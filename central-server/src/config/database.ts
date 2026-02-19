@@ -66,13 +66,31 @@ const getSslConfig = () => {
 
 const sslConfig = getSslConfig();
 
+// Pool size configurable via env : DB_POOL_MAX (défaut: 5)
+// Supabase Transaction Mode (port 6543) : les connexions PgBouncer sont partagées par
+// transaction, pas par session. 5 connexions Node.js suffisent pour des centaines de req/s.
+// En Session Mode (port 5432) un restart Railway causait MaxClientsInSessionMode car
+// ancien + nouveau process réservaient chacun N connexions permanentes.
+// Voir ADR-003 et ADR-015 pour l'historique.
+const dbPoolMax = parseInt(process.env.DB_POOL_MAX || '5', 10);
+
+// Detect Supabase pooler mode from DATABASE_URL port
+const dbUrl = process.env.DATABASE_URL || '';
+const poolerMode = dbUrl.includes(':6543') ? 'transaction' : dbUrl.includes(':5432') ? 'session' : 'direct';
+
 const poolConfig: PoolConfig = {
   connectionString: process.env.DATABASE_URL,
   ssl: sslConfig,
-  max: 5, // Reduced from 20 for Railway Hobby plan (~40MB heap)
+  max: Math.min(Math.max(dbPoolMax, 1), 50), // Clamp entre 1 et 50
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 10000,
 };
+
+logger.info('Database pool configuration', {
+  max: poolConfig.max,
+  idleTimeout: poolConfig.idleTimeoutMillis,
+  poolerMode,
+});
 
 logger.info('Database SSL configuration', {
   NODE_ENV: process.env.NODE_ENV,
@@ -93,12 +111,90 @@ pool.on('connect', () => {
   logger.info('Database connection established');
 });
 
+// Lazy import to avoid circular dependency with metrics.service
+let metricsServiceInstance: {
+  recordDbQuery: (operation: string, durationSeconds: number) => void;
+  recordDbConnections: (active: number, idle: number) => void;
+} | null = null;
+const getMetricsService = () => {
+  if (!metricsServiceInstance) {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      metricsServiceInstance = require('../services/metrics.service').default;
+    } catch {
+      // Metrics service not available yet during startup
+    }
+  }
+  return metricsServiceInstance;
+};
+
+// Track DB connection pool metrics on pool events
+// pg Pool exposes totalCount/idleCount at runtime but @types/pg doesn't declare them
+const poolAny = pool as unknown as { totalCount: number; idleCount: number; on: (event: string, cb: () => void) => void };
+const updatePoolMetrics = () => {
+  const ms = getMetricsService();
+  if (ms && typeof poolAny.totalCount === 'number') {
+    ms.recordDbConnections(poolAny.totalCount - poolAny.idleCount, poolAny.idleCount);
+  }
+};
+
+poolAny.on('acquire', updatePoolMetrics);
+poolAny.on('release', updatePoolMetrics);
+
+// Periodic pool health logging (every 5 min) — detects saturation early
+const POOL_HEALTH_INTERVAL = 5 * 60 * 1000;
+let poolSaturationCount = 0;
+
+setInterval(() => {
+  if (typeof poolAny.totalCount !== 'number') return;
+  const active = poolAny.totalCount - poolAny.idleCount;
+  const total = poolAny.totalCount;
+  const max = poolConfig.max ?? 5;
+  const utilization = total > 0 ? Math.round((active / max) * 100) : 0;
+
+  if (active >= max) {
+    poolSaturationCount++;
+    logger.warn('Database pool saturated', {
+      active,
+      idle: poolAny.idleCount,
+      total,
+      max,
+      utilization: `${utilization}%`,
+      saturationCount: poolSaturationCount,
+      poolerMode,
+    });
+  } else if (utilization > 80) {
+    logger.warn('Database pool high utilization', {
+      active,
+      idle: poolAny.idleCount,
+      total,
+      max,
+      utilization: `${utilization}%`,
+      poolerMode,
+    });
+  } else {
+    logger.debug('Database pool health', {
+      active,
+      idle: poolAny.idleCount,
+      total,
+      max,
+      utilization: `${utilization}%`,
+      poolerMode,
+    });
+  }
+}, POOL_HEALTH_INTERVAL);
+
 export const query = async <T extends QueryResultRow = QueryResultRow>(text: string, params?: any[]) => {
   const start = Date.now();
   try {
     const result = await pool.query<T>(text, params);
     const duration = Date.now() - start;
     logger.debug('Executed query', { text, duration, rows: result.rowCount });
+
+    // Record DB query metrics
+    const operation = text.trim().split(/\s+/)[0]?.toUpperCase() || 'UNKNOWN';
+    getMetricsService()?.recordDbQuery(operation, duration / 1000);
+
     return result;
   } catch (error) {
     logger.error('Database query error:', { text, error });

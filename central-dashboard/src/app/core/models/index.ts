@@ -1,5 +1,10 @@
 /**
- * Positions disponibles pour l'overlay (9 positions)
+ * Thèmes d'overlay disponibles
+ */
+export type OverlayTheme = 'broadcast' | 'minimal';
+
+/**
+ * Positions disponibles pour les overlays (9 positions — utilisé par watermark)
  */
 export type OverlayPosition =
   | 'top-left' | 'top-center' | 'top-right'
@@ -7,28 +12,21 @@ export type OverlayPosition =
   | 'bottom-left' | 'bottom-center' | 'bottom-right';
 
 /**
- * Configuration de l'overlay du score affiché sur la TV
- * Permet de personnaliser la position, les couleurs et les tailles
+ * Positions disponibles pour l'overlay score (6 positions)
+ */
+export type ScoreOverlayPosition =
+  | 'top-left' | 'top-center' | 'top-right'
+  | 'bottom-left' | 'bottom-center' | 'bottom-right';
+
+/**
+ * Configuration de l'overlay du score affiché sur la TV.
+ * Simplifié : thème broadcast/minimal + position.
  */
 export interface ScoreOverlayConfig {
-  /** Position de l'overlay (9 positions disponibles) */
-  position?: OverlayPosition;
-  /** Distance horizontale du bord (en pixels) */
-  offsetX?: number;
-  /** Distance verticale du bord (en pixels) */
-  offsetY?: number;
-  /** Couleur de fond (format CSS, ex: 'rgba(0, 0, 0, 0.85)') */
-  backgroundColor?: string;
-  /** Arrondi des coins (en pixels) */
-  borderRadius?: number;
-  /** Couleur du score (format CSS, ex: '#4caf50') */
-  scoreColor?: string;
-  /** Taille du score (en pixels) */
-  scoreSize?: number;
-  /** Couleur des noms d'équipe */
-  teamNameColor?: string;
-  /** Taille des noms d'équipe (en pixels) */
-  teamNameSize?: number;
+  /** Thème d'affichage : broadcast (style TV pro) ou minimal (score discret) */
+  theme?: OverlayTheme;
+  /** Position de l'overlay score (6 positions) */
+  position?: ScoreOverlayPosition;
 }
 
 export type UserRole = 'super_admin' | 'admin' | 'operator' | 'viewer' | 'advertiser' | 'sponsor' | 'agency';
@@ -79,6 +77,8 @@ export interface Site {
    * Option premium activable par NEOPRO
    */
   live_score_enabled?: boolean;
+  /** Hostname mDNS dérivé du club_name (ex: neopro-usap) */
+  hostname_slug?: string;
   /**
    * Configuration NEOPRO déployée sur le site
    * Contient les paramètres gérés centralement (catégories, vidéos, etc.)
@@ -124,6 +124,17 @@ export interface Site {
    */
   network_profile?: NetworkProfile;
   network_profile_updated_at?: Date;
+
+  /** Nombre moyen de spectateurs par match (pour calcul du reach sponsor) */
+  avg_spectators?: number | null;
+
+  // === Branding fields (P5) ===
+  /** URL du logo du club (pour rapports PDF) */
+  logo_url?: string | null;
+  /** Couleur primaire du club (hex #RRGGBB) */
+  color_primary?: string | null;
+  /** Couleur secondaire du club (hex #RRGGBB) */
+  color_secondary?: string | null;
 
   // === Subscription fields ===
   /** Date de début d'abonnement */
@@ -244,6 +255,15 @@ export interface LocalStorage {
   free: number;
 }
 
+export interface FanStatus {
+  present: boolean;
+  type: string | null;
+  curState: number | null;
+  maxState: number | null;
+  speedPercent: number | null;
+  is_pi5: boolean;
+}
+
 export interface Metrics {
   id: string;
   site_id: string;
@@ -253,6 +273,7 @@ export interface Metrics {
   disk_usage: number | null;
   uptime: number | null;
   network_status: Record<string, unknown> | null;
+  fan_status: FanStatus | null;
   recorded_at: Date;
 }
 
@@ -652,6 +673,143 @@ export interface UpdateSubscriptionRequest {
   note?: string;
 }
 
+// ============================================================================
+// Site Sponsors (P4 — Sponsor analytics par site)
+// ============================================================================
+
+export interface SiteSponsor {
+  id: string;
+  site_id: string;
+  advertiser_id: string | null;
+  name: string;
+  contact_name: string | null;
+  contact_email: string | null;
+  contact_phone: string | null;
+  logo_url: string | null;
+  contract_amount: number | null;
+  contract_start: string | null;
+  contract_end: string | null;
+  source: 'local' | 'neopro';
+  status: 'active' | 'expired' | 'paused';
+  metadata: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+  // Joined fields from listBySite
+  video_count?: number;
+  total_impressions?: number;
+}
+
+export interface SiteSponsorVideo {
+  id: string;
+  site_sponsor_id: string;
+  video_id: string | null;
+  video_filename: string;
+  is_primary: boolean;
+  added_at: string;
+}
+
+export interface SiteSponsorStats {
+  total_impressions: number;
+  total_screen_time_seconds: number;
+  completion_rate: number;
+  estimated_reach: number;
+  active_days: number;
+}
+
+export interface SiteSponsorDailyTrend {
+  date: string;
+  impressions: number;
+  screen_time: number;
+}
+
+export interface SiteSponsorStatsResponse {
+  sponsor: SiteSponsor;
+  period: { from: string; to: string };
+  summary: SiteSponsorStats;
+  daily_trends: SiteSponsorDailyTrend[];
+  videos: SiteSponsorVideo[];
+  cpi: number | null;
+  contract_amount: number | null;
+}
+
+export interface NetworkSponsorSiteBreakdown {
+  site_id: string;
+  site_name: string;
+  club_name: string;
+  impressions: number;
+  screen_time_seconds: number;
+  completion_rate: number;
+}
+
+export interface NetworkSponsorDailyTrend {
+  date: string;
+  impressions: number;
+  screen_time: number;
+}
+
+export interface NetworkSponsorEventType {
+  event_type: string;
+  count: number;
+  total_screen_time: number;
+}
+
+export interface NetworkSponsorStatsResponse {
+  advertiser_id: string;
+  period: { from: string; to: string };
+  summary: {
+    total_impressions: number;
+    total_screen_time_seconds: number;
+    completion_rate: number;
+    estimated_reach: number;
+    active_sites: number;
+    active_days: number;
+    cpi: number | null;
+  };
+  by_site: NetworkSponsorSiteBreakdown[];
+  daily_trends: NetworkSponsorDailyTrend[];
+  by_event_type: NetworkSponsorEventType[];
+}
+
+export interface SiteSponsorBenchmarkEntry {
+  site_sponsor_id: string;
+  sponsor_name: string;
+  impressions: number;
+  screen_time_seconds: number;
+  completion_rate: number;
+  active_days: number;
+  contract_amount: number | null;
+  cpi: number | null;
+  rank: number;
+}
+
+export interface SiteSponsorBenchmarkResponse {
+  site_id: string;
+  period: { from: string; to: string };
+  sponsors: SiteSponsorBenchmarkEntry[];
+  averages: {
+    impressions: number;
+    screen_time_seconds: number;
+    completion_rate: number;
+    active_days: number;
+    cpi: number | null;
+  };
+  total_sponsors: number;
+}
+
+export interface GeneratedReport {
+  id: string;
+  report_type: 'club' | 'advertiser' | 'fleet' | 'site_sponsor';
+  site_sponsor_id: string | null;
+  period_start: string;
+  period_end: string;
+  period_label: string;
+  storage_url: string | null;
+  status: 'pending' | 'generating' | 'completed' | 'failed';
+  created_at: string;
+  completed_at: string | null;
+}
+
 // Re-export site config models
 export * from './site-config.model';
 export * from './admin';
+export * from './config-profile.model';

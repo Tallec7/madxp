@@ -318,11 +318,11 @@ ssh pi@neopro.local 'sudo systemctl restart neopro-app'
 
 Pour le développement et les tests, des configs de démo existent :
 
-| Fichier                                               | Usage                           |
-| ----------------------------------------------------- | ------------------------------- |
-| `raspberry/frontend/assets/demo-configs/default.json` | Config démo par défaut          |
-| `raspberry/frontend/assets/demo-configs/clubs.json`   | Liste des clubs démo            |
-| `raspberry/frontend/assets/demo-configs/[club].json`  | Config spécifique par club démo |
+| Fichier                                          | Usage                           |
+| ------------------------------------------------ | ------------------------------- |
+| `raspberry/src/assets/demo-configs/default.json` | Config démo par défaut          |
+| `raspberry/src/assets/demo-configs/clubs.json`   | Liste des clubs démo            |
+| `raspberry/src/assets/demo-configs/[club].json`  | Config spécifique par club démo |
 
 Ces fichiers sont utilisés uniquement en mode démo (`npm start`).
 

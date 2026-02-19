@@ -66,6 +66,8 @@ Le système d'error handling de Neopro permet :
 └─────────────────────────────────────────────────────────────────────────┘
 ```
 
+> **Note** : Logtail (Better Stack) est configuré via la variable `LOGTAIL_TOKEN`. En production Railway, les logs sont envoyés à Logtail en plus de stdout. Si le token n'est pas configuré, seul stdout est utilisé.
+
 ## Fichiers Frontend
 
 ### 1. ErrorExtractor (`core/utils/error-extractor.ts`)
@@ -206,6 +208,17 @@ throw new ValidationError('Email invalide', { field: 'email' });
 throw new UnauthorizedError('Session expirée');
 ```
 
+**Classes disponibles** (`central-server/src/middleware/errors.ts`) :
+
+| Classe              | Code HTTP | Usage                              |
+| ------------------- | --------- | ---------------------------------- |
+| `NotFoundError`     | 404       | Ressource non trouvée              |
+| `ValidationError`   | 400       | Données d'entrée invalides         |
+| `UnauthorizedError` | 401       | Session expirée ou non authentifié |
+| `ForbiddenError`    | 403       | Permissions insuffisantes          |
+| `ConflictError`     | 409       | Conflit de données (doublon)       |
+| `ServiceError`      | 500       | Erreur interne du service          |
+
 ### 3. Error Handler Middleware (`middleware/error-handler.ts`)
 
 Gestionnaire global des erreurs Express.
@@ -296,27 +309,51 @@ error: (error) => {
 };
 ```
 
+4. **Jamais de `.subscribe()` vide** — chaque Observable HTTP doit avoir un error handler :
+
+```typescript
+// ❌ INTERDIT — l'erreur remonte au GlobalErrorHandler comme "Unhandled error Object"
+this.service.update(data).subscribe();
+
+// ✅ Minimum — erreur silencieuse (fire-and-forget avec retry implicite)
+this.service.update(data).subscribe({
+  error: () => {
+    /* Silencieux — retry au prochain cycle */
+  },
+});
+
+// ✅ Complet — log + notification utilisateur
+this.service.update(data).subscribe({
+  error: (err) => {
+    this.logger.error('Update failed', { error: ErrorExtractor.getMessage(err) });
+  },
+});
+```
+
+> **Pourquoi ?** Un `.subscribe()` vide sur un Observable HTTP qui échoue (ex: déconnexion réseau) produit un rejet de Promise non géré. Le `GlobalErrorHandler` le capture mais ne peut extraire qu'un message vide → cascade de "Unhandled error Object" dans la console.
+
 ### Pour un nouveau service
 
 Les services ne gèrent généralement pas les erreurs directement - elles remontent aux composants. Exception : services avec état (comme `SocketService`).
 
 ## Composants Migrés
 
-| Composant                         | Handlers | Notes             |
-| --------------------------------- | -------- | ----------------- |
-| `login.component.ts`              | 1        | Auth flow         |
-| `forgot-password.component.ts`    | 1        |                   |
-| `reset-password.component.ts`     | 1        |                   |
-| `auth.service.ts`                 | 2        | Periodic check    |
-| `sites-list.component.ts`         | 3        |                   |
-| `content-management.component.ts` | 4        | Upload/deploy     |
-| `site-detail.component.ts`        | 14       | Commandes, config |
-| `users-management.component.ts`   | 5        | CRUD users        |
-| `groups-list.component.ts`        | 4        |                   |
-| `advertisers-list.component.ts`   | 2        |                   |
-| `analytics-overview.component.ts` | 1        |                   |
-| `club-analytics.component.ts`     | 5        | Export PDF        |
-| `socket.service.ts`               | 7        | WebSocket events  |
+| Composant                         | Handlers | Notes                   |
+| --------------------------------- | -------- | ----------------------- |
+| `login.component.ts`              | 1        | Auth flow               |
+| `forgot-password.component.ts`    | 1        |                         |
+| `reset-password.component.ts`     | 1        |                         |
+| `auth.service.ts`                 | 2        | Periodic check          |
+| `sites-list.component.ts`         | 3        |                         |
+| `content-management.component.ts` | 4        | Upload/deploy           |
+| `site-detail.component.ts`        | 14       | Commandes, config       |
+| `users-management.component.ts`   | 5        | CRUD users              |
+| `groups-list.component.ts`        | 4        |                         |
+| `advertisers-list.component.ts`   | 2        |                         |
+| `analytics-overview.component.ts` | 1        |                         |
+| `club-analytics.component.ts`     | 5        | Export PDF              |
+| `cloud-remote.component.ts`       | 17       | Timer, score, commandes |
+| `socket.service.ts`               | 7        | WebSocket events        |
 
 ## Debugging
 
@@ -396,8 +433,36 @@ describe('LoggerService', () => {
 });
 ```
 
+## Traçabilité bout en bout
+
+Exemple de flux complet avec correlation ID :
+
+```
+1. Frontend génère correlationId = "corr-abc123"
+   → HTTP GET /api/sites/uuid-456
+   → Header: X-Correlation-ID: corr-abc123
+
+2. Backend (correlation middleware)
+   → Log: { correlationId: "corr-abc123", message: "GET /api/sites/uuid-456", userId: "user-789" }
+
+3. Backend (controller)
+   → Log: { correlationId: "corr-abc123", message: "Site found", siteId: "uuid-456" }
+
+4. Backend (error handler) — si erreur
+   → Log: { correlationId: "corr-abc123", level: "error", message: "Site not found", code: "NOT_FOUND" }
+   → Response: { error: "Site non trouvé", correlationId: "corr-abc123" }
+
+5. Frontend (error interceptor)
+   → Log envoyé à POST /api/logs avec même correlationId
+   → Logtail/Better Stack: rechercher "corr-abc123" pour voir tout le flux
+```
+
 ## Liens utiles
 
 - [CLAUDE.md](/CLAUDE.md) - Guide principal du projet
 - [ARCHITECTURE.md](/docs/technical/ARCHITECTURE.md) - Architecture technique
 - [SECURITY_IMPROVEMENTS.md](/docs/technical/SECURITY_IMPROVEMENTS.md) - Améliorations sécurité
+
+---
+
+Dernière mise à jour : 10 février 2026

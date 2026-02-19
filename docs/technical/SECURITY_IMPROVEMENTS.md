@@ -10,6 +10,8 @@ Ce document décrit toutes les améliorations de sécurité implémentées pour 
 
 ### SEC-001: Authentification Admin Raspberry
 
+**Date de résolution** : Décembre 2025
+
 **Vulnérabilité corrigée:** Panneau admin accessible sans authentification sur le réseau local.
 
 **Implémentation:**
@@ -45,6 +47,8 @@ app.use((req, res, next) => {
 
 ### SEC-002: Suppression Mot de Passe Hardcodé
 
+**Date de résolution** : Décembre 2025
+
 **Vulnérabilité corrigée:** Mot de passe `GG_NEO_25k!` visible dans le code source.
 
 **Avant (VULNÉRABLE):**
@@ -68,6 +72,8 @@ setInitialPassword(password: string): Observable<boolean> {
 ---
 
 ### SEC-003: CORS Fail-Closed & TLS
+
+**Date de résolution** : Décembre 2025
 
 **Vulnérabilités corrigées:**
 
@@ -105,6 +111,8 @@ const resolveOrigin = (origin?: string): string | null => {
 ---
 
 ### SEC-004: JWT vers HttpOnly Cookies
+
+**Date de résolution** : Décembre 2025
 
 **Vulnérabilité corrigée:** JWT stocké dans localStorage (vulnérable XSS).
 
@@ -162,6 +170,8 @@ res.cookie('auth_token', token, {
 
 ### SEC-005: Chiffrement des Sauvegardes (AES-256-GCM)
 
+**Date de résolution** : Décembre 2025
+
 **Vulnérabilité corrigée:** Backups locaux stockés en clair sur les Raspberry Pi.
 
 **Fichier:** `raspberry/sync-agent/src/tasks/local-backup.js`
@@ -198,6 +208,8 @@ _encrypt(data) {
 
 ### SEC-006: Socket.IO CORS Fail-Closed
 
+**Date de résolution** : Décembre 2025
+
 **Vulnérabilité corrigée:** WebSocket acceptant toutes les origines en production si ALLOWED_ORIGINS non configuré.
 
 **Fichier:** `central-server/src/services/socket.service.ts`
@@ -208,8 +220,8 @@ _encrypt(data) {
 const corsOrigin = hasAllowedOrigins
   ? allowedOrigins
   : isProduction
-    ? false  // ← REJETTE tout en production si non configuré
-    : true;  // Autorise tout en développement
+    ? false // ← REJETTE tout en production si non configuré
+    : true; // Autorise tout en développement
 
 if (isProduction && !hasAllowedOrigins) {
   logger.error('SECURITY WARNING: Socket.IO CORS - ALLOWED_ORIGINS not configured!');
@@ -221,6 +233,8 @@ if (isProduction && !hasAllowedOrigins) {
 
 ### SEC-007: Configuration Helmet Renforcée
 
+**Date de résolution** : Décembre 2025
+
 **Amélioration:** CSP, XSS, HSTS, Frameguard configurés explicitement.
 
 **Fichier:** `central-server/src/server.ts`
@@ -228,60 +242,68 @@ if (isProduction && !hasAllowedOrigins) {
 **Implémentation:**
 
 ```typescript
-app.use(helmet({
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'"],
-      styleSrc: ["'self'", "'unsafe-inline'"],
-      imgSrc: ["'self'", 'data:', 'https:'],
-      connectSrc: ["'self'", 'wss:', 'ws:'],
-      objectSrc: ["'none'"],
-      frameSrc: ["'none'"],
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'", "'unsafe-inline'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        imgSrc: ["'self'", 'data:', 'https:'],
+        connectSrc: ["'self'", 'wss:', 'ws:'],
+        objectSrc: ["'none'"],
+        frameSrc: ["'none'"],
+      },
     },
-  },
-  xssFilter: true,
-  frameguard: { action: 'deny' },
-  noSniff: true,
-  hsts: NODE_ENV === 'production' ? {
-    maxAge: 31536000,
-    includeSubDomains: true,
-    preload: true,
-  } : false,
-  referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
-  hidePoweredBy: true,
-  dnsPrefetchControl: { allow: false },
-  permittedCrossDomainPolicies: { permittedPolicies: 'none' },
-}));
+    xssFilter: true,
+    frameguard: { action: 'deny' },
+    noSniff: true,
+    hsts:
+      NODE_ENV === 'production'
+        ? {
+            maxAge: 31536000,
+            includeSubDomains: true,
+            preload: true,
+          }
+        : false,
+    referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
+    hidePoweredBy: true,
+    dnsPrefetchControl: { allow: false },
+    permittedCrossDomainPolicies: { permittedPolicies: 'none' },
+  }),
+);
 ```
 
 ---
 
 ### GDPR-001: Endpoints Self-Service RGPD
 
+**Date de résolution** : Décembre 2025
+
 **Conformité RGPD:** Articles 17 (Effacement) et 20 (Portabilité).
 
 **Fichiers:**
+
 - `central-server/src/controllers/users.controller.ts`
 - `central-server/src/routes/users.routes.ts`
 
 **Endpoints:**
 
-| Route | Méthode | Article | Description |
-|-------|---------|---------|-------------|
-| `/api/users/me` | DELETE | Art. 17 | Suppression compte utilisateur |
-| `/api/users/me/export` | GET | Art. 20 | Export données personnelles (JSON) |
+| Route                  | Méthode | Article | Description                        |
+| ---------------------- | ------- | ------- | ---------------------------------- |
+| `/api/users/me`        | DELETE  | Art. 17 | Suppression compte utilisateur     |
+| `/api/users/me/export` | GET     | Art. 20 | Export données personnelles (JSON) |
 
 **Protection dernier super_admin:**
 
 ```typescript
 if (userCheck.rows[0].role === 'super_admin') {
   const superAdminCount = await query(
-    "SELECT COUNT(*) FROM users WHERE role = 'super_admin' AND status = 'active'"
+    "SELECT COUNT(*) FROM users WHERE role = 'super_admin' AND status = 'active'",
   );
   if (parseInt(superAdminCount.rows[0].count, 10) <= 1) {
     res.status(400).json({
-      error: 'Impossible de supprimer le dernier super administrateur.'
+      error: 'Impossible de supprimer le dernier super administrateur.',
     });
     return;
   }
@@ -412,9 +434,9 @@ if (process.env.NODE_ENV === 'production') {
 
 ```json
 {
-  "name": "KAP - Gestion d'équipes de sports collectifs",
-  "short_name": "KAP",
-  "description": "KAP by Kalon Partners : la solution tout-en-un pour les coachs",
+  "name": "Neopro - TV interactive pour clubs sportifs",
+  "short_name": "Neopro",
+  "description": "Neopro : solution de TV interactive pour clubs sportifs",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0f172a",
@@ -712,7 +734,7 @@ curl -I https://neopro.local:8080/styles.css
 
 1. Ouvrir la page dans Chrome mobile
 2. Menu > "Ajouter à l'écran d'accueil"
-3. Vérifier l'icône et le nom "KAP"
+3. Vérifier l'icône et le nom "Neopro"
 4. Lancer l'app installée
 
 ---
@@ -778,6 +800,6 @@ Toutes les améliorations sont **compatibles** avec :
 
 ---
 
-**Date de mise à jour** : 29 décembre 2025
+**Date de mise à jour** : 10 février 2026
 **Version** : 2.0
 **Auteur** : Claude (Anthropic)

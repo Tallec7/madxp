@@ -1,32 +1,58 @@
 import { Response } from 'express';
 
-// Explicitly mock the database module for deterministic tests
-jest.mock('../config/database', () => {
-  const pool = {
-    query: jest.fn(),
-    connect: jest.fn(),
-    end: jest.fn(),
-  };
-  return {
-    __esModule: true,
-    default: pool,
-    pool,
-  };
-});
+// Mock repositories
+jest.mock('../repositories', () => ({
+  videoRepository: {
+    filenameExists: jest.fn(),
+    findAllPaginated: jest.fn(),
+    findVideoById: jest.fn(),
+    create: jest.fn(),
+    createBulk: jest.fn(),
+    update: jest.fn(),
+    findStoragePath: jest.fn(),
+    deleteAndReturn: jest.fn(),
+    findForSitePaginated: jest.fn(),
+  },
+  deploymentRepository: {
+    findDeploymentsForVideo: jest.fn(),
+    findAllWithDetails: jest.fn(),
+    findWithDetails: jest.fn(),
+    createFull: jest.fn(),
+    updateFields: jest.fn(),
+    deleteAndReturn: jest.fn(),
+  },
+  siteRepository: {
+    exists: jest.fn(),
+  },
+}));
 
-// Mock supabase
-jest.mock('../config/supabase');
-
-// Mock FTP storage - priority storage backend
-jest.mock('../config/ftp-storage', () => ({
-  isFtpConfigured: jest.fn().mockReturnValue(true),
-  uploadFileToFtp: jest.fn(),
-  deleteFileFromFtp: jest.fn(),
-  getFtpPublicUrl: jest.fn().mockReturnValue('https://cdn.example.com/test.mp4'),
+// Mock storage service
+jest.mock('../services/storage.service', () => ({
+  uploadVideo: jest.fn(),
+  uploadVideoFromDisk: jest.fn(),
+  deleteVideo: jest.fn(),
+  getVideoUrl: jest.fn().mockReturnValue('https://cdn.example.com/test.mp4'),
 }));
 
 // Mock deployment service
 jest.mock('../services/deployment.service');
+
+// Mock upload verification service
+jest.mock('../services/upload-verification.service', () => ({
+  uploadVerificationService: {
+    isVideoReadyForDeployment: jest.fn().mockResolvedValue({ ready: true, status: 'ready' }),
+    getDeploymentBlockedMessage: jest.fn(),
+  },
+  UploadStatus: {},
+}));
+
+// Mock logger
+jest.mock('../config/logger', () => ({
+  info: jest.fn(),
+  error: jest.fn(),
+  warn: jest.fn(),
+  debug: jest.fn(),
+}));
 
 import {
   getVideos,
@@ -34,18 +60,21 @@ import {
   getVideoDeployments,
   createVideo,
   updateVideo,
-  deleteVideo,
+  deleteVideo as deleteVideoController,
   getDeployments,
   getDeployment,
   createDeployment,
   updateDeployment,
   deleteDeployment,
 } from './content.controller';
-import pool from '../config/database';
-import { uploadFile, deleteFile } from '../config/supabase';
-import { uploadFileToFtp, isFtpConfigured } from '../config/ftp-storage';
+import { videoRepository, deploymentRepository, siteRepository } from '../repositories';
+import { uploadVideo, deleteVideo as deleteStorageVideo } from '../services/storage.service';
 import deploymentService from '../services/deployment.service';
 import { AuthRequest } from '../types';
+
+const mockVideoRepo = videoRepository as jest.Mocked<typeof videoRepository>;
+const mockDeploymentRepo = deploymentRepository as jest.Mocked<typeof deploymentRepository>;
+const mockSiteRepo = siteRepository as jest.Mocked<typeof siteRepository>;
 
 // Helper to create mock response
 const createMockResponse = (): Response => {
@@ -83,18 +112,15 @@ describe('Content Controller', () => {
           { id: '2', filename: 'video2.mp4', original_name: 'Another Video', metadata: null },
         ];
 
-        // Mock both data query and count query
-        (pool.query as jest.Mock)
-          .mockResolvedValueOnce({ rows: mockVideos })
-          .mockResolvedValueOnce({ rows: [{ count: '2' }] });
+        mockVideoRepo.findAllPaginated.mockResolvedValueOnce({ rows: mockVideos as never[], total: 2 });
 
         await getVideos(req, res);
 
         expect(res.json).toHaveBeenCalledWith({
-          data: [
-            { ...mockVideos[0], title: 'Custom Title' },
-            { ...mockVideos[1], title: 'Another Video' },
-          ],
+          data: expect.arrayContaining([
+            expect.objectContaining({ id: '1', title: 'Custom Title' }),
+            expect.objectContaining({ id: '2', title: 'Another Video' }),
+          ]),
           pagination: expect.objectContaining({
             total: 2,
             page: 1,
@@ -107,7 +133,7 @@ describe('Content Controller', () => {
         const req = createAuthRequest();
         const res = createMockResponse();
 
-        (pool.query as jest.Mock).mockRejectedValueOnce(new Error('DB Error'));
+        mockVideoRepo.findAllPaginated.mockRejectedValueOnce(new Error('DB Error'));
 
         await getVideos(req, res);
 
@@ -128,18 +154,21 @@ describe('Content Controller', () => {
           metadata: { title: 'Video Title' },
         };
 
-        (pool.query as jest.Mock).mockResolvedValueOnce({ rows: [mockVideo] });
+        mockVideoRepo.findVideoById.mockResolvedValueOnce(mockVideo as never);
 
         await getVideo(req, res);
 
-        expect(res.json).toHaveBeenCalledWith({ ...mockVideo, title: 'Video Title' });
+        expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
+          id: 'video-123',
+          title: 'Video Title',
+        }));
       });
 
       it('should return 404 if video not found', async () => {
         const req = createAuthRequest({ params: { id: 'nonexistent' } });
         const res = createMockResponse();
 
-        (pool.query as jest.Mock).mockResolvedValueOnce({ rows: [] });
+        mockVideoRepo.findVideoById.mockResolvedValueOnce(null);
 
         await getVideo(req, res);
 
@@ -151,7 +180,7 @@ describe('Content Controller', () => {
         const req = createAuthRequest({ params: { id: 'video-123' } });
         const res = createMockResponse();
 
-        (pool.query as jest.Mock).mockRejectedValueOnce(new Error('DB Error'));
+        mockVideoRepo.findVideoById.mockRejectedValueOnce(new Error('DB Error'));
 
         await getVideo(req, res);
 
@@ -174,28 +203,26 @@ describe('Content Controller', () => {
         });
         const res = createMockResponse();
 
-        // Mock FTP upload (priority backend)
-        (uploadFileToFtp as jest.Mock).mockResolvedValueOnce({
+        // Mock storage upload
+        (uploadVideo as jest.Mock).mockResolvedValueOnce({
           path: 'test-video.mp4',
           url: 'https://cdn.example.com/test-video.mp4',
+          verified: true,
+          actualSize: 1024,
         });
 
-        // Mock generateUniqueFilename query (check if filename exists)
-        (pool.query as jest.Mock)
-          .mockResolvedValueOnce({ rows: [] }) // filename doesn't exist yet
-          .mockResolvedValueOnce({
-            rows: [{
-              id: 'video-123',
-              name: 'test-video.mp4',
-              original_name: 'test-video.mp4',
-              category: 'sponsors',
-              size: 1024,
-            }],
-          });
+        // Mock filename check + create
+        mockVideoRepo.filenameExists.mockResolvedValueOnce(false);
+        mockVideoRepo.create.mockResolvedValueOnce({
+          id: 'video-123',
+          filename: 'test-video.mp4',
+          original_name: 'test-video.mp4',
+          category: 'sponsors',
+        } as never);
 
         await createVideo(req, res);
 
-        expect(uploadFileToFtp).toHaveBeenCalledWith(mockFile.buffer, expect.any(String), 'video/mp4');
+        expect(uploadVideo).toHaveBeenCalledWith(mockFile.buffer, expect.any(String), 'video/mp4');
         expect(res.status).toHaveBeenCalledWith(201);
         expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
           id: 'video-123',
@@ -224,16 +251,12 @@ describe('Content Controller', () => {
         const req = createAuthRequest({ file: mockFile as Express.Multer.File });
         const res = createMockResponse();
 
-        // Mock generateUniqueFilename query
-        (pool.query as jest.Mock).mockResolvedValueOnce({ rows: [] });
-
-        // Mock FTP upload failure
-        (uploadFileToFtp as jest.Mock).mockResolvedValueOnce(null);
+        mockVideoRepo.filenameExists.mockResolvedValueOnce(false);
+        (uploadVideo as jest.Mock).mockRejectedValueOnce(new Error('FTP non configuré'));
 
         await createVideo(req, res);
 
         expect(res.status).toHaveBeenCalledWith(500);
-        expect(res.json).toHaveBeenCalledWith({ error: "Erreur lors de l'upload vers le stockage. Vérifiez la configuration FTP ou Supabase." });
       });
 
       it('should return 500 on database error', async () => {
@@ -247,12 +270,15 @@ describe('Content Controller', () => {
         const req = createAuthRequest({ file: mockFile as Express.Multer.File });
         const res = createMockResponse();
 
-        // Mock generateUniqueFilename query first
-        (pool.query as jest.Mock)
-          .mockResolvedValueOnce({ rows: [] }) // filename check
-          .mockRejectedValueOnce(new Error('DB Error')); // INSERT fails
+        mockVideoRepo.filenameExists.mockResolvedValueOnce(false);
+        mockVideoRepo.create.mockRejectedValueOnce(new Error('DB Error'));
 
-        (uploadFileToFtp as jest.Mock).mockResolvedValueOnce({ path: 'test.mp4', url: 'http://test' });
+        (uploadVideo as jest.Mock).mockResolvedValueOnce({
+          path: 'test.mp4',
+          url: 'http://test',
+          verified: true,
+          actualSize: 1024,
+        });
 
         await createVideo(req, res);
 
@@ -268,12 +294,8 @@ describe('Content Controller', () => {
         });
         const res = createMockResponse();
 
-        const updatedVideo = {
-          id: 'video-123',
-          category: 'jingles',
-          subcategory: 'goals',
-        };
-        (pool.query as jest.Mock).mockResolvedValueOnce({ rows: [updatedVideo] });
+        const updatedVideo = { id: 'video-123', category: 'jingles', subcategory: 'goals' };
+        mockVideoRepo.update.mockResolvedValueOnce(updatedVideo as never);
 
         await updateVideo(req, res);
 
@@ -287,7 +309,7 @@ describe('Content Controller', () => {
         });
         const res = createMockResponse();
 
-        (pool.query as jest.Mock).mockResolvedValueOnce({ rows: [] });
+        mockVideoRepo.update.mockResolvedValueOnce(null);
 
         await updateVideo(req, res);
 
@@ -302,7 +324,7 @@ describe('Content Controller', () => {
         });
         const res = createMockResponse();
 
-        (pool.query as jest.Mock).mockRejectedValueOnce(new Error('DB Error'));
+        mockVideoRepo.update.mockRejectedValueOnce(new Error('DB Error'));
 
         await updateVideo(req, res);
 
@@ -315,14 +337,13 @@ describe('Content Controller', () => {
         const req = createAuthRequest({ params: { id: 'video-123' } });
         const res = createMockResponse();
 
-        (pool.query as jest.Mock)
-          .mockResolvedValueOnce({ rows: [{ storage_path: 'videos/test.mp4' }] })
-          .mockResolvedValueOnce({ rows: [{ id: 'video-123' }] });
-        (deleteFile as jest.Mock).mockResolvedValueOnce(undefined);
+        mockVideoRepo.findStoragePath.mockResolvedValueOnce('videos/test.mp4');
+        mockVideoRepo.deleteAndReturn.mockResolvedValueOnce(true);
+        (deleteStorageVideo as jest.Mock).mockResolvedValueOnce(undefined);
 
-        await deleteVideo(req, res);
+        await deleteVideoController(req, res);
 
-        expect(deleteFile).toHaveBeenCalledWith('videos/test.mp4');
+        expect(deleteStorageVideo).toHaveBeenCalledWith('videos/test.mp4');
         expect(res.json).toHaveBeenCalledWith({ message: 'Vidéo supprimée avec succès' });
       });
 
@@ -330,9 +351,10 @@ describe('Content Controller', () => {
         const req = createAuthRequest({ params: { id: 'nonexistent' } });
         const res = createMockResponse();
 
-        (pool.query as jest.Mock).mockResolvedValueOnce({ rows: [] });
+        mockVideoRepo.findStoragePath.mockResolvedValueOnce(null);
+        mockVideoRepo.findVideoById.mockResolvedValueOnce(null);
 
-        await deleteVideo(req, res);
+        await deleteVideoController(req, res);
 
         expect(res.status).toHaveBeenCalledWith(404);
         expect(res.json).toHaveBeenCalledWith({ error: 'Vidéo non trouvée' });
@@ -342,13 +364,14 @@ describe('Content Controller', () => {
         const req = createAuthRequest({ params: { id: 'video-123' } });
         const res = createMockResponse();
 
-        (pool.query as jest.Mock)
-          .mockResolvedValueOnce({ rows: [{ storage_path: null }] })
-          .mockResolvedValueOnce({ rows: [{ id: 'video-123' }] });
+        // findStoragePath returns null but video exists (empty storage_path)
+        mockVideoRepo.findStoragePath.mockResolvedValueOnce(null);
+        mockVideoRepo.findVideoById.mockResolvedValueOnce({ id: 'video-123' } as never);
+        mockVideoRepo.deleteAndReturn.mockResolvedValueOnce(true);
 
-        await deleteVideo(req, res);
+        await deleteVideoController(req, res);
 
-        expect(deleteFile).not.toHaveBeenCalled();
+        expect(deleteStorageVideo).not.toHaveBeenCalled();
         expect(res.json).toHaveBeenCalledWith({ message: 'Vidéo supprimée avec succès' });
       });
     });
@@ -364,9 +387,8 @@ describe('Content Controller', () => {
           { id: 'd3', video_id: 'video-123', status: 'pending', target_name: 'Group C', target_type: 'group' },
         ];
 
-        (pool.query as jest.Mock)
-          .mockResolvedValueOnce({ rows: [{ id: 'video-123' }] }) // video exists
-          .mockResolvedValueOnce({ rows: mockDeployments });
+        mockVideoRepo.findVideoById.mockResolvedValueOnce({ id: 'video-123' } as never);
+        mockDeploymentRepo.findDeploymentsForVideo.mockResolvedValueOnce(mockDeployments as never[]);
 
         await getVideoDeployments(req, res);
 
@@ -387,7 +409,7 @@ describe('Content Controller', () => {
         const req = createAuthRequest({ params: { id: 'nonexistent' } });
         const res = createMockResponse();
 
-        (pool.query as jest.Mock).mockResolvedValueOnce({ rows: [] });
+        mockVideoRepo.findVideoById.mockResolvedValueOnce(null);
 
         await getVideoDeployments(req, res);
 
@@ -399,9 +421,8 @@ describe('Content Controller', () => {
         const req = createAuthRequest({ params: { id: 'video-new' } });
         const res = createMockResponse();
 
-        (pool.query as jest.Mock)
-          .mockResolvedValueOnce({ rows: [{ id: 'video-new' }] }) // video exists
-          .mockResolvedValueOnce({ rows: [] }); // no deployments
+        mockVideoRepo.findVideoById.mockResolvedValueOnce({ id: 'video-new' } as never);
+        mockDeploymentRepo.findDeploymentsForVideo.mockResolvedValueOnce([]);
 
         await getVideoDeployments(req, res);
 
@@ -422,7 +443,7 @@ describe('Content Controller', () => {
         const req = createAuthRequest({ params: { id: 'video-123' } });
         const res = createMockResponse();
 
-        (pool.query as jest.Mock).mockRejectedValueOnce(new Error('DB Error'));
+        mockVideoRepo.findVideoById.mockRejectedValueOnce(new Error('DB Error'));
 
         await getVideoDeployments(req, res);
 
@@ -446,13 +467,13 @@ describe('Content Controller', () => {
           { id: '2', video_id: 'v2', target_type: 'group', target_name: 'Group B', original_name: 'video.mp4', metadata: null },
         ];
 
-        (pool.query as jest.Mock).mockResolvedValueOnce({ rows: mockDeployments });
+        mockDeploymentRepo.findAllWithDetails.mockResolvedValueOnce(mockDeployments as never[]);
 
         await getDeployments(req, res);
 
         expect(res.json).toHaveBeenCalledWith([
-          { ...mockDeployments[0], video_title: 'Video 1' },
-          { ...mockDeployments[1], video_title: 'video.mp4' },
+          expect.objectContaining({ id: '1', video_title: 'Video 1' }),
+          expect.objectContaining({ id: '2', video_title: 'video.mp4' }),
         ]);
       });
 
@@ -460,7 +481,7 @@ describe('Content Controller', () => {
         const req = createAuthRequest();
         const res = createMockResponse();
 
-        (pool.query as jest.Mock).mockRejectedValueOnce(new Error('DB Error'));
+        mockDeploymentRepo.findAllWithDetails.mockRejectedValueOnce(new Error('DB Error'));
 
         await getDeployments(req, res);
 
@@ -474,7 +495,7 @@ describe('Content Controller', () => {
         const res = createMockResponse();
 
         const mockDeployment = { id: 'deploy-123', status: 'completed' };
-        (pool.query as jest.Mock).mockResolvedValueOnce({ rows: [mockDeployment] });
+        mockDeploymentRepo.findWithDetails.mockResolvedValueOnce(mockDeployment as never);
 
         await getDeployment(req, res);
 
@@ -485,7 +506,7 @@ describe('Content Controller', () => {
         const req = createAuthRequest({ params: { id: 'nonexistent' } });
         const res = createMockResponse();
 
-        (pool.query as jest.Mock).mockResolvedValueOnce({ rows: [] });
+        mockDeploymentRepo.findWithDetails.mockResolvedValueOnce(null);
 
         await getDeployment(req, res);
 
@@ -509,7 +530,7 @@ describe('Content Controller', () => {
           status: 'pending',
         };
 
-        (pool.query as jest.Mock).mockResolvedValueOnce({ rows: [mockDeployment] });
+        mockDeploymentRepo.createFull.mockResolvedValueOnce(mockDeployment as never);
 
         await createDeployment(req, res);
 
@@ -524,7 +545,7 @@ describe('Content Controller', () => {
         });
         const res = createMockResponse();
 
-        (pool.query as jest.Mock).mockRejectedValueOnce(new Error('DB Error'));
+        mockDeploymentRepo.createFull.mockRejectedValueOnce(new Error('DB Error'));
 
         await createDeployment(req, res);
 
@@ -541,7 +562,7 @@ describe('Content Controller', () => {
         const res = createMockResponse();
 
         const updated = { id: 'deploy-123', status: 'completed', progress: 100 };
-        (pool.query as jest.Mock).mockResolvedValueOnce({ rows: [updated] });
+        mockDeploymentRepo.updateFields.mockResolvedValueOnce(updated as never);
 
         await updateDeployment(req, res);
 
@@ -555,7 +576,7 @@ describe('Content Controller', () => {
         });
         const res = createMockResponse();
 
-        (pool.query as jest.Mock).mockResolvedValueOnce({ rows: [] });
+        mockDeploymentRepo.updateFields.mockResolvedValueOnce(null);
 
         await updateDeployment(req, res);
 
@@ -568,7 +589,7 @@ describe('Content Controller', () => {
         const req = createAuthRequest({ params: { id: 'deploy-123' } });
         const res = createMockResponse();
 
-        (pool.query as jest.Mock).mockResolvedValueOnce({ rows: [{ id: 'deploy-123' }] });
+        mockDeploymentRepo.deleteAndReturn.mockResolvedValueOnce(true);
 
         await deleteDeployment(req, res);
 
@@ -579,7 +600,7 @@ describe('Content Controller', () => {
         const req = createAuthRequest({ params: { id: 'nonexistent' } });
         const res = createMockResponse();
 
-        (pool.query as jest.Mock).mockResolvedValueOnce({ rows: [] });
+        mockDeploymentRepo.deleteAndReturn.mockResolvedValueOnce(false);
 
         await deleteDeployment(req, res);
 

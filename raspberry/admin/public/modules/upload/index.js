@@ -10,6 +10,9 @@ function initForms() {
         await uploadVideo();
     });
 
+    // Populate sponsor select
+    populateUploadSponsorSelect();
+
     // Category selector - show subcategories for Match categories
     const categorySelect = document.getElementById('video-category');
     const subcategoryGroup = document.getElementById('subcategory-group');
@@ -253,6 +256,8 @@ async function uploadVideo() {
 
     const category = document.getElementById('video-category').value;
     const subcategory = document.getElementById('video-subcategory').value;
+    const sponsorLocalId = document.getElementById('upload-sponsor')?.value || '';
+    const addToLoop = document.getElementById('upload-add-to-loop')?.checked || false;
 
     if (!category) {
         showNotification('Sélectionnez une catégorie', 'error');
@@ -280,6 +285,8 @@ async function uploadVideo() {
         const formData = new FormData();
         formData.append('category', category);
         if (subcategory) formData.append('subcategory', subcategory);
+        if (sponsorLocalId) formData.append('sponsorLocalId', sponsorLocalId);
+        if (sponsorLocalId && addToLoop) formData.append('addToLoop', 'true');
 
         filesToUpload.forEach(file => {
             formData.append('videos', file);
@@ -344,6 +351,8 @@ async function uploadVideo() {
         const formData = new FormData();
         formData.append('category', category);
         if (subcategory) formData.append('subcategory', subcategory);
+        if (sponsorLocalId) formData.append('sponsorLocalId', sponsorLocalId);
+        if (sponsorLocalId && addToLoop) formData.append('addToLoop', 'true');
         formData.append('video', file);
 
         currentFileSpan.textContent = `${file.name} (${formatBytes(file.size)})`;
@@ -382,6 +391,32 @@ async function uploadVideo() {
 
     // Re-enable upload button
     uploadBtn.disabled = false;
+}
+
+/**
+ * Peuple le select de sponsors dans le formulaire d'upload.
+ */
+async function populateUploadSponsorSelect() {
+    const sponsorSelect = document.getElementById('upload-sponsor');
+    if (!sponsorSelect) return;
+
+    try {
+        const response = await fetch('/api/sponsors');
+        if (!response.ok) return;
+        const { sponsors } = await response.json();
+
+        // Garder seulement les sponsors locaux
+        const localSponsors = (sponsors || []).filter(s => s.source === 'local');
+        sponsorSelect.innerHTML = '<option value="">-- Aucun sponsor --</option>';
+        for (const sponsor of localSponsors) {
+            const option = document.createElement('option');
+            option.value = sponsor.localId;
+            option.textContent = sponsor.name;
+            sponsorSelect.appendChild(option);
+        }
+    } catch (error) {
+        console.warn('[upload] Could not load sponsors for upload select:', error);
+    }
 }
 
 // Note: configureWifi() has been replaced by the new WiFi scanner UI

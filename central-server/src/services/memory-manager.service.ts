@@ -5,6 +5,24 @@
 
 import logger from '../config/logger';
 
+// Lazy import to avoid circular dependency with metrics.service
+let metricsServiceInstance: {
+  recordHeapUsage: (percent: number) => void;
+  recordMemoryPressureEvent: (severity: 'warning' | 'critical' | 'emergency') => void;
+  recordGcRun: (freedBytes: number) => void;
+} | null = null;
+const getMetricsService = () => {
+  if (!metricsServiceInstance) {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      metricsServiceInstance = require('./metrics.service').default;
+    } catch {
+      // Metrics service not available yet during startup
+    }
+  }
+  return metricsServiceInstance;
+};
+
 // Configuration - Optimized for Railway Hobby plan (~40MB heap limit)
 const MEMORY_CHECK_INTERVAL_MS = 60 * 1000; // Check every 60 seconds (reduced frequency)
 const HEAP_WARNING_THRESHOLD = 88; // Warn at 88% (was 75% - too noisy with limited heap)
@@ -89,12 +107,16 @@ class MemoryManagerService {
     const stats = this.getMemoryStats();
     const now = Date.now();
 
+    // Always record heap usage for Prometheus
+    getMetricsService()?.recordHeapUsage(stats.heapUsagePercent);
+
     if (stats.heapUsagePercent >= HEAP_EMERGENCY_THRESHOLD) {
       // Emergency: try everything
       logger.error('MEMORY EMERGENCY: Heap usage critical', {
         ...stats,
         threshold: HEAP_EMERGENCY_THRESHOLD,
       });
+      getMetricsService()?.recordMemoryPressureEvent('emergency');
 
       await this.runCleanupCallbacks();
       this.forceGarbageCollection();
@@ -109,6 +131,7 @@ class MemoryManagerService {
         ...stats,
         threshold: HEAP_CRITICAL_THRESHOLD,
       });
+      getMetricsService()?.recordMemoryPressureEvent('critical');
 
       await this.runCleanupCallbacks();
       this.forceGarbageCollection();
@@ -120,6 +143,7 @@ class MemoryManagerService {
           ...stats,
           threshold: HEAP_WARNING_THRESHOLD,
         });
+        getMetricsService()?.recordMemoryPressureEvent('warning');
         this.lastWarningTime = now;
       }
     }
@@ -147,11 +171,16 @@ class MemoryManagerService {
       global.gc();
       const after = this.getMemoryStats();
 
+      const freedMB = Math.round((before.heapUsedMB - after.heapUsedMB) * 100) / 100;
+      const freedBytes = Math.max(0, Math.round((before.heapUsedMB - after.heapUsedMB) * 1024 * 1024));
+
       logger.info('Forced garbage collection', {
         heapBefore: before.heapUsedMB,
         heapAfter: after.heapUsedMB,
-        freedMB: Math.round((before.heapUsedMB - after.heapUsedMB) * 100) / 100,
+        freedMB,
       });
+
+      getMetricsService()?.recordGcRun(freedBytes);
     } else {
       logger.debug('Garbage collection not available (run with --expose-gc to enable)');
     }

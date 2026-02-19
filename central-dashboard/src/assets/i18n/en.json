@@ -48,7 +48,8 @@
     "generating": "Generating...",
     "downloadPdf": "Download PDF",
     "deployToPi": "Deploy to Pi",
-    "editPriority": "Edit priority"
+    "editPriority": "Edit priority",
+    "saving": "Saving..."
   },
   "auth": {
     "login": "Login",
@@ -245,7 +246,31 @@
     "engagement": "Engagement",
     "exportReport": "Export report",
     "uncategorized": "Uncategorized",
-    "downloadPdf": "📥 Download PDF"
+    "downloadPdf": "📥 Download PDF",
+    "tractionTitle": "Traction & Growth",
+    "tractionMetrics": "Traction metrics",
+    "viewDetails": "View details",
+    "deployedBoxes": "Deployed boxes",
+    "totalPlays": "Total plays",
+    "screenTime": "Screen time",
+    "sponsorImpressions": "Sponsor impressions",
+    "activeAdvertisers": "Active advertisers",
+    "retention": "Retention",
+    "fleetGrowth": "Fleet growth",
+    "monthlyEngagement": "Monthly engagement",
+    "subscriptions": "Subscriptions",
+    "advertisersImpressions": "Advertisers & Impressions",
+    "deployments": "Deployments",
+    "reliability": "Reliability",
+    "productVelocity": "Product velocity",
+    "retentionByCohort": "Retention by cohort",
+    "sportDistribution": "Sport distribution",
+    "contentMix": "Content mix",
+    "executiveSummary": "Executive summary",
+    "tabFleet": "Fleet",
+    "tabTraction": "Traction",
+    "tabComparison": "Comparison",
+    "tabRealtime": "Realtime"
   },
   "language": {
     "select": "Language",
@@ -349,6 +374,17 @@
     "deselect": "Deselect",
     "confirmDeletion": "Confirm deletion"
   },
+  "remotePin": {
+    "title": "Cloud Remote PIN",
+    "description": "Protect cloud remote access with a 4-6 digit PIN code. Users will need to enter this PIN on their first connection.",
+    "pinActive": "PIN active",
+    "pinInactive": "Open access (no PIN)",
+    "clearPin": "Remove PIN",
+    "clearingPin": "Removing...",
+    "newPinLabel": "New PIN (4-6 digits)",
+    "setPin": "Set PIN",
+    "settingPin": "Setting..."
+  },
   "debug": {
     "playing": "Playing...",
     "play": "▶ Play",
@@ -398,6 +434,46 @@
     "refresh": "Refresh",
     "notAvailable": "N/A",
     "notLoaded": "Not loaded",
-    "wifiOfflineWarning": "The box must be connected to retrieve WiFi client status."
+    "wifiOfflineWarning": "The box must be connected to retrieve WiFi client status.",
+    "wifiConfig": "WiFi Client Configuration",
+    "scanNetworks": "Scan Networks",
+    "scanningWifi": "Scanning...",
+    "networksFound": "network(s) found",
+    "currentNetwork": "Connected",
+    "connectTo": "Connect to",
+    "wifiPassword": "WiFi Password",
+    "wifiPasswordPlaceholder": "Password (8-63 characters)",
+    "connectWifi": "Connect",
+    "connectingWifi": "Connecting..."
+  },
+  "siteSettings": {
+    "saveBranding": "Save branding"
+  },
+  "siteSponsors": {
+    "statusActive": "Active",
+    "statusPaused": "Paused",
+    "statusExpired": "Expired"
+  },
+  "profiles": {
+    "title": "Config Profiles",
+    "create": "New Profile",
+    "createTitle": "Create Profile",
+    "editTitle": "Edit Profile",
+    "syncAll": "Sync All to Pi",
+    "syncing": "Syncing...",
+    "empty": "No profiles configured.",
+    "default": "Default",
+    "multiConfigActive": "profiles — multi-config active",
+    "nameLabel": "Internal name",
+    "displayNameLabel": "Display name",
+    "cityLabel": "City",
+    "sportLabel": "Sport",
+    "sortOrderLabel": "Sort order",
+    "isDefault": "Default profile",
+    "configSource": "Configuration source",
+    "configFromCurrent": "Import from current site config",
+    "configFromProfile": "Copy from another profile",
+    "configEmpty": "Start with empty config",
+    "selectProfile": "Select a profile to copy..."
   }
 }

@@ -1,10 +1,12 @@
 # Tracking des Impressions Annonceurs - Guide d'Implémentation
 
-**Date**: 28 Décembre 2025 (Mise à jour: 29 Décembre 2025)
-**Version**: 1.2
+**Date**: 28 Décembre 2025 (Mise à jour: 17 Février 2026)
+**Version**: 1.4
 **Conformité**: BP §13 - Analytics Annonceurs (95%)
 
 > **Note terminologique** : Depuis le 2025-12-29, la terminologie "Sponsor" a été remplacée par "Advertiser" (Annonceur). Ce document conserve certaines références à "sponsor" pour la rétrocompatibilité du code legacy. Voir [Migration Sponsor → Advertiser](../changelog/2025-12-29_sponsor-to-advertiser-migration.md).
+
+> **Modèle unifié site_sponsors (P0-P5)** : Depuis février 2026, les impressions dans `advertiser_impressions` portent également un `site_sponsor_id` optionnel. Ce champ permet l'attribution des impressions aux sponsors locaux des clubs (modèle `site_sponsors`). Voir [ADR-SITE-SPONSORS-ANALYTICS.md](ADR-SITE-SPONSORS-ANALYTICS.md) pour le modèle complet.
 
 ---
 
@@ -113,7 +115,7 @@ Ce document décrit le système complet de tracking des impressions annonceurs d
 
 #### `sponsor-analytics.service.ts`
 
-**Localisation**: `raspberry/frontend/app/services/sponsor-analytics.service.ts`
+**Localisation**: `raspberry/src/app/services/sponsor-analytics.service.ts`
 
 **Responsabilités**:
 
@@ -159,7 +161,7 @@ SYNC_AGENT_URL = environment.socketUrl + '/api/sync/sponsor-impressions';
 
 #### `tv.component.ts` (Modifié)
 
-**Localisation**: `raspberry/frontend/app/components/tv/tv.component.ts`
+**Localisation**: `raspberry/src/app/components/tv/tv.component.ts`
 
 **Intégration**:
 
@@ -813,6 +815,50 @@ curl -X POST https://central.neopro.com/api/analytics/impressions \
 
 ## 📝 Changelog
 
+### Version 1.4.0 - 18 Février 2026
+
+**Attribution sponsor complète : `site_sponsor_id` + fallback `video_filename`** :
+
+- ✅ Loop manager (dashboard) utilise `site_sponsor_id` au lieu de `sponsor_id` — alignement avec le type `LoopVideo` côté Pi
+- ✅ Pi tracking fallback : `video.site_sponsor_id || video.sponsor_id` — rétrocompatibilité configs existantes
+- ✅ `recordImpressions()` (central) : résolution en cascade `site_sponsor_id` → `video_id` → `video_filename` avec métriques par méthode
+- ✅ Nouvelle méthode `syncSponsorVideoAssociations()` dans le déploiement — extrait les couples sponsor-vidéo du config JSON et upsert dans `site_sponsor_videos`
+- ✅ `handleSponsorIdsResolved()` met à jour `timeCategories[].loopVideos[]` en plus de `sponsors[]`
+- ✅ `mergeSiteSponsors()` propage le champ `source` ('neopro'/'local')
+- ✅ Pi admin protège les sponsors dashboard (lecture seule + `LockedError`)
+
+**Résolution sponsor lors de l'enregistrement d'une impression** :
+
+```
+Impression reçue par le central
+  ↓
+site_sponsor_id fourni et UUID valide ?
+  → OUI : utiliser directement (méthode 'site_sponsor_id')
+  → NON : résoudre via video_id
+      ↓
+  video_id → JOIN site_sponsor_videos → site_sponsors.id
+    → TROUVÉ : utiliser (méthode 'video_id')
+    → NON TROUVÉ : fallback par video_filename
+        ↓
+    video_filename → JOIN site_sponsor_videos (par filename) → site_sponsors.id
+      → TROUVÉ : utiliser (méthode 'filename')
+      → NON TROUVÉ : impression sans attribution sponsor (méthode 'unresolved')
+```
+
+**Monitoring** : métriques `neopro_impression_resolution_total{method}` et `neopro_sponsor_resolution_failures_total{operation}`
+
+### Version 1.3.0 - 16 Février 2026
+
+**Corrections recording state : auto-stop neutral + auto-start vidéos manuelles + retour neutral** :
+
+- ✅ Auto-stop immédiat du recording au retour en phase `neutral` (boucle par défaut) — remplace l'ancien comportement avec timer 15+3 min en neutral
+- ✅ Auto-start temporaire du recording pour les vidéos manuelles lancées depuis la télécommande en `neutral` (recording OFF)
+- ✅ Le recording s'arrête automatiquement à la fin de la vidéo manuelle si c'est lui qui l'a démarré
+- ✅ Le recording override manuel n'est pas affecté par l'auto-stop neutral
+- ✅ Si le recording était déjà ON (phase active), le lancement manuel ne le coupe pas à la fin
+- ✅ Retour automatique en boucle par défaut (neutral) quand le timer d'inactivité expire (15+3 min) — la Remote souscrit à `inactivityExpired$` et appelle `switchPhase('neutral')`
+- ✅ Tests mis à jour : 31 recording-state + 38 analytics = 69 tests passants
+
 ### Version 1.2.0 - 9 Février 2026
 
 **Contrôle d'enregistrement analytics (RecordingStateService)** :
@@ -822,10 +868,12 @@ curl -X POST https://central.neopro.com/api/analytics/impressions \
 - ✅ Guards dans `AnalyticsService.trackVideoStart/End()` : idem
 - ✅ Au boot : OFF (aucune donnée enregistrée)
 - ✅ Auto-ON quand la Remote change de phase (neutral → before/during/after)
-- ✅ Auto-OFF quand retour en neutral + timeout 15 min
-- ✅ Override manuel via bouton 🔴 REC sur la télécommande
+- ✅ Timer d'inactivité universel : 15 min sans interaction dans **toutes les phases** → popup warning 3 min → auto-OFF (remplace l'ancien auto-OFF neutral-only)
+- ✅ Popup d'avertissement sur la Remote avec décompte visuel et boutons Continuer / Arrêter
+- ✅ Override manuel via bouton 🔴 REC sur la télécommande (pas affecté par le timer d'inactivité)
 - ✅ Contexte sponsor automatique : la Remote wire eventType, period et audienceEstimate
 - ✅ TV second écran (slaves) : analytics désactivées automatiquement
+- ✅ Interactions significatives (changement phase, score, vidéo manuelle, timer, breaking news, etc.) reset le timer d'inactivité
 
 ### Version 1.1.0 - 28 Décembre 2025
 
@@ -868,7 +916,7 @@ curl -X POST https://central.neopro.com/api/analytics/impressions \
 ---
 
 **Auteur** : Claude Code + Équipe NEOPRO
-**Version** : 1.1.0
+**Version** : 1.3.0
 **Conformité** : 95% BP §13
-**Dernière mise à jour** : 28 Décembre 2025
+**Dernière mise à jour** : 16 Février 2026
 **Prochaine révision** : Tests terrain avec données réelles

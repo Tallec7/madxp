@@ -1,5 +1,8 @@
 # Neopro - Système de télévision interactive pour clubs sportifs
 
+[![CI](https://github.com/kalonpartners/neopro/actions/workflows/ci.yml/badge.svg)](https://github.com/kalonpartners/neopro/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/kalonpartners/neopro/graph/badge.svg)](https://codecov.io/gh/kalonpartners/neopro)
+
 Plateforme complète de gestion et de diffusion de contenu vidéo pour clubs sportifs, basée sur Raspberry Pi synchronisés avec un serveur central cloud.
 
 ## Table des matières
@@ -173,7 +176,7 @@ neopro/
 │       ├── assets/i18n/          # Traductions (EN/FR/ES)
 │       └── environments/
 │
-├── server-render/                # Serveur Socket.IO cloud
+├── raspberry/server/              # Serveur Socket.IO cloud
 │
 ├── e2e/                          # Tests E2E (Playwright)
 ├── docker/                       # Config monitoring (Prometheus/Grafana)
@@ -194,7 +197,7 @@ neopro/
 | Frontend Dashboard | Angular 20.3, Chart.js 4.5, Leaflet, ngx-translate (EN/FR/ES) |
 | Backend API        | Node.js 20+, Express 4.18, TypeScript 5.9 strict              |
 | Base de données    | PostgreSQL 15 (Supabase) - Pool: 5 connexions                 |
-| Stockage vidéos    | FTP (Hostinger) + Supabase Storage (fallback)                 |
+| Stockage vidéos    | FTP Hostinger (unifié via `storage.service.ts`)               |
 | WebSocket          | Socket.IO 4.8                                                 |
 | Cache              | Redis (Upstash) - optionnel, pour scaling horizontal          |
 | Auth               | JWT HttpOnly cookie + Bearer token + MFA (TOTP)               |
@@ -268,10 +271,25 @@ cd raspberry/admin && node admin-server-demo.js
 **Option 3 : Docker Compose (stack complète)**
 
 ```bash
-docker-compose up -d
+docker compose --profile full up -d    # Stack complète (DB + Redis + API + monitoring)
 ```
 
-Services : PostgreSQL (5432), Redis (6379), API (3001), Prometheus (9090), Grafana (3000)
+**Option 4 : Monitoring seul (sans builder l'API)**
+
+```bash
+docker compose up prometheus alertmanager grafana   # Scrape local (port 3001) + alerting Slack
+```
+
+Ouvrir Grafana : `http://localhost:3000` (admin/admin) — sélectionner l'environnement dans le dropdown.
+
+Dashboards provisionnés automatiquement :
+
+- **NeoPro Overview** : HTTP rate, latence, WebSocket, déploiements, CPU/RAM, event loop lag
+- **NeoPro Services** : DB, auth, commandes Pi, alertes réseau Pi, stabilité réseau, heartbeats, déconnexions socket (par raison et type de client)
+
+**Alerting** : 14 Prometheus alert rules (server down, zero heartbeats, pool saturation, error rate...) → Alertmanager → Slack. Voir `docker/prometheus/rules.yml`. Pour la prod, les rules Grafana Cloud sont dans `docker/grafana/provisioning/alerting/neopro-alerts-cloud.yml`.
+
+Services : PostgreSQL (5432), Redis (6379), API (3001), Prometheus (9090), Alertmanager (9093), Grafana (3000)
 
 ### Commandes npm
 
@@ -526,17 +544,18 @@ Le guardian surveille le sync-agent et le restaure automatiquement en cas de cra
 
 ## Documentation complète
 
-| Document                                                       | Description                      |
-| -------------------------------------------------------------- | -------------------------------- |
-| [docs/INDEX.md](docs/INDEX.md)                                 | Index de toute la documentation  |
-| [docs/REFERENCE.md](docs/REFERENCE.md)                         | Documentation technique complète |
-| [docs/INSTALLATION_COMPLETE.md](docs/INSTALLATION_COMPLETE.md) | Installation Raspberry Pi        |
-| [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)             | Dépannage approfondi             |
-| [docs/GOLDEN_IMAGE.md](docs/GOLDEN_IMAGE.md)                   | Création d'image golden          |
-| [docs/CONFIGURATION.md](docs/CONFIGURATION.md)                 | Guide de configuration           |
-| [docs/SYNC_ARCHITECTURE.md](docs/SYNC_ARCHITECTURE.md)         | Architecture de synchronisation  |
-| [docs/TESTING_GUIDE.md](docs/TESTING_GUIDE.md)                 | Guide des tests                  |
-| [GUIDE_MISE_EN_PRODUCTION.md](GUIDE_MISE_EN_PRODUCTION.md)     | Mise en production cloud         |
+| Document                                                       | Description                       |
+| -------------------------------------------------------------- | --------------------------------- |
+| [docs/INDEX.md](docs/INDEX.md)                                 | Index de toute la documentation   |
+| [docs/CARTOGRAPHIE_OUTILS.md](docs/CARTOGRAPHIE_OUTILS.md)     | Cartographie des 12 outils Neopro |
+| [docs/REFERENCE.md](docs/REFERENCE.md)                         | Documentation technique complète  |
+| [docs/INSTALLATION_COMPLETE.md](docs/INSTALLATION_COMPLETE.md) | Installation Raspberry Pi         |
+| [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)             | Dépannage approfondi              |
+| [docs/GOLDEN_IMAGE.md](docs/GOLDEN_IMAGE.md)                   | Création d'image golden           |
+| [docs/CONFIGURATION.md](docs/CONFIGURATION.md)                 | Guide de configuration            |
+| [docs/SYNC_ARCHITECTURE.md](docs/SYNC_ARCHITECTURE.md)         | Architecture de synchronisation   |
+| [docs/TESTING_GUIDE.md](docs/TESTING_GUIDE.md)                 | Guide des tests                   |
+| [GUIDE_MISE_EN_PRODUCTION.md](GUIDE_MISE_EN_PRODUCTION.md)     | Mise en production cloud          |
 
 ---
 

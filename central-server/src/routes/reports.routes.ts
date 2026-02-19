@@ -9,6 +9,7 @@ import { authenticate, requireRole } from '../middleware/auth';
 import {
   listClubReports,
   listAdvertiserReports,
+  listSiteSponsorReports,
   getReport,
   generateReport,
   listAllReports,
@@ -25,6 +26,9 @@ router.get('/clubs/:siteId', listClubReports);
 
 // Routes annonceur (accessibles aux advertisers, agencies et admins)
 router.get('/advertisers/:advertiserId', listAdvertiserReports);
+
+// Routes sponsor local (accessibles aux operators et admins)
+router.get('/site-sponsors/:siteSponsorId', listSiteSponsorReports);
 
 // Récupérer un rapport spécifique
 router.get('/:reportId', getReport);

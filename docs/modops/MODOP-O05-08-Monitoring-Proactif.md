@@ -31,28 +31,44 @@ Vérifier chaque jour (matin) que tous les systèmes fonctionnent normalement et
 
 ### 3.2 Accès Grafana
 
-**URL** : `http://localhost:3000` (si Docker local) ou URL Grafana Cloud
+**URL** : `http://localhost:3000` — sélectionner `neopro-production` dans le dropdown "Environment"
+
+**Démarrage** : `docker compose up prometheus alertmanager grafana` (scrape local + prod Railway + alerting Slack)
 
 **Login** :
 
 - Username : admin
-- Password : [voir documentation interne]
+- Password : admin (par défaut, à changer en production)
+
+> 📖 **Guide complet de lecture Grafana** : Un guide détaillé avec seuils vert/jaune/rouge, arbres de diagnostic et matrice d'escalade est disponible sur Notion :
+> [📊 Guide Grafana — Lecture & Diagnostic](https://www.notion.so/305c27de363881d1a95cc4891d6cd823)
 
 ### 3.3 Dashboards à consulter (15 min)
 
-#### Dashboard 1 : Vue d'ensemble (5 min)
+#### Dashboard 1 : NeoPro Overview (5 min)
 
-**URL** : Grafana → Dashboards → Neopro Overview
+**URL** : Grafana → Dashboards → NeoPro → NeoPro Overview
 
-**Métriques clés à vérifier :**
+**9 indicateurs (2 rows) :**
 
-| Métrique                  | Valeur normale      | Action si anormale                             |
-| ------------------------- | ------------------- | ---------------------------------------------- |
-| **Sites connectés**       | Stable (±5% vs J-1) | Si chute > 10% → Vérifier logs serveur central |
-| **Requêtes HTTP/s**       | 50-200 req/s        | Si pic anormal → Vérifier logs nginx           |
-| **Temps de réponse API**  | < 200ms (p95)       | Si > 500ms → Vérifier PostgreSQL               |
-| **Déploiements en cours** | 0-5                 | Si > 10 → Vérifier la queue                    |
-| **Alertes actives**       | 0-2                 | Si > 5 → Consulter MODOP-S11-15                |
+**Row 1 — Santé système (6 stats) :**
+
+| Métrique            | ✅ Vert                | ⚠️ Attention | 🔴 Problème             | Où investiguer                    |
+| ------------------- | ---------------------- | ------------ | ----------------------- | --------------------------------- |
+| **API Health**      | UP                     | —            | DOWN                    | Railway logs                      |
+| **Sites connectés** | Proche du total actifs | Écart 1-3    | Écart > 50% ou 0        | Fleet (Dashboard 3)               |
+| **Alertes actives** | 0                      | 1-4          | 5+                      | Alerts by Severity (Dashboard 3)  |
+| **Taux erreur 5xx** | 0%                     | 1-5%         | > 5%                    | HTTP Status Codes (Dashboard 2)   |
+| **Latence API p95** | < 200ms                | 200-500ms    | > 500ms                 | Event Loop + DB Latency (Dash. 2) |
+| **Mémoire RSS**     | < 256 MB               | 256-512 MB   | > 512 MB (OOM imminent) | Heap + Memory Pressure (Dash. 2)  |
+
+**Row 2 — Déploiements OTA (3 panels) :**
+
+| Métrique                       | ✅ Vert   | ⚠️ Attention | 🔴 Problème    | Où investiguer                                |
+| ------------------------------ | --------- | ------------ | -------------- | --------------------------------------------- |
+| **Déploiements échoués (24h)** | 0         | 1-2          | 3+             | Dashboard → Mises à jour → Historique         |
+| **Déploiements par statut**    | Flux vert | failed rouge | Pics rouges    | Logs Railway, vérifier connectivité Pi        |
+| **Durée déploiement p95**      | < 120s    | 120-300s     | > 300s (5 min) | Bande passante FTP, taille package, Pi saturé |
 
 **Exemple de vue :**
 
@@ -83,9 +99,33 @@ Vérifier chaque jour (matin) que tous les systèmes fonctionnent normalement et
 - ⚠️ Anomalie mineure → Créer une note pour investigation
 - 🚨 Anomalie critique → Intervention immédiate + escalade
 
-#### Dashboard 2 : Santé des sites (5 min)
+#### Dashboard 2 : Infrastructure (5 min)
 
-**URL** : Grafana → Dashboards → Sites Health
+**URL** : Grafana → Dashboards → NeoPro → NeoPro Infrastructure
+
+**Rows à vérifier (uniquement si Overview montre un problème) :**
+
+| Row                   | Métriques clés                                      | Seuils critiques                                                                                                                                                                                          |
+| --------------------- | --------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **API Performance**   | Request Rate, Duration p50/p95/p99, Status Codes    | p99 > 1s, 5xx visibles, Requests In Progress > 15                                                                                                                                                         |
+| **Node.js Runtime**   | Heap Usage %, Event Loop Lag, Memory Pressure       | Heap > 88% warning, > 93% critical, Event Loop > 100ms, emergency events. Les Maps in-memory du alerting service sont bornées (v3.37.2) mais un heap > 88% persistant indique une fuite mémoire ailleurs. |
+| **Auth & Rate Limit** | Auth Attempts (success/fail), Rate Limit Violations | Pic massif de failures = bruteforce                                                                                                                                                                       |
+| **Database**          | Query Latency p95, Connection Pool active/idle      | p95 > 200ms, Pool 5/5 permanent                                                                                                                                                                           |
+| **FTP / Storage**     | FTP Operations success/failed, Duration, Throughput | Failed > 0, p95 > 60s                                                                                                                                                                                     |
+
+#### Dashboard 3 : Business & Fleet (5 min)
+
+**URL** : Grafana → Dashboards → NeoPro → NeoPro Business & Fleet
+
+**Vérifier :**
+
+- **Sites connectés** : Cohérent avec le nombre de clubs actifs (Subscription Status)
+- **WebSocket Connections par type** : Si Pi = 0 mais Dashboard OK → problème côté Pi
+- **Config Sync Pending** : Reste élevé > 30 min → Pi ne se synchronisent pas
+- **Config Drift** : Persiste > 30 min → problème
+- **Predictive Alerts** : "alerts generated" en hausse → intervention préventive
+
+#### Ancienne vue : Santé des sites (Pi)
 
 **Vérifier :**
 
@@ -117,10 +157,37 @@ Vérifier chaque jour (matin) que tous les systèmes fonctionnent normalement et
 | **Redis**           | Mémoire utilisée   | < 500MB  | 500-800MB      | > 800MB        |
 | **Redis**           | Hit rate           | > 90%    | 80-90%         | < 80%          |
 | **WebSocket**       | Connexions actives | 40-50    | 30-40 ou 50-60 | < 30 ou > 60   |
+| **WebSocket**       | Déconnexions/5min  | < 5      | 5-15           | > 15           |
 | **CPU serveur**     | Utilisation        | < 60%    | 60-80%         | > 80%          |
 | **Mémoire serveur** | Utilisation        | < 70%    | 70-85%         | > 85%          |
 
-### 3.4 Rapport quotidien (template)
+### 3.4 Vérifier les alertes Prometheus / Grafana Cloud
+
+**En local** : Ouvrir `http://localhost:9093` (Alertmanager UI) — vérifier qu'aucune alerte n'est en `firing`.
+
+**En prod (Grafana Cloud)** : Alerting → Alert rules → Folder "NeoPro Alerts" — vérifier l'état des 11 rules.
+
+**Alertes critiques (action immédiate si firing)** :
+
+| Alerte               | Signification                       | Action                                            |
+| -------------------- | ----------------------------------- | ------------------------------------------------- |
+| `CentralServerDown`  | Serveur inaccessible depuis 2+ min  | Vérifier Railway (crash, redéploiement)           |
+| `ZeroHeartbeats`     | Aucun Pi ne communique depuis 5 min | Vérifier WebSocket, restart serveur si nécessaire |
+| `NoAgentConnections` | 0 agent WS connecté depuis 5 min    | Même diagnostic que ZeroHeartbeats                |
+
+**Alertes warning (surveillance)** :
+
+| Alerte                | Signification        | Action                                        |
+| --------------------- | -------------------- | --------------------------------------------- |
+| `HighErrorRate`       | > 5% de 5xx          | Vérifier logs Railway, DB latence             |
+| `DbPoolSaturation`    | Pool PG > 80%        | Vérifier requêtes longues, connexions leakées |
+| `HighMemoryUsage`     | RSS > 88% de 256MB   | Risk OOM, vérifier heap, restart préventif    |
+| `HighDisconnectRate`  | > 0.5 déconnexions/s | Instabilité réseau fleet-wide                 |
+| `TooManyActiveAlerts` | > 10 alertes actives | Incident fleet-wide probable                  |
+
+> **Config** : Rules Prometheus dans `docker/prometheus/rules.yml`, rules Grafana Cloud dans `docker/grafana/provisioning/alerting/neopro-alerts-cloud.yml`
+
+### 3.5 Rapport quotidien (template)
 
 ```markdown
 # Rapport Monitoring Quotidien - [Date]
@@ -223,7 +290,42 @@ sum by (status) (
 - Ajouter validation fichier avant déploiement
 - Alerter proactivement sur disque < 15%
 
-#### C. Métriques d'alertes
+#### C. Métriques WebSocket (connexions et déconnexions)
+
+**Connexions WebSocket par type (agent Pi vs dashboard) :**
+
+```promql
+neopro_websocket_connections
+```
+
+> **Note (v3.37.2)** : Cette gauge est maintenant alimentée à chaque scrape `/metrics` avec les labels `type="agent"` (Pi connectés) et `type="dashboard"` (utilisateurs dashboard). Si `agent=0` mais `dashboard>0` → problème côté Pi, pas côté serveur.
+
+**Déconnexions par raison (7 jours) :**
+
+```promql
+sum by (reason) (
+  increase(neopro_websocket_disconnects_total[7d])
+)
+```
+
+**Raisons Socket.IO possibles :**
+
+| Raison                 | Signification                        |
+| ---------------------- | ------------------------------------ |
+| `transport close`      | Perte réseau (WiFi, Ethernet, proxy) |
+| `ping timeout`         | Timeout ping/pong Socket.IO          |
+| `io server disconnect` | Déconnexion forcée côté serveur      |
+| `io client disconnect` | Déconnexion volontaire côté client   |
+| `zombie_timeout`       | Health monitor (60s sans pong)       |
+| `zombie_cleanup`       | Nettoyage manuel de connexion zombie |
+
+**Actions :**
+
+- Si `transport close` > 50% → Problème réseau systémique, vérifier connectivité Pi
+- Si `zombie_timeout` > 20% → Instabilité serveur ou réseau, investiguer
+- Si déconnexions agent > 15/5min → Alerte, investiguer immédiatement
+
+#### D. Métriques d'alertes
 
 **Alertes générées par type (7 jours) :**
 
@@ -567,6 +669,7 @@ curl https://neopro-central-production.up.railway.app/health
 - [ ] PostgreSQL : taille DB < 10GB
 - [ ] Redis : mémoire < 1GB, hit rate > 90%
 - [ ] WebSocket : connexions = nombre de sites en ligne
+- [ ] WebSocket : déconnexions < 5/5min (panneau "Socket Disconnects by Reason")
 - [ ] Dashboard Grafana : toutes les métriques en vert
 
 **Temps total : 10-15 minutes**
@@ -577,15 +680,17 @@ curl https://neopro-central-production.up.railway.app/health
 
 ### Matrice de décision
 
-| Anomalie                  | Sévérité    | Action                   | Délai    |
-| ------------------------- | ----------- | ------------------------ | -------- |
-| Site hors ligne > 24h     | 🟡 Minor    | Email client             | 48h      |
-| CPU > 80%                 | 🟡 Minor    | Surveillance             | 24h      |
-| Disque > 90%              | 🟠 Major    | Nettoyage immédiat       | 4h       |
-| Serveur central CPU > 80% | 🔴 Critical | Investigation + escalade | 1h       |
-| PostgreSQL down           | 🔴 Critical | Intervention immédiate   | Immédiat |
-| Redis down                | 🔴 Critical | Intervention immédiate   | Immédiat |
-| > 10 sites hors ligne     | 🔴 Critical | Vérifier serveur central | Immédiat |
+| Anomalie                  | Sévérité    | Action                                                                                                                        | Délai    |
+| ------------------------- | ----------- | ----------------------------------------------------------------------------------------------------------------------------- | -------- |
+| Site hors ligne > 24h     | 🟡 Minor    | Email client                                                                                                                  | 48h      |
+| CPU > 80%                 | 🟡 Minor    | Surveillance                                                                                                                  | 24h      |
+| Heap Usage > 88%          | 🟡 Minor    | Vérifier Memory Pressure events, les Maps du alerting service se purgent auto (v3.37.2)                                       | 24h      |
+| Heap Usage > 93%          | 🟠 Major    | Le memory manager lance le cleanup auto. Si le heap reste > 93% après cleanup → fuite mémoire, investiguer avec heap snapshot | 4h       |
+| Disque > 90%              | 🟠 Major    | Nettoyage immédiat                                                                                                            | 4h       |
+| Serveur central CPU > 80% | 🔴 Critical | Investigation + escalade                                                                                                      | 1h       |
+| PostgreSQL down           | 🔴 Critical | Intervention immédiate                                                                                                        | Immédiat |
+| Redis down                | 🔴 Critical | Intervention immédiate                                                                                                        | Immédiat |
+| > 10 sites hors ligne     | 🔴 Critical | Vérifier serveur central                                                                                                      | Immédiat |
 
 ---
 

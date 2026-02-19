@@ -30,6 +30,7 @@ interface UpdateDeployment {
   status: 'pending' | 'in_progress' | 'completed' | 'failed';
   progress: number;
   deployed_count?: number;
+  total_count?: number;
   error_message?: string | null;
   started_at?: Date;
   created_at: Date;
@@ -250,7 +251,9 @@ interface UpdateDeployment {
       <!-- History Tab -->
       <div class="tab-content" *ngIf="activeTab === 'history'">
         <div class="deployments-list" *ngIf="deployments.length > 0 else noDeployments">
-          <div class="deployment-card card" *ngFor="let deployment of deployments">
+          <div class="deployment-card card" *ngFor="let deployment of deployments"
+               [class.deployment-pending]="deployment.status === 'pending'"
+               [class.deployment-failed]="deployment.status === 'failed'">
             <div class="deployment-header">
               <div class="deployment-title">
                 <h3>Version {{ deployment.update_version || 'inconnue' }}</h3>
@@ -259,8 +262,8 @@ interface UpdateDeployment {
                 </span>
               </div>
               <div class="deployment-meta">
-                {{ deployment.target_type === 'site' ? '🖥️' : '👥' }}
-                {{ deployment.target_name }}
+                <span class="deployment-target-icon">{{ deployment.target_type === 'site' ? '🖥️' : '👥' }}</span>
+                {{ deployment.target_name || 'Cible inconnue' }}
               </div>
             </div>
 
@@ -273,7 +276,7 @@ interface UpdateDeployment {
                 ></div>
               </div>
               <div class="progress-label">
-                <span>/ sites</span>
+                <span>{{ deployment.deployed_count || 0 }} / {{ deployment.total_count || '?' }} sites</span>
                 <span>{{ deployment.progress }}%</span>
               </div>
             </div>
@@ -293,10 +296,28 @@ interface UpdateDeployment {
             </div>
 
             <div class="deployment-footer">
-              <span class="deployment-date">Démarré: {{ formatDate(deployment.created_at) }}</span>
-              <span *ngIf="deployment.completed_at" class="deployment-completed">
-                Terminé: {{ formatDate(deployment.completed_at) }}
-              </span>
+              <div class="deployment-dates">
+                <span class="deployment-date">Démarré: {{ formatDate(deployment.created_at) }}</span>
+                <span *ngIf="deployment.completed_at" class="deployment-completed">
+                  Terminé: {{ formatDate(deployment.completed_at) }}
+                </span>
+              </div>
+              <div class="deployment-actions">
+                <button
+                  *ngIf="deployment.status === 'failed'"
+                  class="btn btn-sm btn-primary"
+                  (click)="retryDeployment(deployment)"
+                >
+                  Relancer
+                </button>
+                <button
+                  *ngIf="deployment.status === 'pending' || deployment.status === 'in_progress'"
+                  class="btn btn-sm btn-danger"
+                  (click)="cancelDeployment(deployment)"
+                >
+                  Annuler
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -829,13 +850,37 @@ interface UpdateDeployment {
       color: #64748b;
     }
 
+    .deployment-card.deployment-pending {
+      border-left: 3px solid #94a3b8;
+    }
+
+    .deployment-card.deployment-failed {
+      border-left: 3px solid #ef4444;
+    }
+
+    .deployment-target-icon {
+      font-size: 1.125rem;
+    }
+
     .deployment-footer {
       display: flex;
       justify-content: space-between;
+      align-items: center;
       font-size: 0.75rem;
       color: #94a3b8;
       padding-top: 1rem;
       border-top: 1px solid #e2e8f0;
+    }
+
+    .deployment-dates {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+
+    .deployment-actions {
+      display: flex;
+      gap: 0.5rem;
     }
 
     .deployment-info {
@@ -1401,6 +1446,34 @@ export class UpdatesManagementComponent implements OnInit, OnDestroy {
       },
       error: (error) => {
         this.notificationService.error('Erreur lors du déploiement: ' + (error.error?.error || error.message));
+      }
+    });
+  }
+
+  retryDeployment(deployment: UpdateDeployment): void {
+    this.apiService.post(`/update-deployments/${deployment.id}/retry`, {}).subscribe({
+      next: () => {
+        deployment.status = 'pending';
+        deployment.progress = 0;
+        deployment.error_message = null;
+        this.notificationService.success('Déploiement relancé');
+      },
+      error: (error) => {
+        this.notificationService.error('Erreur: ' + (error.error?.error || error.message));
+      }
+    });
+  }
+
+  cancelDeployment(deployment: UpdateDeployment): void {
+    if (!confirm('Annuler ce déploiement ?')) return;
+    this.apiService.put(`/update-deployments/${deployment.id}`, { status: 'failed', error_message: 'Annulé' }).subscribe({
+      next: () => {
+        deployment.status = 'failed';
+        deployment.error_message = 'Annulé';
+        this.notificationService.success('Déploiement annulé');
+      },
+      error: (error) => {
+        this.notificationService.error('Erreur: ' + (error.error?.error || error.message));
       }
     });
   }

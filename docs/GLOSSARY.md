@@ -41,12 +41,17 @@ Signal envoyé **toutes les 30 secondes** par chaque Raspberry Pi au serveur cen
 ### Sync
 
 **Synchronisation bidirectionnelle** entre le Raspberry Pi et le cloud :
+
 - **Pi → Cloud** : Métriques, analytics, liste vidéos locales
 - **Cloud → Pi** : Configuration, commandes, vidéos
 
 ### Config Mirror (Local Config Mirror)
 
 Copie de la **configuration locale du Pi** stockée dans la base de données centrale (colonne `local_config_mirror` de la table `sites`). Permet de voir l'état réel du boîtier depuis le dashboard.
+
+### Config Profile
+
+**Profil de configuration** enregistré pour un site. Chaque profil contient une configuration complète (sponsors, catégories, vidéos). Permet d'avoir N configurations sélectionnables depuis la télécommande (ex: "Standard", "Tournoi U15", "Match Pro"). Table `config_profiles`. Sites mono-config : un seul profil "Par défaut", sélecteur masqué.
 
 ### VideoWatcher
 
@@ -84,6 +89,16 @@ Structure qui **gère plusieurs annonceurs**. Vue consolidée des statistiques d
 
 Rôle en **lecture seule** : peut voir les sites et statistiques mais ne peut rien modifier.
 
+### Site Sponsor
+
+**Sponsor local d'un club** — entité unifiée représentant un sponsor (local ou réseau NEOPRO) pour un site donné. Table `site_sponsors`. Chaque site_sponsor a un `source` (`local` ou `neopro`), des vidéos associées (`site_sponsor_videos`), et peut recevoir des impressions trackées. Permet la génération de rapports PDF par sponsor.
+
+**Voir aussi** : Advertiser, Magic Link
+
+### Magic Link
+
+**Lien d'accès token-based** permettant à un sponsor d'accéder à ses statistiques de visibilité sans compte utilisateur. Généré par l'opérateur via `POST /api/sites/:siteId/sponsors/:sponsorId/access-link`. Le token est hashé (SHA-256) et stocké dans `sponsor_access_tokens` avec une expiration de 30 jours. URL : `/sponsor-access?token=xxx`.
+
 ---
 
 ## Termes Techniques
@@ -92,12 +107,12 @@ Rôle en **lecture seule** : peut voir les sites et statistiques mais ne peut ri
 
 Moment du match qui détermine **quelle playlist de vidéos est jouée** :
 
-| Phase | ID | Icône | Description |
-|-------|----|-------|-------------|
-| Boucle par défaut | `neutral` | - | Hors match, playlist standard |
-| Avant-match | `before` | 🏁 | Accueil des spectateurs |
-| Pendant le match | `during` | ▶️ | Mi-temps, temps morts |
-| Après-match | `after` | 🏆 | Célébrations, résultats |
+| Phase             | ID        | Icône | Description                   |
+| ----------------- | --------- | ----- | ----------------------------- |
+| Boucle par défaut | `neutral` | -     | Hors match, playlist standard |
+| Avant-match       | `before`  | 🏁    | Accueil des spectateurs       |
+| Pendant le match  | `during`  | ▶️    | Mi-temps, temps morts         |
+| Après-match       | `after`   | 🏆    | Célébrations, résultats       |
 
 ### TimeCategory
 
@@ -111,12 +126,12 @@ Une **vidéo dans une boucle de phase**. Structure : `{ name, path, type }`.
 
 **Association** entre une catégorie locale du Pi et un type analytics standardisé pour le reporting.
 
-| Type Analytics | Couleur | Exemples |
-|----------------|---------|----------|
-| `sponsor` | Bleu | SPONSORS, PUBS, PARTENAIRES |
-| `jingle` | Vert | JINGLES, BUTS, ANIMATIONS |
-| `ambiance` | Violet | AMBIANCE, MUSIQUE |
-| `other` | Gris | Tout le reste |
+| Type Analytics | Couleur | Exemples                    |
+| -------------- | ------- | --------------------------- |
+| `sponsor`      | Bleu    | SPONSORS, PUBS, PARTENAIRES |
+| `jingle`       | Vert    | JINGLES, BUTS, ANIMATIONS   |
+| `ambiance`     | Violet  | AMBIANCE, MUSIQUE           |
+| `other`        | Gris    | Tout le reste               |
 
 ### RemotePreview
 
@@ -190,6 +205,14 @@ Commande du cloud vers le Pi pour **télécharger et installer une nouvelle vid�
 
 Commande du cloud vers le Pi pour **mettre à jour la configuration** (sponsors, catégories, paramètres).
 
+### Sync Profiles
+
+Commande du cloud vers le Pi pour **synchroniser tous les profils de configuration**. Écrit les profils dans `profiles/` et génère `profiles/clubs.json`.
+
+### Switch Profile
+
+Commande pour **changer le profil actif** d'un site. Peut être déclenchée depuis le dashboard (`switch_profile` via WebSocket) ou depuis la télécommande locale (`profile-switch` via Socket.IO local).
+
 ### Execute Command
 
 Commande générique pour **exécuter une action** sur le Pi (restart, diagnostic, shell command).
@@ -200,37 +223,55 @@ Commande générique pour **exécuter une action** sur le Pi (restart, diagnosti
 
 ### FTP Storage
 
-Backend de stockage **principal** sur Hostinger. Les vidéos sont accessibles via URL publique `https://cdn.neopro.tv/`.
+Backend de stockage **unique** sur Hostinger, unifié via `storage.service.ts`. Upload en streaming depuis le disque (zéro buffer mémoire). Les vidéos sont accessibles via URL publique `https://kalonpartners.bzh/neopro-video/`.
 
 ### Supabase Storage
 
-Backend de stockage **fallback** utilisé si FTP non configuré. Intégré à la base de données Supabase.
+_Obsolète depuis Phase 1 (février 2026)_ — Le stockage est désormais FTP uniquement. Supabase Storage n'est plus utilisé.
 
 ### Storage Path
 
-Chemin de stockage d'une vidéo. Le format indique le backend :
-- **FTP** : `filename.mp4` (sans slash)
-- **Supabase** : `uploads/filename.mp4` (avec slash)
+Chemin de stockage d'une vidéo sur FTP : `filename.mp4`
+
+---
+
+## Termes Architecture (central-server)
+
+### Repository Pattern
+
+Pattern d'accès base de données utilisé dans central-server. 22 repositories héritant de `BaseRepository<T>` encapsulent toutes les requêtes SQL. Aucun `pool.query()` direct n'est autorisé dans les controllers (ESLint enforced).
+
+### ProfileConfigService
+
+**Service Angular** sur le Raspberry Pi qui gère la sélection et le chargement des profils de configuration en mode production. Équivalent de `DemoConfigService` pour le mode multi-config. Stocke le profil sélectionné dans `localStorage` (`neopro_selected_profile`).
+
+### Socket Handler
+
+Fonction spécialisée dans `src/handlers/` qui traite un événement Socket.IO spécifique. 9 handlers extraits de `socket.service.ts` lors du refactoring Phase 7.2 (heartbeat, config-sync, deploy-progress, etc.).
+
+### BaseRepository
+
+Classe abstraite générique fournissant les opérations CRUD communes (findById, findAll, create, update, delete, exists, count). Tous les repositories du central-server en héritent.
 
 ---
 
 ## Acronymes
 
-| Acronyme | Signification |
-|----------|---------------|
-| API | Application Programming Interface |
-| CLI | Command Line Interface |
-| CORS | Cross-Origin Resource Sharing |
-| CRUD | Create, Read, Update, Delete |
-| E2E | End-to-End (tests) |
-| FTP | File Transfer Protocol |
-| JWT | JSON Web Token |
-| MFA | Multi-Factor Authentication |
-| OTA | Over-The-Air (mise à jour) |
-| PWA | Progressive Web App |
-| RLS | Row-Level Security |
-| TOTP | Time-based One-Time Password |
-| WS | WebSocket |
+| Acronyme | Signification                     |
+| -------- | --------------------------------- |
+| API      | Application Programming Interface |
+| CLI      | Command Line Interface            |
+| CORS     | Cross-Origin Resource Sharing     |
+| CRUD     | Create, Read, Update, Delete      |
+| E2E      | End-to-End (tests)                |
+| FTP      | File Transfer Protocol            |
+| JWT      | JSON Web Token                    |
+| MFA      | Multi-Factor Authentication       |
+| OTA      | Over-The-Air (mise à jour)        |
+| PWA      | Progressive Web App               |
+| RLS      | Row-Level Security                |
+| TOTP     | Time-based One-Time Password      |
+| WS       | WebSocket                         |
 
 ---
 
@@ -242,4 +283,4 @@ Chemin de stockage d'une vidéo. Le format indique le backend :
 
 ---
 
-*Dernière mise à jour : 9 janvier 2026*
+_Dernière mise à jour : 17 février 2026_

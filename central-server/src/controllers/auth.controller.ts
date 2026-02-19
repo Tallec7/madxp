@@ -1,12 +1,13 @@
 import { Request, Response, CookieOptions } from 'express';
 import bcrypt from 'bcryptjs';
-import { query } from '../config/database';
+import { userRepository } from '../repositories';
 import { generateToken } from '../middleware/auth';
 import { AuthRequest, UserRole } from '../types';
 import logger from '../config/logger';
 import { mfaService } from '../services/mfa.service';
 import { passwordResetService } from '../services/password-reset.service';
 import { emailService } from '../services/email.service';
+import metricsService from '../services/metrics.service';
 
 // Configuration des cookies sécurisés
 // Note: sameSite: 'none' est requis pour les cookies cross-origin (frontend et backend sur domaines différents)
@@ -29,63 +30,6 @@ const COOKIE_OPTIONS: CookieOptions = {
 
 export { COOKIE_NAME };
 
-type UserRow = {
-  id: string;
-  email: string;
-  password_hash: string;
-  full_name: string;
-  role: UserRole;
-  mfa_enabled: boolean;
-  advertiser_id?: string | null;
-  sponsor_id?: string | null;
-  agency_id: string | null;
-  created_at?: Date;
-  last_login_at?: Date;
-};
-
-type PasswordRow = {
-  password_hash: string;
-};
-
-const isMissingColumnError = (error: unknown, column: string): boolean => {
-  const candidate = error as { code?: string; message?: string };
-  return candidate?.code === '42703' && typeof candidate?.message === 'string' && candidate.message.includes(`"${column}"`);
-};
-
-const getUserByEmail = async (email: string) => {
-  try {
-    return await query<UserRow>(
-      'SELECT id, email, password_hash, full_name, role, mfa_enabled, advertiser_id, agency_id FROM users WHERE email = $1',
-      [email]
-    );
-  } catch (error) {
-    if (isMissingColumnError(error, 'advertiser_id')) {
-      return await query<UserRow>(
-        'SELECT id, email, password_hash, full_name, role, mfa_enabled, sponsor_id, agency_id FROM users WHERE email = $1',
-        [email]
-      );
-    }
-    throw error;
-  }
-};
-
-const getUserById = async (id: string) => {
-  try {
-    return await query<UserRow>(
-      'SELECT id, email, full_name, role, advertiser_id, agency_id, created_at, last_login_at FROM users WHERE id = $1',
-      [id]
-    );
-  } catch (error) {
-    if (isMissingColumnError(error, 'advertiser_id')) {
-      return await query<UserRow>(
-        'SELECT id, email, full_name, role, sponsor_id, agency_id, created_at, last_login_at FROM users WHERE id = $1',
-        [id]
-      );
-    }
-    throw error;
-  }
-};
-
 export const login = async (req: Request, res: Response): Promise<Response> => {
   try {
     const { email, password, mfaCode } = req.body as {
@@ -94,19 +38,20 @@ export const login = async (req: Request, res: Response): Promise<Response> => {
       mfaCode?: string;
     };
 
-    const result = await getUserByEmail(email);
+    const user = await userRepository.findByEmail(email);
 
-    if (result.rows.length === 0) {
+    if (!user) {
+      metricsService.recordAuthAttempt('failure', false);
       return res.status(401).json({ error: 'Email ou mot de passe incorrect' });
     }
 
-    const user = result.rows[0];
     const advertiserId = user.advertiser_id ?? user.sponsor_id ?? null;
     const sponsorId = user.sponsor_id ?? user.advertiser_id ?? null;
 
     const isValidPassword = await bcrypt.compare(password, user.password_hash);
 
     if (!isValidPassword) {
+      metricsService.recordAuthAttempt('failure', false);
       return res.status(401).json({ error: 'Email ou mot de passe incorrect' });
     }
 
@@ -124,17 +69,19 @@ export const login = async (req: Request, res: Response): Promise<Response> => {
       // Vérifier le code MFA
       const mfaResult = await mfaService.verifyMfaLogin(user.id, mfaCode);
       if (!mfaResult.valid) {
+        metricsService.recordAuthAttempt('failure', true);
         logger.warn('MFA verification failed during login', { email: user.email });
         return res.status(401).json({ error: 'Code MFA invalide' });
       }
     }
 
-    await query('UPDATE users SET last_login_at = NOW() WHERE id = $1', [user.id]);
+    metricsService.recordAuthAttempt('success', user.mfa_enabled);
+    await userRepository.updateLastLogin(user.id);
 
     const token = generateToken({
       id: user.id,
       email: user.email,
-      role: user.role,
+      role: user.role as UserRole,
       advertiser_id: advertiserId,
       sponsor_id: sponsorId,
       agency_id: user.agency_id,
@@ -183,13 +130,12 @@ export const me = async (req: AuthRequest, res: Response) => {
       return res.status(401).json({ error: 'Non authentifié' });
     }
 
-    const result = await getUserById(req.user.id);
+    const user = await userRepository.findForAuth(req.user.id);
 
-    if (result.rows.length === 0) {
+    if (!user) {
       return res.status(404).json({ error: 'Utilisateur non trouvé' });
     }
 
-    const user = result.rows[0];
     const advertiserId = user.advertiser_id ?? user.sponsor_id ?? null;
     const sponsorId = user.sponsor_id ?? user.advertiser_id ?? null;
 
@@ -198,7 +144,7 @@ export const me = async (req: AuthRequest, res: Response) => {
     const token = generateToken({
       id: user.id,
       email: user.email,
-      role: user.role,
+      role: user.role as UserRole,
       advertiser_id: advertiserId,
       sponsor_id: sponsorId,
       agency_id: user.agency_id,
@@ -224,17 +170,13 @@ export const changePassword = async (req: AuthRequest, res: Response) => {
 
     const { current_password, new_password } = req.body as { current_password: string; new_password: string };
 
-    const result = await query<PasswordRow>(
-      'SELECT password_hash FROM users WHERE id = $1',
-      [req.user.id]
-    );
+    const passwordHash = await userRepository.getPasswordHash(req.user.id);
 
-    if (result.rows.length === 0) {
+    if (!passwordHash) {
       return res.status(404).json({ error: 'Utilisateur non trouvé' });
     }
 
-    const user = result.rows[0];
-    const isValidPassword = await bcrypt.compare(current_password, user.password_hash);
+    const isValidPassword = await bcrypt.compare(current_password, passwordHash);
 
     if (!isValidPassword) {
       return res.status(401).json({ error: 'Mot de passe actuel incorrect' });
@@ -242,10 +184,7 @@ export const changePassword = async (req: AuthRequest, res: Response) => {
 
     const hashedPassword = await bcrypt.hash(new_password, 10);
 
-    await query(
-      'UPDATE users SET password_hash = $1, updated_at = NOW() WHERE id = $2',
-      [hashedPassword, req.user.id]
-    );
+    await userRepository.updatePassword(req.user.id, hashedPassword);
 
     logger.info('Password changed', { userId: req.user.id });
 

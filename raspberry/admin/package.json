@@ -1,11 +1,13 @@
 {
   "name": "neopro-admin",
-  "version": "v3.5.5",
+  "version": "v3.61.0",
   "description": "Web Admin Panel for Neopro Raspberry Pi",
   "main": "admin-server.js",
   "scripts": {
     "start": "node admin-server.js",
-    "dev": "nodemon admin-server.js"
+    "dev": "nodemon admin-server.js",
+    "test": "jest --verbose",
+    "test:coverage": "jest --coverage"
   },
   "keywords": [
     "neopro",
@@ -21,6 +23,7 @@
     "nodemailer": "^6.9.7"
   },
   "devDependencies": {
+    "jest": "^30.2.0",
     "nodemon": "^3.0.2"
   }
 }

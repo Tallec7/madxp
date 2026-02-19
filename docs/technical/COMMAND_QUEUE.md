@@ -112,13 +112,15 @@ Ces commandes ont du sens même si le site est offline car elles seront appliqu�
 
 ### Commandes "temps réel uniquement" (non queueables)
 
-| Commande              | Description                  | Raison              |
-| --------------------- | ---------------------------- | ------------------- |
-| `get_logs`            | Récupérer les logs           | Données temps réel  |
-| `get_system_info`     | Infos système                | Données temps réel  |
-| `get_config`          | Récupérer la config actuelle | Données temps réel  |
-| `network_diagnostics` | Diagnostic réseau            | Interaction directe |
-| `get_hotspot_config`  | Config WiFi hotspot          | Données temps réel  |
+| Commande                | Description                  | Raison              |
+| ----------------------- | ---------------------------- | ------------------- |
+| `get_logs`              | Récupérer les logs           | Données temps réel  |
+| `get_system_info`       | Infos système                | Données temps réel  |
+| `get_config`            | Récupérer la config actuelle | Données temps réel  |
+| `network_diagnostics`   | Diagnostic réseau            | Interaction directe |
+| `get_hotspot_config`    | Config WiFi hotspot          | Données temps réel  |
+| `scan_wifi_networks`    | Scanner réseaux WiFi wlan1   | Données temps réel  |
+| `configure_wifi_client` | Connecter wlan1 au WiFi club | Interaction directe |
 
 Ces commandes nécessitent une réponse immédiate et n'ont pas de sens en mode différé.
 
@@ -295,26 +297,34 @@ GET /api/sites/queue/summary
 
 ### Traitement à la reconnexion
 
+`processPendingOnReconnect(siteId)` dans `socket.service.ts` orchestre 4 étapes séquentielles :
+
 ```
 1. Raspberry Pi se reconnecte (WebSocket connect)
    │
-2. socket.service.ts détecte la connexion
+2. socket.service.ts → processPendingOnReconnect(siteId)
    │
-3. Appelle commandQueueService.processPendingCommands(siteId)
+3. Étape 1 : commandQueueService.processPendingCommands(siteId)
+   │  Pour chaque commande en attente (triées par priorité) :
+   │  ├── Vérifie si le site est toujours connecté
+   │  ├── Incrémente le compteur de tentatives
+   │  ├── Crée une entrée dans remote_commands
+   │  ├── Envoie via WebSocket
+   │  │   ├── SUCCÈS → Supprime de pending_commands
+   │  │   └── ÉCHEC → Garde dans pending_commands (retry ultérieur)
+   │  └── Délai de 500ms entre chaque commande
    │
-4. Pour chaque commande en attente (triées par priorité) :
+4. Étape 2 : deploymentService.processPendingDeploymentsForSite(siteId)
    │
-   ├── Vérifie si le site est toujours connecté
-   ├── Incrémente le compteur de tentatives
-   ├── Crée une entrée dans remote_commands
-   ├── Envoie via WebSocket
-   │   │
-   │   ├── SUCCÈS → Supprime de pending_commands
-   │   │
-   │   └── ÉCHEC → Garde dans pending_commands (retry ultérieur)
+5. Étape 3 : updateDeploymentService.processPendingDeploymentsForSite(siteId)
    │
-   └── Délai de 500ms entre chaque commande
+6. Étape 4 : triggerPendingConfigSync(siteId)
+   │  Vérifie pending_config_version_id en base
+   │  Si une version est en attente ET pas de commande update_config active :
+   │  └── Envoie la config via WebSocket
 ```
+
+> Chaque étape est isolée dans un try/catch — un échec n'empêche pas les suivantes.
 
 ### Gestion des expirations
 
@@ -362,6 +372,16 @@ CREATE INDEX idx_pending_commands_expires_at ON pending_commands(expires_at);
 | 5        | Normal (défaut) | Déploiements standards   |
 | 6-9      | Basse           | Mises à jour mineures    |
 | 10       | Très basse      | Tâches de maintenance    |
+
+### Métriques de performance
+
+| Métrique                 | Valeur typique    | Description                              |
+| ------------------------ | ----------------- | ---------------------------------------- |
+| Latence traitement queue | < 2s par commande | Délai entre reconnexion et exécution     |
+| Délai inter-commandes    | 500ms             | Pause entre chaque commande séquentielle |
+| Max tentatives           | 3 (configurable)  | Nombre de retry avant abandon            |
+| Expiration par défaut    | Aucune            | Configurable via `expires_at`            |
+| Capacité queue par site  | Illimitée         | Limité uniquement par le stockage DB     |
 
 ### Vue de résumé
 
@@ -414,6 +434,8 @@ Si le site est offline :
 1. Aller dans **Sites → Queue globale**
 2. Voir tous les sites avec des commandes en attente
 3. Trier par nombre de commandes ou ancienneté
+
+> **Note** : La vue globale de la queue (`/api/sites/queue/summary`) est disponible via l'API mais n'est pas encore intégrée comme page dédiée dans le dashboard. Les commandes en attente sont visibles par site dans la page de détail du site.
 
 ---
 
@@ -523,3 +545,5 @@ psql -h $DB_HOST -U $DB_USER -d $DB_NAME -f central-server/src/scripts/migration
 ---
 
 _Document généré pour le projet NEOPRO - Confidentiel_
+
+_Dernière mise à jour : 10 février 2026_

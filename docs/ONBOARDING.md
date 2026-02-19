@@ -47,8 +47,8 @@ npm run start:central
 # Terminal 3 - API Backend (port 3001)
 cd central-server && npm run dev
 
-# Terminal 4 - Socket.IO server (port 3000) - optionnel
-cd server-render && node server.js
+# Terminal 4 - Socket.IO server local (port 3000) - optionnel
+cd raspberry/server && node server.js
 ```
 
 **Vérification** :
@@ -61,13 +61,13 @@ cd server-render && node server.js
 
 **Fichiers clés à lire** (30 min chacun) :
 
-| Fichier | Pourquoi le lire |
-|---------|------------------|
-| `central-server/src/server.ts` | Point d'entrée API, ordre des middleware |
-| `central-server/src/routes/index.ts` | Toutes les routes REST |
-| `central-server/src/services/socket.service.ts` | Protocole WebSocket Pi ↔ Cloud |
-| `central-dashboard/src/app/app.routes.ts` | Routes Angular dashboard |
-| `raspberry/sync-agent/src/agent.js` | Logique de synchronisation Pi |
+| Fichier                                         | Pourquoi le lire                         |
+| ----------------------------------------------- | ---------------------------------------- |
+| `central-server/src/server.ts`                  | Point d'entrée API, ordre des middleware |
+| `central-server/src/routes/index.ts`            | Toutes les routes REST                   |
+| `central-server/src/services/socket.service.ts` | Protocole WebSocket Pi ↔ Cloud           |
+| `central-dashboard/src/app/app.routes.ts`       | Routes Angular dashboard                 |
+| `raspberry/sync-agent/src/agent.js`             | Logique de synchronisation Pi            |
 
 ### 5. Première Contribution (1h)
 
@@ -87,12 +87,12 @@ cd server-render && node server.js
 
 ### Branches
 
-| Branche | Usage |
-|---------|-------|
-| `main` | Production (protégée, merge via PR uniquement) |
-| `feature/*` | Nouvelles fonctionnalités |
-| `fix/*` | Corrections de bugs |
-| `hotfix/*` | Corrections urgentes production |
+| Branche     | Usage                                          |
+| ----------- | ---------------------------------------------- |
+| `main`      | Production (protégée, merge via PR uniquement) |
+| `feature/*` | Nouvelles fonctionnalités                      |
+| `fix/*`     | Corrections de bugs                            |
+| `hotfix/*`  | Corrections urgentes production                |
 
 ### Commits (Conventional Commits)
 
@@ -130,30 +130,30 @@ cd e2e && npx playwright test  # E2E (avant merge sur main)
 
 ### Par Type de Fichier
 
-| Je cherche... | Emplacement |
-|---------------|-------------|
-| Routes API | `central-server/src/routes/*.ts` |
-| Logique métier | `central-server/src/controllers/*.ts` |
-| Services partagés | `central-server/src/services/*.ts` |
-| Middleware (auth, validation) | `central-server/src/middleware/*.ts` |
-| Types TypeScript | `central-server/src/types/index.ts` |
-| Composants Angular | `central-dashboard/src/app/features/*/` |
-| Services Angular | `central-dashboard/src/app/core/services/` |
-| Code Raspberry | `raspberry/src/app/components/` |
-| Agent de sync | `raspberry/sync-agent/src/` |
-| Scripts de déploiement | `raspberry/scripts/` |
-| Schéma DB | `central-server/src/scripts/full-schema.sql` |
+| Je cherche...                 | Emplacement                                  |
+| ----------------------------- | -------------------------------------------- |
+| Routes API                    | `central-server/src/routes/*.ts`             |
+| Logique métier                | `central-server/src/controllers/*.ts`        |
+| Services partagés             | `central-server/src/services/*.ts`           |
+| Middleware (auth, validation) | `central-server/src/middleware/*.ts`         |
+| Types TypeScript              | `central-server/src/types/index.ts`          |
+| Composants Angular            | `central-dashboard/src/app/features/*/`      |
+| Services Angular              | `central-dashboard/src/app/core/services/`   |
+| Code Raspberry                | `raspberry/src/app/components/`              |
+| Agent de sync                 | `raspberry/sync-agent/src/`                  |
+| Scripts de déploiement        | `raspberry/scripts/`                         |
+| Schéma DB                     | `central-server/src/scripts/full-schema.sql` |
 
 ### Par Fonctionnalité
 
-| Fonctionnalité | Fichiers clés |
-|----------------|---------------|
-| Auth & JWT | `middleware/auth.ts`, `controllers/auth.controller.ts` |
-| Gestion sites | `controllers/sites.controller.ts`, `features/sites/` |
+| Fonctionnalité    | Fichiers clés                                                |
+| ----------------- | ------------------------------------------------------------ |
+| Auth & JWT        | `middleware/auth.ts`, `controllers/auth.controller.ts`       |
+| Gestion sites     | `controllers/sites.controller.ts`, `features/sites/`         |
 | Déploiement vidéo | `services/deployment.service.ts`, `commands/deploy-video.js` |
-| Analytics | `controllers/analytics.controller.ts`, `features/analytics/` |
-| WebSocket | `services/socket.service.ts`, `sync-agent/src/agent.js` |
-| Stockage vidéo | `services/ftp-storage.ts`, `config/supabase.ts` |
+| Analytics         | `controllers/analytics.controller.ts`, `features/analytics/` |
+| WebSocket         | `services/socket.service.ts`, `sync-agent/src/agent.js`      |
+| Stockage vidéo    | `services/ftp-storage.ts`, `config/supabase.ts`              |
 
 ---
 
@@ -231,12 +231,12 @@ git diff --cached | grep -i "password\|secret\|token\|api_key"
 
 Les endpoints sensibles ont des rate limits stricts :
 
-| Type | Limite | Endpoints |
-|------|--------|-----------|
-| Auth | 10/15min | `/api/auth/login`, `/api/auth/forgot-password` |
-| Monitoring | 300/min | `/api/sites/:id/dashboard`, `/api/sites/:id/metrics` |
-| Admin | 200/min | `/api/sites`, `/api/sites/:id` |
-| Sensible | 30/min | POST/PUT/DELETE, `/api/sites/:id/command` |
+| Type       | Limite   | Endpoints                                            |
+| ---------- | -------- | ---------------------------------------------------- |
+| Auth       | 10/15min | `/api/auth/login`, `/api/auth/forgot-password`       |
+| Monitoring | 300/min  | `/api/sites/:id/dashboard`, `/api/sites/:id/metrics` |
+| Admin      | 200/min  | `/api/sites`, `/api/sites/:id`                       |
+| Sensible   | 30/min   | POST/PUT/DELETE, `/api/sites/:id/command`            |
 
 ### 7. Ne pas gérer le mode offline
 
@@ -285,4 +285,4 @@ await commandQueueService.sendOrQueue(siteId, 'update_config', payload);
 
 **Bienvenue dans l'équipe !**
 
-*Dernière mise à jour : 9 janvier 2026*
+_Dernière mise à jour : 9 janvier 2026_

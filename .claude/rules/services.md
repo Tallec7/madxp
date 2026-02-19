@@ -1,27 +1,44 @@
 ---
 paths:
-  - "central-server/src/services/**"
-  - "central-server/src/server.ts"
+  - 'central-server/src/services/**'
+  - 'central-server/src/handlers/**'
+  - 'central-server/src/server.ts'
 ---
 
 # Services Critiques Central Server
 
 ## Services principaux
 
-| Service | Fichier | Rôle |
-|---------|---------|------|
-| Socket | socket.service.ts | Communication temps réel Pi ↔ Cloud |
-| CommandQueue | command-queue.service.ts | File d'attente commandes (offline/online) |
-| Deployment | deployment.service.ts | Orchestration déploiement vidéos |
-| Draft | draft.service.ts | Gestion brouillons de configuration |
-| Orchestrated | orchestrated-deployment.service.ts | Déploiement vidéos + config orchestré |
-| Asset | asset.service.ts | Gestion watermarks et logos |
-| FTP Storage | ftp-storage.ts | Upload/download vidéos sur FTP |
-| Subscription | subscription.service.ts | Gestion abonnements |
-| PredictiveAlerts | predictive-alerts.service.ts | Détection proactive de problèmes |
-| Benchmark | benchmark.service.ts | Benchmarks anonymisés entre clubs |
-| Cron | cron-scheduler.service.ts | Stats quotidiennes, cleanup |
-| Audit | audit.service.ts | Log toutes les actions admin |
+| Service          | Fichier                            | Rôle                                             |
+| ---------------- | ---------------------------------- | ------------------------------------------------ |
+| Socket           | socket.service.ts                  | Orchestrateur temps réel Pi ↔ Cloud (676 lignes) |
+| Storage          | storage.service.ts                 | Upload/download vidéos FTP (unifié, streaming)   |
+| CommandQueue     | command-queue.service.ts           | File d'attente commandes (offline/online)        |
+| Deployment       | deployment.service.ts              | Orchestration déploiement vidéos                 |
+| Draft            | draft.service.ts                   | Gestion brouillons de configuration              |
+| Orchestrated     | orchestrated-deployment.service.ts | Déploiement vidéos + config orchestré            |
+| Asset            | asset.service.ts                   | Gestion watermarks et logos                      |
+| Subscription     | subscription.service.ts            | Gestion abonnements                              |
+| PredictiveAlerts | predictive-alerts.service.ts       | Détection proactive de problèmes                 |
+| Benchmark        | benchmark.service.ts               | Benchmarks anonymisés entre clubs                |
+| Cron             | cron-scheduler.service.ts          | Stats quotidiennes, cleanup                      |
+| Audit            | audit.service.ts                   | Log toutes les actions admin                     |
+
+## Socket Handlers (`src/handlers/`)
+
+9 handlers extraits de `socket.service.ts` (refactoring Phase 7.2) :
+
+| Handler                       | Événements                |
+| ----------------------------- | ------------------------- |
+| heartbeat.handler.ts          | `heartbeat`, `pong_check` |
+| config-sync.handler.ts        | `sync_local_state`        |
+| deploy-progress.handler.ts    | `deploy_progress`         |
+| command-dispatch.handler.ts   | `command_result`          |
+| health-monitor.handler.ts     | Zombie detection, DB sync |
+| license.handler.ts            | `license_status`          |
+| network-resilience.handler.ts | `network_status`          |
+| score-update.handler.ts       | `score_update`            |
+| match-config.handler.ts       | `match_config`            |
 
 ## Pattern Singleton
 
@@ -33,15 +50,16 @@ export const exampleService = new ExampleService();
 export default exampleService;
 ```
 
-## Stockage Vidéo (Double backend)
+## Stockage Vidéo (FTP uniquement)
 
 ```
-Upload vidéo → FTP configuré ?
-                ├── OUI → FTP Hostinger (storage_path = "filename.mp4")
-                └── NON → Supabase Storage (storage_path = "uploads/filename.mp4")
+Upload vidéo → storage.service.ts → FTP Hostinger
+                                     (streaming depuis disque, zéro buffer mémoire)
 ```
 
-Détection : si `storage_path` ne contient pas `/` → FTP, sinon Supabase.
+- Checksum SHA256 calculé en streaming pendant l'upload
+- Nettoyage automatique fichiers temporaires > 1h
+- URL publique : `https://kalonpartners.bzh/neopro-video/{uuid}.mp4`
 
 ## Protocole Socket.IO
 

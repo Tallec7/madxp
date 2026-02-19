@@ -13,6 +13,12 @@
 
 ---
 
+## 🗺️ Cartographie des outils
+
+**[Cartographie des outils Neopro](CARTOGRAPHIE_OUTILS.md)** — Vue complète des 12 outils, leur rôle, public cible et fonctionnalités 🆕
+
+---
+
 ## 📚 Documentation par Thème
 
 ### 📖 [Guides Utilisateur](guides/)
@@ -72,6 +78,18 @@ Documentation business, stratégie et planification.
 - [Business Plan complet](business/BUSINESS_PLAN_COMPLET.md) (113K)
 - [Roadmap vers le 10/10](business/ROADMAP_10_SUR_10.md) (37K)
 - [Backlog](business/BACKLOG.md) - Sprint tracking (23K)
+- **[Métriques Pitch Deck](../central-server/src/scripts/pitch-deck-metrics.sql)** - Extraction SQL des KPIs traction investisseur 🆕
+
+### 🎯 [SAFe — Pilotage Produit](safe/)
+
+Framework SAFe Essential pour le pilotage produit structuré. 🆕
+
+- **[README SAFe](safe/README.md)** - Hub principal : Epics, Features, User Stories, Sprint Tracker
+- [🟢 OVS1 — Club to Screen](safe/OVS1-CLUB-TO-SCREEN.md) - Flux club → écran TV
+- [🟠 OVS2 — Sponsor to Impression](safe/OVS2-SPONSOR-TO-IMPRESSION.md) - Flux sponsor → rapport ROI
+- [🟣 DVS-1 — Neopro Platform](safe/DVS1-NEOPRO-PLATFORM.md) - Value Proposition, stack, budget, WSJF
+- [📊 Portfolio SAFe](safe/PORTFOLIO.md) - Roadmap Gantt, architecture, métriques ARR
+- **Notion (visualisation)** : [SAFe Neopro](https://www.notion.so/30bc27de363881d49d06e50eabbdd6b5)
 
 ### 🔍 [Audits](audit/)
 
@@ -127,8 +145,8 @@ neopro/
 ├── central-server/                 # Cloud API backend (Node.js 20/Express/TypeScript)
 │   └── src/                        # Controllers, routes, middleware, services
 ├── central-dashboard/              # Cloud admin dashboard (Angular 20.3)
-│   └── src/app/features/sites/     # Gestion sites (4 tabs: État/Contenu/Params/Debug)
-├── server-render/                  # Cloud WebSocket server
+│   └── src/app/features/           # Sites (5 tabs), Analytics (4 tabs), Users, etc.
+├── raspberry/server/               # Cloud WebSocket server
 ├── e2e/                           # End-to-end tests (Playwright)
 │
 ├── docs/                          # Documentation (vous êtes ici)
@@ -201,6 +219,6 @@ neopro/
 
 ---
 
-**Dernière mise à jour** : 12 janvier 2026 - Mise à jour docs installation (Pi 5, gpu_mem, Config Drafts)
+**Dernière mise à jour** : 18 février 2026 - SAFe Framework + pilotage produit structuré
 
-**Version** : 2.27.0
+**Version** : 3.37.0

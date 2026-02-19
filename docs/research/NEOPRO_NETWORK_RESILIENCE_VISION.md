@@ -396,5 +396,6 @@ Que le client soit dans un petit club avec un routeur box ou dans un gymnase ave
 
 **Document créé** : 18 janvier 2026
 **Auteur** : Équipe Produit Neopro
-**Statut** : Vision validée, en attente d'implémentation
-**Prochaine étape** : Phase 1 - Stabilisation Immédiate (v2.34)
+**Statut** : Phases 1-4 implémentées (v2.34-v2.37, janvier-février 2026)
+**Prochaine étape** : Monitoring et optimisation continue
+**Voir aussi** : [ADR-024 — Network Resilience 4-Layer](../adr/ADR-024-network-resilience-layers.md)

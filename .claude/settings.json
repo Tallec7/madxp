@@ -1,0 +1,14 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "prompt",
+            "prompt": "Analyse cette session. Si des fichiers ont été modifiés dans au moins 2 composants différents (central-server + raspberry, central-server + central-dashboard, etc.) OU si un choix entre plusieurs alternatives techniques a été fait, rappelle à l'utilisateur : 'Cette session contient une décision architecturale. Pense à créer un ADR (docs/adr/) — template léger : docs/templates/TEMPLATE_ADR_LIGHT.md'. Si aucune décision architecturale n'a été prise, ne dis rien (retourne {\"decision\": \"none\"}). Réponds UNIQUEMENT en JSON : {\"decision\": \"none\"} ou {\"decision\": \"found\", \"reason\": \"<description courte>\"}."
+          }
+        ]
+      }
+    ]
+  }
+}

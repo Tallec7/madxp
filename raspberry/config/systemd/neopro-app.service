@@ -25,8 +25,7 @@ StandardOutput=journal
 StandardError=journal
 SyslogIdentifier=neopro-app
 
-# Limites de sécurité
-NoNewPrivileges=true
+# NoNewPrivileges=true retiré — incompatible avec sudo (bloque setuid au niveau kernel)
 
 [Install]
 WantedBy=multi-user.target

@@ -266,17 +266,17 @@ sudo wpa_cli -i wlan1 reconfigure
 
 ### Ce qui est automatisé (v2.37+)
 
-| Fonctionnalité                     | Où                   | Comportement                                                                      |
-| ---------------------------------- | -------------------- | --------------------------------------------------------------------------------- |
-| **🐕 NetworkWatchdog**             | Sync-Agent           | Surveillance continue hotspot (30s) et internet (60s) avec auto-recovery          |
-| **⏳ Grace period 60s au boot**    | NetworkWatchdog      | Aucune recovery pendant 60s au démarrage (laisse le réseau se stabiliser)         |
-| **🔄 Auto-recovery hotspot**       | NetworkWatchdog      | rfkill unblock → IP config → restart hostapd → restart dnsmasq (max 3 tentatives) |
-| **🌐 Auto-recovery internet**      | NetworkWatchdog      | Recovery progressive en 4 phases : DHCP seul → reconfigure → link reset → alerte  |
-| **↩️ Rollback automatique**        | NetworkWatchdog      | Si perte connexion 30s après changement config → restaure config précédente       |
-| **✍️ Écriture atomique wpa_supplicant** | SafeNetworkOperations | Écriture dans fichier .tmp puis rename (évite corruption par double sed -i)  |
-| **📢 Alertes proactives**          | Central Server       | Check toutes les 4h : BSSID lock mesh, isolation, stabilité faible, offline > 24h |
-| **🔔 network_alert events**        | Socket.IO            | Pi envoie alerte si recovery échoue après 3 tentatives → stocké en DB + dashboard |
-| **📊 Statistiques risques réseau** | NetworkAlertsService | Agrégation profils, isolation, stabilité moyenne pour analytics                   |
+| Fonctionnalité                          | Où                    | Comportement                                                                      |
+| --------------------------------------- | --------------------- | --------------------------------------------------------------------------------- |
+| **🐕 NetworkWatchdog**                  | Sync-Agent            | Surveillance continue hotspot (30s) et internet (60s) avec auto-recovery          |
+| **⏳ Grace period 60s au boot**         | NetworkWatchdog       | Aucune recovery pendant 60s au démarrage (laisse le réseau se stabiliser)         |
+| **🔄 Auto-recovery hotspot**            | NetworkWatchdog       | rfkill unblock → IP config → restart hostapd → restart dnsmasq (max 3 tentatives) |
+| **🌐 Auto-recovery internet**           | NetworkWatchdog       | Recovery progressive en 4 phases : DHCP seul → reconfigure → link reset → alerte  |
+| **↩️ Rollback automatique**             | NetworkWatchdog       | Si perte connexion 30s après changement config → restaure config précédente       |
+| **✍️ Écriture atomique wpa_supplicant** | SafeNetworkOperations | Écriture dans fichier .tmp puis rename (évite corruption par double sed -i)       |
+| **📢 Alertes proactives**               | Central Server        | Check toutes les 4h : BSSID lock mesh, isolation, stabilité faible, offline > 24h |
+| **🔔 network_alert events**             | Socket.IO             | Pi envoie alerte si recovery échoue après 3 tentatives → stocké en DB + dashboard |
+| **📊 Statistiques risques réseau**      | NetworkAlertsService  | Agrégation profils, isolation, stabilité moyenne pour analytics                   |
 
 **Critères d'alertes proactives** :
 
@@ -321,10 +321,11 @@ sudo wpa_cli -i wlan1 reconfigure
 
 ## Clients identifiés comme "mesh"
 
-| Client  | Lieu         | SSID | Nombre d'APs | Notes                                      |
-| ------- | ------------ | ---- | ------------ | ------------------------------------------ |
-| **NLF** | Gymnase Nord | NLFH | 3+           | Incident 18/01/2026 - Ne JAMAIS lock BSSID |
-|         |              |      |              |                                            |
+| Client                     | Profil     | Équipement réseau                                 | Notes                                           |
+| -------------------------- | ---------- | ------------------------------------------------- | ----------------------------------------------- |
+| NLF (Nantes Loire Féminin) | Mesh isolé | TP-Link Deco (3 bornes), isolation client activée | Incident 18 jan 2026 — résolu avec remote cloud |
+| À identifier               | Mesh       | —                                                 | Sites avec >1 AP sur même SSID                  |
+| À identifier               | Enterprise | —                                                 | Sites avec 802.1X ou certificats                |
 
 > **Comment ajouter un client :**
 > Éditer ce fichier et ajouter une ligne au tableau ci-dessus.
@@ -393,6 +394,7 @@ sudo wpa_cli -i wlan1 reconfigure
 
 ## Références
 
+- [WIFI_USB_GUIDE.md](WIFI_USB_GUIDE.md) — Guide complet clé WiFi USB (installation, diagnostic, pannes, recovery)
 - [TROUBLESHOOTING.md - Section 5b](./TROUBLESHOOTING.md#5b-connexion-wlan1-instable-en-environnement-mesh-wifi-répéteurs)
 - [Changelog fix-hotspot preservation](../changelog/2026-01-18_fix-hotspot-wlan1-preservation.md)
 - [hostapd documentation](https://w1.fi/hostapd/)
@@ -414,4 +416,4 @@ sudo wpa_cli -i wlan1 reconfigure
 
 ---
 
-**Dernière mise à jour :** 7 février 2026 (Diagnostic NLF WiFi USB - reason codes, signal -73 dBm)
+**Dernière mise à jour :** 10 février 2026

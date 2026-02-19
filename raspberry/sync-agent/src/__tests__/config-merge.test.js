@@ -566,6 +566,116 @@ describe('Config Merge Module', () => {
     });
   });
 
+  describe('localSponsors preservation (P3)', () => {
+    it('should preserve localSponsors through a merge', () => {
+      const localConfig = {
+        version: '1.0',
+        localSponsors: [
+          {
+            localId: 'ls_1708200000_abc123',
+            centralId: 'uuid-central-1',
+            name: 'Boulangerie Dupont',
+            contactEmail: 'contact@dupont.fr',
+            videoFilenames: ['dupont_spot.mp4'],
+            isActive: true,
+          },
+          {
+            localId: 'ls_1708200001_def456',
+            centralId: null,
+            name: 'Garage Martin',
+            videoFilenames: [],
+            isActive: true,
+          },
+        ],
+        categories: [],
+      };
+
+      const neoProContent = {
+        version: '2.0',
+        localSponsors: [{ localId: 'ls_neopro_attempt', name: 'Should Be Ignored' }],
+        categories: [],
+      };
+
+      const merged = mergeConfigurations(localConfig, neoProContent);
+
+      // Version should update from central
+      expect(merged.version).toBe('2.0');
+      // localSponsors should be preserved from local (NOT overwritten by central)
+      expect(merged.localSponsors).toHaveLength(2);
+      expect(merged.localSponsors[0].localId).toBe('ls_1708200000_abc123');
+      expect(merged.localSponsors[0].centralId).toBe('uuid-central-1');
+      expect(merged.localSponsors[1].localId).toBe('ls_1708200001_def456');
+      expect(merged.localSponsors[1].centralId).toBeNull();
+    });
+
+    it('should preserve empty localSponsors array', () => {
+      const localConfig = {
+        version: '1.0',
+        localSponsors: [],
+        categories: [],
+      };
+
+      const neoProContent = {
+        version: '2.0',
+        localSponsors: [{ localId: 'ls_inject', name: 'Injected' }],
+        categories: [],
+      };
+
+      const merged = mergeConfigurations(localConfig, neoProContent);
+
+      expect(merged.localSponsors).toEqual([]);
+    });
+
+    it('should not add localSponsors if not present in local config', () => {
+      const localConfig = {
+        version: '1.0',
+        categories: [],
+      };
+
+      const neoProContent = {
+        version: '2.0',
+        localSponsors: [{ localId: 'ls_inject', name: 'Injected' }],
+        categories: [],
+      };
+
+      const merged = mergeConfigurations(localConfig, neoProContent);
+
+      // localSponsors should not appear since it was not in local config
+      expect(merged.localSponsors).toBeUndefined();
+    });
+
+    it('should preserve club sponsors in sponsors[] loop through merge', () => {
+      const localConfig = {
+        version: '1.0',
+        categories: [],
+        sponsors: [
+          { path: 'neopro_ad.mp4', locked: true, owner: 'neopro', site_sponsor_id: 'uuid-1' },
+          { path: 'dupont_spot.mp4', locked: false, owner: 'club', _sponsorLocalId: 'ls_123', site_sponsor_id: 'uuid-2' },
+        ],
+      };
+
+      const neoProContent = {
+        version: '2.0',
+        categories: [],
+        sponsors: [
+          { path: 'neopro_ad_v2.mp4', locked: true, owner: 'neopro', site_sponsor_id: 'uuid-1' },
+        ],
+      };
+
+      const merged = mergeConfigurations(localConfig, neoProContent);
+
+      // Should have NEOPRO sponsor updated + club sponsor preserved
+      const neoProSponsors = merged.sponsors.filter(s => s.owner === 'neopro');
+      const clubSponsors = merged.sponsors.filter(s => s.owner === 'club');
+
+      expect(neoProSponsors).toHaveLength(1);
+      expect(neoProSponsors[0].path).toBe('neopro_ad_v2.mp4');
+      expect(clubSponsors).toHaveLength(1);
+      expect(clubSponsors[0].path).toBe('dupont_spot.mp4');
+      expect(clubSponsors[0]._sponsorLocalId).toBe('ls_123');
+    });
+  });
+
   describe('Edge Cases & Security', () => {
     it('should handle malformed categories gracefully', () => {
       const localCategories = [

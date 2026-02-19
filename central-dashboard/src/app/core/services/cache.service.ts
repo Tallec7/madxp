@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { Observable, of, shareReplay, Subject } from 'rxjs';
+import { Observable, shareReplay, Subject } from 'rxjs';
 import { takeUntil, finalize } from 'rxjs/operators';
 
 interface CacheEntry<T> {

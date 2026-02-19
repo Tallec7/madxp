@@ -19,6 +19,22 @@ import { query } from '../config/database';
 import { alertingService } from './alerting.service';
 import logger from '../config/logger';
 
+// Lazy import to avoid circular dependency with metrics.service
+let metricsServiceInstance: {
+  recordPredictiveCheck: (status: 'success' | 'failed', sitesChecked: number, alertsGenerated: number, durationSeconds: number) => void;
+} | null = null;
+const getMetricsService = () => {
+  if (!metricsServiceInstance) {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      metricsServiceInstance = require('./metrics.service').default;
+    } catch {
+      // Metrics service not available yet during startup
+    }
+  }
+  return metricsServiceInstance;
+};
+
 interface SiteMetrics {
   siteId: string;
   siteName: string;
@@ -112,6 +128,8 @@ class PredictiveAlertsService {
       }
 
       const duration = Date.now() - startTime;
+      const durationSeconds = duration / 1000;
+
       logger.info('[PredictiveAlerts] Predictive checks completed', {
         sitesChecked: sites.length,
         alertsGenerated,
@@ -119,9 +137,12 @@ class PredictiveAlertsService {
         durationMs: duration,
       });
 
+      getMetricsService()?.recordPredictiveCheck('success', sites.length, alertsGenerated, durationSeconds);
+
       return { sitesChecked: sites.length, alertsGenerated, errors };
     } catch (error) {
       logger.error('[PredictiveAlerts] Failed to run predictive checks', { error });
+      getMetricsService()?.recordPredictiveCheck('failed', 0, 0, (Date.now() - startTime) / 1000);
       return { sitesChecked: 0, alertsGenerated: 0, errors: 1 };
     }
   }

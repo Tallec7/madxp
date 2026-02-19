@@ -291,6 +291,14 @@ ssh ${RASPBERRY_USER}@${RASPBERRY_IP} "
     # Nettoyage
     rm -rf ~/neopro-update ~/neopro-deploy.tar.gz
 
+    # Installation du fichier sudoers (permissions ciblées pour le sync-agent)
+    if [ -f ${RASPBERRY_DIR}/config/sudoers.d/neopro ]; then
+        sudo cp ${RASPBERRY_DIR}/config/sudoers.d/neopro /etc/sudoers.d/neopro
+        sudo chown root:root /etc/sudoers.d/neopro
+        sudo chmod 440 /etc/sudoers.d/neopro
+        echo 'Sudoers neopro installé'
+    fi
+
     # Installation des services systemd depuis config/systemd/
     if [ -d ${RASPBERRY_DIR}/config/systemd ]; then
         echo 'Installation des services systemd...'
@@ -418,6 +426,32 @@ else
     print_warning "Application non accessible (vérifiez manuellement)"
 fi
 
+# Diagnostic post-déploiement (vérifie la complétude du Pi)
+print_step "Diagnostic post-déploiement (vérification de la complétude du Pi)..."
+DIAG_SCRIPT="${RASPBERRY_DIR}/scripts/diagnose-pi.sh"
+DIAG_OUTPUT=$(ssh ${RASPBERRY_USER}@${RASPBERRY_IP} "
+    if [ -x ${DIAG_SCRIPT} ]; then
+        ${DIAG_SCRIPT} --json 2>/dev/null
+    else
+        echo '{\"healthy\":true,\"errors\":0,\"warnings\":0,\"checks\":[]}'
+    fi
+" 2>/dev/null)
+
+# Parser le résultat JSON
+DIAG_ERRORS=$(echo "${DIAG_OUTPUT}" | grep -o '"errors":[0-9]*' | cut -d: -f2)
+DIAG_WARNINGS=$(echo "${DIAG_OUTPUT}" | grep -o '"warnings":[0-9]*' | cut -d: -f2)
+DIAG_HEALTHY=$(echo "${DIAG_OUTPUT}" | grep -o '"healthy":true')
+
+if [ -n "$DIAG_HEALTHY" ]; then
+    print_success "Diagnostic : Pi complet et opérationnel (${DIAG_WARNINGS:-0} avertissement(s))"
+elif [ -n "$DIAG_ERRORS" ] && [ "$DIAG_ERRORS" -gt 0 ] 2>/dev/null; then
+    print_warning "Diagnostic : ${DIAG_ERRORS} erreur(s), ${DIAG_WARNINGS:-0} avertissement(s)"
+    echo -e "${YELLOW}  Exécutez le diagnostic complet pour les détails :${NC}"
+    echo "  ssh ${RASPBERRY_USER}@${RASPBERRY_IP} '${DIAG_SCRIPT}'"
+else
+    print_warning "Diagnostic : impossible de déterminer l'état (script non disponible ?)"
+fi
+
 echo -e "${GREEN}"
 echo "╔════════════════════════════════════════════════════════════════╗"
 echo "║          DÉPLOIEMENT TERMINÉ AVEC SUCCÈS                       ║"
@@ -434,5 +468,6 @@ echo -e "${YELLOW}Commandes utiles:${NC}"
 echo "  • Voir les logs: ssh ${RASPBERRY_USER}@${RASPBERRY_IP} 'sudo journalctl -u neopro-app -f'"
 echo "  • Redémarrer: ssh ${RASPBERRY_USER}@${RASPBERRY_IP} 'sudo systemctl restart neopro-app'"
 echo "  • Status: ssh ${RASPBERRY_USER}@${RASPBERRY_IP} 'sudo systemctl status neopro-app'"
+echo "  • Diagnostic: ssh ${RASPBERRY_USER}@${RASPBERRY_IP} '${DIAG_SCRIPT}'"
 echo ""
 echo -e "${GREEN}Déploiement terminé!${NC}"

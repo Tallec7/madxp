@@ -147,12 +147,35 @@ Cette commande :
 ### 3. Diagnostic / Maintenance
 
 ```bash
-# Copier le script de diagnostic sur le Pi
-scp raspberry/scripts/diagnose-pi.sh pi@neopro.local:~/
+# Diagnostic interactif (sur le Pi ou via SSH)
+ssh pi@neopro.local '/home/pi/neopro/scripts/diagnose-pi.sh'
 
-# L'exécuter
-ssh pi@neopro.local './diagnose-pi.sh'
+# Diagnostic JSON (exploitable par le dashboard / OTA)
+ssh pi@neopro.local '/home/pi/neopro/scripts/diagnose-pi.sh --json'
 ```
+
+**Ce que vérifie `diagnose-pi.sh` :**
+
+- Version Node.js (v18+ requis)
+- Packages apt critiques (hostapd, dnsmasq, nginx, ffmpeg, avahi-daemon)
+- Packages apt recommandés (unclutter-xfixes, chromium, cec-utils, firmware-realtek)
+- Services systemd (état + installation)
+- Ports réseau (80, 3000, 8080)
+- Fichiers et répertoires critiques + node_modules
+- Configuration Nginx (syntaxe, routes, site-enabled)
+- Réseau WiFi (AP mode, SSID, IP statique)
+- Permissions (home, webapp owner, www-data group, club-config.json)
+- Configuration GPU (gpu_mem / Pi 5 V3D Mesa)
+- Espace disque
+- Tests HTTP (localhost, /tv, :8080)
+
+**Modes de sortie :**
+
+- `--json` : sortie JSON pour exploitation automatique (exit code = nombre d'erreurs)
+- `--quiet` : résumé uniquement
+- _(par défaut)_ : mode interactif avec couleurs et détails
+
+> **Note :** `deploy-remote.sh` exécute automatiquement `diagnose-pi.sh --json` après chaque déploiement. L'OTA (sync-agent) l'exécute aussi dans son rapport post-mise à jour.
 
 ---
 
@@ -176,7 +199,7 @@ ssh pi@neopro.local './diagnose-pi.sh'
 
 | Script                 | Emplacement          | Exécution | Description                                 |
 | ---------------------- | -------------------- | --------- | ------------------------------------------- |
-| `diagnose-pi.sh`       | `raspberry/scripts/` | Sur Pi    | Diagnostic complet                          |
+| `diagnose-pi.sh`       | `raspberry/scripts/` | Sur Pi    | Diagnostic complet (--json pour automation) |
 | `fix-hostname.sh`      | `raspberry/scripts/` | Sur Pi    | Corriger le hostname                        |
 | `setup-wifi-client.sh` | `raspberry/scripts/` | Sur Pi    | Configurer WiFi client (accès internet)     |
 | `cleanup-pi.sh`        | `raspberry/scripts/` | Sur Mac   | **Supprime ~/raspberry après installation** |
@@ -203,11 +226,15 @@ sudo ./install.sh CESSON MyWiFiPass123
 
 **Ce qu'il fait :**
 
+- Valide les entrées (CLUB_NAME : alphanumérique, max 25 chars ; mot de passe WiFi : 8-63 chars, caractères spéciaux supportés)
 - Installe Node.js 18
 - Installe et configure nginx
 - Installe hostapd et dnsmasq (WiFi AP)
+- Copie automatiquement le build Angular (webapp/) s'il est présent
 - Crée les services systemd
 - Configure le réseau WiFi en point d'accès
+- Protège `club-config.json` (`chmod 600` — contient le mot de passe WiFi)
+- **Health check post-installation** : vérifie que les services critiques (nginx, hostapd, dnsmasq) sont actifs, que Nginx répond, et que le hotspot est en mode AP
 
 ---
 
@@ -318,7 +345,11 @@ SKIP_XATTR_CLEANUP=true ./raspberry/scripts/build-raspberry.sh
 
 **Ce qu'il fait :**
 
+- Vérifie Node.js v18+ et les prérequis
 - Compile l'application Angular en mode production
+- **Valide que le build Angular a réussi** (`dist/raspberry/browser/index.html` présent)
+- Inclut les `node_modules` de **server**, sync-agent et admin dans l'archive (pas de `npm install` requis au déploiement)
+- Vérifie l'intégrité de 19+ fichiers critiques + dépendances npm avant archivage
 - Crée l'archive `raspberry/neopro-raspberry-deploy.tar.gz`
 - Ajoute `deploy/VERSION` + `deploy/release.json` (version, commit, date) dans l'archive
 
@@ -530,9 +561,13 @@ ssh pi@neopro.local 'sudo systemctl restart neopro-app nginx'
 
 ### Sécurité
 
-- Les scripts ne stockent jamais les mots de passe en clair dans les logs
+- `CLUB_NAME` validé par regex (`^[a-zA-Z0-9_-]+$`, max 25 chars) dans `setup.sh` et `install.sh`
+- Les mots de passe WiFi sont échappés pour sed (caractères spéciaux `$`, `/`, `&`, `\` supportés)
+- `club-config.json` est protégé en `chmod 600` (seul l'utilisateur `pi` peut le lire)
 - Les configurations avec mots de passe sont dans `.gitignore`
 - Utilisez des mots de passe forts (12+ caractères)
+- `setup.sh` utilise `curl -sSLf` avec `exit 1` pour les fichiers critiques (pas de `|| true` silencieux)
+- Les fichiers temporaires utilisent `mktemp -d` (pas de chemin prévisible)
 
 ### Organisation
 

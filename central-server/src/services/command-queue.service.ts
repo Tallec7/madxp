@@ -33,17 +33,6 @@ export interface QueueCommandOptions {
   createdBy?: string;
 }
 
-// Commandes qui ont du sens en mode offline (config, vidéos, actions différées)
-const QUEUEABLE_COMMANDS = [
-  'update_config',
-  'deploy_video',
-  'delete_video',
-  'update_software',
-  'restart_service',  // Redémarrage de service à la reconnexion
-  'reboot',           // Redémarrage du Pi à la reconnexion
-  'update_hotspot',   // Mise à jour WiFi hotspot à la reconnexion
-];
-
 // Commandes qui nécessitent une connexion temps réel
 const REALTIME_ONLY_COMMANDS = [
   'get_logs',
@@ -56,6 +45,8 @@ const REALTIME_ONLY_COMMANDS = [
   'get_analytics_buffer_status', // État des buffers analytics/sponsors
   'fix_hotspot',                // Réparation hotspot WiFi (fix-hotspot.sh)
   'export_debug_bundle',        // Export bundle debug pour support (P3.3)
+  'scan_wifi_networks',         // Scan WiFi nécessite une connexion temps réel
+  'configure_wifi_client',      // Configuration WiFi nécessite une connexion temps réel
 ];
 
 class CommandQueueService {
@@ -164,6 +155,30 @@ class CommandQueueService {
           [siteId]
         );
         logger.info('Config update pending lock set for 60s', { siteId, commandId });
+
+        // Merger immédiatement le contenu dans local_config_mirror
+        // pour que le dashboard affiche la config sans attendre la fin du lock 60s
+        const neoProContent = commandData.neoProContent as Record<string, unknown> | undefined;
+        if (neoProContent && commandData.mode === 'merge') {
+          const keys = Object.keys(neoProContent);
+          for (const key of keys) {
+            await query(
+              `UPDATE sites SET local_config_mirror = jsonb_set(
+                COALESCE(local_config_mirror, '{}'::jsonb),
+                $1::text[], $2::jsonb
+              ) WHERE id = $3`,
+              [
+                `{${key}}`,
+                JSON.stringify(neoProContent[key]),
+                siteId,
+              ]
+            );
+          }
+          logger.info('Merged update_config content into local_config_mirror', {
+            siteId,
+            keys,
+          });
+        }
       }
 
       const sent = socketService.sendCommand(siteId, {

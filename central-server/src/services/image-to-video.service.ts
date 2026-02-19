@@ -162,10 +162,9 @@ class ImageToVideoService {
       const ffmpeg = spawn('ffmpeg', args);
 
       let stderr = '';
-      let stdout = '';
 
-      ffmpeg.stdout.on('data', (data) => {
-        stdout += data.toString();
+      ffmpeg.stdout.on('data', () => {
+        // stdout data consumed but not used
       });
 
       ffmpeg.stderr.on('data', (data) => {

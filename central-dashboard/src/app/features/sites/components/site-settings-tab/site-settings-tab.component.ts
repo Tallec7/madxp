@@ -5,10 +5,10 @@ import { TranslateModule } from '@ngx-translate/core';
 import { SitesService } from '../../../../core/services/sites.service';
 import { NotificationService } from '../../../../core/services/notification.service';
 import { LoggerService } from '../../../../core/services/logger.service';
-import { AssetService, WatermarkConfig, OverlayPosition as WmOverlayPosition, WatermarkAnimation, WatermarkScheduleRule } from '../../../../core/services/asset.service';
+import { AssetService, WatermarkConfig, WatermarkFileInfo, OverlayPosition as WmOverlayPosition, WatermarkAnimation, WatermarkScheduleRule } from '../../../../core/services/asset.service';
 import { ReportsService, GeneratedReport } from '../../../../core/services/reports.service';
 import { ErrorExtractor } from '../../../../core/utils/error-extractor';
-import { Site, OverlayPosition } from '../../../../core/models';
+import { Site, OverlayTheme, ScoreOverlayPosition } from '../../../../core/models';
 import { QrCodeGeneratorComponent } from '../../../../shared/components/qr-code-generator/qr-code-generator.component';
 
 @Component({
@@ -42,6 +42,163 @@ import { QrCodeGeneratorComponent } from '../../../../shared/components/qr-code-
         </button>
       </div>
 
+      <!-- Spectateurs moyens -->
+      <div class="settings-card">
+        <div class="settings-header">
+          <span class="settings-icon">👥</span>
+          <h4>Audience</h4>
+        </div>
+        <p class="settings-desc">
+          Nombre moyen de spectateurs par match. Utilisé pour calculer le reach des sponsors dans les rapports PDF.
+        </p>
+        <div class="settings-grid">
+          <div class="form-group">
+            <label>Spectateurs moyens par match</label>
+            <input
+              type="number"
+              [(ngModel)]="avgSpectators"
+              placeholder="Ex: 200"
+              min="0"
+              max="100000"
+              class="form-input"
+            />
+            <small class="form-hint">Estimation moyenne. Sera mentionnée dans les rapports sponsors.</small>
+          </div>
+        </div>
+        <button
+          class="btn btn-primary"
+          (click)="saveAvgSpectators()"
+          [disabled]="savingAvgSpectators || avgSpectators === null || avgSpectators === undefined"
+        >
+          {{ savingAvgSpectators ? ('common.saving' | translate) : ('common.save' | translate) }}
+        </button>
+      </div>
+
+      <!-- Branding Club (P5) -->
+      <div class="settings-card">
+        <div class="settings-header">
+          <span class="settings-icon">🎨</span>
+          <h4>Branding Club</h4>
+        </div>
+        <p class="settings-desc">
+          Logo et couleurs du club. Utilisés pour personnaliser les rapports PDF sponsors.
+        </p>
+        <div class="settings-grid">
+          <div class="form-group">
+            <label>URL du logo</label>
+            <input
+              type="url"
+              [(ngModel)]="logoUrl"
+              placeholder="https://example.com/logo.png"
+              class="form-input"
+            />
+            <small class="form-hint">Image PNG, JPEG ou SVG. S'affiche dans l'en-tête du rapport PDF.</small>
+            <div *ngIf="logoUrl" class="logo-preview" style="margin-top: 8px;">
+              <img [src]="logoUrl" alt="Logo preview" style="max-height: 48px; max-width: 200px; border-radius: 4px; background: #f3f4f6; padding: 4px;" (error)="logoUrl && onLogoError()"/>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Couleur primaire</label>
+            <div style="display: flex; gap: 8px; align-items: center;">
+              <input
+                type="color"
+                [(ngModel)]="colorPrimary"
+                style="width: 40px; height: 32px; border: 1px solid var(--border-color); border-radius: 4px; cursor: pointer; padding: 2px;"
+              />
+              <input
+                type="text"
+                [(ngModel)]="colorPrimary"
+                placeholder="#1e3a8a"
+                maxlength="7"
+                class="form-input"
+                style="width: 120px;"
+              />
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Couleur secondaire</label>
+            <div style="display: flex; gap: 8px; align-items: center;">
+              <input
+                type="color"
+                [(ngModel)]="colorSecondary"
+                style="width: 40px; height: 32px; border: 1px solid var(--border-color); border-radius: 4px; cursor: pointer; padding: 2px;"
+              />
+              <input
+                type="text"
+                [(ngModel)]="colorSecondary"
+                placeholder="#3b82f6"
+                maxlength="7"
+                class="form-input"
+                style="width: 120px;"
+              />
+            </div>
+          </div>
+        </div>
+        <div *ngIf="colorPrimary || colorSecondary" class="branding-preview" style="margin: 12px 0; padding: 12px; border-radius: 8px; background: linear-gradient(135deg, {{colorPrimary || '#1e3a8a'}} 0%, {{colorSecondary || '#3b82f6'}} 100%); color: white; font-size: 0.85rem; text-align: center;">
+          Aperçu bandeau rapport
+        </div>
+        <button
+          class="btn btn-primary"
+          (click)="saveBranding()"
+          [disabled]="brandingSaving"
+        >
+          {{ brandingSaving ? ('common.saving' | translate) : ('siteSettings.saveBranding' | translate) }}
+        </button>
+      </div>
+
+      <!-- PIN Télécommande Cloud -->
+      <div class="settings-card">
+        <div class="settings-header">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" style="vertical-align: text-bottom; margin-right: 6px;">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+            <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+          </svg>
+          <h4>{{ 'remotePin.title' | translate }}</h4>
+        </div>
+        <p class="settings-desc">
+          {{ 'remotePin.description' | translate }}
+        </p>
+
+        <ng-container *ngIf="remotePinEnabled; else noPinActive">
+          <div class="pin-status-badge active">
+            <span class="pin-badge-icon">&#128274;</span>
+            <span>{{ 'remotePin.pinActive' | translate }}</span>
+          </div>
+          <button
+            class="btn btn-danger btn-sm"
+            (click)="clearRemotePin()"
+            [disabled]="clearingRemotePin"
+          >
+            {{ clearingRemotePin ? ('remotePin.clearingPin' | translate) : ('remotePin.clearPin' | translate) }}
+          </button>
+        </ng-container>
+        <ng-template #noPinActive>
+          <div class="pin-status-badge inactive">
+            <span class="pin-badge-icon">&#128275;</span>
+            <span>{{ 'remotePin.pinInactive' | translate }}</span>
+          </div>
+          <div class="form-group">
+            <label>{{ 'remotePin.newPinLabel' | translate }}</label>
+            <input
+              type="text"
+              [(ngModel)]="remotePin"
+              placeholder="1234"
+              maxlength="6"
+              pattern="[0-9]*"
+              inputmode="numeric"
+              class="form-input pin-input"
+            />
+          </div>
+          <button
+            class="btn btn-primary btn-sm"
+            (click)="saveRemotePin()"
+            [disabled]="savingRemotePin || !remotePin || remotePin.length < 4"
+          >
+            {{ savingRemotePin ? ('remotePin.settingPin' | translate) : ('remotePin.setPin' | translate) }}
+          </button>
+        </ng-template>
+      </div>
+
       <!-- QR Code Telecommande -->
       <div class="settings-card">
         <div class="settings-header">
@@ -72,6 +229,9 @@ import { QrCodeGeneratorComponent } from '../../../../shared/components/qr-code-
               <span class="mode-badge">Nouveau</span>
             </div>
             <p class="mode-desc">Fonctionne depuis n'importe quel reseau avec Internet. Ideal pour les reseaux avec isolation client (mesh WiFi).</p>
+            <a class="cloud-remote-link" [href]="'/remote/' + siteId" target="_blank" rel="noopener">
+              ↗️ Ouvrir la telecommande cloud
+            </a>
           </div>
         </div>
         <button class="btn btn-primary" (click)="openQrCode()" [disabled]="fetchingSsid">
@@ -193,10 +353,27 @@ import { QrCodeGeneratorComponent } from '../../../../shared/components/qr-code-
           </button>
 
           <div class="overlay-form" *ngIf="showOverlayConfig">
-            <h5>Apparence de l'overlay</h5>
+            <h5>Thème</h5>
+            <div class="overlay-grid">
+              <button class="theme-card" [class.active]="overlayConfig.theme === 'broadcast'" (click)="overlayConfig.theme = 'broadcast'">
+                <div class="theme-preview broadcast">
+                  <span class="tp-team">DOM</span>
+                  <span class="tp-score">2 - 1</span>
+                  <span class="tp-team">EXT</span>
+                </div>
+                <span class="theme-label">Broadcast</span>
+              </button>
+              <button class="theme-card" [class.active]="overlayConfig.theme === 'minimal'" (click)="overlayConfig.theme = 'minimal'">
+                <div class="theme-preview minimal">
+                  <span class="tp-score">2 - 1</span>
+                </div>
+                <span class="theme-label">Minimal</span>
+              </button>
+            </div>
+
+            <h5>Position</h5>
             <div class="overlay-grid">
               <div class="form-group">
-                <label>Position</label>
                 <select [(ngModel)]="overlayConfig.position" class="form-input">
                   <option value="top-left">Haut gauche</option>
                   <option value="top-center">Haut centre</option>
@@ -206,53 +383,19 @@ import { QrCodeGeneratorComponent } from '../../../../shared/components/qr-code-
                   <option value="bottom-right">Bas droite</option>
                 </select>
               </div>
-              <div class="form-group">
-                <label>Décalage X (px)</label>
-                <input type="number" [(ngModel)]="overlayConfig.offsetX" min="0" max="200" class="form-input"/>
-              </div>
-              <div class="form-group">
-                <label>Décalage Y (px)</label>
-                <input type="number" [(ngModel)]="overlayConfig.offsetY" min="0" max="200" class="form-input"/>
-              </div>
-              <div class="form-group">
-                <label>Arrondi (px)</label>
-                <input type="number" [(ngModel)]="overlayConfig.borderRadius" min="0" max="50" class="form-input"/>
-              </div>
-              <div class="form-group">
-                <label>Couleur score</label>
-                <div class="color-input">
-                  <input type="color" [(ngModel)]="overlayConfig.scoreColor"/>
-                  <span>{{ overlayConfig.scoreColor }}</span>
-                </div>
-              </div>
-              <div class="form-group">
-                <label>Taille score (px)</label>
-                <input type="number" [(ngModel)]="overlayConfig.scoreSize" min="16" max="72" class="form-input"/>
-              </div>
-              <div class="form-group">
-                <label>Couleur équipes</label>
-                <div class="color-input">
-                  <input type="color" [(ngModel)]="overlayConfig.teamNameColor"/>
-                  <span>{{ overlayConfig.teamNameColor }}</span>
-                </div>
-              </div>
-              <div class="form-group">
-                <label>Taille équipes (px)</label>
-                <input type="number" [(ngModel)]="overlayConfig.teamNameSize" min="10" max="36" class="form-input"/>
-              </div>
             </div>
 
             <!-- Preview -->
             <div class="overlay-preview">
               <div class="preview-label">Aperçu</div>
               <div class="preview-container" [style.justify-content]="getJustify()" [style.align-items]="getAlign()">
-                <div class="preview-overlay"
-                  [style.border-radius.px]="overlayConfig.borderRadius"
-                  [style.margin]="overlayConfig.offsetY + 'px ' + overlayConfig.offsetX + 'px'"
-                >
-                  <span class="preview-team" [style.color]="overlayConfig.teamNameColor" [style.font-size.px]="overlayConfig.teamNameSize * 0.8">DOM</span>
-                  <span class="preview-score" [style.color]="overlayConfig.scoreColor" [style.font-size.px]="overlayConfig.scoreSize * 0.8">2 - 1</span>
-                  <span class="preview-team" [style.color]="overlayConfig.teamNameColor" [style.font-size.px]="overlayConfig.teamNameSize * 0.8">EXT</span>
+                <div class="preview-overlay" *ngIf="overlayConfig.theme === 'broadcast'">
+                  <span class="preview-team">DOM</span>
+                  <span class="preview-score">2 - 1</span>
+                  <span class="preview-team">EXT</span>
+                </div>
+                <div class="preview-overlay minimal" *ngIf="overlayConfig.theme === 'minimal'">
+                  <span class="preview-score">2 - 1</span>
                 </div>
               </div>
             </div>
@@ -277,43 +420,56 @@ import { QrCodeGeneratorComponent } from '../../../../shared/components/qr-code-
           Ajoutez un logo ou une image qui s'affichera en permanence sur la TV (ex: logo du club, sponsor principal).
         </p>
 
-        <!-- Upload zone -->
-        <div class="watermark-upload" *ngIf="!watermarkConfig.imagePath">
-          <label class="upload-zone" [class.dragging]="isDraggingWatermark">
-            <input
-              type="file"
-              accept="image/png,image/jpeg,image/gif,image/webp,image/svg+xml"
-              (change)="onWatermarkFileSelected($event)"
-              hidden
-            />
-            <span class="upload-icon">📤</span>
-            <span class="upload-text">Cliquez ou glissez une image ici</span>
-            <span class="upload-hint">PNG, JPEG, GIF, WebP ou SVG (max 5 MB)</span>
-          </label>
+        <!-- Watermark selector dropdown -->
+        <div class="watermark-selector">
+          <div class="form-group">
+            <label>Image watermark</label>
+            <div class="selector-row">
+              <select
+                class="form-input"
+                [(ngModel)]="selectedWatermarkName"
+                (ngModelChange)="onWatermarkSelected($event)"
+                [disabled]="loadingWatermarks"
+              >
+                <option value="">-- Aucun watermark --</option>
+                <option *ngFor="let wm of availableWatermarks" [value]="wm.name">
+                  {{ wm.name }}
+                </option>
+              </select>
+              <button
+                class="btn btn-secondary btn-sm"
+                (click)="loadAvailableWatermarks()"
+                [disabled]="loadingWatermarks"
+                title="Rafraichir la liste"
+              >
+                {{ loadingWatermarks ? '...' : 'Rafraichir' }}
+              </button>
+            </div>
+          </div>
         </div>
 
-        <!-- Current watermark preview -->
+        <!-- Preview of selected watermark -->
         <div class="watermark-current" *ngIf="watermarkConfig.imagePath">
           <div class="watermark-preview-box">
             <img [src]="getWatermarkPreviewUrl()" alt="Watermark" class="watermark-img" (error)="onWatermarkImageError($event)"/>
           </div>
           <div class="watermark-info">
             <span class="watermark-path">{{ getWatermarkFilename() }}</span>
-            <div class="watermark-actions">
-              <label class="btn btn-secondary btn-sm">
-                <input
-                  type="file"
-                  accept="image/png,image/jpeg,image/gif,image/webp,image/svg+xml"
-                  (change)="onWatermarkFileSelected($event)"
-                  hidden
-                />
-                Changer l'image
-              </label>
-              <button class="btn btn-danger btn-sm" (click)="removeWatermark()">
-                Supprimer
-              </button>
-            </div>
           </div>
+        </div>
+
+        <!-- Upload new watermark -->
+        <div class="watermark-upload-new">
+          <label class="upload-zone-compact">
+            <input
+              type="file"
+              accept="image/png,image/jpeg,image/gif,image/webp,image/svg+xml"
+              (change)="onWatermarkFileSelected($event)"
+              hidden
+            />
+            Uploader un nouveau watermark
+          </label>
+          <span class="upload-hint-inline">PNG, JPEG, GIF, WebP ou SVG (max 5 MB)</span>
         </div>
 
         <!-- Watermark config form -->
@@ -784,31 +940,63 @@ import { QrCodeGeneratorComponent } from '../../../../shared/components/qr-code-
     }
 
     .overlay-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      display: flex;
       gap: 1rem;
       margin-bottom: 1rem;
     }
 
-    .color-input {
+    .theme-card {
+      flex: 1;
+      padding: 0.75rem;
+      border: 2px solid #e2e8f0;
+      border-radius: 8px;
+      background: #fff;
+      cursor: pointer;
+      text-align: center;
+      transition: border-color 0.2s;
+    }
+
+    .theme-card.active {
+      border-color: #3b82f6;
+      background: #eff6ff;
+    }
+
+    .theme-preview {
       display: flex;
       align-items: center;
-      gap: 0.5rem;
-    }
-
-    .color-input input[type="color"] {
-      width: 40px;
-      height: 32px;
-      border: 1px solid #e2e8f0;
+      justify-content: center;
+      gap: 0.25rem;
+      padding: 0.5rem;
+      background: rgba(0, 0, 0, 0.85);
       border-radius: 4px;
-      padding: 0;
-      cursor: pointer;
+      margin-bottom: 0.5rem;
     }
 
-    .color-input span {
+    .tp-team {
+      font-size: 0.625rem;
+      color: #fff;
+      font-weight: 500;
+    }
+
+    .tp-score {
       font-size: 0.75rem;
-      color: #64748b;
-      font-family: monospace;
+      color: #4caf50;
+      font-weight: 700;
+    }
+
+    .theme-label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: #334155;
+    }
+
+    .theme-preview.minimal {
+      background: rgba(0, 0, 0, 0.55);
+      padding: 0.25rem 0.5rem;
+    }
+
+    .theme-preview.minimal .tp-score {
+      color: #fff;
     }
 
     /* Preview */
@@ -836,7 +1024,14 @@ import { QrCodeGeneratorComponent } from '../../../../shared/components/qr-code-
       align-items: center;
       gap: 0.5rem;
       padding: 0.5rem 1rem;
-      background: rgba(0, 0, 0, 0.85);
+      background: rgba(15, 15, 20, 0.92);
+      border-radius: 6px;
+    }
+
+    .preview-overlay.minimal {
+      background: rgba(0, 0, 0, 0.55);
+      padding: 0.35rem 0.75rem;
+      border-radius: 4px;
     }
 
     .preview-team {
@@ -995,11 +1190,71 @@ import { QrCodeGeneratorComponent } from '../../../../shared/components/qr-code-
       line-height: 1.4;
     }
 
+    .cloud-remote-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.375rem;
+      font-size: 0.8125rem;
+      font-weight: 500;
+      color: #6366f1;
+      text-decoration: none;
+      transition: color 0.15s;
+    }
+
+    .cloud-remote-link:hover {
+      color: #4f46e5;
+      text-decoration: underline;
+    }
+
     .qr-mode-card .qr-detail {
       margin-top: 0.5rem;
     }
 
     /* Watermark styles */
+    .watermark-selector {
+      margin-bottom: 1rem;
+    }
+
+    .selector-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .selector-row select {
+      flex: 1;
+    }
+
+    .watermark-upload-new {
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .upload-zone-compact {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 16px;
+      border: 1px dashed #475569;
+      border-radius: 6px;
+      cursor: pointer;
+      color: #94a3b8;
+      font-size: 0.85rem;
+      transition: border-color 0.2s, color 0.2s;
+    }
+
+    .upload-zone-compact:hover {
+      border-color: #60a5fa;
+      color: #60a5fa;
+    }
+
+    .upload-hint-inline {
+      font-size: 0.75rem;
+      color: #94a3b8;
+    }
+
     .watermark-upload {
       margin-bottom: 1rem;
     }
@@ -1201,6 +1456,42 @@ import { QrCodeGeneratorComponent } from '../../../../shared/components/qr-code-
       line-height: 1;
     }
 
+    /* PIN status badge */
+    .pin-status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 0.75rem;
+      border-radius: 8px;
+      font-size: 0.875rem;
+      font-weight: 500;
+      margin-bottom: 1rem;
+    }
+
+    .pin-status-badge.active {
+      background: #dcfce7;
+      color: #166534;
+      border: 1px solid #bbf7d0;
+    }
+
+    .pin-status-badge.inactive {
+      background: #f1f5f9;
+      color: #64748b;
+      border: 1px solid #e2e8f0;
+    }
+
+    .pin-badge-icon {
+      font-size: 1rem;
+    }
+
+    .pin-input {
+      max-width: 150px;
+      font-family: monospace;
+      font-size: 1.25rem;
+      letter-spacing: 4px;
+      text-align: center;
+    }
+
     /* Rapports PDF */
     .reports-list {
       display: flex;
@@ -1298,6 +1589,23 @@ export class SiteSettingsTabComponent implements OnInit, OnChanges {
   remotePassword: string = '';
   savingClubAuth: boolean = false;
 
+  // Audience
+  avgSpectators: number | null = null;
+  savingAvgSpectators: boolean = false;
+
+  // Branding (P5)
+  logoUrl: string = '';
+  colorPrimary: string = '';
+  colorSecondary: string = '';
+  brandingSaving: boolean = false;
+  logoError: boolean = false;
+
+  // Remote PIN
+  remotePin: string = '';
+  remotePinEnabled: boolean = false;
+  savingRemotePin: boolean = false;
+  clearingRemotePin: boolean = false;
+
   // Hotspot
   hotspotSsid: string = '';
   hotspotPassword: string = '';
@@ -1315,16 +1623,9 @@ export class SiteSettingsTabComponent implements OnInit, OnChanges {
   savingLiveScore: boolean = false;
   showOverlayConfig: boolean = false;
   savingOverlay: boolean = false;
-  overlayConfig = {
-    position: 'top-right' as OverlayPosition,
-    offsetX: 20,
-    offsetY: 20,
-    backgroundColor: 'rgba(0, 0, 0, 0.85)',
-    borderRadius: 12,
-    scoreColor: '#4caf50',
-    scoreSize: 28,
-    teamNameColor: '#ffffff',
-    teamNameSize: 16
+  overlayConfig: { theme: OverlayTheme; position: ScoreOverlayPosition } = {
+    theme: 'broadcast',
+    position: 'top-right',
   };
 
 
@@ -1357,6 +1658,11 @@ export class SiteSettingsTabComponent implements OnInit, OnChanges {
   uploadProgressText: string = '';
   savingWatermark: boolean = false;
 
+  // Watermark selector
+  availableWatermarks: WatermarkFileInfo[] = [];
+  loadingWatermarks: boolean = false;
+  selectedWatermarkName: string = '';
+
   // Options pour les selects
   positionOptions: { value: WmOverlayPosition; label: string }[] = [];
   animationOptions: { value: WatermarkAnimation; label: string }[] = [];
@@ -1383,14 +1689,25 @@ export class SiteSettingsTabComponent implements OnInit, OnChanges {
 
     if (this.site) {
       this.clubName = this.site.club_name || '';
+      this.avgSpectators = this.site.avg_spectators ?? null;
+      // P5: Branding
+      this.logoUrl = this.site.logo_url || '';
+      this.colorPrimary = this.site.color_primary || '';
+      this.colorSecondary = this.site.color_secondary || '';
 
       // Charger les infos hotspot depuis local_config_mirror (synchronisé par le Pi)
       this.loadHotspotInfo(this.site);
 
       // Charger la config scoreOverlay depuis local_config_mirror (synchronisé par le Pi)
-      const mirrorScoreOverlay = this.site.local_config_mirror?.['scoreOverlay'];
+      const mirrorScoreOverlay = this.site.local_config_mirror?.['scoreOverlay'] as Record<string, unknown> | undefined;
       if (mirrorScoreOverlay) {
-        this.overlayConfig = { ...this.overlayConfig, ...mirrorScoreOverlay };
+        if (mirrorScoreOverlay['theme'] === 'broadcast' || mirrorScoreOverlay['theme'] === 'minimal') {
+          this.overlayConfig.theme = mirrorScoreOverlay['theme'];
+        }
+        const pos = mirrorScoreOverlay['position'] as string | undefined;
+        if (pos && ['top-left', 'top-center', 'top-right', 'bottom-left', 'bottom-center', 'bottom-right'].includes(pos)) {
+          this.overlayConfig.position = pos as ScoreOverlayPosition;
+        }
       }
 
       // Charger la config watermark existante depuis local_config_mirror (synchronisé par le Pi)
@@ -1407,9 +1724,27 @@ export class SiteSettingsTabComponent implements OnInit, OnChanges {
         });
       }
 
+      // Charger la liste des watermarks disponibles
+      this.loadAvailableWatermarks();
+
       // Charger les rapports du club
       this.loadClubReports();
+
+      // Charger le statut du PIN télécommande cloud
+      this.loadRemotePinStatus();
     }
+  }
+
+  private loadRemotePinStatus(): void {
+    this.sitesService.getRemotePinStatus(this.siteId).subscribe({
+      next: (response) => {
+        this.remotePinEnabled = response.pinEnabled;
+      },
+      error: () => {
+        // Silencieux - le statut PIN n'est pas critique
+        this.remotePinEnabled = false;
+      }
+    });
   }
 
   ngOnChanges(changes: SimpleChanges): void {
@@ -1424,9 +1759,15 @@ export class SiteSettingsTabComponent implements OnInit, OnChanges {
       this.loadHotspotInfo(site);
 
       // Recharger scoreOverlay
-      const mirrorScoreOverlay = site.local_config_mirror?.['scoreOverlay'];
+      const mirrorScoreOverlay = site.local_config_mirror?.['scoreOverlay'] as Record<string, unknown> | undefined;
       if (mirrorScoreOverlay) {
-        this.overlayConfig = { ...this.overlayConfig, ...mirrorScoreOverlay };
+        if (mirrorScoreOverlay['theme'] === 'broadcast' || mirrorScoreOverlay['theme'] === 'minimal') {
+          this.overlayConfig.theme = mirrorScoreOverlay['theme'];
+        }
+        const pos = mirrorScoreOverlay['position'] as string | undefined;
+        if (pos && ['top-left', 'top-center', 'top-right', 'bottom-left', 'bottom-center', 'bottom-right'].includes(pos)) {
+          this.overlayConfig.position = pos as ScoreOverlayPosition;
+        }
       }
 
       // Recharger watermark config
@@ -1546,7 +1887,7 @@ export class SiteSettingsTabComponent implements OnInit, OnChanges {
       neoProContent,
       mode: 'merge'
     }).subscribe({
-      next: (response: any) => {
+      next: (response: { queued?: boolean }) => {
         this.savingClubAuth = false;
         this.notificationService.success(
           response.queued
@@ -1558,6 +1899,86 @@ export class SiteSettingsTabComponent implements OnInit, OnChanges {
         this.savingClubAuth = false;
         const message = ErrorExtractor.getMessage(error);
         this.notificationService.error(`Erreur déploiement: ${message}`);
+      }
+    });
+  }
+
+  saveAvgSpectators(): void {
+    if (this.avgSpectators === null || this.avgSpectators === undefined) return;
+
+    this.savingAvgSpectators = true;
+    this.sitesService.updateSite(this.siteId, { avg_spectators: this.avgSpectators }).subscribe({
+      next: (updatedSite) => {
+        this.savingAvgSpectators = false;
+        this.notificationService.success('Spectateurs moyens mis à jour');
+        this.siteUpdated.emit(updatedSite);
+      },
+      error: (error) => {
+        this.savingAvgSpectators = false;
+        const message = ErrorExtractor.getMessage(error);
+        this.notificationService.error(`Erreur: ${message}`);
+      }
+    });
+  }
+
+  // P5: Branding
+  saveBranding(): void {
+    this.brandingSaving = true;
+    const data: Record<string, string | null> = {
+      logo_url: this.logoUrl || null,
+      color_primary: this.colorPrimary || null,
+      color_secondary: this.colorSecondary || null,
+    };
+    this.sitesService.updateSite(this.siteId, data).subscribe({
+      next: (updatedSite) => {
+        this.brandingSaving = false;
+        this.notificationService.success('Branding du club mis à jour');
+        this.siteUpdated.emit(updatedSite);
+      },
+      error: (error) => {
+        this.brandingSaving = false;
+        const message = ErrorExtractor.getMessage(error);
+        this.notificationService.error(`Erreur: ${message}`);
+      }
+    });
+  }
+
+  onLogoError(): void {
+    this.logoError = true;
+  }
+
+  saveRemotePin(): void {
+    if (!this.remotePin || this.remotePin.length < 4) {
+      this.notificationService.error('Le PIN doit contenir entre 4 et 6 chiffres');
+      return;
+    }
+
+    this.savingRemotePin = true;
+    this.sitesService.setRemotePin(this.siteId, this.remotePin).subscribe({
+      next: () => {
+        this.remotePinEnabled = true;
+        this.remotePin = '';
+        this.savingRemotePin = false;
+        this.notificationService.success('PIN de télécommande cloud défini avec succès');
+      },
+      error: (error: { error?: { error?: string } }) => {
+        this.savingRemotePin = false;
+        this.notificationService.error(error.error?.error || 'Erreur lors de la définition du PIN');
+      }
+    });
+  }
+
+  clearRemotePin(): void {
+    this.clearingRemotePin = true;
+    this.sitesService.clearRemotePin(this.siteId).subscribe({
+      next: () => {
+        this.remotePinEnabled = false;
+        this.clearingRemotePin = false;
+        this.notificationService.success('PIN de télécommande cloud supprimé');
+      },
+      error: (error: { error?: { error?: string } }) => {
+        this.clearingRemotePin = false;
+        this.notificationService.error(error.error?.error || 'Erreur lors de la suppression du PIN');
       }
     });
   }
@@ -1746,6 +2167,61 @@ export class SiteSettingsTabComponent implements OnInit, OnChanges {
   // Watermark methods
   // ============================================================================
 
+  loadAvailableWatermarks(): void {
+    this.loadingWatermarks = true;
+    this.assetService.listWatermarks().subscribe({
+      next: (response) => {
+        this.availableWatermarks = response.watermarks;
+        this.loadingWatermarks = false;
+
+        // Pre-select the current watermark if one is configured
+        if (this.watermarkConfig.imagePath) {
+          const currentFilename = this.watermarkConfig.imagePath.split('/').pop() || '';
+          const match = this.availableWatermarks.find(w => w.name === currentFilename);
+          if (match) {
+            this.selectedWatermarkName = match.name;
+          }
+        }
+      },
+      error: () => {
+        this.loadingWatermarks = false;
+        this.notificationService.error('Erreur lors du chargement des watermarks');
+      }
+    });
+  }
+
+  onWatermarkSelected(name: string): void {
+    if (!name) {
+      // Option "Aucun" selectionnee — supprimer le watermark
+      this.watermarkConfig = {
+        ...this.watermarkConfig,
+        enabled: false,
+        imagePath: '',
+        cloudUrl: undefined,
+      };
+      this.watermarkPreviewUrl = null;
+      this.selectedWatermarkFile = null;
+      this.selectedWatermarkName = '';
+      this.saveWatermarkConfig();
+      return;
+    }
+
+    const watermark = this.availableWatermarks.find(w => w.name === name);
+    if (!watermark) return;
+
+    this.selectedWatermarkName = name;
+    this.watermarkPreviewUrl = null;
+    this.selectedWatermarkFile = null;
+
+    // Mettre a jour la config avec le watermark selectionne
+    this.watermarkConfig = {
+      ...this.watermarkConfig,
+      imagePath: watermark.localPath,
+      cloudUrl: watermark.url,
+      enabled: true,
+    };
+  }
+
   onWatermarkFileSelected(event: Event): void {
     const input = event.target as HTMLInputElement;
     if (!input.files || input.files.length === 0) return;
@@ -1807,6 +2283,14 @@ export class SiteSettingsTabComponent implements OnInit, OnChanges {
           localPath: response.localPath,
           checksum: response.checksum
         });
+
+        // Auto-déployer la config watermark vers le Pi
+        // L'image a été déployée via deploy_asset, mais configuration.json
+        // doit aussi être mis à jour pour que le watermark s'affiche
+        this.saveWatermarkConfig();
+
+        // Rafraichir la liste des watermarks pour inclure le nouveau fichier
+        this.loadAvailableWatermarks();
       },
       error: (error) => {
         this.uploadingWatermark = false;
@@ -1831,6 +2315,7 @@ export class SiteSettingsTabComponent implements OnInit, OnChanges {
     };
     this.watermarkPreviewUrl = null;
     this.selectedWatermarkFile = null;
+    this.selectedWatermarkName = '';
 
     // Déployer la config sans watermark
     this.saveWatermarkConfig();
@@ -1892,17 +2377,54 @@ export class SiteSettingsTabComponent implements OnInit, OnChanges {
   saveWatermarkConfig(): void {
     this.savingWatermark = true;
 
+    // 1. Toujours envoyer la config (update_config)
     this.sitesService.sendCommand(this.siteId, 'update_config', {
       neoProContent: { watermark: this.watermarkConfig },
       mode: 'merge'
     }).subscribe({
       next: (response: { queued?: boolean }) => {
-        this.savingWatermark = false;
-        this.notificationService.success(
-          response.queued
-            ? 'Configuration mise en file d\'attente'
-            : 'Configuration du watermark déployée!'
-        );
+        // 2. Re-déployer l'image si cloudUrl est disponible
+        // Cela garantit que l'image est présente sur le Pi même si le premier
+        // deploy_asset a échoué ou n'a jamais été reçu
+        if (this.watermarkConfig.cloudUrl && this.watermarkConfig.imagePath) {
+          const filename = this.watermarkConfig.imagePath.split('/').pop() || 'watermark.png';
+          this.assetService.deployAsset(
+            this.siteId,
+            this.watermarkConfig.cloudUrl,
+            filename,
+            this.watermarkConfig.imagePath,
+            undefined,
+            'watermark'
+          ).subscribe({
+            next: () => {
+              this.savingWatermark = false;
+              this.notificationService.success(
+                response.queued
+                  ? 'Configuration et image mises en file d\'attente'
+                  : 'Watermark déployé (config + image)!'
+              );
+            },
+            error: () => {
+              // L'image n'a pas pu être re-déployée, mais la config est OK
+              this.savingWatermark = false;
+              this.notificationService.success(
+                response.queued
+                  ? 'Configuration mise en file d\'attente'
+                  : 'Configuration du watermark déployée!'
+              );
+              this.notificationService.warning(
+                'L\'image n\'a pas pu être re-déployée. Si le watermark ne s\'affiche pas, essayez de re-uploader l\'image.'
+              );
+            }
+          });
+        } else {
+          this.savingWatermark = false;
+          this.notificationService.success(
+            response.queued
+              ? 'Configuration mise en file d\'attente'
+              : 'Configuration du watermark déployée!'
+          );
+        }
       },
       error: (error) => {
         this.savingWatermark = false;

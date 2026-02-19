@@ -13,10 +13,12 @@
 CHROMIUM_URL="http://neopro.local/tv"
 LOG_DIR="/home/pi/neopro/logs"
 LOG_FILE="$LOG_DIR/kiosk-watchdog.log"
+KIOSK_STATUS_FILE="/home/pi/neopro/data/kiosk-status.json"
 CHECK_INTERVAL=30  # Vérifier toutes les 30 secondes
 
 # Créer le dossier de logs si nécessaire
 mkdir -p "$LOG_DIR" 2>/dev/null || true
+mkdir -p "$(dirname "$KIOSK_STATUS_FILE")" 2>/dev/null || true
 MEMORY_THRESHOLD=85  # Redémarrer si mémoire > 85%
 MAX_CRASH_COUNT=3  # Après 3 crashs rapides, attendre plus longtemps
 CRASH_WINDOW=300   # Fenêtre de 5 minutes pour compter les crashs
@@ -52,10 +54,21 @@ cleanup_old_crashes() {
     crash_times=("${new_times[@]}")
 }
 
-# Enregistrer un crash
+# Enregistrer un crash et écrire le statut pour le sync-agent
 record_crash() {
     crash_times+=("$(date +%s)")
     cleanup_old_crashes
+    write_kiosk_status "crashed"
+}
+
+# Écrire le statut kiosk dans un fichier JSON lu par le sync-agent
+write_kiosk_status() {
+    local status="$1"
+    local reason="${2:-}"
+    local now=$(date -u +"%Y-%m-%dT%H:%M:%S.000Z")
+    cat > "$KIOSK_STATUS_FILE" 2>/dev/null <<EOF
+{"status":"${status}","chromiumAlive":$(pgrep -f "chromium.*$CHROMIUM_URL" > /dev/null 2>&1 && echo "true" || echo "false"),"restartCount":${#crash_times[@]},"lastEvent":"${now}","reason":"${reason}","pid":${CHROMIUM_PID:-0}}
+EOF
 }
 
 # Vérifie si trop de crashs récents
@@ -136,22 +149,25 @@ start_chromium() {
     # Flags spécifiques au modèle
     local gpu_flags=()
     if [[ "$PI_MODEL" == "pi5" ]]; then
-        # Pi 5 : GPU compositing via V3D natif (Mesa).
+        # Pi 5 : Driver V3D natif (Mesa) pour le compositing GPU.
         #
         # Historique des tentatives :
         # - SwiftShader (--use-gl=angle --use-angle=swiftshader) : trop lent, vidéos saccadées
         # - EGL natif avec flags (--use-gl=egl --enable-features=Vulkan) : SharedImageStub errors /5s
         # - --disable-gpu : Skia CPU, mieux que SwiftShader mais encore trop lent
-        # - --disable-accelerated-video-decode : flash noir plus long (decode software plus lent)
-        # - --use-angle=disabled : GPU process crash (seul egl-angle autorisé sur Pi OS)
+        # - Aucun flag GPU (v3.24.1) : SharedImageBackingFactory crash loop sur vidéo 1080p
+        #   Le GPU ne trouve pas de backend pour Y_UV 420 en shared_memory → crash toutes les 5s
         #
-        # Solution : Laisser Chromium utiliser le driver V3D 7.1 (Mesa) par défaut.
-        # Les erreurs SharedImageStub/AllocateRingBuffer sont cosmétiques.
-        # Le flash noir en fin de boucle est géré côté webapp (preload anticipé).
-        log "📱 Pi 5 détecté: utilisation du driver V3D natif (Mesa)"
+        # Solution : Garder le compositing GPU (V3D Mesa) mais désactiver le décodage vidéo
+        # hardware qui cause les SharedImage errors. Chromium décode les vidéos en software
+        # (assez performant sur Pi 5 quad A76 2.4GHz) et utilise le GPU uniquement pour
+        # le compositing/rasterization. Résultat : vidéos fluides sans crash GPU.
+        log "📱 Pi 5 détecté: V3D Mesa + décodage vidéo software (évite SharedImage crash)"
         gpu_flags=(
             --ignore-gpu-blocklist
             --enable-gpu-rasterization
+            --disable-features=VaapiVideoDecoder,UseChromeOSDirectVideoDecoder
+            --disable-gpu-memory-buffer-video-frames
         )
     else
         # Pi 4 et antérieurs : utiliser l'accélération GPU hardware
@@ -170,6 +186,16 @@ start_chromium() {
 
     CHROMIUM_PID=$!
     log "✓ Chromium lancé (PID: $CHROMIUM_PID)"
+    write_kiosk_status "running"
+
+    # Masquer le curseur souris — ceinture et bretelles
+    # unclutter-xfixes (autostart LXDE) est la méthode principale,
+    # xdotool est un filet de sécurité si unclutter ne se lance pas
+    if command -v xdotool &> /dev/null; then
+        sleep 2
+        DISPLAY=:0 xdotool mousemove --window "$(xdotool search --name chromium 2>/dev/null | head -1)" 0 0 2>/dev/null || true
+        log "🖱️ Curseur déplacé hors écran (fallback)"
+    fi
 }
 
 # Vérifier si Chromium affiche une page d'erreur
@@ -189,9 +215,10 @@ check_for_crash_page() {
 
     # Méthode 2: Vérifier les logs Chromium pour les erreurs GPU/mémoire
     if [ -f /home/pi/.config/chromium/chrome_debug.log ]; then
-        local recent_errors=$(tail -100 /home/pi/.config/chromium/chrome_debug.log 2>/dev/null | grep -c "GPU process exited\|Renderer crash\|Out of memory" || true)
+        local recent_errors
+        recent_errors=$(tail -100 /home/pi/.config/chromium/chrome_debug.log 2>/dev/null | grep -c "GPU process exited\|Renderer crash\|Out of memory") || recent_errors=0
         if (( recent_errors > 0 )); then
-            log "⚠️ Erreurs GPU/mémoire détectées dans les logs Chromium"
+            log "⚠️ Erreurs GPU/mémoire détectées dans les logs Chromium (${recent_errors})"
             return 0  # Crash détecté
         fi
     fi
@@ -199,8 +226,10 @@ check_for_crash_page() {
     # Méthode 3: Vérifier les erreurs GPU driver dans journalctl (AllocateRingBuffer, etc.)
     # Ces erreurs ne sont pas visibles dans chrome_debug.log mais indiquent une défaillance du GPU driver.
     # Sur Pi 5 avec V3D, ces erreurs se produisent quand le GPU ne peut plus allouer de mémoire.
-    local gpu_driver_errors=$(journalctl -u neopro-kiosk --since "2 minutes ago" --no-pager -q 2>/dev/null | grep -c "AllocateRingBuffer\|kFatalFailure\|GpuChannelMsg_CreateCommandBuffer" || true)
-    if (( gpu_driver_errors > 10 )); then
+    # Seuil à 3 : Chromium crash après ~5-6 kFatalFailure, il faut détecter avant la mort.
+    local gpu_driver_errors
+    gpu_driver_errors=$(journalctl -u neopro-kiosk --since "2 minutes ago" --no-pager -q 2>/dev/null | grep -c "AllocateRingBuffer\|kFatalFailure\|GpuChannelMsg_CreateCommandBuffer") || gpu_driver_errors=0
+    if (( gpu_driver_errors > 3 )); then
         log "⚠️ Erreurs GPU driver détectées (${gpu_driver_errors} en 2 min): AllocateRingBuffer/kFatalFailure"
         return 0  # Crash détecté
     fi
@@ -267,6 +296,7 @@ main() {
 
         if $need_restart; then
             log "🔄 Redémarrage nécessaire: $reason"
+            write_kiosk_status "crashed" "$reason"
             record_crash
 
             cleanup_chromium

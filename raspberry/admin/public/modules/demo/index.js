@@ -113,6 +113,22 @@ if (DEMO_MODE) {
         await new Promise(resolve => setTimeout(resolve, 200 + Math.random() * 300));
 
         // Router vers les données mockées
+        if (url.includes('/api/sync-status')) {
+            return new Response(JSON.stringify({
+                connected: true,
+                lastSyncAt: new Date(Date.now() - 300000).toISOString(),
+                pendingCommands: 0,
+                deadLetters: 0,
+                recentHistory: [
+                    { type: 'central_to_local', timestamp: new Date(Date.now() - 300000).toISOString(), success: true, error: null },
+                    { type: 'connection', timestamp: new Date(Date.now() - 600000).toISOString(), success: true, error: null },
+                    { type: 'local_to_central', timestamp: new Date(Date.now() - 900000).toISOString(), success: true, error: null },
+                ],
+                error: null,
+                lastErrorAt: null,
+            }), { status: 200 });
+        }
+
         if (url.includes('/api/system')) {
             // Varier légèrement les valeurs à chaque appel
             const data = JSON.parse(JSON.stringify(DEMO_DATA.system));

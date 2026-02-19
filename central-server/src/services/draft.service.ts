@@ -13,7 +13,6 @@ import {
   DraftValidationResult,
   MissingVideoInfo,
   SiteConfiguration,
-  SponsorVideo,
   Video,
 } from '../types';
 
@@ -26,23 +25,6 @@ interface CloudVideo {
 interface LocalVideo {
   filename: string;
   path: string;
-}
-
-interface VideosQueryRow {
-  id: string;
-  filename: string;
-  original_name: string;
-  category: string | null;
-  subcategory: string | null;
-  file_size: number;
-  duration: number | null;
-  mime_type: string | null;
-  storage_path: string;
-  thumbnail_url: string | null;
-  metadata: Record<string, unknown>;
-  uploaded_by: string | null;
-  created_at: Date;
-  updated_at: Date;
 }
 
 class DraftService {

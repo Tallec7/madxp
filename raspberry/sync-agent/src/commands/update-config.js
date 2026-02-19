@@ -4,6 +4,7 @@ const fs = require('fs-extra');
 const logger = require('../logger');
 const { config } = require('../config');
 const { mergeConfigurations, calculateConfigHash } = require('../utils/config-merge');
+const { atomicWriteJson, safeReadConfig } = require('../utils/safe-config-io');
 
 const execAsync = util.promisify(exec);
 
@@ -30,14 +31,10 @@ async function updateConfig(data) {
     const backupPath = config.paths.root + '/webapp/configuration.backup.json';
 
     // Lire la configuration locale actuelle
-    let localConfig = {};
-    if (await fs.pathExists(configPath)) {
-      const localContent = await fs.readFile(configPath, 'utf8');
-      localConfig = JSON.parse(localContent);
-    }
+    let localConfig = await safeReadConfig(configPath);
 
     // Créer un backup avant modification
-    await fs.writeFile(backupPath, JSON.stringify(localConfig, null, 2));
+    await atomicWriteJson(backupPath, localConfig);
     logger.info('Backup created', { path: backupPath });
 
     let finalConfig;
@@ -62,9 +59,8 @@ async function updateConfig(data) {
       });
     }
 
-    // Écrire la configuration fusionnée
-    const configJson = JSON.stringify(finalConfig, null, 2);
-    await fs.writeFile(configPath, configJson);
+    // Écrire la configuration fusionnée (atomic write)
+    await atomicWriteJson(configPath, finalConfig);
     logger.info('Configuration written to', { path: configPath });
 
     // Notifier l'application locale du changement
@@ -138,28 +134,9 @@ function applyReplaceMode(localConfig, contentToApply) {
  * Notifie l'application locale du changement de configuration
  */
 async function notifyLocalApp() {
-  const io = require('socket.io-client');
-  const socket = io('http://localhost:3000', { timeout: 5000 });
-  let timeoutId = null;
-
-  socket.on('connect', () => {
-    if (timeoutId) clearTimeout(timeoutId);
-    logger.info('Connected to local server, sending config_updated notification');
-    socket.emit('config_updated');
-    setTimeout(() => socket.close(), 500);
-  });
-
-  socket.on('connect_error', (err) => {
-    if (timeoutId) clearTimeout(timeoutId);
-    logger.warn('Failed to connect to local server for config notification:', err.message);
-    socket.close();
-  });
-
-  timeoutId = setTimeout(() => {
-    if (socket.connected) return;
-    logger.warn('Timeout connecting to local server for config notification');
-    socket.close();
-  }, 5000);
+  const localSocket = require('../services/local-socket');
+  localSocket.emit('config_updated');
+  logger.info('Local server notified of config change');
 }
 
 /**

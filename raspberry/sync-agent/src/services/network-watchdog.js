@@ -28,10 +28,12 @@ const execAsync = util.promisify(exec);
 const HOTSPOT_CHECK_INTERVAL = 30 * 1000; // 30 secondes
 const INTERNET_CHECK_INTERVAL = 60 * 1000; // 60 secondes
 const CLOUD_CHECK_INTERVAL = 30 * 1000; // 30 secondes
-const MAX_RECOVERY_ATTEMPTS = 5; // Increased from 3 to support aggressive phases
+const MAX_RECOVERY_ATTEMPTS = 6; // Phases: gentle(1-2), medium(3), aggressive(4), modprobe(5), USB power-cycle(6)
 const RECOVERY_COOLDOWN = 5 * 60 * 1000; // 5 minutes
+const FAST_RETRY_DELAY = 10 * 1000; // 10s fast retry between recovery phases (instead of waiting 60s)
 const ROLLBACK_TIMEOUT = 30 * 1000; // 30 secondes pour rollback
 const GRACE_PERIOD_DURATION = 60 * 1000; // 60s grace period after network operations
+const GRACE_PERIOD_FILE = '/tmp/neopro-watchdog-grace.json'; // Persists across process restarts
 
 // Interfaces
 const HOTSPOT_INTERFACE = 'wlan0';
@@ -52,6 +54,7 @@ const state = {
     lastCheck: null,
     recoveryAttempts: 0,
     lastRecoveryTime: 0,
+    recoveryStartedAt: 0, // Timestamp when first failure was detected (for duration tracking)
     issues: [],
     ipAddress: null,
     gateway: null,
@@ -385,6 +388,58 @@ function enableGracePeriod(type, durationMs = GRACE_PERIOD_DURATION) {
       durationMs,
       until: new Date(stateObj.gracePeriodUntil).toISOString()
     });
+    // Persist to disk so the grace period survives sync-agent restarts (OTA)
+    persistGracePeriods();
+  }
+}
+
+/**
+ * Persist grace period timestamps to disk.
+ * Survives process restarts during OTA updates.
+ */
+function persistGracePeriods() {
+  try {
+    const data = {
+      hotspot: state.hotspot.gracePeriodUntil,
+      internet: state.internet.gracePeriodUntil,
+    };
+    fs.writeFileSync(GRACE_PERIOD_FILE, JSON.stringify(data));
+  } catch (e) {
+    logger.warn('NetworkWatchdog: Failed to persist grace periods', { error: e.message });
+  }
+}
+
+/**
+ * Restore grace period timestamps from disk (called at startup).
+ * Only restores if the timestamps are still in the future.
+ */
+function restoreGracePeriods() {
+  try {
+    if (!fs.existsSync(GRACE_PERIOD_FILE)) return;
+    const raw = fs.readFileSync(GRACE_PERIOD_FILE, 'utf8');
+    const data = JSON.parse(raw);
+    const now = Date.now();
+
+    if (data.hotspot && data.hotspot > now) {
+      state.hotspot.gracePeriodUntil = data.hotspot;
+      logger.info('NetworkWatchdog: Restored hotspot grace period from disk', {
+        remainingMs: data.hotspot - now,
+        until: new Date(data.hotspot).toISOString()
+      });
+    }
+
+    if (data.internet && data.internet > now) {
+      state.internet.gracePeriodUntil = data.internet;
+      logger.info('NetworkWatchdog: Restored internet grace period from disk', {
+        remainingMs: data.internet - now,
+        until: new Date(data.internet).toISOString()
+      });
+    }
+
+    // Clean up the file
+    fs.unlinkSync(GRACE_PERIOD_FILE);
+  } catch (e) {
+    logger.warn('NetworkWatchdog: Failed to restore grace periods', { error: e.message });
   }
 }
 
@@ -451,16 +506,96 @@ async function attemptHotspotRecovery() {
 }
 
 // =============================================================================
+// USB POWER-CYCLE HELPERS
+// =============================================================================
+
+/**
+ * Tente un USB unbind/rebind pour un device spécifique (ex: "1-1.2")
+ */
+async function attemptUsbPowerCycle(usbDevicePath) {
+  try {
+    logger.warn('NetworkWatchdog: USB power-cycle', { device: usbDevicePath });
+    await execAsync(`echo "${usbDevicePath}" | sudo tee /sys/bus/usb/drivers/usb/unbind 2>/dev/null || true`);
+    await sleep(3000);
+    await execAsync(`echo "${usbDevicePath}" | sudo tee /sys/bus/usb/drivers/usb/bind 2>/dev/null || true`);
+    await sleep(5000);
+
+    // Verify wlan1 reappeared
+    try {
+      await execAsync('ip link show wlan1 2>/dev/null');
+      logger.info('NetworkWatchdog: wlan1 recovered via USB power-cycle', { device: usbDevicePath });
+      return true;
+    } catch {
+      logger.error('NetworkWatchdog: wlan1 still missing after USB power-cycle', { device: usbDevicePath });
+      return false;
+    }
+  } catch (error) {
+    logger.error('NetworkWatchdog: USB power-cycle failed', { device: usbDevicePath, error: error.message });
+    return false;
+  }
+}
+
+/**
+ * Scan tous les devices USB et tente un power-cycle sur ceux qui ressemblent à du WiFi.
+ * Utilisé en dernier recours quand le device path n'est pas connu.
+ */
+async function attemptUsbPowerCycleAll() {
+  try {
+    // List USB devices and find wireless ones
+    const { stdout } = await execAsync(
+      'for d in /sys/bus/usb/devices/[0-9]*-[0-9]*; do ' +
+      'if [ -f "$d/product" ]; then echo "$(basename $d)|$(cat $d/product 2>/dev/null)"; fi; ' +
+      'done 2>/dev/null || true'
+    );
+
+    const lines = stdout.trim().split('\n').filter(Boolean);
+    for (const line of lines) {
+      const [devId, product] = line.split('|');
+      if (!product) continue;
+      const lower = product.toLowerCase();
+      if (lower.includes('wireless') || lower.includes('wifi') || lower.includes('wlan') || lower.includes('802.11')) {
+        logger.warn('NetworkWatchdog: Found WiFi USB device for power-cycle', { devId, product });
+        const recovered = await attemptUsbPowerCycle(devId);
+        if (recovered) return true;
+      }
+    }
+
+    logger.error('NetworkWatchdog: No WiFi USB device found for power-cycle');
+    return false;
+  } catch (error) {
+    logger.error('NetworkWatchdog: USB power-cycle scan failed', { error: error.message });
+    return false;
+  }
+}
+
+// =============================================================================
 // RECOVERY INTERNET
 // =============================================================================
+
+/**
+ * Restart wpa_supplicant for wlan1 via systemd (scoped — doesn't touch wlan0).
+ * Falls back to raw daemon launch if systemd service is not available.
+ */
+async function restartWpaSupplicantWlan1() {
+  try {
+    // Prefer systemd: keeps service tracking correct, auto-restarts, scoped to wlan1
+    await execAsync('sudo systemctl restart wpa_supplicant@wlan1 2>/dev/null');
+    logger.info('NetworkWatchdog: wpa_supplicant@wlan1 restarted via systemd');
+  } catch {
+    // Fallback: raw daemon launch (older Pi without the systemd service)
+    logger.warn('NetworkWatchdog: systemd restart failed, falling back to raw wpa_supplicant');
+    await execAsync('sudo wpa_supplicant -B -i wlan1 -c /etc/wpa_supplicant/wpa_supplicant-wlan1.conf 2>/dev/null || true');
+  }
+}
 
 /**
  * Tente la récupération de la connexion internet avec phases progressives.
  *
  * Phase 1 (attempts 1-2): Gentle - wpa_cli reconfigure + dhclient
  * Phase 2 (attempt 3): Medium - interface down/up cycle
- * Phase 3 (attempt 4): Aggressive - wpa_supplicant restart
- * Phase 4 (attempt 5): Nuclear - USB WiFi driver reload (modprobe)
+ * Phase 3 (attempt 4): Aggressive - wpa_supplicant@wlan1 restart via systemd
+ * Phase 4 (attempt 5): Modprobe - USB WiFi driver reload with verification
+ * Phase 5 (attempt 6): USB power-cycle - hardware unbind/rebind
  */
 async function attemptInternetRecovery() {
   state.internet.recoveryAttempts++;
@@ -471,7 +606,7 @@ async function attemptInternetRecovery() {
   logger.warn('NetworkWatchdog: Tentative récupération internet', {
     attempt,
     maxAttempts: MAX_RECOVERY_ATTEMPTS,
-    phase: attempt <= 2 ? 'gentle' : attempt === 3 ? 'medium' : attempt === 4 ? 'aggressive' : 'nuclear',
+    phase: attempt <= 2 ? 'gentle' : attempt === 3 ? 'medium' : attempt === 4 ? 'aggressive' : attempt === 5 ? 'modprobe' : 'usb-power-cycle',
   });
 
   try {
@@ -501,19 +636,26 @@ async function attemptInternetRecovery() {
       await sleep(3000);
 
     } else if (attempt === 4) {
-      // Phase 3: Aggressive - kill and restart wpa_supplicant
-      logger.warn('NetworkWatchdog: Phase 3 - wpa_supplicant restart');
-      await execAsync('sudo killall wpa_supplicant 2>/dev/null || true');
-      await sleep(2000);
-      await execAsync('sudo wpa_supplicant -B -i wlan1 -c /etc/wpa_supplicant/wpa_supplicant-wlan1.conf 2>/dev/null || true');
+      // Phase 3: Aggressive - restart wpa_supplicant via systemd (wlan1 only)
+      logger.warn('NetworkWatchdog: Phase 3 - wpa_supplicant@wlan1 restart via systemd');
+      await restartWpaSupplicantWlan1();
       await sleep(5000);
       await execAsync('sudo dhclient wlan1 2>/dev/null || true');
       await sleep(3000);
 
-    } else {
-      // Phase 4: Nuclear - USB WiFi driver reload
-      // Detect the driver module used by wlan1
+    } else if (attempt === 5) {
+      // Phase 4: Nuclear - USB WiFi driver reload (modprobe) with verification
       logger.warn('NetworkWatchdog: Phase 4 - USB WiFi driver reload (modprobe)');
+
+      // Save USB device path BEFORE modprobe -r (needed for power-cycle fallback)
+      let savedUsbDevicePath = null;
+      try {
+        const { stdout: devPath } = await execAsync(
+          'readlink -f /sys/class/net/wlan1/device 2>/dev/null | xargs -I{} basename $(dirname {}) 2>/dev/null || echo ""'
+        );
+        savedUsbDevicePath = devPath.trim() || null;
+      } catch { /* wlan1 may already be gone */ }
+
       const driverResult = await execAsync(
         'readlink /sys/class/net/wlan1/device/driver 2>/dev/null | xargs basename 2>/dev/null || echo ""'
       ).catch(() => ({ stdout: '' }));
@@ -524,9 +666,29 @@ async function attemptInternetRecovery() {
         await execAsync(`sudo modprobe -r ${driverModule} 2>/dev/null || true`);
         await sleep(3000);
         await execAsync(`sudo modprobe ${driverModule} 2>/dev/null || true`);
-        await sleep(5000);
-        // Wait for interface to reappear
-        await execAsync('sudo wpa_supplicant -B -i wlan1 -c /etc/wpa_supplicant/wpa_supplicant-wlan1.conf 2>/dev/null || true');
+
+        // Verify wlan1 reappeared (poll 3 times, 3s each)
+        let wlan1Back = false;
+        for (let i = 0; i < 3; i++) {
+          await sleep(3000);
+          try {
+            await execAsync('ip link show wlan1 2>/dev/null');
+            wlan1Back = true;
+            logger.info('NetworkWatchdog: wlan1 reappeared after modprobe', { waitSeconds: (i + 1) * 3 });
+            break;
+          } catch { /* wlan1 pas encore là */ }
+        }
+
+        if (!wlan1Back) {
+          logger.error('NetworkWatchdog: wlan1 did NOT reappear after modprobe — USB hardware issue likely');
+          // Try USB unbind/rebind as immediate fallback
+          if (savedUsbDevicePath) {
+            await attemptUsbPowerCycle(savedUsbDevicePath);
+          }
+        }
+
+        // Reconnect WiFi (whether modprobe or USB power-cycle brought it back)
+        await restartWpaSupplicantWlan1();
         await sleep(5000);
         await execAsync('sudo dhclient wlan1 2>/dev/null || true');
         await sleep(3000);
@@ -540,15 +702,30 @@ async function attemptInternetRecovery() {
         await execAsync('sudo wpa_cli -i wlan1 reconfigure 2>/dev/null || true');
         await sleep(3000);
       }
+
+    } else {
+      // Phase 5: USB power-cycle — last resort hardware reset
+      logger.warn('NetworkWatchdog: Phase 5 - USB power-cycle (unbind/rebind)');
+      await attemptUsbPowerCycleAll();
+      await sleep(5000);
+      // Try to reconnect after power-cycle
+      await restartWpaSupplicantWlan1();
+      await sleep(5000);
+      await execAsync('sudo dhclient wlan1 2>/dev/null || true');
+      await sleep(3000);
     }
 
     // Vérification finale
     const health = await checkInternetHealth();
     if (health.healthy) {
+      // Désactiver le power management WiFi après chaque recovery réussie
+      // Le driver rtl8xxxu peut réactiver le power save après un rechargement module
+      await execAsync('sudo iwconfig wlan1 power off 2>/dev/null || true').catch(() => {});
+
       logger.info('NetworkWatchdog: Internet récupéré avec succès', {
         ip: health.ipAddress,
         gateway: health.gateway,
-        phase: attempt <= 2 ? 'gentle' : attempt === 3 ? 'medium' : attempt === 4 ? 'aggressive' : 'nuclear',
+        phase: attempt <= 2 ? 'gentle' : attempt === 3 ? 'medium' : attempt === 4 ? 'aggressive' : attempt === 5 ? 'modprobe' : 'usb-power-cycle',
       });
       state.internet.recoveryAttempts = 0;
       state.internet.healthy = true;
@@ -559,7 +736,7 @@ async function attemptInternetRecovery() {
     } else {
       logger.error('NetworkWatchdog: Récupération internet échouée', {
         issues: health.issues,
-        phase: attempt <= 2 ? 'gentle' : attempt === 3 ? 'medium' : attempt === 4 ? 'aggressive' : 'nuclear',
+        phase: attempt <= 2 ? 'gentle' : attempt === 3 ? 'medium' : attempt === 4 ? 'aggressive' : attempt === 5 ? 'modprobe' : 'usb-power-cycle',
       });
       return { success: false, issues: health.issues, phase: attempt };
     }
@@ -763,6 +940,9 @@ async function internetWatchLoop() {
       return;
     }
 
+    const wasDown = !state.internet.healthy && state.internet.lastCheck !== null;
+    const hadRecoveryAttempts = state.internet.recoveryAttempts > 0;
+
     const health = await checkInternetHealth();
     state.internet.lastCheck = Date.now();
     state.internet.healthy = health.healthy;
@@ -770,6 +950,38 @@ async function internetWatchLoop() {
     state.internet.ipAddress = health.ipAddress;
     state.internet.gateway = health.gateway;
     state.internet.connectionType = health.connectionType;
+
+    // Notify central when internet recovers after a failure
+    if (health.healthy && (wasDown || hadRecoveryAttempts)) {
+      // Ré-appliquer power management off après recovery
+      await execAsync('sudo iwconfig wlan1 power off 2>/dev/null || true').catch(() => {});
+
+      const recoveryDurationMs = state.internet.recoveryStartedAt
+        ? Date.now() - state.internet.recoveryStartedAt
+        : null;
+      const maxPhaseReached = state.internet.recoveryAttempts;
+
+      logger.info('NetworkWatchdog: Internet recovered', {
+        ip: health.ipAddress,
+        connectionType: health.connectionType,
+        recoveryDurationMs,
+        maxPhaseReached,
+      });
+      state.internet.recoveryAttempts = 0;
+      state.internet.recoveryStartedAt = 0;
+
+      if (socketRef && socketRef.connected) {
+        socketRef.emit('network_recovered', {
+          siteId: config.site.id,
+          type: 'internet',
+          connectionType: health.connectionType,
+          ip: health.ipAddress,
+          recoveryDurationMs,
+          maxPhaseReached,
+          timestamp: new Date().toISOString(),
+        });
+      }
+    }
 
     if (!health.healthy) {
       // If using Ethernet, don't try WiFi recovery
@@ -781,12 +993,21 @@ async function internetWatchLoop() {
         return;
       }
 
+      // Track when the outage started (first failure detection)
+      if (!state.internet.recoveryStartedAt) {
+        state.internet.recoveryStartedAt = Date.now();
+      }
+
       logger.warn('NetworkWatchdog: Problèmes internet détectés', {
         issues: health.issues,
       });
 
       if (canAttemptRecovery('internet')) {
-        await attemptInternetRecovery();
+        const result = await attemptInternetRecovery();
+        if (!result.success) {
+          // Fast retry: re-check in 10s instead of waiting the full 60s interval
+          setTimeout(() => internetWatchLoop(), FAST_RETRY_DELAY);
+        }
       } else {
         logger.error('NetworkWatchdog: Trop de tentatives de récupération internet', {
           attempts: state.internet.recoveryAttempts,
@@ -851,11 +1072,21 @@ function cloudWatchLoop() {
  * Démarre le watchdog
  */
 function start() {
+  // Restore grace periods from disk (survives OTA sync-agent restarts)
+  restoreGracePeriods();
+
   logger.info('NetworkWatchdog: Démarrage', {
     hotspotInterval: HOTSPOT_CHECK_INTERVAL,
     internetInterval: INTERNET_CHECK_INTERVAL,
     cloudInterval: CLOUD_CHECK_INTERVAL,
+    hotspotGraceActive: isInGracePeriod('hotspot'),
+    internetGraceActive: isInGracePeriod('internet'),
   });
+
+  // Désactiver le WiFi power management au démarrage du watchdog
+  execAsync('sudo iwconfig wlan1 power off 2>/dev/null || true')
+    .then(() => logger.info('NetworkWatchdog: WiFi power management disabled on wlan1'))
+    .catch(() => {});
 
   // Première exécution immédiate
   setTimeout(() => hotspotWatchLoop(), 5000);

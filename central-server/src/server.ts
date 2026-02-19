@@ -19,8 +19,12 @@ import memoryManagerService from './services/memory-manager.service';
 import networkAlertsService from './services/network-alerts.service';
 import { adminOpsService } from './services/admin-ops.service';
 import { alertingService } from './services/alerting.service';
+import { alertService } from './services/alert.service';
 import { realtimeStatsService } from './services/realtime-stats.service';
-import { predictiveAlertsService } from './services/predictive-alerts.service';
+// predictiveAlertsService disabled — see startServices() comments
+// import { predictiveAlertsService } from './services/predictive-alerts.service';
+import { subscriptionService } from './services/subscription.service';
+import { cleanupStaleTempFiles } from './middleware/upload';
 
 import authRoutes from './routes/auth.routes';
 import mfaRoutes from './routes/mfa.routes';
@@ -31,6 +35,8 @@ import updatesRoutes from './routes/updates.routes';
 import analyticsRoutes from './routes/analytics.routes';
 import advertiserAnalyticsRoutes from './routes/advertiser-analytics.routes';
 import advertiserSitesRoutes from './routes/advertiser-sites.routes';
+import siteSponsorRoutes from './routes/site-sponsor.routes';
+import sponsorPortalRoutes from './routes/sponsor-portal.routes';
 import auditRoutes from './routes/audit.routes';
 import canaryRoutes from './routes/canary.routes';
 import adminRoutes from './routes/admin.routes';
@@ -42,6 +48,7 @@ import objectivesRoutes from './routes/objectives.routes';
 import playlistSchedulesRoutes from './routes/playlist-schedules.routes';
 import logsRoutes from './routes/logs.routes';
 import draftsRoutes from './routes/drafts.routes';
+import configProfilesRoutes from './routes/config-profiles.routes';
 import assetsRoutes from './routes/assets.routes';
 import remoteRoutes from './routes/remote.routes';
 import subscriptionRoutes from './routes/subscription.routes';
@@ -49,6 +56,7 @@ import billingRoutes from './routes/billing.routes';
 import reportsRoutes from './routes/reports.routes';
 import alertsRoutes from './routes/alerts.routes';
 import benchmarkRoutes from './routes/benchmark.routes';
+import networkSponsorRoutes from './routes/network-sponsor.routes';
 import { authRateLimit, apiRateLimit, sensitiveRateLimit, adminRateLimit, loggingRateLimit } from './middleware/user-rate-limit';
 import { setRLSContext } from './middleware/rls-context';
 import { correlationMiddleware } from './middleware/correlation';
@@ -220,12 +228,33 @@ app.use(correlationMiddleware);
 // No global rate limiter - the per-route limiters are sufficient
 // and a global limiter of 100/15min was causing 429 errors with normal dashboard usage
 
-app.use((req: Request, _res: Response, next: NextFunction) => {
+app.use((req: Request, res: Response, next: NextFunction) => {
+  const correlationReq = req as import('./middleware/correlation').CorrelationRequest;
+  const correlationId = correlationReq.correlationId;
+
   logger.debug('Request', {
     method: req.method,
     path: req.path,
     ip: req.ip,
+    correlationId,
   });
+
+  // Log completed requests with correlation ID for traceability
+  const startTime = Date.now();
+  res.on('finish', () => {
+    const duration = Date.now() - startTime;
+    if (res.statusCode >= 400) {
+      logger.warn('Request completed with error', {
+        method: req.method,
+        path: req.path,
+        statusCode: res.statusCode,
+        durationMs: duration,
+        correlationId,
+        userId: (req as import('./types').AuthRequest).user?.id,
+      });
+    }
+  });
+
   next();
 });
 
@@ -233,10 +262,41 @@ app.use((req: Request, _res: Response, next: NextFunction) => {
 app.use(metricsService.httpMetricsMiddleware());
 
 // Endpoint métriques Prometheus (non rate-limited pour le scraping)
-app.get('/metrics', async (_req: Request, res: Response) => {
+// Protégé par Bearer token si METRICS_BEARER_TOKEN est défini
+app.get('/metrics', async (req: Request, res: Response) => {
+  const metricsToken = process.env.METRICS_BEARER_TOKEN;
+  if (metricsToken) {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || authHeader !== `Bearer ${metricsToken}`) {
+      res.status(401).json({ error: 'Unauthorized - Invalid metrics token' });
+      return;
+    }
+  }
+
   try {
     // Mettre à jour les métriques snapshot
     metricsService.recordConnectedSites(socketService.getConnectionCount());
+    metricsService.recordWebsocketConnection('agent', socketService.getConnectionCount());
+    metricsService.recordWebsocketConnection('dashboard', socketService.getDashboardConnectionCount());
+
+    // Subscription stats snapshot (lightweight PostgreSQL view)
+    try {
+      const subStats = await subscriptionService.getSubscriptionStats();
+      metricsService.recordSubscriptionStats({
+        active: subStats.active_count,
+        expiring_soon: subStats.expiring_soon_count,
+        grace_period: subStats.grace_period_count,
+        blocked: subStats.blocked_count,
+        suspended: subStats.suspended_count,
+      });
+      metricsService.recordSubscriptionPlans({
+        trial: subStats.trial_count,
+        standard: subStats.standard_count,
+        premium: subStats.premium_count,
+      });
+    } catch (subError) {
+      logger.debug('Could not collect subscription metrics', { error: subError });
+    }
 
     res.set('Content-Type', metricsService.getContentType());
     res.send(await metricsService.getMetrics());
@@ -259,7 +319,9 @@ app.get('/', (_req: Request, res: Response) => {
 // Documentation API Swagger/OpenAPI (development only to save memory)
 if (NODE_ENV !== 'production') {
   try {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
     const YAML = require('yamljs');
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
     const swaggerUi = require('swagger-ui-express');
     const swaggerDocument = YAML.load(path.join(__dirname, 'docs', 'openapi.yaml'));
     app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument, {
@@ -320,12 +382,15 @@ app.use('/api/mfa', authRateLimit, mfaRoutes);   // MFA - même restrictions que
 // Other endpoints use the default rate or sensitiveRateLimit where appropriate
 app.use('/api/sites', sitesRoutes);
 app.use('/api/sites', draftsRoutes);  // Config drafts - sous /api/sites/:siteId/draft
+app.use('/api/sites', configProfilesRoutes);  // Config profiles - sous /api/sites/:siteId/profiles
 app.use('/api/groups', apiRateLimit, groupsRoutes);
 app.use('/api', sensitiveRateLimit, contentRoutes); // Upload de vidéos - plus restrictif
 app.use('/api', updatesRoutes); // Mises à jour - rate limits per-route dans updates.routes.ts
 app.use('/api/analytics', apiRateLimit, analyticsRoutes);
 app.use('/api/analytics', advertiserAnalyticsRoutes); // Analytics annonceurs - rate limits per-route (piAnalyticsRateLimit for /impressions, apiRateLimit for the rest)
 app.use('/api', apiRateLimit, advertiserSitesRoutes); // Gestion associations annonceurs <-> sites (+ backward compat)
+app.use('/api/sites', apiRateLimit, siteSponsorRoutes); // Sponsors par site (modèle unifié)
+app.use('/api/sponsor-portal', apiRateLimit, sponsorPortalRoutes); // Portail sponsor (public, token-based)
 app.use('/api/audit', apiRateLimit, auditRoutes);
 app.use('/api/canary', sensitiveRateLimit, canaryRoutes); // Déploiements canary - sensible
 app.use('/api/admin', adminRateLimit, adminRoutes);
@@ -343,6 +408,7 @@ app.use('/api/billing', billingRoutes); // Billing export - admin only
 app.use('/api/reports', apiRateLimit, reportsRoutes); // Generated PDF reports
 app.use('/api/alerts', apiRateLimit, alertsRoutes); // System and predictive alerts
 app.use('/api/benchmark', benchmarkRoutes); // Anonymous benchmarks - rate limits per-route in benchmark.routes.ts
+app.use('/api/network', apiRateLimit, networkSponsorRoutes); // Network sponsor stats (P6.1 cross-club)
 
 // 404 handler - Must be AFTER all routes, BEFORE error handler
 // Uses standardized error format with correlation ID
@@ -391,9 +457,10 @@ const startServer = async () => {
     networkAlertsService.start();
     logger.info('Network alerts service started');
 
-    // Demarrer le service d'alertes predictives (Phase 3.1 - Analytics Enhancement)
-    predictiveAlertsService.start();
-    logger.info('Predictive alerts service started');
+    // DISABLED: Alertes prédictives - UI commentée dans le dashboard, cron inutile
+    // TODO: Réactiver quand le dashboard affichera les alertes prédictives (Phase 5)
+    // predictiveAlertsService.start();
+    // logger.info('Predictive alerts service started');
 
     // Initialiser et démarrer le service de stats temps réel
     const io = socketService.getIO();
@@ -417,6 +484,10 @@ const startServer = async () => {
     });
     memoryManagerService.start();
     logger.info('Memory manager started');
+
+    // Nettoyage périodique des fichiers temporaires d'upload abandonnés (toutes les 30 min)
+    const tempCleanupInterval = setInterval(cleanupStaleTempFiles, 30 * 60 * 1000);
+    tempCleanupInterval.unref(); // Ne pas empêcher le shutdown
   } catch (error) {
     logger.error('Failed to initialize dependencies:', error);
     // Ne pas quitter - le serveur reste en mode dégradé et le health check rapportera l'état
@@ -424,20 +495,35 @@ const startServer = async () => {
 };
 
 process.on('SIGTERM', async () => {
-  logger.info('SIGTERM signal received: closing HTTP server');
+  logger.info('SIGTERM signal received: graceful shutdown starting');
+
+  // Suppress site online/offline alerts BEFORE disconnecting sockets
+  // to prevent false "Site Offline" flood on redeploy
+  alertService.enterShutdownMode();
+
   schedulerService.stop();
   cronSchedulerService.stop();
   memoryManagerService.stop();
-  predictiveAlertsService.stop();
+  // predictiveAlertsService.stop(); // DISABLED: see start() comment above
   alertingService.cleanup();
   adminOpsService.stopCleanup();
+
+  // Cleanup sockets BEFORE closing HTTP server — Socket.IO needs the HTTP
+  // server alive to send the shutdown notification to connected Pi devices.
+  await socketService.cleanup();
+
   httpServer.close(async () => {
     logger.info('HTTP server closed');
-    await socketService.cleanup();
     await pool.end();
     logger.info('Database pool closed');
     process.exit(0);
   });
+
+  // Safety net: force exit if httpServer.close() hangs on lingering connections
+  setTimeout(() => {
+    logger.warn('Graceful shutdown timeout — forcing exit');
+    process.exit(0);
+  }, 10000).unref();
 });
 
 process.on('unhandledRejection', (reason, promise) => {

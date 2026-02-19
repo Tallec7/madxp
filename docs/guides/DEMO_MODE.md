@@ -6,20 +6,20 @@ Le mode démo permet de présenter l'application avec différentes configuration
 
 Le mode démo est contrôlé par la variable `demoMode` dans les fichiers d'environnement :
 
-| Environnement | Fichier | Valeur | Usage |
-|--------------|---------|--------|-------|
-| Développement | `environment.ts` | `true` | Dev local |
-| Production | `environment.prod.ts` | `false` | Production standard |
-| Raspberry | `environment.raspberry.ts` | `false` | Déploiement Raspberry Pi |
-| **Démo** | `environment.demo.ts` | `true` | **Serveur de démonstration** |
+| Environnement | Fichier                    | Valeur  | Usage                        |
+| ------------- | -------------------------- | ------- | ---------------------------- |
+| Développement | `environment.ts`           | `true`  | Dev local                    |
+| Production    | `environment.prod.ts`      | `false` | Production standard          |
+| Raspberry     | `environment.raspberry.ts` | `false` | Déploiement Raspberry Pi     |
+| **Démo**      | `environment.demo.ts`      | `true`  | **Serveur de démonstration** |
 
 ## Build pour le serveur de démo
 
 ```bash
-npx ng build --configuration=demo
+npx ng build raspberry --configuration=demo
 ```
 
-Le build est généré dans `dist/neopro/browser/`.
+Le build est généré dans `dist/raspberry/browser/`.
 
 ## Fonctionnement
 
@@ -69,6 +69,7 @@ dist/raspberry/browser/           # Racine du serveur web
 ### Étapes de déploiement initial
 
 1. **Build** :
+
    ```bash
    npx ng build raspberry --configuration=demo
    ```
@@ -90,6 +91,7 @@ La liste des clubs et leurs configurations sont chargées dynamiquement depuis l
 1. **Créer la config du club** : Ajouter `demo-configs/monclub.json` sur le serveur
 
 2. **Mettre à jour la liste** : Modifier `demo-configs/clubs.json` sur le serveur :
+
    ```json
    [
      { "id": "narh", "name": "NARH", "city": "Nantes", "sport": "Handball" },
@@ -171,12 +173,13 @@ La liste des clubs et leurs configurations sont chargées dynamiquement depuis l
 Le serveur de démo doit avoir un serveur Socket.IO accessible. Actuellement, `environment.demo.ts` pointe vers `https://neopro.onrender.com`.
 
 Pour changer le serveur, modifier avant le build :
+
 ```typescript
-// raspberry/frontend/environments/environment.demo.ts
+// raspberry/src/environments/environment.demo.ts
 export const environment = {
   production: true,
   socketUrl: 'https://votre-serveur-socket.com',
-  demoMode: true
+  demoMode: true,
 };
 ```
 
@@ -189,6 +192,7 @@ Quand l'utilisateur accède à `/login` ou `/tv` sans avoir sélectionné de clu
 3. **Vidéo affichée** : `videos/DEMO/NEOPRO.mp4`
 
 Une fois qu'un club est sélectionné sur `/remote` :
+
 - La config du club est stockée en localStorage
 - `/tv` reçoit la nouvelle config via Socket.IO et lance automatiquement la boucle sponsors du club
 - Le mot de passe devient celui du club sélectionné

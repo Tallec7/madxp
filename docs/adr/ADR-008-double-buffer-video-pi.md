@@ -1,7 +1,7 @@
 # ADR-008: Double-Buffer Vidéo avec Freeze-Frame Pré-capturé
 
-**Date** : Janvier-Février 2026 (v2.24-v3.7.8)
-**Statut** : Accepté (itéré sur 5 commits majeurs)
+**Date** : Janvier-Février 2026 (v2.24-v3.23.x)
+**Statut** : Accepté (itéré sur 5 commits majeurs + correctifs v3.9.x-v3.23.x)
 **Décideurs** : Équipe Neopro
 
 ---
@@ -27,32 +27,86 @@ z-index  5: Black overlay (bloque la boucle pendant transitions)
 z-index 1-2: Players boucle A/B (alternent pour la boucle continue)
 ```
 
-### Stratégie de transition (boucle)
+### Stratégie de transition (boucle) — v3.23.x
 
 ```
-Pendant lecture : setInterval(500ms) → captureLastFrame() → canvas
-À ended :
+Pendant lecture :
+  - setInterval(500ms) → captureLastFrame() → canvas freeze-frame
+  - timeupdate (throttle 200ms) :
+    - À 50% de la vidéo → warmDiskCache() (fetch des 3 prochaines vidéos)
+    - À 1.5s de la fin → preloadOnInactivePlayer()
+    - À 0.5s de la fin → triggerSwitch() (early switch)
+À ended (fallback si early switch raté) :
   1. Affiche freeze-frame (opacity 1, PAS display:block)
   2. Charge vidéo suivante sur player inactif
-  3. Attend canplaythrough (timeout 3s)
-  4. switchPlayers() : nouveau z-index 2 → play → 2×rAF + 300ms → cache ancien
+  3. Attend canplaythrough + polling readyState>=3 /50ms (timeout 1.5s)
+  4. switchPlayers() : nouveau z-index 2 → play → détection frame réel → cache ancien
+Après switch :
+  5. cleanupInactivePlayer() → libère buffers décodeur GPU (~30-50MB)
+     (skip si vidéo active < 5s pour éviter la race condition avec le preload)
+```
+
+### Détection de frame réel (v3.23.x)
+
+Au lieu d'un timer fixe de 300ms pour cacher le freeze-frame après un switch,
+le système attend un **signal réel** que le décodeur produit des pixels :
+
+- Polling `readyState >= 4 && currentTime > 0` via `requestAnimationFrame`
+- Listener `timeupdate` comme signal de confirmation
+- Safety timeout 1.5s (ne devrait jamais être atteint en fonctionnement normal)
+
+Cela élimine les trous noirs sur Pi 5 où les erreurs GPU (SharedImageStub)
+ralentissent le décodeur au-delà des 300ms fixes.
+
+### Reprise de la boucle après vidéo manuelle — v3.60.1
+
+Lorsqu'une vidéo manuelle est déclenchée (télécommande), `onVideoEnded()` ignore les transitions de boucle (`isManualMode` guard). La boucle meurt pendant la lecture manuelle. À la fin, `onManualEnded()` relance la boucle via `startSeamlessLoop(resumeIndex)` :
+
+```
+play(video):
+  1. _savedLoopIndex = currentLoopIndex  // Sauvegarde position
+  2. isManualMode = true                 // Bloque les transitions boucle
+  ...
+onManualEnded():
+  1. isManualMode = false
+  2. Si boucle morte → startSeamlessLoop(_savedLoopIndex + 1)
+     // Reprend à la vidéo SUIVANTE (celle en cours a été interrompue)
+
+startSeamlessLoop(resumeIndex?):
+  - Si resumeIndex fourni → startIndex = resumeIndex % validVideos.length
+  - Sinon → startIndex = 0 (démarrage normal / changement de phase)
+```
+
+### Disk cache warming (boucles 20-100+ vidéos) — v3.9.x
+
+Pour les longues boucles, la vidéo 0 est évincée du cache disque OS après 19+ vidéos.
+`warmDiskCache()` utilise `fetch()` pour pré-lire les 3 prochaines vidéos dans le page cache kernel,
+rendant le preload quasi-instantané même au wrap (vidéo N → vidéo 0).
+
+```
+fetch(video.path) → response.arrayBuffer() → discard (données restent en page cache kernel)
 ```
 
 ### Règles critiques Pi
 
-**NE JAMAIS faire** (cause saccades) :
-- Préchargement pendant la lecture (décodeur ne supporte pas 2 vidéos parallèles)
-- Listener `timeupdate` (même throttlé, cause micro-freezes)
+**NE JAMAIS faire** (cause saccades ou bugs visuels) :
+
 - Transitions CSS opacity (repaints causent saccades)
 - Capture live dans `onVideoEnded()` (frame buffer déjà libéré)
 - `display: none` sur le freeze canvas (cause reflow layout complet)
+- Garder les buffers décodeur de l'ancien player après un switch (fuite mémoire → OOM)
+- Appeler `hideBlackOverlay()` depuis la boucle quand `isManualMode === true` (retire le masque protégeant la vidéo manuelle — invisible sur Pi/HW overlay mais casse l'affichage sur navigateur desktop)
 
 **TOUJOURS faire** :
+
 - Pré-capture périodique toutes les 500ms
 - `opacity: 0/1` uniquement pour montrer/cacher le canvas
-- Préchargement au `ended` seulement
+- Listener `timeupdate` throttlé (200ms) pour preload anticipé et early switch — avec garde `isManualMode` pour ne pas interférer avec les vidéos manuelles
 - Attendre `canplaythrough` avant de jouer
-- Délai 300ms dans `switchPlayers()` pour le compositor GPU
+- Détection de frame réel dans `switchPlayers()` (readyState + timeupdate, PAS timer fixe)
+- `cleanupInactivePlayer()` après chaque switch (libère décodeur GPU) — skip si vidéo < 5s
+- `warmDiskCache()` via fetch() à mi-vidéo (prochaines 3 vidéos)
+- Sauvegarder `currentLoopIndex` dans `_savedLoopIndex` avant d'entrer en mode manuel, et passer `_savedLoopIndex + 1` à `startSeamlessLoop()` pour reprendre au bon endroit
 
 ## Alternatives Considérées (et abandonnées)
 
@@ -95,26 +149,31 @@ Pendant lecture : setInterval(500ms) → captureLastFrame() → canvas
 
 ### Positives
 
-1. **Transitions sans flash** : Aucun écran noir/blanc entre les vidéos
-2. **Stabilité longue durée** : Sessions de 5h+ sans dégradation (cleanup mémoire périodique)
-3. **Vidéos manuelles fluides** : Le freeze-frame masque le chargement de la vidéo manuelle
-4. **Compatible Pi 4 et Pi 5** : Fonctionne avec VideoCore VI et VII
+1. **Transitions sans flash** : Aucun écran noir/blanc entre les vidéos (early switch 0.5s avant la fin)
+2. **Stabilité longue durée** : Sessions de 5h+ sans dégradation (cleanup après chaque switch)
+3. **Boucles 100+ vidéos** : Disk cache warming via fetch() élimine le problème de cache disque au wrap
+4. **Mémoire stable** : ~50-60MB Chromium constant quel que soit le nombre de vidéos
+5. **Vidéos manuelles fluides** : Le freeze-frame masque le chargement de la vidéo manuelle
+6. **Compatible Pi 4 et Pi 5** : Fonctionne avec VideoCore VI et VII
+7. **Robuste aux erreurs GPU** : Détection de frame réel tolère les ralentissements du décodeur
 
 ### Négatives
 
-1. **Complexité** : ~400 lignes de code pour la gestion des transitions
-2. **Légère pause** : ~300-500ms entre les vidéos de boucle (acceptable vs flash)
+1. **Complexité** : ~500 lignes de code pour la gestion des transitions
+2. **Légère pause** : Imperceptible en fonctionnement normal (détection de frame réel)
 3. **Mémoire canvas** : ~4.5MB pour le canvas 720p (réduit de 1080p pour économie)
 4. **Maintenance** : Toute modification du TV component nécessite des tests sur Pi réel
 
 ### Risques Mitigés
 
-| Risque | Mitigation |
-|--------|------------|
-| Erreur décodage GPU | Watchdog 10s + error recovery (skip/reset après 3 erreurs) |
-| Fuite mémoire | Cleanup toutes les 30min OU après 50 vidéos |
-| Vidéo corrompue | Skip automatique avec 1s delay, pas de crash |
-| Changement de phase | Token `switchGeneration` annule les callbacks obsolètes |
+| Risque                        | Mitigation                                                                             |
+| ----------------------------- | -------------------------------------------------------------------------------------- |
+| Erreur décodage GPU           | Watchdog 10s + error recovery (skip/reset après 3 erreurs)                             |
+| Fuite mémoire                 | `cleanupInactivePlayer()` après chaque switch + cleanup périodique (30min / 50 vidéos) |
+| Cache disque (20-100+ vidéos) | `warmDiskCache()` préchauffe le page cache kernel via fetch()                          |
+| Vidéo corrompue               | Skip automatique avec 1s delay, pas de crash                                           |
+| Changement de phase           | Token `switchGeneration` annule les callbacks + `resetPrefetchState()`                 |
+| Boucle reset après vidéo man. | `_savedLoopIndex` sauvegardé, `startSeamlessLoop(resumeIndex)` reprend au bon endroit  |
 
 ## Références
 
@@ -126,4 +185,4 @@ Pendant lecture : setInterval(500ms) → captureLastFrame() → canvas
 
 ---
 
-*Créé le 9 février 2026*
+_Créé le 9 février 2026_

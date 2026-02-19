@@ -1,10 +1,10 @@
 ---
 paths:
-  - "raspberry/src/app/components/tv/**"
-  - "raspberry/src/app/services/double-buffer*"
-  - "raspberry/src/app/services/video-error*"
-  - "raspberry/src/app/services/recording-state*"
-  - "raspberry/server/server.js"
+  - 'raspberry/src/app/components/tv/**'
+  - 'raspberry/src/app/services/double-buffer*'
+  - 'raspberry/src/app/services/video-error*'
+  - 'raspberry/src/app/services/recording-state*'
+  - 'raspberry/server/server.js'
 ---
 
 # Double-Buffer Vidéo (TV Component)
@@ -21,37 +21,56 @@ z-index 1-2: Players boucle A/B (alternent pour la boucle)
 ## Optimisations critiques pour Pi
 
 **⚠️ NE PAS faire** (cause des saccades sur Pi) :
-- Préchargement pendant la lecture (décodeur hardware ne supporte pas 2 vidéos parallèles)
-- Listener `timeupdate` (même throttlé, cause des micro-freezes)
+
+- Préchargement trop tôt pendant la lecture (décodeur hardware ne supporte pas 2 vidéos parallèles)
 - Transition CSS opacity (repaints causent saccades)
 - Capture live dans `onVideoEnded()` (frame buffer déjà libéré sur Chromium/Pi)
 - `display: none` sur le freeze canvas (cause reflow layout complet)
+- Timer fixe pour cacher le freeze-frame (le décodeur GPU peut être plus lent que prévu)
+- Cleanup du player inactif si la vidéo active est courte < 5s (race avec le preload)
+- Jouer une étape de boucle sans `video.path` (cause écran noir)
 
 **À faire** :
+
 - Pré-capture périodique toutes les 500ms via `startLastFrameCapture()`
 - `opacity: 0/1` uniquement (pas `display: none/block`) pour le freeze canvas
-- Préchargement au `ended` seulement (une seule vidéo décode à la fois)
-- Attendre `canplaythrough` avant de jouer (pas `canplay`)
-- Délai 300ms dans `switchPlayers()` (VideoCore VI/VII nécessite 200-400ms pour compositor)
+- Listener `timeupdate` throttlé 200ms pour early preload (1.5s avant fin) et early switch (0.5s)
+- Attendre `canplaythrough` + polling `readyState` avant de jouer (pas `canplay`)
+- Détection de frame réel dans `switchPlayers()` (readyState >= 4 + currentTime > 0 + timeupdate)
 - z-index `2` pour le nouveau player pendant transition, ramené à `1` après
+- Filtrer les étapes sans `video.path` dans `startSeamlessLoop()` + guard dans `playOnActivePlayer()`/`preloadOnInactivePlayer()`
 
 ## Stratégie transition boucle
 
 ```
-Pendant lecture: setInterval(500ms) → captureLastFrame() → canvas
-À ended:
+Pendant lecture:
+  setInterval(500ms) → captureLastFrame() → canvas
+  timeupdate (throttle 200ms):
+    50% → warmDiskCache() (fetch 3 prochaines)
+    1.5s avant fin → preloadOnInactivePlayer()
+    0.5s avant fin → triggerSwitch() (early switch)
+À ended (fallback):
   1. captureAndShowFreezeFrame() (opacity, PAS display)
   2. preloadOnInactivePlayer() → charge suivante
-  3. Attend canplaythrough (timeout 3s)
-  4. switchPlayers(): nouveau visible → play → 2×rAF + 300ms → cache ancien
+  3. Attend canplaythrough + polling readyState>=3 /50ms (timeout 1.5s)
+  4. switchPlayers(): nouveau visible → play → détection frame réel → cache ancien
+Après switch:
+  5. cleanupInactivePlayer() (skip si vidéo active < 5s)
 ```
+
+## Reprise boucle après vidéo manuelle
+
+- `play()` sauvegarde `currentLoopIndex` dans `_savedLoopIndex` avant `isManualMode = true`
+- `onManualEnded()` passe `_savedLoopIndex + 1` à `startSeamlessLoop()` pour reprendre à la vidéo suivante
+- `startSeamlessLoop(resumeIndex?)` clampe l'index via modulo — ne jamais hardcoder `0`
+- Seuls `performFullReset()` (dernier recours) et un appel sans argument (changement de phase) démarrent à l'index 0
 
 ## Système de récupération d'erreurs
 
-| Erreurs consécutives | Action |
-|---------------------|--------|
-| < 3 | Skip vidéo (1s delay) |
-| >= 3 | Full Reset (3s GPU cooldown) |
+| Erreurs consécutives | Action                       |
+| -------------------- | ---------------------------- |
+| < 3                  | Skip vidéo (1s delay)        |
+| >= 3                 | Full Reset (3s GPU cooldown) |
 
 - Watchdog vérifie toutes les 10s que la vidéo progresse
 - Memory cleanup toutes les 30 min OU après 50 vidéos
@@ -64,6 +83,7 @@ Permet de synchroniser plusieurs instances TV (kiosk + navigateur) sur la même 
 **Pourquoi Socket.IO ?** Le kiosk Chromium est un processus séparé → BroadcastChannel ne fonctionne pas entre processes. Tout passe par le serveur local.
 
 **Architecture** :
+
 - Premier TV connecté = **master**, suivants = **slaves**
 - Master émet `tv-loop-update` à chaque changement de vidéo
 - Slaves reçoivent `tv-loop-state`, trouvent la vidéo par path, jouent + seek au temps approximatif
@@ -71,6 +91,7 @@ Permet de synchroniser plusieurs instances TV (kiosk + navigateur) sur la même 
 - **Analytics désactivées pour les slaves** : `if (!this.isSlaveMode)` avant tout `track*()`
 
 **Fichiers** :
+
 - `raspberry/server/server.js` — tvInstances Map, promoteSlave(), handlers
 - `raspberry/src/app/components/tv/tv.component.ts` — tvRole, isSlaveMode, emitLoopState(), handleMasterLoopState()
 

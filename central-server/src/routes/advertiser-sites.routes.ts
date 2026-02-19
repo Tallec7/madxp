@@ -31,7 +31,7 @@ const router = express.Router();
 router.get(
   '/advertisers/:id/sites',
   authenticate,
-  requireRole('super_admin', 'superadmin', 'admin', 'operator'),
+  requireRole('admin', 'operator'),
   getAdvertiserSites
 );
 
@@ -49,7 +49,7 @@ router.get(
 router.post(
   '/advertisers/:id/sites',
   authenticate,
-  requireRole('super_admin', 'superadmin', 'admin', 'operator'),
+  requireRole('admin', 'operator'),
   addSitesToAdvertiser
 );
 
@@ -67,7 +67,7 @@ router.post(
 router.put(
   '/advertisers/:advertiserId/sites/:siteId',
   authenticate,
-  requireRole('super_admin', 'superadmin', 'admin', 'operator'),
+  requireRole('admin', 'operator'),
   updateAdvertiserSite
 );
 
@@ -83,7 +83,7 @@ router.put(
 router.delete(
   '/advertisers/:advertiserId/sites/:siteId',
   authenticate,
-  requireRole('super_admin', 'superadmin', 'admin', 'operator'),
+  requireRole('admin', 'operator'),
   removeSiteFromAdvertiser
 );
 
@@ -103,7 +103,7 @@ router.delete(
 router.get(
   '/sites/:id/advertisers',
   authenticate,
-  requireRole('super_admin', 'superadmin', 'admin', 'operator'),
+  requireRole('admin', 'operator'),
   getSiteAdvertisers
 );
 
@@ -116,13 +116,11 @@ import {
   addSitesToSponsor,
   updateSponsorSite,
   removeSiteFromSponsor,
-  getSiteSponsors,
 } from '../controllers/advertiser-sites.controller';
 
-router.get('/sponsors/:id/sites', authenticate, requireRole('super_admin', 'superadmin', 'admin', 'operator'), getSponsorSites);
-router.post('/sponsors/:id/sites', authenticate, requireRole('super_admin', 'superadmin', 'admin', 'operator'), addSitesToSponsor);
-router.put('/sponsors/:sponsorId/sites/:siteId', authenticate, requireRole('super_admin', 'superadmin', 'admin', 'operator'), updateSponsorSite);
-router.delete('/sponsors/:sponsorId/sites/:siteId', authenticate, requireRole('super_admin', 'superadmin', 'admin', 'operator'), removeSiteFromSponsor);
-router.get('/sites/:id/sponsors', authenticate, requireRole('super_admin', 'superadmin', 'admin', 'operator'), getSiteSponsors);
+router.get('/sponsors/:id/sites', authenticate, requireRole('admin', 'operator'), getSponsorSites);
+router.post('/sponsors/:id/sites', authenticate, requireRole('admin', 'operator'), addSitesToSponsor);
+router.put('/sponsors/:sponsorId/sites/:siteId', authenticate, requireRole('admin', 'operator'), updateSponsorSite);
+router.delete('/sponsors/:sponsorId/sites/:siteId', authenticate, requireRole('admin', 'operator'), removeSiteFromSponsor);
 
 export default router;

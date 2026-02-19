@@ -5,6 +5,7 @@ const crypto = require('crypto');
 const logger = require('../logger');
 const { config } = require('../config');
 const { isLocked } = require('../utils/config-merge');
+const { atomicWriteJson, safeReadConfig } = require('../utils/safe-config-io');
 
 const DEFAULT_EXTENSION = '.mp4';
 const ILLEGAL_FILENAME_CHARS = /[<>:"/\\|?*\x00-\x1F]/g;
@@ -86,6 +87,7 @@ class VideoDeployHandler {
       videoId,
       sponsorId,
       analyticsCategory,
+      siteSponsorId,
     } = data;
 
     // CHECKSUM OBLIGATOIRE - Garantit l'intégrité des vidéos déployées
@@ -296,11 +298,7 @@ class VideoDeployHandler {
       // S'assurer que le répertoire parent existe
       await fs.ensureDir(path.dirname(configPath));
 
-      let configuration = {};
-      if (await fs.pathExists(configPath)) {
-        const content = await fs.readFile(configPath, 'utf-8');
-        configuration = JSON.parse(content);
-      }
+      let configuration = await safeReadConfig(configPath);
 
       if (!configuration.categories) {
         configuration.categories = [];
@@ -342,6 +340,7 @@ class VideoDeployHandler {
         video_id: videoData.videoId || null,
         sponsor_id: videoData.sponsorId || null,
         analytics_category: videoData.analyticsCategory || null,
+        site_sponsor_id: videoData.siteSponsorId || null,
       };
 
       // Ajouter la date d'expiration si présente
@@ -396,6 +395,7 @@ class VideoDeployHandler {
           video_id: videoData.videoId || null,
           sponsor_id: videoData.sponsorId || null,
           analytics_category: 'sponsor',
+          site_sponsor_id: videoData.siteSponsorId || null,
         };
 
         const existingSponsorIndex = configuration.sponsors.findIndex(s => s.path === relativePath);
@@ -408,7 +408,7 @@ class VideoDeployHandler {
         }
       }
 
-      await fs.writeFile(configPath, JSON.stringify(configuration, null, 2));
+      await atomicWriteJson(configPath, configuration);
 
       logger.info('Configuration updated', { configPath });
     } catch (error) {
@@ -418,18 +418,9 @@ class VideoDeployHandler {
   }
 
   async notifyLocalApp() {
-    try {
-      const io = require('socket.io-client');
-      const socket = io('http://localhost:3000', { timeout: 5000 });
-
-      socket.emit('config_updated');
-
-      setTimeout(() => socket.close(), 1000);
-
-      logger.info('Local app notified of configuration change');
-    } catch (error) {
-      logger.warn('Could not notify local app:', error.message);
-    }
+    const localSocket = require('../services/local-socket');
+    localSocket.emit('config_updated');
+    logger.info('Local app notified of configuration change');
   }
 }
 

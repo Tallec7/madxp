@@ -1,5 +1,6 @@
 import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { FormsModule } from '@angular/forms';
+import { TranslateModule } from '@ngx-translate/core';
 import { of, throwError } from 'rxjs';
 import { ContentManagementComponent } from './content-management.component';
 import { ApiService } from '../../core/services/api.service';
@@ -7,6 +8,7 @@ import { SitesService } from '../../core/services/sites.service';
 import { GroupsService } from '../../core/services/groups.service';
 import { SocketService } from '../../core/services/socket.service';
 import { NotificationService } from '../../core/services/notification.service';
+import { LoggerService } from '../../core/services/logger.service';
 
 describe('ContentManagementComponent', () => {
   let component: ContentManagementComponent;
@@ -76,15 +78,17 @@ describe('ContentManagementComponent', () => {
     socketServiceMock.on.and.returnValue(of({}));
 
     const notificationServiceMock = jasmine.createSpyObj('NotificationService', ['error', 'success', 'warning']);
+    const loggerServiceMock = jasmine.createSpyObj('LoggerService', ['debug', 'info', 'warn', 'error', 'addBreadcrumb', 'setAuthenticated']);
 
     await TestBed.configureTestingModule({
-      imports: [ContentManagementComponent, FormsModule],
+      imports: [ContentManagementComponent, FormsModule, TranslateModule.forRoot()],
       providers: [
         { provide: ApiService, useValue: apiServiceMock },
         { provide: SitesService, useValue: sitesServiceMock },
         { provide: GroupsService, useValue: groupsServiceMock },
         { provide: SocketService, useValue: socketServiceMock },
         { provide: NotificationService, useValue: notificationServiceMock },
+        { provide: LoggerService, useValue: loggerServiceMock },
       ],
     }).compileComponents();
 
@@ -111,7 +115,7 @@ describe('ContentManagementComponent', () => {
       fixture.detectChanges();
       tick();
 
-      expect(apiService.get).toHaveBeenCalledWith('/videos');
+      expect(apiService.get).toHaveBeenCalledWith('/videos?page=1&limit=20');
       expect(apiService.get).toHaveBeenCalledWith('/deployments');
       expect(sitesService.loadSites).toHaveBeenCalled();
       expect(groupsService.loadGroups).toHaveBeenCalled();
@@ -167,30 +171,37 @@ describe('ContentManagementComponent', () => {
     });
   });
 
-  describe('filteredVideos', () => {
-    beforeEach(() => {
-      component.videos = mockVideos;
-    });
-
-    it('should return all videos when no search', () => {
+  describe('server-side video search', () => {
+    it('should load videos without search param when videoSearch is empty', () => {
       component.videoSearch = '';
-      expect(component.filteredVideos().length).toBe(2);
+      component.loadVideos();
+      const callArg = apiService.get.calls.mostRecent().args[0] as string;
+      expect(callArg).not.toContain('search=');
     });
 
-    it('should filter by title', () => {
+    it('should include search param when videoSearch is set', () => {
       component.videoSearch = 'Test';
-      expect(component.filteredVideos().length).toBe(1);
-      expect(component.filteredVideos()[0].title).toBe('Video Test');
+      component.loadVideos();
+      const callArg = apiService.get.calls.mostRecent().args[0] as string;
+      expect(callArg).toContain('search=Test');
     });
 
-    it('should filter by filename', () => {
-      component.videoSearch = 'another';
-      expect(component.filteredVideos().length).toBe(1);
+    it('should reset to page 1 on search change', () => {
+      component.videoPagination.page = 3;
+      component.videoSearch = 'query';
+      component.onSearchChange();
+      expect(component.videoPagination.page).toBe(1);
     });
 
-    it('should be case insensitive', () => {
-      component.videoSearch = 'VIDEO';
-      expect(component.filteredVideos().length).toBe(2);
+    it('should populate videos from API response', () => {
+      const mockResponse = {
+        data: mockVideos,
+        pagination: { page: 1, limit: 20, total: 2, totalPages: 1, hasNext: false, hasPrev: false },
+      };
+      apiService.get.and.returnValue(of(mockResponse));
+      component.loadVideos();
+      expect(component.videos.length).toBe(2);
+      expect(component.videos[0].title).toBe('Video Test');
     });
   });
 
@@ -352,12 +363,12 @@ describe('ContentManagementComponent', () => {
     });
 
     it('should get video title by id', () => {
-      component.videos = mockVideos;
+      component.allVideos = mockVideos;
       expect(component.getVideoTitleById('1')).toBe('Video Test');
     });
 
     it('should return unknown for missing video', () => {
-      component.videos = mockVideos;
+      component.allVideos = mockVideos;
       expect(component.getVideoTitleById('999')).toBe('Vidéo inconnue');
     });
 

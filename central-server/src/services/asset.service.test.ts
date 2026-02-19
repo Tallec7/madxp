@@ -6,14 +6,16 @@
 
 import { assetService } from './asset.service';
 import { commandQueueService } from './command-queue.service';
-import { isFtpConfigured, getFtpPublicUrl, uploadFileToFtp } from '../config/ftp-storage';
-import { uploadFile, getPublicUrl } from '../config/supabase';
-import logger from '../config/logger';
 
 // Mock dependencies
 jest.mock('./command-queue.service');
-jest.mock('../config/ftp-storage');
-jest.mock('../config/supabase');
+jest.mock('./storage.service', () => ({
+  uploadAsset: jest.fn(),
+  getAssetUrl: jest.fn(),
+  verifyFileExists: jest.fn().mockResolvedValue({ exists: true, size: 15 }),
+  isStorageConfigured: jest.fn().mockReturnValue(true),
+  listAssets: jest.fn().mockResolvedValue([]),
+}));
 jest.mock('../config/logger', () => ({
   info: jest.fn(),
   error: jest.fn(),
@@ -21,12 +23,11 @@ jest.mock('../config/logger', () => ({
   debug: jest.fn(),
 }));
 
+import { uploadAsset as storageUploadAsset, getAssetUrl, verifyFileExists, isStorageConfigured, listAssets } from './storage.service';
+
 const mockCommandQueue = commandQueueService as jest.Mocked<typeof commandQueueService>;
-const mockIsFtpConfigured = isFtpConfigured as jest.MockedFunction<typeof isFtpConfigured>;
-const mockGetFtpPublicUrl = getFtpPublicUrl as jest.MockedFunction<typeof getFtpPublicUrl>;
-const mockUploadFileToFtp = uploadFileToFtp as jest.MockedFunction<typeof uploadFileToFtp>;
-const mockUploadFile = uploadFile as jest.MockedFunction<typeof uploadFile>;
-const mockGetPublicUrl = getPublicUrl as jest.MockedFunction<typeof getPublicUrl>;
+const mockStorageUploadAsset = storageUploadAsset as jest.MockedFunction<typeof storageUploadAsset>;
+const mockGetAssetUrl = getAssetUrl as jest.MockedFunction<typeof getAssetUrl>;
 
 describe('AssetService', () => {
   const testBuffer = Buffer.from('test image data');
@@ -35,14 +36,15 @@ describe('AssetService', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    // Re-setup verifyFileExists after clearAllMocks (size matches testBuffer.length)
+    (verifyFileExists as jest.Mock).mockResolvedValue({ exists: true, size: testBuffer.length });
   });
 
   describe('uploadAsset', () => {
-    it('should upload to FTP when configured', async () => {
+    it('should upload to FTP via storage service', async () => {
       // Arrange
-      mockIsFtpConfigured.mockReturnValue(true);
-      mockUploadFileToFtp.mockResolvedValue({ path: 'watermarks/logo_club.png', url: 'https://cdn.example.com/watermarks/logo_club.png' });
-      mockGetFtpPublicUrl.mockReturnValue('https://cdn.example.com/watermarks/logo_club.png');
+      mockStorageUploadAsset.mockResolvedValue({ path: 'watermarks/logo_club.png', url: 'https://cdn.example.com/watermarks/logo_club.png' });
+      mockGetAssetUrl.mockReturnValue('https://cdn.example.com/watermarks/logo_club.png');
 
       // Act
       const result = await assetService.uploadAsset(testBuffer, testFilename, 'watermark');
@@ -51,39 +53,33 @@ describe('AssetService', () => {
       expect(result.url).toBe('https://cdn.example.com/watermarks/logo_club.png');
       expect(result.storagePath).toBe('watermarks/logo_club.png');
       expect(result.checksum).toBeDefined();
-      expect(mockUploadFileToFtp).toHaveBeenCalledWith(
+      expect(mockStorageUploadAsset).toHaveBeenCalledWith(
         testBuffer,
         'watermarks/logo_club.png',
         'image/png'
       );
     });
 
-    it('should fallback to Supabase when FTP not configured', async () => {
+    it('should throw when storage is not configured', async () => {
       // Arrange
-      mockIsFtpConfigured.mockReturnValue(false);
-      mockUploadFile.mockResolvedValue({ path: 'watermarks/logo_club.png', url: 'https://supabase.co/storage/watermarks/logo_club.png' });
-      mockGetPublicUrl.mockReturnValue('https://supabase.co/storage/watermarks/logo_club.png');
+      mockStorageUploadAsset.mockRejectedValue(new Error('Stockage vidéo (FTP) non configuré'));
 
-      // Act
-      const result = await assetService.uploadAsset(testBuffer, testFilename, 'watermark');
-
-      // Assert
-      expect(result.url).toBe('https://supabase.co/storage/watermarks/logo_club.png');
-      expect(mockUploadFile).toHaveBeenCalled();
-      expect(mockUploadFileToFtp).not.toHaveBeenCalled();
+      // Act & Assert
+      await expect(
+        assetService.uploadAsset(testBuffer, testFilename, 'watermark')
+      ).rejects.toThrow();
     });
 
     it('should sanitize filename with accents and special characters', async () => {
       // Arrange
-      mockIsFtpConfigured.mockReturnValue(true);
-      mockUploadFileToFtp.mockResolvedValue({ path: 'watermarks/logo_club.png', url: 'https://cdn.example.com/watermarks/logo_club.png' });
-      mockGetFtpPublicUrl.mockReturnValue('https://cdn.example.com/watermarks/logo_equipe.png');
+      mockStorageUploadAsset.mockResolvedValue({ path: 'watermarks/logo_equipe_.png', url: 'https://cdn.example.com/watermarks/logo_equipe_.png' });
+      mockGetAssetUrl.mockReturnValue('https://cdn.example.com/watermarks/logo_equipe.png');
 
       // Act
       await assetService.uploadAsset(testBuffer, 'Logo Équipe!@#.png', 'watermark');
 
       // Assert
-      expect(mockUploadFileToFtp).toHaveBeenCalledWith(
+      expect(mockStorageUploadAsset).toHaveBeenCalledWith(
         testBuffer,
         'watermarks/logo_equipe_.png',
         'image/png'
@@ -92,15 +88,14 @@ describe('AssetService', () => {
 
     it('should use assets folder for non-watermark types', async () => {
       // Arrange
-      mockIsFtpConfigured.mockReturnValue(true);
-      mockUploadFileToFtp.mockResolvedValue({ path: 'watermarks/logo_club.png', url: 'https://cdn.example.com/watermarks/logo_club.png' });
-      mockGetFtpPublicUrl.mockReturnValue('https://cdn.example.com/assets/logo.png');
+      mockStorageUploadAsset.mockResolvedValue({ path: 'assets/logo.png', url: 'https://cdn.example.com/assets/logo.png' });
+      mockGetAssetUrl.mockReturnValue('https://cdn.example.com/assets/logo.png');
 
       // Act
       await assetService.uploadAsset(testBuffer, 'logo.png', 'logo');
 
       // Assert
-      expect(mockUploadFileToFtp).toHaveBeenCalledWith(
+      expect(mockStorageUploadAsset).toHaveBeenCalledWith(
         testBuffer,
         'assets/logo.png',
         'image/png'
@@ -109,9 +104,8 @@ describe('AssetService', () => {
 
     it('should calculate consistent checksum for same content', async () => {
       // Arrange
-      mockIsFtpConfigured.mockReturnValue(true);
-      mockUploadFileToFtp.mockResolvedValue({ path: 'watermarks/logo_club.png', url: 'https://cdn.example.com/watermarks/logo_club.png' });
-      mockGetFtpPublicUrl.mockReturnValue('https://cdn.example.com/watermarks/test.png');
+      mockStorageUploadAsset.mockResolvedValue({ path: 'watermarks/test.png', url: 'https://cdn.example.com/watermarks/test.png' });
+      mockGetAssetUrl.mockReturnValue('https://cdn.example.com/watermarks/test.png');
 
       // Act
       const result1 = await assetService.uploadAsset(testBuffer, 'test1.png', 'watermark');
@@ -190,9 +184,8 @@ describe('AssetService', () => {
   describe('uploadAndDeployWatermark', () => {
     it('should upload then deploy watermark', async () => {
       // Arrange
-      mockIsFtpConfigured.mockReturnValue(true);
-      mockUploadFileToFtp.mockResolvedValue({ path: 'watermarks/logo_club.png', url: 'https://cdn.example.com/watermarks/logo_club.png' });
-      mockGetFtpPublicUrl.mockReturnValue('https://cdn.example.com/watermarks/logo.png');
+      mockStorageUploadAsset.mockResolvedValue({ path: 'watermarks/logo.png', url: 'https://cdn.example.com/watermarks/logo.png' });
+      mockGetAssetUrl.mockReturnValue('https://cdn.example.com/watermarks/logo.png');
       mockCommandQueue.sendOrQueue.mockResolvedValue({
         sent: true,
         queued: false,
@@ -210,7 +203,7 @@ describe('AssetService', () => {
       // Assert
       expect(result.uploadResult.url).toBe('https://cdn.example.com/watermarks/logo.png');
       expect(result.deployResult.sent).toBe(true);
-      expect(mockUploadFileToFtp).toHaveBeenCalled();
+      expect(mockStorageUploadAsset).toHaveBeenCalled();
       expect(mockCommandQueue.sendOrQueue).toHaveBeenCalledWith(
         siteId,
         'deploy_asset',
@@ -431,6 +424,93 @@ describe('AssetService', () => {
         const result = assetService.validateWatermarkConfig({ animation } as any);
         expect(result.valid).toBe(true);
       }
+    });
+  });
+
+  describe('listWatermarks', () => {
+    const mockListAssets = listAssets as jest.MockedFunction<typeof listAssets>;
+
+    it('should list watermarks from storage and enrich with URLs', async () => {
+      // Arrange
+      mockListAssets.mockResolvedValue([
+        { name: 'logo.png', size: 1024, modifiedAt: new Date('2025-01-01') },
+        { name: 'sponsor.jpg', size: 2048, modifiedAt: new Date('2025-02-01') },
+      ]);
+      mockGetAssetUrl.mockImplementation((path: string) => `https://cdn.example.com/${path}`);
+
+      // Act
+      const result = await assetService.listWatermarks();
+
+      // Assert
+      expect(result).toHaveLength(2);
+      expect(result[0].name).toBe('logo.png');
+      expect(result[0].url).toBe('https://cdn.example.com/watermarks/logo.png');
+      expect(result[0].localPath).toBe('assets/watermarks/logo.png');
+      expect(result[0].storagePath).toBe('watermarks/logo.png');
+      expect(result[1].name).toBe('sponsor.jpg');
+    });
+
+    it('should filter non-image files', async () => {
+      // Arrange
+      mockListAssets.mockResolvedValue([
+        { name: 'logo.png', size: 1024, modifiedAt: new Date() },
+        { name: 'readme.txt', size: 100, modifiedAt: new Date() },
+        { name: 'data.json', size: 200, modifiedAt: new Date() },
+      ]);
+      mockGetAssetUrl.mockImplementation((path: string) => `https://cdn.example.com/${path}`);
+
+      // Act
+      const result = await assetService.listWatermarks();
+
+      // Assert
+      expect(result).toHaveLength(1);
+      expect(result[0].name).toBe('logo.png');
+    });
+
+    it('should return empty array when no watermarks exist', async () => {
+      // Arrange
+      mockListAssets.mockResolvedValue([]);
+
+      // Act
+      const result = await assetService.listWatermarks();
+
+      // Assert
+      expect(result).toHaveLength(0);
+    });
+
+    it('should sort watermarks alphabetically', async () => {
+      // Arrange
+      mockListAssets.mockResolvedValue([
+        { name: 'zebra.png', size: 100, modifiedAt: undefined },
+        { name: 'alpha.png', size: 200, modifiedAt: undefined },
+        { name: 'middle.jpg', size: 300, modifiedAt: undefined },
+      ]);
+      mockGetAssetUrl.mockImplementation((path: string) => `https://cdn.example.com/${path}`);
+
+      // Act
+      const result = await assetService.listWatermarks();
+
+      // Assert
+      expect(result.map(w => w.name)).toEqual(['alpha.png', 'middle.jpg', 'zebra.png']);
+    });
+
+    it('should accept all valid image extensions', async () => {
+      // Arrange
+      mockListAssets.mockResolvedValue([
+        { name: 'a.png', size: 100, modifiedAt: undefined },
+        { name: 'b.jpg', size: 100, modifiedAt: undefined },
+        { name: 'c.jpeg', size: 100, modifiedAt: undefined },
+        { name: 'd.gif', size: 100, modifiedAt: undefined },
+        { name: 'e.webp', size: 100, modifiedAt: undefined },
+        { name: 'f.svg', size: 100, modifiedAt: undefined },
+      ]);
+      mockGetAssetUrl.mockImplementation((path: string) => `https://cdn.example.com/${path}`);
+
+      // Act
+      const result = await assetService.listWatermarks();
+
+      // Assert
+      expect(result).toHaveLength(6);
     });
   });
 });

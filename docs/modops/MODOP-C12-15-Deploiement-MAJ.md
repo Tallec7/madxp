@@ -143,24 +143,39 @@ Dashboard → Sites → [Site] → Actions → Mettre à jour le logiciel
 
 **⏱️ Durée totale : 5-10 minutes**
 
+**Options de déploiement (v3.25.0+) :**
+
+Le wizard de déploiement propose deux options dans l'étape 3 :
+
+| Option                             | Défaut | Comportement                                                                                                   |
+| ---------------------------------- | ------ | -------------------------------------------------------------------------------------------------------------- |
+| **Rollback automatique**           | ✅ Oui | En cas d'échec de la mise à jour, le Pi restaure automatiquement la version précédente depuis le backup local. |
+| **Redémarrage après installation** | ❌ Non | Après une mise à jour réussie, le Pi effectue un `sudo reboot` complet (délai de 10s pour remonter le statut). |
+
+- **Rollback automatique** : désactiver uniquement pour le debug (laisser le Pi dans l'état d'échec pour investigation)
+- **Redémarrage après installation** : utile pour appliquer des changements kernel, systemd, ou résoudre des problèmes de mémoire post-update
+
 **Note (v3.7.14+) :** Le script `update-software.js` copie maintenant aussi le dossier `config/` (services systemd) vers le Pi. Les versions précédentes ne copiaient jamais ce dossier, ce qui empêchait l'installation des services de protection via OTA. L'archive inclut maintenant **7 services systemd** (3 core + 4 protection) et **12 scripts runtime** (dont `fix-fleet-pi.sh` et `diagnose-pi.sh`). Si des services sont manquants sur un Pi existant, utiliser `fix-fleet-pi.sh` pour les installer manuellement.
 
 **⚠️ Golden snapshot automatique (v3.7.16+) :** Avant de remplacer le code du sync-agent, `update-software.js` crée automatiquement un snapshot "golden" de la version actuelle (si aucun golden n'existe). Cela garantit que le guardian peut restaurer la version précédente en cas de crash du nouveau code. Sans ce mécanisme, un Pi recevant le guardian pour la première fois via OTA n'aurait aucun fallback et resterait hors ligne indéfiniment en cas de régression.
 
 **Parité des 3 chemins de déploiement (v3.8.1+) :** Les 3 méthodes de mise à jour sont maintenant **100% alignées** :
 
-| Étape | OTA (`update-software.js`) | SCP (`deploy-remote.sh`) | Admin `:8080` (`admin-server.js`) |
-| ----- | --- | --- | --- |
-| webapp/ | ✅ | ✅ | ✅ |
-| server/ + npm install | ✅ | ✅ | ✅ |
-| sync-agent/ + npm install | ✅ | ✅ | ✅ |
-| admin/ | ✅ | ✅ | ✅ |
-| scripts/ | ✅ | ✅ | ✅ |
-| config/systemd/ + enable | ✅ | ✅ | ✅ |
-| Golden snapshot | ✅ | ✅ | ✅ |
-| VERSION + release.json | ✅ | ✅ | ✅ |
-| Restart nginx | ✅ | ✅ | ✅ |
-| Restart kiosk | ✅ | ✅ | ✅ |
+| Étape                     | OTA (`update-software.js`) | SCP (`deploy-remote.sh`) | Admin `:8080` (`admin-server.js`) |
+| ------------------------- | -------------------------- | ------------------------ | --------------------------------- |
+| webapp/                   | ✅                         | ✅                       | ✅                                |
+| server/ + npm install     | ✅                         | ✅                       | ✅                                |
+| sync-agent/ + npm install | ✅                         | ✅                       | ✅                                |
+| admin/                    | ✅                         | ✅                       | ✅                                |
+| scripts/                  | ✅                         | ✅                       | ✅                                |
+| config/systemd/ + enable  | ✅                         | ✅                       | ✅                                |
+| Golden snapshot           | ✅                         | ✅                       | ✅                                |
+| VERSION + release.json    | ✅                         | ✅                       | ✅                                |
+| Restart nginx             | ✅                         | ✅                       | ✅                                |
+| Restart kiosk             | ✅                         | ✅                       | ✅                                |
+| Diagnostic post-deploy    | ✅ (`--json` dans report)  | ✅ (auto via SSH)        | ❌ (manuel)                       |
+
+> **v3.45.1+ :** `deploy-remote.sh` lance automatiquement `diagnose-pi.sh --json` après le déploiement et affiche un résumé (erreurs/warnings/healthy). `update-software.js` inclut le diagnostic dans le `postUpdateReport` remonté au central-server. Pour le chemin Admin `:8080`, lancer manuellement : `ssh pi@<ip> './scripts/diagnose-pi.sh'`.
 
 Avant la v3.8.1, chaque chemin avait des lacunes différentes (services systemd manquants, golden snapshot absent, nginx non redémarré, etc.), ce qui causait des divergences entre Pi selon la méthode de mise à jour utilisée.
 
@@ -294,11 +309,13 @@ Menu Contenu → Vidéos → [Vidéo] → Déployer
 
 ### 5.1 Détection automatique d'échec
 
-**Le système déclenche un rollback automatique si :**
+**Le système déclenche un rollback automatique si** (option "Rollback automatique" activée, défaut: oui) **:**
 
 - Taux de succès < seuil configuré (défaut: 95%)
 - Plus de 3 sites en échec consécutif
 - Erreur critique détectée dans les logs
+
+> **Note :** Si l'option "Rollback automatique" est désactivée dans le wizard de déploiement, le Pi restera dans son état actuel en cas d'échec (utile pour le debug).
 
 **Exemple :**
 
@@ -642,15 +659,40 @@ Pour le support technique, vous pouvez exporter un **bundle de diagnostic comple
 Dashboard → Sites → [Site] → Onglet Debug → "Export Debug Bundle"
 ```
 
-**Contenu du bundle (JSON) :**
+**Alternative en ligne de commande (Pi hors ligne ou sans accès dashboard) :**
+
+```bash
+cd /home/pi/neopro/sync-agent
+node -e "
+  const exp = require('./src/commands/debug-bundle');
+  exp().then(r => {
+    const fs = require('fs'), os = require('os');
+    const f = '/tmp/neopro-debug-' + os.hostname() + '-' + new Date().toISOString().slice(0,10) + '.json';
+    fs.writeFileSync(f, JSON.stringify(r.bundle, null, 2));
+    console.log('Rapport exporté: ' + f);
+  }).catch(e => console.error(e));
+"
+```
+
+**Contenu du bundle (15 sections JSON) :**
 
 - Configuration (sanitisée)
 - Version logicielle
-- État de santé système (GPU, services, throttling)
-- Logs récents (100 lignes)
-- Diagnostics réseau
+- État de santé système (CPU, RAM, température, throttling)
+- Infos système (uptime, hostname, OS, modèle Pi)
+- Statut services systemd
+- Logs 24h (services verbeux cap 500 lignes, calmes complets)
+- Diagnostics réseau (internet, DNS, gateway, serveur central, WiFi, stabilité)
+- Espace disque
 - État des buffers analytics
+- Configuration hotspot (sans passphrase) + diagnostics (clients, canaux, rfkill)
+- Configuration boot (gpu_mem)
+- Métriques transition vidéo (read-only)
+- Messages kernel dmesg (200 dernières lignes — erreurs USB, filesystem, OOM)
+- Périphériques USB (lsusb)
 - Liste des vidéos locales
+
+> Référence complète : [sync-agent brick](../architecture/bricks/sync-agent.md#debug-bundle-export_debug_bundle)
 
 ---
 
@@ -660,12 +702,12 @@ Depuis la v2.27, le **Raspberry Pi 5** est entièrement supporté.
 
 ### Différences Pi 4 vs Pi 5
 
-| Aspect         | Pi 4          | Pi 5                       |
-| -------------- | ------------- | -------------------------- |
-| GPU            | VideoCore VI  | VideoCore VII              |
+| Aspect         | Pi 4          | Pi 5                            |
+| -------------- | ------------- | ------------------------------- |
+| GPU            | VideoCore VI  | VideoCore VII                   |
 | Config GPU     | `gpu_mem=256` | V3D natif (aucun flag, v3.7.3+) |
-| `vcgencmd gpu` | Affiche 256M  | Affiche 4M (normal)        |
-| Décodage vidéo | Hardware      | CPU (FFmpeg) + GPU V3D     |
+| `vcgencmd gpu` | Affiche 256M  | Affiche 4M (normal)             |
+| Décodage vidéo | Hardware      | CPU (FFmpeg) + GPU V3D          |
 
 ### Vérification après déploiement
 
@@ -677,9 +719,9 @@ ssh pi@neopro.local 'cat /proc/device-tree/model'
 ssh pi@neopro.local 'vcgencmd get_mem gpu'
 # Doit afficher : gpu=256M
 
-# Pi 5 : vérifier V3D natif (aucun flag GPU custom)
-ssh pi@neopro.local 'pgrep -a chromium | grep -E "use-gl|use-angle|swiftshader"'
-# Aucun résultat = OK (V3D natif actif)
+# Pi 5 : vérifier que le décodage vidéo hardware est désactivé (v3.26.1+)
+ssh pi@neopro.local 'pgrep -a chromium | grep -o "disable-features=[^ ]*"'
+# Doit afficher: disable-features=VaapiVideoDecoder,UseChromeOSDirectVideoDecoder
 ```
 
 ### Problèmes connus Pi 5

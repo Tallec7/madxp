@@ -95,6 +95,15 @@ Puis selon vos besoins :
 - Modèle économique
 - Roadmap produit
 
+### 🎯 Je suis Chef de Projet / Product Owner
+
+→ **[SAFe Neopro](safe/README.md)** - Framework SAFe Essential complet 🆕
+
+- 21 Epics, 37 Features, 40 User Stories avec WSJF
+- Roadmap PI (3 incréments de 6 semaines)
+- Value Streams : [OVS1 Club to Screen](safe/OVS1-CLUB-TO-SCREEN.md) · [OVS2 Sponsor to Impression](safe/OVS2-SPONSOR-TO-IMPRESSION.md)
+- [Portfolio visuel](safe/PORTFOLIO.md) avec Gantt, trajectoire ARR, croissance clubs
+
 ---
 
 ## 📚 Documents par Thématique
@@ -208,12 +217,13 @@ Ces documents sont conservés pour historique mais **ne pas utiliser** :
 
 ### Parcours 3 : Chef de Projet / Product Owner
 
-1. **[BUSINESS_PLAN_COMPLET.md](BUSINESS_PLAN_COMPLET.md) §13** (20 min) - Vision Analytics Sponsors
-2. **[AVANCEMENT_ANALYTICS_SPONSORS.md](AVANCEMENT_ANALYTICS_SPONSORS.md)** (15 min) - État projet
-3. **[ANALYTICS_SPONSORS_README.md](ANALYTICS_SPONSORS_README.md)** (15 min) - Fonctionnalités
-4. **Prêt à planifier** ✅
+1. **[SAFe Neopro](safe/README.md)** (20 min) - Framework SAFe, Epics, Roadmap PI 🆕
+2. **[Portfolio SAFe](safe/PORTFOLIO.md)** (15 min) - Vue d'ensemble, Gantt, métriques ARR
+3. **[BUSINESS_PLAN_COMPLET.md](BUSINESS_PLAN_COMPLET.md) §13** (15 min) - Vision Analytics Sponsors
+4. **[AVANCEMENT_ANALYTICS_SPONSORS.md](AVANCEMENT_ANALYTICS_SPONSORS.md)** (10 min) - État projet
+5. **Prêt à planifier** ✅
 
-**Temps total** : ~50 minutes
+**Temps total** : ~1 heure
 
 ---
 
@@ -345,7 +355,7 @@ Cochez au fur et à mesure :
 
 ---
 
-**Dernière mise à jour** : 8 Janvier 2026
+**Dernière mise à jour** : 19 Février 2026
 **Maintenu par** : Équipe NEOPRO
 **Feedback** : GitHub Issues
 

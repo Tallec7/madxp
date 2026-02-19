@@ -1,3 +1,5 @@
+export {};
+
 // Mock nodemailer before importing the service
 const mockSendMail = jest.fn();
 const mockVerify = jest.fn();

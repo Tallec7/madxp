@@ -9,6 +9,7 @@ import { RecordingStateService } from './recording-state.service';
  * Interface pour une impression sponsor (alignée avec le schéma DB backend)
  */
 export interface SponsorImpression {
+  event_id: string;
   site_id?: string;
   video_id?: string;
   video_filename: string;
@@ -20,6 +21,22 @@ export interface SponsorImpression {
   period: string; // 'pre_match' | 'halftime' | 'post_match' | 'loop'
   trigger_type: 'auto' | 'manual';
   audience_estimate?: number;
+  site_sponsor_id?: string;
+}
+
+/**
+ * Génère un UUID v4 compatible navigateur (utilise crypto.randomUUID si disponible, sinon fallback)
+ */
+function generateEventId(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  // Fallback pour navigateurs plus anciens
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
 }
 
 /**
@@ -142,8 +159,11 @@ export class SponsorAnalyticsService {
 
     this.currentVideoStart = new Date();
     this.currentImpression = {
+      event_id: generateEventId(),
+      site_sponsor_id: (video as unknown as { site_sponsor_id?: string; sponsor_id?: string }).site_sponsor_id
+        || (video as unknown as { sponsor_id?: string }).sponsor_id || undefined,
       site_id: this.siteId || undefined,
-      video_id: video.id || undefined,
+      video_id: video.video_id || video.id || undefined,
       video_filename: this.getFilename(video.path),
       played_at: this.currentVideoStart.toISOString(),
       video_duration: videoDuration || 0,

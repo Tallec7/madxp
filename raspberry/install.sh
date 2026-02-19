@@ -66,12 +66,28 @@ print_success() {
 }
 
 validate_inputs() {
+    # Valider le nom du club
+    if [[ ! "$CLUB_NAME" =~ ^[a-zA-Z0-9_-]+$ ]]; then
+        print_error "Le nom du club ne doit contenir que des lettres, chiffres, tirets et underscores."
+        exit 1
+    fi
+    if [ ${#CLUB_NAME} -gt 25 ]; then
+        print_error "Le nom du club est trop long (max 25 caractères, SSID WiFi = NEOPRO-NOM limité à 32 chars)."
+        exit 1
+    fi
+
+    # Valider le mot de passe WiFi
     local PASS_LENGTH=${#WIFI_PASSWORD}
     if [ "${PASS_LENGTH}" -lt 8 ] || [ "${PASS_LENGTH}" -gt 63 ]; then
         print_error "Le mot de passe WiFi doit contenir entre 8 et 63 caractères (actuel: ${PASS_LENGTH})."
         echo "Veuillez relancer le script avec un mot de passe plus long: sudo ./install.sh ${CLUB_NAME} MonPassSecret123"
         exit 1
     fi
+}
+
+# Échappe une chaîne pour l'utiliser comme remplacement dans sed (délimiteur |)
+sed_escape() {
+    printf '%s\n' "$1" | sed 's/[&/\|]/\\&/g'
 }
 
 check_root() {
@@ -252,13 +268,13 @@ check_prerequisites() {
 
     # Vérifier les fichiers de configuration requis
     local REQUIRED_FILES=(
-        "./config/systemd/hostapd.conf"
-        "./config/systemd/dnsmasq.conf"
-        "./config/systemd/neopro.service"
-        "./config/systemd/neopro-app.service"
-        "./config/systemd/neopro-admin.service"
-        "./server"
-        "./admin"
+        "${SCRIPT_DIR}/config/systemd/hostapd.conf"
+        "${SCRIPT_DIR}/config/systemd/dnsmasq.conf"
+        "${SCRIPT_DIR}/config/systemd/neopro.service"
+        "${SCRIPT_DIR}/config/systemd/neopro-app.service"
+        "${SCRIPT_DIR}/config/systemd/neopro-admin.service"
+        "${SCRIPT_DIR}/server"
+        "${SCRIPT_DIR}/admin"
     )
 
     for file in "${REQUIRED_FILES[@]}"; do
@@ -326,15 +342,18 @@ install_dependencies() {
         dhcpcd5 \
         iw \
         rfkill \
-        unclutter \
+        unclutter-xfixes \
         xdotool \
         x11-xserver-utils \
         chromium \
         cec-utils \
-        ffmpeg
+        ffmpeg \
+        firmware-realtek \
+        firmware-ralink
 
     # cec-utils: Permet de détecter si la TV est allumée via HDMI-CEC (pour analytics fiables)
     # ffmpeg: Permet d'extraire la durée des vidéos (ffprobe)
+    # firmware-realtek/ralink: Drivers pour clés WiFi USB (nécessaire pour le dual WiFi hotspot + internet)
     print_success "Dépendances installées"
 }
 
@@ -391,10 +410,13 @@ interface ${WIFI_INTERFACE}
 EOF
 
     # Configuration hostapd (avec personnalisation SSID)
-    sed "s/NEOPRO-CLUB/NEOPRO-${CLUB_NAME}/" ./config/systemd/hostapd.conf > /etc/hostapd/hostapd.conf
-    sed -i "s/wpa_passphrase=.*/wpa_passphrase=${WIFI_PASSWORD}/" /etc/hostapd/hostapd.conf
-    sed -i "s/^interface=.*/interface=${WIFI_INTERFACE}/" /etc/hostapd/hostapd.conf
-    sed -i "s/^channel=.*/channel=${WIFI_CHANNEL}/" /etc/hostapd/hostapd.conf
+    # Utiliser le délimiteur | et échapper le mot de passe pour éviter les injections sed
+    local ESCAPED_PASSWORD
+    ESCAPED_PASSWORD=$(sed_escape "${WIFI_PASSWORD}")
+    sed "s|NEOPRO-CLUB|NEOPRO-${CLUB_NAME}|" ./config/systemd/hostapd.conf > /etc/hostapd/hostapd.conf
+    sed -i "s|wpa_passphrase=.*|wpa_passphrase=${ESCAPED_PASSWORD}|" /etc/hostapd/hostapd.conf
+    sed -i "s|^interface=.*|interface=${WIFI_INTERFACE}|" /etc/hostapd/hostapd.conf
+    sed -i "s|^channel=.*|channel=${WIFI_CHANNEL}|" /etc/hostapd/hostapd.conf
 
     # Activation de hostapd
     echo 'DAEMON_CONF="/etc/hostapd/hostapd.conf"' > /etc/default/hostapd
@@ -504,10 +526,19 @@ configure_mdns() {
         sed -i '/^\[server\]/a allow-interfaces=eth0,wlan0,wlan1' /etc/avahi/avahi-daemon.conf
     fi
 
+    # Hostname dynamique : lire HOSTNAME_SLUG depuis site.conf, fallback "neopro"
+    SITE_HOSTNAME="neopro"
+    if [ -f /etc/neopro/site.conf ]; then
+        CONFIGURED_HOSTNAME=$(grep "^HOSTNAME_SLUG=" /etc/neopro/site.conf | cut -d'=' -f2)
+        if [ -n "${CONFIGURED_HOSTNAME}" ]; then
+            SITE_HOSTNAME="${CONFIGURED_HOSTNAME}"
+        fi
+    fi
+
     # Changement du hostname
-    hostnamectl set-hostname neopro
-    echo "neopro" > /etc/hostname
-    sed -i 's/127.0.1.1.*/127.0.1.1\tneopro.local neopro/' /etc/hosts
+    hostnamectl set-hostname "${SITE_HOSTNAME}"
+    echo "${SITE_HOSTNAME}" > /etc/hostname
+    sed -i "s/127.0.1.1.*/127.0.1.1\t${SITE_HOSTNAME}.local ${SITE_HOSTNAME}/" /etc/hosts
 
     # Empêcher cloud-init de réinitialiser le hostname (si présent)
     if [ -f /etc/cloud/cloud.cfg ]; then
@@ -520,11 +551,11 @@ configure_mdns() {
 
     ensure_service_running avahi-daemon
     CURRENT_HOSTNAME=$(hostnamectl --static)
-    if [ "${CURRENT_HOSTNAME}" != "neopro" ]; then
-        print_warning "Hostname actuel (${CURRENT_HOSTNAME}) différent de neopro. Reboot nécessaire."
+    if [ "${CURRENT_HOSTNAME}" != "${SITE_HOSTNAME}" ]; then
+        print_warning "Hostname actuel (${CURRENT_HOSTNAME}) différent de ${SITE_HOSTNAME}. Reboot nécessaire."
     fi
 
-    print_success "mDNS configuré: neopro.local (hostname ${CURRENT_HOSTNAME})"
+    print_success "mDNS configuré: ${SITE_HOSTNAME}.local (hostname ${CURRENT_HOSTNAME})"
 }
 
 ################################################################################
@@ -573,8 +604,14 @@ install_app() {
         print_warning "Dossier scripts non trouvé - scripts de gestion non installés"
     fi
 
-    # Note: Le build Angular doit être copié séparément
-    print_warning "N'oubliez pas de copier le build Angular dans ${INSTALL_DIR}/webapp/"
+    # Copie du build Angular (webapp)
+    if [ -d "./webapp" ] && [ -f "./webapp/index.html" ]; then
+        cp -r ./webapp/* ${INSTALL_DIR}/webapp/
+        print_success "Application Angular installée dans ${INSTALL_DIR}/webapp/"
+    else
+        print_warning "Dossier webapp/ non trouvé ou index.html absent."
+        print_warning "Copiez le build Angular manuellement dans ${INSTALL_DIR}/webapp/"
+    fi
 
     # Permissions
     chown -R pi:pi ${INSTALL_DIR}
@@ -810,7 +847,7 @@ configure_services() {
         print_success "Service neopro-sync-guardian configuré"
 
         # Créer la version golden initiale après que tout soit installé
-        print_info "La version 'golden' du sync-agent sera créée au premier démarrage stable"
+        echo "   ℹ️  La version 'golden' du sync-agent sera créée au premier démarrage stable"
     fi
 
     # Rechargement systemd
@@ -834,7 +871,7 @@ configure_gui() {
 @xset s off
 @xset -dpms
 @xset s noblank
-@unclutter -idle 0
+@unclutter -idle 0 -root
 EOF
 
     chown -R pi:pi /home/pi/.config
@@ -912,6 +949,9 @@ finalize() {
   "version": "1.0.0"
 }
 EOF
+    # Restreindre l'accès au fichier contenant le mot de passe WiFi
+    chown pi:pi ${INSTALL_DIR}/club-config.json
+    chmod 600 ${INSTALL_DIR}/club-config.json
 
     # Permissions finales : tout appartient à pi pour que sync-agent puisse écrire
     # www-data (nginx) peut lire via le groupe pi
@@ -922,6 +962,71 @@ EOF
     usermod -a -G pi www-data
 
     print_success "Configuration et permissions sauvegardées"
+}
+
+################################################################################
+# Vérification post-installation
+################################################################################
+
+verify_installation() {
+    print_step "Vérification post-installation..."
+    local ERRORS=0
+    local WARNINGS=0
+
+    # Vérifier les services critiques
+    for svc in nginx dnsmasq hostapd dhcpcd avahi-daemon; do
+        if service_exists "$svc"; then
+            if systemctl is-active --quiet "$svc"; then
+                print_success "Service $svc: actif"
+            else
+                print_error "Service $svc: inactif"
+                ERRORS=$((ERRORS + 1))
+            fi
+        fi
+    done
+
+    # Vérifier que Nginx répond
+    if command -v curl &> /dev/null; then
+        if curl -sf -o /dev/null http://localhost/ 2>/dev/null; then
+            print_success "Nginx répond sur http://localhost/"
+        elif [ -f "${INSTALL_DIR}/webapp/index.html" ]; then
+            print_warning "Nginx ne répond pas encore (normal avant reboot)"
+            WARNINGS=$((WARNINGS + 1))
+        else
+            print_warning "webapp/index.html absent — Nginx retournera 404"
+            WARNINGS=$((WARNINGS + 1))
+        fi
+    fi
+
+    # Vérifier le hotspot WiFi
+    if iw dev "${WIFI_INTERFACE}" info 2>/dev/null | grep -q "type AP"; then
+        print_success "Hotspot WiFi actif en mode AP"
+    else
+        print_warning "Hotspot WiFi pas encore en mode AP (peut nécessiter un reboot)"
+        WARNINGS=$((WARNINGS + 1))
+    fi
+
+    # Vérifier les fichiers critiques
+    local CRITICAL_FILES=(
+        "${INSTALL_DIR}/server/server.js"
+        "${INSTALL_DIR}/admin/admin-server.js"
+    )
+    for f in "${CRITICAL_FILES[@]}"; do
+        if [ ! -f "$f" ]; then
+            print_error "Fichier critique manquant: $f"
+            ERRORS=$((ERRORS + 1))
+        fi
+    done
+
+    # Résumé
+    if [ $ERRORS -gt 0 ]; then
+        print_error "Vérification: $ERRORS erreur(s), $WARNINGS avertissement(s)"
+        print_warning "L'installation a des problèmes — vérifiez les erreurs ci-dessus."
+    elif [ $WARNINGS -gt 0 ]; then
+        print_warning "Vérification: $WARNINGS avertissement(s) non critiques — un reboot devrait les résoudre."
+    else
+        print_success "Vérification: tout est en ordre"
+    fi
 }
 
 ################################################################################
@@ -958,9 +1063,14 @@ print_summary() {
     fi
     echo ""
     echo -e "${YELLOW}Prochaines étapes:${NC}"
-    echo "  1. Copier le build Angular dans: ${INSTALL_DIR}/webapp/"
-    echo "  2. Copier les vidéos dans: ${INSTALL_DIR}/videos/"
-    echo "  3. Redémarrer le système: sudo reboot"
+    local NEXT_STEP=1
+    if [ ! -f "${INSTALL_DIR}/webapp/index.html" ]; then
+        echo "  ${NEXT_STEP}. Copier le build Angular dans: ${INSTALL_DIR}/webapp/"
+        NEXT_STEP=$((NEXT_STEP + 1))
+    fi
+    echo "  ${NEXT_STEP}. Copier les vidéos dans: ${INSTALL_DIR}/videos/"
+    NEXT_STEP=$((NEXT_STEP + 1))
+    echo "  ${NEXT_STEP}. Redémarrer le système: sudo reboot"
     echo ""
     echo -e "${YELLOW}Accès:${NC}"
     echo "  • Connectez votre appareil au WiFi NEOPRO-${CLUB_NAME} pour accéder aux URLs ci-dessous"
@@ -1027,6 +1137,7 @@ main() {
     configure_gpu_memory
     configure_ssh
     finalize
+    verify_installation
     print_elapsed_time
     print_summary
 

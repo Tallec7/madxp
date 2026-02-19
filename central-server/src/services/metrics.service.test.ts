@@ -160,6 +160,16 @@ describe('MetricsService', () => {
     });
   });
 
+  describe('recordPiAgentAuth', () => {
+    it('should track Pi agent auth attempts with reason', async () => {
+      metricsService.recordPiAgentAuth('success');
+      metricsService.recordPiAgentAuth('failure', 'Clé API invalide');
+
+      const metrics = await metricsService.getMetrics();
+      expect(metrics).toContain('neopro_pi_agent_auth_total');
+    });
+  });
+
   describe('recordWebsocketMessage', () => {
     it('should track websocket messages', async () => {
       metricsService.recordWebsocketMessage('inbound', 'heartbeat');
@@ -167,6 +177,30 @@ describe('MetricsService', () => {
 
       const metrics = await metricsService.getMetrics();
       expect(metrics).toContain('neopro_websocket_messages_total');
+    });
+  });
+
+  describe('recordSocketDisconnect', () => {
+    it('should track socket disconnections by reason and client type', async () => {
+      metricsService.recordSocketDisconnect('transport close', 'agent');
+      metricsService.recordSocketDisconnect('ping timeout', 'agent');
+      metricsService.recordSocketDisconnect('transport close', 'dashboard');
+      metricsService.recordSocketDisconnect('zombie_timeout', 'agent');
+
+      const metrics = await metricsService.getMetrics();
+      expect(metrics).toContain('neopro_websocket_disconnects_total');
+      expect(metrics).toContain('reason="transport close"');
+      expect(metrics).toContain('client_type="agent"');
+      expect(metrics).toContain('client_type="dashboard"');
+    });
+
+    it('should track zombie disconnect reasons separately', async () => {
+      metricsService.recordSocketDisconnect('zombie_timeout', 'agent');
+      metricsService.recordSocketDisconnect('zombie_cleanup', 'agent');
+
+      const metrics = await metricsService.getMetrics();
+      expect(metrics).toContain('reason="zombie_timeout"');
+      expect(metrics).toContain('reason="zombie_cleanup"');
     });
   });
 

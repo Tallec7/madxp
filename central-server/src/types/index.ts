@@ -83,6 +83,8 @@ export interface Site {
   created_at: Date;
   updated_at: Date;
   pending_config_version_id: string | null;
+  remote_pin_hash: string | null;
+  hostname_slug: string | null;
 }
 
 // Group types
@@ -177,6 +179,16 @@ export interface RemoteCommand {
   completed_at: Date | null;
 }
 
+// Fan status types
+export interface FanStatus {
+  present: boolean;
+  type: string | null;
+  curState: number | null;
+  maxState: number | null;
+  speedPercent: number | null;
+  is_pi5: boolean;
+}
+
 // Metrics types
 export interface Metrics {
   id: string;
@@ -187,6 +199,7 @@ export interface Metrics {
   disk_usage: number | null;
   uptime: number | null;
   network_status: Record<string, any> | null;
+  fan_status: FanStatus | null;
   recorded_at: Date;
 }
 
@@ -223,6 +236,15 @@ export interface CommandResult {
   error?: string;
 }
 
+export interface TransitionMetrics {
+  earlySwitchCount: number;
+  safetyTimeoutCount: number;
+  cleanupSkippedCount: number;
+  videoErrorCount: number;
+  totalTransitions: number;
+  lastUpdatedAt?: number | null;
+}
+
 export interface HeartbeatMessage {
   siteId: string;
   timestamp: number;
@@ -241,6 +263,82 @@ export interface HeartbeatMessage {
     buildDate?: string | null;
     source?: string | null;
   };
+  kioskStatus?: {
+    status: 'running' | 'crashed';
+    chromiumAlive: boolean;
+    restartCount: number;
+    lastEvent: string;
+    reason?: string;
+    pid: number;
+  } | null;
+  recordingState?: {
+    isRecording: boolean;
+    isManualOverride: boolean;
+  } | null;
+  transitionMetrics?: TransitionMetrics | null;
+  playerState?: {
+    currentVideo: string | null;
+    currentCategory: string | null;
+    progress: number;
+    duration: number;
+    currentTime: number;
+    phase: string;
+    isManualMode: boolean;
+    isPlaying: boolean;
+    loopIndex: number;
+    loopTotal: number;
+    nextVideo: string | null;
+    lastError: string | null;
+    lastTransitionAt: string | null;
+    overlayActive: boolean;
+    loopResumedFrom: number | null;
+    updatedAt: string;
+  } | null;
+  wifiStatus?: {
+    interface: string | null;
+    connected: boolean;
+    ssid: string | null;
+    signal: number | null;
+    quality: number | null;
+    connectionType: 'wifi' | 'ethernet' | 'none';
+    disconnectsLastHour: number;
+    throttled: string | null;
+    voltageOk: boolean;
+    powerManagement?: 'on' | 'off' | null;
+    channel?: number | null;
+    hotspotChannel?: number | null;
+  } | null;
+  fanStatus?: FanStatus | null;
+}
+
+// ============================================================================
+// Config Profile types (multi-config par site / profils / tournois)
+// ============================================================================
+
+export interface ConfigProfile {
+  id: string;
+  site_id: string;
+  name: string;
+  display_name: string | null;
+  city: string | null;
+  sport: string | null;
+  sort_order: number;
+  is_default: boolean;
+  configuration: SiteConfiguration;
+  created_by: string | null;
+  updated_by: string | null;
+  created_at: Date;
+  updated_at: Date;
+}
+
+export interface ConfigProfileSyncPayload {
+  id: string;
+  name: string;
+  display_name: string | null;
+  city: string | null;
+  sport: string | null;
+  is_default: boolean;
+  configuration: SiteConfiguration;
 }
 
 // ============================================================================
@@ -313,6 +411,23 @@ export interface SponsorVideo {
   owner?: 'neopro' | 'club';
   locked?: boolean;
   expiresAt?: string;
+  site_sponsor_id?: string;
+  display_name?: string;
+}
+
+/**
+ * Données d'un sponsor de site envoyées au Pi lors du déploiement.
+ * Permet au Pi de connaître les sponsors du dashboard central.
+ */
+export interface SiteSponsorDeployment {
+  id: string;
+  name: string;
+  contactEmail: string | null;
+  contactPhone: string | null;
+  logoUrl: string | null;
+  source: 'local' | 'neopro';
+  videoFilenames: string[];
+  isActive: boolean;
 }
 
 export interface CategoryVideo {
@@ -408,7 +523,7 @@ export interface WatermarkSchedule {
 export interface WatermarkConfig {
   enabled: boolean;
   imagePath: string;      // Chemin local sur le Pi: /home/pi/neopro/webapp/assets/watermarks/logo.png
-  cloudUrl?: string;      // URL cloud (FTP ou Supabase) pour l'aperçu dans le dashboard
+  cloudUrl?: string;      // URL cloud (FTP) pour l'aperçu dans le dashboard
   fullscreen: boolean;    // Mode plein écran (couvre tout l'écran)
   position: OverlayPosition;  // Ignoré si fullscreen
   offsetX: number;        // Offset horizontal en pixels - ignoré si fullscreen

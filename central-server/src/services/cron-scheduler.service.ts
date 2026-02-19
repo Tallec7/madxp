@@ -276,7 +276,7 @@ class CronSchedulerService {
   /**
    * Rassemble les données pour un rapport
    */
-  private async gatherReportData(sites: string[]): Promise<{
+  private async gatherReportData(_sites: string[]): Promise<{
     totalSites: number;
     onlineSites: number;
     alertsCount: number;
@@ -374,11 +374,12 @@ class CronSchedulerService {
       'recurring_schedule_executions': 'started_at',
       'audit_logs': 'created_at',
       'video_plays': 'played_at',
-      'sponsor_impressions': 'played_at',
+      'advertiser_impressions': 'played_at',
       'metrics': 'recorded_at',
       'remote_commands': 'created_at',
       'alerts': 'created_at',
       'config_history': 'deployed_at', // Special handling below
+      'sponsor_access_tokens': 'expires_at', // P5: magic link tokens cleanup
     };
 
     for (const table of tables) {
@@ -534,7 +535,7 @@ class CronSchedulerService {
   /**
    * Exécute une tâche d'agrégation
    */
-  private async executeAggregationTask(schedule: RecurringSchedule): Promise<ExecutionResult> {
+  private async executeAggregationTask(_schedule: RecurringSchedule): Promise<ExecutionResult> {
     // Appeler la fonction d'agrégation des stats quotidiennes
     try {
       await query(`SELECT calculate_all_daily_stats(CURRENT_DATE - 1)`, []);
@@ -553,7 +554,7 @@ class CronSchedulerService {
   /**
    * Exécute une tâche de backup (placeholder)
    */
-  private async executeBackupTask(schedule: RecurringSchedule): Promise<ExecutionResult> {
+  private async executeBackupTask(_schedule: RecurringSchedule): Promise<ExecutionResult> {
     // TODO: Implémenter la logique de backup
     return {
       success: true,

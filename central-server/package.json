@@ -11,6 +11,7 @@
     "db:seed": "ts-node src/scripts/seed.ts",
     "create-admin": "ts-node src/scripts/create-admin.ts",
     "test": "jest",
+    "test:smoke": "jest --testPathPattern='__tests__/smoke' --verbose --no-coverage --forceExit",
     "lint": "ESLINT_USE_FLAT_CONFIG=false eslint src/**/*.ts",
     "format": "prettier --write \"src/**/*.ts\""
   },
@@ -25,7 +26,6 @@
     "@logtail/node": "^0.5.2",
     "@logtail/winston": "^0.5.2",
     "@socket.io/redis-adapter": "^8.3.0",
-    "@supabase/supabase-js": "^2.86.2",
     "@types/pdfkit": "^0.17.4",
     "basic-ftp": "^5.1.0",
     "bcryptjs": "^2.4.3",

@@ -63,7 +63,7 @@ Sans architecture de synchronisation intelligente, les modifications locales son
 │  │ ADMIN UI LOCALE (port 8080)                               │ │
 │  │ • Voit tout le contenu                                    │ │
 │  │ • Modifie uniquement les catégories "Club"                │ │
-│  │ • ANNONCES NEOPRO = lecture seule, non supprimable        │ │
+│  │ • ANNONCES NEOPRO = lecture seule côté Pi (non supprimable par le club) │ │
 │  └───────────────────────────────────────────────────────────┘ │
 └─────────────────────────────────────────────────────────────────┘
 ```
@@ -151,11 +151,11 @@ Sans architecture de synchronisation intelligente, les modifications locales son
 
 ### 3.1 Tableau Récapitulatif
 
-| Type                | Propriétaire | Stockage Central | Stockage Local               | Modifiable par Club | Supprimable par Club |
-| ------------------- | ------------ | ---------------- | ---------------------------- | ------------------- | -------------------- |
-| **Annonces NEOPRO** | NEOPRO       | DB + Supabase    | configuration.json + /videos | Non                 | Non                  |
-| **Contenu Club**    | Club         | Miroir (lecture) | configuration.json + /videos | Oui                 | Oui                  |
-| **Config Système**  | NEOPRO       | DB               | configuration.json           | Non                 | Non                  |
+| Type                | Propriétaire | Stockage Central   | Stockage Local               | Modifiable par Club | Supprimable par Club |
+| ------------------- | ------------ | ------------------ | ---------------------------- | ------------------- | -------------------- |
+| **Annonces NEOPRO** | NEOPRO       | DB + FTP Hostinger | configuration.json + /videos | Non                 | Non                  |
+| **Contenu Club**    | Club         | Miroir (lecture)   | configuration.json + /videos | Oui                 | Oui                  |
+| **Config Système**  | NEOPRO       | DB                 | configuration.json           | Non                 | Non                  |
 
 ### 3.2 Contenu NEOPRO (Verrouillé)
 
@@ -171,8 +171,8 @@ Sans architecture de synchronisation intelligente, les modifications locales son
 
 - Catégorie dédiée : `ANNONCES_NEOPRO` (ou nom configurable)
 - Flag `locked: true` dans la configuration
-- L'admin UI affiche ces éléments en lecture seule
-- Icône cadenas visible pour l'opérateur
+- L'admin UI **côté Pi** affiche ces éléments en lecture seule (cadenas visible pour l'opérateur club)
+- Le **Dashboard Central** a un accès complet (suppression, modification) — c'est l'outil de gestion NEOPRO
 
 **Structure dans configuration.json** :
 
@@ -274,16 +274,29 @@ Commandes:          ────────────────────
 
 ### 4.2 Événements de Synchronisation
 
-| Événement                    | Direction       | Déclencheur                    | Action                           |
-| ---------------------------- | --------------- | ------------------------------ | -------------------------------- |
-| **Connexion du Pi**          | Bidirectionnel  | Pi se connecte au central      | Échange état complet             |
-| **Déploiement vidéo NEOPRO** | Central → Local | Admin NEOPRO clique "Déployer" | Download + merge config          |
-| **Modification locale**      | Local → Central | Opérateur modifie via Admin UI | Upload état vers central         |
-| **sync_local_state**         | Local → Central | Connexion + changement vidéos  | Config + liste vidéos + stockage |
-| **Heartbeat**                | Local → Central | Timer 30s                      | Métriques système uniquement     |
-| **Commande admin**           | Central → Local | Admin NEOPRO envoie commande   | Exécution sur Pi                 |
+| Événement                    | Direction          | Déclencheur                    | Action                                                            |
+| ---------------------------- | ------------------ | ------------------------------ | ----------------------------------------------------------------- |
+| **Connexion du Pi**          | Bidirectionnel     | Pi se connecte au central      | Échange état complet + traitement pending (queue + config)        |
+| **Déploiement vidéo NEOPRO** | Central → Local    | Admin NEOPRO clique "Déployer" | Download + merge config                                           |
+| **Modification locale**      | Local → Central    | Opérateur modifie via Admin UI | Upload état vers central                                          |
+| **sync_local_state**         | Local → Central    | Connexion + changement vidéos  | Config + liste vidéos + stockage                                  |
+| **Heartbeat**                | Local → Central    | Timer 30s                      | Métriques système + statut kiosk + recording state + player state |
+| **screenshot-request**       | Central → Local    | Dashboard cloud remote         | Capture JPEG du player TV via canvas.drawImage()                  |
+| **screenshot-data**          | Local → Central    | Réponse screenshot             | JPEG 480p ou `{ error }` si échec (v3.49+)                        |
+| **Commande admin**           | Central → Local    | Admin NEOPRO envoie commande   | Exécution sur Pi                                                  |
+| **sync_profiles**            | Central → Local    | Admin déploie profils          | Écriture profiles/ + clubs.json                                   |
+| **switch_profile**           | Central → Local    | Admin change profil actif      | Activation profil + merge config                                  |
+| **profile-switch**           | Local (front→back) | Remote sélectionne un profil   | Activation profil + reload TV                                     |
+| **update_config (sponsors)** | Central → Local    | Déploiement orchestré          | Merge `siteSponsors` dans `localSponsors[]` du Pi (P8)            |
+| **sponsor_ids_resolved**     | Central → Local    | Réponse à sync_local_state     | Mapping `{ localId: centralUUID }` pour sponsors locaux (P3/P9)   |
 
-> **Note** : Le heartbeat (30s) n'envoie que les métriques système. La liste des vidéos est synchronisée via `sync_local_state` à la connexion et lors de changements détectés par le VideoWatcher.
+> **Note** : Le heartbeat (30s) envoie les métriques système + le statut kiosk Chromium (lu depuis `/home/pi/neopro/data/kiosk-status.json`, écrit par `kiosk-watchdog.sh`) + le recording state analytics (`{ isRecording, isManualOverride }`, récupéré depuis le local server via connexion persistante `local-socket.js`) + le player state TV (`{ currentVideo, progress, phase, isPlaying, loopIndex, ... }`, récupéré depuis le local server via callback `get-player-state` sur la connexion persistante). Le recording state et le player state sont stockés en mémoire côté central (Maps éphémères) et exposés dans `GET /api/remote/:siteId/state` pour la cloud remote. Le player state est aussi broadcasté en temps réel vers la room `dashboard` via l'événement `player_state_updated`. La liste des vidéos est synchronisée via `sync_local_state` à la connexion et lors de changements détectés par le VideoWatcher.
+>
+> **Screenshot à la demande (v3.58+)** : Le dashboard cloud demande un screenshot via `POST /api/remote/:siteId/command` avec `type: 'screenshot'`. Le controller **attend la réponse du Pi** (pattern request-response HTTP, timeout 8s) au lieu de relayer via Socket.IO room. Le flux est : dashboard HTTP POST → controller attend sur `piSocket.on('screenshot-data')` → central émet `screenshot-request` → sync-agent → local server (broadcast via connexion persistante `local-socket.js`) → TV component (canvas.drawImage, JPEG 480p quality 0.5, ~30-50KB) → local server → sync-agent (relay via connexion persistante) → central → **controller retourne l'image dans la réponse HTTP**. Rate-limited à 1 capture/seconde côté Pi.
+>
+> **Historique** : Avant v3.58, le screenshot était relayé au dashboard via `io.to('dashboard').emit('screenshot-data', ...)`. Ce relay Socket.IO perdait silencieusement les payloads base64 (~60 KB) lorsque le dashboard utilisait le transport polling, causant des timeouts systématiques.
+>
+> **Gestion d'erreur screenshot (v3.49+)** : Le TV component et le sync-agent renvoient toujours une réponse `screenshot-data`, même en cas d'échec. Le champ `error` indique la cause : `no_active_video` (aucune vidéo active), `capture_failed` (canvas/video invalide), ou `timeout` (pas de réponse du local server en 10s). En v3.58+, le controller retourne directement l'erreur via HTTP (502 pour erreur Pi, 504 pour timeout). Côté central, les réponses sont instrumentées via `neopro_commands_total{type="screenshot", status="sent|received|pi_error|timeout"}` et `neopro_command_latency_seconds{type="screenshot"}`.
 
 ### 4.3 Processus de Synchronisation Détaillé
 
@@ -295,7 +308,7 @@ Pi                                              Central
 │  ──── WebSocket connect + auth ────────────────►  │
 │       (siteId, apiKey)                            │
 │                                                    │
-│  ◄──── Authentification OK ────────────────────   │
+│  ◄──── Authentification OK ────────────────────   │  → authRetries = 0
 │                                                    │
 │  ──── État local complet ──────────────────────►  │
 │       (configuration.json, liste vidéos)          │
@@ -306,6 +319,17 @@ Pi                                              Central
 │  ──── Confirmation sync terminée ──────────────►  │
 │                                                    │
 ```
+
+**Gestion des erreurs d'authentification (v3.61+) :**
+
+Le sync-agent distingue les erreurs d'auth permanentes des erreurs transitoires :
+
+| Type d'erreur   | Exemples                                                  | Comportement                                       |
+| --------------- | --------------------------------------------------------- | -------------------------------------------------- |
+| **Permanente**  | Clé API invalide, Site non trouvé, Identifiants manquants | `process.exit(1)` immédiat                         |
+| **Transitoire** | Timeout DB, surcharge serveur, pool connexions saturé     | Retry via reconnexion Socket.IO (max 5 tentatives) |
+
+Le compteur `authRetries` est incrémenté à chaque erreur transitoire et remis à 0 après une authentification réussie. Après 5 échecs consécutifs, le processus quitte (relancé par systemd).
 
 #### Étape 2 : Merge de la Configuration
 
@@ -342,8 +366,18 @@ function mergeConfigurations(localConfig, neoProContent) {
     result.categories = mergeCategories(localConfig.categories, neoProContent.categories);
   }
 
+  // 4b. Fusionner les métadonnées sponsors (P8 — dashboard → Pi)
+  if (neoProContent.siteSponsors !== undefined) {
+    result.localSponsors = mergeSiteSponsors(
+      localConfig.localSponsors || [],
+      neoProContent.siteSponsors,
+    );
+  }
+
   // 5. Restaurer les paramètres locaux protégés
+  //    (sauf localSponsors si siteSponsors présent — déjà fusionné en 4b)
   for (const [key, value] of Object.entries(preservedLocalSettings)) {
+    if (key === 'localSponsors' && neoProContent.siteSponsors !== undefined) continue;
     result[key] = value;
   }
 
@@ -382,6 +416,97 @@ function mergeSponsors(localSponsors, centralSponsors) {
 }
 ```
 
+#### Merge des Métadonnées Sponsors (Dashboard → Pi)
+
+Depuis P8, le payload de déploiement inclut un champ `siteSponsors` contenant les métadonnées des sponsors du site (nom, contact, vidéos associées). Ces données sont fusionnées dans `localSponsors[]` du Pi :
+
+```javascript
+// Payload envoyé par le central (dans neoProContent)
+siteSponsors: [
+  {
+    id: 'uuid-site-sponsor', // ID central (site_sponsors.id)
+    name: 'Boulangerie Dupont',
+    contactEmail: 'jean@dupont.fr',
+    contactPhone: '06 12 34 56 78',
+    logoUrl: null,
+    source: 'local', // 'local' ou 'neopro'
+    videoFilenames: ['dupont_spot.mp4', 'dupont_banniere.mp4'],
+    isActive: true,
+  },
+];
+
+// Algorithme de merge (config-merge.js → mergeSiteSponsors)
+// 1. Pour chaque sponsor central :
+//    a) Chercher par centralId (lien existant)
+//    b) Sinon chercher par nom (case-insensitive) pour lier un sponsor local
+//    c) Sinon créer une nouvelle entrée locale avec centralId
+// 2. Préserver les sponsors purement locaux (sans centralId, nom non matché)
+// 3. Fusionner les videoFilenames (union des deux listes)
+```
+
+**Règles de merge** :
+
+| Situation                                    | Résultat                                                 |
+| -------------------------------------------- | -------------------------------------------------------- |
+| Sponsor central avec `centralId` déjà lié    | Mise à jour nom, contact, vidéos                         |
+| Sponsor central avec même nom qu'un local    | Liaison via `centralId` + mise à jour                    |
+| Nouveau sponsor central                      | Création entrée locale avec `centralId`                  |
+| Sponsor local sans match central             | Préservé intact                                          |
+| Sponsor central supprimé (absent du payload) | Entrée locale conservée (pas de suppression destructive) |
+
+**Monitoring** : Métrique `neopro_sponsor_sync_total{status="included"}` à chaque déploiement, `neopro_sponsor_sync_count` pour le nombre de sponsors inclus. Alerte `SponsorSyncMissing` si des déploiements se font sans données sponsors.
+
+#### Sync Sponsors Bidirectionnelle (P9)
+
+Depuis P9, la synchronisation des sponsors est **bidirectionnelle** et chaque direction a son propre mécanisme :
+
+```
+┌──────────────────────┐                          ┌──────────────────────┐
+│   Dashboard Central  │                          │    Raspberry Pi      │
+│                      │   orchestrated deploy    │                      │
+│  site_sponsors (DB)  │ ──── siteSponsors[] ──►  │  localSponsors[]     │
+│  source: 'neopro'    │    neoProContent.        │  source: 'neopro'    │
+│                      │    siteSponsors          │  (lecture seule)     │
+│                      │                          │                      │
+│  site_sponsors (DB)  │ ◄─── localSponsors[] ──  │  localSponsors[]     │
+│  source: 'local'     │    sync_local_state      │  source: 'local'     │
+│                      │                          │  (éditable bénévole) │
+│                      │ ──── mapping{} ────────► │                      │
+│                      │    sponsor_ids_resolved   │  centralId = uuid    │
+└──────────────────────┘                          └──────────────────────┘
+```
+
+**Direction Dashboard → Pi** (déploiement) :
+
+1. Opérateur crée un sponsor dans le dashboard (`site_sponsors` avec `source='neopro'`)
+2. Au déploiement, `getSponsorsForDeployment(siteId)` récupère les sponsors avec `videoFilenames[]`
+3. `syncSponsorVideoAssociations()` extrait les couples sponsor-vidéo du config et upsert dans `site_sponsor_videos`
+4. Le payload `neoProContent.siteSponsors[]` est envoyé au Pi
+5. `mergeSiteSponsors()` fusionne dans `localSponsors[]` avec `source: 'neopro'`
+6. Le Pi admin affiche ces sponsors en section NEOPRO (lecture seule, `LockedError` sur edit/delete)
+
+**Direction Pi → Dashboard** (sync-agent) :
+
+1. Bénévole crée un sponsor local depuis l'admin Pi (`source: 'local'`)
+2. `sync_local_state` envoie `localSponsors[]` au central
+3. `resolveLocalSponsors()` crée/matche des `site_sponsors(source='local')` en DB
+4. Le central émet `sponsor_ids_resolved` avec le mapping `{ localId: centralUUID }`
+5. Le Pi met à jour `centralId` dans `localSponsors[]` et `site_sponsor_id` dans `sponsors[]` + `timeCategories[].loopVideos[]`
+6. Les impressions sont attribuées via `site_sponsor_id` → rapport PDF possible
+
+**Résolution impression (3 niveaux)** :
+
+1. `site_sponsor_id` fourni directement par le Pi (cas nominal)
+2. Fallback `video_id` → JOIN `site_sponsor_videos` → `site_sponsors.id`
+3. Fallback `video_filename` → JOIN `site_sponsor_videos` (par filename) → `site_sponsors.id`
+
+**Monitoring P9** :
+
+- `neopro_impression_resolution_total{method}` — compteur par méthode de résolution (site_sponsor_id, video_id, filename, unresolved)
+- `neopro_sponsor_resolution_failures_total{operation}` — compteur d'échecs (resolve_local, resolve_impression, sync_videos)
+- Alerte `SponsorResolutionFailures` — >0.05/s pendant 10 min
+- Alerte `ImpressionSponsorUnresolved` — >50% non attribuées pendant 15 min
+
 ---
 
 ## 5. Règles de Merge
@@ -404,14 +529,15 @@ Le dashboard central propose deux modes de déploiement :
 
 ### 5.3 Tableau des Règles par Champ
 
-| Champ              | Comportement en mode `merge`                           |
-| ------------------ | ------------------------------------------------------ |
-| `sponsors`         | Central = source de vérité + sponsors locaux préservés |
-| `categories`       | Fusion NEOPRO/Club (locked prend le dessus)            |
-| `timeCategories`   | Remplacement complet par le central                    |
-| `categoryMappings` | Remplacement complet par le central                    |
-| `settings`         | **JAMAIS écrasé** - Protégé localement                 |
-| `siteId`, `apiKey` | **JAMAIS écrasé** - Identifiants du boîtier            |
+| Champ              | Comportement en mode `merge`                                   |
+| ------------------ | -------------------------------------------------------------- |
+| `sponsors`         | Central = source de vérité + sponsors locaux préservés         |
+| `siteSponsors`     | Fusionné dans `localSponsors[]` via `mergeSiteSponsors()` (P8) |
+| `categories`       | Fusion NEOPRO/Club (locked prend le dessus)                    |
+| `timeCategories`   | Remplacement complet par le central                            |
+| `categoryMappings` | Remplacement complet par le central                            |
+| `settings`         | **JAMAIS écrasé** - Protégé localement                         |
+| `siteId`, `apiKey` | **JAMAIS écrasé** - Identifiants du boîtier                    |
 
 ### 5.4 Tableau des Règles pour les Catégories
 
@@ -433,10 +559,12 @@ Le dashboard central propose deux modes de déploiement :
 2. La catégorie club est renommée automatiquement (ajout suffixe `_club`)
 3. L'opérateur est notifié du changement
 
-**Conflit de suppression** : Si l'opérateur tente de supprimer du contenu NEOPRO :
+**Conflit de suppression** : Si l'opérateur club tente de supprimer du contenu NEOPRO depuis l'admin Pi :
 
-1. L'action est bloquée côté Admin UI
+1. L'action est bloquée côté Admin UI du Pi
 2. Message d'erreur : "Ce contenu est géré par NEOPRO et ne peut pas être supprimé"
+
+> **Note** : Cette protection s'applique uniquement côté Pi (clubs). Le Dashboard Central permet la suppression de tout contenu, y compris NEOPRO.
 
 ### 5.6 Nommage des vidéos déployées
 
@@ -512,9 +640,11 @@ Depuis décembre 2025, les vidéos poussées depuis le central conservent leur n
 **Reconnexion (Semaine 5)** :
 
 1. Pi se connecte au central
-2. **Traitement automatique de la queue** :
-   - Le serveur détecte des commandes en attente
-   - Exécution séquentielle par priorité
+2. **`processPendingOnReconnect(siteId)`** s'exécute automatiquement :
+   - Commandes en queue (`pending_commands`) envoyées par priorité
+   - Déploiements de contenu en attente relancés
+   - Mises à jour logicielles en attente relancées
+   - **Config pending** (`pending_config_version_id`) envoyée via `triggerPendingConfigSync()`
    - La vidéo sponsor est déployée automatiquement
 3. Pi envoie son état complet (config + liste vidéos)
 4. Central compare avec son dernier miroir
@@ -750,7 +880,7 @@ socket.emit('neopro_sync', {
       video: {
         id: 'decathlon_noel_2024',
         name: 'Décathlon - Noël 2024',
-        url: 'https://storage.supabase.co/videos/decathlon_noel.mp4',
+        url: 'https://kalonpartners.bzh/neopro-video/decathlon_noel.mp4',
         expires_at: '2025-01-31T23:59:59Z',
       },
     },
@@ -762,10 +892,10 @@ socket.emit('neopro_sync', {
 });
 ```
 
-### 7.3 Admin UI - Gestion des Verrous
+### 7.3 Admin UI Pi - Gestion des Verrous (côté club uniquement)
 
 ```typescript
-// admin-server.js - Vérification avant modification
+// raspberry/admin - Vérification avant modification (Pi uniquement)
 
 function canModifyCategory(category, user) {
   if (category.locked && category.owner === 'neopro') {
@@ -827,6 +957,18 @@ function canDeleteVideo(video, category) {
 2. Téléchargement reporté
 3. NEOPRO notifié pour action (nettoyage distant ou contact club)
 
+### Q: Comment fonctionnent les profils multi-config ?
+
+**R**: Un site peut avoir N profils de configuration (ex: "Standard", "Tournoi U15", "Match Pro"). Chaque profil contient une configuration complète (sponsors, catégories, vidéos). Le flux :
+
+1. L'admin crée/modifie des profils via `/api/sites/:siteId/profiles`
+2. `POST .../profiles/sync` envoie la commande `sync_profiles` au Pi
+3. Le sync-agent écrit chaque profil dans `profiles/{id}.json` + génère `profiles/clubs.json`
+4. Le staff local sélectionne un profil via la télécommande (même UI que le mode démo)
+5. Le Pi active le profil : merge dans `configuration.json` + reload de la TV
+
+**Sites mono-config** : Aucun changement visible. Un seul profil "Par défaut" est auto-créé, le sélecteur n'apparaît pas.
+
 ### Q: L'opérateur peut-il réorganiser l'ordre des catégories NEOPRO ?
 
 **R**: À définir. Options :
@@ -848,16 +990,153 @@ function canDeleteVideo(video, category) {
 
 ---
 
+## Mise à jour OTA (Software Update)
+
+Le déploiement OTA est le seul flux qui met à jour le **code** du Pi (sync-agent, webapp, server, admin, config).
+
+### Flow complet
+
+```
+Dashboard ──POST /api/update-deployments──▶ Central Server
+                                               │
+                                               ├─ 1. applyPreUpdateMigration(siteId)
+                                               │      └─ remote_shell: rm -f VERSION + diagnostic
+                                               │
+                                               ├─ 2. await delay(3s)  ← commandes Pi en parallèle
+                                               │
+                                               └─ 3. sendOrQueue('update_software', { version, updateUrl, ... })
+                                                      │
+                                          Pi (sync-agent)
+                                               │
+                                               ├─ Download .tar.gz depuis CDN
+                                               ├─ SHA256 checksum verify (retry 1x on mismatch)
+                                               ├─ Extraction dans /tmp
+                                               ├─ fixFileOwnership(VERSION, release.json)
+                                               │      └─ sudo chown -R pi:pi + try/catch non-bloquant
+                                               ├─ fs.copy() des fichiers extraits
+                                               ├─ npm install
+                                               ├─ Installation sudoers + systemd services
+                                               ├─ Restart services
+                                               └─ emit update_progress { progress: 100, completed: true }
+```
+
+### Pré-migration (serveur → Pi)
+
+Envoyée via `remote_shell` **avant** l'OTA pour supprimer les fichiers VERSION root:root hérités des anciennes versions (`sudo cp/tee`).
+
+**Stratégie en 4 niveaux** (par fichier VERSION/release.json/version.json) :
+
+| Niveau | Commande            | Condition de succès                         |
+| ------ | ------------------- | ------------------------------------------- |
+| 1      | `rm -f` (sans sudo) | Dossier parent `pi:pi` (cas standard)       |
+| 2      | `sudo chown pi:pi`  | `NoNewPrivileges=false` ET sudoers installé |
+| 3      | `sudo rm -f`        | `NoNewPrivileges=false`                     |
+| 4      | Diagnostic          | Toujours — logge permissions pour debug     |
+
+**Pièges connus :**
+
+- **NE PAS appeler `apply-services`** dans la pré-migration — ça restart le sync-agent et déconnecte le socket
+- **NE PAS utiliser `sed`** pour patcher le code du sync-agent — casse les `sudo cp` légitimes
+- Sans le délai de 3s, les commandes s'exécutent en parallèle côté Pi (race condition `socket.on('command')`)
+- **`NoNewPrivileges=true`** (Pi v3.10→v3.17) bloque tous les sudo du sync-agent
+
+**Versions Pi affectées :**
+
+| Plage       | VERSION copy                     | try/catch | NoNewPrivileges | Impact                  |
+| ----------- | -------------------------------- | --------- | --------------- | ----------------------- |
+| < v3.10     | `sudo cp`                        | Non       | Non installé    | OK                      |
+| v3.10→v3.17 | `fs.copy()` sans protection      | Non       | Actif           | **BLOQUÉ** (EACCES 60%) |
+| v3.20+      | `fs.copy()` + `fixFileOwnership` | Oui       | Retiré          | OK                      |
+
+> **TODO** : Supprimer `applyPreUpdateMigration()` une fois NLF Handball (v3.17.1) mis à jour.
+
+### Admin-server fix-ownership (v3.32.1+)
+
+Route `POST /api/system/fix-ownership` : corrige ownership dossiers + fichiers via sudo. Localhost sans auth.
+
+### Vérification checksum avec retry
+
+Le sync-agent vérifie le SHA256 du package téléchargé avant extraction. En cas de mismatch (corruption FTP, download partiel), il re-télécharge et retente une fois :
+
+1. **Premier essai** : `sha256sum` + comparaison taille fichier
+2. **Mismatch** : log warn avec diagnostics (checksum attendu/reçu, taille attendue/réelle), suppression du fichier corrompu
+3. **Retry** : re-download complet + seconde vérification
+4. **Échec final** : log error, abort OTA
+
+Code : `raspberry/sync-agent/src/commands/update-software.js` → `verifyChecksumWithRetry()`
+
+### Monitoring
+
+Métrique Prometheus : `neopro_ota_errors_total{error_type}` avec labels `permission`, `timeout`, `network`, `disk_full`, `cancelled`, `other`. Le retry côté Pi réduit les erreurs checksum remontées au serveur central.
+
+La pré-migration logge un bloc `=== PRE-MIGRATION DIAG ===` avec les permissions exactes. Visible dans Railway logs.
+
+## Auto-optimisation canal hotspot (v3.61+)
+
+Depuis la v3.61, le sync-agent optimise automatiquement le canal WiFi du hotspot au boot (30s après démarrage, puis toutes les heures).
+
+### Fonctionnement
+
+`SafeNetworkOperations.autoOptimize()` exécute `_scanAndGetBestChannel()` :
+
+1. Lit le canal actuel depuis `/etc/hostapd/hostapd.conf`
+2. Scanne les réseaux WiFi visibles via `sudo iwlist wlan0 scan`
+3. Répartit les réseaux sur les 3 canaux non-overlapping (1, 6, 11) :
+   - Canal 1 : réseaux sur canaux 1-3
+   - Canal 6 : réseaux sur canaux 4-8
+   - Canal 11 : réseaux sur canaux 9-13
+4. Compare le canal actuel avec le meilleur canal
+
+### Seuils de déclenchement
+
+| Paramètre              | Valeur | Description                                                   |
+| ---------------------- | ------ | ------------------------------------------------------------- |
+| `CONGESTION_THRESHOLD` | 5      | Nombre minimum de réseaux sur le canal actuel pour déclencher |
+| `MIN_IMPROVEMENT`      | 3      | Différence minimum de réseaux entre canal actuel et meilleur  |
+
+**Exemple** : Canal 1 avec 9 réseaux, Canal 6 avec 3 → switch (9 ≥ 5 ET 9-3 ≥ 3)
+
+### Application
+
+L'opération utilise la matrice de sécurité du `SafeNetworkOperations` :
+
+| Profil réseau       | Action                                 |
+| ------------------- | -------------------------------------- |
+| SIMPLE, ETHERNET    | Restart hostapd direct                 |
+| MESH, MESH_ISOLATED | Reboot différé (évite de couper wlan1) |
+| ENTERPRISE          | Restart hostapd direct                 |
+
+### Logs
+
+```
+# Changement de canal
+SafeNetworkOperations: hotspot channel congested, optimizing { currentChannel: 1, currentCount: 9, bestChannel: 6, bestCount: 3 }
+
+# Canal OK, pas de changement
+SafeNetworkOperations: hotspot channel OK { currentChannel: 6, currentCount: 2, bestChannel: 6 }
+```
+
+---
+
 ## Historique des Versions
 
-| Version | Date       | Auteur        | Modifications                                            |
-| ------- | ---------- | ------------- | -------------------------------------------------------- |
-| 1.0     | 2024-12-09 | Claude/NEOPRO | Création initiale                                        |
-| 1.1     | 2025-12-16 | Claude/NEOPRO | Ajout Command Queue pour sites offline                   |
-| 1.2     | 2026-01-06 | Claude/NEOPRO | Ajout VideoWatcher et sync_local_state avec vidéos       |
-| 1.3     | 2026-01-07 | Claude/NEOPRO | Documentation merge sponsors, modes merge/replace, fix   |
-| 1.4     | 2026-01-08 | Claude/NEOPRO | `deploy_video` utilise `sendOrQueue()` (offline support) |
-| 1.5     | 2026-01-24 | Claude/NEOPRO | Fix race condition sync_local_state après update_config  |
+| Version | Date       | Auteur        | Modifications                                                                                                        |
+| ------- | ---------- | ------------- | -------------------------------------------------------------------------------------------------------------------- |
+| 1.0     | 2024-12-09 | Claude/NEOPRO | Création initiale                                                                                                    |
+| 1.1     | 2025-12-16 | Claude/NEOPRO | Ajout Command Queue pour sites offline                                                                               |
+| 1.2     | 2026-01-06 | Claude/NEOPRO | Ajout VideoWatcher et sync_local_state avec vidéos                                                                   |
+| 1.3     | 2026-01-07 | Claude/NEOPRO | Documentation merge sponsors, modes merge/replace, fix                                                               |
+| 1.4     | 2026-01-08 | Claude/NEOPRO | `deploy_video` utilise `sendOrQueue()` (offline support)                                                             |
+| 1.5     | 2026-01-24 | Claude/NEOPRO | Fix race condition sync_local_state après update_config                                                              |
+| 1.6     | 2026-02-12 | Claude/NEOPRO | Ajout multi-config profiles (sync_profiles, switch_profile, profile-switch)                                          |
+| 1.7     | 2026-02-15 | Claude/NEOPRO | Ajout section OTA : pré-migration, race condition, monitoring                                                        |
+| 1.8     | 2026-02-15 | Claude/NEOPRO | Réécriture pré-migration : rm sans sudo, diagnostic, versions affectées                                              |
+| 1.9     | 2026-02-15 | Claude/NEOPRO | Connexion locale persistante : relay screenshot et heartbeat via local-socket.js                                     |
+| 2.0     | 2026-02-16 | Claude/NEOPRO | Screenshot error response : réponse immédiate en cas d'échec + métriques Prometheus                                  |
+| 2.1     | 2026-02-17 | Claude/NEOPRO | OTA checksum retry : re-download + vérification 1x en cas de mismatch SHA256                                         |
+| 2.2     | 2026-02-17 | Claude/NEOPRO | Screenshot HTTP response : remplacement du relay Socket.IO room par request-response HTTP                            |
+| 2.3     | 2026-02-18 | Claude/NEOPRO | Sync sponsors Dashboard → Pi : `siteSponsors` dans payload déploiement, `mergeSiteSponsors()`, monitoring Prometheus |
+| 2.4     | 2026-02-19 | Claude/NEOPRO | Auth retry transitoire (5 tentatives), auto-optimisation canal hotspot, fix daily stats `screen_time_seconds`        |
 
 ---
 

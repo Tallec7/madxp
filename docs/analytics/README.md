@@ -17,18 +17,22 @@ Le module **Analytics Sponsors** permet aux clubs sportifs de mesurer précisém
 ### Fonctionnalités principales
 
 ✅ **Dashboard Analytics Web** (Angular)
+
 - Interface CRUD complète pour gérer les sponsors
 - Visualisations Chart.js temps réel (tendances, répartitions)
 - KPIs clés : impressions, temps d'écran, taux de complétion, audience
 - Export CSV et PDF des données
 
 ✅ **Tracking Automatique depuis Boîtiers TV**
+
 - Capture des impressions vidéo sponsors en temps réel
 - Buffer local avec auto-flush (offline-capable)
 - Synchronisation périodique vers serveur central
 - Support contexte événementiel (match, entraînement, tournoi)
+- **Contrôle recording** (v3.38+) : le tracking n'est actif que si `RecordingStateService.isRecording === true` — auto-ON en phase match, auto-OFF au retour en neutral, auto-start temporaire pour vidéos manuelles, auto-return en neutral après 15+3 min d'inactivité
 
 ✅ **Rapports PDF Professionnels**
+
 - Génération PDF 4 pages avec graphiques Chart.js
 - Mise en page professionnelle (charte NEOPRO)
 - Certificat de diffusion avec signature numérique SHA-256
@@ -38,14 +42,14 @@ Le module **Analytics Sponsors** permet aux clubs sportifs de mesurer précisém
 
 **98% de conformité avec BP §13** - Référence Analytics Sponsors
 
-| Composant | État | Conformité |
-|-----------|------|------------|
-| Backend API | ✅ Complete | 100% |
-| Frontend Dashboard | ✅ Complete | 100% |
-| Tracking TV | ✅ Complete | 100% |
-| PDF Graphiques | ✅ Complete | 100% |
-| Tests automatisés | ✅ Complete | 100% |
-| Tests E2E | ⏳ Optionnel | 0% |
+| Composant          | État         | Conformité |
+| ------------------ | ------------ | ---------- |
+| Backend API        | ✅ Complete  | 100%       |
+| Frontend Dashboard | ✅ Complete  | 100%       |
+| Tracking TV        | ✅ Complete  | 100%       |
+| PDF Graphiques     | ✅ Complete  | 100%       |
+| Tests automatisés  | ✅ Complete  | 100%       |
+| Tests E2E          | ⏳ Optionnel | 0%         |
 
 ---
 
@@ -201,12 +205,12 @@ npm start
 
 ### Documentation technique
 
-| Document | Description | Audience |
-|----------|-------------|----------|
-| [IMPLEMENTATION_ANALYTICS_SPONSORS.md](IMPLEMENTATION_ANALYTICS_SPONSORS.md) | Guide d'implémentation complet | Développeurs |
-| [TRACKING_IMPRESSIONS_SPONSORS.md](TRACKING_IMPRESSIONS_SPONSORS.md) | Architecture tracking boîtiers TV | Développeurs backend |
-| [PDF_REPORTS_GUIDE.md](PDF_REPORTS_GUIDE.md) | Génération rapports PDF | Développeurs backend |
-| [AVANCEMENT_ANALYTICS_SPONSORS.md](AVANCEMENT_ANALYTICS_SPONSORS.md) | Suivi progression projet | Chef de projet |
+| Document                                                                     | Description                       | Audience             |
+| ---------------------------------------------------------------------------- | --------------------------------- | -------------------- |
+| [IMPLEMENTATION_ANALYTICS_SPONSORS.md](IMPLEMENTATION_ANALYTICS_SPONSORS.md) | Guide d'implémentation complet    | Développeurs         |
+| [TRACKING_IMPRESSIONS_SPONSORS.md](TRACKING_IMPRESSIONS_SPONSORS.md)         | Architecture tracking boîtiers TV | Développeurs backend |
+| [PDF_REPORTS_GUIDE.md](PDF_REPORTS_GUIDE.md)                                 | Génération rapports PDF           | Développeurs backend |
+| [AVANCEMENT_ANALYTICS_SPONSORS.md](AVANCEMENT_ANALYTICS_SPONSORS.md)         | Suivi progression projet          | Chef de projet       |
 
 ### Schéma base de données
 
@@ -265,6 +269,7 @@ CREATE TABLE sponsor_daily_stats (
 ### API Endpoints
 
 **CRUD Sponsors**
+
 ```http
 GET    /api/sponsors              # Liste tous les sponsors
 GET    /api/sponsors/:id          # Détail d'un sponsor
@@ -274,12 +279,14 @@ DELETE /api/sponsors/:id          # Supprimer un sponsor
 ```
 
 **Associations Vidéos**
+
 ```http
 POST   /api/sponsors/:id/videos           # Associer des vidéos
 DELETE /api/sponsors/:id/videos/:videoId  # Dissocier une vidéo
 ```
 
 **Analytics**
+
 ```http
 GET /api/sponsors/:id/analytics?from=YYYY-MM-DD&to=YYYY-MM-DD
 GET /api/sponsors/:id/videos/stats
@@ -287,12 +294,14 @@ GET /api/sponsors/:id/sites/performance
 ```
 
 **Export**
+
 ```http
 GET /api/sponsors/:id/export/csv?from=...&to=...
 GET /api/sponsors/:id/report?from=...&to=...&signature=true
 ```
 
 **Recording**
+
 ```http
 POST /api/analytics/impressions
 POST /api/sponsors/calculate-daily-stats
@@ -301,19 +310,20 @@ POST /api/sponsors/calculate-daily-stats
 ### Formats de données
 
 **SponsorImpression**
+
 ```typescript
 interface SponsorImpression {
   site_id?: string;
   video_id?: string;
   video_filename: string;
-  played_at: string;              // ISO 8601
-  duration_played: number;        // secondes
-  video_duration: number;         // secondes
+  played_at: string; // ISO 8601
+  duration_played: number; // secondes
+  video_duration: number; // secondes
   completed: boolean;
   event_type: 'match' | 'training' | 'tournament' | 'other';
   period: 'pre_match' | 'halftime' | 'post_match' | 'loop';
   trigger_type: 'auto' | 'manual';
-  audience_estimate?: number;     // nombre de spectateurs
+  audience_estimate?: number; // nombre de spectateurs
 }
 ```
 
@@ -324,6 +334,7 @@ interface SponsorImpression {
 ### ✅ Semaine 1 - Backend + Frontend Dashboard (Complété)
 
 **Réalisations** :
+
 - Backend API REST complet (12 endpoints)
 - Schéma PostgreSQL (4 tables, 3 vues)
 - 4 composants Angular (liste, détail, analytics, vidéos)
@@ -336,6 +347,7 @@ interface SponsorImpression {
 ### ✅ Semaine 2 - Tracking Boîtiers TV (Complété)
 
 **Réalisations** :
+
 - Service tracking frontend (sponsor-analytics.service.ts)
 - Modification TV component avec hooks play/ended
 - Endpoints serveur local (/api/sync/sponsor-impressions)
@@ -348,6 +360,7 @@ interface SponsorImpression {
 ### ✅ Semaine 3 - PDF Graphiques (Complété)
 
 **Réalisations** :
+
 - Installation PDFKit + chartjs-node-canvas
 - Implémentation pdf-report.service.ts (785 lignes)
 - 4 pages PDF professionnelles :
@@ -364,6 +377,7 @@ interface SponsorImpression {
 ### ✅ Phase 4 - Tests & Optimisations (Complétée)
 
 **Réalisé** :
+
 - ✅ **39 tests automatisés** (Jest + Supertest)
   - 15 tests unitaires service PDF
   - 24 tests intégration API endpoints
@@ -374,6 +388,7 @@ interface SponsorImpression {
 **Conformité** : **98%**
 
 **Optimisations (Optionnel Phase 5+)** :
+
 - [ ] Cache Redis pour graphiques
 - [ ] Génération asynchrone (Bull/BullMQ)
 - [ ] Tests E2E (Cypress)
@@ -381,6 +396,7 @@ interface SponsorImpression {
 ### 🔮 Semaine 5-6 - Améliorations Enterprise (Optionnel)
 
 **Roadmap** :
+
 - [ ] Upload logos personnalisés (sponsor/club)
 - [ ] Rapports multi-sponsors (comparatifs)
 - [ ] Templates personnalisables par club
@@ -394,6 +410,7 @@ interface SponsorImpression {
 ### Bugs et questions
 
 Pour signaler un bug ou poser une question :
+
 1. Consulter [TROUBLESHOOTING.md](TROUBLESHOOTING.md)
 2. Vérifier les issues GitHub existantes
 3. Créer une nouvelle issue avec :
@@ -405,6 +422,7 @@ Pour signaler un bug ou poser une question :
 ### Tests manuels
 
 Voir [TESTING_GUIDE.md](TESTING_GUIDE.md) pour :
+
 - Procédures de test fonctionnel
 - Scénarios de test end-to-end
 - Validation des rapports PDF
@@ -436,19 +454,20 @@ npm test
 
 ## Changelog
 
-| Version | Date | Description |
-|---------|------|-------------|
-| 1.3.0 | 2025-12-28 | **Tracking site_id** : Les impressions sponsors incluent désormais le site_id pour une attribution correcte |
-| 1.2.0 | 2025-12-20 | Propagation video_id/sponsor_id/analytics_category dans le déploiement et tracking |
-| 1.1.0 | 2025-12-15 | Phase 4 - Tests automatisés (39 tests) - 98% conformité BP §13 |
-| 1.0.0 | 2025-12-14 | Release initiale - 95% conformité BP §13 |
-| 0.3.0 | 2025-12-14 | Semaine 3 - PDF graphiques avec Chart.js |
-| 0.2.0 | 2025-12-14 | Semaine 2 - Tracking boîtiers TV |
-| 0.1.0 | 2025-12-14 | Semaine 1 - Backend + Frontend dashboard |
+| Version | Date       | Description                                                                                                                                                                  |
+| ------- | ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1.4.0   | 2026-02-19 | **Fix daily stats** : Correction `screen_time_minutes` → `screen_time_seconds` dans `calculate_daily_stats()`. Meilleur logging erreurs 500 sur `/api/analytics/video-plays` |
+| 1.3.0   | 2025-12-28 | **Tracking site_id** : Les impressions sponsors incluent désormais le site_id pour une attribution correcte                                                                  |
+| 1.2.0   | 2025-12-20 | Propagation video_id/sponsor_id/analytics_category dans le déploiement et tracking                                                                                           |
+| 1.1.0   | 2025-12-15 | Phase 4 - Tests automatisés (39 tests) - 98% conformité BP §13                                                                                                               |
+| 1.0.0   | 2025-12-14 | Release initiale - 95% conformité BP §13                                                                                                                                     |
+| 0.3.0   | 2025-12-14 | Semaine 3 - PDF graphiques avec Chart.js                                                                                                                                     |
+| 0.2.0   | 2025-12-14 | Semaine 2 - Tracking boîtiers TV                                                                                                                                             |
+| 0.1.0   | 2025-12-14 | Semaine 1 - Backend + Frontend dashboard                                                                                                                                     |
 
 ---
 
-**Dernière mise à jour** : 28 Décembre 2025
+**Dernière mise à jour** : 19 Février 2026
 **Mainteneur** : Équipe Développement NEOPRO
 **Licence** : Propriétaire
 **Contact** : [Voir BUSINESS_PLAN_COMPLET.md pour contacts]

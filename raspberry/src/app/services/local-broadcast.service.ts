@@ -223,10 +223,6 @@ export interface OptionsUpdateEvent {
   overlay: {
     scoreEnabled: boolean;
     position?: string;
-    useLocalColors?: boolean;
-    backgroundColor?: string;
-    scoreColor?: string;
-    teamNameColor?: string;
   };
   timer: {
     enabled: boolean;
@@ -238,10 +234,10 @@ export interface OptionsUpdateEvent {
     enabled: boolean;
     position: 'top' | 'bottom';
     defaultDuration: number;
-    displayMode: 'scroll' | 'truncate' | 'multiline';
+    displayMode: 'scroll';
     quickMessages: string[];
   };
-  template: 'sportif' | 'elegant' | 'minimal';
+  template: 'broadcast' | 'minimal';
   sport?: string;
   goalAnimation?: {
     enabled: boolean;
@@ -256,7 +252,7 @@ export interface BreakingNewsEvent {
   message: string;
   duration: number; // en secondes
   position: 'top' | 'bottom';
-  displayMode: 'scroll' | 'truncate' | 'multiline';
+  displayMode: 'scroll';
 }
 
 export interface TimerUpdateEvent {

@@ -1,3 +1,6 @@
+// @ts-check
+/** @typedef {import('./types').VideoPlayEvent} VideoPlayEvent */
+
 /**
  * Module de collecte et d'envoi des analytics vidéo
  * Lit le buffer depuis le localStorage de l'application Angular

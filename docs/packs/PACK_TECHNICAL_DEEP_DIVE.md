@@ -2,13 +2,14 @@
 
 **For Software Architects, DevOps Engineers & System Designers**
 
-**Version:** 1.0 | **Last Updated:** December 17, 2025
+**Version:** 1.1 | **Last Updated:** February 16, 2026
 
 ---
 
 ## Usage
 
 Use this pack when:
+
 - Conducting technical architecture reviews
 - Planning infrastructure scaling
 - Designing system integrations
@@ -147,21 +148,25 @@ Use this pack when:
 ### Architectural Patterns
 
 **Pattern 1: Edge Computing**
+
 - Processing at the edge (video playback, auth, UI)
 - Asynchronous sync with cloud
 - Offline-first design
 
 **Pattern 2: Event-Driven**
+
 - Socket.IO for real-time updates
 - Event sourcing for analytics (video_plays events)
 - Command queue for offline sites
 
 **Pattern 3: Multi-Tenancy**
+
 - Row-Level Security (RLS) in PostgreSQL
 - Isolation by `site_id`
 - RLS context middleware
 
 **Pattern 4: Configuration as Code**
+
 - JSON-based configuration
 - Version control friendly
 - Merge-based synchronization
@@ -177,6 +182,7 @@ Use this pack when:
 **Responsibility:** Business logic, API gateway, service orchestration
 
 **Key Files:**
+
 - `src/server.ts` - Express app setup, middleware chain
 - `src/routes/` - Endpoint definitions
 - `src/controllers/` - Business logic (1300+ lines analytics)
@@ -184,6 +190,7 @@ Use this pack when:
 - `src/middleware/` - Auth, validation, error handling
 
 **Request Flow:**
+
 ```
 HTTP Request
     ↓
@@ -211,6 +218,7 @@ HTTP Response + Logging
 ```
 
 **Performance Considerations:**
+
 - Connection pooling (max 20 connections to PostgreSQL)
 - Redis caching for frequently accessed data
 - Query optimization with indexes on `site_id`, `created_at`
@@ -221,6 +229,7 @@ HTTP Response + Logging
 **Responsibility:** Admin UI for site/video/user management and analytics
 
 **Architecture:**
+
 ```
 modules/
 ├── Core Module (Singleton services)
@@ -246,6 +255,7 @@ modules/
 ```
 
 **State Management:**
+
 - Service-based state (no Redux/NgRx for now)
 - RxJS observables for reactivity
 - LocalStorage for user preferences
@@ -255,12 +265,14 @@ modules/
 **Responsibility:** Real-time communication server (cloud instance)
 
 **Features:**
+
 - Sticky sessions via Redis adapter
 - Namespace isolation (`/` for default, `/sync` for sync-agent)
 - Event broadcasting to multiple clients
 - Automatic reconnection with exponential backoff
 
 **Memory efficiency:**
+
 ```
 Per-socket overhead: ~1-2KB
 Max concurrent connections: 10,000+
@@ -276,6 +288,7 @@ Expected load: 100-200 concurrent sockets
 **Key Behaviors:**
 
 1. **Heartbeat (every 30 seconds):**
+
 ```
 Sends to cloud:
 - CPU usage, RAM, Temperature, Disk, Uptime
@@ -290,23 +303,25 @@ Receives from cloud:
 ```
 
 2. **Configuration Merge Algorithm:**
+
 ```javascript
 // Pseudo-code
 function mergeConfig(local, remote) {
   // Keep all local "club" content
-  const clubContent = local.categories.filter(c => c.owner === 'club');
+  const clubContent = local.categories.filter((c) => c.owner === 'club');
 
   // Pull all NEOPRO content
-  const neoProContent = remote.categories.filter(c => c.locked === true);
+  const neoProContent = remote.categories.filter((c) => c.locked === true);
 
   // Merge: NEOPRO overrides, club content preserved
   return {
-    categories: [...neoProContent, ...clubContent]
+    categories: [...neoProContent, ...clubContent],
   };
 }
 ```
 
 3. **Offline Queue:**
+
 ```
 If network is unavailable:
 - Buffer metrics locally (circular buffer, max 100 entries)
@@ -316,6 +331,7 @@ If network is unavailable:
 ```
 
 **Implementation:**
+
 - File: `raspberry/sync-agent/src/sync-agent.ts`
 - WebSocket client with auto-reconnect
 - SQLite local DB for offline state
@@ -357,6 +373,7 @@ socket.emit('score-update', {
 ```
 
 **Performance Characteristics:**
+
 - Message latency: <50ms (local network)
 - Broadcasting to multiple remotes: O(1) complexity
 - Memory per socket: ~1KB
@@ -366,6 +383,7 @@ socket.emit('score-update', {
 **Responsibility:** Local machine administration
 
 **Endpoints:**
+
 ```
 GET  /api/system/stats       - CPU, RAM, Temp, Disk
 GET  /api/system/logs        - Application logs
@@ -375,6 +393,7 @@ POST /api/system/restart     - Restart services
 ```
 
 **Features:**
+
 - Dashboard with real-time metrics
 - Configuration editor (JSON with validation)
 - Log viewer (tail -f style)
@@ -890,17 +909,17 @@ const socket = io('ws://neopro.local:3000', {
   reconnectionDelayMax: 5000,
   reconnectionAttempts: Infinity,
   autoConnect: true,
-  transports: ['websocket', 'polling']
+  transports: ['websocket', 'polling'],
 });
 
 // Custom wrapper service
 class SocketService {
   private socket: Socket;
 
-  emit<T>(event: string, data?: any): void
-  on<T>(event: string, cb: (data: T) => void): void
-  once<T>(event: string): Promise<T>
-  disconnect(): void
+  emit<T>(event: string, data?: any): void;
+  on<T>(event: string, cb: (data: T) => void): void;
+  once<T>(event: string): Promise<T>;
+  disconnect(): void;
 }
 ```
 
@@ -920,10 +939,12 @@ const player = videojs(element, {
   autoplay: false,
   preload: 'auto',
   poster: '/thumbnail.jpg',
-  sources: [{
-    src: '/video.mp4',
-    type: 'video/mp4'
-  }]
+  sources: [
+    {
+      src: '/video.mp4',
+      type: 'video/mp4',
+    },
+  ],
 });
 ```
 
@@ -989,15 +1010,11 @@ app.use(errorHandler);
 
 const redis = new Redis({
   host: process.env.REDIS_URL,
-  db: 0
+  db: 0,
 });
 
 // Caching decorator
-async function getWithCache<T>(
-  key: string,
-  fn: () => Promise<T>,
-  ttl: number = 300
-): Promise<T> {
+async function getWithCache<T>(key: string, fn: () => Promise<T>, ttl: number = 300): Promise<T> {
   const cached = await redis.get(key);
   if (cached) return JSON.parse(cached);
 
@@ -1020,8 +1037,8 @@ async function getWithCache<T>(
 const io = require('socket.io')(server, {
   cors: { origin: [...] },
   transports: ['websocket', 'polling'],
-  pingTimeout: 20000,
-  pingInterval: 25000
+  pingInterval: 10000,
+  pingTimeout: 20000
 });
 
 io.on('connection', (socket) => {
@@ -1104,17 +1121,17 @@ version: '3.8'
 services:
   postgres:
     image: postgres:15
-    ports: ["5432:5432"]
+    ports: ['5432:5432']
     environment:
       POSTGRES_PASSWORD: dev
 
   redis:
     image: redis:7
-    ports: ["6379:6379"]
+    ports: ['6379:6379']
 
   api:
     build: ./central-server
-    ports: ["3001:3000"]
+    ports: ['3001:3000']
     depends_on: [postgres, redis]
     environment:
       DATABASE_URL: postgres://postgres:dev@postgres:5432/neopro
@@ -1122,7 +1139,7 @@ services:
 
   nginx:
     image: nginx:alpine
-    ports: ["80:80"]
+    ports: ['80:80']
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
 ```
@@ -1251,6 +1268,7 @@ Memory Usage:
 ### Scalability Limits & Solutions
 
 **Current Scale:**
+
 ```
 Max supported with current setup:
 - 500-1000 clubs
@@ -1262,6 +1280,7 @@ Max supported with current setup:
 **Scaling Bottlenecks & Solutions:**
 
 1. **Database:**
+
 ```
 Bottleneck: Single PostgreSQL instance
 Solution: Read replicas for read-heavy queries
@@ -1270,6 +1289,7 @@ Cost: +$50-200/month
 ```
 
 2. **Redis:**
+
 ```
 Bottleneck: Single Redis instance
 Solution: Redis Cluster with 6 nodes
@@ -1278,6 +1298,7 @@ Cost: +$100-300/month
 ```
 
 3. **Central Server:**
+
 ```
 Bottleneck: Single Node.js process
 Solution: Horizontal scaling (auto-scaling on Render)
@@ -1286,6 +1307,7 @@ Cost: +$30-100/month per instance
 ```
 
 4. **WebSocket Connections:**
+
 ```
 Bottleneck: Socket.IO memory per connection (~1KB)
 Solution: Redis adapter for cross-server broadcasting
@@ -1363,7 +1385,7 @@ const syncAgentAuth = (req, res, next) => {
 ```typescript
 // Password hashing with bcrypt
 const auth = {
-  password: '$2b$10$...' // bcrypt hash
+  password: '$2b$10$...', // bcrypt hash
 };
 
 const verifyPassword = (input: string, hash: string): boolean => {
@@ -1371,11 +1393,9 @@ const verifyPassword = (input: string, hash: string): boolean => {
 };
 
 // JWT session token
-const sessionToken = jwt.sign(
-  { site_id, expires_at },
-  process.env.LOCAL_JWT_SECRET,
-  { expiresIn: '8h' }
-);
+const sessionToken = jwt.sign({ site_id, expires_at }, process.env.LOCAL_JWT_SECRET, {
+  expiresIn: '8h',
+});
 ```
 
 ### Authorization (RBAC)
@@ -1383,9 +1403,9 @@ const sessionToken = jwt.sign(
 ```typescript
 // Three roles with escalating permissions
 enum Role {
-  viewer = 'viewer',      // Read-only
-  operator = 'operator',  // Can create content
-  admin = 'admin'         // Full access
+  viewer = 'viewer', // Read-only
+  operator = 'operator', // Can create content
+  admin = 'admin', // Full access
 }
 
 // Role-based access control middleware
@@ -1410,10 +1430,10 @@ router.get('/api/analytics', authorize([Role.admin, Role.operator]), getAnalytic
 // Render.com provides free SSL/TLS certificates
 
 // Secrets management
-process.env.DATABASE_URL      // Supabase connection string
-process.env.JWT_SECRET        // For token signing
-process.env.SUPABASE_KEY      // Service role key
-process.env.SMTP_PASSWORD     // Email credentials
+process.env.DATABASE_URL; // Supabase connection string
+process.env.JWT_SECRET; // For token signing
+process.env.SUPABASE_KEY; // Service role key
+process.env.SMTP_PASSWORD; // Email credentials
 
 // Never commit to git (use .env)
 // Rotate regularly (90-day policy)
@@ -1462,16 +1482,14 @@ const promClient = require('prom-client');
 const httpRequestDuration = new promClient.Histogram({
   name: 'http_request_duration_seconds',
   help: 'Duration of HTTP requests in seconds',
-  labelNames: ['method', 'route', 'status_code']
+  labelNames: ['method', 'route', 'status_code'],
 });
 
 app.use((req, res, next) => {
   const start = Date.now();
   res.on('finish', () => {
     const duration = (Date.now() - start) / 1000;
-    httpRequestDuration
-      .labels(req.method, req.route.path, res.statusCode)
-      .observe(duration);
+    httpRequestDuration.labels(req.method, req.route.path, res.statusCode).observe(duration);
   });
   next();
 });
@@ -1511,15 +1529,15 @@ const logger = winston.createLogger({
   transports: [
     new winston.transports.File({
       filename: 'logs/error.log',
-      level: 'error'
+      level: 'error',
     }),
     new winston.transports.File({
-      filename: 'logs/combined.log'
+      filename: 'logs/combined.log',
     }),
     new winston.transports.Console({
-      format: winston.format.simple()
-    })
-  ]
+      format: winston.format.simple(),
+    }),
+  ],
 });
 
 // Usage
@@ -1527,7 +1545,7 @@ logger.info('Video played', {
   videoId: '123',
   siteId: '456',
   duration: 120,
-  timestamp: new Date()
+  timestamp: new Date(),
 });
 
 // Log levels
@@ -1548,23 +1566,23 @@ groups:
         expr: up{job="sync-agent"} == 0
         for: 5m
         annotations:
-          summary: "Site {{ $labels.site_id }} is offline"
+          summary: 'Site {{ $labels.site_id }} is offline'
 
       - alert: HighErrorRate
         expr: rate(http_requests_total{status=~"5.."}[5m]) > 0.05
         annotations:
-          summary: "Error rate > 5%"
+          summary: 'Error rate > 5%'
 
       - alert: HighTemperature
         expr: system_temperature_celsius > 80
         for: 10m
         annotations:
-          summary: "Raspberry Pi overheating: {{ $value }}°C"
+          summary: 'Raspberry Pi overheating: {{ $value }}°C'
 
       - alert: LowDiskSpace
         expr: system_disk_usage_percent > 90
         annotations:
-          summary: "Disk usage at {{ $value }}%"
+          summary: 'Disk usage at {{ $value }}%'
 ```
 
 ### Dashboards (Grafana)
@@ -1607,7 +1625,6 @@ The system is production-ready and battle-tested with real users.
 
 ---
 
-**Version:** 1.0
-**Date:** December 17, 2025
+**Version:** 1.1
+**Date:** February 16, 2026
 **For:** Technical architects, DevOps engineers, system designers
-

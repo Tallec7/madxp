@@ -17,6 +17,7 @@ raspberrypi
 ## 🔍 Cause
 
 Le problème peut venir de plusieurs sources :
+
 1. `cloud-init` qui réinitialise le hostname au démarrage
 2. Configuration `/etc/hosts` mal formatée
 3. Service `avahi-daemon` qui ne démarre pas correctement
@@ -101,12 +102,33 @@ avahi-browse -a -t -r | grep neopro
 Cette correction a été intégrée dans le script `install.sh` pour les futures installations.
 
 Les prochaines installations auront automatiquement :
+
 - Hostname persistant configuré via `hostnamectl`
 - `/etc/hostname` et `/etc/hosts` correctement configurés
 - Protection contre cloud-init (si présent)
 - Service avahi-daemon configuré
 
-**Fichier modifié :** `raspberry/install.sh` lignes 316-320
+**Fichier modifié :** `raspberry/install.sh` (configure_mdns)
+
+## 🏷️ Hostname dynamique (v3.51+)
+
+Depuis la v3.51, le hostname est **dérivé automatiquement du club_name** :
+
+- Pattern : `neopro-<club-slugifié>` (ex: club "USAP" → `neopro-usap.local`)
+- Stocké dans `HOSTNAME_SLUG` dans `/etc/neopro/site.conf`
+- `fix-hostname.sh` et `install.sh` lisent cette variable (fallback: `neopro`)
+- La commande OTA `update_hostname` est envoyée automatiquement quand le club_name change dans le dashboard
+
+Pour changer manuellement le hostname d'un Pi existant :
+
+```bash
+# Depuis le dashboard : modifier le club_name du site
+# → Le hostname sera re-dérivé et la commande envoyée automatiquement au Pi
+
+# Ou manuellement via site.conf :
+sudo sed -i 's/^HOSTNAME_SLUG=.*/HOSTNAME_SLUG=neopro-mon-club/' /etc/neopro/site.conf
+sudo bash ~/neopro/scripts/fix-hostname.sh
+```
 
 ## 🎯 Commandes de diagnostic
 
@@ -136,7 +158,7 @@ fi
 
 1. **Le reboot est nécessaire** pour que le changement de hostname soit complètement appliqué
 2. **Certains services** peuvent mettre du cache le hostname (notamment SSH)
-3. **Si vous utilisez des clés SSH** configurées avec `raspberrypi.local`, il faudra les mettre à jour vers `neopro.local`
+3. **Si vous utilisez des clés SSH** configurées avec `raspberrypi.local`, il faudra les mettre à jour vers le hostname du Pi (ex: `neopro-usap.local`)
 
 ---
 

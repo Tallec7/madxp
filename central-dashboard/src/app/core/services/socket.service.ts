@@ -120,6 +120,15 @@ export class SocketService {
     this.socket.on('alert_created', (data: unknown) => {
       this.eventsSubject.next({ type: 'alert_created', data });
     });
+
+    // Cloud monitoring: player state updates + screenshot data
+    this.socket.on('player_state_updated', (data: unknown) => {
+      this.eventsSubject.next({ type: 'player_state_updated', data });
+    });
+
+    this.socket.on('screenshot-data', (data: unknown) => {
+      this.eventsSubject.next({ type: 'screenshot-data', data });
+    });
   }
 
   disconnect(): void {

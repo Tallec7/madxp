@@ -4,6 +4,7 @@ import { RouterModule } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { Subject, interval, takeUntil } from 'rxjs';
 import { environment } from '../../../environments/environment';
+import { AnalyticsNavComponent } from './analytics-nav.component';
 
 interface RealtimeStats {
   timestamp: string;
@@ -39,16 +40,14 @@ interface RealtimeStats {
 @Component({
   selector: 'app-realtime-dashboard',
   standalone: true,
-  imports: [CommonModule, RouterModule],
+  imports: [CommonModule, RouterModule, AnalyticsNavComponent],
   template: `
     <div class="realtime-dashboard">
+      <app-analytics-nav></app-analytics-nav>
+
       <header class="dashboard-header">
         <div class="header-left">
-          <a routerLink="/analytics" class="back-link">
-            <span class="back-icon">←</span>
-            Analytics
-          </a>
-          <h1>Dashboard Temps Réel</h1>
+          <h1>Temps Reel</h1>
         </div>
         <div class="header-right">
           <span class="live-indicator" [class.connected]="isConnected">

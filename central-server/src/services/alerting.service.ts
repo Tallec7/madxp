@@ -225,7 +225,62 @@ const DEFAULT_THRESHOLDS: Omit<AlertThreshold, 'id'>[] = [
     escalateAfterMinutes: 4320,
     notifyChannels: ['email'],
   },
+  {
+    name: 'Déploiement bloqué',
+    metric: 'deployment_stuck_minutes',
+    condition: 'gt',
+    warningValue: 30,  // Warning après 30 minutes sans progression
+    criticalValue: 60, // Critical après 60 minutes
+    duration: 0,       // Immédiat (le check SQL calcule déjà la durée)
+    enabled: true,
+    cooldownMinutes: 30,
+    escalateAfterMinutes: 120,
+    notifyChannels: ['email'],
+  },
+  {
+    name: 'Déconnexions WebSocket fréquentes',
+    metric: 'websocket_disconnects_1h',
+    condition: 'gt',
+    warningValue: 10,  // >10 déconnexions en 1 heure
+    criticalValue: 30, // >30 déconnexions en 1 heure
+    duration: 0,
+    enabled: true,
+    cooldownMinutes: 60,
+    escalateAfterMinutes: 180,
+    notifyChannels: ['email'],
+  },
+  {
+    name: 'Trous noirs vidéo (safety timeouts)',
+    metric: 'video_safety_timeouts_1h',
+    condition: 'gt',
+    warningValue: 3,  // >3 safety timeouts en 1 heure
+    criticalValue: 10, // >10 safety timeouts en 1 heure
+    duration: 0,
+    enabled: true,
+    cooldownMinutes: 60,
+    escalateAfterMinutes: 180,
+    notifyChannels: ['email'],
+  },
+  {
+    name: 'Crash kiosk Chromium',
+    metric: 'kiosk_crashes_1h',
+    condition: 'gt',
+    warningValue: 1,  // >1 crash en 1 heure
+    criticalValue: 3, // >3 crashes en 1 heure
+    duration: 0,
+    enabled: true,
+    cooldownMinutes: 30,
+    escalateAfterMinutes: 60,
+    notifyChannels: ['email'],
+  },
 ];
+
+// Memory safety limits for in-memory Maps (Railway Hobby plan: 256MB heap)
+const MAX_METRIC_HISTORY_KEYS = 200; // Max unique siteId:metric combinations
+const MAX_METRIC_HISTORY_PER_KEY = 60; // Max snapshots per key (~10min at 10s intervals)
+const MAX_LAST_ALERT_TIME_ENTRIES = 500; // Max cooldown entries
+const MAX_EVENT_ENTRIES_PER_SITE = 200; // Max timestamps per site for disconnect/timeout events
+const MAX_EVENT_SITES = 100; // Max sites tracked for disconnect/timeout events
 
 class AlertingService {
   private tableName = 'alerts';
@@ -234,6 +289,11 @@ class AlertingService {
   private metricHistory: Map<string, MetricSnapshot[]> = new Map();
   private lastAlertTime: Map<string, Date> = new Map();
   private checkInterval: NodeJS.Timeout | null = null;
+
+  // In-memory hourly counters for metrics not stored per-site in DB
+  // Key: siteId, Value: array of timestamps for each event
+  private wsDisconnectEvents: Map<string, number[]> = new Map();
+  private videoSafetyTimeoutEvents: Map<string, number[]> = new Map();
 
   /**
    * Initialise le service d'alerting
@@ -246,6 +306,51 @@ class AlertingService {
   }
 
   /**
+   * Record a WebSocket disconnect event for a site (in-memory, for hourly aggregation).
+   */
+  recordDisconnectEvent(siteId: string): void {
+    if (!this.wsDisconnectEvents.has(siteId)) {
+      // Evict oldest site if map is full
+      if (this.wsDisconnectEvents.size >= MAX_EVENT_SITES) {
+        const oldestKey = this.wsDisconnectEvents.keys().next().value;
+        if (oldestKey) this.wsDisconnectEvents.delete(oldestKey);
+      }
+      this.wsDisconnectEvents.set(siteId, []);
+    }
+    const events = this.wsDisconnectEvents.get(siteId)!;
+    events.push(Date.now());
+    // Hard cap per site to prevent unbounded growth
+    if (events.length > MAX_EVENT_ENTRIES_PER_SITE) {
+      this.wsDisconnectEvents.set(siteId, events.slice(-MAX_EVENT_ENTRIES_PER_SITE));
+    }
+  }
+
+  /**
+   * Record video safety timeout events for a site (in-memory, for hourly aggregation).
+   * Called from heartbeat handler when transitionMetrics.safetyTimeoutCount > 0.
+   */
+  recordVideoSafetyTimeouts(siteId: string, count: number): void {
+    if (count <= 0) return;
+    if (!this.videoSafetyTimeoutEvents.has(siteId)) {
+      // Evict oldest site if map is full
+      if (this.videoSafetyTimeoutEvents.size >= MAX_EVENT_SITES) {
+        const oldestKey = this.videoSafetyTimeoutEvents.keys().next().value;
+        if (oldestKey) this.videoSafetyTimeoutEvents.delete(oldestKey);
+      }
+      this.videoSafetyTimeoutEvents.set(siteId, []);
+    }
+    const events = this.videoSafetyTimeoutEvents.get(siteId)!;
+    const now = Date.now();
+    for (let i = 0; i < count; i++) {
+      events.push(now);
+    }
+    // Hard cap per site to prevent unbounded growth
+    if (events.length > MAX_EVENT_ENTRIES_PER_SITE) {
+      this.videoSafetyTimeoutEvents.set(siteId, events.slice(-MAX_EVENT_ENTRIES_PER_SITE));
+    }
+  }
+
+  /**
    * Évalue une métrique contre les seuils configurés
    */
   async evaluateMetric(siteId: string, metric: string, value: number): Promise<void> {
@@ -253,16 +358,23 @@ class AlertingService {
 
     // Stocker dans l'historique
     if (!this.metricHistory.has(key)) {
+      // Evict oldest key if map is full
+      if (this.metricHistory.size >= MAX_METRIC_HISTORY_KEYS) {
+        const oldestKey = this.metricHistory.keys().next().value;
+        if (oldestKey) this.metricHistory.delete(oldestKey);
+      }
       this.metricHistory.set(key, []);
     }
 
     const history = this.metricHistory.get(key)!;
     history.push({ siteId, metric, value, timestamp: new Date() });
 
-    // Garder seulement les 10 dernières minutes
+    // Garder seulement les 10 dernières minutes + hard cap
     const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
     const filtered = history.filter(h => h.timestamp > tenMinutesAgo);
-    this.metricHistory.set(key, filtered);
+    this.metricHistory.set(key, filtered.length > MAX_METRIC_HISTORY_PER_KEY
+      ? filtered.slice(-MAX_METRIC_HISTORY_PER_KEY)
+      : filtered);
 
     // Récupérer les seuils pour cette métrique
     const thresholds = await this.getThresholdsByMetric(metric);
@@ -514,8 +626,22 @@ class AlertingService {
       enabled: row.enabled as boolean,
       cooldownMinutes: row.cooldown_minutes as number,
       escalateAfterMinutes: row.escalate_after_minutes as number,
-      notifyChannels: JSON.parse(row.notify_channels as string || '[]'),
+      notifyChannels: this.parseNotifyChannels(row.notify_channels),
     };
+  }
+
+  private parseNotifyChannels(value: unknown): string[] {
+    if (Array.isArray(value)) return value;
+    if (!value) return [];
+    if (typeof value === 'string') {
+      try {
+        const parsed = JSON.parse(value);
+        return Array.isArray(parsed) ? parsed : [String(parsed)];
+      } catch {
+        return [value];
+      }
+    }
+    return [];
   }
 
   private checkThresholdViolation(
@@ -918,11 +1044,174 @@ class AlertingService {
     }
   }
 
+  /**
+   * Aggregate hourly metrics and feed them into evaluateMetric().
+   * - websocket_disconnects_1h: from in-memory disconnect events
+   * - video_safety_timeouts_1h: from in-memory safety timeout events
+   * - kiosk_crashes_1h: from alerts table (alert_type = 'kiosk_crash')
+   *
+   * Runs every 5 minutes to balance responsiveness vs DB load.
+   */
+  async checkHourlyMetrics(): Promise<void> {
+    try {
+      const oneHourAgo = Date.now() - 60 * 60 * 1000;
+
+      // 1. WebSocket disconnects (in-memory) — prune old events and evaluate
+      for (const [siteId, events] of this.wsDisconnectEvents.entries()) {
+        const recentEvents = events.filter(ts => ts > oneHourAgo);
+        this.wsDisconnectEvents.set(siteId, recentEvents);
+        if (recentEvents.length > 0) {
+          await this.evaluateMetric(siteId, 'websocket_disconnects_1h', recentEvents.length);
+        }
+      }
+
+      // 2. Video safety timeouts (in-memory) — prune old events and evaluate
+      for (const [siteId, events] of this.videoSafetyTimeoutEvents.entries()) {
+        const recentEvents = events.filter(ts => ts > oneHourAgo);
+        this.videoSafetyTimeoutEvents.set(siteId, recentEvents);
+        if (recentEvents.length > 0) {
+          await this.evaluateMetric(siteId, 'video_safety_timeouts_1h', recentEvents.length);
+        }
+      }
+
+      // 3. Kiosk crashes (from alerts table) — already stored by heartbeat handler
+      const kioskCrashes = await query<{ site_id: string; crash_count: number }>(
+        `SELECT site_id, COUNT(*) AS crash_count
+         FROM alerts
+         WHERE alert_type = 'kiosk_crash'
+           AND created_at > NOW() - INTERVAL '1 hour'
+         GROUP BY site_id`
+      );
+
+      for (const row of kioskCrashes.rows) {
+        await this.evaluateMetric(row.site_id, 'kiosk_crashes_1h', Number(row.crash_count));
+      }
+    } catch (error) {
+      // Don't crash the periodic loop if tables don't exist yet
+      if (error instanceof Error && error.message.includes('alerts')) {
+        return;
+      }
+      logger.error('Error checking hourly metrics:', error);
+    }
+  }
+
   private startPeriodicCheck(): void {
-    // Vérifier l'escalade toutes les minutes
+    // Vérifier l'escalade et les déploiements bloqués toutes les minutes
+    // Vérifier les métriques horaires toutes les 5 minutes
+    let tickCount = 0;
     this.checkInterval = setInterval(async () => {
+      tickCount++;
       await this.checkEscalations();
+      await this.checkStuckDeployments();
+      // Run hourly metrics check every 5 minutes (every 5th tick)
+      if (tickCount % 5 === 0) {
+        await this.checkHourlyMetrics();
+        this.pruneLastAlertTime();
+      }
     }, 60 * 1000);
+  }
+
+  /**
+   * Détecte les déploiements bloqués en in_progress depuis plus de 30 minutes.
+   * Vérifie à la fois content_deployments (vidéos) et update_deployments (OTA).
+   * Crée une alerte via createAlert() pour chaque déploiement coincé.
+   */
+  async checkStuckDeployments(): Promise<void> {
+    try {
+      // Chercher les déploiements content bloqués
+      const contentStuck = await query<{
+        id: string;
+        target_id: string;
+        minutes_stuck: number;
+      }>(`
+        SELECT id, target_id,
+          EXTRACT(EPOCH FROM (NOW() - COALESCE(started_at, created_at))) / 60 AS minutes_stuck
+        FROM content_deployments
+        WHERE status = 'in_progress'
+          AND COALESCE(started_at, created_at) < NOW() - INTERVAL '30 minutes'
+      `);
+
+      // Chercher les déploiements OTA bloqués
+      const updateStuck = await query<{
+        id: string;
+        target_id: string;
+        minutes_stuck: number;
+        version: string;
+      }>(`
+        SELECT ud.id, ud.target_id,
+          EXTRACT(EPOCH FROM (NOW() - COALESCE(ud.started_at, ud.created_at))) / 60 AS minutes_stuck,
+          su.version
+        FROM update_deployments ud
+        JOIN software_updates su ON ud.update_id = su.id
+        WHERE ud.status = 'in_progress'
+          AND COALESCE(ud.started_at, ud.created_at) < NOW() - INTERVAL '30 minutes'
+      `);
+
+      const allStuck = [
+        ...contentStuck.rows.map(r => ({
+          deploymentId: r.id,
+          targetId: r.target_id,
+          minutesStuck: Math.round(r.minutes_stuck),
+          type: 'content' as const,
+          version: undefined as string | undefined,
+        })),
+        ...updateStuck.rows.map(r => ({
+          deploymentId: r.id,
+          targetId: r.target_id,
+          minutesStuck: Math.round(r.minutes_stuck),
+          type: 'update' as const,
+          version: r.version,
+        })),
+      ];
+
+      if (allStuck.length === 0) return;
+
+      logger.warn('Stuck deployments detected', { count: allStuck.length });
+
+      for (const stuck of allStuck) {
+        // Cooldown par deployment ID pour éviter le spam
+        const cooldownKey = `deployment_stuck:${stuck.deploymentId}`;
+        const lastAlert = this.lastAlertTime.get(cooldownKey);
+        if (lastAlert) {
+          const cooldownEnd = new Date(lastAlert.getTime() + 30 * 60 * 1000);
+          if (new Date() < cooldownEnd) continue;
+        }
+
+        const severity: AlertSeverity = stuck.minutesStuck >= 60 ? 'critical' : 'warning';
+        const typeLabel = stuck.type === 'update' ? 'mise à jour logicielle' : 'vidéo';
+        const versionInfo = stuck.version ? ` v${stuck.version}` : '';
+
+        await this.createAlert({
+          siteId: stuck.targetId,
+          type: 'Déploiement bloqué',
+          severity,
+          message: `Déploiement ${typeLabel}${versionInfo} bloqué en in_progress depuis ${stuck.minutesStuck} minutes (ID: ${stuck.deploymentId})`,
+          metadata: {
+            metric: 'deployment_stuck_minutes',
+            value: stuck.minutesStuck,
+            deploymentId: stuck.deploymentId,
+            deploymentType: stuck.type,
+          },
+        });
+
+        this.lastAlertTime.set(cooldownKey, new Date());
+
+        logger.warn('Alert created for stuck deployment', {
+          deploymentId: stuck.deploymentId,
+          minutesStuck: stuck.minutesStuck,
+          severity,
+        });
+      }
+    } catch (error) {
+      // Ne pas faire planter le check périodique si les tables n'existent pas encore
+      if (error instanceof Error && (
+        error.message.includes('content_deployments') ||
+        error.message.includes('update_deployments')
+      )) {
+        return;
+      }
+      logger.error('Error checking stuck deployments:', error);
+    }
   }
 
   private async checkEscalations(): Promise<void> {
@@ -1063,12 +1352,46 @@ class AlertingService {
   clearMemoryCache(): void {
     const historySize = this.metricHistory.size;
     const alertTimeSize = this.lastAlertTime.size;
+    const wsSize = this.wsDisconnectEvents.size;
+    const videoSize = this.videoSafetyTimeoutEvents.size;
     this.metricHistory.clear();
     this.lastAlertTime.clear();
+    this.wsDisconnectEvents.clear();
+    this.videoSafetyTimeoutEvents.clear();
     logger.info('Alerting service memory cache cleared', {
       clearedHistoryEntries: historySize,
       clearedAlertTimeEntries: alertTimeSize,
+      clearedWsDisconnectEntries: wsSize,
+      clearedVideoTimeoutEntries: videoSize,
     });
+  }
+
+  /**
+   * Prune stale entries from lastAlertTime (entries older than 24h are useless for cooldowns)
+   * Called periodically to prevent unbounded Map growth.
+   */
+  private pruneLastAlertTime(): void {
+    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    let pruned = 0;
+    for (const [key, date] of this.lastAlertTime.entries()) {
+      if (date < oneDayAgo) {
+        this.lastAlertTime.delete(key);
+        pruned++;
+      }
+    }
+    // Hard cap as safety net
+    if (this.lastAlertTime.size > MAX_LAST_ALERT_TIME_ENTRIES) {
+      const excess = this.lastAlertTime.size - MAX_LAST_ALERT_TIME_ENTRIES;
+      const iterator = this.lastAlertTime.keys();
+      for (let i = 0; i < excess; i++) {
+        const key = iterator.next().value;
+        if (key) this.lastAlertTime.delete(key);
+      }
+      pruned += excess;
+    }
+    if (pruned > 0) {
+      logger.debug('Pruned stale lastAlertTime entries', { pruned, remaining: this.lastAlertTime.size });
+    }
   }
 }
 

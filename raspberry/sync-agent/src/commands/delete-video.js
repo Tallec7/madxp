@@ -2,9 +2,13 @@ const fs = require('fs-extra');
 const path = require('path');
 const logger = require('../logger');
 const { config } = require('../config');
+const { atomicWriteJson, safeReadConfig } = require('../utils/safe-config-io');
 
 function buildRelativePath(videoData) {
-  const segments = ['videos', videoData.category];
+  const segments = ['videos'];
+  if (videoData.category) {
+    segments.push(videoData.category);
+  }
   if (videoData.subcategory) {
     segments.push(videoData.subcategory);
   }
@@ -26,12 +30,11 @@ class VideoDeleteHandler {
     logger.info('Starting video deletion', { filename, category, subcategory });
 
     try {
-      const videoPath = path.join(
-        config.paths.videos,
-        category,
-        subcategory || '',
-        filename
-      );
+      const segments = [config.paths.videos];
+      if (category) segments.push(category);
+      if (subcategory) segments.push(subcategory);
+      segments.push(filename);
+      const videoPath = path.join(...segments);
 
       if (!(await fs.pathExists(videoPath))) {
         logger.warn('Video file not found', { videoPath });
@@ -66,30 +69,26 @@ class VideoDeleteHandler {
         return;
       }
 
-      const content = await fs.readFile(configPath, 'utf-8');
-      const configuration = JSON.parse(content);
+      const configuration = await safeReadConfig(configPath);
 
       const relativePath = buildRelativePath(videoData);
 
-      if (!configuration.categories) {
-        return;
-      }
-
-      const category = configuration.categories.find(c => c.name === videoData.category);
-
-      if (!category) {
-        return;
-      }
-
       const filterFn = (video) => !isSameVideo(video, relativePath, videoData.filename);
 
-      if (videoData.subcategory) {
-        const subcategory = category.subCategories?.find(s => s.name === videoData.subcategory);
-        if (subcategory) {
-          subcategory.videos = (subcategory.videos || []).filter(filterFn);
+      // Remove from categories if applicable
+      if (configuration.categories && videoData.category) {
+        const category = configuration.categories.find(c => c.name === videoData.category);
+
+        if (category) {
+          if (videoData.subcategory) {
+            const subcategory = category.subCategories?.find(s => s.name === videoData.subcategory);
+            if (subcategory) {
+              subcategory.videos = (subcategory.videos || []).filter(filterFn);
+            }
+          } else {
+            category.videos = (category.videos || []).filter(filterFn);
+          }
         }
-      } else {
-        category.videos = (category.videos || []).filter(filterFn);
       }
 
       // Aussi supprimer du tableau sponsors si présent
@@ -101,7 +100,7 @@ class VideoDeleteHandler {
         }
       }
 
-      await fs.writeFile(configPath, JSON.stringify(configuration, null, 2));
+      await atomicWriteJson(configPath, configuration);
 
       logger.info('Configuration updated after deletion');
     } catch (error) {

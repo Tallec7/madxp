@@ -16,43 +16,60 @@ npm run build:central              # Build dashboard
 cd central-server && npm run build # Compile TypeScript
 
 # Tests
-npm run test:server                # Jest (API)
-npm run test:central               # Karma (Angular Dashboard)
+npm run test:server                # Jest (API central-server — 1487 tests)
+npm run test:smoke                 # Jest (Smoke tests — 142 tests, détecte régressions de wiring)
+npm run test:central               # Karma (Angular Dashboard — 541 tests)
+cd raspberry/server && npm test    # Jest (Socket.IO server — 71 tests)
+cd raspberry/admin && npm test     # Jest (Admin server — 146 tests)
 cd e2e && npx playwright test      # E2E
 npm run lint                       # ESLint
 
+# Monitoring
+docker compose up prometheus alertmanager grafana  # Grafana (3000) + Prometheus (9090) + Alertmanager (9093)
+
 # Base de données
 cd central-server && npm run db:migrate
+
+# Pitch deck / métriques de traction
+source central-server/.env && psql "$DATABASE_URL" -f central-server/src/scripts/pitch-deck-metrics.sql
 ```
 
 ## Règles de code
 
 - **TypeScript strict** : jamais de `any`, toujours typer explicitement
-- **SQL paramétré uniquement** : `query('...WHERE id = $1', [id])`
-- **Logger Winston** : `logger.info('Action', { context })` — pas de `console.log`
+- **Repository pattern** : utiliser les repositories (`siteRepository`, `alertRepository`, etc.) — 0 `query()` direct (ESLint enforced)
+- **Logger Winston** : `logger.info('Action', { context })` — pas de `console.log` dans central-server
 - **Validation Joi** avant traitement des inputs
 - **Async/await** avec try/catch, jamais de callbacks
 - **Conventional Commits** : `feat(scope):`, `fix(scope):`, `docs(scope):`
-- **Repository pattern** : utiliser les repositories (`siteRepository`, `alertRepository`) au lieu de `query()` direct dans les controllers
+- **Architecture modulaire Pi** : `raspberry/server/` et `raspberry/admin/` suivent le pattern orchestrateur + services + routes
 
 ## NE JAMAIS FAIRE
 
 - Modifier les migrations déjà en production
 - Changer le format des `api_key` des sites (casserait tous les Pi)
-- Utiliser `console.log` (utiliser le logger)
+- Utiliser `console.log` dans central-server (utiliser Winston)
+- Importer `../config/database` dans les controllers (ESLint bloque tout import, utiliser les repositories)
 - Commit des secrets ou fichiers `.env`
 - Push directement sur `main` sans PR
 - Requêtes SQL non paramétrées (`'${email}'` → injection SQL)
+- Ajouter `NoNewPrivileges=true` dans les fichiers `.service` systemd (bloque sudo, deadlock OTA — smoke test enforced)
 
 ## Architecture détaillée
 
 - Vue système : `docs/technical/ARCHITECTURE.md`
-- Référence complète : `docs/REFERENCE.md`
+- Référence complète : `docs/technical/REFERENCE.md`
 - Sync-agent : `docs/technical/SYNC_ARCHITECTURE.md`
 - Schéma DB : `central-server/src/scripts/full-schema.sql`
-- Troubleshooting : `docs/TROUBLESHOOTING.md`
+- Troubleshooting : `docs/guides/TROUBLESHOOTING.md`
+- WiFi USB (clé) : `docs/guides/WIFI_USB_GUIDE.md`
 - Onboarding : `docs/01-START-HERE.md`
 - Client critique NLF : `docs/clients/NLF.md`
 - Changelog : `docs/changelog/CHANGELOG.md`
+- Métriques pitch deck : `central-server/src/scripts/pitch-deck-metrics.sql`
+- **SAFe Pilotage Produit** : `docs/safe/README.md` (Epics, Features, US, Sprint Tracker, Value Streams)
+- **SAFe Auto-update** : `.claude/rules/safe-update.md` (mise à jour auto des .md SAFe à chaque feat/fix)
+- **SAFe Excel Generator** : `docs/safe/scripts/export-to-excel.py` (régénéré auto par pre-commit hook)
+- **SAFe Notion (visualisation)** : https://www.notion.so/30bc27de363881d49d06e50eabbdd6b5
 
 Les règles détaillées par domaine sont dans `.claude/rules/` et se chargent automatiquement selon les fichiers édités.

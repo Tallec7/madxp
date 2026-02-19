@@ -2,63 +2,37 @@
  * Remote Cloud Routes
  *
  * Endpoints pour contrôler un site Neopro à distance via le cloud.
- * Permet d'utiliser la télécommande depuis n'importe quel réseau,
- * même avec l'isolation client activée (mesh WiFi, réseaux entreprise).
  *
- * IMPORTANT: Ces routes sont PUBLIQUES (pas d'authentification JWT requise)
- * car elles sont utilisées par les utilisateurs qui scannent le QR code
- * depuis leur téléphone (staff du club, bénévoles, etc.)
- *
- * La sécurité repose sur:
- * - L'UUID du site (difficile à deviner)
- * - Le rate limiting (60 req/min par IP)
- * - Le fait que le site doit être online pour recevoir les commandes
- *
- * Date: 2026-01-18
+ * Sécurité:
+ * - UUID du site (128 bits d'entropie)
+ * - Rate limiting (60 req/min par IP)
+ * - PIN optionnel par site (4-6 chiffres)
+ * - JWT token pour les sessions PIN (24h)
  */
 
 import { Router } from 'express';
 import { remoteRateLimit } from '../middleware/user-rate-limit';
 import { validate, schemas } from '../middleware/validation';
+import { verifyRemotePin } from '../middleware/remote-pin.middleware';
 import {
   getRemoteState,
   sendRemoteCommand,
   getRemoteVideos,
+  verifyPin,
 } from '../controllers/remote.controller';
 
 const router = Router();
 
-// Routes PUBLIQUES (pas d'authentification JWT)
-// Rate limit: remoteRateLimit (60/min par IP) pour éviter les abus
-
-/**
- * GET /api/remote/:siteId/state
- * Récupère l'état actuel du site (connexion, config, vidéos)
- */
+// GET state: toujours accessible (retourne pinRequired si PIN configuré)
 router.get('/:siteId/state', remoteRateLimit, getRemoteState);
 
-/**
- * POST /api/remote/:siteId/command
- * Envoie une commande au site (score, phase, vidéo, etc.)
- *
- * Body: { type: string, data: object }
- *
- * Types supportés:
- * - score-update: { homeTeam, awayTeam, homeScore, awayScore, period?, matchTime? }
- * - score-reset: {}
- * - phase-change: { phase: 'neutral' | 'before' | 'during' | 'after' }
- * - play-video: { video: { name, path, categoryId } }
- * - play-sponsors: {}
- * - timer-update: { action: 'start' | 'pause' | 'reset' | 'sync', time? }
- * - breaking-news: { message, duration?, position? }
- * - match-config: { sessionId, matchDate, matchName, audienceEstimate }
- */
-router.post('/:siteId/command', remoteRateLimit, validate(schemas.remoteCommand), sendRemoteCommand);
+// POST verify-pin: vérifie le PIN et retourne un JWT token
+router.post('/:siteId/verify-pin', remoteRateLimit, validate(schemas.remotePin), verifyPin);
 
-/**
- * GET /api/remote/:siteId/videos
- * Liste les vidéos disponibles sur le site pour la télécommande
- */
-router.get('/:siteId/videos', remoteRateLimit, getRemoteVideos);
+// POST command: protégé par middleware PIN si configuré
+router.post('/:siteId/command', remoteRateLimit, verifyRemotePin, validate(schemas.remoteCommand), sendRemoteCommand);
+
+// GET videos: protégé par middleware PIN si configuré
+router.get('/:siteId/videos', remoteRateLimit, verifyRemotePin, getRemoteVideos);
 
 export default router;

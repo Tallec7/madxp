@@ -13,7 +13,7 @@
 // Mock dependencies before importing the service
 const mockQuery = jest.fn();
 jest.mock('../config/database', () => ({
-  query: (...args: any[]) => mockQuery(...args),
+  query: (...args: unknown[]) => mockQuery(...args),
 }));
 
 const mockLogger = {
@@ -34,7 +34,7 @@ jest.mock('./socket.service', () => {
     __esModule: true,
     default: {
       isConnected: (siteId: string) => mockIsConnected(siteId),
-      sendCommand: (siteId: string, command: any) => mockSendCommand(siteId, command),
+      sendCommand: (siteId: string, command: unknown) => mockSendCommand(siteId, command),
     },
   };
 });
@@ -43,20 +43,36 @@ jest.mock('./socket.service', () => {
 const mockSendOrQueue = jest.fn();
 jest.mock('./command-queue.service', () => ({
   commandQueueService: {
-    sendOrQueue: (...args: any[]) => mockSendOrQueue(...args),
+    sendOrQueue: (...args: unknown[]) => mockSendOrQueue(...args),
   },
 }));
 
-const mockDeleteFile = jest.fn();
-const mockGetPublicUrl = jest.fn();
-jest.mock('../config/supabase', () => ({
-  deleteFile: (...args: any[]) => mockDeleteFile(...args),
-  getPublicUrl: (...args: any[]) => mockGetPublicUrl(...args),
+const mockDeleteVideo = jest.fn();
+const mockGetVideoUrl = jest.fn();
+jest.mock('./storage.service', () => ({
+  deleteVideo: (...args: unknown[]) => mockDeleteVideo(...args),
+  getVideoUrl: (...args: unknown[]) => mockGetVideoUrl(...args),
 }));
 
 // Mock uuid
 jest.mock('uuid', () => ({
   v4: jest.fn(() => 'mock-uuid-1234'),
+}));
+
+// Mock upload-verification.service (imported by deployment.service)
+const mockGetDeploymentBlockedMessage = jest.fn();
+jest.mock('./upload-verification.service', () => ({
+  uploadVerificationService: {
+    getDeploymentBlockedMessage: (...args: unknown[]) => mockGetDeploymentBlockedMessage(...args),
+  },
+}));
+
+// Mock email.service (imported transitively via alerting.service)
+jest.mock('./email.service', () => ({
+  __esModule: true,
+  default: {
+    sendEmail: jest.fn(),
+  },
 }));
 
 // Import after mocks
@@ -65,7 +81,7 @@ import deploymentService from './deployment.service';
 describe('DeploymentService', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    mockGetPublicUrl.mockReturnValue('https://storage.example.com/videos/test.mp4');
+    mockGetVideoUrl.mockReturnValue('https://storage.example.com/videos/test.mp4');
     mockIsConnected.mockReset();
     mockSendCommand.mockReset();
     mockSendOrQueue.mockReset();
@@ -95,6 +111,9 @@ describe('DeploymentService', () => {
       storage_path: 'videos/test-video.mp4',
       checksum: 'abc123def456789checksum',
       metadata: { title: 'Custom Title' },
+      upload_status: 'ready',
+      advertiser_id: null,
+      analytics_category: null,
     };
 
     it('should start deployment to connected site', async () => {
@@ -252,6 +271,8 @@ describe('DeploymentService', () => {
       storage_path: 'videos/pending-video.mp4',
       checksum: 'pending123checksum',
       metadata: null,
+      advertiser_id: null,
+      analytics_category: null,
     };
 
     it('should process pending deployments for newly connected site', async () => {
@@ -346,7 +367,7 @@ describe('DeploymentService', () => {
         .mockResolvedValueOnce({ rows: [{ count: '0' }] }) // Check pending
         .mockResolvedValueOnce({ rows: [{ storage_path: 'videos/test.mp4' }] }); // Get storage path
 
-      mockDeleteFile.mockResolvedValue(true);
+      mockDeleteVideo.mockResolvedValue(true);
 
       await deploymentService.updateProgress('deploy-uuid-123', 'site-123', 100, true);
 
@@ -371,11 +392,11 @@ describe('DeploymentService', () => {
         .mockResolvedValueOnce({ rows: [{ count: '0' }] }) // No pending
         .mockResolvedValueOnce({ rows: [{ storage_path: 'videos/cleanup-me.mp4' }] });
 
-      mockDeleteFile.mockResolvedValue(true);
+      mockDeleteVideo.mockResolvedValue(true);
 
       await deploymentService.updateProgress('deploy-uuid-123', 'site-123', 100, true);
 
-      expect(mockDeleteFile).toHaveBeenCalledWith('videos/cleanup-me.mp4');
+      expect(mockDeleteVideo).toHaveBeenCalledWith('videos/cleanup-me.mp4');
       expect(mockLogger.info).toHaveBeenCalledWith(
         'Video file cleaned up from storage after all deployments completed',
         expect.any(Object)
@@ -393,7 +414,7 @@ describe('DeploymentService', () => {
 
       await deploymentService.updateProgress('deploy-uuid-123', 'site-123', 100, true);
 
-      expect(mockDeleteFile).not.toHaveBeenCalled();
+      expect(mockDeleteVideo).not.toHaveBeenCalled();
       expect(mockLogger.info).toHaveBeenCalledWith(
         'Video still has pending deployments, not cleaning up',
         expect.any(Object)
@@ -506,6 +527,9 @@ describe('DeploymentService', () => {
         storage_path: 'videos/test.mp4',
         checksum: 'socket-fail-checksum',
         metadata: null,
+        upload_status: 'ready',
+        advertiser_id: null,
+        analytics_category: null,
       };
 
       mockQuery
@@ -556,6 +580,9 @@ describe('DeploymentService', () => {
         storage_path: 'videos/group-video.mp4',
         checksum: 'group-deploy-checksum',
         metadata: null,
+        upload_status: 'ready',
+        advertiser_id: null,
+        analytics_category: null,
       };
 
       mockQuery
@@ -605,6 +632,8 @@ describe('DeploymentService', () => {
           storage_path: 'videos/video1.mp4',
           checksum: 'checksum-video-1',
           metadata: null,
+          advertiser_id: null,
+          analytics_category: null,
         },
         {
           id: 'deploy-2',
@@ -617,6 +646,8 @@ describe('DeploymentService', () => {
           storage_path: 'videos/video2.mp4',
           checksum: 'checksum-video-2',
           metadata: { title: 'Custom Title 2' },
+          advertiser_id: null,
+          analytics_category: null,
         },
       ];
 
@@ -761,6 +792,9 @@ describe('DeploymentService', () => {
           storage_path: 'videos/video.mp4',
           checksum: 'retry-checksum-123',
           metadata: null,
+          upload_status: 'ready',
+          advertiser_id: null,
+          analytics_category: null,
         };
 
         mockQuery
@@ -807,6 +841,8 @@ describe('DeploymentService', () => {
           storage_path: 'videos/video.mp4',
           checksum: 'retry-pending-checksum',
           metadata: null,
+          advertiser_id: null,
+          analytics_category: null,
         };
 
         mockQuery
@@ -838,6 +874,8 @@ describe('DeploymentService', () => {
           storage_path: 'videos/video.mp4',
           checksum: 'maxed-retry-checksum',
           metadata: null,
+          advertiser_id: null,
+          analytics_category: null,
         };
 
         mockQuery.mockResolvedValueOnce({ rows: [maxRetriedDeployment] });

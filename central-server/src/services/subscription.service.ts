@@ -13,7 +13,6 @@ import { query } from '../config/database';
 import logger from '../config/logger';
 import { auditService } from './audit.service';
 import {
-  LicenseStatus,
   LicenseStatusResponse,
   SubscriptionPlan,
   SuspensionReason,
@@ -40,12 +39,6 @@ const WARNING_THRESHOLD_DAYS = 30;
 
 /** Seuil pour l'avertissement urgent (en jours) */
 const URGENT_WARNING_THRESHOLD_DAYS = 7;
-
-/** Période de grâce après expiration du cache (en jours) - Pi offline */
-const CONNECTION_GRACE_PERIOD_DAYS = 7;
-
-/** Total maximum de jours offline avant blocage */
-const MAX_OFFLINE_DAYS = LICENSE_CACHE_TTL_DAYS + CONNECTION_GRACE_PERIOD_DAYS; // 14 jours
 
 // ============================================================================
 // Helper Functions

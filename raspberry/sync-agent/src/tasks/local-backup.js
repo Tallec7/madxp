@@ -9,6 +9,7 @@ const path = require('path');
 const crypto = require('crypto');
 const { config } = require('../config');
 const logger = require('../logger');
+const { atomicWriteJson } = require('../utils/safe-config-io');
 
 // Algorithme de chiffrement
 const ENCRYPTION_ALGORITHM = 'aes-256-gcm';
@@ -240,7 +241,7 @@ class LocalBackupService {
       logger.info('Created safety backup before restore', { currentBackup });
 
       // Restaurer (toujours en clair car c'est le fichier de configuration actif)
-      await fs.writeJson(this.configPath, content, { spaces: 2 });
+      await atomicWriteJson(this.configPath, content);
 
       logger.info('Backup restored', {
         backupFilename,

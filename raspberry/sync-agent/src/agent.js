@@ -1,4 +1,7 @@
 #!/usr/bin/env node
+// @ts-check
+/** @typedef {import('./types').SyncAgentConfig} SyncAgentConfig */
+/** @typedef {import('./types').SystemMetrics} SystemMetrics */
 
 const io = require('socket.io-client');
 const fs = require('fs-extra');
@@ -10,6 +13,7 @@ const commands = require('./commands');
 const analyticsCollector = require('./analytics');
 const sponsorImpressionsCollector = require('./sponsor-impressions');
 const { calculateConfigHash } = require('./utils/config-merge');
+const { safeReadConfig } = require('./utils/safe-config-io');
 const ConfigWatcher = require('./watchers/config-watcher');
 const VideoWatcher = require('./watchers/video-watcher');
 const expirationChecker = require('./tasks/expiration-checker');
@@ -21,12 +25,14 @@ const { networkDetector } = require('./services/network-detector');
 const { safeNetworkOperations } = require('./services/safe-network-operations');
 const networkWatchdog = require('./services/network-watchdog');
 const licenseCache = require('./license-cache');
+const localSocket = require('./services/local-socket');
 
 class NeoproSyncAgent {
   constructor() {
     this.socket = null;
     this.reconnectAttempts = 0;
     this.maxReconnectAttempts = 10;
+    this.authRetries = 0;
     this.heartbeatInterval = null;
     this.analyticsInterval = null;
     this.connectionHealthCheckInterval = null;
@@ -35,6 +41,7 @@ class NeoproSyncAgent {
     this.videoWatcher = null;
     this.lastSuccessfulHeartbeat = null;
     this.networkProfileInterval = null;
+    this.watchdogStarted = false;
   }
 
   async start() {
@@ -64,6 +71,13 @@ class NeoproSyncAgent {
     // Démarrer le backup automatique quotidien
     localBackup.start();
 
+    // Démarrer le watchdog réseau dès le boot (indépendant du WebSocket)
+    // Surveille wlan0 (hotspot) et wlan1 (internet) même sans connexion cloud
+    this.startNetworkWatchdog();
+
+    // Connexion persistante au serveur local (port 3000)
+    localSocket.connect();
+
     this.connect();
 
     process.on('SIGTERM', () => this.shutdown());
@@ -78,8 +92,12 @@ class NeoproSyncAgent {
       reconnection: true,
       reconnectionDelay: 5000,
       reconnectionDelayMax: 30000,
+      randomizationFactor: 0.5,
       timeout: 20000,
     });
+
+    // Injecter la référence au socket pour le watchdog cloud
+    networkWatchdog.setSocketRef(this.socket);
 
     this.socket.on('connect', () => this.handleConnect());
     this.socket.on('disconnect', (reason) => this.handleDisconnect(reason));
@@ -106,6 +124,15 @@ class NeoproSyncAgent {
     // Cloud remote action (play video, play sponsors) - relayed as 'command' to local server
     // The local server converts 'command' to 'action' for the TV component
     this.socket.on('cloud-remote-action', (data) => this.relayToLocalServer('command', data));
+    // Recording toggle from cloud remote
+    this.socket.on('recording-toggle', (data) => this.relayToLocalServer('recording-toggle', data));
+
+    // =========================================================================
+    // CLOUD MONITORING — Screenshot request-response
+    // Unlike one-way relay events, screenshots need a response (image data)
+    // from the local server back to the central server.
+    // =========================================================================
+    this.socket.on('screenshot-request', (data) => this.requestScreenshot(data));
 
     // =========================================================================
     // LICENSE STATUS
@@ -113,6 +140,9 @@ class NeoproSyncAgent {
     // This enables offline operation with periodic validation
     // =========================================================================
     this.socket.on('license_status', (status) => this.handleLicenseStatus(status));
+
+    // P3: Receive resolved sponsor IDs from central after local sponsors sync
+    this.socket.on('sponsor_ids_resolved', (mapping) => this.handleSponsorIdsResolved(mapping));
   }
 
   /**
@@ -144,28 +174,88 @@ class NeoproSyncAgent {
   }
 
   /**
+   * Handle resolved sponsor IDs from central server.
+   * Updates localSponsors[].centralId and sponsors[].site_sponsor_id in config.
+   * @param {Object} mapping - { localId: centralUUID, ... }
+   */
+  async handleSponsorIdsResolved(mapping) {
+    if (!mapping || typeof mapping !== 'object' || Object.keys(mapping).length === 0) {
+      return;
+    }
+
+    logger.info('🤝 Sponsor IDs resolved from central', {
+      count: Object.keys(mapping).length,
+      mapping,
+    });
+
+    try {
+      const configPath = config.paths.config;
+      const localConfig = await safeReadConfig(configPath);
+
+      if (!localConfig.localSponsors || localConfig.localSponsors.length === 0) {
+        return;
+      }
+
+      let changed = false;
+
+      // Update centralId on localSponsors
+      for (const sponsor of localConfig.localSponsors) {
+        const centralId = mapping[sponsor.localId];
+        if (centralId && sponsor.centralId !== centralId) {
+          sponsor.centralId = centralId;
+          sponsor.syncedAt = new Date().toISOString();
+          changed = true;
+          logger.info('🤝 Sponsor resolved:', { localId: sponsor.localId, centralId, name: sponsor.name });
+        }
+      }
+
+      // Update site_sponsor_id on sponsors[] (default loop entries)
+      if (localConfig.sponsors && Array.isArray(localConfig.sponsors)) {
+        for (const entry of localConfig.sponsors) {
+          if (entry._sponsorLocalId && mapping[entry._sponsorLocalId]) {
+            const newId = mapping[entry._sponsorLocalId];
+            if (entry.site_sponsor_id !== newId) {
+              entry.site_sponsor_id = newId;
+              changed = true;
+            }
+          }
+        }
+      }
+
+      // Update site_sponsor_id on timeCategories[].loopVideos[] (phase loop entries)
+      if (localConfig.timeCategories && Array.isArray(localConfig.timeCategories)) {
+        for (const tc of localConfig.timeCategories) {
+          if (tc.loopVideos && Array.isArray(tc.loopVideos)) {
+            for (const entry of tc.loopVideos) {
+              if (entry._sponsorLocalId && mapping[entry._sponsorLocalId]) {
+                const newId = mapping[entry._sponsorLocalId];
+                if (entry.site_sponsor_id !== newId) {
+                  entry.site_sponsor_id = newId;
+                  changed = true;
+                }
+              }
+            }
+          }
+        }
+      }
+
+      if (changed) {
+        const { atomicWriteJson } = require('./utils/safe-config-io');
+        await atomicWriteJson(configPath, localConfig);
+        logger.info('🤝 Config updated with resolved sponsor IDs');
+      }
+    } catch (error) {
+      logger.error('Failed to update sponsor IDs in config', { error: error.message });
+    }
+  }
+
+  /**
    * Notify the local Angular app of an event via the local Socket.IO server
    * @param {string} eventName - Name of the event
    * @param {Object} data - Event data
    */
   notifyLocalApp(eventName, data) {
-    const localSocket = io('http://localhost:3000', {
-      timeout: 5000,
-      reconnection: false,
-    });
-
-    localSocket.on('connect', () => {
-      logger.debug('Connected to local server for notification', { eventName });
-      localSocket.emit(eventName, data);
-
-      setTimeout(() => {
-        localSocket.disconnect();
-      }, 500);
-    });
-
-    localSocket.on('connect_error', (error) => {
-      logger.debug('Could not connect to local server for notification', { eventName, error: error.message });
-    });
+    localSocket.emit(eventName, data);
   }
 
   handlePingCheck() {
@@ -189,6 +279,37 @@ class NeoproSyncAgent {
   }
 
   /**
+   * Request a screenshot from the local TV component and relay the response to central.
+   * Unlike relayToLocalServer (fire-and-forget), this waits for a response.
+   * @param {object} data - Screenshot request payload (quality, timestamp)
+   */
+  async requestScreenshot(data) {
+    logger.info('📸 Screenshot requested from cloud, relaying to local server');
+    const screenshotData = await localSocket.requestScreenshot(data);
+    if (!screenshotData) {
+      logger.warn('Screenshot request timed out (no response from local)');
+      this.socket.emit('screenshot-data', { error: 'timeout', timestamp: Date.now() });
+      return;
+    }
+    if (screenshotData.error) {
+      logger.warn('Screenshot request failed', { error: screenshotData.error });
+      this.socket.emit('screenshot-data', screenshotData);
+      return;
+    }
+    logger.info('📸 Screenshot data received from local, forwarding to central');
+    this.socket.emit('screenshot-data', screenshotData);
+  }
+
+  /**
+   * Fetch player state from local Pi server via persistent connection.
+   * Used by heartbeat to include the current TV player state.
+   * @returns {Promise<object|null>}
+   */
+  fetchLocalPlayerState() {
+    return localSocket.request('get-player-state', 2000);
+  }
+
+  /**
    * Relay an event from the central server (cloud remote) to the local Socket.IO server
    * This enables cloud remote control when the user cannot access the local hotspot
    * (e.g., mesh WiFi with client isolation)
@@ -196,37 +317,8 @@ class NeoproSyncAgent {
    * @param {object} data - Event payload
    */
   relayToLocalServer(eventName, data) {
-    logger.info('☁️ Cloud remote event received, relaying to local server', { eventName, data });
-
-    const localSocket = io('http://localhost:3000', {
-      timeout: 5000,
-      reconnection: false,
-    });
-
-    localSocket.on('connect', () => {
-      logger.debug('Connected to local server for relay', { eventName });
-      localSocket.emit(eventName, data);
-
-      // Disconnect after a short delay to allow the event to be processed
-      setTimeout(() => {
-        localSocket.disconnect();
-        logger.debug('Disconnected from local server after relay', { eventName });
-      }, 500);
-    });
-
-    localSocket.on('connect_error', (err) => {
-      logger.warn('Failed to relay event to local server', {
-        eventName,
-        error: err.message,
-      });
-    });
-
-    localSocket.on('error', (err) => {
-      logger.warn('Local server relay error', {
-        eventName,
-        error: err.message,
-      });
-    });
+    logger.info('☁️ Cloud remote event received, relaying to local server', { eventName });
+    localSocket.emit(eventName, data);
   }
 
   handleConnect() {
@@ -244,6 +336,7 @@ class NeoproSyncAgent {
   handleAuthenticated(data) {
     logger.info('Authenticated successfully', data);
 
+    this.authRetries = 0;
     this.connected = true;
     connectionStatus.recordSync(true);
 
@@ -267,8 +360,11 @@ class NeoproSyncAgent {
     // Démarrer la détection périodique du profil réseau
     this.startNetworkProfileDetection();
 
-    // Démarrer le watchdog réseau (Phase 4 - auto-recovery)
-    this.startNetworkWatchdog();
+    // Mettre à jour la ref socket et binder les events pong pour le watchdog cloud
+    // (le watchdog tourne déjà depuis start(), on lui donne juste la socket authentifiée)
+    networkWatchdog.setSocketRef(this.socket);
+    this.socket.on('pong', () => networkWatchdog.updateLastPong());
+    this.socket.on('pong_response', () => networkWatchdog.updateLastPong());
 
     // Traiter les commandes en attente dans la queue offline
     this.processOfflineQueue();
@@ -367,8 +463,7 @@ class NeoproSyncAgent {
         return;
       }
 
-      const configContent = await fs.readFile(configPath, 'utf8');
-      const localConfig = JSON.parse(configContent);
+      const localConfig = await safeReadConfig(configPath);
       const configHash = calculateConfigHash(localConfig);
 
       // Récupérer la liste des vidéos et les stats de stockage
@@ -437,6 +532,7 @@ class NeoproSyncAgent {
         hotspotSsid: hotspotInfo.ssid, // Rétrocompatibilité
         hotspotInfo, // Nouvelles infos complètes
         networkProfile, // Profil réseau détecté
+        localSponsors: localConfig.localSponsors || [], // P3: sponsors locaux
         timestamp: new Date().toISOString(),
       });
 
@@ -444,6 +540,7 @@ class NeoproSyncAgent {
         configHash,
         categoriesCount: localConfig.categories?.length || 0,
         videosCount: videoState.videos.length,
+        localSponsorsCount: (localConfig.localSponsors || []).length,
       });
 
       // Enregistrer la synchronisation réussie
@@ -485,12 +582,35 @@ class NeoproSyncAgent {
   }
 
   handleAuthError(data) {
-    logger.error('❌ Authentication failed', data);
-    logger.error(`Détails: ${data?.message || 'Erreur inconnue'}`);
-    logger.error('Vérifiez que SITE_ID et SITE_API_KEY sont corrects dans /etc/neopro/site.conf');
+    this.authRetries = (this.authRetries || 0) + 1;
+    const MAX_AUTH_RETRIES = 5;
+    const message = data?.message || 'Erreur inconnue';
 
-    this.socket.disconnect();
-    process.exit(1);
+    // Permanent errors: wrong credentials — no point retrying
+    const isPermanent = message.includes('Clé API invalide')
+      || message.includes('Identifiants manquants')
+      || message.includes('Site non trouvé');
+
+    logger.error('Authentication failed', {
+      message,
+      attempt: this.authRetries,
+      maxRetries: MAX_AUTH_RETRIES,
+      isPermanent,
+    });
+
+    if (isPermanent || this.authRetries >= MAX_AUTH_RETRIES) {
+      logger.error('Authentication definitively failed, exiting', {
+        attempts: this.authRetries,
+        isPermanent,
+      });
+      logger.error('Vérifiez que SITE_ID et SITE_API_KEY sont corrects dans /etc/neopro/site.conf');
+      this.socket.disconnect();
+      process.exit(1);
+    }
+
+    // Transient error (DB timeout, server overload): let Socket.IO reconnect
+    logger.warn(`Auth failed (attempt ${this.authRetries}/${MAX_AUTH_RETRIES}), will retry on reconnect`);
+    // Server disconnects us after auth_error, Socket.IO auto-reconnect will retry
   }
 
   handleDisconnect(reason) {
@@ -507,10 +627,8 @@ class NeoproSyncAgent {
       this.heartbeatInterval = null;
     }
 
-    if (this.analyticsInterval) {
-      clearInterval(this.analyticsInterval);
-      this.analyticsInterval = null;
-    }
+    // Note: On ne clear pas analyticsInterval car les analytics sont envoyées
+    // via HTTP, indépendamment de la connexion WebSocket (même logique que networkProfileInterval)
 
     if (this.connectionHealthCheckInterval) {
       clearInterval(this.connectionHealthCheckInterval);
@@ -546,8 +664,16 @@ class NeoproSyncAgent {
     });
 
     if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-      logger.error('Max reconnection attempts reached. Exiting.');
-      process.exit(1);
+      logger.warn('Max reconnection attempts reached. Waiting 30s before retry cycle...', {
+        attempts: this.reconnectAttempts,
+        nextRetryIn: '30s',
+      });
+      this.reconnectAttempts = 0;
+      this.socket.disconnect();
+      setTimeout(() => {
+        logger.info('Retrying connection after cooldown...');
+        this.socket.connect();
+      }, 30000);
     }
   }
 
@@ -600,6 +726,17 @@ class NeoproSyncAgent {
             progress,
           });
         });
+        // Signaler la fin du déploiement (identique à deploy_video)
+        // IMPORTANT: Émis AVANT le command_result et le restart du sync-agent
+        // pour garantir que le serveur central marque le déploiement comme terminé
+        this.socket.emit('update_progress', {
+          deploymentId: data.deploymentId,
+          version: data.version,
+          progress: 100,
+          completed: true,
+        });
+        // Laisser le temps à Socket.IO de flush l'event avant le restart
+        await new Promise(resolve => setTimeout(resolve, 2000));
       } else if (typeof handler === 'function') {
         result = await handler(data);
       } else {
@@ -621,6 +758,21 @@ class NeoproSyncAgent {
         stack: error.stack,
       });
 
+      // Notify server of deployment failure so dashboard shows 'failed' instead of stuck 'in_progress'
+      if (type === 'deploy_video' && data.deploymentId) {
+        this.socket.emit('deploy_progress', {
+          deploymentId: data.deploymentId,
+          videoId: data.videoId,
+          error: error.message,
+        });
+      } else if (type === 'update_software' && data.deploymentId) {
+        this.socket.emit('update_progress', {
+          deploymentId: data.deploymentId,
+          version: data.version,
+          error: error.message,
+        });
+      }
+
       this.socket.emit('command_result', {
         commandId: id,
         status: 'error',
@@ -634,8 +786,8 @@ class NeoproSyncAgent {
    * Détecte les connexions zombies même si handleDisconnect n'est pas appelé
    */
   startConnectionHealthCheck() {
-    const HEALTH_CHECK_INTERVAL = 60000; // 60 secondes
-    const STALE_THRESHOLD = 90000; // 90 secondes sans heartbeat réussi = problème
+    const HEALTH_CHECK_INTERVAL = 30000; // 30 secondes
+    const STALE_THRESHOLD = 60000; // 60 secondes sans heartbeat réussi = forcer reconnexion
 
     logger.info('Starting connection health check', { interval: HEALTH_CHECK_INTERVAL });
 
@@ -663,12 +815,23 @@ class NeoproSyncAgent {
       if (this.connected && this.lastSuccessfulHeartbeat) {
         const timeSinceLastHeartbeat = Date.now() - this.lastSuccessfulHeartbeat;
         if (timeSinceLastHeartbeat > STALE_THRESHOLD) {
-          logger.warn('Health check: heartbeats not getting through', {
+          logger.warn('Health check: heartbeats stale, forcing reconnection', {
             timeSinceLastHeartbeat,
             threshold: STALE_THRESHOLD,
             socketConnected,
           });
-          // Ne pas déconnecter, juste logger - le serveur peut être lent
+          this.connected = false;
+          connectionStatus.setConnected(false, 'health_check_stale_heartbeat');
+
+          // Forcer déconnexion puis reconnexion propre
+          if (this.socket) {
+            this.socket.disconnect();
+            setTimeout(() => {
+              logger.info('Reconnecting after stale heartbeat detection...');
+              this.socket.connect();
+            }, 2000);
+          }
+          return;
         }
       }
 
@@ -743,23 +906,14 @@ class NeoproSyncAgent {
    * Phase 4 de Network Resilience
    */
   startNetworkWatchdog() {
+    if (this.watchdogStarted) {
+      logger.debug('Network watchdog already running, skipping start');
+      return;
+    }
+
     logger.info('Starting network watchdog (Phase 4)');
-
-    // Injecter la référence au socket
-    networkWatchdog.setSocketRef(this.socket);
-
-    // Démarrer le watchdog
     networkWatchdog.start();
-
-    // Écouter les événements pong du serveur pour mettre à jour le timestamp
-    this.socket.on('pong', () => {
-      networkWatchdog.updateLastPong();
-    });
-
-    // Écouter également pong_response si utilisé
-    this.socket.on('pong_response', () => {
-      networkWatchdog.updateLastPong();
-    });
+    this.watchdogStarted = true;
   }
 
   startHeartbeat() {
@@ -770,6 +924,23 @@ class NeoproSyncAgent {
     this.heartbeatInterval = setInterval(() => {
       this.sendHeartbeat();
     }, config.monitoring.heartbeatInterval);
+  }
+
+  /**
+   * Fetch recording state from local Pi server via persistent connection.
+   * Uses cached broadcast value with explicit-fetch fallback.
+   * @returns {Promise<{isRecording: boolean, isManualOverride: boolean} | null>}
+   */
+  fetchLocalRecordingState() {
+    return localSocket.getRecordingState();
+  }
+
+  /**
+   * Fetch transition metrics from local Pi server via persistent connection (get + reset).
+   * @returns {Promise<{earlySwitchCount: number, safetyTimeoutCount: number, cleanupSkippedCount: number, videoErrorCount: number, totalTransitions: number} | null>}
+   */
+  fetchLocalTransitionMetrics() {
+    return localSocket.request('get-transition-metrics', 2000);
   }
 
   async sendHeartbeat() {
@@ -810,12 +981,35 @@ class NeoproSyncAgent {
           logger.warn('Failed to load version info for heartbeat:', error.message);
         }
 
+        // Inclure le statut kiosk (fichier écrit par le watchdog)
+        let kioskStatus = null;
+        try {
+          kioskStatus = await metricsCollector.getKioskStatus();
+        } catch {
+          // Ignore — le fichier peut ne pas encore exister
+        }
+
+        // Fetch recording state from local server
+        const recordingState = await this.fetchLocalRecordingState();
+
+        // Fetch transition metrics from local server (get + reset)
+        const transitionMetrics = await this.fetchLocalTransitionMetrics();
+
+        // Fetch player state from local server (for cloud monitoring)
+        const playerState = await this.fetchLocalPlayerState();
+
         this.socket.emit('heartbeat', {
           siteId: config.site.id,
           timestamp: Date.now(),
           metrics,
           softwareVersion,
           versionInfo,
+          kioskStatus,
+          recordingState,
+          transitionMetrics,
+          playerState,
+          wifiStatus: metrics.wifiStatus || null,
+          fanStatus: metrics.fanStatus || null,
         });
 
         // Enregistrer le succès du heartbeat
@@ -967,6 +1161,8 @@ class NeoproSyncAgent {
       }
     }
 
+    localSocket.disconnect();
+
     if (this.socket) {
       this.socket.disconnect();
     }
@@ -987,4 +1183,5 @@ module.exports = {
   connectionStatus,
   networkDetector,
   networkWatchdog,
+  localSocket,
 };

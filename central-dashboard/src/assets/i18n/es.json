@@ -48,7 +48,8 @@
     "generating": "Generando...",
     "downloadPdf": "Descargar PDF",
     "deployToPi": "Desplegar al Pi",
-    "editPriority": "Editar prioridad"
+    "editPriority": "Editar prioridad",
+    "saving": "Guardando..."
   },
   "auth": {
     "login": "Iniciar sesión",
@@ -245,7 +246,31 @@
     "engagement": "Interacción",
     "exportReport": "Exportar informe",
     "uncategorized": "Sin categorizar",
-    "downloadPdf": "📥 Descargar PDF"
+    "downloadPdf": "📥 Descargar PDF",
+    "tractionTitle": "Traccion & Crecimiento",
+    "tractionMetrics": "Metricas de traccion",
+    "viewDetails": "Ver detalles",
+    "deployedBoxes": "Dispositivos desplegados",
+    "totalPlays": "Reproducciones totales",
+    "screenTime": "Tiempo en pantalla",
+    "sponsorImpressions": "Impresiones de patrocinadores",
+    "activeAdvertisers": "Anunciantes activos",
+    "retention": "Retencion",
+    "fleetGrowth": "Crecimiento de la flota",
+    "monthlyEngagement": "Engagement mensual",
+    "subscriptions": "Suscripciones",
+    "advertisersImpressions": "Anunciantes & Impresiones",
+    "deployments": "Despliegues",
+    "reliability": "Fiabilidad",
+    "productVelocity": "Velocidad del producto",
+    "retentionByCohort": "Retencion por cohorte",
+    "sportDistribution": "Distribucion por deporte",
+    "contentMix": "Mix de contenido",
+    "executiveSummary": "Resumen ejecutivo",
+    "tabFleet": "Flota",
+    "tabTraction": "Traccion",
+    "tabComparison": "Comparacion",
+    "tabRealtime": "Tiempo real"
   },
   "language": {
     "select": "Idioma",
@@ -349,6 +374,17 @@
     "deselect": "Deseleccionar",
     "confirmDeletion": "Confirmar eliminación"
   },
+  "remotePin": {
+    "title": "PIN Mando Cloud",
+    "description": "Proteja el acceso al mando cloud con un código PIN de 4-6 dígitos. Los usuarios deberán introducir este PIN en su primera conexión.",
+    "pinActive": "PIN activo",
+    "pinInactive": "Acceso libre (sin PIN)",
+    "clearPin": "Eliminar PIN",
+    "clearingPin": "Eliminando...",
+    "newPinLabel": "Nuevo PIN (4-6 dígitos)",
+    "setPin": "Definir PIN",
+    "settingPin": "Definiendo..."
+  },
   "debug": {
     "playing": "Reproduciendo...",
     "play": "▶ Reproducir",
@@ -398,6 +434,46 @@
     "refresh": "Actualizar",
     "notAvailable": "N/A",
     "notLoaded": "No cargado",
-    "wifiOfflineWarning": "El dispositivo debe estar conectado para recuperar el estado del cliente WiFi."
+    "wifiOfflineWarning": "El dispositivo debe estar conectado para recuperar el estado del cliente WiFi.",
+    "wifiConfig": "Configuración de Cliente WiFi",
+    "scanNetworks": "Escanear redes",
+    "scanningWifi": "Escaneando...",
+    "networksFound": "red(es) encontrada(s)",
+    "currentNetwork": "Conectado",
+    "connectTo": "Conectar a",
+    "wifiPassword": "Contraseña WiFi",
+    "wifiPasswordPlaceholder": "Contraseña (8-63 caracteres)",
+    "connectWifi": "Conectar",
+    "connectingWifi": "Conectando..."
+  },
+  "siteSettings": {
+    "saveBranding": "Guardar branding"
+  },
+  "siteSponsors": {
+    "statusActive": "Activo",
+    "statusPaused": "Pausado",
+    "statusExpired": "Expirado"
+  },
+  "profiles": {
+    "title": "Perfiles de configuracion",
+    "create": "Nuevo perfil",
+    "createTitle": "Crear perfil",
+    "editTitle": "Editar perfil",
+    "syncAll": "Sincronizar al Pi",
+    "syncing": "Sincronizando...",
+    "empty": "No hay perfiles configurados.",
+    "default": "Predeterminado",
+    "multiConfigActive": "perfiles — multi-config activo",
+    "nameLabel": "Nombre interno",
+    "displayNameLabel": "Nombre visible",
+    "cityLabel": "Ciudad",
+    "sportLabel": "Deporte",
+    "sortOrderLabel": "Orden",
+    "isDefault": "Perfil predeterminado",
+    "configSource": "Fuente de configuracion",
+    "configFromCurrent": "Importar config actual del sitio",
+    "configFromProfile": "Copiar de otro perfil",
+    "configEmpty": "Comenzar con config vacia",
+    "selectProfile": "Seleccionar un perfil..."
   }
 }

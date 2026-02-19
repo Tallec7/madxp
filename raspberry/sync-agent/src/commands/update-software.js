@@ -15,9 +15,9 @@ class SoftwareUpdateHandler {
   }
 
   async execute(data, progressCallback) {
-    const { updateUrl, version, checksum, packageSize } = data;
+    const { updateUrl, version, checksum, packageSize, scheduleReboot, autoRollback } = data;
 
-    logger.info('Starting software update', { version });
+    logger.info('Starting software update', { version, scheduleReboot: !!scheduleReboot, autoRollback: autoRollback !== false });
 
     try {
       progressCallback(2);
@@ -39,7 +39,13 @@ class SoftwareUpdateHandler {
       progressCallback(35);
 
       if (checksum) {
-        await this.verifyChecksum(packagePath, checksum);
+        const verified = await this.verifyChecksumWithRetry(packagePath, checksum, packageSize, {
+          updateUrl,
+          progressCallback,
+        });
+        if (!verified) {
+          throw new Error('Checksum verification failed after retry');
+        }
       }
 
       progressCallback(40);
@@ -80,6 +86,18 @@ class SoftwareUpdateHandler {
 
       logger.info('Software update completed successfully', { newVersion, report });
 
+      // Reboot le Pi si demandé par le dashboard
+      if (scheduleReboot) {
+        logger.info('Scheduled reboot requested, rebooting in 10 seconds...');
+        const { spawn } = require('child_process');
+        setTimeout(() => {
+          spawn('sudo', ['reboot'], {
+            detached: true,
+            stdio: 'ignore',
+          }).unref();
+        }, 10000);
+      }
+
       return {
         success: true,
         version: newVersion,
@@ -89,10 +107,15 @@ class SoftwareUpdateHandler {
     } catch (error) {
       logger.error('Software update failed', { error: error.message, stack: error.stack });
 
-      try {
-        await this.rollback();
-      } catch (rollbackError) {
-        logger.error('Rollback failed', { error: rollbackError.message });
+      // autoRollback est true par défaut (rétrocompatible avec les anciennes commandes sans ce flag)
+      if (autoRollback !== false) {
+        try {
+          await this.rollback();
+        } catch (rollbackError) {
+          logger.error('Rollback failed', { error: rollbackError.message });
+        }
+      } else {
+        logger.warn('Auto-rollback disabled, leaving system in current state');
       }
 
       throw error;
@@ -132,19 +155,73 @@ class SoftwareUpdateHandler {
     }
   }
 
-  async verifyChecksum(filePath, expectedChecksum) {
-    try {
-      const { stdout } = await execAsync(`sha256sum ${filePath}`);
-      const actualChecksum = stdout.split(' ')[0];
+  /**
+   * Verify checksum with one retry on failure.
+   * On mismatch: logs diagnostics, re-downloads once, and retries.
+   */
+  async verifyChecksumWithRetry(filePath, expectedChecksum, expectedSize, { updateUrl, progressCallback }) {
+    const firstResult = await this.verifyChecksum(filePath, expectedChecksum, expectedSize);
+    if (firstResult.match) {
+      return true;
+    }
 
-      if (actualChecksum !== expectedChecksum) {
-        throw new Error('Checksum verification failed');
+    logger.warn('Checksum mismatch on first attempt, will retry download', {
+      expectedChecksum,
+      actualChecksum: firstResult.actualChecksum,
+      expectedSize,
+      actualSize: firstResult.actualSize,
+      sizeMismatch: expectedSize && firstResult.actualSize !== expectedSize,
+    });
+
+    // Re-download
+    logger.info('Re-downloading update package for retry...');
+    await fs.remove(filePath);
+    await this.downloadPackage(updateUrl, filePath, (progress) => {
+      if (progressCallback) {
+        progressCallback(35 + progress * 0.03);
+      }
+    });
+
+    const secondResult = await this.verifyChecksum(filePath, expectedChecksum, expectedSize);
+    if (secondResult.match) {
+      logger.info('Checksum verified on retry');
+      return true;
+    }
+
+    logger.error('Checksum verification failed after retry', {
+      expectedChecksum,
+      actualChecksum: secondResult.actualChecksum,
+      expectedSize,
+      actualSize: secondResult.actualSize,
+    });
+    return false;
+  }
+
+  async verifyChecksum(filePath, expectedChecksum, expectedSize) {
+    try {
+      const stats = await fs.stat(filePath);
+      const actualSize = stats.size;
+
+      if (expectedSize && actualSize !== expectedSize) {
+        logger.warn('Downloaded file size mismatch', {
+          expected: expectedSize,
+          actual: actualSize,
+          diff: actualSize - expectedSize,
+        });
       }
 
-      logger.info('Checksum verified successfully');
+      const { stdout } = await execAsync(`sha256sum ${filePath}`);
+      const actualChecksum = stdout.split(' ')[0];
+      const match = actualChecksum === expectedChecksum;
+
+      if (match) {
+        logger.info('Checksum verified successfully');
+      }
+
+      return { match, actualChecksum, actualSize };
     } catch (error) {
-      logger.error('Checksum verification failed:', error);
-      throw error;
+      logger.error('Checksum computation failed:', error);
+      return { match: false, actualChecksum: null, actualSize: null };
     }
   }
 
@@ -406,35 +483,45 @@ class SoftwareUpdateHandler {
         logger.info('Config files updated (systemd services, etc.)');
       }
 
-      // Copier VERSION et release.json à la racine (avec sudo car peuvent appartenir à root)
-      const versionSource = await fs.pathExists(path.join(extractDir, 'VERSION'))
-        ? path.join(extractDir, 'VERSION')
-        : await fs.pathExists(path.join(sourcePath, 'VERSION'))
-          ? path.join(sourcePath, 'VERSION')
-          : null;
-      if (versionSource) {
-        await execAsync(`sudo cp ${versionSource} ${path.join(rootDir, 'VERSION')}`);
-        await execAsync(`sudo chown pi:pi ${path.join(rootDir, 'VERSION')}`);
-      }
+      // Copier VERSION et release.json à la racine
+      // FIX: Les anciens scripts utilisaient "sudo cp/tee" pour écrire ces fichiers,
+      // ce qui les rendait owner root:root. Le process tourne en pi, donc fs.copy
+      // échoue avec EACCES en tentant d'unlink un fichier root.
+      // Solution : sudo chown avant fs.copy pour reprendre l'ownership.
+      // IMPORTANT : ne PAS faire échouer l'OTA pour un échec de copy VERSION.
+      // writeVersionMetadata() en fin de process réécrira la version dans un try/catch séparé.
+      const versionDest = path.join(rootDir, 'VERSION');
+      const releaseDest = path.join(rootDir, 'release.json');
 
-      const releaseSource = await fs.pathExists(path.join(extractDir, 'release.json'))
-        ? path.join(extractDir, 'release.json')
-        : await fs.pathExists(path.join(sourcePath, 'release.json'))
-          ? path.join(sourcePath, 'release.json')
-          : null;
-      if (releaseSource) {
-        await execAsync(`sudo cp ${releaseSource} ${path.join(rootDir, 'release.json')}`);
-        await execAsync(`sudo chown pi:pi ${path.join(rootDir, 'release.json')}`);
-      }
+      try {
+        await this.fixFileOwnership(versionDest);
+        await this.fixFileOwnership(releaseDest);
 
-      // Corriger les permissions (comme deploy-remote.sh et admin-server.js)
-      logger.info('Fixing permissions...');
-      await execAsync(`sudo chown -R pi:pi ${rootDir}/webapp`);
-      await execAsync(`sudo chown -R pi:pi ${rootDir}/server`);
-      await execAsync(`sudo chown -R pi:pi ${rootDir}/sync-agent 2>/dev/null || true`);
-      await execAsync(`sudo chown -R pi:pi ${rootDir}/admin 2>/dev/null || true`);
-      await execAsync(`sudo chown -R pi:pi ${rootDir}/scripts 2>/dev/null || true`);
-      await execAsync('sudo usermod -a -G pi www-data 2>/dev/null || true');
+        const versionSource = await fs.pathExists(path.join(extractDir, 'VERSION'))
+          ? path.join(extractDir, 'VERSION')
+          : await fs.pathExists(path.join(sourcePath, 'VERSION'))
+            ? path.join(sourcePath, 'VERSION')
+            : null;
+        if (versionSource) {
+          await fs.copy(versionSource, versionDest, { overwrite: true });
+        }
+
+        const releaseSource = await fs.pathExists(path.join(extractDir, 'release.json'))
+          ? path.join(extractDir, 'release.json')
+          : await fs.pathExists(path.join(sourcePath, 'release.json'))
+            ? path.join(sourcePath, 'release.json')
+            : null;
+        if (releaseSource) {
+          await fs.copy(releaseSource, releaseDest, { overwrite: true });
+        }
+
+        logger.info('VERSION and release.json copied (ownership fixed if needed)');
+      } catch (versionCopyError) {
+        // Non-bloquant : writeVersionMetadata() réécrira après l'installation du sudoers
+        logger.warn('VERSION/release.json copy failed (will retry via writeVersionMetadata)', {
+          error: versionCopyError.message,
+        });
+      }
 
       // npm install si nécessaire
       if (await fs.pathExists(path.join(rootDir, 'webapp', 'package.json'))) {
@@ -462,6 +549,18 @@ class SoftwareUpdateHandler {
         } catch (e) {
           logger.error('npm install sync-agent failed', { error: e.message });
           // C'est critique pour le sync-agent, on log l'erreur mais on continue
+        }
+      }
+
+      // Installer le fichier sudoers si présent dans l'archive
+      const sudoersSrc = path.join(rootDir, 'config', 'sudoers.d', 'neopro');
+      if (await fs.pathExists(sudoersSrc)) {
+        try {
+          await execAsync(`sudo cp ${sudoersSrc} /etc/sudoers.d/neopro`);
+          await execAsync('sudo chmod 440 /etc/sudoers.d/neopro');
+          logger.info('Sudoers file installed');
+        } catch (e) {
+          logger.warn('Failed to install sudoers via sudo (NoNewPrivileges?), admin-server will handle it', { error: e.message });
         }
       }
 
@@ -519,7 +618,70 @@ class SoftwareUpdateHandler {
             started: newlyInstalledServices.filter(s => !managedServices.includes(s)).length
           });
         } catch (e) {
-          logger.warn('Failed to install some systemd services', { error: e.message });
+          logger.warn('Failed to install systemd services via sudo, falling back to admin-server', { error: e.message });
+          // Fallback: delegate to admin-server which runs without NoNewPrivileges
+          try {
+            await execAsync('curl -s -X POST http://127.0.0.1:8080/api/system/apply-services');
+            logger.info('Systemd services applied via admin-server fallback');
+          } catch (fallbackError) {
+            logger.warn('Admin-server fallback also failed', { error: fallbackError.message });
+          }
+        }
+      } else {
+        // No config/systemd/ dir but try apply-services anyway (fixes legacy Pi)
+        try {
+          await execAsync('curl -s -X POST http://127.0.0.1:8080/api/system/apply-services');
+          logger.info('Systemd services applied via admin-server (no config/systemd in archive)');
+        } catch (e) {
+          // Admin-server may not have the route yet on very old versions
+        }
+      }
+
+      // Enable watchdog grace period before network-sensitive operations (udev + service restart)
+      // Prevents the watchdog from triggering recovery during OTA udev deployment
+      try {
+        const networkWatchdog = require('../services/network-watchdog');
+        networkWatchdog.enableGracePeriod('internet', 120000); // 2 min
+        networkWatchdog.enableGracePeriod('hotspot', 120000);
+        logger.info('NetworkWatchdog grace period enabled for OTA (120s)');
+      } catch (e) {
+        logger.warn('Could not enable watchdog grace period', { error: e.message });
+      }
+
+      // Deploy udev rules if present in the archive
+      const udevDir = path.join(rootDir, 'config', 'udev');
+      if (await fs.pathExists(udevDir)) {
+        try {
+          const ruleFiles = (await fs.readdir(udevDir)).filter(f => f.endsWith('.rules'));
+          for (const rule of ruleFiles) {
+            await execAsync(`sudo cp ${path.join(udevDir, rule)} /etc/udev/rules.d/${rule}`);
+            logger.info(`Installed udev rule: ${rule}`);
+          }
+          if (ruleFiles.length > 0) {
+            await execAsync(
+              'sudo udevadm control --reload-rules && sudo udevadm trigger --subsystem-match=net --action=add'
+            );
+            logger.info('Udev rules reloaded (filtered: net/add only)');
+          }
+        } catch (e) {
+          logger.warn('Failed to install udev rules', { error: e.message });
+        }
+      }
+
+      // Deploy modprobe.d configs if present (WiFi driver tuning, etc.)
+      const modprobeDir = path.join(rootDir, 'config', 'modprobe.d');
+      if (await fs.pathExists(modprobeDir)) {
+        try {
+          const confFiles = (await fs.readdir(modprobeDir)).filter(f => f.endsWith('.conf'));
+          for (const conf of confFiles) {
+            await execAsync(`sudo cp ${path.join(modprobeDir, conf)} /etc/modprobe.d/${conf}`);
+            logger.info(`Installed modprobe config: ${conf}`);
+          }
+          if (confFiles.length > 0) {
+            logger.info('Modprobe configs deployed (effective after next module reload or reboot)');
+          }
+        } catch (e) {
+          logger.warn('Failed to install modprobe configs', { error: e.message });
         }
       }
 
@@ -544,31 +706,60 @@ class SoftwareUpdateHandler {
       const buildDate = new Date().toISOString();
       const rootDir = config.paths.root;
 
-      // Écrire VERSION (avec sudo car peut appartenir à root)
+      // FIX: Reprendre l'ownership des fichiers potentiellement créés par root (ancien sudo)
       const versionPath = path.join(rootDir, 'VERSION');
-      const versionContent = version + '\n';
-      await execAsync(`echo '${versionContent.trim()}' | sudo tee ${versionPath} > /dev/null`);
-      await execAsync(`sudo chown pi:pi ${versionPath}`);
+      const releasePath = path.join(rootDir, 'release.json');
+      const webappVersionPath = path.join(rootDir, 'webapp', 'version.json');
 
-      // Écrire release.json (avec sudo car peut appartenir à root)
+      await this.fixFileOwnership(versionPath);
+      await this.fixFileOwnership(releasePath);
+      await this.fixFileOwnership(webappVersionPath);
+
+      // Écrire VERSION
+      await fs.writeFile(versionPath, version + '\n');
+
+      // Écrire release.json
       const releaseData = {
         version,
         buildDate,
         source: 'central-dashboard',
       };
-      const releasePath = path.join(rootDir, 'release.json');
-      const releaseContent = JSON.stringify(releaseData, null, 2);
-      await execAsync(`echo '${releaseContent.replace(/'/g, "\\'")}' | sudo tee ${releasePath} > /dev/null`);
-      await execAsync(`sudo chown pi:pi ${releasePath}`);
+      await fs.writeJson(releasePath, releaseData, { spaces: 2 });
 
-      // Écrire webapp/version.json (pi:pi devrait avoir les droits)
-      const webappVersionPath = path.join(rootDir, 'webapp', 'version.json');
+      // Écrire webapp/version.json
       await fs.writeJson(webappVersionPath, { version, buildDate }, { spaces: 2 });
 
       logger.info('Version metadata written', { version });
     } catch (error) {
       logger.warn('Failed to write version metadata:', error.message);
       // Ne pas faire échouer la mise à jour pour ça
+    }
+  }
+
+  /**
+   * Reprend l'ownership d'un fichier s'il appartient à root.
+   * Les anciennes versions du sync-agent utilisaient "sudo cp/tee" pour écrire
+   * VERSION et release.json, créant des fichiers root:root que le user pi
+   * ne peut plus écraser (EACCES sur unlink). Ce fix est idempotent.
+   */
+  async fixFileOwnership(filePath) {
+    try {
+      if (!await fs.pathExists(filePath)) return;
+
+      const stat = await fs.stat(filePath);
+      // uid 0 = root. Si le fichier appartient à root, reprendre l'ownership
+      if (stat.uid === 0) {
+        logger.info('Fixing root-owned file ownership', { filePath });
+        await execAsync(`sudo chown -R pi:pi ${filePath}`);
+      }
+    } catch (error) {
+      // Fallback: si chown échoue, tenter sudo rm pour permettre la recréation
+      logger.warn('chown failed, trying sudo rm', { filePath, error: error.message });
+      try {
+        await execAsync(`sudo rm -f ${filePath}`);
+      } catch (rmError) {
+        logger.warn('sudo rm also failed', { filePath, error: rmError.message });
+      }
     }
   }
 
@@ -799,6 +990,8 @@ class SoftwareUpdateHandler {
 
   /**
    * Génère un rapport post-mise à jour
+   * Exécute diagnose-pi.sh --json pour un diagnostic complet du Pi,
+   * puis enrichit avec les vérifications de services et HTTP.
    * @param {string} newVersion Nouvelle version installée
    * @returns {Promise<object>} Rapport détaillé
    */
@@ -811,9 +1004,49 @@ class SoftwareUpdateHandler {
       diskUsage: null,
       errors: [],
       healthy: true,
+      diagnostic: null,
     };
 
-    // Vérifier chaque service
+    // Exécuter le diagnostic complet via diagnose-pi.sh --json
+    const diagScript = path.join(config.paths.root, 'scripts', 'diagnose-pi.sh');
+    try {
+      if (await fs.pathExists(diagScript)) {
+        const { stdout } = await execAsync(`bash ${diagScript} --json 2>/dev/null`, { timeout: 30000 });
+        try {
+          report.diagnostic = JSON.parse(stdout.trim());
+          if (report.diagnostic.errors > 0) {
+            report.errors.push(`diagnose-pi: ${report.diagnostic.errors} erreur(s) système détectée(s)`);
+            report.healthy = false;
+          }
+          logger.info('Full diagnostic completed', {
+            errors: report.diagnostic.errors,
+            warnings: report.diagnostic.warnings,
+            healthy: report.diagnostic.healthy,
+          });
+        } catch (parseError) {
+          logger.warn('Could not parse diagnostic JSON output', { error: parseError.message });
+        }
+      } else {
+        logger.info('diagnose-pi.sh not found, skipping full diagnostic');
+      }
+    } catch (diagError) {
+      // diagnose-pi.sh exits with error count as exit code — capture output anyway
+      if (diagError.stdout) {
+        try {
+          report.diagnostic = JSON.parse(diagError.stdout.trim());
+          if (report.diagnostic.errors > 0) {
+            report.errors.push(`diagnose-pi: ${report.diagnostic.errors} erreur(s) système détectée(s)`);
+            report.healthy = false;
+          }
+        } catch {
+          logger.warn('Could not parse diagnostic output after error', { error: diagError.message });
+        }
+      } else {
+        logger.warn('diagnose-pi.sh execution failed', { error: diagError.message });
+      }
+    }
+
+    // Vérifier chaque service (toujours fait, même si le diagnostic est disponible)
     const services = ['neopro-app', 'neopro-admin', 'neopro-sync-agent', 'nginx'];
 
     for (const service of services) {
@@ -866,50 +1099,18 @@ class SoftwareUpdateHandler {
    * @param {number} durationMs Durée d'affichage en ms (optionnel)
    */
   async notifyUpcomingRestart(message, durationMs = 10000) {
-    try {
-      const io = require('socket.io-client');
-      const socket = io('http://localhost:3000', {
-        timeout: 5000,
-        reconnection: false,
-      });
-
-      return new Promise((resolve) => {
-        socket.on('connect', () => {
-          socket.emit('system_notification', {
-            type: 'warning',
-            title: 'Mise à jour système',
-            message,
-            duration: durationMs,
-            dismissible: false,
-          });
-
-          logger.info('User notified of upcoming restart', { message });
-
-          // Donner le temps au message d'être reçu
-          setTimeout(() => {
-            socket.close();
-            resolve();
-          }, 1000);
-        });
-
-        socket.on('connect_error', (error) => {
-          logger.warn('Could not notify user of restart (app may be down):', error.message);
-          socket.close();
-          resolve(); // Ne pas bloquer la mise à jour
-        });
-
-        // Timeout si pas de connexion après 3 secondes
-        setTimeout(() => {
-          if (!socket.connected) {
-            logger.warn('Timeout connecting to local socket for notification');
-            socket.close();
-            resolve();
-          }
-        }, 3000);
-      });
-    } catch (error) {
-      logger.warn('Failed to notify user of restart:', error.message);
-      // Ne pas bloquer la mise à jour en cas d'erreur
+    const localSocket = require('../services/local-socket');
+    const sent = localSocket.emit('system_notification', {
+      type: 'warning',
+      title: 'Mise à jour système',
+      message,
+      duration: durationMs,
+      dismissible: false,
+    });
+    if (sent) {
+      logger.info('User notified of upcoming restart', { message });
+    } else {
+      logger.warn('Could not notify user of restart (local server not connected)');
     }
   }
 }

@@ -70,6 +70,7 @@ export const schemas = {
     sports: Joi.array().items(Joi.string()).optional(),
     status: Joi.string().valid('online', 'offline', 'maintenance', 'error').optional(),
     live_score_enabled: Joi.boolean().optional(),
+    avg_spectators: Joi.number().integer().min(0).max(100000).optional(),
   }),
 
   createGroup: Joi.object({
@@ -146,9 +147,26 @@ export const schemas = {
   remoteCommand: Joi.object({
     type: Joi.string().valid(
       'score-update', 'score-reset', 'phase-change', 'play-video',
-      'play-sponsors', 'timer-update', 'breaking-news', 'match-config'
+      'play-sponsors', 'timer-update', 'breaking-news', 'match-config',
+      'recording-toggle', 'screenshot'
     ).required(),
     data: Joi.object().optional().default({}),
+  }),
+
+  // Remote PIN verification (public endpoint)
+  remotePin: Joi.object({
+    pin: Joi.string().pattern(/^\d{4,6}$/).required().messages({
+      'string.pattern.base': 'Le PIN doit contenir entre 4 et 6 chiffres',
+      'any.required': 'Le PIN est requis',
+    }),
+  }),
+
+  // Set remote PIN (admin/operator endpoint)
+  setRemotePin: Joi.object({
+    pin: Joi.string().pattern(/^\d{4,6}$/).required().messages({
+      'string.pattern.base': 'Le PIN doit contenir entre 4 et 6 chiffres',
+      'any.required': 'Le PIN est requis',
+    }),
   }),
 
   // Subscription schemas

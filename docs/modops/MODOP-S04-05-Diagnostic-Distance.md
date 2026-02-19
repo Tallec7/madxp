@@ -223,15 +223,39 @@ cd /home/pi/neopro
 ./scripts/diagnose-pi.sh
 ```
 
-**Le script vérifie automatiquement :**
+**Le script vérifie automatiquement (16 catégories, v3.45.1+) :**
 
-- ✅ Services systemd (neopro-app, nginx, etc.)
+- ✅ Version Node.js (v18+ requis)
+- ✅ Paquets apt critiques (hostapd, dnsmasq, nginx, ffmpeg, avahi-daemon)
+- ✅ Paquets apt recommandés (unclutter-xfixes, chromium, cec-utils, firmware-realtek)
+- ✅ Services systemd — état (running/failed/inactive)
+- ✅ Services systemd — installation (.service files)
+- ✅ Masquage curseur (mode TV)
 - ✅ Ports ouverts (80, 3000, 8080)
-- ✅ Fichiers déployés
-- ✅ Permissions
-- ✅ Configuration
-- ✅ Connectivité réseau
-- ✅ Espace disque et température
+- ✅ Fichiers et répertoires déployés
+- ✅ node_modules (server, admin, sync-agent)
+- ✅ Webapp Angular (index.html, main-\*.js)
+- ✅ Config Nginx (syntaxe, routes, site-enabled)
+- ✅ WiFi AP (interface, mode AP, SSID, IP statique)
+- ✅ Permissions (/home/pi, club-config.json, www-data group)
+- ✅ Configuration GPU
+- ✅ Espace disque
+- ✅ Informations de version (VERSION, release.json)
+
+**Mode JSON pour automation :**
+
+```bash
+# Mode humain (défaut)
+./scripts/diagnose-pi.sh
+
+# Mode JSON (pour automation, intégré dans deploy-remote.sh et update-software.js)
+./scripts/diagnose-pi.sh --json
+
+# Mode silencieux (erreurs uniquement)
+./scripts/diagnose-pi.sh --quiet
+```
+
+Le code de retour = nombre d'erreurs (0 = Pi sain).
 
 **Analyser la sortie du script :**
 

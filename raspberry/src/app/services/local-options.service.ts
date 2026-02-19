@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable } from 'rxjs';
-import { SportType, OverlayPosition } from '../interfaces/configuration.interface';
+import { SportType, ScoreOverlayPosition, OverlayTheme } from '../interfaces/configuration.interface';
 
 /**
  * Configuration d'une équipe pour le match
@@ -35,26 +35,11 @@ export interface GoalAnimationConfig {
 }
 
 /**
- * Preset de configuration sauvegardable
- */
-export interface OverlayPreset {
-  id: string;
-  name: string;
-  sport: SportType;
-  position: OverlayPosition;
-  template: 'sportif' | 'elegant' | 'minimal';
-  backgroundColor?: string;
-  scoreColor?: string;
-  teamNameColor?: string;
-  createdAt: number;
-}
-
-/**
  * Options locales stockées dans localStorage.
  * Ces options sont propres à chaque appareil et ne sont pas synchronisées avec le serveur central.
  */
 export interface LocalOptions {
-  /** Sport actuel (détermine le template et les périodes) */
+  /** Sport actuel (détermine les périodes) */
   sport: SportType;
 
   /** Configuration du match en cours */
@@ -69,13 +54,7 @@ export interface LocalOptions {
     /** Afficher l'overlay du score sur la TV */
     scoreEnabled: boolean;
     /** Position de l'overlay (override local) */
-    position?: OverlayPosition;
-    /** Surcharger les couleurs du central */
-    useLocalColors: boolean;
-    /** Couleurs locales (si useLocalColors = true) */
-    backgroundColor?: string;
-    scoreColor?: string;
-    teamNameColor?: string;
+    position?: ScoreOverlayPosition;
   };
 
   /** Configuration de l'animation de but/point */
@@ -99,17 +78,14 @@ export interface LocalOptions {
     position: 'top' | 'bottom';
     /** Durée d'affichage par défaut en secondes */
     defaultDuration: number;
-    /** Mode d'affichage pour textes longs */
-    displayMode: 'scroll' | 'truncate' | 'multiline';
+    /** Mode d'affichage */
+    displayMode: 'scroll';
     /** Messages rapides prédéfinis */
     quickMessages: string[];
   };
 
-  /** Template d'overlay actif */
-  template: 'sportif' | 'elegant' | 'minimal';
-
-  /** Presets sauvegardés par l'utilisateur */
-  presets: OverlayPreset[];
+  /** Thème d'overlay actif */
+  template: OverlayTheme;
 }
 
 /**
@@ -181,10 +157,6 @@ const DEFAULT_OPTIONS: LocalOptions = {
   overlay: {
     scoreEnabled: false, // Désactivé par défaut - le staff du club active quand il y a un match
     position: undefined, // Utilise la position du central par défaut
-    useLocalColors: false,
-    backgroundColor: undefined,
-    scoreColor: undefined,
-    teamNameColor: undefined,
   },
 
   goalAnimation: {
@@ -215,9 +187,7 @@ const DEFAULT_OPTIONS: LocalOptions = {
     ],
   },
 
-  template: 'sportif',
-
-  presets: [],
+  template: 'broadcast',
 };
 
 const STORAGE_KEY = 'neopro-local-options';
@@ -447,108 +417,47 @@ export class LocalOptionsService {
     });
   }
 
-  // ============================================================================
-  // PRESETS
-  // ============================================================================
-
-  /**
-   * Sauvegarde la configuration actuelle comme preset
-   */
-  public savePreset(name: string): OverlayPreset {
-    const preset: OverlayPreset = {
-      id: this.generateId(),
-      name,
-      sport: this.options.sport,
-      position: this.options.overlay.position || 'top-right',
-      template: this.options.template,
-      backgroundColor: this.options.overlay.backgroundColor,
-      scoreColor: this.options.overlay.scoreColor,
-      teamNameColor: this.options.overlay.teamNameColor,
-      createdAt: Date.now(),
-    };
-
-    this.updateOptions({
-      presets: [...this.options.presets, preset],
-    });
-
-    console.log('[LocalOptions] Preset saved:', preset);
-    return preset;
-  }
-
-  /**
-   * Applique un preset
-   */
-  public applyPreset(presetId: string): boolean {
-    const preset = this.options.presets.find(p => p.id === presetId);
-    if (!preset) return false;
-
-    this.updateOptions({
-      sport: preset.sport,
-      template: preset.template,
-      overlay: {
-        ...this.options.overlay,
-        position: preset.position,
-        useLocalColors: !!(preset.backgroundColor || preset.scoreColor || preset.teamNameColor),
-        backgroundColor: preset.backgroundColor,
-        scoreColor: preset.scoreColor,
-        teamNameColor: preset.teamNameColor,
-      },
-    });
-
-    // Mettre à jour les périodes pour le sport du preset
-    const periods = SPORT_PERIODS[preset.sport];
-    this.updateOptions({
-      match: {
-        ...this.options.match,
-        period: periods[0],
-        periodIndex: 0,
-      },
-      timer: {
-        ...this.options.timer,
-        periodDuration: SPORT_PERIOD_DURATIONS[preset.sport],
-      },
-    });
-
-    console.log('[LocalOptions] Preset applied:', preset);
-    return true;
-  }
-
-  /**
-   * Supprime un preset
-   */
-  public deletePreset(presetId: string): void {
-    this.updateOptions({
-      presets: this.options.presets.filter(p => p.id !== presetId),
-    });
-    console.log('[LocalOptions] Preset deleted:', presetId);
-  }
-
-  /**
-   * Récupère tous les presets
-   */
-  public getPresets(): OverlayPreset[] {
-    return [...this.options.presets];
-  }
-
-  /**
-   * Génère un ID unique
-   */
-  private generateId(): string {
-    return 'preset_' + Date.now().toString(36) + Math.random().toString(36).substring(2, 9);
-  }
-
   private loadFromStorage(): LocalOptions {
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
       if (stored) {
-        const parsed = JSON.parse(stored);
+        const parsed = JSON.parse(stored) as Record<string, unknown>;
+        this.migrateV1ToV2(parsed);
         // Merge avec les valeurs par défaut pour gérer les nouvelles options
-        return this.deepMerge(DEFAULT_OPTIONS, parsed);
+        return this.deepMerge(DEFAULT_OPTIONS, parsed as Partial<LocalOptions>);
       }
     } catch (error) {
       console.warn('[LocalOptions] Failed to load from storage:', error);
     }
     return { ...DEFAULT_OPTIONS };
+  }
+
+  /**
+   * Migration des anciennes options v1 (sportif/elegant/minimal + couleurs + presets) vers v2 (broadcast/minimal)
+   */
+  private migrateV1ToV2(parsed: Record<string, unknown>): void {
+    // Migration template : sportif/elegant → broadcast
+    if (parsed['template'] === 'sportif' || parsed['template'] === 'elegant') {
+      parsed['template'] = 'broadcast';
+    }
+
+    // Migration overlay : supprimer les champs legacy
+    const overlay = parsed['overlay'] as Record<string, unknown> | undefined;
+    if (overlay) {
+      delete overlay['useLocalColors'];
+      delete overlay['backgroundColor'];
+      delete overlay['scoreColor'];
+      delete overlay['teamNameColor'];
+    }
+
+    // Migration breakingNews : forcer displayMode à scroll
+    const breakingNews = parsed['breakingNews'] as Record<string, unknown> | undefined;
+    if (breakingNews) {
+      breakingNews['displayMode'] = 'scroll';
+    }
+
+    // Supprimer les presets
+    delete parsed['presets'];
   }
 
   private saveToStorage(): void {
@@ -577,7 +486,8 @@ export class LocalOptionsService {
             targetValue as object,
             sourceValue as object
           );
-        } else if (sourceValue !== undefined) {
+        } else {
+          // Accepter toutes les valeurs, y compris undefined (pour effacer une prop)
           (result as Record<string, unknown>)[key] = sourceValue;
         }
       }

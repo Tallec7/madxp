@@ -10,6 +10,7 @@
 ### 🎉 Nouvelle fonctionnalité majeure
 
 Module complet d'analytics pour sponsors permettant :
+
 - Suivi précis des impressions vidéos sponsors
 - Dashboard analytics temps réel avec visualisations
 - Rapports PDF professionnels automatisés
@@ -22,6 +23,7 @@ Module complet d'analytics pour sponsors permettant :
 ### ✅ Ajouts
 
 **Backend - Service PDF** (`central-server/src/services/pdf-report.service.ts`)
+
 - Implémentation complète génération PDF professionnelle avec PDFKit
 - Support graphiques Chart.js rendus côté serveur (chartjs-node-canvas)
 - Structure 4 pages :
@@ -39,6 +41,7 @@ Module complet d'analytics pour sponsors permettant :
   - `formatDuration()` - Secondes → Xh Ymin
 
 **Documentation**
+
 - `docs/PDF_REPORTS_GUIDE.md` - Guide complet 400+ lignes
   - Architecture et flux de données
   - Description détaillée structure PDF 4 pages
@@ -56,6 +59,7 @@ Module complet d'analytics pour sponsors permettant :
   - État projet et conformité
 
 **Dépendances**
+
 - `pdfkit@^0.15.0` - Génération PDF
 - `chartjs-node-canvas@^4.1.6` - Rendu Chart.js serveur
 - `@types/pdfkit@^0.13.5` - Types TypeScript
@@ -63,11 +67,13 @@ Module complet d'analytics pour sponsors permettant :
 ### 🔧 Modifications
 
 **Backend - Routes** (`central-server/src/routes/sponsor-analytics.routes.ts`)
+
 - Fix appels `requireRole()` - changé de array vers rest parameters
 - Correction: `requireRole(['admin'])` → `requireRole('admin')`
 - Build TypeScript réussi sans erreurs
 
 **Documentation**
+
 - `docs/AVANCEMENT_ANALYTICS_SPONSORS.md` - Mise à jour 95% conformité
   - Ajout section PDF Graphiques (100% complété)
   - Mise à jour métriques conformité
@@ -85,6 +91,7 @@ Module complet d'analytics pour sponsors permettant :
 ```
 
 **Fichiers modifiés**:
+
 - `central-server/package.json` (+733 packages)
 - `central-server/src/services/pdf-report.service.ts` (785 lignes, complètement réécrit)
 - `central-server/src/routes/sponsor-analytics.routes.ts` (fixes requireRole)
@@ -97,7 +104,8 @@ Module complet d'analytics pour sponsors permettant :
 
 ### ✅ Ajouts
 
-**Frontend Raspberry - Service Tracking** (`raspberry/frontend/app/services/sponsor-analytics.service.ts`)
+**Frontend Raspberry - Service Tracking** (`raspberry/src/app/services/sponsor-analytics.service.ts`)
+
 - Nouveau service Angular standalone pour tracking impressions sponsors
 - Interface `SponsorImpression` complète avec tous les champs métier
 - Buffer local avec localStorage (clé: `neopro_sponsor_impressions`)
@@ -113,7 +121,8 @@ Module complet d'analytics pour sponsors permettant :
   - `setAudienceEstimate(estimate)`
   - `forceFlush()`
 
-**Frontend Raspberry - TV Component** (`raspberry/frontend/app/components/tv/tv.component.ts`)
+**Frontend Raspberry - TV Component** (`raspberry/src/app/components/tv/tv.component.ts`)
+
 - Injection `SponsorAnalyticsService`
 - Tracking automatique lecture vidéos sponsors (événements play/ended)
 - Distinction triggers auto/manual
@@ -124,6 +133,7 @@ Module complet d'analytics pour sponsors permettant :
 - Intégration avec analytics existant (pas de conflit)
 
 **Serveur Local** (`raspberry/server/server.js`)
+
 - Nouveau endpoint `POST /api/sync/sponsor-impressions`
   - Reçoit impressions depuis frontend Angular
   - Stockage JSON local: `~/neopro/data/sponsor_impressions.json`
@@ -134,6 +144,7 @@ Module complet d'analytics pour sponsors permettant :
 - Logs détaillés avec préfixe `[SponsorImpressions]`
 
 **Sync Agent - Collector** (`raspberry/sync-agent/src/sponsor-impressions.js`)
+
 - Nouveau module `SponsorImpressionsCollector` (196 lignes)
 - Méthodes :
   - `loadBuffer()` - Charge depuis fichier au démarrage
@@ -148,6 +159,7 @@ Module complet d'analytics pour sponsors permettant :
 - Auto-recovery : charge impressions pending au démarrage
 
 **Sync Agent - Intégration** (`raspberry/sync-agent/src/agent.js`)
+
 - Import et auto-start `sponsorImpressionsCollector`
 - Nouvelle méthode `startSponsorImpressionsSync()`
 - API publique :
@@ -156,6 +168,7 @@ Module complet d'analytics pour sponsors permettant :
 - Indépendant WebSocket (HTTP-based)
 
 **Documentation**
+
 - `docs/TRACKING_IMPRESSIONS_SPONSORS.md` - Guide complet 689 lignes
   - Architecture détaillée avec diagramme ASCII
   - Flux de données pour 3 scénarios (auto, manual, offline)
@@ -172,8 +185,9 @@ b7d3060 docs(sponsors): Week 2 complete - tracking + implementation guide (90% c
 ```
 
 **Fichiers modifiés**:
-- `raspberry/frontend/app/services/sponsor-analytics.service.ts` (nouveau, 309 lignes)
-- `raspberry/frontend/app/components/tv/tv.component.ts` (modifié)
+
+- `raspberry/src/app/services/sponsor-analytics.service.ts` (nouveau, 309 lignes)
+- `raspberry/src/app/components/tv/tv.component.ts` (modifié)
 - `raspberry/server/server.js` (+88 lignes pour endpoints)
 - `raspberry/sync-agent/src/sponsor-impressions.js` (nouveau, 196 lignes)
 - `raspberry/sync-agent/src/agent.js` (intégration)
@@ -187,6 +201,7 @@ b7d3060 docs(sponsors): Week 2 complete - tracking + implementation guide (90% c
 ### ✅ Ajouts
 
 **Backend - Base de données** (`central-server/src/scripts/sponsor-analytics-tables.sql`)
+
 - 4 nouvelles tables :
   - `sponsors` - Informations sponsors
   - `sponsor_videos` - Association many-to-many sponsors ↔ vidéos
@@ -201,6 +216,7 @@ b7d3060 docs(sponsors): Week 2 complete - tracking + implementation guide (90% c
   - `get_sponsor_impressions_by_period(sponsor_id, from, to)` - Requête optimisée
 
 **Backend - API REST** (`central-server/src/controllers/sponsor-analytics.controller.ts`)
+
 - 12 endpoints opérationnels :
   - **CRUD** : GET/POST/PUT/DELETE `/api/sponsors`
   - **Associations** : POST/DELETE `/api/sponsors/:id/videos`
@@ -216,6 +232,7 @@ b7d3060 docs(sponsors): Week 2 complete - tracking + implementation guide (90% c
     - POST `/api/sponsors/calculate-daily-stats` - Calcul stats (cron)
 
 **Backend - Service PDF** (`central-server/src/services/pdf-report.service.ts`)
+
 - Structure complète (phase 1)
 - Agrégation données depuis PostgreSQL
 - Placeholder PDF fonctionnel
@@ -224,6 +241,7 @@ b7d3060 docs(sponsors): Week 2 complete - tracking + implementation guide (90% c
 **Frontend Dashboard** (`central-dashboard/src/app/features/sponsors/`)
 
 **Composant Liste** (`sponsors-list.component.ts`)
+
 - Interface CRUD complète
 - Recherche et filtres (nom, statut)
 - Modal création/édition sponsor
@@ -232,6 +250,7 @@ b7d3060 docs(sponsors): Week 2 complete - tracking + implementation guide (90% c
 - Actions : Voir détails, Éditer, Supprimer
 
 **Composant Détail** (`sponsor-detail.component.ts`)
+
 - Navigation tabs (Informations, Vidéos, Analytics)
 - Onglet Informations : tous les champs sponsor
 - Modal édition avec formulaire réactif
@@ -240,6 +259,7 @@ b7d3060 docs(sponsors): Week 2 complete - tracking + implementation guide (90% c
 - Liste vidéos associées avec stats rapides
 
 **Composant Analytics** (`sponsor-analytics.component.ts`)
+
 - 6 KPIs cards :
   - Impressions totales
   - Temps d'écran total
@@ -259,6 +279,7 @@ b7d3060 docs(sponsors): Week 2 complete - tracking + implementation guide (90% c
 - Bouton téléchargement PDF
 
 **Composant Vidéos** (`sponsor-videos.component.ts`)
+
 - Liste vidéos associées avec drag & drop
 - Réorganisation priorité par glisser-déposer
 - Modal ajout vidéos avec recherche
@@ -268,6 +289,7 @@ b7d3060 docs(sponsors): Week 2 complete - tracking + implementation guide (90% c
 - Affichage métadonnées vidéo
 
 **Configuration Angular**
+
 - Routes ajoutées dans `app.routes.ts` :
   - `/sponsors` - Liste
   - `/sponsors/:id` - Détail
@@ -287,6 +309,7 @@ d6c71e0 docs(sponsors): update progress tracking - Week 1 complete (80% conformi
 ```
 
 **Fichiers ajoutés**:
+
 - Backend : 3 fichiers (controller, routes, service)
 - Frontend : 4 composants Angular
 - Documentation : 2 guides (implementation, avancement)
@@ -297,18 +320,21 @@ d6c71e0 docs(sponsors): update progress tracking - Week 1 complete (80% conformi
 ## Impact Business (BP §13.6)
 
 ### Pour NEOPRO
+
 - ✅ Différenciateur majeur vs concurrence
 - ✅ Upsell analytics premium : +10-25€/mois/club
 - ✅ Augmentation ARPU estimée : +30%
 - ✅ Amélioration taux conversion sponsors : +50%
 
 ### Pour les Clubs
+
 - ✅ Justification tarifs sponsors avec données réelles
 - ✅ Facilitation renouvellement contrats (preuve valeur)
 - ✅ Attractivité nouveaux sponsors (dossiers professionnels)
 - ✅ Optimisation mix sponsor/contenu
 
 ### Pour les Sponsors
+
 - ✅ ROI mesurable et transparent
 - ✅ Optimisation créatives (data-driven)
 - ✅ Transparence totale sur diffusion
@@ -321,6 +347,7 @@ d6c71e0 docs(sponsors): update progress tracking - Week 1 complete (80% conformi
 ### Tests manuels effectués
 
 **Semaine 1** :
+
 - ✅ CRUD sponsors via API REST (Postman)
 - ✅ Association vidéos sponsors
 - ✅ Affichage dashboard Angular
@@ -328,6 +355,7 @@ d6c71e0 docs(sponsors): update progress tracking - Week 1 complete (80% conformi
 - ✅ Export CSV fonctionnel
 
 **Semaine 2** :
+
 - ✅ Tracking impression depuis TV component
 - ✅ Buffer localStorage persistant
 - ✅ Auto-flush après 50 impressions
@@ -335,6 +363,7 @@ d6c71e0 docs(sponsors): update progress tracking - Week 1 complete (80% conformi
 - ✅ Sync agent pickup et forward central
 
 **Semaine 3** :
+
 - ✅ Build TypeScript sans erreurs
 - ✅ Génération PDF structure 4 pages
 - ✅ Rendu graphiques Chart.js → PNG
@@ -343,6 +372,7 @@ d6c71e0 docs(sponsors): update progress tracking - Week 1 complete (80% conformi
 ### Tests automatisés (à implémenter)
 
 Phase 4 (optionnel) :
+
 - [ ] Tests unitaires service PDF (Jest)
 - [ ] Tests intégration API endpoints
 - [ ] Tests e2e dashboard Angular (Cypress)
@@ -353,12 +383,14 @@ Phase 4 (optionnel) :
 ## Prochaines étapes
 
 ### Phase 4 - Tests & Optimisations (Optionnel, 2-3 jours)
+
 1. Tests unitaires service PDF (Jest)
 2. Tests d'intégration endpoint `/api/sponsors/:id/report`
 3. Optimisation performances (cache graphiques Redis)
 4. Génération asynchrone avec queue (Bull/BullMQ)
 
 ### Phase 5 - Améliorations Enterprise (Optionnel, 1-2 semaines)
+
 1. Support logos personnalisés (upload sponsor/club)
 2. Multi-sponsors (rapports comparatifs)
 3. Templates personnalisables par club
@@ -370,17 +402,20 @@ Phase 4 (optionnel) :
 ## Notes techniques
 
 ### Dépendances principales
+
 - **Backend** : PostgreSQL, Express, PDFKit, chartjs-node-canvas
 - **Frontend** : Angular 20, Chart.js v4, RxJS
 - **Infrastructure** : Render.com, Supabase
 
 ### Performance
+
 - Génération PDF simple : ~100ms
 - Génération PDF avec graphiques : ~500ms
 - Taille PDF typique : 50-150 KB
 - Limite recommandée : 1000 rapports/jour
 
 ### Sécurité
+
 - ✅ Authentification JWT sur tous endpoints
 - ✅ Validation stricte paramètres dates
 - ✅ Rate limiting : 10 rapports/min/user

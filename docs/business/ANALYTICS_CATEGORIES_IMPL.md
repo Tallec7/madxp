@@ -52,12 +52,12 @@ Permettre à l'admin central d'associer chaque catégorie de vidéos d'un site (
 | `central-dashboard/src/app/features/sites/config-editor/config-editor.component.ts` | ✅ Section mapping analytics dans l'éditeur                   |
 | `central-dashboard/src/app/features/layout/layout.component.ts`                     | ✅ Lien sidebar vers admin analytics                          |
 | `central-dashboard/src/app/app.routes.ts`                                           | ✅ Route `/admin/analytics-categories`                        |
-| `raspberry/frontend/app/interfaces/configuration.interface.ts`                      | ✅ Ajout `categoryMappings`                                   |
-| `raspberry/frontend/app/interfaces/video.interface.ts`                              | ✅ Ajout `categoryId`                                         |
-| `raspberry/frontend/app/app.routes.ts`                                              | ✅ Fonction `enrichVideosWithCategoryId()`                    |
-| `raspberry/frontend/app/services/analytics.service.ts`                              | ✅ `setConfiguration()` et détection via mapping              |
-| `raspberry/frontend/app/components/tv/tv.component.ts`                              | ✅ Appel `analyticsService.setConfiguration()`                |
-| `raspberry/frontend/app/components/remote/remote.component.ts`                      | ✅ Enrichissement vidéos + setConfiguration                   |
+| `raspberry/src/app/interfaces/configuration.interface.ts`                           | ✅ Ajout `categoryMappings`                                   |
+| `raspberry/src/app/interfaces/video.interface.ts`                                   | ✅ Ajout `categoryId`                                         |
+| `raspberry/src/app/app.routes.ts`                                                   | ✅ Fonction `enrichVideosWithCategoryId()`                    |
+| `raspberry/src/app/services/analytics.service.ts`                                   | ✅ `setConfiguration()` et détection via mapping              |
+| `raspberry/src/app/components/tv/tv.component.ts`                                   | ✅ Appel `analyticsService.setConfiguration()`                |
+| `raspberry/src/app/components/remote/remote.component.ts`                           | ✅ Enrichissement vidéos + setConfiguration                   |
 
 ---
 

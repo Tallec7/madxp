@@ -7,6 +7,10 @@
 # channel interference in crowded WiFi environments.
 #
 # Channels analyzed: 1, 6, 11 (non-overlapping 2.4GHz channels)
+#
+# Anti-interference: avoids placing hotspot on the same channel as wlan1
+# (internet connection), preventing the hotspot from drowning out the
+# weak upstream signal from the router.
 # =============================================================================
 
 LOG_FILE="/var/log/neopro-hotspot-optimizer.log"
@@ -18,6 +22,24 @@ CONGESTION_THRESHOLD=3
 
 log() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" | tee -a "$LOG_FILE"
+}
+
+# Detect the channel wlan1 (internet) is currently connected to
+# Returns empty string if wlan1 is not connected
+get_wlan1_channel() {
+    local freq
+    freq=$(iw dev wlan1 link 2>/dev/null | grep -oP 'freq: \K[0-9]+')
+    if [ -n "$freq" ]; then
+        # Convert frequency to channel number (2.4GHz band)
+        case "$freq" in
+            2412) echo 1 ;; 2417) echo 2 ;; 2422) echo 3 ;;
+            2427) echo 4 ;; 2432) echo 5 ;; 2437) echo 6 ;;
+            2442) echo 7 ;; 2447) echo 8 ;; 2452) echo 9 ;;
+            2457) echo 10 ;; 2462) echo 11 ;; 2467) echo 12 ;;
+            2472) echo 13 ;;
+            *) echo "" ;;
+        esac
+    fi
 }
 
 # Count networks on a specific channel
@@ -37,14 +59,34 @@ get_current_channel() {
 # Set hostapd channel
 set_channel() {
     local new_channel=$1
+    # Validate channel is a number (1, 6, or 11) to prevent sed injection from corrupted input
+    if ! [[ "$new_channel" =~ ^(1|6|11)$ ]]; then
+        log "ERROR: Invalid channel value '$new_channel', aborting channel change"
+        return 1
+    fi
     log "Setting hotspot channel to $new_channel"
     sed -i "s/^channel=.*/channel=$new_channel/" "$HOSTAPD_CONF"
 }
 
 # Find the least congested channel among 1, 6, 11
+# Penalizes the channel used by wlan1 (internet) to avoid co-channel interference.
+# Sets BEST_CHANNEL variable (not stdout) to avoid $() capture pollution
 find_best_channel() {
-    local best_channel=6
-    local min_networks=999
+    BEST_CHANNEL=6
+    local min_score=999
+
+    # Detect wlan1 channel to avoid self-interference
+    local wlan1_channel
+    wlan1_channel=$(get_wlan1_channel)
+    if [ -n "$wlan1_channel" ]; then
+        log "wlan1 (internet) is on channel $wlan1_channel — will avoid it"
+    else
+        log "wlan1 channel not detected (not connected or 5GHz)"
+    fi
+
+    # Heavy penalty: co-channel with wlan1 adds 100 to the score
+    # so it's only chosen if all other channels are impossibly congested
+    local SELF_INTERFERENCE_PENALTY=100
 
     for channel in 1 6 11; do
         local count=$(count_networks_on_channel "$channel")
@@ -52,13 +94,24 @@ find_best_channel() {
         # stdout is captured by $(find_best_channel), so log() would pollute the return value
         echo "[$(date '+%Y-%m-%d %H:%M:%S')] Channel $channel: $count networks detected" >> "$LOG_FILE"
 
-        if [ "$count" -lt "$min_networks" ]; then
-            min_networks=$count
-            best_channel=$channel
+        # Ensure count is a valid number, default to 0
+        if ! [[ "$count" =~ ^[0-9]+$ ]]; then
+            count=0
+        fi
+
+        local score=$count
+        if [ -n "$wlan1_channel" ] && [ "$channel" = "$wlan1_channel" ]; then
+            score=$((score + SELF_INTERFERENCE_PENALTY))
+            log "Channel $channel: $count networks + self-interference penalty (wlan1) → score $score"
+        else
+            log "Channel $channel: $count networks → score $score"
+        fi
+
+        if [ "$score" -lt "$min_score" ]; then
+            min_score=$score
+            BEST_CHANNEL=$channel
         fi
     done
-
-    echo "$best_channel"
 }
 
 # Main
@@ -91,15 +144,28 @@ main() {
     iwlist "$WIFI_INTERFACE" scan > /dev/null 2>&1
     sleep 1
 
+    # Detect wlan1 channel for self-interference check
+    wlan1_ch=$(get_wlan1_channel)
+
     # Count networks on current channel
     current_count=$(count_networks_on_channel "$current_channel")
     log "Networks on current channel $current_channel: $current_count"
 
-    # If current channel is congested, find a better one
+    # Determine if we need to optimize:
+    # 1. Channel is congested (too many networks)
+    # 2. Self-interference: hotspot is on the same channel as wlan1 (internet)
+    local needs_optimization=false
     if [ "$current_count" -ge "$CONGESTION_THRESHOLD" ]; then
         log "Channel $current_channel is congested (>= $CONGESTION_THRESHOLD networks)"
+        needs_optimization=true
+    elif [ -n "$wlan1_ch" ] && [ "$current_channel" = "$wlan1_ch" ]; then
+        log "Channel $current_channel conflicts with wlan1 (internet) — self-interference risk"
+        needs_optimization=true
+    fi
 
-        best_channel=$(find_best_channel)
+    if [ "$needs_optimization" = true ]; then
+        find_best_channel
+        best_channel=$BEST_CHANNEL
 
         if [ "$best_channel" != "$current_channel" ]; then
             log "Switching from channel $current_channel to $best_channel"
@@ -146,7 +212,11 @@ main() {
             log "Current channel $current_channel is already the best option"
         fi
     else
-        log "Channel $current_channel is OK ($current_count < $CONGESTION_THRESHOLD networks)"
+        if [ -n "$wlan1_ch" ]; then
+            log "Channel $current_channel is OK ($current_count < $CONGESTION_THRESHOLD networks, no wlan1 conflict)"
+        else
+            log "Channel $current_channel is OK ($current_count < $CONGESTION_THRESHOLD networks)"
+        fi
     fi
 
     log "Hotspot optimizer completed"

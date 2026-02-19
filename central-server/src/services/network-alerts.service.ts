@@ -19,7 +19,7 @@
 import cron, { ScheduledTask } from 'node-cron';
 import { query } from '../config/database';
 import logger from '../config/logger';
-import { alertService } from './alert.service';
+
 
 interface SiteNetworkRisk {
   [key: string]: unknown;  // Index signature for QueryResultRow compatibility

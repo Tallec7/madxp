@@ -1,3 +1,5 @@
+// @ts-check
+
 /**
  * Module de fusion intelligente de configuration NEOPRO
  *
@@ -21,6 +23,7 @@ const LOCAL_ONLY_SETTINGS = [
   'apiKey',          // Clé API du boîtier
   'hotspot',         // Configuration WiFi hotspot (SSID, etc.) - si jamais stocké ici
   'localNetwork',    // Configuration réseau locale
+  'localSponsors',   // Sponsors créés localement par le bénévole (P3)
 ];
 
 /**
@@ -129,10 +132,27 @@ function mergeConfigurations(localConfig, neoProContent) {
   }
 
   // ========================================================================
+  // SITE SPONSORS (métadonnées sponsors depuis le dashboard central)
+  // Synchronise les sponsors du central vers localSponsors[] du Pi
+  // ========================================================================
+  if (neoProContent.siteSponsors !== undefined) {
+    result.localSponsors = mergeSiteSponsors(
+      localConfig.localSponsors || [],
+      neoProContent.siteSponsors || []
+    );
+    logger.info(`[config-merge] Site sponsors synchronisés: ${result.localSponsors.length} sponsors`);
+  }
+
+  // ========================================================================
   // RESTAURATION DES PARAMÈTRES LOCAUX PROTÉGÉS
   // On s'assure que les paramètres locaux ne sont jamais perdus
+  // (sauf localSponsors qui est maintenant géré par mergeSiteSponsors)
   // ========================================================================
   for (const [key, value] of Object.entries(preservedLocalSettings)) {
+    // localSponsors est désormais fusionné via mergeSiteSponsors, ne pas écraser
+    if (key === 'localSponsors' && neoProContent.siteSponsors !== undefined) {
+      continue;
+    }
     if (result[key] !== value) {
       logger.info(`[config-merge] Paramètre local préservé: ${key}`);
     }
@@ -224,17 +244,33 @@ function mergeCategories(localCategories, centralCategories) {
       logger.debug(`[config-merge] Catégorie NEOPRO ajoutée/mise à jour: ${centralCat.id}`);
     } else {
       // Catégorie Club envoyée par le central (modifiée via dashboard)
-      // Utiliser la version du central qui contient les modifications
-      result.push({
-        ...centralCat,
-        locked: false,
-        owner: centralCat.owner || 'club',
-      });
-      processedIds.add(centralCat.id);
-      if (localCat) {
-        logger.info(`[config-merge] Catégorie Club mise à jour depuis le central: ${centralCat.id} (${centralCat.name})`);
+      // Si la catégorie existe localement avec du contenu et que le central
+      // l'envoie vide, préserver la version locale (le club ne doit pas perdre ses vidéos)
+      const localHasVideos = localCat && (localCat.videos || []).length > 0;
+      const centralHasNoVideos = !centralCat.videos || centralCat.videos.length === 0;
+
+      if (localCat && localHasVideos && centralHasNoVideos) {
+        // Préserver la version locale qui contient du contenu
+        result.push({
+          ...localCat,
+          locked: false,
+          owner: localCat.owner || 'club',
+        });
+        processedIds.add(centralCat.id);
+        logger.info(`[config-merge] Catégorie Club locale préservée (central vide): ${centralCat.id} (${centralCat.name})`);
       } else {
-        logger.debug(`[config-merge] Nouvelle catégorie Club ajoutée: ${centralCat.id}`);
+        // Utiliser la version du central qui contient les modifications
+        result.push({
+          ...centralCat,
+          locked: false,
+          owner: centralCat.owner || 'club',
+        });
+        processedIds.add(centralCat.id);
+        if (localCat) {
+          logger.info(`[config-merge] Catégorie Club mise à jour depuis le central: ${centralCat.id} (${centralCat.name})`);
+        } else {
+          logger.debug(`[config-merge] Nouvelle catégorie Club ajoutée: ${centralCat.id}`);
+        }
       }
     }
   }
@@ -368,10 +404,111 @@ function calculateConfigHash(config) {
   return crypto.createHash('sha256').update(content).digest('hex').substring(0, 16);
 }
 
+/**
+ * Fusionne les sponsors du dashboard central avec les sponsors locaux du Pi.
+ *
+ * - Les sponsors central sont ajoutés/mis à jour dans localSponsors (avec centralId)
+ * - Les sponsors purement locaux (sans centralId) sont préservés
+ * - Dédoublonne par centralId ET par nom (case-insensitive)
+ *
+ * @param {Array} localSponsors - Sponsors locaux existants sur le Pi
+ * @param {Array} centralSponsors - Sponsors envoyés par le dashboard central
+ * @returns {Array} Sponsors fusionnés
+ */
+function mergeSiteSponsors(localSponsors, centralSponsors) {
+  const result = [];
+  const processedCentralIds = new Set();
+  const processedNames = new Set();
+
+  // 1. Mettre à jour / ajouter les sponsors du central
+  for (const central of centralSponsors) {
+    // Chercher un sponsor local existant lié à ce centralId
+    const existingByCentralId = localSponsors.find(
+      s => s.centralId && s.centralId === central.id
+    );
+
+    // Ou chercher par nom (case-insensitive) pour les sponsors créés localement
+    // qui correspondent à un sponsor central
+    const existingByName = !existingByCentralId
+      ? localSponsors.find(
+          s => !s.centralId && s.name.toLowerCase().trim() === central.name.toLowerCase().trim()
+        )
+      : null;
+
+    const existing = existingByCentralId || existingByName;
+
+    if (existing) {
+      // Mettre à jour le sponsor existant avec les données du central
+      // Source héritée du central : 'neopro' si annonceur réseau, sinon préserver la source locale
+      const effectiveSource = central.source === 'neopro' ? 'neopro' : (existing.source || 'local');
+      result.push({
+        ...existing,
+        centralId: central.id,
+        name: central.name,
+        contactEmail: central.contactEmail || existing.contactEmail || '',
+        contactPhone: central.contactPhone || existing.contactPhone || '',
+        videoFilenames: mergeVideoFilenames(existing.videoFilenames || [], central.videoFilenames || []),
+        isActive: central.isActive !== undefined ? central.isActive : existing.isActive,
+        source: effectiveSource,
+        syncedAt: new Date().toISOString(),
+      });
+      processedCentralIds.add(central.id);
+      processedNames.add(central.name.toLowerCase().trim());
+      if (existing.localId) {
+        logger.debug(`[config-merge] Sponsor local mis à jour depuis central: ${central.name} (${central.id})`);
+      }
+    } else {
+      // Nouveau sponsor depuis le central — créer une entrée locale
+      const localId = `ls_central_${Date.now()}_${central.id.substring(0, 8)}`;
+      result.push({
+        localId,
+        centralId: central.id,
+        name: central.name,
+        contactEmail: central.contactEmail || '',
+        contactPhone: central.contactPhone || '',
+        videoFilenames: central.videoFilenames || [],
+        isActive: central.isActive !== undefined ? central.isActive : true,
+        source: central.source || 'neopro',
+        createdAt: new Date().toISOString(),
+        syncedAt: new Date().toISOString(),
+      });
+      processedCentralIds.add(central.id);
+      processedNames.add(central.name.toLowerCase().trim());
+      logger.info(`[config-merge] Nouveau sponsor depuis central: ${central.name} (${central.id})`);
+    }
+  }
+
+  // 2. Préserver les sponsors purement locaux (non présents dans le central)
+  for (const local of localSponsors) {
+    if (local.centralId && processedCentralIds.has(local.centralId)) {
+      continue; // Déjà traité
+    }
+    if (!local.centralId && processedNames.has(local.name.toLowerCase().trim())) {
+      continue; // Déjà fusionné par nom
+    }
+    result.push(local);
+    logger.debug(`[config-merge] Sponsor local préservé: ${local.name} (${local.localId})`);
+  }
+
+  return result;
+}
+
+/**
+ * Fusionne les listes de noms de fichiers vidéo (union des deux listes)
+ * @param {string[]} localFilenames
+ * @param {string[]} centralFilenames
+ * @returns {string[]}
+ */
+function mergeVideoFilenames(localFilenames, centralFilenames) {
+  const set = new Set([...localFilenames, ...centralFilenames]);
+  return [...set];
+}
+
 module.exports = {
   mergeConfigurations,
   mergeSponsors,
   mergeCategories,
+  mergeSiteSponsors,
   cleanExpiredVideos,
   isLocked,
   hasLockedContent,

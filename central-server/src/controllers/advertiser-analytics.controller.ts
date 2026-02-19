@@ -1,57 +1,15 @@
 import { Response } from 'express';
-import { query } from '../config/database';
 import { AuthRequest } from '../types';
 import { SiteAuthRequest } from '../middleware/auth';
 import logger from '../config/logger';
 import { validate as validateUuid } from 'uuid';
 import { generateAdvertiserReport, generateClubReport } from '../services/pdf-report.service';
-
-// ============================================================================
-// TYPE DEFINITIONS
-// ============================================================================
-
-type QueryRow = Record<string, unknown>;
-
-interface AdvertiserRow extends QueryRow {
-  id: string;
-  name: string;
-  logo_url: string | null;
-  contact_email: string | null;
-  status: string;
-}
-
-interface AdvertiserVideoRow extends QueryRow {
-  video_id: string;
-  video_name: string;
-  impressions: string;
-  screen_time_seconds: string;
-  completion_rate: string;
-}
-
-interface AdvertiserSiteRow extends QueryRow {
-  site_id: string;
-  site_name: string;
-  club_name: string;
-  impressions: string;
-  screen_time_seconds: string;
-}
-
-interface ImpressionRow extends QueryRow {
-  id: string;
-  video_id: string;
-  site_id: string;
-  played_at: string;
-  duration_played: number;
-  completed: boolean;
-  event_type: string | null;
-  period: string | null;
-}
-
-interface DailyTrendRow extends QueryRow {
-  date: string;
-  impressions: string;
-  screen_time: string;
-}
+import {
+  advertiserRepository,
+  type ImpressionBatchItem,
+} from '../repositories';
+import { siteSponsorRepository } from '../repositories/site-sponsor.repository';
+import metricsService from '../services/metrics.service';
 
 // ============================================================================
 // ADVERTISER CRUD
@@ -63,17 +21,13 @@ interface DailyTrendRow extends QueryRow {
  */
 export const listAdvertisers = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const result = await query<AdvertiserRow>(
-      `SELECT id, name, logo_url, contact_email, contact_name, contact_phone, status, created_at
-       FROM advertisers
-       ORDER BY name ASC`
-    );
+    const advertisers = await advertiserRepository.listAll();
 
     res.json({
       success: true,
       data: {
-        advertisers: result.rows,
-        total: result.rowCount || 0,
+        advertisers,
+        total: advertisers.length,
       },
     });
   } catch (error) {
@@ -101,14 +55,9 @@ export const getAdvertiser = async (req: AuthRequest, res: Response): Promise<vo
       return;
     }
 
-    const result = await query<AdvertiserRow>(
-      `SELECT id, name, logo_url, contact_email, contact_name, contact_phone, status, metadata, created_at, updated_at
-       FROM advertisers
-       WHERE id = $1`,
-      [id]
-    );
+    const advertiser = await advertiserRepository.findByIdFull(id);
 
-    if (result.rowCount === 0) {
+    if (!advertiser) {
       res.status(404).json({
         success: false,
         error: 'Advertiser not found',
@@ -118,7 +67,7 @@ export const getAdvertiser = async (req: AuthRequest, res: Response): Promise<vo
 
     res.json({
       success: true,
-      data: { advertiser: result.rows[0] },
+      data: { advertiser },
     });
   } catch (error) {
     logger.error('Error getting advertiser:', error);
@@ -145,16 +94,18 @@ export const createAdvertiser = async (req: AuthRequest, res: Response): Promise
       return;
     }
 
-    const result = await query<AdvertiserRow>(
-      `INSERT INTO advertisers (name, logo_url, contact_email, contact_name, contact_phone, metadata)
-       VALUES ($1, $2, $3, $4, $5, $6)
-       RETURNING *`,
-      [name, logo_url || null, contact_email || null, contact_name || null, contact_phone || null, metadata || {}]
-    );
+    const advertiser = await advertiserRepository.create({
+      name,
+      logoUrl: logo_url || null,
+      contactEmail: contact_email || null,
+      contactName: contact_name || null,
+      contactPhone: contact_phone || null,
+      metadata: metadata || null,
+    });
 
     res.status(201).json({
       success: true,
-      data: { advertiser: result.rows[0] },
+      data: { advertiser },
     });
   } catch (error) {
     logger.error('Error creating advertiser:', error);
@@ -182,22 +133,17 @@ export const updateAdvertiser = async (req: AuthRequest, res: Response): Promise
       return;
     }
 
-    const result = await query<AdvertiserRow>(
-      `UPDATE advertisers
-       SET name = COALESCE($1, name),
-           logo_url = COALESCE($2, logo_url),
-           contact_email = COALESCE($3, contact_email),
-           contact_name = COALESCE($4, contact_name),
-           contact_phone = COALESCE($5, contact_phone),
-           status = COALESCE($6, status),
-           metadata = COALESCE($7, metadata),
-           updated_at = NOW()
-       WHERE id = $8
-       RETURNING *`,
-      [name, logo_url, contact_email, contact_name, contact_phone, status, metadata, id]
-    );
+    const advertiser = await advertiserRepository.update(id, {
+      name,
+      logoUrl: logo_url,
+      contactEmail: contact_email,
+      contactName: contact_name,
+      contactPhone: contact_phone,
+      status,
+      metadata,
+    });
 
-    if (result.rowCount === 0) {
+    if (!advertiser) {
       res.status(404).json({
         success: false,
         error: 'Advertiser not found',
@@ -207,7 +153,7 @@ export const updateAdvertiser = async (req: AuthRequest, res: Response): Promise
 
     res.json({
       success: true,
-      data: { advertiser: result.rows[0] },
+      data: { advertiser },
     });
   } catch (error) {
     logger.error('Error updating advertiser:', error);
@@ -234,9 +180,9 @@ export const deleteAdvertiser = async (req: AuthRequest, res: Response): Promise
       return;
     }
 
-    const result = await query(`DELETE FROM advertisers WHERE id = $1`, [id]);
+    const deleted = await advertiserRepository.delete(id);
 
-    if (result.rowCount === 0) {
+    if (!deleted) {
       res.status(404).json({
         success: false,
         error: 'Advertiser not found',
@@ -287,8 +233,8 @@ export const addVideosToAdvertiser = async (req: AuthRequest, res: Response): Pr
     }
 
     // Vérifier que l'annonceur existe
-    const advertiserCheck = await query<AdvertiserRow>(`SELECT id FROM advertisers WHERE id = $1`, [id]);
-    if (advertiserCheck.rowCount === 0) {
+    const exists = await advertiserRepository.exists(id);
+    if (!exists) {
       res.status(404).json({
         success: false,
         error: 'Advertiser not found',
@@ -297,18 +243,7 @@ export const addVideosToAdvertiser = async (req: AuthRequest, res: Response): Pr
     }
 
     // Insérer les associations
-    const values = video_ids
-      .map((vid, idx) => `($1, $${idx + 2}, $${video_ids.length + 2})`)
-      .join(', ');
-    const params = [id, ...video_ids, is_primary];
-
-    await query(
-      `INSERT INTO advertiser_videos (advertiser_id, video_id, is_primary)
-       VALUES ${values}
-       ON CONFLICT (advertiser_id, video_id) DO UPDATE
-       SET is_primary = EXCLUDED.is_primary`,
-      params
-    );
+    await advertiserRepository.addVideos(id, video_ids as string[], is_primary as boolean);
 
     res.status(201).json({
       success: true,
@@ -339,12 +274,9 @@ export const removeVideoFromAdvertiser = async (req: AuthRequest, res: Response)
       return;
     }
 
-    const result = await query(
-      `DELETE FROM advertiser_videos WHERE advertiser_id = $1 AND video_id = $2`,
-      [id, videoId]
-    );
+    const removed = await advertiserRepository.removeVideo(id, videoId);
 
-    if (result.rowCount === 0) {
+    if (!removed) {
       res.status(404).json({
         success: false,
         error: 'Association not found',
@@ -381,26 +313,11 @@ export const getAdvertiserVideos = async (req: AuthRequest, res: Response): Prom
       return;
     }
 
-    const result = await query(
-      `SELECT
-        av.video_id,
-        av.is_primary,
-        av.added_at,
-        v.filename,
-        v.original_name,
-        v.duration,
-        v.thumbnail_url,
-        v.file_size
-       FROM advertiser_videos av
-       JOIN videos v ON v.id = av.video_id
-       WHERE av.advertiser_id = $1
-       ORDER BY av.added_at DESC`,
-      [id]
-    );
+    const videos = await advertiserRepository.getVideos(id);
 
     res.json({
       success: true,
-      data: { videos: result.rows },
+      data: { videos },
     });
   } catch (error) {
     logger.error('Error getting advertiser videos:', error);
@@ -432,11 +349,7 @@ export const getAdvertiserStats = async (req: AuthRequest, res: Response): Promi
       return;
     }
 
-    const advertiserResult = await query<{ name: string }>(
-      'SELECT name FROM advertisers WHERE id = $1',
-      [id]
-    );
-    const advertiserName = advertiserResult.rows[0]?.name || null;
+    const advertiserName = await advertiserRepository.findName(id);
 
     if (!advertiserName) {
       res.status(404).json({
@@ -451,12 +364,9 @@ export const getAdvertiserStats = async (req: AuthRequest, res: Response): Promi
     const toDate = (to as string) || new Date().toISOString().split('T')[0];
 
     // Récupérer les vidéos de l'annonceur
-    const videosResult = await query(
-      `SELECT video_id FROM advertiser_videos WHERE advertiser_id = $1`,
-      [id]
-    );
+    const videoIds = await advertiserRepository.getVideoIds(id);
 
-    if (videosResult.rowCount === 0) {
+    if (videoIds.length === 0) {
       res.json({
         success: true,
         data: {
@@ -481,116 +391,29 @@ export const getAdvertiserStats = async (req: AuthRequest, res: Response): Promi
       return;
     }
 
-    const videoIds = videosResult.rows.map(r => r.video_id);
+    // Récupérer toutes les stats en parallèle
+    const [summary, byVideoRows, bySiteRows, byPeriodRows, byEventRows, dailyTrendRows] = await Promise.all([
+      advertiserRepository.getStatsSummary(videoIds, fromDate, toDate),
+      advertiserRepository.getStatsByVideo(videoIds, fromDate, toDate),
+      advertiserRepository.getStatsBySite(videoIds, fromDate, toDate),
+      advertiserRepository.getStatsByPeriod(videoIds, fromDate, toDate),
+      advertiserRepository.getStatsByEventType(videoIds, fromDate, toDate),
+      advertiserRepository.getDailyTrends(videoIds, fromDate, toDate),
+    ]);
 
-    // Métriques globales
-    const summaryResult = await query(
-      `SELECT
-        COUNT(*) as total_impressions,
-        SUM(duration_played) as total_screen_time_seconds,
-        ROUND(AVG(CASE WHEN completed THEN 100 ELSE (duration_played::float / NULLIF(video_duration, 0) * 100) END)::numeric, 1) as completion_rate,
-        SUM(audience_estimate) as estimated_reach,
-        COUNT(DISTINCT site_id) as active_sites,
-        COUNT(DISTINCT DATE(played_at)) as active_days
-       FROM advertiser_impressions
-       WHERE video_id = ANY($1::uuid[])
-         AND played_at >= $2::date
-         AND played_at < ($3::date + INTERVAL '1 day')`,
-      [videoIds, fromDate, toDate]
-    );
-
-    const summary = summaryResult.rows[0];
-    const totalImpressions = parseInt(summary.total_impressions as string) || 0;
-    const totalScreenTime = parseInt(summary.total_screen_time_seconds as string) || 0;
+    const totalImpressions = parseInt(summary.total_impressions) || 0;
+    const totalScreenTime = parseInt(summary.total_screen_time_seconds) || 0;
     const avgDailyImpressions = totalImpressions / Math.max(1, Math.ceil((new Date(toDate).getTime() - new Date(fromDate).getTime()) / (24 * 60 * 60 * 1000)));
 
-    // Par vidéo
-    const byVideoResult = await query<AdvertiserVideoRow>(
-      `SELECT
-        v.id as video_id,
-        v.filename as video_name,
-        COUNT(*) as impressions,
-        SUM(ai.duration_played) as screen_time_seconds,
-        ROUND(AVG(CASE WHEN ai.completed THEN 100 ELSE (ai.duration_played::float / NULLIF(ai.video_duration, 0) * 100) END)::numeric, 1) as completion_rate
-       FROM videos v
-       JOIN advertiser_impressions ai ON ai.video_id = v.id
-       WHERE v.id = ANY($1::uuid[])
-         AND ai.played_at >= $2::date
-         AND ai.played_at < ($3::date + INTERVAL '1 day')
-       GROUP BY v.id, v.filename
-       ORDER BY impressions DESC`,
-      [videoIds, fromDate, toDate]
-    );
-
-    // Par site
-    const bySiteResult = await query<AdvertiserSiteRow>(
-      `SELECT
-        s.id as site_id,
-        s.site_name,
-        s.club_name,
-        COUNT(*) as impressions,
-        SUM(ai.duration_played) as screen_time_seconds
-       FROM sites s
-       JOIN advertiser_impressions ai ON ai.site_id = s.id
-       WHERE ai.video_id = ANY($1::uuid[])
-         AND ai.played_at >= $2::date
-         AND ai.played_at < ($3::date + INTERVAL '1 day')
-       GROUP BY s.id, s.site_name, s.club_name
-       ORDER BY impressions DESC
-       LIMIT 20`,
-      [videoIds, fromDate, toDate]
-    );
-
-    // Par période
-    const byPeriodResult = await query(
-      `SELECT
-        COALESCE(period, 'loop') as period,
-        COUNT(*) as count
-       FROM advertiser_impressions
-       WHERE video_id = ANY($1::uuid[])
-         AND played_at >= $2::date
-         AND played_at < ($3::date + INTERVAL '1 day')
-       GROUP BY period`,
-      [videoIds, fromDate, toDate]
-    );
-
-    const byPeriod = byPeriodResult.rows.reduce((acc, row) => {
-      acc[row.period as string] = parseInt(row.count as string);
+    const byPeriod = byPeriodRows.reduce((acc, row) => {
+      acc[row.period] = parseInt(row.count);
       return acc;
     }, {} as Record<string, number>);
 
-    // Par type d'événement
-    const byEventResult = await query(
-      `SELECT
-        COALESCE(event_type, 'other') as event_type,
-        COUNT(*) as count
-       FROM advertiser_impressions
-       WHERE video_id = ANY($1::uuid[])
-         AND played_at >= $2::date
-         AND played_at < ($3::date + INTERVAL '1 day')
-       GROUP BY event_type`,
-      [videoIds, fromDate, toDate]
-    );
-
-    const byEventType = byEventResult.rows.reduce((acc, row) => {
-      acc[row.event_type as string] = parseInt(row.count as string);
+    const byEventType = byEventRows.reduce((acc, row) => {
+      acc[row.event_type] = parseInt(row.count);
       return acc;
     }, {} as Record<string, number>);
-
-    // Tendances quotidiennes
-    const dailyTrendsResult = await query<DailyTrendRow>(
-      `SELECT
-        DATE(played_at) as date,
-        COUNT(*) as impressions,
-        SUM(duration_played) as screen_time
-       FROM advertiser_impressions
-       WHERE video_id = ANY($1::uuid[])
-         AND played_at >= $2::date
-         AND played_at < ($3::date + INTERVAL '1 day')
-       GROUP BY DATE(played_at)
-       ORDER BY date ASC`,
-      [videoIds, fromDate, toDate]
-    );
 
     res.json({
       success: true,
@@ -602,19 +425,19 @@ export const getAdvertiserStats = async (req: AuthRequest, res: Response): Promi
           total_screen_time_seconds: totalScreenTime,
           total_screen_time: formatDuration(totalScreenTime),
           avg_daily_impressions: Math.round(avgDailyImpressions * 10) / 10,
-          completion_rate: parseFloat(summary.completion_rate as string) || 0,
-          estimated_reach: parseInt(summary.estimated_reach as string) || 0,
-          active_sites: parseInt(summary.active_sites as string) || 0,
-          active_days: parseInt(summary.active_days as string) || 0,
+          completion_rate: parseFloat(summary.completion_rate) || 0,
+          estimated_reach: parseInt(summary.estimated_reach) || 0,
+          active_sites: parseInt(summary.active_sites) || 0,
+          active_days: parseInt(summary.active_days) || 0,
         },
-        by_video: byVideoResult.rows.map(v => ({
+        by_video: byVideoRows.map(v => ({
           video_id: v.video_id,
           name: v.video_name,
           impressions: parseInt(v.impressions),
           screen_time_seconds: parseInt(v.screen_time_seconds),
           completion_rate: parseFloat(v.completion_rate) || 0,
         })),
-        by_site: bySiteResult.rows.map(s => ({
+        by_site: bySiteRows.map(s => ({
           site_id: s.site_id,
           site_name: s.site_name,
           club_name: s.club_name,
@@ -624,7 +447,7 @@ export const getAdvertiserStats = async (req: AuthRequest, res: Response): Promi
         by_period: byPeriod,
         by_event_type: byEventType,
         trends: {
-          daily: dailyTrendsResult.rows.map(d => ({
+          daily: dailyTrendRows.map(d => ({
             date: d.date,
             impressions: parseInt(d.impressions),
             screen_time: parseInt(d.screen_time),
@@ -684,15 +507,16 @@ export const recordImpressions = async (req: SiteAuthRequest, res: Response): Pr
       return;
     }
 
-    // Valider et insérer en batch
-    const values: string[] = [];
-    const params: unknown[] = [];
-    let paramIndex = 1;
+    // Valider et construire les items pour le repository
+    const validItems: ImpressionBatchItem[] = [];
     let skippedCount = 0;
 
     for (const imp of impressions) {
       const {
+        event_id,
+        site_sponsor_id,
         video_id,
+        video_filename,
         played_at,
         duration_played,
         video_duration,
@@ -718,29 +542,64 @@ export const recordImpressions = async (req: SiteAuthRequest, res: Response): Pr
         continue;
       }
 
-      values.push(
-        `($${paramIndex}, $${paramIndex + 1}, $${paramIndex + 2}, $${paramIndex + 3}, $${paramIndex + 4}, $${paramIndex + 5}, $${paramIndex + 6}, $${paramIndex + 7}, $${paramIndex + 8}, $${paramIndex + 9}, $${paramIndex + 10}, $${paramIndex + 11})`
-      );
+      // Si event_id est fourni, le valider
+      if (event_id && !validateUuid(event_id)) {
+        skippedCount++;
+        continue;
+      }
 
-      params.push(
-        authenticatedSiteId,  // Utiliser le siteId authentifié, pas celui du body
-        video_id || null,
-        played_at,
-        duration_played,
-        video_duration,
-        completed || false,
-        interrupted_at || null,
-        event_type || null,
-        period || null,
-        trigger_type || 'auto',
-        position_in_loop || null,
-        audience_estimate || null
-      );
+      // Valider site_sponsor_id si fourni, sinon résoudre via video_id ou video_filename
+      let resolvedSiteSponsorId: string | null = null;
+      let resolutionMethod: 'site_sponsor_id' | 'video_id' | 'filename' | 'unresolved' = 'unresolved';
 
-      paramIndex += 12;
+      if (site_sponsor_id && typeof site_sponsor_id === 'string' && validateUuid(site_sponsor_id)) {
+        resolvedSiteSponsorId = site_sponsor_id;
+        resolutionMethod = 'site_sponsor_id';
+      } else if (video_id) {
+        try {
+          resolvedSiteSponsorId = await siteSponsorRepository.resolveSiteSponsorId(video_id as string, authenticatedSiteId);
+          if (resolvedSiteSponsorId) resolutionMethod = 'video_id';
+        } catch (err) {
+          logger.warn('Sponsor resolution via video_id failed', {
+            siteId: authenticatedSiteId, videoId: video_id, error: (err as Error).message,
+          });
+          metricsService.recordSponsorResolutionFailure('resolve_impression');
+        }
+      }
+      // Fallback par filename si video_id absent (sponsors locaux, ancien firmware)
+      if (!resolvedSiteSponsorId && video_filename && typeof video_filename === 'string') {
+        try {
+          resolvedSiteSponsorId = await siteSponsorRepository.resolveSiteSponsorIdByFilename(video_filename as string, authenticatedSiteId);
+          if (resolvedSiteSponsorId) resolutionMethod = 'filename';
+        } catch (err) {
+          logger.warn('Sponsor resolution via filename failed', {
+            siteId: authenticatedSiteId, videoFilename: video_filename, error: (err as Error).message,
+          });
+          metricsService.recordSponsorResolutionFailure('resolve_impression');
+        }
+      }
+
+      metricsService.recordImpressionResolution(resolutionMethod);
+
+      validItems.push({
+        eventId: (event_id as string) || null,
+        siteSponsorId: resolvedSiteSponsorId,
+        siteId: authenticatedSiteId,
+        videoId: video_id || null,
+        playedAt: played_at as string,
+        durationPlayed: duration_played as number,
+        videoDuration: video_duration as number,
+        completed: (completed as boolean) || false,
+        interruptedAt: (interrupted_at as string) || null,
+        eventType: (event_type as string) || null,
+        period: (period as string) || null,
+        triggerType: (trigger_type as string) || 'auto',
+        positionInLoop: (position_in_loop as number) || null,
+        audienceEstimate: (audience_estimate as number) || null,
+      });
     }
 
-    if (values.length === 0) {
+    if (validItems.length === 0) {
       res.status(400).json({
         success: false,
         error: 'No valid impressions to insert',
@@ -749,24 +608,19 @@ export const recordImpressions = async (req: SiteAuthRequest, res: Response): Pr
       return;
     }
 
-    await query(
-      `INSERT INTO advertiser_impressions
-       (site_id, video_id, played_at, duration_played, video_duration, completed, interrupted_at, event_type, period, trigger_type, position_in_loop, audience_estimate)
-       VALUES ${values.join(', ')}`,
-      params
-    );
+    const recorded = await advertiserRepository.recordImpressions(validItems);
 
     logger.info('Advertiser impressions recorded', {
       siteId: authenticatedSiteId,
       siteName: req.siteName,
-      recorded: values.length,
+      recorded,
       skipped: skippedCount
     });
 
     res.status(201).json({
       success: true,
-      message: `${values.length} impression(s) recorded`,
-      recorded: values.length,
+      message: `${recorded} impression(s) recorded`,
+      recorded,
       skipped: skippedCount
     });
   } catch (error) {
@@ -799,12 +653,9 @@ export const exportAdvertiserData = async (req: AuthRequest, res: Response): Pro
     const toDate = (to as string) || new Date().toISOString().split('T')[0];
 
     // Récupérer les vidéos de l'annonceur
-    const videosResult = await query(
-      `SELECT video_id FROM advertiser_videos WHERE advertiser_id = $1`,
-      [id]
-    );
+    const videoIds = await advertiserRepository.getVideoIds(id);
 
-    if (videosResult.rowCount === 0) {
+    if (videoIds.length === 0) {
       res.status(404).json({
         success: false,
         error: 'No videos found for this advertiser',
@@ -812,34 +663,8 @@ export const exportAdvertiserData = async (req: AuthRequest, res: Response): Pro
       return;
     }
 
-    const videoIds = videosResult.rows.map(r => r.video_id);
-
     // Récupérer les impressions
-    const impressionsResult = await query<ImpressionRow>(
-      `SELECT
-        ai.id,
-        ai.video_id,
-        v.filename as video_name,
-        ai.site_id,
-        s.site_name,
-        s.club_name,
-        ai.played_at,
-        ai.duration_played,
-        ai.video_duration,
-        ai.completed,
-        ai.event_type,
-        ai.period,
-        ai.trigger_type,
-        ai.audience_estimate
-       FROM advertiser_impressions ai
-       JOIN videos v ON v.id = ai.video_id
-       JOIN sites s ON s.id = ai.site_id
-       WHERE ai.video_id = ANY($1::uuid[])
-         AND ai.played_at >= $2::date
-         AND ai.played_at < ($3::date + INTERVAL '1 day')
-       ORDER BY ai.played_at DESC`,
-      [videoIds, fromDate, toDate]
-    );
+    const impressionRows = await advertiserRepository.exportImpressions(videoIds, fromDate, toDate);
 
     if (format === 'csv') {
       // Générer CSV
@@ -856,7 +681,7 @@ export const exportAdvertiserData = async (req: AuthRequest, res: Response): Pro
         'Audience',
       ];
 
-      const rows = impressionsResult.rows.map(row => [
+      const rows = impressionRows.map(row => [
         new Date(row.played_at).toISOString(),
         row.video_name,
         row.site_name,
@@ -877,7 +702,7 @@ export const exportAdvertiserData = async (req: AuthRequest, res: Response): Pro
     } else {
       res.json({
         success: true,
-        data: impressionsResult.rows,
+        data: impressionRows,
       });
     }
   } catch (error) {
@@ -898,12 +723,7 @@ export const calculateDailyStats = async (req: AuthRequest, res: Response): Prom
     const { date } = req.body;
     const targetDate = date || new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
-    const result = await query<{ calculate_all_advertiser_daily_stats: number }>(
-      `SELECT calculate_all_advertiser_daily_stats($1::date) as count`,
-      [targetDate]
-    );
-
-    const count = result.rows[0]?.calculate_all_advertiser_daily_stats || 0;
+    const count = await advertiserRepository.calculateDailyStats(targetDate);
 
     res.json({
       success: true,

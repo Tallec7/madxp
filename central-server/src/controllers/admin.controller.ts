@@ -5,7 +5,7 @@ import { AdminActionRequest, LocalClientInput } from '../types/admin';
 import logger from '../config/logger';
 import { PassThrough } from 'stream';
 import socketService from '../services/socket.service';
-import { query } from '../config/database';
+import { siteRepository } from '../repositories';
 import { predictiveAlertsService } from '../services/predictive-alerts.service';
 
 export const listJobs = (_req: AuthRequest, res: Response) => {
@@ -85,14 +85,7 @@ export const getSocketDebugInfo = async (_req: AuthRequest, res: Response) => {
     const socketInfo = socketService.getDebugInfo();
 
     // Sites marqués "online" en DB
-    const dbResult = await query<{ id: string; site_name: string; status: string; last_seen_at: Date }>(
-      `SELECT id, site_name, status, last_seen_at
-       FROM sites
-       WHERE status = 'online'
-       ORDER BY last_seen_at DESC`
-    );
-
-    const dbOnlineSites = dbResult.rows;
+    const dbOnlineSites = await siteRepository.findOnline();
 
     // Comparer les deux sources
     const socketConnectedSet = new Set(socketInfo.connectedSites);
@@ -122,7 +115,7 @@ export const getSocketDebugInfo = async (_req: AuthRequest, res: Response) => {
           id: s.id,
           siteName: s.site_name,
           lastSeenAt: s.last_seen_at,
-          ageMs: Date.now() - new Date(s.last_seen_at).getTime(),
+          ageMs: s.last_seen_at ? Date.now() - new Date(s.last_seen_at).getTime() : null,
         })),
         synchronized: inSocketNotInDb.length === 0 && inDbNotInSocket.length === 0,
       },

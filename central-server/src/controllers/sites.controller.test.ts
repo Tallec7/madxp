@@ -194,20 +194,22 @@ describe('Sites Controller', () => {
         .mockResolvedValueOnce({
           rows: [{ site_name: 'Existing Site' }],
         })
-        // Mock for INSERT
+        // Mock for INSERT site
         .mockResolvedValueOnce({
           rows: [{
             id: 'new-site-id',
             site_name: 'Existing Site-1',
             club_name: 'Test Club',
           }],
-        });
+        })
+        // Mock for INSERT config_profiles (auto-created default profile)
+        .mockResolvedValueOnce({ rows: [{ id: 'profile-id' }] });
 
       await createSite(req, res);
 
       expect(res.status).toHaveBeenCalledWith(201);
       // The site name should have a suffix
-      expect(query).toHaveBeenLastCalledWith(
+      expect(query).toHaveBeenCalledWith(
         expect.any(String),
         expect.arrayContaining([expect.stringMatching(/Existing Site-\d+/)])
       );
@@ -437,11 +439,13 @@ describe('Sites Controller', () => {
         })
         .mockResolvedValueOnce({
           rows: [{ id: 'new-id', site_name: 'Site-3' }],
-        });
+        })
+        // Mock for INSERT config_profiles (auto-created default profile)
+        .mockResolvedValueOnce({ rows: [{ id: 'profile-id' }] });
 
       await createSite(req, res);
 
-      expect(query).toHaveBeenLastCalledWith(
+      expect(query).toHaveBeenCalledWith(
         expect.any(String),
         expect.arrayContaining(['Site-3'])
       );

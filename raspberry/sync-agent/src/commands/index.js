@@ -1,3 +1,7 @@
+// @ts-check
+/** @typedef {import('../types').CommandData} CommandData */
+/** @typedef {import('../types').CommandResult} CommandResult */
+
 /**
  * Commands Index - Point d'entrée pour toutes les commandes du sync-agent
  *
@@ -14,6 +18,7 @@ const deployAsset = require('./deploy-asset');
 
 // === Modules de commandes extraits (P2.4 refactoring) ===
 const updateConfig = require('./update-config');
+const { syncProfiles, switchProfile } = require('./sync-profiles');
 const {
   runDiagnostics,
   runManualDiagnostics,
@@ -34,6 +39,11 @@ const {
   removeBssidLock,
   optimizeForMesh,
 } = require('./wifi-bssid');
+const {
+  scanWifiNetworks,
+  configureWifiClient,
+} = require('./wifi-client');
+const { updateHostname } = require('./hostname');
 
 // === Dépendances ===
 const { exec } = require('child_process');
@@ -62,6 +72,10 @@ const commands = {
   // === Configuration (module: update-config.js) ===
   update_config: updateConfig,
 
+  // === Profils multi-config (module: sync-profiles.js) ===
+  sync_profiles: syncProfiles,
+  switch_profile: switchProfile,
+
   // === Diagnostics (module: diagnostics.js) ===
   run_diagnostics: runDiagnostics,
   runManualDiagnostics: runManualDiagnostics,
@@ -88,6 +102,13 @@ const commands = {
   remove_bssid_lock: removeBssidLock,
   optimize_for_mesh: optimizeForMesh,
 
+  // === WiFi Client Configuration (module: wifi-client.js) ===
+  scan_wifi_networks: scanWifiNetworks,
+  configure_wifi_client: configureWifiClient,
+
+  // === Hostname (module: hostname.js) ===
+  update_hostname: updateHostname,
+
   // === Commandes simples (inline) ===
 
   /**
@@ -96,12 +117,17 @@ const commands = {
   async reboot() {
     logger.warn('System reboot requested');
 
-    setTimeout(async () => {
-      try {
-        await execAsync('sudo reboot');
-      } catch (error) {
-        logger.error('Reboot command failed:', { error: error.message });
-      }
+    // Use fire-and-forget exec (not execAsync) because:
+    // 1. sudo reboot kills the system before the child process can return
+    // 2. execAsync would reject (non-zero exit / signal) — the error was silently caught
+    // 3. The command_result is already sent before the timeout fires
+    setTimeout(() => {
+      logger.info('Executing sudo reboot now...');
+      exec('sudo reboot', (error) => {
+        if (error) {
+          logger.error('Reboot command failed:', { error: error.message });
+        }
+      });
     }, 2000);
 
     return { success: true, message: 'Rebooting in 2 seconds' };
@@ -252,14 +278,8 @@ const commands = {
       logger.info('Site settings updated successfully', { settings: siteConfig.settings });
 
       // Notifier l'application locale
-      try {
-        const io = require('socket.io-client');
-        const socket = io('http://localhost:3000', { timeout: 5000 });
-        socket.emit('settings_updated', siteConfig.settings);
-        setTimeout(() => socket.close(), 1000);
-      } catch (notifyError) {
-        logger.warn('Failed to notify local app of settings change:', { error: notifyError.message });
-      }
+      const localSocket = require('../services/local-socket');
+      localSocket.emit('settings_updated', siteConfig.settings);
 
       return {
         success: true,

@@ -60,6 +60,10 @@ CREATE TABLE IF NOT EXISTS sites (
   pending_config_version_id UUID,
   -- Blocage temporaire des sync_local_state après déploiement config
   config_update_pending_until TIMESTAMPTZ DEFAULT NULL,
+  -- PIN optionnel pour la télécommande cloud
+  remote_pin_hash VARCHAR(64) DEFAULT NULL,
+  -- Hostname mDNS dérivé du club_name (ex: neopro-usap)
+  hostname_slug VARCHAR(63) DEFAULT NULL,
   CONSTRAINT check_status CHECK (status IN ('online', 'offline', 'maintenance', 'error'))
 );
 
@@ -94,8 +98,14 @@ CREATE TABLE IF NOT EXISTS videos (
   duration INT,
   mime_type VARCHAR(100),
   storage_path VARCHAR(500),
+  storage_backend VARCHAR(20) DEFAULT 'ftp',
   thumbnail_url VARCHAR(500),
   checksum VARCHAR(64),
+  upload_status VARCHAR(20) DEFAULT 'ready',
+  upload_verified_at TIMESTAMP,
+  upload_verified_size BIGINT,
+  upload_error_message TEXT,
+  upload_retry_count INT DEFAULT 0,
   metadata JSONB DEFAULT '{}',
   uploaded_by UUID REFERENCES users(id),
   created_at TIMESTAMP DEFAULT NOW(),
@@ -145,6 +155,8 @@ CREATE TABLE IF NOT EXISTS update_deployments (
   error_message TEXT,
   backup_path VARCHAR(500),
   deployed_by UUID REFERENCES users(id),
+  schedule_reboot BOOLEAN DEFAULT FALSE,
+  auto_rollback BOOLEAN DEFAULT TRUE,
   created_at TIMESTAMP DEFAULT NOW(),
   started_at TIMESTAMP,
   completed_at TIMESTAMP,
@@ -164,6 +176,7 @@ CREATE TABLE IF NOT EXISTS remote_commands (
   error_message TEXT,
   executed_by UUID REFERENCES users(id),
   created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW(),
   executed_at TIMESTAMP,
   completed_at TIMESTAMP,
   CONSTRAINT check_status_command CHECK (status IN ('pending', 'executing', 'completed', 'failed', 'timeout'))
@@ -179,6 +192,7 @@ CREATE TABLE IF NOT EXISTS metrics (
   disk_usage FLOAT,
   uptime BIGINT,
   network_status JSONB,
+  fan_status JSONB,
   recorded_at TIMESTAMP DEFAULT NOW()
 );
 
@@ -209,8 +223,58 @@ CREATE TABLE IF NOT EXISTS config_history (
   deployed_at TIMESTAMP DEFAULT NOW(),
   comment TEXT,
   previous_version_id UUID REFERENCES config_history(id),
-  changes_summary JSONB
+  changes_summary JSONB,
+  profile_id UUID
 );
+
+-- =============================================================================
+-- TABLE PROFILS DE CONFIGURATION (multi-config par site)
+-- =============================================================================
+
+CREATE TABLE IF NOT EXISTS config_profiles (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  site_id UUID NOT NULL REFERENCES sites(id) ON DELETE CASCADE,
+  name VARCHAR(255) NOT NULL,
+  display_name VARCHAR(255),
+  city VARCHAR(255),
+  sport VARCHAR(100),
+  sort_order INTEGER DEFAULT 0,
+  is_default BOOLEAN DEFAULT false,
+  configuration JSONB NOT NULL DEFAULT '{}',
+  created_by UUID REFERENCES users(id),
+  updated_by UUID REFERENCES users(id),
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(site_id, name)
+);
+
+CREATE INDEX IF NOT EXISTS idx_config_profiles_site ON config_profiles(site_id);
+CREATE INDEX IF NOT EXISTS idx_config_profiles_default ON config_profiles(site_id, is_default) WHERE is_default = true;
+
+-- FK config_history.profile_id -> config_profiles
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'fk_config_history_profile'
+  ) THEN
+    ALTER TABLE config_history
+      ADD CONSTRAINT fk_config_history_profile
+      FOREIGN KEY (profile_id) REFERENCES config_profiles(id) ON DELETE SET NULL;
+  END IF;
+END $$;
+
+-- FK sites.active_profile_id -> config_profiles
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'fk_sites_active_profile'
+  ) THEN
+    ALTER TABLE sites
+      ADD COLUMN IF NOT EXISTS active_profile_id UUID,
+      ADD CONSTRAINT fk_sites_active_profile
+      FOREIGN KEY (active_profile_id) REFERENCES config_profiles(id) ON DELETE SET NULL;
+  END IF;
+END $$;
 
 DO $$
 BEGIN
@@ -750,34 +814,123 @@ CREATE INDEX IF NOT EXISTS idx_agency_sites_site ON agency_sites(site_id);
 -- Table advertiser_impressions (tracking des affichages pubs)
 CREATE TABLE IF NOT EXISTS advertiser_impressions (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  event_id UUID,
   site_id UUID REFERENCES sites(id) ON DELETE CASCADE,
   advertiser_id UUID REFERENCES advertisers(id) ON DELETE SET NULL,
   video_id UUID REFERENCES videos(id) ON DELETE SET NULL,
   video_filename VARCHAR(255),
   played_at TIMESTAMP NOT NULL,
   duration_played INTEGER,
+  video_duration INTEGER,
+  completed BOOLEAN DEFAULT false,
+  interrupted_at TIMESTAMP,
+  event_type VARCHAR(50),
+  period VARCHAR(50),
+  trigger_type VARCHAR(20) DEFAULT 'auto',
+  position_in_loop INTEGER,
+  audience_estimate INTEGER,
+  site_sponsor_id UUID, -- REFERENCES site_sponsors(id) ON DELETE SET NULL (ajouté par migration)
   created_at TIMESTAMP DEFAULT NOW()
 );
 
+CREATE UNIQUE INDEX IF NOT EXISTS idx_advertiser_impressions_event_id ON advertiser_impressions(event_id) WHERE event_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_advertiser_impressions_site ON advertiser_impressions(site_id, played_at DESC);
 CREATE INDEX IF NOT EXISTS idx_advertiser_impressions_advertiser ON advertiser_impressions(advertiser_id);
 CREATE INDEX IF NOT EXISTS idx_advertiser_impressions_played_at ON advertiser_impressions(played_at);
+CREATE INDEX IF NOT EXISTS idx_impressions_site_sponsor ON advertiser_impressions(site_sponsor_id);
+CREATE INDEX IF NOT EXISTS idx_impressions_site_sponsor_date ON advertiser_impressions(site_sponsor_id, played_at);
 
--- Table advertiser_daily_stats (agrégation quotidienne des impressions)
+-- Table advertiser_daily_stats (agrégation quotidienne des impressions par vidéo et site)
 CREATE TABLE IF NOT EXISTS advertiser_daily_stats (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  date DATE NOT NULL,
-  advertiser_id UUID REFERENCES advertisers(id) ON DELETE CASCADE,
+  video_id UUID REFERENCES videos(id) ON DELETE CASCADE,
   site_id UUID REFERENCES sites(id) ON DELETE CASCADE,
-  impressions_count INTEGER DEFAULT 0,
-  total_duration INTEGER DEFAULT 0,
-  unique_videos INTEGER DEFAULT 0,
+  date DATE NOT NULL,
+  total_impressions INTEGER DEFAULT 0,
+  total_duration_seconds INTEGER DEFAULT 0,
+  completed_plays INTEGER DEFAULT 0,
+  completion_rate NUMERIC(5,2) DEFAULT 0,
+  unique_events INTEGER DEFAULT 0,
+  pre_match_plays INTEGER DEFAULT 0,
+  match_plays INTEGER DEFAULT 0,
+  post_match_plays INTEGER DEFAULT 0,
+  loop_plays INTEGER DEFAULT 0,
+  match_events INTEGER DEFAULT 0,
+  training_events INTEGER DEFAULT 0,
+  tournament_events INTEGER DEFAULT 0,
+  other_events INTEGER DEFAULT 0,
+  auto_plays INTEGER DEFAULT 0,
+  manual_plays INTEGER DEFAULT 0,
+  total_audience_estimate INTEGER DEFAULT 0,
+  avg_audience_per_play NUMERIC(10,2) DEFAULT 0,
   calculated_at TIMESTAMP DEFAULT NOW(),
-  UNIQUE(date, advertiser_id, site_id)
+  UNIQUE(video_id, site_id, date)
 );
 
 CREATE INDEX IF NOT EXISTS idx_advertiser_daily_stats_date ON advertiser_daily_stats(date);
-CREATE INDEX IF NOT EXISTS idx_advertiser_daily_stats_advertiser ON advertiser_daily_stats(advertiser_id);
+CREATE INDEX IF NOT EXISTS idx_advertiser_daily_stats_video ON advertiser_daily_stats(video_id);
+
+-- Table site_sponsors (modèle unifié : un sponsor PAR site)
+CREATE TABLE IF NOT EXISTS site_sponsors (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    site_id         UUID NOT NULL REFERENCES sites(id) ON DELETE CASCADE,
+    advertiser_id   UUID REFERENCES advertisers(id) ON DELETE SET NULL,
+    name            VARCHAR(255) NOT NULL,
+    contact_name    VARCHAR(255),
+    contact_email   VARCHAR(255),
+    contact_phone   VARCHAR(50),
+    logo_url        TEXT,
+    contract_amount DECIMAL(10,2),
+    contract_start  DATE,
+    contract_end    DATE,
+    source          VARCHAR(20) NOT NULL DEFAULT 'local',
+    status          VARCHAR(20) NOT NULL DEFAULT 'active',
+    metadata        JSONB DEFAULT '{}',
+    created_at      TIMESTAMPTZ DEFAULT NOW(),
+    updated_at      TIMESTAMPTZ DEFAULT NOW(),
+
+    CONSTRAINT chk_site_sponsor_source CHECK (source IN ('local', 'neopro')),
+    CONSTRAINT chk_site_sponsor_status CHECK (status IN ('active', 'expired', 'paused'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_site_sponsors_site ON site_sponsors(site_id);
+CREATE INDEX IF NOT EXISTS idx_site_sponsors_advertiser ON site_sponsors(advertiser_id);
+CREATE INDEX IF NOT EXISTS idx_site_sponsors_active ON site_sponsors(site_id, status) WHERE status = 'active';
+CREATE UNIQUE INDEX IF NOT EXISTS idx_site_sponsors_advertiser_site ON site_sponsors(advertiser_id, site_id) WHERE advertiser_id IS NOT NULL;
+
+-- Table site_sponsor_videos (vidéos par sponsor de site)
+CREATE TABLE IF NOT EXISTS site_sponsor_videos (
+    id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    site_sponsor_id     UUID NOT NULL REFERENCES site_sponsors(id) ON DELETE CASCADE,
+    video_id            UUID REFERENCES videos(id) ON DELETE SET NULL,
+    video_filename      VARCHAR(255) NOT NULL,
+    is_primary          BOOLEAN DEFAULT false,
+    added_at            TIMESTAMPTZ DEFAULT NOW(),
+
+    CONSTRAINT uq_site_sponsor_video UNIQUE (site_sponsor_id, video_filename)
+);
+
+CREATE INDEX IF NOT EXISTS idx_site_sponsor_videos_sponsor ON site_sponsor_videos(site_sponsor_id);
+CREATE INDEX IF NOT EXISTS idx_site_sponsor_videos_filename ON site_sponsor_videos(video_filename);
+
+-- P5: Branding club pour les rapports PDF
+ALTER TABLE sites ADD COLUMN IF NOT EXISTS logo_url TEXT DEFAULT NULL;
+ALTER TABLE sites ADD COLUMN IF NOT EXISTS color_primary VARCHAR(7) DEFAULT NULL;
+ALTER TABLE sites ADD COLUMN IF NOT EXISTS color_secondary VARCHAR(7) DEFAULT NULL;
+
+-- P5: Magic link pour acces sponsor autonome
+CREATE TABLE IF NOT EXISTS sponsor_access_tokens (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  site_sponsor_id UUID NOT NULL REFERENCES site_sponsors(id) ON DELETE CASCADE,
+  token_hash VARCHAR(64) NOT NULL,
+  expires_at TIMESTAMPTZ NOT NULL,
+  used_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_sat_token_hash ON sponsor_access_tokens(token_hash);
+CREATE INDEX IF NOT EXISTS idx_sat_site_sponsor_id ON sponsor_access_tokens(site_sponsor_id);
+CREATE INDEX IF NOT EXISTS idx_sat_expires_at ON sponsor_access_tokens(expires_at);
 
 -- Ajouter video_id et sponsor_id aux tables analytics
 ALTER TABLE video_plays ADD COLUMN IF NOT EXISTS video_id UUID REFERENCES videos(id) ON DELETE SET NULL;

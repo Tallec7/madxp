@@ -4,7 +4,7 @@
  */
 import ExcelJS from 'exceljs';
 import { query } from '../config/database';
-import logger from '../config/logger';
+
 
 export interface ExcelExportOptions {
   siteId?: string;
@@ -195,7 +195,7 @@ class ExcelExportService {
       { label: 'Taux de complétion moyen', value: avgCompletion / 100, format: '0.0%' },
     ];
 
-    let row = 4;
+    const row = 4;
     kpis.forEach((kpi, i) => {
       const labelCell = sheet.getCell(`B${row + i}`);
       labelCell.value = kpi.label;
@@ -435,7 +435,7 @@ class ExcelExportService {
       { label: 'Moyenne/jour', value: Math.round(totalImpressions / Math.max(dailyStats.length, 1)) },
     ];
 
-    let row = 4;
+    const row = 4;
     kpis.forEach((kpi, i) => {
       sheet.getCell(`B${row + i}`).value = kpi.label;
       sheet.getCell(`B${row + i}`).font = { bold: true };
@@ -585,7 +585,7 @@ class ExcelExportService {
       { label: 'Moyenne lectures/site', value: Math.round(globalStats.avg_videos_per_site) },
     ];
 
-    let row = 4;
+    const row = 4;
     kpis.forEach((kpi, i) => {
       sheet.getCell(`B${row + i}`).value = kpi.label;
       sheet.getCell(`B${row + i}`).font = { bold: true };
@@ -761,39 +761,46 @@ class ExcelExportService {
   }
 
   private async getAdvertiserDailyStats(advertiserId: string, startDate: string, endDate: string): Promise<any[]> {
+    // advertiser_daily_stats is keyed by (video_id, site_id, date)
+    // We need to join through advertiser_videos to get stats for a specific advertiser
     const result = await query(
       `SELECT
-        date::text,
-        site_id,
-        impressions,
-        screen_time_seconds
-      FROM advertiser_daily_stats
-      WHERE advertiser_id = $1 AND date >= $2 AND date <= $3
-      ORDER BY date`,
+        ads.date::text,
+        ads.site_id,
+        ads.total_impressions as impressions,
+        ads.total_duration_seconds as screen_time_seconds
+      FROM advertiser_daily_stats ads
+      JOIN advertiser_videos av ON av.video_id = ads.video_id
+      WHERE av.advertiser_id = $1 AND ads.date >= $2 AND ads.date <= $3
+      ORDER BY ads.date`,
       [advertiserId, startDate, endDate]
     );
     return result.rows;
   }
 
   private async getAdvertiserSiteStats(advertiserId: string, startDate: string, endDate: string): Promise<SiteStats[]> {
+    // advertiser_daily_stats is keyed by (video_id, site_id, date)
+    // Join through advertiser_videos to resolve the advertiser
     const result = await query(
       `SELECT
         s.id as site_id,
         s.site_name,
         s.club_name,
-        COALESCE(SUM(ads.impressions), 0) as total_videos,
-        COALESCE(SUM(ads.screen_time_seconds), 0) as total_screen_time,
+        COALESCE(SUM(ads.total_impressions), 0) as total_videos,
+        COALESCE(SUM(ads.total_duration_seconds), 0) as total_screen_time,
         COUNT(DISTINCT ads.date) as days_active,
-        COALESCE(AVG(ads.impressions), 0) as avg_daily_videos
+        COALESCE(AVG(ads.total_impressions), 0) as avg_daily_videos
       FROM sites s
       LEFT JOIN advertiser_daily_stats ads ON ads.site_id = s.id
-        AND ads.advertiser_id = $1
         AND ads.date >= $2
         AND ads.date <= $3
+      LEFT JOIN advertiser_videos av ON av.video_id = ads.video_id
+        AND av.advertiser_id = $1
       WHERE EXISTS (
         SELECT 1 FROM advertiser_sites asites
         WHERE asites.site_id = s.id AND asites.advertiser_id = $1
       )
+        AND (ads.video_id IS NULL OR av.video_id IS NOT NULL)
       GROUP BY s.id
       ORDER BY total_videos DESC`,
       [advertiserId, startDate, endDate]
@@ -814,7 +821,7 @@ class ExcelExportService {
       `SELECT
         v.filename as video_name,
         COUNT(ai.id) as impressions,
-        COALESCE(SUM(ai.duration_seconds), 0) as screen_time_seconds,
+        COALESCE(SUM(ai.duration_played), 0) as screen_time_seconds,
         COUNT(DISTINCT ai.site_id) as site_count
       FROM videos v
       JOIN advertiser_videos av ON av.video_id = v.id AND av.advertiser_id = $1

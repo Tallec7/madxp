@@ -1,5 +1,6 @@
 import { Injectable } from "@angular/core";
 import { Command } from "../interfaces/command.interface";
+import { PlayerState } from "./player-state.service";
 import { environment } from "../../environments/environment";
 
 // Interfaces pour les nouveaux événements socket
@@ -33,7 +34,7 @@ export interface BreakingNews {
   message: string;
   duration: number;
   position: 'top' | 'bottom';
-  displayMode: 'scroll' | 'truncate' | 'multiline';
+  displayMode: 'scroll';
 }
 
 export interface OptionsUpdate {
@@ -50,10 +51,10 @@ export interface OptionsUpdate {
     enabled: boolean;
     position: 'top' | 'bottom';
     defaultDuration: number;
-    displayMode: 'scroll' | 'truncate' | 'multiline';
+    displayMode: 'scroll';
     quickMessages: string[];
   };
-  template: 'sportif' | 'elegant' | 'minimal';
+  template: 'broadcast' | 'minimal';
 }
 
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
@@ -133,7 +134,7 @@ export class SocketService {
     }
   }
 
-  public emit(action: string, data: Command | MatchConfig | ScoreUpdate | PhaseChange | RequestState | TimerUpdate | BreakingNews | OptionsUpdate | RecordingStateEvent | LoopState | TvRegister) {
+  public emit(action: string, data: Command | MatchConfig | ScoreUpdate | PhaseChange | RequestState | TimerUpdate | BreakingNews | OptionsUpdate | RecordingStateEvent | LoopState | TvRegister | PlayerState | Record<string, unknown>) {
     if (this.socket) {
       console.log('socket service : emit', action, data);
       this.socket.emit(action, data);

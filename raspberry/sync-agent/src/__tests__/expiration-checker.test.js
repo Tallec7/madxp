@@ -8,13 +8,14 @@
 const fs = require('fs-extra');
 const path = require('path');
 
-// Mock de socket.io-client
-jest.mock('socket.io-client', () => {
-  return jest.fn(() => ({
-    emit: jest.fn(),
-    close: jest.fn(),
-  }));
-});
+// Mock du service local-socket
+jest.mock('../services/local-socket', () => ({
+  emit: jest.fn(() => true),
+  request: jest.fn(() => Promise.resolve(null)),
+  isConnected: jest.fn(() => true),
+  connect: jest.fn(),
+  disconnect: jest.fn(),
+}));
 
 // Mock du config - utiliser un repertoire unique pour ce test
 jest.mock('../config', () => ({

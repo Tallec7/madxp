@@ -1,5 +1,32 @@
 # Migrations Base de Données NEOPRO
 
+## Utilisation
+
+Toutes les migrations sont gérées via le runner `migrate.ts` :
+
+```bash
+cd central-server
+
+# Appliquer les migrations en attente
+npm run db:migrate
+
+# Voir le statut de toutes les migrations
+npm run db:migrate -- --status
+
+# Marquer toutes les migrations comme appliquées (sans les exécuter)
+npm run db:migrate -- --mark-all-applied
+```
+
+Le runner utilise une table `schema_migrations` pour tracker les migrations appliquées. Chaque migration `.sql` est exécutée dans une transaction (ROLLBACK automatique en cas d'erreur).
+
+Les migrations sont idempotentes (`IF NOT EXISTS`, `DO $`) et peuvent aussi être appliquées manuellement si nécessaire :
+
+```bash
+source .env && psql "$DATABASE_URL" -f src/scripts/migrations/<migration>.sql
+```
+
+---
+
 ## 📋 Liste des Migrations
 
 ### 0. 00-create-rls-functions.sql ⚠️ (Optionnel - Troubleshooting)
@@ -485,6 +512,139 @@ psql $DATABASE_URL -f central-server/src/scripts/migrations/add-is-critical-to-s
 
 ---
 
-**Dernière mise à jour:** 22 décembre 2025
+### 7. add-site-sponsors.sql ✅ **P0 Site Sponsors Analytics**
+
+**Date:** 2026-02-17
+**Statut:** Prêt pour exécution
+**Durée estimée:** < 2 secondes
+
+**Description:**
+Crée les tables `site_sponsors` et `site_sponsor_videos` pour le modèle unifié de sponsors par site.
+
+**Ce que fait cette migration:**
+
+- Crée `site_sponsors` (UUID, site_id, advertiser_id optionnel, name, source, contact, contrat, logo, metadata)
+- Crée `site_sponsor_videos` (UUID, site_sponsor_id, video_id optionnel, video_filename, is_primary)
+- Ajoute `site_sponsor_id UUID` à `advertiser_impressions` avec index + FK
+- Crée les index nécessaires
+
+**Commande:**
+
+```bash
+psql $DATABASE_URL -f central-server/src/scripts/migrations/add-site-sponsors.sql
+```
+
+---
+
+### 8. add-site-sponsor-reports.sql ✅ **P3 Site Sponsor Reports**
+
+**Date:** 2026-02-17
+**Statut:** Prêt pour exécution
+**Durée estimée:** < 1 seconde
+
+**Description:**
+Ajoute la table `site_sponsor_reports` pour stocker les rapports PDF générés par sponsor et période.
+
+**Commande:**
+
+```bash
+psql $DATABASE_URL -f central-server/src/scripts/migrations/add-site-sponsor-reports.sql
+```
+
+---
+
+### 9. fix-advertiser-impressions-idempotence.sql ✅ **P4 Fix Idempotence**
+
+**Date:** 2026-02-17
+**Statut:** Prêt pour exécution
+**Durée estimée:** < 1 seconde
+
+**Description:**
+Corrige l'idempotence de l'enregistrement des impressions annonceurs pour éviter les doublons lors des retries du sync-agent.
+
+**Commande:**
+
+```bash
+psql $DATABASE_URL -f central-server/src/scripts/migrations/fix-advertiser-impressions-idempotence.sql
+```
+
+---
+
+### 10. add-site-branding.sql ✅ **P5 Branding Club PDF**
+
+**Date:** 2026-02-17
+**Statut:** Prêt pour exécution
+**Durée estimée:** < 1 seconde
+
+**Description:**
+Ajoute les colonnes de branding club sur la table `sites` : `logo_url`, `color_primary`, `color_secondary`. Utilisées dans les rapports PDF sponsor pour personnaliser les couleurs du club.
+
+**Commande:**
+
+```bash
+psql $DATABASE_URL -f central-server/src/scripts/migrations/add-site-branding.sql
+```
+
+---
+
+### 11. add-sponsor-access-tokens.sql ✅ **P5 Magic Link Sponsor**
+
+**Date:** 2026-02-17
+**Statut:** Prêt pour exécution
+**Durée estimée:** < 1 seconde
+
+**Description:**
+Crée la table `sponsor_access_tokens` pour les magic links d'accès sponsor. Tokens hashés SHA-256, expiration 30 jours. Nettoyage automatique par le cron scheduler.
+
+**Commande:**
+
+```bash
+psql $DATABASE_URL -f central-server/src/scripts/migrations/add-sponsor-access-tokens.sql
+```
+
+---
+
+### 12. add-fan-status.sql ✅ **Fix heartbeat errors**
+
+**Date:** 2026-02-17
+**Statut:** ✅ **REQUIS** - Corrige l'erreur `column "fan_status" of relation "metrics" does not exist`
+**Durée estimée:** < 1 seconde
+
+**Description:**
+Ajoute la colonne `fan_status JSONB DEFAULT NULL` à la table `metrics` pour permettre au heartbeat handler de stocker l'état des ventilateurs des Pi.
+
+**Symptômes du problème:**
+
+- Erreur répétée à chaque heartbeat : `column "fan_status" of relation "metrics" does not exist`
+- Logs Railway spammés par des erreurs INSERT
+
+**Commande:**
+
+```bash
+npm run db:migrate
+# ou manuellement :
+psql $DATABASE_URL -f central-server/src/scripts/migrations/add-fan-status.sql
+```
+
+---
+
+### 13. add-hostname-slug.sql ✅ **mDNS Pi hostname**
+
+**Date:** 2026-02-17
+**Statut:** Prêt pour exécution
+**Durée estimée:** < 2 secondes
+
+**Description:**
+Ajoute `hostname_slug VARCHAR(63)` à la table `sites` pour distinguer les Pi sur le même réseau local via mDNS (ex: `neopro-usap.local`). Backfill automatique depuis `club_name` avec gestion des collisions.
+
+**Commande:**
+
+```bash
+npm run db:migrate
+```
+
+---
+
+**Dernière mise à jour:** 17 février 2026
 **Auteur:** Claude Code
-**Version migrations:** 1.2
+**Version migrations:** 3.0

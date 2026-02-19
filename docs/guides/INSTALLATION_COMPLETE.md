@@ -133,20 +133,23 @@ sudo ./install.sh NANTES VotreMotDePasseWiFi123
 
 **Ce que fait install.sh :**
 
+- ✅ **Valide les entrées** (CLUB_NAME : alphanumérique max 25 chars, mot de passe : 8-63 chars avec caractères spéciaux)
 - ✅ Vérifie les prérequis (connexion Internet, espace disque, fichiers requis)
 - ✅ Met à jour le système
-- ✅ Installe Node.js, nginx, hostapd, dnsmasq
+- ✅ Installe Node.js, nginx, hostapd, dnsmasq, firmware WiFi USB (Realtek/Ralink)
 - ✅ Configure le hostname → `neopro.local`
-- ✅ Configure le WiFi hotspot → `NEOPRO-NANTES`
+- ✅ Configure le WiFi hotspot → `NEOPRO-NANTES` (mot de passe échappé pour sed)
 - ✅ Détecte une clé WiFi USB (`wlan1`) et propose/configure le WiFi client (Internet)
-- ✅ Installe l'application (server, admin, **sync-agent**)
+- ✅ Installe l'application (server, admin, **sync-agent**) + copie automatique du webapp si présent
 - ✅ Configure les services systemd (neopro-app, neopro-admin, neopro-sync-agent)
 - ✅ Configure nginx
 - ✅ **Détecte le modèle de Pi** et configure le GPU :
   - Pi 4 et antérieurs : `gpu_mem=256` dans `/boot/config.txt`
-  - Pi 5 : Driver V3D natif (aucun flag GPU custom, v3.7.3+)
+  - Pi 5 : V3D Mesa + décodage vidéo software (v3.26.1+)
 - ✅ **Installe le watchdog kiosk** pour récupération automatique des crashs Chromium
 - ✅ **Installe 3 services de protection** : hotspot-watchdog, sync-guardian, hotspot-optimizer
+- ✅ **Protège `club-config.json`** en `chmod 600` (contient le mot de passe WiFi)
+- ✅ **Health check post-installation** : vérifie services actifs, réponse Nginx, mode AP WiFi, fichiers critiques
 - ✅ Affiche la durée totale d'installation
 
 ### 1.5 Vérification
@@ -511,18 +514,18 @@ La partie longue (install.sh) n'est à faire qu'une fois par Pi physique.
 
 ## Scripts disponibles
 
-| Script                    | Emplacement          | Description                       |
-| ------------------------- | -------------------- | --------------------------------- |
-| `copy-to-pi.sh`           | `raspberry/scripts/` | Copie intelligente vers Pi        |
-| `install.sh`              | `raspberry/`         | Installation système sur Pi       |
-| `setup-new-club.sh`       | `raspberry/scripts/` | Configuration club complète       |
-| `build-and-deploy.sh`     | `raspberry/scripts/` | Mise à jour application           |
-| `prepare-golden-image.sh` | `raspberry/tools/`   | Prépare Pi pour clonage           |
-| `clone-sd-card.sh`        | `raspberry/tools/`   | Clone carte SD en image           |
-| `cleanup-pi.sh`           | `raspberry/scripts/` | Nettoie ~/raspberry après install |
-| `diagnose-pi.sh`          | `raspberry/scripts/` | Diagnostic complet du Pi (CPU, GPU, services, réseau) |
-| `fix-fleet-pi.sh`         | `raspberry/scripts/` | Réparation flotte (TKIP, services, GPU, buffers) |
-| `fix-hotspot.sh`          | `raspberry/scripts/` | Diagnostic et réparation hotspot WiFi |
+| Script                    | Emplacement          | Description                                                 |
+| ------------------------- | -------------------- | ----------------------------------------------------------- |
+| `copy-to-pi.sh`           | `raspberry/scripts/` | Copie intelligente vers Pi                                  |
+| `install.sh`              | `raspberry/`         | Installation système sur Pi                                 |
+| `setup-new-club.sh`       | `raspberry/scripts/` | Configuration club complète                                 |
+| `build-and-deploy.sh`     | `raspberry/scripts/` | Mise à jour application                                     |
+| `prepare-golden-image.sh` | `raspberry/tools/`   | Prépare Pi pour clonage                                     |
+| `clone-sd-card.sh`        | `raspberry/tools/`   | Clone carte SD en image                                     |
+| `cleanup-pi.sh`           | `raspberry/scripts/` | Nettoie ~/raspberry après install                           |
+| `diagnose-pi.sh`          | `raspberry/scripts/` | Diagnostic complet Pi — 16 checks, `--json` pour automation |
+| `fix-fleet-pi.sh`         | `raspberry/scripts/` | Réparation flotte (TKIP, services, GPU, buffers)            |
+| `fix-hotspot.sh`          | `raspberry/scripts/` | Diagnostic et réparation hotspot WiFi                       |
 
 ---
 
@@ -530,16 +533,16 @@ La partie longue (install.sh) n'est à faire qu'une fois par Pi physique.
 
 ## Support Raspberry Pi 5
 
-Depuis la version 2.27+, le **Raspberry Pi 5** est entièrement supporté. Depuis la v3.7.3, le Pi 5 utilise le **driver V3D natif (Mesa)** pour des performances optimales.
+Depuis la version 2.27+, le **Raspberry Pi 5** est entièrement supporté. Depuis la v3.26.1, le Pi 5 utilise le **driver V3D natif (Mesa)** pour le compositing GPU avec le **décodage vidéo en software** (évite les crashs `SharedImageBackingFactory`).
 
-| Modèle       | GPU           | Configuration GPU                                |
-| ------------ | ------------- | ------------------------------------------------ |
-| Pi 3B+, Pi 4 | VideoCore VI  | `gpu_mem=256` dans `/boot/config.txt`            |
-| **Pi 5**     | VideoCore VII | V3D natif (Mesa) — aucun flag GPU custom (v3.7.3+) |
+| Modèle       | GPU           | Configuration GPU                                               |
+| ------------ | ------------- | --------------------------------------------------------------- |
+| Pi 3B+, Pi 4 | VideoCore VI  | `gpu_mem=256` dans `/boot/config.txt`                           |
+| **Pi 5**     | VideoCore VII | V3D Mesa (compositing GPU) + décodage vidéo software (v3.26.1+) |
 
-**Pourquoi V3D natif sur Pi 5 ?**
+**Pourquoi décodage vidéo software sur Pi 5 ?**
 
-Le Pi 5 utilise le driver Mesa V3D 7.1 pour le compositing GPU, identique au navigateur Chromium normal. Les anciennes solutions (SwiftShader v2.27, EGL natif v3.7.2) ont été abandonnées car elles causaient des saccades ou des erreurs SharedImageStub.
+Le Pi 5 utilise le driver Mesa V3D pour le compositing GPU. Cependant, le décodage vidéo hardware de Chromium échoue à créer des `SharedImage` GPU pour les frames 1080p (format `Y_UV, 420`), provoquant des crashs en boucle. Le décodage software est désactivé via `--disable-features=VaapiVideoDecoder,UseChromeOSDirectVideoDecoder`. Le quad Cortex-A76 2.4GHz a largement la puissance pour décoder du 1080p en software.
 
 **Vérifier le modèle** :
 
@@ -555,9 +558,9 @@ cat /proc/device-tree/model
 vcgencmd get_mem gpu
 
 # Pi 5 : affiche toujours 4M (normal, utilise CMA dynamique)
-# Vérifier qu'aucun flag GPU custom n'est actif :
-pgrep -a chromium | grep -E "use-gl|use-angle|swiftshader"
-# Aucun résultat = OK (V3D natif actif)
+# Vérifier que le décodage vidéo hardware est désactivé :
+pgrep -a chromium | grep -o "disable-features=[^ ]*"
+# Doit afficher: disable-features=VaapiVideoDecoder,UseChromeOSDirectVideoDecoder
 ```
 
 Pour plus de détails sur les crashs Chromium, voir [TROUBLESHOOTING.md](TROUBLESHOOTING.md#5-chromium-crash-aw-snap-error-code-5-après-1-2h-de-boucle-vidéo).

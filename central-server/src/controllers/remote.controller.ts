@@ -6,53 +6,122 @@
  *
  * Les commandes sont relayées via Socket.IO vers le Pi connecté.
  *
- * IMPORTANT: Ces endpoints sont PUBLICS (pas d'authentification JWT requise)
- * car ils sont utilisés par les utilisateurs qui scannent le QR code
- * depuis leur téléphone (staff du club, bénévoles, etc.)
- *
- * La sécurité repose sur:
- * - L'UUID du site (128 bits d'entropie, difficile à deviner)
- * - Le rate limiting (30 req/min par IP)
- * - Le fait que le site doit être online pour recevoir les commandes
- *
- * Date: 2026-01-18
+ * Sécurité:
+ * - UUID du site (128 bits d'entropie, difficile à deviner)
+ * - Rate limiting (60 req/min par IP)
+ * - PIN optionnel par site (4-6 chiffres, stocké en SHA-256)
+ * - JWT token pour les sessions PIN (24h)
  */
 
 import { Request, Response } from 'express';
-import { query } from '../config/database';
+import { createHash } from 'crypto';
+import jwt from 'jsonwebtoken';
+import { siteRepository } from '../repositories';
 import socketService from '../services/socket.service';
+import { commandQueueService } from '../services/command-queue.service';
 import logger from '../config/logger';
+import metricsService from '../services/metrics.service';
+import { generateRemotePinToken } from '../middleware/remote-pin.middleware';
+import { LicenseStatusResponse, SiteSubscriptionInfo, SubscriptionPlan, SuspensionReason } from '../types';
+
+// Lazy import to avoid circular dependency
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let subscriptionService: { computeLicenseStatus: (site: SiteSubscriptionInfo) => Promise<LicenseStatusResponse> } | null = null;
+const getSubscriptionService = async () => {
+  if (!subscriptionService) {
+    const module = await import('../services/subscription.service');
+    subscriptionService = module.subscriptionService;
+  }
+  return subscriptionService;
+};
+
+// Compteur brute-force en mémoire (par IP + siteId)
+const pinAttempts = new Map<string, { count: number; lastAttempt: number }>();
+const MAX_PIN_ATTEMPTS = 5;
+const PIN_LOCKOUT_WINDOW = 10 * 60 * 1000; // 10 minutes
+
+// Nettoyage périodique du compteur
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, value] of pinAttempts.entries()) {
+    if (now - value.lastAttempt > PIN_LOCKOUT_WINDOW) {
+      pinAttempts.delete(key);
+    }
+  }
+}, 60 * 1000); // Toutes les minutes
 
 /**
  * GET /api/remote/:siteId/state
  * Récupère l'état actuel du site (vidéo en cours, phase, score, config)
  *
- * PUBLIC: Pas d'authentification requise (accès via QR code)
+ * Si un PIN est configuré, retourne uniquement les infos de base
+ * (pas de config ni vidéos) sauf si un token valide est fourni.
  */
 export async function getRemoteState(req: Request, res: Response) {
   try {
     const { siteId } = req.params;
 
-    // Récupérer les infos du site
-    const siteResult = await query(
-      `SELECT id, site_name, club_name, status, local_config_mirror, last_seen_at
-       FROM sites WHERE id = $1`,
-      [siteId]
-    );
+    const site = await siteRepository.findById(siteId);
 
-    if (siteResult.rows.length === 0) {
+    if (!site) {
       return res.status(404).json({ error: 'Site non trouvé' });
     }
 
-    const site = siteResult.rows[0];
-    // Cast localConfig pour accéder aux propriétés (type JSONB en DB)
     const localConfig = (site.local_config_mirror || {}) as Record<string, unknown>;
-
-    // Vérifier si le site est connecté
     const isConnected = socketService.isConnected(siteId);
     const connectionHealth = socketService.getConnectionHealth(siteId);
 
-    res.json({
+    // Vérifier si un PIN est configuré
+    const pinRequired = !!site.remote_pin_hash;
+
+    // Si PIN requis, vérifier le token
+    let pinVerified = false;
+    if (pinRequired) {
+      const token = req.headers['x-remote-token'] as string;
+      if (token) {
+        try {
+          const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as { siteId: string; type: string };
+          pinVerified = decoded.type === 'remote-pin' && decoded.siteId === siteId;
+        } catch {
+          // Token invalide ou expiré — pinVerified reste false
+        }
+      }
+    }
+
+    // Compute license status for the cloud remote
+    let licenseStatus: LicenseStatusResponse | null = null;
+    try {
+      const subService = await getSubscriptionService();
+      licenseStatus = await subService.computeLicenseStatus({
+        id: site.id,
+        subscription_start: site.subscription_start ? String(site.subscription_start) : null,
+        subscription_end: site.subscription_end ? String(site.subscription_end) : null,
+        subscription_plan: (site.subscription_plan as SubscriptionPlan) || 'standard',
+        suspended: !!(site.suspended),
+        suspension_reason: (site.suspension_reason as SuspensionReason) || null,
+        suspension_date: site.suspension_date ? String(site.suspension_date) : null,
+        suspension_note: null,
+        last_seen_at: site.last_seen_at ? site.last_seen_at.toISOString() : null,
+      });
+    } catch (error) {
+      logger.warn('Error computing license status for remote', { siteId, error });
+    }
+
+    // Get recording state (ephemeral, in-memory)
+    const recordingState = socketService.getRecordingState(siteId);
+
+    // Pending config and commands info
+    const pendingConfigVersionId = (site as Record<string, unknown>).pending_config_version_id || null;
+    let pendingCommandsCount = 0;
+    try {
+      const pendingCommands = await commandQueueService.getPendingCommands(siteId);
+      pendingCommandsCount = pendingCommands.length;
+    } catch {
+      // Non-blocking — pending_commands table may not exist yet
+    }
+
+    // Réponse de base (toujours retournée)
+    const response: Record<string, unknown> = {
       siteId,
       siteName: site.site_name,
       clubName: site.club_name,
@@ -60,20 +129,135 @@ export async function getRemoteState(req: Request, res: Response) {
       isConnected,
       connectionHealth,
       lastSeenAt: site.last_seen_at,
-      // Configuration locale (miroir)
-      config: {
+      pinRequired,
+      licenseStatus: licenseStatus ? {
+        status: licenseStatus.status,
+        reason: licenseStatus.reason || null,
+        daysLeft: licenseStatus.days_left ?? null,
+        daysExpired: licenseStatus.days_expired ?? null,
+        messageRemote: licenseStatus.message_remote || null,
+        subscriptionEnd: licenseStatus.subscription_end || null,
+        subscriptionPlan: licenseStatus.subscription_plan || null,
+        canAutoUnblock: licenseStatus.can_auto_unblock ?? false,
+        needsConnection: (licenseStatus.days_since_check ?? 0) > 10,
+        daysSinceCheck: licenseStatus.days_since_check ?? null,
+      } : null,
+      recordingState: recordingState || { isRecording: false, isManualOverride: false },
+      playerState: socketService.getPlayerState(siteId) || null,
+      pendingConfigVersionId,
+      pendingCommandsCount,
+    };
+
+    // Si pas de PIN ou PIN vérifié → retourner la config complète
+    if (!pinRequired || pinVerified) {
+      response.config = {
         sponsors: (localConfig.sponsors as unknown[]) || [],
         categories: (localConfig.categories as unknown[]) || [],
         timeCategories: (localConfig.timeCategories as unknown[]) || [],
         liveScoreEnabled: (localConfig.liveScoreEnabled as boolean) ?? false,
         scoreOverlay: localConfig.scoreOverlay || null,
         watermark: localConfig.watermark || null,
-      },
-      // Vidéos locales
-      localVideos: (localConfig._localVideos as unknown[]) || [],
-    });
+      };
+      response.localVideos = (localConfig._localVideos as unknown[]) || [];
+    }
+
+    res.json(response);
   } catch (error) {
     logger.error('Error getting remote state:', { error, siteId: req.params.siteId });
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+}
+
+/**
+ * POST /api/remote/:siteId/verify-pin
+ * Vérifie le PIN et retourne un JWT token pour les requêtes suivantes.
+ *
+ * Protection brute-force: max 5 tentatives par IP+site en 10 minutes.
+ */
+export async function verifyPin(req: Request, res: Response) {
+  try {
+    const { siteId } = req.params;
+    const { pin } = req.body;
+
+    // Vérifier le rate limiting brute-force
+    const attemptKey = `${req.ip}:${siteId}`;
+    const attempts = pinAttempts.get(attemptKey);
+
+    if (attempts && attempts.count >= MAX_PIN_ATTEMPTS) {
+      const elapsed = Date.now() - attempts.lastAttempt;
+      if (elapsed < PIN_LOCKOUT_WINDOW) {
+        const retryAfter = Math.ceil((PIN_LOCKOUT_WINDOW - elapsed) / 1000);
+        logger.warn('Remote PIN brute-force lockout', {
+          siteId,
+          ip: req.ip,
+          attempts: attempts.count,
+          retryAfter,
+        });
+        res.status(429).json({
+          error: 'Trop de tentatives',
+          message: `Trop de tentatives échouées. Réessayez dans ${Math.ceil(retryAfter / 60)} minute(s).`,
+          retryAfter,
+        });
+        return;
+      }
+      // Lockout expiré, reset
+      pinAttempts.delete(attemptKey);
+    }
+
+    // Récupérer le hash du PIN
+    const site = await siteRepository.findById(siteId);
+
+    if (!site) {
+      res.status(404).json({ error: 'Site non trouvé' });
+      return;
+    }
+
+    if (!site.remote_pin_hash) {
+      res.status(400).json({ error: 'Aucun PIN configuré pour ce site' });
+      return;
+    }
+
+    // Vérifier le PIN
+    const pinHash = createHash('sha256').update(pin).digest('hex');
+
+    if (pinHash !== site.remote_pin_hash) {
+      // Incrémenter le compteur
+      const current = pinAttempts.get(attemptKey) || { count: 0, lastAttempt: 0 };
+      current.count += 1;
+      current.lastAttempt = Date.now();
+      pinAttempts.set(attemptKey, current);
+
+      logger.warn('Remote PIN verification failed', {
+        siteId,
+        ip: req.ip,
+        attempts: current.count,
+      });
+
+      res.status(401).json({
+        error: 'PIN incorrect',
+        message: 'Le PIN saisi est incorrect.',
+        attemptsRemaining: Math.max(0, MAX_PIN_ATTEMPTS - current.count),
+      });
+      return;
+    }
+
+    // PIN correct → générer le token
+    pinAttempts.delete(attemptKey); // Reset le compteur
+
+    const token = generateRemotePinToken(siteId);
+
+    logger.info('Remote PIN verified successfully', {
+      siteId,
+      ip: req.ip,
+    });
+
+    res.json({
+      success: true,
+      token,
+      expiresIn: 24 * 60 * 60, // 24h en secondes
+    });
+  } catch (error) {
+    logger.error('Error verifying remote PIN:', { error, siteId: req.params.siteId });
     res.status(500).json({ error: 'Erreur serveur' });
   }
 }
@@ -82,14 +266,13 @@ export async function getRemoteState(req: Request, res: Response) {
  * POST /api/remote/:siteId/command
  * Envoie une commande au site (score, phase, vidéo, etc.)
  *
- * PUBLIC: Pas d'authentification requise (accès via QR code)
+ * Protégé par le middleware verifyRemotePin si un PIN est configuré.
  */
 export async function sendRemoteCommand(req: Request, res: Response) {
   try {
     const { siteId } = req.params;
     const { type, data } = req.body;
 
-    // Valider le type de commande
     const validCommands = [
       'score-update',
       'score-reset',
@@ -99,13 +282,14 @@ export async function sendRemoteCommand(req: Request, res: Response) {
       'timer-update',
       'breaking-news',
       'match-config',
+      'recording-toggle',
+      'screenshot',
     ];
 
     if (!validCommands.includes(type)) {
       return res.status(400).json({ error: `Type de commande invalide: ${type}` });
     }
 
-    // Vérifier si le site est connecté
     const isConnected = socketService.isConnected(siteId);
     if (!isConnected) {
       return res.status(503).json({
@@ -114,13 +298,11 @@ export async function sendRemoteCommand(req: Request, res: Response) {
       });
     }
 
-    // Récupérer l'instance Socket.IO
     const io = socketService.getIO();
     if (!io) {
       return res.status(500).json({ error: 'Service Socket.IO non disponible' });
     }
 
-    // Broadcaster la commande vers le site
     const timestamp = new Date().toISOString();
     let eventName: string;
     let payload: Record<string, unknown>;
@@ -172,7 +354,7 @@ export async function sendRemoteCommand(req: Request, res: Response) {
       case 'timer-update':
         eventName = 'timer-update';
         payload = {
-          action: data.action, // 'start', 'pause', 'reset', 'sync'
+          action: data.action,
           time: data.time,
           timestamp,
         };
@@ -199,12 +381,77 @@ export async function sendRemoteCommand(req: Request, res: Response) {
         };
         break;
 
+      case 'recording-toggle':
+        eventName = 'recording-toggle';
+        payload = { timestamp };
+        break;
+
+      case 'screenshot': {
+        // Screenshot uses request-response HTTP pattern (v3.58+):
+        // The controller waits for the Pi's screenshot-data response via Socket.IO,
+        // then returns the image directly in the HTTP response.
+        // This replaces the previous Socket.IO room relay which silently dropped
+        // large base64 payloads (~60 KB) when the dashboard used polling transport.
+        const piSocket = socketService.getConnectedSocket(siteId);
+        if (!piSocket) {
+          return res.status(503).json({ error: 'Socket du Pi non trouvé' });
+        }
+
+        const screenshotStart = Date.now();
+        const screenshotTimeout = 8000; // 8s (before dashboard's 10s UI timeout)
+        const screenshotData = await new Promise<Record<string, unknown> | null>((resolve) => {
+          const timer = setTimeout(() => {
+            piSocket.off('screenshot-data', handler);
+            resolve(null);
+          }, screenshotTimeout);
+
+          const handler = (responseData: unknown) => {
+            clearTimeout(timer);
+            piSocket.off('screenshot-data', handler);
+            resolve(responseData as Record<string, unknown>);
+          };
+
+          piSocket.on('screenshot-data', handler);
+          io.to(siteId).emit('screenshot-request', { timestamp, quality: data?.quality || 0.5 });
+        });
+
+        const durationSeconds = (Date.now() - screenshotStart) / 1000;
+        metricsService.recordCommand('screenshot', 'sent');
+        metricsService.recordCommandLatency('screenshot', durationSeconds);
+        logger.info('Cloud remote command sent', { siteId, commandType: type, eventName: 'screenshot-request', ip: req.ip });
+
+        if (!screenshotData) {
+          metricsService.recordCommand('screenshot', 'timeout');
+          logger.warn('Screenshot timeout', { siteId, durationSeconds });
+          return res.status(504).json({ error: 'timeout', message: 'Le Pi n\'a pas répondu (8s)' });
+        }
+
+        if (screenshotData.error) {
+          metricsService.recordCommand('screenshot', 'pi_error');
+          logger.warn('Screenshot Pi error', { siteId, error: screenshotData.error, durationSeconds });
+          return res.status(502).json({ error: screenshotData.error, message: 'Erreur capture sur le Pi' });
+        }
+
+        const imageSize = typeof screenshotData.image === 'string' ? (screenshotData.image as string).length : 0;
+        metricsService.recordCommand('screenshot', 'received');
+        logger.info('Screenshot captured successfully', { siteId, durationSeconds, imageSize });
+        return res.json({
+          success: true,
+          commandType: type,
+          image: screenshotData.image,
+          timestamp: screenshotData.timestamp,
+          currentVideo: screenshotData.currentVideo,
+          phase: screenshotData.phase,
+          isManualMode: screenshotData.isManualMode,
+        });
+      }
+
       default:
         return res.status(400).json({ error: 'Type de commande non géré' });
     }
 
-    // Envoyer via Socket.IO vers la room du site
     io.to(siteId).emit(eventName, payload);
+    metricsService.recordCommand(type, 'sent');
 
     logger.info('Cloud remote command sent', {
       siteId,
@@ -220,6 +467,7 @@ export async function sendRemoteCommand(req: Request, res: Response) {
       timestamp,
     });
   } catch (error) {
+    metricsService.recordCommand(req.body?.type || 'unknown', 'error');
     logger.error('Error sending remote command:', { error, siteId: req.params.siteId });
     res.status(500).json({ error: 'Erreur serveur' });
   }
@@ -229,24 +477,19 @@ export async function sendRemoteCommand(req: Request, res: Response) {
  * GET /api/remote/:siteId/videos
  * Liste les vidéos disponibles sur le site (pour la télécommande cloud)
  *
- * PUBLIC: Pas d'authentification requise (accès via QR code)
+ * Protégé par le middleware verifyRemotePin si un PIN est configuré.
  */
 export async function getRemoteVideos(req: Request, res: Response) {
   try {
     const { siteId } = req.params;
 
-    // Récupérer les vidéos locales depuis le miroir de config
-    const siteResult = await query(
-      `SELECT local_config_mirror FROM sites WHERE id = $1`,
-      [siteId]
-    );
+    const site = await siteRepository.findById(siteId);
 
-    if (siteResult.rows.length === 0) {
+    if (!site) {
       return res.status(404).json({ error: 'Site non trouvé' });
     }
 
-    // Cast localConfig pour accéder aux propriétés (type JSONB en DB)
-    const localConfig = (siteResult.rows[0].local_config_mirror || {}) as Record<string, unknown>;
+    const localConfig = (site.local_config_mirror || {}) as Record<string, unknown>;
     const localVideos = (localConfig._localVideos as Array<{
       filename: string;
       path: string;
@@ -257,7 +500,6 @@ export async function getRemoteVideos(req: Request, res: Response) {
     }>) || [];
     const categories = (localConfig.categories as unknown[]) || [];
 
-    // Organiser les vidéos par catégorie
     const videosByCategory: Record<string, Array<{
       filename: string;
       path: string;

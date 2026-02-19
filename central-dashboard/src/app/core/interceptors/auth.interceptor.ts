@@ -1,4 +1,4 @@
-import { HttpInterceptorFn, HttpHeaders } from '@angular/common/http';
+import { HttpInterceptorFn } from '@angular/common/http';
 import { inject, Injector } from '@angular/core';
 import { catchError, throwError } from 'rxjs';
 import { Router } from '@angular/router';

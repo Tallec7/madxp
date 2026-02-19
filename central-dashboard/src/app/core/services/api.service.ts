@@ -1,7 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpHeaders, HttpParams, HttpEventType, HttpEvent } from '@angular/common/http';
-import { Observable, Subject, throwError, timer } from 'rxjs';
-import { map, filter, retryWhen, delayWhen, scan, takeWhile } from 'rxjs/operators';
+import { Observable, Subject } from 'rxjs';
 import { environment } from '@env/environment';
 
 export interface UploadProgress {

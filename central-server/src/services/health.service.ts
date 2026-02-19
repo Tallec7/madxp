@@ -5,7 +5,7 @@
 
 import pool from '../config/database';
 import socketService from './socket.service';
-import logger from '../config/logger';
+
 
 export type HealthStatus = 'healthy' | 'degraded' | 'unhealthy';
 
@@ -238,10 +238,10 @@ class HealthService {
     let status: HealthStatus = 'healthy';
     let message: string | undefined;
 
-    if (heapUsagePercent > 90) {
+    if (heapUsagePercent > 93) {
       status = 'unhealthy';
       message = 'Heap memory critical';
-    } else if (heapUsagePercent > 75) {
+    } else if (heapUsagePercent > 88) {
       status = 'degraded';
       message = 'Heap memory high';
     }

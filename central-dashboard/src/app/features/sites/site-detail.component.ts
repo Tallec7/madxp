@@ -7,7 +7,7 @@ import { SitesService } from '../../core/services/sites.service';
 import { NotificationService } from '../../core/services/notification.service';
 import { LoggerService } from '../../core/services/logger.service';
 import { ErrorExtractor } from '../../core/utils/error-extractor';
-import { Site, Metrics, SiteConnectionStatus, ConnectionHealth, MatchHistoryData, Match } from '../../core/models';
+import { Site, Metrics, FanStatus, SiteConnectionStatus, ConnectionHealth, MatchHistoryData, Match } from '../../core/models';
 import { formatVersion } from './utils/version';
 import { Subscription, interval } from 'rxjs';
 import { ConnectionIndicatorComponent } from '../../shared/components/connection-indicator.component';
@@ -15,9 +15,11 @@ import { SiteContentTabComponent } from './components/site-content-tab/site-cont
 import { SiteSettingsTabComponent } from './components/site-settings-tab/site-settings-tab.component';
 import { SiteDebugTabComponent } from './components/site-debug-tab/site-debug-tab.component';
 import { SiteSubscriptionTabComponent } from './components/site-subscription-tab/site-subscription-tab.component';
+import { SiteProfilesTabComponent } from './components/site-profiles-tab/site-profiles-tab.component';
 import { SiteBenchmarkComponent } from './components/site-benchmark/site-benchmark.component';
+import { SiteSponsorsTabComponent } from './components/site-sponsors-tab/site-sponsors-tab.component';
 
-type TabId = 'status' | 'content' | 'settings' | 'subscription' | 'debug';
+type TabId = 'status' | 'content' | 'settings' | 'profiles' | 'sponsors' | 'subscription' | 'debug';
 
 @Component({
   selector: 'app-site-detail',
@@ -32,7 +34,9 @@ type TabId = 'status' | 'content' | 'settings' | 'subscription' | 'debug';
     SiteSettingsTabComponent,
     SiteDebugTabComponent,
     SiteSubscriptionTabComponent,
-    SiteBenchmarkComponent
+    SiteProfilesTabComponent,
+    SiteBenchmarkComponent,
+    SiteSponsorsTabComponent
   ],
   template: `
     <div class="page-container" *ngIf="site; else loading">
@@ -100,6 +104,22 @@ type TabId = 'status' | 'content' | 'settings' | 'subscription' | 'debug';
         </button>
         <button
           class="tab-btn"
+          [class.active]="activeTab === 'profiles'"
+          (click)="activeTab = 'profiles'"
+        >
+          <span class="tab-icon">📑</span>
+          <span class="tab-label">Profils</span>
+        </button>
+        <button
+          class="tab-btn"
+          [class.active]="activeTab === 'sponsors'"
+          (click)="activeTab = 'sponsors'"
+        >
+          <span class="tab-icon">💼</span>
+          <span class="tab-label">Sponsors</span>
+        </button>
+        <button
+          class="tab-btn"
           [class.active]="activeTab === 'subscription'"
           (click)="activeTab = 'subscription'"
         >
@@ -137,6 +157,12 @@ type TabId = 'status' | 'content' | 'settings' | 'subscription' | 'debug';
                   <span class="label">Club:</span>
                   <span class="value">{{ site.club_name }}</span>
                 </div>
+                @if (site.hostname_slug) {
+                  <div class="info-row">
+                    <span class="label">Hostname:</span>
+                    <span class="value monospace">{{ site.hostname_slug }}.local</span>
+                  </div>
+                }
                 <div class="info-row">
                   <span class="label">Localisation:</span>
                   <span class="value">{{ getLocation() }}</span>
@@ -221,6 +247,28 @@ type TabId = 'status' | 'content' | 'settings' | 'subscription' | 'debug';
                   <div class="metric-info">
                     <div class="metric-label">Uptime</div>
                     <div class="metric-value">{{ formatUptime(currentMetrics.uptime) }}</div>
+                  </div>
+                </div>
+
+                <div class="metric" [class.warning]="wifiSignalWeak" [class.critical]="wifiSignalCritical" *ngIf="wifiStatus">
+                  <div class="metric-icon">{{ connectionIcon }}</div>
+                  <div class="metric-info">
+                    <div class="metric-label">Connexion</div>
+                    <div class="metric-value">{{ wifiSignalDisplay }}</div>
+                  </div>
+                  <div class="metric-bar" *ngIf="wifiStatus.connectionType === 'wifi'">
+                    <div class="metric-fill" [style.width.%]="wifiStatus.quality ?? 0"></div>
+                  </div>
+                </div>
+
+                <div class="metric" [class.warning]="fanWarning" *ngIf="fanStatus?.present">
+                  <div class="metric-icon">🌀</div>
+                  <div class="metric-info">
+                    <div class="metric-label">Ventilateur</div>
+                    <div class="metric-value">{{ fanStatusDisplay }}</div>
+                  </div>
+                  <div class="metric-bar">
+                    <div class="metric-fill" [style.width.%]="fanStatus?.speedPercent ?? 0"></div>
                   </div>
                 </div>
               </div>
@@ -407,6 +455,24 @@ type TabId = 'status' | 'content' | 'settings' | 'subscription' | 'debug';
             [isConnected]="isConnected"
             (siteUpdated)="onSiteUpdated($event)"
           ></app-site-settings-tab>
+        </div>
+
+        <!-- TAB: Profils -->
+        <div *ngIf="activeTab === 'profiles'" class="tab-panel">
+          <app-site-profiles-tab
+            [siteId]="siteId"
+            [site]="site"
+            [isConnected]="isConnected"
+            (profileDeployed)="onConfigDeployed()"
+          ></app-site-profiles-tab>
+        </div>
+
+        <!-- TAB: Sponsors -->
+        <div *ngIf="activeTab === 'sponsors'" class="tab-panel">
+          <app-site-sponsors-tab
+            [siteId]="siteId"
+            [site]="site"
+          ></app-site-sponsors-tab>
         </div>
 
         <!-- TAB: Abonnement -->
@@ -1311,6 +1377,22 @@ export class SiteDetailComponent implements OnInit, OnDestroy {
   // Active tab
   activeTab: TabId = 'status';
 
+  // WiFi / network status
+  wifiStatus: {
+    interface: string | null;
+    connected: boolean;
+    ssid: string | null;
+    signal: number | null;
+    quality: number | null;
+    connectionType: 'wifi' | 'ethernet' | 'none';
+    disconnectsLastHour: number;
+    throttled: string | null;
+    voltageOk: boolean;
+  } | null = null;
+
+  // Fan status
+  fanStatus: FanStatus | null = null;
+
   // Connection
   connectionStatus: SiteConnectionStatus | null = null;
   isConnected = false;
@@ -1430,7 +1512,7 @@ export class SiteDetailComponent implements OnInit, OnDestroy {
           },
           statistics: {
             heartbeats24h: data.connection.heartbeat_24h.count,
-            uptime24h: 0,
+            uptime24h: Math.min(100, (data.connection.heartbeat_24h.count / 2880) * 100),
             firstHeartbeat24h: data.connection.heartbeat_24h.firstAt,
             lastHeartbeat24h: data.connection.heartbeat_24h.lastAt
           },
@@ -1440,6 +1522,16 @@ export class SiteDetailComponent implements OnInit, OnDestroy {
         this.metricsHistory = data.metrics.data;
         if (data.metrics.data.length > 0) {
           this.currentMetrics = data.metrics.data[0];
+          // Extract WiFi status from network_status JSONB
+          const networkStatus = this.currentMetrics?.network_status;
+          if (networkStatus && typeof networkStatus === 'object' && 'connectionType' in networkStatus) {
+            this.wifiStatus = networkStatus as typeof this.wifiStatus;
+          }
+          // Extract fan status from fan_status JSONB
+          const fanData = this.currentMetrics?.fan_status;
+          if (fanData && typeof fanData === 'object' && 'present' in fanData) {
+            this.fanStatus = fanData as FanStatus;
+          }
         }
         this.loadingDashboard = false;
       },
@@ -1899,5 +1991,51 @@ export class SiteDetailComponent implements OnInit, OnDestroy {
    */
   dismissNetworkAlert(): void {
     this.networkAlertDismissed = true;
+  }
+
+  // WiFi / Connection getters for template
+  get wifiSignalDisplay(): string {
+    if (!this.wifiStatus) return 'N/A';
+    if (this.wifiStatus.connectionType === 'ethernet') return 'Ethernet';
+    if (this.wifiStatus.connectionType === 'none') return 'Déconnecté';
+    if (this.wifiStatus.interface === null) return 'Pas de clé USB';
+    if (this.wifiStatus.signal !== null) return `${this.wifiStatus.signal} dBm`;
+    return 'WiFi';
+  }
+
+  get wifiSignalWeak(): boolean {
+    return !!this.wifiStatus &&
+      this.wifiStatus.connectionType === 'wifi' &&
+      this.wifiStatus.signal !== null &&
+      this.wifiStatus.signal < -70;
+  }
+
+  get wifiSignalCritical(): boolean {
+    if (!this.wifiStatus) return false;
+    if (this.wifiStatus.connectionType === 'none') return true;
+    if (this.wifiStatus.interface === null && this.wifiStatus.connectionType !== 'ethernet') return true;
+    return this.wifiStatus.connectionType === 'wifi' &&
+      this.wifiStatus.signal !== null &&
+      this.wifiStatus.signal < -85;
+  }
+
+  get connectionIcon(): string {
+    if (!this.wifiStatus) return '📶';
+    if (this.wifiStatus.connectionType === 'ethernet') return '🔌';
+    if (this.wifiStatus.connectionType === 'none') return '❌';
+    return '📶';
+  }
+
+  get fanWarning(): boolean {
+    if (!this.fanStatus?.present) return false;
+    return this.fanStatus.curState === 0 && (this.currentMetrics?.temperature ?? 0) > 70;
+  }
+
+  get fanStatusDisplay(): string {
+    if (!this.fanStatus?.present) return 'N/A';
+    if (this.fanStatus.speedPercent !== null) {
+      return `${this.fanStatus.speedPercent}%`;
+    }
+    return `${this.fanStatus.curState ?? '?'}/${this.fanStatus.maxState ?? '?'}`;
   }
 }

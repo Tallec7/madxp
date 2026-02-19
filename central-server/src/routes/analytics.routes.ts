@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import * as analyticsController from '../controllers/analytics.controller';
+import * as pitchDeckController from '../controllers/pitch-deck.controller';
 import { authenticate, requireRole } from '../middleware/auth';
 
 const router = Router();
@@ -68,6 +69,9 @@ router.get('/comparison', authenticate, requireRole('admin', 'operator'), analyt
 
 // GET /api/analytics/realtime - Stats temps réel pour dashboard live
 router.get('/realtime', authenticate, requireRole('admin', 'operator'), analyticsController.getRealtimeStats);
+
+// GET /api/analytics/traction - Métriques de traction (croissance, engagement, revenue)
+router.get('/traction', authenticate, requireRole('admin'), pitchDeckController.getTractionMetrics);
 
 // ============================================================================
 // Analytics Categories Management

@@ -1,8 +1,14 @@
 import { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import { login, logout, me, changePassword } from './auth.controller';
-import { query } from '../config/database';
 import { AuthRequest } from '../types';
+import { userRepository, UserRow } from '../repositories';
+import { generateToken } from '../middleware/auth';
+import { mfaService } from '../services/mfa.service';
+
+// ---------------------------------------------------------------------------
+// Mocks
+// ---------------------------------------------------------------------------
 
 // Mock bcrypt
 jest.mock('bcryptjs', () => ({
@@ -10,7 +16,66 @@ jest.mock('bcryptjs', () => ({
   hash: jest.fn(),
 }));
 
-// Helper to create mock response
+// Mock logger (Winston) — avoid console output during tests
+jest.mock('../config/logger', () => ({
+  __esModule: true,
+  default: {
+    info: jest.fn(),
+    warn: jest.fn(),
+    error: jest.fn(),
+    debug: jest.fn(),
+  },
+}));
+
+// Mock repositories
+jest.mock('../repositories', () => ({
+  userRepository: {
+    findByEmail: jest.fn(),
+    updateLastLogin: jest.fn(),
+    findForAuth: jest.fn(),
+    getPasswordHash: jest.fn(),
+    updatePassword: jest.fn(),
+  },
+}));
+
+// Mock middleware/auth
+jest.mock('../middleware/auth', () => ({
+  generateToken: jest.fn().mockReturnValue('mock-jwt-token'),
+}));
+
+// Mock mfaService
+jest.mock('../services/mfa.service', () => ({
+  mfaService: {
+    verifyMfaLogin: jest.fn(),
+  },
+}));
+
+// Mock password-reset and email services (imported by controller but not tested here)
+jest.mock('../services/password-reset.service', () => ({
+  passwordResetService: {
+    requestReset: jest.fn(),
+    verifyToken: jest.fn(),
+    resetPassword: jest.fn(),
+  },
+}));
+jest.mock('../services/email.service', () => ({
+  emailService: {
+    sendPasswordResetEmail: jest.fn(),
+  },
+}));
+
+// ---------------------------------------------------------------------------
+// Typed mock references
+// ---------------------------------------------------------------------------
+
+const mockUserRepository = userRepository as jest.Mocked<typeof userRepository>;
+const mockGenerateToken = generateToken as jest.MockedFunction<typeof generateToken>;
+const mockMfaService = mfaService as jest.Mocked<typeof mfaService>;
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
 const createMockResponse = (): Response => {
   const res: Partial<Response> = {
     status: jest.fn().mockReturnThis(),
@@ -21,19 +86,34 @@ const createMockResponse = (): Response => {
   return res as Response;
 };
 
+// ---------------------------------------------------------------------------
+// Tests
+// ---------------------------------------------------------------------------
+
 describe('Auth Controller', () => {
-  const mockUser = {
+  const mockUser: Pick<
+    UserRow,
+    'id' | 'email' | 'password_hash' | 'full_name' | 'role' | 'mfa_enabled' | 'advertiser_id' | 'sponsor_id' | 'agency_id'
+  > = {
     id: 'user-123',
     email: 'test@example.com',
     password_hash: 'hashed_password',
     full_name: 'Test User',
-    role: 'admin' as const,
+    role: 'admin',
+    mfa_enabled: false,
+    advertiser_id: null,
+    sponsor_id: null,
+    agency_id: null,
   };
 
   beforeEach(() => {
     jest.clearAllMocks();
+    mockGenerateToken.mockReturnValue('mock-jwt-token');
   });
 
+  // -------------------------------------------------------------------------
+  // login
+  // -------------------------------------------------------------------------
   describe('login', () => {
     it('should return 401 if user not found', async () => {
       const req = {
@@ -41,10 +121,11 @@ describe('Auth Controller', () => {
       } as Request;
       const res = createMockResponse();
 
-      (query as jest.Mock).mockResolvedValueOnce({ rows: [] });
+      mockUserRepository.findByEmail.mockResolvedValueOnce(null);
 
       await login(req, res);
 
+      expect(mockUserRepository.findByEmail).toHaveBeenCalledWith('notfound@example.com');
       expect(res.status).toHaveBeenCalledWith(401);
       expect(res.json).toHaveBeenCalledWith({ error: 'Email ou mot de passe incorrect' });
     });
@@ -55,7 +136,7 @@ describe('Auth Controller', () => {
       } as Request;
       const res = createMockResponse();
 
-      (query as jest.Mock).mockResolvedValueOnce({ rows: [mockUser] });
+      mockUserRepository.findByEmail.mockResolvedValueOnce(mockUser as UserRow);
       (bcrypt.compare as jest.Mock).mockResolvedValueOnce(false);
 
       await login(req, res);
@@ -70,16 +151,23 @@ describe('Auth Controller', () => {
       } as Request;
       const res = createMockResponse();
 
-      (query as jest.Mock)
-        .mockResolvedValueOnce({ rows: [mockUser] }) // SELECT user
-        .mockResolvedValueOnce({ rows: [] }); // UPDATE last_login
+      mockUserRepository.findByEmail.mockResolvedValueOnce(mockUser as UserRow);
+      mockUserRepository.updateLastLogin.mockResolvedValueOnce(undefined);
       (bcrypt.compare as jest.Mock).mockResolvedValueOnce(true);
 
       await login(req, res);
 
+      expect(mockUserRepository.updateLastLogin).toHaveBeenCalledWith(mockUser.id);
+      expect(mockGenerateToken).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: mockUser.id,
+          email: mockUser.email,
+          role: mockUser.role,
+        })
+      );
       expect(res.json).toHaveBeenCalledWith(
         expect.objectContaining({
-          token: expect.any(String),
+          token: 'mock-jwt-token',
           user: expect.objectContaining({
             id: mockUser.id,
             email: mockUser.email,
@@ -96,16 +184,15 @@ describe('Auth Controller', () => {
       } as Request;
       const res = createMockResponse();
 
-      (query as jest.Mock)
-        .mockResolvedValueOnce({ rows: [mockUser] })
-        .mockResolvedValueOnce({ rows: [] });
+      mockUserRepository.findByEmail.mockResolvedValueOnce(mockUser as UserRow);
+      mockUserRepository.updateLastLogin.mockResolvedValueOnce(undefined);
       (bcrypt.compare as jest.Mock).mockResolvedValueOnce(true);
 
       await login(req, res);
 
       expect(res.cookie).toHaveBeenCalledWith(
         'neopro_token',
-        expect.any(String),
+        'mock-jwt-token',
         expect.objectContaining({
           httpOnly: true,
           path: '/',
@@ -119,7 +206,7 @@ describe('Auth Controller', () => {
       } as Request;
       const res = createMockResponse();
 
-      (query as jest.Mock).mockRejectedValueOnce(new Error('DB Error'));
+      mockUserRepository.findByEmail.mockRejectedValueOnce(new Error('DB Error'));
 
       await login(req, res);
 
@@ -128,6 +215,9 @@ describe('Auth Controller', () => {
     });
   });
 
+  // -------------------------------------------------------------------------
+  // logout
+  // -------------------------------------------------------------------------
   describe('logout', () => {
     it('should return success message', async () => {
       const req = {
@@ -137,7 +227,7 @@ describe('Auth Controller', () => {
 
       await logout(req, res);
 
-      expect(res.json).toHaveBeenCalledWith({ message: 'Déconnexion réussie' });
+      expect(res.json).toHaveBeenCalledWith({ message: 'D\u00e9connexion r\u00e9ussie' });
     });
 
     it('should clear the cookie on logout', async () => {
@@ -152,6 +242,9 @@ describe('Auth Controller', () => {
     });
   });
 
+  // -------------------------------------------------------------------------
+  // me
+  // -------------------------------------------------------------------------
   describe('me', () => {
     it('should return 401 if user not authenticated', async () => {
       const req = { user: undefined } as AuthRequest;
@@ -160,7 +253,7 @@ describe('Auth Controller', () => {
       await me(req, res);
 
       expect(res.status).toHaveBeenCalledWith(401);
-      expect(res.json).toHaveBeenCalledWith({ error: 'Non authentifié' });
+      expect(res.json).toHaveBeenCalledWith({ error: 'Non authentifi\u00e9' });
     });
 
     it('should return 404 if user not found in database', async () => {
@@ -169,12 +262,13 @@ describe('Auth Controller', () => {
       } as AuthRequest;
       const res = createMockResponse();
 
-      (query as jest.Mock).mockResolvedValueOnce({ rows: [] });
+      mockUserRepository.findForAuth.mockResolvedValueOnce(null);
 
       await me(req, res);
 
+      expect(mockUserRepository.findForAuth).toHaveBeenCalledWith('123');
       expect(res.status).toHaveBeenCalledWith(404);
-      expect(res.json).toHaveBeenCalledWith({ error: 'Utilisateur non trouvé' });
+      expect(res.json).toHaveBeenCalledWith({ error: 'Utilisateur non trouv\u00e9' });
     });
 
     it('should return user data on success', async () => {
@@ -192,17 +286,20 @@ describe('Auth Controller', () => {
         last_login_at: new Date(),
         advertiser_id: null,
         sponsor_id: null,
+        agency_id: null,
       };
 
-      (query as jest.Mock).mockResolvedValueOnce({ rows: [userData] });
+      mockUserRepository.findForAuth.mockResolvedValueOnce(userData as UserRow);
 
       await me(req, res);
 
-      expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
-        id: 'user-123',
-        email: 'test@example.com',
-        role: 'admin',
-      }));
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: 'user-123',
+          email: 'test@example.com',
+          role: 'admin',
+        })
+      );
     });
 
     it('should return 500 on database error', async () => {
@@ -211,15 +308,18 @@ describe('Auth Controller', () => {
       } as AuthRequest;
       const res = createMockResponse();
 
-      (query as jest.Mock).mockRejectedValueOnce(new Error('DB Error'));
+      mockUserRepository.findForAuth.mockRejectedValueOnce(new Error('DB Error'));
 
       await me(req, res);
 
       expect(res.status).toHaveBeenCalledWith(500);
-      expect(res.json).toHaveBeenCalledWith({ error: 'Erreur lors de la récupération des informations' });
+      expect(res.json).toHaveBeenCalledWith({ error: 'Erreur lors de la r\u00e9cup\u00e9ration des informations' });
     });
   });
 
+  // -------------------------------------------------------------------------
+  // changePassword
+  // -------------------------------------------------------------------------
   describe('changePassword', () => {
     it('should return 401 if user not authenticated', async () => {
       const req = {
@@ -231,7 +331,7 @@ describe('Auth Controller', () => {
       await changePassword(req, res);
 
       expect(res.status).toHaveBeenCalledWith(401);
-      expect(res.json).toHaveBeenCalledWith({ error: 'Non authentifié' });
+      expect(res.json).toHaveBeenCalledWith({ error: 'Non authentifi\u00e9' });
     });
 
     it('should return 404 if user not found', async () => {
@@ -241,12 +341,13 @@ describe('Auth Controller', () => {
       } as AuthRequest;
       const res = createMockResponse();
 
-      (query as jest.Mock).mockResolvedValueOnce({ rows: [] });
+      mockUserRepository.getPasswordHash.mockResolvedValueOnce(null);
 
       await changePassword(req, res);
 
+      expect(mockUserRepository.getPasswordHash).toHaveBeenCalledWith('123');
       expect(res.status).toHaveBeenCalledWith(404);
-      expect(res.json).toHaveBeenCalledWith({ error: 'Utilisateur non trouvé' });
+      expect(res.json).toHaveBeenCalledWith({ error: 'Utilisateur non trouv\u00e9' });
     });
 
     it('should return 401 if current password is incorrect', async () => {
@@ -256,13 +357,12 @@ describe('Auth Controller', () => {
       } as AuthRequest;
       const res = createMockResponse();
 
-      (query as jest.Mock).mockResolvedValueOnce({
-        rows: [{ password_hash: 'hashed_password' }],
-      });
+      mockUserRepository.getPasswordHash.mockResolvedValueOnce('hashed_password');
       (bcrypt.compare as jest.Mock).mockResolvedValueOnce(false);
 
       await changePassword(req, res);
 
+      expect(bcrypt.compare).toHaveBeenCalledWith('wrong', 'hashed_password');
       expect(res.status).toHaveBeenCalledWith(401);
       expect(res.json).toHaveBeenCalledWith({ error: 'Mot de passe actuel incorrect' });
     });
@@ -274,20 +374,16 @@ describe('Auth Controller', () => {
       } as AuthRequest;
       const res = createMockResponse();
 
-      (query as jest.Mock)
-        .mockResolvedValueOnce({ rows: [{ password_hash: 'hashed_password' }] })
-        .mockResolvedValueOnce({ rows: [] }); // UPDATE query
+      mockUserRepository.getPasswordHash.mockResolvedValueOnce('hashed_password');
+      mockUserRepository.updatePassword.mockResolvedValueOnce(true);
       (bcrypt.compare as jest.Mock).mockResolvedValueOnce(true);
       (bcrypt.hash as jest.Mock).mockResolvedValueOnce('new_hashed_password');
 
       await changePassword(req, res);
 
       expect(bcrypt.hash).toHaveBeenCalledWith('newpassword', 10);
-      expect(query).toHaveBeenCalledWith(
-        'UPDATE users SET password_hash = $1, updated_at = NOW() WHERE id = $2',
-        ['new_hashed_password', '123']
-      );
-      expect(res.json).toHaveBeenCalledWith({ message: 'Mot de passe modifié avec succès' });
+      expect(mockUserRepository.updatePassword).toHaveBeenCalledWith('123', 'new_hashed_password');
+      expect(res.json).toHaveBeenCalledWith({ message: 'Mot de passe modifi\u00e9 avec succ\u00e8s' });
     });
 
     it('should return 500 on database error', async () => {
@@ -297,7 +393,7 @@ describe('Auth Controller', () => {
       } as AuthRequest;
       const res = createMockResponse();
 
-      (query as jest.Mock).mockRejectedValueOnce(new Error('DB Error'));
+      mockUserRepository.getPasswordHash.mockRejectedValueOnce(new Error('DB Error'));
 
       await changePassword(req, res);
 

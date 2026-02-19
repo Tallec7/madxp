@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { Subscription } from 'rxjs';
-import { Configuration, TimeCategory, SportType, OverlayPosition } from '../../interfaces/configuration.interface';
+import { Configuration, TimeCategory, SportType, ScoreOverlayPosition } from '../../interfaces/configuration.interface';
 import { Category } from '../../interfaces/category.interface';
 import { Video } from '../../interfaces/video.interface';
 import { SocketService } from '../../services/socket.service';
@@ -12,18 +12,18 @@ import { AnalyticsService } from '../../services/analytics.service';
 import { SponsorAnalyticsService } from '../../services/sponsor-analytics.service';
 import { RecordingStateService } from '../../services/recording-state.service';
 import { DemoConfigService } from '../../services/demo-config.service';
+import { ProfileConfigService } from '../../services/profile-config.service';
 import { LocalBroadcastService, TimerUpdateEvent } from '../../services/local-broadcast.service';
 import {
   LocalOptionsService,
   LocalOptions,
-  OverlayPreset,
   TeamConfig,
   SPORT_LABELS,
   SPORT_PERIODS,
   SPORT_PERIOD_DURATIONS
 } from '../../services/local-options.service';
 import { LicenseService, LicenseState } from '../../services/license.service';
-import { ClubSelectorComponent } from '../club-selector/club-selector.component';
+import { ClubSelectorComponent, ClubInfo } from '../club-selector/club-selector.component';
 import { LicenseBannerComponent } from '../license-banner/license-banner.component';
 import { LicenseBlockRemoteComponent } from '../license-block-remote/license-block-remote.component';
 
@@ -45,6 +45,7 @@ export class RemoteComponent implements OnInit, OnDestroy {
   private readonly sponsorAnalytics = inject(SponsorAnalyticsService);
   private readonly recordingState = inject(RecordingStateService);
   private readonly demoConfigService = inject(DemoConfigService);
+  private readonly profileConfigService = inject(ProfileConfigService);
   private readonly localBroadcast = inject(LocalBroadcastService);
   private readonly localOptionsService = inject(LocalOptionsService);
   private readonly licenseService = inject(LicenseService);
@@ -65,7 +66,15 @@ export class RemoteComponent implements OnInit, OnDestroy {
   public currentView: ViewType = 'home';
   public breadcrumb: string[] = ['Télécommande'];
   public isDemoMode = false;
+  public isMultiProfile = false;
   public isReloading = false;
+
+  // Donnees pour le club-selector (mode demo ou multi-profil)
+  public selectorClubs: ClubInfo[] = [];
+  public selectorLoading = true;
+  public selectorError: string | null = null;
+  public selectorTitle = 'Mode Démo';
+  public selectorSubtitle = 'Sélectionnez un club pour démarrer la présentation';
 
   public selectedTimeCategory: TimeCategory | null = null;
   public selectedCategory: Category | null = null;
@@ -115,6 +124,8 @@ export class RemoteComponent implements OnInit, OnDestroy {
 
   // État d'enregistrement analytics
   public isRecording = false;
+  public showRecordingWarning = false;
+  public warningSecondsRemaining = 0;
 
   // Loading state
   public isLoading = false;
@@ -131,14 +142,11 @@ export class RemoteComponent implements OnInit, OnDestroy {
   public readonly sportPeriods = SPORT_PERIODS;
   public readonly sportPeriodDurations = SPORT_PERIOD_DURATIONS;
 
-  // Positions overlay (9 positions)
-  public readonly overlayPositions: { value: OverlayPosition; label: string }[] = [
+  // Positions overlay (6 positions)
+  public readonly overlayPositions: { value: ScoreOverlayPosition; label: string }[] = [
     { value: 'top-left', label: 'Haut gauche' },
     { value: 'top-center', label: 'Haut centre' },
     { value: 'top-right', label: 'Haut droite' },
-    { value: 'middle-left', label: 'Milieu gauche' },
-    { value: 'middle-center', label: 'Centre' },
-    { value: 'middle-right', label: 'Milieu droite' },
     { value: 'bottom-left', label: 'Bas gauche' },
     { value: 'bottom-center', label: 'Bas centre' },
     { value: 'bottom-right', label: 'Bas droite' },
@@ -150,10 +158,6 @@ export class RemoteComponent implements OnInit, OnDestroy {
     { value: 'fullscreen', label: 'Plein écran' },
     { value: 'slide', label: 'Bandeau glissant' },
   ];
-
-  // Présets
-  public showPresetModal = false;
-  public newPresetName = '';
 
   // Swipe gesture tracking
   private touchStartX = 0;
@@ -224,6 +228,28 @@ export class RemoteComponent implements OnInit, OnDestroy {
       })
     );
 
+    // S'abonner au warning d'inactivité recording
+    this.subscriptions.push(
+      this.recordingState.warning$.subscribe((warning) => {
+        this.ngZone.run(() => {
+          this.showRecordingWarning = warning.active;
+          this.warningSecondsRemaining = warning.secondsRemaining;
+        });
+      })
+    );
+
+    // Retour automatique en boucle par défaut quand le timer d'inactivité expire
+    this.subscriptions.push(
+      this.recordingState.inactivityExpired$.subscribe(() => {
+        this.ngZone.run(() => {
+          if (this.activePhase !== 'neutral') {
+            console.log('[Remote] Inactivity expired → returning to neutral');
+            this.switchPhase('neutral');
+          }
+        });
+      })
+    );
+
     this.isDemoMode = this.demoConfigService.isDemoMode();
 
     // Charger le dark mode depuis localStorage
@@ -237,12 +263,36 @@ export class RemoteComponent implements OnInit, OnDestroy {
     this.initializeTimer();
 
     if (this.isDemoMode) {
-      // En mode démo, on commence par la sélection du club
+      // Mode demo : charger les clubs fictifs
+      this.selectorTitle = 'Mode Démo';
+      this.selectorSubtitle = 'Sélectionnez un club pour démarrer la présentation';
+      this.demoConfigService.getAvailableClubs().subscribe({
+        next: (clubs) => {
+          this.selectorClubs = clubs;
+          this.selectorLoading = false;
+        },
+        error: () => {
+          this.selectorError = 'Impossible de charger la liste des clubs';
+          this.selectorLoading = false;
+        }
+      });
       this.currentView = 'club-selector';
     } else {
-      // Mode normal : charger la config depuis le resolver
-      const data = this.route.snapshot.data['configuration'] as Configuration;
-      this.initializeWithConfiguration(data);
+      // Mode production : verifier si multi-profil
+      this.profileConfigService.getAvailableProfiles().subscribe(profiles => {
+        if (profiles.length > 1) {
+          this.isMultiProfile = true;
+          this.selectorTitle = 'Sélection du profil';
+          this.selectorSubtitle = 'Choisissez un profil de configuration';
+          this.selectorClubs = profiles;
+          this.selectorLoading = false;
+          this.currentView = 'club-selector';
+        } else {
+          // Mono-config : comportement normal
+          const data = this.route.snapshot.data['configuration'] as Configuration;
+          this.initializeWithConfiguration(data);
+        }
+      });
     }
 
     // Écouter le score envoyé par le serveur
@@ -270,11 +320,34 @@ export class RemoteComponent implements OnInit, OnDestroy {
     this.socketService.emit('request-state', {});
   }
 
-  public onClubSelected(config: Configuration): void {
-    this.initializeWithConfiguration(config);
-    this.currentView = 'home';
-    // Envoyer la nouvelle config à /tv et lancer la boucle partenaires
-    this.socketService.emit('command', { type: 'reload-config', data: config });
+  public onClubSelected(club: ClubInfo): void {
+    if (this.isDemoMode) {
+      // Mode demo : charger la config depuis /demo-configs/{id}.json
+      this.demoConfigService.loadClubConfiguration(club.id).subscribe({
+        next: (config) => {
+          this.initializeWithConfiguration(config);
+          this.currentView = 'home';
+          this.socketService.emit('command', { type: 'reload-config', data: config });
+        },
+        error: (err) => {
+          console.error('Erreur chargement config club demo:', err);
+        }
+      });
+    } else {
+      // Mode production multi-profil : charger depuis /profiles/{id}.json
+      this.profileConfigService.loadProfileConfiguration(club.id).subscribe({
+        next: (config) => {
+          this.initializeWithConfiguration(config);
+          this.currentView = 'home';
+          // Notifier le serveur local pour switcher le profil actif
+          this.socketService.emit('profile-switch', { profileId: club.id });
+          this.socketService.emit('command', { type: 'reload-config', data: config });
+        },
+        error: (err) => {
+          console.error('Erreur chargement config profil:', err);
+        }
+      });
+    }
   }
 
   private initializeWithConfiguration(config: Configuration): void {
@@ -353,6 +426,7 @@ export class RemoteComponent implements OnInit, OnDestroy {
   // Actions
   public launchSponsors(): void {
     console.log('emit sponsors loop');
+    this.notifyUserActivity();
     // Communication locale (Remote ↔ TV sur le même Raspberry) - PRIORITAIRE
     this.localBroadcast.emitCommand({ type: 'sponsors' });
     // Communication cloud (pour monitoring/dashboard - optionnel)
@@ -361,6 +435,7 @@ export class RemoteComponent implements OnInit, OnDestroy {
 
   public launchVideo(video: Video): void {
     console.log('emit video', video);
+    this.notifyUserActivity();
     // Tracker le déclenchement manuel
     this.analyticsService.trackManualTrigger(video);
 
@@ -610,6 +685,7 @@ export class RemoteComponent implements OnInit, OnDestroy {
    * Sauvegarde les informations du match
    */
   public saveMatchInfo(): void {
+    this.notifyUserActivity();
     console.log('Match info saved:', this.matchInfo);
 
     // Créer une nouvelle session avec les infos du match
@@ -717,6 +793,7 @@ export class RemoteComponent implements OnInit, OnDestroy {
    * Envoie le score à la TV via BroadcastChannel (local) + Socket (cloud)
    */
   public broadcastScore(): void {
+    this.notifyUserActivity();
     const scoreData = {
       homeTeam: this.currentScore.homeTeam,
       awayTeam: this.currentScore.awayTeam,
@@ -767,6 +844,7 @@ export class RemoteComponent implements OnInit, OnDestroy {
   public switchPhase(phase: 'neutral' | 'before' | 'during' | 'after'): void {
     this.activePhase = phase;
     console.log('Switching to phase:', phase);
+    this.notifyUserActivity();
 
     // Notifier le RecordingStateService (auto-start/stop analytics)
     this.recordingState.onPhaseChange(phase);
@@ -797,6 +875,28 @@ export class RemoteComponent implements OnInit, OnDestroy {
    */
   public toggleRecording(): void {
     this.recordingState.toggleRecording();
+  }
+
+  /** Prolonger l'enregistrement (bouton "Continuer" dans la popup warning) */
+  public extendRecording(): void {
+    this.recordingState.extendRecording();
+  }
+
+  /** Arrêter l'enregistrement depuis la popup warning */
+  public dismissRecordingWarning(): void {
+    this.recordingState.stopRecording(true);
+  }
+
+  /** Formate les secondes restantes en M:SS */
+  public formatWarningTime(seconds: number): string {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  }
+
+  /** Notifie le RecordingStateService d'une interaction utilisateur significative */
+  private notifyUserActivity(): void {
+    this.recordingState.resetInactivityTimer();
   }
 
   /**
@@ -1231,6 +1331,7 @@ export class RemoteComponent implements OnInit, OnDestroy {
    * Nouveau match : réinitialise les équipes et logos
    */
   public startNewMatch(): void {
+    this.notifyUserActivity();
     this.localOptionsService.resetMatch();
     this.localOptions = this.localOptionsService.getOptions();
     this.currentScore = {
@@ -1267,89 +1368,10 @@ export class RemoteComponent implements OnInit, OnDestroy {
   /**
    * Met à jour la position locale de l'overlay
    */
-  public setOverlayPosition(position: OverlayPosition | undefined): void {
+  public setOverlayPosition(position: ScoreOverlayPosition | undefined): void {
     this.localOptionsService.updateOverlayOptions({ position });
     this.localOptions = this.localOptionsService.getOptions();
     this.broadcastOptions();
-  }
-
-  /**
-   * Active/désactive les couleurs locales
-   */
-  public toggleLocalColors(useLocal: boolean): void {
-    this.localOptionsService.updateOverlayOptions({ useLocalColors: useLocal });
-    this.localOptions = this.localOptionsService.getOptions();
-    this.broadcastOptions();
-  }
-
-  /**
-   * Met à jour une couleur locale
-   */
-  public setLocalColor(colorType: 'backgroundColor' | 'scoreColor' | 'teamNameColor', color: string): void {
-    this.localOptionsService.updateOverlayOptions({ [colorType]: color });
-    this.localOptions = this.localOptionsService.getOptions();
-    this.broadcastOptions();
-  }
-
-  // ============================================================================
-  // PRESETS
-  // ============================================================================
-
-  /**
-   * Ouvre la modal de création de preset
-   */
-  public openPresetModal(): void {
-    this.showPresetModal = true;
-    this.newPresetName = '';
-  }
-
-  /**
-   * Ferme la modal de preset
-   */
-  public closePresetModal(): void {
-    this.showPresetModal = false;
-    this.newPresetName = '';
-  }
-
-  /**
-   * Sauvegarde un nouveau preset
-   */
-  public savePreset(): void {
-    if (!this.newPresetName.trim()) {
-      this.displayToast('Veuillez entrer un nom', 'info');
-      return;
-    }
-    this.localOptionsService.savePreset(this.newPresetName.trim());
-    this.localOptions = this.localOptionsService.getOptions();
-    this.closePresetModal();
-    this.displayToast('Preset sauvegardé', 'success');
-  }
-
-  /**
-   * Applique un preset
-   */
-  public applyPreset(presetId: string): void {
-    if (this.localOptionsService.applyPreset(presetId)) {
-      this.localOptions = this.localOptionsService.getOptions();
-      this.broadcastOptions();
-      this.displayToast('Preset appliqué', 'success');
-    }
-  }
-
-  /**
-   * Supprime un preset
-   */
-  public deletePreset(presetId: string): void {
-    this.localOptionsService.deletePreset(presetId);
-    this.localOptions = this.localOptionsService.getOptions();
-    this.displayToast('Preset supprimé', 'success');
-  }
-
-  /**
-   * Récupère tous les presets
-   */
-  public getPresets(): OverlayPreset[] {
-    return this.localOptionsService.getPresets();
   }
 
   /**
@@ -1392,6 +1414,7 @@ export class RemoteComponent implements OnInit, OnDestroy {
    * Envoie une breaking news à la TV
    */
   public sendBreakingNews(message?: string): void {
+    this.notifyUserActivity();
     const text = message || this.breakingNewsMessage.trim();
     if (!text) return;
 
@@ -1427,6 +1450,7 @@ export class RemoteComponent implements OnInit, OnDestroy {
    * Démarre ou met en pause le chronomètre
    */
   public toggleTimer(): void {
+    this.notifyUserActivity();
     if (this.timerIsRunning) {
       this.pauseTimer();
     } else {
@@ -1508,6 +1532,7 @@ export class RemoteComponent implements OnInit, OnDestroy {
    * Réinitialise le chronomètre
    */
   public resetTimer(): void {
+    this.notifyUserActivity();
     this.pauseTimer();
 
     // Réinitialiser selon le mode

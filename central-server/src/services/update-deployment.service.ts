@@ -8,8 +8,9 @@ import { query } from '../config/database';
 import socketService from './socket.service';
 import { commandQueueService } from './command-queue.service';
 import logger from '../config/logger';
-import { getPublicUrl } from '../config/supabase';
+
 import { uploadVerificationService } from './upload-verification.service';
+import { metricsService } from './metrics.service';
 
 interface UpdateDeploymentRow {
   id: string;
@@ -59,7 +60,7 @@ class UpdateDeploymentService {
         throw new Error(`Déploiement de mise à jour non trouvé: ${deploymentId}`);
       }
 
-      const deployment = deploymentResult.rows[0] as UpdateDeploymentRow & SoftwareUpdateRow & { upload_status: string };
+      const deployment = deploymentResult.rows[0] as UpdateDeploymentRow & SoftwareUpdateRow & { upload_status: string; schedule_reboot: boolean; auto_rollback: boolean };
       logger.info('Deployment info retrieved', {
         deploymentId,
         version: deployment.version,
@@ -129,7 +130,7 @@ class UpdateDeploymentService {
         });
 
         // deployToSite utilise maintenant sendOrQueue, donc fonctionne même si offline
-        const success = await this.deployToSite(deploymentId, target.siteId, deployment);
+        const success = await this.deployToSite(deploymentId, target.siteId, deployment, deployment.schedule_reboot, deployment.auto_rollback);
         if (success) {
           successCount++;
           if (isConnected) {
@@ -160,6 +161,8 @@ class UpdateDeploymentService {
           [statusMessage.join(' | ') || null, deploymentId]
         );
 
+        metricsService.recordDeployment('in_progress', deployment.target_type);
+
         logger.info('Update deployment in progress', {
           deploymentId,
           commandSentSites,
@@ -167,13 +170,8 @@ class UpdateDeploymentService {
           commandFailedSites,
         });
       } else {
-        // Aucune commande n'a pu être envoyée ou mise en queue
-        await query(
-          `UPDATE update_deployments
-           SET error_message = $1
-           WHERE id = $2 AND status = 'pending'`,
-          ['Échec de l\'envoi à tous les sites cibles', deploymentId]
-        );
+        // Aucune commande n'a pu être envoyée ou mise en queue → marquer comme échoué
+        await this.failDeployment(deploymentId, 'Échec de l\'envoi à tous les sites cibles');
 
         logger.error('Update deployment failed for all sites', {
           deploymentId,
@@ -201,8 +199,8 @@ class UpdateDeploymentService {
    */
   async processPendingDeploymentsForSite(siteId: string): Promise<void> {
     try {
-      // Récupérer les déploiements pending qui ciblent ce site (directement ou via un groupe)
-      const result = await query<UpdateDeploymentRow & SoftwareUpdateRow>(
+      // Récupérer les déploiements pending/in_progress qui ciblent ce site (directement ou via un groupe)
+      const result = await query<UpdateDeploymentRow & SoftwareUpdateRow & { schedule_reboot: boolean; auto_rollback: boolean }>(
         `SELECT ud.*, su.version, su.description, su.is_critical, su.changelog,
                 su.package_url, su.package_size, su.checksum
          FROM update_deployments ud
@@ -221,13 +219,35 @@ class UpdateDeploymentService {
         return;
       }
 
+      // Réconciliation : si le Pi tourne déjà la version cible, marquer comme terminé
+      // Cela couvre le cas où le Pi s'est restarté après la mise à jour et le
+      // callback completed a été perdu (race condition avec le restart du sync-agent)
+      const siteRow = await query<{ software_version: string | null }>(
+        `SELECT software_version FROM sites WHERE id = $1`,
+        [siteId]
+      );
+      const currentVersion = siteRow.rows[0]?.software_version;
+
       logger.info('Processing pending update deployments for site', {
         siteId,
         count: result.rows.length,
+        currentVersion,
       });
 
       for (const deployment of result.rows) {
-        const success = await this.deployToSite(deployment.id, siteId, deployment);
+        // Si le site tourne déjà la version cible → le déploiement a réussi mais le callback a été perdu
+        if (currentVersion && deployment.version && currentVersion === deployment.version) {
+          logger.info('Reconciliation: site already running target version, marking deployment as completed', {
+            siteId,
+            deploymentId: deployment.id,
+            targetVersion: deployment.version,
+            currentVersion,
+          });
+          await this.handleDeploymentResult(deployment.id, siteId, true);
+          continue;
+        }
+
+        const success = await this.deployToSite(deployment.id, siteId, deployment, deployment.schedule_reboot, deployment.auto_rollback);
 
         if (success) {
           // Passer en in_progress si c'était pending
@@ -271,6 +291,91 @@ class UpdateDeploymentService {
   }
 
   /**
+   * Pré-migration avant OTA : supprime les fichiers VERSION/release.json root:root
+   * AVANT que le sync-agent n'exécute l'update.
+   *
+   * Problème : les anciennes versions du sync-agent créaient ces fichiers en root:root
+   * via "sudo cp/tee". Le code OTA v3.17.1 (et antérieur) fait fs.copy(VERSION,
+   * { overwrite: true }) qui appelle fs.unlink() sur le fichier root → EACCES.
+   * Ce crash à 60% est un deadlock : le fix (try/catch non-bloquant) est dans le
+   * NOUVEAU code livré par l'OTA qui échoue.
+   *
+   * Solution : SUPPRIMER les fichiers root:root avant l'OTA (pas chown, pas cp+mv).
+   * Un simple `rm -f` suffit si le dossier parent /home/pi/neopro/ est pi:pi (ce qui
+   * est le cas standard). Si le fichier n'existe plus, fs.copy() skip l'unlink et
+   * crée directement un nouveau fichier — pas d'EACCES.
+   *
+   * Stratégie en 4 niveaux (pour chaque fichier) :
+   * 1. rm -f (sans sudo) → marche si le dossier parent est pi:pi (cas standard)
+   * 2. sudo chown pi:pi → marche si NoNewPrivileges=false ET sudoers installé
+   * 3. sudo rm -f → marche si NoNewPrivileges=false
+   * 4. Diagnostic → log les permissions pour debug futur
+   *
+   * IMPORTANT : NE PAS appeler apply-services ici — ça restart le sync-agent et
+   * déconnecte le socket avant que update_software n'arrive. Le fix des services
+   * systemd se fera APRÈS l'OTA via le nouveau code installé.
+   *
+   * TODO: Supprimer cette pré-migration une fois que NLF Handball (v3.17.1) aura
+   * reçu l'OTA avec succès. Le code v3.20+ a déjà le try/catch non-bloquant
+   * autour de fs.copy(VERSION), donc la pré-migration devient inutile.
+   */
+  private applyPreUpdateMigration(siteId: string): boolean {
+    if (!socketService.isConnected(siteId)) {
+      return false;
+    }
+
+    // Diagnostic : loguer les permissions du dossier et des fichiers pour comprendre
+    // les cas où rm -f échoue (ex: dossier parent root:root, immutable flag, etc.)
+    const diagnostic =
+      'echo "=== PRE-MIGRATION DIAG ==="; ' +
+      'stat -c "dir %n owner=%U:%G perms=%a" /home/pi/neopro/ 2>/dev/null; ' +
+      'stat -c "dir %n owner=%U:%G perms=%a" /home/pi/neopro/webapp/ 2>/dev/null; ' +
+      'for f in /home/pi/neopro/VERSION /home/pi/neopro/release.json /home/pi/neopro/webapp/version.json; do ' +
+      'stat -c "file %n owner=%U:%G perms=%a uid=%u" "$f" 2>/dev/null || echo "file $f ABSENT"; ' +
+      'done';
+
+    // Stratégie : supprimer les fichiers root:root pour que fs.copy() n'ait pas besoin
+    // d'appeler unlink() sur un fichier root. writeVersionMetadata() les recréera après.
+    const fixFiles =
+      'for f in /home/pi/neopro/VERSION /home/pi/neopro/release.json /home/pi/neopro/webapp/version.json; do ' +
+      'if [ -f "$f" ] && [ "$(stat -c %u "$f" 2>/dev/null)" = "0" ]; then ' +
+      // Niveau 1 : rm sans sudo (marche si dossier parent est pi:pi — cas standard)
+      'rm -f "$f" 2>/dev/null && echo "FIXED rm: $f" && continue; ' +
+      // Niveau 2 : sudo chown (marche si NoNewPrivileges=false)
+      'sudo chown pi:pi "$f" 2>/dev/null && echo "FIXED chown: $f" && continue; ' +
+      // Niveau 3 : sudo rm -f (dernier recours)
+      'sudo rm -f "$f" 2>/dev/null && echo "FIXED sudo-rm: $f" && continue; ' +
+      // Rien n'a marché — loguer les détails
+      'echo "FAIL: cannot fix $f (dir may be root:root or NoNewPrivileges)"; ' +
+      'fi; done; ' +
+      // Aussi fixer les dossiers si possible (pour les prochaines tentatives)
+      'for d in /home/pi/neopro /home/pi/neopro/webapp; do ' +
+      'if [ "$(stat -c %u "$d" 2>/dev/null)" = "0" ]; then ' +
+      'sudo chown pi:pi "$d" 2>/dev/null && echo "FIXED dir: $d" || echo "FAIL dir: $d"; ' +
+      'fi; done; ' +
+      'echo "=== PRE-MIGRATION DONE ==="; true';
+
+    const fixOwnershipCommand = `${diagnostic}; ${fixFiles}`;
+
+    try {
+      const commandId = uuidv4();
+
+      socketService.sendCommand(siteId, {
+        id: commandId,
+        type: 'remote_shell',
+        data: { command: fixOwnershipCommand, timeout: 10000 },
+      });
+
+      logger.info('Pre-update migration sent', { siteId });
+      return true;
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      logger.warn('Pre-update migration failed (non-blocking)', { siteId, error: errorMessage });
+      return false;
+    }
+  }
+
+  /**
    * Envoie la commande de mise à jour à un site spécifique
    * Utilise commandQueueService.sendOrQueue() pour gérer les sites offline
    * (même comportement que update_config)
@@ -278,9 +383,22 @@ class UpdateDeploymentService {
   private async deployToSite(
     deploymentId: string,
     siteId: string,
-    update: SoftwareUpdateRow
+    update: SoftwareUpdateRow,
+    scheduleReboot = false,
+    autoRollback = true
   ): Promise<boolean> {
     logger.info('deployToSite called', { deploymentId, siteId, updateVersion: update.version });
+
+    // Pré-migration : supprimer les fichiers VERSION/release.json root:root avant l'OTA
+    // IMPORTANT : le handler socket.on('command') du Pi n'attend PAS la fin du
+    // handleCommand() — les commandes s'exécutent en PARALLÈLE. Il faut donc
+    // attendre que le rm -f ait le temps de terminer avant d'envoyer update_software,
+    // sinon fs.copy() tente unlink() sur le fichier root → EACCES.
+    // Le rm est quasi-instantané, 3s de marge suffisent.
+    const migrationSent = this.applyPreUpdateMigration(siteId);
+    if (migrationSent) {
+      await this.delay(3000);
+    }
 
     const commandData = {
       deploymentId,
@@ -292,6 +410,8 @@ class UpdateDeploymentService {
       isCritical: update.is_critical,
       description: update.description,
       changelog: update.changelog,
+      scheduleReboot,
+      autoRollback,
     };
 
     logger.info('Sending update_software command via sendOrQueue', {
@@ -299,6 +419,8 @@ class UpdateDeploymentService {
       deploymentId,
       version: update.version,
       updateUrl: update.package_url,
+      scheduleReboot,
+      autoRollback,
     });
 
     // Utiliser sendOrQueue comme pour update_config
@@ -349,12 +471,19 @@ class UpdateDeploymentService {
 
         // Pour simplifier, on marque comme complété dès qu'un site réussit
         // Une implémentation plus complète suivrait chaque site individuellement
-        await query(
+        const durationResult = await query<{ duration_seconds: string }>(
           `UPDATE update_deployments
            SET status = 'completed', progress = 100, completed_at = NOW()
-           WHERE id = $1`,
+           WHERE id = $1
+           RETURNING EXTRACT(EPOCH FROM (NOW() - started_at)) as duration_seconds`,
           [deploymentId]
         );
+
+        metricsService.recordDeployment('completed', deployment.rows[0].target_type);
+        const durationSeconds = parseFloat(durationResult.rows[0]?.duration_seconds);
+        if (!isNaN(durationSeconds)) {
+          metricsService.recordDeploymentDuration(deployment.rows[0].target_type, durationSeconds);
+        }
 
         logger.info('Update deployment completed', { deploymentId, siteId });
       } else {
@@ -365,6 +494,8 @@ class UpdateDeploymentService {
           [errorMessage || 'Erreur inconnue', deploymentId]
         );
 
+        metricsService.recordDeployment('failed', 'site');
+        metricsService.recordOtaError(this.categorizeOtaError(errorMessage));
         logger.error('Update deployment failed', { deploymentId, siteId, errorMessage });
       }
     } catch (error) {
@@ -399,7 +530,23 @@ class UpdateDeploymentService {
       [errorMessage, deploymentId]
     );
 
+    metricsService.recordDeployment('failed', 'site');
+    metricsService.recordOtaError(this.categorizeOtaError(errorMessage));
     logger.error('Update deployment failed', { deploymentId, errorMessage });
+  }
+
+  /**
+   * Categorize OTA error messages for Prometheus labeling
+   */
+  private categorizeOtaError(errorMessage?: string): string {
+    if (!errorMessage) return 'unknown';
+    const msg = errorMessage.toLowerCase();
+    if (msg.includes('eacces') || msg.includes('permission')) return 'permission';
+    if (msg.includes('timeout') || msg.includes('timed out')) return 'timeout';
+    if (msg.includes('network') || msg.includes('econnrefused') || msg.includes('enotfound')) return 'network';
+    if (msg.includes('disk') || msg.includes('enospc') || msg.includes('no space')) return 'disk_full';
+    if (msg.includes('annulé') || msg.includes('cancel')) return 'cancelled';
+    return 'other';
   }
 
   /**
@@ -448,6 +595,13 @@ class UpdateDeploymentService {
       logger.error('Error manually retrying update deployment:', { deploymentId, error });
       return false;
     }
+  }
+
+  /**
+   * Délai asynchrone — méthode séparée pour permettre le mock dans les tests
+   */
+  delay(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
   }
 }
 

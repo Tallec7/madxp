@@ -369,7 +369,8 @@ describe('CommandQueueService', () => {
         .mockResolvedValueOnce({ rows: mockCommands }) // getPendingCommands
         .mockResolvedValueOnce({ rows: [] }) // UPDATE attempts
         .mockResolvedValueOnce({ rows: [] }) // INSERT remote_commands
-        .mockResolvedValueOnce({ rows: [] }) // UPDATE remote_commands status
+        .mockResolvedValueOnce({ rows: [] }) // UPDATE sites SET config_update_pending_until (update_config lock)
+        .mockResolvedValueOnce({ rows: [] }) // UPDATE remote_commands status='executing'
         .mockResolvedValueOnce({ rows: [] }) // DELETE from pending_commands
         .mockResolvedValueOnce({ rows: [{ count: '0' }] }); // COUNT remaining
 
@@ -400,9 +401,10 @@ describe('CommandQueueService', () => {
       mockSendCommand.mockReturnValue(true);
       mockQuery
         .mockResolvedValueOnce({ rows: mockCommands }) // getPendingCommands
-        .mockResolvedValueOnce({ rows: [] }) // UPDATE attempts
-        .mockResolvedValueOnce({ rows: [] }) // INSERT remote_commands
-        .mockResolvedValueOnce({ rows: [] }) // UPDATE remote_commands status
+        .mockResolvedValueOnce({ rows: [] }) // UPDATE attempts (cmd-1)
+        .mockResolvedValueOnce({ rows: [] }) // INSERT remote_commands (cmd-1)
+        .mockResolvedValueOnce({ rows: [] }) // UPDATE sites SET config_update_pending_until (update_config lock)
+        .mockResolvedValueOnce({ rows: [] }) // UPDATE remote_commands status='executing' (cmd-1)
         .mockResolvedValueOnce({ rows: [] }) // DELETE cmd-1
         .mockResolvedValueOnce({ rows: [{ count: '1' }] }); // COUNT remaining
 
@@ -426,9 +428,11 @@ describe('CommandQueueService', () => {
       mockSendCommand.mockReturnValue(false); // Fails
 
       mockQuery
-        .mockResolvedValueOnce({ rows: mockCommands })
+        .mockResolvedValueOnce({ rows: mockCommands }) // getPendingCommands
         .mockResolvedValueOnce({ rows: [] }) // UPDATE attempts
         .mockResolvedValueOnce({ rows: [] }) // INSERT remote_commands
+        .mockResolvedValueOnce({ rows: [] }) // UPDATE sites SET config_update_pending_until (update_config lock, before send)
+        .mockResolvedValueOnce({ rows: [] }) // UPDATE sites SET config_update_pending_until = NULL (send failed, clear lock)
         .mockResolvedValueOnce({ rows: [{ count: '1' }] }); // COUNT remaining
 
       await commandQueueService.processPendingCommands('site-123');

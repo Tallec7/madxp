@@ -75,6 +75,14 @@ Définis dans `central-server/src/services/alerting.service.ts:50-123`
 - **Cooldown** : Temps avant nouvelle alerte sur même métrique (évite le spam)
 - **Escalade** : Temps avant escalade vers superviseur
 
+**Cooldowns Slack (v3.48)** : En plus des cooldowns par seuil ci-dessus, les alertes Slack "Site Offline" et "Site Online" ont un cooldown dédié de **5 minutes par site** dans `alert.service.ts`. Cela empêche le spam Slack quand un site se reconnecte/déconnecte rapidement (flapping), par exemple lors d'un redéploiement serveur.
+
+**Grace period au boot (v3.50.3)** : Les alertes "Site Online" **et "Site Offline"** sont supprimées pendant les **90 premières secondes** après le démarrage du serveur. Lors d'un redéploiement Railway, tous les Pi se déconnectent puis reconnectent en ~2-30s — sans cette grace period, chaque déconnexion/reconnexion génère une fausse alerte Slack. Le cooldown en mémoire (Map) est perdu au redémarrage, donc la grace period au boot est nécessaire en complément.
+
+**Shutdown mode (v3.50.3)** : Lors d'un `SIGTERM` (redéploiement Railway), `alertService.enterShutdownMode()` est appelé **avant** la déconnexion des sockets. Toutes les alertes "Site Offline" et "Site Online" sont supprimées pendant le shutdown. Cela élimine les faux positifs en cascade (N sites × 2 alertes) qui polluaient le canal Slack à chaque redéploiement.
+
+**Cooldown WiFi (v3.50.3)** : Les alertes "Signal WiFi faible" ont un cooldown Slack dédié de **6 heures par site**. Quand le signal remonte au-dessus de **-70 dBm**, une alerte "Signal WiFi rétabli" est envoyée et le cooldown est réinitialisé (prêt à re-alerter si le signal redescend). Ce pattern "alerte unique + résolution" remplace le spam horaire précédent.
+
 ### 3.4 Canaux de notification
 
 | Canal       | Configuration                  | Utilisation                     |
@@ -82,6 +90,37 @@ Définis dans `central-server/src/services/alerting.service.ts:50-123`
 | **Email**   | support@neopro.fr              | Alertes non-critiques (Warning) |
 | **Webhook** | https://hooks.neopro.fr/alerts | Intégration avec systèmes tiers |
 | **Slack**   | #alerts-neopro                 | Alertes critiques (temps réel)  |
+
+### 3.5 Alertes Prometheus / Grafana Cloud (infrastructure serveur)
+
+En complément des alertes métier Pi (section 3.3), des alertes infrastructure surveillent le **serveur central** lui-même :
+
+**Local** : Prometheus rules (`docker/prometheus/rules.yml`) → Alertmanager (`localhost:9093`) → Slack
+**Prod** : Grafana Cloud managed alerts (`docker/grafana/provisioning/alerting/neopro-alerts-cloud.yml`) → Contact point Slack
+
+| Alerte                    | Condition                 | Délai  | Sévérité | Action                                        |
+| ------------------------- | ------------------------- | ------ | -------- | --------------------------------------------- |
+| `CentralServerDown`       | Scrape fail (`up == 0`)   | 2 min  | critical | Vérifier Railway, restart                     |
+| `ZeroHeartbeats`          | `rate(heartbeats) == 0`   | 5 min  | critical | WebSocket cassé ou serveur bloqué             |
+| `NoAgentConnections`      | WS agents == 0            | 5 min  | critical | Même diagnostic                               |
+| `HighErrorRate`           | 5xx > 5%                  | 5 min  | warning  | Logs Railway, DB latence                      |
+| `DbPoolSaturation`        | Pool > 80%                | 3 min  | warning  | Requêtes longues, leaks                       |
+| `HighMemoryUsage`         | RSS > 88% de 256MB        | 5 min  | warning  | OOM risk, vérifier heap                       |
+| `HighApiLatency`          | P95 > 3s                  | 5 min  | warning  | DB lente, charge élevée                       |
+| `SlowDbQueries`           | P95 queries > 2s          | 5 min  | warning  | Index manquants                               |
+| `HighDisconnectRate`      | > 0.5/s                   | 3 min  | warning  | Instabilité réseau                            |
+| `ConnectedSitesDrop`      | -50% en 10 min            | 5 min  | warning  | Incident fleet-wide                           |
+| `TooManyActiveAlerts`     | > 10 alertes              | 10 min | warning  | Problème généralisé                           |
+| `SlowNetworkSponsorStats` | P95 network stats > 5s    | 5 min  | warning  | Agrégation cross-club lente, indexes ou cache |
+| `SlowBenchmarkQuery`      | P95 benchmark > 3s        | 5 min  | warning  | Scan sponsors site lent                       |
+| `HighReportFailureRate`   | PDF sponsor fails > 1/min | 10 min | warning  | Match breakdown data issue                    |
+
+**Inhibition** : Quand `CentralServerDown` est actif, toutes les alertes `warning` sont supprimées (inutile d'alerter sur la latence si le serveur est mort).
+
+**Routing Slack** :
+
+- `critical` → notification immédiate, repeat 1h
+- `warning` → groupé 30s, repeat 4h
 
 ---
 
@@ -579,6 +618,14 @@ Support Neopro
 - L'alerte sera automatiquement marquée comme "Resolved"
 - Vérifier qu'il n'y a pas de déconnexions fréquentes (pattern)
 
+**Si plusieurs sites passent hors ligne simultanément :**
+
+- Probablement un **redéploiement du serveur central** (Railway) — pas un problème côté Pi
+- Les alertes Slack "Site Online" sont **automatiquement supprimées** pendant les 60s après le boot (grace period v3.49.3)
+- En régime normal, les alertes Slack sont limitées à 1 par site toutes les 5 min (cooldown `alert.service.ts`)
+- Le serveur émet `server_shutdown` aux Pi avant de fermer, les Pi se reconnectent automatiquement
+- Vérifier le dashboard Railway pour confirmer un deploy récent
+
 **Si le site reste hors ligne > 24h :**
 
 - Créer un ticket de suivi
@@ -638,15 +685,16 @@ message:"Deployment failed"
 
 ### 8.3 Erreurs courantes et solutions
 
-| Erreur dans les logs | Cause                      | Solution                      |
-| -------------------- | -------------------------- | ----------------------------- |
-| `ECONNREFUSED`       | Service arrêté             | Redémarrer le service         |
-| `EADDRINUSE`         | Port déjà utilisé          | Tuer le processus, redémarrer |
-| `MODULE_NOT_FOUND`   | Dépendances npm manquantes | `npm install`                 |
-| `Permission denied`  | Permissions incorrectes    | Fix permissions (MODOP-S06)   |
-| `ETIMEDOUT`          | Timeout réseau             | Vérifier connectivité         |
-| `401 Unauthorized`   | API key invalide           | Réenregistrer le site         |
-| `502 Bad Gateway`    | neopro-app ne répond pas   | Redémarrer neopro-app         |
+| Erreur dans les logs                     | Cause                                              | Solution                                 |
+| ---------------------------------------- | -------------------------------------------------- | ---------------------------------------- |
+| `ECONNREFUSED`                           | Service arrêté                                     | Redémarrer le service                    |
+| `EADDRINUSE`                             | Port déjà utilisé                                  | Tuer le processus, redémarrer            |
+| `MODULE_NOT_FOUND`                       | Dépendances npm manquantes                         | `npm install`                            |
+| `Permission denied`                      | Permissions incorrectes                            | Fix permissions (MODOP-S06)              |
+| `ETIMEDOUT`                              | Timeout réseau                                     | Vérifier connectivité                    |
+| `401 Unauthorized`                       | API key invalide                                   | Réenregistrer le site                    |
+| `502 Bad Gateway`                        | neopro-app ne répond pas                           | Redémarrer neopro-app                    |
+| `is not valid JSON` (checkHourlyMetrics) | `notify_channels` corrompu dans `alert_thresholds` | Corriger en DB (voir TROUBLESHOOTING §9) |
 
 ### 8.4 Analyse proactive
 
@@ -686,6 +734,9 @@ message:"Deployment failed"
 ---
 
 ## 9. ESCALADE
+
+> 📖 **Matrice d'escalade complète sur Notion** : arbres de diagnostic par type de problème (API down, sites déconnectés, 5xx, latence, mémoire, alertes), 5 scénarios types séquencés, et matrice d'escalade détaillée (9 situations × qui contacter × infos à fournir × urgence) :
+> [🔀 Diagnostic & Escalade](https://www.notion.so/305c27de3638816b9d88dcf4e55c65cc)
 
 ### 9.1 Matrice d'escalade
 

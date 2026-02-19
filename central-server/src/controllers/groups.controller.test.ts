@@ -9,19 +9,53 @@ import {
   removeSiteFromGroup,
   getGroupSites,
 } from './groups.controller';
-import { query, getClient } from '../config/database';
+import { groupRepository } from '../repositories';
 import { AuthRequest } from '../types';
 
-// Get the mock client from the mocked module
-const mockClient = {
-  query: jest.fn(),
-  release: jest.fn(),
-};
+// ---------------------------------------------------------------------------
+// Mocks
+// ---------------------------------------------------------------------------
 
-// Override getClient to return our mockClient
-(getClient as jest.Mock).mockResolvedValue(mockClient);
+// Mock logger (Winston) — avoid console output during tests
+jest.mock('../config/logger', () => ({
+  __esModule: true,
+  default: {
+    info: jest.fn(),
+    warn: jest.fn(),
+    error: jest.fn(),
+    debug: jest.fn(),
+  },
+}));
 
-// Helper to create mock response
+// Mock uuid — predictable ID generation
+jest.mock('uuid', () => ({
+  v4: jest.fn().mockReturnValue('new-group-id'),
+}));
+
+// Mock repositories
+jest.mock('../repositories', () => ({
+  groupRepository: {
+    findAllWithSiteCount: jest.fn(),
+    findGroupById: jest.fn(),
+    findGroupSites: jest.fn(),
+    create: jest.fn(),
+    update: jest.fn(),
+    deleteGroup: jest.fn(),
+    addSites: jest.fn(),
+    removeSite: jest.fn(),
+  },
+}));
+
+// ---------------------------------------------------------------------------
+// Typed mock references
+// ---------------------------------------------------------------------------
+
+const mockGroupRepository = groupRepository as jest.Mocked<typeof groupRepository>;
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
 const createMockResponse = (): Response => {
   const res: Partial<Response> = {
     status: jest.fn().mockReturnThis(),
@@ -30,7 +64,6 @@ const createMockResponse = (): Response => {
   return res as Response;
 };
 
-// Helper to create authenticated request
 const createAuthRequest = (overrides: Partial<AuthRequest> = {}): AuthRequest =>
   ({
     user: { id: 'user-123', email: 'admin@example.com', role: 'admin' },
@@ -40,13 +73,13 @@ const createAuthRequest = (overrides: Partial<AuthRequest> = {}): AuthRequest =>
     ...overrides,
   } as AuthRequest);
 
+// ---------------------------------------------------------------------------
+// Tests
+// ---------------------------------------------------------------------------
+
 describe('Groups Controller', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    // Reset mockClient and ensure getClient returns it
-    mockClient.query.mockReset();
-    mockClient.release.mockReset();
-    (getClient as jest.Mock).mockResolvedValue(mockClient);
   });
 
   describe('getGroups', () => {
@@ -55,14 +88,15 @@ describe('Groups Controller', () => {
       const res = createMockResponse();
 
       const mockGroups = [
-        { id: '1', name: 'Group A', site_count: '5' },
-        { id: '2', name: 'Group B', site_count: '3' },
+        { id: '1', name: 'Group A', site_count: 5 },
+        { id: '2', name: 'Group B', site_count: 3 },
       ];
 
-      (query as jest.Mock).mockResolvedValueOnce({ rows: mockGroups });
+      mockGroupRepository.findAllWithSiteCount.mockResolvedValueOnce(mockGroups as never);
 
       await getGroups(req, res);
 
+      expect(mockGroupRepository.findAllWithSiteCount).toHaveBeenCalled();
       expect(res.json).toHaveBeenCalledWith({
         total: 2,
         groups: mockGroups,
@@ -73,7 +107,7 @@ describe('Groups Controller', () => {
       const req = createAuthRequest();
       const res = createMockResponse();
 
-      (query as jest.Mock).mockRejectedValueOnce(new Error('DB Error'));
+      mockGroupRepository.findAllWithSiteCount.mockRejectedValueOnce(new Error('DB Error'));
 
       await getGroups(req, res);
 
@@ -95,12 +129,13 @@ describe('Groups Controller', () => {
         { id: 'site-2', site_name: 'Site B' },
       ];
 
-      (query as jest.Mock)
-        .mockResolvedValueOnce({ rows: [mockGroup] })
-        .mockResolvedValueOnce({ rows: mockSites });
+      mockGroupRepository.findGroupById.mockResolvedValueOnce(mockGroup as never);
+      mockGroupRepository.findGroupSites.mockResolvedValueOnce(mockSites as never);
 
       await getGroup(req, res);
 
+      expect(mockGroupRepository.findGroupById).toHaveBeenCalledWith('group-123');
+      expect(mockGroupRepository.findGroupSites).toHaveBeenCalledWith('group-123');
       expect(res.json).toHaveBeenCalledWith({
         ...mockGroup,
         sites: mockSites,
@@ -111,7 +146,7 @@ describe('Groups Controller', () => {
       const req = createAuthRequest({ params: { id: 'nonexistent' } });
       const res = createMockResponse();
 
-      (query as jest.Mock).mockResolvedValueOnce({ rows: [] });
+      mockGroupRepository.findGroupById.mockResolvedValueOnce(null);
 
       await getGroup(req, res);
 
@@ -123,7 +158,7 @@ describe('Groups Controller', () => {
       const req = createAuthRequest({ params: { id: 'group-123' } });
       const res = createMockResponse();
 
-      (query as jest.Mock).mockRejectedValueOnce(new Error('DB Error'));
+      mockGroupRepository.findGroupById.mockRejectedValueOnce(new Error('DB Error'));
 
       await getGroup(req, res);
 
@@ -150,10 +185,17 @@ describe('Groups Controller', () => {
         type: 'sport',
       };
 
-      (query as jest.Mock).mockResolvedValueOnce({ rows: [mockGroup] });
+      mockGroupRepository.create.mockResolvedValueOnce(mockGroup as never);
 
       await createGroup(req, res);
 
+      expect(mockGroupRepository.create).toHaveBeenCalledWith({
+        id: 'new-group-id',
+        name: 'New Group',
+        description: 'Test description',
+        type: 'sport',
+        filters: JSON.stringify({ sport: 'volleyball' }),
+      });
       expect(res.status).toHaveBeenCalledWith(201);
       expect(res.json).toHaveBeenCalledWith(mockGroup);
     });
@@ -167,16 +209,19 @@ describe('Groups Controller', () => {
       });
       const res = createMockResponse();
 
-      (query as jest.Mock).mockResolvedValueOnce({
-        rows: [{ id: 'id', name: 'Minimal Group', type: 'custom' }],
-      });
+      const mockGroup = { id: 'new-group-id', name: 'Minimal Group', type: 'custom' };
+
+      mockGroupRepository.create.mockResolvedValueOnce(mockGroup as never);
 
       await createGroup(req, res);
 
-      expect(query).toHaveBeenCalledWith(
-        expect.any(String),
-        expect.arrayContaining([expect.any(String), 'Minimal Group', null, 'custom', null])
-      );
+      expect(mockGroupRepository.create).toHaveBeenCalledWith({
+        id: 'new-group-id',
+        name: 'Minimal Group',
+        description: null,
+        type: 'custom',
+        filters: null,
+      });
       expect(res.status).toHaveBeenCalledWith(201);
     });
 
@@ -186,7 +231,7 @@ describe('Groups Controller', () => {
       });
       const res = createMockResponse();
 
-      (query as jest.Mock).mockRejectedValueOnce(new Error('DB Error'));
+      mockGroupRepository.create.mockRejectedValueOnce(new Error('DB Error'));
 
       await createGroup(req, res);
 
@@ -207,10 +252,16 @@ describe('Groups Controller', () => {
         name: 'Updated Name',
         type: 'geography',
       };
-      (query as jest.Mock).mockResolvedValueOnce({ rows: [updatedGroup] });
+      mockGroupRepository.update.mockResolvedValueOnce(updatedGroup as never);
 
       await updateGroup(req, res);
 
+      expect(mockGroupRepository.update).toHaveBeenCalledWith('group-123', {
+        name: 'Updated Name',
+        description: undefined,
+        type: 'geography',
+        filters: undefined,
+      });
       expect(res.json).toHaveBeenCalledWith(updatedGroup);
     });
 
@@ -234,7 +285,7 @@ describe('Groups Controller', () => {
       });
       const res = createMockResponse();
 
-      (query as jest.Mock).mockResolvedValueOnce({ rows: [] });
+      mockGroupRepository.update.mockResolvedValueOnce(null);
 
       await updateGroup(req, res);
 
@@ -248,12 +299,11 @@ describe('Groups Controller', () => {
       const req = createAuthRequest({ params: { id: 'group-123' } });
       const res = createMockResponse();
 
-      (query as jest.Mock).mockResolvedValueOnce({
-        rows: [{ name: 'Deleted Group' }],
-      });
+      mockGroupRepository.deleteGroup.mockResolvedValueOnce('Deleted Group');
 
       await deleteGroup(req, res);
 
+      expect(mockGroupRepository.deleteGroup).toHaveBeenCalledWith('group-123');
       expect(res.json).toHaveBeenCalledWith({ message: 'Groupe supprimé avec succès' });
     });
 
@@ -261,7 +311,7 @@ describe('Groups Controller', () => {
       const req = createAuthRequest({ params: { id: 'nonexistent' } });
       const res = createMockResponse();
 
-      (query as jest.Mock).mockResolvedValueOnce({ rows: [] });
+      mockGroupRepository.deleteGroup.mockResolvedValueOnce(null);
 
       await deleteGroup(req, res);
 
@@ -278,22 +328,15 @@ describe('Groups Controller', () => {
       });
       const res = createMockResponse();
 
-      mockClient.query
-        .mockResolvedValueOnce({}) // BEGIN
-        .mockResolvedValueOnce({ rows: [{ id: 'group-123' }] }) // Group check
-        .mockResolvedValueOnce({ rows: [{ id: 'site-1' }] }) // Site 1 check
-        .mockResolvedValueOnce({}) // Insert site 1
-        .mockResolvedValueOnce({ rows: [{ id: 'site-2' }] }) // Site 2 check
-        .mockResolvedValueOnce({}) // Insert site 2
-        .mockResolvedValueOnce({}); // COMMIT
+      mockGroupRepository.addSites.mockResolvedValueOnce(undefined);
 
       await addSitesToGroup(req, res);
 
+      expect(mockGroupRepository.addSites).toHaveBeenCalledWith('group-123', ['site-1', 'site-2']);
       expect(res.json).toHaveBeenCalledWith({
         message: '2 site(s) ajouté(s) au groupe avec succès',
         added_count: 2,
       });
-      expect(mockClient.release).toHaveBeenCalled();
     });
 
     it('should return 404 if group not found', async () => {
@@ -303,15 +346,14 @@ describe('Groups Controller', () => {
       });
       const res = createMockResponse();
 
-      mockClient.query
-        .mockResolvedValueOnce({}) // BEGIN
-        .mockResolvedValueOnce({ rows: [] }); // Group check - not found
+      mockGroupRepository.addSites.mockRejectedValueOnce(
+        new Error('Group nonexistent not found')
+      );
 
       await addSitesToGroup(req, res);
 
       expect(res.status).toHaveBeenCalledWith(404);
-      expect(res.json).toHaveBeenCalledWith({ error: 'Groupe non trouvé' });
-      expect(mockClient.release).toHaveBeenCalled();
+      expect(res.json).toHaveBeenCalledWith({ error: 'Group nonexistent not found' });
     });
 
     it('should return 404 if site not found', async () => {
@@ -321,31 +363,31 @@ describe('Groups Controller', () => {
       });
       const res = createMockResponse();
 
-      mockClient.query
-        .mockResolvedValueOnce({}) // BEGIN
-        .mockResolvedValueOnce({ rows: [{ id: 'group-123' }] }) // Group check
-        .mockResolvedValueOnce({ rows: [] }); // Site check - not found
+      mockGroupRepository.addSites.mockRejectedValueOnce(
+        new Error('Site nonexistent-site not found')
+      );
 
       await addSitesToGroup(req, res);
 
       expect(res.status).toHaveBeenCalledWith(404);
-      expect(res.json).toHaveBeenCalledWith({ error: 'Site nonexistent-site non trouvé' });
-      expect(mockClient.release).toHaveBeenCalled();
+      expect(res.json).toHaveBeenCalledWith({ error: 'Site nonexistent-site not found' });
     });
 
-    it('should handle database error and release client', async () => {
+    it('should handle database error', async () => {
       const req = createAuthRequest({
         params: { id: 'group-123' },
         body: { site_ids: ['site-1'] },
       });
       const res = createMockResponse();
 
-      mockClient.query.mockRejectedValueOnce(new Error('DB Error'));
+      mockGroupRepository.addSites.mockRejectedValueOnce(new Error('DB Error'));
 
       await addSitesToGroup(req, res);
 
       expect(res.status).toHaveBeenCalledWith(500);
-      expect(mockClient.release).toHaveBeenCalled();
+      expect(res.json).toHaveBeenCalledWith({
+        error: "Erreur lors de l'ajout des sites au groupe",
+      });
     });
   });
 
@@ -356,10 +398,11 @@ describe('Groups Controller', () => {
       });
       const res = createMockResponse();
 
-      (query as jest.Mock).mockResolvedValueOnce({ rows: [{}] });
+      mockGroupRepository.removeSite.mockResolvedValueOnce(true);
 
       await removeSiteFromGroup(req, res);
 
+      expect(mockGroupRepository.removeSite).toHaveBeenCalledWith('group-123', 'site-456');
       expect(res.json).toHaveBeenCalledWith({ message: 'Site retiré du groupe avec succès' });
     });
 
@@ -369,7 +412,7 @@ describe('Groups Controller', () => {
       });
       const res = createMockResponse();
 
-      (query as jest.Mock).mockResolvedValueOnce({ rows: [] });
+      mockGroupRepository.removeSite.mockResolvedValueOnce(false);
 
       await removeSiteFromGroup(req, res);
 
@@ -388,10 +431,11 @@ describe('Groups Controller', () => {
         { id: 'site-2', site_name: 'Site B' },
       ];
 
-      (query as jest.Mock).mockResolvedValueOnce({ rows: mockSites });
+      mockGroupRepository.findGroupSites.mockResolvedValueOnce(mockSites as never);
 
       await getGroupSites(req, res);
 
+      expect(mockGroupRepository.findGroupSites).toHaveBeenCalledWith('group-123');
       expect(res.json).toHaveBeenCalledWith({
         group_id: 'group-123',
         total: 2,
@@ -403,7 +447,7 @@ describe('Groups Controller', () => {
       const req = createAuthRequest({ params: { id: 'group-123' } });
       const res = createMockResponse();
 
-      (query as jest.Mock).mockRejectedValueOnce(new Error('DB Error'));
+      mockGroupRepository.findGroupSites.mockRejectedValueOnce(new Error('DB Error'));
 
       await getGroupSites(req, res);
 

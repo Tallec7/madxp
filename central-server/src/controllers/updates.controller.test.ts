@@ -1,22 +1,61 @@
 import { Response } from 'express';
 import { AuthRequest } from '../types';
 
-// Explicitly mock the database module for deterministic tests
-jest.mock('../config/database', () => {
-  const pool = {
-    query: jest.fn(),
-    connect: jest.fn(),
-    end: jest.fn(),
-  };
-  return {
-    __esModule: true,
-    default: pool,
-    pool,
-  };
-});
+// Mock repositories
+jest.mock('../repositories', () => ({
+  softwareUpdateRepository: {
+    findAllUpdates: jest.fn(),
+    findUpdateById: jest.fn(),
+    createUpdate: jest.fn(),
+    updateUpdate: jest.fn(),
+    deleteUpdate: jest.fn(),
+    findPackageDetails: jest.fn(),
+    findAllDeployments: jest.fn(),
+    findDeploymentById: jest.fn(),
+    createDeployment: jest.fn(),
+    updateDeployment: jest.fn(),
+    deleteDeployment: jest.fn(),
+  },
+}));
 
-jest.mock('../config/supabase', () => ({
-  uploadFile: jest.fn(),
+// Mock storage service
+jest.mock('../services/storage.service', () => ({
+  uploadUpdate: jest.fn(),
+}));
+
+// Mock upload verification service
+jest.mock('../services/upload-verification.service', () => ({
+  uploadVerificationService: {
+    isUpdateReadyForDeployment: jest.fn().mockResolvedValue({ ready: true, status: 'ready' }),
+    getDeploymentBlockedMessage: jest.fn(),
+  },
+  UploadStatus: {},
+}));
+
+// Mock update deployment service
+jest.mock('../services/update-deployment.service', () => ({
+  updateDeploymentService: {
+    startDeployment: jest.fn().mockResolvedValue(undefined),
+  },
+}));
+
+// Mock middleware/upload (cleanupTempFile)
+jest.mock('../middleware/upload', () => ({
+  cleanupTempFile: jest.fn(),
+}));
+
+// Mock fs.readFileSync for disk-storage file reads
+jest.mock('fs', () => ({
+  ...jest.requireActual('fs'),
+  readFileSync: jest.fn().mockReturnValue(Buffer.from('file-content')),
+}));
+
+// Mock logger
+jest.mock('../config/logger', () => ({
+  info: jest.fn(),
+  error: jest.fn(),
+  warn: jest.fn(),
+  debug: jest.fn(),
 }));
 
 import {
@@ -31,8 +70,11 @@ import {
   updateUpdateDeployment,
   deleteUpdateDeployment,
 } from './updates.controller';
-import pool from '../config/database';
-import { uploadFile } from '../config/supabase';
+import { softwareUpdateRepository } from '../repositories';
+import { uploadUpdate } from '../services/storage.service';
+import { uploadVerificationService } from '../services/upload-verification.service';
+
+const mockSoftwareUpdateRepo = softwareUpdateRepository as jest.Mocked<typeof softwareUpdateRepository>;
 
 // Helper to create mock response
 const createMockResponse = (): Response => {
@@ -69,10 +111,11 @@ describe('Updates Controller', () => {
           { id: '2', version: '1.1.0', release_notes: 'Bug fixes' },
         ];
 
-        (pool.query as jest.Mock).mockResolvedValueOnce({ rows: mockUpdates });
+        mockSoftwareUpdateRepo.findAllUpdates.mockResolvedValueOnce(mockUpdates as never);
 
         await getUpdates(req, res);
 
+        expect(mockSoftwareUpdateRepo.findAllUpdates).toHaveBeenCalled();
         expect(res.json).toHaveBeenCalledWith(mockUpdates);
       });
 
@@ -80,7 +123,7 @@ describe('Updates Controller', () => {
         const req = createAuthRequest();
         const res = createMockResponse();
 
-        (pool.query as jest.Mock).mockRejectedValueOnce(new Error('DB Error'));
+        mockSoftwareUpdateRepo.findAllUpdates.mockRejectedValueOnce(new Error('DB Error'));
 
         await getUpdates(req, res);
 
@@ -92,7 +135,7 @@ describe('Updates Controller', () => {
         const req = createAuthRequest();
         const res = createMockResponse();
 
-        (pool.query as jest.Mock).mockRejectedValueOnce({
+        mockSoftwareUpdateRepo.findAllUpdates.mockRejectedValueOnce({
           code: '42P01',
           message: 'relation "software_updates" does not exist',
         });
@@ -110,10 +153,11 @@ describe('Updates Controller', () => {
         const res = createMockResponse();
 
         const mockUpdate = { id: 'update-123', version: '1.0.0' };
-        (pool.query as jest.Mock).mockResolvedValueOnce({ rows: [mockUpdate] });
+        mockSoftwareUpdateRepo.findUpdateById.mockResolvedValueOnce(mockUpdate as never);
 
         await getUpdate(req, res);
 
+        expect(mockSoftwareUpdateRepo.findUpdateById).toHaveBeenCalledWith('update-123');
         expect(res.json).toHaveBeenCalledWith(mockUpdate);
       });
 
@@ -121,7 +165,7 @@ describe('Updates Controller', () => {
         const req = createAuthRequest({ params: { id: 'nonexistent' } });
         const res = createMockResponse();
 
-        (pool.query as jest.Mock).mockResolvedValueOnce({ rows: [] });
+        mockSoftwareUpdateRepo.findUpdateById.mockResolvedValueOnce(null);
 
         await getUpdate(req, res);
 
@@ -133,7 +177,7 @@ describe('Updates Controller', () => {
         const req = createAuthRequest({ params: { id: 'update-123' } });
         const res = createMockResponse();
 
-        (pool.query as jest.Mock).mockRejectedValueOnce(new Error('DB Error'));
+        mockSoftwareUpdateRepo.findUpdateById.mockRejectedValueOnce(new Error('DB Error'));
 
         await getUpdate(req, res);
 
@@ -154,7 +198,7 @@ describe('Updates Controller', () => {
             originalname: 'update.tar.gz',
             mimetype: 'application/gzip',
             size: 1024,
-            buffer: Buffer.from('file-content'),
+            path: '/tmp/neopro-uploads/test-file.tar.gz',
           } as unknown as Express.Multer.File,
         });
         const res = createMockResponse();
@@ -165,17 +209,41 @@ describe('Updates Controller', () => {
           description: 'Major release',
         };
 
-        (uploadFile as jest.Mock).mockResolvedValueOnce({
+        (uploadUpdate as jest.Mock).mockResolvedValueOnce({
           path: 'uploads/update.tar.gz',
           url: 'https://storage/update.tar.gz',
+          verified: true,
+          actualSize: 1024,
         });
 
-        (pool.query as jest.Mock).mockResolvedValueOnce({ rows: [mockUpdate] });
+        mockSoftwareUpdateRepo.createUpdate.mockResolvedValueOnce(mockUpdate as never);
 
         await createUpdate(req, res);
 
+        expect(mockSoftwareUpdateRepo.createUpdate).toHaveBeenCalledWith(
+          expect.objectContaining({
+            version: '2.0.0',
+            is_critical: true,
+            package_url: 'https://storage/update.tar.gz',
+            package_size: 1024,
+            upload_status: 'ready',
+          })
+        );
         expect(res.status).toHaveBeenCalledWith(201);
         expect(res.json).toHaveBeenCalledWith(mockUpdate);
+      });
+
+      it('should return 400 when version or file is missing', async () => {
+        const req = createAuthRequest({
+          body: { version: '1.0.0' },
+          // no file
+        });
+        const res = createMockResponse();
+
+        await createUpdate(req, res);
+
+        expect(res.status).toHaveBeenCalledWith(400);
+        expect(res.json).toHaveBeenCalledWith({ error: 'Version et package requis' });
       });
 
       it('should return 500 on database error', async () => {
@@ -185,16 +253,18 @@ describe('Updates Controller', () => {
             originalname: 'update.tar.gz',
             mimetype: 'application/gzip',
             size: 2048,
-            buffer: Buffer.from('file-content'),
+            path: '/tmp/neopro-uploads/test-file.tar.gz',
           } as unknown as Express.Multer.File,
         });
         const res = createMockResponse();
 
-        (uploadFile as jest.Mock).mockResolvedValueOnce({
+        (uploadUpdate as jest.Mock).mockResolvedValueOnce({
           path: 'uploads/update.tar.gz',
           url: 'https://storage/update.tar.gz',
+          verified: true,
+          actualSize: 2048,
         });
-        (pool.query as jest.Mock).mockRejectedValueOnce(new Error('DB Error'));
+        mockSoftwareUpdateRepo.createUpdate.mockRejectedValueOnce(new Error('DB Error'));
 
         await createUpdate(req, res);
 
@@ -211,10 +281,14 @@ describe('Updates Controller', () => {
         const res = createMockResponse();
 
         const updatedUpdate = { id: 'update-123', version: '1.0.1' };
-        (pool.query as jest.Mock).mockResolvedValueOnce({ rows: [updatedUpdate] });
+        mockSoftwareUpdateRepo.updateUpdate.mockResolvedValueOnce(updatedUpdate as never);
 
         await updateUpdate(req, res);
 
+        expect(mockSoftwareUpdateRepo.updateUpdate).toHaveBeenCalledWith(
+          'update-123',
+          expect.objectContaining({ version: '1.0.1', changelog: 'Updated changelog' })
+        );
         expect(res.json).toHaveBeenCalledWith(updatedUpdate);
       });
 
@@ -225,7 +299,7 @@ describe('Updates Controller', () => {
         });
         const res = createMockResponse();
 
-        (pool.query as jest.Mock).mockResolvedValueOnce({ rows: [] });
+        mockSoftwareUpdateRepo.updateUpdate.mockResolvedValueOnce(null);
 
         await updateUpdate(req, res);
 
@@ -240,7 +314,7 @@ describe('Updates Controller', () => {
         });
         const res = createMockResponse();
 
-        (pool.query as jest.Mock).mockRejectedValueOnce(new Error('DB Error'));
+        mockSoftwareUpdateRepo.updateUpdate.mockRejectedValueOnce(new Error('DB Error'));
 
         await updateUpdate(req, res);
 
@@ -253,10 +327,11 @@ describe('Updates Controller', () => {
         const req = createAuthRequest({ params: { id: 'update-123' } });
         const res = createMockResponse();
 
-        (pool.query as jest.Mock).mockResolvedValueOnce({ rows: [{ id: 'update-123' }] });
+        mockSoftwareUpdateRepo.deleteUpdate.mockResolvedValueOnce(true);
 
         await deleteUpdate(req, res);
 
+        expect(mockSoftwareUpdateRepo.deleteUpdate).toHaveBeenCalledWith('update-123');
         expect(res.json).toHaveBeenCalledWith({ message: 'Mise à jour supprimée avec succès' });
       });
 
@@ -264,7 +339,7 @@ describe('Updates Controller', () => {
         const req = createAuthRequest({ params: { id: 'nonexistent' } });
         const res = createMockResponse();
 
-        (pool.query as jest.Mock).mockResolvedValueOnce({ rows: [] });
+        mockSoftwareUpdateRepo.deleteUpdate.mockResolvedValueOnce(false);
 
         await deleteUpdate(req, res);
 
@@ -276,7 +351,7 @@ describe('Updates Controller', () => {
         const req = createAuthRequest({ params: { id: 'update-123' } });
         const res = createMockResponse();
 
-        (pool.query as jest.Mock).mockRejectedValueOnce(new Error('DB Error'));
+        mockSoftwareUpdateRepo.deleteUpdate.mockRejectedValueOnce(new Error('DB Error'));
 
         await deleteUpdate(req, res);
 
@@ -296,10 +371,11 @@ describe('Updates Controller', () => {
           { id: '2', update_id: 'u2', target_name: 'Group B', status: 'pending' },
         ];
 
-        (pool.query as jest.Mock).mockResolvedValueOnce({ rows: mockDeployments });
+        mockSoftwareUpdateRepo.findAllDeployments.mockResolvedValueOnce(mockDeployments as never);
 
         await getUpdateDeployments(req, res);
 
+        expect(mockSoftwareUpdateRepo.findAllDeployments).toHaveBeenCalled();
         expect(res.json).toHaveBeenCalledWith(mockDeployments);
       });
 
@@ -307,7 +383,7 @@ describe('Updates Controller', () => {
         const req = createAuthRequest();
         const res = createMockResponse();
 
-        (pool.query as jest.Mock).mockRejectedValueOnce(new Error('DB Error'));
+        mockSoftwareUpdateRepo.findAllDeployments.mockRejectedValueOnce(new Error('DB Error'));
 
         await getUpdateDeployments(req, res);
 
@@ -321,10 +397,11 @@ describe('Updates Controller', () => {
         const res = createMockResponse();
 
         const mockDeployment = { id: 'deploy-123', status: 'in_progress', progress: 50 };
-        (pool.query as jest.Mock).mockResolvedValueOnce({ rows: [mockDeployment] });
+        mockSoftwareUpdateRepo.findDeploymentById.mockResolvedValueOnce(mockDeployment as never);
 
         await getUpdateDeployment(req, res);
 
+        expect(mockSoftwareUpdateRepo.findDeploymentById).toHaveBeenCalledWith('deploy-123');
         expect(res.json).toHaveBeenCalledWith(mockDeployment);
       });
 
@@ -332,7 +409,7 @@ describe('Updates Controller', () => {
         const req = createAuthRequest({ params: { id: 'nonexistent' } });
         const res = createMockResponse();
 
-        (pool.query as jest.Mock).mockResolvedValueOnce({ rows: [] });
+        mockSoftwareUpdateRepo.findDeploymentById.mockResolvedValueOnce(null);
 
         await getUpdateDeployment(req, res);
 
@@ -344,7 +421,7 @@ describe('Updates Controller', () => {
         const req = createAuthRequest({ params: { id: 'deploy-123' } });
         const res = createMockResponse();
 
-        (pool.query as jest.Mock).mockRejectedValueOnce(new Error('DB Error'));
+        mockSoftwareUpdateRepo.findDeploymentById.mockRejectedValueOnce(new Error('DB Error'));
 
         await getUpdateDeployment(req, res);
 
@@ -367,10 +444,18 @@ describe('Updates Controller', () => {
           status: 'pending',
         };
 
-        (pool.query as jest.Mock).mockResolvedValueOnce({ rows: [mockDeployment] });
+        mockSoftwareUpdateRepo.createDeployment.mockResolvedValueOnce(mockDeployment as never);
 
         await createUpdateDeployment(req, res);
 
+        expect(mockSoftwareUpdateRepo.createDeployment).toHaveBeenCalledWith({
+          update_id: 'update-123',
+          target_type: 'site',
+          target_id: 'site-456',
+          deployed_by: 'user-123',
+          schedule_reboot: false,
+          auto_rollback: true,
+        });
         expect(res.status).toHaveBeenCalledWith(201);
         expect(res.json).toHaveBeenCalledWith(mockDeployment);
       });
@@ -381,13 +466,43 @@ describe('Updates Controller', () => {
         });
         const res = createMockResponse();
 
-        (pool.query as jest.Mock).mockResolvedValueOnce({ rows: [{ id: '1' }] });
+        mockSoftwareUpdateRepo.createDeployment.mockResolvedValueOnce({ id: '1' } as never);
 
         await createUpdateDeployment(req, res);
 
-        expect(pool.query).toHaveBeenCalledWith(
-          expect.any(String),
-          ['u1', 'site', 's1', 'user-123']
+        expect(mockSoftwareUpdateRepo.createDeployment).toHaveBeenCalledWith({
+          update_id: 'u1',
+          target_type: 'site',
+          target_id: 's1',
+          deployed_by: 'user-123',
+          schedule_reboot: false,
+          auto_rollback: true,
+        });
+      });
+
+      it('should return 409 if update is not ready for deployment', async () => {
+        const req = createAuthRequest({
+          body: { update_id: 'u1', target_id: 's1' },
+        });
+        const res = createMockResponse();
+
+        (uploadVerificationService.isUpdateReadyForDeployment as jest.Mock).mockResolvedValueOnce({
+          ready: false,
+          status: 'uploading',
+          error: 'Upload in progress',
+        });
+        (uploadVerificationService.getDeploymentBlockedMessage as jest.Mock).mockReturnValueOnce(
+          'Update is still uploading'
+        );
+
+        await createUpdateDeployment(req, res);
+
+        expect(res.status).toHaveBeenCalledWith(409);
+        expect(res.json).toHaveBeenCalledWith(
+          expect.objectContaining({
+            error: 'Update not ready for deployment',
+            upload_status: 'uploading',
+          })
         );
       });
 
@@ -397,7 +512,7 @@ describe('Updates Controller', () => {
         });
         const res = createMockResponse();
 
-        (pool.query as jest.Mock).mockRejectedValueOnce(new Error('DB Error'));
+        mockSoftwareUpdateRepo.createDeployment.mockRejectedValueOnce(new Error('DB Error'));
 
         await createUpdateDeployment(req, res);
 
@@ -414,10 +529,16 @@ describe('Updates Controller', () => {
         const res = createMockResponse();
 
         const updated = { id: 'deploy-123', status: 'completed', progress: 100 };
-        (pool.query as jest.Mock).mockResolvedValueOnce({ rows: [updated] });
+        mockSoftwareUpdateRepo.updateDeployment.mockResolvedValueOnce(updated as never);
 
         await updateUpdateDeployment(req, res);
 
+        expect(mockSoftwareUpdateRepo.updateDeployment).toHaveBeenCalledWith('deploy-123', {
+          status: 'completed',
+          progress: 100,
+          error_message: undefined,
+          backup_path: undefined,
+        });
         expect(res.json).toHaveBeenCalledWith(updated);
       });
 
@@ -428,16 +549,19 @@ describe('Updates Controller', () => {
         });
         const res = createMockResponse();
 
-        (pool.query as jest.Mock).mockResolvedValueOnce({
-          rows: [{ id: 'deploy-123', backup_path: '/backups/site-123.tar.gz' }],
-        });
+        mockSoftwareUpdateRepo.updateDeployment.mockResolvedValueOnce({
+          id: 'deploy-123',
+          backup_path: '/backups/site-123.tar.gz',
+        } as never);
 
         await updateUpdateDeployment(req, res);
 
-        expect(pool.query).toHaveBeenCalledWith(
-          expect.any(String),
-          [undefined, undefined, undefined, '/backups/site-123.tar.gz', 'deploy-123']
-        );
+        expect(mockSoftwareUpdateRepo.updateDeployment).toHaveBeenCalledWith('deploy-123', {
+          status: undefined,
+          progress: undefined,
+          error_message: undefined,
+          backup_path: '/backups/site-123.tar.gz',
+        });
       });
 
       it('should return 404 if deployment not found', async () => {
@@ -447,7 +571,7 @@ describe('Updates Controller', () => {
         });
         const res = createMockResponse();
 
-        (pool.query as jest.Mock).mockResolvedValueOnce({ rows: [] });
+        mockSoftwareUpdateRepo.updateDeployment.mockResolvedValueOnce(null);
 
         await updateUpdateDeployment(req, res);
 
@@ -461,7 +585,7 @@ describe('Updates Controller', () => {
         });
         const res = createMockResponse();
 
-        (pool.query as jest.Mock).mockRejectedValueOnce(new Error('DB Error'));
+        mockSoftwareUpdateRepo.updateDeployment.mockRejectedValueOnce(new Error('DB Error'));
 
         await updateUpdateDeployment(req, res);
 
@@ -474,10 +598,11 @@ describe('Updates Controller', () => {
         const req = createAuthRequest({ params: { id: 'deploy-123' } });
         const res = createMockResponse();
 
-        (pool.query as jest.Mock).mockResolvedValueOnce({ rows: [{ id: 'deploy-123' }] });
+        mockSoftwareUpdateRepo.deleteDeployment.mockResolvedValueOnce(true);
 
         await deleteUpdateDeployment(req, res);
 
+        expect(mockSoftwareUpdateRepo.deleteDeployment).toHaveBeenCalledWith('deploy-123');
         expect(res.json).toHaveBeenCalledWith({ message: 'Déploiement de mise à jour supprimé avec succès' });
       });
 
@@ -485,7 +610,7 @@ describe('Updates Controller', () => {
         const req = createAuthRequest({ params: { id: 'nonexistent' } });
         const res = createMockResponse();
 
-        (pool.query as jest.Mock).mockResolvedValueOnce({ rows: [] });
+        mockSoftwareUpdateRepo.deleteDeployment.mockResolvedValueOnce(false);
 
         await deleteUpdateDeployment(req, res);
 
@@ -497,7 +622,7 @@ describe('Updates Controller', () => {
         const req = createAuthRequest({ params: { id: 'deploy-123' } });
         const res = createMockResponse();
 
-        (pool.query as jest.Mock).mockRejectedValueOnce(new Error('DB Error'));
+        mockSoftwareUpdateRepo.deleteDeployment.mockRejectedValueOnce(new Error('DB Error'));
 
         await deleteUpdateDeployment(req, res);
 

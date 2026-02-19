@@ -11,6 +11,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     initDropZone();
     updateTime();
     startConnectionMonitoring(); // Start connection monitoring
+    initMode(); // Initialize club/tech mode from localStorage
     loadDashboard();
     loadVersionLabel();
 
@@ -190,6 +191,9 @@ function switchTab(tab) {
             loadTimeCategories();
             loadCategoriesForManager();
             break;
+        case 'sponsors':
+            loadSponsors();
+            break;
         case 'network':
             loadNetwork();
             loadWifiCurrent();
@@ -222,6 +226,9 @@ window.addCategory = addCategory;
 window.addTimeCategory = addTimeCategory;
 window.clearSelectedFiles = clearSelectedFiles;
 
+// Mode switcher
+window.toggleMode = toggleMode;
+
 // WiFi scanner functions
 window.loadWifiCurrent = loadWifiCurrent;
 window.refreshWifiCurrent = refreshWifiCurrent;
@@ -230,3 +237,12 @@ window.selectWifiNetwork = selectWifiNetwork;
 window.cancelWifiConnect = cancelWifiConnect;
 window.connectToWifi = connectToWifi;
 window.removeBssidLock = removeBssidLock;
+
+// Sponsor functions
+window.loadSponsors = loadSponsors;
+window.openSponsorModal = openSponsorModal;
+window.closeSponsorModal = closeSponsorModal;
+window.saveSponsor = saveSponsor;
+window.confirmDeleteSponsor = confirmDeleteSponsor;
+window.closeSponsorDeleteModal = closeSponsorDeleteModal;
+window.toggleSponsorLoop = toggleSponsorLoop;

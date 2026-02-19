@@ -1,0 +1,280 @@
+# Prometheus alert rules for NeoPro
+# Alerts fire locally → Alertmanager → Slack/email
+#
+# Metrics reference: central-server/src/services/metrics.service.ts
+
+groups:
+  # =============================================
+  # Server Health
+  # =============================================
+  - name: server_health
+    rules:
+      # Central server unreachable (scrape target down)
+      - alert: CentralServerDown
+        expr: up{job=~"neopro.*"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Central Server is DOWN"
+          description: "Prometheus cannot scrape {{ $labels.job }} for 2 minutes. Railway may have crashed or is redeploying."
+
+      # Server responding but unhealthy
+      - alert: CentralServerUnhealthy
+        expr: neopro_health_status == 0
+        for: 3m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Central Server health check failing"
+          description: "Health endpoint returns unhealthy for 3 minutes."
+
+      # High memory usage (OOM risk)
+      - alert: HighMemoryUsage
+        expr: process_resident_memory_bytes / (256 * 1024 * 1024) > 0.88
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Memory usage above 88%"
+          description: "Heap is at {{ $value | humanizePercentage }} of 256MB limit. Risk of OOM."
+
+      # High CPU (event loop saturation)
+      - alert: HighCpuUsage
+        expr: rate(process_cpu_seconds_total[5m]) > 0.8
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High CPU usage"
+          description: "CPU usage sustained above 80% for 5 minutes."
+
+  # =============================================
+  # WebSocket & Pi Connectivity
+  # =============================================
+  - name: websocket_connectivity
+    rules:
+      # No heartbeats at all (all Pi disconnected or server issue)
+      - alert: ZeroHeartbeats
+        expr: rate(neopro_heartbeats_total[5m]) == 0
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Zero Pi heartbeats for 5 minutes"
+          description: "No heartbeats received. Either all Pi are disconnected or WebSocket is broken."
+
+      # No WebSocket connections (agent)
+      - alert: NoAgentConnections
+        expr: neopro_websocket_connections{type="agent"} == 0
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "No Pi agents connected"
+          description: "Zero agent WebSocket connections for 5 minutes."
+
+      # Sudden drop in connected sites (fleet issue)
+      - alert: ConnectedSitesDrop
+        expr: neopro_connected_sites_total < (neopro_connected_sites_total offset 10m) * 0.5 and neopro_connected_sites_total offset 10m > 3
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Connected sites dropped by 50%+"
+          description: "Currently {{ $value }} sites connected, was {{ $value | humanize }} 10 minutes ago."
+
+      # High WebSocket disconnect rate
+      - alert: HighDisconnectRate
+        expr: rate(neopro_websocket_disconnects_total[5m]) > 0.5
+        for: 3m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High WebSocket disconnect rate"
+          description: "More than 0.5 disconnections/sec over 5 minutes. Possible network instability."
+
+  # =============================================
+  # Database
+  # =============================================
+  - name: database
+    rules:
+      # Pool saturation (approaching max connections)
+      - alert: DbPoolSaturation
+        expr: neopro_db_connections{state="active"} / neopro_db_connections{state="total"} > 0.8
+        for: 3m
+        labels:
+          severity: warning
+        annotations:
+          summary: "DB pool saturation above 80%"
+          description: "Active connections: {{ $value | humanizePercentage }} of pool. Risk of exhaustion."
+
+      # Slow queries
+      - alert: SlowDbQueries
+        expr: histogram_quantile(0.95, rate(neopro_db_query_duration_seconds_bucket[5m])) > 2
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "P95 DB query latency above 2s"
+          description: "95th percentile query time is {{ $value | humanizeDuration }}."
+
+  # =============================================
+  # HTTP / API
+  # =============================================
+  - name: http_api
+    rules:
+      # High error rate (5xx)
+      - alert: HighErrorRate
+        expr: sum(rate(http_requests_total{status_code=~"5.."}[5m])) / sum(rate(http_requests_total[5m])) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "HTTP 5xx error rate above 5%"
+          description: "{{ $value | humanizePercentage }} of requests are returning 5xx."
+
+      # API latency degradation
+      - alert: HighApiLatency
+        expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) > 3
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "P95 API latency above 3s"
+          description: "95th percentile response time is {{ $value | humanizeDuration }}."
+
+  # =============================================
+  # Video Uploads
+  # =============================================
+  - name: video_uploads
+    rules:
+      # High upload failure rate
+      - alert: HighUploadFailureRate
+        expr: rate(neopro_video_uploads_total{status="failed"}[10m]) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High video upload failure rate"
+          description: "More than 3 upload failures per minute over 10 minutes."
+
+      # Frequent filename encoding corrections (indicates client-side issue)
+      - alert: FrequentEncodingCorrections
+        expr: rate(neopro_filename_encoding_corrections_total[1h]) > 0.1
+        for: 30m
+        labels:
+          severity: info
+        annotations:
+          summary: "Frequent filename encoding corrections"
+          description: "{{ $value | humanize }}/sec encoding corrections. Many uploads have non-ASCII filenames being corrected."
+
+  # =============================================
+  # Alerts (meta-alerting)
+  # =============================================
+  - name: alerts_meta
+    rules:
+      # Too many active alerts (something is very wrong)
+      - alert: TooManyActiveAlerts
+        expr: neopro_active_alerts > 10
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $value }} active alerts"
+          description: "More than 10 active alerts for 10 minutes. Possible fleet-wide issue."
+
+  # =============================================
+  # Sponsor Analytics (P6)
+  # =============================================
+  - name: sponsor_analytics
+    rules:
+      # Network stats cross-club query latency (P6.1 — heavy aggregation)
+      - alert: SlowNetworkSponsorStats
+        expr: histogram_quantile(0.95, rate(neopro_http_request_duration_seconds_bucket{path=~"/api/network/advertisers/.*/stats"}[5m])) > 5
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "P95 network sponsor stats latency above 5s"
+          description: "Cross-club aggregation queries are slow. P95 latency: {{ $value | humanizeDuration }}. Consider adding indexes or caching."
+
+      # Benchmark query latency (P6.2 — full site sponsor scan)
+      - alert: SlowBenchmarkQuery
+        expr: histogram_quantile(0.95, rate(neopro_http_request_duration_seconds_bucket{path=~"/api/sites/.*/sponsors/benchmark"}[5m])) > 3
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "P95 sponsor benchmark latency above 3s"
+          description: "Benchmark query scanning all site sponsors is slow. P95: {{ $value | humanizeDuration }}."
+
+      # PDF report generation failures (P6.4 — match breakdown page 2)
+      - alert: HighReportFailureRate
+        expr: rate(neopro_report_generations_total{report_type="site_sponsor",status="failed"}[15m]) > 0.02
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High site_sponsor PDF report failure rate"
+          description: "More than 1 PDF generation failure per minute. Possible issue with match breakdown data."
+
+      # Sponsor sync deployment monitoring (P8 — dashboard→Pi sponsor sync)
+      - alert: SponsorSyncMissing
+        expr: rate(neopro_sponsor_sync_total{status="included"}[1h]) == 0 and rate(neopro_deployments_total{status="completed"}[1h]) > 0
+        for: 30m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Config deployments happening without sponsor sync"
+          description: "Deployments are completing but no sponsor data is being synced. Check orchestrated-deployment.service.ts."
+
+      # Sponsor resolution failures: Pi local sponsors failing to resolve or impressions unmatched
+      - alert: SponsorResolutionFailures
+        expr: rate(neopro_sponsor_resolution_failures_total[15m]) > 0.05
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Elevated sponsor resolution failures ({{ $labels.operation }})"
+          description: "{{ $value | humanize }}/sec sponsor resolution failures for {{ $labels.operation }}. Check config-sync.handler or advertiser-analytics.controller."
+
+      # Impression tracking: too many impressions without sponsor attribution
+      - alert: ImpressionSponsorUnresolved
+        expr: rate(neopro_impression_resolution_total{method="unresolved"}[30m]) / rate(neopro_impression_resolution_total[30m]) > 0.5
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Over 50% of impressions without sponsor attribution"
+          description: "{{ $value | humanizePercentage }} of impressions are unresolved. Check site_sponsor_videos table and loop manager config."
+
+      # Pi agent authentication failures (transient DB errors, pool exhaustion)
+      - alert: HighPiAuthFailureRate
+        expr: rate(neopro_pi_agent_auth_total{status="failure"}[5m]) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High Pi agent auth failure rate"
+          description: "More than 0.1 Pi auth failures/sec for 5 minutes. Possible DB pool exhaustion or server overload. Reason: {{ $labels.reason }}."
+
+      # Analytics video-plays endpoint returning 500 errors
+      - alert: HighAnalytics500Rate
+        expr: rate(http_requests_total{method="POST",path="/api/analytics/video-plays",status_code="500"}[10m]) > 0.02
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High 500 error rate on analytics video-plays endpoint"
+          description: "{{ $value | humanize }}/sec 500 errors on POST /api/analytics/video-plays. Check DB schema (tv_status column) and pool connections."
+
+      # Report endpoint validation errors (P7 — frontend/backend payload mismatch)
+      - alert: ReportValidationErrors
+        expr: rate(http_requests_total{method="POST",path="/reports/generate",status_code="400"}[10m]) > 0.01
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Repeated 400 errors on POST /reports/generate"
+          description: "{{ $value | humanize }}/sec validation failures on report generation. Likely frontend sending wrong parameter format (snake_case vs camelCase)."

@@ -18,6 +18,7 @@ Avant de partir sur site, vérifiez que vous avez :
 - [ ] **Câble Ethernet** (pour l'installation initiale)
 - [ ] **Lecteur de carte SD** pour votre ordinateur
 - [ ] **Ordinateur** avec connexion Internet (Mac, Windows ou Linux)
+- [ ] **Clé USB WiFi** (pour la connexion Internet du club) - optionnel mais recommandé
 - [ ] **Accès WiFi du club** (SSID et mot de passe) - optionnel mais recommandé
 
 ---
@@ -171,6 +172,8 @@ nginx hostapd dnsmasq nodejs npm chromium-browser...
 | `dnsmasq` | Gère les adresses IP du hotspot |
 | `nodejs` | Moteur JavaScript pour le serveur |
 | `chromium-browser` | Navigateur qui affiche l'app en mode kiosque |
+| `unclutter-xfixes` | Masque le curseur souris sur l'écran TV |
+| `firmware-realtek` / `firmware-ralink` | Drivers pour clés WiFi USB (nécessaire pour le dual WiFi) |
 
 ---
 

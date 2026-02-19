@@ -21,11 +21,11 @@ const logger = winston.createLogger({
     new winston.transports.Console({
       format: winston.format.combine(
         winston.format.colorize(),
-        winston.format.printf(({ timestamp, level, message, ...meta }) => {
-          const metaString = Object.keys(meta).length && meta.service !== 'neopro-sync-agent'
-            ? JSON.stringify(meta, null, 2)
+        winston.format.printf(({ timestamp, level, message, service, siteId, ...meta }) => {
+          const metaString = Object.keys(meta).length
+            ? ' ' + JSON.stringify(meta)
             : '';
-          return `${timestamp} [${level}]: ${message} ${metaString}`;
+          return `${timestamp} [${level}]: ${message}${metaString}`;
         })
       ),
     }),

@@ -1,19 +1,26 @@
 import { Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import { randomBytes, createHash } from 'crypto';
-import bcrypt from 'bcryptjs';
-import { query } from '../config/database';
 import { AuthRequest, UserRole } from '../types';
 import logger from '../config/logger';
+import { metricsService } from '../services/metrics.service';
 import { auditService } from '../services/audit.service';
-import { formatPaginatedResponse, PaginationParams } from '../middleware/pagination';
+import { formatPaginatedResponse } from '../middleware/pagination';
 import { commandQueueService } from '../services/command-queue.service';
-import { isAdmin } from '../middleware/auth';
-import { getFtpPublicUrl, isFtpConfigured } from '../config/ftp-storage';
-import { getPublicUrl } from '../config/supabase';
+import { getVideoUrl } from '../services/storage.service';
 import { validateShellCommand, getAllowedCommandsForRole } from '../middleware/remote-shell-security';
+import { deriveHostnameSlug, deriveHostnameWithSuffix } from '../utils/hostname';
 import { memoryCache } from '../services/memory-cache.service';
-import { siteRepository } from '../repositories/site.repository';
+import {
+  siteRepository,
+  remoteCommandRepository,
+  metricsRepository,
+  timelineRepository,
+  configProfileRepository,
+  type ExtendedSiteFilters,
+  type SubscriptionFilter,
+  type UpdateSiteInput,
+} from '../repositories';
 
 class HttpError extends Error {
   constructor(public status: number, message: string) {
@@ -23,24 +30,7 @@ class HttpError extends Error {
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-/**
- * Génère l'URL publique pour une vidéo.
- * Détecte automatiquement si le fichier est sur FTP ou Supabase
- * en fonction du format du storage_path.
- */
-function getVideoDownloadUrl(storagePath: string): string {
-  // Si le path est juste un filename (pas de /) → c'est un fichier FTP
-  const isFtpPath = !storagePath.includes('/');
-
-  if (isFtpPath && isFtpConfigured()) {
-    return getFtpPublicUrl(storagePath);
-  }
-
-  // Sinon c'est un chemin Supabase (ex: uploads/filename.mp4)
-  return getPublicUrl(storagePath);
-}
-
-const BCRYPT_ROUNDS = 10;
+// Video URL generation is provided by storage.service.ts
 
 // Seuils de connexion (en secondes)
 // Un site est considéré "online" si heartbeat reçu dans ce délai
@@ -78,110 +68,25 @@ export const getSites = async (req: AuthRequest, res: Response) => {
     const userAgencyId = req.user?.agency_id;
     const userAdvertiserId = req.user?.advertiser_id ?? req.user?.sponsor_id;
 
-    let whereClause = 'WHERE 1=1';
-    const params: any[] = [];
-    let paramIndex = 1;
+    const filters: ExtendedSiteFilters = {
+      status: status as ExtendedSiteFilters['status'],
+      sport: sport as string,
+      region: region as string,
+      search: search as string,
+      subscription: subscription as SubscriptionFilter,
+      userContext: {
+        role: userRole as UserRole,
+        agencyId: userAgencyId,
+        advertiserId: userAdvertiserId,
+      },
+    };
 
-    // Multi-tenant filtering based on user role
-    if (userRole === 'agency') {
-      if (userAgencyId) {
-        // Agency users only see their assigned sites
-        whereClause += ` AND s.id IN (SELECT site_id FROM agency_sites WHERE agency_id = $${paramIndex})`;
-        params.push(userAgencyId);
-        paramIndex++;
-      } else {
-        // Agency user without agency_id sees no sites
-        whereClause += ` AND 1=0`;
-      }
-    } else if (userRole === 'advertiser' || userRole === 'sponsor') {
-      if (userAdvertiserId) {
-        // Advertiser users see sites where their videos are deployed
-        // Videos are linked to advertisers via advertiser_videos table
-        whereClause += ` AND s.id IN (
-          SELECT DISTINCT cd.target_id FROM content_deployments cd
-          JOIN advertiser_videos av ON av.video_id = cd.video_id
-          WHERE av.advertiser_id = $${paramIndex} AND cd.target_type = 'site'
-          UNION
-          SELECT DISTINCT sg.site_id FROM site_groups sg
-          JOIN content_deployments cd ON cd.target_id = sg.group_id AND cd.target_type = 'group'
-          JOIN advertiser_videos av ON av.video_id = cd.video_id
-          WHERE av.advertiser_id = $${paramIndex + 1}
-        )`;
-        params.push(userAdvertiserId, userAdvertiserId);
-        paramIndex += 2;
-      } else {
-        // Advertiser user without advertiser_id sees no sites
-        whereClause += ` AND 1=0`;
-      }
-    }
-    // admin, super_admin, operator, viewer see all sites (no filter)
+    const { rows, total } = await siteRepository.findAllWithFilters(filters, {
+      limit: pagination.limit,
+      offset: pagination.offset,
+    });
 
-    if (status) {
-      whereClause += ` AND s.status = $${paramIndex}`;
-      params.push(status);
-      paramIndex++;
-    }
-
-    if (sport) {
-      whereClause += ` AND s.sports @> $${paramIndex}::jsonb`;
-      params.push(JSON.stringify([sport]));
-      paramIndex++;
-    }
-
-    if (region) {
-      whereClause += ` AND s.location->>'region' = $${paramIndex}`;
-      params.push(region);
-      paramIndex++;
-    }
-
-    if (search) {
-      whereClause += ` AND (s.site_name ILIKE $${paramIndex} OR s.club_name ILIKE $${paramIndex})`;
-      params.push(`%${search}%`);
-      paramIndex++;
-    }
-
-    // Filtre par statut d'abonnement
-    if (subscription) {
-      switch (subscription) {
-        case 'active':
-          // Actif: pas suspendu ET (pas de date de fin OU date de fin > aujourd'hui + 30 jours)
-          whereClause += ` AND s.suspended = false AND (s.subscription_end IS NULL OR s.subscription_end > NOW() + INTERVAL '30 days')`;
-          break;
-        case 'expiring_soon':
-          // Expire bientôt: pas suspendu ET date de fin dans les 30 prochains jours
-          whereClause += ` AND s.suspended = false AND s.subscription_end IS NOT NULL AND s.subscription_end <= NOW() + INTERVAL '30 days' AND s.subscription_end > NOW()`;
-          break;
-        case 'grace_period':
-          // Période de grâce: pas suspendu ET expiré depuis moins de 7 jours
-          whereClause += ` AND s.suspended = false AND s.subscription_end IS NOT NULL AND s.subscription_end <= NOW() AND s.subscription_end > NOW() - INTERVAL '7 days'`;
-          break;
-        case 'suspended':
-          // Suspendu manuellement
-          whereClause += ` AND s.suspended = true`;
-          break;
-        case 'blocked':
-          // Bloqué: expiré depuis plus de 7 jours (non suspendu manuellement)
-          whereClause += ` AND s.suspended = false AND s.subscription_end IS NOT NULL AND s.subscription_end <= NOW() - INTERVAL '7 days'`;
-          break;
-        case 'trial':
-          // En période d'essai
-          whereClause += ` AND s.subscription_plan = 'trial' AND (s.subscription_end IS NULL OR s.subscription_end > NOW())`;
-          break;
-      }
-    }
-
-    // Requêtes paginée et count en parallèle
-    const dataQuery = `SELECT s.* FROM sites s ${whereClause} ORDER BY s.created_at DESC LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
-    const countQuery = `SELECT COUNT(*) as count FROM sites s ${whereClause}`;
-
-    const [dataResult, countResult] = await Promise.all([
-      query(dataQuery, [...params, pagination.limit, pagination.offset]),
-      query(countQuery, params),
-    ]);
-
-    const total = parseInt((countResult.rows[0] as any)?.count || '0', 10);
-
-    res.json(formatPaginatedResponse(dataResult.rows, total, pagination));
+    res.json(formatPaginatedResponse(rows, total, pagination));
   } catch (error) {
     logger.error('Get sites error:', error);
     res.status(500).json({ error: 'Erreur lors de la récupération des sites' });
@@ -211,15 +116,12 @@ export const createSite = async (req: AuthRequest, res: Response) => {
 
     // Check for existing sites with same name and generate unique name if needed
     let uniqueSiteName = site_name;
-    const existingResult = await query(
-      `SELECT site_name FROM sites WHERE site_name = $1 OR site_name ~ $2`,
-      [site_name, `^${site_name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}-\\d+$`]
-    );
+    const existingRows = await siteRepository.findNameDuplicates(site_name);
 
-    if (existingResult.rows.length > 0) {
+    if (existingRows.length > 0) {
       // Find the highest suffix number
       let maxSuffix = 0;
-      for (const row of existingResult.rows as { site_name: string }[]) {
+      for (const row of existingRows) {
         if (row.site_name === site_name) {
           maxSuffix = Math.max(maxSuffix, 1);
         } else {
@@ -238,22 +140,52 @@ export const createSite = async (req: AuthRequest, res: Response) => {
     const api_key = generateApiKey();
     const api_key_hash = hashApiKey(api_key);
 
-    const result = await query(
-      `INSERT INTO sites (id, site_name, club_name, location, sports, hardware_model, api_key)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
-       RETURNING id, site_name, club_name, location, sports, hardware_model, status, created_at`,
-      [
-        id,
-        uniqueSiteName,
-        club_name,
-        location ? JSON.stringify(location) : null,
-        sports ? JSON.stringify(sports) : null,
-        hardware_model || 'Unknown',
-        api_key_hash, // Stocker le hash, pas la clé en clair
-      ]
-    );
+    const site = await siteRepository.create({
+      id,
+      siteName: uniqueSiteName,
+      clubName: club_name,
+      location,
+      sports,
+      hardwareModel: hardware_model || 'Unknown',
+      apiKeyHash: api_key_hash,
+    });
+
+    // Derive hostname from club_name
+    try {
+      const baseHostname = deriveHostnameSlug(club_name);
+      const existingHostnames = await siteRepository.findExistingHostnames();
+      const hostname = deriveHostnameWithSuffix(baseHostname, existingHostnames);
+      await siteRepository.updateHostnameSlug(id, hostname);
+      logger.info('Hostname slug assigned', { siteId: id, hostname });
+    } catch (hostnameError) {
+      logger.warn('Failed to assign hostname slug (non-blocking)', {
+        siteId: id,
+        error: hostnameError instanceof Error ? hostnameError.message : String(hostnameError),
+      });
+    }
 
     logger.info('Site created', { siteId: id, siteName: uniqueSiteName, createdBy: req.user?.email });
+
+    // Auto-creer un profil de configuration par defaut
+    try {
+      await configProfileRepository.create({
+        siteId: id,
+        name: 'Par defaut',
+        displayName: club_name,
+        city: location?.city || undefined,
+        sport: Array.isArray(sports) && sports.length > 0 ? sports[0] : undefined,
+        isDefault: true,
+        configuration: {},
+        createdBy: req.user?.id,
+      });
+      logger.info('Default config profile created', { siteId: id });
+    } catch (profileError) {
+      // Non-bloquant : si la table n'existe pas encore, on continue
+      logger.warn('Failed to create default config profile (migration may not be applied yet)', {
+        siteId: id,
+        error: profileError instanceof Error ? profileError.message : String(profileError),
+      });
+    }
 
     // Audit log
     auditService.logSiteCreated(id, uniqueSiteName, req);
@@ -261,7 +193,7 @@ export const createSite = async (req: AuthRequest, res: Response) => {
     // Return the plain API key only once at creation time
     // IMPORTANT: L'utilisateur doit sauvegarder cette clé, elle ne sera plus jamais affichée
     res.status(201).json({
-      ...result.rows[0],
+      ...site,
       api_key,
       api_key_warning: 'Sauvegardez cette clé API. Elle ne sera plus jamais affichée.',
     });
@@ -275,64 +207,60 @@ export const createSite = async (req: AuthRequest, res: Response) => {
 export const updateSite = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
-    const { site_name, club_name, location, sports, status, live_score_enabled } = req.body;
+    const { site_name, club_name, location, sports, status, live_score_enabled, avg_spectators } = req.body;
 
-    const updates: string[] = [];
-    const params: any[] = [];
-    let paramIndex = 1;
+    const updateData: Record<string, unknown> = {};
+    if (site_name !== undefined) updateData.site_name = site_name;
+    if (club_name !== undefined) updateData.club_name = club_name;
+    if (location !== undefined) updateData.location = JSON.stringify(location);
+    if (sports !== undefined) updateData.sports = JSON.stringify(sports);
+    if (status !== undefined) updateData.status = status;
+    if (live_score_enabled !== undefined) updateData.live_score_enabled = live_score_enabled;
+    if (avg_spectators !== undefined) updateData.avg_spectators = avg_spectators;
 
-    if (site_name !== undefined) {
-      updates.push(`site_name = $${paramIndex}`);
-      params.push(site_name);
-      paramIndex++;
-    }
-
-    if (club_name !== undefined) {
-      updates.push(`club_name = $${paramIndex}`);
-      params.push(club_name);
-      paramIndex++;
-    }
-
-    if (location !== undefined) {
-      updates.push(`location = $${paramIndex}`);
-      params.push(JSON.stringify(location));
-      paramIndex++;
-    }
-
-    if (sports !== undefined) {
-      updates.push(`sports = $${paramIndex}`);
-      params.push(JSON.stringify(sports));
-      paramIndex++;
-    }
-
-    if (status !== undefined) {
-      updates.push(`status = $${paramIndex}`);
-      params.push(status);
-      paramIndex++;
-    }
-
-    if (live_score_enabled !== undefined) {
-      updates.push(`live_score_enabled = $${paramIndex}`);
-      params.push(live_score_enabled);
-      paramIndex++;
-    }
-
-    if (updates.length === 0) {
+    if (Object.keys(updateData).length === 0) {
       return res.status(400).json({ error: 'Aucune donnée à mettre à jour' });
     }
 
-    params.push(id);
-    const sqlQuery = `UPDATE sites SET ${updates.join(', ')}, updated_at = NOW() WHERE id = $${paramIndex} RETURNING *`;
+    const site = await siteRepository.update(id, updateData as UpdateSiteInput);
 
-    const result = await query(sqlQuery, params);
-
-    if (result.rows.length === 0) {
+    if (!site) {
       return res.status(404).json({ error: 'Site non trouvé' });
+    }
+
+    // Re-derive hostname when club_name changes
+    if (club_name !== undefined) {
+      try {
+        const baseHostname = deriveHostnameSlug(club_name);
+        const existingHostnames = await siteRepository.findExistingHostnames();
+        const otherHostnames = existingHostnames.filter(h => h !== site.hostname_slug);
+        const newHostname = deriveHostnameWithSuffix(baseHostname, otherHostnames);
+
+        if (newHostname !== site.hostname_slug) {
+          await siteRepository.updateHostnameSlug(id, newHostname);
+
+          // Push hostname update to Pi
+          await commandQueueService.sendOrQueue(id, 'update_hostname', {
+            hostname: newHostname,
+          });
+
+          logger.info('Hostname updated and command queued', {
+            siteId: id,
+            oldHostname: site.hostname_slug,
+            newHostname,
+          });
+        }
+      } catch (hostnameError) {
+        logger.warn('Failed to update hostname slug (non-blocking)', {
+          siteId: id,
+          error: hostnameError instanceof Error ? hostnameError.message : String(hostnameError),
+        });
+      }
     }
 
     logger.info('Site updated', { siteId: id, updatedBy: req.user?.email });
 
-    res.json(result.rows[0]);
+    res.json(site);
   } catch (error) {
     logger.error('Update site error:', error);
     res.status(500).json({ error: 'Erreur lors de la mise à jour du site' });
@@ -343,16 +271,12 @@ export const deleteSite = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
 
-    const result = await query<{ site_name: string; [key: string]: unknown }>(
-      'DELETE FROM sites WHERE id = $1 RETURNING site_name',
-      [id]
-    );
+    const siteName = await siteRepository.delete(id);
 
-    if (result.rows.length === 0) {
+    if (!siteName) {
       return res.status(404).json({ error: 'Site non trouvé' });
     }
 
-    const siteName = result.rows[0].site_name;
     logger.info('Site deleted', { siteId: id, siteName, deletedBy: req.user?.email });
 
     // Audit log
@@ -372,12 +296,9 @@ export const regenerateApiKey = async (req: AuthRequest, res: Response) => {
     const newApiKey = generateApiKey();
     const newApiKeyHash = hashApiKey(newApiKey);
 
-    const result = await query(
-      'UPDATE sites SET api_key = $1, updated_at = NOW() WHERE id = $2 RETURNING id, site_name, club_name, status, updated_at',
-      [newApiKeyHash, id] // Stocker le hash
-    );
+    const site = await siteRepository.updateApiKey(id, newApiKeyHash);
 
-    if (result.rows.length === 0) {
+    if (!site) {
       return res.status(404).json({ error: 'Site non trouvé' });
     }
 
@@ -389,7 +310,7 @@ export const regenerateApiKey = async (req: AuthRequest, res: Response) => {
     // Return the new plain API key only once
     // IMPORTANT: L'utilisateur doit sauvegarder cette clé, elle ne sera plus jamais affichée
     res.json({
-      ...result.rows[0],
+      ...site,
       api_key: newApiKey,
       api_key_warning: 'Sauvegardez cette clé API. Elle ne sera plus jamais affichée.',
     });
@@ -404,18 +325,12 @@ export const getSiteMetrics = async (req: AuthRequest, res: Response) => {
     const { id } = req.params;
     const { hours = 24 } = req.query;
 
-    const result = await query(
-      `SELECT * FROM metrics
-       WHERE site_id = $1
-       AND recorded_at > NOW() - INTERVAL '${parseInt(hours as string)} hours'
-       ORDER BY recorded_at DESC`,
-      [id]
-    );
+    const metrics = await metricsRepository.findBySiteId(id, parseInt(hours as string));
 
     res.json({
       site_id: id,
       period_hours: hours,
-      metrics: result.rows,
+      metrics,
     });
   } catch (error) {
     logger.error('Get site metrics error:', error);
@@ -426,14 +341,8 @@ export const getSiteMetrics = async (req: AuthRequest, res: Response) => {
 export const getSiteStats = async (req: AuthRequest, res: Response) => {
   try {
     // Récupérer tous les sites avec leur dernier heartbeat depuis la table metrics
-    const sitesResult = await query(`
-      SELECT
-        s.id,
-        s.status,
-        s.last_seen_at,
-        (SELECT recorded_at FROM metrics WHERE site_id = s.id ORDER BY recorded_at DESC LIMIT 1) as last_metric_at
-      FROM sites s
-    `);
+    const sitesRows = await siteRepository.getStats();
+    const sitesResult = { rows: sitesRows };
 
     const socketService = (await import('../services/socket.service')).default;
     const connectedSiteIds = new Set(socketService.getConnectedSites());
@@ -517,20 +426,10 @@ export const getAllSitesConnectionStatus = async (req: AuthRequest, res: Respons
       sitesResult = { rows: cachedSites };
     } else {
       // Récupérer tous les sites avec leur dernier heartbeat depuis la table metrics
-      sitesResult = await query(`
-        SELECT
-          s.id,
-          s.site_name,
-          s.club_name,
-          s.status,
-          s.last_seen_at,
-          s.local_ip,
-          (SELECT recorded_at FROM metrics WHERE site_id = s.id ORDER BY recorded_at DESC LIMIT 1) as last_metric_at
-        FROM sites s
-        ORDER BY s.site_name
-      `);
+      const rows = await siteRepository.findWithConnectionStatus();
+      sitesResult = { rows };
       // Cache for 10 seconds
-      memoryCache.set(cacheKey, sitesResult.rows, 10000);
+      memoryCache.set(cacheKey, rows, 10000);
     }
 
     const socketService = (await import('../services/socket.service')).default;
@@ -565,7 +464,6 @@ export const getAllSitesConnectionStatus = async (req: AuthRequest, res: Respons
 
       // Vérifier la santé de la connexion (détecte les connexions zombie)
       const connectionHealth = isConnectedNow ? socketService.getConnectionHealth(site.id) : null;
-      const isHealthy = connectionHealth?.isHealthy ?? false;
 
       // Vérifier si c'est une vraie connexion zombie (socket morte mais flag actif)
       // Une connexion avec pong légèrement stale n'est PAS une zombie
@@ -638,12 +536,7 @@ export const getConnectionsDebug = async (req: AuthRequest, res: Response) => {
     const debugInfo = socketService.getDebugInfo();
 
     // Ajouter les infos de la base de données pour comparaison
-    const dbSitesResult = await query(`
-      SELECT id, site_name, status, last_seen_at
-      FROM sites
-      WHERE status = 'online' OR last_seen_at > NOW() - INTERVAL '5 minutes'
-      ORDER BY last_seen_at DESC
-    `);
+    const dbSitesResult = { rows: await siteRepository.findForDebug() };
 
     res.json({
       socketService: debugInfo,
@@ -670,8 +563,8 @@ const validateCommandPayload = (command: string, data?: any) => {
 };
 
 const ensureSiteConnected = async (siteId: string) => {
-  const siteResult = await query('SELECT id, site_name, status FROM sites WHERE id = $1', [siteId]);
-  if (siteResult.rows.length === 0) {
+  const site = await siteRepository.findBasicInfo(siteId);
+  if (!site) {
     throw new HttpError(404, 'Site non trouvé');
   }
 
@@ -680,7 +573,7 @@ const ensureSiteConnected = async (siteId: string) => {
     throw new HttpError(503, 'Site non connecté');
   }
 
-  return { site: siteResult.rows[0], socketService };
+  return { site, socketService };
 };
 
 const dispatchCommand = async (
@@ -698,19 +591,18 @@ const dispatchCommand = async (
   const { site, socketService } = await ensureSiteConnected(siteId);
 
   const commandId = uuidv4();
-  await query(
-    `INSERT INTO remote_commands (id, site_id, command_type, command_data, status, executed_by)
-     VALUES ($1, $2, $3, $4, 'pending', $5)`,
-    [commandId, siteId, command, data ? JSON.stringify(data) : null, executedBy]
-  );
+  await remoteCommandRepository.create({
+    id: commandId,
+    siteId,
+    commandType: command,
+    commandData: data ? JSON.stringify(data) : null,
+    executedBy,
+  });
 
   // Pour les commandes update_config, bloquer les sync_local_state pendant 60s
   // pour éviter qu'ils n'écrasent la config fraîchement déployée
   if (command === 'update_config') {
-    await query(
-      `UPDATE sites SET config_update_pending_until = NOW() + INTERVAL '60 seconds' WHERE id = $1`,
-      [siteId]
-    );
+    await siteRepository.setConfigUpdatePending(siteId, 60);
     logger.info('Config update pending lock set for 60s', { siteId, commandId });
   }
 
@@ -721,21 +613,15 @@ const dispatchCommand = async (
   });
 
   if (!sent) {
-    await query(
-      `UPDATE remote_commands SET status = 'failed', error_message = 'Échec envoi' WHERE id = $1`,
-      [commandId]
-    );
+    await remoteCommandRepository.updateStatus(commandId, 'failed', 'Échec envoi');
     // Si l'envoi échoue, lever le blocage
     if (command === 'update_config') {
-      await query(`UPDATE sites SET config_update_pending_until = NULL WHERE id = $1`, [siteId]);
+      await siteRepository.clearConfigUpdatePending(siteId);
     }
     throw new HttpError(503, 'Échec de l\'envoi de la commande');
   }
 
-  await query(
-    `UPDATE remote_commands SET status = 'executing', executed_at = NOW() WHERE id = $1`,
-    [commandId]
-  );
+  await remoteCommandRepository.updateStatus(commandId, 'executing');
 
   logger.info('Command sent to site', {
     siteId,
@@ -754,13 +640,9 @@ const waitForCommandResult = async (commandId: string, timeoutMs = 30000) => {
   const start = Date.now();
 
   while (Date.now() - start < timeoutMs) {
-    const result = await query(
-      `SELECT status, result, error_message FROM remote_commands WHERE id = $1`,
-      [commandId]
-    );
+    const row = await remoteCommandRepository.findStatusById(commandId);
 
-    if (result.rows.length > 0) {
-      const row = result.rows[0] as { status: string; result?: any; error_message?: string };
+    if (row) {
 
       if (row.status === 'completed') {
         const parsedResult = typeof row.result === 'string' ? JSON.parse(row.result) : row.result;
@@ -885,8 +767,8 @@ export const sendCommand = async (req: AuthRequest, res: Response) => {
     validateCommandPayload(command, normalizedData);
 
     // Vérifier que le site existe
-    const siteResult = await query('SELECT id, site_name FROM sites WHERE id = $1', [id]);
-    if (siteResult.rows.length === 0) {
+    const siteInfo = await siteRepository.findBasicInfo(id);
+    if (!siteInfo) {
       return res.status(404).json({ error: 'Site non trouvé' });
     }
 
@@ -939,16 +821,13 @@ export const getCommandStatus = async (req: AuthRequest, res: Response) => {
   try {
     const { id, commandId } = req.params;
 
-    const result = await query(
-      `SELECT * FROM remote_commands WHERE id = $1 AND site_id = $2`,
-      [commandId, id]
-    );
+    const command = await timelineRepository.findCommandBySiteAndId(commandId, id);
 
-    if (result.rows.length === 0) {
+    if (!command) {
       return res.status(404).json({ error: 'Commande non trouvée' });
     }
 
-    res.json(result.rows[0]);
+    res.json(command);
   } catch (error) {
     logger.error('Get command status error:', error);
     res.status(500).json({ error: 'Erreur lors de la récupération du statut' });
@@ -1164,6 +1043,61 @@ export const optimizeForMesh = async (req: AuthRequest, res: Response) => {
   }
 };
 
+export const scanWifiNetworks = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    logger.info('Scanning WiFi networks', { siteId: id });
+
+    const result = await waitForCommandResult(
+      (await dispatchCommand(id, 'scan_wifi_networks', {}, req.user?.id)).commandId,
+      30000 // 30 secondes pour le scan
+    );
+
+    metricsService.recordWifiConfig('scan', 'success');
+    res.json(result);
+  } catch (error) {
+    metricsService.recordWifiConfig('scan', 'failed');
+    logger.error('Scan WiFi networks error:', error);
+    if (error instanceof HttpError) {
+      return res.status(error.status).json({ error: error.message });
+    }
+    res.status(500).json({ error: 'Erreur lors du scan des réseaux WiFi' });
+  }
+};
+
+export const connectWifiClient = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { ssid, password } = req.body;
+
+    // Validation
+    if (!ssid || !ssid.trim()) {
+      return res.status(400).json({ error: 'SSID requis' });
+    }
+    if (!password || password.length < 8 || password.length > 63) {
+      return res.status(400).json({ error: 'Mot de passe invalide (8-63 caractères pour WPA2)' });
+    }
+
+    logger.info('Configuring WiFi client', { siteId: id, ssid });
+
+    const result = await waitForCommandResult(
+      (await dispatchCommand(id, 'configure_wifi_client', { ssid, password }, req.user?.id)).commandId,
+      45000 // 45 secondes pour configuration + connexion
+    );
+
+    metricsService.recordWifiConfig('connect', 'success');
+    res.json(result);
+  } catch (error) {
+    metricsService.recordWifiConfig('connect', 'failed');
+    logger.error('Configure WiFi client error:', error);
+    if (error instanceof HttpError) {
+      return res.status(error.status).json({ error: error.message });
+    }
+    res.status(500).json({ error: 'Erreur lors de la configuration du WiFi client' });
+  }
+};
+
 export const exportDebugBundle = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
@@ -1190,36 +1124,19 @@ export const getSiteConnectionStatus = async (req: AuthRequest, res: Response) =
     const { id } = req.params;
 
     // Récupérer les infos du site
-    const siteResult = await query(
-      `SELECT id, site_name, club_name, status, last_seen_at, local_ip, last_config_sync
-       FROM sites WHERE id = $1`,
-      [id]
-    );
+    const site = await siteRepository.findConnectionInfo(id);
 
-    if (siteResult.rows.length === 0) {
+    if (!site) {
       return res.status(404).json({ error: 'Site non trouvé' });
     }
-
-    const site = siteResult.rows[0] as {
-      id: string;
-      site_name: string;
-      club_name: string;
-      status: string;
-      last_seen_at: Date | null;
-      local_ip: string | null;
-      last_config_sync: Date | null;
-    };
 
     // Vérifier la connexion en temps réel via le socket
     const socketService = (await import('../services/socket.service')).default;
     const isConnectedNow = socketService.isConnected(id);
 
     // Récupérer le dernier heartbeat depuis la table metrics (source de vérité)
-    const lastMetricResult = await query(
-      `SELECT recorded_at FROM metrics WHERE site_id = $1 ORDER BY recorded_at DESC LIMIT 1`,
-      [id]
-    );
-    const lastMetricAt = lastMetricResult.rows[0]?.recorded_at as Date | null;
+    const latestMetric = await metricsRepository.getLatestForSite(id);
+    const lastMetricAt = latestMetric?.recorded_at || null;
 
     // Utiliser le plus récent entre last_seen_at (Socket.IO) et last_metric (table metrics)
     const lastSeenFromSite = site.last_seen_at ? new Date(site.last_seen_at) : null;
@@ -1256,21 +1173,7 @@ export const getSiteConnectionStatus = async (req: AuthRequest, res: Response) =
     }
 
     // Récupérer les statistiques de connexion récentes (24h)
-    const statsResult = await query(
-      `SELECT
-         COUNT(*) as heartbeat_count,
-         MIN(recorded_at) as first_heartbeat,
-         MAX(recorded_at) as last_heartbeat
-       FROM metrics
-       WHERE site_id = $1 AND recorded_at > NOW() - INTERVAL '24 hours'`,
-      [id]
-    );
-
-    const stats = statsResult.rows[0] as {
-      heartbeat_count: string;
-      first_heartbeat: Date | null;
-      last_heartbeat: Date | null;
-    };
+    const stats = await metricsRepository.get24hStatsForSite(id);
 
     const heartbeatCount24h = parseInt(stats?.heartbeat_count || '0', 10);
     // Uptime estimé: heartbeat toutes les 30s = 2880 max par 24h
@@ -1322,42 +1225,17 @@ export const getSiteLocalContent = async (req: AuthRequest, res: Response) => {
     const { id } = req.params;
 
     // Récupérer le site et les vidéos cloud en parallèle
-    const [siteResult, cloudVideosResult] = await Promise.all([
-      query(
-        `SELECT id, site_name, club_name, local_config_mirror, local_config_hash, last_config_sync
-         FROM sites WHERE id = $1`,
-        [id]
-      ),
-      query(
-        `SELECT
-           v.id,
-           v.filename,
-           v.original_name,
-           v.category,
-           v.subcategory,
-           v.file_size,
-           v.duration,
-           v.checksum,
-           v.storage_path,
-           v.created_at,
-           v.updated_at,
-           v.metadata
-         FROM videos v
-         ORDER BY v.created_at DESC
-         LIMIT 500`,
-        []
-      )
+    const [site, cloudVideoRows] = await Promise.all([
+      siteRepository.findWithLocalContent(id),
+      timelineRepository.getCloudVideos(500),
     ]);
 
-    if (siteResult.rows.length === 0) {
+    if (!site) {
       return res.status(404).json({ error: 'Site non trouvé' });
     }
 
-    const site = siteResult.rows[0];
-
     // Formatter les vidéos cloud
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const cloudVideos = cloudVideosResult.rows.map((v: any) => ({
+    const cloudVideos = cloudVideoRows.map((v) => ({
       id: v.id,
       filename: v.filename,
       originalName: v.original_name,
@@ -1367,7 +1245,7 @@ export const getSiteLocalContent = async (req: AuthRequest, res: Response) => {
       size: v.file_size,
       duration: v.duration,
       checksum: v.checksum,
-      url: v.storage_path ? getVideoDownloadUrl(v.storage_path) : null,
+      url: v.storage_path ? getVideoUrl(v.storage_path) : null,
       createdAt: v.created_at,
       updatedAt: v.updated_at
     }));
@@ -1434,8 +1312,8 @@ export const getPendingCommands = async (req: AuthRequest, res: Response) => {
     const { id } = req.params;
 
     // Vérifier que le site existe
-    const siteResult = await query('SELECT id, site_name, club_name FROM sites WHERE id = $1', [id]);
-    if (siteResult.rows.length === 0) {
+    const siteInfo = await siteRepository.findBasicInfo(id);
+    if (!siteInfo) {
       return res.status(404).json({ error: 'Site non trouvé' });
     }
 
@@ -1443,8 +1321,8 @@ export const getPendingCommands = async (req: AuthRequest, res: Response) => {
 
     res.json({
       siteId: id,
-      siteName: siteResult.rows[0].site_name,
-      clubName: siteResult.rows[0].club_name,
+      siteName: siteInfo.site_name,
+      clubName: siteInfo.club_name,
       pendingCount: commands.length,
       commands,
     });
@@ -1462,12 +1340,9 @@ export const cancelPendingCommand = async (req: AuthRequest, res: Response) => {
     const { id, commandId } = req.params;
 
     // Vérifier que la commande appartient bien à ce site
-    const cmdResult = await query(
-      'SELECT id FROM pending_commands WHERE id = $1 AND site_id = $2',
-      [commandId, id]
-    );
+    const pendingCmd = await timelineRepository.findPendingCommand(commandId, id);
 
-    if (cmdResult.rows.length === 0) {
+    if (!pendingCmd) {
       return res.status(404).json({ error: 'Commande non trouvée' });
     }
 
@@ -1493,8 +1368,8 @@ export const clearPendingCommands = async (req: AuthRequest, res: Response) => {
     const { id } = req.params;
 
     // Vérifier que le site existe
-    const siteResult = await query('SELECT id, site_name FROM sites WHERE id = $1', [id]);
-    if (siteResult.rows.length === 0) {
+    const siteInfo = await siteRepository.findBasicInfo(id);
+    if (!siteInfo) {
       return res.status(404).json({ error: 'Site non trouvé' });
     }
 
@@ -1543,40 +1418,20 @@ export const getSiteDashboardData = async (req: AuthRequest, res: Response) => {
     const { hours = 24 } = req.query;
 
     // Récupérer les infos du site
-    const siteResult = await query(
-      `SELECT id, site_name, club_name, status, last_seen_at, local_ip, last_config_sync
-       FROM sites WHERE id = $1`,
-      [id]
-    );
+    const site = await siteRepository.findConnectionInfo(id);
 
-    if (siteResult.rows.length === 0) {
+    if (!site) {
       return res.status(404).json({ error: 'Site non trouvé' });
     }
-
-    const site = siteResult.rows[0] as {
-      id: string;
-      site_name: string;
-      club_name: string;
-      status: string;
-      last_seen_at: Date | null;
-      local_ip: string | null;
-      last_config_sync: Date | null;
-    };
 
     // Vérifier la connexion en temps réel via le socket
     const socketService = (await import('../services/socket.service')).default;
     const isConnectedNow = socketService.isConnected(id);
 
     // Récupérer les métriques (inclut aussi le last_heartbeat)
-    const metricsResult = await query(
-      `SELECT * FROM metrics
-       WHERE site_id = $1
-       AND recorded_at > NOW() - INTERVAL '${parseInt(hours as string)} hours'
-       ORDER BY recorded_at DESC`,
-      [id]
-    );
+    const metricsRows = await metricsRepository.findBySiteId(id, parseInt(hours as string));
 
-    const lastMetricAt = metricsResult.rows[0]?.recorded_at as Date | null;
+    const lastMetricAt = metricsRows[0]?.recorded_at || null;
 
     // Utiliser le plus récent entre last_seen_at (Socket.IO) et last_metric (table metrics)
     const lastSeenFromSite = site.last_seen_at ? new Date(site.last_seen_at) : null;
@@ -1609,17 +1464,7 @@ export const getSiteDashboardData = async (req: AuthRequest, res: Response) => {
     }
 
     // Récupérer les statistiques de connexion récentes (24h)
-    const statsResult = await query(
-      `SELECT
-         COUNT(*) as heartbeat_count,
-         MIN(recorded_at) as first_heartbeat,
-         MAX(recorded_at) as last_heartbeat
-       FROM metrics
-       WHERE site_id = $1 AND recorded_at > NOW() - INTERVAL '24 hours'`,
-      [id]
-    );
-
-    const stats = statsResult.rows[0];
+    const stats = await metricsRepository.get24hStatsForSite(id);
 
     // Récupérer l'état de santé détaillé de la connexion WebSocket
     const connectionHealth = socketService.getConnectionHealth(id);
@@ -1654,7 +1499,7 @@ export const getSiteDashboardData = async (req: AuthRequest, res: Response) => {
       },
       metrics: {
         period_hours: hours,
-        data: metricsResult.rows,
+        data: metricsRows,
       },
     });
   } catch (error) {
@@ -1675,88 +1520,18 @@ export const getSiteTimeline = async (req: AuthRequest, res: Response) => {
     const maxLimit = Math.min(parseInt(limit as string, 10), 50);
 
     // Vérifier que le site existe
-    const siteResult = await query(
-      `SELECT id, site_name FROM sites WHERE id = $1`,
-      [id]
-    );
+    const siteInfo = await siteRepository.findBasicInfo(id);
 
-    if (siteResult.rows.length === 0) {
+    if (!siteInfo) {
       return res.status(404).json({ error: 'Site non trouvé' });
     }
 
-    // Récupérer les événements de plusieurs sources et les combiner
-    const [deploymentsResult, commandsResult, configHistoryResult, alertsResult] = await Promise.all([
-      // 1. Derniers déploiements vers ce site
-      query(
-        `SELECT
-           'deployment' as event_type,
-           cd.id,
-           cd.created_at as timestamp,
-           cd.status,
-           v.filename as video_name,
-           v.category,
-           cd.progress,
-           cd.error_message,
-           u.email as user_email
-         FROM content_deployments cd
-         LEFT JOIN videos v ON cd.video_id = v.id
-         LEFT JOIN users u ON cd.deployed_by = u.id
-         WHERE cd.target_id = $1 AND cd.target_type = 'site'
-         ORDER BY cd.created_at DESC
-         LIMIT $2`,
-        [id, maxLimit]
-      ),
-      // 2. Dernières commandes envoyées
-      query(
-        `SELECT
-           'command' as event_type,
-           rc.id,
-           rc.created_at as timestamp,
-           rc.command_type,
-           rc.status,
-           rc.result,
-           u.email as user_email
-         FROM remote_commands rc
-         LEFT JOIN users u ON rc.executed_by = u.id
-         WHERE rc.site_id = $1
-         ORDER BY rc.created_at DESC
-         LIMIT $2`,
-        [id, maxLimit]
-      ),
-      // 3. Historique des configurations
-      query(
-        `SELECT
-           'config' as event_type,
-           ch.id,
-           ch.deployed_at as timestamp,
-           ch.comment,
-           ch.changes_summary,
-           u.email as user_email
-         FROM config_history ch
-         LEFT JOIN users u ON ch.deployed_by = u.id
-         WHERE ch.site_id = $1
-         ORDER BY ch.deployed_at DESC
-         LIMIT $2`,
-        [id, maxLimit]
-      ),
-      // 4. Alertes récentes
-      query(
-        `SELECT
-           'alert' as event_type,
-           a.id,
-           a.created_at as timestamp,
-           a.alert_type,
-           a.severity,
-           a.message,
-           a.status = 'resolved' as resolved,
-           a.resolved_at
-         FROM alerts a
-         WHERE a.site_id = $1
-         ORDER BY a.created_at DESC
-         LIMIT $2`,
-        [id, maxLimit]
-      ),
-    ]);
+    // Récupérer les événements de plusieurs sources via le timeline repository
+    const timelineData = await timelineRepository.getForSite(id, maxLimit);
+    const deploymentsResult = { rows: timelineData.deployments, rowCount: timelineData.deployments.length };
+    const commandsResult = { rows: timelineData.commands, rowCount: timelineData.commands.length };
+    const configHistoryResult = { rows: timelineData.configs, rowCount: timelineData.configs.length };
+    const alertsResult = { rows: timelineData.alerts, rowCount: timelineData.alerts.length };
 
     // Types pour les résultats de requêtes
     interface DeploymentRow {
@@ -1878,7 +1653,7 @@ export const getSiteTimeline = async (req: AuthRequest, res: Response) => {
 
     res.json({
       siteId: id,
-      siteName: (siteResult.rows[0] as { site_name: string }).site_name,
+      siteName: siteInfo.site_name,
       events: limitedEvents,
       counts: {
         deployments: deploymentsResult.rowCount,
@@ -1900,24 +1675,8 @@ export const getSiteTimeline = async (req: AuthRequest, res: Response) => {
 export const getFleetHealthData = async (req: AuthRequest, res: Response) => {
   try {
     // 1. Get all sites with their connection status, location, version, and latest metrics
-    const sitesResult = await query(`
-      SELECT
-        s.id,
-        s.site_name,
-        s.club_name,
-        s.status,
-        s.last_seen_at,
-        s.local_ip,
-        s.software_version,
-        s.location,
-        (SELECT recorded_at FROM metrics WHERE site_id = s.id ORDER BY recorded_at DESC LIMIT 1) as last_metric_at,
-        (SELECT cpu_usage FROM metrics WHERE site_id = s.id ORDER BY recorded_at DESC LIMIT 1) as cpu_percent,
-        (SELECT memory_usage FROM metrics WHERE site_id = s.id ORDER BY recorded_at DESC LIMIT 1) as memory_percent,
-        (SELECT temperature FROM metrics WHERE site_id = s.id ORDER BY recorded_at DESC LIMIT 1) as temperature,
-        (SELECT disk_usage FROM metrics WHERE site_id = s.id ORDER BY recorded_at DESC LIMIT 1) as disk_percent
-      FROM sites s
-      ORDER BY s.site_name
-    `);
+    const fleetRows = await siteRepository.getFleetHealth();
+    const sitesResult = { rows: fleetRows };
 
     const socketService = (await import('../services/socket.service')).default;
     const connectedSiteIds = new Set(socketService.getConnectedSites());
@@ -2130,18 +1889,9 @@ export const getFleetMetrics = async (req: AuthRequest, res: Response) => {
     }
 
     // Get average metrics from the last hour for sites that have recent data
-    const result = await query(`
-      SELECT
-        COALESCE(AVG(m.cpu_usage), 0) as avg_cpu,
-        COALESCE(AVG(m.memory_usage), 0) as avg_memory,
-        COALESCE(AVG(m.temperature), 0) as avg_temperature,
-        COALESCE(AVG(m.disk_usage), 0) as avg_disk,
-        COUNT(DISTINCT m.site_id) as sites_with_metrics
-      FROM metrics m
-      WHERE m.recorded_at > NOW() - INTERVAL '1 hour'
-    `);
+    const fleetAverages = await metricsRepository.getFleetAverages();
 
-    const metrics = result.rows[0] || {};
+    const metrics = fleetAverages || {};
 
     const response = {
       avgCpu: Math.round((parseFloat(String(metrics.avg_cpu)) || 0) * 10) / 10,
@@ -2163,6 +1913,98 @@ export const getFleetMetrics = async (req: AuthRequest, res: Response) => {
 };
 
 /**
+ * GET /api/sites/:id/remote-pin
+ * Retourne si un PIN est actif pour la télécommande cloud.
+ */
+export async function getRemotePinStatus(req: AuthRequest, res: Response) {
+  try {
+    const { id } = req.params;
+
+    const site = await siteRepository.findById(id);
+    if (!site) {
+      return res.status(404).json({ error: 'Site non trouvé' });
+    }
+
+    const pinHash = await siteRepository.getRemotePinHash(id);
+
+    res.json({ pinEnabled: pinHash !== null });
+  } catch (error) {
+    logger.error('Error getting remote PIN status:', { error, siteId: req.params.id });
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+}
+
+/**
+ * POST /api/sites/:id/remote-pin
+ * Définit un PIN pour la télécommande cloud.
+ * Le PIN est hashé en SHA-256 et stocké en base.
+ */
+export async function setRemotePin(req: AuthRequest, res: Response) {
+  try {
+    const { id } = req.params;
+    const { pin } = req.body;
+
+    // Vérifier que le site existe
+    const site = await siteRepository.findById(id);
+    if (!site) {
+      return res.status(404).json({ error: 'Site non trouvé' });
+    }
+
+    // Hasher le PIN
+    const pinHash = createHash('sha256').update(pin).digest('hex');
+
+    // Stocker le hash
+    await siteRepository.setRemotePin(id, pinHash);
+
+    logger.info('Remote PIN set for site', {
+      siteId: id,
+      userId: req.user?.id,
+      siteName: site.site_name,
+    });
+
+    res.json({
+      success: true,
+      message: 'PIN de télécommande cloud défini avec succès',
+    });
+  } catch (error) {
+    logger.error('Error setting remote PIN:', { error, siteId: req.params.id });
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+}
+
+/**
+ * DELETE /api/sites/:id/remote-pin
+ * Supprime le PIN de télécommande cloud (retour à l'accès libre).
+ */
+export async function clearRemotePin(req: AuthRequest, res: Response) {
+  try {
+    const { id } = req.params;
+
+    // Vérifier que le site existe
+    const site = await siteRepository.findById(id);
+    if (!site) {
+      return res.status(404).json({ error: 'Site non trouvé' });
+    }
+
+    await siteRepository.clearRemotePin(id);
+
+    logger.info('Remote PIN cleared for site', {
+      siteId: id,
+      userId: req.user?.id,
+      siteName: site.site_name,
+    });
+
+    res.json({
+      success: true,
+      message: 'PIN de télécommande cloud supprimé',
+    });
+  } catch (error) {
+    logger.error('Error clearing remote PIN:', { error, siteId: req.params.id });
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+}
+
+/**
  * Get match history for a specific site
  * Returns recent matches with audience estimates, videos played, and duration
  */
@@ -2172,74 +2014,20 @@ export const getSiteMatchHistory = async (req: AuthRequest, res: Response) => {
     const limit = Math.min(parseInt(req.query.limit as string) || 20, 100);
 
     // Verify site exists
-    const siteResult = await query(
-      'SELECT id, site_name, club_name FROM sites WHERE id = $1',
-      [id]
-    );
-    if (siteResult.rows.length === 0) {
+    const siteInfo = await siteRepository.findBasicInfo(id);
+    if (!siteInfo) {
       return res.status(404).json({ error: 'Site non trouvé' });
     }
 
-    // Get match history from club_sessions
-    // Only sessions with match_name OR audience_estimate are considered "matches"
-    interface MatchRow {
-      id: string;
-      started_at: Date;
-      ended_at: Date | null;
-      duration_seconds: number | null;
-      videos_played: number;
-      manual_triggers: number;
-      auto_plays: number;
-      match_date: Date | null;
-      match_name: string | null;
-      audience_estimate: number | null;
-    }
+    // Get match history and aggregate stats in parallel
+    const [matchRows, matchStats] = await Promise.all([
+      siteRepository.getMatchHistory(id, limit),
+      siteRepository.getMatchStats(id),
+    ]);
 
-    const matchesResult = await query(
-      `SELECT
-        id,
-        started_at,
-        ended_at,
-        duration_seconds,
-        videos_played,
-        manual_triggers,
-        auto_plays,
-        match_date,
-        match_name,
-        audience_estimate
-      FROM club_sessions
-      WHERE site_id = $1
-        AND (match_name IS NOT NULL OR audience_estimate IS NOT NULL)
-      ORDER BY COALESCE(match_date, started_at::date) DESC, started_at DESC
-      LIMIT $2`,
-      [id, limit]
-    );
+    const stats = matchStats;
 
-    // Get aggregate stats
-    interface StatsRow {
-      total_matches: string;
-      total_audience: string;
-      avg_audience: string;
-      total_videos: string;
-      total_duration: string;
-    }
-
-    const statsResult = await query(
-      `SELECT
-        COUNT(*) as total_matches,
-        COALESCE(SUM(audience_estimate), 0) as total_audience,
-        COALESCE(AVG(audience_estimate) FILTER (WHERE audience_estimate IS NOT NULL), 0) as avg_audience,
-        COALESCE(SUM(videos_played), 0) as total_videos,
-        COALESCE(SUM(duration_seconds), 0) as total_duration
-      FROM club_sessions
-      WHERE site_id = $1
-        AND (match_name IS NOT NULL OR audience_estimate IS NOT NULL)`,
-      [id]
-    );
-
-    const stats = statsResult.rows[0] as unknown as StatsRow;
-
-    const matches = (matchesResult.rows as unknown as MatchRow[]).map((m) => ({
+    const matches = matchRows.map((m) => ({
       id: m.id,
       matchDate: m.match_date || m.started_at,
       matchName: m.match_name || 'Match non nommé',
@@ -2254,8 +2042,8 @@ export const getSiteMatchHistory = async (req: AuthRequest, res: Response) => {
 
     res.json({
       siteId: id,
-      siteName: (siteResult.rows[0] as { site_name: string }).site_name,
-      clubName: (siteResult.rows[0] as { club_name: string }).club_name,
+      siteName: siteInfo.site_name,
+      clubName: siteInfo.club_name || '',
       matches,
       stats: {
         totalMatches: parseInt(stats.total_matches),

@@ -18,12 +18,17 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Subject, interval, takeUntil, debounceTime } from 'rxjs';
 import { RemoteService, RemoteState } from '../../core/services/remote.service';
+import { LicenseState, LicenseStatus } from '../../core/models/license.model';
+import { LicenseBannerComponent } from './components/license-banner.component';
+import { LicenseBlockRemoteComponent } from './components/license-block-remote.component';
+import { PlayerStatusComponent, PlayerState } from './components/player-status/player-status.component';
+import { ScreenshotViewerComponent } from './components/screenshot-viewer/screenshot-viewer.component';
 
 // Types locaux (identiques au Pi)
 type SportType = 'football' | 'basketball' | 'handball' | 'volleyball' | 'rugby' | 'hockey';
-type OverlayPosition =
+type OverlayTheme = 'broadcast' | 'minimal';
+type ScoreOverlayPosition =
   | 'top-left' | 'top-center' | 'top-right'
-  | 'middle-left' | 'middle-center' | 'middle-right'
   | 'bottom-left' | 'bottom-center' | 'bottom-right';
 
 interface Category {
@@ -72,18 +77,6 @@ interface GoalAnimationConfig {
   soundUrl?: string;
 }
 
-interface OverlayPreset {
-  id: string;
-  name: string;
-  sport: SportType;
-  position: OverlayPosition;
-  template: 'sportif' | 'elegant' | 'minimal';
-  backgroundColor?: string;
-  scoreColor?: string;
-  teamNameColor?: string;
-  createdAt: number;
-}
-
 interface LocalOptions {
   sport: SportType;
   match: {
@@ -94,11 +87,7 @@ interface LocalOptions {
   };
   overlay: {
     scoreEnabled: boolean;
-    position?: OverlayPosition;
-    useLocalColors: boolean;
-    backgroundColor?: string;
-    scoreColor?: string;
-    teamNameColor?: string;
+    position?: ScoreOverlayPosition;
   };
   goalAnimation: GoalAnimationConfig;
   timer: {
@@ -111,11 +100,10 @@ interface LocalOptions {
     enabled: boolean;
     position: 'top' | 'bottom';
     defaultDuration: number;
-    displayMode: 'scroll' | 'truncate' | 'multiline';
+    displayMode: 'scroll';
     quickMessages: string[];
   };
-  template: 'sportif' | 'elegant' | 'minimal';
-  presets: OverlayPreset[];
+  template: OverlayTheme;
 }
 
 // Constantes (identiques au Pi)
@@ -166,10 +154,6 @@ const DEFAULT_OPTIONS: LocalOptions = {
   overlay: {
     scoreEnabled: false,
     position: undefined,
-    useLocalColors: false,
-    backgroundColor: undefined,
-    scoreColor: undefined,
-    teamNameColor: undefined,
   },
   goalAnimation: {
     enabled: true,
@@ -196,8 +180,7 @@ const DEFAULT_OPTIONS: LocalOptions = {
       'Applaudissez vos joueurs !',
     ],
   },
-  template: 'sportif',
-  presets: [],
+  template: 'broadcast',
 };
 
 type ViewType = 'home' | 'time-categories' | 'subcategories' | 'videos' | 'all-videos' | 'options';
@@ -205,7 +188,7 @@ type ViewType = 'home' | 'time-categories' | 'subcategories' | 'videos' | 'all-v
 @Component({
   selector: 'app-cloud-remote',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, LicenseBannerComponent, LicenseBlockRemoteComponent, PlayerStatusComponent, ScreenshotViewerComponent],
   templateUrl: './cloud-remote.component.html',
   styleUrls: ['./cloud-remote.component.scss']
 })
@@ -221,6 +204,8 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
   public clubName: string = '';
   public isConnected = false;
   public connectionError: string | null = null;
+  public pendingConfigVersionId: string | null = null;
+  public pendingCommandsCount = 0;
 
   public configuration!: Configuration;
 
@@ -236,6 +221,7 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
 
   // Recherche
   public searchQuery = '';
+  public readonly searchPlaceholder = 'Rechercher une vid\u00e9o...';
   public searchResults: Video[] = [];
   public isSearching = false;
 
@@ -279,8 +265,27 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
   // Loading state
   public isLoading = true;
 
+  // PIN
+  public pinRequired = false;
+  public pinInput = '';
+  public pinError = '';
+  public pinVerifying = false;
+  public pinAttemptsRemaining: number | null = null;
+
   // Dark mode
   public isDarkMode = false;
+
+  // License
+  public licenseState: LicenseState | null = null;
+  public isLicenseBlocked = false;
+  public hasLicenseWarning = false;
+  public licenseBannerDismissed = false;
+
+  // Recording
+  public isRecording = false;
+
+  // Player state (from heartbeat)
+  public initialPlayerState: PlayerState | null = null;
 
   // Menu header
   public isHeaderMenuOpen = false;
@@ -291,14 +296,11 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
   public readonly sportPeriods = SPORT_PERIODS;
   public readonly sportPeriodDurations = SPORT_PERIOD_DURATIONS;
 
-  // Positions overlay (9 positions)
-  public readonly overlayPositions: { value: OverlayPosition; label: string }[] = [
+  // Positions overlay (6 positions)
+  public readonly overlayPositions: { value: ScoreOverlayPosition; label: string }[] = [
     { value: 'top-left', label: 'Haut gauche' },
     { value: 'top-center', label: 'Haut centre' },
     { value: 'top-right', label: 'Haut droite' },
-    { value: 'middle-left', label: 'Milieu gauche' },
-    { value: 'middle-center', label: 'Centre' },
-    { value: 'middle-right', label: 'Milieu droite' },
     { value: 'bottom-left', label: 'Bas gauche' },
     { value: 'bottom-center', label: 'Bas centre' },
     { value: 'bottom-right', label: 'Bas droite' },
@@ -310,10 +312,6 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
     { value: 'fullscreen', label: 'Plein écran' },
     { value: 'slide', label: 'Bandeau glissant' },
   ];
-
-  // Présets
-  public showPresetModal = false;
-  public newPresetName = '';
 
   // Swipe gesture tracking
   private touchStartX = 0;
@@ -419,12 +417,23 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
         this.siteName = state.siteName;
         this.clubName = state.clubName;
         this.isConnected = state.isConnected && state.connectionHealth?.isHealthy;
+        this.pendingConfigVersionId = state.pendingConfigVersionId || null;
+        this.pendingCommandsCount = state.pendingCommandsCount || 0;
 
         if (!this.isConnected) {
-          this.connectionError = 'Le boîtier n\'est pas connecté au cloud. Vérifiez sa connexion Internet.';
+          this.isLoading = false;
+          return;
         }
 
-        // Construire la configuration
+        // Vérifier si un PIN est requis
+        if (state.pinRequired && !state.config) {
+          this.pinRequired = true;
+          this.isLoading = false;
+          return;
+        }
+
+        // PIN ok ou pas de PIN → charger normalement
+        this.pinRequired = false;
         this.configuration = {
           remote: { title: state.siteName },
           categories: state.config?.categories || [],
@@ -434,6 +443,9 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
         };
 
         this.initializeWithConfiguration(this.configuration);
+        this.updateLicenseState(state);
+        this.updateRecordingState(state);
+        this.initialPlayerState = state.playerState || null;
         this.isLoading = false;
       },
       error: (err) => {
@@ -447,18 +459,99 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
     this.loadSiteState();
   }
 
+  /**
+   * Vérifie le PIN saisi par l'utilisateur
+   */
+  public submitPin(): void {
+    if (!this.pinInput || this.pinInput.length < 4) {
+      this.pinError = 'Le PIN doit contenir au moins 4 chiffres';
+      return;
+    }
+
+    this.pinVerifying = true;
+    this.pinError = '';
+
+    this.remoteService.verifyPin(this.siteId, this.pinInput).subscribe({
+      next: () => {
+        // PIN vérifié avec succès → recharger l'état complet
+        this.pinRequired = false;
+        this.pinInput = '';
+        this.pinError = '';
+        this.pinVerifying = false;
+        this.pinAttemptsRemaining = null;
+        this.loadSiteState();
+      },
+      error: (err: { status: number; error?: { message?: string; attemptsRemaining?: number } }) => {
+        this.pinVerifying = false;
+        this.pinInput = '';
+        if (err.status === 429) {
+          this.pinError = err.error?.message || 'Trop de tentatives. Réessayez plus tard.';
+        } else {
+          this.pinError = err.error?.message || 'PIN incorrect';
+          this.pinAttemptsRemaining = err.error?.attemptsRemaining ?? null;
+        }
+      }
+    });
+  }
+
+  /**
+   * Gestion de la saisie du PIN (numpad)
+   */
+  public onPinDigit(digit: string): void {
+    if (this.pinInput.length < 6) {
+      this.pinInput += digit;
+      this.pinError = '';
+    }
+  }
+
+  public onPinBackspace(): void {
+    this.pinInput = this.pinInput.slice(0, -1);
+    this.pinError = '';
+  }
+
+  public onPinClear(): void {
+    this.pinInput = '';
+    this.pinError = '';
+  }
+
   private refreshState(): void {
     if (!this.siteId) return;
 
     this.remoteService.getState(this.siteId).subscribe({
       next: (state: RemoteState) => {
         this.isConnected = state.isConnected && state.connectionHealth?.isHealthy;
+        this.pendingConfigVersionId = state.pendingConfigVersionId || null;
+        this.pendingCommandsCount = state.pendingCommandsCount || 0;
+
+        // Si PIN requis à nouveau (token expiré)
+        if (state.pinRequired && !state.config) {
+          this.remoteService.clearToken(this.siteId);
+          this.pinRequired = true;
+          return;
+        }
 
         if (!this.isConnected && !this.connectionError) {
           this.displayToast('Connexion perdue avec le boîtier', 'info');
         } else if (this.isConnected && this.connectionError) {
           this.displayToast('Connexion rétablie', 'success');
           this.connectionError = null;
+        }
+
+        if (state.config) {
+          this.configuration = {
+            remote: { title: state.siteName },
+            categories: state.config.categories || [],
+            sponsors: state.config.sponsors || [],
+            timeCategories: state.config.timeCategories || [],
+            liveScoreEnabled: state.config.liveScoreEnabled || false,
+          };
+        }
+
+        this.updateLicenseState(state);
+        this.updateRecordingState(state);
+
+        if (state.playerState) {
+          this.initialPlayerState = state.playerState;
         }
       },
       error: () => {
@@ -473,6 +566,59 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
       ? config.timeCategories
       : this.defaultTimeCategories;
     this.liveScoreEnabled = config.liveScoreEnabled ?? false;
+  }
+
+  // ============================================================================
+  // LICENSE & RECORDING
+  // ============================================================================
+
+  private updateLicenseState(state: RemoteState): void {
+    if (state.licenseStatus) {
+      this.licenseState = {
+        status: state.licenseStatus.status as LicenseStatus,
+        reason: state.licenseStatus.reason,
+        daysLeft: state.licenseStatus.daysLeft,
+        daysExpired: state.licenseStatus.daysExpired,
+        messageRemote: state.licenseStatus.messageRemote,
+        subscriptionEnd: state.licenseStatus.subscriptionEnd,
+        subscriptionPlan: state.licenseStatus.subscriptionPlan,
+        canAutoUnblock: state.licenseStatus.canAutoUnblock,
+        needsConnection: state.licenseStatus.needsConnection,
+        daysSinceCheck: state.licenseStatus.daysSinceCheck,
+      };
+      this.isLicenseBlocked = this.licenseState.status === 'BLOCKED';
+      this.hasLicenseWarning = ['WARNING', 'GRACE_PERIOD', 'CONNECTION_WARNING'].includes(this.licenseState.status);
+    } else {
+      this.licenseState = null;
+      this.isLicenseBlocked = false;
+      this.hasLicenseWarning = false;
+    }
+  }
+
+  private updateRecordingState(state: RemoteState): void {
+    if (state.recordingState) {
+      this.isRecording = state.recordingState.isRecording;
+    }
+  }
+
+  public toggleRecording(): void {
+    if (!this.siteId || !this.isConnected) return;
+    this.remoteService.toggleRecording(this.siteId).subscribe({
+      next: () => {
+        this.isRecording = !this.isRecording;
+        this.displayToast(
+          this.isRecording ? 'Enregistrement démarré' : 'Enregistrement arrêté',
+          'success'
+        );
+      },
+      error: () => {
+        this.displayToast('Erreur lors du toggle enregistrement', 'info');
+      },
+    });
+  }
+
+  public dismissLicenseBanner(): void {
+    this.licenseBannerDismissed = true;
   }
 
   // ============================================================================
@@ -607,7 +753,7 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
   }
 
   public getCategoriesForTimeCategory(timeCategory: TimeCategory): Category[] {
-    const filteredCategories = this.configuration.categories.filter(cat =>
+    const filteredCategories = (this.configuration?.categories ?? []).filter(cat =>
       timeCategory.categoryIds?.includes(cat.id)
     );
     return this.sortByName(filteredCategories);
@@ -1095,6 +1241,9 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
   }
 
   public addQuickMessage(message: string): void {
+    if (!this.localOptions.breakingNews.quickMessages) {
+      this.localOptions.breakingNews.quickMessages = [];
+    }
     if (message.trim() && !this.localOptions.breakingNews.quickMessages.includes(message.trim())) {
       this.localOptions.breakingNews.quickMessages.push(message.trim());
       this.saveLocalOptions();
@@ -1102,7 +1251,7 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
   }
 
   public removeQuickMessage(index: number): void {
-    this.localOptions.breakingNews.quickMessages.splice(index, 1);
+    this.localOptions.breakingNews.quickMessages?.splice(index, 1);
     this.saveLocalOptions();
   }
 
@@ -1253,92 +1402,10 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
   // POSITION OVERLAY
   // ============================================================================
 
-  public setOverlayPosition(position: OverlayPosition | undefined): void {
+  public setOverlayPosition(position: ScoreOverlayPosition | undefined): void {
     this.localOptions.overlay.position = position;
     this.saveLocalOptions();
     this.broadcastOptions();
-  }
-
-  public toggleLocalColors(useLocal: boolean): void {
-    this.localOptions.overlay.useLocalColors = useLocal;
-    this.saveLocalOptions();
-    this.broadcastOptions();
-  }
-
-  public setLocalColor(colorType: 'backgroundColor' | 'scoreColor' | 'teamNameColor', color: string): void {
-    this.localOptions.overlay[colorType] = color;
-    this.saveLocalOptions();
-    this.broadcastOptions();
-  }
-
-  // ============================================================================
-  // PRESETS
-  // ============================================================================
-
-  public openPresetModal(): void {
-    this.showPresetModal = true;
-    this.newPresetName = '';
-  }
-
-  public closePresetModal(): void {
-    this.showPresetModal = false;
-    this.newPresetName = '';
-  }
-
-  public savePreset(): void {
-    if (!this.newPresetName.trim()) {
-      this.displayToast('Veuillez entrer un nom', 'info');
-      return;
-    }
-
-    const preset: OverlayPreset = {
-      id: 'preset_' + Date.now().toString(36) + Math.random().toString(36).substring(2, 9),
-      name: this.newPresetName.trim(),
-      sport: this.localOptions.sport,
-      position: this.localOptions.overlay.position || 'top-right',
-      template: this.localOptions.template,
-      backgroundColor: this.localOptions.overlay.backgroundColor,
-      scoreColor: this.localOptions.overlay.scoreColor,
-      teamNameColor: this.localOptions.overlay.teamNameColor,
-      createdAt: Date.now(),
-    };
-
-    this.localOptions.presets.push(preset);
-    this.saveLocalOptions();
-    this.closePresetModal();
-    this.displayToast('Preset sauvegardé', 'success');
-  }
-
-  public applyPreset(presetId: string): void {
-    const preset = this.localOptions.presets.find(p => p.id === presetId);
-    if (!preset) return;
-
-    this.localOptions.sport = preset.sport;
-    this.localOptions.template = preset.template;
-    this.localOptions.overlay.position = preset.position;
-    this.localOptions.overlay.useLocalColors = !!(preset.backgroundColor || preset.scoreColor || preset.teamNameColor);
-    this.localOptions.overlay.backgroundColor = preset.backgroundColor;
-    this.localOptions.overlay.scoreColor = preset.scoreColor;
-    this.localOptions.overlay.teamNameColor = preset.teamNameColor;
-
-    const periods = SPORT_PERIODS[preset.sport];
-    this.localOptions.match.period = periods[0];
-    this.localOptions.match.periodIndex = 0;
-    this.localOptions.timer.periodDuration = SPORT_PERIOD_DURATIONS[preset.sport];
-
-    this.saveLocalOptions();
-    this.broadcastOptions();
-    this.displayToast('Preset appliqué', 'success');
-  }
-
-  public deletePreset(presetId: string): void {
-    this.localOptions.presets = this.localOptions.presets.filter(p => p.id !== presetId);
-    this.saveLocalOptions();
-    this.displayToast('Preset supprimé', 'success');
-  }
-
-  public getPresets(): OverlayPreset[] {
-    return [...this.localOptions.presets];
   }
 
   // ============================================================================
@@ -1399,7 +1466,7 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
     this.remoteService.updateTimer(this.siteId, {
       action: 'start',
       time: this.timerCurrentTime
-    }).subscribe();
+    }).subscribe({ error: () => { /* Silencieux — retry au prochain sync */ } });
 
     this.timerInterval = setInterval(() => {
       if (this.localOptions.timer.countDown) {
@@ -1441,7 +1508,7 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
     this.remoteService.updateTimer(this.siteId, {
       action: 'pause',
       time: this.timerCurrentTime
-    }).subscribe();
+    }).subscribe({ error: () => { /* Silencieux — retry au prochain sync */ } });
 
     this.displayToast('Chronomètre en pause', 'info');
   }
@@ -1458,7 +1525,7 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
     this.remoteService.updateTimer(this.siteId, {
       action: 'reset',
       time: this.timerCurrentTime
-    }).subscribe();
+    }).subscribe({ error: () => { /* Silencieux — retry au prochain sync */ } });
 
     this.displayToast('Chronomètre réinitialisé', 'success');
   }
@@ -1467,7 +1534,7 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
     this.remoteService.updateTimer(this.siteId, {
       action: 'sync',
       time: this.timerCurrentTime
-    }).subscribe();
+    }).subscribe({ error: () => { /* Silencieux — retry au prochain sync */ } });
   }
 
   public formatTime(seconds: number): string {
@@ -1532,7 +1599,9 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
             sourceValue as object
           );
         } else if (sourceValue !== undefined) {
-          (result as Record<string, unknown>)[key] = sourceValue;
+          (result as Record<string, unknown>)[key] = Array.isArray(sourceValue)
+            ? [...sourceValue]
+            : sourceValue;
         }
       }
     }

@@ -2,7 +2,10 @@ import { Injectable, inject } from '@angular/core';
 import { Observable, BehaviorSubject, tap, map } from 'rxjs';
 import { ApiService } from './api.service';
 import { CacheService } from './cache.service';
-import { Site, SiteStats, Metrics, ConfigHistory, SiteConfiguration, ConfigDiff, SiteConnectionStatus, AllSitesConnectionStatus, LocalVideo, LocalStorage, CloudVideo, FleetHealthData, MatchHistoryData } from '../models';
+import { Site, SiteStats, Metrics, ConfigHistory, SiteConfiguration, ConfigDiff, SiteConnectionStatus, AllSitesConnectionStatus, LocalVideo, LocalStorage, CloudVideo, FleetHealthData, MatchHistoryData, ConfigProfile, CreateProfilePayload, UpdateProfilePayload, ProfilesListResponse, DeployProfileResponse, SyncProfilesResponse, SiteSponsor, SiteSponsorVideo, SiteSponsorStatsResponse, GeneratedReport, NetworkSponsorStatsResponse, SiteSponsorBenchmarkResponse } from '../models';
+
+/** Wrapper backend standard { success: boolean; data: T } */
+interface ApiResponse<T> { success: boolean; data: T }
 
 @Injectable({
   providedIn: 'root'
@@ -165,11 +168,11 @@ export class SitesService {
   }
 
   updateSiteStatus(id: string, status: string): void {
-    const sites = this.sitesSubject.value;
+    const sites = [...this.sitesSubject.value];
     const index = sites.findIndex(s => s.id === id);
     if (index >= 0) {
       sites[index] = { ...sites[index], status: status as Site['status'], last_seen_at: new Date() };
-      this.sitesSubject.next([...sites]);
+      this.sitesSubject.next(sites);
     }
   }
 
@@ -371,6 +374,37 @@ export class SitesService {
     return this.api.post(`/sites/${id}/optimize-mesh`, {});
   }
 
+  // WiFi Client Configuration — scan & connect wlan1 à distance
+  scanWifiNetworks(id: string): Observable<{
+    success: boolean;
+    networks: Array<{
+      ssid: string;
+      bssid: string | null;
+      signal: number | null;
+      quality: number | null;
+      channel: number | null;
+      security: string;
+    }>;
+    currentSsid: string | null;
+    currentBssid: string | null;
+    scannedAt: string;
+    error?: string;
+  }> {
+    return this.api.get(`/sites/${id}/wifi-scan`);
+  }
+
+  connectWifiClient(id: string, ssid: string, password: string): Observable<{
+    success: boolean;
+    connected: boolean;
+    ssid: string;
+    ipAddress: string | null;
+    signal: number | null;
+    message: string;
+    timestamp: string;
+  }> {
+    return this.api.post(`/sites/${id}/wifi-connect`, { ssid, password });
+  }
+
   // Export debug bundle - collecte toutes les informations de debug du Pi
   exportDebugBundle(id: string): Observable<{
     success: boolean;
@@ -526,6 +560,11 @@ export class SitesService {
     return this.api.get(`/sites/${id}/timeline?limit=${limit}`);
   }
 
+  // Cloud video management
+  deleteCloudVideo(videoId: string): Observable<{ message: string }> {
+    return this.api.delete<{ message: string }>(`/videos/${videoId}`);
+  }
+
   // Pending deployments management
   getPendingDeployments(siteId: string): Observable<PendingDeployment[]> {
     return this.api.get<PendingDeployment[]>('/deployments').pipe(
@@ -539,6 +578,157 @@ export class SitesService {
 
   cancelDeployment(deploymentId: string): Observable<void> {
     return this.api.delete(`/deployments/${deploymentId}`);
+  }
+
+  // Remote PIN management
+  setRemotePin(siteId: string, pin: string): Observable<{ success: boolean; message: string }> {
+    return this.api.post(`/sites/${siteId}/remote-pin`, { pin });
+  }
+
+  clearRemotePin(siteId: string): Observable<{ success: boolean; message: string }> {
+    return this.api.delete(`/sites/${siteId}/remote-pin`);
+  }
+
+  getRemotePinStatus(siteId: string): Observable<{ pinEnabled: boolean }> {
+    return this.api.get(`/sites/${siteId}/remote-pin`);
+  }
+
+  // ============================================================================
+  // Config Profiles (multi-config)
+  // ============================================================================
+
+  getProfiles(siteId: string): Observable<ProfilesListResponse> {
+    return this.api.get<ProfilesListResponse>(`/sites/${siteId}/profiles`);
+  }
+
+  getProfile(siteId: string, profileId: string): Observable<ConfigProfile> {
+    return this.api.get<ConfigProfile>(`/sites/${siteId}/profiles/${profileId}`);
+  }
+
+  createProfile(siteId: string, payload: CreateProfilePayload): Observable<ConfigProfile> {
+    return this.api.post<ConfigProfile>(`/sites/${siteId}/profiles`, payload);
+  }
+
+  updateProfile(siteId: string, profileId: string, payload: UpdateProfilePayload): Observable<ConfigProfile> {
+    return this.api.put<ConfigProfile>(`/sites/${siteId}/profiles/${profileId}`, payload);
+  }
+
+  deleteProfile(siteId: string, profileId: string): Observable<{ success: boolean; message: string }> {
+    return this.api.delete<{ success: boolean; message: string }>(`/sites/${siteId}/profiles/${profileId}`);
+  }
+
+  deployProfile(siteId: string, profileId: string): Observable<DeployProfileResponse> {
+    return this.api.post<DeployProfileResponse>(`/sites/${siteId}/profiles/${profileId}/deploy`, {});
+  }
+
+  syncProfiles(siteId: string): Observable<SyncProfilesResponse> {
+    return this.api.post<SyncProfilesResponse>(`/sites/${siteId}/profiles/sync`, {});
+  }
+
+  // ============================================================================
+  // Site Sponsors (P4 — gestion sponsors par site)
+  // ============================================================================
+
+  listSiteSponsors(siteId: string, includeInactive = false): Observable<{
+    site: { id: string; site_name: string; club_name: string };
+    sponsors: SiteSponsor[];
+    total: number;
+  }> {
+    const params: Record<string, string> = {};
+    if (includeInactive) params['include_inactive'] = 'true';
+    return this.api.get<ApiResponse<{
+      site: { id: string; site_name: string; club_name: string };
+      sponsors: SiteSponsor[];
+      total: number;
+    }>>(`/sites/${siteId}/sponsors`, params).pipe(map(r => r.data));
+  }
+
+  getSiteSponsor(siteId: string, sponsorId: string): Observable<SiteSponsor & { videos: SiteSponsorVideo[] }> {
+    return this.api.get<ApiResponse<SiteSponsor & { videos: SiteSponsorVideo[] }>>(
+      `/sites/${siteId}/sponsors/${sponsorId}`
+    ).pipe(map(r => r.data));
+  }
+
+  createSiteSponsor(siteId: string, data: Partial<SiteSponsor>): Observable<SiteSponsor> {
+    return this.api.post<ApiResponse<SiteSponsor>>(
+      `/sites/${siteId}/sponsors`, data
+    ).pipe(map(r => r.data));
+  }
+
+  updateSiteSponsor(siteId: string, sponsorId: string, data: Partial<SiteSponsor>): Observable<SiteSponsor> {
+    return this.api.put<ApiResponse<SiteSponsor>>(
+      `/sites/${siteId}/sponsors/${sponsorId}`, data
+    ).pipe(map(r => r.data));
+  }
+
+  deleteSiteSponsor(siteId: string, sponsorId: string): Observable<void> {
+    return this.api.delete<void>(`/sites/${siteId}/sponsors/${sponsorId}`);
+  }
+
+  getSiteSponsorStats(siteId: string, sponsorId: string, from?: string, to?: string): Observable<SiteSponsorStatsResponse> {
+    const params: Record<string, string> = {};
+    if (from) params['from'] = from;
+    if (to) params['to'] = to;
+    return this.api.get<ApiResponse<SiteSponsorStatsResponse>>(
+      `/sites/${siteId}/sponsors/${sponsorId}/stats`, params
+    ).pipe(map(r => r.data));
+  }
+
+  addVideoToSiteSponsor(siteId: string, sponsorId: string, videoFilename: string): Observable<void> {
+    return this.api.post<void>(
+      `/sites/${siteId}/sponsors/${sponsorId}/videos`,
+      { video_filename: videoFilename }
+    );
+  }
+
+  removeVideoFromSiteSponsor(siteId: string, sponsorId: string, videoFilename: string): Observable<void> {
+    return this.api.delete<void>(
+      `/sites/${siteId}/sponsors/${sponsorId}/videos/${encodeURIComponent(videoFilename)}`
+    );
+  }
+
+  // Reports sponsors
+  generateSponsorReport(siteId: string, sponsorId: string, periodStart: string, periodEnd: string): Observable<{ reportId: string; url: string }> {
+    return this.api.post<ApiResponse<{ reportId: string; url: string }>>(
+      '/reports/generate',
+      { type: 'site_sponsor', entityId: sponsorId, siteId, periodStart, periodEnd }
+    ).pipe(map(r => r.data));
+  }
+
+  getSponsorReports(sponsorId: string): Observable<GeneratedReport[]> {
+    return this.api.get<ApiResponse<GeneratedReport[]>>(
+      `/reports/site-sponsors/${sponsorId}`
+    ).pipe(map(r => r.data));
+  }
+
+  getNetworkSponsorStats(advertiserId: string, from?: string, to?: string): Observable<NetworkSponsorStatsResponse> {
+    const params: Record<string, string> = {};
+    if (from) params['from'] = from;
+    if (to) params['to'] = to;
+    return this.api.get<ApiResponse<NetworkSponsorStatsResponse>>(
+      `/network/advertisers/${advertiserId}/stats`, params
+    ).pipe(map(r => r.data));
+  }
+
+  getSiteSponsorBenchmark(siteId: string, from?: string, to?: string): Observable<SiteSponsorBenchmarkResponse> {
+    const params: Record<string, string> = {};
+    if (from) params['from'] = from;
+    if (to) params['to'] = to;
+    return this.api.get<ApiResponse<SiteSponsorBenchmarkResponse>>(
+      `/sites/${siteId}/sponsors/benchmark`, params
+    ).pipe(map(r => r.data));
+  }
+
+  // P5: Magic link
+  createSponsorAccessLink(siteId: string, sponsorId: string): Observable<{
+    accessUrl: string; expiresAt: string; emailSent: boolean; sentTo: string | null;
+  }> {
+    return this.api.post<ApiResponse<{
+      accessUrl: string; expiresAt: string; emailSent: boolean; sentTo: string | null;
+    }>>(
+      `/sites/${siteId}/sponsors/${sponsorId}/access-link`,
+      {}
+    ).pipe(map(r => r.data));
   }
 }
 

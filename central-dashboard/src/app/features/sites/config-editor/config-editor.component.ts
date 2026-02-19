@@ -12,6 +12,7 @@ import {
   ConfigDiff,
   ConfigValidationResult,
   ConfigValidationError,
+  ConfigValidationWarning,
   CategoryConfig,
   SubcategoryConfig,
   VideoConfig,
@@ -191,7 +192,7 @@ import { RemotePreviewComponent } from '../../../shared/components/remote-previe
               Cette boucle est utilisée par défaut pour toutes les phases, sauf si une boucle spécifique est configurée ci-dessous.
             </p>
             <div class="items-list" *ngIf="config.sponsors.length > 0">
-              <div class="item-card" *ngFor="let sponsor of config.sponsors; let i = index">
+              <div class="item-card" *ngFor="let sponsor of config.sponsors; let i = index" [class.empty-path]="!sponsor.path.trim()">
                 <div class="item-header">
                   <span class="item-name">{{ sponsor.name || 'Nouvelle vidéo' }}</span>
                   <div class="ownership-controls inline">
@@ -551,6 +552,7 @@ import { RemotePreviewComponent } from '../../../shared/components/remote-previe
                     <div
                       class="loop-video-item"
                       *ngFor="let video of timeCategory.loopVideos; let vidIndex = index"
+                      [class.empty-path]="!video.path.trim()"
                       draggable="true"
                       (dragstart)="onLoopDragStart($event, tcIndex, vidIndex)"
                       (dragover)="onLoopDragOver($event)"
@@ -794,6 +796,12 @@ import { RemotePreviewComponent } from '../../../shared/components/remote-previe
             <span class="status-dot success"></span>
             Configuration synchronisée
           </span>
+          <div class="deploy-warnings" *ngIf="validationResult?.warnings?.length">
+            <div class="deploy-warning" *ngFor="let warn of validationResult?.warnings">
+              <span class="warning-icon">⚠️</span>
+              <span>{{ warn.message }}</span>
+            </div>
+          </div>
           <button
             class="btn btn-primary"
             (click)="previewAndDeploy()"
@@ -1533,6 +1541,31 @@ import { RemotePreviewComponent } from '../../../shared/components/remote-previe
       opacity: 0.5;
       border-style: dashed;
       border-color: #2563eb;
+    }
+
+    .loop-video-item.empty-path,
+    .item-card.empty-path {
+      border-color: #f59e0b;
+      background: #fffbeb;
+    }
+
+    .deploy-warnings {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+      margin-right: 0.75rem;
+    }
+
+    .deploy-warning {
+      display: flex;
+      align-items: center;
+      gap: 0.375rem;
+      font-size: 0.8125rem;
+      color: #92400e;
+      background: #fef3c7;
+      padding: 0.375rem 0.75rem;
+      border-radius: 4px;
+      border: 1px solid #f59e0b;
     }
 
     .drag-handle {
@@ -2591,10 +2624,37 @@ export class ConfigEditorComponent implements OnInit, OnDestroy {
       }
     }
 
+    // Warnings pour les étapes de boucle sans vidéo (cause écran noir sur le Pi)
+    const warnings: ConfigValidationWarning[] = [];
+
+    const emptySponsors = this.config.sponsors?.filter(s => !s.path?.trim()) || [];
+    if (emptySponsors.length > 0) {
+      warnings.push({
+        field: 'sponsors',
+        message: `${emptySponsors.length} vidéo(s) de la boucle par défaut sans chemin — causera un écran noir sur le Pi`,
+        suggestion: 'Sélectionnez une vidéo ou supprimez les étapes vides',
+      });
+    }
+
+    if (this.config.timeCategories) {
+      for (const tc of this.config.timeCategories) {
+        if (tc.loopVideos?.length) {
+          const emptyPhaseVideos = tc.loopVideos.filter(v => !v.path?.trim());
+          if (emptyPhaseVideos.length > 0) {
+            warnings.push({
+              field: `timeCategory.${tc.id}`,
+              message: `Phase "${tc.name}" : ${emptyPhaseVideos.length} vidéo(s) sans chemin — causera un écran noir`,
+              suggestion: 'Sélectionnez une vidéo ou supprimez les étapes vides',
+            });
+          }
+        }
+      }
+    }
+
     this.validationResult = {
       valid: errors.length === 0,
       errors,
-      warnings: [],
+      warnings,
     };
 
     this.isValid = errors.length === 0;

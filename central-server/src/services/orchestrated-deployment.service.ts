@@ -10,10 +10,13 @@ import { query } from '../config/database';
 import logger from '../config/logger';
 import { commandQueueService } from './command-queue.service';
 import { draftService } from './draft.service';
+import { siteSponsorRepository } from '../repositories/site-sponsor.repository';
+import metricsService from './metrics.service';
 import {
   OrchestratedDeployment,
   OrchestratedDeploymentStatus,
   SiteConfiguration,
+  SiteSponsorDeployment,
   Video,
 } from '../types';
 
@@ -67,7 +70,7 @@ class OrchestratedDeploymentService {
       throw new Error('Aucun brouillon trouvé pour ce site');
     }
 
-    const validation = await draftService.validateDraft(siteId);
+    await draftService.validateDraft(siteId);
 
     // 2. Récupérer les vidéos à déployer
     const videosToDepoly = await draftService.getVideosToDeployForDraft(siteId);
@@ -169,6 +172,74 @@ class OrchestratedDeploymentService {
   }
 
   /**
+   * Récupère les sponsors du site formatés pour le déploiement Pi
+   */
+  private async getSiteSponsorsForDeployment(siteId: string): Promise<SiteSponsorDeployment[]> {
+    const rows = await siteSponsorRepository.getSponsorsForDeployment(siteId);
+    return rows.map(row => ({
+      id: row.id,
+      name: row.name,
+      contactEmail: row.contact_email,
+      contactPhone: row.contact_phone,
+      logoUrl: row.logo_url,
+      source: row.source as 'local' | 'neopro',
+      videoFilenames: row.video_filenames || [],
+      isActive: true,
+    }));
+  }
+
+  /**
+   * Extrait les associations sponsor-vidéo depuis le config JSON (sponsors[] + timeCategories[].loopVideos[])
+   * et les synchronise dans la table site_sponsor_videos pour maintenir la cohérence.
+   */
+  private async syncSponsorVideoAssociations(siteId: string, configuration: SiteConfiguration): Promise<void> {
+    const associations = new Map<string, Set<string>>(); // site_sponsor_id → Set<video_path>
+
+    // Extraire depuis sponsors[] (boucle par défaut)
+    for (const video of (configuration.sponsors || [])) {
+      if (video.site_sponsor_id && video.path) {
+        if (!associations.has(video.site_sponsor_id)) {
+          associations.set(video.site_sponsor_id, new Set());
+        }
+        const filename = video.path.split('/').pop() || video.path;
+        associations.get(video.site_sponsor_id)!.add(filename);
+      }
+    }
+
+    // Extraire depuis timeCategories[].loopVideos[] (boucles par phase)
+    for (const tc of (configuration.timeCategories || [])) {
+      for (const video of (tc.loopVideos || [])) {
+        if (video.site_sponsor_id && video.path) {
+          if (!associations.has(video.site_sponsor_id)) {
+            associations.set(video.site_sponsor_id, new Set());
+          }
+          const filename = video.path.split('/').pop() || video.path;
+          associations.get(video.site_sponsor_id)!.add(filename);
+        }
+      }
+    }
+
+    if (associations.size === 0) return;
+
+    let synced = 0;
+    for (const [sponsorId, filenames] of associations) {
+      for (const filename of filenames) {
+        try {
+          await siteSponsorRepository.addVideo(sponsorId, null, filename);
+          synced++;
+        } catch {
+          // Non-fatal : le sponsor_id peut ne pas exister en DB (UUID invalide dans le config)
+          metricsService.recordSponsorResolutionFailure('sync_videos');
+        }
+      }
+    }
+
+    if (synced > 0) {
+      logger.info('Synced sponsor-video associations from config', { siteId, synced });
+    }
+  }
+
+  /**
    * Queue la mise à jour de configuration
    */
   private async queueConfigUpdate(
@@ -177,6 +248,9 @@ class OrchestratedDeploymentService {
     configuration: SiteConfiguration,
     userId: string
   ): Promise<void> {
+    // Récupérer les sponsors du site pour les envoyer au Pi
+    const siteSponsors = await this.getSiteSponsorsForDeployment(siteId);
+
     // Préparer le payload pour update_config
     const neoProContent = {
       sponsors: configuration.sponsors,
@@ -185,7 +259,18 @@ class OrchestratedDeploymentService {
       categoryMappings: configuration.categoryMappings,
       liveScoreEnabled: configuration.liveScoreEnabled,
       scoreOverlay: configuration.scoreOverlay,
+      siteSponsors,
     };
+
+    logger.info('Including site sponsors in deployment', {
+      siteId,
+      sponsorCount: siteSponsors.length,
+    });
+
+    metricsService.recordSponsorSync('included', siteSponsors.length);
+
+    // Synchroniser les associations sponsor-vidéo depuis la config vers site_sponsor_videos
+    await this.syncSponsorVideoAssociations(siteId, configuration);
 
     await commandQueueService.queueCommand(
       siteId,
@@ -216,7 +301,7 @@ class OrchestratedDeploymentService {
     orchestratedId: string,
     videoId: string,
     success: boolean,
-    errorMessage?: string
+    _errorMessage?: string
   ): Promise<void> {
     // Mettre à jour le compteur
     if (success) {

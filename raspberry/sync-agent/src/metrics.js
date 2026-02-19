@@ -1,3 +1,6 @@
+// @ts-check
+/** @typedef {import('./types').SystemMetrics} SystemMetrics */
+
 const si = require('systeminformation');
 const os = require('os');
 const { exec } = require('child_process');
@@ -12,6 +15,11 @@ class MetricsCollector {
     // Cache du modèle Pi pour éviter de lire le fichier à chaque appel
     this._piModel = null;
     this._isPi5 = null;
+
+    // Cache EDID — l'écran change rarement, TTL 5 min
+    this._displayInfoCache = null;
+    this._displayInfoCacheTime = 0;
+    this._DISPLAY_CACHE_TTL = 300000; // 5 minutes
   }
 
   /**
@@ -41,14 +49,17 @@ class MetricsCollector {
     this._isPi5 = false;
     return { model: this._piModel, isPi5: this._isPi5 };
   }
+  /** @returns {Promise<SystemMetrics>} */
   async collectAll() {
     try {
-      const [cpu, memory, temperature, disk, localIp] = await Promise.all([
+      const [cpu, memory, temperature, disk, localIp, wifiStatus, fanStatus] = await Promise.all([
         this.getCpuUsage(),
         this.getMemoryUsage(),
         this.getTemperature(),
         this.getDiskUsage(),
         this.getLocalIp(),
+        this.getWifiStatus(),
+        this.getFanStatus(),
       ]);
 
       return {
@@ -58,6 +69,8 @@ class MetricsCollector {
         disk,
         uptime: os.uptime(),
         localIp,
+        wifiStatus,
+        fanStatus,
         timestamp: Date.now(),
       };
     } catch (error) {
@@ -145,6 +158,143 @@ class MetricsCollector {
     }
   }
 
+  /**
+   * Récupère l'état de la connexion réseau (WiFi USB / Ethernet) pour le heartbeat.
+   * Gère 3 scénarios : WiFi USB seul, Ethernet seul, dual (eth0 + wlan1).
+   */
+  async getWifiStatus() {
+    const status = {
+      interface: null,
+      connected: false,
+      ssid: null,
+      signal: null,
+      quality: null,
+      connectionType: 'none',
+      disconnectsLastHour: 0,
+      throttled: null,
+      voltageOk: true,
+      powerManagement: null, // 'on' | 'off' | null (unknown)
+      channel: null,
+      hotspotChannel: null,
+    };
+
+    try {
+      // 1. Détecter Ethernet (prioritaire)
+      try {
+        const { stdout } = await execAsync('ip addr show eth0 2>/dev/null');
+        const hasIp = /inet\s+\d+\.\d+\.\d+\.\d+/.test(stdout);
+        const isUp = /state UP/.test(stdout);
+        if (hasIp && isUp) {
+          status.connectionType = 'ethernet';
+          status.connected = true;
+        }
+      } catch {
+        // eth0 n'existe pas — normal sur certains Pi
+      }
+
+      // 2. Détecter wlan1
+      try {
+        await execAsync('ip link show wlan1 2>/dev/null');
+        status.interface = 'wlan1';
+      } catch {
+        // wlan1 absent — normal si Ethernet uniquement
+      }
+
+      // 3. Signal WiFi (seulement si wlan1 existe)
+      if (status.interface === 'wlan1') {
+        try {
+          const { stdout: iwOut } = await execAsync('iwconfig wlan1 2>/dev/null');
+
+          const ssidMatch = iwOut.match(/ESSID:"([^"]*)"/);
+          if (ssidMatch && ssidMatch[1]) {
+            status.ssid = ssidMatch[1];
+            if (status.connectionType !== 'ethernet') {
+              status.connectionType = 'wifi';
+              status.connected = true;
+            }
+          }
+
+          const signalMatch = iwOut.match(/Signal level=(-?\d+)/);
+          if (signalMatch) {
+            status.signal = parseInt(signalMatch[1]);
+          }
+
+          const qualityMatch = iwOut.match(/Link Quality=(\d+)\/(\d+)/);
+          if (qualityMatch) {
+            status.quality = Math.round(
+              (parseInt(qualityMatch[1]) / parseInt(qualityMatch[2])) * 100
+            );
+          }
+
+          // Power Management status (should be 'off' after our stabilization)
+          const pmMatch = iwOut.match(/Power Management:(\w+)/);
+          if (pmMatch) {
+            status.powerManagement = pmMatch[1].toLowerCase();
+          }
+        } catch {
+          // iwconfig non disponible ou wlan1 pas associé
+        }
+
+        // Channel detection via iw (more reliable than iwconfig for channel info)
+        try {
+          const { stdout: iwLink } = await execAsync('iw dev wlan1 link 2>/dev/null');
+          const freqMatch = iwLink.match(/freq: (\d+)/);
+          if (freqMatch) {
+            const freq = parseInt(freqMatch[1]);
+            // 2.4GHz band: 2412 = ch1, 2437 = ch6, 2462 = ch11, etc.
+            if (freq >= 2412 && freq <= 2484) {
+              status.channel = Math.round((freq - 2407) / 5);
+            }
+          }
+        } catch {
+          // iw non disponible
+        }
+      }
+
+      // Hotspot channel (wlan0)
+      try {
+        const { stdout: hostapd } = await execAsync('grep "^channel=" /etc/hostapd/hostapd.conf 2>/dev/null');
+        const chMatch = hostapd.match(/channel=(\d+)/);
+        if (chMatch) {
+          status.hotspotChannel = parseInt(chMatch[1]);
+        }
+      } catch {
+        // hostapd.conf not available
+      }
+
+      // 4. Throttling (toujours — affecte tout le système)
+      try {
+        const { stdout: throttledOut } = await execAsync('vcgencmd get_throttled 2>/dev/null');
+        const match = throttledOut.match(/throttled=(0x[0-9a-fA-F]+)/);
+        if (match) {
+          status.throttled = match[1];
+          const value = parseInt(match[1], 16);
+          // Bits 0 (current) et 16 (occurred) = under-voltage
+          status.voltageOk = !(value & 0x10001);
+        }
+      } catch {
+        // vcgencmd non disponible (non-Raspberry Pi)
+      }
+
+      // 5. Déconnexions dernière heure (seulement si WiFi est la connexion principale)
+      if (status.interface === 'wlan1' && status.connectionType === 'wifi') {
+        try {
+          const { stdout: journalOut } = await execAsync(
+            'journalctl -u wpa_supplicant@wlan1 --since "1 hour ago" --no-pager -q 2>/dev/null | grep -c DISCONNECTED || echo 0',
+            { timeout: 5000 }
+          );
+          status.disconnectsLastHour = parseInt(journalOut.trim()) || 0;
+        } catch {
+          // journalctl non disponible
+        }
+      }
+    } catch (error) {
+      logger.error('Error getting WiFi status:', error);
+    }
+
+    return status;
+  }
+
   async getNetworkStatus() {
     try {
       const [interfaces, connections] = await Promise.all([
@@ -226,6 +376,76 @@ class MetricsCollector {
       logger.error('Error getting system info:', error);
       return null;
     }
+  }
+
+  /**
+   * Récupère l'état du ventilateur depuis /sys/class/thermal/cooling_device0/
+   * Pi 5 Active Cooler: cur_state 0-4 (off, low, medium, high, full)
+   * Pi 4 Fan HAT: cur_state 0 ou 1 (off/on)
+   * Retourne present: false si aucun ventilateur détecté (pas d'alerte)
+   *
+   * @returns {Promise<{present: boolean, type: string|null, curState: number|null, maxState: number|null, speedPercent: number|null, is_pi5: boolean}>}
+   */
+  async getFanStatus() {
+    const { isPi5 } = await this.detectPiModel();
+
+    const fanStatus = {
+      present: false,
+      type: null,
+      curState: null,
+      maxState: null,
+      speedPercent: null,
+      is_pi5: isPi5,
+    };
+
+    const basePath = '/sys/class/thermal/cooling_device0';
+
+    try {
+      if (!fs.existsSync(basePath)) {
+        return fanStatus;
+      }
+
+      fanStatus.present = true;
+
+      // Type du ventilateur (ex: "pwm-fan")
+      try {
+        const typePath = `${basePath}/type`;
+        if (fs.existsSync(typePath)) {
+          fanStatus.type = fs.readFileSync(typePath, 'utf8').trim();
+        }
+      } catch {
+        // type file not readable
+      }
+
+      // État courant
+      try {
+        const curStatePath = `${basePath}/cur_state`;
+        if (fs.existsSync(curStatePath)) {
+          fanStatus.curState = parseInt(fs.readFileSync(curStatePath, 'utf8').trim(), 10);
+        }
+      } catch {
+        // cur_state not readable
+      }
+
+      // État maximum
+      try {
+        const maxStatePath = `${basePath}/max_state`;
+        if (fs.existsSync(maxStatePath)) {
+          fanStatus.maxState = parseInt(fs.readFileSync(maxStatePath, 'utf8').trim(), 10);
+        }
+      } catch {
+        // max_state not readable
+      }
+
+      // Pourcentage de vitesse
+      if (fanStatus.curState !== null && fanStatus.maxState !== null && fanStatus.maxState > 0) {
+        fanStatus.speedPercent = Math.round((fanStatus.curState / fanStatus.maxState) * 100);
+      }
+    } catch (error) {
+      logger.warn('Error reading fan status:', error.message);
+    }
+
+    return fanStatus;
   }
 
   /**
@@ -382,6 +602,188 @@ class MetricsCollector {
   }
 
   /**
+   * Trouve le chemin du fichier EDID de l'écran HDMI connecté.
+   * Cherche dans /sys/class/drm/ les connecteurs HDMI avec un EDID non vide.
+   * @returns {string|null} Chemin vers le fichier EDID ou null
+   */
+  _findEdidPath() {
+    try {
+      const drmDir = '/sys/class/drm';
+      if (!fs.existsSync(drmDir)) return null;
+
+      const entries = fs.readdirSync(drmDir);
+      const hdmiEntries = entries.filter(e => e.includes('HDMI'));
+
+      for (const entry of hdmiEntries) {
+        const edidPath = `${drmDir}/${entry}/edid`;
+        try {
+          const stat = fs.statSync(edidPath);
+          if (stat.size > 0) {
+            return edidPath;
+          }
+        } catch {
+          // Fichier n'existe pas ou pas accessible
+        }
+      }
+    } catch (error) {
+      logger.debug('Could not scan DRM directory for EDID:', error.message);
+    }
+    return null;
+  }
+
+  /**
+   * Parse un buffer EDID brut (128+ bytes) pour extraire les informations d'affichage.
+   * @param {Buffer} edidBuffer - Buffer EDID brut lu depuis /sys/class/drm/
+   * @returns {{manufacturer: string|null, model: string|null, serial: string|null, resolution: string|null, hasCeaExtension: boolean}}
+   */
+  _parseEdid(edidBuffer) {
+    const result = {
+      manufacturer: null,
+      model: null,
+      serial: null,
+      resolution: null,
+      hasCeaExtension: false,
+    };
+
+    if (!edidBuffer || edidBuffer.length < 128) return result;
+
+    // Vérifier le header EDID (bytes 0-7: 00 FF FF FF FF FF FF 00)
+    const header = [0x00, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x00];
+    if (!header.every((b, i) => edidBuffer[i] === b)) return result;
+
+    try {
+      // Manufacturer ID (bytes 8-9, big-endian, 3 lettres sur 15 bits)
+      const mfgCode = (edidBuffer[8] << 8) | edidBuffer[9];
+      const char1 = String.fromCharCode(((mfgCode >> 10) & 0x1F) + 64);
+      const char2 = String.fromCharCode(((mfgCode >> 5) & 0x1F) + 64);
+      const char3 = String.fromCharCode((mfgCode & 0x1F) + 64);
+      result.manufacturer = char1 + char2 + char3;
+    } catch {
+      // Parsing fabricant échoué
+    }
+
+    // Résolution native depuis le premier Detailed Timing Descriptor (bytes 54-71)
+    try {
+      const hActive = ((edidBuffer[58] & 0xF0) << 4) | edidBuffer[56];
+      const vActive = ((edidBuffer[61] & 0xF0) << 4) | edidBuffer[59];
+      if (hActive > 0 && vActive > 0) {
+        result.resolution = `${hActive}x${vActive}`;
+      }
+    } catch {
+      // Parsing résolution échoué
+    }
+
+    // Parcourir les 4 descriptor blocks (18 bytes chacun, à partir de byte 54)
+    for (let i = 0; i < 4; i++) {
+      const offset = 54 + (i * 18);
+      if (offset + 18 > edidBuffer.length) break;
+
+      if (edidBuffer[offset] === 0 && edidBuffer[offset + 1] === 0) {
+        const tag = edidBuffer[offset + 3];
+
+        if (tag === 0xFC) {
+          // Monitor Name descriptor
+          try {
+            result.model = edidBuffer.slice(offset + 5, offset + 18)
+              .toString('ascii').replace(/[\n\r\0]/g, '').trim();
+          } catch {
+            // Parsing nom échoué
+          }
+        } else if (tag === 0xFF) {
+          // Serial Number descriptor
+          try {
+            result.serial = edidBuffer.slice(offset + 5, offset + 18)
+              .toString('ascii').replace(/[\n\r\0]/g, '').trim();
+          } catch {
+            // Parsing serial échoué
+          }
+        }
+      }
+    }
+
+    // CEA Extension Block (indice que c'est une TV)
+    if (edidBuffer[126] > 0 && edidBuffer.length >= 256 && edidBuffer[128] === 0x02) {
+      result.hasCeaExtension = true;
+    }
+
+    return result;
+  }
+
+  /**
+   * Récupère les informations de l'écran connecté via EDID.
+   * Permet de détecter le type d'écran (TV vs moniteur PC) et ses caractéristiques.
+   * @returns {Promise<{connected: boolean, manufacturer: string|null, model: string|null, serial: string|null, resolution: string|null, display_type: string, detection_method: string}>}
+   */
+  async getDisplayInfo() {
+    const now = Date.now();
+    if (this._displayInfoCache && (now - this._displayInfoCacheTime) < this._DISPLAY_CACHE_TTL) {
+      return this._displayInfoCache;
+    }
+
+    const displayInfo = {
+      connected: false,
+      manufacturer: null,
+      model: null,
+      serial: null,
+      resolution: null,
+      display_type: 'unknown',
+      detection_method: 'none',
+    };
+
+    try {
+      const edidPath = this._findEdidPath();
+
+      if (edidPath) {
+        displayInfo.connected = true;
+        try {
+          const edidBuffer = fs.readFileSync(edidPath);
+          const parsed = this._parseEdid(edidBuffer);
+          displayInfo.manufacturer = parsed.manufacturer;
+          displayInfo.model = parsed.model;
+          displayInfo.serial = parsed.serial;
+          displayInfo.resolution = parsed.resolution;
+          displayInfo.detection_method = 'edid_raw';
+
+          if (parsed.hasCeaExtension) {
+            displayInfo.display_type = 'tv';
+          }
+        } catch (error) {
+          logger.debug('Could not parse EDID file:', error.message);
+        }
+      } else {
+        try {
+          const drmDir = '/sys/class/drm';
+          if (fs.existsSync(drmDir)) {
+            const entries = fs.readdirSync(drmDir);
+            const hdmiEntry = entries.find(e => e.includes('HDMI'));
+            if (hdmiEntry) {
+              displayInfo.detection_method = 'drm_status';
+              // Vérifier le fichier status DRM pour la connexion physique
+              const statusPath = `${drmDir}/${hdmiEntry}/status`;
+              try {
+                const status = fs.readFileSync(statusPath, 'utf8').trim();
+                if (status === 'connected') {
+                  displayInfo.connected = true;
+                }
+              } catch {
+                // Fichier status inaccessible — on ne peut pas confirmer
+              }
+            }
+          }
+        } catch {
+          // Pas de DRM disponible
+        }
+      }
+    } catch (error) {
+      logger.warn('Error getting display info:', error.message);
+    }
+
+    this._displayInfoCache = displayInfo;
+    this._displayInfoCacheTime = now;
+    return displayInfo;
+  }
+
+  /**
    * Récupère l'état de la TV via HDMI-CEC
    * Permet de savoir si la TV est allumée, en veille, ou déconnectée
    */
@@ -449,18 +851,46 @@ class MetricsCollector {
   }
 
   /**
+   * Récupère le statut du kiosk Chromium via le fichier écrit par le watchdog.
+   * Retourne null si le fichier n'existe pas (watchdog pas encore démarré).
+   */
+  async getKioskStatus() {
+    const statusFile = '/home/pi/neopro/data/kiosk-status.json';
+    try {
+      const content = await fs.promises.readFile(statusFile, 'utf8');
+      return JSON.parse(content);
+    } catch {
+      return null;
+    }
+  }
+
+  /**
    * Récupère un rapport de santé complet du système
    * Utilisé par la commande get_health_status
    */
   async getHealthStatus() {
     try {
-      const [metrics, gpuInfo, services, systemInfo, hdmiCecStatus] = await Promise.all([
+      const [metrics, gpuInfo, services, systemInfo, hdmiCecStatus, displayInfo, fanStatus] = await Promise.all([
         this.collectAll(),
         this.getGpuInfo(),
         this.getServicesStatus(),
         this.getSystemInfo(),
         this.getHdmiCecStatus(),
+        this.getDisplayInfo(),
+        this.getFanStatus(),
       ]);
+
+      // Affiner le type d'écran en croisant EDID + CEC
+      // displayInfo.connected est fiable : basé sur EDID (taille > 0) ou DRM status file ("connected")
+      // Note : hdmiCecStatus.tv_connected n'est PAS fiable pour la détection physique
+      // (cec-client retourne "power status: unknown" même sans écran branché sur Pi 5)
+      if (displayInfo.display_type === 'unknown') {
+        if (hdmiCecStatus.devices_found > 0) {
+          displayInfo.display_type = 'tv';
+        } else if (hdmiCecStatus.cec_available && hdmiCecStatus.devices_found === 0 && displayInfo.connected) {
+          displayInfo.display_type = 'monitor';
+        }
+      }
 
       // Calculer un score de santé global
       let healthScore = 100;
@@ -490,6 +920,17 @@ class MetricsCollector {
         });
       }
 
+      // Ventilateur (alerter uniquement si installé et arrêté à haute température)
+      if (fanStatus.present && metrics && metrics.temperature > 70 && fanStatus.curState === 0) {
+        healthScore -= 15;
+        issues.push({
+          severity: 'warning',
+          component: 'Fan',
+          message: `Ventilateur arrêté alors que la température est de ${metrics.temperature}°C`,
+          fix: 'Vérifier la connexion du ventilateur ou les paramètres de refroidissement',
+        });
+      }
+
       // Alimentation (throttling)
       if (!gpuInfo.voltage_ok) {
         healthScore -= 25;
@@ -502,7 +943,7 @@ class MetricsCollector {
       }
 
       // Services critiques
-      const criticalServices = ['neopro-app', 'neopro-sync-agent', 'nginx'];
+      const criticalServices = ['neopro-app', 'neopro-sync-agent', 'neopro-kiosk', 'nginx'];
       for (const svc of services) {
         if (criticalServices.includes(svc.name) && svc.failed) {
           healthScore -= 15;
@@ -512,6 +953,30 @@ class MetricsCollector {
             message: `Service ${svc.name} en échec`,
             fix: `sudo systemctl restart ${svc.name}`,
             lastError: svc.lastError,
+          });
+        }
+      }
+
+      // Kiosk Chromium check — le service systemd peut être "active" (watchdog tourne)
+      // mais Chromium peut être crashé. Vérifier le fichier de statut du watchdog.
+      const kioskStatus = await this.getKioskStatus();
+      if (kioskStatus) {
+        if (!kioskStatus.chromiumAlive) {
+          healthScore -= 20;
+          issues.push({
+            severity: 'critical',
+            component: 'Kiosk',
+            message: 'Chromium non actif — la TV n\'affiche rien',
+            fix: 'sudo systemctl restart neopro-kiosk',
+          });
+        }
+        if (kioskStatus.restartCount > 3) {
+          healthScore -= 10;
+          issues.push({
+            severity: 'warning',
+            component: 'Kiosk',
+            message: `Chromium a redémarré ${kioskStatus.restartCount} fois récemment (instabilité GPU)`,
+            fix: 'Vérifier les logs GPU: journalctl -u neopro-kiosk -n 50',
           });
         }
       }
@@ -538,8 +1003,9 @@ class MetricsCollector {
         });
       }
 
-      // HDMI-CEC / TV Status
-      if (hdmiCecStatus.cec_available && !hdmiCecStatus.tv_connected) {
+      // HDMI-CEC / TV Status — ne pas alerter si c'est un moniteur PC (CEC non supporté)
+      const isMonitor = displayInfo.display_type === 'monitor';
+      if (hdmiCecStatus.cec_available && !hdmiCecStatus.tv_connected && !isMonitor) {
         issues.push({
           severity: 'warning',
           component: 'HDMI-CEC',
@@ -562,9 +1028,11 @@ class MetricsCollector {
         healthStatus: healthScore >= 80 ? 'healthy' : healthScore >= 50 ? 'degraded' : 'critical',
         issues,
         gpu: gpuInfo,
+        fanStatus,
         services,
         metrics,
         hdmiCecStatus,
+        displayInfo,
         system: {
           hostname: systemInfo?.hostname,
           os: systemInfo?.os,

@@ -7,6 +7,7 @@ const fs = require('fs-extra');
 const path = require('path');
 const logger = require('../logger');
 const { config } = require('../config');
+const { atomicWriteJson, safeReadConfig } = require('../utils/safe-config-io');
 
 class ExpirationChecker {
   constructor() {
@@ -56,8 +57,7 @@ class ExpirationChecker {
         return { checked: 0, removed: 0 };
       }
 
-      const content = await fs.readFile(configPath, 'utf-8');
-      const configuration = JSON.parse(content);
+      const configuration = await safeReadConfig(configPath);
 
       if (!configuration.categories || !Array.isArray(configuration.categories)) {
         return { checked: 0, removed: 0 };
@@ -106,7 +106,7 @@ class ExpirationChecker {
 
       // Sauvegarder la configuration si modifiée
       if (modified) {
-        await fs.writeFile(configPath, JSON.stringify(configuration, null, 2));
+        await atomicWriteJson(configPath, configuration);
         logger.info('Configuration updated after removing expired videos', { removed });
 
         // Notifier l'application locale
@@ -178,18 +178,9 @@ class ExpirationChecker {
    * Notifie l'application locale des changements
    */
   async notifyLocalApp() {
-    try {
-      const io = require('socket.io-client');
-      const socket = io('http://localhost:3000', { timeout: 5000 });
-
-      socket.emit('config_updated', { reason: 'expired_videos_removed' });
-
-      setTimeout(() => socket.close(), 1000);
-
-      logger.debug('Local app notified of expired videos removal');
-    } catch (error) {
-      logger.warn('Could not notify local app of expiration changes:', error.message);
-    }
+    const localSocket = require('../services/local-socket');
+    localSocket.emit('config_updated', { reason: 'expired_videos_removed' });
+    logger.debug('Local app notified of expired videos removal');
   }
 
   /**

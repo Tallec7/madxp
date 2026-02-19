@@ -321,7 +321,7 @@ CRITICAL_FILES=(
     "central-server/src/middleware/auth.ts"
     "central-server/src/services/socket.service.ts"
     "central-server/src/config/database.ts"
-    "raspberry/frontend/src/app/components/tv.component.ts"
+    "raspberry/src/app/components/tv.component.ts"
     "raspberry/sync-agent/sync-agent.ts"
 )
 

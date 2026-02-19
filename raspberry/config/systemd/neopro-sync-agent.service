@@ -30,8 +30,8 @@ StandardOutput=journal
 StandardError=journal
 SyslogIdentifier=neopro-sync-agent
 
-# Limites de sécurité
-NoNewPrivileges=true
+# Sécurité : sudo restreint via /etc/sudoers.d/neopro (systemctl + cp services uniquement)
+# NoNewPrivileges=true incompatible avec sudo (bloque setuid au niveau kernel)
 
 [Install]
 WantedBy=multi-user.target

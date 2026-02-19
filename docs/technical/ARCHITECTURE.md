@@ -1,5 +1,13 @@
 # Architecture Neopro
 
+## Diagrammes de Sequence
+
+> Diagrammes Mermaid detailles des flux critiques (prerequis pour le refactoring)
+
+- [01 - Authentification](diagrams/01-auth-sequence.md) : Login -> JWT -> MFA -> Cookie -> Requetes authentifiees
+- [02 - Sync Pi <-> Cloud](diagrams/02-sync-pi-cloud-sequence.md) : Connexion -> Heartbeat -> Etat -> Commandes
+- [03 - Deploiement Video](diagrams/03-video-deployment-sequence.md) : Upload -> FTP -> Deploy -> Pi -> Checksum
+
 ## Vue d'ensemble
 
 Neopro est une plateforme distribuée Edge + Cloud pour la diffusion de contenu vidéo dans les clubs sportifs.
@@ -41,6 +49,8 @@ Neopro est une plateforme distribuée Edge + Cloud pour la diffusion de contenu 
 │  │  - Config sync   │  │  - TV control    │  │            │ │
 │  │  - Video sync    │  │  - Remote events │  │  - Config  │ │
 │  │  - Analytics push│  │  - State mgmt    │  │  - Logs    │ │
+│  │                  │  │                  │  │  - Sync ◄──┤─── reads sync-agent state files
+│  │                  │  │                  │  │  - Modes   │ │
 │  └──────┬───────────┘  └──────┬───────────┘  └──────┬─────┘ │
 │         │                     │                     │       │
 │         └─────────────────────┴─────────────────────┘       │
@@ -68,29 +78,49 @@ neopro/ (monorepo)
 │
 ├── raspberry/                      # Edge application
 │   ├── src/                        # Angular frontend (TV/Remote/Login)
-│   ├── server/                     # Socket.IO local server
+│   ├── server/                     # Socket.IO local server (Express modulaire)
+│   │   ├── server.js               #   Orchestrateur (~110 lignes)
+│   │   ├── helpers.js              #   Constantes partagées
+│   │   ├── services/               #   6 services (state, buffer, license, hdmi+edid, auth)
+│   │   ├── routes/                 #   6 contrôleurs HTTP minces
+│   │   ├── socket/                 #   Handlers Socket.IO (18 events)
+│   │   ├── __tests__/              #   Tests Jest (71 tests)
 │   │   └── package.json
-│   ├── admin/                      # Admin interface (Express)
+│   ├── admin/                      # Admin interface (Express modulaire)
+│   │   ├── admin-server.js         #   Orchestrateur (~260 lignes)
+│   │   ├── helpers.js              #   Utilitaires partagés (exec, paths)
+│   │   ├── services/               #   7 services métier
+│   │   ├── routes/                 #   10 contrôleurs HTTP (dont sync-status)
+│   │   ├── __tests__/              #   Tests Jest (60%+ couverture)
 │   │   └── package.json
 │   └── sync-agent/                 # Sync service with cloud
 │       └── package.json
 │
 ├── central-server/                 # Cloud API backend
 │   ├── src/
-│   │   ├── controllers/
-│   │   ├── routes/
-│   │   ├── middleware/
-│   │   └── services/
+│   │   ├── controllers/            # HTTP route handlers
+│   │   ├── routes/                 # Express route definitions
+│   │   ├── middleware/             # Auth, RLS, rate-limit, error-handler
+│   │   ├── services/              # Business logic (socket, deployment, alerting…)
+│   │   ├── handlers/              # 9 Socket.IO event handlers (extraits de socket.service)
+│   │   └── repositories/          # 22 repos (BaseRepository<T> + implémentations)
 │   └── package.json
 │
 ├── central-dashboard/              # Cloud admin dashboard
 │   ├── src/app/
 │   │   ├── features/
-│   │   ├── core/
-│   │   └── shared/
-│   └── package.json
-│
-├── server-render/                  # Cloud WebSocket server
+│   │   │   ├── sites/
+│   │   │   │   ├── site-detail.component.ts     # Page détail (6 onglets)
+│   │   │   │   └── components/
+│   │   │   │       ├── site-content-tab/        # Pipeline contenu (bibliothèque → boucles → télécommande → analytics)
+│   │   │   │       ├── loop-manager/            # Gestion unifiée boucles (défaut + 3 phases)
+│   │   │   │       ├── site-sponsors-tab/       # Sponsors locaux : CRUD, KPIs, association vidéos, benchmark, magic link
+│   │   │   │       ├── site-settings-tab/       # Config réseau, hotspot, branding club
+│   │   │   │       ├── site-profiles-tab/       # Multi-config CRUD + deploy
+│   │   │   │       └── site-debug-tab/          # Logs, commandes
+│   │   │   └── sponsor-portal/                  # Page publique portail sponsor (token-based)
+│   │   ├── core/                                # Models, services, guards
+│   │   └── shared/                              # Composants réutilisables
 │   └── package.json
 │
 ├── e2e/                           # End-to-end tests
@@ -123,10 +153,10 @@ neopro/ (monorepo)
 └──────────────┘          └──────────────┘
         │
         ▼
-┌──────────────┐          ┌──────────────┐
-│local-server  │◀─Socket─▶│server-render │
-│ (Socket.IO)  │          │ (Socket.IO)  │
-└──────────────┘          └──────────────┘
+┌──────────────┐
+│local-server  │
+│ (Socket.IO)  │
+└──────────────┘
 ```
 
 ---
@@ -157,7 +187,7 @@ Merge local + remote config
 Angular frontend (reload config)
 ```
 
-### 2. Analytics tracking
+### 2. Analytics tracking (advertiser + site_sponsor)
 
 ```
 TV Frontend (impression sponsor)
@@ -171,11 +201,28 @@ Sync Agent (buffer + batch)
          ▼
 Central Server API (/api/sponsor-analytics/impressions)
          │
+         ├── advertiser_impressions (annonceurs réseau)
          ▼
 PostgreSQL (sponsor_impressions table)
          │
          ▼
 Dashboard Analytics (Chart.js graphs)
+
+Site Sponsor flow (local sponsors) :
+  site_sponsors → site_sponsor_videos → advertiser_impressions (site_sponsor_id)
+         │
+         ├── Site detail > Sponsors tab (KPIs, Chart.js trends, CPI)
+         │         │
+         │         └── Benchmark panel (P6.2 — sponsor vs site average)
+         │
+         ├── Network Stats (P6.1 — cross-club via site_sponsors.advertiser_id)
+         │         GET /api/network/advertisers/:id/stats
+         │         → trends, by_site, by_event_type, CPI réseau
+         │
+         ├── PDF Report (branding club : couleurs + logo)
+         │         └── Page 2 conditionnelle (P6.4 — match-by-match breakdown)
+         │
+         └── Sponsor Portal (/sponsor-access?token=xxx) — public, token-based
 ```
 
 ### 3. Remote control
@@ -193,20 +240,45 @@ TV Frontend (player commands)
 Video.js API (play/pause/seek)
 ```
 
+### 4. Multi-config profiles
+
+```
+Dashboard (Admin crée/édite profil)
+         │
+         ▼
+Central Server API (POST /sites/:id/profiles)
+         │
+         ▼
+PostgreSQL (config_profiles table)
+         │
+         ▼
+Socket.IO → sync_profiles command
+         │
+         ▼
+Sync Agent (écrit profiles/*.json + clubs.json)
+         │
+         ▼
+Pi Frontend (ProfileConfigService sélectionne le profil actif)
+```
+
+- Un site peut avoir **N profils** de configuration
+- Chaque profil contient un `configuration` JSON complet
+- Le Pi résout le profil actif via `clubs.json` → `activeProfileId`
+- Switch de profil possible depuis la télécommande ou le dashboard
+
 ---
 
 ## Technologies par composant
 
-| Composant              | Stack                                      | Base de données                               | Déploiement            |
-| ---------------------- | ------------------------------------------ | --------------------------------------------- | ---------------------- |
-| `raspberry/src`        | Angular 20, Video.js 8.x, Socket.IO client | -                                             | Raspberry Pi (systemd) |
-| `raspberry/server`     | Node.js, Socket.IO 4.8                     | -                                             | Raspberry Pi (systemd) |
-| `raspberry/admin`      | Express, vanilla JS                        | -                                             | Raspberry Pi (systemd) |
-| `raspberry/sync-agent` | Node.js 20, Axios, SHA256 checksum         | -                                             | Raspberry Pi (systemd) |
-| `central-server`       | Node.js 20+, Express 4.18, TypeScript 5.9  | Supabase (PostgreSQL), FTP Hostinger (vidéos) | Railway                |
-| `central-dashboard`    | Angular 20.3, Chart.js 4.5, Leaflet        | -                                             | Hostinger (static)     |
-| `server-render`        | Node.js 20, Socket.IO 4.8                  | Redis (Upstash)                               | Railway                |
-| `e2e`                  | Playwright                                 | -                                             | CI/CD                  |
+| Composant              | Stack                                                                  | Base de données                               | Déploiement            |
+| ---------------------- | ---------------------------------------------------------------------- | --------------------------------------------- | ---------------------- |
+| `raspberry/src`        | Angular 20, Video.js 8.x, Socket.IO client                             | -                                             | Raspberry Pi (systemd) |
+| `raspberry/server`     | Node.js, Socket.IO 4.8                                                 | -                                             | Raspberry Pi (systemd) |
+| `raspberry/admin`      | Express, vanilla JS (dual mode: club/tech)                             | -                                             | Raspberry Pi (systemd) |
+| `raspberry/sync-agent` | Node.js 20, Axios, SHA256 checksum                                     | -                                             | Raspberry Pi (systemd) |
+| `central-server`       | Node.js 20+, Express 4.18, TypeScript 5.9, Winston, Repository Pattern | Supabase (PostgreSQL), FTP Hostinger (vidéos) | Railway                |
+| `central-dashboard`    | Angular 20.3, Chart.js 4.5, Leaflet                                    | -                                             | Hostinger (static)     |
+| `e2e`                  | Playwright                                                             | -                                             | CI/CD                  |
 
 ---
 
@@ -237,9 +309,8 @@ Video.js API (play/pause/seek)
 
 **Infrastructure as Code**
 
-- `render.yaml` : Central Server, Socket Server, Dashboard
+- `render.yaml` : Central Server, Dashboard
 - `docker-compose.yml` : Stack locale (dev)
-- `k8s/` : Kubernetes manifests (base + overlays)
 
 **CI/CD**
 
@@ -275,21 +346,93 @@ Video.js API (play/pause/seek)
 - Merge intelligent (central overrides)
 - Schema validation
 
-### 5. Monitoring & Observability
+### 5. Repository Pattern (central-server)
 
-- Prometheus metrics (Port 9090)
-- Grafana dashboards (Port 3000)
+- Accès base de données exclusivement via repositories typés (`siteRepository`, `alertRepository`, etc.)
+- `BaseRepository<T>` générique (CRUD, pagination, exists)
+- 22 repositories couvrant 100% des accès PostgreSQL :
+  `site`, `user`, `video`, `group`, `alert`, `analytics`, `sponsor`, `config-history`,
+  `deployment`, `advertising`, `subscription`, `agency`, `metrics`, `objective`,
+  `playlist-schedule`, `remote-command`, `report`, `timeline`, `advertiser-portal`,
+  `software-update`, `email` (notification), `site-sponsor`
+- Règle ESLint `no-restricted-imports` bloquant **tout** import de `../config/database` dans les controllers
+- Requêtes SQL paramétrées uniquement (`$1`, `$2`, etc.)
+
+### 5b. Socket Handler Extraction (central-server)
+
+- `socket.service.ts` réduit de 1 717 → 676 lignes (orchestrateur uniquement)
+- 9 handlers extraits dans `src/handlers/` :
+  `heartbeat`, `config-sync`, `deploy-progress`, `command-dispatch`,
+  `health-monitor`, `license`, `network-resilience`, `score-update`, `match-config`
+- Chaque handler est une fonction pure recevant `(socket, data, dependencies)`
+
+### 6. Structured Logging (Winston)
+
+- Winston remplace console.log dans central-server
+- Correlation ID pour traçabilité distribuée
+- Niveaux : error, warn, info, debug
+- Format JSON structuré en production
+
+### 7. Monitoring & Observability
+
+- **Prometheus metrics** (Port 9090) — 33+ métriques custom `neopro_*` (dont 3 kiosk, 3 fan : `neopro_fan_present`, `neopro_fan_state`, `neopro_fan_failures_total` + `neopro_license_status_pushes_total`, `neopro_deploy_progress_events_total`, `neopro_ota_errors_total{error_type}`, `neopro_wifi_config_total`) + métriques Node.js par défaut
+- **Grafana dashboards** (Port 3000) — 3 dashboards (local) + 3 dashboards cloud :
+  - _NeoPro Overview_ : API Health, sites connectés, alertes actives, taux 5xx, latence p95, mémoire RSS
+  - _NeoPro Infrastructure_ : HTTP rate/latence par percentile, Node.js runtime (heap, event loop lag, memory pressure), auth & rate limiting, DB pool & latency, FTP storage
+  - _NeoPro Business & Fleet_ : content pipeline (video uploads), fleet Pi (WebSocket par type, heartbeats, network stability, socket disconnects), video transitions, deployments (canary, sync, drift), subscriptions & predictive alerts, **kiosk Chromium** (status, crashes, restarts), **Fan Pi** (présence, état, failures)
+- **Scrape targets** : Docker local, `host.docker.internal:3001` (dev), Railway HTTPS (prod)
+- **Smoke tests** : `npm run test:smoke` — 139 tests détectent les régressions de wiring API (routes, middlewares, repositories, services, handlers, error types, métriques Prometheus critiques, hourly metric alerting wiring) + conventions Pi (systemd, sudoers)
 - Systemd journald logs
 - Winston structured logging with Correlation ID
-- Memory Manager Service (heap monitoring, pressure cleanup)
+- Memory Manager Service (heap monitoring, pressure cleanup at 93%/97%)
+- **Memory safety bounds** (v3.37.2) — bornes dures sur les Maps in-memory du service d'alerting pour éviter l'épuisement du heap sur Railway Hobby (256 MB) :
+  - `metricHistory` : max 200 clés × 60 snapshots/clé
+  - `wsDisconnectEvents` / `videoSafetyTimeoutEvents` : max 100 sites × 200 events/site
+  - `lastAlertTime` : pruning auto > 24h toutes les 5 min + hard cap 500 entrées
 - Health checks (/health, /live, /ready)
+- **Guide de lecture Grafana** : [Notion — Guide Grafana Support](https://www.notion.so/305c27de363881d1a95cc4891d6cd823) — seuils, arbres de diagnostic, matrice d'escalade
 
-### 6. Alerting Multi-Canal
+### 8. Alerting Multi-Canal
 
 - Email (SMTP via emailService)
 - Webhook (POST JSON vers URL configurable)
-- Slack (Incoming Webhooks avec Block Kit)
+- Slack (Incoming Webhooks avec Block Kit) — `alert.service.ts` avec méthodes pré-construites et **cooldown anti-flapping** (5 min/site pour `siteOffline`/`siteOnline`) + **shutdown mode** (v3.50.3 : `enterShutdownMode()` sur SIGTERM supprime les faux offline)
 - Escalade automatique vers superviseurs
+- **Graceful shutdown** (v3.48+) : `server_shutdown` émis aux Pi avant fermeture, `io.disconnectSockets()` + `io.close()`, safety timeout 10s — **v3.50.3** : `alertService.enterShutdownMode()` appelé avant déconnexion des sockets + boot grace period 90s (online + offline)
+- **19 seuils par défaut** : 7 réactifs (CPU, mémoire, température, disque, site offline, deployment failure, **fan failure**) + 9 prédictifs (inactivité, disk growth, déconnexions, WiFi signal, video errors, temperature trend, hotspot instability, subscription expiry, stuck deployments) + 3 nouveaux (WebSocket disconnects fréquents, trous noirs vidéo/safety timeouts, crash kiosk Chromium)
+- **Alertes réseau WiFi** (v3.33+) : `networkFailure()` (échec recovery watchdog), `info('Réseau rétabli')` (recovery confirmée) — dédupliquées 1/heure/site ; **alertes signal WiFi** (v3.50.3) : `lowWifiSignal()` avec cooldown 6h/site + `wifiSignalRecovered()` auto quand signal > -70 dBm
+- **Test Slack** : `POST /api/alerts/test-slack` (super_admin) — vérifie la configuration webhook
+- **Variables d'environnement** : `SLACK_WEBHOOK_URL` + `SLACK_ALERTS_ENABLED=true`
+
+### 9. Prometheus Alerting (Alertmanager + Grafana Cloud)
+
+Alertes infrastructure côté serveur, complémentaires aux alertes métier Pi (section 8).
+
+- **Alertmanager** (Port 9093) — routing Slack avec 2 niveaux :
+  - `critical` → notification immédiate, repeat 1h
+  - `warning` → groupé 30s, repeat 4h
+  - Inhibition : si `CentralServerDown` actif, les warnings par-métrique sont supprimés
+- **Prometheus rules** (`docker/prometheus/rules.yml`) — 14 alert rules locales :
+
+| Groupe        | Alerte                   | Condition               | Seuil (for) | Sévérité |
+| ------------- | ------------------------ | ----------------------- | ----------- | -------- |
+| Server Health | `CentralServerDown`      | `up == 0`               | 2 min       | critical |
+| Server Health | `CentralServerUnhealthy` | health check fail       | 3 min       | critical |
+| Server Health | `HighMemoryUsage`        | RSS > 88% of 256MB      | 5 min       | warning  |
+| Server Health | `HighCpuUsage`           | CPU > 80%               | 5 min       | warning  |
+| Connectivity  | `ZeroHeartbeats`         | `rate(heartbeats) == 0` | 5 min       | critical |
+| Connectivity  | `NoAgentConnections`     | WS agents == 0          | 5 min       | critical |
+| Connectivity  | `ConnectedSitesDrop`     | -50% en 10 min          | 5 min       | warning  |
+| Connectivity  | `HighDisconnectRate`     | > 0.5/s                 | 3 min       | warning  |
+| Database      | `DbPoolSaturation`       | active/total > 80%      | 3 min       | warning  |
+| Database      | `SlowDbQueries`          | P95 > 2s                | 5 min       | warning  |
+| HTTP          | `HighErrorRate`          | 5xx > 5%                | 5 min       | warning  |
+| HTTP          | `HighApiLatency`         | P95 > 3s                | 5 min       | warning  |
+| Meta          | `TooManyActiveAlerts`    | > 10 alertes actives    | 10 min      | warning  |
+
+- **Grafana Cloud alerts** (`docker/grafana/provisioning/alerting/neopro-alerts-cloud.yml`) — 11 managed alert rules (même logique, format Grafana Cloud provisioning) pour la production sur `grafanacloud-tallec7-prom`
+- **Stack local** : `docker compose up prometheus alertmanager grafana`
+- **Stack prod** : Import YAML dans Grafana Cloud → Alerting → Alert rules + configurer Contact point Slack
 
 ---
 
@@ -412,9 +555,11 @@ Pour fonctionner sans internet, le build Angular doit inclure :
 
 ### Stockage vidéo
 
-- **Production** : FTP Hostinger (`kalonpartners.bzh/neopro-video/`)
-- **Fallback** : Supabase Storage
+- **FTP Hostinger uniquement** (`kalonpartners.bzh/neopro-video/`) — unifié via `storage.service.ts`
+- Upload streaming depuis le disque (zéro buffer mémoire)
+- Checksum SHA256 streaming pendant l'upload
 - **URLs publiques** : `https://kalonpartners.bzh/neopro-video/{uuid}.mp4`
+- Nettoyage périodique des fichiers temporaires abandonnés (> 1h)
 
 ---
 
@@ -429,19 +574,25 @@ Pour fonctionner sans internet, le build Angular doit inclure :
 
 ### Optimisations backend
 
-- Redis cache (sessions, config)
+- Redis adapter Socket.IO (sticky sessions multi-instance)
 - PostgreSQL indexes
-- Connection pooling
+- Connection pooling configurable (`DB_POOL_MAX`, defaut 10, clamp 1-50)
 - Rate limiting (per-user based)
 - Memory Manager with automatic cleanup at 93% heap usage
 - Bounded Maps/Arrays to prevent memory leaks (pendingCommands: 100, jobs: 100)
 - Node.js heap limit: 256MB (Railway Hobby plan optimization)
+- Video upload en disk storage + streaming FTP (pas de buffer memoire)
+- Batch insert analytics (`video_plays`) par lots de 100
 
 ### Optimisations edge
 
 - Local video storage
 - Zero latency control
 - Offline playback
+- Double-buffer vidéo avec early switch (`timeupdate` → preload 1.5s, switch 0.5s avant la fin)
+- Cleanup agressif des buffers décodeur GPU après chaque switch (~50MB mémoire stable)
+- Disk cache warming via `fetch()` pour boucles 20-100+ vidéos (page cache kernel)
+- Freeze-frame pré-capturé (500ms) pour transitions sans flash
 
 ---
 
@@ -481,7 +632,7 @@ Pour fonctionner sans internet, le build Angular doit inclure :
 - Rapports PDF
 - Graphiques temps réel
 
-### Phase 4 : Intelligence (🚧 En cours)
+### Phase 4 : Intelligence (📋 Backlog)
 
 - Estimation audience (caméra RPi)
 - Score live (websocket)
@@ -492,6 +643,24 @@ Pour fonctionner sans internet, le build Angular doit inclure :
 - Multi-tenant SaaS
 - White-label
 - App mobile iOS/Android
+
+### Architecture Roadmap (✅ Complété)
+
+Refactoring en 7 phases réalisé en février 2026 :
+
+1. **Storage** — Unification FTP-only via `storage.service.ts`
+2. **Dead Code** — Suppression dossiers obsolètes, références mortes
+3. **Winston Logger** — Remplacement `console.log` → Winston structuré
+4. **Modularisation Pi** — admin-server (3 970→260 lignes), socket-server (812→110 lignes)
+5. **Error Handling** — Classes d'erreur typées (`ServiceError`, `ValidationError`)
+6. **Repository Pattern** — 150 appels `query()` → 21 repositories typés
+7. **Refactoring avancé** :
+   - 7.1 — Migration services vers Repository pattern
+   - 7.2 — Extraction socket handlers (1 717→676 lignes, 9 handlers)
+   - 7.3 — Migration controllers vers Repository pattern (ESLint enforced)
+   - 7.4 — Auth admin/super_admin boundary
+
+Résultat : 1 586 tests / 75 suites, 0 failures.
 
 ---
 
@@ -504,5 +673,5 @@ Pour fonctionner sans internet, le build Angular doit inclure :
 
 ---
 
-**Dernière mise à jour** : 9 janvier 2026
-**Version** : 2.21.2
+**Dernière mise à jour** : 17 février 2026
+**Version** : 3.52.0

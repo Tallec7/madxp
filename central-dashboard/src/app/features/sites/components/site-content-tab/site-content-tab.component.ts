@@ -1,7 +1,7 @@
 import { Component, Input, Output, EventEmitter, OnInit, OnChanges, OnDestroy, SimpleChanges, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { interval, Subscription, filter, take } from 'rxjs';
+import { interval, Subscription, filter, take, forkJoin } from 'rxjs';
 import { SitesService, PendingDeployment } from '../../../../core/services/sites.service';
 import { NotificationService } from '../../../../core/services/notification.service';
 import { LoggerService } from '../../../../core/services/logger.service';
@@ -14,20 +14,15 @@ import {
   LocalVideo,
   CloudVideo,
   LocalStorage,
-  ConfigDiff
+  ConfigDiff,
+  ConfigHistory,
+  SiteSponsor
 } from '../../../../core/models';
 import { VideoLibraryComponent, VideoItem, VideoDeployState } from '../video-library/video-library.component';
 import { RemotePreviewComponent } from '../remote-preview/remote-preview.component';
 import { VideoUploadZoneComponent, UploadedVideo } from '../video-upload-zone/video-upload-zone.component';
+import { LoopManagerComponent } from '../loop-manager/loop-manager.component';
 import { TranslateModule } from '@ngx-translate/core';
-
-interface SponsorVideo {
-  name: string;
-  path: string;
-  type: string;
-  owner?: 'club' | 'neopro';
-  locked?: boolean;
-}
 
 /**
  * Interface unifiée pour les vidéos dans les dropdowns
@@ -62,7 +57,7 @@ interface HumanReadableDiff {
 @Component({
   selector: 'app-site-content-tab',
   standalone: true,
-  imports: [CommonModule, FormsModule, VideoLibraryComponent, RemotePreviewComponent, VideoUploadZoneComponent, TranslateModule],
+  imports: [CommonModule, FormsModule, VideoLibraryComponent, RemotePreviewComponent, VideoUploadZoneComponent, LoopManagerComponent, TranslateModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="content-tab">
@@ -177,8 +172,54 @@ interface HumanReadableDiff {
         </div>
       </div>
 
+      <!-- Bandeau de santé configuration -->
+      <div class="config-health-bar" *ngIf="config">
+        <a class="health-step" (click)="scrollToSection('library')" [class.ok]="totalVideoCount > 0"
+           title="Nombre total de vidéos disponibles (Pi + Cloud)">
+          <span class="health-icon">📚</span>
+          <span class="health-label">Vidéos</span>
+          <span class="health-value">{{ totalVideoCount }}</span>
+        </a>
+        <span class="health-arrow">→</span>
+        <a class="health-step" (click)="scrollToSection('loops')" [class.ok]="hasPhaseLoops()" [class.warn]="!hasPhaseLoops() && (config.sponsors?.length ?? 0) > 0"
+           title="Les boucles par phase (avant-match/match/après-match) activent le tracking analytics. La boucle par défaut ne génère pas de données.">
+          <span class="health-icon">🔄</span>
+          <span class="health-label">Boucles</span>
+          <span class="health-value" *ngIf="hasPhaseLoops()">3 phases ✅</span>
+          <span class="health-value warn" *ngIf="!hasPhaseLoops()">⚠️ défaut</span>
+        </a>
+        <span class="health-arrow">→</span>
+        <a class="health-step" (click)="scrollToSection('remote')" [class.ok]="getAssignedCategoryCount() > 0"
+           title="Catégories assignées aux phases de la télécommande">
+          <span class="health-icon">🎮</span>
+          <span class="health-label">Télécommande</span>
+          <span class="health-value">{{ getAssignedCategoryCount() }} catég.</span>
+        </a>
+        <span class="health-arrow">→</span>
+        <a class="health-step" (click)="scrollToSection('analytics')" [class.ok]="getUnmappedAnalyticsCount() === 0" [class.warn]="getUnmappedAnalyticsCount() > 0"
+           title="Chaque catégorie doit être mappée à un type analytics (sponsor, jingle, ambiance) pour apparaître dans les rapports">
+          <span class="health-icon">📊</span>
+          <span class="health-label">Analytics</span>
+          <span class="health-value" *ngIf="getUnmappedAnalyticsCount() === 0">✅</span>
+          <span class="health-value warn" *ngIf="getUnmappedAnalyticsCount() > 0">⚠️ {{ getUnmappedAnalyticsCount() }} non mappés</span>
+        </a>
+      </div>
+
+      <!-- Compteurs d'impact -->
+      <div class="impact-counters" *ngIf="config && (getTrackedVideoCount() > 0 || getFallbackVideoCount() > 0)">
+        <span class="impact-tracked" *ngIf="getTrackedVideoCount() > 0"
+              title="Vidéos dans les boucles par phase — génèrent des impressions analytics">
+          ✅ {{ getTrackedVideoCount() }} vidéo(s) trackée(s)
+        </span>
+        <span class="impact-separator" *ngIf="getTrackedVideoCount() > 0 && getFallbackVideoCount() > 0">·</span>
+        <span class="impact-fallback" *ngIf="getFallbackVideoCount() > 0"
+              title="Vidéos dans la boucle par défaut uniquement — aucune donnée analytics générée">
+          ⚠️ {{ getFallbackVideoCount() }} en fallback non tracké
+        </span>
+      </div>
+
       <!-- Bibliothèque Vidéo -->
-      <div class="section">
+      <div class="section" id="section-library">
         <app-video-library
           [videos]="localVideos"
           [cloudVideos]="cloudVideos"
@@ -193,75 +234,6 @@ interface HumanReadableDiff {
           (videoDeploy)="onVideoDeploy($event)"
           (videoDelete)="onVideoDelete($event)"
         ></app-video-library>
-      </div>
-
-      <!-- Aperçu télécommande -->
-      <div class="section">
-        <app-remote-preview
-          [config]="config"
-          [localVideos]="localVideos"
-        ></app-remote-preview>
-      </div>
-
-      <!-- Boucle par défaut -->
-      <div class="section card">
-        <div class="section-header">
-          <h4>
-            <span class="section-icon">🔄</span>
-            Boucle par défaut
-          </h4>
-          <button class="btn btn-sm btn-secondary" (click)="addSponsor()">+ Ajouter</button>
-        </div>
-        <p class="section-desc">
-          Vidéos diffusées automatiquement quand aucune vidéo n'est sélectionnée.
-          Utilisée par défaut pour toutes les phases sans boucle personnalisée.
-        </p>
-
-        <div class="sponsors-list" *ngIf="config.sponsors && config.sponsors.length > 0">
-          <div class="sponsor-item" *ngFor="let sponsor of config.sponsors; let i = index" [class.neopro]="sponsor.owner === 'neopro'" [class.has-error]="!sponsor.path">
-            <span class="sponsor-order">{{ i + 1 }}</span>
-            <div class="sponsor-content">
-              <input
-                type="text"
-                [(ngModel)]="sponsor.name"
-                (ngModelChange)="markDirty()"
-                placeholder="Nom"
-                class="sponsor-name-input"
-              />
-              <select
-                [(ngModel)]="sponsor.path"
-                (ngModelChange)="markDirty()"
-                class="video-select"
-                [class.input-error]="!sponsor.path"
-                [class.has-cloud-video]="isCloudVideoPath(sponsor.path)"
-              >
-                <option value="">-- Sélectionner --</option>
-                <optgroup *ngFor="let group of videoOptionGroups; trackBy: trackByGroupKey" [label]="group.icon + ' ' + group.label">
-                  <option *ngFor="let v of group.videos; trackBy: trackByVideoPath" [value]="v.path">
-                    {{ v.displayName }}{{ v.isOnPi ? '' : ' ⏳' }}
-                  </option>
-                </optgroup>
-              </select>
-              <span class="cloud-hint" *ngIf="isCloudVideoPath(sponsor.path)">⏳ Sera déployée</span>
-              <span class="error-hint" *ngIf="!sponsor.path">Vidéo requise</span>
-            </div>
-            <div class="sponsor-owner">
-              <label class="owner-radio">
-                <input type="radio" [name]="'owner-' + i" [(ngModel)]="sponsor.owner" value="club" (ngModelChange)="markDirty()"/>
-                <span class="owner-label club">Club</span>
-              </label>
-              <label class="owner-radio">
-                <input type="radio" [name]="'owner-' + i" [(ngModel)]="sponsor.owner" value="neopro" (ngModelChange)="markDirty()"/>
-                <span class="owner-label neopro">NEOPRO</span>
-              </label>
-            </div>
-            <button class="btn-remove" (click)="removeSponsor(i)">×</button>
-          </div>
-        </div>
-        <div class="empty-state" *ngIf="!config.sponsors || config.sponsors.length === 0">
-          <p>Aucune vidéo dans la boucle par défaut</p>
-          <button class="btn btn-primary btn-sm" (click)="addSponsor()">Ajouter une vidéo</button>
-        </div>
       </div>
 
       <!-- Catégories -->
@@ -394,8 +366,21 @@ interface HumanReadableDiff {
         </div>
       </div>
 
+      <!-- Boucles Vidéo (défaut + par phase) -->
+      <div class="section" id="section-loops">
+        <app-loop-manager
+          [config]="config"
+          [videoOptionGroups]="videoOptionGroups"
+          [cloudVideoPaths]="cloudVideoPaths"
+          [localVideos]="localVideos"
+          [videoDurations]="videoDurations"
+          [siteSponsors]="siteSponsors"
+          (configChanged)="markDirty()"
+        ></app-loop-manager>
+      </div>
+
       <!-- Organisation Télécommande -->
-      <div class="section card">
+      <div class="section card" id="section-remote">
         <div class="section-header">
           <h4>
             <span class="section-icon">📱</span>
@@ -432,74 +417,8 @@ interface HumanReadableDiff {
         </div>
       </div>
 
-      <!-- Boucles Vidéo par Phase -->
-      <div class="section card">
-        <div class="section-header">
-          <h4>
-            <span class="section-icon">🎬</span>
-            Boucles Vidéo par Phase
-          </h4>
-        </div>
-        <p class="section-desc">
-          Définir une boucle spécifique pour chaque phase (optionnel, sinon la boucle par défaut est utilisée)
-        </p>
-
-        <div class="phase-loops-grid">
-          <div class="phase-loop-card" *ngFor="let tc of getTimeCategories()">
-            <div class="phase-loop-header">
-              <span class="phase-loop-icon">{{ tc.icon }}</span>
-              <span class="phase-loop-name">{{ tc.name }}</span>
-              <span class="phase-loop-count">{{ getPhaseLoopVideoCount(tc.id) }} vidéo(s)</span>
-              <button class="btn-add-tiny" (click)="addPhaseLoopVideo(tc.id)">+ Ajouter</button>
-            </div>
-            <div class="phase-loop-content">
-              <div class="phase-loop-videos" *ngIf="getPhaseLoopVideos(tc.id).length > 0">
-                <div class="loop-video-item" *ngFor="let video of getPhaseLoopVideos(tc.id); let vidIndex = index">
-                  <span class="loop-video-order">{{ vidIndex + 1 }}</span>
-                  <input
-                    type="text"
-                    [value]="video.name"
-                    (input)="updatePhaseLoopVideo(tc.id, vidIndex, 'name', $any($event.target).value)"
-                    placeholder="Nom"
-                    class="loop-video-name-input"
-                  />
-                  <select
-                    class="loop-video-select"
-                    [ngModel]="video.path"
-                    (ngModelChange)="updatePhaseLoopVideo(tc.id, vidIndex, 'path', $event)"
-                    [class.has-cloud-video]="isCloudVideoPath(video.path)"
-                  >
-                    <option value="">-- Sélectionner --</option>
-                    <optgroup *ngFor="let group of videoOptionGroups; trackBy: trackByGroupKey" [label]="group.icon + ' ' + group.label">
-                      <option *ngFor="let v of group.videos; trackBy: trackByVideoPath" [value]="v.path">
-                        {{ v.displayName }}{{ v.isOnPi ? '' : ' ⏳' }}
-                      </option>
-                    </optgroup>
-                  </select>
-                  <span class="cloud-badge" *ngIf="isCloudVideoPath(video.path)" title="Sera déployée automatiquement">⏳</span>
-                  <button class="btn-remove-tiny" (click)="removePhaseLoopVideo(tc.id, vidIndex)">×</button>
-                </div>
-              </div>
-              <div class="phase-loop-empty" *ngIf="getPhaseLoopVideos(tc.id).length === 0">
-                <span class="loop-hint">→ Utilise la boucle par défaut ({{ config.sponsors.length }} vidéos)</span>
-              </div>
-              <div class="phase-loop-actions" *ngIf="config.sponsors.length > 0 && getPhaseLoopVideos(tc.id).length === 0">
-                <button class="btn btn-sm btn-secondary" (click)="copyDefaultLoopToPhase(tc.id)">
-                  Copier la boucle par défaut
-                </button>
-              </div>
-              <div class="phase-loop-actions" *ngIf="getPhaseLoopVideos(tc.id).length > 0">
-                <button class="btn btn-sm btn-secondary" (click)="clearPhaseLoop(tc.id)">
-                  Effacer (utiliser boucle par défaut)
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
       <!-- Catégories Analytics -->
-      <div class="section card">
+      <div class="section card" id="section-analytics">
         <div class="section-header">
           <h4>
             <span class="section-icon">📊</span>
@@ -531,6 +450,14 @@ interface HumanReadableDiff {
                 <option value="ambiance">Ambiance</option>
                 <option value="other">Autre</option>
               </select>
+              <button
+                class="btn-suggestion"
+                *ngIf="!getCategoryAnalyticsType(cat.id) && suggestAnalyticsType(cat.name)"
+                (click)="setCategoryAnalyticsType(cat.id, suggestAnalyticsType(cat.name))"
+                title="Suggestion basée sur le nom"
+              >
+                💡 {{ suggestAnalyticsType(cat.name) }}
+              </button>
             </div>
             <!-- Catégorie AVEC sous-catégories : mapping par sous-cat -->
             <ng-container *ngIf="cat.subCategories?.length">
@@ -551,12 +478,115 @@ interface HumanReadableDiff {
                   <option value="ambiance">Ambiance</option>
                   <option value="other">Autre</option>
                 </select>
+                <button
+                  class="btn-suggestion"
+                  *ngIf="!getCategoryAnalyticsType(subcat.id) && suggestAnalyticsType(subcat.name)"
+                  (click)="setCategoryAnalyticsType(subcat.id, suggestAnalyticsType(subcat.name))"
+                  title="Suggestion basée sur le nom"
+                >
+                  💡 {{ suggestAnalyticsType(subcat.name) }}
+                </button>
               </div>
             </ng-container>
           </ng-container>
         </div>
         <div class="empty-state small" *ngIf="!config.categories || config.categories.length === 0">
           <p>Créez d'abord des catégories pour configurer les analytics</p>
+        </div>
+      </div>
+
+      <!-- Historique des modifications -->
+      <div class="section card" id="section-history">
+        <div class="section-header clickable" (click)="toggleHistory()">
+          <h4>
+            <span class="section-icon">📜</span>
+            Historique des modifications
+            <span class="history-count" *ngIf="configHistory.length > 0">({{ configHistoryTotal }})</span>
+          </h4>
+          <span class="expand-icon">{{ showHistory ? '▼' : '▶' }}</span>
+        </div>
+
+        <div class="history-content" *ngIf="showHistory">
+          <div class="loading-inline" *ngIf="loadingHistory">
+            <div class="spinner-small"></div>
+            <span>Chargement de l'historique...</span>
+          </div>
+
+          <div class="history-list" *ngIf="!loadingHistory && configHistory.length > 0">
+            <div class="history-item" *ngFor="let entry of configHistory; let entryIdx = index">
+              <div class="history-header-row">
+                <div class="history-meta">
+                  <span class="history-date">{{ entry.deployed_at | date:'dd/MM/yyyy HH:mm' }}</span>
+                  <span class="history-author" *ngIf="entry.deployed_by_name || entry.deployed_by_email">
+                    par {{ entry.deployed_by_name || entry.deployed_by_email }}
+                  </span>
+                </div>
+                <div class="history-entry-actions">
+                  <button
+                    class="btn-history-detail"
+                    *ngIf="entry.changes_summary && entry.changes_summary.length > 0"
+                    (click)="toggleHistoryDetail(entryIdx)"
+                    title="Voir le détail des changements"
+                  >
+                    {{ expandedHistoryItems[entryIdx] ? '▼' : '▶' }} Détails
+                  </button>
+                  <button
+                    class="btn-history-restore"
+                    (click)="restoreVersion(entry)"
+                    title="Restaurer cette version"
+                  >
+                    ↩ Restaurer
+                  </button>
+                </div>
+              </div>
+              <div class="history-comment" *ngIf="entry.comment">{{ entry.comment }}</div>
+              <div class="history-changes" *ngIf="entry.changes_summary && entry.changes_summary.length > 0">
+                <span class="history-changes-count">{{ entry.changes_summary!.length }} changement(s)</span>
+                <span class="history-change-pills">
+                  <span class="change-pill added" *ngIf="countChangeType(entry.changes_summary!, 'added') as n">+{{ n }}</span>
+                  <span class="change-pill changed" *ngIf="countChangeType(entry.changes_summary!, 'changed') as n">~{{ n }}</span>
+                  <span class="change-pill removed" *ngIf="countChangeType(entry.changes_summary!, 'removed') as n">-{{ n }}</span>
+                </span>
+              </div>
+
+              <!-- Détail dépliable des changements -->
+              <div class="history-detail" *ngIf="expandedHistoryItems[entryIdx] && entry.changes_summary">
+                <div
+                  class="history-diff-row"
+                  *ngFor="let diff of entry.changes_summary"
+                  [class]="'diff-type-' + diff.type"
+                >
+                  <span class="diff-type-badge">
+                    <span *ngIf="diff.type === 'added'">+</span>
+                    <span *ngIf="diff.type === 'changed'">~</span>
+                    <span *ngIf="diff.type === 'removed'">−</span>
+                  </span>
+                  <span class="diff-path">{{ diff.path || diff.field }}</span>
+                  <span class="diff-values" *ngIf="diff.type === 'changed'">
+                    <span class="diff-old">{{ formatDiffValue(diff.oldValue) }}</span>
+                    →
+                    <span class="diff-new">{{ formatDiffValue(diff.newValue) }}</span>
+                  </span>
+                  <span class="diff-values" *ngIf="diff.type === 'added'">
+                    <span class="diff-new">{{ formatDiffValue(diff.newValue) }}</span>
+                  </span>
+                  <span class="diff-values" *ngIf="diff.type === 'removed'">
+                    <span class="diff-old">{{ formatDiffValue(diff.oldValue) }}</span>
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="empty-state small" *ngIf="!loadingHistory && configHistory.length === 0">
+            <p>Aucun historique disponible</p>
+          </div>
+
+          <div class="history-actions" *ngIf="!loadingHistory && configHistoryTotal > configHistory.length">
+            <button class="btn btn-sm btn-outline" (click)="loadMoreHistory()">
+              Voir plus ({{ configHistoryTotal - configHistory.length }} restant(s))
+            </button>
+          </div>
         </div>
       </div>
 
@@ -580,6 +610,13 @@ interface HumanReadableDiff {
         <button class="status-close" *ngIf="deployStatus !== 'sending' && deployStatus !== 'pending'" (click)="resetDeployStatus()">×</button>
       </div>
 
+      <!-- Warnings de validation (non bloquants) -->
+      <div class="validation-warnings" *ngIf="isDirty && validationWarnings.length > 0">
+        <div class="validation-warning" *ngFor="let w of validationWarnings">
+          <span>⚠️</span> {{ w }}
+        </div>
+      </div>
+
       <div class="actions-bar" *ngIf="isDirty" [class.has-errors]="validationErrors.length > 0">
         <div class="actions-status">
           <span class="dirty-indicator">⚠️ Modifications non enregistrées</span>
@@ -592,6 +629,71 @@ interface HumanReadableDiff {
           <button class="btn btn-primary" (click)="previewDeploy()" [disabled]="deploying || validationErrors.length > 0">
             {{ deploying ? ('common.deploying' | translate) : (isConnected ? ('common.deploy' | translate) : ('common.deployQueued' | translate)) }}
           </button>
+        </div>
+      </div>
+
+      <!-- FAB Preview Télécommande -->
+      <button
+        class="fab-preview"
+        *ngIf="config"
+        (click)="showRemotePreview = !showRemotePreview"
+        [class.active]="showRemotePreview"
+        title="Aperçu télécommande"
+      >
+        📱
+      </button>
+
+      <!-- Panneau Preview sticky -->
+      <div class="preview-panel" *ngIf="showRemotePreview" (click)="showRemotePreview = false">
+        <div class="preview-panel-content" (click)="$event.stopPropagation()">
+          <div class="preview-panel-header">
+            <h4>Aperçu Télécommande</h4>
+            <button class="preview-close" (click)="showRemotePreview = false">×</button>
+          </div>
+          <app-remote-preview
+            [config]="config"
+            [localVideos]="localVideos"
+          ></app-remote-preview>
+        </div>
+      </div>
+
+      <!-- Delete Video Modal -->
+      <div class="modal" *ngIf="showDeleteModal" (click)="showDeleteModal = false">
+        <div class="modal-content modal-delete" (click)="$event.stopPropagation()">
+          <div class="modal-header">
+            <h2>Supprimer une vidéo</h2>
+            <button class="modal-close" (click)="showDeleteModal = false">&times;</button>
+          </div>
+          <div class="modal-body">
+            <p class="delete-filename">"{{ deleteTarget?.displayName || deleteTarget?.filename }}"</p>
+
+            <!-- Only on Pi -->
+            <div *ngIf="deleteCanPi && !deleteCanCloud">
+              <p class="delete-description">Cette vidéo est uniquement sur le <strong>Pi</strong>.</p>
+            </div>
+
+            <!-- Only in cloud -->
+            <div *ngIf="!deleteCanPi && deleteCanCloud">
+              <p class="delete-description">Cette vidéo est uniquement dans le <strong>cloud</strong>.</p>
+            </div>
+
+            <!-- On both -->
+            <div *ngIf="deleteCanPi && deleteCanCloud" class="delete-choices">
+              <p class="delete-description">Cette vidéo est sur le <strong>Pi</strong> et dans le <strong>cloud</strong>. Que souhaitez-vous supprimer ?</p>
+            </div>
+          </div>
+          <div class="modal-footer delete-actions">
+            <button class="btn btn-secondary" (click)="showDeleteModal = false">Annuler</button>
+            <button *ngIf="deleteCanPi" class="btn btn-delete-pi" (click)="executeDelete('pi')">
+              Supprimer du Pi
+            </button>
+            <button *ngIf="deleteCanCloud" class="btn btn-delete-cloud" (click)="executeDelete('cloud')">
+              Supprimer du cloud
+            </button>
+            <button *ngIf="deleteCanPi && deleteCanCloud" class="btn btn-delete-both" (click)="executeDelete('both')">
+              Supprimer des deux
+            </button>
+          </div>
         </div>
       </div>
 
@@ -1628,6 +1730,72 @@ interface HumanReadableDiff {
       background: #f8fafc;
     }
 
+    /* Delete Modal */
+    .modal-delete {
+      max-width: 480px;
+    }
+
+    .delete-filename {
+      font-weight: 600;
+      font-size: 1.05rem;
+      color: #1e293b;
+      margin: 0 0 0.75rem;
+      word-break: break-all;
+    }
+
+    .delete-description {
+      color: #64748b;
+      margin: 0;
+      line-height: 1.5;
+    }
+
+    .delete-actions {
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+
+    .btn-delete-pi {
+      background: #f59e0b;
+      color: white;
+      border: none;
+      padding: 0.5rem 1rem;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 500;
+    }
+
+    .btn-delete-pi:hover {
+      background: #d97706;
+    }
+
+    .btn-delete-cloud {
+      background: #3b82f6;
+      color: white;
+      border: none;
+      padding: 0.5rem 1rem;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 500;
+    }
+
+    .btn-delete-cloud:hover {
+      background: #2563eb;
+    }
+
+    .btn-delete-both {
+      background: #ef4444;
+      color: white;
+      border: none;
+      padding: 0.5rem 1rem;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 500;
+    }
+
+    .btn-delete-both:hover {
+      background: #dc2626;
+    }
+
     /* Diff Modal */
     .modal {
       position: fixed;
@@ -2420,6 +2588,436 @@ interface HumanReadableDiff {
       opacity: 0.5;
       cursor: not-allowed;
     }
+
+    /* Health bar */
+    .config-health-bar {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.75rem 1rem;
+      margin-bottom: 1rem;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+    }
+
+    .health-step {
+      display: flex;
+      align-items: center;
+      gap: 0.375rem;
+      padding: 0.375rem 0.625rem;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.15s;
+      text-decoration: none;
+      color: #64748b;
+      font-size: 0.8125rem;
+    }
+
+    .health-step:hover {
+      background: #e2e8f0;
+      color: #334155;
+    }
+
+    .health-step.ok {
+      color: #15803d;
+    }
+
+    .health-step.warn {
+      color: #92400e;
+      background: #fef3c7;
+    }
+
+    .health-icon {
+      font-size: 1rem;
+    }
+
+    .health-label {
+      font-weight: 500;
+    }
+
+    .health-value {
+      font-size: 0.75rem;
+    }
+
+    .health-value.warn {
+      font-weight: 600;
+    }
+
+    .health-arrow {
+      color: #cbd5e1;
+      font-size: 0.75rem;
+    }
+
+    /* Validation warnings */
+    .validation-warnings {
+      margin-bottom: 0.75rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.375rem;
+    }
+
+    .validation-warning {
+      display: flex;
+      align-items: center;
+      gap: 0.375rem;
+      padding: 0.5rem 0.75rem;
+      background: #fefce8;
+      border: 1px solid #fde68a;
+      border-radius: 6px;
+      font-size: 0.8125rem;
+      color: #92400e;
+    }
+
+    /* Impact counters */
+    .impact-counters {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.375rem 1rem;
+      font-size: 0.8125rem;
+      color: #64748b;
+      background: #f8fafc;
+      border-radius: 8px;
+      border: 1px solid #e2e8f0;
+    }
+
+    .impact-tracked {
+      color: #166534;
+    }
+
+    .impact-separator {
+      color: #cbd5e1;
+    }
+
+    .impact-fallback {
+      color: #92400e;
+    }
+
+    /* Auto-suggestion analytics */
+    .btn-suggestion {
+      border: none;
+      background: #dbeafe;
+      color: #1e40af;
+      font-size: 0.6875rem;
+      padding: 0.125rem 0.5rem;
+      border-radius: 4px;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background 0.15s;
+    }
+
+    .btn-suggestion:hover {
+      background: #bfdbfe;
+    }
+
+    /* FAB Preview Télécommande */
+    .fab-preview {
+      position: fixed;
+      bottom: 2rem;
+      right: 2rem;
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      border: none;
+      background: #3b82f6;
+      color: white;
+      font-size: 1.25rem;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      z-index: 100;
+      transition: all 0.2s;
+    }
+
+    .fab-preview:hover {
+      background: #2563eb;
+      transform: scale(1.05);
+    }
+
+    .fab-preview.active {
+      background: #1e40af;
+    }
+
+    /* Preview Panel overlay */
+    .preview-panel {
+      position: fixed;
+      top: 0;
+      right: 0;
+      bottom: 0;
+      left: 0;
+      background: rgba(0, 0, 0, 0.3);
+      z-index: 200;
+      display: flex;
+      justify-content: flex-end;
+    }
+
+    .preview-panel-content {
+      width: 380px;
+      max-width: 90vw;
+      background: white;
+      box-shadow: -4px 0 20px rgba(0, 0, 0, 0.1);
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+    }
+
+    .preview-panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem 1.25rem;
+      border-bottom: 1px solid #e2e8f0;
+    }
+
+    .preview-panel-header h4 {
+      margin: 0;
+      font-size: 1rem;
+      font-weight: 600;
+    }
+
+    .preview-close {
+      border: none;
+      background: none;
+      font-size: 1.5rem;
+      cursor: pointer;
+      color: #64748b;
+      padding: 0;
+    }
+
+    .preview-close:hover {
+      color: #334155;
+    }
+
+    /* Historique des modifications */
+    .section-header.clickable {
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .section-header.clickable:hover {
+      opacity: 0.85;
+    }
+
+    .history-count {
+      font-size: 0.75rem;
+      color: #64748b;
+      font-weight: 400;
+    }
+
+    .history-content {
+      margin-top: 0.75rem;
+    }
+
+    .history-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .history-item {
+      padding: 0.75rem;
+      background: #f8fafc;
+      border-radius: 8px;
+      border: 1px solid #e2e8f0;
+      border-left: 3px solid #3b82f6;
+    }
+
+    .history-meta {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.8125rem;
+    }
+
+    .history-date {
+      font-weight: 600;
+      color: #334155;
+    }
+
+    .history-author {
+      color: #64748b;
+    }
+
+    .history-comment {
+      margin-top: 0.25rem;
+      font-size: 0.8125rem;
+      color: #475569;
+      font-style: italic;
+    }
+
+    .history-changes {
+      margin-top: 0.375rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .history-changes-count {
+      font-size: 0.75rem;
+      color: #64748b;
+    }
+
+    .history-change-pills {
+      display: flex;
+      gap: 0.25rem;
+    }
+
+    .change-pill {
+      font-size: 0.625rem;
+      font-weight: 600;
+      padding: 0.0625rem 0.375rem;
+      border-radius: 4px;
+    }
+
+    .change-pill.added {
+      background: #dcfce7;
+      color: #166534;
+    }
+
+    .change-pill.changed {
+      background: #fef3c7;
+      color: #92400e;
+    }
+
+    .change-pill.removed {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+
+    .history-header-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+    }
+
+    .history-entry-actions {
+      display: flex;
+      gap: 0.375rem;
+      flex-shrink: 0;
+    }
+
+    .btn-history-detail {
+      border: 1px solid #e2e8f0;
+      background: white;
+      color: #64748b;
+      font-size: 0.6875rem;
+      padding: 0.125rem 0.5rem;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .btn-history-detail:hover {
+      background: #f1f5f9;
+      color: #334155;
+    }
+
+    .btn-history-restore {
+      border: 1px solid #dbeafe;
+      background: #eff6ff;
+      color: #1e40af;
+      font-size: 0.6875rem;
+      padding: 0.125rem 0.5rem;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .btn-history-restore:hover {
+      background: #dbeafe;
+    }
+
+    /* History detail */
+    .history-detail {
+      margin-top: 0.5rem;
+      padding: 0.5rem;
+      background: white;
+      border-radius: 6px;
+      border: 1px solid #e2e8f0;
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+
+    .history-diff-row {
+      display: flex;
+      align-items: baseline;
+      gap: 0.5rem;
+      padding: 0.25rem 0.375rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-family: ui-monospace, monospace;
+    }
+
+    .history-diff-row.diff-type-added {
+      background: #f0fdf4;
+    }
+
+    .history-diff-row.diff-type-changed {
+      background: #fffbeb;
+    }
+
+    .history-diff-row.diff-type-removed {
+      background: #fef2f2;
+    }
+
+    .diff-type-badge {
+      width: 16px;
+      height: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 3px;
+      font-weight: 700;
+      font-size: 0.6875rem;
+      flex-shrink: 0;
+    }
+
+    .diff-type-added .diff-type-badge {
+      background: #dcfce7;
+      color: #166534;
+    }
+
+    .diff-type-changed .diff-type-badge {
+      background: #fef3c7;
+      color: #92400e;
+    }
+
+    .diff-type-removed .diff-type-badge {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+
+    .diff-path {
+      color: #475569;
+      word-break: break-all;
+      min-width: 0;
+    }
+
+    .diff-values {
+      color: #64748b;
+      margin-left: auto;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 300px;
+    }
+
+    .diff-old {
+      color: #991b1b;
+      text-decoration: line-through;
+    }
+
+    .diff-new {
+      color: #166534;
+    }
+
+    .history-actions {
+      margin-top: 0.75rem;
+      text-align: center;
+    }
   `]
 })
 export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
@@ -2445,6 +3043,12 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
   lastSyncTime: Date | null = null;
   private refreshCommandId: string | null = null;
   private refreshPollSubscription: Subscription | null = null;
+
+  // Delete modal
+  showDeleteModal: boolean = false;
+  deleteTarget: VideoItem | null = null;
+  deleteCanPi: boolean = false;
+  deleteCanCloud: boolean = false;
 
   // Diff modal
   showDiffModal: boolean = false;
@@ -2479,6 +3083,25 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
 
   // Video relevance tracking for filtered view in video-library
   configVideoPaths: Set<string> = new Set();
+
+  // Cloud video paths (not yet on Pi) — passed to loop-manager
+  cloudVideoPaths: Set<string> = new Set();
+
+  // Video durations lookup (path → seconds) — passed to loop-manager
+  videoDurations: Map<string, number> = new Map();
+
+  // Site sponsors — passed to loop-manager for sponsor_id dropdown
+  siteSponsors: SiteSponsor[] = [];
+
+  // Remote preview panel
+  showRemotePreview = false;
+
+  // Config history
+  configHistory: ConfigHistory[] = [];
+  configHistoryTotal = 0;
+  loadingHistory = false;
+  showHistory = false;
+  expandedHistoryItems: Record<number, boolean> = {};
 
   /**
    * Getter qui calcule les IDs des vidéos avec déploiement en cours
@@ -2858,6 +3481,160 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
     return errors;
   }
 
+  /**
+   * Warnings de validation non bloquants (affichés avant le bouton déployer)
+   */
+  get validationWarnings(): string[] {
+    if (!this.config) return [];
+    const warnings: string[] = [];
+
+    // Vidéos dans la boucle par défaut sans boucles par phase
+    if (this.config.sponsors?.length > 0 && !this.hasPhaseLoops()) {
+      warnings.push(`${this.config.sponsors.length} vidéo(s) dans la boucle par défaut sans tracking analytics`);
+    }
+
+    // Catégories assignées à une phase mais vides
+    const phases = this.config.timeCategories || [];
+    for (const tc of phases) {
+      for (const catId of tc.categoryIds || []) {
+        const cat = this.config.categories?.find(c => c.id === catId);
+        if (cat && (!cat.videos || cat.videos.length === 0) && (!cat.subCategories || cat.subCategories.length === 0)) {
+          warnings.push(`Catégorie "${cat.name}" assignée à ${tc.name} mais vide`);
+        }
+      }
+    }
+
+    // Catégories analytics non mappées
+    const unmapped = this.getUnmappedAnalyticsCount();
+    if (unmapped > 0) {
+      warnings.push(`${unmapped} catégorie(s) non mappée(s) en analytics`);
+    }
+
+    return warnings;
+  }
+
+  // === Health bar helpers ===
+
+  get totalVideoCount(): number {
+    return this.localVideos.length + this.cloudVideos.length;
+  }
+
+  scrollToSection(sectionId: string): void {
+    const el = document.getElementById('section-' + sectionId);
+    el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  hasPhaseLoops(): boolean {
+    if (!this.config) return false;
+    const phases = this.config.timeCategories || [];
+    return phases.some(tc => tc.loopVideos && tc.loopVideos.length > 0);
+  }
+
+  getAssignedCategoryCount(): number {
+    if (!this.config) return 0;
+    const phases = this.config.timeCategories || [];
+    const allIds = new Set<string>();
+    phases.forEach(tc => tc.categoryIds?.forEach(id => allIds.add(id)));
+    return allIds.size;
+  }
+
+  getUnmappedAnalyticsCount(): number {
+    if (!this.config?.categories) return 0;
+    let unmapped = 0;
+    for (const cat of this.config.categories) {
+      if (cat.subCategories?.length) {
+        for (const sub of cat.subCategories) {
+          if (!this.config.categoryMappings?.[sub.id]) unmapped++;
+        }
+      } else {
+        if (!this.config.categoryMappings?.[cat.id]) unmapped++;
+      }
+    }
+    return unmapped;
+  }
+
+  // === Impact counters ===
+
+  /**
+   * Nombre de vidéos dans les boucles par phase (trackées en analytics)
+   */
+  getTrackedVideoCount(): number {
+    if (!this.config) return 0;
+    const phases = this.config.timeCategories || [];
+    return phases.reduce((sum, tc) => sum + (tc.loopVideos?.length || 0), 0);
+  }
+
+  /**
+   * Nombre de vidéos dans la boucle par défaut (non trackées)
+   */
+  getFallbackVideoCount(): number {
+    if (!this.config) return 0;
+    return this.config.sponsors?.length || 0;
+  }
+
+  // === Config history ===
+
+  toggleHistory(): void {
+    this.showHistory = !this.showHistory;
+    if (this.showHistory && this.configHistory.length === 0) {
+      this.loadConfigHistory();
+    }
+  }
+
+  loadConfigHistory(): void {
+    this.loadingHistory = true;
+    this.cdr.markForCheck();
+    this.sitesService.getConfigHistory(this.siteId, 10, 0).subscribe({
+      next: (response) => {
+        this.configHistory = response.history || [];
+        this.configHistoryTotal = response.total || 0;
+        this.loadingHistory = false;
+        this.cdr.markForCheck();
+      },
+      error: () => {
+        this.configHistory = [];
+        this.configHistoryTotal = 0;
+        this.loadingHistory = false;
+        this.cdr.markForCheck();
+      }
+    });
+  }
+
+  loadMoreHistory(): void {
+    const offset = this.configHistory.length;
+    this.loadingHistory = true;
+    this.cdr.markForCheck();
+    this.sitesService.getConfigHistory(this.siteId, 10, offset).subscribe({
+      next: (response) => {
+        this.configHistory = [...this.configHistory, ...(response.history || [])];
+        this.configHistoryTotal = response.total || 0;
+        this.loadingHistory = false;
+        this.cdr.markForCheck();
+      },
+      error: () => {
+        this.loadingHistory = false;
+        this.cdr.markForCheck();
+      }
+    });
+  }
+
+  countChangeType(changes: ConfigDiff[], type: string): number {
+    return changes.filter(c => c.type === type).length;
+  }
+
+  toggleHistoryDetail(index: number): void {
+    this.expandedHistoryItems[index] = !this.expandedHistoryItems[index];
+    this.cdr.markForCheck();
+  }
+
+  restoreVersion(entry: ConfigHistory): void {
+    if (!entry.configuration) return;
+    this.config = JSON.parse(JSON.stringify(entry.configuration));
+    this.markDirty();
+    this.notificationService.success('Configuration restaurée — déployez pour appliquer');
+    this.showHistory = false;
+  }
+
   constructor(
     private sitesService: SitesService,
     private notificationService: NotificationService,
@@ -2870,12 +3647,14 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
   ngOnInit(): void {
     this.loadContent();
     this.loadDraft();
+    this.loadSiteSponsors();
   }
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['siteId'] && !changes['siteId'].firstChange) {
       this.loadContent();
       this.loadDraft();
+      this.loadSiteSponsors();
     }
   }
 
@@ -2993,6 +3772,24 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
           // Ignorer les erreurs de polling, on réessaie
         }
       });
+    });
+  }
+
+  /**
+   * Charge les sponsors du site pour le dropdown dans le loop manager
+   */
+  private loadSiteSponsors(): void {
+    if (!this.siteId) return;
+    this.sitesService.listSiteSponsors(this.siteId).subscribe({
+      next: (response) => {
+        this.siteSponsors = (response.sponsors || []).filter(s => s.status === 'active');
+        this.cdr.markForCheck();
+      },
+      error: () => {
+        // Non-bloquant : le dropdown sponsor reste vide
+        this.siteSponsors = [];
+        this.cdr.markForCheck();
+      }
     });
   }
 
@@ -3310,44 +4107,65 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
   }
 
   onVideoDelete(video: VideoItem): void {
-    const location = video.isOnPi ? 'du Pi' : 'du cloud';
-    if (confirm(`Supprimer "${video.filename}" ${location} ?`)) {
-      if (video.isOnPi && video.source === 'local') {
-        // Delete from Pi via command
-        this.sitesService.sendCommand(this.siteId, 'delete_video', {
-          path: video.path,
-          filename: video.filename
-        }).subscribe({
-          next: () => {
-            this.notificationService.success(`"${video.filename}" supprimé du Pi`);
-            this.loadContent();
-          },
-          error: (error) => {
-            const message = ErrorExtractor.getMessage(error);
-            this.notificationService.error(`Erreur: ${message}`);
-          }
-        });
-      } else if (video.id) {
-        // Delete from cloud via API
-        this.notificationService.warning('Suppression cloud non implémentée');
-      }
+    this.deleteTarget = video;
+    this.deleteCanPi = video.isOnPi;
+    this.deleteCanCloud = !!video.id;
+    this.showDeleteModal = true;
+  }
+
+  executeDelete(choice: 'pi' | 'cloud' | 'both'): void {
+    const video = this.deleteTarget;
+    if (!video) return;
+    this.showDeleteModal = false;
+
+    // Use Pi filesystem category/subcategory when available, fall back to cloud metadata
+    const piCat = video.piCategory ?? video.category;
+    const piSubcat = video.piSubcategory ?? video.subcategory;
+    const deletePi$ = this.sitesService.sendCommand(this.siteId, 'delete_video', {
+      filename: video.filename,
+      category: piCat || undefined,
+      subcategory: piSubcat || undefined
+    });
+    const deleteCloud$ = this.sitesService.deleteCloudVideo(video.id!);
+
+    if (choice === 'both') {
+      forkJoin([deletePi$, deleteCloud$]).subscribe({
+        next: () => {
+          this.notificationService.success(`"${video.filename}" supprimé du Pi et du cloud`);
+          this.loadContent();
+        },
+        error: (error) => {
+          const message = ErrorExtractor.getMessage(error);
+          this.notificationService.error(`Erreur: ${message}`);
+        }
+      });
+    } else if (choice === 'pi') {
+      deletePi$.subscribe({
+        next: () => {
+          this.notificationService.success(`"${video.filename}" supprimé du Pi`);
+          this.loadContent();
+        },
+        error: (error) => {
+          const message = ErrorExtractor.getMessage(error);
+          this.notificationService.error(`Erreur: ${message}`);
+        }
+      });
+    } else {
+      deleteCloud$.subscribe({
+        next: () => {
+          this.notificationService.success(`"${video.filename}" supprimé du cloud`);
+          this.loadContent();
+        },
+        error: (error) => {
+          const message = ErrorExtractor.getMessage(error);
+          this.notificationService.error(`Erreur: ${message}`);
+        }
+      });
     }
   }
 
   onConfigChange(config: SiteConfiguration): void {
     this.config = config;
-    this.markDirty();
-  }
-
-  // Sponsors
-  addSponsor(): void {
-    if (!this.config.sponsors) this.config.sponsors = [];
-    this.config.sponsors.push({ name: '', path: '', type: 'video/mp4', owner: 'club' });
-    this.markDirty();
-  }
-
-  removeSponsor(index: number): void {
-    this.config.sponsors?.splice(index, 1);
     this.markDirty();
   }
 
@@ -3521,6 +4339,22 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
 
     // 5. Update cached array for template (prevents flickering)
     this.updateVideoOptionGroupsCache();
+
+    // 6. Build video durations lookup
+    this.videoDurations = new Map<string, number>();
+    for (const local of this.localVideos) {
+      if (local.duration && local.duration > 0) {
+        this.videoDurations.set(local.path, local.duration);
+      }
+    }
+    for (const cloud of this.cloudVideos) {
+      if (cloud.duration && cloud.duration > 0) {
+        const path = `cloud/${cloud.filename}`;
+        if (!this.videoDurations.has(path)) {
+          this.videoDurations.set(path, cloud.duration);
+        }
+      }
+    }
   }
 
   /**
@@ -3545,6 +4379,11 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
     }
 
     this.videoOptionGroups = groups;
+
+    // Build cloudVideoPaths (videos not yet on Pi)
+    this.cloudVideoPaths = new Set(
+      this.unifiedVideoOptions.filter(v => !v.isOnPi).map(v => v.path)
+    );
   }
 
   /**
@@ -3745,76 +4584,6 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
     this.markDirty();
   }
 
-  // Phase Loop Videos - Support N vidéos par phase
-  getPhaseLoopVideos(timeCategoryId: string): SponsorVideo[] {
-    const tc = this.config.timeCategories?.find(t => t.id === timeCategoryId);
-    return tc?.loopVideos || [];
-  }
-
-  getPhaseLoopVideoCount(timeCategoryId: string): number {
-    return this.getPhaseLoopVideos(timeCategoryId).length;
-  }
-
-  addPhaseLoopVideo(timeCategoryId: string): void {
-    this.ensureTimeCategories();
-    const tc = this.config.timeCategories!.find(t => t.id === timeCategoryId);
-    if (!tc) return;
-
-    if (!tc.loopVideos) {
-      tc.loopVideos = [];
-    }
-    tc.loopVideos.push({
-      name: '',
-      path: '',
-      type: 'video/mp4'
-    });
-    this.markDirty();
-  }
-
-  updatePhaseLoopVideo(timeCategoryId: string, vidIndex: number, field: 'name' | 'path', value: string): void {
-    const tc = this.config.timeCategories?.find(t => t.id === timeCategoryId);
-    if (!tc?.loopVideos?.[vidIndex]) return;
-
-    tc.loopVideos[vidIndex][field] = value;
-
-    // Si on change le path, auto-remplir le nom si vide
-    if (field === 'path' && value && !tc.loopVideos[vidIndex].name) {
-      const video = this.localVideos.find(v => v.path === value);
-      tc.loopVideos[vidIndex].name = video?.filename || value.split('/').pop() || 'Vidéo';
-    }
-
-    this.markDirty();
-  }
-
-  removePhaseLoopVideo(timeCategoryId: string, vidIndex: number): void {
-    const tc = this.config.timeCategories?.find(t => t.id === timeCategoryId);
-    if (!tc?.loopVideos) return;
-
-    tc.loopVideos.splice(vidIndex, 1);
-    this.markDirty();
-  }
-
-  copyDefaultLoopToPhase(timeCategoryId: string): void {
-    this.ensureTimeCategories();
-    const tc = this.config.timeCategories!.find(t => t.id === timeCategoryId);
-    if (!tc || !this.config.sponsors) return;
-
-    tc.loopVideos = this.config.sponsors.map(s => ({
-      name: s.name,
-      path: s.path,
-      type: s.type || 'video/mp4'
-    }));
-    this.markDirty();
-  }
-
-  clearPhaseLoop(timeCategoryId: string): void {
-    const tc = this.config.timeCategories?.find(t => t.id === timeCategoryId);
-    if (!tc) return;
-
-    tc.loopVideos = [];
-    this.markDirty();
-  }
-
   // Analytics Category Mappings
   getCategoryAnalyticsType(categoryId: string): string {
     return this.config.categoryMappings?.[categoryId] || '';
@@ -3832,6 +4601,22 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
     }
 
     this.markDirty();
+  }
+
+  /**
+   * Suggère un type analytics basé sur le nom de la catégorie
+   */
+  suggestAnalyticsType(categoryName: string): string {
+    if (!categoryName) return '';
+    const name = categoryName.toLowerCase().trim();
+    const sponsorKeywords = ['sponsor', 'partenaire', 'pub', 'annonce', 'focus partenaire', 'publicité'];
+    const jingleKeywords = ['jingle', 'intro', 'générique', 'transition', 'habillage'];
+    const ambianceKeywords = ['ambiance', 'animation', 'divertissement', 'musique', 'fond'];
+
+    if (sponsorKeywords.some(k => name.includes(k))) return 'sponsor';
+    if (jingleKeywords.some(k => name.includes(k))) return 'jingle';
+    if (ambianceKeywords.some(k => name.includes(k))) return 'ambiance';
+    return '';
   }
 
   // Actions

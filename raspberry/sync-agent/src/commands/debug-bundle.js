@@ -80,16 +80,31 @@ async function exportDebugBundle() {
     bundle.sections.services = { error: error.message };
   }
 
-  // 6. Logs récents (dernières 100 lignes de chaque service)
+  // 6. Logs récents (24h, cap par service pour limiter la taille)
+  //    Services verbeux (heartbeat 30s) → dernières 500 lignes (~4-6h)
+  //    Services calmes → 24h complet
   try {
-    const services = ['neopro-sync-agent', 'neopro-app', 'neopro-kiosk', 'neopro-admin', 'nginx', 'hostapd'];
+    const verboseServices = ['neopro-sync-agent', 'neopro-app'];
+    const quietServices = ['neopro-kiosk', 'neopro-admin', 'nginx', 'hostapd'];
     bundle.sections.logs = {};
 
-    for (const service of services) {
+    for (const service of verboseServices) {
       try {
         const { stdout } = await execAsync(
-          `sudo journalctl -u ${service} -n 100 --no-pager -q 2>/dev/null || echo "No logs available"`,
-          { timeout: 10000 }
+          `sudo journalctl -u ${service} --since "24 hours ago" --no-pager -q 2>/dev/null | tail -500 || echo "No logs available"`,
+          { timeout: 15000 }
+        );
+        bundle.sections.logs[service] = stdout.trim();
+      } catch {
+        bundle.sections.logs[service] = 'Unable to retrieve logs';
+      }
+    }
+
+    for (const service of quietServices) {
+      try {
+        const { stdout } = await execAsync(
+          `sudo journalctl -u ${service} --since "24 hours ago" --no-pager -q 2>/dev/null || echo "No logs available"`,
+          { timeout: 15000 }
         );
         bundle.sections.logs[service] = stdout.trim();
       } catch {
@@ -210,7 +225,35 @@ async function exportDebugBundle() {
     bundle.sections.bootConfig = { error: error.message };
   }
 
-  // 12. Video list summary
+  // 12. Transition metrics (read-only, no reset)
+  try {
+    const localSocket = require('../services/local-socket');
+    const transitionMetrics = await localSocket.request('get-transition-metrics-readonly', 2000);
+    bundle.sections.transitionMetrics = transitionMetrics || { note: 'No data available' };
+  } catch (error) {
+    bundle.sections.transitionMetrics = { error: error.message };
+  }
+
+  // 13. Kernel messages (USB disconnects, fs errors, OOM, etc.)
+  try {
+    const { stdout } = await execAsync(
+      'sudo dmesg --time-format iso 2>/dev/null | tail -200 || sudo dmesg | tail -200 || echo ""',
+      { timeout: 10000 }
+    );
+    bundle.sections.dmesg = stdout.trim();
+  } catch (error) {
+    bundle.sections.dmesg = { error: error.message };
+  }
+
+  // 14. USB devices (WiFi dongles, etc.)
+  try {
+    const { stdout } = await execAsync('lsusb 2>/dev/null || echo "lsusb not available"', { timeout: 5000 });
+    bundle.sections.usbDevices = stdout.trim();
+  } catch (error) {
+    bundle.sections.usbDevices = { error: error.message };
+  }
+
+  // 15. Video list summary
   try {
     const videosPath = config.paths.root + '/videos';
     if (await fs.pathExists(videosPath)) {

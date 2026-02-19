@@ -84,9 +84,24 @@ const DEFAULT_ALLOWED_COMMANDS = [
   'update_hotspot',
   'get_hotspot_config',
   'network_diagnostics',
-  'remote_shell', // Terminal distant
+  'remote_shell',
+  'get_health_status',
+  'run_diagnostics',
+  'export_debug_bundle',
+  'get_analytics_buffer_status',
+  'fix_hotspot',
+  'get_wifi_bssid_status',
+  'remove_bssid_lock',
+  'optimize_for_mesh',
+  'deploy_asset',
+  'sync_profiles',
+  'switch_profile',
+  'scan_wifi_networks',
+  'configure_wifi_client',
 ];
 ```
+
+> **Important** : Toute nouvelle commande ajoutée dans `commands/index.js` **doit aussi** être ajoutée dans `DEFAULT_ALLOWED_COMMANDS` dans `config.js`, sinon l'agent la rejettera avec "Command not allowed".
 
 ### Restrictions par rôle
 
@@ -96,27 +111,52 @@ const DEFAULT_ALLOWED_COMMANDS = [
 | admin       | Toutes sauf rm, shutdown                                       |
 | operator    | Commandes en lecture seule (ls, cat, df, journalctl, ps, ping) |
 
+### Validation côté Central Server
+
+Le middleware `remote-shell-security.ts` applique une validation par rôle **avant** d'envoyer la commande au Pi :
+
+- **Operator** : whitelist stricte (lecture seule : `ls`, `cat`, `df`, `journalctl`, `ps`, `ping`...)
+- **Admin** : whitelist étendue (+ `systemctl restart`, `cp`, `mv`, `curl`...)
+- **Super Admin** : blacklist uniquement — toutes les commandes sauf patterns destructeurs
+
+**Blacklist (tous rôles)** : `rm -rf`, `mkfs`, `dd if=`, `shutdown`, `eval`, `curl|sh`, `sudo -S`, `sudo su`, écriture dans `/etc`, `/boot`, `/usr`, manipulation SSH keys, fork bombs...
+
+### Permissions sudo (sudoers)
+
+Le fichier `raspberry/config/sudoers.d/neopro` définit les commandes sudo autorisées pour l'utilisateur `pi` :
+
+| Catégorie        | Commandes autorisées                                                                    |
+| ---------------- | --------------------------------------------------------------------------------------- |
+| Services systemd | `systemctl start/stop/restart/enable neopro-*`, `hostapd`, `dnsmasq`, `nginx`           |
+| Gestion paquets  | `apt-get update`, `apt-get install`, `apt update`, `apt install`, `dpkg --configure -a` |
+| Déploiement OTA  | `cp` services → `/etc/systemd/system/`, `cp` sudoers                                    |
+| Réseau WiFi      | `wpa_cli`, `wpa_supplicant`, `iwlist scan`, `dhclient`, `rfkill`, `hostapd_cli`         |
+| Système          | `reboot`, scripts `/home/pi/neopro/scripts/*`                                           |
+
+> **Note** : Ce fichier est déployé automatiquement via OTA (`update_software`).
+
 ### Protection côté Pi
 
-Le handler `remote-shell.js` applique des restrictions :
+Le handler `remote-shell.js` applique des restrictions d'exécution :
 
 ```javascript
-// Commandes dangereuses bloquées
-const DANGEROUS_PATTERNS = [
-  /rm\s+-rf?\s+\//, // rm -rf /
-  /mkfs/,
-  /dd\s+if=/,
-  />\s*\/dev\//,
-  /shutdown/,
-  /reboot/, // Utiliser la commande dédiée
-];
-
-// Timeout de 30 secondes
-const COMMAND_TIMEOUT = 30000;
+// Timeout de 60 secondes (max 5 minutes)
+const COMMAND_TIMEOUT = 60000;
 
 // Limite de sortie (évite saturation mémoire)
 const MAX_OUTPUT_SIZE = 1024 * 1024; // 1 MB
 ```
+
+## Limites
+
+| Paramètre         | Valeur                  | Description                             |
+| ----------------- | ----------------------- | --------------------------------------- |
+| `COMMAND_TIMEOUT` | 60 secondes             | Timeout d'exécution de la commande      |
+| `MAX_OUTPUT_SIZE` | 1 MB (1 048 576 octets) | Taille maximale de la sortie capturée   |
+| `MAX_CONCURRENT`  | 1 par site              | Une seule commande à la fois par site   |
+| Encodage          | UTF-8                   | Sortie tronquée si caractères invalides |
+
+> **Note** : Si la sortie dépasse `MAX_OUTPUT_SIZE`, elle est tronquée avec un message d'avertissement.
 
 ## Utilisation
 
@@ -158,6 +198,26 @@ du -sh /home/pi/neopro/videos/*
 ip addr show
 ping -c 3 google.com
 curl -s http://localhost:3000/health
+
+# Installation de paquets (super_admin uniquement)
+sudo apt-get update
+sudo apt-get install -y firmware-realtek firmware-ralink
+dpkg -l | grep firmware
+```
+
+### Exemple de résultat
+
+```json
+{
+  "commandId": "uuid-xxx",
+  "status": "success",
+  "result": {
+    "stdout": "Filesystem      Size  Used Avail Use% Mounted on\n/dev/mmcblk0p2   29G  8.2G   20G  30% /\n",
+    "stderr": "",
+    "exitCode": 0,
+    "executionTime": 234
+  }
+}
 ```
 
 ## Déploiement
@@ -230,8 +290,43 @@ Le terminal distant nécessite que le site soit connecté. Vérifier :
 2. La connexion WebSocket fonctionne (logs sync-agent)
 3. L'API centrale est accessible depuis le Pi
 
+### Erreur "no new privileges" sur sudo
+
+**Cause** : Le fichier `.service` systemd du sync-agent contient `NoNewPrivileges=true`, un flag kernel qui bloque irréversiblement `sudo` pour le process et ses enfants. Tous les Pi installés entre déc. 2025 et fév. 2026 sont potentiellement concernés.
+
+**Solution** : Déployer un OTA >= v3.17.1. Le mécanisme `apply-services` corrige automatiquement les fichiers `.service` :
+
+```
+sync-agent (NoNewPrivileges=true)
+  │ sudo cp → BLOQUÉ par kernel
+  │ fallback: curl POST http://127.0.0.1:8080/api/system/apply-services
+  ▼
+admin-server (pas de NoNewPrivileges)
+  │ sudo cp .service → /etc/systemd/system/
+  │ sudo systemctl daemon-reload
+  │ sudo systemctl restart neopro-sync-agent
+  ▼
+sync-agent redémarré SANS NoNewPrivileges → sudo fonctionne
+```
+
+**Fichiers impliqués** :
+
+| Fichier                                      | Rôle                                              |
+| -------------------------------------------- | ------------------------------------------------- |
+| `admin/admin-server.js`                      | Route `apply-services` montée AVANT `requireAuth` |
+| `admin/services/system.service.js`           | Méthode `applySystemdServices()`                  |
+| `sync-agent/src/commands/update-software.js` | Fallback curl si sudo échoue                      |
+| `config/systemd/*.service`                   | Fichiers corrigés (sans `NoNewPrivileges`)        |
+| `config/sudoers.d/neopro`                    | Règles sudo pour apt, systemctl, etc.             |
+
+**Prévention** : `npm run test:smoke` vérifie qu'aucun `.service` ne contient `NoNewPrivileges=true`.
+
 ## Changelog
 
+- **13 février 2026** : Synchronisation `DEFAULT_ALLOWED_COMMANDS` — ajout des 14 commandes manquantes dans la documentation (debug, WiFi, profiles, assets). Ajout note d'avertissement sur l'obligation d'ajouter toute nouvelle commande dans `config.js`
+- **12 février 2026** : Fix `NoNewPrivileges` deadlock — mécanisme `apply-services` via admin-server, smoke tests de convention, auto-correction OTA
+- **12 février 2026** : Ajout `apt-get`/`apt install` au sudoers — installation de paquets depuis le dashboard (super_admin)
+- **10 février 2026** : Ajout section Limites, exemple de résultat, correction timeout 60s
 - **v2.12.0** (2026-01-08) : Ajout de la fonctionnalité remote shell
   - Nouveau handler `remote-shell.js`
   - UI terminal dans l'onglet Debug

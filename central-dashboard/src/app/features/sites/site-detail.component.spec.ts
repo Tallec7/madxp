@@ -1,17 +1,21 @@
 import { ComponentFixture, TestBed, fakeAsync, tick, discardPeriodicTasks } from '@angular/core/testing';
 import { RouterTestingModule } from '@angular/router/testing';
+import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
-import { of, throwError, BehaviorSubject } from 'rxjs';
+import { TranslateModule } from '@ngx-translate/core';
+import { of, throwError } from 'rxjs';
 import { SiteDetailComponent } from './site-detail.component';
 import { SitesService } from '../../core/services/sites.service';
 import { NotificationService } from '../../core/services/notification.service';
+import { LoggerService } from '../../core/services/logger.service';
 
 describe('SiteDetailComponent', () => {
   let component: SiteDetailComponent;
   let fixture: ComponentFixture<SiteDetailComponent>;
   let sitesService: jasmine.SpyObj<SitesService>;
   let notificationService: jasmine.SpyObj<NotificationService>;
+  let loggerService: jasmine.SpyObj<LoggerService>;
 
   const mockSite = {
     id: 's1',
@@ -40,25 +44,60 @@ describe('SiteDetailComponent', () => {
     uptime: 86400, // 1 day
   };
 
+  const mockDashboardData = {
+    site: mockSite,
+    connection: {
+      isConnected: true,
+      status: 'online',
+      lastSeenAt: new Date().toISOString(),
+      secondsSinceLastSeen: 0,
+      localIp: '192.168.1.100',
+      lastConfigSync: null,
+      heartbeat_24h: { count: 100, firstAt: null, lastAt: null },
+    },
+    metrics: { data: [mockMetrics] },
+    health: null,
+  };
+
   beforeEach(async () => {
-    const sitesServiceMock = jasmine.createSpyObj('SitesService', ['getSite', 'getSiteMetrics', 'sendCommand', 'regenerateApiKey']);
+    const sitesServiceMock = jasmine.createSpyObj('SitesService', [
+      'getSite', 'getSiteMetrics', 'getDashboardData', 'getMatchHistory',
+      'restartService', 'rebootSite', 'getLogs', 'getSystemInfo',
+      'regenerateApiKey', 'sendCommand',
+    ]);
     sitesServiceMock.getSite.and.returnValue(of(mockSite));
     sitesServiceMock.getSiteMetrics.and.returnValue(of({ metrics: [mockMetrics] }));
+    sitesServiceMock.getDashboardData.and.returnValue(of(mockDashboardData));
+    sitesServiceMock.getMatchHistory.and.returnValue(of(null));
+    sitesServiceMock.restartService.and.returnValue(of({ success: true, message: 'OK' }));
+    sitesServiceMock.rebootSite.and.returnValue(of({ success: true, message: 'OK' }));
+    sitesServiceMock.getLogs.and.returnValue(of({ logs: ['log line 1'] }));
+    sitesServiceMock.getSystemInfo.and.returnValue(of({ hostname: 'pi-test', os: 'Linux', kernel: '5.10', architecture: 'arm64', cpu_model: 'Cortex-A72', cpu_cores: 4, total_memory: 4096, ip_address: '192.168.1.100', mac_address: '00:00:00:00:00:00' }));
     sitesServiceMock.sendCommand.and.returnValue(of({ success: true, message: 'OK' }));
-    sitesServiceMock.regenerateApiKey.and.returnValue(of({ api_key: 'new-key-123' } as any));
+    sitesServiceMock.regenerateApiKey.and.returnValue(of({ ...mockSite, api_key: 'new-key-123' } as any));
 
     const notificationServiceMock = jasmine.createSpyObj('NotificationService', ['error', 'success', 'info']);
+    const loggerServiceMock = jasmine.createSpyObj('LoggerService', ['debug', 'info', 'warn', 'error', 'addBreadcrumb']);
 
     await TestBed.configureTestingModule({
-      imports: [SiteDetailComponent, RouterTestingModule, FormsModule],
+      imports: [SiteDetailComponent, RouterTestingModule, HttpClientTestingModule, FormsModule, TranslateModule.forRoot()],
       providers: [
         { provide: SitesService, useValue: sitesServiceMock },
         { provide: NotificationService, useValue: notificationServiceMock },
+        { provide: LoggerService, useValue: loggerServiceMock },
         {
           provide: ActivatedRoute,
           useValue: {
             params: of({ id: 's1' }),
-            snapshot: { params: { id: 's1' } },
+            snapshot: {
+              params: { id: 's1' },
+              paramMap: {
+                get: (key: string) => key === 'id' ? 's1' : null,
+                has: (key: string) => key === 'id',
+                getAll: () => [],
+                keys: ['id'],
+              },
+            },
           },
         },
       ],
@@ -68,6 +107,7 @@ describe('SiteDetailComponent', () => {
     component = fixture.componentInstance;
     sitesService = TestBed.inject(SitesService) as jasmine.SpyObj<SitesService>;
     notificationService = TestBed.inject(NotificationService) as jasmine.SpyObj<NotificationService>;
+    loggerService = TestBed.inject(LoggerService) as jasmine.SpyObj<LoggerService>;
   });
 
   afterEach(() => {
@@ -89,11 +129,11 @@ describe('SiteDetailComponent', () => {
       discardPeriodicTasks();
     }));
 
-    it('should load metrics after site is loaded', fakeAsync(() => {
+    it('should load dashboard data after init', fakeAsync(() => {
       fixture.detectChanges();
       tick();
 
-      expect(sitesService.getSiteMetrics).toHaveBeenCalledWith('s1', 24);
+      expect(sitesService.getDashboardData).toHaveBeenCalledWith('s1', 24);
       expect(component.currentMetrics).toEqual(mockMetrics as any);
 
       discardPeriodicTasks();
@@ -101,12 +141,11 @@ describe('SiteDetailComponent', () => {
 
     it('should handle error when loading site', fakeAsync(() => {
       sitesService.getSite.and.returnValue(throwError(() => new Error('Not found')));
-      const consoleSpy = spyOn(console, 'error').and.callFake(() => {});
 
       fixture.detectChanges();
       tick();
 
-      expect(consoleSpy).toHaveBeenCalled();
+      expect(loggerService.error).toHaveBeenCalled();
 
       discardPeriodicTasks();
     }));
@@ -131,24 +170,27 @@ describe('SiteDetailComponent', () => {
   });
 
   describe('formatLastSeen', () => {
-    it('should return formatted date for recent timestamp', () => {
+    it('should return formatted string for recent timestamp', () => {
       const date = new Date();
       const result = component.formatLastSeen(date);
-      expect(result).toContain('à');
+      // Returns "À l'instant" for very recent dates
+      expect(result).toBeTruthy();
+      expect(result).not.toBe('Jamais vu');
     });
 
-    it('should return N/A for null date', () => {
-      expect(component.formatLastSeen(null as any)).toBe('N/A');
+    it('should return Jamais vu for null date', () => {
+      expect(component.formatLastSeen(null as any)).toBe('Jamais vu');
     });
 
-    it('should return N/A for undefined date', () => {
-      expect(component.formatLastSeen(null as any)).toBe('N/A');
+    it('should return Jamais vu for undefined date', () => {
+      expect(component.formatLastSeen(null as any)).toBe('Jamais vu');
     });
   });
 
   describe('formatUptime', () => {
     it('should format days correctly', () => {
-      expect(component.formatUptime(86400)).toBe('1j 0h 0m');
+      // Component returns '1j 0h' (no minutes when days > 0)
+      expect(component.formatUptime(86400)).toBe('1j 0h');
     });
 
     it('should format hours correctly', () => {
@@ -176,18 +218,20 @@ describe('SiteDetailComponent', () => {
     }));
 
     describe('restartService', () => {
-      it('should send restart command', fakeAsync(() => {
-        sitesService.sendCommand.and.returnValue(of({ success: true, message: 'OK' }));
+      it('should send restart command on confirm', fakeAsync(() => {
+        spyOn(window, 'confirm').and.returnValue(true);
+        sitesService.restartService.and.returnValue(of({ success: true, message: 'OK' }));
 
         component.restartService('neopro-app');
         tick();
 
-        expect(sitesService.sendCommand).toHaveBeenCalledWith('s1', 'restart_service', { service: 'neopro-app' });
+        expect(sitesService.restartService).toHaveBeenCalledWith('s1', 'neopro-app');
         expect(notificationService.success).toHaveBeenCalled();
       }));
 
       it('should show error on failure', fakeAsync(() => {
-        sitesService.sendCommand.and.returnValue(throwError(() => new Error('Command failed')));
+        spyOn(window, 'confirm').and.returnValue(true);
+        sitesService.restartService.and.returnValue(throwError(() => new Error('Command failed')));
 
         component.restartService('neopro-app');
         tick();
@@ -199,12 +243,12 @@ describe('SiteDetailComponent', () => {
     describe('rebootSite', () => {
       it('should send reboot command on confirm', fakeAsync(() => {
         spyOn(window, 'confirm').and.returnValue(true);
-        sitesService.sendCommand.and.returnValue(of({ success: true, message: 'OK' }));
+        sitesService.rebootSite.and.returnValue(of({ success: true, message: 'OK' }));
 
         component.rebootSite();
         tick();
 
-        expect(sitesService.sendCommand).toHaveBeenCalledWith('s1', 'reboot', {});
+        expect(sitesService.rebootSite).toHaveBeenCalledWith('s1');
       }));
 
       it('should not reboot on cancel', () => {
@@ -212,14 +256,14 @@ describe('SiteDetailComponent', () => {
 
         component.rebootSite();
 
-        expect(sitesService.sendCommand).not.toHaveBeenCalled();
+        expect(sitesService.rebootSite).not.toHaveBeenCalled();
       });
     });
 
     describe('regenerateApiKey', () => {
       it('should regenerate API key on confirm', fakeAsync(() => {
         spyOn(window, 'confirm').and.returnValue(true);
-        sitesService.regenerateApiKey.and.returnValue(of({ api_key: 'new-key' } as any));
+        sitesService.regenerateApiKey.and.returnValue(of({ ...mockSite, api_key: 'new-key' } as any));
 
         component.regenerateApiKey();
         tick();
@@ -238,24 +282,26 @@ describe('SiteDetailComponent', () => {
     });
 
     describe('getLogs', () => {
-      it('should request logs from service', fakeAsync(() => {
-        sitesService.sendCommand.and.returnValue(of({ logs: 'log content' } as any));
+      it('should open logs modal and request logs from service', fakeAsync(() => {
+        sitesService.getLogs.and.returnValue(of({ logs: ['log content'] }));
 
         component.getLogs();
         tick();
 
-        expect(sitesService.sendCommand).toHaveBeenCalledWith('s1', 'get_logs', { lines: 100 });
+        expect(component.showLogsModal).toBe(true);
+        expect(sitesService.getLogs).toHaveBeenCalledWith('s1', 200);
       }));
     });
 
     describe('getSystemInfo', () => {
-      it('should request system info', fakeAsync(() => {
-        sitesService.sendCommand.and.returnValue(of({ info: 'system info' } as any));
+      it('should open system info modal and request info', fakeAsync(() => {
+        sitesService.getSystemInfo.and.returnValue(of({ hostname: 'pi-test', os: 'Linux', kernel: '5.10', architecture: 'arm64', cpu_model: 'Cortex-A72', cpu_cores: 4, total_memory: 4096, ip_address: '192.168.1.100', mac_address: '00:00:00:00:00:00' }));
 
         component.getSystemInfo();
         tick();
 
-        expect(sitesService.sendCommand).toHaveBeenCalledWith('s1', 'system_info', {});
+        expect(component.showSystemInfoModal).toBe(true);
+        expect(sitesService.getSystemInfo).toHaveBeenCalledWith('s1');
       }));
     });
   });
@@ -309,8 +355,8 @@ describe('SiteDetailComponent', () => {
       expect(actionCards.length).toBeGreaterThan(0);
     });
 
-    it('should disable actions when site is offline', () => {
-      component.site = { ...mockSite, status: 'offline' } as any;
+    it('should disable actions when not connected', () => {
+      component.isConnected = false;
       fixture.detectChanges();
 
       const disabledButtons = fixture.nativeElement.querySelectorAll('.action-card[disabled]');

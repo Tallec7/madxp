@@ -17,9 +17,23 @@
       }
     ],
     [
+      "@semantic-release/exec",
+      {
+        "prepareCmd": "./scripts/sync-raspberry-versions.sh ${nextRelease.version}"
+      }
+    ],
+    [
       "@semantic-release/git",
       {
-        "assets": ["package.json", "package-lock.json", "docs/changelog/CHANGELOG.md"],
+        "assets": [
+          "package.json",
+          "package-lock.json",
+          "docs/changelog/CHANGELOG.md",
+          "raspberry/admin/package.json",
+          "raspberry/server/package.json",
+          "raspberry/sync-agent/package.json",
+          "raspberry/admin/public/app.js"
+        ],
         "message": "chore(release): ${nextRelease.version}\n\n${nextRelease.notes}"
       }
     ],

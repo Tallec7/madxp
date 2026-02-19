@@ -3,7 +3,6 @@
  */
 
 import { Request, Response, NextFunction } from 'express';
-import { AuthRequest } from '../types';
 
 export interface PaginationParams {
   page: number;
@@ -25,6 +24,7 @@ export interface PaginatedResponse<T> {
 
 // Étendre le type Request pour inclure pagination
 declare global {
+  // eslint-disable-next-line @typescript-eslint/no-namespace
   namespace Express {
     interface Request {
       pagination?: PaginationParams;

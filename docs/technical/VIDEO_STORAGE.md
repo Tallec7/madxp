@@ -1,7 +1,7 @@
 # Stockage Vidéo - Architecture et Déploiement
 
 > **Document de référence technique**
-> Version 1.0 - 9 Janvier 2026
+> Version 3.0 - 17 Février 2026
 
 ---
 
@@ -15,6 +15,7 @@
 6. [Nommage des fichiers](#6-nommage-des-fichiers)
 7. [Intégrité des fichiers](#7-intégrité-des-fichiers)
 8. [Dépannage](#8-dépannage)
+9. [Flux de déploiement watermark (v3.50+)](#9-flux-de-déploiement-watermark-v350)
 
 ---
 
@@ -28,7 +29,12 @@ Les vidéos uploadées dans le dashboard central doivent être :
 - Téléchargées par les Raspberry Pi lors du déploiement
 - Supprimées automatiquement une fois tous les déploiements terminés
 
-### La solution : Double stockage avec fallback
+### La solution : Stockage FTP Hostinger
+
+> **Toutes les vidéos et assets sont stockés sur FTP Hostinger.**
+> Le stockage est géré par un service centralisé `storage.service.ts` qui encapsule toutes les opérations.
+
+### Détail du flux
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -36,14 +42,11 @@ Les vidéos uploadées dans le dashboard central doivent être :
 │                                                                  │
 │  Upload vidéo →                                                  │
 │                                                                  │
-│  FTP configuré ?                                                 │
-│    ├── OUI → Upload vers FTP Hostinger                          │
-│    │         storage_path = "filename.mp4" (pas de /)           │
-│    │         URL = FTP_PUBLIC_URL + filename                    │
-│    │                                                             │
-│    └── NON → Upload vers Supabase Storage                       │
-│              storage_path = "uploads/filename.mp4" (avec /)     │
-│              URL = SUPABASE_URL/storage/v1/object/public/...    │
+│  storage.service.ts                                              │
+│    → uploadVideo() / uploadVideoFromDisk()                      │
+│    → Upload vers FTP Hostinger                                  │
+│    → storage_path = "filename.mp4"                              │
+│    → URL = FTP_PUBLIC_URL + filename                            │
 │                                                                  │
 └──────────────────────────┬──────────────────────────────────────┘
                            │
@@ -67,11 +70,32 @@ Les vidéos uploadées dans le dashboard central doivent être :
 
 ## 2. Architecture de stockage
 
-### Stockage primaire : FTP Hostinger
+### Service centralisé : `storage.service.ts`
 
-**Quand utilisé** : Si les variables d'environnement FTP sont configurées
+Toutes les opérations de stockage passent par `central-server/src/services/storage.service.ts`, une façade sur `ftp-storage.ts`.
 
-**Variables requises** :
+**Fonctions principales** :
+
+| Fonction                | Description                                               |
+| ----------------------- | --------------------------------------------------------- |
+| `uploadVideo()`         | Upload vidéo depuis un buffer mémoire                     |
+| `uploadVideoFromDisk()` | Upload vidéo depuis un fichier disque (streaming)         |
+| `deleteVideo()`         | Supprime un fichier vidéo du stockage                     |
+| `getVideoUrl()`         | Retourne l'URL publique d'une vidéo                       |
+| `uploadUpdate()`        | Upload un package de mise à jour                          |
+| `uploadAsset()`         | Upload un asset (watermark, logo, rapport)                |
+| `getAssetUrl()`         | Retourne l'URL publique d'un asset                        |
+| `listAssets(directory)` | Liste les fichiers d'un répertoire FTP (ex: `watermarks`) |
+| `verifyFileExists()`    | Vérifie l'existence d'un fichier sur FTP                  |
+
+**Comportement** :
+
+- Si le FTP n'est pas configuré, le service lance une erreur explicite au lieu d'échouer silencieusement.
+- Les sous-dossiers sont créés automatiquement sur le FTP via `ensureDir` avant l'upload (ex: `watermarks/` pour les assets watermark).
+
+### Configuration FTP
+
+**Variables d'environnement requises** :
 
 ```bash
 FTP_HOST=ftp.example.com
@@ -80,41 +104,37 @@ FTP_PASSWORD=password
 FTP_PUBLIC_URL=https://cdn.example.com/videos
 ```
 
+**Pour les mises à jour logicielles** (optionnel) :
+
+```bash
+FTP_UPDATE_HOST=ftp.example.com
+FTP_UPDATE_USER=username
+FTP_UPDATE_PASSWORD=password
+FTP_UPDATE_PUBLIC_URL=https://cdn.example.com/updates
+```
+
 **Caractéristiques** :
 
-- Upload direct via protocole FTP
+- Upload direct via protocole FTP (streaming depuis disque)
 - URL publique simple : `FTP_PUBLIC_URL/filename.mp4`
-- Pas de limite de taille (contrairement à Supabase)
+- Pas de limite de taille artificielle
+- Vérification post-upload (taille, existence)
 - Coût réduit pour gros volumes
 
-**Format du `storage_path`** : Juste le nom de fichier sans slash
+**Format du `storage_path`** : Nom de fichier seul
 
 ```
 Decathlon_FOCUS_Partenaire.mp4
 ```
 
-### Stockage fallback : Supabase Storage
+### Limites de taille
 
-**Quand utilisé** : Si FTP n'est pas configuré
-
-**Variables requises** :
-
-```bash
-SUPABASE_URL=https://xxx.supabase.co
-SUPABASE_SERVICE_KEY=xxx
-```
-
-**Caractéristiques** :
-
-- Bucket `videos` créé automatiquement s'il n'existe pas
-- Limite de 1 GB par fichier
-- URL publique : `SUPABASE_URL/storage/v1/object/public/videos/uploads/filename.mp4`
-
-**Format du `storage_path`** : Chemin complet avec slash
-
-```
-uploads/Decathlon_FOCUS_Partenaire.mp4
-```
+| Paramètre                   | Valeur                     | Description                                          |
+| --------------------------- | -------------------------- | ---------------------------------------------------- |
+| Taille max upload           | Pas de limite artificielle | Limité par l'espace disque temporaire Railway        |
+| Taille max mémoire (images) | 50 MB                      | Les images restent en memory storage pour conversion |
+| Espace disque temp          | `/tmp/neopro-uploads/`     | Nettoyé automatiquement (fichiers > 1h supprimés)    |
+| Nom de fichier max          | 100 caractères             | Après sanitization (extension non comptée)           |
 
 ---
 
@@ -122,39 +142,79 @@ uploads/Decathlon_FOCUS_Partenaire.mp4
 
 ### Fichiers impliqués
 
-| Fichier                 | Rôle                                            |
-| ----------------------- | ----------------------------------------------- |
-| `content.controller.ts` | Réception du fichier, génération du nom, upload |
-| `ftp-storage.ts`        | Upload vers FTP Hostinger                       |
-| `supabase.ts`           | Upload vers Supabase Storage                    |
+| Fichier                  | Rôle                                    |
+| ------------------------ | --------------------------------------- |
+| `upload.ts` (middleware) | Multer disk storage, cleanup temp files |
+| `content.controller.ts`  | Réception du fichier, génération du nom |
+| `storage.service.ts`     | Façade d'upload (délègue à ftp-storage) |
+| `ftp-storage.ts`         | Upload vers FTP Hostinger (streaming)   |
 
 ### Séquence d'upload
 
 ```
 1. Réception du fichier (multipart/form-data)
+   │  Multer écrit le fichier sur disque (/tmp/neopro-uploads/)
+   │  PAS de chargement en mémoire (évite OOM sur fichiers > 256MB)
    │
-2. Génération du nom de fichier sanitisé
-   │ - Suppression des accents
+2. Correction encodage multer (latin1 → UTF-8)
+   │  fixMulterEncoding() re-encode le nom de fichier
+   │  Multer 1.4.x décode Content-Disposition en latin1
+   │
+3. Génération du nom de fichier sanitisé
+   │ - Normalisation Unicode NFD + suppression diacritiques
    │ - Remplacement des espaces par _
    │ - Suppression des caractères spéciaux
    │ - Ajout de suffixe numérique si doublon
    │
-3. Calcul du checksum SHA256
+4. Calcul du checksum SHA256 (streaming depuis le disque)
    │
-4. Upload vers le stockage
-   │ - FTP si configuré
-   │ - Supabase sinon
+5. Upload vers FTP via storage.service
+   │ - uploadVideoFromDisk() → basic-ftp.uploadFrom(filePath)
+   │ - Stream direct disque → FTP
+   │ - Vérification post-upload (taille, existence)
    │
-5. Enregistrement en base de données
+6. Enregistrement en base de données
    │ - filename: nom sanitisé
-   │ - original_name: nom original
+   │ - original_name: nom original (corrigé UTF-8)
    │ - storage_path: chemin de stockage
    │ - checksum: SHA256 pour vérification
    │
-6. Retour de la réponse avec l'ID vidéo
+7. Nettoyage du fichier temporaire (finally)
+   │ - Cleanup immédiat après traitement
+   │ - Nettoyage périodique des fichiers abandonnés (> 1h, toutes les 30 min)
+   │
+8. Retour de la réponse avec l'ID vidéo
 ```
 
+> **Note** : Les images (< 50MB, conversion image→vidéo) restent en memory storage car leur taille est compatible avec le heap.
+
+### Correction de l'encodage multer (latin1 → UTF-8)
+
+Multer 1.4.x décode le header `Content-Disposition` en latin1 au lieu d'UTF-8, ce qui corrompt les caractères accentués. `fixMulterEncoding()` détecte et corrige ce problème :
+
+```typescript
+// Entrée (corrompu par multer) : "SoirÃ©e_Club.mp4"
+// Sortie (corrigé)             : "Soirée_Club.mp4"
+
+function fixMulterEncoding(filename: string): string {
+  try {
+    const fixed = Buffer.from(filename, 'latin1').toString('utf8');
+    if (!fixed.includes('\ufffd') && fixed !== filename) {
+      metricsService.recordFilenameEncodingCorrection();
+      return fixed;
+    }
+  } catch {
+    // En cas d'erreur, retourner l'original
+  }
+  return filename;
+}
+```
+
+> **Métrique Prometheus** : `neopro_filename_encoding_corrections_total` comptabilise les corrections pour détecter les tendances côté client.
+
 ### Sanitization des noms de fichiers
+
+Utilise la normalisation Unicode NFD pour gérer universellement tous les diacritiques (accents, cédilles, tildes, etc.) :
 
 ```typescript
 // Entrée : "Décathlon FOCUS Partenaire (2024).mp4"
@@ -165,15 +225,11 @@ function sanitizeFilename(filename: string): string {
   const name = path.basename(filename, ext);
 
   const sanitized = name
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // Supprime les diacritiques
     .replace(/\s+/g, '_') // Espaces → underscores
-    .replace(/[àáâãäå]/gi, 'a') // Accents
-    .replace(/[èéêë]/gi, 'e')
-    .replace(/[ìíîï]/gi, 'i')
-    .replace(/[òóôõö]/gi, 'o')
-    .replace(/[ùúûü]/gi, 'u')
-    .replace(/[ç]/gi, 'c')
-    .replace(/[ñ]/gi, 'n')
     .replace(/[^a-zA-Z0-9_-]/g, '') // Caractères non autorisés
+    .replace(/_+/g, '_') // Évite les underscores multiples
     .substring(0, 100); // Limite longueur
 
   return sanitized + ext.toLowerCase();
@@ -186,11 +242,12 @@ function sanitizeFilename(filename: string): string {
 
 ### Fichiers impliqués
 
-| Fichier                        | Rôle                                  |
-| ------------------------------ | ------------------------------------- |
-| `deployment.service.ts`        | Orchestration du déploiement          |
-| `command-queue.service.ts`     | Gestion des sites offline             |
-| `deploy-video.js` (sync-agent) | Téléchargement et installation sur Pi |
+| Fichier                        | Rôle                                     |
+| ------------------------------ | ---------------------------------------- |
+| `deployment.service.ts`        | Orchestration du déploiement             |
+| `storage.service.ts`           | Génération URL + suppression post-deploy |
+| `command-queue.service.ts`     | Gestion des sites offline                |
+| `deploy-video.js` (sync-agent) | Téléchargement et installation sur Pi    |
 
 ### Séquence de déploiement
 
@@ -201,8 +258,7 @@ function sanitizeFilename(filename: string): string {
    │ - storage_path, checksum, metadata
    │
 3. Génération de l'URL de téléchargement
-   │ - getVideoDownloadUrl(storage_path)
-   │ - Détecte automatiquement FTP vs Supabase
+   │ - getVideoUrl(storage_path)  via storage.service
    │
 4. Envoi de la commande aux sites cibles
    │ - sendOrQueue() : envoi immédiat ou mise en queue
@@ -220,40 +276,34 @@ function sanitizeFilename(filename: string): string {
 9. Mise à jour de configuration.json
    │
 10. Notification de succès au serveur central
+    │
+11. Nettoyage automatique du fichier FTP
+    │ - deleteVideo(storagePath) via storage.service
+    │ - Une fois TOUS les sites déployés avec succès
 ```
 
 ---
 
 ## 5. Génération des URLs
 
-### Le problème (bug corrigé le 2026-01-09)
+### Mécanisme
 
-Avant la correction, `deployment.service.ts` utilisait toujours `getPublicUrl()` de Supabase, même si le fichier était stocké sur FTP. Cela générait des URLs Supabase invalides pour des fichiers qui n'existaient pas sur Supabase.
-
-### La solution : détection automatique
+Le service `storage.service.ts` utilise `getFtpPublicUrl()` pour générer les URLs :
 
 ```typescript
-// deployment.service.ts
-
-function getVideoDownloadUrl(storagePath: string): string {
-  // Si le path est juste un filename (pas de /) → c'est un fichier FTP
-  const isFtpPath = !storagePath.includes('/');
-
-  if (isFtpPath && isFtpConfigured()) {
-    return getFtpPublicUrl(storagePath);
-  }
-
-  // Sinon c'est un chemin Supabase (ex: uploads/filename.mp4)
-  return getPublicUrl(storagePath);
-}
+// storage.service.ts
+export const getVideoUrl = (storagePath: string): string => {
+  return getFtpPublicUrl(storagePath);
+  // → FTP_PUBLIC_URL + "/" + storagePath
+};
 ```
 
 ### Exemples
 
-| storage_path        | Type détecté | URL générée                                                                 |
-| ------------------- | ------------ | --------------------------------------------------------------------------- |
-| `video.mp4`         | FTP          | `https://cdn.neopro.tv/video.mp4`                                           |
-| `uploads/video.mp4` | Supabase     | `https://xxx.supabase.co/storage/v1/object/public/videos/uploads/video.mp4` |
+| storage_path          | URL générée                                 |
+| --------------------- | ------------------------------------------- |
+| `video.mp4`           | `https://cdn.neopro.tv/video.mp4`           |
+| `watermarks/logo.png` | `https://cdn.neopro.tv/watermarks/logo.png` |
 
 ---
 
@@ -276,11 +326,11 @@ function getVideoDownloadUrl(storagePath: string): string {
 
 ### Champs en base de données
 
-| Champ           | Description               | Exemple                                                                 |
-| --------------- | ------------------------- | ----------------------------------------------------------------------- |
-| `filename`      | Nom sanitisé (clé unique) | `Decathlon_FOCUS.mp4`                                                   |
-| `original_name` | Nom original uploadé      | `Décathlon FOCUS.mp4`                                                   |
-| `storage_path`  | Chemin dans le stockage   | `Decathlon_FOCUS.mp4` (FTP) ou `uploads/Decathlon_FOCUS.mp4` (Supabase) |
+| Champ           | Description                 | Exemple               |
+| --------------- | --------------------------- | --------------------- |
+| `filename`      | Nom sanitisé (clé unique)   | `Decathlon_FOCUS.mp4` |
+| `original_name` | Nom original uploadé        | `Décathlon FOCUS.mp4` |
+| `storage_path`  | Chemin dans le stockage FTP | `Decathlon_FOCUS.mp4` |
 
 ---
 
@@ -316,6 +366,103 @@ if (downloadedChecksum !== expectedChecksum) {
 - **Sécurité** : Empêche l'injection de fichiers malveillants
 - **Fiabilité** : Le Pi rejette automatiquement les fichiers corrompus
 
+## Suppression manuelle depuis le Dashboard
+
+L'administrateur peut supprimer une vidéo depuis la **Bibliothèque Vidéo** d'un site (onglet Contenu). Le comportement dépend de l'emplacement de la vidéo :
+
+### Cas de suppression
+
+| Situation                                                  | Comportement                                           |
+| ---------------------------------------------------------- | ------------------------------------------------------ |
+| Vidéo uniquement sur le Pi (`isOnPi=true`, pas d'ID cloud) | Confirmation → commande `delete_video` vers le Pi      |
+| Vidéo uniquement dans le cloud (`isOnPi=false`, ID cloud)  | Confirmation → `DELETE /api/videos/:id`                |
+| Vidéo sur les deux (`isOnPi=true` + ID cloud)              | Dialog avec 3 choix : Pi seul, cloud seul, ou les deux |
+
+### Flux — Suppression cloud
+
+```
+1. Clic "Supprimer" sur une vidéo cloud
+   │
+2. Confirmation utilisateur
+   │
+3. Appel DELETE /api/videos/:id
+   │  - Authentification requise (admin)
+   │  - Récupération du storage_path en DB
+   │
+4. Suppression en base (videos table)
+   │  - CASCADE sur content_deployments
+   │
+5. Suppression du fichier FTP
+   │  - deleteVideo(storagePath) via storage.service
+   │
+6. Notification succès + rechargement du contenu
+```
+
+### Flux — Suppression Pi
+
+```
+1. Clic "Supprimer" sur une vidéo Pi
+   │
+2. Confirmation utilisateur
+   │
+3. Commande sendCommand(siteId, 'delete_video', { filename, category, subcategory })
+   │  - Envoyée via Socket.IO au sync-agent
+   │  - category/subcategory proviennent des données Pi (piCategory), pas du cloud
+   │  - Le sync-agent reconstruit le chemin : /home/pi/neopro/videos/{category}/{subcategory}/{filename}
+   │  - Si category est null (vidéo à la racine) : /home/pi/neopro/videos/{filename}
+   │
+4. Sync-agent supprime le fichier + met à jour configuration.json
+   │
+5. Notification succès + rechargement du contenu
+```
+
+### Flux — Suppression des deux (Pi + cloud)
+
+Quand la vidéo est présente sur les deux, le dashboard ouvre un modal avec des boutons colorés : **Supprimer du Pi** (amber), **Supprimer du cloud** (bleu), **Supprimer des deux** (rouge). Si l'utilisateur choisit « les deux », les deux appels sont lancés en parallèle via `forkJoin`.
+
+### Fichiers impliqués (Dashboard → API)
+
+| Fichier                         | Rôle                                                 |
+| ------------------------------- | ---------------------------------------------------- |
+| `site-content-tab.component.ts` | Modal de suppression (onVideoDelete → executeDelete) |
+| `sites.service.ts`              | `deleteCloudVideo(id)` → API, `sendCommand` → Pi     |
+| `content.controller.ts`         | Orchestre suppression DB + FTP                       |
+| `video.repository.ts`           | `deleteAndReturn()` + `findStoragePath()`            |
+| `storage.service.ts`            | `deleteVideo()` → FTP                                |
+| `delete-video.js` (sync-agent)  | Suppression fichier + update config sur le Pi        |
+
+---
+
+## Nettoyage automatique des fichiers temporaires
+
+Le middleware d'upload (`upload.ts`) effectue un nettoyage périodique des fichiers temporaires abandonnés :
+
+- **Fréquence** : Toutes les 30 minutes
+- **Critère** : Fichiers dans `/tmp/neopro-uploads/` datant de plus de 1 heure
+- **Déclencheur** : Cron interne au serveur (pas de dépendance externe)
+
+```typescript
+// Nettoyage dans upload.ts
+const TEMP_CLEANUP_INTERVAL = 30 * 60 * 1000; // 30 min
+const TEMP_MAX_AGE = 60 * 60 * 1000; // 1 heure
+
+setInterval(async () => {
+  const files = await fs.readdir(UPLOAD_DIR);
+  for (const file of files) {
+    const stat = await fs.stat(path.join(UPLOAD_DIR, file));
+    if (Date.now() - stat.mtimeMs > TEMP_MAX_AGE) {
+      await fs.unlink(path.join(UPLOAD_DIR, file));
+    }
+  }
+}, TEMP_CLEANUP_INTERVAL);
+```
+
+**Cas de nettoyage** :
+
+- Upload interrompu (client déconnecté)
+- Erreur pendant le traitement FTP
+- Crash du serveur pendant un upload
+
 ---
 
 ## 8. Dépannage
@@ -331,15 +478,11 @@ Video deployment failed: Failed to download video
 
 **Causes possibles** :
 
-1. **Mauvaise URL générée** (bug corrigé 2026-01-09)
-   - Vérifier que le serveur central a la dernière version du code
-   - Le `storage_path` doit correspondre au type de stockage
-
-2. **Fichier non trouvé sur le stockage**
-   - Vérifier que le fichier existe sur FTP/Supabase
+1. **Fichier non trouvé sur FTP**
+   - Vérifier que le fichier existe sur le serveur FTP
    - Vérifier les credentials de stockage
 
-3. **URL FTP_PUBLIC_URL mal configurée**
+2. **URL FTP_PUBLIC_URL mal configurée**
    - Doit pointer vers l'URL publique du CDN FTP
    - Ne pas inclure de slash final
 
@@ -350,6 +493,28 @@ Video deployment failed: Failed to download video
 SELECT filename, storage_path, checksum
 FROM videos
 WHERE filename LIKE '%Decathlon%';
+```
+
+### Erreur FTP 550 "No such file or directory" (watermark/asset upload)
+
+**Symptôme** :
+
+```
+FTPError: 550 watermarks/watermark_neopro.png: No such file or directory
+```
+
+**Cause** : Le sous-dossier (ex: `watermarks/`) n'existait pas sur le serveur FTP. `basic-ftp` `uploadFrom()` ne crée pas les dossiers intermédiaires.
+
+**Résolution** : Corrigé dans `ftp-storage.ts` — `client.ensureDir(dir)` est appelé automatiquement avant chaque upload si le chemin contient un sous-dossier. Si l'erreur réapparaît, vérifier les permissions FTP sur la création de dossiers.
+
+### Erreur "Stockage vidéo (FTP) non configuré"
+
+**Symptôme** : Upload échoue avec erreur 500 et message indiquant que le FTP n'est pas configuré.
+
+**Solution** : Vérifier que les 4 variables FTP sont définies dans l'environnement :
+
+```bash
+echo $FTP_HOST $FTP_USER $FTP_PASSWORD $FTP_PUBLIC_URL
 ```
 
 ### Déploiement bloqué à 0%
@@ -385,15 +550,141 @@ Checksum mismatch: expected abc123, got def456
 **Solution** :
 
 - Ré-uploader la vidéo
-- Vérifier l'intégrité du fichier sur le stockage
+- Vérifier l'intégrité du fichier sur le stockage FTP
 
 ---
 
 ## Historique des versions
 
-| Version | Date       | Modifications     |
-| ------- | ---------- | ----------------- |
-| 1.0     | 2026-01-09 | Création initiale |
+| Version | Date       | Modifications                                                      |
+| ------- | ---------- | ------------------------------------------------------------------ |
+| 1.0     | 2026-01-09 | Création initiale                                                  |
+| 2.0     | 2026-02-10 | Suppression Supabase fallback, migration vers storage.service.ts   |
+| 2.1     | 2026-02-15 | Ajout section suppression manuelle depuis le Dashboard             |
+| 2.2     | 2026-02-15 | Fix null category, piCategory, modal UX                            |
+| 2.3     | 2026-02-16 | Auto-création sous-dossiers FTP (ensureDir) + troubleshooting 550  |
+| 2.4     | 2026-02-17 | Flux déploiement watermark, fix race condition deploy_asset        |
+| 2.5     | 2026-02-17 | Re-deploy image on save, Pi-side retry with backoff                |
+| 2.6     | 2026-02-17 | Cache-buster systématique pour bypass nginx immutable (30j)        |
+| 3.0     | 2026-02-17 | Fix encodage multer latin1→UTF-8, sanitization NFD, métriques      |
+| 3.1     | 2026-02-17 | Liste déroulante watermark, GET /api/assets/watermarks, listAssets |
+
+---
+
+## 9. Flux de déploiement watermark (v3.50+)
+
+Le déploiement d'un watermark suit un flux en **deux commandes séquentielles** :
+
+```
+Dashboard                 Central Server              Raspberry Pi
+   │                           │                           │
+   │ POST /api/assets/         │                           │
+   │   watermark/:siteId       │                           │
+   │ ─────────────────────────>│                           │
+   │                           │ 1) Upload FTP             │
+   │                           │    watermarks/logo.png    │
+   │                           │                           │
+   │                           │ 2) deploy_asset command   │
+   │                           │ ─────────────────────────>│
+   │                           │    → Download image       │
+   │                           │    → Save to webapp/      │
+   │                           │      assets/watermarks/   │
+   │                           │                           │
+   │ saveWatermarkConfig()     │                           │
+   │ ─────────────────────────>│                           │
+   │                           │ 3) update_config command  │
+   │                           │    (mode: merge)          │
+   │                           │ ─────────────────────────>│
+   │                           │    → Merge watermark      │
+   │                           │      into configuration   │
+   │                           │    → Emit config_updated  │
+   │                           │    → Angular reloads      │
+   │                           │      watermark overlay    │
+```
+
+### Points clés
+
+- **`deploy_asset`** ne touche PAS à `configuration.json` et n'émet PAS `config_updated`. Il ne fait que déposer le fichier image.
+- **`update_config`** (mode merge) met à jour `configuration.json` avec la section `watermark` et émet `config_updated` pour recharger l'app Angular.
+- Le dashboard appelle `saveWatermarkConfig()` automatiquement après un upload réussi (pas besoin de clic manuel).
+- Pendant le lock de 60s (`config_update_pending_until`), la config watermark est immédiatement mergée dans `local_config_mirror` via `jsonb_set` pour éviter la perte au refresh dashboard.
+
+### Re-deploy image sur "Deployer le watermark" (v3.54.3+)
+
+`saveWatermarkConfig()` envoie désormais **les deux commandes** à chaque déploiement :
+
+1. `update_config` — met à jour la section watermark dans `configuration.json`
+2. `deploy_asset` — re-télécharge l'image depuis `cloudUrl` vers le Pi
+
+Cela garantit que même si le premier `deploy_asset` a échoué (Pi offline, timeout réseau, etc.), l'image est re-déployée à chaque clic sur "Deployer le watermark".
+
+### Retry côté Pi (v3.54.3+)
+
+Si l'image watermark ne charge pas (fichier pas encore présent après `deploy_asset`), le `WatermarkService` retente automatiquement :
+
+| Tentative | Délai |
+| --------- | ----- |
+| 1         | 5s    |
+| 2         | 10s   |
+| 3         | 30s   |
+| 4         | 60s   |
+| 5         | 120s  |
+
+- Un **cache-buster** (`?_v=<timestamp>`) est ajouté au `src` de l'image (voir section ci-dessous).
+- Le retry state est **réinitialisé** à chaque nouvelle configuration (`setConfiguration()` / `init()`).
+- Après 5 échecs, le service abandonne et log une erreur console.
+
+### Cache-buster nginx (v3.55.4+)
+
+nginx sur le Pi sert les fichiers statiques avec `Cache-Control: public, immutable` et `expires 30d` (cf. `raspberry/config/nginx/neopro-hls.conf`). Sans cache-buster, Chromium ne rechargerait jamais une image watermark remplacée avec le même nom de fichier.
+
+`WatermarkService.getImageSrc()` ajoute **systématiquement** un paramètre `?_v=<timestamp>` :
+
+- **Affichage normal** : `?_v=<configVersion>` — timestamp fixé au dernier `setConfiguration()`. L'image est cachée tant que la config ne change pas.
+- **Pendant les retries** : `?_v=<Date.now()>` — timestamp unique à chaque tentative, forçant un rechargement frais même si le fichier vient d'être déployé.
+
+### Structure de la configuration watermark
+
+```json
+{
+  "watermark": {
+    "enabled": true,
+    "imagePath": "assets/watermarks/watermark_neopro.png",
+    "position": "top-right",
+    "size": 15,
+    "opacity": 80,
+    "fullscreen": true,
+    "imageUrl": "https://cdn.neopro.tv/watermarks/watermark_neopro.png"
+  }
+}
+```
+
+### Conditions d'affichage (Angular Pi)
+
+Le watermark s'affiche si les 3 conditions sont remplies :
+
+1. `showWatermark` = `true` (via `WatermarkService.checkVisibility()`)
+2. `configuration.watermark.enabled` = `true`
+3. `configuration.watermark.imagePath` est défini et non vide
+
+> **Note (v3.54.3+) :** Si l'image échoue au chargement (`<img (error)>`), le service ne désactive plus définitivement le watermark. Il programme un retry avec backoff (5 tentatives). L'image `src` utilise `getImageSrc()` avec cache-buster systématique (v3.55.4+) pour contourner le cache nginx immutable.
+
+### Sélection watermark depuis le Dashboard (v3.55.6+)
+
+Le Dashboard propose une **liste déroulante** des watermarks disponibles sur le FTP, au lieu de forcer un upload à chaque fois.
+
+**Endpoint** : `GET /api/assets/watermarks` (admin, operator)
+
+**Flux** :
+
+1. Le Dashboard appelle `GET /api/assets/watermarks` au chargement du tab Settings
+2. L'API liste le dossier `watermarks/` sur le FTP via `listAssets('watermarks')`
+3. Filtre les fichiers image (.png, .jpg, .jpeg, .gif, .webp, .svg)
+4. Enrichit chaque fichier avec `url` (CDN), `localPath` (chemin Pi), `storagePath` (chemin FTP)
+5. L'utilisateur sélectionne un watermark dans la dropdown → `update_config` + `deploy_asset` vers le Pi
+6. L'upload d'un nouveau watermark reste possible (zone upload compacte), rafraîchit la liste après succès
+
+**Monitoring** : L'opération FTP `list` est instrumentée via `recordFtpOperation('list', status, 'video', duration)` — visible dans les métriques Prometheus `ftp_operations_total{operation="list"}` et `ftp_operation_duration_seconds{operation="list"}`.
 
 ---
 

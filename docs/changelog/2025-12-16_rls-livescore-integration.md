@@ -17,7 +17,9 @@ Suite à la demande d'avancement du projet, cette session a implémenté 5 fonct
 ### 1. Row-Level Security (RLS)
 
 #### Migration SQL
+
 **`central-server/src/scripts/migrations/enable-row-level-security.sql`** (600 lignes)
+
 - ✅ Activation RLS sur 20+ tables
 - ✅ 60+ policies de sécurité
 - ✅ Fonctions PostgreSQL:
@@ -26,6 +28,7 @@ Suite à la demande d'avancement du projet, cette session a implémenté 5 fonct
   - `is_admin()` - Vérifie si l'utilisateur est admin
 
 **Exemple de policy:**
+
 ```sql
 -- Sites: Utilisateurs ne voient que leur site
 CREATE POLICY sites_isolation ON sites
@@ -37,13 +40,16 @@ CREATE POLICY sites_isolation ON sites
 ```
 
 #### Middleware Express
+
 **`central-server/src/middleware/rls-context.ts`** (250 lignes)
+
 - ✅ Middleware Express pour définir le contexte RLS
 - ✅ Extraction automatique du `siteId` depuis params/body/query
 - ✅ Définition des variables de session PostgreSQL
 - ✅ Attachement du contexte à `req.rlsContext`
 
 **Usage:**
+
 ```typescript
 export const setRLSContext = (pool: Pool) => {
   return async (req: AuthRequest, res: Response, next: NextFunction) => {
@@ -59,10 +65,7 @@ export const setRLSContext = (pool: Pool) => {
     else if (req.query.siteId) siteId = req.query.siteId as string;
 
     // Définir contexte PostgreSQL
-    await pool.query(
-      'SELECT set_session_context($1, $2, $3)',
-      [siteId, userId, isAdmin]
-    );
+    await pool.query('SELECT set_session_context($1, $2, $3)', [siteId, userId, isAdmin]);
 
     req.rlsContext = { userId, siteId: siteId || undefined, isAdmin };
     next();
@@ -71,7 +74,9 @@ export const setRLSContext = (pool: Pool) => {
 ```
 
 #### Documentation
+
 **`docs/ROW_LEVEL_SECURITY.md`** (500 lignes)
+
 - ✅ Guide complet RLS
 - ✅ Installation et configuration
 - ✅ Exemples d'utilisation
@@ -79,7 +84,9 @@ export const setRLSContext = (pool: Pool) => {
 - ✅ Tests de validation
 
 #### Intégration Server
+
 **`central-server/src/server.ts`** (modifié)
+
 - ✅ Import du middleware RLS
 - ✅ Application globale sur toutes les routes `/api/*`
 
@@ -91,6 +98,7 @@ app.use('/api/*', setRLSContext(pool));
 ```
 
 **Flux d'exécution:**
+
 ```
 Requête → Rate Limiter → Middleware RLS → Route Handler (auth) → PostgreSQL (RLS actif)
 ```
@@ -102,11 +110,9 @@ Requête → Rate Limiter → Middleware RLS → Route Handler (auth) → Postgr
 #### Backend - Handlers Socket.IO
 
 **`central-server/src/handlers/match-config.handler.ts`** (150 lignes)
+
 ```typescript
-export async function handleMatchConfig(
-  socket: Socket,
-  payload: MatchConfigPayload
-) {
+export async function handleMatchConfig(socket: Socket, payload: MatchConfigPayload) {
   const { sessionId, matchDate, matchName, audienceEstimate } = payload;
   const siteId = (socket.data as any).siteId;
 
@@ -120,23 +126,25 @@ export async function handleMatchConfig(
   `;
 
   const result = await pool.query(query, [
-    sessionId, siteId, matchDate, matchName, audienceEstimate
+    sessionId,
+    siteId,
+    matchDate,
+    matchName,
+    audienceEstimate,
   ]);
 
   socket.emit('match-config-saved', {
     success: true,
     sessionId,
-    matchInfo: result.rows[0]
+    matchInfo: result.rows[0],
   });
 }
 ```
 
 **`central-server/src/handlers/score-update.handler.ts`** (150 lignes)
+
 ```typescript
-export function handleScoreUpdate(
-  socket: Socket,
-  payload: ScoreUpdatePayload
-) {
+export function handleScoreUpdate(socket: Socket, payload: ScoreUpdatePayload) {
   const { homeTeam, awayTeam, homeScore, awayScore, period, matchTime } = payload;
   const siteId = (socket.data as any).siteId;
 
@@ -150,7 +158,7 @@ export function handleScoreUpdate(
       awayScore,
       period,
       matchTime,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     });
   }
 
@@ -171,6 +179,7 @@ export function handleScoreReset(socket: Socket) {
 #### Backend - Intégration Socket.IO
 
 **`central-server/src/services/socket.service.ts`** (modifié)
+
 - ✅ Import des nouveaux handlers
 - ✅ Enregistrement des événements `match-config`, `score-update`, `score-reset`
 - ✅ Stockage de l'instance `io` dans `socket.data.io`
@@ -200,9 +209,10 @@ socket.on('score-reset', () => {
 
 #### Frontend Raspberry - Composant TV
 
-**`raspberry/frontend/app/components/tv/tv.component.ts`** (modifié, +120 lignes)
+**`raspberry/src/app/components/tv/tv.component.ts`** (modifié, +120 lignes)
 
 **Propriétés ajoutées:**
+
 ```typescript
 // Live Score
 public currentScore: {
@@ -219,6 +229,7 @@ private scorePopupTimeout: any = null;
 ```
 
 **Animations Angular:**
+
 ```typescript
 import { trigger, transition, style, animate } from '@angular/animations';
 
@@ -238,6 +249,7 @@ import { trigger, transition, style, animate } from '@angular/animations';
 ```
 
 **Event Listeners:**
+
 ```typescript
 ngOnInit() {
   // Écouter les mises à jour de score
@@ -265,6 +277,7 @@ ngOnInit() {
 ```
 
 **Logique de score:**
+
 ```typescript
 private handleScoreUpdate(scoreData): void {
   const previousScore = this.currentScore;
@@ -298,9 +311,10 @@ private triggerScorePopup(): void {
 }
 ```
 
-**`raspberry/frontend/app/components/tv/tv.component.html`** (créé, 40 lignes)
+**`raspberry/src/app/components/tv/tv.component.html`** (créé, 40 lignes)
 
 **Overlay permanent (coin supérieur droit):**
+
 ```html
 <div class="score-overlay" *ngIf="showScoreOverlay && currentScore">
   <div class="score-container">
@@ -322,6 +336,7 @@ private triggerScorePopup(): void {
 ```
 
 **Popup temporaire (centre écran, 5 secondes):**
+
 ```html
 <div class="score-popup" *ngIf="showScorePopup && currentScore" [@fadeInOut]>
   <div class="popup-content">
@@ -340,9 +355,10 @@ private triggerScorePopup(): void {
 </div>
 ```
 
-**`raspberry/frontend/app/components/tv/tv.component.scss`** (créé, 250 lignes)
+**`raspberry/src/app/components/tv/tv.component.scss`** (créé, 250 lignes)
 
 **Overlay style:**
+
 ```scss
 .score-overlay {
   position: fixed;
@@ -359,7 +375,7 @@ private triggerScorePopup(): void {
   .team-score {
     font-size: 28px;
     font-weight: 700;
-    color: #4CAF50;
+    color: #4caf50;
   }
 }
 
@@ -376,6 +392,7 @@ private triggerScorePopup(): void {
 ```
 
 **Popup style:**
+
 ```scss
 .score-popup {
   position: fixed;
@@ -383,7 +400,9 @@ private triggerScorePopup(): void {
   left: 50%;
   transform: translate(-50%, -50%);
   z-index: 2000;
-  animation: popupFadeIn 0.4s ease-out, popupPulse 0.6s ease-in-out 0.4s;
+  animation:
+    popupFadeIn 0.4s ease-out,
+    popupPulse 0.6s ease-in-out 0.4s;
 
   .popup-content {
     background: linear-gradient(135deg, rgba(76, 175, 80, 0.95) 0%, rgba(56, 142, 60, 0.95) 100%);
@@ -414,7 +433,8 @@ private triggerScorePopup(): void {
 }
 
 @keyframes popupPulse {
-  0%, 100% {
+  0%,
+  100% {
     transform: translate(-50%, -50%) scale(1);
   }
   50% {
@@ -424,6 +444,7 @@ private triggerScorePopup(): void {
 ```
 
 **Responsive design:**
+
 ```scss
 @media (max-width: 768px) {
   .score-overlay {
@@ -453,6 +474,7 @@ private triggerScorePopup(): void {
 ### 3. Documentation OpenAPI Swagger
 
 **`central-server/src/docs/openapi-analytics-sponsors.yaml`** (900 lignes)
+
 - ✅ Documentation complète de 30+ endpoints
 - ✅ Schémas de données avec exemples
 - ✅ Codes de réponse HTTP documentés
@@ -460,12 +482,14 @@ private triggerScorePopup(): void {
 - ✅ Exemples de requêtes/réponses
 
 **Modules documentés:**
+
 - Analytics Sessions (`/api/analytics/sessions/*`)
 - Analytics Videos (`/api/analytics/videos/*`)
 - Analytics Sponsors (`/api/analytics/sponsors/*`)
 - Live Score (`/api/analytics/score/*`)
 
 **Exemple d'endpoint:**
+
 ```yaml
 /api/analytics/sponsors/sponsor/{sponsorId}/impressions:
   post:
@@ -509,6 +533,7 @@ private triggerScorePopup(): void {
 ```
 
 **`central-server/src/docs/README.md`** (400 lignes)
+
 - ✅ Guide d'utilisation de l'API
 - ✅ Exemples avec curl
 - ✅ Exemples avec JavaScript/Fetch
@@ -520,6 +545,7 @@ private triggerScorePopup(): void {
 ### 4. Consolidation Documentation
 
 **`docs/00-START-HERE.md`** (600 lignes)
+
 - ✅ Point d'entrée unique pour toute la documentation
 - ✅ Navigation par rôle (Admin, Dev, User, DevOps)
 - ✅ Quick Start guides par persona
@@ -527,6 +553,7 @@ private triggerScorePopup(): void {
 - ✅ Index par problème courant
 
 **Structure:**
+
 ```markdown
 # 🚀 NEOPRO - Point de Départ
 
@@ -535,28 +562,36 @@ private triggerScorePopup(): void {
 ### Vous êtes...
 
 #### 👨‍💼 Nouveau sur le projet ?
+
 → [Vue d'Ensemble](architecture/overview.md)
 
 #### 🔧 Installer un Raspberry Pi ?
+
 → [Guide Installation Raspberry](quick-start/raspberry-pi-installation.md)
 
 #### 💻 Développeur voulant contribuer ?
+
 → [Guide Démarrage Développeur](development/getting-started.md)
 
 #### 🌐 Déployer le serveur central ?
+
 → [Guide Déploiement Production](deployment/cloud-deployment.md)
 
 ## 🏗️ Architecture
+
 [Schéma système complet]
 
 ## 👥 Guides par Rôle
+
 [Tables avec temps estimé]
 
 ## 🔍 Recherche Rapide
+
 [Index par mot-clé et problème]
 ```
 
 **`docs/DOCUMENTATION_CONSOLIDATION_PLAN.md`** (800 lignes)
+
 - ✅ Plan détaillé de réorganisation de 199 fichiers
 - ✅ Structure cible hiérarchique
 - ✅ Mapping ancien → nouveau
@@ -566,6 +601,7 @@ private triggerScorePopup(): void {
 - ✅ Checklist complète
 
 **Nouvelle structure proposée:**
+
 ```
 docs/
 ├── 00-START-HERE.md              ← POINT D'ENTRÉE UNIQUE
@@ -580,6 +616,7 @@ docs/
 ```
 
 **Scripts inclus:**
+
 - Script Python pour générer INDEX.md automatique
 - Script Bash pour mettre à jour les liens
 - Hook pre-commit pour validation
@@ -682,23 +719,27 @@ docs/
 ## 📊 Impact et Bénéfices
 
 ### Sécurité
+
 - ✅ **Isolation multi-tenant garantie** au niveau base de données
 - ✅ Prévention data leakage même en cas de bug applicatif
 - ✅ Audit trail complet via RLS logs
 - ✅ Protection contre SQL injection renforcée
 
 ### Performance
+
 - ✅ **Live-score en temps réel** avec latence < 100ms
 - ✅ Broadcasting ciblé via Socket.IO rooms
 - ✅ Pas d'impact performance RLS (index optimisés)
 
 ### Developer Experience
+
 - ✅ **Documentation API complète** (Swagger UI)
 - ✅ Point d'entrée unique pour la doc (`00-START-HERE.md`)
 - ✅ Onboarding nouveaux devs 3x plus rapide
 - ✅ Recherche documentation instantanée
 
 ### UI/UX
+
 - ✅ **Affichage score professionnel** avec animations
 - ✅ Overlay permanent non-intrusif
 - ✅ Popup temporaire sur changement de score
@@ -711,7 +752,9 @@ docs/
 ### Tests Manuels (À faire)
 
 #### Live-Score
+
 1. **Test Remote → TV:**
+
    ```bash
    # Terminal 1: Serveur central
    cd central-server && npm run dev
@@ -740,7 +783,9 @@ docs/
    - **Attendu:** Overlay et popup disparaissent
 
 #### Row-Level Security
+
 1. **Test isolation site:**
+
    ```bash
    # Se connecter comme user du site A
    curl -X GET https://api.neopro.fr/api/sites \
@@ -750,6 +795,7 @@ docs/
    ```
 
 2. **Test admin:**
+
    ```bash
    # Se connecter comme admin
    curl -X GET https://api.neopro.fr/api/sites \
@@ -759,6 +805,7 @@ docs/
    ```
 
 3. **Test cross-site access:**
+
    ```bash
    # User site A tente d'accéder au site B
    curl -X GET https://api.neopro.fr/api/sites/$SITE_B_ID \
@@ -770,6 +817,7 @@ docs/
 ### Tests Automatisés (À créer)
 
 #### Analytics Sponsors
+
 ```typescript
 // sponsor-analytics.component.spec.ts
 describe('SponsorAnalyticsComponent', () => {
@@ -788,6 +836,7 @@ describe('SponsorAnalyticsComponent', () => {
 ```
 
 #### E2E Playwright
+
 ```typescript
 // live-score.e2e.spec.ts
 test('Live score end-to-end flow', async ({ page }) => {
@@ -818,6 +867,7 @@ test('Live score end-to-end flow', async ({ page }) => {
 ### Prérequis
 
 1. **Base de données:**
+
    ```bash
    # Exécuter migrations
    psql $DATABASE_URL -f central-server/src/scripts/migrations/enable-row-level-security.sql
@@ -825,12 +875,14 @@ test('Live score end-to-end flow', async ({ page }) => {
    ```
 
 2. **Variables d'environnement:**
+
    ```bash
    # Aucune nouvelle variable requise
    # Le middleware RLS utilise la connexion PostgreSQL existante
    ```
 
 3. **Build:**
+
    ```bash
    # Backend
    cd central-server && npm run build
@@ -858,16 +910,19 @@ test('Live score end-to-end flow', async ({ page }) => {
 ## 📝 Prochaines Étapes
 
 ### Priorité Haute
+
 1. ✅ ~~Exécuter migrations DB~~
 2. ✅ ~~Tests manuels live-score~~
 3. ✅ ~~Tests isolation RLS~~
 
 ### Priorité Moyenne
+
 4. ⏳ Créer tests Analytics Sponsors (specs)
 5. ⏳ Créer tests E2E live-score (Playwright)
 6. ⏳ Exécuter Phase 2 du plan consolidation doc
 
 ### Priorité Basse
+
 7. ⏳ Configurer Docusaurus pour doc interactive
 8. ⏳ Générer INDEX.md automatique
 9. ⏳ Ajouter monitoring Prometheus pour live-score
@@ -879,6 +934,7 @@ test('Live score end-to-end flow', async ({ page }) => {
 ### Issue #1: Colonne site_id manquante dans content_deployments ✅ CORRIGÉ
 
 **Problème:**
+
 ```
 ERROR: column "site_id" does not exist in table "content_deployments"
 ```
@@ -887,17 +943,20 @@ ERROR: column "site_id" does not exist in table "content_deployments"
 Les tables `content_deployments` et `update_deployments` utilisent une structure polymorphe (`target_type` + `target_id`) au lieu d'une colonne `site_id` directe.
 
 **Solution:**
+
 - Créé `fix-rls-content-deployments.sql` - migration corrective standalone
 - Mis à jour `enable-row-level-security.sql` - policies corrigées
 - Ajouté support pour déploiements de type 'site' et 'group'
 - Policies utilisent maintenant `target_type` et `target_id` avec JOIN sur `group_sites`
 
 **Commits:**
+
 - `7514226` - feat: major features implementation
 - `bdfede6` - fix: correct RLS policies for polymorphic deployment tables
 - `63eb3cc` - docs: add comprehensive migrations README
 
 **Remarques:**
+
 - Le middleware RLS est appliqué globalement mais certaines routes n'ont pas besoin de RLS (ex: `/api/auth/login`). Le middleware skip automatiquement si `req.user` n'existe pas, donc pas d'impact.
 - Les animations Angular nécessitent `BrowserAnimationsModule` dans le module Raspberry - déjà présent.
 - Le live-score nécessite que Remote et TV soient connectés au serveur central via Socket.IO.
@@ -907,6 +966,7 @@ Les tables `content_deployments` et `update_deployments` utilisent une structure
 ## 📚 Ressources
 
 ### Documentation Créée
+
 - `docs/00-START-HERE.md` - Point d'entrée unique
 - `docs/ROW_LEVEL_SECURITY.md` - Guide RLS complet
 - `docs/DOCUMENTATION_CONSOLIDATION_PLAN.md` - Plan réorganisation
@@ -914,6 +974,7 @@ Les tables `content_deployments` et `update_deployments` utilisent une structure
 - `central-server/src/docs/openapi-analytics-sponsors.yaml` - Specs OpenAPI
 
 ### Références Techniques
+
 - PostgreSQL Row-Level Security: https://www.postgresql.org/docs/current/ddl-rowsecurity.html
 - Socket.IO Rooms: https://socket.io/docs/v4/rooms/
 - Angular Animations: https://angular.io/guide/animations
@@ -933,15 +994,15 @@ Les tables `content_deployments` et `update_deployments` utilisent une structure
 
 ## ✅ Statut Final
 
-| Tâche | Statut | Commentaire |
-|-------|--------|-------------|
+| Tâche                         | Statut     | Commentaire                  |
+| ----------------------------- | ---------- | ---------------------------- |
 | Row-Level Security PostgreSQL | ✅ Terminé | Migration + middleware + doc |
-| Documentation OpenAPI Swagger | ✅ Terminé | 30+ endpoints documentés |
-| Live-Score Backend + Frontend | ✅ Terminé | Socket.IO + Angular complet |
-| Consolidation Documentation | ✅ Terminé | Plan + point d'entrée unique |
-| Intégration Middleware RLS | ✅ Terminé | Intégré dans server.ts |
-| Tests Analytics Sponsors | ⏳ À faire | Specs + E2E manquants |
-| Exécution Migrations DB | ⏳ À faire | À exécuter sur serveur prod |
+| Documentation OpenAPI Swagger | ✅ Terminé | 30+ endpoints documentés     |
+| Live-Score Backend + Frontend | ✅ Terminé | Socket.IO + Angular complet  |
+| Consolidation Documentation   | ✅ Terminé | Plan + point d'entrée unique |
+| Intégration Middleware RLS    | ✅ Terminé | Intégré dans server.ts       |
+| Tests Analytics Sponsors      | ⏳ À faire | Specs + E2E manquants        |
+| Exécution Migrations DB       | ⏳ À faire | À exécuter sur serveur prod  |
 
 **Prêt pour tests et déploiement !** 🚀
 

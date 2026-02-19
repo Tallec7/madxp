@@ -6,6 +6,7 @@
  */
 import { Component, Input, inject, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { LicenseService, LicenseState } from '../../services/license.service';
 import { Subscription } from 'rxjs';
 
@@ -37,9 +38,9 @@ import { Subscription } from 'rxjs';
         <!-- Message contextuel -->
         <p class="message">{{ getMessage() }}</p>
 
-        <!-- Icone contextuelle -->
+        <!-- Icone contextuelle (SVG pour compatibilité écrans TV) -->
         <div class="icon-container">
-          <span class="icon">{{ getIcon() }}</span>
+          <span class="icon" [innerHTML]="getIcon()"></span>
         </div>
 
         <!-- Information de contact -->
@@ -328,23 +329,40 @@ export class LicenseBlockComponent implements OnInit, OnDestroy {
     return messages[reason || ''] || 'Le service est temporairement indisponible.';
   }
 
+  private readonly sanitizer = inject(DomSanitizer);
+
   /**
-   * Retourne l'icône selon la raison du blocage
+   * Retourne l'icône SVG selon la raison du blocage.
+   * SVG inline au lieu d'emojis pour compatibilité écrans TV / Raspberry Pi.
    */
-  getIcon(): string {
+  getIcon(): SafeHtml {
     const reason = this.licenseState?.reason;
+    const svgAttr = 'xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"';
     const icons: Record<string, string> = {
-      'unpaid': '💳',
-      'expired': '📅',
-      'abuse': '⛔',
-      'maintenance': '🔧',
-      'request': '✋',
-      'hardware': '🔌',
-      'trial_ended': '🎁',
-      'connection': '📡',
-      'connection_required': '🌐',
-      'server_blocked': '🚫'
+      // 💳 Credit card
+      'unpaid': `<svg ${svgAttr}><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>`,
+      // 📅 Calendar
+      'expired': `<svg ${svgAttr}><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>`,
+      // ⛔ Ban
+      'abuse': `<svg ${svgAttr}><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>`,
+      // 🔧 Wrench
+      'maintenance': `<svg ${svgAttr}><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>`,
+      // ✋ Hand
+      'request': `<svg ${svgAttr}><path d="M18 11V6a2 2 0 0 0-4 0v1M14 10V4a2 2 0 0 0-4 0v6M10 10V5a2 2 0 0 0-4 0v9"/><path d="M18 11a2 2 0 0 1 4 0v3a8 8 0 0 1-8 8h-2c-2.5 0-4.3-1-5.7-2.7L3.3 15a2 2 0 0 1 3-2.6L8 14"/></svg>`,
+      // 🔌 Plug
+      'hardware': `<svg ${svgAttr}><path d="M12 22v-5"/><path d="M9 8V2"/><path d="M15 8V2"/><path d="M18 8v5a6 6 0 0 1-12 0V8z"/></svg>`,
+      // 🎁 Gift
+      'trial_ended': `<svg ${svgAttr}><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>`,
+      // 📡 Satellite
+      'connection': `<svg ${svgAttr}><path d="M2 20h.01"/><path d="M7 20v-4"/><path d="M12 20v-8"/><path d="M17 20V8"/><path d="M22 4v16"/></svg>`,
+      // 🌐 Globe
+      'connection_required': `<svg ${svgAttr}><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>`,
+      // 🚫 No entry
+      'server_blocked': `<svg ${svgAttr}><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>`
     };
-    return icons[reason || ''] || '⚠️';
+    // ⚠️ Warning triangle (default)
+    const defaultIcon = `<svg ${svgAttr}><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`;
+    const svg = icons[reason || ''] || defaultIcon;
+    return this.sanitizer.bypassSecurityTrustHtml(svg);
   }
 }

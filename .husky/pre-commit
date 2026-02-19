@@ -25,4 +25,17 @@ if [ $? -ne 0 ]; then
   exit 1
 fi
 
+# Auto-regenerate SAFe Excel if any docs/safe/*.md changed
+SAFE_MD_CHANGED=$(git diff --cached --name-only -- 'docs/safe/*.md' | head -1)
+if [ -n "$SAFE_MD_CHANGED" ]; then
+  echo "SAFe .md files changed — regenerating Excel portfolio..."
+  if command -v python3 >/dev/null 2>&1 && python3 -c "import openpyxl" 2>/dev/null; then
+    python3 docs/safe/scripts/export-to-excel.py --output docs/safe/NEOPRO_SAFe_Portfolio.xlsx
+    git add docs/safe/NEOPRO_SAFe_Portfolio.xlsx
+    echo "✅ Excel portfolio updated and staged."
+  else
+    echo "⚠️  Skipping Excel generation (openpyxl not installed)"
+  fi
+fi
+
 npx lint-staged

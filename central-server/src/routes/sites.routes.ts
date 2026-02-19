@@ -123,6 +123,23 @@ router.post(
   sitesController.optimizeForMesh
 );
 
+// WiFi Client Configuration (scan & connect wlan1)
+router.get(
+  '/:id/wifi-scan',
+  authenticate,
+  requireRole('admin', 'operator'),
+  adminRateLimit,
+  sitesController.scanWifiNetworks
+);
+
+router.post(
+  '/:id/wifi-connect',
+  authenticate,
+  requireRole('admin', 'operator'),
+  sensitiveRateLimit,
+  sitesController.connectWifiClient
+);
+
 router.get(
   '/:id/debug-bundle',
   authenticate,
@@ -248,6 +265,32 @@ router.delete(
   requireRole('admin', 'operator'),
   sensitiveRateLimit,
   sitesController.clearPendingCommands
+);
+
+// Remote PIN management
+router.get(
+  '/:id/remote-pin',
+  authenticate,
+  requireRole('admin', 'operator'),
+  adminRateLimit,
+  sitesController.getRemotePinStatus
+);
+
+router.post(
+  '/:id/remote-pin',
+  authenticate,
+  requireRole('admin', 'operator'),
+  sensitiveRateLimit,
+  validate(schemas.setRemotePin),
+  sitesController.setRemotePin
+);
+
+router.delete(
+  '/:id/remote-pin',
+  authenticate,
+  requireRole('admin', 'operator'),
+  sensitiveRateLimit,
+  sitesController.clearRemotePin
 );
 
 // Subscription management routes for specific site

@@ -8,14 +8,33 @@ Interface d'administration web pour gérer un système Neopro sur Raspberry Pi.
 
 Accessible depuis n'importe quel appareil connecté au WiFi `NEOPRO-[CLUB]`.
 
+## Modes d'utilisation
+
+L'interface propose deux modes adaptés à chaque profil utilisateur :
+
+### 🏠 Mode club (par défaut)
+
+Mode simplifié pour le staff sportif bénévole. Affiche uniquement :
+
+- **Dashboard** : carte santé globale (vert/jaune/rouge) + widget sync cloud
+- **Vidéos** : bibliothèque, upload, catégories, blocs temps
+- **Réseau** : connexion WiFi actuelle uniquement
+
+Les onglets Logs et Système sont masqués. Les métriques techniques (CPU, RAM, température détaillées) sont cachées.
+
+### 🔧 Mode technicien
+
+Mode complet pour les techniciens Neopro. Affiche toutes les fonctionnalités : métriques détaillées, scanner WiFi, hotspot, logs, services systemd, etc.
+
+Le mode est persisté dans le navigateur (localStorage). Toggle accessible dans le header.
+
 ## Fonctionnalités
 
 ### 📊 Dashboard
 
-- Monitoring système en temps réel
-- CPU, Mémoire, Température, Stockage
-- État des services
-- Uptime système
+- **Mode club** : carte santé système (🟢 vert / ⚠️ jaune / 🔴 rouge) basée sur les seuils CPU, RAM, température, stockage + uptime
+- **Mode technicien** : monitoring système complet en temps réel (CPU, Mémoire, Température, Stockage, Services, Uptime)
+- **Widget Sync Status** (les deux modes) : état de connexion cloud, dernière synchronisation, commandes en attente, erreurs dead-letter. Historique récent expandable en mode tech
 - Rafraîchissement automatique toutes les 5s
 
 ### 🎬 Vidéos
@@ -112,6 +131,7 @@ sudo systemctl start neopro-admin
 #### Système
 
 - `GET /api/system` - Infos système
+- `GET /api/sync-status` - État de synchronisation cloud (connexion, dernière sync, queue offline, dead letters)
 - `GET /api/config` - Configuration club
 - `GET /api/network` - Infos réseau
 - `POST /api/system/reboot` - Redémarrer
@@ -266,12 +286,66 @@ npm run dev
 
 ```
 admin/
-├── admin-server.js      # Serveur Express
-├── package.json         # Dépendances
-└── public/             # Frontend
-    ├── index.html      # Interface
-    ├── styles.css      # Styles
-    └── app.js          # JS
+├── admin-server.js          # Orchestrateur Express (wiring services ↔ routes)
+├── helpers.js               # Utilitaires partagés (exec, sanitize, paths)
+├── cache-manager.js         # Cache en mémoire avec TTL & namespaces
+├── email-notifier.js        # Notifications email (nodemailer)
+├── package.json             # Dépendances
+│
+├── services/                # Logique métier (pur, testable)
+│   ├── errors.js            #   Classes d'erreur typées (NotFound, Locked, Validation…)
+│   ├── configuration.service.js  #   CRUD sur configuration.json
+│   ├── video.service.js     #   Upload, list, edit, delete, orphelins
+│   ├── video-processing.service.js  #   File de traitement (compression, miniatures)
+│   ├── system.service.js    #   CPU, disk, version, logs, services systemd
+│   ├── network.service.js   #   WiFi scan, connect, BSSID lock, hotspot
+│   └── backup.service.js    #   Backups CRUD, timer systemd
+│
+├── routes/                  # Contrôleurs HTTP minces (délèguent aux services)
+│   ├── auth.js              #   Login, sessions, middleware requireAuth
+│   ├── system.js            #   GET /api/system, POST /api/system/reboot…
+│   ├── sync-status.js       #   GET /api/sync-status (état sync-agent)
+│   ├── videos.js            #   CRUD vidéos, upload, orphelins, miniatures
+│   ├── config.js            #   Catégories, sous-catégories, timeCategories
+│   ├── network.js           #   WiFi, réseau, hotspot
+│   ├── backup.js            #   Backups, auto-backup
+│   ├── update.js            #   Mise à jour OTA (.tar.gz)
+│   ├── email.js             #   Config email, test, envoi
+│   └── cache.js             #   Stats cache, vidage
+│
+├── __tests__/               # Tests unitaires (Jest, 60%+ couverture)
+│   ├── helpers.test.js
+│   ├── errors.test.js
+│   ├── configuration.service.test.js
+│   ├── system.service.test.js
+│   ├── network.service.test.js
+│   ├── video-processing.service.test.js
+│   └── backup.service.test.js
+│
+└── public/                  # Frontend (HTML/CSS/JS statique)
+    ├── index.html
+    ├── styles.css
+    ├── app.js               # Fichier concaténé (build output)
+    └── modules/             # Sources modulaires (voir MODULES.md)
+```
+
+### Architecture
+
+Le serveur suit une architecture en couches :
+
+```
+HTTP Request → Route (thin controller) → Service (business logic) → helpers/fs/exec
+```
+
+- **Routes** : parsent les inputs HTTP, appellent le service, formatent la réponse
+- **Services** : encapsulent la logique métier, lèvent des erreurs typées
+- **Helpers** : fonctions utilitaires pures (sanitize, format, exec sécurisé)
+
+### Tests
+
+```bash
+npm test              # Lance les tests Jest
+npm run test:coverage # Tests avec rapport de couverture
 ```
 
 ## Dépannage
@@ -324,7 +398,7 @@ Pour toute question : support@neopro.fr
 
 ---
 
-**Version :** 1.3.0
+**Version :** 3.23.0
 **Licence :** MIT
 **Auteur :** Neopro / Kalon Partners
-**Dernière mise à jour :** 3 janvier 2026
+**Dernière mise à jour :** 14 février 2026

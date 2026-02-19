@@ -14,11 +14,18 @@ import nodemailer from 'nodemailer';
 import { Transporter } from 'nodemailer';
 import logger from '../config/logger';
 
+export interface EmailAttachment {
+  filename: string;
+  content: Buffer;
+  contentType?: string;
+}
+
 export interface EmailOptions {
   to: string | string[];
   subject: string;
   text?: string;
   html?: string;
+  attachments?: EmailAttachment[];
 }
 
 export interface AlertEmailData {
@@ -137,6 +144,11 @@ class EmailService {
         subject: options.subject,
         text: options.text,
         html: options.html,
+        attachments: options.attachments?.map(a => ({
+          filename: a.filename,
+          content: a.content,
+          contentType: a.contentType || 'application/pdf',
+        })),
       });
 
       logger.info('Email sent', {
@@ -231,6 +243,79 @@ class EmailService {
 
     const html = this.getSummaryEmailTemplate(data);
     const text = `Rapport ${data.period}\n\nSites: ${data.onlineSites}/${data.totalSites} en ligne\nAlertes: ${data.alertsCount}\nDeploiements: ${data.deploymentsCount}`;
+
+    return this.send({ to, subject, html, text });
+  }
+
+  /**
+   * Envoie un rapport de visibilite sponsor avec PDF en piece jointe
+   */
+  async sendSponsorReport(
+    to: string | string[],
+    data: {
+      sponsorName: string;
+      clubName: string;
+      period: string;
+      pdfBuffer: Buffer;
+      pdfFilename: string;
+    }
+  ): Promise<boolean> {
+    const subject = `[NeoPro] Rapport de visibilite ${data.sponsorName} - ${data.period}`;
+
+    const html = this.getSponsorReportEmailTemplate(data);
+    const text = `Rapport de visibilite ${data.sponsorName} pour ${data.clubName} - ${data.period}. Veuillez trouver le rapport PDF en piece jointe.`;
+
+    return this.send({
+      to,
+      subject,
+      html,
+      text,
+      attachments: [{
+        filename: data.pdfFilename,
+        content: data.pdfBuffer,
+        contentType: 'application/pdf',
+      }],
+    });
+  }
+
+  /**
+   * Envoie un magic link d'acces au portail sponsor
+   * P5: Permet au sponsor de consulter ses stats sans compte
+   */
+  async sendSponsorAccessLink(
+    to: string,
+    data: {
+      sponsorName: string;
+      clubName: string;
+      accessUrl: string;
+      expiresAt: Date;
+    }
+  ): Promise<boolean> {
+    const subject = `[NeoPro] Acces a vos statistiques de visibilite - ${data.clubName}`;
+
+    const expiresFormatted = data.expiresAt.toLocaleDateString('fr-FR', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    });
+
+    const content = `
+      <div class="header">
+        <h1>📊 Vos statistiques de visibilite</h1>
+      </div>
+      <div class="content">
+        <p>Bonjour,</p>
+        <p>Vous avez ete invite a consulter les statistiques de visibilite de <strong>${data.sponsorName}</strong> au <strong>${data.clubName}</strong>.</p>
+        <p style="text-align: center; margin: 24px 0;">
+          <a href="${data.accessUrl}" class="btn">Voir mes statistiques</a>
+        </p>
+        <p class="meta">Ce lien est valable jusqu'au ${expiresFormatted}.</p>
+        <p class="meta">Vous pourrez consulter vos impressions, votre audience estimee et telecharger vos rapports PDF.</p>
+      </div>
+    `;
+
+    const html = this.getBaseTemplate(content);
+    const text = `Consultez vos statistiques de visibilite pour ${data.sponsorName} au ${data.clubName}. Lien: ${data.accessUrl} (valable jusqu'au ${expiresFormatted}).`;
 
     return this.send({ to, subject, html, text });
   }
@@ -381,6 +466,38 @@ class EmailService {
         <p style="margin-top: 16px; color: #999; font-size: 12px;">
           Si le bouton ne fonctionne pas, copiez et collez ce lien dans votre navigateur:<br>
           <a href="${data.resetLink}" style="color: #2022E9; word-break: break-all;">${data.resetLink}</a>
+        </p>
+      </div>
+    `;
+
+    return this.getBaseTemplate(content);
+  }
+
+  private getSponsorReportEmailTemplate(data: {
+    sponsorName: string;
+    clubName: string;
+    period: string;
+  }): string {
+    const content = `
+      <div class="header">
+        <h1>Rapport de Visibilite</h1>
+      </div>
+      <div class="content">
+        <p>Bonjour,</p>
+        <p>Veuillez trouver ci-joint le rapport de visibilite pour <strong>${data.sponsorName}</strong>
+        au sein du club <strong>${data.clubName}</strong> pour la periode <strong>${data.period}</strong>.</p>
+        <div class="success">
+          <p style="margin: 0;">Le rapport PDF est joint a cet email.</p>
+        </div>
+        <p>Ce rapport presente :</p>
+        <ul>
+          <li>Le nombre total de passages de votre annonce</li>
+          <li>L'audience estimee touchee</li>
+          <li>La repartition par type d'evenement (matchs, entrainements, etc.)</li>
+        </ul>
+        <p class="meta" style="margin-top: 24px;">
+          Ce rapport est genere automatiquement par la plateforme NeoPro.<br>
+          Pour toute question, contactez votre interlocuteur au club.
         </p>
       </div>
     `;

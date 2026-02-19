@@ -287,25 +287,33 @@ GET  /api/remote/:siteId/videos   → Liste des vidéos disponibles
 
 ### Commandes supportées
 
-| Type            | Payload                                      | Description                 |
-| --------------- | -------------------------------------------- | --------------------------- | -------- | --------- | ------------------- |
-| `score-update`  | `{homeTeam, awayTeam, homeScore, awayScore}` | Mise à jour du score        |
-| `score-reset`   | `{}`                                         | Reset du score              |
-| `phase-change`  | `{phase: 'neutral'                           | 'before'                    | 'during' | 'after'}` | Changement de phase |
-| `play-video`    | `{video: {name, path}}`                      | Lecture d'une vidéo         |
-| `play-sponsors` | `{}`                                         | Retour à la boucle sponsors |
-| `timer-update`  | `{action: 'start'                            | 'pause'                     | 'reset'  | 'sync'}`  | Contrôle timer      |
-| `breaking-news` | `{message, duration?, position?}`            | Message défilant            |
-| `match-config`  | `{sessionId, matchDate, matchName}`          | Config match                |
+| Type               | Payload                                      | Description                     |
+| ------------------ | -------------------------------------------- | ------------------------------- | -------- | --------- | ------------------- |
+| `score-update`     | `{homeTeam, awayTeam, homeScore, awayScore}` | Mise à jour du score            |
+| `score-reset`      | `{}`                                         | Reset du score                  |
+| `phase-change`     | `{phase: 'neutral'                           | 'before'                        | 'during' | 'after'}` | Changement de phase |
+| `play-video`       | `{video: {name, path}}`                      | Lecture d'une vidéo             |
+| `play-sponsors`    | `{}`                                         | Retour à la boucle sponsors     |
+| `timer-update`     | `{action: 'start'                            | 'pause'                         | 'reset'  | 'sync'}`  | Contrôle timer      |
+| `breaking-news`    | `{message, duration?, position?}`            | Message défilant                |
+| `match-config`     | `{sessionId, matchDate, matchName}`          | Config match                    |
+| `recording-toggle` | `{}`                                         | Toggle enregistrement analytics |
+
+### Fonctionnalités iso avec remote locale (février 2026)
+
+- **Licence** : bannière WARNING/GRACE_PERIOD/CONNECTION_WARNING + écran blocage BLOCKED
+- **REC** : indicateur d'enregistrement analytics + toggle start/stop
+- **PIN** : protection optionnelle 4-6 chiffres (si configuré par l'admin)
 
 ### Limites
 
 - ❌ Pi offline → télécommande cloud indisponible (fallback : hotspot local)
 - ⚡ Latence ~200ms vs ~50ms en local
+- ⏱️ Recording state rafraîchi par polling (60s) vs temps réel en local
 
 ### Statut
 
-✅ **IMPLÉMENTÉ** - Janvier 2026
+✅ **IMPLÉMENTÉ** - Janvier 2026 (base), Février 2026 (licence + REC)
 
 ---
 
@@ -441,12 +449,12 @@ Service de surveillance réseau complet au niveau du sync-agent.
 
 **Séquence de récupération Internet (progressive, v3.7.14+)** :
 
-| Phase | Tentative | Action | Délai après |
-|-------|-----------|--------|-------------|
-| 1 - Douce | 1 | `dhclient wlan1` (renouveler DHCP seulement) | 30s |
-| 2 - Normale | 2 | `wpa_cli reconfigure` + `dhclient` | 60s |
-| 3 - Agressive | 3-4 | `ip link set wlan1 down/up` + reconfigure + dhclient | 120s |
-| 4 - Dernière chance | 5 | Alerte envoyée au central | — |
+| Phase               | Tentative | Action                                               | Délai après |
+| ------------------- | --------- | ---------------------------------------------------- | ----------- |
+| 1 - Douce           | 1         | `dhclient wlan1` (renouveler DHCP seulement)         | 30s         |
+| 2 - Normale         | 2         | `wpa_cli reconfigure` + `dhclient`                   | 60s         |
+| 3 - Agressive       | 3-4       | `ip link set wlan1 down/up` + reconfigure + dhclient | 120s        |
+| 4 - Dernière chance | 5         | Alerte envoyée au central                            | —           |
 
 > **Pourquoi la progression ?** Un simple `wpa_cli reconfigure` causait une cascade de réassociations WiFi
 > qui faisait planter le driver USB WiFi (brcmfmac). La recovery progressive essaie d'abord DHCP seul,
@@ -563,17 +571,18 @@ Export du debug bundle depuis le dashboard central pour analyse approfondie des 
 
 ### Problèmes identifiés
 
-| # | Problème | Sévérité | Statut |
-|---|----------|----------|--------|
-| 1 | **Double NetworkDetector.detect()** → 4x `wpa_cli reconfigure` → crash USB WiFi | CRITIQUE | Corrigé (Phase 2 code) |
-| 2 | **TKIP sur le hotspot** → éjections téléphones (triple disassociation) | MAJEUR | Corrigé (script SSH `fix-fleet-pi.sh`) |
-| 3 | **3 services systemd manquants** (watchdog, guardian, optimizer) | MAJEUR | Corrigé (fix OTA + script SSH) |
-| 4 | **2 676 analytics bloquées** | MODÉRÉ | Flush via script SSH |
-| 5 | **Erreurs GPU SharedImage** (~5/s) | MINEUR | Nettoyage cache via script SSH |
+| #   | Problème                                                                        | Sévérité | Statut                                 |
+| --- | ------------------------------------------------------------------------------- | -------- | -------------------------------------- |
+| 1   | **Double NetworkDetector.detect()** → 4x `wpa_cli reconfigure` → crash USB WiFi | CRITIQUE | Corrigé (Phase 2 code)                 |
+| 2   | **TKIP sur le hotspot** → éjections téléphones (triple disassociation)          | MAJEUR   | Corrigé (script SSH `fix-fleet-pi.sh`) |
+| 3   | **3 services systemd manquants** (watchdog, guardian, optimizer)                | MAJEUR   | Corrigé (fix OTA + script SSH)         |
+| 4   | **2 676 analytics bloquées**                                                    | MODÉRÉ   | Flush via script SSH                   |
+| 5   | **Erreurs GPU SharedImage** (~5/s)                                              | MINEUR   | Nettoyage cache via script SSH         |
 
 ### Corrections appliquées
 
 **Phase 2 — Code (livrée via OTA)** :
+
 - Debounce 120s sur `NetworkDetector.detect()` (empêche double appel)
 - Grace period 60s au boot pour NetworkWatchdog (laisse le réseau se stabiliser)
 - Écriture atomique wpa_supplicant (plus de double `sed -i` qui corrompait le fichier)
@@ -581,6 +590,7 @@ Export du debug bundle depuis le dashboard central pour analyse approfondie des 
 - Fix pipeline OTA (`update-software.js` copie maintenant `config/` → services systemd installés)
 
 **Phase 1 — SSH (script `fix-fleet-pi.sh`)** :
+
 1. TKIP → CCMP dans `/etc/hostapd/hostapd.conf`
 2. Installation des 3 services systemd manquants
 3. Création du dossier `videos-processing`
@@ -600,4 +610,50 @@ Voir `docs/analysis/NLF-debug-bundle-2026-02-08.md`
 
 ---
 
-**Dernière mise à jour :** 8 février 2026 (Analyse debug bundle — 5 problèmes identifiés, corrections Phase 2 code + script SSH fleet)
+## Diagnostic "Connexion instable" en Ethernet — 19 février 2026
+
+### Symptôme
+
+Le dashboard affichait "Connexion instable" (orange, `displayStatus: warning`) avec 93.2% uptime malgré une connexion **Ethernet filaire**. La carte de la liste des sites montrait "Connecté" (vert) — le statut oscillait entre les deux.
+
+### Investigation
+
+1. **Code Pi vérifié** : `NetworkDetector` et `NetworkWatchdog` gèrent correctement Ethernet — aucune opération `wpa_cli` n'est lancée quand `eth0` est actif
+2. **Logs Railway analysés** : le problème était côté serveur, pas côté Pi
+
+### Cause racine : Saturation pool Supabase Session Mode
+
+Le central-server utilisait le pooler Supabase en **Session Mode** (port 5432) avec `DB_POOL_MAX=15`. Lors d'un restart Railway :
+
+- L'ancien process gardait ses 15 connexions pendant le graceful shutdown
+- Le nouveau process demandait 15 nouvelles connexions
+- Supabase refusait : `MaxClientsInSessionMode: max clients reached`
+- **Toutes** les requêtes DB échouaient → heartbeats perdus → tous les Pi marqués offline
+
+**Timeline observée (2026-02-18)** :
+
+```
+12:48  — Railway restart
+13:45  — Début boucle connect/disconnect (11 min de chaos)
+14:07  — MaxClientsInSessionMode + rate limit Railway (1589 logs droppés)
+14:13  — connectedSites: 0 — TOUS les Pi offline
+```
+
+### Correction appliquée
+
+| Paramètre     | Avant                 | Après                     |
+| ------------- | --------------------- | ------------------------- |
+| Port Supabase | `5432` (Session Mode) | `6543` (Transaction Mode) |
+| `DB_POOL_MAX` | `15`                  | `5`                       |
+
+En Transaction Mode, les connexions PgBouncer sont partagées par transaction (pas par session). Un restart ne peut plus saturer le pool.
+
+### Résultat
+
+- Serveur redémarré, 0 erreurs
+- 2 agents reconnectés immédiatement
+- Monitoring pool DB ajouté (log toutes les 5 min)
+
+---
+
+**Dernière mise à jour :** 19 février 2026 (Diagnostic "Connexion instable" Ethernet — cause racine Supabase Session Mode, fix Transaction Mode)

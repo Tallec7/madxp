@@ -1,7 +1,8 @@
-import { Component, Input, Output, EventEmitter, OnInit, ViewChild, ElementRef, AfterViewChecked } from '@angular/core';
+import { Component, Input, Output, EventEmitter, OnInit, OnDestroy, ViewChild, ElementRef, AfterViewChecked } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TranslateModule } from '@ngx-translate/core';
+import { Subscription, interval } from 'rxjs';
 import { SitesService } from '../../../../core/services/sites.service';
 import { NotificationService } from '../../../../core/services/notification.service';
 import { LoggerService } from '../../../../core/services/logger.service';
@@ -50,6 +51,25 @@ interface HdmiCecStatus {
   error: string | null;
 }
 
+interface DisplayInfo {
+  connected: boolean;
+  manufacturer: string | null;
+  model: string | null;
+  serial: string | null;
+  resolution: string | null;
+  display_type: 'tv' | 'monitor' | 'projector' | 'unknown';
+  detection_method: string;
+}
+
+interface FanStatusInfo {
+  present: boolean;
+  type: string | null;
+  curState: number | null;
+  maxState: number | null;
+  speedPercent: number | null;
+  is_pi5: boolean;
+}
+
 interface HealthStatus {
   success: boolean;
   timestamp: string;
@@ -57,6 +77,7 @@ interface HealthStatus {
   healthStatus: 'healthy' | 'degraded' | 'critical';
   issues: HealthIssue[];
   gpu: GpuInfo;
+  fanStatus?: FanStatusInfo;
   services: ServiceStatus[];
   metrics: {
     cpu: number;
@@ -67,6 +88,7 @@ interface HealthStatus {
     localIp: string | null;
   } | null;
   hdmiCecStatus?: HdmiCecStatus;
+  displayInfo?: DisplayInfo;
   system: {
     hostname: string;
     os: string;
@@ -229,6 +251,25 @@ interface WifiBssidStatus {
   timestamp: string;
 }
 
+// Types pour WiFi Client Configuration (scan & connect wlan1)
+interface WifiNetwork {
+  ssid: string;
+  bssid: string | null;
+  signal: number | null;
+  quality: number | null;
+  channel: number | null;
+  security: string;
+}
+
+interface WifiScanResult {
+  success: boolean;
+  networks: WifiNetwork[];
+  currentSsid: string | null;
+  currentBssid: string | null;
+  scannedAt: string;
+  error?: string;
+}
+
 @Component({
   selector: 'app-site-debug-tab',
   standalone: true,
@@ -387,17 +428,80 @@ interface WifiBssidStatus {
               </div>
             </div>
 
-            <!-- HDMI-CEC TV Status -->
-            <div class="health-section" *ngIf="healthStatus.hdmiCecStatus">
-              <h5>📺 État TV (HDMI-CEC)</h5>
+            <!-- Fan Status -->
+            <div class="health-section" *ngIf="healthStatus.fanStatus?.present">
+              <h5>🌀 Ventilateur {{ healthStatus.fanStatus?.is_pi5 ? '(Pi 5 Active Cooler)' : '(Fan HAT)' }}</h5>
               <div class="health-grid">
+                <div class="health-metric">
+                  <span class="metric-label">Type</span>
+                  <span class="metric-value">{{ healthStatus.fanStatus?.type || 'N/A' }}</span>
+                </div>
+                <div class="health-metric" [class.metric-warning]="healthStatus.fanStatus?.curState === 0 && (healthStatus.metrics?.temperature ?? 0) > 70">
+                  <span class="metric-label">État</span>
+                  <span class="metric-value">
+                    {{ healthStatus.fanStatus?.curState }}/{{ healthStatus.fanStatus?.maxState }}
+                    <span *ngIf="healthStatus.fanStatus?.speedPercent !== null">({{ healthStatus.fanStatus?.speedPercent }}%)</span>
+                  </span>
+                </div>
+                <div class="health-metric">
+                  <span class="metric-label">Vitesse</span>
+                  <span class="metric-value">
+                    <span *ngIf="healthStatus.fanStatus?.curState === 0">Arrêté</span>
+                    <span *ngIf="(healthStatus.fanStatus?.curState ?? -1) > 0 && (healthStatus.fanStatus?.curState ?? 0) <= 1">Faible</span>
+                    <span *ngIf="(healthStatus.fanStatus?.curState ?? 0) > 1 && (healthStatus.fanStatus?.curState ?? 0) <= 2">Moyen</span>
+                    <span *ngIf="(healthStatus.fanStatus?.curState ?? 0) > 2">Fort</span>
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div class="health-section" *ngIf="healthStatus.fanStatus && !healthStatus.fanStatus.present">
+              <h5>🌀 Ventilateur</h5>
+              <p class="muted">Aucun ventilateur détecté (refroidissement passif)</p>
+            </div>
+
+            <!-- HDMI-CEC TV Status + Display Info -->
+            <div class="health-section" *ngIf="healthStatus.hdmiCecStatus">
+              <h5>{{ getDisplaySectionIcon(healthStatus.displayInfo) }} {{ getDisplaySectionTitle(healthStatus.displayInfo) }}</h5>
+
+              <!-- Display Info (from EDID) -->
+              <div class="health-grid" *ngIf="healthStatus.displayInfo?.connected">
+                <div class="health-metric metric-ok">
+                  <span class="metric-label">Écran</span>
+                  <span class="metric-value">
+                    {{ getDisplayName(healthStatus.displayInfo) }}
+                  </span>
+                </div>
+                <div class="health-metric" *ngIf="healthStatus.displayInfo?.resolution">
+                  <span class="metric-label">Résolution</span>
+                  <span class="metric-value">{{ healthStatus.displayInfo?.resolution }}</span>
+                </div>
+                <div class="health-metric">
+                  <span class="metric-label">Type</span>
+                  <span class="metric-value">{{ getDisplayTypeLabel(healthStatus.displayInfo?.display_type || 'unknown') }}</span>
+                </div>
+                <div class="health-metric" [class.metric-ok]="healthStatus.hdmiCecStatus.tv_connected" [class.metric-warning]="!healthStatus.hdmiCecStatus.tv_connected">
+                  <span class="metric-label">Connexion HDMI</span>
+                  <span class="metric-value">
+                    {{ healthStatus.hdmiCecStatus.tv_connected ? '✅ Connected' : '✅ Signal OK' }}
+                  </span>
+                </div>
+              </div>
+
+              <!-- Monitor PC detected: simplified CEC info -->
+              <div class="monitor-notice" *ngIf="healthStatus.displayInfo?.display_type === 'monitor'">
+                <span class="metric-hint">🖥️ Moniteur PC détecté — le contrôle CEC (allumage/extinction automatique) n'est pas disponible sur ce type d'écran.</span>
+              </div>
+
+              <!-- TV CEC details (only for TVs or unknown displays) -->
+              <div class="health-grid" *ngIf="healthStatus.displayInfo?.display_type !== 'monitor'">
                 <div class="health-metric" [class.metric-warning]="healthStatus.hdmiCecStatus.tv_power === 'standby'" [class.metric-ok]="healthStatus.hdmiCecStatus.tv_power === 'on'">
                   <span class="metric-label">Alimentation TV</span>
                   <span class="metric-value">
                     {{ getTvPowerLabel(healthStatus.hdmiCecStatus.tv_power) }}
                   </span>
                 </div>
-                <div class="health-metric" [class.metric-ok]="healthStatus.hdmiCecStatus.tv_connected" [class.metric-warning]="!healthStatus.hdmiCecStatus.tv_connected">
+                <div class="health-metric" *ngIf="!healthStatus.displayInfo?.connected" [class.metric-ok]="healthStatus.hdmiCecStatus.tv_connected" [class.metric-warning]="!healthStatus.hdmiCecStatus.tv_connected">
                   <span class="metric-label">Connexion HDMI</span>
                   <span class="metric-value">
                     {{ healthStatus.hdmiCecStatus.tv_connected ? '✅ Connected' : '❌ Not detected' }}
@@ -417,7 +521,7 @@ interface WifiBssidStatus {
               <div class="cec-last-check" *ngIf="healthStatus.hdmiCecStatus.last_check_at">
                 <span class="metric-hint">Dernière vérification: {{ healthStatus.hdmiCecStatus.last_check_at | date:'HH:mm:ss' }}</span>
               </div>
-              <div class="cec-error" *ngIf="healthStatus.hdmiCecStatus.error">
+              <div class="cec-error" *ngIf="healthStatus.hdmiCecStatus.error && healthStatus.displayInfo?.display_type !== 'monitor'">
                 <span class="metric-hint metric-warning">⚠️ {{ healthStatus.hdmiCecStatus.error }}</span>
               </div>
             </div>
@@ -1218,6 +1322,91 @@ interface WifiBssidStatus {
               <button class="btn btn-secondary btn-sm" (click)="loadWifiBssidStatus()" [disabled]="loadingWifiBssid">
                 🔄 {{ 'debug.refresh' | translate }}
               </button>
+            </div>
+          </div>
+
+          <!-- WiFi Client Configuration (scan & connect wlan1) -->
+          <div class="wifi-config-section" *ngIf="isConnected">
+            <h5>{{ 'debug.wifiConfig' | translate }}</h5>
+
+            <div class="wifi-scan-actions">
+              <button class="btn btn-primary btn-sm" (click)="scanWifiNetworks()" [disabled]="scanningWifi || connectingWifi">
+                📡 {{ scanningWifi ? ('debug.scanningWifi' | translate) : ('debug.scanNetworks' | translate) }}
+              </button>
+            </div>
+
+            <!-- Scanning spinner -->
+            <div *ngIf="scanningWifi" class="loading-inline">
+              <div class="spinner-small"></div>
+              <span>{{ 'debug.scanningWifi' | translate }}</span>
+            </div>
+
+            <!-- Scan error -->
+            <div *ngIf="wifiScanResult && !wifiScanResult.success && wifiScanResult.error" class="wifi-scan-error">
+              ⚠️ {{ wifiScanResult.error }}
+            </div>
+
+            <!-- Scan results -->
+            <div *ngIf="wifiScanResult && wifiScanResult.success && !scanningWifi" class="wifi-networks-list">
+              <div class="scan-info">
+                {{ wifiScanResult.networks.length }} {{ 'debug.networksFound' | translate }}
+                <span class="scan-time">{{ wifiScanResult.scannedAt | date:'HH:mm:ss' }}</span>
+              </div>
+
+              <div *ngFor="let network of wifiScanResult.networks"
+                class="wifi-network-item"
+                [class.selected]="selectedWifiNetwork?.ssid === network.ssid && selectedWifiNetwork?.bssid === network.bssid"
+                [class.current-network]="wifiScanResult.currentSsid === network.ssid"
+                (click)="selectWifiNetwork(network)">
+                <div class="network-info">
+                  <span class="network-ssid">{{ network.ssid }}</span>
+                  <span class="network-details">{{ network.security }} · ch.{{ network.channel }}</span>
+                </div>
+                <div class="network-signal">
+                  <span [class]="getWifiSignalClass(network.signal)">
+                    {{ network.signal }} dBm
+                  </span>
+                  <span *ngIf="wifiScanResult.currentSsid === network.ssid" class="current-badge">
+                    ✓ {{ 'debug.currentNetwork' | translate }}
+                  </span>
+                </div>
+              </div>
+
+              <!-- Connect form when a network is selected -->
+              <div *ngIf="selectedWifiNetwork" class="wifi-connect-form">
+                <div class="connect-target">
+                  {{ 'debug.connectTo' | translate }} <strong>{{ selectedWifiNetwork.ssid }}</strong>
+                  ({{ selectedWifiNetwork.security }})
+                </div>
+
+                <div *ngIf="selectedWifiNetwork.security !== 'Open'" class="password-input-group">
+                  <label>{{ 'debug.wifiPassword' | translate }}</label>
+                  <input
+                    type="password"
+                    [(ngModel)]="wifiPassword"
+                    [placeholder]="'debug.wifiPasswordPlaceholder' | translate"
+                    class="form-control"
+                    (keyup.enter)="connectWifiClient()"
+                  />
+                </div>
+
+                <div class="connect-actions">
+                  <button
+                    class="btn btn-success btn-sm"
+                    (click)="connectWifiClient()"
+                    [disabled]="connectingWifi || (selectedWifiNetwork.security !== 'Open' && (!wifiPassword || wifiPassword.length < 8))">
+                    {{ connectingWifi ? ('debug.connectingWifi' | translate) : ('debug.connectWifi' | translate) }}
+                  </button>
+                </div>
+
+                <!-- Connection result -->
+                <div *ngIf="wifiConnectResult" class="wifi-connect-result"
+                  [class.connect-success]="wifiConnectResult.connected"
+                  [class.connect-pending]="!wifiConnectResult.connected">
+                  <div>{{ wifiConnectResult.message }}</div>
+                  <div *ngIf="wifiConnectResult.ipAddress">IP: {{ wifiConnectResult.ipAddress }}</div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -2056,6 +2245,16 @@ interface WifiBssidStatus {
       padding: 0.5rem;
       background: #fef3c7;
       border-radius: 4px;
+    }
+
+    .monitor-notice {
+      margin-top: 0.5rem;
+      padding: 0.75rem;
+      background: #eff6ff;
+      border-radius: 6px;
+      border-left: 3px solid #3b82f6;
+      font-size: 0.85rem;
+      color: #1e40af;
     }
 
     /* Services grid */
@@ -3012,6 +3211,158 @@ interface WifiBssidStatus {
       margin-left: 0.5rem;
     }
 
+    /* WiFi Client Configuration (scan & connect) */
+    .wifi-config-section {
+      margin-top: 1rem;
+      padding-top: 1rem;
+      border-top: 1px solid #e2e8f0;
+    }
+
+    .wifi-config-section h5 {
+      margin: 0 0 0.75rem 0;
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: #334155;
+    }
+
+    .wifi-scan-actions {
+      margin-bottom: 0.75rem;
+    }
+
+    .wifi-scan-error {
+      background: #fef3c7;
+      border: 1px solid #fcd34d;
+      border-radius: 6px;
+      padding: 0.75rem;
+      margin-top: 0.5rem;
+      font-size: 0.813rem;
+      color: #92400e;
+    }
+
+    .wifi-networks-list {
+      margin-top: 0.75rem;
+    }
+
+    .scan-info {
+      font-size: 0.75rem;
+      color: #64748b;
+      margin-bottom: 0.5rem;
+    }
+
+    .scan-time {
+      margin-left: 0.5rem;
+      font-style: italic;
+    }
+
+    .wifi-network-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.5rem 0.75rem;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      margin-bottom: 0.25rem;
+      cursor: pointer;
+      transition: background-color 0.15s, border-color 0.15s;
+      font-size: 0.813rem;
+    }
+
+    .wifi-network-item:hover {
+      background-color: #f8fafc;
+    }
+
+    .wifi-network-item.selected {
+      border-color: #3b82f6;
+      background-color: #eff6ff;
+    }
+
+    .wifi-network-item.current-network {
+      border-left: 3px solid #16a34a;
+    }
+
+    .network-info {
+      display: flex;
+      flex-direction: column;
+      gap: 0.125rem;
+    }
+
+    .network-ssid {
+      font-weight: 500;
+    }
+
+    .network-details {
+      font-size: 0.688rem;
+      color: #94a3b8;
+    }
+
+    .network-signal {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.75rem;
+    }
+
+    .current-badge {
+      font-size: 0.688rem;
+      color: #16a34a;
+      font-weight: 600;
+    }
+
+    .wifi-connect-form {
+      margin-top: 0.75rem;
+      padding: 0.75rem;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      background: #f8fafc;
+    }
+
+    .connect-target {
+      margin-bottom: 0.5rem;
+      font-size: 0.813rem;
+    }
+
+    .password-input-group {
+      margin-bottom: 0.5rem;
+    }
+
+    .password-input-group label {
+      display: block;
+      font-size: 0.75rem;
+      color: #64748b;
+      margin-bottom: 0.25rem;
+    }
+
+    .password-input-group .form-control {
+      width: 100%;
+      padding: 0.375rem 0.625rem;
+      border: 1px solid #cbd5e1;
+      border-radius: 6px;
+      font-size: 0.813rem;
+    }
+
+    .connect-actions {
+      margin-top: 0.5rem;
+    }
+
+    .wifi-connect-result {
+      margin-top: 0.625rem;
+      padding: 0.5rem 0.75rem;
+      border-radius: 6px;
+      font-size: 0.813rem;
+    }
+
+    .wifi-connect-result.connect-success {
+      background-color: #dcfce7;
+      color: #166534;
+      border: 1px solid #86efac;
+    }
+
+    .wifi-connect-result.connect-pending {
+      background-color: #fef9c3;
+      color: #854d0e;
+      border: 1px solid #fde047;
+    }
+
     /* P3.3 - Export */
     .export-section {
       padding-top: 1rem;
@@ -3228,7 +3579,7 @@ interface WifiBssidStatus {
     }
   `]
 })
-export class SiteDebugTabComponent implements OnInit, AfterViewChecked {
+export class SiteDebugTabComponent implements OnInit, AfterViewChecked, OnDestroy {
   @Input() siteId!: string;
   @Input() isConnected: boolean = false;
   @Input() connectionHealth: ConnectionHealth | null = null;
@@ -3300,6 +3651,7 @@ export class SiteDebugTabComponent implements OnInit, AfterViewChecked {
   showBufferStatus: boolean = false;
   bufferStatus: BufferStatus | null = null;
   loadingBufferStatus: boolean = false;
+  private bufferPollSubscription: Subscription | null = null;
 
   // Hotspot (P2.4)
   showHotspotFix: boolean = false;
@@ -3315,6 +3667,14 @@ export class SiteDebugTabComponent implements OnInit, AfterViewChecked {
   loadingWifiBssid: boolean = false;
   removingBssidLock: boolean = false;
   optimizingMesh: boolean = false;
+
+  // WiFi Client Configuration (scan & connect wlan1)
+  wifiScanResult: WifiScanResult | null = null;
+  scanningWifi: boolean = false;
+  selectedWifiNetwork: WifiNetwork | null = null;
+  wifiPassword: string = '';
+  connectingWifi: boolean = false;
+  wifiConnectResult: { connected: boolean; ipAddress: string | null; message: string } | null = null;
 
   // Export (P3.3)
   showExport: boolean = false;
@@ -3342,6 +3702,10 @@ export class SiteDebugTabComponent implements OnInit, AfterViewChecked {
 
   ngOnInit(): void {
     this.loadDebugInfo();
+  }
+
+  ngOnDestroy(): void {
+    this.bufferPollSubscription?.unsubscribe();
   }
 
   ngAfterViewChecked(): void {
@@ -3594,6 +3958,43 @@ export class SiteDebugTabComponent implements OnInit, AfterViewChecked {
       case 'transitioning': return '⏳ Transition...';
       case 'unknown': return '❓ Inconnu';
       default: return '❓ Non détecté';
+    }
+  }
+
+  getDisplaySectionIcon(displayInfo?: DisplayInfo): string {
+    if (!displayInfo) return '📺';
+    switch (displayInfo.display_type) {
+      case 'monitor': return '🖥️';
+      case 'tv': return '📺';
+      case 'projector': return '📽️';
+      default: return '📺';
+    }
+  }
+
+  getDisplaySectionTitle(displayInfo?: DisplayInfo): string {
+    if (!displayInfo || !displayInfo.connected) return 'État TV (HDMI-CEC)';
+    switch (displayInfo.display_type) {
+      case 'monitor': return 'Écran (Moniteur PC)';
+      case 'tv': return 'État TV (HDMI-CEC)';
+      case 'projector': return 'Écran (Projecteur)';
+      default: return 'Écran connecté';
+    }
+  }
+
+  getDisplayName(displayInfo?: DisplayInfo): string {
+    if (!displayInfo) return 'Inconnu';
+    const parts: string[] = [];
+    if (displayInfo.manufacturer) parts.push(displayInfo.manufacturer);
+    if (displayInfo.model) parts.push(displayInfo.model);
+    return parts.length > 0 ? parts.join(' ') : 'Écran détecté';
+  }
+
+  getDisplayTypeLabel(displayType: string): string {
+    switch (displayType) {
+      case 'tv': return '📺 TV';
+      case 'monitor': return '🖥️ Moniteur PC';
+      case 'projector': return '📽️ Projecteur';
+      default: return '❓ Inconnu';
     }
   }
 
@@ -3880,16 +4281,61 @@ export class SiteDebugTabComponent implements OnInit, AfterViewChecked {
     }
 
     this.loadingBufferStatus = true;
+    this.bufferPollSubscription?.unsubscribe();
 
     this.sitesService.sendCommand(this.siteId, 'get_analytics_buffer_status', {}).subscribe({
       next: (response: unknown) => {
-        this.loadingBufferStatus = false;
-        const result = (response as { result?: BufferStatus })?.result || response as BufferStatus;
-        if (result && result.success !== false) {
-          this.bufferStatus = result;
-        } else {
-          this.notificationService.error('Échec de la récupération de l\'état des buffers');
+        const commandResponse = response as { success?: boolean; commandId?: string; sent?: boolean };
+        if (!commandResponse.commandId) {
+          this.loadingBufferStatus = false;
+          this.notificationService.error('Échec de l\'envoi de la commande');
+          return;
         }
+
+        // Poller le résultat de la commande asynchrone
+        const commandId = commandResponse.commandId;
+        const POLL_TIMEOUT_SECONDS = 15;
+        let pollCount = 0;
+        let isPolling = false;
+
+        this.bufferPollSubscription = interval(1000).subscribe(() => {
+          pollCount++;
+
+          if (pollCount > POLL_TIMEOUT_SECONDS) {
+            this.bufferPollSubscription?.unsubscribe();
+            this.loadingBufferStatus = false;
+            this.notificationService.warning('Timeout: le boîtier ne répond pas');
+            return;
+          }
+
+          if (isPolling) {
+            return;
+          }
+          isPolling = true;
+
+          this.sitesService.getCommandStatus(this.siteId, commandId).subscribe({
+            next: (status: { status: string; result?: Record<string, unknown>; error_message?: string }) => {
+              isPolling = false;
+              if (status.status === 'completed') {
+                this.bufferPollSubscription?.unsubscribe();
+                this.loadingBufferStatus = false;
+                const result = status.result as unknown as BufferStatus;
+                if (result && result.success !== false) {
+                  this.bufferStatus = result;
+                } else {
+                  this.notificationService.error('Échec de la récupération de l\'état des buffers');
+                }
+              } else if (status.status === 'failed') {
+                this.bufferPollSubscription?.unsubscribe();
+                this.loadingBufferStatus = false;
+                this.notificationService.error(status.error_message || 'Commande échouée');
+              }
+            },
+            error: () => {
+              isPolling = false;
+            }
+          });
+        });
       },
       error: (error) => {
         this.loadingBufferStatus = false;
@@ -4096,6 +4542,92 @@ export class SiteDebugTabComponent implements OnInit, AfterViewChecked {
         this.logger.error('Failed to optimize for mesh', { error: message, siteId: this.siteId });
       }
     });
+  }
+
+  // ============================================
+  // WiFi Client Configuration Methods (scan & connect wlan1)
+  // ============================================
+
+  scanWifiNetworks(): void {
+    if (!this.siteId || !this.isConnected) return;
+
+    this.scanningWifi = true;
+    this.selectedWifiNetwork = null;
+    this.wifiPassword = '';
+    this.wifiConnectResult = null;
+
+    this.sitesService.scanWifiNetworks(this.siteId).subscribe({
+      next: (response) => {
+        this.scanningWifi = false;
+        this.wifiScanResult = response;
+        if (!response.success && response.error) {
+          this.notificationService.warning(response.error);
+        }
+      },
+      error: (error) => {
+        this.scanningWifi = false;
+        const message = ErrorExtractor.getMessage(error);
+        this.notificationService.error(`Erreur scan WiFi: ${message}`);
+        this.logger.error('Failed to scan WiFi networks', { error: message, siteId: this.siteId });
+      }
+    });
+  }
+
+  selectWifiNetwork(network: WifiNetwork): void {
+    if (this.selectedWifiNetwork?.ssid === network.ssid && this.selectedWifiNetwork?.bssid === network.bssid) {
+      this.selectedWifiNetwork = null;
+      this.wifiPassword = '';
+    } else {
+      this.selectedWifiNetwork = network;
+      this.wifiPassword = '';
+      this.wifiConnectResult = null;
+    }
+  }
+
+  connectWifiClient(): void {
+    if (!this.siteId || !this.isConnected || !this.selectedWifiNetwork) return;
+    if (this.selectedWifiNetwork.security !== 'Open' && (!this.wifiPassword || this.wifiPassword.length < 8)) {
+      this.notificationService.warning('Le mot de passe doit contenir au moins 8 caractères');
+      return;
+    }
+
+    this.connectingWifi = true;
+    this.wifiConnectResult = null;
+
+    this.sitesService.connectWifiClient(
+      this.siteId,
+      this.selectedWifiNetwork.ssid,
+      this.wifiPassword
+    ).subscribe({
+      next: (response) => {
+        this.connectingWifi = false;
+        this.wifiConnectResult = {
+          connected: response.connected,
+          ipAddress: response.ipAddress,
+          message: response.message,
+        };
+        if (response.connected) {
+          this.notificationService.success(response.message);
+          this.wifiPassword = '';
+          this.loadWifiBssidStatus();
+        } else {
+          this.notificationService.warning(response.message);
+        }
+      },
+      error: (error) => {
+        this.connectingWifi = false;
+        const message = ErrorExtractor.getMessage(error);
+        this.notificationService.error(`Erreur connexion WiFi: ${message}`);
+        this.logger.error('Failed to connect WiFi client', { error: message, siteId: this.siteId });
+      }
+    });
+  }
+
+  getWifiSignalClass(signal: number | null): string {
+    if (!signal) return '';
+    if (signal > -60) return 'signal-good';
+    if (signal > -75) return 'signal-medium';
+    return 'signal-weak';
   }
 
   // ============================================

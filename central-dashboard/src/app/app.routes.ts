@@ -27,6 +27,11 @@ export const routes: Routes = [
     path: 'remote/:siteId',
     loadComponent: () => import('./features/remote/cloud-remote.component').then(m => m.CloudRemoteComponent)
   },
+  // Portail sponsor magic link (accessible SANS authentification via token)
+  {
+    path: 'sponsor-access',
+    loadComponent: () => import('./features/sponsor-portal/site-sponsor-portal.component').then(m => m.SiteSponsorPortalComponent)
+  },
   {
     path: '',
     canActivate: [authGuard],
@@ -52,6 +57,12 @@ export const routes: Routes = [
         canActivate: [roleGuard],
         data: { roles: ['super_admin', 'admin'] },
         loadComponent: () => import('./features/analytics/analytics-comparison.component').then(m => m.AnalyticsComparisonComponent)
+      },
+      {
+        path: 'analytics/traction',
+        canActivate: [roleGuard],
+        data: { roles: ['super_admin', 'admin'] },
+        loadComponent: () => import('./features/analytics/analytics-traction.component').then(m => m.AnalyticsTractionComponent)
       },
       {
         path: 'analytics/realtime',
@@ -112,6 +123,18 @@ export const routes: Routes = [
         path: 'advertisers/:id/videos',
         loadComponent: () => import('./features/sponsors/sponsor-videos.component').then(m => m.SponsorVideosComponent)
       },
+      {
+        path: 'advertisers/:id/analytics',
+        canActivate: [roleGuard],
+        data: { roles: ['super_admin', 'admin', 'operator', 'advertiser'] },
+        loadComponent: () => import('./features/sponsors/sponsor-analytics.component').then(m => m.SponsorAnalyticsComponent)
+      },
+      {
+        path: 'network/advertisers/:id/analytics',
+        canActivate: [roleGuard],
+        data: { roles: ['super_admin', 'admin', 'operator', 'advertiser'] },
+        loadComponent: () => import('./features/network-analytics/network-sponsor-stats.component').then(m => m.NetworkSponsorStatsComponent)
+      },
       // Routes legacy sponsors (redirection vers advertisers pour retrocompatibilite)
       {
         path: 'sponsors',
@@ -127,7 +150,7 @@ export const routes: Routes = [
       {
         path: 'advertiser-portal',
         canActivate: [roleGuard],
-        data: { roles: ['advertiser', 'sponsor', 'admin', 'super_admin', 'superadmin'] },
+        data: { roles: ['advertiser', 'sponsor', 'admin', 'super_admin'] },
         loadComponent: () => import('./features/sponsor-portal/sponsor-dashboard.component').then(m => m.SponsorDashboardComponent)
       },
       // Legacy sponsor-portal redirect

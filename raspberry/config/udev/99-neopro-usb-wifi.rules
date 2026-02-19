@@ -1,0 +1,11 @@
+# Neopro — Stabilisation WiFi USB (clé RTL8192EU / wlan1)
+# Déployé automatiquement via OTA dans /etc/udev/rules.d/
+
+# 1. Désactiver USB autosuspend sur le device parent → empêche le kernel d'endormir la clé USB
+ACTION=="add", SUBSYSTEM=="net", KERNEL=="wlan1", RUN+="/bin/sh -c 'echo on > /sys$devpath/device/../power/control 2>/dev/null || true'"
+
+# 2. Désactiver le WiFi power management (iwconfig power off) → empêche le chipset de couper le radio
+ACTION=="add", SUBSYSTEM=="net", KERNEL=="wlan1", RUN+="/bin/sh -c 'sleep 2 && /sbin/iwconfig wlan1 power off 2>/dev/null || true'"
+
+# 3. Désactiver USB autosuspend au niveau du bus USB (ceinture + bretelles)
+ACTION=="add", SUBSYSTEM=="net", KERNEL=="wlan1", RUN+="/bin/sh -c 'echo -1 > /sys$devpath/device/../power/autosuspend 2>/dev/null || true'"
