@@ -90,6 +90,9 @@ find_best_channel() {
 
     for channel in 1 6 11; do
         local count=$(count_networks_on_channel "$channel")
+        # Write directly to log file (NOT via log() which uses tee → stdout)
+        # stdout is captured by $(find_best_channel), so log() would pollute the return value
+        echo "[$(date '+%Y-%m-%d %H:%M:%S')] Channel $channel: $count networks detected" >> "$LOG_FILE"
 
         # Ensure count is a valid number, default to 0
         if ! [[ "$count" =~ ^[0-9]+$ ]]; then
