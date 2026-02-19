@@ -156,6 +156,7 @@ export class TvComponent implements OnInit, OnDestroy {
   private activeManualPlayer: 'A' | 'B' = 'A'; // Quel player manuel est visible
   private isManualMode = false; // Est-on en train de jouer une vidéo manuelle ?
   private _manualRecordingStarted = false; // Auto-start recording pour vidéo manuelle en neutral
+  private _savedLoopIndex = 0; // Index de la boucle sauvegardé avant mode manuel
 
   // Watchdog et récupération d'erreurs
   private watchdogInterval: ReturnType<typeof setInterval> | null = null;
@@ -750,6 +751,8 @@ export class TvComponent implements OnInit, OnDestroy {
 
     // ÉTAPE 0: Mettre isManualMode IMMÉDIATEMENT pour bloquer les transitions de boucle
     // (onVideoEnded ignore les ended events quand isManualMode est true)
+    // Sauvegarder l'index courant pour reprendre la boucle au bon endroit après la vidéo manuelle
+    this._savedLoopIndex = this.currentLoopIndex;
     this.isManualMode = true;
 
     // ÉTAPE 1: Capturer et afficher le freeze-frame IMMÉDIATEMENT
@@ -907,13 +910,15 @@ export class TvComponent implements OnInit, OnDestroy {
       // La boucle a pu se terminer pendant la lecture manuelle (pas de gestion du ended)
       const activeLoopPlayer = this.getActivePlayer();
       if (!activeLoopPlayer || activeLoopPlayer.paused || activeLoopPlayer.ended || !this.isLoopMode) {
-        console.log('tv player : loop died during manual, restarting');
+        // Reprendre à la vidéo suivante (celle d'avant a déjà été vue/interrompue)
+        const resumeAt = this._savedLoopIndex + 1;
+        console.log('tv player : loop died during manual, restarting at index', resumeAt);
         // La boucle est morte — la relancer proprement
         // Le freeze-frame couvre visuellement pendant le redémarrage
         this.captureAndShowFreezeFrame();
         this.pendingSwitch = false;
         this.switchTriggered = false;
-        this.startSeamlessLoop();
+        this.startSeamlessLoop(resumeAt);
         // playOnActivePlayer cachera le freeze-frame quand la vidéo sera prête
       } else {
         // La boucle tourne encore — cacher les overlays pour la révéler
@@ -1451,7 +1456,7 @@ export class TvComponent implements OnInit, OnDestroy {
   /**
    * Démarre la boucle vidéo avec double-buffer
    */
-  private startSeamlessLoop(): void {
+  private startSeamlessLoop(resumeIndex?: number): void {
     if (this.isStartingLoop) {
       console.log('[TV] startSeamlessLoop already in progress, skipping');
       return;
@@ -1466,7 +1471,6 @@ export class TvComponent implements OnInit, OnDestroy {
     this.playerB?.pause();
 
     this.isLoopMode = true;
-    this.currentLoopIndex = 0;
     this.pendingSwitch = false;
     this.switchTriggered = false;
 
@@ -1494,10 +1498,16 @@ export class TvComponent implements OnInit, OnDestroy {
       return;
     }
 
-    console.log('[TV] Starting loop with', loopVideos.length, 'videos');
+    // Reprendre à l'index demandé (clampé à la taille de la boucle) ou 0 par défaut
+    const startIndex = (resumeIndex != null && validVideos.length > 0)
+      ? resumeIndex % validVideos.length
+      : 0;
+    this.currentLoopIndex = startIndex;
 
-    // Jouer la première vidéo sur le player actif
-    this.playOnActivePlayer(0);
+    console.log('[TV] Starting loop with', validVideos.length, 'videos at index', startIndex);
+
+    // Jouer la vidéo à l'index de reprise sur le player actif
+    this.playOnActivePlayer(startIndex);
 
     // NE PAS précharger immédiatement - attendre les dernières secondes
     // Cela évite de décoder 2 vidéos en parallèle et réduit les saccades
