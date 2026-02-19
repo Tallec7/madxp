@@ -551,6 +551,62 @@ class SafeNetworkOperations {
   }
 
   /**
+   * Scan WiFi environment and determine the best channel for the hotspot.
+   * Compares channels 1, 6, 11 (non-overlapping 2.4GHz channels).
+   *
+   * @returns {{ currentChannel: number, bestChannel: number, channelCounts: Record<number, number>, totalNetworks: number } | null}
+   */
+  async _scanAndGetBestChannel() {
+    try {
+      // Read current channel from hostapd.conf
+      const { stdout: channelLine } = await execAsync(
+        `grep "^channel=" ${this.hostapdPath} 2>/dev/null || echo ""`
+      );
+      const currentChannel = parseInt(channelLine.replace('channel=', '').trim()) || 0;
+      if (!currentChannel) {
+        return null;
+      }
+
+      // Scan surrounding networks (iwlist works even in AP mode on bcm43455)
+      const { stdout: scanOut } = await execAsync(
+        'sudo iwlist wlan0 scan 2>/dev/null | grep "Channel:" || echo ""',
+        { timeout: 15000 }
+      );
+
+      const channelCounts = { 1: 0, 6: 0, 11: 0 };
+      let totalNetworks = 0;
+      const lines = scanOut.trim().split('\n').filter(l => l.length > 0);
+
+      for (const line of lines) {
+        const match = line.match(/Channel:(\d+)/);
+        if (match) {
+          const ch = parseInt(match[1]);
+          totalNetworks++;
+          // Group overlapping channels: 1-3 → 1, 4-8 → 6, 9-13 → 11
+          if (ch >= 1 && ch <= 3) channelCounts[1]++;
+          else if (ch >= 4 && ch <= 8) channelCounts[6]++;
+          else if (ch >= 9 && ch <= 13) channelCounts[11]++;
+        }
+      }
+
+      // Find least congested channel
+      let bestChannel = 1;
+      let minCount = channelCounts[1];
+      for (const ch of [6, 11]) {
+        if (channelCounts[ch] < minCount) {
+          minCount = channelCounts[ch];
+          bestChannel = ch;
+        }
+      }
+
+      return { currentChannel, bestChannel, channelCounts, totalNetworks };
+    } catch (error) {
+      logger.warn('SafeNetworkOperations: channel scan failed', { error: error.message });
+      return null;
+    }
+  }
+
+  /**
    * Auto-optimize network based on detected profile
    * Called at boot or when profile changes significantly
    */
@@ -605,6 +661,54 @@ class SafeNetworkOperations {
       } catch (e) {
         // Ignore
       }
+    }
+
+    // Auto-optimize hotspot channel if current channel is congested
+    // Applies to ALL profile types (hotspot runs on wlan0, independent of wlan1 connection)
+    try {
+      const channelInfo = await this._scanAndGetBestChannel();
+      if (channelInfo) {
+        const { currentChannel, bestChannel, channelCounts, totalNetworks } = channelInfo;
+        const currentCount = channelCounts[currentChannel] || 0;
+        const bestCount = channelCounts[bestChannel] || 0;
+
+        // Only switch if current channel is congested (>=5 networks)
+        // AND the best alternative has at least 3 fewer networks (avoid flapping)
+        const CONGESTION_THRESHOLD = 5;
+        const MIN_IMPROVEMENT = 3;
+
+        if (currentChannel !== bestChannel
+            && currentCount >= CONGESTION_THRESHOLD
+            && (currentCount - bestCount) >= MIN_IMPROVEMENT) {
+          logger.info('SafeNetworkOperations: hotspot channel congested, optimizing', {
+            currentChannel,
+            currentCount,
+            bestChannel,
+            bestCount,
+            totalNetworks,
+            channelCounts
+          });
+
+          const result = await this.executeOperation(OPERATIONS.UPDATE_HOTSPOT_CHANNEL, { channel: bestChannel });
+          actions.push({
+            action: 'optimize_hotspot_channel',
+            previousChannel: currentChannel,
+            newChannel: bestChannel,
+            reason: `Channel ${currentChannel} congested (${currentCount} networks), switched to channel ${bestChannel} (${bestCount} networks)`,
+            ...result
+          });
+        } else {
+          logger.info('SafeNetworkOperations: hotspot channel OK', {
+            currentChannel,
+            currentCount,
+            bestChannel,
+            bestCount,
+            totalNetworks
+          });
+        }
+      }
+    } catch (error) {
+      logger.warn('SafeNetworkOperations: hotspot channel optimization failed', { error: error.message });
     }
 
     logger.info('SafeNetworkOperations: auto-optimize completed', { actions: actions.length });
