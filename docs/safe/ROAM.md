@@ -1,6 +1,6 @@
 # Registre de Risques ROAM — PI-1
 
-> **Dernière mise à jour** : 18 Février 2026
+> **Dernière mise à jour** : 19 Février 2026
 > **PI** : PI-1 (Février - Mars 2026)
 > Framework SAFe ROAM : **R**esolved, **O**wned, **A**ccepted, **M**itigated
 
