@@ -17,6 +17,7 @@
 13. [Blocage BSSID Lock en Mesh (v2.34+)](#blocage-bssid-lock-en-mesh-v234)
 14. [Écran / HDMI (v3.44+)](#écran--hdmi-v344)
 15. [Recording Analytics (v3.38+)](#recording-analytics--état-denregistrement-v338)
+16. [Saturation pool DB (MaxClientsInSessionMode)](#saturation-pool-db-maxclientsinsessionmode)
 
 > **WiFi USB** : Pour un guide complet sur la clé WiFi USB (installation, diagnostic, pannes, recovery), voir [WIFI_USB_GUIDE.md](WIFI_USB_GUIDE.md).
 >
@@ -2708,6 +2709,34 @@ Le `onTimeUpdate()` de la boucle arrière-plan ne vérifiait pas `isManualMode`.
 - Ajout de `if (this.isManualMode) return;` dans `onTimeUpdate()` pour bloquer l'early switch pendant les vidéos manuelles
 - Protection de tous les `hideBlackOverlay()` dans `switchPlayers()`, `playOnActivePlayer()` et `startSeamlessLoop()` avec `if (!this.isManualMode)`
 
+### 7b. Boucle vidéo reprend au début après une vidéo manuelle (logo Neopro)
+
+**Symptômes :**
+
+- Depuis la télécommande, on lance une vidéo manuelle
+- La vidéo joue correctement
+- Au retour en boucle, la boucle repart de la vidéo 0 (le logo Neopro) au lieu de reprendre là où elle en était
+
+**Cause racine (corrigée en v3.60.1) :**
+
+Pendant le mode manuel, `onVideoEnded()` ignore les events de la boucle (`isManualMode` guard, ligne 1877). La boucle arrière-plan meurt car la vidéo en cours se termine sans transition vers la suivante. À la fin de la vidéo manuelle, `onManualEnded()` détecte la boucle morte et appelle `startSeamlessLoop()` qui faisait `currentLoopIndex = 0` inconditionnellement.
+
+**Solution (v3.60.1) :**
+
+- `_savedLoopIndex` sauvegarde la position courante avant d'entrer en mode manuel
+- `startSeamlessLoop(resumeIndex?)` accepte un index de reprise optionnel (clampé via modulo)
+- `onManualEnded()` passe `_savedLoopIndex + 1` pour reprendre à la vidéo suivante
+
+**Vérification :**
+
+```bash
+# Dans la console navigateur (/tv), on doit voir :
+# "tv player : loop died during manual, restarting at index 5"  (au lieu de 0)
+# "[TV] Starting loop with 12 videos at index 5"                (au lieu de "at index 0")
+```
+
+**Monitoring :** Le `PlayerState` remonté au central via heartbeat affiche désormais le bon `loopIndex` après reprise (visible dans le dashboard monitoring du site).
+
 ### 8. Vidéos ne se chargent pas
 
 **Cause :** Chemins incorrects dans configuration.json
@@ -3097,4 +3126,59 @@ cat ~/neopro/data/sponsor_impressions.json
 
 ---
 
-**Dernière mise à jour :** 16 février 2026 (v3.44.5 - ajout section Recording Analytics)
+## Saturation pool DB (MaxClientsInSessionMode)
+
+### Symptôme
+
+Tous les sites passent "Connexion instable" ou "Hors ligne" simultanément, même ceux en Ethernet. Les logs Railway montrent :
+
+```
+MaxClientsInSessionMode: max clients reached - in Session mode max clients are limited to pool_size
+```
+
+### Cause
+
+Le pooler Supabase PgBouncer a deux modes :
+
+- **Session Mode** (port 5432) : chaque connexion Node.js réserve une connexion PgBouncer pour toute la durée de vie du process
+- **Transaction Mode** (port 6543) : les connexions sont partagées, empruntées le temps d'une transaction
+
+En Session Mode, un restart Railway (ancien + nouveau process) doublait les connexions requises, saturant le pool.
+
+### Vérification
+
+```bash
+# Vérifier le mode actuel (port dans DATABASE_URL)
+railway variables --service neopro-central | grep DATABASE_URL
+# Port 6543 = Transaction Mode ✅
+# Port 5432 = Session Mode ⚠️
+
+# Vérifier les logs de santé du pool (toutes les 5 min)
+railway logs --service neopro-central --lines 10 --filter "pool saturated OR pool high utilization"
+```
+
+### Correction
+
+Si le pool est en Session Mode (port 5432), passer en Transaction Mode :
+
+```bash
+# Changer le port dans DATABASE_URL
+railway variables --set "DATABASE_URL=postgresql://...@pooler.supabase.com:6543/postgres" --service neopro-central
+
+# Réduire le pool (5 suffisent en Transaction Mode)
+railway variables --set "DB_POOL_MAX=5" --service neopro-central
+```
+
+### Monitoring
+
+Le fichier `database.ts` logge l'état du pool toutes les 5 minutes :
+
+- **`Database pool saturated`** (warn) : toutes les connexions occupées
+- **`Database pool high utilization`** (warn) : > 80% d'utilisation
+- **`Database pool health`** (debug) : état normal
+
+Le mode pooler (`transaction` / `session` / `direct`) est loggé au démarrage et dans chaque log de santé.
+
+---
+
+**Dernière mise à jour :** 19 février 2026 (ajout section saturation pool DB)

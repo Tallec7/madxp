@@ -66,5 +66,6 @@ export interface PlayerState {
   lastError: string | null;
   lastTransitionAt: string | null;
   overlayActive: boolean;
+  loopResumedFrom: number | null;
   updatedAt: string;
 }

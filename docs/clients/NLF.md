@@ -610,4 +610,50 @@ Voir `docs/analysis/NLF-debug-bundle-2026-02-08.md`
 
 ---
 
-**Dernière mise à jour :** 8 février 2026 (Analyse debug bundle — 5 problèmes identifiés, corrections Phase 2 code + script SSH fleet)
+## Diagnostic "Connexion instable" en Ethernet — 19 février 2026
+
+### Symptôme
+
+Le dashboard affichait "Connexion instable" (orange, `displayStatus: warning`) avec 93.2% uptime malgré une connexion **Ethernet filaire**. La carte de la liste des sites montrait "Connecté" (vert) — le statut oscillait entre les deux.
+
+### Investigation
+
+1. **Code Pi vérifié** : `NetworkDetector` et `NetworkWatchdog` gèrent correctement Ethernet — aucune opération `wpa_cli` n'est lancée quand `eth0` est actif
+2. **Logs Railway analysés** : le problème était côté serveur, pas côté Pi
+
+### Cause racine : Saturation pool Supabase Session Mode
+
+Le central-server utilisait le pooler Supabase en **Session Mode** (port 5432) avec `DB_POOL_MAX=15`. Lors d'un restart Railway :
+
+- L'ancien process gardait ses 15 connexions pendant le graceful shutdown
+- Le nouveau process demandait 15 nouvelles connexions
+- Supabase refusait : `MaxClientsInSessionMode: max clients reached`
+- **Toutes** les requêtes DB échouaient → heartbeats perdus → tous les Pi marqués offline
+
+**Timeline observée (2026-02-18)** :
+
+```
+12:48  — Railway restart
+13:45  — Début boucle connect/disconnect (11 min de chaos)
+14:07  — MaxClientsInSessionMode + rate limit Railway (1589 logs droppés)
+14:13  — connectedSites: 0 — TOUS les Pi offline
+```
+
+### Correction appliquée
+
+| Paramètre     | Avant                 | Après                     |
+| ------------- | --------------------- | ------------------------- |
+| Port Supabase | `5432` (Session Mode) | `6543` (Transaction Mode) |
+| `DB_POOL_MAX` | `15`                  | `5`                       |
+
+En Transaction Mode, les connexions PgBouncer sont partagées par transaction (pas par session). Un restart ne peut plus saturer le pool.
+
+### Résultat
+
+- Serveur redémarré, 0 erreurs
+- 2 agents reconnectés immédiatement
+- Monitoring pool DB ajouté (log toutes les 5 min)
+
+---
+
+**Dernière mise à jour :** 19 février 2026 (Diagnostic "Connexion instable" Ethernet — cause racine Supabase Session Mode, fix Transaction Mode)

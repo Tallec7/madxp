@@ -24,6 +24,86 @@
 
 ---
 
+## [3.60.2](https://github.com/Tallec7/neopro/compare/v3.60.1...v3.60.2) (2026-02-19)
+
+### Bug Fixes
+
+- **raspberry:** preserve loop position when resuming after manual video ([#406](https://github.com/Tallec7/neopro/issues/406)) ([06ebc56](https://github.com/Tallec7/neopro/commit/06ebc56454e06d7e12deda6c2d3016c341d3b66f))
+
+## [3.60.1](https://github.com/Tallec7/neopro/compare/v3.60.0...v3.60.1) (2026-02-19)
+
+### Bug Fixes
+
+- **raspberry:** preserve loop position when resuming after manual video ([2801e81](https://github.com/Tallec7/neopro/commit/2801e81))
+- **infra:** switch Supabase from Session Mode to Transaction Mode ([71737f7](https://github.com/Tallec7/neopro/commit/71737f7207b4896c8f610fc0e1aa84d46d16f449))
+
+## fix(raspberry): Boucle vidéo reprend à la bonne position après vidéo manuelle (2026-02-19)
+
+### Problème
+
+Quand une vidéo manuelle était déclenchée depuis la télécommande, la boucle de sponsors reprenait systématiquement à l'index 0 (le logo Neopro) au lieu de reprendre là où elle en était. Cause : `startSeamlessLoop()` faisait `currentLoopIndex = 0` inconditionnellement, et `onVideoEnded()` bloque les transitions pendant `isManualMode` → la boucle meurt → `onManualEnded()` appelait `startSeamlessLoop()` sans index de reprise.
+
+### Changements
+
+| Fichier           | Modification                                                                                  |
+| ----------------- | --------------------------------------------------------------------------------------------- |
+| `tv.component.ts` | Ajout `_savedLoopIndex` — sauvegarde la position avant mode manuel                            |
+| `tv.component.ts` | `startSeamlessLoop(resumeIndex?)` — accepte un index de reprise optionnel (clampé via modulo) |
+| `tv.component.ts` | `onManualEnded()` — passe `_savedLoopIndex + 1` pour reprendre à la vidéo suivante            |
+
+### Monitoring
+
+Le `PlayerState` (remonté au central via heartbeat) reflète désormais correctement le `loopIndex` après reprise — plus de retour systématique à `loopIndex: 0` après chaque vidéo manuelle. Observable dans le dashboard monitoring du site.
+
+### Fichiers modifiés
+
+- `raspberry/src/app/components/tv/tv.component.ts` — logique de reprise boucle
+- `docs/changelog/CHANGELOG.md` — cette entrée
+- `docs/guides/TROUBLESHOOTING.md` — nouvelle section diagnostic
+- `docs/adr/ADR-008-double-buffer-video-pi.md` — documentation `resumeIndex`
+- `.claude/rules/raspberry-tv.md` — règle de reprise boucle
+
+---
+
+## fix(infra): Supabase Session Mode → Transaction Mode (2026-02-19)
+
+### Problème
+
+Le central-server utilisait le **Supabase Session Mode pooler** (port 5432). En Session Mode, chaque connexion du pool Node.js réserve une connexion PgBouncer pour toute la durée de la session. Lors d'un restart Railway, l'ancien et le nouveau process coexistaient brièvement, doublant les connexions requises et saturant le pool Supabase :
+
+```
+MaxClientsInSessionMode: max clients reached - in Session mode max clients are limited to pool_size
+```
+
+**Impact observé (2026-02-18)** :
+
+- De 13:45 à 13:56 : boucle connect/disconnect de tous les agents (11 min de chaos)
+- 14:07 : rate limit Railway atteint (500 logs/sec, 1589 messages droppés)
+- 14:13 : `connectedSites: 0` — tous les Pi déconnectés
+- NLF Handball affiché "Connexion instable" avec 93.2% uptime malgré Ethernet
+
+### Changements
+
+| Paramètre     | Avant                 | Après                     | Effet                                                                      |
+| ------------- | --------------------- | ------------------------- | -------------------------------------------------------------------------- |
+| Port Supabase | `5432` (Session Mode) | `6543` (Transaction Mode) | Connexions partagées par transaction, plus de saturation lors des restarts |
+| `DB_POOL_MAX` | `15`                  | `5`                       | Suffisant en Transaction Mode, réduit la pression sur PgBouncer            |
+
+### Monitoring ajouté
+
+- Log périodique (5 min) de la santé du pool DB : utilisation, saturation, mode pooler
+- Warning automatique si utilisation > 80% ou pool saturé
+
+### Fichiers modifiés
+
+- `central-server/src/config/database.ts` — commentaires Transaction Mode + monitoring pool
+- `docs/adr/ADR-003-postgresql-supabase.md` — section Transaction Mode
+- `docs/adr/ADR-015-railway-hobby-constraints.md` — mise à jour pool config
+- `docs/clients/NLF.md` — diagnostic session 2026-02-19
+- `docs/guides/TROUBLESHOOTING.md` — section MaxClientsInSessionMode
+
+---
+
 ## Hotspot Watchdog — nginx + avahi-daemon monitoring + guide iOS (2026-02-19)
 
 ### Monitoring

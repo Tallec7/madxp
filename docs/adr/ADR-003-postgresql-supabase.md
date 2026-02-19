@@ -15,6 +15,7 @@ Neopro nécessite une base de données pour stocker :
 3. **Configuration** : États des sites, historique de configuration
 
 Contraintes :
+
 - Multi-tenant (isolation des données par rôle)
 - Haute disponibilité (service 24/7)
 - Budget limité (startup)
@@ -43,10 +44,12 @@ CREATE POLICY sites_by_role ON sites
 ### 1. MongoDB
 
 **Avantages** :
+
 - Schéma flexible (configuration JSON)
 - Horizontal scaling natif
 
 **Inconvénients** :
+
 - Pas de RLS natif
 - Transactions ACID limitées
 - Courbe d'apprentissage équipe
@@ -56,10 +59,12 @@ CREATE POLICY sites_by_role ON sites
 ### 2. MySQL
 
 **Avantages** :
+
 - Familier pour l'équipe
 - Large écosystème
 
 **Inconvénients** :
+
 - Pas de RLS natif
 - JSONB moins performant
 - Moins d'extensions (pas de PostGIS si besoin)
@@ -69,11 +74,13 @@ CREATE POLICY sites_by_role ON sites
 ### 3. Firebase Firestore
 
 **Avantages** :
+
 - Temps réel natif
 - Scaling automatique
 - Règles de sécurité déclaratives
 
 **Inconvénients** :
+
 - Vendor lock-in Google
 - Coûts imprévisibles à l'échelle
 - Requêtes complexes difficiles
@@ -83,6 +90,7 @@ CREATE POLICY sites_by_role ON sites
 ### 4. PostgreSQL + Supabase ✅
 
 **Avantages** :
+
 - RLS natif pour multi-tenant
 - JSONB performant (config, metadata)
 - Supabase Auth intégré (optionnel)
@@ -91,6 +99,7 @@ CREATE POLICY sites_by_role ON sites
 - Backups automatiques
 
 **Inconvénients** :
+
 - Dépendance Supabase (mitigé : export PostgreSQL standard)
 - Latence US/EU selon région
 
@@ -99,10 +108,12 @@ CREATE POLICY sites_by_role ON sites
 ### 5. Self-hosted PostgreSQL
 
 **Avantages** :
+
 - Contrôle total
 - Pas de vendor lock-in
 
 **Inconvénients** :
+
 - DevOps à gérer (backups, upgrades, HA)
 - Coût infra + temps équipe
 
@@ -128,10 +139,10 @@ CREATE POLICY sites_by_role ON sites
 // database.ts - Optimisé pour Railway Hobby plan
 const pool = new Pool({
   connectionString: DATABASE_URL,
-  max: 5,                    // Pool réduit (Railway 512MB)
+  max: 5, // Pool réduit (Railway 512MB)
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 10000,
-  ssl: { rejectUnauthorized: false }
+  ssl: { rejectUnauthorized: false },
 });
 ```
 
@@ -159,6 +170,7 @@ club_daily_stats (site_id, date, total_videos, total_impressions) -- Agrégation
 Le pool de connexions a été réduit de 20 à **5 connexions** pour tenir dans les 512MB de RAM de Railway Hobby plan. Voir ADR-015 pour les détails.
 
 Optimisations associées :
+
 - Pending commands Socket.IO : 500 → 100
 - Logs Winston : 10MB×5 → 2MB×2
 - Seuils mémoire : warning 88%, critical 93%, emergency 97%
@@ -167,33 +179,35 @@ Optimisations associées :
 
 La croissance non contrôlée de la DB a nécessité une politique de cleanup automatique :
 
-| Table | Rétention | Justification |
-|-------|-----------|---------------|
-| `video_plays` | 90 jours | `club_daily_stats` conserve l'historique long terme |
-| `advertiser_impressions` | 90 jours | `advertiser_daily_stats` conserve l'agrégation |
-| `metrics` | 7 jours | Debug court terme (CPU, RAM, temp) |
-| `config_history` | 20 versions/site | Rollback réaliste |
-| `remote_commands` | 30 jours | Historique debug |
-| `alerts`, `audit_logs` | 90 jours | Conformité/audit |
+| Table                    | Rétention        | Justification                                       |
+| ------------------------ | ---------------- | --------------------------------------------------- |
+| `video_plays`            | 90 jours         | `club_daily_stats` conserve l'historique long terme |
+| `advertiser_impressions` | 90 jours         | `advertiser_daily_stats` conserve l'agrégation      |
+| `metrics`                | 7 jours          | Debug court terme (CPU, RAM, temp)                  |
+| `config_history`         | 20 versions/site | Rollback réaliste                                   |
+| `remote_commands`        | 30 jours         | Historique debug                                    |
+| `alerts`, `audit_logs`   | 90 jours         | Conformité/audit                                    |
 
 **Tables préservées indéfiniment** (agrégations pré-calculées) :
+
 - `club_daily_stats`, `advertiser_daily_stats`
 
 Jobs cron quotidiens à 3h du matin via `cron-scheduler.service.ts`.
 
 ### Nouvelles tables majeures (v2.27 → v3.0)
 
-| Table | Version | Usage |
-|-------|---------|-------|
-| `config_drafts` | v2.27 | Brouillons de configuration (1 par site, UNIQUE) |
-| `orchestrated_deployments` | v2.27 | Suivi déploiements vidéos + config |
-| `subscription_suspension_reasons` | v2.47 | Motifs de suspension avec messages TV/Remote |
-| `subscription_history` | v2.47 | Historique changements abonnement |
-| `alert_thresholds` | v3.0 | Seuils pour alertes prédictives (14 métriques) |
+| Table                             | Version | Usage                                            |
+| --------------------------------- | ------- | ------------------------------------------------ |
+| `config_drafts`                   | v2.27   | Brouillons de configuration (1 par site, UNIQUE) |
+| `orchestrated_deployments`        | v2.27   | Suivi déploiements vidéos + config               |
+| `subscription_suspension_reasons` | v2.47   | Motifs de suspension avec messages TV/Remote     |
+| `subscription_history`            | v2.47   | Historique changements abonnement                |
+| `alert_thresholds`                | v3.0    | Seuils pour alertes prédictives (14 métriques)   |
 
 ### Vues matérialisées et agrégation
 
 12 vues analytics ajoutées pour éviter les requêtes complexes répétées :
+
 - `subscription_status_summary` : Sites enrichis avec statut calculé
 - `subscription_stats` : Compteurs globaux par statut/plan
 - `club_analytics_summary`, `top_videos_by_site`
@@ -201,12 +215,12 @@ Jobs cron quotidiens à 3h du matin via `cron-scheduler.service.ts`.
 
 ### Colonnes JSONB stratégiques
 
-| Colonne | Table | Usage |
-|---------|-------|-------|
-| `local_config_mirror` | `sites` | Copie de la config du Pi (sync bidirectionnel) |
-| `network_profile` | `sites` | Profil réseau auto-détecté (simple/mesh/enterprise) |
-| `configuration` | `config_drafts` | Brouillon de config pré-déploiement |
-| `metadata` | `videos` | Métadonnées variables par vidéo |
+| Colonne               | Table           | Usage                                               |
+| --------------------- | --------------- | --------------------------------------------------- |
+| `local_config_mirror` | `sites`         | Copie de la config du Pi (sync bidirectionnel)      |
+| `network_profile`     | `sites`         | Profil réseau auto-détecté (simple/mesh/enterprise) |
+| `configuration`       | `config_drafts` | Brouillon de config pré-déploiement                 |
+| `metadata`            | `videos`        | Métadonnées variables par vidéo                     |
 
 ### Schéma étendu
 
@@ -232,6 +246,30 @@ videos += (uploaded_for_site_id UUID, upload_status, upload_verified_at, upload_
 video_plays += (tv_status TEXT) -- 'on', 'standby', 'disconnected', 'unknown'
 ```
 
+### Migration Session Mode → Transaction Mode (2026-02-19)
+
+Le pooler Supabase PgBouncer expose deux modes via des ports différents :
+
+| Mode            | Port   | Comportement                                                        | Risque restart                                             |
+| --------------- | ------ | ------------------------------------------------------------------- | ---------------------------------------------------------- |
+| **Session**     | `5432` | Connexion réservée pour toute la session du client                  | ⚠️ Saturation lors des restarts (ancien + nouveau process) |
+| **Transaction** | `6543` | Connexion partagée, empruntée uniquement le temps d'une transaction | ✅ Pas de saturation                                       |
+
+**Problème rencontré** : en Session Mode avec `DB_POOL_MAX=15`, un restart Railway causait `MaxClientsInSessionMode` car l'ancien et le nouveau process demandaient chacun 15 connexions (30 total) pour un pool Supabase limité à ~15.
+
+**Impact** : tous les heartbeats échouaient → tous les Pi marqués offline → boucle de reconnexion de 11+ minutes.
+
+**Solution** :
+
+- Port changé de `5432` à `6543` (Transaction Mode)
+- `DB_POOL_MAX` réduit de `15` à `5` (suffisant en Transaction Mode)
+
+**Compatibilité Transaction Mode** :
+
+- ✅ `pool.query()` (requêtes simples) — auto-wrapped dans une transaction implicite
+- ✅ `getClient()` + `BEGIN/COMMIT` (transactions explicites) — PgBouncer garde la même connexion
+- ⚠️ `SET session` variables — ne persistent PAS entre requêtes (le middleware RLS utilise `set_config` mais échoue silencieusement si la function n'existe pas en DB)
+
 ## Références
 
 - [database.ts](../../central-server/src/config/database.ts)
@@ -242,4 +280,4 @@ video_plays += (tv_status TEXT) -- 'on', 'standby', 'disconnected', 'unknown'
 
 ---
 
-*Créé le 9 janvier 2026 — Mis à jour le 11 février 2026*
+_Créé le 9 janvier 2026 — Mis à jour le 19 février 2026_

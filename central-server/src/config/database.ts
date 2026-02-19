@@ -66,9 +66,17 @@ const getSslConfig = () => {
 
 const sslConfig = getSslConfig();
 
-// Pool size configurable via env : DB_POOL_MAX (défaut: 10 en prod, 5 en hobby)
-// Railway Hobby : 5 | Railway Pro / Render Standard : 15-20
-const dbPoolMax = parseInt(process.env.DB_POOL_MAX || '10', 10);
+// Pool size configurable via env : DB_POOL_MAX (défaut: 5)
+// Supabase Transaction Mode (port 6543) : les connexions PgBouncer sont partagées par
+// transaction, pas par session. 5 connexions Node.js suffisent pour des centaines de req/s.
+// En Session Mode (port 5432) un restart Railway causait MaxClientsInSessionMode car
+// ancien + nouveau process réservaient chacun N connexions permanentes.
+// Voir ADR-003 et ADR-015 pour l'historique.
+const dbPoolMax = parseInt(process.env.DB_POOL_MAX || '5', 10);
+
+// Detect Supabase pooler mode from DATABASE_URL port
+const dbUrl = process.env.DATABASE_URL || '';
+const poolerMode = dbUrl.includes(':6543') ? 'transaction' : dbUrl.includes(':5432') ? 'session' : 'direct';
 
 const poolConfig: PoolConfig = {
   connectionString: process.env.DATABASE_URL,
@@ -78,7 +86,11 @@ const poolConfig: PoolConfig = {
   connectionTimeoutMillis: 10000,
 };
 
-logger.info('Database pool configuration', { max: poolConfig.max, idleTimeout: poolConfig.idleTimeoutMillis });
+logger.info('Database pool configuration', {
+  max: poolConfig.max,
+  idleTimeout: poolConfig.idleTimeoutMillis,
+  poolerMode,
+});
 
 logger.info('Database SSL configuration', {
   NODE_ENV: process.env.NODE_ENV,
@@ -128,6 +140,49 @@ const updatePoolMetrics = () => {
 
 poolAny.on('acquire', updatePoolMetrics);
 poolAny.on('release', updatePoolMetrics);
+
+// Periodic pool health logging (every 5 min) — detects saturation early
+const POOL_HEALTH_INTERVAL = 5 * 60 * 1000;
+let poolSaturationCount = 0;
+
+setInterval(() => {
+  if (typeof poolAny.totalCount !== 'number') return;
+  const active = poolAny.totalCount - poolAny.idleCount;
+  const total = poolAny.totalCount;
+  const max = poolConfig.max ?? 5;
+  const utilization = total > 0 ? Math.round((active / max) * 100) : 0;
+
+  if (active >= max) {
+    poolSaturationCount++;
+    logger.warn('Database pool saturated', {
+      active,
+      idle: poolAny.idleCount,
+      total,
+      max,
+      utilization: `${utilization}%`,
+      saturationCount: poolSaturationCount,
+      poolerMode,
+    });
+  } else if (utilization > 80) {
+    logger.warn('Database pool high utilization', {
+      active,
+      idle: poolAny.idleCount,
+      total,
+      max,
+      utilization: `${utilization}%`,
+      poolerMode,
+    });
+  } else {
+    logger.debug('Database pool health', {
+      active,
+      idle: poolAny.idleCount,
+      total,
+      max,
+      utilization: `${utilization}%`,
+      poolerMode,
+    });
+  }
+}, POOL_HEALTH_INTERVAL);
 
 export const query = async <T extends QueryResultRow = QueryResultRow>(text: string, params?: any[]) => {
   const start = Date.now();
