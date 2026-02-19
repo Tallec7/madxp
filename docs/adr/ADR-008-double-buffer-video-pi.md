@@ -58,6 +58,25 @@ le système attend un **signal réel** que le décodeur produit des pixels :
 Cela élimine les trous noirs sur Pi 5 où les erreurs GPU (SharedImageStub)
 ralentissent le décodeur au-delà des 300ms fixes.
 
+### Reprise de la boucle après vidéo manuelle — v3.60.1
+
+Lorsqu'une vidéo manuelle est déclenchée (télécommande), `onVideoEnded()` ignore les transitions de boucle (`isManualMode` guard). La boucle meurt pendant la lecture manuelle. À la fin, `onManualEnded()` relance la boucle via `startSeamlessLoop(resumeIndex)` :
+
+```
+play(video):
+  1. _savedLoopIndex = currentLoopIndex  // Sauvegarde position
+  2. isManualMode = true                 // Bloque les transitions boucle
+  ...
+onManualEnded():
+  1. isManualMode = false
+  2. Si boucle morte → startSeamlessLoop(_savedLoopIndex + 1)
+     // Reprend à la vidéo SUIVANTE (celle en cours a été interrompue)
+
+startSeamlessLoop(resumeIndex?):
+  - Si resumeIndex fourni → startIndex = resumeIndex % validVideos.length
+  - Sinon → startIndex = 0 (démarrage normal / changement de phase)
+```
+
 ### Disk cache warming (boucles 20-100+ vidéos) — v3.9.x
 
 Pour les longues boucles, la vidéo 0 est évincée du cache disque OS après 19+ vidéos.
@@ -87,6 +106,7 @@ fetch(video.path) → response.arrayBuffer() → discard (données restent en pa
 - Détection de frame réel dans `switchPlayers()` (readyState + timeupdate, PAS timer fixe)
 - `cleanupInactivePlayer()` après chaque switch (libère décodeur GPU) — skip si vidéo < 5s
 - `warmDiskCache()` via fetch() à mi-vidéo (prochaines 3 vidéos)
+- Sauvegarder `currentLoopIndex` dans `_savedLoopIndex` avant d'entrer en mode manuel, et passer `_savedLoopIndex + 1` à `startSeamlessLoop()` pour reprendre au bon endroit
 
 ## Alternatives Considérées (et abandonnées)
 
@@ -153,6 +173,7 @@ fetch(video.path) → response.arrayBuffer() → discard (données restent en pa
 | Cache disque (20-100+ vidéos) | `warmDiskCache()` préchauffe le page cache kernel via fetch()                          |
 | Vidéo corrompue               | Skip automatique avec 1s delay, pas de crash                                           |
 | Changement de phase           | Token `switchGeneration` annule les callbacks + `resetPrefetchState()`                 |
+| Boucle reset après vidéo man. | `_savedLoopIndex` sauvegardé, `startSeamlessLoop(resumeIndex)` reprend au bon endroit  |
 
 ## Références
 

@@ -913,6 +913,8 @@ export class TvComponent implements OnInit, OnDestroy {
         // Reprendre à la vidéo suivante (celle d'avant a déjà été vue/interrompue)
         const resumeAt = this._savedLoopIndex + 1;
         console.log('tv player : loop died during manual, restarting at index', resumeAt);
+        // Signaler la reprise pour le monitoring cloud
+        this.emitPlayerState({ loopResumedFrom: this._savedLoopIndex });
         // La boucle est morte — la relancer proprement
         // Le freeze-frame couvre visuellement pendant le redémarrage
         this.captureAndShowFreezeFrame();
@@ -1590,6 +1592,8 @@ export class TvComponent implements OnInit, OnDestroy {
             nextVideo: PlayerStateService.filenameFromPath(loopVideos[nextIdx]?.path),
             lastError: null,
             lastTransitionAt: new Date().toISOString(),
+            // Effacer loopResumedFrom après la première vidéo de reprise
+            loopResumedFrom: null,
           });
 
           // Attendre que le player rende réellement des pixels avant de cacher le freeze-frame.

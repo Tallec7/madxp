@@ -2709,6 +2709,34 @@ Le `onTimeUpdate()` de la boucle arrière-plan ne vérifiait pas `isManualMode`.
 - Ajout de `if (this.isManualMode) return;` dans `onTimeUpdate()` pour bloquer l'early switch pendant les vidéos manuelles
 - Protection de tous les `hideBlackOverlay()` dans `switchPlayers()`, `playOnActivePlayer()` et `startSeamlessLoop()` avec `if (!this.isManualMode)`
 
+### 7b. Boucle vidéo reprend au début après une vidéo manuelle (logo Neopro)
+
+**Symptômes :**
+
+- Depuis la télécommande, on lance une vidéo manuelle
+- La vidéo joue correctement
+- Au retour en boucle, la boucle repart de la vidéo 0 (le logo Neopro) au lieu de reprendre là où elle en était
+
+**Cause racine (corrigée en v3.60.1) :**
+
+Pendant le mode manuel, `onVideoEnded()` ignore les events de la boucle (`isManualMode` guard, ligne 1877). La boucle arrière-plan meurt car la vidéo en cours se termine sans transition vers la suivante. À la fin de la vidéo manuelle, `onManualEnded()` détecte la boucle morte et appelle `startSeamlessLoop()` qui faisait `currentLoopIndex = 0` inconditionnellement.
+
+**Solution (v3.60.1) :**
+
+- `_savedLoopIndex` sauvegarde la position courante avant d'entrer en mode manuel
+- `startSeamlessLoop(resumeIndex?)` accepte un index de reprise optionnel (clampé via modulo)
+- `onManualEnded()` passe `_savedLoopIndex + 1` pour reprendre à la vidéo suivante
+
+**Vérification :**
+
+```bash
+# Dans la console navigateur (/tv), on doit voir :
+# "tv player : loop died during manual, restarting at index 5"  (au lieu de 0)
+# "[TV] Starting loop with 12 videos at index 5"                (au lieu de "at index 0")
+```
+
+**Monitoring :** Le `PlayerState` remonté au central via heartbeat affiche désormais le bon `loopIndex` après reprise (visible dans le dashboard monitoring du site).
+
 ### 8. Vidéos ne se chargent pas
 
 **Cause :** Chemins incorrects dans configuration.json

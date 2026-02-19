@@ -33,6 +33,8 @@ export interface PlayerState {
   lastTransitionAt: string | null;
   /** True if the score overlay is currently visible */
   overlayActive: boolean;
+  /** Index from which the loop was resumed after a manual video (null if normal start) */
+  loopResumedFrom: number | null;
   /** ISO timestamp of the last state update */
   updatedAt: string;
 }
@@ -61,6 +63,7 @@ export class PlayerStateService {
     lastError: null,
     lastTransitionAt: null,
     overlayActive: false,
+    loopResumedFrom: null,
     updatedAt: new Date().toISOString(),
   };
 

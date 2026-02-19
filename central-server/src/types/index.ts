@@ -291,6 +291,7 @@ export interface HeartbeatMessage {
     lastError: string | null;
     lastTransitionAt: string | null;
     overlayActive: boolean;
+    loopResumedFrom: number | null;
     updatedAt: string;
   } | null;
   wifiStatus?: {
