@@ -29,9 +29,9 @@ flowchart TB
     VS2 --> DVS
     TRANS --> DVS
 
-    DVS --> PI1["📦 PI-1\n10 Epics • 80 SP"]
-    DVS --> PI2["📦 PI-2\n2 Epics"]
-    DVS --> PI3["📦 PI-3\n3 Epics"]
+    DVS --> PI1["📦 PI-1\n4 Epics + 2 reliquats • 79 SP"]
+    DVS --> PI2["📦 PI-2\n5 Epics • 69 SP"]
+    DVS --> PI3["📦 PI-3\n7 Epics • 73 SP"]
 
     style VISION fill:#1a237e,color:#fff
     style OKR fill:#283593,color:#fff
@@ -69,14 +69,21 @@ gantt
     E-09 Architecture Audit             :e09, 2026-02-16, 42d
     E-10 Monitoring Fleet               :e10, 2026-02-16, 42d
 
-    section PI-2 Régie
+    section PI-2 Régie & Score
     E-05 Motion Design Personnalisé     :e05, 2026-04-01, 42d
     E-11 Régie Publicitaire Régionale  :crit, e11, 2026-04-01, 42d
+    E-15 Score Live Phase 2             :e15, 2026-04-01, 42d
+    E-16 Rapports Email Auto            :e16, 2026-04-01, 42d
+    E-17 A/B Testing Créas              :e17, 2026-04-01, 42d
 
-    section PI-3 Upsells & Impact
+    section PI-3 Upsells & Écosystème
     E-12 Multi-Écrans Synchronisés      :e12, 2026-06-01, 42d
     E-13 Marque Blanche Club            :e13, 2026-06-01, 42d
     E-14 Fonds de Solidarité            :e14, 2026-06-01, 42d
+    E-18 Intégrations Billetterie       :e18, 2026-06-01, 42d
+    E-19 Capteurs Présence              :e19, 2026-06-01, 42d
+    E-20 Analytics ML                   :e20, 2026-06-01, 42d
+    E-21 API Partenaires OAuth          :e21, 2026-06-01, 42d
 
     section Milestones
     5 clubs payants                     :milestone, m1, 2026-03-31, 0d
@@ -116,27 +123,30 @@ xychart-beta
 
 | Value Stream                 | Epics  | Features | User Stories | SP Total    |
 | ---------------------------- | ------ | -------- | ------------ | ----------- |
-| 🟢 VS1 Club to Screen        | 5      | 8        | 14           | ~95 SP      |
-| 🟠 VS2 Sponsor to Impression | 5      | 10       | 18           | ~115 SP     |
-| ⬜ Transverse                | 4      | 5        | 9            | ~50 SP      |
-| **Total**                    | **14** | **23**   | **41**       | **~260 SP** |
+| 🟢 VS1 Club to Screen        | 7      | 11       | 18           | ~108 SP     |
+| 🟠 VS2 Sponsor to Impression | 7      | 12       | 20           | ~128 SP     |
+| ⬜ Transverse                | 7      | 8        | 12           | ~67 SP      |
+| **Total**                    | **21** | **37**   | **40**       | **~262 SP** |
+
+> Note : 5 Epics Done (avant PI-1) + 176 features livrées documentées dans [IMPLEMENTED-BACKLOG.md](IMPLEMENTED-BACKLOG.md)
 
 ### Par PI
 
-| PI   | Période        | Epics | Focus              | Milestone                     |
-| ---- | -------------- | ----- | ------------------ | ----------------------------- |
-| PI-1 | Fév-Mars 2026  | 10    | Fondations produit | 5 clubs payants               |
-| PI-2 | Avr-Mai 2026   | 2     | Régie publicitaire | Lancement régie à 15 clubs    |
-| PI-3 | Juin-Juil 2026 | 3     | Upsells + Impact   | 20 clubs, premiers annonceurs |
+| PI   | Période        | Epics | SP  | Focus                                                | Milestone                     |
+| ---- | -------------- | ----- | --- | ---------------------------------------------------- | ----------------------------- |
+| Done | Avant PI-1     | 5     | ~41 | Profils, WiFi, Alertes, Audit, Monitoring            | -                             |
+| PI-1 | Fév-Mars 2026  | 4+2   | 79  | Sponsors self-service, analytics, onboarding         | 5 clubs payants               |
+| PI-2 | Avr-Mai 2026   | 5     | 69  | Régie publicitaire, score live, email auto, A/B      | Lancement régie à 15 clubs    |
+| PI-3 | Juin-Juil 2026 | 7     | 73  | Multi-écrans, marque blanche, billetterie, ML, OAuth | 20 clubs, premiers annonceurs |
 
 ### Par Thème Stratégique
 
-| Thème                   | Epics                        | OKR     | Impact principal        |
-| ----------------------- | ---------------------------- | ------- | ----------------------- |
-| 🟥 TS1 Monétisation     | E-01, E-02, E-03, E-05, E-11 | O2 + O4 | ARR + revenus régie     |
-| 🟦 TS2 Expérience Match | E-04, E-12, E-13             | O3 + O5 | Engagement + image pro  |
-| 🟩 TS3 Acquisition      | E-06, E-07, E-14             | O1 + O5 | Scalabilité déploiement |
-| 🟪 TS4 Excellence Ops   | E-08, E-09, E-10             | O3 + O4 | Fiabilité + monitoring  |
+| Thème                   | Epics                                    | OKR     | Impact principal        |
+| ----------------------- | ---------------------------------------- | ------- | ----------------------- |
+| 🟥 TS1 Monétisation     | E-01, E-02, E-03, E-05, E-11, E-17, E-21 | O2 + O4 | ARR + revenus régie     |
+| 🟦 TS2 Expérience Match | E-04, E-12, E-13, E-15, E-18, E-19       | O3 + O5 | Engagement + image pro  |
+| 🟩 TS3 Acquisition      | E-06, E-07, E-14                         | O1 + O5 | Scalabilité déploiement |
+| 🟪 TS4 Excellence Ops   | E-08, E-09, E-10, E-16, E-20             | O3 + O4 | Fiabilité + monitoring  |
 
 ---
 

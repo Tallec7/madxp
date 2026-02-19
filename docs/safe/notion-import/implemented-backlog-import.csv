@@ -1,0 +1,177 @@
+Name,Code,Domaine,Statut,Fichiers clés,Version/Date
+Authentification JWT (HttpOnly cookies + Bearer),IMP-SEC-01,Authentification & Sécurité,Production,"auth.controller.ts, authentication.service.ts",Déc 2025
+MFA / 2FA (TOTP avec QR code),IMP-SEC-02,Authentification & Sécurité,Production,"mfa.service.ts, mfa.routes.ts",Déc 2025
+Réinitialisation mot de passe (token 24h + email),IMP-SEC-03,Authentification & Sécurité,Production,password-reset.service.ts,Déc 2025
+Journalisation d'audit GDPR,IMP-SEC-04,Authentification & Sécurité,Production,"audit.service.ts, audit.routes.ts",Déc 2025
+Sécurité niveau ligne (isolation multi-tenant PostgreSQL),IMP-SEC-05,Authentification & Sécurité,Production,"00-create-rls-functions.sql, enable-row-level-security.sql",Déc 2025
+CORS fermé par défaut en production,IMP-SEC-06,Authentification & Sécurité,Production,server.ts,Déc 2025
+Auth admin Raspberry (cookies session + mot de passe initial),IMP-SEC-07,Authentification & Sécurité,Production,"admin-server.js, auth-config.json",Déc 2025
+Suppression mot de passe en dur,IMP-SEC-08,Authentification & Sécurité,Production,-,Déc 2025
+GDPR self-service (Art. 17 droit à l'effacement + Art. 20 portabilité),IMP-SEC-09,Authentification & Sécurité,Production,gdpr.service.ts,Déc 2025
+Sauvegardes chiffrées AES-256-GCM avec PBKDF2,IMP-SEC-10,Authentification & Sécurité,Production,backup-encryption.service.ts,Déc 2025
+Helmet renforcé (CSP + X-Frame-Options deny + HSTS 1 an),IMP-SEC-11,Authentification & Sécurité,Production,server.ts,Déc 2025
+Socket.IO CORS fermé par défaut (production),IMP-SEC-12,Authentification & Sécurité,Production,socket.service.ts,Déc 2025
+Pages légales intégrées (CGU + CGV + Politique de confidentialité + Registre GDPR),IMP-SEC-13,Authentification & Sécurité,Production,/legal/privacy; /legal/terms,Déc 2025
+Upload vidéo avec vérification checksum (SHA-256),IMP-VID-01,Gestion de Contenu & Vidéo,Production,"content.controller.ts, upload-verification.service.ts",2025
+Compression vidéo automatique,IMP-VID-02,Gestion de Contenu & Vidéo,Production,video-compression.service.ts,2025
+Conversion image vers vidéo (ffmpeg + JPG/PNG/WEBP → MP4),IMP-VID-03,Gestion de Contenu & Vidéo,Production,image-to-video.service.ts,v2.44.0 Jan 2026
+Conversion image vers vidéo : option fond flouté,IMP-VID-04,Gestion de Contenu & Vidéo,Production,image-to-video.service.ts,Jan 2026
+Miniatures automatiques,IMP-VID-05,Gestion de Contenu & Vidéo,Production,thumbnail.service.ts,2025
+Stockage unifié FTP (Hostinger),IMP-VID-06,Gestion de Contenu & Vidéo,Production,storage.service.ts,2025
+Versioning brouillon de config (sauvegarder avant déployer),IMP-VID-07,Gestion de Contenu & Vidéo,Production,"draft.service.ts, drafts.controller.ts",Déc 2025
+Gestion des assets (logos + images),IMP-VID-08,Gestion de Contenu & Vidéo,Production,"assets.controller.ts, asset.service.ts",2025
+Pagination côté serveur pour listing vidéos,IMP-VID-09,Gestion de Contenu & Vidéo,Production,content.controller.ts,v3.56.0
+Prévisualisation vidéo dans page gestion contenu,IMP-VID-10,Gestion de Contenu & Vidéo,Production,content-management.component.ts,2025
+Historique config avec détail dépliable et restauration,IMP-VID-11,Gestion de Contenu & Vidéo,Production,config-history.component.ts,v3.57.0
+Restructuration UX onglet Contenu (ADR-022 + P0→P3),IMP-VID-12,Gestion de Contenu & Vidéo,Production,content-tab.component.ts,2026
+Historique des modifications dans onglet Contenu (P3-3),IMP-VID-13,Gestion de Contenu & Vidéo,Production,-,2026
+Overlay V2 Multi-Sport (6 sports + 9 positions),IMP-OVR-01,Score en Direct & Overlays,Production,"local-options.service.ts, tv.component.ts",Déc 2025
+Overlay local (chronomètre + bandeau info + popup but + 3 templates),IMP-OVR-02,Score en Direct & Overlays,Production,local-broadcast.service.ts,Déc 2025
+Overlay score simplifié : 2 thèmes CSS broadcast,IMP-OVR-03,Score en Direct & Overlays,Production,overlay.component.ts,v3.50.0
+Score en direct avec overlay + popup,IMP-OVR-04,Score en Direct & Overlays,Production,-,Déc 2025
+Personnalisation overlay score depuis dashboard central,IMP-OVR-05,Score en Direct & Overlays,Production,-,Déc 2025
+Upload logos équipes et affichage dans overlay,IMP-OVR-06,Score en Direct & Overlays,Production,-,Déc 2025
+Presets overlay (templates de configuration réutilisables),IMP-OVR-07,Score en Direct & Overlays,Production,-,Déc 2025
+Bandeau d'informations défilant (scroll/truncate/multiline),IMP-OVR-08,Score en Direct & Overlays,Production,-,Déc 2025
+Animation but (popup/plein écran/slide),IMP-OVR-09,Score en Direct & Overlays,Production,-,Déc 2025
+Chronomètre intégré avec score,IMP-OVR-10,Score en Direct & Overlays,Production,-,Déc 2025
+Déploiement vidéo avec retry (3 max + backoff 5min),IMP-DEP-01,Déploiement & OTA,Production,deployment.service.ts,2025
+Déploiement orchestré multi-sites,IMP-DEP-02,Déploiement & OTA,Production,orchestrated-deployment.service.ts,2025
+Déploiement canary progressif (10→25→50→75→100%),IMP-DEP-03,Déploiement & OTA,Production,canary-deployment.service.ts,2025
+Mises à jour logicielles OTA avec planification redémarrage,IMP-DEP-04,Déploiement & OTA,Production,"update-deployment.service.ts, updates.controller.ts",2025
+File de commandes (commandes pour Pi hors-ligne),IMP-DEP-05,Déploiement & OTA,Production,command-queue.service.ts,2025
+Déploiements planifiés (date/heure),IMP-DEP-06,Déploiement & OTA,Production,deployment.service.ts,2025
+File de déploiement vidéo (pattern sendOrQueue),IMP-DEP-07,Déploiement & OTA,Production,deployment.service.ts,Jan 2026
+OTA planification redémarrage + rollback automatique,IMP-DEP-08,Déploiement & OTA,Production,update-deployment.service.ts,v3.55.0
+Exécuteur de migration + retry checksum OTA,IMP-DEP-09,Déploiement & OTA,Production,migration-runner.js,v3.55.0
+Diagnostic santé Pi complet (mode JSON),IMP-DEP-10,Déploiement & OTA,Production,health-diagnostic.js,2026
+Scripts pré-migration (fix ownership + copie VERSION),IMP-DEP-11,Déploiement & OTA,Production,pre-migration.sh,v3.55.x
+Scripts install/setup/build renforcés,IMP-DEP-12,Déploiement & OTA,Production,"install.sh, setup.sh, build-raspberry.sh",2026
+Système d'abonnements 3 tiers (Essentiel/Autonomie/Premium),IMP-MON-01,Monétisation & Sponsors,Production,"subscription.service.ts, subscription.controller.ts",Déc 2025
+Facturation mensuelle (export CSV/JSON),IMP-MON-02,Monétisation & Sponsors,Production,"billing.service.ts, billing.controller.ts",Déc 2025
+Portail annonceur (upload vidéos + analytics + compte),IMP-MON-03,Monétisation & Sponsors,Production,advertiser-portal.controller.ts,Déc 2025
+Portail sponsor lien magique (accès token sans login),IMP-MON-04,Monétisation & Sponsors,Production,"sponsor-access.service.ts, sponsor-portal.controller.ts",Déc 2025
+Portail agence (gestion multi-annonceurs),IMP-MON-05,Monétisation & Sponsors,Production,agency.controller.ts,Déc 2025
+Association site-sponsor,IMP-MON-06,Monétisation & Sponsors,Production,"site-sponsor.repository.ts, site-sponsor.controller.ts",2025
+Migration Sponsor → Annonceur (sémantique métier),IMP-MON-07,Monétisation & Sponsors,Production,rename-sponsor-to-advertiser.sql,Déc 2025
+Preuve de diffusion (capture + certificat),IMP-MON-08,Monétisation & Sponsors,Production,"add-proof-of-broadcasts.sql, proof.service.ts",2025
+Métriques sponsors cross-réseau,IMP-MON-09,Monétisation & Sponsors,Production,network-sponsor.routes.ts,2025
+Interface association vidéo-sponsor (ajout/suppression),IMP-MON-10,Monétisation & Sponsors,Production,video-sponsor.component.ts,v3.59.0
+Sync dashboard sponsors vers Pi pendant déploiement (P8),IMP-MON-11,Monétisation & Sponsors,Production,deployment.service.ts,v3.60.0
+Site-sponsors P0-P5 : analytics + branding + liens magiques,IMP-MON-12,Monétisation & Sponsors,Production,site-sponsor.controller.ts,v3.53.0
+Poussée licence temps réel vers Pi sur changement abonnement,IMP-MON-13,Monétisation & Sponsors,Production,subscription.service.ts,2026
+Interface abonnement : design premium glassmorphism + modal unifié,IMP-MON-14,Monétisation & Sponsors,Production,subscription.component.ts,2026
+Analytics club (santé + engagement + lectures vidéo),IMP-ANA-01,Analytics & Reporting,Production,"analytics.controller.ts, analytics.repository.ts",2025
+Analytics annonceurs (impressions par gymnase/période),IMP-ANA-02,Analytics & Reporting,Production,advertiser-analytics.controller.ts,Déc 2025
+Rapport PDF club (6 pages avec signature SHA-256),IMP-ANA-03,Analytics & Reporting,Production,pdf-report.service.ts,Déc 2025
+Rapports mensuels automatisés (PDF + CSV),IMP-ANA-04,Analytics & Reporting,Production,monthly-reports.service.ts,Déc 2025
+Export Excel analytics,IMP-ANA-05,Analytics & Reporting,Production,excel-export.service.ts,2025
+Benchmark clubs anonymisé,IMP-ANA-06,Analytics & Reporting,Production,"benchmark.service.ts, benchmark.controller.ts",2025
+Métriques Prometheus (performance + alertes + sync),IMP-ANA-07,Analytics & Reporting,Production,metrics.service.ts,2025
+Statistiques temps réel (agrégation live),IMP-ANA-08,Analytics & Reporting,Production,realtime-stats.service.ts,2025
+Métriques pitch-deck (investisseurs),IMP-ANA-09,Analytics & Reporting,Production,"pitch-deck.controller.ts, pitch-deck.repository.ts",2025
+Estimation d'audience et score live (champs DB),IMP-ANA-10,Analytics & Reporting,Livré,add-audience-and-score-fields.sql,Déc 2025
+P6 analytics : statistiques réseau + benchmark + CPI + décomposition match PDF,IMP-ANA-11,Analytics & Reporting,Production,analytics.controller.ts,v3.54.0
+Dashboard métriques de traction (KPIs business pour pitch),IMP-ANA-12,Analytics & Reporting,Production,traction-metrics.component.ts,2026
+Détection statut TV HDMI-CEC (filtrer vraies lectures vidéo),IMP-ANA-13,Analytics & Reporting,Production,hdmi-cec.service.ts,2026
+Dashboard santé flotte,IMP-ANA-14,Analytics & Reporting,Production,fleet-health.component.ts,2025
+Dashboard temps réel + export Excel,IMP-ANA-15,Analytics & Reporting,Production,realtime-dashboard.component.ts,2025
+Navigation par onglets sur toutes les pages analytics,IMP-ANA-16,Analytics & Reporting,Production,analytics.module.ts,2026
+Analytics sponsors : 6 KPIs + graphiques (ligne + anneau) + export CSV,IMP-ANA-17,Analytics & Reporting,Production,sponsor-analytics.component.ts,Déc 2025
+Rapports PDF sponsors professionnels (Chart.js),IMP-ANA-18,Analytics & Reporting,Production,pdf-report.service.ts,Déc 2025
+Télécommande v2 (recherche + badge audience + modal match),IMP-PI-01,Raspberry Pi (Edge),Production,remote.component.ts,Déc 2025
+Socket.IO mode hors-ligne autonome (lib locale),IMP-PI-02,Raspberry Pi (Edge),Production,socket.io.min.js local,Déc 2025
+Lecture vidéo double-buffer (transitions fluides),IMP-PI-03,Raspberry Pi (Edge),Production,double-buffer-video.service.ts,2025
+Profils de configuration (avant/pendant/après match),IMP-PI-04,Raspberry Pi (Edge),Production,"profile-config.service.ts, config-profiles.controller.ts",Déc 2025
+Détection statut HDMI,IMP-PI-05,Raspberry Pi (Edge),Production,hdmi-status.service.ts,2025
+Détection HDMI EDID (identifier type écran : moniteur PC vs TV),IMP-PI-06,Raspberry Pi (Edge),Production,hdmi-edid.service.ts,2026
+Récupération erreur vidéo (lecture de secours),IMP-PI-07,Raspberry Pi (Edge),Production,video-error-recovery.service.ts,2025
+Filigrane overlay configurable,IMP-PI-08,Raspberry Pi (Edge),Production,watermark.service.ts,2025
+Sélecteur de filigrane déroulant sur Dashboard,IMP-PI-09,Raspberry Pi (Edge),Production,watermark.component.ts,v3.57.0
+Capture d'écran (à la demande depuis télécommande cloud),IMP-PI-10,Raspberry Pi (Edge),Production,screenshot.service.ts,2025
+Branding personnalisé par site (logo + couleurs),IMP-PI-11,Raspberry Pi (Edge),Production,add-site-branding.sql,2025
+Hostname Pi dynamique dérivé du nom du club,IMP-PI-12,Raspberry Pi (Edge),Production,hostname.service.ts,v3.51.0
+Enregistrement : retour auto en boucle après inactivité,IMP-PI-13,Raspberry Pi (Edge),Production,recording.service.ts,2026
+Enregistrement : popup avertissement inactivité avec décompte (ADR-021),IMP-PI-14,Raspberry Pi (Edge),Production,remote.component.ts,2026
+Bascule mode club/tech + widget statut sync,IMP-PI-15,Raspberry Pi (Edge),Production,admin-panel.component.ts,2026
+Installation apt depuis dashboard via sudoers,IMP-PI-16,Raspberry Pi (Edge),Production,"sudoers, admin-server.js",2026
+Contrôle enregistrement analytics + sync TV maître-esclave,IMP-PI-17,Raspberry Pi (Edge),Production,recording.service.ts,2026
+Masquage curseur kiosque (triple protection sur TV),IMP-PI-18,Raspberry Pi (Edge),Production,kiosk.css,2026
+Transitions TV : détection frame réel (élimine trous noirs sur Pi 5),IMP-PI-19,Raspberry Pi (Edge),Production,double-buffer-video.service.ts,2026
+Chromium → chromium (compat Raspberry Pi OS Trixie),IMP-PI-20,Raspberry Pi (Edge),Production,kiosk.sh,Déc 2025
+Programmation boucle vidéo par phase match (pré/pendant/post),IMP-PI-21,Raspberry Pi (Edge),Production,loop-scheduler.js,Déc 2025
+Agent de sync bidirectionnel (cloud ↔ Pi),IMP-NET-01,Résilience Réseau & Sync,Production,sync-agent/,2025
+File d'attente hors-ligne (stocke commandes pendant déconnexion),IMP-NET-02,Résilience Réseau & Sync,Production,offline-queue.js,2025
+Chien de garde réseau (surveillance réseau),IMP-NET-03,Résilience Réseau & Sync,Production,network-watchdog.js,2025
+Opérations réseau sécurisées (retry + backoff exponentiel),IMP-NET-04,Résilience Réseau & Sync,Production,safe-network-operations.js,2025
+Détection statut connexion (en ligne/hors-ligne/dégradé),IMP-NET-05,Résilience Réseau & Sync,Production,connection-status.js,2025
+Historique de synchronisation,IMP-NET-06,Résilience Réseau & Sync,Production,sync-history.js,2025
+Résilience Réseau Phase 4 : auto-recovery NetworkWatchdog (6 phases),IMP-NET-07,Résilience Réseau & Sync,Production,network-watchdog.js,v2.37.0 Jan 2026
+Mécanisme de rollback pour opérations réseau risquées,IMP-NET-08,Résilience Réseau & Sync,Production,network-watchdog.js,v2.37.0 Jan 2026
+Alertes réseau proactives (mesh + isolation client + stabilité),IMP-NET-09,Résilience Réseau & Sync,Production,network-alerts.service.ts,v2.37.0 Jan 2026
+Support portail captif Android + compat iOS/Windows/macOS,IMP-NET-10,Résilience Réseau & Sync,Production,captive-portal.sh,Jan 2026
+WiFi USB RTL8192EU stabilisation 4 couches (driver + udev + boot + watchdog),IMP-NET-11,Résilience Réseau & Sync,Production,wifi-usb-stabilize.sh,v3.40.0 Fév 2026
+Anti-interférence hotspot (penalty +100 sur sélection canal wlan1),IMP-NET-12,Résilience Réseau & Sync,Production,wifi-usb-stabilize.sh,Fév 2026
+WiFi récupération rapide (~2min vs ~5min) + fix boot init,IMP-NET-13,Résilience Réseau & Sync,Production,wifi-recovery.js,v3.58.0
+Préservation hotspot wlan1 (pas de restart hostapd immédiat),IMP-NET-14,Résilience Réseau & Sync,Production,fix-hotspot.sh,Jan 2026
+Écriture atomique sync-agent pour configuration.json + auto-recovery,IMP-NET-15,Résilience Réseau & Sync,Production,sync-agent/config-writer.js,v3.48.0
+Socket local persistant sync-agent (remplace éphémère),IMP-NET-16,Résilience Réseau & Sync,Production,sync-agent/socket.js,2026
+Configuration WiFi client à distance depuis dashboard central,IMP-NET-17,Résilience Réseau & Sync,Production,wifi-config.controller.ts,2026
+Alertes réactives (CRUD + règles + escalade),IMP-ALR-01,Monitoring & Alertes,Production,"alerts.controller.ts, alerting.service.ts",2025
+Alertes prédictives (disque + CPU + WiFi + inactivité),IMP-ALR-02,Monitoring & Alertes,Production,predictive-alerts.service.ts,2025
+Alertes réseau (qualité WiFi + déconnexions),IMP-ALR-03,Monitoring & Alertes,Production,network-alerts.service.ts,2025
+Vérifications santé système,IMP-ALR-04,Monitoring & Alertes,Production,health.service.ts,2025
+Objectifs & alertes clubs (7 métriques + 3 périodes),IMP-ALR-05,Monitoring & Alertes,Production,objectives.controller.ts,Déc 2025
+Monitoring ventilateur de bout en bout (alertes + Prometheus + Grafana),IMP-ALR-06,Monitoring & Alertes,Production,fan-monitoring.service.ts,v3.52.0
+Notification Slack "Site en ligne" sur reconnexion Pi,IMP-ALR-07,Monitoring & Alertes,Production,slack.service.ts,v3.49.0
+Notification Slack réseau rétabli,IMP-ALR-08,Monitoring & Alertes,Production,alerting.service.ts,2026
+Notifications webhook pour alertes,IMP-ALR-09,Monitoring & Alertes,Production,webhook.service.ts,Déc 2025
+Escalade superviseur pour alertes critiques,IMP-ALR-10,Monitoring & Alertes,Production,alerting.service.ts,Déc 2025
+Anti-flapping cooldown Slack + arrêt propre,IMP-ALR-11,Monitoring & Alertes,Production,alerting.service.ts,2026
+Détection crash kiosque de bout en bout + lien télécommande cloud,IMP-ALR-12,Monitoring & Alertes,Production,kiosk-monitor.service.ts,2026
+Pipeline métriques qualité transitions vidéo,IMP-ALR-13,Monitoring & Alertes,Production,metrics.service.ts,2026
+Métrique Prometheus déconnexion Socket + panels Grafana,IMP-ALR-14,Monitoring & Alertes,Production,metrics.service.ts,2026
+Métriques pool connexions DB (actif/inactif),IMP-ALR-15,Monitoring & Alertes,Production,metrics.service.ts,2026
+Dashboards Grafana Cloud avec auth Bearer sur /metrics,IMP-ALR-16,Monitoring & Alertes,Production,metrics.middleware.ts,2026
+3 dashboards Grafana restructurés + mémoire/prédictif/facturation,IMP-ALR-17,Monitoring & Alertes,Production,grafana/,2026
+Lacunes supervision complétées (4 métriques + 3 alertes + kiosque Grafana),IMP-ALR-18,Monitoring & Alertes,Production,monitoring/,2026
+Métriques FTP + sync + rate-limit + logs corrélés,IMP-ALR-19,Monitoring & Alertes,Production,metrics.service.ts,2026
+Journalisation centralisée Logtail/Better Stack,IMP-ALR-20,Monitoring & Alertes,Production,logtail.service.ts,Déc 2025
+3 seuils d'alerte horaires avec flux de données,IMP-ALR-21,Monitoring & Alertes,Production,alerting.service.ts,2026
+Smoke tests pour monitoring + métriques réseau Pi,IMP-ALR-22,Monitoring & Alertes,Production,smoke/,2026
+Système de jobs admin (build + deploy + sync + maintenance),IMP-ADM-01,Administration & Infrastructure,Production,admin-ops.service.ts,2025
+Télécommande cloud (protégée par PIN + rate-limited),IMP-ADM-02,Administration & Infrastructure,Production,remote.controller.ts,2025
+Groupes de sites (regroupement logique),IMP-ADM-03,Administration & Infrastructure,Production,groups.controller.ts,2025
+Email transactionnel (alertes + reset + notifications),IMP-ADM-04,Administration & Infrastructure,Production,email.service.ts,Déc 2025
+Gestionnaire mémoire (prévention fuites mémoire),IMP-ADM-05,Administration & Infrastructure,Production,memory-manager.service.ts,2025
+Cache mémoire (TTL 60s),IMP-ADM-06,Administration & Infrastructure,Production,memory-cache.service.ts,2025
+Nettoyage automatique rétention données,IMP-ADM-07,Administration & Infrastructure,Production,add-data-retention-cleanup.sql,2025
+Slugs URL de site (URLs lisibles),IMP-ADM-08,Administration & Infrastructure,Production,add-hostname-slug.sql,2025
+Repository pattern 100% (24 repositories + ESLint bloquant),IMP-ADM-09,Administration & Infrastructure,Production,"base.repository.ts + 23 repos",Déc 2025
+Documentation OpenAPI Swagger (30+ endpoints),IMP-ADM-10,Administration & Infrastructure,Production,swagger.ts,Déc 2025
+Vue carte des sites (Leaflet + statut temps réel),IMP-ADM-11,Administration & Infrastructure,Production,sites-map.component.ts,2025
+Bundle de diagnostic (logs kernel dmesg + lsusb + logs étendus 24h),IMP-ADM-12,Administration & Infrastructure,Production,debug-bundle.sh,2026
+Générateur QR code avec bouton accès télécommande cloud,IMP-ADM-13,Administration & Infrastructure,Production,qr-code.component.ts,2026
+Télécommande cloud : vue live TV + monitoring état lecteur,IMP-ADM-14,Administration & Infrastructure,Production,remote.controller.ts,2026
+Télécommande cloud : affichage licence + indicateur REC,IMP-ADM-15,Administration & Infrastructure,Production,remote.component.ts,2026
+Télécommande cloud : relais capture écran HTTP,IMP-ADM-16,Administration & Infrastructure,Production,remote.controller.ts,2026
+Onglet profils dans détail site : interface multi-config,IMP-ADM-17,Administration & Infrastructure,Production,profiles.component.ts,2026
+Modal de suppression UX + paramètres suppression Pi,IMP-ADM-18,Administration & Infrastructure,Production,site-detail.component.ts,2026
+Suppression vidéo cloud/Pi (bibliothèque vidéo),IMP-ADM-19,Administration & Infrastructure,Production,content.controller.ts,2026
+Planifications récurrentes cron (quotidien/hebdo/mensuel/personnalisé),IMP-ADM-20,Administration & Infrastructure,Production,cron-scheduler.service.ts,Déc 2025
+Rate-limit analytics Pi (500 req/min),IMP-ADM-21,Administration & Infrastructure,Production,rate-limit.middleware.ts,2025
+Auto-sync versions sous-paquets raspberry à la release,IMP-ADM-22,Administration & Infrastructure,Production,release.sh,2026
+Playlists personnalisées (ordre + aléatoire + pondéré),IMP-PLS-01,Playlists & Programmation,Production,playlist-schedule.controller.ts,Déc 2025
+Programmation horaire (jours + heures + contexte match),IMP-PLS-02,Playlists & Programmation,Production,cron-scheduler.service.ts,Déc 2025
+Planifications récurrentes,IMP-PLS-03,Playlists & Programmation,Production,add-recurring-schedules.sql,Déc 2025
+Gestion utilisateurs multi-tenant (super_admin > admin > operator > viewer),IMP-USR-01,Gestion Utilisateurs & Rôles,Production,users.controller.ts,2025
+Rôles sponsor/annonceur + agence avec enrichissement JWT,IMP-USR-02,Gestion Utilisateurs & Rôles,Production,auth.service.ts,Déc 2025
+Portail agences : gestion multi-annonceurs,IMP-USR-03,Gestion Utilisateurs & Rôles,Production,agency.controller.ts,Déc 2025
+Page gestion utilisateurs (panel admin),IMP-USR-04,Gestion Utilisateurs & Rôles,Production,users.component.ts,Déc 2025
+Documentation consolidée (199 fichiers + point d'entrée 00-START-HERE.md),IMP-DOC-01,Documentation & Qualité,Production,docs/,Déc 2025
+Guide personnalisation overlay,IMP-DOC-02,Documentation & Qualité,Production,docs/guides/,Déc 2025
+Documentation système sponsors,IMP-DOC-03,Documentation & Qualité,Production,docs/features/,Déc 2025
+Guide correction hotspot Android,IMP-DOC-04,Documentation & Qualité,Production,docs/guides/,Jan 2026
+Guide environnements WiFi mesh,IMP-DOC-05,Documentation & Qualité,Production,docs/guides/,Jan 2026
+Guide stabilité WiFi USB,IMP-DOC-06,Documentation & Qualité,Production,docs/guides/WIFI_USB_GUIDE.md,Fév 2026
+Documentation framework SAFe complète,IMP-DOC-07,Documentation & Qualité,Production,docs/safe/,Fév 2026

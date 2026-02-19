@@ -99,7 +99,7 @@ Chaque Epic a des **Leading Indicators** (prédictifs) et **Lagging Indicators**
 | Value Streams    | 2 OVS + 1 DVS avec lead times, bottlenecks      |
 | Epics            | 14 Epics avec Lean Business Cases, KPI, WSJF    |
 | Features         | 23 Features avec acceptance criteria            |
-| User Stories     | 41 US avec critères d'acceptation, story points |
+| User Stories     | 30 US PI-1 (PI-2/PI-3 découpées en PI Planning) |
 | Sprint Tracker   | Vélocité par sprint, formules automatiques      |
 | Business Pillars | 4 Thèmes Stratégiques alignés OKR               |
 

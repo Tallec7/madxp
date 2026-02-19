@@ -1,3 +1,27 @@
+# [3.61.0](https://github.com/Tallec7/neopro/compare/v3.60.2...v3.61.0) (2026-02-19)
+
+### Features
+
+- **safe:** add Claude rule for auto-updating SAFe .md on feat/fix commits ([6bab93b](https://github.com/Tallec7/neopro/commit/6bab93ba0132962aff62cd05d172628d1b8fa692))
+- **safe:** add export-to-excel.py generator for SAFe portfolio ([067b3f0](https://github.com/Tallec7/neopro/commit/067b3f026e18495c492cb832685a016bdd120d62))
+- **safe:** auto-regenerate Excel on docs/safe/\*.md commit ([a629fb1](https://github.com/Tallec7/neopro/commit/a629fb1925825d78b6060533f5c03513f45bb13c))
+
+## SAFe tooling : export Excel, auto-regen hook, Claude rule auto-update (2026-02-19)
+
+### Features
+
+- **safe export-to-excel:** nouveau script `docs/safe/scripts/export-to-excel.py` qui génère `NEOPRO_SAFe_Portfolio.xlsx` avec 11 onglets (Dashboard, Glossaire, Vision OKR, Value Streams, Epics LBC, Features US, PI Objectives, Sprint Tracker, ROAM, Flow Metrics, Implemented Backlog). Formules WSJF, COUNTIF, SUMIF automatiques
+- **safe pre-commit hook:** le hook `.husky/pre-commit` détecte les changements `docs/safe/*.md` et régénère automatiquement l'Excel via `export-to-excel.py`. Skip gracieux si openpyxl absent
+- **safe Claude rule:** nouvelle règle `.claude/rules/safe-update.md` — checklist automatique pour que Claude mette à jour FEATURES.md, IMPLEMENTED-BACKLOG.md, compteurs et dates à chaque commit `feat`/`fix` qui complète une Feature SAFe. Mapping scope → Epic → Feature inclus
+
+### Documentation
+
+- **docs/safe/README.md:** ajout section "Tooling & Automatisation" documentant le pipeline .md → Excel, correction compteurs Implemented Backlog (75 → 176 features)
+- **docs/01-START-HERE.md:** mise à jour compteurs SAFe (14→21 Epics, 23→37 Features, 41→40 US)
+- **CLAUDE.md:** ajout références SAFe Auto-update rule et Excel Generator
+
+---
+
 ## Résilience sync-agent + hotspot auto-optimize + fix analytics daily stats (2026-02-19)
 
 ### Bug Fixes

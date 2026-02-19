@@ -20,7 +20,7 @@ npm run test:server                # Jest (API central-server — 1487 tests)
 npm run test:smoke                 # Jest (Smoke tests — 142 tests, détecte régressions de wiring)
 npm run test:central               # Karma (Angular Dashboard — 541 tests)
 cd raspberry/server && npm test    # Jest (Socket.IO server — 71 tests)
-cd raspberry/admin && npm test     # Jest (Admin server — 124 tests)
+cd raspberry/admin && npm test     # Jest (Admin server — 146 tests)
 cd e2e && npx playwright test      # E2E
 npm run lint                       # ESLint
 
@@ -68,6 +68,8 @@ source central-server/.env && psql "$DATABASE_URL" -f central-server/src/scripts
 - Changelog : `docs/changelog/CHANGELOG.md`
 - Métriques pitch deck : `central-server/src/scripts/pitch-deck-metrics.sql`
 - **SAFe Pilotage Produit** : `docs/safe/README.md` (Epics, Features, US, Sprint Tracker, Value Streams)
+- **SAFe Auto-update** : `.claude/rules/safe-update.md` (mise à jour auto des .md SAFe à chaque feat/fix)
+- **SAFe Excel Generator** : `docs/safe/scripts/export-to-excel.py` (régénéré auto par pre-commit hook)
 - **SAFe Notion (visualisation)** : https://www.notion.so/30bc27de363881d49d06e50eabbdd6b5
 
 Les règles détaillées par domaine sont dans `.claude/rules/` et se chargent automatiquement selon les fichiers édités.
