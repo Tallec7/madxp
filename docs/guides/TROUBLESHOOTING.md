@@ -19,6 +19,8 @@
 15. [Recording Analytics (v3.38+)](#recording-analytics--état-denregistrement-v338)
 
 > **WiFi USB** : Pour un guide complet sur la clé WiFi USB (installation, diagnostic, pannes, recovery), voir [WIFI_USB_GUIDE.md](WIFI_USB_GUIDE.md).
+>
+> **Hotspot iOS** : Pour le guide dédié connexion iPhone/iPad, voir [IOS_HOTSPOT_FIX.md](IOS_HOTSPOT_FIX.md). Pour Android, voir [ANDROID_HOTSPOT_FIX.md](ANDROID_HOTSPOT_FIX.md).
 
 ---
 
@@ -104,6 +106,38 @@ sudo systemctl status dnsmasq
 sudo systemctl restart hostapd
 sudo systemctl restart dnsmasq
 ```
+
+#### 2b. Diagnostic rapide de tous les services hotspot
+
+Si le hotspot fonctionnait avant et a soudainement cassé, un service a probablement crashé. Vérifier tous les services d'un coup :
+
+```bash
+# Vérification rapide — les 4 services critiques du hotspot
+systemctl is-active hostapd dnsmasq nginx avahi-daemon
+# Tout doit afficher "active"
+
+# Ou en une commande avec détails
+for svc in hostapd dnsmasq nginx avahi-daemon; do
+  printf "%-15s %s\n" "$svc:" "$(systemctl is-active $svc)"
+done
+
+# Vérifier aussi l'interface wlan0 et son IP
+ip addr show wlan0 | grep "inet "
+# Doit afficher : inet 192.168.4.1/24
+
+# Tester que nginx répond (captive portal + webapp)
+curl -s -o /dev/null -w "%{http_code}" http://localhost/
+# Doit retourner : 200
+
+# Tester le captive portal iOS
+curl -s http://localhost/hotspot-detect.html
+# Doit retourner : <HTML><HEAD><TITLE>Success</TITLE></HEAD><BODY>Success</BODY></HTML>
+
+# Ou lancer le watchdog en mode status (vérifie tout)
+/home/pi/neopro/scripts/hotspot-watchdog.sh --status
+```
+
+**Le coupable le plus probable quand "ça marchait avant"** : `avahi-daemon` ou `nginx` a crashé silencieusement. Le hotspot-watchdog (v3.61+) surveille désormais ces deux services en plus de hostapd et dnsmasq.
 
 #### 3. Problème mDNS (neopro.local ne fonctionne pas)
 
@@ -245,6 +279,28 @@ grep neopro /etc/dnsmasq.conf
 
 1. Sur l'iPhone, **déconnectez puis reconnectez** le WiFi (pour récupérer la nouvelle config DNS)
 2. Essayez `http://neopro.local/remote` dans Safari
+
+**Solution 3 : Vérifier le captive portal iOS (v2.5.0+)**
+
+iOS envoie une requête HTTP vers `http://captive.apple.com/hotspot-detect.html` à chaque connexion WiFi. Si la réponse n'est pas exactement `<HTML><HEAD><TITLE>Success</TITLE></HEAD><BODY>Success</BODY></HTML>`, iOS ouvre un **captive portal sheet** qui restreint l'accès réseau dans Safari.
+
+```bash
+ssh pi@192.168.4.1
+
+# 1. Vérifier que nginx répond au captive portal iOS
+curl -s http://localhost/hotspot-detect.html
+# Doit retourner exactement : <HTML><HEAD><TITLE>Success</TITLE></HEAD><BODY>Success</BODY></HTML>
+
+# 2. Vérifier que dnsmasq redirige captive.apple.com vers le Pi
+grep "captive.apple.com" /etc/dnsmasq.conf
+# Doit afficher : address=/captive.apple.com/192.168.4.1
+
+# 3. Si l'endpoint ne répond pas, vérifier nginx
+sudo systemctl status nginx
+sudo nginx -t  # Vérifier la config
+```
+
+Si le captive portal n'est pas configuré, consultez le guide complet : [IOS_HOTSPOT_FIX.md](IOS_HOTSPOT_FIX.md)
 
 **Workaround si ça ne marche toujours pas :**
 

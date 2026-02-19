@@ -1,3 +1,17 @@
+## Hotspot Watchdog — nginx + avahi-daemon monitoring + guide iOS (2026-02-19)
+
+### Monitoring
+
+- **hotspot-watchdog.sh:** ajout surveillance de `nginx` et `avahi-daemon` en plus de hostapd/dnsmasq/rfkill — si nginx tombe, le captive portal et la webapp deviennent inaccessibles ; si avahi-daemon tombe, la résolution mDNS `neopro.local` cesse de fonctionner. Le watchdog détecte et relance automatiquement les deux services (recovery 6 étapes au lieu de 4)
+- **hotspot-watchdog.sh --status:** affiche désormais l'état de nginx et avahi-daemon dans le rapport de santé
+
+### Documentation
+
+- **IOS_HOTSPOT_FIX.md:** nouveau guide dédié iOS/iPadOS (symétrique à ANDROID_HOTSPOT_FIX.md) — arbre de diagnostic, captive portal Apple (`/hotspot-detect.html`), différences Mac vs iPhone, résolution mDNS, 4 cas de debug avec solutions
+- **TROUBLESHOOTING.md:** nouvelle section "Diagnostic rapide de tous les services hotspot" (one-liner pour vérifier les 4 services critiques), enrichissement de la section iPhone avec vérification captive portal iOS, lien vers le guide iOS dédié
+
+---
+
 ## SAFe Framework — Pilotage Produit structuré (2026-02-18)
 
 ### Documentation
