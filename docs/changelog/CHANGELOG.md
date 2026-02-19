@@ -1,3 +1,9 @@
+## [3.61.1](https://github.com/Tallec7/neopro/compare/v3.61.0...v3.61.1) (2026-02-19)
+
+### Bug Fixes
+
+- **analytics:** prevent video-plays batch loss from orphaned FK references ([#411](https://github.com/Tallec7/neopro/issues/411)) ([18678bf](https://github.com/Tallec7/neopro/commit/18678bfeb444ddd6cecd504afc3cb66f7c25f6b5))
+
 ## fix(analytics): validation FK complète sur video_plays — plus de perte de batch (2026-02-19)
 
 ### Bug Fixes
