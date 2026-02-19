@@ -11,6 +11,8 @@
 # - wlan0 pas en mode AP
 # - WiFi bloqué par rfkill
 # - dnsmasq arrêté
+# - nginx arrêté (captive portal + webapp inaccessibles)
+# - avahi-daemon arrêté (résolution mDNS neopro.local cassée)
 #
 # Usage :
 #   ./hotspot-watchdog.sh           # Exécution unique
@@ -104,6 +106,24 @@ check_rfkill() {
     fi
 }
 
+# Vérifier que nginx est actif (captive portal + webapp)
+check_nginx() {
+    if systemctl is-active --quiet nginx; then
+        return 0
+    else
+        return 1
+    fi
+}
+
+# Vérifier que avahi-daemon est actif (résolution mDNS neopro.local)
+check_avahi() {
+    if systemctl is-active --quiet avahi-daemon; then
+        return 0
+    else
+        return 1
+    fi
+}
+
 # Vérifier l'IP du hotspot
 check_hotspot_ip() {
     if ip addr show "$WIFI_INTERFACE" 2>/dev/null | grep -q "192.168.4.1"; then
@@ -135,6 +155,14 @@ check_hotspot_health() {
 
     if ! check_hotspot_ip; then
         issues+=("IP 192.168.4.1 non configurée")
+    fi
+
+    if ! check_nginx; then
+        issues+=("nginx inactif")
+    fi
+
+    if ! check_avahi; then
+        issues+=("avahi-daemon inactif")
     fi
 
     if [[ ${#issues[@]} -eq 0 ]]; then
@@ -174,22 +202,22 @@ attempt_recovery() {
     log_warn "Tentative de récupération #$RECOVERY_ATTEMPTS/$MAX_RECOVERY_ATTEMPTS"
 
     # Étape 1: Débloquer rfkill
-    log_info "Étape 1/4: Déblocage rfkill..."
+    log_info "Étape 1/6: Déblocage rfkill..."
     sudo rfkill unblock wifi 2>/dev/null || true
     sleep 1
 
     # Étape 2: Configurer l'IP statique si manquante
     if ! check_hotspot_ip; then
-        log_info "Étape 2/4: Configuration IP statique..."
+        log_info "Étape 2/6: Configuration IP statique..."
         sudo ip addr add 192.168.4.1/24 dev "$WIFI_INTERFACE" 2>/dev/null || true
         sudo ip link set "$WIFI_INTERFACE" up 2>/dev/null || true
         sleep 1
     else
-        log_info "Étape 2/4: IP déjà configurée"
+        log_info "Étape 2/6: IP déjà configurée"
     fi
 
     # Étape 3: Redémarrer hostapd
-    log_info "Étape 3/4: Redémarrage hostapd..."
+    log_info "Étape 3/6: Redémarrage hostapd..."
     sudo systemctl restart hostapd 2>/dev/null || {
         log_error "Échec du redémarrage hostapd"
         return 1
@@ -197,12 +225,34 @@ attempt_recovery() {
     sleep 3
 
     # Étape 4: Redémarrer dnsmasq
-    log_info "Étape 4/4: Redémarrage dnsmasq..."
+    log_info "Étape 4/6: Redémarrage dnsmasq..."
     sudo systemctl restart dnsmasq 2>/dev/null || {
         log_error "Échec du redémarrage dnsmasq"
         return 1
     }
     sleep 2
+
+    # Étape 5: Redémarrer nginx (captive portal + webapp)
+    if ! check_nginx; then
+        log_info "Étape 5/6: Redémarrage nginx..."
+        sudo systemctl restart nginx 2>/dev/null || {
+            log_error "Échec du redémarrage nginx"
+        }
+        sleep 1
+    else
+        log_info "Étape 5/6: nginx déjà actif"
+    fi
+
+    # Étape 6: Redémarrer avahi-daemon (résolution mDNS neopro.local)
+    if ! check_avahi; then
+        log_info "Étape 6/6: Redémarrage avahi-daemon..."
+        sudo systemctl restart avahi-daemon 2>/dev/null || {
+            log_error "Échec du redémarrage avahi-daemon"
+        }
+        sleep 1
+    else
+        log_info "Étape 6/6: avahi-daemon déjà actif"
+    fi
 
     # Vérification finale
     if issues=$(check_hotspot_health); then
@@ -249,6 +299,20 @@ print_status() {
         echo "[✓] rfkill: WiFi non bloqué"
     else
         echo "[✗] rfkill: WiFi BLOQUÉ"
+    fi
+
+    # nginx
+    if check_nginx; then
+        echo "[✓] nginx: actif (captive portal + webapp)"
+    else
+        echo "[✗] nginx: INACTIF — captive portal et webapp inaccessibles"
+    fi
+
+    # avahi-daemon
+    if check_avahi; then
+        echo "[✓] avahi-daemon: actif (mDNS neopro.local)"
+    else
+        echo "[✗] avahi-daemon: INACTIF — neopro.local ne résout plus"
     fi
 
     # IP

@@ -322,12 +322,21 @@ check_hotspot_services() {
 test_connectivity() {
     print_section "4. Test de connectivité"
 
-    # Test captive portal
+    # Test captive portal Android
     local CAPTIVE_TEST=$(curl -s -o /dev/null -w "%{http_code}" http://localhost/generate_204 2>/dev/null)
     if [ "$CAPTIVE_TEST" = "204" ]; then
-        print_success "Captive portal : OK (204)"
+        print_success "Captive portal Android : OK (204)"
     else
-        print_warning "Captive portal : code $CAPTIVE_TEST (attendu: 204)"
+        print_warning "Captive portal Android : code $CAPTIVE_TEST (attendu: 204)"
+    fi
+
+    # Test captive portal iOS (Apple)
+    local APPLE_BODY=$(curl -s http://localhost/hotspot-detect.html 2>/dev/null)
+    if echo "$APPLE_BODY" | grep -q "Success"; then
+        print_success "Captive portal iOS : OK (Success)"
+    else
+        print_warning "Captive portal iOS : endpoint /hotspot-detect.html manquant ou invalide"
+        print_info "  → Sans cet endpoint, les iPhones restreignent l'accès réseau dans Safari"
     fi
 
     # Test page principale
@@ -505,6 +514,8 @@ output_json() {
     local SSID=$(grep "^ssid=" /etc/hostapd/hostapd.conf 2>/dev/null | cut -d= -f2)
     local HOSTAPD_ACTIVE=$(systemctl is-active --quiet hostapd && echo "true" || echo "false")
     local DNSMASQ_ACTIVE=$(systemctl is-active --quiet dnsmasq && echo "true" || echo "false")
+    local CAPTIVE_ANDROID=$(curl -s -o /dev/null -w "%{http_code}" http://localhost/generate_204 2>/dev/null)
+    local CAPTIVE_IOS_OK=$(curl -s http://localhost/hotspot-detect.html 2>/dev/null | grep -q "Success" && echo "true" || echo "false")
     local THROTTLED=$(vcgencmd get_throttled 2>/dev/null | cut -d= -f2)
     local POWER_OK="true"
     # Vérifier uniquement les bits d'alimentation (sous-voltage) : bit 0 et bit 16
@@ -525,6 +536,8 @@ output_json() {
     "ssid": "$SSID",
     "hostapdActive": $HOSTAPD_ACTIVE,
     "dnsmasqActive": $DNSMASQ_ACTIVE,
+    "captivePortalAndroid": "$CAPTIVE_ANDROID",
+    "captivePortalIos": $CAPTIVE_IOS_OK,
     "powerOk": $POWER_OK,
     "throttledValue": "$THROTTLED"
   },
