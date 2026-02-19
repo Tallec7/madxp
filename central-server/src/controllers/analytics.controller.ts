@@ -268,8 +268,9 @@ export const recordVideoPlays = async (req: AuthRequest, res: Response) => {
 
     res.json({ success: true, recorded: validPlays.length });
   } catch (error) {
-    logger.error('Record video plays error:', error);
-    res.status(500).json({ error: 'Erreur lors de l\'enregistrement des lectures' });
+    const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue';
+    logger.error('Record video plays error:', { error: errorMessage, siteId: req.body?.site_id, playsCount: req.body?.plays?.length });
+    res.status(500).json({ error: 'Erreur lors de l\'enregistrement des lectures', details: errorMessage });
   }
 };
 

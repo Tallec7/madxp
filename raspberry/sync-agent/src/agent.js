@@ -32,6 +32,7 @@ class NeoproSyncAgent {
     this.socket = null;
     this.reconnectAttempts = 0;
     this.maxReconnectAttempts = 10;
+    this.authRetries = 0;
     this.heartbeatInterval = null;
     this.analyticsInterval = null;
     this.connectionHealthCheckInterval = null;
@@ -335,6 +336,7 @@ class NeoproSyncAgent {
   handleAuthenticated(data) {
     logger.info('Authenticated successfully', data);
 
+    this.authRetries = 0;
     this.connected = true;
     connectionStatus.recordSync(true);
 
@@ -580,12 +582,35 @@ class NeoproSyncAgent {
   }
 
   handleAuthError(data) {
-    logger.error('❌ Authentication failed', data);
-    logger.error(`Détails: ${data?.message || 'Erreur inconnue'}`);
-    logger.error('Vérifiez que SITE_ID et SITE_API_KEY sont corrects dans /etc/neopro/site.conf');
+    this.authRetries = (this.authRetries || 0) + 1;
+    const MAX_AUTH_RETRIES = 5;
+    const message = data?.message || 'Erreur inconnue';
 
-    this.socket.disconnect();
-    process.exit(1);
+    // Permanent errors: wrong credentials — no point retrying
+    const isPermanent = message.includes('Clé API invalide')
+      || message.includes('Identifiants manquants')
+      || message.includes('Site non trouvé');
+
+    logger.error('Authentication failed', {
+      message,
+      attempt: this.authRetries,
+      maxRetries: MAX_AUTH_RETRIES,
+      isPermanent,
+    });
+
+    if (isPermanent || this.authRetries >= MAX_AUTH_RETRIES) {
+      logger.error('Authentication definitively failed, exiting', {
+        attempts: this.authRetries,
+        isPermanent,
+      });
+      logger.error('Vérifiez que SITE_ID et SITE_API_KEY sont corrects dans /etc/neopro/site.conf');
+      this.socket.disconnect();
+      process.exit(1);
+    }
+
+    // Transient error (DB timeout, server overload): let Socket.IO reconnect
+    logger.warn(`Auth failed (attempt ${this.authRetries}/${MAX_AUTH_RETRIES}), will retry on reconnect`);
+    // Server disconnects us after auth_error, Socket.IO auto-reconnect will retry
   }
 
   handleDisconnect(reason) {
