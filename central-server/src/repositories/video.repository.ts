@@ -77,6 +77,19 @@ class VideoRepositoryImpl extends BaseRepository<VideoRow> {
   }
 
   /**
+   * Retourne le sous-ensemble d'IDs qui existent dans la table videos.
+   */
+  async findExistingIds(ids: string[]): Promise<Set<string>> {
+    if (ids.length === 0) return new Set();
+    const placeholders = ids.map((_, i) => `$${i + 1}`).join(', ');
+    const result = await query<{ id: string }>(
+      `SELECT id FROM videos WHERE id IN (${placeholders})`,
+      ids
+    );
+    return new Set(result.rows.map(r => r.id));
+  }
+
+  /**
    * Verifie si un nom de fichier existe deja en base.
    */
   async filenameExists(filename: string): Promise<boolean> {

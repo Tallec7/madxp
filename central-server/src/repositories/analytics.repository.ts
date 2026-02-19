@@ -474,6 +474,19 @@ class AnalyticsRepositoryImpl {
     return result.rows[0] || null;
   }
 
+  /**
+   * Retourne le sous-ensemble d'IDs qui existent dans la table club_sessions.
+   */
+  async findExistingSessionIds(ids: string[]): Promise<Set<string>> {
+    if (ids.length === 0) return new Set();
+    const placeholders = ids.map((_, i) => `$${i + 1}`).join(', ');
+    const result = await query<{ id: string }>(
+      `SELECT id FROM club_sessions WHERE id IN (${placeholders})`,
+      ids
+    );
+    return new Set(result.rows.map(r => r.id));
+  }
+
   // ========================================================================
   // Video Plays (Batch Insert)
   // ========================================================================

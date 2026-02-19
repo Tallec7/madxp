@@ -925,6 +925,34 @@ Les analytics ne sont générées que lorsque des vidéos sont effectivement lue
 - Vérifier que des vidéos sont configurées dans `configuration.json`
 - Déclencher manuellement une lecture depuis la télécommande (`/remote`)
 
+### Le batch video-plays échoue avec "violates foreign key constraint" (corrigé v3.61+)
+
+#### Symptômes
+
+- Logs central : `insert or update on table "video_plays" violates foreign key constraint "video_plays_sponsor_id_fkey"` (ou `video_plays_video_id_fkey`, `video_plays_session_id_fkey`)
+- La totalité du batch (jusqu'à 100 plays) est rejetée — perte de données analytics
+- Le Pi continue d'envoyer le même buffer en boucle (les plays ne sont jamais consommées)
+
+#### Cause
+
+Le Pi envoie des `sponsor_id`, `video_id` ou `session_id` référençant des enregistrements supprimés côté serveur (advertiser désactivé, vidéo supprimée, session nettoyée). Le serveur validait uniquement le format UUID mais pas l'existence en base, provoquant un rejet FK PostgreSQL sur tout le batch.
+
+#### Correction (v3.61+)
+
+Le contrôleur `POST /api/analytics/video-plays` effectue désormais une vérification d'existence en parallèle sur les 3 FK (`advertisers`, `videos`, `club_sessions`) avant l'INSERT. Les références orphelines sont nullifiées avec un warning log et une métrique Prometheus (`neopro_video_plays_fk_fallback_total{column="sponsor_id|video_id|session_id"}`).
+
+#### Diagnostic si le problème persiste
+
+```bash
+# Vérifier les logs pour les FK fallback (devrait être un warning, pas une erreur)
+railway logs -n 100 -s neopro-central --filter "FK targets"
+
+# Vérifier la métrique Prometheus
+curl -s https://neopro-central-production.up.railway.app/metrics | grep video_plays_fk_fallback
+```
+
+---
+
 ### Les analytics restent dans le buffer et ne partent jamais
 
 #### Symptômes
