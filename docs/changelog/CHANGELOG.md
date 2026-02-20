@@ -1,3 +1,9 @@
+## [3.62.1](https://github.com/Tallec7/neopro/compare/v3.62.0...v3.62.1) (2026-02-20)
+
+### Bug Fixes
+
+- **db:** reduce video_plays retention 90→30 days, add DB size monitoring ([903e1a2](https://github.com/Tallec7/neopro/commit/903e1a2309d671f83ce0e893930073d9ef2fa706))
+
 # [3.62.1](https://github.com/Tallec7/neopro/compare/v3.62.0...v3.62.1) (2026-02-20)
 
 ### Performance
