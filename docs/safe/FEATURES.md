@@ -1,6 +1,6 @@
 # Features & User Stories — NEOPRO SAFe
 
-> **Dernière mise à jour** : 19 Février 2026
+> **Dernière mise à jour** : 21 Février 2026
 > **PI actuel** : PI-1 (Février - Mars 2026)
 > Ce document contient les Features/US futures (PI-1 à PI-3) ET les Epics terminés avant PI-1. Les 75 features implémentées (hors SAFe) sont documentées dans [IMPLEMENTED-BACKLOG.md](IMPLEMENTED-BACKLOG.md).
 
@@ -654,13 +654,13 @@ Tous les controllers utilisent le repository pattern. ESLint bloquant actif. Aud
 
 ### Vue d'ensemble
 
-| Scope             | Epics               | Features | US     | SP      |
-| ----------------- | ------------------- | -------- | ------ | ------- |
-| Done (avant PI-1) | 5 (dont 2 partiels) | 9/11     | -      | ~41     |
-| PI-1 Actif        | 4 + 2 reliquats     | 12       | 19     | 79      |
-| PI-2              | 5                   | 7        | 12     | 69      |
-| PI-3              | 7                   | 7        | 9      | 73      |
-| **Total SAFe**    | **21**              | **37**   | **40** | **262** |
+| Scope             | Epics               | Features       | US     | SP      |
+| ----------------- | ------------------- | -------------- | ------ | ------- |
+| Done (avant PI-1) | 5 (dont 2 partiels) | 9 (+ 2 → PI-1) | -      | ~41     |
+| PI-1 Actif        | 4 + 2 reliquats     | 12             | 19     | 79      |
+| PI-2              | 5                   | 7              | 12     | 69      |
+| PI-3              | 7                   | 7              | 9      | 73      |
+| **Total SAFe**    | **21**              | **35 uniques** | **40** | **262** |
 
 > **Note PI-1** : Les 79 SP sont sous la capacité de 80 SP. Le backlog est désormais réaliste (vs 130 SP avant requalification des Done).
 

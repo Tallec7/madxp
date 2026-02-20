@@ -25,7 +25,7 @@
 ### 3. implemented-backlog-import.csv
 
 - **Source**: `IMPLEMENTED-BACKLOG.md` (Feature Registry)
-- **Rows**: 177 (1 header + 176 features)
+- **Rows**: 179 (1 header + 178 features)
 - **Columns**: Name, Code, Domaine, Statut, Fichiers clés, Version/Date
 - **Domains** (13):
   - Authentification & Sécurité (13 features)
@@ -34,8 +34,8 @@
   - Déploiement & OTA (12 features)
   - Monétisation & Sponsors (14 features)
   - Analytics & Reporting (18 features)
-  - Raspberry Pi (Edge) (21 features)
-  - Résilience Réseau & Sync (17 features)
+  - Raspberry Pi (Edge) (22 features)
+  - Résilience Réseau & Sync (18 features)
   - Monitoring & Alertes (22 features)
   - Administration & Infrastructure (22 features)
   - Playlists & Programmation (3 features)

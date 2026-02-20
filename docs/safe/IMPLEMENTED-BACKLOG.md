@@ -1,6 +1,6 @@
 # Implemented Backlog — Features Livrées
 
-> **Dernière mise à jour** : 19 Février 2026
+> **Dernière mise à jour** : 21 Février 2026
 > Ce document recense **toutes** les features implémentées dans le codebase NEOPRO, organisées par domaine fonctionnel. Il complète le backlog SAFe (futur) avec une vue exhaustive du produit livré.
 > **Source** : Croisement systématique de 34 changelogs, 200+ commits git (v3.47→v3.60), et audit codebase.
 
@@ -161,6 +161,7 @@
 | IMP-PI-19 | Transitions TV : détection frame réel (élimine trous noirs sur Pi 5)    | Production | `double-buffer-video.service.ts`                             | 2026         |
 | IMP-PI-20 | Chromium → chromium (compat Raspberry Pi OS Trixie)                     | Production | `kiosk.sh`                                                   | Déc 2025     |
 | IMP-PI-21 | Programmation boucle vidéo par phase match (pré/pendant/post)           | Production | `loop-scheduler.js`                                          | Déc 2025     |
+| IMP-PI-22 | Installation apt sécurisée via sudoers ciblé (pas de NoNewPrivileges)   | Production | `sudoers`                                                    | 2026         |
 
 ---
 
@@ -185,6 +186,7 @@
 | IMP-NET-15 | Écriture atomique sync-agent pour configuration.json + auto-recovery         | Production | `sync-agent/config-writer.js` | v3.48.0          |
 | IMP-NET-16 | Socket local persistant sync-agent (remplace éphémère)                       | Production | `sync-agent/socket.js`        | 2026             |
 | IMP-NET-17 | Configuration WiFi client à distance depuis dashboard central                | Production | `wifi-config.controller.ts`   | 2026             |
+| IMP-NET-18 | Détection WiFi USB au boot + watchdog surveillance                           | Production | `wifi-usb-stabilize.sh`       | Fév 2026         |
 
 ---
 
@@ -285,7 +287,7 @@
 
 | Métrique                  | Valeur                                                             |
 | ------------------------- | ------------------------------------------------------------------ |
-| **Features implémentées** | **130**                                                            |
+| **Features implémentées** | **178**                                                            |
 | Domaines fonctionnels     | 13                                                                 |
 | Controllers API           | 38                                                                 |
 | Services métier           | 37                                                                 |

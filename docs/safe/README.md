@@ -1,6 +1,6 @@
 # SAFe Neopro — Pilotage Produit
 
-> **Dernière mise à jour** : 19 Février 2026
+> **Dernière mise à jour** : 21 Février 2026
 > **Framework** : SAFe Essential (simplifié)
 > **Cadence PI** : 6 semaines (3 sprints de 2 semaines)
 > **PI actuel** : PI-1 (Février - Mars 2026)
@@ -15,10 +15,10 @@
 | Value Streams    | 2 OVS + 1 DVS avec lead times, bottlenecks                   |
 | Business Pillars | 4 Thèmes Stratégiques alignés OKR                            |
 | Epics            | 21 Epics (5 pré-PI-1 + 4 PI-1 + 5 PI-2 + 7 PI-3)             |
-| Features         | 37 Features avec acceptance criteria                         |
-| User Stories     | 40 US (19 PI-1 + 12 PI-2 + 9 PI-3)                           |
+| Features         | 35 Features avec acceptance criteria                         |
+| User Stories     | 218 US (178 Done + 19 PI-1 + 12 PI-2 + 9 PI-3)               |
 | Sprint Tracker   | Vélocité par sprint, formules automatiques                   |
-| Implemented      | 176 features livrées (13 domaines), traçabilité git complète |
+| Implemented      | 178 features livrées (13 domaines), traçabilité git complète |
 
 ---
 
@@ -205,7 +205,8 @@ Le **Sprint Tracker** (database Notion) capture automatiquement :
 | Page                                             | Description                                            |
 | ------------------------------------------------ | ------------------------------------------------------ |
 | [📋 Lean Business Cases](LEAN-BUSINESS-CASES.md) | LBC pour les 21 Epics (problème, solution, coût, KPIs) |
-| [🎯 Features & User Stories](FEATURES.md)        | 37 Features, 40 US avec acceptance criteria et SP      |
+| [🎯 Features & Critères](FEATURES.md)            | 35 Features avec acceptance criteria et SP             |
+| [📝 User Stories Complètes](USER-STORIES.md)     | 218 US (178 Done + 40 futures) avec traçabilité ADR    |
 | [🏁 PI Objectives](PI-OBJECTIVES.md)             | Objectifs PI avec scoring Business Value (1-10)        |
 | [⚠️ Registre ROAM](ROAM.md)                      | 8 risques identifiés avec matrice probabilité × impact |
 | [🔄 Inspect & Adapt](INSPECT-ADAPT.md)           | Template I&A avec quantitative review et retrospective |
@@ -215,7 +216,7 @@ Le **Sprint Tracker** (database Notion) capture automatiquement :
 
 | Page                                             | Description                                              |
 | ------------------------------------------------ | -------------------------------------------------------- |
-| [✅ Implemented Backlog](IMPLEMENTED-BACKLOG.md) | 176 features livrées avec traçabilité code (13 domaines) |
+| [✅ Implemented Backlog](IMPLEMENTED-BACKLOG.md) | 178 features livrées avec traçabilité code (13 domaines) |
 
 ## Tooling & Automatisation
 

@@ -6,7 +6,7 @@ LOCATION: /sessions/affectionate-practical-hamilton/mnt/neopro/docs/safe/notion-
 FILES CREATED:
 1. roam-import.csv (8 risks from ROAM.md)
 2. pi-objectives-import.csv (12 objectives: 6 PI-1 + 3 PI-2 + 3 PI-3)
-3. implemented-backlog-import.csv (176 features across 13 domains)
+3. implemented-backlog-import.csv (178 features across 13 domains)
 4. flow-metrics-import.csv (6 flow metric entries)
 5. README.md (detailed documentation)
 
@@ -27,7 +27,7 @@ flow-metrics-import.csv:
 NOTIONS DATABASES TO CREATE:
 1. Risks (8 entries)
 2. PI Objectives (12 entries)
-3. Implemented Features (176 entries)
+3. Implemented Features (178 entries)
 4. Flow Metrics (6 entries)
 
 ENCODING: UTF-8 with BOM, comma-delimited

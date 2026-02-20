@@ -123,12 +123,12 @@ xychart-beta
 
 | Value Stream                 | Epics  | Features | User Stories | SP Total    |
 | ---------------------------- | ------ | -------- | ------------ | ----------- |
-| 🟢 VS1 Club to Screen        | 7      | 11       | 18           | ~108 SP     |
-| 🟠 VS2 Sponsor to Impression | 7      | 12       | 20           | ~128 SP     |
-| ⬜ Transverse                | 7      | 8        | 12           | ~67 SP      |
-| **Total**                    | **21** | **37**   | **40**       | **~262 SP** |
+| 🟢 VS1 Club to Screen        | 7      | 12       | 18           | ~108 SP     |
+| 🟠 VS2 Sponsor to Impression | 7      | 13       | 20           | ~128 SP     |
+| ⬜ Transverse                | 7      | 10       | 12           | ~67 SP      |
+| **Total**                    | **21** | **35**   | **40**       | **~262 SP** |
 
-> Note : 5 Epics Done (avant PI-1) + 176 features livrées documentées dans [IMPLEMENTED-BACKLOG.md](IMPLEMENTED-BACKLOG.md)
+> Note : 5 Epics Done (avant PI-1) + 178 features livrées documentées dans [IMPLEMENTED-BACKLOG.md](IMPLEMENTED-BACKLOG.md)
 
 ### Par PI
 

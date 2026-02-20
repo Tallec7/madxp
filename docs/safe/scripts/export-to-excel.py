@@ -15,12 +15,12 @@ Structure Excel (13 onglets) :
     3. Vision & OKR         — Vision, 4 Thèmes, 5 Objectifs, 38 Key Results, KPIs
     4. Value Streams        — OVS-1, OVS-2, DVS-1 détaillé, 12 outils Neopro
     5. Epics & LBC          — 21 Epics avec WSJF, SUMIF Cost dynamique
-    6. Features & US        — 37 Features groupées par PI, COUNTIF/SUMIF → User Stories
+    6. Features & US        — 35 Features groupées par PI, COUNTIF/SUMIF → User Stories
     7. PI Objectives        — Objectifs PI-1/2 + aspirationnel, résumé BV, prédictabilité
     8. Sprint Tracker       — S1-S12 (PI-1 + PI-2), résumé, capacité équipe
     9. ROAM                 — 8 risques avec action/atténuation, résumé COUNTIF
    10. Flow Metrics         — Métriques par VS + allocation avec barres REPT
-   11. Implemented Backlog  — 176+ features, statistiques produit, domain summary COUNTIF
+   11. Implemented Backlog  — 178+ features, statistiques produit, domain summary COUNTIF
    12. User Stories         — Backlog US détaillé (headers, lié à Features)
    13. _ChartData           — Données pour graphiques Excel
 """
