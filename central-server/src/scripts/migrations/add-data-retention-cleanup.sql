@@ -3,7 +3,7 @@
 -- Description: Configure automatic cleanup of historical data to manage database growth
 --
 -- Retention Policy:
--- - video_plays: 90 days (daily stats preserve long-term)
+-- - video_plays: 30 days (reduced from 90 — see reduce-video-plays-retention.sql)
 -- - sponsor_impressions: 90 days (daily stats preserve long-term)
 -- - metrics: 7 days (short-term diagnostics only)
 -- - config_history: 20 versions per site (keep recent for rollback)

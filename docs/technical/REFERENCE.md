@@ -1286,7 +1286,24 @@ Sponsor Portal: 100 req/min    (PUBLIC, par IP)
 | **Alerting**      | `alerting.service.ts`       | Alertes multi-canal (email, slack, webhook) — 18 seuils par défaut + `checkHourlyMetrics()` agrège WS disconnects, video safety timeouts, kiosk crashes et alimente `evaluateMetric()` toutes les 5 min              |
 | **AlertService**  | `alert.service.ts`          | Notifications Slack (Block Kit) — méthodes pré-construites : `siteOffline`, `siteOnline`, `lowWifiSignal` (6h cooldown), `wifiSignalRecovered`, `networkFailure`, `enterShutdownMode`, `info/warning/error/critical` |
 | **Health**        | `health.service.ts`         | Endpoints /health, /live, /ready                                                                                                                                                                                     |
-| **Metrics**       | `metrics.service.ts`        | Export Prometheus — 30 métriques `neopro_*` (HTTP, WS, DB, disconnect, kiosk, license push, deploy progress, OTA errors, WiFi config, video transitions)                                                             |
+| **Metrics**       | `metrics.service.ts`        | Export Prometheus — 32 métriques `neopro_*` (HTTP, WS, DB size/table, disconnect, kiosk, license push, deploy progress, OTA errors, WiFi config, video transitions)                                                  |
+
+### Politique de rétention des données
+
+Les données volumineuses sont nettoyées automatiquement par le `CronScheduler` :
+
+| Table                           | Rétention        | Heure cleanup   | Notes                                            |
+| ------------------------------- | ---------------- | --------------- | ------------------------------------------------ |
+| `video_plays`                   | **30 jours**     | 3h15            | Agrégées dans `club_daily_stats` avant nettoyage |
+| `advertiser_impressions`        | 90 jours         | 3h30            | Agrégées dans `advertiser_daily_stats`           |
+| `metrics`                       | 7 jours          | 3h45            | Diagnostics système court terme                  |
+| `remote_commands`               | 30 jours         | 4h00            | Historique debug                                 |
+| `alerts`                        | 90 jours         | 4h15            | Analyse patterns incidents                       |
+| `config_history`                | 20 versions/site | 4h30            | Rollback configurations                          |
+| `audit_logs`                    | 90 jours         | (logs schedule) | Conformité/audit                                 |
+| `recurring_schedule_executions` | 90 jours         | (logs schedule) | Historique exécution crons                       |
+
+> **Monitoring :** `neopro_db_size_bytes` et `neopro_db_table_size_bytes{table}` sont collectés toutes les 5 min. Alertes Prometheus : `DbSizeWarning` (>400 MB), `DbSizeCritical` (>475 MB), `DbTableSizeHigh` (>200 MB/table). Supabase free tier = 500 MB.
 
 ### Socket Handlers (`src/handlers/`)
 

@@ -133,6 +133,19 @@ const dbConnectionsGauge = new Gauge({
   registers: [register],
 });
 
+const dbSizeBytesGauge = new Gauge({
+  name: 'neopro_db_size_bytes',
+  help: 'Total database size in bytes (pg_database_size)',
+  registers: [register],
+});
+
+const dbTableSizeBytesGauge = new Gauge({
+  name: 'neopro_db_table_size_bytes',
+  help: 'Total relation size per table in bytes (top tables only)',
+  labelNames: ['table'],
+  registers: [register],
+});
+
 // ============= Métriques WebSocket =============
 
 const websocketConnectionsGauge = new Gauge({
@@ -658,6 +671,14 @@ class MetricsService {
   recordDbConnections(active: number, idle: number): void {
     dbConnectionsGauge.set({ state: 'active' }, active);
     dbConnectionsGauge.set({ state: 'idle' }, idle);
+  }
+
+  recordDbSize(totalBytes: number): void {
+    dbSizeBytesGauge.set(totalBytes);
+  }
+
+  recordDbTableSize(table: string, totalBytes: number): void {
+    dbTableSizeBytesGauge.set({ table }, totalBytes);
   }
 
   recordWebsocketConnection(type: string, count: number): void {

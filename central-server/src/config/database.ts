@@ -115,6 +115,8 @@ pool.on('connect', () => {
 let metricsServiceInstance: {
   recordDbQuery: (operation: string, durationSeconds: number) => void;
   recordDbConnections: (active: number, idle: number) => void;
+  recordDbSize: (totalBytes: number) => void;
+  recordDbTableSize: (table: string, totalBytes: number) => void;
 } | null = null;
 const getMetricsService = () => {
   if (!metricsServiceInstance) {
@@ -183,6 +185,45 @@ setInterval(() => {
     });
   }
 }, POOL_HEALTH_INTERVAL);
+
+// Periodic DB size monitoring (every 5 min) — detects Supabase quota overruns early
+const DB_SIZE_INTERVAL = 5 * 60 * 1000;
+const DB_SIZE_TABLES = ['video_plays', 'advertiser_impressions', 'metrics', 'audit_logs', 'remote_commands'];
+const DB_SIZE_WARN_BYTES = 400 * 1024 * 1024; // 400 MB — Supabase free tier limit is 500 MB
+
+setInterval(async () => {
+  const ms = getMetricsService();
+  if (!ms) return;
+
+  try {
+    const sizeResult = await pool.query<{ size: string }>(
+      `SELECT pg_database_size(current_database())::text AS size`
+    );
+    const totalBytes = parseInt(sizeResult.rows[0]?.size || '0', 10);
+    ms.recordDbSize(totalBytes);
+
+    if (totalBytes > DB_SIZE_WARN_BYTES) {
+      logger.warn('Database size approaching Supabase quota', {
+        sizeBytes: totalBytes,
+        sizeMB: Math.round(totalBytes / (1024 * 1024)),
+        quotaMB: 500,
+        usagePercent: Math.round((totalBytes / (500 * 1024 * 1024)) * 100),
+      });
+    }
+
+    // Collect per-table sizes for the top tables
+    const tableResult = await pool.query<{ tablename: string; total_bytes: string }>(
+      `SELECT tablename, pg_total_relation_size('public.' || tablename)::text AS total_bytes
+       FROM pg_tables WHERE schemaname = 'public' AND tablename = ANY($1)`,
+      [DB_SIZE_TABLES]
+    );
+    for (const row of tableResult.rows) {
+      ms.recordDbTableSize(row.tablename, parseInt(row.total_bytes, 10));
+    }
+  } catch (error) {
+    logger.debug('DB size metrics collection failed', { error });
+  }
+}, DB_SIZE_INTERVAL);
 
 export const query = async <T extends QueryResultRow = QueryResultRow>(text: string, params?: any[]) => {
   const start = Date.now();

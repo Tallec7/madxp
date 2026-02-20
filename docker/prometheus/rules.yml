@@ -119,6 +119,36 @@ groups:
           summary: "P95 DB query latency above 2s"
           description: "95th percentile query time is {{ $value | humanizeDuration }}."
 
+      # Database size approaching Supabase free tier quota (500 MB)
+      - alert: DbSizeWarning
+        expr: neopro_db_size_bytes > 400 * 1024 * 1024
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Database size above 400 MB (Supabase free tier: 500 MB)"
+          description: "Current DB size: {{ $value | humanize1024 }}B. Consider running cleanup or reducing retention."
+
+      # Database size critical — over quota
+      - alert: DbSizeCritical
+        expr: neopro_db_size_bytes > 475 * 1024 * 1024
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Database size above 475 MB — approaching Supabase 500 MB hard limit"
+          description: "Current DB size: {{ $value | humanize1024 }}B. Immediate action required: VACUUM FULL or reduce retention."
+
+      # Single table consuming too much space (>200 MB)
+      - alert: DbTableSizeHigh
+        expr: neopro_db_table_size_bytes > 200 * 1024 * 1024
+        for: 30m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Table {{ $labels.table }} exceeds 200 MB"
+          description: "Table {{ $labels.table }} size: {{ $value | humanize1024 }}B. Check retention policy."
+
   # =============================================
   # HTTP / API
   # =============================================

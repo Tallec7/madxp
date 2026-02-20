@@ -1,3 +1,21 @@
+# [3.62.1](https://github.com/Tallec7/neopro/compare/v3.62.0...v3.62.1) (2026-02-20)
+
+### Performance
+
+- **db:** reduce `video_plays` retention from 90 days to 30 days — data already aggregated in `club_daily_stats` before cleanup. Reclaimed ~600 MB (DB was at 149% of Supabase 500 MB quota)
+- **db:** remove duplicate index `idx_video_plays_date` (identical to `idx_video_plays_played_at`)
+
+### Monitoring
+
+- **Prometheus:** new gauges `neopro_db_size_bytes` (total DB size) and `neopro_db_table_size_bytes{table}` (per-table size for top tables) — collected every 5 min
+- **Prometheus:** new alerts `DbSizeWarning` (>400 MB), `DbSizeCritical` (>475 MB), `DbTableSizeHigh` (>200 MB/table) — early detection of Supabase quota overruns
+
+### Documentation
+
+- **REFERENCE.md:** add data retention policy table with all cleanup schedules, retention periods, and DB size monitoring details
+
+---
+
 # [3.62.0](https://github.com/Tallec7/neopro/compare/v3.61.1...v3.62.0) (2026-02-19)
 
 ### Features
