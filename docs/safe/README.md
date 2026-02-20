@@ -139,15 +139,15 @@ Vision Stratégique (OKR 2026)
 
 | Sprint   | Dates     | Story Points | Focus                                                  |
 | -------- | --------- | ------------ | ------------------------------------------------------ |
-| Sprint 1 | Sem 8-9   | ~27 SP       | Rotation sponsors, analytics API, carte flotte         |
-| Sprint 2 | Sem 10-11 | ~27 SP       | Portail sponsor, wizard onboarding, WiFi USB           |
-| Sprint 3 | Sem 12-13 | ~25 SP       | Validation admin, auto-provisioning, heatmap, rapports |
+| Sprint 1 | Sem 8-9   | 26 SP        | Rotation sponsors, analytics API, carte flotte         |
+| Sprint 2 | Sem 10-11 | 25 SP        | Portail sponsor, wizard onboarding, WiFi USB           |
+| Sprint 3 | Sem 12-13 | 28 SP        | Validation admin, auto-provisioning, heatmap, rapports |
 
 ### Velocity Cible
 
-- Sprint 1 : 27 SP (7 US)
-- Sprint 2 : 27 SP (7 US)
-- Sprint 3 : 25 SP (5 US)
+- Sprint 1 : 26 SP (6 US)
+- Sprint 2 : 25 SP (7 US)
+- Sprint 3 : 28 SP (6 US)
 - **Total PI-1 : 79 SP / 19 User Stories**
 
 ---
@@ -164,14 +164,14 @@ Le **Sprint Tracker** (database Notion) capture automatiquement :
 
 ### Indicateurs DVS (Development Value Stream)
 
-| Métrique           | Cible PI-1   | Mesure                                 |
-| ------------------ | ------------ | -------------------------------------- |
-| Vélocité moyenne   | 27 SP/sprint | SP Complétés / sprint                  |
-| Taux complétion US | > 85%        | US Terminées / (Terminées + Reportées) |
-| Cycle Time moyen   | < 3 jours    | PR open → merged                       |
-| Lead Time feature  | < 2 semaines | Epic start → déployé                   |
-| Couverture tests   | > 80%        | Jest + Karma coverage                  |
-| Taux de carry-over | < 15%        | US Reportées / total US                |
+| Métrique           | Cible PI-1    | Mesure                                 |
+| ------------------ | ------------- | -------------------------------------- |
+| Vélocité moyenne   | ~26 SP/sprint | SP Complétés / sprint                  |
+| Taux complétion US | > 85%         | US Terminées / (Terminées + Reportées) |
+| Cycle Time moyen   | < 3 jours     | PR open → merged                       |
+| Lead Time feature  | < 2 semaines  | Epic start → déployé                   |
+| Couverture tests   | > 80%         | Jest + Karma coverage                  |
+| Taux de carry-over | < 15%         | US Reportées / total US                |
 
 ### Rituels de suivi
 

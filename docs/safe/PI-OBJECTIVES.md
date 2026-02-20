@@ -1,6 +1,6 @@
 # PI Objectives — Scoring Business Value
 
-> **Dernière mise à jour** : 18 Février 2026
+> **Dernière mise à jour** : 20 Février 2026
 > **Framework** : SAFe Essential — PI Objectives avec Business Value (BV) scoring
 > Le scoring BV (1-10) est défini par les Business Owners en PI Planning.
 
@@ -66,7 +66,7 @@ Le ratio **Actual / Planned** mesure la **Program Predictability** (cible : > 80
 | Étendus        | 2         | 8      | 7        |
 | **Total PI-1** | **6**     | **79** | **44**   |
 
-**Capacité PI** : ~80 SP (3 sprints × ~27 SP)
+**Capacité PI** : 79 SP (3 sprints × ~26 SP)
 **Taux de charge** : Engagés 71 SP / Capacité 80 SP = **89%** (marge de sécurité de 11%)
 
 ---

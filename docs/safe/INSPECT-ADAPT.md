@@ -66,12 +66,12 @@
 
 | Sprint       | Dates     | SP Planifiés | SP Complétés | Vélocité % | US Terminées | US Reportées |
 | ------------ | --------- | ------------ | ------------ | ---------- | ------------ | ------------ |
-| Sprint 1     | Sem 8-9   | 27           | _à remplir_  | \_%        | _/7_         |              |
-| Sprint 2     | Sem 10-11 | 27           | _à remplir_  | \_%        | _/7_         |              |
-| Sprint 3     | Sem 12-13 | 25           | _à remplir_  | \_%        | _/5_         |              |
+| Sprint 1     | Sem 8-9   | 26           | _à remplir_  | \_%        | _/6_         |              |
+| Sprint 2     | Sem 10-11 | 25           | _à remplir_  | \_%        | _/7_         |              |
+| Sprint 3     | Sem 12-13 | 28           | _à remplir_  | \_%        | _/6_         |              |
 | **Total PI** |           | **79**       | _à remplir_  | **\_%**    | _/19_        |              |
 
-**Vélocité moyenne** : _ SP/sprint (cible : 27 SP/sprint)
+**Vélocité moyenne** : _ SP/sprint (cible : ~26 SP/sprint)
 **Taux de complétion US** : _% (cible : > 85%)
 **Taux de report (carry-over)** : \_% (cible : < 15%)
 

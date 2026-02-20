@@ -1,6 +1,6 @@
 # Registre de Risques ROAM — PI-1
 
-> **Dernière mise à jour** : 19 Février 2026
+> **Dernière mise à jour** : 20 Février 2026
 > **PI** : PI-1 (Février - Mars 2026)
 > Framework SAFe ROAM : **R**esolved, **O**wned, **A**ccepted, **M**itigated
 
@@ -29,7 +29,7 @@
 | **Impact**      | Moyen — Les objectifs étendus seront reportés |
 | **Owner**       | Gwenvael                                      |
 
-**Description** : Un seul développeur pour 79 SP (71 engagés + 8 étendus) sur 6 semaines. La vélocité cible de 27 SP/sprint n'est pas encore validée historiquement. 5 Epics requalifiés Done allègent le PI-1 mais le risque capacité reste.
+**Description** : Un seul développeur pour 79 SP (71 engagés + 8 étendus) sur 6 semaines. La vélocité cible de ~26 SP/sprint n'est pas encore validée historiquement. 5 Epics requalifiés Done allègent le PI-1 mais le risque capacité reste.
 
 **Mitigation** : Les objectifs étendus (F-07.3 WiFi USB 3 SP, F-10.1 Carte flotte 5 SP) servent de buffer. En cas de retard, ils sont reportés en PI-2 sans impact business critique. Focus sur les 4 objectifs engagés (E-01, E-02, E-03, E-06).
 

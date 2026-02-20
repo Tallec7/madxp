@@ -121,14 +121,14 @@ xychart-beta
 
 ### Par Value Stream
 
-| Value Stream                 | Epics  | Features | User Stories | SP Total    |
-| ---------------------------- | ------ | -------- | ------------ | ----------- |
-| 🟢 VS1 Club to Screen        | 7      | 12       | 18           | ~108 SP     |
-| 🟠 VS2 Sponsor to Impression | 7      | 13       | 20           | ~128 SP     |
-| ⬜ Transverse                | 7      | 10       | 12           | ~67 SP      |
-| **Total**                    | **21** | **35**   | **40**       | **~262 SP** |
+| Value Stream                 | Epics  | Features | US (planifiées) | SP estimés |
+| ---------------------------- | ------ | -------- | --------------- | ---------- |
+| 🟢 VS1 Club to Screen        | 8      | 12       | 13              | ~74 SP     |
+| 🟠 VS2 Sponsor to Impression | 6      | 13       | 21              | ~103 SP    |
+| ⬜ Transverse                | 7      | 10       | 6               | ~44 SP     |
+| **Total**                    | **21** | **35**   | **40**          | **221 SP** |
 
-> Note : 5 Epics Done (avant PI-1) + 178 features livrées documentées dans [IMPLEMENTED-BACKLOG.md](IMPLEMENTED-BACKLOG.md)
+> **Note** : Ce tableau concerne les 40 US futures (PI-1 à PI-3). 178 US supplémentaires ont été livrées avant le PI Planning (voir [IMPLEMENTED-BACKLOG.md](IMPLEMENTED-BACKLOG.md)).
 
 ### Par PI
 

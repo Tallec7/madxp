@@ -125,14 +125,14 @@ flowchart LR
 
 ## KPIs Développement
 
-| KPI                      | Cible        | Mesure                    |
-| ------------------------ | ------------ | ------------------------- |
-| Vélocité                 | 27 SP/sprint | Sprint Tracker            |
-| Temps de cycle           | < 3 jours    | PR ouverte → fusionnée    |
-| Couverture tests         | > 80%        | Jest (1487) + Karma (541) |
-| Uptime production        | > 98.5%      | Prometheus                |
-| Déploiement              | < 30 min     | Pipeline CI/CD            |
-| Incidents critiques / PI | < 2          | Alerting                  |
+| KPI                      | Cible         | Mesure                    |
+| ------------------------ | ------------- | ------------------------- |
+| Vélocité                 | ~26 SP/sprint | Sprint Tracker            |
+| Temps de cycle           | < 3 jours     | PR ouverte → fusionnée    |
+| Couverture tests         | > 80%         | Jest (1487) + Karma (541) |
+| Uptime production        | > 98.5%       | Prometheus                |
+| Déploiement              | < 30 min      | Pipeline CI/CD            |
+| Incidents critiques / PI | < 2           | Alerting                  |
 
 ## Priorisation Économique (WSJF)
 
