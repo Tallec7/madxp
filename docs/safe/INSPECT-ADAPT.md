@@ -108,12 +108,12 @@ Cible : > 80%
 
 | Métrique                  | Valeur avant PI | Valeur fin PI | Cible   |
 | ------------------------- | --------------- | ------------- | ------- |
-| Tests central-server      | 1487            | _à remplir_   | ≥ 1487  |
-| Tests Angular Dashboard   | 541             | _à remplir_   | ≥ 541   |
+| Tests central-server      | 1464            | _à remplir_   | ≥ 1464  |
+| Tests Angular Dashboard   | 554             | _à remplir_   | ≥ 554   |
 | Smoke tests               | 142             | _à remplir_   | 142/142 |
 | Tests Admin Pi            | 146             | _à remplir_   | ≥ 146   |
 | Tests Socket Pi           | 71              | _à remplir_   | ≥ 71    |
-| **Total tests**           | **2 387**       | _à remplir_   | ≥ 2 387 |
+| **Total tests**           | **2 235**       | _à remplir_   | ≥ 2 235 |
 | Bugs trouvés post-release | -               | _à remplir_   | < 3     |
 
 ---

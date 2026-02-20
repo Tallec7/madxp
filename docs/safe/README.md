@@ -61,13 +61,13 @@ Vision Stratégique (OKR 2026)
 
 ### Epics Done (avant PI-1)
 
-| Epic                               | Value Stream | Thème | Statut                    |
-| ---------------------------------- | ------------ | ----- | ------------------------- |
-| E-04 Profils Config Match          | VS1          | TS2   | ✅ Done                   |
-| E-07 Résilience WiFi V2            | VS1          | TS3   | ⚠️ Partiel (F-07.3 reste) |
-| E-08 Alertes Prédictives Dashboard | Transverse   | TS4   | ✅ Done                   |
-| E-09 Architecture Audit            | Transverse   | TS4   | ✅ Done                   |
-| E-10 Monitoring Fleet              | Transverse   | TS4   | ⚠️ Partiel (F-10.1 reste) |
+| Epic                               | Value Stream | Thème | Statut                                                    |
+| ---------------------------------- | ------------ | ----- | --------------------------------------------------------- |
+| E-04 Profils Config Match          | VS1          | TS2   | ✅ Done                                                   |
+| E-07 Résilience WiFi V2            | VS1          | TS3   | ⚠️ Partiel (F-07.3 reste)                                 |
+| E-08 Alertes Prédictives Dashboard | Transverse   | TS4   | ✅ Done                                                   |
+| E-09 Architecture Audit            | Transverse   | TS4   | ✅ Done                                                   |
+| E-10 Monitoring Fleet              | Transverse   | TS4   | ✅ Done (carte Leaflet trouvée: `sites-map.component.ts`) |
 
 ### Epics PI-1 (Backlog Actif)
 

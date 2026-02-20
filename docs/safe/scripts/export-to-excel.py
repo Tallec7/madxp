@@ -353,7 +353,7 @@ def build_vision_okr(wb):
     kpis = [
         ("Clubs actifs (Pi connect\u00e9s)", "4", "100", "\U0001f7e1 En cours", "Dashboard fleet"),
         ("Annonceurs actifs", "0", "10", "\U0001f7e1 Early stage", "DB advertisers"),
-        ("Tests totaux", "2 387", "2 500", "\U0001f7e2 On track", "npm run test:*"),
+        ("Tests totaux", "2 235", "2 500", "\U0001f7e2 On track", "npm run test:*"),
         ("Uptime API", "99.2%", "99.5%", "\U0001f7e1 Proche", "Grafana"),
         ("Versions livr\u00e9es", "30+ (v3.47\u2192v3.60)", "Continu", "\U0001f7e2 Actif", "Git tags"),
         ("Features impl\u00e9ment\u00e9es", "184+", "-", "\U0001f7e2 Complet", "IMPLEMENTED-BACKLOG"),
@@ -433,7 +433,7 @@ def build_value_streams(wb):
         (1, "Product Discovery & Backlog", "PO (Gwenvael)", "SAFe Framework, Notion", "WSJF score, backlog depth", "Continu"),
         (2, "Architecture & Design", "Tech Lead", "ADR, TypeScript strict", "Design reviews pass\u00e9s", "Par feature"),
         (3, "Development (Sprint)", "Engineering", "Git, ESLint, Repository Pattern", "V\u00e9locit\u00e9 SP/sprint, WIP", "Sprint 2 semaines"),
-        (4, "Testing & QA", "Engineering", "Jest, Karma, Playwright, Smoke", "2 387 tests, coverage", "CI automatique"),
+        (4, "Testing & QA", "Engineering", "Jest, Karma, Playwright, Smoke", "2 235 tests, coverage", "CI automatique"),
         (5, "Release & OTA", "DevOps", "Git tags, Railway, FTP, Canary", "OTA success rate, rollback", "~2 releases/semaine"),
         (6, "Monitoring & Feedback", "Support", "Grafana, Prometheus, Slack", "Uptime, MTTR, NPS", "Continu"),
     ]
@@ -1048,7 +1048,7 @@ def build_implemented_backlog(wb):
         ("Services m\u00e9tier", "37"),
         ("Repositories", "24"),
         ("Versions released", "30+ (v1.0 \u2192 v3.60.0)"),
-        ("Tests (total)", "2 387"),
+        ("Tests (total)", "2 235"),
     ]
     for label, val in stats:
         ws.cell(row=r, column=1, value=label).border = THIN_BORDER

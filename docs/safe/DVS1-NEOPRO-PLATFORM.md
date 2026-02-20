@@ -129,7 +129,7 @@ flowchart LR
 | ------------------------ | ------------- | ------------------------- |
 | Vélocité                 | ~26 SP/sprint | Sprint Tracker            |
 | Temps de cycle           | < 3 jours     | PR ouverte → fusionnée    |
-| Couverture tests         | > 80%         | Jest (1487) + Karma (541) |
+| Couverture tests         | > 80%         | Jest (1464) + Karma (554) |
 | Uptime production        | > 98.5%       | Prometheus                |
 | Déploiement              | < 30 min      | Pipeline CI/CD            |
 | Incidents critiques / PI | < 2           | Alerting                  |

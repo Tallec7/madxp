@@ -83,14 +83,12 @@ Tous les controllers utilisent le repository pattern. ESLint bloquant actif. Aud
 
 ### E-10 — Monitoring Fleet ⚠️ PARTIELLEMENT DONE
 
-**Statut** : Métriques agrégées terminées, carte Leaflet manquante
+**Statut** : ✅ Terminé (carte Leaflet + métriques agrégées)
 
-| Feature                             | Statut     | Fichiers                                          |
-| ----------------------------------- | ---------- | ------------------------------------------------- |
-| F-10.1 Carte de la flotte (Leaflet) | ⏳ Backlog | Marqueurs et carte non trouvés dans le code       |
-| F-10.2 Métriques agrégées flotte    | ✅ Done    | `metrics.service.ts`, `realtime-stats.service.ts` |
-
-**Reste à faire** : F-10.1 (5 SP)
+| Feature                             | Statut  | Fichiers                                                             |
+| ----------------------------------- | ------- | -------------------------------------------------------------------- |
+| F-10.1 Carte de la flotte (Leaflet) | ✅ Done | `sites-map.component.ts` (Leaflet, marqueurs online/offline/warning) |
+| F-10.2 Métriques agrégées flotte    | ✅ Done | `metrics.service.ts`, `realtime-stats.service.ts`                    |
 
 ---
 
