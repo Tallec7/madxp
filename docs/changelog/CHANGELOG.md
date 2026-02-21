@@ -1,3 +1,9 @@
+# [3.64.0](https://github.com/Tallec7/neopro/compare/v3.63.0...v3.64.0) (2026-02-21)
+
+### Features
+
+- **dashboard:** P3 audit — sidebar responsive mobile + ARIA accessibility (F-AUD-19, F-AUD-20) ([4dcc38a](https://github.com/Tallec7/neopro/commit/4dcc38a06a6e1c65341aa8ee09c7cf8d93606bd5))
+
 # [3.63.0](https://github.com/Tallec7/neopro/compare/v3.62.1...v3.63.0) (2026-02-21)
 
 ### Features
