@@ -1,3 +1,9 @@
+## [3.64.2](https://github.com/Tallec7/neopro/compare/v3.64.1...v3.64.2) (2026-02-21)
+
+### Bug Fixes
+
+- **api:** résoudre 500 health matrix + 400 stats annonceur en production ([63f757b](https://github.com/Tallec7/neopro/commit/63f757ba4bbe0831e5cc6b3b086241fee66b0f19))
+
 ## [3.64.1](https://github.com/Tallec7/neopro/compare/v3.64.0...v3.64.1) (2026-02-21)
 
 ### Bug Fixes
