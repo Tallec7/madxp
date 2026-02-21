@@ -1,3 +1,10 @@
+# [3.65.0](https://github.com/Tallec7/neopro/compare/v3.64.2...v3.65.0) (2026-02-21)
+
+### Features
+
+- **dual-hdmi:** E-22 — Dual HDMI TV + LED complet (F-22.1, F-22.2, F-22.3) ([912996a](https://github.com/Tallec7/neopro/commit/912996ae22451b8e86a9a40df3989beb0e986aa3))
+- **safe:** E-22 Contenus Différenciés TV + LED — epic, LBC, features, US ([1d8c383](https://github.com/Tallec7/neopro/commit/1d8c383c53d98944b5462d500d6aed6d2c923f30))
+
 ## Sponsor Auto-Resolution (Fév 2026)
 
 ### feat(sponsors): auto-résolution sponsor ↔ vidéo au déploiement
