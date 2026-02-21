@@ -1,3 +1,9 @@
+## [3.68.4](https://github.com/Tallec7/neopro/compare/v3.68.3...v3.68.4) (2026-02-21)
+
+### Bug Fixes
+
+- **analytics:** daily stats updated_at + déduplication video_plays ([d595db5](https://github.com/Tallec7/neopro/commit/d595db5730020cf490c65df29dfb696ab6533743))
+
 ## Analytics Pipeline Fix — Daily Stats + Déduplication (Fév 2026)
 
 ### fix(analytics): daily stats cassées + doublons video_plays
