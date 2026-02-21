@@ -20,27 +20,28 @@ Avant chaque commit de type `feat(scope)` ou `fix(scope)` qui implémente ou com
 
 Utiliser le mapping scope → Epic pour déterminer quelle Feature est impactée :
 
-| Scope commit                    | Epics liés       | Features               |
-| ------------------------------- | ---------------- | ---------------------- |
-| `sponsors`, `advertiser`        | E-01, E-02, E-03 | F-01.x, F-02.x, F-03.x |
-| `match`, `remote`, `profiles`   | E-04             | F-04.x (Done)          |
-| `onboarding`, `provisioning`    | E-06             | F-06.x                 |
-| `wifi`, `resilience`, `offline` | E-07             | F-07.x                 |
-| `alerts`, `predictive`          | E-08             | F-08.x (Done)          |
-| `audit`, `repository`           | E-09             | F-09.x (Done)          |
-| `fleet`, `monitoring`           | E-10             | F-10.x                 |
-| `motion`, `templates`           | E-05             | F-05.x (PI-2)          |
-| `regie`, `regional`             | E-11             | F-11.x (PI-2)          |
-| `score`, `live`                 | E-15             | F-15.x (PI-2)          |
-| `email`, `reports`              | E-16             | F-16.x (PI-2)          |
-| `ab-test`, `creas`              | E-17             | F-17.x (PI-2)          |
-| `multi-screen`, `sync`          | E-12             | F-12.x (PI-3)          |
-| `branding`, `whitelabel`        | E-13             | F-13.x (PI-3)          |
-| `solidarity`, `fund`            | E-14             | F-14.x (PI-3)          |
-| `ticketing`                     | E-18             | F-18.x (PI-3)          |
-| `presence`, `sensors`           | E-19             | F-19.x (PI-3)          |
-| `ml`, `analytics-ml`            | E-20             | F-20.x (PI-3)          |
-| `oauth`, `api-partners`         | E-21             | F-21.x (PI-3)          |
+| Scope commit                       | Epics liés       | Features               |
+| ---------------------------------- | ---------------- | ---------------------- |
+| `sponsors`, `advertiser`           | E-01, E-02, E-03 | F-01.x, F-02.x, F-03.x |
+| `match`, `remote`, `profiles`      | E-04             | F-04.x (Done)          |
+| `onboarding`, `provisioning`       | E-06             | F-06.x                 |
+| `wifi`, `resilience`, `offline`    | E-07             | F-07.x                 |
+| `alerts`, `predictive`             | E-08             | F-08.x (Done)          |
+| `audit`, `repository`              | E-09             | F-09.x (Done)          |
+| `fleet`, `monitoring`              | E-10             | F-10.x                 |
+| `motion`, `templates`              | E-05             | F-05.x (PI-2)          |
+| `regie`, `regional`                | E-11             | F-11.x (PI-2)          |
+| `score`, `live`                    | E-15             | F-15.x (PI-2)          |
+| `email`, `reports`                 | E-16             | F-16.x (PI-2)          |
+| `ab-test`, `creas`                 | E-17             | F-17.x (PI-2)          |
+| `multi-screen`, `sync`             | E-12             | F-12.x (PI-3)          |
+| `branding`, `whitelabel`           | E-13             | F-13.x (PI-3)          |
+| `solidarity`, `fund`               | E-14             | F-14.x (PI-3)          |
+| `ticketing`                        | E-18             | F-18.x (PI-3)          |
+| `presence`, `sensors`              | E-19             | F-19.x (PI-3)          |
+| `ml`, `analytics-ml`               | E-20             | F-20.x (PI-3)          |
+| `oauth`, `api-partners`            | E-21             | F-21.x (PI-3)          |
+| `led`, `dual-output`, `dual-kiosk` | E-22             | F-22.x (PI-2)          |
 
 Si le scope ne matche aucun Epic, ou si le commit ne complète pas une Feature SAFe → **skip**, ne rien mettre à jour.
 

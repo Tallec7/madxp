@@ -97,11 +97,12 @@ Cible : > 80% → BV Réel ≥ 30
 
 > _À définir lors du PI-2 Planning (fin Mars 2026)._
 
-| #   | Objectif PI (prévisionnel)                                      | VS  | Thème | BV estimé |
-| --- | --------------------------------------------------------------- | --- | ----- | --------- |
-| 1   | Lancer la régie publicitaire régionale avec ≥ 1 annonceur signé | VS2 | TS1   | 10        |
-| 2   | Livrer 3 templates motion design personnalisables               | VS2 | TS2   | 6         |
-| 3   | Carry-over PI-1 (objectifs étendus non atteints)                | -   | -     | Variable  |
+| #   | Objectif PI (prévisionnel)                                             | VS  | Thème | BV estimé |
+| --- | ---------------------------------------------------------------------- | --- | ----- | --------- |
+| 1   | Lancer la régie publicitaire régionale avec ≥ 1 annonceur signé        | VS2 | TS1   | 10        |
+| 2   | Livrer 3 templates motion design personnalisables                      | VS2 | TS2   | 6         |
+| 3   | TV + LED dual output fonctionnel (1 Pi, 2 HDMI, contenus différenciés) | VS1 | TS2   | 8         |
+| 4   | Carry-over PI-1 (objectifs étendus non atteints)                       | -   | -     | Variable  |
 
 ---
 

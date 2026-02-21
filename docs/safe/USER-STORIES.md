@@ -349,7 +349,7 @@
 
 ---
 
-### PI-2 — Avril-Mai 2026 (12 US, 69 SP)
+### PI-2 — Avril-Mai 2026 (21 US, 108 SP)
 
 #### E-05 — Motion Design Personnalisé (3 US, 16 SP)
 
@@ -387,6 +387,20 @@
 | --------- | ------- | ---------------------------------------------------------------------------- | --- | ------- | -------- | ---------- |
 | US-17.1.1 | F-17.1  | CRUD campagnes A/B + allocation trafic + variantes                           | 5   | PI-2 S3 | Could    | ⏳ Backlog |
 | US-17.1.2 | F-17.1  | Dashboard résultats A/B avec test statistique (χ²) et recommandation gagnant | 8   | PI-2 S3 | Could    | ⏳ Backlog |
+
+#### E-22 — Contenus Différenciés TV + LED (9 US, 39 SP)
+
+| US        | Feature | Description                                                                                                | SP  | Sprint  | Priorité | Statut     |
+| --------- | ------- | ---------------------------------------------------------------------------------------------------------- | --- | ------- | -------- | ---------- |
+| US-22.0.1 | F-22.0  | Spike : Pi 5 dual HDMI + 2 flux vidéo + test contrôleur LED + validation détection HDMI DRM/KMS            | 3   | PI-2 S4 | Must     | ⏳ Backlog |
+| US-22.1.1 | F-22.1  | Config Pi dual HDMI + watchdog dual kiosk avec détection HDMI DRM/KMS                                      | 5   | PI-2 S4 | Must     | ⏳ Backlog |
+| US-22.1.2 | F-22.1  | Route Angular `/led` + paramètre `displayType` dans TvComponent (filtre playlist)                          | 5   | PI-2 S4 | Must     | ⏳ Backlog |
+| US-22.1.3 | F-22.1  | Dashboard — configuration site LED (toggle `led_enabled`, `led_resolution`, fallback `hdmi_force_hotplug`) | 3   | PI-2 S4 | Must     | ⏳ Backlog |
+| US-22.2.1 | F-22.2  | Score overlay LED bandeau compact + animations de but spécifiques LED                                      | 5   | PI-2 S4 | Must     | ⏳ Backlog |
+| US-22.2.2 | F-22.2  | Indicateur LED connecté dans la Remote + fallback vidéo LED                                                | 3   | PI-2 S5 | Should   | ⏳ Backlog |
+| US-22.3.1 | F-22.3  | Table `video_variants` + migration DB + API upload variante LED                                            | 5   | PI-2 S5 | Must     | ⏳ Backlog |
+| US-22.3.2 | F-22.3  | Dashboard UI variantes vidéo + déploiement conditionnel par `display_type`                                 | 5   | PI-2 S5 | Must     | ⏳ Backlog |
+| US-22.3.3 | F-22.3  | Adaptation pipeline déploiement (envoi variantes LED si `led_enabled`) + provisioning dual kiosk via OTA   | 5   | PI-2 S5 | Must     | ⏳ Backlog |
 
 ---
 

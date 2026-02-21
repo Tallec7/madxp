@@ -1,6 +1,6 @@
 # Features & User Stories — NEOPRO SAFe
 
-> **Dernière mise à jour** : 21 Février 2026
+> **Dernière mise à jour** : 21 Février 2026 <!-- E-22 ajouté -->
 > **PI actuel** : PI-1 (Février - Mars 2026)
 > Ce document contient les Features/US futures (PI-1 à PI-3) ET les Epics terminés avant PI-1. Les 75 features implémentées (hors SAFe) sont documentées dans [IMPLEMENTED-BACKLOG.md](IMPLEMENTED-BACKLOG.md).
 
@@ -465,6 +465,103 @@ Tous les controllers utilisent le repository pattern. ESLint bloquant actif. Aud
 
 ---
 
+### E-22 — Contenus Différenciés TV + LED
+
+> **Référence technique** : [PROP-002 — TV + LED Dual Output](../proposals/PROP-002-tv-led-dual-output.md)
+
+**Dépendances amont** : Nécessite un Pi 5 + panneau LED + contrôleur LED pour validation hardware (spike). Pas de dépendance inter-epic logicielle.
+
+**Risques (ROAM)**
+
+| Risque                                               | Type      | Mitigation                                                                  |
+| ---------------------------------------------------- | --------- | --------------------------------------------------------------------------- |
+| GPU surchargé avec 2 flux vidéo simultanés           | Accepted  | Pi 5 obligatoire, vidéos max 1080p@30fps, monitoring GPU via watchdog       |
+| Contrôleur LED incompatible HDMI ou EDID capricieux  | Mitigated | Spike US-22.0.1 valide avec matériel réel (Linsn MC100, Novastar MX40 Pro)  |
+| Prospect annule → dev inutile                        | Owned     | Go/No-Go avant tout dev feature (spike seul si prospect incertain)          |
+| Détection HDMI 1 échoue sur certains contrôleurs LED | Mitigated | Fallback config : `hdmi_force_hotplug:1=1` activable par site via dashboard |
+
+### F-22.0 : Enabler — Validation hardware dual HDMI (spike)
+
+> _Valider que le Pi 5 gère 2 flux vidéo simultanés sur ses 2 sorties HDMI avec un contrôleur LED réel._
+
+**Critères d'acceptation**
+
+- [ ] Pi 5 avec 2 écrans (TV HDMI 0 + contrôleur LED HDMI 1) affiche simultanément
+- [ ] 2 vidéos 1080p@30fps décodées en parallèle pendant 5h sans crash
+- [ ] RAM totale < 2GB (headroom pour Pi 4GB)
+- [ ] Détection HDMI via `/sys/class/drm/card1-HDMI-A-2/status` fonctionne avec le contrôleur LED testé
+- [ ] Documenter les contrôleurs LED compatibles et les résolutions validées
+
+| US        | Description                                                                                     | SP  | Sprint  | Priorité |
+| --------- | ----------------------------------------------------------------------------------------------- | --- | ------- | -------- |
+| US-22.0.1 | Spike : Pi 5 dual HDMI + 2 flux vidéo + test contrôleur LED + validation détection HDMI DRM/KMS | 3   | PI-2 S4 | Must     |
+
+---
+
+### F-22.1 : Dual Kiosk HDMI natif
+
+> _En tant que club avec TV + panneau LED, les deux écrans affichent des contenus adaptés à leur format depuis un seul Pi._
+
+**Critères d'acceptation**
+
+- [ ] 2 instances Chromium kiosk sur les 2 HDMI du Pi 5 (bureau étendu)
+- [ ] Route `/tv` (HDMI 0) + route `/led` (HDMI 1)
+- [ ] Config `config.txt` : `max_framebuffers=2`, résolutions par port
+- [ ] Watchdog vérifie `/sys/class/drm/card1-HDMI-A-2/status` avant de lancer le kiosk LED
+- [ ] Re-check périodique (30-60s) : lance le kiosk LED si HDMI 1 passe à `connected`
+- [ ] Si `led_enabled=true` mais HDMI 1 non branché → mode TV-only, pas de 2e Chromium
+- [ ] Fallback config : `hdmi_force_hotplug:1=1` activable par site si détection auto échoue
+- [ ] RAM totale < 2GB (headroom pour Pi 4GB)
+
+| US        | Description                                                                                                 | SP  | Sprint  | Priorité |
+| --------- | ----------------------------------------------------------------------------------------------------------- | --- | ------- | -------- |
+| US-22.1.1 | Config Pi dual HDMI (`config.txt` + `max_framebuffers=2`) + watchdog dual kiosk avec détection HDMI DRM/KMS | 5   | PI-2 S4 | Must     |
+| US-22.1.2 | Route Angular `/led` + paramètre `displayType` dans TvComponent (filtre playlist)                           | 5   | PI-2 S4 | Must     |
+| US-22.1.3 | Dashboard — configuration site LED (toggle `led_enabled`, `led_resolution`, fallback `hdmi_force_hotplug`)  | 3   | PI-2 S4 | Must     |
+
+---
+
+### F-22.2 : Réactions différenciées TV vs LED
+
+> _En tant qu'opérateur, mes actions Remote produisent des réactions visuelles adaptées sur la TV et le LED simultanément._
+
+**Critères d'acceptation**
+
+- [ ] Score overlay LED format bandeau compact (score + chrono + période)
+- [ ] Animation de but spécifique LED (flash couleur équipe + texte "BUT !")
+- [ ] Breaking news format LED (texte pleine largeur dans le bandeau)
+- [ ] Un seul événement Socket.IO → 2 réactions différentes selon `displayType`
+- [ ] Indicateur LED connecté dans la Remote
+
+| US        | Description                                                                                   | SP  | Sprint  | Priorité |
+| --------- | --------------------------------------------------------------------------------------------- | --- | ------- | -------- |
+| US-22.2.1 | Score overlay LED bandeau compact + animations de but spécifiques LED (flash couleur + texte) | 5   | PI-2 S4 | Must     |
+| US-22.2.2 | Indicateur LED connecté dans la Remote + fallback vidéo LED (`object-fit: cover`)             | 3   | PI-2 S5 | Should   |
+
+---
+
+### F-22.3 : Variantes vidéo par type d'écran
+
+> _En tant qu'opérateur/annonceur, je peux uploader une version TV et une version LED de chaque vidéo, et le pipeline de déploiement envoie les bons fichiers au Pi._
+
+**Critères d'acceptation**
+
+- [ ] Table `video_variants` avec `display_type` (tv/led)
+- [ ] API upload variante LED d'une vidéo existante
+- [ ] Dashboard : UI pour associer variante LED à une vidéo TV
+- [ ] Déploiement conditionnel : playlist TV = variantes `tv`, playlist LED = variantes `led`
+- [ ] Pipeline adapté : n'envoie les variantes LED que si le site est `led_enabled`
+- [ ] Provisioning dual kiosk config poussé via OTA quand `led_enabled` est activé
+- [ ] Fallback : si pas de variante LED, redimensionner la version TV (CSS `object-fit: cover`)
+
+| US        | Description                                                                                                     | SP  | Sprint  | Priorité |
+| --------- | --------------------------------------------------------------------------------------------------------------- | --- | ------- | -------- |
+| US-22.3.1 | Table `video_variants` + migration DB + API upload variante LED                                                 | 5   | PI-2 S5 | Must     |
+| US-22.3.2 | Dashboard UI variantes vidéo + déploiement conditionnel par `display_type`                                      | 5   | PI-2 S5 | Must     |
+| US-22.3.3 | Adaptation pipeline déploiement (envoi variantes LED si `led_enabled`) + provisioning dual kiosk config via OTA | 5   | PI-2 S5 | Must     |
+
+---
+
 ## PI-3 Epics (Juin - Juillet 2026)
 
 ### E-12 — Multi-Écrans Synchronisés
@@ -635,7 +732,8 @@ Tous les controllers utilisent le repository pattern. ESLint bloquant actif. Aud
 | E-15 Score Live Phase 2  | 1        | 2            | 11         |
 | E-16 Rapports Email Auto | 1        | 2            | 8          |
 | E-17 A/B Testing         | 1        | 2            | 13         |
-| **Total PI-2**           | **7**    | **12**       | **69**     |
+| E-22 TV + LED Dual       | 4        | 9            | 39         |
+| **Total PI-2**           | **11**   | **21**       | **108**    |
 
 ### PI-3 Backlog
 
@@ -656,9 +754,9 @@ Tous les controllers utilisent le repository pattern. ESLint bloquant actif. Aud
 | ----------------- | ------------------- | -------------- | ------ | ------- |
 | Done (avant PI-1) | 5 (dont 2 partiels) | 9 (+ 2 → PI-1) | -      | ~41     |
 | PI-1 Actif        | 4 + 2 reliquats     | 12             | 19     | 79      |
-| PI-2              | 5                   | 7              | 12     | 69      |
+| PI-2              | 6                   | 11             | 21     | 108     |
 | PI-3              | 7                   | 7              | 9      | 73      |
-| **Total SAFe**    | **21**              | **35 uniques** | **40** | **262** |
+| **Total SAFe**    | **22**              | **39 uniques** | **49** | **301** |
 
 > **Note PI-1** : Les 79 SP sont sous la capacité de 80 SP. Le backlog est désormais réaliste (vs 130 SP avant requalification des Done).
 

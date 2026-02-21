@@ -501,6 +501,7 @@ def build_epics_lbc(wb):
         ("E-19", "Capteurs Pr\u00e9sence Hardware", "VS1 - Club to Screen", "TS2 - Exp\u00e9rience Match", None, "PI-3", "Backlog", None, None, 2, 2, 3),
         ("E-20", "Analytics Pr\u00e9dictives ML", "Transverse", "TS4 - Excellence Ops", None, "PI-3", "Backlog", None, None, 2, 3, 1),
         ("E-21", "API Partenaires OAuth", "Transverse", "TS1 - Mon\u00e9tisation", None, "PI-3", "Backlog", None, None, 2, 3, 1),
+        ("E-22", "Contenus Diff\u00e9renci\u00e9s TV+LED", "VS1 - Club to Screen", "TS2 - Exp\u00e9rience Match", None, "PI-2", "Backlog", None, None, 4, 5, 1),
     ]
 
     for i, epic in enumerate(epics, 4):
@@ -601,6 +602,10 @@ def build_features_us(wb):
         ("E-19", "F-19.1", "Comptage spectateurs automatique", 3, "Backlog", "PI-2 (Avr-Jun 2025)", ""),
         ("E-20", "F-20.1", "Pr\u00e9dictions engagement et uptime", 3, "Backlog", "PI-2 (Avr-Jun 2025)", ""),
         ("E-21", "F-21.1", "API OAuth 2.0 pour partenaires", 3, "Backlog", "PI-2 (Avr-Jun 2025)", ""),
+        ("E-22", "F-22.0", "Enabler \u2014 Validation hardware dual HDMI (spike)", 1, "Backlog", "PI-2 (Avr-Jun 2026)", ""),
+        ("E-22", "F-22.1", "Dual Kiosk HDMI natif", 2, "Backlog", "PI-2 (Avr-Jun 2026)", ""),
+        ("E-22", "F-22.2", "R\u00e9actions diff\u00e9renci\u00e9es TV vs LED", 2, "Backlog", "PI-2 (Avr-Jun 2026)", ""),
+        ("E-22", "F-22.3", "Variantes vid\u00e9o par type d'\u00e9cran", 2, "Backlog", "PI-2 (Avr-Jun 2026)", ""),
     ]
 
     pi2_start = r

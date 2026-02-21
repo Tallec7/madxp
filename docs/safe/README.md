@@ -87,6 +87,7 @@ Vision Stratégique (OKR 2026)
 | **E-15 Score Live Phase 2**           | VS1          | TS2   | PI-2 |
 | **E-16 Rapports Email Auto**          | Transverse   | TS4   | PI-2 |
 | **E-17 A/B Testing Créas**            | VS2          | TS1   | PI-2 |
+| **E-22 Contenus Différenciés TV+LED** | VS1          | TS2   | PI-2 |
 
 ### Epics PI-3
 
@@ -102,11 +103,11 @@ Vision Stratégique (OKR 2026)
 
 ## Roadmap PI
 
-| PI   | Période        | Epics                                        | Focus                                                        |
-| ---- | -------------- | -------------------------------------------- | ------------------------------------------------------------ |
-| PI-1 | Fév-Mars 2026  | E-01, E-02, E-03, E-06 + reliquats E-07/E-10 | Fondations : sponsors self-service, analytics, onboarding    |
-| PI-2 | Avr-Mai 2026   | E-05, E-11, E-15, E-16, E-17                 | Régie publicitaire + motion design + email auto + score live |
-| PI-3 | Juin-Juil 2026 | E-12 à E-14, E-18 à E-21                     | Multi-écrans, marque blanche, billetterie, ML, OAuth         |
+| PI   | Période        | Epics                                        | Focus                                                                 |
+| ---- | -------------- | -------------------------------------------- | --------------------------------------------------------------------- |
+| PI-1 | Fév-Mars 2026  | E-01, E-02, E-03, E-06 + reliquats E-07/E-10 | Fondations : sponsors self-service, analytics, onboarding             |
+| PI-2 | Avr-Mai 2026   | E-05, E-11, E-15, E-16, E-17, E-22           | Régie publicitaire + motion design + email auto + score live + TV+LED |
+| PI-3 | Juin-Juil 2026 | E-12 à E-14, E-18 à E-21                     | Multi-écrans, marque blanche, billetterie, ML, OAuth                  |
 
 ## Cadence
 

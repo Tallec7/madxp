@@ -504,15 +504,16 @@
 | 3    | E-11 Régie Publicitaire Régionale | 18   | PI-2 | Backlog |
 | 4    | E-01 Portail Sponsor Self-Service | 13   | PI-1 | Backlog |
 | 5    | E-07 Résilience WiFi V2           | 12   | PI-1 | Backlog |
-| 6    | E-02 Rotation Sponsors            | 10   | PI-1 | Backlog |
-| 6    | E-08 Alertes Prédictives          | 10   | PI-1 | Backlog |
-| 8    | E-04 Profils Config Match         | 8    | PI-1 | Backlog |
-| 8    | E-10 Monitoring Fleet             | 8    | PI-1 | Backlog |
-| 8    | E-12 Multi-Écrans Synchronisés    | 8    | PI-3 | Backlog |
-| 11   | E-05 Motion Design Personnalisé   | 7    | PI-2 | Backlog |
-| 12   | E-09 Architecture Audit           | 6    | PI-1 | Backlog |
-| 12   | E-13 Marque Blanche Club          | 6    | PI-3 | Backlog |
-| 14   | E-14 Fonds de Solidarité          | 5    | PI-3 | Backlog |
+| 5    | E-22 Contenus Différenciés TV+LED | 12   | PI-2 | Backlog |
+| 7    | E-02 Rotation Sponsors            | 10   | PI-1 | Backlog |
+| 7    | E-08 Alertes Prédictives          | 10   | PI-1 | Backlog |
+| 9    | E-04 Profils Config Match         | 8    | PI-1 | Backlog |
+| 9    | E-10 Monitoring Fleet             | 8    | PI-1 | Backlog |
+| 9    | E-12 Multi-Écrans Synchronisés    | 8    | PI-3 | Backlog |
+| 12   | E-05 Motion Design Personnalisé   | 7    | PI-2 | Backlog |
+| 13   | E-09 Architecture Audit           | 6    | PI-1 | Backlog |
+| 13   | E-13 Marque Blanche Club          | 6    | PI-3 | Backlog |
+| 15   | E-14 Fonds de Solidarité          | 5    | PI-3 | Backlog |
 
 ---
 
@@ -760,6 +761,44 @@
 
 ---
 
+### E-22 — Contenus Différenciés TV + LED
+
+| Champ                 | Détail                 |
+| --------------------- | ---------------------- |
+| **Value Stream**      | VS1 — Club to Screen   |
+| **Thème Stratégique** | TS2 — Expérience Match |
+| **WSJF**              | 12                     |
+
+**Problème** : Certains clubs disposent d'une TV classique ET d'un panneau LED (bandeau, mur LED, totem). Ils veulent diffuser des contenus différenciés adaptés au format de chaque support (16:9 pour la TV, format custom pour le LED) depuis un seul Raspberry Pi.
+
+**Solution** : Utiliser les 2 sorties HDMI natives du Pi 5 avec 2 instances Chromium kiosk indépendantes (`/tv` et `/led`). Chaque instance interprète les mêmes événements Socket.IO (score, commandes, faits de jeu) selon son `displayType`. Un système de variantes vidéo permet d'uploader une version TV et une version LED de chaque contenu.
+
+**Hypothèses**
+
+- 10-15% des clubs cibles disposent d'un panneau LED en plus de la TV
+- L'upsell LED justifie un supplément de 50€/mois par écran LED
+- Le Pi 5 gère 2 flux vidéo simultanés (GPU 256MB, 1080p@30fps max)
+- Les contrôleurs LED professionnels (Linsn, Novastar) acceptent un signal HDMI standard
+
+**Coût estimé** : 39 SP (≈ 4-5 semaines dev, dont 3 SP spike hardware)
+
+**Bénéfice attendu**
+
+- Upsell : +600€/an par écran LED supplémentaire
+- Pénétration du segment semi-pro et clubs multi-espaces
+- Différenciation massive vs concurrence (aucun concurrent ne gère TV+LED)
+- Attractivité pour les annonceurs (affichage multi-support = CPM plus élevé)
+
+**Indicateurs avancés** : Nombre de clubs TV+LED, latence de synchronisation TV/LED, taux de couverture variantes LED
+**Indicateurs retardés** : ARR upsell LED, NPS clubs semi-pro, CPM moyen annonceurs multi-support
+
+**MVP** : 1 Pi avec 2 HDMI → TV + LED affichant contenus adaptés à chaque format + score overlay différencié
+**Go/No-Go** : Go si ≥ 1 prospect confirme installation LED
+
+**Référence technique** : [PROP-002 — TV + LED Dual Output](../proposals/PROP-002-tv-led-dual-output.md)
+
+---
+
 ## Récapitulatif WSJF (mis à jour)
 
 | Rang | Epic                              | WSJF | PI   | Statut                    |
@@ -769,22 +808,23 @@
 | 3    | E-11 Régie Publicitaire Régionale | 18   | PI-2 | Backlog                   |
 | 4    | E-01 Portail Sponsor Self-Service | 13   | PI-1 | Backlog                   |
 | 5    | E-07 Résilience WiFi V2           | 12   | PI-1 | ⚠️ Partiel (F-07.3 reste) |
-| 6    | E-02 Rotation Sponsors            | 10   | PI-1 | Backlog                   |
-| 6    | E-08 Alertes Prédictives          | 10   | PI-1 | ✅ Done                   |
-| 6    | E-16 Rapports Email Auto          | 10   | PI-2 | Backlog (nouveau)         |
-| 9    | E-15 Score Live Phase 2           | 9    | PI-2 | Backlog (nouveau)         |
-| 10   | E-04 Profils Config Match         | 8    | PI-1 | ✅ Done                   |
-| 10   | E-10 Monitoring Fleet             | 8    | PI-1 | ⚠️ Partiel (F-10.1 reste) |
-| 10   | E-12 Multi-Écrans Synchronisés    | 8    | PI-3 | Backlog                   |
-| 13   | E-05 Motion Design Personnalisé   | 7    | PI-2 | Backlog                   |
-| 13   | E-17 A/B Testing                  | 7    | PI-2 | Backlog (nouveau)         |
-| 15   | E-09 Architecture Audit           | 6    | PI-1 | ✅ Done                   |
-| 15   | E-13 Marque Blanche Club          | 6    | PI-3 | Backlog                   |
-| 15   | E-18 Billetterie                  | 6    | PI-3 | Backlog (nouveau)         |
-| 18   | E-14 Fonds de Solidarité          | 5    | PI-3 | Backlog                   |
-| 18   | E-20 Analytics ML                 | 5    | PI-3 | Backlog (nouveau)         |
-| 18   | E-21 API OAuth                    | 5    | PI-3 | Backlog (nouveau)         |
-| 21   | E-19 Capteurs Présence            | 4    | PI-3 | Backlog (nouveau)         |
+| 5    | E-22 Contenus Différenciés TV+LED | 12   | PI-2 | Backlog (nouveau)         |
+| 7    | E-02 Rotation Sponsors            | 10   | PI-1 | Backlog                   |
+| 7    | E-08 Alertes Prédictives          | 10   | PI-1 | ✅ Done                   |
+| 7    | E-16 Rapports Email Auto          | 10   | PI-2 | Backlog (nouveau)         |
+| 10   | E-15 Score Live Phase 2           | 9    | PI-2 | Backlog (nouveau)         |
+| 11   | E-04 Profils Config Match         | 8    | PI-1 | ✅ Done                   |
+| 11   | E-10 Monitoring Fleet             | 8    | PI-1 | ⚠️ Partiel (F-10.1 reste) |
+| 11   | E-12 Multi-Écrans Synchronisés    | 8    | PI-3 | Backlog                   |
+| 14   | E-05 Motion Design Personnalisé   | 7    | PI-2 | Backlog                   |
+| 14   | E-17 A/B Testing                  | 7    | PI-2 | Backlog (nouveau)         |
+| 16   | E-09 Architecture Audit           | 6    | PI-1 | ✅ Done                   |
+| 16   | E-13 Marque Blanche Club          | 6    | PI-3 | Backlog                   |
+| 16   | E-18 Billetterie                  | 6    | PI-3 | Backlog (nouveau)         |
+| 19   | E-14 Fonds de Solidarité          | 5    | PI-3 | Backlog                   |
+| 19   | E-20 Analytics ML                 | 5    | PI-3 | Backlog (nouveau)         |
+| 19   | E-21 API OAuth                    | 5    | PI-3 | Backlog (nouveau)         |
+| 22   | E-19 Capteurs Présence            | 4    | PI-3 | Backlog (nouveau)         |
 
 ---
 

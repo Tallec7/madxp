@@ -75,6 +75,7 @@ gantt
     E-15 Score Live Phase 2             :e15, 2026-04-01, 42d
     E-16 Rapports Email Auto            :e16, 2026-04-01, 42d
     E-17 A/B Testing Créas              :e17, 2026-04-01, 42d
+    E-22 Contenus Différenciés TV+LED  :e22, 2026-04-01, 42d
 
     section PI-3 Upsells & Écosystème
     E-12 Multi-Écrans Synchronisés      :e12, 2026-06-01, 42d
@@ -123,28 +124,28 @@ xychart-beta
 
 | Value Stream                 | Epics  | Features | US (planifiées) | SP estimés |
 | ---------------------------- | ------ | -------- | --------------- | ---------- |
-| 🟢 VS1 Club to Screen        | 8      | 12       | 13              | ~74 SP     |
+| 🟢 VS1 Club to Screen        | 9      | 16       | 22              | ~113 SP    |
 | 🟠 VS2 Sponsor to Impression | 6      | 13       | 21              | ~103 SP    |
 | ⬜ Transverse                | 7      | 10       | 6               | ~44 SP     |
-| **Total**                    | **21** | **35**   | **40**          | **221 SP** |
+| **Total**                    | **22** | **39**   | **49**          | **260 SP** |
 
 > **Note** : Ce tableau concerne les 40 US futures (PI-1 à PI-3). 178 US supplémentaires ont été livrées avant le PI Planning (voir [IMPLEMENTED-BACKLOG.md](IMPLEMENTED-BACKLOG.md)).
 
 ### Par PI
 
-| PI   | Période        | Epics | SP  | Focus                                                | Milestone                     |
-| ---- | -------------- | ----- | --- | ---------------------------------------------------- | ----------------------------- |
-| Done | Avant PI-1     | 5     | ~41 | Profils, WiFi, Alertes, Audit, Monitoring            | -                             |
-| PI-1 | Fév-Mars 2026  | 4+2   | 79  | Sponsors self-service, analytics, onboarding         | 5 clubs payants               |
-| PI-2 | Avr-Mai 2026   | 5     | 69  | Régie publicitaire, score live, email auto, A/B      | Lancement régie à 15 clubs    |
-| PI-3 | Juin-Juil 2026 | 7     | 73  | Multi-écrans, marque blanche, billetterie, ML, OAuth | 20 clubs, premiers annonceurs |
+| PI   | Période        | Epics | SP  | Focus                                                   | Milestone                     |
+| ---- | -------------- | ----- | --- | ------------------------------------------------------- | ----------------------------- |
+| Done | Avant PI-1     | 5     | ~41 | Profils, WiFi, Alertes, Audit, Monitoring               | -                             |
+| PI-1 | Fév-Mars 2026  | 4+2   | 79  | Sponsors self-service, analytics, onboarding            | 5 clubs payants               |
+| PI-2 | Avr-Mai 2026   | 6     | 108 | Régie publicitaire, score live, email auto, A/B, TV+LED | Lancement régie à 15 clubs    |
+| PI-3 | Juin-Juil 2026 | 7     | 73  | Multi-écrans, marque blanche, billetterie, ML, OAuth    | 20 clubs, premiers annonceurs |
 
 ### Par Thème Stratégique
 
 | Thème                   | Epics                                    | OKR     | Impact principal        |
 | ----------------------- | ---------------------------------------- | ------- | ----------------------- |
 | 🟥 TS1 Monétisation     | E-01, E-02, E-03, E-05, E-11, E-17, E-21 | O2 + O4 | ARR + revenus régie     |
-| 🟦 TS2 Expérience Match | E-04, E-12, E-13, E-15, E-18, E-19       | O3 + O5 | Engagement + image pro  |
+| 🟦 TS2 Expérience Match | E-04, E-12, E-13, E-15, E-18, E-19, E-22 | O3 + O5 | Engagement + image pro  |
 | 🟩 TS3 Acquisition      | E-06, E-07, E-14                         | O1 + O5 | Scalabilité déploiement |
 | 🟪 TS4 Excellence Ops   | E-08, E-09, E-10, E-16, E-20             | O3 + O4 | Fiabilité + monitoring  |
 

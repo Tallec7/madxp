@@ -151,6 +151,7 @@ quadrantChart
     E-11 Regie: [0.8, 0.95]
     E-08 Alertes: [0.35, 0.5]
     E-12 Multi-Ecrans: [0.5, 0.4]
+    E-22 TV+LED Dual: [0.6, 0.65]
     E-13 Marque Blanche: [0.25, 0.35]
     E-14 Fonds Solidarite: [0.45, 0.3]
 ```

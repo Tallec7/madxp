@@ -5,6 +5,7 @@
 **Date** : 2026-02-11
 **Statut** : Proposé
 **Décideurs** : Équipe Neopro
+**Epic SAFe** : [E-22 — Contenus Différenciés TV + LED](../safe/FEATURES.md#e-22--contenus-différenciés-tv--led) (PI-2)
 **Lié à** : [PROP-001](./PROP-001-multi-tv-single-pi.md) (Multi-TV), [ADR-008](../adr/ADR-008-double-buffer-video-pi.md) (Double-Buffer Vidéo)
 
 ---
@@ -94,9 +95,11 @@ Utiliser les **2 sorties HDMI natives du Pi** avec **2 instances Chromium kiosk 
 # Activer double framebuffer
 max_framebuffers=2
 
-# Forcer les 2 sorties HDMI actives
+# HDMI 0 (TV) : toujours forcé actif
 hdmi_force_hotplug:0=1
-hdmi_force_hotplug:1=1
+
+# HDMI 1 (LED) : NE PAS forcer — auto-détection via DRM/KMS
+# hdmi_force_hotplug:1=1  ← DÉSACTIVÉ par défaut (activable par site via dashboard si détection échoue)
 
 # GPU memory pour double décodage vidéo
 gpu_mem=256
@@ -115,7 +118,10 @@ hdmi_cvt=1920 384 60  # Exemple bandeau LED
 **Watchdog dual kiosk** (`kiosk-watchdog.sh` modifié) :
 
 ```bash
-# Instance TV (HDMI 0)
+# Détection HDMI 1 via DRM/KMS (Pi 5)
+HDMI1_STATUS=$(cat /sys/class/drm/card1-HDMI-A-2/status 2>/dev/null || echo "disconnected")
+
+# Instance TV (HDMI 0) — toujours lancée
 chromium-browser \
   --user-data-dir=/tmp/kiosk-tv \
   --window-position=0,0 \
@@ -124,14 +130,20 @@ chromium-browser \
   --autoplay-policy=no-user-gesture-required \
   http://neopro.local/tv &
 
-# Instance LED (HDMI 1, décalée de la largeur de l'écran 0)
-chromium-browser \
-  --user-data-dir=/tmp/kiosk-led \
-  --window-position=1920,0 \
-  --window-size=1920,384 \
-  --kiosk \
-  --autoplay-policy=no-user-gesture-required \
-  http://neopro.local/led &
+# Instance LED (HDMI 1) — lancée uniquement si led_enabled ET HDMI 1 connecté
+if [ "$LED_ENABLED" = "true" ] && [ "$HDMI1_STATUS" = "connected" ]; then
+  chromium-browser \
+    --user-data-dir=/tmp/kiosk-led \
+    --window-position=1920,0 \
+    --window-size=1920,384 \
+    --kiosk \
+    --autoplay-policy=no-user-gesture-required \
+    http://neopro.local/led &
+fi
+
+# Re-check périodique (toutes les 30s) dans la boucle watchdog
+# Si HDMI 1 passe de disconnected → connected, lancer le kiosk LED
+# Si déjà lancé, ne rien faire (watchdog classique)
 ```
 
 ### Scénario B — LED via sortie composite/GPIO (panneaux HUB75 directs)
