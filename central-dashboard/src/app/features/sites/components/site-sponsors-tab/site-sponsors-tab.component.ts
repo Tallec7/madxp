@@ -1348,9 +1348,12 @@ export class SiteSponsorsTabComponent implements OnInit, OnDestroy {
   private videosInLoops: Set<string> = new Set();
   configLoaded = false;
 
+  // Cached site content to avoid multiple identical API calls
+  private cachedConfiguration: SiteConfiguration | null = null;
+
   ngOnInit(): void {
     this.loadSponsors();
-    this.loadSiteConfig();
+    this.loadSiteContentOnce();
   }
 
   ngOnDestroy(): void {
@@ -1607,21 +1610,10 @@ export class SiteSponsorsTabComponent implements OnInit, OnDestroy {
   }
 
   loadWizardVideos(): void {
-    this.wizardVideosLoading = true;
+    // Use cached config (deployed videos only) instead of all cloud videos
+    this.wizardVideos = this.extractDeployedVideos(this.cachedConfiguration);
+    this.filterWizardVideos();
     this.cdr.markForCheck();
-
-    this.sitesService.getLocalContent(this.siteId).subscribe({
-      next: (res) => {
-        this.wizardVideos = res?.cloudVideos ?? [];
-        this.filterWizardVideos();
-        this.wizardVideosLoading = false;
-        this.cdr.markForCheck();
-      },
-      error: () => {
-        this.wizardVideosLoading = false;
-        this.cdr.markForCheck();
-      },
-    });
   }
 
   filterWizardVideos(): void {
@@ -1801,26 +1793,14 @@ export class SiteSponsorsTabComponent implements OnInit, OnDestroy {
   // =========================================================================
 
   private loadAvailableVideos(): void {
-    this.availableVideosLoading = true;
-    this.availableVideos = [];
+    // Use cached config (deployed videos only) instead of all cloud videos
+    const associatedFilenames = new Set(
+      (this.detailStats?.videos ?? []).map(v => v.video_filename)
+    );
+    this.availableVideos = this.extractDeployedVideos(this.cachedConfiguration)
+      .filter(v => !associatedFilenames.has(v.filename));
+    this.availableVideosLoading = false;
     this.cdr.markForCheck();
-
-    this.sitesService.getLocalContent(this.siteId).subscribe({
-      next: (content) => {
-        // Use cloud videos as the available pool, filter out already-associated ones
-        const associatedFilenames = new Set(
-          (this.detailStats?.videos ?? []).map(v => v.video_filename)
-        );
-        this.availableVideos = (content.cloudVideos ?? [])
-          .filter(v => !associatedFilenames.has(v.filename));
-        this.availableVideosLoading = false;
-        this.cdr.markForCheck();
-      },
-      error: () => {
-        this.availableVideosLoading = false;
-        this.cdr.markForCheck();
-      },
-    });
   }
 
   addVideo(): void {
@@ -1894,18 +1874,83 @@ export class SiteSponsorsTabComponent implements OnInit, OnDestroy {
   // Loop presence detection (video-not-in-loop warning)
   // =========================================================================
 
-  private loadSiteConfig(): void {
+  /**
+   * Single API call that loads the site config and caches it for reuse by
+   * loadWizardVideos(), loadAvailableVideos(), and loop detection.
+   */
+  private loadSiteContentOnce(): void {
     this.sitesService.getLocalContent(this.siteId).subscribe({
       next: (content) => {
-        this.buildVideosInLoopsSet(content.configuration);
+        this.cachedConfiguration = content.configuration ?? null;
+        this.buildVideosInLoopsSet(this.cachedConfiguration);
         this.configLoaded = true;
         this.cdr.markForCheck();
       },
       error: () => {
-        // Config unavailable — no warnings shown, degrade gracefully
+        this.cachedConfiguration = null;
         this.configLoaded = false;
       },
     });
+  }
+
+  /**
+   * Extracts all unique video filenames deployed in the site config
+   * and returns them as CloudVideo-compatible objects for the dropdown.
+   */
+  private extractDeployedVideos(config: SiteConfiguration | null): CloudVideo[] {
+    if (!config) return [];
+    const seen = new Map<string, string>(); // filename → path
+
+    const addVideo = (path: string, name?: string): void => {
+      if (!path) return;
+      const parts = path.split('/');
+      const filename = parts[parts.length - 1];
+      if (filename && !seen.has(filename)) {
+        seen.set(filename, path);
+      }
+      if (name && !seen.has(name)) {
+        seen.set(name, path);
+      }
+    };
+
+    // Global loop
+    for (const v of config.sponsors ?? []) {
+      addVideo(v.path, v.name);
+    }
+    // Phase loops
+    for (const tc of config.timeCategories ?? []) {
+      for (const v of tc.loopVideos ?? []) {
+        addVideo(v.path, v.name);
+      }
+    }
+    // Categories + subcategories
+    for (const cat of config.categories ?? []) {
+      for (const v of cat.videos ?? []) {
+        addVideo(v.path, v.name);
+      }
+      for (const sub of cat.subCategories ?? []) {
+        for (const v of sub.videos ?? []) {
+          addVideo(v.path, v.name);
+        }
+      }
+    }
+
+    // Convert to CloudVideo-like objects for dropdown compatibility
+    return Array.from(seen.entries()).map(([filename, path]) => ({
+      id: '',
+      filename,
+      originalName: filename,
+      title: filename.replace(/\.[^/.]+$/, '').replace(/_/g, ' '),
+      category: null,
+      subcategory: null,
+      size: 0,
+      duration: null,
+      checksum: null,
+      url: '',
+      uploadedForSiteId: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }));
   }
 
   /**

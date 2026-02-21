@@ -1,3 +1,16 @@
+## UX Sponsors — Dropdown filtré + Badges catégories (Fév 2026)
+
+### fix(sponsors): dropdown vidéo filtré aux vidéos déployées + badge sponsor dans catégories
+
+- **Dropdown filtré** : le select d'association vidéo-sponsor ne montre plus les 500 vidéos de la DB, uniquement celles déployées sur le Pi (extraction depuis `SiteConfiguration`)
+- **Cache API** : `loadSiteContentOnce()` remplace 3 appels `getLocalContent()` séparés par un seul
+- **Badge sponsor catégories** : badge 🔗 bleu avec le nom du sponsor sur chaque vidéo de catégorie/sous-catégorie associée à un sponsor
+- **Tests** : build Angular OK, 1590 tests serveur OK, 142 smoke OK
+
+**Fichiers clés** : `site-sponsors-tab.component.ts`, `site-content-tab.component.ts`
+
+---
+
 # [3.65.0](https://github.com/Tallec7/neopro/compare/v3.64.2...v3.65.0) (2026-02-21)
 
 ### Features
@@ -46,9 +59,7 @@
 - Sync-agent : download LED variant dans `videos-led/`, non-bloquant
 - Boucle vidéo Pi : mapping vers `variants.led.path` si `displayType === 'led'`
 
-**Fichiers clés** : `video-variant.repository.ts`, `content.controller.ts`, `deployment.service.ts`, `deploy-video.js`, `tv.component.ts`, `kiosk-watchdog.sh`, `state.service.js`, `video-variant-panel.component.ts`
-
----
+## **Fichiers clés** : `video-variant.repository.ts`, `content.controller.ts`, `deployment.service.ts`, `deploy-video.js`, `tv.component.ts`, `kiosk-watchdog.sh`, `state.service.js`, `video-variant-panel.component.ts`
 
 ## [3.64.2](https://github.com/Tallec7/neopro/compare/v3.64.1...v3.64.2) (2026-02-21)
 

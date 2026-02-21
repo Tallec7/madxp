@@ -327,23 +327,25 @@
 | IMP-AUD-28 | Badge sponsor auto-détecté dans Loop Manager                              | Production | `loop-manager.component.ts`                                                | Fév 2026     |
 | IMP-AUD-29 | Warning "Hors boucle" vidéos sponsor dans onglet Sponsors                 | Production | `site-sponsors-tab.component.ts`                                           | Fév 2026     |
 | IMP-AUD-30 | Métrique Prometheus sponsor auto-resolution (resolved/skipped/unresolved) | Production | `metrics.service.ts`                                                       | Fév 2026     |
+| IMP-AUD-31 | Dropdown vidéo filtré aux vidéos déployées sur le Pi (+ cache API)        | Production | `site-sponsors-tab.component.ts`                                           | Fév 2026     |
+| IMP-AUD-32 | Badge sponsor dans catégories et sous-catégories                          | Production | `site-content-tab.component.ts`                                            | Fév 2026     |
 
 ---
 
 ## Statistiques Produit
 
-| Métrique                  | Valeur                                                               |
-| ------------------------- | -------------------------------------------------------------------- |
-| **Features implémentées** | **216** (+26 audit, +8 E-22 TV+LED dual, +4 sponsor auto-resolution) |
-| Domaines fonctionnels     | 14                                                                   |
-| Controllers API           | 29 (+sponsor-alerts)                                                 |
-| Services métier           | 40 (+sponsor-alert, sponsor-stats, sponsor-auto-resolution)          |
-| Repositories              | 25 (+video-variant)                                                  |
-| Migrations DB             | 54 (+add-led-support-and-video-variants)                             |
-| Modules dashboard         | 21 (+advertiser-health, analytics-categories)                        |
-| Services Raspberry        | 19 (+sponsor-stats)                                                  |
-| Versions publiées         | 265+ (v2.1 → v3.62)                                                  |
-| Tests (total)             | 2 386 (1590 API + 506 Angular + 148 Admin + 71 Socket + 142 Smoke)   |
+| Métrique                  | Valeur                                                             |
+| ------------------------- | ------------------------------------------------------------------ |
+| **Features implémentées** | **218** (+26 audit, +8 E-22 TV+LED dual, +6 sponsor UX)            |
+| Domaines fonctionnels     | 14                                                                 |
+| Controllers API           | 29 (+sponsor-alerts)                                               |
+| Services métier           | 40 (+sponsor-alert, sponsor-stats, sponsor-auto-resolution)        |
+| Repositories              | 25 (+video-variant)                                                |
+| Migrations DB             | 54 (+add-led-support-and-video-variants)                           |
+| Modules dashboard         | 21 (+advertiser-health, analytics-categories)                      |
+| Services Raspberry        | 19 (+sponsor-stats)                                                |
+| Versions publiées         | 265+ (v2.1 → v3.62)                                                |
+| Tests (total)             | 2 386 (1590 API + 506 Angular + 148 Admin + 71 Socket + 142 Smoke) |
 
 ---
 
@@ -356,7 +358,7 @@
 | E-08 Alertes Prédictives           | IMP-ALR-02, IMP-ALR-06→22                | Monitoring                          |
 | E-09 Architecture Audit            | IMP-ADM-09, IMP-DOC-01                   | Admin, Documentation                |
 | E-10 Monitoring Fleet (partiel)    | IMP-ALR-16→19, IMP-ANA-14                | Monitoring, Analytics               |
-| Audit Sponsors & Analytics         | IMP-AUD-01→30 (30 features, 93 SP)       | Analytics, Sponsors, Pi, Monitoring |
+| Audit Sponsors & Analytics         | IMP-AUD-01→32 (32 features, 93 SP)       | Analytics, Sponsors, Pi, Monitoring |
 | E-22 TV + LED Dual (F-22.1+F-22.3) | IMP-VID-14→16, IMP-PI-23→26 (7 features) | Vidéo, Raspberry Pi, Dashboard      |
 
 ---

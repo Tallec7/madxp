@@ -302,6 +302,7 @@ interface HumanReadableDiff {
                       class="video-name-compact"
                     />
                     <span class="cloud-badge" *ngIf="isCloudVideoPath(video.path)" title="Sera déployée automatiquement">⏳</span>
+                    <span class="sponsor-badge-auto" *ngIf="getCategorySponsor(video.path) as sponsor" [title]="'Associé au sponsor ' + sponsor.name">🔗 {{ sponsor.name }}</span>
                     <button class="btn-remove-tiny" (click)="removeVideoFromCategory(catIndex, vidIndex)">×</button>
                   </div>
                 </div>
@@ -350,6 +351,7 @@ interface HumanReadableDiff {
                           class="video-name-compact"
                         />
                         <span class="cloud-badge" *ngIf="isCloudVideoPath(video.path)" title="Sera déployée automatiquement">⏳</span>
+                        <span class="sponsor-badge-auto" *ngIf="getCategorySponsor(video.path) as sponsor" [title]="'Associé au sponsor ' + sponsor.name">🔗 {{ sponsor.name }}</span>
                         <button class="btn-remove-tiny" (click)="removeVideoFromSubcategory(catIndex, subIndex, vidIndex)">×</button>
                       </div>
                     </div>
@@ -1055,6 +1057,18 @@ interface HumanReadableDiff {
     .cloud-badge {
       font-size: 0.75rem;
       color: #92400e;
+    }
+    .sponsor-badge-auto {
+      display: inline-block;
+      font-size: 0.7rem;
+      color: #1e40af;
+      background: #dbeafe;
+      border: 1px solid #93c5fd;
+      border-radius: 4px;
+      padding: 0.1rem 0.4rem;
+      font-weight: 600;
+      white-space: nowrap;
+      cursor: help;
     }
 
     .sponsor-owner {
@@ -4455,6 +4469,19 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
   isCloudVideoPath(path: string): boolean {
     const video = this.unifiedVideoOptions.find(v => v.path === path);
     return video ? !video.isOnPi : false;
+  }
+
+  /**
+   * Returns the sponsor associated with a video in a category, if any.
+   * Uses the same filename-matching logic as the Loop Manager badge.
+   */
+  getCategorySponsor(videoPath: string): SiteSponsor | null {
+    if (!videoPath || this.siteSponsors.length === 0) return null;
+    const parts = videoPath.split('/');
+    const bareFilename = parts[parts.length - 1] || videoPath;
+    return this.siteSponsors.find(
+      sp => sp.video_filenames?.includes(bareFilename)
+    ) ?? null;
   }
 
   /**
