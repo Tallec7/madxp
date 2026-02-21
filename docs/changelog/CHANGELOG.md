@@ -1,3 +1,9 @@
+## [3.68.2](https://github.com/Tallec7/neopro/compare/v3.68.1...v3.68.2) (2026-02-21)
+
+### Bug Fixes
+
+- **alerts:** améliorer rapprochement vidéos orphelines — multi-match + path complet ([cd9a67a](https://github.com/Tallec7/neopro/commit/cd9a67aa57d3e6b19919fe551345f763b2fc58b2))
+
 ## [3.68.1](https://github.com/Tallec7/neopro/compare/v3.68.0...v3.68.1) (2026-02-21)
 
 ### Bug Fixes
