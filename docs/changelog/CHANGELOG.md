@@ -1,3 +1,9 @@
+## [3.68.3](https://github.com/Tallec7/neopro/compare/v3.68.2...v3.68.3) (2026-02-21)
+
+### Bug Fixes
+
+- **analytics:** consolider l'affichage buffer — supprimer référence sponsor_impressions.json ([e9bdfc5](https://github.com/Tallec7/neopro/commit/e9bdfc53a2b9697ef60e50a1ab8772649db24ab1))
+
 ## [3.68.2](https://github.com/Tallec7/neopro/compare/v3.68.1...v3.68.2) (2026-02-21)
 
 ### Bug Fixes
