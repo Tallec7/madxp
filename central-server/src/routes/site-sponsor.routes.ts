@@ -1,5 +1,6 @@
 import express from 'express';
 import { authenticate, requireRole } from '../middleware/auth';
+import { siteSponsorValidation } from '../middleware/analytics-validation';
 import {
   listSiteSponsors,
   getSiteSponsor,
@@ -34,6 +35,7 @@ router.get(
   '/:siteId/sponsors',
   authenticate,
   requireRole('admin', 'operator'),
+  ...siteSponsorValidation.listSiteSponsors,
   listSiteSponsors
 );
 
@@ -48,6 +50,7 @@ router.get(
   '/:siteId/sponsors/benchmark',
   authenticate,
   requireRole('admin', 'operator'),
+  ...siteSponsorValidation.getSiteSponsorBenchmark,
   getSiteSponsorBenchmark
 );
 
@@ -61,6 +64,7 @@ router.get(
   '/:siteId/sponsors/:sponsorId',
   authenticate,
   requireRole('admin', 'operator'),
+  siteSponsorValidation.getSiteSponsor,
   getSiteSponsor
 );
 
@@ -82,6 +86,7 @@ router.post(
   '/:siteId/sponsors',
   authenticate,
   requireRole('admin', 'operator'),
+  ...siteSponsorValidation.createSiteSponsor,
   createSiteSponsor
 );
 
@@ -95,6 +100,7 @@ router.put(
   '/:siteId/sponsors/:sponsorId',
   authenticate,
   requireRole('admin', 'operator'),
+  ...siteSponsorValidation.updateSiteSponsor,
   updateSiteSponsor
 );
 
@@ -108,6 +114,7 @@ router.delete(
   '/:siteId/sponsors/:sponsorId',
   authenticate,
   requireRole('admin'),
+  siteSponsorValidation.deleteSiteSponsor,
   deleteSiteSponsor
 );
 
@@ -125,6 +132,7 @@ router.get(
   '/:siteId/sponsors/:sponsorId/stats',
   authenticate,
   requireRole('admin', 'operator'),
+  ...siteSponsorValidation.getSiteSponsorStats,
   getSiteSponsorStats
 );
 
@@ -143,6 +151,7 @@ router.post(
   '/:siteId/sponsors/:sponsorId/videos',
   authenticate,
   requireRole('admin', 'operator'),
+  ...siteSponsorValidation.addVideoToSiteSponsor,
   addVideoToSiteSponsor
 );
 
@@ -156,6 +165,7 @@ router.delete(
   '/:siteId/sponsors/:sponsorId/videos/:filename',
   authenticate,
   requireRole('admin', 'operator'),
+  siteSponsorValidation.removeVideoFromSiteSponsor,
   removeVideoFromSiteSponsor
 );
 
@@ -170,6 +180,7 @@ router.post(
   '/:siteId/sponsors/:sponsorId/access-link',
   authenticate,
   requireRole('admin', 'operator'),
+  siteSponsorValidation.createAccessLink,
   createAccessLink
 );
 

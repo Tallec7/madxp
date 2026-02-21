@@ -179,6 +179,7 @@ class OrchestratedDeploymentService {
     return rows.map(row => ({
       id: row.id,
       name: row.name,
+      display_name: row.name,
       contactEmail: row.contact_email,
       contactPhone: row.contact_phone,
       logoUrl: row.logo_url,

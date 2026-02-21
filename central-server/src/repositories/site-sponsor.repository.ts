@@ -454,6 +454,79 @@ class SiteSponsorRepositoryImpl extends BaseRepository<SiteSponsorRow> {
     return result.rows[0]?.id || null;
   }
 
+  /**
+   * Bulk-resolve site_sponsor_ids for multiple (video_id, site_id) pairs in ONE query.
+   * Returns a Map keyed by "videoId::siteId" → site_sponsor_id.
+   */
+  async resolveSiteSponsorIdsBulk(
+    pairs: ReadonlyArray<{ videoId: string; siteId: string }>
+  ): Promise<Map<string, string>> {
+    const result = new Map<string, string>();
+    if (pairs.length === 0) return result;
+
+    // Build parameterised VALUES list: ($1,$2), ($3,$4), ...
+    const values: string[] = [];
+    const params: unknown[] = [];
+    let idx = 1;
+    for (const p of pairs) {
+      values.push(`($${idx}::uuid, $${idx + 1}::uuid)`);
+      params.push(p.videoId, p.siteId);
+      idx += 2;
+    }
+
+    const queryResult = await query<{ site_sponsor_id: string; video_id: string; site_id: string }>(
+      `SELECT DISTINCT ON (v.video_id, v.site_id)
+         ss.id AS site_sponsor_id,
+         ssv.video_id,
+         ss.site_id
+       FROM (VALUES ${values.join(', ')}) AS v(video_id, site_id)
+       JOIN site_sponsor_videos ssv ON ssv.video_id = v.video_id
+       JOIN site_sponsors ss ON ss.id = ssv.site_sponsor_id AND ss.site_id = v.site_id`,
+      params
+    );
+
+    for (const row of queryResult.rows) {
+      result.set(`${row.video_id}::${row.site_id}`, row.site_sponsor_id);
+    }
+    return result;
+  }
+
+  /**
+   * Bulk-resolve site_sponsor_ids for multiple (video_filename, site_id) pairs in ONE query.
+   * Returns a Map keyed by "filename::siteId" → site_sponsor_id.
+   */
+  async resolveSiteSponsorIdsByFilenameBulk(
+    pairs: ReadonlyArray<{ videoFilename: string; siteId: string }>
+  ): Promise<Map<string, string>> {
+    const result = new Map<string, string>();
+    if (pairs.length === 0) return result;
+
+    const values: string[] = [];
+    const params: unknown[] = [];
+    let idx = 1;
+    for (const p of pairs) {
+      values.push(`($${idx}::text, $${idx + 1}::uuid)`);
+      params.push(p.videoFilename, p.siteId);
+      idx += 2;
+    }
+
+    const queryResult = await query<{ site_sponsor_id: string; video_filename: string; site_id: string }>(
+      `SELECT DISTINCT ON (v.video_filename, v.site_id)
+         ss.id AS site_sponsor_id,
+         ssv.video_filename,
+         ss.site_id
+       FROM (VALUES ${values.join(', ')}) AS v(video_filename, site_id)
+       JOIN site_sponsor_videos ssv ON ssv.video_filename = v.video_filename
+       JOIN site_sponsors ss ON ss.id = ssv.site_sponsor_id AND ss.site_id = v.site_id`,
+      params
+    );
+
+    for (const row of queryResult.rows) {
+      result.set(`${row.video_filename}::${row.site_id}`, row.site_sponsor_id);
+    }
+    return result;
+  }
+
   // ========================================================================
   // Statistics
   // ========================================================================

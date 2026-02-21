@@ -2,6 +2,7 @@ import express from 'express';
 import { authenticate, authenticateSiteApiKey } from '../middleware/auth';
 import { requireRole } from '../middleware/auth';
 import { apiRateLimit, piAnalyticsRateLimit } from '../middleware/user-rate-limit';
+import { analyticsValidation } from '../middleware/analytics-validation';
 import {
   listAdvertisers,
   getAdvertiser,
@@ -38,6 +39,7 @@ router.get(
   '/advertisers/:id',
   authenticate,
   apiRateLimit,
+  analyticsValidation.getAdvertiser,
   getAdvertiser
 );
 
@@ -47,6 +49,7 @@ router.post(
   authenticate,
   requireRole('admin', 'operator'),
   apiRateLimit,
+  analyticsValidation.createAdvertiser,
   createAdvertiser
 );
 
@@ -56,6 +59,7 @@ router.put(
   authenticate,
   requireRole('admin', 'operator'),
   apiRateLimit,
+  ...analyticsValidation.updateAdvertiser,
   updateAdvertiser
 );
 
@@ -65,6 +69,7 @@ router.delete(
   authenticate,
   requireRole('admin'),
   apiRateLimit,
+  analyticsValidation.deleteAdvertiser,
   deleteAdvertiser
 );
 
@@ -77,6 +82,7 @@ router.get(
   '/advertisers/:id/videos',
   authenticate,
   apiRateLimit,
+  analyticsValidation.getAdvertiserVideos,
   getAdvertiserVideos
 );
 
@@ -86,6 +92,7 @@ router.post(
   authenticate,
   requireRole('admin', 'operator'),
   apiRateLimit,
+  ...analyticsValidation.addVideosToAdvertiser,
   addVideosToAdvertiser
 );
 
@@ -95,6 +102,7 @@ router.delete(
   authenticate,
   requireRole('admin', 'operator'),
   apiRateLimit,
+  analyticsValidation.removeVideoFromAdvertiser,
   removeVideoFromAdvertiser
 );
 
@@ -108,6 +116,7 @@ router.get(
   '/advertisers/:id/stats',
   authenticate,
   apiRateLimit,
+  ...analyticsValidation.getAdvertiserStats,
   getAdvertiserStats
 );
 
@@ -117,6 +126,7 @@ router.get(
   '/advertisers/:id/export',
   authenticate,
   apiRateLimit,
+  ...analyticsValidation.exportAdvertiserData,
   exportAdvertiserData
 );
 
@@ -126,6 +136,7 @@ router.get(
   '/advertisers/:id/report/pdf',
   authenticate,
   apiRateLimit,
+  ...analyticsValidation.generateAdvertiserPdfReport,
   generateAdvertiserPdfReport
 );
 
@@ -136,6 +147,7 @@ router.get(
   '/advertisers/:advertiserId/export/excel',
   authenticate,
   apiRateLimit,
+  ...analyticsValidation.exportAdvertiserExcel,
   analyticsController.exportAdvertiserExcel
 );
 
@@ -145,6 +157,7 @@ router.get(
   '/clubs/:siteId/report/pdf',
   authenticate,
   apiRateLimit,
+  ...analyticsValidation.generateClubPdfReport,
   generateClubPdfReport
 );
 
@@ -158,6 +171,7 @@ router.post(
   '/impressions',
   piAnalyticsRateLimit,
   authenticateSiteApiKey,
+  analyticsValidation.recordImpressions,
   recordImpressions
 );
 
@@ -168,6 +182,7 @@ router.post(
   authenticate,
   requireRole('admin'),
   apiRateLimit,
+  analyticsValidation.calculateDailyStats,
   calculateDailyStats
 );
 
@@ -191,16 +206,16 @@ import {
 } from '../controllers/advertiser-analytics.controller';
 
 router.get('/sponsors', authenticate, apiRateLimit, listSponsors);
-router.get('/sponsors/:id', authenticate, apiRateLimit, getSponsor);
-router.post('/sponsors', authenticate, requireRole('admin', 'operator'), apiRateLimit, createSponsor);
-router.put('/sponsors/:id', authenticate, requireRole('admin', 'operator'), apiRateLimit, updateSponsor);
-router.delete('/sponsors/:id', authenticate, requireRole('admin'), apiRateLimit, deleteSponsor);
-router.get('/sponsors/:id/videos', authenticate, apiRateLimit, getSponsorVideos);
-router.post('/sponsors/:id/videos', authenticate, requireRole('admin', 'operator'), apiRateLimit, addVideosToSponsor);
-router.delete('/sponsors/:id/videos/:videoId', authenticate, requireRole('admin', 'operator'), apiRateLimit, removeVideoFromSponsor);
-router.get('/sponsors/:id/stats', authenticate, apiRateLimit, getSponsorStats);
-router.get('/sponsors/:id/export', authenticate, apiRateLimit, exportSponsorData);
-router.get('/sponsors/:id/report/pdf', authenticate, apiRateLimit, generateSponsorPdfReport);
-router.post('/sponsors/calculate-daily-stats', authenticate, requireRole('admin'), apiRateLimit, calculateDailyStats);
+router.get('/sponsors/:id', authenticate, apiRateLimit, analyticsValidation.getAdvertiser, getSponsor);
+router.post('/sponsors', authenticate, requireRole('admin', 'operator'), apiRateLimit, analyticsValidation.createAdvertiser, createSponsor);
+router.put('/sponsors/:id', authenticate, requireRole('admin', 'operator'), apiRateLimit, ...analyticsValidation.updateAdvertiser, updateSponsor);
+router.delete('/sponsors/:id', authenticate, requireRole('admin'), apiRateLimit, analyticsValidation.deleteAdvertiser, deleteSponsor);
+router.get('/sponsors/:id/videos', authenticate, apiRateLimit, analyticsValidation.getAdvertiserVideos, getSponsorVideos);
+router.post('/sponsors/:id/videos', authenticate, requireRole('admin', 'operator'), apiRateLimit, ...analyticsValidation.addVideosToAdvertiser, addVideosToSponsor);
+router.delete('/sponsors/:id/videos/:videoId', authenticate, requireRole('admin', 'operator'), apiRateLimit, analyticsValidation.removeVideoFromAdvertiser, removeVideoFromSponsor);
+router.get('/sponsors/:id/stats', authenticate, apiRateLimit, ...analyticsValidation.getAdvertiserStats, getSponsorStats);
+router.get('/sponsors/:id/export', authenticate, apiRateLimit, ...analyticsValidation.exportAdvertiserData, exportSponsorData);
+router.get('/sponsors/:id/report/pdf', authenticate, apiRateLimit, ...analyticsValidation.generateAdvertiserPdfReport, generateSponsorPdfReport);
+router.post('/sponsors/calculate-daily-stats', authenticate, requireRole('admin'), apiRateLimit, analyticsValidation.calculateDailyStats, calculateDailyStats);
 
 export default router;

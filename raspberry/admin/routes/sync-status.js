@@ -59,6 +59,17 @@ module.exports = function createSyncStatusRouter() {
         ? lastSuccessfulSync.timestamp
         : null;
 
+      // Dernière réception de contenu NEOPRO (F-AUD-14)
+      const lastContentSync = history.find(
+        (entry) => entry.type === 'content_received' && entry.success === true
+      );
+      const lastContentSyncAt = lastContentSync
+        ? lastContentSync.timestamp
+        : null;
+      const lastContentSyncDetails = lastContentSync
+        ? lastContentSync.details || {}
+        : null;
+
       // Dernière erreur
       const lastError = history.find((entry) => entry.success === false);
 
@@ -73,6 +84,8 @@ module.exports = function createSyncStatusRouter() {
       res.json({
         connected,
         lastSyncAt,
+        lastContentSyncAt,
+        lastContentSyncDetails,
         pendingCommands: offlineQueue.length,
         deadLetters: deadLetterQueue.length,
         recentHistory,

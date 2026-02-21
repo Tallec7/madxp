@@ -2,7 +2,7 @@
 
 > **Dernière mise à jour** : 21 Février 2026
 > Ce document recense **toutes** les features implémentées dans le codebase NEOPRO, organisées par domaine fonctionnel. Il complète le backlog SAFe (futur) avec une vue exhaustive du produit livré.
-> **Source** : Croisement systématique de 34 changelogs, 200+ commits git (v3.47→v3.60), et audit codebase.
+> **Source** : Croisement systématique de 34 changelogs, 200+ commits git (v3.47→v3.62), audit codebase, et sprint audit sponsors/analytics (24 features P0+P1+P2).
 
 ---
 
@@ -283,32 +283,66 @@
 
 ---
 
+## 14. Audit Sponsors & Analytics (Fév 2026)
+
+> Sprint dédié audit complet du système sponsors/analytics. 24 features, 87 SP, en 3 priorités.
+
+| ID         | Feature                                                            | Statut     | Fichiers clés                                                     | Version/Date |
+| ---------- | ------------------------------------------------------------------ | ---------- | ----------------------------------------------------------------- | ------------ |
+| IMP-AUD-01 | Impression resolution pipeline (site_sponsor_id/video_id/filename) | Production | `advertiser-analytics.controller.ts`                              | Fév 2026     |
+| IMP-AUD-02 | N+1 fix recordImpressions + requêtes batch                         | Production | `advertiser-analytics.controller.ts`                              | Fév 2026     |
+| IMP-AUD-03 | Sync sponsors pendant déploiement config                           | Production | `orchestrated-deployment.service.ts`                              | Fév 2026     |
+| IMP-AUD-04 | Interface association vidéo-sponsor (UI)                           | Production | `site-sponsors-tab.component.ts`                                  | Fév 2026     |
+| IMP-AUD-05 | Pipeline analytics Pi → Central (batch + buffer + retry)           | Production | `analytics.js`, `sponsor-impressions.js`                          | Fév 2026     |
+| IMP-AUD-06 | Validation Joi routes analytics                                    | Production | `analytics-validation.ts`                                         | Fév 2026     |
+| IMP-AUD-07 | Alertes proactives impressions sponsors (health matrix + Slack)    | Production | `sponsor-alert.service.ts`, `advertiser-health.component.ts`      | Fév 2026     |
+| IMP-AUD-08 | Diagnostic système guidé (wizard Pi admin)                         | Production | `site-debug-tab.component.ts`                                     | Fév 2026     |
+| IMP-AUD-09 | Migration sponsor → advertiser dashboard (renommage sémantique)    | Production | `advertisers-list.component.ts`, `advertiser-detail.component.ts` | Fév 2026     |
+| IMP-AUD-10 | Refactoring analytics Pi admin (stats locales sponsors)            | Production | `sponsor-stats.service.js`, `sponsors/index.js`                   | Fév 2026     |
+| IMP-AUD-11 | Portail sponsor KPIs (impressions + tendances)                     | Production | `sponsor-dashboard.component.ts`                                  | Fév 2026     |
+| IMP-AUD-12 | Analytics catégories (stats par catégorie contenu)                 | Production | `analytics-categories.component.ts`                               | Fév 2026     |
+| IMP-AUD-13 | Network sponsor stats (cross-club par annonceur)                   | Production | `network-sponsor-stats.component.ts`                              | Fév 2026     |
+| IMP-AUD-14 | Notification sync contenu central sur Pi admin (bannière + toast)  | Production | `sync-status.js`, `update-config.js`                              | Fév 2026     |
+| IMP-AUD-15 | Skeleton screens analytics et listes sponsors (shimmer)            | Production | `analytics.component.ts`, `advertisers-list.component.ts`         | Fév 2026     |
+| IMP-AUD-16 | Gestion contenu centralisée (CRUD, bulk, filtres)                  | Production | `content-management.component.ts`                                 | Fév 2026     |
+| IMP-AUD-17 | Wizard création sponsor Pi admin                                   | Production | `sponsors/index.js`                                               | Fév 2026     |
+| IMP-AUD-18 | Tests advertiser-analytics.controller (72 tests, 100% coverage)    | Production | `advertiser-analytics.controller.test.ts`                         | Fév 2026     |
+| IMP-AUD-19 | Advertiser analytics avancé (filtres, graphiques, export CSV)      | Production | `advertiser-analytics.component.ts`                               | Fév 2026     |
+| IMP-AUD-20 | Affichage nom annonceur au lieu de filename sur Pi                 | Production | `sponsor.service.js`                                              | Fév 2026     |
+| IMP-AUD-21 | Pi admin sponsor wizard (formulaire guidé ajout sponsor)           | Production | `admin-server.js`, `sponsors.js`                                  | Fév 2026     |
+| IMP-AUD-22 | Badge confirmation déploiement sync vers Pi                        | Production | `site-sponsors-tab.component.ts`                                  | Fév 2026     |
+| IMP-AUD-23 | Prometheus sponsor health metrics (4 métriques)                    | Production | `metrics.service.ts`                                              | Fév 2026     |
+| IMP-AUD-24 | Événement content_received dans sync-history (traçabilité sync)    | Production | `update-config.js`, `sync-status.js`                              | Fév 2026     |
+
+---
+
 ## Statistiques Produit
 
-| Métrique                  | Valeur                                                 |
-| ------------------------- | ------------------------------------------------------ |
-| **Features implémentées** | **178**                                                |
-| Domaines fonctionnels     | 13                                                     |
-| Controllers API           | 28                                                     |
-| Services métier           | 37                                                     |
-| Repositories              | 24                                                     |
-| Migrations DB             | 53                                                     |
-| Modules dashboard         | 19                                                     |
-| Services Raspberry        | 18                                                     |
-| Versions publiées         | 265+ (v2.1 → v3.62)                                    |
-| Tests (total)             | 2 235 (1464 API + 554 Angular + 146 Admin + 71 Socket) |
+| Métrique                  | Valeur                                                             |
+| ------------------------- | ------------------------------------------------------------------ |
+| **Features implémentées** | **202** (+24 audit sponsors/analytics)                             |
+| Domaines fonctionnels     | 14                                                                 |
+| Controllers API           | 29 (+sponsor-alerts)                                               |
+| Services métier           | 39 (+sponsor-alert, sponsor-stats)                                 |
+| Repositories              | 24                                                                 |
+| Migrations DB             | 53                                                                 |
+| Modules dashboard         | 21 (+advertiser-health, analytics-categories)                      |
+| Services Raspberry        | 19 (+sponsor-stats)                                                |
+| Versions publiées         | 265+ (v2.1 → v3.62)                                                |
+| Tests (total)             | 2 369 (1573 API + 506 Angular + 148 Admin + 71 Socket + 142 Smoke) |
 
 ---
 
 ## Mapping vers Epics SAFe (Terminés)
 
-| Epic SAFe                       | Features implémentées     | Domaines              |
-| ------------------------------- | ------------------------- | --------------------- |
-| E-04 Profils Config Match       | IMP-PI-04, IMP-ADM-17     | Raspberry Pi, Admin   |
-| E-07 Résilience WiFi (partiel)  | IMP-NET-07→14             | Réseau & Sync         |
-| E-08 Alertes Prédictives        | IMP-ALR-02, IMP-ALR-06→22 | Monitoring            |
-| E-09 Architecture Audit         | IMP-ADM-09, IMP-DOC-01    | Admin, Documentation  |
-| E-10 Monitoring Fleet (partiel) | IMP-ALR-16→19, IMP-ANA-14 | Monitoring, Analytics |
+| Epic SAFe                       | Features implémentées              | Domaines                            |
+| ------------------------------- | ---------------------------------- | ----------------------------------- |
+| E-04 Profils Config Match       | IMP-PI-04, IMP-ADM-17              | Raspberry Pi, Admin                 |
+| E-07 Résilience WiFi (partiel)  | IMP-NET-07→14                      | Réseau & Sync                       |
+| E-08 Alertes Prédictives        | IMP-ALR-02, IMP-ALR-06→22          | Monitoring                          |
+| E-09 Architecture Audit         | IMP-ADM-09, IMP-DOC-01             | Admin, Documentation                |
+| E-10 Monitoring Fleet (partiel) | IMP-ALR-16→19, IMP-ANA-14          | Monitoring, Analytics               |
+| Audit Sponsors & Analytics      | IMP-AUD-01→24 (24 features, 87 SP) | Analytics, Sponsors, Pi, Monitoring |
 
 ---
 

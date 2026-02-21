@@ -20,8 +20,9 @@ const { NotFoundError, LockedError, ValidationError, DuplicateError } = require(
 /**
  * @param {Object} deps
  * @param {import('../services/sponsor.service')} deps.sponsorService
+ * @param {import('../services/sponsor-stats.service')} deps.sponsorStatsService
  */
-module.exports = function createSponsorsRouter({ sponsorService }) {
+module.exports = function createSponsorsRouter({ sponsorService, sponsorStatsService }) {
   const router = express.Router();
 
   /** Map service errors to HTTP status codes */
@@ -33,6 +34,31 @@ module.exports = function createSponsorsRouter({ sponsorService }) {
     console.error('[admin] Sponsor error:', error);
     return res.status(500).json({ error: error.message });
   }
+
+  // ===========================================================================
+  // STATS (before :localId routes to avoid parameter capture)
+  // ===========================================================================
+
+  // Get local sponsor stats (aggregated from buffer + history)
+  router.get('/api/sponsors/stats', async (req, res) => {
+    try {
+      const days = parseInt(req.query.days, 10) || 30;
+      const stats = await sponsorStatsService.getStats({ days });
+      res.json(stats);
+    } catch (error) {
+      handleError(res, error);
+    }
+  });
+
+  // Persist current buffer into local history (called before flush)
+  router.post('/api/sponsors/stats/persist', async (req, res) => {
+    try {
+      const result = await sponsorStatsService.persistCurrentBuffer();
+      res.json({ success: true, ...result });
+    } catch (error) {
+      handleError(res, error);
+    }
+  });
 
   // ===========================================================================
   // CRUD

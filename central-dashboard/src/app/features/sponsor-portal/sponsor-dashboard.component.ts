@@ -9,6 +9,20 @@ import { SponsorPortalService, SponsorDashboard, SponsorSite, SponsorVideo } fro
   imports: [CommonModule, RouterModule],
   template: `
     <div class="dashboard-container">
+      <!-- Loading -->
+      <div class="loading-container" *ngIf="loading && !dashboard && !hasError">
+        <div class="spinner"></div>
+        <p>Chargement de votre tableau de bord...</p>
+      </div>
+
+      <!-- Error state -->
+      <div class="error-banner" *ngIf="hasError && !dashboard">
+        <div class="error-icon">⚠️</div>
+        <h2>Impossible de charger vos statistiques</h2>
+        <p>Vérifiez votre connexion internet et réessayez.</p>
+        <button class="btn btn-primary" (click)="retryAll()">🔄 Réessayer</button>
+      </div>
+
       <div class="header">
         <div class="sponsor-info" *ngIf="dashboard?.advertiser">
           <img *ngIf="dashboard?.advertiser?.logo_url"
@@ -170,6 +184,68 @@ import { SponsorPortalService, SponsorDashboard, SponsorSite, SponsorVideo } fro
       padding: 2rem;
       max-width: 1400px;
       margin: 0 auto;
+    }
+
+    .loading-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 4rem 2rem;
+      color: #64748b;
+    }
+
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 4px solid #e2e8f0;
+      border-top-color: #2563eb;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin-bottom: 1rem;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .error-banner {
+      text-align: center;
+      padding: 3rem 2rem;
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      border-radius: 12px;
+      margin-bottom: 2rem;
+    }
+
+    .error-icon {
+      font-size: 3rem;
+      margin-bottom: 1rem;
+    }
+
+    .error-banner h2 {
+      color: #991b1b;
+      margin: 0 0 0.5rem 0;
+      font-size: 1.25rem;
+    }
+
+    .error-banner p {
+      color: #b91c1c;
+      margin: 0 0 1.5rem 0;
+    }
+
+    .error-banner .btn-primary {
+      background: #2563eb;
+      color: white;
+      border: none;
+      padding: 0.75rem 1.5rem;
+      border-radius: 8px;
+      font-size: 1rem;
+      cursor: pointer;
+    }
+
+    .error-banner .btn-primary:hover {
+      background: #1d4ed8;
     }
 
     .header {
@@ -484,11 +560,34 @@ export class SponsorDashboardComponent implements OnInit {
   sites: SponsorSite[] = [];
   videos: SponsorVideo[] = [];
   maxImpressions = 1;
+  loading = true;
+  hasError = false;
+  private errorCount = 0;
 
   ngOnInit(): void {
+    this.loadAll();
+  }
+
+  private loadAll(): void {
+    this.loading = true;
+    this.hasError = false;
+    this.errorCount = 0;
     this.loadDashboard();
     this.loadSites();
     this.loadVideos();
+  }
+
+  retryAll(): void {
+    this.loadAll();
+  }
+
+  private onApiError(): void {
+    this.errorCount++;
+    // Si les 3 API échouent, afficher l'erreur globale
+    if (this.errorCount >= 3) {
+      this.hasError = true;
+      this.loading = false;
+    }
   }
 
   loadDashboard(): void {
@@ -496,22 +595,29 @@ export class SponsorDashboardComponent implements OnInit {
       next: (response) => {
         this.dashboard = response.data;
         this.maxImpressions = Math.max(...(response.data.trends?.map(t => t.impressions) || [1]));
+        this.loading = false;
       },
-      error: () => { /* Silencieux - erreur gérée par l'intercepteur */ }
+      error: () => this.onApiError()
     });
   }
 
   loadSites(): void {
     this.sponsorService.getSites().subscribe({
-      next: (response) => this.sites = response.data.sites,
-      error: () => { /* Silencieux - erreur gérée par l'intercepteur */ }
+      next: (response) => {
+        this.sites = response.data.sites;
+        this.loading = false;
+      },
+      error: () => this.onApiError()
     });
   }
 
   loadVideos(): void {
     this.sponsorService.getVideos().subscribe({
-      next: (response) => this.videos = response.data.videos,
-      error: () => { /* Silencieux - erreur gérée par l'intercepteur */ }
+      next: (response) => {
+        this.videos = response.data.videos;
+        this.loading = false;
+      },
+      error: () => this.onApiError()
     });
   }
 

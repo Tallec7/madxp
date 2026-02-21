@@ -24,13 +24,13 @@ Chart.register(...registerables);
     <!-- Loading -->
     <div class="loading-container" *ngIf="loading">
       <div class="spinner"></div>
-      <p>Chargement des statistiques reseau...</p>
+      <p>Chargement des statistiques réseau...</p>
     </div>
 
     <!-- Error -->
     <div class="error-banner" *ngIf="error">
       <span>{{ error }}</span>
-      <button class="btn btn-sm" (click)="loadData()">Reessayer</button>
+      <button class="btn btn-sm" (click)="loadData()">Réessayer</button>
     </div>
 
     <!-- Content -->
@@ -38,7 +38,7 @@ Chart.register(...registerables);
       <!-- Header -->
       <div class="page-header">
         <div>
-          <h2>Stats Reseau Annonceur</h2>
+          <h2>Stats Réseau Annonceur</h2>
           <p class="subtitle">
             Performance cross-club &mdash;
             {{ data.period.from | date:'dd/MM/yyyy' }} au {{ data.period.to | date:'dd/MM/yyyy' }}
@@ -63,7 +63,7 @@ Chart.register(...registerables);
         </div>
         <div class="kpi-card accent-orange">
           <div class="kpi-value">{{ formatScreenTime(data.summary.total_screen_time_seconds) }}</div>
-          <div class="kpi-label">Temps d'ecran total</div>
+          <div class="kpi-label">Temps d'écran total</div>
         </div>
         <div class="kpi-card accent-slate">
           <div class="kpi-value">{{ data.summary.active_days }}</div>
@@ -71,7 +71,7 @@ Chart.register(...registerables);
         </div>
         <div class="kpi-card accent-teal" *ngIf="data.summary.cpi !== null">
           <div class="kpi-value">{{ data.summary.cpi | number:'1.2-2' }} &euro;</div>
-          <div class="kpi-label">CPI reseau</div>
+          <div class="kpi-label">CPI réseau</div>
         </div>
       </div>
 
@@ -85,7 +85,7 @@ Chart.register(...registerables);
 
         <!-- Event type doughnut -->
         <div class="chart-card chart-card-sm" *ngIf="data.by_event_type.length">
-          <h3>Repartition par type</h3>
+          <h3>Répartition par type</h3>
           <canvas #eventTypeCanvas></canvas>
         </div>
       </div>
@@ -98,7 +98,7 @@ Chart.register(...registerables);
             <tr>
               <th>Club</th>
               <th>Passages</th>
-              <th>Temps ecran</th>
+              <th>Temps écran</th>
               <th>Completion</th>
             </tr>
           </thead>
@@ -303,7 +303,7 @@ export class NetworkSponsorStatsComponent implements OnInit, OnDestroy {
         setTimeout(() => this.renderCharts(), 50);
       },
       error: () => {
-        this.error = 'Impossible de charger les statistiques reseau';
+        this.error = 'Impossible de charger les statistiques réseau';
         this.loading = false;
         this.cdr.markForCheck();
       },

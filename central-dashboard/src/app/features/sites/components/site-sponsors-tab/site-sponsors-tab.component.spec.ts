@@ -5,6 +5,7 @@ import { of, throwError, delay } from 'rxjs';
 import { SiteSponsorsTabComponent } from './site-sponsors-tab.component';
 import { SitesService } from '../../../../core/services/sites.service';
 import { NotificationService } from '../../../../core/services/notification.service';
+import { ConfirmDialogService } from '../../../../core/services/confirm-dialog.service';
 import { SiteSponsor, GeneratedReport } from '../../../../core/models';
 
 describe('SiteSponsorsTabComponent', () => {
@@ -12,6 +13,7 @@ describe('SiteSponsorsTabComponent', () => {
   let fixture: ComponentFixture<SiteSponsorsTabComponent>;
   let sitesService: jasmine.SpyObj<SitesService>;
   let notificationService: jasmine.SpyObj<NotificationService>;
+  let confirmDialogService: jasmine.SpyObj<ConfirmDialogService>;
 
   const mockSponsors: SiteSponsor[] = [
     {
@@ -164,13 +166,16 @@ describe('SiteSponsorsTabComponent', () => {
       averages: { impressions: 1150, screen_time_seconds: 2700, completion_rate: 0.915, active_days: 24, cpi: 0.067 },
     }));
 
-    const notificationServiceMock = jasmine.createSpyObj('NotificationService', ['error', 'success', 'info']);
+    const notificationServiceMock = jasmine.createSpyObj('NotificationService', ['error', 'success', 'info', 'warning']);
+    const confirmDialogServiceMock = jasmine.createSpyObj('ConfirmDialogService', ['confirm']);
+    confirmDialogServiceMock.confirm.and.returnValue(Promise.resolve(true));
 
     await TestBed.configureTestingModule({
       imports: [SiteSponsorsTabComponent, FormsModule, TranslateModule.forRoot()],
       providers: [
         { provide: SitesService, useValue: sitesServiceMock },
         { provide: NotificationService, useValue: notificationServiceMock },
+        { provide: ConfirmDialogService, useValue: confirmDialogServiceMock },
       ],
     }).compileComponents();
 
@@ -179,6 +184,7 @@ describe('SiteSponsorsTabComponent', () => {
     component.siteId = 's1';
     sitesService = TestBed.inject(SitesService) as jasmine.SpyObj<SitesService>;
     notificationService = TestBed.inject(NotificationService) as jasmine.SpyObj<NotificationService>;
+    confirmDialogService = TestBed.inject(ConfirmDialogService) as jasmine.SpyObj<ConfirmDialogService>;
   });
 
   it('should create', () => {
@@ -345,7 +351,7 @@ describe('SiteSponsorsTabComponent', () => {
     }));
 
     it('should delete a sponsor with confirmation', fakeAsync(() => {
-      spyOn(window, 'confirm').and.returnValue(true);
+      confirmDialogService.confirm.and.returnValue(Promise.resolve(true));
 
       component.confirmDelete(mockSponsors[0]);
       tick();
@@ -357,7 +363,7 @@ describe('SiteSponsorsTabComponent', () => {
     }));
 
     it('should not delete when confirmation is cancelled', fakeAsync(() => {
-      spyOn(window, 'confirm').and.returnValue(false);
+      confirmDialogService.confirm.and.returnValue(Promise.resolve(false));
 
       component.confirmDelete(mockSponsors[0]);
       tick();
@@ -366,7 +372,7 @@ describe('SiteSponsorsTabComponent', () => {
     }));
 
     it('should collapse expanded detail on delete', fakeAsync(() => {
-      spyOn(window, 'confirm').and.returnValue(true);
+      confirmDialogService.confirm.and.returnValue(Promise.resolve(true));
       component.expandedSponsorId = 'sp1';
 
       component.confirmDelete(mockSponsors[0]);
@@ -525,7 +531,7 @@ describe('SiteSponsorsTabComponent', () => {
     }));
 
     it('should remove a video from the sponsor', fakeAsync(() => {
-      spyOn(window, 'confirm').and.returnValue(true);
+      confirmDialogService.confirm.and.returnValue(Promise.resolve(true));
       component.removeVideo('sponsor-a.mp4');
       tick();
 
@@ -535,7 +541,7 @@ describe('SiteSponsorsTabComponent', () => {
     }));
 
     it('should not remove video when confirmation cancelled', fakeAsync(() => {
-      spyOn(window, 'confirm').and.returnValue(false);
+      confirmDialogService.confirm.and.returnValue(Promise.resolve(false));
       component.removeVideo('sponsor-a.mp4');
       tick();
 
@@ -543,7 +549,7 @@ describe('SiteSponsorsTabComponent', () => {
     }));
 
     it('should handle remove video error', fakeAsync(() => {
-      spyOn(window, 'confirm').and.returnValue(true);
+      confirmDialogService.confirm.and.returnValue(Promise.resolve(true));
       sitesService.removeVideoFromSiteSponsor.and.returnValue(throwError(() => new Error('fail')));
       component.removeVideo('sponsor-a.mp4');
       tick();

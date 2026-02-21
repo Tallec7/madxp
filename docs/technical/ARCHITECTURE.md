@@ -89,8 +89,8 @@ neopro/ (monorepo)
 │   ├── admin/                      # Admin interface (Express modulaire)
 │   │   ├── admin-server.js         #   Orchestrateur (~260 lignes)
 │   │   ├── helpers.js              #   Utilitaires partagés (exec, paths)
-│   │   ├── services/               #   7 services métier
-│   │   ├── routes/                 #   10 contrôleurs HTTP (dont sync-status)
+│   │   ├── services/               #   8 services métier
+│   │   ├── routes/                 #   11 contrôleurs HTTP (dont sync-status, sponsors)
 │   │   ├── __tests__/              #   Tests Jest (60%+ couverture)
 │   │   └── package.json
 │   └── sync-agent/                 # Sync service with cloud
@@ -185,6 +185,12 @@ Merge local + remote config
          │
          ▼
 Angular frontend (reload config)
+         │
+         ▼
+sync-history.json (event: content_received)
+         │
+         ▼
+Admin UI /api/sync-status → content sync banner
 ```
 
 ### 2. Analytics tracking (advertiser + site_sponsor)
@@ -223,6 +229,26 @@ Site Sponsor flow (local sponsors) :
          │         └── Page 2 conditionnelle (P6.4 — match-by-match breakdown)
          │
          └── Sponsor Portal (/sponsor-access?token=xxx) — public, token-based
+```
+
+### 2b. Sponsor health monitoring (F-AUD-07)
+
+```
+Advertiser Health Dashboard
+         │
+         ▼
+GET /api/sponsor-alerts/health
+         │
+         ▼
+sponsor-alert.service.ts
+         │
+         ├── advertiser_sites × advertiser_impressions JOIN
+         │   → impressions 7d/30d, daily avg, days since last
+         ▼
+Health Matrix (healthy/warning/critical per pair)
+         │
+         ├── Dashboard Angular (advertiser-health.component.ts)
+         └── POST /check → alerts table + Slack notification
 ```
 
 ### 3. Remote control
@@ -375,7 +401,7 @@ Pi Frontend (ProfileConfigService sélectionne le profil actif)
 
 ### 7. Monitoring & Observability
 
-- **Prometheus metrics** (Port 9090) — 33+ métriques custom `neopro_*` (dont 3 kiosk, 3 fan : `neopro_fan_present`, `neopro_fan_state`, `neopro_fan_failures_total` + `neopro_license_status_pushes_total`, `neopro_deploy_progress_events_total`, `neopro_ota_errors_total{error_type}`, `neopro_wifi_config_total`) + métriques Node.js par défaut
+- **Prometheus metrics** (Port 9090) — 37+ métriques custom `neopro_*` (dont 3 kiosk, 3 fan : `neopro_fan_present`, `neopro_fan_state`, `neopro_fan_failures_total` + `neopro_license_status_pushes_total`, `neopro_deploy_progress_events_total`, `neopro_ota_errors_total{error_type}`, `neopro_wifi_config_total`) + métriques Node.js par défaut
 - **Grafana dashboards** (Port 3000) — 3 dashboards (local) + 3 dashboards cloud :
   - _NeoPro Overview_ : API Health, sites connectés, alertes actives, taux 5xx, latence p95, mémoire RSS
   - _NeoPro Infrastructure_ : HTTP rate/latence par percentile, Node.js runtime (heap, event loop lag, memory pressure), auth & rate limiting, DB pool & latency, FTP storage
@@ -400,6 +426,7 @@ Pi Frontend (ProfileConfigService sélectionne le profil actif)
 - Escalade automatique vers superviseurs
 - **Graceful shutdown** (v3.48+) : `server_shutdown` émis aux Pi avant fermeture, `io.disconnectSockets()` + `io.close()`, safety timeout 10s — **v3.50.3** : `alertService.enterShutdownMode()` appelé avant déconnexion des sockets + boot grace period 90s (online + offline)
 - **19 seuils par défaut** : 7 réactifs (CPU, mémoire, température, disque, site offline, deployment failure, **fan failure**) + 9 prédictifs (inactivité, disk growth, déconnexions, WiFi signal, video errors, temperature trend, hotspot instability, subscription expiry, stuck deployments) + 3 nouveaux (WebSocket disconnects fréquents, trous noirs vidéo/safety timeouts, crash kiosk Chromium)
+- **Sponsor health matrix** (F-AUD-07) : matrice santé annonceurs (healthy/warning/critical), alertes proactives Slack pour sponsors sans impressions depuis N jours, dashboard Angular dédié
 - **Alertes réseau WiFi** (v3.33+) : `networkFailure()` (échec recovery watchdog), `info('Réseau rétabli')` (recovery confirmée) — dédupliquées 1/heure/site ; **alertes signal WiFi** (v3.50.3) : `lowWifiSignal()` avec cooldown 6h/site + `wifiSignalRecovered()` auto quand signal > -70 dBm
 - **Test Slack** : `POST /api/alerts/test-slack` (super_admin) — vérifie la configuration webhook
 - **Variables d'environnement** : `SLACK_WEBHOOK_URL` + `SLACK_ALERTS_ENABLED=true`
@@ -660,7 +687,7 @@ Refactoring en 7 phases réalisé en février 2026 :
    - 7.3 — Migration controllers vers Repository pattern (ESLint enforced)
    - 7.4 — Auth admin/super_admin boundary
 
-Résultat : 1 586 tests / 75 suites, 0 failures.
+Résultat : 2 369 tests / 85+ suites, 0 failures.
 
 ---
 
@@ -673,5 +700,5 @@ Résultat : 1 586 tests / 75 suites, 0 failures.
 
 ---
 
-**Dernière mise à jour** : 17 février 2026
-**Version** : 3.52.0
+**Dernière mise à jour** : 21 février 2026
+**Version** : 3.62.1+

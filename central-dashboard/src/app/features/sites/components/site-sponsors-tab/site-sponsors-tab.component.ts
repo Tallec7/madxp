@@ -7,6 +7,7 @@ import { TranslateModule } from '@ngx-translate/core';
 import { Chart, ChartConfiguration, registerables } from 'chart.js';
 import { SitesService } from '../../../../core/services/sites.service';
 import { NotificationService } from '../../../../core/services/notification.service';
+import { ConfirmDialogService } from '../../../../core/services/confirm-dialog.service';
 import { Site, SiteSponsor, SiteSponsorVideo, SiteSponsorStatsResponse, SiteSponsorDailyTrend, GeneratedReport, SiteSponsorBenchmarkResponse, CloudVideo } from '../../../../core/models';
 
 Chart.register(...registerables);
@@ -17,10 +18,55 @@ Chart.register(...registerables);
   imports: [CommonModule, FormsModule, TranslateModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <!-- Loading -->
-    <div class="loading" *ngIf="loading">
-      <div class="spinner"></div>
-      <p>Chargement des sponsors...</p>
+    <!-- Loading Skeleton -->
+    <div class="sponsors-tab" *ngIf="loading">
+      <div class="tab-header">
+        <h3>
+          <span class="section-icon">💼</span>
+          Sponsors du club
+        </h3>
+      </div>
+      <table class="data-table skeleton-table">
+        <thead>
+          <tr>
+            <th>Sponsor</th>
+            <th>Source</th>
+            <th>Vidéos</th>
+            <th>Impressions</th>
+            <th>Config</th>
+            <th>Statut</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let i of [1,2,3,4]">
+            <td class="sponsor-name-cell">
+              <div class="skeleton-shimmer skeleton-text" style="width: 70%; height: 14px;"></div>
+              <div class="skeleton-shimmer skeleton-text" style="width: 50%; height: 11px; margin-top: 4px;"></div>
+            </td>
+            <td>
+              <div class="skeleton-shimmer skeleton-text" style="width: 65px; height: 22px; border-radius: 4px;"></div>
+            </td>
+            <td>
+              <div class="skeleton-shimmer skeleton-text" style="width: 20px; height: 14px;"></div>
+            </td>
+            <td>
+              <div class="skeleton-shimmer skeleton-text" style="width: 35px; height: 14px;"></div>
+            </td>
+            <td>
+              <div class="skeleton-shimmer skeleton-text" style="width: 75px; height: 22px; border-radius: 4px;"></div>
+            </td>
+            <td>
+              <div class="skeleton-shimmer skeleton-text" style="width: 50px; height: 14px;"></div>
+            </td>
+            <td class="actions-cell">
+              <div class="skeleton-shimmer" style="width: 28px; height: 28px; border-radius: 6px;"></div>
+              <div class="skeleton-shimmer" style="width: 28px; height: 28px; border-radius: 6px;"></div>
+              <div class="skeleton-shimmer" style="width: 28px; height: 28px; border-radius: 6px;"></div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
     </div>
 
     <!-- Error -->
@@ -30,7 +76,7 @@ Chart.register(...registerables);
     </div>
 
     <!-- Content -->
-    <div class="sponsors-tab" *ngIf="!loading">
+    <div class="sponsors-tab fade-in" *ngIf="!loading">
       <!-- Header -->
       <div class="tab-header">
         <h3>
@@ -38,7 +84,12 @@ Chart.register(...registerables);
           Sponsors du club
           <span class="count-badge" *ngIf="sponsors.length">{{ sponsors.length }}</span>
         </h3>
-        <button class="btn btn-primary" (click)="openCreateModal()">+ Ajouter sponsor</button>
+        <div class="header-actions">
+          <span class="sync-badge" [ngClass]="syncStatusClass" [title]="syncTooltip">
+            {{ syncStatusIcon }} {{ syncStatusLabel }}
+          </span>
+          <button class="btn btn-primary" (click)="openCreateModal()">+ Ajouter sponsor</button>
+        </div>
       </div>
 
       <!-- Empty state -->
@@ -57,6 +108,7 @@ Chart.register(...registerables);
             <th>Source</th>
             <th>Vidéos</th>
             <th>Impressions</th>
+            <th>Config</th>
             <th>Statut</th>
             <th>Actions</th>
           </tr>
@@ -76,6 +128,17 @@ Chart.register(...registerables);
               </td>
               <td>{{ sponsor.video_count || 0 }}</td>
               <td>{{ sponsor.total_impressions || 0 }}</td>
+              <td>
+                <span class="config-badge" [ngClass]="isConfigComplete(sponsor) ? 'config-complete' : 'config-incomplete'"
+                      [title]="getConfigTooltip(sponsor)">
+                  {{ isConfigComplete(sponsor) ? '🟢 Complet' : '🔴 Incomplet' }}
+                </span>
+                <button class="btn-config-cta" *ngIf="!isConfigComplete(sponsor) && sponsor.source !== 'neopro'"
+                        (click)="toggleDetail(sponsor)"
+                        [title]="getConfigCta(sponsor)">
+                  {{ getConfigCta(sponsor) }}
+                </button>
+              </td>
               <td>
                 <span class="status-badge" [ngClass]="'status-' + sponsor.status">
                   {{ sponsor.status === 'active' ? ('siteSponsors.statusActive' | translate) : sponsor.status === 'paused' ? ('siteSponsors.statusPaused' | translate) : ('siteSponsors.statusExpired' | translate) }}
@@ -102,7 +165,7 @@ Chart.register(...registerables);
 
             <!-- Detail expand row -->
             <tr class="detail-row" *ngIf="expandedSponsorId === sponsor.id">
-              <td colspan="6">
+              <td colspan="7">
                 <div class="detail-panel" *ngIf="detailLoading">
                   <div class="spinner"></div>
                   <p>Chargement des statistiques...</p>
@@ -273,11 +336,11 @@ Chart.register(...registerables);
       </table>
     </div>
 
-    <!-- Create/Edit Modal -->
-    <div class="modal-overlay" *ngIf="showModal" (click)="closeModal()">
+    <!-- Edit Modal (single-page) -->
+    <div class="modal-overlay" *ngIf="showModal && isEditing" (click)="closeModal()">
       <div class="modal-content" (click)="$event.stopPropagation()">
         <div class="modal-header">
-          <h3>{{ isEditing ? 'Modifier' : 'Nouveau' }} sponsor</h3>
+          <h3>Modifier sponsor</h3>
           <button class="close-btn" (click)="closeModal()">&times;</button>
         </div>
         <form (submit)="saveSponsor($event)" class="modal-body">
@@ -297,7 +360,7 @@ Chart.register(...registerables);
             <label>Téléphone</label>
             <input type="tel" [(ngModel)]="formData.contact_phone" name="contact_phone" placeholder="Ex: 06 12 34 56 78" />
           </div>
-          <div class="form-group" *ngIf="isEditing">
+          <div class="form-group">
             <label>Statut</label>
             <select [(ngModel)]="formData.status" name="status">
               <option value="active">Actif</option>
@@ -308,10 +371,154 @@ Chart.register(...registerables);
           <div class="modal-footer">
             <button type="button" class="btn btn-secondary" (click)="closeModal()">Annuler</button>
             <button type="submit" class="btn btn-primary" [disabled]="saving">
-              {{ saving ? 'Enregistrement...' : (isEditing ? 'Enregistrer' : 'Créer') }}
+              {{ saving ? 'Enregistrement...' : 'Enregistrer' }}
             </button>
           </div>
         </form>
+      </div>
+    </div>
+
+    <!-- Create Wizard (3-step) -->
+    <div class="modal-overlay" *ngIf="showModal && !isEditing" (click)="closeModal()">
+      <div class="modal-content wizard-modal" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <h3>✨ Nouveau sponsor</h3>
+          <button class="close-btn" (click)="closeModal()">&times;</button>
+        </div>
+
+        <!-- Step indicator -->
+        <div class="wizard-steps">
+          <div class="wizard-step-item" [class.active]="wizardStep >= 1" [class.done]="wizardStep > 1">
+            <div class="wizard-dot">{{ wizardStep > 1 ? '✓' : '1' }}</div>
+            <span>Infos</span>
+          </div>
+          <div class="wizard-line" [class.active]="wizardStep > 1"></div>
+          <div class="wizard-step-item" [class.active]="wizardStep >= 2" [class.done]="wizardStep > 2">
+            <div class="wizard-dot">{{ wizardStep > 2 ? '✓' : '2' }}</div>
+            <span>Vidéo</span>
+          </div>
+          <div class="wizard-line" [class.active]="wizardStep > 2"></div>
+          <div class="wizard-step-item" [class.active]="wizardStep >= 3" [class.done]="wizardStep > 3">
+            <div class="wizard-dot">{{ wizardStep > 3 ? '✓' : '3' }}</div>
+            <span>Boucle</span>
+          </div>
+        </div>
+
+        <!-- Step 1: Sponsor Info -->
+        <div class="wizard-panel" *ngIf="wizardStep === 1">
+          <h4>Informations du sponsor</h4>
+          <div class="form-group">
+            <label>Nom du sponsor *</label>
+            <input type="text" [(ngModel)]="formData.name" name="wname" placeholder="Ex: Boulangerie Dupont" />
+          </div>
+          <div class="form-group">
+            <label>Contact (nom)</label>
+            <input type="text" [(ngModel)]="formData.contact_name" name="wcontact" placeholder="Ex: Jean Dupont" />
+          </div>
+          <div class="form-group">
+            <label>Email</label>
+            <input type="email" [(ngModel)]="formData.contact_email" name="wemail" placeholder="Ex: contact@dupont.fr" />
+          </div>
+          <div class="form-group">
+            <label>Téléphone</label>
+            <input type="tel" [(ngModel)]="formData.contact_phone" name="wphone" placeholder="Ex: 06 12 34 56 78" />
+          </div>
+
+          <div class="wizard-nav">
+            <button class="btn btn-secondary" (click)="closeModal()">Annuler</button>
+            <button class="btn btn-primary" (click)="wizardNext()" [disabled]="!formData.name.trim()">
+              Suivant →
+            </button>
+          </div>
+        </div>
+
+        <!-- Step 2: Video Selection -->
+        <div class="wizard-panel" *ngIf="wizardStep === 2">
+          <h4>Associer une vidéo <span class="optional-label">(optionnel)</span></h4>
+          <p class="wizard-hint">Sélectionnez une vidéo à diffuser pour ce sponsor. Vous pourrez en ajouter d'autres plus tard.</p>
+
+          <div *ngIf="wizardVideosLoading" class="loading-inline">
+            <div class="spinner-sm"></div>
+            <span>Chargement des vidéos...</span>
+          </div>
+
+          <div *ngIf="!wizardVideosLoading" class="wizard-video-list">
+            <div class="wizard-video-search">
+              <input type="text" [(ngModel)]="wizardVideoSearch" (input)="filterWizardVideos()" name="wvsearch"
+                     [placeholder]="'sponsors.searchVideo' | translate" />
+            </div>
+            <div class="wizard-videos-scroll">
+              <div *ngFor="let v of wizardFilteredVideos"
+                   class="wizard-video-item"
+                   [class.selected]="wizardSelectedVideo === v.filename"
+                   (click)="wizardSelectedVideo = v.filename">
+                <span class="wv-radio">{{ wizardSelectedVideo === v.filename ? '◉' : '○' }}</span>
+                <div class="wv-info">
+                  <strong>{{ v.filename }}</strong>
+                  <span class="wv-meta" *ngIf="v.title">{{ v.title }}</span>
+                </div>
+              </div>
+              <div *ngIf="wizardFilteredVideos.length === 0" class="wizard-video-empty">
+                Aucune vidéo disponible
+              </div>
+            </div>
+            <div class="wizard-video-selected" *ngIf="wizardSelectedVideo">
+              🎬 Sélectionnée: <strong>{{ wizardSelectedVideo }}</strong>
+              <button class="btn-link" (click)="wizardSelectedVideo = ''">✕ Retirer</button>
+            </div>
+          </div>
+
+          <div class="wizard-nav">
+            <button class="btn btn-secondary" (click)="wizardBack()">← Précédent</button>
+            <button class="btn btn-primary" (click)="wizardNext()">
+              {{ wizardSelectedVideo ? ('sponsors.wizardNext' | translate) : ('sponsors.wizardSkip' | translate) }}
+            </button>
+          </div>
+        </div>
+
+        <!-- Step 3: Loop Config + Confirmation -->
+        <div class="wizard-panel" *ngIf="wizardStep === 3">
+          <h4>Configuration de la boucle</h4>
+
+          <div class="wizard-summary-card">
+            <div class="ws-row">
+              <span class="ws-label">Sponsor:</span>
+              <strong>{{ formData.name }}</strong>
+            </div>
+            <div class="ws-row" *ngIf="formData.contact_email">
+              <span class="ws-label">Email:</span>
+              <span>{{ formData.contact_email }}</span>
+            </div>
+            <div class="ws-row">
+              <span class="ws-label">Vidéo:</span>
+              <span>{{ wizardSelectedVideo || ('sponsors.wizardNoVideo' | translate) }}</span>
+            </div>
+          </div>
+
+          <div class="form-group wizard-loop-option">
+            <label class="checkbox-label">
+              <input type="checkbox" [(ngModel)]="wizardAddToLoop" name="wloop" />
+              Ajouter automatiquement à la boucle de diffusion
+            </label>
+            <p class="form-hint">La vidéo du sponsor sera intégrée dans la boucle de diffusion du club</p>
+          </div>
+
+          <div class="wizard-nav">
+            <button class="btn btn-secondary" (click)="wizardBack()">← Précédent</button>
+            <button class="btn btn-primary" (click)="wizardCreate()" [disabled]="saving">
+              {{ saving ? 'Création...' : '✓ Créer le sponsor' }}
+            </button>
+          </div>
+        </div>
+
+        <!-- Success -->
+        <div class="wizard-panel wizard-success" *ngIf="wizardStep === 4">
+          <div class="success-icon">✅</div>
+          <h4>Sponsor créé avec succès !</h4>
+          <p *ngIf="wizardSelectedVideo">La vidéo sera diffusée dans la boucle du club.</p>
+          <p *ngIf="!wizardSelectedVideo">Pensez à associer une vidéo pour commencer la diffusion.</p>
+          <button class="btn btn-primary" (click)="closeModal()">Fermer</button>
+        </div>
       </div>
     </div>
   `,
@@ -331,7 +538,46 @@ Chart.register(...registerables);
       align-items: center;
       gap: 0.5rem;
     }
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
     .section-icon { font-size: 1.2rem; }
+
+    /* Sync Status Badge (F-AUD-23) */
+    .sync-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      padding: 0.25rem 0.65rem;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 500;
+      white-space: nowrap;
+      cursor: help;
+    }
+    .sync-ok {
+      background: #dcfce7;
+      color: #166534;
+    }
+    .sync-pending {
+      background: #fef3c7;
+      color: #92400e;
+      animation: syncPulse 2s ease-in-out infinite;
+    }
+    .sync-unknown {
+      background: #f1f5f9;
+      color: #64748b;
+    }
+    .sync-stale {
+      background: #fef2f2;
+      color: #991b1b;
+    }
+    @keyframes syncPulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.7; }
+    }
     .count-badge {
       background: #e2e8f0;
       color: #475569;
@@ -369,6 +615,29 @@ Chart.register(...registerables);
       justify-content: space-between;
       align-items: center;
       margin-bottom: 1rem;
+    }
+
+    /* Skeleton Shimmer */
+    .skeleton-shimmer {
+      background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite;
+      border-radius: 8px;
+    }
+    @keyframes shimmer {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+    .skeleton-text { height: 14px; margin-bottom: 0; }
+    .skeleton-table tbody tr:hover { background: transparent; }
+
+    /* Fade in transition */
+    .fade-in {
+      animation: skeletonFadeIn 0.3s ease-in;
+    }
+    @keyframes skeletonFadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
     }
 
     /* Empty state */
@@ -432,6 +701,31 @@ Chart.register(...registerables);
     .status-badge {
       font-size: 0.8rem;
     }
+
+    /* Config complete/incomplete badge */
+    .config-badge {
+      display: inline-block;
+      font-size: 0.75rem;
+      font-weight: 500;
+      padding: 0.15rem 0.5rem;
+      border-radius: 4px;
+      cursor: help;
+    }
+    .config-complete { background: #dcfce7; color: #166534; }
+    .config-incomplete { background: #fef2f2; color: #991b1b; }
+    .btn-config-cta {
+      display: block;
+      margin-top: 0.3rem;
+      background: none;
+      border: none;
+      color: #3b82f6;
+      font-size: 0.7rem;
+      font-weight: 500;
+      cursor: pointer;
+      padding: 0;
+      text-decoration: underline;
+    }
+    .btn-config-cta:hover { color: #1d4ed8; }
 
     /* Actions */
     .actions-cell {
@@ -706,6 +1000,241 @@ Chart.register(...registerables);
     .btn-secondary { background: #f1f5f9; color: #475569; border-color: #d1d5db; }
     .btn-secondary:hover:not(:disabled) { background: #e2e8f0; }
     .btn-sm { padding: 0.35rem 0.75rem; font-size: 0.8rem; }
+    .btn-link {
+      background: none;
+      border: none;
+      color: #ef4444;
+      font-size: 0.8rem;
+      cursor: pointer;
+      padding: 0;
+      margin-left: 0.5rem;
+    }
+    .btn-link:hover { text-decoration: underline; }
+    .btn-outline {
+      background: white;
+      border: 1px solid #d1d5db;
+      color: #475569;
+    }
+    .btn-outline:hover:not(:disabled) { background: #f8fafc; border-color: #94a3b8; }
+
+    /* Wizard Modal */
+    .wizard-modal { width: 560px; }
+
+    .wizard-steps {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1.25rem 1.5rem 0.5rem;
+      gap: 0;
+    }
+    .wizard-step-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.35rem;
+      opacity: 0.4;
+      transition: opacity 0.2s;
+    }
+    .wizard-step-item.active { opacity: 1; }
+    .wizard-step-item.done { opacity: 0.8; }
+    .wizard-dot {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: #e2e8f0;
+      color: #64748b;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+      font-size: 0.85rem;
+      transition: all 0.2s;
+    }
+    .wizard-step-item.active .wizard-dot {
+      background: #3b82f6;
+      color: white;
+    }
+    .wizard-step-item.done .wizard-dot {
+      background: #22c55e;
+      color: white;
+    }
+    .wizard-step-item span {
+      font-size: 0.7rem;
+      font-weight: 500;
+      color: #64748b;
+    }
+    .wizard-step-item.active span { color: #1e40af; }
+
+    .wizard-line {
+      width: 60px;
+      height: 2px;
+      background: #e2e8f0;
+      margin: 0 0.5rem;
+      margin-bottom: 1.2rem;
+      transition: background 0.2s;
+    }
+    .wizard-line.active { background: #3b82f6; }
+
+    .wizard-panel {
+      padding: 1.5rem;
+      animation: fadeIn 0.2s ease;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .wizard-panel h4 {
+      margin: 0 0 1rem;
+      font-size: 1rem;
+      color: #0f172a;
+    }
+    .optional-label {
+      font-weight: 400;
+      color: #94a3b8;
+      font-size: 0.85rem;
+    }
+    .wizard-hint {
+      font-size: 0.85rem;
+      color: #64748b;
+      margin: -0.5rem 0 1rem;
+    }
+
+    .wizard-nav {
+      display: flex;
+      justify-content: space-between;
+      padding-top: 1rem;
+      margin-top: 1rem;
+      border-top: 1px solid #f1f5f9;
+    }
+
+    /* Wizard Video List */
+    .wizard-video-list { margin-bottom: 0.5rem; }
+    .wizard-video-search { margin-bottom: 0.75rem; }
+    .wizard-video-search input {
+      width: 100%;
+      padding: 0.5rem 0.75rem;
+      border: 1px solid #d1d5db;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      box-sizing: border-box;
+    }
+    .wizard-video-search input:focus {
+      outline: none;
+      border-color: #3b82f6;
+    }
+    .wizard-videos-scroll {
+      max-height: 220px;
+      overflow-y: auto;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+    }
+    .wizard-video-item {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.6rem 0.75rem;
+      cursor: pointer;
+      border-bottom: 1px solid #f1f5f9;
+      transition: background 0.15s;
+    }
+    .wizard-video-item:last-child { border-bottom: none; }
+    .wizard-video-item:hover { background: #f8fafc; }
+    .wizard-video-item.selected { background: #eff6ff; }
+    .wv-radio { font-size: 1.1rem; color: #94a3b8; }
+    .wizard-video-item.selected .wv-radio { color: #3b82f6; }
+    .wv-info { display: flex; flex-direction: column; gap: 0.1rem; }
+    .wv-info strong { font-size: 0.85rem; color: #0f172a; }
+    .wv-meta { font-size: 0.75rem; color: #94a3b8; }
+    .wizard-video-empty {
+      padding: 2rem;
+      text-align: center;
+      color: #94a3b8;
+      font-size: 0.85rem;
+    }
+    .wizard-video-selected {
+      margin-top: 0.75rem;
+      padding: 0.5rem 0.75rem;
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      color: #1e40af;
+    }
+
+    /* Wizard Summary */
+    .wizard-summary-card {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 1rem;
+      margin-bottom: 1.25rem;
+    }
+    .ws-row {
+      display: flex;
+      gap: 0.75rem;
+      padding: 0.4rem 0;
+      font-size: 0.85rem;
+    }
+    .ws-label {
+      color: #64748b;
+      min-width: 70px;
+    }
+
+    /* Wizard Loop */
+    .wizard-loop-option { margin-bottom: 0; }
+    .checkbox-label {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.9rem;
+      cursor: pointer;
+      font-weight: 500;
+    }
+    .checkbox-label input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      cursor: pointer;
+    }
+    .form-hint {
+      font-size: 0.8rem;
+      color: #94a3b8;
+      margin: 0.35rem 0 0 1.75rem;
+    }
+
+    /* Wizard Success */
+    .wizard-success {
+      text-align: center;
+      padding: 2.5rem 1.5rem;
+    }
+    .success-icon { font-size: 3rem; margin-bottom: 1rem; }
+    .wizard-success h4 {
+      font-size: 1.15rem;
+      margin-bottom: 0.5rem;
+    }
+    .wizard-success p {
+      color: #64748b;
+      margin-bottom: 1.5rem;
+      font-size: 0.9rem;
+    }
+
+    /* Loading inline */
+    .loading-inline {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 1.5rem;
+      justify-content: center;
+      color: #64748b;
+      font-size: 0.85rem;
+    }
+    .spinner-sm {
+      width: 18px;
+      height: 18px;
+      border: 2px solid #e2e8f0;
+      border-top-color: #3b82f6;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
   `],
 })
 export class SiteSponsorsTabComponent implements OnInit, OnDestroy {
@@ -716,6 +1245,7 @@ export class SiteSponsorsTabComponent implements OnInit, OnDestroy {
 
   private readonly sitesService = inject(SitesService);
   private readonly notification = inject(NotificationService);
+  private readonly confirmDialog = inject(ConfirmDialogService);
   private readonly cdr = inject(ChangeDetectorRef);
 
   // List
@@ -743,6 +1273,15 @@ export class SiteSponsorsTabComponent implements OnInit, OnDestroy {
     contact_phone: string;
     status: string;
   } = { name: '', contact_name: '', contact_email: '', contact_phone: '', status: 'active' };
+
+  // Wizard (create flow)
+  wizardStep = 1;
+  wizardVideos: CloudVideo[] = [];
+  wizardFilteredVideos: CloudVideo[] = [];
+  wizardVideosLoading = false;
+  wizardVideoSearch = '';
+  wizardSelectedVideo = '';
+  wizardAddToLoop = true;
 
   // Benchmark (P6.2)
   benchmarkData: SiteSponsorBenchmarkResponse | null = null;
@@ -935,6 +1474,12 @@ export class SiteSponsorsTabComponent implements OnInit, OnDestroy {
     this.isEditing = false;
     this.editingSponsorId = '';
     this.formData = { name: '', contact_name: '', contact_email: '', contact_phone: '', status: 'active' };
+    this.wizardStep = 1;
+    this.wizardSelectedVideo = '';
+    this.wizardVideoSearch = '';
+    this.wizardAddToLoop = true;
+    this.wizardVideos = [];
+    this.wizardFilteredVideos = [];
     this.showModal = true;
     this.cdr.markForCheck();
   }
@@ -991,8 +1536,112 @@ export class SiteSponsorsTabComponent implements OnInit, OnDestroy {
     });
   }
 
-  confirmDelete(sponsor: SiteSponsor): void {
-    if (!confirm(`Supprimer le sponsor "${sponsor.name}" ? Cette action est irréversible.`)) return;
+  // =========================================================================
+  // Wizard (3-step create flow)
+  // =========================================================================
+
+  wizardNext(): void {
+    if (this.wizardStep === 1) {
+      if (!this.formData.name.trim()) return;
+      this.wizardStep = 2;
+      // Load available videos for step 2
+      if (this.wizardVideos.length === 0) {
+        this.loadWizardVideos();
+      }
+    } else if (this.wizardStep === 2) {
+      this.wizardStep = 3;
+    }
+    this.cdr.markForCheck();
+  }
+
+  wizardBack(): void {
+    if (this.wizardStep > 1) {
+      this.wizardStep--;
+      this.cdr.markForCheck();
+    }
+  }
+
+  loadWizardVideos(): void {
+    this.wizardVideosLoading = true;
+    this.cdr.markForCheck();
+
+    this.sitesService.getLocalContent(this.siteId).subscribe({
+      next: (res) => {
+        this.wizardVideos = res?.cloudVideos ?? [];
+        this.filterWizardVideos();
+        this.wizardVideosLoading = false;
+        this.cdr.markForCheck();
+      },
+      error: () => {
+        this.wizardVideosLoading = false;
+        this.cdr.markForCheck();
+      },
+    });
+  }
+
+  filterWizardVideos(): void {
+    const term = this.wizardVideoSearch.toLowerCase();
+    this.wizardFilteredVideos = this.wizardVideos.filter(v =>
+      v.filename.toLowerCase().includes(term) ||
+      (v.title || '').toLowerCase().includes(term)
+    );
+  }
+
+  wizardCreate(): void {
+    if (!this.formData.name.trim()) return;
+
+    this.saving = true;
+    this.cdr.markForCheck();
+
+    const payload: Partial<SiteSponsor> = {
+      name: this.formData.name.trim(),
+      contact_name: this.formData.contact_name.trim() || null,
+      contact_email: this.formData.contact_email.trim() || null,
+      contact_phone: this.formData.contact_phone.trim() || null,
+      status: 'active' as SiteSponsor['status'],
+    };
+
+    this.sitesService.createSiteSponsor(this.siteId, payload).subscribe({
+      next: (created) => {
+        // If video selected, associate it
+        if (this.wizardSelectedVideo && created?.id) {
+          this.sitesService.addVideoToSiteSponsor(this.siteId, created.id, this.wizardSelectedVideo).subscribe({
+            next: () => {
+              this.saving = false;
+              this.wizardStep = 4; // success screen
+              this.loadSponsors();
+              this.cdr.markForCheck();
+            },
+            error: () => {
+              // Sponsor created but video association failed
+              this.notification.warning('Sponsor créé mais erreur lors de l\'association de la vidéo');
+              this.saving = false;
+              this.wizardStep = 4;
+              this.loadSponsors();
+              this.cdr.markForCheck();
+            },
+          });
+        } else {
+          this.saving = false;
+          this.wizardStep = 4; // success screen
+          this.loadSponsors();
+          this.cdr.markForCheck();
+        }
+      },
+      error: () => {
+        this.notification.error('Erreur lors de la création du sponsor');
+        this.saving = false;
+        this.cdr.markForCheck();
+      },
+    });
+  }
+
+  async confirmDelete(sponsor: SiteSponsor): Promise<void> {
+    const ok = await this.confirmDialog.confirm(
+      `Supprimer le sponsor "${sponsor.name}" ? Cette action est irréversible.`,
+      { title: 'Suppression', confirmLabel: 'Supprimer' },
+    );
+    if (!ok) return;
 
     this.sitesService.deleteSiteSponsor(this.siteId, sponsor.id).subscribe({
       next: () => {
@@ -1154,9 +1803,10 @@ export class SiteSponsorsTabComponent implements OnInit, OnDestroy {
     });
   }
 
-  removeVideo(filename: string): void {
+  async removeVideo(filename: string): Promise<void> {
     if (!this.expandedSponsorId) return;
-    if (!confirm(`Retirer la vidéo "${filename}" de ce sponsor ?`)) return;
+    const ok = await this.confirmDialog.confirm(`Retirer la vidéo "${filename}" de ce sponsor ?`);
+    if (!ok) return;
 
     this.removingVideoFilename = filename;
     this.cdr.markForCheck();
@@ -1199,11 +1849,120 @@ export class SiteSponsorsTabComponent implements OnInit, OnDestroy {
   // Helpers
   // =========================================================================
 
+  // =========================================================================
+  // Config complete/incomplete indicator (F-AUD-24)
+  // =========================================================================
+
+  isConfigComplete(sponsor: SiteSponsor): boolean {
+    return (sponsor.video_count ?? 0) >= 1;
+  }
+
+  getConfigTooltip(sponsor: SiteSponsor): string {
+    if (this.isConfigComplete(sponsor)) {
+      return 'Ce sponsor est correctement configuré et diffusé';
+    }
+    if ((sponsor.video_count ?? 0) === 0) {
+      return 'Aucune vidéo associée — ce sponsor ne sera pas diffusé';
+    }
+    return 'Configuration incomplète';
+  }
+
+  getConfigCta(sponsor: SiteSponsor): string {
+    if ((sponsor.video_count ?? 0) === 0) {
+      return '+ Ajouter une vidéo';
+    }
+    return 'Configurer';
+  }
+
   formatScreenTime(seconds: number): string {
     if (!seconds) return '0 min';
     const hrs = Math.floor(seconds / 3600);
     const mins = Math.floor((seconds % 3600) / 60);
     if (hrs > 0) return `${hrs}h ${mins}m`;
     return `${mins} min`;
+  }
+
+  // =========================================================================
+  // Sync status badge (F-AUD-23)
+  // =========================================================================
+
+  get syncStatusClass(): string {
+    if (!this.site) return 'sync-unknown';
+
+    const pendingUntil = this.site.config_update_pending_until;
+    if (pendingUntil && new Date(pendingUntil) > new Date()) {
+      return 'sync-pending';
+    }
+
+    const lastSync = this.site.last_config_sync;
+    if (!lastSync) return 'sync-unknown';
+
+    const ageMs = Date.now() - new Date(lastSync).getTime();
+    const ageHours = ageMs / (1000 * 60 * 60);
+
+    if (ageHours < 24) return 'sync-ok';
+    if (ageHours < 72) return 'sync-unknown';
+    return 'sync-stale';
+  }
+
+  get syncStatusIcon(): string {
+    if (!this.site) return '⚪';
+
+    const pendingUntil = this.site.config_update_pending_until;
+    if (pendingUntil && new Date(pendingUntil) > new Date()) return '🟡';
+
+    const lastSync = this.site.last_config_sync;
+    if (!lastSync) return '⚪';
+
+    const ageHours = (Date.now() - new Date(lastSync).getTime()) / (1000 * 60 * 60);
+    if (ageHours < 24) return '🟢';
+    if (ageHours < 72) return '⚪';
+    return '🔴';
+  }
+
+  get syncStatusLabel(): string {
+    if (!this.site) return 'Sync inconnue';
+
+    const pendingUntil = this.site.config_update_pending_until;
+    if (pendingUntil && new Date(pendingUntil) > new Date()) return 'Sync en cours…';
+
+    const lastSync = this.site.last_config_sync;
+    if (!lastSync) return 'Jamais synchronisé';
+
+    return `Sync ${this.formatRelativeTime(lastSync)}`;
+  }
+
+  get syncTooltip(): string {
+    if (!this.site) return 'État de synchronisation inconnu';
+
+    const pendingUntil = this.site.config_update_pending_until;
+    if (pendingUntil && new Date(pendingUntil) > new Date()) {
+      return 'Un déploiement de configuration est en cours vers le Pi';
+    }
+
+    const lastSync = this.site.last_config_sync;
+    if (!lastSync) return 'Le Pi n\'a jamais synchronisé sa configuration';
+
+    const ageHours = (Date.now() - new Date(lastSync).getTime()) / (1000 * 60 * 60);
+    const formatted = new Date(lastSync).toLocaleString('fr-FR');
+
+    if (ageHours < 24) {
+      return `Configuration synchronisée avec le Pi le ${formatted}`;
+    }
+    if (ageHours < 72) {
+      return `Dernière sync le ${formatted} — le Pi ne s'est pas reconnecté récemment`;
+    }
+    return `Sync obsolète (${formatted}) — vérifier la connexion du Pi`;
+  }
+
+  private formatRelativeTime(dateStr: string): string {
+    const diff = Date.now() - new Date(dateStr).getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1) return 'à l\'instant';
+    if (mins < 60) return `il y a ${mins} min`;
+    const hours = Math.floor(mins / 60);
+    if (hours < 24) return `il y a ${hours}h`;
+    const days = Math.floor(hours / 24);
+    return `il y a ${days}j`;
   }
 }

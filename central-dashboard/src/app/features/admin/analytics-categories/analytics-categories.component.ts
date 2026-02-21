@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { TranslateModule } from '@ngx-translate/core';
 import { AnalyticsService } from '../../../core/services/analytics.service';
 import { NotificationService } from '../../../core/services/notification.service';
+import { ConfirmDialogService } from '../../../core/services/confirm-dialog.service';
 import { AnalyticsCategory } from '../../../core/models';
 
 @Component({
@@ -553,6 +554,7 @@ import { AnalyticsCategory } from '../../../core/models';
 export class AnalyticsCategoriesComponent implements OnInit {
   private readonly analyticsService = inject(AnalyticsService);
   private readonly notificationService = inject(NotificationService);
+  private readonly confirmDialog = inject(ConfirmDialogService);
 
   categories: AnalyticsCategory[] = [];
   loading = true;
@@ -673,22 +675,26 @@ export class AnalyticsCategoriesComponent implements OnInit {
     }
   }
 
-  deleteCategory(category: AnalyticsCategory): void {
+  async deleteCategory(category: AnalyticsCategory): Promise<void> {
     if (category.is_default) {
       this.notificationService.warning('Les catégories par défaut ne peuvent pas être supprimées');
       return;
     }
 
-    if (confirm(`Supprimer la catégorie "${category.name}" ?\n\nLes sites utilisant cette catégorie devront être reconfigurés.`)) {
-      this.analyticsService.deleteAnalyticsCategory(category.id).subscribe({
-        next: () => {
-          this.notificationService.success('Catégorie supprimée');
-          this.loadCategories();
-        },
-        error: () => {
-          this.notificationService.error('Erreur lors de la suppression');
-        }
-      });
-    }
+    const ok = await this.confirmDialog.confirm(
+      `Supprimer la catégorie "${category.name}" ?\n\nLes sites utilisant cette catégorie devront être reconfigurés.`,
+      { title: 'Suppression', confirmLabel: 'Supprimer' },
+    );
+    if (!ok) return;
+
+    this.analyticsService.deleteAnalyticsCategory(category.id).subscribe({
+      next: () => {
+        this.notificationService.success('Catégorie supprimée');
+        this.loadCategories();
+      },
+      error: () => {
+        this.notificationService.error('Erreur lors de la suppression');
+      }
+    });
   }
 }

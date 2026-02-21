@@ -180,7 +180,11 @@
     "analytics": "Statistiques",
     "searchSponsor": "Rechercher un sponsor...",
     "searchVideo": "Rechercher une vidéo...",
-    "editPriority": "Modifier la priorité"
+    "editPriority": "Modifier la priorité",
+    "searchAdvertiserOrClub": "Rechercher annonceur ou club...",
+    "wizardNext": "Suivant →",
+    "wizardSkip": "Passer →",
+    "wizardNoVideo": "Aucune (à configurer plus tard)"
   },
   "content": {
     "title": "Gestion du contenu",

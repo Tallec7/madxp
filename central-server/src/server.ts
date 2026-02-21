@@ -57,6 +57,7 @@ import reportsRoutes from './routes/reports.routes';
 import alertsRoutes from './routes/alerts.routes';
 import benchmarkRoutes from './routes/benchmark.routes';
 import networkSponsorRoutes from './routes/network-sponsor.routes';
+import sponsorAlertsRoutes from './routes/sponsor-alerts.routes';
 import { authRateLimit, apiRateLimit, sensitiveRateLimit, adminRateLimit, loggingRateLimit } from './middleware/user-rate-limit';
 import { setRLSContext } from './middleware/rls-context';
 import { correlationMiddleware } from './middleware/correlation';
@@ -409,6 +410,7 @@ app.use('/api/reports', apiRateLimit, reportsRoutes); // Generated PDF reports
 app.use('/api/alerts', apiRateLimit, alertsRoutes); // System and predictive alerts
 app.use('/api/benchmark', benchmarkRoutes); // Anonymous benchmarks - rate limits per-route in benchmark.routes.ts
 app.use('/api/network', apiRateLimit, networkSponsorRoutes); // Network sponsor stats (P6.1 cross-club)
+app.use('/api/sponsor-alerts', apiRateLimit, sponsorAlertsRoutes); // Proactive sponsor impression alerts (F-AUD-07)
 
 // 404 handler - Must be AFTER all routes, BEFORE error handler
 // Uses standardized error format with correlation ID

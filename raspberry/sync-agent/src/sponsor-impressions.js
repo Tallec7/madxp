@@ -194,6 +194,18 @@ class SponsorImpressionsCollector {
       return { sent: 0 };
     }
 
+    // Persister les impressions dans l'historique local avant flush
+    // pour que les stats restent visibles sur le Pi admin après envoi au central
+    try {
+      await axios.post('http://127.0.0.1:8080/api/sponsors/stats/persist', {}, {
+        timeout: 5000,
+        headers: { Cookie: 'neopro_admin_session=internal' },
+      });
+    } catch {
+      // Non bloquant — les stats locales sont un bonus
+      logger.debug('[SponsorImpressions] Could not persist stats history (admin may be down)');
+    }
+
     const baseUrl = serverUrl?.replace(/\/$/, '');
     if (!baseUrl) {
       logger.error('[SponsorImpressions] Central server URL is not configured');

@@ -136,6 +136,12 @@ export interface Site {
   /** Couleur secondaire du club (hex #RRGGBB) */
   color_secondary?: string | null;
 
+  // === Config sync fields ===
+  /** Last config synchronization from Pi */
+  last_config_sync?: string | null;
+  /** Config update pending until (deployment in progress) */
+  config_update_pending_until?: string | null;
+
   // === Subscription fields ===
   /** Date de début d'abonnement */
   subscription_start?: string | null;

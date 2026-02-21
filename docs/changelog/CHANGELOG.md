@@ -1,3 +1,51 @@
+## Audit Sponsors & Analytics — P0 + P1 + P2 (2026-02-21)
+
+### ✅ 24 Features / 87 Story Points — Complete Audit Sprint
+
+**P0 — Critical (9 features, 33 SP)**
+
+- **F-AUD-01** (5 SP): Impression resolution pipeline — résolution fiable des impressions sponsors via `site_sponsor_id`, `video_id`, ou `filename` (`advertiser-analytics.controller.ts`)
+- **F-AUD-02** (3 SP): Correction compteurs annonceurs — N+1 fix `recordImpressions` + requêtes batch (`advertiser-analytics.controller.ts`)
+- **F-AUD-03** (3 SP): Sync sponsors pendant déploiement — push automatique des site_sponsors vers le Pi lors de chaque deploy config (`orchestrated-deployment.service.ts`)
+- **F-AUD-04** (2 SP): Interface association vidéo-sponsor — UI d'ajout/retrait vidéos par sponsor dans l'onglet sponsors site (`site-sponsors-tab.component.ts`)
+- **F-AUD-05** (5 SP): Pipeline analytics Pi → Central — envoi batch des impressions depuis le Pi avec buffer et retry (`analytics.js`, `sponsor-impressions.js`)
+- **F-AUD-06** (3 SP): Validation Joi routes analytics — middleware de validation sur toutes les routes analytics (`analytics-validation.ts`)
+- **F-AUD-09** (3 SP): Migration sponsor → advertiser dans le dashboard — renommage sémantique complet (`advertisers-list.component.ts`, `advertiser-detail.component.ts`)
+- **F-AUD-10** (5 SP): Refactoring analytics Pi admin — statistiques locales sponsors (`sponsor-stats.service.js`, `sponsors/index.js`)
+- **F-AUD-11** (4 SP): Portail sponsor KPIs — affichage impressions et tendances sur le portail public (`sponsor-dashboard.component.ts`)
+
+**P1 — Important (7 features, 30 SP)**
+
+- **F-AUD-12** (5 SP): Analytics catégories — composant admin pour statistiques par catégorie de contenu (`analytics-categories.component.ts`)
+- **F-AUD-13** (3 SP): Network sponsor stats — statistiques cross-club par annonceur réseau (`network-sponsor-stats.component.ts`)
+- **F-AUD-16** (5 SP): Gestion contenu centralisée — page content-management avec CRUD, bulk actions, filtres (`content-management.component.ts`)
+- **F-AUD-17** (5 SP): Wizard création sponsor Pi admin — formulaire guidé de création de sponsor local (`sponsors/index.js`)
+- **F-AUD-19** (3 SP): Diagnostic système guidé — assistant interactif de diagnostic Pi depuis l'admin (`site-debug-tab.component.ts`)
+- **F-AUD-20** (5 SP): Advertiser analytics avancé — filtres, graphiques, export CSV (`advertiser-analytics.component.ts`)
+- **F-AUD-22** (4 SP): Pi admin sponsor wizard — assistant complet ajout sponsor sur Pi (`admin-server.js`, `sponsors.js`)
+
+**P2 — Nice-to-have (6 features, 24 SP)**
+
+- **F-AUD-07** (8 SP): Alertes proactives impressions sponsors — service de santé annonceurs avec matrice health, alertes Slack, dashboard Angular (`sponsor-alert.service.ts`, `advertiser-health.component.ts`)
+- **F-AUD-14** (3 SP): Notification sync contenu central sur Pi admin — bannière et toast quand le contenu NEOPRO est mis à jour (`sync-status.js`, `update-config.js`)
+- **F-AUD-15** (3 SP): Skeleton screens analytics et listes sponsors — shimmer placeholders first-load-only sur analytics, advertisers-list, site-sponsors-tab
+- **F-AUD-18** (5 SP): Tests advertiser-analytics.controller — 72 tests, 12 describe blocks, 100% statement coverage (`advertiser-analytics.controller.test.ts`)
+- **F-AUD-21** (2 SP): Affichage nom annonceur au lieu de filename sur Pi — résolution displayName dans l'admin Pi (`sponsor.service.js`)
+- **F-AUD-23** (3 SP): Badge confirmation déploiement sync vers Pi — indicateur visuel sync OK/pending/stale dans l'onglet sponsors (`site-sponsors-tab.component.ts`)
+
+### Monitoring
+
+- **Prometheus** : 4 nouvelles métriques `neopro_sponsor_health_*` (check_total, entries gauge, alerts_created_total, check_duration_seconds)
+
+### Tests
+
+- central-server : 1573 tests (+ 72 F-AUD-18)
+- smoke : 142 tests
+- Angular dashboard : 506 tests
+- Pi admin : 148 tests
+
+---
+
 ## [3.62.1](https://github.com/Tallec7/neopro/compare/v3.62.0...v3.62.1) (2026-02-20)
 
 ### Bug Fixes

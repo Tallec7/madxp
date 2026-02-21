@@ -102,6 +102,7 @@ class SponsorService {
       contactEmail: (contactEmail || '').trim(),
       contactPhone: (contactPhone || '').trim(),
       videoFilenames: [],
+      frequency: 2, // 1=Basse, 2=Normale, 3=Haute, 4=Maximum
       isActive: true,
       createdAt: new Date().toISOString(),
       syncedAt: null,
@@ -162,6 +163,18 @@ class SponsorService {
     }
     if (updates.isActive !== undefined) {
       sponsor.isActive = Boolean(updates.isActive);
+    }
+    if (updates.frequency !== undefined) {
+      const freq = parseInt(updates.frequency, 10);
+      if (freq >= 1 && freq <= 4) {
+        const oldFreq = sponsor.frequency || 2;
+        sponsor.frequency = freq;
+
+        // Si le sponsor est dans la boucle, recalculer les entrées
+        if (oldFreq !== freq && this._isSponsorInLoop(config, sponsor)) {
+          this._rebuildLoopEntries(config, sponsor);
+        }
+      }
     }
 
     await this._configService.saveConfig(config);
@@ -299,26 +312,12 @@ class SponsorService {
       throw new NotFoundError('Sponsor non trouvé');
     }
 
-    const existingPaths = new Set(
-      config.sponsors
-        .filter(s => s._sponsorLocalId === localId)
-        .map(s => s.path)
-    );
-
-    for (const filename of (sponsor.videoFilenames || [])) {
-      if (!existingPaths.has(filename)) {
-        config.sponsors.push({
-          path: filename,
-          owner: 'club',
-          locked: false,
-          site_sponsor_id: sponsor.centralId || null,
-          _sponsorLocalId: localId,
-        });
-      }
-    }
+    // Nettoyer les anciennes entrées et reconstruire selon la fréquence
+    this._removeFromLoopInternal(config, sponsor);
+    this._rebuildLoopEntries(config, sponsor);
 
     await this._configService.saveConfig(config);
-    console.log('[admin] Sponsor ajouté à la boucle:', sponsor.name);
+    console.log('[admin] Sponsor ajouté à la boucle:', sponsor.name, `(freq=${sponsor.frequency || 2})`);
 
     return {
       ...sponsor,
@@ -370,6 +369,67 @@ class SponsorService {
   }
 
   /**
+   * Reconstruit les entrées de boucle pour un sponsor selon sa fréquence.
+   * frequency=1 → 1 entrée par vidéo (basse)
+   * frequency=2 → 2 entrées par vidéo (normale)
+   * frequency=3 → 3 entrées par vidéo (haute)
+   * frequency=4 → 4 entrées par vidéo (maximum)
+   *
+   * Les entrées sont réparties de manière espacée dans la boucle existante
+   * pour éviter que toutes les vidéos d'un même sponsor soient consécutives.
+   *
+   * @param {Object} config
+   * @param {Object} sponsor
+   */
+  _rebuildLoopEntries(config, sponsor) {
+    const freq = sponsor.frequency || 2;
+    const filenames = sponsor.videoFilenames || [];
+
+    if (filenames.length === 0) return;
+
+    // Collecter les entrées qui ne sont PAS ce sponsor (pour intercaler)
+    const otherEntries = (config.sponsors || []).filter(
+      s => s._sponsorLocalId !== sponsor.localId
+    );
+
+    // Créer les nouvelles entrées pour ce sponsor
+    const newEntries = [];
+    for (let rep = 0; rep < freq; rep++) {
+      for (const filename of filenames) {
+        newEntries.push({
+          path: filename,
+          owner: 'club',
+          locked: false,
+          site_sponsor_id: sponsor.centralId || null,
+          _sponsorLocalId: sponsor.localId,
+          _frequency: freq,
+        });
+      }
+    }
+
+    // Intercaler les entrées du sponsor parmi les autres
+    // pour éviter des blocs consécutifs du même sponsor
+    const result = [...otherEntries];
+    if (result.length === 0) {
+      // Aucun autre sponsor — ajouter simplement
+      result.push(...newEntries);
+    } else {
+      // Répartir uniformément
+      const step = Math.max(1, Math.floor(result.length / newEntries.length));
+      let insertPos = Math.min(step, result.length);
+      for (const entry of newEntries) {
+        result.splice(insertPos, 0, entry);
+        insertPos += step + 1;
+        if (insertPos > result.length) {
+          insertPos = result.length;
+        }
+      }
+    }
+
+    config.sponsors = result;
+  }
+
+  /**
    * Retire les entries d'un sponsor de la boucle (mutate config).
    * @param {Object} config
    * @param {Object} sponsor
@@ -387,6 +447,7 @@ class SponsorService {
    */
   _extractNeoProSponsors(config) {
     const sponsors = config.sponsors || [];
+    const localSponsors = config.localSponsors || [];
     const neoProMap = new Map();
 
     for (const s of sponsors) {
@@ -394,8 +455,14 @@ class SponsorService {
         // Grouper par site_sponsor_id ou par path
         const key = s.site_sponsor_id || s.path;
         if (!neoProMap.has(key)) {
+          // Résoudre le nom d'affichage : display_name → localSponsors[].name → path
+          let displayName = s.display_name;
+          if (!displayName && s.site_sponsor_id) {
+            const match = localSponsors.find(ls => ls.centralId === s.site_sponsor_id);
+            if (match) displayName = match.name;
+          }
           neoProMap.set(key, {
-            name: s.display_name || s.path,
+            name: displayName || s.path,
             source: 'neopro',
             videoFilenames: [],
             isActive: true,

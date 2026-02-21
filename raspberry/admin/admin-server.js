@@ -61,6 +61,7 @@ const SystemService = require('./services/system.service');
 const NetworkService = require('./services/network.service');
 const BackupService = require('./services/backup.service');
 const SponsorService = require('./services/sponsor.service');
+const SponsorStatsService = require('./services/sponsor-stats.service');
 
 // Instantiate services (ordered by dependency)
 const configService = new ConfigurationService({ cache, NAMESPACES });
@@ -70,6 +71,7 @@ const systemService = new SystemService();
 const networkService = new NetworkService();
 const backupService = new BackupService();
 const sponsorService = new SponsorService({ configService });
+const sponsorStatsService = new SponsorStatsService({ configService });
 
 // =============================================================================
 // ROUTES
@@ -101,7 +103,7 @@ const backupRouter = createBackupRouter({ backupService });
 const emailRouter = createEmailRouter(emailNotifier);
 const cacheRouter = createCacheRouter(cache, NAMESPACES);
 const syncStatusRouter = createSyncStatusRouter();
-const sponsorsRouter = createSponsorsRouter({ sponsorService });
+const sponsorsRouter = createSponsorsRouter({ sponsorService, sponsorStatsService });
 
 // =============================================================================
 // EXPRESS APP

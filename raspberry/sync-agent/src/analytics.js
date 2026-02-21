@@ -206,42 +206,75 @@ class AnalyticsCollector {
 
     for (let i = 0; i < batches.length; i++) {
       const batch = batches[i];
+      let batchSent = false;
 
-      try {
-        const result = await this.sendBatch(url, siteId, batch);
-        totalSent += batch.length;
-        totalRecorded += result.recorded || 0;
+      // Retry logic: up to 2 retries for transient errors (429, 5xx, timeout)
+      for (let attempt = 0; attempt < 3 && !batchSent; attempt++) {
+        try {
+          if (attempt > 0) {
+            const retryDelay = attempt * 5000; // 5s, 10s
+            logger.info('Retrying analytics batch after transient error', {
+              batch: i + 1, attempt: attempt + 1, retryDelay,
+            });
+            await new Promise(resolve => setTimeout(resolve, retryDelay));
+          }
 
-        logger.debug('Batch sent successfully', {
-          batch: i + 1,
-          of: batches.length,
-          sent: batch.length,
-          recorded: result.recorded,
-        });
+          const result = await this.sendBatch(url, siteId, batch);
+          totalSent += batch.length;
+          totalRecorded += result.recorded || 0;
+          batchSent = true;
 
-        // Mettre à jour le buffer après chaque batch réussi
-        // Supprimer les événements envoyés
-        this.buffer = events.slice(totalSent);
-        this.saveBuffer();
+          logger.debug('Batch sent successfully', {
+            batch: i + 1,
+            of: batches.length,
+            sent: batch.length,
+            recorded: result.recorded,
+          });
 
-        // Petite pause entre les batches pour ne pas surcharger le serveur
-        if (i < batches.length - 1) {
-          await new Promise(resolve => setTimeout(resolve, BATCH_DELAY));
+          // Mettre à jour le buffer après chaque batch réussi
+          this.buffer = events.slice(totalSent);
+          this.saveBuffer();
+
+          // Petite pause entre les batches pour ne pas surcharger le serveur
+          if (i < batches.length - 1) {
+            await new Promise(resolve => setTimeout(resolve, BATCH_DELAY));
+          }
+        } catch (error) {
+          const status = error.response?.status;
+          const message = error.response
+            ? `HTTP ${status}: ${error.response.data?.error || error.response.statusText || 'Unknown error'}`
+            : error.message;
+
+          const isTransient = !status || status === 429 || status >= 500;
+
+          // Non-transient errors (4xx except 429) - stop immediately
+          if (!isTransient) {
+            logger.warn('Analytics batch rejected (non-transient), stopping', {
+              batch: i + 1, of: batches.length, error: message, sentSoFar: totalSent,
+            });
+            lastError = message;
+            i = batches.length; // Break outer loop
+            break;
+          }
+
+          // Transient errors - retry if attempts remain
+          if (isTransient && attempt < 2) {
+            logger.warn('Analytics batch transient error, will retry', {
+              batch: i + 1, attempt: attempt + 1, error: message,
+            });
+            continue;
+          }
+
+          // Final failure for this batch after retries
+          logger.warn('Analytics batch send failed after retries, stopping', {
+            batch: i + 1, of: batches.length, error: message,
+            sentSoFar: totalSent, attempts: attempt + 1,
+          });
+
+          lastError = message;
+          i = batches.length; // Break outer loop
+          break;
         }
-      } catch (error) {
-        const message = error.response
-          ? `HTTP ${error.response.status}: ${error.response.data?.error || error.response.statusText || 'Unknown error'}`
-          : error.message;
-
-        logger.warn('Batch send failed, stopping', {
-          batch: i + 1,
-          of: batches.length,
-          error: message,
-          sentSoFar: totalSent,
-        });
-
-        lastError = message;
-        break; // Arrêter l'envoi, on réessaiera les événements restants plus tard
       }
     }
 

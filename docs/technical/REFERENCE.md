@@ -1233,6 +1233,17 @@ GET    /network/advertisers/:advertiserId/stats   - Stats réseau cross-club d'u
 
 > Agrège impressions, temps d'écran, reach, sites actifs, CPI, tendances quotidiennes, répartition par event_type et performance par club. Requêtes cross-club via `site_sponsors.advertiser_id`.
 
+**Endpoints Sponsor Alerts / Health Matrix (auth JWT, montés sur /api/sponsor-alerts) — F-AUD-07 :**
+
+```
+GET    /sponsor-alerts/health                 - Matrice santé complète annonceurs × sites (operator+)
+GET    /sponsor-alerts/health/:advertiserId   - Matrice santé filtrée pour un annonceur (operator+)
+GET    /sponsor-alerts/config                 - Configuration seuils d'alerte actuels (admin+)
+POST   /sponsor-alerts/check                  - Vérification manuelle des alertes (admin+)
+```
+
+> Calcule la santé de chaque paire annonceur-site (impressions 7j/30j, moyenne quotidienne, jours depuis dernière impression). Seuils configurables : `warningThresholdDaily` (défaut: 5), `criticalThresholdDays` (défaut: 3). Le check crée des alertes dans la table `alerts` pour les statuts critiques + notification Slack.
+
 **Endpoints Reports (auth JWT, admin/super_admin, montés sur /api/reports) :**
 
 ```

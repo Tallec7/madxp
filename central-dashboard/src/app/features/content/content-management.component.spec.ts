@@ -8,6 +8,7 @@ import { SitesService } from '../../core/services/sites.service';
 import { GroupsService } from '../../core/services/groups.service';
 import { SocketService } from '../../core/services/socket.service';
 import { NotificationService } from '../../core/services/notification.service';
+import { ConfirmDialogService } from '../../core/services/confirm-dialog.service';
 import { LoggerService } from '../../core/services/logger.service';
 
 describe('ContentManagementComponent', () => {
@@ -18,6 +19,7 @@ describe('ContentManagementComponent', () => {
   let groupsService: jasmine.SpyObj<GroupsService>;
   let socketService: jasmine.SpyObj<SocketService>;
   let notificationService: jasmine.SpyObj<NotificationService>;
+  let confirmDialogService: jasmine.SpyObj<ConfirmDialogService>;
 
   const mockVideos = [
     {
@@ -78,6 +80,8 @@ describe('ContentManagementComponent', () => {
     socketServiceMock.on.and.returnValue(of({}));
 
     const notificationServiceMock = jasmine.createSpyObj('NotificationService', ['error', 'success', 'warning']);
+    const confirmDialogServiceMock = jasmine.createSpyObj('ConfirmDialogService', ['confirm']);
+    confirmDialogServiceMock.confirm.and.returnValue(Promise.resolve(true));
     const loggerServiceMock = jasmine.createSpyObj('LoggerService', ['debug', 'info', 'warn', 'error', 'addBreadcrumb', 'setAuthenticated']);
 
     await TestBed.configureTestingModule({
@@ -88,6 +92,7 @@ describe('ContentManagementComponent', () => {
         { provide: GroupsService, useValue: groupsServiceMock },
         { provide: SocketService, useValue: socketServiceMock },
         { provide: NotificationService, useValue: notificationServiceMock },
+        { provide: ConfirmDialogService, useValue: confirmDialogServiceMock },
         { provide: LoggerService, useValue: loggerServiceMock },
       ],
     }).compileComponents();
@@ -99,6 +104,7 @@ describe('ContentManagementComponent', () => {
     groupsService = TestBed.inject(GroupsService) as jasmine.SpyObj<GroupsService>;
     socketService = TestBed.inject(SocketService) as jasmine.SpyObj<SocketService>;
     notificationService = TestBed.inject(NotificationService) as jasmine.SpyObj<NotificationService>;
+    confirmDialogService = TestBed.inject(ConfirmDialogService) as jasmine.SpyObj<ConfirmDialogService>;
   });
 
   it('should create', () => {
@@ -313,7 +319,7 @@ describe('ContentManagementComponent', () => {
     });
 
     it('should delete video on confirm', fakeAsync(() => {
-      spyOn(window, 'confirm').and.returnValue(true);
+      confirmDialogService.confirm.and.returnValue(Promise.resolve(true));
       apiService.delete.and.returnValue(of({}));
 
       component.deleteVideo(mockVideos[0]);
@@ -323,16 +329,17 @@ describe('ContentManagementComponent', () => {
       expect(component.videos.length).toBe(1);
     }));
 
-    it('should not delete video on cancel', () => {
-      spyOn(window, 'confirm').and.returnValue(false);
+    it('should not delete video on cancel', fakeAsync(() => {
+      confirmDialogService.confirm.and.returnValue(Promise.resolve(false));
 
       component.deleteVideo(mockVideos[0]);
+      tick();
 
       expect(apiService.delete).not.toHaveBeenCalled();
-    });
+    }));
 
     it('should show error on failure', fakeAsync(() => {
-      spyOn(window, 'confirm').and.returnValue(true);
+      confirmDialogService.confirm.and.returnValue(Promise.resolve(true));
       apiService.delete.and.returnValue(throwError(() => ({ error: { error: 'Delete failed' } })));
 
       component.deleteVideo(mockVideos[0]);

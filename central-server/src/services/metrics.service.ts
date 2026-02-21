@@ -551,6 +551,35 @@ const videoPlaysFkFallbackTotal = new Counter({
   registers: [register],
 });
 
+// ============= Métriques Sponsor Health (F-AUD-07) =============
+
+const sponsorHealthCheckTotal = new Counter({
+  name: 'neopro_sponsor_health_check_total',
+  help: 'Total sponsor health check runs (manual or automated)',
+  labelNames: ['trigger'],  // 'manual' | 'automated'
+  registers: [register],
+});
+
+const sponsorHealthEntriesGauge = new Gauge({
+  name: 'neopro_sponsor_health_entries',
+  help: 'Current sponsor health matrix entries by status',
+  labelNames: ['status'],  // 'healthy' | 'warning' | 'critical'
+  registers: [register],
+});
+
+const sponsorHealthAlertsCreatedTotal = new Counter({
+  name: 'neopro_sponsor_health_alerts_created_total',
+  help: 'Total proactive sponsor alerts created from health checks',
+  registers: [register],
+});
+
+const sponsorHealthCheckDuration = new Histogram({
+  name: 'neopro_sponsor_health_check_duration_seconds',
+  help: 'Duration of sponsor health check in seconds',
+  buckets: [0.1, 0.5, 1, 2, 5, 10],
+  registers: [register],
+});
+
 // ============= Service Class =============
 
 class MetricsService {
@@ -906,6 +935,19 @@ class MetricsService {
     if (durationSeconds !== undefined) {
       reportGenerationDuration.observe({ report_type: reportType }, durationSeconds);
     }
+  }
+
+  // ============= Méthodes Sponsor Health (F-AUD-07) =============
+
+  recordSponsorHealthCheck(trigger: 'manual' | 'automated', healthy: number, warning: number, critical: number, alertsCreated: number, durationSeconds: number): void {
+    sponsorHealthCheckTotal.inc({ trigger });
+    sponsorHealthEntriesGauge.set({ status: 'healthy' }, healthy);
+    sponsorHealthEntriesGauge.set({ status: 'warning' }, warning);
+    sponsorHealthEntriesGauge.set({ status: 'critical' }, critical);
+    if (alertsCreated > 0) {
+      sponsorHealthAlertsCreatedTotal.inc(alertsCreated);
+    }
+    sponsorHealthCheckDuration.observe(durationSeconds);
   }
 
   /**

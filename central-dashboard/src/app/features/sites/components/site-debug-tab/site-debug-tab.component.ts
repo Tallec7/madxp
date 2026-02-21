@@ -270,12 +270,129 @@ interface WifiScanResult {
   error?: string;
 }
 
+// Types pour le diagnostic guidé (F-AUD-08)
+type WizardStepStatus = 'pending' | 'checking' | 'ok' | 'warning' | 'error';
+
+interface WizardStep {
+  id: number;
+  title: string;
+  icon: string;
+  status: WizardStepStatus;
+  message: string;
+  details: string[];
+  suggestions: string[];
+}
+
 @Component({
   selector: 'app-site-debug-tab',
   standalone: true,
   imports: [CommonModule, FormsModule, TranslateModule, CommandExecutorComponent],
   template: `
     <div class="debug-tab">
+      <!-- Diagnostic guidé (F-AUD-08) -->
+      <div class="debug-card wizard-card">
+        <div class="debug-header" (click)="toggleWizard()">
+          <span class="expand-icon">{{ showWizard ? '&#9660;' : '&#9654;' }}</span>
+          <span class="debug-icon">&#128270;</span>
+          <h4>Diagnostic guid&eacute;</h4>
+          <span class="debug-stats" *ngIf="wizardCompleted && !showWizard"
+            [class.health-ok]="getWizardOverallStatus() === 'ok'"
+            [class.health-warning]="getWizardOverallStatus() === 'warning'"
+            [class.health-critical]="getWizardOverallStatus() === 'error'">
+            {{ getWizardScoreLabel() }}
+          </span>
+        </div>
+
+        <div class="debug-content" *ngIf="showWizard">
+          <!-- Step indicator -->
+          <div class="wizard-steps-indicator">
+            <div class="wizard-step-dot" *ngFor="let step of wizardSteps; let i = index"
+              [class.dot-active]="i === wizardCurrentStep"
+              [class.dot-ok]="step.status === 'ok'"
+              [class.dot-warning]="step.status === 'warning'"
+              [class.dot-error]="step.status === 'error'"
+              [class.dot-checking]="step.status === 'checking'"
+              [class.dot-pending]="step.status === 'pending'"
+              (click)="goToWizardStep(i)">
+              <span class="dot-number">{{ i + 1 }}</span>
+            </div>
+          </div>
+
+          <!-- Wizard not started -->
+          <div *ngIf="!wizardRunning && !wizardCompleted" class="wizard-start">
+            <p class="wizard-intro">
+              Ce diagnostic v&eacute;rifie en 5 &eacute;tapes le bon fonctionnement du site :
+              connectivit&eacute;, vid&eacute;os, boucle de diffusion, impressions, et synth&egrave;se.
+            </p>
+            <button class="btn btn-primary" (click)="startWizard()">
+              &#128270; Lancer le diagnostic
+            </button>
+          </div>
+
+          <!-- Current step display -->
+          <div *ngIf="wizardRunning || wizardCompleted" class="wizard-step-content">
+            <div class="wizard-step-header">
+              <span class="wizard-step-icon">{{ getWizardStepStatusIcon(wizardSteps[wizardCurrentStep].status) }}</span>
+              <div class="wizard-step-title">
+                <h5>&Eacute;tape {{ wizardCurrentStep + 1 }}/{{ wizardSteps.length }} &mdash; {{ wizardSteps[wizardCurrentStep].title }}</h5>
+                <span class="wizard-step-subtitle" *ngIf="wizardSteps[wizardCurrentStep].message">
+                  {{ wizardSteps[wizardCurrentStep].message }}
+                </span>
+              </div>
+            </div>
+
+            <!-- Details -->
+            <div class="wizard-step-details" *ngIf="wizardSteps[wizardCurrentStep].details.length > 0">
+              <div class="wizard-detail-item" *ngFor="let detail of wizardSteps[wizardCurrentStep].details">
+                {{ detail }}
+              </div>
+            </div>
+
+            <!-- Suggestions (when there are issues) -->
+            <div class="wizard-step-suggestions" *ngIf="wizardSteps[wizardCurrentStep].suggestions.length > 0">
+              <h6>Suggestions :</h6>
+              <ul>
+                <li *ngFor="let suggestion of wizardSteps[wizardCurrentStep].suggestions">{{ suggestion }}</li>
+              </ul>
+            </div>
+
+            <!-- Summary (step 5) -->
+            <div *ngIf="wizardCurrentStep === 4 && wizardCompleted" class="wizard-summary">
+              <div class="wizard-summary-score"
+                [class.summary-ok]="getWizardOverallStatus() === 'ok'"
+                [class.summary-warning]="getWizardOverallStatus() === 'warning'"
+                [class.summary-error]="getWizardOverallStatus() === 'error'">
+                <span class="summary-score-value">{{ getWizardScore() }}/4</span>
+                <span class="summary-score-label">{{ getWizardScoreLabel() }}</span>
+              </div>
+              <div class="wizard-checklist">
+                <div class="wizard-checklist-item" *ngFor="let step of wizardSteps; let i = index">
+                  <span *ngIf="i < 4">{{ getWizardStepStatusIcon(step.status) }} {{ step.title }} &mdash; {{ step.message }}</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Navigation buttons -->
+            <div class="wizard-nav">
+              <button class="btn btn-secondary btn-sm" *ngIf="wizardCurrentStep > 0"
+                (click)="wizardPreviousStep()">
+                &larr; Pr&eacute;c&eacute;dent
+              </button>
+              <div class="wizard-nav-spacer"></div>
+              <button class="btn btn-secondary btn-sm" *ngIf="wizardCompleted"
+                (click)="startWizard()">
+                &#128260; Relancer
+              </button>
+              <button class="btn btn-primary btn-sm" *ngIf="wizardRunning && wizardCurrentStep < wizardSteps.length - 1"
+                (click)="wizardNextStep()"
+                [disabled]="wizardSteps[wizardCurrentStep].status === 'checking'">
+                Suivant &rarr;
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- Fichiers sur le Pi -->
       <div class="debug-card">
         <div class="debug-header" (click)="showFiles = !showFiles">
@@ -3577,6 +3694,256 @@ interface WifiScanResult {
     .timeline-actions {
       margin-top: 1rem;
     }
+
+    /* Diagnostic guidé (F-AUD-08) */
+    .wizard-card {
+      border: 2px solid #e0e7ff;
+      background: linear-gradient(135deg, #fefefe 0%, #f8faff 100%);
+    }
+
+    .wizard-steps-indicator {
+      display: flex;
+      justify-content: center;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+      padding-top: 0.5rem;
+    }
+
+    .wizard-step-dot {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      background: #e2e8f0;
+      border: 2px solid transparent;
+    }
+
+    .wizard-step-dot:hover {
+      transform: scale(1.1);
+    }
+
+    .dot-number {
+      font-size: 0.8125rem;
+      font-weight: 600;
+      color: #64748b;
+    }
+
+    .dot-active {
+      border-color: #2563eb;
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+    }
+
+    .dot-ok {
+      background: #dcfce7;
+    }
+    .dot-ok .dot-number {
+      color: #15803d;
+    }
+
+    .dot-warning {
+      background: #fef3c7;
+    }
+    .dot-warning .dot-number {
+      color: #92400e;
+    }
+
+    .dot-error {
+      background: #fee2e2;
+    }
+    .dot-error .dot-number {
+      color: #dc2626;
+    }
+
+    .dot-checking {
+      background: #dbeafe;
+      animation: pulse-dot 1.2s ease-in-out infinite;
+    }
+    .dot-checking .dot-number {
+      color: #1e40af;
+    }
+
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    .dot-pending {
+      background: #f1f5f9;
+    }
+
+    .wizard-start {
+      text-align: center;
+      padding: 1rem 0;
+    }
+
+    .wizard-intro {
+      color: #475569;
+      font-size: 0.875rem;
+      margin-bottom: 1rem;
+      line-height: 1.5;
+    }
+
+    .wizard-step-content {
+      padding: 0.5rem 0;
+    }
+
+    .wizard-step-header {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.75rem;
+      margin-bottom: 1rem;
+    }
+
+    .wizard-step-icon {
+      font-size: 1.5rem;
+      flex-shrink: 0;
+      margin-top: 0.1rem;
+    }
+
+    .wizard-step-title h5 {
+      margin: 0;
+      font-size: 0.9375rem;
+      font-weight: 600;
+      color: #1e293b;
+    }
+
+    .wizard-step-subtitle {
+      display: block;
+      font-size: 0.8125rem;
+      color: #64748b;
+      margin-top: 0.25rem;
+    }
+
+    .wizard-step-details {
+      background: #f8fafc;
+      border-radius: 8px;
+      padding: 0.75rem 1rem;
+      margin-bottom: 1rem;
+    }
+
+    .wizard-detail-item {
+      font-size: 0.8125rem;
+      color: #334155;
+      padding: 0.25rem 0;
+    }
+
+    .wizard-step-suggestions {
+      background: #fffbeb;
+      border: 1px solid #fde68a;
+      border-radius: 8px;
+      padding: 0.75rem 1rem;
+      margin-bottom: 1rem;
+    }
+
+    .wizard-step-suggestions h6 {
+      margin: 0 0 0.5rem 0;
+      font-size: 0.8125rem;
+      font-weight: 600;
+      color: #92400e;
+    }
+
+    .wizard-step-suggestions ul {
+      margin: 0;
+      padding-left: 1.25rem;
+    }
+
+    .wizard-step-suggestions li {
+      font-size: 0.8125rem;
+      color: #78350f;
+      padding: 0.125rem 0;
+    }
+
+    .wizard-summary {
+      margin-bottom: 1rem;
+    }
+
+    .wizard-summary-score {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 1rem;
+      border-radius: 10px;
+      margin-bottom: 1rem;
+    }
+
+    .summary-ok {
+      background: #dcfce7;
+      border: 1px solid #86efac;
+    }
+
+    .summary-warning {
+      background: #fef3c7;
+      border: 1px solid #fde68a;
+    }
+
+    .summary-error {
+      background: #fee2e2;
+      border: 1px solid #fca5a5;
+    }
+
+    .summary-score-value {
+      font-size: 1.5rem;
+      font-weight: 700;
+    }
+
+    .summary-ok .summary-score-value {
+      color: #15803d;
+    }
+
+    .summary-warning .summary-score-value {
+      color: #92400e;
+    }
+
+    .summary-error .summary-score-value {
+      color: #dc2626;
+    }
+
+    .summary-score-label {
+      font-size: 0.9375rem;
+      font-weight: 500;
+    }
+
+    .summary-ok .summary-score-label {
+      color: #166534;
+    }
+
+    .summary-warning .summary-score-label {
+      color: #78350f;
+    }
+
+    .summary-error .summary-score-label {
+      color: #991b1b;
+    }
+
+    .wizard-checklist {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .wizard-checklist-item {
+      font-size: 0.8125rem;
+      color: #334155;
+      padding: 0.375rem 0.75rem;
+      background: #f8fafc;
+      border-radius: 6px;
+    }
+
+    .wizard-nav {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding-top: 0.75rem;
+      border-top: 1px solid #f1f5f9;
+    }
+
+    .wizard-nav-spacer {
+      flex: 1;
+    }
   `]
 })
 export class SiteDebugTabComponent implements OnInit, AfterViewChecked, OnDestroy {
@@ -3694,6 +4061,20 @@ export class SiteDebugTabComponent implements OnInit, AfterViewChecked, OnDestro
   }> = [];
   loadingTimeline: boolean = false;
 
+  // Diagnostic guidé (F-AUD-08)
+  showWizard: boolean = false;
+  wizardRunning: boolean = false;
+  wizardCompleted: boolean = false;
+  wizardCurrentStep: number = 0;
+  private wizardBufferPollSub: Subscription | null = null;
+  wizardSteps: WizardStep[] = [
+    { id: 1, title: 'Connectivit\u00e9', icon: '\uD83D\uDD0C', status: 'pending', message: '', details: [], suggestions: [] },
+    { id: 2, title: 'Vid\u00e9os', icon: '\uD83C\uDFAC', status: 'pending', message: '', details: [], suggestions: [] },
+    { id: 3, title: 'Boucle de diffusion', icon: '\uD83D\uDD01', status: 'pending', message: '', details: [], suggestions: [] },
+    { id: 4, title: 'Impressions r\u00e9centes', icon: '\uD83D\uDCCA', status: 'pending', message: '', details: [], suggestions: [] },
+    { id: 5, title: 'Diagnostic complet', icon: '\uD83D\uDCCB', status: 'pending', message: '', details: [], suggestions: [] },
+  ];
+
   constructor(
     private sitesService: SitesService,
     private notificationService: NotificationService,
@@ -3706,6 +4087,7 @@ export class SiteDebugTabComponent implements OnInit, AfterViewChecked, OnDestro
 
   ngOnDestroy(): void {
     this.bufferPollSubscription?.unsubscribe();
+    this.wizardBufferPollSub?.unsubscribe();
   }
 
   ngAfterViewChecked(): void {
@@ -4678,5 +5060,354 @@ export class SiteDebugTabComponent implements OnInit, AfterViewChecked, OnDestro
       case 'pending': return '⏸️ En attente';
       default: return status || '';
     }
+  }
+
+  // ===== Diagnostic guidé (F-AUD-08) =====
+
+  toggleWizard(): void {
+    this.showWizard = !this.showWizard;
+  }
+
+  startWizard(): void {
+    this.wizardBufferPollSub?.unsubscribe();
+    this.wizardRunning = true;
+    this.wizardCompleted = false;
+    this.wizardCurrentStep = 0;
+    this.wizardSteps = this.wizardSteps.map(step => ({
+      ...step,
+      status: 'pending' as WizardStepStatus,
+      message: '',
+      details: [],
+      suggestions: [],
+    }));
+    this.runWizardStep(0);
+  }
+
+  goToWizardStep(index: number): void {
+    if (index >= 0 && index < this.wizardSteps.length) {
+      this.wizardCurrentStep = index;
+    }
+  }
+
+  wizardNextStep(): void {
+    if (this.wizardCurrentStep < this.wizardSteps.length - 1) {
+      this.wizardCurrentStep++;
+      if (this.wizardSteps[this.wizardCurrentStep].status === 'pending') {
+        this.runWizardStep(this.wizardCurrentStep);
+      }
+    }
+  }
+
+  wizardPreviousStep(): void {
+    if (this.wizardCurrentStep > 0) {
+      this.wizardCurrentStep--;
+    }
+  }
+
+  getWizardStepStatusIcon(status: WizardStepStatus): string {
+    switch (status) {
+      case 'ok': return '\u2705';
+      case 'warning': return '\u26A0\uFE0F';
+      case 'error': return '\u274C';
+      case 'checking': return '\u23F3';
+      case 'pending': return '\u2B55';
+    }
+  }
+
+  getWizardScore(): number {
+    return this.wizardSteps
+      .filter((_step, i) => i < 4) // Only count the 4 diagnostic steps, not summary
+      .filter(step => step.status === 'ok')
+      .length;
+  }
+
+  getWizardOverallStatus(): 'ok' | 'warning' | 'error' {
+    const score = this.getWizardScore();
+    if (score === 4) return 'ok';
+    if (score >= 2) return 'warning';
+    return 'error';
+  }
+
+  getWizardScoreLabel(): string {
+    const status = this.getWizardOverallStatus();
+    switch (status) {
+      case 'ok': return 'Site op\u00e9rationnel';
+      case 'warning': return 'Probl\u00e8mes d\u00e9tect\u00e9s';
+      case 'error': return 'Site en difficult\u00e9';
+    }
+  }
+
+  private runWizardStep(stepIndex: number): void {
+    switch (stepIndex) {
+      case 0:
+        this.wizardCheckConnectivity();
+        break;
+      case 1:
+        this.wizardCheckVideos();
+        break;
+      case 2:
+        this.wizardCheckLoop();
+        break;
+      case 3:
+        this.wizardCheckImpressions();
+        break;
+      case 4:
+        this.wizardBuildSummary();
+        break;
+    }
+  }
+
+  private wizardCheckConnectivity(): void {
+    const step = this.wizardSteps[0];
+    step.status = 'checking';
+    step.message = 'V\u00e9rification de la connectivit\u00e9...';
+
+    // Simulated async delay to give the UI a "checking" feel
+    setTimeout(() => {
+      if (this.isConnected) {
+        step.status = 'ok';
+        step.message = 'Le bo\u00eetier est en ligne';
+        step.details = ['Connexion WebSocket active'];
+        step.suggestions = [];
+        if (this.connectionHealth) {
+          if (this.connectionHealth.lastPongAgeMs !== null) {
+            const ageSec = Math.round(this.connectionHealth.lastPongAgeMs / 1000);
+            step.details.push(`Dernier heartbeat : il y a ${ageSec}s`);
+          }
+          if (!this.connectionHealth.isHealthy) {
+            step.status = 'warning';
+            step.message = 'Connect\u00e9 mais connexion instable';
+            step.suggestions = [this.connectionHealth.reason];
+          }
+        }
+        // Auto-advance after short delay
+        setTimeout(() => {
+          if (this.wizardCurrentStep === 0 && this.wizardRunning) {
+            this.wizardNextStep();
+          }
+        }, 800);
+      } else {
+        step.status = 'error';
+        step.message = 'Le bo\u00eetier est hors ligne';
+        step.details = [];
+        step.suggestions = [
+          'V\u00e9rifier que le bo\u00eetier est allum\u00e9 (LED d\'alimentation)',
+          'V\u00e9rifier le c\u00e2ble r\u00e9seau ou la connexion WiFi',
+          'Red\u00e9marrer le routeur si n\u00e9cessaire',
+          'V\u00e9rifier que le bo\u00eetier a acc\u00e8s \u00e0 Internet',
+        ];
+      }
+    }, 500);
+  }
+
+  private wizardCheckVideos(): void {
+    const step = this.wizardSteps[1];
+    step.status = 'checking';
+    step.message = 'V\u00e9rification des vid\u00e9os...';
+
+    setTimeout(() => {
+      const videoCount = this.localVideos.length;
+      if (videoCount > 0) {
+        const totalSize = this.getTotalSize();
+        step.status = 'ok';
+        step.message = `${videoCount} vid\u00e9o${videoCount > 1 ? 's' : ''} pr\u00e9sente${videoCount > 1 ? 's' : ''}`;
+        step.details = [
+          `Espace utilis\u00e9 : ${this.formatBytes(totalSize)}`,
+        ];
+        if (this.localStorage) {
+          const pct = Math.round((this.localStorage.used / this.localStorage.total) * 100);
+          step.details.push(`Stockage : ${pct}% utilis\u00e9 (${this.formatBytes(this.localStorage.free)} libre)`);
+          if (pct > 90) {
+            step.status = 'warning';
+            step.suggestions = ['L\'espace disque est presque plein. Envisager de supprimer des vid\u00e9os inutilis\u00e9es.'];
+          }
+        }
+        if (this.lastVideoSync) {
+          step.details.push(`Derni\u00e8re sync : ${new Date(this.lastVideoSync).toLocaleString('fr-FR')}`);
+        }
+      } else {
+        step.status = 'error';
+        step.message = 'Aucune vid\u00e9o sur le bo\u00eetier';
+        step.suggestions = [
+          'D\u00e9ployer du contenu depuis l\'onglet "Contenu"',
+          'V\u00e9rifier que le bo\u00eetier est connect\u00e9 pour la synchronisation',
+        ];
+      }
+    }, 400);
+  }
+
+  private wizardCheckLoop(): void {
+    const step = this.wizardSteps[2];
+    step.status = 'checking';
+    step.message = 'V\u00e9rification de la boucle de diffusion...';
+
+    setTimeout(() => {
+      try {
+        const config = JSON.parse(this.configJson) as Record<string, unknown>;
+        const sponsors = config['sponsors'] as Array<Record<string, unknown>> | undefined;
+        const sponsorCount = sponsors?.length ?? 0;
+
+        if (sponsorCount > 0) {
+          step.status = 'ok';
+          step.message = `Boucle configur\u00e9e avec ${sponsorCount} vid\u00e9o${sponsorCount > 1 ? 's' : ''}`;
+          step.details = [`${sponsorCount} \u00e9l\u00e9ment${sponsorCount > 1 ? 's' : ''} dans la boucle de diffusion`];
+
+          const timeCategories = config['timeCategories'] as Array<Record<string, unknown>> | undefined;
+          if (timeCategories && timeCategories.length > 0) {
+            step.details.push(`${timeCategories.length} tranche${timeCategories.length > 1 ? 's' : ''} horaire${timeCategories.length > 1 ? 's' : ''} configur\u00e9e${timeCategories.length > 1 ? 's' : ''}`);
+          }
+        } else {
+          step.status = 'error';
+          step.message = 'Boucle de diffusion vide';
+          step.suggestions = [
+            'Configurer la boucle depuis l\'onglet "Contenu"',
+            'Ajouter des vid\u00e9os \u00e0 la boucle de diffusion (sponsors/animations)',
+          ];
+        }
+      } catch {
+        step.status = 'warning';
+        step.message = 'Impossible de lire la configuration';
+        step.details = ['La configuration JSON n\'a pas pu \u00eatre analys\u00e9e'];
+        step.suggestions = ['Recharger les donn\u00e9es du site'];
+      }
+    }, 400);
+  }
+
+  private wizardCheckImpressions(): void {
+    const step = this.wizardSteps[3];
+    step.status = 'checking';
+    step.message = 'V\u00e9rification des impressions r\u00e9centes...';
+
+    if (!this.isConnected) {
+      setTimeout(() => {
+        step.status = 'warning';
+        step.message = 'Impossible de v\u00e9rifier (bo\u00eetier hors ligne)';
+        step.suggestions = ['Connecter le bo\u00eetier pour v\u00e9rifier les impressions'];
+      }, 300);
+      return;
+    }
+
+    // If we already have buffer status data, use it
+    if (this.bufferStatus) {
+      this.wizardEvaluateImpressions(step, this.bufferStatus);
+      return;
+    }
+
+    // Otherwise, trigger a buffer status command
+    this.wizardBufferPollSub?.unsubscribe();
+    this.sitesService.sendCommand(this.siteId, 'get_analytics_buffer_status', {}).subscribe({
+      next: (response: unknown) => {
+        const cmdResponse = response as { success?: boolean; commandId?: string };
+        if (!cmdResponse.commandId) {
+          step.status = 'warning';
+          step.message = 'Impossible de r\u00e9cup\u00e9rer les donn\u00e9es';
+          step.suggestions = ['R\u00e9essayer le diagnostic'];
+          return;
+        }
+
+        const commandId = cmdResponse.commandId;
+        let pollCount = 0;
+        let isPolling = false;
+
+        this.wizardBufferPollSub = interval(1000).subscribe(() => {
+          pollCount++;
+          if (pollCount > 12) {
+            this.wizardBufferPollSub?.unsubscribe();
+            step.status = 'warning';
+            step.message = 'Timeout: le bo\u00eetier ne r\u00e9pond pas';
+            step.suggestions = ['Le bo\u00eetier est peut-\u00eatre surcharg\u00e9, r\u00e9essayer plus tard'];
+            return;
+          }
+          if (isPolling) return;
+          isPolling = true;
+
+          this.sitesService.getCommandStatus(this.siteId, commandId).subscribe({
+            next: (status: { status: string; result?: Record<string, unknown> }) => {
+              isPolling = false;
+              if (status.status === 'completed') {
+                this.wizardBufferPollSub?.unsubscribe();
+                const result = status.result as unknown as BufferStatus;
+                if (result && result.success !== false) {
+                  this.bufferStatus = result;
+                  this.wizardEvaluateImpressions(step, result);
+                } else {
+                  step.status = 'warning';
+                  step.message = '\u00c9chec de r\u00e9cup\u00e9ration du buffer';
+                  step.suggestions = ['R\u00e9essayer le diagnostic'];
+                }
+              } else if (status.status === 'failed') {
+                this.wizardBufferPollSub?.unsubscribe();
+                step.status = 'warning';
+                step.message = 'Commande \u00e9chou\u00e9e sur le bo\u00eetier';
+                step.suggestions = ['V\u00e9rifier les services sur le bo\u00eetier'];
+              }
+            },
+            error: () => {
+              isPolling = false;
+            }
+          });
+        });
+      },
+      error: () => {
+        step.status = 'warning';
+        step.message = 'Erreur de communication avec le serveur';
+        step.suggestions = ['V\u00e9rifier la connexion r\u00e9seau'];
+      }
+    });
+  }
+
+  private wizardEvaluateImpressions(step: WizardStep, buffer: BufferStatus): void {
+    const analyticsCount = buffer.analytics?.event_count ?? 0;
+    const sponsorsCount = buffer.sponsors?.event_count ?? 0;
+    const totalEvents = analyticsCount + sponsorsCount;
+
+    if (totalEvents > 0) {
+      step.status = 'ok';
+      step.message = `${totalEvents} \u00e9v\u00e9nement${totalEvents > 1 ? 's' : ''} en buffer`;
+      step.details = [
+        `Analytics : ${analyticsCount} \u00e9v\u00e9nement${analyticsCount > 1 ? 's' : ''}`,
+        `Sponsors : ${sponsorsCount} \u00e9v\u00e9nement${sponsorsCount > 1 ? 's' : ''}`,
+      ];
+      if (buffer.analytics?.oldest_event) {
+        step.details.push(`Plus ancien : ${new Date(buffer.analytics.oldest_event).toLocaleString('fr-FR')}`);
+      }
+      if (totalEvents > 1000) {
+        step.status = 'warning';
+        step.message = `${totalEvents} \u00e9v\u00e9nements en attente (file importante)`;
+        step.suggestions = ['Le buffer est volumineux. V\u00e9rifier la synchronisation des analytics.'];
+      }
+    } else {
+      // No events in buffer - could mean sync is working well OR no activity
+      step.status = 'warning';
+      step.message = 'Aucun \u00e9v\u00e9nement en buffer';
+      step.details = ['Le buffer est vide : soit la sync fonctionne bien, soit il n\'y a pas d\'activit\u00e9 r\u00e9cente.'];
+      step.suggestions = ['V\u00e9rifier que la boucle de diffusion tourne sur la TV'];
+    }
+  }
+
+  private wizardBuildSummary(): void {
+    const step = this.wizardSteps[4];
+    const score = this.getWizardScore();
+    const total = 4;
+
+    if (score === total) {
+      step.status = 'ok';
+      step.message = 'Tous les diagnostics sont OK';
+    } else if (score >= 2) {
+      step.status = 'warning';
+      const issues = this.wizardSteps.filter((_s, i) => i < 4 && _s.status !== 'ok').length;
+      step.message = `${issues} point${issues > 1 ? 's' : ''} d'attention d\u00e9tect\u00e9${issues > 1 ? 's' : ''}`;
+    } else {
+      step.status = 'error';
+      const issues = this.wizardSteps.filter((_s, i) => i < 4 && _s.status !== 'ok').length;
+      step.message = `${issues} probl\u00e8me${issues > 1 ? 's' : ''} d\u00e9tect\u00e9${issues > 1 ? 's' : ''}`;
+    }
+
+    step.details = this.wizardSteps
+      .filter((_s, i) => i < 4)
+      .map(s => `${this.getWizardStepStatusIcon(s.status)} ${s.title} : ${s.message}`);
+
+    this.wizardRunning = false;
+    this.wizardCompleted = true;
   }
 }

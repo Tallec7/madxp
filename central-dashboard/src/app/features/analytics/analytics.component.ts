@@ -64,9 +64,20 @@ interface RecentActivity {
         </div>
       </div>
 
+      <!-- Skeleton: Stats Cards -->
+      <div class="stats-grid" *ngIf="loading && !lastUpdate">
+        <div class="stat-card skeleton-shimmer skeleton-card" *ngFor="let i of [1,2,3,4]">
+          <div class="skeleton-shimmer skeleton-circle"></div>
+          <div class="stat-content">
+            <div class="skeleton-shimmer skeleton-text" style="width: 50%; height: 28px;"></div>
+            <div class="skeleton-shimmer skeleton-text skeleton-text-short" style="margin-top: 6px;"></div>
+          </div>
+        </div>
+      </div>
+
       <!-- Stats Cards -->
-      <div class="stats-grid">
-        <div class="stat-card" [routerLink]="['/sites']">
+      <div class="stats-grid" *ngIf="!loading || lastUpdate">
+        <div class="stat-card fade-in" [routerLink]="['/sites']">
           <div class="stat-icon">🖥️</div>
           <div class="stat-content">
             <div class="stat-value">{{ stats.total }}</div>
@@ -74,7 +85,7 @@ interface RecentActivity {
           </div>
         </div>
 
-        <div class="stat-card stat-success" [routerLink]="['/sites']" [queryParams]="{status: 'online'}">
+        <div class="stat-card stat-success fade-in" [routerLink]="['/sites']" [queryParams]="{status: 'online'}">
           <div class="stat-icon">✅</div>
           <div class="stat-content">
             <div class="stat-value">{{ stats.online }}</div>
@@ -83,7 +94,7 @@ interface RecentActivity {
           </div>
         </div>
 
-        <div class="stat-card stat-warning" [routerLink]="['/sites']" [queryParams]="{status: 'warning'}">
+        <div class="stat-card stat-warning fade-in" [routerLink]="['/sites']" [queryParams]="{status: 'warning'}">
           <div class="stat-icon">⚠️</div>
           <div class="stat-content">
             <div class="stat-value">{{ stats.warning }}</div>
@@ -92,7 +103,7 @@ interface RecentActivity {
           </div>
         </div>
 
-        <div class="stat-card stat-danger" [routerLink]="['/sites']" [queryParams]="{status: 'offline'}">
+        <div class="stat-card stat-danger fade-in" [routerLink]="['/sites']" [queryParams]="{status: 'offline'}">
           <div class="stat-icon">❌</div>
           <div class="stat-content">
             <div class="stat-value">{{ stats.offline }}</div>
@@ -102,10 +113,65 @@ interface RecentActivity {
         </div>
       </div>
 
-      <!-- Main Content -->
-      <div class="content-grid">
-        <!-- Fleet Metrics -->
+      <!-- Skeleton: Main Content -->
+      <div class="content-grid" *ngIf="loading && !lastUpdate">
+        <!-- Skeleton: Metrics Card -->
         <div class="card metrics-card">
+          <div class="skeleton-shimmer skeleton-text" style="width: 55%; height: 18px; margin-bottom: 20px;"></div>
+          <div class="metrics-list">
+            <div class="metric-row" *ngFor="let i of [1,2,3,4]">
+              <div class="skeleton-shimmer skeleton-text" style="width: 60px; height: 14px;"></div>
+              <div class="metric-bar-container">
+                <div class="skeleton-shimmer" style="height: 100%; width: 60%; border-radius: 4px;"></div>
+              </div>
+              <div class="skeleton-shimmer skeleton-text" style="width: 40px; height: 14px;"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Skeleton: Sites Card -->
+        <div class="card sites-card">
+          <div class="skeleton-shimmer skeleton-text" style="width: 50%; height: 18px; margin-bottom: 20px;"></div>
+          <div class="sites-list">
+            <div class="site-row" *ngFor="let i of [1,2,3]" style="background: transparent;">
+              <div class="skeleton-shimmer skeleton-circle" style="width: 10px; height: 10px;"></div>
+              <div class="site-info">
+                <div class="skeleton-shimmer skeleton-text" style="width: 70%;"></div>
+                <div class="skeleton-shimmer skeleton-text" style="width: 40%; margin-top: 4px;"></div>
+              </div>
+              <div class="skeleton-shimmer skeleton-text" style="width: 60px;"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Skeleton: Activity Card -->
+        <div class="card activity-card">
+          <div class="skeleton-shimmer skeleton-text" style="width: 45%; height: 18px; margin-bottom: 20px;"></div>
+          <div class="activity-list">
+            <div class="activity-row" *ngFor="let i of [1,2,3,4]" style="background: transparent;">
+              <div class="skeleton-shimmer skeleton-circle" style="width: 20px; height: 20px;"></div>
+              <div class="activity-content">
+                <div class="skeleton-shimmer skeleton-text" style="width: 50%;"></div>
+                <div class="skeleton-shimmer skeleton-text" style="width: 80%; margin-top: 4px;"></div>
+              </div>
+              <div class="skeleton-shimmer skeleton-text" style="width: 50px;"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Skeleton: Online Sites Card -->
+        <div class="card online-sites-card">
+          <div class="skeleton-shimmer skeleton-text" style="width: 40%; height: 18px; margin-bottom: 20px;"></div>
+          <div class="sites-grid">
+            <div class="skeleton-shimmer skeleton-card" style="height: 52px;" *ngFor="let i of [1,2,3,4,5,6,7,8]"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Main Content -->
+      <div class="content-grid" *ngIf="!loading || lastUpdate">
+        <!-- Fleet Metrics -->
+        <div class="card metrics-card fade-in">
           <h2>📊 Métriques Moyennes de la Flotte</h2>
           <div class="metrics-list">
             <div class="metric-row">
@@ -163,7 +229,7 @@ interface RecentActivity {
         </div>
 
         <!-- Sites List with Issues -->
-        <div class="card sites-card">
+        <div class="card sites-card fade-in">
           <h2>🚨 Sites nécessitant attention</h2>
           <div class="sites-list" *ngIf="problemSites.length > 0; else noProblems">
             <a *ngFor="let site of problemSites"
@@ -195,7 +261,7 @@ interface RecentActivity {
         </div>
 
         <!-- Recent Activity -->
-        <div class="card activity-card">
+        <div class="card activity-card fade-in">
           <h2>📋 Activité Récente</h2>
           <div class="activity-list" *ngIf="recentActivity.length > 0; else noActivity">
             <div *ngFor="let activity of recentActivity" class="activity-row" [class]="activity.type">
@@ -224,7 +290,7 @@ interface RecentActivity {
         </div>
 
         <!-- Online Sites -->
-        <div class="card online-sites-card">
+        <div class="card online-sites-card fade-in">
           <h2>🟢 Sites en ligne ({{ stats.online }})</h2>
           <div class="sites-grid" *ngIf="onlineSites.length > 0; else noOnlineSites">
             <a *ngFor="let site of onlineSites.slice(0, 12)"
@@ -723,6 +789,32 @@ interface RecentActivity {
       margin-top: 2px;
       text-transform: uppercase;
       letter-spacing: 0.5px;
+    }
+
+    /* Skeleton Shimmer */
+    .skeleton-shimmer {
+      background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite;
+      border-radius: 8px;
+    }
+    @keyframes shimmer {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+    .skeleton-text { height: 14px; margin-bottom: 8px; }
+    .skeleton-text-short { width: 60%; }
+    .skeleton-text-long { width: 90%; }
+    .skeleton-circle { width: 40px; height: 40px; border-radius: 50%; }
+    .skeleton-card { padding: 16px; min-height: 100px; }
+
+    /* Fade in transition */
+    .fade-in {
+      animation: fadeIn 0.3s ease-in;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
     }
 
     /* Responsive */

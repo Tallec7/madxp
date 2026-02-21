@@ -2,6 +2,9 @@
 // Sync Status Widget - Dashboard
 // ============================================================================
 
+/** Track last notified content sync to avoid duplicate notifications */
+let _lastNotifiedContentSync = null;
+
 /**
  * Charge et affiche le widget de statut de synchronisation
  * Appelé depuis loadDashboard() à chaque cycle de rafraîchissement
@@ -19,6 +22,9 @@ async function loadSyncStatus() {
 
         const data = await response.json();
         renderSyncStatus(container, data);
+
+        // F-AUD-14: Show one-time notification for recent content sync
+        checkContentSyncNotification(data);
     } catch (error) {
         console.warn('[admin-ui] Sync status unavailable:', error.message);
         renderSyncStatusError(container);
@@ -71,6 +77,28 @@ function renderSyncStatus(container, data) {
             + '</details>';
     }
 
+    // F-AUD-14: Contenu NEOPRO synchronisé banner
+    let contentSyncBanner = '';
+    if (data.lastContentSyncAt) {
+        const contentSyncAge = Math.floor((Date.now() - new Date(data.lastContentSyncAt).getTime()) / 1000);
+        const contentSyncText = formatRelativeTime(data.lastContentSyncAt);
+        const details = data.lastContentSyncDetails || {};
+        const detailParts = [];
+        if (details.sponsorsCount) detailParts.push(details.sponsorsCount + ' sponsors');
+        if (details.categoriesCount) detailParts.push(details.categoriesCount + ' catégories');
+        if (details.siteSponsorsCount) detailParts.push(details.siteSponsorsCount + ' annonceurs');
+        const detailText = detailParts.length > 0 ? ' (' + detailParts.join(', ') + ')' : '';
+
+        const isRecent = contentSyncAge < 600; // < 10 minutes
+        const bannerClass = isRecent ? 'content-sync-recent' : 'content-sync-old';
+
+        contentSyncBanner = ''
+            + '<div class="content-sync-banner ' + bannerClass + '">'
+            + '  <span class="content-sync-icon">' + (isRecent ? '📡' : '📋') + '</span>'
+            + '  <span>Contenu NEOPRO : ' + contentSyncText + detailText + '</span>'
+            + '</div>';
+    }
+
     container.innerHTML = ''
         + '<div class="sync-status-banner ' + connectionClass + '">'
         + '  <div class="sync-status-main">'
@@ -85,8 +113,37 @@ function renderSyncStatus(container, data) {
         + '    ' + pendingBadge
         + '    ' + deadLetterBadge
         + '  </div>'
+        + '  ' + contentSyncBanner
         + '  ' + historySection
         + '</div>';
+}
+
+/**
+ * F-AUD-14: Show a one-time toast notification when new NEOPRO content is synced.
+ * Only fires once per unique content sync timestamp to avoid spamming.
+ */
+function checkContentSyncNotification(data) {
+    if (!data.lastContentSyncAt) return;
+
+    const syncTs = data.lastContentSyncAt;
+    const syncAge = Date.now() - new Date(syncTs).getTime();
+
+    // Only notify for syncs within the last 5 minutes
+    if (syncAge > 5 * 60 * 1000) return;
+
+    // Only notify once per sync event
+    if (_lastNotifiedContentSync === syncTs) return;
+    _lastNotifiedContentSync = syncTs;
+
+    const details = data.lastContentSyncDetails || {};
+    const parts = [];
+    if (details.siteSponsorsCount) parts.push(details.siteSponsorsCount + ' annonceur(s)');
+    if (details.categoriesCount) parts.push(details.categoriesCount + ' catégorie(s)');
+    const suffix = parts.length > 0 ? ' — ' + parts.join(', ') : '';
+
+    if (typeof showNotification === 'function') {
+        showNotification('📡 Contenu NEOPRO mis à jour' + suffix, 'success');
+    }
 }
 
 /**

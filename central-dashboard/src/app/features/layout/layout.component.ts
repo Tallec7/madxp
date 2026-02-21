@@ -10,11 +10,13 @@ import { NotificationService } from '../../core/services/notification.service';
 import { TranslationService } from '../../core/services/translation.service';
 import { User } from '../../core/models';
 import { LanguageSelectorComponent } from '../../shared/components/language-selector/language-selector.component';
+import { ConfirmDialogComponent } from '../../shared/components/confirm-dialog/confirm-dialog.component';
+import { ConfirmDialogService } from '../../core/services/confirm-dialog.service';
 
 @Component({
   selector: 'app-layout',
   standalone: true,
-  imports: [CommonModule, RouterModule, TranslateModule, LanguageSelectorComponent],
+  imports: [CommonModule, RouterModule, TranslateModule, LanguageSelectorComponent, ConfirmDialogComponent],
   animations: [
     trigger('slideIn', [
       transition(':enter', [
@@ -62,9 +64,13 @@ import { LanguageSelectorComponent } from '../../shared/components/language-sele
             <span class="icon" aria-hidden="true">👥</span>
             <span>{{ 'nav.groups' | translate }}</span>
           </a>
-          <a routerLink="/advertisers" routerLinkActive="active" class="nav-item" [attr.aria-label]="'nav.advertisers' | translate">
+          <a routerLink="/advertisers" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" class="nav-item" [attr.aria-label]="'nav.advertisers' | translate">
             <span class="icon" aria-hidden="true">💼</span>
             <span>{{ 'nav.advertisers' | translate }}</span>
+          </a>
+          <a routerLink="/advertisers/health" routerLinkActive="active" class="nav-item" *ngIf="canManageContent()" aria-label="Sante Annonceurs">
+            <span class="icon" aria-hidden="true">🩺</span>
+            <span>Sante Annonceurs</span>
           </a>
 
           <!-- Portals section for admin users -->
@@ -158,6 +164,9 @@ import { LanguageSelectorComponent } from '../../shared/components/language-sele
         <router-outlet></router-outlet>
       </main>
     </div>
+
+    <!-- Global confirm dialog (replaces native window.confirm) -->
+    <app-confirm-dialog></app-confirm-dialog>
   `,
   styles: [`
     .layout {
@@ -581,10 +590,15 @@ export class LayoutComponent implements OnInit, OnDestroy {
     return icons[type] || 'ℹ️';
   }
 
-  logout(): void {
-    if (confirm(this.translationService.instant('auth.logoutConfirm'))) {
-      this.socketService.disconnect();
-      this.authService.logout();
-    }
+  private readonly confirmDialog = inject(ConfirmDialogService);
+
+  async logout(): Promise<void> {
+    const ok = await this.confirmDialog.confirm(
+      this.translationService.instant('auth.logoutConfirm'),
+      { title: 'Déconnexion', confirmLabel: 'Se déconnecter', confirmStyle: 'primary' },
+    );
+    if (!ok) return;
+    this.socketService.disconnect();
+    this.authService.logout();
   }
 }

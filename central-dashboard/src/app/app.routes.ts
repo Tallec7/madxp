@@ -115,19 +115,26 @@ export const routes: Routes = [
         path: 'advertisers',
         loadComponent: () => import('./features/advertisers/advertisers-list.component').then(m => m.AdvertisersListComponent)
       },
+      // F-AUD-07: Advertiser Health Matrix (MUST be before advertisers/:id to avoid param match)
+      {
+        path: 'advertisers/health',
+        canActivate: [roleGuard],
+        data: { roles: ['super_admin', 'admin', 'operator'] },
+        loadComponent: () => import('./features/advertisers/advertiser-health.component').then(m => m.AdvertiserHealthComponent)
+      },
       {
         path: 'advertisers/:id',
-        loadComponent: () => import('./features/sponsors/sponsor-detail.component').then(m => m.SponsorDetailComponent)
+        loadComponent: () => import('./features/advertisers/advertiser-detail.component').then(m => m.SponsorDetailComponent)
       },
       {
         path: 'advertisers/:id/videos',
-        loadComponent: () => import('./features/sponsors/sponsor-videos.component').then(m => m.SponsorVideosComponent)
+        loadComponent: () => import('./features/advertisers/advertiser-videos.component').then(m => m.SponsorVideosComponent)
       },
       {
         path: 'advertisers/:id/analytics',
         canActivate: [roleGuard],
         data: { roles: ['super_admin', 'admin', 'operator', 'advertiser'] },
-        loadComponent: () => import('./features/sponsors/sponsor-analytics.component').then(m => m.SponsorAnalyticsComponent)
+        loadComponent: () => import('./features/advertisers/advertiser-analytics.component').then(m => m.SponsorAnalyticsComponent)
       },
       {
         path: 'network/advertisers/:id/analytics',

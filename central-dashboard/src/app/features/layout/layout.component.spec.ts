@@ -7,6 +7,7 @@ import { LayoutComponent } from './layout.component';
 import { AuthService } from '../../core/services/auth.service';
 import { SocketService } from '../../core/services/socket.service';
 import { NotificationService } from '../../core/services/notification.service';
+import { ConfirmDialogService } from '../../core/services/confirm-dialog.service';
 import { TranslationService } from '../../core/services/translation.service';
 import { Router } from '@angular/router';
 
@@ -16,6 +17,7 @@ describe('LayoutComponent', () => {
   let authService: jasmine.SpyObj<AuthService>;
   let socketService: jasmine.SpyObj<SocketService>;
   let notificationService: jasmine.SpyObj<NotificationService>;
+  let confirmDialogService: jasmine.SpyObj<ConfirmDialogService>;
   let translationService: jasmine.SpyObj<TranslationService>;
   let router: Router;
 
@@ -45,6 +47,11 @@ describe('LayoutComponent', () => {
     const notificationServiceMock = jasmine.createSpyObj('NotificationService', [], {
       notification$: notificationSubject.asObservable()
     });
+
+    const confirmDialogServiceMock = jasmine.createSpyObj('ConfirmDialogService', ['confirm'], {
+      dialog$: new Subject<any>().asObservable()
+    });
+    confirmDialogServiceMock.confirm.and.returnValue(Promise.resolve(true));
 
     const translationServiceMock = jasmine.createSpyObj('TranslationService', ['instant', 'initializeLanguage', 'setLanguage', 'getCurrentLanguage', 'getLanguageOption'], {
       currentLang$: new BehaviorSubject('fr').asObservable(),
@@ -93,6 +100,7 @@ describe('LayoutComponent', () => {
         { provide: AuthService, useValue: authServiceMock },
         { provide: SocketService, useValue: socketServiceMock },
         { provide: NotificationService, useValue: notificationServiceMock },
+        { provide: ConfirmDialogService, useValue: confirmDialogServiceMock },
         { provide: TranslationService, useValue: translationServiceMock },
       ],
     }).compileComponents();
@@ -102,6 +110,7 @@ describe('LayoutComponent', () => {
     authService = TestBed.inject(AuthService) as jasmine.SpyObj<AuthService>;
     socketService = TestBed.inject(SocketService) as jasmine.SpyObj<SocketService>;
     notificationService = TestBed.inject(NotificationService) as jasmine.SpyObj<NotificationService>;
+    confirmDialogService = TestBed.inject(ConfirmDialogService) as jasmine.SpyObj<ConfirmDialogService>;
     translationService = TestBed.inject(TranslationService) as jasmine.SpyObj<TranslationService>;
     router = TestBed.inject(Router);
   });
@@ -302,22 +311,24 @@ describe('LayoutComponent', () => {
   });
 
   describe('logout', () => {
-    it('should call authService.logout on confirm', () => {
-      spyOn(window, 'confirm').and.returnValue(true);
+    it('should call authService.logout on confirm', fakeAsync(() => {
+      confirmDialogService.confirm.and.returnValue(Promise.resolve(true));
 
       component.logout();
+      tick();
 
       expect(socketService.disconnect).toHaveBeenCalled();
       expect(authService.logout).toHaveBeenCalled();
-    });
+    }));
 
-    it('should not logout on cancel', () => {
-      spyOn(window, 'confirm').and.returnValue(false);
+    it('should not logout on cancel', fakeAsync(() => {
+      confirmDialogService.confirm.and.returnValue(Promise.resolve(false));
 
       component.logout();
+      tick();
 
       expect(authService.logout).not.toHaveBeenCalled();
-    });
+    }));
   });
 
   describe('Template', () => {

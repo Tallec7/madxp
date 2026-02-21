@@ -7,6 +7,7 @@ import { SitesService } from '../../core/services/sites.service';
 import { GroupsService } from '../../core/services/groups.service';
 import { SocketService } from '../../core/services/socket.service';
 import { NotificationService } from '../../core/services/notification.service';
+import { ConfirmDialogService } from '../../core/services/confirm-dialog.service';
 import { LoggerService } from '../../core/services/logger.service';
 import { ErrorExtractor } from '../../core/utils/error-extractor';
 import { Site, Group } from '../../core/models';
@@ -1873,6 +1874,7 @@ export class ContentManagementComponent implements OnInit, OnDestroy {
   private readonly groupsService = inject(GroupsService);
   private readonly socketService = inject(SocketService);
   private readonly notificationService = inject(NotificationService);
+  private readonly confirmDialog = inject(ConfirmDialogService);
   private readonly logger = inject(LoggerService);
   private subscriptions = new Subscription();
   private searchTimeout: ReturnType<typeof setTimeout> | null = null;
@@ -2173,8 +2175,12 @@ export class ContentManagementComponent implements OnInit, OnDestroy {
     }
   }
 
-  deleteVideo(video: Video): void {
-    if (confirm(`Supprimer la vidéo "${video.title}" ?`)) {
+  async deleteVideo(video: Video): Promise<void> {
+    const ok = await this.confirmDialog.confirm(
+      `Supprimer la vidéo "${video.title}" ?`,
+      { title: 'Suppression', confirmLabel: 'Supprimer' },
+    );
+    if (ok) {
       this.apiService.delete(`/videos/${video.id}`).subscribe({
         next: () => {
           this.videos = this.videos.filter(v => v.id !== video.id);

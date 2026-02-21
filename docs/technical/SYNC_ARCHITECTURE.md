@@ -274,21 +274,22 @@ Commandes:          ────────────────────
 
 ### 4.2 Événements de Synchronisation
 
-| Événement                    | Direction          | Déclencheur                    | Action                                                            |
-| ---------------------------- | ------------------ | ------------------------------ | ----------------------------------------------------------------- |
-| **Connexion du Pi**          | Bidirectionnel     | Pi se connecte au central      | Échange état complet + traitement pending (queue + config)        |
-| **Déploiement vidéo NEOPRO** | Central → Local    | Admin NEOPRO clique "Déployer" | Download + merge config                                           |
-| **Modification locale**      | Local → Central    | Opérateur modifie via Admin UI | Upload état vers central                                          |
-| **sync_local_state**         | Local → Central    | Connexion + changement vidéos  | Config + liste vidéos + stockage                                  |
-| **Heartbeat**                | Local → Central    | Timer 30s                      | Métriques système + statut kiosk + recording state + player state |
-| **screenshot-request**       | Central → Local    | Dashboard cloud remote         | Capture JPEG du player TV via canvas.drawImage()                  |
-| **screenshot-data**          | Local → Central    | Réponse screenshot             | JPEG 480p ou `{ error }` si échec (v3.49+)                        |
-| **Commande admin**           | Central → Local    | Admin NEOPRO envoie commande   | Exécution sur Pi                                                  |
-| **sync_profiles**            | Central → Local    | Admin déploie profils          | Écriture profiles/ + clubs.json                                   |
-| **switch_profile**           | Central → Local    | Admin change profil actif      | Activation profil + merge config                                  |
-| **profile-switch**           | Local (front→back) | Remote sélectionne un profil   | Activation profil + reload TV                                     |
-| **update_config (sponsors)** | Central → Local    | Déploiement orchestré          | Merge `siteSponsors` dans `localSponsors[]` du Pi (P8)            |
-| **sponsor_ids_resolved**     | Central → Local    | Réponse à sync_local_state     | Mapping `{ localId: centralUUID }` pour sponsors locaux (P3/P9)   |
+| Événement                    | Direction          | Déclencheur                    | Action                                                                                |
+| ---------------------------- | ------------------ | ------------------------------ | ------------------------------------------------------------------------------------- |
+| **Connexion du Pi**          | Bidirectionnel     | Pi se connecte au central      | Échange état complet + traitement pending (queue + config)                            |
+| **Déploiement vidéo NEOPRO** | Central → Local    | Admin NEOPRO clique "Déployer" | Download + merge config                                                               |
+| **Modification locale**      | Local → Central    | Opérateur modifie via Admin UI | Upload état vers central                                                              |
+| **sync_local_state**         | Local → Central    | Connexion + changement vidéos  | Config + liste vidéos + stockage                                                      |
+| **Heartbeat**                | Local → Central    | Timer 30s                      | Métriques système + statut kiosk + recording state + player state                     |
+| **screenshot-request**       | Central → Local    | Dashboard cloud remote         | Capture JPEG du player TV via canvas.drawImage()                                      |
+| **screenshot-data**          | Local → Central    | Réponse screenshot             | JPEG 480p ou `{ error }` si échec (v3.49+)                                            |
+| **Commande admin**           | Central → Local    | Admin NEOPRO envoie commande   | Exécution sur Pi                                                                      |
+| **sync_profiles**            | Central → Local    | Admin déploie profils          | Écriture profiles/ + clubs.json                                                       |
+| **switch_profile**           | Central → Local    | Admin change profil actif      | Activation profil + merge config                                                      |
+| **profile-switch**           | Local (front→back) | Remote sélectionne un profil   | Activation profil + reload TV                                                         |
+| **update_config (sponsors)** | Central → Local    | Déploiement orchestré          | Merge `siteSponsors` dans `localSponsors[]` du Pi (P8)                                |
+| **sponsor_ids_resolved**     | Central → Local    | Réponse à sync_local_state     | Mapping `{ localId: centralUUID }` pour sponsors locaux (P3/P9)                       |
+| **content_received** (hist.) | Local (interne)    | Après update_config réussi     | Événement sync-history.json : sponsors/catégories reçus, bannière admin Pi (F-AUD-14) |
 
 > **Note** : Le heartbeat (30s) envoie les métriques système + le statut kiosk Chromium (lu depuis `/home/pi/neopro/data/kiosk-status.json`, écrit par `kiosk-watchdog.sh`) + le recording state analytics (`{ isRecording, isManualOverride }`, récupéré depuis le local server via connexion persistante `local-socket.js`) + le player state TV (`{ currentVideo, progress, phase, isPlaying, loopIndex, ... }`, récupéré depuis le local server via callback `get-player-state` sur la connexion persistante). Le recording state et le player state sont stockés en mémoire côté central (Maps éphémères) et exposés dans `GET /api/remote/:siteId/state` pour la cloud remote. Le player state est aussi broadcasté en temps réel vers la room `dashboard` via l'événement `player_state_updated`. La liste des vidéos est synchronisée via `sync_local_state` à la connexion et lors de changements détectés par le VideoWatcher.
 >
@@ -1137,6 +1138,7 @@ SafeNetworkOperations: hotspot channel OK { currentChannel: 6, currentCount: 2, 
 | 2.2     | 2026-02-17 | Claude/NEOPRO | Screenshot HTTP response : remplacement du relay Socket.IO room par request-response HTTP                            |
 | 2.3     | 2026-02-18 | Claude/NEOPRO | Sync sponsors Dashboard → Pi : `siteSponsors` dans payload déploiement, `mergeSiteSponsors()`, monitoring Prometheus |
 | 2.4     | 2026-02-19 | Claude/NEOPRO | Auth retry transitoire (5 tentatives), auto-optimisation canal hotspot, fix daily stats `screen_time_seconds`        |
+| 2.5     | 2026-02-21 | Claude/NEOPRO | Événement `content_received` dans sync-history, bannière sync contenu admin Pi, métriques sponsor health Prometheus  |
 
 ---
 

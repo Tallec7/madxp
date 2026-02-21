@@ -1,6 +1,6 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule } from '@angular/router';
+import { Router, RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { TranslateModule } from '@ngx-translate/core';
 import { ApiService } from '../../core/services/api.service';
@@ -50,27 +50,44 @@ interface Advertiser {
         </select>
       </div>
 
-      <!-- Loading State -->
-      <div *ngIf="loading" class="loading">
-        <div class="spinner"></div>
-        <p>Chargement des annonceurs...</p>
+      <!-- Loading Skeleton State -->
+      <div *ngIf="loading" class="advertisers-grid">
+        <div *ngFor="let i of [1,2,3,4,5,6]" class="advertiser-card skeleton-card-container">
+          <div class="advertiser-header">
+            <div class="skeleton-shimmer skeleton-avatar"></div>
+            <div class="advertiser-info">
+              <div class="skeleton-shimmer skeleton-text" style="width: 65%; height: 18px;"></div>
+              <div class="skeleton-shimmer skeleton-text" style="width: 40%; height: 22px; margin-top: 6px; border-radius: 12px;"></div>
+            </div>
+          </div>
+          <div class="advertiser-details">
+            <div class="skeleton-detail-row" *ngFor="let j of [1,2]">
+              <div class="skeleton-shimmer skeleton-text" style="width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0;"></div>
+              <div class="skeleton-shimmer skeleton-text" style="width: 70%; height: 13px;"></div>
+            </div>
+          </div>
+          <div class="advertiser-actions">
+            <div class="skeleton-shimmer skeleton-btn"></div>
+            <div class="skeleton-shimmer skeleton-btn"></div>
+          </div>
+        </div>
       </div>
 
       <!-- Empty State -->
       <div *ngIf="!loading && filteredAdvertisers.length === 0" class="empty-state">
         <div class="icon">📊</div>
-        <h2>Aucun annonceur trouve</h2>
+        <h2>Aucun annonceur trouvé</h2>
         <p *ngIf="searchTerm || statusFilter">Essayez de modifier vos filtres</p>
         <p *ngIf="!searchTerm && !statusFilter && canManage">
-          Creez votre premier annonceur pour commencer a suivre les analytics.
+          Créez votre premier annonceur pour commencer à suivre les analytics.
         </p>
         <button class="btn btn-primary" (click)="openCreateModal()" *ngIf="!searchTerm && !statusFilter && canManage">
-          Creer un Annonceur
+          Créer un Annonceur
         </button>
       </div>
 
       <!-- Advertisers Grid -->
-      <div *ngIf="!loading && filteredAdvertisers.length > 0" class="advertisers-grid">
+      <div *ngIf="!loading && filteredAdvertisers.length > 0" class="advertisers-grid fade-in">
         <div *ngFor="let advertiser of filteredAdvertisers" class="advertiser-card" [routerLink]="['/advertisers', advertiser.id]">
           <div class="advertiser-header">
             <div class="advertiser-logo" *ngIf="advertiser.logo_url">
@@ -243,24 +260,51 @@ interface Advertiser {
       min-width: 200px;
     }
 
-    .loading {
-      text-align: center;
-      padding: 4rem;
+    /* Skeleton Shimmer */
+    .skeleton-shimmer {
+      background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite;
+      border-radius: 8px;
+    }
+    @keyframes shimmer {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+    .skeleton-text { height: 14px; margin-bottom: 8px; }
+    .skeleton-avatar {
+      width: 60px;
+      height: 60px;
+      border-radius: 8px;
+      flex-shrink: 0;
+    }
+    .skeleton-detail-row {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 0;
+    }
+    .skeleton-btn {
+      flex: 1;
+      height: 36px;
+      border-radius: 8px;
+    }
+    .skeleton-card-container {
+      cursor: default;
+    }
+    .skeleton-card-container:hover {
+      border-color: #e0e0e0;
+      box-shadow: none;
+      transform: none;
     }
 
-    .spinner {
-      width: 50px;
-      height: 50px;
-      border: 4px solid #f3f3f3;
-      border-top: 4px solid #3498db;
-      border-radius: 50%;
-      animation: spin 1s linear infinite;
-      margin: 0 auto 1rem;
+    /* Fade in transition */
+    .fade-in {
+      animation: fadeIn 0.3s ease-in;
     }
-
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
     }
 
     .empty-state {
@@ -533,6 +577,7 @@ export class AdvertisersListComponent implements OnInit {
   private notification = inject(NotificationService);
   private authService = inject(AuthService);
   private logger = inject(LoggerService);
+  private router = inject(Router);
 
   ngOnInit() {
     this.checkPermissions();
@@ -634,7 +679,7 @@ export class AdvertisersListComponent implements OnInit {
     request$.subscribe({
       next: () => {
         this.notification.success(
-          this.isEditing ? 'Annonceur modifie avec succes' : 'Annonceur cree avec succes'
+          this.isEditing ? 'Annonceur modifié avec succès' : 'Annonceur créé avec succès'
         );
         this.closeModal();
         this.loadAdvertisers();
@@ -653,7 +698,6 @@ export class AdvertisersListComponent implements OnInit {
 
   viewAnalytics(event: Event, advertiserId: string) {
     event.stopPropagation();
-    // Navigate to analytics view
-    window.location.href = `/advertisers/${advertiserId}`;
+    this.router.navigate(['/advertisers', advertiserId]);
   }
 }

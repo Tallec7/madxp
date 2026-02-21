@@ -5,6 +5,7 @@ const logger = require('../logger');
 const { config } = require('../config');
 const { mergeConfigurations, calculateConfigHash } = require('../utils/config-merge');
 const { atomicWriteJson, safeReadConfig } = require('../utils/safe-config-io');
+const syncHistory = require('../services/sync-history');
 
 const execAsync = util.promisify(exec);
 
@@ -65,6 +66,18 @@ async function updateConfig(data) {
 
     // Notifier l'application locale du changement
     await notifyLocalApp();
+
+    // Enregistrer l'événement dans l'historique sync (F-AUD-14)
+    const sponsorsCount = finalConfig.sponsors?.length || 0;
+    const categoriesCount = finalConfig.categories?.length || 0;
+    const siteSponsorsCount = (data.neoProContent || data.configuration)?.siteSponsors?.length || 0;
+    await syncHistory.recordSync('content_received', {
+      mode: data.mode || 'merge',
+      sponsorsCount,
+      categoriesCount,
+      siteSponsorsCount,
+      hash: calculateConfigHash(finalConfig),
+    }, true);
 
     logger.info('Configuration updated successfully');
 

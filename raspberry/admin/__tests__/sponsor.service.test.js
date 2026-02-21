@@ -276,7 +276,7 @@ describe('SponsorService', () => {
   // =========================================================================
 
   describe('addToLoop / removeFromLoop', () => {
-    it('should add video entries to sponsors[] array', async () => {
+    it('should add video entries to sponsors[] array (frequency x videos)', async () => {
       const created = await sponsorService.createSponsor({ name: 'Loop' });
       await sponsorService.linkVideo(created.localId, 'loop1.mp4');
       await sponsorService.linkVideo(created.localId, 'loop2.mp4');
@@ -286,7 +286,8 @@ describe('SponsorService', () => {
 
       const config = configService._getConfig();
       const entries = config.sponsors.filter(s => s._sponsorLocalId === created.localId);
-      expect(entries.length).toBe(2);
+      // Default frequency=2, so 2 videos × 2 = 4 entries
+      expect(entries.length).toBe(4);
       expect(entries[0].owner).toBe('club');
       expect(entries[0].locked).toBe(false);
     });
@@ -312,6 +313,7 @@ describe('SponsorService', () => {
           centralId: 'central-uuid-123',
           name: 'Resolved',
           videoFilenames: ['ad.mp4'],
+          frequency: 1, // Use frequency 1 for simpler assertion
           isActive: true,
         }],
       });
@@ -327,6 +329,44 @@ describe('SponsorService', () => {
     it('should throw NotFoundError for nonexistent sponsor', async () => {
       await expect(sponsorService.addToLoop('nope'))
         .rejects.toThrow(NotFoundError);
+    });
+
+    it('should create frequency × video count entries in loop', async () => {
+      const created = await sponsorService.createSponsor({ name: 'FreqTest' });
+      await sponsorService.linkVideo(created.localId, 'v1.mp4');
+      await sponsorService.linkVideo(created.localId, 'v2.mp4');
+
+      // Update frequency to 3 (high)
+      await sponsorService.updateSponsor(created.localId, { frequency: 3 });
+      await sponsorService.addToLoop(created.localId);
+
+      const config = configService._getConfig();
+      const entries = config.sponsors.filter(s => s._sponsorLocalId === created.localId);
+      // 2 videos × frequency 3 = 6 entries
+      expect(entries.length).toBe(6);
+      // All entries should have paths from our videos
+      const paths = entries.map(e => e.path);
+      expect(paths.filter(p => p === 'v1.mp4').length).toBe(3);
+      expect(paths.filter(p => p === 'v2.mp4').length).toBe(3);
+    });
+
+    it('should rebuild loop entries when frequency changes for an in-loop sponsor', async () => {
+      const created = await sponsorService.createSponsor({ name: 'RebuildTest' });
+      await sponsorService.linkVideo(created.localId, 'vid.mp4');
+      await sponsorService.addToLoop(created.localId);
+
+      let config = configService._getConfig();
+      let entries = config.sponsors.filter(s => s._sponsorLocalId === created.localId);
+      // Default freq=2, 1 video → 2 entries
+      expect(entries.length).toBe(2);
+
+      // Change frequency to 4
+      await sponsorService.updateSponsor(created.localId, { frequency: 4 });
+
+      config = configService._getConfig();
+      entries = config.sponsors.filter(s => s._sponsorLocalId === created.localId);
+      // Now: 1 video × frequency 4 = 4 entries
+      expect(entries.length).toBe(4);
     });
   });
 });

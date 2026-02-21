@@ -422,6 +422,7 @@ export interface SponsorVideo {
 export interface SiteSponsorDeployment {
   id: string;
   name: string;
+  display_name: string;
   contactEmail: string | null;
   contactPhone: string | null;
   logoUrl: string | null;

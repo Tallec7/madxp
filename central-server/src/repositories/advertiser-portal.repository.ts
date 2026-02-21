@@ -220,17 +220,20 @@ class AdvertiserPortalRepositoryImpl extends BaseRepository<QueryResultRow> {
   async getDashboardReach(advertiserId: string): Promise<PortalReachStatsRow | null> {
     const result = await query<PortalReachStatsRow>(
       `SELECT
-        COALESCE(SUM(DISTINCT cs.audience_estimate), 0) as total_reach,
-        COUNT(DISTINCT cs.id) as matches_with_ads,
-        ROUND(AVG(cs.audience_estimate)::numeric, 0) as avg_audience_per_match
-       FROM advertiser_impressions ai
-       JOIN advertiser_videos av ON av.video_id = ai.video_id
-       JOIN club_sessions cs ON cs.site_id = ai.site_id
-         AND ai.played_at >= cs.started_at
-         AND (cs.ended_at IS NULL OR ai.played_at <= cs.ended_at)
-         AND cs.audience_estimate IS NOT NULL
-       WHERE av.advertiser_id = $1
-         AND ai.played_at >= CURRENT_DATE - INTERVAL '30 days'`,
+        COALESCE(SUM(unique_sessions.audience_estimate), 0) as total_reach,
+        COUNT(*) as matches_with_ads,
+        ROUND(AVG(unique_sessions.audience_estimate)::numeric, 0) as avg_audience_per_match
+       FROM (
+         SELECT DISTINCT cs.id, cs.audience_estimate
+         FROM advertiser_impressions ai
+         JOIN advertiser_videos av ON av.video_id = ai.video_id
+         JOIN club_sessions cs ON cs.site_id = ai.site_id
+           AND ai.played_at >= cs.started_at
+           AND (cs.ended_at IS NULL OR ai.played_at <= cs.ended_at)
+           AND cs.audience_estimate IS NOT NULL
+         WHERE av.advertiser_id = $1
+           AND ai.played_at >= CURRENT_DATE - INTERVAL '30 days'
+       ) unique_sessions`,
       [advertiserId]
     );
     return result.rows[0] || null;

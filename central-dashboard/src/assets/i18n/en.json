@@ -180,7 +180,11 @@
     "analytics": "Analytics",
     "searchSponsor": "Search a sponsor...",
     "searchVideo": "Search a video...",
-    "editPriority": "Edit priority"
+    "editPriority": "Edit priority",
+    "searchAdvertiserOrClub": "Search advertiser or club...",
+    "wizardNext": "Next →",
+    "wizardSkip": "Skip →",
+    "wizardNoVideo": "None (configure later)"
   },
   "content": {
     "title": "Content Management",
