@@ -2,7 +2,7 @@
  * Neopro Admin Panel - JavaScript
  * FICHIER GENERE - Ne pas editer directement
  * Editer les fichiers dans modules/ puis lancer: bash build-admin.sh
- * Build: 6df47fdb
+ * Build: 0eb8fc10
  */
 
 
@@ -688,13 +688,13 @@ function formatDuration(seconds) {
 // Sync Status Widget - Dashboard
 // ============================================================================
 
+/** Track last notified content sync to avoid duplicate notifications */
+let _lastNotifiedContentSync = null;
+
 /**
  * Charge et affiche le widget de statut de synchronisation
  * Appelé depuis loadDashboard() à chaque cycle de rafraîchissement
  */
-/** Track last notified content sync to avoid duplicate notifications */
-let _lastNotifiedContentSync = null;
-
 async function loadSyncStatus() {
     const container = document.getElementById('sync-status-widget');
     if (!container) return;
@@ -806,6 +806,7 @@ function renderSyncStatus(container, data) {
 
 /**
  * F-AUD-14: Show a one-time toast notification when new NEOPRO content is synced.
+ * Only fires once per unique content sync timestamp to avoid spamming.
  */
 function checkContentSyncNotification(data) {
     if (!data.lastContentSyncAt) return;
@@ -2773,10 +2774,10 @@ function renderSponsorStats(container, data) {
 
     // KPI Cards
     html += '<div class="sponsor-stats-kpis">';
-    html += renderStatKpiCard('📺', summary.total_impressions, 'Passages');
-    html += renderStatKpiCard('⏱️', formatSponsorScreenTime(summary.total_screen_time_seconds), 'Temps écran');
-    html += renderStatKpiCard('✅', summary.avg_completion_rate + '%', 'Complétion');
-    html += renderStatKpiCard('📅', summary.active_days, 'Jours actifs');
+    html += renderKpiCard('📺', summary.total_impressions, 'Passages');
+    html += renderKpiCard('⏱️', formatScreenTime(summary.total_screen_time_seconds), 'Temps écran');
+    html += renderKpiCard('✅', summary.avg_completion_rate + '%', 'Complétion');
+    html += renderKpiCard('📅', summary.active_days, 'Jours actifs');
     html += '</div>';
 
     // Mini chart (barres quotidiennes)
@@ -2799,7 +2800,7 @@ function renderSponsorStats(container, data) {
             html += `<tr>
                 <td><strong>${escapeHtml(s.name)}</strong>${sourceBadge}</td>
                 <td>${s.impressions}</td>
-                <td>${formatSponsorScreenTime(s.screen_time_seconds)}</td>
+                <td>${formatScreenTime(s.screen_time_seconds)}</td>
                 <td>${s.completion_rate}%</td>
             </tr>`;
         }
@@ -2811,9 +2812,9 @@ function renderSponsorStats(container, data) {
 }
 
 /**
- * Rend une carte KPI stats.
+ * Rend une carte KPI.
  */
-function renderStatKpiCard(icon, value, label) {
+function renderKpiCard(icon, value, label) {
     return `
         <div class="card sponsor-kpi-card">
             <div style="font-size: 20px; margin-bottom: 4px;">${icon}</div>
@@ -2855,9 +2856,9 @@ function renderDailyBars(daily) {
 }
 
 /**
- * Formate des secondes en durée lisible (stats sponsor).
+ * Formate des secondes en durée lisible.
  */
-function formatSponsorScreenTime(seconds) {
+function formatScreenTime(seconds) {
     if (!seconds || seconds <= 0) return '0 min';
     const hrs = Math.floor(seconds / 3600);
     const mins = Math.floor((seconds % 3600) / 60);
@@ -5375,7 +5376,6 @@ function switchTab(tab) {
             break;
         case 'sponsors':
             loadSponsors();
-            loadSponsorStats();
             break;
         case 'network':
             loadNetwork();
@@ -5422,7 +5422,6 @@ window.connectToWifi = connectToWifi;
 window.removeBssidLock = removeBssidLock;
 
 // Sponsor functions
-window.loadSponsorStats = loadSponsorStats;
 window.loadSponsors = loadSponsors;
 window.openSponsorModal = openSponsorModal;
 window.closeSponsorModal = closeSponsorModal;
@@ -5430,8 +5429,3 @@ window.saveSponsor = saveSponsor;
 window.confirmDeleteSponsor = confirmDeleteSponsor;
 window.closeSponsorDeleteModal = closeSponsorDeleteModal;
 window.toggleSponsorLoop = toggleSponsorLoop;
-
-// Sponsor wizard functions
-window.goToWizardStep = goToWizardStep;
-window.selectWizardVideoOption = selectWizardVideoOption;
-window.clearWizardUpload = clearWizardUpload;

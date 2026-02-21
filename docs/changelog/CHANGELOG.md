@@ -1,3 +1,9 @@
+# [3.63.0](https://github.com/Tallec7/neopro/compare/v3.62.1...v3.63.0) (2026-02-21)
+
+### Features
+
+- **audit:** complete sponsor & analytics audit — 24 features, 87 SP (P0+P1+P2) ([0eb8fc1](https://github.com/Tallec7/neopro/commit/0eb8fc10691f63ae7b76a7fb480236d063b72121))
+
 ## Audit Sponsors & Analytics — P0 + P1 + P2 (2026-02-21)
 
 ### ✅ 24 Features / 87 Story Points — Complete Audit Sprint
