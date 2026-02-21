@@ -23,12 +23,21 @@ DROP VIEW IF EXISTS advertiser_performance_by_site CASCADE;
 DROP VIEW IF EXISTS advertiser_stats_summary CASCADE;
 DROP VIEW IF EXISTS top_advertiser_videos CASCADE;
 
--- 2. Drop RLS policies
-DROP POLICY IF EXISTS site_insert_advertiser_impressions ON advertiser_impressions;
-DROP POLICY IF EXISTS site_select_own_advertiser_impressions ON advertiser_impressions;
-
--- 3. Drop the table
-DROP TABLE IF EXISTS advertiser_impressions CASCADE;
+-- 2. Drop RLS policies + table (only if table exists)
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.tables
+    WHERE table_schema = 'public' AND table_name = 'advertiser_impressions'
+  ) THEN
+    DROP POLICY IF EXISTS site_insert_advertiser_impressions ON advertiser_impressions;
+    DROP POLICY IF EXISTS site_select_own_advertiser_impressions ON advertiser_impressions;
+    DROP TABLE advertiser_impressions CASCADE;
+    RAISE NOTICE 'advertiser_impressions table dropped successfully';
+  ELSE
+    RAISE NOTICE 'advertiser_impressions table does not exist — skipping drop (expected if Pipeline B was never functional)';
+  END IF;
+END $$;
 
 -- 4. Recreate views using video_plays
 CREATE OR REPLACE VIEW advertiser_analytics_summary AS
