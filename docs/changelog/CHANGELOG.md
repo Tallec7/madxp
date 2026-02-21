@@ -1,3 +1,9 @@
+## [3.65.2](https://github.com/Tallec7/neopro/compare/v3.65.1...v3.65.2) (2026-02-21)
+
+### Bug Fixes
+
+- **sponsors:** lisibilite dropdown video - titre + filename sans doublons ([07cd44a](https://github.com/Tallec7/neopro/commit/07cd44ad1eae5f6fda67ad36375a9532f0ab462d))
+
 ## [3.65.1](https://github.com/Tallec7/neopro/compare/v3.65.0...v3.65.1) (2026-02-21)
 
 ### Bug Fixes
