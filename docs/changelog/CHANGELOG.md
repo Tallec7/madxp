@@ -1,3 +1,9 @@
+## [3.64.1](https://github.com/Tallec7/neopro/compare/v3.64.0...v3.64.1) (2026-02-21)
+
+### Bug Fixes
+
+- **dashboard:** ErrorExtractor.extract → getMessage dans advertiser-health ([97eb0da](https://github.com/Tallec7/neopro/commit/97eb0dab4f315bbfef4185836afbca6cb15cace2))
+
 # [3.64.0](https://github.com/Tallec7/neopro/compare/v3.63.0...v3.64.0) (2026-02-21)
 
 ### Features
