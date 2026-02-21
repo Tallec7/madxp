@@ -167,9 +167,24 @@ class VideoDeployHandler {
 
       await this.updateConfiguration(finalVideoData);
 
+      // === LED variant deployment (non-blocking) ===
+      let ledResult = null;
+      if (data.ledVariant && data.ledVariant.videoUrl) {
+        try {
+          ledResult = await this.deployLedVariant(data.ledVariant, finalVideoData, progressCallback);
+          logger.info('LED variant deployed', { ledResult });
+        } catch (ledError) {
+          // Non-bloquant: erreur LED ne fait pas échouer le déploiement TV
+          logger.warn('LED variant deployment failed (non-blocking)', {
+            error: ledError.message,
+            videoId: data.videoId,
+          });
+        }
+      }
+
       await this.notifyLocalApp();
 
-      logger.info('Video deployed successfully', { targetPath });
+      logger.info('Video deployed successfully', { targetPath, hasLedVariant: !!ledResult });
 
       const stat = await fs.stat(targetPath);
       return {
@@ -178,11 +193,106 @@ class VideoDeployHandler {
         size: stat.size,
         checksum, // Checksum vérifié
         filename: finalFilename,
+        ledVariant: ledResult,
       };
     } catch (error) {
       logger.error('Video deployment failed', { error: error.message, stack: error.stack });
       throw error;
     }
+  }
+
+  /**
+   * Déploie la variante LED d'une vidéo
+   * Télécharge dans videos-led/{category}/{subcategory}/ et met à jour la config
+   * @param {object} ledVariant Données de la variante LED
+   * @param {object} tvVideoData Données de la vidéo TV déjà déployée
+   * @param {function} progressCallback Callback pour le progrès
+   */
+  async deployLedVariant(ledVariant, tvVideoData, progressCallback) {
+    const { videoUrl, filename, checksum, width, height, duration } = ledVariant;
+
+    const ledBaseDir = config.paths.videos.replace(/\/videos\/?$/, '/videos-led');
+    const targetDir = path.join(ledBaseDir, tvVideoData.category, tvVideoData.subcategory || '');
+    await fs.ensureDir(targetDir);
+
+    const sanitizedFilename = sanitizeFilename(filename || tvVideoData.filename);
+    const finalFilename = await ensureUniqueFilename(sanitizedFilename, targetDir);
+    const targetPath = path.join(targetDir, finalFilename);
+
+    logger.info('Deploying LED variant', { targetPath, checksum: !!checksum });
+
+    await this.downloadFile(videoUrl, targetPath, null); // No progress for LED (secondary)
+
+    // Verify checksum if provided
+    if (checksum) {
+      const downloadedChecksum = await calculateFileChecksum(targetPath);
+      if (downloadedChecksum !== checksum) {
+        await fs.remove(targetPath);
+        throw new Error(`LED variant checksum mismatch: expected ${checksum}, got ${downloadedChecksum}`);
+      }
+    }
+
+    // Update configuration.json with LED variant info on the video entry
+    const configPath = config.paths.config;
+    const configuration = await safeReadConfig(configPath);
+
+    const relativePath = buildRelativePath(tvVideoData);
+    const ledRelativePath = relativePath.replace(/^videos\//, 'videos-led/');
+
+    // Find the video entry in categories and add variants.led
+    if (configuration.categories) {
+      for (const cat of configuration.categories) {
+        const addLedVariant = (videoEntry) => {
+          if (videoEntry.path === relativePath) {
+            if (!videoEntry.variants) videoEntry.variants = {};
+            videoEntry.variants.led = {
+              path: ledRelativePath,
+              filename: finalFilename,
+              width: width || null,
+              height: height || null,
+              duration: duration || null,
+            };
+            return true;
+          }
+          return false;
+        };
+
+        for (const v of cat.videos || []) {
+          if (addLedVariant(v)) break;
+        }
+        for (const sub of cat.subCategories || []) {
+          for (const v of sub.videos || []) {
+            if (addLedVariant(v)) break;
+          }
+        }
+      }
+    }
+
+    // Also update sponsors array if it's a sponsor video
+    if (configuration.sponsors) {
+      for (const sponsor of configuration.sponsors) {
+        if (sponsor.path === relativePath) {
+          if (!sponsor.variants) sponsor.variants = {};
+          sponsor.variants.led = {
+            path: ledRelativePath,
+            filename: finalFilename,
+            width: width || null,
+            height: height || null,
+          };
+          break;
+        }
+      }
+    }
+
+    await atomicWriteJson(configPath, configuration);
+
+    const stat = await fs.stat(targetPath);
+    return {
+      success: true,
+      path: targetPath,
+      size: stat.size,
+      filename: finalFilename,
+    };
   }
 
   /**

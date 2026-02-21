@@ -14,6 +14,8 @@ import logger from '../config/logger';
 import { metricsService } from '../services/metrics.service';
 import { SocketContext } from './socket-context';
 import { siteSponsorRepository } from '../repositories/site-sponsor.repository';
+import { autoResolveSponsorIds } from '../services/sponsor-auto-resolution.service';
+import type { SiteConfiguration } from '../types';
 
 /** Payload shape for a local sponsor sent from Pi */
 interface LocalSponsorPayload {
@@ -382,9 +384,27 @@ async function sendPendingConfigCommand(
     });
   }
 
+  // Auto-résolution : injecter site_sponsor_id dans toutes les vidéos de la config
+  let enrichedConfiguration = configuration;
+  try {
+    const { configuration: resolved, resolved: resolvedCount } =
+      await autoResolveSponsorIds(siteId, configuration as SiteConfiguration);
+    if (resolvedCount > 0) {
+      enrichedConfiguration = resolved as Record<string, unknown>;
+      logger.info('Sponsor auto-resolution in pending config sync', {
+        siteId, resolved: resolvedCount,
+      });
+    }
+  } catch (autoResolveError) {
+    logger.warn('Sponsor auto-resolution failed in pending config sync (non-fatal)', {
+      siteId,
+      error: (autoResolveError as Error).message,
+    });
+  }
+
   const configWithSponsors = siteSponsors.length > 0
-    ? { ...configuration, siteSponsors }
-    : configuration;
+    ? { ...enrichedConfiguration, siteSponsors }
+    : enrichedConfiguration;
 
   const commandId = uuidv4();
   const commandPayload = {

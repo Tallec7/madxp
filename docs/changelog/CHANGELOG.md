@@ -1,3 +1,48 @@
+## Sponsor Auto-Resolution (Fév 2026)
+
+### feat(sponsors): auto-résolution sponsor ↔ vidéo au déploiement
+
+- **Backend** : `sponsor-auto-resolution.service.ts` — résolution automatique des `site_sponsor_id` pour toutes les vidéos (boucles + catégories) au moment du déploiement
+- **Pipeline** : injection dans `orchestrated-deployment.service.ts` (deploy) et `config-sync.handler.ts` (reconnect)
+- **Dashboard** : badge auto-détecté 🔗 dans le Loop Manager + warning ⚠️ "Hors boucle" dans l'onglet Sponsors
+- **Métriques** : counter Prometheus `neopro_sponsor_auto_resolution_total{outcome}`
+- **Tests** : 17 tests unitaires (100% couverture), 1590 tests serveur OK, 142 smoke OK
+
+**Fichiers clés** : `sponsor-auto-resolution.service.ts`, `orchestrated-deployment.service.ts`, `config-sync.handler.ts`, `metrics.service.ts`, `loop-manager.component.ts`, `site-sponsors-tab.component.ts`
+
+---
+
+## E-22 — Dual HDMI TV + LED (Fév 2026)
+
+### Features (F-22.1 + F-22.2 + F-22.3)
+
+**F-22.1 Dual Kiosk HDMI natif**
+
+- Migration DB : colonnes `led_enabled`, `led_resolution` sur `sites`
+- Dashboard : toggle LED + dropdown résolution dans paramètres site
+- Route Angular `/led` avec `displayType` dans TvComponent
+- Watchdog dual Chromium : détection HDMI 1 (DRM/KMS), auto start/stop
+- Socket.IO `tv-register` avec `displayType`, LED jamais slave
+
+**F-22.2 Réactions différenciées TV vs LED (partiel)**
+
+- Score overlay LED : bandeau horizontal compact (score + chrono)
+- Animation de but LED : flash plein écran couleur par équipe + texte
+- Overlays TV masqués sur route `/led`, overlays LED masqués sur `/tv`
+
+**F-22.3 Variantes vidéo par type d'écran**
+
+- Table `video_variants` avec contrainte `UNIQUE(video_id, display_type)`
+- API CRUD : GET/POST/DELETE variantes vidéo (UPSERT via ON CONFLICT)
+- Dashboard : panel upload/gestion variantes LED par vidéo
+- Déploiement conditionnel : `ledVariant` dans commandData si `led_enabled`
+- Sync-agent : download LED variant dans `videos-led/`, non-bloquant
+- Boucle vidéo Pi : mapping vers `variants.led.path` si `displayType === 'led'`
+
+**Fichiers clés** : `video-variant.repository.ts`, `content.controller.ts`, `deployment.service.ts`, `deploy-video.js`, `tv.component.ts`, `kiosk-watchdog.sh`, `state.service.js`, `video-variant-panel.component.ts`
+
+---
+
 ## [3.64.2](https://github.com/Tallec7/neopro/compare/v3.64.1...v3.64.2) (2026-02-21)
 
 ### Bug Fixes

@@ -61,6 +61,7 @@ export interface VideoConfig {
   locked?: boolean;  // true = non modifiable par le club
   deployed_at?: string;  // ISO date - quand la vidéo a été déployée par NEOPRO
   expires_at?: string;  // ISO date - expiration automatique (annonces temporaires)
+  site_sponsor_id?: string; // Auto-résolu depuis site_sponsor_videos au déploiement
 }
 
 // Sous-catégorie de vidéos

@@ -64,6 +64,9 @@ CREATE TABLE IF NOT EXISTS sites (
   remote_pin_hash VARCHAR(64) DEFAULT NULL,
   -- Hostname mDNS dérivé du club_name (ex: neopro-usap)
   hostname_slug VARCHAR(63) DEFAULT NULL,
+  -- E-22: LED dual output (ADR-029)
+  led_enabled BOOLEAN DEFAULT false,
+  led_resolution VARCHAR(20) DEFAULT NULL,
   CONSTRAINT check_status CHECK (status IN ('online', 'offline', 'maintenance', 'error'))
 );
 
@@ -110,6 +113,27 @@ CREATE TABLE IF NOT EXISTS videos (
   uploaded_by UUID REFERENCES users(id),
   created_at TIMESTAMP DEFAULT NOW(),
   updated_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Table des variantes vidéo par type d'écran (E-22: TV + LED)
+CREATE TABLE IF NOT EXISTS video_variants (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  video_id UUID NOT NULL REFERENCES videos(id) ON DELETE CASCADE,
+  display_type VARCHAR(20) NOT NULL CHECK (display_type IN ('tv', 'led')),
+  filename VARCHAR(500) NOT NULL,
+  original_name VARCHAR(500),
+  storage_path VARCHAR(1000) NOT NULL,
+  file_size BIGINT NOT NULL DEFAULT 0,
+  checksum VARCHAR(128),
+  mime_type VARCHAR(100) DEFAULT 'video/mp4',
+  width INTEGER,
+  height INTEGER,
+  duration NUMERIC(10, 2),
+  metadata JSONB DEFAULT '{}',
+  uploaded_by UUID,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(video_id, display_type)
 );
 
 -- Table des déploiements de contenu
@@ -360,6 +384,11 @@ CREATE INDEX IF NOT EXISTS idx_commands_site ON remote_commands(site_id, created
 CREATE INDEX IF NOT EXISTS idx_commands_status ON remote_commands(status);
 CREATE INDEX IF NOT EXISTS idx_alerts_site ON alerts(site_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_alerts_status ON alerts(status, severity);
+
+-- Index video_variants (E-22)
+CREATE INDEX IF NOT EXISTS idx_video_variants_video_id ON video_variants(video_id);
+CREATE INDEX IF NOT EXISTS idx_video_variants_display_type ON video_variants(display_type);
+CREATE INDEX IF NOT EXISTS idx_sites_led_enabled ON sites(led_enabled) WHERE led_enabled = true;
 
 -- Index config_history
 CREATE INDEX IF NOT EXISTS idx_config_history_site ON config_history(site_id, deployed_at DESC);

@@ -12,6 +12,7 @@ import { LoggerService } from '../../core/services/logger.service';
 import { ErrorExtractor } from '../../core/utils/error-extractor';
 import { Site, Group } from '../../core/models';
 import { Subscription, firstValueFrom } from 'rxjs';
+import { VideoVariantPanelComponent } from './video-variant-panel.component';
 
 interface Video {
   id: string;
@@ -66,7 +67,7 @@ interface VideoDeploymentHistory {
 @Component({
   selector: 'app-content-management',
   standalone: true,
-  imports: [CommonModule, FormsModule, TranslateModule],
+  imports: [CommonModule, FormsModule, TranslateModule, VideoVariantPanelComponent],
   template: `
     <div class="page-container">
       <h1>Gestion du contenu</h1>
@@ -147,6 +148,7 @@ interface VideoDeploymentHistory {
                 🗑️
               </button>
             </div>
+            <app-video-variant-panel [videoId]="video.id"></app-video-variant-panel>
           </div>
         </div>
 

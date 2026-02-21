@@ -128,6 +128,12 @@ export interface Site {
   /** Nombre moyen de spectateurs par match (pour calcul du reach sponsor) */
   avg_spectators?: number | null;
 
+  // === LED Panel fields (E-22 Dual HDMI) ===
+  /** Enable LED panel output on HDMI 1 */
+  led_enabled?: boolean;
+  /** LED panel resolution (e.g., '1920x384') */
+  led_resolution?: string | null;
+
   // === Branding fields (P5) ===
   /** URL du logo du club (pour rapports PDF) */
   logo_url?: string | null;
@@ -703,6 +709,7 @@ export interface SiteSponsor {
   // Joined fields from listBySite
   video_count?: number;
   total_impressions?: number;
+  video_filenames?: string[];
 }
 
 export interface SiteSponsorVideo {

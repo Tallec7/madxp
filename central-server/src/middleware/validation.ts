@@ -71,6 +71,8 @@ export const schemas = {
     status: Joi.string().valid('online', 'offline', 'maintenance', 'error').optional(),
     live_score_enabled: Joi.boolean().optional(),
     avg_spectators: Joi.number().integer().min(0).max(100000).optional(),
+    led_enabled: Joi.boolean().optional(),
+    led_resolution: Joi.string().pattern(/^\d{1,5}x\d{1,5}$/).max(20).optional().allow(null),
   }),
 
   createGroup: Joi.object({

@@ -569,14 +569,14 @@ interface SponsorVideo {
                 type="text"
                 [(ngModel)]="siteSearchTerm"
                 (input)="filterAvailableSites()"
-                placeholder="Rechercher un club..."
+                [placeholder]="'common.searchClub' | translate"
               />
             </div>
 
             <!-- Loading -->
             <div *ngIf="loadingAvailableSites" class="loading-small">
               <div class="spinner-small"></div>
-              <span>Chargement des clubs...</span>
+              <span>{{ 'common.loadingClubs' | translate }}</span>
             </div>
 
             <!-- Available Sites List -->
@@ -1558,8 +1558,8 @@ export class SponsorDetailComponent implements OnInit {
   filterAvailableVideos() {
     const term = this.videoSearchTerm.toLowerCase();
     this.filteredAvailableVideos = this.availableVideos.filter(video =>
-      video.title.toLowerCase().includes(term) ||
-      video.filename.toLowerCase().includes(term)
+      (video.title || '').toLowerCase().includes(term) ||
+      (video.filename || '').toLowerCase().includes(term)
     );
   }
 
@@ -1668,7 +1668,7 @@ export class SponsorDetailComponent implements OnInit {
   filterAvailableSites(): void {
     const term = this.siteSearchTerm.toLowerCase();
     this.filteredAvailableSites = this.availableSites.filter(site =>
-      site.name.toLowerCase().includes(term) ||
+      (site.name || '').toLowerCase().includes(term) ||
       (site.club_name || '').toLowerCase().includes(term) ||
       (site.city || '').toLowerCase().includes(term)
     );

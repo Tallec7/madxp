@@ -542,6 +542,15 @@ const reportGenerationDuration = new Histogram({
   registers: [register],
 });
 
+// ============= Métriques Auto-Résolution Sponsor (déploiement) =============
+
+const sponsorAutoResolutionTotal = new Counter({
+  name: 'neopro_sponsor_auto_resolution_total',
+  help: 'Sponsor auto-resolution outcomes during deployment config enrichment',
+  labelNames: ['outcome'],  // 'resolved' | 'skipped' | 'unresolved'
+  registers: [register],
+});
+
 // ============= Métriques FK Fallback (video_plays) =============
 
 const videoPlaysFkFallbackTotal = new Counter({
@@ -935,6 +944,12 @@ class MetricsService {
     if (durationSeconds !== undefined) {
       reportGenerationDuration.observe({ report_type: reportType }, durationSeconds);
     }
+  }
+
+  // ============= Méthodes Auto-Résolution Sponsor =============
+
+  recordSponsorAutoResolution(outcome: 'resolved' | 'skipped' | 'unresolved', count: number): void {
+    sponsorAutoResolutionTotal.inc({ outcome }, count);
   }
 
   // ============= Méthodes Sponsor Health (F-AUD-07) =============

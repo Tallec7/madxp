@@ -410,6 +410,43 @@ import { QrCodeGeneratorComponent } from '../../../../shared/components/qr-code-
         </div>
       </div>
 
+      <!-- Sortie LED (HDMI 1) -->
+      <div class="settings-card">
+        <div class="settings-header">
+          <span class="settings-icon">💡</span>
+          <h4>Sortie LED (HDMI 1)</h4>
+        </div>
+        <p class="settings-desc">
+          Active la sortie HDMI 1 pour un panneau LED. Le Pi affichera des contenus differencies sur la TV (HDMI 0) et le panneau LED (HDMI 1).
+        </p>
+        <div class="premium-toggle">
+          <label class="toggle-container">
+            <input
+              type="checkbox"
+              [checked]="site?.led_enabled"
+              (change)="toggleLedEnabled($event)"
+              [disabled]="savingLedEnabled"
+            />
+            <span class="toggle-slider"></span>
+            <span class="toggle-label">Panneau LED active</span>
+          </label>
+        </div>
+        <div class="settings-grid" *ngIf="site?.led_enabled" style="margin-top: 1rem;">
+          <div class="form-group">
+            <label>Resolution du panneau LED</label>
+            <select [(ngModel)]="ledResolution" class="form-input" (ngModelChange)="saveLedResolution()">
+              <option [ngValue]="null">-- Non definie --</option>
+              <option value="1920x384">Bandeau 1920x384</option>
+              <option value="1280x384">Bandeau 1280x384</option>
+              <option value="768x1024">Portrait 768x1024</option>
+              <option value="1280x720">720p (1280x720)</option>
+              <option value="1920x1080">1080p (1920x1080)</option>
+            </select>
+            <small class="form-hint">Resolution native du controleur LED (Linsn, Novastar, etc.)</small>
+          </div>
+        </div>
+      </div>
+
       <!-- Watermark / Logo en surimpression -->
       <div class="settings-card">
         <div class="settings-header">
@@ -1619,6 +1656,11 @@ export class SiteSettingsTabComponent implements OnInit, OnChanges {
   showCurrentPassword: boolean = false;
   fetchingHotspotConfig: boolean = false;
 
+  // LED Panel (E-22)
+  savingLedEnabled: boolean = false;
+  ledResolution: string | null = null;
+  savingLedResolution: boolean = false;
+
   // Premium
   savingLiveScore: boolean = false;
   showOverlayConfig: boolean = false;
@@ -1690,6 +1732,7 @@ export class SiteSettingsTabComponent implements OnInit, OnChanges {
     if (this.site) {
       this.clubName = this.site.club_name || '';
       this.avgSpectators = this.site.avg_spectators ?? null;
+      this.ledResolution = this.site.led_resolution ?? null;
       // P5: Branding
       this.logoUrl = this.site.logo_url || '';
       this.colorPrimary = this.site.color_primary || '';
@@ -2047,6 +2090,55 @@ export class SiteSettingsTabComponent implements OnInit, OnChanges {
       error: (error) => {
         this.savingLiveScore = false;
         checkbox.checked = !newValue;
+        const message = ErrorExtractor.getMessage(error);
+        this.notificationService.error(`Erreur: ${message}`);
+      }
+    });
+  }
+
+  toggleLedEnabled(event: Event): void {
+    const checkbox = event.target as HTMLInputElement;
+    const newValue = checkbox.checked;
+
+    this.savingLedEnabled = true;
+    this.sitesService.updateSite(this.siteId, { led_enabled: newValue }).subscribe({
+      next: (updatedSite) => {
+        this.sitesService.sendCommand(this.siteId, 'update_config', {
+          neoProContent: { ledEnabled: newValue },
+          mode: 'merge'
+        }).subscribe({
+          next: () => {
+            this.savingLedEnabled = false;
+            this.notificationService.success(
+              newValue ? 'Sortie LED activee !' : 'Sortie LED desactivee !'
+            );
+            this.siteUpdated.emit(updatedSite);
+          },
+          error: () => {
+            this.savingLedEnabled = false;
+            this.notificationService.warning('Option sauvegardee mais erreur lors du deploiement');
+          }
+        });
+      },
+      error: (error) => {
+        this.savingLedEnabled = false;
+        checkbox.checked = !newValue;
+        const message = ErrorExtractor.getMessage(error);
+        this.notificationService.error(`Erreur: ${message}`);
+      }
+    });
+  }
+
+  saveLedResolution(): void {
+    this.savingLedResolution = true;
+    this.sitesService.updateSite(this.siteId, { led_resolution: this.ledResolution }).subscribe({
+      next: (updatedSite) => {
+        this.savingLedResolution = false;
+        this.notificationService.success('Resolution LED sauvegardee');
+        this.siteUpdated.emit(updatedSite);
+      },
+      error: (error) => {
+        this.savingLedResolution = false;
         const message = ErrorExtractor.getMessage(error);
         this.notificationService.error(`Erreur: ${message}`);
       }

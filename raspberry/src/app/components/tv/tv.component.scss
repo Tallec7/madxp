@@ -827,3 +827,115 @@
 .watermark-anim-zoom {
   animation: watermarkZoomIn 0.5s ease-out;
 }
+
+// ============================================================================
+// LED DISPLAY OVERLAYS
+// Optimisés pour panneaux LED (bandeau horizontal, haute visibilité)
+// ============================================================================
+
+// Score bandeau LED — fixé en bas, texte large haute-lisibilité
+.led-score-bandeau {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 8px 24px;
+  background: rgba(0, 0, 0, 0.85);
+  animation: overlayReveal 0.3s ease-out both;
+
+  .led-team {
+    font-size: 28px;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.9);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 200px;
+  }
+
+  .led-score {
+    font-size: 48px;
+    font-weight: 900;
+    font-variant-numeric: tabular-nums;
+    color: #ffffff;
+    min-width: 50px;
+    text-align: center;
+    line-height: 1;
+  }
+
+  .led-divider {
+    font-size: 32px;
+    font-weight: 300;
+    color: rgba(255, 255, 255, 0.5);
+  }
+
+  .led-timer {
+    font-size: 24px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: #64b5f6;
+    margin-left: 16px;
+    padding-left: 16px;
+    border-left: 2px solid rgba(255, 255, 255, 0.2);
+  }
+}
+
+// Goal flash LED — flash couleur plein écran rapide
+.led-goal-flash {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 2000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  animation: ledFlashPulse 0.4s ease-in-out infinite alternate;
+
+  // Couleur par défaut (vert)
+  background: rgba(76, 175, 80, 0.95);
+
+  &.home {
+    background: rgba(33, 150, 243, 0.95);
+  }
+
+  &.away {
+    background: rgba(244, 67, 54, 0.95);
+  }
+
+  .led-goal-text {
+    font-size: 96px;
+    font-weight: 900;
+    color: #ffffff;
+    text-transform: uppercase;
+    letter-spacing: 8px;
+    text-shadow: 0 0 40px rgba(255, 255, 255, 0.6);
+  }
+
+  .led-goal-score {
+    font-size: 72px;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    color: rgba(255, 255, 255, 0.95);
+    text-shadow: 0 0 20px rgba(255, 255, 255, 0.4);
+  }
+}
+
+@keyframes ledFlashPulse {
+  from {
+    opacity: 0.85;
+  }
+  to {
+    opacity: 1;
+  }
+}

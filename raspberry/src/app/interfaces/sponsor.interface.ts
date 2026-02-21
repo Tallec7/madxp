@@ -28,6 +28,15 @@ export interface LoopVideo {
     analytics_category?: string;
     /** UUID du site_sponsor unifie (P1 — tracking granulaire par site) */
     site_sponsor_id?: string;
+    /** Variantes video par type d'ecran (LED, etc.) */
+    variants?: {
+        led?: {
+            path: string;
+            filename?: string;
+            width?: number | null;
+            height?: number | null;
+        };
+    };
 }
 
 /**

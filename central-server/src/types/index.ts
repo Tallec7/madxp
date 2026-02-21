@@ -435,6 +435,7 @@ export interface CategoryVideo {
   name: string;
   path: string;
   type?: string;
+  site_sponsor_id?: string; // Auto-résolu depuis site_sponsor_videos au déploiement
 }
 
 export interface SubCategory {

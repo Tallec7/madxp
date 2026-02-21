@@ -1,8 +1,8 @@
 # Features & User Stories — NEOPRO SAFe
 
-> **Dernière mise à jour** : 21 Février 2026 <!-- E-22 ajouté -->
+> **Dernière mise à jour** : 21 Février 2026 <!-- E-22 F-22.1+F-22.2+F-22.3 implémentés -->
 > **PI actuel** : PI-1 (Février - Mars 2026)
-> Ce document contient les Features/US futures (PI-1 à PI-3) ET les Epics terminés avant PI-1. Les 75 features implémentées (hors SAFe) sont documentées dans [IMPLEMENTED-BACKLOG.md](IMPLEMENTED-BACKLOG.md).
+> Ce document contient les Features/US futures (PI-1 à PI-3) ET les Epics terminés avant PI-1. Les 212 features implémentées (hors SAFe) sont documentées dans [IMPLEMENTED-BACKLOG.md](IMPLEMENTED-BACKLOG.md).
 
 ---
 
@@ -498,20 +498,20 @@ Tous les controllers utilisent le repository pattern. ESLint bloquant actif. Aud
 
 ---
 
-### F-22.1 : Dual Kiosk HDMI natif
+### F-22.1 : Dual Kiosk HDMI natif ✅ Livré (Fév 2026)
 
 > _En tant que club avec TV + panneau LED, les deux écrans affichent des contenus adaptés à leur format depuis un seul Pi._
 
 **Critères d'acceptation**
 
-- [ ] 2 instances Chromium kiosk sur les 2 HDMI du Pi 5 (bureau étendu)
-- [ ] Route `/tv` (HDMI 0) + route `/led` (HDMI 1)
-- [ ] Config `config.txt` : `max_framebuffers=2`, résolutions par port
-- [ ] Watchdog vérifie `/sys/class/drm/card1-HDMI-A-2/status` avant de lancer le kiosk LED
-- [ ] Re-check périodique (30-60s) : lance le kiosk LED si HDMI 1 passe à `connected`
-- [ ] Si `led_enabled=true` mais HDMI 1 non branché → mode TV-only, pas de 2e Chromium
+- [x] 2 instances Chromium kiosk sur les 2 HDMI du Pi 5 (bureau étendu)
+- [x] Route `/tv` (HDMI 0) + route `/led` (HDMI 1)
+- [ ] Config `config.txt` : `max_framebuffers=2`, résolutions par port _(provisioning OTA à venir)_
+- [x] Watchdog vérifie `/sys/class/drm/card1-HDMI-A-2/status` avant de lancer le kiosk LED
+- [x] Re-check périodique (30-60s) : lance le kiosk LED si HDMI 1 passe à `connected`
+- [x] Si `led_enabled=true` mais HDMI 1 non branché → mode TV-only, pas de 2e Chromium
 - [ ] Fallback config : `hdmi_force_hotplug:1=1` activable par site si détection auto échoue
-- [ ] RAM totale < 2GB (headroom pour Pi 4GB)
+- [ ] RAM totale < 2GB (headroom pour Pi 4GB) _(à valider sur hardware réel)_
 
 | US        | Description                                                                                                 | SP  | Sprint  | Priorité |
 | --------- | ----------------------------------------------------------------------------------------------------------- | --- | ------- | -------- |
@@ -521,16 +521,16 @@ Tous les controllers utilisent le repository pattern. ESLint bloquant actif. Aud
 
 ---
 
-### F-22.2 : Réactions différenciées TV vs LED
+### F-22.2 : Réactions différenciées TV vs LED ⚙️ Partiel (Fév 2026)
 
 > _En tant qu'opérateur, mes actions Remote produisent des réactions visuelles adaptées sur la TV et le LED simultanément._
 
 **Critères d'acceptation**
 
-- [ ] Score overlay LED format bandeau compact (score + chrono + période)
-- [ ] Animation de but spécifique LED (flash couleur équipe + texte "BUT !")
+- [x] Score overlay LED format bandeau compact (score + chrono + période)
+- [x] Animation de but spécifique LED (flash couleur équipe + texte "BUT !")
 - [ ] Breaking news format LED (texte pleine largeur dans le bandeau)
-- [ ] Un seul événement Socket.IO → 2 réactions différentes selon `displayType`
+- [x] Un seul événement Socket.IO → 2 réactions différentes selon `displayType`
 - [ ] Indicateur LED connecté dans la Remote
 
 | US        | Description                                                                                   | SP  | Sprint  | Priorité |
@@ -540,19 +540,19 @@ Tous les controllers utilisent le repository pattern. ESLint bloquant actif. Aud
 
 ---
 
-### F-22.3 : Variantes vidéo par type d'écran
+### F-22.3 : Variantes vidéo par type d'écran ✅ Livré (Fév 2026)
 
 > _En tant qu'opérateur/annonceur, je peux uploader une version TV et une version LED de chaque vidéo, et le pipeline de déploiement envoie les bons fichiers au Pi._
 
 **Critères d'acceptation**
 
-- [ ] Table `video_variants` avec `display_type` (tv/led)
-- [ ] API upload variante LED d'une vidéo existante
-- [ ] Dashboard : UI pour associer variante LED à une vidéo TV
-- [ ] Déploiement conditionnel : playlist TV = variantes `tv`, playlist LED = variantes `led`
-- [ ] Pipeline adapté : n'envoie les variantes LED que si le site est `led_enabled`
+- [x] Table `video_variants` avec `display_type` (tv/led)
+- [x] API upload variante LED d'une vidéo existante
+- [x] Dashboard : UI pour associer variante LED à une vidéo TV
+- [x] Déploiement conditionnel : playlist TV = variantes `tv`, playlist LED = variantes `led`
+- [x] Pipeline adapté : n'envoie les variantes LED que si le site est `led_enabled`
 - [ ] Provisioning dual kiosk config poussé via OTA quand `led_enabled` est activé
-- [ ] Fallback : si pas de variante LED, redimensionner la version TV (CSS `object-fit: cover`)
+- [x] Fallback : si pas de variante LED, redimensionner la version TV (CSS `object-fit: cover`)
 
 | US        | Description                                                                                                     | SP  | Sprint  | Priorité |
 | --------- | --------------------------------------------------------------------------------------------------------------- | --- | ------- | -------- |

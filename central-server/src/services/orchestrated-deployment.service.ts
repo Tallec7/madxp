@@ -12,6 +12,7 @@ import { commandQueueService } from './command-queue.service';
 import { draftService } from './draft.service';
 import { siteSponsorRepository } from '../repositories/site-sponsor.repository';
 import metricsService from './metrics.service';
+import { autoResolveSponsorIds } from './sponsor-auto-resolution.service';
 import {
   OrchestratedDeployment,
   OrchestratedDeploymentStatus,
@@ -252,14 +253,24 @@ class OrchestratedDeploymentService {
     // Récupérer les sponsors du site pour les envoyer au Pi
     const siteSponsors = await this.getSiteSponsorsForDeployment(siteId);
 
-    // Préparer le payload pour update_config
+    // Auto-résolution : injecter site_sponsor_id dans toutes les vidéos de la config
+    const { configuration: enrichedConfig, resolved, unresolved } =
+      await autoResolveSponsorIds(siteId, configuration);
+
+    if (resolved > 0 || unresolved > 0) {
+      logger.info('Sponsor auto-resolution in deployment', {
+        siteId, orchestratedId, resolved, unresolved,
+      });
+    }
+
+    // Préparer le payload pour update_config (utilise la config enrichie)
     const neoProContent = {
-      sponsors: configuration.sponsors,
-      categories: configuration.categories,
-      timeCategories: configuration.timeCategories,
-      categoryMappings: configuration.categoryMappings,
-      liveScoreEnabled: configuration.liveScoreEnabled,
-      scoreOverlay: configuration.scoreOverlay,
+      sponsors: enrichedConfig.sponsors,
+      categories: enrichedConfig.categories,
+      timeCategories: enrichedConfig.timeCategories,
+      categoryMappings: enrichedConfig.categoryMappings,
+      liveScoreEnabled: enrichedConfig.liveScoreEnabled,
+      scoreOverlay: enrichedConfig.scoreOverlay,
       siteSponsors,
     };
 

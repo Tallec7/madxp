@@ -1,5 +1,6 @@
 import { Component, ElementRef, inject, Input, OnDestroy, OnInit, ViewChild, NgZone, ViewEncapsulation } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { ActivatedRoute } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { Subscription } from 'rxjs';
 import videojs from 'video.js';
@@ -52,6 +53,7 @@ export class TvComponent implements OnInit, OnDestroy {
   private readonly localOptionsService = inject(LocalOptionsService);
   private readonly http = inject(HttpClient);
   private readonly ngZone = inject(NgZone);
+  private readonly route = inject(ActivatedRoute);
 
   // Services extraits (P2 refactoring)
   private readonly doubleBufferService = inject(DoubleBufferVideoService);
@@ -63,6 +65,9 @@ export class TvComponent implements OnInit, OnDestroy {
   private readonly recordingState = inject(RecordingStateService);
 
   private localBroadcastSubscriptions: Subscription[] = [];
+
+  // Display type: 'tv' (standard HDMI 0) ou 'led' (panneau LED HDMI 1)
+  public displayType: 'tv' | 'led' = 'tv';
 
   // License status - bloque l'affichage si la licence n'est pas valide
   public licenseState: LicenseState | null = null;
@@ -201,6 +206,10 @@ export class TvComponent implements OnInit, OnDestroy {
   public player: Player;
 
   public ngOnInit() {
+    // Lire le displayType depuis la route data (/led → 'led', /tv → 'tv')
+    this.displayType = (this.route.snapshot.data['displayType'] as 'tv' | 'led') || 'tv';
+    console.log(`[TV] Display type: ${this.displayType}`);
+
     // S'abonner aux mises à jour du statut de licence
     this.localBroadcastSubscriptions.push(
       this.licenseService.state$.subscribe((state) => {
@@ -519,15 +528,16 @@ export class TvComponent implements OnInit, OnDestroy {
     // Le master émet son état de boucle, les slaves se synchronisent
     // =========================================================================
 
-    // S'enregistrer en tant qu'instance TV
-    this.socketService.emit('tv-register', {});
+    // S'enregistrer en tant qu'instance TV (avec le type d'écran)
+    this.socketService.emit('tv-register', { displayType: this.displayType } as unknown as Command);
 
     // Recevoir le rôle assigné par le serveur
     this.socketService.on<{ role: 'master' | 'slave' }>('tv-role-assigned', (data) => {
       this.ngZone.run(() => {
         this.tvRole = data.role;
-        this.isSlaveMode = data.role === 'slave';
-        console.log(`[TV] Role assigned: ${data.role}`);
+        // LED display is always independent — never sync as slave
+        this.isSlaveMode = data.role === 'slave' && this.displayType !== 'led';
+        console.log(`[TV] Role assigned: ${data.role}, displayType: ${this.displayType}`);
 
         if (this.isSlaveMode) {
           console.log('[TV] Running as SLAVE - analytics disabled, waiting for master state');
@@ -946,17 +956,31 @@ export class TvComponent implements OnInit, OnDestroy {
    * Si la phase n'a pas de loopVideos configurés, utilise sponsors[] global.
    */
   private getLoopVideosForPhase(phase: 'neutral' | 'before' | 'during' | 'after'): Sponsor[] {
+    let videos: Sponsor[];
+
     if (phase === 'neutral') {
-      return this.configuration.sponsors || [];
+      videos = this.configuration.sponsors || [];
+    } else {
+      const timeCategory = this.configuration.timeCategories?.find(tc => tc.id === phase);
+      if (timeCategory?.loopVideos && timeCategory.loopVideos.length > 0) {
+        videos = timeCategory.loopVideos;
+      } else {
+        // Fallback: utiliser la boucle globale
+        videos = this.configuration.sponsors || [];
+      }
     }
 
-    const timeCategory = this.configuration.timeCategories?.find(tc => tc.id === phase);
-    if (timeCategory?.loopVideos && timeCategory.loopVideos.length > 0) {
-      return timeCategory.loopVideos;
+    // LED display: utiliser la variante LED quand disponible
+    if (this.displayType === 'led') {
+      return videos.map(video => {
+        if (video.variants?.led?.path) {
+          return { ...video, path: video.variants.led.path };
+        }
+        return video;
+      });
     }
 
-    // Fallback: utiliser la boucle globale
-    return this.configuration.sponsors || [];
+    return videos;
   }
 
   /**
@@ -1157,18 +1181,20 @@ export class TvComponent implements OnInit, OnDestroy {
     this.goalScoringTeam = team;
     this.showGoalAnimation = true;
 
-    console.log('[TV] Goal animation triggered for team:', team, 'style:', config.style);
+    const displayInfo = this.displayType === 'led' ? 'LED flash' : config.style;
+    console.log('[TV] Goal animation triggered for team:', team, 'style:', displayInfo);
 
-    // Jouer le son si activé
-    if (config.soundEnabled && config.soundUrl) {
+    // Jouer le son si activé (pas sur LED — le son vient de la TV principale)
+    if (this.displayType !== 'led' && config.soundEnabled && config.soundUrl) {
       this.playGoalSound(config.soundUrl);
     }
 
-    // Masquer après la durée configurée
+    // LED: durée plus courte (flash rapide), TV: durée configurée
+    const duration = this.displayType === 'led' ? Math.min(config.duration, 3) : config.duration;
     this.goalAnimationTimeout = setTimeout(() => {
       this.showGoalAnimation = false;
       this.goalScoringTeam = null;
-    }, config.duration * 1000);
+    }, duration * 1000);
   }
 
   /**

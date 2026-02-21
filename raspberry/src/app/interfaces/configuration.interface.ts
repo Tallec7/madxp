@@ -178,4 +178,25 @@ export interface Configuration {
      * Modifiable depuis le Central Dashboard.
      */
     watermark?: WatermarkConfig;
+    /**
+     * Active la sortie LED sur HDMI 1 (dual kiosk).
+     * Configuré depuis le Central Dashboard.
+     */
+    ledEnabled?: boolean;
+    /**
+     * Résolution du panneau LED (ex: '1920x384').
+     */
+    ledResolution?: string;
+}
+
+/**
+ * Informations d'une variante vidéo (LED, etc.)
+ * Attachée aux entrées vidéo dans configuration.json
+ */
+export interface VideoVariantInfo {
+    path: string;
+    filename?: string;
+    width?: number | null;
+    height?: number | null;
+    duration?: number | null;
 }

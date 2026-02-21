@@ -6,6 +6,7 @@ import metricsService from './metrics.service';
 import { getVideoUrl, deleteVideo } from './storage.service';
 import { uploadVerificationService } from './upload-verification.service';
 import { siteSponsorRepository } from '../repositories/site-sponsor.repository';
+import { videoVariantRepository } from '../repositories/video-variant.repository';
 
 // Configuration du retry
 const RETRY_CONFIG = {
@@ -321,6 +322,43 @@ class DeploymentService {
       // Non-bloquant : si la table n'existe pas encore, on continue sans
     }
 
+    // Chercher la variante LED si le site a led_enabled
+    let ledVariant: {
+      filename: string;
+      storagePath: string;
+      checksum: string | null;
+      videoUrl: string;
+      width: number | null;
+      height: number | null;
+      duration: number | null;
+    } | null = null;
+
+    try {
+      const siteResult = await query(
+        `SELECT led_enabled FROM sites WHERE id = $1`,
+        [siteId]
+      );
+      const siteLedEnabled = siteResult.rows[0]?.led_enabled === true;
+
+      if (siteLedEnabled) {
+        const variant = await videoVariantRepository.findByVideoAndDisplay(videoId, 'led');
+        if (variant) {
+          ledVariant = {
+            filename: variant.filename,
+            storagePath: variant.storage_path,
+            checksum: variant.checksum,
+            videoUrl: getVideoUrl(variant.storage_path),
+            width: variant.width,
+            height: variant.height,
+            duration: variant.duration ? parseFloat(String(variant.duration)) : null,
+          };
+        }
+      }
+    } catch (ledError) {
+      // Non-bloquant : si la table n'existe pas encore, on continue sans variante LED
+      logger.debug('LED variant lookup failed (non-blocking)', { videoId, siteId, error: ledError });
+    }
+
     const commandData = {
       deploymentId,
       videoId,
@@ -335,6 +373,8 @@ class DeploymentService {
       sponsorId: deployment.advertiser_id || null,
       analyticsCategory: deployment.analytics_category || null,
       siteSponsorId,
+      // Variante LED (null si site sans LED ou pas de variante)
+      ledVariant,
     };
 
     logger.info('Sending deploy_video command via sendOrQueue', {

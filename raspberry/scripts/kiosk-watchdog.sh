@@ -11,6 +11,8 @@
 ################################################################################
 
 CHROMIUM_URL="http://neopro.local/tv"
+CHROMIUM_LED_URL="http://neopro.local/led"
+CONFIG_FILE="/home/pi/neopro/config/configuration.json"
 LOG_DIR="/home/pi/neopro/logs"
 LOG_FILE="$LOG_DIR/kiosk-watchdog.log"
 KIOSK_STATUS_FILE="/home/pi/neopro/data/kiosk-status.json"
@@ -37,6 +39,41 @@ detect_pi_model() {
 }
 
 PI_MODEL=$(detect_pi_model)
+
+# LED Chromium state
+LED_CHROMIUM_PID=0
+LED_ENABLED=false
+
+# Lire ledEnabled depuis configuration.json
+read_led_enabled() {
+    if [ -f "$CONFIG_FILE" ]; then
+        local val
+        val=$(python3 -c "import json,sys; c=json.load(open('$CONFIG_FILE')); print('true' if c.get('ledEnabled') else 'false')" 2>/dev/null)
+        LED_ENABLED="${val:-false}"
+    else
+        LED_ENABLED=false
+    fi
+}
+
+# Détecter si HDMI 1 (second écran) est connecté
+detect_hdmi1_status() {
+    local status_file=""
+    if [[ "$PI_MODEL" == "pi5" ]]; then
+        # Pi 5: DRM card1-HDMI-A-2
+        status_file="/sys/class/drm/card1-HDMI-A-2/status"
+    else
+        # Pi 4: DRM card0-HDMI-A-2 (second HDMI = micro-HDMI droit)
+        status_file="/sys/class/drm/card0-HDMI-A-2/status"
+    fi
+
+    if [ -f "$status_file" ]; then
+        local status
+        status=$(cat "$status_file" 2>/dev/null)
+        [[ "$status" == "connected" ]]
+        return $?
+    fi
+    return 1  # Non connecté ou fichier non trouvé
+}
 
 log() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" | tee -a "$LOG_FILE"
@@ -66,8 +103,11 @@ write_kiosk_status() {
     local status="$1"
     local reason="${2:-}"
     local now=$(date -u +"%Y-%m-%dT%H:%M:%S.000Z")
+    local led_alive=$(pgrep -f "chromium.*$CHROMIUM_LED_URL" > /dev/null 2>&1 && echo "true" || echo "false")
+    local hdmi1_status="unknown"
+    detect_hdmi1_status && hdmi1_status="connected" || hdmi1_status="disconnected"
     cat > "$KIOSK_STATUS_FILE" 2>/dev/null <<EOF
-{"status":"${status}","chromiumAlive":$(pgrep -f "chromium.*$CHROMIUM_URL" > /dev/null 2>&1 && echo "true" || echo "false"),"restartCount":${#crash_times[@]},"lastEvent":"${now}","reason":"${reason}","pid":${CHROMIUM_PID:-0}}
+{"status":"${status}","chromiumAlive":$(pgrep -f "chromium.*$CHROMIUM_URL" > /dev/null 2>&1 && echo "true" || echo "false"),"restartCount":${#crash_times[@]},"lastEvent":"${now}","reason":"${reason}","pid":${CHROMIUM_PID:-0},"ledEnabled":${LED_ENABLED},"ledChromiumAlive":${led_alive},"hdmi1Status":"${hdmi1_status}"}
 EOF
 }
 
@@ -82,6 +122,7 @@ cleanup_chromium() {
     log "🧹 Nettoyage des processus Chromium..."
     pkill -9 -f "chromium" 2>/dev/null || true
     pkill -9 -f "chrome" 2>/dev/null || true
+    LED_CHROMIUM_PID=0
 
     # Attendre que les processus se terminent
     sleep 2
@@ -90,6 +131,7 @@ cleanup_chromium() {
     rm -rf /home/pi/.cache/chromium/Default/Cache/* 2>/dev/null || true
     rm -rf /home/pi/.cache/chromium/Default/Code\ Cache/* 2>/dev/null || true
     rm -rf /home/pi/.config/chromium/Default/GPUCache/* 2>/dev/null || true
+    rm -rf /tmp/kiosk-led 2>/dev/null || true
 
     # Synchroniser les écritures disque
     sync
@@ -198,6 +240,109 @@ start_chromium() {
     fi
 }
 
+# Lancer Chromium LED sur le second écran (HDMI 1)
+start_chromium_led() {
+    log "🖥️ Lancement de Chromium LED sur HDMI 1..."
+
+    export DISPLAY=:0
+    export XAUTHORITY=/home/pi/.Xauthority
+
+    # Flags identiques au kiosk principal + user-data-dir séparé + positionnement écran 2
+    local common_flags=(
+        --kiosk
+        --autoplay-policy=no-user-gesture-required
+        --noerrdialogs
+        --disable-infobars
+        --disable-session-crashed-bubble
+        --disable-restore-session-state
+        --disable-features=TranslateUI,MediaRouter
+        --no-first-run
+        --fast
+        --fast-start
+        --disable-component-update
+        --disable-background-networking
+        --disable-sync
+        --disable-translate
+        --disable-cloud-import
+        --disable-print-preview
+        --disable-hang-monitor
+        --disable-popup-blocking
+        --enable-features=OverlayScrollbar
+        --memory-pressure-off
+        --disable-breakpad
+        --disable-crash-reporter
+        --disable-dev-shm-usage
+        --disable-checker-imaging
+        --user-data-dir=/tmp/kiosk-led
+        --window-position=1920,0
+    )
+
+    # Mêmes flags GPU que le kiosk principal
+    local gpu_flags=()
+    if [[ "$PI_MODEL" == "pi5" ]]; then
+        gpu_flags=(
+            --ignore-gpu-blocklist
+            --enable-gpu-rasterization
+            --disable-features=VaapiVideoDecoder,UseChromeOSDirectVideoDecoder
+            --disable-gpu-memory-buffer-video-frames
+        )
+    else
+        gpu_flags=(
+            --disable-gpu-driver-bug-workarounds
+            --enable-gpu-rasterization
+            --enable-zero-copy
+            --ignore-gpu-blocklist
+            --disable-software-rasterizer
+            --disable-gpu-vsync
+        )
+    fi
+
+    "$CHROMIUM_BIN" "${common_flags[@]}" "${gpu_flags[@]}" "$CHROMIUM_LED_URL" &
+    LED_CHROMIUM_PID=$!
+    log "✓ Chromium LED lancé (PID: $LED_CHROMIUM_PID)"
+}
+
+# Arrêter le Chromium LED
+stop_chromium_led() {
+    if (( LED_CHROMIUM_PID > 0 )); then
+        log "🔴 Arrêt du Chromium LED (PID: $LED_CHROMIUM_PID)..."
+        kill -9 "$LED_CHROMIUM_PID" 2>/dev/null || true
+        LED_CHROMIUM_PID=0
+        # Nettoyer le user-data-dir temporaire
+        rm -rf /tmp/kiosk-led 2>/dev/null || true
+        log "✓ Chromium LED arrêté"
+    fi
+}
+
+# Vérifier et gérer le Chromium LED
+check_led_chromium() {
+    read_led_enabled
+
+    if [[ "$LED_ENABLED" != "true" ]]; then
+        # LED désactivé → arrêter le Chromium LED si en cours
+        if (( LED_CHROMIUM_PID > 0 )); then
+            log "LED désactivé dans la config, arrêt du Chromium LED"
+            stop_chromium_led
+        fi
+        return
+    fi
+
+    # LED activé → vérifier HDMI 1
+    if detect_hdmi1_status; then
+        # HDMI 1 connecté → vérifier que le Chromium LED tourne
+        if (( LED_CHROMIUM_PID == 0 )) || ! kill -0 "$LED_CHROMIUM_PID" 2>/dev/null; then
+            log "HDMI 1 connecté + LED activé → lancement du Chromium LED"
+            start_chromium_led
+        fi
+    else
+        # HDMI 1 déconnecté → arrêter le Chromium LED
+        if (( LED_CHROMIUM_PID > 0 )); then
+            log "HDMI 1 déconnecté, arrêt du Chromium LED"
+            stop_chromium_led
+        fi
+    fi
+}
+
 # Vérifier si Chromium affiche une page d'erreur
 check_for_crash_page() {
     # Méthode 1: Vérifier le titre de la fenêtre via xdotool
@@ -270,6 +415,13 @@ main() {
     sleep 2
     start_chromium
 
+    # Lire la config LED et lancer le Chromium LED si nécessaire
+    read_led_enabled
+    if [[ "$LED_ENABLED" == "true" ]] && detect_hdmi1_status; then
+        log "LED activé et HDMI 1 connecté — lancement du Chromium LED"
+        start_chromium_led
+    fi
+
     while true; do
         sleep "$CHECK_INTERVAL"
 
@@ -311,10 +463,16 @@ main() {
 
             start_chromium
         fi
+
+        # Vérification LED: lancer/arrêter le Chromium LED selon config + HDMI 1
+        check_led_chromium
+
+        # Mettre à jour le statut kiosk
+        write_kiosk_status "running"
     done
 }
 
 # Gestion des signaux pour un arrêt propre
-trap 'log "Arrêt du watchdog..."; cleanup_chromium; exit 0' SIGTERM SIGINT
+trap 'log "Arrêt du watchdog..."; stop_chromium_led; cleanup_chromium; exit 0' SIGTERM SIGINT
 
 main "$@"

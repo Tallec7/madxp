@@ -231,7 +231,34 @@ Site Sponsor flow (local sponsors) :
          └── Sponsor Portal (/sponsor-access?token=xxx) — public, token-based
 ```
 
-### 2b. Sponsor health monitoring (F-AUD-07)
+### 2b. Sponsor auto-resolution at deployment
+
+```
+Dashboard saves config (boucles + catégories)
+         │
+         ▼
+orchestrated-deployment.service.ts → queueConfigUpdate()
+         │
+         ▼
+sponsor-auto-resolution.service.ts → autoResolveSponsorIds(siteId, config)
+         │
+         ├── collectAllVideos() : sponsors[] + timeCategories[].loopVideos[]
+         │                        + categories[].videos[] + subCategories[].videos[]
+         │
+         ├── extractFilename() : "videos/BOUCLE/07_A_L_AFFUT.mp4" → "07_A_L_AFFUT.mp4"
+         │
+         ├── siteSponsorRepository.resolveSiteSponsorIdsByFilenameBulk()
+         │   → 1 seul appel SQL bulk (filename × siteId → site_sponsor_id)
+         │
+         └── Injection site_sponsor_id dans la config clonée
+                  │
+                  ▼
+         Config enrichie envoyée au Pi → impressions trackées avec site_sponsor_id
+
+Metrics: neopro_sponsor_auto_resolution_total{outcome="resolved|skipped|unresolved"}
+```
+
+### 2c. Sponsor health monitoring (F-AUD-07)
 
 ```
 Advertiser Health Dashboard
@@ -405,7 +432,7 @@ Pi Frontend (ProfileConfigService sélectionne le profil actif)
 - **Grafana dashboards** (Port 3000) — 3 dashboards (local) + 3 dashboards cloud :
   - _NeoPro Overview_ : API Health, sites connectés, alertes actives, taux 5xx, latence p95, mémoire RSS
   - _NeoPro Infrastructure_ : HTTP rate/latence par percentile, Node.js runtime (heap, event loop lag, memory pressure), auth & rate limiting, DB pool & latency, FTP storage
-  - _NeoPro Business & Fleet_ : content pipeline (video uploads), fleet Pi (WebSocket par type, heartbeats, network stability, socket disconnects), video transitions, deployments (canary, sync, drift), subscriptions & predictive alerts, **kiosk Chromium** (status, crashes, restarts), **Fan Pi** (présence, état, failures)
+  - _NeoPro Business & Fleet_ : content pipeline (video uploads), fleet Pi (WebSocket par type, heartbeats, network stability, socket disconnects), video transitions, deployments (canary, sync, drift), subscriptions & predictive alerts, **kiosk Chromium** (status, crashes, restarts, **dual TV+LED**), **Fan Pi** (présence, état, failures)
 - **Scrape targets** : Docker local, `host.docker.internal:3001` (dev), Railway HTTPS (prod)
 - **Smoke tests** : `npm run test:smoke` — 139 tests détectent les régressions de wiring API (routes, middlewares, repositories, services, handlers, error types, métriques Prometheus critiques, hourly metric alerting wiring) + conventions Pi (systemd, sudoers)
 - Systemd journald logs
@@ -491,13 +518,14 @@ Le Raspberry Pi peut fonctionner dans différents modes réseau :
 │                                                                   │
 │  wlan0: Hotspot "NEOPRO_xxx"     wlan1: Non utilisé              │
 │                                                                   │
-│  ┌─────────────┐    ┌─────────────┐    ┌─────────────────────┐  │
-│  │   Nginx     │    │ Socket.IO   │    │      Chromium       │  │
-│  │  Port 80    │    │  Port 3000  │    │    /tv (kiosk)      │  │
-│  └──────┬──────┘    └──────┬──────┘    └──────────┬──────────┘  │
-│         │                  │                      │              │
-│         └──────────────────┼──────────────────────┘              │
-│                            │ Communication locale                │
+│  ┌───────────┐  ┌───────────┐  ┌──────────────┐ ┌────────────┐  │
+│  │  Nginx    │  │ Socket.IO │  │  Chromium    │ │ Chromium   │  │
+│  │  Port 80  │  │ Port 3000 │  │ /tv (HDMI 0) │ │/led (H1)*  │  │
+│  └─────┬─────┘  └─────┬─────┘  └──────┬───────┘ └─────┬──────┘  │
+│        │               │               │               │          │
+│        └───────────────┼───────────────┴───────────────┘          │
+│                        │ Communication locale                     │
+│        * LED kiosk : lancé si led_enabled + HDMI 1 connecté       │
 └────────────────────────────┼─────────────────────────────────────┘
                              │
                    WiFi (192.168.4.x)

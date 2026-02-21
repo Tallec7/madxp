@@ -99,7 +99,7 @@ interface LoopTab {
                 (ngModelChange)="onChanged()"
                 class="sponsor-select"
               >
-                <option [ngValue]="undefined">— Sans sponsor —</option>
+                <option [ngValue]="undefined">{{ getAutoDetectedSponsorLabel(video.path) }}</option>
                 <option *ngFor="let sp of siteSponsors" [value]="sp.id">
                   {{ sp.source === 'neopro' ? '📡 ' : '🏠 ' }}{{ sp.name }}
                 </option>
@@ -164,7 +164,7 @@ interface LoopTab {
                   (ngModelChange)="updatePhaseVideo(i, 'site_sponsor_id', $event)"
                   class="sponsor-select"
                 >
-                  <option [ngValue]="undefined">— Sans sponsor —</option>
+                  <option [ngValue]="undefined">{{ getAutoDetectedSponsorLabel(video.path) }}</option>
                   <option *ngFor="let sp of siteSponsors" [value]="sp.id">
                     {{ sp.source === 'neopro' ? '📡 ' : '🏠 ' }}{{ sp.name }}
                   </option>
@@ -734,6 +734,34 @@ export class LoopManagerComponent implements OnInit, OnChanges {
     if (!tc) return;
     tc.loopVideos = [];
     this.onChanged();
+  }
+
+  // === Sponsor auto-detection ===
+
+  /**
+   * Extracts the bare filename from a video path and matches it against
+   * siteSponsors[].video_filenames[] to find an auto-detected sponsor.
+   * Returns the SiteSponsor if found, null otherwise.
+   */
+  getAutoDetectedSponsor(videoPath: string): SiteSponsor | null {
+    if (!videoPath || this.siteSponsors.length === 0) return null;
+    const parts = videoPath.split('/');
+    const bareFilename = parts[parts.length - 1] || videoPath;
+    return this.siteSponsors.find(
+      sp => sp.video_filenames?.includes(bareFilename)
+    ) ?? null;
+  }
+
+  /**
+   * Returns the label for the default (no sponsor) option in the dropdown.
+   * Shows "🔗 SPONSOR_NAME (auto)" if auto-detected, or "— Sans sponsor —" otherwise.
+   */
+  getAutoDetectedSponsorLabel(videoPath: string): string {
+    const sponsor = this.getAutoDetectedSponsor(videoPath);
+    if (sponsor) {
+      return `\u{1F517} ${sponsor.name} (auto)`;
+    }
+    return '\u2014 Sans sponsor \u2014';
   }
 
   // === Helpers ===

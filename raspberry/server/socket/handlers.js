@@ -166,10 +166,11 @@ module.exports = function registerSocketHandlers({ io, stateService, configPath 
      * Slaves receive the current loop state immediately.
      * @event tv-register
      */
-    socket.on('tv-register', () => {
-      const role = stateService.registerTv(socket.id);
+    socket.on('tv-register', (data) => {
+      const displayType = data?.displayType || 'tv';
+      const role = stateService.registerTv(socket.id, displayType);
       socket.emit('tv-role-assigned', { role });
-      console.log(`[TV-Sync] Registered as ${role}:`, socket.id);
+      console.log(`[TV-Sync] Registered as ${role} (${displayType}):`, socket.id);
 
       // Send current loop state to new slaves
       if (role === 'slave') {

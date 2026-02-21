@@ -55,11 +55,12 @@
   playsinline
 ></video>
 
-<!-- Overlay Score (broadcast-quality, CSS-only themes) -->
+<!-- Overlay Score TV (broadcast-quality, CSS-only themes) — masqué sur LED -->
 <!-- Requiert: liveScoreEnabled (central) ET scoreEnabled (local) -->
 <div
   class="score-overlay"
   *ngIf="
+    displayType !== 'led' &&
     showScoreOverlay &&
     currentScore &&
     configuration?.liveScoreEnabled &&
@@ -132,11 +133,12 @@
   </ng-container>
 </div>
 
-<!-- Timer Overlay (standalone quand pas de score ou non intégré) -->
+<!-- Timer Overlay (standalone quand pas de score ou non intégré) — masqué sur LED -->
 <!-- Requiert: liveScoreEnabled (central) pour afficher le timer lié au match -->
 <div
   class="timer-overlay"
   *ngIf="
+    displayType !== 'led' &&
     configuration?.liveScoreEnabled &&
     localOptions.timer.enabled &&
     timerIsRunning &&
@@ -152,11 +154,12 @@
   <span class="timer-value">{{ formatTimerDisplay() }}</span>
 </div>
 
-<!-- Animation de But/Point (3 styles: popup, fullscreen, slide) -->
+<!-- Animation de But/Point TV (3 styles: popup, fullscreen, slide) — masquée sur LED -->
 <!-- Requiert: liveScoreEnabled (central) ET goalAnimation.enabled (local) -->
 <div
   class="goal-animation"
   *ngIf="
+    displayType !== 'led' &&
     showGoalAnimation &&
     currentScore &&
     configuration?.liveScoreEnabled &&
@@ -221,6 +224,50 @@
     </span>
     <span class="breaking-news-text">{{ currentBreakingNews.message }}</span>
   </div>
+</div>
+
+<!-- ============================================================== -->
+<!-- LED OVERLAYS — Score bandeau + Goal flash (affichés uniquement sur /led) -->
+<!-- ============================================================== -->
+
+<!-- LED Score Bandeau (bandeau horizontal en bas) -->
+<div
+  class="led-score-bandeau"
+  *ngIf="
+    displayType === 'led' &&
+    showScoreOverlay &&
+    currentScore &&
+    configuration?.liveScoreEnabled &&
+    localOptions.overlay.scoreEnabled
+  "
+>
+  <span class="led-team home">{{ currentScore.homeTeam }}</span>
+  <span class="led-score home">{{ currentScore.homeScore }}</span>
+  <span class="led-divider">-</span>
+  <span class="led-score away">{{ currentScore.awayScore }}</span>
+  <span class="led-team away">{{ currentScore.awayTeam }}</span>
+  <span class="led-timer" *ngIf="localOptions.timer.enabled && timerIsRunning">{{
+    formatTimerDisplay()
+  }}</span>
+</div>
+
+<!-- LED Goal Flash (flash couleur plein écran) -->
+<div
+  class="led-goal-flash"
+  *ngIf="
+    displayType === 'led' &&
+    showGoalAnimation &&
+    currentScore &&
+    configuration?.liveScoreEnabled &&
+    localOptions.goalAnimation.enabled
+  "
+  [class.home]="goalScoringTeam === 'home'"
+  [class.away]="goalScoringTeam === 'away'"
+>
+  <span class="led-goal-text">{{
+    localOptions.sport === 'football' || localOptions.sport === 'handball' ? 'BUUUUT !' : 'POINT !'
+  }}</span>
+  <span class="led-goal-score">{{ currentScore.homeScore }} - {{ currentScore.awayScore }}</span>
 </div>
 
 <!-- Watermark Overlay (z-index 1100, au-dessus du score mais sous les animations) -->

@@ -16,6 +16,11 @@ router.post('/videos/bulk', authenticate, requireRole('admin', 'operator'), uplo
 router.put('/videos/:id', authenticate, requireRole('admin', 'operator'), contentController.updateVideo);
 router.delete('/videos/:id', authenticate, requireRole('admin'), contentController.deleteVideo);
 
+// Video variant routes (E-22: LED variants)
+router.get('/videos/:id/variants', authenticate, contentController.getVideoVariants);
+router.post('/videos/:id/variants', authenticate, requireRole('admin', 'operator'), uploadVideo.single('video'), contentController.createVideoVariant);
+router.delete('/videos/:videoId/variants/:displayType', authenticate, requireRole('admin'), contentController.deleteVideoVariant);
+
 // Image to video conversion
 router.post('/image-to-video', authenticate, requireRole('admin', 'operator'), uploadImage.single('image'), contentController.convertImageToVideo);
 

@@ -8,6 +8,8 @@
     "create": "Crear",
     "search": "Buscar",
     "searchPlaceholder": "Buscar...",
+    "searchClub": "Buscar un club...",
+    "loadingClubs": "Cargando clubes...",
     "filter": "Filtrar",
     "actions": "Acciones",
     "confirm": "Confirmar",
@@ -472,7 +474,9 @@
   "siteSponsors": {
     "statusActive": "Activo",
     "statusPaused": "Pausado",
-    "statusExpired": "Expirado"
+    "statusExpired": "Expirado",
+    "videosNotInLoop": "Fuera de bucle",
+    "videosNotInLoopTooltip": "Video(s) ausente(s) de los bucles y categorias de difusion"
   },
   "profiles": {
     "title": "Perfiles de configuracion",

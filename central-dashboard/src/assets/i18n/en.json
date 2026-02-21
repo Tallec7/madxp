@@ -8,6 +8,8 @@
     "create": "Create",
     "search": "Search",
     "searchPlaceholder": "Search...",
+    "searchClub": "Search a club...",
+    "loadingClubs": "Loading clubs...",
     "filter": "Filter",
     "actions": "Actions",
     "confirm": "Confirm",
@@ -472,7 +474,9 @@
   "siteSponsors": {
     "statusActive": "Active",
     "statusPaused": "Paused",
-    "statusExpired": "Expired"
+    "statusExpired": "Expired",
+    "videosNotInLoop": "Not in loop",
+    "videosNotInLoopTooltip": "Video(s) not found in any broadcast loop or category"
   },
   "profiles": {
     "title": "Config Profiles",

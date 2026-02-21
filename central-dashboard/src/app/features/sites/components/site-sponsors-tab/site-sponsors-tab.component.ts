@@ -8,7 +8,7 @@ import { Chart, ChartConfiguration, registerables } from 'chart.js';
 import { SitesService } from '../../../../core/services/sites.service';
 import { NotificationService } from '../../../../core/services/notification.service';
 import { ConfirmDialogService } from '../../../../core/services/confirm-dialog.service';
-import { Site, SiteSponsor, SiteSponsorVideo, SiteSponsorStatsResponse, SiteSponsorDailyTrend, GeneratedReport, SiteSponsorBenchmarkResponse, CloudVideo } from '../../../../core/models';
+import { Site, SiteSponsor, SiteSponsorVideo, SiteSponsorStatsResponse, SiteSponsorDailyTrend, GeneratedReport, SiteSponsorBenchmarkResponse, CloudVideo, SiteConfiguration } from '../../../../core/models';
 
 Chart.register(...registerables);
 
@@ -126,7 +126,14 @@ Chart.register(...registerables);
                   {{ sponsor.source === 'neopro' ? '📡 NEOPRO' : '🏠 Club' }}
                 </span>
               </td>
-              <td>{{ sponsor.video_count || 0 }}</td>
+              <td>
+                {{ sponsor.video_count || 0 }}
+                <span class="loop-warning-badge"
+                      *ngIf="hasVideosNotInLoop(sponsor)"
+                      [title]="('siteSponsors.videosNotInLoopTooltip' | translate) + ' (' + getVideosNotInLoopCount(sponsor) + ')'">
+                  {{ 'siteSponsors.videosNotInLoop' | translate }}
+                </span>
+              </td>
               <td>{{ sponsor.total_impressions || 0 }}</td>
               <td>
                 <span class="config-badge" [ngClass]="isConfigComplete(sponsor) ? 'config-complete' : 'config-incomplete'"
@@ -212,9 +219,15 @@ Chart.register(...registerables);
                   <div class="videos-section">
                     <h4>Vidéos associées ({{ detailStats.videos?.length || 0 }})</h4>
                     <div class="video-chips" *ngIf="detailStats.videos?.length">
-                      <span class="video-chip" *ngFor="let v of detailStats.videos">
+                      <span class="video-chip" *ngFor="let v of detailStats.videos"
+                            [class.chip-not-in-loop]="isVideoNotInLoop(v.video_filename)">
                         🎬 {{ v.video_filename }}
                         <span class="chip-primary" *ngIf="v.is_primary">Principal</span>
+                        <span class="chip-warning"
+                              *ngIf="isVideoNotInLoop(v.video_filename)"
+                              [title]="'siteSponsors.videosNotInLoopTooltip' | translate">
+                          {{ 'siteSponsors.videosNotInLoop' | translate }}
+                        </span>
                         <button class="chip-remove" title="Retirer cette vidéo" (click)="removeVideo(v.video_filename)"
                                 [disabled]="removingVideoFilename === v.video_filename">
                           {{ removingVideoFilename === v.video_filename ? '⏳' : '✕' }}
@@ -727,6 +740,20 @@ Chart.register(...registerables);
     }
     .btn-config-cta:hover { color: #1d4ed8; }
 
+    /* Loop warning badge (video not in any loop/category) */
+    .loop-warning-badge {
+      display: inline-block;
+      font-size: 0.7rem;
+      font-weight: 500;
+      padding: 0.15rem 0.45rem;
+      border-radius: 4px;
+      background: #fef3c7;
+      color: #92400e;
+      margin-left: 0.35rem;
+      cursor: help;
+      white-space: nowrap;
+    }
+
     /* Actions */
     .actions-cell {
       display: flex;
@@ -828,6 +855,19 @@ Chart.register(...registerables);
       padding: 0.1rem 0.35rem;
       border-radius: 3px;
       font-weight: 600;
+    }
+    .chip-not-in-loop {
+      border-color: #fbbf24;
+      background: #fffbeb;
+    }
+    .chip-warning {
+      background: #fef3c7;
+      color: #92400e;
+      font-size: 0.65rem;
+      padding: 0.1rem 0.35rem;
+      border-radius: 3px;
+      font-weight: 600;
+      cursor: help;
     }
     .chip-remove {
       background: none;
@@ -1304,8 +1344,13 @@ export class SiteSponsorsTabComponent implements OnInit, OnDestroy {
   accessLinkUrl: string | null = null;
   accessLinkCopied = false;
 
+  // Loop presence detection (video-not-in-loop warning)
+  private videosInLoops: Set<string> = new Set();
+  configLoaded = false;
+
   ngOnInit(): void {
     this.loadSponsors();
+    this.loadSiteConfig();
   }
 
   ngOnDestroy(): void {
@@ -1843,6 +1888,111 @@ export class SiteSponsorsTabComponent implements OnInit, OnDestroy {
         this.loadSponsors();
       },
     });
+  }
+
+  // =========================================================================
+  // Loop presence detection (video-not-in-loop warning)
+  // =========================================================================
+
+  private loadSiteConfig(): void {
+    this.sitesService.getLocalContent(this.siteId).subscribe({
+      next: (content) => {
+        this.buildVideosInLoopsSet(content.configuration);
+        this.configLoaded = true;
+        this.cdr.markForCheck();
+      },
+      error: () => {
+        // Config unavailable — no warnings shown, degrade gracefully
+        this.configLoaded = false;
+      },
+    });
+  }
+
+  /**
+   * Extracts all video filenames present in the site configuration loops and categories.
+   * Covers: config.sponsors[], config.timeCategories[].loopVideos[],
+   * config.categories[].videos[], config.categories[].subCategories[].videos[]
+   */
+  private buildVideosInLoopsSet(config: SiteConfiguration | null): void {
+    this.videosInLoops = new Set();
+    if (!config) return;
+
+    // Helper to extract bare filename from a path like "videos/BOUCLE/video.mp4"
+    const extractFilename = (path: string): string => {
+      const parts = path.split('/');
+      return parts[parts.length - 1];
+    };
+
+    // 1. Global loop (config.sponsors[] — legacy name for loop videos)
+    for (const loopVideo of config.sponsors ?? []) {
+      if (loopVideo.path) {
+        this.videosInLoops.add(extractFilename(loopVideo.path));
+      }
+      if (loopVideo.name) {
+        this.videosInLoops.add(loopVideo.name);
+      }
+    }
+
+    // 2. Time categories loop videos
+    for (const tc of config.timeCategories ?? []) {
+      for (const loopVideo of tc.loopVideos ?? []) {
+        if (loopVideo.path) {
+          this.videosInLoops.add(extractFilename(loopVideo.path));
+        }
+        if (loopVideo.name) {
+          this.videosInLoops.add(loopVideo.name);
+        }
+      }
+    }
+
+    // 3. Category videos and subcategory videos
+    for (const cat of config.categories ?? []) {
+      for (const video of cat.videos ?? []) {
+        if (video.path) {
+          this.videosInLoops.add(extractFilename(video.path));
+        }
+        if (video.name) {
+          this.videosInLoops.add(video.name);
+        }
+      }
+      for (const subCat of cat.subCategories ?? []) {
+        for (const video of subCat.videos ?? []) {
+          if (video.path) {
+            this.videosInLoops.add(extractFilename(video.path));
+          }
+          if (video.name) {
+            this.videosInLoops.add(video.name);
+          }
+        }
+      }
+    }
+  }
+
+  /**
+   * Returns true if the sponsor has videos that are NOT found in any loop or category.
+   */
+  hasVideosNotInLoop(sponsor: SiteSponsor): boolean {
+    if (!this.configLoaded) return false;
+    const filenames = sponsor.video_filenames ?? [];
+    if (filenames.length === 0) return false;
+    return filenames.some(f => !this.videosInLoops.has(f));
+  }
+
+  /**
+   * Returns true if a specific video filename is NOT in any loop or category.
+   */
+  isVideoNotInLoop(filename: string): boolean {
+    if (!this.configLoaded) return false;
+    return !this.videosInLoops.has(filename);
+  }
+
+  /**
+   * Returns the count of sponsor videos missing from loops/categories.
+   */
+  getVideosNotInLoopCount(sponsor: SiteSponsor): number {
+    if (!this.configLoaded) return 0;
+    const filenames = sponsor.video_filenames ?? [];
+    return filenames.filter(f => !this.videosInLoops.has(f)).length;
   }
 
   // =========================================================================

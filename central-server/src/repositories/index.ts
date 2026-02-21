@@ -245,4 +245,10 @@ export {
   type ContentMixRow,
 } from './pitch-deck.repository';
 export { siteSponsorRepository } from './site-sponsor.repository';
+export {
+  videoVariantRepository,
+  type VideoVariantRow,
+  type CreateVideoVariantInput,
+  type DisplayType,
+} from './video-variant.repository';
 export { BaseRepository } from './base.repository';

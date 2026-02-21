@@ -171,14 +171,22 @@ class StateService {
   }
 
   // --- TV Registration (Master-Slave) ---
-  registerTv(socketId) {
+  registerTv(socketId, displayType = 'tv') {
     const masterId = this._getMasterId();
     if (!masterId) {
-      this._tvInstances.set(socketId, { role: 'master', connectedAt: Date.now() });
+      this._tvInstances.set(socketId, { role: 'master', displayType, connectedAt: Date.now() });
       return 'master';
     }
-    this._tvInstances.set(socketId, { role: 'slave', connectedAt: Date.now() });
+    this._tvInstances.set(socketId, { role: 'slave', displayType, connectedAt: Date.now() });
     return 'slave';
+  }
+
+  getConnectedDisplayTypes() {
+    const types = new Set();
+    for (const [, info] of this._tvInstances) {
+      types.add(info.displayType || 'tv');
+    }
+    return Array.from(types);
   }
 
   unregisterTv(socketId) {

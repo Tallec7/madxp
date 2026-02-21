@@ -75,6 +75,7 @@ export const routes: Routes = [
     { path: '', redirectTo: 'tv', pathMatch: 'full' },
     { path: 'login', component: LoginComponent },
     { path: 'tv', component: TvComponent, resolve: { configuration: getConfiguration } },
+    { path: 'led', component: TvComponent, resolve: { configuration: getConfiguration }, data: { displayType: 'led' } },
     { path: 'remote', component: RemoteComponent, resolve: { configuration: getConfiguration }, canActivate: [authGuard] },
     { path: '**', redirectTo: 'tv' }
 ];

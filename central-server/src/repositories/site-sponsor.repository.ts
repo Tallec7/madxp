@@ -41,6 +41,7 @@ export interface SiteSponsorListRow extends QueryResultRow {
   created_at: Date;
   video_count: string;
   total_impressions: string;
+  video_filenames: string[];
 }
 
 export interface CreateSiteSponsorInput {
@@ -199,7 +200,11 @@ class SiteSponsorRepositoryImpl extends BaseRepository<SiteSponsorRow> {
         ss.status,
         ss.created_at,
         COUNT(DISTINCT ssv.id)::text as video_count,
-        COALESCE(imp.cnt, 0)::text as total_impressions
+        COALESCE(imp.cnt, 0)::text as total_impressions,
+        COALESCE(
+          array_agg(ssv.video_filename) FILTER (WHERE ssv.video_filename IS NOT NULL),
+          '{}'
+        ) as video_filenames
        FROM site_sponsors ss
        LEFT JOIN site_sponsor_videos ssv ON ssv.site_sponsor_id = ss.id
        LEFT JOIN (
