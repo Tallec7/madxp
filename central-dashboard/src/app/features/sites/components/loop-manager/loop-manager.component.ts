@@ -93,17 +93,10 @@ interface LoopTab {
               </select>
               <span class="cloud-hint" *ngIf="isCloudVideo(video.path)">⏳ Sera déployée</span>
               <span class="error-hint" *ngIf="!video.path">Vidéo requise</span>
-              <select
-                *ngIf="siteSponsors.length > 0"
-                [(ngModel)]="video.site_sponsor_id"
-                (ngModelChange)="onChanged()"
-                class="sponsor-select"
-              >
-                <option [ngValue]="undefined">{{ getAutoDetectedSponsorLabel(video.path) }}</option>
-                <option *ngFor="let sp of siteSponsors" [value]="sp.id">
-                  {{ sp.source === 'neopro' ? '📡 ' : '🏠 ' }}{{ sp.name }}
-                </option>
-              </select>
+              <span class="sponsor-badge-readonly" *ngIf="getAutoDetectedSponsor(video.path) as sponsor"
+                    [title]="'Associé au sponsor ' + sponsor.name + ' (onglet Sponsors)'">
+                🔗 {{ sponsor.name }}
+              </span>
             </div>
             <span class="video-duration" *ngIf="getVideoDuration(video.path) as dur">{{ formatDuration(dur) }}</span>
             <div class="video-owner">
@@ -158,17 +151,10 @@ interface LoopTab {
                   </optgroup>
                 </select>
                 <span class="cloud-badge" *ngIf="isCloudVideo(video.path)" title="Sera déployée automatiquement">⏳</span>
-                <select
-                  *ngIf="siteSponsors.length > 0"
-                  [ngModel]="video.site_sponsor_id"
-                  (ngModelChange)="updatePhaseVideo(i, 'site_sponsor_id', $event)"
-                  class="sponsor-select"
-                >
-                  <option [ngValue]="undefined">{{ getAutoDetectedSponsorLabel(video.path) }}</option>
-                  <option *ngFor="let sp of siteSponsors" [value]="sp.id">
-                    {{ sp.source === 'neopro' ? '📡 ' : '🏠 ' }}{{ sp.name }}
-                  </option>
-                </select>
+                <span class="sponsor-badge-readonly" *ngIf="getAutoDetectedSponsor(video.path) as sponsor"
+                      [title]="'Associé au sponsor ' + sponsor.name + ' (onglet Sponsors)'">
+                  🔗 {{ sponsor.name }}
+                </span>
               </div>
               <span class="video-duration" *ngIf="getVideoDuration(video.path) as dur">{{ formatDuration(dur) }}</span>
               <button class="btn-remove-sm" (click)="removePhaseVideo(i)">×</button>
@@ -418,14 +404,17 @@ interface LoopTab {
       color: #92400e;
     }
 
-    .sponsor-select {
-      width: 180px;
-      padding: 0.375rem 0.5rem;
-      border: 1px solid #e2e8f0;
+    .sponsor-badge-readonly {
+      display: inline-block;
+      padding: 0.2rem 0.5rem;
+      border: 1px solid #93c5fd;
       border-radius: 4px;
-      font-size: 0.75rem;
-      color: #475569;
-      background: white;
+      font-size: 0.7rem;
+      color: #1e40af;
+      background: #dbeafe;
+      font-weight: 600;
+      white-space: nowrap;
+      cursor: help;
     }
 
     .error-hint {
@@ -693,13 +682,12 @@ export class LoopManagerComponent implements OnInit, OnChanges {
     this.onChanged();
   }
 
-  updatePhaseVideo(index: number, field: 'name' | 'path' | 'site_sponsor_id', value: string): void {
+  updatePhaseVideo(index: number, field: 'name' | 'path', value: string): void {
     const tc = this.config.timeCategories?.find(t => t.id === this.activeTab);
     if (!tc?.loopVideos?.[index]) return;
     const video = tc.loopVideos[index];
     if (field === 'name') video.name = value;
     else if (field === 'path') video.path = value;
-    else if (field === 'site_sponsor_id') video.site_sponsor_id = value || undefined;
 
     // Auto-remplir le nom si on change le path et que le nom est vide
     if (field === 'path' && value && !tc.loopVideos[index].name) {
@@ -750,18 +738,6 @@ export class LoopManagerComponent implements OnInit, OnChanges {
     return this.siteSponsors.find(
       sp => sp.video_filenames?.includes(bareFilename)
     ) ?? null;
-  }
-
-  /**
-   * Returns the label for the default (no sponsor) option in the dropdown.
-   * Shows "🔗 SPONSOR_NAME (auto)" if auto-detected, or "— Sans sponsor —" otherwise.
-   */
-  getAutoDetectedSponsorLabel(videoPath: string): string {
-    const sponsor = this.getAutoDetectedSponsor(videoPath);
-    if (sponsor) {
-      return `\u{1F517} ${sponsor.name} (auto)`;
-    }
-    return '\u2014 Sans sponsor \u2014';
   }
 
   // === Helpers ===
