@@ -1,8 +1,17 @@
--- Migration: Fix calculate_daily_stats function column name
--- Date: 2026-02-19
--- Description: Fix screen_time_minutes → screen_time_seconds in calculate_daily_stats
--- The add-tv-status-analytics migration incorrectly used screen_time_minutes
--- but the club_daily_stats table column is screen_time_seconds
+-- Migration: Fix daily stats updated_at + Deduplicate video_plays
+-- Date: 2026-02-21
+-- Description:
+--   1. Fix calculate_daily_stats: remove updated_at reference (column doesn't exist)
+--   2. Add unique index on video_plays to prevent future duplicates
+--   3. Clean existing duplicates (~8700 rows)
+--   4. Backfill daily stats for Feb 5-20 (17 missing days)
+
+-- ============================================================================
+-- Part 1: Fix calculate_daily_stats function
+-- The previous migration (fix-daily-stats-column-name.sql) fixed
+-- screen_time_minutes → screen_time_seconds but introduced updated_at = NOW()
+-- on line 136. club_daily_stats has no updated_at column — calculated_at suffices.
+-- ============================================================================
 
 CREATE OR REPLACE FUNCTION calculate_daily_stats(p_site_id UUID, p_date DATE)
 RETURNS void AS $$
@@ -67,7 +76,7 @@ BEGIN
       AND recorded_at >= p_date
       AND recorded_at < p_date + INTERVAL '1 day';
 
-    -- Availability (online minutes)
+    -- Availability (online minutes based on heartbeat intervals)
     WITH intervals AS (
         SELECT
             recorded_at,
@@ -98,7 +107,7 @@ BEGIN
       AND created_at >= p_date
       AND created_at < p_date + INTERVAL '1 day';
 
-    -- Upsert daily stats (FIX: use screen_time_seconds, not screen_time_minutes)
+    -- Upsert daily stats (FIX: removed updated_at — column does not exist)
     INSERT INTO club_daily_stats (
         site_id, date,
         sessions_count, screen_time_seconds, videos_played,
@@ -136,7 +145,58 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+-- ============================================================================
+-- Part 2: Deduplicate existing video_plays
+-- Pattern: same (site_id, played_at, video_filename) inserted twice ~0.7s apart
+-- Keep the row with the earliest created_at (first successful insert)
+-- ============================================================================
+
+DELETE FROM video_plays
+WHERE id IN (
+    SELECT id FROM (
+        SELECT
+            id,
+            ROW_NUMBER() OVER (
+                PARTITION BY site_id, played_at, video_filename
+                ORDER BY created_at ASC
+            ) as rn
+        FROM video_plays
+    ) ranked
+    WHERE rn > 1
+);
+
+-- ============================================================================
+-- Part 3: Prevent future duplicates
+-- Unique index on (site_id, played_at, video_filename)
+-- This makes INSERT idempotent — the sync-agent can safely retry without duplication
+-- ============================================================================
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_video_plays_dedup
+ON video_plays (site_id, played_at, video_filename);
+
+-- ============================================================================
+-- Part 4: Backfill daily stats for the 17 missing days (Feb 5 → Feb 20)
+-- ============================================================================
+
+DO $$
+DECLARE
+    v_date DATE;
+    v_count INTEGER := 0;
+BEGIN
+    FOR v_date IN SELECT generate_series('2026-02-05'::date, '2026-02-20'::date, '1 day'::interval)::date
+    LOOP
+        PERFORM calculate_all_daily_stats(v_date);
+        v_count := v_count + 1;
+    END LOOP;
+
+    -- Also calculate today (partial)
+    PERFORM calculate_all_daily_stats(CURRENT_DATE);
+    v_count := v_count + 1;
+
+    RAISE NOTICE 'Backfilled daily stats for % days', v_count;
+END $$;
+
 DO $$
 BEGIN
-    RAISE NOTICE 'Migration complete: Fixed screen_time_minutes → screen_time_seconds in calculate_daily_stats';
+    RAISE NOTICE 'Migration complete: fixed updated_at, deduped video_plays, added unique index, backfilled daily stats';
 END $$;

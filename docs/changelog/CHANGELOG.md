@@ -1,3 +1,20 @@
+## Analytics Pipeline Fix — Daily Stats + Déduplication (Fév 2026)
+
+### fix(analytics): daily stats cassées + doublons video_plays
+
+**Bug 1 — Daily stats en échec depuis le 5 février :**
+
+- La migration `fix-daily-stats-column-name.sql` (commit 452405f) avait corrigé `screen_time_minutes → screen_time_seconds` mais introduit `updated_at = NOW()` dans le `ON CONFLICT` — colonne inexistante sur `club_daily_stats`
+- Corrigé : suppression de la référence `updated_at`, `calculated_at` suffit
+- Backfill des 17 jours manquants (5-21 fév) via `calculate_all_daily_stats()`
+
+**Bug 2 — Doublons systématiques (11% des plays) :**
+
+- Le sync-agent envoyait le même batch 2 fois (~0.7s d'écart) avant de flush le buffer
+- 8 809 doublons supprimés (78 396 → 69 837 plays)
+- Ajout index unique `(site_id, played_at, video_filename)` pour prévenir les futurs doublons
+- `recordVideoPlays()` utilise désormais `ON CONFLICT DO NOTHING` (insertion idempotente)
+
 ## [3.68.3](https://github.com/Tallec7/neopro/compare/v3.68.2...v3.68.3) (2026-02-21)
 
 ### Bug Fixes

@@ -401,6 +401,7 @@ CREATE INDEX IF NOT EXISTS idx_video_plays_site ON video_plays(site_id, played_a
 CREATE INDEX IF NOT EXISTS idx_video_plays_session ON video_plays(session_id);
 CREATE INDEX IF NOT EXISTS idx_video_plays_date ON video_plays(played_at);
 CREATE INDEX IF NOT EXISTS idx_video_plays_filename ON video_plays(video_filename);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_video_plays_dedup ON video_plays(site_id, played_at, video_filename);
 CREATE INDEX IF NOT EXISTS idx_club_daily_stats_site ON club_daily_stats(site_id, date DESC);
 CREATE INDEX IF NOT EXISTS idx_club_daily_stats_date ON club_daily_stats(date);
 

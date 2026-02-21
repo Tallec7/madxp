@@ -526,7 +526,8 @@ class AnalyticsRepositoryImpl {
 
       await query(
         `INSERT INTO video_plays (site_id, session_id, video_filename, category, played_at, duration_played, video_duration, completed, trigger_type, video_id, sponsor_id, tv_status, event_type, period, audience_estimate, position_in_loop, site_sponsor_id, campaign_id)
-         VALUES ${placeholders.join(', ')}`,
+         VALUES ${placeholders.join(', ')}
+         ON CONFLICT (site_id, played_at, video_filename) DO NOTHING`,
         values
       );
     }
