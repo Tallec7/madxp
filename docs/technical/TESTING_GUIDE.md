@@ -6,7 +6,7 @@ Ce document décrit la stratégie de tests pour le projet NEOPRO, couvrant le ce
 
 | Composant         | Framework     | Couverture | Tests |
 | ----------------- | ------------- | ---------- | ----- |
-| central-server    | Jest          | ~90%       | 1 586 |
+| central-server    | Jest          | ~90%       | 1 592 |
 | central-dashboard | Karma/Jasmine | N/A        | 528   |
 | sync-agent        | Jest          | ~50%       | 89    |
 

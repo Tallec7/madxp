@@ -145,7 +145,15 @@ describe('SiteSponsorsTabComponent', () => {
     sitesServiceMock.generateSponsorReport.and.returnValue(of({ reportId: 'r2', url: 'https://example.com/report2.pdf' }));
     sitesServiceMock.getLocalContent.and.returnValue(of({
       siteId: 's1', siteName: 'Site Test', clubName: 'Club Test',
-      hasContent: true, lastSync: null, configHash: null, configuration: null,
+      hasContent: true, lastSync: null, configHash: null,
+      configuration: {
+        sponsors: [
+          { name: 'Sponsor A Video', path: '/videos/sponsor-a.mp4' },
+          { name: 'Sponsor B Video', path: '/videos/sponsor-b.mp4' },
+          { name: 'Promo', path: '/videos/promo.mp4' },
+        ],
+        categories: [],
+      },
       localVideos: [], localStorage: null, lastVideoSync: null, hotspotInfo: null,
       cloudVideos: [
         { id: 'cv1', filename: 'sponsor-a.mp4', originalName: 'sponsor-a.mp4', title: 'Sponsor A Video', category: 'sponsor', subcategory: null, size: 1024, duration: 30, checksum: null, url: 'https://example.com/sponsor-a.mp4', uploadedForSiteId: 's1', createdAt: new Date(), updatedAt: new Date() },

@@ -1,3 +1,15 @@
+## CI Fixes — Lint & Test (Fév 2026)
+
+### fix(ci): correction lint central-server + test Karma dashboard
+
+- **Lint** : suppression de 4 imports de types inutilisés (`SponsorVideo`, `CategoryVideo`, `Category`, `TimeCategory`) dans `sponsor-auto-resolution.service.ts`
+- **Test** : correction du mock `getLocalContent` dans `site-sponsors-tab.component.spec.ts` — le test `should load available videos` attendait des vidéos cloud mais `loadAvailableVideos()` utilise désormais `extractDeployedVideos(cachedConfiguration)` (changement v3.65.1)
+- **Résultat** : 0 erreurs lint, 1592 tests serveur OK, 506 tests Angular OK, 142 smoke OK
+
+**Fichiers modifiés** : `sponsor-auto-resolution.service.ts`, `site-sponsors-tab.component.spec.ts`
+
+---
+
 ## [3.65.2](https://github.com/Tallec7/neopro/compare/v3.65.1...v3.65.2) (2026-02-21)
 
 ### Bug Fixes

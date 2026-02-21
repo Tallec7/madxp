@@ -17,10 +17,6 @@ import { siteSponsorRepository } from '../repositories/site-sponsor.repository';
 import { metricsService } from './metrics.service';
 import type {
   SiteConfiguration,
-  SponsorVideo,
-  CategoryVideo,
-  Category,
-  TimeCategory,
 } from '../types';
 
 export interface SponsorAutoResolutionResult {
