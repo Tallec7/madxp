@@ -1,3 +1,9 @@
+# [3.66.0](https://github.com/Tallec7/neopro/compare/v3.65.3...v3.66.0) (2026-02-21)
+
+### Features
+
+- **monitoring:** parite alertes cloud + dashboard sponsor analytics ([ba25bfa](https://github.com/Tallec7/neopro/commit/ba25bfa1908bb389865e396585cd2c0fe517b29a))
+
 ## [3.65.3](https://github.com/Tallec7/neopro/compare/v3.65.2...v3.65.3) (2026-02-21)
 
 ### Bug Fixes
