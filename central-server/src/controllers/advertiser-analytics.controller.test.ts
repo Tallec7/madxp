@@ -27,10 +27,18 @@ const mockAdvertiserRepository = {
   recordImpressions: jest.fn(),
   exportImpressions: jest.fn(),
   calculateDailyStats: jest.fn(),
+  getKpisSummary: jest.fn(),
+  getKpisPeakHours: jest.fn(),
+  getKpisRotationData: jest.fn(),
+};
+
+const mockSiteRepository = {
+  exists: jest.fn(),
 };
 
 jest.mock('../repositories', () => ({
   advertiserRepository: mockAdvertiserRepository,
+  siteRepository: mockSiteRepository,
 }));
 
 const mockSiteSponsorRepository = {
@@ -76,6 +84,7 @@ import {
   removeVideoFromAdvertiser,
   getAdvertiserVideos,
   getAdvertiserStats,
+  getAdvertiserKpis,
   recordImpressions,
   exportAdvertiserData,
   calculateDailyStats,
@@ -836,6 +845,84 @@ describe('Advertiser Analytics Controller', () => {
   });
 
   // =========================================================================
+  // getAdvertiserKpis
+  // =========================================================================
+
+  describe('getAdvertiserKpis', () => {
+    it('should return enriched KPIs from video_plays', async () => {
+      const req = createAuthRequest({
+        params: { id: VALID_UUID },
+        query: { from: '2025-01-01', to: '2025-01-31' },
+      });
+      const res = createMockResponse();
+
+      mockAdvertiserRepository.findName.mockResolvedValueOnce('Sponsor A');
+      mockAdvertiserRepository.getKpisSummary.mockResolvedValueOnce({
+        total_impressions: '200',
+        verified_impressions: '150',
+        tv_on_rate: '75.0',
+        match_day_impressions: '80',
+        completion_rate: '88.5',
+        sites_coverage: '4',
+        total_screen_time_seconds: '7200',
+      });
+      mockAdvertiserRepository.getKpisPeakHours.mockResolvedValueOnce([
+        { hour: '14', impressions: '30', screen_time: '900' },
+        { hour: '20', impressions: '50', screen_time: '1500' },
+      ]);
+      mockAdvertiserRepository.getKpisRotationData.mockResolvedValueOnce([
+        { video_filename: 'pub1.mp4', play_count: '100' },
+        { video_filename: 'pub2.mp4', play_count: '100' },
+      ]);
+
+      await getAdvertiserKpis(req, res);
+
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          success: true,
+          data: expect.objectContaining({
+            advertiser_name: 'Sponsor A',
+            kpis: expect.objectContaining({
+              total_impressions: 200,
+              verified_impressions: 150,
+              tv_on_rate: 75.0,
+              match_day_impressions: 80,
+              completion_rate: 88.5,
+              sites_coverage: 4,
+              rotation_fairness: 1,
+              renewal_score: expect.any(Number),
+            }),
+            peak_hours: expect.any(Object),
+            rotation: expect.arrayContaining([
+              expect.objectContaining({ video: 'pub1.mp4', plays: 100 }),
+            ]),
+          }),
+        })
+      );
+    });
+
+    it('should return 404 for unknown advertiser', async () => {
+      const req = createAuthRequest({ params: { id: VALID_UUID }, query: {} });
+      const res = createMockResponse();
+
+      mockAdvertiserRepository.findName.mockResolvedValueOnce(null);
+
+      await getAdvertiserKpis(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(404);
+    });
+
+    it('should return 400 for invalid UUID', async () => {
+      const req = createAuthRequest({ params: { id: 'not-a-uuid' }, query: {} });
+      const res = createMockResponse();
+
+      await getAdvertiserKpis(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(400);
+    });
+  });
+
+  // =========================================================================
   // recordImpressions
   // =========================================================================
 
@@ -871,7 +958,7 @@ describe('Advertiser Analytics Controller', () => {
       );
     });
 
-    it('should return 401 when site is not authenticated', async () => {
+    it('should return 401 when no auth and no site_id in body', async () => {
       const req = createSiteAuthRequest({
         body: { impressions: [validImpression] },
       });
@@ -885,7 +972,52 @@ describe('Advertiser Analytics Controller', () => {
       expect(res.json).toHaveBeenCalledWith(
         expect.objectContaining({
           success: false,
-          error: 'Site authentication required',
+          error: 'Site identification required',
+        })
+      );
+    });
+
+    it('should fallback to site_id from body when auth is missing', async () => {
+      const req = createSiteAuthRequest({
+        body: {
+          impressions: [{ ...validImpression, site_id: VALID_SITE_ID }],
+        },
+      });
+      // Remove siteId to simulate no API key auth
+      (req as SiteAuthRequest).siteId = undefined;
+      const res = createMockResponse();
+
+      mockSiteRepository.exists.mockResolvedValueOnce(true);
+      mockSiteSponsorRepository.resolveSiteSponsorIdsBulk.mockResolvedValueOnce(new Map());
+      mockAdvertiserRepository.recordImpressions.mockResolvedValueOnce(1);
+
+      await recordImpressions(req, res);
+
+      expect(mockSiteRepository.exists).toHaveBeenCalledWith(VALID_SITE_ID);
+      expect(res.status).toHaveBeenCalledWith(201);
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({ success: true, recorded: 1 })
+      );
+    });
+
+    it('should return 404 when fallback site_id does not exist', async () => {
+      const req = createSiteAuthRequest({
+        body: {
+          impressions: [{ ...validImpression, site_id: VALID_SITE_ID }],
+        },
+      });
+      (req as SiteAuthRequest).siteId = undefined;
+      const res = createMockResponse();
+
+      mockSiteRepository.exists.mockResolvedValueOnce(false);
+
+      await recordImpressions(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(404);
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          success: false,
+          error: 'Site not found',
         })
       );
     });

@@ -374,7 +374,6 @@ class CronSchedulerService {
       'recurring_schedule_executions': 'started_at',
       'audit_logs': 'created_at',
       'video_plays': 'played_at',
-      'advertiser_impressions': 'played_at',
       'metrics': 'recorded_at',
       'remote_commands': 'created_at',
       'alerts': 'created_at',

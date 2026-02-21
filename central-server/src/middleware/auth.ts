@@ -246,6 +246,83 @@ export interface SiteAuthRequest extends AuthRequest {
  *
  * Le middleware ajoute siteId et siteName à la requête si l'authentification réussit.
  */
+/**
+ * Variante optionnelle de authenticateSiteApiKey.
+ * Tente l'auth par API key. Si absente ou invalide, passe au handler
+ * suivant SANS bloquer (req.siteId reste undefined).
+ * Le controller peut alors utiliser un fallback (ex: site_id dans le body).
+ *
+ * Usage:
+ *   router.post('/impressions', authenticateSiteApiKeyOptional, recordImpressions);
+ */
+export const authenticateSiteApiKeyOptional = async (
+  req: SiteAuthRequest,
+  _res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const authHeader = req.headers.authorization;
+
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      // Pas de header → on passe sans bloquer
+      logger.debug('Site API key auth skipped: no Authorization header (optional mode)');
+      next();
+      return;
+    }
+
+    const apiKey = authHeader.substring(7).trim();
+
+    if (!apiKey || apiKey.length < 10) {
+      logger.warn('Site API key auth skipped: key too short (optional mode)', {
+        keyLength: apiKey.length
+      });
+      next();
+      return;
+    }
+
+    const apiKeyHash = hashApiKey(apiKey);
+
+    const result = await query<{ id: string; site_name: string; status: string }>(
+      'SELECT id, site_name, status FROM sites WHERE api_key = $1',
+      [apiKeyHash]
+    );
+
+    if (result.rowCount === 0) {
+      logger.warn('Site API key auth failed in optional mode: unknown key', {
+        keyPrefix: apiKey.substring(0, 8) + '...'
+      });
+      next();
+      return;
+    }
+
+    const site = result.rows[0];
+
+    if (site.status === 'disabled') {
+      logger.warn('Site API key auth failed in optional mode: site disabled', {
+        siteId: site.id,
+        siteName: site.site_name
+      });
+      next();
+      return;
+    }
+
+    // Auth réussie
+    req.siteId = site.id;
+    req.siteName = site.site_name;
+
+    logger.debug('Site API key authentication successful (optional mode)', {
+      siteId: site.id,
+      siteName: site.site_name
+    });
+
+    next();
+  } catch (error) {
+    logger.error('Site API key authentication error (optional mode):', error);
+    // En mode optionnel, on ne bloque pas même en cas d'erreur
+    next();
+  }
+};
+
 export const authenticateSiteApiKey = async (
   req: SiteAuthRequest,
   res: Response,

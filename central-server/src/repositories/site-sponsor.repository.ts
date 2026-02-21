@@ -209,8 +209,8 @@ class SiteSponsorRepositoryImpl extends BaseRepository<SiteSponsorRow> {
        LEFT JOIN site_sponsor_videos ssv ON ssv.site_sponsor_id = ss.id
        LEFT JOIN (
          SELECT site_sponsor_id, COUNT(*) as cnt
-         FROM advertiser_impressions
-         WHERE site_sponsor_id IS NOT NULL
+         FROM video_plays
+         WHERE site_sponsor_id IS NOT NULL AND category = 'sponsor'
          GROUP BY site_sponsor_id
        ) imp ON imp.site_sponsor_id = ss.id
        WHERE ss.site_id = $1 ${statusFilter}
@@ -547,8 +547,9 @@ class SiteSponsorRepositoryImpl extends BaseRepository<SiteSponsorRow> {
         ROUND(AVG(CASE WHEN completed THEN 100 ELSE (duration_played::float / NULLIF(video_duration, 0) * 100) END)::numeric, 1) as completion_rate,
         COALESCE(SUM(audience_estimate), 0) as estimated_reach,
         COUNT(DISTINCT DATE(played_at)) as active_days
-       FROM advertiser_impressions
+       FROM video_plays
        WHERE site_sponsor_id = $1
+         AND category = 'sponsor'
          AND played_at >= $2::date
          AND played_at < ($3::date + INTERVAL '1 day')`,
       [siteSponsorId, from, to]
@@ -565,8 +566,9 @@ class SiteSponsorRepositoryImpl extends BaseRepository<SiteSponsorRow> {
         DATE(played_at) as date,
         COUNT(*) as impressions,
         SUM(duration_played) as screen_time
-       FROM advertiser_impressions
+       FROM video_plays
        WHERE site_sponsor_id = $1
+         AND category = 'sponsor'
          AND played_at >= $2::date
          AND played_at < ($3::date + INTERVAL '1 day')
        GROUP BY DATE(played_at)
@@ -602,8 +604,8 @@ class SiteSponsorRepositoryImpl extends BaseRepository<SiteSponsorRow> {
        LEFT JOIN site_sponsor_videos ssv ON ssv.site_sponsor_id = ss.id
        LEFT JOIN (
          SELECT site_sponsor_id, COUNT(*) as cnt
-         FROM advertiser_impressions
-         WHERE site_sponsor_id IS NOT NULL
+         FROM video_plays
+         WHERE site_sponsor_id IS NOT NULL AND category = 'sponsor'
          GROUP BY site_sponsor_id
        ) imp ON imp.site_sponsor_id = ss.id
        WHERE ss.advertiser_id = $1
@@ -631,8 +633,9 @@ class SiteSponsorRepositoryImpl extends BaseRepository<SiteSponsorRow> {
         COALESCE(event_type, 'other') as event_type,
         COUNT(*)::text as count,
         COALESCE(SUM(duration_played), 0)::text as total_screen_time
-       FROM advertiser_impressions
+       FROM video_plays
        WHERE site_sponsor_id = $1
+         AND category = 'sponsor'
          AND played_at >= $2::date
          AND played_at < ($3::date + INTERVAL '1 day')
        GROUP BY event_type
@@ -652,8 +655,9 @@ class SiteSponsorRepositoryImpl extends BaseRepository<SiteSponsorRow> {
   ): Promise<number> {
     const result = await query<{ count: string }>(
       `SELECT COUNT(DISTINCT DATE(played_at))::text as count
-       FROM advertiser_impressions
+       FROM video_plays
        WHERE site_sponsor_id = $1
+         AND category = 'sponsor'
          AND event_type = 'match'
          AND played_at >= $2::date
          AND played_at < ($3::date + INTERVAL '1 day')`,
@@ -672,18 +676,19 @@ class SiteSponsorRepositoryImpl extends BaseRepository<SiteSponsorRow> {
     return query<NetworkStatsSummary>(
       `SELECT
          COUNT(*)::text AS total_impressions,
-         COALESCE(SUM(ai.duration_played), 0)::text AS total_screen_time_seconds,
+         COALESCE(SUM(vp.duration_played), 0)::text AS total_screen_time_seconds,
          CASE WHEN COUNT(*) > 0
-           THEN ROUND(SUM(CASE WHEN ai.completed THEN 1 ELSE 0 END)::numeric / COUNT(*) * 100, 1)::text
+           THEN ROUND(SUM(CASE WHEN vp.completed THEN 1 ELSE 0 END)::numeric / COUNT(*) * 100, 1)::text
            ELSE '0' END AS completion_rate,
-         COALESCE(SUM(ai.audience_estimate), 0)::text AS estimated_reach,
+         COALESCE(SUM(vp.audience_estimate), 0)::text AS estimated_reach,
          COUNT(DISTINCT ss.site_id)::text AS active_sites,
-         COUNT(DISTINCT DATE(ai.played_at))::text AS active_days
-       FROM advertiser_impressions ai
-       JOIN site_sponsors ss ON ss.id = ai.site_sponsor_id
+         COUNT(DISTINCT DATE(vp.played_at))::text AS active_days
+       FROM video_plays vp
+       JOIN site_sponsors ss ON ss.id = vp.site_sponsor_id
        WHERE ss.advertiser_id = $1
-         AND ai.played_at >= $2::date
-         AND ai.played_at < ($3::date + INTERVAL '1 day')`,
+         AND vp.category = 'sponsor'
+         AND vp.played_at >= $2::date
+         AND vp.played_at < ($3::date + INTERVAL '1 day')`,
       [advertiserId, from, to]
     );
   }
@@ -697,16 +702,17 @@ class SiteSponsorRepositoryImpl extends BaseRepository<SiteSponsorRow> {
          s.site_name,
          s.club_name,
          COUNT(*)::text AS impressions,
-         COALESCE(SUM(ai.duration_played), 0)::text AS screen_time_seconds,
+         COALESCE(SUM(vp.duration_played), 0)::text AS screen_time_seconds,
          CASE WHEN COUNT(*) > 0
-           THEN ROUND(SUM(CASE WHEN ai.completed THEN 1 ELSE 0 END)::numeric / COUNT(*) * 100, 1)::text
+           THEN ROUND(SUM(CASE WHEN vp.completed THEN 1 ELSE 0 END)::numeric / COUNT(*) * 100, 1)::text
            ELSE '0' END AS completion_rate
-       FROM advertiser_impressions ai
-       JOIN site_sponsors ss ON ss.id = ai.site_sponsor_id
+       FROM video_plays vp
+       JOIN site_sponsors ss ON ss.id = vp.site_sponsor_id
        JOIN sites s ON s.id = ss.site_id
        WHERE ss.advertiser_id = $1
-         AND ai.played_at >= $2::date
-         AND ai.played_at < ($3::date + INTERVAL '1 day')
+         AND vp.category = 'sponsor'
+         AND vp.played_at >= $2::date
+         AND vp.played_at < ($3::date + INTERVAL '1 day')
        GROUP BY ss.site_id, s.site_name, s.club_name
        ORDER BY impressions DESC`,
       [advertiserId, from, to]
@@ -718,15 +724,16 @@ class SiteSponsorRepositoryImpl extends BaseRepository<SiteSponsorRow> {
   ): Promise<{ rows: NetworkDailyTrendRow[] }> {
     return query<NetworkDailyTrendRow>(
       `SELECT
-         DATE(ai.played_at)::text AS date,
+         DATE(vp.played_at)::text AS date,
          COUNT(*)::text AS impressions,
-         COALESCE(SUM(ai.duration_played), 0)::text AS screen_time
-       FROM advertiser_impressions ai
-       JOIN site_sponsors ss ON ss.id = ai.site_sponsor_id
+         COALESCE(SUM(vp.duration_played), 0)::text AS screen_time
+       FROM video_plays vp
+       JOIN site_sponsors ss ON ss.id = vp.site_sponsor_id
        WHERE ss.advertiser_id = $1
-         AND ai.played_at >= $2::date
-         AND ai.played_at < ($3::date + INTERVAL '1 day')
-       GROUP BY DATE(ai.played_at)
+         AND vp.category = 'sponsor'
+         AND vp.played_at >= $2::date
+         AND vp.played_at < ($3::date + INTERVAL '1 day')
+       GROUP BY DATE(vp.played_at)
        ORDER BY date ASC`,
       [advertiserId, from, to]
     );
@@ -737,15 +744,16 @@ class SiteSponsorRepositoryImpl extends BaseRepository<SiteSponsorRow> {
   ): Promise<{ rows: NetworkEventTypeRow[] }> {
     return query<NetworkEventTypeRow>(
       `SELECT
-         ai.event_type,
+         vp.event_type,
          COUNT(*)::text AS count,
-         COALESCE(SUM(ai.duration_played), 0)::text AS total_screen_time
-       FROM advertiser_impressions ai
-       JOIN site_sponsors ss ON ss.id = ai.site_sponsor_id
+         COALESCE(SUM(vp.duration_played), 0)::text AS total_screen_time
+       FROM video_plays vp
+       JOIN site_sponsors ss ON ss.id = vp.site_sponsor_id
        WHERE ss.advertiser_id = $1
-         AND ai.played_at >= $2::date
-         AND ai.played_at < ($3::date + INTERVAL '1 day')
-       GROUP BY ai.event_type
+         AND vp.category = 'sponsor'
+         AND vp.played_at >= $2::date
+         AND vp.played_at < ($3::date + INTERVAL '1 day')
+       GROUP BY vp.event_type
        ORDER BY count DESC`,
       [advertiserId, from, to]
     );
@@ -793,18 +801,19 @@ class SiteSponsorRepositoryImpl extends BaseRepository<SiteSponsorRow> {
       `SELECT
          ss.id AS site_sponsor_id,
          ss.name AS sponsor_name,
-         COUNT(ai.id)::text AS impressions,
-         COALESCE(SUM(ai.duration_played), 0)::text AS screen_time_seconds,
-         CASE WHEN COUNT(ai.id) > 0
-           THEN ROUND(SUM(CASE WHEN ai.completed THEN 1 ELSE 0 END)::numeric / COUNT(ai.id) * 100, 1)::text
+         COUNT(vp.id)::text AS impressions,
+         COALESCE(SUM(vp.duration_played), 0)::text AS screen_time_seconds,
+         CASE WHEN COUNT(vp.id) > 0
+           THEN ROUND(SUM(CASE WHEN vp.completed THEN 1 ELSE 0 END)::numeric / COUNT(vp.id) * 100, 1)::text
            ELSE '0' END AS completion_rate,
-         COUNT(DISTINCT DATE(ai.played_at))::text AS active_days,
+         COUNT(DISTINCT DATE(vp.played_at))::text AS active_days,
          ss.contract_amount::text AS contract_amount
        FROM site_sponsors ss
-       LEFT JOIN advertiser_impressions ai
-         ON ai.site_sponsor_id = ss.id
-         AND ai.played_at >= $2::date
-         AND ai.played_at < ($3::date + INTERVAL '1 day')
+       LEFT JOIN video_plays vp
+         ON vp.site_sponsor_id = ss.id
+         AND vp.category = 'sponsor'
+         AND vp.played_at >= $2::date
+         AND vp.played_at < ($3::date + INTERVAL '1 day')
        WHERE ss.site_id = $1
          AND ss.status = 'active'
        GROUP BY ss.id
@@ -826,8 +835,9 @@ class SiteSponsorRepositoryImpl extends BaseRepository<SiteSponsorRow> {
          COUNT(*)::text AS impressions,
          COALESCE(SUM(duration_played), 0)::text AS screen_time_seconds,
          COALESCE(SUM(audience_estimate), 0)::text AS audience_estimate
-       FROM advertiser_impressions
+       FROM video_plays
        WHERE site_sponsor_id = $1
+         AND category = 'sponsor'
          AND event_type = 'match'
          AND played_at >= $2::date
          AND played_at < ($3::date + INTERVAL '1 day')

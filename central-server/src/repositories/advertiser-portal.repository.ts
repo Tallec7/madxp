@@ -225,14 +225,15 @@ class AdvertiserPortalRepositoryImpl extends BaseRepository<QueryResultRow> {
         ROUND(AVG(unique_sessions.audience_estimate)::numeric, 0) as avg_audience_per_match
        FROM (
          SELECT DISTINCT cs.id, cs.audience_estimate
-         FROM advertiser_impressions ai
-         JOIN advertiser_videos av ON av.video_id = ai.video_id
-         JOIN club_sessions cs ON cs.site_id = ai.site_id
-           AND ai.played_at >= cs.started_at
-           AND (cs.ended_at IS NULL OR ai.played_at <= cs.ended_at)
+         FROM video_plays vp
+         JOIN advertiser_videos av ON av.video_id = vp.video_id
+         JOIN club_sessions cs ON cs.site_id = vp.site_id
+           AND vp.played_at >= cs.started_at
+           AND (cs.ended_at IS NULL OR vp.played_at <= cs.ended_at)
            AND cs.audience_estimate IS NOT NULL
          WHERE av.advertiser_id = $1
-           AND ai.played_at >= CURRENT_DATE - INTERVAL '30 days'
+           AND vp.played_at >= CURRENT_DATE - INTERVAL '30 days'
+           AND vp.category = 'sponsor'
        ) unique_sessions`,
       [advertiserId]
     );

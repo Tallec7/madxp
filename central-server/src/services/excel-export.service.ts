@@ -820,14 +820,15 @@ class ExcelExportService {
     const result = await query(
       `SELECT
         v.filename as video_name,
-        COUNT(ai.id) as impressions,
-        COALESCE(SUM(ai.duration_played), 0) as screen_time_seconds,
-        COUNT(DISTINCT ai.site_id) as site_count
+        COUNT(vp.id) as impressions,
+        COALESCE(SUM(vp.duration_played), 0) as screen_time_seconds,
+        COUNT(DISTINCT vp.site_id) as site_count
       FROM videos v
       JOIN advertiser_videos av ON av.video_id = v.id AND av.advertiser_id = $1
-      LEFT JOIN advertiser_impressions ai ON ai.video_id = v.id
-        AND ai.played_at >= $2
-        AND ai.played_at <= $3::date + 1
+      LEFT JOIN video_plays vp ON vp.video_id = v.id
+        AND vp.category = 'sponsor'
+        AND vp.played_at >= $2
+        AND vp.played_at <= $3::date + 1
       GROUP BY v.id, v.filename
       ORDER BY impressions DESC`,
       [advertiserId, startDate, endDate]

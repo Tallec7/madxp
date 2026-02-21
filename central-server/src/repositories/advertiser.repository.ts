@@ -90,6 +90,28 @@ export interface AdvertiserDailyTrendRow extends QueryResultRow {
   screen_time: string;
 }
 
+// KPI types (from consolidated video_plays pipeline)
+export interface AdvertiserKpisSummary extends QueryResultRow {
+  total_impressions: string;
+  verified_impressions: string;
+  tv_on_rate: string;
+  match_day_impressions: string;
+  completion_rate: string;
+  sites_coverage: string;
+  total_screen_time_seconds: string;
+}
+
+export interface AdvertiserPeakHourRow extends QueryResultRow {
+  hour: string;
+  impressions: string;
+  screen_time: string;
+}
+
+export interface AdvertiserRotationFairnessRow extends QueryResultRow {
+  video_filename: string;
+  play_count: string;
+}
+
 export interface AdvertiserImpressionExportRow extends QueryResultRow {
   id: string;
   video_id: string;
@@ -314,8 +336,9 @@ class AdvertiserRepositoryImpl extends BaseRepository<AdvertiserRow> {
         SUM(audience_estimate) as estimated_reach,
         COUNT(DISTINCT site_id) as active_sites,
         COUNT(DISTINCT DATE(played_at)) as active_days
-       FROM advertiser_impressions
+       FROM video_plays
        WHERE video_id = ANY($1::uuid[])
+         AND category = 'sponsor'
          AND played_at >= $2::date
          AND played_at < ($3::date + INTERVAL '1 day')`,
       [videoIds, from, to]
@@ -332,13 +355,13 @@ class AdvertiserRepositoryImpl extends BaseRepository<AdvertiserRow> {
         v.id as video_id,
         v.filename as video_name,
         COUNT(*) as impressions,
-        SUM(ai.duration_played) as screen_time_seconds,
-        ROUND(AVG(CASE WHEN ai.completed THEN 100 ELSE (ai.duration_played::float / NULLIF(ai.video_duration, 0) * 100) END)::numeric, 1) as completion_rate
+        SUM(vp.duration_played) as screen_time_seconds,
+        ROUND(AVG(CASE WHEN vp.completed THEN 100 ELSE (vp.duration_played::float / NULLIF(vp.video_duration, 0) * 100) END)::numeric, 1) as completion_rate
        FROM videos v
-       JOIN advertiser_impressions ai ON ai.video_id = v.id
+       JOIN video_plays vp ON vp.video_id = v.id AND vp.category = 'sponsor'
        WHERE v.id = ANY($1::uuid[])
-         AND ai.played_at >= $2::date
-         AND ai.played_at < ($3::date + INTERVAL '1 day')
+         AND vp.played_at >= $2::date
+         AND vp.played_at < ($3::date + INTERVAL '1 day')
        GROUP BY v.id, v.filename
        ORDER BY impressions DESC`,
       [videoIds, from, to]
@@ -356,12 +379,12 @@ class AdvertiserRepositoryImpl extends BaseRepository<AdvertiserRow> {
         s.site_name,
         s.club_name,
         COUNT(*) as impressions,
-        SUM(ai.duration_played) as screen_time_seconds
+        SUM(vp.duration_played) as screen_time_seconds
        FROM sites s
-       JOIN advertiser_impressions ai ON ai.site_id = s.id
-       WHERE ai.video_id = ANY($1::uuid[])
-         AND ai.played_at >= $2::date
-         AND ai.played_at < ($3::date + INTERVAL '1 day')
+       JOIN video_plays vp ON vp.site_id = s.id AND vp.category = 'sponsor'
+       WHERE vp.video_id = ANY($1::uuid[])
+         AND vp.played_at >= $2::date
+         AND vp.played_at < ($3::date + INTERVAL '1 day')
        GROUP BY s.id, s.site_name, s.club_name
        ORDER BY impressions DESC
        LIMIT 20`,
@@ -378,8 +401,9 @@ class AdvertiserRepositoryImpl extends BaseRepository<AdvertiserRow> {
       `SELECT
         COALESCE(period, 'loop') as period,
         COUNT(*) as count
-       FROM advertiser_impressions
+       FROM video_plays
        WHERE video_id = ANY($1::uuid[])
+         AND category = 'sponsor'
          AND played_at >= $2::date
          AND played_at < ($3::date + INTERVAL '1 day')
        GROUP BY period`,
@@ -396,8 +420,9 @@ class AdvertiserRepositoryImpl extends BaseRepository<AdvertiserRow> {
       `SELECT
         COALESCE(event_type, 'other') as event_type,
         COUNT(*) as count
-       FROM advertiser_impressions
+       FROM video_plays
        WHERE video_id = ANY($1::uuid[])
+         AND category = 'sponsor'
          AND played_at >= $2::date
          AND played_at < ($3::date + INTERVAL '1 day')
        GROUP BY event_type`,
@@ -415,13 +440,90 @@ class AdvertiserRepositoryImpl extends BaseRepository<AdvertiserRow> {
         DATE(played_at) as date,
         COUNT(*) as impressions,
         SUM(duration_played) as screen_time
-       FROM advertiser_impressions
+       FROM video_plays
        WHERE video_id = ANY($1::uuid[])
+         AND category = 'sponsor'
          AND played_at >= $2::date
          AND played_at < ($3::date + INTERVAL '1 day')
        GROUP BY DATE(played_at)
        ORDER BY date ASC`,
       [videoIds, from, to]
+    );
+    return result.rows;
+  }
+
+  // ========================================================================
+  // KPIs (from consolidated video_plays pipeline)
+  // ========================================================================
+
+  /**
+   * KPIs enrichis depuis video_plays (Pipeline A consolidé).
+   * Utilise tv_status, event_type, period pour des métriques business actionnables.
+   */
+  async getKpisSummary(advertiserId: string, from: string, to: string): Promise<AdvertiserKpisSummary> {
+    const result = await query<AdvertiserKpisSummary>(
+      `SELECT
+        COUNT(*) as total_impressions,
+        COUNT(*) FILTER (WHERE tv_status = 'on') as verified_impressions,
+        ROUND(
+          (COUNT(*) FILTER (WHERE tv_status = 'on'))::numeric /
+          NULLIF(COUNT(*), 0) * 100, 1
+        ) as tv_on_rate,
+        COUNT(*) FILTER (WHERE event_type = 'match') as match_day_impressions,
+        ROUND(AVG(CASE WHEN completed THEN 100 ELSE 0 END)::numeric, 1) as completion_rate,
+        COUNT(DISTINCT site_id) as sites_coverage,
+        COALESCE(SUM(duration_played), 0) as total_screen_time_seconds
+       FROM video_plays
+       WHERE sponsor_id = $1
+         AND category = 'sponsor'
+         AND played_at >= $2::date
+         AND played_at < ($3::date + INTERVAL '1 day')
+         AND (tv_status IN ('on', 'unknown') OR tv_status IS NULL)`,
+      [advertiserId, from, to]
+    );
+    return result.rows[0];
+  }
+
+  /**
+   * Heures de forte visibilité (heatmap data).
+   */
+  async getKpisPeakHours(advertiserId: string, from: string, to: string): Promise<AdvertiserPeakHourRow[]> {
+    const result = await query<AdvertiserPeakHourRow>(
+      `SELECT
+        EXTRACT(hour FROM played_at)::int as hour,
+        COUNT(*) as impressions,
+        COALESCE(SUM(duration_played), 0) as screen_time
+       FROM video_plays
+       WHERE sponsor_id = $1
+         AND category = 'sponsor'
+         AND played_at >= $2::date
+         AND played_at < ($3::date + INTERVAL '1 day')
+         AND (tv_status IN ('on', 'unknown') OR tv_status IS NULL)
+       GROUP BY EXTRACT(hour FROM played_at)
+       ORDER BY hour`,
+      [advertiserId, from, to]
+    );
+    return result.rows;
+  }
+
+  /**
+   * Données pour le calcul du rotation fairness score.
+   * Retourne le nombre de passages par vidéo.
+   */
+  async getKpisRotationData(advertiserId: string, from: string, to: string): Promise<AdvertiserRotationFairnessRow[]> {
+    const result = await query<AdvertiserRotationFairnessRow>(
+      `SELECT
+        video_filename,
+        COUNT(*) as play_count
+       FROM video_plays
+       WHERE sponsor_id = $1
+         AND category = 'sponsor'
+         AND played_at >= $2::date
+         AND played_at < ($3::date + INTERVAL '1 day')
+         AND (tv_status IN ('on', 'unknown') OR tv_status IS NULL)
+       GROUP BY video_filename
+       ORDER BY play_count DESC`,
+      [advertiserId, from, to]
     );
     return result.rows;
   }
@@ -442,19 +544,19 @@ class AdvertiserRepositoryImpl extends BaseRepository<AdvertiserRow> {
 
     for (const imp of items) {
       values.push(
-        `($${paramIndex}, $${paramIndex + 1}, $${paramIndex + 2}, $${paramIndex + 3}, $${paramIndex + 4}, $${paramIndex + 5}, $${paramIndex + 6}, $${paramIndex + 7}, $${paramIndex + 8}, $${paramIndex + 9}, $${paramIndex + 10}, $${paramIndex + 11}, $${paramIndex + 12}, $${paramIndex + 13})`
+        `($${paramIndex}, $${paramIndex + 1}, $${paramIndex + 2}, $${paramIndex + 3}, $${paramIndex + 4}, $${paramIndex + 5}, $${paramIndex + 6}, $${paramIndex + 7}, $${paramIndex + 8}, $${paramIndex + 9}, $${paramIndex + 10}, $${paramIndex + 11}, $${paramIndex + 12}, 'sponsor')`
       );
       params.push(
         imp.eventId, imp.siteSponsorId, imp.siteId, imp.videoId, imp.playedAt,
-        imp.durationPlayed, imp.videoDuration, imp.completed, imp.interruptedAt,
+        imp.durationPlayed, imp.videoDuration, imp.completed,
         imp.eventType, imp.period, imp.triggerType, imp.positionInLoop, imp.audienceEstimate
       );
-      paramIndex += 14;
+      paramIndex += 13;
     }
 
     await query(
-      `INSERT INTO advertiser_impressions
-       (event_id, site_sponsor_id, site_id, video_id, played_at, duration_played, video_duration, completed, interrupted_at, event_type, period, trigger_type, position_in_loop, audience_estimate)
+      `INSERT INTO video_plays
+       (event_id, site_sponsor_id, site_id, video_id, played_at, duration_played, video_duration, completed, event_type, period, trigger_type, position_in_loop, audience_estimate, category)
        VALUES ${values.join(', ')}
        ON CONFLICT (event_id) WHERE event_id IS NOT NULL DO NOTHING`,
       params
@@ -473,27 +575,28 @@ class AdvertiserRepositoryImpl extends BaseRepository<AdvertiserRow> {
   async exportImpressions(videoIds: string[], from: string, to: string): Promise<AdvertiserImpressionExportRow[]> {
     const result = await query<AdvertiserImpressionExportRow>(
       `SELECT
-        ai.id,
-        ai.video_id,
+        vp.id,
+        vp.video_id,
         v.filename as video_name,
-        ai.site_id,
+        vp.site_id,
         s.site_name,
         s.club_name,
-        ai.played_at,
-        ai.duration_played,
-        ai.video_duration,
-        ai.completed,
-        ai.event_type,
-        ai.period,
-        ai.trigger_type,
-        ai.audience_estimate
-       FROM advertiser_impressions ai
-       JOIN videos v ON v.id = ai.video_id
-       JOIN sites s ON s.id = ai.site_id
-       WHERE ai.video_id = ANY($1::uuid[])
-         AND ai.played_at >= $2::date
-         AND ai.played_at < ($3::date + INTERVAL '1 day')
-       ORDER BY ai.played_at DESC`,
+        vp.played_at,
+        vp.duration_played,
+        vp.video_duration,
+        vp.completed,
+        vp.event_type,
+        vp.period,
+        vp.trigger_type,
+        vp.audience_estimate
+       FROM video_plays vp
+       JOIN videos v ON v.id = vp.video_id
+       JOIN sites s ON s.id = vp.site_id
+       WHERE vp.video_id = ANY($1::uuid[])
+         AND vp.category = 'sponsor'
+         AND vp.played_at >= $2::date
+         AND vp.played_at < ($3::date + INTERVAL '1 day')
+       ORDER BY vp.played_at DESC`,
       [videoIds, from, to]
     );
     return result.rows;

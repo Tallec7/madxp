@@ -318,3 +318,33 @@ groups:
         annotations:
           summary: "Repeated 400 errors on POST /reports/generate"
           description: "{{ $value | humanize }}/sec validation failures on report generation. Likely frontend sending wrong parameter format (snake_case vs camelCase)."
+
+      # KPIs endpoint latency (consolidated pipeline — verified impressions, rotation fairness)
+      - alert: AnalyticsKpisEndpointSlow
+        expr: histogram_quantile(0.95, rate(neopro_http_request_duration_seconds_bucket{path=~"/api/analytics/advertisers/.*/kpis"}[5m])) > 5
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "P95 advertiser KPIs endpoint latency above 5s"
+          description: "Consolidated pipeline KPIs query is slow. P95: {{ $value | humanizeDuration }}. Check video_plays indexes on (sponsor_id, category, played_at)."
+
+      # Campaign data inconsistency: video_plays referencing non-existent campaigns
+      - alert: CampaignDataInconsistency
+        expr: rate(neopro_video_plays_fk_fallback_total{column="campaign_id"}[30m]) > 0.05
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "video_plays referencing deleted campaigns"
+          description: "{{ $value | humanize }}/sec video plays have campaign_id nullified. Check campaign lifecycle management."
+
+      # Verified impressions quality: TV-on rate dropping (HDMI-CEC detection issues)
+      - alert: VerifiedImpressionsDropoff
+        expr: sum(rate(neopro_video_plays_total{category="sponsor",tv_status="on"}[1h])) / sum(rate(neopro_video_plays_total{category="sponsor"}[1h])) < 0.1
+        for: 30m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Verified impressions (TV-on) rate below 10%"
+          description: "Only {{ $value | humanizePercentage }} of sponsor impressions have tv_status=on. Possible HDMI-CEC detection issue across fleet."

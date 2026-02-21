@@ -11,7 +11,6 @@ const metricsCollector = require('./metrics');
 const { getVersionInfo } = require('./utils/version-info');
 const commands = require('./commands');
 const analyticsCollector = require('./analytics');
-const sponsorImpressionsCollector = require('./sponsor-impressions');
 const { calculateConfigHash } = require('./utils/config-merge');
 const { safeReadConfig } = require('./utils/safe-config-io');
 const ConfigWatcher = require('./watchers/config-watcher');
@@ -61,9 +60,6 @@ class NeoproSyncAgent {
     // Démarrer l'envoi des analytics immédiatement (indépendant du WebSocket)
     // Les analytics sont envoyées via HTTP, pas besoin d'attendre la connexion WS
     this.startAnalyticsSync();
-
-    // Démarrer l'envoi des impressions sponsors
-    this.startSponsorImpressionsSync();
 
     // Démarrer le vérificateur d'expiration des vidéos
     expirationChecker.start();
@@ -564,23 +560,6 @@ class NeoproSyncAgent {
     };
   }
 
-  /**
-   * Ajouter des impressions sponsors au buffer
-   * @param {Array} impressions - Liste des impressions
-   * @returns {boolean} - True si flush nécessaire
-   */
-  addSponsorImpressions(impressions) {
-    return sponsorImpressionsCollector.addImpressions(impressions);
-  }
-
-  /**
-   * Obtenir les stats des impressions sponsors
-   * @returns {Object} - Statistiques du buffer
-   */
-  getSponsorImpressionsStats() {
-    return sponsorImpressionsCollector.getStats();
-  }
-
   handleAuthError(data) {
     this.authRetries = (this.authRetries || 0) + 1;
     const MAX_AUTH_RETRIES = 5;
@@ -1038,17 +1017,6 @@ class NeoproSyncAgent {
     this.analyticsInterval = setInterval(() => {
       this.sendAnalytics();
     }, interval);
-  }
-
-  startSponsorImpressionsSync() {
-    const interval = config.monitoring?.analyticsInterval || 5 * 60 * 1000; // 5 minutes par défaut
-    logger.info('[SponsorImpressions] Starting sponsor impressions sync', { interval });
-
-    // Démarrer la synchronisation périodique automatique
-    sponsorImpressionsCollector.startPeriodicSync(
-      config.central.url,
-      config.site.id
-    );
   }
 
   async sendAnalytics() {

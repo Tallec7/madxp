@@ -6,6 +6,7 @@ import { validate as validateUuid } from 'uuid';
 import { generateAdvertiserReport, generateClubReport } from '../services/pdf-report.service';
 import {
   advertiserRepository,
+  siteRepository,
   type ImpressionBatchItem,
 } from '../repositories';
 import { siteSponsorRepository } from '../repositories/site-sponsor.repository';
@@ -465,6 +466,106 @@ export const getAdvertiserStats = async (req: AuthRequest, res: Response): Promi
 };
 
 /**
+ * GET /api/analytics/advertisers/:id/kpis
+ * KPIs enrichis depuis video_plays (Pipeline consolidé).
+ * Utilise tv_status, event_type, period pour des métriques business actionnables.
+ */
+export const getAdvertiserKpis = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const { from, to } = req.query;
+
+    if (!validateUuid(id)) {
+      res.status(400).json({ success: false, error: 'Invalid advertiser ID' });
+      return;
+    }
+
+    const advertiserName = await advertiserRepository.findName(id);
+    if (!advertiserName) {
+      res.status(404).json({ success: false, error: 'Advertiser not found' });
+      return;
+    }
+
+    const fromDate = (from as string) || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+    const toDate = (to as string) || new Date().toISOString().split('T')[0];
+
+    // Requêtes KPI en parallèle (depuis video_plays consolidé)
+    const [summary, peakHours, rotationData] = await Promise.all([
+      advertiserRepository.getKpisSummary(id, fromDate, toDate),
+      advertiserRepository.getKpisPeakHours(id, fromDate, toDate),
+      advertiserRepository.getKpisRotationData(id, fromDate, toDate),
+    ]);
+
+    const totalImpressions = parseInt(summary.total_impressions) || 0;
+    const verifiedImpressions = parseInt(summary.verified_impressions) || 0;
+    const matchDayImpressions = parseInt(summary.match_day_impressions) || 0;
+
+    // Calcul du rotation fairness (0 = inégal, 1 = parfaitement équitable)
+    let rotationFairness = 1;
+    if (rotationData.length > 1) {
+      const counts = rotationData.map(r => parseInt(r.play_count));
+      const mean = counts.reduce((a, b) => a + b, 0) / counts.length;
+      const variance = counts.reduce((sum, c) => sum + Math.pow(c - mean, 2), 0) / counts.length;
+      const cv = mean > 0 ? Math.sqrt(variance) / mean : 0; // Coefficient de variation
+      rotationFairness = Math.round(Math.max(0, 1 - cv) * 100) / 100;
+    }
+
+    // Heatmap 24h
+    const hourlyMap: Record<number, { impressions: number; screen_time: number }> = {};
+    for (let h = 0; h < 24; h++) {
+      hourlyMap[h] = { impressions: 0, screen_time: 0 };
+    }
+    for (const row of peakHours) {
+      const h = parseInt(row.hour);
+      hourlyMap[h] = {
+        impressions: parseInt(row.impressions),
+        screen_time: parseInt(row.screen_time),
+      };
+    }
+
+    // Score de renouvellement (0-100)
+    // Pondération : verified_impressions (30%), completion_rate (25%), match_day (20%), sites_coverage (15%), fairness (10%)
+    const completionRate = parseFloat(summary.completion_rate) || 0;
+    const sitesCoverage = parseInt(summary.sites_coverage) || 0;
+    const renewalScore = Math.round(
+      Math.min(verifiedImpressions / Math.max(totalImpressions * 0.5, 1), 1) * 30 +
+      Math.min(completionRate / 80, 1) * 25 +
+      Math.min(matchDayImpressions / Math.max(totalImpressions * 0.3, 1), 1) * 20 +
+      Math.min(sitesCoverage / 5, 1) * 15 +
+      rotationFairness * 10
+    );
+
+    res.json({
+      success: true,
+      data: {
+        advertiser_name: advertiserName,
+        period: `${fromDate}/${toDate}`,
+        kpis: {
+          total_impressions: totalImpressions,
+          verified_impressions: verifiedImpressions,
+          tv_on_rate: parseFloat(summary.tv_on_rate) || 0,
+          match_day_impressions: matchDayImpressions,
+          completion_rate: completionRate,
+          sites_coverage: sitesCoverage,
+          total_screen_time_seconds: parseInt(summary.total_screen_time_seconds) || 0,
+          total_screen_time: formatDuration(parseInt(summary.total_screen_time_seconds) || 0),
+          rotation_fairness: rotationFairness,
+          renewal_score: renewalScore,
+        },
+        peak_hours: hourlyMap,
+        rotation: rotationData.map(r => ({
+          video: r.video_filename,
+          plays: parseInt(r.play_count),
+        })),
+      },
+    });
+  } catch (error) {
+    logger.error('Error fetching advertiser KPIs:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch advertiser KPIs' });
+  }
+};
+
+/**
  * POST /api/analytics/impressions
  * Recevoir un batch d'impressions depuis les boîtiers Raspberry (via sync-agent).
  *
@@ -477,16 +578,41 @@ export const recordImpressions = async (req: SiteAuthRequest, res: Response): Pr
   try {
     const { impressions } = req.body;
 
-    // Le siteId provient de l'authentification par API key
-    const authenticatedSiteId = req.siteId;
+    // Le siteId provient de l'authentification par API key (prioritaire)
+    // ou du body des impressions (fallback si API key absente/invalide)
+    let authenticatedSiteId = req.siteId;
 
     if (!authenticatedSiteId) {
-      res.status(401).json({
-        success: false,
-        error: 'Site authentication required',
-        message: 'Le site doit être authentifié par API key'
+      // Fallback: extraire site_id depuis la première impression
+      const bodySiteId = Array.isArray(impressions) && impressions.length > 0
+        ? impressions[0].site_id
+        : undefined;
+
+      if (!bodySiteId || typeof bodySiteId !== 'string') {
+        res.status(401).json({
+          success: false,
+          error: 'Site identification required',
+          message: 'API key ou site_id dans les impressions requis'
+        });
+        return;
+      }
+
+      // Valider que le site existe
+      const siteExists = await siteRepository.exists(bodySiteId);
+      if (!siteExists) {
+        res.status(404).json({
+          success: false,
+          error: 'Site not found',
+          message: 'Le site_id fourni est inconnu'
+        });
+        return;
+      }
+
+      authenticatedSiteId = bodySiteId;
+      logger.warn('Impressions received without API key auth, using body site_id fallback', {
+        siteId: bodySiteId,
+        impressionCount: impressions?.length
       });
-      return;
     }
 
     if (!Array.isArray(impressions) || impressions.length === 0) {

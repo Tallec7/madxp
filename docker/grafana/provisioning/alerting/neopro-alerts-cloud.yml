@@ -1164,3 +1164,120 @@ groups:
         annotations:
           summary: "Repeated 400 errors on POST /reports/generate"
           description: "Likely frontend sending wrong parameter format (snake_case vs camelCase)."
+
+      # KPIs endpoint latency (consolidated pipeline)
+      - uid: neopro-kpis-slow
+        title: Slow Advertiser KPIs Endpoint (P95)
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: grafanacloud-tallec7-prom
+            model:
+              expr: histogram_quantile(0.95, rate(neopro_http_request_duration_seconds_bucket{path=~"/api/analytics/advertisers/.*/kpis"}[5m]))
+              instant: true
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              type: reduce
+              expression: A
+              reducer: last
+              refId: B
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: B
+              conditions:
+                - evaluator:
+                    type: gt
+                    params: [5]
+              refId: C
+        for: 5m
+        labels:
+          severity: warning
+          team: neopro
+        annotations:
+          summary: "P95 advertiser KPIs endpoint latency above 5s"
+          description: "Consolidated pipeline KPIs query is slow. Check video_plays indexes."
+
+      # Campaign data inconsistency
+      - uid: neopro-campaign-fk
+        title: Campaign Data Inconsistency
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 1800
+              to: 0
+            datasourceUid: grafanacloud-tallec7-prom
+            model:
+              expr: rate(neopro_video_plays_fk_fallback_total{column="campaign_id"}[30m])
+              instant: true
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              type: reduce
+              expression: A
+              reducer: last
+              refId: B
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: B
+              conditions:
+                - evaluator:
+                    type: gt
+                    params: [0.05]
+              refId: C
+        for: 15m
+        labels:
+          severity: warning
+          team: neopro
+        annotations:
+          summary: "video_plays referencing deleted campaigns"
+          description: "Check campaign lifecycle management."
+
+      # Verified impressions quality dropoff
+      - uid: neopro-verified-impressions-drop
+        title: Verified Impressions (TV-on) Dropoff
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 3600
+              to: 0
+            datasourceUid: grafanacloud-tallec7-prom
+            model:
+              expr: sum(rate(neopro_video_plays_total{category="sponsor",tv_status="on"}[1h])) / sum(rate(neopro_video_plays_total{category="sponsor"}[1h]))
+              instant: true
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              type: reduce
+              expression: A
+              reducer: last
+              refId: B
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: B
+              conditions:
+                - evaluator:
+                    type: lt
+                    params: [0.1]
+              refId: C
+        for: 30m
+        labels:
+          severity: warning
+          team: neopro
+        annotations:
+          summary: "Verified impressions (TV-on) rate below 10%"
+          description: "Possible HDMI-CEC detection issue across fleet."

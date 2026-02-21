@@ -113,6 +113,9 @@ export {
   type AdvertiserDailyTrendRow,
   type AdvertiserImpressionExportRow,
   type ImpressionBatchItem,
+  type AdvertiserKpisSummary,
+  type AdvertiserPeakHourRow,
+  type AdvertiserRotationFairnessRow,
 } from './advertiser.repository';
 export {
   reportRepository,

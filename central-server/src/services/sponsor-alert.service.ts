@@ -134,17 +134,18 @@ class SponsorAlertService {
           s.id AS site_id,
           s.site_name,
           s.club_name,
-          COALESCE(SUM(CASE WHEN ai.played_at >= NOW() - INTERVAL '7 days' THEN 1 ELSE 0 END), 0)::text AS impressions_7d,
-          COALESCE(SUM(CASE WHEN ai.played_at >= NOW() - INTERVAL '30 days' THEN 1 ELSE 0 END), 0)::text AS impressions_30d,
-          MAX(ai.played_at)::text AS last_impression_at,
-          EXTRACT(DAY FROM NOW() - MAX(ai.played_at))::text AS days_since_last
+          COALESCE(SUM(CASE WHEN vp.played_at >= NOW() - INTERVAL '7 days' THEN 1 ELSE 0 END), 0)::text AS impressions_7d,
+          COALESCE(SUM(CASE WHEN vp.played_at >= NOW() - INTERVAL '30 days' THEN 1 ELSE 0 END), 0)::text AS impressions_30d,
+          MAX(vp.played_at)::text AS last_impression_at,
+          EXTRACT(DAY FROM NOW() - MAX(vp.played_at))::text AS days_since_last
         FROM site_sponsors ss
         JOIN advertisers a ON a.id = ss.advertiser_id
         JOIN sites s ON s.id = ss.site_id
-        LEFT JOIN advertiser_impressions ai
-          ON ai.advertiser_id = a.id
-          AND ai.site_id = s.id
-          AND ai.played_at >= NOW() - INTERVAL '30 days'
+        LEFT JOIN video_plays vp
+          ON vp.sponsor_id = a.id
+          AND vp.site_id = s.id
+          AND vp.category = 'sponsor'
+          AND vp.played_at >= NOW() - INTERVAL '30 days'
         ${whereClause}
         GROUP BY a.id, a.name, s.id, s.site_name, s.club_name
         ORDER BY a.name ASC, s.club_name ASC`,

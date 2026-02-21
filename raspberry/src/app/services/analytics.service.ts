@@ -30,6 +30,16 @@ export interface VideoPlayEvent {
    * - 'unknown' : CEC non disponible, on ne peut pas savoir
    */
   tv_status?: 'on' | 'standby' | 'disconnected' | 'unknown';
+  /** Type d'événement sportif en cours */
+  event_type?: 'match' | 'training' | 'tournament' | 'other';
+  /** Période du match en cours */
+  period?: 'pre_match' | 'halftime' | 'post_match' | 'loop';
+  /** Estimation du nombre de spectateurs */
+  audience_estimate?: number;
+  /** Position de la vidéo dans la boucle de rotation */
+  position_in_loop?: number;
+  /** UUID du site_sponsor pour jointure directe */
+  site_sponsor_id?: string;
 }
 
 /**
@@ -49,6 +59,12 @@ export class AnalyticsService {
   private currentTriggerType: 'auto' | 'manual' = 'auto';
   private currentTvStatus: 'on' | 'standby' | 'disconnected' | 'unknown' = 'unknown';
   private isSending = false;
+
+  // Contexte sponsor (unifié depuis SponsorAnalyticsService)
+  private currentEventType: 'match' | 'training' | 'tournament' | 'other' = 'other';
+  private currentPeriod: 'pre_match' | 'halftime' | 'post_match' | 'loop' = 'loop';
+  private audienceEstimate: number | null = null;
+  private siteId: string | null = null;
 
   // Configuration courante avec le mapping des catégories
   private configuration: Configuration | null = null;
@@ -108,6 +124,38 @@ export class AnalyticsService {
   public setConfiguration(config: Configuration): void {
     this.configuration = config;
     console.log('[Analytics] Configuration set with categoryMappings:', config.categoryMappings);
+  }
+
+  /**
+   * Définir le site ID (club ID) pour les impressions sponsors
+   */
+  public setSiteId(id: string): void {
+    this.siteId = id;
+    console.log('[Analytics] Site ID set:', id);
+  }
+
+  /**
+   * Définir le type d'événement en cours (match, entraînement, etc.)
+   */
+  public setEventType(eventType: 'match' | 'training' | 'tournament' | 'other'): void {
+    this.currentEventType = eventType;
+    console.log('[Analytics] Event type set:', eventType);
+  }
+
+  /**
+   * Définir la période en cours (pré-match, mi-temps, etc.)
+   */
+  public setPeriod(period: 'pre_match' | 'halftime' | 'post_match' | 'loop'): void {
+    this.currentPeriod = period;
+    console.log('[Analytics] Period set:', period);
+  }
+
+  /**
+   * Définir l'estimation de l'audience
+   */
+  public setAudienceEstimate(estimate: number): void {
+    this.audienceEstimate = estimate;
+    console.log('[Analytics] Audience estimate set:', estimate);
   }
 
   /**
@@ -173,6 +221,11 @@ export class AnalyticsService {
       sponsor_id: this.currentVideo.sponsor_id,
       // État de la TV au moment de la lecture
       tv_status: this.currentTvStatus,
+      // Contexte sponsor (unifié)
+      event_type: this.currentEventType,
+      period: this.currentPeriod,
+      audience_estimate: this.audienceEstimate || undefined,
+      site_sponsor_id: (this.currentVideo as unknown as { site_sponsor_id?: string }).site_sponsor_id,
     };
 
     // NE PAS tracker si la TV est éteinte ou en veille (sauf si CEC non disponible)

@@ -287,11 +287,11 @@ describe('AdvertiserRepository', () => {
 
       expect(count).toBe(1);
       const sql = mockQuery.mock.calls[0][0] as string;
-      expect(sql).toContain('INSERT INTO advertiser_impressions');
+      expect(sql).toContain('INSERT INTO video_plays');
       expect(sql).toContain('event_id');
       expect(sql).toContain('site_sponsor_id');
       expect(sql).toContain('ON CONFLICT (event_id)');
-      expect(mockQuery.mock.calls[0][1]).toHaveLength(14);
+      expect(mockQuery.mock.calls[0][1]).toHaveLength(13);
     });
 
     it('should return 0 for empty array', async () => {

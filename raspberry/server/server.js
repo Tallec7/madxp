@@ -9,7 +9,6 @@ const {
   CONFIG_PATH,
   LICENSE_CACHE_PATH,
   ANALYTICS_FILE_PATH,
-  SPONSOR_IMPRESSIONS_FILE_PATH,
   PORT,
 } = require('./helpers');
 
@@ -31,16 +30,6 @@ const analyticsBuffer = new BufferService({
   centralUrl: CENTRAL_SERVER_URL,
   centralEndpoint: '/api/analytics/video-plays',
   payloadKey: 'plays',
-  siteId: SITE_ID,
-  isCloudEnv: IS_CLOUD_ENV,
-});
-
-const sponsorBuffer = new BufferService({
-  filePath: SPONSOR_IMPRESSIONS_FILE_PATH,
-  label: 'SponsorImpressions',
-  centralUrl: CENTRAL_SERVER_URL,
-  centralEndpoint: '/api/analytics/impressions',
-  payloadKey: 'impressions',
   siteId: SITE_ID,
   isCloudEnv: IS_CLOUD_ENV,
 });
@@ -89,14 +78,12 @@ const authService = new AuthService({ configPath: CONFIG_PATH, io });
 const createHealthRouter = require('./routes/health');
 const createLicenseRouter = require('./routes/license');
 const createAnalyticsRouter = require('./routes/analytics');
-const createSponsorRouter = require('./routes/sponsor-impressions');
 const createHdmiRouter = require('./routes/hdmi');
 const createAuthRouter = require('./routes/auth');
 
 app.use(createHealthRouter({ io }));
 app.use(createLicenseRouter({ licenseService }));
 app.use(createAnalyticsRouter({ analyticsBuffer }));
-app.use(createSponsorRouter({ sponsorBuffer }));
 app.use(createHdmiRouter({ hdmiService }));
 app.use(createAuthRouter({ authService }));
 

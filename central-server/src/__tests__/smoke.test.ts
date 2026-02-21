@@ -849,6 +849,7 @@ describe('Middleware exports wiring', () => {
     expect(auth.isAdmin).toBeDefined();
     expect(auth.isInternal).toBeDefined();
     expect(auth.authenticateSiteApiKey).toBeDefined();
+    expect(auth.authenticateSiteApiKeyOptional).toBeDefined();
     expect(auth.requireSponsorAccess).toBeDefined();
     expect(auth.requireAgencyAccess).toBeDefined();
   });

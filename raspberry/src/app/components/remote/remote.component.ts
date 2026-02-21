@@ -9,7 +9,6 @@ import { Category } from '../../interfaces/category.interface';
 import { Video } from '../../interfaces/video.interface';
 import { SocketService } from '../../services/socket.service';
 import { AnalyticsService } from '../../services/analytics.service';
-import { SponsorAnalyticsService } from '../../services/sponsor-analytics.service';
 import { RecordingStateService } from '../../services/recording-state.service';
 import { DemoConfigService } from '../../services/demo-config.service';
 import { ProfileConfigService } from '../../services/profile-config.service';
@@ -42,7 +41,6 @@ export class RemoteComponent implements OnInit, OnDestroy {
   private readonly http = inject(HttpClient);
   private readonly socketService = inject(SocketService);
   private readonly analyticsService = inject(AnalyticsService);
-  private readonly sponsorAnalytics = inject(SponsorAnalyticsService);
   private readonly recordingState = inject(RecordingStateService);
   private readonly demoConfigService = inject(DemoConfigService);
   private readonly profileConfigService = inject(ProfileConfigService);
@@ -693,7 +691,7 @@ export class RemoteComponent implements OnInit, OnDestroy {
 
     // Mettre à jour l'estimation d'audience dans le sponsor analytics
     if (this.matchInfo.audienceEstimate > 0) {
-      this.sponsorAnalytics.setAudienceEstimate(this.matchInfo.audienceEstimate);
+      this.analyticsService.setAudienceEstimate(this.matchInfo.audienceEstimate);
     }
 
     // Envoyer au serveur via socket
@@ -849,7 +847,7 @@ export class RemoteComponent implements OnInit, OnDestroy {
     // Notifier le RecordingStateService (auto-start/stop analytics)
     this.recordingState.onPhaseChange(phase);
 
-    // Mettre à jour le contexte sponsor analytics
+    // Mettre à jour le contexte analytics (consolidé — plus de pipeline séparé)
     const periodMap: Record<string, 'pre_match' | 'halftime' | 'post_match' | 'loop'> = {
       'before': 'pre_match',
       'during': 'halftime',
@@ -857,11 +855,11 @@ export class RemoteComponent implements OnInit, OnDestroy {
       'neutral': 'loop'
     };
     if (phase !== 'neutral') {
-      this.sponsorAnalytics.setEventType('match');
-      this.sponsorAnalytics.setPeriod(periodMap[phase]);
+      this.analyticsService.setEventType('match');
+      this.analyticsService.setPeriod(periodMap[phase]);
     } else {
-      this.sponsorAnalytics.setEventType('other');
-      this.sponsorAnalytics.setPeriod('loop');
+      this.analyticsService.setEventType('other');
+      this.analyticsService.setPeriod('loop');
     }
 
     // Communication locale (Remote ↔ TV sur le même Raspberry) - PRIORITAIRE

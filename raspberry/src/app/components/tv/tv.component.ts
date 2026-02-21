@@ -8,7 +8,6 @@ import "videojs-playlist";
 import Player from 'video.js/dist/types/player';
 import { SocketService, LoopState } from '../../services/socket.service';
 import { AnalyticsService } from '../../services/analytics.service';
-import { SponsorAnalyticsService } from '../../services/sponsor-analytics.service';
 import { LocalBroadcastService, ScoreUpdateEvent, PhaseChangeEvent, OptionsUpdateEvent, BreakingNewsEvent, TimerUpdateEvent } from '../../services/local-broadcast.service';
 import { LocalOptionsService, LocalOptions, GoalAnimationConfig, TeamConfig } from '../../services/local-options.service';
 import { DoubleBufferVideoService, DoubleBufferCallbacks } from '../../services/double-buffer-video.service';
@@ -48,7 +47,6 @@ interface PlayerWithPlaylist extends Player {
 export class TvComponent implements OnInit, OnDestroy {
   private readonly socketService = inject(SocketService);
   private readonly analyticsService = inject(AnalyticsService);
-  private readonly sponsorAnalytics = inject(SponsorAnalyticsService);
   private readonly localBroadcast = inject(LocalBroadcastService);
   private readonly localOptionsService = inject(LocalOptionsService);
   private readonly http = inject(HttpClient);
@@ -241,9 +239,6 @@ export class TvComponent implements OnInit, OnDestroy {
     // Configurer l'analytics service avec la configuration (pour le mapping des catégories)
     this.analyticsService.setConfiguration(this.configuration);
 
-    // Configurer le service sponsor analytics
-    this.sponsorAnalytics.setConfiguration(this.configuration);
-
     // Récupérer le site_id depuis l'API du serveur local
     this.loadSiteId();
 
@@ -316,13 +311,6 @@ export class TvComponent implements OnInit, OnDestroy {
         console.log('[TV] Sponsor lookup:', { found: !!sponsor, loopPaths: this.currentLoopVideos.map(s => s.path) });
         if (sponsor) {
           this.analyticsService.trackVideoStart(sponsor, 'auto');
-
-          // Tracker l'impression sponsor
-          this.sponsorAnalytics.trackSponsorStart(
-            sponsor,
-            'auto',
-            this.player.duration() || 0
-          );
         } else {
           // Fallback: tracker quand même la vidéo même si pas trouvée dans sponsors
           // (peut arriver si le path ne matche pas exactement)
@@ -341,7 +329,6 @@ export class TvComponent implements OnInit, OnDestroy {
       // Pour les vidéos de la boucle, tracker la fin
       if (this.lastTriggerType === 'auto') {
         this.analyticsService.trackVideoEnd(true);
-        this.sponsorAnalytics.trackSponsorEnd(true);
       }
     });
 
@@ -814,9 +801,6 @@ export class TvComponent implements OnInit, OnDestroy {
                   this._manualRecordingStarted = true;
                 }
                 this.analyticsService.trackVideoStart(video, 'manual');
-                if (isSponsor) {
-                  this.sponsorAnalytics.trackSponsorStart(video, 'manual', targetPlayer.duration || 0);
-                }
               }
 
               // Mettre à jour l'état du player pour le monitoring cloud
@@ -896,9 +880,6 @@ export class TvComponent implements OnInit, OnDestroy {
       // Tracker la fin (désactivé pour les slaves)
       if (!this.isSlaveMode) {
         this.analyticsService.trackVideoEnd(true);
-        if (isSponsor) {
-          this.sponsorAnalytics.trackSponsorEnd(true);
-        }
         // Auto-stop recording si on l'avait démarré pour cette vidéo manuelle
         if (this._manualRecordingStarted) {
           console.log('[TV] Auto-stop recording after manual video ended');
@@ -1073,7 +1054,6 @@ export class TvComponent implements OnInit, OnDestroy {
 
     // Mettre à jour la configuration dans l'analytics service
     this.analyticsService.setConfiguration(config);
-    this.sponsorAnalytics.setConfiguration(config);
 
     // Réinitialiser à la phase neutre
     this.activePhase = 'neutral';
@@ -1098,15 +1078,15 @@ export class TvComponent implements OnInit, OnDestroy {
     audienceEstimate?: number
   ): void {
     this.currentEventType = eventType;
-    this.sponsorAnalytics.setEventType(eventType);
+    this.analyticsService.setEventType(eventType);
 
     if (period) {
       this.currentPeriod = period;
-      this.sponsorAnalytics.setPeriod(period);
+      this.analyticsService.setPeriod(period);
     }
 
     if (audienceEstimate !== undefined) {
-      this.sponsorAnalytics.setAudienceEstimate(audienceEstimate);
+      this.analyticsService.setAudienceEstimate(audienceEstimate);
     }
 
     console.log('[TV] Event context updated:', { eventType, period, audienceEstimate });
@@ -1114,12 +1094,12 @@ export class TvComponent implements OnInit, OnDestroy {
 
   public updatePeriod(period: 'pre_match' | 'halftime' | 'post_match' | 'loop'): void {
     this.currentPeriod = period;
-    this.sponsorAnalytics.setPeriod(period);
+    this.analyticsService.setPeriod(period);
     console.log('[TV] Period updated:', period);
   }
 
   public updateAudienceEstimate(estimate: number): void {
-    this.sponsorAnalytics.setAudienceEstimate(estimate);
+    this.analyticsService.setAudienceEstimate(estimate);
     console.log('[TV] Audience estimate updated:', estimate);
   }
 
@@ -1286,8 +1266,8 @@ export class TvComponent implements OnInit, OnDestroy {
       .subscribe({
         next: (response) => {
           if (response.siteId) {
-            this.sponsorAnalytics.setSiteId(response.siteId);
-            console.log('[TV] Site ID loaded for sponsor analytics:', response.siteId);
+            this.analyticsService.setSiteId(response.siteId);
+            console.log('[TV] Site ID loaded for analytics:', response.siteId);
           } else {
             console.warn('[TV] No site ID configured - sponsor analytics will not include site_id');
           }
@@ -1590,11 +1570,6 @@ export class TvComponent implements OnInit, OnDestroy {
           // Tracker (désactivé pour les slaves)
           if (!this.isSlaveMode) {
             this.analyticsService.trackVideoStart(video, 'auto');
-            this.sponsorAnalytics.trackSponsorStart(
-              video,
-              'auto',
-              player.duration || 0
-            );
           }
 
           // Émettre l'état de la boucle si master
@@ -1881,7 +1856,6 @@ export class TvComponent implements OnInit, OnDestroy {
       // Tracker la fin de la vidéo actuelle (désactivé pour les slaves)
       if (!this.isSlaveMode) {
         this.analyticsService.trackVideoEnd(true);
-        this.sponsorAnalytics.trackSponsorEnd(true);
       }
 
       const loopVideos = this.currentLoopVideos;
@@ -2059,11 +2033,6 @@ export class TvComponent implements OnInit, OnDestroy {
           const video = this.currentLoopVideos[nextVideoIndex];
           if (!this.isSlaveMode) {
             this.analyticsService.trackVideoStart(video, 'auto');
-            this.sponsorAnalytics.trackSponsorStart(
-              video,
-              'auto',
-              newPlayer.duration || 0
-            );
           }
 
           // Émettre l'état de la boucle si master

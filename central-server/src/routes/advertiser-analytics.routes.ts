@@ -1,5 +1,5 @@
 import express from 'express';
-import { authenticate, authenticateSiteApiKey } from '../middleware/auth';
+import { authenticate, authenticateSiteApiKeyOptional } from '../middleware/auth';
 import { requireRole } from '../middleware/auth';
 import { apiRateLimit, piAnalyticsRateLimit } from '../middleware/user-rate-limit';
 import { analyticsValidation } from '../middleware/analytics-validation';
@@ -13,6 +13,7 @@ import {
   removeVideoFromAdvertiser,
   getAdvertiserVideos,
   getAdvertiserStats,
+  getAdvertiserKpis,
   recordImpressions,
   exportAdvertiserData,
   calculateDailyStats,
@@ -120,6 +121,16 @@ router.get(
   getAdvertiserStats
 );
 
+// KPIs enrichis d'un annonceur (depuis video_plays consolidé)
+// Query params: ?from=YYYY-MM-DD&to=YYYY-MM-DD
+router.get(
+  '/advertisers/:id/kpis',
+  authenticate,
+  apiRateLimit,
+  ...analyticsValidation.getAdvertiserKpis,
+  getAdvertiserKpis
+);
+
 // Export CSV des données annonceur
 // Query params: ?from=YYYY-MM-DD&to=YYYY-MM-DD&format=csv
 router.get(
@@ -161,16 +172,17 @@ router.get(
   generateClubPdfReport
 );
 
-// Recevoir un batch d'impressions (depuis sync-agent Raspberry via API key)
-// Header requis: Authorization: Bearer <site_api_key>
+// Recevoir un batch d'impressions (depuis sync-agent Raspberry)
+// Auth: Bearer <site_api_key> (optionnel — fallback sur site_id dans le body)
 // Body: { impressions: AdvertiserImpression[] }
-// Note: Les impressions sont envoyées par le sync-agent du Raspberry,
-// authentifié par l'API key du site (pas un token utilisateur JWT)
+// Note: Les impressions sont envoyées par le sync-agent du Raspberry.
+// L'auth par API key est préférée mais optionnelle pour éviter de perdre
+// des données si la clé est mal configurée sur un Pi.
 // Rate limit dédié: 500 req/min (plus permissif car Pi de confiance)
 router.post(
   '/impressions',
   piAnalyticsRateLimit,
-  authenticateSiteApiKey,
+  authenticateSiteApiKeyOptional,
   analyticsValidation.recordImpressions,
   recordImpressions
 );

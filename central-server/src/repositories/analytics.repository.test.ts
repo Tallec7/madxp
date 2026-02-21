@@ -294,11 +294,13 @@ describe('AnalyticsRepository', () => {
         siteId: 's1', sessionId: 'sess-1', videoFilename: 'v.mp4', category: 'sport',
         playedAt: '2024-01-15T10:00:00Z', durationPlayed: 30, videoDuration: 60,
         completed: false, triggerType: 'auto', videoId: null, sponsorId: null, tvStatus: null,
+        eventType: 'match', period: 'halftime', audienceEstimate: 200, positionInLoop: 3, siteSponsorId: null,
+        campaignId: null,
       }]);
 
       const sql = mockQuery.mock.calls[0][0] as string;
       expect(sql).toContain('INSERT INTO video_plays');
-      expect(mockQuery.mock.calls[0][1]).toHaveLength(12);
+      expect(mockQuery.mock.calls[0][1]).toHaveLength(18);
     });
 
     it('should do nothing for empty array', async () => {

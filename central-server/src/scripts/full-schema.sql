@@ -13,7 +13,7 @@
 --   - Analytics: club_sessions, video_plays, club_daily_stats
 --   - Auth: password_reset_tokens, audit_logs
 --   - Scheduling: recurring_schedules, recurring_schedule_executions
---   - Advertisers: advertisers, agencies, advertiser_impressions, advertiser_daily_stats
+--   - Advertisers: advertisers, agencies, advertiser_daily_stats, campaigns, scheduled_reports
 -- =============================================================================
 
 -- Extension pour UUID
@@ -840,34 +840,7 @@ CREATE TABLE IF NOT EXISTS agency_sites (
 CREATE INDEX IF NOT EXISTS idx_agency_sites_agency ON agency_sites(agency_id);
 CREATE INDEX IF NOT EXISTS idx_agency_sites_site ON agency_sites(site_id);
 
--- Table advertiser_impressions (tracking des affichages pubs)
-CREATE TABLE IF NOT EXISTS advertiser_impressions (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  event_id UUID,
-  site_id UUID REFERENCES sites(id) ON DELETE CASCADE,
-  advertiser_id UUID REFERENCES advertisers(id) ON DELETE SET NULL,
-  video_id UUID REFERENCES videos(id) ON DELETE SET NULL,
-  video_filename VARCHAR(255),
-  played_at TIMESTAMP NOT NULL,
-  duration_played INTEGER,
-  video_duration INTEGER,
-  completed BOOLEAN DEFAULT false,
-  interrupted_at TIMESTAMP,
-  event_type VARCHAR(50),
-  period VARCHAR(50),
-  trigger_type VARCHAR(20) DEFAULT 'auto',
-  position_in_loop INTEGER,
-  audience_estimate INTEGER,
-  site_sponsor_id UUID, -- REFERENCES site_sponsors(id) ON DELETE SET NULL (ajouté par migration)
-  created_at TIMESTAMP DEFAULT NOW()
-);
-
-CREATE UNIQUE INDEX IF NOT EXISTS idx_advertiser_impressions_event_id ON advertiser_impressions(event_id) WHERE event_id IS NOT NULL;
-CREATE INDEX IF NOT EXISTS idx_advertiser_impressions_site ON advertiser_impressions(site_id, played_at DESC);
-CREATE INDEX IF NOT EXISTS idx_advertiser_impressions_advertiser ON advertiser_impressions(advertiser_id);
-CREATE INDEX IF NOT EXISTS idx_advertiser_impressions_played_at ON advertiser_impressions(played_at);
-CREATE INDEX IF NOT EXISTS idx_impressions_site_sponsor ON advertiser_impressions(site_sponsor_id);
-CREATE INDEX IF NOT EXISTS idx_impressions_site_sponsor_date ON advertiser_impressions(site_sponsor_id, played_at);
+-- NOTE: advertiser_impressions table removed — consolidated into video_plays (category = 'sponsor')
 
 -- Table advertiser_daily_stats (agrégation quotidienne des impressions par vidéo et site)
 CREATE TABLE IF NOT EXISTS advertiser_daily_stats (
@@ -970,6 +943,80 @@ ALTER TABLE video_plays ADD COLUMN IF NOT EXISTS analytics_category VARCHAR(50);
 ALTER TABLE video_plays ADD COLUMN IF NOT EXISTS tv_status VARCHAR(20) DEFAULT 'unknown';
 CREATE INDEX IF NOT EXISTS idx_video_plays_tv_status ON video_plays(tv_status);
 
+-- Sponsor context columns (consolidated pipeline — event_type, period, audience, etc.)
+ALTER TABLE video_plays ADD COLUMN IF NOT EXISTS event_type VARCHAR(50);
+ALTER TABLE video_plays ADD COLUMN IF NOT EXISTS period VARCHAR(50);
+ALTER TABLE video_plays ADD COLUMN IF NOT EXISTS audience_estimate INTEGER;
+ALTER TABLE video_plays ADD COLUMN IF NOT EXISTS position_in_loop INTEGER;
+ALTER TABLE video_plays ADD COLUMN IF NOT EXISTS site_sponsor_id UUID;
+CREATE INDEX IF NOT EXISTS idx_video_plays_event_type ON video_plays(event_type);
+CREATE INDEX IF NOT EXISTS idx_video_plays_site_sponsor ON video_plays(site_sponsor_id);
+CREATE INDEX IF NOT EXISTS idx_video_plays_sponsor_analytics ON video_plays(site_id, category, played_at DESC) WHERE category = 'sponsor';
+
+-- =============================================================================
+-- CAMPAIGNS (PI-2 : E-11 Régie, E-17 A/B Testing)
+-- =============================================================================
+
+CREATE TABLE IF NOT EXISTS campaigns (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  advertiser_id UUID NOT NULL REFERENCES advertisers(id) ON DELETE CASCADE,
+  name VARCHAR(255) NOT NULL,
+  target_impressions INTEGER,
+  target_sites UUID[],
+  campaign_type VARCHAR(50) NOT NULL DEFAULT 'standard',
+  variant_config JSONB,
+  status VARCHAR(20) NOT NULL DEFAULT 'draft',
+  start_date DATE,
+  end_date DATE,
+  created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
+  CONSTRAINT check_campaign_type CHECK (campaign_type IN ('standard', 'regional', 'ab_test')),
+  CONSTRAINT check_campaign_status CHECK (status IN ('draft', 'active', 'paused', 'completed', 'archived')),
+  CONSTRAINT check_campaign_dates CHECK (end_date IS NULL OR start_date IS NULL OR end_date >= start_date),
+  CONSTRAINT check_target_impressions_positive CHECK (target_impressions IS NULL OR target_impressions > 0)
+);
+
+CREATE INDEX IF NOT EXISTS idx_campaigns_advertiser ON campaigns(advertiser_id);
+CREATE INDEX IF NOT EXISTS idx_campaigns_status ON campaigns(status) WHERE status = 'active';
+CREATE INDEX IF NOT EXISTS idx_campaigns_dates ON campaigns(start_date, end_date);
+
+-- Campaign tracking sur video_plays
+ALTER TABLE video_plays ADD COLUMN IF NOT EXISTS campaign_id UUID REFERENCES campaigns(id) ON DELETE SET NULL;
+CREATE INDEX IF NOT EXISTS idx_video_plays_campaign ON video_plays(campaign_id) WHERE campaign_id IS NOT NULL;
+
+-- =============================================================================
+-- SCHEDULED REPORTS (PI-2 : E-16 Rapports Automatiques)
+-- =============================================================================
+
+CREATE TABLE IF NOT EXISTS scheduled_reports (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  advertiser_id UUID REFERENCES advertisers(id) ON DELETE CASCADE,
+  campaign_id UUID REFERENCES campaigns(id) ON DELETE SET NULL,
+  report_type VARCHAR(50) NOT NULL DEFAULT 'advertiser',
+  frequency VARCHAR(20) NOT NULL DEFAULT 'monthly',
+  recipients TEXT[] NOT NULL DEFAULT '{}',
+  next_send_at TIMESTAMP,
+  last_sent_at TIMESTAMP,
+  enabled BOOLEAN NOT NULL DEFAULT true,
+  created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
+  CONSTRAINT check_report_type CHECK (report_type IN ('advertiser', 'campaign', 'club')),
+  CONSTRAINT check_frequency CHECK (frequency IN ('weekly', 'biweekly', 'monthly', 'quarterly'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_scheduled_reports_advertiser ON scheduled_reports(advertiser_id);
+CREATE INDEX IF NOT EXISTS idx_scheduled_reports_next_send ON scheduled_reports(next_send_at) WHERE enabled = true;
+
+-- Bridge view for advertiser dashboard (reads from video_plays instead of advertiser_impressions)
+CREATE OR REPLACE VIEW sponsor_impressions_bridge AS
+SELECT vp.id, vp.site_id, vp.sponsor_id AS advertiser_id, vp.video_id,
+       vp.video_filename, vp.played_at, vp.duration_played, vp.video_duration,
+       vp.completed, vp.event_type, vp.period, vp.trigger_type,
+       vp.position_in_loop, vp.audience_estimate, vp.site_sponsor_id, vp.tv_status
+FROM video_plays vp
+WHERE vp.category = 'sponsor'
+  AND (vp.tv_status IN ('on', 'unknown') OR vp.tv_status IS NULL);
+
 -- Vue pending_commands_summary
 CREATE OR REPLACE VIEW pending_commands_summary AS
 SELECT
@@ -1036,25 +1083,26 @@ CREATE OR REPLACE VIEW advertiser_analytics_summary AS
 SELECT
   a.id AS advertiser_id,
   a.name AS advertiser_name,
-  COUNT(DISTINCT ai.site_id) AS sites_reached,
-  COUNT(ai.id) AS total_impressions,
-  COALESCE(SUM(ai.duration_played), 0) AS total_duration
+  COUNT(DISTINCT vp.site_id) AS sites_reached,
+  COUNT(vp.id) AS total_impressions,
+  COALESCE(SUM(vp.duration_played), 0) AS total_duration
 FROM advertisers a
-LEFT JOIN advertiser_impressions ai ON ai.advertiser_id = a.id
+LEFT JOIN video_plays vp ON vp.sponsor_id = a.id AND vp.category = 'sponsor'
 GROUP BY a.id, a.name;
 
 -- Vue advertiser_performance_by_site (performance par site pour un annonceur)
 CREATE OR REPLACE VIEW advertiser_performance_by_site AS
 SELECT
-  ai.advertiser_id,
-  ai.site_id,
+  vp.sponsor_id AS advertiser_id,
+  vp.site_id,
   s.site_name,
   s.club_name,
-  COUNT(ai.id) AS impressions_count,
-  COALESCE(SUM(ai.duration_played), 0) AS total_duration
-FROM advertiser_impressions ai
-JOIN sites s ON s.id = ai.site_id
-GROUP BY ai.advertiser_id, ai.site_id, s.site_name, s.club_name;
+  COUNT(vp.id) AS impressions_count,
+  COALESCE(SUM(vp.duration_played), 0) AS total_duration
+FROM video_plays vp
+JOIN sites s ON s.id = vp.site_id
+WHERE vp.category = 'sponsor'
+GROUP BY vp.sponsor_id, vp.site_id, s.site_name, s.club_name;
 
 -- Vue advertiser_stats_summary (résumé stats annonceurs)
 CREATE OR REPLACE VIEW advertiser_stats_summary AS
@@ -1063,25 +1111,25 @@ SELECT
   a.name,
   a.status,
   COUNT(DISTINCT av.video_id) AS video_count,
-  COUNT(DISTINCT ai.site_id) AS sites_count,
-  COUNT(ai.id) AS total_impressions
+  COUNT(DISTINCT vp.site_id) AS sites_count,
+  COUNT(vp.id) AS total_impressions
 FROM advertisers a
 LEFT JOIN advertiser_videos av ON av.advertiser_id = a.id
-LEFT JOIN advertiser_impressions ai ON ai.advertiser_id = a.id
+LEFT JOIN video_plays vp ON vp.sponsor_id = a.id AND vp.category = 'sponsor'
 GROUP BY a.id, a.name, a.status;
 
 -- Vue top_advertiser_videos (vidéos sponsors les plus jouées)
 CREATE OR REPLACE VIEW top_advertiser_videos AS
 SELECT
-  ai.advertiser_id,
+  vp.sponsor_id AS advertiser_id,
   a.name AS advertiser_name,
-  ai.video_filename,
+  vp.video_filename,
   COUNT(*) AS play_count,
-  SUM(ai.duration_played) AS total_duration
-FROM advertiser_impressions ai
-JOIN advertisers a ON a.id = ai.advertiser_id
-WHERE ai.played_at > NOW() - INTERVAL '30 days'
-GROUP BY ai.advertiser_id, a.name, ai.video_filename
+  SUM(vp.duration_played) AS total_duration
+FROM video_plays vp
+JOIN advertisers a ON a.id = vp.sponsor_id
+WHERE vp.category = 'sponsor' AND vp.played_at > NOW() - INTERVAL '30 days'
+GROUP BY vp.sponsor_id, a.name, vp.video_filename
 ORDER BY play_count DESC;
 
 -- Vue advertiser_accessible_sites (sites accessibles par annonceur)
@@ -1134,7 +1182,6 @@ COMMENT ON TABLE orchestrated_deployments IS 'Déploiements orchestrés (vidéos
 COMMENT ON TABLE audit_logs IS 'Logs d''audit des actions admin';
 COMMENT ON TABLE advertisers IS 'Annonceurs (sponsors) avec contrats publicitaires';
 COMMENT ON TABLE agencies IS 'Agences gérant plusieurs annonceurs';
-COMMENT ON TABLE advertiser_impressions IS 'Tracking des impressions publicitaires';
 COMMENT ON TABLE advertiser_sites IS 'Liaison annonceurs <-> sites autorisés';
 COMMENT ON TABLE agency_sites IS 'Liaison agences <-> sites autorisés';
 
@@ -1154,6 +1201,7 @@ BEGIN
     RAISE NOTICE '  - remote_commands, metrics, alerts';
     RAISE NOTICE '  - config_history';
     RAISE NOTICE '  - club_sessions, video_plays, club_daily_stats';
+    RAISE NOTICE '  - campaigns, scheduled_reports';
     RAISE NOTICE '';
     RAISE NOTICE 'Vues: club_analytics_summary, top_videos_by_site';
     RAISE NOTICE 'Fonctions: calculate_daily_stats(), calculate_all_daily_stats()';

@@ -1139,6 +1139,7 @@ SafeNetworkOperations: hotspot channel OK { currentChannel: 6, currentCount: 2, 
 | 2.3     | 2026-02-18 | Claude/NEOPRO | Sync sponsors Dashboard → Pi : `siteSponsors` dans payload déploiement, `mergeSiteSponsors()`, monitoring Prometheus |
 | 2.4     | 2026-02-19 | Claude/NEOPRO | Auth retry transitoire (5 tentatives), auto-optimisation canal hotspot, fix daily stats `screen_time_seconds`        |
 | 2.5     | 2026-02-21 | Claude/NEOPRO | Événement `content_received` dans sync-history, bannière sync contenu admin Pi, métriques sponsor health Prometheus  |
+| 2.6     | 2026-02-21 | Claude/NEOPRO | Pipeline analytics unifié (video_plays), suppression sponsor-impressions.js, tables campaigns + scheduled_reports    |
 
 ---
 

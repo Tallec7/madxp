@@ -264,9 +264,9 @@ async function generateAdvertiserReports(
     SELECT DISTINCT a.id, a.name
     FROM advertisers a
     JOIN advertiser_videos av ON av.advertiser_id = a.id
-    JOIN advertiser_impressions ai ON ai.video_id = av.video_id
-    WHERE ai.played_at >= $1::date
-      AND ai.played_at <= $2::date
+    JOIN video_plays vp ON vp.video_id = av.video_id AND vp.category = 'sponsor'
+    WHERE vp.played_at >= $1::date
+      AND vp.played_at <= $2::date
       AND a.status = 'active'
     ORDER BY a.name
   `, [periodStart, periodEnd]);
@@ -409,9 +409,9 @@ async function generateSiteSponsorReports(
            s.club_name
     FROM site_sponsors ss
     JOIN sites s ON s.id = ss.site_id
-    JOIN advertiser_impressions ai ON ai.site_sponsor_id = ss.id
-    WHERE ai.played_at >= $1::date
-      AND ai.played_at <= $2::date
+    JOIN video_plays vp ON vp.site_sponsor_id = ss.id AND vp.category = 'sponsor'
+    WHERE vp.played_at >= $1::date
+      AND vp.played_at <= $2::date
       AND ss.status = 'active'
     ORDER BY ss.name
   `, [periodStart, periodEnd]);

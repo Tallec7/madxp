@@ -1,12 +1,12 @@
 # Tracking des Impressions Annonceurs - Guide d'Implémentation
 
-**Date**: 28 Décembre 2025 (Mise à jour: 17 Février 2026)
-**Version**: 1.4
+**Date**: 28 Décembre 2025 (Mise à jour: 21 Février 2026)
+**Version**: 2.0
 **Conformité**: BP §13 - Analytics Annonceurs (95%)
 
 > **Note terminologique** : Depuis le 2025-12-29, la terminologie "Sponsor" a été remplacée par "Advertiser" (Annonceur). Ce document conserve certaines références à "sponsor" pour la rétrocompatibilité du code legacy. Voir [Migration Sponsor → Advertiser](../changelog/2025-12-29_sponsor-to-advertiser-migration.md).
 
-> **Modèle unifié site_sponsors (P0-P5)** : Depuis février 2026, les impressions dans `advertiser_impressions` portent également un `site_sponsor_id` optionnel. Ce champ permet l'attribution des impressions aux sponsors locaux des clubs (modèle `site_sponsors`). Voir [ADR-SITE-SPONSORS-ANALYTICS.md](ADR-SITE-SPONSORS-ANALYTICS.md) pour le modèle complet.
+> **Pipeline unifié v3.66+ (21 Fév 2026)** : Le double pipeline (video_plays + advertiser_impressions) a été consolidé en un seul pipeline `video_plays` avec `category = 'sponsor'`. L'ancien `SponsorAnalyticsService` et `sponsor-impressions.js` ont été supprimés. Toutes les queries utilisent `video_plays WHERE category = 'sponsor'`. La table `advertiser_impressions` a été droppée. Voir [ADR-SITE-SPONSORS-ANALYTICS.md](ADR-SITE-SPONSORS-ANALYTICS.md) pour le modèle complet.
 
 ---
 
@@ -23,32 +23,32 @@ Ce document décrit le système complet de tracking des impressions annonceurs d
 │                                                                   │
 │  ┌─────────────────────────────────────────────────────────┐    │
 │  │  TV Component (Angular)                                  │    │
-│  │  - Lecture vidéo sponsor                                 │    │
+│  │  - Lecture vidéo sponsor + club                          │    │
 │  │  - Événements: play, end, error                          │    │
 │  │  - Contexte: event_type, period, audience               │    │
 │  └──────────────┬───────────────────────────────────────────┘    │
 │                 │                                                 │
 │                 ▼                                                 │
 │  ┌─────────────────────────────────────────────────────────┐    │
-│  │  SponsorAnalyticsService                                 │    │
+│  │  AnalyticsService (pipeline unifié v3.66+)               │    │
 │  │  - Buffer local (localStorage, persistant)               │    │
-│  │  - Envoi immédiat à chaque impression (v3.7.1+)          │    │
-│  │  - Auto-flush 5min ou 50 impressions (filet de sécurité) │    │
+│  │  - Sponsors: category='sponsor' + event_type/period      │    │
+│  │  - Auto-flush 5min ou 50 événements                      │    │
 │  └──────────────┬───────────────────────────────────────────┘    │
 │                 │                                                 │
-│                 │ HTTP POST (immédiat + flush périodique)         │
+│                 │ HTTP POST (flush périodique)                    │
 │                 ▼                                                 │
 │  ┌─────────────────────────────────────────────────────────┐    │
 │  │  Local Server (Express, port 3000)                       │    │
-│  │  POST /api/sync/sponsor-impressions                      │    │
-│  │  - Stocke dans ~/neopro/data/sponsor_impressions.json   │    │
+│  │  POST /api/analytics                                     │    │
+│  │  - Stocke dans ~/neopro/data/analytics_buffer.json      │    │
 │  └──────────────┬───────────────────────────────────────────┘    │
 │                 │                                                 │
 │                 ▼                                                 │
 │  ┌─────────────────────────────────────────────────────────┐    │
 │  │  Sync Agent (Node.js)                                    │    │
 │  │  - Charge buffer au démarrage                            │    │
-│  │  - Envoi périodique (5min)                               │    │
+│  │  - Envoi périodique (5min) via video-plays batch         │    │
 │  │  - Retry avec backoff                                    │    │
 │  └──────────────┬───────────────────────────────────────────┘    │
 │                 │                                                 │
@@ -61,32 +61,32 @@ Ce document décrit le système complet de tracking des impressions annonceurs d
 ├─────────────────────────────────────────────────────────────────┤
 │                                                                   │
 │  ┌─────────────────────────────────────────────────────────┐    │
-│  │  API /api/analytics/impressions                          │    │
-│  │  - Validation données                                    │    │
-│  │  - Batch INSERT PostgreSQL                               │    │
+│  │  API POST /api/analytics/video-plays                     │    │
+│  │  - Validation données (+ campaign_id optionnel)          │    │
+│  │  - Batch INSERT video_plays (category='sponsor')         │    │
 │  └──────────────┬───────────────────────────────────────────┘    │
 │                 │                                                 │
 │                 ▼                                                 │
 │  ┌─────────────────────────────────────────────────────────┐    │
 │  │  PostgreSQL Database                                     │    │
-│  │  sponsor_impressions table                               │    │
-│  │  - site_id, video_id, played_at                          │    │
-│  │  - duration_played, completed                            │    │
-│  │  - event_type, period, audience_estimate                 │    │
+│  │  video_plays table (category = 'sponsor' pour sponsors)  │    │
+│  │  - site_id, sponsor_id, video_filename, played_at        │    │
+│  │  - duration_played, completed, tv_status                 │    │
+│  │  - event_type, period, audience_estimate, campaign_id    │    │
 │  └──────────────┬───────────────────────────────────────────┘    │
 │                 │                                                 │
 │                 ▼                                                 │
 │  ┌─────────────────────────────────────────────────────────┐    │
-│  │  SQL Views & Aggregation Functions                       │    │
-│  │  - sponsor_analytics_summary                             │    │
-│  │  - calculate_sponsor_daily_stats()                       │    │
+│  │  SQL Views (advertiser_analytics_summary, etc.)          │    │
+│  │  KPIs endpoint: GET /api/analytics/advertisers/:id/kpis  │    │
+│  │  → verified_impressions, rotation_fairness, renewal_score│    │
 │  └──────────────┬───────────────────────────────────────────┘    │
 │                 │                                                 │
 │                 ▼                                                 │
 │  ┌─────────────────────────────────────────────────────────┐    │
 │  │  API /api/analytics/sponsors/:id/stats                   │    │
 │  │  - Agrégation temps réel                                 │    │
-│  │  - Export CSV/PDF                                        │    │
+│  │  - Export CSV/PDF (impressions vérifiées)                 │    │
 │  └──────────────┬───────────────────────────────────────────┘    │
 │                 │                                                 │
 └─────────────────┼─────────────────────────────────────────────────┘
@@ -113,84 +113,74 @@ Ce document décrit le système complet de tracking des impressions annonceurs d
 
 ### 1. Frontend TV (Raspberry Pi - Angular)
 
-#### `sponsor-analytics.service.ts`
+#### `analytics.service.ts` (pipeline unifié v3.66+)
 
-**Localisation**: `raspberry/src/app/services/sponsor-analytics.service.ts`
+**Localisation**: `raspberry/src/app/services/analytics.service.ts`
+
+> **Note v3.66+** : L'ancien `SponsorAnalyticsService` a été supprimé. `AnalyticsService` gère désormais le tracking de toutes les vidéos (club + sponsor) via un pipeline unique `video_plays`.
 
 **Responsabilités**:
 
-- Tracker les lectures de vidéos sponsors
+- Tracker les lectures de toutes les vidéos (club et sponsor)
 - Maintenir un buffer local avec localStorage
 - Envoyer périodiquement au serveur local
+- Enrichir les événements sponsor avec `event_type`, `period`, `audience_estimate`
 
-**Interface SponsorImpression**:
+**Interface VideoPlayEvent** (enrichie pour sponsors):
 
 ```typescript
 {
   site_id?: string;           // ID du club/site
   video_id?: string;          // ID de la vidéo
   video_filename: string;     // Nom du fichier vidéo
+  category: string;           // 'sponsor' | 'club' | ...
   played_at: string;          // Timestamp ISO 8601
   duration_played: number;    // Secondes réellement visionnées
   video_duration: number;     // Durée totale de la vidéo
   completed: boolean;         // Lecture complète ?
-  event_type: string;         // 'match' | 'training' | 'tournament' | 'other'
-  period: string;             // 'pre_match' | 'halftime' | 'post_match' | 'loop'
   trigger_type: string;       // 'auto' | 'manual'
+  tv_status?: string;         // 'on' | 'standby' | 'unknown' (HDMI-CEC)
+  // Champs enrichis pour sponsors (v3.66+) :
+  event_type?: string;        // 'match' | 'training' | 'tournament' | 'other'
+  period?: string;            // 'pre_match' | 'halftime' | 'post_match' | 'loop'
   audience_estimate?: number; // Estimation audience
+  position_in_loop?: number;  // Position dans la boucle
+  site_sponsor_id?: string;   // UUID site_sponsor associé
+  campaign_id?: string;       // UUID campagne (PI-2)
 }
 ```
 
 **Méthodes principales**:
 
-- `trackSponsorStart(video, triggerType, duration)` - Début de lecture
-- `trackSponsorEnd(completed)` - Fin de lecture
-- `setEventType(type)` - Définir le type d'événement
-- `setPeriod(period)` - Définir la période
+- `trackVideoStart(video, triggerType, duration)` - Début de lecture
+- `trackVideoEnd(completed)` - Fin de lecture
+- `setEventType(type)` - Définir le type d'événement (sponsor)
+- `setPeriod(period)` - Définir la période (sponsor)
 - `setAudienceEstimate(estimate)` - Définir l'audience estimée
 - `forceFlush()` - Forcer l'envoi immédiat
-
-**Configuration**:
-
-```typescript
-FLUSH_INTERVAL = 5 * 60 * 1000; // 5 minutes
-MAX_BUFFER_SIZE = 50; // Auto-flush à 50 impressions
-STORAGE_KEY = 'neopro_sponsor_impressions';
-SYNC_AGENT_URL = environment.socketUrl + '/api/sync/sponsor-impressions';
-```
 
 #### `tv.component.ts` (Modifié)
 
 **Localisation**: `raspberry/src/app/components/tv/tv.component.ts`
 
-**Intégration**:
+**Intégration (v3.66+ pipeline unifié)**:
 
 ```typescript
-// Injection du service
-private readonly sponsorAnalytics = inject(SponsorAnalyticsService);
+// Injection du service unique
+private readonly analyticsService = inject(AnalyticsService);
 
-// Configuration au démarrage
-ngOnInit() {
-  this.sponsorAnalytics.setConfiguration(this.configuration);
-  // this.sponsorAnalytics.setSiteId(this.configuration.siteId);
-}
-
-// Tracking lors de la lecture
+// Tracking lors de la lecture (sponsor ou club)
 this.player.on('play', () => {
-  // La boucle active dépend de la phase courante
-  const sponsor = this.currentLoopVideos.find(s => ...);
-  if (sponsor) {
-    this.sponsorAnalytics.trackSponsorStart(
-      sponsor,
-      'auto',
-      this.player.duration() || 0
-    );
-  }
+  this.analyticsService.trackVideoStart(
+    video,
+    'auto',
+    this.player.duration() || 0
+  );
 });
 
 // Tracking fin de lecture
 this.player.on('ended', () => {
-  this.sponsorAnalytics.trackSponsorEnd(true);
+  this.analyticsService.trackVideoEnd(true);
 });
 ```
 
@@ -323,74 +313,13 @@ Retourne les statistiques du buffer local.
 
 ### 3. Sync Agent (Raspberry Pi - Node.js)
 
-#### `sponsor-impressions.js` (Nouveau)
+> **v3.66+** : L'ancien module `sponsor-impressions.js` a été supprimé. Le sync-agent utilise uniquement le collecteur `video-plays` existant pour envoyer toutes les impressions (club + sponsor) au central via `POST /api/analytics/video-plays`.
 
-**Localisation**: `raspberry/sync-agent/src/sponsor-impressions.js`
-
-**Classe SponsorImpressionsCollector**:
-
-**Propriétés**:
-
-- `buffer` - Array d'impressions en attente
-- `lastSendTime` - Timestamp du dernier envoi réussi
-- `sendInterval` - Intervalle d'envoi (5min par défaut)
-- `maxBufferSize` - Taille max avant auto-flush (100)
-
-**Méthodes principales**:
-
-```javascript
-loadBuffer(); // Charge depuis le fichier
-saveBuffer(); // Sauvegarde dans le fichier
-addImpressions(array); // Ajoute au buffer
-flushBuffer(); // Récupère et vide le buffer
-sendToServer(url, siteId); // Envoie HTTP POST au central
-startPeriodicSync(); // Démarre l'envoi automatique
-getStats(); // Statistiques du buffer
-```
-
-**Fonctionnalités**:
-
-- ✅ Persistance fichier JSON
-- ✅ Auto-récupération au démarrage
-- ✅ Envoi périodique (5min)
-- ✅ Retry avec logs détaillés
-- ✅ Ajout automatique du site_id
-- ✅ Gestion erreurs réseau
-- ✅ Préservation données en cas d'échec
-
-#### `agent.js` (Modifié)
+#### `agent.js`
 
 **Localisation**: `raspberry/sync-agent/src/agent.js`
 
-**Modifications**:
-
-```javascript
-// Import
-const sponsorImpressionsCollector = require('./sponsor-impressions');
-
-// Démarrage automatique
-async start() {
-  this.startSponsorImpressionsSync();
-  // ...
-}
-
-// Nouvelle méthode
-startSponsorImpressionsSync() {
-  sponsorImpressionsCollector.startPeriodicSync(
-    config.central.url,
-    config.site.id
-  );
-}
-
-// API publique
-addSponsorImpressions(impressions) {
-  return sponsorImpressionsCollector.addImpressions(impressions);
-}
-
-getSponsorImpressionsStats() {
-  return sponsorImpressionsCollector.getStats();
-}
-```
+Le sync-agent charge le buffer `analytics_buffer.json` (écrit par le local server) et l'envoie périodiquement au central. Les événements sponsor sont distingués par `category: 'sponsor'` dans le payload.
 
 ---
 
@@ -815,6 +744,23 @@ curl -X POST https://central.neopro.com/api/analytics/impressions \
 
 ## 📝 Changelog
 
+### Version 2.0.0 - 21 Février 2026
+
+**Pipeline unifié : suppression du double pipeline, consolidation dans video_plays** :
+
+- ✅ Suppression de `SponsorAnalyticsService` — `AnalyticsService` gère toutes les vidéos (club + sponsor)
+- ✅ Suppression de `sponsor-impressions.js` (sync-agent) — le collecteur `video-plays` est le seul pipeline
+- ✅ Enrichissement de `VideoPlayEvent` avec `event_type`, `period`, `audience_estimate`, `position_in_loop`, `site_sponsor_id`, `campaign_id`
+- ✅ Central server : toutes les queries migrées de `advertiser_impressions` vers `video_plays WHERE category = 'sponsor'`
+- ✅ 30+ queries migrées dans 12+ fichiers (repositories, services, rapports)
+- ✅ Script backfill pour enrichir `video_plays` depuis `advertiser_impressions` avant suppression
+- ✅ Table `advertiser_impressions` droppée, vues SQL recréées sur `video_plays`
+- ✅ Nouveaux KPIs : `verified_impressions` (TV allumée), `rotation_fairness`, `renewal_score`, `peak_hours`
+- ✅ Dashboard enrichi : 4 KPI cards avancés, heatmap 24h, score de renouvellement
+- ✅ PDF enrichi : section impressions vérifiées avec taux TV-on
+- ✅ Nouvelles tables : `campaigns` (PI-2 Régie), `scheduled_reports` (PI-2 Rapports Auto)
+- ✅ 1595 tests serveur, 142 smoke tests, dashboard build OK
+
 ### Version 1.4.0 - 18 Février 2026
 
 **Attribution sponsor complète : `site_sponsor_id` + fallback `video_filename`** :
@@ -916,7 +862,7 @@ site_sponsor_id fourni et UUID valide ?
 ---
 
 **Auteur** : Claude Code + Équipe NEOPRO
-**Version** : 1.3.0
+**Version** : 2.0.0
 **Conformité** : 95% BP §13
-**Dernière mise à jour** : 16 Février 2026
+**Dernière mise à jour** : 21 Février 2026
 **Prochaine révision** : Tests terrain avec données réelles

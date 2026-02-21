@@ -90,7 +90,7 @@ describe('AdvertiserPortalRepository', () => {
       expect(result).toEqual(mockReach);
       const sql = mockQuery.mock.calls[0][0] as string;
       expect(sql).toContain('club_sessions cs');
-      expect(sql).toContain('advertiser_impressions ai');
+      expect(sql).toContain('video_plays vp');
     });
 
     it('should return null when no data', async () => {

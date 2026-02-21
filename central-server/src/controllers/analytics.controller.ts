@@ -216,6 +216,8 @@ export const recordVideoPlays = async (req: AuthRequest, res: Response) => {
 
     // Valider et préparer toutes les entrées avant l'insertion batch
     const validTvStatuses = ['on', 'standby', 'disconnected', 'unknown'];
+    const validEventTypes = ['match', 'training', 'tournament', 'other'];
+    const validPeriods = ['pre_match', 'halftime', 'post_match', 'loop'];
     const validPlays: VideoPlaysBatchItem[] = [];
 
     for (const play of plays) {
@@ -240,6 +242,22 @@ export const recordVideoPlays = async (req: AuthRequest, res: Response) => {
 
       const tvStatus = validTvStatuses.includes(play.tv_status) ? play.tv_status : 'unknown';
 
+      // Sponsor context fields (consolidated pipeline)
+      const eventType = validEventTypes.includes(play.event_type) ? play.event_type : null;
+      const period = validPeriods.includes(play.period) ? play.period : null;
+      const audienceEstimate = typeof play.audience_estimate === 'number' && play.audience_estimate >= 0
+        ? play.audience_estimate : null;
+      const positionInLoop = typeof play.position_in_loop === 'number' && play.position_in_loop >= 0
+        ? play.position_in_loop : null;
+      const siteSponsorId =
+        typeof play.site_sponsor_id === 'string' && validateUuid(play.site_sponsor_id)
+          ? play.site_sponsor_id
+          : null;
+      const campaignId =
+        typeof play.campaign_id === 'string' && validateUuid(play.campaign_id)
+          ? play.campaign_id
+          : null;
+
       validPlays.push({
         siteId: site_id,
         sessionId,
@@ -253,6 +271,12 @@ export const recordVideoPlays = async (req: AuthRequest, res: Response) => {
         videoId,
         sponsorId,
         tvStatus,
+        eventType,
+        period,
+        audienceEstimate,
+        positionInLoop,
+        siteSponsorId,
+        campaignId,
       });
     }
 

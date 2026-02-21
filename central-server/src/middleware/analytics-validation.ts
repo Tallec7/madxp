@@ -428,6 +428,10 @@ export const analyticsValidation = {
     validateParams(advertiserIdParams),
     validateQuery(dateRangeQuery),
   ],
+  getAdvertiserKpis: [
+    validateParams(advertiserIdParams),
+    validateQuery(dateRangeQuery),
+  ],
   exportAdvertiserData: [
     validateParams(advertiserIdParams),
     validateQuery(exportQueryWithFormat),

@@ -188,7 +188,7 @@ setInterval(() => {
 
 // Periodic DB size monitoring (every 5 min) — detects Supabase quota overruns early
 const DB_SIZE_INTERVAL = 5 * 60 * 1000;
-const DB_SIZE_TABLES = ['video_plays', 'advertiser_impressions', 'metrics', 'audit_logs', 'remote_commands'];
+const DB_SIZE_TABLES = ['video_plays', 'metrics', 'audit_logs', 'remote_commands'];
 const DB_SIZE_WARN_BYTES = 400 * 1024 * 1024; // 400 MB — Supabase free tier limit is 500 MB
 
 setInterval(async () => {

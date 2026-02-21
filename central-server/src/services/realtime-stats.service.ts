@@ -177,8 +177,9 @@ class RealtimeStatsService {
     // Impressions sponsors dans la dernière heure
     const impressionsResult = await query(`
       SELECT COUNT(*) as count
-      FROM advertiser_impressions
-      WHERE played_at >= NOW() - INTERVAL '1 hour'
+      FROM video_plays
+      WHERE category = 'sponsor'
+        AND played_at >= NOW() - INTERVAL '1 hour'
     `);
 
     // Sessions actives (sites avec activité dans les 5 dernières minutes)

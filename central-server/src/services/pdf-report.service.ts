@@ -45,6 +45,12 @@ interface ReportData {
     active_sites: number;
     active_days: number;
   };
+  verified_impressions?: {
+    verified_count: number;
+    tv_on_rate: number;
+    match_day_impressions: number;
+    completion_rate: number;
+  };
   by_video?: unknown[];
   by_site?: unknown[];
   by_period?: Record<string, number>;
@@ -121,8 +127,9 @@ export async function generateAdvertiserReport(
         COALESCE(SUM(audience_estimate), 0) as estimated_reach,
         COUNT(DISTINCT site_id) as active_sites,
         COUNT(DISTINCT DATE(played_at)) as active_days
-       FROM advertiser_impressions
+       FROM video_plays
        WHERE video_id = ANY($1::uuid[])
+         AND category = 'sponsor'
          AND played_at >= $2::date
          AND played_at < ($3::date + INTERVAL '1 day')`,
       [vids, from, to]
@@ -134,14 +141,38 @@ export async function generateAdvertiserReport(
         DATE(played_at) as date,
         COUNT(*) as impressions,
         SUM(duration_played) as screen_time
-       FROM advertiser_impressions
+       FROM video_plays
        WHERE video_id = ANY($1::uuid[])
+         AND category = 'sponsor'
          AND played_at >= $2::date
          AND played_at < ($3::date + INTERVAL '1 day')
        GROUP BY DATE(played_at)
        ORDER BY date ASC`,
       [vids, from, to]
     );
+
+    // KPIs vérifiés (depuis video_plays consolidé)
+    const verifiedResult = await query(
+      `SELECT
+        COUNT(*) FILTER (WHERE tv_status = 'on') as verified_count,
+        ROUND(
+          (COUNT(*) FILTER (WHERE tv_status = 'on')::numeric /
+           NULLIF(COUNT(*), 0) * 100), 1
+        ) as tv_on_rate,
+        COUNT(*) FILTER (WHERE event_type = 'match') as match_day_impressions,
+        ROUND(
+          (COUNT(*) FILTER (WHERE completed = true)::numeric /
+           NULLIF(COUNT(*), 0) * 100), 1
+        ) as completion_rate_verified
+       FROM video_plays
+       WHERE sponsor_id = $1
+         AND category = 'sponsor'
+         AND played_at >= $2::date
+         AND played_at < ($3::date + INTERVAL '1 day')`,
+      [advertiserId, from, to]
+    );
+
+    const verified = verifiedResult.rows[0];
 
     const reportData: ReportData = {
       sponsor: {
@@ -157,6 +188,12 @@ export async function generateAdvertiserReport(
         estimated_reach: parseInt(summary.rows[0]?.estimated_reach as string) || 0,
         active_sites: parseInt(summary.rows[0]?.active_sites as string) || 0,
         active_days: parseInt(summary.rows[0]?.active_days as string) || 0,
+      },
+      verified_impressions: {
+        verified_count: parseInt(verified?.verified_count as string) || 0,
+        tv_on_rate: parseFloat(verified?.tv_on_rate as string) || 0,
+        match_day_impressions: parseInt(verified?.match_day_impressions as string) || 0,
+        completion_rate: parseFloat(verified?.completion_rate_verified as string) || 0,
       },
       trends: {
         daily: dailyTrends.rows.map(d => ({
@@ -594,6 +631,78 @@ async function generatePlaceholderPdf(data: ReportData, options: PdfReportOption
       }
 
       yPosition += 3 * (cardHeight + cardGap) + 40;
+
+      // Section Impressions Vérifiées (si données disponibles)
+      if (data.verified_impressions && data.verified_impressions.verified_count > 0) {
+        doc
+          .fontSize(16)
+          .fillColor(COLORS.primary)
+          .font('Helvetica-Bold')
+          .text('IMPRESSIONS VÉRIFIÉES', 50, yPosition);
+
+        yPosition += 30;
+
+        doc
+          .fontSize(11)
+          .fillColor(COLORS.text)
+          .font('Helvetica')
+          .text(
+            'Les impressions vérifiées comptabilisent uniquement les diffusions avec TV confirmée allumée (HDMI-CEC).',
+            50, yPosition, { width: 500 }
+          );
+
+        yPosition += 30;
+
+        const verifiedKpis = [
+          {
+            label: 'Impressions vérifiées',
+            value: formatNumber(data.verified_impressions.verified_count),
+            sub: `${data.verified_impressions.tv_on_rate}% du total`
+          },
+          {
+            label: 'Impressions match day',
+            value: formatNumber(data.verified_impressions.match_day_impressions),
+            sub: 'Pendant les matchs'
+          },
+          {
+            label: 'Taux de complétion',
+            value: `${data.verified_impressions.completion_rate}%`,
+            sub: 'Vidéos vues en entier'
+          },
+        ];
+
+        const verifiedCardWidth = 155;
+        const verifiedCardHeight = 70;
+
+        verifiedKpis.forEach((vk, idx) => {
+          const x = 50 + idx * (verifiedCardWidth + 15);
+
+          // Fond vert clair
+          doc
+            .rect(x, yPosition, verifiedCardWidth, verifiedCardHeight)
+            .fillAndStroke('#ecfdf5', '#6ee7b7');
+
+          doc
+            .fontSize(9)
+            .fillColor('#065f46')
+            .font('Helvetica')
+            .text(vk.label, x + 10, yPosition + 10, { width: verifiedCardWidth - 20 });
+
+          doc
+            .fontSize(16)
+            .fillColor('#065f46')
+            .font('Helvetica-Bold')
+            .text(vk.value, x + 10, yPosition + 28, { width: verifiedCardWidth - 20 });
+
+          doc
+            .fontSize(8)
+            .fillColor('#6b7280')
+            .font('Helvetica')
+            .text(vk.sub, x + 10, yPosition + 52, { width: verifiedCardWidth - 20 });
+        });
+
+        yPosition += verifiedCardHeight + 20;
+      }
 
       // ============================================================================
       // PAGE 3: GRAPHIQUES
@@ -1612,8 +1721,9 @@ export async function generateSiteSponsorReport(
         ROUND(AVG(CASE WHEN completed THEN 100 ELSE (duration_played::float / NULLIF(video_duration, 0) * 100) END)::numeric, 1) as completion_rate,
         COALESCE(SUM(audience_estimate), 0) as estimated_reach_fallback,
         COUNT(DISTINCT DATE(played_at)) as active_days
-       FROM advertiser_impressions
+       FROM video_plays
        WHERE site_sponsor_id = $1
+         AND category = 'sponsor'
          AND played_at >= $2::date
          AND played_at < ($3::date + INTERVAL '1 day')`,
       [siteSponsorId, from, to]
@@ -1628,8 +1738,9 @@ export async function generateSiteSponsorReport(
     // 3. Match session count
     const matchResult = await query(
       `SELECT COUNT(DISTINCT DATE(played_at))::text as count
-       FROM advertiser_impressions
+       FROM video_plays
        WHERE site_sponsor_id = $1
+         AND category = 'sponsor'
          AND event_type = 'match'
          AND played_at >= $2::date
          AND played_at < ($3::date + INTERVAL '1 day')`,
@@ -1659,8 +1770,9 @@ export async function generateSiteSponsorReport(
         COALESCE(event_type, 'other') as event_type,
         COUNT(*)::text as count,
         COALESCE(SUM(duration_played), 0)::text as total_screen_time
-       FROM advertiser_impressions
+       FROM video_plays
        WHERE site_sponsor_id = $1
+         AND category = 'sponsor'
          AND played_at >= $2::date
          AND played_at < ($3::date + INTERVAL '1 day')
        GROUP BY event_type

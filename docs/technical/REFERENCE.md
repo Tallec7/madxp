@@ -617,12 +617,12 @@ ssh pi@neopro.local 'sudo journalctl -u neopro-sync -n 50'
 
 ### Scripts Central Server (SQL)
 
-| Script                         | Emplacement                   | Description                                                  |
-| ------------------------------ | ----------------------------- | ------------------------------------------------------------ |
-| `full-schema.sql`              | `central-server/src/scripts/` | Schéma complet de la BDD (init nouveau environnement)        |
-| `pitch-deck-metrics.sql`       | `central-server/src/scripts/` | Extraction des métriques de traction pour pitch investisseur |
-| `analytics-tables.sql`         | `central-server/src/scripts/` | Création des tables analytics club                           |
-| `sponsor-analytics-tables.sql` | `central-server/src/scripts/` | Création des tables analytics sponsors                       |
+| Script                         | Emplacement                   | Description                                                       |
+| ------------------------------ | ----------------------------- | ----------------------------------------------------------------- |
+| `full-schema.sql`              | `central-server/src/scripts/` | Schéma complet de la BDD (init nouveau environnement)             |
+| `pitch-deck-metrics.sql`       | `central-server/src/scripts/` | Extraction des métriques de traction pour pitch investisseur      |
+| `analytics-tables.sql`         | `central-server/src/scripts/` | Création des tables analytics club                                |
+| `sponsor-analytics-tables.sql` | `central-server/src/scripts/` | Création des tables analytics sponsors (legacy, voir video_plays) |
 
 **Usage pitch-deck-metrics :**
 
@@ -1020,7 +1020,7 @@ Toutes les 2 minutes, le service vérifie et synchronise les statuts entre la ba
 
 ### RecordingStateService (Angular — Raspberry Pi)
 
-Service Angular (`raspberry/src/app/services/recording-state.service.ts`) contrôlant l'activation du tracking analytics. Tous les appels `trackVideoStart()`/`trackVideoEnd()` dans `AnalyticsService` et `SponsorAnalyticsService` sont gardés par `isRecording`.
+Service Angular (`raspberry/src/app/services/recording-state.service.ts`) contrôlant l'activation du tracking analytics. Tous les appels `trackVideoStart()`/`trackVideoEnd()` dans `AnalyticsService` sont gardés par `isRecording`. Depuis v3.66, le pipeline est unifié : `AnalyticsService` gère à la fois les vidéos club et sponsor (l'ancien `SponsorAnalyticsService` a été supprimé).
 
 **Cycle de vie du recording :**
 
@@ -1303,16 +1303,15 @@ Sponsor Portal: 100 req/min    (PUBLIC, par IP)
 
 Les données volumineuses sont nettoyées automatiquement par le `CronScheduler` :
 
-| Table                           | Rétention        | Heure cleanup   | Notes                                            |
-| ------------------------------- | ---------------- | --------------- | ------------------------------------------------ |
-| `video_plays`                   | **30 jours**     | 3h15            | Agrégées dans `club_daily_stats` avant nettoyage |
-| `advertiser_impressions`        | 90 jours         | 3h30            | Agrégées dans `advertiser_daily_stats`           |
-| `metrics`                       | 7 jours          | 3h45            | Diagnostics système court terme                  |
-| `remote_commands`               | 30 jours         | 4h00            | Historique debug                                 |
-| `alerts`                        | 90 jours         | 4h15            | Analyse patterns incidents                       |
-| `config_history`                | 20 versions/site | 4h30            | Rollback configurations                          |
-| `audit_logs`                    | 90 jours         | (logs schedule) | Conformité/audit                                 |
-| `recurring_schedule_executions` | 90 jours         | (logs schedule) | Historique exécution crons                       |
+| Table                           | Rétention        | Heure cleanup   | Notes                                                                       |
+| ------------------------------- | ---------------- | --------------- | --------------------------------------------------------------------------- |
+| `video_plays`                   | **30 jours**     | 3h15            | Agrégées dans `club_daily_stats` / `advertiser_daily_stats` avant nettoyage |
+| `metrics`                       | 7 jours          | 3h45            | Diagnostics système court terme                                             |
+| `remote_commands`               | 30 jours         | 4h00            | Historique debug                                                            |
+| `alerts`                        | 90 jours         | 4h15            | Analyse patterns incidents                                                  |
+| `config_history`                | 20 versions/site | 4h30            | Rollback configurations                                                     |
+| `audit_logs`                    | 90 jours         | (logs schedule) | Conformité/audit                                                            |
+| `recurring_schedule_executions` | 90 jours         | (logs schedule) | Historique exécution crons                                                  |
 
 > **Monitoring :** `neopro_db_size_bytes` et `neopro_db_table_size_bytes{table}` sont collectés toutes les 5 min. Alertes Prometheus : `DbSizeWarning` (>400 MB), `DbSizeCritical` (>475 MB), `DbTableSizeHigh` (>200 MB/table). Supabase free tier = 500 MB.
 
@@ -1336,32 +1335,32 @@ Le service Socket.IO délègue le traitement des événements à 9 handlers spé
 
 Tous les accès PostgreSQL passent par des repositories typés héritant de `BaseRepository<T>` :
 
-| Repository          | Table(s) principale(s)                             |
-| ------------------- | -------------------------------------------------- |
-| `site`              | `sites`                                            |
-| `user`              | `users`                                            |
-| `video`             | `videos`                                           |
-| `group`             | `groups`, `group_sites`                            |
-| `deployment`        | `content_deployments`, `deployment_targets`        |
-| `software-update`   | `software_updates`, `update_deployments`           |
-| `alert`             | `alerts`, `alert_thresholds`                       |
-| `analytics`         | `video_plays`, `club_sessions`, `club_daily_stats` |
-| `sponsor`           | `advertiser_impressions`, `advertiser_daily_stats` |
-| `config-history`    | `config_drafts`, `config_history`                  |
-| `config-profile`    | `config_profiles`                                  |
-| `advertising`       | `advertiser_videos`, `advertiser_sites`            |
-| `advertiser-portal` | `advertisers` (portail annonceurs)                 |
-| `agency`            | `agencies`, `agency_sites`                         |
-| `subscription`      | `subscription_history`                             |
-| `metrics`           | `site_metrics`                                     |
-| `objective`         | `objectives`                                       |
-| `playlist-schedule` | `playlist_schedules`                               |
-| `remote-command`    | `remote_commands`, `pending_commands`              |
-| `report`            | `reports`, `generated_reports`                     |
-| `timeline`          | `timeline_events`                                  |
-| `email`             | Notifications email (templates)                    |
-| `pitch-deck`        | Vue agrégée multi-tables (métriques traction)      |
-| `site-sponsor`      | `site_sponsors`, `site_sponsor_videos`             |
+| Repository          | Table(s) principale(s)                                       |
+| ------------------- | ------------------------------------------------------------ |
+| `site`              | `sites`                                                      |
+| `user`              | `users`                                                      |
+| `video`             | `videos`                                                     |
+| `group`             | `groups`, `group_sites`                                      |
+| `deployment`        | `content_deployments`, `deployment_targets`                  |
+| `software-update`   | `software_updates`, `update_deployments`                     |
+| `alert`             | `alerts`, `alert_thresholds`                                 |
+| `analytics`         | `video_plays`, `club_sessions`, `club_daily_stats`           |
+| `sponsor`           | `video_plays` (category='sponsor'), `advertiser_daily_stats` |
+| `config-history`    | `config_drafts`, `config_history`                            |
+| `config-profile`    | `config_profiles`                                            |
+| `advertising`       | `advertiser_videos`, `advertiser_sites`                      |
+| `advertiser-portal` | `advertisers` (portail annonceurs)                           |
+| `agency`            | `agencies`, `agency_sites`                                   |
+| `subscription`      | `subscription_history`                                       |
+| `metrics`           | `site_metrics`                                               |
+| `objective`         | `objectives`                                                 |
+| `playlist-schedule` | `playlist_schedules`                                         |
+| `remote-command`    | `remote_commands`, `pending_commands`                        |
+| `report`            | `reports`, `generated_reports`                               |
+| `timeline`          | `timeline_events`                                            |
+| `email`             | Notifications email (templates)                              |
+| `pitch-deck`        | Vue agrégée multi-tables (métriques traction)                |
+| `site-sponsor`      | `site_sponsors`, `site_sponsor_videos`                       |
 
 ### Gestion Mémoire (Railway Hobby Plan)
 
@@ -1595,4 +1594,4 @@ Voir **[docs/TROUBLESHOOTING.md](TROUBLESHOOTING.md)**
 
 ---
 
-**Dernière mise à jour :** 17 février 2026
+**Dernière mise à jour :** 21 février 2026

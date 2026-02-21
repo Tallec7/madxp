@@ -49,6 +49,27 @@ interface Distribution {
   percentage: number;
 }
 
+interface KpisResponse {
+  kpis: {
+    total_impressions: number;
+    verified_impressions: number;
+    tv_on_rate: number;
+    match_day_impressions: number;
+    completion_rate: number;
+    sites_coverage: number;
+    total_screen_time_seconds: number;
+    rotation_fairness: number;
+    renewal_score: number;
+  };
+  peak_hours: {
+    hourly_heatmap: number[];
+  };
+  rotation: Array<{
+    video_filename: string;
+    play_count: number;
+  }>;
+}
+
 @Component({
   selector: 'app-sponsor-analytics',
   standalone: true,
@@ -162,6 +183,56 @@ interface Distribution {
             <div class="kpi-content">
               <span class="kpi-value">{{ formatDuration(summary.avg_watch_duration || 0) }}</span>
               <span class="kpi-label">Durée moy. visionnage</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- KPIs Avancés (from /kpis endpoint) -->
+        <div *ngIf="kpisData" class="kpis-advanced">
+          <h2 class="section-title">KPIs Sponsors Avancés</h2>
+          <div class="kpis-grid">
+            <div class="kpi-card kpi-verified">
+              <div class="kpi-icon">✓</div>
+              <div class="kpi-content">
+                <span class="kpi-value">{{ kpisData.kpis.verified_impressions.toLocaleString() }}</span>
+                <span class="kpi-label">Impressions vérifiées (TV on)</span>
+                <span class="kpi-badge badge-blue">{{ kpisData.kpis.tv_on_rate.toFixed(1) }}% TV allumée</span>
+              </div>
+            </div>
+
+            <div class="kpi-card">
+              <div class="kpi-icon">🏟️</div>
+              <div class="kpi-content">
+                <span class="kpi-value">{{ kpisData.kpis.match_day_impressions.toLocaleString() }}</span>
+                <span class="kpi-label">Impressions match day</span>
+              </div>
+            </div>
+
+            <div class="kpi-card">
+              <div class="kpi-icon">⚖️</div>
+              <div class="kpi-content">
+                <span class="kpi-value">{{ (kpisData.kpis.rotation_fairness * 100).toFixed(0) }}%</span>
+                <span class="kpi-label">Equité de rotation</span>
+              </div>
+            </div>
+
+            <div class="kpi-card" [ngClass]="getRenewalScoreClass(kpisData.kpis.renewal_score)">
+              <div class="kpi-icon">{{ getRenewalScoreIcon(kpisData.kpis.renewal_score) }}</div>
+              <div class="kpi-content">
+                <span class="kpi-value">{{ (kpisData.kpis.renewal_score * 100).toFixed(0) }}/100</span>
+                <span class="kpi-label">Score renouvellement</span>
+                <span class="kpi-badge" [ngClass]="getRenewalBadgeClass(kpisData.kpis.renewal_score)">
+                  {{ getRenewalScoreLabel(kpisData.kpis.renewal_score) }}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Peak Hours Chart -->
+          <div class="charts-row" style="margin-top: 1.25rem;">
+            <div class="chart-card full-width">
+              <h3>📊 Heures de forte visibilité (24h)</h3>
+              <canvas #peakHoursChart role="img" aria-label="Heatmap des heures de diffusion"></canvas>
             </div>
           </div>
         </div>
@@ -546,6 +617,63 @@ interface Distribution {
       z-index: 1;
     }
 
+    /* Section title */
+    .section-title {
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: #111827;
+      margin: 0 0 1rem 0;
+    }
+
+    .kpis-advanced {
+      margin-bottom: 2rem;
+      padding-top: 1.5rem;
+      border-top: 2px solid #e5e7eb;
+    }
+
+    /* KPI badges */
+    .kpi-badge {
+      display: inline-block;
+      padding: 0.125rem 0.5rem;
+      border-radius: 10px;
+      font-size: 0.75rem;
+      font-weight: 500;
+      margin-top: 0.25rem;
+    }
+
+    .badge-blue {
+      background: #dbeafe;
+      color: #1e40af;
+    }
+
+    .badge-green {
+      background: #d1fae5;
+      color: #065f46;
+    }
+
+    .badge-yellow {
+      background: #fef3c7;
+      color: #92400e;
+    }
+
+    .badge-red {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+
+    /* Renewal score card */
+    .kpi-card.renewal-green {
+      border-left: 4px solid #10b981;
+    }
+
+    .kpi-card.renewal-yellow {
+      border-left: 4px solid #f59e0b;
+    }
+
+    .kpi-card.renewal-red {
+      border-left: 4px solid #ef4444;
+    }
+
     /* Buttons */
     .btn {
       padding: 0.625rem 1.25rem;
@@ -645,11 +773,13 @@ export class SponsorAnalyticsComponent implements OnInit, AfterViewInit, OnDestr
   @ViewChild('trendsChart') trendsChart!: ElementRef<HTMLCanvasElement>;
   @ViewChild('periodChart') periodChart!: ElementRef<HTMLCanvasElement>;
   @ViewChild('eventChart') eventChart!: ElementRef<HTMLCanvasElement>;
+  @ViewChild('peakHoursChart') peakHoursChart!: ElementRef<HTMLCanvasElement>;
 
   sponsorId: string = '';
   sponsorName: string = '';
 
   summary: AnalyticsSummary | null = null;
+  kpisData: KpisResponse | null = null;
   topVideos: VideoPerformance[] = [];
   topSites: SitePerformance[] = [];
   dailyTrends: DailyTrend[] = [];
@@ -670,6 +800,7 @@ export class SponsorAnalyticsComponent implements OnInit, AfterViewInit, OnDestr
   private trendsChartInstance: Chart | null = null;
   private periodChartInstance: Chart | null = null;
   private eventChartInstance: Chart | null = null;
+  private peakHoursChartInstance: Chart | null = null;
 
   private api = inject(ApiService);
   private route = inject(ActivatedRoute);
@@ -693,15 +824,15 @@ export class SponsorAnalyticsComponent implements OnInit, AfterViewInit, OnDestr
     const { from, to } = this.getDateRange();
     this.updatePeriodLabel(from, to);
 
-    this.api.get<any>(`/analytics/advertisers/${this.sponsorId}/stats`, {
+    const params = {
       from: from.toISOString().split('T')[0],
       to: to.toISOString().split('T')[0]
-    }).subscribe({
-      next: (data) => {
-        // Store sponsor name
-        this.sponsorName = data.data.advertiser_name || 'Annonceur';
+    };
 
-        // Store analytics data
+    // Load stats + KPIs in parallel
+    this.api.get<any>(`/analytics/advertisers/${this.sponsorId}/stats`, params).subscribe({
+      next: (data) => {
+        this.sponsorName = data.data.advertiser_name || 'Annonceur';
         this.summary = data.data.summary;
         this.topVideos = data.data.by_video?.slice(0, 10) || [];
         this.topSites = data.data.by_site?.slice(0, 20) || [];
@@ -709,7 +840,6 @@ export class SponsorAnalyticsComponent implements OnInit, AfterViewInit, OnDestr
         this.periodDistribution = this.formatDistribution(data.data.by_period);
         this.eventDistribution = this.formatDistribution(data.data.by_event);
 
-        // Render charts after data is loaded (wait for view to be ready)
         if (this.chartsReady) {
           setTimeout(() => this.renderCharts(), 100);
         }
@@ -720,6 +850,23 @@ export class SponsorAnalyticsComponent implements OnInit, AfterViewInit, OnDestr
       },
       complete: () => {
         this.loading = false;
+      }
+    });
+
+    this.loadKpis(params);
+  }
+
+  loadKpis(params: { from: string; to: string }) {
+    this.api.get<any>(`/analytics/advertisers/${this.sponsorId}/kpis`, params).subscribe({
+      next: (data) => {
+        this.kpisData = data.data;
+        if (this.chartsReady) {
+          setTimeout(() => this.renderPeakHoursChart(), 150);
+        }
+      },
+      error: () => {
+        // KPIs are a nice-to-have — don't block the main dashboard
+        this.kpisData = null;
       }
     });
   }
@@ -776,6 +923,31 @@ export class SponsorAnalyticsComponent implements OnInit, AfterViewInit, OnDestr
       other: 'Autre'
     };
     return labels[key] || key;
+  }
+
+  // Renewal score helpers
+  getRenewalScoreClass(score: number): string {
+    if (score >= 0.7) return 'renewal-green';
+    if (score >= 0.4) return 'renewal-yellow';
+    return 'renewal-red';
+  }
+
+  getRenewalScoreIcon(score: number): string {
+    if (score >= 0.7) return '🟢';
+    if (score >= 0.4) return '🟡';
+    return '🔴';
+  }
+
+  getRenewalScoreLabel(score: number): string {
+    if (score >= 0.7) return 'Excellent';
+    if (score >= 0.4) return 'Moyen';
+    return 'A risque';
+  }
+
+  getRenewalBadgeClass(score: number): string {
+    if (score >= 0.7) return 'badge-green';
+    if (score >= 0.4) return 'badge-yellow';
+    return 'badge-red';
   }
 
   renderCharts() {
@@ -967,6 +1139,60 @@ export class SponsorAnalyticsComponent implements OnInit, AfterViewInit, OnDestr
     this.eventChartInstance = new Chart(ctx, config);
   }
 
+  renderPeakHoursChart() {
+    if (!this.peakHoursChart || !this.kpisData?.peak_hours?.hourly_heatmap) return;
+
+    if (this.peakHoursChartInstance) {
+      this.peakHoursChartInstance.destroy();
+    }
+
+    const ctx = this.peakHoursChart.nativeElement.getContext('2d');
+    if (!ctx) return;
+
+    const heatmap = this.kpisData.peak_hours.hourly_heatmap;
+    const maxVal = Math.max(...heatmap, 1);
+
+    const config: ChartConfiguration = {
+      type: 'bar',
+      data: {
+        labels: heatmap.map((_, i) => `${i}h`),
+        datasets: [{
+          label: 'Impressions',
+          data: heatmap,
+          backgroundColor: heatmap.map(v => {
+            const intensity = v / maxVal;
+            if (intensity >= 0.75) return '#1d4ed8';
+            if (intensity >= 0.5) return '#3b82f6';
+            if (intensity >= 0.25) return '#93c5fd';
+            return '#dbeafe';
+          }),
+          borderRadius: 3
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: true,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              title: (items) => `${items[0].label} - ${parseInt(items[0].label) + 1}h`,
+              label: (context) => `${(context.parsed.y ?? 0).toLocaleString()} impressions`
+            }
+          }
+        },
+        scales: {
+          y: {
+            beginAtZero: true,
+            ticks: { callback: (value) => value.toLocaleString() }
+          }
+        }
+      }
+    };
+
+    this.peakHoursChartInstance = new Chart(ctx, config);
+  }
+
   onPeriodChange() {
     if (this.selectedPeriod !== 'custom') {
       this.loadAnalytics();
@@ -1050,7 +1276,6 @@ export class SponsorAnalyticsComponent implements OnInit, AfterViewInit, OnDestr
   }
 
   ngOnDestroy() {
-    // Cleanup chart instances
     if (this.trendsChartInstance) {
       this.trendsChartInstance.destroy();
     }
@@ -1059,6 +1284,9 @@ export class SponsorAnalyticsComponent implements OnInit, AfterViewInit, OnDestr
     }
     if (this.eventChartInstance) {
       this.eventChartInstance.destroy();
+    }
+    if (this.peakHoursChartInstance) {
+      this.peakHoursChartInstance.destroy();
     }
   }
 }

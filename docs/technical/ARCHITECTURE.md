@@ -193,29 +193,36 @@ sync-history.json (event: content_received)
 Admin UI /api/sync-status → content sync banner
 ```
 
-### 2. Analytics tracking (advertiser + site_sponsor)
+### 2. Analytics tracking (pipeline unifié video_plays)
+
+> **v3.66+** : Pipeline consolidé — toutes les impressions sponsors passent par `video_plays` avec `category = 'sponsor'`. L'ancienne table `advertiser_impressions` a été supprimée.
 
 ```
-TV Frontend (impression sponsor)
+TV Frontend (impression sponsor + vidéo club)
          │
          ▼
-Local Server (WebSocket event)
+AnalyticsService (Angular — pipeline unique)
+         │  trackVideoStart/End avec event_type, period, audience_estimate
+         ▼
+Local Server (/api/analytics — buffer JSON)
          │
          ▼
-Sync Agent (buffer + batch)
+Sync Agent (video-plays batch, flush 5min)
          │
          ▼
-Central Server API (/api/sponsor-analytics/impressions)
-         │
-         ├── advertiser_impressions (annonceurs réseau)
-         ▼
-PostgreSQL (sponsor_impressions table)
+Central Server API (POST /api/analytics/video-plays)
          │
          ▼
-Dashboard Analytics (Chart.js graphs)
+PostgreSQL (video_plays table, category = 'sponsor' pour sponsors)
+         │
+         ├── KPIs avancés (GET /api/analytics/advertisers/:id/kpis)
+         │         → verified_impressions (tv_status='on'), match_day, rotation_fairness,
+         │           renewal_score, peak_hours heatmap
+         ▼
+Dashboard Analytics (Chart.js graphs + KPI cards)
 
 Site Sponsor flow (local sponsors) :
-  site_sponsors → site_sponsor_videos → advertiser_impressions (site_sponsor_id)
+  site_sponsors → site_sponsor_videos → video_plays (site_sponsor_id, category='sponsor')
          │
          ├── Site detail > Sponsors tab (KPIs, Chart.js trends, CPI)
          │         │
@@ -225,7 +232,7 @@ Site Sponsor flow (local sponsors) :
          │         GET /api/network/advertisers/:id/stats
          │         → trends, by_site, by_event_type, CPI réseau
          │
-         ├── PDF Report (branding club : couleurs + logo)
+         ├── PDF Report enrichi (impressions vérifiées + breakdown match day)
          │         └── Page 2 conditionnelle (P6.4 — match-by-match breakdown)
          │
          └── Sponsor Portal (/sponsor-access?token=xxx) — public, token-based
@@ -269,7 +276,7 @@ GET /api/sponsor-alerts/health
          ▼
 sponsor-alert.service.ts
          │
-         ├── advertiser_sites × advertiser_impressions JOIN
+         ├── advertiser_sites × video_plays (category='sponsor') JOIN
          │   → impressions 7d/30d, daily avg, days since last
          ▼
 Health Matrix (healthy/warning/critical per pair)
@@ -467,7 +474,7 @@ Alertes infrastructure côté serveur, complémentaires aux alertes métier Pi (
   - `critical` → notification immédiate, repeat 1h
   - `warning` → groupé 30s, repeat 4h
   - Inhibition : si `CentralServerDown` actif, les warnings par-métrique sont supprimés
-- **Prometheus rules** (`docker/prometheus/rules.yml`) — 28 alert rules locales :
+- **Prometheus rules** (`docker/prometheus/rules.yml`) — 31 alert rules locales :
 
 | Groupe            | Alerte                         | Condition                     | Seuil (for) | Sévérité |
 | ----------------- | ------------------------------ | ----------------------------- | ----------- | -------- |
@@ -499,6 +506,9 @@ Alertes infrastructure côté serveur, complémentaires aux alertes métier Pi (
 | Sponsor Analytics | `HighAnalytics500Rate`         | 500 sur video-plays > 0.02/s  | 10 min      | warning  |
 | Sponsor Analytics | `HighVideoPlaysFkFallbackRate` | FK fallback > 0.1/s           | 15 min      | warning  |
 | Sponsor Analytics | `ReportValidationErrors`       | 400 sur /reports > 0.01/s     | 5 min       | warning  |
+| Sponsor Analytics | `AnalyticsKpisEndpointSlow`    | P95 KPIs endpoint > 5s        | 5 min       | warning  |
+| Sponsor Analytics | `CampaignDataInconsistency`    | campaign_id FK orphelins      | 15 min      | warning  |
+| Sponsor Analytics | `VerifiedImpressionsDropoff`   | TV-on rate < 10%              | 30 min      | warning  |
 
 - **Grafana Cloud alerts** (`docker/grafana/provisioning/alerting/neopro-alerts-cloud.yml`) — 28 managed alert rules (parité complète avec local, format Grafana Cloud provisioning) pour la production sur `grafanacloud-tallec7-prom`
 - **Stack local** : `docker compose up prometheus alertmanager grafana`

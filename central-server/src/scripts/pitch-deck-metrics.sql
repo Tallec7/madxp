@@ -278,7 +278,7 @@ SELECT
     TO_CHAR(COALESCE(SUM(duration_played), 0) / 3600, 'FM999,999') AS "Heures de diffusion pub",
     ROUND(100.0 * COUNT(*) FILTER (WHERE completed = true)
         / NULLIF(COUNT(*), 0), 1)                                   AS "Taux complétion %"
-FROM advertiser_impressions;
+FROM video_plays WHERE category = 'sponsor';
 
 -- Impressions par mois
 \echo ''
@@ -303,7 +303,8 @@ FROM (
         COUNT(DISTINCT site_id)                     AS sites,
         COUNT(DISTINCT video_id)                    AS videos,
         COALESCE(SUM(duration_played), 0) / 3600.0  AS screen_time_h
-    FROM advertiser_impressions
+    FROM video_plays
+    WHERE category = 'sponsor'
     GROUP BY 1
 ) monthly
 ORDER BY month;
@@ -492,7 +493,7 @@ SELECT
      FROM video_plays)                                                AS "Heures de screen time",
     (SELECT COUNT(*) FROM advertisers WHERE status = 'active')        AS "Annonceurs actifs",
     (SELECT TO_CHAR(COUNT(*), 'FM999,999,999')
-     FROM advertiser_impressions)                                     AS "Impressions pub (lifetime)",
+     FROM video_plays WHERE category = 'sponsor')                      AS "Impressions pub (lifetime)",
     (SELECT COUNT(*) FROM software_updates)                           AS "Releases produit",
     (SELECT ROUND(AVG(uptime_percent), 1) FROM club_daily_stats)      AS "Uptime moyen %";
 
