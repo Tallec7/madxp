@@ -1,3 +1,9 @@
+## [3.67.1](https://github.com/Tallec7/neopro/compare/v3.67.0...v3.67.1) (2026-02-21)
+
+### Bug Fixes
+
+- **build:** suppression sponsor-impressions.js des scripts build/setup + sync docs pipeline unifié ([dbbcd96](https://github.com/Tallec7/neopro/commit/dbbcd96e9968d5546d5d1bbcf50c1e300a5b820c))
+
 # [3.67.0](https://github.com/Tallec7/neopro/compare/v3.66.0...v3.67.0) (2026-02-21)
 
 ### Features
