@@ -1,3 +1,9 @@
+# [3.67.0](https://github.com/Tallec7/neopro/compare/v3.66.0...v3.67.0) (2026-02-21)
+
+### Features
+
+- **analytics:** consolidation pipeline sponsors — video_plays unique + KPIs avancés + monitoring ([12e2a45](https://github.com/Tallec7/neopro/commit/12e2a455017557c873308c32977d4a3898785266))
+
 # [3.66.0](https://github.com/Tallec7/neopro/compare/v3.65.3...v3.66.0) (2026-02-21)
 
 ### Features
