@@ -422,3 +422,745 @@ groups:
         annotations:
           summary: "More than 10 active alerts"
           description: "Possible fleet-wide issue. Check Pi fleet status."
+
+  # =============================================
+  # CRITICAL — Server Health (missing from cloud)
+  # =============================================
+  - orgId: 1
+    name: NeoPro - Server Health
+    folder: NeoPro Alerts
+    interval: 1m
+    rules:
+      # Server responding but health endpoint failing
+      - uid: neopro-server-unhealthy
+        title: Central Server Unhealthy
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: grafanacloud-tallec7-prom
+            model:
+              expr: neopro_health_status
+              instant: true
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              type: reduce
+              expression: A
+              reducer: last
+              refId: B
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: B
+              conditions:
+                - evaluator:
+                    type: lt
+                    params: [1]
+              refId: C
+        for: 3m
+        labels:
+          severity: critical
+          team: neopro
+        annotations:
+          summary: "Central Server health check failing"
+          description: "Health endpoint returns unhealthy for 3 minutes. Server is up but degraded."
+
+      # High CPU usage (event loop saturation)
+      - uid: neopro-high-cpu
+        title: High CPU Usage
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: grafanacloud-tallec7-prom
+            model:
+              expr: rate(process_cpu_seconds_total[5m])
+              instant: true
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              type: reduce
+              expression: A
+              reducer: last
+              refId: B
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: B
+              conditions:
+                - evaluator:
+                    type: gt
+                    params: [0.8]
+              refId: C
+        for: 5m
+        labels:
+          severity: warning
+          team: neopro
+        annotations:
+          summary: "CPU usage sustained above 80%"
+          description: "Event loop may be saturated. Check for blocking operations."
+
+  # =============================================
+  # WARNING — Connectivity (missing from cloud)
+  # =============================================
+  - orgId: 1
+    name: NeoPro - Connectivity
+    folder: NeoPro Alerts
+    interval: 1m
+    rules:
+      # Sudden drop in connected sites (fleet issue)
+      - uid: neopro-sites-drop
+        title: Connected Sites Drop 50%
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: grafanacloud-tallec7-prom
+            model:
+              expr: neopro_connected_sites_total < (neopro_connected_sites_total offset 10m) * 0.5 and neopro_connected_sites_total offset 10m > 3
+              instant: true
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              type: reduce
+              expression: A
+              reducer: last
+              refId: B
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: B
+              conditions:
+                - evaluator:
+                    type: gt
+                    params: [0]
+              refId: C
+        for: 5m
+        labels:
+          severity: warning
+          team: neopro
+        annotations:
+          summary: "Connected sites dropped by 50%+"
+          description: "Fleet-wide disconnection detected. Check network or server-side WebSocket."
+
+  # =============================================
+  # WARNING — Database Size (missing from cloud)
+  # =============================================
+  - orgId: 1
+    name: NeoPro - Database Size
+    folder: NeoPro Alerts
+    interval: 5m
+    rules:
+      # Database approaching Supabase free tier quota (500 MB)
+      - uid: neopro-db-size-warning
+        title: Database Size Warning (400 MB)
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: grafanacloud-tallec7-prom
+            model:
+              expr: neopro_db_size_bytes
+              instant: true
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              type: reduce
+              expression: A
+              reducer: last
+              refId: B
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: B
+              conditions:
+                - evaluator:
+                    type: gt
+                    params: [419430400]
+              refId: C
+        for: 10m
+        labels:
+          severity: warning
+          team: neopro
+        annotations:
+          summary: "Database size above 400 MB (Supabase free tier: 500 MB)"
+          description: "Consider running cleanup or reducing retention."
+
+      # Database size critical — approaching hard limit
+      - uid: neopro-db-size-critical
+        title: Database Size Critical (475 MB)
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: grafanacloud-tallec7-prom
+            model:
+              expr: neopro_db_size_bytes
+              instant: true
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              type: reduce
+              expression: A
+              reducer: last
+              refId: B
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: B
+              conditions:
+                - evaluator:
+                    type: gt
+                    params: [497025024]
+              refId: C
+        for: 5m
+        labels:
+          severity: critical
+          team: neopro
+        annotations:
+          summary: "Database size above 475 MB — approaching Supabase 500 MB hard limit"
+          description: "Immediate action required: VACUUM FULL or reduce retention."
+
+      # Single table consuming too much space
+      - uid: neopro-db-table-size
+        title: Database Table Size High (200 MB)
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 1800
+              to: 0
+            datasourceUid: grafanacloud-tallec7-prom
+            model:
+              expr: neopro_db_table_size_bytes
+              instant: true
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              type: reduce
+              expression: A
+              reducer: last
+              refId: B
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: B
+              conditions:
+                - evaluator:
+                    type: gt
+                    params: [209715200]
+              refId: C
+        for: 30m
+        labels:
+          severity: warning
+          team: neopro
+        annotations:
+          summary: "A database table exceeds 200 MB"
+          description: "Check retention policy for the affected table."
+
+  # =============================================
+  # WARNING — Video Uploads (missing from cloud)
+  # =============================================
+  - orgId: 1
+    name: NeoPro - Video Uploads
+    folder: NeoPro Alerts
+    interval: 1m
+    rules:
+      # High upload failure rate
+      - uid: neopro-upload-failures
+        title: High Video Upload Failure Rate
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: grafanacloud-tallec7-prom
+            model:
+              expr: rate(neopro_video_uploads_total{status="failed"}[10m])
+              instant: true
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              type: reduce
+              expression: A
+              reducer: last
+              refId: B
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: B
+              conditions:
+                - evaluator:
+                    type: gt
+                    params: [0.05]
+              refId: C
+        for: 5m
+        labels:
+          severity: warning
+          team: neopro
+        annotations:
+          summary: "High video upload failure rate"
+          description: "More than 3 upload failures per minute over 10 minutes."
+
+      # Frequent filename encoding corrections
+      - uid: neopro-encoding-corrections
+        title: Frequent Filename Encoding Corrections
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 3600
+              to: 0
+            datasourceUid: grafanacloud-tallec7-prom
+            model:
+              expr: rate(neopro_filename_encoding_corrections_total[1h])
+              instant: true
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              type: reduce
+              expression: A
+              reducer: last
+              refId: B
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: B
+              conditions:
+                - evaluator:
+                    type: gt
+                    params: [0.1]
+              refId: C
+        for: 30m
+        labels:
+          severity: info
+          team: neopro
+        annotations:
+          summary: "Frequent filename encoding corrections"
+          description: "Many uploads have non-ASCII filenames being corrected. Check client-side encoding."
+
+  # =============================================
+  # WARNING — Sponsor Analytics (P6-P8)
+  # =============================================
+  - orgId: 1
+    name: NeoPro - Sponsor Analytics
+    folder: NeoPro Alerts
+    interval: 1m
+    rules:
+      # Network stats cross-club query latency (P6.1)
+      - uid: neopro-slow-network-sponsor
+        title: Slow Network Sponsor Stats (P95)
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: grafanacloud-tallec7-prom
+            model:
+              expr: histogram_quantile(0.95, rate(neopro_http_request_duration_seconds_bucket{path=~"/api/network/advertisers/.*/stats"}[5m]))
+              instant: true
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              type: reduce
+              expression: A
+              reducer: last
+              refId: B
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: B
+              conditions:
+                - evaluator:
+                    type: gt
+                    params: [5]
+              refId: C
+        for: 5m
+        labels:
+          severity: warning
+          team: neopro
+        annotations:
+          summary: "P95 network sponsor stats latency above 5s"
+          description: "Cross-club aggregation queries are slow. Consider adding indexes or caching."
+
+      # Benchmark query latency (P6.2)
+      - uid: neopro-slow-benchmark
+        title: Slow Sponsor Benchmark Query (P95)
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: grafanacloud-tallec7-prom
+            model:
+              expr: histogram_quantile(0.95, rate(neopro_http_request_duration_seconds_bucket{path=~"/api/sites/.*/sponsors/benchmark"}[5m]))
+              instant: true
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              type: reduce
+              expression: A
+              reducer: last
+              refId: B
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: B
+              conditions:
+                - evaluator:
+                    type: gt
+                    params: [3]
+              refId: C
+        for: 5m
+        labels:
+          severity: warning
+          team: neopro
+        annotations:
+          summary: "P95 sponsor benchmark latency above 3s"
+          description: "Benchmark query scanning all site sponsors is slow."
+
+      # PDF report generation failures (P6.4)
+      - uid: neopro-report-failures
+        title: High Sponsor Report Failure Rate
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 900
+              to: 0
+            datasourceUid: grafanacloud-tallec7-prom
+            model:
+              expr: rate(neopro_report_generations_total{report_type="site_sponsor",status="failed"}[15m])
+              instant: true
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              type: reduce
+              expression: A
+              reducer: last
+              refId: B
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: B
+              conditions:
+                - evaluator:
+                    type: gt
+                    params: [0.02]
+              refId: C
+        for: 10m
+        labels:
+          severity: warning
+          team: neopro
+        annotations:
+          summary: "High site_sponsor PDF report failure rate"
+          description: "More than 1 PDF generation failure per minute. Check match breakdown data."
+
+      # Sponsor sync missing from deployments (P8)
+      - uid: neopro-sponsor-sync-missing
+        title: Sponsor Sync Missing from Deployments
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 3600
+              to: 0
+            datasourceUid: grafanacloud-tallec7-prom
+            model:
+              expr: rate(neopro_sponsor_sync_total{status="included"}[1h]) == 0 and rate(neopro_deployments_total{status="completed"}[1h]) > 0
+              instant: true
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              type: reduce
+              expression: A
+              reducer: last
+              refId: B
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: B
+              conditions:
+                - evaluator:
+                    type: gt
+                    params: [0]
+              refId: C
+        for: 30m
+        labels:
+          severity: warning
+          team: neopro
+        annotations:
+          summary: "Config deployments happening without sponsor sync"
+          description: "Deployments are completing but no sponsor data is being synced."
+
+      # Sponsor resolution failures
+      - uid: neopro-sponsor-resolution
+        title: Elevated Sponsor Resolution Failures
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 900
+              to: 0
+            datasourceUid: grafanacloud-tallec7-prom
+            model:
+              expr: rate(neopro_sponsor_resolution_failures_total[15m])
+              instant: true
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              type: reduce
+              expression: A
+              reducer: last
+              refId: B
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: B
+              conditions:
+                - evaluator:
+                    type: gt
+                    params: [0.05]
+              refId: C
+        for: 10m
+        labels:
+          severity: warning
+          team: neopro
+        annotations:
+          summary: "Elevated sponsor resolution failures"
+          description: "Check config-sync.handler or advertiser-analytics.controller."
+
+      # Over 50% impressions without sponsor attribution
+      - uid: neopro-impressions-unresolved
+        title: Impressions Without Sponsor Attribution
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 1800
+              to: 0
+            datasourceUid: grafanacloud-tallec7-prom
+            model:
+              expr: rate(neopro_impression_resolution_total{method="unresolved"}[30m]) / rate(neopro_impression_resolution_total[30m])
+              instant: true
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              type: reduce
+              expression: A
+              reducer: last
+              refId: B
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: B
+              conditions:
+                - evaluator:
+                    type: gt
+                    params: [0.5]
+              refId: C
+        for: 15m
+        labels:
+          severity: warning
+          team: neopro
+        annotations:
+          summary: "Over 50% of impressions without sponsor attribution"
+          description: "Check site_sponsor_videos table and loop manager config."
+
+      # Pi agent authentication failures
+      - uid: neopro-pi-auth-failures
+        title: High Pi Agent Auth Failure Rate
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: grafanacloud-tallec7-prom
+            model:
+              expr: rate(neopro_pi_agent_auth_total{status="failure"}[5m])
+              instant: true
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              type: reduce
+              expression: A
+              reducer: last
+              refId: B
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: B
+              conditions:
+                - evaluator:
+                    type: gt
+                    params: [0.1]
+              refId: C
+        for: 5m
+        labels:
+          severity: warning
+          team: neopro
+        annotations:
+          summary: "High Pi agent auth failure rate"
+          description: "Possible DB pool exhaustion or server overload."
+
+      # Analytics video-plays 500 errors
+      - uid: neopro-analytics-500
+        title: High Analytics 500 Error Rate
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: grafanacloud-tallec7-prom
+            model:
+              expr: rate(http_requests_total{method="POST",path="/api/analytics/video-plays",status_code="500"}[10m])
+              instant: true
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              type: reduce
+              expression: A
+              reducer: last
+              refId: B
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: B
+              conditions:
+                - evaluator:
+                    type: gt
+                    params: [0.02]
+              refId: C
+        for: 10m
+        labels:
+          severity: warning
+          team: neopro
+        annotations:
+          summary: "High 500 error rate on analytics video-plays endpoint"
+          description: "Check DB schema and pool connections."
+
+      # FK fallback on video_plays
+      - uid: neopro-fk-fallback
+        title: High Video Plays FK Fallback Rate
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 1800
+              to: 0
+            datasourceUid: grafanacloud-tallec7-prom
+            model:
+              expr: rate(neopro_video_plays_fk_fallback_total[30m])
+              instant: true
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              type: reduce
+              expression: A
+              reducer: last
+              refId: B
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: B
+              conditions:
+                - evaluator:
+                    type: gt
+                    params: [0.1]
+              refId: C
+        for: 15m
+        labels:
+          severity: warning
+          team: neopro
+        annotations:
+          summary: "Elevated FK fallback rate on video_plays"
+          description: "Pi may be sending stale references to deleted records."
+
+      # Report endpoint validation errors
+      - uid: neopro-report-validation
+        title: Report Generation Validation Errors
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: grafanacloud-tallec7-prom
+            model:
+              expr: rate(http_requests_total{method="POST",path="/reports/generate",status_code="400"}[10m])
+              instant: true
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              type: reduce
+              expression: A
+              reducer: last
+              refId: B
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: B
+              conditions:
+                - evaluator:
+                    type: gt
+                    params: [0.01]
+              refId: C
+        for: 5m
+        labels:
+          severity: warning
+          team: neopro
+        annotations:
+          summary: "Repeated 400 errors on POST /reports/generate"
+          description: "Likely frontend sending wrong parameter format (snake_case vs camelCase)."

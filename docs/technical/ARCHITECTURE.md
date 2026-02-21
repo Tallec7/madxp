@@ -429,10 +429,11 @@ Pi Frontend (ProfileConfigService sélectionne le profil actif)
 ### 7. Monitoring & Observability
 
 - **Prometheus metrics** (Port 9090) — 37+ métriques custom `neopro_*` (dont 3 kiosk, 3 fan : `neopro_fan_present`, `neopro_fan_state`, `neopro_fan_failures_total` + `neopro_license_status_pushes_total`, `neopro_deploy_progress_events_total`, `neopro_ota_errors_total{error_type}`, `neopro_wifi_config_total`) + métriques Node.js par défaut
-- **Grafana dashboards** (Port 3000) — 3 dashboards (local) + 3 dashboards cloud :
+- **Grafana dashboards** (Port 3000) — 3 dashboards (local) + 4 dashboards cloud :
   - _NeoPro Overview_ : API Health, sites connectés, alertes actives, taux 5xx, latence p95, mémoire RSS
   - _NeoPro Infrastructure_ : HTTP rate/latence par percentile, Node.js runtime (heap, event loop lag, memory pressure), auth & rate limiting, DB pool & latency, FTP storage
   - _NeoPro Business & Fleet_ : content pipeline (video uploads), fleet Pi (WebSocket par type, heartbeats, network stability, socket disconnects), video transitions, deployments (canary, sync, drift), subscriptions & predictive alerts, **kiosk Chromium** (status, crashes, restarts, **dual TV+LED**), **Fan Pi** (présence, état, failures)
+  - _NeoPro Sponsor Analytics_ (cloud) : sync & deployment (rate, sponsors/deploy, auto-resolution), impression attribution (méthodes de résolution, FK fallback, Pi auth), **sponsor health F-AUD-07** (matrice santé, health checks, alertes proactives), reports & API quality (génération PDF, latence network stats/benchmark)
 - **Scrape targets** : Docker local, `host.docker.internal:3001` (dev), Railway HTTPS (prod)
 - **Smoke tests** : `npm run test:smoke` — 139 tests détectent les régressions de wiring API (routes, middlewares, repositories, services, handlers, error types, métriques Prometheus critiques, hourly metric alerting wiring) + conventions Pi (systemd, sudoers)
 - Systemd journald logs
@@ -466,25 +467,40 @@ Alertes infrastructure côté serveur, complémentaires aux alertes métier Pi (
   - `critical` → notification immédiate, repeat 1h
   - `warning` → groupé 30s, repeat 4h
   - Inhibition : si `CentralServerDown` actif, les warnings par-métrique sont supprimés
-- **Prometheus rules** (`docker/prometheus/rules.yml`) — 14 alert rules locales :
+- **Prometheus rules** (`docker/prometheus/rules.yml`) — 28 alert rules locales :
 
-| Groupe        | Alerte                   | Condition               | Seuil (for) | Sévérité |
-| ------------- | ------------------------ | ----------------------- | ----------- | -------- |
-| Server Health | `CentralServerDown`      | `up == 0`               | 2 min       | critical |
-| Server Health | `CentralServerUnhealthy` | health check fail       | 3 min       | critical |
-| Server Health | `HighMemoryUsage`        | RSS > 88% of 256MB      | 5 min       | warning  |
-| Server Health | `HighCpuUsage`           | CPU > 80%               | 5 min       | warning  |
-| Connectivity  | `ZeroHeartbeats`         | `rate(heartbeats) == 0` | 5 min       | critical |
-| Connectivity  | `NoAgentConnections`     | WS agents == 0          | 5 min       | critical |
-| Connectivity  | `ConnectedSitesDrop`     | -50% en 10 min          | 5 min       | warning  |
-| Connectivity  | `HighDisconnectRate`     | > 0.5/s                 | 3 min       | warning  |
-| Database      | `DbPoolSaturation`       | active/total > 80%      | 3 min       | warning  |
-| Database      | `SlowDbQueries`          | P95 > 2s                | 5 min       | warning  |
-| HTTP          | `HighErrorRate`          | 5xx > 5%                | 5 min       | warning  |
-| HTTP          | `HighApiLatency`         | P95 > 3s                | 5 min       | warning  |
-| Meta          | `TooManyActiveAlerts`    | > 10 alertes actives    | 10 min      | warning  |
+| Groupe            | Alerte                         | Condition                     | Seuil (for) | Sévérité |
+| ----------------- | ------------------------------ | ----------------------------- | ----------- | -------- |
+| Server Health     | `CentralServerDown`            | `up == 0`                     | 2 min       | critical |
+| Server Health     | `CentralServerUnhealthy`       | health check fail             | 3 min       | critical |
+| Server Health     | `HighMemoryUsage`              | RSS > 88% of 256MB            | 5 min       | warning  |
+| Server Health     | `HighCpuUsage`                 | CPU > 80%                     | 5 min       | warning  |
+| Connectivity      | `ZeroHeartbeats`               | `rate(heartbeats) == 0`       | 5 min       | critical |
+| Connectivity      | `NoAgentConnections`           | WS agents == 0                | 5 min       | critical |
+| Connectivity      | `ConnectedSitesDrop`           | -50% en 10 min                | 5 min       | warning  |
+| Connectivity      | `HighDisconnectRate`           | > 0.5/s                       | 3 min       | warning  |
+| Database          | `DbPoolSaturation`             | active/total > 80%            | 3 min       | warning  |
+| Database          | `SlowDbQueries`                | P95 > 2s                      | 5 min       | warning  |
+| Database          | `DbSizeWarning`                | DB > 400 MB                   | 10 min      | warning  |
+| Database          | `DbSizeCritical`               | DB > 475 MB                   | 5 min       | critical |
+| Database          | `DbTableSizeHigh`              | Table > 200 MB                | 30 min      | warning  |
+| HTTP              | `HighErrorRate`                | 5xx > 5%                      | 5 min       | warning  |
+| HTTP              | `HighApiLatency`               | P95 > 3s                      | 5 min       | warning  |
+| Video             | `HighUploadFailureRate`        | Upload fails > 3/min          | 5 min       | warning  |
+| Video             | `FrequentEncodingCorrections`  | Encoding fixes > 0.1/s        | 30 min      | info     |
+| Meta              | `TooManyActiveAlerts`          | > 10 alertes actives          | 10 min      | warning  |
+| Sponsor Analytics | `SlowNetworkSponsorStats`      | P95 network stats > 5s        | 5 min       | warning  |
+| Sponsor Analytics | `SlowBenchmarkQuery`           | P95 benchmark > 3s            | 5 min       | warning  |
+| Sponsor Analytics | `HighReportFailureRate`        | PDF sponsor fails > 1/min     | 10 min      | warning  |
+| Sponsor Analytics | `SponsorSyncMissing`           | Deploy sans sync sponsor      | 30 min      | warning  |
+| Sponsor Analytics | `SponsorResolutionFailures`    | Resolution fails > 0.05/s     | 10 min      | warning  |
+| Sponsor Analytics | `ImpressionSponsorUnresolved`  | > 50% impressions sans attrib | 15 min      | warning  |
+| Sponsor Analytics | `HighPiAuthFailureRate`        | Pi auth fails > 0.1/s         | 5 min       | warning  |
+| Sponsor Analytics | `HighAnalytics500Rate`         | 500 sur video-plays > 0.02/s  | 10 min      | warning  |
+| Sponsor Analytics | `HighVideoPlaysFkFallbackRate` | FK fallback > 0.1/s           | 15 min      | warning  |
+| Sponsor Analytics | `ReportValidationErrors`       | 400 sur /reports > 0.01/s     | 5 min       | warning  |
 
-- **Grafana Cloud alerts** (`docker/grafana/provisioning/alerting/neopro-alerts-cloud.yml`) — 11 managed alert rules (même logique, format Grafana Cloud provisioning) pour la production sur `grafanacloud-tallec7-prom`
+- **Grafana Cloud alerts** (`docker/grafana/provisioning/alerting/neopro-alerts-cloud.yml`) — 28 managed alert rules (parité complète avec local, format Grafana Cloud provisioning) pour la production sur `grafanacloud-tallec7-prom`
 - **Stack local** : `docker compose up prometheus alertmanager grafana`
 - **Stack prod** : Import YAML dans Grafana Cloud → Alerting → Alert rules + configurer Contact point Slack
 

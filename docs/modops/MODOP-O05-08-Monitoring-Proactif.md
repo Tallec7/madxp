@@ -125,6 +125,25 @@ Vérifier chaque jour (matin) que tous les systèmes fonctionnent normalement et
 - **Config Drift** : Persiste > 30 min → problème
 - **Predictive Alerts** : "alerts generated" en hausse → intervention préventive
 
+#### Dashboard 4 : Sponsor Analytics (5 min)
+
+**URL** : Grafana → Dashboards → NeoPro → NeoPro Sponsor Analytics
+
+**4 sections à vérifier :**
+
+| Section                       | Métriques clés                                            | Seuils critiques                                            |
+| ----------------------------- | --------------------------------------------------------- | ----------------------------------------------------------- |
+| **Sponsor Sync & Deployment** | Sync Rate, Sponsors/Deploy, Auto-Resolution, Failures     | Resolution failures > 0, sync rate = 0 pendant déploiements |
+| **Impression Attribution**    | Méthodes de résolution (%), Unresolved Ratio, FK Fallback | Unresolved > 50%, FK fallback visible, Pi Auth failures > 0 |
+| **Sponsor Health (F-AUD-07)** | Matrice santé (healthy/warning/critical), Health Checks   | Entries "critical" > 0, alertes proactives en hausse        |
+| **Reports & API Quality**     | Report Generations, Duration, Network Stats & Benchmark   | Failures > 0, P95 network stats > 5s, P95 benchmark > 3s    |
+
+**Actions :**
+
+- ✅ Tout vert → Sponsors bien synchronisés, impressions attribuées correctement
+- ⚠️ Unresolved > 20% → Vérifier `site_sponsor_videos` et loop manager config
+- 🚨 Sponsor Health "critical" → Investiguer sponsors sans impressions, contacter annonceur
+
 #### Ancienne vue : Santé des sites (Pi)
 
 **Vérifier :**
