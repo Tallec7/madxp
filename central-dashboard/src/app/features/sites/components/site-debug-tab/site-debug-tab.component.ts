@@ -197,7 +197,8 @@ interface BufferStatus {
   success: boolean;
   timestamp: string;
   analytics?: BufferInfo;
-  sponsors?: BufferInfo;
+  sponsors?: { event_count: number; oldest_event: string | null; newest_event: string | null };
+  legacy_sponsor_file?: boolean;
 }
 
 // Types pour le hotspot (P2.4)
@@ -1110,20 +1111,20 @@ interface WizardStep {
         <div class="debug-header" (click)="showBufferStatus = !showBufferStatus">
           <span class="expand-icon">{{ showBufferStatus ? '▼' : '▶' }}</span>
           <span class="debug-icon">📊</span>
-          <h4>Buffers Analytics</h4>
+          <h4>Buffer Analytics</h4>
           <span class="debug-stats" *ngIf="bufferStatus">
-            {{ (bufferStatus.analytics?.event_count || 0) + (bufferStatus.sponsors?.event_count || 0) }} événements en attente
+            {{ bufferStatus.analytics?.event_count || 0 }} événements en attente
           </span>
         </div>
 
         <div class="debug-content" *ngIf="showBufferStatus">
           <div *ngIf="!isConnected" class="offline-warning">
-            ⚠️ Le boîtier doit être connecté pour voir l'état des buffers.
+            ⚠️ Le boîtier doit être connecté pour voir l'état du buffer.
           </div>
 
           <div *ngIf="isConnected && !bufferStatus && !loadingBufferStatus" class="buffer-actions">
             <button class="btn btn-primary btn-sm" (click)="loadBufferStatus()">
-              🔄 Charger l'état des buffers
+              🔄 Charger l'état du buffer
             </button>
           </div>
 
@@ -1134,34 +1135,28 @@ interface WizardStep {
 
           <div *ngIf="bufferStatus && !loadingBufferStatus" class="buffer-content">
             <div class="buffer-grid">
-              <!-- Analytics buffer -->
+              <!-- Unified analytics buffer -->
               <div class="buffer-card" [class.buffer-warning]="(bufferStatus.analytics?.event_count || 0) > 1000">
                 <div class="buffer-header">📹 Lectures vidéo</div>
                 <div class="buffer-count">{{ bufferStatus.analytics?.event_count || 0 }}</div>
                 <div class="buffer-label">événements</div>
                 <div class="buffer-details" *ngIf="bufferStatus.analytics?.file_exists">
                   <div class="buffer-detail">Taille: {{ formatBytes(bufferStatus.analytics?.file_size_bytes || 0) }}</div>
+                  <div class="buffer-detail" *ngIf="bufferStatus.sponsors?.event_count">
+                    dont {{ bufferStatus.sponsors?.event_count }} sponsors
+                  </div>
                   <div class="buffer-detail" *ngIf="bufferStatus.analytics?.oldest_event">
                     Plus ancien: {{ bufferStatus.analytics?.oldest_event | date:'dd/MM HH:mm' }}
                   </div>
                 </div>
               </div>
-
-              <!-- Sponsors buffer -->
-              <div class="buffer-card" [class.buffer-warning]="(bufferStatus.sponsors?.event_count || 0) > 1000">
-                <div class="buffer-header">🎯 Impressions sponsors</div>
-                <div class="buffer-count">{{ bufferStatus.sponsors?.event_count || 0 }}</div>
-                <div class="buffer-label">événements</div>
-                <div class="buffer-details" *ngIf="bufferStatus.sponsors?.file_exists">
-                  <div class="buffer-detail">Taille: {{ formatBytes(bufferStatus.sponsors?.file_size_bytes || 0) }}</div>
-                  <div class="buffer-detail" *ngIf="bufferStatus.sponsors?.oldest_event">
-                    Plus ancien: {{ bufferStatus.sponsors?.oldest_event | date:'dd/MM HH:mm' }}
-                  </div>
-                </div>
-              </div>
             </div>
 
-            <div class="buffer-hint" *ngIf="(bufferStatus.analytics?.event_count || 0) + (bufferStatus.sponsors?.event_count || 0) > 1000">
+            <div class="buffer-hint" *ngIf="bufferStatus.legacy_sponsor_file">
+              ⚠️ Fichier legacy <code>sponsor_impressions.json</code> détecté. Ce fichier est obsolète depuis la consolidation du pipeline (v3.66) et peut être supprimé.
+            </div>
+
+            <div class="buffer-hint" *ngIf="(bufferStatus.analytics?.event_count || 0) > 1000">
               ⚠️ Le buffer contient beaucoup d'événements. Ils seront envoyés automatiquement à la prochaine synchronisation.
             </div>
 
@@ -5357,19 +5352,23 @@ export class SiteDebugTabComponent implements OnInit, AfterViewChecked, OnDestro
   }
 
   private wizardEvaluateImpressions(step: WizardStep, buffer: BufferStatus): void {
-    const analyticsCount = buffer.analytics?.event_count ?? 0;
+    const totalEvents = buffer.analytics?.event_count ?? 0;
     const sponsorsCount = buffer.sponsors?.event_count ?? 0;
-    const totalEvents = analyticsCount + sponsorsCount;
 
     if (totalEvents > 0) {
       step.status = 'ok';
       step.message = `${totalEvents} \u00e9v\u00e9nement${totalEvents > 1 ? 's' : ''} en buffer`;
       step.details = [
-        `Analytics : ${analyticsCount} \u00e9v\u00e9nement${analyticsCount > 1 ? 's' : ''}`,
-        `Sponsors : ${sponsorsCount} \u00e9v\u00e9nement${sponsorsCount > 1 ? 's' : ''}`,
+        `Total : ${totalEvents} \u00e9v\u00e9nement${totalEvents > 1 ? 's' : ''}`,
       ];
+      if (sponsorsCount > 0) {
+        step.details.push(`dont ${sponsorsCount} sponsor${sponsorsCount > 1 ? 's' : ''}`);
+      }
       if (buffer.analytics?.oldest_event) {
         step.details.push(`Plus ancien : ${new Date(buffer.analytics.oldest_event).toLocaleString('fr-FR')}`);
+      }
+      if (buffer.legacy_sponsor_file) {
+        step.details.push('⚠️ Fichier legacy sponsor_impressions.json d\u00e9tect\u00e9 (obsolète)');
       }
       if (totalEvents > 1000) {
         step.status = 'warning';

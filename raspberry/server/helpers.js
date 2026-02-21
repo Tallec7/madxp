@@ -18,7 +18,6 @@ const NEOPRO_WEBAPP_DIR = path.join(HOME_DIR, 'neopro', 'webapp');
 const CONFIG_PATH = path.join(NEOPRO_WEBAPP_DIR, 'configuration.json');
 const LICENSE_CACHE_PATH = path.join(NEOPRO_DATA_DIR, 'license_cache.json');
 const ANALYTICS_FILE_PATH = path.join(NEOPRO_DATA_DIR, 'analytics_buffer.json');
-const SPONSOR_IMPRESSIONS_FILE_PATH = path.join(NEOPRO_DATA_DIR, 'sponsor_impressions.json');
 
 module.exports = {
   CENTRAL_SERVER_URL,
@@ -31,5 +30,4 @@ module.exports = {
   CONFIG_PATH,
   LICENSE_CACHE_PATH,
   ANALYTICS_FILE_PATH,
-  SPONSOR_IMPRESSIONS_FILE_PATH,
 };

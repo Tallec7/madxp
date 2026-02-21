@@ -1,12 +1,15 @@
 /**
  * SponsorStatsService — Calcul de statistiques locales pour les sponsors
  *
- * Lit les buffers d'impressions sponsors sur le Pi (données non encore envoyées
- * au central + historique local) pour offrir un aperçu immédiat au club staff,
+ * Lit le buffer analytics unifié sur le Pi (events avec category='sponsor')
+ * + historique local pour offrir un aperçu immédiat au club staff,
  * sans dépendre d'une connexion internet.
  *
+ * Depuis v3.66 (consolidation pipelines), toutes les impressions transitent
+ * par analytics_buffer.json. Les events sponsors sont filtrés par category='sponsor'.
+ *
  * Sources de données :
- * - sponsor_impressions.json (impressions sponsors avec durée, complétion, etc.)
+ * - analytics_buffer.json (buffer unifié, filtré par category='sponsor')
  * - configuration.json (noms des sponsors, vidéos liées)
  */
 
@@ -18,7 +21,6 @@ const NEOPRO_DATA_DIR = path.join(
   'neopro',
   'data'
 );
-const IMPRESSIONS_FILE = path.join(NEOPRO_DATA_DIR, 'sponsor_impressions.json');
 const ANALYTICS_FILE = path.join(NEOPRO_DATA_DIR, 'analytics_buffer.json');
 
 // Fichier de stats agrégées persisté localement (survit aux flushes du buffer)
@@ -298,10 +300,13 @@ class SponsorStatsService {
   // ===========================================================================
 
   /**
-   * Lit le buffer d'impressions sponsors.
+   * Lit les impressions sponsors depuis le buffer analytics unifié.
+   * Filtre les events avec category='sponsor' et mappe les champs
+   * pour compatibilité avec le reste du service.
    */
   async _readImpressions() {
-    return this._readJsonFile(IMPRESSIONS_FILE);
+    const allEvents = this._readJsonFile(ANALYTICS_FILE);
+    return allEvents.filter(e => e.category === 'sponsor');
   }
 
   /**
