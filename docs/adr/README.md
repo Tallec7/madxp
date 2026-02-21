@@ -45,6 +45,7 @@ Un ADR documente une décision technique importante avec :
 | [ADR-026](ADR-026-predictive-alerts.md)              | Alertes prédictives multi-métriques       | Accepté                  | Fév 2026 |
 | [ADR-027](ADR-027-analytics-ui-removal.md)           | Suppression de l'UI Analytics dashboard   | Accepté                  | Fév 2026 |
 | [ADR-028](ADR-028-atomic-config-write.md)            | Écriture atomique de configuration.json   | Accepté                  | Fév 2026 |
+| [ADR-029](ADR-029-dual-hdmi-tv-led.md)               | Dual HDMI TV + LED depuis un seul Pi      | Proposé                  | Fév 2026 |
 
 ### Supersédés
 
@@ -57,17 +58,17 @@ Un ADR documente une décision technique importante avec :
 
 > Déplacées dans [`../proposals/`](../proposals/) — ce ne sont pas des ADR tant que la décision n'est pas prise.
 
-| ID                                                               | Titre                                  | Sujet                   |
-| ---------------------------------------------------------------- | -------------------------------------- | ----------------------- |
-| [PROP-001](../proposals/PROP-001-multi-tv-single-pi.md)          | Multi-TV depuis un seul Pi             | Hardware / Architecture |
-| [PROP-002](../proposals/PROP-002-tv-led-dual-output.md)          | TV + LED dual output                   | Hardware / Architecture |
-| [PROP-003](../proposals/PROP-003-stramatel-live-score.md)        | Score live multi-constructeurs         | Intégration hardware    |
-| [PROP-004](../proposals/PROP-004-video-template-engine.md)       | Moteur de templates vidéo              | Feature produit         |
-| [PROP-005](../proposals/PROP-005-scheduling-local-vs-server.md)  | Planification horaire local vs serveur | Architecture            |
-| [PROP-006](../proposals/PROP-006-sponsor-self-service-portal.md) | Portail sponsor self-service           | Feature produit         |
-| [PROP-007](../proposals/PROP-007-sponsor-rotation-algorithm.md)  | Rotation équitable des sponsors        | Algorithme              |
-| [PROP-008](../proposals/PROP-008-content-expiration.md)          | Expiration automatique de contenu      | Feature produit         |
-| [PROP-009](../proposals/PROP-009-motion-design-personnalise.md)  | Motion design personnalisé             | Feature produit         |
+| ID                                                               | Titre                                                         | Sujet                   |
+| ---------------------------------------------------------------- | ------------------------------------------------------------- | ----------------------- |
+| [PROP-001](../proposals/PROP-001-multi-tv-single-pi.md)          | Multi-TV depuis un seul Pi                                    | Hardware / Architecture |
+| [PROP-002](../proposals/PROP-002-tv-led-dual-output.md)          | TV + LED dual output → [ADR-029](ADR-029-dual-hdmi-tv-led.md) | Hardware / Architecture |
+| [PROP-003](../proposals/PROP-003-stramatel-live-score.md)        | Score live multi-constructeurs                                | Intégration hardware    |
+| [PROP-004](../proposals/PROP-004-video-template-engine.md)       | Moteur de templates vidéo                                     | Feature produit         |
+| [PROP-005](../proposals/PROP-005-scheduling-local-vs-server.md)  | Planification horaire local vs serveur                        | Architecture            |
+| [PROP-006](../proposals/PROP-006-sponsor-self-service-portal.md) | Portail sponsor self-service                                  | Feature produit         |
+| [PROP-007](../proposals/PROP-007-sponsor-rotation-algorithm.md)  | Rotation équitable des sponsors                               | Algorithme              |
+| [PROP-008](../proposals/PROP-008-content-expiration.md)          | Expiration automatique de contenu                             | Feature produit         |
+| [PROP-009](../proposals/PROP-009-motion-design-personnalise.md)  | Motion design personnalisé                                    | Feature produit         |
 
 ## Statuts
 
@@ -81,7 +82,7 @@ Un ADR documente une décision technique importante avec :
 
 1. Décider du format avec la [grille de décision](BEST_PRACTICES.md#quand-créer-un-adr-)
 2. Copier le template approprié (complet ou léger)
-3. Numéroter séquentiellement (prochain : **ADR-029**)
+3. Numéroter séquentiellement (prochain : **ADR-030**)
 4. Remplir les sections
 5. Commiter avec le code dans la même PR
 6. Mettre à jour ce README après merge
@@ -104,4 +105,4 @@ Voir **[BEST_PRACTICES.md](BEST_PRACTICES.md)** pour :
 
 ---
 
-_Dernière mise à jour : 16 février 2026_
+_Dernière mise à jour : 21 février 2026_

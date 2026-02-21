@@ -6,6 +6,7 @@
 **Statut** : Proposé
 **Décideurs** : Équipe Neopro
 **Epic SAFe** : [E-22 — Contenus Différenciés TV + LED](../safe/FEATURES.md#e-22--contenus-différenciés-tv--led) (PI-2)
+**ADR** : [ADR-029](../adr/ADR-029-dual-hdmi-tv-led.md) (décision architecturale)
 **Lié à** : [PROP-001](./PROP-001-multi-tv-single-pi.md) (Multi-TV), [ADR-008](../adr/ADR-008-double-buffer-video-pi.md) (Double-Buffer Vidéo)
 
 ---
