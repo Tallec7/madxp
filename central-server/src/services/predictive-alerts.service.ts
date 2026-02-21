@@ -362,14 +362,15 @@ class PredictiveAlertsService {
         const mirror = row.local_config_mirror as Record<string, unknown>;
         if (!mirror) continue;
 
-        // Extraire les vidéos locales du Pi
-        const localVideos = (mirror._localVideos as Array<{ filename: string }>) || [];
+        // Extraire les vidéos locales du Pi (paths complets ET filenames)
+        const localVideos = (mirror._localVideos as Array<{ filename: string; path: string }>) || [];
+        const localPaths = new Set(localVideos.map(v => v.path));
         const localFilenames = new Set(
           localVideos.map(v => v.filename.toLowerCase())
         );
 
         // Si aucune vidéo locale connue, ne pas alerter (Pi pas encore synchronisé)
-        if (localFilenames.size === 0) continue;
+        if (localPaths.size === 0) continue;
 
         // Extraire les paths vidéo de la config
         const config = mirror as unknown as SiteConfiguration;
@@ -377,12 +378,24 @@ class PredictiveAlertsService {
 
         if (referencedPaths.length === 0) continue;
 
+        // Deux catégories d'orphelins :
+        // - "path_mismatch" : filename existe sur Pi mais à un chemin différent (réparable)
+        // - "missing"       : filename absent du Pi (vidéo réellement manquante)
         let orphanCount = 0;
         const orphanedPaths: string[] = [];
 
         for (const videoPath of referencedPaths) {
+          // 1. D'abord vérifier par path complet (match exact)
+          if (localPaths.has(videoPath)) continue;
+
+          // 2. Path ne matche pas → vérifier par filename
           const filename = extractFilenameFromPath(videoPath).toLowerCase();
-          if (!localFilenames.has(filename)) {
+          if (localFilenames.has(filename)) {
+            // Path mismatch — le fichier existe sous un autre chemin
+            orphanCount++;
+            orphanedPaths.push(videoPath);
+          } else {
+            // Fichier réellement absent du Pi
             orphanCount++;
             orphanedPaths.push(videoPath);
           }

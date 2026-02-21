@@ -3205,7 +3205,7 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
 
   // Orphaned video detection — paths in config that don't match any available video
   allKnownVideoPaths: Set<string> = new Set();
-  filenameToPathMap: Map<string, string> = new Map(); // filename.lower → correct path
+  filenameToPathsMap: Map<string, string[]> = new Map(); // filename.lower → [path1, path2, ...]
   orphanedVideoCount = 0;
   repairableOrphanCount = 0;
   orphanedVideoDetails: { path: string; location: string; repairable: boolean; suggestedPath: string | null }[] = [];
@@ -4510,9 +4510,18 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
 
     // Build orphaned video detection maps
     this.allKnownVideoPaths = new Set(this.unifiedVideoOptions.map(v => v.path));
-    this.filenameToPathMap = new Map();
-    for (const v of this.unifiedVideoOptions) {
-      this.filenameToPathMap.set(v.filename.toLowerCase(), v.path);
+    // Also index all localVideos by path (not just unifiedVideoOptions, which dedup by filename)
+    for (const local of this.localVideos) {
+      this.allKnownVideoPaths.add(local.path);
+    }
+    this.filenameToPathsMap = new Map();
+    for (const local of this.localVideos) {
+      const key = local.filename.toLowerCase();
+      const existing = this.filenameToPathsMap.get(key) || [];
+      if (!existing.includes(local.path)) {
+        existing.push(local.path);
+      }
+      this.filenameToPathsMap.set(key, existing);
     }
 
     this.detectOrphanedVideoPaths();
@@ -4574,13 +4583,55 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
   }
 
   /**
-   * Tente de trouver le bon path par correspondance de filename.
-   * Ex: "videos/MATCH/BUT/JOUEUR_01.mp4" → match "JOUEUR_01.mp4" → "videos/video_nlf/MATCH/BUT/JOUEUR_01.mp4"
+   * Tente de trouver le bon path par correspondance de filename + proximité de structure.
+   *
+   * Stratégie :
+   * 1. Extraire le filename du path orphelin
+   * 2. Chercher tous les paths disponibles ayant ce filename
+   * 3. Si 0 match → null (vidéo réellement absente)
+   * 4. Si 1 match → réparation sûre
+   * 5. Si N matches → choisir celui dont la structure de dossier est la plus proche
+   *    (nombre de segments communs depuis la fin, ex: MATCH/BUT/file.mp4 vs video_nlf/MATCH/BUT/file.mp4)
+   *
+   * Ex: "videos/MATCH/BUT/JOUEUR_01.mp4" → match "JOUEUR_01.mp4"
+   *   candidats: ["videos/video_nlf/MATCH/BUT/JOUEUR_01.mp4"]  → unique → réparation
+   *   candidats: ["videos/MATCH/JOUEUR_01.mp4", "videos/SPONSORS/JOUEUR_01.mp4"] → score de proximité
    */
   tryRepairOrphanedPath(orphanedPath: string): string | null {
     const parts = orphanedPath.split('/');
     const filename = parts[parts.length - 1].toLowerCase();
-    return this.filenameToPathMap.get(filename) ?? null;
+    const candidates = this.filenameToPathsMap.get(filename);
+
+    if (!candidates || candidates.length === 0) return null;
+    if (candidates.length === 1) return candidates[0];
+
+    // Multiple candidates — score by path segment similarity (from the end, excluding filename)
+    const orphanedSegments = parts.slice(0, -1).map(s => s.toLowerCase());
+    let bestCandidate = candidates[0];
+    let bestScore = -1;
+
+    for (const candidate of candidates) {
+      const candidateSegments = candidate.split('/').slice(0, -1).map(s => s.toLowerCase());
+
+      // Count matching segments from the end (closest directory structure)
+      let score = 0;
+      let oi = orphanedSegments.length - 1;
+      let ci = candidateSegments.length - 1;
+      while (oi >= 0 && ci >= 0) {
+        if (orphanedSegments[oi] === candidateSegments[ci]) {
+          score++;
+        }
+        oi--;
+        ci--;
+      }
+
+      if (score > bestScore) {
+        bestScore = score;
+        bestCandidate = candidate;
+      }
+    }
+
+    return bestCandidate;
   }
 
   /**
