@@ -8,6 +8,7 @@ import { environment } from '../../../environments/environment';
 import { CacheService } from '../../core/services/cache.service';
 import { AnalyticsService, TractionMetrics } from '../../core/services/analytics.service';
 import { AuthService } from '../../core/services/auth.service';
+import { TranslateModule } from '@ngx-translate/core';
 import { AnalyticsNavComponent } from './analytics-nav.component';
 
 interface SiteStatus {
@@ -44,7 +45,7 @@ interface RecentActivity {
 @Component({
   selector: 'app-analytics',
   standalone: true,
-  imports: [CommonModule, RouterModule, AnalyticsNavComponent],
+  imports: [CommonModule, RouterModule, TranslateModule, AnalyticsNavComponent],
   template: `
     <div class="analytics-container">
       <app-analytics-nav></app-analytics-nav>
@@ -176,7 +177,12 @@ interface RecentActivity {
           <div class="metrics-list">
             <div class="metric-row">
               <span class="metric-label">🔥 CPU</span>
-              <div class="metric-bar-container">
+              <div class="metric-bar-container"
+                   role="progressbar"
+                   [attr.aria-valuenow]="stats.avgCpu"
+                   aria-valuemin="0"
+                   aria-valuemax="100"
+                   [attr.aria-label]="'analytics.cpuUsage' | translate">
                 <div class="metric-bar"
                      [class.good]="stats.avgCpu < 50"
                      [class.warning]="stats.avgCpu >= 50 && stats.avgCpu < 80"
@@ -189,7 +195,12 @@ interface RecentActivity {
 
             <div class="metric-row">
               <span class="metric-label">💾 RAM</span>
-              <div class="metric-bar-container">
+              <div class="metric-bar-container"
+                   role="progressbar"
+                   [attr.aria-valuenow]="stats.avgMemory"
+                   aria-valuemin="0"
+                   aria-valuemax="100"
+                   [attr.aria-label]="'analytics.memoryUsage' | translate">
                 <div class="metric-bar"
                      [class.good]="stats.avgMemory < 60"
                      [class.warning]="stats.avgMemory >= 60 && stats.avgMemory < 85"
@@ -202,7 +213,12 @@ interface RecentActivity {
 
             <div class="metric-row">
               <span class="metric-label">🌡️ Temp</span>
-              <div class="metric-bar-container">
+              <div class="metric-bar-container"
+                   role="progressbar"
+                   [attr.aria-valuenow]="stats.avgTemperature"
+                   aria-valuemin="0"
+                   aria-valuemax="100"
+                   [attr.aria-label]="'analytics.temperatureLevel' | translate">
                 <div class="metric-bar"
                      [class.good]="stats.avgTemperature < 60"
                      [class.warning]="stats.avgTemperature >= 60 && stats.avgTemperature < 75"
@@ -215,7 +231,12 @@ interface RecentActivity {
 
             <div class="metric-row">
               <span class="metric-label">💿 Disque</span>
-              <div class="metric-bar-container">
+              <div class="metric-bar-container"
+                   role="progressbar"
+                   [attr.aria-valuenow]="stats.avgDisk"
+                   aria-valuemin="0"
+                   aria-valuemax="100"
+                   [attr.aria-label]="'analytics.diskUsage' | translate">
                 <div class="metric-bar"
                      [class.good]="stats.avgDisk < 70"
                      [class.warning]="stats.avgDisk >= 70 && stats.avgDisk < 90"

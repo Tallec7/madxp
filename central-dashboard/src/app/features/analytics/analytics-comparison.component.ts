@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import { Chart, ChartConfiguration, registerables } from 'chart.js';
+import { TranslateModule } from '@ngx-translate/core';
 import { ApiService } from '../../core/services/api.service';
 import { SitesService } from '../../core/services/sites.service';
 import { NotificationService } from '../../core/services/notification.service';
@@ -37,7 +38,7 @@ interface ComparisonData {
 @Component({
   selector: 'app-analytics-comparison',
   standalone: true,
-  imports: [CommonModule, RouterModule, FormsModule, AnalyticsNavComponent],
+  imports: [CommonModule, RouterModule, FormsModule, TranslateModule, AnalyticsNavComponent],
   template: `
     <div class="page-container">
       <app-analytics-nav></app-analytics-nav>
@@ -130,8 +131,9 @@ interface ComparisonData {
         <!-- Chart -->
         <div class="card chart-card">
           <h3>📈 Comparaison des vidéos jouées</h3>
+          <p class="sr-only">{{ 'analytics.comparisonChartSummary' | translate }}</p>
           <div class="chart-container">
-            <canvas #comparisonChart></canvas>
+            <canvas #comparisonChart role="img" [attr.aria-label]="'analytics.comparisonChartLabel' | translate"></canvas>
           </div>
         </div>
 
@@ -164,7 +166,12 @@ interface ComparisonData {
                     </span>
                   </td>
                   <td>
-                    <div class="progress-bar">
+                    <div class="progress-bar"
+                         role="progressbar"
+                         [attr.aria-valuenow]="calculatePercentage(site.total_videos, comparisonData.totals.total_videos)"
+                         aria-valuemin="0"
+                         aria-valuemax="100"
+                         [attr.aria-label]="('analytics.shareOfTotal' | translate) + ': ' + calculatePercentage(site.total_videos, comparisonData.totals.total_videos).toFixed(1) + '%'">
                       <div
                         class="progress-fill"
                         [style.width.%]="calculatePercentage(site.total_videos, comparisonData.totals.total_videos)"

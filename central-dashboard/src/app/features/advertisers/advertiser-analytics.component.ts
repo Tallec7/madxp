@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { Chart, ChartConfiguration, registerables } from 'chart.js';
+import { TranslateModule } from '@ngx-translate/core';
 import { ApiService } from '../../core/services/api.service';
 import { NotificationService } from '../../core/services/notification.service';
 
@@ -51,7 +52,7 @@ interface Distribution {
 @Component({
   selector: 'app-sponsor-analytics',
   standalone: true,
-  imports: [CommonModule, RouterModule, FormsModule],
+  imports: [CommonModule, RouterModule, FormsModule, TranslateModule],
   template: `
     <div class="analytics-container">
       <!-- Header -->
@@ -169,12 +170,14 @@ interface Distribution {
         <div class="charts-row">
           <div class="chart-card chart-large">
             <h3>📈 Tendances quotidiennes</h3>
-            <canvas #trendsChart></canvas>
+            <p class="sr-only">{{ 'sponsors.trendsChartSummary' | translate }}</p>
+            <canvas #trendsChart role="img" [attr.aria-label]="'sponsors.trendsChartLabel' | translate"></canvas>
           </div>
 
           <div class="chart-card">
             <h3>🕐 Répartition par période</h3>
-            <canvas #periodChart></canvas>
+            <p class="sr-only">{{ 'sponsors.periodChartSummary' | translate }}</p>
+            <canvas #periodChart role="img" [attr.aria-label]="'sponsors.periodChartLabel' | translate"></canvas>
           </div>
         </div>
 
@@ -182,7 +185,8 @@ interface Distribution {
         <div class="charts-row">
           <div class="chart-card">
             <h3>🏆 Type d'événement</h3>
-            <canvas #eventChart></canvas>
+            <p class="sr-only">{{ 'sponsors.eventChartSummary' | translate }}</p>
+            <canvas #eventChart role="img" [attr.aria-label]="'sponsors.eventChartLabel' | translate"></canvas>
           </div>
 
           <div class="chart-card chart-large">
@@ -243,7 +247,12 @@ interface Distribution {
                     <td>{{ formatDuration(site.total_screen_time) }}</td>
                     <td>{{ site.unique_videos }}</td>
                     <td>
-                      <div class="progress-bar">
+                      <div class="progress-bar"
+                           role="progressbar"
+                           [attr.aria-valuenow]="calculatePercentage(site.impressions, summary.total_impressions)"
+                           aria-valuemin="0"
+                           aria-valuemax="100"
+                           [attr.aria-label]="('analytics.shareOfTotal' | translate) + ': ' + calculatePercentage(site.impressions, summary.total_impressions).toFixed(1) + '%'">
                         <div
                           class="progress-fill"
                           [style.width.%]="calculatePercentage(site.impressions, summary.total_impressions)"

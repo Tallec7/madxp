@@ -1,8 +1,9 @@
-import { Component, OnInit, OnDestroy, inject } from '@angular/core';
+import { Component, OnInit, OnDestroy, HostListener, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule, Router } from '@angular/router';
+import { RouterModule, Router, NavigationEnd } from '@angular/router';
 import { trigger, transition, style, animate } from '@angular/animations';
 import { Subscription } from 'rxjs';
+import { filter } from 'rxjs/operators';
 import { TranslateModule } from '@ngx-translate/core';
 import { AuthService } from '../../core/services/auth.service';
 import { SocketService } from '../../core/services/socket.service';
@@ -33,7 +34,19 @@ import { ConfirmDialogService } from '../../core/services/confirm-dialog.service
     <a href="#main-content" class="skip-link">{{ 'nav.skipToContent' | translate }}</a>
 
     <div class="layout">
-      <aside class="sidebar" role="complementary" [attr.aria-label]="'nav.dashboard' | translate">
+      <!-- Mobile hamburger toggle -->
+      <button class="hamburger-toggle" (click)="toggleSidebar()" [attr.aria-label]="'nav.toggleMenu' | translate" [attr.aria-expanded]="sidebarOpen">
+        <span class="hamburger-icon" [class.open]="sidebarOpen">
+          <span></span>
+          <span></span>
+          <span></span>
+        </span>
+      </button>
+
+      <!-- Mobile overlay backdrop -->
+      <div class="sidebar-overlay" [class.visible]="sidebarOpen" (click)="closeSidebar()"></div>
+
+      <aside class="sidebar" [class.sidebar-open]="sidebarOpen" role="complementary" [attr.aria-label]="'nav.dashboard' | translate">
         <div class="sidebar-header">
           <img src="assets/neopro-logo-white.png" alt="Neopro Dashboard Central" class="sidebar-logo" />
           <span
@@ -48,27 +61,27 @@ import { ConfirmDialogService } from '../../core/services/confirm-dialog.service
         </div>
 
         <nav class="sidebar-nav" [attr.aria-label]="'nav.dashboard' | translate">
-          <a routerLink="/dashboard" routerLinkActive="active" class="nav-item" [attr.aria-label]="'nav.dashboard' | translate">
+          <a routerLink="/dashboard" routerLinkActive="active" class="nav-item" (click)="closeSidebar()" [attr.aria-label]="'nav.dashboard' | translate">
             <span class="icon" aria-hidden="true">🏠</span>
             <span>{{ 'nav.dashboard' | translate }}</span>
           </a>
-          <a routerLink="/analytics" routerLinkActive="active" class="nav-item">
+          <a routerLink="/analytics" routerLinkActive="active" class="nav-item" (click)="closeSidebar()">
             <span class="icon" aria-hidden="true">📈</span>
             <span>Analytics</span>
           </a>
-          <a routerLink="/sites" routerLinkActive="active" class="nav-item" [attr.aria-label]="'nav.sites' | translate">
+          <a routerLink="/sites" routerLinkActive="active" class="nav-item" (click)="closeSidebar()" [attr.aria-label]="'nav.sites' | translate">
             <span class="icon" aria-hidden="true">🖥️</span>
             <span>{{ 'nav.sites' | translate }}</span>
           </a>
-          <a routerLink="/groups" routerLinkActive="active" class="nav-item" [attr.aria-label]="'nav.groups' | translate">
+          <a routerLink="/groups" routerLinkActive="active" class="nav-item" (click)="closeSidebar()" [attr.aria-label]="'nav.groups' | translate">
             <span class="icon" aria-hidden="true">👥</span>
             <span>{{ 'nav.groups' | translate }}</span>
           </a>
-          <a routerLink="/advertisers" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" class="nav-item" [attr.aria-label]="'nav.advertisers' | translate">
+          <a routerLink="/advertisers" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" class="nav-item" (click)="closeSidebar()" [attr.aria-label]="'nav.advertisers' | translate">
             <span class="icon" aria-hidden="true">💼</span>
             <span>{{ 'nav.advertisers' | translate }}</span>
           </a>
-          <a routerLink="/advertisers/health" routerLinkActive="active" class="nav-item" *ngIf="canManageContent()" aria-label="Sante Annonceurs">
+          <a routerLink="/advertisers/health" routerLinkActive="active" class="nav-item" (click)="closeSidebar()" *ngIf="canManageContent()" aria-label="Sante Annonceurs">
             <span class="icon" aria-hidden="true">🩺</span>
             <span>Sante Annonceurs</span>
           </a>
@@ -76,40 +89,40 @@ import { ConfirmDialogService } from '../../core/services/confirm-dialog.service
           <!-- Portals section for admin users -->
           <div class="nav-section" *ngIf="isAdmin()" role="group" aria-label="Portails">
             <div class="nav-section-title" id="portals-section">Portails</div>
-            <a routerLink="/advertiser-portal" routerLinkActive="active" class="nav-item" aria-describedby="portals-section">
+            <a routerLink="/advertiser-portal" routerLinkActive="active" class="nav-item" (click)="closeSidebar()" aria-describedby="portals-section">
               <span class="icon" aria-hidden="true">🎯</span>
               <span>Portail Annonceur</span>
             </a>
-            <a routerLink="/agency-portal" routerLinkActive="active" class="nav-item" aria-describedby="portals-section">
+            <a routerLink="/agency-portal" routerLinkActive="active" class="nav-item" (click)="closeSidebar()" aria-describedby="portals-section">
               <span class="icon" aria-hidden="true">🏢</span>
               <span>Portail Agence</span>
             </a>
           </div>
 
-          <a routerLink="/content" routerLinkActive="active" class="nav-item" *ngIf="canManageContent()" [attr.aria-label]="'nav.content' | translate">
+          <a routerLink="/content" routerLinkActive="active" class="nav-item" (click)="closeSidebar()" *ngIf="canManageContent()" [attr.aria-label]="'nav.content' | translate">
             <span class="icon" aria-hidden="true">📹</span>
             <span>{{ 'nav.content' | translate }}</span>
           </a>
-          <a routerLink="/updates" routerLinkActive="active" class="nav-item" *ngIf="canManageContent()" [attr.aria-label]="'nav.updates' | translate">
+          <a routerLink="/updates" routerLinkActive="active" class="nav-item" (click)="closeSidebar()" *ngIf="canManageContent()" [attr.aria-label]="'nav.updates' | translate">
             <span class="icon" aria-hidden="true">🔄</span>
             <span>{{ 'nav.updates' | translate }}</span>
           </a>
 
           <div class="nav-section" *ngIf="isAdmin()" role="group" [attr.aria-label]="'nav.administration' | translate">
             <div class="nav-section-title" id="admin-section">{{ 'nav.administration' | translate }}</div>
-            <a routerLink="/subscriptions" routerLinkActive="active" class="nav-item" aria-describedby="admin-section">
+            <a routerLink="/subscriptions" routerLinkActive="active" class="nav-item" (click)="closeSidebar()" aria-describedby="admin-section">
               <span class="icon" aria-hidden="true">💳</span>
               <span>Abonnements</span>
             </a>
-            <a routerLink="/admin/users" routerLinkActive="active" class="nav-item" aria-describedby="admin-section" [attr.aria-label]="'nav.users' | translate">
+            <a routerLink="/admin/users" routerLinkActive="active" class="nav-item" (click)="closeSidebar()" aria-describedby="admin-section" [attr.aria-label]="'nav.users' | translate">
               <span class="icon" aria-hidden="true">👤</span>
               <span>{{ 'nav.users' | translate }}</span>
             </a>
-            <a routerLink="/admin/agencies" routerLinkActive="active" class="nav-item" aria-describedby="admin-section" [attr.aria-label]="'nav.agencies' | translate">
+            <a routerLink="/admin/agencies" routerLinkActive="active" class="nav-item" (click)="closeSidebar()" aria-describedby="admin-section" [attr.aria-label]="'nav.agencies' | translate">
               <span class="icon" aria-hidden="true">🏢</span>
               <span>{{ 'nav.agencies' | translate }}</span>
             </a>
-            <a routerLink="/admin/local" routerLinkActive="active" class="nav-item" aria-describedby="admin-section" [attr.aria-label]="'nav.localConsole' | translate">
+            <a routerLink="/admin/local" routerLinkActive="active" class="nav-item" (click)="closeSidebar()" aria-describedby="admin-section" [attr.aria-label]="'nav.localConsole' | translate">
               <span class="icon" aria-hidden="true">🛠️</span>
               <span>{{ 'nav.localConsole' | translate }}</span>
             </a>
@@ -399,33 +412,133 @@ import { ConfirmDialogService } from '../../core/services/confirm-dialog.service
       color: #64748b;
     }
 
+    /* ── Hamburger toggle button ── */
+    .hamburger-toggle {
+      display: none;
+      position: fixed;
+      top: 0.75rem;
+      left: 0.75rem;
+      z-index: 1100;
+      background: var(--neo-black, #000000);
+      border: none;
+      border-radius: 8px;
+      padding: 0.625rem;
+      cursor: pointer;
+      width: 44px;
+      height: 44px;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .hamburger-icon {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      gap: 5px;
+      width: 22px;
+      height: 22px;
+      position: relative;
+    }
+
+    .hamburger-icon span {
+      display: block;
+      width: 22px;
+      height: 2px;
+      background: white;
+      border-radius: 2px;
+      transition: transform 0.3s ease, opacity 0.3s ease;
+      transform-origin: center;
+    }
+
+    .hamburger-icon.open span:nth-child(1) {
+      transform: translateY(7px) rotate(45deg);
+    }
+
+    .hamburger-icon.open span:nth-child(2) {
+      opacity: 0;
+    }
+
+    .hamburger-icon.open span:nth-child(3) {
+      transform: translateY(-7px) rotate(-45deg);
+    }
+
+    /* ── Overlay backdrop ── */
+    .sidebar-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 999;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+
+    .sidebar-overlay.visible {
+      opacity: 1;
+    }
+
+    /* ── Mobile responsive: hamburger + drawer ── */
     @media (max-width: 768px) {
+      .hamburger-toggle {
+        display: flex;
+      }
+
+      .sidebar-overlay {
+        display: block;
+        pointer-events: none;
+      }
+
+      .sidebar-overlay.visible {
+        pointer-events: auto;
+      }
+
       .sidebar {
-        width: 70px;
+        position: fixed;
+        top: 0;
+        left: 0;
+        bottom: 0;
+        width: 280px;
+        z-index: 1000;
+        transform: translateX(-100%);
+        transition: transform 0.3s ease;
+        overflow-y: auto;
       }
 
-      .sidebar-header h1,
-      .connection-status,
-      .nav-item span:not(.icon),
-      .user-details,
-      .btn-logout,
-      .footer-top {
-        display: none;
+      .sidebar.sidebar-open {
+        transform: translateX(0);
       }
 
-      .sidebar-header {
-        padding: 1rem;
-        text-align: center;
+      .main-content {
+        margin-left: 0;
+        width: 100%;
+      }
+    }
+
+    /* ── iPhone / small mobile ── */
+    @media (max-width: 375px) {
+      .sidebar {
+        width: 100%;
       }
 
-      .nav-item {
-        justify-content: center;
-        padding: 1rem;
+      .hamburger-toggle {
+        top: 0.5rem;
+        left: 0.5rem;
+      }
+    }
+
+    /* ── Reduced motion ── */
+    @media (prefers-reduced-motion: reduce) {
+      .sidebar {
+        transition: none;
       }
 
-      .footer-user {
-        justify-content: center;
-        padding: 0.5rem;
+      .sidebar-overlay {
+        transition: none;
+      }
+
+      .hamburger-icon span {
+        transition: none;
       }
     }
 
@@ -451,6 +564,11 @@ import { ConfirmDialogService } from '../../core/services/confirm-dialog.service
       outline: 3px solid #fff;
       outline-offset: -3px;
       background: rgba(255, 255, 255, 0.1);
+    }
+
+    .hamburger-toggle:focus-visible {
+      outline: 3px solid #fff;
+      outline-offset: 2px;
     }
 
     .btn-logout:focus-visible {
@@ -491,8 +609,11 @@ export class LayoutComponent implements OnInit, OnDestroy {
   currentUser: User | null = null;
   isConnected = false;
   notifications: Array<{id: number; type: string; message: string}> = [];
+  sidebarOpen = false;
   private notificationId = 0;
   private subscriptions = new Subscription();
+
+  private static readonly MOBILE_BREAKPOINT = 768;
 
   ngOnInit(): void {
     this.subscriptions.add(
@@ -538,6 +659,30 @@ export class LayoutComponent implements OnInit, OnDestroy {
     }));
 
     this.isConnected = this.socketService.isConnected();
+
+    // Close mobile sidebar on route navigation
+    this.subscriptions.add(
+      this.router.events.pipe(
+        filter((event): event is NavigationEnd => event instanceof NavigationEnd)
+      ).subscribe(() => {
+        this.closeSidebar();
+      })
+    );
+  }
+
+  @HostListener('window:resize')
+  onWindowResize(): void {
+    if (window.innerWidth > LayoutComponent.MOBILE_BREAKPOINT && this.sidebarOpen) {
+      this.closeSidebar();
+    }
+  }
+
+  toggleSidebar(): void {
+    this.sidebarOpen = !this.sidebarOpen;
+  }
+
+  closeSidebar(): void {
+    this.sidebarOpen = false;
   }
 
   ngOnDestroy(): void {

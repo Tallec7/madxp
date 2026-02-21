@@ -21,9 +21,11 @@ interface NavTab {
         <a
           [routerLink]="tab.path"
           routerLinkActive="active"
+          #rla="routerLinkActive"
           [routerLinkActiveOptions]="{ exact: tab.path === '/analytics' }"
           class="nav-tab"
           role="tab"
+          [attr.aria-selected]="rla.isActive"
         >
           <span class="tab-icon">{{ tab.icon }}</span>
           <span class="tab-label">{{ tab.label }}</span>

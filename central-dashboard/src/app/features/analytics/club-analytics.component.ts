@@ -49,11 +49,13 @@ type TabType = 'overview' | 'usage' | 'content' | 'health';
       </div>
 
       <!-- Tabs -->
-      <div class="tabs">
+      <div class="tabs" role="tablist">
         <button
           class="tab"
           [class.active]="activeTab === 'overview'"
           (click)="activeTab = 'overview'"
+          role="tab"
+          [attr.aria-selected]="activeTab === 'overview'"
         >
           Vue d'ensemble
         </button>
@@ -61,6 +63,8 @@ type TabType = 'overview' | 'usage' | 'content' | 'health';
           class="tab"
           [class.active]="activeTab === 'usage'"
           (click)="activeTab = 'usage'"
+          role="tab"
+          [attr.aria-selected]="activeTab === 'usage'"
         >
           Utilisation
         </button>
@@ -68,6 +72,8 @@ type TabType = 'overview' | 'usage' | 'content' | 'health';
           class="tab"
           [class.active]="activeTab === 'content'"
           (click)="activeTab = 'content'"
+          role="tab"
+          [attr.aria-selected]="activeTab === 'content'"
         >
           Contenu
         </button>
@@ -75,13 +81,15 @@ type TabType = 'overview' | 'usage' | 'content' | 'health';
           class="tab"
           [class.active]="activeTab === 'health'"
           (click)="activeTab = 'health'"
+          role="tab"
+          [attr.aria-selected]="activeTab === 'health'"
         >
           Santé Système
         </button>
       </div>
 
       <!-- Overview Tab -->
-      <div class="tab-content" *ngIf="activeTab === 'overview'">
+      <div class="tab-content" role="tabpanel" *ngIf="activeTab === 'overview'">
         <!-- KPIs -->
         <div class="kpi-grid">
           <div class="kpi-card">
@@ -124,7 +132,8 @@ type TabType = 'overview' | 'usage' | 'content' | 'health';
           <!-- Daily Plays Chart -->
           <div class="card chart-card">
             <h3>Lectures par jour</h3>
-            <div class="simple-chart" *ngIf="usage?.daily_breakdown?.length">
+            <p class="sr-only">{{ 'analytics.dailyPlaysChartLabel' | translate }}</p>
+            <div class="simple-chart" role="img" [attr.aria-label]="'analytics.dailyPlaysChartLabel' | translate" *ngIf="usage?.daily_breakdown?.length">
               <div class="chart-bars">
                 <div
                   *ngFor="let day of usage?.daily_breakdown"
@@ -145,7 +154,8 @@ type TabType = 'overview' | 'usage' | 'content' | 'health';
           <!-- Categories Breakdown -->
           <div class="card chart-card">
             <h3>Répartition par catégorie</h3>
-            <div class="categories-list" *ngIf="content?.categories_breakdown?.length">
+            <p class="sr-only">{{ 'analytics.categoryChartLabel' | translate }}</p>
+            <div class="categories-list" role="img" [attr.aria-label]="'analytics.categoryChartLabel' | translate" *ngIf="content?.categories_breakdown?.length">
               <div
                 *ngFor="let cat of content?.categories_breakdown?.slice(0, 5)"
                 class="category-item"
@@ -194,7 +204,7 @@ type TabType = 'overview' | 'usage' | 'content' | 'health';
       </div>
 
       <!-- Usage Tab -->
-      <div class="tab-content" *ngIf="activeTab === 'usage'">
+      <div class="tab-content" role="tabpanel" *ngIf="activeTab === 'usage'">
         <div class="stats-grid">
           <div class="stat-card">
             <div class="stat-icon">▶️</div>
@@ -252,7 +262,7 @@ type TabType = 'overview' | 'usage' | 'content' | 'health';
       </div>
 
       <!-- Content Tab -->
-      <div class="tab-content" *ngIf="activeTab === 'content'">
+      <div class="tab-content" role="tabpanel" *ngIf="activeTab === 'content'">
         <!-- Top Videos -->
         <div class="card">
           <h3>Top Vidéos</h3>
@@ -310,7 +320,7 @@ type TabType = 'overview' | 'usage' | 'content' | 'health';
       </div>
 
       <!-- Health Tab -->
-      <div class="tab-content" *ngIf="activeTab === 'health'">
+      <div class="tab-content" role="tabpanel" *ngIf="activeTab === 'health'">
         <!-- Current Metrics -->
         <div class="card" *ngIf="health?.current_metrics as metrics">
           <h3>Métriques actuelles</h3>

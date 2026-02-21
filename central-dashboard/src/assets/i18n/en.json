@@ -93,7 +93,8 @@
     "agencies": "Agencies",
     "analyticsCategories": "Analytics Categories",
     "localConsole": "Local Console",
-    "skipToContent": "Skip to main content"
+    "skipToContent": "Skip to main content",
+    "toggleMenu": "Toggle menu"
   },
   "status": {
     "connected": "Connected",
@@ -184,7 +185,13 @@
     "searchAdvertiserOrClub": "Search advertiser or club...",
     "wizardNext": "Next →",
     "wizardSkip": "Skip →",
-    "wizardNoVideo": "None (configure later)"
+    "wizardNoVideo": "None (configure later)",
+    "trendsChartLabel": "Impressions trends chart over time",
+    "periodChartLabel": "Impressions distribution by period chart",
+    "eventChartLabel": "Event type breakdown chart",
+    "trendsChartSummary": "Chart showing daily impression trends",
+    "periodChartSummary": "Chart showing distribution by time period",
+    "eventChartSummary": "Chart showing breakdown by event type"
   },
   "content": {
     "title": "Content Management",
@@ -274,7 +281,16 @@
     "tabFleet": "Fleet",
     "tabTraction": "Traction",
     "tabComparison": "Comparison",
-    "tabRealtime": "Realtime"
+    "tabRealtime": "Realtime",
+    "cpuUsage": "CPU usage",
+    "memoryUsage": "Memory usage",
+    "temperatureLevel": "Temperature",
+    "diskUsage": "Disk usage",
+    "comparisonChartLabel": "Multi-site video comparison chart",
+    "comparisonChartSummary": "Chart comparing video counts across multiple sites",
+    "shareOfTotal": "Share of total",
+    "dailyPlaysChartLabel": "Daily plays chart for the last 7 days",
+    "categoryChartLabel": "Category breakdown chart"
   },
   "language": {
     "select": "Language",

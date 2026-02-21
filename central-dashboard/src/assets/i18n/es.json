@@ -93,7 +93,8 @@
     "agencies": "Agencias",
     "analyticsCategories": "Categorías de Analytics",
     "localConsole": "Consola local",
-    "skipToContent": "Ir al contenido principal"
+    "skipToContent": "Ir al contenido principal",
+    "toggleMenu": "Alternar menu"
   },
   "status": {
     "connected": "Conectado",
@@ -184,7 +185,13 @@
     "searchAdvertiserOrClub": "Buscar anunciante o club...",
     "wizardNext": "Siguiente →",
     "wizardSkip": "Omitir →",
-    "wizardNoVideo": "Ninguno (configurar después)"
+    "wizardNoVideo": "Ninguno (configurar después)",
+    "trendsChartLabel": "Grafico de tendencia de impresiones",
+    "periodChartLabel": "Grafico de distribucion por periodo",
+    "eventChartLabel": "Grafico de desglose por tipo de evento",
+    "trendsChartSummary": "Grafico mostrando las tendencias diarias de impresiones",
+    "periodChartSummary": "Grafico mostrando la distribucion por periodo",
+    "eventChartSummary": "Grafico mostrando el desglose por tipo de evento"
   },
   "content": {
     "title": "Gestión de contenido",
@@ -274,7 +281,16 @@
     "tabFleet": "Flota",
     "tabTraction": "Traccion",
     "tabComparison": "Comparacion",
-    "tabRealtime": "Tiempo real"
+    "tabRealtime": "Tiempo real",
+    "cpuUsage": "Uso de CPU",
+    "memoryUsage": "Uso de memoria",
+    "temperatureLevel": "Temperatura",
+    "diskUsage": "Uso de disco",
+    "comparisonChartLabel": "Grafico comparativo multi-sitios",
+    "comparisonChartSummary": "Grafico comparando los videos en varios sitios",
+    "shareOfTotal": "Parte del total",
+    "dailyPlaysChartLabel": "Grafico de reproducciones diarias en 7 dias",
+    "categoryChartLabel": "Grafico de distribucion por categoria"
   },
   "language": {
     "select": "Idioma",
