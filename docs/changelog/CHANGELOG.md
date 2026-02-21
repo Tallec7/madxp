@@ -1,3 +1,9 @@
+## [3.65.1](https://github.com/Tallec7/neopro/compare/v3.65.0...v3.65.1) (2026-02-21)
+
+### Bug Fixes
+
+- **sponsors:** dropdown video filtre aux videos deployees + badge sponsor categories ([acbc7c8](https://github.com/Tallec7/neopro/commit/acbc7c8925343ee4c5ef4bca4079b4e0141152ec))
+
 ## UX Sponsors — Dropdown filtré + Badges catégories (Fév 2026)
 
 ### fix(sponsors): dropdown vidéo filtré aux vidéos déployées + badge sponsor dans catégories
