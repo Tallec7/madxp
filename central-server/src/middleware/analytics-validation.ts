@@ -118,7 +118,16 @@ const isoDateString = Joi.string()
 const dateRangeQuery = Joi.object({
   from: isoDateString.optional(),
   to: isoDateString.optional(),
+  days: Joi.number().integer().min(1).max(365).optional(),
 }).custom((value, helpers) => {
+  // Convert `days` shorthand → from/to date range
+  if (value.days && !value.from && !value.to) {
+    const to = new Date();
+    const from = new Date(Date.now() - value.days * 24 * 60 * 60 * 1000);
+    value.from = from.toISOString().split('T')[0];
+    value.to = to.toISOString().split('T')[0];
+    delete value.days;
+  }
   if (value.from && value.to) {
     const fromDate = new Date(value.from as string);
     const toDate = new Date(value.to as string);

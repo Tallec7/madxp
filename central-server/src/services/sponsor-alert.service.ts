@@ -103,44 +103,59 @@ class SponsorAlertService {
    * This is the core query powering the "Advertiser Health" dashboard view.
    */
   async getSponsorHealth(advertiserId?: string): Promise<SponsorHealthMatrix> {
-    const conditions: string[] = [];
-    const params: unknown[] = [];
-    let paramIndex = 1;
+    const emptyMatrix: SponsorHealthMatrix = {
+      entries: [],
+      summary: { total: 0, healthy: 0, warning: 0, critical: 0 },
+      generatedAt: new Date().toISOString(),
+    };
 
-    if (advertiserId) {
-      conditions.push(`a.id = $${paramIndex++}`);
-      params.push(advertiserId);
+    // Guard: check that required tables exist before querying
+    let result: { rows: HealthQueryRow[] };
+    try {
+      const conditions: string[] = [];
+      const params: unknown[] = [];
+      let paramIndex = 1;
+
+      if (advertiserId) {
+        conditions.push(`a.id = $${paramIndex++}`);
+        params.push(advertiserId);
+      }
+
+      const whereClause = conditions.length > 0
+        ? `WHERE ${conditions.join(' AND ')}`
+        : '';
+
+      // Use site_sponsors (unified model) with fallback to advertiser_sites
+      // site_sponsors is the canonical source since migration add-site-sponsors.sql
+      result = await query<HealthQueryRow>(
+        `SELECT
+          a.id AS advertiser_id,
+          a.name AS advertiser_name,
+          s.id AS site_id,
+          s.site_name,
+          s.club_name,
+          COALESCE(SUM(CASE WHEN ai.played_at >= NOW() - INTERVAL '7 days' THEN 1 ELSE 0 END), 0)::text AS impressions_7d,
+          COALESCE(SUM(CASE WHEN ai.played_at >= NOW() - INTERVAL '30 days' THEN 1 ELSE 0 END), 0)::text AS impressions_30d,
+          MAX(ai.played_at)::text AS last_impression_at,
+          EXTRACT(DAY FROM NOW() - MAX(ai.played_at))::text AS days_since_last
+        FROM site_sponsors ss
+        JOIN advertisers a ON a.id = ss.advertiser_id
+        JOIN sites s ON s.id = ss.site_id
+        LEFT JOIN advertiser_impressions ai
+          ON ai.advertiser_id = a.id
+          AND ai.site_id = s.id
+          AND ai.played_at >= NOW() - INTERVAL '30 days'
+        ${whereClause}
+        GROUP BY a.id, a.name, s.id, s.site_name, s.club_name
+        ORDER BY a.name ASC, s.club_name ASC`,
+        params
+      );
+    } catch (dbError) {
+      logger.warn('Sponsor health query failed — tables may not exist yet', {
+        error: dbError instanceof Error ? dbError.message : String(dbError),
+      });
+      return emptyMatrix;
     }
-
-    const whereClause = conditions.length > 0
-      ? `WHERE ${conditions.join(' AND ')}`
-      : '';
-
-    // Query: for each advertiser-site pair (from advertiser_sites),
-    // compute impression counts from advertiser_impressions
-    const result = await query<HealthQueryRow>(
-      `SELECT
-        a.id AS advertiser_id,
-        a.name AS advertiser_name,
-        s.id AS site_id,
-        s.site_name,
-        s.club_name,
-        COALESCE(SUM(CASE WHEN ai.played_at >= NOW() - INTERVAL '7 days' THEN 1 ELSE 0 END), 0)::text AS impressions_7d,
-        COALESCE(SUM(CASE WHEN ai.played_at >= NOW() - INTERVAL '30 days' THEN 1 ELSE 0 END), 0)::text AS impressions_30d,
-        MAX(ai.played_at)::text AS last_impression_at,
-        EXTRACT(DAY FROM NOW() - MAX(ai.played_at))::text AS days_since_last
-      FROM advertiser_sites asites
-      JOIN advertisers a ON a.id = asites.advertiser_id
-      JOIN sites s ON s.id = asites.site_id
-      LEFT JOIN advertiser_impressions ai
-        ON ai.advertiser_id = a.id
-        AND ai.site_id = s.id
-        AND ai.played_at >= NOW() - INTERVAL '30 days'
-      ${whereClause}
-      GROUP BY a.id, a.name, s.id, s.site_name, s.club_name
-      ORDER BY a.name ASC, s.club_name ASC`,
-      params
-    );
 
     const entries: SponsorHealthEntry[] = result.rows.map(row => {
       const impressions7d = parseInt(row.impressions_7d, 10);
@@ -188,6 +203,9 @@ class SponsorAlertService {
    */
   async checkAlerts(): Promise<{ created: number; total: number }> {
     const matrix = await this.getSponsorHealth();
+    if (matrix.summary.total === 0) {
+      return { created: 0, total: 0 };
+    }
     let created = 0;
 
     for (const entry of matrix.entries) {
