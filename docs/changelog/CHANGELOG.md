@@ -1,3 +1,9 @@
+# [3.68.0](https://github.com/Tallec7/neopro/compare/v3.67.1...v3.68.0) (2026-02-21)
+
+### Features
+
+- **alerts:** détection vidéos orphelines — dashboard + alerte prédictive + monitoring ([53039ce](https://github.com/Tallec7/neopro/commit/53039ced1925d0f4f9994fa849ddb259de3265e2))
+
 ## [3.67.1](https://github.com/Tallec7/neopro/compare/v3.67.0...v3.67.1) (2026-02-21)
 
 ### Bug Fixes
