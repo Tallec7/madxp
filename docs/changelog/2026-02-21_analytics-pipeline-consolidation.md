@@ -49,12 +49,20 @@ Le systeme analytics sponsors avait **deux pipelines paralleles** :
 - **Backfill script** : enrichissement `video_plays` depuis `advertiser_impressions`
 - **Drop table** : `advertiser_impressions` supprimee, 4 vues SQL recreees
 
+### Phase 5 — Cleanup build scripts (v3.67)
+
+- **`build-raspberry.sh`** : suppression de `sponsor-impressions.js` de la liste `SYNC_AGENT_CRITICAL` (integrite build)
+- **`setup.sh`** : suppression de `sponsor-impressions.js` de la boucle de telechargement sync-agent
+- **Documentation** : mise a jour TRACKING_IMPRESSIONS.md, IMPLEMENTATION.md, sync-agent.md, buffer.service.js
+- **Alerte Prometheus** : ajout `SponsorAnalyticsPipelineStall` (detection pipeline sponsor en panne)
+
 ### Monitoring
 
 - Alertes Prometheus ajoutees pour le pipeline consolide :
   - `AnalyticsKpisEndpointSlow` : latence P95 du nouvel endpoint KPIs
   - `CampaignDataInconsistency` : video_plays avec campaign_id orphelin
   - `VerifiedImpressionsDropoff` : chute du taux TV-on (qualite HDMI-CEC)
+  - `SponsorAnalyticsPipelineStall` : zero sponsor plays alors que club plays OK (v3.67)
 
 ## Tests
 

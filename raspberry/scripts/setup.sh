@@ -166,7 +166,7 @@ download_installation_files() {
     curl -sSL "$GITHUB_RAW/raspberry/sync-agent/package.json" -o sync-agent/package.json 2>/dev/null || true
 
     # Fichiers principaux du sync-agent (TOUS les fichiers nécessaires)
-    for file in agent.js analytics.js config.js logger.js metrics.js sponsor-impressions.js; do
+    for file in agent.js analytics.js config.js logger.js metrics.js; do
         curl -sSL "$GITHUB_RAW/raspberry/sync-agent/src/$file" -o "sync-agent/src/$file" 2>/dev/null || true
     done
 

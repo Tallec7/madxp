@@ -4,8 +4,8 @@
 
 - Statut: `active`
 - Owner: \u00e9quipe NEOPRO
-- Derni\u00e8re revue: 2026-02-15
-- Version: 3.36.1
+- Derni\u00e8re revue: 2026-02-21
+- Version: 3.67.0
 - D\u00e9pend de: Central Server (Socket.IO), Local Server (port 3000), Admin Server (port 8080)
 - Impacte: \u00c9tat de synchronisation du Pi, d\u00e9ploiements vid\u00e9o, analytics cloud
 
@@ -21,7 +21,7 @@ Agent Node.js r\u00e9sident sur le Raspberry Pi qui maintient la connexion Socke
 - **Ex\u00e9cution commandes** : re\u00e7oit et ex\u00e9cute `deploy_video`, `update_config`, `delete_video`, etc.
 - **T\u00e9l\u00e9chargement vid\u00e9os** : download vid\u00e9os depuis FTP avec checksum SHA256
 - **Config merge** : fusionne le contenu NEOPRO (cloud) avec le contenu club (local)
-- **Analytics push** : pousse sessions TV, impressions sponsors, plays vid\u00e9o vers le cloud
+- **Analytics push** : pousse sessions TV et plays vid\u00e9o (club + sponsor) vers le cloud via pipeline unifi\u00e9 `video_plays` (v3.66+)
 - **Surveillance fichiers** : VideoWatcher + ConfigWatcher d\u00e9tectent les changements locaux
 - **Gestion offline** : queue les commandes sortantes quand d\u00e9connect\u00e9
 - **Connexion locale persistante** : maintient Socket.IO vers localhost:3000 (singleton `local-socket.js`)
@@ -143,9 +143,8 @@ raspberry/sync-agent/
 \u2502   \u251c\u2500\u2500 types.js                     # Types/constantes
 \u2502   \u251c\u2500\u2500 logger.js                    # Logger structur\u00e9
 \u2502   \u251c\u2500\u2500 metrics.js                   # Collecte m\u00e9triques syst\u00e8me
-\u2502   \u251c\u2500\u2500 analytics.js                 # Buffer + push analytics
+\u2502   \u251c\u2500\u2500 analytics.js                 # Buffer + push analytics (pipeline unifi\u00e9 v3.66+)
 \u2502   \u251c\u2500\u2500 license-cache.js             # Cache licence (TTL 24h)
-\u2502   \u251c\u2500\u2500 sponsor-impressions.js       # Compteur impressions sponsors
 \u2502   \u2502
 \u2502   \u251c\u2500\u2500 commands/                    # 14 modules de commandes
 \u2502   \u2502   \u251c\u2500\u2500 index.js                 # Dispatch table
@@ -220,9 +219,8 @@ Sécurité : chaque section a son propre try/catch (un échec n'empêche pas les
 ```
 start()
   \u2502 1. Validation configuration (exit si invalide)
-  \u2502 2. Analytics sync (HTTP, ind\u00e9pendant du WS)
-  \u2502 3. Sponsor impressions sync
-  \u2502 4. Expiration checker
+  \u2502 2. Analytics sync (HTTP, ind\u00e9pendant du WS \u2014 pipeline unifi\u00e9 video_plays v3.66+)
+  \u2502 3. Expiration checker
   \u2502 5. Local backup
   \u2502 6. Network watchdog (surveille wlan0/wlan1 d\u00e8s le boot)
   \u2502 7. localSocket.connect() \u2192 Socket.IO persistant vers localhost:3000

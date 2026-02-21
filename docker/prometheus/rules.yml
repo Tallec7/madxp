@@ -348,3 +348,13 @@ groups:
         annotations:
           summary: "Verified impressions (TV-on) rate below 10%"
           description: "Only {{ $value | humanizePercentage }} of sponsor impressions have tv_status=on. Possible HDMI-CEC detection issue across fleet."
+
+      # Sponsor analytics pipeline stall: club plays flowing but no sponsor plays (unified pipeline v3.67+)
+      - alert: SponsorAnalyticsPipelineStall
+        expr: rate(neopro_video_plays_total{category="sponsor"}[2h]) == 0 and rate(neopro_video_plays_total{category="club"}[2h]) > 0
+        for: 2h
+        labels:
+          severity: warning
+        annotations:
+          summary: "No sponsor video plays for 2h while club plays are flowing"
+          description: "Unified pipeline receives club plays but zero sponsor plays. Check AnalyticsService category tagging and sync-agent analytics.js buffer."

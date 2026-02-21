@@ -178,7 +178,6 @@ verify_build_integrity() {
         "sync-agent/src/config.js"
         "sync-agent/src/logger.js"
         "sync-agent/src/analytics.js"
-        "sync-agent/src/sponsor-impressions.js"
         "sync-agent/src/metrics.js"
         "sync-agent/src/commands/index.js"
         "sync-agent/src/commands/update-software.js"

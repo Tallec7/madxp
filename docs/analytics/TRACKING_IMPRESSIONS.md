@@ -251,19 +251,20 @@ Ces méthodes peuvent être appelées depuis:
 
 **Localisation**: `raspberry/server/server.js`
 
-**Nouveaux endpoints**:
+**Endpoint analytics (pipeline unifié v3.66+)**:
 
-##### POST `/api/sync/sponsor-impressions`
+##### POST `/api/analytics`
 
-Reçoit les impressions du frontend Angular.
+Reçoit les événements analytics du frontend Angular (club + sponsor) via le `BufferService`.
 
 **Request Body**:
 
 ```json
 {
-  "impressions": [
+  "plays": [
     {
       "video_filename": "sponsor_coca_cola_30s.mp4",
+      "category": "sponsor",
       "played_at": "2025-12-14T21:30:00.000Z",
       "duration_played": 30,
       "video_duration": 30,
@@ -271,49 +272,24 @@ Reçoit les impressions du frontend Angular.
       "event_type": "match",
       "period": "halftime",
       "trigger_type": "auto",
-      "audience_estimate": 150
+      "audience_estimate": 150,
+      "tv_status": "on"
     }
   ]
 }
 ```
 
-**Response**:
-
-```json
-{
-  "success": true,
-  "received": 1,
-  "queued": 15
-}
-```
-
 **Comportement**:
 
-- **Mode Cloud (Render)**: Forwarde immédiatement au serveur central
-- **Mode Raspberry**: Stocke dans `~/neopro/data/sponsor_impressions.json`
-- Créé le dossier si nécessaire
-- Append au buffer existant
-- Logs détaillés
-
-##### GET `/api/sync/sponsor-impressions/stats`
-
-Retourne les statistiques du buffer local.
-
-**Response**:
-
-```json
-{
-  "count": 15,
-  "oldestImpression": "2025-12-14T21:00:00.000Z",
-  "newestImpression": "2025-12-14T21:30:00.000Z"
-}
-```
+- Stocke dans `~/neopro/data/analytics_buffer.json`
+- Le sync-agent charge ce buffer et l'envoie périodiquement au central via `POST /api/analytics/video-plays`
+- Les événements sponsor sont distingués par `category: 'sponsor'`
 
 ---
 
 ### 3. Sync Agent (Raspberry Pi - Node.js)
 
-> **v3.66+** : L'ancien module `sponsor-impressions.js` a été supprimé. Le sync-agent utilise uniquement le collecteur `video-plays` existant pour envoyer toutes les impressions (club + sponsor) au central via `POST /api/analytics/video-plays`.
+> **v3.66+** : L'ancien module `sponsor-impressions.js` a été supprimé. Le sync-agent utilise uniquement le collecteur `video-plays` dans `analytics.js` pour envoyer toutes les impressions (club + sponsor) au central via `POST /api/analytics/video-plays`.
 
 #### `agent.js`
 
@@ -325,29 +301,29 @@ Le sync-agent charge le buffer `analytics_buffer.json` (écrit par le local serv
 
 ## 🔄 Flux de Données Détaillé
 
-### Scénario 1: Lecture Automatique (Boucle Sponsors)
+### Scénario 1: Lecture Automatique (Boucle Sponsors) — Pipeline unifié v3.66+
 
 1. **TV Component** détecte `play` event
-2. **TV Component** identifie que c'est une vidéo sponsor
-3. **SponsorAnalyticsService.trackSponsorStart()** est appelé avec:
+2. **TV Component** identifie que c'est une vidéo sponsor (`category: 'sponsor'`)
+3. **AnalyticsService.trackVideoStart()** est appelé avec:
    - `video`: objet Video complet
    - `triggerType`: 'auto'
    - `videoDuration`: durée depuis player
-4. Service crée une **impression partielle** avec timestamp
+4. Service crée un **événement partiel** avec timestamp et enrichissement sponsor (`event_type`, `period`, `audience_estimate`)
 5. Vidéo se termine → `ended` event
-6. **SponsorAnalyticsService.trackSponsorEnd(true)** calcule:
+6. **AnalyticsService.trackVideoEnd(true)** calcule:
    - `duration_played` = temps écoulé depuis start
    - `completed` = true
-7. Impression ajoutée au **buffer local** (localStorage)
+7. Événement ajouté au **buffer local** (localStorage)
 8. Si buffer >= 50 OU timer 5min écoulé:
-   - **HTTP POST** vers `http://neopro.local:3000/api/sync/sponsor-impressions`
-9. **Local Server** reçoit et stocke dans fichier JSON
+   - **HTTP POST** vers `http://neopro.local:3000/api/analytics`
+9. **Local Server** reçoit et stocke dans `analytics_buffer.json`
 10. **Sync Agent** (running en background):
-    - Charge le fichier toutes les 5min
-    - **HTTP POST** vers serveur central `/api/analytics/impressions`
-    - Vide le fichier si succès
-11. **API Central** valide et insère dans PostgreSQL
-12. **Dashboard** requête et affiche les stats
+    - Charge le buffer `analytics_buffer.json` toutes les 5min
+    - **HTTP POST** vers serveur central `/api/analytics/video-plays`
+    - Vide le buffer si succès
+11. **API Central** valide et insère dans `video_plays` (avec `category = 'sponsor'`)
+12. **Dashboard** requête et affiche les stats via vues SQL
 
 ### Scénario 2: Lecture Manuelle (Télécommande)
 
@@ -431,17 +407,17 @@ socket.on('match_started', (data) => {
 });
 ```
 
-### Monitoring
+### Monitoring (pipeline unifié v3.66+)
 
 #### Vérifier le Buffer Local
 
 ```bash
 # Frontend buffer (localStorage)
 # Dans la console navigateur:
-localStorage.getItem('neopro_sponsor_impressions')
+localStorage.getItem('neopro_analytics_buffer')
 
-# Serveur local buffer
-cat ~/neopro/data/sponsor_impressions.json
+# Serveur local buffer (pipeline unifié)
+cat ~/neopro/data/analytics_buffer.json
 
 # Sync agent logs
 journalctl -u neopro-sync-agent -f
@@ -450,15 +426,11 @@ journalctl -u neopro-sync-agent -f
 #### API Stats
 
 ```bash
-# Stats buffer local
-curl http://neopro.local:3000/api/sync/sponsor-impressions/stats
+# Stats buffer local (pipeline unifié)
+curl http://neopro.local:3000/api/analytics/stats
 
-# Response:
-{
-  "count": 42,
-  "oldestImpression": "2025-12-14T20:00:00.000Z",
-  "newestImpression": "2025-12-14T21:30:00.000Z"
-}
+# Filtrer les impressions sponsor dans la DB centrale
+# SELECT count(*) FROM video_plays WHERE category = 'sponsor';
 ```
 
 #### Dashboard Central
@@ -490,20 +462,20 @@ cd raspberry/sync-agent && npm start
 cd raspberry/frontend && npm start
 ```
 
-**2. Simuler une impression**
+**2. Simuler une impression (pipeline unifié v3.66+)**
 
 ```typescript
 // Dans la console navigateur (Dev Tools)
-const service = // récupérer l'instance SponsorAnalyticsService
-  service.trackSponsorStart(
-    { id: 'test-1', path: '/sponsor.mp4', type: 'video/mp4' },
+const service = // récupérer l'instance AnalyticsService
+  service.trackVideoStart(
+    { id: 'test-1', path: '/sponsor.mp4', type: 'video/mp4', category: 'sponsor' },
     'manual',
     30,
   );
 
 // Attendre 10 secondes
 setTimeout(() => {
-  service.trackSponsorEnd(true);
+  service.trackVideoEnd(true);
 }, 10000);
 ```
 
@@ -511,13 +483,13 @@ setTimeout(() => {
 
 ```bash
 # Vérifier localStorage
-localStorage.getItem('neopro_sponsor_impressions')
+localStorage.getItem('neopro_analytics_buffer')
 
-# Vérifier fichier local
-cat ~/neopro/data/sponsor_impressions.json
+# Vérifier fichier local (pipeline unifié)
+cat ~/neopro/data/analytics_buffer.json
 
 # Vérifier logs sync-agent
-# Devrait voir: [SponsorImpressions] Sent X impressions to server
+# Devrait voir: [Analytics] Sent X plays to server
 
 # Vérifier dashboard central
 # Requête GET /api/analytics/sponsors/:id/stats
@@ -619,7 +591,7 @@ Authorization: Bearer <site_api_key>
 **Configuration sync-agent** :
 
 ```javascript
-// raspberry/sync-agent/src/sponsor-impressions.js
+// raspberry/sync-agent/src/analytics.js (pipeline unifié v3.66+)
 headers: {
   'Content-Type': 'application/json',
   'Authorization': `Bearer ${apiKey}` // API key du site
@@ -658,22 +630,23 @@ export const authenticateSiteApiKey = async (req, res, next) => {
 **Diagnostic**:
 
 ```bash
-# 1. Vérifier frontend buffer
-localStorage.getItem('neopro_sponsor_impressions')
+# 1. Vérifier frontend buffer (pipeline unifié v3.66+)
+localStorage.getItem('neopro_analytics_buffer')
 
 # 2. Vérifier serveur local logs
 journalctl -u neopro-server -n 50
 
-# 3. Vérifier fichier local
-ls -lh ~/neopro/data/sponsor_impressions.json
+# 3. Vérifier fichier local (pipeline unifié)
+ls -lh ~/neopro/data/analytics_buffer.json
 
 # 4. Vérifier sync-agent logs
 journalctl -u neopro-sync-agent -n 50
 
-# 5. Test manuel du endpoint central
-curl -X POST https://central.neopro.com/api/analytics/impressions \
+# 5. Test manuel du endpoint central (pipeline unifié)
+curl -X POST https://central.neopro.com/api/analytics/video-plays \
   -H "Content-Type: application/json" \
-  -d '{"impressions":[{"video_filename":"test.mp4","played_at":"2025-12-14T21:00:00Z","duration_played":10,"video_duration":30,"completed":false,"event_type":"other","period":"loop","trigger_type":"manual"}]}'
+  -H "Authorization: Bearer <site_api_key>" \
+  -d '{"plays":[{"video_filename":"test.mp4","category":"sponsor","played_at":"2025-12-14T21:00:00Z","duration_played":10,"video_duration":30,"completed":false,"event_type":"other","period":"loop","trigger_type":"manual","tv_status":"on"}]}'
 ```
 
 **Solutions**:
@@ -697,7 +670,7 @@ curl -X POST https://central.neopro.com/api/analytics/impressions \
 2. Tester manuellement l'API centrale
 3. Vider manuellement si nécessaire:
    ```bash
-   rm ~/neopro/data/sponsor_impressions.json
+   rm ~/neopro/data/analytics_buffer.json
    ```
 
 ### Problème: Doublons dans la DB

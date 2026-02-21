@@ -5,7 +5,7 @@ const axios = require('axios');
 /**
  * BufferService - Generic file-based buffer with optional central forwarding.
  *
- * Used by both analytics and sponsor-impressions endpoints.
+ * Used by the analytics endpoint (unified pipeline v3.66+, club + sponsor).
  * In cloud env: tries to forward to the central server, falls back to local.
  * On Pi: always stores locally (sync-agent will upload later).
  */
