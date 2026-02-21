@@ -1,3 +1,9 @@
+## [3.68.1](https://github.com/Tallec7/neopro/compare/v3.68.0...v3.68.1) (2026-02-21)
+
+### Bug Fixes
+
+- **analytics:** rendre les migrations backfill/drop idempotentes si advertiser_impressions n'existe pas ([138f0e2](https://github.com/Tallec7/neopro/commit/138f0e2b34d211461ec477e6c8ee43b90d640077))
+
 # [3.68.0](https://github.com/Tallec7/neopro/compare/v3.67.1...v3.68.0) (2026-02-21)
 
 ### Features
