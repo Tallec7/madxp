@@ -242,7 +242,7 @@ Chart.register(...registerables);
                       <select class="video-select" [(ngModel)]="selectedVideoFilename" name="videoSelect"
                               [disabled]="addingVideo || availableVideosLoading">
                         <option value="">{{ availableVideosLoading ? 'Chargement...' : 'Sélectionner une vidéo...' }}</option>
-                        <option *ngFor="let v of availableVideos" [value]="v.filename">{{ v.filename }}</option>
+                        <option *ngFor="let v of availableVideos" [value]="v.filename">{{ v.title !== v.filename ? v.title + ' (' + v.filename + ')' : v.filename }}</option>
                       </select>
                       <button class="btn btn-sm btn-primary" (click)="addVideo()"
                               [disabled]="!selectedVideoFilename || addingVideo">
@@ -467,8 +467,8 @@ Chart.register(...registerables);
                    (click)="wizardSelectedVideo = v.filename">
                 <span class="wv-radio">{{ wizardSelectedVideo === v.filename ? '◉' : '○' }}</span>
                 <div class="wv-info">
-                  <strong>{{ v.filename }}</strong>
-                  <span class="wv-meta" *ngIf="v.title">{{ v.title }}</span>
+                  <strong>{{ v.title || v.filename }}</strong>
+                  <span class="wv-meta" *ngIf="v.title && v.title !== v.filename">{{ v.filename }}</span>
                 </div>
               </div>
               <div *ngIf="wizardFilteredVideos.length === 0" class="wizard-video-empty">
@@ -1899,17 +1899,15 @@ export class SiteSponsorsTabComponent implements OnInit, OnDestroy {
    */
   private extractDeployedVideos(config: SiteConfiguration | null): CloudVideo[] {
     if (!config) return [];
-    const seen = new Map<string, string>(); // filename → path
+    // Map: bare filename → display name (from config "name" field)
+    const seen = new Map<string, string>();
 
-    const addVideo = (path: string, name?: string): void => {
+    const addVideo = (path: string, displayName?: string): void => {
       if (!path) return;
       const parts = path.split('/');
       const filename = parts[parts.length - 1];
       if (filename && !seen.has(filename)) {
-        seen.set(filename, path);
-      }
-      if (name && !seen.has(name)) {
-        seen.set(name, path);
+        seen.set(filename, displayName || '');
       }
     };
 
@@ -1935,12 +1933,12 @@ export class SiteSponsorsTabComponent implements OnInit, OnDestroy {
       }
     }
 
-    // Convert to CloudVideo-like objects for dropdown compatibility
-    return Array.from(seen.entries()).map(([filename, path]) => ({
+    // One entry per video: filename as key, display name as readable title
+    return Array.from(seen.entries()).map(([filename, displayName]) => ({
       id: '',
       filename,
       originalName: filename,
-      title: filename.replace(/\.[^/.]+$/, '').replace(/_/g, ' '),
+      title: displayName || filename.replace(/\.[^/.]+$/, '').replace(/_/g, ' '),
       category: null,
       subcategory: null,
       size: 0,
