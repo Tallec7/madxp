@@ -1521,4 +1521,34 @@ describe('Hourly metric alerting wiring', () => {
       evaluatesKioskCrashes: true,
     });
   });
+
+  it('alerting service has orphaned_video_references threshold defined', () => {
+    const alertingPath = path.join(repoRoot, 'central-server', 'src', 'services', 'alerting.service.ts');
+    const content = fs.readFileSync(alertingPath, 'utf8');
+
+    expect({
+      hasOrphanedThreshold: content.includes("metric: 'orphaned_video_references'"),
+      hasWarningValue: content.includes('warningValue: 1'),
+      hasCriticalValue: content.includes('criticalValue: 5'),
+    }).toEqual({
+      hasOrphanedThreshold: true,
+      hasWarningValue: true,
+      hasCriticalValue: true,
+    });
+  });
+
+  it('predictive-alerts service checks orphaned video references', () => {
+    const predictivePath = path.join(repoRoot, 'central-server', 'src', 'services', 'predictive-alerts.service.ts');
+    const content = fs.readFileSync(predictivePath, 'utf8');
+
+    expect({
+      importsExtractVideoPaths: content.includes("from '../utils/config-video-paths'"),
+      hasCheckOrphanedMethod: content.includes('checkOrphanedVideoReferences'),
+      callsEvaluateMetric: content.includes("'orphaned_video_references'"),
+    }).toEqual({
+      importsExtractVideoPaths: true,
+      hasCheckOrphanedMethod: true,
+      callsEvaluateMetric: true,
+    });
+  });
 });

@@ -236,6 +236,32 @@ interface HumanReadableDiff {
         ></app-video-library>
       </div>
 
+      <!-- Orphaned video references warning -->
+      <div class="orphaned-warning-banner" *ngIf="orphanedVideoCount > 0">
+        <span class="orphaned-warning-icon">&#9888;</span>
+        <div class="orphaned-warning-content">
+          <strong>{{ orphanedVideoCount }} vidéo(s) introuvable(s)</strong> —
+          Des boutons pointent vers des vidéos dont le chemin ne correspond plus aux fichiers disponibles.
+          Ces boutons ne feront rien quand on appuie dessus.
+          <div class="orphaned-warning-actions" *ngIf="repairableOrphanCount > 0">
+            <button class="btn btn-sm btn-primary" (click)="repairAllOrphanedPaths()">
+              Réparer automatiquement ({{ repairableOrphanCount }})
+            </button>
+          </div>
+          <details class="orphaned-details" *ngIf="orphanedVideoDetails.length > 0">
+            <summary>Voir les détails</summary>
+            <ul>
+              <li *ngFor="let detail of orphanedVideoDetails">
+                <strong>{{ detail.location }}</strong>:
+                <code>{{ detail.path }}</code>
+                <span class="repair-hint" *ngIf="detail.repairable"> → {{ detail.suggestedPath }}</span>
+                <span class="no-repair-hint" *ngIf="!detail.repairable"> (aucune correspondance)</span>
+              </li>
+            </ul>
+          </details>
+        </div>
+      </div>
+
       <!-- Catégories -->
       <div class="section card">
         <div class="section-header">
@@ -282,12 +308,13 @@ interface HumanReadableDiff {
                   <button class="btn-add-tiny" (click)="addVideoToCategory(catIndex)">+ Vidéo</button>
                 </div>
                 <div class="video-list-compact" *ngIf="cat.videos && cat.videos.length > 0">
-                  <div class="video-row" *ngFor="let video of cat.videos; let vidIndex = index">
+                  <div class="video-row" *ngFor="let video of cat.videos; let vidIndex = index" [class.orphaned]="isOrphanedVideoPath(video.path)">
                     <select
                       [(ngModel)]="video.path"
                       (ngModelChange)="markDirty()"
                       class="video-select-compact"
                       [class.has-cloud-video]="isCloudVideoPath(video.path)"
+                      [class.orphaned]="isOrphanedVideoPath(video.path)"
                     >
                       <option value="">-- Sélectionner --</option>
                       <optgroup *ngFor="let group of videoOptionGroups; trackBy: trackByGroupKey" [label]="group.icon + ' ' + group.label">
@@ -331,12 +358,13 @@ interface HumanReadableDiff {
                       <button class="btn-remove-tiny" (click)="removeSubcategory(catIndex, subIndex)">×</button>
                     </div>
                     <div class="subcat-videos" *ngIf="subcat.videos && subcat.videos.length > 0">
-                      <div class="video-row" *ngFor="let video of subcat.videos; let vidIndex = index">
+                      <div class="video-row" *ngFor="let video of subcat.videos; let vidIndex = index" [class.orphaned]="isOrphanedVideoPath(video.path)">
                         <select
                           [(ngModel)]="video.path"
                           (ngModelChange)="markDirty()"
                           class="video-select-compact"
                           [class.has-cloud-video]="isCloudVideoPath(video.path)"
+                          [class.orphaned]="isOrphanedVideoPath(video.path)"
                         >
                           <option value="">-- Sélectionner --</option>
                           <optgroup *ngFor="let group of videoOptionGroups; trackBy: trackByGroupKey" [label]="group.icon + ' ' + group.label">
@@ -374,6 +402,7 @@ interface HumanReadableDiff {
           [config]="config"
           [videoOptionGroups]="videoOptionGroups"
           [cloudVideoPaths]="cloudVideoPaths"
+          [allKnownVideoPaths]="allKnownVideoPaths"
           [localVideos]="localVideos"
           [videoDurations]="videoDurations"
           [siteSponsors]="siteSponsors"
@@ -1279,6 +1308,13 @@ interface HumanReadableDiff {
       gap: 0.375rem;
     }
 
+    .video-row.orphaned {
+      background: #fef2f2;
+      border-left: 3px solid #dc2626;
+      padding-left: 0.25rem;
+      border-radius: 4px;
+    }
+
     .video-select-compact, .video-input-compact {
       flex: 2;
       padding: 0.25rem 0.375rem;
@@ -1287,12 +1323,78 @@ interface HumanReadableDiff {
       font-size: 0.75rem;
     }
 
+    .video-select-compact.orphaned {
+      border-color: #fca5a5;
+      background: #fef2f2;
+      color: #991b1b;
+    }
+
     .video-name-compact {
       flex: 1;
       padding: 0.25rem 0.375rem;
       border: 1px solid #e2e8f0;
       border-radius: 4px;
       font-size: 0.75rem;
+    }
+
+    /* Orphaned video warning banner */
+    .orphaned-warning-banner {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.75rem;
+      margin: 0.75rem 0;
+      padding: 0.75rem 1rem;
+      background: #fef2f2;
+      border: 1px solid #fca5a5;
+      border-left: 4px solid #dc2626;
+      border-radius: 8px;
+      font-size: 0.8125rem;
+      color: #991b1b;
+    }
+
+    .orphaned-warning-icon {
+      font-size: 1.25rem;
+      flex-shrink: 0;
+    }
+
+    .orphaned-warning-content strong {
+      font-weight: 600;
+    }
+
+    .orphaned-warning-actions {
+      margin-top: 0.5rem;
+    }
+
+    .orphaned-details {
+      margin-top: 0.5rem;
+      font-size: 0.75rem;
+    }
+
+    .orphaned-details ul {
+      margin: 0.25rem 0 0 1rem;
+      padding: 0;
+    }
+
+    .orphaned-details li {
+      margin-bottom: 0.25rem;
+    }
+
+    .orphaned-details code {
+      font-size: 0.6875rem;
+      background: #fee2e2;
+      padding: 0.0625rem 0.25rem;
+      border-radius: 2px;
+    }
+
+    .repair-hint {
+      color: #16a34a;
+      font-size: 0.6875rem;
+    }
+
+    .no-repair-hint {
+      color: #9ca3af;
+      font-size: 0.6875rem;
+      font-style: italic;
     }
 
     .btn-remove-tiny {
@@ -3101,6 +3203,13 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
   // Cloud video paths (not yet on Pi) — passed to loop-manager
   cloudVideoPaths: Set<string> = new Set();
 
+  // Orphaned video detection — paths in config that don't match any available video
+  allKnownVideoPaths: Set<string> = new Set();
+  filenameToPathMap: Map<string, string> = new Map(); // filename.lower → correct path
+  orphanedVideoCount = 0;
+  repairableOrphanCount = 0;
+  orphanedVideoDetails: { path: string; location: string; repairable: boolean; suggestedPath: string | null }[] = [];
+
   // Video durations lookup (path → seconds) — passed to loop-manager
   videoDurations: Map<string, number> = new Map();
 
@@ -4398,6 +4507,149 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
     this.cloudVideoPaths = new Set(
       this.unifiedVideoOptions.filter(v => !v.isOnPi).map(v => v.path)
     );
+
+    // Build orphaned video detection maps
+    this.allKnownVideoPaths = new Set(this.unifiedVideoOptions.map(v => v.path));
+    this.filenameToPathMap = new Map();
+    for (const v of this.unifiedVideoOptions) {
+      this.filenameToPathMap.set(v.filename.toLowerCase(), v.path);
+    }
+
+    this.detectOrphanedVideoPaths();
+  }
+
+  /**
+   * Détecte les paths vidéo orphelins dans la config :
+   * boutons dont le path ne correspond à aucune vidéo disponible.
+   */
+  private detectOrphanedVideoPaths(): void {
+    if (!this.config || this.allKnownVideoPaths.size === 0) {
+      this.orphanedVideoCount = 0;
+      this.repairableOrphanCount = 0;
+      this.orphanedVideoDetails = [];
+      return;
+    }
+
+    const details: { path: string; location: string; repairable: boolean; suggestedPath: string | null }[] = [];
+
+    // Check sponsors (default loop)
+    for (const sponsor of this.config.sponsors || []) {
+      if (sponsor.path && !this.allKnownVideoPaths.has(sponsor.path)) {
+        const suggested = this.tryRepairOrphanedPath(sponsor.path);
+        details.push({ path: sponsor.path, location: 'Boucle par défaut', repairable: !!suggested, suggestedPath: suggested });
+      }
+    }
+
+    // Check categories and subcategories
+    for (const cat of this.config.categories || []) {
+      for (const video of cat.videos || []) {
+        if (video.path && !this.allKnownVideoPaths.has(video.path)) {
+          const suggested = this.tryRepairOrphanedPath(video.path);
+          details.push({ path: video.path, location: cat.name, repairable: !!suggested, suggestedPath: suggested });
+        }
+      }
+      for (const subcat of cat.subCategories || []) {
+        for (const video of subcat.videos || []) {
+          if (video.path && !this.allKnownVideoPaths.has(video.path)) {
+            const suggested = this.tryRepairOrphanedPath(video.path);
+            details.push({ path: video.path, location: `${cat.name} > ${subcat.name}`, repairable: !!suggested, suggestedPath: suggested });
+          }
+        }
+      }
+    }
+
+    // Check timeCategories loop videos
+    for (const tc of this.config.timeCategories || []) {
+      for (const video of tc.loopVideos || []) {
+        if (video.path && !this.allKnownVideoPaths.has(video.path)) {
+          const suggested = this.tryRepairOrphanedPath(video.path);
+          details.push({ path: video.path, location: `Boucle "${tc.name}"`, repairable: !!suggested, suggestedPath: suggested });
+        }
+      }
+    }
+
+    this.orphanedVideoCount = details.length;
+    this.repairableOrphanCount = details.filter(d => d.repairable).length;
+    this.orphanedVideoDetails = details;
+  }
+
+  /**
+   * Tente de trouver le bon path par correspondance de filename.
+   * Ex: "videos/MATCH/BUT/JOUEUR_01.mp4" → match "JOUEUR_01.mp4" → "videos/video_nlf/MATCH/BUT/JOUEUR_01.mp4"
+   */
+  tryRepairOrphanedPath(orphanedPath: string): string | null {
+    const parts = orphanedPath.split('/');
+    const filename = parts[parts.length - 1].toLowerCase();
+    return this.filenameToPathMap.get(filename) ?? null;
+  }
+
+  /**
+   * Vérifie si un path vidéo est orphelin (dans config mais pas dans les options dispo)
+   */
+  isOrphanedVideoPath(videoPath: string): boolean {
+    if (!videoPath) return false;
+    return this.allKnownVideoPaths.size > 0 && !this.allKnownVideoPaths.has(videoPath);
+  }
+
+  /**
+   * Répare automatiquement tous les paths orphelins qui peuvent être matchés par filename.
+   * Parcourt la config, corrige les paths, et marque la config comme modifiée.
+   */
+  repairAllOrphanedPaths(): void {
+    let repaired = 0;
+
+    // Repair sponsors
+    for (const sponsor of this.config.sponsors || []) {
+      if (sponsor.path && this.isOrphanedVideoPath(sponsor.path)) {
+        const suggested = this.tryRepairOrphanedPath(sponsor.path);
+        if (suggested) {
+          sponsor.path = suggested;
+          repaired++;
+        }
+      }
+    }
+
+    // Repair categories + subcategories
+    for (const cat of this.config.categories || []) {
+      for (const video of cat.videos || []) {
+        if (video.path && this.isOrphanedVideoPath(video.path)) {
+          const suggested = this.tryRepairOrphanedPath(video.path);
+          if (suggested) {
+            video.path = suggested;
+            repaired++;
+          }
+        }
+      }
+      for (const subcat of cat.subCategories || []) {
+        for (const video of subcat.videos || []) {
+          if (video.path && this.isOrphanedVideoPath(video.path)) {
+            const suggested = this.tryRepairOrphanedPath(video.path);
+            if (suggested) {
+              video.path = suggested;
+              repaired++;
+            }
+          }
+        }
+      }
+    }
+
+    // Repair timeCategories loop videos
+    for (const tc of this.config.timeCategories || []) {
+      for (const video of tc.loopVideos || []) {
+        if (video.path && this.isOrphanedVideoPath(video.path)) {
+          const suggested = this.tryRepairOrphanedPath(video.path);
+          if (suggested) {
+            video.path = suggested;
+            repaired++;
+          }
+        }
+      }
+    }
+
+    if (repaired > 0) {
+      this.markDirty();
+      this.detectOrphanedVideoPaths(); // Recalculate after repair
+    }
   }
 
   /**

@@ -13,11 +13,14 @@
  * - temperature_trend : Détecte les surchauffes progressives
  * - hotspot_restarts_24h : Identifie les problèmes de hotspot
  * - days_until_subscription_end : Alerte sur les abonnements expirant
+ * - orphaned_video_references : Détecte les boutons sans vidéo (path mismatch)
  */
 
 import { query } from '../config/database';
 import { alertingService } from './alerting.service';
 import logger from '../config/logger';
+import { extractVideoPaths, extractFilenameFromPath } from '../utils/config-video-paths';
+import { SiteConfiguration } from '../types';
 
 // Lazy import to avoid circular dependency with metrics.service
 let metricsServiceInstance: {
@@ -125,6 +128,17 @@ class PredictiveAlertsService {
             error: error instanceof Error ? error.message : error,
           });
         }
+      }
+
+      // 9. Références vidéo orphelines (check batch sur tous les sites)
+      try {
+        const orphanAlerts = await this.checkOrphanedVideoReferences();
+        alertsGenerated += orphanAlerts;
+      } catch (error) {
+        errors++;
+        logger.error('[PredictiveAlerts] Error checking orphaned videos', {
+          error: error instanceof Error ? error.message : error,
+        });
       }
 
       const duration = Date.now() - startTime;
@@ -318,6 +332,83 @@ class PredictiveAlertsService {
       if (daysUntilEnd > 0 && daysUntilEnd < 30) {
         await alertingService.evaluateMetric(site.siteId, 'days_until_subscription_end', daysUntilEnd);
         alertCount++;
+      }
+    }
+
+    return alertCount;
+  }
+
+  /**
+   * Vérifie les références vidéo orphelines sur tous les sites actifs.
+   * Un orphelin = un bouton dans la config dont le path ne correspond à aucune
+   * vidéo présente sur le Pi (match par filename, pas par path complet).
+   */
+  private async checkOrphanedVideoReferences(): Promise<number> {
+    let alertCount = 0;
+
+    const result = await query(`
+      SELECT
+        s.id as site_id,
+        s.site_name,
+        s.local_config_mirror
+      FROM sites s
+      WHERE s.status != 'archived'
+        AND s.suspended = false
+        AND s.local_config_mirror IS NOT NULL
+    `);
+
+    for (const row of result.rows) {
+      try {
+        const mirror = row.local_config_mirror as Record<string, unknown>;
+        if (!mirror) continue;
+
+        // Extraire les vidéos locales du Pi
+        const localVideos = (mirror._localVideos as Array<{ filename: string }>) || [];
+        const localFilenames = new Set(
+          localVideos.map(v => v.filename.toLowerCase())
+        );
+
+        // Si aucune vidéo locale connue, ne pas alerter (Pi pas encore synchronisé)
+        if (localFilenames.size === 0) continue;
+
+        // Extraire les paths vidéo de la config
+        const config = mirror as unknown as SiteConfiguration;
+        const referencedPaths = extractVideoPaths(config);
+
+        if (referencedPaths.length === 0) continue;
+
+        let orphanCount = 0;
+        const orphanedPaths: string[] = [];
+
+        for (const videoPath of referencedPaths) {
+          const filename = extractFilenameFromPath(videoPath).toLowerCase();
+          if (!localFilenames.has(filename)) {
+            orphanCount++;
+            orphanedPaths.push(videoPath);
+          }
+        }
+
+        if (orphanCount > 0) {
+          await alertingService.evaluateMetric(
+            row.site_id as string,
+            'orphaned_video_references',
+            orphanCount
+          );
+          alertCount++;
+
+          logger.warn('[PredictiveAlerts] Orphaned video references detected', {
+            siteId: row.site_id,
+            siteName: row.site_name,
+            orphanCount,
+            totalReferenced: referencedPaths.length,
+            orphanedPaths: orphanedPaths.slice(0, 5),
+          });
+        }
+      } catch (error) {
+        logger.error('[PredictiveAlerts] Error checking orphans for site', {
+          siteId: row.site_id,
+          error: error instanceof Error ? error.message : error,
+        });
       }
     }
 

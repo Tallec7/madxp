@@ -37,17 +37,18 @@ Les profils de configuration par phase de match (Avant-Match, Match, Après-Matc
 
 ### E-08 — Alertes Prédictives Dashboard ✅ DONE
 
-**Statut** : Terminé (2025)
-**Fichiers** : `predictive-alerts.service.ts`, `network-alerts.service.ts`, `alerting.service.ts`
+**Statut** : Terminé (2025, étendu Fév 2026)
+**Fichiers** : `predictive-alerts.service.ts`, `network-alerts.service.ts`, `alerting.service.ts`, `config-video-paths.ts`
 
-Le service d'alertes prédictives est opérationnel avec 4 règles : disque, CPU, WiFi dégradé, inactivité. Calcul de tendance sur 24h glissantes. Notifications dashboard intégrées.
+Le service d'alertes prédictives est opérationnel avec 9 règles : inactivité, disk growth, déconnexions, WiFi signal, video errors, temperature trend, hotspot instability, subscription expiry, **références vidéo orphelines**. Calcul de tendance sur 24h glissantes. Notifications dashboard intégrées.
 
-| Feature                             | Statut  | Fichiers                                          |
-| ----------------------------------- | ------- | ------------------------------------------------- |
-| F-08.1 Règles d'alertes prédictives | ✅ Done | `predictive-alerts.service.ts` (4 règles actives) |
-| F-08.2 Dashboard tendances          | ✅ Done | `analytics.controller.ts` (métriques santé 30j)   |
+| Feature                             | Statut  | Fichiers                                                                              |
+| ----------------------------------- | ------- | ------------------------------------------------------------------------------------- |
+| F-08.1 Règles d'alertes prédictives | ✅ Done | `predictive-alerts.service.ts` (9 règles actives)                                     |
+| F-08.2 Dashboard tendances          | ✅ Done | `analytics.controller.ts` (métriques santé 30j)                                       |
+| F-08.3 Détection vidéos orphelines  | ✅ Done | `config-video-paths.ts`, `site-content-tab.component.ts`, `loop-manager.component.ts` |
 
-**SP réel** : ~8 SP (conforme)
+**SP réel** : ~10 SP (8 initial + 2 F-08.3)
 
 ---
 

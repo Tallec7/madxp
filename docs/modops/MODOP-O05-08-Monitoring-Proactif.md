@@ -124,6 +124,7 @@ Vérifier chaque jour (matin) que tous les systèmes fonctionnent normalement et
 - **Config Sync Pending** : Reste élevé > 30 min → Pi ne se synchronisent pas
 - **Config Drift** : Persiste > 30 min → problème
 - **Predictive Alerts** : "alerts generated" en hausse → intervention préventive
+- **Vidéos orphelines** : alerte `orphaned_video_references` → boutons de la télécommande ne jouent rien. Ouvrir l'onglet Contenu du site dans le dashboard, utiliser le bouton « Réparer automatiquement » si disponible, puis sauvegarder la config
 
 #### Dashboard 4 : Sponsor Analytics (5 min)
 

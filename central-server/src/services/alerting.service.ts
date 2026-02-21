@@ -273,6 +273,18 @@ const DEFAULT_THRESHOLDS: Omit<AlertThreshold, 'id'>[] = [
     escalateAfterMinutes: 60,
     notifyChannels: ['email'],
   },
+  {
+    name: '[PRÉD] Références vidéo orphelines',
+    metric: 'orphaned_video_references',
+    condition: 'gt',
+    warningValue: 1,   // Warning dès 1 vidéo orpheline
+    criticalValue: 5,  // Critical si 5+ vidéos orphelines
+    duration: 0,
+    enabled: true,
+    cooldownMinutes: 1440, // 1 jour
+    escalateAfterMinutes: 4320, // 3 jours
+    notifyChannels: ['email'],
+  },
 ];
 
 // Memory safety limits for in-memory Maps (Railway Hobby plan: 256MB heap)

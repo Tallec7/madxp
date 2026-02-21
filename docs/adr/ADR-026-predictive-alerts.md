@@ -21,20 +21,21 @@ Problèmes identifiés :
 
 ## Décision
 
-Implémenter un **service d'alertes prédictives** qui évalue 8 métriques toutes les heures et génère des alertes avant que les problèmes ne surviennent.
+Implémenter un **service d'alertes prédictives** qui évalue 9 métriques toutes les heures et génère des alertes avant que les problèmes ne surviennent.
 
 ### Métriques évaluées
 
-| Métrique                      | Warning  | Critical  | Source                  |
-| ----------------------------- | -------- | --------- | ----------------------- |
-| `days_since_last_video`       | >7 jours | >14 jours | `video_plays`           |
-| `disk_growth_rate`            | >5%/h    | >10%/h    | `metrics` (disk)        |
-| `disconnections_24h`          | >5       | >10       | `metrics` (connexion)   |
-| `wifi_signal_quality`         | <50%     | <25%      | `metrics` (signal)      |
-| `video_errors_24h`            | >5       | >15       | `video_plays` (erreurs) |
-| `temperature_trend`           | >5°C/h   | >10°C/h   | `metrics` (temp)        |
-| `hotspot_restarts_24h`        | >2       | >5        | `alerts` (hotspot)      |
-| `days_until_subscription_end` | <30j     | <7j       | `sites` (subscription)  |
+| Métrique                      | Warning  | Critical  | Source                                  |
+| ----------------------------- | -------- | --------- | --------------------------------------- |
+| `days_since_last_video`       | >7 jours | >14 jours | `video_plays`                           |
+| `disk_growth_rate`            | >5%/h    | >10%/h    | `metrics` (disk)                        |
+| `disconnections_24h`          | >5       | >10       | `metrics` (connexion)                   |
+| `wifi_signal_quality`         | <50%     | <25%      | `metrics` (signal)                      |
+| `video_errors_24h`            | >5       | >15       | `video_plays` (erreurs)                 |
+| `temperature_trend`           | >5°C/h   | >10°C/h   | `metrics` (temp)                        |
+| `hotspot_restarts_24h`        | >2       | >5        | `alerts` (hotspot)                      |
+| `days_until_subscription_end` | <30j     | <7j       | `sites` (subscription)                  |
+| `orphaned_video_references`   | >1       | >5        | `local_config_mirror` vs `_localVideos` |
 
 ### Architecture
 
@@ -43,7 +44,9 @@ predictive-alerts.service.ts (cron horaire)
     │
     ├── Requête SQL agrégée (metrics, video_plays, alerts, sites)
     │
-    ├── Pour chaque site : évalue les 8 métriques
+    ├── Pour chaque site : évalue les 8 métriques per-site
+    │
+    ├── Batch : checkOrphanedVideoReferences() (config vs _localVideos)
     │
     ├── alerting.service.ts → evaluateMetric()
     │   ├── Seuil dépassé ? → Créer/mettre à jour l'alerte
@@ -54,7 +57,7 @@ predictive-alerts.service.ts (cron horaire)
 
 ### Seuils par défaut
 
-Chargés au démarrage dans `alert_thresholds` (14 seuils : 6 réactifs + 8 prédictifs). Modifiables en DB sans redéploiement.
+Chargés au démarrage dans `alert_thresholds` (15 seuils : 6 réactifs + 9 prédictifs). Modifiables en DB sans redéploiement.
 
 ## Alternatives Considérées
 
@@ -105,6 +108,7 @@ Chargés au démarrage dans `alert_thresholds` (14 seuils : 6 réactifs + 8 pré
 
 - `central-server/src/services/predictive-alerts.service.ts` — Service principal
 - `central-server/src/services/alerting.service.ts` — Évaluation des seuils
+- `central-server/src/utils/config-video-paths.ts` — Extraction paths vidéo (partagé avec draft.service)
 - `central-server/src/controllers/alerts.controller.ts` — API REST
 - `central-server/src/routes/alerts.routes.ts` — Routes
 

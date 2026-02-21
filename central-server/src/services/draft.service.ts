@@ -15,6 +15,10 @@ import {
   SiteConfiguration,
   Video,
 } from '../types';
+import {
+  extractVideoPaths,
+  extractFilenameFromPath,
+} from '../utils/config-video-paths';
 
 interface CloudVideo {
   id: string;
@@ -152,13 +156,13 @@ class DraftService {
     }
 
     // Extraire tous les chemins de vidéos de la configuration
-    const videoPaths = this.extractVideoPaths(draft.configuration);
+    const videoPaths = extractVideoPaths(draft.configuration);
 
     const missingVideos: MissingVideoInfo[] = [];
     const videosToDeploy: string[] = [];
 
     for (const videoPath of videoPaths) {
-      const filename = this.extractFilenameFromPath(videoPath);
+      const filename = extractFilenameFromPath(videoPath);
       const filenameLower = filename.toLowerCase();
 
       const isOnPi = localFilenames.has(filenameLower);
@@ -261,7 +265,7 @@ class DraftService {
     config: SiteConfiguration,
     cloudVideos: CloudVideo[]
   ): string[] {
-    const videoPaths = this.extractVideoPaths(config);
+    const videoPaths = extractVideoPaths(config);
     const cloudVideosByFilename = new Map<string, string>();
 
     for (const video of cloudVideos) {
@@ -271,7 +275,7 @@ class DraftService {
     const referencedIds: string[] = [];
 
     for (const videoPath of videoPaths) {
-      const filename = this.extractFilenameFromPath(videoPath);
+      const filename = extractFilenameFromPath(videoPath);
       const videoId = cloudVideosByFilename.get(filename.toLowerCase());
       if (videoId) {
         referencedIds.push(videoId);
@@ -279,69 +283,6 @@ class DraftService {
     }
 
     return [...new Set(referencedIds)];
-  }
-
-  /**
-   * Extrait tous les chemins de vidéos d'une configuration
-   */
-  private extractVideoPaths(config: SiteConfiguration): string[] {
-    const paths: string[] = [];
-
-    // Sponsors (boucle par défaut)
-    if (config.sponsors) {
-      for (const sponsor of config.sponsors) {
-        if (sponsor.path) {
-          paths.push(sponsor.path);
-        }
-      }
-    }
-
-    // Categories
-    if (config.categories) {
-      for (const category of config.categories) {
-        if (category.videos) {
-          for (const video of category.videos) {
-            if (video.path) {
-              paths.push(video.path);
-            }
-          }
-        }
-        if (category.subCategories) {
-          for (const subCat of category.subCategories) {
-            if (subCat.videos) {
-              for (const video of subCat.videos) {
-                if (video.path) {
-                  paths.push(video.path);
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-
-    // Time Categories (phases de match)
-    if (config.timeCategories) {
-      for (const timeCategory of config.timeCategories) {
-        if (timeCategory.loopVideos) {
-          for (const video of timeCategory.loopVideos) {
-            if (video.path) {
-              paths.push(video.path);
-            }
-          }
-        }
-      }
-    }
-
-    return [...new Set(paths)];
-  }
-
-  /**
-   * Extrait le nom de fichier d'un chemin (ex: "videos/SPONSORS/video.mp4" → "video.mp4")
-   */
-  private extractFilenameFromPath(videoPath: string): string {
-    const parts = videoPath.split('/');
-    return parts[parts.length - 1];
   }
 
   /**

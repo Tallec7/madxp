@@ -1281,3 +1281,89 @@ groups:
         annotations:
           summary: "Verified impressions (TV-on) rate below 10%"
           description: "Possible HDMI-CEC detection issue across fleet."
+
+  # =============================================
+  # WARNING — Predictive Alerts Meta
+  # =============================================
+  - orgId: 1
+    name: NeoPro - Predictive Meta
+    folder: NeoPro Alerts
+    interval: 1m
+    rules:
+      # Predictive checks failing
+      - uid: neopro-predictive-checks-failing
+        title: Predictive Checks Failing
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 7200
+              to: 0
+            datasourceUid: grafanacloud-tallec7-prom
+            model:
+              expr: increase(neopro_predictive_checks_total{status="failed"}[2h])
+              instant: true
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              type: reduce
+              expression: A
+              reducer: last
+              refId: B
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: B
+              conditions:
+                - evaluator:
+                    type: gt
+                    params: [1]
+              refId: C
+        for: 10m
+        labels:
+          severity: warning
+          team: neopro
+        annotations:
+          summary: "Predictive alert checks failing"
+          description: "Failed predictive check runs in the last 2 hours. Check predictive-alerts.service.ts logs."
+
+      # Burst of predictive alerts
+      - uid: neopro-high-predictive-alert-rate
+        title: High Predictive Alert Rate
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 7200
+              to: 0
+            datasourceUid: grafanacloud-tallec7-prom
+            model:
+              expr: increase(neopro_predictive_alerts_generated_total[2h])
+              instant: true
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              type: reduce
+              expression: A
+              reducer: last
+              refId: B
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: B
+              conditions:
+                - evaluator:
+                    type: gt
+                    params: [20]
+              refId: C
+        for: 10m
+        labels:
+          severity: warning
+          team: neopro
+        annotations:
+          summary: "High volume of predictive alerts generated"
+          description: "More than 20 predictive alerts in 2 hours. Possible fleet-wide issue (orphaned videos after mass deployment, subscription wave, etc.)."

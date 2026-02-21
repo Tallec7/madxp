@@ -442,7 +442,7 @@ Pi Frontend (ProfileConfigService sélectionne le profil actif)
   - _NeoPro Business & Fleet_ : content pipeline (video uploads), fleet Pi (WebSocket par type, heartbeats, network stability, socket disconnects), video transitions, deployments (canary, sync, drift), subscriptions & predictive alerts, **kiosk Chromium** (status, crashes, restarts, **dual TV+LED**), **Fan Pi** (présence, état, failures)
   - _NeoPro Sponsor Analytics_ (cloud) : sync & deployment (rate, sponsors/deploy, auto-resolution), impression attribution (méthodes de résolution, FK fallback, Pi auth), **sponsor health F-AUD-07** (matrice santé, health checks, alertes proactives), reports & API quality (génération PDF, latence network stats/benchmark)
 - **Scrape targets** : Docker local, `host.docker.internal:3001` (dev), Railway HTTPS (prod)
-- **Smoke tests** : `npm run test:smoke` — 139 tests détectent les régressions de wiring API (routes, middlewares, repositories, services, handlers, error types, métriques Prometheus critiques, hourly metric alerting wiring) + conventions Pi (systemd, sudoers)
+- **Smoke tests** : `npm run test:smoke` — 144 tests détectent les régressions de wiring API (routes, middlewares, repositories, services, handlers, error types, métriques Prometheus critiques, hourly metric alerting wiring) + conventions Pi (systemd, sudoers)
 - Systemd journald logs
 - Winston structured logging with Correlation ID
 - Memory Manager Service (heap monitoring, pressure cleanup at 93%/97%)
@@ -460,7 +460,7 @@ Pi Frontend (ProfileConfigService sélectionne le profil actif)
 - Slack (Incoming Webhooks avec Block Kit) — `alert.service.ts` avec méthodes pré-construites et **cooldown anti-flapping** (5 min/site pour `siteOffline`/`siteOnline`) + **shutdown mode** (v3.50.3 : `enterShutdownMode()` sur SIGTERM supprime les faux offline)
 - Escalade automatique vers superviseurs
 - **Graceful shutdown** (v3.48+) : `server_shutdown` émis aux Pi avant fermeture, `io.disconnectSockets()` + `io.close()`, safety timeout 10s — **v3.50.3** : `alertService.enterShutdownMode()` appelé avant déconnexion des sockets + boot grace period 90s (online + offline)
-- **19 seuils par défaut** : 7 réactifs (CPU, mémoire, température, disque, site offline, deployment failure, **fan failure**) + 9 prédictifs (inactivité, disk growth, déconnexions, WiFi signal, video errors, temperature trend, hotspot instability, subscription expiry, stuck deployments) + 3 nouveaux (WebSocket disconnects fréquents, trous noirs vidéo/safety timeouts, crash kiosk Chromium)
+- **20 seuils par défaut** : 7 réactifs (CPU, mémoire, température, disque, site offline, deployment failure, **fan failure**) + 10 prédictifs (inactivité, disk growth, déconnexions, WiFi signal, video errors, temperature trend, hotspot instability, subscription expiry, stuck deployments, **références vidéo orphelines**) + 3 nouveaux (WebSocket disconnects fréquents, trous noirs vidéo/safety timeouts, crash kiosk Chromium)
 - **Sponsor health matrix** (F-AUD-07) : matrice santé annonceurs (healthy/warning/critical), alertes proactives Slack pour sponsors sans impressions depuis N jours, dashboard Angular dédié
 - **Alertes réseau WiFi** (v3.33+) : `networkFailure()` (échec recovery watchdog), `info('Réseau rétabli')` (recovery confirmée) — dédupliquées 1/heure/site ; **alertes signal WiFi** (v3.50.3) : `lowWifiSignal()` avec cooldown 6h/site + `wifiSignalRecovered()` auto quand signal > -70 dBm
 - **Test Slack** : `POST /api/alerts/test-slack` (super_admin) — vérifie la configuration webhook
@@ -474,7 +474,7 @@ Alertes infrastructure côté serveur, complémentaires aux alertes métier Pi (
   - `critical` → notification immédiate, repeat 1h
   - `warning` → groupé 30s, repeat 4h
   - Inhibition : si `CentralServerDown` actif, les warnings par-métrique sont supprimés
-- **Prometheus rules** (`docker/prometheus/rules.yml`) — 31 alert rules locales :
+- **Prometheus rules** (`docker/prometheus/rules.yml`) — 33 alert rules locales :
 
 | Groupe            | Alerte                         | Condition                     | Seuil (for) | Sévérité |
 | ----------------- | ------------------------------ | ----------------------------- | ----------- | -------- |
@@ -496,6 +496,8 @@ Alertes infrastructure côté serveur, complémentaires aux alertes métier Pi (
 | Video             | `HighUploadFailureRate`        | Upload fails > 3/min          | 5 min       | warning  |
 | Video             | `FrequentEncodingCorrections`  | Encoding fixes > 0.1/s        | 30 min      | info     |
 | Meta              | `TooManyActiveAlerts`          | > 10 alertes actives          | 10 min      | warning  |
+| Meta              | `PredictiveChecksFailing`      | checks failed > 1 en 2h       | 10 min      | warning  |
+| Meta              | `HighPredictiveAlertRate`      | > 20 alertes prédictives/2h   | 10 min      | warning  |
 | Sponsor Analytics | `SlowNetworkSponsorStats`      | P95 network stats > 5s        | 5 min       | warning  |
 | Sponsor Analytics | `SlowBenchmarkQuery`           | P95 benchmark > 3s            | 5 min       | warning  |
 | Sponsor Analytics | `HighReportFailureRate`        | PDF sponsor fails > 1/min     | 10 min      | warning  |
@@ -510,7 +512,7 @@ Alertes infrastructure côté serveur, complémentaires aux alertes métier Pi (
 | Sponsor Analytics | `CampaignDataInconsistency`    | campaign_id FK orphelins      | 15 min      | warning  |
 | Sponsor Analytics | `VerifiedImpressionsDropoff`   | TV-on rate < 10%              | 30 min      | warning  |
 
-- **Grafana Cloud alerts** (`docker/grafana/provisioning/alerting/neopro-alerts-cloud.yml`) — 28 managed alert rules (parité complète avec local, format Grafana Cloud provisioning) pour la production sur `grafanacloud-tallec7-prom`
+- **Grafana Cloud alerts** (`docker/grafana/provisioning/alerting/neopro-alerts-cloud.yml`) — 30 managed alert rules (parité complète avec local, format Grafana Cloud provisioning) pour la production sur `grafanacloud-tallec7-prom`
 - **Stack local** : `docker compose up prometheus alertmanager grafana`
 - **Stack prod** : Import YAML dans Grafana Cloud → Alerting → Alert rules + configurer Contact point Slack
 

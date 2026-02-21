@@ -67,6 +67,7 @@ interface LoopTab {
             *ngFor="let video of config.sponsors; let i = index"
             [class.neopro]="video.owner === 'neopro'"
             [class.has-error]="!video.path"
+            [class.orphaned]="isOrphanedVideo(video.path)"
           >
             <span class="video-order">{{ i + 1 }}</span>
             <div class="video-fields">
@@ -127,6 +128,7 @@ interface LoopTab {
             <div
               class="loop-video-row"
               *ngFor="let video of getPhaseVideos(); let i = index"
+              [class.orphaned]="isOrphanedVideo(video.path)"
             >
               <span class="video-order">{{ i + 1 }}</span>
               <div class="video-fields">
@@ -347,6 +349,12 @@ interface LoopTab {
     .loop-video-row.neopro {
       background: #fefce8;
       border-color: #fde047;
+    }
+
+    .loop-video-row.orphaned {
+      background: #fef2f2;
+      border-color: #fca5a5;
+      border-left: 3px solid #dc2626;
     }
 
     .video-order {
@@ -580,6 +588,7 @@ export class LoopManagerComponent implements OnInit, OnChanges {
   @Input() config!: SiteConfiguration;
   @Input() videoOptionGroups: { key: string; label: string; icon: string; videos: { path: string; displayName: string; isOnPi: boolean }[] }[] = [];
   @Input() cloudVideoPaths: Set<string> = new Set();
+  @Input() allKnownVideoPaths: Set<string> = new Set();
   @Input() localVideos: LocalVideo[] = [];
   @Input() videoDurations: Map<string, number> = new Map();
   @Input() siteSponsors: SiteSponsor[] = [];
@@ -626,6 +635,11 @@ export class LoopManagerComponent implements OnInit, OnChanges {
 
   isCloudVideo(path: string): boolean {
     return this.cloudVideoPaths.has(path);
+  }
+
+  isOrphanedVideo(path: string): boolean {
+    if (!path) return false;
+    return this.allKnownVideoPaths.size > 0 && !this.allKnownVideoPaths.has(path);
   }
 
   // === Default loop ===

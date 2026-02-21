@@ -214,6 +214,26 @@ groups:
           summary: "{{ $value }} active alerts"
           description: "More than 10 active alerts for 10 minutes. Possible fleet-wide issue."
 
+      # Predictive checks failing (service may be broken)
+      - alert: PredictiveChecksFailing
+        expr: increase(neopro_predictive_checks_total{status="failed"}[2h]) > 1
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Predictive alert checks failing"
+          description: "{{ $value }} failed predictive check runs in the last 2 hours. Check predictive-alerts.service.ts logs."
+
+      # Burst of predictive alerts (possible fleet-wide config issue)
+      - alert: HighPredictiveAlertRate
+        expr: increase(neopro_predictive_alerts_generated_total[2h]) > 20
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $value }} predictive alerts generated in 2h"
+          description: "High volume of predictive alerts. Possible fleet-wide issue (orphaned videos after mass deployment, subscription wave, etc.)."
+
   # =============================================
   # Sponsor Analytics (P6)
   # =============================================
