@@ -546,7 +546,7 @@ export class AdvertiserHealthComponent implements OnInit, OnDestroy {
         },
         error: (error) => {
           this.loading = false;
-          this.loggerService.error('Failed to fetch sponsor health matrix', ErrorExtractor.extract(error));
+          this.loggerService.error('Failed to fetch sponsor health matrix', { detail: ErrorExtractor.getMessage(error) });
           this.notificationService.error('Erreur lors du chargement de la matrice de sante');
         },
       });
@@ -588,7 +588,7 @@ export class AdvertiserHealthComponent implements OnInit, OnDestroy {
       },
       error: (error) => {
         this.checkRunning = false;
-        this.loggerService.error('Failed to trigger sponsor alert check', ErrorExtractor.extract(error));
+        this.loggerService.error('Failed to trigger sponsor alert check', { detail: ErrorExtractor.getMessage(error) });
         this.notificationService.error('Erreur lors de la verification des alertes');
       },
     });
