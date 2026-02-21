@@ -1,3 +1,9 @@
+## [3.65.3](https://github.com/Tallec7/neopro/compare/v3.65.2...v3.65.3) (2026-02-21)
+
+### Bug Fixes
+
+- **ci:** correction lint central-server + test Karma dashboard ([37cf72e](https://github.com/Tallec7/neopro/commit/37cf72e78a7aacfc16c2bf5c7e2b795edcf6ecb7))
+
 ## CI Fixes — Lint & Test (Fév 2026)
 
 ### fix(ci): correction lint central-server + test Karma dashboard
