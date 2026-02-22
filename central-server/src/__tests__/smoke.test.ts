@@ -1638,6 +1638,29 @@ describe('Cloud remote relay chain', () => {
   });
 });
 
+// ─── #31 socket.data ban in handlers (Socket.IO v4 property mismatch) ───────
+describe('Socket.IO property access consistency', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+  const handlersDir = path.join(repoRoot, 'central-server', 'src', 'handlers');
+  const handlerFiles = fs.readdirSync(handlersDir)
+    .filter((f: string) => f.endsWith('.handler.ts') && !f.endsWith('.test.ts'));
+
+  it('no handler uses socket.data (must use (socket as any).prop)', () => {
+    // Socket.IO v4: socket.data is a separate {} object, NOT the same as properties
+    // set via (socket as any).siteId in socket.service.ts.
+    // Using socket.data.siteId returns undefined → silent early return.
+    const violations: string[] = [];
+    for (const file of handlerFiles) {
+      const content = fs.readFileSync(path.join(handlersDir, file), 'utf8');
+      // Match socket.data.xxx or (socket.data as xxx) patterns
+      if (/socket\.data[.\s]/.test(content)) {
+        violations.push(file);
+      }
+    }
+    expect(violations).toEqual([]);
+  });
+});
+
 // =================================================================
 // Sponsor loop analytics wiring
 // =================================================================
