@@ -1,3 +1,9 @@
+## [3.69.3](https://github.com/Tallec7/neopro/compare/v3.69.2...v3.69.3) (2026-02-22)
+
+### Bug Fixes
+
+- **cloud-remote:** relay chain cassée — zombie detection, handler manquant, socket.data mismatch ([1d5bdae](https://github.com/Tallec7/neopro/commit/1d5bdae9dee378684df4d0a2d757a9a5b80329df)), closes [#30](https://github.com/Tallec7/neopro/issues/30)
+
 ## [3.69.3] (2026-02-22)
 
 ### Bug Fixes
