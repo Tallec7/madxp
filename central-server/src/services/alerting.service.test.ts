@@ -118,8 +118,8 @@ describe('AlertingService', () => {
         call[0]?.includes('INSERT INTO alert_thresholds')
       );
 
-      // Should insert 17 thresholds (19 default - 2 existing)
-      expect(insertCalls.length).toBe(17);
+      // Should insert 18 thresholds (20 default - 2 existing)
+      expect(insertCalls.length).toBe(18);
     });
 
     it('should start periodic escalation check', async () => {

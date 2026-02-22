@@ -285,6 +285,18 @@ const DEFAULT_THRESHOLDS: Omit<AlertThreshold, 'id'>[] = [
     escalateAfterMinutes: 4320, // 3 jours
     notifyChannels: ['email'],
   },
+  {
+    name: '[PRÉD] Site mesh sans Ethernet',
+    metric: 'mesh_without_ethernet',
+    condition: 'eq',
+    warningValue: 1,
+    criticalValue: 1,
+    duration: 0,
+    enabled: true,
+    cooldownMinutes: 1440, // 1 jour — ne spammer pas
+    escalateAfterMinutes: 4320, // 3 jours
+    notifyChannels: ['email'],
+  },
 ];
 
 // Memory safety limits for in-memory Maps (Railway Hobby plan: 256MB heap)
