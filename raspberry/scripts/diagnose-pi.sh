@@ -387,6 +387,42 @@ check_nginx_config() {
     fi
 }
 
+check_hotspot_config() {
+    local HOSTAPD_CONF="/etc/hostapd/hostapd.conf"
+
+    if [ ! -f "$HOSTAPD_CONF" ]; then
+        print_warning "hostapd.conf absent — hotspot non configuré"
+        json_add "hotspot" "config" "warn" "absent"
+        return
+    fi
+
+    # TKIP check — TKIP causes "wrong password" on modern phones
+    if grep -q "wpa_pairwise=TKIP" "$HOSTAPD_CONF" 2>/dev/null; then
+        print_error "hostapd : wpa_pairwise=TKIP (déprécié — cause 'mauvais MDP' sur téléphones modernes)"
+        json_add "hotspot" "cipher" "error" "TKIP"
+        TOTAL_ERRORS=$((TOTAL_ERRORS + 1))
+        if [ "$OUTPUT_MODE" = "human" ]; then
+            echo -e "  ${YELLOW}Fix : sudo sed -i 's/wpa_pairwise=TKIP/wpa_pairwise=CCMP/' $HOSTAPD_CONF && sudo systemctl restart hostapd${NC}"
+        fi
+    elif grep -q "wpa_pairwise=CCMP" "$HOSTAPD_CONF" 2>/dev/null; then
+        print_success "hostapd : cipher CCMP (AES) OK"
+        json_add "hotspot" "cipher" "ok" "CCMP"
+    fi
+
+    # nginx default_server check — without it, captive portal is empty
+    local NGINX_SITES="/etc/nginx/sites-available"
+    if [ -d "$NGINX_SITES" ]; then
+        if grep -rq "default_server" "$NGINX_SITES" 2>/dev/null; then
+            print_success "nginx captive portal : default_server configuré"
+            json_add "hotspot" "captive_portal" "ok" "default_server"
+        else
+            print_warning "nginx : pas de default_server — captive portal peut être vide"
+            json_add "hotspot" "captive_portal" "warn" "pas de default_server"
+            TOTAL_WARNINGS=$((TOTAL_WARNINGS + 1))
+        fi
+    fi
+}
+
 check_systemd_services_installed() {
     # Services systemd qui devraient être installés (au minimum)
     local EXPECTED_SERVICES=(
@@ -606,6 +642,10 @@ check_service "avahi-daemon" || SERVICES_OK=false
 # 3. Services systemd (installés)
 print_section "3. Services systemd (installation)"
 check_systemd_services_installed
+
+# 3b. Configuration hotspot (TKIP, captive portal)
+print_section "3b. Configuration hotspot WiFi"
+check_hotspot_config
 
 # 4. Masquage curseur TV
 print_section "4. Masquage curseur TV"

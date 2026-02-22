@@ -2220,6 +2220,33 @@ sudo systemctl restart hostapd
 sudo systemctl restart dnsmasq
 ```
 
+### 3c. "Mauvais mot de passe" malgré le bon mot de passe (TKIP)
+
+**Symptômes :**
+
+- Le SSID `NEOPRO-XXX` est visible mais la connexion échoue
+- Le téléphone affiche "Mot de passe incorrect" alors que c'est le bon
+- Principalement sur Android 12+ et iOS 16+
+
+**Cause :** Le fichier `hostapd.conf` utilise `wpa_pairwise=TKIP` (cipher déprécié). Les téléphones modernes rejettent TKIP silencieusement et affichent "mauvais mot de passe" au lieu de "cipher non supporté".
+
+**Diagnostic :**
+
+```bash
+grep wpa_pairwise /etc/hostapd/hostapd.conf
+# Si TKIP → c'est le problème
+```
+
+**Correction :**
+
+```bash
+# Remplacer TKIP par CCMP (AES)
+sudo sed -i 's/wpa_pairwise=TKIP/wpa_pairwise=CCMP/' /etc/hostapd/hostapd.conf
+sudo systemctl restart hostapd
+```
+
+**Note (v3.69+) :** Le `hotspot-optimizer.sh` corrige automatiquement TKIP → CCMP au boot. Le prochain OTA déploiera ce fix sur toute la flotte.
+
 ### 3b. Clé WiFi USB non détectée (pas de wlan1)
 
 **Symptômes :**
@@ -2344,8 +2371,9 @@ Dans l'onglet Debug d'un site, la section "Hotspot WiFi" affiche :
 **Causes fréquentes :**
 
 1. **Interférences sur le channel 6** - Dans un nouveau lieu (gymnase, salle des fêtes), beaucoup de réseaux WiFi peuvent utiliser le même canal
-2. **Alimentation insuffisante** - Le Pi est branché sur un port USB de TV ou hub non alimenté (voltage < 5V)
-3. **Distance/obstacles** - Le WiFi 2.4GHz a une portée limitée (~10-15m), les murs épais ou structures métalliques bloquent le signal
+2. **Scan WiFi sur l'interface AP (corrigé v3.69+)** - Le `hotspot-optimizer.sh` faisait `iwlist wlan0 scan` alors que wlan0 est l'interface AP, causant la sortie temporaire du mode AP et la disparition du SSID pendant 10-15 min. Le scan se fait maintenant sur wlan1
+3. **Alimentation insuffisante** - Le Pi est branché sur un port USB de TV ou hub non alimenté (voltage < 5V)
+4. **Distance/obstacles** - Le WiFi 2.4GHz a une portée limitée (~10-15m), les murs épais ou structures métalliques bloquent le signal
 
 **Solution automatique au boot (v2.28+) :**
 
@@ -2971,7 +2999,7 @@ En cas de problème, il tente une récupération automatique (max 3 tentatives, 
 
 ### Auto-optimisation canal WiFi (v3.61+)
 
-Le sync-agent optimise automatiquement le canal du hotspot au boot (30s après démarrage) et toutes les heures. Il scanne les réseaux WiFi visibles et bascule vers le canal le moins congestionné (1, 6 ou 11).
+Le `hotspot-optimizer.sh` optimise automatiquement le canal du hotspot au boot. Il scanne les réseaux WiFi visibles via wlan1 (sans perturber l'AP sur wlan0) et bascule vers le canal le moins congestionné (1, 6 ou 11). Depuis v3.69, il corrige aussi automatiquement TKIP → CCMP si détecté.
 
 **Seuils :** Congestion ≥ 5 réseaux sur le canal actuel, amélioration ≥ 3 réseaux vs meilleur canal.
 
@@ -2984,8 +3012,8 @@ journalctl -u neopro-sync-agent --since "1 hour ago" | grep -i "hotspot channel"
 # Canal actuel
 grep "^channel=" /etc/hostapd/hostapd.conf
 
-# Scan des réseaux par canal
-sudo iwlist wlan0 scan 2>/dev/null | grep "Channel:" | sort | uniq -c | sort -rn
+# Scan des réseaux par canal (utiliser wlan1, PAS wlan0 qui est l'AP !)
+sudo iwlist wlan1 scan 2>/dev/null | grep "Channel:" | sort | uniq -c | sort -rn
 ```
 
 ### Commandes utiles

@@ -171,6 +171,8 @@
 | IMP-PI-25 | Overlays LED : score bandeau compact + goal flash couleur par équipe    | Livré      | `tv.component.html`, `tv.component.scss`                     | Fév 2026     |
 | IMP-PI-26 | Socket.IO `tv-register` avec `displayType` (master-slave par écran)     | Livré      | `state.service.js`, `handlers.js`                            | Fév 2026     |
 | IMP-PI-27 | Kiosk : attente active X11 avant lancement Chromium (xdpyinfo polling)  | Production | `kiosk-watchdog.sh`, `neopro-kiosk.service`                  | Fév 2026     |
+| IMP-PI-28 | Hotspot : scan WiFi sur wlan1 (plus wlan0 AP) — corrige SSID invisible  | Production | `hotspot-optimizer.sh`                                       | Fév 2026     |
+| IMP-PI-29 | Hotspot : auto-fix TKIP→CCMP au boot via optimizer (propagation OTA)    | Production | `hotspot-optimizer.sh`                                       | Fév 2026     |
 
 ---
 
@@ -196,6 +198,7 @@
 | IMP-NET-16 | Socket local persistant sync-agent (remplace éphémère)                       | Production | `sync-agent/socket.js`        | 2026             |
 | IMP-NET-17 | Configuration WiFi client à distance depuis dashboard central                | Production | `sites.controller.ts`         | 2026             |
 | IMP-NET-18 | Détection WiFi USB au boot + watchdog surveillance                           | Production | `wifi-usb-stabilize.sh`       | Fév 2026         |
+| IMP-NET-19 | Captive portal nginx default_server — corrige captive portal vide            | Production | `nginx-captive-portal.conf`   | Fév 2026         |
 
 ---
 
@@ -336,18 +339,18 @@
 
 ## Statistiques Produit
 
-| Métrique                  | Valeur                                                                        |
-| ------------------------- | ----------------------------------------------------------------------------- |
-| **Features implémentées** | **220** (+26 audit, +8 E-22 TV+LED dual, +6 sponsor UX, +2 résilience Pi/OTA) |
-| Domaines fonctionnels     | 14                                                                            |
-| Controllers API           | 29 (+sponsor-alerts)                                                          |
-| Services métier           | 40 (+sponsor-alert, sponsor-stats, sponsor-auto-resolution)                   |
-| Repositories              | 25 (+video-variant)                                                           |
-| Migrations DB             | 54 (+add-led-support-and-video-variants)                                      |
-| Modules dashboard         | 21 (+advertiser-health, analytics-categories)                                 |
-| Services Raspberry        | 19 (+sponsor-stats)                                                           |
-| Versions publiées         | 265+ (v2.1 → v3.62)                                                           |
-| Tests (total)             | 2 386 (1590 API + 506 Angular + 148 Admin + 71 Socket + 142 Smoke)            |
+| Métrique                  | Valeur                                                                                         |
+| ------------------------- | ---------------------------------------------------------------------------------------------- |
+| **Features implémentées** | **223** (+26 audit, +8 E-22 TV+LED dual, +6 sponsor UX, +2 résilience Pi/OTA, +3 hotspot WiFi) |
+| Domaines fonctionnels     | 14                                                                                             |
+| Controllers API           | 29 (+sponsor-alerts)                                                                           |
+| Services métier           | 40 (+sponsor-alert, sponsor-stats, sponsor-auto-resolution)                                    |
+| Repositories              | 25 (+video-variant)                                                                            |
+| Migrations DB             | 54 (+add-led-support-and-video-variants)                                                       |
+| Modules dashboard         | 21 (+advertiser-health, analytics-categories)                                                  |
+| Services Raspberry        | 19 (+sponsor-stats)                                                                            |
+| Versions publiées         | 265+ (v2.1 → v3.62)                                                                            |
+| Tests (total)             | 2 386 (1590 API + 506 Angular + 148 Admin + 71 Socket + 142 Smoke)                             |
 
 ---
 

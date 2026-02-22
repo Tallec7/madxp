@@ -41,6 +41,21 @@
 - **alerts:** nouvelles alertes `fs_ext4_errors` (warning/critical) et `fs_readonly` (critical) automatiques
 - **diagnostic:** `check_node_modules` vérifie les dépendances critiques par composant (détecte corruption post-crash)
 
+### Hotspot WiFi
+
+- **wifi:** correction cipher WPA2 TKIP → CCMP dans hostapd.conf template et prepare-image.sh
+  Les téléphones modernes (Android 12+, iOS 16+) rejettent TKIP et affichent "mauvais mot de passe"
+  au lieu de négocier un cipher. Migré vers CCMP (AES) uniquement.
+- **wifi:** auto-fix TKIP → CCMP dans `hotspot-optimizer.sh` — propagation à toute la flotte via OTA
+  Au prochain OTA, le boot de chaque Pi corrigera automatiquement `wpa_pairwise=TKIP` sans intervention.
+- **wifi:** scan WiFi sur wlan1 au lieu de wlan0 dans `hotspot-optimizer.sh`
+  Le scan `iwlist` sur l'interface AP (wlan0) sortait temporairement du mode AP, causant la disparition
+  du SSID pendant 10-15 minutes (hostapd crash + 3 cycles de recovery watchdog). Le scan se fait
+  maintenant sur wlan1 (clé USB WiFi client), sans perturber le hotspot.
+- **wifi:** nginx captive portal `default_server` — corrige le captive portal vide sur les téléphones
+  Les requêtes de connectivity check (Host: connectivitycheck.gstatic.com) ne matchaient pas le
+  `server_name neopro.local 192.168.4.1`. Nginx est maintenant catch-all (`server_name _`).
+
 ## [3.68.8](https://github.com/Tallec7/neopro/compare/v3.68.7...v3.68.8) (2026-02-22)
 
 ### Bug Fixes

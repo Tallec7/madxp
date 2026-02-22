@@ -73,8 +73,8 @@ Si une feature est **complète et déployable**, ajouter une ligne dans le bon d
 | Déploiement & OTA               | IMP-DEP- | 13         |
 | Monétisation & Sponsors         | IMP-MON- | 14         |
 | Analytics & Reporting           | IMP-ANA- | 18         |
-| Raspberry Pi (Edge)             | IMP-PI-  | 27         |
-| Résilience Réseau & Sync        | IMP-NET- | 17         |
+| Raspberry Pi (Edge)             | IMP-PI-  | 29         |
+| Résilience Réseau & Sync        | IMP-NET- | 19         |
 | Monitoring & Alertes            | IMP-ALR- | 22         |
 | Administration & Infrastructure | IMP-ADM- | 22         |
 | Playlists & Programmation       | IMP-PLS- | 03         |
