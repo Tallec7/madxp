@@ -271,6 +271,18 @@ type TabId = 'status' | 'content' | 'settings' | 'profiles' | 'sponsors' | 'subs
                     <div class="metric-fill" [style.width.%]="fanStatus?.speedPercent ?? 0"></div>
                   </div>
                 </div>
+
+                <div class="metric" [class.warning]="!hotspotActive" *ngIf="hotspotSsid">
+                  <div class="metric-icon">📡</div>
+                  <div class="metric-info">
+                    <div class="metric-label">Hotspot</div>
+                    <div class="metric-value">{{ hotspotActive ? hotspotSsid : 'Inactif' }}</div>
+                  </div>
+                  <div class="metric-details" *ngIf="hotspotActive">
+                    <span class="metric-detail">Ch. {{ hotspotChannel || '?' }}</span>
+                    <span class="metric-detail" *ngIf="hotspotClients > 0">{{ hotspotClients }} client{{ hotspotClients > 1 ? 's' : '' }}</span>
+                  </div>
+                </div>
               </div>
               <ng-template #noMetrics>
                 <p class="no-data">Aucune métrique disponible</p>
@@ -312,6 +324,14 @@ type TabId = 'status' | 'content' | 'settings' | 'profiles' | 'sponsors' | 'subs
                 <div class="action-content">
                   <div class="action-title">Infos système</div>
                   <div class="action-desc">{{ isConnected ? 'Détails matériel' : '⚡ Temps réel requis' }}</div>
+                </div>
+              </button>
+
+              <button class="action-card" (click)="restartHotspot()" [disabled]="sendingCommand" *ngIf="hotspotSsid">
+                <span class="action-icon">📡</span>
+                <div class="action-content">
+                  <div class="action-title">Relancer Hotspot</div>
+                  <div class="action-desc">{{ isConnected ? 'Redémarre hostapd + dnsmasq' : ('debug.queued' | translate) }}</div>
                 </div>
               </button>
 
@@ -946,6 +966,20 @@ type TabId = 'status' | 'content' | 'settings' | 'profiles' | 'sponsors' | 'subs
       background: #f59e0b;
     }
 
+    .metric-details {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+    }
+
+    .metric-detail {
+      font-size: 0.75rem;
+      color: #64748b;
+      background: #f1f5f9;
+      padding: 0.125rem 0.5rem;
+      border-radius: 4px;
+    }
+
     .uptime-metric .metric-info {
       flex: 1;
     }
@@ -1393,6 +1427,12 @@ export class SiteDetailComponent implements OnInit, OnDestroy {
   // Fan status
   fanStatus: FanStatus | null = null;
 
+  // Hotspot status (from local_config_mirror)
+  hotspotSsid: string | null = null;
+  hotspotChannel: number | null = null;
+  hotspotClients: number = 0;
+  hotspotActive: boolean = false;
+
   // Connection
   connectionStatus: SiteConnectionStatus | null = null;
   isConnected = false;
@@ -1454,6 +1494,7 @@ export class SiteDetailComponent implements OnInit, OnDestroy {
     this.sitesService.getSite(this.siteId).subscribe({
       next: (site) => {
         this.site = site;
+        this.updateHotspotStatus(site);
         this.loadMatchHistory();
       },
       error: (error) => {
@@ -1657,6 +1698,43 @@ export class SiteDetailComponent implements OnInit, OnDestroy {
           this.notificationService.success(
             response.queued ? '📥 Commande mise en file d\'attente' : 'Commande envoyée !'
           );
+        },
+        error: (error) => {
+          this.sendingCommand = false;
+          const message = ErrorExtractor.getMessage(error);
+          this.notificationService.error(`Erreur: ${message}`);
+        }
+      });
+    }
+  }
+
+  private updateHotspotStatus(site: Site): void {
+    const info = site.local_config_mirror?._hotspotInfo;
+    if (info) {
+      this.hotspotSsid = info.ssid || null;
+      this.hotspotChannel = info.channel || null;
+      this.hotspotClients = info.clients || 0;
+      this.hotspotActive = info.isActive || false;
+    } else {
+      const ssid = site.local_config_mirror?._hotspotSsid;
+      if (ssid) {
+        this.hotspotSsid = ssid;
+        this.hotspotActive = true;
+      }
+    }
+  }
+
+  restartHotspot(): void {
+    if (confirm('Redémarrer le hotspot WiFi (hostapd + dnsmasq) ?')) {
+      this.sendingCommand = true;
+      this.sitesService.fixHotspot(this.siteId, true).subscribe({
+        next: (result) => {
+          this.sendingCommand = false;
+          if (result.success) {
+            this.notificationService.success('Hotspot redémarré avec succès');
+          } else {
+            this.notificationService.warning('Des problèmes ont été détectés, consultez l\'onglet Debug pour plus de détails');
+          }
         },
         error: (error) => {
           this.sendingCommand = false;
