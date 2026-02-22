@@ -1,3 +1,9 @@
+# [3.71.0](https://github.com/Tallec7/neopro/compare/v3.70.0...v3.71.0) (2026-02-22)
+
+### Features
+
+- **resilience:** add DB circuit breaker to prevent pool death-spiral ([93d5051](https://github.com/Tallec7/neopro/commit/93d505180810cc70193d9708f553af262b3b4f8c))
+
 # [3.71.0] (2026-02-22)
 
 ### Features
