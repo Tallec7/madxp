@@ -1,3 +1,9 @@
+## [3.69.1](https://github.com/Tallec7/neopro/compare/v3.69.0...v3.69.1) (2026-02-22)
+
+### Bug Fixes
+
+- **pi:** OTA node_modules integrity check + kiosk X11 readiness wait ([49bb49a](https://github.com/Tallec7/neopro/commit/49bb49a600f10b073013313001582289b00bb274))
+
 # [3.69.0](https://github.com/Tallec7/neopro/compare/v3.68.8...v3.69.0) (2026-02-22)
 
 ### Features
