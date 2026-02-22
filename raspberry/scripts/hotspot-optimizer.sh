@@ -26,6 +26,12 @@ SCAN_INTERFACE=""
 # Threshold: if current channel has more than this many networks, consider switching
 CONGESTION_THRESHOLD=3
 
+# Hotspot TX power (dBm). Default 31 dBm is too strong for a 2-3m remote control use case.
+# Reducing to 15 dBm minimizes 2.4GHz self-interference with wlan1 and neighboring networks.
+# Override via /home/pi/neopro/config/hotspot-txpower.conf (single line: e.g. "20")
+HOTSPOT_TXPOWER=15
+TXPOWER_CONF="/home/pi/neopro/config/hotspot-txpower.conf"
+
 # Detect the best interface for WiFi scanning (NOT the AP interface)
 detect_scan_interface() {
     # Prefer wlan1 (USB WiFi dongle, used as client for internet)
@@ -302,8 +308,41 @@ main() {
         fi
     fi
 
+    # Apply TX power reduction to minimize self-interference
+    apply_txpower
+
     log "Hotspot optimizer completed"
     log "=========================================="
+}
+
+# Apply configured TX power to hotspot interface
+# Reduces 2.4GHz interference with wlan1 and neighbors without affecting
+# remote control range (staff connect from 2-3m away)
+apply_txpower() {
+    # Read override from config file if it exists
+    if [ -f "$TXPOWER_CONF" ]; then
+        local custom_power
+        custom_power=$(head -1 "$TXPOWER_CONF" 2>/dev/null | tr -d '[:space:]')
+        if [[ "$custom_power" =~ ^[0-9]+$ ]] && [ "$custom_power" -ge 1 ] && [ "$custom_power" -le 31 ]; then
+            HOTSPOT_TXPOWER=$custom_power
+            log "TX power override from config: ${HOTSPOT_TXPOWER} dBm"
+        fi
+    fi
+
+    # Get current TX power
+    local current_power
+    current_power=$(iw dev "$WIFI_INTERFACE" info 2>/dev/null | grep -oP 'txpower \K[0-9.]+' | cut -d. -f1)
+
+    if [ -n "$current_power" ] && [ "$current_power" -ne "$HOTSPOT_TXPOWER" ] 2>/dev/null; then
+        log "Reducing hotspot TX power: ${current_power} dBm → ${HOTSPOT_TXPOWER} dBm"
+        if iw dev "$WIFI_INTERFACE" set txpower fixed "${HOTSPOT_TXPOWER}00" 2>/dev/null; then
+            log "TX power set to ${HOTSPOT_TXPOWER} dBm"
+        else
+            log "WARNING: Failed to set TX power (interface may not support it)"
+        fi
+    elif [ -n "$current_power" ]; then
+        log "TX power already at ${HOTSPOT_TXPOWER} dBm"
+    fi
 }
 
 main "$@"

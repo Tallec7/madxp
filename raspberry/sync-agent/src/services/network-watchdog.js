@@ -321,6 +321,55 @@ async function checkInternetHealth() {
 }
 
 // =============================================================================
+// CAPTIVE PORTAL DETECTION
+// =============================================================================
+
+/**
+ * Detect captive portals by checking HTTP connectivity check endpoints.
+ * If WiFi is connected and DNS resolves but HTTP returns a redirect (302) or
+ * unexpected content, a captive portal is likely intercepting traffic.
+ * This prevents the watchdog from cycling through useless recovery phases.
+ */
+async function detectCaptivePortal() {
+  try {
+    // Only check if wlan1 has an IP (WiFi connected but internet blocked)
+    const ip = await getInternetIp();
+    if (!ip) {
+      return { detected: false };
+    }
+
+    // Standard captive portal detection (same method as Android/iOS)
+    const { stdout } = await execAsync(
+      'curl -s -o /dev/null -w "%{http_code}:%{redirect_url}" --max-time 5 --connect-timeout 3 http://connectivitycheck.gstatic.com/generate_204',
+      { timeout: 10000 }
+    );
+
+    const [httpCode, redirectUrl] = stdout.split(':');
+    const code = parseInt(httpCode, 10);
+
+    // 204 = no captive portal (direct internet access)
+    if (code === 204) {
+      return { detected: false };
+    }
+
+    // 302/301/307 = redirect to captive portal login page
+    // 200 = captive portal injecting its own page instead of 204
+    if (code === 302 || code === 301 || code === 307 || code === 200) {
+      logger.warn('NetworkWatchdog: Captive portal detected', {
+        httpCode: code,
+        redirectUrl: redirectUrl || 'N/A',
+      });
+      return { detected: true, redirectUrl: redirectUrl || null };
+    }
+
+    return { detected: false };
+  } catch {
+    // curl failed (DNS failure, timeout) — not a captive portal, just no connectivity
+    return { detected: false };
+  }
+}
+
+// =============================================================================
 // CHECKS CLOUD (Socket.IO)
 // =============================================================================
 
@@ -993,6 +1042,27 @@ async function internetWatchLoop() {
         return;
       }
 
+      // Check for captive portal before entering recovery phases
+      // A captive portal means WiFi is connected + DNS works but HTTP is redirected
+      // Recovery phases won't help — alert the operator instead
+      const captivePortal = await detectCaptivePortal();
+      if (captivePortal.detected) {
+        logger.warn('NetworkWatchdog: Captive portal detected — recovery skipped', {
+          redirectUrl: captivePortal.redirectUrl,
+        });
+        if (socketRef && socketRef.connected) {
+          socketRef.emit('network_alert', {
+            siteId: config.site.id,
+            type: 'captive_portal_detected',
+            severity: 'warning',
+            message: 'Portail captif détecté. Le Pi ne peut pas se connecter automatiquement. Solutions : whitelist MAC, Ethernet ou CPL.',
+            redirectUrl: captivePortal.redirectUrl,
+            timestamp: new Date().toISOString(),
+          });
+        }
+        return;
+      }
+
       // Track when the outage started (first failure detection)
       if (!state.internet.recoveryStartedAt) {
         state.internet.recoveryStartedAt = Date.now();
@@ -1177,6 +1247,7 @@ module.exports = {
   // Checks
   checkHotspotHealth,
   checkInternetHealth,
+  detectCaptivePortal,
 
   // Recovery
   attemptHotspotRecovery,

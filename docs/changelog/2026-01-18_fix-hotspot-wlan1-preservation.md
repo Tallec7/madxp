@@ -77,6 +77,8 @@ Le script `fix-hotspot.sh` **ne redémarre plus automatiquement hostapd** après
 
 ### UX Dashboard central
 
+> **v3.69+** : Le statut hotspot (SSID, canal, clients, état) est désormais visible directement dans l'onglet **État** avec une action rapide "Relancer Hotspot". L'onglet Debug conserve le diagnostic avancé avec changement de canal et modal de reboot.
+
 Dans l'onglet Debug > section "Hotspot WiFi" :
 
 1. Cliquer "Réparer automatiquement"

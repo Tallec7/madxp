@@ -133,9 +133,56 @@ check_hotspot_ip() {
     fi
 }
 
+# Detect brcmfmac firmware crash (Broadcom WiFi chip on wlan0)
+# The onboard WiFi can crash with "brcmf_fw_crashed: Firmware has halted or crashed"
+# When this happens, hostapd may still appear "active" but the interface is dead.
+# Recovery requires reloading the kernel module.
+check_brcmfmac() {
+    # Check dmesg for recent firmware crash (last 5 minutes = 300 seconds)
+    local crash_count
+    crash_count=$(dmesg --time-format iso 2>/dev/null | tail -200 | grep -c "brcmf_fw_crashed" || echo "0")
+
+    if [[ "$crash_count" -gt 0 ]]; then
+        return 1
+    fi
+    return 0
+}
+
+# Recover from brcmfmac firmware crash by reloading the kernel module
+recover_brcmfmac() {
+    log_warn "brcmfmac firmware crash detected — reloading driver"
+
+    # Unload the driver
+    sudo modprobe -r brcmfmac 2>/dev/null || true
+    sleep 3
+
+    # Reload the driver
+    sudo modprobe brcmfmac 2>/dev/null || {
+        log_error "Failed to reload brcmfmac driver"
+        return 1
+    }
+    sleep 5
+
+    # Verify wlan0 reappeared
+    if ip link show "$WIFI_INTERFACE" &>/dev/null; then
+        log_success "brcmfmac driver reloaded, $WIFI_INTERFACE recovered"
+        # Disable power management after reload
+        sudo iwconfig "$WIFI_INTERFACE" power off 2>/dev/null || true
+        return 0
+    else
+        log_error "$WIFI_INTERFACE did not reappear after brcmfmac reload"
+        return 1
+    fi
+}
+
 # Check complet de la santé du hotspot
 check_hotspot_health() {
     local issues=()
+
+    # Check for brcmfmac firmware crash first (takes priority)
+    if ! check_brcmfmac; then
+        issues+=("brcmfmac firmware crash")
+    fi
 
     if ! check_rfkill; then
         issues+=("WiFi bloqué par rfkill")
@@ -200,6 +247,16 @@ attempt_recovery() {
     LAST_RECOVERY_TIME=$(date +%s)
 
     log_warn "Tentative de récupération #$RECOVERY_ATTEMPTS/$MAX_RECOVERY_ATTEMPTS"
+
+    # Étape 0: Check brcmfmac firmware crash (must be fixed first)
+    if ! check_brcmfmac; then
+        log_warn "Étape 0/6: Récupération crash firmware brcmfmac..."
+        recover_brcmfmac || {
+            log_error "Récupération brcmfmac échouée"
+            return 1
+        }
+        sleep 2
+    fi
 
     # Étape 1: Débloquer rfkill
     log_info "Étape 1/6: Déblocage rfkill..."

@@ -51,6 +51,8 @@ interface SiteMetrics {
   previousTemperature: number | null;
   hotspotRestarts24h: number;
   subscriptionEnd: Date | null;
+  networkProfileType: string | null;
+  networkStabilityScore: number | null;
 }
 
 class PredictiveAlertsService {
@@ -239,7 +241,9 @@ class PredictiveAlertsService {
         lm.temperature as current_temperature,
         pm.temperature as previous_temperature,
         COALESCE(hrc.count, 0)::int as hotspot_restarts_24h,
-        s.subscription_end
+        s.subscription_end,
+        s.local_config_mirror->'_networkProfile'->>'type' as network_profile_type,
+        (s.local_config_mirror->'_networkProfile'->>'stabilityScore')::int as network_stability_score
       FROM sites s
       LEFT JOIN last_metrics lm ON lm.site_id = s.id
       LEFT JOIN previous_metrics pm ON pm.site_id = s.id
@@ -264,6 +268,8 @@ class PredictiveAlertsService {
       previousTemperature: row.previous_temperature as number | null,
       hotspotRestarts24h: row.hotspot_restarts_24h as number,
       subscriptionEnd: row.subscription_end ? new Date(row.subscription_end as string) : null,
+      networkProfileType: (row.network_profile_type as string) || null,
+      networkStabilityScore: row.network_stability_score as number | null,
     }));
   }
 
@@ -333,6 +339,23 @@ class PredictiveAlertsService {
         await alertingService.evaluateMetric(site.siteId, 'days_until_subscription_end', daysUntilEnd);
         alertCount++;
       }
+    }
+
+    // 10. Site mesh/mesh_isolated sans Ethernet — recommander câble Ethernet
+    if (
+      site.networkProfileType &&
+      (site.networkProfileType === 'mesh' || site.networkProfileType === 'mesh_isolated') &&
+      site.networkStabilityScore !== null &&
+      site.networkStabilityScore < 60
+    ) {
+      await alertingService.evaluateMetric(site.siteId, 'mesh_without_ethernet', 1);
+      alertCount++;
+      logger.info('[PredictiveAlerts] Mesh site with low stability — Ethernet recommended', {
+        siteId: site.siteId,
+        siteName: site.siteName,
+        profileType: site.networkProfileType,
+        stabilityScore: site.networkStabilityScore,
+      });
     }
 
     return alertCount;

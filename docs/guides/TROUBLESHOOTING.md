@@ -2384,6 +2384,17 @@ Depuis la version 2.28, le Pi **optimise automatiquement le canal WiFi au démar
 - Si le canal actuel a >= 3 réseaux voisins, switch vers le canal le moins encombré
 - Redémarre hostapd pour appliquer le nouveau canal
 - Log dans `/var/log/neopro-hotspot-optimizer.log`
+- Réduction TX power automatique (v3.69+) : 15 dBm par défaut (au lieu de 31 dBm) pour minimiser les interférences avec wlan1
+
+**Configurer le TX power (v3.69+) :**
+
+```bash
+# Voir la puissance actuelle
+iw dev wlan0 info | grep txpower
+
+# Override la valeur par défaut (15 dBm) — créer le fichier avec la valeur en dBm (1-31)
+echo "20" | sudo tee /home/pi/neopro/config/hotspot-txpower.conf
+```
 
 **Vérifier si l'optimizer a changé le canal :**
 
@@ -2959,6 +2970,7 @@ Depuis la v3.36, le NetworkWatchdog (intégré au sync-agent) démarre **dès le
 - **Démarrage au boot** : le watchdog n'attend plus l'authentification cloud pour démarrer
 - **Pas de process.exit** : le sync-agent ne se tue plus après 10 échecs de connexion — il attend 30s puis retente, laissant le watchdog actif
 - **6 phases de recovery** pour wlan1 : reconfigure → interface down/up → systemctl restart → modprobe driver → USB power-cycle
+- **Détection portail captif** (v3.69+) : avant toute recovery, vérifie si le réseau a un portail captif (`connectivitycheck.gstatic.com/generate_204`). Si portail détecté, skip la recovery et alerte l'opérateur
 
 ### Vérifier que le watchdog tourne
 
@@ -2988,13 +3000,28 @@ Depuis la version 2.34, un service de surveillance du hotspot est actif par déf
 
 Le watchdog vérifie toutes les 30 secondes :
 
+- **brcmfmac firmware** (v3.69+) — crash silencieux du chip Broadcom (dmesg `brcmf_fw_crashed`)
 - hostapd actif
 - wlan0 en mode AP
 - dnsmasq actif
+- nginx actif (captive portal + webapp)
+- avahi-daemon actif (résolution mDNS neopro.local)
 - WiFi non bloqué par rfkill
 - IP 192.168.4.1 configurée
 
 En cas de problème, il tente une récupération automatique (max 3 tentatives, cooldown 5 min).
+
+**Séquence de recovery (v3.69+) :**
+
+| Étape | Action                                                            |
+| ----- | ----------------------------------------------------------------- |
+| 0     | Recovery brcmfmac (`modprobe -r` / `modprobe`) si firmware crashé |
+| 1     | Déblocage rfkill                                                  |
+| 2     | Configuration IP statique 192.168.4.1                             |
+| 3     | Redémarrage hostapd                                               |
+| 4     | Redémarrage dnsmasq                                               |
+| 5     | Redémarrage nginx                                                 |
+| 6     | Redémarrage avahi-daemon                                          |
 
 **Installation :** Depuis la v3.7.14, `install.sh` enregistre automatiquement le service `neopro-hotspot-watchdog` ainsi que `neopro-sync-guardian` et `neopro-hotspot-optimizer`. Pour les Pi installés avant cette version, utiliser `fix-fleet-pi.sh` pour installer les services manquants.
 

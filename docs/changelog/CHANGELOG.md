@@ -84,7 +84,17 @@
 
 ### Features
 
+- **dashboard:** hotspot WiFi visible dans l'onglet État (carte métrique SSID/canal/clients + action rapide "Relancer Hotspot") ([e1cfd2b](https://github.com/Tallec7/neopro/commit/e1cfd2b))
+- **dashboard:** carte profil réseau dans l'onglet État (type mesh/ethernet/simple, score stabilité, nombre d'AP)
 - **pi:** dedup OTA + SD card protection + filesystem monitoring ([a9025a0](https://github.com/Tallec7/neopro/commit/a9025a0f8383484b9a272e9c48d0b55a646e0115))
+- **pi:** détection crash firmware brcmfmac dans hotspot-watchdog (dmesg + modprobe recovery)
+- **pi:** détection portail captif dans network-watchdog (skip recovery si portail réseau)
+- **pi:** réduction TX power hotspot configurable (15 dBm par défaut, override via config)
+
+### Monitoring
+
+- **alerts:** nouveau seuil prédictif `mesh_without_ethernet` — alerte si site mesh avec stabilité < 60%
+- **alerts:** détection portail captif reportée au central via `network_alert` (type `captive_portal_detected`)
 
 ## [3.69.0] (2026-02-22)
 

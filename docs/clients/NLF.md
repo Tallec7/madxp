@@ -375,6 +375,26 @@ grep neopro /etc/dnsmasq.conf
 
 ---
 
+## Nouveautés v3.69 — Résilience réseau renforcée
+
+Features spécifiquement motivées par les problèmes récurrents du NLF :
+
+| Feature                       | Impact NLF                                         | Détail                                |
+| ----------------------------- | -------------------------------------------------- | ------------------------------------- |
+| **Carte profil réseau**       | Dashboard → État affiche "Mesh" + stabilité + 3 AP | Visibilité immédiate de l'état réseau |
+| **Alerte mesh sans Ethernet** | Alerte proactive si stabilité < 60%                | Recommande câble Ethernet             |
+| **Détection portail captif**  | Skip recovery inutile si portail réseau            | Évite les cascades de reconfigure     |
+| **TX power 15 dBm**           | Réduit interférences hotspot ↔ wlan1               | Suffisant pour 2-3m (télécommande)    |
+| **Recovery crash brcmfmac**   | Recharge driver automatiquement                    | Plus besoin de reboot manuel          |
+
+**Configuration TX power NLF** : si 15 dBm s'avère insuffisant dans le gymnase, override via :
+
+```bash
+echo "20" | sudo tee /home/pi/neopro/config/hotspot-txpower.conf
+```
+
+---
+
 ## Notes diverses
 
 _(Ajouter ici toute information utile découverte au fil du temps)_
@@ -656,4 +676,4 @@ En Transaction Mode, les connexions PgBouncer sont partagées par transaction (p
 
 ---
 
-**Dernière mise à jour :** 19 février 2026 (Diagnostic "Connexion instable" Ethernet — cause racine Supabase Session Mode, fix Transaction Mode)
+**Dernière mise à jour :** 22 février 2026 (Résilience réseau v3.69 — profil réseau, alerte mesh, portail captif, TX power, brcmfmac recovery)
