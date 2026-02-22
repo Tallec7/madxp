@@ -281,8 +281,9 @@ class OrchestratedDeploymentService {
 
     metricsService.recordSponsorSync('included', siteSponsors.length);
 
-    // Synchroniser les associations sponsor-vidéo depuis la config vers site_sponsor_videos
-    await this.syncSponsorVideoAssociations(siteId, configuration);
+    // Synchroniser les associations sponsor-vidéo depuis la config enrichie vers site_sponsor_videos
+    // (utilise enrichedConfig car l'auto-résolution vient d'y injecter les site_sponsor_id)
+    await this.syncSponsorVideoAssociations(siteId, enrichedConfig);
 
     await commandQueueService.queueCommand(
       siteId,

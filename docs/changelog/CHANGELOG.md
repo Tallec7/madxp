@@ -1,3 +1,20 @@
+## [3.69.4] (2026-02-22)
+
+### Bug Fixes
+
+- **sponsors:** impressions boucle invisible — les vidéos ajoutées à la boucle par l'admin Pi
+  manquaient `analytics_category: 'sponsor'`. Le `detectCategory()` tombait en fallback path-based,
+  catégorisait en `'other'`, et la query `listBySite` filtrant sur `category = 'sponsor'` les ignorait.
+  Le dashboard affichait 0 impressions pour les vidéos jouées en boucle.
+- **deployment:** `syncSponsorVideoAssociations()` utilisait la config originale au lieu de la config
+  enrichie par `autoResolveSponsorIds()` — les `site_sponsor_id` fraîchement résolus n'étaient pas
+  synchronisés dans `site_sponsor_videos`.
+
+### Tests
+
+- **smoke:** test "Sponsor loop entries must include analytics_category" — vérifie que `_rebuildLoopEntries`
+  inclut `analytics_category: 'sponsor'` pour éviter une régression silencieuse du tracking.
+
 ## [3.69.3](https://github.com/Tallec7/neopro/compare/v3.69.2...v3.69.3) (2026-02-22)
 
 ### Bug Fixes

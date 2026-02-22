@@ -680,6 +680,37 @@ WHERE category = 'sponsor' AND site_id = '<site_uuid>';
 
 **Résolution long terme** : Redéployer la config des sites pour que l'auto-résolution injecte `site_sponsor_id` dans la config Pi. Les futures impressions auront directement le `site_sponsor_id` renseigné.
 
+### Problème: Impressions boucle locale invisibles (v3.69.4)
+
+**Cause** : Les vidéos ajoutées à la boucle par l'admin Pi (`sponsor.service.js` → `_rebuildLoopEntries`) ne recevaient pas `analytics_category: 'sponsor'`. Le `detectCategory()` sur le Pi tombait en fallback path-based (ex: `07_A_L_AFFUT.mp4` ne contient ni "sponsor" ni "partenaire") → catégorisait en `'other'`. La query `listBySite` filtre sur `category = 'sponsor'` → impressions invisibles.
+
+En parallèle, `syncSponsorVideoAssociations()` dans le service de déploiement utilisait la config originale au lieu de la config enrichie par `autoResolveSponsorIds()`, empêchant la synchronisation des `site_sponsor_id` dans `site_sponsor_videos`.
+
+**Diagnostic** :
+
+```sql
+-- Vérifier les plays de boucle catégorisés 'other' au lieu de 'sponsor'
+SELECT category, COUNT(*)
+FROM video_plays
+WHERE site_id = '<site_uuid>'
+  AND trigger_type = 'auto'
+GROUP BY category;
+-- Si 'other' >> 'sponsor' → les loop entries manquent analytics_category
+```
+
+```bash
+# Vérifier la config locale du Pi
+cat ~/neopro/data/configuration.json | jq '.sponsors[] | {path, analytics_category, owner}'
+# Les entrées 'club' doivent avoir analytics_category: 'sponsor'
+```
+
+**Fix appliqué (v3.69.4)** :
+
+1. `_rebuildLoopEntries()` ajoute `analytics_category: 'sponsor'` + `name` + `type` aux entrées de boucle
+2. `syncSponsorVideoAssociations()` reçoit `enrichedConfig` (avec les `site_sponsor_id` résolus)
+
+**Backfill données historiques** : Les plays déjà enregistrés en `category='other'` restent non comptés. Un redéploiement de la config (qui réécrit les loop entries avec `analytics_category`) corrige le problème pour les futures impressions.
+
 ### Problème: Buffer grandit indéfiniment
 
 **Causes**:
@@ -740,6 +771,15 @@ WHERE category = 'sponsor' AND site_id = '<site_uuid>';
 ---
 
 ## 📝 Changelog
+
+### Version 2.2.0 - 22 Février 2026
+
+**Fix impressions boucle locale invisibles (v3.69.4)** :
+
+- ✅ `_rebuildLoopEntries()` (admin Pi) ajoute `analytics_category: 'sponsor'` aux entrées de boucle — les plays étaient catégorisés 'other' au lieu de 'sponsor'
+- ✅ `syncSponsorVideoAssociations()` reçoit la config enrichie par `autoResolveSponsorIds()` — les `site_sponsor_id` fraîchement résolus sont synchronisés dans `site_sponsor_videos`
+- ✅ Ajout `name` et `type: 'video/mp4'` aux entrées de boucle pour cohérence avec le format central
+- ✅ Smoke test de régression : vérifie que les loop entries incluent `analytics_category: 'sponsor'`
 
 ### Version 2.1.0 - 22 Février 2026
 
@@ -868,7 +908,7 @@ site_sponsor_id fourni et UUID valide ?
 ---
 
 **Auteur** : Claude Code + Équipe NEOPRO
-**Version** : 2.0.0
+**Version** : 2.2.0
 **Conformité** : 95% BP §13
-**Dernière mise à jour** : 21 Février 2026
+**Dernière mise à jour** : 22 Février 2026
 **Prochaine révision** : Tests terrain avec données réelles

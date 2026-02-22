@@ -1637,3 +1637,38 @@ describe('Cloud remote relay chain', () => {
     expect(remoteCtrl).toContain('io.sockets.adapter.rooms.get(siteId)');
   });
 });
+
+// =================================================================
+// Sponsor loop analytics wiring
+// =================================================================
+
+describe('Sponsor loop analytics category wiring', () => {
+  const sponsorService = fs.readFileSync(
+    path.resolve(__dirname, '../../../raspberry/admin/services/sponsor.service.js'),
+    'utf8'
+  );
+
+  const deploymentService = fs.readFileSync(
+    path.resolve(__dirname, '../services/orchestrated-deployment.service.ts'),
+    'utf8'
+  );
+
+  it('_rebuildLoopEntries sets analytics_category sponsor on loop entries', () => {
+    // Loop entries MUST have analytics_category: 'sponsor' otherwise detectCategory()
+    // on the Pi falls back to path-based detection and categorizes as 'other',
+    // making impressions invisible in listBySite (filters on category = 'sponsor')
+    expect(sponsorService).toContain("analytics_category: 'sponsor'");
+  });
+
+  it('_rebuildLoopEntries includes name and type for loop entries', () => {
+    // Loop entries need name and type for consistency with central-deployed entries
+    expect(sponsorService).toContain('name: sponsor.name');
+    expect(sponsorService).toContain("type: 'video/mp4'");
+  });
+
+  it('syncSponsorVideoAssociations receives enriched config (not original)', () => {
+    // Must use enrichedConfig (with auto-resolved site_sponsor_id) not the original config
+    // otherwise newly resolved videos won't be synced to site_sponsor_videos
+    expect(deploymentService).toContain('syncSponsorVideoAssociations(siteId, enrichedConfig)');
+  });
+});
