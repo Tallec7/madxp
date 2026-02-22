@@ -1,3 +1,10 @@
+# [3.70.0](https://github.com/Tallec7/neopro/compare/v3.69.5...v3.70.0) (2026-02-22)
+
+### Features
+
+- **dashboard:** add hotspot status and restart action to site status tab ([e1cfd2b](https://github.com/Tallec7/neopro/commit/e1cfd2b929a5701015eac42c766ae6b5dc4ffb8f))
+- **network:** add WiFi resilience features for site stability ([797734f](https://github.com/Tallec7/neopro/commit/797734f060aa4c900e4c268aba789212fb817f46))
+
 ## [3.69.5](https://github.com/Tallec7/neopro/compare/v3.69.4...v3.69.5) (2026-02-22)
 
 ### Bug Fixes
