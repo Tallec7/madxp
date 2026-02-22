@@ -8,6 +8,7 @@
 import { Server as SocketIOServer } from 'socket.io';
 import { query } from '../config/database';
 import logger from '../config/logger';
+import { dbCircuitBreaker } from './db-circuit-breaker.service';
 
 export interface RealtimeStats {
   timestamp: string;
@@ -93,15 +94,29 @@ class RealtimeStatsService {
       return;
     }
 
+    // Skip DB queries if circuit breaker is open — serve cached stats instead
+    if (!dbCircuitBreaker.isAvailable()) {
+      if (this.lastStats) {
+        this.io.to('admin-dashboard').emit('realtime-stats', this.lastStats);
+      }
+      return;
+    }
+
     try {
       const stats = await this.collectStats();
+      dbCircuitBreaker.recordSuccess();
       this.lastStats = stats;
 
       // Broadcast à tous les clients connectés au namespace admin
       this.io.to('admin-dashboard').emit('realtime-stats', stats);
 
     } catch (error) {
+      dbCircuitBreaker.recordFailure(error instanceof Error ? error : undefined);
       logger.error('Error broadcasting realtime stats:', error);
+      // Serve stale stats rather than nothing
+      if (this.lastStats) {
+        this.io.to('admin-dashboard').emit('realtime-stats', this.lastStats);
+      }
     }
   }
 

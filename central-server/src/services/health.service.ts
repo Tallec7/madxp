@@ -5,7 +5,7 @@
 
 import pool from '../config/database';
 import socketService from './socket.service';
-
+import { dbCircuitBreaker } from './db-circuit-breaker.service';
 
 export type HealthStatus = 'healthy' | 'degraded' | 'unhealthy';
 
@@ -127,6 +127,21 @@ class HealthService {
    */
   private async checkDatabase(): Promise<DependencyCheck> {
     const start = Date.now();
+    const cbStatus = dbCircuitBreaker.getStatus();
+
+    // If circuit breaker is OPEN, report degraded without hitting DB
+    if (cbStatus.state === 'OPEN') {
+      return {
+        name: 'PostgreSQL',
+        status: 'degraded',
+        latencyMs: 0,
+        message: 'Circuit breaker OPEN — background services paused',
+        details: {
+          circuitBreaker: cbStatus.state,
+          consecutiveFailures: cbStatus.consecutiveFailures,
+        },
+      };
+    }
 
     try {
       const result = await pool.query('SELECT 1 as health, NOW() as server_time');
@@ -151,6 +166,7 @@ class HealthService {
         message,
         details: {
           serverTime: result.rows[0].server_time,
+          circuitBreaker: cbStatus.state,
         },
       };
     } catch (error) {
@@ -159,6 +175,10 @@ class HealthService {
         status: 'unhealthy',
         latencyMs: Date.now() - start,
         message: error instanceof Error ? error.message : 'Connection failed',
+        details: {
+          circuitBreaker: cbStatus.state,
+          consecutiveFailures: cbStatus.consecutiveFailures,
+        },
       };
     }
   }

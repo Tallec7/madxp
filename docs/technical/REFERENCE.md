@@ -583,6 +583,32 @@ ssh pi@neopro.local 'sudo journalctl -u neopro-sync -n 50'
 # Vérifier que le site apparaît avec 🟢 En ligne
 ```
 
+### Résilience base de données (v3.71+)
+
+Le central server intègre un **circuit breaker DB** pour survivre aux interruptions
+transitoires de Supabase/PgBouncer sans intervention manuelle.
+
+**Composants :**
+
+| Mécanisme         | Fichier                                   | Rôle                                                                                                        |
+| ----------------- | ----------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| Statement timeout | `config/database.ts`                      | `SET statement_timeout = 8000` sur chaque connexion — tue les requêtes bloquées avant le pool timeout (10s) |
+| Circuit breaker   | `services/db-circuit-breaker.service.ts`  | CLOSED → OPEN (après 3 échecs) → HALF_OPEN (après 30s) → CLOSED (si probe OK)                               |
+| Background skip   | realtime-stats, scheduler, alerting       | `dbCircuitBreaker.isAvailable()` avant chaque tick — zéro requête DB quand circuit OPEN                     |
+| Pi backoff        | `socket.service.ts` → `retry_later` event | Quand circuit OPEN, le serveur dit au Pi d'attendre 30s au lieu de reconnecter toutes les 5s                |
+
+**Variables d'environnement :**
+
+| Variable               | Défaut | Description                                                     |
+| ---------------------- | ------ | --------------------------------------------------------------- |
+| `DB_POOL_MAX`          | 10     | Nombre max de connexions dans le pool Node.js                   |
+| `DB_STATEMENT_TIMEOUT` | 8000   | Timeout par requête en ms (doit être < connectionTimeoutMillis) |
+
+**Monitoring :**
+
+- Health check `/api/health` → `checks.database.details.circuitBreaker` (CLOSED/OPEN/HALF_OPEN)
+- Prometheus → `neopro_db_circuit_breaker_state` (0/1/2) — configurer alerting Grafana sur state > 0
+
 ---
 
 ## Scripts disponibles

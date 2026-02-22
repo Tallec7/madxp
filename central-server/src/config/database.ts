@@ -66,13 +66,18 @@ const getSslConfig = () => {
 
 const sslConfig = getSslConfig();
 
-// Pool size configurable via env : DB_POOL_MAX (défaut: 5)
+// Pool size configurable via env : DB_POOL_MAX (défaut: 10)
 // Supabase Transaction Mode (port 6543) : les connexions PgBouncer sont partagées par
-// transaction, pas par session. 5 connexions Node.js suffisent pour des centaines de req/s.
+// transaction, pas par session. 10 connexions Node.js assurent une marge suffisante
+// pour absorber les pics (background services + user requests simultanées).
 // En Session Mode (port 5432) un restart Railway causait MaxClientsInSessionMode car
 // ancien + nouveau process réservaient chacun N connexions permanentes.
 // Voir ADR-003 et ADR-015 pour l'historique.
-const dbPoolMax = parseInt(process.env.DB_POOL_MAX || '5', 10);
+const dbPoolMax = parseInt(process.env.DB_POOL_MAX || '10', 10);
+
+// Statement timeout kills queries that hang too long (e.g. when PgBouncer is overloaded).
+// Must be shorter than connectionTimeoutMillis to release pool slots before new connections timeout.
+const statementTimeoutMs = parseInt(process.env.DB_STATEMENT_TIMEOUT || '8000', 10);
 
 // Detect Supabase pooler mode from DATABASE_URL port
 const dbUrl = process.env.DATABASE_URL || '';
@@ -89,6 +94,7 @@ const poolConfig: PoolConfig = {
 logger.info('Database pool configuration', {
   max: poolConfig.max,
   idleTimeout: poolConfig.idleTimeoutMillis,
+  statementTimeout: statementTimeoutMs,
   poolerMode,
 });
 
@@ -136,9 +142,18 @@ pool.on('error', (err: Error) => {
   }
 });
 
-pool.on('connect', () => {
-  logger.info('Database connection established');
-});
+// @types/pg declares connect callback as () => void, but at runtime pg passes the Client.
+// Use the untyped poolAny binding to set statement_timeout on every new connection.
+// Kill hung queries before they block the pool — prevents death spiral when PgBouncer is slow.
+(pool as unknown as { on: (event: string, cb: (client: { query: (text: string) => Promise<unknown> }) => void) => void })
+  .on('connect', (client) => {
+    client.query(`SET statement_timeout = ${statementTimeoutMs}`).catch((err: unknown) => {
+      logger.warn('Failed to set statement_timeout on new connection', {
+        error: err instanceof Error ? err.message : String(err),
+      });
+    });
+    logger.info('Database connection established');
+  });
 
 // Lazy import to avoid circular dependency with metrics.service
 let metricsServiceInstance: {
@@ -225,6 +240,14 @@ setInterval(async () => {
   const ms = getMetricsService();
   if (!ms) return;
 
+  // Skip DB size check if circuit breaker is open (lazy import to avoid circular dep)
+  try {
+    const { dbCircuitBreaker } = require('../services/db-circuit-breaker.service');
+    if (!dbCircuitBreaker.isAvailable()) return;
+  } catch {
+    // Circuit breaker not available yet during startup — proceed normally
+  }
+
   try {
     const sizeResult = await pool.query<{ size: string }>(
       `SELECT pg_database_size(current_database())::text AS size`
@@ -255,6 +278,19 @@ setInterval(async () => {
   }
 }, DB_SIZE_INTERVAL);
 
+// Lazy reference to circuit breaker (avoids circular dep with services/)
+let circuitBreakerInstance: { recordSuccess: () => void; recordFailure: (e?: Error) => void } | null = null;
+const getCircuitBreaker = () => {
+  if (!circuitBreakerInstance) {
+    try {
+      circuitBreakerInstance = require('../services/db-circuit-breaker.service').dbCircuitBreaker;
+    } catch {
+      // Not available yet during startup
+    }
+  }
+  return circuitBreakerInstance;
+};
+
 export const query = async <T extends QueryResultRow = QueryResultRow>(text: string, params?: any[]) => {
   const start = Date.now();
   try {
@@ -266,8 +302,13 @@ export const query = async <T extends QueryResultRow = QueryResultRow>(text: str
     const operation = text.trim().split(/\s+/)[0]?.toUpperCase() || 'UNKNOWN';
     getMetricsService()?.recordDbQuery(operation, duration / 1000);
 
+    // Notify circuit breaker of success
+    getCircuitBreaker()?.recordSuccess();
+
     return result;
   } catch (error) {
+    // Notify circuit breaker of failure (connection timeouts, statement timeouts, etc.)
+    getCircuitBreaker()?.recordFailure(error instanceof Error ? error : undefined);
     logger.error('Database query error:', { text, error });
     throw error;
   }

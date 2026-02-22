@@ -2,6 +2,7 @@ import { query } from '../config/database';
 import deploymentService from './deployment.service';
 import updateDeploymentService from './update-deployment.service';
 import logger from '../config/logger';
+import { dbCircuitBreaker } from './db-circuit-breaker.service';
 
 // Configuration du scheduler
 const SCHEDULER_CONFIG = {
@@ -64,6 +65,11 @@ class SchedulerService {
   private async processScheduledDeployments(): Promise<void> {
     // Eviter les executions concurrentes
     if (this.isProcessing) {
+      return;
+    }
+
+    // Skip if DB is unavailable — deployments can wait for the next tick
+    if (!dbCircuitBreaker.isAvailable()) {
       return;
     }
 

@@ -1,3 +1,27 @@
+# [3.71.0] (2026-02-22)
+
+### Features
+
+- **resilience:** DB circuit breaker prevents death-spiral when Supabase/PgBouncer is temporarily slow
+  - New `db-circuit-breaker.service.ts`: 3 states (CLOSED → OPEN → HALF_OPEN), opens after 3 consecutive
+    DB failures, pauses all background services for 30s, then probes recovery with a single query.
+  - `statement_timeout = 8s` on every pool connection — kills hung queries before `connectionTimeoutMillis`
+    (10s), freeing pool slots and preventing cascading timeouts.
+  - `DB_POOL_MAX` default raised from 5 to 10 — absorbs spikes from background services + Pi auth + user requests.
+  - Background services (`realtime-stats`, `scheduler`, `alerting`, DB size monitor) skip their ticks when
+    circuit is OPEN, reducing pool pressure to zero during outages.
+  - Socket.IO auth emits `retry_later` to Pi agents when circuit is OPEN — prevents 50+ Pi from hammering
+    auth queries during DB downtime. Sync-agent respects backoff delay instead of reconnecting every 5s.
+  - Health endpoint (`/api/health`) reports circuit breaker state in DB check details.
+  - Prometheus gauge `neopro_db_circuit_breaker_state` (0=CLOSED, 1=HALF_OPEN, 2=OPEN) for Grafana alerting.
+
+### Recovery Timeline (before → after)
+
+- **Before**: Supabase hiccup 2s → pool saturated → background services pile up → 50 Pi reconnect storm
+  → login 500 → "Déconnecté" for 5+ minutes → manual Railway restart required.
+- **After**: Supabase hiccup 2s → 3 timeouts → circuit OPEN → background skip, Pi told "retry in 30s"
+  → pool drains → HALF_OPEN probe → CLOSED → full recovery in ~30s, zero manual intervention.
+
 # [3.70.0](https://github.com/Tallec7/neopro/compare/v3.69.5...v3.70.0) (2026-02-22)
 
 ### Features

@@ -100,6 +100,7 @@ class NeoproSyncAgent {
     this.socket.on('connect_error', (error) => this.handleConnectError(error));
     this.socket.on('authenticated', (data) => this.handleAuthenticated(data));
     this.socket.on('auth_error', (data) => this.handleAuthError(data));
+    this.socket.on('retry_later', (data) => this.handleRetryLater(data));
     this.socket.on('command', (cmd) => this.handleCommand(cmd));
     // Health check - Respond to server pings to prove connection is alive
     this.socket.on('ping_check', () => this.handlePingCheck());
@@ -594,6 +595,21 @@ class NeoproSyncAgent {
     // Transient error (DB timeout, server overload): let Socket.IO reconnect
     logger.warn(`Auth failed (attempt ${this.authRetries}/${MAX_AUTH_RETRIES}), will retry on reconnect`);
     // Server disconnects us after auth_error, Socket.IO auto-reconnect will retry
+  }
+
+  handleRetryLater(data) {
+    const retryAfterMs = data?.retryAfterMs || 30000;
+    logger.warn('Server requested retry later (DB overloaded)', {
+      retryAfterMs,
+      reason: data?.reason,
+    });
+
+    // Don't count this as an auth failure — it's a transient server issue
+    // Override Socket.IO's reconnection delay to use the server's suggested delay
+    this.socket.io.opts.reconnectionDelay = Math.max(retryAfterMs, 10000);
+
+    // Socket will be disconnected by the server; Socket.IO auto-reconnect
+    // will kick in after reconnectionDelay
   }
 
   handleDisconnect(reason) {

@@ -6,6 +6,7 @@ import { query } from '../config/database';
 import logger from '../config/logger';
 import metricsService from './metrics.service';
 import emailService from './email.service';
+import { dbCircuitBreaker } from './db-circuit-breaker.service';
 
 // Configuration des notifications externes (via variables d'environnement)
 const WEBHOOK_URL = process.env.ALERTING_WEBHOOK_URL;
@@ -1124,6 +1125,10 @@ class AlertingService {
     // Vérifier les métriques horaires toutes les 5 minutes
     let tickCount = 0;
     this.checkInterval = setInterval(async () => {
+      // Skip all periodic checks if DB is unavailable — prevents pile-up
+      if (!dbCircuitBreaker.isAvailable()) {
+        return;
+      }
       tickCount++;
       await this.checkEscalations();
       await this.checkStuckDeployments();

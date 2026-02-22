@@ -49,6 +49,7 @@ import {
   MAX_PONG_ENTRIES,
 } from '../handlers/health-monitor.handler';
 import { alertingService } from './alerting.service';
+import { dbCircuitBreaker } from './db-circuit-breaker.service';
 
 // ============================================================================
 // Lazy service loaders (circular dependency avoidance)
@@ -311,6 +312,15 @@ class SocketService {
 
     socket.on('authenticate', async (data: SocketData) => {
       clearTimeout(authTimeout);
+
+      // When DB is down, tell the Pi to retry later instead of consuming pool connections
+      if (!dbCircuitBreaker.isAvailable()) {
+        logger.warn('DB circuit breaker open — telling Pi to retry later', { siteId: data?.siteId });
+        socket.emit('retry_later', { retryAfterMs: 30000, reason: 'server_overloaded' });
+        socket.disconnect();
+        return;
+      }
+
       try {
         await this.authenticateAgent(socket, data);
         metricsService.recordPiAgentAuth('success');

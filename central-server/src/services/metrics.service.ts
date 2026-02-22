@@ -152,6 +152,12 @@ const dbPoolErrorsCounter = new Counter({
   registers: [register],
 });
 
+const dbCircuitBreakerGauge = new Gauge({
+  name: 'neopro_db_circuit_breaker_state',
+  help: 'DB circuit breaker state (0=CLOSED, 1=HALF_OPEN, 2=OPEN)',
+  registers: [register],
+});
+
 // ============= Métriques WebSocket =============
 
 const websocketConnectionsGauge = new Gauge({
@@ -727,6 +733,11 @@ class MetricsService {
 
   recordDbPoolError(): void {
     dbPoolErrorsCounter.inc();
+  }
+
+  recordDbCircuitBreakerState(state: 'CLOSED' | 'HALF_OPEN' | 'OPEN'): void {
+    const stateMap = { CLOSED: 0, HALF_OPEN: 1, OPEN: 2 };
+    dbCircuitBreakerGauge.set(stateMap[state]);
   }
 
   recordWebsocketConnection(type: string, count: number): void {
