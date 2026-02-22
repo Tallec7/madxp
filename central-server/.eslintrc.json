@@ -32,6 +32,18 @@
           }
         ]
       }
+    },
+    {
+      "files": ["src/handlers/**/*.ts"],
+      "rules": {
+        "no-restricted-syntax": [
+          "error",
+          {
+            "selector": "MemberExpression[object.property.name='data'][object.object.name='socket']",
+            "message": "Don't use socket.data — use (socket as any).prop instead. Socket.IO v4 socket.data is a separate empty object, NOT the same as properties set via (socket as any).prop in socket.service.ts."
+          }
+        ]
+      }
     }
   ],
   "ignorePatterns": ["**/*.test.ts", "**/__tests__/**"]

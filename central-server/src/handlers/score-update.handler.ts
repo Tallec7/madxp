@@ -54,8 +54,8 @@ export function handleScoreUpdate(socket: Socket, payload: ScoreUpdatePayload) {
       return;
     }
 
-    // Récupérer le site_id depuis les données du socket
-    const siteId = (socket.data as any).siteId;
+    // Récupérer le site_id depuis le socket (stocké par socket.service.ts lors de l'auth)
+    const siteId = (socket as any).siteId as string | undefined;
     if (!siteId) {
       logger.warn('score-update: site_id introuvable', { socketId: socket.id });
       socket.emit('score-update-error', {
@@ -75,9 +75,8 @@ export function handleScoreUpdate(socket: Socket, payload: ScoreUpdatePayload) {
     });
 
     // Relay vers le TV client du même site
-    // socket.data.io est l'instance Socket.IO principale
-    if (socket.data.io) {
-      const io = socket.data.io;
+    const io = (socket as any).io;
+    if (io) {
 
       // Broadcast vers tous les clients du site (TV)
       io.to(siteId).emit('score-update', {
@@ -151,7 +150,7 @@ export function handleScoreUpdate(socket: Socket, payload: ScoreUpdatePayload) {
  */
 export function handleScoreReset(socket: Socket) {
   try {
-    const siteId = (socket.data as any).siteId;
+    const siteId = (socket as any).siteId as string | undefined;
     if (!siteId) {
       return;
     }
@@ -159,8 +158,8 @@ export function handleScoreReset(socket: Socket) {
     logger.info('score-reset received', { siteId });
 
     // Broadcast reset vers le TV
-    if (socket.data.io) {
-      const io = socket.data.io;
+    const io = (socket as any).io;
+    if (io) {
       io.to(siteId).emit('score-reset', {
         timestamp: new Date().toISOString()
       });

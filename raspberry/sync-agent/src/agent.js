@@ -313,8 +313,12 @@ class NeoproSyncAgent {
    * @param {object} data - Event payload
    */
   relayToLocalServer(eventName, data) {
-    logger.info('☁️ Cloud remote event received, relaying to local server', { eventName });
-    localSocket.emit(eventName, data);
+    const relayed = localSocket.emit(eventName, data);
+    if (relayed) {
+      logger.info('☁️ Cloud remote event relayed to local server', { eventName });
+    } else {
+      logger.warn('☁️ Cloud remote event DROPPED — local server not connected', { eventName });
+    }
   }
 
   handleConnect() {

@@ -224,6 +224,16 @@ module.exports = function registerSocketHandlers({ io, stateService, configPath 
     });
 
     /**
+     * Match info updated (from sync-agent/cloud remote) — relays to TV/Remote clients.
+     * @event match-info-updated
+     * @param {object} data — `{ sessionId, matchDate, matchName, audienceEstimate }`
+     */
+    socket.on('match-info-updated', (data) => {
+      console.log('Match info updated reçu:', data);
+      socket.broadcast.emit('match-info-updated', data);
+    });
+
+    /**
      * Config updated notification (from sync-agent) — re-reads configuration.json
      * from disk and broadcasts a reload-config action to all clients.
      * @event config_updated

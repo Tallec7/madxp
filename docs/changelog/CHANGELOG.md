@@ -1,3 +1,85 @@
+## [3.69.5](https://github.com/Tallec7/neopro/compare/v3.69.4...v3.69.5) (2026-02-22)
+
+### Bug Fixes
+
+- **sponsors:** backfill plays historiques category='other' → 'sponsor' ([6fee04d](https://github.com/Tallec7/neopro/commit/6fee04da82dc986cc29bd7c34e56aaf69d147dd6))
+
+## [3.69.4](https://github.com/Tallec7/neopro/compare/v3.69.3...v3.69.4) (2026-02-22)
+
+### Bug Fixes
+
+- **sponsors:** impressions boucle locale invisibles dans dashboard ([23bd430](https://github.com/Tallec7/neopro/commit/23bd430e8091fb7c6785b6837b8aadf2672337f8))
+
+## [3.69.4] (2026-02-22)
+
+### Bug Fixes
+
+- **sponsors:** impressions boucle invisible — les vidéos ajoutées à la boucle par l'admin Pi
+  manquaient `analytics_category: 'sponsor'`. Le `detectCategory()` tombait en fallback path-based,
+  catégorisait en `'other'`, et la query `listBySite` filtrant sur `category = 'sponsor'` les ignorait.
+  Le dashboard affichait 0 impressions pour les vidéos jouées en boucle.
+- **deployment:** `syncSponsorVideoAssociations()` utilisait la config originale au lieu de la config
+  enrichie par `autoResolveSponsorIds()` — les `site_sponsor_id` fraîchement résolus n'étaient pas
+  synchronisés dans `site_sponsor_videos`.
+
+### Migrations
+
+- **backfill:** script `backfill-other-to-sponsor-category.sql` — reclasse les `video_plays` historiques
+  de `category='other'` vers `'sponsor'` quand le `video_filename` matche un sponsor via `site_sponsor_videos`.
+  Résout aussi les `site_sponsor_id` manquants. Idempotent, réversible.
+
+### Tests
+
+- **smoke:** test "Sponsor loop entries must include analytics_category" — vérifie que `_rebuildLoopEntries`
+  inclut `analytics_category: 'sponsor'` pour éviter une régression silencieuse du tracking.
+
+## [3.69.3](https://github.com/Tallec7/neopro/compare/v3.69.2...v3.69.3) (2026-02-22)
+
+### Bug Fixes
+
+- **cloud-remote:** relay chain cassée — zombie detection, handler manquant, socket.data mismatch ([1d5bdae](https://github.com/Tallec7/neopro/commit/1d5bdae9dee378684df4d0a2d757a9a5b80329df)), closes [#30](https://github.com/Tallec7/neopro/issues/30)
+
+## [3.69.3] (2026-02-22)
+
+### Bug Fixes
+
+- **cloud-remote:** détection connexion zombie — vérification room Socket.IO en plus de la Map `connectedSites`
+  Le dashboard affichait "Commande envoyée" (succès) mais rien ne se passait sur le Pi. Cause : après une
+  partition réseau, le socket était déconnecté sans que le handler `disconnect` ne se déclenche. La room
+  Socket.IO était vide mais `isConnected()` retournait `true`. Le controller retourne maintenant **503
+  "Connexion instable"** au lieu d'un faux succès.
+- **cloud-remote:** ajout handler `match-info-updated` manquant dans `handlers.js` (Pi local server)
+  Les commandes `match-config` depuis la cloud remote étaient relayées par le sync-agent mais droppées
+  silencieusement par le local server (aucun listener). Les scores, phases et timers fonctionnaient car
+  ils avaient leurs handlers.
+- **socket:** fix mismatch `socket.data.siteId` vs `(socket as any).siteId` dans `score-update.handler.ts`
+  et `match-config.handler.ts` — Socket.IO v4 sépare `socket.data` (objet vide) et les propriétés directes.
+  Le `siteId` était `undefined` → early return silencieux → les scores Pi ne remontaient pas au dashboard.
+- **sync-agent:** `relayToLocalServer()` logge maintenant un **warn** quand un événement cloud remote est
+  droppé (connexion locale coupée), au lieu d'un debug silencieux dans `local-socket.js`.
+
+### Monitoring
+
+- **prometheus:** nouveau status `zombie` dans `neopro_commands_total{type, status}` — compteur incrémenté
+  quand le controller détecte une room vide lors d'une commande cloud remote.
+
+### Tests
+
+- **smoke:** test #30 "Cloud remote relay chain" (5 assertions) — vérifie la complétude de la chaîne
+  `remote.controller.ts` → `agent.js` → `handlers.js` pour tous les événements cloud remote.
+
+## [3.69.2](https://github.com/Tallec7/neopro/compare/v3.69.1...v3.69.2) (2026-02-22)
+
+### Bug Fixes
+
+- **wifi:** hotspot invisible + mauvais MDP + captive portal vide ([1f0e8f8](https://github.com/Tallec7/neopro/commit/1f0e8f812b23cc193623186bdcf4ea60e2065241))
+
+## [3.69.1](https://github.com/Tallec7/neopro/compare/v3.69.0...v3.69.1) (2026-02-22)
+
+### Bug Fixes
+
+- **pi:** OTA node_modules integrity check + kiosk X11 readiness wait ([49bb49a](https://github.com/Tallec7/neopro/commit/49bb49a600f10b073013313001582289b00bb274))
+
 # [3.69.0](https://github.com/Tallec7/neopro/compare/v3.68.8...v3.69.0) (2026-02-22)
 
 ### Features
@@ -22,6 +104,15 @@
   Race condition : `processPendingDeploymentsForSite()` re-envoyait un `update_software` quand
   le Pi revenait en ligne (status `in_progress`). Guard dedup server-side (remote_commands <120s)
   - lock file client-side (`/tmp/neopro-update.lock`) pour double protection.
+- **ota:** vérification intégrité `node_modules` après npm install — rollback automatique si modules critiques manquants
+  Après un shutdown unclean (coupure courant, crash kernel), le cleanup EXT4 orphan pouvait supprimer
+  des modules partiellement écrits (ex: `gopd`). L'OTA détecte maintenant les modules manquants
+  (`express`, `socket.io`, `fs-extra`, etc.), tente une réparation npm install, et déclenche un
+  rollback automatique si la réparation échoue. Le npm install du server est aussi loggé (plus silencieux).
+- **kiosk:** attente active du serveur X avant lancement Chromium — remplace le `sleep 10` fixe
+  Le `ExecStartPre` systemd et le watchdog attendent maintenant activement que `xdpyinfo` réponde
+  (max 60s, check toutes les 2s). Résout le crash `Missing X server or $DISPLAY` quand le display
+  s'initialise lentement (Pi 5 avec GPU V3D, premier boot, HDMI hot-plug).
 
 ### Features
 
@@ -34,6 +125,22 @@
 
 - **heartbeat:** nouveau champ `filesystemHealth` (ext4Errors, isReadOnly) dans le heartbeat Pi → central
 - **alerts:** nouvelles alertes `fs_ext4_errors` (warning/critical) et `fs_readonly` (critical) automatiques
+- **diagnostic:** `check_node_modules` vérifie les dépendances critiques par composant (détecte corruption post-crash)
+
+### Hotspot WiFi
+
+- **wifi:** correction cipher WPA2 TKIP → CCMP dans hostapd.conf template et prepare-image.sh
+  Les téléphones modernes (Android 12+, iOS 16+) rejettent TKIP et affichent "mauvais mot de passe"
+  au lieu de négocier un cipher. Migré vers CCMP (AES) uniquement.
+- **wifi:** auto-fix TKIP → CCMP dans `hotspot-optimizer.sh` — propagation à toute la flotte via OTA
+  Au prochain OTA, le boot de chaque Pi corrigera automatiquement `wpa_pairwise=TKIP` sans intervention.
+- **wifi:** scan WiFi sur wlan1 au lieu de wlan0 dans `hotspot-optimizer.sh`
+  Le scan `iwlist` sur l'interface AP (wlan0) sortait temporairement du mode AP, causant la disparition
+  du SSID pendant 10-15 minutes (hostapd crash + 3 cycles de recovery watchdog). Le scan se fait
+  maintenant sur wlan1 (clé USB WiFi client), sans perturber le hotspot.
+- **wifi:** nginx captive portal `default_server` — corrige le captive portal vide sur les téléphones
+  Les requêtes de connectivity check (Host: connectivitycheck.gstatic.com) ne matchaient pas le
+  `server_name neopro.local 192.168.4.1`. Nginx est maintenant catch-all (`server_name _`).
 
 ## [3.68.8](https://github.com/Tallec7/neopro/compare/v3.68.7...v3.68.8) (2026-02-22)
 

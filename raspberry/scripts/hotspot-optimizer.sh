@@ -15,7 +15,13 @@
 
 LOG_FILE="/var/log/neopro-hotspot-optimizer.log"
 HOSTAPD_CONF="/etc/hostapd/hostapd.conf"
-WIFI_INTERFACE="wlan0"
+AP_INTERFACE="wlan0"
+
+# CRITICAL: Never scan on the AP interface (wlan0) — it disrupts the hotspot!
+# iwlist scan on an active AP interface temporarily takes it out of AP mode,
+# causing the SSID to disappear and hostapd to crash/restart.
+# Use wlan1 (USB WiFi client) for scanning instead.
+SCAN_INTERFACE=""
 
 # Threshold: if current channel has more than this many networks, consider switching
 CONGESTION_THRESHOLD=3
@@ -25,6 +31,21 @@ CONGESTION_THRESHOLD=3
 # Override via /home/pi/neopro/config/hotspot-txpower.conf (single line: e.g. "20")
 HOTSPOT_TXPOWER=15
 TXPOWER_CONF="/home/pi/neopro/config/hotspot-txpower.conf"
+
+# Detect the best interface for WiFi scanning (NOT the AP interface)
+detect_scan_interface() {
+    # Prefer wlan1 (USB WiFi dongle, used as client for internet)
+    if ip link show wlan1 &>/dev/null; then
+        SCAN_INTERFACE="wlan1"
+        log "Using wlan1 for WiFi scanning (safe — not the AP interface)"
+        return 0
+    fi
+
+    # No alternative interface — we must stop hostapd briefly to scan on wlan0
+    SCAN_INTERFACE="wlan0"
+    log "WARNING: No wlan1 available — will briefly stop hostapd to scan on wlan0"
+    return 1
+}
 
 log() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" | tee -a "$LOG_FILE"
@@ -49,11 +70,10 @@ get_wlan1_channel() {
 }
 
 # Count networks on a specific channel
+# Uses SCAN_INTERFACE (wlan1 preferred) to avoid disrupting the AP on wlan0
 count_networks_on_channel() {
     local channel=$1
-    # Use iwlist to scan and count networks on this channel
-    # Note: scan may need to be run as root
-    local count=$(iwlist "$WIFI_INTERFACE" scan 2>/dev/null | grep -E "Channel:$channel\$" | wc -l)
+    local count=$(iwlist "$SCAN_INTERFACE" scan 2>/dev/null | grep -E "Channel:$channel\$" | wc -l)
     echo "$count"
 }
 
@@ -120,6 +140,20 @@ find_best_channel() {
     done
 }
 
+# Fix deprecated TKIP cipher → CCMP (AES)
+# TKIP was deployed in early images but modern phones (Android 12+, iOS 16+)
+# reject TKIP and show "wrong password" errors.
+# This fix propagates to the fleet via OTA (hotspot-optimizer.sh is deployed).
+fix_tkip_cipher() {
+    if grep -q "wpa_pairwise=TKIP" "$HOSTAPD_CONF"; then
+        log "SECURITY FIX: Replacing deprecated TKIP with CCMP (AES)"
+        sed -i 's/wpa_pairwise=TKIP/wpa_pairwise=CCMP/' "$HOSTAPD_CONF"
+        log "wpa_pairwise changed from TKIP to CCMP"
+        return 0  # Changed — caller should restart hostapd
+    fi
+    return 1  # No change needed
+}
+
 # Main
 main() {
     log "=========================================="
@@ -131,6 +165,13 @@ main() {
         exit 1
     fi
 
+    # Fix TKIP → CCMP before any channel optimization
+    local tkip_fixed=false
+    local hostapd_restarted=false
+    if fix_tkip_cipher; then
+        tkip_fixed=true
+    fi
+
     # Get current channel
     current_channel=$(get_current_channel)
     if [ -z "$current_channel" ]; then
@@ -140,14 +181,28 @@ main() {
         log "Current hotspot channel: $current_channel"
     fi
 
+    # Detect safe scan interface (wlan1 preferred, wlan0 fallback)
+    local must_stop_hostapd=false
+    detect_scan_interface
+    if [ "$SCAN_INTERFACE" = "wlan0" ]; then
+        must_stop_hostapd=true
+    fi
+
     # Brief delay to let WiFi hardware initialize
     sleep 2
 
-    # Scan for networks (may need multiple attempts)
-    log "Scanning WiFi environment..."
+    # Scan for networks
+    log "Scanning WiFi environment on $SCAN_INTERFACE..."
+
+    # If scanning on wlan0 (AP), stop hostapd first to release the interface
+    if [ "$must_stop_hostapd" = true ]; then
+        log "Stopping hostapd to scan on wlan0..."
+        systemctl stop hostapd 2>/dev/null || true
+        sleep 2
+    fi
 
     # Perform scan
-    iwlist "$WIFI_INTERFACE" scan > /dev/null 2>&1
+    iwlist "$SCAN_INTERFACE" scan > /dev/null 2>&1
     sleep 1
 
     # Detect wlan1 channel for self-interference check
@@ -184,9 +239,10 @@ main() {
                 log "Note: wlan1 is connected, will restore after restart"
             fi
 
-            # Restart hostapd to apply new channel
+            # Restart hostapd to apply new channel (and TKIP fix if applicable)
             log "Restarting hostapd..."
             systemctl restart hostapd
+            hostapd_restarted=true
 
             if systemctl is-active --quiet hostapd; then
                 log "SUCCESS: Hotspot now on channel $best_channel"
@@ -222,6 +278,33 @@ main() {
             log "Channel $current_channel is OK ($current_count < $CONGESTION_THRESHOLD networks, no wlan1 conflict)"
         else
             log "Channel $current_channel is OK ($current_count < $CONGESTION_THRESHOLD networks)"
+        fi
+    fi
+
+    # Ensure hostapd is running after all operations:
+    # - If we stopped it for scanning on wlan0, it needs to be restarted
+    # - If TKIP was fixed, hostapd needs a restart to apply the cipher change
+    # - If channel was changed above, hostapd was already restarted — skip
+    if [ "$hostapd_restarted" != true ]; then
+        if [ "$tkip_fixed" = true ]; then
+            log "Restarting hostapd to apply TKIP → CCMP cipher fix..."
+            systemctl restart hostapd
+        elif [ "$must_stop_hostapd" = true ]; then
+            log "Restarting hostapd after scan on wlan0..."
+            systemctl start hostapd
+        fi
+
+        if ! systemctl is-active --quiet hostapd; then
+            log "ERROR: hostapd is not running — attempting start..."
+            systemctl start hostapd
+            sleep 2
+            if systemctl is-active --quiet hostapd; then
+                log "SUCCESS: hostapd recovered"
+            else
+                log "ERROR: hostapd failed to start — check config"
+            fi
+        else
+            log "hostapd is active"
         fi
     fi
 

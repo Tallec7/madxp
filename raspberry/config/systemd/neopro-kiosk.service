@@ -13,8 +13,9 @@ User=pi
 Environment=DISPLAY=:0
 Environment=XAUTHORITY=/home/pi/.Xauthority
 
-# Attendre que le serveur soit prêt
-ExecStartPre=/bin/sleep 10
+# Attendre que le serveur X soit prêt (max 60s, check toutes les 2s)
+# Remplace le sleep fixe 10s qui échouait si X n'était pas encore prêt
+ExecStartPre=/bin/bash -c 'for i in $(seq 1 30); do DISPLAY=:0 xdpyinfo >/dev/null 2>&1 && exit 0; sleep 2; done; echo "X server not ready after 60s" >&2; exit 1'
 
 # Lancement du watchdog qui gère Chromium
 # Le watchdog détecte les crashs "Aw, Snap!" et relance automatiquement

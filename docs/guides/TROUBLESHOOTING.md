@@ -18,6 +18,7 @@
 14. [Écran / HDMI (v3.44+)](#écran--hdmi-v344)
 15. [Recording Analytics (v3.38+)](#recording-analytics--état-denregistrement-v338)
 16. [Saturation pool DB (MaxClientsInSessionMode)](#saturation-pool-db-maxclientsinsessionmode)
+17. [Cloud Remote ne fonctionne pas (v3.69.3+)](#cloud-remote-ne-fonctionne-pas-v3692)
 
 > **WiFi USB** : Pour un guide complet sur la clé WiFi USB (installation, diagnostic, pannes, recovery), voir [WIFI_USB_GUIDE.md](WIFI_USB_GUIDE.md).
 >
@@ -2220,6 +2221,33 @@ sudo systemctl restart hostapd
 sudo systemctl restart dnsmasq
 ```
 
+### 3c. "Mauvais mot de passe" malgré le bon mot de passe (TKIP)
+
+**Symptômes :**
+
+- Le SSID `NEOPRO-XXX` est visible mais la connexion échoue
+- Le téléphone affiche "Mot de passe incorrect" alors que c'est le bon
+- Principalement sur Android 12+ et iOS 16+
+
+**Cause :** Le fichier `hostapd.conf` utilise `wpa_pairwise=TKIP` (cipher déprécié). Les téléphones modernes rejettent TKIP silencieusement et affichent "mauvais mot de passe" au lieu de "cipher non supporté".
+
+**Diagnostic :**
+
+```bash
+grep wpa_pairwise /etc/hostapd/hostapd.conf
+# Si TKIP → c'est le problème
+```
+
+**Correction :**
+
+```bash
+# Remplacer TKIP par CCMP (AES)
+sudo sed -i 's/wpa_pairwise=TKIP/wpa_pairwise=CCMP/' /etc/hostapd/hostapd.conf
+sudo systemctl restart hostapd
+```
+
+**Note (v3.69+) :** Le `hotspot-optimizer.sh` corrige automatiquement TKIP → CCMP au boot. Le prochain OTA déploiera ce fix sur toute la flotte.
+
 ### 3b. Clé WiFi USB non détectée (pas de wlan1)
 
 **Symptômes :**
@@ -2344,8 +2372,9 @@ Dans l'onglet Debug d'un site, la section "Hotspot WiFi" affiche :
 **Causes fréquentes :**
 
 1. **Interférences sur le channel 6** - Dans un nouveau lieu (gymnase, salle des fêtes), beaucoup de réseaux WiFi peuvent utiliser le même canal
-2. **Alimentation insuffisante** - Le Pi est branché sur un port USB de TV ou hub non alimenté (voltage < 5V)
-3. **Distance/obstacles** - Le WiFi 2.4GHz a une portée limitée (~10-15m), les murs épais ou structures métalliques bloquent le signal
+2. **Scan WiFi sur l'interface AP (corrigé v3.69+)** - Le `hotspot-optimizer.sh` faisait `iwlist wlan0 scan` alors que wlan0 est l'interface AP, causant la sortie temporaire du mode AP et la disparition du SSID pendant 10-15 min. Le scan se fait maintenant sur wlan1
+3. **Alimentation insuffisante** - Le Pi est branché sur un port USB de TV ou hub non alimenté (voltage < 5V)
+4. **Distance/obstacles** - Le WiFi 2.4GHz a une portée limitée (~10-15m), les murs épais ou structures métalliques bloquent le signal
 
 **Solution automatique au boot (v2.28+) :**
 
@@ -2998,7 +3027,7 @@ En cas de problème, il tente une récupération automatique (max 3 tentatives, 
 
 ### Auto-optimisation canal WiFi (v3.61+)
 
-Le sync-agent optimise automatiquement le canal du hotspot au boot (30s après démarrage) et toutes les heures. Il scanne les réseaux WiFi visibles et bascule vers le canal le moins congestionné (1, 6 ou 11).
+Le `hotspot-optimizer.sh` optimise automatiquement le canal du hotspot au boot. Il scanne les réseaux WiFi visibles via wlan1 (sans perturber l'AP sur wlan0) et bascule vers le canal le moins congestionné (1, 6 ou 11). Depuis v3.69, il corrige aussi automatiquement TKIP → CCMP si détecté.
 
 **Seuils :** Congestion ≥ 5 réseaux sur le canal actuel, amélioration ≥ 3 réseaux vs meilleur canal.
 
@@ -3011,8 +3040,8 @@ journalctl -u neopro-sync-agent --since "1 hour ago" | grep -i "hotspot channel"
 # Canal actuel
 grep "^channel=" /etc/hostapd/hostapd.conf
 
-# Scan des réseaux par canal
-sudo iwlist wlan0 scan 2>/dev/null | grep "Channel:" | sort | uniq -c | sort -rn
+# Scan des réseaux par canal (utiliser wlan1, PAS wlan0 qui est l'AP !)
+sudo iwlist wlan1 scan 2>/dev/null | grep "Channel:" | sort | uniq -c | sort -rn
 ```
 
 ### Commandes utiles
@@ -3276,4 +3305,91 @@ Le mode pooler (`transaction` / `session` / `direct`) est loggé au démarrage e
 
 ---
 
-**Dernière mise à jour :** 19 février 2026 (ajout section saturation pool DB)
+## Cloud Remote ne fonctionne pas (v3.69.3+)
+
+### Symptôme 1 : Dashboard affiche "Succès" mais rien ne se passe sur le Pi
+
+**Cause probable : Connexion zombie.** Le Pi apparaît connecté dans la Map `connectedSites`, mais le socket a été déconnecté sans que le handler `disconnect` ne se déclenche (partition réseau, timeout TCP silencieux). L'émission `io.to(siteId).emit()` envoie dans une room vide.
+
+**Depuis v3.69.3 :** Le controller vérifie la room Socket.IO en plus de la Map. Si la room est vide, il retourne **503 "Connexion instable"** au lieu d'un faux succès. Le Pi se reconnecte automatiquement sous ~30s.
+
+**Vérification :**
+
+```bash
+# Logs Railway — chercher les détections zombie
+railway logs --service neopro-central --lines 50 --filter "zombie connection detected"
+
+# Métrique Prometheus — compteur de commandes zombie
+curl -s https://api.neopro.fr/metrics | grep 'neopro_commands_total{type=.*status="zombie"}'
+```
+
+### Symptôme 2 : Score / phase / timer marchent mais match-config ne fait rien
+
+**Cause (< v3.69.3) :** Le handler `match-info-updated` manquait dans `raspberry/server/socket/handlers.js`. L'événement était relayé par le sync-agent au local server, mais le local server n'avait pas de listener et l'événement était silencieusement ignoré.
+
+**Correction (v3.69.3) :** Handler `match-info-updated` ajouté — broadcast vers TV/Remote clients.
+
+### Symptôme 3 : Les scores Pi → Dashboard ne remontent pas (dashboard live score vide)
+
+**Cause (< v3.69.3) :** Mismatch `socket.data.siteId` vs `(socket as any).siteId` dans `score-update.handler.ts` et `match-config.handler.ts`. Socket.IO v4 sépare `socket.data` (objet vide `{}`) et les propriétés directes du socket. Le `siteId` était `undefined` → early return silencieux.
+
+**Correction (v3.69.3) :** Accès unifié via `(socket as any).siteId` — cohérent avec `socket.service.ts`.
+
+### Symptôme 4 : Les commandes cloud remote sont envoyées mais le sync-agent les drop silencieusement
+
+**Cause :** La connexion locale (sync-agent → Pi local server port 3000) est coupée. Le `relayToLocalServer()` appelait `localSocket.emit()` qui retournait `false` sans log visible.
+
+**Depuis v3.69.3 :** `relayToLocalServer()` logge un **warn** quand un événement est droppé :
+
+```
+☁️ Cloud remote event DROPPED — local server not connected { eventName: 'score-update' }
+```
+
+**Vérification sur le Pi :**
+
+```bash
+# Vérifier les logs du sync-agent
+journalctl -u neopro-sync -n 50 --no-pager | grep -E "DROPPED|relayed"
+
+# Vérifier que le local server tourne
+systemctl is-active neopro-server
+
+# Vérifier la connexion locale
+journalctl -u neopro-sync -n 20 --no-pager | grep "local server"
+```
+
+### Chaîne complète du relay cloud remote
+
+```
+Dashboard (Angular)
+    │
+    ▼ HTTP POST /api/remote/:siteId/command
+Central Server (remote.controller.ts)
+    │ ✅ Vérifie room membership (anti-zombie)
+    ▼ io.to(siteId).emit(eventName, payload)
+Sync-Agent (agent.js — sur le Pi)
+    │ ✅ Logge warn si drop
+    ▼ relayToLocalServer(eventName, data) → localSocket.emit()
+Pi Local Server (handlers.js — port 3000)
+    │
+    ▼ socket.broadcast.emit() → TV Angular component
+```
+
+**Événements relayés :**
+
+| Commande dashboard | Événement central→Pi  | Événement local→TV   |
+| ------------------ | --------------------- | -------------------- |
+| `play-video`       | `cloud-remote-action` | `command`            |
+| `play-sponsors`    | `cloud-remote-action` | `command`            |
+| `score-update`     | `score-update`        | `score-update`       |
+| `score-reset`      | `score-reset`         | `score-reset`        |
+| `phase-change`     | `phase-change`        | `phase-change`       |
+| `timer-update`     | `timer-update`        | `timer-update`       |
+| `breaking-news`    | `breaking-news`       | `breaking-news`      |
+| `match-config`     | `match-info-updated`  | `match-info-updated` |
+| `recording-toggle` | `recording-toggle`    | `recording-toggle`   |
+| `screenshot`       | `screenshot-request`  | `screenshot-request` |
+
+---
+
+**Dernière mise à jour :** 22 février 2026 (ajout section cloud remote)

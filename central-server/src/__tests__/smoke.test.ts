@@ -1552,3 +1552,146 @@ describe('Hourly metric alerting wiring', () => {
     });
   });
 });
+
+// ─── #30 Cloud remote relay chain completeness ──────────────────────────────
+describe('Cloud remote relay chain', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+  const remoteCtrlPath = path.join(repoRoot, 'central-server', 'src', 'controllers', 'remote.controller.ts');
+  const agentPath = path.join(repoRoot, 'raspberry', 'sync-agent', 'src', 'agent.js');
+  const handlersPath = path.join(repoRoot, 'raspberry', 'server', 'socket', 'handlers.js');
+
+  const remoteCtrl = fs.readFileSync(remoteCtrlPath, 'utf8');
+  const agent = fs.readFileSync(agentPath, 'utf8');
+  const handlers = fs.readFileSync(handlersPath, 'utf8');
+
+  // Events emitted by remote.controller.ts via io.to(siteId).emit()
+  const remoteControllerEvents = [
+    'score-update',
+    'score-reset',
+    'phase-change',
+    'cloud-remote-action',
+    'timer-update',
+    'breaking-news',
+    'match-info-updated',
+    'recording-toggle',
+    'screenshot-request',
+  ];
+
+  // All events sync-agent listens for from central server
+  // Includes remote controller events + options-update (emitted by socket.service on config change)
+  const syncAgentListenEvents = [
+    ...remoteControllerEvents,
+    'options-update',
+  ];
+
+  // Events relayed by sync-agent to local Pi server (local event name)
+  // These must ALL have handlers in Pi local server handlers.js
+  const localRelayedEvents = [
+    'score-update',
+    'score-reset',
+    'phase-change',
+    'command',        // cloud-remote-action → relayed as 'command'
+    'timer-update',
+    'breaking-news',
+    'match-info-updated',
+    'recording-toggle',
+    'options-update',
+    'screenshot-request',
+  ];
+
+  it('remote.controller.ts emits all cloud remote event types', () => {
+    for (const event of remoteControllerEvents) {
+      if (event === 'screenshot-request') {
+        // screenshot-request is emitted inline (not via eventName variable)
+        expect(remoteCtrl).toContain("emit('screenshot-request'");
+      } else {
+        expect(remoteCtrl).toContain(`'${event}'`);
+      }
+    }
+  });
+
+  it('sync-agent listens for all cloud remote events from central server', () => {
+    for (const event of syncAgentListenEvents) {
+      expect(agent).toContain(`socket.on('${event}'`);
+    }
+  });
+
+  it('sync-agent relays standard events and handles screenshot separately', () => {
+    // Standard relay events use relayToLocalServer
+    const relayEvents = syncAgentListenEvents.filter(e => e !== 'screenshot-request');
+    for (const event of relayEvents) {
+      expect(agent).toContain(`socket.on('${event}'`);
+    }
+    // screenshot-request uses requestScreenshot (needs response relay back)
+    expect(agent).toContain("socket.on('screenshot-request'");
+    expect(agent).toContain('requestScreenshot');
+  });
+
+  it('Pi local server handlers.js has handlers for all relayed events', () => {
+    for (const event of localRelayedEvents) {
+      expect(handlers).toContain(`socket.on('${event}'`);
+    }
+  });
+
+  it('remote.controller.ts checks room membership to detect zombie connections', () => {
+    expect(remoteCtrl).toContain('io.sockets.adapter.rooms.get(siteId)');
+  });
+});
+
+// ─── #31 socket.data ban in handlers (Socket.IO v4 property mismatch) ───────
+describe('Socket.IO property access consistency', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+  const handlersDir = path.join(repoRoot, 'central-server', 'src', 'handlers');
+  const handlerFiles = fs.readdirSync(handlersDir)
+    .filter((f: string) => f.endsWith('.handler.ts') && !f.endsWith('.test.ts'));
+
+  it('no handler uses socket.data (must use (socket as any).prop)', () => {
+    // Socket.IO v4: socket.data is a separate {} object, NOT the same as properties
+    // set via (socket as any).siteId in socket.service.ts.
+    // Using socket.data.siteId returns undefined → silent early return.
+    const violations: string[] = [];
+    for (const file of handlerFiles) {
+      const content = fs.readFileSync(path.join(handlersDir, file), 'utf8');
+      // Match socket.data.xxx or (socket.data as xxx) patterns
+      if (/socket\.data[.\s]/.test(content)) {
+        violations.push(file);
+      }
+    }
+    expect(violations).toEqual([]);
+  });
+});
+
+// =================================================================
+// Sponsor loop analytics wiring
+// =================================================================
+
+describe('Sponsor loop analytics category wiring', () => {
+  const sponsorService = fs.readFileSync(
+    path.resolve(__dirname, '../../../raspberry/admin/services/sponsor.service.js'),
+    'utf8'
+  );
+
+  const deploymentService = fs.readFileSync(
+    path.resolve(__dirname, '../services/orchestrated-deployment.service.ts'),
+    'utf8'
+  );
+
+  it('_rebuildLoopEntries sets analytics_category sponsor on loop entries', () => {
+    // Loop entries MUST have analytics_category: 'sponsor' otherwise detectCategory()
+    // on the Pi falls back to path-based detection and categorizes as 'other',
+    // making impressions invisible in listBySite (filters on category = 'sponsor')
+    expect(sponsorService).toContain("analytics_category: 'sponsor'");
+  });
+
+  it('_rebuildLoopEntries includes name and type for loop entries', () => {
+    // Loop entries need name and type for consistency with central-deployed entries
+    expect(sponsorService).toContain('name: sponsor.name');
+    expect(sponsorService).toContain("type: 'video/mp4'");
+  });
+
+  it('syncSponsorVideoAssociations receives enriched config (not original)', () => {
+    // Must use enrichedConfig (with auto-resolved site_sponsor_id) not the original config
+    // otherwise newly resolved videos won't be synced to site_sponsor_videos
+    expect(deploymentService).toContain('syncSponsorVideoAssociations(siteId, enrichedConfig)');
+  });
+});

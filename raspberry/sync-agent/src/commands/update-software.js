@@ -553,9 +553,11 @@ class SoftwareUpdateHandler {
 
       if (await fs.pathExists(path.join(rootDir, 'server', 'package.json'))) {
         try {
-          await execAsync(`cd ${rootDir}/server && npm install --production 2>/dev/null || true`);
+          logger.info('Running npm install for server...');
+          await execAsync(`cd ${rootDir}/server && npm install --production`);
+          logger.info('npm install server completed');
         } catch (e) {
-          logger.warn('npm install server failed (non-critical)', { error: e.message });
+          logger.warn('npm install server failed', { error: e.message });
         }
       }
 
@@ -567,9 +569,14 @@ class SoftwareUpdateHandler {
           logger.info('npm install sync-agent completed');
         } catch (e) {
           logger.error('npm install sync-agent failed', { error: e.message });
-          // C'est critique pour le sync-agent, on log l'erreur mais on continue
         }
       }
+
+      // Vérifier l'intégrité des node_modules critiques avant de démarrer les services.
+      // Si un module est manquant (ex: corruption EXT4 après shutdown unclean, npm install
+      // interrompu), on lance un npm install ciblé. Si ça échoue toujours, on throw pour
+      // déclencher le rollback automatique.
+      await this.verifyNodeModules(rootDir);
 
       // Installer le fichier sudoers si présent dans l'archive
       const sudoersSrc = path.join(rootDir, 'config', 'sudoers.d', 'neopro');
@@ -803,6 +810,58 @@ class SoftwareUpdateHandler {
         logger.warn('sudo rm also failed', { filePath, error: rmError.message });
       }
     }
+  }
+
+  /**
+   * Vérifie que les node_modules critiques sont présents et resolvables.
+   * Si un module manque (corruption EXT4, npm install interrompu), tente un npm install
+   * de réparation. Si la réparation échoue, throw pour déclencher le rollback.
+   */
+  async verifyNodeModules(rootDir) {
+    const checks = [
+      { component: 'server', modules: ['express', 'socket.io'] },
+      { component: 'sync-agent', modules: ['socket.io-client', 'fs-extra'] },
+      { component: 'admin', modules: ['express'] },
+    ];
+
+    for (const { component, modules } of checks) {
+      const componentDir = path.join(rootDir, component);
+      if (!await fs.pathExists(path.join(componentDir, 'package.json'))) continue;
+
+      const missing = [];
+      for (const mod of modules) {
+        const modPath = path.join(componentDir, 'node_modules', mod);
+        if (!await fs.pathExists(modPath)) {
+          missing.push(mod);
+        }
+      }
+
+      if (missing.length === 0) continue;
+
+      logger.warn(`Missing modules in ${component}: ${missing.join(', ')} — running repair npm install`);
+      try {
+        await execAsync(`cd ${componentDir} && npm install --production`, { timeout: 300000 });
+        logger.info(`Repair npm install for ${component} completed`);
+
+        // Re-check after repair
+        const stillMissing = [];
+        for (const mod of missing) {
+          const modPath = path.join(componentDir, 'node_modules', mod);
+          if (!await fs.pathExists(modPath)) {
+            stillMissing.push(mod);
+          }
+        }
+
+        if (stillMissing.length > 0) {
+          throw new Error(`Critical modules still missing in ${component} after repair: ${stillMissing.join(', ')}`);
+        }
+      } catch (repairError) {
+        // Throw pour déclencher le rollback automatique
+        throw new Error(`node_modules integrity check failed for ${component}: ${repairError.message}`);
+      }
+    }
+
+    logger.info('node_modules integrity check passed');
   }
 
   async startServices() {

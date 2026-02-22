@@ -84,6 +84,26 @@ groups:
           summary: "Connected sites dropped by 50%+"
           description: "Currently {{ $value }} sites connected, was {{ $value | humanize }} 10 minutes ago."
 
+      # Cloud remote zombie connections (command sent to empty room)
+      - alert: CloudRemoteZombieConnections
+        expr: increase(neopro_commands_total{status="zombie"}[15m]) > 3
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Cloud remote zombie connections detected"
+          description: "{{ $value }} cloud remote commands hit zombie connections in 15 minutes. Pi sockets are in connectedSites Map but not in Socket.IO rooms. Possible network partitions."
+
+      # Cloud remote high failure rate (zombie + error combined)
+      - alert: CloudRemoteHighFailureRate
+        expr: sum(rate(neopro_commands_total{status=~"zombie|error"}[10m])) / sum(rate(neopro_commands_total[10m])) > 0.3
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Cloud remote failure rate above 30%"
+          description: "{{ $value | humanizePercentage }} of cloud remote commands are failing. Check WebSocket connectivity and sync-agent logs."
+
       # High WebSocket disconnect rate
       - alert: HighDisconnectRate
         expr: rate(neopro_websocket_disconnects_total[5m]) > 0.5

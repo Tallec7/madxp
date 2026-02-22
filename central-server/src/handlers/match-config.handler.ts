@@ -42,8 +42,8 @@ export async function handleMatchConfig(socket: Socket, payload: MatchConfigPayl
       return;
     }
 
-    // Récupérer le site_id depuis les données du socket
-    const siteId = (socket.data as any).siteId;
+    // Récupérer le site_id depuis le socket (stocké par socket.service.ts lors de l'auth)
+    const siteId = (socket as any).siteId as string | undefined;
     if (!siteId) {
       logger.warn('match-config: site_id introuvable', { socketId: socket.id });
       socket.emit('match-config-error', {
@@ -138,10 +138,9 @@ export async function handleMatchConfig(socket: Socket, payload: MatchConfigPayl
       audienceEstimate
     });
 
-    // Optionnel: Notifier le TV client du même site
-    // (utile si on veut afficher une notification)
-    if (socket.data.io) {
-      const io = socket.data.io;
+    // Notifier le TV client du même site
+    const io = (socket as any).io;
+    if (io) {
       io.to(siteId).emit('match-info-updated', {
         sessionId,
         matchDate,

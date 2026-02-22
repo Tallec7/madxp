@@ -397,9 +397,12 @@ class SponsorService {
     for (let rep = 0; rep < freq; rep++) {
       for (const filename of filenames) {
         newEntries.push({
+          name: sponsor.name,
           path: filename,
+          type: 'video/mp4',
           owner: 'club',
           locked: false,
+          analytics_category: 'sponsor',
           site_sponsor_id: sponsor.centralId || null,
           _sponsorLocalId: sponsor.localId,
           _frequency: freq,

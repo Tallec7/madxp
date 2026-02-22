@@ -286,6 +286,12 @@ check_apt_packages() {
 }
 
 check_node_modules() {
+    # Modules critiques par composant — si absents, le service crash au démarrage
+    declare -A CRITICAL_DEPS
+    CRITICAL_DEPS[server]="express socket.io"
+    CRITICAL_DEPS[admin]="express"
+    CRITICAL_DEPS[sync-agent]="socket.io-client fs-extra axios"
+
     local COMPONENTS=("server" "admin" "sync-agent")
 
     for component in "${COMPONENTS[@]}"; do
@@ -301,8 +307,23 @@ check_node_modules() {
         elif [ -d "$dir/node_modules" ]; then
             local MOD_COUNT
             MOD_COUNT=$(ls -1 "$dir/node_modules" 2>/dev/null | wc -l | tr -d ' ')
-            print_success "${component}/node_modules : présent (${MOD_COUNT} modules)"
-            json_add "node_modules" "$component" "ok" "${MOD_COUNT} modules"
+
+            # Vérifier les dépendances critiques (détecte corruption EXT4 / npm install interrompu)
+            local missing_deps=""
+            for dep in ${CRITICAL_DEPS[$component]}; do
+                if [ ! -d "$dir/node_modules/$dep" ]; then
+                    missing_deps="${missing_deps}${dep} "
+                fi
+            done
+
+            if [ -n "$missing_deps" ]; then
+                print_error "${component}/node_modules : ${MOD_COUNT} modules, MANQUANTS: ${missing_deps}"
+                json_add "node_modules" "$component" "error" "${MOD_COUNT} modules, missing: ${missing_deps}"
+                TOTAL_ERRORS=$((TOTAL_ERRORS + 1))
+            else
+                print_success "${component}/node_modules : présent (${MOD_COUNT} modules, deps critiques OK)"
+                json_add "node_modules" "$component" "ok" "${MOD_COUNT} modules"
+            fi
         fi
     done
 }
@@ -363,6 +384,42 @@ check_nginx_config() {
         print_error "Fichier config Nginx absent : ${NGINX_CONF}"
         json_add "nginx" "config_file" "error" "absent"
         TOTAL_ERRORS=$((TOTAL_ERRORS + 1))
+    fi
+}
+
+check_hotspot_config() {
+    local HOSTAPD_CONF="/etc/hostapd/hostapd.conf"
+
+    if [ ! -f "$HOSTAPD_CONF" ]; then
+        print_warning "hostapd.conf absent — hotspot non configuré"
+        json_add "hotspot" "config" "warn" "absent"
+        return
+    fi
+
+    # TKIP check — TKIP causes "wrong password" on modern phones
+    if grep -q "wpa_pairwise=TKIP" "$HOSTAPD_CONF" 2>/dev/null; then
+        print_error "hostapd : wpa_pairwise=TKIP (déprécié — cause 'mauvais MDP' sur téléphones modernes)"
+        json_add "hotspot" "cipher" "error" "TKIP"
+        TOTAL_ERRORS=$((TOTAL_ERRORS + 1))
+        if [ "$OUTPUT_MODE" = "human" ]; then
+            echo -e "  ${YELLOW}Fix : sudo sed -i 's/wpa_pairwise=TKIP/wpa_pairwise=CCMP/' $HOSTAPD_CONF && sudo systemctl restart hostapd${NC}"
+        fi
+    elif grep -q "wpa_pairwise=CCMP" "$HOSTAPD_CONF" 2>/dev/null; then
+        print_success "hostapd : cipher CCMP (AES) OK"
+        json_add "hotspot" "cipher" "ok" "CCMP"
+    fi
+
+    # nginx default_server check — without it, captive portal is empty
+    local NGINX_SITES="/etc/nginx/sites-available"
+    if [ -d "$NGINX_SITES" ]; then
+        if grep -rq "default_server" "$NGINX_SITES" 2>/dev/null; then
+            print_success "nginx captive portal : default_server configuré"
+            json_add "hotspot" "captive_portal" "ok" "default_server"
+        else
+            print_warning "nginx : pas de default_server — captive portal peut être vide"
+            json_add "hotspot" "captive_portal" "warn" "pas de default_server"
+            TOTAL_WARNINGS=$((TOTAL_WARNINGS + 1))
+        fi
     fi
 }
 
@@ -585,6 +642,10 @@ check_service "avahi-daemon" || SERVICES_OK=false
 # 3. Services systemd (installés)
 print_section "3. Services systemd (installation)"
 check_systemd_services_installed
+
+# 3b. Configuration hotspot (TKIP, captive portal)
+print_section "3b. Configuration hotspot WiFi"
+check_hotspot_config
 
 # 4. Masquage curseur TV
 print_section "4. Masquage curseur TV"

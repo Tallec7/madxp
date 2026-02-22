@@ -87,8 +87,53 @@ Upload vidéo → storage.service.ts → FTP Hostinger
 
 ```
 Dashboard Cloud Remote → HTTP API → Central Server
-→ Socket.IO emit vers room siteId
+→ Socket.IO emit vers room siteId (+ vérification room membership anti-zombie)
 → Sync-Agent reçoit l'événement
-→ relayToLocalServer() → localhost:3000
+→ relayToLocalServer() → localhost:3000 (+ warn log si drop)
 → Serveur local broadcast vers TV/Remote
 ```
+
+**Chaîne complète** : Tout nouvel événement cloud remote doit être ajouté dans les 3 fichiers :
+
+1. `remote.controller.ts` — case dans le switch + emit
+2. `sync-agent/agent.js` — `centralSocket.on()` + `relayToLocalServer()`
+3. `raspberry/server/socket/handlers.js` — `socket.on()` + broadcast
+
+Le smoke test #30 vérifie automatiquement cette complétude.
+
+## ⛔ Anti-Patterns Socket.IO (NE JAMAIS FAIRE)
+
+### 1. Ne JAMAIS utiliser `socket.data`
+
+```typescript
+// ❌ INTERDIT — socket.data est un objet vide {} séparé
+const siteId = socket.data.siteId; // → undefined
+const io = socket.data.io; // → undefined
+
+// ✅ CORRECT — propriétés stockées par socket.service.ts
+const siteId = (socket as any).siteId;
+const io = (socket as any).io;
+```
+
+**Raison** : Socket.IO v4 sépare `socket.data` (objet propre, utilisé pour le handshake) des propriétés directes définies via `(socket as any).prop` dans `socket.service.ts`. Confondre les deux cause des `undefined` silencieux et des early returns.
+
+ESLint `no-restricted-syntax` bloque `socket.data` dans les handlers. Smoke test #31 le vérifie aussi.
+
+### 2. Ne JAMAIS émettre vers une room sans vérifier le membership
+
+```typescript
+// ❌ RISQUE — la room peut être vide (connexion zombie)
+io.to(siteId).emit('event', data);
+
+// ✅ CORRECT — vérifier que la room contient des sockets
+const room = io.sockets.adapter.rooms.get(siteId);
+if (!room || room.size === 0) {
+  logger.warn('Zombie connection detected', { siteId });
+  return res.status(503).json({ error: 'Connexion instable' });
+}
+io.to(siteId).emit('event', data);
+```
+
+### 3. Ne JAMAIS ajouter un événement cloud remote sans les 3 fichiers
+
+Si un événement est ajouté dans `remote.controller.ts` sans listener dans `agent.js` et handler dans `handlers.js`, la commande sera émise avec succès côté central mais droppée silencieusement côté Pi. Le smoke test #30 échouera si un maillon manque.
