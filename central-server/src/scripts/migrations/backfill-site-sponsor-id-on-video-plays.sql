@@ -39,8 +39,9 @@ BEGIN
   UPDATE video_plays vp
   SET site_sponsor_id = ssv.site_sponsor_id
   FROM site_sponsor_videos ssv
-  JOIN site_sponsors ss ON ss.id = ssv.site_sponsor_id AND ss.site_id = vp.site_id
+  JOIN site_sponsors ss ON ss.id = ssv.site_sponsor_id
   WHERE vp.video_filename = ssv.video_filename
+    AND ss.site_id = vp.site_id
     AND vp.category = 'sponsor'
     AND vp.site_sponsor_id IS NULL;
 
