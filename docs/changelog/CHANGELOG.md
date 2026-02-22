@@ -2,6 +2,13 @@
 
 ### Bug Fixes
 
+- **content:** vidéos locales manquantes dans la Bibliothèque Vidéo ([77fc278](https://github.com/Tallec7/neopro/commit/77fc27892a07364b93d13f32f7f76a08c16e3391))
+- **sponsors:** corriger UPDATE FROM référence table cible dans backfill SQL ([b597fce](https://github.com/Tallec7/neopro/commit/b597fceb1c4c32e05560ec9572c7507f5843e6c2))
+
+## [3.68.7](https://github.com/Tallec7/neopro/compare/v3.68.6...v3.68.7) (2026-02-22)
+
+### Bug Fixes
+
 - **content:** vidéos locales manquantes dans la Bibliothèque Vidéo du dashboard
 
   La déduplication local/cloud utilisait le filename au lieu du path, ce qui excluait
