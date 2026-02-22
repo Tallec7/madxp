@@ -309,6 +309,7 @@ describe('UpdateDeploymentService', () => {
     it('should auto-complete deployment when site already runs target version (reconciliation)', async () => {
       mockQuery
         .mockResolvedValueOnce({ rows: [{ ...mockDeploymentRow, status: 'in_progress' }] }) // Pending deployments
+        .mockResolvedValueOnce({ rows: [] }) // No recent remote_commands (dedup check)
         .mockResolvedValueOnce({ rows: [{ software_version: '3.17.1' }] }) // Site current version
         .mockResolvedValueOnce({ rows: [{ target_type: 'site', target_id: 'site-uuid-300' }] }) // handleDeploymentResult query
         .mockResolvedValueOnce({ rows: [] }); // Update status
@@ -327,6 +328,7 @@ describe('UpdateDeploymentService', () => {
     it('should deploy pending updates to reconnected site when version differs', async () => {
       mockQuery
         .mockResolvedValueOnce({ rows: [{ ...mockDeploymentRow, status: 'pending' }] }) // Pending deployments
+        .mockResolvedValueOnce({ rows: [] }) // No recent remote_commands (dedup check)
         .mockResolvedValueOnce({ rows: [{ software_version: '3.16.0' }] }) // Site at older version
         .mockResolvedValueOnce({ rows: [] }); // Update status after deploy
 
@@ -334,6 +336,45 @@ describe('UpdateDeploymentService', () => {
 
       await updateDeploymentService.processPendingDeploymentsForSite('site-uuid-300');
 
+      expect(mockSendOrQueue).toHaveBeenCalledWith(
+        'site-uuid-300',
+        'update_software',
+        expect.objectContaining({ version: '3.17.1' }),
+        expect.anything(),
+      );
+    });
+
+    it('should skip deployment when recent update_software command exists for site (dedup)', async () => {
+      mockQuery
+        .mockResolvedValueOnce({ rows: [{ ...mockDeploymentRow, status: 'in_progress' }] }) // Pending deployments
+        .mockResolvedValueOnce({ rows: [{ command_id: 'existing-cmd-456' }] }); // Recent remote_commands
+
+      await updateDeploymentService.processPendingDeploymentsForSite('site-uuid-300');
+
+      // Should NOT send any command (dedup guard blocks it)
+      expect(mockSendOrQueue).not.toHaveBeenCalled();
+      // Should log the skip
+      expect(mockLogger.info).toHaveBeenCalledWith(
+        expect.stringContaining('Skipping update deployment'),
+        expect.objectContaining({
+          siteId: 'site-uuid-300',
+          existingCommandId: 'existing-cmd-456',
+        }),
+      );
+    });
+
+    it('should proceed with deployment when no recent update_software command exists', async () => {
+      mockQuery
+        .mockResolvedValueOnce({ rows: [{ ...mockDeploymentRow, status: 'pending' }] }) // Pending deployments
+        .mockResolvedValueOnce({ rows: [] }) // No recent remote_commands (dedup passes)
+        .mockResolvedValueOnce({ rows: [{ software_version: '3.16.0' }] }) // Site at older version
+        .mockResolvedValueOnce({ rows: [] }); // Update status after deploy
+
+      mockIsConnected.mockReturnValue(true);
+
+      await updateDeploymentService.processPendingDeploymentsForSite('site-uuid-300');
+
+      // Should proceed to deploy since no dedup match
       expect(mockSendOrQueue).toHaveBeenCalledWith(
         'site-uuid-300',
         'update_software',

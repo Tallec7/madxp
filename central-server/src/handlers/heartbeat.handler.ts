@@ -118,7 +118,7 @@ export async function handleHeartbeat(
       }
     }
 
-    await checkAlerts(siteId, message.metrics, message.kioskStatus, message.wifiStatus, message.fanStatus);
+    await checkAlerts(siteId, message.metrics, message.kioskStatus, message.wifiStatus, message.fanStatus, message.filesystemHealth);
   } catch (error) {
     logger.error('Error handling heartbeat:', error);
   }
@@ -133,7 +133,8 @@ async function checkAlerts(
   metrics: HeartbeatMessage['metrics'],
   kioskStatus?: HeartbeatMessage['kioskStatus'],
   wifiStatus?: HeartbeatMessage['wifiStatus'],
-  fanStatus?: HeartbeatMessage['fanStatus']
+  fanStatus?: HeartbeatMessage['fanStatus'],
+  filesystemHealth?: HeartbeatMessage['filesystemHealth']
 ): Promise<void> {
   const alerts: Array<{ type: string; severity: string; message: string }> = [];
 
@@ -257,6 +258,25 @@ async function checkAlerts(
   // Update kiosk status metric
   if (kioskStatus) {
     metricsService.recordKioskStatus(kioskStatus.chromiumAlive ? 1 : 0, kioskStatus.restartCount);
+  }
+
+  // SD card / filesystem health alerts
+  if (filesystemHealth) {
+    if (filesystemHealth.isReadOnly) {
+      alerts.push({
+        type: 'fs_readonly',
+        severity: 'critical',
+        message: 'Filesystem root monté en lecture seule — SD card potentiellement corrompue',
+      });
+    }
+
+    if (filesystemHealth.ext4Errors > 0) {
+      alerts.push({
+        type: 'fs_ext4_errors',
+        severity: filesystemHealth.ext4Errors > 5 ? 'critical' : 'warning',
+        message: `${filesystemHealth.ext4Errors} erreur(s) EXT4 détectée(s) dans dmesg — SD card à surveiller`,
+      });
+    }
   }
 
   for (const alert of alerts) {

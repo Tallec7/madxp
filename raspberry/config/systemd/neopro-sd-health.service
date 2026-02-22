@@ -1,0 +1,8 @@
+[Unit]
+Description=Neopro SD Card Health Check
+After=network.target
+
+[Service]
+Type=oneshot
+ExecStart=/bin/bash -c 'dmesg | grep -c "EXT4-fs error" > /tmp/neopro-ext4-errors.txt 2>&1; sudo tune2fs -l /dev/mmcblk0p2 2>/dev/null | grep "Filesystem state" > /tmp/neopro-fs-state.txt 2>&1'
+User=pi

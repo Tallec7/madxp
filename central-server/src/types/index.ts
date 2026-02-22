@@ -309,6 +309,10 @@ export interface HeartbeatMessage {
     hotspotChannel?: number | null;
   } | null;
   fanStatus?: FanStatus | null;
+  filesystemHealth?: {
+    ext4Errors: number;
+    isReadOnly: boolean;
+  } | null;
 }
 
 // ============================================================================

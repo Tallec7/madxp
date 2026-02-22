@@ -219,6 +219,27 @@ class UpdateDeploymentService {
         return;
       }
 
+      // Déduplication : vérifier si une commande update_software a déjà été envoyée récemment
+      // Empêche le double envoi lors de reconnexions rapides pendant un OTA en cours
+      const recentCommandsResult = await query<{ command_id: string }>(
+        `SELECT id as command_id FROM remote_commands
+         WHERE site_id = $1
+           AND command_type = 'update_software'
+           AND status IN ('pending', 'executing')
+           AND created_at > NOW() - INTERVAL '120 seconds'
+         LIMIT 1`,
+        [siteId]
+      );
+
+      if (recentCommandsResult.rows.length > 0) {
+        logger.info('Skipping update deployment: recent update_software command already in flight', {
+          siteId,
+          existingCommandId: recentCommandsResult.rows[0].command_id,
+          pendingDeployments: result.rows.length,
+        });
+        return;
+      }
+
       // Réconciliation : si le Pi tourne déjà la version cible, marquer comme terminé
       // Cela couvre le cas où le Pi s'est restarté après la mise à jour et le
       // callback completed a été perdu (race condition avec le restart du sync-agent)

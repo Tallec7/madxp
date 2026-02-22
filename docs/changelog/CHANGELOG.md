@@ -1,3 +1,24 @@
+## [3.69.0] (2026-02-22)
+
+### Bug Fixes
+
+- **ota:** déduplication double commande `update_software` lors de reconnexion Pi pendant OTA
+  Race condition : `processPendingDeploymentsForSite()` re-envoyait un `update_software` quand
+  le Pi revenait en ligne (status `in_progress`). Guard dedup server-side (remote_commands <120s)
+  + lock file client-side (`/tmp/neopro-update.lock`) pour double protection.
+
+### Features
+
+- **pi:** nouvelle section "Santé filesystem" dans `diagnose-pi.sh` (erreurs EXT4, état tune2fs, read-only)
+- **pi:** `journald.conf` déployé par OTA — limite les journaux à 100M / 7 jours (protège la SD)
+- **pi:** `noatime` automatiquement appliqué dans fstab via OTA (réduit les écritures SD)
+- **pi:** timer systemd `neopro-sd-health` (check hebdomadaire erreurs EXT4 + état filesystem)
+
+### Monitoring
+
+- **heartbeat:** nouveau champ `filesystemHealth` (ext4Errors, isReadOnly) dans le heartbeat Pi → central
+- **alerts:** nouvelles alertes `fs_ext4_errors` (warning/critical) et `fs_readonly` (critical) automatiques
+
 ## [3.68.8](https://github.com/Tallec7/neopro/compare/v3.68.7...v3.68.8) (2026-02-22)
 
 ### Bug Fixes

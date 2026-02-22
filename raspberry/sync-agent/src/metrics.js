@@ -62,6 +62,9 @@ class MetricsCollector {
         this.getFanStatus(),
       ]);
 
+      // Filesystem health (non-bloquant, collecté en parallèle des autres métriques)
+      const filesystemHealth = await this.getFilesystemHealth();
+
       return {
         cpu,
         memory,
@@ -71,6 +74,7 @@ class MetricsCollector {
         localIp,
         wifiStatus,
         fanStatus,
+        filesystemHealth,
         timestamp: Date.now(),
       };
     } catch (error) {
@@ -453,6 +457,29 @@ class MetricsCollector {
    * Critique pour diagnostiquer les crashs Chromium (Aw, Snap!)
    *
    * NOTE: Sur Pi 5 (VideoCore VII), gpu_mem n'est plus configurable.
+   * Santé filesystem SD card.
+   * Détecte les erreurs EXT4 dans dmesg et l'état read-only.
+   * Léger (pas de tune2fs qui nécessite sudo) — adapté au heartbeat périodique.
+   * @returns {Promise<{ext4Errors: number, isReadOnly: boolean} | null>}
+   */
+  async getFilesystemHealth() {
+    try {
+      const [dmesgResult, mountResult] = await Promise.all([
+        execAsync('dmesg 2>/dev/null | grep -c "EXT4-fs error" || echo "0"', { timeout: 5000 }),
+        execAsync('mount | grep "on / " | head -1', { timeout: 3000 }),
+      ]);
+
+      const ext4Errors = parseInt(dmesgResult.stdout.trim(), 10) || 0;
+      const isReadOnly = mountResult.stdout.includes('ro,') || mountResult.stdout.includes('ro)');
+
+      return { ext4Errors, isReadOnly };
+    } catch (error) {
+      logger.debug('Failed to collect filesystem health', { error: error.message });
+      return null;
+    }
+  }
+
+  /**
    * Le GPU utilise la mémoire partagée CMA (Contiguous Memory Allocator).
    * vcgencmd get_mem gpu retourne toujours 4M (valeur legacy) sur Pi 5.
    * Ce n'est PAS un problème - le Pi 5 gère la mémoire GPU dynamiquement.

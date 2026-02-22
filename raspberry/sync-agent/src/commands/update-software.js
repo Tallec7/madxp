@@ -19,6 +19,23 @@ class SoftwareUpdateHandler {
 
     logger.info('Starting software update', { version, scheduleReboot: !!scheduleReboot, autoRollback: autoRollback !== false });
 
+    // Déduplication côté Pi : lock file pour empêcher les exécutions concurrentes
+    const LOCK_FILE = '/tmp/neopro-update.lock';
+    if (await fs.pathExists(LOCK_FILE)) {
+      try {
+        const stat = await fs.stat(LOCK_FILE);
+        const ageMinutes = (Date.now() - stat.mtimeMs) / 60000;
+        if (ageMinutes < 10) {
+          logger.warn('Update already in progress, rejecting duplicate command', { lockAge: ageMinutes.toFixed(1) });
+          return { success: true, skipped: true, reason: 'update_already_in_progress' };
+        }
+        logger.warn('Stale update lock found, removing', { ageMinutes: ageMinutes.toFixed(1) });
+      } catch (statErr) {
+        logger.warn('Failed to stat lock file, proceeding', { error: statErr.message });
+      }
+    }
+    await fs.writeFile(LOCK_FILE, JSON.stringify({ pid: process.pid, startedAt: new Date().toISOString(), version }));
+
     try {
       progressCallback(2);
 
@@ -119,6 +136,8 @@ class SoftwareUpdateHandler {
       }
 
       throw error;
+    } finally {
+      await fs.remove(LOCK_FILE).catch(() => {});
     }
   }
 
@@ -683,6 +702,29 @@ class SoftwareUpdateHandler {
         } catch (e) {
           logger.warn('Failed to install modprobe configs', { error: e.message });
         }
+      }
+
+      // Deploy journald.conf si présent (limiter les écritures SD card)
+      const journaldConf = path.join(rootDir, 'config', 'journald.conf');
+      if (await fs.pathExists(journaldConf)) {
+        try {
+          await execAsync(`sudo cp ${journaldConf} /etc/systemd/journald.conf`);
+          await execAsync('sudo systemctl restart systemd-journald');
+          logger.info('journald.conf deployed and journald restarted');
+        } catch (e) {
+          logger.warn('Failed to deploy journald.conf', { error: e.message });
+        }
+      }
+
+      // Appliquer noatime sur la partition root si pas déjà configuré (réduit les écritures SD)
+      try {
+        const { stdout: fstab } = await execAsync('cat /etc/fstab');
+        if (fstab.includes('/dev/mmcblk0p2') && !fstab.includes('noatime')) {
+          await execAsync(`sudo sed -i 's|defaults|defaults,noatime|' /etc/fstab`);
+          logger.info('Added noatime to fstab (effective after reboot)');
+        }
+      } catch (e) {
+        logger.warn('Failed to apply noatime to fstab', { error: e.message });
       }
 
       // Écrire les fichiers de version avec la version fournie par le dashboard central

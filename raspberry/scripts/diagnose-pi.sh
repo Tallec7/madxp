@@ -502,6 +502,50 @@ check_disk_space() {
     fi
 }
 
+check_filesystem_health() {
+    # 1. Erreurs EXT4 dans dmesg
+    local EXT4_ERRORS
+    EXT4_ERRORS=$(dmesg 2>/dev/null | grep -c "EXT4-fs error" || echo "0")
+
+    if [ "$EXT4_ERRORS" -gt 0 ]; then
+        print_error "Erreurs EXT4 détectées dans dmesg : ${EXT4_ERRORS} erreur(s)"
+        json_add "filesystem" "ext4_errors" "error" "${EXT4_ERRORS} erreurs dmesg"
+        TOTAL_ERRORS=$((TOTAL_ERRORS + 1))
+    else
+        print_success "Aucune erreur EXT4 dans dmesg"
+        json_add "filesystem" "ext4_errors" "ok" "aucune"
+    fi
+
+    # 2. État du filesystem via tune2fs
+    local FS_STATE
+    FS_STATE=$(sudo tune2fs -l /dev/mmcblk0p2 2>/dev/null | grep "Filesystem state" | awk -F: '{print $2}' | tr -d ' ')
+
+    if [ -n "$FS_STATE" ]; then
+        if [ "$FS_STATE" = "clean" ]; then
+            print_success "Filesystem state : clean"
+            json_add "filesystem" "state" "ok" "clean"
+        else
+            print_error "Filesystem state : ${FS_STATE} (fsck recommandé)"
+            json_add "filesystem" "state" "error" "${FS_STATE}"
+            TOTAL_ERRORS=$((TOTAL_ERRORS + 1))
+        fi
+    else
+        print_warning "Impossible de lire l'état du filesystem (tune2fs)"
+        json_add "filesystem" "state" "warn" "indisponible"
+        TOTAL_WARNINGS=$((TOTAL_WARNINGS + 1))
+    fi
+
+    # 3. Vérifier si monté en lecture seule (urgence)
+    if mount | grep "on / " | grep -q "ro,"; then
+        print_error "Filesystem monté en lecture seule !"
+        json_add "filesystem" "mount" "error" "read-only"
+        TOTAL_ERRORS=$((TOTAL_ERRORS + 1))
+    else
+        print_success "Filesystem monté en lecture-écriture"
+        json_add "filesystem" "mount" "ok" "rw"
+    fi
+}
+
 check_version_info() {
     if [ -f "${NEOPRO_DIR}/VERSION" ]; then
         local VERSION
@@ -661,12 +705,16 @@ check_gpu_config
 print_section "13. Espace disque"
 check_disk_space
 
-# 14. Version
-print_section "14. Version installée"
+# 14. Santé filesystem
+print_section "14. Santé filesystem"
+check_filesystem_health
+
+# 15. Version
+print_section "15. Version installée"
 check_version_info
 
-# 15. Tests HTTP
-print_section "15. Tests HTTP"
+# 16. Tests HTTP
+print_section "16. Tests HTTP"
 HTTP_OK=true
 echo -n "Test http://localhost ... "
 HTTP_CODE=$(curl -sf -o /dev/null -w "%{http_code}" http://localhost/ 2>/dev/null || echo "000")
@@ -702,9 +750,9 @@ else
     HTTP_OK=false
 fi
 
-# 16. Logs récents (mode human uniquement)
+# 17. Logs récents (mode human uniquement)
 if [ "$OUTPUT_MODE" = "human" ]; then
-    print_section "16. Logs récents (dernières erreurs)"
+    print_section "17. Logs récents (dernières erreurs)"
     echo "Logs neopro-app :"
     journalctl -u neopro-app -n 5 --no-pager 2>/dev/null || echo "  Aucun log récent"
 

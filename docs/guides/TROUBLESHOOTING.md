@@ -1856,7 +1856,7 @@ cd /home/pi/neopro
 ./scripts/diagnose-pi.sh --quiet
 ```
 
-**Ce script vérifie (16 catégories, v3.45.1+) :**
+**Ce script vérifie (17 catégories, v3.69+) :**
 
 - ✅ Version Node.js (v18+ requis)
 - ✅ Paquets apt critiques et recommandés
@@ -1871,6 +1871,7 @@ cd /home/pi/neopro
 - ✅ Permissions et propriétaires
 - ✅ Configuration GPU
 - ✅ Espace disque
+- ✅ **Santé filesystem SD** (erreurs EXT4 dmesg, état tune2fs, lecture seule)
 - ✅ Informations de version
 
 Le code de retour = nombre d'erreurs (0 = Pi sain). Le mode `--json` est automatiquement utilisé par `deploy-remote.sh` (post-déploiement) et `update-software.js` (rapport OTA).
@@ -1948,6 +1949,45 @@ df -h
 
 # Mémoire
 free -h
+```
+
+---
+
+## Corruption SD card (v3.69+)
+
+### Erreurs EXT4 dans dmesg
+
+**Symptôme :** Le dashboard affiche une alerte `fs_ext4_errors` ou le diagnostic affiche des erreurs filesystem.
+
+**Cause :** Les SD cards subissent de la corruption due aux coupures de courant pendant les écritures. Les blocs `/var/log/` sont les plus vulnérables (logrotate + journalctl).
+
+**Diagnostic :**
+
+```bash
+# Vérifier les erreurs EXT4
+dmesg | grep "EXT4-fs error"
+
+# Vérifier l'état du filesystem
+sudo tune2fs -l /dev/mmcblk0p2 | grep "Filesystem state"
+
+# Vérifier si monté en lecture seule
+mount | grep "on / "
+```
+
+**Protections déployées automatiquement par OTA (v3.69+) :**
+
+- **journald.conf** : Limite les journaux à 100M / 7 jours (réduit les écritures)
+- **fstab noatime** : Supprime les écritures d'accès-time à chaque lecture fichier
+- **Déduplication OTA** : Lock file `/tmp/neopro-update.lock` empêche les doubles exécutions
+- **Timer sd-health** : Check hebdomadaire (erreurs dmesg + état filesystem)
+- **Monitoring heartbeat** : Erreurs EXT4 et lecture-seule remontées automatiquement au dashboard
+
+**Si filesystem "not clean" ou "read-only" :**
+
+```bash
+# Planifier un fsck au prochain reboot
+sudo touch /forcefsck
+sudo reboot
 ```
 
 ---
