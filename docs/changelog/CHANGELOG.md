@@ -1,3 +1,9 @@
+## [3.69.2](https://github.com/Tallec7/neopro/compare/v3.69.1...v3.69.2) (2026-02-22)
+
+### Bug Fixes
+
+- **wifi:** hotspot invisible + mauvais MDP + captive portal vide ([1f0e8f8](https://github.com/Tallec7/neopro/commit/1f0e8f812b23cc193623186bdcf4ea60e2065241))
+
 ## [3.69.1](https://github.com/Tallec7/neopro/compare/v3.69.0...v3.69.1) (2026-02-22)
 
 ### Bug Fixes
