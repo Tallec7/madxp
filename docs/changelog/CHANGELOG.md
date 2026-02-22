@@ -1,3 +1,9 @@
+## [3.68.6](https://github.com/Tallec7/neopro/compare/v3.68.5...v3.68.6) (2026-02-22)
+
+### Bug Fixes
+
+- **sponsors:** script backfill site_sponsor_id sur video_plays existants ([0b43b47](https://github.com/Tallec7/neopro/commit/0b43b477ae2cf048cc51a950c50fcd9cc481a559))
+
 ## [3.68.5](https://github.com/Tallec7/neopro/compare/v3.68.4...v3.68.5) (2026-02-22)
 
 ### Bug Fixes
