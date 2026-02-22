@@ -1,3 +1,9 @@
+## [3.68.8](https://github.com/Tallec7/neopro/compare/v3.68.7...v3.68.8) (2026-02-22)
+
+### Bug Fixes
+
+- **database:** pool error handler résilient — tolérer les déconnexions idle PgBouncer ([155db2c](https://github.com/Tallec7/neopro/commit/155db2c61c8dd084df1bdbf91b5da8dad9bd57a9))
+
 ## [3.68.8] (2026-02-22)
 
 ### Bug Fixes
