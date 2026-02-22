@@ -242,7 +242,7 @@ setInterval(async () => {
 
   // Skip DB size check if circuit breaker is open (lazy import to avoid circular dep)
   try {
-    const { dbCircuitBreaker } = require('../services/db-circuit-breaker.service');
+    const { dbCircuitBreaker } = await import('../services/db-circuit-breaker.service');
     if (!dbCircuitBreaker.isAvailable()) return;
   } catch {
     // Circuit breaker not available yet during startup — proceed normally
@@ -280,10 +280,11 @@ setInterval(async () => {
 
 // Lazy reference to circuit breaker (avoids circular dep with services/)
 let circuitBreakerInstance: { recordSuccess: () => void; recordFailure: (e?: Error) => void } | null = null;
-const getCircuitBreaker = () => {
+const getCircuitBreaker = async () => {
   if (!circuitBreakerInstance) {
     try {
-      circuitBreakerInstance = require('../services/db-circuit-breaker.service').dbCircuitBreaker;
+      const mod = await import('../services/db-circuit-breaker.service');
+      circuitBreakerInstance = mod.dbCircuitBreaker;
     } catch {
       // Not available yet during startup
     }
@@ -303,12 +304,12 @@ export const query = async <T extends QueryResultRow = QueryResultRow>(text: str
     getMetricsService()?.recordDbQuery(operation, duration / 1000);
 
     // Notify circuit breaker of success
-    getCircuitBreaker()?.recordSuccess();
+    (await getCircuitBreaker())?.recordSuccess();
 
     return result;
   } catch (error) {
     // Notify circuit breaker of failure (connection timeouts, statement timeouts, etc.)
-    getCircuitBreaker()?.recordFailure(error instanceof Error ? error : undefined);
+    (await getCircuitBreaker())?.recordFailure(error instanceof Error ? error : undefined);
     logger.error('Database query error:', { text, error });
     throw error;
   }
