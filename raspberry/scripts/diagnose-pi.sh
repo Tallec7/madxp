@@ -286,6 +286,12 @@ check_apt_packages() {
 }
 
 check_node_modules() {
+    # Modules critiques par composant — si absents, le service crash au démarrage
+    declare -A CRITICAL_DEPS
+    CRITICAL_DEPS[server]="express socket.io"
+    CRITICAL_DEPS[admin]="express"
+    CRITICAL_DEPS[sync-agent]="socket.io-client fs-extra axios"
+
     local COMPONENTS=("server" "admin" "sync-agent")
 
     for component in "${COMPONENTS[@]}"; do
@@ -301,8 +307,23 @@ check_node_modules() {
         elif [ -d "$dir/node_modules" ]; then
             local MOD_COUNT
             MOD_COUNT=$(ls -1 "$dir/node_modules" 2>/dev/null | wc -l | tr -d ' ')
-            print_success "${component}/node_modules : présent (${MOD_COUNT} modules)"
-            json_add "node_modules" "$component" "ok" "${MOD_COUNT} modules"
+
+            # Vérifier les dépendances critiques (détecte corruption EXT4 / npm install interrompu)
+            local missing_deps=""
+            for dep in ${CRITICAL_DEPS[$component]}; do
+                if [ ! -d "$dir/node_modules/$dep" ]; then
+                    missing_deps="${missing_deps}${dep} "
+                fi
+            done
+
+            if [ -n "$missing_deps" ]; then
+                print_error "${component}/node_modules : ${MOD_COUNT} modules, MANQUANTS: ${missing_deps}"
+                json_add "node_modules" "$component" "error" "${MOD_COUNT} modules, missing: ${missing_deps}"
+                TOTAL_ERRORS=$((TOTAL_ERRORS + 1))
+            else
+                print_success "${component}/node_modules : présent (${MOD_COUNT} modules, deps critiques OK)"
+                json_add "node_modules" "$component" "ok" "${MOD_COUNT} modules"
+            fi
         fi
     done
 }

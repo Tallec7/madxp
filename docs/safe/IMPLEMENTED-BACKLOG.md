@@ -1,6 +1,6 @@
 # Implemented Backlog — Features Livrées
 
-> **Dernière mise à jour** : 21 Février 2026
+> **Dernière mise à jour** : 22 Février 2026
 > Ce document recense **toutes** les features implémentées dans le codebase NEOPRO, organisées par domaine fonctionnel. Il complète le backlog SAFe (futur) avec une vue exhaustive du produit livré.
 > **Source** : Croisement systématique de 34 changelogs, 200+ commits git (v3.47→v3.64), audit codebase, et sprint audit sponsors/analytics (26 features P0+P1+P2+P3).
 
@@ -90,6 +90,7 @@
 | IMP-DEP-10 | Diagnostic santé Pi complet (mode JSON)                     | Production | `diagnose-pi.sh`, `diagnose.js`                         | 2026         |
 | IMP-DEP-11 | Scripts pré-migration (fix ownership, copie VERSION)        | Production | `pre-migration.sh`                                      | v3.55.x      |
 | IMP-DEP-12 | Scripts install/setup/build renforcés                       | Production | `install.sh`, `setup.sh`, `build-raspberry.sh`          | 2026         |
+| IMP-DEP-13 | OTA vérification intégrité node_modules + rollback auto     | Production | `update-software.js`, `diagnose-pi.sh`                  | Fév 2026     |
 
 ---
 
@@ -169,6 +170,7 @@
 | IMP-PI-24 | Watchdog dual Chromium LED (détection HDMI 1 DRM/KMS, auto start/stop)  | Livré      | `kiosk-watchdog.sh`                                          | Fév 2026     |
 | IMP-PI-25 | Overlays LED : score bandeau compact + goal flash couleur par équipe    | Livré      | `tv.component.html`, `tv.component.scss`                     | Fév 2026     |
 | IMP-PI-26 | Socket.IO `tv-register` avec `displayType` (master-slave par écran)     | Livré      | `state.service.js`, `handlers.js`                            | Fév 2026     |
+| IMP-PI-27 | Kiosk : attente active X11 avant lancement Chromium (xdpyinfo polling)  | Production | `kiosk-watchdog.sh`, `neopro-kiosk.service`                  | Fév 2026     |
 
 ---
 
@@ -334,18 +336,18 @@
 
 ## Statistiques Produit
 
-| Métrique                  | Valeur                                                             |
-| ------------------------- | ------------------------------------------------------------------ |
-| **Features implémentées** | **218** (+26 audit, +8 E-22 TV+LED dual, +6 sponsor UX)            |
-| Domaines fonctionnels     | 14                                                                 |
-| Controllers API           | 29 (+sponsor-alerts)                                               |
-| Services métier           | 40 (+sponsor-alert, sponsor-stats, sponsor-auto-resolution)        |
-| Repositories              | 25 (+video-variant)                                                |
-| Migrations DB             | 54 (+add-led-support-and-video-variants)                           |
-| Modules dashboard         | 21 (+advertiser-health, analytics-categories)                      |
-| Services Raspberry        | 19 (+sponsor-stats)                                                |
-| Versions publiées         | 265+ (v2.1 → v3.62)                                                |
-| Tests (total)             | 2 386 (1590 API + 506 Angular + 148 Admin + 71 Socket + 142 Smoke) |
+| Métrique                  | Valeur                                                                        |
+| ------------------------- | ----------------------------------------------------------------------------- |
+| **Features implémentées** | **220** (+26 audit, +8 E-22 TV+LED dual, +6 sponsor UX, +2 résilience Pi/OTA) |
+| Domaines fonctionnels     | 14                                                                            |
+| Controllers API           | 29 (+sponsor-alerts)                                                          |
+| Services métier           | 40 (+sponsor-alert, sponsor-stats, sponsor-auto-resolution)                   |
+| Repositories              | 25 (+video-variant)                                                           |
+| Migrations DB             | 54 (+add-led-support-and-video-variants)                                      |
+| Modules dashboard         | 21 (+advertiser-health, analytics-categories)                                 |
+| Services Raspberry        | 19 (+sponsor-stats)                                                           |
+| Versions publiées         | 265+ (v2.1 → v3.62)                                                           |
+| Tests (total)             | 2 386 (1590 API + 506 Angular + 148 Admin + 71 Socket + 142 Smoke)            |
 
 ---
 

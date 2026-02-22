@@ -12,6 +12,15 @@
   Race condition : `processPendingDeploymentsForSite()` re-envoyait un `update_software` quand
   le Pi revenait en ligne (status `in_progress`). Guard dedup server-side (remote_commands <120s)
   - lock file client-side (`/tmp/neopro-update.lock`) pour double protection.
+- **ota:** vérification intégrité `node_modules` après npm install — rollback automatique si modules critiques manquants
+  Après un shutdown unclean (coupure courant, crash kernel), le cleanup EXT4 orphan pouvait supprimer
+  des modules partiellement écrits (ex: `gopd`). L'OTA détecte maintenant les modules manquants
+  (`express`, `socket.io`, `fs-extra`, etc.), tente une réparation npm install, et déclenche un
+  rollback automatique si la réparation échoue. Le npm install du server est aussi loggé (plus silencieux).
+- **kiosk:** attente active du serveur X avant lancement Chromium — remplace le `sleep 10` fixe
+  Le `ExecStartPre` systemd et le watchdog attendent maintenant activement que `xdpyinfo` réponde
+  (max 60s, check toutes les 2s). Résout le crash `Missing X server or $DISPLAY` quand le display
+  s'initialise lentement (Pi 5 avec GPU V3D, premier boot, HDMI hot-plug).
 
 ### Features
 
@@ -24,6 +33,7 @@
 
 - **heartbeat:** nouveau champ `filesystemHealth` (ext4Errors, isReadOnly) dans le heartbeat Pi → central
 - **alerts:** nouvelles alertes `fs_ext4_errors` (warning/critical) et `fs_readonly` (critical) automatiques
+- **diagnostic:** `check_node_modules` vérifie les dépendances critiques par composant (détecte corruption post-crash)
 
 ## [3.68.8](https://github.com/Tallec7/neopro/compare/v3.68.7...v3.68.8) (2026-02-22)
 

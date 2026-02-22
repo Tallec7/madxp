@@ -404,11 +404,35 @@ check_chromium_alive() {
     return 0  # Chromium vivant
 }
 
+# Attendre que le serveur X soit disponible (max 60s)
+wait_for_x_server() {
+    local max_attempts=30
+    local attempt=0
+    while (( attempt < max_attempts )); do
+        if DISPLAY=:0 xdpyinfo > /dev/null 2>&1; then
+            log "✓ Serveur X disponible (après ${attempt}×2s)"
+            return 0
+        fi
+        (( attempt++ ))
+        sleep 2
+    done
+    log "❌ Serveur X non disponible après 60s"
+    return 1
+}
+
 # Fonction principale de surveillance
 main() {
     log "═══════════════════════════════════════════════════"
     log "🐕 Démarrage du watchdog Kiosk Neopro"
     log "═══════════════════════════════════════════════════"
+
+    # Attendre que X soit prêt avant de lancer Chromium
+    if ! wait_for_x_server; then
+        log "⚠️ Serveur X introuvable — Chromium ne pourra pas se lancer"
+        log "  Causes possibles: HDMI non branché, display manager non démarré"
+        write_kiosk_status "error" "X server not available"
+        # Continuer quand même — le watchdog loop réessayera
+    fi
 
     # Premier démarrage
     cleanup_chromium
