@@ -645,6 +645,25 @@ npm run db:migrate
 
 ---
 
-**Dernière mise à jour:** 17 février 2026
+### 14. backfill-site-sponsor-id-on-video-plays.sql ✅ **Backfill site_sponsor_id**
+
+**Date:** 2026-02-22
+**Statut:** Prêt pour exécution
+**Durée estimée:** < 5 secondes (dépend du volume)
+
+**Description:**
+Résout les `site_sponsor_id` NULL dans `video_plays` (category='sponsor') via `video_filename` → `site_sponsor_videos` → `site_sponsors`. Les enregistrements antérieurs à l'auto-résolution déploiement n'avaient pas cette colonne renseignée → 0 impressions affichées sur le dashboard.
+
+**Idempotent:** Oui — ne touche que les lignes avec `site_sponsor_id IS NULL`.
+
+**Commande:**
+
+```bash
+psql $DATABASE_URL -f central-server/src/scripts/migrations/backfill-site-sponsor-id-on-video-plays.sql
+```
+
+---
+
+**Dernière mise à jour:** 22 février 2026
 **Auteur:** Claude Code
-**Version migrations:** 3.0
+**Version migrations:** 3.1

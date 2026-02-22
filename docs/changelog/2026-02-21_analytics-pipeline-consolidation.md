@@ -70,6 +70,7 @@ Le systeme analytics sponsors avait **deux pipelines paralleles** :
 - Les enregistrements `video_plays` sans `site_sponsor_id` (antérieurs à l'auto-résolution) sont désormais comptés via résolution `video_filename` → `site_sponsor_videos` → `site_sponsors`
 - Pas de double-comptage (branches mutuellement exclusives `IS NOT NULL` / `IS NULL`)
 - Corrige l'affichage "0 impressions" sur le dashboard sponsors pour les sites existants
+- **Script backfill** : `backfill-site-sponsor-id-on-video-plays.sql` résout rétroactivement les `site_sponsor_id` NULL via `video_filename` → `site_sponsor_videos`
 
 ## Tests
 
