@@ -64,6 +64,13 @@ Le systeme analytics sponsors avait **deux pipelines paralleles** :
   - `VerifiedImpressionsDropoff` : chute du taux TV-on (qualite HDMI-CEC)
   - `SponsorAnalyticsPipelineStall` : zero sponsor plays alors que club plays OK (v3.67)
 
+### Phase 6 — Fix comptage impressions dashboard (v3.68.5, 22 Fév)
+
+- **Requêtes `listBySite` / `listBySiteForAdvertiser`** : ajout fallback `video_filename` via `UNION ALL`
+- Les enregistrements `video_plays` sans `site_sponsor_id` (antérieurs à l'auto-résolution) sont désormais comptés via résolution `video_filename` → `site_sponsor_videos` → `site_sponsors`
+- Pas de double-comptage (branches mutuellement exclusives `IS NOT NULL` / `IS NULL`)
+- Corrige l'affichage "0 impressions" sur le dashboard sponsors pour les sites existants
+
 ## Tests
 
 | Suite                   | Resultat         |

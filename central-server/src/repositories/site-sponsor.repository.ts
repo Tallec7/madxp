@@ -208,11 +208,20 @@ class SiteSponsorRepositoryImpl extends BaseRepository<SiteSponsorRow> {
        FROM site_sponsors ss
        LEFT JOIN site_sponsor_videos ssv ON ssv.site_sponsor_id = ss.id
        LEFT JOIN (
-         SELECT site_sponsor_id, COUNT(*) as cnt
-         FROM video_plays
-         WHERE site_sponsor_id IS NOT NULL AND category = 'sponsor'
-         GROUP BY site_sponsor_id
-       ) imp ON imp.site_sponsor_id = ss.id
+         SELECT ss_id, COUNT(*) as cnt
+         FROM (
+           SELECT site_sponsor_id AS ss_id
+           FROM video_plays
+           WHERE site_sponsor_id IS NOT NULL AND category = 'sponsor'
+           UNION ALL
+           SELECT ssv.site_sponsor_id AS ss_id
+           FROM video_plays vp
+           JOIN site_sponsor_videos ssv ON ssv.video_filename = vp.video_filename
+           JOIN site_sponsors ss2 ON ss2.id = ssv.site_sponsor_id AND ss2.site_id = vp.site_id
+           WHERE vp.site_sponsor_id IS NULL AND vp.category = 'sponsor'
+         ) resolved
+         GROUP BY ss_id
+       ) imp ON imp.ss_id = ss.id
        WHERE ss.site_id = $1 ${statusFilter}
        GROUP BY ss.id, imp.cnt
        ORDER BY ss.name ASC`,
@@ -603,11 +612,20 @@ class SiteSponsorRepositoryImpl extends BaseRepository<SiteSponsorRow> {
        FROM site_sponsors ss
        LEFT JOIN site_sponsor_videos ssv ON ssv.site_sponsor_id = ss.id
        LEFT JOIN (
-         SELECT site_sponsor_id, COUNT(*) as cnt
-         FROM video_plays
-         WHERE site_sponsor_id IS NOT NULL AND category = 'sponsor'
-         GROUP BY site_sponsor_id
-       ) imp ON imp.site_sponsor_id = ss.id
+         SELECT ss_id, COUNT(*) as cnt
+         FROM (
+           SELECT site_sponsor_id AS ss_id
+           FROM video_plays
+           WHERE site_sponsor_id IS NOT NULL AND category = 'sponsor'
+           UNION ALL
+           SELECT ssv.site_sponsor_id AS ss_id
+           FROM video_plays vp
+           JOIN site_sponsor_videos ssv ON ssv.video_filename = vp.video_filename
+           JOIN site_sponsors ss2 ON ss2.id = ssv.site_sponsor_id AND ss2.site_id = vp.site_id
+           WHERE vp.site_sponsor_id IS NULL AND vp.category = 'sponsor'
+         ) resolved
+         GROUP BY ss_id
+       ) imp ON imp.ss_id = ss.id
        WHERE ss.advertiser_id = $1
        GROUP BY ss.id, imp.cnt
        ORDER BY ss.name ASC`,

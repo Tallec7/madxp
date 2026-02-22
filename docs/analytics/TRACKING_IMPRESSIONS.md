@@ -656,6 +656,30 @@ curl -X POST https://central.neopro.com/api/analytics/video-plays \
 - Sync-agent: Vérifier `CENTRAL_SERVER_URL` et `SITE_ID`
 - Réseau: Vérifier firewall/DNS
 
+### Problème: Dashboard sponsors affiche 0 impressions (v3.68.5)
+
+**Cause** : La colonne `site_sponsor_id` dans `video_plays` est récente. Les enregistrements antérieurs à l'auto-résolution (déploiement) ont `site_sponsor_id = NULL`. Si la requête ne comptait que les plays avec `site_sponsor_id IS NOT NULL`, les impressions historiques étaient invisibles.
+
+**Diagnostic** :
+
+```sql
+-- Vérifier combien de plays sponsor ont un site_sponsor_id NULL
+SELECT
+  COUNT(*) FILTER (WHERE site_sponsor_id IS NOT NULL) AS with_id,
+  COUNT(*) FILTER (WHERE site_sponsor_id IS NULL) AS without_id
+FROM video_plays
+WHERE category = 'sponsor' AND site_id = '<site_uuid>';
+```
+
+**Fix appliqué (v3.68.5)** : Les requêtes `listBySite` et `listBySiteForAdvertiser` dans `site-sponsor.repository.ts` utilisent maintenant un `UNION ALL` fallback :
+
+1. **Branche directe** : `video_plays.site_sponsor_id` (nouveaux enregistrements)
+2. **Branche fallback** : résolution par `video_filename` via `site_sponsor_videos` (enregistrements historiques sans `site_sponsor_id`)
+
+**Monitoring** : La métrique `neopro_impression_resolution_total{method}` permet de suivre le ratio `site_sponsor_id` vs `filename` vs `unresolved`. L'alerte `ImpressionSponsorUnresolved` se déclenche si >50% des impressions sont non résolues pendant 15 min.
+
+**Résolution long terme** : Redéployer la config des sites pour que l'auto-résolution injecte `site_sponsor_id` dans la config Pi. Les futures impressions auront directement le `site_sponsor_id` renseigné.
+
 ### Problème: Buffer grandit indéfiniment
 
 **Causes**:
@@ -716,6 +740,15 @@ curl -X POST https://central.neopro.com/api/analytics/video-plays \
 ---
 
 ## 📝 Changelog
+
+### Version 2.1.0 - 22 Février 2026
+
+**Fix comptage impressions dashboard sponsors (v3.68.5)** :
+
+- ✅ Les requêtes `listBySite` et `listBySiteForAdvertiser` comptent désormais les impressions via `site_sponsor_id` ET par fallback `video_filename` (via `site_sponsor_videos`)
+- ✅ Corrige l'affichage "0 impressions" pour les sites dont les `video_plays` historiques n'ont pas encore de `site_sponsor_id`
+- ✅ Pas de double-comptage : les deux branches du `UNION ALL` sont mutuellement exclusives (`IS NOT NULL` vs `IS NULL`)
+- ✅ Monitoring existant couvre ce cas : `neopro_impression_resolution_total{method}` + alerte `ImpressionSponsorUnresolved`
 
 ### Version 2.0.0 - 21 Février 2026
 

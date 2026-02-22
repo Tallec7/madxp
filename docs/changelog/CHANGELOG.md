@@ -1,3 +1,11 @@
+## [3.68.5](https://github.com/Tallec7/neopro/compare/v3.68.4...v3.68.5) (2026-02-22)
+
+### Bug Fixes
+
+- **sponsors:** fallback video_filename pour le comptage impressions quand site_sponsor_id est NULL ([XXXXXX](https://github.com/Tallec7/neopro/commit/XXXXXX))
+
+Les requêtes `listBySite` et `listBySiteForAdvertiser` ne comptaient les impressions que via `video_plays.site_sponsor_id` (colonne ajoutée récemment). Les enregistrements antérieurs à l'auto-résolution ont `site_sponsor_id = NULL` → 0 impressions affichées. Ajout d'un `UNION ALL` fallback résolvant par `video_filename` via `site_sponsor_videos` pour les enregistrements sans `site_sponsor_id`.
+
 ## [3.68.4](https://github.com/Tallec7/neopro/compare/v3.68.3...v3.68.4) (2026-02-21)
 
 ### Bug Fixes
