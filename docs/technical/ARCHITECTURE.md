@@ -110,14 +110,14 @@ neopro/ (monorepo)
 │   ├── src/app/
 │   │   ├── features/
 │   │   │   ├── sites/
-│   │   │   │   ├── site-detail.component.ts     # Page détail (6 onglets)
+│   │   │   │   ├── site-detail.component.ts     # Page détail (6 onglets) — onglet État : métriques système + hotspot + actions rapides
 │   │   │   │   └── components/
 │   │   │   │       ├── site-content-tab/        # Pipeline contenu (bibliothèque → boucles → télécommande → analytics)
 │   │   │   │       ├── loop-manager/            # Gestion unifiée boucles (défaut + 3 phases)
 │   │   │   │       ├── site-sponsors-tab/       # Sponsors locaux : CRUD, KPIs, association vidéos, benchmark, magic link
 │   │   │   │       ├── site-settings-tab/       # Config réseau, hotspot, branding club
 │   │   │   │       ├── site-profiles-tab/       # Multi-config CRUD + deploy
-│   │   │   │       └── site-debug-tab/          # Logs, commandes
+│   │   │   │       └── site-debug-tab/          # Logs, commandes, diagnostic hotspot avancé
 │   │   │   └── sponsor-portal/                  # Page publique portail sponsor (token-based)
 │   │   ├── core/                                # Models, services, guards
 │   │   └── shared/                              # Composants réutilisables
@@ -758,5 +758,5 @@ Résultat : 2 369 tests / 85+ suites, 0 failures.
 
 ---
 
-**Dernière mise à jour** : 21 février 2026
-**Version** : 3.62.1+
+**Dernière mise à jour** : 22 février 2026
+**Version** : 3.69.0+
