@@ -1,3 +1,14 @@
+## [3.68.7](https://github.com/Tallec7/neopro/compare/v3.68.6...v3.68.7) (2026-02-22)
+
+### Bug Fixes
+
+- **content:** vidéos locales manquantes dans la Bibliothèque Vidéo du dashboard
+
+  La déduplication local/cloud utilisait le filename au lieu du path, ce qui excluait
+  les vidéos Pi ayant le même nom dans des dossiers différents. Le champ
+  `uploaded_for_site_id` n'était pas remonté par `getCloudVideos`, empêchant le filtre
+  "Pertinentes" de fonctionner pour les uploads contextuels.
+
 ## [3.68.6](https://github.com/Tallec7/neopro/compare/v3.68.5...v3.68.6) (2026-02-22)
 
 ### Bug Fixes

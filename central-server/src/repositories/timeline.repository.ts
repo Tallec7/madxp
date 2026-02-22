@@ -64,6 +64,7 @@ export interface CloudVideoRow extends QueryResultRow {
   duration: number | null;
   checksum: string | null;
   storage_path: string | null;
+  uploaded_for_site_id: string | null;
   created_at: Date;
   updated_at: Date;
   metadata: Record<string, unknown> | null;
@@ -174,6 +175,7 @@ class TimelineRepositoryImpl {
          v.duration,
          v.checksum,
          v.storage_path,
+         v.uploaded_for_site_id,
          v.created_at,
          v.updated_at,
          v.metadata

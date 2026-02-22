@@ -1124,6 +1124,8 @@ export class VideoLibraryComponent implements OnChanges {
     // Track which cloud videos we've already added to avoid duplicates
     const seenCloudIds = new Set<string>();
     const seenFilenames = new Set<string>();
+    // Track matched local video paths to avoid losing locals with duplicate filenames
+    const matchedLocalPaths = new Set<string>();
 
     const cloudMapped: VideoItem[] = [];
 
@@ -1154,6 +1156,11 @@ export class VideoLibraryComponent implements OnChanges {
         }
       }
 
+      // Track matched local video by its unique path (not filename)
+      if (localMatch) {
+        matchedLocalPaths.add(localMatch.path);
+      }
+
       cloudMapped.push({
         id: cloud.id,
         path: cloud.url,
@@ -1173,9 +1180,10 @@ export class VideoLibraryComponent implements OnChanges {
       });
     }
 
-    // Local videos not in cloud list
+    // Local videos not already represented by a cloud entry
+    // Use path-based matching to avoid losing locals with duplicate filenames
     const localOnlyMapped: VideoItem[] = this.videos
-      .filter(local => !seenFilenames.has(local.filename.toLowerCase()))
+      .filter(local => !matchedLocalPaths.has(local.path))
       .map(local => ({
         id: null,
         path: local.path,
