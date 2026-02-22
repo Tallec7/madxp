@@ -283,6 +283,18 @@ type TabId = 'status' | 'content' | 'settings' | 'profiles' | 'sponsors' | 'subs
                     <span class="metric-detail" *ngIf="hotspotClients > 0">{{ hotspotClients }} client{{ hotspotClients > 1 ? 's' : '' }}</span>
                   </div>
                 </div>
+
+                <div class="metric" [class.warning]="networkProfileType === 'mesh' || networkProfileType === 'mesh_isolated'" [class.critical]="networkStabilityScore !== null && networkStabilityScore < 25" *ngIf="networkProfileType">
+                  <div class="metric-icon">{{ networkProfileType === 'ethernet' ? '🔌' : '🌐' }}</div>
+                  <div class="metric-info">
+                    <div class="metric-label">Réseau</div>
+                    <div class="metric-value">{{ networkProfileLabel }}</div>
+                  </div>
+                  <div class="metric-details">
+                    <span class="metric-detail" *ngIf="networkStabilityScore !== null">Stabilité {{ networkStabilityScore }}%</span>
+                    <span class="metric-detail" *ngIf="networkApCount > 1">{{ networkApCount }} AP</span>
+                  </div>
+                </div>
               </div>
               <ng-template #noMetrics>
                 <p class="no-data">Aucune métrique disponible</p>
@@ -1433,6 +1445,12 @@ export class SiteDetailComponent implements OnInit, OnDestroy {
   hotspotClients: number = 0;
   hotspotActive: boolean = false;
 
+  // Network profile (from local_config_mirror._networkProfile)
+  networkProfileType: string | null = null;
+  networkStabilityScore: number | null = null;
+  networkApCount: number = 0;
+  networkProfileLabel: string = '';
+
   // Connection
   connectionStatus: SiteConnectionStatus | null = null;
   isConnected = false;
@@ -1722,6 +1740,26 @@ export class SiteDetailComponent implements OnInit, OnDestroy {
         this.hotspotActive = true;
       }
     }
+
+    const profile = site.local_config_mirror?._networkProfile;
+    if (profile) {
+      this.networkProfileType = profile.type || null;
+      this.networkStabilityScore = profile.stabilityScore ?? null;
+      this.networkApCount = profile.apCount || 0;
+      this.networkProfileLabel = this.getNetworkProfileLabel(profile.type);
+    }
+  }
+
+  private getNetworkProfileLabel(type: string): string {
+    const labels: Record<string, string> = {
+      'ethernet': 'Ethernet',
+      'simple': 'WiFi Simple',
+      'mesh': 'WiFi Mesh',
+      'mesh_isolated': 'Mesh Isolé',
+      'enterprise': 'Enterprise',
+      'unknown': 'Inconnu',
+    };
+    return labels[type] || type;
   }
 
   restartHotspot(): void {
