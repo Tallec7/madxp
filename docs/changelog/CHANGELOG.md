@@ -1,3 +1,9 @@
+# [3.69.0](https://github.com/Tallec7/neopro/compare/v3.68.8...v3.69.0) (2026-02-22)
+
+### Features
+
+- **pi:** dedup OTA + SD card protection + filesystem monitoring ([a9025a0](https://github.com/Tallec7/neopro/commit/a9025a0f8383484b9a272e9c48d0b55a646e0115))
+
 ## [3.69.0] (2026-02-22)
 
 ### Bug Fixes
@@ -5,7 +11,7 @@
 - **ota:** déduplication double commande `update_software` lors de reconnexion Pi pendant OTA
   Race condition : `processPendingDeploymentsForSite()` re-envoyait un `update_software` quand
   le Pi revenait en ligne (status `in_progress`). Guard dedup server-side (remote_commands <120s)
-  + lock file client-side (`/tmp/neopro-update.lock`) pour double protection.
+  - lock file client-side (`/tmp/neopro-update.lock`) pour double protection.
 
 ### Features
 
