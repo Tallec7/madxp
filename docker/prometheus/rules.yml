@@ -109,6 +109,16 @@ groups:
           summary: "DB pool saturation above 80%"
           description: "Active connections: {{ $value | humanizePercentage }} of pool. Risk of exhaustion."
 
+      # Pool idle-client errors (PgBouncer disconnects)
+      - alert: DbPoolErrors
+        expr: rate(neopro_db_pool_errors_total[5m]) * 60 > 3
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Database pool errors > 3/min"
+          description: "PgBouncer idle-client disconnects: {{ $value | humanize }}/min. Server will exit after 5 errors in 30s window."
+
       # Slow queries
       - alert: SlowDbQueries
         expr: histogram_quantile(0.95, rate(neopro_db_query_duration_seconds_bucket[5m])) > 2

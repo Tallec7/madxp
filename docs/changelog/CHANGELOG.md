@@ -1,3 +1,24 @@
+## [3.68.8] (2026-02-22)
+
+### Bug Fixes
+
+- **database:** pool error handler résilient — tolère les déconnexions idle PgBouncer au lieu de crash immédiat
+  Le handler `pool.on('error')` appelait `process.exit(-1)` sur chaque erreur de connexion idle.
+  PgBouncer (Supabase Transaction Mode) tue régulièrement les connexions idle, causant des
+  crashs serveur → socket déconnectées + ERR_HTTP2_PROTOCOL_ERROR côté dashboard.
+  Nouveau comportement : tolère les erreurs transitoires, crash uniquement après 5 erreurs en 30s.
+
+### Performance
+
+- **content:** endpoint léger `GET /videos/names` pour les dropdowns (id+titre+file_size uniquement)
+  `loadAllVideos()` chargeait `/videos?limit=500` (toutes les métadonnées) juste pour un `<select>`.
+  Payload réduit ~10x, temps de réponse amélioré.
+
+### Monitoring
+
+- **metrics:** nouveau counter Prometheus `neopro_db_pool_errors_total` pour tracer les erreurs pool
+- **alerts:** nouvelle règle `DbPoolErrors` (> 3 erreurs/min pendant 5 min → warning)
+
 ## [3.68.7](https://github.com/Tallec7/neopro/compare/v3.68.6...v3.68.7) (2026-02-22)
 
 ### Bug Fixes

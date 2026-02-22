@@ -102,9 +102,38 @@ logger.info('Database SSL configuration', {
 
 const pool = new Pool(poolConfig);
 
+// Track consecutive idle-client errors to distinguish transient PgBouncer
+// disconnects (normal with Supabase Transaction Mode) from permanent failures.
+let poolErrorCount = 0;
+let poolErrorResetTimer: ReturnType<typeof setTimeout> | null = null;
+const POOL_ERROR_THRESHOLD = 5;     // exit after 5 errors …
+const POOL_ERROR_WINDOW_MS = 30000; // … within 30 seconds
+
 pool.on('error', (err: Error) => {
-  logger.error('Unexpected database error:', err);
-  process.exit(-1);
+  poolErrorCount++;
+  logger.error('Database pool idle-client error', {
+    message: err.message,
+    consecutiveErrors: poolErrorCount,
+    threshold: POOL_ERROR_THRESHOLD,
+  });
+
+  // Record Prometheus metric (lazy import to avoid circular dep)
+  getMetricsService()?.recordDbPoolError();
+
+  // Reset counter after the window — transient errors are expected
+  if (poolErrorResetTimer) clearTimeout(poolErrorResetTimer);
+  poolErrorResetTimer = setTimeout(() => {
+    poolErrorCount = 0;
+  }, POOL_ERROR_WINDOW_MS);
+
+  // Only crash if errors keep coming — indicates a permanent issue
+  if (poolErrorCount >= POOL_ERROR_THRESHOLD) {
+    logger.error('Too many consecutive database pool errors — exiting', {
+      count: poolErrorCount,
+      windowMs: POOL_ERROR_WINDOW_MS,
+    });
+    process.exit(-1);
+  }
 });
 
 pool.on('connect', () => {
@@ -117,6 +146,7 @@ let metricsServiceInstance: {
   recordDbConnections: (active: number, idle: number) => void;
   recordDbSize: (totalBytes: number) => void;
   recordDbTableSize: (table: string, totalBytes: number) => void;
+  recordDbPoolError: () => void;
 } | null = null;
 const getMetricsService = () => {
   if (!metricsServiceInstance) {

@@ -1821,7 +1821,7 @@ export class ContentManagementComponent implements OnInit, OnDestroy {
   activeTab: 'videos' | 'deploy' | 'history' = 'videos';
 
   videos: Video[] = [];
-  allVideos: Video[] = [];
+  allVideos: { id: string; title: string; file_size: number }[] = [];
   deployments: Deployment[] = [];
   sites: Site[] = [];
   groups: Group[] = [];
@@ -1921,12 +1921,12 @@ export class ContentManagementComponent implements OnInit, OnDestroy {
   }
 
   loadAllVideos(): void {
-    this.apiService.get<{ data: Video[]; pagination: PaginationInfo }>('/videos?limit=500').subscribe({
-      next: (response) => {
-        this.allVideos = response.data || [];
+    this.apiService.get<{ id: string; title: string; file_size: number }[]>('/videos/names').subscribe({
+      next: (names) => {
+        this.allVideos = names || [];
       },
       error: (error) => {
-        this.logger.warn('Failed to load all videos for deploy', { error: ErrorExtractor.getMessage(error) });
+        this.logger.warn('Failed to load video names for deploy', { error: ErrorExtractor.getMessage(error) });
       }
     });
   }

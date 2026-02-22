@@ -146,6 +146,12 @@ const dbTableSizeBytesGauge = new Gauge({
   registers: [register],
 });
 
+const dbPoolErrorsCounter = new Counter({
+  name: 'neopro_db_pool_errors_total',
+  help: 'Total idle-client errors on the database connection pool (PgBouncer disconnects)',
+  registers: [register],
+});
+
 // ============= Métriques WebSocket =============
 
 const websocketConnectionsGauge = new Gauge({
@@ -717,6 +723,10 @@ class MetricsService {
 
   recordDbTableSize(table: string, totalBytes: number): void {
     dbTableSizeBytesGauge.set({ table }, totalBytes);
+  }
+
+  recordDbPoolError(): void {
+    dbPoolErrorsCounter.inc();
   }
 
   recordWebsocketConnection(type: string, count: number): void {

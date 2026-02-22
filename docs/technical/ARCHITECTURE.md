@@ -487,6 +487,7 @@ Alertes infrastructure côté serveur, complémentaires aux alertes métier Pi (
 | Connectivity      | `ConnectedSitesDrop`           | -50% en 10 min                | 5 min       | warning  |
 | Connectivity      | `HighDisconnectRate`           | > 0.5/s                       | 3 min       | warning  |
 | Database          | `DbPoolSaturation`             | active/total > 80%            | 3 min       | warning  |
+| Database          | `DbPoolErrors`                 | pool errors > 3/min           | 5 min       | warning  |
 | Database          | `SlowDbQueries`                | P95 > 2s                      | 5 min       | warning  |
 | Database          | `DbSizeWarning`                | DB > 400 MB                   | 10 min      | warning  |
 | Database          | `DbSizeCritical`               | DB > 475 MB                   | 5 min       | critical |
@@ -659,7 +660,8 @@ Pour fonctionner sans internet, le build Angular doit inclure :
 
 - Redis adapter Socket.IO (sticky sessions multi-instance)
 - PostgreSQL indexes
-- Connection pooling configurable (`DB_POOL_MAX`, defaut 10, clamp 1-50)
+- Connection pooling configurable (`DB_POOL_MAX`, defaut 5, clamp 1-50)
+- Pool error resilience : tolère les déconnexions idle PgBouncer, crash uniquement après 5 erreurs / 30s
 - Rate limiting (per-user based)
 - Memory Manager with automatic cleanup at 93% heap usage
 - Bounded Maps/Arrays to prevent memory leaks (pendingCommands: 100, jobs: 100)

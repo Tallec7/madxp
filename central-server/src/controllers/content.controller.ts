@@ -113,6 +113,16 @@ async function generateUniqueFilename(originalName: string): Promise<string> {
   }
 }
 
+export const getVideoNames = async (_req: AuthRequest, res: Response) => {
+  try {
+    const names = await videoRepository.findAllNames();
+    res.json(names);
+  } catch (error) {
+    logger.error('Error fetching video names:', error);
+    res.status(500).json({ error: 'Erreur lors de la récupération des noms de vidéos' });
+  }
+};
+
 export const getVideos = async (req: AuthRequest, res: Response) => {
   try {
     const { category, search } = req.query;

@@ -1159,6 +1159,7 @@ DELETE /sites/:id/remote-pin    - Supprimer PIN télécommande cloud
 
 ```
 GET    /content/videos                  - Liste vidéos (paginé: ?page=1&limit=20&search=&category=, max 500)
+GET    /content/videos/names            - Liste légère id+titre+file_size pour dropdowns (pas de pagination)
 GET    /content/videos/:id              - Détails d'une vidéo
 GET    /content/videos/:id/deployments  - Historique des déploiements d'une vidéo
 GET    /content/videos/for-site/:siteId - Vidéos prioritaires pour un site (paginé)

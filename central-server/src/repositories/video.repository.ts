@@ -77,6 +77,22 @@ class VideoRepositoryImpl extends BaseRepository<VideoRow> {
   }
 
   /**
+   * Liste legere id + titre pour les dropdowns (pas de pagination, pas de metadata lourde).
+   */
+  async findAllNames(): Promise<{ id: string; title: string; file_size: number }[]> {
+    const result = await query<{ id: string; original_name: string; filename: string; metadata: Record<string, unknown>; file_size: number }>(
+      `SELECT id, original_name, filename, metadata, file_size
+       FROM videos
+       ORDER BY created_at DESC`
+    );
+    return result.rows.map(r => ({
+      id: r.id,
+      title: (r.metadata as { title?: string })?.title || r.original_name || r.filename,
+      file_size: r.file_size,
+    }));
+  }
+
+  /**
    * Retourne le sous-ensemble d'IDs qui existent dans la table videos.
    */
   async findExistingIds(ids: string[]): Promise<Set<string>> {

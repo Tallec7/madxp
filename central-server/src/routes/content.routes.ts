@@ -8,6 +8,7 @@ const router = Router();
 
 // Video routes
 router.get('/videos', authenticate, createPaginationMiddleware(20, 500), contentController.getVideos);
+router.get('/videos/names', authenticate, contentController.getVideoNames);  // Liste légère id+titre pour dropdowns
 router.get('/videos/for-site/:siteId', authenticate, paginationMiddleware, contentController.getVideosForSite);  // Vidéos priorisées pour un site
 router.get('/videos/:id', authenticate, contentController.getVideo);
 router.get('/videos/:id/deployments', authenticate, contentController.getVideoDeployments);
