@@ -1,3 +1,9 @@
+## [3.69.5](https://github.com/Tallec7/neopro/compare/v3.69.4...v3.69.5) (2026-02-22)
+
+### Bug Fixes
+
+- **sponsors:** backfill plays historiques category='other' → 'sponsor' ([6fee04d](https://github.com/Tallec7/neopro/commit/6fee04da82dc986cc29bd7c34e56aaf69d147dd6))
+
 ## [3.69.4](https://github.com/Tallec7/neopro/compare/v3.69.3...v3.69.4) (2026-02-22)
 
 ### Bug Fixes
