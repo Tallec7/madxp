@@ -16,6 +16,12 @@
   enrichie par `autoResolveSponsorIds()` — les `site_sponsor_id` fraîchement résolus n'étaient pas
   synchronisés dans `site_sponsor_videos`.
 
+### Migrations
+
+- **backfill:** script `backfill-other-to-sponsor-category.sql` — reclasse les `video_plays` historiques
+  de `category='other'` vers `'sponsor'` quand le `video_filename` matche un sponsor via `site_sponsor_videos`.
+  Résout aussi les `site_sponsor_id` manquants. Idempotent, réversible.
+
 ### Tests
 
 - **smoke:** test "Sponsor loop entries must include analytics_category" — vérifie que `_rebuildLoopEntries`

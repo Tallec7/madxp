@@ -709,7 +709,14 @@ cat ~/neopro/data/configuration.json | jq '.sponsors[] | {path, analytics_catego
 1. `_rebuildLoopEntries()` ajoute `analytics_category: 'sponsor'` + `name` + `type` aux entrées de boucle
 2. `syncSponsorVideoAssociations()` reçoit `enrichedConfig` (avec les `site_sponsor_id` résolus)
 
-**Backfill données historiques** : Les plays déjà enregistrés en `category='other'` restent non comptés. Un redéploiement de la config (qui réécrit les loop entries avec `analytics_category`) corrige le problème pour les futures impressions.
+**Backfill données historiques** :
+
+```bash
+# Exécuter le script de backfill (idempotent, réversible)
+source central-server/.env && psql "$DATABASE_URL" -f central-server/src/scripts/migrations/backfill-other-to-sponsor-category.sql
+```
+
+Ce script reclasse les plays `category='other'` → `'sponsor'` quand le `video_filename` matche un sponsor dans `site_sponsor_videos`, et résout les `site_sponsor_id` manquants.
 
 ### Problème: Buffer grandit indéfiniment
 
