@@ -1,3 +1,9 @@
+## [3.69.4](https://github.com/Tallec7/neopro/compare/v3.69.3...v3.69.4) (2026-02-22)
+
+### Bug Fixes
+
+- **sponsors:** impressions boucle locale invisibles dans dashboard ([23bd430](https://github.com/Tallec7/neopro/commit/23bd430e8091fb7c6785b6837b8aadf2672337f8))
+
 ## [3.69.4] (2026-02-22)
 
 ### Bug Fixes
