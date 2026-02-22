@@ -1,3 +1,32 @@
+## [3.69.3] (2026-02-22)
+
+### Bug Fixes
+
+- **cloud-remote:** détection connexion zombie — vérification room Socket.IO en plus de la Map `connectedSites`
+  Le dashboard affichait "Commande envoyée" (succès) mais rien ne se passait sur le Pi. Cause : après une
+  partition réseau, le socket était déconnecté sans que le handler `disconnect` ne se déclenche. La room
+  Socket.IO était vide mais `isConnected()` retournait `true`. Le controller retourne maintenant **503
+  "Connexion instable"** au lieu d'un faux succès.
+- **cloud-remote:** ajout handler `match-info-updated` manquant dans `handlers.js` (Pi local server)
+  Les commandes `match-config` depuis la cloud remote étaient relayées par le sync-agent mais droppées
+  silencieusement par le local server (aucun listener). Les scores, phases et timers fonctionnaient car
+  ils avaient leurs handlers.
+- **socket:** fix mismatch `socket.data.siteId` vs `(socket as any).siteId` dans `score-update.handler.ts`
+  et `match-config.handler.ts` — Socket.IO v4 sépare `socket.data` (objet vide) et les propriétés directes.
+  Le `siteId` était `undefined` → early return silencieux → les scores Pi ne remontaient pas au dashboard.
+- **sync-agent:** `relayToLocalServer()` logge maintenant un **warn** quand un événement cloud remote est
+  droppé (connexion locale coupée), au lieu d'un debug silencieux dans `local-socket.js`.
+
+### Monitoring
+
+- **prometheus:** nouveau status `zombie` dans `neopro_commands_total{type, status}` — compteur incrémenté
+  quand le controller détecte une room vide lors d'une commande cloud remote.
+
+### Tests
+
+- **smoke:** test #30 "Cloud remote relay chain" (5 assertions) — vérifie la complétude de la chaîne
+  `remote.controller.ts` → `agent.js` → `handlers.js` pour tous les événements cloud remote.
+
 ## [3.69.2](https://github.com/Tallec7/neopro/compare/v3.69.1...v3.69.2) (2026-02-22)
 
 ### Bug Fixes

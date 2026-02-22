@@ -1552,3 +1552,88 @@ describe('Hourly metric alerting wiring', () => {
     });
   });
 });
+
+// ─── #30 Cloud remote relay chain completeness ──────────────────────────────
+describe('Cloud remote relay chain', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+  const remoteCtrlPath = path.join(repoRoot, 'central-server', 'src', 'controllers', 'remote.controller.ts');
+  const agentPath = path.join(repoRoot, 'raspberry', 'sync-agent', 'src', 'agent.js');
+  const handlersPath = path.join(repoRoot, 'raspberry', 'server', 'socket', 'handlers.js');
+
+  const remoteCtrl = fs.readFileSync(remoteCtrlPath, 'utf8');
+  const agent = fs.readFileSync(agentPath, 'utf8');
+  const handlers = fs.readFileSync(handlersPath, 'utf8');
+
+  // Events emitted by remote.controller.ts via io.to(siteId).emit()
+  const remoteControllerEvents = [
+    'score-update',
+    'score-reset',
+    'phase-change',
+    'cloud-remote-action',
+    'timer-update',
+    'breaking-news',
+    'match-info-updated',
+    'recording-toggle',
+    'screenshot-request',
+  ];
+
+  // All events sync-agent listens for from central server
+  // Includes remote controller events + options-update (emitted by socket.service on config change)
+  const syncAgentListenEvents = [
+    ...remoteControllerEvents,
+    'options-update',
+  ];
+
+  // Events relayed by sync-agent to local Pi server (local event name)
+  // These must ALL have handlers in Pi local server handlers.js
+  const localRelayedEvents = [
+    'score-update',
+    'score-reset',
+    'phase-change',
+    'command',        // cloud-remote-action → relayed as 'command'
+    'timer-update',
+    'breaking-news',
+    'match-info-updated',
+    'recording-toggle',
+    'options-update',
+    'screenshot-request',
+  ];
+
+  it('remote.controller.ts emits all cloud remote event types', () => {
+    for (const event of remoteControllerEvents) {
+      if (event === 'screenshot-request') {
+        // screenshot-request is emitted inline (not via eventName variable)
+        expect(remoteCtrl).toContain("emit('screenshot-request'");
+      } else {
+        expect(remoteCtrl).toContain(`'${event}'`);
+      }
+    }
+  });
+
+  it('sync-agent listens for all cloud remote events from central server', () => {
+    for (const event of syncAgentListenEvents) {
+      expect(agent).toContain(`socket.on('${event}'`);
+    }
+  });
+
+  it('sync-agent relays standard events and handles screenshot separately', () => {
+    // Standard relay events use relayToLocalServer
+    const relayEvents = syncAgentListenEvents.filter(e => e !== 'screenshot-request');
+    for (const event of relayEvents) {
+      expect(agent).toContain(`socket.on('${event}'`);
+    }
+    // screenshot-request uses requestScreenshot (needs response relay back)
+    expect(agent).toContain("socket.on('screenshot-request'");
+    expect(agent).toContain('requestScreenshot');
+  });
+
+  it('Pi local server handlers.js has handlers for all relayed events', () => {
+    for (const event of localRelayedEvents) {
+      expect(handlers).toContain(`socket.on('${event}'`);
+    }
+  });
+
+  it('remote.controller.ts checks room membership to detect zombie connections', () => {
+    expect(remoteCtrl).toContain('io.sockets.adapter.rooms.get(siteId)');
+  });
+});

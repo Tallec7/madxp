@@ -303,6 +303,21 @@ export async function sendRemoteCommand(req: Request, res: Response) {
       return res.status(500).json({ error: 'Service Socket.IO non disponible' });
     }
 
+    // Vérifier que le socket est bien dans la room (détection connexion zombie)
+    const room = io.sockets.adapter.rooms.get(siteId);
+    if (!room || room.size === 0) {
+      logger.warn('Cloud remote: zombie connection detected (in map but not in room)', {
+        siteId,
+        commandType: type,
+        ip: req.ip,
+      });
+      metricsService.recordCommand(type, 'zombie');
+      return res.status(503).json({
+        error: 'Connexion instable',
+        message: 'Le boîtier semble connecté mais ne reçoit plus les commandes. Il devrait se reconnecter automatiquement sous 30 secondes.',
+      });
+    }
+
     const timestamp = new Date().toISOString();
     let eventName: string;
     let payload: Record<string, unknown>;

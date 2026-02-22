@@ -18,6 +18,7 @@
 14. [Écran / HDMI (v3.44+)](#écran--hdmi-v344)
 15. [Recording Analytics (v3.38+)](#recording-analytics--état-denregistrement-v338)
 16. [Saturation pool DB (MaxClientsInSessionMode)](#saturation-pool-db-maxclientsinsessionmode)
+17. [Cloud Remote ne fonctionne pas (v3.69.3+)](#cloud-remote-ne-fonctionne-pas-v3692)
 
 > **WiFi USB** : Pour un guide complet sur la clé WiFi USB (installation, diagnostic, pannes, recovery), voir [WIFI_USB_GUIDE.md](WIFI_USB_GUIDE.md).
 >
@@ -3277,4 +3278,91 @@ Le mode pooler (`transaction` / `session` / `direct`) est loggé au démarrage e
 
 ---
 
-**Dernière mise à jour :** 19 février 2026 (ajout section saturation pool DB)
+## Cloud Remote ne fonctionne pas (v3.69.3+)
+
+### Symptôme 1 : Dashboard affiche "Succès" mais rien ne se passe sur le Pi
+
+**Cause probable : Connexion zombie.** Le Pi apparaît connecté dans la Map `connectedSites`, mais le socket a été déconnecté sans que le handler `disconnect` ne se déclenche (partition réseau, timeout TCP silencieux). L'émission `io.to(siteId).emit()` envoie dans une room vide.
+
+**Depuis v3.69.3 :** Le controller vérifie la room Socket.IO en plus de la Map. Si la room est vide, il retourne **503 "Connexion instable"** au lieu d'un faux succès. Le Pi se reconnecte automatiquement sous ~30s.
+
+**Vérification :**
+
+```bash
+# Logs Railway — chercher les détections zombie
+railway logs --service neopro-central --lines 50 --filter "zombie connection detected"
+
+# Métrique Prometheus — compteur de commandes zombie
+curl -s https://api.neopro.fr/metrics | grep 'neopro_commands_total{type=.*status="zombie"}'
+```
+
+### Symptôme 2 : Score / phase / timer marchent mais match-config ne fait rien
+
+**Cause (< v3.69.3) :** Le handler `match-info-updated` manquait dans `raspberry/server/socket/handlers.js`. L'événement était relayé par le sync-agent au local server, mais le local server n'avait pas de listener et l'événement était silencieusement ignoré.
+
+**Correction (v3.69.3) :** Handler `match-info-updated` ajouté — broadcast vers TV/Remote clients.
+
+### Symptôme 3 : Les scores Pi → Dashboard ne remontent pas (dashboard live score vide)
+
+**Cause (< v3.69.3) :** Mismatch `socket.data.siteId` vs `(socket as any).siteId` dans `score-update.handler.ts` et `match-config.handler.ts`. Socket.IO v4 sépare `socket.data` (objet vide `{}`) et les propriétés directes du socket. Le `siteId` était `undefined` → early return silencieux.
+
+**Correction (v3.69.3) :** Accès unifié via `(socket as any).siteId` — cohérent avec `socket.service.ts`.
+
+### Symptôme 4 : Les commandes cloud remote sont envoyées mais le sync-agent les drop silencieusement
+
+**Cause :** La connexion locale (sync-agent → Pi local server port 3000) est coupée. Le `relayToLocalServer()` appelait `localSocket.emit()` qui retournait `false` sans log visible.
+
+**Depuis v3.69.3 :** `relayToLocalServer()` logge un **warn** quand un événement est droppé :
+
+```
+☁️ Cloud remote event DROPPED — local server not connected { eventName: 'score-update' }
+```
+
+**Vérification sur le Pi :**
+
+```bash
+# Vérifier les logs du sync-agent
+journalctl -u neopro-sync -n 50 --no-pager | grep -E "DROPPED|relayed"
+
+# Vérifier que le local server tourne
+systemctl is-active neopro-server
+
+# Vérifier la connexion locale
+journalctl -u neopro-sync -n 20 --no-pager | grep "local server"
+```
+
+### Chaîne complète du relay cloud remote
+
+```
+Dashboard (Angular)
+    │
+    ▼ HTTP POST /api/remote/:siteId/command
+Central Server (remote.controller.ts)
+    │ ✅ Vérifie room membership (anti-zombie)
+    ▼ io.to(siteId).emit(eventName, payload)
+Sync-Agent (agent.js — sur le Pi)
+    │ ✅ Logge warn si drop
+    ▼ relayToLocalServer(eventName, data) → localSocket.emit()
+Pi Local Server (handlers.js — port 3000)
+    │
+    ▼ socket.broadcast.emit() → TV Angular component
+```
+
+**Événements relayés :**
+
+| Commande dashboard | Événement central→Pi  | Événement local→TV   |
+| ------------------ | --------------------- | -------------------- |
+| `play-video`       | `cloud-remote-action` | `command`            |
+| `play-sponsors`    | `cloud-remote-action` | `command`            |
+| `score-update`     | `score-update`        | `score-update`       |
+| `score-reset`      | `score-reset`         | `score-reset`        |
+| `phase-change`     | `phase-change`        | `phase-change`       |
+| `timer-update`     | `timer-update`        | `timer-update`       |
+| `breaking-news`    | `breaking-news`       | `breaking-news`      |
+| `match-config`     | `match-info-updated`  | `match-info-updated` |
+| `recording-toggle` | `recording-toggle`    | `recording-toggle`   |
+| `screenshot`       | `screenshot-request`  | `screenshot-request` |
+
+---
+
+**Dernière mise à jour :** 22 février 2026 (ajout section cloud remote)
