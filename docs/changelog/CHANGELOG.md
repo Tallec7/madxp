@@ -13,6 +13,10 @@
 ### Features
 
 - **hdmi:** enrichir edid-decode avec infos écran détaillées et catégorisation ([45c9b62](https://github.com/Tallec7/neopro/commit/45c9b628754ecbe177cdbd969f1b1391b8caaf28))
+- **dashboard:** afficher infos EDID enrichies dans page debug ([09f01a5](https://github.com/Tallec7/neopro/commit/09f01a56))
+  - Catégorie écran (OLED/QLED/LED/monitor/projector), taille diagonale, résolution native, refresh rate, version HDMI, HDR, espaces couleur
+  - Rendu conditionnel : visible uniquement quand `edid-decode` est installé sur le Pi
+  - i18n complet (fr/en/es) — 7 nouvelles clés par langue (800 total)
 
 # [3.77.0](https://github.com/Tallec7/neopro/compare/v3.76.4...v3.77.0) (2026-02-23)
 

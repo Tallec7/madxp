@@ -340,23 +340,24 @@
 | IMP-AUD-33 | Debug page restructure (14→12 sections, summary bar, modals, i18n 250+ clés) | Production | `site-debug-tab.component.ts`, `debug-summary-bar.component.ts`            | Fév 2026     |
 | IMP-AUD-34 | Debug page refactoring (extraction composants, pollCommand utility, tests)   | Production | `command-poller.util.ts`, `debug-summary-bar.component.ts`                 | Fév 2026     |
 | IMP-AUD-35 | Debug page i18n complet — 0 texte français hardcodé (template + TS + wizard) | Production | `site-debug-tab.component.ts`, `fr/en/es.json`                             | Fév 2026     |
+| IMP-AUD-36 | Affichage EDID enrichi dans page debug (catégorie, HDR, HDMI, refresh rate)  | Livré      | `site-debug-tab.component.ts`, `fr/en/es.json`                             | Fév 2026     |
 
 ---
 
 ## Statistiques Produit
 
-| Métrique                  | Valeur                                                                                                                            |
-| ------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| **Features implémentées** | **227** (+26 audit, +8 E-22 TV+LED dual, +6 sponsor UX, +2 résilience Pi/OTA, +3 hotspot WiFi, +3 debug page, +1 EDID enrichment) |
-| Domaines fonctionnels     | 14                                                                                                                                |
-| Controllers API           | 29 (+sponsor-alerts)                                                                                                              |
-| Services métier           | 40 (+sponsor-alert, sponsor-stats, sponsor-auto-resolution)                                                                       |
-| Repositories              | 25 (+video-variant)                                                                                                               |
-| Migrations DB             | 54 (+add-led-support-and-video-variants)                                                                                          |
-| Modules dashboard         | 21 (+advertiser-health, analytics-categories)                                                                                     |
-| Services Raspberry        | 19 (+sponsor-stats)                                                                                                               |
-| Versions publiées         | 265+ (v2.1 → v3.62)                                                                                                               |
-| Tests (total)             | 2 386 (1590 API + 506 Angular + 148 Admin + 71 Socket + 142 Smoke)                                                                |
+| Métrique                  | Valeur                                                                                                                                                       |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Features implémentées** | **228** (+26 audit, +8 E-22 TV+LED dual, +6 sponsor UX, +2 résilience Pi/OTA, +3 hotspot WiFi, +3 debug page, +1 EDID enrichment, +1 dashboard EDID display) |
+| Domaines fonctionnels     | 14                                                                                                                                                           |
+| Controllers API           | 29 (+sponsor-alerts)                                                                                                                                         |
+| Services métier           | 40 (+sponsor-alert, sponsor-stats, sponsor-auto-resolution)                                                                                                  |
+| Repositories              | 25 (+video-variant)                                                                                                                                          |
+| Migrations DB             | 54 (+add-led-support-and-video-variants)                                                                                                                     |
+| Modules dashboard         | 21 (+advertiser-health, analytics-categories)                                                                                                                |
+| Services Raspberry        | 19 (+sponsor-stats)                                                                                                                                          |
+| Versions publiées         | 265+ (v2.1 → v3.62)                                                                                                                                          |
+| Tests (total)             | 2 386 (1590 API + 506 Angular + 148 Admin + 71 Socket + 142 Smoke)                                                                                           |
 
 ---
 

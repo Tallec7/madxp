@@ -542,7 +542,7 @@ Signaux "Monitor" : `display_type === 'monitor'` OU (`diagonal_inches < 28` ET p
 - Cache EDID : 5 minutes (l'écran change rarement)
 - **Dépendance optionnelle** : `edid-decode` (apt package), parsing graceful si absent
 
-**Impact dashboard :** La section HDMI-CEC s'adapte au type d'écran. Pour un moniteur PC, les métriques CEC sont masquées et un message explicatif est affiché.
+**Impact dashboard :** La section HDMI-CEC s'adapte au type d'écran. Pour un moniteur PC, les métriques CEC sont masquées et un message explicatif est affiché. Quand `edid-decode` est installé sur le Pi, la page debug affiche les infos enrichies : catégorie écran (OLED/QLED/LED/etc.), taille diagonale, résolution native, refresh rate, version HDMI, support HDR, et espaces couleur. Si `edid-decode` est absent, seules les infos basiques (fabricant, modèle, résolution, type) sont affichées.
 
 ### Monitoring ventilateur (v3.52+)
 
