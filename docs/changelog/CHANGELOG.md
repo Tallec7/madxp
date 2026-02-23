@@ -1,3 +1,9 @@
+## [3.76.1](https://github.com/Tallec7/neopro/compare/v3.76.0...v3.76.1) (2026-02-23)
+
+### Bug Fixes
+
+- **dashboard:** close unterminated div tag in site-debug-tab template ([0b00b39](https://github.com/Tallec7/neopro/commit/0b00b390c89454ee8a4e2809749563c084168ed6))
+
 # [3.76.0](https://github.com/Tallec7/neopro/compare/v3.75.0...v3.76.0) (2026-02-23)
 
 ### Features
