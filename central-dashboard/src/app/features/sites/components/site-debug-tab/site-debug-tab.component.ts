@@ -435,7 +435,7 @@ interface WizardStep {
               <span class="file-category file-sortable" (click)="sortFiles('category')">Catégorie {{ fileSortField === 'category' ? (fileSortAsc ? '▲' : '▼') : '' }}</span>
               <span class="file-size file-sortable" (click)="sortFiles('size')">Taille {{ fileSortField === 'size' ? (fileSortAsc ? '▲' : '▼') : '' }}</span>
             </div>
-            <div class="file-row" *ngFor="let video of getSortedVideos()"
+            <div class="file-row" *ngFor="let video of getSortedVideos()">
               <span class="file-name" [title]="video.path">{{ video.filename }}</span>
               <span class="file-category">{{ video.category || '-' }}</span>
               <span class="file-size">{{ formatBytes(video.size) }}</span>
