@@ -1177,55 +1177,55 @@ interface WizardStep {
           <span class="debug-icon">📊</span>
           <h4>{{ 'debug.bufferTitle' | translate }}</h4>
           <span class="debug-stats" *ngIf="bufferStatus">
-            {{ bufferStatus.analytics?.event_count || 0 }} événements en attente
+            {{ bufferStatus.analytics?.event_count || 0 }} {{ 'debug.bufferPending' | translate }}
           </span>
         </div>
 
         <div class="debug-content" *ngIf="showBufferStatus">
           <div *ngIf="!isConnected" class="offline-warning">
-            ⚠️ Le boîtier doit être connecté pour voir l'état du buffer.
+            ⚠️ {{ 'debug.bufferOffline' | translate }}
           </div>
 
           <div *ngIf="isConnected && !bufferStatus && !loadingBufferStatus" class="buffer-actions">
             <button class="btn btn-primary btn-sm" (click)="loadBufferStatus()">
-              🔄 Charger l'état du buffer
+              🔄 {{ 'debug.bufferLoad' | translate }}
             </button>
           </div>
 
           <div *ngIf="loadingBufferStatus" class="loading-inline">
             <div class="spinner-small"></div>
-            <span>Récupération...</span>
+            <span>{{ 'debug.bufferLoading' | translate }}</span>
           </div>
 
           <div *ngIf="bufferStatus && !loadingBufferStatus" class="buffer-content">
             <div class="buffer-grid">
               <!-- Unified analytics buffer -->
               <div class="buffer-card" [class.buffer-warning]="(bufferStatus.analytics?.event_count || 0) > 1000">
-                <div class="buffer-header">📹 Lectures vidéo</div>
+                <div class="buffer-header">📹 {{ 'debug.bufferVideoPlays' | translate }}</div>
                 <div class="buffer-count">{{ bufferStatus.analytics?.event_count || 0 }}</div>
-                <div class="buffer-label">événements</div>
+                <div class="buffer-label">{{ 'debug.bufferEvents' | translate }}</div>
                 <div class="buffer-details" *ngIf="bufferStatus.analytics?.file_exists">
-                  <div class="buffer-detail">Taille: {{ formatBytes(bufferStatus.analytics?.file_size_bytes || 0) }}</div>
+                  <div class="buffer-detail">{{ 'debug.bufferSize' | translate }}: {{ formatBytes(bufferStatus.analytics?.file_size_bytes || 0) }}</div>
                   <div class="buffer-detail" *ngIf="bufferStatus.sponsors?.event_count">
-                    dont {{ bufferStatus.sponsors?.event_count }} sponsors
+                    {{ 'debug.bufferIncludingSponsors' | translate:{ count: bufferStatus.sponsors?.event_count } }}
                   </div>
                   <div class="buffer-detail" *ngIf="bufferStatus.analytics?.oldest_event">
-                    Plus ancien: {{ bufferStatus.analytics?.oldest_event | date:'dd/MM HH:mm' }}
+                    {{ 'debug.bufferOldest' | translate }}: {{ bufferStatus.analytics?.oldest_event | date:'dd/MM HH:mm' }}
                   </div>
                 </div>
               </div>
             </div>
 
             <div class="buffer-hint" *ngIf="bufferStatus.legacy_sponsor_file">
-              ⚠️ Fichier legacy <code>sponsor_impressions.json</code> détecté. Ce fichier est obsolète depuis la consolidation du pipeline (v3.66) et peut être supprimé.
+              ⚠️ <span [innerHTML]="'debug.bufferLegacyWarning' | translate"></span>
             </div>
 
             <div class="buffer-hint" *ngIf="(bufferStatus.analytics?.event_count || 0) > 1000">
-              ⚠️ Le buffer contient beaucoup d'événements. Ils seront envoyés automatiquement à la prochaine synchronisation.
+              ⚠️ {{ 'debug.bufferOverflowWarning' | translate }}
             </div>
 
             <button class="btn btn-secondary btn-sm" (click)="loadBufferStatus()" [disabled]="loadingBufferStatus">
-              🔄 Rafraîchir
+              🔄 {{ 'debug.bufferRefresh' | translate }}
             </button>
           </div>
         </div>

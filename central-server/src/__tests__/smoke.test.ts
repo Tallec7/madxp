@@ -1945,7 +1945,8 @@ describe('Debug page architecture guards', () => {
     const esJson = fs.readFileSync(path.join(repoRoot, 'central-dashboard/src/assets/i18n/es.json'), 'utf8');
 
     // Check critical keys exist in all 3 languages
-    const criticalKeys = ['debug.summaryFiles', 'debug.healthTitle', 'debug.logsTitle', 'debug.networkTitle'];
+    const criticalKeys = ['debug.summaryFiles', 'debug.healthTitle', 'debug.logsTitle', 'debug.networkTitle',
+      'debug.bufferPending', 'debug.bufferVideoPlays', 'debug.bufferEvents', 'debug.bufferRefresh'];
     for (const key of criticalKeys) {
       const parts = key.split('.');
       expect({ [`fr_has_${key}`]: frJson.includes(`"${parts[1]}"`) })
