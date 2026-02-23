@@ -1962,6 +1962,21 @@ describe('Debug page architecture guards', () => {
     }
   });
 
+  it('wizardEvaluateImpressions must treat empty buffer as ok (not warning)', () => {
+    // An empty analytics buffer is the normal state when sync works correctly.
+    // Marking it as 'warning' contradicts the health score (100/100 healthy)
+    // and confuses operators. This test prevents regression to the old behavior.
+    // See: fix(debug) commit "make empty buffer status consistent with health score"
+    const hasEmptyBufferWarning = /else\s*\{[^}]*event_count.*==.*0[^}]*status\s*=\s*'warning'/s.test(debugTab)
+      || /totalEvents.*===?\s*0[^}]*status\s*=\s*'warning'/s.test(debugTab);
+    const hasEmptyBufferOk = debugTab.includes("step.status = 'ok'")
+      && debugTab.includes("Buffer vide (sync OK)");
+    expect({ emptyBufferIsNotWarning: !hasEmptyBufferWarning })
+      .toEqual({ emptyBufferIsNotWarning: true });
+    expect({ emptyBufferIsOk: hasEmptyBufferOk })
+      .toEqual({ emptyBufferIsOk: true });
+  });
+
   it('site-debug-tab must use confirmModal for dangerous actions (reboot, restore)', () => {
     // The custom modal pattern replaces native confirm() for reboot and config restore.
     // Both actions need explicit confirmation to prevent accidental triggers.
@@ -2105,5 +2120,26 @@ describe('Analytics pages business-first architecture', () => {
     // Without this, there's zero sponsor visibility on the club page (VS2 gap).
     expect({ hasSponsorBenchmark: clubAnalytics.includes('getSiteSponsorBenchmark') })
       .toEqual({ hasSponsorBenchmark: true });
+  });
+});
+
+// =================================================================
+// Rate-limit assignment regression tests
+// =================================================================
+
+describe('Rate-limit assignment guards', () => {
+  const serverTs = fs.readFileSync(
+    path.join(path.resolve(__dirname, '..', '..', '..'), 'central-server/src/server.ts'),
+    'utf8'
+  );
+
+  // Incident 2026-02-23: siteSponsorRoutes used apiRateLimit (100/min shared counter).
+  // The dashboard sponsors tab fires 4 parallel requests per expand (list + stats +
+  // benchmark + reports), quickly exhausting the shared budget and causing 429 cascades
+  // (including on /api/logs/frontend). Fix: adminRateLimit (400/min, separate counter).
+  it('siteSponsorRoutes must use adminRateLimit (not apiRateLimit)', () => {
+    const sponsorRouteMount = serverTs.match(/app\.use\('\/api\/sites',\s*(\w+),\s*siteSponsorRoutes\)/);
+    expect(sponsorRouteMount).not.toBeNull();
+    expect({ limiter: sponsorRouteMount![1] }).toEqual({ limiter: 'adminRateLimit' });
   });
 });

@@ -348,12 +348,14 @@ install_dependencies() {
         x11-utils \
         chromium \
         cec-utils \
+        edid-decode \
         ffmpeg \
         firmware-realtek \
         firmware-ralink
 
     # x11-utils: Fournit xdpyinfo, utilisé par neopro-kiosk.service pour vérifier que le serveur X est prêt
     # cec-utils: Permet de détecter si la TV est allumée via HDMI-CEC (pour analytics fiables)
+    # edid-decode: Parsing EDID détaillé (résolutions supportées, taille physique, année de fabrication)
     # ffmpeg: Permet d'extraire la durée des vidéos (ffprobe)
     # firmware-realtek/ralink: Drivers pour clés WiFi USB (nécessaire pour le dual WiFi hotspot + internet)
     print_success "Dépendances installées"

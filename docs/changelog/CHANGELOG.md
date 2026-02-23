@@ -1,3 +1,55 @@
+## [3.76.4](https://github.com/Tallec7/neopro/compare/v3.76.3...v3.76.4) (2026-02-23)
+
+### Bug Fixes
+
+- **debug:** make empty buffer status consistent with health score ([#420](https://github.com/Tallec7/neopro/issues/420)) ([a15d504](https://github.com/Tallec7/neopro/commit/a15d5045f775c470193f16bc38787c29dd378816))
+
+## [3.76.3](https://github.com/Tallec7/neopro/compare/v3.76.2...v3.76.3) (2026-02-23)
+
+### Bug Fixes
+
+- use adminRateLimit for sponsor routes to prevent 429 cascade ([#419](https://github.com/Tallec7/neopro/issues/419)) ([6cc63d0](https://github.com/Tallec7/neopro/commit/6cc63d00edcc168d6be791d2e5001930faa4f836))
+- **rate-limit:** use adminRateLimit (400/min) for sponsor routes to prevent 429 cascade ([ff67fdc](https://github.com/Tallec7/neopro/commit/ff67fdc))
+- **debug:** make empty buffer status consistent with health score — le diagnostic guidé step 4 affichait ⚠️ "Aucun événement en buffer" (warning) alors que la santé système indiquait 100/100 "Bon état". Un buffer vide est l'état normal quand la sync fonctionne : status changé de `warning` à `ok` avec message "Buffer vide (sync OK)".
+
+### Tests
+
+- **smoke:** ajout test anti-régression `wizardEvaluateImpressions must treat empty buffer as ok` — empêche le retour du status `warning` sur buffer vide dans le diagnostic guidé, qui serait incohérent avec le score santé hardware.
+
+## [3.76.2](https://github.com/Tallec7/neopro/compare/v3.76.1...v3.76.2) (2026-02-23)
+
+### Bug Fixes
+
+- **debug:** use ReplaySubject to fix pollCommand race condition ([7271892](https://github.com/Tallec7/neopro/commit/7271892a6588310a8d105df10c33c4922d59f449))
+
+## [3.76.1](https://github.com/Tallec7/neopro/compare/v3.76.0...v3.76.1) (2026-02-23)
+
+### Bug Fixes
+
+- **dashboard:** close unterminated div tag in site-debug-tab template ([0b00b39](https://github.com/Tallec7/neopro/commit/0b00b390c89454ee8a4e2809749563c084168ed6))
+
+# [3.76.0](https://github.com/Tallec7/neopro/compare/v3.75.0...v3.76.0) (2026-02-23)
+
+### Features
+
+- **debug:** add WiFi client status to debug export bundle ([9bde070](https://github.com/Tallec7/neopro/commit/9bde0709bbe8f4840e0bb33eea4097db9ade84fd))
+
+# [3.75.0](https://github.com/Tallec7/neopro/compare/v3.74.0...v3.75.0) (2026-02-23)
+
+### Features
+
+- **debug:** Phase C - restructure sections, polish UX, harmonize i18n ([fddd4e6](https://github.com/Tallec7/neopro/commit/fddd4e6d32da9db5fcaa29969ba681aed57727c1))
+
+# [3.74.0](https://github.com/Tallec7/neopro/compare/v3.73.0...v3.74.0) (2026-02-23)
+
+### Bug Fixes
+
+- **analytics:** audit et corrections de la page analytics flotte ([44673e8](https://github.com/Tallec7/neopro/commit/44673e88a6d85eae8e3f3a14582b7078f4f1610a))
+
+### Features
+
+- **analytics:** refonte business-first des pages analytics fleet et club ([a21d16a](https://github.com/Tallec7/neopro/commit/a21d16a9840a9f8a501f9589c55687cf6663a0d1))
+
 # [3.74.0](https://github.com/Tallec7/neopro/compare/v3.73.0...v3.74.0) (2026-02-23)
 
 ### Features

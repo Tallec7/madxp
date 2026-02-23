@@ -164,4 +164,85 @@ describe('HdmiService', () => {
     expect(status.error).toBe('exec timeout');
     expect(status.tv_connected).toBe(false);
   });
+
+  describe('_parseEdidDecodeOutput', () => {
+    it('should parse a complete TV edid-decode output', () => {
+      const output = `Block 0, Base EDID:
+  Vendor & Product Identification:
+    Manufacturer: SAM
+    Made in week 51 of 2018
+  Basic Display Parameters & Features:
+    Digital display
+    Maximum image size: 120 cm x 68 cm
+  Detailed Timing Descriptors:
+    DTD 1:  3840x2160   30.000000 Hz  16:9
+    DTD 2:  1920x1080   60.000000 Hz  16:9
+
+Block 1, CEC Extension:
+  Audio:
+    Linear PCM:
+      Max channels: 2
+  Color depth: 8 bits
+`;
+
+      const result = service._parseEdidDecodeOutput(output);
+
+      expect(result.screen_size).toBe('120x68cm');
+      expect(result.year_of_manufacture).toBe(2018);
+      expect(result.input_type).toBe('digital');
+      expect(result.color_depth).toBe('8bpc');
+      expect(result.audio_supported).toBe(true);
+      expect(result.supported_resolutions).toContain('3840x2160');
+      expect(result.supported_resolutions).toContain('1920x1080');
+    });
+
+    it('should parse a PC monitor without audio', () => {
+      const output = `Block 0, Base EDID:
+  Vendor & Product Identification:
+    Made in week 30 of 2022
+  Basic Display Parameters & Features:
+    Digital display
+    Maximum image size: 60 cm x 34 cm
+  Detailed Timing Descriptors:
+    DTD 1:  2560x1440   59.951000 Hz  16:9
+`;
+
+      const result = service._parseEdidDecodeOutput(output);
+
+      expect(result.screen_size).toBe('60x34cm');
+      expect(result.year_of_manufacture).toBe(2022);
+      expect(result.audio_supported).toBe(false);
+      expect(result.supported_resolutions).toContain('2560x1440');
+    });
+
+    it('should return defaults for empty output', () => {
+      const result = service._parseEdidDecodeOutput('');
+
+      expect(result.screen_size).toBeNull();
+      expect(result.year_of_manufacture).toBeNull();
+      expect(result.input_type).toBeNull();
+      expect(result.color_depth).toBeNull();
+      expect(result.supported_resolutions).toEqual([]);
+      expect(result.audio_supported).toBe(false);
+    });
+
+    it('should detect analog display', () => {
+      const output = `  Basic Display Parameters & Features:
+    Analog display
+    Maximum image size: 47 cm x 30 cm
+`;
+
+      const result = service._parseEdidDecodeOutput(output);
+      expect(result.input_type).toBe('analog');
+    });
+
+    it('should detect Model year format', () => {
+      const output = `  Vendor & Product Identification:
+    Model year 2020
+`;
+
+      const result = service._parseEdidDecodeOutput(output);
+      expect(result.year_of_manufacture).toBe(2020);
+    });
+  });
 });
