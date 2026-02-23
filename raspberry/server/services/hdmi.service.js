@@ -67,7 +67,8 @@ class HdmiService {
 
   /**
    * Récupère les infos de l'écran connecté via EDID.
-   * @returns {Promise<{connected: boolean, manufacturer: string|null, model: string|null, resolution: string|null, display_type: string}>}
+   * Enrichit avec edid-decode si disponible (résolutions supportées, taille physique, année).
+   * @returns {Promise<{connected: boolean, manufacturer: string|null, model: string|null, resolution: string|null, display_type: string, edid_detailed: object|null}>}
    */
   async getDisplayInfo() {
     const now = Date.now();
@@ -81,6 +82,7 @@ class HdmiService {
       model: null,
       resolution: null,
       display_type: 'unknown',
+      edid_detailed: null,
     };
 
     try {
@@ -94,6 +96,16 @@ class HdmiService {
         displayInfo.resolution = parsed.resolution;
         if (parsed.hasCeaExtension) {
           displayInfo.display_type = 'tv';
+        }
+
+        // Enrichir avec edid-decode si disponible
+        try {
+          const detailed = await this._runEdidDecode(edidPath);
+          if (detailed) {
+            displayInfo.edid_detailed = detailed;
+          }
+        } catch {
+          // edid-decode non disponible ou erreur — on continue avec le parsing basique
         }
       } else {
         // Pas d'EDID lisible — vérifier le DRM status pour la connexion physique
@@ -204,6 +216,79 @@ class HdmiService {
 
     if (edidBuffer[126] > 0 && edidBuffer.length >= 256 && edidBuffer[128] === 0x02) {
       result.hasCeaExtension = true;
+    }
+
+    return result;
+  }
+
+  /**
+   * Exécute edid-decode sur le fichier EDID et parse la sortie.
+   * @param {string} edidPath - Chemin vers le fichier EDID binaire
+   * @returns {Promise<object|null>} Infos détaillées ou null si edid-decode indisponible
+   */
+  async _runEdidDecode(edidPath) {
+    const { stdout } = await execAsync(`edid-decode "${edidPath}" 2>/dev/null`, { timeout: 5000 });
+    return this._parseEdidDecodeOutput(stdout);
+  }
+
+  /**
+   * Parse la sortie texte de edid-decode.
+   * @param {string} output - Sortie stdout de edid-decode
+   * @returns {object} Infos structurées extraites
+   */
+  _parseEdidDecodeOutput(output) {
+    const result = {
+      screen_size: null,
+      year_of_manufacture: null,
+      input_type: null,
+      color_depth: null,
+      supported_resolutions: [],
+      audio_supported: false,
+    };
+
+    const lines = output.split('\n');
+    for (const line of lines) {
+      const trimmed = line.trim();
+
+      // Taille physique : "Maximum image size: 53 cm x 30 cm"
+      const sizeMatch = trimmed.match(/Maximum image size:\s*(\d+)\s*cm\s*x\s*(\d+)\s*cm/i);
+      if (sizeMatch) {
+        result.screen_size = `${sizeMatch[1]}x${sizeMatch[2]}cm`;
+      }
+
+      // Année : "Made in week 51 of 2018" ou "Model year 2020"
+      const yearMatch = trimmed.match(/(?:Made in week \d+ of|Model year)\s+(\d{4})/);
+      if (yearMatch) {
+        result.year_of_manufacture = parseInt(yearMatch[1], 10);
+      }
+
+      // Type d'entrée : "Digital display" ou "Analog display"
+      if (/Digital display/i.test(trimmed)) {
+        result.input_type = 'digital';
+      } else if (/Analog display/i.test(trimmed)) {
+        result.input_type = 'analog';
+      }
+
+      // Profondeur couleur : "Color depth: 8 bits" ou "8 bpc"
+      const depthMatch = trimmed.match(/(?:Color depth|Maximum):\s*(\d+)\s*(?:bits|bpc)/i)
+        || trimmed.match(/(\d+)\s*bpc/i);
+      if (depthMatch && !result.color_depth) {
+        result.color_depth = `${depthMatch[1]}bpc`;
+      }
+
+      // Résolutions depuis les detailed timings et standard timings
+      const resMatch = trimmed.match(/(\d{3,5})x(\d{3,5})[pi]?\s/);
+      if (resMatch) {
+        const res = `${resMatch[1]}x${resMatch[2]}`;
+        if (!result.supported_resolutions.includes(res)) {
+          result.supported_resolutions.push(res);
+        }
+      }
+
+      // Audio : "Audio:" ou "Basic audio support"
+      if (/(?:Basic audio support|Audio:)/i.test(trimmed)) {
+        result.audio_supported = true;
+      }
     }
 
     return result;

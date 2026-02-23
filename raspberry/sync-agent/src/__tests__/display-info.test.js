@@ -271,10 +271,15 @@ describe('getDisplayInfo', () => {
   const originalStatSync = fs.statSync;
   const originalReadFileSync = fs.readFileSync;
 
+  let edidDecodeSpy;
+
   beforeEach(() => {
     // Réinitialiser le cache entre les tests
     metricsCollector._displayInfoCache = null;
     metricsCollector._displayInfoCacheTime = 0;
+    // Mock _runEdidDecode pour éviter l'appel réel à edid-decode
+    edidDecodeSpy = jest.spyOn(metricsCollector, '_runEdidDecode')
+      .mockRejectedValue(new Error('edid-decode not installed'));
   });
 
   afterEach(() => {
@@ -282,6 +287,7 @@ describe('getDisplayInfo', () => {
     fs.readdirSync = originalReaddirSync;
     fs.statSync = originalStatSync;
     fs.readFileSync = originalReadFileSync;
+    edidDecodeSpy.mockRestore();
   });
 
   test('détecte un moniteur PC connecté via EDID', async () => {
@@ -328,6 +334,57 @@ describe('getDisplayInfo', () => {
     expect(result.connected).toBe(true);
     expect(result.manufacturer).toBe('SAM');
     expect(result.display_type).toBe('tv');
+  });
+
+  test('enrichit avec edid-decode quand disponible', async () => {
+    const edidBuf = createEdidBuffer({
+      manufacturer: 'SAM',
+      model: 'SAMSUNG',
+      hActive: 3840,
+      vActive: 2160,
+      hasCeaExtension: true,
+    });
+
+    edidDecodeSpy.mockResolvedValue({
+      screen_size: '120x68cm',
+      year_of_manufacture: 2018,
+      input_type: 'digital',
+      color_depth: '8bpc',
+      supported_resolutions: ['3840x2160', '1920x1080'],
+      audio_supported: true,
+    });
+
+    fs.existsSync = jest.fn(() => true);
+    fs.readdirSync = jest.fn(() => ['card1-HDMI-A-1']);
+    fs.statSync = jest.fn(() => ({ size: 256 }));
+    fs.readFileSync = jest.fn(() => edidBuf);
+
+    const result = await metricsCollector.getDisplayInfo();
+
+    expect(result.edid_detailed).not.toBeNull();
+    expect(result.edid_detailed.screen_size).toBe('120x68cm');
+    expect(result.edid_detailed.year_of_manufacture).toBe(2018);
+    expect(result.edid_detailed.audio_supported).toBe(true);
+  });
+
+  test('continue sans edid_detailed si edid-decode indisponible', async () => {
+    const edidBuf = createEdidBuffer({
+      manufacturer: 'DEL',
+      model: 'DELL P2419H',
+      hActive: 1920,
+      vActive: 1080,
+    });
+
+    fs.existsSync = jest.fn(() => true);
+    fs.readdirSync = jest.fn(() => ['card1-HDMI-A-1']);
+    fs.statSync = jest.fn(() => ({ size: 128 }));
+    fs.readFileSync = jest.fn(() => edidBuf);
+
+    const result = await metricsCollector.getDisplayInfo();
+
+    expect(result.connected).toBe(true);
+    expect(result.manufacturer).toBe('DEL');
+    expect(result.edid_detailed).toBeNull();
   });
 
   test('retourne connected=false si aucun EDID trouvé', async () => {
@@ -409,4 +466,168 @@ describe('getDisplayInfo', () => {
 
     return buf;
   }
+});
+
+describe('_parseEdidDecodeOutput', () => {
+  test('parse une sortie edid-decode complète de TV Samsung', () => {
+    const output = `edid-decode (hex):
+
+Block 0, Base EDID:
+  EDID Structure Version & Revision: 1.3
+  Vendor & Product Identification:
+    Manufacturer: SAM
+    Model: 2795
+    Serial Number: 1129531222
+    Made in week 51 of 2018
+  Basic Display Parameters & Features:
+    Digital display
+    Maximum image size: 120 cm x 68 cm
+    Gamma: 2.20
+  Color Characteristics:
+    Red  : 0.6396, 0.3300
+  Standard Timings:
+    1920x1080i  50.000 Hz
+    1280x720    60.000 Hz
+  Detailed Timing Descriptors:
+    DTD 1:  3840x2160   30.000000 Hz  16:9
+    DTD 2:  1920x1080   60.000000 Hz  16:9
+    Monitor name: SAMSUNG
+    Monitor serial number: H4ZN500001
+
+Block 1, CEC Extension:
+  Audio:
+    Linear PCM:
+      Max channels: 2
+      Supported sample rates (kHz): 48 44.1 32
+      Supported sample sizes (bits): 24 20 16
+  Color depth: 8 bits
+`;
+
+    const result = metricsCollector._parseEdidDecodeOutput(output);
+
+    expect(result.screen_size).toBe('120x68cm');
+    expect(result.year_of_manufacture).toBe(2018);
+    expect(result.input_type).toBe('digital');
+    expect(result.color_depth).toBe('8bpc');
+    expect(result.audio_supported).toBe(true);
+    expect(result.supported_resolutions).toContain('3840x2160');
+    expect(result.supported_resolutions).toContain('1920x1080');
+    expect(result.supported_resolutions).toContain('1280x720');
+  });
+
+  test('parse un moniteur PC sans audio ni CEA', () => {
+    const output = `Block 0, Base EDID:
+  Vendor & Product Identification:
+    Manufacturer: DEL
+    Model: 16611
+    Made in week 30 of 2022
+  Basic Display Parameters & Features:
+    Digital display
+    Maximum image size: 60 cm x 34 cm
+  Detailed Timing Descriptors:
+    DTD 1:  2560x1440   59.951000 Hz  16:9
+    Monitor name: DELL U2722D
+`;
+
+    const result = metricsCollector._parseEdidDecodeOutput(output);
+
+    expect(result.screen_size).toBe('60x34cm');
+    expect(result.year_of_manufacture).toBe(2022);
+    expect(result.input_type).toBe('digital');
+    expect(result.audio_supported).toBe(false);
+    expect(result.supported_resolutions).toContain('2560x1440');
+  });
+
+  test('parse un écran analogique ancien', () => {
+    const output = `Block 0, Base EDID:
+  Vendor & Product Identification:
+    Manufacturer: LEN
+    Model year 2015
+  Basic Display Parameters & Features:
+    Analog display
+    Maximum image size: 47 cm x 30 cm
+  Detailed Timing Descriptors:
+    DTD 1:  1920x1200   59.950000 Hz  16:10
+`;
+
+    const result = metricsCollector._parseEdidDecodeOutput(output);
+
+    expect(result.input_type).toBe('analog');
+    expect(result.year_of_manufacture).toBe(2015);
+    expect(result.screen_size).toBe('47x30cm');
+    expect(result.supported_resolutions).toContain('1920x1200');
+  });
+
+  test('retourne des valeurs par défaut pour une sortie vide', () => {
+    const result = metricsCollector._parseEdidDecodeOutput('');
+
+    expect(result.screen_size).toBeNull();
+    expect(result.year_of_manufacture).toBeNull();
+    expect(result.input_type).toBeNull();
+    expect(result.color_depth).toBeNull();
+    expect(result.supported_resolutions).toEqual([]);
+    expect(result.audio_supported).toBe(false);
+  });
+
+  test('ne duplique pas les résolutions identiques', () => {
+    const output = `  DTD 1:  1920x1080   60.000000 Hz  16:9
+  DTD 2:  1920x1080   50.000000 Hz  16:9
+  DTD 3:  1280x720    60.000000 Hz  16:9
+`;
+
+    const result = metricsCollector._parseEdidDecodeOutput(output);
+
+    const count1080 = result.supported_resolutions.filter(r => r === '1920x1080').length;
+    expect(count1080).toBe(1);
+    expect(result.supported_resolutions).toHaveLength(2);
+  });
+
+  test('détecte Basic audio support', () => {
+    const output = `  Basic Display Parameters & Features:
+    Digital display
+    Basic audio support
+`;
+
+    const result = metricsCollector._parseEdidDecodeOutput(output);
+    expect(result.audio_supported).toBe(true);
+  });
+});
+
+describe('_runEdidDecode', () => {
+  const { exec } = require('child_process');
+
+  afterEach(() => {
+    exec.mockReset();
+  });
+
+  test('appelle edid-decode avec le bon chemin', async () => {
+    exec.mockImplementation((cmd, opts, cb) => {
+      if (typeof opts === 'function') {
+        cb = opts;
+      }
+      cb(null, { stdout: 'Maximum image size: 53 cm x 30 cm\nDigital display\n', stderr: '' });
+    });
+
+    const result = await metricsCollector._runEdidDecode('/sys/class/drm/card1-HDMI-A-1/edid');
+
+    expect(exec).toHaveBeenCalledWith(
+      'edid-decode "/sys/class/drm/card1-HDMI-A-1/edid" 2>/dev/null',
+      expect.objectContaining({ timeout: 5000 }),
+      expect.any(Function)
+    );
+    expect(result.screen_size).toBe('53x30cm');
+    expect(result.input_type).toBe('digital');
+  });
+
+  test('propage l\'erreur si edid-decode n\'est pas installé', async () => {
+    exec.mockImplementation((cmd, opts, cb) => {
+      if (typeof opts === 'function') {
+        cb = opts;
+      }
+      cb(new Error('command not found: edid-decode'));
+    });
+
+    await expect(metricsCollector._runEdidDecode('/sys/class/drm/card1-HDMI-A-1/edid'))
+      .rejects.toThrow('command not found');
+  });
 });
