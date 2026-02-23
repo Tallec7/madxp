@@ -408,19 +408,38 @@ export class SitesService {
   // Export debug bundle - collecte toutes les informations de debug du Pi
   exportDebugBundle(id: string): Observable<{
     success: boolean;
-    timestamp: string;
     bundle: {
-      configuration: Record<string, unknown>;
-      version: string;
-      healthStatus: Record<string, unknown>;
-      services: Array<{ name: string; status: string; active: boolean }>;
-      logs: string[];
-      network: Record<string, unknown>;
-      disk: Record<string, unknown>;
-      buffers: Record<string, unknown>;
-      hotspotConfig: Record<string, unknown>;
-      bootConfig: Record<string, unknown>;
-      videos: Array<{ filename: string; size: number; category: string }>;
+      timestamp: string;
+      hostname: string;
+      sections: {
+        configuration: Record<string, unknown>;
+        version: string;
+        release: Record<string, unknown>;
+        health: Record<string, unknown>;
+        systemInfo: Record<string, unknown>;
+        services: Array<{ name: string; status: string; active: boolean }>;
+        logs: Record<string, string>;
+        network: Record<string, unknown>;
+        diskUsage: string;
+        buffers: Record<string, unknown>;
+        hotspotConfig: string;
+        hotspotDiagnostics: Record<string, unknown>;
+        bootConfig: string;
+        transitionMetrics: Record<string, unknown>;
+        dmesg: string;
+        usbDevices: string;
+        wifiClient: {
+          connected: boolean;
+          ssid: string | null;
+          bssid: string | null;
+          signal: number | null;
+          ipAddress: string | null;
+          bssidLocked: string | null;
+          isMeshEnvironment: boolean;
+          meshApCount: number;
+        };
+        videoFiles: string[];
+      };
     };
   }> {
     return this.api.get(`/sites/${id}/debug-bundle`);

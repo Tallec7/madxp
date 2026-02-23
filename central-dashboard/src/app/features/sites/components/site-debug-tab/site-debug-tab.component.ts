@@ -5201,7 +5201,7 @@ export class SiteDebugTabComponent implements OnInit, AfterViewChecked, OnDestro
 
           const link = document.createElement('a');
           link.href = url;
-          const hostname = (response.bundle as { hostname?: string })?.hostname || this.siteId;
+          const hostname = response.bundle.hostname || this.siteId;
           const timestamp = new Date().toISOString().slice(0, 10);
           link.download = `neopro-debug-${hostname}-${timestamp}.json`;
           document.body.appendChild(link);

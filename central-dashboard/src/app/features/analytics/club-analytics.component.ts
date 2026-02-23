@@ -1,9 +1,11 @@
-import { Component, OnInit, OnDestroy, inject } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject, ElementRef, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterModule } from '@angular/router';
 import { TranslateModule } from '@ngx-translate/core';
-import { Subscription, interval, forkJoin } from 'rxjs';
+import { Subscription, interval, forkJoin, of } from 'rxjs';
+import { catchError } from 'rxjs/operators';
+import { Chart, ChartConfiguration, registerables } from 'chart.js';
 import {
   AnalyticsService,
   ClubHealthData,
@@ -16,415 +18,227 @@ import { SitesService } from '../../core/services/sites.service';
 import { NotificationService } from '../../core/services/notification.service';
 import { LoggerService } from '../../core/services/logger.service';
 import { ErrorExtractor } from '../../core/utils/error-extractor';
-import { Site } from '../../core/models';
+import { Site, SiteSponsorBenchmarkResponse, SiteSponsorBenchmarkEntry } from '../../core/models';
 
-type TabType = 'overview' | 'usage' | 'content' | 'health';
+Chart.register(...registerables);
 
 @Component({
   selector: 'app-club-analytics',
   standalone: true,
   imports: [CommonModule, RouterModule, FormsModule, TranslateModule],
   template: `
-    <div class="page-container" *ngIf="site; else loading">
+    <div class="page-container" *ngIf="site; else loadingTpl">
       <!-- Header -->
       <div class="page-header">
         <div class="header-left">
-          <button class="btn btn-secondary" routerLink="/sites">← Sites</button>
-          <button class="btn btn-secondary" [routerLink]="['/sites', siteId]">← Détails site</button>
+          <a class="back-link" [routerLink]="['/sites', siteId]">&larr; {{ site.club_name }}</a>
         </div>
-        <h1>Analytics - {{ site.club_name }}</h1>
         <div class="header-actions">
           <select [(ngModel)]="selectedPeriod" (change)="onPeriodChange()" class="period-select">
-            <option value="7">7 derniers jours</option>
-            <option value="30">30 derniers jours</option>
-            <option value="90">90 derniers jours</option>
+            <option value="7">7 jours</option>
+            <option value="30">30 jours</option>
+            <option value="90">90 jours</option>
           </select>
-          <button class="btn btn-primary" (click)="exportData()" [disabled]="exporting">
-            {{ exporting ? 'Export...' : 'Exporter CSV' }}
+          <button class="btn btn-outline" (click)="exportData()" [disabled]="exporting">
+            {{ exporting ? 'Export...' : 'CSV' }}
           </button>
-          <button class="btn btn-success" (click)="downloadPdf()" [disabled]="exportingPdf">
-            {{ exportingPdf ? ('common.generating' | translate) : ('analytics.downloadPdf' | translate) }}
+          <button class="btn btn-primary" (click)="downloadPdf()" [disabled]="exportingPdf">
+            {{ exportingPdf ? 'Generation...' : 'PDF' }}
           </button>
         </div>
       </div>
 
-      <!-- Tabs -->
-      <div class="tabs" role="tablist">
-        <button
-          class="tab"
-          [class.active]="activeTab === 'overview'"
-          (click)="activeTab = 'overview'"
-          role="tab"
-          [attr.aria-selected]="activeTab === 'overview'"
-        >
-          Vue d'ensemble
-        </button>
-        <button
-          class="tab"
-          [class.active]="activeTab === 'usage'"
-          (click)="activeTab = 'usage'"
-          role="tab"
-          [attr.aria-selected]="activeTab === 'usage'"
-        >
-          Utilisation
-        </button>
-        <button
-          class="tab"
-          [class.active]="activeTab === 'content'"
-          (click)="activeTab = 'content'"
-          role="tab"
-          [attr.aria-selected]="activeTab === 'content'"
-        >
-          Contenu
-        </button>
-        <button
-          class="tab"
-          [class.active]="activeTab === 'health'"
-          (click)="activeTab = 'health'"
-          role="tab"
-          [attr.aria-selected]="activeTab === 'health'"
-        >
-          Santé Système
-        </button>
-      </div>
-
-      <!-- Overview Tab -->
-      <div class="tab-content" role="tabpanel" *ngIf="activeTab === 'overview'">
-        <!-- KPIs -->
-        <div class="kpi-grid">
-          <div class="kpi-card">
-            <div class="kpi-icon status-icon" [class.online]="health?.status === 'online'">
-              {{ health?.status === 'online' ? '🟢' : '🔴' }}
-            </div>
-            <div class="kpi-content">
-              <div class="kpi-value">{{ health?.status || 'N/A' }}</div>
-              <div class="kpi-label">Statut actuel</div>
-            </div>
-          </div>
-
-          <div class="kpi-card">
-            <div class="kpi-icon">📊</div>
-            <div class="kpi-content">
-              <div class="kpi-value">{{ usage?.total_plays || 0 }}</div>
-              <div class="kpi-label">Vidéos jouées ({{ selectedPeriod }}j)</div>
-            </div>
-          </div>
-
-          <div class="kpi-card">
-            <div class="kpi-icon">⏱️</div>
-            <div class="kpi-content">
-              <div class="kpi-value">{{ formatDuration(usage?.total_duration || 0) }}</div>
-              <div class="kpi-label">Temps de diffusion</div>
-            </div>
-          </div>
-
-          <div class="kpi-card">
-            <div class="kpi-icon">✅</div>
-            <div class="kpi-content">
-              <div class="kpi-value">{{ health?.availability_24h?.toFixed(1) || 0 }}%</div>
-              <div class="kpi-label">Disponibilité 24h</div>
+      <!-- Business KPIs -->
+      <div class="kpi-grid">
+        <div class="kpi-card">
+          <div class="kpi-accent accent-blue"></div>
+          <div class="kpi-body">
+            <div class="kpi-value">{{ usage?.total_plays || 0 }}</div>
+            <div class="kpi-label">Videos diffusees</div>
+            <div class="kpi-trend" *ngIf="playsTrend !== null" [class.up]="playsTrend > 0" [class.down]="playsTrend < 0">
+              {{ playsTrend > 0 ? '+' : '' }}{{ playsTrend }}% vs periode prec.
             </div>
           </div>
         </div>
 
-        <!-- Charts Row -->
-        <div class="charts-row">
-          <!-- Daily Plays Chart -->
-          <div class="card chart-card">
-            <h3>Lectures par jour</h3>
-            <p class="sr-only">{{ 'analytics.dailyPlaysChartLabel' | translate }}</p>
-            <div class="simple-chart" role="img" [attr.aria-label]="'analytics.dailyPlaysChartLabel' | translate" *ngIf="usage?.daily_breakdown?.length">
-              <div class="chart-bars">
-                <div
-                  *ngFor="let day of usage?.daily_breakdown"
-                  class="chart-bar-container"
-                  [title]="day.date + ': ' + day.plays + ' lectures'"
-                >
-                  <div
-                    class="chart-bar"
-                    [style.height.%]="getBarHeight(day.plays, getMaxPlays())"
-                  ></div>
-                  <div class="chart-label">{{ formatChartDate(day.date) }}</div>
-                </div>
-              </div>
-            </div>
-            <p class="no-data" *ngIf="!usage?.daily_breakdown?.length">Pas de données</p>
-          </div>
-
-          <!-- Categories Breakdown -->
-          <div class="card chart-card">
-            <h3>Répartition par catégorie</h3>
-            <p class="sr-only">{{ 'analytics.categoryChartLabel' | translate }}</p>
-            <div class="categories-list" role="img" [attr.aria-label]="'analytics.categoryChartLabel' | translate" *ngIf="content?.categories_breakdown?.length">
-              <div
-                *ngFor="let cat of content?.categories_breakdown?.slice(0, 5)"
-                class="category-item"
-              >
-                <div class="category-info">
-                  <span class="category-name">{{ cat.category || ('common.uncategorized' | translate) }}</span>
-                  <span class="category-count">{{ cat.play_count }} lectures</span>
-                </div>
-                <div class="category-bar">
-                  <div
-                    class="category-fill"
-                    [style.width.%]="getCategoryPercent(cat.play_count)"
-                  ></div>
-                </div>
-              </div>
-            </div>
-            <p class="no-data" *ngIf="!content?.categories_breakdown?.length">Pas de données</p>
+        <div class="kpi-card">
+          <div class="kpi-accent accent-purple"></div>
+          <div class="kpi-body">
+            <div class="kpi-value">{{ formatDuration(usage?.total_duration || 0) }}</div>
+            <div class="kpi-label">Temps d'ecran</div>
+            <div class="kpi-sub">{{ usage?.unique_videos || 0 }} videos uniques</div>
           </div>
         </div>
 
-        <!-- Recent Activity -->
-        <div class="card">
-          <h3>Activité récente</h3>
-          <div class="activity-list" *ngIf="recentAlerts?.length">
-            <div
-              *ngFor="let alert of recentAlerts.slice(0, 5)"
-              class="activity-item"
-              [class.resolved]="alert.resolved"
-            >
-              <div class="activity-icon" [class]="'severity-' + alert.severity">
-                {{ getSeverityIcon(alert.severity) }}
-              </div>
-              <div class="activity-content">
-                <div class="activity-message">{{ alert.message }}</div>
-                <div class="activity-time">{{ formatDate(alert.created_at) }}</div>
-              </div>
-              <div class="activity-status">
-                <span class="status-badge" [class.resolved]="alert.resolved">
-                  {{ alert.resolved ? 'Résolu' : 'Actif' }}
-                </span>
-              </div>
-            </div>
+        <div class="kpi-card">
+          <div class="kpi-accent accent-orange"></div>
+          <div class="kpi-body">
+            <div class="kpi-value">{{ sponsorBenchmark?.sponsors?.length || 0 }}</div>
+            <div class="kpi-label">Sponsors actifs</div>
+            <div class="kpi-sub" *ngIf="totalSponsorImpressions > 0">{{ totalSponsorImpressions }} impressions</div>
           </div>
-          <p class="no-data" *ngIf="!recentAlerts?.length">Aucune alerte récente</p>
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-accent" [class.accent-green]="(health?.availability_24h || 0) >= 90" [class.accent-red]="(health?.availability_24h || 0) < 90"></div>
+          <div class="kpi-body">
+            <div class="kpi-value">{{ (health?.availability_24h || 0).toFixed(0) }}%</div>
+            <div class="kpi-label">Disponibilite 24h</div>
+            <div class="kpi-sub">{{ health?.status === 'online' ? 'En ligne' : 'Hors ligne' }}</div>
+          </div>
         </div>
       </div>
 
-      <!-- Usage Tab -->
-      <div class="tab-content" role="tabpanel" *ngIf="activeTab === 'usage'">
-        <div class="stats-grid">
-          <div class="stat-card">
-            <div class="stat-icon">▶️</div>
-            <div class="stat-value">{{ usage?.total_plays || 0 }}</div>
-            <div class="stat-label">Lectures totales</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-icon">🎬</div>
-            <div class="stat-value">{{ usage?.unique_videos || 0 }}</div>
-            <div class="stat-label">Vidéos uniques</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-icon">🎯</div>
-            <div class="stat-value">{{ usage?.manual_triggers || 0 }}</div>
-            <div class="stat-label">Déclenchements manuels</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-icon">🔄</div>
-            <div class="stat-value">{{ usage?.auto_plays || 0 }}</div>
-            <div class="stat-label">Lectures auto</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-icon">📈</div>
-            <div class="stat-value">{{ (usage?.avg_completion_rate || 0).toFixed(0) }}%</div>
-            <div class="stat-label">Taux de complétion moyen</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-icon">⏱️</div>
-            <div class="stat-value">{{ formatDuration(usage?.total_duration || 0) }}</div>
-            <div class="stat-label">Durée totale</div>
-          </div>
+      <!-- Engagement Chart -->
+      <div class="card chart-section">
+        <div class="card-header-row">
+          <h2>Engagement ({{ selectedPeriod }} jours)</h2>
         </div>
-
-        <!-- Daily Breakdown Table -->
-        <div class="card">
-          <h3>Détail par jour</h3>
-          <table class="data-table" *ngIf="usage?.daily_breakdown?.length">
-            <thead>
-              <tr>
-                <th>Date</th>
-                <th>Lectures</th>
-                <th>Durée</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr *ngFor="let day of usage?.daily_breakdown">
-                <td>{{ formatTableDate(day.date) }}</td>
-                <td>{{ day.plays }}</td>
-                <td>{{ formatDuration(day.duration) }}</td>
-              </tr>
-            </tbody>
-          </table>
-          <p class="no-data" *ngIf="!usage?.daily_breakdown?.length">Pas de données</p>
+        <div class="chart-container" *ngIf="usage?.daily_breakdown?.length">
+          <canvas #dailyChart></canvas>
         </div>
+        <p class="no-data" *ngIf="!usage?.daily_breakdown?.length">Pas de donnees sur cette periode</p>
       </div>
 
-      <!-- Content Tab -->
-      <div class="tab-content" role="tabpanel" *ngIf="activeTab === 'content'">
-        <!-- Top Videos -->
+      <!-- Two columns: Content + Sponsors -->
+      <div class="two-col">
+        <!-- Top Content -->
         <div class="card">
-          <h3>Top Vidéos</h3>
-          <table class="data-table" *ngIf="content?.top_videos?.length">
-            <thead>
-              <tr>
-                <th>Vidéo</th>
-                <th>Catégorie</th>
-                <th>Lectures</th>
-                <th>Durée totale</th>
-                <th>Complétion</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr *ngFor="let video of content?.top_videos">
-                <td class="video-name">{{ getVideoName(video.filename) }}</td>
-                <td>{{ video.category || '-' }}</td>
-                <td>{{ video.play_count }}</td>
-                <td>{{ formatDuration(video.total_duration) }}</td>
-                <td>
-                  <div class="completion-bar">
-                    <div class="completion-fill" [style.width.%]="video.avg_completion || 0"></div>
-                    <span class="completion-text">{{ (video.avg_completion || 0).toFixed(0) }}%</span>
-                  </div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-          <p class="no-data" *ngIf="!content?.top_videos?.length">Pas de données</p>
-        </div>
-
-        <!-- Categories -->
-        <div class="card">
-          <h3>Par Catégorie</h3>
-          <table class="data-table" *ngIf="content?.categories_breakdown?.length">
-            <thead>
-              <tr>
-                <th>Catégorie</th>
-                <th>Lectures</th>
-                <th>Durée totale</th>
-                <th>Part</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr *ngFor="let cat of content?.categories_breakdown">
-                <td>{{ cat.category || ('common.uncategorized' | translate) }}</td>
-                <td>{{ cat.play_count }}</td>
-                <td>{{ formatDuration(cat.total_duration) }}</td>
-                <td>{{ getCategoryPercent(cat.play_count).toFixed(1) }}%</td>
-              </tr>
-            </tbody>
-          </table>
-          <p class="no-data" *ngIf="!content?.categories_breakdown?.length">Pas de données</p>
-        </div>
-      </div>
-
-      <!-- Health Tab -->
-      <div class="tab-content" role="tabpanel" *ngIf="activeTab === 'health'">
-        <!-- Current Metrics -->
-        <div class="card" *ngIf="health?.current_metrics as metrics">
-          <h3>Métriques actuelles</h3>
-          <div class="metrics-grid">
-              <div class="metric" [class.warning]="(metrics.cpu_usage || 0) > 80">
-                <div class="metric-icon">💻</div>
-                <div class="metric-info">
-                  <div class="metric-label">CPU</div>
-                  <div class="metric-value">{{ (metrics.cpu_usage || 0).toFixed(1) }}%</div>
-                </div>
-                <div class="metric-bar">
-                  <div class="metric-fill" [style.width.%]="metrics.cpu_usage || 0"></div>
-                </div>
+          <h2>Top contenus</h2>
+          <div class="content-list" *ngIf="content?.top_videos?.length; else noContent">
+            <div *ngFor="let video of content?.top_videos?.slice(0, 8)" class="content-item">
+              <div class="content-rank">
+                <span class="category-dot" [style.background]="getCategoryColor(video.category)"></span>
               </div>
-
-              <div class="metric" [class.warning]="(metrics.memory_usage || 0) > 80">
-                <div class="metric-icon">🧠</div>
-                <div class="metric-info">
-                  <div class="metric-label">RAM</div>
-                  <div class="metric-value">{{ (metrics.memory_usage || 0).toFixed(1) }}%</div>
-                </div>
-                <div class="metric-bar">
-                  <div class="metric-fill" [style.width.%]="metrics.memory_usage || 0"></div>
-                </div>
+              <div class="content-info">
+                <span class="content-name">{{ getVideoName(video.filename) }}</span>
+                <span class="content-cat">{{ video.category || 'Non categorise' }}</span>
               </div>
-
-              <div class="metric" [class.warning]="(metrics.temperature || 0) > 70">
-                <div class="metric-icon">🌡️</div>
-                <div class="metric-info">
-                  <div class="metric-label">Température</div>
-                  <div class="metric-value">{{ (metrics.temperature || 0).toFixed(1) }}°C</div>
-                </div>
-                <div class="metric-bar">
-                  <div class="metric-fill" [style.width.%]="Math.min(metrics.temperature || 0, 100)"></div>
-                </div>
-              </div>
-
-              <div class="metric" [class.warning]="(metrics.disk_usage || 0) > 80">
-                <div class="metric-icon">💾</div>
-                <div class="metric-info">
-                  <div class="metric-label">Disque</div>
-                  <div class="metric-value">{{ (metrics.disk_usage || 0).toFixed(1) }}%</div>
-                </div>
-                <div class="metric-bar">
-                  <div class="metric-fill" [style.width.%]="metrics.disk_usage || 0"></div>
-                </div>
-              </div>
-          </div>
-        </div>
-
-        <!-- Availability History -->
-        <div class="card">
-          <h3>Historique Disponibilité</h3>
-          <table class="data-table" *ngIf="availability?.length">
-            <thead>
-              <tr>
-                <th>Date</th>
-                <th>Temps en ligne</th>
-                <th>Disponibilité</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr *ngFor="let day of availability">
-                <td>{{ formatTableDate(day.date) }}</td>
-                <td>{{ formatMinutes(day.online_minutes) }} / {{ formatMinutes(day.total_minutes) }}</td>
-                <td>
-                  <div class="availability-bar">
-                    <div class="availability-fill" [style.width.%]="day.availability_percent || 0"></div>
-                    <span class="availability-text">{{ (day.availability_percent || 0).toFixed(1) }}%</span>
-                  </div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-          <p class="no-data" *ngIf="!availability?.length">Pas de données</p>
-        </div>
-
-        <!-- Alerts History -->
-        <div class="card">
-          <h3>Historique Alertes</h3>
-          <div class="alerts-list" *ngIf="recentAlerts?.length">
-            <div
-              *ngFor="let alert of recentAlerts"
-              class="alert-item"
-              [class]="'severity-' + alert.severity"
-              [class.resolved]="alert.resolved"
-            >
-              <div class="alert-icon">{{ getSeverityIcon(alert.severity) }}</div>
-              <div class="alert-content">
-                <div class="alert-type">{{ alert.type }}</div>
-                <div class="alert-message">{{ alert.message }}</div>
-                <div class="alert-time">{{ formatDate(alert.created_at) }}</div>
-              </div>
-              <div class="alert-status">
-                {{ alert.resolved ? 'Résolu' : 'Actif' }}
+              <div class="content-stats">
+                <span class="content-plays">{{ video.play_count }}</span>
+                <span class="content-duration">{{ formatDuration(video.total_duration) }}</span>
               </div>
             </div>
           </div>
-          <p class="no-data" *ngIf="!recentAlerts?.length">Aucune alerte</p>
+          <ng-template #noContent>
+            <div class="empty-state">Aucune video jouee</div>
+          </ng-template>
+
+          <!-- Categories summary -->
+          <div class="categories-summary" *ngIf="content?.categories_breakdown?.length">
+            <h3>Par categorie</h3>
+            <div *ngFor="let cat of content?.categories_breakdown?.slice(0, 5)" class="cat-row">
+              <span class="cat-name">
+                <span class="category-dot" [style.background]="getCategoryColor(cat.category)"></span>
+                {{ cat.category || 'Autre' }}
+              </span>
+              <div class="cat-bar-bg">
+                <div class="cat-bar-fill" [style.width.%]="getCategoryPercent(cat.play_count)" [style.background]="getCategoryColor(cat.category)"></div>
+              </div>
+              <span class="cat-count">{{ cat.play_count }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sponsors -->
+        <div class="card">
+          <h2>Sponsors ce club</h2>
+          <div class="sponsor-list" *ngIf="sponsorBenchmark?.sponsors?.length; else noSponsors">
+            <div *ngFor="let sponsor of sponsorBenchmark?.sponsors" class="sponsor-item">
+              <div class="sponsor-info">
+                <span class="sponsor-name">{{ sponsor.sponsor_name }}</span>
+                <span class="sponsor-meta">{{ sponsor.active_days }}j actif · Rang #{{ sponsor.rank }}</span>
+              </div>
+              <div class="sponsor-metrics">
+                <div class="sponsor-metric">
+                  <span class="sm-value">{{ sponsor.impressions }}</span>
+                  <span class="sm-label">imp.</span>
+                </div>
+                <div class="sponsor-metric">
+                  <span class="sm-value" [class.good]="sponsor.completion_rate >= 80" [class.warn]="sponsor.completion_rate >= 50 && sponsor.completion_rate < 80" [class.bad]="sponsor.completion_rate < 50">
+                    {{ sponsor.completion_rate?.toFixed(0) || 0 }}%
+                  </span>
+                  <span class="sm-label">compl.</span>
+                </div>
+                <div class="sponsor-metric" *ngIf="sponsor.cpi !== null">
+                  <span class="sm-value">{{ sponsor.cpi?.toFixed(2) }}&euro;</span>
+                  <span class="sm-label">CPI</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Averages -->
+            <div class="sponsor-averages" *ngIf="sponsorBenchmark?.averages">
+              <span class="avg-label">Moy. club</span>
+              <span class="avg-stat">{{ sponsorBenchmark?.averages?.impressions?.toFixed(0) || 0 }} imp.</span>
+              <span class="avg-stat">{{ sponsorBenchmark?.averages?.completion_rate?.toFixed(0) || 0 }}% compl.</span>
+              <span class="avg-stat" *ngIf="sponsorBenchmark?.averages?.cpi !== null">{{ sponsorBenchmark?.averages?.cpi?.toFixed(2) || '-' }}&euro; CPI</span>
+            </div>
+          </div>
+          <ng-template #noSponsors>
+            <div class="empty-state">Aucun sponsor associe a ce club</div>
+          </ng-template>
+        </div>
+      </div>
+
+      <!-- Sante systeme (accordeon) -->
+      <div class="card card-collapsible">
+        <div class="card-header-row clickable" (click)="healthExpanded = !healthExpanded">
+          <h2>Sante systeme</h2>
+          <div class="health-pills">
+            <span class="pill" [class.ok]="health?.status === 'online'" [class.off]="health?.status !== 'online'">
+              {{ health?.status === 'online' ? 'En ligne' : 'Hors ligne' }}
+            </span>
+            <span class="pill" *ngIf="health?.current_metrics">
+              CPU {{ (health?.current_metrics?.cpu_usage || 0).toFixed(0) }}%
+            </span>
+            <span class="pill" *ngIf="health?.current_metrics">
+              {{ (health?.current_metrics?.temperature || 0).toFixed(0) }}°C
+            </span>
+          </div>
+          <span class="expand-toggle">{{ healthExpanded ? '−' : '+' }}</span>
+        </div>
+
+        <div class="health-expanded" *ngIf="healthExpanded">
+          <!-- Metrics -->
+          <div class="metrics-compact" *ngIf="health?.current_metrics as metrics">
+            <div class="mc-item" [class.warn]="(metrics.cpu_usage || 0) > 80">
+              <span class="mc-label">CPU</span>
+              <div class="mc-bar"><div class="mc-fill" [style.width.%]="metrics.cpu_usage || 0"></div></div>
+              <span class="mc-val">{{ (metrics.cpu_usage || 0).toFixed(0) }}%</span>
+            </div>
+            <div class="mc-item" [class.warn]="(metrics.memory_usage || 0) > 80">
+              <span class="mc-label">RAM</span>
+              <div class="mc-bar"><div class="mc-fill" [style.width.%]="metrics.memory_usage || 0"></div></div>
+              <span class="mc-val">{{ (metrics.memory_usage || 0).toFixed(0) }}%</span>
+            </div>
+            <div class="mc-item" [class.warn]="(metrics.temperature || 0) > 70">
+              <span class="mc-label">Temp</span>
+              <div class="mc-bar"><div class="mc-fill" [style.width.%]="Math.min(metrics.temperature || 0, 100)"></div></div>
+              <span class="mc-val">{{ (metrics.temperature || 0).toFixed(0) }}°C</span>
+            </div>
+            <div class="mc-item" [class.warn]="(metrics.disk_usage || 0) > 80">
+              <span class="mc-label">Disk</span>
+              <div class="mc-bar"><div class="mc-fill" [style.width.%]="metrics.disk_usage || 0"></div></div>
+              <span class="mc-val">{{ (metrics.disk_usage || 0).toFixed(0) }}%</span>
+            </div>
+          </div>
+
+          <!-- Recent alerts -->
+          <div class="alerts-compact" *ngIf="recentAlerts?.length">
+            <h3>Alertes recentes</h3>
+            <div *ngFor="let alert of recentAlerts.slice(0, 5)" class="alert-row" [class.resolved]="alert.resolved">
+              <span class="alert-sev">{{ getSeverityIcon(alert.severity) }}</span>
+              <span class="alert-msg">{{ alert.message }}</span>
+              <span class="alert-time">{{ formatDate(alert.created_at) }}</span>
+              <span class="alert-badge" [class.resolved]="alert.resolved">{{ alert.resolved ? 'Resolu' : 'Actif' }}</span>
+            </div>
+          </div>
         </div>
       </div>
     </div>
 
-    <ng-template #loading>
+    <ng-template #loadingTpl>
       <div class="loading-container">
         <div class="spinner"></div>
         <p>Chargement des analytics...</p>
@@ -432,629 +246,185 @@ type TabType = 'overview' | 'usage' | 'content' | 'health';
     </ng-template>
   `,
   styles: [`
-    .page-container {
-      padding: 2rem;
-      max-width: 1400px;
-      margin: 0 auto;
-    }
+    .page-container { padding: 2rem; max-width: 1400px; margin: 0 auto; }
 
-    .page-header {
-      display: flex;
-      align-items: center;
-      gap: 1rem;
-      margin-bottom: 2rem;
-      flex-wrap: wrap;
-    }
+    /* Header */
+    .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem; }
+    .back-link { font-size: 1rem; color: #2563eb; text-decoration: none; font-weight: 500; }
+    .back-link:hover { text-decoration: underline; }
+    .header-actions { display: flex; gap: 0.5rem; align-items: center; }
 
-    .header-left {
-      display: flex;
-      gap: 0.5rem;
-    }
+    .period-select { padding: 0.4rem 0.75rem; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 0.875rem; background: white; }
 
-    .page-header h1 {
-      flex: 1;
-      margin: 0;
-      font-size: 1.75rem;
-      color: #0f172a;
-    }
+    .btn { padding: 0.4rem 1rem; border-radius: 6px; font-weight: 500; cursor: pointer; border: none; transition: all 0.15s; font-size: 0.875rem; }
+    .btn-primary { background: #2563eb; color: white; }
+    .btn-primary:hover:not(:disabled) { background: #1d4ed8; }
+    .btn-outline { background: white; color: #475569; border: 1px solid #e2e8f0; }
+    .btn-outline:hover:not(:disabled) { background: #f8fafc; }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
-    .header-actions {
-      display: flex;
-      gap: 1rem;
-      align-items: center;
-    }
-
-    .period-select {
-      padding: 0.5rem 1rem;
-      border: 2px solid #e2e8f0;
-      border-radius: 6px;
-      font-size: 0.875rem;
-      background: white;
-    }
-
-    /* Tabs */
-    .tabs {
-      display: flex;
-      gap: 0.5rem;
-      margin-bottom: 2rem;
-      border-bottom: 2px solid #e2e8f0;
-      padding-bottom: 0;
-    }
-
-    .tab {
-      padding: 0.75rem 1.5rem;
-      border: none;
-      background: none;
-      font-size: 0.875rem;
-      font-weight: 500;
-      color: #64748b;
-      cursor: pointer;
-      border-bottom: 3px solid transparent;
-      margin-bottom: -2px;
-      transition: all 0.2s;
-    }
-
-    .tab:hover {
-      color: #2563eb;
-    }
-
-    .tab.active {
-      color: #2563eb;
-      border-bottom-color: #2563eb;
-    }
-
-    /* KPIs */
-    .kpi-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 1.5rem;
-      margin-bottom: 2rem;
-    }
+    /* KPI Grid */
+    .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 20px; }
 
     .kpi-card {
-      display: flex;
-      align-items: center;
-      gap: 1rem;
-      padding: 1.5rem;
-      background: white;
-      border-radius: 12px;
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      background: white; border-radius: 12px; display: flex; overflow: hidden;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08); border: 1px solid #e2e8f0;
     }
 
-    .kpi-icon {
-      font-size: 2rem;
-      width: 56px;
-      height: 56px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: #f1f5f9;
-      border-radius: 12px;
-    }
+    .kpi-accent { width: 4px; flex-shrink: 0; }
+    .accent-blue { background: #2563eb; }
+    .accent-purple { background: #7c3aed; }
+    .accent-orange { background: #f59e0b; }
+    .accent-green { background: #10b981; }
+    .accent-red { background: #ef4444; }
 
-    .kpi-value {
-      font-size: 1.5rem;
-      font-weight: 700;
-      color: #0f172a;
-    }
-
-    .kpi-label {
-      font-size: 0.875rem;
-      color: #64748b;
-    }
-
-    /* Stats Grid */
-    .stats-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-      gap: 1rem;
-      margin-bottom: 2rem;
-    }
-
-    .stat-card {
-      padding: 1.25rem;
-      background: white;
-      border-radius: 12px;
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-      text-align: center;
-    }
-
-    .stat-icon {
-      font-size: 1.5rem;
-      margin-bottom: 0.5rem;
-    }
-
-    .stat-value {
-      font-size: 1.75rem;
-      font-weight: 700;
-      color: #0f172a;
-    }
-
-    .stat-label {
-      font-size: 0.75rem;
-      color: #64748b;
-      text-transform: uppercase;
-    }
-
-    /* Charts */
-    .charts-row {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-      gap: 1.5rem;
-      margin-bottom: 2rem;
-    }
-
-    .chart-card {
-      min-height: 300px;
-    }
-
-    .simple-chart {
-      height: 200px;
-      display: flex;
-      align-items: flex-end;
-    }
-
-    .chart-bars {
-      display: flex;
-      align-items: flex-end;
-      justify-content: space-around;
-      width: 100%;
-      height: 100%;
-      padding: 0 0.5rem;
-    }
-
-    .chart-bar-container {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      height: 100%;
-      max-width: 50px;
-    }
-
-    .chart-bar {
-      width: 60%;
-      background: linear-gradient(180deg, #2563eb, #3b82f6);
-      border-radius: 4px 4px 0 0;
-      min-height: 4px;
-      transition: height 0.3s ease;
-    }
-
-    .chart-label {
-      font-size: 0.625rem;
-      color: #64748b;
-      margin-top: 0.5rem;
-      text-align: center;
-    }
-
-    /* Categories List */
-    .categories-list {
-      display: flex;
-      flex-direction: column;
-      gap: 1rem;
-    }
-
-    .category-item {
-      display: flex;
-      flex-direction: column;
-      gap: 0.5rem;
-    }
-
-    .category-info {
-      display: flex;
-      justify-content: space-between;
-    }
-
-    .category-name {
-      font-weight: 500;
-      color: #0f172a;
-    }
-
-    .category-count {
-      font-size: 0.875rem;
-      color: #64748b;
-    }
-
-    .category-bar {
-      height: 8px;
-      background: #e2e8f0;
-      border-radius: 4px;
-      overflow: hidden;
-    }
-
-    .category-fill {
-      height: 100%;
-      background: linear-gradient(90deg, #2563eb, #3b82f6);
-      transition: width 0.3s ease;
-    }
-
-    /* Activity List */
-    .activity-list {
-      display: flex;
-      flex-direction: column;
-      gap: 1rem;
-    }
-
-    .activity-item {
-      display: flex;
-      align-items: center;
-      gap: 1rem;
-      padding: 1rem;
-      background: #f8fafc;
-      border-radius: 8px;
-      border-left: 3px solid #2563eb;
-    }
-
-    .activity-item.resolved {
-      opacity: 0.7;
-    }
-
-    .activity-icon {
-      font-size: 1.5rem;
-      width: 40px;
-      height: 40px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: white;
-      border-radius: 8px;
-    }
-
-    .activity-icon.severity-critical { background: #fef2f2; }
-    .activity-icon.severity-warning { background: #fffbeb; }
-    .activity-icon.severity-info { background: #eff6ff; }
-
-    .activity-content {
-      flex: 1;
-    }
-
-    .activity-message {
-      font-weight: 500;
-      color: #0f172a;
-    }
-
-    .activity-time {
-      font-size: 0.75rem;
-      color: #64748b;
-    }
-
-    .status-badge {
-      padding: 0.25rem 0.75rem;
-      border-radius: 12px;
-      font-size: 0.75rem;
-      font-weight: 500;
-      background: #fef2f2;
-      color: #b91c1c;
-    }
-
-    .status-badge.resolved {
-      background: #ecfdf5;
-      color: #065f46;
-    }
+    .kpi-body { padding: 16px 20px; }
+    .kpi-value { font-size: 26px; font-weight: 700; color: #0f172a; line-height: 1.2; }
+    .kpi-label { font-size: 13px; color: #64748b; margin-top: 2px; }
+    .kpi-sub { font-size: 12px; color: #94a3b8; margin-top: 3px; }
+    .kpi-trend { font-size: 12px; margin-top: 3px; font-weight: 500; }
+    .kpi-trend.up { color: #059669; }
+    .kpi-trend.down { color: #dc2626; }
 
     /* Cards */
-    .card {
-      background: white;
-      border-radius: 12px;
-      padding: 1.5rem;
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-      margin-bottom: 1.5rem;
-    }
+    .card { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); border: 1px solid #e2e8f0; margin-bottom: 20px; }
+    .card h2 { margin: 0 0 16px 0; font-size: 16px; font-weight: 600; color: #1e293b; }
+    .card h3 { margin: 16px 0 10px; font-size: 13px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.3px; }
 
-    .card h3 {
-      margin: 0 0 1.5rem 0;
-      font-size: 1.125rem;
-      color: #0f172a;
-      padding-bottom: 0.75rem;
-      border-bottom: 2px solid #e2e8f0;
-    }
+    .card-header-row { display: flex; justify-content: space-between; align-items: center; }
+    .card-header-row.clickable { cursor: pointer; }
 
-    /* Data Tables */
-    .data-table {
-      width: 100%;
-      border-collapse: collapse;
-    }
+    /* Chart */
+    .chart-section { margin-bottom: 20px; }
+    .chart-container { height: 260px; position: relative; }
 
-    .data-table th,
-    .data-table td {
-      padding: 0.75rem 1rem;
-      text-align: left;
-      border-bottom: 1px solid #e2e8f0;
-    }
+    /* Two columns */
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
+    .two-col .card { margin-bottom: 0; }
 
-    .data-table th {
-      font-weight: 600;
-      color: #64748b;
-      font-size: 0.75rem;
-      text-transform: uppercase;
-      background: #f8fafc;
-    }
+    /* Content List */
+    .content-list { display: flex; flex-direction: column; gap: 6px; }
 
-    .data-table td {
-      color: #0f172a;
-    }
+    .content-item { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 6px; transition: background 0.15s; }
+    .content-item:hover { background: #f8fafc; }
 
-    .data-table tbody tr:hover {
-      background: #f8fafc;
-    }
+    .content-rank { flex-shrink: 0; }
+    .category-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
 
-    .video-name {
-      max-width: 300px;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
+    .content-info { flex: 1; min-width: 0; }
+    .content-name { display: block; font-size: 14px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .content-cat { font-size: 11px; color: #94a3b8; }
 
-    /* Completion Bar */
-    .completion-bar {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      width: 100%;
-    }
+    .content-stats { text-align: right; flex-shrink: 0; }
+    .content-plays { display: block; font-size: 14px; font-weight: 600; color: #0f172a; }
+    .content-duration { font-size: 11px; color: #94a3b8; }
 
-    .completion-fill {
-      height: 8px;
-      background: linear-gradient(90deg, #10b981, #34d399);
-      border-radius: 4px;
-      flex: 1;
-      max-width: 100px;
-    }
+    /* Categories */
+    .categories-summary { border-top: 1px solid #f1f5f9; padding-top: 8px; margin-top: 12px; }
 
-    .completion-text {
-      font-size: 0.75rem;
-      color: #64748b;
-      min-width: 35px;
-    }
+    .cat-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+    .cat-name { width: 120px; font-size: 13px; color: #475569; display: flex; align-items: center; gap: 6px; flex-shrink: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .cat-bar-bg { flex: 1; height: 6px; background: #f1f5f9; border-radius: 3px; overflow: hidden; }
+    .cat-bar-fill { height: 100%; border-radius: 3px; transition: width 0.3s; }
+    .cat-count { width: 40px; text-align: right; font-size: 12px; font-weight: 600; color: #475569; flex-shrink: 0; }
 
-    /* Availability Bar */
-    .availability-bar {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-    }
+    /* Sponsors */
+    .sponsor-list { display: flex; flex-direction: column; gap: 10px; }
 
-    .availability-fill {
-      height: 8px;
-      background: linear-gradient(90deg, #10b981, #34d399);
-      border-radius: 4px;
-      width: 100px;
-    }
+    .sponsor-item { padding: 12px; background: #f8fafc; border-radius: 8px; border-left: 3px solid #f59e0b; }
+    .sponsor-info { margin-bottom: 8px; }
+    .sponsor-name { display: block; font-weight: 600; font-size: 14px; color: #0f172a; }
+    .sponsor-meta { font-size: 11px; color: #94a3b8; }
 
-    .availability-text {
-      font-size: 0.875rem;
-      font-weight: 500;
-    }
+    .sponsor-metrics { display: flex; gap: 16px; }
+    .sponsor-metric { text-align: center; }
+    .sm-value { display: block; font-size: 16px; font-weight: 700; color: #0f172a; }
+    .sm-value.good { color: #059669; }
+    .sm-value.warn { color: #d97706; }
+    .sm-value.bad { color: #dc2626; }
+    .sm-label { font-size: 10px; color: #94a3b8; text-transform: uppercase; }
 
-    /* Metrics */
-    .metrics-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 1rem;
-    }
+    .sponsor-averages { display: flex; align-items: center; gap: 12px; padding: 10px 12px; background: #eff6ff; border-radius: 6px; margin-top: 8px; }
+    .avg-label { font-size: 12px; font-weight: 600; color: #2563eb; }
+    .avg-stat { font-size: 12px; color: #475569; }
 
-    .metric {
-      display: flex;
-      flex-direction: column;
-      gap: 0.5rem;
-      padding: 1rem;
-      background: #f8fafc;
-      border-radius: 8px;
-      border-left: 3px solid #2563eb;
-    }
+    /* Health Collapsible */
+    .card-collapsible { padding: 16px 20px; }
+    .card-collapsible h2 { margin-bottom: 0; }
 
-    .metric.warning {
-      border-left-color: #f59e0b;
-      background: #fffbeb;
-    }
+    .health-pills { display: flex; gap: 8px; flex: 1; justify-content: flex-end; margin-right: 12px; }
+    .pill { font-size: 12px; padding: 3px 10px; border-radius: 12px; background: #f1f5f9; color: #64748b; }
+    .pill.ok { background: #ecfdf5; color: #059669; }
+    .pill.off { background: #fef2f2; color: #dc2626; }
+    .expand-toggle { font-size: 18px; color: #94a3b8; font-weight: 600; width: 24px; text-align: center; cursor: pointer; }
 
-    .metric-icon {
-      font-size: 1.5rem;
-    }
+    .health-expanded { margin-top: 16px; }
 
-    .metric-info {
-      display: flex;
-      justify-content: space-between;
-      align-items: baseline;
-    }
+    .metrics-compact { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+    .mc-item { display: flex; align-items: center; gap: 8px; }
+    .mc-item.warn .mc-fill { background: #f59e0b !important; }
+    .mc-label { width: 36px; font-size: 12px; color: #64748b; font-weight: 500; }
+    .mc-bar { flex: 1; height: 6px; background: #f1f5f9; border-radius: 3px; overflow: hidden; }
+    .mc-fill { height: 100%; background: #2563eb; border-radius: 3px; transition: width 0.3s; }
+    .mc-val { width: 40px; text-align: right; font-size: 12px; font-weight: 600; color: #475569; }
 
-    .metric-label {
-      font-size: 0.75rem;
-      color: #64748b;
-      text-transform: uppercase;
-      font-weight: 600;
-    }
+    /* Alerts compact */
+    .alerts-compact { margin-top: 16px; }
+    .alerts-compact h3 { margin: 0 0 8px; font-size: 12px; color: #64748b; text-transform: uppercase; font-weight: 600; }
 
-    .metric-value {
-      font-size: 1.25rem;
-      font-weight: 700;
-      color: #0f172a;
-    }
+    .alert-row { display: flex; align-items: center; gap: 8px; padding: 6px 0; font-size: 13px; border-bottom: 1px solid #f8fafc; }
+    .alert-row.resolved { opacity: 0.5; }
+    .alert-sev { flex-shrink: 0; }
+    .alert-msg { flex: 1; color: #475569; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .alert-time { font-size: 11px; color: #94a3b8; flex-shrink: 0; }
+    .alert-badge { font-size: 11px; padding: 2px 8px; border-radius: 10px; background: #fef2f2; color: #b91c1c; flex-shrink: 0; }
+    .alert-badge.resolved { background: #ecfdf5; color: #065f46; }
 
-    .metric-bar {
-      height: 6px;
-      background: #e2e8f0;
-      border-radius: 3px;
-      overflow: hidden;
-    }
+    /* Empty / loading */
+    .empty-state { text-align: center; padding: 24px; color: #94a3b8; font-size: 14px; }
+    .no-data { text-align: center; padding: 40px; color: #94a3b8; font-size: 14px; }
 
-    .metric-fill {
-      height: 100%;
-      background: linear-gradient(90deg, #2563eb, #3b82f6);
-      transition: width 0.3s ease;
-    }
+    .loading-container { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 400px; gap: 1rem; }
+    .spinner { width: 40px; height: 40px; border: 4px solid #e2e8f0; border-top-color: #2563eb; border-radius: 50%; animation: spin 1s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
 
-    .metric.warning .metric-fill {
-      background: linear-gradient(90deg, #f59e0b, #fbbf24);
-    }
-
-    /* Alerts */
-    .alerts-list {
-      display: flex;
-      flex-direction: column;
-      gap: 0.75rem;
-    }
-
-    .alert-item {
-      display: flex;
-      align-items: center;
-      gap: 1rem;
-      padding: 1rem;
-      border-radius: 8px;
-      background: #f8fafc;
-    }
-
-    .alert-item.severity-critical {
-      background: #fef2f2;
-      border-left: 3px solid #ef4444;
-    }
-
-    .alert-item.severity-warning {
-      background: #fffbeb;
-      border-left: 3px solid #f59e0b;
-    }
-
-    .alert-item.severity-info {
-      background: #eff6ff;
-      border-left: 3px solid #3b82f6;
-    }
-
-    .alert-item.resolved {
-      opacity: 0.6;
-    }
-
-    .alert-icon {
-      font-size: 1.25rem;
-    }
-
-    .alert-content {
-      flex: 1;
-    }
-
-    .alert-type {
-      font-weight: 600;
-      color: #0f172a;
-      font-size: 0.875rem;
-    }
-
-    .alert-message {
-      color: #475569;
-      font-size: 0.875rem;
-    }
-
-    .alert-time {
-      font-size: 0.75rem;
-      color: #94a3b8;
-    }
-
-    .alert-status {
-      font-size: 0.75rem;
-      font-weight: 500;
-      padding: 0.25rem 0.75rem;
-      border-radius: 12px;
-      background: #f1f5f9;
-      color: #64748b;
-    }
-
-    /* Buttons */
-    .btn {
-      padding: 0.5rem 1rem;
-      border-radius: 6px;
-      font-weight: 500;
-      cursor: pointer;
-      border: none;
-      transition: all 0.2s;
-      font-size: 0.875rem;
-    }
-
-    .btn-primary {
-      background: #2563eb;
-      color: white;
-    }
-
-    .btn-primary:hover:not(:disabled) {
-      background: #1d4ed8;
-    }
-
-    .btn-primary:disabled {
-      background: #93c5fd;
-      cursor: not-allowed;
-    }
-
-    .btn-secondary {
-      background: #e2e8f0;
-      color: #475569;
-    }
-
-    .btn-secondary:hover {
-      background: #cbd5e1;
-    }
-
-    /* Loading */
-    .loading-container {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      min-height: 400px;
-      gap: 1rem;
-    }
-
-    .spinner {
-      width: 40px;
-      height: 40px;
-      border: 4px solid #e2e8f0;
-      border-top-color: #2563eb;
-      border-radius: 50%;
-      animation: spin 1s linear infinite;
-    }
-
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
-
-    .no-data {
-      text-align: center;
-      padding: 2rem;
-      color: #94a3b8;
+    /* Responsive */
+    @media (max-width: 1100px) {
+      .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+      .two-col { grid-template-columns: 1fr; }
     }
 
     @media (max-width: 768px) {
-      .page-header {
-        flex-direction: column;
-        align-items: flex-start;
-      }
-
-      .header-actions {
-        width: 100%;
-        flex-direction: column;
-      }
-
-      .tabs {
-        overflow-x: auto;
-      }
-
-      .charts-row {
-        grid-template-columns: 1fr;
-      }
+      .page-container { padding: 1rem; }
+      .page-header { flex-direction: column; align-items: flex-start; }
+      .kpi-grid { grid-template-columns: 1fr 1fr; }
+      .metrics-compact { grid-template-columns: 1fr; }
     }
   `]
 })
 export class ClubAnalyticsComponent implements OnInit, OnDestroy {
+  @ViewChild('dailyChart') dailyChartRef!: ElementRef<HTMLCanvasElement>;
+
   siteId!: string;
   site: Site | null = null;
-  activeTab: TabType = 'overview';
   selectedPeriod = '30';
   exporting = false;
   exportingPdf = false;
+  healthExpanded = false;
   Math = Math;
 
   // Data
   health: ClubHealthData | null = null;
   usage: UsageStats | null = null;
+  previousUsage: UsageStats | null = null;
   content: ContentStats | null = null;
   availability: AvailabilityData[] = [];
   recentAlerts: AlertData[] = [];
+  sponsorBenchmark: SiteSponsorBenchmarkResponse | null = null;
+
+  // Computed
+  playsTrend: number | null = null;
+  totalSponsorImpressions = 0;
 
   private readonly route = inject(ActivatedRoute);
   private readonly analyticsService = inject(AnalyticsService);
@@ -1062,57 +432,144 @@ export class ClubAnalyticsComponent implements OnInit, OnDestroy {
   private readonly notificationService = inject(NotificationService);
   private readonly logger = inject(LoggerService);
   private refreshSubscription?: Subscription;
+  private dailyChart: Chart | null = null;
+
+  private readonly categoryColors: Record<string, string> = {
+    sponsor: '#f59e0b',
+    jingle: '#2563eb',
+    ambiance: '#10b981',
+    pub: '#ef4444',
+    info: '#8b5cf6',
+    animation: '#ec4899',
+  };
 
   ngOnInit(): void {
     this.siteId = this.route.snapshot.paramMap.get('id')!;
     this.loadData();
-
-    // Auto-refresh toutes les 60 secondes
-    this.refreshSubscription = interval(60000).subscribe(() => {
-      this.loadData();
-    });
+    this.refreshSubscription = interval(60000).subscribe(() => this.loadData());
   }
 
   ngOnDestroy(): void {
     this.refreshSubscription?.unsubscribe();
+    this.dailyChart?.destroy();
   }
 
   loadData(): void {
     const days = parseInt(this.selectedPeriod, 10);
 
-    // Charger site
     this.sitesService.getSite(this.siteId).subscribe({
       next: (site) => this.site = site,
-      error: (err) => {
-        const message = ErrorExtractor.getMessage(err);
-        this.logger.warn('Failed to load site for analytics', { error: message, siteId: this.siteId });
-      }
+      error: (err) => this.logger.warn('Failed to load site', { error: ErrorExtractor.getMessage(err), siteId: this.siteId })
     });
 
-    // Charger toutes les analytics en parallèle
+    // Calculate date range for sponsors
+    const to = new Date();
+    const from = new Date();
+    from.setDate(from.getDate() - days);
+    const fromStr = from.toISOString().split('T')[0];
+    const toStr = to.toISOString().split('T')[0];
+
     forkJoin({
       health: this.analyticsService.getClubHealth(this.siteId),
       usage: this.analyticsService.getClubUsage(this.siteId, days),
+      previousUsage: this.analyticsService.getClubUsage(this.siteId, days * 2).pipe(catchError(() => of(null))),
       content: this.analyticsService.getClubContent(this.siteId, days),
       availability: this.analyticsService.getClubAvailability(this.siteId, days),
-      alerts: this.analyticsService.getClubAlerts(this.siteId, days)
+      alerts: this.analyticsService.getClubAlerts(this.siteId, days),
+      sponsors: this.sitesService.getSiteSponsorBenchmark(this.siteId, fromStr, toStr).pipe(catchError(() => of(null)))
     }).subscribe({
       next: (data) => {
         this.health = data.health;
         this.usage = data.usage;
+        this.previousUsage = data.previousUsage;
         this.content = data.content;
         this.availability = data.availability.availability;
         this.recentAlerts = data.alerts.alerts;
+        this.sponsorBenchmark = data.sponsors;
+
+        // Compute trend
+        this.computePlaysTrend(data.usage, data.previousUsage);
+
+        // Compute total sponsor impressions
+        this.totalSponsorImpressions = data.sponsors?.sponsors?.reduce((sum, s) => sum + (s.impressions || 0), 0) || 0;
+
+        // Render chart
+        setTimeout(() => this.renderDailyChart(), 0);
       },
       error: (err) => {
-        const message = ErrorExtractor.getMessage(err);
-        this.logger.error('Failed to load club analytics', { error: message, siteId: this.siteId });
+        this.logger.error('Failed to load club analytics', { error: ErrorExtractor.getMessage(err), siteId: this.siteId });
       }
     });
   }
 
   onPeriodChange(): void {
+    this.dailyChart?.destroy();
+    this.dailyChart = null;
     this.loadData();
+  }
+
+  private computePlaysTrend(current: UsageStats | null, extended: UsageStats | null): void {
+    if (!current || !extended) {
+      this.playsTrend = null;
+      return;
+    }
+
+    const currentPlays = current.total_plays || 0;
+    const extendedPlays = extended.total_plays || 0;
+    const previousPlays = extendedPlays - currentPlays;
+
+    if (previousPlays <= 0) {
+      this.playsTrend = currentPlays > 0 ? 100 : null;
+      return;
+    }
+
+    this.playsTrend = Math.round(((currentPlays - previousPlays) / previousPlays) * 100);
+  }
+
+  private renderDailyChart(): void {
+    if (!this.dailyChartRef?.nativeElement || !this.usage?.daily_breakdown?.length) return;
+    this.dailyChart?.destroy();
+
+    const breakdown = this.usage.daily_breakdown;
+    const labels = breakdown.map(d => {
+      const date = new Date(d.date);
+      return date.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' });
+    });
+
+    const config: ChartConfiguration = {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [{
+          label: 'Lectures',
+          data: breakdown.map(d => d.plays),
+          backgroundColor: '#2563eb',
+          borderRadius: 4,
+          maxBarThickness: 32,
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: '#0f172a',
+            padding: 10,
+            cornerRadius: 8,
+            callbacks: {
+              label: (ctx) => `${ctx.parsed.y} lectures`
+            }
+          }
+        },
+        scales: {
+          x: { grid: { display: false } },
+          y: { beginAtZero: true, grid: { color: '#f1f5f9' } }
+        }
+      }
+    };
+
+    this.dailyChart = new Chart(this.dailyChartRef.nativeElement, config);
   }
 
   exportData(): void {
@@ -1130,9 +587,7 @@ export class ClubAnalyticsComponent implements OnInit, OnDestroy {
         this.exporting = false;
       },
       error: (err) => {
-        const message = ErrorExtractor.getMessage(err);
-        this.logger.error('Failed to export club data', { error: message, siteId: this.siteId });
-        this.notificationService.error(`Erreur lors de l'export: ${message}`);
+        this.notificationService.error(`Erreur export: ${ErrorExtractor.getMessage(err)}`);
         this.exporting = false;
       }
     });
@@ -1141,29 +596,22 @@ export class ClubAnalyticsComponent implements OnInit, OnDestroy {
   downloadPdf(): void {
     this.exportingPdf = true;
     const days = parseInt(this.selectedPeriod, 10);
-
-    // Calculer les dates from et to
     const to = new Date();
     const from = new Date();
     from.setDate(from.getDate() - days);
 
-    const fromStr = from.toISOString().split('T')[0];
-    const toStr = to.toISOString().split('T')[0];
-
-    this.analyticsService.getClubPdfReport(this.siteId, fromStr, toStr).subscribe({
+    this.analyticsService.getClubPdfReport(this.siteId, from.toISOString().split('T')[0], to.toISOString().split('T')[0]).subscribe({
       next: (blob) => {
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `rapport-club-${this.site?.club_name || this.siteId}-${fromStr}-${toStr}.pdf`;
+        a.download = `rapport-${this.site?.club_name || this.siteId}.pdf`;
         a.click();
         window.URL.revokeObjectURL(url);
         this.exportingPdf = false;
       },
       error: (err) => {
-        const message = ErrorExtractor.getMessage(err);
-        this.logger.error('Failed to generate PDF report', { error: message, siteId: this.siteId });
-        this.notificationService.error(`Erreur lors de la génération du PDF: ${message}`);
+        this.notificationService.error(`Erreur PDF: ${ErrorExtractor.getMessage(err)}`);
         this.exportingPdf = false;
       }
     });
@@ -1178,49 +626,12 @@ export class ClubAnalyticsComponent implements OnInit, OnDestroy {
     return `${minutes}min`;
   }
 
-  formatMinutes(minutes: number): string {
-    if (!minutes) return '0min';
-    const hours = Math.floor(minutes / 60);
-    const mins = minutes % 60;
-    if (hours > 0) return `${hours}h${mins}m`;
-    return `${mins}min`;
-  }
-
   formatDate(date: string): string {
-    return new Date(date).toLocaleString('fr-FR', {
-      day: '2-digit',
-      month: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  }
-
-  formatTableDate(date: string): string {
-    return new Date(date).toLocaleDateString('fr-FR', {
-      weekday: 'short',
-      day: '2-digit',
-      month: '2-digit'
-    });
-  }
-
-  formatChartDate(date: string): string {
-    return new Date(date).toLocaleDateString('fr-FR', {
-      day: '2-digit',
-      month: '2-digit'
-    });
+    return new Date(date).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
   }
 
   getVideoName(filename: string): string {
     return filename.replace(/\.[^/.]+$/, '').replace(/_/g, ' ');
-  }
-
-  getMaxPlays(): number {
-    if (!this.usage?.daily_breakdown?.length) return 1;
-    return Math.max(...this.usage.daily_breakdown.map(d => d.plays), 1);
-  }
-
-  getBarHeight(value: number, max: number): number {
-    return (value / max) * 100;
   }
 
   getCategoryPercent(playCount: number): number {
@@ -1229,12 +640,13 @@ export class ClubAnalyticsComponent implements OnInit, OnDestroy {
     return total > 0 ? (playCount / total) * 100 : 0;
   }
 
+  getCategoryColor(category: string): string {
+    const key = (category || '').toLowerCase();
+    return this.categoryColors[key] || '#94a3b8';
+  }
+
   getSeverityIcon(severity: string): string {
-    const icons: Record<string, string> = {
-      critical: '🔴',
-      warning: '🟠',
-      info: '🔵'
-    };
+    const icons: Record<string, string> = { critical: '🔴', warning: '🟠', info: '🔵' };
     return icons[severity] || '⚪';
   }
 }
