@@ -53,6 +53,23 @@ interface HdmiCecStatus {
   error: string | null;
 }
 
+interface EdidDetailed {
+  screen_size: string | null;
+  year_of_manufacture: number | null;
+  input_type: string | null;
+  color_depth: string | null;
+  native_resolution: string | null;
+  max_refresh_rate: number | null;
+  hdmi_version: string | null;
+  hdr_supported: boolean;
+  color_spaces: string[];
+  standby_supported: boolean;
+  display_product_type: string | null;
+  diagonal_inches: number | null;
+  audio_supported: boolean;
+  supported_resolutions: string[];
+}
+
 interface DisplayInfo {
   connected: boolean;
   manufacturer: string | null;
@@ -61,6 +78,8 @@ interface DisplayInfo {
   resolution: string | null;
   display_type: 'tv' | 'monitor' | 'projector' | 'unknown';
   detection_method: string;
+  display_category?: string;
+  edid_detailed?: EdidDetailed | null;
 }
 
 interface FanStatusInfo {
@@ -622,6 +641,38 @@ interface WizardStep {
                   <span class="metric-value">
                     {{ healthStatus.hdmiCecStatus.tv_connected ? ('✅ ' + ('debug.healthHdmiConnected' | translate)) : ('✅ ' + ('debug.healthHdmiSignalOk' | translate)) }}
                   </span>
+                </div>
+              </div>
+
+              <!-- Enriched EDID details (edid-decode) -->
+              <div class="health-grid" *ngIf="healthStatus.displayInfo?.edid_detailed as edid">
+                <div class="health-metric" *ngIf="healthStatus.displayInfo?.display_category">
+                  <span class="metric-label">{{ 'debug.healthDisplayCategory' | translate }}</span>
+                  <span class="metric-value">{{ getDisplayCategoryLabel(healthStatus.displayInfo?.display_category) }}</span>
+                </div>
+                <div class="health-metric" *ngIf="edid.diagonal_inches">
+                  <span class="metric-label">{{ 'debug.healthDisplaySize' | translate }}</span>
+                  <span class="metric-value">{{ edid.diagonal_inches }}"</span>
+                </div>
+                <div class="health-metric" *ngIf="edid.native_resolution">
+                  <span class="metric-label">{{ 'debug.healthNativeResolution' | translate }}</span>
+                  <span class="metric-value">{{ edid.native_resolution }}</span>
+                </div>
+                <div class="health-metric" *ngIf="edid.max_refresh_rate">
+                  <span class="metric-label">{{ 'debug.healthRefreshRate' | translate }}</span>
+                  <span class="metric-value">{{ edid.max_refresh_rate }} Hz</span>
+                </div>
+                <div class="health-metric" *ngIf="edid.hdmi_version">
+                  <span class="metric-label">{{ 'debug.healthHdmiVersion' | translate }}</span>
+                  <span class="metric-value">HDMI {{ edid.hdmi_version }}</span>
+                </div>
+                <div class="health-metric" *ngIf="edid.hdr_supported">
+                  <span class="metric-label">HDR</span>
+                  <span class="metric-value metric-ok-text">✅ {{ 'debug.healthHdrSupported' | translate }}</span>
+                </div>
+                <div class="health-metric" *ngIf="edid.color_spaces?.length">
+                  <span class="metric-label">{{ 'debug.healthColorSpaces' | translate }}</span>
+                  <span class="metric-value metric-small">{{ edid.color_spaces.join(', ') }}</span>
                 </div>
               </div>
 
@@ -2503,6 +2554,14 @@ interface WizardStep {
     .metric-hint {
       font-size: 0.6875rem;
       margin-left: 0.25rem;
+    }
+
+    .metric-ok-text {
+      color: #16a34a;
+    }
+
+    .metric-small {
+      font-size: 0.75rem;
     }
 
     .throttle-flags {
@@ -4769,6 +4828,22 @@ export class SiteDebugTabComponent implements OnInit, AfterViewChecked, OnDestro
       case 'projector': return '📽️ ' + this.translate.instant('debug.displayTypeProjector');
       default: return '❓ ' + this.translate.instant('debug.displayUnknown');
     }
+  }
+
+  getDisplayCategoryLabel(category?: string): string {
+    if (!category) return '❓ ' + this.translate.instant('debug.displayUnknown');
+    const labels: Record<string, string> = {
+      tv_oled: '📺 OLED',
+      tv_qled: '📺 QLED',
+      tv_qned: '📺 QNED',
+      tv_led: '📺 LED',
+      tv_lcd: '📺 LCD',
+      tv_plasma: '📺 Plasma',
+      tv: '📺 ' + this.translate.instant('debug.displayTypeTv'),
+      monitor: '🖥️ ' + this.translate.instant('debug.displayTypeMonitor'),
+      projector: '📽️ ' + this.translate.instant('debug.displayTypeProjector'),
+    };
+    return labels[category] || '❓ ' + category;
   }
 
   // ============================================
