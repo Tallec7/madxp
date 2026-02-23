@@ -1,29 +1,18 @@
-# Analytics Feature - Status: DEPRECATED
+# Analytics Feature - Status: ACTIVE
 
-> **ATTENTION** : Ce module est marqué comme supprimé dans la documentation (v3.0.0)
-> mais les composants et routes sont encore actifs dans le code.
+## Composants
 
-## Contexte
+| Fichier                             | Route                   | Description                                | Roles                        |
+| ----------------------------------- | ----------------------- | ------------------------------------------ | ---------------------------- |
+| `analytics.component.ts`            | `/analytics`            | Vue flotte (statuts, metriques, activite)  | super_admin, admin, operator |
+| `analytics-traction.component.ts`   | `/analytics/traction`   | KPIs traction & croissance                 | super_admin, admin           |
+| `analytics-comparison.component.ts` | `/analytics/comparison` | Comparaison multi-sites (Chart.js)         | super_admin, admin           |
+| `realtime-dashboard.component.ts`   | `/analytics/realtime`   | Tableau de bord temps reel (polling 10s)   | super_admin, admin           |
+| `club-analytics.component.ts`       | `/sites/:id/analytics`  | Analytics par club (usage, contenu, sante) | super_admin, admin, operator |
+| `analytics-nav.component.ts`        | -                       | Navigation par onglets entre sous-pages    | -                            |
 
-Les pages analytics du dashboard ont été marquées comme supprimées en v3.0
-car les métriques étaient incohérentes :
-- "Temps de diffusion" = somme durées vidéo × lectures (pas le temps écran réel)
-- "Taux de complétion" = toujours 100% (bug)
-- "Disponibilité" = mesure connexion cloud, pas usage TV
-- Spikes de données lors du vidage de buffers accumulés
+## Limites connues
 
-## État actuel
-
-Les fichiers suivants sont encore référencés dans `app.routes.ts` :
-- `analytics.component.ts`
-- `analytics-comparison.component.ts`
-- `analytics-overview.component.ts`
-- `club-analytics.component.ts`
-- `realtime-dashboard.component.ts`
-
-## Decision requise
-
-**TODO** : Décider avec le Product Owner si ces composants doivent être :
-1. **Supprimés** : Retirer les fichiers, routes, et liens de navigation
-2. **Conservés** : Mettre à jour la documentation pour refléter qu'ils sont actifs
-3. **Masqués** : Retirer les liens de navigation mais garder les routes (accès direct)
+- "Temps de diffusion" = somme durees video x lectures (pas le temps ecran reel)
+- "Disponibilite" = mesure connexion cloud, pas usage TV physique
+- L'activite recente sur la page flotte est derivee des statuts de connexion (pas de flux d'evenements dedie)

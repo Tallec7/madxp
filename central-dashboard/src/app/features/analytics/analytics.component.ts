@@ -8,6 +8,8 @@ import { environment } from '../../../environments/environment';
 import { CacheService } from '../../core/services/cache.service';
 import { AnalyticsService, TractionMetrics } from '../../core/services/analytics.service';
 import { AuthService } from '../../core/services/auth.service';
+import { LoggerService } from '../../core/services/logger.service';
+import { NotificationService } from '../../core/services/notification.service';
 import { TranslateModule } from '@ngx-translate/core';
 import { AnalyticsNavComponent } from './analytics-nav.component';
 
@@ -40,6 +42,23 @@ interface RecentActivity {
   site_id: string;
   message: string;
   timestamp: string;
+}
+
+interface ConnectionStatusResponse {
+  sites: Array<{
+    siteId: string;
+    siteName: string;
+    clubName: string;
+    displayStatus: 'online' | 'offline' | 'warning' | 'unknown';
+    lastSeenAt: string | null;
+  }>;
+  stats: {
+    total: number;
+    online: number;
+    offline: number;
+    warning: number;
+    unknown: number;
+  };
 }
 
 @Component({
@@ -876,7 +895,10 @@ export class AnalyticsComponent implements OnInit, OnDestroy {
   private cache = inject(CacheService);
   private analyticsService = inject(AnalyticsService);
   private authService = inject(AuthService);
+  private logger = inject(LoggerService);
+  private notificationService = inject(NotificationService);
   private refreshSubscription?: Subscription;
+  private tractionSubscription?: Subscription;
 
   Math = Math; // Expose Math to template
 
@@ -908,28 +930,11 @@ export class AnalyticsComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.refreshSubscription?.unsubscribe();
+    this.tractionSubscription?.unsubscribe();
   }
 
   loadData(): void {
     this.loading = true;
-
-    // L'API retourne { sites: [...], stats: {...} }
-    interface ConnectionStatusResponse {
-      sites: Array<{
-        siteId: string;
-        siteName: string;
-        clubName: string;
-        displayStatus: 'online' | 'offline' | 'warning' | 'unknown';
-        lastSeenAt: string | null;
-      }>;
-      stats: {
-        total: number;
-        online: number;
-        offline: number;
-        warning: number;
-        unknown: number;
-      };
-    }
 
     // Récupérer les statuts de connexion ET les métriques moyennes en parallèle
     // Utilise le cache pour éviter les requêtes redondantes (TTL 30s)
@@ -988,15 +993,17 @@ export class AnalyticsComponent implements OnInit, OnDestroy {
         this.loading = false;
       },
       error: (err) => {
-        console.error('Failed to load analytics data:', err);
+        this.logger.warn('Failed to load analytics data', { error: err?.message || err });
+        this.notificationService.error('Erreur lors du chargement des donnees de la flotte');
         this.loading = false;
       }
     });
 
     // Load traction metrics (admin only)
+    this.tractionSubscription?.unsubscribe();
     this.authService.currentUser$.pipe(take(1)).subscribe(user => {
       if (user?.role === 'super_admin' || user?.role === 'admin') {
-        this.analyticsService.getTractionMetrics().subscribe({
+        this.tractionSubscription = this.analyticsService.getTractionMetrics().subscribe({
           next: (data) => { this.traction = data; },
           error: () => { /* silently fail — non-critical */ }
         });
@@ -1005,32 +1012,26 @@ export class AnalyticsComponent implements OnInit, OnDestroy {
   }
 
   generateRecentActivity(): void {
-    // Generate activity based on site status changes
+    // Derive activity from current site statuses (connection/disconnection events)
     const activities: RecentActivity[] = [];
 
-    // Recently connected (last_seen_at within 5 minutes)
-    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
-
     this.allSites.forEach(site => {
-      if (site.status === 'online' && site.last_seen_at) {
-        const lastSeen = new Date(site.last_seen_at);
-        if (lastSeen > fiveMinutesAgo) {
-          activities.push({
-            type: 'connection',
-            site_name: site.site_name,
-            site_id: site.id,
-            message: 'Connexion établie',
-            timestamp: site.last_seen_at
-          });
-        }
-      }
+      if (!site.last_seen_at) return;
 
-      if (site.status === 'offline' && site.last_seen_at) {
+      if (site.status === 'offline') {
         activities.push({
           type: 'disconnection',
           site_name: site.site_name,
           site_id: site.id,
-          message: 'Déconnecté',
+          message: 'Hors ligne',
+          timestamp: site.last_seen_at
+        });
+      } else if (site.status === 'warning') {
+        activities.push({
+          type: 'alert',
+          site_name: site.site_name,
+          site_id: site.id,
+          message: 'Connexion instable',
           timestamp: site.last_seen_at
         });
       }
