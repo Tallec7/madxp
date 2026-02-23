@@ -3,12 +3,14 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TranslateModule } from '@ngx-translate/core';
 import { Subscription, interval } from 'rxjs';
+import { pollCommand, CommandPollResult } from './command-poller.util';
 import { SitesService } from '../../../../core/services/sites.service';
 import { NotificationService } from '../../../../core/services/notification.service';
 import { LoggerService } from '../../../../core/services/logger.service';
 import { ErrorExtractor } from '../../../../core/utils/error-extractor';
 import { LocalVideo, LocalStorage, ConfigHistory, SiteConfiguration } from '../../../../core/models';
 import { CommandExecutorComponent } from '../command-executor/command-executor.component';
+import { DebugSummaryBarComponent } from './debug-summary-bar/debug-summary-bar.component';
 
 // Types pour le health status
 interface GpuInfo {
@@ -287,44 +289,19 @@ interface WizardStep {
 @Component({
   selector: 'app-site-debug-tab',
   standalone: true,
-  imports: [CommonModule, FormsModule, TranslateModule, CommandExecutorComponent],
+  imports: [CommonModule, FormsModule, TranslateModule, CommandExecutorComponent, DebugSummaryBarComponent],
   template: `
     <div class="debug-tab">
       <!-- Dashboard résumé -->
-      <div class="summary-bar">
-        <div class="summary-pill" [class.pill-ok]="isConnected && isConnectionHealthy()" [class.pill-error]="!isConnected" [class.pill-warning]="isConnected && !isConnectionHealthy()">
-          <span class="pill-icon">{{ isConnected ? (isConnectionHealthy() ? '🟢' : '🟡') : '🔴' }}</span>
-          <span class="pill-label">{{ getConnectionStatusText() }}</span>
-        </div>
-        <div class="summary-pill" *ngIf="healthStatus"
-          [class.pill-ok]="healthStatus.healthStatus === 'healthy'"
-          [class.pill-warning]="healthStatus.healthStatus === 'degraded'"
-          [class.pill-error]="healthStatus.healthStatus === 'critical'">
-          <span class="pill-icon">🩺</span>
-          <span class="pill-label">{{ healthStatus.healthScore }}%</span>
-        </div>
-        <div class="summary-pill" [class.pill-ok]="localVideos.length > 0" [class.pill-warning]="localVideos.length === 0">
-          <span class="pill-icon">📂</span>
-          <span class="pill-label">{{ localVideos.length }} fichiers</span>
-        </div>
-        <div class="summary-pill" *ngIf="networkInfo"
-          [class.pill-ok]="networkInfo.internet?.reachable"
-          [class.pill-error]="!networkInfo.internet?.reachable">
-          <span class="pill-icon">🌐</span>
-          <span class="pill-label">{{ networkInfo.internet?.reachable ? 'Internet OK' : 'Pas d\\'Internet' }}</span>
-        </div>
-        <div class="summary-pill" *ngIf="hotspotInfo"
-          [class.pill-ok]="hotspotInfo.isActive"
-          [class.pill-error]="!hotspotInfo.isActive">
-          <span class="pill-icon">📡</span>
-          <span class="pill-label">Hotspot {{ hotspotInfo.isActive ? 'actif' : 'inactif' }}</span>
-          <span class="pill-detail" *ngIf="hotspotInfo.clients > 0">👥 {{ hotspotInfo.clients }}</span>
-        </div>
-        <div class="summary-pill" *ngIf="bufferStatus">
-          <span class="pill-icon">📊</span>
-          <span class="pill-label">{{ bufferStatus.analytics?.event_count || 0 }} events</span>
-        </div>
-      </div>
+      <app-debug-summary-bar
+        [isConnected]="isConnected"
+        [connectionHealth]="connectionHealth"
+        [healthStatus]="healthStatus"
+        [filesCount]="localVideos.length"
+        [networkInfo]="networkInfo"
+        [hotspotInfo]="hotspotInfo"
+        [bufferStatus]="bufferStatus">
+      </app-debug-summary-bar>
 
       <!-- Diagnostic guidé (F-AUD-08) -->
       <div class="debug-card wizard-card">
@@ -5105,65 +5082,24 @@ export class SiteDebugTabComponent implements OnInit, AfterViewChecked, OnDestro
     this.loadingBufferStatus = true;
     this.bufferPollSubscription?.unsubscribe();
 
-    this.sitesService.sendCommand(this.siteId, 'get_analytics_buffer_status', {}).subscribe({
-      next: (response: unknown) => {
-        const commandResponse = response as { success?: boolean; commandId?: string; sent?: boolean };
-        if (!commandResponse.commandId) {
-          this.loadingBufferStatus = false;
-          this.notificationService.error('Échec de l\'envoi de la commande');
-          return;
-        }
+    const { result$, cancel } = pollCommand<BufferStatus>({
+      siteId: this.siteId,
+      commandName: 'get_analytics_buffer_status',
+      timeoutSeconds: 15,
+      sendCommand: (id, cmd, params) => this.sitesService.sendCommand(id, cmd, params),
+      getCommandStatus: (id, cmdId) => this.sitesService.getCommandStatus(id, cmdId),
+    });
 
-        // Poller le résultat de la commande asynchrone
-        const commandId = commandResponse.commandId;
-        const POLL_TIMEOUT_SECONDS = 15;
-        let pollCount = 0;
-        let isPolling = false;
+    // Store cancel function for cleanup
+    this.bufferPollSubscription = new Subscription(() => cancel());
 
-        this.bufferPollSubscription = interval(1000).subscribe(() => {
-          pollCount++;
-
-          if (pollCount > POLL_TIMEOUT_SECONDS) {
-            this.bufferPollSubscription?.unsubscribe();
-            this.loadingBufferStatus = false;
-            this.notificationService.warning('Timeout: le boîtier ne répond pas');
-            return;
-          }
-
-          if (isPolling) {
-            return;
-          }
-          isPolling = true;
-
-          this.sitesService.getCommandStatus(this.siteId, commandId).subscribe({
-            next: (status: { status: string; result?: Record<string, unknown>; error_message?: string }) => {
-              isPolling = false;
-              if (status.status === 'completed') {
-                this.bufferPollSubscription?.unsubscribe();
-                this.loadingBufferStatus = false;
-                const result = status.result as unknown as BufferStatus;
-                if (result && result.success !== false) {
-                  this.bufferStatus = result;
-                } else {
-                  this.notificationService.error('Échec de la récupération de l\'état des buffers');
-                }
-              } else if (status.status === 'failed') {
-                this.bufferPollSubscription?.unsubscribe();
-                this.loadingBufferStatus = false;
-                this.notificationService.error(status.error_message || 'Commande échouée');
-              }
-            },
-            error: () => {
-              isPolling = false;
-            }
-          });
-        });
-      },
-      error: (error) => {
-        this.loadingBufferStatus = false;
-        const message = ErrorExtractor.getMessage(error);
-        this.notificationService.error(`Erreur: ${message}`);
-        this.logger.error('Failed to get buffer status', { error: message, siteId: this.siteId });
+    result$.subscribe((pollResult: CommandPollResult<BufferStatus>) => {
+      this.loadingBufferStatus = false;
+      if (pollResult.success && pollResult.data) {
+        this.bufferStatus = pollResult.data;
+      } else {
+        this.notificationService.error(pollResult.error || 'Échec de la récupération de l\'état des buffers');
+        this.logger.error('Failed to get buffer status', { error: pollResult.error, siteId: this.siteId });
       }
     });
   }
@@ -5790,65 +5726,27 @@ export class SiteDebugTabComponent implements OnInit, AfterViewChecked, OnDestro
       return;
     }
 
-    // Otherwise, trigger a buffer status command
+    // Otherwise, trigger a buffer status command via factorized poller
     this.wizardBufferPollSub?.unsubscribe();
-    this.sitesService.sendCommand(this.siteId, 'get_analytics_buffer_status', {}).subscribe({
-      next: (response: unknown) => {
-        const cmdResponse = response as { success?: boolean; commandId?: string };
-        if (!cmdResponse.commandId) {
-          step.status = 'warning';
-          step.message = 'Impossible de r\u00e9cup\u00e9rer les donn\u00e9es';
-          step.suggestions = ['R\u00e9essayer le diagnostic'];
-          return;
-        }
 
-        const commandId = cmdResponse.commandId;
-        let pollCount = 0;
-        let isPolling = false;
+    const { result$, cancel } = pollCommand<BufferStatus>({
+      siteId: this.siteId,
+      commandName: 'get_analytics_buffer_status',
+      timeoutSeconds: 12,
+      sendCommand: (id, cmd, params) => this.sitesService.sendCommand(id, cmd, params),
+      getCommandStatus: (id, cmdId) => this.sitesService.getCommandStatus(id, cmdId),
+    });
 
-        this.wizardBufferPollSub = interval(1000).subscribe(() => {
-          pollCount++;
-          if (pollCount > 12) {
-            this.wizardBufferPollSub?.unsubscribe();
-            step.status = 'warning';
-            step.message = 'Timeout: le bo\u00eetier ne r\u00e9pond pas';
-            step.suggestions = ['Le bo\u00eetier est peut-\u00eatre surcharg\u00e9, r\u00e9essayer plus tard'];
-            return;
-          }
-          if (isPolling) return;
-          isPolling = true;
+    this.wizardBufferPollSub = new Subscription(() => cancel());
 
-          this.sitesService.getCommandStatus(this.siteId, commandId).subscribe({
-            next: (status: { status: string; result?: Record<string, unknown> }) => {
-              isPolling = false;
-              if (status.status === 'completed') {
-                this.wizardBufferPollSub?.unsubscribe();
-                const result = status.result as unknown as BufferStatus;
-                if (result && result.success !== false) {
-                  this.bufferStatus = result;
-                  this.wizardEvaluateImpressions(step, result);
-                } else {
-                  step.status = 'warning';
-                  step.message = '\u00c9chec de r\u00e9cup\u00e9ration du buffer';
-                  step.suggestions = ['R\u00e9essayer le diagnostic'];
-                }
-              } else if (status.status === 'failed') {
-                this.wizardBufferPollSub?.unsubscribe();
-                step.status = 'warning';
-                step.message = 'Commande \u00e9chou\u00e9e sur le bo\u00eetier';
-                step.suggestions = ['V\u00e9rifier les services sur le bo\u00eetier'];
-              }
-            },
-            error: () => {
-              isPolling = false;
-            }
-          });
-        });
-      },
-      error: () => {
+    result$.subscribe((pollResult: CommandPollResult<BufferStatus>) => {
+      if (pollResult.success && pollResult.data) {
+        this.bufferStatus = pollResult.data;
+        this.wizardEvaluateImpressions(step, pollResult.data);
+      } else {
         step.status = 'warning';
-        step.message = 'Erreur de communication avec le serveur';
-        step.suggestions = ['V\u00e9rifier la connexion r\u00e9seau'];
+        step.message = pollResult.error || '\u00c9chec de r\u00e9cup\u00e9ration du buffer';
+        step.suggestions = ['R\u00e9essayer le diagnostic'];
       }
     });
   }
