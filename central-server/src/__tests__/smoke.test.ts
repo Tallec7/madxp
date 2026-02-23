@@ -1967,14 +1967,20 @@ describe('Debug page architecture guards', () => {
     // Marking it as 'warning' contradicts the health score (100/100 healthy)
     // and confuses operators. This test prevents regression to the old behavior.
     // See: fix(debug) commit "make empty buffer status consistent with health score"
-    const hasEmptyBufferWarning = /else\s*\{[^}]*event_count.*==.*0[^}]*status\s*=\s*'warning'/s.test(debugTab)
-      || /totalEvents.*===?\s*0[^}]*status\s*=\s*'warning'/s.test(debugTab);
-    const hasEmptyBufferOk = debugTab.includes("step.status = 'ok'")
-      && debugTab.includes("Buffer vide (sync OK)");
-    expect({ emptyBufferIsNotWarning: !hasEmptyBufferWarning })
-      .toEqual({ emptyBufferIsNotWarning: true });
-    expect({ emptyBufferIsOk: hasEmptyBufferOk })
+    // Extract the private wizardEvaluateImpressions method body, then check its else branch.
+    // After i18n refactoring, the branch uses translate.instant('debug.wizardNoEvents').
+    const fnMatch = /private wizardEvaluateImpressions\([\s\S]*?\n  \}/m.exec(debugTab);
+    expect(fnMatch).toBeTruthy();
+    const fnBody = fnMatch![0];
+    // The top-level else branch (empty buffer) must set status='ok', not 'warning'.
+    const elseBranch = /\} else \{([\s\S]*?)\n    \}\n  \}/.exec(fnBody);
+    expect(elseBranch).toBeTruthy();
+    const hasOkStatus = elseBranch![1].includes("step.status = 'ok'");
+    const hasWarningStatus = elseBranch![1].includes("step.status = 'warning'");
+    expect({ emptyBufferIsOk: hasOkStatus })
       .toEqual({ emptyBufferIsOk: true });
+    expect({ emptyBufferIsNotWarning: !hasWarningStatus })
+      .toEqual({ emptyBufferIsNotWarning: true });
   });
 
   it('site-debug-tab must use confirmModal for dangerous actions (reboot, restore)', () => {

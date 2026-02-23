@@ -5780,11 +5780,12 @@ export class SiteDebugTabComponent implements OnInit, AfterViewChecked, OnDestro
         step.suggestions = [this.translate.instant('debug.wizardSuggestCheckSync')];
       }
     } else {
-      // No events in buffer - could mean sync is working well OR no activity
-      step.status = 'warning';
+      // Empty buffer is the normal state when sync is working correctly.
+      // Marking it as 'warning' contradicts the health score (100/100 healthy).
+      step.status = 'ok';
       step.message = this.translate.instant('debug.wizardNoEvents');
       step.details = [this.translate.instant('debug.wizardBufferEmpty')];
-      step.suggestions = [this.translate.instant('debug.wizardSuggestCheckLoop')];
+      step.suggestions = [];
     }
   }
 
