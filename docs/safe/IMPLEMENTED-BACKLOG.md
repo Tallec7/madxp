@@ -137,6 +137,8 @@
 | IMP-ANA-16 | Navigation par onglets sur toutes les pages analytics                       | Production | `analytics.module.ts`                                  | 2026         |
 | IMP-ANA-17 | Analytics sponsors : 6 KPIs, graphiques (ligne + anneau), export CSV        | Production | `sponsor-analytics.component.ts`                       | Déc 2025     |
 | IMP-ANA-18 | Rapports PDF sponsors professionnels (Chart.js)                             | Production | `pdf-report.service.ts`                                | Déc 2025     |
+| IMP-ANA-19 | Refonte fleet overview business-first (KPIs, Chart.js engagement, sponsors) | Production | `analytics.component.ts`                               | Fév 2026     |
+| IMP-ANA-20 | Refonte club analytics : page unique, sponsors benchmark, tendances         | Production | `club-analytics.component.ts`                          | Fév 2026     |
 
 ---
 

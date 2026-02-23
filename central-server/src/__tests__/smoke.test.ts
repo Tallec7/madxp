@@ -1881,3 +1881,53 @@ describe('Benchmark repository query safety', () => {
       .toEqual({ hasExplicitStatusFilter: true });
   });
 });
+
+// =================================================================
+// Analytics pages business-first regression tests
+// =================================================================
+
+describe('Analytics pages business-first architecture', () => {
+  const analyticsRoot = path.resolve(__dirname, '..', '..', '..');
+
+  const analyticsFleet = fs.readFileSync(
+    path.join(analyticsRoot, 'central-dashboard/src/app/features/analytics/analytics.component.ts'),
+    'utf8'
+  );
+
+  const clubAnalytics = fs.readFileSync(
+    path.join(analyticsRoot, 'central-dashboard/src/app/features/analytics/club-analytics.component.ts'),
+    'utf8'
+  );
+
+  // Fleet Overview must use Chart.js, not CSS-only bar charts
+  it('fleet analytics must import Chart.js (not CSS-only charts)', () => {
+    // Incident: original fleet page used CSS div bars instead of Chart.js.
+    // Chart.js is installed (^4.5.1) and must be used for engagement charts.
+    expect({ usesChartJs: analyticsFleet.includes("from 'chart.js'") })
+      .toEqual({ usesChartJs: true });
+  });
+
+  // Fleet Overview must show business KPIs (impressions, plays) not just tech metrics
+  it('fleet analytics must display sponsor impressions KPI', () => {
+    // The fleet page must surface sponsor impression data (VS2 monetization).
+    // Without this, the page is just a NOC dashboard and doesn't serve E-03.
+    expect({ hasImpressions: analyticsFleet.includes('totalImpressions') })
+      .toEqual({ hasImpressions: true });
+  });
+
+  // Club Analytics must NOT use tabs (single scrollable page)
+  it('club analytics must be a single scrollable page (no tabs)', () => {
+    // Incident: 4-tab layout (overview/usage/content/health) created friction and
+    // duplicated data. The refonte uses a single scrollable page.
+    expect({ hasTabs: clubAnalytics.includes("activeTab === 'usage'") })
+      .toEqual({ hasTabs: false });
+  });
+
+  // Club Analytics must integrate sponsor benchmark data
+  it('club analytics must include sponsor benchmark integration', () => {
+    // Club analytics must show sponsor impressions via /sites/:id/sponsors/benchmark.
+    // Without this, there's zero sponsor visibility on the club page (VS2 gap).
+    expect({ hasSponsorBenchmark: clubAnalytics.includes('getSiteSponsorBenchmark') })
+      .toEqual({ hasSponsorBenchmark: true });
+  });
+});

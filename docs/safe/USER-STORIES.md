@@ -123,7 +123,7 @@
 
 ---
 
-### 6. Analytics & Reporting (18 US)
+### 6. Analytics & Reporting (20 US)
 
 | ID         | User Story                                                                                            | SP  | Statut   | Fichiers clés                                          | Date     |
 | ---------- | ----------------------------------------------------------------------------------------------------- | --- | -------- | ------------------------------------------------------ | -------- |
@@ -145,6 +145,8 @@
 | IMP-ANA-16 | En tant qu'admin, la navigation par onglets est disponible sur toutes les pages analytics             | 2   | ✅ Done  | `analytics.module.ts`                                  | 2026     |
 | IMP-ANA-17 | En tant qu'admin, les analytics sponsors affichent 6 KPIs, graphiques (ligne + anneau), export CSV    | 5   | ✅ Done  | `sponsor-analytics.component.ts`                       | Déc 2025 |
 | IMP-ANA-18 | En tant qu'admin, les rapports PDF sponsors sont professionnels avec Chart.js                         | 5   | ✅ Done  | `pdf-report.service.ts`                                | Déc 2025 |
+| IMP-ANA-19 | En tant qu'admin, la page fleet affiche les KPIs business (plays, impressions, engagement Chart.js)   | 5   | ✅ Done  | `analytics.component.ts`                               | Fév 2026 |
+| IMP-ANA-20 | En tant qu'admin, la page club analytics est une vue unique avec sponsors benchmark et tendances      | 5   | ✅ Done  | `club-analytics.component.ts`                          | Fév 2026 |
 
 ---
 
