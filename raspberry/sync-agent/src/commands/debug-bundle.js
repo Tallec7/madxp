@@ -6,6 +6,7 @@ const logger = require('../logger');
 const { config } = require('../config');
 const networkDiagnostics = require('./network-diagnostics');
 const { getAnalyticsBufferStatus } = require('./analytics-buffer');
+const { getWifiBssidStatus } = require('./wifi-bssid');
 
 const execAsync = util.promisify(exec);
 
@@ -253,7 +254,24 @@ async function exportDebugBundle() {
     bundle.sections.usbDevices = { error: error.message };
   }
 
-  // 15. Video list summary
+  // 15. WiFi client status (BSSID, signal, mesh detection)
+  try {
+    const wifiStatus = await getWifiBssidStatus();
+    bundle.sections.wifiClient = {
+      connected: wifiStatus.connected,
+      ssid: wifiStatus.ssid,
+      bssid: wifiStatus.bssid,
+      signal: wifiStatus.signal,
+      ipAddress: wifiStatus.ipAddress,
+      bssidLocked: wifiStatus.bssidLocked,
+      isMeshEnvironment: wifiStatus.isMeshEnvironment,
+      meshApCount: wifiStatus.meshApCount,
+    };
+  } catch (error) {
+    bundle.sections.wifiClient = { error: error.message };
+  }
+
+  // 16. Video list summary
   try {
     const videosPath = config.paths.root + '/videos';
     if (await fs.pathExists(videosPath)) {
