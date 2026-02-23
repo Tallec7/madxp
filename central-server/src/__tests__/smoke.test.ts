@@ -1957,6 +1957,21 @@ describe('Debug page architecture guards', () => {
     }
   });
 
+  it('wizardEvaluateImpressions must treat empty buffer as ok (not warning)', () => {
+    // An empty analytics buffer is the normal state when sync works correctly.
+    // Marking it as 'warning' contradicts the health score (100/100 healthy)
+    // and confuses operators. This test prevents regression to the old behavior.
+    // See: fix(debug) commit "make empty buffer status consistent with health score"
+    const hasEmptyBufferWarning = /else\s*\{[^}]*event_count.*==.*0[^}]*status\s*=\s*'warning'/s.test(debugTab)
+      || /totalEvents.*===?\s*0[^}]*status\s*=\s*'warning'/s.test(debugTab);
+    const hasEmptyBufferOk = debugTab.includes("step.status = 'ok'")
+      && debugTab.includes("Buffer vide (sync OK)");
+    expect({ emptyBufferIsNotWarning: !hasEmptyBufferWarning })
+      .toEqual({ emptyBufferIsNotWarning: true });
+    expect({ emptyBufferIsOk: hasEmptyBufferOk })
+      .toEqual({ emptyBufferIsOk: true });
+  });
+
   it('site-debug-tab must use confirmModal for dangerous actions (reboot, restore)', () => {
     // The custom modal pattern replaces native confirm() for reboot and config restore.
     // Both actions need explicit confirmation to prevent accidental triggers.

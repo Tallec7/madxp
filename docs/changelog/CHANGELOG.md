@@ -3,12 +3,12 @@
 ### Bug Fixes
 
 - use adminRateLimit for sponsor routes to prevent 429 cascade ([#419](https://github.com/Tallec7/neopro/issues/419)) ([6cc63d0](https://github.com/Tallec7/neopro/commit/6cc63d00edcc168d6be791d2e5001930faa4f836))
-
-## [3.76.3](https://github.com/Tallec7/neopro/compare/v3.76.2...v3.76.3) (2026-02-23)
-
-### Bug Fixes
-
 - **rate-limit:** use adminRateLimit (400/min) for sponsor routes to prevent 429 cascade ([ff67fdc](https://github.com/Tallec7/neopro/commit/ff67fdc))
+- **debug:** make empty buffer status consistent with health score — le diagnostic guidé step 4 affichait ⚠️ "Aucun événement en buffer" (warning) alors que la santé système indiquait 100/100 "Bon état". Un buffer vide est l'état normal quand la sync fonctionne : status changé de `warning` à `ok` avec message "Buffer vide (sync OK)".
+
+### Tests
+
+- **smoke:** ajout test anti-régression `wizardEvaluateImpressions must treat empty buffer as ok` — empêche le retour du status `warning` sur buffer vide dans le diagnostic guidé, qui serait incohérent avec le score santé hardware.
 
 ## [3.76.2](https://github.com/Tallec7/neopro/compare/v3.76.1...v3.76.2) (2026-02-23)
 
