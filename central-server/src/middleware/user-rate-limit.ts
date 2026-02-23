@@ -4,9 +4,16 @@
  */
 
 import rateLimit, { RateLimitRequestHandler, Options } from 'express-rate-limit';
-import { Request, Response } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import { AuthRequest } from '../types';
 import logger from '../config/logger';
+
+interface RateLimitInfo {
+  limit: number;
+  used: number;
+  remaining: number;
+  resetTime: Date;
+}
 
 // Lazy import to avoid circular dependency with metrics.service
 let metricsServiceInstance: {
@@ -60,7 +67,8 @@ const createLimitHandler = (limiterName: string) => (req: Request, res: Response
 
 
 /**
- * Crée un rate limiter avec configuration personnalisée
+ * Crée un rate limiter avec configuration personnalisée.
+ * Inclut le tracking near-exhaustion (>80% consommé) pour les métriques Prometheus.
  */
 export const createUserRateLimit = (
   windowMs: number,
@@ -68,7 +76,7 @@ export const createUserRateLimit = (
   options: Partial<Options> = {},
   limiterName = 'unknown'
 ): RateLimitRequestHandler => {
-  return rateLimit({
+  const limiter = rateLimit({
     windowMs,
     max,
     keyGenerator: userKeyGenerator,
@@ -79,6 +87,24 @@ export const createUserRateLimit = (
     skipSuccessfulRequests: false,
     ...options,
   });
+
+  // Wrapper qui détecte la near-exhaustion (>80% consommé) après le rate limiter
+  const wrapper = (req: Request, res: Response, next: NextFunction): void => {
+    limiter(req, res, () => {
+      const info = (req as Request & { rateLimit?: RateLimitInfo }).rateLimit;
+      if (info && info.remaining < info.limit * 0.2) {
+        getMetricsService()?.recordRateLimitNearExhaustion(limiterName);
+      }
+      next();
+    });
+  };
+
+  // Preserve express-rate-limit's resetKey method for tests
+  if ('resetKey' in limiter) {
+    (wrapper as RateLimitRequestHandler).resetKey = (limiter as RateLimitRequestHandler).resetKey;
+  }
+
+  return wrapper as RateLimitRequestHandler;
 };
 
 /**

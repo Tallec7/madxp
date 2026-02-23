@@ -1,3 +1,9 @@
+## [3.76.3](https://github.com/Tallec7/neopro/compare/v3.76.2...v3.76.3) (2026-02-23)
+
+### Bug Fixes
+
+- **rate-limit:** use adminRateLimit (400/min) for sponsor routes to prevent 429 cascade ([ff67fdc](https://github.com/Tallec7/neopro/commit/ff67fdc))
+
 ## [3.76.2](https://github.com/Tallec7/neopro/compare/v3.76.1...v3.76.2) (2026-02-23)
 
 ### Bug Fixes

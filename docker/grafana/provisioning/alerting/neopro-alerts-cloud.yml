@@ -1367,3 +1367,89 @@ groups:
         annotations:
           summary: "High volume of predictive alerts generated"
           description: "More than 20 predictive alerts in 2 hours. Possible fleet-wide issue (orphaned videos after mass deployment, subscription wave, etc.)."
+
+  # =============================================
+  # RATE LIMITING — Dashboard UX protection
+  # =============================================
+  - orgId: 1
+    name: NeoPro - Rate Limiting
+    folder: NeoPro Alerts
+    interval: 1m
+    rules:
+      # Rate limit hits spike — any limiter
+      - uid: neopro-rate-limit-spike
+        title: Rate Limit Hits Spike
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: grafanacloud-tallec7-prom
+            model:
+              expr: sum(increase(neopro_rate_limit_hits_total[5m])) by (limiter)
+              instant: true
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              type: reduce
+              expression: A
+              reducer: max
+              refId: B
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: B
+              conditions:
+                - evaluator:
+                    type: gt
+                    params: [10]
+              refId: C
+        for: 5m
+        labels:
+          severity: warning
+          team: neopro
+        annotations:
+          summary: "Rate limit violations detected (>10 hits in 5min)"
+          description: "A rate limiter is actively rejecting requests. Check which limiter via label. Sustained 429s degrade dashboard UX and can cascade to frontend logging endpoints."
+
+      # Admin rate limit near exhaustion — early warning for sponsor routes
+      - uid: neopro-admin-rate-limit-near-exhaustion
+        title: Admin Rate Limit Near Exhaustion
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: grafanacloud-tallec7-prom
+            model:
+              expr: increase(neopro_rate_limit_near_exhaustion_total{limiter="admin"}[5m])
+              instant: true
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              type: reduce
+              expression: A
+              reducer: last
+              refId: B
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: B
+              conditions:
+                - evaluator:
+                    type: gt
+                    params: [5]
+              refId: C
+        for: 5m
+        labels:
+          severity: warning
+          team: neopro
+        annotations:
+          summary: "Admin rate limiter near exhaustion (>80% consumed)"
+          description: "The admin rate limiter (used by sponsor routes) is frequently near its 400 req/min limit. A user with many sponsors may soon hit 429 errors."
