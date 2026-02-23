@@ -1,3 +1,9 @@
+# [3.75.0](https://github.com/Tallec7/neopro/compare/v3.74.0...v3.75.0) (2026-02-23)
+
+### Features
+
+- **debug:** Phase C - restructure sections, polish UX, harmonize i18n ([fddd4e6](https://github.com/Tallec7/neopro/commit/fddd4e6d32da9db5fcaa29969ba681aed57727c1))
+
 # [3.74.0](https://github.com/Tallec7/neopro/compare/v3.73.0...v3.74.0) (2026-02-23)
 
 ### Bug Fixes
