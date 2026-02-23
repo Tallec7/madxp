@@ -1,3 +1,10 @@
+## [3.72.1](https://github.com/Tallec7/neopro/compare/v3.72.0...v3.72.1) (2026-02-23)
+
+### Bug Fixes
+
+- **benchmark:** resolve 500 on /api/benchmark/sites/:siteId — query timeout ([b57a237](https://github.com/Tallec7/neopro/commit/b57a2373fb41a1c2f8d7872fda8d6ef286253c16))
+- **kiosk:** ensure x11-utils is installed on all Pi (TV noire post-OTA) ([f5e47ef](https://github.com/Tallec7/neopro/commit/f5e47eff10c8ca3275a8fd2659b645051ebec981))
+
 # [3.72.0](https://github.com/Tallec7/neopro/compare/v3.71.0...v3.72.0) (2026-02-23)
 
 ### Bug Fixes
