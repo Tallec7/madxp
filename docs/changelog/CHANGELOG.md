@@ -1,3 +1,13 @@
+# [3.79.0](https://github.com/Tallec7/neopro/compare/v3.78.0...v3.79.0) (2026-02-23)
+
+### Bug Fixes
+
+- **debug:** restore empty buffer status to 'ok' after i18n regression ([2f11461](https://github.com/Tallec7/neopro/commit/2f11461c47e79a30be3b95e92f90b5fb8f34ebc6))
+
+### Features
+
+- **dashboard:** afficher infos EDID enrichies dans page debug ([09f01a5](https://github.com/Tallec7/neopro/commit/09f01a5650546b39ab126337c126b6a46d09b9b1))
+
 # [3.78.0](https://github.com/Tallec7/neopro/compare/v3.77.0...v3.78.0) (2026-02-23)
 
 ### Features
