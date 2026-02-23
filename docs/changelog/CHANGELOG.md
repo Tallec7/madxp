@@ -1,5 +1,15 @@
 # [3.74.0](https://github.com/Tallec7/neopro/compare/v3.73.0...v3.74.0) (2026-02-23)
 
+### Bug Fixes
+
+- **analytics:** audit et corrections de la page analytics flotte ([44673e8](https://github.com/Tallec7/neopro/commit/44673e88a6d85eae8e3f3a14582b7078f4f1610a))
+
+### Features
+
+- **analytics:** refonte business-first des pages analytics fleet et club ([a21d16a](https://github.com/Tallec7/neopro/commit/a21d16a9840a9f8a501f9589c55687cf6663a0d1))
+
+# [3.74.0](https://github.com/Tallec7/neopro/compare/v3.73.0...v3.74.0) (2026-02-23)
+
 ### Features
 
 - **analytics:** refonte business-first des pages analytics fleet et club
