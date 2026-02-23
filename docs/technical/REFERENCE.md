@@ -1446,7 +1446,7 @@ Le site-detail est organisé en **6 onglets** avec des composants Angular standa
 | **Sponsors**   | `SiteSponsorsTabComponent` | CRUD sponsors locaux, KPIs, Chart.js trends, association vidéos (add/remove), magic link d'accès, benchmark |
 | **Paramètres** | `SiteSettingsTabComponent` | Config réseau, hotspot, branding club (logo, couleurs)                                                      |
 | **Profils**    | `SiteProfilesTabComponent` | Multi-config CRUD, déploiement, synchronisation                                                             |
-| **Debug**      | `SiteDebugTabComponent`    | Logs, commandes, diagnostics, santé ventilateur                                                             |
+| **Debug**      | `SiteDebugTabComponent`    | 12 sections : diagnostic guidé, santé système, config & historique, fichiers, commandes, logs, réseau, buffer analytics, hotspot, export bundle, clients WiFi, timeline. Sous-composants : `DebugSummaryBarComponent` (barre résumé), `pollCommand<T>()` utility |
 
 #### SiteProfilesTabComponent (multi-config)
 
