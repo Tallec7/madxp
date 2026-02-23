@@ -1,3 +1,9 @@
+## [3.76.4](https://github.com/Tallec7/neopro/compare/v3.76.3...v3.76.4) (2026-02-23)
+
+### Bug Fixes
+
+- **debug:** make empty buffer status consistent with health score ([#420](https://github.com/Tallec7/neopro/issues/420)) ([a15d504](https://github.com/Tallec7/neopro/commit/a15d5045f775c470193f16bc38787c29dd378816))
+
 ## [3.76.3](https://github.com/Tallec7/neopro/compare/v3.76.2...v3.76.3) (2026-02-23)
 
 ### Bug Fixes
