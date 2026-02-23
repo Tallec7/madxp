@@ -1271,6 +1271,19 @@ POST   /sponsor-alerts/check                  - Vérification manuelle des alert
 
 > Calcule la santé de chaque paire annonceur-site (impressions 7j/30j, moyenne quotidienne, jours depuis dernière impression). Seuils configurables : `warningThresholdDaily` (défaut: 5), `criticalThresholdDays` (défaut: 3). Le check crée des alertes dans la table `alerts` pour les statuts critiques + notification Slack.
 
+**Endpoints Fleet Benchmark (auth JWT, montés sur /api/benchmark) :**
+
+```
+GET    /benchmark/sites/:siteId   - Benchmark anonymisé d'un site vs ses pairs (operator+)
+GET    /benchmark/global          - Résumé global par sport et région (admin)
+GET    /benchmark/compare         - Comparaison de 2-10 sites côte à côte (admin)
+```
+
+> Compare un club à ses pairs sur 5 métriques : sessions/mois, vidéos/session, durée moyenne, uptime, vidéos totales.
+> Segmentation par sport (`@>` JSONB), région (`location->>'region'`), taille de club.
+> Résultats cachés 60s (`memoryCache`). Minimum 3 pairs pour un benchmark significatif.
+> **Optimisation v3.72** : requêtes avec `LEFT JOIN` pré-agrégés (pas de sous-requêtes corrélées) — respect du `statement_timeout` 8s.
+
 **Endpoints Reports (auth JWT, admin/super_admin, montés sur /api/reports) :**
 
 ```
@@ -1388,6 +1401,7 @@ Tous les accès PostgreSQL passent par des repositories typés héritant de `Bas
 | `email`             | Notifications email (templates)                              |
 | `pitch-deck`        | Vue agrégée multi-tables (métriques traction)                |
 | `site-sponsor`      | `site_sponsors`, `site_sponsor_videos`                       |
+| `benchmark`         | `sites`, `club_sessions`, `video_plays`, `metrics` (lecture) |
 
 ### Gestion Mémoire (Railway Hobby Plan)
 

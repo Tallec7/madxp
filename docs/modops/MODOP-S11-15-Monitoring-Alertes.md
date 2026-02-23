@@ -98,36 +98,37 @@ En complément des alertes métier Pi (section 3.3), des alertes infrastructure 
 **Local** : Prometheus rules (`docker/prometheus/rules.yml`) → Alertmanager (`localhost:9093`) → Slack
 **Prod** : Grafana Cloud managed alerts (`docker/grafana/provisioning/alerting/neopro-alerts-cloud.yml`) → Contact point Slack
 
-| Alerte                         | Condition                     | Délai  | Sévérité | Action                                        |
-| ------------------------------ | ----------------------------- | ------ | -------- | --------------------------------------------- |
-| `CentralServerDown`            | Scrape fail (`up == 0`)       | 2 min  | critical | Vérifier Railway, restart                     |
-| `CentralServerUnhealthy`       | Health check fail             | 3 min  | critical | Serveur UP mais dégradé, vérifier DB/deps     |
-| `ZeroHeartbeats`               | `rate(heartbeats) == 0`       | 5 min  | critical | WebSocket cassé ou serveur bloqué             |
-| `NoAgentConnections`           | WS agents == 0                | 5 min  | critical | Même diagnostic                               |
-| `DbSizeCritical`               | DB > 475 MB                   | 5 min  | critical | VACUUM FULL urgent, réduire rétention         |
-| `HighErrorRate`                | 5xx > 5%                      | 5 min  | warning  | Logs Railway, DB latence                      |
-| `HighCpuUsage`                 | CPU > 80%                     | 5 min  | warning  | Event loop saturé, ops bloquantes             |
-| `DbPoolSaturation`             | Pool > 80%                    | 3 min  | warning  | Requêtes longues, leaks                       |
-| `HighMemoryUsage`              | RSS > 88% de 256MB            | 5 min  | warning  | OOM risk, vérifier heap                       |
-| `HighApiLatency`               | P95 > 3s                      | 5 min  | warning  | DB lente, charge élevée                       |
-| `SlowDbQueries`                | P95 queries > 2s              | 5 min  | warning  | Index manquants                               |
-| `DbSizeWarning`                | DB > 400 MB                   | 10 min | warning  | Approche quota Supabase 500 MB                |
-| `DbTableSizeHigh`              | Table > 200 MB                | 30 min | warning  | Vérifier politique de rétention               |
-| `HighDisconnectRate`           | > 0.5/s                       | 3 min  | warning  | Instabilité réseau                            |
-| `ConnectedSitesDrop`           | -50% en 10 min                | 5 min  | warning  | Incident fleet-wide                           |
-| `TooManyActiveAlerts`          | > 10 alertes                  | 10 min | warning  | Problème généralisé                           |
-| `HighUploadFailureRate`        | Upload fails > 3/min          | 5 min  | warning  | FTP/storage, permissions, espace disque       |
-| `FrequentEncodingCorrections`  | Encoding fixes > 0.1/s        | 30 min | info     | Client envoie des noms de fichiers non-ASCII  |
-| `SlowNetworkSponsorStats`      | P95 network stats > 5s        | 5 min  | warning  | Agrégation cross-club lente, indexes ou cache |
-| `SlowBenchmarkQuery`           | P95 benchmark > 3s            | 5 min  | warning  | Scan sponsors site lent                       |
-| `HighReportFailureRate`        | PDF sponsor fails > 1/min     | 10 min | warning  | Match breakdown data issue                    |
-| `SponsorSyncMissing`           | Deploy sans sync sponsor      | 30 min | warning  | orchestrated-deployment.service.ts            |
-| `SponsorResolutionFailures`    | Resolution fails > 0.05/s     | 10 min | warning  | config-sync.handler ou analytics.controller   |
-| `ImpressionSponsorUnresolved`  | > 50% impressions sans attrib | 15 min | warning  | site_sponsor_videos table, loop manager       |
-| `HighPiAuthFailureRate`        | Pi auth fails > 0.1/s         | 5 min  | warning  | DB pool exhaustion, server overload           |
-| `HighAnalytics500Rate`         | 500 sur video-plays > 0.02/s  | 10 min | warning  | DB schema, pool connections                   |
-| `HighVideoPlaysFkFallbackRate` | FK fallback > 0.1/s           | 15 min | warning  | Pi envoie refs stales vers records supprimés  |
-| `ReportValidationErrors`       | 400 sur /reports > 0.01/s     | 5 min  | warning  | Format payload frontend (snake/camelCase)     |
+| Alerte                         | Condition                     | Délai  | Sévérité | Action                                         |
+| ------------------------------ | ----------------------------- | ------ | -------- | ---------------------------------------------- |
+| `CentralServerDown`            | Scrape fail (`up == 0`)       | 2 min  | critical | Vérifier Railway, restart                      |
+| `CentralServerUnhealthy`       | Health check fail             | 3 min  | critical | Serveur UP mais dégradé, vérifier DB/deps      |
+| `ZeroHeartbeats`               | `rate(heartbeats) == 0`       | 5 min  | critical | WebSocket cassé ou serveur bloqué              |
+| `NoAgentConnections`           | WS agents == 0                | 5 min  | critical | Même diagnostic                                |
+| `DbSizeCritical`               | DB > 475 MB                   | 5 min  | critical | VACUUM FULL urgent, réduire rétention          |
+| `HighErrorRate`                | 5xx > 5%                      | 5 min  | warning  | Logs Railway, DB latence                       |
+| `HighCpuUsage`                 | CPU > 80%                     | 5 min  | warning  | Event loop saturé, ops bloquantes              |
+| `DbPoolSaturation`             | Pool > 80%                    | 3 min  | warning  | Requêtes longues, leaks                        |
+| `HighMemoryUsage`              | RSS > 88% de 256MB            | 5 min  | warning  | OOM risk, vérifier heap                        |
+| `HighApiLatency`               | P95 > 3s                      | 5 min  | warning  | DB lente, charge élevée                        |
+| `SlowDbQueries`                | P95 queries > 2s              | 5 min  | warning  | Index manquants                                |
+| `DbSizeWarning`                | DB > 400 MB                   | 10 min | warning  | Approche quota Supabase 500 MB                 |
+| `DbTableSizeHigh`              | Table > 200 MB                | 30 min | warning  | Vérifier politique de rétention                |
+| `HighDisconnectRate`           | > 0.5/s                       | 3 min  | warning  | Instabilité réseau                             |
+| `ConnectedSitesDrop`           | -50% en 10 min                | 5 min  | warning  | Incident fleet-wide                            |
+| `TooManyActiveAlerts`          | > 10 alertes                  | 10 min | warning  | Problème généralisé                            |
+| `HighUploadFailureRate`        | Upload fails > 3/min          | 5 min  | warning  | FTP/storage, permissions, espace disque        |
+| `FrequentEncodingCorrections`  | Encoding fixes > 0.1/s        | 30 min | info     | Client envoie des noms de fichiers non-ASCII   |
+| `SlowNetworkSponsorStats`      | P95 network stats > 5s        | 5 min  | warning  | Agrégation cross-club lente, indexes ou cache  |
+| `SlowBenchmarkQuery`           | P95 benchmark > 3s            | 5 min  | warning  | Scan sponsors site lent                        |
+| `SlowFleetBenchmarkQuery`      | P95 fleet benchmark > 5s      | 5 min  | warning  | Peer comparison lent (benchmark.repository.ts) |
+| `HighReportFailureRate`        | PDF sponsor fails > 1/min     | 10 min | warning  | Match breakdown data issue                     |
+| `SponsorSyncMissing`           | Deploy sans sync sponsor      | 30 min | warning  | orchestrated-deployment.service.ts             |
+| `SponsorResolutionFailures`    | Resolution fails > 0.05/s     | 10 min | warning  | config-sync.handler ou analytics.controller    |
+| `ImpressionSponsorUnresolved`  | > 50% impressions sans attrib | 15 min | warning  | site_sponsor_videos table, loop manager        |
+| `HighPiAuthFailureRate`        | Pi auth fails > 0.1/s         | 5 min  | warning  | DB pool exhaustion, server overload            |
+| `HighAnalytics500Rate`         | 500 sur video-plays > 0.02/s  | 10 min | warning  | DB schema, pool connections                    |
+| `HighVideoPlaysFkFallbackRate` | FK fallback > 0.1/s           | 15 min | warning  | Pi envoie refs stales vers records supprimés   |
+| `ReportValidationErrors`       | 400 sur /reports > 0.01/s     | 5 min  | warning  | Format payload frontend (snake/camelCase)      |
 
 **Inhibition** : Quand `CentralServerDown` est actif, toutes les alertes `warning` sont supprimées (inutile d'alerter sur la latence si le serveur est mort).
 

@@ -254,4 +254,12 @@ export {
   type CreateVideoVariantInput,
   type DisplayType,
 } from './video-variant.repository';
+export {
+  benchmarkRepository,
+  type SiteBenchmarkInfoRow,
+  type SiteMetricsRow,
+  type PeerMetricsRow,
+  type SportBenchmarkRow,
+  type RegionBenchmarkRow,
+} from './benchmark.repository';
 export { BaseRepository } from './base.repository';

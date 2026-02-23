@@ -10,6 +10,21 @@
 
 # [3.72.0] (2026-02-23)
 
+### Bug Fixes
+
+- **benchmark:** fix 500 on `/api/benchmark/sites/:siteId` — query timeout (8s)
+  - **Cause** : `benchmark.service.ts` utilisait 4 requêtes séparées + sous-requêtes corrélées O(n²) par site
+    dans `getPeerMetrics` → timeout systématique sur 50+ sites actifs.
+  - **benchmark.repository.ts** (nouveau) : extraction des requêtes SQL dans un repository dédié, conformément
+    au pattern repository du projet (ESLint enforced).
+  - **Optimisation `getSiteMetrics`** : 4 round-trips → 1 requête unique avec sous-requêtes scalaires.
+  - **Optimisation `getPeerMetrics`** : sous-requêtes corrélées → `LEFT JOIN` pré-agrégés (1 seul scan par table).
+  - **Filtrage sport** : `s.sports ? $N` → `s.sports @> $N::jsonb` (compatible index GIN).
+  - **Filtrage statut** : `status != 'archived'` (dead code, pas de statut 'archived' en DB)
+    → `status IN ('online', 'offline', 'maintenance')` (conforme CHECK constraint).
+  - **Monitoring** : ajout alerte Prometheus `SlowFleetBenchmarkQuery` (P95 > 5s) dans `rules.yml`.
+  - **Tests** : 14 tests unitaires dans `benchmark.repository.test.ts` (patterns SQL, filtres, edge cases).
+
 ### Features
 
 - **kiosk:** remove Video.js legacy player — only native HTML5 double-buffer remains

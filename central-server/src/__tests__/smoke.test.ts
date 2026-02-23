@@ -1845,3 +1845,39 @@ describe('Kiosk xdpyinfo dependency must be provisioned', () => {
       .toEqual({ hasX11Utils: true });
   });
 });
+
+// ----------------------------------------------------------
+// Benchmark query pattern regression guards
+// ----------------------------------------------------------
+describe('Benchmark repository query safety', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+  const benchmarkRepo = fs.readFileSync(
+    path.join(repoRoot, 'central-server/src/repositories/benchmark.repository.ts'),
+    'utf8'
+  );
+
+  it('getPeerMetrics must use LEFT JOIN (not correlated subqueries)', () => {
+    // Correlated subqueries cause O(n²) execution time and statement_timeout on 50+ sites.
+    // Incident: 23/02/2026 — 500 on /api/benchmark/sites/:siteId in production.
+    expect({ usesLeftJoin: benchmarkRepo.includes('LEFT JOIN') })
+      .toEqual({ usesLeftJoin: true });
+  });
+
+  it('benchmark.repository must NOT import query directly from database config', () => {
+    // Repository pattern: all SQL goes through repositories, never direct query() in services.
+    // benchmark.service.ts previously imported query() directly, violating the pattern.
+    const benchmarkService = fs.readFileSync(
+      path.join(repoRoot, 'central-server/src/services/benchmark.service.ts'),
+      'utf8'
+    );
+    expect({ directQueryImport: benchmarkService.includes("from '../config/database'") })
+      .toEqual({ directQueryImport: false });
+  });
+
+  it('getPeerMetrics must filter active statuses explicitly (not != archived)', () => {
+    // sites.status CHECK allows: online, offline, maintenance, error (no 'archived').
+    // Using != 'archived' was dead code that included 'error' sites in benchmarks.
+    expect({ hasExplicitStatusFilter: benchmarkRepo.includes("s.status IN ('online', 'offline', 'maintenance')") })
+      .toEqual({ hasExplicitStatusFilter: true });
+  });
+});

@@ -289,6 +289,16 @@ groups:
           summary: "P95 sponsor benchmark latency above 3s"
           description: "Benchmark query scanning all site sponsors is slow. P95: {{ $value | humanizeDuration }}."
 
+      # Fleet benchmark query latency (peer comparison across sites)
+      - alert: SlowFleetBenchmarkQuery
+        expr: histogram_quantile(0.95, rate(neopro_http_request_duration_seconds_bucket{path="/benchmark/sites/:id"}[5m])) > 5
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "P95 fleet benchmark latency above 5s"
+          description: "Fleet benchmark peer comparison query is slow. P95: {{ $value | humanizeDuration }}. Risk of statement_timeout (8s). Check benchmark.repository.ts query patterns."
+
       # PDF report generation failures (P6.4 — match breakdown page 2)
       - alert: HighReportFailureRate
         expr: rate(neopro_report_generations_total{report_type="site_sponsor",status="failed"}[15m]) > 0.02

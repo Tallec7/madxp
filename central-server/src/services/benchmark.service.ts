@@ -17,8 +17,8 @@
  * - Par taille de club (petit < 5 sessions/mois, moyen 5-15, grand > 15)
  */
 
-import { query } from '../config/database';
 import logger from '../config/logger';
+import { benchmarkRepository } from '../repositories/benchmark.repository';
 
 interface BenchmarkStats {
   metric: string;
@@ -61,25 +61,13 @@ class BenchmarkService {
     logger.info('[Benchmark] Calculating benchmark', { siteId, period, filters });
 
     // 1. Récupérer les infos du site pour la segmentation
-    const siteResult = await query(`
-      SELECT
-        id,
-        site_name,
-        sports,
-        location
-      FROM sites
-      WHERE id = $1
-    `, [siteId]);
-
-    if (siteResult.rowCount === 0) {
+    const site = await benchmarkRepository.findSiteForBenchmark(siteId);
+    if (!site) {
       throw new Error('Site not found');
     }
 
-    const site = siteResult.rows[0];
-    // sports is JSONB array, parse if needed
-    const sportsRaw = site.sports;
-    const sports: string[] = Array.isArray(sportsRaw) ? sportsRaw : [];
-    const region = (site.location as { region?: string })?.region;
+    const sports: string[] = Array.isArray(site.sports) ? site.sports : [];
+    const region = site.location?.region;
 
     // 2. Déterminer les segments de comparaison
     const segments: SegmentFilter = {
@@ -134,68 +122,14 @@ class BenchmarkService {
     siteId: string,
     period: { start: string; end: string }
   ): Promise<Record<string, number>> {
-    // Sessions par mois
-    const sessionsResult = await query(`
-      SELECT COUNT(*) as session_count
-      FROM club_sessions
-      WHERE site_id = $1
-        AND started_at >= $2::date
-        AND started_at <= $3::date
-    `, [siteId, period.start, period.end]);
-
-    // Vidéos jouées
-    const videosResult = await query(`
-      SELECT COUNT(*) as video_count
-      FROM video_plays
-      WHERE site_id = $1
-        AND played_at >= $2::date
-        AND played_at <= $3::date
-    `, [siteId, period.start, period.end]);
-
-    // Durée moyenne des sessions (en minutes)
-    const durationResult = await query(`
-      SELECT
-        COALESCE(AVG(EXTRACT(EPOCH FROM (ended_at - started_at)) / 60), 0) as avg_duration
-      FROM club_sessions
-      WHERE site_id = $1
-        AND started_at >= $2::date
-        AND started_at <= $3::date
-        AND ended_at IS NOT NULL
-    `, [siteId, period.start, period.end]);
-
-    // Uptime (basé sur les heartbeats)
-    const uptimeResult = await query(`
-      SELECT
-        COUNT(*) FILTER (WHERE status = 'online') as online_days,
-        COUNT(*) as total_days
-      FROM (
-        SELECT
-          DATE(recorded_at) as day,
-          MAX(CASE WHEN recorded_at = (
-            SELECT MAX(m2.recorded_at)
-            FROM metrics m2
-            WHERE m2.site_id = $1 AND DATE(m2.recorded_at) = DATE(m.recorded_at)
-          ) THEN 'online' END) as status
-        FROM metrics m
-        WHERE site_id = $1
-          AND recorded_at >= $2::date
-          AND recorded_at <= $3::date
-        GROUP BY DATE(recorded_at)
-      ) daily_status
-    `, [siteId, period.start, period.end]);
-
-    const sessionCount = parseInt(sessionsResult.rows[0]?.session_count as string, 10) || 0;
-    const videoCount = parseInt(videosResult.rows[0]?.video_count as string, 10) || 0;
-    const avgDuration = parseFloat(durationResult.rows[0]?.avg_duration as string) || 0;
-    const onlineDays = parseInt(uptimeResult.rows[0]?.online_days as string, 10) || 0;
-    const totalDays = parseInt(uptimeResult.rows[0]?.total_days as string, 10) || 1;
+    const m = await benchmarkRepository.getSiteMetrics(siteId, period.start, period.end);
 
     return {
-      sessions_per_month: sessionCount,
-      videos_per_session: sessionCount > 0 ? videoCount / sessionCount : 0,
-      avg_session_duration: avgDuration,
-      uptime_percent: (onlineDays / totalDays) * 100,
-      total_videos: videoCount,
+      sessions_per_month: m.sessionCount,
+      videos_per_session: m.sessionCount > 0 ? m.videoCount / m.sessionCount : 0,
+      avg_session_duration: m.avgDuration,
+      uptime_percent: (m.onlineDays / m.totalDays) * 100,
+      total_videos: m.videoCount,
     };
   }
 
@@ -207,72 +141,18 @@ class BenchmarkService {
     period: { start: string; end: string },
     segments: SegmentFilter
   ): Promise<Record<string, number>[]> {
-    // Build the WHERE clause based on segments
-    const conditions: string[] = [
-      `s.id != $1`,
-      `s.status != 'archived'`,
-    ];
-    const params: (string | number)[] = [excludeSiteId, period.start, period.end];
-    let paramIndex = 4;
+    const rows = await benchmarkRepository.getPeerMetrics(
+      excludeSiteId,
+      period.start,
+      period.end,
+      { sport: segments.sport, region: segments.region }
+    );
 
-    if (segments.sport) {
-      // sports is JSONB array, use ? operator to check if element exists
-      conditions.push(`s.sports ? $${paramIndex}`);
-      params.push(segments.sport);
-      paramIndex++;
-    }
-
-    if (segments.region) {
-      conditions.push(`(s.location->>'region') = $${paramIndex}`);
-      params.push(segments.region);
-      paramIndex++;
-    }
-
-    const whereClause = conditions.join(' AND ');
-
-    // Get all comparable sites with their metrics
-    const result = await query(`
-      WITH site_metrics AS (
-        SELECT
-          s.id as site_id,
-          (
-            SELECT COUNT(*)
-            FROM club_sessions cs
-            WHERE cs.site_id = s.id
-              AND cs.started_at >= $2::date
-              AND cs.started_at <= $3::date
-          ) as session_count,
-          (
-            SELECT COUNT(*)
-            FROM video_plays vp
-            WHERE vp.site_id = s.id
-              AND vp.played_at >= $2::date
-              AND vp.played_at <= $3::date
-          ) as video_count,
-          (
-            SELECT COALESCE(AVG(EXTRACT(EPOCH FROM (cs.ended_at - cs.started_at)) / 60), 0)
-            FROM club_sessions cs
-            WHERE cs.site_id = s.id
-              AND cs.started_at >= $2::date
-              AND cs.started_at <= $3::date
-              AND cs.ended_at IS NOT NULL
-          ) as avg_duration
-        FROM sites s
-        WHERE ${whereClause}
-      )
-      SELECT
-        session_count as sessions_per_month,
-        CASE WHEN session_count > 0 THEN video_count::float / session_count ELSE 0 END as videos_per_session,
-        avg_duration as avg_session_duration,
-        video_count as total_videos
-      FROM site_metrics
-    `, params);
-
-    return result.rows.map(row => ({
-      sessions_per_month: parseInt(row.sessions_per_month as string, 10) || 0,
-      videos_per_session: parseFloat(row.videos_per_session as string) || 0,
-      avg_session_duration: parseFloat(row.avg_session_duration as string) || 0,
-      total_videos: parseInt(row.total_videos as string, 10) || 0,
+    return rows.map(row => ({
+      sessions_per_month: parseInt(row.sessions_per_month, 10) || 0,
+      videos_per_session: parseFloat(row.videos_per_session) || 0,
+      avg_session_duration: parseFloat(row.avg_session_duration) || 0,
+      total_videos: parseInt(row.total_videos, 10) || 0,
     }));
   }
 
@@ -313,92 +193,33 @@ class BenchmarkService {
     bySport: Record<string, { count: number; avgSessions: number; avgVideos: number }>;
     byRegion: Record<string, { count: number; avgSessions: number; avgVideos: number }>;
   }> {
-    // Par sport - sports is JSONB array, use jsonb_array_elements_text
-    const sportResult = await query(`
-      SELECT
-        sport,
-        COUNT(DISTINCT s.id) as site_count,
-        COALESCE(AVG((
-          SELECT COUNT(*)
-          FROM club_sessions cs
-          WHERE cs.site_id = s.id
-            AND cs.started_at >= $1::date
-            AND cs.started_at <= $2::date
-        )), 0) as avg_sessions,
-        COALESCE(AVG((
-          SELECT COUNT(*)
-          FROM video_plays vp
-          WHERE vp.site_id = s.id
-            AND vp.played_at >= $1::date
-            AND vp.played_at <= $2::date
-        )), 0) as avg_videos
-      FROM sites s
-      CROSS JOIN LATERAL jsonb_array_elements_text(s.sports) AS sport
-      WHERE s.status != 'archived'
-        AND s.sports IS NOT NULL
-        AND jsonb_array_length(s.sports) > 0
-      GROUP BY sport
-      ORDER BY site_count DESC
-    `, [period.start, period.end]);
-
-    // Par région
-    const regionResult = await query(`
-      SELECT
-        s.location->>'region' as region,
-        COUNT(DISTINCT s.id) as site_count,
-        COALESCE(AVG((
-          SELECT COUNT(*)
-          FROM club_sessions cs
-          WHERE cs.site_id = s.id
-            AND cs.started_at >= $1::date
-            AND cs.started_at <= $2::date
-        )), 0) as avg_sessions,
-        COALESCE(AVG((
-          SELECT COUNT(*)
-          FROM video_plays vp
-          WHERE vp.site_id = s.id
-            AND vp.played_at >= $1::date
-            AND vp.played_at <= $2::date
-        )), 0) as avg_videos
-      FROM sites s
-      WHERE s.status != 'archived'
-        AND s.location->>'region' IS NOT NULL
-      GROUP BY s.location->>'region'
-      ORDER BY site_count DESC
-    `, [period.start, period.end]);
+    const [sportRows, regionRows, totalSites] = await Promise.all([
+      benchmarkRepository.getGlobalBySport(period.start, period.end),
+      benchmarkRepository.getGlobalByRegion(period.start, period.end),
+      benchmarkRepository.countActiveSites(),
+    ]);
 
     const bySport: Record<string, { count: number; avgSessions: number; avgVideos: number }> = {};
-    for (const row of sportResult.rows) {
-      bySport[row.sport as string] = {
-        count: parseInt(row.site_count as string, 10),
-        avgSessions: parseFloat(row.avg_sessions as string) || 0,
-        avgVideos: parseFloat(row.avg_videos as string) || 0,
+    for (const row of sportRows) {
+      bySport[row.sport] = {
+        count: parseInt(row.site_count, 10),
+        avgSessions: parseFloat(row.avg_sessions) || 0,
+        avgVideos: parseFloat(row.avg_videos) || 0,
       };
     }
 
     const byRegion: Record<string, { count: number; avgSessions: number; avgVideos: number }> = {};
-    for (const row of regionResult.rows) {
+    for (const row of regionRows) {
       if (row.region) {
-        byRegion[row.region as string] = {
-          count: parseInt(row.site_count as string, 10),
-          avgSessions: parseFloat(row.avg_sessions as string) || 0,
-          avgVideos: parseFloat(row.avg_videos as string) || 0,
+        byRegion[row.region] = {
+          count: parseInt(row.site_count, 10),
+          avgSessions: parseFloat(row.avg_sessions) || 0,
+          avgVideos: parseFloat(row.avg_videos) || 0,
         };
       }
     }
 
-    // Total sites
-    const totalResult = await query(`
-      SELECT COUNT(*) as total
-      FROM sites
-      WHERE status != 'archived'
-    `);
-
-    return {
-      totalSites: parseInt(totalResult.rows[0].total as string, 10),
-      bySport,
-      byRegion,
-    };
+    return { totalSites, bySport, byRegion };
   }
 }
 
