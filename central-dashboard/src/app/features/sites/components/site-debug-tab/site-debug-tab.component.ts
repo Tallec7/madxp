@@ -3,12 +3,14 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TranslateModule } from '@ngx-translate/core';
 import { Subscription, interval } from 'rxjs';
+import { pollCommand, CommandPollResult } from './command-poller.util';
 import { SitesService } from '../../../../core/services/sites.service';
 import { NotificationService } from '../../../../core/services/notification.service';
 import { LoggerService } from '../../../../core/services/logger.service';
 import { ErrorExtractor } from '../../../../core/utils/error-extractor';
 import { LocalVideo, LocalStorage, ConfigHistory, SiteConfiguration } from '../../../../core/models';
 import { CommandExecutorComponent } from '../command-executor/command-executor.component';
+import { DebugSummaryBarComponent } from './debug-summary-bar/debug-summary-bar.component';
 
 // Types pour le health status
 interface GpuInfo {
@@ -287,9 +289,20 @@ interface WizardStep {
 @Component({
   selector: 'app-site-debug-tab',
   standalone: true,
-  imports: [CommonModule, FormsModule, TranslateModule, CommandExecutorComponent],
+  imports: [CommonModule, FormsModule, TranslateModule, CommandExecutorComponent, DebugSummaryBarComponent],
   template: `
     <div class="debug-tab">
+      <!-- Dashboard résumé -->
+      <app-debug-summary-bar
+        [isConnected]="isConnected"
+        [connectionHealth]="connectionHealth"
+        [healthStatus]="healthStatus"
+        [filesCount]="localVideos.length"
+        [networkInfo]="networkInfo"
+        [hotspotInfo]="hotspotInfo"
+        [bufferStatus]="bufferStatus">
+      </app-debug-summary-bar>
+
       <!-- Diagnostic guidé (F-AUD-08) -->
       <div class="debug-card wizard-card">
         <div class="debug-header" (click)="toggleWizard()">
@@ -399,7 +412,7 @@ interface WizardStep {
         <div class="debug-header" (click)="showFiles = !showFiles">
           <span class="expand-icon">{{ showFiles ? '▼' : '▶' }}</span>
           <span class="debug-icon">📂</span>
-          <h4>Fichiers sur le Pi</h4>
+          <h4>{{ 'debug.filesTitle' | translate }}</h4>
           <span class="debug-stats" *ngIf="localVideos.length > 0">
             {{ localVideos.length }} fichiers | {{ formatBytes(getTotalSize()) }}
           </span>
@@ -418,11 +431,11 @@ interface WizardStep {
 
           <div class="files-list" *ngIf="localVideos.length > 0">
             <div class="file-row header">
-              <span class="file-name">Fichier</span>
-              <span class="file-category">Catégorie</span>
-              <span class="file-size">Taille</span>
+              <span class="file-name file-sortable" (click)="sortFiles('filename')">Fichier {{ fileSortField === 'filename' ? (fileSortAsc ? '▲' : '▼') : '' }}</span>
+              <span class="file-category file-sortable" (click)="sortFiles('category')">Catégorie {{ fileSortField === 'category' ? (fileSortAsc ? '▲' : '▼') : '' }}</span>
+              <span class="file-size file-sortable" (click)="sortFiles('size')">Taille {{ fileSortField === 'size' ? (fileSortAsc ? '▲' : '▼') : '' }}</span>
             </div>
-            <div class="file-row" *ngFor="let video of localVideos">
+            <div class="file-row" *ngFor="let video of getSortedVideos()"
               <span class="file-name" [title]="video.path">{{ video.filename }}</span>
               <span class="file-category">{{ video.category || '-' }}</span>
               <span class="file-size">{{ formatBytes(video.size) }}</span>
@@ -444,7 +457,7 @@ interface WizardStep {
         <div class="debug-header" (click)="toggleHealthStatus()">
           <span class="expand-icon">{{ showHealthStatus ? '▼' : '▶' }}</span>
           <span class="debug-icon">🩺</span>
-          <h4>Santé système</h4>
+          <h4>{{ 'debug.healthTitle' | translate }}</h4>
           <span class="debug-stats" *ngIf="healthStatus && healthStatus.healthScore !== undefined"
             [class.health-ok]="healthStatus.healthStatus === 'healthy'"
             [class.health-warning]="healthStatus.healthStatus === 'degraded'"
@@ -487,6 +500,13 @@ interface WizardStep {
               <button class="btn btn-secondary btn-sm refresh-btn" (click)="loadHealthStatus()" [disabled]="loadingHealthStatus">
                 🔄
               </button>
+            </div>
+
+            <!-- Système (hostname, OS, IP) -->
+            <div class="system-info-bar" *ngIf="healthStatus.system">
+              <span class="system-tag" *ngIf="healthStatus.system.hostname">🏷️ {{ healthStatus.system.hostname }}</span>
+              <span class="system-tag" *ngIf="healthStatus.system.os">💻 {{ healthStatus.system.os }}</span>
+              <span class="system-tag" *ngIf="healthStatus.system.localIp">🌐 {{ healthStatus.system.localIp }}</span>
             </div>
 
             <!-- Alertes/Issues -->
@@ -682,97 +702,83 @@ interface WizardStep {
               </div>
             </div>
           </div>
-        </div>
-      </div>
 
-      <!-- Diagnostic complet (P1.2) -->
-      <div class="debug-card">
-        <div class="debug-header" (click)="showDiagnostics = !showDiagnostics">
-          <span class="expand-icon">{{ showDiagnostics ? '▼' : '▶' }}</span>
-          <span class="debug-icon">🔍</span>
-          <h4>Diagnostic complet</h4>
-          <span class="debug-stats" *ngIf="diagnosticsResult">
-            {{ getDiagnosticsOkCount() }}/{{ diagnosticsResult.checks?.length || 0 }} OK
-          </span>
-        </div>
+          <!-- Diagnostic approfondi (fusionné P1.2) -->
+          <div class="health-section diagnostics-subsection" *ngIf="isConnected">
+            <h5>🔍 Diagnostic approfondi
+              <span class="diagnostics-badge" *ngIf="diagnosticsResult">
+                {{ getDiagnosticsOkCount() }}/{{ diagnosticsResult.checks?.length || 0 }} OK
+              </span>
+            </h5>
+            <p class="diagnostics-hint">Exécute diagnose-pi.sh — rapport complet du boîtier</p>
 
-        <div class="debug-content" *ngIf="showDiagnostics">
-          <div *ngIf="!isConnected" class="offline-warning">
-            ⚠️ Le boîtier doit être connecté pour lancer un diagnostic.
-          </div>
-
-          <div class="diagnostics-actions" *ngIf="isConnected">
-            <button class="btn btn-primary" (click)="runDiagnostics()" [disabled]="runningDiagnostics">
-              {{ runningDiagnostics ? '⏳ Diagnostic en cours...' : '🔍 Lancer le diagnostic complet' }}
+            <button class="btn btn-primary btn-sm" (click)="runDiagnostics()" [disabled]="runningDiagnostics">
+              {{ runningDiagnostics ? '⏳ Diagnostic en cours...' : '🔍 Lancer le diagnostic' }}
             </button>
-            <p class="diagnostics-hint">Exécute le script diagnose-pi.sh et retourne un rapport complet</p>
-          </div>
 
-          <div *ngIf="runningDiagnostics" class="loading-inline">
-            <div class="spinner-small"></div>
-            <span>Exécution du diagnostic (peut prendre jusqu'à 60 secondes)...</span>
-          </div>
-
-          <div *ngIf="diagnosticsResult && !runningDiagnostics" class="diagnostics-result">
-            <div class="diagnostics-header">
-              <span class="diagnostics-time">{{ diagnosticsResult.timestamp | date:'dd/MM/yyyy HH:mm:ss' }}</span>
+            <div *ngIf="runningDiagnostics" class="loading-inline">
+              <div class="spinner-small"></div>
+              <span>Exécution (peut prendre jusqu'à 60 secondes)...</span>
             </div>
 
-            <!-- Affichage structuré des checks -->
-            <div *ngIf="diagnosticsResult.checks && diagnosticsResult.checks.length > 0" class="checks-list">
-              <div *ngFor="let category of getDiagnosticsCategories()" class="check-category">
-                <h6>{{ category }}</h6>
-                <div class="check-items">
-                  <div *ngFor="let check of getChecksByCategory(category)" class="check-item"
-                    [class.check-ok]="check.status === 'ok'"
-                    [class.check-fail]="check.status === 'fail'"
-                    [class.check-warning]="check.status === 'warning'">
-                    <span class="check-status">{{ check.status === 'ok' ? '✅' : check.status === 'fail' ? '❌' : '⚠️' }}</span>
-                    <span class="check-name">{{ check.name }}</span>
-                    <span class="check-value">{{ check.value }}</span>
-                    <span class="check-warn" *ngIf="check.warning">{{ check.warning }}</span>
+            <div *ngIf="diagnosticsResult && !runningDiagnostics" class="diagnostics-result">
+              <div class="diagnostics-header">
+                <span class="diagnostics-time">{{ diagnosticsResult.timestamp | date:'dd/MM/yyyy HH:mm:ss' }}</span>
+              </div>
+
+              <div *ngIf="diagnosticsResult.checks && diagnosticsResult.checks.length > 0" class="checks-list">
+                <div *ngFor="let category of getDiagnosticsCategories()" class="check-category">
+                  <h6>{{ category }}</h6>
+                  <div class="check-items">
+                    <div *ngFor="let check of getChecksByCategory(category)" class="check-item"
+                      [class.check-ok]="check.status === 'ok'"
+                      [class.check-fail]="check.status === 'fail'"
+                      [class.check-warning]="check.status === 'warning'">
+                      <span class="check-status">{{ check.status === 'ok' ? '✅' : check.status === 'fail' ? '❌' : '⚠️' }}</span>
+                      <span class="check-name">{{ check.name }}</span>
+                      <span class="check-value">{{ check.value }}</span>
+                      <span class="check-warn" *ngIf="check.warning">{{ check.warning }}</span>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
 
-            <!-- Sortie brute si script exécuté -->
-            <div *ngIf="diagnosticsResult.output" class="diagnostics-output">
-              <h6>Sortie du script</h6>
-              <pre class="output-viewer">{{ diagnosticsResult.output }}</pre>
+              <div *ngIf="diagnosticsResult.output" class="diagnostics-output">
+                <h6>Sortie du script</h6>
+                <pre class="output-viewer">{{ diagnosticsResult.output }}</pre>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- Configuration JSON -->
-      <div class="debug-card">
-        <div class="debug-header" (click)="showJson = !showJson">
-          <span class="expand-icon">{{ showJson ? '▼' : '▶' }}</span>
-          <span class="debug-icon">📋</span>
-          <h4>Configuration JSON</h4>
-          <span class="debug-stats" *ngIf="configHash">Hash: {{ configHash.substring(0, 8) }}...</span>
-        </div>
-
-        <div class="debug-content" *ngIf="showJson">
-          <div class="json-actions">
-            <button class="btn btn-secondary btn-sm" (click)="copyJson()">📋 Copier</button>
-            <button class="btn btn-secondary btn-sm" (click)="downloadJson()">💾 Télécharger</button>
-          </div>
-          <pre class="json-viewer">{{ configJson }}</pre>
-        </div>
-      </div>
-
-      <!-- Historique des configurations (P1.3 - avec diff visuel) -->
+      <!-- Configuration & Historique (P1.3 - fusionné) -->
       <div class="debug-card">
         <div class="debug-header" (click)="toggleHistory()">
           <span class="expand-icon">{{ showHistory ? '▼' : '▶' }}</span>
           <span class="debug-icon">📜</span>
-          <h4>Historique des configurations</h4>
+          <h4>{{ 'debug.configHistoryTitle' | translate }}</h4>
+          <span class="debug-stats" *ngIf="configHash">{{ configHash.substring(0, 8) }}</span>
           <span class="debug-stats" *ngIf="historyTotal > 0">{{ historyTotal }} version(s)</span>
         </div>
 
         <div class="debug-content" *ngIf="showHistory">
+          <!-- Config actuelle -->
+          <div class="current-config-card">
+            <div class="current-config-header">
+              <h5>📋 Configuration actuelle</h5>
+              <div class="current-config-actions">
+                <button class="btn btn-secondary btn-sm" (click)="copyJson()">📋 Copier</button>
+                <button class="btn btn-secondary btn-sm" (click)="downloadJson()">💾 Télécharger</button>
+                <button class="btn btn-secondary btn-sm" (click)="showJson = !showJson">
+                  {{ showJson ? '▲ Masquer' : '▼ Voir JSON' }}
+                </button>
+              </div>
+            </div>
+            <pre class="json-viewer" *ngIf="showJson">{{ configJson }}</pre>
+          </div>
+
+          <!-- Historique -->
           <div *ngIf="loadingHistory" class="loading-inline">
             <div class="spinner-small"></div>
             <span>Chargement...</span>
@@ -909,7 +915,7 @@ interface WizardStep {
         <div class="debug-header" (click)="showTerminal = !showTerminal">
           <span class="expand-icon">{{ showTerminal ? '▼' : '▶' }}</span>
           <span class="debug-icon">💻</span>
-          <h4>Terminal & Commandes</h4>
+          <h4>{{ 'debug.commandsTitle' | translate }}</h4>
           <span class="debug-stats"
             [class.connected]="isConnected && isConnectionHealthy()"
             [class.disconnected]="!isConnected"
@@ -981,7 +987,7 @@ interface WizardStep {
         <div class="debug-header" (click)="showLogs = !showLogs">
           <span class="expand-icon">{{ showLogs ? '▼' : '▶' }}</span>
           <span class="debug-icon">📜</span>
-          <h4>Logs système</h4>
+          <h4>{{ 'debug.logsTitle' | translate }}</h4>
           <span class="debug-stats" *ngIf="selectedLogService">{{ selectedLogService }}</span>
         </div>
 
@@ -1013,7 +1019,13 @@ interface WizardStep {
             </div>
 
             <div *ngIf="logsContent && !loadingLogs" class="logs-viewer">
-              <pre class="logs-output">{{ logsContent }}</pre>
+              <div class="logs-toolbar">
+                <input type="text" class="log-filter-input" [(ngModel)]="logFilter" placeholder="Filtrer les logs...">
+                <button class="btn btn-secondary btn-sm" (click)="copyLogs()">📋 Copier</button>
+                <button class="btn btn-secondary btn-sm" (click)="downloadLogs()">💾</button>
+              </div>
+              <pre class="logs-output"><ng-container *ngFor="let line of getFilteredLogLines()"><span [class]="getLogLineClass(line)">{{ line }}
+</span></ng-container></pre>
             </div>
           </div>
         </div>
@@ -1024,7 +1036,7 @@ interface WizardStep {
         <div class="debug-header" (click)="showNetworkInfo = !showNetworkInfo">
           <span class="expand-icon">{{ showNetworkInfo ? '▼' : '▶' }}</span>
           <span class="debug-icon">🌐</span>
-          <h4>Réseau</h4>
+          <h4>{{ 'debug.networkTitle' | translate }}</h4>
           <span class="debug-stats" *ngIf="networkInfo">
             {{ networkInfo.internet?.reachable ? '✅ Internet OK' : '❌ Pas d\\'Internet' }}
           </span>
@@ -1099,6 +1111,58 @@ interface WizardStep {
               </div>
             </div>
 
+            <!-- Stabilité -->
+            <div class="wifi-section" *ngIf="networkInfo.stability">
+              <h5>📈 Stabilité</h5>
+              <div class="wifi-info">
+                <span *ngIf="networkInfo.stability.interface_uptime_seconds !== null">
+                  <strong>Uptime interface:</strong> {{ formatUptime(networkInfo.stability.interface_uptime_seconds!) }}
+                </span>
+                <span *ngIf="networkInfo.stability.reconnections_24h !== null"
+                  [class.text-danger]="(networkInfo.stability.reconnections_24h ?? 0) > 5"
+                  [class.text-success]="(networkInfo.stability.reconnections_24h ?? 0) === 0">
+                  <strong>Reconnexions 24h:</strong> {{ networkInfo.stability.reconnections_24h }}
+                </span>
+              </div>
+            </div>
+
+            <!-- Interfaces réseau -->
+            <div class="wifi-section" *ngIf="networkInfo.interfaces && networkInfo.interfaces.length > 0">
+              <h5>🔌 Interfaces réseau</h5>
+              <div class="interfaces-list">
+                <div class="interface-row header">
+                  <span>Interface</span>
+                  <span>IP</span>
+                  <span>Type</span>
+                  <span>État</span>
+                </div>
+                <div class="interface-row" *ngFor="let iface of networkInfo.interfaces"
+                  [class.interface-up]="iface.operstate === 'up'"
+                  [class.interface-down]="iface.operstate !== 'up'">
+                  <span class="interface-name">{{ iface.name }}</span>
+                  <span class="interface-ip">{{ iface.ip4 || '-' }}</span>
+                  <span class="interface-type">{{ iface.type }}</span>
+                  <span class="interface-state">{{ iface.operstate === 'up' ? '✅' : '⚪' }} {{ iface.operstate }}</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Détails serveur central -->
+            <div class="wifi-section" *ngIf="networkInfo.central_server">
+              <h5>☁️ Détails serveur central</h5>
+              <div class="wifi-info">
+                <span *ngIf="networkInfo.central_server.http_latency_ms">
+                  <strong>Latence HTTP:</strong> {{ networkInfo.central_server.http_latency_ms }}ms
+                </span>
+                <span *ngIf="networkInfo.central_server.ssl_valid !== null && networkInfo.central_server.ssl_valid !== undefined">
+                  <strong>SSL:</strong> {{ networkInfo.central_server.ssl_valid ? '✅ Valide' : '❌ Invalide' }}
+                </span>
+                <span *ngIf="networkInfo.central_server.port_443_open !== null && networkInfo.central_server.port_443_open !== undefined">
+                  <strong>Port 443:</strong> {{ networkInfo.central_server.port_443_open ? '✅ Ouvert' : '❌ Fermé' }}
+                </span>
+              </div>
+            </div>
+
             <button class="btn btn-secondary btn-sm refresh-network-btn" (click)="loadNetworkInfo()" [disabled]="loadingNetworkInfo">
               🔄 Rafraîchir
             </button>
@@ -1111,7 +1175,7 @@ interface WizardStep {
         <div class="debug-header" (click)="showBufferStatus = !showBufferStatus">
           <span class="expand-icon">{{ showBufferStatus ? '▼' : '▶' }}</span>
           <span class="debug-icon">📊</span>
-          <h4>Buffer Analytics</h4>
+          <h4>{{ 'debug.bufferTitle' | translate }}</h4>
           <span class="debug-stats" *ngIf="bufferStatus">
             {{ bufferStatus.analytics?.event_count || 0 }} événements en attente
           </span>
@@ -1172,7 +1236,7 @@ interface WizardStep {
         <div class="debug-header" (click)="showHotspotFix = !showHotspotFix">
           <span class="expand-icon">{{ showHotspotFix ? '▼' : '▶' }}</span>
           <span class="debug-icon">📡</span>
-          <h4>Hotspot WiFi</h4>
+          <h4>{{ 'debug.hotspotTitle' | translate }}</h4>
           <span class="debug-stats" *ngIf="hotspotInfo">
             <span *ngIf="hotspotInfo.isActive" class="status-badge status-online">● Actif</span>
             <span *ngIf="!hotspotInfo.isActive" class="status-badge status-offline">● Inactif</span>
@@ -1529,7 +1593,7 @@ interface WizardStep {
         <div class="debug-header" (click)="showExport = !showExport">
           <span class="expand-icon">{{ showExport ? '▼' : '▶' }}</span>
           <span class="debug-icon">📦</span>
-          <h4>Export pour support</h4>
+          <h4>{{ 'debug.exportTitle' | translate }}</h4>
         </div>
 
         <div class="debug-content" *ngIf="showExport">
@@ -1566,7 +1630,7 @@ interface WizardStep {
         <div class="debug-header" (click)="toggleTimeline()">
           <span class="expand-icon">{{ showTimeline ? '▼' : '▶' }}</span>
           <span class="debug-icon">📅</span>
-          <h4>Activité récente</h4>
+          <h4>{{ 'debug.timelineTitle' | translate }}</h4>
           <span class="debug-stats" *ngIf="timelineEvents.length > 0">
             {{ timelineEvents.length }} événement(s)
           </span>
@@ -1582,8 +1646,16 @@ interface WizardStep {
             Aucun événement récent trouvé.
           </div>
 
+          <div *ngIf="!loadingTimeline && timelineEvents.length > 0" class="timeline-filter-bar">
+            <button class="btn btn-sm" [class.btn-primary]="!timelineTypeFilter" [class.btn-secondary]="timelineTypeFilter" (click)="timelineTypeFilter = ''">Tous</button>
+            <button class="btn btn-sm" [class.btn-primary]="timelineTypeFilter === 'deployment'" [class.btn-secondary]="timelineTypeFilter !== 'deployment'" (click)="timelineTypeFilter = 'deployment'">📹 Déploiements</button>
+            <button class="btn btn-sm" [class.btn-primary]="timelineTypeFilter === 'command'" [class.btn-secondary]="timelineTypeFilter !== 'command'" (click)="timelineTypeFilter = 'command'">⚡ Commandes</button>
+            <button class="btn btn-sm" [class.btn-primary]="timelineTypeFilter === 'config'" [class.btn-secondary]="timelineTypeFilter !== 'config'" (click)="timelineTypeFilter = 'config'">⚙️ Config</button>
+            <button class="btn btn-sm" [class.btn-primary]="timelineTypeFilter === 'alert'" [class.btn-secondary]="timelineTypeFilter !== 'alert'" (click)="timelineTypeFilter = 'alert'">⚠️ Alertes</button>
+          </div>
+
           <div *ngIf="!loadingTimeline && timelineEvents.length > 0" class="timeline">
-            <div class="timeline-item" *ngFor="let event of timelineEvents"
+            <div class="timeline-item" *ngFor="let event of getFilteredTimeline()"
               [class.timeline-deployment]="event.type === 'deployment'"
               [class.timeline-command]="event.type === 'command'"
               [class.timeline-config]="event.type === 'config'"
@@ -1604,6 +1676,12 @@ interface WizardStep {
                   </span>
                   <span class="timeline-user" *ngIf="event.user">{{ event.user }}</span>
                 </div>
+                <div class="timeline-details" *ngIf="event.details && hasDetails(event.details)">
+                  <div class="detail-item" *ngFor="let key of getDetailKeys(event.details)">
+                    <span class="detail-key">{{ key }}:</span>
+                    <span class="detail-value">{{ formatDetailValue(event.details[key]) }}</span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -1616,6 +1694,22 @@ interface WizardStep {
         </div>
       </div>
 
+      <!-- Modal de confirmation générique -->
+      <div *ngIf="confirmModal.visible" class="modal-overlay" (click)="cancelConfirmModal()">
+        <div class="modal-content confirm-modal" (click)="$event.stopPropagation()">
+          <h3>{{ confirmModal.icon }} {{ confirmModal.title }}</h3>
+          <p>{{ confirmModal.message }}</p>
+          <p class="reboot-warning" *ngIf="confirmModal.warning">⚠️ {{ confirmModal.warning }}</p>
+          <div class="modal-actions">
+            <button class="btn btn-secondary" (click)="cancelConfirmModal()">Annuler</button>
+            <button class="btn" [class.btn-danger]="confirmModal.danger" [class.btn-primary]="!confirmModal.danger"
+              (click)="executeConfirmModal()" [disabled]="confirmModal.executing">
+              {{ confirmModal.executing ? '⏳...' : confirmModal.confirmLabel }}
+            </button>
+          </div>
+        </div>
+      </div>
+
     </div>
   `,
   styles: [`
@@ -1623,6 +1717,57 @@ interface WizardStep {
       display: flex;
       flex-direction: column;
       gap: 1rem;
+    }
+
+    /* Summary bar */
+    .summary-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      padding: 0.75rem 1rem;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+
+    .summary-pill {
+      display: flex;
+      align-items: center;
+      gap: 0.375rem;
+      padding: 0.375rem 0.75rem;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: 500;
+      background: #f1f5f9;
+      color: #475569;
+      border: 1px solid #e2e8f0;
+    }
+
+    .summary-pill.pill-ok {
+      background: #f0fdf4;
+      color: #166534;
+      border-color: #bbf7d0;
+    }
+
+    .summary-pill.pill-warning {
+      background: #fffbeb;
+      color: #92400e;
+      border-color: #fde68a;
+    }
+
+    .summary-pill.pill-error {
+      background: #fef2f2;
+      color: #991b1b;
+      border-color: #fecaca;
+    }
+
+    .pill-icon {
+      font-size: 0.8125rem;
+    }
+
+    .pill-detail {
+      font-size: 0.6875rem;
+      opacity: 0.8;
     }
 
     .debug-card {
@@ -1736,6 +1881,15 @@ interface WizardStep {
       text-transform: uppercase;
     }
 
+    .file-sortable {
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .file-sortable:hover {
+      color: #2563eb;
+    }
+
     .file-name {
       overflow: hidden;
       text-overflow: ellipsis;
@@ -1766,6 +1920,35 @@ interface WizardStep {
 
     .sync-value {
       font-weight: 500;
+    }
+
+    /* Current config card (merged into history) */
+    .current-config-card {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 1rem;
+      margin-bottom: 1.5rem;
+      margin-top: 1rem;
+    }
+
+    .current-config-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+
+    .current-config-header h5 {
+      margin: 0;
+      font-size: 0.875rem;
+      font-weight: 600;
+    }
+
+    .current-config-actions {
+      display: flex;
+      gap: 0.5rem;
     }
 
     /* JSON viewer */
@@ -2410,8 +2593,24 @@ interface WizardStep {
       padding-top: 1rem;
     }
 
+    .diagnostics-subsection {
+      margin-top: 1rem;
+      padding-top: 1rem;
+      border-top: 2px dashed #e2e8f0;
+    }
+
+    .diagnostics-badge {
+      font-size: 0.75rem;
+      font-weight: 500;
+      background: #f1f5f9;
+      padding: 0.125rem 0.5rem;
+      border-radius: 4px;
+      margin-left: 0.5rem;
+      color: #64748b;
+    }
+
     .diagnostics-hint {
-      margin: 0.5rem 0 0 0;
+      margin: 0 0 0.75rem 0;
       font-size: 0.75rem;
       color: #64748b;
     }
@@ -2729,6 +2928,21 @@ interface WizardStep {
       margin-top: 1rem;
     }
 
+    .logs-toolbar {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 0.5rem;
+      align-items: center;
+    }
+
+    .log-filter-input {
+      flex: 1;
+      padding: 0.375rem 0.75rem;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      font-size: 0.8125rem;
+    }
+
     .logs-output {
       background: #1e293b;
       color: #e2e8f0;
@@ -2740,6 +2954,23 @@ interface WizardStep {
       overflow: auto;
       white-space: pre-wrap;
       word-break: break-all;
+      margin: 0;
+    }
+
+    .log-error {
+      color: #fca5a5;
+    }
+
+    .log-warn {
+      color: #fde68a;
+    }
+
+    .log-debug {
+      color: #94a3b8;
+    }
+
+    .log-info {
+      color: #e2e8f0;
     }
 
     /* P2.2 - Network */
@@ -2812,6 +3043,64 @@ interface WizardStep {
 
     .refresh-network-btn {
       margin-top: 1rem;
+    }
+
+    /* System info bar (hostname, OS, IP) */
+    .system-info-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .system-tag {
+      font-size: 0.75rem;
+      padding: 0.25rem 0.5rem;
+      background: #f1f5f9;
+      border-radius: 4px;
+      color: #475569;
+      font-family: 'SF Mono', Monaco, monospace;
+    }
+
+    /* Interfaces list */
+    .interfaces-list {
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      overflow: hidden;
+    }
+
+    .interface-row {
+      display: grid;
+      grid-template-columns: 100px 1fr 80px 80px;
+      gap: 0.5rem;
+      padding: 0.375rem 0.75rem;
+      font-size: 0.75rem;
+      border-bottom: 1px solid #f1f5f9;
+    }
+
+    .interface-row:last-child {
+      border-bottom: none;
+    }
+
+    .interface-row.header {
+      background: #f8fafc;
+      font-weight: 600;
+      color: #475569;
+      font-size: 0.6875rem;
+      text-transform: uppercase;
+    }
+
+    .interface-row.interface-up {
+      background: #f0fdf4;
+    }
+
+    .interface-name {
+      font-family: 'SF Mono', Monaco, monospace;
+      font-weight: 500;
+    }
+
+    .interface-ip {
+      font-family: 'SF Mono', Monaco, monospace;
     }
 
     /* P2.3 - Buffer */
@@ -3081,6 +3370,18 @@ interface WizardStep {
     .btn-danger:disabled {
       background: #f87171;
       cursor: not-allowed;
+    }
+
+    .confirm-modal h3 {
+      margin: 0 0 1rem 0;
+      font-size: 1.125rem;
+      color: #1e293b;
+    }
+
+    .confirm-modal p {
+      margin: 0 0 0.75rem 0;
+      font-size: 0.875rem;
+      color: #475569;
     }
 
     /* Diagnostic grid */
@@ -3686,6 +3987,35 @@ interface WizardStep {
       font-style: italic;
     }
 
+    .timeline-details {
+      margin-top: 0.375rem;
+      padding-top: 0.375rem;
+      border-top: 1px solid #e2e8f0;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.25rem 1rem;
+    }
+
+    .detail-item {
+      font-size: 0.6875rem;
+      color: #64748b;
+    }
+
+    .detail-key {
+      font-weight: 500;
+    }
+
+    .detail-value {
+      font-family: 'SF Mono', Monaco, monospace;
+    }
+
+    .timeline-filter-bar {
+      display: flex;
+      gap: 0.375rem;
+      flex-wrap: wrap;
+      margin-bottom: 1rem;
+    }
+
     .timeline-actions {
       margin-top: 1rem;
     }
@@ -3962,10 +4292,11 @@ export class SiteDebugTabComponent implements OnInit, AfterViewChecked, OnDestro
 
   showFiles: boolean = false;
   showJson: boolean = false;
+  fileSortField: 'filename' | 'category' | 'size' = 'filename';
+  fileSortAsc: boolean = true;
   showHistory: boolean = false;
   showTerminal: boolean = false;
   showHealthStatus: boolean = false;
-  showDiagnostics: boolean = false;
 
   // Commands
   executingCommand: boolean = false;
@@ -4003,6 +4334,7 @@ export class SiteDebugTabComponent implements OnInit, AfterViewChecked, OnDestro
   logLines: number = 100;
   logsContent: string = '';
   loadingLogs: boolean = false;
+  logFilter: string = '';
 
   // Network (P2.2)
   showNetworkInfo: boolean = false;
@@ -4055,6 +4387,23 @@ export class SiteDebugTabComponent implements OnInit, AfterViewChecked, OnDestro
     user?: string;
   }> = [];
   loadingTimeline: boolean = false;
+  timelineTypeFilter: string = '';
+
+  // Modal de confirmation générique
+  confirmModal: {
+    visible: boolean;
+    title: string;
+    message: string;
+    warning: string;
+    confirmLabel: string;
+    danger: boolean;
+    icon: string;
+    executing: boolean;
+    onConfirm: (() => void) | null;
+  } = {
+    visible: false, title: '', message: '', warning: '', confirmLabel: 'Confirmer',
+    danger: false, icon: '', executing: false, onConfirm: null
+  };
 
   // Diagnostic guidé (F-AUD-08)
   showWizard: boolean = false;
@@ -4131,21 +4480,38 @@ export class SiteDebugTabComponent implements OnInit, AfterViewChecked, OnDestro
   }
 
   formatBytes(bytes: number): string {
-    if (!bytes || bytes === 0) return '0 B';
+    if (bytes === null || bytes === undefined || bytes <= 0 || !isFinite(bytes)) return '0 B';
     const k = 1024;
-    const sizes = ['B', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+    const i = Math.min(Math.floor(Math.log(bytes) / Math.log(k)), sizes.length - 1);
     return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
   }
 
-  getVideoCategories(): string[] {
-    const cats = new Set<string>();
-    this.localVideos.forEach(v => cats.add(v.category || ''));
-    return Array.from(cats).sort();
+  sortFiles(field: 'filename' | 'category' | 'size'): void {
+    if (this.fileSortField === field) {
+      this.fileSortAsc = !this.fileSortAsc;
+    } else {
+      this.fileSortField = field;
+      this.fileSortAsc = field === 'size' ? false : true; // Size defaults to descending
+    }
   }
 
-  getVideosByCategory(category: string): LocalVideo[] {
-    return this.localVideos.filter(v => (v.category || '') === category);
+  getSortedVideos(): LocalVideo[] {
+    return [...this.localVideos].sort((a, b) => {
+      let cmp = 0;
+      switch (this.fileSortField) {
+        case 'filename':
+          cmp = (a.filename || '').localeCompare(b.filename || '');
+          break;
+        case 'category':
+          cmp = (a.category || '').localeCompare(b.category || '');
+          break;
+        case 'size':
+          cmp = a.size - b.size;
+          break;
+      }
+      return this.fileSortAsc ? cmp : -cmp;
+    });
   }
 
   copyJson(): void {
@@ -4200,10 +4566,20 @@ export class SiteDebugTabComponent implements OnInit, AfterViewChecked, OnDestro
       return;
     }
 
-    if (!confirm(`Restaurer et déployer la configuration du ${new Date(item.deployed_at).toLocaleString()} ?\n\nCela va remplacer la configuration actuelle sur le boîtier.`)) {
-      return;
-    }
+    const dateStr = new Date(item.deployed_at).toLocaleString();
+    this.showConfirmModal({
+      title: 'Restaurer la configuration',
+      message: `Restaurer et déployer la configuration du ${dateStr} ? Cela va remplacer la configuration actuelle sur le boîtier.`,
+      warning: 'La configuration en cours sera écrasée.',
+      confirmLabel: '🔄 Restaurer',
+      danger: true,
+      icon: '📜',
+      onConfirm: () => this.doRestoreVersion(item),
+    });
+  }
 
+  private doRestoreVersion(item: ConfigHistory): void {
+    this.confirmModal.visible = false;
     this.restoringVersion = item.id;
 
     // Déployer directement la configuration restaurée via la commande update_config
@@ -4247,18 +4623,34 @@ export class SiteDebugTabComponent implements OnInit, AfterViewChecked, OnDestro
         params = { service: 'neopro-sync-agent' };
         break;
       case 'reboot':
-        if (!confirm('Êtes-vous sûr de vouloir redémarrer le Raspberry Pi ?')) {
-          this.executingCommand = false;
-          return;
-        }
-        break;
+        this.executingCommand = false;
+        this.showConfirmModal({
+          title: 'Redémarrer le Raspberry Pi',
+          message: 'Le boîtier va redémarrer. La TV et la télécommande seront indisponibles pendant environ 1 minute.',
+          warning: 'Le contenu ne sera pas diffusé pendant le redémarrage.',
+          confirmLabel: '🔄 Redémarrer',
+          danger: true,
+          icon: '🔌',
+          onConfirm: () => {
+            this.confirmModal.visible = false;
+            this.doExecuteCommand('reboot', {});
+          },
+        });
+        return;
     }
+
+    this.doExecuteCommand(commandType, params);
+  }
+
+  private doExecuteCommand(commandType: string, params: Record<string, unknown>): void {
+    this.executingCommand = true;
+    this.commandResult = '';
 
     this.sitesService.sendCommand(this.siteId, commandType, params).subscribe({
       next: (response) => {
         this.executingCommand = false;
         this.commandResult = JSON.stringify(response, null, 2);
-        this.notificationService.success(`Commande "${command}" envoyée avec succès`);
+        this.notificationService.success(`Commande "${commandType}" envoyée avec succès`);
       },
       error: (error) => {
         this.executingCommand = false;
@@ -4617,6 +5009,36 @@ export class SiteDebugTabComponent implements OnInit, AfterViewChecked, OnDestro
     });
   }
 
+  getFilteredLogLines(): string[] {
+    const lines = this.logsContent.split('\n');
+    if (!this.logFilter) return lines;
+    const filter = this.logFilter.toLowerCase();
+    return lines.filter(line => line.toLowerCase().includes(filter));
+  }
+
+  getLogLineClass(line: string): string {
+    const lower = line.toLowerCase();
+    if (lower.includes('error') || lower.includes('err]') || lower.includes('fatal')) return 'log-error';
+    if (lower.includes('warn') || lower.includes('warning')) return 'log-warn';
+    if (lower.includes('debug') || lower.includes('trace')) return 'log-debug';
+    return 'log-info';
+  }
+
+  copyLogs(): void {
+    navigator.clipboard.writeText(this.logsContent);
+    this.notificationService.success('Logs copiés !');
+  }
+
+  downloadLogs(): void {
+    const blob = new Blob([this.logsContent], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `logs-${this.siteId}-${this.selectedLogService}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   // ============================================
   // P2.2 - Network Methods
   // ============================================
@@ -4660,65 +5082,24 @@ export class SiteDebugTabComponent implements OnInit, AfterViewChecked, OnDestro
     this.loadingBufferStatus = true;
     this.bufferPollSubscription?.unsubscribe();
 
-    this.sitesService.sendCommand(this.siteId, 'get_analytics_buffer_status', {}).subscribe({
-      next: (response: unknown) => {
-        const commandResponse = response as { success?: boolean; commandId?: string; sent?: boolean };
-        if (!commandResponse.commandId) {
-          this.loadingBufferStatus = false;
-          this.notificationService.error('Échec de l\'envoi de la commande');
-          return;
-        }
+    const { result$, cancel } = pollCommand<BufferStatus>({
+      siteId: this.siteId,
+      commandName: 'get_analytics_buffer_status',
+      timeoutSeconds: 15,
+      sendCommand: (id, cmd, params) => this.sitesService.sendCommand(id, cmd, params),
+      getCommandStatus: (id, cmdId) => this.sitesService.getCommandStatus(id, cmdId),
+    });
 
-        // Poller le résultat de la commande asynchrone
-        const commandId = commandResponse.commandId;
-        const POLL_TIMEOUT_SECONDS = 15;
-        let pollCount = 0;
-        let isPolling = false;
+    // Store cancel function for cleanup
+    this.bufferPollSubscription = new Subscription(() => cancel());
 
-        this.bufferPollSubscription = interval(1000).subscribe(() => {
-          pollCount++;
-
-          if (pollCount > POLL_TIMEOUT_SECONDS) {
-            this.bufferPollSubscription?.unsubscribe();
-            this.loadingBufferStatus = false;
-            this.notificationService.warning('Timeout: le boîtier ne répond pas');
-            return;
-          }
-
-          if (isPolling) {
-            return;
-          }
-          isPolling = true;
-
-          this.sitesService.getCommandStatus(this.siteId, commandId).subscribe({
-            next: (status: { status: string; result?: Record<string, unknown>; error_message?: string }) => {
-              isPolling = false;
-              if (status.status === 'completed') {
-                this.bufferPollSubscription?.unsubscribe();
-                this.loadingBufferStatus = false;
-                const result = status.result as unknown as BufferStatus;
-                if (result && result.success !== false) {
-                  this.bufferStatus = result;
-                } else {
-                  this.notificationService.error('Échec de la récupération de l\'état des buffers');
-                }
-              } else if (status.status === 'failed') {
-                this.bufferPollSubscription?.unsubscribe();
-                this.loadingBufferStatus = false;
-                this.notificationService.error(status.error_message || 'Commande échouée');
-              }
-            },
-            error: () => {
-              isPolling = false;
-            }
-          });
-        });
-      },
-      error: (error) => {
-        this.loadingBufferStatus = false;
-        const message = ErrorExtractor.getMessage(error);
-        this.notificationService.error(`Erreur: ${message}`);
-        this.logger.error('Failed to get buffer status', { error: message, siteId: this.siteId });
+    result$.subscribe((pollResult: CommandPollResult<BufferStatus>) => {
+      this.loadingBufferStatus = false;
+      if (pollResult.success && pollResult.data) {
+        this.bufferStatus = pollResult.data;
+      } else {
+        this.notificationService.error(pollResult.error || 'Échec de la récupération de l\'état des buffers');
+        this.logger.error('Failed to get buffer status', { error: pollResult.error, siteId: this.siteId });
       }
     });
   }
@@ -5057,6 +5438,63 @@ export class SiteDebugTabComponent implements OnInit, AfterViewChecked, OnDestro
     }
   }
 
+  getFilteredTimeline(): typeof this.timelineEvents {
+    if (!this.timelineTypeFilter) return this.timelineEvents;
+    return this.timelineEvents.filter(e => e.type === this.timelineTypeFilter);
+  }
+
+  // ===== Confirmation modal =====
+
+  showConfirmModal(options: {
+    title: string;
+    message: string;
+    warning?: string;
+    confirmLabel?: string;
+    danger?: boolean;
+    icon?: string;
+    onConfirm: () => void;
+  }): void {
+    this.confirmModal = {
+      visible: true,
+      title: options.title,
+      message: options.message,
+      warning: options.warning || '',
+      confirmLabel: options.confirmLabel || 'Confirmer',
+      danger: options.danger ?? true,
+      icon: options.icon || '⚠️',
+      executing: false,
+      onConfirm: options.onConfirm,
+    };
+  }
+
+  cancelConfirmModal(): void {
+    this.confirmModal.visible = false;
+    this.confirmModal.onConfirm = null;
+  }
+
+  executeConfirmModal(): void {
+    if (this.confirmModal.onConfirm) {
+      this.confirmModal.executing = true;
+      this.confirmModal.onConfirm();
+    }
+  }
+
+  // ===== Timeline detail helpers =====
+
+  hasDetails(details: Record<string, unknown>): boolean {
+    return Object.keys(details).length > 0;
+  }
+
+  getDetailKeys(details: Record<string, unknown>): string[] {
+    return Object.keys(details).slice(0, 5); // Limit to 5 keys for readability
+  }
+
+  formatDetailValue(value: unknown): string {
+    if (value === null || value === undefined) return '-';
+    if (typeof value === 'object') return JSON.stringify(value);
+    return String(value);
+  }
+
   // ===== Diagnostic guidé (F-AUD-08) =====
 
   toggleWizard(): void {
@@ -5288,65 +5726,27 @@ export class SiteDebugTabComponent implements OnInit, AfterViewChecked, OnDestro
       return;
     }
 
-    // Otherwise, trigger a buffer status command
+    // Otherwise, trigger a buffer status command via factorized poller
     this.wizardBufferPollSub?.unsubscribe();
-    this.sitesService.sendCommand(this.siteId, 'get_analytics_buffer_status', {}).subscribe({
-      next: (response: unknown) => {
-        const cmdResponse = response as { success?: boolean; commandId?: string };
-        if (!cmdResponse.commandId) {
-          step.status = 'warning';
-          step.message = 'Impossible de r\u00e9cup\u00e9rer les donn\u00e9es';
-          step.suggestions = ['R\u00e9essayer le diagnostic'];
-          return;
-        }
 
-        const commandId = cmdResponse.commandId;
-        let pollCount = 0;
-        let isPolling = false;
+    const { result$, cancel } = pollCommand<BufferStatus>({
+      siteId: this.siteId,
+      commandName: 'get_analytics_buffer_status',
+      timeoutSeconds: 12,
+      sendCommand: (id, cmd, params) => this.sitesService.sendCommand(id, cmd, params),
+      getCommandStatus: (id, cmdId) => this.sitesService.getCommandStatus(id, cmdId),
+    });
 
-        this.wizardBufferPollSub = interval(1000).subscribe(() => {
-          pollCount++;
-          if (pollCount > 12) {
-            this.wizardBufferPollSub?.unsubscribe();
-            step.status = 'warning';
-            step.message = 'Timeout: le bo\u00eetier ne r\u00e9pond pas';
-            step.suggestions = ['Le bo\u00eetier est peut-\u00eatre surcharg\u00e9, r\u00e9essayer plus tard'];
-            return;
-          }
-          if (isPolling) return;
-          isPolling = true;
+    this.wizardBufferPollSub = new Subscription(() => cancel());
 
-          this.sitesService.getCommandStatus(this.siteId, commandId).subscribe({
-            next: (status: { status: string; result?: Record<string, unknown> }) => {
-              isPolling = false;
-              if (status.status === 'completed') {
-                this.wizardBufferPollSub?.unsubscribe();
-                const result = status.result as unknown as BufferStatus;
-                if (result && result.success !== false) {
-                  this.bufferStatus = result;
-                  this.wizardEvaluateImpressions(step, result);
-                } else {
-                  step.status = 'warning';
-                  step.message = '\u00c9chec de r\u00e9cup\u00e9ration du buffer';
-                  step.suggestions = ['R\u00e9essayer le diagnostic'];
-                }
-              } else if (status.status === 'failed') {
-                this.wizardBufferPollSub?.unsubscribe();
-                step.status = 'warning';
-                step.message = 'Commande \u00e9chou\u00e9e sur le bo\u00eetier';
-                step.suggestions = ['V\u00e9rifier les services sur le bo\u00eetier'];
-              }
-            },
-            error: () => {
-              isPolling = false;
-            }
-          });
-        });
-      },
-      error: () => {
+    result$.subscribe((pollResult: CommandPollResult<BufferStatus>) => {
+      if (pollResult.success && pollResult.data) {
+        this.bufferStatus = pollResult.data;
+        this.wizardEvaluateImpressions(step, pollResult.data);
+      } else {
         step.status = 'warning';
-        step.message = 'Erreur de communication avec le serveur';
-        step.suggestions = ['V\u00e9rifier la connexion r\u00e9seau'];
+        step.message = pollResult.error || '\u00c9chec de r\u00e9cup\u00e9ration du buffer';
+        step.suggestions = ['R\u00e9essayer le diagnostic'];
       }
     });
   }

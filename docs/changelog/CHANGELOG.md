@@ -24,6 +24,33 @@
     `/analytics/traction`, `/sites/:id/sponsors/benchmark`).
   - **Smoke tests** : 4 tests de non-régression pour empêcher le retour vers une vue tech-centric.
 
+- **debug:** Phase C — restructure page debug dashboard (14→12 sections)
+  - **Fusion sections** : "Diagnostic complet" intégré dans "Santé système" (subsection contextuelle),
+    "Configuration JSON" intégré dans "Historique configs" (carte config courante en tête)
+  - **Barre résumé** : dashboard de pilules status (connexion, santé, fichiers, réseau, hotspot, buffer)
+    en tête de page pour vue d'ensemble instantanée
+  - **Données masquées exposées** : hostname, OS, IP, interfaces réseau détaillées, stabilité connexion,
+    détails serveur central (SSL, URL, version)
+  - **Modale confirmation** : remplacement des `confirm()` natifs par modale custom (reboot, restauration config)
+  - **Logs améliorés** : filtre texte, colorisation par niveau (ERROR=rouge, WARN=orange), copier/télécharger
+  - **Fichiers** : tri par nom/taille/date, icônes par type
+  - **Timeline** : filtre par type d'événement, affichage détails expandable
+  - **i18n** : 90+ clés ajoutées (fr/en/es) pour toutes les sections debug
+
+- **debug:** Phase B — refactoring architecture composant debug
+  - **Extraction** : `DebugSummaryBarComponent` standalone (barre résumé → sous-composant réutilisable)
+  - **Factorisation** : utilitaire `pollCommand<T>()` — élimine ~80 lignes de code dupliqué (polling buffer + wizard)
+  - **Tests** : 12 tests unitaires Jasmine (7 summary-bar, 5 command-poller)
+
+### Tests
+
+- **smoke:** tests anti-régression debug page
+  - `site-debug-tab must import DebugSummaryBarComponent` — empêche régression extraction sous-composant
+  - `site-debug-tab must import pollCommand utility` — empêche retour au polling dupliqué
+  - `site-debug-tab must NOT use native confirm()` — empêche réintroduction de confirm() natif
+  - `command-poller.util must export pollCommand and CommandPollResult` — vérifie l'API publique
+  - `i18n fr/en/es must contain debug section keys` — empêche oubli de traduction
+
 # [3.73.0](https://github.com/Tallec7/neopro/compare/v3.72.1...v3.73.0) (2026-02-23)
 
 ### Features
