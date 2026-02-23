@@ -130,6 +130,7 @@ Depuis v3.36.1, le sync-agent maintient une **connexion Socket.IO persistante** 
   - expiration-checker.test.js (vid\u00e9os expir\u00e9es)
   - sync-history.test.js (historique)
   - config.test.js (configuration)
+  - debug-bundle.test.js (complétude bundle, masquage données sensibles, résilience)
 - **Int\u00e9gration** : Tests manuels avec Central Server de dev
 - **E2E** : Playwright (parcours d\u00e9ploiement complet)
 
@@ -156,7 +157,7 @@ raspberry/sync-agent/
 \u2502   \u2502   \u251c\u2500\u2500 diagnostics.js           # Diagnostic syst\u00e8me complet
 \u2502   \u2502   \u251c\u2500\u2500 network-diagnostics.js   # Diagnostic r\u00e9seau
 \u2502   \u2502   \u251c\u2500\u2500 remote-shell.js          # Shell distant s\u00e9curis\u00e9
-\u2502   \u2502   \u251c\u2500\u2500 debug-bundle.js          # Bundle debug pour support (15 sections)
+\u2502   \u2502   \u251c\u2500\u2500 debug-bundle.js          # Bundle debug pour support (16 sections)
 \u2502   \u2502   \u251c\u2500\u2500 wifi-bssid.js            # Config WiFi BSSID
 \u2502   \u2502   \u251c\u2500\u2500 wifi-client.js           # Scan & connect WiFi client (wlan1)
 \u2502   \u2502   \u251c\u2500\u2500 hotspot.js               # Activation hotspot
@@ -191,7 +192,7 @@ raspberry/sync-agent/
 
 ### Debug bundle (`export_debug_bundle`)
 
-Collecte 15 sections de diagnostic en une seule commande (timeout 60s) :
+Collecte 16 sections de diagnostic en une seule commande (timeout 60s) :
 
 | #   | Section               | Source                      | Contenu                                                                                                    |
 | --- | --------------------- | --------------------------- | ---------------------------------------------------------------------------------------------------------- |
@@ -210,9 +211,12 @@ Collecte 15 sections de diagnostic en une seule commande (timeout 60s) :
 | 12  | `transitionMetrics`   | Socket.IO local (read-only) | Métriques de transition vidéo (sans reset des compteurs)                                                   |
 | 13  | `dmesg`               | `dmesg` (kernel)            | 200 dernières lignes kernel — erreurs USB, filesystem, OOM                                                 |
 | 14  | `usbDevices`          | `lsusb`                     | Inventaire périphériques USB (clés WiFi, etc.)                                                             |
-| 15  | `videoFiles`          | Filesystem                  | Liste des fichiers vidéo déployés (max 50)                                                                 |
+| 15  | `wifiClient`          | `wifi-bssid.js`             | SSID, BSSID, signal dBm, IP, BSSID lock, détection mesh (nb APs)                                          |
+| 16  | `videoFiles`          | Filesystem                  | Liste des fichiers vidéo déployés (max 50)                                                                 |
 
 Sécurité : chaque section a son propre try/catch (un échec n'empêche pas les autres). Les données sensibles sont systématiquement masquées.
+
+Tests : `debug-bundle.test.js` vérifie la complétude (garde-fou anti-régression), le masquage des données sensibles, et la résilience aux erreurs individuelles.
 
 ## 11. S\u00e9quence de d\u00e9marrage
 

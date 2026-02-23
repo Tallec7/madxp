@@ -1,3 +1,13 @@
+## [3.73.0] (2026-02-23)
+
+### Features
+
+- **debug:** add WiFi client status (BSSID, signal, mesh detection) to debug export bundle
+  - Nouvelle section `wifiClient` dans le bundle : SSID, BSSID, signal dBm, IP, BSSID lock, mesh detection
+  - Bundle passe de 15 à 16 sections — complétude totale par rapport à l'onglet Debug du dashboard
+  - Type TypeScript `sites.service.ts` corrigé pour refléter la structure réelle du bundle
+  - Tests unitaires `debug-bundle.test.js` : garde-fou anti-régression sur la complétude (liste exhaustive des sections), masquage données sensibles, résilience aux erreurs
+
 ## [3.72.1](https://github.com/Tallec7/neopro/compare/v3.72.0...v3.72.1) (2026-02-23)
 
 ### Bug Fixes
