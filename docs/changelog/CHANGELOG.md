@@ -1,3 +1,9 @@
+# [3.73.0](https://github.com/Tallec7/neopro/compare/v3.72.1...v3.73.0) (2026-02-23)
+
+### Features
+
+- **debug:** add WiFi client status to debug export bundle ([#413](https://github.com/Tallec7/neopro/issues/413)) ([fb0a659](https://github.com/Tallec7/neopro/commit/fb0a65987ef783bff5e911cec10b5aa0ecca6f32))
+
 ## [3.72.1](https://github.com/Tallec7/neopro/compare/v3.72.0...v3.72.1) (2026-02-23)
 
 ### Bug Fixes
