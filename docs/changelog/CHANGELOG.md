@@ -1,3 +1,13 @@
+# [3.77.0](https://github.com/Tallec7/neopro/compare/v3.76.4...v3.77.0) (2026-02-23)
+
+### Bug Fixes
+
+- **debug:** i18n buffer section — replace hardcoded French with translate pipes ([45a3af6](https://github.com/Tallec7/neopro/commit/45a3af698cf7afe7b26f167adbfaf14fdadf41a6))
+
+### Features
+
+- **debug:** complete i18n — all hardcoded French replaced with translate pipes ([46fc699](https://github.com/Tallec7/neopro/commit/46fc699085b84c613794a2f5c26fde9791b79eff))
+
 ## [3.76.4](https://github.com/Tallec7/neopro/compare/v3.76.3...v3.76.4) (2026-02-23)
 
 ### Bug Fixes
