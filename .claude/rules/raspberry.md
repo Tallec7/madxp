@@ -36,7 +36,7 @@ paths:
 | diagnostics | diagnostics.js | Diagnostics système |
 | hotspot | hotspot.js | Gestion hotspot WiFi |
 | network-diag | network-diagnostics.js | Diagnostics réseau |
-| debug-bundle | debug-bundle.js | Export debug pour support |
+| debug-bundle | debug-bundle.js | Export debug pour support (16 sections, testé) |
 | analytics-buf | analytics-buffer.js | Buffer analytics |
 
 ## Config Merge Intelligent
