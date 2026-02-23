@@ -5776,11 +5776,11 @@ export class SiteDebugTabComponent implements OnInit, AfterViewChecked, OnDestro
         step.suggestions = ['Le buffer est volumineux. V\u00e9rifier la synchronisation des analytics.'];
       }
     } else {
-      // No events in buffer - could mean sync is working well OR no activity
-      step.status = 'warning';
-      step.message = 'Aucun \u00e9v\u00e9nement en buffer';
-      step.details = ['Le buffer est vide : soit la sync fonctionne bien, soit il n\'y a pas d\'activit\u00e9 r\u00e9cente.'];
-      step.suggestions = ['V\u00e9rifier que la boucle de diffusion tourne sur la TV'];
+      // Empty buffer is the normal state when sync is working correctly
+      step.status = 'ok';
+      step.message = 'Buffer vide (sync OK)';
+      step.details = ['Le buffer est vide : les impressions sont synchronis\u00e9es normalement.'];
+      step.suggestions = [];
     }
   }
 

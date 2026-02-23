@@ -1148,6 +1148,16 @@ Retourne les statistiques du buffer d'analytics local.
 4. Le sync-agent récupère ces données et les envoie au serveur central
 5. Le dashboard central affiche les statistiques agrégées
 
+**Interprétation du buffer dans le diagnostic guidé (step 4) :**
+
+| État buffer                   | Status diagnostic | Signification                               |
+| ----------------------------- | ----------------- | ------------------------------------------- |
+| `event_count > 0` et `≤ 1000` | ✅ ok             | Événements en attente de sync (normal)      |
+| `event_count > 1000`          | ⚠️ warning        | File d'attente importante, vérifier la sync |
+| `event_count == 0`            | ✅ ok             | Buffer vide — sync fonctionne normalement   |
+
+> **Note :** Un buffer vide est l'état attendu quand la synchronisation fonctionne correctement. Le score santé système (hardware) et le diagnostic guidé (applicatif) doivent rester cohérents : un buffer vide ne doit pas déclencher de warning car il ne reflète pas un problème matériel.
+
 ### API Serveur Central
 
 **Base URL :** `https://neopro-central-production.up.railway.app/api`
@@ -1441,13 +1451,13 @@ GET /ready     - Readiness probe (prêt pour le trafic)
 
 Le site-detail est organisé en **6 onglets** avec des composants Angular standalone :
 
-| Onglet         | Composant                  | Fonctionnalités                                                                                             |
-| -------------- | -------------------------- | ----------------------------------------------------------------------------------------------------------- |
-| **État**       | `site-detail.component.ts` | Métriques, connexion temps réel, alertes, ventilateur                                                       |
-| **Contenu**    | `SiteContentTabComponent`  | Boucles par phase, catégories, mapping analytics                                                            |
-| **Sponsors**   | `SiteSponsorsTabComponent` | CRUD sponsors locaux, KPIs, Chart.js trends, association vidéos (add/remove), magic link d'accès, benchmark |
-| **Paramètres** | `SiteSettingsTabComponent` | Config réseau, hotspot, branding club (logo, couleurs)                                                      |
-| **Profils**    | `SiteProfilesTabComponent` | Multi-config CRUD, déploiement, synchronisation                                                             |
+| Onglet         | Composant                  | Fonctionnalités                                                                                                                                                                                                                                                  |
+| -------------- | -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **État**       | `site-detail.component.ts` | Métriques, connexion temps réel, alertes, ventilateur                                                                                                                                                                                                            |
+| **Contenu**    | `SiteContentTabComponent`  | Boucles par phase, catégories, mapping analytics                                                                                                                                                                                                                 |
+| **Sponsors**   | `SiteSponsorsTabComponent` | CRUD sponsors locaux, KPIs, Chart.js trends, association vidéos (add/remove), magic link d'accès, benchmark                                                                                                                                                      |
+| **Paramètres** | `SiteSettingsTabComponent` | Config réseau, hotspot, branding club (logo, couleurs)                                                                                                                                                                                                           |
+| **Profils**    | `SiteProfilesTabComponent` | Multi-config CRUD, déploiement, synchronisation                                                                                                                                                                                                                  |
 | **Debug**      | `SiteDebugTabComponent`    | 12 sections : diagnostic guidé, santé système, config & historique, fichiers, commandes, logs, réseau, buffer analytics, hotspot, export bundle, clients WiFi, timeline. Sous-composants : `DebugSummaryBarComponent` (barre résumé), `pollCommand<T>()` utility |
 
 #### SiteProfilesTabComponent (multi-config)
