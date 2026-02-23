@@ -1,3 +1,19 @@
+# [3.74.0](https://github.com/Tallec7/neopro/compare/v3.73.0...v3.74.0) (2026-02-23)
+
+### Features
+
+- **analytics:** refonte business-first des pages analytics fleet et club
+  - **Fleet Overview** (`/analytics`) : KPIs business en haut (plays, screen time, impressions sponsors,
+    % fleet online), Chart.js engagement mensuel (lectures + sites actifs), top clubs actifs classés par
+    plays, clubs à relancer (0 play / offline), résumé sponsors, santé flotte condensée en accordéon.
+  - **Club Analytics** (`/sites/:id/analytics`) : suppression des 4 tabs → page unique scrollable,
+    KPIs avec tendance vs période précédente (+X%), Chart.js bar chart engagement quotidien,
+    section sponsors par club (benchmark : impressions, CPI, completion rate via `/sponsors/benchmark`),
+    top contenus avec catégories colorées, santé système en accordéon replié par défaut.
+  - **Aucune modification backend** — utilise les APIs existantes (`/analytics/overview`,
+    `/analytics/traction`, `/sites/:id/sponsors/benchmark`).
+  - **Smoke tests** : 4 tests de non-régression pour empêcher le retour vers une vue tech-centric.
+
 # [3.73.0](https://github.com/Tallec7/neopro/compare/v3.72.1...v3.73.0) (2026-02-23)
 
 ### Features
