@@ -1,3 +1,9 @@
+# [3.78.0](https://github.com/Tallec7/neopro/compare/v3.77.0...v3.78.0) (2026-02-23)
+
+### Features
+
+- **hdmi:** enrichir edid-decode avec infos écran détaillées et catégorisation ([45c9b62](https://github.com/Tallec7/neopro/commit/45c9b628754ecbe177cdbd969f1b1391b8caaf28))
+
 # [3.77.0](https://github.com/Tallec7/neopro/compare/v3.76.4...v3.77.0) (2026-02-23)
 
 ### Bug Fixes
