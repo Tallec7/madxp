@@ -755,6 +755,7 @@ class MetricsCollector {
       serial: null,
       resolution: null,
       display_type: 'unknown',
+      display_category: null,
       detection_method: 'none',
       edid_detailed: null,
     };
@@ -845,9 +846,19 @@ class MetricsCollector {
       color_depth: null,
       supported_resolutions: [],
       audio_supported: false,
+      native_resolution: null,
+      max_refresh_rate: null,
+      hdmi_version: null,
+      hdr_supported: false,
+      color_spaces: [],
+      standby_supported: false,
+      display_product_type: null,
+      diagonal_inches: null,
     };
 
     const lines = output.split('\n');
+    let maxRefresh = 0;
+
     for (const line of lines) {
       const trimmed = line.trim();
 
@@ -890,9 +901,132 @@ class MetricsCollector {
       if (/(?:Basic audio support|Audio:)/i.test(trimmed)) {
         result.audio_supported = true;
       }
+
+      // Résolution native : premier DTD (Detailed Timing Descriptor)
+      if (!result.native_resolution) {
+        const nativeMatch = trimmed.match(/DTD\s+1:\s+(\d{3,5})x(\d{3,5})\s+[\d.]+\s*Hz/);
+        if (nativeMatch) {
+          result.native_resolution = `${nativeMatch[1]}x${nativeMatch[2]}`;
+        }
+      }
+
+      // Refresh rate max depuis tous les DTDs et timings
+      const hzMatch = trimmed.match(/(\d+(?:\.\d+)?)\s*Hz/);
+      if (hzMatch) {
+        const hz = parseFloat(hzMatch[1]);
+        if (hz > maxRefresh && hz < 500) {
+          maxRefresh = hz;
+        }
+      }
+
+      // Version HDMI déduite du TMDS clock max
+      const tmdsMatch = trimmed.match(/Maximum TMDS clock:\s*(\d+)\s*MHz/i);
+      if (tmdsMatch) {
+        const tmds = parseInt(tmdsMatch[1], 10);
+        if (tmds >= 600) result.hdmi_version = '2.1';
+        else if (tmds >= 300) result.hdmi_version = '2.0';
+        else result.hdmi_version = '1.4';
+      }
+
+      // HDR : "HDR Static Metadata", "SMPTE ST2084", "Hybrid Log-Gamma"
+      if (/HDR Static Metadata|SMPTE ST2084|HDR10|Hybrid Log-Gamma|HLG/i.test(trimmed)) {
+        result.hdr_supported = true;
+      }
+
+      // Espaces couleur
+      if (/BT2020RGB/i.test(trimmed) && !result.color_spaces.includes('BT2020_RGB')) {
+        result.color_spaces.push('BT2020_RGB');
+      }
+      if (/BT2020YCC/i.test(trimmed) && !result.color_spaces.includes('BT2020_YCC')) {
+        result.color_spaces.push('BT2020_YCC');
+      }
+      if (/DC_Y444|YCbCr\s*4:4:4/i.test(trimmed) && !result.color_spaces.includes('YCbCr_444')) {
+        result.color_spaces.push('YCbCr_444');
+      }
+      if (/YCbCr\s*4:2:2/i.test(trimmed) && !result.color_spaces.includes('YCbCr_422')) {
+        result.color_spaces.push('YCbCr_422');
+      }
+      if (/YCbCr\s*4:2:0/i.test(trimmed) && !result.color_spaces.includes('YCbCr_420')) {
+        result.color_spaces.push('YCbCr_420');
+      }
+
+      // Gestion de l'alimentation (DPMS)
+      if (/DPMS levels:/i.test(trimmed)) {
+        result.standby_supported = true;
+      }
+
+      // Type de produit : "Display Product Type: ..."
+      const productTypeMatch = trimmed.match(/Display Product Type:\s*(.+)/i);
+      if (productTypeMatch) {
+        result.display_product_type = productTypeMatch[1].trim().toLowerCase();
+      }
+    }
+
+    if (maxRefresh > 0) {
+      result.max_refresh_rate = Math.round(maxRefresh);
+    }
+
+    // Diagonale en pouces calculée depuis la taille physique
+    if (result.screen_size) {
+      const sizeDigMatch = result.screen_size.match(/(\d+)x(\d+)cm/);
+      if (sizeDigMatch) {
+        const w = parseInt(sizeDigMatch[1], 10);
+        const h = parseInt(sizeDigMatch[2], 10);
+        result.diagonal_inches = Math.round(Math.sqrt(w * w + h * h) / 2.54);
+      }
     }
 
     return result;
+  }
+
+  /**
+   * Infère la catégorie d'écran en croisant nom de modèle, taille, audio et type détecté.
+   * @param {string|null} model - Nom du modèle EDID
+   * @param {string} displayType - 'tv' | 'monitor' | 'unknown'
+   * @param {object|null} edidDetailed - Données edid-decode enrichies
+   * @returns {string} 'tv_oled' | 'tv_qled' | 'tv_qned' | 'tv_led' | 'tv_lcd' | 'tv_plasma' | 'tv' | 'monitor' | 'projector' | 'unknown'
+   */
+  _inferDisplayCategory(model, displayType, edidDetailed) {
+    const modelUpper = (model || '').toUpperCase();
+    const detailed = edidDetailed || {};
+
+    // Projecteur détecté via EDID
+    if (detailed.display_product_type && /projector/i.test(detailed.display_product_type)) {
+      return 'projector';
+    }
+
+    // Technologie de dalle détectée depuis le nom de modèle
+    // Ordre important : OLED avant LED, QLED avant LED
+    let panelTech = null;
+    if (/OLED/.test(modelUpper)) {
+      panelTech = 'oled';
+    } else if (/QNED/.test(modelUpper)) {
+      panelTech = 'qned';
+    } else if (/QLED/.test(modelUpper)) {
+      panelTech = 'qled';
+    } else if (/NANO(?:CELL)?/.test(modelUpper)) {
+      panelTech = 'led';
+    } else if (/\bLED\b/.test(modelUpper)) {
+      panelTech = 'led';
+    } else if (/\bLCD\b/.test(modelUpper)) {
+      panelTech = 'lcd';
+    } else if (/PLASMA|PDP/.test(modelUpper)) {
+      panelTech = 'plasma';
+    }
+
+    // Déterminer TV vs moniteur en croisant tous les signaux
+    const diag = detailed.diagonal_inches;
+    const isTV = displayType === 'tv' ||
+                 detailed.audio_supported === true ||
+                 (diag && diag >= 32);
+    const isMonitor = displayType === 'monitor' ||
+                      (diag && diag < 28 && !detailed.audio_supported);
+
+    if (isTV && panelTech) return `tv_${panelTech}`;
+    if (isTV) return 'tv';
+    if (isMonitor) return 'monitor';
+
+    return 'unknown';
   }
 
   /**
@@ -1003,6 +1137,11 @@ class MetricsCollector {
           displayInfo.display_type = 'monitor';
         }
       }
+
+      // Inférer la catégorie d'écran (tv_oled, tv_led, monitor, projector, etc.)
+      displayInfo.display_category = this._inferDisplayCategory(
+        displayInfo.model, displayInfo.display_type, displayInfo.edid_detailed
+      );
 
       // Calculer un score de santé global
       let healthScore = 100;

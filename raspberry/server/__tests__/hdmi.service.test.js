@@ -174,6 +174,7 @@ describe('HdmiService', () => {
   Basic Display Parameters & Features:
     Digital display
     Maximum image size: 120 cm x 68 cm
+    DPMS levels: Standby Suspend Off
   Detailed Timing Descriptors:
     DTD 1:  3840x2160   30.000000 Hz  16:9
     DTD 2:  1920x1080   60.000000 Hz  16:9
@@ -183,6 +184,14 @@ Block 1, CEC Extension:
     Linear PCM:
       Max channels: 2
   Color depth: 8 bits
+  HDMI Vendor-Specific Data Block:
+    Maximum TMDS clock: 300 MHz
+    DC_Y444
+  HDR Static Metadata Data Block:
+    SMPTE ST2084
+  Colorimetry Data Block:
+    BT2020RGB
+    BT2020YCC
 `;
 
       const result = service._parseEdidDecodeOutput(output);
@@ -194,6 +203,16 @@ Block 1, CEC Extension:
       expect(result.audio_supported).toBe(true);
       expect(result.supported_resolutions).toContain('3840x2160');
       expect(result.supported_resolutions).toContain('1920x1080');
+      // Nouveaux champs
+      expect(result.native_resolution).toBe('3840x2160');
+      expect(result.max_refresh_rate).toBe(60);
+      expect(result.hdmi_version).toBe('2.0');
+      expect(result.hdr_supported).toBe(true);
+      expect(result.color_spaces).toContain('YCbCr_444');
+      expect(result.color_spaces).toContain('BT2020_RGB');
+      expect(result.color_spaces).toContain('BT2020_YCC');
+      expect(result.standby_supported).toBe(true);
+      expect(result.diagonal_inches).toBe(54);
     });
 
     it('should parse a PC monitor without audio', () => {
@@ -213,6 +232,11 @@ Block 1, CEC Extension:
       expect(result.year_of_manufacture).toBe(2022);
       expect(result.audio_supported).toBe(false);
       expect(result.supported_resolutions).toContain('2560x1440');
+      expect(result.native_resolution).toBe('2560x1440');
+      expect(result.max_refresh_rate).toBe(60);
+      expect(result.diagonal_inches).toBe(27);
+      expect(result.hdr_supported).toBe(false);
+      expect(result.hdmi_version).toBeNull();
     });
 
     it('should return defaults for empty output', () => {
@@ -224,6 +248,14 @@ Block 1, CEC Extension:
       expect(result.color_depth).toBeNull();
       expect(result.supported_resolutions).toEqual([]);
       expect(result.audio_supported).toBe(false);
+      expect(result.native_resolution).toBeNull();
+      expect(result.max_refresh_rate).toBeNull();
+      expect(result.hdmi_version).toBeNull();
+      expect(result.hdr_supported).toBe(false);
+      expect(result.color_spaces).toEqual([]);
+      expect(result.standby_supported).toBe(false);
+      expect(result.display_product_type).toBeNull();
+      expect(result.diagonal_inches).toBeNull();
     });
 
     it('should detect analog display', () => {
@@ -243,6 +275,124 @@ Block 1, CEC Extension:
 
       const result = service._parseEdidDecodeOutput(output);
       expect(result.year_of_manufacture).toBe(2020);
+    });
+
+    it('should detect HDMI 2.1 from high TMDS clock', () => {
+      const output = `  HDMI Vendor-Specific Data Block:
+    Maximum TMDS clock: 600 MHz
+`;
+
+      const result = service._parseEdidDecodeOutput(output);
+      expect(result.hdmi_version).toBe('2.1');
+    });
+
+    it('should detect HDMI 1.4 from low TMDS clock', () => {
+      const output = `  HDMI Vendor-Specific Data Block:
+    Maximum TMDS clock: 165 MHz
+`;
+
+      const result = service._parseEdidDecodeOutput(output);
+      expect(result.hdmi_version).toBe('1.4');
+    });
+
+    it('should detect Display Product Type', () => {
+      const output = `  Display Product Type: Projector
+`;
+
+      const result = service._parseEdidDecodeOutput(output);
+      expect(result.display_product_type).toBe('projector');
+    });
+
+    it('should detect HLG HDR', () => {
+      const output = `  HDR Static Metadata Data Block:
+    Hybrid Log-Gamma
+`;
+
+      const result = service._parseEdidDecodeOutput(output);
+      expect(result.hdr_supported).toBe(true);
+    });
+  });
+
+  describe('_inferDisplayCategory', () => {
+    it('should detect tv_oled from model name', () => {
+      const result = service._inferDisplayCategory('LG OLED55C1', 'tv', {
+        audio_supported: true,
+        diagonal_inches: 55,
+      });
+      expect(result).toBe('tv_oled');
+    });
+
+    it('should detect tv_qled from model name', () => {
+      const result = service._inferDisplayCategory('SAMSUNG QLED', 'tv', {
+        audio_supported: true,
+        diagonal_inches: 65,
+      });
+      expect(result).toBe('tv_qled');
+    });
+
+    it('should detect tv_led from model name', () => {
+      const result = service._inferDisplayCategory('LED TV', 'tv', {
+        audio_supported: true,
+        diagonal_inches: 43,
+      });
+      expect(result).toBe('tv_led');
+    });
+
+    it('should prefer OLED over LED when model contains OLED', () => {
+      const result = service._inferDisplayCategory('OLED65', 'tv', {
+        audio_supported: true,
+        diagonal_inches: 65,
+      });
+      expect(result).toBe('tv_oled');
+    });
+
+    it('should detect monitor from small screen without audio', () => {
+      const result = service._inferDisplayCategory('DELL P2419H', 'monitor', {
+        audio_supported: false,
+        diagonal_inches: 24,
+      });
+      expect(result).toBe('monitor');
+    });
+
+    it('should detect projector from display_product_type', () => {
+      const result = service._inferDisplayCategory('EPSON', 'unknown', {
+        display_product_type: 'projector',
+      });
+      expect(result).toBe('projector');
+    });
+
+    it('should infer tv from large screen with audio even without model keyword', () => {
+      const result = service._inferDisplayCategory('SAMSUNG', 'unknown', {
+        audio_supported: true,
+        diagonal_inches: 55,
+      });
+      expect(result).toBe('tv');
+    });
+
+    it('should infer tv from display_type alone', () => {
+      const result = service._inferDisplayCategory('SAMSUNG', 'tv', null);
+      expect(result).toBe('tv');
+    });
+
+    it('should return unknown when no signals available', () => {
+      const result = service._inferDisplayCategory(null, 'unknown', null);
+      expect(result).toBe('unknown');
+    });
+
+    it('should detect tv_plasma from model name', () => {
+      const result = service._inferDisplayCategory('PLASMA TV', 'tv', {
+        audio_supported: true,
+        diagonal_inches: 50,
+      });
+      expect(result).toBe('tv_plasma');
+    });
+
+    it('should detect tv_qned from model name', () => {
+      const result = service._inferDisplayCategory('LG QNED81', 'tv', {
+        audio_supported: true,
+        diagonal_inches: 55,
+      });
+      expect(result).toBe('tv_qned');
     });
   });
 });
