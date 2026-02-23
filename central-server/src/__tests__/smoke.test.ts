@@ -1945,7 +1945,12 @@ describe('Debug page architecture guards', () => {
     const esJson = fs.readFileSync(path.join(repoRoot, 'central-dashboard/src/assets/i18n/es.json'), 'utf8');
 
     // Check critical keys exist in all 3 languages
-    const criticalKeys = ['debug.summaryFiles', 'debug.healthTitle', 'debug.logsTitle', 'debug.networkTitle'];
+    const criticalKeys = ['debug.summaryFiles', 'debug.healthTitle', 'debug.logsTitle', 'debug.networkTitle',
+      'debug.bufferPending', 'debug.bufferVideoPlays', 'debug.bufferEvents', 'debug.bufferRefresh',
+      'debug.wizardCheckingConnectivity', 'debug.wizardDeviceOnline', 'debug.wizardNoVideos',
+      'debug.wizardLoopEmpty', 'debug.wizardAllOk', 'debug.timelineAll', 'debug.timelineDeployments',
+      'debug.healthFanTitle', 'debug.healthHdmiConnection', 'debug.healthSystemdServices',
+      'debug.exportOffline', 'debug.rebootRequiredTitle', 'debug.hotspotWaiting'];
     for (const key of criticalKeys) {
       const parts = key.split('.');
       expect({ [`fr_has_${key}`]: frJson.includes(`"${parts[1]}"`) })
@@ -1981,6 +1986,90 @@ describe('Debug page architecture guards', () => {
       .toEqual({ hasDoExecuteCommand: true });
     expect({ hasDoRestoreVersion: debugTab.includes('doRestoreVersion(') })
       .toEqual({ hasDoRestoreVersion: true });
+  });
+
+  it('i18n key count must be identical across fr/en/es', () => {
+    // All 3 translation files must have the exact same debug keys.
+    // A mismatch means a key was added to one language but not the others.
+    const repoRoot2 = path.resolve(__dirname, '..', '..', '..');
+    const frObj = JSON.parse(fs.readFileSync(path.join(repoRoot2, 'central-dashboard/src/assets/i18n/fr.json'), 'utf8'));
+    const enObj = JSON.parse(fs.readFileSync(path.join(repoRoot2, 'central-dashboard/src/assets/i18n/en.json'), 'utf8'));
+    const esObj = JSON.parse(fs.readFileSync(path.join(repoRoot2, 'central-dashboard/src/assets/i18n/es.json'), 'utf8'));
+    const frKeys = Object.keys(frObj['debug'] || {}).sort();
+    const enKeys = Object.keys(enObj['debug'] || {}).sort();
+    const esKeys = Object.keys(esObj['debug'] || {}).sort();
+    expect({ fr_en_count_match: frKeys.length === enKeys.length })
+      .toEqual({ fr_en_count_match: true });
+    expect({ fr_es_count_match: frKeys.length === esKeys.length })
+      .toEqual({ fr_es_count_match: true });
+    // Check that the key sets are identical (not just counts)
+    const frMissing = frKeys.filter(k => !enKeys.includes(k));
+    const enMissing = enKeys.filter(k => !frKeys.includes(k));
+    expect({ fr_keys_missing_in_en: frMissing }).toEqual({ fr_keys_missing_in_en: [] });
+    expect({ en_keys_missing_in_fr: enMissing }).toEqual({ en_keys_missing_in_fr: [] });
+  });
+
+  it('site-debug-tab template must not contain hardcoded French UI words', () => {
+    // Phase D eliminated all hardcoded French from the debug page template.
+    // This guard prevents regression: any new UI text must use translate pipe.
+    const templateMatch = debugTab.match(/template\s*:\s*`([\s\S]*?)`/);
+    expect(templateMatch).toBeTruthy();
+    const template = templateMatch![1];
+
+    // Strip HTML comments and Angular attribute bindings to isolate visible text
+    const cleaned = template
+      .replace(/<!--[\s\S]*?-->/g, '')        // HTML comments
+      .replace(/\[[\w.]+\]\s*=\s*"[^"]*"/g, '') // Angular attribute bindings
+      .replace(/class\s*=\s*"[^"]*"/g, '')    // CSS class attributes
+      .replace(/\*ngIf\s*=\s*"[^"]*"/g, '')   // *ngIf directives
+      .replace(/\*ngFor\s*=\s*"[^"]*"/g, '')  // *ngFor directives
+      .replace(/\([\w.]+\)\s*=\s*"[^"]*"/g, ''); // Event bindings
+
+    // French UI words that must never appear as visible text in the template.
+    // Words with accents are safe markers — they cannot be CSS/JS identifiers.
+    const forbiddenInTemplate = [
+      'Chargement',     // → debug.healthLoading | translate
+      'Récupération',   // → debug.logsRetrieving | translate
+      'Rafraîchir',     // → debug.networkRefresh | translate
+      'Annuler',        // → debug.confirmCancel | translate
+      'Redémarrage',    // → debug.rebootRequiredTitle | translate
+      'Ventilateur',    // → debug.healthFanTitle | translate
+      'Alimentation',   // → debug.healthPower | translate
+      'événement',      // → debug.timelineEvents | translate
+      'Déploiements',   // → debug.timelineDeployments | translate
+      'Collecte',       // → debug.exportCollecting | translate
+      'Sous-voltage',   // → debug.healthUnderVoltage | translate
+      'Mémoire GPU',    // → debug.healthGpuMem | translate
+      'Température',    // → debug.healthTemperature | translate
+    ];
+
+    for (const word of forbiddenInTemplate) {
+      const found = cleaned.includes(word);
+      expect({ [`template_has_hardcoded_${word}`]: found })
+        .toEqual({ [`template_has_hardcoded_${word}`]: false });
+    }
+  });
+
+  it('site-debug-tab wizard methods must use translate.instant()', () => {
+    // Phase D migrated all wizard step messages to translate.instant().
+    // Hardcoded French in wizard methods would show untranslated text to en/es users.
+    // Each wizard method must call translate.instant() at least once.
+    const wizardMethods = [
+      'wizardCheckConnectivity',
+      'wizardCheckVideos',
+      'wizardCheckLoop',
+      'wizardCheckImpressions',
+      'wizardEvaluateImpressions',
+      'wizardBuildSummary',
+    ];
+    for (const method of wizardMethods) {
+      // Find the method body and check it uses translate.instant
+      const methodRegex = new RegExp(`private ${method}\\b[\\s\\S]*?(?=private \\w|^\\}$)`, 'm');
+      const methodMatch = debugTab.match(methodRegex);
+      const usesTranslate = methodMatch ? methodMatch[0].includes('translate.instant') : false;
+      expect({ [`${method}_uses_translate`]: usesTranslate })
+        .toEqual({ [`${method}_uses_translate`]: true });
+    }
   });
 });
 

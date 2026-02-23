@@ -336,8 +336,9 @@
 | IMP-AUD-30 | Métrique Prometheus sponsor auto-resolution (resolved/skipped/unresolved) | Production | `metrics.service.ts`                                                       | Fév 2026     |
 | IMP-AUD-31 | Dropdown vidéo filtré aux vidéos déployées sur le Pi (+ cache API)        | Production | `site-sponsors-tab.component.ts`                                           | Fév 2026     |
 | IMP-AUD-32 | Badge sponsor dans catégories et sous-catégories                          | Production | `site-content-tab.component.ts`                                            | Fév 2026     |
-| IMP-AUD-33 | Debug page restructure (14→12 sections, summary bar, modals, i18n 90+ clés) | Production | `site-debug-tab.component.ts`, `debug-summary-bar.component.ts`            | Fév 2026     |
+| IMP-AUD-33 | Debug page restructure (14→12 sections, summary bar, modals, i18n 250+ clés) | Production | `site-debug-tab.component.ts`, `debug-summary-bar.component.ts`            | Fév 2026     |
 | IMP-AUD-34 | Debug page refactoring (extraction composants, pollCommand utility, tests)    | Production | `command-poller.util.ts`, `debug-summary-bar.component.ts`                 | Fév 2026     |
+| IMP-AUD-35 | Debug page i18n complet — 0 texte français hardcodé (template + TS + wizard) | Production | `site-debug-tab.component.ts`, `fr/en/es.json`                             | Fév 2026     |
 
 ---
 
@@ -345,7 +346,7 @@
 
 | Métrique                  | Valeur                                                                                                         |
 | ------------------------- | -------------------------------------------------------------------------------------------------------------- |
-| **Features implémentées** | **225** (+26 audit, +8 E-22 TV+LED dual, +6 sponsor UX, +2 résilience Pi/OTA, +3 hotspot WiFi, +2 debug page) |
+| **Features implémentées** | **226** (+26 audit, +8 E-22 TV+LED dual, +6 sponsor UX, +2 résilience Pi/OTA, +3 hotspot WiFi, +3 debug page) |
 | Domaines fonctionnels     | 14                                                                                             |
 | Controllers API           | 29 (+sponsor-alerts)                                                                           |
 | Services métier           | 40 (+sponsor-alert, sponsor-stats, sponsor-auto-resolution)                                    |

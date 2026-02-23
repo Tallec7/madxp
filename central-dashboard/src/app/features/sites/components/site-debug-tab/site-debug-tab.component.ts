@@ -1,7 +1,7 @@
 import { Component, Input, Output, EventEmitter, OnInit, OnDestroy, ViewChild, ElementRef, AfterViewChecked } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { TranslateModule } from '@ngx-translate/core';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { Subscription, interval } from 'rxjs';
 import { pollCommand, CommandPollResult } from './command-poller.util';
 import { SitesService } from '../../../../core/services/sites.service';
@@ -308,7 +308,7 @@ interface WizardStep {
         <div class="debug-header" (click)="toggleWizard()">
           <span class="expand-icon">{{ showWizard ? '&#9660;' : '&#9654;' }}</span>
           <span class="debug-icon">&#128270;</span>
-          <h4>Diagnostic guid&eacute;</h4>
+          <h4>{{ 'debug.wizardTitle' | translate }}</h4>
           <span class="debug-stats" *ngIf="wizardCompleted && !showWizard"
             [class.health-ok]="getWizardOverallStatus() === 'ok'"
             [class.health-warning]="getWizardOverallStatus() === 'warning'"
@@ -335,11 +335,10 @@ interface WizardStep {
           <!-- Wizard not started -->
           <div *ngIf="!wizardRunning && !wizardCompleted" class="wizard-start">
             <p class="wizard-intro">
-              Ce diagnostic v&eacute;rifie en 5 &eacute;tapes le bon fonctionnement du site :
-              connectivit&eacute;, vid&eacute;os, boucle de diffusion, impressions, et synth&egrave;se.
+              {{ 'debug.wizardIntro' | translate }}
             </p>
             <button class="btn btn-primary" (click)="startWizard()">
-              &#128270; Lancer le diagnostic
+              &#128270; {{ 'debug.wizardStart' | translate }}
             </button>
           </div>
 
@@ -348,7 +347,7 @@ interface WizardStep {
             <div class="wizard-step-header">
               <span class="wizard-step-icon">{{ getWizardStepStatusIcon(wizardSteps[wizardCurrentStep].status) }}</span>
               <div class="wizard-step-title">
-                <h5>&Eacute;tape {{ wizardCurrentStep + 1 }}/{{ wizardSteps.length }} &mdash; {{ wizardSteps[wizardCurrentStep].title }}</h5>
+                <h5>{{ 'debug.wizardStep' | translate }} {{ wizardCurrentStep + 1 }}/{{ wizardSteps.length }} &mdash; {{ wizardSteps[wizardCurrentStep].title }}</h5>
                 <span class="wizard-step-subtitle" *ngIf="wizardSteps[wizardCurrentStep].message">
                   {{ wizardSteps[wizardCurrentStep].message }}
                 </span>
@@ -364,7 +363,7 @@ interface WizardStep {
 
             <!-- Suggestions (when there are issues) -->
             <div class="wizard-step-suggestions" *ngIf="wizardSteps[wizardCurrentStep].suggestions.length > 0">
-              <h6>Suggestions :</h6>
+              <h6>{{ 'debug.wizardSuggestions' | translate }} :</h6>
               <ul>
                 <li *ngFor="let suggestion of wizardSteps[wizardCurrentStep].suggestions">{{ suggestion }}</li>
               </ul>
@@ -390,17 +389,17 @@ interface WizardStep {
             <div class="wizard-nav">
               <button class="btn btn-secondary btn-sm" *ngIf="wizardCurrentStep > 0"
                 (click)="wizardPreviousStep()">
-                &larr; Pr&eacute;c&eacute;dent
+                &larr; {{ 'debug.wizardPrevious' | translate }}
               </button>
               <div class="wizard-nav-spacer"></div>
               <button class="btn btn-secondary btn-sm" *ngIf="wizardCompleted"
                 (click)="startWizard()">
-                &#128260; Relancer
+                &#128260; {{ 'debug.wizardRestart' | translate }}
               </button>
               <button class="btn btn-primary btn-sm" *ngIf="wizardRunning && wizardCurrentStep < wizardSteps.length - 1"
                 (click)="wizardNextStep()"
                 [disabled]="wizardSteps[wizardCurrentStep].status === 'checking'">
-                Suivant &rarr;
+                {{ 'debug.wizardNext' | translate }} &rarr;
               </button>
             </div>
           </div>
@@ -414,15 +413,15 @@ interface WizardStep {
           <span class="debug-icon">📂</span>
           <h4>{{ 'debug.filesTitle' | translate }}</h4>
           <span class="debug-stats" *ngIf="localVideos.length > 0">
-            {{ localVideos.length }} fichiers | {{ formatBytes(getTotalSize()) }}
+            {{ localVideos.length }} {{ 'debug.summaryFiles' | translate }} | {{ formatBytes(getTotalSize()) }}
           </span>
         </div>
 
         <div class="debug-content" *ngIf="showFiles">
           <div class="storage-bar" *ngIf="localStorage">
             <div class="storage-info">
-              <span>{{ formatBytes(localStorage.used) }} utilisé sur {{ formatBytes(localStorage.total) }}</span>
-              <span>{{ formatBytes(localStorage.free) }} libre</span>
+              <span>{{ formatBytes(localStorage.used) }} {{ 'debug.filesUsed' | translate }} {{ formatBytes(localStorage.total) }}</span>
+              <span>{{ formatBytes(localStorage.free) }} {{ 'debug.filesFree' | translate }}</span>
             </div>
             <div class="storage-progress">
               <div class="storage-fill" [style.width.%]="getStoragePercent()"></div>
@@ -431,9 +430,9 @@ interface WizardStep {
 
           <div class="files-list" *ngIf="localVideos.length > 0">
             <div class="file-row header">
-              <span class="file-name file-sortable" (click)="sortFiles('filename')">Fichier {{ fileSortField === 'filename' ? (fileSortAsc ? '▲' : '▼') : '' }}</span>
-              <span class="file-category file-sortable" (click)="sortFiles('category')">Catégorie {{ fileSortField === 'category' ? (fileSortAsc ? '▲' : '▼') : '' }}</span>
-              <span class="file-size file-sortable" (click)="sortFiles('size')">Taille {{ fileSortField === 'size' ? (fileSortAsc ? '▲' : '▼') : '' }}</span>
+              <span class="file-name file-sortable" (click)="sortFiles('filename')" role="button" tabindex="0" (keydown.enter)="sortFiles('filename')" (keydown.space)="sortFiles('filename')">{{ 'debug.filesFileName' | translate }} {{ fileSortField === 'filename' ? (fileSortAsc ? '▲' : '▼') : '' }}</span>
+              <span class="file-category file-sortable" (click)="sortFiles('category')" role="button" tabindex="0" (keydown.enter)="sortFiles('category')" (keydown.space)="sortFiles('category')">{{ 'debug.filesCategory' | translate }} {{ fileSortField === 'category' ? (fileSortAsc ? '▲' : '▼') : '' }}</span>
+              <span class="file-size file-sortable" (click)="sortFiles('size')" role="button" tabindex="0" (keydown.enter)="sortFiles('size')" (keydown.space)="sortFiles('size')">{{ 'debug.filesSize' | translate }} {{ fileSortField === 'size' ? (fileSortAsc ? '▲' : '▼') : '' }}</span>
             </div>
             <div class="file-row" *ngFor="let video of getSortedVideos()">
               <span class="file-name" [title]="video.path">{{ video.filename }}</span>
@@ -442,11 +441,11 @@ interface WizardStep {
             </div>
           </div>
           <p class="empty-hint" *ngIf="localVideos.length === 0">
-            Aucun fichier synchronisé. Le boîtier doit être connecté pour remonter sa liste de fichiers.
+            {{ 'debug.filesNoFilesSync' | translate }}
           </p>
 
           <div class="sync-info" *ngIf="lastVideoSync">
-            <span class="sync-label">Dernière synchronisation:</span>
+            <span class="sync-label">{{ 'debug.filesLastSyncLabel' | translate }}:</span>
             <span class="sync-value">{{ lastVideoSync | date:'dd/MM/yyyy HH:mm' }}</span>
           </div>
         </div>
@@ -464,24 +463,24 @@ interface WizardStep {
             [class.health-critical]="healthStatus.healthStatus === 'critical'">
             {{ healthStatus.healthScore }}% - {{ getHealthStatusLabel(healthStatus.healthStatus) }}
           </span>
-          <span class="debug-stats" *ngIf="(!healthStatus || healthStatus.healthScore === undefined) && !loadingHealthStatus">Non chargé</span>
-          <span class="debug-stats" *ngIf="loadingHealthStatus">Chargement...</span>
+          <span class="debug-stats" *ngIf="(!healthStatus || healthStatus.healthScore === undefined) && !loadingHealthStatus">{{ 'debug.healthNotLoaded' | translate }}</span>
+          <span class="debug-stats" *ngIf="loadingHealthStatus">{{ 'debug.healthLoadingShort' | translate }}</span>
         </div>
 
         <div class="debug-content" *ngIf="showHealthStatus">
           <div *ngIf="!isConnected" class="offline-warning">
-            ⚠️ Le boîtier doit être connecté pour récupérer l'état de santé.
+            ⚠️ {{ 'debug.healthOffline' | translate }}
           </div>
 
           <div *ngIf="isConnected && !healthStatus && !loadingHealthStatus" class="health-actions">
             <button class="btn btn-primary btn-sm" (click)="loadHealthStatus()">
-              🔄 Charger l'état de santé
+              🔄 {{ 'debug.healthLoad' | translate }}
             </button>
           </div>
 
           <div *ngIf="loadingHealthStatus" class="loading-inline">
             <div class="spinner-small"></div>
-            <span>Récupération des données...</span>
+            <span>{{ 'debug.healthLoading' | translate }}</span>
           </div>
 
           <div *ngIf="healthStatus && healthStatus.healthScore !== undefined" class="health-content">
@@ -511,7 +510,7 @@ interface WizardStep {
 
             <!-- Alertes/Issues -->
             <div *ngIf="healthStatus.issues && healthStatus.issues.length > 0" class="health-issues">
-              <h5>⚠️ Problèmes détectés ({{ healthStatus.issues.length }})</h5>
+              <h5>⚠️ {{ 'debug.healthIssues' | translate }} ({{ healthStatus.issues.length }})</h5>
               <div class="issue-item" *ngFor="let issue of healthStatus.issues"
                 [class.issue-critical]="issue.severity === 'critical'"
                 [class.issue-warning]="issue.severity === 'warning'">
@@ -528,29 +527,29 @@ interface WizardStep {
               <h5>🎮 GPU {{ healthStatus.gpu.is_pi5 ? '(Pi 5)' : '' }}</h5>
               <div class="health-grid">
                 <div class="health-metric" [class.metric-warning]="healthStatus.gpu.gpu_mem_warning">
-                  <span class="metric-label">Mémoire GPU</span>
+                  <span class="metric-label">{{ 'debug.healthGpuMem' | translate }}</span>
                   <span class="metric-value">
                     <ng-container *ngIf="healthStatus.gpu.is_pi5; else legacyGpuMem">
                       <!-- Pi 5: mémoire GPU dynamique (CMA), la valeur 4M est un indicateur legacy -->
-                      <span class="metric-ok">✅ Dynamique (CMA)</span>
+                      <span class="metric-ok">✅ {{ 'debug.healthDynamic' | translate }}</span>
                     </ng-container>
                     <ng-template #legacyGpuMem>
                       {{ healthStatus.gpu.gpu_mem_mb !== null ? healthStatus.gpu.gpu_mem_mb + 'M' : 'N/A' }}
-                      <span class="metric-hint" *ngIf="healthStatus.gpu.gpu_mem_warning">⚠️ Min: 128M</span>
+                      <span class="metric-hint" *ngIf="healthStatus.gpu.gpu_mem_warning">⚠️ {{ 'debug.healthMinGpu' | translate }}</span>
                     </ng-template>
                   </span>
                 </div>
                 <div class="health-metric" [class.metric-warning]="healthStatus.gpu.temperature_warning">
-                  <span class="metric-label">Température</span>
+                  <span class="metric-label">{{ 'debug.healthTemperature' | translate }}</span>
                   <span class="metric-value">
                     {{ healthStatus.gpu.temperature !== null ? healthStatus.gpu.temperature + '°C' : 'N/A' }}
-                    <span class="metric-hint" *ngIf="healthStatus.gpu.temperature_warning">🔥 Élevée</span>
+                    <span class="metric-hint" *ngIf="healthStatus.gpu.temperature_warning">🔥 {{ 'debug.healthTempHigh' | translate }}</span>
                   </span>
                 </div>
                 <div class="health-metric" [class.metric-warning]="!healthStatus.gpu.voltage_ok">
-                  <span class="metric-label">Alimentation</span>
+                  <span class="metric-label">{{ 'debug.healthPower' | translate }}</span>
                   <span class="metric-value">
-                    {{ healthStatus.gpu.voltage_ok ? '✅ OK' : '⚠️ Sous-voltage' }}
+                    {{ healthStatus.gpu.voltage_ok ? ('✅ ' + ('debug.healthVoltageOk' | translate)) : ('⚠️ ' + ('debug.healthUnderVoltage' | translate)) }}
                   </span>
                 </div>
                 <div class="health-metric" [class.metric-warning]="healthStatus.gpu.throttling_active">
@@ -568,34 +567,34 @@ interface WizardStep {
 
             <!-- Fan Status -->
             <div class="health-section" *ngIf="healthStatus.fanStatus?.present">
-              <h5>🌀 Ventilateur {{ healthStatus.fanStatus?.is_pi5 ? '(Pi 5 Active Cooler)' : '(Fan HAT)' }}</h5>
+              <h5>🌀 {{ 'debug.healthFanTitle' | translate }} {{ healthStatus.fanStatus?.is_pi5 ? '(Pi 5 Active Cooler)' : '(Fan HAT)' }}</h5>
               <div class="health-grid">
                 <div class="health-metric">
-                  <span class="metric-label">Type</span>
+                  <span class="metric-label">{{ 'debug.healthFanType' | translate }}</span>
                   <span class="metric-value">{{ healthStatus.fanStatus?.type || 'N/A' }}</span>
                 </div>
                 <div class="health-metric" [class.metric-warning]="healthStatus.fanStatus?.curState === 0 && (healthStatus.metrics?.temperature ?? 0) > 70">
-                  <span class="metric-label">État</span>
+                  <span class="metric-label">{{ 'debug.healthFanState' | translate }}</span>
                   <span class="metric-value">
                     {{ healthStatus.fanStatus?.curState }}/{{ healthStatus.fanStatus?.maxState }}
                     <span *ngIf="healthStatus.fanStatus?.speedPercent !== null">({{ healthStatus.fanStatus?.speedPercent }}%)</span>
                   </span>
                 </div>
                 <div class="health-metric">
-                  <span class="metric-label">Vitesse</span>
+                  <span class="metric-label">{{ 'debug.healthFanSpeed' | translate }}</span>
                   <span class="metric-value">
-                    <span *ngIf="healthStatus.fanStatus?.curState === 0">Arrêté</span>
-                    <span *ngIf="(healthStatus.fanStatus?.curState ?? -1) > 0 && (healthStatus.fanStatus?.curState ?? 0) <= 1">Faible</span>
-                    <span *ngIf="(healthStatus.fanStatus?.curState ?? 0) > 1 && (healthStatus.fanStatus?.curState ?? 0) <= 2">Moyen</span>
-                    <span *ngIf="(healthStatus.fanStatus?.curState ?? 0) > 2">Fort</span>
+                    <span *ngIf="healthStatus.fanStatus?.curState === 0">{{ 'debug.healthFanStopped' | translate }}</span>
+                    <span *ngIf="(healthStatus.fanStatus?.curState ?? -1) > 0 && (healthStatus.fanStatus?.curState ?? 0) <= 1">{{ 'debug.healthFanLow' | translate }}</span>
+                    <span *ngIf="(healthStatus.fanStatus?.curState ?? 0) > 1 && (healthStatus.fanStatus?.curState ?? 0) <= 2">{{ 'debug.healthFanMedium' | translate }}</span>
+                    <span *ngIf="(healthStatus.fanStatus?.curState ?? 0) > 2">{{ 'debug.healthFanHigh' | translate }}</span>
                   </span>
                 </div>
               </div>
             </div>
 
             <div class="health-section" *ngIf="healthStatus.fanStatus && !healthStatus.fanStatus.present">
-              <h5>🌀 Ventilateur</h5>
-              <p class="muted">Aucun ventilateur détecté (refroidissement passif)</p>
+              <h5>🌀 {{ 'debug.healthFanTitle' | translate }}</h5>
+              <p class="muted">{{ 'debug.healthNoFan' | translate }}</p>
             </div>
 
             <!-- HDMI-CEC TV Status + Display Info -->
@@ -605,59 +604,59 @@ interface WizardStep {
               <!-- Display Info (from EDID) -->
               <div class="health-grid" *ngIf="healthStatus.displayInfo?.connected">
                 <div class="health-metric metric-ok">
-                  <span class="metric-label">Écran</span>
+                  <span class="metric-label">{{ 'debug.healthDisplay' | translate }}</span>
                   <span class="metric-value">
                     {{ getDisplayName(healthStatus.displayInfo) }}
                   </span>
                 </div>
                 <div class="health-metric" *ngIf="healthStatus.displayInfo?.resolution">
-                  <span class="metric-label">Résolution</span>
+                  <span class="metric-label">{{ 'debug.healthDisplayResolution' | translate }}</span>
                   <span class="metric-value">{{ healthStatus.displayInfo?.resolution }}</span>
                 </div>
                 <div class="health-metric">
-                  <span class="metric-label">Type</span>
+                  <span class="metric-label">{{ 'debug.healthDisplayType' | translate }}</span>
                   <span class="metric-value">{{ getDisplayTypeLabel(healthStatus.displayInfo?.display_type || 'unknown') }}</span>
                 </div>
                 <div class="health-metric" [class.metric-ok]="healthStatus.hdmiCecStatus.tv_connected" [class.metric-warning]="!healthStatus.hdmiCecStatus.tv_connected">
-                  <span class="metric-label">Connexion HDMI</span>
+                  <span class="metric-label">{{ 'debug.healthHdmiConnection' | translate }}</span>
                   <span class="metric-value">
-                    {{ healthStatus.hdmiCecStatus.tv_connected ? '✅ Connected' : '✅ Signal OK' }}
+                    {{ healthStatus.hdmiCecStatus.tv_connected ? ('✅ ' + ('debug.healthHdmiConnected' | translate)) : ('✅ ' + ('debug.healthHdmiSignalOk' | translate)) }}
                   </span>
                 </div>
               </div>
 
               <!-- Monitor PC detected: simplified CEC info -->
               <div class="monitor-notice" *ngIf="healthStatus.displayInfo?.display_type === 'monitor'">
-                <span class="metric-hint">🖥️ Moniteur PC détecté — le contrôle CEC (allumage/extinction automatique) n'est pas disponible sur ce type d'écran.</span>
+                <span class="metric-hint">🖥️ {{ 'debug.healthMonitorNotice' | translate }}</span>
               </div>
 
               <!-- TV CEC details (only for TVs or unknown displays) -->
               <div class="health-grid" *ngIf="healthStatus.displayInfo?.display_type !== 'monitor'">
                 <div class="health-metric" [class.metric-warning]="healthStatus.hdmiCecStatus.tv_power === 'standby'" [class.metric-ok]="healthStatus.hdmiCecStatus.tv_power === 'on'">
-                  <span class="metric-label">Alimentation TV</span>
+                  <span class="metric-label">{{ 'debug.healthTvPower' | translate }}</span>
                   <span class="metric-value">
                     {{ getTvPowerLabel(healthStatus.hdmiCecStatus.tv_power) }}
                   </span>
                 </div>
                 <div class="health-metric" *ngIf="!healthStatus.displayInfo?.connected" [class.metric-ok]="healthStatus.hdmiCecStatus.tv_connected" [class.metric-warning]="!healthStatus.hdmiCecStatus.tv_connected">
-                  <span class="metric-label">Connexion HDMI</span>
+                  <span class="metric-label">{{ 'debug.healthHdmiConnection' | translate }}</span>
                   <span class="metric-value">
-                    {{ healthStatus.hdmiCecStatus.tv_connected ? '✅ Connected' : '❌ Not detected' }}
+                    {{ healthStatus.hdmiCecStatus.tv_connected ? ('✅ ' + ('debug.healthHdmiConnected' | translate)) : ('❌ ' + ('debug.healthHdmiNotDetected' | translate)) }}
                   </span>
                 </div>
                 <div class="health-metric" [class.metric-ok]="healthStatus.hdmiCecStatus.cec_available">
-                  <span class="metric-label">CEC disponible</span>
+                  <span class="metric-label">{{ 'debug.healthCecAvailable' | translate }}</span>
                   <span class="metric-value">
-                    {{ healthStatus.hdmiCecStatus.cec_available ? '✅ Yes' : '❌ No' }}
+                    {{ healthStatus.hdmiCecStatus.cec_available ? ('✅ ' + ('debug.yes' | translate)) : ('❌ ' + ('debug.no' | translate)) }}
                   </span>
                 </div>
                 <div class="health-metric">
-                  <span class="metric-label">Périphériques CEC</span>
+                  <span class="metric-label">{{ 'debug.healthCecDevices' | translate }}</span>
                   <span class="metric-value">{{ healthStatus.hdmiCecStatus.devices_found }}</span>
                 </div>
               </div>
               <div class="cec-last-check" *ngIf="healthStatus.hdmiCecStatus.last_check_at">
-                <span class="metric-hint">Dernière vérification: {{ healthStatus.hdmiCecStatus.last_check_at | date:'HH:mm:ss' }}</span>
+                <span class="metric-hint">{{ 'debug.healthLastCheck' | translate }} {{ healthStatus.hdmiCecStatus.last_check_at | date:'HH:mm:ss' }}</span>
               </div>
               <div class="cec-error" *ngIf="healthStatus.hdmiCecStatus.error && healthStatus.displayInfo?.display_type !== 'monitor'">
                 <span class="metric-hint metric-warning">⚠️ {{ healthStatus.hdmiCecStatus.error }}</span>
@@ -666,7 +665,7 @@ interface WizardStep {
 
             <!-- Services -->
             <div class="health-section" *ngIf="healthStatus.services && healthStatus.services.length > 0">
-              <h5>⚙️ Services systemd</h5>
+              <h5>⚙️ {{ 'debug.healthSystemdServices' | translate }}</h5>
               <div class="services-grid">
                 <div class="service-item" *ngFor="let svc of healthStatus.services"
                   [class.service-active]="svc.active"
@@ -681,18 +680,18 @@ interface WizardStep {
 
             <!-- Métriques système -->
             <div class="health-section" *ngIf="healthStatus.metrics">
-              <h5>📊 Ressources</h5>
+              <h5>📊 {{ 'debug.healthResources' | translate }}</h5>
               <div class="health-grid">
                 <div class="health-metric">
                   <span class="metric-label">CPU</span>
                   <span class="metric-value">{{ healthStatus.metrics.cpu }}%</span>
                 </div>
                 <div class="health-metric" [class.metric-warning]="healthStatus.metrics.memory > 90">
-                  <span class="metric-label">Mémoire</span>
+                  <span class="metric-label">{{ 'debug.healthMemory' | translate }}</span>
                   <span class="metric-value">{{ healthStatus.metrics.memory }}%</span>
                 </div>
                 <div class="health-metric" [class.metric-warning]="healthStatus.metrics.disk > 90">
-                  <span class="metric-label">Disque</span>
+                  <span class="metric-label">{{ 'debug.healthDisk' | translate }}</span>
                   <span class="metric-value">{{ healthStatus.metrics.disk }}%</span>
                 </div>
                 <div class="health-metric">
@@ -705,20 +704,20 @@ interface WizardStep {
 
           <!-- Diagnostic approfondi (fusionné P1.2) -->
           <div class="health-section diagnostics-subsection" *ngIf="isConnected">
-            <h5>🔍 Diagnostic approfondi
+            <h5>🔍 {{ 'debug.healthDiagTitle' | translate }}
               <span class="diagnostics-badge" *ngIf="diagnosticsResult">
                 {{ getDiagnosticsOkCount() }}/{{ diagnosticsResult.checks?.length || 0 }} OK
               </span>
             </h5>
-            <p class="diagnostics-hint">Exécute diagnose-pi.sh — rapport complet du boîtier</p>
+            <p class="diagnostics-hint">{{ 'debug.healthDiagHint' | translate }}</p>
 
             <button class="btn btn-primary btn-sm" (click)="runDiagnostics()" [disabled]="runningDiagnostics">
-              {{ runningDiagnostics ? '⏳ Diagnostic en cours...' : '🔍 Lancer le diagnostic' }}
+              {{ runningDiagnostics ? ('⏳ ' + ('debug.healthDiagRunning' | translate)) : ('🔍 ' + ('debug.healthDiagRun' | translate)) }}
             </button>
 
             <div *ngIf="runningDiagnostics" class="loading-inline">
               <div class="spinner-small"></div>
-              <span>Exécution (peut prendre jusqu'à 60 secondes)...</span>
+              <span>{{ 'debug.healthDiagExec' | translate }}</span>
             </div>
 
             <div *ngIf="diagnosticsResult && !runningDiagnostics" class="diagnostics-result">
@@ -744,7 +743,7 @@ interface WizardStep {
               </div>
 
               <div *ngIf="diagnosticsResult.output" class="diagnostics-output">
-                <h6>Sortie du script</h6>
+                <h6>{{ 'debug.healthDiagScriptOutput' | translate }}</h6>
                 <pre class="output-viewer">{{ diagnosticsResult.output }}</pre>
               </div>
             </div>
@@ -766,12 +765,12 @@ interface WizardStep {
           <!-- Config actuelle -->
           <div class="current-config-card">
             <div class="current-config-header">
-              <h5>📋 Configuration actuelle</h5>
+              <h5>📋 {{ 'debug.configCurrent' | translate }}</h5>
               <div class="current-config-actions">
-                <button class="btn btn-secondary btn-sm" (click)="copyJson()">📋 Copier</button>
-                <button class="btn btn-secondary btn-sm" (click)="downloadJson()">💾 Télécharger</button>
+                <button class="btn btn-secondary btn-sm" (click)="copyJson()">📋 {{ 'debug.configCopy' | translate }}</button>
+                <button class="btn btn-secondary btn-sm" (click)="downloadJson()">💾 {{ 'debug.configDownload' | translate }}</button>
                 <button class="btn btn-secondary btn-sm" (click)="showJson = !showJson">
-                  {{ showJson ? '▲ Masquer' : '▼ Voir JSON' }}
+                  {{ showJson ? ('▲ ' + ('debug.configHideJson' | translate)) : ('▼ ' + ('debug.configShowJson' | translate)) }}
                 </button>
               </div>
             </div>
@@ -781,30 +780,30 @@ interface WizardStep {
           <!-- Historique -->
           <div *ngIf="loadingHistory" class="loading-inline">
             <div class="spinner-small"></div>
-            <span>Chargement...</span>
+            <span>{{ 'debug.healthLoadingShort' | translate }}</span>
           </div>
 
           <div *ngIf="!loadingHistory && history.length === 0" class="empty-hint">
-            Aucun historique. L'historique sera créé lors du premier déploiement.
+            {{ 'debug.configNoHistory' | translate }}
           </div>
 
           <!-- Mode comparaison -->
           <div *ngIf="compareMode && !loadingHistory && history.length > 1" class="compare-mode-bar">
             <span class="compare-info">
-              {{ selectedForCompare.length }}/2 versions sélectionnées
+              {{ selectedForCompare.length }}/2 {{ 'debug.configSelected' | translate }}
             </span>
             <button class="btn btn-primary btn-sm" (click)="executeCompare()"
               [disabled]="selectedForCompare.length !== 2 || loadingDiff">
-              {{ loadingDiff ? 'Comparaison...' : '🔍 Comparer' }}
+              {{ loadingDiff ? ('debug.healthLoadingShort' | translate) : ('🔍 ' + ('debug.configCompare' | translate)) }}
             </button>
-            <button class="btn btn-secondary btn-sm" (click)="cancelCompareMode()">Annuler</button>
+            <button class="btn btn-secondary btn-sm" (click)="cancelCompareMode()">{{ 'debug.confirmCancel' | translate }}</button>
           </div>
 
           <div class="history-list" *ngIf="!loadingHistory && history.length > 0">
             <!-- Bouton pour activer le mode comparaison -->
             <div class="history-actions" *ngIf="history.length > 1 && !compareMode">
               <button class="btn btn-secondary btn-sm" (click)="startCompareMode()">
-                🔀 Comparer des versions
+                🔀 {{ 'debug.configCompare' | translate }}
               </button>
             </div>
 
@@ -824,21 +823,21 @@ interface WizardStep {
 
               <div class="history-item-main">
                 <div class="history-item-date">{{ item.deployed_at | date:'dd/MM/yyyy HH:mm' }}</div>
-                <div class="history-item-user">{{ item.deployed_by_email || 'Système' }}</div>
+                <div class="history-item-user">{{ item.deployed_by_email || ('debug.configSystemUser' | translate) }}</div>
                 <div class="history-item-comment" *ngIf="item.comment">{{ item.comment }}</div>
                 <!-- Indicateur de changements -->
                 <div class="history-item-changes" *ngIf="item.changes_summary && item.changes_summary.length > 0">
-                  <span class="changes-badge">{{ item.changes_summary.length }} changement(s)</span>
+                  <span class="changes-badge">{{ item.changes_summary.length }} {{ 'debug.configChanges' | translate }}</span>
                 </div>
               </div>
               <div class="history-item-actions" *ngIf="!compareMode">
-                <button class="btn btn-secondary btn-sm" (click)="viewVersion(item)">Voir</button>
+                <button class="btn btn-secondary btn-sm" (click)="viewVersion(item)">{{ 'debug.configView' | translate }}</button>
                 <button class="btn btn-secondary btn-sm" (click)="viewVersionDiff(item, i)"
-                  *ngIf="i < history.length - 1" title="Voir les changements depuis la version précédente">
-                  Diff
+                  *ngIf="i < history.length - 1" [title]="'debug.configViewDiff' | translate">
+                  {{ 'debug.configDiffLabel' | translate }}
                 </button>
                 <button class="btn btn-primary btn-sm" (click)="restoreVersion(item)" [disabled]="restoringVersion">
-                  {{ restoringVersion === item.id ? 'Restauration...' : 'Restaurer' }}
+                  {{ restoringVersion === item.id ? ('debug.configRestoring' | translate) : ('debug.configRestore' | translate) }}
                 </button>
               </div>
             </div>
@@ -847,7 +846,7 @@ interface WizardStep {
           <!-- Version viewer modal -->
           <div class="version-modal" *ngIf="viewingVersion && !viewingDiff" #versionModal>
             <div class="version-modal-header">
-              <h5>Version du {{ viewingVersion.deployed_at | date:'dd/MM/yyyy HH:mm' }}</h5>
+              <h5>{{ 'debug.configVersionOf' | translate }} {{ viewingVersion.deployed_at | date:'dd/MM/yyyy HH:mm' }}</h5>
               <button class="btn-close" (click)="viewingVersion = null">×</button>
             </div>
             <div class="version-modal-body">
@@ -858,7 +857,7 @@ interface WizardStep {
           <!-- Diff viewer modal (P1.3) -->
           <div class="diff-modal" *ngIf="viewingDiff" #diffModal>
             <div class="diff-modal-header">
-              <h5>Différences</h5>
+              <h5>{{ 'debug.configDiffTitle' | translate }}</h5>
               <div class="diff-versions">
                 <span class="diff-version old">{{ diffVersionOld | date:'dd/MM HH:mm' }}</span>
                 <span class="diff-arrow">→</span>
@@ -869,18 +868,18 @@ interface WizardStep {
             <div class="diff-modal-body">
               <div *ngIf="loadingDiff" class="loading-inline">
                 <div class="spinner-small"></div>
-                <span>Calcul des différences...</span>
+                <span>{{ 'debug.configDiffLoading' | translate }}</span>
               </div>
 
               <div *ngIf="!loadingDiff && configDiff.length === 0" class="empty-hint">
-                Aucune différence détectée entre ces deux versions.
+                {{ 'debug.configDiffEmpty' | translate }}
               </div>
 
               <div *ngIf="!loadingDiff && configDiff.length > 0" class="diff-list">
                 <div class="diff-summary">
-                  <span class="diff-count added">{{ getDiffCountByType('added') }} ajouté(s)</span>
-                  <span class="diff-count removed">{{ getDiffCountByType('removed') }} supprimé(s)</span>
-                  <span class="diff-count changed">{{ getDiffCountByType('changed') }} modifié(s)</span>
+                  <span class="diff-count added">{{ getDiffCountByType('added') }} {{ 'debug.configDiffAdded' | translate }}</span>
+                  <span class="diff-count removed">{{ getDiffCountByType('removed') }} {{ 'debug.configDiffRemoved' | translate }}</span>
+                  <span class="diff-count changed">{{ getDiffCountByType('changed') }} {{ 'debug.configDiffChanged' | translate }}</span>
                 </div>
 
                 <div class="diff-item" *ngFor="let diff of configDiff"
@@ -895,11 +894,11 @@ interface WizardStep {
                   </div>
                   <div class="diff-item-content">
                     <div class="diff-old" *ngIf="diff.type !== 'added' && diff.oldValue !== undefined">
-                      <span class="diff-label">Avant:</span>
+                      <span class="diff-label">{{ 'debug.configDiffBefore' | translate }}:</span>
                       <code>{{ formatDiffValue(diff.oldValue) }}</code>
                     </div>
                     <div class="diff-new" *ngIf="diff.type !== 'removed' && diff.newValue !== undefined">
-                      <span class="diff-label">Après:</span>
+                      <span class="diff-label">{{ 'debug.configDiffAfter' | translate }}:</span>
                       <code>{{ formatDiffValue(diff.newValue) }}</code>
                     </div>
                   </div>
@@ -929,44 +928,43 @@ interface WizardStep {
           <div *ngIf="isConnected && connectionHealth && !connectionHealth.isHealthy" class="zombie-warning">
             <div class="zombie-header">
               <span class="zombie-icon">⚠️</span>
-              <span class="zombie-title">Connexion instable détectée</span>
+              <span class="zombie-title">{{ 'debug.zombieTitle' | translate }}</span>
             </div>
             <div class="zombie-details">
               <div class="zombie-info">
-                <span class="zombie-label">État:</span>
+                <span class="zombie-label">{{ 'debug.zombieState' | translate }}:</span>
                 <span class="zombie-value">{{ getZombieReasonText() }}</span>
               </div>
               <div class="zombie-info" *ngIf="connectionHealth.lastPongAgeMs !== null">
-                <span class="zombie-label">Dernier pong:</span>
-                <span class="zombie-value">il y a {{ formatPongAge(connectionHealth.lastPongAgeMs) }}</span>
+                <span class="zombie-label">{{ 'debug.zombieLastPong' | translate }}:</span>
+                <span class="zombie-value">{{ 'debug.zombieAgo' | translate }} {{ formatPongAge(connectionHealth.lastPongAgeMs) }}</span>
               </div>
               <div class="zombie-info">
-                <span class="zombie-label">Socket dans la map:</span>
-                <span class="zombie-value">{{ connectionHealth.socketInMap ? 'Oui' : 'Non' }}</span>
+                <span class="zombie-label">{{ 'debug.zombieSocketInMap' | translate }}:</span>
+                <span class="zombie-value">{{ connectionHealth.socketInMap ? ('debug.yes' | translate) : ('debug.no' | translate) }}</span>
               </div>
               <div class="zombie-info">
-                <span class="zombie-label">Socket connectée:</span>
-                <span class="zombie-value">{{ connectionHealth.socketConnected ? 'Oui' : 'Non' }}</span>
+                <span class="zombie-label">{{ 'debug.zombieSocketConnected' | translate }}:</span>
+                <span class="zombie-value">{{ connectionHealth.socketConnected ? ('debug.yes' | translate) : ('debug.no' | translate) }}</span>
               </div>
             </div>
             <div class="zombie-hint">
-              💡 Le boîtier est peut-être en train de se reconnecter. Les commandes temps réel peuvent échouer.
-              Essayez de redémarrer le sync-agent ou le boîtier si le problème persiste.
+              💡 {{ 'debug.zombieHint' | translate }}
             </div>
           </div>
 
           <!-- Commandes rapides -->
           <div class="quick-commands" *ngIf="isConnected">
-            <div class="quick-commands-label">Commandes rapides:</div>
+            <div class="quick-commands-label">{{ 'debug.commandsQuickLabel' | translate }}</div>
             <div class="quick-commands-buttons">
-              <button class="btn btn-warning btn-xs" (click)="executeCommand('fix_permissions')" [disabled]="executingCommand" title="Corriger les permissions des fichiers">
-                🔐 Permissions
+              <button class="btn btn-warning btn-xs" (click)="executeCommand('fix_permissions')" [disabled]="executingCommand" [title]="'debug.commandsFixPerms' | translate">
+                🔐 {{ 'debug.commandsPermissions' | translate }}
               </button>
-              <button class="btn btn-secondary btn-xs" (click)="executeCommand('restart_sync')" [disabled]="executingCommand" title="Relancer le sync-agent">
-                🔃 Sync-agent
+              <button class="btn btn-secondary btn-xs" (click)="executeCommand('restart_sync')" [disabled]="executingCommand" [title]="'debug.commandsRestartSync' | translate">
+                🔃 {{ 'debug.commandsSyncAgent' | translate }}
               </button>
-              <button class="btn btn-secondary btn-xs" (click)="executeCommand('reboot')" [disabled]="executingCommand" title="Redémarrer le Raspberry Pi">
-                🔄 Reboot
+              <button class="btn btn-secondary btn-xs" (click)="executeCommand('reboot')" [disabled]="executingCommand" [title]="'debug.confirmRebootTitle' | translate">
+                🔄 {{ 'debug.commandsRebootShort' | translate }}
               </button>
             </div>
             <div class="command-result-inline" *ngIf="commandResult">
@@ -993,7 +991,7 @@ interface WizardStep {
 
         <div class="debug-content" *ngIf="showLogs">
           <div *ngIf="!isConnected" class="offline-warning">
-            ⚠️ Le boîtier doit être connecté pour récupérer les logs.
+            ⚠️ {{ 'debug.logsOffline' | translate }}
           </div>
 
           <div *ngIf="isConnected" class="logs-section">
@@ -1006,7 +1004,7 @@ interface WizardStep {
                 <option value="nginx">nginx</option>
                 <option value="hostapd">hostapd</option>
               </select>
-              <input type="number" [(ngModel)]="logLines" min="10" max="500" class="log-lines-input" placeholder="Lignes">
+              <input type="number" [(ngModel)]="logLines" min="10" max="500" class="log-lines-input" [placeholder]="'debug.logsLines' | translate">
               <button class="btn btn-primary btn-sm" (click)="loadLogs()" [disabled]="loadingLogs">
                 <span *ngIf="loadingLogs">⏳ {{ 'debug.loadingLogs' | translate }}</span>
                 <span *ngIf="!loadingLogs">🔄 {{ 'debug.loadLogs' | translate }}</span>
@@ -1015,13 +1013,13 @@ interface WizardStep {
 
             <div *ngIf="loadingLogs" class="loading-inline">
               <div class="spinner-small"></div>
-              <span>Récupération des logs...</span>
+              <span>{{ 'debug.logsRetrieving' | translate }}</span>
             </div>
 
             <div *ngIf="logsContent && !loadingLogs" class="logs-viewer">
               <div class="logs-toolbar">
-                <input type="text" class="log-filter-input" [(ngModel)]="logFilter" placeholder="Filtrer les logs...">
-                <button class="btn btn-secondary btn-sm" (click)="copyLogs()">📋 Copier</button>
+                <input type="text" class="log-filter-input" [(ngModel)]="logFilter" [placeholder]="'debug.logsFilter' | translate">
+                <button class="btn btn-secondary btn-sm" (click)="copyLogs()">📋 {{ 'debug.logsCopy' | translate }}</button>
                 <button class="btn btn-secondary btn-sm" (click)="downloadLogs()">💾</button>
               </div>
               <pre class="logs-output"><ng-container *ngFor="let line of getFilteredLogLines()"><span [class]="getLogLineClass(line)">{{ line }}
@@ -1038,52 +1036,52 @@ interface WizardStep {
           <span class="debug-icon">🌐</span>
           <h4>{{ 'debug.networkTitle' | translate }}</h4>
           <span class="debug-stats" *ngIf="networkInfo">
-            {{ networkInfo.internet?.reachable ? '✅ Internet OK' : '❌ Pas d\\'Internet' }}
+            {{ networkInfo.internet?.reachable ? ('✅ ' + ('debug.summaryInternetOk' | translate)) : ('❌ ' + ('debug.summaryNoInternet' | translate)) }}
           </span>
         </div>
 
         <div class="debug-content" *ngIf="showNetworkInfo">
           <div *ngIf="!isConnected" class="offline-warning">
-            ⚠️ Le boîtier doit être connecté pour les diagnostics réseau.
+            ⚠️ {{ 'debug.networkOffline' | translate }}
           </div>
 
           <div *ngIf="isConnected && !networkInfo && !loadingNetworkInfo" class="network-actions">
             <button class="btn btn-primary btn-sm" (click)="loadNetworkInfo()">
-              🔄 Analyser le réseau
+              🔄 {{ 'debug.networkAnalyze' | translate }}
             </button>
           </div>
 
           <div *ngIf="loadingNetworkInfo" class="loading-inline">
             <div class="spinner-small"></div>
-            <span>Analyse du réseau...</span>
+            <span>{{ 'debug.networkAnalyzing' | translate }}</span>
           </div>
 
           <div *ngIf="networkInfo && !loadingNetworkInfo" class="network-content">
             <div class="network-grid">
               <!-- Internet -->
               <div class="network-card" [class.status-ok]="networkInfo.internet?.reachable" [class.status-fail]="!networkInfo.internet?.reachable">
-                <div class="network-card-header">🌍 Internet</div>
-                <div class="network-card-value">{{ networkInfo.internet?.reachable ? 'Connecté' : 'Non accessible' }}</div>
+                <div class="network-card-header">🌍 {{ 'debug.networkInternet' | translate }}</div>
+                <div class="network-card-value">{{ networkInfo.internet?.reachable ? ('debug.networkConnected' | translate) : ('debug.networkNotReachable' | translate) }}</div>
                 <div class="network-card-detail" *ngIf="networkInfo.internet?.latency_ms">
-                  Latence: {{ networkInfo.internet?.latency_ms }}ms
+                  {{ 'debug.networkLatency' | translate }}: {{ networkInfo.internet?.latency_ms }}ms
                 </div>
                 <div class="network-card-detail" *ngIf="networkInfo.internet?.packet_loss_percent !== null">
-                  Perte: {{ networkInfo.internet?.packet_loss_percent }}%
+                  {{ 'debug.networkPacketLoss' | translate }}: {{ networkInfo.internet?.packet_loss_percent }}%
                 </div>
               </div>
 
               <!-- DNS -->
               <div class="network-card" [class.status-ok]="networkInfo.dns?.working" [class.status-fail]="!networkInfo.dns?.working">
-                <div class="network-card-header">🔗 DNS</div>
-                <div class="network-card-value">{{ networkInfo.dns?.working ? 'Fonctionnel' : 'En échec' }}</div>
+                <div class="network-card-header">🔗 {{ 'debug.networkDns' | translate }}</div>
+                <div class="network-card-value">{{ networkInfo.dns?.working ? ('debug.networkDnsWorking' | translate) : ('debug.networkDnsFailed' | translate) }}</div>
                 <div class="network-card-detail" *ngIf="networkInfo.dns?.resolution_time_ms">
-                  Résolution: {{ networkInfo.dns?.resolution_time_ms }}ms
+                  {{ 'debug.networkResolution' | translate }}: {{ networkInfo.dns?.resolution_time_ms }}ms
                 </div>
               </div>
 
               <!-- Passerelle -->
               <div class="network-card" [class.status-ok]="networkInfo.gateway?.reachable" [class.status-fail]="!networkInfo.gateway?.reachable">
-                <div class="network-card-header">🚪 Passerelle</div>
+                <div class="network-card-header">🚪 {{ 'debug.networkGateway' | translate }}</div>
                 <div class="network-card-value">{{ networkInfo.gateway?.ip || 'N/A' }}</div>
                 <div class="network-card-detail">
                   <span *ngIf="networkInfo.gateway?.reachable">✅ {{ 'debug.gatewayAccessible' | translate }}</span>
@@ -1093,10 +1091,10 @@ interface WizardStep {
 
               <!-- Serveur Central -->
               <div class="network-card" [class.status-ok]="networkInfo.central_server?.reachable" [class.status-fail]="!networkInfo.central_server?.reachable">
-                <div class="network-card-header">☁️ Serveur Central</div>
-                <div class="network-card-value">{{ networkInfo.central_server?.reachable ? 'Connecté' : 'Non accessible' }}</div>
+                <div class="network-card-header">☁️ {{ 'debug.networkCentral' | translate }}</div>
+                <div class="network-card-value">{{ networkInfo.central_server?.reachable ? ('debug.networkConnected' | translate) : ('debug.networkNotReachable' | translate) }}</div>
                 <div class="network-card-detail" *ngIf="networkInfo.central_server?.latency_ms">
-                  Latence: {{ networkInfo.central_server?.latency_ms }}ms
+                  {{ 'debug.networkLatency' | translate }}: {{ networkInfo.central_server?.latency_ms }}ms
                 </div>
               </div>
             </div>
@@ -1107,34 +1105,34 @@ interface WizardStep {
               <div class="wifi-info">
                 <span><strong>SSID:</strong> {{ networkInfo.wifi.ssid || 'N/A' }}</span>
                 <span><strong>Signal:</strong> {{ networkInfo.wifi.signal_dbm }}dBm ({{ networkInfo.wifi.quality_percent }}%)</span>
-                <span *ngIf="networkInfo.wifi.bitrate_mbps"><strong>Débit:</strong> {{ networkInfo.wifi.bitrate_mbps }} Mb/s</span>
+                <span *ngIf="networkInfo.wifi.bitrate_mbps"><strong>{{ 'debug.networkBitrate' | translate }}:</strong> {{ networkInfo.wifi.bitrate_mbps }} Mb/s</span>
               </div>
             </div>
 
             <!-- Stabilité -->
             <div class="wifi-section" *ngIf="networkInfo.stability">
-              <h5>📈 Stabilité</h5>
+              <h5>📈 {{ 'debug.networkStability' | translate }}</h5>
               <div class="wifi-info">
                 <span *ngIf="networkInfo.stability.interface_uptime_seconds !== null">
-                  <strong>Uptime interface:</strong> {{ formatUptime(networkInfo.stability.interface_uptime_seconds!) }}
+                  <strong>{{ 'debug.networkUptimeInterface' | translate }}:</strong> {{ formatUptime(networkInfo.stability.interface_uptime_seconds!) }}
                 </span>
                 <span *ngIf="networkInfo.stability.reconnections_24h !== null"
                   [class.text-danger]="(networkInfo.stability.reconnections_24h ?? 0) > 5"
                   [class.text-success]="(networkInfo.stability.reconnections_24h ?? 0) === 0">
-                  <strong>Reconnexions 24h:</strong> {{ networkInfo.stability.reconnections_24h }}
+                  <strong>{{ 'debug.networkReconnections24h' | translate }}:</strong> {{ networkInfo.stability.reconnections_24h }}
                 </span>
               </div>
             </div>
 
             <!-- Interfaces réseau -->
             <div class="wifi-section" *ngIf="networkInfo.interfaces && networkInfo.interfaces.length > 0">
-              <h5>🔌 Interfaces réseau</h5>
+              <h5>🔌 {{ 'debug.networkInterfaces' | translate }}</h5>
               <div class="interfaces-list">
                 <div class="interface-row header">
-                  <span>Interface</span>
-                  <span>IP</span>
-                  <span>Type</span>
-                  <span>État</span>
+                  <span>{{ 'debug.networkInterfaceName' | translate }}</span>
+                  <span>{{ 'debug.networkInterfaceIp' | translate }}</span>
+                  <span>{{ 'debug.networkInterfaceType' | translate }}</span>
+                  <span>{{ 'debug.networkInterfaceState' | translate }}</span>
                 </div>
                 <div class="interface-row" *ngFor="let iface of networkInfo.interfaces"
                   [class.interface-up]="iface.operstate === 'up'"
@@ -1149,22 +1147,22 @@ interface WizardStep {
 
             <!-- Détails serveur central -->
             <div class="wifi-section" *ngIf="networkInfo.central_server">
-              <h5>☁️ Détails serveur central</h5>
+              <h5>☁️ {{ 'debug.networkCentralDetails' | translate }}</h5>
               <div class="wifi-info">
                 <span *ngIf="networkInfo.central_server.http_latency_ms">
-                  <strong>Latence HTTP:</strong> {{ networkInfo.central_server.http_latency_ms }}ms
+                  <strong>{{ 'debug.networkHttpLatency' | translate }}:</strong> {{ networkInfo.central_server.http_latency_ms }}ms
                 </span>
                 <span *ngIf="networkInfo.central_server.ssl_valid !== null && networkInfo.central_server.ssl_valid !== undefined">
-                  <strong>SSL:</strong> {{ networkInfo.central_server.ssl_valid ? '✅ Valide' : '❌ Invalide' }}
+                  <strong>SSL:</strong> {{ networkInfo.central_server.ssl_valid ? ('✅ ' + ('debug.networkSslValid' | translate)) : ('❌ ' + ('debug.networkSslInvalid' | translate)) }}
                 </span>
                 <span *ngIf="networkInfo.central_server.port_443_open !== null && networkInfo.central_server.port_443_open !== undefined">
-                  <strong>Port 443:</strong> {{ networkInfo.central_server.port_443_open ? '✅ Ouvert' : '❌ Fermé' }}
+                  <strong>Port 443:</strong> {{ networkInfo.central_server.port_443_open ? ('✅ ' + ('debug.networkPortOpen' | translate)) : ('❌ ' + ('debug.networkPortClosed' | translate)) }}
                 </span>
               </div>
             </div>
 
             <button class="btn btn-secondary btn-sm refresh-network-btn" (click)="loadNetworkInfo()" [disabled]="loadingNetworkInfo">
-              🔄 Rafraîchir
+              🔄 {{ 'debug.networkRefresh' | translate }}
             </button>
           </div>
         </div>
@@ -1177,55 +1175,55 @@ interface WizardStep {
           <span class="debug-icon">📊</span>
           <h4>{{ 'debug.bufferTitle' | translate }}</h4>
           <span class="debug-stats" *ngIf="bufferStatus">
-            {{ bufferStatus.analytics?.event_count || 0 }} événements en attente
+            {{ bufferStatus.analytics?.event_count || 0 }} {{ 'debug.bufferPending' | translate }}
           </span>
         </div>
 
         <div class="debug-content" *ngIf="showBufferStatus">
           <div *ngIf="!isConnected" class="offline-warning">
-            ⚠️ Le boîtier doit être connecté pour voir l'état du buffer.
+            ⚠️ {{ 'debug.bufferOffline' | translate }}
           </div>
 
           <div *ngIf="isConnected && !bufferStatus && !loadingBufferStatus" class="buffer-actions">
             <button class="btn btn-primary btn-sm" (click)="loadBufferStatus()">
-              🔄 Charger l'état du buffer
+              🔄 {{ 'debug.bufferLoad' | translate }}
             </button>
           </div>
 
           <div *ngIf="loadingBufferStatus" class="loading-inline">
             <div class="spinner-small"></div>
-            <span>Récupération...</span>
+            <span>{{ 'debug.bufferLoading' | translate }}</span>
           </div>
 
           <div *ngIf="bufferStatus && !loadingBufferStatus" class="buffer-content">
             <div class="buffer-grid">
               <!-- Unified analytics buffer -->
               <div class="buffer-card" [class.buffer-warning]="(bufferStatus.analytics?.event_count || 0) > 1000">
-                <div class="buffer-header">📹 Lectures vidéo</div>
+                <div class="buffer-header">📹 {{ 'debug.bufferVideoPlays' | translate }}</div>
                 <div class="buffer-count">{{ bufferStatus.analytics?.event_count || 0 }}</div>
-                <div class="buffer-label">événements</div>
+                <div class="buffer-label">{{ 'debug.bufferEvents' | translate }}</div>
                 <div class="buffer-details" *ngIf="bufferStatus.analytics?.file_exists">
-                  <div class="buffer-detail">Taille: {{ formatBytes(bufferStatus.analytics?.file_size_bytes || 0) }}</div>
+                  <div class="buffer-detail">{{ 'debug.bufferSize' | translate }}: {{ formatBytes(bufferStatus.analytics?.file_size_bytes || 0) }}</div>
                   <div class="buffer-detail" *ngIf="bufferStatus.sponsors?.event_count">
-                    dont {{ bufferStatus.sponsors?.event_count }} sponsors
+                    {{ 'debug.bufferIncludingSponsors' | translate:{ count: bufferStatus.sponsors?.event_count } }}
                   </div>
                   <div class="buffer-detail" *ngIf="bufferStatus.analytics?.oldest_event">
-                    Plus ancien: {{ bufferStatus.analytics?.oldest_event | date:'dd/MM HH:mm' }}
+                    {{ 'debug.bufferOldest' | translate }}: {{ bufferStatus.analytics?.oldest_event | date:'dd/MM HH:mm' }}
                   </div>
                 </div>
               </div>
             </div>
 
             <div class="buffer-hint" *ngIf="bufferStatus.legacy_sponsor_file">
-              ⚠️ Fichier legacy <code>sponsor_impressions.json</code> détecté. Ce fichier est obsolète depuis la consolidation du pipeline (v3.66) et peut être supprimé.
+              ⚠️ <span [innerHTML]="'debug.bufferLegacyWarning' | translate"></span>
             </div>
 
             <div class="buffer-hint" *ngIf="(bufferStatus.analytics?.event_count || 0) > 1000">
-              ⚠️ Le buffer contient beaucoup d'événements. Ils seront envoyés automatiquement à la prochaine synchronisation.
+              ⚠️ {{ 'debug.bufferOverflowWarning' | translate }}
             </div>
 
             <button class="btn btn-secondary btn-sm" (click)="loadBufferStatus()" [disabled]="loadingBufferStatus">
-              🔄 Rafraîchir
+              🔄 {{ 'debug.bufferRefresh' | translate }}
             </button>
           </div>
         </div>
@@ -1238,8 +1236,8 @@ interface WizardStep {
           <span class="debug-icon">📡</span>
           <h4>{{ 'debug.hotspotTitle' | translate }}</h4>
           <span class="debug-stats" *ngIf="hotspotInfo">
-            <span *ngIf="hotspotInfo.isActive" class="status-badge status-online">● Actif</span>
-            <span *ngIf="!hotspotInfo.isActive" class="status-badge status-offline">● Inactif</span>
+            <span *ngIf="hotspotInfo.isActive" class="status-badge status-online">● {{ 'debug.hotspotActive' | translate }}</span>
+            <span *ngIf="!hotspotInfo.isActive" class="status-badge status-offline">● {{ 'debug.hotspotInactive' | translate }}</span>
             <span *ngIf="hotspotInfo.clients > 0" class="client-count">👥 {{ hotspotInfo.clients }}</span>
           </span>
           <span class="debug-stats" *ngIf="!hotspotInfo && hotspotResult">
@@ -1257,63 +1255,61 @@ interface WizardStep {
                 <span class="info-value">{{ hotspotInfo.ssid || 'N/A' }}</span>
               </div>
               <div class="info-item">
-                <span class="info-label">Canal</span>
+                <span class="info-label">{{ 'debug.hotspotChannel' | translate }}</span>
                 <span class="info-value" [class.channel-crowded]="hotspotInfo.channel === 1 || hotspotInfo.channel === 6">
                   {{ hotspotInfo.channel || 'N/A' }}
-                  <span *ngIf="hotspotInfo.channel === 1 || hotspotInfo.channel === 6" class="channel-warning" title="Canal potentiellement encombré">⚠️</span>
+                  <span *ngIf="hotspotInfo.channel === 1 || hotspotInfo.channel === 6" class="channel-warning" [title]="'debug.hotspotChannelCrowded' | translate">⚠️</span>
                 </span>
               </div>
               <div class="info-item">
-                <span class="info-label">État</span>
+                <span class="info-label">{{ 'debug.hotspotState' | translate }}</span>
                 <span class="info-value" [class.text-success]="hotspotInfo.isActive" [class.text-danger]="!hotspotInfo.isActive">
                   {{ hotspotInfo.isActive ? '✅' : '❌' }} {{ (hotspotInfo.isActive ? 'sites.status.active' : 'sites.status.inactive') | translate }}
                 </span>
               </div>
               <div class="info-item">
-                <span class="info-label">Clients connectés</span>
+                <span class="info-label">{{ 'debug.hotspotClients' | translate }}</span>
                 <span class="info-value">👥 {{ hotspotInfo.clients || 0 }}</span>
               </div>
             </div>
           </div>
 
           <div *ngIf="!isConnected" class="offline-warning">
-            ⚠️ Le boîtier doit être connecté pour gérer le hotspot.
+            ⚠️ {{ 'debug.hotspotOffline' | translate }}
           </div>
 
           <div *ngIf="isConnected" class="hotspot-section">
             <p class="hotspot-hint">
-              Si le réseau WiFi du boîtier (NEOPRO-xxx) n'apparaît pas ou est instable,
-              utilisez ce bouton pour diagnostiquer et réparer automatiquement.
+              {{ 'debug.hotspotHint' | translate }}
             </p>
 
             <div class="hotspot-actions">
               <button class="btn btn-warning" (click)="fixHotspot(false)" [disabled]="fixingHotspot">
-                {{ fixingHotspot ? '⏳ Diagnostic...' : '🔍 Diagnostiquer' }}
+                {{ fixingHotspot ? ('⏳ ' + ('debug.hotspotDiagnosing' | translate)) : ('🔍 ' + ('debug.hotspotDiagnoseBtn' | translate)) }}
               </button>
               <button class="btn btn-primary" (click)="fixHotspot(true)" [disabled]="fixingHotspot">
-                {{ fixingHotspot ? '⏳ Réparation...' : '🔧 Réparer automatiquement' }}
+                {{ fixingHotspot ? ('⏳ ' + ('debug.hotspotRepairing' | translate)) : ('🔧 ' + ('debug.hotspotRepairBtn' | translate)) }}
               </button>
             </div>
 
             <div *ngIf="fixingHotspot" class="loading-inline">
               <div class="spinner-small"></div>
-              <span>Cette opération peut prendre jusqu'à 2 minutes (scan des canaux WiFi)...</span>
+              <span>{{ 'debug.hotspotWaiting' | translate }}</span>
             </div>
 
             <!-- Modal de confirmation de reboot -->
             <div *ngIf="showRebootConfirmModal" class="modal-overlay">
               <div class="modal-content reboot-modal">
-                <h3>⚠️ Redémarrage nécessaire</h3>
+                <h3>⚠️ {{ 'debug.rebootRequiredTitle' | translate }}</h3>
                 <p>
-                  Le canal WiFi a été changé de <strong>{{ hotspotResult?.fix?.oldChannel }}</strong>
-                  à <strong>{{ hotspotResult?.fix?.newChannel }}</strong>.
+                  {{ 'debug.rebootChannelChanged' | translate }} <strong>{{ hotspotResult?.fix?.oldChannel }}</strong>
+                  {{ 'debug.rebootChannelTo' | translate }} <strong>{{ hotspotResult?.fix?.newChannel }}</strong>.
                 </p>
                 <p>
-                  Pour appliquer ce changement, le boîtier doit redémarrer
-                  (~1 minute d'interruption).
+                  {{ 'debug.rebootApplyMsg' | translate }}
                 </p>
                 <p class="reboot-warning">
-                  ⚠️ La TV et la télécommande seront indisponibles pendant le redémarrage.
+                  ⚠️ {{ 'debug.rebootTvWarning' | translate }}
                 </p>
                 <div class="modal-actions">
                   <button class="btn btn-secondary" (click)="cancelReboot()">
@@ -1364,8 +1360,8 @@ interface WizardStep {
 
                 <!-- Message si canal changé mais en attente de reboot -->
                 <div *ngIf="hotspotResult.fix?.channelChanged && hotspotResult.fix?.needsReboot" class="pending-reboot-info">
-                  <p>✅ Canal changé de {{ hotspotResult.fix?.oldChannel }} à {{ hotspotResult.fix?.newChannel }}.</p>
-                  <p>ℹ️ Le changement sera appliqué au prochain redémarrage du boîtier.</p>
+                  <p>✅ {{ 'debug.rebootChannelPending' | translate:{ old: hotspotResult.fix?.oldChannel, new: hotspotResult.fix?.newChannel } }}</p>
+                  <p>ℹ️ {{ 'debug.rebootApplyNextRestart' | translate }}</p>
                 </div>
 
                 <!-- Message du script -->
@@ -1598,24 +1594,23 @@ interface WizardStep {
 
         <div class="debug-content" *ngIf="showExport">
           <div *ngIf="!isConnected" class="offline-warning">
-            ⚠️ Le boîtier doit être connecté pour exporter les données de debug.
+            ⚠️ {{ 'debug.exportOffline' | translate }}
           </div>
 
           <div *ngIf="isConnected" class="export-section">
             <p class="export-hint">
-              Exporte un rapport complet contenant la configuration, les logs récents,
-              l'état des services et les diagnostics système. Utile pour le support technique.
+              {{ 'debug.exportHintFull' | translate }}
             </p>
 
             <div class="export-actions">
               <button class="btn btn-primary" (click)="exportDebugBundle()" [disabled]="exportingBundle">
-                {{ exportingBundle ? '⏳ Collecte des données...' : '📦 Exporter le rapport de debug' }}
+                {{ exportingBundle ? ('⏳ ' + ('debug.exportBtnExporting' | translate)) : ('📦 ' + ('debug.exportBtnLabel' | translate)) }}
               </button>
             </div>
 
             <div *ngIf="exportingBundle" class="loading-inline">
               <div class="spinner-small"></div>
-              <span>Collecte des logs, configuration et diagnostics...</span>
+              <span>{{ 'debug.exportCollecting' | translate }}</span>
             </div>
 
             <div *ngIf="exportError" class="export-error">
@@ -1632,26 +1627,26 @@ interface WizardStep {
           <span class="debug-icon">📅</span>
           <h4>{{ 'debug.timelineTitle' | translate }}</h4>
           <span class="debug-stats" *ngIf="timelineEvents.length > 0">
-            {{ timelineEvents.length }} événement(s)
+            {{ timelineEvents.length }} {{ 'debug.timelineEvents' | translate }}
           </span>
         </div>
 
         <div class="debug-content" *ngIf="showTimeline">
           <div *ngIf="loadingTimeline" class="loading-inline">
             <div class="spinner-small"></div>
-            <span>Chargement de l'historique...</span>
+            <span>{{ 'debug.timelineLoading' | translate }}</span>
           </div>
 
           <div *ngIf="!loadingTimeline && timelineEvents.length === 0" class="empty-hint">
-            Aucun événement récent trouvé.
+            {{ 'debug.timelineEmpty' | translate }}
           </div>
 
           <div *ngIf="!loadingTimeline && timelineEvents.length > 0" class="timeline-filter-bar">
-            <button class="btn btn-sm" [class.btn-primary]="!timelineTypeFilter" [class.btn-secondary]="timelineTypeFilter" (click)="timelineTypeFilter = ''">Tous</button>
-            <button class="btn btn-sm" [class.btn-primary]="timelineTypeFilter === 'deployment'" [class.btn-secondary]="timelineTypeFilter !== 'deployment'" (click)="timelineTypeFilter = 'deployment'">📹 Déploiements</button>
-            <button class="btn btn-sm" [class.btn-primary]="timelineTypeFilter === 'command'" [class.btn-secondary]="timelineTypeFilter !== 'command'" (click)="timelineTypeFilter = 'command'">⚡ Commandes</button>
-            <button class="btn btn-sm" [class.btn-primary]="timelineTypeFilter === 'config'" [class.btn-secondary]="timelineTypeFilter !== 'config'" (click)="timelineTypeFilter = 'config'">⚙️ Config</button>
-            <button class="btn btn-sm" [class.btn-primary]="timelineTypeFilter === 'alert'" [class.btn-secondary]="timelineTypeFilter !== 'alert'" (click)="timelineTypeFilter = 'alert'">⚠️ Alertes</button>
+            <button class="btn btn-sm" [class.btn-primary]="!timelineTypeFilter" [class.btn-secondary]="timelineTypeFilter" (click)="timelineTypeFilter = ''">{{ 'debug.timelineAll' | translate }}</button>
+            <button class="btn btn-sm" [class.btn-primary]="timelineTypeFilter === 'deployment'" [class.btn-secondary]="timelineTypeFilter !== 'deployment'" (click)="timelineTypeFilter = 'deployment'">📹 {{ 'debug.timelineDeployments' | translate }}</button>
+            <button class="btn btn-sm" [class.btn-primary]="timelineTypeFilter === 'command'" [class.btn-secondary]="timelineTypeFilter !== 'command'" (click)="timelineTypeFilter = 'command'">⚡ {{ 'debug.timelineCommands' | translate }}</button>
+            <button class="btn btn-sm" [class.btn-primary]="timelineTypeFilter === 'config'" [class.btn-secondary]="timelineTypeFilter !== 'config'" (click)="timelineTypeFilter = 'config'">⚙️ {{ 'debug.timelineConfig' | translate }}</button>
+            <button class="btn btn-sm" [class.btn-primary]="timelineTypeFilter === 'alert'" [class.btn-secondary]="timelineTypeFilter !== 'alert'" (click)="timelineTypeFilter = 'alert'">⚠️ {{ 'debug.timelineAlerts' | translate }}</button>
           </div>
 
           <div *ngIf="!loadingTimeline && timelineEvents.length > 0" class="timeline">
@@ -1688,7 +1683,7 @@ interface WizardStep {
 
           <div class="timeline-actions" *ngIf="!loadingTimeline">
             <button class="btn btn-secondary btn-sm" (click)="loadTimeline()" [disabled]="loadingTimeline">
-              🔄 Rafraîchir
+              🔄 {{ 'debug.timelineRefresh' | translate }}
             </button>
           </div>
         </div>
@@ -1701,7 +1696,7 @@ interface WizardStep {
           <p>{{ confirmModal.message }}</p>
           <p class="reboot-warning" *ngIf="confirmModal.warning">⚠️ {{ confirmModal.warning }}</p>
           <div class="modal-actions">
-            <button class="btn btn-secondary" (click)="cancelConfirmModal()">Annuler</button>
+            <button class="btn btn-secondary" (click)="cancelConfirmModal()">{{ 'debug.confirmCancel' | translate }}</button>
             <button class="btn" [class.btn-danger]="confirmModal.danger" [class.btn-primary]="!confirmModal.danger"
               (click)="executeConfirmModal()" [disabled]="confirmModal.executing">
               {{ confirmModal.executing ? '⏳...' : confirmModal.confirmLabel }}
@@ -4401,7 +4396,7 @@ export class SiteDebugTabComponent implements OnInit, AfterViewChecked, OnDestro
     executing: boolean;
     onConfirm: (() => void) | null;
   } = {
-    visible: false, title: '', message: '', warning: '', confirmLabel: 'Confirmer',
+    visible: false, title: '', message: '', warning: '', confirmLabel: '',
     danger: false, icon: '', executing: false, onConfirm: null
   };
 
@@ -4411,22 +4406,31 @@ export class SiteDebugTabComponent implements OnInit, AfterViewChecked, OnDestro
   wizardCompleted: boolean = false;
   wizardCurrentStep: number = 0;
   private wizardBufferPollSub: Subscription | null = null;
+  wizardStepKeys: string[] = ['debug.wizardStepConnectivity', 'debug.wizardStepVideos', 'debug.wizardStepLoop', 'debug.wizardStepImpressions', 'debug.wizardStepSummary'];
   wizardSteps: WizardStep[] = [
-    { id: 1, title: 'Connectivit\u00e9', icon: '\uD83D\uDD0C', status: 'pending', message: '', details: [], suggestions: [] },
-    { id: 2, title: 'Vid\u00e9os', icon: '\uD83C\uDFAC', status: 'pending', message: '', details: [], suggestions: [] },
-    { id: 3, title: 'Boucle de diffusion', icon: '\uD83D\uDD01', status: 'pending', message: '', details: [], suggestions: [] },
-    { id: 4, title: 'Impressions r\u00e9centes', icon: '\uD83D\uDCCA', status: 'pending', message: '', details: [], suggestions: [] },
-    { id: 5, title: 'Diagnostic complet', icon: '\uD83D\uDCCB', status: 'pending', message: '', details: [], suggestions: [] },
+    { id: 1, title: '', icon: '\uD83D\uDD0C', status: 'pending', message: '', details: [], suggestions: [] },
+    { id: 2, title: '', icon: '\uD83C\uDFAC', status: 'pending', message: '', details: [], suggestions: [] },
+    { id: 3, title: '', icon: '\uD83D\uDD01', status: 'pending', message: '', details: [], suggestions: [] },
+    { id: 4, title: '', icon: '\uD83D\uDCCA', status: 'pending', message: '', details: [], suggestions: [] },
+    { id: 5, title: '', icon: '\uD83D\uDCCB', status: 'pending', message: '', details: [], suggestions: [] },
   ];
 
   constructor(
     private sitesService: SitesService,
     private notificationService: NotificationService,
-    private logger: LoggerService
+    private logger: LoggerService,
+    private translate: TranslateService
   ) {}
 
   ngOnInit(): void {
+    this.initWizardTitles();
     this.loadDebugInfo();
+  }
+
+  private initWizardTitles(): void {
+    this.wizardSteps.forEach((step, i) => {
+      step.title = this.translate.instant(this.wizardStepKeys[i]);
+    });
   }
 
   ngOnDestroy(): void {
@@ -4516,7 +4520,7 @@ export class SiteDebugTabComponent implements OnInit, AfterViewChecked, OnDestro
 
   copyJson(): void {
     navigator.clipboard.writeText(this.configJson);
-    this.notificationService.success('JSON copié !');
+    this.notificationService.success(this.translate.instant('debug.notifyJsonCopied'));
   }
 
   downloadJson(): void {
@@ -4562,16 +4566,16 @@ export class SiteDebugTabComponent implements OnInit, AfterViewChecked, OnDestro
 
   restoreVersion(item: ConfigHistory): void {
     if (!item.configuration) {
-      this.notificationService.error('Configuration non disponible pour cette version');
+      this.notificationService.error(this.translate.instant('debug.notifyConfigNotAvailable'));
       return;
     }
 
     const dateStr = new Date(item.deployed_at).toLocaleString();
     this.showConfirmModal({
-      title: 'Restaurer la configuration',
-      message: `Restaurer et déployer la configuration du ${dateStr} ? Cela va remplacer la configuration actuelle sur le boîtier.`,
-      warning: 'La configuration en cours sera écrasée.',
-      confirmLabel: '🔄 Restaurer',
+      title: this.translate.instant('debug.confirmRestoreTitle'),
+      message: this.translate.instant('debug.confirmRestoreMsg', { date: dateStr }),
+      warning: this.translate.instant('debug.confirmRestoreWarn'),
+      confirmLabel: '🔄 ' + this.translate.instant('debug.configRestore'),
       danger: true,
       icon: '📜',
       onConfirm: () => this.doRestoreVersion(item),
@@ -4590,7 +4594,7 @@ export class SiteDebugTabComponent implements OnInit, AfterViewChecked, OnDestro
     }).subscribe({
       next: () => {
         this.restoringVersion = null;
-        this.notificationService.success('Configuration restaurée et déployée avec succès !');
+        this.notificationService.success(this.translate.instant('debug.notifyConfigRestored'));
         this.configRestored.emit(item.configuration);
         // Recharger les infos de debug pour refléter la nouvelle config
         this.loadDebugInfo();
@@ -4598,7 +4602,7 @@ export class SiteDebugTabComponent implements OnInit, AfterViewChecked, OnDestro
       error: (error) => {
         this.restoringVersion = null;
         const message = ErrorExtractor.getMessage(error);
-        this.notificationService.error(`Erreur lors de la restauration: ${message}`);
+        this.notificationService.error(`${this.translate.instant('debug.notifyRestoreError')}: ${message}`);
         this.logger.error('Failed to restore config version', { error: message, siteId: this.siteId, versionId: item.id });
       }
     });
@@ -4625,10 +4629,10 @@ export class SiteDebugTabComponent implements OnInit, AfterViewChecked, OnDestro
       case 'reboot':
         this.executingCommand = false;
         this.showConfirmModal({
-          title: 'Redémarrer le Raspberry Pi',
-          message: 'Le boîtier va redémarrer. La TV et la télécommande seront indisponibles pendant environ 1 minute.',
-          warning: 'Le contenu ne sera pas diffusé pendant le redémarrage.',
-          confirmLabel: '🔄 Redémarrer',
+          title: this.translate.instant('debug.confirmRebootTitle'),
+          message: this.translate.instant('debug.confirmRebootMsg'),
+          warning: this.translate.instant('debug.confirmRebootWarn'),
+          confirmLabel: '🔄 ' + this.translate.instant('debug.commandsRebootShort'),
           danger: true,
           icon: '🔌',
           onConfirm: () => {
@@ -4650,13 +4654,13 @@ export class SiteDebugTabComponent implements OnInit, AfterViewChecked, OnDestro
       next: (response) => {
         this.executingCommand = false;
         this.commandResult = JSON.stringify(response, null, 2);
-        this.notificationService.success(`Commande "${commandType}" envoyée avec succès`);
+        this.notificationService.success(this.translate.instant('debug.notifyCommandSuccess'));
       },
       error: (error) => {
         this.executingCommand = false;
         const message = ErrorExtractor.getMessage(error);
-        this.commandResult = `Erreur: ${message}`;
-        this.notificationService.error(`Erreur: ${message}`);
+        this.commandResult = `${this.translate.instant('debug.notifyError')}: ${message}`;
+        this.notificationService.error(`${this.translate.instant('debug.notifyError')}: ${message}`);
       }
     });
   }
@@ -4674,7 +4678,7 @@ export class SiteDebugTabComponent implements OnInit, AfterViewChecked, OnDestro
 
   loadHealthStatus(): void {
     if (!this.isConnected) {
-      this.notificationService.warning('Le boîtier doit être connecté pour récupérer l\'état de santé');
+      this.notificationService.warning(this.translate.instant('debug.notifyDeviceOffline'));
       return;
     }
 
@@ -4688,13 +4692,13 @@ export class SiteDebugTabComponent implements OnInit, AfterViewChecked, OnDestro
           this.healthStatus = result;
         } else {
           this.logger.warn('Invalid health status response', { result });
-          this.notificationService.error('Échec de la récupération de l\'état de santé');
+          this.notificationService.error(this.translate.instant('debug.notifyHealthFailed'));
         }
       },
       error: (error) => {
         this.loadingHealthStatus = false;
         const message = ErrorExtractor.getMessage(error);
-        this.notificationService.error(`Erreur: ${message}`);
+        this.notificationService.error(`${this.translate.instant('debug.notifyError')}: ${message}`);
         this.logger.error('Failed to get health status', { error: message, siteId: this.siteId });
       }
     });
@@ -4702,9 +4706,9 @@ export class SiteDebugTabComponent implements OnInit, AfterViewChecked, OnDestro
 
   getHealthStatusLabel(status: string): string {
     switch (status) {
-      case 'healthy': return 'Bon état';
-      case 'degraded': return 'Dégradé';
-      case 'critical': return 'Critique';
+      case 'healthy': return this.translate.instant('debug.healthStatusHealthy');
+      case 'degraded': return this.translate.instant('debug.healthStatusDegraded');
+      case 'critical': return this.translate.instant('debug.healthStatusCritical');
       default: return status;
     }
   }
@@ -4722,11 +4726,11 @@ export class SiteDebugTabComponent implements OnInit, AfterViewChecked, OnDestro
 
   getTvPowerLabel(power: string | null): string {
     switch (power) {
-      case 'on': return '✅ Allumée';
-      case 'standby': return '🔴 En veille';
-      case 'transitioning': return '⏳ Transition...';
-      case 'unknown': return '❓ Inconnu';
-      default: return '❓ Non détecté';
+      case 'on': return '✅ ' + this.translate.instant('debug.tvOn');
+      case 'standby': return '🔴 ' + this.translate.instant('debug.tvStandby');
+      case 'transitioning': return '⏳ ' + this.translate.instant('debug.tvTransitioning');
+      case 'unknown': return '❓ ' + this.translate.instant('debug.tvUnknown');
+      default: return '❓ ' + this.translate.instant('debug.tvNotDetected');
     }
   }
 
@@ -4741,29 +4745,29 @@ export class SiteDebugTabComponent implements OnInit, AfterViewChecked, OnDestro
   }
 
   getDisplaySectionTitle(displayInfo?: DisplayInfo): string {
-    if (!displayInfo || !displayInfo.connected) return 'État TV (HDMI-CEC)';
+    if (!displayInfo || !displayInfo.connected) return this.translate.instant('debug.displayTv');
     switch (displayInfo.display_type) {
-      case 'monitor': return 'Écran (Moniteur PC)';
-      case 'tv': return 'État TV (HDMI-CEC)';
-      case 'projector': return 'Écran (Projecteur)';
-      default: return 'Écran connecté';
+      case 'monitor': return this.translate.instant('debug.displayMonitor');
+      case 'tv': return this.translate.instant('debug.displayTv');
+      case 'projector': return this.translate.instant('debug.displayProjector');
+      default: return this.translate.instant('debug.displayConnected');
     }
   }
 
   getDisplayName(displayInfo?: DisplayInfo): string {
-    if (!displayInfo) return 'Inconnu';
+    if (!displayInfo) return this.translate.instant('debug.displayUnknown');
     const parts: string[] = [];
     if (displayInfo.manufacturer) parts.push(displayInfo.manufacturer);
     if (displayInfo.model) parts.push(displayInfo.model);
-    return parts.length > 0 ? parts.join(' ') : 'Écran détecté';
+    return parts.length > 0 ? parts.join(' ') : this.translate.instant('debug.displayDetected');
   }
 
   getDisplayTypeLabel(displayType: string): string {
     switch (displayType) {
-      case 'tv': return '📺 TV';
-      case 'monitor': return '🖥️ Moniteur PC';
-      case 'projector': return '📽️ Projecteur';
-      default: return '❓ Inconnu';
+      case 'tv': return '📺 ' + this.translate.instant('debug.displayTypeTv');
+      case 'monitor': return '🖥️ ' + this.translate.instant('debug.displayTypeMonitor');
+      case 'projector': return '📽️ ' + this.translate.instant('debug.displayTypeProjector');
+      default: return '❓ ' + this.translate.instant('debug.displayUnknown');
     }
   }
 
@@ -4773,7 +4777,7 @@ export class SiteDebugTabComponent implements OnInit, AfterViewChecked, OnDestro
 
   runDiagnostics(): void {
     if (!this.isConnected) {
-      this.notificationService.warning('Le boîtier doit être connecté pour lancer un diagnostic');
+      this.notificationService.warning(this.translate.instant('debug.notifyDeviceOffline'));
       return;
     }
 
@@ -4786,16 +4790,16 @@ export class SiteDebugTabComponent implements OnInit, AfterViewChecked, OnDestro
         this.logger.info('Diagnostics received', { result });
         if (result && (result.success !== false || result.output)) {
           this.diagnosticsResult = result;
-          this.notificationService.success('Diagnostic terminé');
+          this.notificationService.success(this.translate.instant('debug.notifyDiagDone'));
         } else {
           this.logger.warn('Invalid diagnostics response', { result });
-          this.notificationService.error('Échec du diagnostic');
+          this.notificationService.error(this.translate.instant('debug.notifyDiagFailed'));
         }
       },
       error: (error) => {
         this.runningDiagnostics = false;
         const message = ErrorExtractor.getMessage(error);
-        this.notificationService.error(`Erreur: ${message}`);
+        this.notificationService.error(`${this.translate.instant('debug.notifyError')}: ${message}`);
         this.logger.error('Failed to run diagnostics', { error: message, siteId: this.siteId });
       }
     });
@@ -4878,7 +4882,7 @@ export class SiteDebugTabComponent implements OnInit, AfterViewChecked, OnDestro
       error: (error) => {
         this.loadingDiff = false;
         const message = ErrorExtractor.getMessage(error);
-        this.notificationService.error(`Erreur: ${message}`);
+        this.notificationService.error(`${this.translate.instant('debug.notifyError')}: ${message}`);
         this.logger.error('Failed to compare config versions', { error: message, siteId: this.siteId });
       }
     });
@@ -4908,7 +4912,7 @@ export class SiteDebugTabComponent implements OnInit, AfterViewChecked, OnDestro
       error: (error) => {
         this.loadingDiff = false;
         const message = ErrorExtractor.getMessage(error);
-        this.notificationService.error(`Erreur: ${message}`);
+        this.notificationService.error(`${this.translate.instant('debug.notifyError')}: ${message}`);
       }
     });
   }
@@ -4943,28 +4947,28 @@ export class SiteDebugTabComponent implements OnInit, AfterViewChecked, OnDestro
 
   getConnectionStatusText(): string {
     if (!this.isConnected) {
-      return '○ Déconnecté';
+      return '○ ' + this.translate.instant('debug.connectionDisconnected');
     }
     if (this.connectionHealth && !this.connectionHealth.isHealthy) {
-      return '⚠ Instable';
+      return '⚠ ' + this.translate.instant('debug.connectionUnstable');
     }
-    return '● Connecté';
+    return '● ' + this.translate.instant('debug.connectionConnected');
   }
 
   getZombieReasonText(): string {
-    if (!this.connectionHealth) return 'Inconnu';
+    if (!this.connectionHealth) return this.translate.instant('debug.zombieUnknown');
 
     switch (this.connectionHealth.reason) {
       case 'not_in_map':
-        return 'Socket non enregistrée sur le serveur';
+        return this.translate.instant('debug.zombieNotInMap');
       case 'socket_disconnected':
-        return 'Socket présente mais déconnectée';
+        return this.translate.instant('debug.zombieSocketDisconnected');
       case 'no_pong_received':
-        return 'Aucune réponse ping reçue';
+        return this.translate.instant('debug.zombieNoPong');
       case 'pong_stale':
-        return 'Réponse ping trop ancienne';
+        return this.translate.instant('debug.zombiePongStale');
       case 'healthy':
-        return 'Connexion saine';
+        return this.translate.instant('debug.zombieHealthy');
       default:
         return this.connectionHealth.reason;
     }
@@ -4983,7 +4987,7 @@ export class SiteDebugTabComponent implements OnInit, AfterViewChecked, OnDestro
 
   loadLogs(): void {
     if (!this.isConnected) {
-      this.notificationService.warning('Le boîtier doit être connecté pour récupérer les logs');
+      this.notificationService.warning(this.translate.instant('debug.notifyDeviceOffline'));
       return;
     }
 
@@ -4995,15 +4999,15 @@ export class SiteDebugTabComponent implements OnInit, AfterViewChecked, OnDestro
         this.loadingLogs = false;
         // L'endpoint retourne { logs: string[] }
         if (response?.logs && Array.isArray(response.logs)) {
-          this.logsContent = response.logs.join('\n') || 'Aucun log disponible';
+          this.logsContent = response.logs.join('\n') || this.translate.instant('debug.logsNoLogs');
         } else {
-          this.logsContent = 'Aucun log disponible';
+          this.logsContent = this.translate.instant('debug.logsNoLogs');
         }
       },
       error: (error) => {
         this.loadingLogs = false;
         const message = ErrorExtractor.getMessage(error);
-        this.notificationService.error(`Erreur: ${message}`);
+        this.notificationService.error(`${this.translate.instant('debug.notifyError')}: ${message}`);
         this.logger.error('Failed to get logs', { error: message, siteId: this.siteId });
       }
     });
@@ -5026,7 +5030,7 @@ export class SiteDebugTabComponent implements OnInit, AfterViewChecked, OnDestro
 
   copyLogs(): void {
     navigator.clipboard.writeText(this.logsContent);
-    this.notificationService.success('Logs copiés !');
+    this.notificationService.success(this.translate.instant('debug.notifyLogsCopied'));
   }
 
   downloadLogs(): void {
@@ -5045,7 +5049,7 @@ export class SiteDebugTabComponent implements OnInit, AfterViewChecked, OnDestro
 
   loadNetworkInfo(): void {
     if (!this.isConnected) {
-      this.notificationService.warning('Le boîtier doit être connecté pour les diagnostics réseau');
+      this.notificationService.warning(this.translate.instant('debug.notifyDeviceOffline'));
       return;
     }
 
@@ -5057,13 +5061,13 @@ export class SiteDebugTabComponent implements OnInit, AfterViewChecked, OnDestro
         if (result && result.success !== false) {
           this.networkInfo = result as NetworkDiagnostics;
         } else {
-          this.notificationService.error('Échec des diagnostics réseau');
+          this.notificationService.error(this.translate.instant('debug.notifyNetworkFailed'));
         }
       },
       error: (error) => {
         this.loadingNetworkInfo = false;
         const message = ErrorExtractor.getMessage(error);
-        this.notificationService.error(`Erreur: ${message}`);
+        this.notificationService.error(`${this.translate.instant('debug.notifyError')}: ${message}`);
         this.logger.error('Failed to get network diagnostics', { error: message, siteId: this.siteId });
       }
     });
@@ -5075,7 +5079,7 @@ export class SiteDebugTabComponent implements OnInit, AfterViewChecked, OnDestro
 
   loadBufferStatus(): void {
     if (!this.isConnected) {
-      this.notificationService.warning('Le boîtier doit être connecté pour voir l\'état des buffers');
+      this.notificationService.warning(this.translate.instant('debug.notifyDeviceOffline'));
       return;
     }
 
@@ -5098,7 +5102,7 @@ export class SiteDebugTabComponent implements OnInit, AfterViewChecked, OnDestro
       if (pollResult.success && pollResult.data) {
         this.bufferStatus = pollResult.data;
       } else {
-        this.notificationService.error(pollResult.error || 'Échec de la récupération de l\'état des buffers');
+        this.notificationService.error(pollResult.error || this.translate.instant('debug.notifyBufferFailed'));
         this.logger.error('Failed to get buffer status', { error: pollResult.error, siteId: this.siteId });
       }
     });
@@ -5110,7 +5114,7 @@ export class SiteDebugTabComponent implements OnInit, AfterViewChecked, OnDestro
 
   fixHotspot(autoFix: boolean): void {
     if (!this.isConnected) {
-      this.notificationService.warning('Le boîtier doit être connecté pour gérer le hotspot');
+      this.notificationService.warning(this.translate.instant('debug.notifyDeviceOffline'));
       return;
     }
 
@@ -5128,18 +5132,18 @@ export class SiteDebugTabComponent implements OnInit, AfterViewChecked, OnDestro
           // Si le canal a été changé et qu'un reboot est nécessaire, afficher le modal de confirmation
           if (autoFix && result.fix?.channelChanged && result.fix?.needsReboot) {
             this.showRebootConfirmModal = true;
-            this.notificationService.info('Canal WiFi modifié - redémarrage nécessaire pour appliquer');
+            this.notificationService.info(this.translate.instant('debug.notifyHotspotChanged'));
           } else if (result.success) {
-            this.notificationService.success(autoFix ? 'Hotspot réparé avec succès' : 'Diagnostic terminé');
+            this.notificationService.success(this.translate.instant(autoFix ? 'debug.notifyHotspotFixed' : 'debug.notifyHotspotDiagDone'));
           } else {
-            this.notificationService.warning('Des problèmes ont été détectés');
+            this.notificationService.warning(this.translate.instant('debug.notifyHotspotIssues'));
           }
         }
       },
       error: (error) => {
         this.fixingHotspot = false;
         const message = ErrorExtractor.getMessage(error);
-        this.notificationService.error(`Erreur: ${message}`);
+        this.notificationService.error(`${this.translate.instant('debug.notifyError')}: ${message}`);
         this.logger.error('Failed to fix hotspot', { error: message, siteId: this.siteId });
       }
     });
@@ -5147,12 +5151,12 @@ export class SiteDebugTabComponent implements OnInit, AfterViewChecked, OnDestro
 
   cancelReboot(): void {
     this.showRebootConfirmModal = false;
-    this.notificationService.info('Le changement de canal sera appliqué au prochain redémarrage du boîtier');
+    this.notificationService.info(this.translate.instant('debug.notifyRebootPending'));
   }
 
   confirmReboot(): void {
     if (!this.isConnected) {
-      this.notificationService.warning('Le boîtier doit être connecté pour redémarrer');
+      this.notificationService.warning(this.translate.instant('debug.notifyDeviceOffline'));
       return;
     }
 
@@ -5163,13 +5167,13 @@ export class SiteDebugTabComponent implements OnInit, AfterViewChecked, OnDestro
       next: () => {
         this.rebooting = false;
         this.showRebootConfirmModal = false;
-        this.notificationService.success('Redémarrage en cours... Le boîtier sera de nouveau en ligne dans ~1 minute');
+        this.notificationService.success(this.translate.instant('debug.notifyRebootStarted'));
         this.logger.info('Reboot command sent after hotspot fix', { siteId: this.siteId });
       },
       error: (error) => {
         this.rebooting = false;
         const message = ErrorExtractor.getMessage(error);
-        this.notificationService.error(`Erreur lors du redémarrage: ${message}`);
+        this.notificationService.error(`${this.translate.instant('debug.notifyRebootError')}: ${message}`);
         this.logger.error('Failed to reboot after hotspot fix', { error: message, siteId: this.siteId });
       }
     });
@@ -5181,7 +5185,7 @@ export class SiteDebugTabComponent implements OnInit, AfterViewChecked, OnDestro
 
   exportDebugBundle(): void {
     if (!this.isConnected) {
-      this.notificationService.warning('Le boîtier doit être connecté pour exporter les données');
+      this.notificationService.warning(this.translate.instant('debug.notifyDeviceOffline'));
       return;
     }
 
@@ -5209,17 +5213,17 @@ export class SiteDebugTabComponent implements OnInit, AfterViewChecked, OnDestro
           document.body.removeChild(link);
           URL.revokeObjectURL(url);
 
-          this.notificationService.success('Rapport de debug exporté');
+          this.notificationService.success(this.translate.instant('debug.notifyExportDone'));
         } else {
-          this.exportError = 'Le rapport n\'a pas pu être généré';
-          this.notificationService.error('Échec de l\'export');
+          this.exportError = this.translate.instant('debug.notifyExportGenFailed');
+          this.notificationService.error(this.translate.instant('debug.notifyExportFailed'));
         }
       },
       error: (error) => {
         this.exportingBundle = false;
         const message = ErrorExtractor.getMessage(error);
         this.exportError = message;
-        this.notificationService.error(`Erreur: ${message}`);
+        this.notificationService.error(`${this.translate.instant('debug.notifyError')}: ${message}`);
         this.logger.error('Failed to export debug bundle', { error: message, siteId: this.siteId });
       }
     });
@@ -5248,7 +5252,7 @@ export class SiteDebugTabComponent implements OnInit, AfterViewChecked, OnDestro
       error: (error) => {
         this.loadingWifiBssid = false;
         const message = ErrorExtractor.getMessage(error);
-        this.notificationService.error(`Erreur: ${message}`);
+        this.notificationService.error(`${this.translate.instant('debug.notifyError')}: ${message}`);
         this.logger.error('Failed to load WiFi BSSID status', { error: message, siteId: this.siteId });
       }
     });
@@ -5262,7 +5266,7 @@ export class SiteDebugTabComponent implements OnInit, AfterViewChecked, OnDestro
       next: (response) => {
         this.removingBssidLock = false;
         if (response.success) {
-          this.notificationService.success('Verrouillage BSSID supprimé. Le roaming est maintenant actif.');
+          this.notificationService.success(this.translate.instant('debug.notifyBssidRemoved'));
           // Recharger le status
           this.loadWifiBssidStatus();
         } else {
@@ -5272,7 +5276,7 @@ export class SiteDebugTabComponent implements OnInit, AfterViewChecked, OnDestro
       error: (error) => {
         this.removingBssidLock = false;
         const message = ErrorExtractor.getMessage(error);
-        this.notificationService.error(`Erreur: ${message}`);
+        this.notificationService.error(`${this.translate.instant('debug.notifyError')}: ${message}`);
         this.logger.error('Failed to remove BSSID lock', { error: message, siteId: this.siteId });
       }
     });
@@ -5286,7 +5290,7 @@ export class SiteDebugTabComponent implements OnInit, AfterViewChecked, OnDestro
       next: (response) => {
         this.optimizingMesh = false;
         if (response.success) {
-          this.notificationService.success('Configuration WiFi optimisée pour environnement mesh.');
+          this.notificationService.success(this.translate.instant('debug.notifyMeshOptimized'));
           // Recharger le status
           this.loadWifiBssidStatus();
         } else {
@@ -5296,7 +5300,7 @@ export class SiteDebugTabComponent implements OnInit, AfterViewChecked, OnDestro
       error: (error) => {
         this.optimizingMesh = false;
         const message = ErrorExtractor.getMessage(error);
-        this.notificationService.error(`Erreur: ${message}`);
+        this.notificationService.error(`${this.translate.instant('debug.notifyError')}: ${message}`);
         this.logger.error('Failed to optimize for mesh', { error: message, siteId: this.siteId });
       }
     });
@@ -5325,7 +5329,7 @@ export class SiteDebugTabComponent implements OnInit, AfterViewChecked, OnDestro
       error: (error) => {
         this.scanningWifi = false;
         const message = ErrorExtractor.getMessage(error);
-        this.notificationService.error(`Erreur scan WiFi: ${message}`);
+        this.notificationService.error(`${this.translate.instant('debug.notifyWifiScanError')}: ${message}`);
         this.logger.error('Failed to scan WiFi networks', { error: message, siteId: this.siteId });
       }
     });
@@ -5345,7 +5349,7 @@ export class SiteDebugTabComponent implements OnInit, AfterViewChecked, OnDestro
   connectWifiClient(): void {
     if (!this.siteId || !this.isConnected || !this.selectedWifiNetwork) return;
     if (this.selectedWifiNetwork.security !== 'Open' && (!this.wifiPassword || this.wifiPassword.length < 8)) {
-      this.notificationService.warning('Le mot de passe doit contenir au moins 8 caractères');
+      this.notificationService.warning(this.translate.instant('debug.notifyWifiPasswordMin'));
       return;
     }
 
@@ -5375,7 +5379,7 @@ export class SiteDebugTabComponent implements OnInit, AfterViewChecked, OnDestro
       error: (error) => {
         this.connectingWifi = false;
         const message = ErrorExtractor.getMessage(error);
-        this.notificationService.error(`Erreur connexion WiFi: ${message}`);
+        this.notificationService.error(`${this.translate.instant('debug.notifyWifiConnectError')}: ${message}`);
         this.logger.error('Failed to connect WiFi client', { error: message, siteId: this.siteId });
       }
     });
@@ -5410,7 +5414,7 @@ export class SiteDebugTabComponent implements OnInit, AfterViewChecked, OnDestro
       error: (error) => {
         this.loadingTimeline = false;
         const message = ErrorExtractor.getMessage(error);
-        this.notificationService.error(`Erreur: ${message}`);
+        this.notificationService.error(`${this.translate.instant('debug.notifyError')}: ${message}`);
         this.logger.error('Failed to load timeline', { error: message, siteId: this.siteId });
       }
     });
@@ -5428,12 +5432,12 @@ export class SiteDebugTabComponent implements OnInit, AfterViewChecked, OnDestro
 
   getStatusLabel(status: string | undefined): string {
     switch (status) {
-      case 'completed': return '✅ Terminé';
-      case 'in_progress': return '⏳ En cours';
-      case 'failed': return '❌ Échoué';
-      case 'active': return '🔴 Actif';
-      case 'resolved': return '✅ Résolu';
-      case 'pending': return '⏸️ En attente';
+      case 'completed': return '✅ ' + this.translate.instant('debug.statusCompleted');
+      case 'in_progress': return '⏳ ' + this.translate.instant('debug.statusInProgress');
+      case 'failed': return '❌ ' + this.translate.instant('debug.statusFailed');
+      case 'active': return '🔴 ' + this.translate.instant('debug.statusActive');
+      case 'resolved': return '✅ ' + this.translate.instant('debug.statusResolved');
+      case 'pending': return '⏸️ ' + this.translate.instant('debug.statusPending');
       default: return status || '';
     }
   }
@@ -5593,23 +5597,23 @@ export class SiteDebugTabComponent implements OnInit, AfterViewChecked, OnDestro
   private wizardCheckConnectivity(): void {
     const step = this.wizardSteps[0];
     step.status = 'checking';
-    step.message = 'V\u00e9rification de la connectivit\u00e9...';
+    step.message = this.translate.instant('debug.wizardCheckingConnectivity');
 
     // Simulated async delay to give the UI a "checking" feel
     setTimeout(() => {
       if (this.isConnected) {
         step.status = 'ok';
-        step.message = 'Le bo\u00eetier est en ligne';
-        step.details = ['Connexion WebSocket active'];
+        step.message = this.translate.instant('debug.wizardDeviceOnline');
+        step.details = [this.translate.instant('debug.wizardWebSocketActive')];
         step.suggestions = [];
         if (this.connectionHealth) {
           if (this.connectionHealth.lastPongAgeMs !== null) {
             const ageSec = Math.round(this.connectionHealth.lastPongAgeMs / 1000);
-            step.details.push(`Dernier heartbeat : il y a ${ageSec}s`);
+            step.details.push(this.translate.instant('debug.wizardLastHeartbeat', { seconds: ageSec }));
           }
           if (!this.connectionHealth.isHealthy) {
             step.status = 'warning';
-            step.message = 'Connect\u00e9 mais connexion instable';
+            step.message = this.translate.instant('debug.wizardConnectedUnstable');
             step.suggestions = [this.connectionHealth.reason];
           }
         }
@@ -5621,13 +5625,13 @@ export class SiteDebugTabComponent implements OnInit, AfterViewChecked, OnDestro
         }, 800);
       } else {
         step.status = 'error';
-        step.message = 'Le bo\u00eetier est hors ligne';
+        step.message = this.translate.instant('debug.wizardDeviceOffline');
         step.details = [];
         step.suggestions = [
-          'V\u00e9rifier que le bo\u00eetier est allum\u00e9 (LED d\'alimentation)',
-          'V\u00e9rifier le c\u00e2ble r\u00e9seau ou la connexion WiFi',
-          'Red\u00e9marrer le routeur si n\u00e9cessaire',
-          'V\u00e9rifier que le bo\u00eetier a acc\u00e8s \u00e0 Internet',
+          this.translate.instant('debug.wizardSuggestPowerLed'),
+          this.translate.instant('debug.wizardSuggestCable'),
+          this.translate.instant('debug.wizardSuggestRouter'),
+          this.translate.instant('debug.wizardSuggestInternet'),
         ];
       }
     }, 500);
@@ -5636,34 +5640,34 @@ export class SiteDebugTabComponent implements OnInit, AfterViewChecked, OnDestro
   private wizardCheckVideos(): void {
     const step = this.wizardSteps[1];
     step.status = 'checking';
-    step.message = 'V\u00e9rification des vid\u00e9os...';
+    step.message = this.translate.instant('debug.wizardCheckingVideos');
 
     setTimeout(() => {
       const videoCount = this.localVideos.length;
       if (videoCount > 0) {
         const totalSize = this.getTotalSize();
         step.status = 'ok';
-        step.message = `${videoCount} vid\u00e9o${videoCount > 1 ? 's' : ''} pr\u00e9sente${videoCount > 1 ? 's' : ''}`;
+        step.message = this.translate.instant('debug.wizardVideosPresent', { count: videoCount });
         step.details = [
-          `Espace utilis\u00e9 : ${this.formatBytes(totalSize)}`,
+          this.translate.instant('debug.wizardSpaceUsed', { size: this.formatBytes(totalSize) }),
         ];
         if (this.localStorage) {
           const pct = Math.round((this.localStorage.used / this.localStorage.total) * 100);
-          step.details.push(`Stockage : ${pct}% utilis\u00e9 (${this.formatBytes(this.localStorage.free)} libre)`);
+          step.details.push(this.translate.instant('debug.wizardStorageUsed', { pct, free: this.formatBytes(this.localStorage.free) }));
           if (pct > 90) {
             step.status = 'warning';
-            step.suggestions = ['L\'espace disque est presque plein. Envisager de supprimer des vid\u00e9os inutilis\u00e9es.'];
+            step.suggestions = [this.translate.instant('debug.wizardDiskAlmostFull')];
           }
         }
         if (this.lastVideoSync) {
-          step.details.push(`Derni\u00e8re sync : ${new Date(this.lastVideoSync).toLocaleString('fr-FR')}`);
+          step.details.push(this.translate.instant('debug.wizardLastSyncDate', { date: new Date(this.lastVideoSync).toLocaleString() }));
         }
       } else {
         step.status = 'error';
-        step.message = 'Aucune vid\u00e9o sur le bo\u00eetier';
+        step.message = this.translate.instant('debug.wizardNoVideos');
         step.suggestions = [
-          'D\u00e9ployer du contenu depuis l\'onglet "Contenu"',
-          'V\u00e9rifier que le bo\u00eetier est connect\u00e9 pour la synchronisation',
+          this.translate.instant('debug.wizardSuggestDeploy'),
+          this.translate.instant('debug.wizardSuggestConnect'),
         ];
       }
     }, 400);
@@ -5672,7 +5676,7 @@ export class SiteDebugTabComponent implements OnInit, AfterViewChecked, OnDestro
   private wizardCheckLoop(): void {
     const step = this.wizardSteps[2];
     step.status = 'checking';
-    step.message = 'V\u00e9rification de la boucle de diffusion...';
+    step.message = this.translate.instant('debug.wizardCheckingLoop');
 
     setTimeout(() => {
       try {
@@ -5682,26 +5686,26 @@ export class SiteDebugTabComponent implements OnInit, AfterViewChecked, OnDestro
 
         if (sponsorCount > 0) {
           step.status = 'ok';
-          step.message = `Boucle configur\u00e9e avec ${sponsorCount} vid\u00e9o${sponsorCount > 1 ? 's' : ''}`;
-          step.details = [`${sponsorCount} \u00e9l\u00e9ment${sponsorCount > 1 ? 's' : ''} dans la boucle de diffusion`];
+          step.message = this.translate.instant('debug.wizardLoopConfigured', { count: sponsorCount });
+          step.details = [this.translate.instant('debug.wizardLoopItems', { count: sponsorCount })];
 
           const timeCategories = config['timeCategories'] as Array<Record<string, unknown>> | undefined;
           if (timeCategories && timeCategories.length > 0) {
-            step.details.push(`${timeCategories.length} tranche${timeCategories.length > 1 ? 's' : ''} horaire${timeCategories.length > 1 ? 's' : ''} configur\u00e9e${timeCategories.length > 1 ? 's' : ''}`);
+            step.details.push(this.translate.instant('debug.wizardTimeCategories', { count: timeCategories.length }));
           }
         } else {
           step.status = 'error';
-          step.message = 'Boucle de diffusion vide';
+          step.message = this.translate.instant('debug.wizardLoopEmpty');
           step.suggestions = [
-            'Configurer la boucle depuis l\'onglet "Contenu"',
-            'Ajouter des vid\u00e9os \u00e0 la boucle de diffusion (sponsors/animations)',
+            this.translate.instant('debug.wizardSuggestConfigLoop'),
+            this.translate.instant('debug.wizardSuggestAddVideos'),
           ];
         }
       } catch {
         step.status = 'warning';
-        step.message = 'Impossible de lire la configuration';
-        step.details = ['La configuration JSON n\'a pas pu \u00eatre analys\u00e9e'];
-        step.suggestions = ['Recharger les donn\u00e9es du site'];
+        step.message = this.translate.instant('debug.wizardCannotReadConfig');
+        step.details = [this.translate.instant('debug.wizardJsonParseError')];
+        step.suggestions = [this.translate.instant('debug.wizardSuggestReload')];
       }
     }, 400);
   }
@@ -5709,13 +5713,13 @@ export class SiteDebugTabComponent implements OnInit, AfterViewChecked, OnDestro
   private wizardCheckImpressions(): void {
     const step = this.wizardSteps[3];
     step.status = 'checking';
-    step.message = 'V\u00e9rification des impressions r\u00e9centes...';
+    step.message = this.translate.instant('debug.wizardCheckingImpressions');
 
     if (!this.isConnected) {
       setTimeout(() => {
         step.status = 'warning';
-        step.message = 'Impossible de v\u00e9rifier (bo\u00eetier hors ligne)';
-        step.suggestions = ['Connecter le bo\u00eetier pour v\u00e9rifier les impressions'];
+        step.message = this.translate.instant('debug.wizardCannotCheckOffline');
+        step.suggestions = [this.translate.instant('debug.wizardSuggestConnectImpressions')];
       }, 300);
       return;
     }
@@ -5745,8 +5749,8 @@ export class SiteDebugTabComponent implements OnInit, AfterViewChecked, OnDestro
         this.wizardEvaluateImpressions(step, pollResult.data);
       } else {
         step.status = 'warning';
-        step.message = pollResult.error || '\u00c9chec de r\u00e9cup\u00e9ration du buffer';
-        step.suggestions = ['R\u00e9essayer le diagnostic'];
+        step.message = pollResult.error || this.translate.instant('debug.wizardBufferFetchFailed');
+        step.suggestions = [this.translate.instant('debug.wizardSuggestRetry')];
       }
     });
   }
@@ -5757,30 +5761,30 @@ export class SiteDebugTabComponent implements OnInit, AfterViewChecked, OnDestro
 
     if (totalEvents > 0) {
       step.status = 'ok';
-      step.message = `${totalEvents} \u00e9v\u00e9nement${totalEvents > 1 ? 's' : ''} en buffer`;
+      step.message = this.translate.instant('debug.wizardEventsInBuffer', { count: totalEvents });
       step.details = [
-        `Total : ${totalEvents} \u00e9v\u00e9nement${totalEvents > 1 ? 's' : ''}`,
+        this.translate.instant('debug.wizardTotalEvents', { count: totalEvents }),
       ];
       if (sponsorsCount > 0) {
-        step.details.push(`dont ${sponsorsCount} sponsor${sponsorsCount > 1 ? 's' : ''}`);
+        step.details.push(this.translate.instant('debug.wizardIncludingSponsors', { count: sponsorsCount }));
       }
       if (buffer.analytics?.oldest_event) {
-        step.details.push(`Plus ancien : ${new Date(buffer.analytics.oldest_event).toLocaleString('fr-FR')}`);
+        step.details.push(this.translate.instant('debug.wizardOldestEvent', { date: new Date(buffer.analytics.oldest_event).toLocaleString() }));
       }
       if (buffer.legacy_sponsor_file) {
-        step.details.push('⚠️ Fichier legacy sponsor_impressions.json d\u00e9tect\u00e9 (obsolète)');
+        step.details.push('⚠️ ' + this.translate.instant('debug.wizardLegacyFile'));
       }
       if (totalEvents > 1000) {
         step.status = 'warning';
-        step.message = `${totalEvents} \u00e9v\u00e9nements en attente (file importante)`;
-        step.suggestions = ['Le buffer est volumineux. V\u00e9rifier la synchronisation des analytics.'];
+        step.message = this.translate.instant('debug.wizardBufferLarge', { count: totalEvents });
+        step.suggestions = [this.translate.instant('debug.wizardSuggestCheckSync')];
       }
     } else {
-      // Empty buffer is the normal state when sync is working correctly
-      step.status = 'ok';
-      step.message = 'Buffer vide (sync OK)';
-      step.details = ['Le buffer est vide : les impressions sont synchronis\u00e9es normalement.'];
-      step.suggestions = [];
+      // No events in buffer - could mean sync is working well OR no activity
+      step.status = 'warning';
+      step.message = this.translate.instant('debug.wizardNoEvents');
+      step.details = [this.translate.instant('debug.wizardBufferEmpty')];
+      step.suggestions = [this.translate.instant('debug.wizardSuggestCheckLoop')];
     }
   }
 
@@ -5791,15 +5795,15 @@ export class SiteDebugTabComponent implements OnInit, AfterViewChecked, OnDestro
 
     if (score === total) {
       step.status = 'ok';
-      step.message = 'Tous les diagnostics sont OK';
+      step.message = this.translate.instant('debug.wizardAllOk');
     } else if (score >= 2) {
       step.status = 'warning';
       const issues = this.wizardSteps.filter((_s, i) => i < 4 && _s.status !== 'ok').length;
-      step.message = `${issues} point${issues > 1 ? 's' : ''} d'attention d\u00e9tect\u00e9${issues > 1 ? 's' : ''}`;
+      step.message = this.translate.instant('debug.wizardAttentionPoints', { count: issues });
     } else {
       step.status = 'error';
       const issues = this.wizardSteps.filter((_s, i) => i < 4 && _s.status !== 'ok').length;
-      step.message = `${issues} probl\u00e8me${issues > 1 ? 's' : ''} d\u00e9tect\u00e9${issues > 1 ? 's' : ''}`;
+      step.message = this.translate.instant('debug.wizardProblems', { count: issues });
     }
 
     step.details = this.wizardSteps

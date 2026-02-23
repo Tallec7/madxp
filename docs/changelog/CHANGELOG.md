@@ -77,7 +77,18 @@
   - **Logs améliorés** : filtre texte, colorisation par niveau (ERROR=rouge, WARN=orange), copier/télécharger
   - **Fichiers** : tri par nom/taille/date, icônes par type
   - **Timeline** : filtre par type d'événement, affichage détails expandable
-  - **i18n** : 90+ clés ajoutées (fr/en/es) pour toutes les sections debug
+  - **i18n** : 250+ clés ajoutées (fr/en/es) couvrant 100% de la page debug
+
+- **debug:** Phase D — i18n complet page debug (0 texte français restant)
+  - **Template** : toutes les sections migrées vers `translate` pipe (health GPU/fan/CEC/services/ressources,
+    hotspot reboot modal, export, timeline filtres, config historique, commandes rapides, diagnostics approfondi)
+  - **TypeScript** : 5 méthodes wizard entièrement i18n-isées avec `translate.instant()` et paramètres
+    (connectivity, videos, loop, impressions, summary)
+  - **Notifications** : 30+ messages passés à `translate.instant()` (succès, erreurs, confirmations)
+  - **Helpers** : 8 méthodes de label refactorisées (getHealthStatusLabel, getTvPowerLabel, etc.)
+  - **Clés ajoutées** : ~160 nouvelles clés (wizard 48, health 29, hotspot/reboot 13, timeline 7, notifications 28, etc.)
+  - **3 langues** : fr, en, es — parité vérifiée (326 clés debug dans chaque fichier)
+  - **Smoke tests** : 20 clés critiques vérifiées + guards anti-régression hardcoded French
 
 - **debug:** Phase B — refactoring architecture composant debug
   - **Extraction** : `DebugSummaryBarComponent` standalone (barre résumé → sous-composant réutilisable)
@@ -91,7 +102,10 @@
   - `site-debug-tab must import pollCommand utility` — empêche retour au polling dupliqué
   - `site-debug-tab must NOT use native confirm()` — empêche réintroduction de confirm() natif
   - `command-poller.util must export pollCommand and CommandPollResult` — vérifie l'API publique
-  - `i18n fr/en/es must contain debug section keys` — empêche oubli de traduction
+  - `i18n fr/en/es must contain debug section keys` — 20 clés critiques vérifiées dans 3 langues
+  - `i18n key count must be identical across fr/en/es` — parité stricte des fichiers de traduction
+  - `site-debug-tab template must not contain hardcoded French` — bloque le retour de texte non traduit
+  - `site-debug-tab wizard methods must use translate.instant()` — empêche hardcoded dans le TypeScript
 
 # [3.73.0](https://github.com/Tallec7/neopro/compare/v3.72.1...v3.73.0) (2026-02-23)
 
