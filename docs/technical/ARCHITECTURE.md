@@ -297,7 +297,7 @@ Local Server (Socket.IO :3000)
 TV Frontend (player commands)
          │
          ▼
-Video.js API (play/pause/seek)
+Native HTML5 <video> (double-buffer A/B)
 ```
 
 ### 4. Multi-config profiles
@@ -332,7 +332,7 @@ Pi Frontend (ProfileConfigService sélectionne le profil actif)
 
 | Composant              | Stack                                                                  | Base de données                               | Déploiement            |
 | ---------------------- | ---------------------------------------------------------------------- | --------------------------------------------- | ---------------------- |
-| `raspberry/src`        | Angular 20, Video.js 8.x, Socket.IO client                             | -                                             | Raspberry Pi (systemd) |
+| `raspberry/src`        | Angular 20, native HTML5 video (double-buffer), Socket.IO client       | -                                             | Raspberry Pi (systemd) |
 | `raspberry/server`     | Node.js, Socket.IO 4.8                                                 | -                                             | Raspberry Pi (systemd) |
 | `raspberry/admin`      | Express, vanilla JS (dual mode: club/tech)                             | -                                             | Raspberry Pi (systemd) |
 | `raspberry/sync-agent` | Node.js 20, Axios, SHA256 checksum                                     | -                                             | Raspberry Pi (systemd) |
@@ -652,7 +652,7 @@ Pour fonctionner sans internet, le build Angular doit inclure :
 ### Optimisations frontend
 
 - Lazy loading routes
-- Video.js streaming
+- Native HTML5 video double-buffer (seamless A/B switching)
 - SCSS compilation
 - Service Worker (PWA ready)
 

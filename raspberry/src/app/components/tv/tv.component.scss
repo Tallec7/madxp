@@ -96,15 +96,6 @@
 }
 
 // ============================================================================
-// LEGACY VIDEO.JS PLAYER (caché, gardé pour compatibilité)
-// ============================================================================
-
-.hidden-player,
-.video-js {
-  display: none !important;
-}
-
-// ============================================================================
 // SCORE OVERLAY — Position classes + Broadcast/Minimal themes
 // Tout en CSS pur, 0 runtime JS pour le style (position via classes CSS)
 // ============================================================================

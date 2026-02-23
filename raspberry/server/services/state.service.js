@@ -6,12 +6,10 @@
  */
 class StateService {
   constructor() {
-    this._score = {
-      homeTeam: 'DOMICILE',
-      awayTeam: 'EXTÉRIEUR',
-      homeScore: 0,
-      awayScore: 0,
-    };
+    // Score initialisé à null — aucun match actif tant qu'un opérateur
+    // n'a pas explicitement envoyé un score-update via la télécommande.
+    // Évite d'afficher "DOMICILE 0-0 EXTÉRIEUR" au boot du kiosk.
+    this._score = null;
 
     this._phase = 'neutral';
     this._options = null;
@@ -57,22 +55,22 @@ class StateService {
 
   // --- Score ---
   getScore() {
-    return { ...this._score };
+    return this._score ? { ...this._score } : null;
   }
 
   updateScore(data) {
     this._score = {
-      homeTeam: data.homeTeam || this._score.homeTeam,
-      awayTeam: data.awayTeam || this._score.awayTeam,
-      homeScore: data.homeScore ?? this._score.homeScore,
-      awayScore: data.awayScore ?? this._score.awayScore,
+      homeTeam: data.homeTeam || (this._score?.homeTeam ?? 'DOMICILE'),
+      awayTeam: data.awayTeam || (this._score?.awayTeam ?? 'EXTÉRIEUR'),
+      homeScore: data.homeScore ?? (this._score?.homeScore ?? 0),
+      awayScore: data.awayScore ?? (this._score?.awayScore ?? 0),
     };
     return this.getScore();
   }
 
   resetScore() {
-    this._score.homeScore = 0;
-    this._score.awayScore = 0;
+    // Reset complet : pas de match actif
+    this._score = null;
     return this.getScore();
   }
 

@@ -841,6 +841,47 @@ ssh pi@neopro.local 'sudo systemctl restart neopro-kiosk'
 
 ---
 
+### Ancienne version de l'app visible au boot (cache Chromium)
+
+#### Symptômes
+
+- Au démarrage du kiosk, on voit brièvement l'ancienne version de l'app Angular
+- Rectangle noir en haut à gauche (ancien player Video.js)
+- Score "DOMICILE 0 - 0 EXTÉRIEUR" avec l'ancien design
+- Après quelques secondes, la vraie app se charge avec la bonne boucle vidéo
+
+#### Cause racine
+
+Chromium cachait `index.html` sur disque (pas de header `Cache-Control`), et au boot il servait
+l'ancienne version cachée avant de revalider avec nginx. L'ancien `index.html` référençait les
+vieux fichiers JS/CSS (avec les anciens content-hash) → rendu de l'ancien code Angular.
+
+#### Solution (v3.72+)
+
+1. **nginx `Cache-Control: no-store` sur `index.html`** — force Chromium à toujours charger
+   le dernier build. Les fichiers JS/CSS avec content-hash restent cachés 30d (immutable).
+2. **Nettoyage complet du cache Chromium au boot** — `cleanup_chromium()` dans `kiosk-watchdog.sh`
+   supprime `Cache/`, `Code Cache/`, `GPUCache/`, `Service Worker/`, `Application Cache/`.
+3. **Flags `--disk-cache-size=1 --aggressive-cache-discard`** — Chromium ne met quasi rien en cache disque.
+
+#### Vérification
+
+```bash
+# Vérifier les headers nginx sur index.html
+curl -I http://neopro.local/index.html
+# Doit contenir: Cache-Control: no-cache, no-store, must-revalidate
+
+# Vérifier les flags Chromium
+ps aux | grep chromium | grep disk-cache-size
+# Doit contenir: --disk-cache-size=1
+
+# Vérifier que le cache est vide après boot
+ls -la /home/pi/.cache/chromium/Default/Cache/ 2>/dev/null
+# Doit être vide ou inexistant
+```
+
+---
+
 ### Les analytics vidéo ne remontent pas au dashboard central
 
 #### Symptômes

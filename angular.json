@@ -49,15 +49,7 @@
               }
             ],
             "styles": ["raspberry/src/styles.scss"],
-            "allowedCommonJsDependencies": [
-              "global/window",
-              "global/document",
-              "@videojs/xhr",
-              "videojs-vtt.js",
-              "mux.js/lib/tools/parse-sidx",
-              "mux.js/lib/utils/clock",
-              "@xmldom/xmldom"
-            ]
+            "allowedCommonJsDependencies": ["@xmldom/xmldom"]
           },
           "configurations": {
             "production": {

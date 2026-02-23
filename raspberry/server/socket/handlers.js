@@ -31,7 +31,10 @@ module.exports = function registerSocketHandlers({ io, stateService, configPath 
 
     // --- Initial state sync (send full state to newly connected client) ---
     const state = stateService.getFullState();
-    socket.emit('score-update', state.score);
+    // N'envoyer le score que s'il y a un match actif (évite le "DOMICILE 0-0" au boot)
+    if (state.score) {
+      socket.emit('score-update', state.score);
+    }
     socket.emit('phase-change', { phase: state.phase });
     socket.emit('recording-state', state.recordingState);
     if (state.options) {
@@ -63,14 +66,13 @@ module.exports = function registerSocketHandlers({ io, stateService, configPath 
     });
 
     /**
-     * Score reset — resets score to 0-0 and broadcasts.
+     * Score reset — resets to null (no active match) and broadcasts.
      * @event score-reset
      */
     socket.on('score-reset', () => {
-      console.log('Score reset re\u00e7u');
+      console.log('Score reset reçu');
       stateService.resetScore();
       io.emit('score-reset');
-      io.emit('score-update', stateService.getScore());
     });
 
     /**
@@ -90,9 +92,11 @@ module.exports = function registerSocketHandlers({ io, stateService, configPath 
      * @event request-state
      */
     socket.on('request-state', () => {
-      console.log('Request state re\u00e7u de:', socket.id);
+      console.log('Request state reçu de:', socket.id);
       const s = stateService.getFullState();
-      socket.emit('score-update', s.score);
+      if (s.score) {
+        socket.emit('score-update', s.score);
+      }
       socket.emit('phase-change', { phase: s.phase });
       socket.emit('recording-state', s.recordingState);
       if (s.options) {

@@ -127,10 +127,14 @@ cleanup_chromium() {
     # Attendre que les processus se terminent
     sleep 2
 
-    # Vider le cache Chromium pour libérer de la mémoire
-    rm -rf /home/pi/.cache/chromium/Default/Cache/* 2>/dev/null || true
-    rm -rf /home/pi/.cache/chromium/Default/Code\ Cache/* 2>/dev/null || true
-    rm -rf /home/pi/.config/chromium/Default/GPUCache/* 2>/dev/null || true
+    # Vider TOUT le cache Chromium (HTTP cache, code cache, GPU cache, SW cache)
+    # Empêche l'affichage d'une ancienne version de l'app Angular au boot
+    rm -rf /home/pi/.cache/chromium/Default/Cache 2>/dev/null || true
+    rm -rf /home/pi/.cache/chromium/Default/Code\ Cache 2>/dev/null || true
+    rm -rf /home/pi/.config/chromium/Default/GPUCache 2>/dev/null || true
+    rm -rf /home/pi/.config/chromium/Default/Cache 2>/dev/null || true
+    rm -rf /home/pi/.config/chromium/Default/Service\ Worker 2>/dev/null || true
+    rm -rf /home/pi/.config/chromium/Default/Application\ Cache 2>/dev/null || true
     rm -rf /tmp/kiosk-led 2>/dev/null || true
 
     # Synchroniser les écritures disque
@@ -186,6 +190,8 @@ start_chromium() {
         --disable-crash-reporter
         --disable-dev-shm-usage
         --disable-checker-imaging
+        --disk-cache-size=1
+        --aggressive-cache-discard
     )
 
     # Flags spécifiques au modèle
@@ -273,6 +279,8 @@ start_chromium_led() {
         --disable-crash-reporter
         --disable-dev-shm-usage
         --disable-checker-imaging
+        --disk-cache-size=1
+        --aggressive-cache-discard
         --user-data-dir=/tmp/kiosk-led
         --window-position=1920,0
     )

@@ -9,21 +9,24 @@ describe('StateService', () => {
 
   // --- Score ---
   describe('Score', () => {
-    it('should return default score', () => {
+    it('should return null by default (no active match)', () => {
       const score = service.getScore();
-      expect(score).toEqual({
-        homeTeam: 'DOMICILE',
-        awayTeam: 'EXTÉRIEUR',
-        homeScore: 0,
-        awayScore: 0,
-      });
+      expect(score).toBeNull();
     });
 
-    it('should update score partially', () => {
+    it('should update score from null state', () => {
       const score = service.updateScore({ homeScore: 3 });
       expect(score.homeScore).toBe(3);
       expect(score.awayScore).toBe(0);
       expect(score.homeTeam).toBe('DOMICILE');
+    });
+
+    it('should update score partially', () => {
+      service.updateScore({ homeTeam: 'PSG', homeScore: 1 });
+      const score = service.updateScore({ homeScore: 3 });
+      expect(score.homeScore).toBe(3);
+      expect(score.awayScore).toBe(0);
+      expect(score.homeTeam).toBe('PSG');
     });
 
     it('should update team names', () => {
@@ -32,15 +35,14 @@ describe('StateService', () => {
       expect(score.awayTeam).toBe('OL');
     });
 
-    it('should reset score to 0-0 but keep team names', () => {
+    it('should reset score to null (no active match)', () => {
       service.updateScore({ homeTeam: 'PSG', homeScore: 2, awayScore: 1 });
       const score = service.resetScore();
-      expect(score.homeScore).toBe(0);
-      expect(score.awayScore).toBe(0);
-      expect(score.homeTeam).toBe('PSG');
+      expect(score).toBeNull();
     });
 
     it('should return copies, not references', () => {
+      service.updateScore({ homeScore: 0 });
       const score1 = service.getScore();
       score1.homeScore = 99;
       const score2 = service.getScore();

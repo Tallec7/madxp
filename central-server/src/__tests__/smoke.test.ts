@@ -1695,3 +1695,113 @@ describe('Sponsor loop analytics category wiring', () => {
     expect(deploymentService).toContain('syncSponsorVideoAssociations(siteId, enrichedConfig)');
   });
 });
+
+// =================================================================
+// Kiosk boot regressions — Video.js removal, cache, score
+// =================================================================
+
+describe('Kiosk boot regression guards', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+
+  it('tv.component.ts must NOT import video.js (legacy player removed in v3.72)', () => {
+    // Video.js caused a black rectangle at boot on Pi with slow GPU.
+    // Only native HTML5 <video> double-buffer is used now.
+    const tvComponent = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/src/app/components/tv/tv.component.ts'),
+      'utf8'
+    );
+    expect({ hasVideoJs: /import.*video\.js|import.*videojs/m.test(tvComponent) })
+      .toEqual({ hasVideoJs: false });
+  });
+
+  it('tv.component.html must NOT have video.js player element', () => {
+    const tvTemplate = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/src/app/components/tv/tv.component.html'),
+      'utf8'
+    );
+    expect({ hasVideoJsElement: /class="video-js"|#target.*video-js/m.test(tvTemplate) })
+      .toEqual({ hasVideoJsElement: false });
+  });
+
+  it('StateService must default score to null (not DOMICILE/EXTÉRIEUR)', () => {
+    // Default DOMICILE 0-0 EXTÉRIEUR was emitted on every client connect,
+    // causing phantom score overlay even when premium not activated.
+    const stateService = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/server/services/state.service.js'),
+      'utf8'
+    );
+    expect({ scoreDefaultNull: /this\._score\s*=\s*null/.test(stateService) })
+      .toEqual({ scoreDefaultNull: true });
+  });
+
+  it('handlers.js must guard score-update emission with null check', () => {
+    // Prevents emitting score-update with null data on client connect
+    const handlers = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/server/socket/handlers.js'),
+      'utf8'
+    );
+    expect({ guardsScoreEmit: /if\s*\(s(?:tate)?\.score\)/.test(handlers) })
+      .toEqual({ guardsScoreEmit: true });
+  });
+});
+
+describe('Nginx cache-control conventions', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+
+  const nginxConfigs = [
+    'raspberry/config/nginx-captive-portal.conf',
+    'raspberry/config/nginx/neopro-hls.conf',
+  ];
+
+  for (const configPath of nginxConfigs) {
+    it(`${configPath} must have Cache-Control no-store on index.html`, () => {
+      // Without no-store, Chromium caches index.html and serves old Angular builds at boot,
+      // showing stale UI (old Video.js player, old score design) before the current build loads.
+      const content = fs.readFileSync(path.join(repoRoot, configPath), 'utf8');
+      expect({
+        file: configPath,
+        hasIndexHtmlNoCache: /location\s*=\s*\/index\.html\s*\{[^}]*no-cache,\s*no-store/s.test(content),
+      }).toEqual({
+        file: configPath,
+        hasIndexHtmlNoCache: true,
+      });
+    });
+  }
+
+  it('install.sh nginx config must have Cache-Control no-store on index.html', () => {
+    const content = fs.readFileSync(path.join(repoRoot, 'raspberry/install.sh'), 'utf8');
+    expect({
+      hasIndexHtmlNoCache: /location\s*=\s*\/index\.html\s*\{[^}]*no-cache,\s*no-store/s.test(content),
+    }).toEqual({
+      hasIndexHtmlNoCache: true,
+    });
+  });
+});
+
+describe('Kiosk watchdog cache management', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+  const watchdog = fs.readFileSync(
+    path.join(repoRoot, 'raspberry/scripts/kiosk-watchdog.sh'),
+    'utf8'
+  );
+
+  it('kiosk-watchdog.sh must clear all Chromium cache directories', () => {
+    // Incomplete cache clearing causes old Angular builds to persist and display at boot
+    const requiredPaths = [
+      '.cache/chromium/Default/Cache',
+      '.cache/chromium/Default/Code',   // Code Cache
+      '.config/chromium/Default/GPUCache',
+      '.config/chromium/Default/Cache',
+      '.config/chromium/Default/Service',  // Service Worker
+      '.config/chromium/Default/Application', // Application Cache
+    ];
+    const missing = requiredPaths.filter(p => !watchdog.includes(p));
+    expect({ missingCachePaths: missing }).toEqual({ missingCachePaths: [] });
+  });
+
+  it('kiosk-watchdog.sh must have --disk-cache-size flag on main Chromium', () => {
+    // Without this flag, Chromium accumulates stale cached builds
+    expect({ hasDiskCacheSize: /--disk-cache-size=\d+/.test(watchdog) })
+      .toEqual({ hasDiskCacheSize: true });
+  });
+});

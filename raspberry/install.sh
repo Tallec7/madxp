@@ -345,12 +345,14 @@ install_dependencies() {
         unclutter-xfixes \
         xdotool \
         x11-xserver-utils \
+        x11-utils \
         chromium \
         cec-utils \
         ffmpeg \
         firmware-realtek \
         firmware-ralink
 
+    # x11-utils: Fournit xdpyinfo, utilisé par neopro-kiosk.service pour vérifier que le serveur X est prêt
     # cec-utils: Permet de détecter si la TV est allumée via HDMI-CEC (pour analytics fiables)
     # ffmpeg: Permet d'extraire la durée des vidéos (ffprobe)
     # firmware-realtek/ralink: Drivers pour clés WiFi USB (nécessaire pour le dual WiFi hotspot + internet)
@@ -676,7 +678,23 @@ server {
     # APPLICATION PRINCIPALE
     # ========================================================================
 
-    # Application Angular
+    # index.html — jamais mis en cache (garantit le chargement du dernier build Angular)
+    # Les JS/CSS ont des content-hash dans leurs noms, donc immutables par design.
+    location = /index.html {
+        add_header Cache-Control "no-cache, no-store, must-revalidate";
+        add_header Pragma "no-cache";
+        add_header Expires 0;
+    }
+
+    # Fichiers statiques Angular (JS/CSS/fonts/images) — cache longue durée
+    # Les content-hash dans les noms de fichiers garantissent l'invalidation automatique
+    location ~* \.(js|mjs|css|woff2?|ttf|eot|ico|png|jpg|jpeg|gif|svg|webp|map)$ {
+        try_files $uri =404;
+        expires 30d;
+        add_header Cache-Control "public, immutable";
+    }
+
+    # Application Angular (fallback SPA)
     location / {
         try_files $uri $uri/ /index.html;
     }

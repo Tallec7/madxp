@@ -3,9 +3,6 @@ import { CommonModule } from '@angular/common';
 import { ActivatedRoute } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { Subscription } from 'rxjs';
-import videojs from 'video.js';
-import "videojs-playlist";
-import Player from 'video.js/dist/types/player';
 import { SocketService, LoopState } from '../../services/socket.service';
 import { AnalyticsService } from '../../services/analytics.service';
 import { LocalBroadcastService, ScoreUpdateEvent, PhaseChangeEvent, OptionsUpdateEvent, BreakingNewsEvent, TimerUpdateEvent } from '../../services/local-broadcast.service';
@@ -23,19 +20,6 @@ import { Configuration, OverlayPosition, ScoreOverlayPosition, SportType, Waterm
 import { Command } from '../../interfaces/command.interface';
 import { Sponsor } from '../../interfaces/sponsor.interface';
 import { environment } from '../../../environments/environment';
-
-interface PlaylistItem {
-  sources: { src: string; type: string }[];
-}
-
-interface PlayerWithPlaylist extends Player {
-  playlist: {
-    (items: PlaylistItem[]): void;
-    first(): void;
-    repeat(value: boolean): void;
-    autoadvance(delay: number): void;
-  };
-}
 
 @Component({
   selector: 'app-tv',
@@ -123,8 +107,6 @@ export class TvComponent implements OnInit, OnDestroy {
   public timerCountDown = false;
   public timerHalfDuration = 45;
 
-  @ViewChild('target', { static: true }) target: ElementRef;
-
   // Double-buffer pour la BOUCLE (z-index 1-2)
   @ViewChild('playerA', { static: true }) playerARef: ElementRef<HTMLVideoElement>;
   @ViewChild('playerB', { static: true }) playerBRef: ElementRef<HTMLVideoElement>;
@@ -201,8 +183,6 @@ export class TvComponent implements OnInit, OnDestroy {
   };
   private transitionMetricsInterval: ReturnType<typeof setInterval> | null = null;
 
-  public player: Player;
-
   public ngOnInit() {
     // Lire le displayType depuis la route data (/led → 'led', /tv → 'tv')
     this.displayType = (this.route.snapshot.data['displayType'] as 'tv' | 'led') || 'tv';
@@ -251,19 +231,6 @@ export class TvComponent implements OnInit, OnDestroy {
     // Initialiser le watermark (délégué au service)
     this.watermarkService.init(this.configuration);
 
-    // Legacy Video.js (gardé pour compatibilité mais non utilisé)
-    const options = {
-      fullscreen: true,
-      autoplay: false, // Désactivé car on utilise le player natif
-      muted: true,
-      controls: false,
-      preload: "none"
-    }
-
-    this.player = videojs(this.target.nativeElement, options, () => {
-      console.log('tv legacy player ready (not used)');
-    });
-
     // Activer le plein écran ET le son au premier clic/touche utilisateur
     const activateFullscreenAndUnmute = () => {
       // Activer le son sur les deux players
@@ -286,52 +253,6 @@ export class TvComponent implements OnInit, OnDestroy {
     document.addEventListener('keydown', activateFullscreenAndUnmute, { once: true });
     document.addEventListener('touchstart', activateFullscreenAndUnmute, { once: true });
 
-    // Tracker les erreurs de lecture (désactivé pour les slaves)
-    this.player.on('error', (error: Event) => {
-      console.error('tv player error', error);
-      // Tracker l'erreur si une vidéo était en cours
-      if (!this.isSlaveMode) {
-        const currentSrc = this.player.currentSrc();
-        if (currentSrc) {
-          this.analyticsService.trackVideoError({ name: 'unknown', path: currentSrc, type: 'video/mp4' }, error);
-        }
-      }
-      this.sponsors();
-    });
-
-    // Tracker le changement de vidéo dans la playlist (sponsors)
-    // Note: analytics désactivées pour les slaves (second écran)
-    this.player.on('play', () => {
-      if (this.isSlaveMode) return;
-      const currentSrc = this.player.currentSrc();
-      console.log('[TV] Video play event:', { currentSrc, triggerType: this.lastTriggerType, phase: this.activePhase, loopCount: this.currentLoopVideos.length });
-      if (currentSrc && this.lastTriggerType === 'auto') {
-        // C'est une vidéo de la boucle active (selon la phase)
-        const sponsor = this.currentLoopVideos.find(s => currentSrc.includes(s.path));
-        console.log('[TV] Sponsor lookup:', { found: !!sponsor, loopPaths: this.currentLoopVideos.map(s => s.path) });
-        if (sponsor) {
-          this.analyticsService.trackVideoStart(sponsor, 'auto');
-        } else {
-          // Fallback: tracker quand même la vidéo même si pas trouvée dans sponsors
-          // (peut arriver si le path ne matche pas exactement)
-          const filename = currentSrc.split('/').pop() || 'unknown';
-          console.warn('[TV] Sponsor not found for', currentSrc, '- tracking as fallback');
-          this.analyticsService.trackVideoStart(
-            { name: filename, path: currentSrc, type: 'video/mp4' },
-            'auto'
-          );
-        }
-      }
-    });
-
-    this.player.on('ended', () => {
-      if (this.isSlaveMode) return;
-      // Pour les vidéos de la boucle, tracker la fin
-      if (this.lastTriggerType === 'auto') {
-        this.analyticsService.trackVideoEnd(true);
-      }
-    });
-
     this.socketService.on('action', (command: Command) => {
       console.log('tv action received', command);
       if (command.type === 'video' && command.data) {
@@ -351,7 +272,9 @@ export class TvComponent implements OnInit, OnDestroy {
     });
 
     // Live Score - Écouter les mises à jour de score
-    this.socketService.on('score-update', (scoreData: { homeTeam: string; awayTeam: string; homeScore: number; awayScore: number; period?: string; matchTime?: string }) => {
+    this.socketService.on('score-update', (scoreData: { homeTeam: string; awayTeam: string; homeScore: number; awayScore: number; period?: string; matchTime?: string } | null) => {
+      // Ignorer les score-update null (pas de match actif)
+      if (!scoreData) return;
       console.log('[TV] Score update received:', scoreData);
       this.handleScoreUpdate(scoreData);
     });
@@ -721,9 +644,6 @@ export class TvComponent implements OnInit, OnDestroy {
     this.localBroadcastSubscriptions.forEach(sub => sub.unsubscribe());
     this.localBroadcastSubscriptions = [];
 
-    if (this.player) {
-      this.player.dispose();
-    }
   }
 
   private play(video: Video) {

@@ -1,3 +1,40 @@
+# [3.72.0] (2026-02-23)
+
+### Features
+
+- **kiosk:** remove Video.js legacy player — only native HTML5 double-buffer remains
+  - Supprimé `<video #target>` (Video.js), imports, interfaces, `player.dispose()`, CSS `.hidden-player`
+  - Supprimé `@use 'video.js/dist/video-js.css'` de `styles.scss`
+  - Nettoyé `allowedCommonJsDependencies` dans `angular.json`
+  - Élimine le rectangle noir visible au boot sur Pi avec GPU lent
+
+- **kiosk:** prevent stale Angular build display at Chromium boot
+  - **nginx**: ajouté `Cache-Control: no-cache, no-store, must-revalidate` sur `index.html` dans les 3 configs
+    nginx (production `install.sh`, `nginx-captive-portal.conf`, `neopro-hls.conf`). Les fichiers JS/CSS
+    avec content-hash restent cachés 30d avec `immutable`.
+  - **kiosk-watchdog.sh**: nettoyage complet du cache Chromium au boot — ajouté `~/.config/chromium/Default/Cache`,
+    `Service Worker/`, `Application Cache/` en plus des dirs existants.
+  - **Chromium flags**: ajouté `--disk-cache-size=1` et `--aggressive-cache-discard` aux deux instances
+    (kiosk principal + LED). Empêche Chromium de cacher les ressources sur disque.
+
+### Bug Fixes
+
+- **pi-server:** score default `null` au lieu de `DOMICILE 0-0 EXTÉRIEUR`
+  - `StateService._score` initialisé à `null` (pas de match actif par défaut)
+  - `handlers.js` n'émet plus `score-update` quand le score est `null` (connexion + request-state)
+  - `score-reset` remet le score à `null` sans émettre de `score-update`
+  - Angular `tv.component.ts` ignore les `scoreData` null reçus via Socket.IO
+  - Empêche l'affichage du score "DOMICILE 0 - 0 EXTÉRIEUR" au boot quand premium non activé
+
+### Tests
+
+- **smoke:** ajouté tests de non-régression pour les conventions Pi :
+  - `tv.component.ts must NOT import video.js` — empêche la réintroduction de Video.js
+  - `nginx configs must have Cache-Control no-store on index.html` — protège contre le cache stale
+  - `kiosk-watchdog.sh must clear Chromium cache dirs` — vérifie le nettoyage complet
+  - `kiosk-watchdog.sh must have --disk-cache-size flag` — vérifie les flags anti-cache
+  - `StateService must default score to null` — empêche la régression du score fantôme
+
 # [3.71.0](https://github.com/Tallec7/neopro/compare/v3.70.0...v3.71.0) (2026-02-22)
 
 ### Features
