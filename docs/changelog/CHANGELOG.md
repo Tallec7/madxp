@@ -1,3 +1,13 @@
+# [3.72.0](https://github.com/Tallec7/neopro/compare/v3.71.0...v3.72.0) (2026-02-23)
+
+### Bug Fixes
+
+- **lint:** replace require() with dynamic import() in database config ([7c79509](https://github.com/Tallec7/neopro/commit/7c79509805e6d3d737175d432c5526484fb83dda))
+
+### Features
+
+- **kiosk:** fix stale Angular build display at Chromium boot ([31275e5](https://github.com/Tallec7/neopro/commit/31275e5eadd184c9e058cde3f5355c8ee69dfb42))
+
 # [3.72.0] (2026-02-23)
 
 ### Features
