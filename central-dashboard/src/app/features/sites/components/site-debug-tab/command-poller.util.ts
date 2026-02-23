@@ -1,4 +1,4 @@
-import { Observable, Subject, Subscription, interval } from 'rxjs';
+import { Observable, ReplaySubject, Subscription, interval } from 'rxjs';
 
 export interface CommandPollOptions {
   siteId: string;
@@ -22,7 +22,7 @@ export interface CommandPollResult<T> {
  * Replaces the duplicated ~40 lines of polling logic in BufferStatus and Wizard step 4.
  */
 export function pollCommand<T>(options: CommandPollOptions): { result$: Observable<CommandPollResult<T>>; cancel: () => void } {
-  const subject = new Subject<CommandPollResult<T>>();
+  const subject = new ReplaySubject<CommandPollResult<T>>(1);
   let pollSub: Subscription | null = null;
   const timeoutSec = options.timeoutSeconds ?? 15;
 
