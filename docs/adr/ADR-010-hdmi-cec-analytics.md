@@ -166,16 +166,54 @@ En complément du CEC, le Pi lit maintenant les données **EDID** (Extended Disp
 - `central-dashboard/.../site-debug-tab.component.ts` — Affichage adaptatif
 - `raspberry/sync-agent/src/__tests__/display-info.test.js` — 18 tests unitaires
 
+## Évolution : Enrichissement edid-decode (v3.77.0)
+
+**Date** : Février 2026
+
+### Problème
+
+Le parsing EDID basique (v3.44.0) identifiait uniquement 4 champs (fabricant, modèle, résolution, type). Pour les cas d'usage fleet analytics (benchmark écrans, ciblage variantes vidéo LED vs TV), il manquait des informations structurées sur les capacités de l'écran (HDR, refresh rate, taille, technologie de dalle).
+
+### Solution : Parser edid-decode enrichi
+
+En complément du parsing EDID binaire, le Pi utilise maintenant l'outil CLI `edid-decode` (package apt) pour extraire 8 champs structurés supplémentaires. Le parsing est graceful : si `edid-decode` n'est pas installé, le parsing basique continue de fonctionner.
+
+**Nouveaux champs (`edid_detailed`) :**
+
+| Donnée                 | Source edid-decode                  | Exemple          |
+| ---------------------- | ----------------------------------- | ---------------- |
+| `native_resolution`    | Premier DTD (Detailed Timing)       | `3840x2160`      |
+| `max_refresh_rate`     | Max Hz sur tous les DTDs (< 500 Hz) | `120`            |
+| `hdmi_version`         | Inféré depuis TMDS clock max        | `2.1`            |
+| `hdr_supported`        | HDR10 / HLG / SMPTE ST2084          | `true`           |
+| `color_spaces`         | BT2020, YCbCr 4:4:4/4:2:2/4:2:0     | `['BT2020_RGB']` |
+| `standby_supported`    | DPMS levels détectés                | `true`           |
+| `display_product_type` | Display Product Type EDID           | `projector`      |
+| `diagonal_inches`      | Calculé depuis taille physique (cm) | `55`             |
+
+**Catégorisation écran (`_inferDisplayCategory`) :**
+
+Nouvelle méthode qui croise le nom de modèle (regex OLED/QLED/LED/LCD/PLASMA), la taille physique (diag ≥ 32" = TV), le support audio, et le type CEC/EDID pour produire une catégorie fine :
+
+`tv_oled`, `tv_qled`, `tv_qned`, `tv_led`, `tv_lcd`, `tv_plasma`, `tv`, `monitor`, `projector`, `unknown`
+
+### Fichiers impactés
+
+- `raspberry/server/services/hdmi.service.js` — `_parseEdidDecodeOutput()`, `_inferDisplayCategory()`, `_runEdidDecode()`
+- `raspberry/sync-agent/src/metrics.js` — Mêmes méthodes synchronisées
+- `raspberry/server/__tests__/hdmi.service.test.js` — 29 tests unitaires (dont 20 nouveaux)
+- `raspberry/sync-agent/src/__tests__/display-info.test.js` — 44 tests unitaires (dont 15 nouveaux)
+
 ## Références
 
 - [hdmi-status.service.ts](../../raspberry/src/app/services/hdmi-status.service.ts)
 - [analytics.service.ts](../../raspberry/src/app/services/analytics.service.ts)
 - [analytics.controller.ts](../../central-server/src/controllers/analytics.controller.ts)
 - [add-tv-status-analytics.sql](../../central-server/src/scripts/migrations/add-tv-status-analytics.sql)
-- [hdmi.service.js](../../raspberry/server/services/hdmi.service.js) — Service EDID + CEC
+- [hdmi.service.js](../../raspberry/server/services/hdmi.service.js) — Service EDID + CEC + edid-decode
 - [metrics.js](../../raspberry/sync-agent/src/metrics.js) — Collecte EDID pour health status
 - ADR-027 : Suppression de l'UI Analytics dashboard
 
 ---
 
-_Créé le 11 février 2026 — Mis à jour le 16 février 2026 (EDID v3.44.0)_
+_Créé le 11 février 2026 — Mis à jour le 23 février 2026 (edid-decode enrichment v3.77.0)_

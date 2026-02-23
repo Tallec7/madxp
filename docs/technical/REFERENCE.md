@@ -475,11 +475,11 @@ const uptime24h = Math.min(100, (heartbeatCount24h / 2880) * 100);
 
 Le endpoint `/api/sites/:id/dashboard` renvoie `heartbeat_24h.count`, et le frontend calcule l'uptime localement.
 
-### Détection écran EDID (v3.44+)
+### Détection écran EDID (v3.77+)
 
-Le Pi détecte automatiquement l'écran connecté via les données **EDID** (Extended Display Identification Data) lues depuis `/sys/class/drm/card*-HDMI-*/edid`.
+Le Pi détecte automatiquement l'écran connecté via les données **EDID** (Extended Display Identification Data) lues depuis `/sys/class/drm/card*-HDMI-*/edid`, enrichies par `edid-decode` (package apt optionnel).
 
-**Données collectées :**
+**Données collectées (parsing binaire EDID) :**
 
 | Champ              | Description                                    | Exemple                          |
 | ------------------ | ---------------------------------------------- | -------------------------------- |
@@ -490,21 +490,57 @@ Le Pi détecte automatiquement l'écran connecté via les données **EDID** (Ext
 | `display_type`     | Type d'écran détecté                           | `tv`, `monitor`, `unknown`       |
 | `detection_method` | Méthode utilisée                               | `edid_raw`, `drm_status`, `none` |
 
-**Heuristique de type d'écran :**
+**Données enrichies (`edid_detailed`, via edid-decode) :**
+
+| Champ                  | Description                                           | Exemple                       |
+| ---------------------- | ----------------------------------------------------- | ----------------------------- |
+| `native_resolution`    | Résolution native (premier DTD edid-decode)           | `3840x2160`                   |
+| `max_refresh_rate`     | Refresh rate max détecté (Hz)                         | `120`                         |
+| `hdmi_version`         | Version HDMI inférée depuis TMDS clock max            | `2.1`, `2.0`, `1.4`           |
+| `hdr_supported`        | HDR détecté (HDR10, HLG, SMPTE ST2084)                | `true`                        |
+| `color_spaces`         | Espaces couleur supportés                             | `['BT2020_RGB', 'YCbCr_444']` |
+| `standby_supported`    | Support DPMS (veille)                                 | `true`                        |
+| `display_product_type` | Type produit EDID                                     | `projector`                   |
+| `diagonal_inches`      | Diagonale en pouces (calculée depuis taille physique) | `55`                          |
+
+> Si `edid-decode` n'est pas installé, `edid_detailed` est `null` et le parsing binaire basique continue de fonctionner.
+
+**Heuristique de type d'écran (`display_type`) :**
 
 1. Réponse CEC (devices > 0) → `tv`
 2. CEA Extension Block dans EDID → `tv`
 3. CEC dispo + 0 devices + écran connecté (EDID ou DRM status) → `monitor`
 4. Sinon → `unknown`
 
+**Catégorisation enrichie (`display_category` via `_inferDisplayCategory`) :**
+
+En complément du `display_type` basique, la méthode `_inferDisplayCategory()` croise nom de modèle, taille physique, support audio et type détecté pour produire une catégorie fine :
+
+| Catégorie   | Condition                                                        |
+| ----------- | ---------------------------------------------------------------- |
+| `projector` | `display_product_type` contient "projector"                      |
+| `tv_oled`   | TV + nom de modèle contient "OLED"                               |
+| `tv_qled`   | TV + nom de modèle contient "QLED"                               |
+| `tv_qned`   | TV + nom de modèle contient "QNED"                               |
+| `tv_led`    | TV + nom de modèle contient "LED" ou "NANOCELL"                  |
+| `tv_lcd`    | TV + nom de modèle contient "LCD"                                |
+| `tv_plasma` | TV + nom de modèle contient "PLASMA" ou "PDP"                    |
+| `tv`        | TV détectée (CEC, CEA, audio, diag ≥ 32") sans techno identifiée |
+| `monitor`   | Moniteur (diag < 28", pas d'audio, CEC 0 devices)                |
+| `unknown`   | Aucun signal exploitable                                         |
+
+Signaux "TV" : `display_type === 'tv'` OU `audio_supported === true` OU `diagonal_inches >= 32`.
+Signaux "Monitor" : `display_type === 'monitor'` OU (`diagonal_inches < 28` ET pas d'audio).
+
 > **Détection physique :** La connexion d'un écran est vérifiée via EDID (taille > 0) ou le fichier DRM status (`/sys/class/drm/card*-HDMI-*/status` = `connected`). Le signal CEC `tv_connected` n'est **pas** utilisé car il génère des faux positifs sur Pi 5 (retourne `true` sans écran branché).
 
 **Intégration :**
 
-- `sync-agent/src/metrics.js` → `getDisplayInfo()` inclus dans `getHealthStatus()` sous la clé `displayInfo`
-- `server/services/hdmi.service.js` → `getFullStatus()` croise CEC + EDID
-- Route `/api/hdmi-status` retourne CEC + display info combinés
+- `sync-agent/src/metrics.js` → `getDisplayInfo()` inclus dans `getHealthStatus()` sous la clé `displayInfo` (inclut `edid_detailed` + `display_category`)
+- `server/services/hdmi.service.js` → `getFullStatus()` croise CEC + EDID + edid-decode
+- Route `/api/hdmi-status` retourne CEC + display info + catégorie combinés
 - Cache EDID : 5 minutes (l'écran change rarement)
+- **Dépendance optionnelle** : `edid-decode` (apt package), parsing graceful si absent
 
 **Impact dashboard :** La section HDMI-CEC s'adapte au type d'écran. Pour un moniteur PC, les métriques CEC sont masquées et un message explicatif est affiché.
 

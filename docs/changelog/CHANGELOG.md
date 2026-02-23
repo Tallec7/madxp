@@ -7,6 +7,14 @@
 ### Features
 
 - **debug:** complete i18n — all hardcoded French replaced with translate pipes ([46fc699](https://github.com/Tallec7/neopro/commit/46fc699085b84c613794a2f5c26fde9791b79eff))
+- **hdmi:** enrichir edid-decode avec infos écran détaillées et catégorisation ([93c9793](https://github.com/Tallec7/neopro/commit/93c97934))
+  - 8 nouveaux champs `edid_detailed` : `native_resolution`, `max_refresh_rate`, `hdmi_version`, `hdr_supported`, `color_spaces`, `standby_supported`, `display_product_type`, `diagonal_inches`
+  - Catégorisation intelligente `_inferDisplayCategory()` : croise nom de modèle, taille physique, audio et CEC pour produire `tv_oled`, `tv_qled`, `tv_led`, `monitor`, `projector`, etc.
+  - Dépendance optionnelle `edid-decode` (apt) — parsing graceful si absent
+
+### Tests
+
+- 20 nouveaux tests hdmi.service (29 total), 15 nouveaux tests display-info (44 total)
 
 ## [3.76.4](https://github.com/Tallec7/neopro/compare/v3.76.3...v3.76.4) (2026-02-23)
 
