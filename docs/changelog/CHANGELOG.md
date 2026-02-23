@@ -29,6 +29,16 @@
 
 ### Bug Fixes
 
+- **kiosk:** fix TV noire après OTA — `x11-utils` (xdpyinfo) manquant sur certains Pi
+  - **Cause** : l'OTA 3.71.0 a déployé un `neopro-kiosk.service` utilisant `xdpyinfo` pour
+    vérifier la disponibilité du serveur X, mais le paquet `x11-utils` n'était pas pré-installé
+    sur tous les Pi → le health check échouait systématiquement → TV noire.
+  - **install.sh** : ajouté `x11-utils` dans les dépendances apt (nouveaux Pi)
+  - **diagnose-pi.sh** : ajouté `x11-utils` dans les paquets recommandés (détection si manquant)
+  - **update-software.js** : l'OTA vérifie et installe automatiquement les paquets apt manquants
+    (`dpkg -l` + `apt-get install -y` si absent). Non-bloquant si apt échoue.
+  - **Incident NLF** : résolu le 22/02/2026 par `sudo apt-get install -y x11-utils` + restart kiosk
+
 - **pi-server:** score default `null` au lieu de `DOMICILE 0-0 EXTÉRIEUR`
   - `StateService._score` initialisé à `null` (pas de match actif par défaut)
   - `handlers.js` n'émet plus `score-update` quand le score est `null` (connexion + request-state)
@@ -44,6 +54,8 @@
   - `kiosk-watchdog.sh must clear Chromium cache dirs` — vérifie le nettoyage complet
   - `kiosk-watchdog.sh must have --disk-cache-size flag` — vérifie les flags anti-cache
   - `StateService must default score to null` — empêche la régression du score fantôme
+  - `neopro-kiosk.service xdpyinfo dependency must be in install.sh` — empêche l'oubli de x11-utils
+  - `OTA must auto-install required apt packages` — vérifie que update-software.js installe x11-utils
 
 # [3.71.0](https://github.com/Tallec7/neopro/compare/v3.70.0...v3.71.0) (2026-02-22)
 

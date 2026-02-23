@@ -663,6 +663,29 @@ class SoftwareUpdateHandler {
         }
       }
 
+      // Installer les paquets apt manquants requis par les services.
+      // x11-utils: fournit xdpyinfo, utilisé par neopro-kiosk.service pour vérifier que X est prêt.
+      // Non-bloquant: si apt échoue (pas d'internet, lock dpkg), l'OTA continue.
+      const requiredAptPackages = ['x11-utils'];
+      try {
+        const missingPackages = [];
+        for (const pkg of requiredAptPackages) {
+          try {
+            const { stdout } = await execAsync(`dpkg -l ${pkg} 2>/dev/null | grep '^ii'`);
+            if (!stdout.trim()) missingPackages.push(pkg);
+          } catch {
+            missingPackages.push(pkg);
+          }
+        }
+        if (missingPackages.length > 0) {
+          logger.info('Installing missing apt packages...', { packages: missingPackages });
+          await execAsync(`sudo apt-get update -qq && sudo apt-get install -y ${missingPackages.join(' ')}`, { timeout: 120000 });
+          logger.info('Apt packages installed', { packages: missingPackages });
+        }
+      } catch (e) {
+        logger.warn('Failed to install apt packages (non-blocking)', { error: e.message });
+      }
+
       // Enable watchdog grace period before network-sensitive operations (udev + service restart)
       // Prevents the watchdog from triggering recovery during OTA udev deployment
       try {

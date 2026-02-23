@@ -243,6 +243,7 @@ check_apt_packages() {
         "chromium"
         "cec-utils"
         "firmware-realtek"
+        "x11-utils"
     )
 
     local MISSING_CRITICAL=()

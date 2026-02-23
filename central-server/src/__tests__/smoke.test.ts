@@ -1805,3 +1805,43 @@ describe('Kiosk watchdog cache management', () => {
       .toEqual({ hasDiskCacheSize: true });
   });
 });
+
+describe('Kiosk xdpyinfo dependency must be provisioned', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+
+  it('neopro-kiosk.service xdpyinfo dependency must be in install.sh', () => {
+    // neopro-kiosk.service uses xdpyinfo (from x11-utils) to check X server readiness.
+    // If x11-utils is missing from install.sh, new Pi deployments will have a black TV screen.
+    // Incident: NLF 22/02/2026 — TV noire post-OTA because x11-utils was not pre-installed.
+    const installSh = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/install.sh'),
+      'utf8'
+    );
+    expect({ hasX11Utils: installSh.includes('x11-utils') })
+      .toEqual({ hasX11Utils: true });
+  });
+
+  it('OTA must auto-install required apt packages including x11-utils', () => {
+    // update-software.js must have a requiredAptPackages list that includes x11-utils.
+    // This ensures existing Pi fleet gets x11-utils installed during OTA upgrade.
+    const updateSoftware = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/sync-agent/src/commands/update-software.js'),
+      'utf8'
+    );
+    expect({ hasRequiredAptPackages: updateSoftware.includes('requiredAptPackages') })
+      .toEqual({ hasRequiredAptPackages: true });
+    expect({ hasX11Utils: updateSoftware.includes("'x11-utils'") })
+      .toEqual({ hasX11Utils: true });
+  });
+
+  it('diagnose-pi.sh must check for x11-utils in recommended packages', () => {
+    // diagnose-pi.sh warns when recommended packages are missing.
+    // x11-utils must be in the list to alert operators before kiosk fails.
+    const diagnosePi = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/scripts/diagnose-pi.sh'),
+      'utf8'
+    );
+    expect({ hasX11Utils: diagnosePi.includes('x11-utils') })
+      .toEqual({ hasX11Utils: true });
+  });
+});

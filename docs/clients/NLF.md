@@ -676,4 +676,43 @@ En Transaction Mode, les connexions PgBouncer sont partagées par transaction (p
 
 ---
 
-**Dernière mise à jour :** 22 février 2026 (Résilience réseau v3.69 — profil réseau, alerte mesh, portail captif, TX power, brcmfmac recovery)
+---
+
+## Incident : TV noire après OTA — 22 février 2026
+
+### Symptôme
+
+- TV noire après déploiement OTA v3.71.0
+- `neopro-kiosk` en échec : `X server not ready after 60s` (3 tentatives, 3 échecs)
+- Tous les autres services OK (sync-agent, admin, app, hotspot)
+
+### Cause racine
+
+L'OTA 3.71.0 a déployé un nouveau `neopro-kiosk.service` utilisant `xdpyinfo` pour vérifier que le serveur X est prêt (remplacement du `sleep 10` aveugle). Mais `x11-utils` (qui fournit `xdpyinfo`) n'était pas installé sur ce Pi → le health check retournait `command not found` (exit 127) → le kiosk ne démarrait jamais.
+
+Le serveur X (XWayland via lightdm) fonctionnait parfaitement — seul l'outil de vérification manquait.
+
+### Résolution
+
+```bash
+sudo apt-get update && sudo apt-get install -y x11-utils
+sudo systemctl restart neopro-kiosk
+```
+
+TV opérationnelle en 30 secondes après l'installation.
+
+### Corrections permanentes (v3.72)
+
+1. **install.sh** : `x11-utils` ajouté aux dépendances apt (nouveaux Pi)
+2. **diagnose-pi.sh** : `x11-utils` dans les paquets recommandés (alerté si manquant)
+3. **update-software.js** : OTA vérifie et installe automatiquement les paquets apt manquants
+4. **smoke test** : vérifie que `x11-utils` est dans `install.sh` et `update-software.js`
+
+### Leçons apprises
+
+- ⚠️ Toute dépendance système utilisée dans un `.service` doit être dans `install.sh` ET dans l'OTA
+- ⚠️ Tester l'OTA sur un Pi "propre" (sans paquets bonus) avant déploiement fleet
+
+---
+
+**Dernière mise à jour :** 23 février 2026 (TV noire post-OTA — x11-utils manquant, corrigé v3.72)

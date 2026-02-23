@@ -784,6 +784,42 @@ sudo systemctl restart neopro-kiosk
 
 Le script `install.sh` détecte maintenant automatiquement le bon chemin. Pour en bénéficier :
 
+#### TV noire — "X server not ready after 60s" (v3.72+)
+
+**Symptômes :**
+
+- L'écran reste noir après le boot
+- `journalctl -u neopro-kiosk` affiche `X server not ready after 60s`
+- Le service restart en boucle (3 tentatives puis abandon)
+
+**Cause :** Le paquet `x11-utils` (qui fournit `xdpyinfo`) n'est pas installé. Le service `neopro-kiosk.service` utilise `xdpyinfo` pour vérifier que le serveur X est prêt avant de lancer Chromium. Sans cet outil, le health check échoue systématiquement.
+
+**Diagnostic :**
+
+```bash
+# Vérifier si xdpyinfo est installé
+which xdpyinfo
+# Si "not found" → c'est le problème
+
+# Vérifier que X est bien disponible (après install x11-utils)
+DISPLAY=:0 xdpyinfo | head -5
+```
+
+**Solution :**
+
+```bash
+# Installer le paquet manquant
+sudo apt-get update && sudo apt-get install -y x11-utils
+
+# Redémarrer le kiosk
+sudo systemctl restart neopro-kiosk
+
+# Vérifier
+sudo systemctl status neopro-kiosk
+```
+
+> **Note :** Depuis v3.72, l'OTA installe automatiquement `x11-utils` si manquant. Ce problème ne devrait plus se reproduire sur les futures mises à jour.
+
 ```bash
 # Depuis votre Mac, redéployer les fichiers système
 ./raspberry/scripts/deploy-remote.sh pi@neopro.local
