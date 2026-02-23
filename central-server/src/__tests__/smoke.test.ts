@@ -1946,7 +1946,11 @@ describe('Debug page architecture guards', () => {
 
     // Check critical keys exist in all 3 languages
     const criticalKeys = ['debug.summaryFiles', 'debug.healthTitle', 'debug.logsTitle', 'debug.networkTitle',
-      'debug.bufferPending', 'debug.bufferVideoPlays', 'debug.bufferEvents', 'debug.bufferRefresh'];
+      'debug.bufferPending', 'debug.bufferVideoPlays', 'debug.bufferEvents', 'debug.bufferRefresh',
+      'debug.wizardCheckingConnectivity', 'debug.wizardDeviceOnline', 'debug.wizardNoVideos',
+      'debug.wizardLoopEmpty', 'debug.wizardAllOk', 'debug.timelineAll', 'debug.timelineDeployments',
+      'debug.healthFanTitle', 'debug.healthHdmiConnection', 'debug.healthSystemdServices',
+      'debug.exportOffline', 'debug.rebootRequiredTitle', 'debug.hotspotWaiting'];
     for (const key of criticalKeys) {
       const parts = key.split('.');
       expect({ [`fr_has_${key}`]: frJson.includes(`"${parts[1]}"`) })
