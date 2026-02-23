@@ -1310,16 +1310,18 @@ GET    /sponsor-portal/report   - Téléchargement rapport PDF via token (page 2
 
 ```
 Auth:            60 req/min (prod), 100 req/min (dev)  (anti-bruteforce)
-API:            100 req/min     (standard)
+API:            100 req/min     (standard — compteur partagé entre toutes les routes utilisant apiRateLimit)
 Monitoring:     300 req/min     (status, metrics polling)
 Logging:        200 req/min     (frontend logs - silently dropped if exceeded)
 Sensitive:       30 req/min     (commands, deployments)
 Remote Cloud:    60 req/min     (télécommande cloud - PUBLIC, par IP)
 Upload:          10 req/hour    (video uploads)
-Admin:          400 req/min     (dashboard ops - handles multiple components loading)
+Admin:          400 req/min     (dashboard ops — sponsors, admin panel, multiple components loading)
 Pi Analytics:   500 req/min     (impressions sponsors depuis les Pi - par IP)
 Sponsor Portal: 100 req/min    (PUBLIC, par IP)
 ```
+
+**Note** : Chaque appel à `rateLimit()` crée un **compteur séparé**. Les routes utilisant `apiRateLimit` partagent un même compteur de 100 req/min. Les routes sponsors (`siteSponsorRoutes`) utilisent `adminRateLimit` (compteur séparé à 400 req/min) car le dashboard charge liste + stats + benchmark + rapports en parallèle.
 
 **Note** : Les rate limits sont basés sur le `user_id` (et non sur l'IP) en production, sauf Remote Cloud, Pi Analytics et Sponsor Portal qui sont par IP (endpoints publics). En test (supertest), tous les requêtes partagent la même IP, donc le rate limiter peut se déclencher avant le middleware d'auth — les smoke tests RBAC acceptent 403 ou 429.
 

@@ -2018,3 +2018,24 @@ describe('Analytics pages business-first architecture', () => {
       .toEqual({ hasSponsorBenchmark: true });
   });
 });
+
+// =================================================================
+// Rate-limit assignment regression tests
+// =================================================================
+
+describe('Rate-limit assignment guards', () => {
+  const serverTs = fs.readFileSync(
+    path.join(path.resolve(__dirname, '..', '..', '..'), 'central-server/src/server.ts'),
+    'utf8'
+  );
+
+  // Incident 2026-02-23: siteSponsorRoutes used apiRateLimit (100/min shared counter).
+  // The dashboard sponsors tab fires 4 parallel requests per expand (list + stats +
+  // benchmark + reports), quickly exhausting the shared budget and causing 429 cascades
+  // (including on /api/logs/frontend). Fix: adminRateLimit (400/min, separate counter).
+  it('siteSponsorRoutes must use adminRateLimit (not apiRateLimit)', () => {
+    const sponsorRouteMount = serverTs.match(/app\.use\('\/api\/sites',\s*(\w+),\s*siteSponsorRoutes\)/);
+    expect(sponsorRouteMount).not.toBeNull();
+    expect({ limiter: sponsorRouteMount![1] }).toEqual({ limiter: 'adminRateLimit' });
+  });
+});
