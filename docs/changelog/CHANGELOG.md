@@ -1,3 +1,9 @@
+## [3.76.2](https://github.com/Tallec7/neopro/compare/v3.76.1...v3.76.2) (2026-02-23)
+
+### Bug Fixes
+
+- **debug:** use ReplaySubject to fix pollCommand race condition ([7271892](https://github.com/Tallec7/neopro/commit/7271892a6588310a8d105df10c33c4922d59f449))
+
 ## [3.76.1](https://github.com/Tallec7/neopro/compare/v3.76.0...v3.76.1) (2026-02-23)
 
 ### Bug Fixes
