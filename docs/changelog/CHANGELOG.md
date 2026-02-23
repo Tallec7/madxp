@@ -1,12 +1,61 @@
-## [3.73.0] (2026-02-23)
+# [3.74.0](https://github.com/Tallec7/neopro/compare/v3.73.0...v3.74.0) (2026-02-23)
+
+### Bug Fixes
+
+- **analytics:** audit et corrections de la page analytics flotte ([44673e8](https://github.com/Tallec7/neopro/commit/44673e88a6d85eae8e3f3a14582b7078f4f1610a))
 
 ### Features
 
-- **debug:** add WiFi client status (BSSID, signal, mesh detection) to debug export bundle
-  - Nouvelle section `wifiClient` dans le bundle : SSID, BSSID, signal dBm, IP, BSSID lock, mesh detection
-  - Bundle passe de 15 à 16 sections — complétude totale par rapport à l'onglet Debug du dashboard
-  - Type TypeScript `sites.service.ts` corrigé pour refléter la structure réelle du bundle
-  - Tests unitaires `debug-bundle.test.js` : garde-fou anti-régression sur la complétude (liste exhaustive des sections), masquage données sensibles, résilience aux erreurs
+- **analytics:** refonte business-first des pages analytics fleet et club ([a21d16a](https://github.com/Tallec7/neopro/commit/a21d16a9840a9f8a501f9589c55687cf6663a0d1))
+
+# [3.74.0](https://github.com/Tallec7/neopro/compare/v3.73.0...v3.74.0) (2026-02-23)
+
+### Features
+
+- **analytics:** refonte business-first des pages analytics fleet et club
+  - **Fleet Overview** (`/analytics`) : KPIs business en haut (plays, screen time, impressions sponsors,
+    % fleet online), Chart.js engagement mensuel (lectures + sites actifs), top clubs actifs classés par
+    plays, clubs à relancer (0 play / offline), résumé sponsors, santé flotte condensée en accordéon.
+  - **Club Analytics** (`/sites/:id/analytics`) : suppression des 4 tabs → page unique scrollable,
+    KPIs avec tendance vs période précédente (+X%), Chart.js bar chart engagement quotidien,
+    section sponsors par club (benchmark : impressions, CPI, completion rate via `/sponsors/benchmark`),
+    top contenus avec catégories colorées, santé système en accordéon replié par défaut.
+  - **Aucune modification backend** — utilise les APIs existantes (`/analytics/overview`,
+    `/analytics/traction`, `/sites/:id/sponsors/benchmark`).
+  - **Smoke tests** : 4 tests de non-régression pour empêcher le retour vers une vue tech-centric.
+
+- **debug:** Phase C — restructure page debug dashboard (14→12 sections)
+  - **Fusion sections** : "Diagnostic complet" intégré dans "Santé système" (subsection contextuelle),
+    "Configuration JSON" intégré dans "Historique configs" (carte config courante en tête)
+  - **Barre résumé** : dashboard de pilules status (connexion, santé, fichiers, réseau, hotspot, buffer)
+    en tête de page pour vue d'ensemble instantanée
+  - **Données masquées exposées** : hostname, OS, IP, interfaces réseau détaillées, stabilité connexion,
+    détails serveur central (SSL, URL, version)
+  - **Modale confirmation** : remplacement des `confirm()` natifs par modale custom (reboot, restauration config)
+  - **Logs améliorés** : filtre texte, colorisation par niveau (ERROR=rouge, WARN=orange), copier/télécharger
+  - **Fichiers** : tri par nom/taille/date, icônes par type
+  - **Timeline** : filtre par type d'événement, affichage détails expandable
+  - **i18n** : 90+ clés ajoutées (fr/en/es) pour toutes les sections debug
+
+- **debug:** Phase B — refactoring architecture composant debug
+  - **Extraction** : `DebugSummaryBarComponent` standalone (barre résumé → sous-composant réutilisable)
+  - **Factorisation** : utilitaire `pollCommand<T>()` — élimine ~80 lignes de code dupliqué (polling buffer + wizard)
+  - **Tests** : 12 tests unitaires Jasmine (7 summary-bar, 5 command-poller)
+
+### Tests
+
+- **smoke:** tests anti-régression debug page
+  - `site-debug-tab must import DebugSummaryBarComponent` — empêche régression extraction sous-composant
+  - `site-debug-tab must import pollCommand utility` — empêche retour au polling dupliqué
+  - `site-debug-tab must NOT use native confirm()` — empêche réintroduction de confirm() natif
+  - `command-poller.util must export pollCommand and CommandPollResult` — vérifie l'API publique
+  - `i18n fr/en/es must contain debug section keys` — empêche oubli de traduction
+
+# [3.73.0](https://github.com/Tallec7/neopro/compare/v3.72.1...v3.73.0) (2026-02-23)
+
+### Features
+
+- **debug:** add WiFi client status to debug export bundle ([#413](https://github.com/Tallec7/neopro/issues/413)) ([fb0a659](https://github.com/Tallec7/neopro/commit/fb0a65987ef783bff5e911cec10b5aa0ecca6f32))
 
 ## [3.72.1](https://github.com/Tallec7/neopro/compare/v3.72.0...v3.72.1) (2026-02-23)
 

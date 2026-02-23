@@ -137,6 +137,8 @@
 | IMP-ANA-16 | Navigation par onglets sur toutes les pages analytics                       | Production | `analytics.module.ts`                                  | 2026         |
 | IMP-ANA-17 | Analytics sponsors : 6 KPIs, graphiques (ligne + anneau), export CSV        | Production | `sponsor-analytics.component.ts`                       | Déc 2025     |
 | IMP-ANA-18 | Rapports PDF sponsors professionnels (Chart.js)                             | Production | `pdf-report.service.ts`                                | Déc 2025     |
+| IMP-ANA-19 | Refonte fleet overview business-first (KPIs, Chart.js engagement, sponsors) | Production | `analytics.component.ts`                               | Fév 2026     |
+| IMP-ANA-20 | Refonte club analytics : page unique, sponsors benchmark, tendances         | Production | `club-analytics.component.ts`                          | Fév 2026     |
 
 ---
 
@@ -334,14 +336,16 @@
 | IMP-AUD-30 | Métrique Prometheus sponsor auto-resolution (resolved/skipped/unresolved) | Production | `metrics.service.ts`                                                       | Fév 2026     |
 | IMP-AUD-31 | Dropdown vidéo filtré aux vidéos déployées sur le Pi (+ cache API)        | Production | `site-sponsors-tab.component.ts`                                           | Fév 2026     |
 | IMP-AUD-32 | Badge sponsor dans catégories et sous-catégories                          | Production | `site-content-tab.component.ts`                                            | Fév 2026     |
+| IMP-AUD-33 | Debug page restructure (14→12 sections, summary bar, modals, i18n 90+ clés) | Production | `site-debug-tab.component.ts`, `debug-summary-bar.component.ts`            | Fév 2026     |
+| IMP-AUD-34 | Debug page refactoring (extraction composants, pollCommand utility, tests)    | Production | `command-poller.util.ts`, `debug-summary-bar.component.ts`                 | Fév 2026     |
 
 ---
 
 ## Statistiques Produit
 
-| Métrique                  | Valeur                                                                                         |
-| ------------------------- | ---------------------------------------------------------------------------------------------- |
-| **Features implémentées** | **223** (+26 audit, +8 E-22 TV+LED dual, +6 sponsor UX, +2 résilience Pi/OTA, +3 hotspot WiFi) |
+| Métrique                  | Valeur                                                                                                         |
+| ------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| **Features implémentées** | **225** (+26 audit, +8 E-22 TV+LED dual, +6 sponsor UX, +2 résilience Pi/OTA, +3 hotspot WiFi, +2 debug page) |
 | Domaines fonctionnels     | 14                                                                                             |
 | Controllers API           | 29 (+sponsor-alerts)                                                                           |
 | Services métier           | 40 (+sponsor-alert, sponsor-stats, sponsor-auto-resolution)                                    |

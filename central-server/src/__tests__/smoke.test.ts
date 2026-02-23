@@ -1881,3 +1881,140 @@ describe('Benchmark repository query safety', () => {
       .toEqual({ hasExplicitStatusFilter: true });
   });
 });
+
+// ----------------------------------------------------------
+// Debug page regression guards
+// ----------------------------------------------------------
+describe('Debug page architecture guards', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+  const debugTabPath = path.join(repoRoot, 'central-dashboard/src/app/features/sites/components/site-debug-tab/site-debug-tab.component.ts');
+  const debugTab = fs.readFileSync(debugTabPath, 'utf8');
+
+  it('site-debug-tab must import DebugSummaryBarComponent (extracted sub-component)', () => {
+    // Phase B extracted the summary bar into a standalone sub-component.
+    // Re-inlining it would bloat the monolith and lose reusability.
+    expect({ importsDebugSummaryBar: debugTab.includes("import { DebugSummaryBarComponent }") })
+      .toEqual({ importsDebugSummaryBar: true });
+  });
+
+  it('site-debug-tab must import pollCommand utility (no duplicated polling)', () => {
+    // Phase B factorized ~80 lines of duplicated command-polling into pollCommand<T>().
+    // Reverting to inline polling duplicates code and risks divergent behavior.
+    expect({ importsPollCommand: debugTab.includes("import { pollCommand") })
+      .toEqual({ importsPollCommand: true });
+  });
+
+  it('site-debug-tab must NOT use native confirm() dialogs', () => {
+    // Phase C replaced native confirm() with custom modals for consistent UX.
+    // Native confirm() blocks the JS thread and cannot be styled.
+    // Match standalone confirm( calls but not confirmModal or showConfirmModal
+    const hasNativeConfirm = /(?<!show)(?<!cancel)(?<!execute)\bconfirm\s*\(/.test(debugTab);
+    expect({ usesNativeConfirm: hasNativeConfirm })
+      .toEqual({ usesNativeConfirm: false });
+  });
+
+  it('command-poller.util must export pollCommand and CommandPollResult', () => {
+    // The polling utility is the shared abstraction for command execution + status polling.
+    // Changing its API would break buffer status loading and wizard diagnostics.
+    const pollerUtil = fs.readFileSync(
+      path.join(repoRoot, 'central-dashboard/src/app/features/sites/components/site-debug-tab/command-poller.util.ts'),
+      'utf8'
+    );
+    expect({ exportsPollCommand: pollerUtil.includes('export function pollCommand') })
+      .toEqual({ exportsPollCommand: true });
+    expect({ exportsCommandPollResult: pollerUtil.includes('export interface CommandPollResult') })
+      .toEqual({ exportsCommandPollResult: true });
+  });
+
+  it('DebugSummaryBarComponent must be a standalone Angular component', () => {
+    // The summary bar must remain standalone for independent testability and reuse.
+    const summaryBar = fs.readFileSync(
+      path.join(repoRoot, 'central-dashboard/src/app/features/sites/components/site-debug-tab/debug-summary-bar/debug-summary-bar.component.ts'),
+      'utf8'
+    );
+    expect({ isStandalone: summaryBar.includes('standalone: true') })
+      .toEqual({ isStandalone: true });
+    expect({ hasSelector: summaryBar.includes("selector: 'app-debug-summary-bar'") })
+      .toEqual({ hasSelector: true });
+  });
+
+  it('i18n fr/en/es must contain debug section keys', () => {
+    // Phase C added 90+ i18n keys. Missing translations cause raw key display.
+    const frJson = fs.readFileSync(path.join(repoRoot, 'central-dashboard/src/assets/i18n/fr.json'), 'utf8');
+    const enJson = fs.readFileSync(path.join(repoRoot, 'central-dashboard/src/assets/i18n/en.json'), 'utf8');
+    const esJson = fs.readFileSync(path.join(repoRoot, 'central-dashboard/src/assets/i18n/es.json'), 'utf8');
+
+    // Check critical keys exist in all 3 languages
+    const criticalKeys = ['debug.summaryFiles', 'debug.healthTitle', 'debug.logsTitle', 'debug.networkTitle'];
+    for (const key of criticalKeys) {
+      const parts = key.split('.');
+      expect({ [`fr_has_${key}`]: frJson.includes(`"${parts[1]}"`) })
+        .toEqual({ [`fr_has_${key}`]: true });
+      expect({ [`en_has_${key}`]: enJson.includes(`"${parts[1]}"`) })
+        .toEqual({ [`en_has_${key}`]: true });
+      expect({ [`es_has_${key}`]: esJson.includes(`"${parts[1]}"`) })
+        .toEqual({ [`es_has_${key}`]: true });
+    }
+  });
+
+  it('site-debug-tab must use confirmModal for dangerous actions (reboot, restore)', () => {
+    // The custom modal pattern replaces native confirm() for reboot and config restore.
+    // Both actions need explicit confirmation to prevent accidental triggers.
+    expect({ hasShowConfirmModal: debugTab.includes('showConfirmModal(') })
+      .toEqual({ hasShowConfirmModal: true });
+    expect({ hasDoExecuteCommand: debugTab.includes('doExecuteCommand(') })
+      .toEqual({ hasDoExecuteCommand: true });
+    expect({ hasDoRestoreVersion: debugTab.includes('doRestoreVersion(') })
+      .toEqual({ hasDoRestoreVersion: true });
+  });
+});
+
+// =================================================================
+// Analytics pages business-first regression tests
+// =================================================================
+
+describe('Analytics pages business-first architecture', () => {
+  const analyticsRoot = path.resolve(__dirname, '..', '..', '..');
+
+  const analyticsFleet = fs.readFileSync(
+    path.join(analyticsRoot, 'central-dashboard/src/app/features/analytics/analytics.component.ts'),
+    'utf8'
+  );
+
+  const clubAnalytics = fs.readFileSync(
+    path.join(analyticsRoot, 'central-dashboard/src/app/features/analytics/club-analytics.component.ts'),
+    'utf8'
+  );
+
+  // Fleet Overview must use Chart.js, not CSS-only bar charts
+  it('fleet analytics must import Chart.js (not CSS-only charts)', () => {
+    // Incident: original fleet page used CSS div bars instead of Chart.js.
+    // Chart.js is installed (^4.5.1) and must be used for engagement charts.
+    expect({ usesChartJs: analyticsFleet.includes("from 'chart.js'") })
+      .toEqual({ usesChartJs: true });
+  });
+
+  // Fleet Overview must show business KPIs (impressions, plays) not just tech metrics
+  it('fleet analytics must display sponsor impressions KPI', () => {
+    // The fleet page must surface sponsor impression data (VS2 monetization).
+    // Without this, the page is just a NOC dashboard and doesn't serve E-03.
+    expect({ hasImpressions: analyticsFleet.includes('totalImpressions') })
+      .toEqual({ hasImpressions: true });
+  });
+
+  // Club Analytics must NOT use tabs (single scrollable page)
+  it('club analytics must be a single scrollable page (no tabs)', () => {
+    // Incident: 4-tab layout (overview/usage/content/health) created friction and
+    // duplicated data. The refonte uses a single scrollable page.
+    expect({ hasTabs: clubAnalytics.includes("activeTab === 'usage'") })
+      .toEqual({ hasTabs: false });
+  });
+
+  // Club Analytics must integrate sponsor benchmark data
+  it('club analytics must include sponsor benchmark integration', () => {
+    // Club analytics must show sponsor impressions via /sites/:id/sponsors/benchmark.
+    // Without this, there's zero sponsor visibility on the club page (VS2 gap).
+    expect({ hasSponsorBenchmark: clubAnalytics.includes('getSiteSponsorBenchmark') })
+      .toEqual({ hasSponsorBenchmark: true });
+  });
+});
