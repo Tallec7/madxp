@@ -1,3 +1,9 @@
+## [3.80.14](https://github.com/Tallec7/neopro/compare/v3.80.13...v3.80.14) (2026-02-24)
+
+### Bug Fixes
+
+- **kiosk:** remove ExecStop SIGKILL from systemd service — true root cause of GPU crash loop ([61a8d48](https://github.com/Tallec7/neopro/commit/61a8d483a1e3c5bc14941bd60ac64356547466ca))
+
 ## [3.80.13](https://github.com/Tallec7/neopro/compare/v3.80.12...v3.80.13) (2026-02-24)
 
 ### Bug Fixes
