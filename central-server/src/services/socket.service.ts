@@ -757,9 +757,12 @@ class SocketService {
       await new Promise((resolve) => setTimeout(resolve, 500));
 
       // Close all Socket.IO connections and stop accepting new ones
-      this.io.disconnectSockets(true);
-      this.io.close();
-      this.io = null;
+      // Re-check this.io after await — concurrent cleanup calls may have nullified it
+      if (this.io) {
+        this.io.disconnectSockets(true);
+        this.io.close();
+        this.io = null;
+      }
     }
 
     this.pendingCommands.clear();
