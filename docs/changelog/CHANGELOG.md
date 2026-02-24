@@ -1,3 +1,9 @@
+## [3.80.4](https://github.com/Tallec7/neopro/compare/v3.80.3...v3.80.4) (2026-02-24)
+
+### Bug Fixes
+
+- **hdmi:** \_findEdidPath utilise readFileSync au lieu de stat.size pour sysfs ([c019065](https://github.com/Tallec7/neopro/commit/c019065a6985e249affcf2959c768774b1b243c7))
+
 ## [3.80.3](https://github.com/Tallec7/neopro/compare/v3.80.2...v3.80.3) (2026-02-24)
 
 ### Bug Fixes
