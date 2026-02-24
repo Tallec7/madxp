@@ -80,9 +80,9 @@ export interface UpdateSiteInput {
   sports?: string;
   status?: string;
   live_score_enabled?: boolean;
-  // E-22: LED dual output (ADR-029)
-  led_enabled?: boolean;
-  led_resolution?: string | null;
+  // E-22: Secondary display dual output (ADR-029)
+  secondary_display_enabled?: boolean;
+  secondary_display_resolution?: string | null;
   remote_pin_hash?: string | null;
   hostname_slug?: string;
   // P5: Branding club pour les rapports PDF

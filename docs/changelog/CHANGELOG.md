@@ -1,3 +1,18 @@
+## [Unreleased]
+
+### Refactoring
+
+- **display:** rename "LED" to "secondary display" across entire codebase (E-22)
+  - Le terme "LED" était trop restrictif : le HDMI secondaire peut alimenter un panneau LED,
+    un parc de TV tribunes, un écran géant, etc.
+  - **DB** : `sites.led_enabled` → `secondary_display_enabled`, `led_resolution` → `secondary_display_resolution`,
+    `display_type: 'led'` → `'secondary'` (migration `rename-led-to-secondary-display.sql`)
+  - **API** : validation, controllers, deployment service adaptés
+  - **Dashboard** : labels "Panneau LED" → "Écran secondaire", variant panel renommé
+  - **Pi** : route `/led` → `/secondary`, CSS `.led-*` → `.secondary-*`, config `secondaryDisplayEnabled`
+  - **Watchdog** : rétrocompatibilité avec `ledEnabled` pour les configs existantes
+  - **Sync-agent** : rétrocompatibilité `ledVariant` → `secondaryVariant`, migration `videos-led/` → `videos-secondary/`
+
 ## [3.80.7](https://github.com/Tallec7/neopro/compare/v3.80.6...v3.80.7) (2026-02-24)
 
 ### Bug Fixes

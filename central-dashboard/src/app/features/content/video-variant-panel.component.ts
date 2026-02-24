@@ -8,7 +8,7 @@ import { environment } from '../../../environments/environment';
 interface VideoVariant {
   id: string;
   video_id: string;
-  display_type: 'tv' | 'led';
+  display_type: 'tv' | 'secondary';
   filename: string;
   original_name: string | null;
   file_size: number;
@@ -26,23 +26,23 @@ interface VideoVariant {
   template: `
     <div class="variant-panel">
       <div class="variant-header" (click)="toggleOpen()">
-        <span class="variant-icon">💡</span>
-        <span class="variant-title">Variante LED</span>
-        <span class="variant-badge" *ngIf="ledVariant">1</span>
+        <span class="variant-icon">🖥️</span>
+        <span class="variant-title">Variante ecran secondaire</span>
+        <span class="variant-badge" *ngIf="secondaryVariant">1</span>
         <span class="variant-chevron">{{ isOpen ? '▲' : '▼' }}</span>
       </div>
 
       <div class="variant-body" *ngIf="isOpen">
         <div class="variant-loading" *ngIf="loading">Chargement...</div>
 
-        <!-- Existing LED variant -->
-        <div class="variant-item" *ngIf="ledVariant && !loading">
+        <!-- Existing secondary variant -->
+        <div class="variant-item" *ngIf="secondaryVariant && !loading">
           <div class="variant-info">
-            <span class="variant-name">{{ ledVariant.original_name || ledVariant.filename }}</span>
+            <span class="variant-name">{{ secondaryVariant.original_name || secondaryVariant.filename }}</span>
             <span class="variant-meta">
-              {{ formatFileSize(ledVariant.file_size) }}
-              <ng-container *ngIf="ledVariant.width && ledVariant.height">
-                · {{ ledVariant.width }}x{{ ledVariant.height }}
+              {{ formatFileSize(secondaryVariant.file_size) }}
+              <ng-container *ngIf="secondaryVariant.width && secondaryVariant.height">
+                · {{ secondaryVariant.width }}x{{ secondaryVariant.height }}
               </ng-container>
             </span>
           </div>
@@ -56,7 +56,7 @@ interface VideoVariant {
         </div>
 
         <!-- Upload zone -->
-        <div class="variant-upload" *ngIf="!ledVariant && !loading">
+        <div class="variant-upload" *ngIf="!secondaryVariant && !loading">
           <label class="upload-zone-compact" [class.uploading]="uploading">
             <input
               type="file"
@@ -65,13 +65,13 @@ interface VideoVariant {
               hidden
               [disabled]="uploading"
             />
-            {{ uploading ? 'Upload ' + uploadProgress + '%' : 'Uploader variante LED' }}
+            {{ uploading ? 'Upload ' + uploadProgress + '%' : 'Uploader variante ecran secondaire' }}
           </label>
-          <span class="upload-hint">Format adapte au panneau LED</span>
+          <span class="upload-hint">Format adapte a l'ecran secondaire (panneau LED, TV tribunes, etc.)</span>
         </div>
 
         <!-- Replace variant -->
-        <div class="variant-replace" *ngIf="ledVariant && !loading">
+        <div class="variant-replace" *ngIf="secondaryVariant && !loading">
           <label class="upload-zone-compact small">
             <input
               type="file"
@@ -249,11 +249,11 @@ export class VideoVariantPanelComponent {
   uploading = false;
   uploadProgress = 0;
   deleting = false;
-  ledVariant: VideoVariant | null = null;
+  secondaryVariant: VideoVariant | null = null;
 
   toggleOpen(): void {
     this.isOpen = !this.isOpen;
-    if (this.isOpen && !this.ledVariant && !this.loading) {
+    if (this.isOpen && !this.secondaryVariant && !this.loading) {
       this.loadVariants();
     }
   }
@@ -266,7 +266,7 @@ export class VideoVariantPanelComponent {
     ).subscribe({
       next: (response) => {
         this.loading = false;
-        this.ledVariant = response.variants.find(v => v.display_type === 'led') || null;
+        this.secondaryVariant = response.variants.find(v => v.display_type === 'secondary') || null;
       },
       error: () => {
         this.loading = false;
@@ -284,7 +284,7 @@ export class VideoVariantPanelComponent {
 
     const formData = new FormData();
     formData.append('video', file);
-    formData.append('display_type', 'led');
+    formData.append('display_type', 'secondary');
 
     this.http.post<VideoVariant>(
       `${environment.apiUrl}/content/videos/${this.videoId}/variants`,
@@ -296,8 +296,8 @@ export class VideoVariantPanelComponent {
           this.uploadProgress = Math.round((event.loaded / event.total) * 100);
         } else if (event.type === HttpEventType.Response && event.body) {
           this.uploading = false;
-          this.ledVariant = event.body;
-          this.notificationService.success('Variante LED uploadee');
+          this.secondaryVariant = event.body;
+          this.notificationService.success('Variante ecran secondaire uploadee');
         }
       },
       error: (error) => {
@@ -312,17 +312,17 @@ export class VideoVariantPanelComponent {
   }
 
   deleteVariant(): void {
-    if (!this.ledVariant) return;
+    if (!this.secondaryVariant) return;
     this.deleting = true;
 
     this.http.delete(
-      `${environment.apiUrl}/content/videos/${this.videoId}/variants/led`,
+      `${environment.apiUrl}/content/videos/${this.videoId}/variants/secondary`,
       { withCredentials: true }
     ).subscribe({
       next: () => {
         this.deleting = false;
-        this.ledVariant = null;
-        this.notificationService.success('Variante LED supprimee');
+        this.secondaryVariant = null;
+        this.notificationService.success('Variante ecran secondaire supprimee');
       },
       error: (error) => {
         this.deleting = false;

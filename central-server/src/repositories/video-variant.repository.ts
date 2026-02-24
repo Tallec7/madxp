@@ -6,7 +6,7 @@ import { BaseRepository } from './base.repository';
 // Types
 // --------------------------------------------------------------------------
 
-export type DisplayType = 'tv' | 'led';
+export type DisplayType = 'tv' | 'secondary';
 
 export interface VideoVariantRow extends QueryResultRow {
   id: string;
@@ -127,14 +127,14 @@ class VideoVariantRepositoryImpl extends BaseRepository<VideoVariantRow> {
     return result.rowCount !== null && result.rowCount > 0;
   }
 
-  async findLedVariantsForVideos(
+  async findSecondaryVariantsForVideos(
     videoIds: string[]
   ): Promise<VideoVariantRow[]> {
     if (videoIds.length === 0) return [];
     const placeholders = videoIds.map((_, i) => `$${i + 1}`).join(', ');
     const result = await query<VideoVariantRow>(
       `SELECT * FROM video_variants
-       WHERE video_id IN (${placeholders}) AND display_type = 'led'`,
+       WHERE video_id IN (${placeholders}) AND display_type = 'secondary'`,
       videoIds
     );
     return result.rows;

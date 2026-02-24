@@ -64,9 +64,9 @@ CREATE TABLE IF NOT EXISTS sites (
   remote_pin_hash VARCHAR(64) DEFAULT NULL,
   -- Hostname mDNS dérivé du club_name (ex: neopro-usap)
   hostname_slug VARCHAR(63) DEFAULT NULL,
-  -- E-22: LED dual output (ADR-029)
-  led_enabled BOOLEAN DEFAULT false,
-  led_resolution VARCHAR(20) DEFAULT NULL,
+  -- E-22: Secondary display dual output (ADR-029)
+  secondary_display_enabled BOOLEAN DEFAULT false,
+  secondary_display_resolution VARCHAR(20) DEFAULT NULL,
   CONSTRAINT check_status CHECK (status IN ('online', 'offline', 'maintenance', 'error'))
 );
 
@@ -115,11 +115,11 @@ CREATE TABLE IF NOT EXISTS videos (
   updated_at TIMESTAMP DEFAULT NOW()
 );
 
--- Table des variantes vidéo par type d'écran (E-22: TV + LED)
+-- Table des variantes vidéo par type d'écran (E-22: TV + Secondary)
 CREATE TABLE IF NOT EXISTS video_variants (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   video_id UUID NOT NULL REFERENCES videos(id) ON DELETE CASCADE,
-  display_type VARCHAR(20) NOT NULL CHECK (display_type IN ('tv', 'led')),
+  display_type VARCHAR(20) NOT NULL CHECK (display_type IN ('tv', 'secondary')),
   filename VARCHAR(500) NOT NULL,
   original_name VARCHAR(500),
   storage_path VARCHAR(1000) NOT NULL,
@@ -388,7 +388,7 @@ CREATE INDEX IF NOT EXISTS idx_alerts_status ON alerts(status, severity);
 -- Index video_variants (E-22)
 CREATE INDEX IF NOT EXISTS idx_video_variants_video_id ON video_variants(video_id);
 CREATE INDEX IF NOT EXISTS idx_video_variants_display_type ON video_variants(display_type);
-CREATE INDEX IF NOT EXISTS idx_sites_led_enabled ON sites(led_enabled) WHERE led_enabled = true;
+CREATE INDEX IF NOT EXISTS idx_sites_secondary_display_enabled ON sites(secondary_display_enabled) WHERE secondary_display_enabled = true;
 
 -- Index config_history
 CREATE INDEX IF NOT EXISTS idx_config_history_site ON config_history(site_id, deployed_at DESC);

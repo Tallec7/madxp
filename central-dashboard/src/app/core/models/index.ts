@@ -128,11 +128,11 @@ export interface Site {
   /** Nombre moyen de spectateurs par match (pour calcul du reach sponsor) */
   avg_spectators?: number | null;
 
-  // === LED Panel fields (E-22 Dual HDMI) ===
-  /** Enable LED panel output on HDMI 1 */
-  led_enabled?: boolean;
-  /** LED panel resolution (e.g., '1920x384') */
-  led_resolution?: string | null;
+  // === Secondary Display fields (E-22 Dual HDMI) ===
+  /** Enable secondary display output on HDMI 1 (LED panel, chained TVs, giant screen, etc.) */
+  secondary_display_enabled?: boolean;
+  /** Secondary display resolution (e.g., '1920x384' for LED banner, '1920x1080' for TV) */
+  secondary_display_resolution?: string | null;
 
   // === Branding fields (P5) ===
   /** URL du logo du club (pour rapports PDF) */

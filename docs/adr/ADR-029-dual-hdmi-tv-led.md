@@ -1,9 +1,10 @@
-# ADR-029 : Dual HDMI TV + LED — Contenus Différenciés depuis un Seul Pi
+# ADR-029 : Dual HDMI — Contenus Différenciés Écran Principal + Secondaire
 
 | Champ     | Valeur                                                            |
 | --------- | ----------------------------------------------------------------- |
-| Statut    | Proposé                                                           |
+| Statut    | Accepté                                                           |
 | Date      | 2026-02-21                                                        |
+| Mis à jour| 2026-02-24 (renommage LED → Secondary Display)                    |
 | Catégorie | Edge / Display                                                    |
 | Composant | `raspberry`, `central-server`, `central-dashboard`                |
 | Epic SAFe | [E-22](../safe/FEATURES.md#e-22--contenus-différenciés-tv--led)   |
@@ -11,7 +12,13 @@
 
 ## Contexte
 
-Des clubs sportifs disposent d'un **écran TV classique** et d'un **panneau LED** (bandeau, mur, totem) pilotés par un contrôleur HDMI (Linsn MC100, Novastar MX40 Pro). Ils souhaitent des contenus différenciés sur chaque support depuis **un seul Raspberry Pi**.
+Des clubs sportifs disposent d'un **écran principal** (TV, écran géant) et d'un **écran secondaire** (panneau LED bord de terrain, parc de TV tribunes chaînées en HDMI, moniteur vestiaires). Ils souhaitent des contenus différenciés sur chaque support depuis **un seul Raspberry Pi**.
+
+> **Note renommage (2026-02-24)** : Le terme "LED" a été remplacé par "secondary display"
+> dans tout le codebase car le HDMI secondaire n'est pas toujours un panneau LED — il peut
+> s'agir de TV tribunes chaînées, d'un écran géant, etc. Voir migration
+> `rename-led-to-secondary-display.sql`. Le watchdog et le sync-agent gèrent la
+> rétrocompatibilité avec l'ancien format (`ledEnabled` → `secondaryDisplayEnabled`).
 
 Aujourd'hui le Pi n'utilise qu'un seul port HDMI (HDMI 0). Il n'existe pas de concept de type d'écran dans le modèle de données, ni de variantes vidéo par format.
 

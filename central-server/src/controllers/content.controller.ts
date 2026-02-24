@@ -837,7 +837,7 @@ export const getVideoVariants = async (req: AuthRequest, res: Response) => {
 
 /**
  * POST /content/videos/:id/variants
- * Upload une variante vidéo pour un type d'écran (tv, led)
+ * Upload une variante vidéo pour un type d'écran (tv, secondary)
  * Body (FormData): video file + display_type
  */
 export const createVideoVariant = async (req: AuthRequest, res: Response) => {
@@ -852,8 +852,8 @@ export const createVideoVariant = async (req: AuthRequest, res: Response) => {
     const { id } = req.params;
     const displayType = req.body.display_type as DisplayType;
 
-    if (!displayType || !['tv', 'led'].includes(displayType)) {
-      return res.status(400).json({ error: 'display_type requis (tv ou led)' });
+    if (!displayType || !['tv', 'secondary'].includes(displayType)) {
+      return res.status(400).json({ error: 'display_type requis (tv ou secondary)' });
     }
 
     // Vérifier que la vidéo parente existe
@@ -942,8 +942,8 @@ export const deleteVideoVariant = async (req: AuthRequest, res: Response) => {
   try {
     const { videoId, displayType } = req.params;
 
-    if (!['tv', 'led'].includes(displayType)) {
-      return res.status(400).json({ error: 'display_type invalide (tv ou led)' });
+    if (!['tv', 'secondary'].includes(displayType)) {
+      return res.status(400).json({ error: 'display_type invalide (tv ou secondary)' });
     }
 
     // Récupérer le storage_path avant suppression

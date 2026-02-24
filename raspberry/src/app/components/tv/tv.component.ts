@@ -48,8 +48,8 @@ export class TvComponent implements OnInit, OnDestroy {
 
   private localBroadcastSubscriptions: Subscription[] = [];
 
-  // Display type: 'tv' (standard HDMI 0) ou 'led' (panneau LED HDMI 1)
-  public displayType: 'tv' | 'led' = 'tv';
+  // Display type: 'tv' (HDMI 0 principal) ou 'secondary' (HDMI 1 écran secondaire)
+  public displayType: 'tv' | 'secondary' = 'tv';
 
   // License status - bloque l'affichage si la licence n'est pas valide
   public licenseState: LicenseState | null = null;
@@ -184,8 +184,8 @@ export class TvComponent implements OnInit, OnDestroy {
   private transitionMetricsInterval: ReturnType<typeof setInterval> | null = null;
 
   public ngOnInit() {
-    // Lire le displayType depuis la route data (/led → 'led', /tv → 'tv')
-    this.displayType = (this.route.snapshot.data['displayType'] as 'tv' | 'led') || 'tv';
+    // Lire le displayType depuis la route data (/secondary → 'secondary', /tv → 'tv')
+    this.displayType = (this.route.snapshot.data['displayType'] as 'tv' | 'secondary') || 'tv';
     console.log(`[TV] Display type: ${this.displayType}`);
 
     // S'abonner aux mises à jour du statut de licence
@@ -445,8 +445,8 @@ export class TvComponent implements OnInit, OnDestroy {
     this.socketService.on<{ role: 'master' | 'slave' }>('tv-role-assigned', (data) => {
       this.ngZone.run(() => {
         this.tvRole = data.role;
-        // LED display is always independent — never sync as slave
-        this.isSlaveMode = data.role === 'slave' && this.displayType !== 'led';
+        // Secondary display is always independent — never sync as slave
+        this.isSlaveMode = data.role === 'slave' && this.displayType !== 'secondary';
         console.log(`[TV] Role assigned: ${data.role}, displayType: ${this.displayType}`);
 
         if (this.isSlaveMode) {
@@ -871,11 +871,11 @@ export class TvComponent implements OnInit, OnDestroy {
       }
     }
 
-    // LED display: utiliser la variante LED quand disponible
-    if (this.displayType === 'led') {
+    // Secondary display: utiliser la variante secondaire quand disponible
+    if (this.displayType === 'secondary') {
       return videos.map(video => {
-        if (video.variants?.led?.path) {
-          return { ...video, path: video.variants.led.path };
+        if (video.variants?.secondary?.path) {
+          return { ...video, path: video.variants.secondary.path };
         }
         return video;
       });
@@ -1081,16 +1081,16 @@ export class TvComponent implements OnInit, OnDestroy {
     this.goalScoringTeam = team;
     this.showGoalAnimation = true;
 
-    const displayInfo = this.displayType === 'led' ? 'LED flash' : config.style;
+    const displayInfo = this.displayType === 'secondary' ? 'Secondary flash' : config.style;
     console.log('[TV] Goal animation triggered for team:', team, 'style:', displayInfo);
 
-    // Jouer le son si activé (pas sur LED — le son vient de la TV principale)
-    if (this.displayType !== 'led' && config.soundEnabled && config.soundUrl) {
+    // Jouer le son si activé (pas sur écran secondaire — le son vient de l'écran principal)
+    if (this.displayType !== 'secondary' && config.soundEnabled && config.soundUrl) {
       this.playGoalSound(config.soundUrl);
     }
 
-    // LED: durée plus courte (flash rapide), TV: durée configurée
-    const duration = this.displayType === 'led' ? Math.min(config.duration, 3) : config.duration;
+    // Secondary: durée plus courte (flash rapide), TV: durée configurée
+    const duration = this.displayType === 'secondary' ? Math.min(config.duration, 3) : config.duration;
     this.goalAnimationTimeout = setTimeout(() => {
       this.showGoalAnimation = false;
       this.goalScoringTeam = null;
