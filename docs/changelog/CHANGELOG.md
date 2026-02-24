@@ -1,3 +1,9 @@
+## [3.80.12](https://github.com/Tallec7/neopro/compare/v3.80.11...v3.80.12) (2026-02-24)
+
+### Bug Fixes
+
+- **ci:** add concurrency cancel-in-progress to prevent stale CI runs ([e0c7966](https://github.com/Tallec7/neopro/commit/e0c7966f516a334e00b585734848697f8c528de6))
+
 ## [3.80.11](https://github.com/Tallec7/neopro/compare/v3.80.10...v3.80.11) (2026-02-24)
 
 ### Bug Fixes
