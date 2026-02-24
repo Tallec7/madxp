@@ -1,3 +1,9 @@
+## [3.80.3](https://github.com/Tallec7/neopro/compare/v3.80.2...v3.80.3) (2026-02-24)
+
+### Bug Fixes
+
+- **deploy:** utiliser set +e pour le bloc diagnostic (bash 3.2 macOS) ([b91dadf](https://github.com/Tallec7/neopro/commit/b91dadfacfa95b449744f346a704c7cae758f5fd))
+
 ## [3.80.2](https://github.com/Tallec7/neopro/compare/v3.80.1...v3.80.2) (2026-02-24)
 
 ### Bug Fixes
