@@ -1,3 +1,9 @@
+# [3.80.0](https://github.com/Tallec7/neopro/compare/v3.79.2...v3.80.0) (2026-02-24)
+
+### Features
+
+- **debug:** ajouter quick-commands Restart Kiosk/App et bouton Apply Services admin ([495e6b7](https://github.com/Tallec7/neopro/commit/495e6b7f8b07c60332d1b300ebe8611a85909177))
+
 ## [3.80.1](https://github.com/Tallec7/neopro/compare/v3.80.0...v3.80.1) (2026-02-24)
 
 ### Features

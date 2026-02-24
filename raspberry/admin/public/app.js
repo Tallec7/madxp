@@ -2,7 +2,7 @@
  * Neopro Admin Panel - JavaScript
  * FICHIER GENERE - Ne pas editer directement
  * Editer les fichiers dans modules/ puis lancer: bash build-admin.sh
- * Build: f0e83248
+ * Build: 495e6b7f
  */
 
 
@@ -519,30 +519,6 @@ async function restartService(service) {
         }
     } catch (error) {
         showNotification('Erreur lors du redémarrage', 'error');
-    }
-}
-
-async function applyServices() {
-    if (!confirm('Appliquer les services systemd (daemon-reload + copie des fichiers .service) ?')) {
-        return;
-    }
-
-    try {
-        const response = await fetch('/api/system/apply-services', {
-            method: 'POST'
-        });
-
-        const data = await response.json();
-
-        if (data.success) {
-            const applied = data.applied && data.applied.length > 0 ? data.applied.join(', ') : 'aucun changement';
-            showNotification(`Services appliqués: ${applied}`, 'success');
-            setTimeout(() => loadDashboard(), 2000);
-        } else {
-            showNotification('Erreur: ' + data.error, 'error');
-        }
-    } catch (error) {
-        showNotification("Erreur lors de l'application des services", 'error');
     }
 }
 
@@ -5425,7 +5401,6 @@ window.confirmAction = confirmAction;
 window.closeModal = closeModal;
 window.closeEditModal = closeEditModal;
 window.restartService = restartService;
-window.applyServices = applyServices;
 window.refreshNetwork = refreshNetwork;
 window.refreshLogs = refreshLogs;
 window.refreshCategories = refreshCategories;
