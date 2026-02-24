@@ -427,15 +427,18 @@ else
 fi
 
 # Diagnostic post-déploiement (vérifie la complétude du Pi)
+# NOTE: set +e nécessaire car bash 3.2 (macOS) déclenche set -e à l'intérieur
+# des $() avant que || true ne puisse rattraper le code de sortie
+set +e
 print_step "Diagnostic post-déploiement (vérification de la complétude du Pi)..."
 DIAG_SCRIPT="${RASPBERRY_DIR}/scripts/diagnose-pi.sh"
 DIAG_OUTPUT=$(ssh ${RASPBERRY_USER}@${RASPBERRY_IP} "
     if [ -x ${DIAG_SCRIPT} ]; then
-        ${DIAG_SCRIPT} --json 2>/dev/null || true
+        ${DIAG_SCRIPT} --json 2>/dev/null
     else
         echo '{\"healthy\":true,\"errors\":0,\"warnings\":0,\"checks\":[]}'
     fi
-" 2>/dev/null) || true
+" 2>/dev/null)
 
 # Parser le résultat JSON
 DIAG_ERRORS=$(echo "${DIAG_OUTPUT}" | grep -o '"errors":[0-9]*' | cut -d: -f2)
@@ -451,6 +454,7 @@ elif [ -n "$DIAG_ERRORS" ] && [ "$DIAG_ERRORS" -gt 0 ] 2>/dev/null; then
 else
     print_warning "Diagnostic : impossible de déterminer l'état (script non disponible ?)"
 fi
+set -e
 
 echo -e "${GREEN}"
 echo "╔════════════════════════════════════════════════════════════════╗"
