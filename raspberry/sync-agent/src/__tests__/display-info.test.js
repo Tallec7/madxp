@@ -214,18 +214,18 @@ describe('EDID Parser (_parseEdid)', () => {
 describe('_findEdidPath', () => {
   const originalExistsSync = fs.existsSync;
   const originalReaddirSync = fs.readdirSync;
-  const originalStatSync = fs.statSync;
+  const originalReadFileSync = fs.readFileSync;
 
   afterEach(() => {
     fs.existsSync = originalExistsSync;
     fs.readdirSync = originalReaddirSync;
-    fs.statSync = originalStatSync;
+    fs.readFileSync = originalReadFileSync;
   });
 
   test('trouve un fichier EDID HDMI valide', () => {
     fs.existsSync = jest.fn((p) => p === '/sys/class/drm');
     fs.readdirSync = jest.fn(() => ['card1-HDMI-A-1', 'card1-DP-1', 'version']);
-    fs.statSync = jest.fn(() => ({ size: 256 }));
+    fs.readFileSync = jest.fn(() => Buffer.alloc(256));
 
     const result = metricsCollector._findEdidPath();
     expect(result).toBe('/sys/class/drm/card1-HDMI-A-1/edid');
@@ -249,7 +249,7 @@ describe('_findEdidPath', () => {
   test('retourne null si le fichier EDID est vide (pas d\'écran)', () => {
     fs.existsSync = jest.fn(() => true);
     fs.readdirSync = jest.fn(() => ['card1-HDMI-A-1']);
-    fs.statSync = jest.fn(() => ({ size: 0 }));
+    fs.readFileSync = jest.fn(() => Buffer.alloc(0));
 
     const result = metricsCollector._findEdidPath();
     expect(result).toBeNull();
@@ -258,7 +258,7 @@ describe('_findEdidPath', () => {
   test('ignore les fichiers EDID inaccessibles', () => {
     fs.existsSync = jest.fn(() => true);
     fs.readdirSync = jest.fn(() => ['card1-HDMI-A-1']);
-    fs.statSync = jest.fn(() => { throw new Error('Permission denied'); });
+    fs.readFileSync = jest.fn(() => { throw new Error('Permission denied'); });
 
     const result = metricsCollector._findEdidPath();
     expect(result).toBeNull();
@@ -268,7 +268,6 @@ describe('_findEdidPath', () => {
 describe('getDisplayInfo', () => {
   const originalExistsSync = fs.existsSync;
   const originalReaddirSync = fs.readdirSync;
-  const originalStatSync = fs.statSync;
   const originalReadFileSync = fs.readFileSync;
 
   let edidDecodeSpy;
@@ -285,7 +284,6 @@ describe('getDisplayInfo', () => {
   afterEach(() => {
     fs.existsSync = originalExistsSync;
     fs.readdirSync = originalReaddirSync;
-    fs.statSync = originalStatSync;
     fs.readFileSync = originalReadFileSync;
     edidDecodeSpy.mockRestore();
   });
@@ -301,7 +299,6 @@ describe('getDisplayInfo', () => {
 
     fs.existsSync = jest.fn(() => true);
     fs.readdirSync = jest.fn(() => ['card1-HDMI-A-1']);
-    fs.statSync = jest.fn(() => ({ size: 128 }));
     fs.readFileSync = jest.fn(() => edidBuf);
 
     const result = await metricsCollector.getDisplayInfo();
@@ -326,7 +323,6 @@ describe('getDisplayInfo', () => {
 
     fs.existsSync = jest.fn(() => true);
     fs.readdirSync = jest.fn(() => ['card1-HDMI-A-1']);
-    fs.statSync = jest.fn(() => ({ size: 256 }));
     fs.readFileSync = jest.fn(() => edidBuf);
 
     const result = await metricsCollector.getDisplayInfo();
@@ -356,7 +352,6 @@ describe('getDisplayInfo', () => {
 
     fs.existsSync = jest.fn(() => true);
     fs.readdirSync = jest.fn(() => ['card1-HDMI-A-1']);
-    fs.statSync = jest.fn(() => ({ size: 256 }));
     fs.readFileSync = jest.fn(() => edidBuf);
 
     const result = await metricsCollector.getDisplayInfo();
@@ -377,7 +372,6 @@ describe('getDisplayInfo', () => {
 
     fs.existsSync = jest.fn(() => true);
     fs.readdirSync = jest.fn(() => ['card1-HDMI-A-1']);
-    fs.statSync = jest.fn(() => ({ size: 128 }));
     fs.readFileSync = jest.fn(() => edidBuf);
 
     const result = await metricsCollector.getDisplayInfo();
@@ -390,7 +384,7 @@ describe('getDisplayInfo', () => {
   test('retourne connected=false si aucun EDID trouvé', async () => {
     fs.existsSync = jest.fn(() => true);
     fs.readdirSync = jest.fn(() => ['card1-HDMI-A-1']);
-    fs.statSync = jest.fn(() => ({ size: 0 }));
+    fs.readFileSync = jest.fn(() => Buffer.alloc(0));
 
     const result = await metricsCollector.getDisplayInfo();
 

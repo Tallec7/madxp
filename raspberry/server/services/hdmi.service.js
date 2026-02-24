@@ -178,8 +178,10 @@ class HdmiService {
       for (const entry of hdmiEntries) {
         const edidPath = `${drmDir}/${entry}/edid`;
         try {
-          const stat = fs.statSync(edidPath);
-          if (stat.size > 0) return edidPath;
+          // sysfs virtual files report stat.size=0 even when they have content.
+          // Read the file and check buffer length instead.
+          const buf = fs.readFileSync(edidPath);
+          if (buf.length > 0) return edidPath;
         } catch {
           // File not accessible
         }
