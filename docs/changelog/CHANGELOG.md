@@ -1,3 +1,9 @@
+## [3.80.1](https://github.com/Tallec7/neopro/compare/v3.80.0...v3.80.1) (2026-02-24)
+
+### Bug Fixes
+
+- **kiosk:** popup GNOME Keyring causée par dbus-launch ([38ffe90](https://github.com/Tallec7/neopro/commit/38ffe903d89041163da1fd4411f84f840711fa42))
+
 # [3.80.0](https://github.com/Tallec7/neopro/compare/v3.79.2...v3.80.0) (2026-02-24)
 
 ### Features
