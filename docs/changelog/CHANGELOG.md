@@ -28,6 +28,14 @@
 
 ## [Unreleased]
 
+### CI/CD
+
+- **ci:** ajout `concurrency: cancel-in-progress` au workflow CI
+  - **Problème** : quand 2 commits sont pushés séparément, le CI lançait un run sur le commit
+    intermédiaire qui échouait si les smoke tests référençaient du code pas encore committé
+  - **Fix** : les runs obsolètes sont automatiquement annulés quand un nouveau push arrive
+  - 2 smoke tests ajoutés pour empêcher la suppression accidentelle du setting `concurrency`
+
 ### Performance
 
 - **build:** optimize Raspberry Pi build output (-49% taille, -37% fichiers)

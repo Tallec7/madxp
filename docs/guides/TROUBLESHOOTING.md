@@ -3163,6 +3163,33 @@ gh api repos/Tallec7/neopro/rulesets
 
 > **Note** : Le `GITHUB_TOKEN` par défaut ne suffit pas pour semantic-release car il ne peut pas pusher de commits/tags sur `main`.
 
+### Smoke tests échouent sur le CI mais passent en local
+
+#### Erreur
+
+```
+Tests: 4 failed, 1718 passed, 1722 total
+expect(buildScript).toContain('BEFORE_FILES=');
+```
+
+#### Cause
+
+Les smoke tests lisent des fichiers **cross-repo** (`raspberry/scripts/`, `central-dashboard/`, etc.). Si les smoke tests sont committés avant le code qu'ils testent (dans 2 commits séparés), le CI lance un run sur le commit intermédiaire où le code n'existe pas encore → échec.
+
+#### Pourquoi ça ne se voit pas en local
+
+En local, le workspace contient toujours le code le plus récent. Le CI, lui, checkout le commit exact du push.
+
+#### Solution (implémentée)
+
+Le workflow `ci.yml` utilise `concurrency: cancel-in-progress: true` pour annuler automatiquement les runs obsolètes quand un nouveau push arrive sur la même branche.
+
+#### Prévention
+
+- **Toujours committer les smoke tests dans le même commit que le code testé**
+- Si 2 commits sont liés, les pusher ensemble (`git push` unique) — GitHub ne lance le CI que sur le HEAD du push
+- 2 smoke tests gardent le setting `concurrency` dans `ci.yml`
+
 ---
 
 ## NetworkWatchdog — Auto-recovery réseau (v3.36+)

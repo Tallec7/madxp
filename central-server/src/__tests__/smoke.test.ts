@@ -2929,3 +2929,32 @@ describe('Build script node_modules cleanup guards', () => {
     expect(buildScript).toContain('REMOVED=');
   });
 });
+
+// ----------------------------------------------------------
+// CI workflow reliability guards
+// Incident: 24/02/2026 — Smoke tests added in commit A tested
+// code only added in commit B. Without concurrency cancellation,
+// the CI run for commit A fails even though HEAD is correct.
+// Guard: ensure concurrency: cancel-in-progress stays in CI.
+// ----------------------------------------------------------
+describe('CI workflow reliability guards', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+  const ciWorkflow = fs.readFileSync(
+    path.join(repoRoot, '.github/workflows/ci.yml'),
+    'utf8'
+  );
+
+  it('ci.yml must have concurrency with cancel-in-progress to prevent stale runs', () => {
+    // Without this, pushing multiple commits triggers parallel CI runs on
+    // intermediate commits that may fail because tests reference code not
+    // yet present at that point in the history.
+    expect(ciWorkflow).toContain('cancel-in-progress: true');
+  });
+
+  it('ci.yml must define concurrency group per workflow and ref', () => {
+    // The group must include both workflow name and branch ref so that
+    // runs on different branches don't cancel each other.
+    expect(ciWorkflow).toContain('github.workflow');
+    expect(ciWorkflow).toContain('github.ref');
+  });
+});
