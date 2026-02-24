@@ -16,6 +16,8 @@ class ConfigWatcher {
     this.debounceTimer = null;
     this.debounceDelay = 2000; // 2 secondes de debounce
     this.lastHash = null;
+    this.paused = false; // Pause during OTA to avoid spam
+    this.resumeTimer = null;
   }
 
   /**
@@ -66,6 +68,45 @@ class ConfigWatcher {
       clearTimeout(this.debounceTimer);
       this.debounceTimer = null;
     }
+
+    if (this.resumeTimer) {
+      clearTimeout(this.resumeTimer);
+      this.resumeTimer = null;
+    }
+    this.paused = false;
+  }
+
+  /**
+   * Pause notifications (e.g. during OTA updates to avoid event spam).
+   * Automatically resumes after durationMs. A single notifyChange is triggered
+   * on resume if the file actually changed while paused.
+   * @param {number} durationMs How long to pause (default: 30s)
+   */
+  pause(durationMs = 30000) {
+    this.paused = true;
+    if (this.debounceTimer) {
+      clearTimeout(this.debounceTimer);
+      this.debounceTimer = null;
+    }
+    if (this.resumeTimer) {
+      clearTimeout(this.resumeTimer);
+    }
+    this.resumeTimer = setTimeout(() => this.resume(), durationMs);
+    logger.info('[config-watcher] Paused for OTA', { durationMs });
+  }
+
+  /**
+   * Resume notifications and trigger a single change check
+   */
+  resume() {
+    if (this.resumeTimer) {
+      clearTimeout(this.resumeTimer);
+      this.resumeTimer = null;
+    }
+    this.paused = false;
+    logger.info('[config-watcher] Resumed after OTA pause');
+    // Single deferred check to catch changes that occurred while paused
+    this.handleChange();
   }
 
   /**
@@ -80,6 +121,9 @@ class ConfigWatcher {
    * Gère un changement détecté avec debounce
    */
   handleChange() {
+    // Skip events while paused (OTA in progress)
+    if (this.paused) return;
+
     // Annuler le timer précédent si il existe
     if (this.debounceTimer) {
       clearTimeout(this.debounceTimer);

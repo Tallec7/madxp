@@ -665,8 +665,9 @@ class SoftwareUpdateHandler {
 
       // Installer les paquets apt manquants requis par les services.
       // x11-utils: fournit xdpyinfo, utilisé par neopro-kiosk.service pour vérifier que X est prêt.
+      // edid-decode: parsing EDID détaillé (résolutions, taille physique, HDR, HDMI version).
       // Non-bloquant: si apt échoue (pas d'internet, lock dpkg), l'OTA continue.
-      const requiredAptPackages = ['x11-utils'];
+      const requiredAptPackages = ['x11-utils', 'edid-decode'];
       try {
         const missingPackages = [];
         for (const pkg of requiredAptPackages) {
@@ -818,20 +819,24 @@ class SoftwareUpdateHandler {
     try {
       if (!await fs.pathExists(filePath)) return;
 
-      const stat = await fs.stat(filePath);
-      // uid 0 = root. Si le fichier appartient à root, reprendre l'ownership
-      if (stat.uid === 0) {
-        logger.info('Fixing root-owned file ownership', { filePath });
-        await execAsync(`sudo chown -R pi:pi ${filePath}`);
+      // Check actual write access instead of just uid — covers root-owned files,
+      // immutable flags, directory permission issues, etc.
+      try {
+        await fs.access(filePath, fs.constants.W_OK);
+        return; // writable, no fix needed
+      } catch {
+        // File exists but not writable — fix it
+      }
+
+      logger.info('Fixing non-writable file', { filePath });
+      try {
+        await execAsync(`sudo chown pi:pi ${filePath}`);
+      } catch {
+        // Fallback: remove so fs.copy can recreate it
+        await execAsync(`sudo rm -f ${filePath}`);
       }
     } catch (error) {
-      // Fallback: si chown échoue, tenter sudo rm pour permettre la recréation
-      logger.warn('chown failed, trying sudo rm', { filePath, error: error.message });
-      try {
-        await execAsync(`sudo rm -f ${filePath}`);
-      } catch (rmError) {
-        logger.warn('sudo rm also failed', { filePath, error: rmError.message });
-      }
+      logger.warn('fixFileOwnership failed', { filePath, error: error.message });
     }
   }
 

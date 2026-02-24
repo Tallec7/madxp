@@ -24,7 +24,7 @@ export async function handleNetworkAlert(
   alert: Record<string, unknown>
 ): Promise<void> {
   try {
-    const { type, severity, issues, recoveryAttempts, timestamp } = alert;
+    const { type, severity, issues, message, recoveryAttempts, timestamp } = alert;
 
     logger.warn('Network alert received from site', {
       siteId,
@@ -57,8 +57,8 @@ export async function handleNetworkAlert(
           siteId,
           alertType,
           severity,
-          `Network issue: ${(issues as string[])?.join(', ') || 'unknown'}`,
-          JSON.stringify({ issues, recoveryAttempts, watchdogTimestamp: timestamp }),
+          (message as string) || `Network issue: ${(issues as string[])?.join(', ') || 'unknown'}`,
+          JSON.stringify({ issues, message, recoveryAttempts, watchdogTimestamp: timestamp }),
           new Date(),
         ]
       );

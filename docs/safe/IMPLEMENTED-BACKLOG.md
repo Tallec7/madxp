@@ -176,6 +176,7 @@
 | IMP-PI-28 | Hotspot : scan WiFi sur wlan1 (plus wlan0 AP) — corrige SSID invisible              | Production | `hotspot-optimizer.sh`                                       | Fév 2026     |
 | IMP-PI-29 | Hotspot : auto-fix TKIP→CCMP au boot via optimizer (propagation OTA)                | Production | `hotspot-optimizer.sh`                                       | Fév 2026     |
 | IMP-PI-30 | Catégorisation intelligente écran (edid-decode enrichi, \_inferDisplayCategory)     | Livré      | `hdmi.service.js`, `metrics.js`                              | Fév 2026     |
+| IMP-PI-31 | OTA auto-installe edid-decode sur Pi existants (requiredAptPackages + diagnose-pi)  | Livré      | `update-software.js`, `diagnose-pi.sh`                       | Fév 2026     |
 
 ---
 
@@ -346,18 +347,18 @@
 
 ## Statistiques Produit
 
-| Métrique                  | Valeur                                                                                                                                                       |
-| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Features implémentées** | **228** (+26 audit, +8 E-22 TV+LED dual, +6 sponsor UX, +2 résilience Pi/OTA, +3 hotspot WiFi, +3 debug page, +1 EDID enrichment, +1 dashboard EDID display) |
-| Domaines fonctionnels     | 14                                                                                                                                                           |
-| Controllers API           | 29 (+sponsor-alerts)                                                                                                                                         |
-| Services métier           | 40 (+sponsor-alert, sponsor-stats, sponsor-auto-resolution)                                                                                                  |
-| Repositories              | 25 (+video-variant)                                                                                                                                          |
-| Migrations DB             | 54 (+add-led-support-and-video-variants)                                                                                                                     |
-| Modules dashboard         | 21 (+advertiser-health, analytics-categories)                                                                                                                |
-| Services Raspberry        | 19 (+sponsor-stats)                                                                                                                                          |
-| Versions publiées         | 265+ (v2.1 → v3.62)                                                                                                                                          |
-| Tests (total)             | 2 386 (1590 API + 506 Angular + 148 Admin + 71 Socket + 142 Smoke)                                                                                           |
+| Métrique                  | Valeur                                                                                                                                                                           |
+| ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Features implémentées** | **229** (+26 audit, +8 E-22 TV+LED dual, +6 sponsor UX, +2 résilience Pi/OTA, +3 hotspot WiFi, +3 debug page, +1 EDID enrichment, +1 dashboard EDID display, +1 OTA edid-decode) |
+| Domaines fonctionnels     | 14                                                                                                                                                                               |
+| Controllers API           | 29 (+sponsor-alerts)                                                                                                                                                             |
+| Services métier           | 40 (+sponsor-alert, sponsor-stats, sponsor-auto-resolution)                                                                                                                      |
+| Repositories              | 25 (+video-variant)                                                                                                                                                              |
+| Migrations DB             | 54 (+add-led-support-and-video-variants)                                                                                                                                         |
+| Modules dashboard         | 21 (+advertiser-health, analytics-categories)                                                                                                                                    |
+| Services Raspberry        | 19 (+sponsor-stats)                                                                                                                                                              |
+| Versions publiées         | 265+ (v2.1 → v3.62)                                                                                                                                                              |
+| Tests (total)             | 2 386 (1590 API + 506 Angular + 148 Admin + 71 Socket + 142 Smoke)                                                                                                               |
 
 ---
 

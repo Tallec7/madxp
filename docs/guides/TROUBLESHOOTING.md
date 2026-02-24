@@ -3059,6 +3059,14 @@ journalctl -u neopro-sync-agent --since "1 hour ago" --no-pager | grep -i "watch
 journalctl -u neopro-sync-agent --since "boot" | grep "Starting network watchdog"
 ```
 
+### BSSID mismatch auto-clear (v3.79+)
+
+Quand le Pi est connecté en WiFi et sain, le watchdog vérifie si le BSSID connecté correspond au BSSID verrouillé dans wpa_supplicant. Si un mismatch persiste >5 min, le lock est automatiquement supprimé et une alerte `bssid_lock_auto_cleared` est envoyée au central (DB + Slack + dashboard temps réel).
+
+### Config-watcher pause pendant OTA (v3.79+)
+
+Avant chaque OTA, le config-watcher est mis en pause (2 min) pour éviter les 11x événements `config change detected` causés par l'extraction de l'archive. Un seul check différé est effectué à la reprise.
+
 ### Le watchdog ne tente pas de recovery ?
 
 Causes possibles :
@@ -3106,7 +3114,7 @@ En cas de problème, il tente une récupération automatique (max 3 tentatives, 
 
 Le `hotspot-optimizer.sh` optimise automatiquement le canal du hotspot au boot. Il scanne les réseaux WiFi visibles via wlan1 (sans perturber l'AP sur wlan0) et bascule vers le canal le moins congestionné (1, 6 ou 11). Depuis v3.69, il corrige aussi automatiquement TKIP → CCMP si détecté.
 
-**Seuils :** Congestion ≥ 5 réseaux sur le canal actuel, amélioration ≥ 3 réseaux vs meilleur canal.
+**Seuils (v3.79+) :** Congestion ≥ 3 réseaux sur le canal actuel, amélioration ≥ 2 réseaux vs meilleur canal. (Avant v3.79 : ≥5 et ≥3, ce qui ne déclenchait jamais le switch dans les environnements modérément congestionnés.)
 
 **Diagnostic :**
 
@@ -3155,6 +3163,7 @@ Depuis la version 2.34, le verrouillage BSSID est **bloqué automatiquement** en
 1. **Admin Panel (`:8080`)** : Le checkbox "Verrouiller BSSID" est désactivé si plusieurs APs avec le même SSID sont détectés
 2. **Validation serveur** : Même si le frontend est contourné, le backend refuse la requête
 3. **Dashboard central** : Un avertissement apparaît si un BSSID lock est détecté en mesh
+4. **Auto-clear (v3.79+)** : Si le Pi est connecté à un BSSID différent du BSSID verrouillé pendant >5 min (mismatch), le watchdog supprime automatiquement le lock et émet une alerte `bssid_lock_auto_cleared` vers le central
 
 ### Supprimer un BSSID lock existant
 
@@ -3165,6 +3174,19 @@ http://neopro.local:8080 → Onglet Réseau → Bouton "Supprimer le verrouillag
 # Ou manuellement
 sudo sed -i '/bssid=/d' /etc/wpa_supplicant/wpa_supplicant.conf
 sudo wpa_cli -i wlan1 reconfigure
+```
+
+### Diagnostic BSSID mismatch (v3.79+)
+
+```bash
+# Voir le BSSID actuellement connecté
+wpa_cli -i wlan1 status | grep bssid
+
+# Voir le BSSID verrouillé dans la config
+grep -i bssid /etc/wpa_supplicant/wpa_supplicant*.conf
+
+# Vérifier si le watchdog a auto-clear un lock
+journalctl -u neopro-sync-agent --since "24 hours ago" | grep -i "bssid.*mismatch\|bssid.*auto-clear"
 ```
 
 ---

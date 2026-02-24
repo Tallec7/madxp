@@ -718,6 +718,10 @@ class NeoproSyncAgent {
           completed: true,
         });
       } else if (type === 'update_software') {
+        // Pause config-watcher during OTA to avoid event spam (11x duplicate syncs)
+        if (this.configWatcher) {
+          this.configWatcher.pause(120000); // 2 min — covers the full OTA duration
+        }
         result = await handler.execute(data, (progress) => {
           this.socket.emit('update_progress', {
             deploymentId: data.deploymentId,
@@ -898,6 +902,22 @@ class NeoproSyncAgent {
         logger.error('Failed to update network profile', { error: error.message });
       }
     }, NETWORK_PROFILE_INTERVAL);
+  }
+
+  /**
+   * Remove stale files from previous versions (non-blocking, fire-and-forget).
+   */
+  cleanupLegacyFiles() {
+    const legacyPath = require('path').join(
+      process.env.HOME || '/home/pi', 'neopro', 'data', 'sponsor_impressions.json'
+    );
+    fs.pathExists(legacyPath).then((exists) => {
+      if (!exists) return;
+      logger.info('[cleanup] Removing stale sponsor_impressions.json (pre-v3.66 remnant)');
+      fs.remove(legacyPath).catch((err) => {
+        logger.warn('[cleanup] Failed to remove legacy file', { error: err.message });
+      });
+    });
   }
 
   /**

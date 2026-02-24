@@ -672,10 +672,10 @@ class SafeNetworkOperations {
         const currentCount = channelCounts[currentChannel] || 0;
         const bestCount = channelCounts[bestChannel] || 0;
 
-        // Only switch if current channel is congested (>=5 networks)
-        // AND the best alternative has at least 3 fewer networks (avoid flapping)
-        const CONGESTION_THRESHOLD = 5;
-        const MIN_IMPROVEMENT = 3;
+        // Only switch if current channel is congested (>=3 networks)
+        // AND the best alternative has at least 2 fewer networks (avoid flapping)
+        const CONGESTION_THRESHOLD = 3;
+        const MIN_IMPROVEMENT = 2;
 
         if (currentChannel !== bestChannel
             && currentCount >= CONGESTION_THRESHOLD

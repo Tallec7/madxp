@@ -3,10 +3,18 @@
 ### Bug Fixes
 
 - **debug:** restore empty buffer status to 'ok' after i18n regression ([2f11461](https://github.com/Tallec7/neopro/commit/2f11461c47e79a30be3b95e92f90b5fb8f34ebc6))
+- **watchdog:** auto-clear stale BSSID lock when connected BSSID mismatches locked BSSID for >5 min — prevents roaming fights in multi-AP environments (NLF Handball debug bundle)
+- **ota:** pause config-watcher during OTA extract to eliminate 11x duplicate config sync events — adds `pause()/resume()` mechanism to ConfigWatcher
+- **ota:** fix VERSION file EACCES by checking actual write access (`W_OK`) instead of only `uid === 0` — handles root-owned files, immutable flags, and directory permission issues
+- **sync-agent:** auto-delete stale `sponsor_impressions.json` on startup (pre-v3.66 pipeline consolidation remnant)
+- **hotspot:** lower channel auto-switch thresholds from 5→3 (congestion) and 3→2 (min improvement) — enables channel optimization in moderately congested environments
 
 ### Features
 
 - **dashboard:** afficher infos EDID enrichies dans page debug ([09f01a5](https://github.com/Tallec7/neopro/commit/09f01a5650546b39ab126337c126b6a46d09b9b1))
+- **ota:** ajouter `edid-decode` aux paquets apt auto-installés lors des mises à jour OTA
+  - Les Pi existants (déployés avant PR #421) recevront automatiquement le paquet
+  - Ajout dans `diagnose-pi.sh` (recommended packages) et smoke test de régression
 
 # [3.78.0](https://github.com/Tallec7/neopro/compare/v3.77.0...v3.78.0) (2026-02-23)
 

@@ -19,8 +19,10 @@
 const { exec } = require('child_process');
 const util = require('util');
 const fs = require('fs-extra');
+const path = require('path');
 const logger = require('../logger');
 const { config } = require('../config');
+const { safeNetworkOperations, OPERATIONS } = require('./safe-network-operations');
 
 const execAsync = util.promisify(exec);
 
@@ -34,6 +36,7 @@ const FAST_RETRY_DELAY = 10 * 1000; // 10s fast retry between recovery phases (i
 const ROLLBACK_TIMEOUT = 30 * 1000; // 30 secondes pour rollback
 const GRACE_PERIOD_DURATION = 60 * 1000; // 60s grace period after network operations
 const GRACE_PERIOD_FILE = '/tmp/neopro-watchdog-grace.json'; // Persists across process restarts
+const BSSID_MISMATCH_THRESHOLD = 5 * 60 * 1000; // 5 min mismatch before auto-clearing lock
 
 // Interfaces
 const HOTSPOT_INTERFACE = 'wlan0';
@@ -71,6 +74,10 @@ const state = {
     config: null,
     timestamp: null,
     operation: null,
+  },
+  bssidMismatch: {
+    detectedAt: 0,
+    cleared: false,
   },
 };
 
@@ -979,6 +986,84 @@ async function hotspotWatchLoop() {
 }
 
 /**
+ * Detect BSSID lock mismatch: the Pi is connected to a different AP than the
+ * locked BSSID in wpa_supplicant config. After BSSID_MISMATCH_THRESHOLD the
+ * stale lock is auto-cleared so the Pi can roam freely.
+ */
+async function checkBssidMismatch() {
+  try {
+    // Get connected BSSID from wpa_cli
+    const { stdout } = await execAsync('wpa_cli -i wlan1 status 2>/dev/null');
+    const bssidMatch = stdout.match(/^bssid=([0-9a-f:]+)/im);
+    if (!bssidMatch) return; // not associated
+
+    const connectedBssid = bssidMatch[1].toLowerCase();
+
+    // Read locked BSSID from wpa_supplicant config
+    const wpaPaths = [
+      '/etc/wpa_supplicant/wpa_supplicant-wlan1.conf',
+      '/etc/wpa_supplicant/wpa_supplicant.conf',
+    ];
+    let lockedBssid = null;
+    for (const p of wpaPaths) {
+      try {
+        const content = await fs.readFile(p, 'utf8');
+        const m = content.match(/^\s*bssid=([0-9a-f:]+)/im);
+        if (m) { lockedBssid = m[1].toLowerCase(); break; }
+      } catch { /* file not found */ }
+    }
+
+    if (!lockedBssid) {
+      // No BSSID lock configured — reset state
+      state.bssidMismatch.detectedAt = 0;
+      state.bssidMismatch.cleared = false;
+      return;
+    }
+
+    if (connectedBssid === lockedBssid) {
+      // Match — reset
+      state.bssidMismatch.detectedAt = 0;
+      state.bssidMismatch.cleared = false;
+      return;
+    }
+
+    // Mismatch detected
+    if (!state.bssidMismatch.detectedAt) {
+      state.bssidMismatch.detectedAt = Date.now();
+      logger.warn('NetworkWatchdog: BSSID lock mismatch detected', {
+        connected: connectedBssid,
+        locked: lockedBssid,
+      });
+    }
+
+    const elapsed = Date.now() - state.bssidMismatch.detectedAt;
+    if (elapsed >= BSSID_MISMATCH_THRESHOLD && !state.bssidMismatch.cleared) {
+      logger.info('NetworkWatchdog: Auto-clearing stale BSSID lock', {
+        connected: connectedBssid,
+        locked: lockedBssid,
+        elapsedMs: elapsed,
+      });
+      await safeNetworkOperations.executeOperation(OPERATIONS.REMOVE_BSSID_LOCK);
+      state.bssidMismatch.cleared = true;
+
+      if (socketRef && socketRef.connected) {
+        socketRef.emit('network_alert', {
+          siteId: config.site.id,
+          type: 'bssid_lock_auto_cleared',
+          severity: 'info',
+          message: `BSSID lock auto-cleared: was locked to ${lockedBssid} but connected to ${connectedBssid}`,
+          connected: connectedBssid,
+          locked: lockedBssid,
+          timestamp: new Date().toISOString(),
+        });
+      }
+    }
+  } catch (error) {
+    logger.debug('NetworkWatchdog: BSSID mismatch check failed', { error: error.message });
+  }
+}
+
+/**
  * Boucle de surveillance internet
  */
 async function internetWatchLoop() {
@@ -1030,6 +1115,11 @@ async function internetWatchLoop() {
           timestamp: new Date().toISOString(),
         });
       }
+    }
+
+    // Check for BSSID lock mismatch when healthy and on WiFi
+    if (health.healthy && health.connectionType === 'wifi') {
+      await checkBssidMismatch();
     }
 
     if (!health.healthy) {

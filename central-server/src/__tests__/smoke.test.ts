@@ -1821,9 +1821,9 @@ describe('Kiosk xdpyinfo dependency must be provisioned', () => {
       .toEqual({ hasX11Utils: true });
   });
 
-  it('OTA must auto-install required apt packages including x11-utils', () => {
-    // update-software.js must have a requiredAptPackages list that includes x11-utils.
-    // This ensures existing Pi fleet gets x11-utils installed during OTA upgrade.
+  it('OTA must auto-install required apt packages including x11-utils and edid-decode', () => {
+    // update-software.js must have a requiredAptPackages list that includes x11-utils and edid-decode.
+    // This ensures existing Pi fleet gets these packages installed during OTA upgrade.
     const updateSoftware = fs.readFileSync(
       path.join(repoRoot, 'raspberry/sync-agent/src/commands/update-software.js'),
       'utf8'
@@ -1832,6 +1832,8 @@ describe('Kiosk xdpyinfo dependency must be provisioned', () => {
       .toEqual({ hasRequiredAptPackages: true });
     expect({ hasX11Utils: updateSoftware.includes("'x11-utils'") })
       .toEqual({ hasX11Utils: true });
+    expect({ hasEdidDecode: updateSoftware.includes("'edid-decode'") })
+      .toEqual({ hasEdidDecode: true });
   });
 
   it('diagnose-pi.sh must check for x11-utils in recommended packages', () => {
@@ -2147,5 +2149,101 @@ describe('Rate-limit assignment guards', () => {
     const sponsorRouteMount = serverTs.match(/app\.use\('\/api\/sites',\s*(\w+),\s*siteSponsorRoutes\)/);
     expect(sponsorRouteMount).not.toBeNull();
     expect({ limiter: sponsorRouteMount![1] }).toEqual({ limiter: 'adminRateLimit' });
+  });
+});
+
+// =================================================================
+// Sync-agent debug bundle regression guards (v3.79+)
+// Prevents recurrence of issues found in NLF Handball Pi debug bundle.
+// =================================================================
+
+describe('Sync-agent debug bundle regression guards', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+
+  // Issue: BSSID connected ≠ BSSID locked for hours with no detection.
+  // Fix: checkBssidMismatch() in network-watchdog auto-clears stale locks.
+  it('network-watchdog must have BSSID mismatch detection', () => {
+    const watchdog = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/sync-agent/src/services/network-watchdog.js'),
+      'utf8'
+    );
+    expect({ hasBssidCheck: watchdog.includes('checkBssidMismatch') })
+      .toEqual({ hasBssidCheck: true });
+    expect({ hasThreshold: watchdog.includes('BSSID_MISMATCH_THRESHOLD') })
+      .toEqual({ hasThreshold: true });
+  });
+
+  // Issue: 11x duplicate config sync events during OTA extract.
+  // Fix: ConfigWatcher.pause()/resume() mechanism.
+  it('config-watcher must have pause/resume mechanism for OTA', () => {
+    const watcher = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/sync-agent/src/watchers/config-watcher.js'),
+      'utf8'
+    );
+    expect({ hasPause: watcher.includes('pause(') }).toEqual({ hasPause: true });
+    expect({ hasResume: watcher.includes('resume()') }).toEqual({ hasResume: true });
+    expect({ hasPausedFlag: watcher.includes('this.paused') }).toEqual({ hasPausedFlag: true });
+  });
+
+  // Issue: OTA must pause config-watcher before extracting.
+  it('agent.js must pause config-watcher before OTA update', () => {
+    const agent = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/sync-agent/src/agent.js'),
+      'utf8'
+    );
+    expect({ pausesBeforeOta: agent.includes('configWatcher.pause') })
+      .toEqual({ pausesBeforeOta: true });
+  });
+
+  // Issue: EACCES on unlink VERSION because fixFileOwnership only checked uid===0.
+  // Fix: Check fs.constants.W_OK (actual write access).
+  it('fixFileOwnership must check W_OK write access (not just uid)', () => {
+    const updateSoftware = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/sync-agent/src/commands/update-software.js'),
+      'utf8'
+    );
+    expect({ checksWriteAccess: updateSoftware.includes('W_OK') })
+      .toEqual({ checksWriteAccess: true });
+  });
+
+  // Issue: Stale sponsor_impressions.json from pre-v3.66.
+  // Fix: Auto-cleanup on startup.
+  it('agent.js must cleanup legacy sponsor_impressions.json on startup', () => {
+    const agent = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/sync-agent/src/agent.js'),
+      'utf8'
+    );
+    expect({ hasCleanup: agent.includes('cleanupLegacyFiles') })
+      .toEqual({ hasCleanup: true });
+    expect({ hasSponsorPath: agent.includes('sponsor_impressions.json') })
+      .toEqual({ hasSponsorPath: true });
+  });
+
+  // Issue: Channel auto-switch never triggered (threshold 5 too high).
+  // Fix: CONGESTION_THRESHOLD=3, MIN_IMPROVEMENT=2.
+  it('hotspot channel congestion threshold must be 3 (not 5)', () => {
+    const safeOps = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/sync-agent/src/services/safe-network-operations.js'),
+      'utf8'
+    );
+    const thresholdMatch = safeOps.match(/CONGESTION_THRESHOLD\s*=\s*(\d+)/);
+    const improvementMatch = safeOps.match(/MIN_IMPROVEMENT\s*=\s*(\d+)/);
+    expect(thresholdMatch).not.toBeNull();
+    expect(improvementMatch).not.toBeNull();
+    expect({ congestionThreshold: Number(thresholdMatch![1]) })
+      .toEqual({ congestionThreshold: 3 });
+    expect({ minImprovement: Number(improvementMatch![1]) })
+      .toEqual({ minImprovement: 2 });
+  });
+
+  // Issue: network_alert handler only used issues[] for message, missing message field.
+  // Fix: Fallback to message string from alert payload.
+  it('network-resilience handler must support message field in alerts', () => {
+    const handler = fs.readFileSync(
+      path.join(repoRoot, 'central-server/src/handlers/network-resilience.handler.ts'),
+      'utf8'
+    );
+    expect({ extractsMessage: /const\s*\{[^}]*message[^}]*\}\s*=\s*alert/.test(handler) })
+      .toEqual({ extractsMessage: true });
   });
 });

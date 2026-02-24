@@ -244,6 +244,7 @@ check_apt_packages() {
         "cec-utils"
         "firmware-realtek"
         "x11-utils"
+        "edid-decode"
     )
 
     local MISSING_CRITICAL=()
