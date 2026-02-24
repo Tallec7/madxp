@@ -409,6 +409,20 @@ groups:
           summary: "Verified impressions (TV-on) rate below 10%"
           description: "Only {{ $value | humanizePercentage }} of sponsor impressions have tv_status=on. Possible HDMI-CEC detection issue across fleet."
 
+      # E-22: Secondary display config deployment monitoring
+      # Detects when config deployments happen but secondary display settings
+      # are not being propagated (config-merge regression). Works by monitoring
+      # the config drift metric — if a Pi repeatedly drifts after deployment,
+      # the secondary display settings may be getting dropped during merge.
+      - alert: SecondaryDisplayConfigDrift
+        expr: increase(neopro_config_drift_total[2h]) > 10 and increase(neopro_deployments_total{status="completed"}[2h]) > 3
+        for: 30m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Repeated config drift detected after deployments"
+          description: "{{ $value | humanize }} config drifts in 2h alongside completed deployments. Possible config-merge regression — secondary display or other settings may be silently dropped during merge. Check config-merge.js and Pi logs."
+
       # Sponsor analytics pipeline stall: club plays flowing but no sponsor plays (unified pipeline v3.67+)
       - alert: SponsorAnalyticsPipelineStall
         expr: rate(neopro_video_plays_total{category="sponsor"}[2h]) == 0 and rate(neopro_video_plays_total{category="club"}[2h]) > 0

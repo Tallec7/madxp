@@ -466,11 +466,16 @@ Tous les controllers utilisent le repository pattern. ESLint bloquant actif. Aud
 
 ---
 
-### E-22 — Contenus Différenciés TV + LED
+### E-22 — Contenus Différenciés TV + Écran Secondaire
 
-> **Référence technique** : [PROP-002 — TV + LED Dual Output](../proposals/PROP-002-tv-led-dual-output.md)
+> **Référence technique** : [PROP-002 — TV + LED Dual Output](../proposals/PROP-002-tv-led-dual-output.md) | [ADR-029](../adr/ADR-029-dual-hdmi-tv-led.md)
 
-**Dépendances amont** : Nécessite un Pi 5 + panneau LED + contrôleur LED pour validation hardware (spike). Pas de dépendance inter-epic logicielle.
+> **Renommage (Fév 2026)** : "LED" → "Secondary Display" dans tout le codebase. Le HDMI secondaire
+> peut alimenter un panneau LED, un parc de TV tribunes, un écran géant, etc.
+> Migration DB : `rename-led-to-secondary-display.sql`. Rétrocompat assurée dans watchdog, sync-agent,
+> et config-merge.
+
+**Dépendances amont** : Nécessite un Pi 5 + écran secondaire + contrôleur pour validation hardware (spike). Pas de dépendance inter-epic logicielle.
 
 **Risques (ROAM)**
 
@@ -479,7 +484,8 @@ Tous les controllers utilisent le repository pattern. ESLint bloquant actif. Aud
 | GPU surchargé avec 2 flux vidéo simultanés           | Accepted  | Pi 5 obligatoire, vidéos max 1080p@30fps, monitoring GPU via watchdog       |
 | Contrôleur LED incompatible HDMI ou EDID capricieux  | Mitigated | Spike US-22.0.1 valide avec matériel réel (Linsn MC100, Novastar MX40 Pro)  |
 | Prospect annule → dev inutile                        | Owned     | Go/No-Go avant tout dev feature (spike seul si prospect incertain)          |
-| Détection HDMI 1 échoue sur certains contrôleurs LED | Mitigated | Fallback config : `hdmi_force_hotplug:1=1` activable par site via dashboard |
+| Détection HDMI 1 échoue sur certains contrôleurs     | Mitigated | Fallback config : `hdmi_force_hotplug:1=1` activable par site via dashboard |
+| Config-merge perd les nouvelles clés silencieusement  | Resolved  | Smoke test garde-fou + tests unitaires (11 cas) empêchent la régression     |
 
 ### F-22.0 : Enabler — Validation hardware dual HDMI (spike)
 
@@ -501,65 +507,66 @@ Tous les controllers utilisent le repository pattern. ESLint bloquant actif. Aud
 
 ### F-22.1 : Dual Kiosk HDMI natif ✅ Livré (Fév 2026)
 
-> _En tant que club avec TV + panneau LED, les deux écrans affichent des contenus adaptés à leur format depuis un seul Pi._
+> _En tant que club avec TV + écran secondaire, les deux écrans affichent des contenus adaptés à leur format depuis un seul Pi._
 
 **Critères d'acceptation**
 
 - [x] 2 instances Chromium kiosk sur les 2 HDMI du Pi 5 (bureau étendu)
-- [x] Route `/tv` (HDMI 0) + route `/led` (HDMI 1)
+- [x] Route `/tv` (HDMI 0) + route `/secondary` (HDMI 1)
 - [ ] Config `config.txt` : `max_framebuffers=2`, résolutions par port _(provisioning OTA à venir)_
-- [x] Watchdog vérifie `/sys/class/drm/card1-HDMI-A-2/status` avant de lancer le kiosk LED
-- [x] Re-check périodique (30-60s) : lance le kiosk LED si HDMI 1 passe à `connected`
-- [x] Si `led_enabled=true` mais HDMI 1 non branché → mode TV-only, pas de 2e Chromium
+- [x] Watchdog vérifie `/sys/class/drm/card1-HDMI-A-2/status` avant de lancer le kiosk secondaire
+- [x] Re-check périodique (30-60s) : lance le kiosk secondaire si HDMI 1 passe à `connected`
+- [x] Si `secondaryDisplayEnabled=true` mais HDMI 1 non branché → mode TV-only, pas de 2e Chromium
 - [ ] Fallback config : `hdmi_force_hotplug:1=1` activable par site si détection auto échoue
 - [ ] RAM totale < 2GB (headroom pour Pi 4GB) _(à valider sur hardware réel)_
+- [x] Config-merge propage `secondaryDisplayEnabled` dans configuration.json (fix Fév 2026)
 
 | US        | Description                                                                                                 | SP  | Sprint  | Priorité |
 | --------- | ----------------------------------------------------------------------------------------------------------- | --- | ------- | -------- |
 | US-22.1.1 | Config Pi dual HDMI (`config.txt` + `max_framebuffers=2`) + watchdog dual kiosk avec détection HDMI DRM/KMS | 5   | PI-2 S4 | Must     |
-| US-22.1.2 | Route Angular `/led` + paramètre `displayType` dans TvComponent (filtre playlist)                           | 5   | PI-2 S4 | Must     |
-| US-22.1.3 | Dashboard — configuration site LED (toggle `led_enabled`, `led_resolution`, fallback `hdmi_force_hotplug`)  | 3   | PI-2 S4 | Must     |
+| US-22.1.2 | Route Angular `/secondary` + paramètre `displayType` dans TvComponent (filtre playlist)                     | 5   | PI-2 S4 | Must     |
+| US-22.1.3 | Dashboard — configuration site écran secondaire (toggle, résolution, fallback `hdmi_force_hotplug`)          | 3   | PI-2 S4 | Must     |
 
 ---
 
-### F-22.2 : Réactions différenciées TV vs LED ⚙️ Partiel (Fév 2026)
+### F-22.2 : Réactions différenciées TV vs Secondaire ⚙️ Partiel (Fév 2026)
 
-> _En tant qu'opérateur, mes actions Remote produisent des réactions visuelles adaptées sur la TV et le LED simultanément._
+> _En tant qu'opérateur, mes actions Remote produisent des réactions visuelles adaptées sur la TV et l'écran secondaire simultanément._
 
 **Critères d'acceptation**
 
-- [x] Score overlay LED format bandeau compact (score + chrono + période)
-- [x] Animation de but spécifique LED (flash couleur équipe + texte "BUT !")
-- [ ] Breaking news format LED (texte pleine largeur dans le bandeau)
+- [x] Score overlay secondaire format bandeau compact (score + chrono + période)
+- [x] Animation de but spécifique secondaire (flash couleur équipe + texte "BUT !")
+- [ ] Breaking news format secondaire (texte pleine largeur dans le bandeau)
 - [x] Un seul événement Socket.IO → 2 réactions différentes selon `displayType`
-- [ ] Indicateur LED connecté dans la Remote
+- [ ] Indicateur écran secondaire connecté dans la Remote
 
-| US        | Description                                                                                   | SP  | Sprint  | Priorité |
-| --------- | --------------------------------------------------------------------------------------------- | --- | ------- | -------- |
-| US-22.2.1 | Score overlay LED bandeau compact + animations de but spécifiques LED (flash couleur + texte) | 5   | PI-2 S4 | Must     |
-| US-22.2.2 | Indicateur LED connecté dans la Remote + fallback vidéo LED (`object-fit: cover`)             | 3   | PI-2 S5 | Should   |
+| US        | Description                                                                                                       | SP  | Sprint  | Priorité |
+| --------- | ----------------------------------------------------------------------------------------------------------------- | --- | ------- | -------- |
+| US-22.2.1 | Score overlay secondaire bandeau compact + animations de but spécifiques secondaire (flash couleur + texte)       | 5   | PI-2 S4 | Must     |
+| US-22.2.2 | Indicateur écran secondaire connecté dans la Remote + fallback vidéo secondaire (`object-fit: cover`)              | 3   | PI-2 S5 | Should   |
 
 ---
 
 ### F-22.3 : Variantes vidéo par type d'écran ✅ Livré (Fév 2026)
 
-> _En tant qu'opérateur/annonceur, je peux uploader une version TV et une version LED de chaque vidéo, et le pipeline de déploiement envoie les bons fichiers au Pi._
+> _En tant qu'opérateur/annonceur, je peux uploader une version TV et une version secondaire de chaque vidéo, et le pipeline de déploiement envoie les bons fichiers au Pi._
 
 **Critères d'acceptation**
 
-- [x] Table `video_variants` avec `display_type` (tv/led)
-- [x] API upload variante LED d'une vidéo existante
-- [x] Dashboard : UI pour associer variante LED à une vidéo TV
-- [x] Déploiement conditionnel : playlist TV = variantes `tv`, playlist LED = variantes `led`
-- [x] Pipeline adapté : n'envoie les variantes LED que si le site est `led_enabled`
-- [ ] Provisioning dual kiosk config poussé via OTA quand `led_enabled` est activé
-- [x] Fallback : si pas de variante LED, redimensionner la version TV (CSS `object-fit: cover`)
+- [x] Table `video_variants` avec `display_type` (tv/secondary)
+- [x] API upload variante secondaire d'une vidéo existante
+- [x] Dashboard : UI pour associer variante secondaire à une vidéo TV
+- [x] Déploiement conditionnel : playlist TV = variantes `tv`, playlist secondaire = variantes `secondary`
+- [x] Pipeline adapté : n'envoie les variantes secondaires que si le site est `secondary_display_enabled`
+- [ ] Provisioning dual kiosk config poussé via OTA quand `secondary_display_enabled` est activé
+- [x] Fallback : si pas de variante secondaire, redimensionner la version TV (CSS `object-fit: cover`)
 
-| US        | Description                                                                                                     | SP  | Sprint  | Priorité |
-| --------- | --------------------------------------------------------------------------------------------------------------- | --- | ------- | -------- |
-| US-22.3.1 | Table `video_variants` + migration DB + API upload variante LED                                                 | 5   | PI-2 S5 | Must     |
-| US-22.3.2 | Dashboard UI variantes vidéo + déploiement conditionnel par `display_type`                                      | 5   | PI-2 S5 | Must     |
-| US-22.3.3 | Adaptation pipeline déploiement (envoi variantes LED si `led_enabled`) + provisioning dual kiosk config via OTA | 5   | PI-2 S5 | Must     |
+| US        | Description                                                                                                                         | SP  | Sprint  | Priorité |
+| --------- | ----------------------------------------------------------------------------------------------------------------------------------- | --- | ------- | -------- |
+| US-22.3.1 | Table `video_variants` + migration DB + API upload variante secondaire                                                              | 5   | PI-2 S5 | Must     |
+| US-22.3.2 | Dashboard UI variantes vidéo + déploiement conditionnel par `display_type`                                                          | 5   | PI-2 S5 | Must     |
+| US-22.3.3 | Adaptation pipeline déploiement (envoi variantes secondaires si `secondary_display_enabled`) + provisioning dual kiosk config via OTA | 5   | PI-2 S5 | Must     |
 
 ---
 
