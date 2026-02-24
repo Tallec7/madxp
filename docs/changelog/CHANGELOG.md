@@ -1,3 +1,9 @@
+## [3.79.2](https://github.com/Tallec7/neopro/compare/v3.79.1...v3.79.2) (2026-02-24)
+
+### Bug Fixes
+
+- **kiosk:** ancienne version Angular affichée au boot du Pi ([f0e8324](https://github.com/Tallec7/neopro/commit/f0e83248bb56c13207ac6233950804f4c2aeceda))
+
 ## [3.80.0](https://github.com/Tallec7/neopro/compare/v3.79.1...v3.80.0) (2026-02-24)
 
 ### Bug Fixes
