@@ -81,7 +81,12 @@
   - **`deploy-remote.sh`** : restart en 2 phases (backend+nginx en parallèle → wait → kiosk séquentiel)
   - **Crash detection** : pattern `check_for_crash_page()` affiné (suppression faux positif `*"Error"*`
     qui matchait les fenêtres xdg-desktop-portal)
-  - 10 smoke tests ajoutés pour empêcher la régression
+  - **`--disable-features` doublon** : `common_flags` et `gpu_flags` avaient chacun un `--disable-features`,
+    Chromium n'honorant que le dernier → `XdgDesktopPortal` n'était pas désactivé sur Pi 5.
+    Fix : combinaison en un seul flag `--disable-features="$disable_features"` au lancement.
+  - **`--user-data-dir`** : ajout `/tmp/kiosk-primary` au Chromium principal (isolé du profil par défaut,
+    cleanup automatique dans `cleanup_chromium()`)
+  - 15 smoke tests ajoutés pour empêcher la régression
 - **profiles:** fix multi-profile system not working in production (7 bugs — ADR-030)
   - **nginx:** `location = /configuration.json` et `location /profiles/` avec `no-cache` avant la regex
     `.json` qui cachait tous les profils 30 jours (exact match gagne sur regex)

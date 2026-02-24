@@ -2898,11 +2898,49 @@ describe('Kiosk GPU crash loop regression guards', () => {
       .toEqual({ noGenericErrorPattern: true });
   });
 
-  it('common_flags must disable XdgDesktopPortal feature', () => {
+  it('--disable-features must include XdgDesktopPortal', () => {
     // xdg-desktop-portal spawns unnecessary portal windows in kiosk mode,
     // causing log spam and potential overlay issues on the main display.
     expect({ hasXdgDisable: watchdog.includes('XdgDesktopPortal') })
       .toEqual({ hasXdgDisable: true });
+  });
+
+  it('--disable-features must NOT appear inside array definitions (common_flags/gpu_flags)', () => {
+    // CRITICAL: Chromium only honours the LAST --disable-features flag.
+    // Having --disable-features in BOTH common_flags and gpu_flags means the
+    // gpu_flags value silently overrides common_flags, so XdgDesktopPortal
+    // ends up NOT disabled on Pi 5. All features must be combined into a
+    // single --disable-features="$disable_features" at launch time.
+    const arrayDisableFeatures = watchdog.match(/^\s+--disable-features=/gm) || [];
+    expect({ noDisableFeaturesInArrays: arrayDisableFeatures.length })
+      .toEqual({ noDisableFeaturesInArrays: 0 });
+  });
+
+  it('Chromium launch commands must use combined --disable-features variable', () => {
+    // Both start_chromium() and start_chromium_secondary() must pass a single
+    // combined --disable-features="$disable_features" in the launch command.
+    const launchLines = watchdog.match(/"\$CHROMIUM_BIN".*--disable-features="\$disable_features"/g) || [];
+    expect({ combinedDisableFeaturesCount: launchLines.length })
+      .toEqual({ combinedDisableFeaturesCount: 2 }); // primary + secondary
+  });
+
+  it('primary Chromium must have --user-data-dir for profile isolation', () => {
+    // Without --user-data-dir, the primary Chromium uses the default profile
+    // at /home/pi/.config/chromium/ which can accumulate stale state between
+    // deploys. A dedicated temp dir ensures a clean profile on every restart.
+    const startFn = watchdog.match(/start_chromium\(\)\s*\{[\s\S]*?\n\}/);
+    expect(startFn).not.toBeNull();
+    expect({ hasUserDataDir: startFn![0].includes('--user-data-dir=/tmp/kiosk-primary') })
+      .toEqual({ hasUserDataDir: true });
+  });
+
+  it('cleanup_chromium must clean /tmp/kiosk-primary', () => {
+    // Since primary Chromium now uses --user-data-dir=/tmp/kiosk-primary,
+    // cleanup_chromium must purge this directory to avoid stale profile data.
+    const cleanupFn = watchdog.match(/cleanup_chromium\(\)\s*\{[\s\S]*?\n\}/);
+    expect(cleanupFn).not.toBeNull();
+    expect({ cleansPrimary: cleanupFn![0].includes('rm -rf /tmp/kiosk-primary') })
+      .toEqual({ cleansPrimary: true });
   });
 });
 

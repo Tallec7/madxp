@@ -158,6 +158,7 @@ cleanup_chromium() {
     # Local Storage, HTTP cache in-memory sérialisé, etc.)
     rm -rf /home/pi/.cache/chromium 2>/dev/null || true
     rm -rf /home/pi/.config/chromium 2>/dev/null || true
+    rm -rf /tmp/kiosk-primary 2>/dev/null || true
     rm -rf /tmp/kiosk-secondary 2>/dev/null || true
     rm -rf /tmp/kiosk-led 2>/dev/null || true  # Rétrocompat: nettoyer l'ancien répertoire
 
@@ -193,6 +194,10 @@ start_chromium() {
     export DISPLAY=:0
     export XAUTHORITY=/home/pi/.Xauthority
 
+    # Features à désactiver — CRITIQUE : Chromium n'accepte qu'un seul --disable-features,
+    # le dernier flag écrase les précédents ! On combine donc common + model-specific ici.
+    local disable_features="TranslateUI,MediaRouter,XdgDesktopPortal"
+
     # Flags communs à tous les modèles
     local common_flags=(
         --kiosk
@@ -201,7 +206,6 @@ start_chromium() {
         --disable-infobars
         --disable-session-crashed-bubble
         --disable-restore-session-state
-        --disable-features=TranslateUI,MediaRouter,XdgDesktopPortal
         --no-first-run
         --fast
         --fast-start
@@ -223,6 +227,7 @@ start_chromium() {
         --aggressive-cache-discard
         --disable-gpu-shader-disk-cache
         --password-store=basic
+        --user-data-dir=/tmp/kiosk-primary
     )
 
     # Flags spécifiques au modèle
@@ -242,10 +247,10 @@ start_chromium() {
         # (assez performant sur Pi 5 quad A76 2.4GHz) et utilise le GPU uniquement pour
         # le compositing/rasterization. Résultat : vidéos fluides sans crash GPU.
         log "📱 Pi 5 détecté: V3D Mesa + décodage vidéo software (évite SharedImage crash)"
+        disable_features+=",VaapiVideoDecoder,UseChromeOSDirectVideoDecoder"
         gpu_flags=(
             --ignore-gpu-blocklist
             --enable-gpu-rasterization
-            --disable-features=VaapiVideoDecoder,UseChromeOSDirectVideoDecoder
             --disable-gpu-memory-buffer-video-frames
         )
     else
@@ -261,7 +266,7 @@ start_chromium() {
         )
     fi
 
-    "$CHROMIUM_BIN" "${common_flags[@]}" "${gpu_flags[@]}" "$CHROMIUM_URL" &
+    "$CHROMIUM_BIN" "${common_flags[@]}" "${gpu_flags[@]}" --disable-features="$disable_features" "$CHROMIUM_URL" &
 
     CHROMIUM_PID=$!
     log "✓ Chromium lancé (PID: $CHROMIUM_PID)"
@@ -284,6 +289,9 @@ start_chromium_secondary() {
     export DISPLAY=:0
     export XAUTHORITY=/home/pi/.Xauthority
 
+    # Features à désactiver — même combine que start_chromium() (un seul --disable-features)
+    local disable_features="TranslateUI,MediaRouter,XdgDesktopPortal"
+
     # Flags identiques au kiosk principal + user-data-dir séparé + positionnement écran 2
     local common_flags=(
         --kiosk
@@ -292,7 +300,6 @@ start_chromium_secondary() {
         --disable-infobars
         --disable-session-crashed-bubble
         --disable-restore-session-state
-        --disable-features=TranslateUI,MediaRouter,XdgDesktopPortal
         --no-first-run
         --fast
         --fast-start
@@ -321,10 +328,10 @@ start_chromium_secondary() {
     # Mêmes flags GPU que le kiosk principal
     local gpu_flags=()
     if [[ "$PI_MODEL" == "pi5" ]]; then
+        disable_features+=",VaapiVideoDecoder,UseChromeOSDirectVideoDecoder"
         gpu_flags=(
             --ignore-gpu-blocklist
             --enable-gpu-rasterization
-            --disable-features=VaapiVideoDecoder,UseChromeOSDirectVideoDecoder
             --disable-gpu-memory-buffer-video-frames
         )
     else
@@ -338,7 +345,7 @@ start_chromium_secondary() {
         )
     fi
 
-    "$CHROMIUM_BIN" "${common_flags[@]}" "${gpu_flags[@]}" "$CHROMIUM_SECONDARY_URL" &
+    "$CHROMIUM_BIN" "${common_flags[@]}" "${gpu_flags[@]}" --disable-features="$disable_features" "$CHROMIUM_SECONDARY_URL" &
     SECONDARY_CHROMIUM_PID=$!
     log "✓ Chromium secondaire lancé (PID: $SECONDARY_CHROMIUM_PID)"
 }
