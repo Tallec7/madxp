@@ -201,7 +201,7 @@ start_chromium() {
         --disable-infobars
         --disable-session-crashed-bubble
         --disable-restore-session-state
-        --disable-features=TranslateUI,MediaRouter
+        --disable-features=TranslateUI,MediaRouter,XdgDesktopPortal
         --no-first-run
         --fast
         --fast-start
@@ -292,7 +292,7 @@ start_chromium_secondary() {
         --disable-infobars
         --disable-session-crashed-bubble
         --disable-restore-session-state
-        --disable-features=TranslateUI,MediaRouter
+        --disable-features=TranslateUI,MediaRouter,XdgDesktopPortal
         --no-first-run
         --fast
         --fast-start
@@ -312,6 +312,7 @@ start_chromium_secondary() {
         --disable-checker-imaging
         --disk-cache-size=1
         --aggressive-cache-discard
+        --disable-gpu-shader-disk-cache
         --password-store=basic
         --user-data-dir=/tmp/kiosk-secondary
         --window-position=1920,0
@@ -346,10 +347,26 @@ start_chromium_secondary() {
 stop_chromium_secondary() {
     if (( SECONDARY_CHROMIUM_PID > 0 )); then
         log "🔴 Arrêt du Chromium secondaire (PID: $SECONDARY_CHROMIUM_PID)..."
-        kill -9 "$SECONDARY_CHROMIUM_PID" 2>/dev/null || true
+
+        # Arrêt gracieux SIGTERM — même logique que cleanup_chromium()
+        # Un SIGKILL direct corrompt l'état GPU V3D partagé avec le Chromium principal.
+        kill -TERM "$SECONDARY_CHROMIUM_PID" 2>/dev/null || true
+        local wait_count=0
+        while kill -0 "$SECONDARY_CHROMIUM_PID" 2>/dev/null && (( wait_count < 10 )); do
+            sleep 0.5
+            (( wait_count++ ))
+        done
+        # SIGKILL uniquement si SIGTERM échoue
+        if kill -0 "$SECONDARY_CHROMIUM_PID" 2>/dev/null; then
+            log "⚠️ Chromium secondaire n'a pas répondu au SIGTERM, SIGKILL..."
+            kill -9 "$SECONDARY_CHROMIUM_PID" 2>/dev/null || true
+            sleep 1
+        fi
+
         SECONDARY_CHROMIUM_PID=0
-        # Nettoyer le user-data-dir temporaire
+        # Nettoyer le user-data-dir temporaire + shm orphelins
         rm -rf /tmp/kiosk-secondary 2>/dev/null || true
+        rm -rf /dev/shm/.org.chromium.* 2>/dev/null || true
         log "✓ Chromium secondaire arrêté"
     fi
 }
@@ -389,11 +406,15 @@ check_for_crash_page() {
     if command -v xdotool &> /dev/null; then
         local window_name=$(DISPLAY=:0 xdotool getactivewindow getwindowname 2>/dev/null || echo "")
 
+        # Patterns Chromium uniquement — ne PAS utiliser "Error" seul
+        # car xdg-desktop-portal et autres fenêtres X11 peuvent contenir
+        # "Error" dans leur titre, causant des faux positifs → restart boucle
         if [[ "$window_name" == *"Aw, Snap"* ]] || \
            [[ "$window_name" == *"Oups"* ]] || \
-           [[ "$window_name" == *"Error"* ]] || \
-           [[ "$window_name" == *"crashed"* ]]; then
-            log "⚠️ Page de crash détectée: $window_name"
+           [[ "$window_name" == *"crashed"* ]] || \
+           [[ "$window_name" == *"ERR_"* ]] || \
+           [[ "$window_name" == *"Page Unresponsive"* ]]; then
+            log "⚠️ Page de crash Chromium détectée: $window_name"
             return 0  # Crash détecté
         fi
     fi

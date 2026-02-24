@@ -2855,6 +2855,37 @@ describe('Kiosk GPU crash loop regression guards', () => {
     expect({ hasShaderCacheDisable: watchdog.includes('--disable-gpu-shader-disk-cache') })
       .toEqual({ hasShaderCacheDisable: true });
   });
+
+  it('stop_chromium_secondary must use SIGTERM before SIGKILL', () => {
+    // stop_chromium_secondary shares the V3D GPU with the main Chromium.
+    // A direct SIGKILL corrupts GPU state for BOTH instances.
+    // SIGTERM must come first; SIGKILL only as fallback after timeout.
+    const stopFn = watchdog.match(/stop_chromium_secondary\(\)\s*\{[\s\S]*?\n\}/);
+    expect(stopFn).not.toBeNull();
+    const fn = stopFn![0];
+    const termIdx = fn.indexOf('kill -TERM');
+    const killIdx = fn.indexOf('kill -9');
+    expect({ hasSigterm: termIdx > -1 }).toEqual({ hasSigterm: true });
+    expect({ sigtermBeforeSigkill: termIdx < killIdx })
+      .toEqual({ sigtermBeforeSigkill: true });
+  });
+
+  it('check_for_crash_page must NOT match generic "Error" window titles', () => {
+    // xdg-desktop-portal and other X11 windows can have "Error" in their title.
+    // Matching generic "Error" causes false-positive crash detection → restart loop.
+    const crashFn = watchdog.match(/check_for_crash_page\(\)\s*\{[\s\S]*?\n\}/);
+    expect(crashFn).not.toBeNull();
+    // Must NOT have a pattern like *"Error"* (too broad)
+    expect({ noGenericErrorPattern: !crashFn![0].includes('"*"Error"*"') && !crashFn![0].includes("*\"Error\"*") })
+      .toEqual({ noGenericErrorPattern: true });
+  });
+
+  it('common_flags must disable XdgDesktopPortal feature', () => {
+    // xdg-desktop-portal spawns unnecessary portal windows in kiosk mode,
+    // causing log spam and potential overlay issues on the main display.
+    expect({ hasXdgDisable: watchdog.includes('XdgDesktopPortal') })
+      .toEqual({ hasXdgDisable: true });
+  });
 });
 
 describe('Deploy script kiosk restart ordering', () => {
