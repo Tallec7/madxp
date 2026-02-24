@@ -820,12 +820,12 @@
 }
 
 // ============================================================================
-// LED DISPLAY OVERLAYS
-// Optimisés pour panneaux LED (bandeau horizontal, haute visibilité)
+// SECONDARY DISPLAY OVERLAYS
+// Optimisés pour écrans secondaires (bandeau LED, TV tribunes, écran géant)
 // ============================================================================
 
-// Score bandeau LED — fixé en bas, texte large haute-lisibilité
-.led-score-bandeau {
+// Score bandeau secondaire — fixé en bas, texte large haute-lisibilité
+.secondary-score-bandeau {
   position: fixed;
   bottom: 0;
   left: 0;
@@ -839,7 +839,7 @@
   background: rgba(0, 0, 0, 0.85);
   animation: overlayReveal 0.3s ease-out both;
 
-  .led-team {
+  .secondary-team {
     font-size: 28px;
     font-weight: 700;
     color: rgba(255, 255, 255, 0.9);
@@ -851,7 +851,7 @@
     max-width: 200px;
   }
 
-  .led-score {
+  .secondary-score {
     font-size: 48px;
     font-weight: 900;
     font-variant-numeric: tabular-nums;
@@ -861,13 +861,13 @@
     line-height: 1;
   }
 
-  .led-divider {
+  .secondary-divider {
     font-size: 32px;
     font-weight: 300;
     color: rgba(255, 255, 255, 0.5);
   }
 
-  .led-timer {
+  .secondary-timer {
     font-size: 24px;
     font-weight: 700;
     font-variant-numeric: tabular-nums;
@@ -878,8 +878,8 @@
   }
 }
 
-// Goal flash LED — flash couleur plein écran rapide
-.led-goal-flash {
+// Goal flash secondaire — flash couleur plein écran rapide
+.secondary-goal-flash {
   position: fixed;
   top: 0;
   left: 0;
@@ -891,7 +891,7 @@
   align-items: center;
   justify-content: center;
   gap: 16px;
-  animation: ledFlashPulse 0.4s ease-in-out infinite alternate;
+  animation: secondaryFlashPulse 0.4s ease-in-out infinite alternate;
 
   // Couleur par défaut (vert)
   background: rgba(76, 175, 80, 0.95);
@@ -904,7 +904,7 @@
     background: rgba(244, 67, 54, 0.95);
   }
 
-  .led-goal-text {
+  .secondary-goal-text {
     font-size: 96px;
     font-weight: 900;
     color: #ffffff;
@@ -913,7 +913,7 @@
     text-shadow: 0 0 40px rgba(255, 255, 255, 0.6);
   }
 
-  .led-goal-score {
+  .secondary-goal-score {
     font-size: 72px;
     font-weight: 800;
     font-variant-numeric: tabular-nums;
@@ -922,7 +922,7 @@
   }
 }
 
-@keyframes ledFlashPulse {
+@keyframes secondaryFlashPulse {
   from {
     opacity: 0.85;
   }

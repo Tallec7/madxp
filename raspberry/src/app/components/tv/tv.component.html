@@ -48,12 +48,12 @@
   [hidden]="isLicenseBlocked"
 ></video>
 
-<!-- Overlay Score TV (broadcast-quality, CSS-only themes) — masqué sur LED -->
+<!-- Overlay Score TV (broadcast-quality, CSS-only themes) — masqué sur écran secondaire -->
 <!-- Requiert: liveScoreEnabled (central) ET scoreEnabled (local) -->
 <div
   class="score-overlay"
   *ngIf="
-    displayType !== 'led' &&
+    displayType !== 'secondary' &&
     showScoreOverlay &&
     currentScore &&
     configuration?.liveScoreEnabled &&
@@ -126,12 +126,12 @@
   </ng-container>
 </div>
 
-<!-- Timer Overlay (standalone quand pas de score ou non intégré) — masqué sur LED -->
+<!-- Timer Overlay (standalone quand pas de score ou non intégré) — masqué sur écran secondaire -->
 <!-- Requiert: liveScoreEnabled (central) pour afficher le timer lié au match -->
 <div
   class="timer-overlay"
   *ngIf="
-    displayType !== 'led' &&
+    displayType !== 'secondary' &&
     configuration?.liveScoreEnabled &&
     localOptions.timer.enabled &&
     timerIsRunning &&
@@ -147,12 +147,12 @@
   <span class="timer-value">{{ formatTimerDisplay() }}</span>
 </div>
 
-<!-- Animation de But/Point TV (3 styles: popup, fullscreen, slide) — masquée sur LED -->
+<!-- Animation de But/Point TV (3 styles: popup, fullscreen, slide) — masquée sur écran secondaire -->
 <!-- Requiert: liveScoreEnabled (central) ET goalAnimation.enabled (local) -->
 <div
   class="goal-animation"
   *ngIf="
-    displayType !== 'led' &&
+    displayType !== 'secondary' &&
     showGoalAnimation &&
     currentScore &&
     configuration?.liveScoreEnabled &&
@@ -220,35 +220,35 @@
 </div>
 
 <!-- ============================================================== -->
-<!-- LED OVERLAYS — Score bandeau + Goal flash (affichés uniquement sur /led) -->
+<!-- SECONDARY DISPLAY OVERLAYS — Score bandeau + Goal flash (affichés uniquement sur /secondary) -->
 <!-- ============================================================== -->
 
-<!-- LED Score Bandeau (bandeau horizontal en bas) -->
+<!-- Secondary Score Bandeau (bandeau horizontal en bas) -->
 <div
-  class="led-score-bandeau"
+  class="secondary-score-bandeau"
   *ngIf="
-    displayType === 'led' &&
+    displayType === 'secondary' &&
     showScoreOverlay &&
     currentScore &&
     configuration?.liveScoreEnabled &&
     localOptions.overlay.scoreEnabled
   "
 >
-  <span class="led-team home">{{ currentScore.homeTeam }}</span>
-  <span class="led-score home">{{ currentScore.homeScore }}</span>
-  <span class="led-divider">-</span>
-  <span class="led-score away">{{ currentScore.awayScore }}</span>
-  <span class="led-team away">{{ currentScore.awayTeam }}</span>
-  <span class="led-timer" *ngIf="localOptions.timer.enabled && timerIsRunning">{{
+  <span class="secondary-team home">{{ currentScore.homeTeam }}</span>
+  <span class="secondary-score home">{{ currentScore.homeScore }}</span>
+  <span class="secondary-divider">-</span>
+  <span class="secondary-score away">{{ currentScore.awayScore }}</span>
+  <span class="secondary-team away">{{ currentScore.awayTeam }}</span>
+  <span class="secondary-timer" *ngIf="localOptions.timer.enabled && timerIsRunning">{{
     formatTimerDisplay()
   }}</span>
 </div>
 
-<!-- LED Goal Flash (flash couleur plein écran) -->
+<!-- Secondary Goal Flash (flash couleur plein écran) -->
 <div
-  class="led-goal-flash"
+  class="secondary-goal-flash"
   *ngIf="
-    displayType === 'led' &&
+    displayType === 'secondary' &&
     showGoalAnimation &&
     currentScore &&
     configuration?.liveScoreEnabled &&
@@ -257,10 +257,10 @@
   [class.home]="goalScoringTeam === 'home'"
   [class.away]="goalScoringTeam === 'away'"
 >
-  <span class="led-goal-text">{{
+  <span class="secondary-goal-text">{{
     localOptions.sport === 'football' || localOptions.sport === 'handball' ? 'BUUUUT !' : 'POINT !'
   }}</span>
-  <span class="led-goal-score">{{ currentScore.homeScore }} - {{ currentScore.awayScore }}</span>
+  <span class="secondary-goal-score">{{ currentScore.homeScore }} - {{ currentScore.awayScore }}</span>
 </div>
 
 <!-- Watermark Overlay (z-index 1100, au-dessus du score mais sous les animations) -->

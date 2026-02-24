@@ -322,8 +322,8 @@ class DeploymentService {
       // Non-bloquant : si la table n'existe pas encore, on continue sans
     }
 
-    // Chercher la variante LED si le site a led_enabled
-    let ledVariant: {
+    // Chercher la variante secondaire si le site a secondary_display_enabled
+    let secondaryVariant: {
       filename: string;
       storagePath: string;
       checksum: string | null;
@@ -335,15 +335,15 @@ class DeploymentService {
 
     try {
       const siteResult = await query(
-        `SELECT led_enabled FROM sites WHERE id = $1`,
+        `SELECT secondary_display_enabled FROM sites WHERE id = $1`,
         [siteId]
       );
-      const siteLedEnabled = siteResult.rows[0]?.led_enabled === true;
+      const siteSecondaryEnabled = siteResult.rows[0]?.secondary_display_enabled === true;
 
-      if (siteLedEnabled) {
-        const variant = await videoVariantRepository.findByVideoAndDisplay(videoId, 'led');
+      if (siteSecondaryEnabled) {
+        const variant = await videoVariantRepository.findByVideoAndDisplay(videoId, 'secondary');
         if (variant) {
-          ledVariant = {
+          secondaryVariant = {
             filename: variant.filename,
             storagePath: variant.storage_path,
             checksum: variant.checksum,
@@ -354,9 +354,9 @@ class DeploymentService {
           };
         }
       }
-    } catch (ledError) {
-      // Non-bloquant : si la table n'existe pas encore, on continue sans variante LED
-      logger.debug('LED variant lookup failed (non-blocking)', { videoId, siteId, error: ledError });
+    } catch (secondaryError) {
+      // Non-bloquant : si la table n'existe pas encore, on continue sans variante secondaire
+      logger.debug('Secondary variant lookup failed (non-blocking)', { videoId, siteId, error: secondaryError });
     }
 
     const commandData = {
@@ -373,8 +373,8 @@ class DeploymentService {
       sponsorId: deployment.advertiser_id || null,
       analyticsCategory: deployment.analytics_category || null,
       siteSponsorId,
-      // Variante LED (null si site sans LED ou pas de variante)
-      ledVariant,
+      // Variante écran secondaire (null si pas activé ou pas de variante)
+      secondaryVariant,
     };
 
     logger.info('Sending deploy_video command via sendOrQueue', {

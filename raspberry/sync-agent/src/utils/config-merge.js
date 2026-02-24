@@ -71,6 +71,30 @@ function mergeConfigurations(localConfig, neoProContent) {
     logger.info(`[config-merge] watermark mis à jour: enabled=${neoProContent.watermark?.enabled}`);
   }
 
+  // Mettre à jour secondaryDisplayEnabled (écran secondaire HDMI 1)
+  // Rétrocompat: migre aussi l'ancienne clé "ledEnabled"
+  if (neoProContent.secondaryDisplayEnabled !== undefined) {
+    result.secondaryDisplayEnabled = neoProContent.secondaryDisplayEnabled;
+    delete result.ledEnabled; // Nettoyage rétrocompat
+    logger.info(`[config-merge] secondaryDisplayEnabled mis à jour: ${neoProContent.secondaryDisplayEnabled}`);
+  } else if (neoProContent.ledEnabled !== undefined) {
+    // Ancien central qui envoie encore "ledEnabled" → migrer
+    result.secondaryDisplayEnabled = neoProContent.ledEnabled;
+    delete result.ledEnabled;
+    logger.info(`[config-merge] ledEnabled migré vers secondaryDisplayEnabled: ${neoProContent.ledEnabled}`);
+  }
+
+  // Mettre à jour secondaryDisplayResolution (résolution écran secondaire)
+  if (neoProContent.secondaryDisplayResolution !== undefined) {
+    result.secondaryDisplayResolution = neoProContent.secondaryDisplayResolution;
+    delete result.ledResolution;
+    logger.info(`[config-merge] secondaryDisplayResolution mis à jour: ${neoProContent.secondaryDisplayResolution}`);
+  } else if (neoProContent.ledResolution !== undefined) {
+    result.secondaryDisplayResolution = neoProContent.ledResolution;
+    delete result.ledResolution;
+    logger.info(`[config-merge] ledResolution migré vers secondaryDisplayResolution: ${neoProContent.ledResolution}`);
+  }
+
   // ========================================================================
   // AUTHENTIFICATION TÉLÉCOMMANDE (remotePassword, clubName)
   // Ces champs sont stockés dans la section "auth" pour /remote/login

@@ -359,12 +359,29 @@ function mergeConfigurations(localConfig, neoProContent) {
     }
   }
 
-  // 2. Fusionner les sponsors (central = source de vérité)
+  // 2. Écran secondaire (E-22 — HDMI 1 : panneau LED, TV tribunes, écran géant)
+  //    Rétrocompat: migre les anciennes clés ledEnabled/ledResolution
+  if (neoProContent.secondaryDisplayEnabled !== undefined) {
+    result.secondaryDisplayEnabled = neoProContent.secondaryDisplayEnabled;
+    delete result.ledEnabled;
+  } else if (neoProContent.ledEnabled !== undefined) {
+    result.secondaryDisplayEnabled = neoProContent.ledEnabled;
+    delete result.ledEnabled;
+  }
+  if (neoProContent.secondaryDisplayResolution !== undefined) {
+    result.secondaryDisplayResolution = neoProContent.secondaryDisplayResolution;
+    delete result.ledResolution;
+  } else if (neoProContent.ledResolution !== undefined) {
+    result.secondaryDisplayResolution = neoProContent.ledResolution;
+    delete result.ledResolution;
+  }
+
+  // 3. Fusionner les sponsors (central = source de vérité)
   if (neoProContent.sponsors !== undefined) {
     result.sponsors = mergeSponsors(localConfig.sponsors, neoProContent.sponsors);
   }
 
-  // 3. Remplacer timeCategories et categoryMappings (gérés par le central)
+  // 4. Remplacer timeCategories et categoryMappings (gérés par le central)
   if (neoProContent.timeCategories !== undefined) {
     result.timeCategories = neoProContent.timeCategories;
   }
@@ -372,12 +389,12 @@ function mergeConfigurations(localConfig, neoProContent) {
     result.categoryMappings = neoProContent.categoryMappings;
   }
 
-  // 4. Fusionner les catégories
+  // 5. Fusionner les catégories
   if (neoProContent.categories !== undefined) {
     result.categories = mergeCategories(localConfig.categories, neoProContent.categories);
   }
 
-  // 4b. Fusionner les métadonnées sponsors (P8 — dashboard → Pi)
+  // 5b. Fusionner les métadonnées sponsors (P8 — dashboard → Pi)
   if (neoProContent.siteSponsors !== undefined) {
     result.localSponsors = mergeSiteSponsors(
       localConfig.localSponsors || [],
@@ -385,8 +402,8 @@ function mergeConfigurations(localConfig, neoProContent) {
     );
   }
 
-  // 5. Restaurer les paramètres locaux protégés
-  //    (sauf localSponsors si siteSponsors présent — déjà fusionné en 4b)
+  // 6. Restaurer les paramètres locaux protégés
+  //    (sauf localSponsors si siteSponsors présent — déjà fusionné en 5b)
   for (const [key, value] of Object.entries(preservedLocalSettings)) {
     if (key === 'localSponsors' && neoProContent.siteSponsors !== undefined) continue;
     result[key] = value;

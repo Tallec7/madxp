@@ -566,6 +566,181 @@ describe('Config Merge Module', () => {
     });
   });
 
+  describe('secondaryDisplayEnabled (écran secondaire HDMI 1)', () => {
+    it('should update secondaryDisplayEnabled to true when provided', () => {
+      const localConfig = {
+        version: '1.0',
+        secondaryDisplayEnabled: false,
+        categories: []
+      };
+      const neoProContent = {
+        secondaryDisplayEnabled: true
+      };
+
+      const merged = mergeConfigurations(localConfig, neoProContent);
+
+      expect(merged.secondaryDisplayEnabled).toBe(true);
+    });
+
+    it('should update secondaryDisplayEnabled to false when provided', () => {
+      const localConfig = {
+        version: '1.0',
+        secondaryDisplayEnabled: true,
+        categories: []
+      };
+      const neoProContent = {
+        secondaryDisplayEnabled: false
+      };
+
+      const merged = mergeConfigurations(localConfig, neoProContent);
+
+      expect(merged.secondaryDisplayEnabled).toBe(false);
+    });
+
+    it('should preserve secondaryDisplayEnabled when not in neoProContent', () => {
+      const localConfig = {
+        version: '1.0',
+        secondaryDisplayEnabled: true,
+        categories: []
+      };
+      const neoProContent = {
+        version: '2.0',
+        categories: []
+      };
+
+      const merged = mergeConfigurations(localConfig, neoProContent);
+
+      expect(merged.secondaryDisplayEnabled).toBe(true);
+      expect(merged.version).toBe('2.0');
+    });
+
+    it('should add secondaryDisplayEnabled when not in local config', () => {
+      const localConfig = {
+        version: '1.0',
+        categories: []
+      };
+      const neoProContent = {
+        secondaryDisplayEnabled: true
+      };
+
+      const merged = mergeConfigurations(localConfig, neoProContent);
+
+      expect(merged.secondaryDisplayEnabled).toBe(true);
+    });
+
+    it('should migrate ledEnabled to secondaryDisplayEnabled (backward compat)', () => {
+      const localConfig = {
+        version: '1.0',
+        ledEnabled: true,
+        categories: []
+      };
+      const neoProContent = {
+        ledEnabled: true
+      };
+
+      const merged = mergeConfigurations(localConfig, neoProContent);
+
+      expect(merged.secondaryDisplayEnabled).toBe(true);
+      expect(merged.ledEnabled).toBeUndefined();
+    });
+
+    it('should clean old ledEnabled when central sends secondaryDisplayEnabled', () => {
+      const localConfig = {
+        version: '1.0',
+        ledEnabled: true,
+        categories: []
+      };
+      const neoProContent = {
+        secondaryDisplayEnabled: true
+      };
+
+      const merged = mergeConfigurations(localConfig, neoProContent);
+
+      expect(merged.secondaryDisplayEnabled).toBe(true);
+      expect(merged.ledEnabled).toBeUndefined();
+    });
+
+    it('should prefer secondaryDisplayEnabled over ledEnabled when both sent', () => {
+      const localConfig = {
+        version: '1.0',
+        categories: []
+      };
+      const neoProContent = {
+        secondaryDisplayEnabled: true,
+        ledEnabled: false
+      };
+
+      const merged = mergeConfigurations(localConfig, neoProContent);
+
+      // secondaryDisplayEnabled takes priority
+      expect(merged.secondaryDisplayEnabled).toBe(true);
+      expect(merged.ledEnabled).toBeUndefined();
+    });
+  });
+
+  describe('secondaryDisplayResolution (résolution écran secondaire)', () => {
+    it('should update secondaryDisplayResolution when provided', () => {
+      const localConfig = {
+        version: '1.0',
+        categories: []
+      };
+      const neoProContent = {
+        secondaryDisplayResolution: '1920x384'
+      };
+
+      const merged = mergeConfigurations(localConfig, neoProContent);
+
+      expect(merged.secondaryDisplayResolution).toBe('1920x384');
+    });
+
+    it('should migrate ledResolution to secondaryDisplayResolution', () => {
+      const localConfig = {
+        version: '1.0',
+        ledResolution: '1920x384',
+        categories: []
+      };
+      const neoProContent = {
+        ledResolution: '1920x384'
+      };
+
+      const merged = mergeConfigurations(localConfig, neoProContent);
+
+      expect(merged.secondaryDisplayResolution).toBe('1920x384');
+      expect(merged.ledResolution).toBeUndefined();
+    });
+
+    it('should clean old ledResolution when central sends secondaryDisplayResolution', () => {
+      const localConfig = {
+        version: '1.0',
+        ledResolution: '1920x384',
+        categories: []
+      };
+      const neoProContent = {
+        secondaryDisplayResolution: '1920x1080'
+      };
+
+      const merged = mergeConfigurations(localConfig, neoProContent);
+
+      expect(merged.secondaryDisplayResolution).toBe('1920x1080');
+      expect(merged.ledResolution).toBeUndefined();
+    });
+
+    it('should preserve secondaryDisplayResolution when not in neoProContent', () => {
+      const localConfig = {
+        version: '1.0',
+        secondaryDisplayResolution: '1920x384',
+        categories: []
+      };
+      const neoProContent = {
+        version: '2.0'
+      };
+
+      const merged = mergeConfigurations(localConfig, neoProContent);
+
+      expect(merged.secondaryDisplayResolution).toBe('1920x384');
+    });
+  });
+
   describe('localSponsors preservation (P3)', () => {
     it('should preserve localSponsors through a merge', () => {
       const localConfig = {

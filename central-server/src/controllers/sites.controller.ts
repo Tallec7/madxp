@@ -207,7 +207,7 @@ export const createSite = async (req: AuthRequest, res: Response) => {
 export const updateSite = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
-    const { site_name, club_name, location, sports, status, live_score_enabled, avg_spectators, led_enabled, led_resolution } = req.body;
+    const { site_name, club_name, location, sports, status, live_score_enabled, avg_spectators, secondary_display_enabled, secondary_display_resolution } = req.body;
 
     const updateData: Record<string, unknown> = {};
     if (site_name !== undefined) updateData.site_name = site_name;
@@ -217,8 +217,8 @@ export const updateSite = async (req: AuthRequest, res: Response) => {
     if (status !== undefined) updateData.status = status;
     if (live_score_enabled !== undefined) updateData.live_score_enabled = live_score_enabled;
     if (avg_spectators !== undefined) updateData.avg_spectators = avg_spectators;
-    if (led_enabled !== undefined) updateData.led_enabled = led_enabled;
-    if (led_resolution !== undefined) updateData.led_resolution = led_resolution;
+    if (secondary_display_enabled !== undefined) updateData.secondary_display_enabled = secondary_display_enabled;
+    if (secondary_display_resolution !== undefined) updateData.secondary_display_resolution = secondary_display_resolution;
 
     if (Object.keys(updateData).length === 0) {
       return res.status(400).json({ error: 'Aucune donnée à mettre à jour' });

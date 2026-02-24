@@ -1,3 +1,32 @@
+## [Unreleased]
+
+### Bug Fixes
+
+- **sync-agent:** fix config-merge silently dropping `secondaryDisplayEnabled` / `secondaryDisplayResolution` (E-22)
+  - **Bug critique** : `mergeConfigurations()` ne gérait pas ces clés explicitement → elles étaient perdues
+    lors du merge, empêchant l'activation de l'écran secondaire via le dashboard sur les Pi déployés
+  - Ajout du handling explicite + migration automatique des anciennes clés `ledEnabled` / `ledResolution`
+  - 11 tests unitaires ajoutés couvrant activation, désactivation, migration, et rétrocompat
+  - Smoke test ajouté pour empêcher la régression (vérifie que config-merge.js gère `secondaryDisplayEnabled`)
+
+### Refactoring
+
+- **display:** rename "LED" to "secondary display" across entire codebase (E-22)
+  - Le terme "LED" était trop restrictif : le HDMI secondaire peut alimenter un panneau LED,
+    un parc de TV tribunes, un écran géant, etc.
+  - **DB** : `sites.led_enabled` → `secondary_display_enabled`, `led_resolution` → `secondary_display_resolution`,
+    `display_type: 'led'` → `'secondary'` (migration `rename-led-to-secondary-display.sql`)
+  - **API** : validation, controllers, deployment service adaptés
+  - **Dashboard** : labels "Panneau LED" → "Écran secondaire", variant panel renommé
+  - **Pi** : route `/led` → `/secondary`, CSS `.led-*` → `.secondary-*`, config `secondaryDisplayEnabled`
+  - **Watchdog** : rétrocompatibilité avec `ledEnabled` pour les configs existantes
+  - **Sync-agent** : rétrocompatibilité `ledVariant` → `secondaryVariant`, migration `videos-led/` → `videos-secondary/`
+
+### Monitoring
+
+- **prometheus:** alerte `SecondaryDisplayConfigDrift` — détecte quand `secondaryDisplayEnabled=true` en DB
+  mais aucune variante secondaire n'est déployée pour les vidéos du site
+
 ## [3.80.7](https://github.com/Tallec7/neopro/compare/v3.80.6...v3.80.7) (2026-02-24)
 
 ### Bug Fixes

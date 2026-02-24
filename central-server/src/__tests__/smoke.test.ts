@@ -2446,3 +2446,51 @@ describe('OTA reboot race condition guards', () => {
       .toEqual({ skipsRestartOnReboot: true });
   });
 });
+
+// ----------------------------------------------------------
+// E-22 config-merge guard: secondaryDisplayEnabled must be
+// explicitly handled in config-merge.js. Without this, the
+// key is silently dropped during merge and the secondary
+// display never activates on deployed Pi.
+// ----------------------------------------------------------
+describe('E-22 config-merge secondary display guard', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+  const configMergePath = path.join(repoRoot, 'raspberry/sync-agent/src/utils/config-merge.js');
+
+  let content: string;
+  beforeAll(() => {
+    content = fs.readFileSync(configMergePath, 'utf8');
+  });
+
+  it('config-merge.js must handle secondaryDisplayEnabled explicitly', () => {
+    expect({
+      handlesSecondaryDisplayEnabled: /neoProContent\.secondaryDisplayEnabled/.test(content),
+    }).toEqual({
+      handlesSecondaryDisplayEnabled: true,
+    });
+  });
+
+  it('config-merge.js must handle secondaryDisplayResolution explicitly', () => {
+    expect({
+      handlesSecondaryDisplayResolution: /neoProContent\.secondaryDisplayResolution/.test(content),
+    }).toEqual({
+      handlesSecondaryDisplayResolution: true,
+    });
+  });
+
+  it('config-merge.js must migrate legacy ledEnabled to secondaryDisplayEnabled', () => {
+    expect({
+      migratesLedEnabled: /neoProContent\.ledEnabled/.test(content),
+    }).toEqual({
+      migratesLedEnabled: true,
+    });
+  });
+
+  it('config-merge.js must clean up old ledEnabled key during migration', () => {
+    expect({
+      deletesLedEnabled: /delete result\.ledEnabled/.test(content),
+    }).toEqual({
+      deletesLedEnabled: true,
+    });
+  });
+});

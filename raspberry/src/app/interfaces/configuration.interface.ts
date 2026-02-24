@@ -179,18 +179,19 @@ export interface Configuration {
      */
     watermark?: WatermarkConfig;
     /**
-     * Active la sortie LED sur HDMI 1 (dual kiosk).
+     * Active l'écran secondaire sur HDMI 1 (dual kiosk).
      * Configuré depuis le Central Dashboard.
+     * Rétrocompat: le watchdog lit aussi "ledEnabled" pour les configs existantes.
      */
-    ledEnabled?: boolean;
+    secondaryDisplayEnabled?: boolean;
     /**
-     * Résolution du panneau LED (ex: '1920x384').
+     * Résolution de l'écran secondaire (ex: '1920x384' pour LED, '1920x1080' pour TV).
      */
-    ledResolution?: string;
+    secondaryDisplayResolution?: string;
 }
 
 /**
- * Informations d'une variante vidéo (LED, etc.)
+ * Informations d'une variante vidéo pour l'écran secondaire.
  * Attachée aux entrées vidéo dans configuration.json
  */
 export interface VideoVariantInfo {
