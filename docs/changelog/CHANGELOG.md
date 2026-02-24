@@ -2,6 +2,12 @@
 
 ### Bug Fixes
 
+- **ota:** race condition reboot post-OTA — restart sync-agent tuait le timer ([8a1121e](https://github.com/Tallec7/neopro/commit/8a1121e1941bfa114e4fecd1583ec6e799d3ac4d))
+
+## [3.80.5](https://github.com/Tallec7/neopro/compare/v3.80.4...v3.80.5) (2026-02-24)
+
+### Bug Fixes
+
 - **ota:** fix race condition reboot post-OTA — le restart sync-agent (5s) tuait le process Node avant que le timer de reboot (10s) ne se déclenche. Fix : `shutdown -r +0` via spawn (survit au kill process) + skip restart sync-agent quand reboot prévu
 - **reboot:** commande reboot standalone utilise `shutdown -r +0` au lieu de `setTimeout` + `exec('sudo reboot')` — plus fiable, pas de timer destructible
 
