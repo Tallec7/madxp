@@ -133,12 +133,12 @@ xychart-beta
 
 ### Par PI
 
-| PI   | Période        | Epics | SP  | Focus                                                   | Milestone                     |
-| ---- | -------------- | ----- | --- | ------------------------------------------------------- | ----------------------------- |
-| Done | Avant PI-1     | 5     | ~41 | Profils, WiFi, Alertes, Audit, Monitoring               | -                             |
-| PI-1 | Fév-Mars 2026  | 4+2   | 79  | Sponsors self-service, analytics, onboarding            | 5 clubs payants               |
-| PI-2 | Avr-Mai 2026   | 6     | 108 | Régie publicitaire, score live, email auto, A/B, TV+LED | Lancement régie à 15 clubs    |
-| PI-3 | Juin-Juil 2026 | 7     | 73  | Multi-écrans, marque blanche, billetterie, ML, OAuth    | 20 clubs, premiers annonceurs |
+| PI   | Période        | Epics | SP  | Focus                                                         | Milestone                     |
+| ---- | -------------- | ----- | --- | ------------------------------------------------------------- | ----------------------------- |
+| Done | Avant PI-1     | 5     | ~41 | Profils, WiFi, Alertes, Audit, Monitoring                     | -                             |
+| PI-1 | Fév-Mars 2026  | 4+2   | 79  | Sponsors self-service, analytics, onboarding                  | 5 clubs payants               |
+| PI-2 | Avr-Mai 2026   | 6     | 117 | Régie publicitaire, score live, email auto, A/B, TV+Secondary | Lancement régie à 15 clubs    |
+| PI-3 | Juin-Juil 2026 | 7     | 73  | Multi-écrans, marque blanche, billetterie, ML, OAuth          | 20 clubs, premiers annonceurs |
 
 ### Par Thème Stratégique
 
