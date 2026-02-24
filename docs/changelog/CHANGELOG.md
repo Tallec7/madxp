@@ -1,3 +1,13 @@
+## [3.80.11](https://github.com/Tallec7/neopro/compare/v3.80.10...v3.80.11) (2026-02-24)
+
+### Bug Fixes
+
+- **kiosk:** fix Chromium GPU crash loop after OTA deploy on Pi 5 ([4669242](https://github.com/Tallec7/neopro/commit/4669242ac26ddd85d7a6c28d01ac1de8916f12cf))
+
+### Performance Improvements
+
+- **build:** optimize Raspberry Pi build output (-49% size, -37% files) ([0681a19](https://github.com/Tallec7/neopro/commit/0681a192fd1b1af33a377291ebd5ce69801a869e))
+
 ## [3.80.10](https://github.com/Tallec7/neopro/compare/v3.80.9...v3.80.10) (2026-02-24)
 
 ### Bug Fixes
