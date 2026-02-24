@@ -1,3 +1,9 @@
+## [3.80.16](https://github.com/Tallec7/neopro/compare/v3.80.15...v3.80.16) (2026-02-24)
+
+### Bug Fixes
+
+- **kiosk:** detect and kill parasitic windows blocking Chromium display ([1fa8422](https://github.com/Tallec7/neopro/commit/1fa8422568a2ea8896faae90443fddae1ac18377))
+
 ## [3.80.15](https://github.com/Tallec7/neopro/compare/v3.80.14...v3.80.15) (2026-02-24)
 
 ### Bug Fixes
