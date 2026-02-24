@@ -1,3 +1,9 @@
+## [3.80.2](https://github.com/Tallec7/neopro/compare/v3.80.1...v3.80.2) (2026-02-24)
+
+### Bug Fixes
+
+- **deploy:** diagnostic post-déploiement ne fait plus échouer le script ([dc51aea](https://github.com/Tallec7/neopro/commit/dc51aeada016bf2e078b85edd2b7901199021063))
+
 ## [3.80.1](https://github.com/Tallec7/neopro/compare/v3.80.0...v3.80.1) (2026-02-24)
 
 ### Bug Fixes
