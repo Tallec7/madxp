@@ -2660,3 +2660,152 @@ describe('E-22 TvComponent variant selection guard', () => {
     });
   });
 });
+
+// ----------------------------------------------------------
+// Multi-profile sync & cache regression guards (ADR-030)
+// ----------------------------------------------------------
+// Bug prevention: Deploy profile must also trigger sync_profiles to create
+// the profiles/ directory on Pi. Nginx must not cache profile JSON files.
+// The Angular resolver must have a fallback when a profile is deleted.
+describe('Multi-profile sync & cache regression guards (ADR-030)', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+
+  // --- Server-side: deployProfile must send sync_profiles ---
+  it('deployProfile must call findBySite and send sync_profiles', () => {
+    const controller = fs.readFileSync(
+      path.join(repoRoot, 'central-server/src/controllers/config-profiles.controller.ts'),
+      'utf8'
+    );
+    // deployProfile must call findBySite to get all profiles for sync
+    const deployFn = controller.match(
+      /export const deployProfile[\s\S]*?(?=export const \w|$)/
+    );
+    expect(deployFn).not.toBeNull();
+    expect({
+      callsFindBySite: deployFn![0].includes('findBySite(siteId)'),
+      sendsSyncProfiles: deployFn![0].includes("type: 'sync_profiles'"),
+    }).toEqual({
+      callsFindBySite: true,
+      sendsSyncProfiles: true,
+    });
+  });
+
+  // --- Nginx: profiles/ and configuration.json must not be cached ---
+  const nginxConfigs = [
+    'raspberry/config/nginx-captive-portal.conf',
+    'raspberry/config/nginx/neopro-hls.conf',
+  ];
+
+  for (const configPath of nginxConfigs) {
+    it(`${configPath} must have no-cache on /profiles/ directory`, () => {
+      const content = fs.readFileSync(path.join(repoRoot, configPath), 'utf8');
+      expect({
+        file: configPath,
+        hasProfilesNoCache: /location\s+\/profiles\/\s*\{[^}]*no-cache,\s*no-store/s.test(content),
+      }).toEqual({
+        file: configPath,
+        hasProfilesNoCache: true,
+      });
+    });
+
+    it(`${configPath} must use exact match (=) for /configuration.json`, () => {
+      const content = fs.readFileSync(path.join(repoRoot, configPath), 'utf8');
+      // Must use "location = /configuration.json" (exact match beats regex)
+      expect({
+        file: configPath,
+        hasExactMatch: /location\s+=\s+\/configuration\.json\s*\{/.test(content),
+      }).toEqual({
+        file: configPath,
+        hasExactMatch: true,
+      });
+    });
+  }
+
+  // --- Angular resolver: catchError fallback ---
+  it('app.routes.ts resolver must have catchError fallback for profile loading', () => {
+    const routes = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/src/app/app.routes.ts'),
+      'utf8'
+    );
+    expect({
+      importsCatchError: routes.includes('catchError'),
+      hasFallbackToDefaultConfig: /catchError.*configuration\.json/s.test(routes),
+      callsClearSelection: routes.includes('profileConfigService.clearSelection()'),
+    }).toEqual({
+      importsCatchError: true,
+      hasFallbackToDefaultConfig: true,
+      callsClearSelection: true,
+    });
+  });
+
+  // --- Remote: no double reload-config on profile switch ---
+  it('remote.component.ts must NOT emit reload-config after profile-switch in production', () => {
+    const remote = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/src/app/components/remote/remote.component.ts'),
+      'utf8'
+    );
+    // Find the production profile-switch block (after loadProfileConfiguration)
+    const prodBlock = remote.match(
+      /loadProfileConfiguration[\s\S]*?(?=private\s|\}\s*$)/
+    );
+    expect(prodBlock).not.toBeNull();
+    // Must emit profile-switch but NOT reload-config in the same block
+    expect({
+      emitsProfileSwitch: prodBlock![0].includes("emit('profile-switch'"),
+      noReloadConfig: !prodBlock![0].includes("type: 'reload-config'"),
+    }).toEqual({
+      emitsProfileSwitch: true,
+      noReloadConfig: true,
+    });
+  });
+
+  // --- Remote: back button works in production multi-profile ---
+  it('remote.component.html must show back-to-clubs button for multi-profile (not just demo)', () => {
+    const template = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/src/app/components/remote/remote.component.html'),
+      'utf8'
+    );
+    // The condition must include isMultiProfile, not just isDemoMode
+    expect({
+      hasMultiProfileCondition: template.includes('isMultiProfile'),
+    }).toEqual({
+      hasMultiProfileCondition: true,
+    });
+  });
+
+  // --- ProfileConfigService: resetCache clears selectedConfiguration ---
+  it('profile-config.service.ts resetCache must clear selectedConfiguration', () => {
+    const service = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/src/app/services/profile-config.service.ts'),
+      'utf8'
+    );
+    const resetFn = service.match(
+      /public resetCache\(\)[\s\S]*?\n  \}/
+    );
+    expect(resetFn).not.toBeNull();
+    expect({
+      clearsSelected: resetFn![0].includes('this.selectedConfiguration = null'),
+    }).toEqual({
+      clearsSelected: true,
+    });
+  });
+
+  // --- ProfileConfigService: loadProfileConfiguration has error handling ---
+  it('profile-config.service.ts loadProfileConfiguration must have catchError', () => {
+    const service = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/src/app/services/profile-config.service.ts'),
+      'utf8'
+    );
+    const loadFn = service.match(
+      /public loadProfileConfiguration[\s\S]*?\n  \}/
+    );
+    expect(loadFn).not.toBeNull();
+    expect({
+      hasCatchError: loadFn![0].includes('catchError'),
+      removesLocalStorage: loadFn![0].includes('localStorage.removeItem'),
+    }).toEqual({
+      hasCatchError: true,
+      removesLocalStorage: true,
+    });
+  });
+});

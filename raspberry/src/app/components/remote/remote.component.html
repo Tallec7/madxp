@@ -72,7 +72,7 @@
                 </svg>
               </button>
             }
-            @if (isDemoMode && breadcrumb.length === 1 && !isSearching) {
+            @if ((isDemoMode || isMultiProfile) && breadcrumb.length === 1 && !isSearching) {
               <button
                 class="back-button"
                 (click)="backToClubSelector()"

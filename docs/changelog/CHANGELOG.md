@@ -8,6 +8,19 @@
 
 ### Bug Fixes
 
+- **profiles:** fix multi-profile system not working in production (7 bugs — ADR-030)
+  - **nginx:** `location = /configuration.json` et `location /profiles/` avec `no-cache` avant la regex
+    `.json` qui cachait tous les profils 30 jours (exact match gagne sur regex)
+  - **deploy:** `deployProfile()` envoie aussi `sync_profiles` quand >1 profil — le dossier `profiles/`
+    n'était jamais créé sur le Pi car l'admin clique Deploy, pas Sync
+  - **resolver:** `catchError` + fallback sur `/configuration.json` si le profil sélectionné n'existe plus
+    (avant : écran blanc permanent, resolver bloqué sur 404)
+  - **remote:** bouton retour club-selector conditionné à `isDemoMode || isMultiProfile` au lieu de
+    `isDemoMode` seul — en production multi-profil, impossible de changer de profil
+  - **remote:** suppression du double `reload-config` (profile-switch handler le broadcast déjà)
+  - **profile-config.service:** `resetCache()` clear aussi `selectedConfiguration` +
+    `loadProfileConfiguration()` a un `catchError` qui clean localStorage
+  - **dashboard:** warning Pi offline + badge profil actif + boutons Deploy/Sync disabled quand Pi déconnecté
 - **sync-agent:** fix config-merge silently dropping `secondaryDisplayEnabled` / `secondaryDisplayResolution` (E-22)
   - **Bug critique** : `mergeConfigurations()` ne gérait pas ces clés explicitement → elles étaient perdues
     lors du merge, empêchant l'activation de l'écran secondaire via le dashboard sur les Pi déployés
@@ -51,7 +64,6 @@
 
 - **docs:** synchronisation ARCHITECTURE.md, REFERENCE.md, IMPLEMENTED-BACKLOG.md, GLOSSARY.md
   avec le renommage LED → Secondary Display et les nouvelles routes/features E-22
-
 
 ## [3.80.7](https://github.com/Tallec7/neopro/compare/v3.80.6...v3.80.7) (2026-02-24)
 

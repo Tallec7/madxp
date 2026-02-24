@@ -46,6 +46,7 @@ Un ADR documente une décision technique importante avec :
 | [ADR-027](ADR-027-analytics-ui-removal.md)           | Suppression de l'UI Analytics dashboard   | Accepté                  | Fév 2026 |
 | [ADR-028](ADR-028-atomic-config-write.md)            | Écriture atomique de configuration.json   | Accepté                  | Fév 2026 |
 | [ADR-029](ADR-029-dual-hdmi-tv-led.md)               | Dual HDMI TV + LED depuis un seul Pi      | Proposé                  | Fév 2026 |
+| [ADR-030](ADR-030-multi-profile-sync-deploy.md)      | Deploy profile auto-sync + cache Nginx    | Accepté                  | Fév 2026 |
 
 ### Supersédés
 
@@ -82,7 +83,7 @@ Un ADR documente une décision technique importante avec :
 
 1. Décider du format avec la [grille de décision](BEST_PRACTICES.md#quand-créer-un-adr-)
 2. Copier le template approprié (complet ou léger)
-3. Numéroter séquentiellement (prochain : **ADR-030**)
+3. Numéroter séquentiellement (prochain : **ADR-031**)
 4. Remplir les sections
 5. Commiter avec le code dans la même PR
 6. Mettre à jour ce README après merge
@@ -105,4 +106,4 @@ Voir **[BEST_PRACTICES.md](BEST_PRACTICES.md)** pour :
 
 ---
 
-_Dernière mise à jour : 21 février 2026_
+_Dernière mise à jour : 24 février 2026_

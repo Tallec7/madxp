@@ -264,12 +264,33 @@ export const deployProfile = async (req: AuthRequest, res: Response) => {
     // Trigger le sync vers le Pi
     await socketService.triggerPendingConfigSync(siteId);
 
+    // Aussi synchroniser tous les profils pour que le Pi ait le dossier profiles/
+    // (necessaire pour que le club-selector fonctionne sur la remote)
+    const allProfiles = await configProfileRepository.findBySite(siteId);
+    if (allProfiles.length > 1) {
+      const syncPayload = allProfiles.map((p) => ({
+        id: p.id,
+        name: p.name,
+        display_name: p.display_name,
+        city: p.city,
+        sport: p.sport,
+        is_default: p.is_default,
+        configuration: p.configuration,
+      }));
+      socketService.sendCommand(siteId, {
+        id: uuidv4(),
+        type: 'sync_profiles',
+        data: { profiles: syncPayload },
+      });
+    }
+
     logger.info('Config profile deployed', {
       siteId,
       profileId,
       profileName: profile.name,
       versionId,
       deployedBy: req.user?.email,
+      profilesSynced: allProfiles.length > 1,
     });
 
     res.json({

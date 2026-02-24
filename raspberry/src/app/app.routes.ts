@@ -6,7 +6,7 @@ import { Configuration } from './interfaces/configuration.interface';
 import { Category } from './interfaces/category.interface';
 import { inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { map, tap } from 'rxjs';
+import { map, tap, catchError } from 'rxjs';
 import { authGuard } from './guards/auth.guard';
 import { DemoConfigService } from './services/demo-config.service';
 import { ProfileConfigService } from './services/profile-config.service';
@@ -60,7 +60,15 @@ const getConfiguration: ResolveFn<Configuration> = () => {
   if (selectedProfile$) {
     return selectedProfile$.pipe(
       map(enrichVideosWithCategoryId),
-      tap(data => console.log('load configuration (profile)', data))
+      tap(data => console.log('load configuration (profile)', data)),
+      catchError(() => {
+        console.warn('Profile load failed, clearing selection and falling back to default config');
+        profileConfigService.clearSelection();
+        return http.get<Configuration>('/configuration.json').pipe(
+          map(enrichVideosWithCategoryId),
+          tap(data => console.log('load configuration (fallback)', data))
+        );
+      })
     );
   }
 

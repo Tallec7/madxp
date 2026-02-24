@@ -24,7 +24,7 @@ import { Site, ConfigProfile, CreateProfilePayload, UpdateProfilePayload, SiteCo
           <button
             class="btn btn-secondary btn-sm"
             (click)="syncAllProfiles()"
-            [disabled]="syncing || profiles.length === 0"
+            [disabled]="syncing || profiles.length === 0 || !isConnected"
           >
             {{ syncing ? ('profiles.syncing' | translate) : ('profiles.syncAll' | translate) }}
           </button>
@@ -32,6 +32,12 @@ import { Site, ConfigProfile, CreateProfilePayload, UpdateProfilePayload, SiteCo
             + {{ 'profiles.create' | translate }}
           </button>
         </div>
+      </div>
+
+      <!-- Warning Pi offline -->
+      <div class="warning-banner" *ngIf="!isConnected">
+        <span class="warning-icon">⚠️</span>
+        <span>Pi hors-ligne — les changements seront appliques a la reconnexion</span>
       </div>
 
       <!-- Info multi-config -->
@@ -58,12 +64,18 @@ import { Site, ConfigProfile, CreateProfilePayload, UpdateProfilePayload, SiteCo
           class="profile-card"
           *ngFor="let profile of profiles"
           [class.is-default]="profile.is_default"
+          [class.is-active]="site?.active_profile_id === profile.id"
         >
           <div class="profile-header">
             <div class="profile-name">{{ profile.name }}</div>
-            <span class="badge-default" *ngIf="profile.is_default">
-              {{ 'profiles.default' | translate }}
-            </span>
+            <div class="profile-badges">
+              <span class="badge-active" *ngIf="site?.active_profile_id === profile.id">
+                ACTIF
+              </span>
+              <span class="badge-default" *ngIf="profile.is_default">
+                {{ 'profiles.default' | translate }}
+              </span>
+            </div>
           </div>
           <div class="profile-display-name" *ngIf="profile.display_name">
             {{ profile.display_name }}
@@ -82,7 +94,7 @@ import { Site, ConfigProfile, CreateProfilePayload, UpdateProfilePayload, SiteCo
             <button
               class="btn btn-sm btn-primary"
               (click)="deployProfile(profile)"
-              [disabled]="deploying[profile.id]"
+              [disabled]="deploying[profile.id] || !isConnected"
             >
               {{ deploying[profile.id] ? ('common.deploying' | translate) : ('common.deploy' | translate) }}
             </button>
@@ -278,6 +290,12 @@ import { Site, ConfigProfile, CreateProfilePayload, UpdateProfilePayload, SiteCo
       color: #1e293b;
     }
 
+    .profile-badges {
+      display: flex;
+      gap: 0.375rem;
+      align-items: center;
+    }
+
     .badge-default {
       background: #dcfce7;
       color: #166534;
@@ -285,6 +303,39 @@ import { Site, ConfigProfile, CreateProfilePayload, UpdateProfilePayload, SiteCo
       border-radius: 4px;
       font-size: 0.75rem;
       font-weight: 500;
+    }
+
+    .badge-active {
+      background: #fef3c7;
+      color: #92400e;
+      padding: 0.125rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+
+    .profile-card.is-active {
+      border-color: #f59e0b;
+    }
+
+    .profile-card.is-active.is-default {
+      border-color: #f59e0b;
+    }
+
+    .warning-banner {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 0.75rem;
+      background: #fef3c7;
+      border: 1px solid #fde68a;
+      border-radius: 6px;
+      font-size: 0.8125rem;
+      color: #92400e;
+    }
+
+    .warning-icon {
+      font-size: 1rem;
     }
 
     .profile-display-name {

@@ -447,7 +447,14 @@ describe('Config Profiles Controller', () => {
         // updateSitePendingConfigVersion
         .mockResolvedValueOnce({ rowCount: 1 })
         // updateSiteActiveProfile
-        .mockResolvedValueOnce({ rowCount: 1 });
+        .mockResolvedValueOnce({ rowCount: 1 })
+        // findBySite (for auto-sync when > 1 profile)
+        .mockResolvedValueOnce({
+          rows: [
+            { id: 'p1', site_id: 'site-1', name: 'Default', display_name: null, city: null, sport: null, is_default: true, configuration: { sponsors: [] } },
+            { id: 'p2', site_id: 'site-1', name: 'Match', display_name: null, city: null, sport: null, is_default: false, configuration: { sponsors: [] } },
+          ],
+        });
 
       await deployProfile(req, res);
 
@@ -460,6 +467,11 @@ describe('Config Profiles Controller', () => {
         })
       );
       expect(socketService.triggerPendingConfigSync).toHaveBeenCalledWith('site-1');
+      // Verify sync_profiles command was also sent (auto-sync)
+      expect(socketService.sendCommand).toHaveBeenCalledWith(
+        'site-1',
+        expect.objectContaining({ type: 'sync_profiles' })
+      );
     });
 
     it('should return 404 if profile not found', async () => {

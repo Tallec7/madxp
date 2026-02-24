@@ -60,6 +60,12 @@ export class ProfileConfigService {
       tap(config => {
         this.selectedConfiguration = config;
         localStorage.setItem(SELECTED_PROFILE_KEY, profileId);
+      }),
+      catchError((err) => {
+        console.error('Failed to load profile', profileId, err);
+        localStorage.removeItem(SELECTED_PROFILE_KEY);
+        this.selectedConfiguration = null;
+        throw err;
       })
     );
   }
@@ -102,5 +108,6 @@ export class ProfileConfigService {
   public resetCache(): void {
     this.profilesCache$ = null;
     this.profileCount = 0;
+    this.selectedConfiguration = null;
   }
 }

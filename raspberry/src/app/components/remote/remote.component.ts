@@ -338,8 +338,8 @@ export class RemoteComponent implements OnInit, OnDestroy {
           this.initializeWithConfiguration(config);
           this.currentView = 'home';
           // Notifier le serveur local pour switcher le profil actif
+          // Le handler profile-switch cote serveur broadcast deja reload-config a la TV
           this.socketService.emit('profile-switch', { profileId: club.id });
-          this.socketService.emit('command', { type: 'reload-config', data: config });
         },
         error: (err) => {
           console.error('Erreur chargement config profil:', err);
