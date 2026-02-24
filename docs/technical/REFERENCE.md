@@ -480,6 +480,8 @@ Le endpoint `/api/sites/:id/dashboard` renvoie `heartbeat_24h.count`, et le fron
 
 Le Pi détecte automatiquement l'écran connecté via les données **EDID** (Extended Display Identification Data) lues depuis `/sys/class/drm/card*-HDMI-*/edid`, enrichies par `edid-decode` (package apt optionnel).
 
+> **Note sysfs (v3.80.4)** : Les fichiers EDID dans `/sys/class/drm/` sont des fichiers virtuels sysfs qui reportent `stat.size=0` même quand ils contiennent des données. La détection utilise `fs.readFileSync().length > 0` (et non `stat.size`).
+
 **Données collectées (parsing binaire EDID) :**
 
 | Champ              | Description                                    | Exemple                          |

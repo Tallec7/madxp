@@ -144,39 +144,40 @@
 
 ## 7. Raspberry Pi (Edge)
 
-| ID        | Feature                                                                             | Statut     | Fichiers clés                                                | Version/Date |
-| --------- | ----------------------------------------------------------------------------------- | ---------- | ------------------------------------------------------------ | ------------ |
-| IMP-PI-01 | Télécommande v2 (recherche, badge audience, modal match)                            | Production | `remote.component.ts`                                        | Déc 2025     |
-| IMP-PI-02 | Socket.IO mode hors-ligne autonome (lib locale)                                     | Production | `socket.io.min.js` local                                     | Déc 2025     |
-| IMP-PI-03 | Lecture vidéo double-buffer (transitions fluides)                                   | Production | `double-buffer-video.service.ts`                             | 2025         |
-| IMP-PI-04 | Profils de configuration (avant/pendant/après match)                                | Production | `profile-config.service.ts`, `config-profiles.controller.ts` | Déc 2025     |
-| IMP-PI-05 | Détection statut HDMI                                                               | Production | `hdmi-status.service.ts`                                     | 2025         |
-| IMP-PI-06 | Détection HDMI EDID (type écran + 8 champs enrichis edid-decode + display_category) | Production | `hdmi.service.js`, `hdmi-status.service.ts`, `metrics.js`    | 2026         |
-| IMP-PI-07 | Récupération erreur vidéo (lecture de secours)                                      | Production | `video-error-recovery.service.ts`                            | 2025         |
-| IMP-PI-08 | Filigrane overlay configurable                                                      | Production | `watermark.service.ts`                                       | 2025         |
-| IMP-PI-09 | Sélecteur de filigrane déroulant sur Dashboard                                      | Production | `watermark.component.ts`                                     | v3.57.0      |
-| IMP-PI-10 | Capture d'écran (à la demande depuis télécommande cloud)                            | Production | `screenshot.service.ts`                                      | 2025         |
-| IMP-PI-11 | Branding personnalisé par site (logo, couleurs)                                     | Production | `add-site-branding.sql`                                      | 2025         |
-| IMP-PI-12 | Hostname Pi dynamique dérivé du nom du club                                         | Production | `hostname.js` (sync-agent), `hostname.ts` (utils)            | v3.51.0      |
-| IMP-PI-13 | Enregistrement : retour auto en boucle après inactivité                             | Production | `recording-state.service.ts`                                 | 2026         |
-| IMP-PI-14 | Enregistrement : popup avertissement inactivité avec décompte (ADR-021)             | Production | `remote.component.ts`                                        | 2026         |
-| IMP-PI-15 | Bascule mode club/tech + widget statut sync                                         | Production | `admin-panel.component.ts`                                   | 2026         |
-| IMP-PI-16 | Installation apt depuis dashboard via sudoers                                       | Production | `sudoers`, `admin-server.js`                                 | 2026         |
-| IMP-PI-17 | Contrôle enregistrement analytics + sync TV maître-esclave                          | Production | `recording.service.ts`                                       | 2026         |
-| IMP-PI-18 | Masquage curseur kiosque (triple protection sur TV)                                 | Production | `kiosk.css`                                                  | 2026         |
-| IMP-PI-19 | Transitions TV : détection frame réel (élimine trous noirs sur Pi 5)                | Production | `double-buffer-video.service.ts`                             | 2026         |
-| IMP-PI-20 | Chromium → chromium (compat Raspberry Pi OS Trixie)                                 | Production | `kiosk.sh`                                                   | Déc 2025     |
-| IMP-PI-21 | Programmation boucle vidéo par phase match (pré/pendant/post)                       | Production | `loop-scheduler.js`                                          | Déc 2025     |
-| IMP-PI-22 | Installation apt sécurisée via sudoers ciblé (pas de NoNewPrivileges)               | Production | `sudoers`                                                    | 2026         |
-| IMP-PI-23 | Dual Kiosk HDMI : route `/led` + `displayType` dans TvComponent                     | Livré      | `app.routes.ts`, `tv.component.ts`                           | Fév 2026     |
-| IMP-PI-24 | Watchdog dual Chromium LED (détection HDMI 1 DRM/KMS, auto start/stop)              | Livré      | `kiosk-watchdog.sh`                                          | Fév 2026     |
-| IMP-PI-25 | Overlays LED : score bandeau compact + goal flash couleur par équipe                | Livré      | `tv.component.html`, `tv.component.scss`                     | Fév 2026     |
-| IMP-PI-26 | Socket.IO `tv-register` avec `displayType` (master-slave par écran)                 | Livré      | `state.service.js`, `handlers.js`                            | Fév 2026     |
-| IMP-PI-27 | Kiosk : attente active X11 avant lancement Chromium (xdpyinfo polling)              | Production | `kiosk-watchdog.sh`, `neopro-kiosk.service`                  | Fév 2026     |
-| IMP-PI-28 | Hotspot : scan WiFi sur wlan1 (plus wlan0 AP) — corrige SSID invisible              | Production | `hotspot-optimizer.sh`                                       | Fév 2026     |
-| IMP-PI-29 | Hotspot : auto-fix TKIP→CCMP au boot via optimizer (propagation OTA)                | Production | `hotspot-optimizer.sh`                                       | Fév 2026     |
-| IMP-PI-30 | Catégorisation intelligente écran (edid-decode enrichi, \_inferDisplayCategory)     | Livré      | `hdmi.service.js`, `metrics.js`                              | Fév 2026     |
-| IMP-PI-31 | OTA auto-installe edid-decode sur Pi existants (requiredAptPackages + diagnose-pi)  | Livré      | `update-software.js`, `diagnose-pi.sh`                       | Fév 2026     |
+| ID        | Feature                                                                              | Statut     | Fichiers clés                                                | Version/Date |
+| --------- | ------------------------------------------------------------------------------------ | ---------- | ------------------------------------------------------------ | ------------ |
+| IMP-PI-01 | Télécommande v2 (recherche, badge audience, modal match)                             | Production | `remote.component.ts`                                        | Déc 2025     |
+| IMP-PI-02 | Socket.IO mode hors-ligne autonome (lib locale)                                      | Production | `socket.io.min.js` local                                     | Déc 2025     |
+| IMP-PI-03 | Lecture vidéo double-buffer (transitions fluides)                                    | Production | `double-buffer-video.service.ts`                             | 2025         |
+| IMP-PI-04 | Profils de configuration (avant/pendant/après match)                                 | Production | `profile-config.service.ts`, `config-profiles.controller.ts` | Déc 2025     |
+| IMP-PI-05 | Détection statut HDMI                                                                | Production | `hdmi-status.service.ts`                                     | 2025         |
+| IMP-PI-06 | Détection HDMI EDID (type écran + 8 champs enrichis edid-decode + display_category)  | Production | `hdmi.service.js`, `hdmi-status.service.ts`, `metrics.js`    | 2026         |
+| IMP-PI-07 | Récupération erreur vidéo (lecture de secours)                                       | Production | `video-error-recovery.service.ts`                            | 2025         |
+| IMP-PI-08 | Filigrane overlay configurable                                                       | Production | `watermark.service.ts`                                       | 2025         |
+| IMP-PI-09 | Sélecteur de filigrane déroulant sur Dashboard                                       | Production | `watermark.component.ts`                                     | v3.57.0      |
+| IMP-PI-10 | Capture d'écran (à la demande depuis télécommande cloud)                             | Production | `screenshot.service.ts`                                      | 2025         |
+| IMP-PI-11 | Branding personnalisé par site (logo, couleurs)                                      | Production | `add-site-branding.sql`                                      | 2025         |
+| IMP-PI-12 | Hostname Pi dynamique dérivé du nom du club                                          | Production | `hostname.js` (sync-agent), `hostname.ts` (utils)            | v3.51.0      |
+| IMP-PI-13 | Enregistrement : retour auto en boucle après inactivité                              | Production | `recording-state.service.ts`                                 | 2026         |
+| IMP-PI-14 | Enregistrement : popup avertissement inactivité avec décompte (ADR-021)              | Production | `remote.component.ts`                                        | 2026         |
+| IMP-PI-15 | Bascule mode club/tech + widget statut sync                                          | Production | `admin-panel.component.ts`                                   | 2026         |
+| IMP-PI-16 | Installation apt depuis dashboard via sudoers                                        | Production | `sudoers`, `admin-server.js`                                 | 2026         |
+| IMP-PI-17 | Contrôle enregistrement analytics + sync TV maître-esclave                           | Production | `recording.service.ts`                                       | 2026         |
+| IMP-PI-18 | Masquage curseur kiosque (triple protection sur TV)                                  | Production | `kiosk.css`                                                  | 2026         |
+| IMP-PI-19 | Transitions TV : détection frame réel (élimine trous noirs sur Pi 5)                 | Production | `double-buffer-video.service.ts`                             | 2026         |
+| IMP-PI-20 | Chromium → chromium (compat Raspberry Pi OS Trixie)                                  | Production | `kiosk.sh`                                                   | Déc 2025     |
+| IMP-PI-21 | Programmation boucle vidéo par phase match (pré/pendant/post)                        | Production | `loop-scheduler.js`                                          | Déc 2025     |
+| IMP-PI-22 | Installation apt sécurisée via sudoers ciblé (pas de NoNewPrivileges)                | Production | `sudoers`                                                    | 2026         |
+| IMP-PI-23 | Dual Kiosk HDMI : route `/led` + `displayType` dans TvComponent                      | Livré      | `app.routes.ts`, `tv.component.ts`                           | Fév 2026     |
+| IMP-PI-24 | Watchdog dual Chromium LED (détection HDMI 1 DRM/KMS, auto start/stop)               | Livré      | `kiosk-watchdog.sh`                                          | Fév 2026     |
+| IMP-PI-25 | Overlays LED : score bandeau compact + goal flash couleur par équipe                 | Livré      | `tv.component.html`, `tv.component.scss`                     | Fév 2026     |
+| IMP-PI-26 | Socket.IO `tv-register` avec `displayType` (master-slave par écran)                  | Livré      | `state.service.js`, `handlers.js`                            | Fév 2026     |
+| IMP-PI-27 | Kiosk : attente active X11 avant lancement Chromium (xdpyinfo polling)               | Production | `kiosk-watchdog.sh`, `neopro-kiosk.service`                  | Fév 2026     |
+| IMP-PI-28 | Hotspot : scan WiFi sur wlan1 (plus wlan0 AP) — corrige SSID invisible               | Production | `hotspot-optimizer.sh`                                       | Fév 2026     |
+| IMP-PI-29 | Hotspot : auto-fix TKIP→CCMP au boot via optimizer (propagation OTA)                 | Production | `hotspot-optimizer.sh`                                       | Fév 2026     |
+| IMP-PI-30 | Catégorisation intelligente écran (edid-decode enrichi, \_inferDisplayCategory)      | Livré      | `hdmi.service.js`, `metrics.js`                              | Fév 2026     |
+| IMP-PI-31 | OTA auto-installe edid-decode sur Pi existants (requiredAptPackages + diagnose-pi)   | Livré      | `update-software.js`, `diagnose-pi.sh`                       | Fév 2026     |
+| IMP-PI-32 | Fix \_findEdidPath sysfs (stat.size=0 → readFileSync.length) — débloque EDID enrichi | Livré      | `metrics.js`, `hdmi.service.js`                              | Fév 2026     |
 
 ---
 
@@ -347,18 +348,18 @@
 
 ## Statistiques Produit
 
-| Métrique                  | Valeur                                                                                                                                                                           |
-| ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Features implémentées** | **229** (+26 audit, +8 E-22 TV+LED dual, +6 sponsor UX, +2 résilience Pi/OTA, +3 hotspot WiFi, +3 debug page, +1 EDID enrichment, +1 dashboard EDID display, +1 OTA edid-decode) |
-| Domaines fonctionnels     | 14                                                                                                                                                                               |
-| Controllers API           | 29 (+sponsor-alerts)                                                                                                                                                             |
-| Services métier           | 40 (+sponsor-alert, sponsor-stats, sponsor-auto-resolution)                                                                                                                      |
-| Repositories              | 25 (+video-variant)                                                                                                                                                              |
-| Migrations DB             | 54 (+add-led-support-and-video-variants)                                                                                                                                         |
-| Modules dashboard         | 21 (+advertiser-health, analytics-categories)                                                                                                                                    |
-| Services Raspberry        | 19 (+sponsor-stats)                                                                                                                                                              |
-| Versions publiées         | 265+ (v2.1 → v3.62)                                                                                                                                                              |
-| Tests (total)             | 2 386 (1590 API + 506 Angular + 148 Admin + 71 Socket + 142 Smoke)                                                                                                               |
+| Métrique                  | Valeur                                                                                                                                                                                         |
+| ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Features implémentées** | **230** (+26 audit, +8 E-22 TV+LED dual, +6 sponsor UX, +2 résilience Pi/OTA, +3 hotspot WiFi, +3 debug page, +1 EDID enrichment, +1 dashboard EDID display, +1 OTA edid-decode, +1 sysfs fix) |
+| Domaines fonctionnels     | 14                                                                                                                                                                                             |
+| Controllers API           | 29 (+sponsor-alerts)                                                                                                                                                                           |
+| Services métier           | 40 (+sponsor-alert, sponsor-stats, sponsor-auto-resolution)                                                                                                                                    |
+| Repositories              | 25 (+video-variant)                                                                                                                                                                            |
+| Migrations DB             | 54 (+add-led-support-and-video-variants)                                                                                                                                                       |
+| Modules dashboard         | 21 (+advertiser-health, analytics-categories)                                                                                                                                                  |
+| Services Raspberry        | 19 (+sponsor-stats)                                                                                                                                                                            |
+| Versions publiées         | 265+ (v2.1 → v3.62)                                                                                                                                                                            |
+| Tests (total)             | 2 386 (1590 API + 506 Angular + 148 Admin + 71 Socket + 142 Smoke)                                                                                                                             |
 
 ---
 

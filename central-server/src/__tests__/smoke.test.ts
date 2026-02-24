@@ -1872,6 +1872,31 @@ describe('Kiosk xdpyinfo dependency must be provisioned', () => {
       .toEqual({ hasEdidDecode: true });
   });
 
+  it('_findEdidPath must use readFileSync (not stat.size) for sysfs virtual files', () => {
+    // sysfs files /sys/class/drm/*/edid report stat.size=0 even with 128-256 bytes of data.
+    // Using stat.size caused edidPath=null → edid_detailed=null → enriched EDID invisible.
+    // Incident: 24/02/2026 — all Pis had stat.size=0 for EDID files, enriched display never shown.
+    const metricsJs = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/sync-agent/src/metrics.js'),
+      'utf8'
+    );
+    const hdmiServiceJs = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/server/services/hdmi.service.js'),
+      'utf8'
+    );
+    // metrics.js must NOT use stat.size for EDID detection
+    expect({ metricsUsesStatSize: /statSync.*edid[\s\S]{0,50}stat\.size/.test(metricsJs) })
+      .toEqual({ metricsUsesStatSize: false });
+    // hdmi.service.js must NOT use stat.size for EDID detection
+    expect({ hdmiUsesStatSize: /statSync.*edid[\s\S]{0,50}stat\.size/.test(hdmiServiceJs) })
+      .toEqual({ hdmiUsesStatSize: false });
+    // Both must use readFileSync + buf.length in _findEdidPath
+    expect({ metricsUsesReadFile: metricsJs.includes('readFileSync(edidPath)') })
+      .toEqual({ metricsUsesReadFile: true });
+    expect({ hdmiUsesReadFile: hdmiServiceJs.includes('readFileSync(edidPath)') })
+      .toEqual({ hdmiUsesReadFile: true });
+  });
+
   it('diagnose-pi.sh must check for x11-utils in recommended packages', () => {
     // diagnose-pi.sh warns when recommended packages are missing.
     // x11-utils must be in the list to alert operators before kiosk fails.
