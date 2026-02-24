@@ -1,3 +1,9 @@
+## [3.80.9](https://github.com/Tallec7/neopro/compare/v3.80.8...v3.80.9) (2026-02-24)
+
+### Bug Fixes
+
+- **profiles:** fix multi-profile system not working in production (ADR-030) ([9e9c542](https://github.com/Tallec7/neopro/commit/9e9c542dd1c20ea26a65f5940a29d77fbd16b088))
+
 ## [3.80.8](https://github.com/Tallec7/neopro/compare/v3.80.7...v3.80.8) (2026-02-24)
 
 ### Bug Fixes
