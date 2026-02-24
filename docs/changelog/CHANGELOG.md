@@ -1,3 +1,9 @@
+## [3.79.1](https://github.com/Tallec7/neopro/compare/v3.79.0...v3.79.1) (2026-02-24)
+
+### Bug Fixes
+
+- **sync-agent:** 5 correctifs debug bundle NLF Handball Pi v3.78.0 ([34d0102](https://github.com/Tallec7/neopro/commit/34d0102d4531eb2680cc6aa852b820bad06b6e0b))
+
 # [3.79.0](https://github.com/Tallec7/neopro/compare/v3.78.0...v3.79.0) (2026-02-23)
 
 ### Bug Fixes
