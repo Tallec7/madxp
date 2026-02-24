@@ -206,16 +206,24 @@ sudo ./tools/clone-sd-card.sh neopro-golden-v1.0
 
 ## 🔧 Services systemd
 
-| Service           | Port | Description                                            |
-| ----------------- | ---- | ------------------------------------------------------ |
-| neopro-app        | 3000 | Serveur Socket.IO                                      |
-| neopro-admin      | 8080 | Interface admin                                        |
-| neopro-sync-agent | -    | Agent synchronisation central                          |
-| neopro-kiosk      | -    | Mode kiosk Chromium (détection automatique du binaire) |
-| nginx             | 80   | Serveur web (reverse proxy)                            |
-| hostapd           | -    | Point d'accès WiFi                                     |
+| Service           | Port | Description                                         |
+| ----------------- | ---- | --------------------------------------------------- |
+| neopro-app        | 3000 | Serveur Socket.IO                                   |
+| neopro-admin      | 8080 | Interface admin                                     |
+| neopro-sync-agent | -    | Agent synchronisation central                       |
+| neopro-kiosk      | -    | Mode kiosk Chromium (watchdog + arrêt GPU gracieux) |
+| nginx             | 80   | Serveur web (reverse proxy)                         |
+| hostapd           | -    | Point d'accès WiFi                                  |
 
-> **Note :** Le service `neopro-kiosk` détecte automatiquement le chemin de Chromium (`/usr/bin/chromium` ou `/usr/bin/chromium-browser`) lors de l'installation via `install.sh`.
+> **Note :** Le service `neopro-kiosk` lance `kiosk-watchdog.sh` qui :
+>
+> - Détecte automatiquement le binaire Chromium (`/usr/bin/chromium` ou `/usr/bin/chromium-browser`)
+> - Vérifie que nginx est prêt (HTTP 200) avant de lancer Chromium
+> - Détecte les crashs "Aw, Snap!" et relance automatiquement
+> - **Arrêt gracieux GPU** : SIGTERM (5s) → SIGKILL en dernier recours + cleanup `/dev/shm`
+> - `KillMode=mixed` dans le service systemd : seul le watchdog reçoit SIGTERM, pas Chromium directement
+>
+> Voir [`config/systemd/README.md`](config/systemd/README.md) pour les détails techniques.
 
 ### Commandes utiles
 

@@ -1602,6 +1602,22 @@ sudo journalctl -f
 
 > `diagnose-pi.sh` vérifie 16 catégories : Node.js version, packages apt, services systemd (état + installation), ports, fichiers critiques, node_modules, webapp, Nginx (syntaxe + routes), WiFi (AP + SSID + IP), permissions, GPU, espace disque, version, HTTP. En mode `--json`, le exit code = nombre d'erreurs (0 = Pi sain). `deploy-remote.sh` et l'OTA l'exécutent automatiquement après chaque déploiement.
 
+### Kiosk Watchdog (neopro-kiosk.service)
+
+Le service `neopro-kiosk` lance `kiosk-watchdog.sh` — un superviseur qui gère le cycle de vie de Chromium en mode kiosk :
+
+| Fonctionnalité         | Description                                                                                                                                |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Arrêt gracieux GPU** | SIGTERM (5s) → SIGKILL dernier recours. Critique sur Pi 5 : le driver V3D Mesa doit libérer les DMA buffers sinon artifacts GPU au restart |
+| **KillMode=mixed**     | systemd envoie SIGTERM au watchdog seul (pas à Chromium), le trap handler fait le cleanup propre                                           |
+| **TimeoutStopSec=15**  | Fenêtre de 15s pour l'arrêt gracieux avant SIGKILL automatique                                                                             |
+| **Nginx readiness**    | Curl HTTP 200 sur `neopro.local/index.html` (15s timeout) avant de lancer Chromium                                                         |
+| **Crash detection**    | Détecte "Aw, Snap!", "Page Unresponsive", `ERR_*` via `xdotool` et relance automatiquement                                                 |
+| **GPU cleanup**        | Suppression `/dev/shm/.org.chromium.*` (segments mémoire partagée orphelins)                                                               |
+| **kiosk-status.json**  | Écrit dans `/home/pi/neopro/data/` — lu par le heartbeat et remonté au central                                                             |
+
+> ⚠️ **Ne jamais ajouter `ExecStop=pkill -9` dans le `.service`** — cela bypasse le trap handler et corrompt l'état GPU V3D sur Pi 5. Smoke test enforced.
+
 ### Maintenance
 
 ```bash

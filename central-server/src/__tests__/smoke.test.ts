@@ -2927,6 +2927,37 @@ describe('Deploy script kiosk restart ordering', () => {
 });
 
 // ----------------------------------------------------------
+// Grafana kiosk health alerting guards
+// ----------------------------------------------------------
+describe('Grafana kiosk health alerts', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+  const alertsYml = fs.readFileSync(
+    path.join(repoRoot, 'docker/grafana/provisioning/alerting/neopro-alerts-cloud.yml'),
+    'utf8'
+  );
+
+  it('must have kiosk crash alert rule', () => {
+    expect({ hasKioskCrashAlert: alertsYml.includes('neopro-kiosk-crash') })
+      .toEqual({ hasKioskCrashAlert: true });
+  });
+
+  it('must have kiosk down alert rule', () => {
+    expect({ hasKioskDownAlert: alertsYml.includes('neopro-kiosk-down') })
+      .toEqual({ hasKioskDownAlert: true });
+  });
+
+  it('must query neopro_kiosk_crashes_total metric', () => {
+    expect({ queriesCrashMetric: alertsYml.includes('neopro_kiosk_crashes_total') })
+      .toEqual({ queriesCrashMetric: true });
+  });
+
+  it('must query neopro_kiosk_status metric', () => {
+    expect({ queriesStatusMetric: alertsYml.includes('neopro_kiosk_status') })
+      .toEqual({ queriesStatusMetric: true });
+  });
+});
+
+// ----------------------------------------------------------
 // Build script post-install cleanup regression guards
 // ----------------------------------------------------------
 describe('Build script node_modules cleanup guards', () => {

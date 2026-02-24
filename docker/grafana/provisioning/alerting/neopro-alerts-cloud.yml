@@ -1453,3 +1453,167 @@ groups:
         annotations:
           summary: "Admin rate limiter near exhaustion (>80% consumed)"
           description: "The admin rate limiter (used by sponsor routes) is frequently near its 400 req/min limit. A user with many sponsors may soon hit 429 errors."
+
+  # =============================================
+  # KIOSK — Chromium GPU Health (Pi 5)
+  # =============================================
+  - orgId: 1
+    name: NeoPro - Kiosk Health
+    folder: NeoPro Alerts
+    interval: 1m
+    rules:
+      # Kiosk Chromium crash detected (critical)
+      - uid: neopro-kiosk-crash
+        title: Kiosk Chromium Crash
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: grafanacloud-tallec7-prom
+            model:
+              expr: increase(neopro_kiosk_crashes_total[10m])
+              instant: true
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              type: reduce
+              expression: A
+              reducer: last
+              refId: B
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: B
+              conditions:
+                - evaluator:
+                    type: gt
+                    params: [0]
+              refId: C
+        for: 0s
+        labels:
+          severity: critical
+          team: neopro
+        annotations:
+          summary: "Kiosk Chromium crash detected"
+          description: "A Pi kiosk Chromium process has crashed. Check kiosk-watchdog logs: journalctl -u neopro-kiosk -n 50. If repeated, GPU state may be corrupted — power cycle the Pi."
+
+      # Kiosk unstable — repeated crashes (warning)
+      - uid: neopro-kiosk-unstable
+        title: Kiosk Chromium Unstable (repeated crashes)
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 3600
+              to: 0
+            datasourceUid: grafanacloud-tallec7-prom
+            model:
+              expr: increase(neopro_kiosk_crashes_total[1h])
+              instant: true
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              type: reduce
+              expression: A
+              reducer: last
+              refId: B
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: B
+              conditions:
+                - evaluator:
+                    type: gt
+                    params: [3]
+              refId: C
+        for: 5m
+        labels:
+          severity: warning
+          team: neopro
+        annotations:
+          summary: "Kiosk unstable — >3 crashes in 1 hour"
+          description: "The kiosk Chromium process has crashed more than 3 times in the last hour. Likely cause: GPU V3D state corruption after SIGKILL. Power cycle the Pi to reset GPU state."
+
+      # Kiosk down — Chromium not running (critical)
+      - uid: neopro-kiosk-down
+        title: Kiosk Chromium Down
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: grafanacloud-tallec7-prom
+            model:
+              expr: neopro_kiosk_status
+              instant: true
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              type: reduce
+              expression: A
+              reducer: last
+              refId: B
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: B
+              conditions:
+                - evaluator:
+                    type: lt
+                    params: [1]
+              refId: C
+        for: 3m
+        labels:
+          severity: critical
+          team: neopro
+        annotations:
+          summary: "Kiosk Chromium is DOWN"
+          description: "The kiosk Chromium process is not running for 3+ minutes. The TV display is blank. Check Pi connectivity and kiosk service: systemctl status neopro-kiosk."
+
+      # Kiosk high restart count (warning)
+      - uid: neopro-kiosk-high-restarts
+        title: Kiosk High Restart Count
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: grafanacloud-tallec7-prom
+            model:
+              expr: neopro_kiosk_restart_count
+              instant: true
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              type: reduce
+              expression: A
+              reducer: last
+              refId: B
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: B
+              conditions:
+                - evaluator:
+                    type: gt
+                    params: [5]
+              refId: C
+        for: 5m
+        labels:
+          severity: warning
+          team: neopro
+        annotations:
+          summary: "Kiosk Chromium restart count elevated (>5)"
+          description: "The kiosk watchdog has restarted Chromium more than 5 times. This indicates instability — check GPU health, /dev/shm orphans, and nginx availability."

@@ -17,7 +17,7 @@ cd central-server && npm run build # Compile TypeScript
 
 # Tests
 npm run test:server                # Jest (API central-server — 1592 tests)
-npm run test:smoke                 # Jest (Smoke tests — 205 tests, détecte régressions de wiring)
+npm run test:smoke                 # Jest (Smoke tests — 251 tests, détecte régressions de wiring)
 npm run test:central               # Karma (Angular Dashboard — 506 tests)
 cd raspberry/server && npm test    # Jest (Socket.IO server — 71 tests)
 cd raspberry/admin && npm test     # Jest (Admin server — 148 tests)
@@ -54,6 +54,7 @@ source central-server/.env && psql "$DATABASE_URL" -f central-server/src/scripts
 - Push directement sur `main` sans PR
 - Requêtes SQL non paramétrées (`'${email}'` → injection SQL)
 - Ajouter `NoNewPrivileges=true` dans les fichiers `.service` systemd (bloque sudo, deadlock OTA — smoke test enforced)
+- Ajouter `ExecStop=pkill -9` dans `neopro-kiosk.service` (bypasse le trap handler du watchdog, corrompt l'état GPU V3D sur Pi 5 — smoke test enforced)
 
 ## Architecture détaillée
 
