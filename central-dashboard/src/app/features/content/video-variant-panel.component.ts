@@ -261,7 +261,7 @@ export class VideoVariantPanelComponent {
   loadVariants(): void {
     this.loading = true;
     this.http.get<{ variants: VideoVariant[] }>(
-      `${environment.apiUrl}/content/videos/${this.videoId}/variants`,
+      `${environment.apiUrl}/videos/${this.videoId}/variants`,
       { withCredentials: true }
     ).subscribe({
       next: (response) => {
@@ -287,7 +287,7 @@ export class VideoVariantPanelComponent {
     formData.append('display_type', 'secondary');
 
     this.http.post<VideoVariant>(
-      `${environment.apiUrl}/content/videos/${this.videoId}/variants`,
+      `${environment.apiUrl}/videos/${this.videoId}/variants`,
       formData,
       { withCredentials: true, reportProgress: true, observe: 'events' }
     ).subscribe({
@@ -316,7 +316,7 @@ export class VideoVariantPanelComponent {
     this.deleting = true;
 
     this.http.delete(
-      `${environment.apiUrl}/content/videos/${this.videoId}/variants/secondary`,
+      `${environment.apiUrl}/videos/${this.videoId}/variants/secondary`,
       { withCredentials: true }
     ).subscribe({
       next: () => {

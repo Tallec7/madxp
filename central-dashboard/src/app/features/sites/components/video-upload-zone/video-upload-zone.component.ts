@@ -281,7 +281,7 @@ export class VideoUploadZoneComponent {
     }
 
     this.http.post<UploadedVideo>(
-      `${environment.apiUrl}/content/videos`,
+      `${environment.apiUrl}/videos`,
       formData,
       {
         withCredentials: true,
