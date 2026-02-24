@@ -18,6 +18,17 @@
 
 ## [Unreleased]
 
+### Performance
+
+- **build:** optimize Raspberry Pi build output (-49% taille, -37% fichiers)
+  - **Avant** : 3 620 fichiers, 770 dossiers, 41 MB
+  - **Apres** : 2 263 fichiers, 607 dossiers, 21 MB (archive ~5 MB)
+  - Exclusion `__tests__/` et `coverage/` des rsync (server, sync-agent, admin)
+  - Nettoyage post-install node_modules : docs (`.md`), tests, `@types/`, `.ts`, `.map`,
+    configs lint/CI, `.github/`, `package-lock.json`, artefacts macOS
+  - Le build affiche maintenant les metriques avant/apres nettoyage
+  - 4 smoke tests ajoutés pour empêcher la regression du nettoyage
+
 ### Bug Fixes
 
 - **kiosk:** fix Chromium GPU crash loop after OTA deploy on Pi 5

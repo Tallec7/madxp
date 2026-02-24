@@ -374,7 +374,7 @@ cp -r dist/raspberry/browser/* ${DEPLOY_DIR}/webapp/
 
 # Copier le serveur Node.js (source de vérité: raspberry/server/)
 # Exclure les fichiers .md (documentation) du déploiement
-rsync -a --exclude='*.md' --exclude='node_modules' raspberry/server/ ${DEPLOY_DIR}/server/
+rsync -a --exclude='*.md' --exclude='node_modules' --exclude='__tests__' raspberry/server/ ${DEPLOY_DIR}/server/
 
 # Installer les dépendances du serveur pour les inclure dans l'archive
 if [ -f "${DEPLOY_DIR}/server/package.json" ]; then
@@ -389,7 +389,7 @@ fi
 
 # Copier le sync-agent
 if [ -d "raspberry/sync-agent" ]; then
-    rsync -a --exclude='*.md' --exclude='node_modules' raspberry/sync-agent/ ${DEPLOY_DIR}/sync-agent/
+    rsync -a --exclude='*.md' --exclude='node_modules' --exclude='__tests__' --exclude='coverage' raspberry/sync-agent/ ${DEPLOY_DIR}/sync-agent/
 
     # Installer les dépendances du sync-agent pour les inclure dans l'archive
     # Cela évite de devoir faire npm install sur chaque Pi après déploiement
@@ -480,6 +480,57 @@ if [ -f "raspberry/config/sudoers.d/neopro" ]; then
     cp raspberry/config/sudoers.d/neopro ${DEPLOY_DIR}/config/sudoers.d/
     print_success "Fichier sudoers copié"
 fi
+
+# ══════════════════════════════════════════════════════════════════════════════
+# Nettoyage post-install : supprimer les fichiers inutiles au runtime
+# Economise ~500+ fichiers et ~3-5 MB dans l'archive finale
+# ══════════════════════════════════════════════════════════════════════════════
+print_step "Nettoyage des fichiers inutiles au runtime..."
+
+BEFORE_FILES=$(find ${DEPLOY_DIR} -type f | wc -l | tr -d ' ')
+BEFORE_SIZE=$(du -sh ${DEPLOY_DIR} | cut -f1)
+
+# Supprimer les fichiers de documentation dans node_modules (README, CHANGELOG, etc.)
+find ${DEPLOY_DIR}/*/node_modules -maxdepth 3 \( -name '*.md' -o -name '*.markdown' \) -type f -delete 2>/dev/null || true
+
+# Supprimer les dossiers test/tests dans les dépendances
+find ${DEPLOY_DIR}/*/node_modules -maxdepth 2 -type d \( -name 'test' -o -name 'tests' -o -name '__tests__' -o -name 'example' -o -name 'examples' \) -exec rm -rf {} + 2>/dev/null || true
+
+# Supprimer les fichiers de config lint/CI inutiles
+find ${DEPLOY_DIR}/*/node_modules -maxdepth 3 \( \
+    -name '.eslintrc' -o -name '.eslintrc.*' -o \
+    -name '.prettierrc' -o -name '.prettierrc.*' -o \
+    -name '.editorconfig' -o \
+    -name '.travis.yml' -o -name '.github' -o \
+    -name '.npmignore' -o -name '.gitattributes' -o \
+    -name 'tsconfig.json' -o -name 'tsconfig.*.json' -o \
+    -name '.jshintrc' -o -name 'Makefile' -o \
+    -name 'Gruntfile.js' -o -name 'Gulpfile.js' -o \
+    -name '.zuul.yml' -o -name 'appveyor.yml' -o \
+    -name '.coveralls.yml' -o -name '.istanbul.yml' -o \
+    -name 'karma.conf.js' -o -name '.babelrc' \
+\) -delete 2>/dev/null || true
+
+# Supprimer les répertoires .github dans les dépendances
+find ${DEPLOY_DIR}/*/node_modules -maxdepth 2 -type d -name '.github' -exec rm -rf {} + 2>/dev/null || true
+
+# Supprimer les fichiers TypeScript source (.ts, .map) et @types dans node_modules
+# (seuls les .js sont nécessaires au runtime, pas les .d.ts ni @types)
+find ${DEPLOY_DIR}/*/node_modules -maxdepth 4 -name '*.ts' -type f -delete 2>/dev/null || true
+find ${DEPLOY_DIR}/*/node_modules -maxdepth 4 -name '*.map' -type f -delete 2>/dev/null || true
+find ${DEPLOY_DIR}/*/node_modules -maxdepth 1 -type d -name '@types' -exec rm -rf {} + 2>/dev/null || true
+
+# Supprimer package-lock.json dans les sous-packages (inutiles au runtime)
+find ${DEPLOY_DIR} -maxdepth 2 -name 'package-lock.json' -type f -delete 2>/dev/null || true
+
+# Supprimer les artefacts macOS et fichiers backup
+find ${DEPLOY_DIR} -name '.DS_Store' -o -name '*.bak' -o -name 'Thumbs.db' | xargs rm -f 2>/dev/null || true
+
+AFTER_FILES=$(find ${DEPLOY_DIR} -type f | wc -l | tr -d ' ')
+AFTER_SIZE=$(du -sh ${DEPLOY_DIR} | cut -f1)
+REMOVED=$((BEFORE_FILES - AFTER_FILES))
+
+print_success "Nettoyage terminé: ${REMOVED} fichiers supprimés (${BEFORE_SIZE} → ${AFTER_SIZE})"
 
 create_version_metadata
 
