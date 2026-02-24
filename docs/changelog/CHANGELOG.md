@@ -1,3 +1,9 @@
+## [3.80.15](https://github.com/Tallec7/neopro/compare/v3.80.14...v3.80.15) (2026-02-24)
+
+### Bug Fixes
+
+- **kiosk:** merge duplicate --disable-features flags + isolate primary Chromium profile ([439949e](https://github.com/Tallec7/neopro/commit/439949ee7715a08167889c83aafdb4632f1412ff))
+
 ## [3.80.14](https://github.com/Tallec7/neopro/compare/v3.80.13...v3.80.14) (2026-02-24)
 
 ### Bug Fixes

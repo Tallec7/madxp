@@ -1,6 +1,6 @@
 {
   "name": "neopro",
-  "version": "3.80.14",
+  "version": "3.80.15",
   "scripts": {
     "ng": "ng",
     "start": "ng serve raspberry",
