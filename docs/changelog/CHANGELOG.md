@@ -1,3 +1,9 @@
+## [3.80.13](https://github.com/Tallec7/neopro/compare/v3.80.12...v3.80.13) (2026-02-24)
+
+### Bug Fixes
+
+- **kiosk:** fix secondary Chromium SIGKILL + crash detection false positives ([88d6807](https://github.com/Tallec7/neopro/commit/88d680791be4a4046a8db9706680b2de97cbdae8))
+
 ## [3.80.12](https://github.com/Tallec7/neopro/compare/v3.80.11...v3.80.12) (2026-02-24)
 
 ### Bug Fixes
