@@ -1,6 +1,6 @@
 # Features & User Stories — NEOPRO SAFe
 
-> **Dernière mise à jour** : 21 Février 2026 <!-- E-22 F-22.1+F-22.2+F-22.3 implémentés -->
+> **Dernière mise à jour** : 24 Février 2026 <!-- E-22 decisions GO/NO-GO + F-22.4/F-22.5/F-22.6 -->
 > **PI actuel** : PI-1 (Février - Mars 2026)
 > Ce document contient les Features/US futures (PI-1 à PI-3) ET les Epics terminés avant PI-1. Les 212 features implémentées (hors SAFe) sont documentées dans [IMPLEMENTED-BACKLOG.md](IMPLEMENTED-BACKLOG.md).
 
@@ -485,9 +485,11 @@ Tous les controllers utilisent le repository pattern. ESLint bloquant actif. Aud
 | Contrôleur LED incompatible HDMI ou EDID capricieux  | Mitigated | Spike US-22.0.1 valide avec matériel réel (Linsn MC100, Novastar MX40 Pro)  |
 | Prospect annule → dev inutile                        | Owned     | Go/No-Go avant tout dev feature (spike seul si prospect incertain)          |
 | Détection HDMI 1 échoue sur certains contrôleurs     | Mitigated | Fallback config : `hdmi_force_hotplug:1=1` activable par site via dashboard |
-| Config-merge perd les nouvelles clés silencieusement  | Resolved  | Smoke test garde-fou + tests unitaires (11 cas) empêchent la régression     |
+| Config-merge perd les nouvelles clés silencieusement | Resolved  | Smoke test garde-fou + tests unitaires (11 cas) empêchent la régression     |
 
 ### F-22.0 : Enabler — Validation hardware dual HDMI (spike)
+
+> **Plan de test détaillé** : [SPIKE-001](../proposals/SPIKE-001-dual-hdmi-hardware-validation.md)
 
 > _Valider que le Pi 5 gère 2 flux vidéo simultanés sur ses 2 sorties HDMI avec un contrôleur LED réel._
 
@@ -525,7 +527,7 @@ Tous les controllers utilisent le repository pattern. ESLint bloquant actif. Aud
 | --------- | ----------------------------------------------------------------------------------------------------------- | --- | ------- | -------- |
 | US-22.1.1 | Config Pi dual HDMI (`config.txt` + `max_framebuffers=2`) + watchdog dual kiosk avec détection HDMI DRM/KMS | 5   | PI-2 S4 | Must     |
 | US-22.1.2 | Route Angular `/secondary` + paramètre `displayType` dans TvComponent (filtre playlist)                     | 5   | PI-2 S4 | Must     |
-| US-22.1.3 | Dashboard — configuration site écran secondaire (toggle, résolution, fallback `hdmi_force_hotplug`)          | 3   | PI-2 S4 | Must     |
+| US-22.1.3 | Dashboard — configuration site écran secondaire (toggle, résolution, fallback `hdmi_force_hotplug`)         | 3   | PI-2 S4 | Must     |
 
 ---
 
@@ -539,12 +541,12 @@ Tous les controllers utilisent le repository pattern. ESLint bloquant actif. Aud
 - [x] Animation de but spécifique secondaire (flash couleur équipe + texte "BUT !")
 - [ ] Breaking news format secondaire (texte pleine largeur dans le bandeau)
 - [x] Un seul événement Socket.IO → 2 réactions différentes selon `displayType`
-- [ ] Indicateur écran secondaire connecté dans la Remote
+- [ ] Indicateur écran secondaire connecté dans la Remote — [SPEC détaillée](../proposals/SPEC-US-22.2.2-remote-secondary-indicator.md)
 
-| US        | Description                                                                                                       | SP  | Sprint  | Priorité |
-| --------- | ----------------------------------------------------------------------------------------------------------------- | --- | ------- | -------- |
-| US-22.2.1 | Score overlay secondaire bandeau compact + animations de but spécifiques secondaire (flash couleur + texte)       | 5   | PI-2 S4 | Must     |
-| US-22.2.2 | Indicateur écran secondaire connecté dans la Remote + fallback vidéo secondaire (`object-fit: cover`)              | 3   | PI-2 S5 | Should   |
+| US        | Description                                                                                                 | SP  | Sprint  | Priorité |
+| --------- | ----------------------------------------------------------------------------------------------------------- | --- | ------- | -------- |
+| US-22.2.1 | Score overlay secondaire bandeau compact + animations de but spécifiques secondaire (flash couleur + texte) | 5   | PI-2 S4 | Must     |
+| US-22.2.2 | Indicateur écran secondaire connecté dans la Remote + fallback vidéo secondaire (`object-fit: cover`)       | 3   | PI-2 S5 | Should   |
 
 ---
 
@@ -562,11 +564,86 @@ Tous les controllers utilisent le repository pattern. ESLint bloquant actif. Aud
 - [ ] Provisioning dual kiosk config poussé via OTA quand `secondary_display_enabled` est activé
 - [x] Fallback : si pas de variante secondaire, redimensionner la version TV (CSS `object-fit: cover`)
 
-| US        | Description                                                                                                                         | SP  | Sprint  | Priorité |
-| --------- | ----------------------------------------------------------------------------------------------------------------------------------- | --- | ------- | -------- |
-| US-22.3.1 | Table `video_variants` + migration DB + API upload variante secondaire                                                              | 5   | PI-2 S5 | Must     |
-| US-22.3.2 | Dashboard UI variantes vidéo + déploiement conditionnel par `display_type`                                                          | 5   | PI-2 S5 | Must     |
+| US        | Description                                                                                                                           | SP  | Sprint  | Priorité |
+| --------- | ------------------------------------------------------------------------------------------------------------------------------------- | --- | ------- | -------- |
+| US-22.3.1 | Table `video_variants` + migration DB + API upload variante secondaire                                                                | 5   | PI-2 S5 | Must     |
+| US-22.3.2 | Dashboard UI variantes vidéo + déploiement conditionnel par `display_type`                                                            | 5   | PI-2 S5 | Must     |
 | US-22.3.3 | Adaptation pipeline déploiement (envoi variantes secondaires si `secondary_display_enabled`) + provisioning dual kiosk config via OTA | 5   | PI-2 S5 | Must     |
+
+---
+
+### Décisions E-22 (24 Février 2026)
+
+| Proposition                            | Décision        | Rationnel                                                                                                                               |
+| -------------------------------------- | --------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| F-22.0 Hardware Spike                  | **GO**          | Risque #1 non mitigé — doit être planifié rapidement                                                                                    |
+| F-22.4 Tests E2E Dual Display          | **GO**          | Sécurité anti-régression sur le scénario dual-display complet                                                                           |
+| F-22.5 Auto-génération variantes vidéo | **À détailler** | Proposal nécessaire (pipeline FFmpeg, formats cibles, coût CPU serveur)                                                                 |
+| F-22.6 Preview live Dashboard          | **À détailler** | Intérêt réel à valider — surcharge CPU Pi potentielle avec stream WebRTC                                                                |
+| US-22.2.2 Indicateur Remote            | **GO**          | Quick win à détailler (quel format, quel feedback pour le staff)                                                                        |
+| Fallback PiP intelligent               | **NO GO**       | Si HDMI secondaire déconnecté → le 2e Chromium ne s'ouvre pas du tout (watchdog vérifie DRM/KMS). Pas de scénario "écran noir" à gérer. |
+
+---
+
+### F-22.4 : Tests E2E Dual Display ✅ GO
+
+> **Tests** : [`e2e/tests/dual-display.spec.ts`](../../e2e/tests/dual-display.spec.ts)
+
+> _Valider le scénario complet dual-display de bout en bout : 2 routes Angular reçoivent les mêmes événements Socket.IO et réagissent différemment selon `displayType`._
+
+**Critères d'acceptation**
+
+- [ ] Test Playwright ouvrant `/tv` et `/secondary` en parallèle
+- [ ] Vérification qu'un `score-update` produit overlay popup sur `/tv` et bandeau compact sur `/secondary`
+- [ ] Vérification qu'un `command` (vidéo) charge la variante TV sur `/tv` et la variante secondary sur `/secondary`
+- [ ] Vérification qu'un `breaking-news` s'affiche sur les 2 routes avec format adapté
+- [ ] Intégration dans `npm run test:e2e` avec tag `@dual-display`
+
+| US        | Description                                                                                                  | SP  | Sprint  | Priorité |
+| --------- | ------------------------------------------------------------------------------------------------------------ | --- | ------- | -------- |
+| US-22.4.1 | Tests E2E Playwright dual display : 2 routes /tv + /secondary, événements simultanés, vérification réactions | 5   | PI-2 S5 | Must     |
+
+---
+
+### F-22.5 : Auto-génération variantes vidéo 📋 À DÉTAILLER
+
+> _Pipeline serveur qui génère automatiquement une variante secondary à partir de la vidéo TV, réduisant la friction opérateur à zéro._
+
+**Points à explorer dans la proposal**
+
+- Pipeline FFmpeg côté central-server vs worker dédié (charge CPU)
+- Formats cibles : bandeau horizontal (LED), portrait, carré — configurable par site ?
+- Stratégie de crop : centre ? détection de saillance ? paramétrable ?
+- Temps de génération acceptable (async + notification quand prêt)
+- Coût Railway (CPU burst) vs génération côté Pi
+- Opt-in par opérateur (bouton "Générer automatiquement") vs systématique
+
+**Statut** : ✅ Proposal rédigée → [PROP-010](../proposals/PROP-010-auto-generation-video-variants.md) — 13 SP estimés
+
+| US        | Description                                                                                                  | SP  | Sprint | Priorité |
+| --------- | ------------------------------------------------------------------------------------------------------------ | --- | ------ | -------- |
+| US-22.5.1 | Proposal : architecture pipeline auto-génération variantes vidéo (FFmpeg, formats, crop, coût, UX opérateur) | 2   | TBD    | Should   |
+
+---
+
+### F-22.6 : Preview live Dashboard 📋 À DÉTAILLER
+
+> _Visualiser en temps réel depuis le dashboard ce qui s'affiche sur la TV et l'écran secondaire d'un site, sans être physiquement sur place._
+
+**Points à explorer dans l'analyse**
+
+- Impact CPU Pi : un stream WebRTC ou capture périodique (screenshot toutes les 5s) ?
+- Bande passante : screenshot JPEG compressé (~50KB/5s) vs WebRTC (~500Kbps continu)
+- Approche légère : réutiliser le mécanisme screenshot existant (`screenshot.service.ts`) en mode polling
+- Approche riche : WebRTC via coturn, mais complexité + charge réseau
+- Intérêt réel : combien d'opérateurs utilisent la capture écran actuelle ? (analytics à vérifier)
+- Alternative : améliorer la capture écran existante avec auto-refresh dans le dashboard
+
+**Statut** : ✅ Analyse réalisée → [SPIKE-002](../proposals/SPIKE-002-preview-live-dashboard.md) — Recommandation : Screenshot amélioré (3 SP)
+
+| US        | Description                                                                                             | SP  | Sprint | Priorité |
+| --------- | ------------------------------------------------------------------------------------------------------- | --- | ------ | -------- |
+| US-22.6.1 | Spike : analyse usage capture écran + benchmark CPU/bande passante des approches preview live dashboard | 2   | TBD    | Could    |
 
 ---
 
@@ -740,8 +817,8 @@ Tous les controllers utilisent le repository pattern. ESLint bloquant actif. Aud
 | E-15 Score Live Phase 2  | 1        | 2            | 11         |
 | E-16 Rapports Email Auto | 1        | 2            | 8          |
 | E-17 A/B Testing         | 1        | 2            | 13         |
-| E-22 TV + LED Dual       | 4        | 9            | 39         |
-| **Total PI-2**           | **11**   | **21**       | **108**    |
+| E-22 TV + Secondary Dual | 7        | 12           | 48         |
+| **Total PI-2**           | **14**   | **24**       | **117**    |
 
 ### PI-3 Backlog
 
@@ -762,11 +839,12 @@ Tous les controllers utilisent le repository pattern. ESLint bloquant actif. Aud
 | ----------------- | ------------------- | -------------- | ------ | ------- |
 | Done (avant PI-1) | 5 (dont 2 partiels) | 9 (+ 2 → PI-1) | -      | ~41     |
 | PI-1 Actif        | 4 + 2 reliquats     | 12             | 19     | 79      |
-| PI-2              | 6                   | 11             | 21     | 108     |
+| PI-2              | 6                   | 14             | 24     | 117     |
 | PI-3              | 7                   | 7              | 9      | 73      |
-| **Total SAFe**    | **22**              | **39 uniques** | **49** | **301** |
+| **Total SAFe**    | **22**              | **42 uniques** | **52** | **310** |
 
 > **Note PI-1** : Les 79 SP sont sous la capacité de 80 SP. Le backlog est désormais réaliste (vs 130 SP avant requalification des Done).
+> **Note E-22** : 3 features ajoutées le 24/02 (F-22.4 GO, F-22.5 et F-22.6 à détailler). Fallback PiP : NO GO.
 
 ---
 

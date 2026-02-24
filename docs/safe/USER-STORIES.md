@@ -1,6 +1,6 @@
 # User Stories — NEOPRO SAFe
 
-> **Dernière mise à jour** : 21 Février 2026
+> **Dernière mise à jour** : 24 Février 2026
 > **PI actuel** : PI-1 (Février - Mars 2026)
 > Ce document recense **toutes** les User Stories du produit NEOPRO :
 >
@@ -351,7 +351,7 @@
 
 ---
 
-### PI-2 — Avril-Mai 2026 (21 US, 108 SP)
+### PI-2 — Avril-Mai 2026 (24 US, 117 SP)
 
 #### E-05 — Motion Design Personnalisé (3 US, 16 SP)
 
@@ -390,19 +390,25 @@
 | US-17.1.1 | F-17.1  | CRUD campagnes A/B + allocation trafic + variantes                           | 5   | PI-2 S3 | Could    | ⏳ Backlog |
 | US-17.1.2 | F-17.1  | Dashboard résultats A/B avec test statistique (χ²) et recommandation gagnant | 8   | PI-2 S3 | Could    | ⏳ Backlog |
 
-#### E-22 — Contenus Différenciés TV + LED (9 US, 39 SP)
+#### E-22 — Contenus Différenciés TV + Écran Secondaire (12 US, 48 SP)
 
-| US        | Feature | Description                                                                                                | SP  | Sprint  | Priorité | Statut     |
-| --------- | ------- | ---------------------------------------------------------------------------------------------------------- | --- | ------- | -------- | ---------- |
-| US-22.0.1 | F-22.0  | Spike : Pi 5 dual HDMI + 2 flux vidéo + test contrôleur LED + validation détection HDMI DRM/KMS            | 3   | PI-2 S4 | Must     | ⏳ Backlog |
-| US-22.1.1 | F-22.1  | Config Pi dual HDMI + watchdog dual kiosk avec détection HDMI DRM/KMS                                      | 5   | PI-2 S4 | Must     | ⏳ Backlog |
-| US-22.1.2 | F-22.1  | Route Angular `/led` + paramètre `displayType` dans TvComponent (filtre playlist)                          | 5   | PI-2 S4 | Must     | ⏳ Backlog |
-| US-22.1.3 | F-22.1  | Dashboard — configuration site LED (toggle `led_enabled`, `led_resolution`, fallback `hdmi_force_hotplug`) | 3   | PI-2 S4 | Must     | ⏳ Backlog |
-| US-22.2.1 | F-22.2  | Score overlay LED bandeau compact + animations de but spécifiques LED                                      | 5   | PI-2 S4 | Must     | ⏳ Backlog |
-| US-22.2.2 | F-22.2  | Indicateur LED connecté dans la Remote + fallback vidéo LED                                                | 3   | PI-2 S5 | Should   | ⏳ Backlog |
-| US-22.3.1 | F-22.3  | Table `video_variants` + migration DB + API upload variante LED                                            | 5   | PI-2 S5 | Must     | ⏳ Backlog |
-| US-22.3.2 | F-22.3  | Dashboard UI variantes vidéo + déploiement conditionnel par `display_type`                                 | 5   | PI-2 S5 | Must     | ⏳ Backlog |
-| US-22.3.3 | F-22.3  | Adaptation pipeline déploiement (envoi variantes LED si `led_enabled`) + provisioning dual kiosk via OTA   | 5   | PI-2 S5 | Must     | ⏳ Backlog |
+> **Renommage Fév 2026** : LED → Secondary Display. F-22.1, F-22.2 (partiel), F-22.3 livrés en avance de phase.
+> **Décisions 24/02** : F-22.4 GO, F-22.5/F-22.6 à détailler, Fallback PiP NO GO.
+
+| US        | Feature | Description                                                                                          | SP  | Sprint  | Priorité | Statut         |
+| --------- | ------- | ---------------------------------------------------------------------------------------------------- | --- | ------- | -------- | -------------- |
+| US-22.0.1 | F-22.0  | Spike : Pi 5 dual HDMI + 2 flux vidéo + test contrôleur LED + validation détection HDMI DRM/KMS      | 3   | PI-2 S4 | Must     | ⏳ Backlog     |
+| US-22.1.1 | F-22.1  | Config Pi dual HDMI + watchdog dual kiosk avec détection HDMI DRM/KMS                                | 5   | PI-2 S4 | Must     | ✅ Livré       |
+| US-22.1.2 | F-22.1  | Route Angular `/secondary` + paramètre `displayType` dans TvComponent (filtre playlist)              | 5   | PI-2 S4 | Must     | ✅ Livré       |
+| US-22.1.3 | F-22.1  | Dashboard — configuration site secondary display (toggle, résolution, fallback `hdmi_force_hotplug`) | 3   | PI-2 S4 | Must     | ✅ Livré       |
+| US-22.2.1 | F-22.2  | Score overlay secondary bandeau compact + animations de but spécifiques (flash couleur + texte)      | 5   | PI-2 S4 | Must     | ✅ Livré       |
+| US-22.2.2 | F-22.2  | Indicateur écran secondaire connecté dans la Remote + fallback vidéo (`object-fit: cover`)           | 3   | PI-2 S5 | Should   | ⏳ À détailler |
+| US-22.3.1 | F-22.3  | Table `video_variants` + migration DB + API upload variante secondaire                               | 5   | PI-2 S5 | Must     | ✅ Livré       |
+| US-22.3.2 | F-22.3  | Dashboard UI variantes vidéo + déploiement conditionnel par `display_type`                           | 5   | PI-2 S5 | Must     | ✅ Livré       |
+| US-22.3.3 | F-22.3  | Adaptation pipeline déploiement (envoi variantes secondaires si `secondary_display_enabled`) + OTA   | 5   | PI-2 S5 | Must     | ✅ Livré       |
+| US-22.4.1 | F-22.4  | Tests E2E Playwright dual display : 2 routes /tv + /secondary, événements simultanés                 | 5   | PI-2 S5 | Must     | ⏳ Backlog     |
+| US-22.5.1 | F-22.5  | Proposal : architecture pipeline auto-génération variantes vidéo (FFmpeg, formats, crop, coût)       | 2   | TBD     | Should   | ⏳ À détailler |
+| US-22.6.1 | F-22.6  | Spike : analyse usage capture écran + benchmark approches preview live dashboard                     | 2   | TBD     | Could    | ⏳ À détailler |
 
 ---
 
@@ -462,9 +468,9 @@
 | -------------------- | ------- | ---------- |
 | ✅ Done (production) | 178     | ~600+      |
 | ⏳ Backlog PI-1      | 19      | 79         |
-| ⏳ Backlog PI-2      | 12      | 69         |
+| ⏳ Backlog PI-2      | 15      | 78         |
 | ⏳ Backlog PI-3      | 9       | 73         |
-| **Total**            | **218** | **~821+**  |
+| **Total**            | **221** | **~830+**  |
 
 ### Par domaine (Done)
 
@@ -490,9 +496,9 @@
 | PI                    | Epics                                        | US     | SP      |
 | --------------------- | -------------------------------------------- | ------ | ------- |
 | PI-1 (Fév-Mars 2026)  | E-01, E-02, E-03, E-06 + reliquats E-07/E-10 | 19     | 79      |
-| PI-2 (Avr-Mai 2026)   | E-05, E-11, E-15, E-16, E-17                 | 12     | 69      |
+| PI-2 (Avr-Mai 2026)   | E-05, E-11, E-15, E-16, E-17, E-22           | 15     | 78      |
 | PI-3 (Juin-Juil 2026) | E-12, E-13, E-14, E-18, E-19, E-20, E-21     | 9      | 73      |
-| **Total Futur**       | **16 Epics**                                 | **40** | **221** |
+| **Total Futur**       | **16 Epics**                                 | **43** | **230** |
 
 ---
 

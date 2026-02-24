@@ -120,7 +120,9 @@ Moment du match qui détermine **quelle playlist de vidéos est jouée** :
 
 ### LoopVideo
 
-Une **vidéo dans une boucle de phase**. Structure : `{ name, path, type }`.
+Une **vidéo dans une boucle de phase**. Structure : `{ name, path, type, variants? }`.
+
+Le champ `variants` (optionnel) contient les chemins alternatifs par type d'écran : `{ secondary?: string }`. Si une variante `secondary` existe, l'écran secondaire utilisera ce chemin au lieu du `path` principal.
 
 ### CategoryMapping
 
@@ -136,6 +138,18 @@ Une **vidéo dans une boucle de phase**. Structure : `{ name, path, type }`.
 ### RemotePreview
 
 **Simulation visuelle** de la télécommande Pi dans le dashboard central. Permet de voir et tester l'interface de contrôle.
+
+### Écran Secondaire (Secondary Display)
+
+**Sortie HDMI secondaire** du Raspberry Pi, alimentant un écran différent de la TV principale. Peut être un panneau LED bandeau (1920×384), un écran géant, un affichage tribunes, etc. Le terme "secondaire" remplace "LED" (trop restrictif) depuis v3.80.7.
+
+**Architecture** : 2e instance Chromium ouverte sur `/secondary` (HDMI 1), même Angular app avec `displayType='secondary'`. Le watchdog détecte la connexion HDMI 1 via DRM (`/sys/class/drm/card1-HDMI-A-2/status`).
+
+**Config** : `secondaryDisplayEnabled`, `secondaryDisplayResolution` (table `sites`)
+
+**Variantes** : Les vidéos peuvent avoir une variante `display_type='secondary'` dans `video_variants`, adaptée aux dimensions de l'écran secondaire.
+
+**Synonymes historiques** : LED, panneau LED (obsolètes depuis v3.80.7)
 
 ### Double-Buffer Vidéo
 
@@ -283,4 +297,4 @@ Classe abstraite générique fournissant les opérations CRUD communes (findById
 
 ---
 
-_Dernière mise à jour : 17 février 2026_
+_Dernière mise à jour : 24 février 2026_

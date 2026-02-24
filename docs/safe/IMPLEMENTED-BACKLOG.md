@@ -1,6 +1,6 @@
 # Implemented Backlog — Features Livrées
 
-> **Dernière mise à jour** : 23 Février 2026
+> **Dernière mise à jour** : 24 Février 2026
 > Ce document recense **toutes** les features implémentées dans le codebase NEOPRO, organisées par domaine fonctionnel. Il complète le backlog SAFe (futur) avec une vue exhaustive du produit livré.
 > **Source** : Croisement systématique de 34 changelogs, 200+ commits git (v3.47→v3.64), audit codebase, et sprint audit sponsors/analytics (26 features P0+P1+P2+P3).
 
@@ -36,24 +36,24 @@
 
 ## 2. Gestion de Contenu & Vidéo
 
-| ID         | Feature                                                                         | Statut     | Fichiers clés                                                               | Version/Date     |
-| ---------- | ------------------------------------------------------------------------------- | ---------- | --------------------------------------------------------------------------- | ---------------- |
-| IMP-VID-01 | Upload vidéo avec vérification checksum (SHA-256)                               | Production | `content.controller.ts`, `upload-verification.service.ts`                   | 2025             |
-| IMP-VID-02 | Compression vidéo automatique                                                   | Production | `video-compression.service.ts`                                              | 2025             |
-| IMP-VID-03 | Conversion image vers vidéo (ffmpeg, JPG/PNG/WEBP → MP4)                        | Production | `image-to-video.service.ts`                                                 | v2.44.0 Jan 2026 |
-| IMP-VID-04 | Conversion image vers vidéo : option fond flouté                                | Production | `image-to-video.service.ts`                                                 | Jan 2026         |
-| IMP-VID-05 | Miniatures automatiques                                                         | Production | `thumbnail.service.ts`                                                      | 2025             |
-| IMP-VID-06 | Stockage unifié FTP (Hostinger)                                                 | Production | `storage.service.ts`                                                        | 2025             |
-| IMP-VID-07 | Versioning brouillon de config (sauvegarder avant déployer)                     | Production | `draft.service.ts`, `drafts.controller.ts`                                  | Déc 2025         |
-| IMP-VID-08 | Gestion des assets (logos, images)                                              | Production | `assets.controller.ts`, `asset.service.ts`                                  | 2025             |
-| IMP-VID-09 | Pagination côté serveur pour listing vidéos                                     | Production | `content.controller.ts`                                                     | v3.56.0          |
-| IMP-VID-10 | Prévisualisation vidéo dans page gestion contenu                                | Production | `content-management.component.ts`                                           | 2025             |
-| IMP-VID-11 | Historique config avec détail dépliable et restauration                         | Production | `config-history.component.ts`                                               | v3.57.0          |
-| IMP-VID-12 | Restructuration UX onglet Contenu (ADR-022, P0→P3)                              | Production | `content-tab.component.ts`                                                  | 2026             |
-| IMP-VID-13 | Historique des modifications dans onglet Contenu (P3-3)                         | Production | -                                                                           | 2026             |
-| IMP-VID-14 | Variantes vidéo par type d'écran (table `video_variants`, API CRUD, upload LED) | Livré      | `video-variant.repository.ts`, `content.controller.ts`, `content.routes.ts` | Fév 2026         |
-| IMP-VID-15 | Dashboard gestion variantes vidéo LED (panel upload/delete par vidéo)           | Livré      | `video-variant-panel.component.ts`, `content-management.component.ts`       | Fév 2026         |
-| IMP-VID-16 | Déploiement conditionnel variantes LED (pipeline + sync-agent)                  | Livré      | `deployment.service.ts`, `deploy-video.js`                                  | Fév 2026         |
+| ID         | Feature                                                                               | Statut     | Fichiers clés                                                               | Version/Date     |
+| ---------- | ------------------------------------------------------------------------------------- | ---------- | --------------------------------------------------------------------------- | ---------------- |
+| IMP-VID-01 | Upload vidéo avec vérification checksum (SHA-256)                                     | Production | `content.controller.ts`, `upload-verification.service.ts`                   | 2025             |
+| IMP-VID-02 | Compression vidéo automatique                                                         | Production | `video-compression.service.ts`                                              | 2025             |
+| IMP-VID-03 | Conversion image vers vidéo (ffmpeg, JPG/PNG/WEBP → MP4)                              | Production | `image-to-video.service.ts`                                                 | v2.44.0 Jan 2026 |
+| IMP-VID-04 | Conversion image vers vidéo : option fond flouté                                      | Production | `image-to-video.service.ts`                                                 | Jan 2026         |
+| IMP-VID-05 | Miniatures automatiques                                                               | Production | `thumbnail.service.ts`                                                      | 2025             |
+| IMP-VID-06 | Stockage unifié FTP (Hostinger)                                                       | Production | `storage.service.ts`                                                        | 2025             |
+| IMP-VID-07 | Versioning brouillon de config (sauvegarder avant déployer)                           | Production | `draft.service.ts`, `drafts.controller.ts`                                  | Déc 2025         |
+| IMP-VID-08 | Gestion des assets (logos, images)                                                    | Production | `assets.controller.ts`, `asset.service.ts`                                  | 2025             |
+| IMP-VID-09 | Pagination côté serveur pour listing vidéos                                           | Production | `content.controller.ts`                                                     | v3.56.0          |
+| IMP-VID-10 | Prévisualisation vidéo dans page gestion contenu                                      | Production | `content-management.component.ts`                                           | 2025             |
+| IMP-VID-11 | Historique config avec détail dépliable et restauration                               | Production | `config-history.component.ts`                                               | v3.57.0          |
+| IMP-VID-12 | Restructuration UX onglet Contenu (ADR-022, P0→P3)                                    | Production | `content-tab.component.ts`                                                  | 2026             |
+| IMP-VID-13 | Historique des modifications dans onglet Contenu (P3-3)                               | Production | -                                                                           | 2026             |
+| IMP-VID-14 | Variantes vidéo par type d'écran (table `video_variants`, API CRUD, upload secondary) | Production | `video-variant.repository.ts`, `content.controller.ts`, `content.routes.ts` | Fév 2026         |
+| IMP-VID-15 | Dashboard gestion variantes vidéo écran secondaire (panel upload/delete par vidéo)    | Production | `video-variant-panel.component.ts`, `content-management.component.ts`       | Fév 2026         |
+| IMP-VID-16 | Déploiement conditionnel variantes écran secondaire (pipeline + sync-agent)           | Production | `deployment.service.ts`, `deploy-video.js`                                  | Fév 2026         |
 
 ---
 
@@ -168,9 +168,9 @@
 | IMP-PI-20 | Chromium → chromium (compat Raspberry Pi OS Trixie)                                  | Production | `kiosk.sh`                                                   | Déc 2025     |
 | IMP-PI-21 | Programmation boucle vidéo par phase match (pré/pendant/post)                        | Production | `loop-scheduler.js`                                          | Déc 2025     |
 | IMP-PI-22 | Installation apt sécurisée via sudoers ciblé (pas de NoNewPrivileges)                | Production | `sudoers`                                                    | 2026         |
-| IMP-PI-23 | Dual Kiosk HDMI : route `/led` + `displayType` dans TvComponent                      | Livré      | `app.routes.ts`, `tv.component.ts`                           | Fév 2026     |
-| IMP-PI-24 | Watchdog dual Chromium LED (détection HDMI 1 DRM/KMS, auto start/stop)               | Livré      | `kiosk-watchdog.sh`                                          | Fév 2026     |
-| IMP-PI-25 | Overlays LED : score bandeau compact + goal flash couleur par équipe                 | Livré      | `tv.component.html`, `tv.component.scss`                     | Fév 2026     |
+| IMP-PI-23 | Dual Kiosk HDMI : route `/secondary` + `displayType` dans TvComponent                | Production | `app.routes.ts`, `tv.component.ts`                           | Fév 2026     |
+| IMP-PI-24 | Watchdog dual Chromium secondary (détection HDMI 1 DRM/KMS, auto start/stop)         | Production | `kiosk-watchdog.sh`                                          | Fév 2026     |
+| IMP-PI-25 | Overlays secondary : score bandeau compact + goal flash couleur par équipe           | Production | `tv.component.html`, `tv.component.scss`                     | Fév 2026     |
 | IMP-PI-26 | Socket.IO `tv-register` avec `displayType` (master-slave par écran)                  | Livré      | `state.service.js`, `handlers.js`                            | Fév 2026     |
 | IMP-PI-27 | Kiosk : attente active X11 avant lancement Chromium (xdpyinfo polling)               | Production | `kiosk-watchdog.sh`, `neopro-kiosk.service`                  | Fév 2026     |
 | IMP-PI-28 | Hotspot : scan WiFi sur wlan1 (plus wlan0 AP) — corrige SSID invisible               | Production | `hotspot-optimizer.sh`                                       | Fév 2026     |
@@ -238,31 +238,31 @@
 
 ## 10. Administration & Infrastructure
 
-| ID         | Feature                                                                | Statut     | Fichiers clés                    | Version/Date |
-| ---------- | ---------------------------------------------------------------------- | ---------- | -------------------------------- | ------------ |
-| IMP-ADM-01 | Système de jobs admin (build, deploy, sync, maintenance)               | Production | `admin-ops.service.ts`           | 2025         |
-| IMP-ADM-02 | Télécommande cloud (protégée par PIN, rate-limited)                    | Production | `remote.controller.ts`           | 2025         |
-| IMP-ADM-03 | Groupes de sites (regroupement logique)                                | Production | `groups.controller.ts`           | 2025         |
-| IMP-ADM-04 | Email transactionnel (alertes, reset, notifications)                   | Production | `email.service.ts`               | Déc 2025     |
-| IMP-ADM-05 | Gestionnaire mémoire (prévention fuites mémoire)                       | Production | `memory-manager.service.ts`      | 2025         |
-| IMP-ADM-06 | Cache mémoire (TTL 60s)                                                | Production | `memory-cache.service.ts`        | 2025         |
-| IMP-ADM-07 | Nettoyage automatique rétention données                                | Production | `add-data-retention-cleanup.sql` | 2025         |
-| IMP-ADM-08 | Slugs URL de site (URLs lisibles)                                      | Production | `add-hostname-slug.sql`          | 2025         |
-| IMP-ADM-09 | Repository pattern 100% (24 repositories, ESLint bloquant)             | Production | `base.repository.ts` + 23 repos  | Déc 2025     |
-| IMP-ADM-10 | Documentation OpenAPI Swagger (30+ endpoints)                          | Production | `server.ts` (swagger-ui-express) | Déc 2025     |
-| IMP-ADM-11 | Vue carte des sites (Leaflet, statut temps réel)                       | Production | `sites-map.component.ts`         | 2025         |
-| IMP-ADM-12 | Bundle de diagnostic (logs kernel dmesg, lsusb, logs étendus 24h)      | Production | `debug-bundle.sh`                | 2026         |
-| IMP-ADM-13 | Générateur QR code avec bouton accès télécommande cloud                | Production | `qr-code.component.ts`           | 2026         |
-| IMP-ADM-14 | Télécommande cloud : vue live TV + monitoring état lecteur             | Production | `remote.controller.ts`           | 2026         |
-| IMP-ADM-15 | Télécommande cloud : affichage licence + indicateur REC                | Production | `remote.component.ts`            | 2026         |
-| IMP-ADM-16 | Télécommande cloud : relais capture écran HTTP                         | Production | `remote.controller.ts`           | 2026         |
-| IMP-ADM-17 | Onglet profils dans détail site : interface multi-config               | Production | `profiles.component.ts`          | 2026         |
-| IMP-ADM-18 | Modal de suppression UX + paramètres suppression Pi                    | Production | `site-detail.component.ts`       | 2026         |
-| IMP-ADM-19 | Suppression vidéo cloud/Pi (bibliothèque vidéo)                        | Production | `content.controller.ts`          | 2026         |
-| IMP-ADM-20 | Planifications récurrentes cron (quotidien/hebdo/mensuel/personnalisé) | Production | `cron-scheduler.service.ts`      | Déc 2025     |
-| IMP-ADM-21 | Rate-limit analytics Pi (500 req/min)                                  | Production | `rate-limit.middleware.ts`       | 2025         |
-| IMP-ADM-22 | Auto-sync versions sous-paquets raspberry à la release                 | Production | `release.sh`                     | 2026         |
-| IMP-ADM-23 | Paramètres site LED (toggle `led_enabled`, dropdown `led_resolution`)  | Livré      | `site-settings-tab.component.ts` | Fév 2026     |
+| ID         | Feature                                                                                                        | Statut     | Fichiers clés                    | Version/Date |
+| ---------- | -------------------------------------------------------------------------------------------------------------- | ---------- | -------------------------------- | ------------ |
+| IMP-ADM-01 | Système de jobs admin (build, deploy, sync, maintenance)                                                       | Production | `admin-ops.service.ts`           | 2025         |
+| IMP-ADM-02 | Télécommande cloud (protégée par PIN, rate-limited)                                                            | Production | `remote.controller.ts`           | 2025         |
+| IMP-ADM-03 | Groupes de sites (regroupement logique)                                                                        | Production | `groups.controller.ts`           | 2025         |
+| IMP-ADM-04 | Email transactionnel (alertes, reset, notifications)                                                           | Production | `email.service.ts`               | Déc 2025     |
+| IMP-ADM-05 | Gestionnaire mémoire (prévention fuites mémoire)                                                               | Production | `memory-manager.service.ts`      | 2025         |
+| IMP-ADM-06 | Cache mémoire (TTL 60s)                                                                                        | Production | `memory-cache.service.ts`        | 2025         |
+| IMP-ADM-07 | Nettoyage automatique rétention données                                                                        | Production | `add-data-retention-cleanup.sql` | 2025         |
+| IMP-ADM-08 | Slugs URL de site (URLs lisibles)                                                                              | Production | `add-hostname-slug.sql`          | 2025         |
+| IMP-ADM-09 | Repository pattern 100% (24 repositories, ESLint bloquant)                                                     | Production | `base.repository.ts` + 23 repos  | Déc 2025     |
+| IMP-ADM-10 | Documentation OpenAPI Swagger (30+ endpoints)                                                                  | Production | `server.ts` (swagger-ui-express) | Déc 2025     |
+| IMP-ADM-11 | Vue carte des sites (Leaflet, statut temps réel)                                                               | Production | `sites-map.component.ts`         | 2025         |
+| IMP-ADM-12 | Bundle de diagnostic (logs kernel dmesg, lsusb, logs étendus 24h)                                              | Production | `debug-bundle.sh`                | 2026         |
+| IMP-ADM-13 | Générateur QR code avec bouton accès télécommande cloud                                                        | Production | `qr-code.component.ts`           | 2026         |
+| IMP-ADM-14 | Télécommande cloud : vue live TV + monitoring état lecteur                                                     | Production | `remote.controller.ts`           | 2026         |
+| IMP-ADM-15 | Télécommande cloud : affichage licence + indicateur REC                                                        | Production | `remote.component.ts`            | 2026         |
+| IMP-ADM-16 | Télécommande cloud : relais capture écran HTTP                                                                 | Production | `remote.controller.ts`           | 2026         |
+| IMP-ADM-17 | Onglet profils dans détail site : interface multi-config                                                       | Production | `profiles.component.ts`          | 2026         |
+| IMP-ADM-18 | Modal de suppression UX + paramètres suppression Pi                                                            | Production | `site-detail.component.ts`       | 2026         |
+| IMP-ADM-19 | Suppression vidéo cloud/Pi (bibliothèque vidéo)                                                                | Production | `content.controller.ts`          | 2026         |
+| IMP-ADM-20 | Planifications récurrentes cron (quotidien/hebdo/mensuel/personnalisé)                                         | Production | `cron-scheduler.service.ts`      | Déc 2025     |
+| IMP-ADM-21 | Rate-limit analytics Pi (500 req/min)                                                                          | Production | `rate-limit.middleware.ts`       | 2025         |
+| IMP-ADM-22 | Auto-sync versions sous-paquets raspberry à la release                                                         | Production | `release.sh`                     | 2026         |
+| IMP-ADM-23 | Paramètres site écran secondaire (toggle `secondary_display_enabled`, dropdown `secondary_display_resolution`) | Production | `site-settings-tab.component.ts` | Fév 2026     |
 
 ---
 
@@ -348,32 +348,32 @@
 
 ## Statistiques Produit
 
-| Métrique                  | Valeur                                                                                                                                                                                         |
-| ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Features implémentées** | **230** (+26 audit, +8 E-22 TV+LED dual, +6 sponsor UX, +2 résilience Pi/OTA, +3 hotspot WiFi, +3 debug page, +1 EDID enrichment, +1 dashboard EDID display, +1 OTA edid-decode, +1 sysfs fix) |
-| Domaines fonctionnels     | 14                                                                                                                                                                                             |
-| Controllers API           | 29 (+sponsor-alerts)                                                                                                                                                                           |
-| Services métier           | 40 (+sponsor-alert, sponsor-stats, sponsor-auto-resolution)                                                                                                                                    |
-| Repositories              | 25 (+video-variant)                                                                                                                                                                            |
-| Migrations DB             | 54 (+add-led-support-and-video-variants)                                                                                                                                                       |
-| Modules dashboard         | 21 (+advertiser-health, analytics-categories)                                                                                                                                                  |
-| Services Raspberry        | 19 (+sponsor-stats)                                                                                                                                                                            |
-| Versions publiées         | 265+ (v2.1 → v3.62)                                                                                                                                                                            |
-| Tests (total)             | 2 386 (1590 API + 506 Angular + 148 Admin + 71 Socket + 142 Smoke)                                                                                                                             |
+| Métrique                  | Valeur                                                                                                                                                                                               |
+| ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Features implémentées** | **230** (+26 audit, +8 E-22 TV+Secondary dual, +6 sponsor UX, +2 résilience Pi/OTA, +3 hotspot WiFi, +3 debug page, +1 EDID enrichment, +1 dashboard EDID display, +1 OTA edid-decode, +1 sysfs fix) |
+| Domaines fonctionnels     | 14                                                                                                                                                                                                   |
+| Controllers API           | 29 (+sponsor-alerts)                                                                                                                                                                                 |
+| Services métier           | 40 (+sponsor-alert, sponsor-stats, sponsor-auto-resolution)                                                                                                                                          |
+| Repositories              | 25 (+video-variant)                                                                                                                                                                                  |
+| Migrations DB             | 55 (+add-led-support-and-video-variants, +rename-led-to-secondary-display)                                                                                                                           |
+| Modules dashboard         | 21 (+advertiser-health, analytics-categories)                                                                                                                                                        |
+| Services Raspberry        | 19 (+sponsor-stats)                                                                                                                                                                                  |
+| Versions publiées         | 265+ (v2.1 → v3.62)                                                                                                                                                                                  |
+| Tests (total)             | 2 386 (1590 API + 506 Angular + 148 Admin + 71 Socket + 142 Smoke)                                                                                                                                   |
 
 ---
 
 ## Mapping vers Epics SAFe (Terminés)
 
-| Epic SAFe                          | Features implémentées                    | Domaines                            |
-| ---------------------------------- | ---------------------------------------- | ----------------------------------- |
-| E-04 Profils Config Match          | IMP-PI-04, IMP-ADM-17                    | Raspberry Pi, Admin                 |
-| E-07 Résilience WiFi (partiel)     | IMP-NET-07→14                            | Réseau & Sync                       |
-| E-08 Alertes Prédictives           | IMP-ALR-02, IMP-ALR-06→22                | Monitoring                          |
-| E-09 Architecture Audit            | IMP-ADM-09, IMP-DOC-01                   | Admin, Documentation                |
-| E-10 Monitoring Fleet (partiel)    | IMP-ALR-16→19, IMP-ANA-14                | Monitoring, Analytics               |
-| Audit Sponsors & Analytics         | IMP-AUD-01→32 (32 features, 93 SP)       | Analytics, Sponsors, Pi, Monitoring |
-| E-22 TV + LED Dual (F-22.1+F-22.3) | IMP-VID-14→16, IMP-PI-23→26 (7 features) | Vidéo, Raspberry Pi, Dashboard      |
+| Epic SAFe                                | Features implémentées                    | Domaines                            |
+| ---------------------------------------- | ---------------------------------------- | ----------------------------------- |
+| E-04 Profils Config Match                | IMP-PI-04, IMP-ADM-17                    | Raspberry Pi, Admin                 |
+| E-07 Résilience WiFi (partiel)           | IMP-NET-07→14                            | Réseau & Sync                       |
+| E-08 Alertes Prédictives                 | IMP-ALR-02, IMP-ALR-06→22                | Monitoring                          |
+| E-09 Architecture Audit                  | IMP-ADM-09, IMP-DOC-01                   | Admin, Documentation                |
+| E-10 Monitoring Fleet (partiel)          | IMP-ALR-16→19, IMP-ANA-14                | Monitoring, Analytics               |
+| Audit Sponsors & Analytics               | IMP-AUD-01→32 (32 features, 93 SP)       | Analytics, Sponsors, Pi, Monitoring |
+| E-22 TV + Secondary Dual (F-22.1→F-22.3) | IMP-VID-14→16, IMP-PI-23→26 (7 features) | Vidéo, Raspberry Pi, Dashboard      |
 
 ---
 

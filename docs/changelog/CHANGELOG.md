@@ -33,6 +33,25 @@
 - **prometheus:** alerte `SecondaryDisplayConfigDrift` — détecte quand `secondaryDisplayEnabled=true` en DB
   mais aucune variante secondaire n'est déployée pour les vidéos du site
 
+### Documentation & Planification (E-22 Session Décisions)
+
+- **safe:** décisions GO/NO-GO sur 6 axes E-22 — 3 GO, 2 à détailler, 1 NO GO
+  - **GO** : F-22.0 Hardware Spike, F-22.4 Tests E2E Dual Display, US-22.2.2 Indicateur Remote
+  - **À détailler** : F-22.5 Auto-génération variantes vidéo (FFmpeg), F-22.6 Preview live Dashboard
+  - **NO GO** : Fallback intelligent (si HDMI déconnecté → 2nd Chromium ne s'ouvre pas, pas de fallback nécessaire)
+- **docs:** 5 deliverables produits :
+  - `SPIKE-001` — plan de test hardware validation dual HDMI Pi 5
+  - `SPEC-US-22.2.2` — design indicateur écran secondaire dans Remote (pill verte/grise)
+  - `PROP-010` — auto-génération variantes vidéo via FFmpeg (centre-crop, 13 SP)
+  - `SPIKE-002` — analyse preview live dashboard (3 approches : screenshot amélioré vs WebRTC vs SSE)
+  - `dual-display.spec.ts` — 9 tests E2E Playwright pour routes `/tv` et `/secondary`
+- **smoke:** ajout guards anti-régression pour route `/secondary`, variantes vidéo, et LoopVideo type
+
+### Sync Documentation
+
+- **docs:** synchronisation ARCHITECTURE.md, REFERENCE.md, IMPLEMENTED-BACKLOG.md, GLOSSARY.md
+  avec le renommage LED → Secondary Display et les nouvelles routes/features E-22
+
 ## [3.80.7](https://github.com/Tallec7/neopro/compare/v3.80.6...v3.80.7) (2026-02-24)
 
 ### Bug Fixes

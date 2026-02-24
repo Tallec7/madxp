@@ -48,7 +48,8 @@ Raspberry Pi (neopro-<club>.local / 192.168.4.1)
 ├── Port 80 (nginx)
 │   └── Application Angular (dist/neopro/browser/)
 │       ├── /login       - Page de connexion
-│       ├── /tv          - Mode TV (protégé)
+│       ├── /tv          - Mode TV principal (protégé)
+│       ├── /secondary   - Mode écran secondaire (protégé)
 │       └── /remote      - Télécommande (protégé)
 │
 ├── Port 3000 (Node.js)
