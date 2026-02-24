@@ -190,6 +190,7 @@ start_chromium() {
         --disable-checker-imaging
         --disk-cache-size=1
         --aggressive-cache-discard
+        --password-store=basic
     )
 
     # Flags spécifiques au modèle
@@ -279,6 +280,7 @@ start_chromium_led() {
         --disable-checker-imaging
         --disk-cache-size=1
         --aggressive-cache-discard
+        --password-store=basic
         --user-data-dir=/tmp/kiosk-led
         --window-position=1920,0
     )
