@@ -4,8 +4,9 @@
 
 [Unit]
 Description=Neopro Kiosk Mode (TV Display) with Watchdog
-After=graphical.target neopro-app.service
+After=graphical.target neopro-app.service nginx.service
 Wants=graphical.target
+Requires=nginx.service
 
 [Service]
 Type=simple

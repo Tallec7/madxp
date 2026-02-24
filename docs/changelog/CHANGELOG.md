@@ -1,3 +1,17 @@
+## [3.80.0](https://github.com/Tallec7/neopro/compare/v3.79.1...v3.80.0) (2026-02-24)
+
+### Bug Fixes
+
+- **kiosk:** ancienne version Angular affichée au boot — Chromium conservait des données dans des sous-dossiers du profil non nettoyés (Session Storage, IndexedDB, Local Storage, HTTP cache sérialisé). Purge complète du profil Chromium à chaque restart (`rm -rf ~/.cache/chromium ~/.config/chromium`) au lieu de sous-dossiers individuels
+- **kiosk:** race condition au boot — Chromium pouvait démarrer avant Nginx et charger du contenu depuis son cache interne. Ajout `Requires=nginx.service` + `After=nginx.service` dans `neopro-kiosk.service`
+- **kiosk:** spam D-Bus dans journalctl — erreurs "Failed to connect to the bus" toutes les ~6 secondes. Lancement d'une session D-Bus minimale avant Chromium via `dbus-launch`
+
+### Chores
+
+- **smoke:** adapter le test de purge cache au nettoyage complet du profil Chromium
+- **smoke:** ajouter garde-fou vérifiant la dépendance `nginx.service` dans `neopro-kiosk.service`
+- **docs:** ajouter troubleshooting "TV affiche une ancienne version au boot"
+
 ## [3.79.1](https://github.com/Tallec7/neopro/compare/v3.79.0...v3.79.1) (2026-02-24)
 
 ### Bug Fixes

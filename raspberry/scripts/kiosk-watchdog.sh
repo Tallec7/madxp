@@ -127,14 +127,12 @@ cleanup_chromium() {
     # Attendre que les processus se terminent
     sleep 2
 
-    # Vider TOUT le cache Chromium (HTTP cache, code cache, GPU cache, SW cache)
-    # Empêche l'affichage d'une ancienne version de l'app Angular au boot
-    rm -rf /home/pi/.cache/chromium/Default/Cache 2>/dev/null || true
-    rm -rf /home/pi/.cache/chromium/Default/Code\ Cache 2>/dev/null || true
-    rm -rf /home/pi/.config/chromium/Default/GPUCache 2>/dev/null || true
-    rm -rf /home/pi/.config/chromium/Default/Cache 2>/dev/null || true
-    rm -rf /home/pi/.config/chromium/Default/Service\ Worker 2>/dev/null || true
-    rm -rf /home/pi/.config/chromium/Default/Application\ Cache 2>/dev/null || true
+    # Purger l'intégralité du profil Chromium (mode kiosk = aucun état persistant)
+    # Corrige le bug d'ancienne version affichée au boot : Chromium conservait
+    # des données dans des sous-dossiers non nettoyés (Session Storage, IndexedDB,
+    # Local Storage, HTTP cache in-memory sérialisé, etc.)
+    rm -rf /home/pi/.cache/chromium 2>/dev/null || true
+    rm -rf /home/pi/.config/chromium 2>/dev/null || true
     rm -rf /tmp/kiosk-led 2>/dev/null || true
 
     # Synchroniser les écritures disque
@@ -442,10 +440,46 @@ main() {
         # Continuer quand même — le watchdog loop réessayera
     fi
 
+    # Lancer un D-Bus session minimal si absent (évite le spam d'erreurs
+    # "Failed to connect to the bus" dans journalctl — Chromium fonctionne
+    # sans D-Bus mais log des erreurs toutes les ~6 secondes)
+    if [ -z "$DBUS_SESSION_BUS_ADDRESS" ]; then
+        if command -v dbus-launch &> /dev/null; then
+            eval "$(dbus-launch --sh-syntax)" 2>/dev/null || true
+            log "✓ D-Bus session lancé (PID: ${DBUS_SESSION_BUS_PID:-?})"
+        fi
+    fi
+
     # Premier démarrage
     cleanup_chromium
     sleep 2
     start_chromium
+
+    # Vérifier que Nginx sert la bonne version (détection version stale)
+    # Attend 5s que Chromium charge, puis compare la version servie vs fichier disque
+    (
+        sleep 10
+        local disk_version=""
+        local served_version=""
+        if [ -f "${NEOPRO_DIR:-/home/pi/neopro}/webapp/version.json" ]; then
+            disk_version=$(python3 -c "import json; print(json.load(open('${NEOPRO_DIR:-/home/pi/neopro}/webapp/version.json'))['version'])" 2>/dev/null || echo "")
+        fi
+        served_version=$(curl -s --max-time 5 http://neopro.local/version.json 2>/dev/null | python3 -c "import json,sys; print(json.load(sys.stdin)['version'])" 2>/dev/null || echo "")
+
+        if [ -n "$disk_version" ] && [ -n "$served_version" ]; then
+            if [ "$disk_version" != "$served_version" ]; then
+                log "⚠️ VERSION MISMATCH: disque=$disk_version, servie=$served_version — Chromium affiche une ancienne version!"
+                log "🔄 Forçage du restart kiosk pour charger la bonne version..."
+                cleanup_chromium
+                sleep 2
+                start_chromium
+            else
+                log "✓ Version cohérente: $disk_version"
+            fi
+        elif [ -n "$disk_version" ] && [ -z "$served_version" ]; then
+            log "⚠️ Nginx ne sert pas version.json — vérifier que nginx est actif"
+        fi
+    ) &
 
     # Lire la config LED et lancer le Chromium LED si nécessaire
     read_led_enabled
@@ -505,6 +539,6 @@ main() {
 }
 
 # Gestion des signaux pour un arrêt propre
-trap 'log "Arrêt du watchdog..."; stop_chromium_led; cleanup_chromium; exit 0' SIGTERM SIGINT
+trap 'log "Arrêt du watchdog..."; stop_chromium_led; cleanup_chromium; [ -n "$DBUS_SESSION_BUS_PID" ] && kill "$DBUS_SESSION_BUS_PID" 2>/dev/null; exit 0' SIGTERM SIGINT
 
 main "$@"

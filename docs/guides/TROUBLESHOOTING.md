@@ -784,6 +784,42 @@ sudo systemctl restart neopro-kiosk
 
 Le script `install.sh` détecte maintenant automatiquement le bon chemin. Pour en bénéficier :
 
+#### TV affiche une ancienne version au boot (v3.80+)
+
+**Symptômes :**
+
+- Au boot, l'écran TV affiche une ancienne version de l'app Angular (features supprimées réapparaissent : score overlay, encart noir, etc.)
+- Un `systemctl restart neopro-kiosk` corrige le problème
+- `cat /home/pi/neopro/webapp/version.json` montre la bonne version (les fichiers sur disque sont à jour)
+
+**Cause :** Chromium conservait des données dans des sous-dossiers du profil non nettoyés au boot (Session Storage, IndexedDB, Local Storage, HTTP cache sérialisé). De plus, le service kiosk pouvait démarrer avant Nginx, forçant Chromium à charger du contenu depuis son cache interne.
+
+**Correction (appliquée en v3.80) :**
+
+1. **Purge complète du profil Chromium** : `rm -rf ~/.cache/chromium ~/.config/chromium` au lieu de sous-dossiers individuels (mode kiosk = aucun état persistant nécessaire)
+2. **Dépendance systemd** : `Requires=nginx.service` + `After=nginx.service` ajoutés à `neopro-kiosk.service`
+3. **Smoke test** : vérifie que la purge complète et la dépendance nginx sont présentes
+
+**Diagnostic sur un Pi non mis à jour :**
+
+```bash
+# Vérifier la version affichée vs la version sur disque
+cat /home/pi/neopro/webapp/version.json
+
+# Vérifier que nginx est dans les dépendances du kiosk
+grep nginx /etc/systemd/system/neopro-kiosk.service
+
+# Vérifier que la purge complète est dans le watchdog
+grep -c 'rm -rf /home/pi/.config/chromium ' /home/pi/neopro/scripts/kiosk-watchdog.sh
+# Attendu: 1 (purge complète). Si 0: ancienne version avec nettoyage partiel
+```
+
+**Fix manuel (Pi non encore mis à jour) :**
+
+```bash
+sudo systemctl restart neopro-kiosk
+```
+
 #### TV noire — "X server not ready after 60s" (v3.72+)
 
 **Symptômes :**

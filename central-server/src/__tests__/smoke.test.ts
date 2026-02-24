@@ -1785,24 +1785,50 @@ describe('Kiosk watchdog cache management', () => {
     'utf8'
   );
 
-  it('kiosk-watchdog.sh must clear all Chromium cache directories', () => {
-    // Incomplete cache clearing causes old Angular builds to persist and display at boot
-    const requiredPaths = [
-      '.cache/chromium/Default/Cache',
-      '.cache/chromium/Default/Code',   // Code Cache
-      '.config/chromium/Default/GPUCache',
-      '.config/chromium/Default/Cache',
-      '.config/chromium/Default/Service',  // Service Worker
-      '.config/chromium/Default/Application', // Application Cache
+  it('kiosk-watchdog.sh must purge entire Chromium profile (not just subdirectories)', () => {
+    // Purging only specific subdirectories left stale data in Session Storage,
+    // IndexedDB, Local Storage etc., causing old Angular builds to persist at boot.
+    // Full profile purge is safe because kiosk mode needs no persistent state.
+    const requiredPurges = [
+      '.cache/chromium',   // All Chromium cache (HTTP, Code, etc.)
+      '.config/chromium',  // All Chromium profile (Session, IndexedDB, Local Storage, etc.)
     ];
-    const missing = requiredPaths.filter(p => !watchdog.includes(p));
-    expect({ missingCachePaths: missing }).toEqual({ missingCachePaths: [] });
+    const missing = requiredPurges.filter(p => !watchdog.includes(`rm -rf /home/pi/${p}`));
+    expect({ missingProfilePurges: missing }).toEqual({ missingProfilePurges: [] });
   });
 
   it('kiosk-watchdog.sh must have --disk-cache-size flag on main Chromium', () => {
     // Without this flag, Chromium accumulates stale cached builds
     expect({ hasDiskCacheSize: /--disk-cache-size=\d+/.test(watchdog) })
       .toEqual({ hasDiskCacheSize: true });
+  });
+
+  it('kiosk-watchdog.sh must launch D-Bus session before Chromium', () => {
+    // Without a D-Bus session, Chromium spams journalctl with
+    // "Failed to connect to the bus" errors every ~6 seconds
+    expect({ hasDbusLaunch: watchdog.includes('dbus-launch') })
+      .toEqual({ hasDbusLaunch: true });
+  });
+});
+
+describe('neopro-kiosk.service must depend on nginx', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+  const kioskService = fs.readFileSync(
+    path.join(repoRoot, 'raspberry/config/systemd/neopro-kiosk.service'),
+    'utf8'
+  );
+
+  it('neopro-kiosk.service must have After=nginx.service', () => {
+    // Without this, Chromium can start before Nginx and load stale cached content
+    // Incident: 24/02/2026 — old Angular version displayed at every boot
+    expect({ hasAfterNginx: kioskService.includes('nginx.service') })
+      .toEqual({ hasAfterNginx: true });
+  });
+
+  it('neopro-kiosk.service must Require nginx.service', () => {
+    // Ensures kiosk won't start if nginx fails to start
+    expect({ hasRequiresNginx: /Requires=.*nginx\.service/.test(kioskService) })
+      .toEqual({ hasRequiresNginx: true });
   });
 });
 
