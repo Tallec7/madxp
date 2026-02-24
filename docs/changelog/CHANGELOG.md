@@ -1,3 +1,9 @@
+## [3.80.7](https://github.com/Tallec7/neopro/compare/v3.80.6...v3.80.7) (2026-02-24)
+
+### Bug Fixes
+
+- **admin:** restore applyServices() lost during build — add to source modules ([254b996](https://github.com/Tallec7/neopro/commit/254b9968b9f602a10b97ed364b3c515fc111fb75))
+
 ## [3.80.6](https://github.com/Tallec7/neopro/compare/v3.80.5...v3.80.6) (2026-02-24)
 
 ### Bug Fixes
