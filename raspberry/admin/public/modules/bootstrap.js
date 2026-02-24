@@ -218,6 +218,7 @@ window.confirmAction = confirmAction;
 window.closeModal = closeModal;
 window.closeEditModal = closeEditModal;
 window.restartService = restartService;
+window.applyServices = applyServices;
 window.refreshNetwork = refreshNetwork;
 window.refreshLogs = refreshLogs;
 window.refreshCategories = refreshCategories;

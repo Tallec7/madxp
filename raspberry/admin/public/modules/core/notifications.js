@@ -28,6 +28,30 @@ async function restartService(service) {
     }
 }
 
+async function applyServices() {
+    if (!confirm('Appliquer les services systemd (daemon-reload + copie des fichiers .service) ?')) {
+        return;
+    }
+
+    try {
+        const response = await fetch('/api/system/apply-services', {
+            method: 'POST'
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            const applied = data.applied && data.applied.length > 0 ? data.applied.join(', ') : 'aucun changement';
+            showNotification(`Services appliqués: ${applied}`, 'success');
+            setTimeout(() => loadDashboard(), 2000);
+        } else {
+            showNotification('Erreur: ' + data.error, 'error');
+        }
+    } catch (error) {
+        showNotification("Erreur lors de l'application des services", 'error');
+    }
+}
+
 function confirmAction(action) {
     const modal = document.getElementById('modal');
     const title = document.getElementById('modal-title');
