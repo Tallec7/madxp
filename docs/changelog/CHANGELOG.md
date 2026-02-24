@@ -1,3 +1,9 @@
+## [3.80.8](https://github.com/Tallec7/neopro/compare/v3.80.7...v3.80.8) (2026-02-24)
+
+### Bug Fixes
+
+- **raspberry:** rename variants.led → variants.secondary in LoopVideo type ([#425](https://github.com/Tallec7/neopro/issues/425)) ([a702a2c](https://github.com/Tallec7/neopro/commit/a702a2c5742b5d30b3495cccab153b1e2ac57444))
+
 ## [Unreleased]
 
 ### Bug Fixes
