@@ -126,14 +126,33 @@ too_many_crashes() {
 # Nettoyer les processus Chromium zombies
 cleanup_chromium() {
     log "🧹 Nettoyage des processus Chromium..."
-    pkill -9 -f "chromium" 2>/dev/null || true
-    pkill -9 -f "chrome" 2>/dev/null || true
     SECONDARY_CHROMIUM_PID=0
 
-    # Attendre que les processus se terminent
-    sleep 2
+    # Phase 1: Arrêt gracieux (SIGTERM) — laisse Chromium libérer les ressources GPU
+    # Sur Pi 5, le driver V3D Mesa a besoin de ce cleanup pour libérer les DMA buffers,
+    # shaders et mémoire GPU. Un SIGKILL direct laisse le GPU dans un état inconsistant,
+    # causant des crashes/boucles au prochain lancement (VSync errors, rendering freeze).
+    if pgrep -f "chromium" > /dev/null 2>&1; then
+        pkill -TERM -f "chromium" 2>/dev/null || true
+        pkill -TERM -f "chrome" 2>/dev/null || true
 
-    # Purger l'intégralité du profil Chromium (mode kiosk = aucun état persistant)
+        # Attendre jusqu'à 5s que Chromium se termine proprement
+        local wait_count=0
+        while pgrep -f "chromium" > /dev/null 2>&1 && (( wait_count < 10 )); do
+            sleep 0.5
+            (( wait_count++ ))
+        done
+
+        # Phase 2: SIGKILL si toujours en vie
+        if pgrep -f "chromium" > /dev/null 2>&1; then
+            log "⚠️ Chromium n'a pas répondu au SIGTERM, SIGKILL..."
+            pkill -9 -f "chromium" 2>/dev/null || true
+            pkill -9 -f "chrome" 2>/dev/null || true
+            sleep 2
+        fi
+    fi
+
+    # Phase 3: Purger l'intégralité du profil Chromium (mode kiosk = aucun état persistant)
     # Corrige le bug d'ancienne version affichée au boot : Chromium conservait
     # des données dans des sous-dossiers non nettoyés (Session Storage, IndexedDB,
     # Local Storage, HTTP cache in-memory sérialisé, etc.)
@@ -141,6 +160,11 @@ cleanup_chromium() {
     rm -rf /home/pi/.config/chromium 2>/dev/null || true
     rm -rf /tmp/kiosk-secondary 2>/dev/null || true
     rm -rf /tmp/kiosk-led 2>/dev/null || true  # Rétrocompat: nettoyer l'ancien répertoire
+
+    # Phase 4: Nettoyer les segments de mémoire partagée orphelins (GPU/IPC)
+    # Après un SIGKILL, des shm segments peuvent rester et polluer le prochain Chromium
+    rm -rf /dev/shm/.org.chromium.* 2>/dev/null || true
+    rm -rf /dev/shm/.com.google.* 2>/dev/null || true
 
     # Synchroniser les écritures disque
     sync
@@ -197,6 +221,7 @@ start_chromium() {
         --disable-checker-imaging
         --disk-cache-size=1
         --aggressive-cache-discard
+        --disable-gpu-shader-disk-cache
         --password-store=basic
     )
 
@@ -461,7 +486,21 @@ main() {
 
     # Premier démarrage
     cleanup_chromium
-    sleep 2
+
+    # Attendre que nginx serve la webapp (évite un écran blanc si restart en parallèle)
+    local nginx_wait=0
+    while (( nginx_wait < 15 )); do
+        if curl -s -o /dev/null -w "%{http_code}" --max-time 2 http://neopro.local/index.html 2>/dev/null | grep -q "200"; then
+            log "✓ Nginx prêt (après ${nginx_wait}s)"
+            break
+        fi
+        (( nginx_wait++ ))
+        sleep 1
+    done
+    if (( nginx_wait >= 15 )); then
+        log "⚠️ Nginx pas encore prêt après 15s — lancement de Chromium quand même"
+    fi
+
     start_chromium
 
     # Vérifier que Nginx sert la bonne version (détection version stale)

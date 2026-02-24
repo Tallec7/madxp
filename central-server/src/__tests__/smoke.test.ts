@@ -2809,3 +2809,123 @@ describe('Multi-profile sync & cache regression guards (ADR-030)', () => {
     });
   });
 });
+
+// ----------------------------------------------------------
+// Kiosk GPU crash loop regression guards
+// Incident: 24/02/2026 — After OTA deploy, Chromium enters a
+// rendering crash loop on Pi 5 because SIGKILL prevents the
+// V3D Mesa GPU driver from releasing DMA buffers/shaders.
+// Power-cycling fixes it because the kernel fully resets GPU.
+// Fix: graceful SIGTERM, shared-memory cleanup, nginx wait.
+// ----------------------------------------------------------
+describe('Kiosk GPU crash loop regression guards', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+  const watchdog = fs.readFileSync(
+    path.join(repoRoot, 'raspberry/scripts/kiosk-watchdog.sh'),
+    'utf8'
+  );
+
+  it('cleanup_chromium must use SIGTERM before SIGKILL (graceful GPU shutdown)', () => {
+    // SIGKILL without prior SIGTERM leaves V3D GPU in dirty state on Pi 5.
+    // cleanup_chromium must send SIGTERM first and only SIGKILL as fallback.
+    const termIndex = watchdog.indexOf('pkill -TERM -f "chromium"');
+    const killIndex = watchdog.indexOf('pkill -9 -f "chromium"');
+    expect({ hasSigterm: termIndex > -1 }).toEqual({ hasSigterm: true });
+    expect({ hasSigkillFallback: killIndex > -1 }).toEqual({ hasSigkillFallback: true });
+    expect({ sigtermBeforeSigkill: termIndex < killIndex })
+      .toEqual({ sigtermBeforeSigkill: true });
+  });
+
+  it('cleanup_chromium must clean /dev/shm shared memory segments', () => {
+    // Orphaned Chromium shared memory segments pollute the next instance's
+    // GPU/IPC initialization, contributing to the crash loop.
+    expect({ cleansChromiumShm: watchdog.includes('rm -rf /dev/shm/.org.chromium.') })
+      .toEqual({ cleansChromiumShm: true });
+  });
+
+  it('kiosk-watchdog.sh must check nginx readiness before launching Chromium', () => {
+    // Without this, Chromium may load before nginx is ready after a deploy,
+    // resulting in a blank screen or loading a stale SW-cached version.
+    expect({ hasNginxReadinessCheck: watchdog.includes('curl') && watchdog.includes('neopro.local') })
+      .toEqual({ hasNginxReadinessCheck: true });
+  });
+
+  it('common_flags must include --disable-gpu-shader-disk-cache', () => {
+    // Stale GPU shader cache between versions causes Chromium rendering issues.
+    expect({ hasShaderCacheDisable: watchdog.includes('--disable-gpu-shader-disk-cache') })
+      .toEqual({ hasShaderCacheDisable: true });
+  });
+});
+
+describe('Deploy script kiosk restart ordering', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+  const deploy = fs.readFileSync(
+    path.join(repoRoot, 'raspberry/scripts/deploy-remote.sh'),
+    'utf8'
+  );
+
+  it('deploy-remote.sh must restart kiosk AFTER nginx (not in parallel)', () => {
+    // Restarting kiosk in parallel with nginx causes a race: Chromium starts
+    // before nginx is ready, loading stale content or a blank screen.
+    // The 'wait' command must appear BEFORE the kiosk restart line.
+    const waitIndex = deploy.lastIndexOf('\n    wait\n');
+    const kioskRestartIndex = deploy.indexOf('sudo systemctl restart neopro-kiosk');
+    expect({ hasWaitBeforeKiosk: waitIndex > -1 && kioskRestartIndex > -1 })
+      .toEqual({ hasWaitBeforeKiosk: true });
+    expect({ kioskAfterWait: kioskRestartIndex > waitIndex })
+      .toEqual({ kioskAfterWait: true });
+  });
+});
+
+// ----------------------------------------------------------
+// Build script post-install cleanup regression guards
+// ----------------------------------------------------------
+describe('Build script node_modules cleanup guards', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+  const buildScript = fs.readFileSync(
+    path.join(repoRoot, 'raspberry/scripts/build-raspberry.sh'),
+    'utf8'
+  );
+
+  it('build-raspberry.sh must exclude __tests__ from all rsync copies', () => {
+    // All three rsync commands (server, sync-agent, admin) must exclude __tests__
+    // to prevent shipping test code to production Pi.
+    const rsyncLines = buildScript
+      .split('\n')
+      .filter((l) => l.includes('rsync') && l.includes('DEPLOY_DIR'));
+    expect(rsyncLines.length).toBeGreaterThanOrEqual(3);
+    for (const line of rsyncLines) {
+      expect({ line, excludesTests: line.includes("--exclude='__tests__'") }).toEqual({
+        line,
+        excludesTests: true,
+      });
+    }
+  });
+
+  it('build-raspberry.sh must exclude coverage/ from sync-agent rsync', () => {
+    // Coverage reports (Jest HTML output) must not ship to Pi.
+    const syncAgentRsync = buildScript
+      .split('\n')
+      .find((l) => l.includes('rsync') && l.includes('sync-agent/'));
+    expect(syncAgentRsync).toBeDefined();
+    expect(syncAgentRsync).toContain("--exclude='coverage'");
+  });
+
+  it('build-raspberry.sh must have post-install cleanup block', () => {
+    // The cleanup block removes docs, tests, @types, .map files etc.
+    // from node_modules after npm install --production.
+    expect(buildScript).toContain('Nettoyage des fichiers inutiles au runtime');
+    expect(buildScript).toContain("@types");
+    expect(buildScript).toContain("'*.map'");
+    expect(buildScript).toContain("'test'");
+    expect(buildScript).toContain("'*.md'");
+  });
+
+  it('build-raspberry.sh must report cleanup metrics (before/after)', () => {
+    // The build must log how many files were removed so operators can
+    // spot anomalies (e.g. cleanup accidentally deleting runtime files).
+    expect(buildScript).toContain('BEFORE_FILES=');
+    expect(buildScript).toContain('AFTER_FILES=');
+    expect(buildScript).toContain('REMOVED=');
+  });
+});

@@ -20,6 +20,14 @@
 
 ### Bug Fixes
 
+- **kiosk:** fix Chromium GPU crash loop after OTA deploy on Pi 5
+  - **Root cause** : `cleanup_chromium()` utilisait `pkill -9` (SIGKILL) qui empêche le driver V3D Mesa
+    de libérer les DMA buffers/shaders GPU. Au restart, Chromium héritait d'un état GPU corrompu →
+    boucle de crash. Power-cycling résolvait car le kernel réinitialise entièrement le GPU.
+  - **`kiosk-watchdog.sh`** : arrêt gracieux SIGTERM (5s) avant SIGKILL, nettoyage `/dev/shm/.org.chromium.*`,
+    vérification nginx prêt (curl HTTP 200, 15s timeout), flag `--disable-gpu-shader-disk-cache`
+  - **`deploy-remote.sh`** : restart en 2 phases (backend+nginx en parallèle → wait → kiosk séquentiel)
+  - 5 smoke tests ajoutés pour empêcher la régression
 - **profiles:** fix multi-profile system not working in production (7 bugs — ADR-030)
   - **nginx:** `location = /configuration.json` et `location /profiles/` avec `no-cache` avant la regex
     `.json` qui cachait tous les profils 30 jours (exact match gagne sur regex)

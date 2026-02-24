@@ -820,6 +820,63 @@ grep -c 'rm -rf /home/pi/.config/chromium ' /home/pi/neopro/scripts/kiosk-watchd
 sudo systemctl restart neopro-kiosk
 ```
 
+#### Crash loop Chromium après déploiement OTA — Pi 5 (v3.81+)
+
+**Symptômes :**
+
+- Après un `deploy-remote.sh` ou une mise à jour OTA, Chromium entre dans une boucle de crash/relance
+- Les logs kiosk montrent `GetVSyncParametersIfAvailable() failed` et des erreurs Vulkan/Dawn
+- Un simple `systemctl restart neopro-kiosk` ne résout pas le problème
+- **Débrancher/rebrancher le Pi (power cycle) corrige le problème**
+- Affecte Pi 5 uniquement (GPU V3D Mesa)
+
+**Cause :** Le `cleanup_chromium()` du watchdog utilisait `pkill -9` (SIGKILL) pour arrêter Chromium.
+Ce signal tue le processus immédiatement **sans laisser le driver GPU V3D Mesa libérer les DMA buffers,
+shaders et mémoire GPU**. Au redémarrage du service, le nouveau Chromium hérite d'un état GPU corrompu
+(segments mémoire partagée `/dev/shm/.org.chromium.*` orphelins) et entre en boucle de crash.
+Le power cycle fonctionne car le kernel réinitialise entièrement le GPU.
+
+**Problème secondaire :** `deploy-remote.sh` redémarrait nginx et kiosk en parallèle, causant une race
+condition où Chromium démarrait avant que nginx ne soit prêt à servir la webapp.
+
+**Correction (v3.81) — 4 changements :**
+
+1. **Arrêt gracieux** : `cleanup_chromium()` envoie SIGTERM (5s timeout) avant SIGKILL en dernier recours
+2. **Nettoyage `/dev/shm`** : suppression des segments mémoire partagée Chromium orphelins après kill
+3. **Attente nginx** : le watchdog vérifie que nginx répond (HTTP 200) avant de lancer Chromium (15s timeout)
+4. **Déploiement séquentiel** : `deploy-remote.sh` redémarre kiosk APRÈS nginx + backend (deux phases)
+5. **`--disable-gpu-shader-disk-cache`** : empêche le cache shader GPU persistant entre versions
+
+**Diagnostic :**
+
+```bash
+# Vérifier que le watchdog utilise SIGTERM (pas seulement SIGKILL)
+grep -c 'pkill -TERM' /home/pi/neopro/scripts/kiosk-watchdog.sh
+# Attendu: 2+. Si 0: ancienne version avec pkill -9 direct
+
+# Vérifier le nettoyage /dev/shm
+grep -c 'dev/shm/.org.chromium' /home/pi/neopro/scripts/kiosk-watchdog.sh
+# Attendu: 1+. Si 0: ancienne version sans nettoyage shm
+
+# Vérifier l'attente nginx
+grep -c 'neopro.local/index.html' /home/pi/neopro/scripts/kiosk-watchdog.sh
+# Attendu: 1+. Si 0: ancienne version sans attente nginx
+
+# Vérifier le flag GPU shader cache
+grep -c 'disable-gpu-shader-disk-cache' /home/pi/neopro/scripts/kiosk-watchdog.sh
+# Attendu: 1+. Si 0: ancienne version
+```
+
+**Fix manuel (Pi non encore mis à jour) :**
+
+```bash
+# Copier les scripts mis à jour
+scp raspberry/scripts/kiosk-watchdog.sh pi@neopro.local:/home/pi/neopro/scripts/
+scp raspberry/scripts/deploy-remote.sh pi@neopro.local:/home/pi/neopro/scripts/
+# Power cycle recommandé pour repartir d'un état GPU propre
+ssh pi@neopro.local 'sudo shutdown -r now'
+```
+
 #### Popup "Choose password for new keyring" (v3.80.1+)
 
 **Symptômes :**

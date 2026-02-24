@@ -351,7 +351,7 @@ ssh ${RASPBERRY_USER}@${RASPBERRY_IP} "
         sleep 1
     fi
 
-    # Redémarrer tous les services en parallèle
+    # Phase 1: Redémarrer les services backend + nginx (en parallèle entre eux)
     sudo systemctl start neopro-app &
     sudo systemctl restart nginx &
 
@@ -365,13 +365,15 @@ ssh ${RASPBERRY_USER}@${RASPBERRY_IP} "
         sudo systemctl restart neopro-sync-agent &
     fi
 
-    # Redémarrer kiosk pour appliquer la nouvelle webapp + kiosk-watchdog.sh
-    if systemctl list-unit-files neopro-kiosk.service >/dev/null 2>&1; then
-        sudo systemctl restart neopro-kiosk &
-    fi
-
-    # Attendre que tous les services redémarrent
+    # Attendre que backend + nginx soient prêts AVANT de redémarrer le kiosk
+    # Évite que Chromium charge une page d'erreur/blanche si nginx n'est pas prêt
     wait
+
+    # Phase 2: Redémarrer kiosk APRÈS que nginx + neopro-app sont opérationnels
+    # Le kiosk-watchdog vérifie aussi nginx, mais l'ordonnancement ici est plus fiable
+    if systemctl list-unit-files neopro-kiosk.service >/dev/null 2>&1; then
+        sudo systemctl restart neopro-kiosk
+    fi
     sleep 1
 
     # Vérification des services
