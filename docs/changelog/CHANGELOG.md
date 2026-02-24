@@ -1,3 +1,9 @@
+## [3.80.6](https://github.com/Tallec7/neopro/compare/v3.80.5...v3.80.6) (2026-02-24)
+
+### Bug Fixes
+
+- **smoke:** fix startServices regex matching full file instead of fragile function boundaries ([13c4086](https://github.com/Tallec7/neopro/commit/13c4086a13edd9d2ad3899f1275b040ed6018671))
+
 ## [3.80.5](https://github.com/Tallec7/neopro/compare/v3.80.4...v3.80.5) (2026-02-24)
 
 ### Bug Fixes
