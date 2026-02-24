@@ -431,11 +431,11 @@ print_step "Diagnostic post-déploiement (vérification de la complétude du Pi)
 DIAG_SCRIPT="${RASPBERRY_DIR}/scripts/diagnose-pi.sh"
 DIAG_OUTPUT=$(ssh ${RASPBERRY_USER}@${RASPBERRY_IP} "
     if [ -x ${DIAG_SCRIPT} ]; then
-        ${DIAG_SCRIPT} --json 2>/dev/null
+        ${DIAG_SCRIPT} --json 2>/dev/null || true
     else
         echo '{\"healthy\":true,\"errors\":0,\"warnings\":0,\"checks\":[]}'
     fi
-" 2>/dev/null)
+" 2>/dev/null) || true
 
 # Parser le résultat JSON
 DIAG_ERRORS=$(echo "${DIAG_OUTPUT}" | grep -o '"errors":[0-9]*' | cut -d: -f2)
