@@ -2944,6 +2944,59 @@ describe('Kiosk GPU crash loop regression guards', () => {
   });
 });
 
+// ----------------------------------------------------------
+// Parasitic window/service detection guards
+// Incident: 24/02/2026 — Manually installed VLC kiosk service
+// (neopro-vlc-kiosk.service) ran fullscreen on top of Chromium,
+// making the TV appear frozen with an old score overlay.
+// The watchdog now detects non-Chromium windows and kills them.
+// ----------------------------------------------------------
+describe('Parasitic window detection guards', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+  const watchdog = fs.readFileSync(
+    path.join(repoRoot, 'raspberry/scripts/kiosk-watchdog.sh'),
+    'utf8'
+  );
+
+  it('watchdog loop must detect non-Chromium active windows (parasitic process)', () => {
+    // A non-Chromium window (VLC, xdg-desktop-portal, etc.) taking focus
+    // hides the Angular kiosk entirely. The watchdog must detect this by
+    // checking the active window name and killing the parasite.
+    expect({ hasParasiteDetection: watchdog.includes('FENÊTRE PARASITE') })
+      .toEqual({ hasParasiteDetection: true });
+    expect({ checksActiveWindow: watchdog.includes('xdotool getactivewindow getwindowname') })
+      .toEqual({ checksActiveWindow: true });
+  });
+
+  it('watchdog must restore Chromium focus after killing a parasitic window', () => {
+    // After killing the parasite, Chromium must be brought back to the front
+    // using xdotool windowactivate to ensure the TV displays the kiosk.
+    expect({ restoresChromium: watchdog.includes('xdotool windowactivate') })
+      .toEqual({ restoresChromium: true });
+  });
+
+  it('kiosk-watchdog.sh must NOT reference VLC or ffmpeg-stream', () => {
+    // The HLS pipeline (VLC + FFmpeg) was an abandoned experiment.
+    // The watchdog must never launch or depend on these tools.
+    expect({ noVlc: !watchdog.includes('/usr/bin/vlc') && !watchdog.includes('vlc-kiosk') })
+      .toEqual({ noVlc: true });
+    expect({ noFfmpegStream: !watchdog.includes('ffmpeg-stream.sh') && !watchdog.includes('score-bridge') })
+      .toEqual({ noFfmpegStream: true });
+  });
+
+  it('no systemd .service files must reference VLC or HLS pipeline in codebase', () => {
+    // Prevent accidentally re-introducing the parasitic services.
+    const systemdDir = path.join(repoRoot, 'raspberry/config/systemd');
+    const serviceFiles = fs.readdirSync(systemdDir).filter(f => f.endsWith('.service'));
+    for (const file of serviceFiles) {
+      const content = fs.readFileSync(path.join(systemdDir, file), 'utf8');
+      expect({ file, hasVlc: content.includes('vlc') }).toEqual({ file, hasVlc: false });
+      expect({ file, hasHlsPipeline: content.includes('ffmpeg-stream') || content.includes('score-bridge') || content.includes('playlist-manager') })
+        .toEqual({ file, hasHlsPipeline: false });
+    }
+  });
+});
+
 describe('Deploy script kiosk restart ordering', () => {
   const repoRoot = path.resolve(__dirname, '..', '..', '..');
   const deploy = fs.readFileSync(

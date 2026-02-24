@@ -891,6 +891,69 @@ scp raspberry/config/systemd/neopro-kiosk.service pi@neopro.local:/home/pi/neopr
 ssh pi@neopro.local 'sudo cp /home/pi/neopro/config/systemd/neopro-kiosk.service /etc/systemd/system/ && sudo systemctl daemon-reload && sudo shutdown -r now'
 ```
 
+#### TV figée — fenêtre parasite devant Chromium (v3.81+)
+
+**Symptômes :**
+
+- La TV affiche un contenu figé (score overlay ancien, rectangle noir, vidéo en boucle sans contrôle)
+- La télécommande Socket.IO ne répond pas (pas de changement visible à l'écran)
+- Un `systemctl restart neopro-kiosk` ne résout PAS le problème
+- Un power cycle peut résoudre temporairement (selon l'ordre de démarrage des services)
+- Affecte un seul Pi (services installés manuellement sur cette machine)
+
+**Cause racine :** Un processus non-Chromium (VLC, xdg-desktop-portal, etc.) tourne en fullscreen
+**par-dessus** la fenêtre Chromium du kiosk Angular. Chromium est bien actif en arrière-plan
+(il reçoit les events Socket.IO) mais sa fenêtre est masquée par la fenêtre parasite.
+La télécommande paraît inopérante car les changements Angular ne sont pas visibles.
+
+**Cas réel (24/12/2024) :** Un pipeline HLS expérimental composé de 4 services systemd manuels
+(`neopro-vlc-kiosk`, `neopro-ffmpeg-stream`, `neopro-score-bridge`, `neopro-playlist-manager`)
+faisait tourner VLC fullscreen pour afficher un flux HLS avec score incrusté par FFmpeg.
+Ces services n'étaient PAS dans le codebase et redémarraient à chaque boot (`Restart=always`).
+
+**Protection intégrée (v3.81+) :** Le watchdog détecte automatiquement les fenêtres non-Chromium
+au premier plan (toutes les 30s), les tue, et remet Chromium en focus.
+Les logs contiendront : `🚨 FENÊTRE PARASITE détectée: '<nom>'`.
+
+**Diagnostic :**
+
+```bash
+# Vérifier quelle fenêtre est au premier plan
+DISPLAY=:0 xdotool getactivewindow getwindowname
+# Attendu: "Neopro - Chromium". Si autre chose: fenêtre parasite
+
+# Lister TOUS les services neopro
+systemctl list-units 'neopro-*' --all --no-pager
+# Attendu: 7 services légitimes (admin, app, hotspot-optimizer, hotspot-watchdog, kiosk, sync-agent, sync-guardian)
+# Si plus: services parasites à supprimer
+
+# Vérifier les logs du watchdog pour détections de parasites
+journalctl -u neopro-kiosk --since "1 hour ago" --no-pager | grep -i "parasite"
+```
+
+**Fix manuel (si le watchdog n'est pas à jour) :**
+
+```bash
+# 1. Identifier le processus parasite
+DISPLAY=:0 xdotool getactivewindow getwindowname
+DISPLAY=:0 xdotool getactivewindow getwindowpid
+
+# 2. Le tuer
+kill -9 <PID>
+
+# 3. Désactiver les services parasites
+sudo systemctl disable --now neopro-vlc-kiosk neopro-ffmpeg-stream neopro-score-bridge neopro-playlist-manager 2>/dev/null
+sudo rm -f /etc/systemd/system/neopro-vlc-kiosk.service /etc/systemd/system/neopro-ffmpeg-stream.service /etc/systemd/system/neopro-score-bridge.service /etc/systemd/system/neopro-playlist-manager.service
+sudo systemctl daemon-reload
+
+# 4. Supprimer les scripts parasites
+rm -f /home/pi/neopro/scripts/vlc-kiosk.sh /home/pi/neopro/scripts/ffmpeg-stream.sh
+rm -f /home/pi/neopro/services/score-bridge.js /home/pi/neopro/services/playlist-manager.js
+
+# 5. Remettre Chromium au premier plan
+DISPLAY=:0 xdotool search --name "Chromium" windowactivate
+```
+
 #### Popup "Choose password for new keyring" (v3.80.1+)
 
 **Symptômes :**

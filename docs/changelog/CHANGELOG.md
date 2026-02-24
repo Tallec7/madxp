@@ -92,7 +92,12 @@
     Fix : combinaison en un seul flag `--disable-features="$disable_features"` au lancement.
   - **`--user-data-dir`** : ajout `/tmp/kiosk-primary` au Chromium principal (isolé du profil par défaut,
     cleanup automatique dans `cleanup_chromium()`)
-  - 15 smoke tests ajoutés pour empêcher la régression
+  - **VLC parasite (root cause réelle)** : un pipeline HLS expérimental (4 services systemd manuels :
+    `neopro-vlc-kiosk`, `neopro-ffmpeg-stream`, `neopro-score-bridge`, `neopro-playlist-manager`)
+    installé le 24/12 sur un seul Pi faisait tourner VLC fullscreen par-dessus Chromium.
+    Symptômes : TV figée (score overlay FFmpeg, pas Angular), télécommande inopérante.
+    Fix : services désactivés/supprimés + watchdog détecte et tue les fenêtres parasites non-Chromium.
+  - 19 smoke tests ajoutés pour empêcher la régression (GPU + parasites)
 - **profiles:** fix multi-profile system not working in production (7 bugs — ADR-030)
   - **nginx:** `location = /configuration.json` et `location /profiles/` avec `no-cache` avant la regex
     `.json` qui cachait tous les profils 30 jours (exact match gagne sur regex)

@@ -576,13 +576,48 @@ main() {
             reason="Processus mort"
         fi
 
-        # Vérification 2: Page de crash ?
+        # Vérification 2: Fenêtre parasite devant Chromium ?
+        # Un processus non-Chromium (ex: VLC, xdg-desktop-portal) peut prendre le focus
+        # et masquer entièrement le kiosk Angular. Détection + kill automatique.
+        if ! $need_restart && command -v xdotool &> /dev/null; then
+            local active_window
+            active_window=$(DISPLAY=:0 xdotool getactivewindow getwindowname 2>/dev/null || echo "")
+            if [ -n "$active_window" ] && \
+               [[ "$active_window" != *"Chromium"* ]] && \
+               [[ "$active_window" != *"chromium"* ]] && \
+               [[ "$active_window" != *"Neopro"* ]] && \
+               [[ "$active_window" != *"neopro"* ]]; then
+                log "🚨 FENÊTRE PARASITE détectée: '$active_window' — bloque le kiosk Chromium"
+                # Identifier et tuer le processus parasite
+                local parasite_wid
+                parasite_wid=$(DISPLAY=:0 xdotool getactivewindow 2>/dev/null || echo "")
+                if [ -n "$parasite_wid" ]; then
+                    local parasite_pid
+                    parasite_pid=$(DISPLAY=:0 xdotool getwindowpid "$parasite_wid" 2>/dev/null || echo "")
+                    if [ -n "$parasite_pid" ] && (( parasite_pid > 1 )); then
+                        log "🔪 Kill du processus parasite PID=$parasite_pid"
+                        kill -9 "$parasite_pid" 2>/dev/null || true
+                    fi
+                    # Fermer la fenêtre X11
+                    DISPLAY=:0 xdotool windowclose "$parasite_wid" 2>/dev/null || true
+                fi
+                # Remettre Chromium au premier plan
+                local chromium_wid
+                chromium_wid=$(DISPLAY=:0 xdotool search --name "Chromium" 2>/dev/null | head -1 || echo "")
+                if [ -n "$chromium_wid" ]; then
+                    DISPLAY=:0 xdotool windowactivate "$chromium_wid" 2>/dev/null || true
+                    log "✓ Chromium remis au premier plan"
+                fi
+            fi
+        fi
+
+        # Vérification 3: Page de crash ?
         if ! $need_restart && check_for_crash_page; then
             need_restart=true
             reason="Page de crash détectée"
         fi
 
-        # Vérification 3: Pression mémoire ?
+        # Vérification 4: Pression mémoire ?
         if ! $need_restart && check_memory_pressure; then
             need_restart=true
             reason="Pression mémoire élevée"
