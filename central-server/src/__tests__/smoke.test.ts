@@ -2084,6 +2084,33 @@ describe('Debug page architecture guards', () => {
     }
   });
 
+  it('site-debug-tab quick-commands must include restart_kiosk and restart_app', () => {
+    // Quick-command buttons for Kiosk and App restart are essential for remote debug.
+    // Missing buttons would force operators to use the terminal for common operations.
+    expect({ hasRestartKiosk: debugTab.includes("case 'restart_kiosk':") })
+      .toEqual({ hasRestartKiosk: true });
+    expect({ hasRestartApp: debugTab.includes("case 'restart_app':") })
+      .toEqual({ hasRestartApp: true });
+    expect({ kioskMapsToService: debugTab.includes("service: 'neopro-kiosk'") })
+      .toEqual({ kioskMapsToService: true });
+    expect({ appMapsToService: debugTab.includes("service: 'neopro-app'") })
+      .toEqual({ appMapsToService: true });
+  });
+
+  it('i18n must contain quick-command keys for kiosk and app restart', () => {
+    // Missing i18n keys would display raw keys like "debug.commandsKiosk" in the UI.
+    const frJson = fs.readFileSync(path.join(repoRoot, 'central-dashboard/src/assets/i18n/fr.json'), 'utf8');
+    const enJson = fs.readFileSync(path.join(repoRoot, 'central-dashboard/src/assets/i18n/en.json'), 'utf8');
+    const esJson = fs.readFileSync(path.join(repoRoot, 'central-dashboard/src/assets/i18n/es.json'), 'utf8');
+
+    const newKeys = ['commandsRestartKiosk', 'commandsKiosk', 'commandsRestartApp', 'commandsApp'];
+    for (const key of newKeys) {
+      expect({ [`fr_has_${key}`]: frJson.includes(`"${key}"`) }).toEqual({ [`fr_has_${key}`]: true });
+      expect({ [`en_has_${key}`]: enJson.includes(`"${key}"`) }).toEqual({ [`en_has_${key}`]: true });
+      expect({ [`es_has_${key}`]: esJson.includes(`"${key}"`) }).toEqual({ [`es_has_${key}`]: true });
+    }
+  });
+
   it('site-debug-tab wizard methods must use translate.instant()', () => {
     // Phase D migrated all wizard step messages to translate.instant().
     // Hardcoded French in wizard methods would show untranslated text to en/es users.
@@ -2104,6 +2131,60 @@ describe('Debug page architecture guards', () => {
       expect({ [`${method}_uses_translate`]: usesTranslate })
         .toEqual({ [`${method}_uses_translate`]: true });
     }
+  });
+});
+
+// =================================================================
+// Admin :8080 UI regression tests
+// =================================================================
+
+describe('Admin :8080 service control UI', () => {
+  const adminRoot = path.resolve(__dirname, '..', '..', '..');
+  const adminHtml = fs.readFileSync(path.join(adminRoot, 'raspberry/admin/public/index.html'), 'utf8');
+  const adminJs = fs.readFileSync(path.join(adminRoot, 'raspberry/admin/public/app.js'), 'utf8');
+
+  it('admin HTML must have restart buttons for neopro-app, nginx, and neopro-kiosk', () => {
+    // Service restart buttons are the primary way to recover services locally.
+    // Removing any would force SSH access for basic recovery operations.
+    expect({ hasNeoProApp: adminHtml.includes("restartService('neopro-app')") })
+      .toEqual({ hasNeoProApp: true });
+    expect({ hasNginx: adminHtml.includes("restartService('nginx')") })
+      .toEqual({ hasNginx: true });
+    expect({ hasKiosk: adminHtml.includes("restartService('neopro-kiosk')") })
+      .toEqual({ hasKiosk: true });
+  });
+
+  it('admin HTML must have apply-services button for daemon-reload', () => {
+    // After OTA, .service files may be stale in /etc/systemd/system/.
+    // The apply-services button triggers daemon-reload + copy without SSH.
+    expect({ hasApplyServices: adminHtml.includes("applyServices()") })
+      .toEqual({ hasApplyServices: true });
+  });
+
+  it('admin JS must export restartService and applyServices to window', () => {
+    // Functions called from onclick must be on window scope.
+    // Missing exports would cause silent failures on button click.
+    expect({ exportsRestartService: adminJs.includes('window.restartService = restartService') })
+      .toEqual({ exportsRestartService: true });
+    expect({ exportsApplyServices: adminJs.includes('window.applyServices = applyServices') })
+      .toEqual({ exportsApplyServices: true });
+  });
+
+  it('admin applyServices function must call /api/system/apply-services', () => {
+    // The function must hit the correct endpoint. A typo would silently 404.
+    expect({ callsCorrectEndpoint: adminJs.includes("fetch('/api/system/apply-services'") })
+      .toEqual({ callsCorrectEndpoint: true });
+  });
+
+  it('admin JS must use showNotification (not alert) for user feedback', () => {
+    // Native alert() blocks the UI and is inconsistent with the rest of the admin panel.
+    // All user-facing messages must use the showNotification() utility.
+    const applyFnMatch = adminJs.match(/async function applyServices\(\)[\s\S]*?^}/m);
+    expect(applyFnMatch).toBeTruthy();
+    expect({ usesNotification: applyFnMatch![0].includes('showNotification') })
+      .toEqual({ usesNotification: true });
+    expect({ noAlert: !applyFnMatch![0].includes('alert(') })
+      .toEqual({ noAlert: true });
   });
 });
 

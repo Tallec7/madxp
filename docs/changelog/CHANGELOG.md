@@ -1,3 +1,16 @@
+## [3.80.1](https://github.com/Tallec7/neopro/compare/v3.80.0...v3.80.1) (2026-02-24)
+
+### Features
+
+- **debug:** ajouter boutons quick-command Restart Kiosk et Restart App dans l'onglet Debug du dashboard central
+- **admin:** ajouter bouton Apply Services (daemon-reload + copie .service) dans l'interface admin :8080
+
+### Chores
+
+- **smoke:** 7 nouveaux smoke tests — régression quick-commands dashboard + admin :8080 (restart buttons, apply-services, window exports)
+- **docs:** documenter les contrôles de services dans REFERENCE.md (section Port 8080)
+- **i18n:** ajouter traductions fr/en/es pour les nouveaux boutons (commandsKiosk, commandsApp, commandsRestartKiosk, commandsRestartApp)
+
 ## [3.79.2](https://github.com/Tallec7/neopro/compare/v3.79.1...v3.79.2) (2026-02-24)
 
 ### Bug Fixes

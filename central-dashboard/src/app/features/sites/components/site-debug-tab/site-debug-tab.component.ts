@@ -1014,6 +1014,12 @@ interface WizardStep {
               <button class="btn btn-secondary btn-xs" (click)="executeCommand('restart_sync')" [disabled]="executingCommand" [title]="'debug.commandsRestartSync' | translate">
                 🔃 {{ 'debug.commandsSyncAgent' | translate }}
               </button>
+              <button class="btn btn-secondary btn-xs" (click)="executeCommand('restart_kiosk')" [disabled]="executingCommand" [title]="'debug.commandsRestartKiosk' | translate">
+                🖥️ {{ 'debug.commandsKiosk' | translate }}
+              </button>
+              <button class="btn btn-secondary btn-xs" (click)="executeCommand('restart_app')" [disabled]="executingCommand" [title]="'debug.commandsRestartApp' | translate">
+                📺 {{ 'debug.commandsApp' | translate }}
+              </button>
               <button class="btn btn-secondary btn-xs" (click)="executeCommand('reboot')" [disabled]="executingCommand" [title]="'debug.confirmRebootTitle' | translate">
                 🔄 {{ 'debug.commandsRebootShort' | translate }}
               </button>
@@ -4684,6 +4690,14 @@ export class SiteDebugTabComponent implements OnInit, AfterViewChecked, OnDestro
       case 'restart_sync':
         commandType = 'restart_service';
         params = { service: 'neopro-sync-agent' };
+        break;
+      case 'restart_kiosk':
+        commandType = 'restart_service';
+        params = { service: 'neopro-kiosk' };
+        break;
+      case 'restart_app':
+        commandType = 'restart_service';
+        params = { service: 'neopro-app' };
         break;
       case 'reboot':
         this.executingCommand = false;

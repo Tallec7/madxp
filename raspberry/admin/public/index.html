@@ -23,11 +23,11 @@
     <link rel="preconnect" href="//neopro.local" />
 
     <!-- Preload Critical Resources -->
-    <link rel="preload" href="/styles.css?v=3.68.7" as="style" />
-    <link rel="preload" href="/app.js?v=3.68.7" as="script" />
+    <link rel="preload" href="/styles.css?v=3.79.1" as="style" />
+    <link rel="preload" href="/app.js?v=3.79.1" as="script" />
 
     <!-- Styles -->
-    <link rel="stylesheet" href="styles.css?v=3.68.7" />
+    <link rel="stylesheet" href="styles.css?v=3.79.1" />
   </head>
   <body>
     <div class="container" role="application" aria-label="Interface d'administration Neopro">
@@ -938,6 +938,10 @@
                     🔄 Redémarrer
                   </button>
                 </div>
+                <div class="service-control-item">
+                  <span>Services systemd (daemon-reload)</span>
+                  <button class="btn btn-primary" onclick="applyServices()">🔧 Appliquer</button>
+                </div>
               </div>
             </div>
           </div>
@@ -1073,6 +1077,6 @@
       </div>
     </div>
 
-    <script src="app.js?v=3.68.7"></script>
+    <script src="app.js?v=3.79.1"></script>
   </body>
 </html>

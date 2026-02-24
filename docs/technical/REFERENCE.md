@@ -60,6 +60,7 @@ Raspberry Pi (neopro-<club>.local / 192.168.4.1)
 │       ├── Dashboard système (santé simplifiée ou métriques complètes)
 │       ├── Widget Sync Status (état connexion cloud)
 │       ├── Gestion configuration
+│       ├── Contrôle services (restart app/nginx/kiosk, apply-services/daemon-reload)
 │       └── Upload vidéos
 │
 └── Sync Agent (systemd)
