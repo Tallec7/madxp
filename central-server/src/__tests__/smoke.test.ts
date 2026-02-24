@@ -1840,6 +1840,24 @@ describe('neopro-kiosk.service must depend on nginx', () => {
     expect({ hasRequiresNginx: /Requires=.*nginx\.service/.test(kioskService) })
       .toEqual({ hasRequiresNginx: true });
   });
+
+  it('neopro-kiosk.service must NOT have ExecStop with pkill -9', () => {
+    // ExecStop=pkill -9 bypasses the watchdog's SIGTERM graceful shutdown,
+    // preventing the V3D GPU driver from releasing DMA buffers on Pi 5.
+    // This causes rendering artifacts and crash loops after systemctl restart.
+    // The watchdog's trap handler manages Chromium shutdown via cleanup_chromium().
+    expect({ noExecStopKill9: !/^ExecStop=.*pkill.*-9/m.test(kioskService) })
+      .toEqual({ noExecStopKill9: true });
+  });
+
+  it('neopro-kiosk.service must use KillMode=mixed', () => {
+    // KillMode=mixed sends SIGTERM to main process (watchdog) only,
+    // allowing the trap handler to cleanly shutdown Chromium.
+    // Default KillMode=control-group sends SIGTERM to ALL processes simultaneously,
+    // racing with the watchdog's cleanup.
+    expect({ hasKillModeMixed: kioskService.includes('KillMode=mixed') })
+      .toEqual({ hasKillModeMixed: true });
+  });
 });
 
 describe('Kiosk xdpyinfo dependency must be provisioned', () => {

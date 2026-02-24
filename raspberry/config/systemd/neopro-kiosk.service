@@ -22,8 +22,13 @@ ExecStartPre=/bin/bash -c 'for i in $(seq 1 30); do DISPLAY=:0 xdpyinfo >/dev/nu
 # Le watchdog détecte les crashs "Aw, Snap!" et relance automatiquement
 ExecStart=/home/pi/neopro/scripts/kiosk-watchdog.sh
 
-# Arrêt propre
-ExecStop=/usr/bin/pkill -9 -f chromium
+# Arrêt propre via le trap handler du watchdog (SIGTERM → cleanup_chromium).
+# PAS de ExecStop pkill -9 : un SIGKILL direct empêche le driver V3D Mesa de
+# libérer les DMA buffers GPU, causant des artifacts de rendu et crash loops
+# au prochain lancement de Chromium sur Pi 5.
+# KillMode=mixed : SIGTERM au watchdog (main), SIGKILL aux orphelins après timeout.
+KillMode=mixed
+TimeoutStopSec=15
 
 # Redémarrage automatique du watchdog si il crash
 Restart=always

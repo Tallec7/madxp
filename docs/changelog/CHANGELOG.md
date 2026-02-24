@@ -62,13 +62,20 @@
 ### Bug Fixes
 
 - **kiosk:** fix Chromium GPU crash loop after OTA deploy on Pi 5
-  - **Root cause** : `cleanup_chromium()` utilisait `pkill -9` (SIGKILL) qui empêche le driver V3D Mesa
-    de libérer les DMA buffers/shaders GPU. Au restart, Chromium héritait d'un état GPU corrompu →
-    boucle de crash. Power-cycling résolvait car le kernel réinitialise entièrement le GPU.
-  - **`kiosk-watchdog.sh`** : arrêt gracieux SIGTERM (5s) avant SIGKILL, nettoyage `/dev/shm/.org.chromium.*`,
-    vérification nginx prêt (curl HTTP 200, 15s timeout), flag `--disable-gpu-shader-disk-cache`
+  - **Root cause** : `ExecStop=/usr/bin/pkill -9 -f chromium` dans `neopro-kiosk.service` exécutait un
+    SIGKILL direct sur Chromium **avant** que le trap handler du watchdog ne puisse faire un arrêt gracieux.
+    Le SIGKILL empêche le driver V3D Mesa de libérer les DMA buffers/shaders GPU → au restart,
+    Chromium hérite d'un état GPU corrompu → artifacts de rendu (rectangle noir, vieux score, remote inopérante).
+    Power-cycling résout car le kernel réinitialise entièrement le GPU.
+  - **`neopro-kiosk.service`** : suppression `ExecStop=pkill -9`, ajout `KillMode=mixed` (SIGTERM au
+    watchdog seul, SIGKILL aux orphelins après timeout) + `TimeoutStopSec=15`
+  - **`kiosk-watchdog.sh`** : arrêt gracieux SIGTERM (5s) avant SIGKILL dans `cleanup_chromium()` et
+    `stop_chromium_secondary()`, nettoyage `/dev/shm/.org.chromium.*`, vérification nginx prêt
+    (curl HTTP 200, 15s timeout), flags `--disable-gpu-shader-disk-cache` et `--disable-features=XdgDesktopPortal`
   - **`deploy-remote.sh`** : restart en 2 phases (backend+nginx en parallèle → wait → kiosk séquentiel)
-  - 5 smoke tests ajoutés pour empêcher la régression
+  - **Crash detection** : pattern `check_for_crash_page()` affiné (suppression faux positif `*"Error"*`
+    qui matchait les fenêtres xdg-desktop-portal)
+  - 10 smoke tests ajoutés pour empêcher la régression
 - **profiles:** fix multi-profile system not working in production (7 bugs — ADR-030)
   - **nginx:** `location = /configuration.json` et `location /profiles/` avec `no-cache` avant la regex
     `.json` qui cachait tous les profils 30 jours (exact match gagne sur regex)

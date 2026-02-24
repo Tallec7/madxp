@@ -830,51 +830,65 @@ sudo systemctl restart neopro-kiosk
 - **Débrancher/rebrancher le Pi (power cycle) corrige le problème**
 - Affecte Pi 5 uniquement (GPU V3D Mesa)
 
-**Cause :** Le `cleanup_chromium()` du watchdog utilisait `pkill -9` (SIGKILL) pour arrêter Chromium.
-Ce signal tue le processus immédiatement **sans laisser le driver GPU V3D Mesa libérer les DMA buffers,
-shaders et mémoire GPU**. Au redémarrage du service, le nouveau Chromium hérite d'un état GPU corrompu
-(segments mémoire partagée `/dev/shm/.org.chromium.*` orphelins) et entre en boucle de crash.
+**Cause racine :** `ExecStop=/usr/bin/pkill -9 -f chromium` dans `neopro-kiosk.service` exécutait un
+SIGKILL direct sur Chromium **avant** que le trap handler du watchdog (SIGTERM → `cleanup_chromium()`)
+ne puisse s'exécuter. Ce SIGKILL empêche le driver GPU V3D Mesa de libérer les DMA buffers,
+shaders et mémoire GPU. Au redémarrage du service, le nouveau Chromium hérite d'un état GPU corrompu
+(segments mémoire partagée `/dev/shm/.org.chromium.*` orphelins) → artifacts de rendu
+(rectangle noir, vieux score neon vert, remote inopérante).
 Le power cycle fonctionne car le kernel réinitialise entièrement le GPU.
 
-**Problème secondaire :** `deploy-remote.sh` redémarrait nginx et kiosk en parallèle, causant une race
-condition où Chromium démarrait avant que nginx ne soit prêt à servir la webapp.
+**Problèmes secondaires :**
 
-**Correction (v3.81) — 4 changements :**
+- `stop_chromium_secondary()` utilisait aussi `kill -9` direct (même corruption GPU V3D)
+- `check_for_crash_page()` matchait `*"Error"*` (faux positif sur fenêtres xdg-desktop-portal)
+- `deploy-remote.sh` redémarrait nginx et kiosk en parallèle (race condition)
 
-1. **Arrêt gracieux** : `cleanup_chromium()` envoie SIGTERM (5s timeout) avant SIGKILL en dernier recours
-2. **Nettoyage `/dev/shm`** : suppression des segments mémoire partagée Chromium orphelins après kill
-3. **Attente nginx** : le watchdog vérifie que nginx répond (HTTP 200) avant de lancer Chromium (15s timeout)
-4. **Déploiement séquentiel** : `deploy-remote.sh` redémarre kiosk APRÈS nginx + backend (deux phases)
-5. **`--disable-gpu-shader-disk-cache`** : empêche le cache shader GPU persistant entre versions
+**Correction (v3.81) — 7 changements :**
+
+1. **`neopro-kiosk.service`** : suppression `ExecStop=pkill -9`, ajout `KillMode=mixed` (SIGTERM au
+   watchdog seul → trap handler → `cleanup_chromium()` gracieux) + `TimeoutStopSec=15`
+2. **Arrêt gracieux** : `cleanup_chromium()` et `stop_chromium_secondary()` envoient SIGTERM (5s timeout)
+   avant SIGKILL en dernier recours
+3. **Nettoyage `/dev/shm`** : suppression des segments mémoire partagée Chromium orphelins après kill
+4. **Attente nginx** : le watchdog vérifie que nginx répond (HTTP 200) avant de lancer Chromium (15s timeout)
+5. **Déploiement séquentiel** : `deploy-remote.sh` redémarre kiosk APRÈS nginx + backend (deux phases)
+6. **`--disable-gpu-shader-disk-cache`** : empêche le cache shader GPU persistant entre versions
+7. **`--disable-features=XdgDesktopPortal`** : empêche les fenêtres portal en mode kiosk
 
 **Diagnostic :**
 
 ```bash
-# Vérifier que le watchdog utilise SIGTERM (pas seulement SIGKILL)
-grep -c 'pkill -TERM' /home/pi/neopro/scripts/kiosk-watchdog.sh
-# Attendu: 2+. Si 0: ancienne version avec pkill -9 direct
+# Vérifier que le service n'a PAS de ExecStop avec pkill -9
+grep 'ExecStop' /home/pi/neopro/config/systemd/neopro-kiosk.service
+# Attendu: rien. Si "ExecStop=...pkill -9...": ancienne version
+
+# Vérifier KillMode=mixed
+grep 'KillMode' /home/pi/neopro/config/systemd/neopro-kiosk.service
+# Attendu: KillMode=mixed. Si absent ou "control-group": ancienne version
+
+# Vérifier que le watchdog utilise SIGTERM
+grep -c 'kill -TERM' /home/pi/neopro/scripts/kiosk-watchdog.sh
+# Attendu: 2+. Si 0: ancienne version avec SIGKILL direct
 
 # Vérifier le nettoyage /dev/shm
 grep -c 'dev/shm/.org.chromium' /home/pi/neopro/scripts/kiosk-watchdog.sh
-# Attendu: 1+. Si 0: ancienne version sans nettoyage shm
+# Attendu: 2+. Si 0: ancienne version sans nettoyage shm
 
-# Vérifier l'attente nginx
-grep -c 'neopro.local/index.html' /home/pi/neopro/scripts/kiosk-watchdog.sh
-# Attendu: 1+. Si 0: ancienne version sans attente nginx
-
-# Vérifier le flag GPU shader cache
-grep -c 'disable-gpu-shader-disk-cache' /home/pi/neopro/scripts/kiosk-watchdog.sh
+# Vérifier XdgDesktopPortal disable
+grep -c 'XdgDesktopPortal' /home/pi/neopro/scripts/kiosk-watchdog.sh
 # Attendu: 1+. Si 0: ancienne version
 ```
 
 **Fix manuel (Pi non encore mis à jour) :**
 
 ```bash
-# Copier les scripts mis à jour
+# Copier les fichiers mis à jour
 scp raspberry/scripts/kiosk-watchdog.sh pi@neopro.local:/home/pi/neopro/scripts/
 scp raspberry/scripts/deploy-remote.sh pi@neopro.local:/home/pi/neopro/scripts/
-# Power cycle recommandé pour repartir d'un état GPU propre
-ssh pi@neopro.local 'sudo shutdown -r now'
+scp raspberry/config/systemd/neopro-kiosk.service pi@neopro.local:/home/pi/neopro/config/systemd/
+# Recharger systemd et power cycle pour repartir d'un état GPU propre
+ssh pi@neopro.local 'sudo cp /home/pi/neopro/config/systemd/neopro-kiosk.service /etc/systemd/system/ && sudo systemctl daemon-reload && sudo shutdown -r now'
 ```
 
 #### Popup "Choose password for new keyring" (v3.80.1+)
