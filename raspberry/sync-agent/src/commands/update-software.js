@@ -16,6 +16,7 @@ class SoftwareUpdateHandler {
 
   async execute(data, progressCallback) {
     const { updateUrl, version, checksum, packageSize, scheduleReboot, autoRollback } = data;
+    this._scheduleReboot = !!scheduleReboot;
 
     logger.info('Starting software update', { version, scheduleReboot: !!scheduleReboot, autoRollback: autoRollback !== false });
 
@@ -104,15 +105,16 @@ class SoftwareUpdateHandler {
       logger.info('Software update completed successfully', { newVersion, report });
 
       // Reboot le Pi si demandé par le dashboard
+      // Use 'shutdown -r +0' instead of setTimeout+spawn('reboot') because
+      // shutdown is handled by the init system and survives process restarts
+      // (the old setTimeout approach was killed when sync-agent restarted).
       if (scheduleReboot) {
-        logger.info('Scheduled reboot requested, rebooting in 10 seconds...');
+        logger.warn('OTA reboot: spawning shutdown -r +0', { version: newVersion, previousVersion: this.previousVersion });
         const { spawn } = require('child_process');
-        setTimeout(() => {
-          spawn('sudo', ['reboot'], {
-            detached: true,
-            stdio: 'ignore',
-          }).unref();
-        }, 10000);
+        spawn('sudo', ['shutdown', '-r', '+0'], {
+          detached: true,
+          stdio: 'ignore',
+        }).unref();
       }
 
       return {
@@ -977,16 +979,22 @@ class SoftwareUpdateHandler {
         logger.warn('Failed to restart neopro-kiosk (non-critical):', error.message);
       }
 
-      // Schedule sync-agent restart to apply any updates to itself
-      // Use spawn with detached to allow the current process to exit
-      logger.info('Scheduling sync-agent restart in 5 seconds...');
-      const { spawn } = require('child_process');
-      setTimeout(() => {
-        spawn('sudo', ['systemctl', 'restart', 'neopro-sync-agent'], {
-          detached: true,
-          stdio: 'ignore'
-        }).unref();
-      }, 5000);
+      // Skip sync-agent restart if a reboot is scheduled — it would kill the
+      // process and destroy the reboot timer before it fires (race condition).
+      if (this._scheduleReboot) {
+        logger.info('Skipping sync-agent restart — system reboot is scheduled');
+      } else {
+        // Schedule sync-agent restart to apply any updates to itself
+        // Use spawn with detached to allow the current process to exit
+        logger.info('Scheduling sync-agent restart in 5 seconds...');
+        const { spawn } = require('child_process');
+        setTimeout(() => {
+          spawn('sudo', ['systemctl', 'restart', 'neopro-sync-agent'], {
+            detached: true,
+            stdio: 'ignore'
+          }).unref();
+        }, 5000);
+      }
     } catch (error) {
       logger.error('Failed to start services:', error);
       throw error;

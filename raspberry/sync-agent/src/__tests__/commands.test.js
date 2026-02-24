@@ -125,6 +125,7 @@ describe('Commands Module', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockExecuteOperation.mockReset();
+    spawn.mockReturnValue({ unref: jest.fn() });
     fs.pathExists.mockResolvedValue(false);
     fs.readFile.mockResolvedValue('{}');
     fs.writeFile.mockResolvedValue(undefined);
@@ -174,23 +175,15 @@ describe('Commands Module', () => {
   });
 
   describe('reboot', () => {
-    it('should return success and schedule reboot', async () => {
-      jest.useFakeTimers();
-      mockExecAsync();
-
+    it('should return success and call shutdown -r', async () => {
       const result = await commands.reboot();
 
       expect(result.success).toBe(true);
-      expect(result.message).toContain('2 seconds');
-
-      jest.advanceTimersByTime(2500);
-
-      expect(exec).toHaveBeenCalledWith(
-        'sudo reboot',
-        expect.any(Function)
+      expect(result.message).toContain('shutdown');
+      expect(spawn).toHaveBeenCalledWith(
+        'sudo', ['shutdown', '-r', '+0'],
+        expect.objectContaining({ detached: true, stdio: 'ignore' })
       );
-
-      jest.useRealTimers();
     });
   });
 
@@ -507,18 +500,15 @@ wpa_passphrase=testpassword
   });
 
   describe('reboot command', () => {
-    it('should initiate system reboot', async () => {
-      exec.mockImplementation((cmd, callback) => {
-        if (callback) {
-          callback(null, { stdout: '', stderr: '' });
-        }
-        return { stdout: '', stderr: '' };
-      });
-
+    it('should initiate system reboot via shutdown', async () => {
       const result = await commands.reboot();
 
       expect(result.success).toBe(true);
-      expect(result.message).toContain('Rebooting');
+      expect(result.message).toContain('shutdown');
+      expect(spawn).toHaveBeenCalledWith(
+        'sudo', ['shutdown', '-r', '+0'],
+        expect.objectContaining({ detached: true })
+      );
     });
   });
 

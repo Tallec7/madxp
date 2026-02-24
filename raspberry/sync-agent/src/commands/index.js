@@ -117,20 +117,18 @@ const commands = {
   async reboot() {
     logger.warn('System reboot requested');
 
-    // Use fire-and-forget exec (not execAsync) because:
-    // 1. sudo reboot kills the system before the child process can return
-    // 2. execAsync would reject (non-zero exit / signal) — the error was silently caught
-    // 3. The command_result is already sent before the timeout fires
-    setTimeout(() => {
-      logger.info('Executing sudo reboot now...');
-      exec('sudo reboot', (error) => {
-        if (error) {
-          logger.error('Reboot command failed:', { error: error.message });
-        }
-      });
-    }, 2000);
+    // Use 'shutdown -r +0' instead of setTimeout+exec('sudo reboot') because
+    // shutdown is handled by the init system and is more reliable:
+    // 1. It survives if the Node.js process is killed before the timer fires
+    // 2. It properly signals all services to stop before rebooting
+    // 3. The command_result is sent before shutdown begins
+    const { spawn } = require('child_process');
+    spawn('sudo', ['shutdown', '-r', '+0'], {
+      detached: true,
+      stdio: 'ignore',
+    }).unref();
 
-    return { success: true, message: 'Rebooting in 2 seconds' };
+    return { success: true, message: 'Reboot initiated via shutdown' };
   },
 
   /**

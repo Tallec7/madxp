@@ -1027,8 +1027,29 @@ Dashboard ──POST /api/update-deployments──▶ Central Server
                                                ├─ fs.copy() des fichiers extraits
                                                ├─ npm install
                                                ├─ Installation sudoers + systemd services
-                                               ├─ Restart services
-                                               └─ emit update_progress { progress: 100, completed: true }
+                                               ├─ startServices() (restart kiosk + app + nginx)
+                                               │      └─ Si scheduleReboot=false : schedule restart sync-agent (5s)
+                                               │      └─ Si scheduleReboot=true  : skip restart sync-agent
+                                               ├─ emit update_progress { progress: 100, completed: true }
+                                               └─ Si scheduleReboot=true : spawn('shutdown -r +0')
+```
+
+### Reboot post-OTA (v3.80.5+)
+
+Le dashboard peut demander un reboot après OTA via `scheduleReboot: true`. Le mécanisme utilise `shutdown -r +0` (géré par systemd, survit au kill du process Node) au lieu de `setTimeout` + `spawn('reboot')`.
+
+**Race condition corrigée (v3.80.5)** : avant, `startServices()` schedulait un restart du sync-agent à t+5s et le reboot était schedulé à t+10s. Le restart tuait le process Node et détruisait le timer de reboot → le Pi ne rebootait jamais. Fix : skip le restart sync-agent quand un reboot est prévu.
+
+```
+AVANT (bug) :
+  t=0s  startServices() schedule restart sync-agent à t+5s
+  t=0s  scheduleReboot schedule reboot à t+10s
+  t+5s  systemctl restart neopro-sync-agent → KILL process → timer reboot PERDU
+  t+10s reboot ne se déclenche jamais
+
+APRÈS (fix) :
+  t=0s  startServices() détecte scheduleReboot → skip restart sync-agent
+  t=0s  spawn('sudo shutdown -r +0') → reboot immédiat via systemd
 ```
 
 ### Pré-migration (serveur → Pi)
@@ -1151,6 +1172,7 @@ SafeNetworkOperations: hotspot channel OK { currentChannel: 6, currentCount: 2, 
 | 2.5     | 2026-02-21 | Claude/NEOPRO | Événement `content_received` dans sync-history, bannière sync contenu admin Pi, métriques sponsor health Prometheus  |
 | 2.6     | 2026-02-21 | Claude/NEOPRO | Pipeline analytics unifié (video_plays), suppression sponsor-impressions.js, tables campaigns + scheduled_reports    |
 | 2.7     | 2026-02-22 | Claude/NEOPRO | Cloud remote relay chain : détection zombie, fix socket.data, handler match-info-updated, monitoring Prometheus      |
+| 2.8     | 2026-02-24 | Claude/NEOPRO | Fix race condition reboot post-OTA : `shutdown -r +0` via spawn, skip restart sync-agent quand reboot prévu          |
 
 ---
 

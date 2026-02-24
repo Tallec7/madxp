@@ -54,6 +54,17 @@ Route `POST /api/system/fix-ownership` (v3.32.1+) : corrige l'ownership des doss
 
 Les fixes dans le code du sync-agent ne sont livrés que via OTA. Si le code OLD du sync-agent crashe pendant l'OTA, le fix ne peut jamais être livré. La solution est de corriger l'**état du filesystem** (supprimer les fichiers root:root) via la pré-migration, pas de patcher le code.
 
+## Reboot post-OTA
+
+Le reboot post-OTA utilise `spawn('sudo', ['shutdown', '-r', '+0'])` (pas `setTimeout` + `spawn('reboot')`). `shutdown` est géré par systemd et survit au kill du process Node.
+
+**Règle critique** : `startServices()` doit **skip le restart sync-agent** quand `this._scheduleReboot` est true. Sinon le restart (5s) tue le process avant que le reboot ne se déclenche (race condition). La commande `reboot` standalone (dans `commands/index.js`) utilise le même mécanisme `shutdown -r +0`.
+
+**INTERDIT** :
+
+- `setTimeout` + `exec/spawn('sudo reboot')` → tué par le restart sync-agent
+- Restart sync-agent quand un reboot est prévu → inutile et dangereux
+
 ## TODO Cleanup
 
 Supprimer `applyPreUpdateMigration()` une fois que tous les Pi v3.10→v3.17 auront été mis à jour (actuellement seul NLF Handball v3.17.1). Le code v3.20+ a le try/catch non-bloquant et n'a plus besoin de la pré-migration.
