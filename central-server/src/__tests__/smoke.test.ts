@@ -2494,3 +2494,169 @@ describe('E-22 config-merge secondary display guard', () => {
     });
   });
 });
+
+// ----------------------------------------------------------
+// E-22 route /secondary guard: Angular app must expose
+// /secondary route with displayType='secondary' so the
+// dual kiosk Chromium loads the correct display mode.
+// ----------------------------------------------------------
+describe('E-22 Angular /secondary route guard', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+  const routesPath = path.join(repoRoot, 'raspberry/src/app/app.routes.ts');
+
+  let content: string;
+  beforeAll(() => {
+    content = fs.readFileSync(routesPath, 'utf8');
+  });
+
+  it('app.routes.ts must have /secondary route with displayType secondary', () => {
+    expect({
+      hasSecondaryRoute: /path:\s*['"]secondary['"]/.test(content),
+      hasDisplayTypeSecondary: /displayType:\s*['"]secondary['"]/.test(content),
+    }).toEqual({
+      hasSecondaryRoute: true,
+      hasDisplayTypeSecondary: true,
+    });
+  });
+
+  it('app.routes.ts must NOT have /led route (renamed to /secondary)', () => {
+    expect({
+      hasLedRoute: /path:\s*['"]led['"]/.test(content),
+    }).toEqual({
+      hasLedRoute: false,
+    });
+  });
+});
+
+// ----------------------------------------------------------
+// E-22 LoopVideo variants guard: LoopVideo interface must
+// use variants.secondary (not variants.led) to ensure video
+// variant selection works for the secondary display.
+// ----------------------------------------------------------
+describe('E-22 LoopVideo variants.secondary guard', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+  const interfacePath = path.join(repoRoot, 'raspberry/src/app/interfaces/sponsor.interface.ts');
+
+  let content: string;
+  beforeAll(() => {
+    content = fs.readFileSync(interfacePath, 'utf8');
+  });
+
+  it('LoopVideo must have variants.secondary field', () => {
+    expect({
+      hasVariantsSecondary: /variants\??\s*:\s*\{[^}]*secondary\??\s*:/.test(content),
+    }).toEqual({
+      hasVariantsSecondary: true,
+    });
+  });
+
+  it('LoopVideo must NOT have variants.led field (renamed)', () => {
+    expect({
+      hasVariantsLed: /variants\??\s*:\s*\{[^}]*\bled\b/.test(content),
+    }).toEqual({
+      hasVariantsLed: false,
+    });
+  });
+});
+
+// ----------------------------------------------------------
+// E-22 video variant API routes guard: content.routes.ts must
+// expose CRUD endpoints for video variants (/videos/:id/variants).
+// ----------------------------------------------------------
+describe('E-22 video variant API routes guard', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+  const routesPath = path.join(repoRoot, 'central-server/src/routes/content.routes.ts');
+
+  let content: string;
+  beforeAll(() => {
+    content = fs.readFileSync(routesPath, 'utf8');
+  });
+
+  it('content.routes.ts must have GET /videos/:id/variants', () => {
+    expect({
+      hasGetVariants: /router\.get\(.*variants.*getVideoVariants/.test(content),
+    }).toEqual({
+      hasGetVariants: true,
+    });
+  });
+
+  it('content.routes.ts must have POST /videos/:id/variants', () => {
+    expect({
+      hasPostVariants: /router\.post\(.*variants.*createVideoVariant/.test(content),
+    }).toEqual({
+      hasPostVariants: true,
+    });
+  });
+
+  it('content.routes.ts must have DELETE /videos/:videoId/variants/:displayType', () => {
+    expect({
+      hasDeleteVariants: /router\.delete\(.*variants.*deleteVideoVariant/.test(content),
+    }).toEqual({
+      hasDeleteVariants: true,
+    });
+  });
+});
+
+// ----------------------------------------------------------
+// E-22 watchdog secondary display guard: kiosk-watchdog.sh
+// must read secondaryDisplayEnabled from config (not just
+// ledEnabled) to properly manage the 2nd Chromium instance.
+// ----------------------------------------------------------
+describe('E-22 watchdog secondary display guard', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+  const watchdogPath = path.join(repoRoot, 'raspberry/scripts/kiosk-watchdog.sh');
+
+  let content: string;
+  beforeAll(() => {
+    content = fs.readFileSync(watchdogPath, 'utf8');
+  });
+
+  it('watchdog must read secondaryDisplayEnabled from config', () => {
+    expect({
+      readsSecondaryDisplayEnabled: /secondaryDisplayEnabled/.test(content),
+    }).toEqual({
+      readsSecondaryDisplayEnabled: true,
+    });
+  });
+
+  it('watchdog must detect HDMI 1 via DRM sysfs', () => {
+    expect({
+      detectsHdmi1: /\/sys\/class\/drm/.test(content),
+    }).toEqual({
+      detectsHdmi1: true,
+    });
+  });
+
+  it('watchdog must launch /secondary URL (not /led)', () => {
+    expect({
+      launchesSecondary: /\/secondary/.test(content),
+      doesNotLaunchLed: !/--app=.*\/led/.test(content),
+    }).toEqual({
+      launchesSecondary: true,
+      doesNotLaunchLed: true,
+    });
+  });
+});
+
+// ----------------------------------------------------------
+// E-22 TvComponent variant selection guard: tv.component.ts
+// must select secondary variant path when displayType is
+// 'secondary' to avoid playing the wrong video on the 2nd screen.
+// ----------------------------------------------------------
+describe('E-22 TvComponent variant selection guard', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+  const tvPath = path.join(repoRoot, 'raspberry/src/app/components/tv/tv.component.ts');
+
+  let content: string;
+  beforeAll(() => {
+    content = fs.readFileSync(tvPath, 'utf8');
+  });
+
+  it('TvComponent must check variants.secondary.path for video selection', () => {
+    expect({
+      checksVariantsSecondary: /variants\?\.secondary\?\.path/.test(content),
+    }).toEqual({
+      checksVariantsSecondary: true,
+    });
+  });
+});

@@ -56,13 +56,14 @@ Neopro est une plateforme distribuée Edge + Cloud pour la diffusion de contenu 
 │         └─────────────────────┴─────────────────────┘       │
 │                               │                             │
 │                   ┌───────────▼───────────┐                 │
-│                   │   Angular Frontend    │                 │
-│                   │    (Port: 4200)       │                 │
-│                   │                       │                 │
-│                   │  /login   - Auth      │                 │
-│                   │  /tv      - Player    │                 │
-│                   │  /remote  - Control   │                 │
-│                   └───────────────────────┘                 │
+│                   │     Angular Frontend      │                 │
+│                   │      (Port: 4200)         │                 │
+│                   │                           │                 │
+│                   │  /login      - Auth       │                 │
+│                   │  /tv         - Player TV  │                 │
+│                   │  /secondary  - Player 2nd │                 │
+│                   │  /remote     - Control    │                 │
+│                   └───────────────────────────┘                 │
 │                                                               │
 └─────────────────────────────────────────────────────────────┘
 ```
@@ -439,7 +440,7 @@ Pi Frontend (ProfileConfigService sélectionne le profil actif)
 - **Grafana dashboards** (Port 3000) — 3 dashboards (local) + 4 dashboards cloud :
   - _NeoPro Overview_ : API Health, sites connectés, alertes actives, taux 5xx, latence p95, mémoire RSS
   - _NeoPro Infrastructure_ : HTTP rate/latence par percentile, Node.js runtime (heap, event loop lag, memory pressure), auth & rate limiting, DB pool & latency, FTP storage
-  - _NeoPro Business & Fleet_ : content pipeline (video uploads), fleet Pi (WebSocket par type, heartbeats, network stability, socket disconnects), video transitions, deployments (canary, sync, drift), subscriptions & predictive alerts, **kiosk Chromium** (status, crashes, restarts, **dual TV+LED**), **Fan Pi** (présence, état, failures)
+  - _NeoPro Business & Fleet_ : content pipeline (video uploads), fleet Pi (WebSocket par type, heartbeats, network stability, socket disconnects), video transitions, deployments (canary, sync, drift), subscriptions & predictive alerts, **kiosk Chromium** (status, crashes, restarts, **dual TV+Secondary**), **Fan Pi** (présence, état, failures)
   - _NeoPro Sponsor Analytics_ (cloud) : sync & deployment (rate, sponsors/deploy, auto-resolution), impression attribution (méthodes de résolution, FK fallback, Pi auth), **sponsor health F-AUD-07** (matrice santé, health checks, alertes proactives), reports & API quality (génération PDF, latence network stats/benchmark)
 - **Scrape targets** : Docker local, `host.docker.internal:3001` (dev), Railway HTTPS (prod)
 - **Smoke tests** : `npm run test:smoke` — 205 tests détectent les régressions de wiring API (routes, middlewares, repositories, services, handlers, error types, métriques Prometheus critiques, hourly metric alerting wiring) + conventions Pi (systemd, sudoers, kiosk Chromium) + benchmark query patterns
@@ -548,14 +549,15 @@ Le Raspberry Pi peut fonctionner dans différents modes réseau :
 │                                                                   │
 │  wlan0: Hotspot "NEOPRO_xxx"     wlan1: Non utilisé              │
 │                                                                   │
-│  ┌───────────┐  ┌───────────┐  ┌──────────────┐ ┌────────────┐  │
-│  │  Nginx    │  │ Socket.IO │  │  Chromium    │ │ Chromium   │  │
-│  │  Port 80  │  │ Port 3000 │  │ /tv (HDMI 0) │ │/led (H1)*  │  │
-│  └─────┬─────┘  └─────┬─────┘  └──────┬───────┘ └─────┬──────┘  │
-│        │               │               │               │          │
-│        └───────────────┼───────────────┴───────────────┘          │
-│                        │ Communication locale                     │
-│        * LED kiosk : lancé si led_enabled + HDMI 1 connecté       │
+│  ┌───────────┐  ┌───────────┐  ┌──────────────┐ ┌────────────────┐ │
+│  │  Nginx    │  │ Socket.IO │  │  Chromium    │ │   Chromium     │ │
+│  │  Port 80  │  │ Port 3000 │  │ /tv (HDMI 0) │ │/secondary (H1)*│ │
+│  └─────┬─────┘  └─────┬─────┘  └──────┬───────┘ └──────┬─────────┘ │
+│        │               │               │                │           │
+│        └───────────────┼───────────────┴────────────────┘           │
+│                        │ Communication locale                       │
+│        * Secondary kiosk : lancé si secondaryDisplayEnabled         │
+│          + HDMI 1 connecté (détection DRM /sys/class/drm/)          │
 └────────────────────────────┼─────────────────────────────────────┘
                              │
                    WiFi (192.168.4.x)
@@ -759,5 +761,5 @@ Résultat : 2 369 tests / 85+ suites, 0 failures.
 
 ---
 
-**Dernière mise à jour** : 22 février 2026
-**Version** : 3.69.0+
+**Dernière mise à jour** : 24 février 2026
+**Version** : 3.80.7+
