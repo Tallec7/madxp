@@ -2,7 +2,10 @@
 
 ### Bug Fixes
 
-- **hdmi:** \_findEdidPath utilise readFileSync au lieu de stat.size pour sysfs ([c019065](https://github.com/Tallec7/neopro/commit/c019065a6985e249affcf2959c768774b1b243c7))
+- **hdmi:** `_findEdidPath` utilise `readFileSync` au lieu de `stat.size` pour détecter les fichiers EDID sysfs ([c019065](https://github.com/Tallec7/neopro/commit/c019065a6985e249affcf2959c768774b1b243c7))
+  - Les fichiers virtuels `/sys/class/drm/*/edid` reportent `stat.size=0` même avec 128-256 bytes de données
+  - Causait `edidPath=null` → `edid_detailed=null` → section enrichie invisible sur tous les Pi
+  - Fix dans `metrics.js` (sync-agent) et `hdmi.service.js` (serveur local)
 
 ## [3.80.3](https://github.com/Tallec7/neopro/compare/v3.80.2...v3.80.3) (2026-02-24)
 
