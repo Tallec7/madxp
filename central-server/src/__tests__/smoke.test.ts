@@ -1809,6 +1809,16 @@ describe('Kiosk watchdog cache management', () => {
     expect({ hasDbusLaunch: watchdog.includes('dbus-launch') })
       .toEqual({ hasDbusLaunch: true });
   });
+
+  it('kiosk-watchdog.sh must use --password-store=basic on all Chromium instances', () => {
+    // Without this flag, dbus-launch enables GNOME Keyring access and Chromium
+    // shows a blocking "Choose password for new keyring" popup in kiosk mode.
+    // Incident: 24/02/2026 — popup bloquante sur Pi après ajout dbus-launch.
+    const matches = watchdog.match(/--password-store=basic/g) || [];
+    // Must appear at least twice: once for TV Chromium, once for LED Chromium
+    expect({ passwordStoreBasicCount: matches.length >= 2 })
+      .toEqual({ passwordStoreBasicCount: true });
+  });
 });
 
 describe('neopro-kiosk.service must depend on nginx', () => {
@@ -2352,5 +2362,62 @@ describe('Sync-agent debug bundle regression guards', () => {
     );
     expect({ extractsMessage: /const\s*\{[^}]*message[^}]*\}\s*=\s*alert/.test(handler) })
       .toEqual({ extractsMessage: true });
+  });
+});
+
+// ----------------------------------------------------------
+// Reboot OTA race condition regression guard
+// ----------------------------------------------------------
+// Issue: startServices() scheduled sync-agent restart at t+5s, reboot at t+10s.
+// The restart killed the Node process, destroying the reboot timer → Pi never rebooted.
+// Fix: use 'shutdown -r' (survives process kill) + skip sync-agent restart when reboot scheduled.
+describe('OTA reboot race condition guards', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+
+  // Guard: reboot command must use 'shutdown -r', not setTimeout+exec('sudo reboot')
+  it('reboot command must use shutdown -r (not setTimeout+reboot)', () => {
+    const indexJs = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/sync-agent/src/commands/index.js'),
+      'utf8'
+    );
+    const rebootFn = indexJs.match(/async reboot\(\)[\s\S]*?return \{[^}]*\};/);
+    expect(rebootFn).not.toBeNull();
+    expect({ usesShutdown: rebootFn![0].includes("'shutdown'") })
+      .toEqual({ usesShutdown: true });
+    // Strip comments before checking for setTimeout — the comment mentions the old approach
+    const codeOnly = rebootFn![0].replace(/\/\/.*$/gm, '');
+    expect({ noSetTimeoutReboot: !/setTimeout[\s\S]*?reboot/.test(codeOnly) })
+      .toEqual({ noSetTimeoutReboot: true });
+  });
+
+  // Guard: OTA scheduleReboot must use 'shutdown -r', not setTimeout
+  it('OTA scheduleReboot must use shutdown -r (not setTimeout+reboot)', () => {
+    const updateSw = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/sync-agent/src/commands/update-software.js'),
+      'utf8'
+    );
+    // Match the full if(scheduleReboot){...} block up to the closing brace at same indent
+    const rebootBlock = updateSw.match(/if\s*\(scheduleReboot\)\s*\{[\s\S]*?\.unref\(\);[\s\S]*?\}/);
+    expect(rebootBlock).not.toBeNull();
+    expect({ usesShutdown: rebootBlock![0].includes("'shutdown'") })
+      .toEqual({ usesShutdown: true });
+    // Strip comments before checking for setTimeout
+    const codeOnly = rebootBlock![0].replace(/\/\/.*$/gm, '');
+    expect({ noSetTimeoutReboot: !/setTimeout[\s\S]*?reboot/i.test(codeOnly) })
+      .toEqual({ noSetTimeoutReboot: true });
+  });
+
+  // Guard: startServices() must skip sync-agent restart when reboot is scheduled
+  it('startServices must skip sync-agent restart when scheduleReboot is true', () => {
+    const updateSw = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/sync-agent/src/commands/update-software.js'),
+      'utf8'
+    );
+    const startServicesFn = updateSw.match(/async startServices\(\)[\s\S]*?^\s{2}\}/m);
+    expect(startServicesFn).not.toBeNull();
+    expect({ checksScheduleReboot: /this\._scheduleReboot/.test(startServicesFn![0]) })
+      .toEqual({ checksScheduleReboot: true });
+    expect({ skipsRestartOnReboot: /skip.*sync-agent restart/i.test(startServicesFn![0]) })
+      .toEqual({ skipsRestartOnReboot: true });
   });
 });

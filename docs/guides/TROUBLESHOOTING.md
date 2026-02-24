@@ -820,6 +820,40 @@ grep -c 'rm -rf /home/pi/.config/chromium ' /home/pi/neopro/scripts/kiosk-watchd
 sudo systemctl restart neopro-kiosk
 ```
 
+#### Popup "Choose password for new keyring" (v3.80.1+)
+
+**Symptômes :**
+
+- Au boot, Chromium affiche un popup GNOME Keyring : "Choose password for new keyring"
+- Le popup est bloquant et empêche le chargement de la page `/tv`
+- Apparaît uniquement après la mise à jour vers v3.80+ (ajout de `dbus-launch`)
+
+**Cause :** Le `dbus-launch` ajouté en v3.80 pour supprimer le spam D-Bus ("Failed to connect to the bus") crée une session D-Bus complète. Chromium détecte alors le système de keyring GNOME et tente de l'utiliser pour stocker les mots de passe, ce qui déclenche un popup de création de keyring.
+
+**Correction (v3.80.1) :** `--password-store=basic` ajouté sur les deux instances Chromium (TV + LED) dans `kiosk-watchdog.sh`. Ce flag force Chromium à utiliser un stockage de mots de passe basique (en mémoire) au lieu de GNOME Keyring.
+
+**Diagnostic :**
+
+```bash
+# Vérifier que le flag est présent dans le watchdog
+grep -c 'password-store=basic' /home/pi/neopro/scripts/kiosk-watchdog.sh
+# Attendu: 2 (une fois pour TV, une fois pour LED). Si 0: version < v3.80.1
+
+# Vérifier que dbus-launch est présent
+grep -c 'dbus-launch' /home/pi/neopro/scripts/kiosk-watchdog.sh
+# Attendu: 1+. Si 0: version < v3.80.0
+```
+
+**Fix manuel (Pi non encore mis à jour) :**
+
+```bash
+# Ajouter le flag dans les common_flags des deux instances Chromium
+# dans /home/pi/neopro/scripts/kiosk-watchdog.sh :
+#   "--password-store=basic"
+# puis redémarrer :
+sudo systemctl restart neopro-kiosk
+```
+
 #### TV noire — "X server not ready after 60s" (v3.72+)
 
 **Symptômes :**

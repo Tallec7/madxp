@@ -17,7 +17,7 @@ cd central-server && npm run build # Compile TypeScript
 
 # Tests
 npm run test:server                # Jest (API central-server — 1592 tests)
-npm run test:smoke                 # Jest (Smoke tests — 168 tests, détecte régressions de wiring)
+npm run test:smoke                 # Jest (Smoke tests — 205 tests, détecte régressions de wiring)
 npm run test:central               # Karma (Angular Dashboard — 506 tests)
 cd raspberry/server && npm test    # Jest (Socket.IO server — 71 tests)
 cd raspberry/admin && npm test     # Jest (Admin server — 148 tests)
