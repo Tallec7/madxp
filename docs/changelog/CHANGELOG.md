@@ -1,3 +1,9 @@
+## [3.80.10](https://github.com/Tallec7/neopro/compare/v3.80.9...v3.80.10) (2026-02-24)
+
+### Bug Fixes
+
+- **socket:** guard against null io in cleanup after async delay ([2c07177](https://github.com/Tallec7/neopro/commit/2c07177cf7ae22732f6ddde410d21220aea27918))
+
 ## [3.80.9](https://github.com/Tallec7/neopro/compare/v3.80.8...v3.80.9) (2026-02-24)
 
 ### Bug Fixes
