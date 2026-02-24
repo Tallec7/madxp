@@ -52,6 +52,7 @@
 - **docs:** synchronisation ARCHITECTURE.md, REFERENCE.md, IMPLEMENTED-BACKLOG.md, GLOSSARY.md
   avec le renommage LED → Secondary Display et les nouvelles routes/features E-22
 
+
 ## [3.80.7](https://github.com/Tallec7/neopro/compare/v3.80.6...v3.80.7) (2026-02-24)
 
 ### Bug Fixes
