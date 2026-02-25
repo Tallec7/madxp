@@ -455,11 +455,18 @@ elif [ -n "$DIAG_ERRORS" ] && [ "$DIAG_ERRORS" -gt 0 ] 2>/dev/null; then
     print_warning "Diagnostic : ${DIAG_ERRORS} erreur(s), ${DIAG_WARNINGS:-0} avertissement(s)"
     echo -e "${YELLOW}  Exécutez le diagnostic complet pour les détails :${NC}"
     echo "  ssh ${RASPBERRY_USER}@${RASPBERRY_IP} '${DIAG_SCRIPT}'"
-elif [ "$DIAG_SSH_RC" -ne 0 ]; then
+elif [ "$DIAG_SSH_RC" -eq 255 ]; then
+    # Exit 255 = SSH connection failure (auth, timeout, unreachable)
     print_warning "Diagnostic : connexion SSH échouée (code ${DIAG_SSH_RC})"
     DIAG_SSH_MSG=$(cat "${DIAG_SSH_ERR}" 2>/dev/null | head -1)
     [ -n "$DIAG_SSH_MSG" ] && echo -e "${YELLOW}  ${DIAG_SSH_MSG}${NC}"
     echo -e "${YELLOW}  Exécutez le diagnostic manuellement :${NC}"
+    echo "  ssh ${RASPBERRY_USER}@${RASPBERRY_IP} '${DIAG_SCRIPT}'"
+elif [ "$DIAG_SSH_RC" -ne 0 ] && [ -n "$DIAG_OUTPUT" ]; then
+    # SSH OK but diagnose-pi.sh returned errors (exit code = error count)
+    # JSON parsing may have failed (old script version with stdout pollution)
+    print_warning "Diagnostic : ${DIAG_SSH_RC} erreur(s) détectée(s)"
+    echo -e "${YELLOW}  Exécutez le diagnostic complet pour les détails :${NC}"
     echo "  ssh ${RASPBERRY_USER}@${RASPBERRY_IP} '${DIAG_SCRIPT}'"
 else
     print_warning "Diagnostic : impossible de déterminer l'état (script non disponible ?)"
