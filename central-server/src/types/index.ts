@@ -132,6 +132,7 @@ export interface ContentDeployment {
   progress: number;
   error_message: string | null;
   deployed_by: string | null;
+  has_secondary_variant: boolean;
   created_at: Date;
   started_at: Date | null;
   completed_at: Date | null;

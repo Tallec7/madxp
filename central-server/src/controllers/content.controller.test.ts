@@ -382,9 +382,9 @@ describe('Content Controller', () => {
         const res = createMockResponse();
 
         const mockDeployments = [
-          { id: 'd1', video_id: 'video-123', status: 'completed', target_name: 'Site A', target_type: 'site' },
-          { id: 'd2', video_id: 'video-123', status: 'failed', target_name: 'Site B', target_type: 'site' },
-          { id: 'd3', video_id: 'video-123', status: 'pending', target_name: 'Group C', target_type: 'group' },
+          { id: 'd1', video_id: 'video-123', status: 'completed', target_name: 'Site A', target_type: 'site', has_secondary_variant: true },
+          { id: 'd2', video_id: 'video-123', status: 'failed', target_name: 'Site B', target_type: 'site', has_secondary_variant: false },
+          { id: 'd3', video_id: 'video-123', status: 'pending', target_name: 'Group C', target_type: 'group', has_secondary_variant: false },
         ];
 
         mockVideoRepo.findVideoById.mockResolvedValueOnce({ id: 'video-123' } as never);
@@ -463,8 +463,8 @@ describe('Content Controller', () => {
         const res = createMockResponse();
 
         const mockDeployments = [
-          { id: '1', video_id: 'v1', target_type: 'site', target_name: 'Site A', metadata: { title: 'Video 1' } },
-          { id: '2', video_id: 'v2', target_type: 'group', target_name: 'Group B', original_name: 'video.mp4', metadata: null },
+          { id: '1', video_id: 'v1', target_type: 'site', target_name: 'Site A', metadata: { title: 'Video 1' }, has_secondary_variant: false },
+          { id: '2', video_id: 'v2', target_type: 'group', target_name: 'Group B', original_name: 'video.mp4', metadata: null, has_secondary_variant: true },
         ];
 
         mockDeploymentRepo.findAllWithDetails.mockResolvedValueOnce(mockDeployments as never[]);

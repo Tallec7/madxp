@@ -146,6 +146,7 @@ CREATE TABLE IF NOT EXISTS content_deployments (
   progress INT DEFAULT 0,
   error_message TEXT,
   deployed_by UUID REFERENCES users(id),
+  has_secondary_variant BOOLEAN DEFAULT false,
   created_at TIMESTAMP DEFAULT NOW(),
   started_at TIMESTAMP,
   completed_at TIMESTAMP,

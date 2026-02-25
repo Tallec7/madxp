@@ -408,6 +408,24 @@ class DeploymentService {
       message: result.message,
     });
 
+    // Persister le flag secondaryVariant si ce déploiement en inclut une
+    if (secondaryVariant && (result.sent || result.queued)) {
+      try {
+        await query(
+          `UPDATE content_deployments
+           SET has_secondary_variant = true
+           WHERE id = $1 AND has_secondary_variant = false`,
+          [deploymentId]
+        );
+      } catch (flagError) {
+        // Non-bloquant : ne pas échouer le déploiement pour un indicateur UX
+        logger.debug('Failed to set has_secondary_variant flag', {
+          deploymentId,
+          error: flagError instanceof Error ? flagError.message : String(flagError),
+        });
+      }
+    }
+
     // Retourne true si envoyé OU mis en queue (sera traité à la reconnexion)
     return result.sent || result.queued;
   }

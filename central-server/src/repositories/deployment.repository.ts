@@ -35,6 +35,7 @@ export interface VideoDeploymentRow {
   target_name: string;
   club_name: string | null;
   deployed_by_name: string;
+  has_secondary_variant: boolean;
 }
 
 export interface DeploymentDetailRow {
@@ -55,6 +56,7 @@ export interface DeploymentDetailRow {
   target_name: string;
   video_name?: string;
   video_title?: string;
+  has_secondary_variant: boolean;
 }
 
 export interface CreateFullDeploymentInput {
@@ -202,6 +204,7 @@ class DeploymentRepositoryImpl extends BaseRepository<ContentDeployment> {
     const result = await query<VideoDeploymentRow>(
       `SELECT cd.id, cd.video_id, cd.target_type, cd.target_id, cd.status, cd.progress,
               cd.error_message as error, cd.completed_at, cd.created_at, cd.started_at,
+              cd.has_secondary_variant,
               CASE
                 WHEN cd.target_type = 'site' THEN s.site_name
                 ELSE 'Groupe'
@@ -228,7 +231,7 @@ class DeploymentRepositoryImpl extends BaseRepository<ContentDeployment> {
     const result = await query<DeploymentDetailRow>(
       `SELECT cd.id, cd.video_id, cd.target_type, cd.target_id, cd.status, cd.progress,
               cd.error_message as error, cd.completed_at as deployed_at,
-              cd.created_at, cd.started_at,
+              cd.created_at, cd.started_at, cd.has_secondary_variant,
               v.filename, v.original_name, v.metadata,
               CASE
                 WHEN cd.target_type = 'site' THEN s.site_name
@@ -249,7 +252,7 @@ class DeploymentRepositoryImpl extends BaseRepository<ContentDeployment> {
     const result = await query<DeploymentDetailRow>(
       `SELECT cd.id, cd.video_id, cd.target_type, cd.target_id, cd.status, cd.progress,
               cd.error_message as error, cd.completed_at as deployed_at,
-              cd.created_at, cd.started_at,
+              cd.created_at, cd.started_at, cd.has_secondary_variant,
               v.filename as video_name,
               CASE
                 WHEN cd.target_type = 'site' THEN s.site_name

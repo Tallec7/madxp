@@ -50,6 +50,7 @@ interface Deployment {
   started_at?: Date;
   completed_at?: Date;
   error?: string;
+  has_secondary_variant?: boolean;
 }
 
 interface VideoDeploymentHistory {
@@ -325,6 +326,8 @@ interface VideoDeploymentHistory {
               <div class="deployment-meta">
                 {{ deployment.target_type === 'site' ? '🖥️' : '👥' }}
                 {{ deployment.target_name }}
+                <span class="secondary-variant-badge" *ngIf="deployment.has_secondary_variant"
+                      title="Variante écran secondaire incluse">📺 2nd</span>
               </div>
             </div>
 
@@ -491,6 +494,8 @@ interface VideoDeploymentHistory {
                     {{ dep.target_type === 'site' ? '🖥️' : '👥' }}
                     {{ dep.target_name }}
                     <span class="club-name" *ngIf="dep.club_name">({{ dep.club_name }})</span>
+                    <span class="secondary-variant-badge" *ngIf="dep.has_secondary_variant"
+                          title="Variante écran secondaire incluse">📺 2nd</span>
                   </span>
                   <span class="badge" [class]="'badge-' + getDeploymentStatusBadge(dep.status)">
                     {{ getDeploymentStatusLabel(dep.status) }}
@@ -1533,6 +1538,20 @@ interface VideoDeploymentHistory {
     .club-name {
       color: #64748b;
       font-weight: 400;
+    }
+
+    .secondary-variant-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      padding: 0.125rem 0.5rem;
+      background: #dbeafe;
+      color: #1e40af;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 500;
+      margin-left: 0.5rem;
+      white-space: nowrap;
     }
 
     .history-item-details {
