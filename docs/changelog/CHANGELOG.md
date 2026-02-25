@@ -2,6 +2,12 @@
 
 ### Features
 
+- **secondary-display:** add 📺 2nd badge on videos with secondary variant ([475edbe](https://github.com/Tallec7/neopro/commit/475edbead603b4104279a260891043f9cfc6f0dc))
+
+# [3.82.0](https://github.com/Tallec7/neopro/compare/v3.81.0...v3.82.0) (2026-02-25)
+
+### Features
+
 - **dashboard:** add `📺 2nd` badge in site category config for videos with secondary variant — enriches `getSiteLocalContent` API with `secondaryVariantVideoIds` + `secondaryDisplayEnabled`
 - **remote:** add `📺 2nd` badge on video cards when `configuration.secondaryDisplayEnabled` and `video.variants.secondary` exist
 
