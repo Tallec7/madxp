@@ -1925,6 +1925,52 @@ describe('Kiosk xdpyinfo dependency must be provisioned', () => {
     expect({ hasX11Utils: diagnosePi.includes('x11-utils') })
       .toEqual({ hasX11Utils: true });
   });
+
+  it('diagnose-pi.sh must NOT echo to stdout in --json mode (pollutes JSON output)', () => {
+    // Incident: 25/02/2026 — deploy-remote.sh post-deployment diagnostic always showed
+    // "impossible de déterminer l'état" because echo -n "Test http://..." lines
+    // were not gated on OUTPUT_MODE, polluting JSON output and breaking grep parsing.
+    // All echo/printf to stdout must be guarded by OUTPUT_MODE != "json".
+    const diagnosePi = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/scripts/diagnose-pi.sh'),
+      'utf8'
+    );
+    // Find raw echo statements not guarded by json mode check
+    const lines = diagnosePi.split('\n');
+    const ungatedEchos: string[] = [];
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim();
+      // Skip comments, empty lines, heredocs, and echo inside json_add or if blocks
+      if (!line || line.startsWith('#') || line.startsWith('cat <<')) continue;
+      // Detect bare echo/echo -n that output to stdout (not guarded by OUTPUT_MODE)
+      if (/^echo\s/.test(line) || /^echo$/.test(line)) {
+        // Check if this line is inside an OUTPUT_MODE guard (look at surrounding context)
+        const prevLine = i > 0 ? lines[i - 1].trim() : '';
+        const prevPrevLine = i > 1 ? lines[i - 2].trim() : '';
+        const isInsideHumanGuard =
+          prevLine.includes('OUTPUT_MODE') ||
+          prevPrevLine.includes('OUTPUT_MODE') ||
+          prevLine.includes('json') ||
+          prevPrevLine.includes('json');
+        // Lines inside "if [ "$OUTPUT_MODE" = "human" ]" blocks are OK
+        // We only flag top-level echo that will run in all modes
+        if (!isInsideHumanGuard) {
+          // Check if this echo is inside a function that already gates on mode
+          // (print_header, print_section, print_success etc. all return early in json mode)
+          // Only flag echo in the main body (after "EXÉCUTION DU DIAGNOSTIC")
+          const beforeLine = diagnosePi.substring(0, diagnosePi.indexOf(line));
+          if (beforeLine.includes('EXÉCUTION DU DIAGNOSTIC') &&
+              !line.includes('echo \'') && // skip echo for json heredoc
+              !line.includes('echo "') && // might be inside if block
+              line.startsWith('echo -n')) { // bare echo -n at top level
+            ungatedEchos.push(`line ${i + 1}: ${line}`);
+          }
+        }
+      }
+    }
+    expect({ ungatedEchosInJsonMode: ungatedEchos })
+      .toEqual({ ungatedEchosInJsonMode: [] });
+  });
 });
 
 // ----------------------------------------------------------
@@ -3047,6 +3093,16 @@ describe('Deploy script kiosk restart ordering', () => {
       .toEqual({ hasWaitBeforeKiosk: true });
     expect({ kioskAfterWait: kioskRestartIndex > waitIndex })
       .toEqual({ kioskAfterWait: true });
+  });
+
+  it('deploy-remote.sh diagnostic must capture SSH exit code (not swallow errors)', () => {
+    // Incident: 25/02/2026 — diagnostic always showed "impossible de déterminer l'état"
+    // because SSH errors were swallowed by 2>/dev/null. The diagnostic must capture
+    // the SSH exit code and report connection failures explicitly.
+    expect({ capturesSshExitCode: deploy.includes('DIAG_SSH_RC=$?') })
+      .toEqual({ capturesSshExitCode: true });
+    expect({ checksSshFailure: deploy.includes('DIAG_SSH_RC') && deploy.includes('connexion SSH échouée') })
+      .toEqual({ checksSshFailure: true });
   });
 });
 

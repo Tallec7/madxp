@@ -779,7 +779,7 @@ check_version_info
 # 16. Tests HTTP
 print_section "16. Tests HTTP"
 HTTP_OK=true
-echo -n "Test http://localhost ... "
+[ "$OUTPUT_MODE" != "json" ] && echo -n "Test http://localhost ... "
 HTTP_CODE=$(curl -sf -o /dev/null -w "%{http_code}" http://localhost/ 2>/dev/null || echo "000")
 if [ "$HTTP_CODE" = "200" ]; then
     print_success "OK (200)"
@@ -791,7 +791,7 @@ else
     TOTAL_ERRORS=$((TOTAL_ERRORS + 1))
 fi
 
-echo -n "Test http://localhost/tv ... "
+[ "$OUTPUT_MODE" != "json" ] && echo -n "Test http://localhost/tv ... "
 TV_CODE=$(curl -sf -o /dev/null -w "%{http_code}" http://localhost/tv 2>/dev/null || echo "000")
 if [ "$TV_CODE" = "200" ]; then
     print_success "OK (200)"
@@ -802,7 +802,7 @@ else
     HTTP_OK=false
 fi
 
-echo -n "Test http://localhost:8080 ... "
+[ "$OUTPUT_MODE" != "json" ] && echo -n "Test http://localhost:8080 ... "
 ADMIN_CODE=$(curl -sf -o /dev/null -w "%{http_code}" http://localhost:8080/ 2>/dev/null || echo "000")
 if [ "$ADMIN_CODE" = "200" ]; then
     print_success "OK (200)"

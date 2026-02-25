@@ -3,6 +3,15 @@
 ### Bug Fixes
 
 - **secondary-display:** use [0-9] instead of \d in grep -E for xrandr detection ([1cd5b4b](https://github.com/Tallec7/neopro/commit/1cd5b4b843bdc0d9dad2d37f280c4fccd8033099))
+- **deployment:** fix post-deployment diagnostic always showing "impossible de déterminer l'état" — `diagnose-pi.sh` echo lines polluted JSON output in `--json` mode, and `deploy-remote.sh` swallowed SSH errors silently
+
+### Tests
+
+- **smoke:** add 2 regression guards — diagnose-pi.sh JSON output purity + deploy-remote.sh SSH error capture
+
+### Documentation
+
+- **troubleshooting:** add note about SSH diagnostic failure in post-deployment (v3.82.3+)
 
 ## [3.82.2](https://github.com/Tallec7/neopro/compare/v3.82.1...v3.82.2) (2026-02-25)
 

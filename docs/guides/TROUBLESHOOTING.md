@@ -2159,6 +2159,8 @@ cd /home/pi/neopro
 
 Le code de retour = nombre d'erreurs (0 = Pi sain). Le mode `--json` est automatiquement utilisé par `deploy-remote.sh` (post-déploiement) et `update-software.js` (rapport OTA).
 
+> **Note v3.82.3+ :** Si le diagnostic post-déploiement affiche `"impossible de déterminer l'état"`, cela signifie que la connexion SSH pour le diagnostic a échoué (mot de passe incorrect, timeout, etc.). Le script affiche maintenant le code d'erreur SSH et la raison. Relancez manuellement : `ssh pi@neopro.local '/home/pi/neopro/scripts/diagnose-pi.sh'`
+
 **Exemple de sortie :**
 
 ```
