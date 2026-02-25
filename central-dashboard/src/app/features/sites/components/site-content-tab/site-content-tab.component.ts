@@ -181,7 +181,7 @@ interface HumanReadableDiff {
           <span class="health-value">{{ totalVideoCount }}</span>
         </a>
         <span class="health-arrow">→</span>
-        <a class="health-step" (click)="scrollToSection('loops')" [class.ok]="hasPhaseLoops()" [class.warn]="!hasPhaseLoops() && (config.sponsors?.length ?? 0) > 0"
+        <a class="health-step" (click)="scrollToSection('loops')" [class.ok]="hasPhaseLoops()" [class.warn]="!hasPhaseLoops() && config.sponsors.length > 0"
            title="Les boucles par phase (avant-match/match/après-match) activent le tracking analytics. La boucle par défaut ne génère pas de données.">
           <span class="health-icon">🔄</span>
           <span class="health-label">Boucles</span>

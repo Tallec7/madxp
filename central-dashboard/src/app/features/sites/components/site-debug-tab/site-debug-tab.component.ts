@@ -1174,8 +1174,8 @@ interface WizardStep {
                   <strong>{{ 'debug.networkUptimeInterface' | translate }}:</strong> {{ formatUptime(networkInfo.stability.interface_uptime_seconds!) }}
                 </span>
                 <span *ngIf="networkInfo.stability.reconnections_24h !== null"
-                  [class.text-danger]="(networkInfo.stability.reconnections_24h ?? 0) > 5"
-                  [class.text-success]="(networkInfo.stability.reconnections_24h ?? 0) === 0">
+                  [class.text-danger]="networkInfo.stability.reconnections_24h! > 5"
+                  [class.text-success]="networkInfo.stability.reconnections_24h === 0">
                   <strong>{{ 'debug.networkReconnections24h' | translate }}:</strong> {{ networkInfo.stability.reconnections_24h }}
                 </span>
               </div>

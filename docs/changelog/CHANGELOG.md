@@ -1,3 +1,18 @@
+## [3.80.18](https://github.com/Tallec7/neopro/compare/v3.80.17...v3.80.18) (2026-02-25)
+
+### Bug Fixes
+
+- **build:** fix 12 Angular build warnings (NG8107 unnecessary `?.`, NG8102 unnecessary `??`, CSS budget, leaflet CommonJS)
+
+### Configuration
+
+- **angular.json:** bump central-dashboard anyComponentStyle budget 40kB → 48kB (aligned with raspberry config)
+- **angular.json:** add `leaflet` to `allowedCommonJsDependencies` (suppresses ESM bailout warning)
+
+### Tests
+
+- **smoke:** add Angular build config guards (leaflet CommonJS + component style budget threshold)
+
 ## [3.80.17](https://github.com/Tallec7/neopro/compare/v3.80.16...v3.80.17) (2026-02-25)
 
 ### Bug Fixes

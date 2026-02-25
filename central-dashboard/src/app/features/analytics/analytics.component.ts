@@ -188,7 +188,7 @@ interface SiteSummary {
                 <span class="alert-reason" *ngIf="club.status === 'offline'">Hors ligne</span>
                 <span class="alert-reason" *ngIf="club.status !== 'offline'">0 lecture aujourd'hui</span>
               </div>
-              <span class="alert-avail" [class.low]="club.availability_24h < 80">{{ club.availability_24h?.toFixed(0) || 0 }}% dispo</span>
+              <span class="alert-avail" [class.low]="club.availability_24h < 80">{{ club.availability_24h.toFixed(0) || 0 }}% dispo</span>
             </a>
           </div>
           <ng-template #noDormant>

@@ -156,12 +156,12 @@ Chart.register(...registerables);
                 </div>
                 <div class="sponsor-metric">
                   <span class="sm-value" [class.good]="sponsor.completion_rate >= 80" [class.warn]="sponsor.completion_rate >= 50 && sponsor.completion_rate < 80" [class.bad]="sponsor.completion_rate < 50">
-                    {{ sponsor.completion_rate?.toFixed(0) || 0 }}%
+                    {{ sponsor.completion_rate.toFixed(0) || 0 }}%
                   </span>
                   <span class="sm-label">compl.</span>
                 </div>
                 <div class="sponsor-metric" *ngIf="sponsor.cpi !== null">
-                  <span class="sm-value">{{ sponsor.cpi?.toFixed(2) }}&euro;</span>
+                  <span class="sm-value">{{ sponsor.cpi.toFixed(2) }}&euro;</span>
                   <span class="sm-label">CPI</span>
                 </div>
               </div>

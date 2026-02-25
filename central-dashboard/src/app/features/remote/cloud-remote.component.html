@@ -1584,11 +1584,11 @@
               </svg>
             </button>
           </div>
-          @if (localOptions.breakingNews.quickMessages?.length) {
+          @if (localOptions.breakingNews.quickMessages.length) {
             <div class="quick-messages">
               <span class="quick-messages-label">Messages rapides :</span>
               <div class="quick-messages-list">
-                @for (msg of localOptions.breakingNews.quickMessages ?? []; track msg) {
+                @for (msg of localOptions.breakingNews.quickMessages; track msg) {
                   <button class="quick-message-btn" (click)="sendQuickNews(msg)">
                     {{ msg }}
                   </button>

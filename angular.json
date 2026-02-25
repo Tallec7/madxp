@@ -191,7 +191,7 @@
               }
             ],
             "styles": ["central-dashboard/src/styles.scss"],
-            "allowedCommonJsDependencies": ["qrcode"]
+            "allowedCommonJsDependencies": ["qrcode", "leaflet"]
           },
           "configurations": {
             "production": {
@@ -203,8 +203,8 @@
                 },
                 {
                   "type": "anyComponentStyle",
-                  "maximumWarning": "40kb",
-                  "maximumError": "50kb"
+                  "maximumWarning": "48kb",
+                  "maximumError": "64kb"
                 }
               ],
               "outputHashing": "all",

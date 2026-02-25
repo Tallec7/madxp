@@ -3209,3 +3209,50 @@ describe('Video variant display_type alignment guard', () => {
     });
   });
 });
+
+// ── Angular build config guards ─────────────────────────────────────────
+// Prevents regression of build warnings fixed in 3.80.18:
+// - Missing allowedCommonJsDependencies (leaflet → optimization bailout)
+// - Component style budgets too low (cloud-remote.component.scss > 40kB)
+describe('Angular build config guards', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+  const angularJsonPath = path.join(repoRoot, 'angular.json');
+
+  let angularConfig: {
+    projects: Record<
+      string,
+      {
+        architect: {
+          build: {
+            options: { allowedCommonJsDependencies?: string[] };
+            configurations: Record<
+              string,
+              { budgets?: { type: string; maximumWarning: string; maximumError: string }[] }
+            >;
+          };
+        };
+      }
+    >;
+  };
+
+  beforeAll(() => {
+    angularConfig = JSON.parse(fs.readFileSync(angularJsonPath, 'utf8'));
+  });
+
+  it('central-dashboard must allow leaflet as CommonJS dependency', () => {
+    const allowed =
+      angularConfig.projects['central-dashboard']?.architect?.build?.options
+        ?.allowedCommonJsDependencies ?? [];
+    expect(allowed).toContain('leaflet');
+  });
+
+  it('central-dashboard production budget for anyComponentStyle must be >= 48kb warning', () => {
+    const budgets =
+      angularConfig.projects['central-dashboard']?.architect?.build?.configurations?.production
+        ?.budgets ?? [];
+    const componentBudget = budgets.find((b) => b.type === 'anyComponentStyle');
+    expect(componentBudget).toBeDefined();
+    const warningKb = parseInt(componentBudget!.maximumWarning, 10);
+    expect(warningKb).toBeGreaterThanOrEqual(48);
+  });
+});

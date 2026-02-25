@@ -217,7 +217,7 @@ Chart.register(...registerables);
 
                   <!-- Videos -->
                   <div class="videos-section">
-                    <h4>Vidéos associées ({{ detailStats.videos?.length || 0 }})</h4>
+                    <h4>Vidéos associées ({{ detailStats.videos.length || 0 }})</h4>
                     <div class="video-chips" *ngIf="detailStats.videos?.length">
                       <span class="video-chip" *ngFor="let v of detailStats.videos"
                             [class.chip-not-in-loop]="isVideoNotInLoop(v.video_filename)">
@@ -263,7 +263,7 @@ Chart.register(...registerables);
                       [disabled]="creatingAccessLink"
                       *ngIf="expandedSponsor"
                     >
-                      {{ creatingAccessLink ? '⏳ Création...' : (expandedSponsor?.contact_email ? '📧 Envoyer par email' : '🔗 Générer le lien') }}
+                      {{ creatingAccessLink ? '⏳ Création...' : (expandedSponsor!.contact_email ? '📧 Envoyer par email' : '🔗 Générer le lien') }}
                     </button>
                     <div *ngIf="accessLinkUrl" class="access-link-result" style="margin-top: 8px;">
                       <input type="text" [value]="accessLinkUrl" readonly class="form-input"
