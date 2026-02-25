@@ -445,8 +445,10 @@ export class TvComponent implements OnInit, OnDestroy {
     this.socketService.on<{ role: 'master' | 'slave' }>('tv-role-assigned', (data) => {
       this.ngZone.run(() => {
         this.tvRole = data.role;
-        // Secondary display is always independent — never sync as slave
-        this.isSlaveMode = data.role === 'slave' && this.displayType !== 'secondary';
+        // Secondary display syncs as slave to the primary (master)
+        // so both screens show the same video at the same time.
+        // When secondary variants exist, the slave uses its own variant path via getFilteredVideos().
+        this.isSlaveMode = data.role === 'slave';
         console.log(`[TV] Role assigned: ${data.role}, displayType: ${this.displayType}`);
 
         if (this.isSlaveMode) {

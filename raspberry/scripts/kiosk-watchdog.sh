@@ -12,7 +12,7 @@
 
 CHROMIUM_URL="http://neopro.local/tv"
 CHROMIUM_SECONDARY_URL="http://neopro.local/secondary"
-CONFIG_FILE="/home/pi/neopro/config/configuration.json"
+CONFIG_FILE="/home/pi/neopro/webapp/configuration.json"
 LOG_DIR="/home/pi/neopro/logs"
 LOG_FILE="$LOG_DIR/kiosk-watchdog.log"
 KIOSK_STATUS_FILE="/home/pi/neopro/data/kiosk-status.json"
@@ -282,12 +282,86 @@ start_chromium() {
     fi
 }
 
+# Configurer xrandr pour étendre le bureau sur HDMI 1
+# Détecte automatiquement le nom de la sortie HDMI secondaire et la résolution.
+setup_secondary_xrandr() {
+    export DISPLAY=:0
+    export XAUTHORITY=/home/pi/.Xauthority
+
+    # Trouver le nom de la sortie HDMI secondaire (HDMI-2 sur Pi 5, parfois HDMI-1-2)
+    local secondary_output=""
+    secondary_output=$(xrandr --query 2>/dev/null | grep -E "^HDMI.* connected" | grep -v "primary" | head -1 | awk '{print $1}')
+
+    if [[ -z "$secondary_output" ]]; then
+        # Fallback: chercher tout output connecté qui n'est pas le primaire
+        local primary_output
+        primary_output=$(xrandr --query 2>/dev/null | grep -E "^.* connected primary" | awk '{print $1}')
+        secondary_output=$(xrandr --query 2>/dev/null | grep -E "^.* connected" | grep -v "$primary_output" | head -1 | awk '{print $1}')
+    fi
+
+    if [[ -z "$secondary_output" ]]; then
+        log "⚠️ xrandr: aucune sortie HDMI secondaire détectée"
+        return 1
+    fi
+
+    # Lire la résolution configurée (ex: "1920x1080", "1920x384")
+    local configured_res=""
+    if [ -f "$CONFIG_FILE" ]; then
+        configured_res=$(python3 -c "
+import json
+c = json.load(open('$CONFIG_FILE'))
+print(c.get('secondaryDisplayResolution', ''))
+" 2>/dev/null)
+    fi
+
+    # Trouver la sortie primaire pour --right-of
+    local primary_output
+    primary_output=$(xrandr --query 2>/dev/null | grep -E "^.* connected primary" | awk '{print $1}')
+
+    if [[ -n "$configured_res" && "$configured_res" != "None" ]]; then
+        log "📺 xrandr: activation $secondary_output en ${configured_res} à droite de $primary_output"
+        xrandr --output "$secondary_output" --mode "$configured_res" --right-of "$primary_output" 2>/dev/null \
+            || xrandr --output "$secondary_output" --auto --right-of "$primary_output" 2>/dev/null
+    else
+        log "📺 xrandr: activation $secondary_output (auto) à droite de $primary_output"
+        xrandr --output "$secondary_output" --auto --right-of "$primary_output" 2>/dev/null
+    fi
+
+    if [[ $? -ne 0 ]]; then
+        log "⚠️ xrandr: échec de la configuration de $secondary_output"
+        return 1
+    fi
+
+    # Lire la géométrie réelle depuis xrandr pour positionner Chromium
+    # Format: "HDMI-A-2 connected 3840x2160+1920+0" → offset=1920, width=3840, height=2160
+    local geom
+    geom=$(xrandr --query 2>/dev/null | grep -E "^${secondary_output} connected" | grep -oP '\d+x\d+\+\d+\+\d+')
+    if [[ -n "$geom" ]]; then
+        SECONDARY_SCREEN_WIDTH=$(echo "$geom" | grep -oP '^\d+')
+        SECONDARY_SCREEN_HEIGHT=$(echo "$geom" | grep -oP '(?<=x)\d+(?=\+)')
+        SECONDARY_X_OFFSET=$(echo "$geom" | grep -oP '(?<=\+)\d+(?=\+)')
+    else
+        SECONDARY_SCREEN_WIDTH=1920
+        SECONDARY_SCREEN_HEIGHT=1080
+        SECONDARY_X_OFFSET=1920
+    fi
+
+    log "✓ xrandr: $secondary_output configuré, géométrie=${SECONDARY_SCREEN_WIDTH}x${SECONDARY_SCREEN_HEIGHT}+${SECONDARY_X_OFFSET}"
+    return 0
+}
+
 # Lancer Chromium secondaire sur le second écran (HDMI 1)
 start_chromium_secondary() {
     log "🖥️ Lancement de Chromium écran secondaire sur HDMI 1..."
 
     export DISPLAY=:0
     export XAUTHORITY=/home/pi/.Xauthority
+
+    # Configurer xrandr avant de lancer Chromium
+    if ! setup_secondary_xrandr; then
+        log "⚠️ Impossible de configurer xrandr, abandon du lancement secondaire"
+        return 1
+    fi
 
     # Features à désactiver — même combine que start_chromium() (un seul --disable-features)
     local disable_features="TranslateUI,MediaRouter,XdgDesktopPortal"
@@ -322,7 +396,8 @@ start_chromium_secondary() {
         --disable-gpu-shader-disk-cache
         --password-store=basic
         --user-data-dir=/tmp/kiosk-secondary
-        --window-position=1920,0
+        --window-position=${SECONDARY_X_OFFSET:-1920},0
+        --window-size=${SECONDARY_SCREEN_WIDTH:-1920},${SECONDARY_SCREEN_HEIGHT:-1080}
     )
 
     # Mêmes flags GPU que le kiosk principal
@@ -374,6 +449,12 @@ stop_chromium_secondary() {
         # Nettoyer le user-data-dir temporaire + shm orphelins
         rm -rf /tmp/kiosk-secondary 2>/dev/null || true
         rm -rf /dev/shm/.org.chromium.* 2>/dev/null || true
+        # Désactiver la sortie HDMI secondaire dans xrandr
+        local secondary_output
+        secondary_output=$(DISPLAY=:0 xrandr --query 2>/dev/null | grep -E "^HDMI.* connected" | grep -v "primary" | head -1 | awk '{print $1}')
+        if [[ -n "$secondary_output" ]]; then
+            DISPLAY=:0 xrandr --output "$secondary_output" --off 2>/dev/null || true
+        fi
         log "✓ Chromium secondaire arrêté"
     fi
 }
