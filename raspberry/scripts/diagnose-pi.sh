@@ -335,14 +335,16 @@ check_nginx_config() {
     # Use full path — /usr/sbin may not be in PATH via SSH
     local NGINX_BIN
     NGINX_BIN=$(command -v nginx 2>/dev/null || echo "/usr/sbin/nginx")
-    if "$NGINX_BIN" -t 2>&1 | grep -q "successful"; then
+    # Use sudo for nginx -t — without it the PID file check fails with
+    # "Permission denied" even when the syntax is valid, causing a false positive.
+    if sudo "$NGINX_BIN" -t >/dev/null 2>&1; then
         print_success "Configuration Nginx valide"
         json_add "nginx" "syntax" "ok" "valide"
     else
         print_error "Configuration Nginx invalide"
         json_add "nginx" "syntax" "error" "invalide"
         TOTAL_ERRORS=$((TOTAL_ERRORS + 1))
-        [ "$OUTPUT_MODE" = "human" ] && "$NGINX_BIN" -t 2>&1
+        [ "$OUTPUT_MODE" = "human" ] && sudo "$NGINX_BIN" -t 2>&1
     fi
 
     # Vérifier le site-enabled

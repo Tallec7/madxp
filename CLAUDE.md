@@ -62,6 +62,8 @@ source central-server/.env && psql "$DATABASE_URL" -f central-server/src/scripts
 - Laisser le slave jouer sa boucle indépendamment du master (le slave doit pauser sa boucle dès `tv-role-assigned` et attendre les directives du master via `tv-loop-state` — smoke test enforced)
 - Jouer une vidéo manuelle sur le secondary display sans résoudre la variante secondaire (le command `action` envoie le path principal — toujours passer par `resolveSecondaryVariant()` avant `play()` — smoke test enforced)
 - Utiliser `\d` dans `grep -E` (syntaxe Perl uniquement — utiliser `[0-9]` avec grep -E — smoke test enforced)
+- Créer `club-config.json` sans `chmod 600` (contient le mot de passe WiFi en clair — smoke test enforced)
+- Lancer `nginx -t` sans `sudo` dans les scripts de diagnostic (Permission denied sur PID = faux positif — smoke test enforced)
 
 ## Architecture détaillée
 

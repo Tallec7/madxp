@@ -1,39 +1,17 @@
-## [3.83.1](https://github.com/Tallec7/neopro/compare/v3.83.0...v3.83.1) (2026-02-26)
+## [3.82.11](https://github.com/Tallec7/neopro/compare/v3.82.10...v3.82.11) (2026-02-25)
 
 ### Bug Fixes
 
-- **secondary-display:** resolve secondary variant for manual video playback ([#431](https://github.com/Tallec7/neopro/issues/431)) ([a22e373](https://github.com/Tallec7/neopro/commit/a22e37334d4e25b7db6f2fc0e13485eb43bb1bb6))
-
-## [3.83.1] (2026-02-26)
-
-### Bug Fixes
-
-- **secondary-display:** resolve secondary variant for manual video playback — when a video was triggered manually from the remote, both screens played the primary video because `resolveSecondaryVariant()` was only applied to loop videos (`getLoopVideosForPhase`), not to manual video commands. Fix: add `resolveSecondaryVariant()` helper that resolves the variant path from the Video object or by looking up the full configuration (`findVideoInConfig`). Applied in 3 locations: Socket.IO `action` handler, BroadcastChannel `onCommand` handler, and `handleMasterLoopState` CAS 1 (slave receives master's manual video state). ([343c62d](https://github.com/Tallec7/neopro/commit/343c62d))
+- **diagnostic:** fix nginx false positive in diagnose-pi.sh — use `sudo nginx -t` instead of running as `pi` user (Permission denied on PID file)
+- **security:** fix club-config.json created without chmod 600 in golden image first-boot-setup (WiFi password exposed world-readable)
 
 ### Tests
 
-- **smoke:** add 2 regression guards for secondary variant resolution on manual videos — `resolveSecondaryVariant` must exist and search config, manual video commands must call it before `play()` (291 tests total).
+- **smoke:** add 2 regression guards — sudo nginx -t in diagnostic, chmod 600 on club-config.json in prepare-image
 
 ### Documentation
 
-- **CLAUDE.md:** add "NE JAMAIS FAIRE" rule for playing manual videos without `resolveSecondaryVariant()`
-- **reference:** add manual video variant resolution warning + updated sync table row for manual videos
-- **troubleshooting:** add section 21 "Vidéo secondaire identique à la principale" with root cause, diagnostic, and 2 new smoke tests
-- **ADR-031:** update with 4th desynchronization problem (manual videos) and its resolution
-
-# [3.83.0](https://github.com/Tallec7/neopro/compare/v3.82.10...v3.83.0) (2026-02-26)
-
-### Features
-
-- **ui:** add secondary video indicators across dashboard and cloud remote ([#430](https://github.com/Tallec7/neopro/issues/430)) ([748fa76](https://github.com/Tallec7/neopro/commit/748fa76184e7ab4a7f60053a40972aec77528c90))
-
-### Tests
-
-- **smoke:** add 8 regression guards for secondary video deployment UI — cloud remote HTML/TS/SCSS wiring, remote controller API fields, RemoteState interface, site-detail badge, pending deployment badge, PendingDeployment interface
-
-### Documentation
-
-- **reference:** update "Indicateurs UX 📺 2nd" table with 3 new rows (cloud remote, site-detail, pending deployments)
+- **CLAUDE.md:** add 2 "NE JAMAIS FAIRE" rules for club-config.json permissions and nginx -t sudo, update smoke test count (291)
 
 ## [3.82.10](https://github.com/Tallec7/neopro/compare/v3.82.9...v3.82.10) (2026-02-25)
 

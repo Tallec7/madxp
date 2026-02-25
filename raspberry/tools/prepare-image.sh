@@ -206,6 +206,10 @@ cat > /home/pi/neopro/club-config.json << EOF
 }
 EOF
 
+# Sécuriser club-config.json (contient le mot de passe WiFi)
+chmod 600 /home/pi/neopro/club-config.json
+chown pi:pi /home/pi/neopro/club-config.json
+
 # Suppression du fichier de première config
 rm -f /home/pi/neopro/first-boot-config.json
 
