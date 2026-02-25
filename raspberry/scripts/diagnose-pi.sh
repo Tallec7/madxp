@@ -332,14 +332,17 @@ check_node_modules() {
 
 check_nginx_config() {
     # Vérifier que la config Nginx est valide
-    if nginx -t 2>&1 | grep -q "successful"; then
+    # Use full path — /usr/sbin may not be in PATH via SSH
+    local NGINX_BIN
+    NGINX_BIN=$(command -v nginx 2>/dev/null || echo "/usr/sbin/nginx")
+    if "$NGINX_BIN" -t 2>&1 | grep -q "successful"; then
         print_success "Configuration Nginx valide"
         json_add "nginx" "syntax" "ok" "valide"
     else
         print_error "Configuration Nginx invalide"
         json_add "nginx" "syntax" "error" "invalide"
         TOTAL_ERRORS=$((TOTAL_ERRORS + 1))
-        [ "$OUTPUT_MODE" = "human" ] && nginx -t 2>&1
+        [ "$OUTPUT_MODE" = "human" ] && "$NGINX_BIN" -t 2>&1
     fi
 
     # Vérifier le site-enabled
@@ -564,7 +567,7 @@ check_disk_space() {
 check_filesystem_health() {
     # 1. Erreurs EXT4 dans dmesg
     local EXT4_ERRORS
-    EXT4_ERRORS=$(dmesg 2>/dev/null | grep -c "EXT4-fs error" || echo "0")
+    EXT4_ERRORS=$(dmesg 2>/dev/null | grep -c "EXT4-fs error" || true)
 
     if [ "$EXT4_ERRORS" -gt 0 ]; then
         print_error "Erreurs EXT4 détectées dans dmesg : ${EXT4_ERRORS} erreur(s)"
@@ -722,7 +725,17 @@ check_nginx_config
 
 # 10. Réseau WiFi
 print_section "10. Réseau WiFi"
+# Detect WiFi interface — iw may not be in PATH, fall back to /sys/class/net
 WIFI_INTERFACE=$(iw dev 2>/dev/null | awk '/Interface/ {print $2; exit}')
+if [ -z "$WIFI_INTERFACE" ]; then
+    # Fallback: check /sys/class/net for wireless interfaces
+    for iface in /sys/class/net/wlan*; do
+        if [ -d "$iface/wireless" ] 2>/dev/null; then
+            WIFI_INTERFACE=$(basename "$iface")
+            break
+        fi
+    done
+fi
 if [ -n "${WIFI_INTERFACE}" ]; then
     print_success "Interface WiFi détectée : ${WIFI_INTERFACE}"
     json_add "wifi" "interface" "ok" "${WIFI_INTERFACE}"
@@ -751,9 +764,10 @@ if [ -n "${WIFI_INTERFACE}" ]; then
         TOTAL_ERRORS=$((TOTAL_ERRORS + 1))
     fi
 else
-    print_error "Interface WiFi non détectée"
-    json_add "wifi" "interface" "error" "non détectée"
-    TOTAL_ERRORS=$((TOTAL_ERRORS + 1))
+    # WiFi is optional — Pi works fine on Ethernet without hotspot
+    print_warning "Interface WiFi non détectée (hotspot indisponible, Ethernet OK)"
+    json_add "wifi" "interface" "warn" "non détectée"
+    TOTAL_WARNINGS=$((TOTAL_WARNINGS + 1))
 fi
 
 # 11. Permissions et sécurité
