@@ -2,6 +2,12 @@
 
 ### Bug Fixes
 
+- **deployment:** add LIMIT to GET /api/deployments — prevent 500/429 cascade ([c225a46](https://github.com/Tallec7/neopro/commit/c225a4609064e2a66c58d640fa255241215e29f6))
+
+## [3.82.1](https://github.com/Tallec7/neopro/compare/v3.82.0...v3.82.1) (2026-02-25)
+
+### Bug Fixes
+
 - **deployment:** add LIMIT to `GET /api/deployments` — unbounded query caused 500 timeout + 429 cascade in production (Supabase pool=5 exhaustion)
 
 ### Documentation
