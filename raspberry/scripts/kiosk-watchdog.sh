@@ -282,60 +282,63 @@ start_chromium() {
     fi
 }
 
-# Configurer xrandr pour étendre le bureau sur HDMI 1
-# Détecte automatiquement le nom de la sortie HDMI secondaire et la résolution.
+# Configurer xrandr pour étendre le bureau sur HDMI 1 et lire la géométrie.
+# Détecte les sorties par position (offset +0+0 = primaire), pas par le mot-clé "primary"
+# qui n'est pas toujours présent dans la sortie xrandr.
 setup_secondary_xrandr() {
     export DISPLAY=:0
     export XAUTHORITY=/home/pi/.Xauthority
 
-    # Trouver le nom de la sortie HDMI secondaire (HDMI-2 sur Pi 5, parfois HDMI-1-2)
-    local secondary_output=""
-    secondary_output=$(xrandr --query 2>/dev/null | grep -E "^HDMI.* connected" | grep -v "primary" | head -1 | awk '{print $1}')
+    local xrandr_output
+    xrandr_output=$(xrandr --query 2>/dev/null)
 
-    if [[ -z "$secondary_output" ]]; then
-        # Fallback: chercher tout output connecté qui n'est pas le primaire
-        local primary_output
-        primary_output=$(xrandr --query 2>/dev/null | grep -E "^.* connected primary" | awk '{print $1}')
-        secondary_output=$(xrandr --query 2>/dev/null | grep -E "^.* connected" | grep -v "$primary_output" | head -1 | awk '{print $1}')
-    fi
-
-    if [[ -z "$secondary_output" ]]; then
-        log "⚠️ xrandr: aucune sortie HDMI secondaire détectée"
+    if [[ -z "$xrandr_output" ]]; then
+        log "⚠️ xrandr: impossible d'interroger X11"
         return 1
     fi
 
-    # Lire la résolution configurée (ex: "1920x1080", "1920x384")
-    local configured_res=""
-    if [ -f "$CONFIG_FILE" ]; then
-        configured_res=$(python3 -c "
-import json
-c = json.load(open('$CONFIG_FILE'))
-print(c.get('secondaryDisplayResolution', ''))
-" 2>/dev/null)
+    # Identifier le primaire (offset +0+0) et le secondaire (offset non-nul)
+    # Format xrandr: "HDMI-A-1 connected 1920x1080+0+0" ou "HDMI-A-2 connected 3840x2160+1920+0"
+    local primary_output="" secondary_output=""
+    while IFS= read -r line; do
+        local name geom
+        name=$(echo "$line" | awk '{print $1}')
+        geom=$(echo "$line" | grep -oP '\d+x\d+\+\d+\+\d+')
+        if [[ -n "$geom" ]]; then
+            local x_offset
+            x_offset=$(echo "$geom" | grep -oP '(?<=\+)\d+(?=\+)')
+            if [[ "$x_offset" == "0" ]]; then
+                primary_output="$name"
+            else
+                secondary_output="$name"
+            fi
+        fi
+    done <<< "$(echo "$xrandr_output" | grep -E '^HDMI.* connected \d')"
+
+    if [[ -z "$secondary_output" ]]; then
+        log "⚠️ xrandr: aucune sortie HDMI secondaire avec offset non-nul détectée"
+        # Essayer d'activer la seconde sortie HDMI
+        local inactive_hdmi
+        inactive_hdmi=$(echo "$xrandr_output" | grep -E '^HDMI.* connected' | grep -v "$primary_output" | head -1 | awk '{print $1}')
+        if [[ -n "$inactive_hdmi" && -n "$primary_output" ]]; then
+            log "📺 xrandr: tentative d'activation de $inactive_hdmi à droite de $primary_output"
+            xrandr --output "$inactive_hdmi" --auto --right-of "$primary_output" 2>/dev/null || true
+            sleep 1
+            # Re-lire xrandr après activation
+            xrandr_output=$(xrandr --query 2>/dev/null)
+            secondary_output=$(echo "$xrandr_output" | grep -E "^${inactive_hdmi} connected" | grep -oP '^\S+')
+        fi
     fi
 
-    # Trouver la sortie primaire pour --right-of
-    local primary_output
-    primary_output=$(xrandr --query 2>/dev/null | grep -E "^.* connected primary" | awk '{print $1}')
-
-    if [[ -n "$configured_res" && "$configured_res" != "None" ]]; then
-        log "📺 xrandr: activation $secondary_output en ${configured_res} à droite de $primary_output"
-        xrandr --output "$secondary_output" --mode "$configured_res" --right-of "$primary_output" 2>/dev/null \
-            || xrandr --output "$secondary_output" --auto --right-of "$primary_output" 2>/dev/null
-    else
-        log "📺 xrandr: activation $secondary_output (auto) à droite de $primary_output"
-        xrandr --output "$secondary_output" --auto --right-of "$primary_output" 2>/dev/null
-    fi
-
-    if [[ $? -ne 0 ]]; then
-        log "⚠️ xrandr: échec de la configuration de $secondary_output"
+    if [[ -z "$secondary_output" ]]; then
+        log "⚠️ xrandr: impossible de trouver une sortie secondaire"
         return 1
     fi
 
-    # Lire la géométrie réelle depuis xrandr pour positionner Chromium
-    # Format: "HDMI-A-2 connected 3840x2160+1920+0" → offset=1920, width=3840, height=2160
+    # Lire la géométrie de la sortie secondaire
+    # Format: "HDMI-A-2 connected 3840x2160+1920+0"
     local geom
-    geom=$(xrandr --query 2>/dev/null | grep -E "^${secondary_output} connected" | grep -oP '\d+x\d+\+\d+\+\d+')
+    geom=$(echo "$xrandr_output" | grep -E "^${secondary_output} connected" | grep -oP '\d+x\d+\+\d+\+\d+')
     if [[ -n "$geom" ]]; then
         SECONDARY_SCREEN_WIDTH=$(echo "$geom" | grep -oP '^\d+')
         SECONDARY_SCREEN_HEIGHT=$(echo "$geom" | grep -oP '(?<=x)\d+(?=\+)')
@@ -346,7 +349,7 @@ print(c.get('secondaryDisplayResolution', ''))
         SECONDARY_X_OFFSET=1920
     fi
 
-    log "✓ xrandr: $secondary_output configuré, géométrie=${SECONDARY_SCREEN_WIDTH}x${SECONDARY_SCREEN_HEIGHT}+${SECONDARY_X_OFFSET}"
+    log "✓ xrandr: ${primary_output} (primaire) + ${secondary_output} (secondaire), géométrie=${SECONDARY_SCREEN_WIDTH}x${SECONDARY_SCREEN_HEIGHT}+${SECONDARY_X_OFFSET}"
     return 0
 }
 
