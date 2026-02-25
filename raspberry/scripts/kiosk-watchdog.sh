@@ -370,8 +370,11 @@ start_chromium_secondary() {
     local disable_features="TranslateUI,MediaRouter,XdgDesktopPortal"
 
     # Flags identiques au kiosk principal + user-data-dir séparé + positionnement écran 2
+    # NOTE: --start-fullscreen au lieu de --kiosk pour le secondaire.
+    # --kiosk force le plein écran sur le moniteur principal et ignore --window-position.
+    # --start-fullscreen respecte le positionnement sur l'écran secondaire.
     local common_flags=(
-        --kiosk
+        --start-fullscreen
         --autoplay-policy=no-user-gesture-required
         --noerrdialogs
         --disable-infobars
