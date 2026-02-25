@@ -1,3 +1,9 @@
+## [3.82.5](https://github.com/Tallec7/neopro/compare/v3.82.4...v3.82.5) (2026-02-25)
+
+### Bug Fixes
+
+- **deployment:** distinguish SSH failure (255) from remote script errors in diagnostic ([9902c23](https://github.com/Tallec7/neopro/commit/9902c23fa0fad7799d85640a32da5c9dee247bfc))
+
 ## [3.82.4](https://github.com/Tallec7/neopro/compare/v3.82.3...v3.82.4) (2026-02-25)
 
 ### Bug Fixes
