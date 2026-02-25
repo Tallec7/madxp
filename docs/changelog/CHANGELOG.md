@@ -1,3 +1,9 @@
+## [3.82.4](https://github.com/Tallec7/neopro/compare/v3.82.3...v3.82.4) (2026-02-25)
+
+### Bug Fixes
+
+- **deployment:** fix post-deployment diagnostic — JSON pollution + silent SSH failure ([dd76e18](https://github.com/Tallec7/neopro/commit/dd76e18da44a5b52ce498e4e7ac25e75d956bade))
+
 ## [3.82.3](https://github.com/Tallec7/neopro/compare/v3.82.2...v3.82.3) (2026-02-25)
 
 ### Bug Fixes
