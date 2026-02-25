@@ -3210,6 +3210,56 @@ describe('Video variant display_type alignment guard', () => {
   });
 });
 
+// ----------------------------------------------------------
+// Deployment secondary variant persistence guard: deployToSite()
+// must persist has_secondary_variant = true after successful
+// deployment when a secondary variant is included.
+// ----------------------------------------------------------
+describe('Deployment secondary variant persistence guard', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+  const servicePath = path.join(repoRoot, 'central-server/src/services/deployment.service.ts');
+  const repoPath = path.join(repoRoot, 'central-server/src/repositories/deployment.repository.ts');
+  const schemaPath = path.join(repoRoot, 'central-server/src/scripts/full-schema.sql');
+
+  let serviceContent: string;
+  let repoContent: string;
+  let schemaContent: string;
+
+  beforeAll(() => {
+    serviceContent = fs.readFileSync(servicePath, 'utf8');
+    repoContent = fs.readFileSync(repoPath, 'utf8');
+    schemaContent = fs.readFileSync(schemaPath, 'utf8');
+  });
+
+  it('deployToSite must persist has_secondary_variant flag', () => {
+    expect({
+      updatesFlag: /has_secondary_variant\s*=\s*true/.test(serviceContent),
+    }).toEqual({
+      updatesFlag: true,
+    });
+  });
+
+  it('deployment repository queries must SELECT has_secondary_variant', () => {
+    expect({
+      inVideoDeployments: /findDeploymentsForVideo[\s\S]*?has_secondary_variant/.test(repoContent),
+      inAllDetails: /findAllWithDetails[\s\S]*?has_secondary_variant/.test(repoContent),
+      inDetails: /findWithDetails[\s\S]*?has_secondary_variant/.test(repoContent),
+    }).toEqual({
+      inVideoDeployments: true,
+      inAllDetails: true,
+      inDetails: true,
+    });
+  });
+
+  it('full-schema.sql must include has_secondary_variant column', () => {
+    expect({
+      hasColumn: /has_secondary_variant\s+BOOLEAN/.test(schemaContent),
+    }).toEqual({
+      hasColumn: true,
+    });
+  });
+});
+
 // ── Angular build config guards ─────────────────────────────────────────
 // Prevents regression of build warnings fixed in 3.80.18:
 // - Missing allowedCommonJsDependencies (leaflet → optimization bailout)

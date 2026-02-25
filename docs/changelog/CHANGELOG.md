@@ -2,18 +2,22 @@
 
 ### Features
 
-- **deployment:** add secondary variant indicator in deployment history ([749b67f](https://github.com/Tallec7/neopro/commit/749b67f94c55307f6b77d877a4f3ee880471f446))
+- **deployment:** add secondary variant indicator (`📺 2nd` badge) in deployment history — persists `has_secondary_variant` boolean at deploy time for historical accuracy ([749b67f](https://github.com/Tallec7/neopro/commit/749b67f9))
+
+### Documentation
+
+- **reference:** add video variants & secondary display section (endpoints, tables, FTP paths, deployment flow)
+- **changelog:** consolidate v3.80.18 entries
+
+### Tests
+
+- **smoke:** add 3 `has_secondary_variant` persistence guards (service, repository, schema)
 
 ## [3.80.18](https://github.com/Tallec7/neopro/compare/v3.80.17...v3.80.18) (2026-02-25)
 
 ### Bug Fixes
 
 - **build:** eliminate 12 Angular build warnings + add smoke guards ([40001a5](https://github.com/Tallec7/neopro/commit/40001a59498d95e4c083e05742565a9ff02a4847))
-
-## [3.80.18](https://github.com/Tallec7/neopro/compare/v3.80.17...v3.80.18) (2026-02-25)
-
-### Bug Fixes
-
 - **build:** fix 12 Angular build warnings (NG8107 unnecessary `?.`, NG8102 unnecessary `??`, CSS budget, leaflet CommonJS)
 
 ### Configuration

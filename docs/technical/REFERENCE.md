@@ -1251,6 +1251,37 @@ PUT    /content/deployments/:id         - Mettre à jour un déploiement
 DELETE /content/deployments/:id         - Supprimer un déploiement
 ```
 
+**Endpoints Variantes Vidéo (écran secondaire) :**
+
+```
+GET    /videos/:id/variants            - Liste des variantes d'une vidéo
+POST   /videos/:id/variants            - Upload variante (multipart, display_type: 'tv'|'secondary')
+DELETE /videos/:id/variants/secondary  - Supprimer la variante écran secondaire
+```
+
+### Variantes Vidéo et Écran Secondaire
+
+Le HDMI secondaire du Raspberry Pi peut alimenter un panneau LED bord de terrain, des TV tribunes, un écran géant, etc. Chaque vidéo peut avoir une **variante secondaire** optimisée pour cet écran.
+
+**Tables impliquées :**
+
+| Table                 | Colonne(s) clé                                              | Description                                    |
+| --------------------- | ----------------------------------------------------------- | ---------------------------------------------- |
+| `video_variants`      | `display_type` (`'tv'`\|`'secondary'`)                      | Fichier vidéo alternatif par type d'écran      |
+| `sites`               | `secondary_display_enabled`, `secondary_display_resolution` | Active/configure l'écran secondaire du Pi      |
+| `content_deployments` | `has_secondary_variant`                                     | Flag booléen persisté au moment du déploiement |
+
+**Stockage FTP :** `variants/{videoId}/{displayType}/{filename}` (ex: `variants/837ad.../secondary/Pres.mp4`)
+
+**Flux de déploiement avec variante secondaire :**
+
+1. `deployToSite()` vérifie `site.secondary_display_enabled`
+2. Si activé, charge la variante via `videoVariantRepository.findByVideoAndType(videoId, 'secondary')`
+3. Envoie les deux vidéos (principale + secondaire) via `sendOrQueue`
+4. Persiste `has_secondary_variant = true` dans `content_deployments` (non-bloquant, try/catch)
+
+**Indicateur UX dashboard :** Badge `📺 2nd` affiché dans l'historique des déploiements si `has_secondary_variant` est `true`.
+
 **Endpoints Config Profiles (multi-config) :**
 
 ```
