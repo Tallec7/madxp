@@ -1,3 +1,9 @@
+## [3.82.8](https://github.com/Tallec7/neopro/compare/v3.82.7...v3.82.8) (2026-02-25)
+
+### Bug Fixes
+
+- **secondary-display:** constrain primary Chromium to its monitor in dual-display mode ([6cc0f0e](https://github.com/Tallec7/neopro/commit/6cc0f0e316790dde735b297512b2debfac2dda7e))
+
 ## [3.82.7](https://github.com/Tallec7/neopro/compare/v3.82.6...v3.82.7) (2026-02-25)
 
 ### Bug Fixes
