@@ -1,3 +1,10 @@
+## [3.82.6](https://github.com/Tallec7/neopro/compare/v3.82.5...v3.82.6) (2026-02-25)
+
+### Bug Fixes
+
+- **diagnostic:** fix false positives in diagnose-pi.sh — nginx PATH, EXT4 parsing, WiFi detection ([301d142](https://github.com/Tallec7/neopro/commit/301d142e4eec67a4ee6b03d77d108c33ced841b6))
+- **secondary-display:** use --start-fullscreen instead of --kiosk for secondary Chromium ([318f74c](https://github.com/Tallec7/neopro/commit/318f74cdfe2ae6463e96820b2e6fe93f1f704f15))
+
 ## [3.82.5](https://github.com/Tallec7/neopro/compare/v3.82.4...v3.82.5) (2026-02-25)
 
 ### Bug Fixes
