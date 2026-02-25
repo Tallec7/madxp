@@ -313,7 +313,7 @@ setup_secondary_xrandr() {
                 secondary_output="$name"
             fi
         fi
-    done <<< "$(echo "$xrandr_output" | grep -E '^HDMI.* connected \d')"
+    done <<< "$(echo "$xrandr_output" | grep -E '^HDMI.* connected [0-9]')"
 
     if [[ -z "$secondary_output" ]]; then
         log "⚠️ xrandr: aucune sortie HDMI secondaire avec offset non-nul détectée"
