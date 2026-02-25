@@ -205,8 +205,11 @@ start_chromium() {
     # Flags communs à tous les modèles
     # En mode dual-display, on utilise --app=URL au lieu de --kiosk pour le primaire.
     # --kiosk prend TOUT le bureau X11 virtuel (les deux écrans combinés) et masque
-    # la fenêtre du Chromium secondaire. --app= crée une fenêtre contrainte à un seul
-    # moniteur, puis xdotool F11 passe en plein écran sur ce moniteur uniquement.
+    # la fenêtre du Chromium secondaire. --app= crée une fenêtre sans barre d'adresse
+    # qu'on force ensuite en plein écran par-moniteur via xprop + xdotool windowsize.
+    # NOTE: F11 ne marche PAS pour le plein écran par-moniteur — il prend aussi tout
+    # le bureau X11 virtuel (même comportement que --kiosk). La seule solution fiable
+    # est xprop _MOTIF_WM_HINTS (supprimer les décorations) + xdotool windowsize.
     local common_flags=()
     if [[ "$DUAL_DISPLAY_ACTIVE" == "true" ]]; then
         log "📺 Mode dual-display: primaire en --app= (pas --kiosk, qui couvrirait les 2 écrans)"
@@ -297,20 +300,28 @@ start_chromium() {
     log "✓ Chromium lancé (PID: $CHROMIUM_PID)"
     write_kiosk_status "running"
 
-    # En mode dual-display, envoyer F11 pour passer en plein écran sur le moniteur primaire
-    # (--app= ne fait pas de plein écran automatique, contrairement à --kiosk)
+    # En mode dual-display, forcer le plein écran par-moniteur sur le moniteur primaire.
+    # On NE peut PAS utiliser F11 : Chromium F11 = fullscreen sur TOUT le bureau X11 virtuel
+    # (= les deux écrans combinés, ex: 5760x2160), pas sur un seul moniteur.
+    # Solution : supprimer les décorations de fenêtre (title bar) via xprop _MOTIF_WM_HINTS
+    # puis forcer la taille exacte du moniteur primaire via xdotool windowmove/windowsize.
     if [[ "$DUAL_DISPLAY_ACTIVE" == "true" ]]; then
         (
             sleep 4
             local wid
             wid=$(DISPLAY=:0 xdotool search --pid $CHROMIUM_PID 2>/dev/null | head -1)
             if [[ -n "$wid" ]]; then
+                # 1. Supprimer les décorations (title bar, bordures)
+                DISPLAY=:0 xprop -id "$wid" -f _MOTIF_WM_HINTS 32c -set _MOTIF_WM_HINTS "0x2, 0x0, 0x0, 0x0, 0x0" 2>/dev/null
+                sleep 0.3
+                # 2. Positionner et redimensionner exactement sur le moniteur primaire
+                DISPLAY=:0 xdotool windowmove "$wid" 0 0 2>/dev/null
+                DISPLAY=:0 xdotool windowsize "$wid" "${PRIMARY_SCREEN_WIDTH:-1920}" "${PRIMARY_SCREEN_HEIGHT:-1080}" 2>/dev/null
+                # 3. S'assurer que la fenêtre est au premier plan
                 DISPLAY=:0 xdotool windowactivate "$wid" 2>/dev/null
-                sleep 0.5
-                DISPLAY=:0 xdotool key F11 2>/dev/null
-                log "✓ Chromium primaire mis en plein écran (F11, WID: $wid)"
+                log "✓ Chromium primaire plein écran par-moniteur (xprop+xdotool, WID: $wid, ${PRIMARY_SCREEN_WIDTH:-1920}x${PRIMARY_SCREEN_HEIGHT:-1080})"
             else
-                log "⚠️ Impossible de trouver la fenêtre primaire pour F11"
+                log "⚠️ Impossible de trouver la fenêtre primaire pour xprop/xdotool"
             fi
         ) &
     fi
@@ -428,7 +439,8 @@ start_chromium_secondary() {
     # NOTE: --app=URL au lieu de --kiosk pour le secondaire.
     # --kiosk force le plein écran sur le moniteur principal et ignore --window-position.
     # --app crée une fenêtre sans onglets/barre d'adresse qui respecte le positionnement.
-    # On envoie ensuite F11 via xdotool pour passer en vrai plein écran.
+    # Ensuite xprop _MOTIF_WM_HINTS + xdotool windowsize pour le plein écran par-moniteur.
+    # F11 ne marche PAS : il prend tout le bureau X11 virtuel, comme --kiosk.
     local common_flags=(
         --app="${CHROMIUM_SECONDARY_URL}"
         --autoplay-policy=no-user-gesture-required
@@ -486,19 +498,26 @@ start_chromium_secondary() {
     SECONDARY_CHROMIUM_PID=$!
     log "✓ Chromium secondaire lancé (PID: $SECONDARY_CHROMIUM_PID)"
 
-    # Attendre que la fenêtre apparaisse puis envoyer F11 pour passer en plein écran
-    # --app positionne correctement la fenêtre mais ne la met pas en plein écran
+    # Forcer le plein écran par-moniteur sur le moniteur secondaire.
+    # On NE peut PAS utiliser F11 : Chromium F11 = fullscreen sur TOUT le bureau X11 virtuel
+    # (= les deux écrans combinés), pas sur un seul moniteur.
+    # Solution : xprop _MOTIF_WM_HINTS (supprimer décorations) + xdotool windowmove/windowsize.
     (
         sleep 4
         local wid
         wid=$(DISPLAY=:0 xdotool search --pid $SECONDARY_CHROMIUM_PID 2>/dev/null | head -1)
         if [[ -n "$wid" ]]; then
+            # 1. Supprimer les décorations (title bar, bordures)
+            DISPLAY=:0 xprop -id "$wid" -f _MOTIF_WM_HINTS 32c -set _MOTIF_WM_HINTS "0x2, 0x0, 0x0, 0x0, 0x0" 2>/dev/null
+            sleep 0.3
+            # 2. Positionner et redimensionner exactement sur le moniteur secondaire
+            DISPLAY=:0 xdotool windowmove "$wid" "${SECONDARY_X_OFFSET:-1920}" 0 2>/dev/null
+            DISPLAY=:0 xdotool windowsize "$wid" "${SECONDARY_SCREEN_WIDTH:-1920}" "${SECONDARY_SCREEN_HEIGHT:-1080}" 2>/dev/null
+            # 3. S'assurer que la fenêtre est au premier plan
             DISPLAY=:0 xdotool windowactivate "$wid" 2>/dev/null
-            sleep 0.5
-            DISPLAY=:0 xdotool key F11 2>/dev/null
-            log "✓ Chromium secondaire mis en plein écran (F11, WID: $wid)"
+            log "✓ Chromium secondaire plein écran par-moniteur (xprop+xdotool, WID: $wid, ${SECONDARY_SCREEN_WIDTH:-1920}x${SECONDARY_SCREEN_HEIGHT:-1080}+${SECONDARY_X_OFFSET:-1920})"
         else
-            log "⚠️ Impossible de trouver la fenêtre secondaire pour F11"
+            log "⚠️ Impossible de trouver la fenêtre secondaire pour xprop/xdotool"
         fi
     ) &
 }

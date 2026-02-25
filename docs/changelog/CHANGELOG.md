@@ -1,3 +1,20 @@
+## [3.82.9](https://github.com/Tallec7/neopro/compare/v3.82.8...v3.82.9) (2026-02-25)
+
+### Bug Fixes
+
+- **secondary-display:** replace F11 with xprop `_MOTIF_WM_HINTS` + xdotool `windowmove/windowsize` for per-monitor fullscreen — F11 takes the ENTIRE X11 virtual desktop (both monitors combined, e.g. 5760x2160), exactly like `--kiosk`. The only reliable per-monitor fullscreen is removing decorations via xprop and forcing exact size via xdotool. Applies to both primary (in dual-display mode) and secondary Chromium.
+
+### Tests
+
+- **smoke:** replace F11 guard with xprop + xdotool windowsize guards (8 tests total). Add no-F11 assertion for both primary and secondary functions.
+
+### Documentation
+
+- **troubleshooting:** update section 19 with xprop/xdotool approach, document F11 limitation
+- **architecture:** update secondary kiosk launch mode to xprop/xdotool
+- **reference:** add F11 warning, update secondary display description
+- **CLAUDE.md:** add "NE JAMAIS FAIRE" rule for xdotool F11 in dual-display
+
 ## [3.82.8](https://github.com/Tallec7/neopro/compare/v3.82.7...v3.82.8) (2026-02-25)
 
 ### Bug Fixes

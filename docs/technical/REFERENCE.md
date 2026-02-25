@@ -1643,20 +1643,22 @@ sudo journalctl -f
 
 Le service `neopro-kiosk` lance `kiosk-watchdog.sh` — un superviseur qui gère le cycle de vie de Chromium en mode kiosk :
 
-| Fonctionnalité         | Description                                                                                                                                                           |
-| ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Arrêt gracieux GPU** | SIGTERM (5s) → SIGKILL dernier recours. Critique sur Pi 5 : le driver V3D Mesa doit libérer les DMA buffers sinon artifacts GPU au restart                            |
-| **KillMode=mixed**     | systemd envoie SIGTERM au watchdog seul (pas à Chromium), le trap handler fait le cleanup propre                                                                      |
-| **TimeoutStopSec=15**  | Fenêtre de 15s pour l'arrêt gracieux avant SIGKILL automatique                                                                                                        |
-| **Nginx readiness**    | Curl HTTP 200 sur `neopro.local/index.html` (15s timeout) avant de lancer Chromium                                                                                    |
-| **Crash detection**    | Détecte "Aw, Snap!", "Page Unresponsive", `ERR_*` via `xdotool` et relance automatiquement                                                                            |
-| **GPU cleanup**        | Suppression `/dev/shm/.org.chromium.*` (segments mémoire partagée orphelins)                                                                                          |
-| **kiosk-status.json**  | Écrit dans `/home/pi/neopro/data/` — lu par le heartbeat et remonté au central                                                                                        |
-| **Secondary display**  | `--app=URL` + `xdotool F11` (pas `--kiosk`, qui force plein écran sur primaire). Détection xrandr par offset position (Pi 5 n'a pas "primary"). Smoke tests: 7 guards |
+| Fonctionnalité         | Description                                                                                                                                                                                                  |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Arrêt gracieux GPU** | SIGTERM (5s) → SIGKILL dernier recours. Critique sur Pi 5 : le driver V3D Mesa doit libérer les DMA buffers sinon artifacts GPU au restart                                                                   |
+| **KillMode=mixed**     | systemd envoie SIGTERM au watchdog seul (pas à Chromium), le trap handler fait le cleanup propre                                                                                                             |
+| **TimeoutStopSec=15**  | Fenêtre de 15s pour l'arrêt gracieux avant SIGKILL automatique                                                                                                                                               |
+| **Nginx readiness**    | Curl HTTP 200 sur `neopro.local/index.html` (15s timeout) avant de lancer Chromium                                                                                                                           |
+| **Crash detection**    | Détecte "Aw, Snap!", "Page Unresponsive", `ERR_*` via `xdotool` et relance automatiquement                                                                                                                   |
+| **GPU cleanup**        | Suppression `/dev/shm/.org.chromium.*` (segments mémoire partagée orphelins)                                                                                                                                 |
+| **kiosk-status.json**  | Écrit dans `/home/pi/neopro/data/` — lu par le heartbeat et remonté au central                                                                                                                               |
+| **Secondary display**  | `--app=URL` + `xprop _MOTIF_WM_HINTS` + `xdotool windowsize` (pas `--kiosk` ni `F11`, qui prennent tout le bureau X11). Détection xrandr par offset position (Pi 5 n'a pas "primary"). Smoke tests: 8 guards |
 
 > ⚠️ **Ne jamais ajouter `ExecStop=pkill -9` dans le `.service`** — cela bypasse le trap handler et corrompt l'état GPU V3D sur Pi 5. Smoke test enforced.
 >
-> ⚠️ **Ne jamais utiliser `--kiosk` pour le Chromium secondaire** — `--kiosk` force le plein écran sur le moniteur principal et ignore `--window-position`. Utiliser `--app=URL` + xdotool F11. Smoke test enforced.
+> ⚠️ **Ne jamais utiliser `--kiosk` pour le Chromium secondaire** — `--kiosk` force le plein écran sur le moniteur principal et ignore `--window-position`. Utiliser `--app=URL` + xprop/xdotool windowsize. Smoke test enforced.
+>
+> ⚠️ **Ne jamais utiliser `xdotool key F11` pour le plein écran dual-display** — F11 prend tout le bureau X11 virtuel (les 2 écrans combinés), exactement comme `--kiosk`. Utiliser `xprop _MOTIF_WM_HINTS` + `xdotool windowsize` pour un plein écran par-moniteur. Smoke test enforced.
 
 ### Maintenance
 

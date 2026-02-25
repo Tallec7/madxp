@@ -2771,19 +2771,49 @@ describe('E-22 watchdog secondary display guard', () => {
     });
   });
 
-  // Bug fix v3.82.6: --app= positions window correctly but needs xdotool F11 for fullscreen.
-  it('watchdog secondary must use xdotool F11 for fullscreen after --app= launch', () => {
+  // Bug fix v3.82.8: F11 fullscreen spans ENTIRE X11 virtual desktop (both monitors),
+  // NOT per-monitor. Must use xprop _MOTIF_WM_HINTS (remove decorations) + xdotool
+  // windowmove/windowsize for per-monitor fullscreen. F11 must NOT be used.
+  it('watchdog secondary must use xprop _MOTIF_WM_HINTS + xdotool windowsize (NOT F11)', () => {
     const secondaryFn = content.match(
       /start_chromium_secondary\(\)[\s\S]*?^}/m
     );
     expect(secondaryFn).not.toBeNull();
     const fnContent = secondaryFn![0];
     expect({
-      hasXdotoolF11: /xdotool.*key.*F11/.test(fnContent),
+      hasMotifWmHints: /_MOTIF_WM_HINTS/.test(fnContent),
+      hasXdotoolWindowsize: /xdotool.*windowsize/.test(fnContent),
+      hasXdotoolWindowmove: /xdotool.*windowmove/.test(fnContent),
       hasWindowSearch: /xdotool.*search.*pid/.test(fnContent),
+      // F11 must NOT be used — it spans the entire X11 virtual desktop
+      noF11: !/xdotool.*key.*F11/.test(fnContent),
     }).toEqual({
-      hasXdotoolF11: true,
+      hasMotifWmHints: true,
+      hasXdotoolWindowsize: true,
+      hasXdotoolWindowmove: true,
       hasWindowSearch: true,
+      noF11: true,
+    });
+  });
+
+  // Guard: primary Chromium in dual-display mode must also use xprop + xdotool (not F11)
+  it('watchdog primary in dual-display must use xprop _MOTIF_WM_HINTS + xdotool windowsize (NOT F11)', () => {
+    const primaryFn = content.match(
+      /start_chromium\(\)[\s\S]*?^}/m
+    );
+    expect(primaryFn).not.toBeNull();
+    const fnContent = primaryFn![0];
+    expect({
+      hasMotifWmHints: /_MOTIF_WM_HINTS/.test(fnContent),
+      hasXdotoolWindowsize: /xdotool.*windowsize/.test(fnContent),
+      hasXdotoolWindowmove: /xdotool.*windowmove/.test(fnContent),
+      // F11 must NOT be used anywhere in start_chromium
+      noF11: !/xdotool.*key.*F11/.test(fnContent),
+    }).toEqual({
+      hasMotifWmHints: true,
+      hasXdotoolWindowsize: true,
+      hasXdotoolWindowmove: true,
+      noF11: true,
     });
   });
 

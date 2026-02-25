@@ -3820,7 +3820,7 @@ DISPLAY=:0 xrandr --query | grep 'HDMI.*connected'
 
 **Cause :** `--kiosk` (et `--start-fullscreen`) ignorent `--window-position` et forcent le plein écran sur l'écran primaire. Le processus Chromium secondaire tourne mais sa fenêtre est invisible (superposée au primaire).
 
-**Correction (v3.82.7) :** Utiliser `--app=URL` au lieu de `--kiosk` pour le Chromium secondaire. `--app` crée une fenêtre sans onglets/barre d'adresse qui respecte `--window-position`. Ensuite, `xdotool key F11` est envoyé après 4s pour passer en vrai plein écran.
+**Correction (v3.82.8) :** Utiliser `--app=URL` au lieu de `--kiosk` pour le Chromium secondaire. `--app` crée une fenêtre sans onglets/barre d'adresse qui respecte `--window-position`. Ensuite, `xprop _MOTIF_WM_HINTS` supprime les décorations (title bar) et `xdotool windowmove/windowsize` force la taille exacte du moniteur. **NB :** `F11` ne marche PAS pour le plein écran par-moniteur — il prend tout le bureau X11 virtuel (les 2 écrans combinés).
 
 **Diagnostic :**
 
@@ -3876,11 +3876,12 @@ cat /home/pi/neopro/data/kiosk-status.json | python3 -m json.tool
 
 1. `grep [0-9]` (pas `\d`) pour la détection HDMI xrandr
 2. `--app=URL` (pas `--kiosk`) pour le Chromium secondaire
-3. `xdotool F11` pour le plein écran après lancement `--app=`
-4. Détection par offset de position (pas par mot-clé "primary")
-5. `--user-data-dir` séparé pour éviter les conflits de session
-6. `--window-position` et `--window-size` pour le positionnement
-7. Lecture de `secondaryDisplayEnabled` depuis la config
+3. `xprop _MOTIF_WM_HINTS` + `xdotool windowsize` pour le plein écran par-moniteur (PAS F11)
+4. Même chose pour le primaire en mode dual-display (PAS F11)
+5. Détection par offset de position (pas par mot-clé "primary")
+6. `--user-data-dir` séparé pour éviter les conflits de session
+7. `--window-position` et `--window-size` pour le positionnement
+8. Lecture de `secondaryDisplayEnabled` depuis la config
 
 ### Fix manuel (Pi non encore mis à jour)
 
@@ -3894,7 +3895,7 @@ cat /home/pi/neopro/webapp/version.json
 # Vérification après déploiement
 sudo systemctl restart neopro-kiosk
 journalctl -u neopro-kiosk -f --no-pager | head -30
-# Chercher: "✓ Chromium secondaire lancé" et "✓ Chromium secondaire mis en plein écran (F11"
+# Chercher: "✓ Chromium secondaire lancé" et "✓ Chromium secondaire plein écran par-moniteur (xprop+xdotool"
 ```
 
 ---
