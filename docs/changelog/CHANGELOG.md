@@ -1,3 +1,9 @@
+## [3.80.17](https://github.com/Tallec7/neopro/compare/v3.80.16...v3.80.17) (2026-02-25)
+
+### Bug Fixes
+
+- **ftp:** add ensureDir to disk-streaming upload for nested paths ([ea9acd7](https://github.com/Tallec7/neopro/commit/ea9acd75b49d43affa3a31d8c8c3f38a8e4b8f79))
+
 ## [3.80.16](https://github.com/Tallec7/neopro/compare/v3.80.15...v3.80.16) (2026-02-24)
 
 ### Bug Fixes
