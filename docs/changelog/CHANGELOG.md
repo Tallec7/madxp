@@ -1,3 +1,9 @@
+# [3.81.0](https://github.com/Tallec7/neopro/compare/v3.80.18...v3.81.0) (2026-02-25)
+
+### Features
+
+- **deployment:** add secondary variant indicator in deployment history ([749b67f](https://github.com/Tallec7/neopro/commit/749b67f94c55307f6b77d877a4f3ee880471f446))
+
 ## [3.80.18](https://github.com/Tallec7/neopro/compare/v3.80.17...v3.80.18) (2026-02-25)
 
 ### Bug Fixes
