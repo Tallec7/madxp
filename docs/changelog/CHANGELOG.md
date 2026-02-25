@@ -1,3 +1,20 @@
+## [3.82.10](https://github.com/Tallec7/neopro/compare/v3.82.9...v3.82.10) (2026-02-25)
+
+### Bug Fixes
+
+- **dual-display-sync:** fix video loop desynchronization between primary and secondary screens — three root causes: (1) slave played its own loop independently because `startSeamlessLoop()` ran before `tv-register` was even emitted, (2) `handleMasterLoopState()` used `findIndex(v => v.path)` which always failed for secondary variants, (3) slave restarted independent playback on phase changes via `switchToPhase()`. Fix: slave pauses players on `tv-role-assigned`, `startSeamlessLoop()` returns early in slave mode, sync uses `videoIndex` (not `videoPath`) with approximate seek.
+
+### Tests
+
+- **smoke:** add 6 regression guards for dual-display sync — slave pause on role-assigned, startSeamlessLoop early-return in slave mode, index-based sync (not path), onVideoEnded freeze+wait, server tv-register role assignment, server tv-loop-update master check.
+
+### Documentation
+
+- **architecture:** add master-slave sync diagram and invariants for dual-display
+- **reference:** add sync table (master vs slave behavior), diagnostic commands, findIndex warning
+- **troubleshooting:** add section 20 "Deux écrans désynchronisés" with 3 root causes, corrections, diagnostic commands, and 6 smoke test descriptions
+- **CLAUDE.md:** add 2 "NE JAMAIS FAIRE" rules for videoPath sync and independent slave loop
+
 ## [3.82.9](https://github.com/Tallec7/neopro/compare/v3.82.8...v3.82.9) (2026-02-25)
 
 ### Bug Fixes

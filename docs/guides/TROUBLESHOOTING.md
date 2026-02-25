@@ -21,6 +21,7 @@
 17. [Cloud Remote ne fonctionne pas (v3.69.3+)](#cloud-remote-ne-fonctionne-pas-v3692)
 18. [500/429 cascade sur GET /api/deployments (v3.82.1+)](#500429-cascade-sur-get-apideployments-v3821)
 19. [Second écran ne s'affiche pas (v3.82.7+)](#second-écran-ne-saffiche-pas-v3827)
+20. [Deux écrans désynchronisés (v3.82.10+)](#deux-écrans-désynchronisés-v38210)
 
 > **WiFi USB** : Pour un guide complet sur la clé WiFi USB (installation, diagnostic, pannes, recovery), voir [WIFI_USB_GUIDE.md](WIFI_USB_GUIDE.md).
 >
@@ -3900,4 +3901,70 @@ journalctl -u neopro-kiosk -f --no-pager | head -30
 
 ---
 
-**Dernière mise à jour :** 25 février 2026 (ajout section second écran v3.82.7)
+---
+
+## Deux écrans désynchronisés (v3.82.10+)
+
+Les deux écrans s'affichent correctement en plein écran (xprop/xdotool OK), mais les vidéos ne sont pas synchronisées — chaque écran joue sa boucle indépendamment.
+
+### Symptôme
+
+Les deux écrans jouent des vidéos différentes ou la même vidéo avec un décalage. Le score, les breaking news et les phases sont synchronisés, mais la boucle vidéo ne l'est pas.
+
+### Causes connues et corrections
+
+#### 1. Le slave ne pause pas sa boucle indépendante (< v3.82.10)
+
+**Cause :** `startSeamlessLoop()` est appelé pendant `ngOnInit()` (ligne 229) AVANT que `tv-register` soit émis (ligne 442). Le slave jouait donc sa boucle complètement seul pendant le round-trip Socket.IO, et ne s'arrêtait pas quand le rôle slave arrivait.
+
+**Correction (v3.82.10) :** Quand `tv-role-assigned` arrive avec `role: 'slave'`, on pause immédiatement `playerA` et `playerB` et on affiche un freeze-frame. Le slave attend maintenant la directive du master via `tv-loop-state`.
+
+#### 2. La sync par `videoPath` échoue avec les variants secondaires (< v3.82.10)
+
+**Cause :** Le master émet `videoPath` original (ex: `/media/videos/pub1.mp4`), mais le slave secondaire utilise les variants (ex: `/media/videos/pub1_secondary.mp4`). `findIndex(v => v.path === state.videoPath)` retournait toujours -1. Le fallback par index existait mais n'incluait pas le seek approximatif.
+
+**Correction (v3.82.10) :** On utilise **toujours** `state.videoIndex` (fiable car les deux boucles ont le même ordre), avec seek approximatif au temps du master.
+
+#### 3. Le slave relance la boucle indépendamment sur `switchToPhase()` (< v3.82.10)
+
+**Cause :** Quand la télécommande change la phase (avant/pendant/après match), `switchToPhase()` appelle `startSeamlessLoop()` qui relançait la boucle indépendamment même en mode slave.
+
+**Correction (v3.82.10) :** `startSeamlessLoop()` retourne immédiatement quand `isSlaveMode === true`.
+
+### Diagnostic
+
+```bash
+# 1. Vérifier les rôles assignés
+journalctl -u neopro-kiosk --no-pager | grep '\[TV\] Role assigned'
+# Attendu: "master, displayType: tv" ET "slave, displayType: secondary"
+# Si les deux sont "master" → problème de Socket.IO (vérifier le serveur local)
+
+# 2. Vérifier que le slave a pausé
+journalctl -u neopro-kiosk --no-pager | grep '\[TV\] Slave'
+# Attendu: "paused independent loop" puis "syncing to index"
+# Si absent → ancienne version sans le fix
+
+# 3. Vérifier la réception des événements master
+journalctl -u neopro-kiosk --no-pager | grep 'Slave.*sync'
+# Attendu: lignes "Slave: syncing to index N (master: path, local: path)"
+# Si absent → le master n'émet pas ou le serveur ne relaie pas
+
+# 4. Vérifier le serveur Socket.IO
+journalctl -u neopro-app --no-pager | grep 'TV-Sync'
+# Attendu: "Registered as master" et "Registered as slave"
+```
+
+### Smoke tests de régression
+
+6 smoke tests empêchent la régression (dans `smoke.test.ts`) :
+
+1. `tv-role-assigned` handler doit pauser `playerA` et `playerB` quand slave
+2. `startSeamlessLoop` doit retourner immédiatement en mode slave
+3. `handleMasterLoopState` doit synchroniser par `videoIndex` (pas `videoPath`)
+4. `onVideoEnded` doit afficher freeze-frame et attendre le master quand slave
+5. Server `tv-register` doit assigner rôle et envoyer loopState aux slaves
+6. Server `tv-loop-update` doit vérifier le master et broadcaster aux slaves
+
+---
+
+**Dernière mise à jour :** 25 février 2026 (ajout section sync dual-display v3.82.10)

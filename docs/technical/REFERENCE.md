@@ -1659,6 +1659,34 @@ Le service `neopro-kiosk` lance `kiosk-watchdog.sh` — un superviseur qui gère
 > ⚠️ **Ne jamais utiliser `--kiosk` pour le Chromium secondaire** — `--kiosk` force le plein écran sur le moniteur principal et ignore `--window-position`. Utiliser `--app=URL` + xprop/xdotool windowsize. Smoke test enforced.
 >
 > ⚠️ **Ne jamais utiliser `xdotool key F11` pour le plein écran dual-display** — F11 prend tout le bureau X11 virtuel (les 2 écrans combinés), exactement comme `--kiosk`. Utiliser `xprop _MOTIF_WM_HINTS` + `xdotool windowsize` pour un plein écran par-moniteur. Smoke test enforced.
+>
+> ⚠️ **Ne jamais utiliser `findIndex(v => v.path === state.videoPath)` pour la sync slave** — le secondary display utilise des variants de vidéos avec des chemins différents du master. Toujours synchroniser par `videoIndex`. Smoke test enforced.
+
+#### Synchronisation Master-Slave (dual-display)
+
+Les deux instances Chromium se synchronisent via Socket.IO master-slave :
+
+| Étape        | Master (`/tv`)                                     | Slave (`/secondary`)                                           |
+| ------------ | -------------------------------------------------- | -------------------------------------------------------------- |
+| Boot         | `startSeamlessLoop()` → joue vidéo 0               | `startSeamlessLoop()` → joue indépendamment                    |
+| Rôle         | `tv-role-assigned: master` → émet `tv-loop-update` | `tv-role-assigned: slave` → **pause players** + freeze-frame   |
+| Sync         | Master transition → `emitLoopState(index, path)`   | `handleMasterLoopState()` → `playOnActivePlayer(index)` + seek |
+| Fin vidéo    | `onVideoEnded()` → avance boucle                   | `onVideoEnded()` → freeze-frame, **attend master**             |
+| Phase change | `switchToPhase()` → relance boucle                 | `startSeamlessLoop()` → retourne immédiatement, attend master  |
+
+**Sync par index** : le slave utilise `videoIndex` (pas `videoPath`) car les variants secondaires ont des chemins différents. Les deux boucles ont le même ordre, donc l'index est toujours fiable.
+
+**Diagnostic sync** :
+
+```bash
+# Vérifier les rôles dans les logs Chromium
+journalctl -u neopro-kiosk --no-pager | grep '\[TV\] Role assigned'
+# Attendu: 2 lignes — une "master" et une "slave"
+
+# Vérifier la sync
+journalctl -u neopro-kiosk --no-pager | grep '\[TV\] Slave'
+# Attendu: "paused independent loop" puis "syncing to index"
+```
 
 ### Maintenance
 

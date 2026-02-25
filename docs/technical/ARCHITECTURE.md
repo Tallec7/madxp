@@ -622,7 +622,41 @@ Remote (téléphone)                    TV (Chromium kiosk)
 - options-update : overlay config
 - breaking-news : flash info
 - timer-update : chronomètre
+- tv-register/tv-role-assigned : master-slave sync (dual-display)
+- tv-loop-update/tv-loop-state : synchronisation boucle vidéo
 ```
+
+### Synchronisation Master-Slave (dual-display)
+
+Quand deux écrans sont connectés (HDMI-A-1 + HDMI-A-2), deux instances Chromium tournent :
+le primaire (`/tv`) et le secondaire (`/secondary`). Elles se synchronisent via Socket.IO :
+
+```
+Chromium /tv (HDMI-A-1)              Chromium /secondary (HDMI-A-2)
+   │                                        │
+   │ tv-register {displayType:'tv'}         │ tv-register {displayType:'secondary'}
+   ▼                                        ▼
+┌─────────────────────────────────────────────────┐
+│            Socket.IO Server (:3000)              │
+│                                                  │
+│  1er connecté → MASTER (émet l'état de boucle)  │
+│  2ème connecté → SLAVE (reçoit et suit)          │
+│                                                  │
+│  tv-loop-update (master→server→broadcast)        │
+│  tv-loop-state  (server→slaves)                  │
+└─────────────────────────────────────────────────┘
+
+Sync par index : le slave utilise videoIndex (pas videoPath)
+car le secondary display peut avoir des variants de vidéos
+avec des chemins différents.
+```
+
+**Invariants** (smoke tests enforced) :
+
+- Le slave PAUSE sa boucle indépendante dès réception de `tv-role-assigned`
+- `startSeamlessLoop()` retourne immédiatement en mode slave
+- `onVideoEnded()` affiche un freeze-frame et attend le master
+- `handleMasterLoopState()` synchronise par `videoIndex` (pas `videoPath`)
 
 ### Dépendances critiques en mode offline
 

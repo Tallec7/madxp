@@ -2871,6 +2871,122 @@ describe('E-22 watchdog secondary display guard', () => {
 });
 
 // ----------------------------------------------------------
+// E-22 TvComponent master-slave sync guards: tv.component.ts
+// must synchronize secondary display via Socket.IO master-slave.
+// These guards prevent regression of the dual-display sync fix.
+// ----------------------------------------------------------
+describe('E-22 TvComponent master-slave sync guards', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+  const tvPath = path.join(repoRoot, 'raspberry/src/app/components/tv/tv.component.ts');
+
+  let content: string;
+  beforeAll(() => {
+    content = fs.readFileSync(tvPath, 'utf8');
+  });
+
+  // Guard: slave must pause players when role is assigned (stop independent loop)
+  it('tv-role-assigned handler must pause playerA and playerB when slave', () => {
+    // Extract the tv-role-assigned handler
+    const roleHandler = content.match(/on.*tv-role-assigned[\s\S]*?}\);[\s]*}\);/);
+    expect(roleHandler).not.toBeNull();
+    const handler = roleHandler![0];
+    expect({
+      pausesPlayerA: /playerA\?\.pause\(\)/.test(handler),
+      pausesPlayerB: /playerB\?\.pause\(\)/.test(handler),
+      checksIsLoopMode: /this\.isLoopMode/.test(handler),
+      showsFreezeFrame: /captureAndShowFreezeFrame/.test(handler),
+    }).toEqual({
+      pausesPlayerA: true,
+      pausesPlayerB: true,
+      checksIsLoopMode: true,
+      showsFreezeFrame: true,
+    });
+  });
+
+  // Guard: startSeamlessLoop must NOT play independently when in slave mode
+  it('startSeamlessLoop must return early when isSlaveMode', () => {
+    const loopFn = content.match(/private startSeamlessLoop[\s\S]*?setTimeout\(\(\) => \{[\s\S]*?\}, 500\);[\s\S]*?\}/);
+    expect(loopFn).not.toBeNull();
+    const fn = loopFn![0];
+    expect({
+      checksSlaveMode: /this\.isSlaveMode/.test(fn),
+      returnsEarlyForSlave: /if\s*\(this\.isSlaveMode\)[\s\S]*?return;/.test(fn),
+    }).toEqual({
+      checksSlaveMode: true,
+      returnsEarlyForSlave: true,
+    });
+  });
+
+  // Guard: handleMasterLoopState must use index-based sync (NOT path-based findIndex)
+  it('handleMasterLoopState must sync by videoIndex not by path findIndex', () => {
+    const syncFn = content.match(/private handleMasterLoopState[\s\S]*?^  \}/m);
+    expect(syncFn).not.toBeNull();
+    const fn = syncFn![0];
+    expect({
+      usesVideoIndex: /state\.videoIndex\s*%/.test(fn),
+      noPathFindIndex: !/findIndex\(v\s*=>\s*v\.path\s*===\s*state\.videoPath\)/.test(fn),
+      hasSeek: /player\.currentTime\s*=\s*elapsed/.test(fn),
+    }).toEqual({
+      usesVideoIndex: true,
+      noPathFindIndex: true,
+      hasSeek: true,
+    });
+  });
+
+  // Guard: onVideoEnded must show freeze frame and return when in slave mode
+  it('onVideoEnded must freeze and wait for master when slave', () => {
+    const endedFn = content.match(/private onVideoEnded[\s\S]*?^  \}/m);
+    expect(endedFn).not.toBeNull();
+    const fn = endedFn![0];
+    expect({
+      checksSlaveMode: /this\.isSlaveMode/.test(fn),
+      showsFreezeFrame: /captureAndShowFreezeFrame/.test(fn),
+      returnsEarlyForSlave: /if\s*\(this\.isSlaveMode\)[\s\S]*?return;/.test(fn),
+    }).toEqual({
+      checksSlaveMode: true,
+      showsFreezeFrame: true,
+      returnsEarlyForSlave: true,
+    });
+  });
+});
+
+// ----------------------------------------------------------
+// E-22 Server-side TV sync guards: handlers.js must relay
+// master loop state to slaves and assign roles correctly.
+// ----------------------------------------------------------
+describe('E-22 server-side TV sync guards', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+  const handlersPath = path.join(repoRoot, 'raspberry/server/socket/handlers.js');
+
+  let content: string;
+  beforeAll(() => {
+    content = fs.readFileSync(handlersPath, 'utf8');
+  });
+
+  it('tv-register must assign role and send loopState to slaves', () => {
+    expect({
+      emitsRoleAssigned: /socket\.emit\('tv-role-assigned'/.test(content),
+      sendsLoopStateToSlave: /socket\.emit\('tv-loop-state'.*getLoopState/.test(content),
+      checksRoleSlave: /role\s*===\s*'slave'/.test(content),
+    }).toEqual({
+      emitsRoleAssigned: true,
+      sendsLoopStateToSlave: true,
+      checksRoleSlave: true,
+    });
+  });
+
+  it('tv-loop-update must broadcast only from master', () => {
+    expect({
+      checksMaster: /isTvMaster\(socket\.id\)/.test(content),
+      broadcastsToSlaves: /socket\.broadcast\.emit\('tv-loop-state'/.test(content),
+    }).toEqual({
+      checksMaster: true,
+      broadcastsToSlaves: true,
+    });
+  });
+});
+
+// ----------------------------------------------------------
 // E-22 TvComponent variant selection guard: tv.component.ts
 // must select secondary variant path when displayType is
 // 'secondary' to avoid playing the wrong video on the 2nd screen.

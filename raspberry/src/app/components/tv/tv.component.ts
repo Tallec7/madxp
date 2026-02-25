@@ -453,6 +453,16 @@ export class TvComponent implements OnInit, OnDestroy {
 
         if (this.isSlaveMode) {
           console.log('[TV] Running as SLAVE - analytics disabled, waiting for master state');
+          // Stop independent loop playback — startSeamlessLoop() already ran before
+          // tv-register was even emitted, so the slave is playing independently.
+          // Pause and show freeze frame; handleMasterLoopState() will restart playback
+          // when the master's loop state arrives (next event from server).
+          if (this.isLoopMode) {
+            this.captureAndShowFreezeFrame();
+            this.playerA?.pause();
+            this.playerB?.pause();
+            console.log('[TV] Slave: paused independent loop, waiting for master sync');
+          }
         } else {
           console.log('[TV] Running as MASTER - will emit loop state updates');
         }
@@ -1434,6 +1444,15 @@ export class TvComponent implements OnInit, OnDestroy {
       : 0;
     this.currentLoopIndex = startIndex;
 
+    // En mode slave, ne pas jouer indépendamment — attendre les directives du master.
+    // Cela arrive quand switchToPhase() ou sponsors() relance la boucle sur le slave.
+    // La première boucle au boot est aussi concernée : tv-role-assigned pausera ensuite.
+    if (this.isSlaveMode) {
+      console.log('[TV] Slave mode: loop ready with', validVideos.length, 'videos, waiting for master sync');
+      this.isStartingLoop = false;
+      return;
+    }
+
     console.log('[TV] Starting loop with', validVideos.length, 'videos at index', startIndex);
 
     // Jouer la vidéo à l'index de reprise sur le player actif
@@ -2222,40 +2241,38 @@ export class TvComponent implements OnInit, OnDestroy {
       this.hideBlackOverlay();
     }
 
-    // Trouver la vidéo dans notre boucle locale
-    const targetIndex = this.currentLoopVideos.findIndex(v => v.path === state.videoPath);
+    // Trouver la vidéo dans notre boucle locale.
+    // Stratégie : index d'abord (fiable même avec variants secondaires), path en fallback.
+    // Le secondary display remplace les paths par leurs variants (getLoopVideosForPhase),
+    // donc le path du master ne matchera jamais le path du slave quand des variants existent.
+    // L'index est toujours fiable car les deux boucles ont le même ordre.
+    if (this.currentLoopVideos.length === 0) {
+      console.warn('[TV] Slave: no videos in local loop, ignoring master state');
+      return;
+    }
 
-    if (targetIndex >= 0) {
-      // La vidéo existe dans notre boucle
-      console.log(`[TV] Slave: syncing to video index ${targetIndex} (${state.videoPath})`);
+    const syncIndex = state.videoIndex % this.currentLoopVideos.length;
+    const localVideo = this.currentLoopVideos[syncIndex];
 
-      // Afficher le freeze-frame pour masquer la transition
-      this.captureAndShowFreezeFrame();
+    console.log(`[TV] Slave: syncing to index ${syncIndex} (master: ${state.videoPath}, local: ${localVideo?.path})`);
 
-      // Jouer la vidéo sur le player actif
-      this.playOnActivePlayer(targetIndex);
+    // Afficher le freeze-frame pour masquer la transition
+    this.captureAndShowFreezeFrame();
 
-      // Seek approximatif au temps du master
-      if (state.videoStartedAt) {
-        const elapsed = (Date.now() - state.videoStartedAt) / 1000;
-        if (elapsed > 1) {
-          setTimeout(() => {
-            const player = this.getActivePlayer();
-            if (player && player.duration && elapsed < player.duration) {
-              player.currentTime = elapsed;
-              console.log(`[TV] Slave: seeked loop video to ${elapsed.toFixed(1)}s`);
-            }
-          }, 500);
-        }
-      }
-    } else {
-      // Vidéo pas trouvée dans notre boucle (config différente ?)
-      // Essayer par index comme fallback
-      console.warn(`[TV] Slave: video ${state.videoPath} not found in local loop, using index ${state.videoIndex}`);
-      if (this.currentLoopVideos.length > 0) {
-        const fallbackIndex = state.videoIndex % this.currentLoopVideos.length;
-        this.captureAndShowFreezeFrame();
-        this.playOnActivePlayer(fallbackIndex);
+    // Jouer la vidéo sur le player actif
+    this.playOnActivePlayer(syncIndex);
+
+    // Seek approximatif au temps du master pour rester synchrone
+    if (state.videoStartedAt) {
+      const elapsed = (Date.now() - state.videoStartedAt) / 1000;
+      if (elapsed > 1) {
+        setTimeout(() => {
+          const player = this.getActivePlayer();
+          if (player && player.duration && elapsed < player.duration) {
+            player.currentTime = elapsed;
+            console.log(`[TV] Slave: seeked to ${elapsed.toFixed(1)}s`);
+          }
+        }, 500);
       }
     }
   }
