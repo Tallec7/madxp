@@ -370,11 +370,12 @@ start_chromium_secondary() {
     local disable_features="TranslateUI,MediaRouter,XdgDesktopPortal"
 
     # Flags identiques au kiosk principal + user-data-dir séparé + positionnement écran 2
-    # NOTE: --start-fullscreen au lieu de --kiosk pour le secondaire.
+    # NOTE: --app=URL au lieu de --kiosk pour le secondaire.
     # --kiosk force le plein écran sur le moniteur principal et ignore --window-position.
-    # --start-fullscreen respecte le positionnement sur l'écran secondaire.
+    # --app crée une fenêtre sans onglets/barre d'adresse qui respecte le positionnement.
+    # On envoie ensuite F11 via xdotool pour passer en vrai plein écran.
     local common_flags=(
-        --start-fullscreen
+        --app="${CHROMIUM_SECONDARY_URL}"
         --autoplay-policy=no-user-gesture-required
         --noerrdialogs
         --disable-infobars
@@ -426,9 +427,25 @@ start_chromium_secondary() {
         )
     fi
 
-    "$CHROMIUM_BIN" "${common_flags[@]}" "${gpu_flags[@]}" --disable-features="$disable_features" "$CHROMIUM_SECONDARY_URL" &
+    "$CHROMIUM_BIN" "${common_flags[@]}" "${gpu_flags[@]}" --disable-features="$disable_features" &
     SECONDARY_CHROMIUM_PID=$!
     log "✓ Chromium secondaire lancé (PID: $SECONDARY_CHROMIUM_PID)"
+
+    # Attendre que la fenêtre apparaisse puis envoyer F11 pour passer en plein écran
+    # --app positionne correctement la fenêtre mais ne la met pas en plein écran
+    (
+        sleep 4
+        local wid
+        wid=$(DISPLAY=:0 xdotool search --pid $SECONDARY_CHROMIUM_PID 2>/dev/null | head -1)
+        if [[ -n "$wid" ]]; then
+            DISPLAY=:0 xdotool windowactivate "$wid" 2>/dev/null
+            sleep 0.5
+            DISPLAY=:0 xdotool key F11 2>/dev/null
+            log "✓ Chromium secondaire mis en plein écran (F11, WID: $wid)"
+        else
+            log "⚠️ Impossible de trouver la fenêtre secondaire pour F11"
+        fi
+    ) &
 }
 
 # Arrêter le Chromium secondaire
