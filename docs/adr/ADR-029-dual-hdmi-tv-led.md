@@ -1,14 +1,14 @@
 # ADR-029 : Dual HDMI — Contenus Différenciés Écran Principal + Secondaire
 
-| Champ     | Valeur                                                            |
-| --------- | ----------------------------------------------------------------- |
-| Statut    | Accepté                                                           |
-| Date      | 2026-02-21                                                        |
-| Mis à jour| 2026-02-24 (renommage LED → Secondary Display, fix config-merge)  |
-| Catégorie | Edge / Display                                                    |
-| Composant | `raspberry`, `central-server`, `central-dashboard`                |
-| Epic SAFe | [E-22](../safe/FEATURES.md#e-22--contenus-différenciés-tv--led)   |
-| Proposal  | [PROP-002](../proposals/PROP-002-tv-led-dual-output.md) (détails) |
+| Champ      | Valeur                                                            |
+| ---------- | ----------------------------------------------------------------- |
+| Statut     | Accepté                                                           |
+| Date       | 2026-02-21                                                        |
+| Mis à jour | 2026-02-24 (renommage LED → Secondary Display, fix config-merge)  |
+| Catégorie  | Edge / Display                                                    |
+| Composant  | `raspberry`, `central-server`, `central-dashboard`                |
+| Epic SAFe  | [E-22](../safe/FEATURES.md#e-22--contenus-différenciés-tv--led)   |
+| Proposal   | [PROP-002](../proposals/PROP-002-tv-led-dual-output.md) (détails) |
 
 ## Contexte
 
@@ -28,7 +28,7 @@ Des clubs sportifs disposent d'un **écran principal** (TV, écran géant) et d'
 
 Aujourd'hui le Pi n'utilise qu'un seul port HDMI (HDMI 0). Il n'existe pas de concept de type d'écran dans le modèle de données, ni de variantes vidéo par format.
 
-**Lié à** : [ADR-008](./ADR-008-double-buffer-video-pi.md) (Double-Buffer Vidéo — contraintes GPU)
+**Lié à** : [ADR-008](./ADR-008-double-buffer-video-pi.md) (Double-Buffer Vidéo — contraintes GPU), [ADR-031](./ADR-031-master-slave-video-loop-sync.md) (Sync master-slave boucles vidéo)
 
 ## Décision
 
@@ -52,11 +52,11 @@ Aujourd'hui le Pi n'utilise qu'un seul port HDMI (HDMI 0). Il n'existe pas de co
 
 Un seul événement Socket.IO est émis (score-update, command, breaking-news, phase-change). Chaque instance l'interprète selon son `displayType` :
 
-| Événement       | TV (HDMI 0)               | Secondaire (HDMI 1)                    |
-| --------------- | ------------------------- | -------------------------------------- |
-| `score-update`  | Overlay popup + animation | Bandeau score compact + flash          |
-| `command`       | Vidéo variante TV (16:9)  | Vidéo variante secondaire (bandeau)    |
-| `breaking-news` | Bandeau texte en overlay  | Texte pleine largeur intégré           |
+| Événement       | TV (HDMI 0)               | Secondaire (HDMI 1)                 |
+| --------------- | ------------------------- | ----------------------------------- |
+| `score-update`  | Overlay popup + animation | Bandeau score compact + flash       |
+| `command`       | Vidéo variante TV (16:9)  | Vidéo variante secondaire (bandeau) |
+| `breaking-news` | Bandeau texte en overlay  | Texte pleine largeur intégré        |
 
 La Remote reste inchangée — intelligence dans le récepteur, pas l'émetteur.
 
@@ -115,12 +115,12 @@ Le `content-deployment` filtre les vidéos par `display_type` selon la configura
 
 ### Risques (ROAM)
 
-| Risque                      | Type     | Mitigation                                       |
-| --------------------------- | -------- | ------------------------------------------------ |
-| GPU surchargé 2 flux        | Resolved | Pi 5 obligatoire, vidéos 1080p max, monitoring   |
-| DRM/KMS instable sur Pi 5   | Accepted | Fallback `hdmi_force_hotplug:1=1` par site       |
+| Risque                             | Type     | Mitigation                                                     |
+| ---------------------------------- | -------- | -------------------------------------------------------------- |
+| GPU surchargé 2 flux               | Resolved | Pi 5 obligatoire, vidéos 1080p max, monitoring                 |
+| DRM/KMS instable sur Pi 5          | Accepted | Fallback `hdmi_force_hotplug:1=1` par site                     |
 | Résolution secondaire non standard | Owned    | Config par site via dashboard (`secondary_display_resolution`) |
-| Contrôleur LED incompatible | Accepted | Spike enabler F-22.0 valide les modèles cibles   |
+| Contrôleur LED incompatible        | Accepted | Spike enabler F-22.0 valide les modèles cibles                 |
 
 ## Références
 

@@ -26,27 +26,28 @@ Un ADR documente une décision technique importante avec :
 
 ### Décisions terrain (2025-2026)
 
-| ID                                                   | Titre                                     | Statut                   | Date     |
-| ---------------------------------------------------- | ----------------------------------------- | ------------------------ | -------- |
-| [ADR-006](ADR-006-subscription-license-system.md)    | Système d'abonnement et licence offline   | Accepté                  | Jan 2026 |
-| [ADR-007](ADR-007-public-remote-api.md)              | API Remote publique (sans auth JWT)       | Accepté                  | Jan 2026 |
-| [ADR-008](ADR-008-double-buffer-video-pi.md)         | Double-buffer vidéo avec freeze-frame     | Accepté                  | Jan 2026 |
-| [ADR-009](ADR-009-analytics-removal.md)              | Suppression des pages Analytics dashboard | ⚠️ Supersédé par ADR-027 | Fév 2026 |
-| [ADR-010](ADR-010-hdmi-cec-analytics.md)             | Détection HDMI-CEC pour analytics fiables | Accepté                  | Fév 2026 |
-| [ADR-011](ADR-011-bssid-lock-mesh-prohibition.md)    | Interdiction BSSID lock en mesh           | Accepté                  | Jan 2026 |
-| [ADR-012](ADR-012-sync-agent-vanilla-js.md)          | Sync-agent en JS vanilla (pas TypeScript) | Accepté                  | Oct 2024 |
-| [ADR-013](ADR-013-config-merge-strategy.md)          | Merge intelligent de configuration        | Accepté                  | Déc 2025 |
-| [ADR-014](ADR-014-guardian-bash-independent.md)      | Guardian bash indépendant                 | Accepté                  | Jan 2026 |
-| [ADR-015](ADR-015-railway-hobby-constraints.md)      | Contraintes Railway Hobby plan            | Accepté                  | Jan 2026 |
-| [ADR-021](ADR-021-recording-inactivity-timer.md)     | Timer d'inactivité recording              | Accepté                  | Fév 2026 |
-| [ADR-022](ADR-022-content-tab-ux-restructuration.md) | Restructuration UX onglet Contenu         | Accepté                  | Fév 2026 |
-| [ADR-024](ADR-024-network-resilience-layers.md)      | Résilience réseau multi-couches           | Accepté                  | Jan 2026 |
-| [ADR-025](ADR-025-dual-storage-ftp-supabase.md)      | Double backend stockage FTP + Supabase    | Accepté                  | Déc 2024 |
-| [ADR-026](ADR-026-predictive-alerts.md)              | Alertes prédictives multi-métriques       | Accepté                  | Fév 2026 |
-| [ADR-027](ADR-027-analytics-ui-removal.md)           | Suppression de l'UI Analytics dashboard   | Accepté                  | Fév 2026 |
-| [ADR-028](ADR-028-atomic-config-write.md)            | Écriture atomique de configuration.json   | Accepté                  | Fév 2026 |
-| [ADR-029](ADR-029-dual-hdmi-tv-led.md)               | Dual HDMI TV + LED depuis un seul Pi      | Proposé                  | Fév 2026 |
-| [ADR-030](ADR-030-multi-profile-sync-deploy.md)      | Deploy profile auto-sync + cache Nginx    | Accepté                  | Fév 2026 |
+| ID                                                   | Titre                                        | Statut                   | Date     |
+| ---------------------------------------------------- | -------------------------------------------- | ------------------------ | -------- |
+| [ADR-006](ADR-006-subscription-license-system.md)    | Système d'abonnement et licence offline      | Accepté                  | Jan 2026 |
+| [ADR-007](ADR-007-public-remote-api.md)              | API Remote publique (sans auth JWT)          | Accepté                  | Jan 2026 |
+| [ADR-008](ADR-008-double-buffer-video-pi.md)         | Double-buffer vidéo avec freeze-frame        | Accepté                  | Jan 2026 |
+| [ADR-009](ADR-009-analytics-removal.md)              | Suppression des pages Analytics dashboard    | ⚠️ Supersédé par ADR-027 | Fév 2026 |
+| [ADR-010](ADR-010-hdmi-cec-analytics.md)             | Détection HDMI-CEC pour analytics fiables    | Accepté                  | Fév 2026 |
+| [ADR-011](ADR-011-bssid-lock-mesh-prohibition.md)    | Interdiction BSSID lock en mesh              | Accepté                  | Jan 2026 |
+| [ADR-012](ADR-012-sync-agent-vanilla-js.md)          | Sync-agent en JS vanilla (pas TypeScript)    | Accepté                  | Oct 2024 |
+| [ADR-013](ADR-013-config-merge-strategy.md)          | Merge intelligent de configuration           | Accepté                  | Déc 2025 |
+| [ADR-014](ADR-014-guardian-bash-independent.md)      | Guardian bash indépendant                    | Accepté                  | Jan 2026 |
+| [ADR-015](ADR-015-railway-hobby-constraints.md)      | Contraintes Railway Hobby plan               | Accepté                  | Jan 2026 |
+| [ADR-021](ADR-021-recording-inactivity-timer.md)     | Timer d'inactivité recording                 | Accepté                  | Fév 2026 |
+| [ADR-022](ADR-022-content-tab-ux-restructuration.md) | Restructuration UX onglet Contenu            | Accepté                  | Fév 2026 |
+| [ADR-024](ADR-024-network-resilience-layers.md)      | Résilience réseau multi-couches              | Accepté                  | Jan 2026 |
+| [ADR-025](ADR-025-dual-storage-ftp-supabase.md)      | Double backend stockage FTP + Supabase       | Accepté                  | Déc 2024 |
+| [ADR-026](ADR-026-predictive-alerts.md)              | Alertes prédictives multi-métriques          | Accepté                  | Fév 2026 |
+| [ADR-027](ADR-027-analytics-ui-removal.md)           | Suppression de l'UI Analytics dashboard      | Accepté                  | Fév 2026 |
+| [ADR-028](ADR-028-atomic-config-write.md)            | Écriture atomique de configuration.json      | Accepté                  | Fév 2026 |
+| [ADR-029](ADR-029-dual-hdmi-tv-led.md)               | Dual HDMI TV + LED depuis un seul Pi         | Proposé                  | Fév 2026 |
+| [ADR-030](ADR-030-multi-profile-sync-deploy.md)      | Deploy profile auto-sync + cache Nginx       | Accepté                  | Fév 2026 |
+| [ADR-031](ADR-031-master-slave-video-loop-sync.md)   | Sync master-slave boucles vidéo dual-display | Accepté                  | Fév 2026 |
 
 ### Supersédés
 
@@ -83,7 +84,7 @@ Un ADR documente une décision technique importante avec :
 
 1. Décider du format avec la [grille de décision](BEST_PRACTICES.md#quand-créer-un-adr-)
 2. Copier le template approprié (complet ou léger)
-3. Numéroter séquentiellement (prochain : **ADR-031**)
+3. Numéroter séquentiellement (prochain : **ADR-032**)
 4. Remplir les sections
 5. Commiter avec le code dans la même PR
 6. Mettre à jour ce README après merge
@@ -106,4 +107,4 @@ Voir **[BEST_PRACTICES.md](BEST_PRACTICES.md)** pour :
 
 ---
 
-_Dernière mise à jour : 24 février 2026_
+_Dernière mise à jour : 25 février 2026_
