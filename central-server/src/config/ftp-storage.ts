@@ -151,6 +151,14 @@ export const uploadFileToFtpFromDisk = async (
 
     logger.info('FTP connected, streaming file from disk:', { filename, size: fileStats.size });
 
+    // Créer le dossier parent si le filename contient un sous-dossier (ex: variants/uuid/secondary/file.mp4)
+    const dir = path.posix.dirname(filename);
+    if (dir && dir !== '.') {
+      logger.info('FTP ensuring directory exists:', { dir });
+      await client.ensureDir(dir);
+      await client.cd('/');
+    }
+
     const uploadStart = Date.now();
     // Stream directement depuis le disque — pas de buffer en mémoire
     await client.uploadFrom(filePath, filename);
