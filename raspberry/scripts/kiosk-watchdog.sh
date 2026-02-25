@@ -43,6 +43,10 @@ PI_MODEL=$(detect_pi_model)
 # Secondary display Chromium state
 SECONDARY_CHROMIUM_PID=0
 SECONDARY_DISPLAY_ENABLED=false
+# Dual-display active = secondary is running → primary must be constrained to its monitor
+DUAL_DISPLAY_ACTIVE=false
+PRIMARY_SCREEN_WIDTH=0
+PRIMARY_SCREEN_HEIGHT=0
 
 # Lire secondaryDisplayEnabled depuis configuration.json
 # Rétrocompat: lit aussi "ledEnabled" pour les configs existantes (avant renommage)
@@ -199,8 +203,24 @@ start_chromium() {
     local disable_features="TranslateUI,MediaRouter,XdgDesktopPortal"
 
     # Flags communs à tous les modèles
-    local common_flags=(
-        --kiosk
+    # En mode dual-display, on utilise --app=URL au lieu de --kiosk pour le primaire.
+    # --kiosk prend TOUT le bureau X11 virtuel (les deux écrans combinés) et masque
+    # la fenêtre du Chromium secondaire. --app= crée une fenêtre contrainte à un seul
+    # moniteur, puis xdotool F11 passe en plein écran sur ce moniteur uniquement.
+    local common_flags=()
+    if [[ "$DUAL_DISPLAY_ACTIVE" == "true" ]]; then
+        log "📺 Mode dual-display: primaire en --app= (pas --kiosk, qui couvrirait les 2 écrans)"
+        common_flags=(
+            --app="${CHROMIUM_URL}"
+            --window-position=0,0
+            --window-size=${PRIMARY_SCREEN_WIDTH:-1920},${PRIMARY_SCREEN_HEIGHT:-1080}
+        )
+    else
+        common_flags=(
+            --kiosk
+        )
+    fi
+    common_flags+=(
         --autoplay-policy=no-user-gesture-required
         --noerrdialogs
         --disable-infobars
@@ -266,11 +286,34 @@ start_chromium() {
         )
     fi
 
-    "$CHROMIUM_BIN" "${common_flags[@]}" "${gpu_flags[@]}" --disable-features="$disable_features" "$CHROMIUM_URL" &
+    # En mode dual-display, l'URL est dans --app=, pas en argument positionnel
+    if [[ "$DUAL_DISPLAY_ACTIVE" == "true" ]]; then
+        "$CHROMIUM_BIN" "${common_flags[@]}" "${gpu_flags[@]}" --disable-features="$disable_features" &
+    else
+        "$CHROMIUM_BIN" "${common_flags[@]}" "${gpu_flags[@]}" --disable-features="$disable_features" "$CHROMIUM_URL" &
+    fi
 
     CHROMIUM_PID=$!
     log "✓ Chromium lancé (PID: $CHROMIUM_PID)"
     write_kiosk_status "running"
+
+    # En mode dual-display, envoyer F11 pour passer en plein écran sur le moniteur primaire
+    # (--app= ne fait pas de plein écran automatique, contrairement à --kiosk)
+    if [[ "$DUAL_DISPLAY_ACTIVE" == "true" ]]; then
+        (
+            sleep 4
+            local wid
+            wid=$(DISPLAY=:0 xdotool search --pid $CHROMIUM_PID 2>/dev/null | head -1)
+            if [[ -n "$wid" ]]; then
+                DISPLAY=:0 xdotool windowactivate "$wid" 2>/dev/null
+                sleep 0.5
+                DISPLAY=:0 xdotool key F11 2>/dev/null
+                log "✓ Chromium primaire mis en plein écran (F11, WID: $wid)"
+            else
+                log "⚠️ Impossible de trouver la fenêtre primaire pour F11"
+            fi
+        ) &
+    fi
 
     # Masquer le curseur souris — ceinture et bretelles
     # unclutter-xfixes (autostart LXDE) est la méthode principale,
@@ -335,21 +378,33 @@ setup_secondary_xrandr() {
         return 1
     fi
 
+    # Lire la géométrie de la sortie primaire
+    # Format: "HDMI-A-1 connected 1920x1080+0+0"
+    local pgeom
+    pgeom=$(echo "$xrandr_output" | grep -E "^${primary_output} connected" | grep -oP '[0-9]+x[0-9]+\+[0-9]+\+[0-9]+')
+    if [[ -n "$pgeom" ]]; then
+        PRIMARY_SCREEN_WIDTH=$(echo "$pgeom" | grep -oP '^[0-9]+')
+        PRIMARY_SCREEN_HEIGHT=$(echo "$pgeom" | grep -oP '(?<=x)[0-9]+(?=\+)')
+    else
+        PRIMARY_SCREEN_WIDTH=1920
+        PRIMARY_SCREEN_HEIGHT=1080
+    fi
+
     # Lire la géométrie de la sortie secondaire
     # Format: "HDMI-A-2 connected 3840x2160+1920+0"
     local geom
-    geom=$(echo "$xrandr_output" | grep -E "^${secondary_output} connected" | grep -oP '\d+x\d+\+\d+\+\d+')
+    geom=$(echo "$xrandr_output" | grep -E "^${secondary_output} connected" | grep -oP '[0-9]+x[0-9]+\+[0-9]+\+[0-9]+')
     if [[ -n "$geom" ]]; then
-        SECONDARY_SCREEN_WIDTH=$(echo "$geom" | grep -oP '^\d+')
-        SECONDARY_SCREEN_HEIGHT=$(echo "$geom" | grep -oP '(?<=x)\d+(?=\+)')
-        SECONDARY_X_OFFSET=$(echo "$geom" | grep -oP '(?<=\+)\d+(?=\+)')
+        SECONDARY_SCREEN_WIDTH=$(echo "$geom" | grep -oP '^[0-9]+')
+        SECONDARY_SCREEN_HEIGHT=$(echo "$geom" | grep -oP '(?<=x)[0-9]+(?=\+)')
+        SECONDARY_X_OFFSET=$(echo "$geom" | grep -oP '(?<=\+)[0-9]+(?=\+)')
     else
         SECONDARY_SCREEN_WIDTH=1920
         SECONDARY_SCREEN_HEIGHT=1080
         SECONDARY_X_OFFSET=1920
     fi
 
-    log "✓ xrandr: ${primary_output} (primaire) + ${secondary_output} (secondaire), géométrie=${SECONDARY_SCREEN_WIDTH}x${SECONDARY_SCREEN_HEIGHT}+${SECONDARY_X_OFFSET}"
+    log "✓ xrandr: ${primary_output} (primaire ${PRIMARY_SCREEN_WIDTH}x${PRIMARY_SCREEN_HEIGHT}) + ${secondary_output} (secondaire ${SECONDARY_SCREEN_WIDTH}x${SECONDARY_SCREEN_HEIGHT}+${SECONDARY_X_OFFSET})"
     return 0
 }
 
@@ -500,6 +555,18 @@ check_secondary_chromium() {
         # HDMI 1 connecté → vérifier que le Chromium secondaire tourne
         if (( SECONDARY_CHROMIUM_PID == 0 )) || ! kill -0 "$SECONDARY_CHROMIUM_PID" 2>/dev/null; then
             log "HDMI 1 connecté + écran secondaire activé → lancement du Chromium secondaire"
+
+            # Si le dual-display n'était pas actif avant (ex: HDMI branché à chaud),
+            # il faut relancer le primaire en --app= mode pour ne pas couvrir les 2 écrans
+            if [[ "$DUAL_DISPLAY_ACTIVE" != "true" ]]; then
+                DUAL_DISPLAY_ACTIVE=true
+                setup_secondary_xrandr || true
+                log "📺 Passage en dual-display: relance du primaire en mode --app= (pas --kiosk)"
+                cleanup_chromium
+                sleep 1
+                start_chromium
+            fi
+
             start_chromium_secondary
         fi
     else
@@ -507,6 +574,14 @@ check_secondary_chromium() {
         if (( SECONDARY_CHROMIUM_PID > 0 )); then
             log "HDMI 1 déconnecté, arrêt du Chromium secondaire"
             stop_chromium_secondary
+        fi
+        # Repasser en mode single-display si nécessaire
+        if [[ "$DUAL_DISPLAY_ACTIVE" == "true" ]]; then
+            DUAL_DISPLAY_ACTIVE=false
+            log "📺 Retour en single-display: relance du primaire en mode --kiosk"
+            cleanup_chromium
+            sleep 1
+            start_chromium
         fi
     fi
 }
@@ -631,6 +706,17 @@ main() {
     done
     if (( nginx_wait >= 15 )); then
         log "⚠️ Nginx pas encore prêt après 15s — lancement de Chromium quand même"
+    fi
+
+    # Pré-check dual-display AVANT de lancer le primaire.
+    # Si le second écran est activé et HDMI 1 connecté, le primaire doit utiliser
+    # --app=URL (pas --kiosk) pour ne pas couvrir les deux écrans.
+    read_secondary_display_enabled
+    if [[ "$SECONDARY_DISPLAY_ENABLED" == "true" ]] && detect_hdmi1_status; then
+        DUAL_DISPLAY_ACTIVE=true
+        # Configurer xrandr pour connaître les résolutions des deux écrans
+        setup_secondary_xrandr || true
+        log "📺 Dual-display détecté au démarrage: primaire=${PRIMARY_SCREEN_WIDTH}x${PRIMARY_SCREEN_HEIGHT}"
     fi
 
     start_chromium

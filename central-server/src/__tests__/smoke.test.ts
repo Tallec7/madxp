@@ -3101,11 +3101,11 @@ describe('Kiosk GPU crash loop regression guards', () => {
   });
 
   it('Chromium launch commands must use combined --disable-features variable', () => {
-    // Both start_chromium() and start_chromium_secondary() must pass a single
-    // combined --disable-features="$disable_features" in the launch command.
+    // start_chromium() has 2 launch paths (kiosk mode + dual-display mode) and
+    // start_chromium_secondary() has 1, all must pass combined --disable-features.
     const launchLines = watchdog.match(/"\$CHROMIUM_BIN".*--disable-features="\$disable_features"/g) || [];
     expect({ combinedDisableFeaturesCount: launchLines.length })
-      .toEqual({ combinedDisableFeaturesCount: 2 }); // primary + secondary
+      .toEqual({ combinedDisableFeaturesCount: 3 }); // primary-kiosk + primary-dual + secondary
   });
 
   it('primary Chromium must have --user-data-dir for profile isolation', () => {
