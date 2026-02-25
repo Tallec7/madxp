@@ -542,6 +542,7 @@ Tous les controllers utilisent le repository pattern. ESLint bloquant actif. Aud
 - [ ] Breaking news format secondaire (texte pleine largeur dans le bandeau)
 - [x] Un seul événement Socket.IO → 2 réactions différentes selon `displayType`
 - [ ] Indicateur écran secondaire connecté dans la Remote — [SPEC détaillée](../proposals/SPEC-US-22.2.2-remote-secondary-indicator.md)
+- [x] Badge `📺 2nd` sur les vidéos avec variante secondaire (Dashboard site-content-tab + Remote)
 
 | US        | Description                                                                                                 | SP  | Sprint  | Priorité |
 | --------- | ----------------------------------------------------------------------------------------------------------- | --- | ------- | -------- |

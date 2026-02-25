@@ -17,6 +17,7 @@ import {
   metricsRepository,
   timelineRepository,
   configProfileRepository,
+  videoVariantRepository,
   type ExtendedSiteFilters,
   type SubscriptionFilter,
   type UpdateSiteInput,
@@ -1253,6 +1254,12 @@ export const getSiteLocalContent = async (req: AuthRequest, res: Response) => {
       updatedAt: v.updated_at
     }));
 
+    // Récupérer les IDs des vidéos ayant une variante secondaire
+    const cloudVideoIds = cloudVideoRows.map((v) => v.id);
+    const secondaryVariants = await videoVariantRepository.findSecondaryVariantsForVideos(cloudVideoIds);
+    const secondaryVariantVideoIds = secondaryVariants.map((v) => v.video_id);
+    const secondaryDisplayEnabled = site.secondary_display_enabled ?? false;
+
     if (!site.local_config_mirror) {
       return res.json({
         siteId: id,
@@ -1266,7 +1273,9 @@ export const getSiteLocalContent = async (req: AuthRequest, res: Response) => {
         cloudVideos,
         localStorage: null,
         lastVideoSync: null,
-        hotspotInfo: null
+        hotspotInfo: null,
+        secondaryVariantVideoIds,
+        secondaryDisplayEnabled,
       });
     }
 
@@ -1295,7 +1304,9 @@ export const getSiteLocalContent = async (req: AuthRequest, res: Response) => {
       cloudVideos,
       localStorage,
       lastVideoSync,
-      hotspotInfo
+      hotspotInfo,
+      secondaryVariantVideoIds,
+      secondaryDisplayEnabled,
     });
   } catch (error) {
     logger.error('Get site local content error:', error);

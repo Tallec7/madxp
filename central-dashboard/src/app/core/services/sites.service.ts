@@ -228,6 +228,8 @@ export class SitesService {
     localStorage: LocalStorage | null;
     lastVideoSync: string | null;
     hotspotInfo: { ssid: string | null; channel: number | null; clients: number; isActive: boolean } | null;
+    secondaryVariantVideoIds: string[];
+    secondaryDisplayEnabled: boolean;
   }> {
     return this.api.get(`/sites/${id}/local-content`);
   }

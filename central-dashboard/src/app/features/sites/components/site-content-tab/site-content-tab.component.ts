@@ -38,6 +38,7 @@ interface UnifiedVideoOption {
   isCloud: boolean;       // ☁️ Disponible dans le cloud
   source: 'local' | 'cloud' | 'both';
   cloudId?: string;       // ID cloud pour le déploiement
+  hasSecondaryVariant?: boolean; // 📺 A une variante secondaire
 }
 
 type VideoOptionGroup = 'forThisSite' | 'onPi' | 'cloud';
@@ -318,7 +319,7 @@ interface HumanReadableDiff {
                     >
                       <option value="">-- Sélectionner --</option>
                       <optgroup *ngFor="let group of videoOptionGroups; trackBy: trackByGroupKey" [label]="group.icon + ' ' + group.label">
-                        <option *ngFor="let v of group.videos; trackBy: trackByVideoPath" [value]="v.path">{{ v.displayName }}{{ v.isOnPi ? '' : ' ⏳' }}</option>
+                        <option *ngFor="let v of group.videos; trackBy: trackByVideoPath" [value]="v.path">{{ v.displayName }}{{ v.isOnPi ? '' : ' ⏳' }}{{ (secondaryDisplayEnabled && v.hasSecondaryVariant) ? ' 📺' : '' }}</option>
                       </optgroup>
                     </select>
                     <input
@@ -329,6 +330,7 @@ interface HumanReadableDiff {
                       class="video-name-compact"
                     />
                     <span class="cloud-badge" *ngIf="isCloudVideoPath(video.path)" title="Sera déployée automatiquement">⏳</span>
+                    <span class="secondary-variant-badge" *ngIf="hasSecondaryVariantForPath(video.path)" title="Variante secondaire disponible">📺 2nd</span>
                     <span class="sponsor-badge-auto" *ngIf="getCategorySponsor(video.path) as sponsor" [title]="'Associé au sponsor ' + sponsor.name">🔗 {{ sponsor.name }}</span>
                     <button class="btn-remove-tiny" (click)="removeVideoFromCategory(catIndex, vidIndex)">×</button>
                   </div>
@@ -368,7 +370,7 @@ interface HumanReadableDiff {
                         >
                           <option value="">-- Sélectionner --</option>
                           <optgroup *ngFor="let group of videoOptionGroups; trackBy: trackByGroupKey" [label]="group.icon + ' ' + group.label">
-                            <option *ngFor="let v of group.videos; trackBy: trackByVideoPath" [value]="v.path">{{ v.displayName }}{{ v.isOnPi ? '' : ' ⏳' }}</option>
+                            <option *ngFor="let v of group.videos; trackBy: trackByVideoPath" [value]="v.path">{{ v.displayName }}{{ v.isOnPi ? '' : ' ⏳' }}{{ (secondaryDisplayEnabled && v.hasSecondaryVariant) ? ' 📺' : '' }}</option>
                           </optgroup>
                         </select>
                         <input
@@ -379,6 +381,7 @@ interface HumanReadableDiff {
                           class="video-name-compact"
                         />
                         <span class="cloud-badge" *ngIf="isCloudVideoPath(video.path)" title="Sera déployée automatiquement">⏳</span>
+                        <span class="secondary-variant-badge" *ngIf="hasSecondaryVariantForPath(video.path)" title="Variante secondaire disponible">📺 2nd</span>
                         <span class="sponsor-badge-auto" *ngIf="getCategorySponsor(video.path) as sponsor" [title]="'Associé au sponsor ' + sponsor.name">🔗 {{ sponsor.name }}</span>
                         <button class="btn-remove-tiny" (click)="removeVideoFromSubcategory(catIndex, subIndex, vidIndex)">×</button>
                       </div>
@@ -1086,6 +1089,16 @@ interface HumanReadableDiff {
     .cloud-badge {
       font-size: 0.75rem;
       color: #92400e;
+    }
+    .secondary-variant-badge {
+      display: inline-block;
+      font-size: 0.7rem;
+      color: #1e40af;
+      background: #eff6ff;
+      border: 1px solid #93c5fd;
+      border-radius: 4px;
+      padding: 0.1rem 0.35rem;
+      font-weight: 600;
     }
     .sponsor-badge-auto {
       display: inline-block;
@@ -3193,6 +3206,9 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
   // Unified video options for dropdowns (Cloud + Local merged)
   unifiedVideoOptions: UnifiedVideoOption[] = [];
   videoSearchQuery: string = '';
+  // Secondary variant tracking
+  secondaryVariantVideoIds: Set<string> = new Set();
+  secondaryDisplayEnabled: boolean = false;
   groupedVideoOptions: Map<VideoOptionGroup, UnifiedVideoOption[]> = new Map();
   // Cached array for template - prevents flickering by avoiding method calls in template
   videoOptionGroups: { key: VideoOptionGroup; label: string; icon: string; videos: UnifiedVideoOption[] }[] = [];
@@ -3926,6 +3942,8 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
         this.localVideos = response.localVideos || [];
         this.cloudVideos = response.cloudVideos || [];
         this.localStorage = response.localStorage || null;
+        this.secondaryVariantVideoIds = new Set(response.secondaryVariantVideoIds || []);
+        this.secondaryDisplayEnabled = response.secondaryDisplayEnabled ?? false;
 
         if (response.configuration) {
           this.config = this.normalizeConfig(response.configuration);
@@ -4422,6 +4440,7 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
         existing.cloudId = cloud.id;
         existing.source = 'both';
         existing.displayName = cloud.title || cloud.originalName || cloud.filename;
+        existing.hasSecondaryVariant = this.secondaryVariantVideoIds.has(cloud.id);
       } else {
         // Vidéo uniquement dans le cloud
         // Utiliser l'URL cloud comme path (sera transformé en path local lors du déploiement)
@@ -4435,7 +4454,8 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
           isForThisSite: cloud.uploadedForSiteId === this.siteId,
           isCloud: true,
           source: 'cloud',
-          cloudId: cloud.id
+          cloudId: cloud.id,
+          hasSecondaryVariant: this.secondaryVariantVideoIds.has(cloud.id),
         });
       }
     }
@@ -4772,6 +4792,12 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
   isCloudVideoPath(path: string): boolean {
     const video = this.unifiedVideoOptions.find(v => v.path === path);
     return video ? !video.isOnPi : false;
+  }
+
+  hasSecondaryVariantForPath(path: string): boolean {
+    if (!this.secondaryDisplayEnabled) return false;
+    const video = this.unifiedVideoOptions.find(v => v.path === path);
+    return video?.hasSecondaryVariant ?? false;
   }
 
   /**

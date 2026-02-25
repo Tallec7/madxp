@@ -1082,6 +1082,17 @@ input:focus-visible {
   color: #8b5cf6;
   font-weight: 500;
 }
+.video-secondary-badge {
+  display: inline-block;
+  font-size: 0.7rem;
+  color: #93c5fd;
+  background: rgba(59, 130, 246, 0.15);
+  border: 1px solid rgba(96, 165, 250, 0.3);
+  border-radius: 4px;
+  padding: 0.1rem 0.35rem;
+  font-weight: 600;
+  margin-top: 0.2rem;
+}
 .video-arrow,
 .video-play {
   font-size: 1.25rem;

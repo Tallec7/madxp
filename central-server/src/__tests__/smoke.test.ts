@@ -3306,3 +3306,84 @@ describe('Angular build config guards', () => {
     expect(warningKb).toBeGreaterThanOrEqual(48);
   });
 });
+
+// ── Secondary variant badge wiring guards ───────────────────────────────
+// Prevents regression of the 📺 2nd badge in site-content-tab and remote.
+// If any of these guards fail, the badge is silently broken.
+describe('Secondary variant badge wiring guards', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+
+  // Central Server
+  const sitesControllerPath = path.join(
+    repoRoot,
+    'central-server/src/controllers/sites.controller.ts',
+  );
+  // Dashboard
+  const siteContentTabPath = path.join(
+    repoRoot,
+    'central-dashboard/src/app/features/sites/components/site-content-tab/site-content-tab.component.ts',
+  );
+  // Pi Remote
+  const remoteTemplatePath = path.join(
+    repoRoot,
+    'raspberry/src/app/components/remote/remote.component.html',
+  );
+  const videoInterfacePath = path.join(
+    repoRoot,
+    'raspberry/src/app/interfaces/video.interface.ts',
+  );
+
+  let controllerContent: string;
+  let siteContentTabContent: string;
+  let remoteTemplateContent: string;
+  let videoInterfaceContent: string;
+
+  beforeAll(() => {
+    controllerContent = fs.readFileSync(sitesControllerPath, 'utf8');
+    siteContentTabContent = fs.readFileSync(siteContentTabPath, 'utf8');
+    remoteTemplateContent = fs.readFileSync(remoteTemplatePath, 'utf8');
+    videoInterfaceContent = fs.readFileSync(videoInterfacePath, 'utf8');
+  });
+
+  it('getSiteLocalContent must return secondaryVariantVideoIds and secondaryDisplayEnabled', () => {
+    expect({
+      returnsVariantIds: /secondaryVariantVideoIds/.test(controllerContent),
+      returnsDisplayEnabled: /secondaryDisplayEnabled/.test(controllerContent),
+      callsVariantRepo: /findSecondaryVariantsForVideos/.test(controllerContent),
+    }).toEqual({
+      returnsVariantIds: true,
+      returnsDisplayEnabled: true,
+      callsVariantRepo: true,
+    });
+  });
+
+  it('site-content-tab must wire secondary variant badge', () => {
+    expect({
+      hasBadgeClass: /secondary-variant-badge/.test(siteContentTabContent),
+      hasHelperMethod: /hasSecondaryVariantForPath/.test(siteContentTabContent),
+      hasVariantSet: /secondaryVariantVideoIds/.test(siteContentTabContent),
+    }).toEqual({
+      hasBadgeClass: true,
+      hasHelperMethod: true,
+      hasVariantSet: true,
+    });
+  });
+
+  it('remote template must have video-secondary-badge for variant indicator', () => {
+    expect({
+      hasBadge: /video-secondary-badge/.test(remoteTemplateContent),
+      checksVariants: /video\.variants\?\.secondary/.test(remoteTemplateContent),
+    }).toEqual({
+      hasBadge: true,
+      checksVariants: true,
+    });
+  });
+
+  it('Video interface must type variants.secondary', () => {
+    expect({
+      hasVariantsField: /variants\?[\s\S]*?secondary/.test(videoInterfaceContent),
+    }).toEqual({
+      hasVariantsField: true,
+    });
+  });
+});

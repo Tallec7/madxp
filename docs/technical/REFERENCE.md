@@ -1218,7 +1218,7 @@ POST   /auth/reset-password     - Reset mot de passe
 GET    /sites                   - Liste paginée, filtres: status, sport, region
 GET    /sites/:id               - Détails + config + metrics
 GET    /sites/:id/dashboard     - Endpoint agrégé (connection + metrics)
-GET    /sites/:id/local-content - Vidéos locales + stockage
+GET    /sites/:id/local-content - Vidéos locales + stockage + secondaryVariantVideoIds + secondaryDisplayEnabled
 GET    /sites/:id/connection-status - Statut connexion temps réel
 GET    /sites/:id/metrics       - Métriques système (CPU, RAM, temp)
 POST   /sites                   - Créer site (génère api_key)
@@ -1280,7 +1280,13 @@ Le HDMI secondaire du Raspberry Pi peut alimenter un panneau LED bord de terrain
 3. Envoie les deux vidéos (principale + secondaire) via `sendOrQueue`
 4. Persiste `has_secondary_variant = true` dans `content_deployments` (non-bloquant, try/catch)
 
-**Indicateur UX dashboard :** Badge `📺 2nd` affiché dans l'historique des déploiements si `has_secondary_variant` est `true`.
+**Indicateurs UX `📺 2nd` :**
+
+| Vue                                | Condition d'affichage                                                | Source de données                                  |
+| ---------------------------------- | -------------------------------------------------------------------- | -------------------------------------------------- |
+| Historique déploiements            | `has_secondary_variant` dans `content_deployments`                   | Table `content_deployments`                        |
+| Dashboard — Config catégories site | `secondaryDisplayEnabled` + vidéo dans `secondaryVariantVideoIds`    | API `GET /sites/:id/local-content`                 |
+| Pi Remote — Cartes vidéo           | `configuration.secondaryDisplayEnabled` + `video.variants.secondary` | `configuration.json` (écrit par `deploy-video.js`) |
 
 **Endpoints Config Profiles (multi-config) :**
 

@@ -395,20 +395,20 @@
 > **Renommage Fév 2026** : LED → Secondary Display. F-22.1, F-22.2 (partiel), F-22.3 livrés en avance de phase.
 > **Décisions 24/02** : F-22.4 GO, F-22.5/F-22.6 à détailler, Fallback PiP NO GO.
 
-| US        | Feature | Description                                                                                          | SP  | Sprint  | Priorité | Statut         |
-| --------- | ------- | ---------------------------------------------------------------------------------------------------- | --- | ------- | -------- | -------------- |
-| US-22.0.1 | F-22.0  | Spike : Pi 5 dual HDMI + 2 flux vidéo + test contrôleur LED + validation détection HDMI DRM/KMS      | 3   | PI-2 S4 | Must     | ⏳ Backlog     |
-| US-22.1.1 | F-22.1  | Config Pi dual HDMI + watchdog dual kiosk avec détection HDMI DRM/KMS                                | 5   | PI-2 S4 | Must     | ✅ Livré       |
-| US-22.1.2 | F-22.1  | Route Angular `/secondary` + paramètre `displayType` dans TvComponent (filtre playlist)              | 5   | PI-2 S4 | Must     | ✅ Livré       |
-| US-22.1.3 | F-22.1  | Dashboard — configuration site secondary display (toggle, résolution, fallback `hdmi_force_hotplug`) | 3   | PI-2 S4 | Must     | ✅ Livré       |
-| US-22.2.1 | F-22.2  | Score overlay secondary bandeau compact + animations de but spécifiques (flash couleur + texte)      | 5   | PI-2 S4 | Must     | ✅ Livré       |
-| US-22.2.2 | F-22.2  | Indicateur écran secondaire connecté dans la Remote + fallback vidéo (`object-fit: cover`)           | 3   | PI-2 S5 | Should   | ⏳ À détailler |
-| US-22.3.1 | F-22.3  | Table `video_variants` + migration DB + API upload variante secondaire                               | 5   | PI-2 S5 | Must     | ✅ Livré       |
-| US-22.3.2 | F-22.3  | Dashboard UI variantes vidéo + déploiement conditionnel par `display_type`                           | 5   | PI-2 S5 | Must     | ✅ Livré       |
-| US-22.3.3 | F-22.3  | Adaptation pipeline déploiement (envoi variantes secondaires si `secondary_display_enabled`) + OTA   | 5   | PI-2 S5 | Must     | ✅ Livré       |
-| US-22.4.1 | F-22.4  | Tests E2E Playwright dual display : 2 routes /tv + /secondary, événements simultanés                 | 5   | PI-2 S5 | Must     | ⏳ Backlog     |
-| US-22.5.1 | F-22.5  | Proposal : architecture pipeline auto-génération variantes vidéo (FFmpeg, formats, crop, coût)       | 2   | TBD     | Should   | ⏳ À détailler |
-| US-22.6.1 | F-22.6  | Spike : analyse usage capture écran + benchmark approches preview live dashboard                     | 2   | TBD     | Could    | ⏳ À détailler |
+| US        | Feature | Description                                                                                          | SP  | Sprint  | Priorité | Statut                                          |
+| --------- | ------- | ---------------------------------------------------------------------------------------------------- | --- | ------- | -------- | ----------------------------------------------- |
+| US-22.0.1 | F-22.0  | Spike : Pi 5 dual HDMI + 2 flux vidéo + test contrôleur LED + validation détection HDMI DRM/KMS      | 3   | PI-2 S4 | Must     | ⏳ Backlog                                      |
+| US-22.1.1 | F-22.1  | Config Pi dual HDMI + watchdog dual kiosk avec détection HDMI DRM/KMS                                | 5   | PI-2 S4 | Must     | ✅ Livré                                        |
+| US-22.1.2 | F-22.1  | Route Angular `/secondary` + paramètre `displayType` dans TvComponent (filtre playlist)              | 5   | PI-2 S4 | Must     | ✅ Livré                                        |
+| US-22.1.3 | F-22.1  | Dashboard — configuration site secondary display (toggle, résolution, fallback `hdmi_force_hotplug`) | 3   | PI-2 S4 | Must     | ✅ Livré                                        |
+| US-22.2.1 | F-22.2  | Score overlay secondary bandeau compact + animations de but spécifiques (flash couleur + texte)      | 5   | PI-2 S4 | Must     | ✅ Livré                                        |
+| US-22.2.2 | F-22.2  | Indicateur écran secondaire connecté dans la Remote + fallback vidéo (`object-fit: cover`)           | 3   | PI-2 S5 | Should   | 🔧 Partiel (badge 📺 livré, connexion restante) |
+| US-22.3.1 | F-22.3  | Table `video_variants` + migration DB + API upload variante secondaire                               | 5   | PI-2 S5 | Must     | ✅ Livré                                        |
+| US-22.3.2 | F-22.3  | Dashboard UI variantes vidéo + déploiement conditionnel par `display_type`                           | 5   | PI-2 S5 | Must     | ✅ Livré                                        |
+| US-22.3.3 | F-22.3  | Adaptation pipeline déploiement (envoi variantes secondaires si `secondary_display_enabled`) + OTA   | 5   | PI-2 S5 | Must     | ✅ Livré                                        |
+| US-22.4.1 | F-22.4  | Tests E2E Playwright dual display : 2 routes /tv + /secondary, événements simultanés                 | 5   | PI-2 S5 | Must     | ⏳ Backlog                                      |
+| US-22.5.1 | F-22.5  | Proposal : architecture pipeline auto-génération variantes vidéo (FFmpeg, formats, crop, coût)       | 2   | TBD     | Should   | ⏳ À détailler                                  |
+| US-22.6.1 | F-22.6  | Spike : analyse usage capture écran + benchmark approches preview live dashboard                     | 2   | TBD     | Could    | ⏳ À détailler                                  |
 
 ---
 

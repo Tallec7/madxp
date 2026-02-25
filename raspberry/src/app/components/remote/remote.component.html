@@ -466,6 +466,9 @@
                       <span class="video-category">{{
                         getVideoCategoryName(video) || 'Vidéo'
                       }}</span>
+                      @if (configuration?.secondaryDisplayEnabled && video.variants?.secondary) {
+                        <span class="video-secondary-badge">📺 2nd</span>
+                      }
                     </div>
                     @if (playingVideoPath === video.path) {
                       <div class="video-playing-indicator">
@@ -756,6 +759,9 @@
                       <span class="video-category">{{
                         getVideoCategoryName(video) || 'Vidéo'
                       }}</span>
+                      @if (configuration?.secondaryDisplayEnabled && video.variants?.secondary) {
+                        <span class="video-secondary-badge">📺 2nd</span>
+                      }
                     </div>
                     @if (playingVideoPath === video.path) {
                       <div class="video-playing-indicator">
@@ -1009,6 +1015,9 @@
                       <span class="video-category">{{
                         getVideoCategoryName(video) || 'Vidéo'
                       }}</span>
+                      @if (configuration?.secondaryDisplayEnabled && video.variants?.secondary) {
+                        <span class="video-secondary-badge">📺 2nd</span>
+                      }
                     </div>
                     @if (playingVideoPath === video.path) {
                       <div class="video-playing-indicator">

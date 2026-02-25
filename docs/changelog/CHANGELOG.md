@@ -1,3 +1,19 @@
+# [3.82.0](https://github.com/Tallec7/neopro/compare/v3.81.0...v3.82.0) (2026-02-25)
+
+### Features
+
+- **dashboard:** add `📺 2nd` badge in site category config for videos with secondary variant — enriches `getSiteLocalContent` API with `secondaryVariantVideoIds` + `secondaryDisplayEnabled`
+- **remote:** add `📺 2nd` badge on video cards when `configuration.secondaryDisplayEnabled` and `video.variants.secondary` exist
+
+### Documentation
+
+- **reference:** document new `secondaryVariantVideoIds` and `secondaryDisplayEnabled` response fields in `GET /sites/:id/local-content`
+- **safe:** update US-22.2.2 status (partial delivery — badge indicator)
+
+### Tests
+
+- **smoke:** add 4 secondary variant badge wiring guards (controller, site-content-tab, remote template, Video interface)
+
 # [3.81.0](https://github.com/Tallec7/neopro/compare/v3.80.18...v3.81.0) (2026-02-25)
 
 ### Features
