@@ -1,3 +1,9 @@
+## [3.82.7](https://github.com/Tallec7/neopro/compare/v3.82.6...v3.82.7) (2026-02-25)
+
+### Bug Fixes
+
+- **secondary-display:** use --app=URL + xdotool F11 instead of --kiosk for secondary Chromium ([809ff60](https://github.com/Tallec7/neopro/commit/809ff60cdcc55cd7a29ecf04ff7efe8224b5b9c7))
+
 ## [3.82.6](https://github.com/Tallec7/neopro/compare/v3.82.5...v3.82.6) (2026-02-25)
 
 ### Bug Fixes
