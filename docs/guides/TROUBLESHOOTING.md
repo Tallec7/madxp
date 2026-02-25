@@ -20,6 +20,7 @@
 16. [Saturation pool DB (MaxClientsInSessionMode)](#saturation-pool-db-maxclientsinsessionmode)
 17. [Cloud Remote ne fonctionne pas (v3.69.3+)](#cloud-remote-ne-fonctionne-pas-v3692)
 18. [500/429 cascade sur GET /api/deployments (v3.82.1+)](#500429-cascade-sur-get-apideployments-v3821)
+19. [Second écran ne s'affiche pas (v3.82.7+)](#second-écran-ne-saffiche-pas-v3827)
 
 > **WiFi USB** : Pour un guide complet sur la clé WiFi USB (installation, diagnostic, pannes, recovery), voir [WIFI_USB_GUIDE.md](WIFI_USB_GUIDE.md).
 >
@@ -3776,4 +3777,126 @@ Si le nombre total de `content_deployments` dépasse 10 000 lignes, envisager un
 
 ---
 
-**Dernière mise à jour :** 25 février 2026 (ajout section 500/429 cascade deployments)
+## Second écran ne s'affiche pas (v3.82.7+)
+
+Le Pi supporte un second écran (HDMI-A-2) affichant la route `/secondary` via un deuxième processus Chromium. Cette section couvre les problèmes de dual-display sur Raspberry Pi 5.
+
+### Symptôme
+
+Le dashboard indique `secondaryDisplayEnabled: true`, mais le second écran reste noir ou ne montre rien. Un seul écran (le principal `/tv`) est visible.
+
+### Causes connues et corrections
+
+#### 1. xrandr ne détecte pas le second écran (grep `\d` au lieu de `[0-9]`)
+
+**Cause :** `grep -E '\d'` utilise `\d` qui est une syntaxe Perl regex uniquement. Avec `grep -E` (extended regex), `\d` matche le caractère littéral `d`, pas les chiffres.
+
+**Correction (v3.82.3) :** Remplacer `\d` par `[0-9]` dans les patterns grep -E.
+
+**Diagnostic :**
+
+```bash
+# Vérifier que le watchdog utilise [0-9] et non \d
+grep 'grep -E.*HDMI.*connected' /home/pi/neopro/scripts/kiosk-watchdog.sh
+# Attendu: grep -E '^HDMI.* connected [0-9]'
+# Si \d est présent: ancienne version
+```
+
+#### 2. xrandr utilise le mot-clé "primary" (absent sur Pi 5)
+
+**Cause :** Pi 5 ne marque pas de sortie HDMI comme "primary" dans xrandr. L'ancienne détection par `grep "primary"` ne trouvait rien.
+
+**Correction (v3.82.2) :** Détection par offset de position — la sortie à `+0+0` est le primaire, toute sortie avec un offset non-nul est le secondaire.
+
+**Diagnostic :**
+
+```bash
+# Vérifier la détection xrandr
+DISPLAY=:0 xrandr --query | grep 'HDMI.*connected'
+# Attendu: 2 lignes avec résolutions (ex: 1920x1080+0+0 et 3840x2160+1920+0)
+```
+
+#### 3. `--kiosk` force le plein écran sur le moniteur principal
+
+**Cause :** `--kiosk` (et `--start-fullscreen`) ignorent `--window-position` et forcent le plein écran sur l'écran primaire. Le processus Chromium secondaire tourne mais sa fenêtre est invisible (superposée au primaire).
+
+**Correction (v3.82.7) :** Utiliser `--app=URL` au lieu de `--kiosk` pour le Chromium secondaire. `--app` crée une fenêtre sans onglets/barre d'adresse qui respecte `--window-position`. Ensuite, `xdotool key F11` est envoyé après 4s pour passer en vrai plein écran.
+
+**Diagnostic :**
+
+```bash
+# Vérifier que le watchdog utilise --app= (pas --kiosk) pour le secondaire
+grep -A2 'start_chromium_secondary' /home/pi/neopro/scripts/kiosk-watchdog.sh | head -5
+
+# Vérifier les fenêtres Chromium visibles
+DISPLAY=:0 xdotool search --name "" getwindowgeometry 2>/dev/null
+# Attendu: 2 fenêtres — une à 0,0 (primaire) et une à 1920,0+ (secondaire)
+
+# Vérifier les processus Chromium
+ps aux | grep chromium | grep -v grep
+# Attendu: 2 groupes de processus (un avec /tv, un avec /secondary)
+```
+
+#### 4. Pas de CONFIG_FILE ou mauvais chemin
+
+**Cause :** Le watchdog lisait `secondaryDisplayEnabled` depuis un chemin incorrect.
+
+**Correction (v3.82.2) :** Le chemin doit être `/home/pi/neopro/webapp/configuration.json`.
+
+**Diagnostic :**
+
+```bash
+# Vérifier que la config existe et contient la clé
+cat /home/pi/neopro/webapp/configuration.json | python3 -c "import sys,json; print(json.load(sys.stdin).get('secondaryDisplayEnabled', 'MISSING'))"
+# Attendu: true
+```
+
+### Monitoring intégré
+
+Le watchdog écrit l'état du second écran dans `/home/pi/neopro/data/kiosk-status.json` :
+
+```json
+{
+  "secondaryDisplayEnabled": true,
+  "secondaryChromiumAlive": true,
+  "hdmi1Status": "connected"
+}
+```
+
+**Vérification sur un Pi :**
+
+```bash
+cat /home/pi/neopro/data/kiosk-status.json | python3 -m json.tool
+# Vérifier secondaryChromiumAlive=true et hdmi1Status="connected"
+```
+
+### Smoke tests de régression
+
+7 smoke tests empêchent la régression (dans `smoke.test.ts`, section "E-22 watchdog secondary display guard") :
+
+1. `grep [0-9]` (pas `\d`) pour la détection HDMI xrandr
+2. `--app=URL` (pas `--kiosk`) pour le Chromium secondaire
+3. `xdotool F11` pour le plein écran après lancement `--app=`
+4. Détection par offset de position (pas par mot-clé "primary")
+5. `--user-data-dir` séparé pour éviter les conflits de session
+6. `--window-position` et `--window-size` pour le positionnement
+7. Lecture de `secondaryDisplayEnabled` depuis la config
+
+### Fix manuel (Pi non encore mis à jour)
+
+```bash
+# Vérifier la version
+cat /home/pi/neopro/webapp/version.json
+
+# Si < 3.82.7, déployer la dernière version via l'admin
+# http://neopro.local:8080 → Upload & Deploy
+
+# Vérification après déploiement
+sudo systemctl restart neopro-kiosk
+journalctl -u neopro-kiosk -f --no-pager | head -30
+# Chercher: "✓ Chromium secondaire lancé" et "✓ Chromium secondaire mis en plein écran (F11"
+```
+
+---
+
+**Dernière mise à jour :** 25 février 2026 (ajout section second écran v3.82.7)

@@ -557,8 +557,9 @@ Le Raspberry Pi peut fonctionner dans différents modes réseau :
 │        │               │               │                │           │
 │        └───────────────┼───────────────┴────────────────┘           │
 │                        │ Communication locale                       │
-│        * Secondary kiosk : lancé si secondaryDisplayEnabled         │
-│          + HDMI 1 connecté (détection DRM /sys/class/drm/)          │
+│        * Secondary kiosk (--app=URL + xdotool F11) :                │
+│          lancé si secondaryDisplayEnabled + HDMI 1 connecté         │
+│          Détection: xrandr offset (Pi 5 n'a pas "primary")         │
 └────────────────────────────┼─────────────────────────────────────┘
                              │
                    WiFi (192.168.4.x)

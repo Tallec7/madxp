@@ -2733,6 +2733,111 @@ describe('E-22 watchdog secondary display guard', () => {
       doesNotLaunchLed: true,
     });
   });
+
+  // Bug fix v3.82.3: grep -E '\d' doesn't work (Perl regex only).
+  // Must use [0-9] in grep -E for HDMI xrandr detection.
+  it('watchdog xrandr grep must use [0-9] not \\d for digit matching', () => {
+    // Extract all grep -E lines that filter HDMI connected outputs
+    const hdmiGrepLines = content.match(/grep -E '.*HDMI.*connected.*/g) || [];
+    expect({
+      hasHdmiGrep: hdmiGrepLines.length > 0,
+      // None of the HDMI grep -E lines should use \d (Perl-only regex)
+      noBackslashD: hdmiGrepLines.every((line: string) => !line.includes('\\d')),
+      // At least one line must use [0-9] for digit matching
+      usesBracketDigit: hdmiGrepLines.some((line: string) => line.includes('[0-9]')),
+    }).toEqual({
+      hasHdmiGrep: true,
+      noBackslashD: true,
+      usesBracketDigit: true,
+    });
+  });
+
+  // Bug fix v3.82.6: --kiosk forces fullscreen on primary monitor, ignoring --window-position.
+  // Secondary Chromium must use --app=URL mode, NOT --kiosk.
+  it('watchdog secondary Chromium must use --app= mode (not --kiosk)', () => {
+    // Extract the start_chromium_secondary function
+    const secondaryFn = content.match(
+      /start_chromium_secondary\(\)[\s\S]*?^}/m
+    );
+    expect(secondaryFn).not.toBeNull();
+    const fnContent = secondaryFn![0];
+    expect({
+      usesAppMode: /--app=.*secondary/.test(fnContent) || /--app="\$\{?CHROMIUM_SECONDARY_URL/.test(fnContent),
+      // Must NOT use --kiosk in the secondary function (forces fullscreen on primary)
+      noKioskFlag: !/^\s*--kiosk\b/m.test(fnContent),
+    }).toEqual({
+      usesAppMode: true,
+      noKioskFlag: true,
+    });
+  });
+
+  // Bug fix v3.82.6: --app= positions window correctly but needs xdotool F11 for fullscreen.
+  it('watchdog secondary must use xdotool F11 for fullscreen after --app= launch', () => {
+    const secondaryFn = content.match(
+      /start_chromium_secondary\(\)[\s\S]*?^}/m
+    );
+    expect(secondaryFn).not.toBeNull();
+    const fnContent = secondaryFn![0];
+    expect({
+      hasXdotoolF11: /xdotool.*key.*F11/.test(fnContent),
+      hasWindowSearch: /xdotool.*search.*pid/.test(fnContent),
+    }).toEqual({
+      hasXdotoolF11: true,
+      hasWindowSearch: true,
+    });
+  });
+
+  // Bug fix v3.82.2: xrandr detection must use position offset, not "primary" keyword.
+  // Pi 5 doesn't show "primary" in xrandr output.
+  it('watchdog xrandr detection must use position offset (not "primary" keyword)', () => {
+    // The setup_secondary_xrandr function must check for offset +0+0, not grep "primary"
+    const xrandrFn = content.match(
+      /setup_secondary_xrandr\(\)[\s\S]*?^}/m
+    );
+    expect(xrandrFn).not.toBeNull();
+    const fnContent = xrandrFn![0];
+    expect({
+      // Must check x_offset for primary detection (offset-based, not keyword-based)
+      checksOffset: /x_offset.*==.*"0"/.test(fnContent) || /x_offset.*-eq.*0/.test(fnContent),
+      // Must NOT rely on "primary" keyword for initial detection
+      // (it's OK in fallback/stop functions, but not in main detection logic)
+      usesOffsetDetection: /offset.*non-nul|offset.*0/.test(fnContent),
+    }).toEqual({
+      checksOffset: true,
+      usesOffsetDetection: true,
+    });
+  });
+
+  // Guard: secondary Chromium must have separate --user-data-dir to avoid
+  // sharing session/cookies with primary (causes tab conflicts).
+  it('watchdog secondary must use separate --user-data-dir', () => {
+    const secondaryFn = content.match(
+      /start_chromium_secondary\(\)[\s\S]*?^}/m
+    );
+    expect(secondaryFn).not.toBeNull();
+    expect({
+      hasSeparateUserDataDir: /--user-data-dir=.*secondary/.test(secondaryFn![0]),
+    }).toEqual({
+      hasSeparateUserDataDir: true,
+    });
+  });
+
+  // Guard: secondary Chromium must have --window-position and --window-size
+  // to place the window on the correct monitor.
+  it('watchdog secondary must set --window-position and --window-size', () => {
+    const secondaryFn = content.match(
+      /start_chromium_secondary\(\)[\s\S]*?^}/m
+    );
+    expect(secondaryFn).not.toBeNull();
+    const fnContent = secondaryFn![0];
+    expect({
+      hasWindowPosition: /--window-position=/.test(fnContent),
+      hasWindowSize: /--window-size=/.test(fnContent),
+    }).toEqual({
+      hasWindowPosition: true,
+      hasWindowSize: true,
+    });
+  });
 });
 
 // ----------------------------------------------------------

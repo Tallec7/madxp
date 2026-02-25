@@ -2,7 +2,17 @@
 
 ### Bug Fixes
 
-- **secondary-display:** use --app=URL + xdotool F11 instead of --kiosk for secondary Chromium ([809ff60](https://github.com/Tallec7/neopro/commit/809ff60cdcc55cd7a29ecf04ff7efe8224b5b9c7))
+- **secondary-display:** use `--app=URL` + xdotool F11 instead of `--kiosk` for secondary Chromium — `--kiosk` and `--start-fullscreen` both force fullscreen on primary monitor, ignoring `--window-position`. `--app=` creates a frameless window respecting positioning, then xdotool sends F11 for true fullscreen on the secondary screen ([809ff60](https://github.com/Tallec7/neopro/commit/809ff60c))
+
+### Tests
+
+- **smoke:** add 7 regression guards for secondary display watchdog — grep `[0-9]` (not `\d`), `--app=` mode (not `--kiosk`), xdotool F11 fullscreen, position offset detection (not "primary" keyword), separate `--user-data-dir`, `--window-position` + `--window-size`
+
+### Documentation
+
+- **troubleshooting:** add comprehensive "Second écran ne s'affiche pas" section with diagnostic commands
+- **architecture:** update secondary kiosk launch mode documentation (`--app=` + xdotool F11)
+- **changelog:** consolidate v3.82.2–v3.82.6 secondary display bug fixes
 
 ## [3.82.6](https://github.com/Tallec7/neopro/compare/v3.82.5...v3.82.6) (2026-02-25)
 
