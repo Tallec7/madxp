@@ -19,6 +19,7 @@
 15. [Recording Analytics (v3.38+)](#recording-analytics--état-denregistrement-v338)
 16. [Saturation pool DB (MaxClientsInSessionMode)](#saturation-pool-db-maxclientsinsessionmode)
 17. [Cloud Remote ne fonctionne pas (v3.69.3+)](#cloud-remote-ne-fonctionne-pas-v3692)
+18. [500/429 cascade sur GET /api/deployments (v3.82.1+)](#500429-cascade-sur-get-apideployments-v3821)
 
 > **WiFi USB** : Pour un guide complet sur la clé WiFi USB (installation, diagnostic, pannes, recovery), voir [WIFI_USB_GUIDE.md](WIFI_USB_GUIDE.md).
 >
@@ -3722,4 +3723,55 @@ Pi Local Server (handlers.js — port 3000)
 
 ---
 
-**Dernière mise à jour :** 22 février 2026 (ajout section cloud remote)
+## 500/429 cascade sur GET /api/deployments (v3.82.1+)
+
+### Symptôme
+
+Le dashboard affiche "Failed to load deployments" dans la console. Les logs réseau montrent :
+
+```
+GET /api/deployments → 500 (Internal Server Error)
+GET /api/deployments → 429 (Too Many Requests)  ← retries bloqués par rate limiter
+GET /api/logs/frontend → 429                     ← rate limiter global déclenché
+```
+
+L'onglet "Historique" de Content Management et les pending deployments du site ne chargent pas.
+
+### Cause
+
+`findAllWithDetails()` dans `deployment.repository.ts` n'avait **pas de clause LIMIT**. La requête retournait TOUS les déploiements de la base (JOINs sur `videos` + `sites`), causant un timeout PostgreSQL sur Supabase Transaction Mode (pool=5). Le 500 déclenche des retries Angular qui saturent le rate limiter → 429 en cascade.
+
+### Correction (v3.82.1)
+
+- `findAllWithDetails(limit=200)` : clause `LIMIT $1` paramétrisée (défaut 200)
+- Controller : accepte `?limit=` query param (clampé 1–500, défaut 200)
+- Smoke test : 2 guards vérifient la présence et la paramétrisation du LIMIT
+
+### Vérification
+
+```bash
+# Vérifier que l'endpoint répond (production)
+curl -s -o /dev/null -w "%{http_code}" -H "Authorization: Bearer $TOKEN" \
+  "https://neopro-central-production.up.railway.app/api/deployments?limit=10"
+# Doit retourner 200
+
+# Vérifier les logs Railway pour les erreurs de déploiement
+railway logs --service neopro-central --lines 20 --filter "Error fetching deployments"
+
+# Vérifier le nombre de déploiements en base
+source central-server/.env && psql "$DATABASE_URL" -c \
+  "SELECT COUNT(*) as total, MIN(created_at) as oldest FROM content_deployments;"
+```
+
+### Monitoring
+
+Le smoke test `Deployment repository query safety` (2 assertions) empêche la régression :
+
+- `findAllWithDetails must have a LIMIT clause`
+- `findAllWithDetails LIMIT must be parameterized`
+
+Si le nombre total de `content_deployments` dépasse 10 000 lignes, envisager une purge des déploiements `completed` de plus de 6 mois, ou ajouter une pagination côté dashboard.
+
+---
+
+**Dernière mise à jour :** 25 février 2026 (ajout section 500/429 cascade deployments)

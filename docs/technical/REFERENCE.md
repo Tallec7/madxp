@@ -1244,7 +1244,7 @@ POST   /content/videos/bulk             - Upload multiple (max 20 fichiers)
 PUT    /content/videos/:id              - Modifier métadonnées vidéo
 DELETE /content/videos/:id              - Supprimer vidéo
 POST   /content/image-to-video          - Convertir image en vidéo MP4
-GET    /content/deployments             - Liste des déploiements
+GET    /content/deployments             - Liste des déploiements (?limit=200, max 500)
 GET    /content/deployments/:id         - Détails d'un déploiement
 POST   /content/deployments             - Créer un déploiement vers site/groupe
 PUT    /content/deployments/:id         - Mettre à jour un déploiement

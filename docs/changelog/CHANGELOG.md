@@ -1,3 +1,18 @@
+## [3.82.1](https://github.com/Tallec7/neopro/compare/v3.82.0...v3.82.1) (2026-02-25)
+
+### Bug Fixes
+
+- **deployment:** add LIMIT to `GET /api/deployments` — unbounded query caused 500 timeout + 429 cascade in production (Supabase pool=5 exhaustion)
+
+### Documentation
+
+- **troubleshooting:** add section "500/429 cascade sur GET /api/deployments" with cause, correction, verification commands, and monitoring
+- **reference:** document `?limit=` query param on `GET /content/deployments`
+
+### Tests
+
+- **smoke:** add 2 deployment query safety guards (LIMIT clause + parameterized LIMIT)
+
 # [3.82.0](https://github.com/Tallec7/neopro/compare/v3.81.0...v3.82.0) (2026-02-25)
 
 ### Features

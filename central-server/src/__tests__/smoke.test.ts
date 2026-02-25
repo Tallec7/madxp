@@ -1964,6 +1964,39 @@ describe('Benchmark repository query safety', () => {
 });
 
 // ----------------------------------------------------------
+// Deployment query safety guards
+// ----------------------------------------------------------
+describe('Deployment repository query safety', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+  const deploymentRepo = fs.readFileSync(
+    path.join(repoRoot, 'central-server/src/repositories/deployment.repository.ts'),
+    'utf8'
+  );
+
+  it('findAllWithDetails must have a LIMIT clause (prevent unbounded result sets)', () => {
+    // Incident: 25/02/2026 — 500 on GET /api/deployments in production.
+    // Without LIMIT, the query returns ALL deployments ever, causing timeouts on
+    // Supabase Transaction Mode (pool=5). The 500 triggers frontend retries → 429 cascade.
+    const findAllMethod = deploymentRepo.match(
+      /findAllWithDetails[\s\S]*?return result\.rows;\s*\}/
+    );
+    expect({ methodFound: !!findAllMethod }).toEqual({ methodFound: true });
+    expect({ hasLimit: /LIMIT/i.test(findAllMethod![0]) })
+      .toEqual({ hasLimit: true });
+  });
+
+  it('findAllWithDetails LIMIT must be parameterized (not hardcoded)', () => {
+    // Parameterized LIMIT ($1) allows the controller to accept ?limit= query param
+    // while keeping a safe default. Hardcoded LIMIT would prevent flexibility.
+    const findAllMethod = deploymentRepo.match(
+      /findAllWithDetails[\s\S]*?return result\.rows;\s*\}/
+    );
+    expect({ hasParameterizedLimit: /LIMIT \$\d/.test(findAllMethod![0]) })
+      .toEqual({ hasParameterizedLimit: true });
+  });
+});
+
+// ----------------------------------------------------------
 // Debug page regression guards
 // ----------------------------------------------------------
 describe('Debug page architecture guards', () => {

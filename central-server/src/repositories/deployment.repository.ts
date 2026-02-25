@@ -227,7 +227,7 @@ class DeploymentRepositoryImpl extends BaseRepository<ContentDeployment> {
   /**
    * Tous les deploiements avec details video et site.
    */
-  async findAllWithDetails(): Promise<DeploymentDetailRow[]> {
+  async findAllWithDetails(limit = 200): Promise<DeploymentDetailRow[]> {
     const result = await query<DeploymentDetailRow>(
       `SELECT cd.id, cd.video_id, cd.target_type, cd.target_id, cd.status, cd.progress,
               cd.error_message as error, cd.completed_at as deployed_at,
@@ -240,7 +240,9 @@ class DeploymentRepositoryImpl extends BaseRepository<ContentDeployment> {
        FROM content_deployments cd
        LEFT JOIN videos v ON cd.video_id = v.id
        LEFT JOIN sites s ON cd.target_type = 'site' AND cd.target_id = s.id
-       ORDER BY cd.created_at DESC`
+       ORDER BY cd.created_at DESC
+       LIMIT $1`,
+      [limit]
     );
     return result.rows;
   }

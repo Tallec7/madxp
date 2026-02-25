@@ -497,7 +497,8 @@ export const deleteVideo = async (req: AuthRequest, res: Response) => {
 
 export const getDeployments = async (req: AuthRequest, res: Response) => {
   try {
-    const rows = await deploymentRepository.findAllWithDetails();
+    const limit = Math.min(Math.max(Number(req.query.limit) || 200, 1), 500);
+    const rows = await deploymentRepository.findAllWithDetails(limit);
 
     // Ajouter video_title depuis metadata
     const deployments = rows.map(d => ({
