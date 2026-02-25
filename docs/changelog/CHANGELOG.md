@@ -1,3 +1,10 @@
+## [3.82.2](https://github.com/Tallec7/neopro/compare/v3.82.1...v3.82.2) (2026-02-25)
+
+### Bug Fixes
+
+- **secondary-display:** fix dual-screen display — wrong config path, missing window-size, and enable sync ([1c4d0cf](https://github.com/Tallec7/neopro/commit/1c4d0cf3841901552d42553da14a9e6e875df901))
+- **secondary-display:** rewrite xrandr detection by position offset instead of "primary" keyword ([7f20ecb](https://github.com/Tallec7/neopro/commit/7f20ecb14736c537b116dfec6260381d7a420af6))
+
 ## [3.82.1](https://github.com/Tallec7/neopro/compare/v3.82.0...v3.82.1) (2026-02-25)
 
 ### Bug Fixes
