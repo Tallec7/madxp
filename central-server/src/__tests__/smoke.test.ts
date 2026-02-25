@@ -3129,3 +3129,83 @@ describe('CI workflow reliability guards', () => {
     expect(ciWorkflow).toContain('github.ref');
   });
 });
+
+// ----------------------------------------------------------
+// FTP upload ensureDir guard: both uploadFileToFtp (buffer) and
+// uploadFileToFtpFromDisk (streaming) must call ensureDir before
+// upload to avoid FTP 550 on nested paths like variants/uuid/secondary/.
+// ----------------------------------------------------------
+describe('FTP upload ensureDir guard', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+  const ftpStoragePath = path.join(repoRoot, 'central-server/src/config/ftp-storage.ts');
+
+  let content: string;
+  beforeAll(() => {
+    content = fs.readFileSync(ftpStoragePath, 'utf8');
+  });
+
+  it('uploadFileToFtp (buffer) must call ensureDir before upload', () => {
+    // Extract the uploadFileToFtp function body (buffer-based upload)
+    const fnMatch = content.match(
+      /export const uploadFileToFtp\b[\s\S]*?^};/m
+    );
+    expect(fnMatch).not.toBeNull();
+    expect({
+      hasEnsureDir: /ensureDir/.test(fnMatch![0]),
+    }).toEqual({
+      hasEnsureDir: true,
+    });
+  });
+
+  it('uploadFileToFtpFromDisk (streaming) must call ensureDir before upload', () => {
+    // Extract the uploadFileToFtpFromDisk function body (disk streaming upload)
+    const fnMatch = content.match(
+      /export const uploadFileToFtpFromDisk\b[\s\S]*?^};/m
+    );
+    expect(fnMatch).not.toBeNull();
+    expect({
+      hasEnsureDir: /ensureDir/.test(fnMatch![0]),
+    }).toEqual({
+      hasEnsureDir: true,
+    });
+  });
+});
+
+// ----------------------------------------------------------
+// Video variant display_type alignment guard: the TypeScript
+// DisplayType and the controller validation must use the same
+// values as the DB CHECK constraint (tv, secondary).
+// ----------------------------------------------------------
+describe('Video variant display_type alignment guard', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+  const repoPath = path.join(repoRoot, 'central-server/src/repositories/video-variant.repository.ts');
+  const controllerPath = path.join(repoRoot, 'central-server/src/controllers/content.controller.ts');
+
+  let repoContent: string;
+  let controllerContent: string;
+  beforeAll(() => {
+    repoContent = fs.readFileSync(repoPath, 'utf8');
+    controllerContent = fs.readFileSync(controllerPath, 'utf8');
+  });
+
+  it('DisplayType must include "secondary" (not "led")', () => {
+    expect({
+      hasSecondary: /DisplayType\s*=.*'secondary'/.test(repoContent),
+      noLed: !/DisplayType\s*=.*'led'/.test(repoContent),
+    }).toEqual({
+      hasSecondary: true,
+      noLed: true,
+    });
+  });
+
+  it('createVideoVariant controller must validate "secondary" (not "led")', () => {
+    // The controller validates display_type with an includes check
+    expect({
+      validatesSecondary: /\['tv',\s*'secondary'\]/.test(controllerContent),
+      noLedValidation: !/\['tv',\s*'led'\]/.test(controllerContent),
+    }).toEqual({
+      validatesSecondary: true,
+      noLedValidation: true,
+    });
+  });
+});

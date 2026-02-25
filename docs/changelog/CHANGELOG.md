@@ -2,7 +2,18 @@
 
 ### Bug Fixes
 
-- **ftp:** add ensureDir to disk-streaming upload for nested paths ([ea9acd7](https://github.com/Tallec7/neopro/commit/ea9acd75b49d43affa3a31d8c8c3f38a8e4b8f79))
+- **ftp:** add ensureDir to disk-streaming upload for nested paths — fixes FTP 550 on video variant upload to `variants/{uuid}/secondary/` ([ea9acd7](https://github.com/Tallec7/neopro/commit/ea9acd75))
+- **db:** apply rename-led-to-secondary-display migration — aligns CHECK constraint with TypeScript DisplayType
+
+### Documentation
+
+- **troubleshooting:** update FTP 550 section with streaming fix history
+- **video-storage:** clarify ensureDir applies to both buffer and streaming uploads
+
+### Tests
+
+- **smoke:** add FTP upload ensureDir guard (both upload functions must have ensureDir)
+- **smoke:** add video variant display_type alignment guard (TS must match DB constraint)
 
 ## [3.80.16](https://github.com/Tallec7/neopro/compare/v3.80.15...v3.80.16) (2026-02-24)
 

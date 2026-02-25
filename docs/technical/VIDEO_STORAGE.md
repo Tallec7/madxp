@@ -91,7 +91,7 @@ Toutes les opérations de stockage passent par `central-server/src/services/stor
 **Comportement** :
 
 - Si le FTP n'est pas configuré, le service lance une erreur explicite au lieu d'échouer silencieusement.
-- Les sous-dossiers sont créés automatiquement sur le FTP via `ensureDir` avant l'upload (ex: `watermarks/` pour les assets watermark).
+- Les sous-dossiers sont créés automatiquement sur le FTP via `ensureDir` avant l'upload, tant en mode buffer (`uploadFileToFtp`) qu'en mode streaming (`uploadFileToFtpFromDisk`). Exemples : `watermarks/` pour les assets, `variants/{uuid}/secondary/` pour les variantes vidéo.
 
 ### Configuration FTP
 

@@ -1864,7 +1864,7 @@ Mettre à jour `central-server` vers v2.21.x+ où le fix est inclus dans `conten
 # "FTPError: 550 watermarks/watermark_neopro.png: No such file or directory"
 ```
 
-**Solution :** Corrigé en v3.49.4 — `ftp-storage.ts` appelle `client.ensureDir(dir)` automatiquement avant chaque upload. Si l'erreur réapparaît, vérifier les permissions FTP.
+**Solution :** Corrigé en v3.49.4 pour `uploadFileToFtp()` (buffer) et en v3.80.17 pour `uploadFileToFtpFromDisk()` (streaming) — `ftp-storage.ts` appelle `client.ensureDir(dir)` automatiquement avant chaque upload. Les variantes vidéo (chemin `variants/{uuid}/secondary/`) utilisent le streaming et étaient impactées. Smoke test `FTP upload ensureDir guard` empêche la régression. Si l'erreur réapparaît, vérifier les permissions FTP.
 
 ### Watermark uploadé mais pas déployé sur le Pi
 
