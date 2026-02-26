@@ -1,3 +1,9 @@
+# [3.83.0](https://github.com/Tallec7/neopro/compare/v3.82.10...v3.83.0) (2026-02-26)
+
+### Features
+
+- **ui:** add secondary video indicators across dashboard and cloud remote ([#430](https://github.com/Tallec7/neopro/issues/430)) ([748fa76](https://github.com/Tallec7/neopro/commit/748fa76184e7ab4a7f60053a40972aec77528c90))
+
 ## [3.82.10](https://github.com/Tallec7/neopro/compare/v3.82.9...v3.82.10) (2026-02-25)
 
 ### Bug Fixes
