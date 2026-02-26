@@ -1286,6 +1286,9 @@ Le HDMI secondaire du Raspberry Pi peut alimenter un panneau LED bord de terrain
 | ---------------------------------- | -------------------------------------------------------------------- | -------------------------------------------------- |
 | Historique déploiements            | `has_secondary_variant` dans `content_deployments`                   | Table `content_deployments`                        |
 | Dashboard — Config catégories site | `secondaryDisplayEnabled` + vidéo dans `secondaryVariantVideoIds`    | API `GET /sites/:id/local-content`                 |
+| Dashboard — Déploiements en attente| `deployment.has_secondary_variant`                                   | API `GET /deployments`                             |
+| Dashboard — Fiche site (État)      | `site.secondary_display_enabled` + résolution                        | API `GET /sites/:id`                               |
+| Cloud Remote — Cartes vidéo        | `secondaryDisplayEnabled` + `video.hasSecondaryVariant`              | API `GET /api/remote/:siteId` (`secondaryVariantPaths`) |
 | Pi Remote — Cartes vidéo           | `configuration.secondaryDisplayEnabled` + `video.variants.secondary` | `configuration.json` (écrit par `deploy-video.js`) |
 
 **Endpoints Config Profiles (multi-config) :**

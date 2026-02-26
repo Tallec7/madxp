@@ -3757,3 +3757,139 @@ describe('Secondary variant badge wiring guards', () => {
     });
   });
 });
+
+// ── Secondary video deployment UI guards ─────────────────────────────────
+// Prevents regression of the 3 new secondary-display indicators added
+// to (1) cloud remote, (2) site-detail status tab, (3) pending deployments.
+describe('Secondary video deployment UI guards', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+
+  const cloudRemoteHtmlPath = path.join(
+    repoRoot,
+    'central-dashboard/src/app/features/remote/cloud-remote.component.html',
+  );
+  const cloudRemoteTsPath = path.join(
+    repoRoot,
+    'central-dashboard/src/app/features/remote/cloud-remote.component.ts',
+  );
+  const cloudRemoteScssPath = path.join(
+    repoRoot,
+    'central-dashboard/src/app/features/remote/cloud-remote.component.scss',
+  );
+  const siteDetailPath = path.join(
+    repoRoot,
+    'central-dashboard/src/app/features/sites/site-detail.component.ts',
+  );
+  const remoteControllerPath = path.join(
+    repoRoot,
+    'central-server/src/controllers/remote.controller.ts',
+  );
+  const siteContentTabPath = path.join(
+    repoRoot,
+    'central-dashboard/src/app/features/sites/components/site-content-tab/site-content-tab.component.ts',
+  );
+  const remoteServicePath = path.join(
+    repoRoot,
+    'central-dashboard/src/app/core/services/remote.service.ts',
+  );
+  const sitesServicePath = path.join(
+    repoRoot,
+    'central-dashboard/src/app/core/services/sites.service.ts',
+  );
+
+  let cloudRemoteHtml: string;
+  let cloudRemoteTs: string;
+  let cloudRemoteScss: string;
+  let siteDetailContent: string;
+  let remoteControllerContent: string;
+  let siteContentTabContent: string;
+  let remoteServiceContent: string;
+  let sitesServiceContent: string;
+
+  beforeAll(() => {
+    cloudRemoteHtml = fs.readFileSync(cloudRemoteHtmlPath, 'utf8');
+    cloudRemoteTs = fs.readFileSync(cloudRemoteTsPath, 'utf8');
+    cloudRemoteScss = fs.readFileSync(cloudRemoteScssPath, 'utf8');
+    siteDetailContent = fs.readFileSync(siteDetailPath, 'utf8');
+    remoteControllerContent = fs.readFileSync(remoteControllerPath, 'utf8');
+    siteContentTabContent = fs.readFileSync(siteContentTabPath, 'utf8');
+    remoteServiceContent = fs.readFileSync(remoteServicePath, 'utf8');
+    sitesServiceContent = fs.readFileSync(sitesServicePath, 'utf8');
+  });
+
+  it('cloud remote HTML must show video-secondary-badge for videos with secondary variants', () => {
+    expect({
+      hasBadgeClass: /video-secondary-badge/.test(cloudRemoteHtml),
+      checksHasSecondary: /hasSecondaryVariant/.test(cloudRemoteHtml),
+      checksDisplayEnabled: /secondaryDisplayEnabled/.test(cloudRemoteHtml),
+    }).toEqual({
+      hasBadgeClass: true,
+      checksHasSecondary: true,
+      checksDisplayEnabled: true,
+    });
+  });
+
+  it('cloud remote TS must have markSecondaryVariants and secondaryVariantPaths', () => {
+    expect({
+      hasMarkMethod: /markSecondaryVariants/.test(cloudRemoteTs),
+      hasVariantPaths: /secondaryVariantPaths/.test(cloudRemoteTs),
+      hasDisplayEnabled: /secondaryDisplayEnabled/.test(cloudRemoteTs),
+      hasVideoFlag: /hasSecondaryVariant/.test(cloudRemoteTs),
+    }).toEqual({
+      hasMarkMethod: true,
+      hasVariantPaths: true,
+      hasDisplayEnabled: true,
+      hasVideoFlag: true,
+    });
+  });
+
+  it('cloud remote SCSS must style video-secondary-badge', () => {
+    expect(/\.video-secondary-badge/.test(cloudRemoteScss)).toBe(true);
+  });
+
+  it('remote controller must expose secondaryDisplayEnabled and secondaryVariantPaths', () => {
+    expect({
+      exportsDisplayEnabled: /secondaryDisplayEnabled/.test(remoteControllerContent),
+      exportsVariantPaths: /secondaryVariantPaths/.test(remoteControllerContent),
+      importsVariantRepo: /videoVariantRepository/.test(remoteControllerContent),
+    }).toEqual({
+      exportsDisplayEnabled: true,
+      exportsVariantPaths: true,
+      importsVariantRepo: true,
+    });
+  });
+
+  it('RemoteState interface must include secondaryDisplayEnabled and secondaryVariantPaths', () => {
+    expect({
+      hasDisplayEnabled: /secondaryDisplayEnabled/.test(remoteServiceContent),
+      hasVariantPaths: /secondaryVariantPaths/.test(remoteServiceContent),
+    }).toEqual({
+      hasDisplayEnabled: true,
+      hasVariantPaths: true,
+    });
+  });
+
+  it('site-detail must show badge-secondary-display when secondary_display_enabled', () => {
+    expect({
+      hasBadge: /badge-secondary-display/.test(siteDetailContent),
+      checksEnabled: /secondary_display_enabled/.test(siteDetailContent),
+      hasResolution: /secondary_display_resolution/.test(siteDetailContent),
+    }).toEqual({
+      hasBadge: true,
+      checksEnabled: true,
+      hasResolution: true,
+    });
+  });
+
+  it('pending deployments must show secondary variant badge when has_secondary_variant', () => {
+    expect({
+      hasDeployBadge: /deployment\.has_secondary_variant/.test(siteContentTabContent),
+    }).toEqual({
+      hasDeployBadge: true,
+    });
+  });
+
+  it('PendingDeployment interface must include has_secondary_variant field', () => {
+    expect(/has_secondary_variant/.test(sitesServiceContent)).toBe(true);
+  });
+});
