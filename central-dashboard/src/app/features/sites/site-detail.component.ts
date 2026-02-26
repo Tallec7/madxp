@@ -179,6 +179,15 @@ type TabId = 'status' | 'content' | 'settings' | 'profiles' | 'sponsors' | 'subs
                   <span class="label">Modèle:</span>
                   <span class="value">{{ site.hardware_model || 'N/A' }}</span>
                 </div>
+                @if (site.secondary_display_enabled) {
+                  <div class="info-row">
+                    <span class="label">Écran secondaire:</span>
+                    <span class="value">
+                      <span class="badge-secondary-display">📺 Activé</span>
+                      <span class="secondary-resolution" *ngIf="site.secondary_display_resolution">{{ site.secondary_display_resolution }}</span>
+                    </span>
+                  </div>
+                }
                 <div class="info-row">
                   <span class="label">Dernière vue:</span>
                   <span class="value">{{ formatLastSeen(site.last_seen_at) }}</span>
@@ -919,6 +928,23 @@ type TabId = 'status' | 'content' | 'settings' | 'profiles' | 'sponsors' | 'subs
     .info-row .value.monospace {
       font-family: 'SF Mono', Monaco, monospace;
       font-size: 0.8125rem;
+    }
+
+    .badge-secondary-display {
+      display: inline-block;
+      background: #dbeafe;
+      color: #1d4ed8;
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 4px;
+    }
+
+    .secondary-resolution {
+      font-family: 'SF Mono', Monaco, monospace;
+      font-size: 0.75rem;
+      color: #64748b;
+      margin-left: 6px;
     }
 
     /* Metrics */
