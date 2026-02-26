@@ -1,3 +1,9 @@
+## [3.83.2](https://github.com/Tallec7/neopro/compare/v3.83.1...v3.83.2) (2026-02-26)
+
+### Bug Fixes
+
+- **security:** harden club-config.json permissions and fix nginx diagnostic false positive ([8dcbb7b](https://github.com/Tallec7/neopro/commit/8dcbb7bf909317559680d38341fb081a926139d0))
+
 ## [3.82.11](https://github.com/Tallec7/neopro/compare/v3.82.10...v3.82.11) (2026-02-25)
 
 ### Bug Fixes
