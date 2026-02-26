@@ -3411,6 +3411,16 @@ describe('Deploy script kiosk restart ordering', () => {
     expect({ checksSshFailure: deploy.includes('DIAG_SSH_RC') && deploy.includes('connexion SSH échouée') })
       .toEqual({ checksSshFailure: true });
   });
+
+  it('deploy-remote.sh must verify /etc/hosts before restarting services', () => {
+    // Incident: 26/02/2026 — /etc/hosts was corrupted (binary data), causing
+    // nginx to fail with "host not found in upstream localhost". The deploy script
+    // must check /etc/hosts integrity and repair it before restarting nginx.
+    expect({ checksEtcHosts: deploy.includes('/etc/hosts') })
+      .toEqual({ checksEtcHosts: true });
+    expect({ checks127001: deploy.includes('127.0.0.1') })
+      .toEqual({ checks127001: true });
+  });
 });
 
 // ----------------------------------------------------------

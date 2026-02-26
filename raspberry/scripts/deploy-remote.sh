@@ -120,6 +120,38 @@ elif [ -n "${SSH_RESULT}" ] && [ "${SSH_RESULT}" -ne 0 ]; then
 fi
 print_success "Connexion SSH OK"
 
+# Vérification de /etc/hosts (corruption = nginx crash car "localhost" non résolu)
+print_step "Vérification de /etc/hosts..."
+ssh ${RASPBERRY_USER}@${RASPBERRY_IP} "
+    HOSTS_FILE=/etc/hosts
+    NEEDS_FIX=false
+
+    # Détecter fichier corrompu (contient du binaire)
+    if file \"\$HOSTS_FILE\" 2>/dev/null | grep -qv 'text'; then
+        echo 'ERREUR: /etc/hosts contient des données binaires (fichier corrompu)'
+        NEEDS_FIX=true
+    # Détecter entrée localhost manquante
+    elif ! grep -q '^127\.0\.0\.1[[:space:]]' \"\$HOSTS_FILE\" 2>/dev/null; then
+        echo 'ERREUR: /etc/hosts ne contient pas 127.0.0.1 localhost'
+        NEEDS_FIX=true
+    fi
+
+    if [ \"\$NEEDS_FIX\" = true ]; then
+        echo 'Réparation automatique de /etc/hosts...'
+        HOSTNAME=\$(hostname 2>/dev/null || echo 'neopro')
+        sudo bash -c \"cat > \$HOSTS_FILE << HOSTSEOF
+127.0.0.1	localhost
+127.0.1.1	\$HOSTNAME
+::1		localhost ip6-localhost ip6-loopback
+ff02::1		ip6-allnodes
+ff02::2		ip6-allrouters
+HOSTSEOF\"
+        echo '/etc/hosts réparé'
+    else
+        echo '/etc/hosts OK'
+    fi
+"
+
 # Backup de la version actuelle (sans compression pour vitesse sur Pi)
 print_step "Sauvegarde de la version actuelle..."
 ssh ${RASPBERRY_USER}@${RASPBERRY_IP} "
