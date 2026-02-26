@@ -445,29 +445,28 @@ export const verifyFtpFileExists = async (
       secure: ftpCfg.secure,
     });
 
-    // Lister les fichiers pour trouver celui qu'on cherche
+    // Vérifier l'existence du fichier via sa taille (fonctionne avec les chemins complets)
     const verifyStart = Date.now();
-    const list = await client.list();
-    const file = list.find(f => f.name === filename);
+    const fileSize = await client.size(filename);
     const verifyDuration = (Date.now() - verifyStart) / 1000;
-
-    if (!file) {
-      getMetricsService()?.recordFtpOperation('verify', 'not_found', config, verifyDuration);
-      return { exists: false, size: null, error: 'File not found on FTP' };
-    }
 
     logger.info('FTP file verification successful:', {
       filename,
-      size: file.size,
-      modifiedAt: file.modifiedAt,
+      size: fileSize,
     });
 
     getMetricsService()?.recordFtpOperation('verify', 'success', config, verifyDuration);
-    return { exists: true, size: file.size };
+    return { exists: true, size: fileSize };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown FTP error';
-    logger.error('FTP file verification failed:', { filename, error: errorMessage });
-    getMetricsService()?.recordFtpOperation('verify', 'failed', config);
+    // FTP 550 = file not found (expected), other errors are genuine failures
+    const isNotFound = errorMessage.includes('550');
+    if (isNotFound) {
+      getMetricsService()?.recordFtpOperation('verify', 'not_found', config);
+    } else {
+      logger.error('FTP file verification failed:', { filename, error: errorMessage });
+      getMetricsService()?.recordFtpOperation('verify', 'failed', config);
+    }
     return { exists: false, size: null, error: errorMessage };
   } finally {
     client.close();
