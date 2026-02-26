@@ -1,3 +1,20 @@
+## [3.83.1] (2026-02-26)
+
+### Bug Fixes
+
+- **secondary-display:** resolve secondary variant for manual video playback — when a video was triggered manually from the remote, both screens played the primary video because `resolveSecondaryVariant()` was only applied to loop videos (`getLoopVideosForPhase`), not to manual video commands. Fix: add `resolveSecondaryVariant()` helper that resolves the variant path from the Video object or by looking up the full configuration (`findVideoInConfig`). Applied in 3 locations: Socket.IO `action` handler, BroadcastChannel `onCommand` handler, and `handleMasterLoopState` CAS 1 (slave receives master's manual video state). ([343c62d](https://github.com/Tallec7/neopro/commit/343c62d))
+
+### Tests
+
+- **smoke:** add 2 regression guards for secondary variant resolution on manual videos — `resolveSecondaryVariant` must exist and search config, manual video commands must call it before `play()` (291 tests total).
+
+### Documentation
+
+- **CLAUDE.md:** add "NE JAMAIS FAIRE" rule for playing manual videos without `resolveSecondaryVariant()`
+- **reference:** add manual video variant resolution warning + updated sync table row for manual videos
+- **troubleshooting:** add section 21 "Vidéo secondaire identique à la principale" with root cause, diagnostic, and 2 new smoke tests
+- **ADR-031:** update with 4th desynchronization problem (manual videos) and its resolution
+
 # [3.83.0](https://github.com/Tallec7/neopro/compare/v3.82.10...v3.83.0) (2026-02-26)
 
 ### Features

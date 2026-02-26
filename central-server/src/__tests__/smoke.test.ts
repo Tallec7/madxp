@@ -2948,6 +2948,36 @@ describe('E-22 TvComponent master-slave sync guards', () => {
       returnsEarlyForSlave: true,
     });
   });
+
+  // Guard: manual videos must resolve secondary variant before play
+  it('manual video commands must use resolveSecondaryVariant before play', () => {
+    // Socket action handler must resolve secondary variant
+    const actionHandler = content.match(/on\('action'[\s\S]*?}\);/);
+    expect(actionHandler).not.toBeNull();
+    expect(actionHandler![0]).toMatch(/resolveSecondaryVariant/);
+
+    // handleMasterLoopState CAS 1 must resolve secondary variant
+    const masterHandler = content.match(/private handleMasterLoopState[\s\S]*?^  \}/m);
+    expect(masterHandler).not.toBeNull();
+    expect(masterHandler![0]).toMatch(/resolveSecondaryVariant/);
+  });
+
+  // Guard: resolveSecondaryVariant must exist and look up config when variants missing
+  it('resolveSecondaryVariant must exist and search config for variants', () => {
+    expect({
+      hasMethod: /private resolveSecondaryVariant/.test(content),
+      checksDisplayType: /this\.displayType\s*!==\s*'secondary'/.test(content),
+      hasFindInConfig: /private findVideoInConfig/.test(content),
+      searchesSponsors: /this\.configuration\.sponsors/.test(content),
+      searchesCategories: /this\.configuration\.categories/.test(content),
+    }).toEqual({
+      hasMethod: true,
+      checksDisplayType: true,
+      hasFindInConfig: true,
+      searchesSponsors: true,
+      searchesCategories: true,
+    });
+  });
 });
 
 // ----------------------------------------------------------

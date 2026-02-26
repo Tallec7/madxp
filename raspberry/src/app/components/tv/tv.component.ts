@@ -19,6 +19,7 @@ import { Video } from '../../interfaces/video.interface';
 import { Configuration, OverlayPosition, ScoreOverlayPosition, SportType, WatermarkScheduleRule } from '../../interfaces/configuration.interface';
 import { Command } from '../../interfaces/command.interface';
 import { Sponsor } from '../../interfaces/sponsor.interface';
+import { Category } from '../../interfaces/category.interface';
 import { environment } from '../../../environments/environment';
 
 @Component({
@@ -257,7 +258,7 @@ export class TvComponent implements OnInit, OnDestroy {
       console.log('tv action received', command);
       if (command.type === 'video' && command.data) {
         this.lastTriggerType = 'manual';
-        this.play(command.data as Video);
+        this.play(this.resolveSecondaryVariant(command.data as Video));
       } else if (command.type === 'sponsors') {
         this.lastTriggerType = 'auto';
         // Capturer le freeze-frame AVANT de relancer la boucle
@@ -391,7 +392,7 @@ export class TvComponent implements OnInit, OnDestroy {
         console.log('[TV] Local command received:', command);
         if (command.type === 'video' && command.data) {
           this.lastTriggerType = 'manual';
-          this.play(command.data as Video);
+          this.play(this.resolveSecondaryVariant(command.data as Video));
         } else if (command.type === 'sponsors') {
           this.lastTriggerType = 'auto';
           // Capturer le freeze-frame AVANT de relancer la boucle
@@ -885,15 +886,70 @@ export class TvComponent implements OnInit, OnDestroy {
 
     // Secondary display: utiliser la variante secondaire quand disponible
     if (this.displayType === 'secondary') {
-      return videos.map(video => {
-        if (video.variants?.secondary?.path) {
-          return { ...video, path: video.variants.secondary.path };
-        }
-        return video;
-      });
+      return videos.map(video => this.resolveSecondaryVariant(video));
     }
 
     return videos;
+  }
+
+  /**
+   * Résout la variante secondaire d'une vidéo si le displayType est 'secondary'.
+   * Remplace le path par celui de la variante secondaire quand disponible.
+   * Pour les vidéos manuelles reçues sans variants (ex: via tv-loop-state),
+   * cherche dans la configuration complète par le path du master.
+   */
+  private resolveSecondaryVariant<T extends { path: string; variants?: { secondary?: { path: string } } }>(video: T): T {
+    if (this.displayType !== 'secondary') return video;
+
+    // Si la vidéo a déjà sa variante secondaire, l'utiliser
+    if (video.variants?.secondary?.path) {
+      console.log('[TV] Secondary: resolved variant from video object:', video.variants.secondary.path);
+      return { ...video, path: video.variants.secondary.path };
+    }
+
+    // Sinon, chercher dans la configuration complète (catégories + sponsors + timeCategories)
+    const found = this.findVideoInConfig(video.path);
+    if (found?.variants?.secondary?.path) {
+      console.log('[TV] Secondary: resolved variant from config lookup:', found.variants.secondary.path);
+      return { ...video, path: found.variants.secondary.path };
+    }
+
+    // Monitoring : pas de variante secondaire trouvée
+    console.warn('[TV] Secondary: no variant found for video, using primary path:', video.path);
+    return video;
+  }
+
+  /**
+   * Cherche une vidéo dans toute la configuration par son path.
+   * Parcourt sponsors[], timeCategories[].loopVideos[] et categories[].videos[] (récursif).
+   */
+  private findVideoInConfig(path: string): Video | Sponsor | null {
+    // Chercher dans sponsors[]
+    const sponsor = this.configuration.sponsors?.find(s => s.path === path);
+    if (sponsor) return sponsor;
+
+    // Chercher dans timeCategories[].loopVideos[]
+    if (this.configuration.timeCategories) {
+      for (const tc of this.configuration.timeCategories) {
+        const loopVideo = tc.loopVideos?.find(v => v.path === path);
+        if (loopVideo) return loopVideo;
+      }
+    }
+
+    // Chercher dans categories[] (récursif)
+    const searchCategories = (cats: Category[]): Video | null => {
+      for (const cat of cats) {
+        const video = cat.videos?.find(v => v.path === path);
+        if (video) return video;
+        if (cat.subCategories) {
+          const found = searchCategories(cat.subCategories);
+          if (found) return found;
+        }
+      }
+      return null;
+    };
+
+    return this.configuration.categories ? searchCategories(this.configuration.categories) : null;
   }
 
   /**
@@ -2200,19 +2256,21 @@ export class TvComponent implements OnInit, OnDestroy {
 
     // CAS 1: Le master joue une vidéo manuelle
     if (state.isManualMode && state.manualVideoPath) {
+      // Résoudre la variante secondaire si applicable
+      const resolvedVideo = this.resolveSecondaryVariant({
+        name: state.manualVideoPath.split('/').pop() || 'manual',
+        path: state.manualVideoPath,
+        type: 'video/mp4'
+      } as Video);
+
       // Si on n'est pas déjà en mode manuel ou si c'est une vidéo différente
       const currentManualPlayer = this.getActiveManualPlayer();
       const currentManualSrc = currentManualPlayer?.src || '';
 
-      if (!this.isManualMode || !currentManualSrc.includes(state.manualVideoPath)) {
-        console.log('[TV] Slave: master switched to manual video:', state.manualVideoPath);
-        // Jouer la vidéo manuelle comme le master
-        const video: Video = {
-          name: state.manualVideoPath.split('/').pop() || 'manual',
-          path: state.manualVideoPath,
-          type: 'video/mp4'
-        };
-        this.play(video);
+      if (!this.isManualMode || !currentManualSrc.includes(resolvedVideo.path)) {
+        console.log('[TV] Slave: master switched to manual video:', state.manualVideoPath,
+          this.displayType === 'secondary' ? `(resolved: ${resolvedVideo.path})` : '');
+        this.play(resolvedVideo);
 
         // Seek approximatif au temps du master
         if (state.manualVideoStartedAt) {
