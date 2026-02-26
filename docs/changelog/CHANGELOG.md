@@ -1,3 +1,9 @@
+## [3.83.1](https://github.com/Tallec7/neopro/compare/v3.83.0...v3.83.1) (2026-02-26)
+
+### Bug Fixes
+
+- **secondary-display:** resolve secondary variant for manual video playback ([#431](https://github.com/Tallec7/neopro/issues/431)) ([a22e373](https://github.com/Tallec7/neopro/commit/a22e37334d4e25b7db6f2fc0e13485eb43bb1bb6))
+
 ## [3.83.1] (2026-02-26)
 
 ### Bug Fixes
