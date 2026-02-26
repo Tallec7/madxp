@@ -1,3 +1,9 @@
+## [3.83.3](https://github.com/Tallec7/neopro/compare/v3.83.2...v3.83.3) (2026-02-26)
+
+### Bug Fixes
+
+- **deploy:** auto-repair corrupted /etc/hosts before nginx restart ([ff2f80a](https://github.com/Tallec7/neopro/commit/ff2f80aeeba0c4eb7f42090161404ac058de826b))
+
 ## [3.83.2](https://github.com/Tallec7/neopro/compare/v3.83.1...v3.83.2) (2026-02-26)
 
 ### Bug Fixes
