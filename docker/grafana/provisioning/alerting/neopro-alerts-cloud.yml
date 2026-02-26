@@ -768,6 +768,97 @@ groups:
           description: "Many uploads have non-ASCII filenames being corrected. Check client-side encoding."
 
   # =============================================
+  # WARNING — FTP Storage Health
+  # =============================================
+  - orgId: 1
+    name: NeoPro - FTP Storage
+    folder: NeoPro Alerts
+    interval: 1m
+    rules:
+      # FTP verification failure rate (detects regression on verify logic)
+      - uid: neopro-ftp-verify-failures
+        title: FTP Verification Failure Rate High
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 1800
+              to: 0
+            datasourceUid: grafanacloud-tallec7-prom
+            model:
+              expr: |
+                (
+                  sum(rate(neopro_ftp_operations_total{operation="verify", status=~"failed|not_found"}[30m]))
+                  /
+                  clamp_min(sum(rate(neopro_ftp_operations_total{operation="verify"}[30m])), 0.001)
+                ) > 0.5
+              instant: true
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              type: reduce
+              expression: A
+              reducer: last
+              refId: B
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: B
+              conditions:
+                - evaluator:
+                    type: gt
+                    params: [0]
+              refId: C
+        for: 10m
+        labels:
+          severity: warning
+          team: neopro
+        annotations:
+          summary: "FTP verification failure rate > 50%"
+          description: "More than half of FTP upload verifications are failing over 30 minutes. This may indicate an FTP server issue or a regression in verifyFtpFileExists() (e.g. root-listing bug). Check ftp-storage.ts and FTP server health."
+
+      # FTP excessive retries (detects wasted bandwidth from failed verifications)
+      - uid: neopro-ftp-excessive-retries
+        title: FTP Excessive Retries
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 1800
+              to: 0
+            datasourceUid: grafanacloud-tallec7-prom
+            model:
+              expr: rate(neopro_ftp_retries_total[30m])
+              instant: true
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              type: reduce
+              expression: A
+              reducer: last
+              refId: B
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: B
+              conditions:
+                - evaluator:
+                    type: gt
+                    params: [0.1]
+              refId: C
+        for: 15m
+        labels:
+          severity: warning
+          team: neopro
+        annotations:
+          summary: "FTP retry rate elevated"
+          description: "FTP retries are elevated (>6/hour). Each retry re-uploads the entire file, wasting bandwidth. Check FTP verification logic and server stability."
+
+  # =============================================
   # WARNING — Sponsor Analytics (P6-P8)
   # =============================================
   - orgId: 1

@@ -2797,6 +2797,31 @@ describe('E-22 watchdog secondary display guard', () => {
     });
   });
 
+  // E-23 US-23.4.2: Primary Chromium must ALWAYS use --app= mode (never --kiosk).
+  // --kiosk takes the entire X11 virtual desktop (both monitors) and prevents
+  // zero-blackout transitions when switching between single and dual display.
+  // With --app=, we can resize via xdotool without restarting Chromium.
+  it('watchdog primary Chromium must use --app= mode (not --kiosk)', () => {
+    const primaryFn = content.match(
+      /start_chromium\(\)[\s\S]*?^}/m
+    );
+    expect(primaryFn).not.toBeNull();
+    const fnContent = primaryFn![0];
+    expect({
+      usesAppMode: /--app="\$\{?CHROMIUM_URL/.test(fnContent),
+      // Must NOT use --kiosk anywhere in common_flags or launch command
+      noKioskInFlags: !/^\s*--kiosk\s*$/m.test(fnContent),
+      // Must always apply xprop + xdotool for fullscreen (not conditional on DUAL_DISPLAY_ACTIVE)
+      alwaysXprop: /_MOTIF_WM_HINTS/.test(fnContent),
+      alwaysXdotoolSize: /xdotool.*windowsize/.test(fnContent),
+    }).toEqual({
+      usesAppMode: true,
+      noKioskInFlags: true,
+      alwaysXprop: true,
+      alwaysXdotoolSize: true,
+    });
+  });
+
   // Bug fix v3.82.8: F11 fullscreen spans ENTIRE X11 virtual desktop (both monitors),
   // NOT per-monitor. Must use xprop _MOTIF_WM_HINTS (remove decorations) + xdotool
   // windowmove/windowsize for per-monitor fullscreen. F11 must NOT be used.
@@ -2892,6 +2917,201 @@ describe('E-22 watchdog secondary display guard', () => {
     }).toEqual({
       hasWindowPosition: true,
       hasWindowSize: true,
+    });
+  });
+});
+
+// ----------------------------------------------------------
+// E-23 HDMI hotplug udev rules and notify script
+// ----------------------------------------------------------
+
+describe('E-23 HDMI hotplug udev and notify', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+
+  it('udev rules file must exist for HDMI hotplug', () => {
+    const rulesPath = path.join(repoRoot, 'raspberry/config/udev/99-neopro-hdmi-hotplug.rules');
+    expect({ rulesFileExists: fs.existsSync(rulesPath) })
+      .toEqual({ rulesFileExists: true });
+
+    const content = fs.readFileSync(rulesPath, 'utf8');
+    expect({
+      hasDrmSubsystem: content.includes('SUBSYSTEM=="drm"'),
+      hasChangeAction: content.includes('ACTION=="change"'),
+      hasNotifyScript: content.includes('neopro-hdmi-notify.sh'),
+    }).toEqual({
+      hasDrmSubsystem: true,
+      hasChangeAction: true,
+      hasNotifyScript: true,
+    });
+  });
+
+  it('neopro-hdmi-notify.sh must write flag file atomically', () => {
+    const scriptPath = path.join(repoRoot, 'raspberry/scripts/neopro-hdmi-notify.sh');
+    expect({ scriptExists: fs.existsSync(scriptPath) })
+      .toEqual({ scriptExists: true });
+
+    const content = fs.readFileSync(scriptPath, 'utf8');
+    expect({
+      hasFlagFile: content.includes('/tmp/hdmi-changed'),
+      hasMktemp: content.includes('mktemp'),
+      hasMv: content.includes('mv '),
+    }).toEqual({
+      hasFlagFile: true,
+      hasMktemp: true,
+      hasMv: true,
+    });
+  });
+
+  it('kiosk-watchdog.sh must check HDMI flag file for fast hotplug reaction', () => {
+    const watchdogContent = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/scripts/kiosk-watchdog.sh'),
+      'utf8'
+    );
+    expect({
+      hasFlagFile: watchdogContent.includes('HDMI_FLAG_FILE'),
+      hasHdmiTriggered: watchdogContent.includes('hdmi_triggered'),
+      hasUdevLog: watchdogContent.includes('HDMI hotplug détecté (udev)'),
+    }).toEqual({
+      hasFlagFile: true,
+      hasHdmiTriggered: true,
+      hasUdevLog: true,
+    });
+  });
+
+  it('build-raspberry.sh must include neopro-hdmi-notify.sh in runtime scripts', () => {
+    const buildScript = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/scripts/build-raspberry.sh'),
+      'utf8'
+    );
+    expect({ hasHdmiNotify: buildScript.includes('neopro-hdmi-notify.sh') })
+      .toEqual({ hasHdmiNotify: true });
+  });
+});
+
+// ----------------------------------------------------------
+// E-23 HDMI monitoring and alerts wiring
+// ----------------------------------------------------------
+describe('E-23 HDMI monitoring and alerts wiring', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+
+  it('state.service.js must have HDMI state methods', () => {
+    const content = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/server/services/state.service.js'),
+      'utf8'
+    );
+    expect({
+      hasHdmiState: content.includes('_hdmiState'),
+      hasGetHdmiState: content.includes('getHdmiState'),
+      hasUpdateHdmiState: content.includes('updateHdmiState'),
+      hasGetConnectedClients: content.includes('getConnectedClients'),
+    }).toEqual({
+      hasHdmiState: true,
+      hasGetHdmiState: true,
+      hasUpdateHdmiState: true,
+      hasGetConnectedClients: true,
+    });
+  });
+
+  it('handlers.js must wire hdmi-status-update and get-connected-clients events', () => {
+    const content = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/server/socket/handlers.js'),
+      'utf8'
+    );
+    expect({
+      hasHdmiStatusUpdate: content.includes("'hdmi-status-update'"),
+      hasGetHdmiState: content.includes("'get-hdmi-state'"),
+      hasGetConnectedClients: content.includes("'get-connected-clients'"),
+      hasHdmiAlert: content.includes("'hdmi-alert'"),
+      hasHdmiService: content.includes('hdmiService'),
+    }).toEqual({
+      hasHdmiStatusUpdate: true,
+      hasGetHdmiState: true,
+      hasGetConnectedClients: true,
+      hasHdmiAlert: true,
+      hasHdmiService: true,
+    });
+  });
+
+  it('tv-register handler must capture userAgent and ip from socket handshake', () => {
+    const content = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/server/socket/handlers.js'),
+      'utf8'
+    );
+    expect({
+      hasUserAgent: content.includes("socket.handshake?.headers?.['user-agent']"),
+      hasIp: content.includes('socket.handshake?.address'),
+    }).toEqual({
+      hasUserAgent: true,
+      hasIp: true,
+    });
+  });
+
+  it('sync-agent must fetch HDMI state and connected clients for heartbeat', () => {
+    const content = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/sync-agent/src/agent.js'),
+      'utf8'
+    );
+    expect({
+      hasFetchHdmi: content.includes('fetchLocalHdmiState'),
+      hasFetchClients: content.includes('fetchLocalConnectedClients'),
+      hasHeartbeatHdmi: content.includes('hdmiStatus'),
+      hasHeartbeatClients: content.includes('connectedClients'),
+    }).toEqual({
+      hasFetchHdmi: true,
+      hasFetchClients: true,
+      hasHeartbeatHdmi: true,
+      hasHeartbeatClients: true,
+    });
+  });
+
+  it('heartbeat.handler.ts must process hdmiStatus and create HDMI alerts', () => {
+    const content = fs.readFileSync(
+      path.join(repoRoot, 'central-server/src/handlers/heartbeat.handler.ts'),
+      'utf8'
+    );
+    expect({
+      hasHdmiStatus: content.includes('hdmiStatus'),
+      hasNoDisplayAlert: content.includes("'no_display'"),
+      hasWrongPortAlert: content.includes("'hdmi_wrong_port'"),
+      hasDashboardEmit: content.includes("'hdmi_status_updated'"),
+    }).toEqual({
+      hasHdmiStatus: true,
+      hasNoDisplayAlert: true,
+      hasWrongPortAlert: true,
+      hasDashboardEmit: true,
+    });
+  });
+
+  it('HeartbeatMessage type must include hdmiStatus and connectedClients', () => {
+    const content = fs.readFileSync(
+      path.join(repoRoot, 'central-server/src/types/index.ts'),
+      'utf8'
+    );
+    expect({
+      hasHdmiStatus: content.includes('hdmiStatus'),
+      hasConnectedClients: content.includes('connectedClients'),
+    }).toEqual({
+      hasHdmiStatus: true,
+      hasConnectedClients: true,
+    });
+  });
+  it('check_secondary_chromium must use xdotool resize for zero-blackout transitions', () => {
+    const content = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/scripts/kiosk-watchdog.sh'),
+      'utf8'
+    );
+    // Extract the check_secondary_chromium function body
+    const funcStart = content.indexOf('check_secondary_chromium()');
+    const funcBody = content.slice(funcStart, funcStart + 4000);
+    // Dual transition logs must mention "sans restart" (zero-blackout)
+    expect({
+      hasDualNoRestart: funcBody.includes('sans restart'),
+      hasSingleNoRestart: funcBody.includes('Retour en single-display: redimensionnement'),
+      hasXdotoolResize: funcBody.includes('xdotool windowsize'),
+    }).toEqual({
+      hasDualNoRestart: true,
+      hasSingleNoRestart: true,
+      hasXdotoolResize: true,
     });
   });
 });
@@ -3303,11 +3523,11 @@ describe('Kiosk GPU crash loop regression guards', () => {
   });
 
   it('Chromium launch commands must use combined --disable-features variable', () => {
-    // start_chromium() has 2 launch paths (kiosk mode + dual-display mode) and
-    // start_chromium_secondary() has 1, all must pass combined --disable-features.
+    // start_chromium() has 1 launch path (always --app= mode) and
+    // start_chromium_secondary() has 1, both must pass combined --disable-features.
     const launchLines = watchdog.match(/"\$CHROMIUM_BIN".*--disable-features="\$disable_features"/g) || [];
     expect({ combinedDisableFeaturesCount: launchLines.length })
-      .toEqual({ combinedDisableFeaturesCount: 3 }); // primary-kiosk + primary-dual + secondary
+      .toEqual({ combinedDisableFeaturesCount: 2 }); // primary + secondary
   });
 
   it('primary Chromium must have --user-data-dir for profile isolation', () => {
@@ -3927,5 +4147,46 @@ describe('Secondary video deployment UI guards', () => {
 
   it('PendingDeployment interface must include has_secondary_variant field', () => {
     expect(/has_secondary_variant/.test(sitesServiceContent)).toBe(true);
+  });
+});
+
+// ----------------------------------------------------------
+// FTP verifyFtpFileExists must use client.size() — NOT client.list()
+// client.list() without a directory argument only returns root-level
+// entries, so nested paths like variants/uuid/secondary/file.mp4
+// will NEVER be found. client.size(filename) works with full paths.
+// ----------------------------------------------------------
+describe('FTP verifyFtpFileExists must use client.size()', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+  const ftpStoragePath = path.join(repoRoot, 'central-server/src/config/ftp-storage.ts');
+
+  let content: string;
+  beforeAll(() => {
+    content = fs.readFileSync(ftpStoragePath, 'utf8');
+  });
+
+  it('verifyFtpFileExists must call client.size() for path-safe verification', () => {
+    const fnMatch = content.match(
+      /export const verifyFtpFileExists\b[\s\S]*?^};/m
+    );
+    expect(fnMatch).not.toBeNull();
+    expect({
+      usesSize: /client\.size\(/.test(fnMatch![0]),
+    }).toEqual({
+      usesSize: true,
+    });
+  });
+
+  it('verifyFtpFileExists must NOT use client.list() without directory (root-only bug)', () => {
+    const fnMatch = content.match(
+      /export const verifyFtpFileExists\b[\s\S]*?^};/m
+    );
+    expect(fnMatch).not.toBeNull();
+    // client.list() without argument only lists root — breaks for nested paths
+    expect({
+      usesBarelist: /client\.list\(\)/.test(fnMatch![0]),
+    }).toEqual({
+      usesBarelist: false,
+    });
   });
 });

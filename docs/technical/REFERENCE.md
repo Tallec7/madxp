@@ -1273,6 +1273,8 @@ Le HDMI secondaire du Raspberry Pi peut alimenter un panneau LED bord de terrain
 
 **Stockage FTP :** `variants/{videoId}/{displayType}/{filename}` (ex: `variants/837ad.../secondary/Pres.mp4`)
 
+**Vérification post-upload FTP :** Après chaque upload, `verifyFtpFileExists()` confirme la présence du fichier via `client.size(filename)`. Cette méthode supporte les chemins complets imbriqués. Ne **jamais** utiliser `client.list()` sans argument (ne liste que la racine, échoue pour les sous-dossiers). Alertes Grafana : `neopro-ftp-verify-failures` (taux d'échec > 50%) et `neopro-ftp-excessive-retries` (bande passante gaspillée).
+
 **Flux de déploiement avec variante secondaire :**
 
 1. `deployToSite()` vérifie `site.secondary_display_enabled`
@@ -1282,14 +1284,14 @@ Le HDMI secondaire du Raspberry Pi peut alimenter un panneau LED bord de terrain
 
 **Indicateurs UX `📺 2nd` :**
 
-| Vue                                | Condition d'affichage                                                | Source de données                                  |
-| ---------------------------------- | -------------------------------------------------------------------- | -------------------------------------------------- |
-| Historique déploiements            | `has_secondary_variant` dans `content_deployments`                   | Table `content_deployments`                        |
-| Dashboard — Config catégories site | `secondaryDisplayEnabled` + vidéo dans `secondaryVariantVideoIds`    | API `GET /sites/:id/local-content`                 |
-| Dashboard — Déploiements en attente| `deployment.has_secondary_variant`                                   | API `GET /deployments`                             |
-| Dashboard — Fiche site (État)      | `site.secondary_display_enabled` + résolution                        | API `GET /sites/:id`                               |
-| Cloud Remote — Cartes vidéo        | `secondaryDisplayEnabled` + `video.hasSecondaryVariant`              | API `GET /api/remote/:siteId` (`secondaryVariantPaths`) |
-| Pi Remote — Cartes vidéo           | `configuration.secondaryDisplayEnabled` + `video.variants.secondary` | `configuration.json` (écrit par `deploy-video.js`) |
+| Vue                                 | Condition d'affichage                                                | Source de données                                       |
+| ----------------------------------- | -------------------------------------------------------------------- | ------------------------------------------------------- |
+| Historique déploiements             | `has_secondary_variant` dans `content_deployments`                   | Table `content_deployments`                             |
+| Dashboard — Config catégories site  | `secondaryDisplayEnabled` + vidéo dans `secondaryVariantVideoIds`    | API `GET /sites/:id/local-content`                      |
+| Dashboard — Déploiements en attente | `deployment.has_secondary_variant`                                   | API `GET /deployments`                                  |
+| Dashboard — Fiche site (État)       | `site.secondary_display_enabled` + résolution                        | API `GET /sites/:id`                                    |
+| Cloud Remote — Cartes vidéo         | `secondaryDisplayEnabled` + `video.hasSecondaryVariant`              | API `GET /api/remote/:siteId` (`secondaryVariantPaths`) |
+| Pi Remote — Cartes vidéo            | `configuration.secondaryDisplayEnabled` + `video.variants.secondary` | `configuration.json` (écrit par `deploy-video.js`)      |
 
 **Endpoints Config Profiles (multi-config) :**
 
@@ -1671,15 +1673,15 @@ Le service `neopro-kiosk` lance `kiosk-watchdog.sh` — un superviseur qui gère
 
 Les deux instances Chromium se synchronisent via Socket.IO master-slave :
 
-| Étape          | Master (`/tv`)                                     | Slave (`/secondary`)                                                                  |
-| -------------- | -------------------------------------------------- | ------------------------------------------------------------------------------------- |
-| Boot           | `startSeamlessLoop()` → joue vidéo 0               | `startSeamlessLoop()` → joue indépendamment                                          |
-| Rôle           | `tv-role-assigned: master` → émet `tv-loop-update` | `tv-role-assigned: slave` → **pause players** + freeze-frame                          |
-| Sync boucle    | Master transition → `emitLoopState(index, path)`   | `handleMasterLoopState()` → `playOnActivePlayer(index)` + seek                       |
-| Vidéo manuelle | `play(video)` → émet `tv-loop-update` (manual)     | `handleMasterLoopState()` CAS 1 → `resolveSecondaryVariant()` + `play()` + seek      |
-| Fin vidéo      | `onVideoEnded()` → avance boucle                   | `onVideoEnded()` → freeze-frame, **attend master**                                   |
-| Phase change   | `switchToPhase()` → relance boucle                 | `startSeamlessLoop()` → retourne immédiatement, attend master                         |
-| Action directe | —                                                  | Reçoit aussi `action` via Socket.IO → `resolveSecondaryVariant()` avant `play()`      |
+| Étape          | Master (`/tv`)                                     | Slave (`/secondary`)                                                             |
+| -------------- | -------------------------------------------------- | -------------------------------------------------------------------------------- |
+| Boot           | `startSeamlessLoop()` → joue vidéo 0               | `startSeamlessLoop()` → joue indépendamment                                      |
+| Rôle           | `tv-role-assigned: master` → émet `tv-loop-update` | `tv-role-assigned: slave` → **pause players** + freeze-frame                     |
+| Sync boucle    | Master transition → `emitLoopState(index, path)`   | `handleMasterLoopState()` → `playOnActivePlayer(index)` + seek                   |
+| Vidéo manuelle | `play(video)` → émet `tv-loop-update` (manual)     | `handleMasterLoopState()` CAS 1 → `resolveSecondaryVariant()` + `play()` + seek  |
+| Fin vidéo      | `onVideoEnded()` → avance boucle                   | `onVideoEnded()` → freeze-frame, **attend master**                               |
+| Phase change   | `switchToPhase()` → relance boucle                 | `startSeamlessLoop()` → retourne immédiatement, attend master                    |
+| Action directe | —                                                  | Reçoit aussi `action` via Socket.IO → `resolveSecondaryVariant()` avant `play()` |
 
 **Sync par index** : le slave utilise `videoIndex` (pas `videoPath`) car les variants secondaires ont des chemins différents. Les deux boucles ont le même ordre, donc l'index est toujours fiable.
 

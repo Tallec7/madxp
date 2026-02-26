@@ -1,3 +1,17 @@
+## [3.83.4](https://github.com/Tallec7/neopro/compare/v3.83.3...v3.83.4) (2026-02-26)
+
+### Bug Fixes
+
+- **ftp:** fix verification always failing for files in subdirectories — `verifyFtpFileExists()` used `client.list()` on root directory, never finding nested paths like `variants/uuid/secondary/file.mp4`. Replaced with `client.size(filename)` which works with full paths. Was causing 3x redundant re-uploads per variant file.
+
+### Monitoring
+
+- **grafana:** add FTP Storage alert group — detect verification failure rate > 50% and excessive FTP retries (wasted bandwidth)
+
+### Tests
+
+- **smoke:** add 2 regression guards — `verifyFtpFileExists` must use `client.size()`, must NOT use bare `client.list()`
+
 ## [3.83.3](https://github.com/Tallec7/neopro/compare/v3.83.2...v3.83.3) (2026-02-26)
 
 ### Bug Fixes
