@@ -13,15 +13,16 @@
 
 En dual-display, deux instances Chromium séparées (`--user-data-dir` distincts) affichent `/tv` et `/secondary`. BroadcastChannel ne fonctionne pas entre processus Chromium distincts. Socket.IO (via le serveur local port 3000) est le **seul canal de communication**.
 
-Trois problèmes de désynchronisation identifiés :
+Quatre problèmes de désynchronisation identifiés :
 
 1. **Race condition** : `startSeamlessLoop()` s'exécute dans `ngOnInit()` **avant** `tv-register` (Socket.IO round-trip). Le slave joue sa boucle indépendamment pendant ~200ms.
 2. **Path mismatch** : les variantes secondaires ont des chemins différents (`variants.secondary.path`). La synchronisation par `videoPath` échoue systématiquement (`findIndex` retourne -1).
 3. **Relance parasite** : `switchToPhase()` et `sponsors()` rappellent `startSeamlessLoop()` sans vérifier `isSlaveMode`.
+4. **Vidéos manuelles sans résolution de variante** (v3.82.11) : le broadcast Socket.IO `action` envoie le path de la vidéo principale à tous les clients. Le secondary display jouait cette vidéo directement sans résoudre la variante secondaire (`resolveSecondaryVariant` n'était appliqué qu'aux vidéos de boucle).
 
 ## Décision
 
-**Synchronisation par `videoIndex`** (position ordinale dans la boucle) au lieu de `videoPath` (chemin fichier). Le slave est passif : il pause sa boucle dès `tv-role-assigned` et attend les directives du master via `tv-loop-state`.
+**Synchronisation par `videoIndex`** (position ordinale dans la boucle) au lieu de `videoPath` (chemin fichier). Le slave est passif : il pause sa boucle dès `tv-role-assigned` et attend les directives du master via `tv-loop-state`. Pour les vidéos manuelles, `resolveSecondaryVariant()` résout la variante secondaire avant chaque `play()`.
 
 Protocole :
 
@@ -45,11 +46,11 @@ Protocole :
 - Le slave ne peut jamais avancer seul dans la boucle (toute transition vient du master)
 - Si le master se déconnecte, le serveur promeut le plus ancien slave en master (`unregisterTv`)
 - **Invariant** : les boucles master et slave doivent avoir le **même nombre et ordre** de vidéos (seuls les chemins variant)
-- 6 smoke tests empêchent la régression (section `E-22 TvComponent master-slave sync guards`)
+- 8 smoke tests empêchent la régression (section `E-22 TvComponent master-slave sync guards`)
 
 ## Fichiers impactés
 
-- `raspberry/src/app/components/tv/tv.component.ts` — pause slave, early return `startSeamlessLoop`, sync par `videoIndex`
+- `raspberry/src/app/components/tv/tv.component.ts` — pause slave, early return `startSeamlessLoop`, sync par `videoIndex`, `resolveSecondaryVariant()` + `findVideoInConfig()` pour vidéos manuelles
 - `raspberry/server/socket/handlers.js` — `tv-register` (rôle) + `tv-loop-update` (broadcast) [lu, non modifié]
 - `raspberry/server/services/state.service.js` — `_loopState` avec `videoIndex` + `videoStartedAt` [lu, non modifié]
-- `central-server/src/__tests__/smoke.test.ts` — 6 guards anti-régression
+- `central-server/src/__tests__/smoke.test.ts` — 8 guards anti-régression (6 sync + 2 variant resolution)

@@ -17,7 +17,7 @@ cd central-server && npm run build # Compile TypeScript
 
 # Tests
 npm run test:server                # Jest (API central-server — 1592 tests)
-npm run test:smoke                 # Jest (Smoke tests — 259 tests, détecte régressions de wiring)
+npm run test:smoke                 # Jest (Smoke tests — 291 tests, détecte régressions de wiring)
 npm run test:central               # Karma (Angular Dashboard — 506 tests)
 cd raspberry/server && npm test    # Jest (Socket.IO server — 71 tests)
 cd raspberry/admin && npm test     # Jest (Admin server — 148 tests)
@@ -60,6 +60,7 @@ source central-server/.env && psql "$DATABASE_URL" -f central-server/src/scripts
 - Utiliser `xdotool key F11` pour le plein écran en dual-display (F11 prend TOUT le bureau X11 virtuel, pas un seul moniteur — utiliser `xprop _MOTIF_WM_HINTS` + `xdotool windowsize` — smoke test enforced)
 - Synchroniser le slave dual-display par `videoPath` dans `handleMasterLoopState` (le secondary utilise des variants avec des chemins différents — toujours sync par `videoIndex` — smoke test enforced)
 - Laisser le slave jouer sa boucle indépendamment du master (le slave doit pauser sa boucle dès `tv-role-assigned` et attendre les directives du master via `tv-loop-state` — smoke test enforced)
+- Jouer une vidéo manuelle sur le secondary display sans résoudre la variante secondaire (le command `action` envoie le path principal — toujours passer par `resolveSecondaryVariant()` avant `play()` — smoke test enforced)
 - Utiliser `\d` dans `grep -E` (syntaxe Perl uniquement — utiliser `[0-9]` avec grep -E — smoke test enforced)
 
 ## Architecture détaillée

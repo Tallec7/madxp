@@ -903,15 +903,19 @@ export class TvComponent implements OnInit, OnDestroy {
 
     // Si la vidéo a déjà sa variante secondaire, l'utiliser
     if (video.variants?.secondary?.path) {
+      console.log('[TV] Secondary: resolved variant from video object:', video.variants.secondary.path);
       return { ...video, path: video.variants.secondary.path };
     }
 
     // Sinon, chercher dans la configuration complète (catégories + sponsors + timeCategories)
     const found = this.findVideoInConfig(video.path);
     if (found?.variants?.secondary?.path) {
+      console.log('[TV] Secondary: resolved variant from config lookup:', found.variants.secondary.path);
       return { ...video, path: found.variants.secondary.path };
     }
 
+    // Monitoring : pas de variante secondaire trouvée
+    console.warn('[TV] Secondary: no variant found for video, using primary path:', video.path);
     return video;
   }
 

@@ -3967,4 +3967,56 @@ journalctl -u neopro-app --no-pager | grep 'TV-Sync'
 
 ---
 
-**Dernière mise à jour :** 25 février 2026 (ajout section sync dual-display v3.82.10)
+## Vidéo secondaire identique à la principale (v3.82.11+)
+
+L'écran secondaire affiche la **même vidéo** que l'écran principal au lieu de la variante secondaire, uniquement quand une vidéo est lancée manuellement (depuis la télécommande ou les catégories).
+
+### Symptôme
+
+La boucle vidéo affiche bien les variantes secondaires (format banner, LED, etc.), mais dès qu'on clique sur une vidéo dans la télécommande, l'écran secondaire joue la vidéo principale au lieu de sa variante secondaire. Le retour à la boucle restaure les bonnes variantes.
+
+### Cause racine
+
+Le serveur Socket.IO broadcast le `command` (`io.emit('action', data)`) à **tous** les clients. Le command contient le chemin de la vidéo principale. La résolution de la variante secondaire (`resolveSecondaryVariant`) n'était appliquée que dans `getLoopVideosForPhase()` pour la boucle, mais **pas** pour les vidéos manuelles. Trois points d'entrée étaient affectés :
+
+1. **Handler `action` Socket.IO** : `this.play(command.data)` jouait le path principal
+2. **Handler `onCommand` BroadcastChannel** : idem
+3. **`handleMasterLoopState` CAS 1** : le slave reconstruisait un `Video` avec `state.manualVideoPath` (path du master) sans résolution de variante
+
+### Correction (v3.82.11)
+
+Ajout de `resolveSecondaryVariant()` qui :
+1. Vérifie `video.variants.secondary.path` (quand l'objet Video inclut les variants)
+2. Sinon, cherche dans la configuration complète via `findVideoInConfig(path)` : sponsors → timeCategories.loopVideos → categories.videos (récursif)
+3. Retourne le path de la variante secondaire si trouvé, ou le path original sinon
+
+Appliqué aux 3 points d'entrée avant chaque appel à `play()`.
+
+### Diagnostic
+
+```bash
+# 1. Vérifier que la résolution de variante fonctionne
+journalctl -u neopro-kiosk --no-pager | grep 'resolved:'
+# Attendu (secondary): "master switched to manual video: /path/primary.mp4 (resolved: /path/secondary.mp4)"
+# Si absent → ancienne version sans le fix
+
+# 2. Vérifier le displayType
+journalctl -u neopro-kiosk --no-pager | grep 'Display type'
+# Attendu: "Display type: secondary" pour l'écran HDMI 1
+
+# 3. Vérifier que la vidéo a bien une variante secondaire dans configuration.json
+cat /home/pi/neopro/webapp/configuration.json | python3 -m json.tool | grep -A5 '"secondary"'
+# Attendu: { "path": "...", "filename": "..." }
+# Si absent → la vidéo n'a pas été déployée avec variante secondaire
+```
+
+### Smoke tests de régression
+
+2 smoke tests supplémentaires (dans `smoke.test.ts`, 291 total) :
+
+1. Les handlers `action` et `handleMasterLoopState` doivent appeler `resolveSecondaryVariant` avant `play()`
+2. `resolveSecondaryVariant` doit exister, vérifier `displayType`, et avoir `findVideoInConfig` pour le fallback
+
+---
+
+**Dernière mise à jour :** 26 février 2026 (ajout section variante secondaire vidéo manuelle v3.82.11)

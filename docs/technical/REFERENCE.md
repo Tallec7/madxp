@@ -1661,20 +1661,26 @@ Le service `neopro-kiosk` lance `kiosk-watchdog.sh` — un superviseur qui gère
 > ⚠️ **Ne jamais utiliser `xdotool key F11` pour le plein écran dual-display** — F11 prend tout le bureau X11 virtuel (les 2 écrans combinés), exactement comme `--kiosk`. Utiliser `xprop _MOTIF_WM_HINTS` + `xdotool windowsize` pour un plein écran par-moniteur. Smoke test enforced.
 >
 > ⚠️ **Ne jamais utiliser `findIndex(v => v.path === state.videoPath)` pour la sync slave** — le secondary display utilise des variants de vidéos avec des chemins différents du master. Toujours synchroniser par `videoIndex`. Smoke test enforced.
+>
+> ⚠️ **Ne jamais jouer une vidéo manuelle sur le secondary sans `resolveSecondaryVariant()`** — le command `action` et le `tv-loop-state` envoient le path de la vidéo principale. Le secondary doit résoudre la variante via `resolveSecondaryVariant()` qui cherche dans `video.variants`, puis fallback dans `findVideoInConfig()` (sponsors, timeCategories, categories). Smoke test enforced.
 
 #### Synchronisation Master-Slave (dual-display)
 
 Les deux instances Chromium se synchronisent via Socket.IO master-slave :
 
-| Étape        | Master (`/tv`)                                     | Slave (`/secondary`)                                           |
-| ------------ | -------------------------------------------------- | -------------------------------------------------------------- |
-| Boot         | `startSeamlessLoop()` → joue vidéo 0               | `startSeamlessLoop()` → joue indépendamment                    |
-| Rôle         | `tv-role-assigned: master` → émet `tv-loop-update` | `tv-role-assigned: slave` → **pause players** + freeze-frame   |
-| Sync         | Master transition → `emitLoopState(index, path)`   | `handleMasterLoopState()` → `playOnActivePlayer(index)` + seek |
-| Fin vidéo    | `onVideoEnded()` → avance boucle                   | `onVideoEnded()` → freeze-frame, **attend master**             |
-| Phase change | `switchToPhase()` → relance boucle                 | `startSeamlessLoop()` → retourne immédiatement, attend master  |
+| Étape          | Master (`/tv`)                                     | Slave (`/secondary`)                                                                  |
+| -------------- | -------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| Boot           | `startSeamlessLoop()` → joue vidéo 0               | `startSeamlessLoop()` → joue indépendamment                                          |
+| Rôle           | `tv-role-assigned: master` → émet `tv-loop-update` | `tv-role-assigned: slave` → **pause players** + freeze-frame                          |
+| Sync boucle    | Master transition → `emitLoopState(index, path)`   | `handleMasterLoopState()` → `playOnActivePlayer(index)` + seek                       |
+| Vidéo manuelle | `play(video)` → émet `tv-loop-update` (manual)     | `handleMasterLoopState()` CAS 1 → `resolveSecondaryVariant()` + `play()` + seek      |
+| Fin vidéo      | `onVideoEnded()` → avance boucle                   | `onVideoEnded()` → freeze-frame, **attend master**                                   |
+| Phase change   | `switchToPhase()` → relance boucle                 | `startSeamlessLoop()` → retourne immédiatement, attend master                         |
+| Action directe | —                                                  | Reçoit aussi `action` via Socket.IO → `resolveSecondaryVariant()` avant `play()`      |
 
 **Sync par index** : le slave utilise `videoIndex` (pas `videoPath`) car les variants secondaires ont des chemins différents. Les deux boucles ont le même ordre, donc l'index est toujours fiable.
+
+**Résolution variante secondaire** : `resolveSecondaryVariant()` vérifie d'abord `video.variants.secondary.path`, puis cherche dans la config complète via `findVideoInConfig(path)` (sponsors → timeCategories.loopVideos → categories.videos récursif). Appliqué aux 3 points d'entrée : `action` handler, BroadcastChannel, `handleMasterLoopState` CAS 1.
 
 **Diagnostic sync** :
 
