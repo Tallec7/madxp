@@ -2,6 +2,13 @@
 
 ### Bug Fixes
 
+- **ftp:** add monitoring and regression guards for FTP verification ([fd70c01](https://github.com/Tallec7/neopro/commit/fd70c01cce93a88ae36ca44354460a7bb5847f6d))
+- **ftp:** fix verification always failing for files in subdirectories ([09b78de](https://github.com/Tallec7/neopro/commit/09b78def4d70b09e74e078cc02505247ad14451b))
+
+## [3.83.4](https://github.com/Tallec7/neopro/compare/v3.83.3...v3.83.4) (2026-02-26)
+
+### Bug Fixes
+
 - **ftp:** fix verification always failing for files in subdirectories — `verifyFtpFileExists()` used `client.list()` on root directory, never finding nested paths like `variants/uuid/secondary/file.mp4`. Replaced with `client.size(filename)` which works with full paths. Was causing 3x redundant re-uploads per variant file.
 
 ### Monitoring
