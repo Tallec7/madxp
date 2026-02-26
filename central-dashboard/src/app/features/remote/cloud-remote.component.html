@@ -545,6 +545,9 @@
                   <div class="video-info">
                     <h3 class="video-title">{{ video.name }}</h3>
                     <span class="video-category">{{ getVideoCategoryName(video) || 'Vidéo' }}</span>
+                    @if (secondaryDisplayEnabled && video.hasSecondaryVariant) {
+                      <span class="video-secondary-badge">📺 2nd</span>
+                    }
                   </div>
                   @if (playingVideoPath === video.path) {
                     <div class="video-playing-indicator">
@@ -611,6 +614,9 @@
                       </div>
                     </div>
                     <span class="recent-video-name">{{ video.name }}</span>
+                    @if (secondaryDisplayEnabled && video.hasSecondaryVariant) {
+                      <span class="video-secondary-badge">📺 2nd</span>
+                    }
                   </button>
                 }
               </div>
@@ -784,6 +790,9 @@
                   <div class="video-info">
                     <h3 class="video-title">{{ video.name }}</h3>
                     <span class="video-category">{{ getVideoCategoryName(video) || 'Vidéo' }}</span>
+                    @if (secondaryDisplayEnabled && video.hasSecondaryVariant) {
+                      <span class="video-secondary-badge">📺 2nd</span>
+                    }
                   </div>
                   @if (playingVideoPath === video.path) {
                     <div class="video-playing-indicator">
@@ -1026,6 +1035,9 @@
                   <div class="video-info">
                     <h3 class="video-title">{{ video.name }}</h3>
                     <span class="video-category">{{ getVideoCategoryName(video) || 'Vidéo' }}</span>
+                    @if (secondaryDisplayEnabled && video.hasSecondaryVariant) {
+                      <span class="video-secondary-badge">📺 2nd</span>
+                    }
                   </div>
                   @if (playingVideoPath === video.path) {
                     <div class="video-playing-indicator">

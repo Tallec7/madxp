@@ -43,6 +43,7 @@ interface Video {
   path: string;
   type?: string;
   categoryId?: string;
+  hasSecondaryVariant?: boolean;
 }
 
 interface TimeCategory {
@@ -208,6 +209,8 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
   public pendingCommandsCount = 0;
 
   public configuration!: Configuration;
+  public secondaryDisplayEnabled = false;
+  private secondaryVariantPaths: Set<string> = new Set();
 
   // Options locales (stockées dans localStorage du navigateur)
   public localOptions: LocalOptions = this.loadLocalOptions();
@@ -434,6 +437,8 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
 
         // PIN ok ou pas de PIN → charger normalement
         this.pinRequired = false;
+        this.secondaryDisplayEnabled = state.secondaryDisplayEnabled ?? false;
+        this.secondaryVariantPaths = new Set(state.secondaryVariantPaths || []);
         this.configuration = {
           remote: { title: state.siteName },
           categories: state.config?.categories || [],
@@ -442,7 +447,7 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
           liveScoreEnabled: state.config?.liveScoreEnabled || false,
         };
 
-        this.initializeWithConfiguration(this.configuration);
+        this.initializeWithConfiguration(this.markSecondaryVariants(this.configuration));
         this.updateLicenseState(state);
         this.updateRecordingState(state);
         this.initialPlayerState = state.playerState || null;
@@ -805,6 +810,8 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
 
     this.remoteService.getState(this.siteId).subscribe({
       next: (state: RemoteState) => {
+        this.secondaryDisplayEnabled = state.secondaryDisplayEnabled ?? false;
+        this.secondaryVariantPaths = new Set(state.secondaryVariantPaths || []);
         this.configuration = {
           remote: { title: state.siteName },
           categories: state.config?.categories || [],
@@ -813,7 +820,7 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
           liveScoreEnabled: state.config?.liveScoreEnabled || false,
         };
 
-        const enrichedConfig = this.enrichVideosWithCategoryId(this.configuration);
+        const enrichedConfig = this.enrichVideosWithCategoryId(this.markSecondaryVariants(this.configuration));
         this.initializeWithConfiguration(enrichedConfig);
 
         this.currentView = 'home';
@@ -831,6 +838,34 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
         this.displayToast('Erreur de chargement', 'info');
       }
     });
+  }
+
+  /**
+   * Marque les vidéos ayant une variante secondaire (📺) pour affichage dans la télécommande.
+   */
+  private markSecondaryVariants(config: Configuration): Configuration {
+    if (!this.secondaryDisplayEnabled || this.secondaryVariantPaths.size === 0) return config;
+
+    const markVideo = (video: Video): Video =>
+      this.secondaryVariantPaths.has(video.path)
+        ? { ...video, hasSecondaryVariant: true }
+        : video;
+
+    const markCategory = (cat: Category): Category => ({
+      ...cat,
+      videos: cat.videos?.map(markVideo),
+      subCategories: cat.subCategories?.map(markCategory),
+    });
+
+    return {
+      ...config,
+      sponsors: config.sponsors?.map(markVideo) || [],
+      categories: config.categories?.map(markCategory) || [],
+      timeCategories: config.timeCategories?.map(tc => ({
+        ...tc,
+        loopVideos: tc.loopVideos?.map(markVideo),
+      })) || [],
+    };
   }
 
   private enrichVideosWithCategoryId(config: Configuration): Configuration {

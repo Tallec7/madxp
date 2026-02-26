@@ -95,6 +95,8 @@ export interface RemoteState {
   } | null;
   pendingConfigVersionId?: string | null;
   pendingCommandsCount?: number;
+  secondaryDisplayEnabled?: boolean;
+  secondaryVariantPaths?: string[];
 }
 
 export interface RemoteVideos {

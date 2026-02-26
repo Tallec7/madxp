@@ -768,4 +768,5 @@ export interface PendingDeployment {
   original_name: string | null;
   video_title: string;
   target_name: string;
+  has_secondary_variant?: boolean;
 }

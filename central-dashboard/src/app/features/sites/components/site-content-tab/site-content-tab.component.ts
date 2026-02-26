@@ -154,6 +154,7 @@ interface HumanReadableDiff {
         <div class="pending-list">
           <div class="pending-item" *ngFor="let deployment of pendingDeployments">
             <span class="pending-video">{{ deployment.video_title || deployment.filename }}</span>
+            <span class="secondary-variant-badge" *ngIf="deployment.has_secondary_variant" title="Inclut la variante écran secondaire">📺 2nd</span>
             <span class="pending-status" [class]="'status-' + deployment.status">
               {{ deployment.status === 'pending' ? ('⏳ ' + ('content.statusPending' | translate)) : ('🚀 ' + ('content.statusInProgress' | translate)) }}
             </span>
