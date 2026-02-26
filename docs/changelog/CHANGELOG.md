@@ -27,6 +27,14 @@
 
 - **ui:** add secondary video indicators across dashboard and cloud remote ([#430](https://github.com/Tallec7/neopro/issues/430)) ([748fa76](https://github.com/Tallec7/neopro/commit/748fa76184e7ab4a7f60053a40972aec77528c90))
 
+### Tests
+
+- **smoke:** add 8 regression guards for secondary video deployment UI — cloud remote HTML/TS/SCSS wiring, remote controller API fields, RemoteState interface, site-detail badge, pending deployment badge, PendingDeployment interface
+
+### Documentation
+
+- **reference:** update "Indicateurs UX 📺 2nd" table with 3 new rows (cloud remote, site-detail, pending deployments)
+
 ## [3.82.10](https://github.com/Tallec7/neopro/compare/v3.82.9...v3.82.10) (2026-02-25)
 
 ### Bug Fixes
