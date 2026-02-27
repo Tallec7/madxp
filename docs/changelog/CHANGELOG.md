@@ -1,3 +1,9 @@
+## [3.84.1](https://github.com/Tallec7/neopro/compare/v3.84.0...v3.84.1) (2026-02-27)
+
+### Bug Fixes
+
+- **e-23:** finalize remaining gaps — SW audio unlock, analytics source endpoint, docs ([44953e3](https://github.com/Tallec7/neopro/commit/44953e310cfd2e59b2dd7f009bc733b52e311ce9))
+
 # [3.84.0](https://github.com/Tallec7/neopro/compare/v3.83.4...v3.84.0) (2026-02-27)
 
 ### Features
