@@ -4228,4 +4228,77 @@ systemctl status nginx
 
 ---
 
-**Dernière mise à jour :** 27 février 2026 (ajout sections HDMI détection, mauvaise prise, failover, accès PC — E-23 v3.84)
+## Pi démarre sans aucun écran — mode headless (v3.84+)
+
+### Symptôme
+
+Le Pi est sous tension mais aucun écran n'est branché. La LED d'activité clignote lentement (1s on/1s off) et le buzzer émet 3 bips courts au boot.
+
+### Diagnostic
+
+```bash
+# 1. Vérifier que le Pi est bien en ligne (depuis un PC sur le même réseau)
+ping neopro.local
+
+# 2. Accéder au panneau admin sans écran
+curl http://neopro.local/admin/api/system
+
+# 3. Vérifier les flags HDMI
+ssh pi@neopro.local 'cat /tmp/kiosk-status.json | python3 -m json.tool'
+
+# 4. Vérifier que les services tournent (sans kiosk Chromium)
+ssh pi@neopro.local 'systemctl status neopro-server neopro-sync-agent'
+
+# 5. Vérifier le pattern LED actuel
+ssh pi@neopro.local 'cat /sys/class/leds/ACT/trigger 2>/dev/null || cat /sys/class/leds/led0/trigger'
+```
+
+### Correction
+
+1. **Brancher un écran** sur HDMI-0 (port le plus proche de l'alimentation USB-C sur Pi 5)
+2. Le watchdog détecte automatiquement l'écran via udev (< 1s) ou polling (5s max)
+3. Chromium se lance et affiche la TV
+4. La LED repasse en mode heartbeat normal
+
+### Notes
+
+- En mode headless, le Pi reste **pleinement fonctionnel** : serveur Socket.IO, sync-agent, admin panel
+- Le heartbeat vers le central-server inclut `hdmiStatus.hdmi0: "disconnected"` → alerte "Aucun écran" dans le dashboard
+- La config `hdmi_force_hotplug=1` dans `/boot/firmware/config.txt` assure que X11 démarre même sans écran
+
+---
+
+## Navigateur PC rétrogradé en esclave — priorité kiosk (v3.84+)
+
+### Symptôme
+
+Un utilisateur accède à la TV depuis son navigateur PC. Au début tout fonctionne, puis soudainement la page affiche un message indiquant le mode esclave. Le PC ne contrôle plus la boucle vidéo.
+
+### Cause
+
+Le Pi physique (kiosk) a repris le rôle master. Par conception, le Pi est **toujours master** — si un navigateur PC était master, il est automatiquement rétrogradé en slave quand le Pi s'enregistre.
+
+### Diagnostic
+
+```bash
+# 1. Vérifier les clients connectés
+curl -s http://neopro.local/admin/api/system | python3 -c "import sys,json; d=json.load(sys.stdin); print(json.dumps(d.get('connectedClients',[]), indent=2))"
+
+# 2. Vérifier dans les logs du serveur Pi
+ssh pi@neopro.local 'journalctl -u neopro-server --since "5 min ago" | grep -i "master\|demot\|priority"'
+```
+
+### Explication
+
+- Le champ `isKiosk` est détecté via le user-agent (armv7l/aarch64/raspbian = kiosk)
+- Un kiosk prend toujours le rôle master, même si un autre client est déjà master
+- Un PC ne peut **jamais** reprendre le master tant qu'un kiosk est connecté
+- Kiosk-à-kiosk : le premier arrivé reste master (pas de demotion entre kiosks)
+
+### Comportement attendu
+
+Ceci est le **comportement normal et voulu**. Le Pi pilote la TV physique et doit toujours avoir le contrôle. Le navigateur PC peut regarder le flux en mode esclave mais ne contrôle pas la playlist.
+
+---
+
+**Dernière mise à jour :** 27 février 2026 (ajout sections mode headless, priorité kiosk — E-23 v3.84)

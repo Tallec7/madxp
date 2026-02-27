@@ -491,6 +491,43 @@ export const getClubContent = async (req: AuthRequest, res: Response) => {
   }
 };
 
+/**
+ * GET /api/analytics/clubs/:siteId/sources
+ * Répartition kiosk (Pi) vs PC (navigateur) — E-23 US-23.7.4
+ */
+export const getClubSourceBreakdown = async (req: AuthRequest, res: Response) => {
+  try {
+    const { siteId } = req.params;
+    const { days = 30 } = req.query;
+
+    const daysNum = Math.min(parseInt(days as string) || 30, 90);
+    const fromDate = new Date();
+    fromDate.setDate(fromDate.getDate() - daysNum);
+    const toDate = new Date();
+
+    const rows = await analyticsRepository.getSourceBreakdown(
+      siteId,
+      fromDate.toISOString(),
+      toDate.toISOString()
+    );
+
+    res.json({
+      period: `${daysNum} days`,
+      sources: rows.map((row) => ({
+        source: row.source,
+        plays: parseInt(row.plays),
+        screen_time_seconds: parseInt(row.screen_time_seconds),
+        unique_videos: parseInt(row.unique_videos),
+        sessions_count: parseInt(row.sessions_count),
+        avg_completion_rate: row.avg_completion ? Number(row.avg_completion) : 0,
+      })),
+    });
+  } catch (error) {
+    logger.error('Get club source breakdown error:', error);
+    res.status(500).json({ error: 'Erreur lors de la récupération de la répartition par source' });
+  }
+};
+
 // ============================================================================
 // PHASE 3 - ADVANCED ANALYTICS
 // ============================================================================

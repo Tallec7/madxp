@@ -80,6 +80,15 @@ export interface TopVideoRow extends QueryResultRow {
   avg_completion: number | null;
 }
 
+export interface SourceBreakdownRow extends QueryResultRow {
+  source: string;
+  plays: string;
+  screen_time_seconds: string;
+  unique_videos: string;
+  sessions_count: string;
+  avg_completion: number | null;
+}
+
 export interface SessionRow extends QueryResultRow {
   id: string;
   started_at: Date;
@@ -444,6 +453,31 @@ class AnalyticsRepositoryImpl {
        ORDER BY plays DESC
        LIMIT $4`,
       [siteId, from, to, limit]
+    );
+    return result.rows;
+  }
+
+  /**
+   * Repartition des lectures par source (kiosk Pi vs PC navigateur) — E-23 US-23.7.4.
+   */
+  async getSourceBreakdown(siteId: string, from: string, to: string): Promise<SourceBreakdownRow[]> {
+    const result = await query<SourceBreakdownRow>(
+      `SELECT
+        COALESCE(source, 'kiosk') as source,
+        COUNT(*) as plays,
+        COALESCE(SUM(duration_played), 0) as screen_time_seconds,
+        COUNT(DISTINCT video_filename) as unique_videos,
+        COUNT(DISTINCT session_id) as sessions_count,
+        AVG(CASE WHEN completed THEN 100
+            WHEN video_duration > 0 THEN (duration_played::float / video_duration * 100)
+            ELSE 100 END) as avg_completion
+       FROM video_plays
+       WHERE site_id = $1
+         AND played_at >= $2
+         AND played_at <= $3
+       GROUP BY COALESCE(source, 'kiosk')
+       ORDER BY plays DESC`,
+      [siteId, from, to]
     );
     return result.rows;
   }

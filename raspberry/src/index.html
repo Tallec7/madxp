@@ -17,10 +17,32 @@
   </head>
   <body>
     <app-root></app-root>
-    <!-- E-23 US-23.7.3: Register service worker for PWA installation -->
+    <!-- E-23 US-23.7.3: Register service worker + audio unlock on first interaction -->
     <script>
       if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('/service-worker.js').catch(function () {});
+        navigator.serviceWorker
+          .register('/service-worker.js')
+          .then(function () {
+            // Listen for audio-unlocked broadcast from SW
+            navigator.serviceWorker.addEventListener('message', function (e) {
+              if (e.data && e.data.type === 'audio-unlocked' && window.__neoproAudioCtx) {
+                window.__neoproAudioCtx.resume();
+              }
+            });
+          })
+          .catch(function () {});
+        // On first user gesture, create AudioContext and ask SW to broadcast unlock
+        document.addEventListener(
+          'click',
+          function neoFirstClick() {
+            document.removeEventListener('click', neoFirstClick);
+            window.__neoproAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            if (navigator.serviceWorker.controller) {
+              navigator.serviceWorker.controller.postMessage({ type: 'audio-unlock-request' });
+            }
+          },
+          { once: true },
+        );
       }
     </script>
   </body>

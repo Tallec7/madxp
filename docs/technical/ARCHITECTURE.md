@@ -728,6 +728,17 @@ Scripts : `neopro-led-status.sh` (sysfs `/sys/class/leds/ACT` ou `led0`) et `neo
 
 Le Pi physique (kiosk) est **toujours master**. Si un navigateur PC s'est enregistré comme master, le Pi le rétrograde automatiquement en slave via `tv-role-assigned { role: 'slave' }`. Le PC reçoit un toast "Rétrogradé en mode esclave — le boîtier Pi a repris le contrôle".
 
+### Transition dual-display zéro coupure (F-23.4)
+
+Le passage mono→dual et dual→mono se fait **sans restart de Chromium** :
+
+1. Chromium est toujours lancé en `--app=URL` (jamais `--kiosk`) → redimensionnable via `xdotool`
+2. Activation dual : `xrandr --output HDMI-X --auto --right-of` + `xdotool windowsize` sur les 2 fenêtres
+3. Désactivation dual : `xdotool windowsize` plein écran sur le primaire, kill du secondaire
+4. Plein écran par `xprop _MOTIF_WM_HINTS` (pas `F11` qui prend tout le bureau X11)
+
+Le slave se synchronise par **videoIndex** (pas `videoPath`) car les variantes secondaires ont des chemins différents.
+
 ### Détection mauvaise prise & auto-swap (F-23.5)
 
 ```
@@ -786,7 +797,7 @@ Machine à états pour la perte de l'écran principal en mode dual-display :
 | `hdmiStatus.wrongPort`   | boolean | Écran sur mauvaise prise HDMI                                  |
 | `connectedClients`       | array   | Liste des clients connectés (role, ip, userAgent, displayType) |
 
-### Smoke tests de régression (22 guards)
+### Smoke tests de régression (29 guards)
 
 Tous les invariants E-23 sont protégés par des smoke tests dans `central-server/src/__tests__/smoke.test.ts` — toute régression casse le CI.
 

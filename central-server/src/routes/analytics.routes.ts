@@ -34,6 +34,9 @@ router.get('/clubs/:siteId/usage', authenticate, analyticsController.getClubUsag
 // GET /api/analytics/clubs/:siteId/content - Analytics contenu
 router.get('/clubs/:siteId/content', authenticate, analyticsController.getClubContent);
 
+// GET /api/analytics/clubs/:siteId/sources - Répartition kiosk (Pi) vs PC (E-23 US-23.7.4)
+router.get('/clubs/:siteId/sources', authenticate, analyticsController.getClubSourceBreakdown);
+
 // ============================================================================
 // Phase 3 - Advanced Analytics
 // ============================================================================

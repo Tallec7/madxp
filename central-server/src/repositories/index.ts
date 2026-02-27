@@ -83,6 +83,7 @@ export {
   type DailyHeartbeatRow,
   type ClubAlertRow,
   type UsageStatsRow,
+  type SourceBreakdownRow,
   type DailyStatsRow,
   type CategoryStatsRow,
   type TopVideoRow,
