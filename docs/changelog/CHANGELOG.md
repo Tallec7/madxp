@@ -1,3 +1,9 @@
+# [3.84.0](https://github.com/Tallec7/neopro/compare/v3.83.4...v3.84.0) (2026-02-27)
+
+### Features
+
+- **hdmi-resilience:** implement Epic E-23 — HDMI resilience & browser access (33 US, 146 SP) ([cb32a59](https://github.com/Tallec7/neopro/commit/cb32a5901bf014c3a82d32c1d906bf58471c2c22))
+
 ## [3.84.0](https://github.com/Tallec7/neopro/compare/v3.83.4...v3.84.0) (2026-02-27)
 
 ### Features
