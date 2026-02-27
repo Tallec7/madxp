@@ -1,6 +1,6 @@
 # Features & User Stories — NEOPRO SAFe
 
-> **Dernière mise à jour** : 24 Février 2026 <!-- E-22 decisions GO/NO-GO + F-22.4/F-22.5/F-22.6 -->
+> **Dernière mise à jour** : 26 Février 2026 <!-- E-23 Résilience HDMI & Accès Navigateur (7F, 33US, 146SP) -->
 > **PI actuel** : PI-1 (Février - Mars 2026)
 > Ce document contient les Features/US futures (PI-1 à PI-3) ET les Epics terminés avant PI-1. Les 212 features implémentées (hors SAFe) sont documentées dans [IMPLEMENTED-BACKLOG.md](IMPLEMENTED-BACKLOG.md).
 
@@ -648,6 +648,162 @@ Tous les controllers utilisent le repository pattern. ESLint bloquant actif. Aud
 
 ---
 
+### E-23 — Résilience HDMI & Accès Navigateur
+
+> **Dépendance** : E-22 (dual-display). Score fiabilité HDMI actuel : 64/100 → cible 95/100.
+> **Scope** : 7 Features, 33 User Stories, 146 SP (P0: 65 SP, P1: 60 SP, P2: 21 SP)
+
+### F-23.1 : Détection HDMI temps réel
+
+> _En tant que système, les 2 ports HDMI sont surveillés en temps réel via udev au lieu du polling 30s, et le dashboard affiche une alerte quand aucun écran n'est branché._
+
+**Critères d'acceptation**
+
+- [ ] Le watchdog surveille HDMI-0 ET HDMI-1 (DRM/KMS sysfs `card{0,1}-HDMI-A-{1,2}`)
+- [ ] Les règles udev déclenchent un événement immédiat au hotplug (< 1s vs 30s polling)
+- [ ] Le dashboard affiche une alerte "Aucun écran branché" en temps réel via Socket.IO
+- [ ] Rétro-compatible Pi 4 (paths DRM différents) et Pi 5
+
+| US        | Description                                                                                     | SP  | Sprint  | Priorité |
+| --------- | ----------------------------------------------------------------------------------------------- | --- | ------- | -------- |
+| US-23.1.1 | Surveillance HDMI-0 dans le watchdog (`detect_hdmi0_status()` via DRM/KMS sysfs)                | 3   | PI-2 S4 | Must     |
+| US-23.1.2 | Alerte dashboard "aucun écran branché" avec indicateur visuel temps réel (Socket.IO)            | 5   | PI-2 S4 | Must     |
+| US-23.1.3 | Règles udev hotplug HDMI-0/HDMI-1 remplaçant le polling 30s (`/etc/udev/rules.d/99-hdmi.rules`) | 5   | PI-2 S4 | Must     |
+
+---
+
+### F-23.2 : Boot sans écran & mode dégradé
+
+> _En tant qu'installateur, quand le Pi démarre sans écran HDMI, il affiche un splash d'attente, offre un mode PC, et donne un feedback physique (LED/bip)._
+
+**Critères d'acceptation**
+
+- [ ] Splash screen animé "En attente d'écran…" avec logo Neopro (affiché dès que HDMI détecté)
+- [ ] Config "mode PC" dans le dashboard : marque un site comme fonctionnant sans écran physique
+- [ ] LED GPIO clignotement lent = en attente d'écran (Pi 4/5)
+- [ ] Bip sonore court quand HDMI est détecté (confirmation branchement)
+- [ ] Page neopro.local enrichie : QR code, statut HDMI en direct, aide dépannage
+
+| US        | Description                                                                            | SP  | Sprint  | Priorité |
+| --------- | -------------------------------------------------------------------------------------- | --- | ------- | -------- |
+| US-23.2.1 | Splash screen d'attente animé (logo Neopro + "En attente d'écran…" + spinner)          | 3   | PI-2 S5 | Should   |
+| US-23.2.2 | Configuration "mode PC" dans le dashboard (marquer site sans écran physique)           | 5   | PI-2 S5 | Should   |
+| US-23.2.3 | LED pattern Pi "en attente d'écran" (GPIO clignotement lent, compatible Pi 4 et Pi 5)  | 2   | PI-2 S6 | Could    |
+| US-23.2.4 | Bip sonore sur détection HDMI (feedback audio confirmation branchement via buzzer/PWM) | 2   | PI-2 S6 | Could    |
+| US-23.2.5 | Page neopro.local enrichie (QR code accès, statut HDMI temps réel, aide dépannage)     | 3   | PI-2 S6 | Could    |
+
+---
+
+### F-23.3 : Hotplug premier écran & priorité kiosk
+
+> _En tant que système, quand un écran physique est branché alors qu'un PC est déjà connecté sur `/tv`, le kiosk Pi reprend automatiquement le rôle master._
+
+**Critères d'acceptation**
+
+- [ ] Le kiosk Pi est TOUJOURS master quand il se connecte (même si un PC est déjà master)
+- [ ] Le PC reçoit une notification de rétrogradation slave
+- [ ] La première vidéo s'affiche en < 2s grâce au cache nginx local
+- [ ] La métrique boot-to-video est collectée (HDMI détecté → première frame vidéo)
+
+| US        | Description                                                                                       | SP  | Sprint  | Priorité |
+| --------- | ------------------------------------------------------------------------------------------------- | --- | ------- | -------- |
+| US-23.3.1 | Priorité master au kiosk Pi (le Pi physique est toujours master, même si PC connecté avant)       | 5   | PI-2 S4 | Must     |
+| US-23.3.2 | Notification de rétrogradation PC → slave quand kiosk reprend le contrôle (toast + badge)         | 2   | PI-2 S6 | Could    |
+| US-23.3.3 | Pré-chargement vidéo via cache nginx local (première vidéo disponible < 2s post-détection HDMI)   | 5   | PI-2 S5 | Should   |
+| US-23.3.4 | Métrique boot-to-video (temps entre détection HDMI et première frame vidéo, envoyée au dashboard) | 3   | PI-2 S5 | Should   |
+
+---
+
+### F-23.4 : Transition dual-display zéro coupure
+
+> _En tant que spectateur, quand un second écran est branché, la transition vers le mode dual se fait sans aucun blackout sur l'écran principal._
+
+**Critères d'acceptation**
+
+- [ ] `xrandr --output` redimensionne le desktop étendu sans relancer Chromium (zéro blackout)
+- [ ] Chromium lancé en `--app=` par défaut (compatible redimensionnement dynamique vs `--kiosk`)
+- [ ] L'écran secondaire affiche un splash "Chargement…" pendant l'initialisation
+- [ ] Le dashboard reçoit une notification "mode dual-display activé" avec statut des 2 sorties
+- [ ] Métriques de transition collectées (temps, succès/échec, cause d'échec)
+
+| US        | Description                                                                                      | SP  | Sprint  | Priorité |
+| --------- | ------------------------------------------------------------------------------------------------ | --- | ------- | -------- |
+| US-23.4.1 | Redimensionnement xrandr en direct sans relancer Chromium (zéro blackout écran principal)        | 8   | PI-2 S4 | Must     |
+| US-23.4.2 | Lancement Chromium en `--app=` par défaut (compatible redimensionnement dynamique)               | 5   | PI-2 S4 | Must     |
+| US-23.4.3 | Splash screen écran secondaire pendant initialisation (logo + "Chargement…" + spinner)           | 3   | PI-2 S5 | Should   |
+| US-23.4.4 | Notification dashboard "mode dual-display activé" avec statut des 2 sorties HDMI                 | 5   | PI-2 S5 | Should   |
+| US-23.4.5 | Métriques de transition dual-display (temps transition, succès/échec, cause, envoi au dashboard) | 3   | PI-2 S6 | Could    |
+
+---
+
+### F-23.5 : Résilience mauvaise prise HDMI
+
+> _En tant qu'installateur, quand un seul écran est branché sur HDMI-1 (au lieu de HDMI-0), le Pi détecte la situation, affiche un message d'aide, puis bascule automatiquement après 10 secondes._
+
+**Critères d'acceptation**
+
+- [ ] Le watchdog détecte l'état "mauvaise prise" (HDMI-1 connecté sans HDMI-0)
+- [ ] `config.txt` force X11 sur les 2 prises (`hdmi_force_hotplug:0=1` + `hdmi_force_hotplug:1=1`)
+- [ ] Message d'aide affiché : "Branchez sur la prise 1 (marquée ①) ou patientez 10s"
+- [ ] Auto-swap : après 10s, HDMI-1 est utilisé comme sortie principale
+- [ ] Retour automatique au mode normal si HDMI-0 est rebranché
+- [ ] Guide d'autocollants de marquage physique dans la doc d'installation
+
+| US        | Description                                                                                           | SP  | Sprint  | Priorité |
+| --------- | ----------------------------------------------------------------------------------------------------- | --- | ------- | -------- |
+| US-23.5.1 | Détection état "mauvaise prise" (HDMI-1 connecté sans HDMI-0) dans le watchdog                        | 3   | PI-2 S4 | Must     |
+| US-23.5.2 | Forcer X11 sur les 2 prises HDMI (`config.txt` : `hdmi_force_hotplug:0=1` + `hdmi_force_hotplug:1=1`) | 5   | PI-2 S4 | Must     |
+| US-23.5.3 | Message d'aide sur écran mal branché ("Branchez sur la prise ① ou patientez 10s")                     | 5   | PI-2 S5 | Should   |
+| US-23.5.4 | Auto-swap : utiliser HDMI-1 comme sortie principale après 10s si HDMI-0 absent                        | 8   | PI-2 S5 | Must     |
+| US-23.5.5 | Retour automatique au mode normal quand HDMI-0 est rebranché après un auto-swap                       | 5   | PI-2 S5 | Should   |
+| US-23.5.6 | Guide marquage physique des prises HDMI (autocollants ①/② dans la doc d'installation)                 | 3   | PI-2 S6 | Could    |
+
+---
+
+### F-23.6 : Failover perte écran principal en dual
+
+> _En tant que spectateur, quand l'écran principal est débranché pendant le mode dual-display, l'écran secondaire prend automatiquement le relais en mode TV complet sans intervention._
+
+**Critères d'acceptation**
+
+- [ ] Alerte rouge temps réel "écran principal perdu en dual-display" envoyée au dashboard
+- [ ] L'écran secondaire est automatiquement promu en mode TV complet (full playlist + overlays)
+- [ ] Le Chromium fantôme sur HDMI-0 est tué proprement (SIGTERM + cleanup GPU V3D DMA buffers)
+- [ ] Si HDMI-0 est rebranché, retour automatique au mode dual-display
+- [ ] Métriques failover collectées (temps de bascule, incidents, durée mode dégradé)
+
+| US        | Description                                                                                      | SP  | Sprint  | Priorité |
+| --------- | ------------------------------------------------------------------------------------------------ | --- | ------- | -------- |
+| US-23.6.1 | Alerte rouge temps réel "écran principal perdu en dual-display" (Socket.IO → dashboard)          | 3   | PI-2 S4 | Must     |
+| US-23.6.2 | Bascule automatique écran 2 → mode TV complet (promotion master + full playlist + overlays)      | 8   | PI-2 S4 | Must     |
+| US-23.6.3 | Kill Chromium fantôme HDMI-0 + nettoyage GPU V3D DMA buffers (SIGTERM → 5s → SIGKILL)            | 5   | PI-2 S4 | Must     |
+| US-23.6.4 | Retour automatique au mode dual-display quand HDMI-0 rebranché après failover                    | 8   | PI-2 S5 | Should   |
+| US-23.6.5 | Métriques failover (temps de bascule, incidents, causes, durée mode dégradé, envoi au dashboard) | 3   | PI-2 S6 | Could    |
+
+---
+
+### F-23.7 : Accès navigateur PC sécurisé
+
+> _En tant qu'admin, les connexions navigateur PC sur `/tv` et `/secondary` sont monitorées, les analytics distinguent PC vs kiosk Pi, et un mode PWA permet l'autoplay du son._
+
+**Critères d'acceptation**
+
+- [ ] Le dashboard affiche le nombre et la source (IP, user-agent) des clients connectés par site
+- [ ] Page d'accueil enrichie pour les accès PC (statut Pi, aide, liens rapides)
+- [ ] Mode PWA installable avec autoplay son (contourne la restriction navigateur service worker)
+- [ ] Les analytics distinguent les événements PC (user-agent) vs kiosk Pi
+- [ ] Fix : un secondary qui devient master ne doit pas émettre d'analytics (guard sur `displayType`)
+
+| US        | Description                                                                                                | SP  | Sprint  | Priorité |
+| --------- | ---------------------------------------------------------------------------------------------------------- | --- | ------- | -------- |
+| US-23.7.1 | Monitoring des clients connectés sur /tv et /secondary (compteur, source IP, user-agent, type device)      | 5   | PI-2 S4 | Must     |
+| US-23.7.2 | Page d'accueil enrichie pour accès PC (statut Pi, HDMI, aide dépannage, liens rapides /tv /secondary)      | 5   | PI-2 S6 | Could    |
+| US-23.7.3 | PWA manifest + service worker pour autoplay son automatique (contourne restriction navigateur)             | 5   | PI-2 S5 | Should   |
+| US-23.7.4 | Analytics distinctes PC vs Pi (user-agent tagging, exclusion métriques kiosk pour les sessions PC)         | 5   | PI-2 S5 | Should   |
+| US-23.7.5 | Fix analytics displayType : guard `displayType !== 'secondary'` en plus de `!isSlaveMode` sur tv.component | 3   | PI-2 S6 | Should   |
+
+---
+
 ## PI-3 Epics (Juin - Juillet 2026)
 
 ### E-12 — Multi-Écrans Synchronisés
@@ -811,15 +967,16 @@ Tous les controllers utilisent le repository pattern. ESLint bloquant actif. Aud
 
 ### PI-2 Backlog
 
-| Epic                     | Features | User Stories | SP estimés |
-| ------------------------ | -------- | ------------ | ---------- |
-| E-05 Motion Design       | 2        | 3            | 16         |
-| E-11 Régie Publicitaire  | 2        | 3            | 21         |
-| E-15 Score Live Phase 2  | 1        | 2            | 11         |
-| E-16 Rapports Email Auto | 1        | 2            | 8          |
-| E-17 A/B Testing         | 1        | 2            | 13         |
-| E-22 TV + Secondary Dual | 7        | 12           | 48         |
-| **Total PI-2**           | **14**   | **24**       | **117**    |
+| Epic                          | Features | User Stories | SP estimés |
+| ----------------------------- | -------- | ------------ | ---------- |
+| E-05 Motion Design            | 2        | 3            | 16         |
+| E-11 Régie Publicitaire       | 2        | 3            | 21         |
+| E-15 Score Live Phase 2       | 1        | 2            | 11         |
+| E-16 Rapports Email Auto      | 1        | 2            | 8          |
+| E-17 A/B Testing              | 1        | 2            | 13         |
+| E-22 TV + Secondary Dual      | 7        | 12           | 48         |
+| E-23 Résilience HDMI & Nav PC | 7        | 33           | 146        |
+| **Total PI-2**                | **21**   | **57**       | **263**    |
 
 ### PI-3 Backlog
 
@@ -840,12 +997,13 @@ Tous les controllers utilisent le repository pattern. ESLint bloquant actif. Aud
 | ----------------- | ------------------- | -------------- | ------ | ------- |
 | Done (avant PI-1) | 5 (dont 2 partiels) | 9 (+ 2 → PI-1) | -      | ~41     |
 | PI-1 Actif        | 4 + 2 reliquats     | 12             | 19     | 79      |
-| PI-2              | 6                   | 14             | 24     | 117     |
+| PI-2              | 7                   | 21             | 57     | 263     |
 | PI-3              | 7                   | 7              | 9      | 73      |
-| **Total SAFe**    | **22**              | **42 uniques** | **52** | **310** |
+| **Total SAFe**    | **23**              | **49 uniques** | **85** | **456** |
 
 > **Note PI-1** : Les 79 SP sont sous la capacité de 80 SP. Le backlog est désormais réaliste (vs 130 SP avant requalification des Done).
 > **Note E-22** : 3 features ajoutées le 24/02 (F-22.4 GO, F-22.5 et F-22.6 à détailler). Fallback PiP : NO GO.
+> **Note E-23** : 7 features, 33 US, 146 SP. Epic Résilience HDMI & Accès Navigateur ajouté le 26/02.
 
 ---
 

@@ -441,6 +441,7 @@ RUNTIME_SCRIPTS=(
     "raspberry/scripts/sync-agent-guardian.sh"
     "raspberry/scripts/fix-fleet-pi.sh"
     "raspberry/scripts/diagnose-pi.sh"
+    "raspberry/scripts/neopro-hdmi-notify.sh"
 )
 mkdir -p ${DEPLOY_DIR}/scripts
 for script_path in "${RUNTIME_SCRIPTS[@]}"; do

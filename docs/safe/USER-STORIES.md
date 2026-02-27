@@ -1,11 +1,11 @@
 # User Stories — NEOPRO SAFe
 
-> **Dernière mise à jour** : 24 Février 2026
+> **Dernière mise à jour** : 26 Février 2026 _(+33 US E-23 Résilience HDMI & Accès Navigateur)_
 > **PI actuel** : PI-1 (Février - Mars 2026)
 > Ce document recense **toutes** les User Stories du produit NEOPRO :
 >
 > - **178 US livrées** (13 domaines, traçabilité code + ADR)
-> - **40 US futures** (PI-1 à PI-3, issues de [FEATURES.md](FEATURES.md))
+> - **76 US futures** (PI-1 à PI-3, issues de [FEATURES.md](FEATURES.md))
 >
 > **Convention** : Les US livrées reprennent les IDs `IMP-XXX-NN` de [IMPLEMENTED-BACKLOG.md](IMPLEMENTED-BACKLOG.md). Les US futures reprennent les IDs `US-XX.X.X` de [FEATURES.md](FEATURES.md).
 
@@ -351,7 +351,7 @@
 
 ---
 
-### PI-2 — Avril-Mai 2026 (24 US, 117 SP)
+### PI-2 — Avril-Mai 2026 (57 US, 263 SP)
 
 #### E-05 — Motion Design Personnalisé (3 US, 16 SP)
 
@@ -409,6 +409,79 @@
 | US-22.4.1 | F-22.4  | Tests E2E Playwright dual display : 2 routes /tv + /secondary, événements simultanés                 | 5   | PI-2 S5 | Must     | ⏳ Backlog                                      |
 | US-22.5.1 | F-22.5  | Proposal : architecture pipeline auto-génération variantes vidéo (FFmpeg, formats, crop, coût)       | 2   | TBD     | Should   | ⏳ À détailler                                  |
 | US-22.6.1 | F-22.6  | Spike : analyse usage capture écran + benchmark approches preview live dashboard                     | 2   | TBD     | Could    | ⏳ À détailler                                  |
+
+#### E-23 — Résilience HDMI & Accès Navigateur (33 US, 146 SP)
+
+> **Ajouté 26/02/2026** : Epic HDMI/Navigateur PC issu de l'analyse des 6 scénarios HDMI.
+> Dépendance E-22 (dual-display). P0 = Sprint S4, P1 = Sprint S5, P2 = Sprint S6.
+
+##### F-23.1 — Détection HDMI temps réel (3 US, 13 SP)
+
+| US        | Feature | Description                                                                                                     | SP  | Sprint  | Priorité | Statut     |
+| --------- | ------- | --------------------------------------------------------------------------------------------------------------- | --- | ------- | -------- | ---------- |
+| US-23.1.1 | F-23.1  | Service DRM/KMS polling sysfs (`/sys/class/drm/card*/status`) toutes les 2s + événements connected/disconnected | 5   | PI-2 S4 | Must     | ⏳ Backlog |
+| US-23.1.2 | F-23.1  | Règle udev `drm/card*` → relance détection <1s + fallback polling si udev indisponible                          | 5   | PI-2 S4 | Must     | ⏳ Backlog |
+| US-23.1.3 | F-23.1  | Remontée état HDMI vers dashboard via Socket.IO + badge vert/rouge par sortie dans Fleet View                   | 3   | PI-2 S4 | Must     | ⏳ Backlog |
+
+##### F-23.2 — Boot sans écran & mode dégradé (5 US, 15 SP)
+
+| US        | Feature | Description                                                                                           | SP  | Sprint  | Priorité | Statut     |
+| --------- | ------- | ----------------------------------------------------------------------------------------------------- | --- | ------- | -------- | ---------- |
+| US-23.2.1 | F-23.2  | Au boot, si aucun écran détecté : lancer les services (sync-agent, admin, server) sans kiosk Chromium | 3   | PI-2 S4 | Must     | ⏳ Backlog |
+| US-23.2.2 | F-23.2  | Alerte dashboard « Pi online, aucun écran connecté » avec état `headless`                             | 2   | PI-2 S4 | Must     | ⏳ Backlog |
+| US-23.2.3 | F-23.2  | Dès qu'un écran est branché (hotplug) → lancement kiosk automatique sur cet écran                     | 3   | PI-2 S5 | Should   | ⏳ Backlog |
+| US-23.2.4 | F-23.2  | API locale `/api/display/status` retournant le nombre d'écrans détectés + résolutions                 | 2   | PI-2 S5 | Should   | ⏳ Backlog |
+| US-23.2.5 | F-23.2  | Compteur uptime en mode headless visible dans Fleet View + historique                                 | 5   | PI-2 S6 | Could    | ⏳ Backlog |
+
+##### F-23.3 — Hotplug premier écran & priorité kiosk (4 US, 15 SP)
+
+| US        | Feature | Description                                                                                      | SP  | Sprint  | Priorité | Statut     |
+| --------- | ------- | ------------------------------------------------------------------------------------------------ | --- | ------- | -------- | ---------- |
+| US-23.3.1 | F-23.3  | Handler hotplug : détection premier écran → `xrandr --auto` + lancement kiosk Chromium <5s       | 5   | PI-2 S4 | Must     | ⏳ Backlog |
+| US-23.3.2 | F-23.3  | Si kiosk déjà lancé sur un écran et nouveau écran branché → ne pas interrompre le kiosk existant | 3   | PI-2 S5 | Should   | ⏳ Backlog |
+| US-23.3.3 | F-23.3  | Configurer résolution préférée par défaut (1080p) si l'EDID propose plusieurs modes              | 5   | PI-2 S5 | Should   | ⏳ Backlog |
+| US-23.3.4 | F-23.3  | Log structuré de tous les événements hotplug (timestamp, port, résolution, action) pour debug    | 2   | PI-2 S6 | Could    | ⏳ Backlog |
+
+##### F-23.4 — Transition dual-display zéro coupure (5 US, 24 SP)
+
+| US        | Feature | Description                                                                                          | SP  | Sprint  | Priorité | Statut     |
+| --------- | ------- | ---------------------------------------------------------------------------------------------------- | --- | ------- | -------- | ---------- |
+| US-23.4.1 | F-23.4  | Quand 2e écran branché : lancer Chromium secondary `--app=` + `xprop` sans couper le kiosk primaire  | 5   | PI-2 S4 | Must     | ⏳ Backlog |
+| US-23.4.2 | F-23.4  | Synchronisation Socket.IO master/slave : pause boucle slave + attente directives `tv-loop-state`     | 5   | PI-2 S4 | Must     | ⏳ Backlog |
+| US-23.4.3 | F-23.4  | Guard `displayType` sur les événements analytics du secondary (empêcher double-comptage impressions) | 3   | PI-2 S5 | Should   | ⏳ Backlog |
+| US-23.4.4 | F-23.4  | Résolution variante secondaire `resolveSecondaryVariant()` avant `play()` sur vidéo manuelle         | 3   | PI-2 S5 | Should   | ⏳ Backlog |
+| US-23.4.5 | F-23.4  | Tests E2E : transition mono→dual sans coupure vidéo ni flash blanc sur écran principal               | 8   | PI-2 S5 | Should   | ⏳ Backlog |
+
+##### F-23.5 — Résilience mauvaise prise HDMI (6 US, 29 SP)
+
+| US        | Feature | Description                                                                                          | SP  | Sprint  | Priorité | Statut     |
+| --------- | ------- | ---------------------------------------------------------------------------------------------------- | --- | ------- | -------- | ---------- |
+| US-23.5.1 | F-23.5  | Détection écran unique branché sur HDMI-2 au lieu de HDMI-1 → swap automatique `xrandr --output`     | 5   | PI-2 S4 | Must     | ⏳ Backlog |
+| US-23.5.2 | F-23.5  | Détection EDID fantôme (connecteur sans écran réel) via validation résolution + timing               | 5   | PI-2 S4 | Must     | ⏳ Backlog |
+| US-23.5.3 | F-23.5  | Alerte dashboard « écran branché sur HDMI-2, veuillez utiliser HDMI-1 » + notification push          | 3   | PI-2 S5 | Should   | ⏳ Backlog |
+| US-23.5.4 | F-23.5  | Retry automatique (3 tentatives, backoff 2s/5s/10s) si `xrandr --auto` échoue sur HDMI signal faible | 5   | PI-2 S5 | Should   | ⏳ Backlog |
+| US-23.5.5 | F-23.5  | Indicateur qualité signal HDMI (bon/dégradé/absent) dans Fleet View basé sur fréquence reconnexions  | 8   | PI-2 S6 | Could    | ⏳ Backlog |
+| US-23.5.6 | F-23.5  | Documentation guide « branchement HDMI correct » généré automatiquement par site (QR code)           | 3   | PI-2 S6 | Could    | ⏳ Backlog |
+
+##### F-23.6 — Failover perte écran principal en dual (5 US, 27 SP)
+
+| US        | Feature | Description                                                                                           | SP  | Sprint  | Priorité | Statut     |
+| --------- | ------- | ----------------------------------------------------------------------------------------------------- | --- | ------- | -------- | ---------- |
+| US-23.6.1 | F-23.6  | Détection perte HDMI-1 en mode dual → promotion écran secondaire en master (role swap)                | 8   | PI-2 S4 | Must     | ⏳ Backlog |
+| US-23.6.2 | F-23.6  | Notification dashboard « failover activé : HDMI-2 promu master » + alerte orange                      | 3   | PI-2 S5 | Should   | ⏳ Backlog |
+| US-23.6.3 | F-23.6  | Quand HDMI-1 rebranché : retour automatique au mode dual avec re-promotion HDMI-1 master              | 5   | PI-2 S5 | Should   | ⏳ Backlog |
+| US-23.6.4 | F-23.6  | Perte HDMI-2 uniquement → passage mode mono, arrêt Chromium secondary, reprise boucle master seul     | 3   | PI-2 S5 | Should   | ⏳ Backlog |
+| US-23.6.5 | F-23.6  | Historique événements failover consultable dashboard (date, port perdu, durée failover, restauration) | 8   | PI-2 S6 | Could    | ⏳ Backlog |
+
+##### F-23.7 — Accès navigateur PC sécurisé (5 US, 23 SP)
+
+| US        | Feature | Description                                                                                       | SP  | Sprint  | Priorité | Statut     |
+| --------- | ------- | ------------------------------------------------------------------------------------------------- | --- | ------- | -------- | ---------- |
+| US-23.7.1 | F-23.7  | Route `/tv` accessible via navigateur PC (même réseau) avec auth token temporaire (TTL 4h)        | 5   | PI-2 S4 | Must     | ⏳ Backlog |
+| US-23.7.2 | F-23.7  | Détection user-agent navigateur PC → layout responsive adapté (pas de rotation forcée, scrollbar) | 3   | PI-2 S5 | Should   | ⏳ Backlog |
+| US-23.7.3 | F-23.7  | Génération QR code temporaire dans admin local pour connexion rapide navigateur PC                | 5   | PI-2 S5 | Should   | ⏳ Backlog |
+| US-23.7.4 | F-23.7  | Guard : si navigateur PC connecté ET écran HDMI connecté → popup choix « afficher ici ou TV »     | 5   | PI-2 S6 | Could    | ⏳ Backlog |
+| US-23.7.5 | F-23.7  | Analytics : distinguer impressions « browser PC » vs « kiosk Pi » dans les rapports sponsors      | 5   | PI-2 S6 | Could    | ⏳ Backlog |
 
 ---
 
@@ -468,9 +541,9 @@
 | -------------------- | ------- | ---------- |
 | ✅ Done (production) | 178     | ~600+      |
 | ⏳ Backlog PI-1      | 19      | 79         |
-| ⏳ Backlog PI-2      | 15      | 78         |
+| ⏳ Backlog PI-2      | 48      | 224        |
 | ⏳ Backlog PI-3      | 9       | 73         |
-| **Total**            | **221** | **~830+**  |
+| **Total**            | **254** | **~976+**  |
 
 ### Par domaine (Done)
 
@@ -496,9 +569,9 @@
 | PI                    | Epics                                        | US     | SP      |
 | --------------------- | -------------------------------------------- | ------ | ------- |
 | PI-1 (Fév-Mars 2026)  | E-01, E-02, E-03, E-06 + reliquats E-07/E-10 | 19     | 79      |
-| PI-2 (Avr-Mai 2026)   | E-05, E-11, E-15, E-16, E-17, E-22           | 15     | 78      |
+| PI-2 (Avr-Mai 2026)   | E-05, E-11, E-15, E-16, E-17, E-22, E-23     | 48     | 224     |
 | PI-3 (Juin-Juil 2026) | E-12, E-13, E-14, E-18, E-19, E-20, E-21     | 9      | 73      |
-| **Total Futur**       | **16 Epics**                                 | **43** | **230** |
+| **Total Futur**       | **17 Epics**                                 | **76** | **376** |
 
 ---
 

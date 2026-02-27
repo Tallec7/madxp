@@ -17,6 +17,8 @@ LOG_DIR="/home/pi/neopro/logs"
 LOG_FILE="$LOG_DIR/kiosk-watchdog.log"
 KIOSK_STATUS_FILE="/home/pi/neopro/data/kiosk-status.json"
 CHECK_INTERVAL=30  # Vérifier toutes les 30 secondes
+HDMI_CHECK_INTERVAL=5  # Vérifier le flag HDMI udev toutes les 5 secondes
+HDMI_FLAG_FILE="/tmp/hdmi-changed"  # Écrit par neopro-hdmi-notify.sh (udev)
 
 # Créer le dossier de logs si nécessaire
 mkdir -p "$LOG_DIR" 2>/dev/null || true
@@ -65,6 +67,26 @@ print('true' if c.get('secondaryDisplayEnabled', c.get('ledEnabled')) else 'fals
     fi
 }
 
+# Détecter si HDMI 0 (écran principal) est connecté
+detect_hdmi0_status() {
+    local status_file=""
+    if [[ "$PI_MODEL" == "pi5" ]]; then
+        # Pi 5: DRM card1-HDMI-A-1
+        status_file="/sys/class/drm/card1-HDMI-A-1/status"
+    else
+        # Pi 4: DRM card0-HDMI-A-1 (premier HDMI = micro-HDMI gauche)
+        status_file="/sys/class/drm/card0-HDMI-A-1/status"
+    fi
+
+    if [ -f "$status_file" ]; then
+        local status
+        status=$(cat "$status_file" 2>/dev/null)
+        [[ "$status" == "connected" ]]
+        return $?
+    fi
+    return 1  # Non connecté ou fichier non trouvé
+}
+
 # Détecter si HDMI 1 (second écran) est connecté
 detect_hdmi1_status() {
     local status_file=""
@@ -83,6 +105,144 @@ detect_hdmi1_status() {
         return $?
     fi
     return 1  # Non connecté ou fichier non trouvé
+}
+
+# Détecte si l'écran est branché sur le mauvais port HDMI.
+# "Mauvais port" = HDMI-1 connecté ET HDMI-0 déconnecté ET le mode dual-display N'est PAS activé.
+# Dans ce cas, l'écran devrait être branché sur HDMI-0 (port principal).
+detect_wrong_port() {
+    # Si le mode dual-display est activé, les deux ports sont valides
+    if [[ "$SECONDARY_DISPLAY_ENABLED" == "true" ]]; then
+        return 1
+    fi
+    # Mauvais port = HDMI-1 connecté mais HDMI-0 déconnecté
+    if detect_hdmi1_status && ! detect_hdmi0_status; then
+        return 0  # Mauvais port détecté
+    fi
+    return 1
+}
+
+# E-23 US-23.2.3: LED pattern helper — signals HDMI status via onboard activity LED
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+set_led_pattern() {
+    local pattern="$1"
+    if [ -x "$SCRIPT_DIR/neopro-led-status.sh" ]; then
+        "$SCRIPT_DIR/neopro-led-status.sh" "$pattern" 2>/dev/null || true
+    fi
+}
+
+# E-23 US-23.2.4: Buzzer helper — audio alert via PWM buzzer on GPIO 18
+buzzer_beep() {
+    local pattern="$1"
+    if [ -x "$SCRIPT_DIR/neopro-buzzer.sh" ]; then
+        "$SCRIPT_DIR/neopro-buzzer.sh" "$pattern" 2>/dev/null &
+    fi
+}
+
+# Flags pour le timer auto-swap et recovery (E-23 US-23.5.4 + US-23.5.5)
+WRONG_PORT_DETECTED_AT=0
+HDMI_SWAPPED=0
+HDMI_SWAP_DELAY=10  # seconds before auto-swap
+
+# E-23 US-23.5.4: Auto-swap HDMI-1 as primary when wrong port detected for HDMI_SWAP_DELAY seconds.
+# Uses xrandr to make HDMI-A-2 (HDMI-1) the primary output and reconfigures Chromium.
+hdmi_auto_swap() {
+    log "🔄 AUTO-SWAP: basculement de HDMI-1 en sortie principale"
+
+    # Identify the HDMI-1 xrandr output name (Pi 5: HDMI-A-2, Pi 4: HDMI-A-2)
+    local hdmi1_output
+    hdmi1_output=$(DISPLAY=:0 xrandr --query 2>/dev/null | grep -E '^HDMI.* connected' | grep -v '+0+0' | head -1 | awk '{print $1}')
+    if [[ -z "$hdmi1_output" ]]; then
+        # Fallback: find any connected HDMI output
+        hdmi1_output=$(DISPLAY=:0 xrandr --query 2>/dev/null | grep -E '^HDMI.* connected' | head -1 | awk '{print $1}')
+    fi
+
+    if [[ -z "$hdmi1_output" ]]; then
+        log "⚠️ AUTO-SWAP: aucune sortie HDMI connectée trouvée via xrandr"
+        return 1
+    fi
+
+    # Make HDMI-1 the primary and only output
+    DISPLAY=:0 xrandr --output "$hdmi1_output" --primary --auto 2>/dev/null || true
+    sleep 1
+
+    # Read the new resolution
+    local geom
+    geom=$(DISPLAY=:0 xrandr --query 2>/dev/null | grep -E "^${hdmi1_output} connected" | grep -oP '[0-9]+x[0-9]+\+[0-9]+\+[0-9]+')
+    local swap_width swap_height
+    swap_width=$(echo "$geom" | grep -oP '^[0-9]+')
+    swap_height=$(echo "$geom" | grep -oP '(?<=x)[0-9]+(?=\+)')
+    swap_width=${swap_width:-1920}
+    swap_height=${swap_height:-1080}
+
+    # Resize the existing Chromium window to fit the new primary
+    local wid
+    wid=$(DISPLAY=:0 xdotool search --name "Neopro" 2>/dev/null | head -1)
+    if [[ -z "$wid" ]]; then
+        wid=$(DISPLAY=:0 xdotool search --class "chromium" 2>/dev/null | head -1)
+    fi
+    if [[ -n "$wid" ]]; then
+        DISPLAY=:0 xdotool windowmove "$wid" 0 0 2>/dev/null
+        DISPLAY=:0 xdotool windowsize "$wid" "$swap_width" "$swap_height" 2>/dev/null
+        log "✓ AUTO-SWAP: Chromium redimensionné ${swap_width}x${swap_height} sur $hdmi1_output"
+    else
+        log "⚠️ AUTO-SWAP: fenêtre Chromium introuvable, restart nécessaire"
+        cleanup_chromium
+        start_chromium
+    fi
+
+    HDMI_SWAPPED=1
+    echo "hdmi_swapped" > /tmp/hdmi-swapped
+    rm -f /tmp/hdmi-wrong-port
+    log "✓ AUTO-SWAP: HDMI-1 est maintenant le port principal"
+}
+
+# E-23 US-23.5.5: Reverse the HDMI auto-swap when HDMI-0 becomes available again.
+# Restores HDMI-0 as primary and reconfigures Chromium.
+hdmi_reverse_swap() {
+    log "🔄 REVERSE-SWAP: retour de HDMI-0 comme sortie principale"
+
+    # Identify the HDMI-0 xrandr output name
+    local hdmi0_output
+    hdmi0_output=$(DISPLAY=:0 xrandr --query 2>/dev/null | grep -E '^HDMI.* connected' | head -1 | awk '{print $1}')
+
+    if [[ -z "$hdmi0_output" ]]; then
+        log "⚠️ REVERSE-SWAP: HDMI-0 non trouvé via xrandr"
+        return 1
+    fi
+
+    # Make HDMI-0 primary again
+    DISPLAY=:0 xrandr --output "$hdmi0_output" --primary --auto 2>/dev/null || true
+    sleep 1
+
+    # Read new resolution
+    local geom
+    geom=$(DISPLAY=:0 xrandr --query 2>/dev/null | grep -E "^${hdmi0_output} connected" | grep -oP '[0-9]+x[0-9]+\+[0-9]+\+[0-9]+')
+    local restore_width restore_height
+    restore_width=$(echo "$geom" | grep -oP '^[0-9]+')
+    restore_height=$(echo "$geom" | grep -oP '(?<=x)[0-9]+(?=\+)')
+    restore_width=${restore_width:-1920}
+    restore_height=${restore_height:-1080}
+
+    # Resize Chromium back to HDMI-0
+    local wid
+    wid=$(DISPLAY=:0 xdotool search --name "Neopro" 2>/dev/null | head -1)
+    if [[ -z "$wid" ]]; then
+        wid=$(DISPLAY=:0 xdotool search --class "chromium" 2>/dev/null | head -1)
+    fi
+    if [[ -n "$wid" ]]; then
+        DISPLAY=:0 xdotool windowmove "$wid" 0 0 2>/dev/null
+        DISPLAY=:0 xdotool windowsize "$wid" "$restore_width" "$restore_height" 2>/dev/null
+        log "✓ REVERSE-SWAP: Chromium repositionné ${restore_width}x${restore_height} sur $hdmi0_output"
+    else
+        log "⚠️ REVERSE-SWAP: fenêtre Chromium introuvable, restart nécessaire"
+        cleanup_chromium
+        start_chromium
+    fi
+
+    HDMI_SWAPPED=0
+    rm -f /tmp/hdmi-swapped
+    log "✓ REVERSE-SWAP: HDMI-0 est à nouveau le port principal"
 }
 
 log() {
@@ -114,10 +274,12 @@ write_kiosk_status() {
     local reason="${2:-}"
     local now=$(date -u +"%Y-%m-%dT%H:%M:%S.000Z")
     local secondary_alive=$(pgrep -f "chromium.*$CHROMIUM_SECONDARY_URL" > /dev/null 2>&1 && echo "true" || echo "false")
+    local hdmi0_status="unknown"
     local hdmi1_status="unknown"
+    detect_hdmi0_status && hdmi0_status="connected" || hdmi0_status="disconnected"
     detect_hdmi1_status && hdmi1_status="connected" || hdmi1_status="disconnected"
     cat > "$KIOSK_STATUS_FILE" 2>/dev/null <<EOF
-{"status":"${status}","chromiumAlive":$(pgrep -f "chromium.*$CHROMIUM_URL" > /dev/null 2>&1 && echo "true" || echo "false"),"restartCount":${#crash_times[@]},"lastEvent":"${now}","reason":"${reason}","pid":${CHROMIUM_PID:-0},"secondaryDisplayEnabled":${SECONDARY_DISPLAY_ENABLED},"secondaryChromiumAlive":${secondary_alive},"hdmi1Status":"${hdmi1_status}"}
+{"status":"${status}","chromiumAlive":$(pgrep -f "chromium.*$CHROMIUM_URL" > /dev/null 2>&1 && echo "true" || echo "false"),"restartCount":${#crash_times[@]},"lastEvent":"${now}","reason":"${reason}","pid":${CHROMIUM_PID:-0},"secondaryDisplayEnabled":${SECONDARY_DISPLAY_ENABLED},"secondaryChromiumAlive":${secondary_alive},"hdmi0Status":"${hdmi0_status}","hdmi1Status":"${hdmi1_status}","dualDisplayActive":${DUAL_DISPLAY_ACTIVE:-false},"hdmiFailoverActive":${HDMI_FAILOVER_ACTIVE:-false}}
 EOF
 }
 
@@ -177,6 +339,99 @@ cleanup_chromium() {
     log "✓ Nettoyage terminé"
 }
 
+# Arrêter UNIQUEMENT le Chromium primaire (PID-targeted, pour failover dual-display).
+# Utilise la même séquence SIGTERM→5s→SIGKILL que cleanup_chromium() pour un arrêt GPU-safe.
+# Contrairement à cleanup_chromium(), ne touche PAS au Chromium secondaire.
+stop_chromium_primary() {
+    if (( CHROMIUM_PID > 0 )) && kill -0 "$CHROMIUM_PID" 2>/dev/null; then
+        log "🔴 Arrêt du Chromium primaire fantôme (PID: $CHROMIUM_PID)..."
+
+        # Phase 1: SIGTERM — laisse Chromium libérer les ressources GPU V3D
+        kill -TERM "$CHROMIUM_PID" 2>/dev/null || true
+        local wait_count=0
+        while kill -0 "$CHROMIUM_PID" 2>/dev/null && (( wait_count < 10 )); do
+            sleep 0.5
+            (( wait_count++ ))
+        done
+
+        # Phase 2: SIGKILL si toujours en vie
+        if kill -0 "$CHROMIUM_PID" 2>/dev/null; then
+            log "⚠️ Chromium primaire n'a pas répondu au SIGTERM, SIGKILL..."
+            kill -9 "$CHROMIUM_PID" 2>/dev/null || true
+            sleep 1
+        fi
+
+        CHROMIUM_PID=0
+        # Nettoyer le user-data-dir primaire + shm orphelins
+        rm -rf /tmp/kiosk-primary 2>/dev/null || true
+        rm -rf /dev/shm/.org.chromium.* 2>/dev/null || true
+        sync
+        log "✓ Chromium primaire arrêté (GPU cleanup OK)"
+    fi
+}
+
+# E-23 US-23.6.2: Failover — promouvoir le secondaire en mode TV complet quand HDMI-0 est perdu.
+# 1. Arrêter le Chromium primaire (fantôme sur HDMI-0 déconnecté)
+# 2. Reconfigurer xrandr: HDMI-1 devient primary
+# 3. Redimensionner le Chromium secondaire en plein écran
+# 4. Écrire le flag failover pour le server Socket.IO
+activate_hdmi_failover() {
+    log "🔄 FAILOVER: HDMI-0 perdu pendant dual-display, promotion du secondaire..."
+
+    # Phase 1: Arrêter le primaire fantôme AVANT de reconfigurer (GPU cleanup critique)
+    stop_chromium_primary
+
+    # Phase 2: Reconfigurer xrandr — HDMI-1 devient le seul écran
+    export DISPLAY=:0
+    export XAUTHORITY=/home/pi/.Xauthority
+    local secondary_output
+    secondary_output=$(xrandr --query 2>/dev/null | grep -E "^HDMI.* connected" | head -1 | awk '{print $1}')
+    if [[ -n "$secondary_output" ]]; then
+        xrandr --output "$secondary_output" --primary 2>/dev/null || true
+        log "✓ xrandr: $secondary_output promu en primary"
+    fi
+
+    # Phase 3: Redimensionner le Chromium secondaire en plein écran sur HDMI-1
+    if (( SECONDARY_CHROMIUM_PID > 0 )) && kill -0 "$SECONDARY_CHROMIUM_PID" 2>/dev/null; then
+        local wid
+        wid=$(DISPLAY=:0 xdotool search --pid "$SECONDARY_CHROMIUM_PID" 2>/dev/null | head -1)
+        if [[ -n "$wid" ]]; then
+            DISPLAY=:0 xdotool windowmove "$wid" 0 0 2>/dev/null
+            DISPLAY=:0 xdotool windowsize "$wid" "${SECONDARY_SCREEN_WIDTH:-1920}" "${SECONDARY_SCREEN_HEIGHT:-1080}" 2>/dev/null
+            DISPLAY=:0 xdotool windowactivate "$wid" 2>/dev/null
+            log "✓ Chromium secondaire promu en plein écran principal"
+        fi
+    fi
+
+    # Phase 4: Écrire le flag failover pour le server Socket.IO
+    echo "failover_active" > /tmp/hdmi-failover-active
+
+    HDMI_FAILOVER_ACTIVE=true
+    DUAL_DISPLAY_ACTIVE=false
+    log "✓ FAILOVER activé: secondaire = TV mode complet"
+}
+
+# E-23 US-23.6.2: Retour du failover — HDMI-0 est de retour, restaurer le dual-display.
+# 1. Relancer le Chromium primaire sur HDMI-0
+# 2. Reconfigurer xrandr dual-display
+# 3. Repositionner le Chromium secondaire
+# 4. Supprimer le flag failover
+deactivate_hdmi_failover() {
+    log "🔄 RETOUR FAILOVER: HDMI-0 de retour, restauration du dual-display..."
+
+    HDMI_FAILOVER_ACTIVE=false
+    rm -f /tmp/hdmi-failover-active
+
+    # Le primaire a été arrêté pendant le failover.
+    # Au prochain tour de boucle, le watchdog verra CHROMIUM_PID=0 et relancera start_chromium().
+    # Le check_secondary_chromium() verra HDMI-1 connecté + SECONDARY_DISPLAY_ENABLED → relancera le dual.
+    # Pas besoin de tout relancer ici, le watchdog s'en occupe naturellement.
+    log "✓ Flag failover supprimé — le watchdog relancera le primaire au prochain cycle"
+}
+
+# Flag failover
+HDMI_FAILOVER_ACTIVE=false
+
 # Détecte le chemin de Chromium (varie selon la version de Raspberry Pi OS)
 detect_chromium_path() {
     if [ -x "/usr/bin/chromium" ]; then
@@ -203,26 +458,21 @@ start_chromium() {
     local disable_features="TranslateUI,MediaRouter,XdgDesktopPortal"
 
     # Flags communs à tous les modèles
-    # En mode dual-display, on utilise --app=URL au lieu de --kiosk pour le primaire.
-    # --kiosk prend TOUT le bureau X11 virtuel (les deux écrans combinés) et masque
-    # la fenêtre du Chromium secondaire. --app= crée une fenêtre sans barre d'adresse
-    # qu'on force ensuite en plein écran par-moniteur via xprop + xdotool windowsize.
+    # TOUJOURS utiliser --app=URL (jamais --kiosk). Raisons :
+    # 1. --kiosk prend TOUT le bureau X11 virtuel (les deux écrans combinés)
+    #    et masque la fenêtre du Chromium secondaire en dual-display
+    # 2. --app= crée une fenêtre sans barre d'adresse qu'on redimensionne
+    #    au plein écran par-moniteur via xprop + xdotool windowsize
+    # 3. En mode --app=, le passage single↔dual ne nécessite PAS de restart Chromium,
+    #    juste un xdotool windowsize (transition zero-blackout)
     # NOTE: F11 ne marche PAS pour le plein écran par-moniteur — il prend aussi tout
     # le bureau X11 virtuel (même comportement que --kiosk). La seule solution fiable
     # est xprop _MOTIF_WM_HINTS (supprimer les décorations) + xdotool windowsize.
-    local common_flags=()
-    if [[ "$DUAL_DISPLAY_ACTIVE" == "true" ]]; then
-        log "📺 Mode dual-display: primaire en --app= (pas --kiosk, qui couvrirait les 2 écrans)"
-        common_flags=(
-            --app="${CHROMIUM_URL}"
-            --window-position=0,0
-            --window-size=${PRIMARY_SCREEN_WIDTH:-1920},${PRIMARY_SCREEN_HEIGHT:-1080}
-        )
-    else
-        common_flags=(
-            --kiosk
-        )
-    fi
+    local common_flags=(
+        --app="${CHROMIUM_URL}"
+        --window-position=0,0
+        --window-size=${PRIMARY_SCREEN_WIDTH:-1920},${PRIMARY_SCREEN_HEIGHT:-1080}
+    )
     common_flags+=(
         --autoplay-policy=no-user-gesture-required
         --noerrdialogs
@@ -289,42 +539,37 @@ start_chromium() {
         )
     fi
 
-    # En mode dual-display, l'URL est dans --app=, pas en argument positionnel
-    if [[ "$DUAL_DISPLAY_ACTIVE" == "true" ]]; then
-        "$CHROMIUM_BIN" "${common_flags[@]}" "${gpu_flags[@]}" --disable-features="$disable_features" &
-    else
-        "$CHROMIUM_BIN" "${common_flags[@]}" "${gpu_flags[@]}" --disable-features="$disable_features" "$CHROMIUM_URL" &
-    fi
+    # L'URL est toujours dans --app=, pas en argument positionnel
+    "$CHROMIUM_BIN" "${common_flags[@]}" "${gpu_flags[@]}" --disable-features="$disable_features" &
 
     CHROMIUM_PID=$!
     log "✓ Chromium lancé (PID: $CHROMIUM_PID)"
     write_kiosk_status "running"
 
-    # En mode dual-display, forcer le plein écran par-moniteur sur le moniteur primaire.
+    # Forcer le plein écran par-moniteur sur le moniteur primaire via xprop + xdotool.
+    # Toujours exécuté car --app= est le mode par défaut (plus de --kiosk).
     # On NE peut PAS utiliser F11 : Chromium F11 = fullscreen sur TOUT le bureau X11 virtuel
     # (= les deux écrans combinés, ex: 5760x2160), pas sur un seul moniteur.
     # Solution : supprimer les décorations de fenêtre (title bar) via xprop _MOTIF_WM_HINTS
     # puis forcer la taille exacte du moniteur primaire via xdotool windowmove/windowsize.
-    if [[ "$DUAL_DISPLAY_ACTIVE" == "true" ]]; then
-        (
-            sleep 4
-            local wid
-            wid=$(DISPLAY=:0 xdotool search --pid $CHROMIUM_PID 2>/dev/null | head -1)
-            if [[ -n "$wid" ]]; then
-                # 1. Supprimer les décorations (title bar, bordures)
-                DISPLAY=:0 xprop -id "$wid" -f _MOTIF_WM_HINTS 32c -set _MOTIF_WM_HINTS "0x2, 0x0, 0x0, 0x0, 0x0" 2>/dev/null
-                sleep 0.3
-                # 2. Positionner et redimensionner exactement sur le moniteur primaire
-                DISPLAY=:0 xdotool windowmove "$wid" 0 0 2>/dev/null
-                DISPLAY=:0 xdotool windowsize "$wid" "${PRIMARY_SCREEN_WIDTH:-1920}" "${PRIMARY_SCREEN_HEIGHT:-1080}" 2>/dev/null
-                # 3. S'assurer que la fenêtre est au premier plan
-                DISPLAY=:0 xdotool windowactivate "$wid" 2>/dev/null
-                log "✓ Chromium primaire plein écran par-moniteur (xprop+xdotool, WID: $wid, ${PRIMARY_SCREEN_WIDTH:-1920}x${PRIMARY_SCREEN_HEIGHT:-1080})"
-            else
-                log "⚠️ Impossible de trouver la fenêtre primaire pour xprop/xdotool"
-            fi
-        ) &
-    fi
+    (
+        sleep 4
+        local wid
+        wid=$(DISPLAY=:0 xdotool search --pid $CHROMIUM_PID 2>/dev/null | head -1)
+        if [[ -n "$wid" ]]; then
+            # 1. Supprimer les décorations (title bar, bordures)
+            DISPLAY=:0 xprop -id "$wid" -f _MOTIF_WM_HINTS 32c -set _MOTIF_WM_HINTS "0x2, 0x0, 0x0, 0x0, 0x0" 2>/dev/null
+            sleep 0.3
+            # 2. Positionner et redimensionner exactement sur le moniteur primaire
+            DISPLAY=:0 xdotool windowmove "$wid" 0 0 2>/dev/null
+            DISPLAY=:0 xdotool windowsize "$wid" "${PRIMARY_SCREEN_WIDTH:-1920}" "${PRIMARY_SCREEN_HEIGHT:-1080}" 2>/dev/null
+            # 3. S'assurer que la fenêtre est au premier plan
+            DISPLAY=:0 xdotool windowactivate "$wid" 2>/dev/null
+            log "✓ Chromium primaire plein écran par-moniteur (xprop+xdotool, WID: $wid, ${PRIMARY_SCREEN_WIDTH:-1920}x${PRIMARY_SCREEN_HEIGHT:-1080})"
+        else
+            log "⚠️ Impossible de trouver la fenêtre primaire pour xprop/xdotool"
+        fi
+    ) &
 
     # Masquer le curseur souris — ceinture et bretelles
     # unclutter-xfixes (autostart LXDE) est la méthode principale,
@@ -569,21 +814,46 @@ check_secondary_chromium() {
         return
     fi
 
+    # E-23 US-23.6.2: Failover — si HDMI-0 perdu pendant dual-display et HDMI-1 encore connecté
+    if [[ "$DUAL_DISPLAY_ACTIVE" == "true" ]] && ! detect_hdmi0_status && detect_hdmi1_status; then
+        log "⚠️ HDMI-0 perdu pendant dual-display, HDMI-1 encore connecté"
+        activate_hdmi_failover
+        return
+    fi
+
+    # E-23 US-23.6.2: Retour failover — HDMI-0 de retour pendant le failover
+    if [[ "$HDMI_FAILOVER_ACTIVE" == "true" ]] && detect_hdmi0_status; then
+        deactivate_hdmi_failover
+        return
+    fi
+
+    # Si failover actif, ne pas gérer le dual-display normalement
+    if [[ "$HDMI_FAILOVER_ACTIVE" == "true" ]]; then
+        return
+    fi
+
     # Écran secondaire activé → vérifier HDMI 1
     if detect_hdmi1_status; then
         # HDMI 1 connecté → vérifier que le Chromium secondaire tourne
         if (( SECONDARY_CHROMIUM_PID == 0 )) || ! kill -0 "$SECONDARY_CHROMIUM_PID" 2>/dev/null; then
             log "HDMI 1 connecté + écran secondaire activé → lancement du Chromium secondaire"
 
-            # Si le dual-display n'était pas actif avant (ex: HDMI branché à chaud),
-            # il faut relancer le primaire en --app= mode pour ne pas couvrir les 2 écrans
+            # Le primaire est toujours en --app= mode, donc PAS besoin de le relancer.
+            # On configure juste xrandr et on redimensionne via xdotool (zero-blackout).
             if [[ "$DUAL_DISPLAY_ACTIVE" != "true" ]]; then
                 DUAL_DISPLAY_ACTIVE=true
                 setup_secondary_xrandr || true
-                log "📺 Passage en dual-display: relance du primaire en mode --app= (pas --kiosk)"
-                cleanup_chromium
-                sleep 1
-                start_chromium
+                log "📺 Passage en dual-display: redimensionnement du primaire (sans restart)"
+                # Redimensionner le primaire pour la nouvelle résolution (si elle a changé)
+                if (( CHROMIUM_PID > 0 )) && kill -0 "$CHROMIUM_PID" 2>/dev/null; then
+                    local wid
+                    wid=$(DISPLAY=:0 xdotool search --pid "$CHROMIUM_PID" 2>/dev/null | head -1)
+                    if [[ -n "$wid" ]]; then
+                        DISPLAY=:0 xdotool windowmove "$wid" 0 0 2>/dev/null
+                        DISPLAY=:0 xdotool windowsize "$wid" "${PRIMARY_SCREEN_WIDTH:-1920}" "${PRIMARY_SCREEN_HEIGHT:-1080}" 2>/dev/null
+                        log "✓ Primaire redimensionné pour dual-display (${PRIMARY_SCREEN_WIDTH:-1920}x${PRIMARY_SCREEN_HEIGHT:-1080})"
+                    fi
+                fi
             fi
 
             start_chromium_secondary
@@ -597,10 +867,17 @@ check_secondary_chromium() {
         # Repasser en mode single-display si nécessaire
         if [[ "$DUAL_DISPLAY_ACTIVE" == "true" ]]; then
             DUAL_DISPLAY_ACTIVE=false
-            log "📺 Retour en single-display: relance du primaire en mode --kiosk"
-            cleanup_chromium
-            sleep 1
-            start_chromium
+            log "📺 Retour en single-display: redimensionnement du primaire (sans restart)"
+            # Le primaire est déjà en --app= mode, on le redimensionne en plein écran
+            if (( CHROMIUM_PID > 0 )) && kill -0 "$CHROMIUM_PID" 2>/dev/null; then
+                local wid
+                wid=$(DISPLAY=:0 xdotool search --pid "$CHROMIUM_PID" 2>/dev/null | head -1)
+                if [[ -n "$wid" ]]; then
+                    DISPLAY=:0 xdotool windowmove "$wid" 0 0 2>/dev/null
+                    DISPLAY=:0 xdotool windowsize "$wid" "${PRIMARY_SCREEN_WIDTH:-1920}" "${PRIMARY_SCREEN_HEIGHT:-1080}" 2>/dev/null
+                    log "✓ Primaire redimensionné pour single-display (${PRIMARY_SCREEN_WIDTH:-1920}x${PRIMARY_SCREEN_HEIGHT:-1080})"
+                fi
+            fi
         fi
     fi
 }
@@ -728,8 +1005,8 @@ main() {
     fi
 
     # Pré-check dual-display AVANT de lancer le primaire.
-    # Si le second écran est activé et HDMI 1 connecté, le primaire doit utiliser
-    # --app=URL (pas --kiosk) pour ne pas couvrir les deux écrans.
+    # Le primaire utilise toujours --app=URL, mais on configure xrandr en amont
+    # si un second écran est détecté pour connaître les résolutions des deux moniteurs.
     read_secondary_display_enabled
     if [[ "$SECONDARY_DISPLAY_ENABLED" == "true" ]] && detect_hdmi1_status; then
         DUAL_DISPLAY_ACTIVE=true
@@ -774,7 +1051,21 @@ main() {
     fi
 
     while true; do
-        sleep "$CHECK_INTERVAL"
+        # Attente interruptible: au lieu de dormir CHECK_INTERVAL d'un bloc,
+        # on dort par tranches de HDMI_CHECK_INTERVAL secondes.
+        # Si le flag udev HDMI apparaît, on sort immédiatement pour traiter.
+        local waited=0
+        local hdmi_triggered=false
+        while (( waited < CHECK_INTERVAL )); do
+            sleep "$HDMI_CHECK_INTERVAL"
+            waited=$((waited + HDMI_CHECK_INTERVAL))
+            if [ -f "$HDMI_FLAG_FILE" ]; then
+                rm -f "$HDMI_FLAG_FILE"
+                hdmi_triggered=true
+                log "⚡ HDMI hotplug détecté (udev) — vérification immédiate"
+                break
+            fi
+        done
 
         local need_restart=false
         local reason=""
@@ -852,6 +1143,56 @@ main() {
 
         # Vérification écran secondaire: lancer/arrêter selon config + HDMI 1
         check_secondary_chromium
+
+        # Détection mauvais port HDMI (écran sur HDMI-1 au lieu de HDMI-0)
+        if detect_wrong_port; then
+            if (( WRONG_PORT_DETECTED_AT == 0 )); then
+                WRONG_PORT_DETECTED_AT=$(date +%s)
+                log "⚠️ MAUVAIS PORT HDMI: écran détecté sur HDMI-1 mais pas sur HDMI-0"
+                log "   → L'écran devrait être branché sur le port HDMI principal (HDMI-0)"
+                # Écrire le flag pour le server (alerting)
+                echo "wrong_port" > /tmp/hdmi-wrong-port
+                # E-23 US-23.2.3: LED fast blink pour mauvais port
+                set_led_pattern "fast-blink"
+                # E-23 US-23.2.4: Buzzer double beep pour mauvais port
+                buzzer_beep "double"
+            fi
+
+            # E-23 US-23.5.4: Auto-swap après HDMI_SWAP_DELAY secondes
+            if (( WRONG_PORT_DETECTED_AT > 0 && HDMI_SWAPPED == 0 )); then
+                local now_swap=$(date +%s)
+                local elapsed=$(( now_swap - WRONG_PORT_DETECTED_AT ))
+                if (( elapsed >= HDMI_SWAP_DELAY )); then
+                    hdmi_auto_swap
+                fi
+            fi
+        else
+            if (( WRONG_PORT_DETECTED_AT > 0 )); then
+                WRONG_PORT_DETECTED_AT=0
+                rm -f /tmp/hdmi-wrong-port
+                log "✓ Port HDMI correct (ou dual-display activé)"
+                # E-23 US-23.2.3: Restore normal LED
+                set_led_pattern "heartbeat"
+            fi
+
+            # E-23 US-23.5.5: Reverse swap quand HDMI-0 revient
+            if (( HDMI_SWAPPED == 1 )) && detect_hdmi0_status; then
+                log "📺 HDMI-0 redétecté pendant auto-swap — lancement du retour"
+                hdmi_reverse_swap
+            fi
+        fi
+
+        # E-23 US-23.2.3 + US-23.2.4: LED slow blink + buzzer triple quand aucun écran
+        if ! detect_hdmi0_status && ! detect_hdmi1_status; then
+            set_led_pattern "slow-blink"
+            # Only beep once on first detection (avoid repeated beeps every loop iteration)
+            if [ ! -f /tmp/hdmi-no-screen-beeped ]; then
+                buzzer_beep "triple"
+                touch /tmp/hdmi-no-screen-beeped
+            fi
+        else
+            rm -f /tmp/hdmi-no-screen-beeped
+        fi
 
         # Mettre à jour le statut kiosk
         write_kiosk_status "running"

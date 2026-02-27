@@ -986,6 +986,10 @@ CREATE INDEX IF NOT EXISTS idx_campaigns_dates ON campaigns(start_date, end_date
 ALTER TABLE video_plays ADD COLUMN IF NOT EXISTS campaign_id UUID REFERENCES campaigns(id) ON DELETE SET NULL;
 CREATE INDEX IF NOT EXISTS idx_video_plays_campaign ON video_plays(campaign_id) WHERE campaign_id IS NOT NULL;
 
+-- E-23 US-23.7.4: Playback source (kiosk=Pi, pc=browser)
+ALTER TABLE video_plays ADD COLUMN IF NOT EXISTS source VARCHAR(10) DEFAULT NULL;
+CREATE INDEX IF NOT EXISTS idx_video_plays_source ON video_plays (source) WHERE source IS NOT NULL;
+
 -- =============================================================================
 -- SCHEDULED REPORTS (PI-2 : E-16 Rapports Automatiques)
 -- =============================================================================

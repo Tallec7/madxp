@@ -465,6 +465,51 @@ class HdmiService {
     this._cache.status = status;
     this._cache.lastCheck = now;
   }
+
+  /**
+   * Read both HDMI port connection status directly from DRM sysfs.
+   * This is a lightweight check (no CEC) — just connected/disconnected.
+   * Used for HDMI status monitoring and alerting (E-23).
+   *
+   * @returns {{ hdmi0: boolean, hdmi1: boolean }}
+   */
+  getBothPortsStatus() {
+    const result = { hdmi0: false, hdmi1: false };
+
+    // Detect Pi model (Pi 5 uses card1, Pi 4 uses card0)
+    let card = 'card0';
+    try {
+      if (fs.existsSync('/sys/class/drm/card1-HDMI-A-1')) {
+        card = 'card1';
+      }
+    } catch {
+      // Fallback to card0
+    }
+
+    // HDMI-0 (primary port): HDMI-A-1 on both Pi 4 and Pi 5
+    try {
+      const hdmi0Path = `/sys/class/drm/${card}-HDMI-A-1/status`;
+      if (fs.existsSync(hdmi0Path)) {
+        const status = fs.readFileSync(hdmi0Path, 'utf8').trim();
+        result.hdmi0 = status === 'connected';
+      }
+    } catch {
+      // Not available
+    }
+
+    // HDMI-1 (secondary port): HDMI-A-2
+    try {
+      const hdmi1Path = `/sys/class/drm/${card}-HDMI-A-2/status`;
+      if (fs.existsSync(hdmi1Path)) {
+        const status = fs.readFileSync(hdmi1Path, 'utf8').trim();
+        result.hdmi1 = status === 'connected';
+      }
+    } catch {
+      // Not available
+    }
+
+    return result;
+  }
 }
 
 module.exports = HdmiService;

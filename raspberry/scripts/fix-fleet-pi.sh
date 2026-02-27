@@ -19,6 +19,7 @@
 #   5. Vide le cache Chromium (erreurs SharedImage / AllocateRingBuffer)
 #   6. Force le flush des buffers bloqués (analytics + sponsors)
 #   7. Vérifie gpu_mem dans la config boot (Pi 5 : dynamique CMA)
+#   8. Vérifie hdmi_force_hotplug sur les 2 ports HDMI (E-23)
 #
 # Compatible : Pi 4, Pi 5, Ethernet, WiFi
 # Temps estimé : ~30 secondes
@@ -409,7 +410,7 @@ fi
 # 7. Vérification gpu_mem (config boot)
 # =============================================================================
 
-log_step "7/7 — Vérification gpu_mem"
+log_step "7/8 — Vérification gpu_mem"
 
 if [ "$IS_PI5" = true ]; then
     log_ok "Pi 5 détecté — gpu_mem est dynamique (CMA), pas besoin de configurer"
@@ -464,6 +465,43 @@ else
 fi
 
 # =============================================================================
+# 8. Vérification hdmi_force_hotplug (E-23 Résilience HDMI)
+# =============================================================================
+
+log_step "8/8 — Vérification hdmi_force_hotplug"
+
+BOOT_CONFIG_HDMI=""
+for cfg in /boot/firmware/config.txt /boot/config.txt; do
+    if [ -f "$cfg" ]; then
+        BOOT_CONFIG_HDMI="$cfg"
+        break
+    fi
+done
+
+if [ -n "$BOOT_CONFIG_HDMI" ]; then
+    for port in 0 1; do
+        key="hdmi_force_hotplug:${port}"
+        if grep -q "^${key}=1" "$BOOT_CONFIG_HDMI" 2>/dev/null; then
+            log_ok "${key}=1 déjà configuré"
+        elif grep -q "^${key}=" "$BOOT_CONFIG_HDMI" 2>/dev/null; then
+            sed -i "s/^${key}=.*/${key}=1/" "$BOOT_CONFIG_HDMI"
+            log_ok "${key} mis à jour à 1"
+            CHANGES=$((CHANGES + 1))
+            NEEDS_REBOOT=true
+        else
+            echo "" >> "$BOOT_CONFIG_HDMI"
+            echo "# Force HDMI port ${port} hotplug (Neopro E-23)" >> "$BOOT_CONFIG_HDMI"
+            echo "${key}=1" >> "$BOOT_CONFIG_HDMI"
+            log_ok "${key}=1 ajouté à $BOOT_CONFIG_HDMI"
+            CHANGES=$((CHANGES + 1))
+            NEEDS_REBOOT=true
+        fi
+    done
+else
+    log_warn "Fichier config.txt non trouvé"
+fi
+
+# =============================================================================
 # Résumé
 # =============================================================================
 
@@ -483,6 +521,7 @@ if [ "$NEEDS_REBOOT" = true ]; then
     echo -e "  ${YELLOW}  - Changement TKIP → CCMP sur le hotspot${NC}"
     echo -e "  ${YELLOW}  - Nettoyage cache GPU Chromium${NC}"
     [ "$IS_PI5" = false ] && echo -e "  ${YELLOW}  - Configuration gpu_mem${NC}"
+    echo -e "  ${YELLOW}  - Configuration hdmi_force_hotplug${NC}"
     echo ""
     read -p "  Redémarrer maintenant ? (o/N) " -n 1 -r
     echo ""

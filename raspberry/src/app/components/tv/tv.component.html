@@ -10,6 +10,40 @@
   "
 ></app-license-block>
 
+<!-- E-23 US-23.5.3: Wrong HDMI port detected — help screen with countdown (z-index 50) -->
+<app-wrong-port-screen *ngIf="wrongPort && !isLicenseBlocked"></app-wrong-port-screen>
+
+<!-- E-23 US-23.2.1: Splash screen quand aucun écran connecté (z-index 50) -->
+<app-waiting-screen
+  *ngIf="!hdmiConnected && !wrongPort && !isLicenseBlocked"
+  [message]="
+    displayType === 'secondary'
+      ? 'En attente de l\u2019\u00e9cran secondaire\u2026'
+      : 'En attente d\u2019\u00e9cran\u2026'
+  "
+  [subMessage]="'Branchez un \u00e9cran sur le port HDMI'"
+></app-waiting-screen>
+
+<!-- E-23 US-23.3.2: Demotion notice when Pi takes over as master (z-index 40) -->
+<div *ngIf="demotionNotice" class="demotion-notice">
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="24"
+    height="24"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  >
+    <circle cx="12" cy="12" r="10" />
+    <line x1="12" y1="8" x2="12" y2="12" />
+    <line x1="12" y1="16" x2="12.01" y2="16" />
+  </svg>
+  <span>Le boîtier Pi est connecté — cette fenêtre passe en mode secondaire</span>
+</div>
+
 <!-- Canvas freeze-frame pour transitions sans flash (z-index 20) -->
 <canvas #freezeCanvas class="freeze-canvas" [hidden]="isLicenseBlocked"></canvas>
 
@@ -260,7 +294,9 @@
   <span class="secondary-goal-text">{{
     localOptions.sport === 'football' || localOptions.sport === 'handball' ? 'BUUUUT !' : 'POINT !'
   }}</span>
-  <span class="secondary-goal-score">{{ currentScore.homeScore }} - {{ currentScore.awayScore }}</span>
+  <span class="secondary-goal-score"
+    >{{ currentScore.homeScore }} - {{ currentScore.awayScore }}</span
+  >
 </div>
 
 <!-- Watermark Overlay (z-index 1100, au-dessus du score mais sous les animations) -->

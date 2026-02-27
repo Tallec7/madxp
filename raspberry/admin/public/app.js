@@ -2,7 +2,7 @@
  * Neopro Admin Panel - JavaScript
  * FICHIER GENERE - Ne pas editer directement
  * Editer les fichiers dans modules/ puis lancer: bash build-admin.sh
- * Build: fd70c01c
+ * Build: 30cd8186
  */
 
 
@@ -938,14 +938,55 @@ async function loadDashboard() {
         document.getElementById('last-update').textContent =
             'Dernière mise à jour: ' + new Date().toLocaleTimeString('fr-FR');
 
+        // E-23 US-23.2.5: Update HDMI status card
+        updateHdmiStatusCard(data.hdmi);
+
     } catch (error) {
         console.error('Error loading dashboard:', error);
     }
 }
 
+// E-23 US-23.2.5: Update HDMI status indicators
+function updateHdmiStatusCard(hdmi) {
+    if (!hdmi) return;
+    const statusLabel = (s) => {
+        if (s === 'connected') return '\u{1F7E2} Connect\u00e9';
+        if (s === 'disconnected') return '\u{1F534} D\u00e9connect\u00e9';
+        return '\u26AA Inconnu';
+    };
+    const el0 = document.getElementById('hdmi0-status');
+    const el1 = document.getElementById('hdmi1-status');
+    const elMode = document.getElementById('hdmi-mode');
+    if (el0) el0.textContent = statusLabel(hdmi.hdmi0);
+    if (el1) el1.textContent = statusLabel(hdmi.hdmi1);
+    if (elMode) {
+        if (hdmi.failover) elMode.textContent = '\u26A0\uFE0F Failover actif';
+        else if (hdmi.wrongPort) elMode.textContent = '\u26A0\uFE0F Mauvais port';
+        else if (hdmi.dualDisplay) elMode.textContent = '\u{1F4FA} Dual Display';
+        else elMode.textContent = 'Standard';
+    }
+}
+
+// E-23 US-23.2.5: Generate QR code for quick access
+function initQrCode() {
+    var container = document.getElementById('qr-code-container');
+    if (!container) return;
+    var url = window.location.href;
+    var size = 120;
+    var qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=' + size + 'x' + size + '&data=' + encodeURIComponent(url) + '&format=svg';
+    container.innerHTML = '<img src="' + qrUrl + '" alt="QR Code" width="' + size + '" height="' + size + '" style="image-rendering: pixelated;" onerror="this.parentElement.innerHTML=\'QR non disponible (hors ligne)\'"/>';
+}
+
+// Initialize QR code on first load
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initQrCode);
+} else {
+    initQrCode();
+}
+
 /**
- * Dashboard simplifié pour le mode club :
- * Une seule carte "santé" avec indicateur vert/jaune/rouge
+ * Dashboard simplifi\u00e9 pour le mode club :
+ * Une seule carte "sant\u00e9" avec indicateur vert/jaune/rouge
  */
 function renderClubDashboard(data) {
     const cardsGrid = document.querySelector('#tab-dashboard .cards-grid');

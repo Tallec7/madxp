@@ -686,6 +686,112 @@ Pour fonctionner sans internet, le build Angular doit inclure :
 
 ---
 
+## Résilience HDMI & Accès Navigateur (E-23)
+
+> Epic E-23 — 7 Features, 33 US, 146 SP — implémenté v3.84+
+
+### Détection HDMI temps réel (F-23.1)
+
+```
+                   udev (< 1s)                 polling (5s fallback)
+                        │                              │
+  /sys/class/drm/       ▼                              ▼
+  card{0,1}-HDMI-A-{1,2}/status ─── kiosk-watchdog.sh ───┐
+                                                          │
+              ┌────── /tmp/kiosk-status.json ◄────────────┘
+              │
+              ▼
+      hdmi.service.js ──► state.service.js ──► handlers.js
+              │                                     │
+              ▼                                     ▼
+      /admin/api/system              hdmi-status-update (Socket.IO)
+      (admin panel)                  heartbeat → central-server
+```
+
+- **udev rules** : `/etc/udev/rules.d/99-neopro-hdmi-hotplug.rules` → `neopro-hdmi-notify.sh` écrit `/tmp/hdmi-changed`
+- **Sysfs** : Pi 5 `card1-HDMI-A-{1,2}`, Pi 4 `card0-HDMI-A-{1,2}` — valeurs `connected`/`disconnected`
+- **Watchdog** : vérifie inotify flag + polling 5s fallback, écrit JSON `/tmp/kiosk-status.json`
+
+### Mode headless & signalement physique (F-23.2)
+
+| Signal               | Condition           | Pattern                          |
+| -------------------- | ------------------- | -------------------------------- |
+| LED activité Pi      | Aucun écran         | Clignotement lent (1s on/1s off) |
+| LED activité Pi      | Mauvaise prise HDMI | Clignotement rapide (200ms)      |
+| LED activité Pi      | Normal              | Heartbeat (mmc0 par défaut)      |
+| Buzzer PWM (GPIO 18) | Mauvaise prise HDMI | 2 bips courts                    |
+| Buzzer PWM (GPIO 18) | Aucun écran         | 3 bips courts (une seule fois)   |
+
+Scripts : `neopro-led-status.sh` (sysfs `/sys/class/leds/ACT` ou `led0`) et `neopro-buzzer.sh` (PWM `/sys/class/pwm/pwmchip0`)
+
+### Priorité Kiosk Pi (F-23.3)
+
+Le Pi physique (kiosk) est **toujours master**. Si un navigateur PC s'est enregistré comme master, le Pi le rétrograde automatiquement en slave via `tv-role-assigned { role: 'slave' }`. Le PC reçoit un toast "Rétrogradé en mode esclave — le boîtier Pi a repris le contrôle".
+
+### Détection mauvaise prise & auto-swap (F-23.5)
+
+```
+HDMI-1 connecté && HDMI-0 déconnecté && !dual_display
+        │
+        ▼
+  detect_wrong_port() = true
+        │
+        ├── LED fast-blink + buzzer double
+        ├── Message aide affiché sur HDMI-1 (countdown 10s)
+        │
+        ▼  (après 10s)
+  xrandr --output HDMI-1 --primary
+  Flag /tmp/hdmi-swapped
+        │
+        ▼  (HDMI-0 rebranché)
+  Reverse swap automatique → retour HDMI-0 primary
+```
+
+### Failover dual-display (F-23.6)
+
+Machine à états pour la perte de l'écran principal en mode dual-display :
+
+```
+  DUAL_ACTIVE ──── HDMI-0 perdu ────► FAILOVER_ACTIVE
+       │                                     │
+       │                                     ├── Chromium primaire tué (SIGTERM→SIGKILL)
+       │                                     ├── xrandr HDMI-1 → primary
+       │                                     ├── Secondary → plein écran TV complet
+       │                                     ├── tv-role-promotion émis
+       │                                     │
+       │          HDMI-0 rebranché           │
+       ◄──────────────────────────────────────┘
+       │
+       ├── Chromium primaire relancé sur HDMI-0
+       ├── Secondary redimensionné
+       ├── tv-role-demotion émis
+       └── Flag failover supprimé
+```
+
+### Accès navigateur PC (F-23.7)
+
+- **Homepage** : `raspberry/webapp/index.html` — page d'accueil enrichie avec statut HDMI, liens TV/Admin/Remote, QR code
+- **PWA** : `manifest.json` pour installation sur l'écran d'accueil
+- **Admin enrichi** : carte HDMI avec statut temps réel (HDMI-0, HDMI-1, mode dual/failover/wrong-port)
+- **Analytics** : guard `displayType !== 'secondary'` sur tous les `trackVideoStart`/`trackVideoEnd` (évite double-comptage)
+
+### Métriques HDMI (via heartbeat)
+
+| Champ heartbeat          | Type    | Description                                                    |
+| ------------------------ | ------- | -------------------------------------------------------------- |
+| `hdmiStatus.hdmi0`       | string  | `connected` / `disconnected` / `unknown`                       |
+| `hdmiStatus.hdmi1`       | string  | idem                                                           |
+| `hdmiStatus.dualDisplay` | boolean | Mode dual-display actif                                        |
+| `hdmiStatus.failover`    | boolean | Failover en cours                                              |
+| `hdmiStatus.wrongPort`   | boolean | Écran sur mauvaise prise HDMI                                  |
+| `connectedClients`       | array   | Liste des clients connectés (role, ip, userAgent, displayType) |
+
+### Smoke tests de régression (22 guards)
+
+Tous les invariants E-23 sont protégés par des smoke tests dans `central-server/src/__tests__/smoke.test.ts` — toute régression casse le CI.
+
+---
+
 ## Performance
 
 ### Optimisations frontend

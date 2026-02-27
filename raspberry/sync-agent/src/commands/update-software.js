@@ -711,12 +711,27 @@ class SoftwareUpdateHandler {
           }
           if (ruleFiles.length > 0) {
             await execAsync(
-              'sudo udevadm control --reload-rules && sudo udevadm trigger --subsystem-match=net --action=add'
+              'sudo udevadm control --reload-rules && sudo udevadm trigger --subsystem-match=net --action=add && sudo udevadm trigger --subsystem-match=drm --action=change'
             );
-            logger.info('Udev rules reloaded (filtered: net/add only)');
+            logger.info('Udev rules reloaded (net/add + drm/change)');
           }
         } catch (e) {
           logger.warn('Failed to install udev rules', { error: e.message });
+        }
+      }
+
+      // Deploy scripts to /usr/local/bin/ if present (udev handlers, etc.)
+      const scriptsDir = path.join(rootDir, 'scripts');
+      if (await fs.pathExists(scriptsDir)) {
+        try {
+          const binScripts = (await fs.readdir(scriptsDir)).filter(f => f.startsWith('neopro-') && f.endsWith('.sh'));
+          for (const script of binScripts) {
+            await execAsync(`sudo cp ${path.join(scriptsDir, script)} /usr/local/bin/${script}`);
+            await execAsync(`sudo chmod +x /usr/local/bin/${script}`);
+            logger.info(`Installed script to /usr/local/bin: ${script}`);
+          }
+        } catch (e) {
+          logger.warn('Failed to install bin scripts', { error: e.message });
         }
       }
 

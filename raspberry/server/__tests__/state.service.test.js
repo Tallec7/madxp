@@ -152,14 +152,16 @@ describe('StateService', () => {
   // --- TV Registration ---
   describe('TV Registration (Master-Slave)', () => {
     it('should assign first TV as master', () => {
-      const role = service.registerTv('socket-1');
+      const { role, demoted } = service.registerTv('socket-1');
       expect(role).toBe('master');
+      expect(demoted).toBeNull();
     });
 
     it('should assign subsequent TVs as slave', () => {
       service.registerTv('socket-1');
-      const role = service.registerTv('socket-2');
+      const { role, demoted } = service.registerTv('socket-2');
       expect(role).toBe('slave');
+      expect(demoted).toBeNull();
     });
 
     it('should report master status correctly', () => {
@@ -200,11 +202,115 @@ describe('StateService', () => {
       const result = service.unregisterTv('socket-1');
       expect(result).toEqual({ wasMaster: true, promoted: null });
     });
+
+    // E-23 US-23.3.1: Pi kiosk always master priority
+    it('should give Pi kiosk (displayType=tv) master priority over PC', () => {
+      // PC registers first as master
+      service.registerTv('pc-socket', 'secondary');
+      expect(service.isTvMaster('pc-socket')).toBe(true);
+
+      // Pi kiosk registers — should take over as master
+      const { role, demoted } = service.registerTv('pi-socket', 'tv');
+      expect(role).toBe('master');
+      expect(demoted).toBe('pc-socket');
+      expect(service.isTvMaster('pi-socket')).toBe(true);
+      expect(service.isTvMaster('pc-socket')).toBe(false);
+    });
+
+    it('should NOT demote an existing kiosk master when another kiosk registers', () => {
+      // First kiosk is master
+      service.registerTv('pi-1', 'tv');
+      expect(service.isTvMaster('pi-1')).toBe(true);
+
+      // Second kiosk registers — should become slave, not demote the first
+      const { role, demoted } = service.registerTv('pi-2', 'tv');
+      expect(role).toBe('slave');
+      expect(demoted).toBeNull();
+      expect(service.isTvMaster('pi-1')).toBe(true);
+    });
+
+    it('should NOT demote a kiosk master when a PC registers', () => {
+      // Pi kiosk is master
+      service.registerTv('pi-socket', 'tv');
+      expect(service.isTvMaster('pi-socket')).toBe(true);
+
+      // PC registers — should become slave
+      const { role, demoted } = service.registerTv('pc-socket', 'secondary');
+      expect(role).toBe('slave');
+      expect(demoted).toBeNull();
+      expect(service.isTvMaster('pi-socket')).toBe(true);
+    });
+  });
+
+  // --- HDMI State (E-23) ---
+  describe('HdmiState', () => {
+    it('should return default HDMI state', () => {
+      const state = service.getHdmiState();
+      expect(state).toEqual({
+        hdmi0: false,
+        hdmi1: false,
+        wrongPort: false,
+        updatedAt: null,
+      });
+    });
+
+    it('should update HDMI state partially', () => {
+      const state = service.updateHdmiState({ hdmi0: true });
+      expect(state.hdmi0).toBe(true);
+      expect(state.hdmi1).toBe(false);
+      expect(state.wrongPort).toBe(false);
+      expect(state.updatedAt).toBeDefined();
+    });
+
+    it('should merge HDMI updates', () => {
+      service.updateHdmiState({ hdmi0: true });
+      const state = service.updateHdmiState({ hdmi1: true, wrongPort: true });
+      expect(state.hdmi0).toBe(true);
+      expect(state.hdmi1).toBe(true);
+      expect(state.wrongPort).toBe(true);
+    });
+
+    it('should return a copy', () => {
+      const s1 = service.getHdmiState();
+      s1.hdmi0 = true;
+      expect(service.getHdmiState().hdmi0).toBe(false);
+    });
+  });
+
+  // --- Connected Clients (E-23 US-23.7.1) ---
+  describe('ConnectedClients', () => {
+    it('should return empty list by default', () => {
+      expect(service.getConnectedClients()).toEqual([]);
+    });
+
+    it('should return registered clients with metadata', () => {
+      service.registerTv('socket-1', 'tv', { userAgent: 'Mozilla/5.0 (Linux; aarch64)', ip: '192.168.1.10' });
+      service.registerTv('socket-2', 'secondary', { userAgent: 'Mozilla/5.0 (Windows)', ip: '192.168.1.20' });
+      const clients = service.getConnectedClients();
+      expect(clients).toHaveLength(2);
+
+      const master = clients.find(c => c.role === 'master');
+      expect(master.socketId).toBe('socket-1');
+      expect(master.displayType).toBe('tv');
+      expect(master.userAgent).toContain('aarch64');
+      expect(master.ip).toBe('192.168.1.10');
+
+      const slave = clients.find(c => c.role === 'slave');
+      expect(slave.socketId).toBe('socket-2');
+      expect(slave.displayType).toBe('secondary');
+    });
+
+    it('should not include unregistered clients', () => {
+      service.registerTv('socket-1', 'tv');
+      service.registerTv('socket-2', 'secondary');
+      service.unregisterTv('socket-2');
+      expect(service.getConnectedClients()).toHaveLength(1);
+    });
   });
 
   // --- Full State ---
   describe('getFullState', () => {
-    it('should return all state objects', () => {
+    it('should return all state objects including hdmiState', () => {
       const state = service.getFullState();
       expect(state).toHaveProperty('score');
       expect(state).toHaveProperty('phase');
@@ -212,6 +318,59 @@ describe('StateService', () => {
       expect(state).toHaveProperty('timer');
       expect(state).toHaveProperty('recordingState');
       expect(state).toHaveProperty('loopState');
+      expect(state).toHaveProperty('hdmiState');
+    });
+  });
+
+  // --- Transition Metrics (E-23 US-23.4.5 + US-23.6.5) ---
+  describe('transitionMetrics', () => {
+    it('should accumulate standard counters', () => {
+      service.updateTransitionMetrics({ earlySwitchCount: 2, totalTransitions: 5 });
+      service.updateTransitionMetrics({ earlySwitchCount: 1, totalTransitions: 3 });
+      const m = service.getTransitionMetrics();
+      expect(m.earlySwitchCount).toBe(3);
+      expect(m.totalTransitions).toBe(8);
+    });
+
+    it('should accumulate dual-display metrics', () => {
+      service.updateTransitionMetrics({ dualDisplayTransitions: 1 });
+      service.updateTransitionMetrics({ dualDisplayTransitions: 2, dualDisplayRestarts: 1 });
+      const m = service.getTransitionMetrics();
+      expect(m.dualDisplayTransitions).toBe(3);
+      expect(m.dualDisplayRestarts).toBe(1);
+    });
+
+    it('should accumulate failover metrics', () => {
+      service.updateTransitionMetrics({ failoverCount: 1 });
+      service.updateTransitionMetrics({ failoverRecoveryCount: 1, failoverDurationMs: 5000 });
+      const m = service.getTransitionMetrics();
+      expect(m.failoverCount).toBe(1);
+      expect(m.failoverRecoveryCount).toBe(1);
+      expect(m.failoverDurationMs).toBe(5000);
+    });
+
+    it('should reset counters but keep boot and failover duration on getAndReset', () => {
+      service.setBootToVideoMs(1200);
+      service.updateTransitionMetrics({
+        totalTransitions: 10,
+        failoverCount: 2,
+        failoverDurationMs: 3000,
+        dualDisplayTransitions: 3,
+      });
+      const m = service.getAndResetTransitionMetrics();
+      expect(m.totalTransitions).toBe(10);
+      expect(m.failoverCount).toBe(2);
+      expect(m.dualDisplayTransitions).toBe(3);
+      expect(m.bootToVideoMs).toBe(1200);
+      expect(m.failoverDurationMs).toBe(3000);
+
+      // After reset, counters should be 0 but one-shot values preserved
+      const after = service.getTransitionMetrics();
+      expect(after.totalTransitions).toBe(0);
+      expect(after.failoverCount).toBe(0);
+      expect(after.dualDisplayTransitions).toBe(0);
+      expect(after.bootToVideoMs).toBe(1200);
+      expect(after.failoverDurationMs).toBe(3000);
     });
   });
 });

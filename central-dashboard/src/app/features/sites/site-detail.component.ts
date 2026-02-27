@@ -6,6 +6,7 @@ import { TranslateModule } from '@ngx-translate/core';
 import { SitesService } from '../../core/services/sites.service';
 import { NotificationService } from '../../core/services/notification.service';
 import { LoggerService } from '../../core/services/logger.service';
+import { SocketService } from '../../core/services/socket.service';
 import { ErrorExtractor } from '../../core/utils/error-extractor';
 import { Site, Metrics, FanStatus, SiteConnectionStatus, ConnectionHealth, MatchHistoryData, Match } from '../../core/models';
 import { formatVersion } from './utils/version';
@@ -185,6 +186,15 @@ type TabId = 'status' | 'content' | 'settings' | 'profiles' | 'sponsors' | 'subs
                     <span class="value">
                       <span class="badge-secondary-display">📺 Activé</span>
                       <span class="secondary-resolution" *ngIf="site.secondary_display_resolution">{{ site.secondary_display_resolution }}</span>
+                    </span>
+                  </div>
+                }
+                @if (dualDisplayActive) {
+                  <div class="info-row">
+                    <span class="label">Dual-Display:</span>
+                    <span class="value">
+                      <span class="badge-dual-display">🖥️ Actif</span>
+                      <span class="hdmi-ports-status">HDMI-0: {{ hdmiStatus?.hdmi0 ? '✅' : '❌' }} · HDMI-1: {{ hdmiStatus?.hdmi1 ? '✅' : '❌' }}</span>
                     </span>
                   </div>
                 }
@@ -947,6 +957,23 @@ type TabId = 'status' | 'content' | 'settings' | 'profiles' | 'sponsors' | 'subs
       margin-left: 6px;
     }
 
+    .badge-dual-display {
+      display: inline-block;
+      background: #dcfce7;
+      color: #15803d;
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 4px;
+    }
+
+    .hdmi-ports-status {
+      font-family: 'SF Mono', Monaco, monospace;
+      font-size: 0.75rem;
+      color: #64748b;
+      margin-left: 6px;
+    }
+
     /* Metrics */
     .metrics-grid {
       display: flex;
@@ -1465,6 +1492,10 @@ export class SiteDetailComponent implements OnInit, OnDestroy {
   // Fan status
   fanStatus: FanStatus | null = null;
 
+  // E-23 US-23.4.4: Dual-display & HDMI port status (real-time from heartbeat)
+  dualDisplayActive = false;
+  hdmiStatus: { hdmi0: boolean; hdmi1: boolean; wrongPort: boolean } | null = null;
+
   // Hotspot status (from local_config_mirror)
   hotspotSsid: string | null = null;
   hotspotChannel: number | null = null;
@@ -1517,7 +1548,9 @@ export class SiteDetailComponent implements OnInit, OnDestroy {
   private readonly sitesService = inject(SitesService);
   private readonly notificationService = inject(NotificationService);
   private readonly logger = inject(LoggerService);
+  private readonly socketService = inject(SocketService);
   private refreshSubscription?: Subscription;
+  private hdmiSubscription?: Subscription;
 
   ngOnInit(): void {
     this.siteId = this.route.snapshot.paramMap.get('id')!;
@@ -1528,10 +1561,22 @@ export class SiteDetailComponent implements OnInit, OnDestroy {
     this.refreshSubscription = interval(30000).subscribe(() => {
       this.loadDashboardData();
     });
+
+    // E-23 US-23.4.4: Real-time HDMI & dual-display status updates
+    this.hdmiSubscription = this.socketService.events$.subscribe((event) => {
+      if (event.type === 'hdmi_status_updated') {
+        const data = event.data as { siteId: string; hdmiStatus: { hdmi0: boolean; hdmi1: boolean; wrongPort: boolean }; dualDisplayActive: boolean };
+        if (data.siteId === this.siteId) {
+          this.hdmiStatus = data.hdmiStatus;
+          this.dualDisplayActive = data.dualDisplayActive;
+        }
+      }
+    });
   }
 
   ngOnDestroy(): void {
     this.refreshSubscription?.unsubscribe();
+    this.hdmiSubscription?.unsubscribe();
   }
 
   loadSite(): void {

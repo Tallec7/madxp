@@ -134,6 +134,10 @@ export interface Site {
   /** Secondary display resolution (e.g., '1920x384' for LED banner, '1920x1080' for TV) */
   secondary_display_resolution?: string | null;
 
+  // === PC Mode (E-23 US-23.2.2) ===
+  /** Enable PC browser mode — allows accessing the TV display from any browser */
+  pc_mode_enabled?: boolean;
+
   // === Branding fields (P5) ===
   /** URL du logo du club (pour rapports PDF) */
   logo_url?: string | null;

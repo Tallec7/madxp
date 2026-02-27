@@ -1167,6 +1167,77 @@ SafeNetworkOperations: hotspot channel OK { currentChannel: 6, currentCount: 2, 
 
 ---
 
+## Événements HDMI & Failover (E-23 v3.84+)
+
+> Synchronisation des événements HDMI entre le Pi edge et le central-server.
+
+### Nouveaux événements Socket.IO (Pi → Central)
+
+| Événement               | Direction       | Payload                                                               | Fréquence                                     |
+| ----------------------- | --------------- | --------------------------------------------------------------------- | --------------------------------------------- | ------------- |
+| `hdmi-status-update`    | Pi → Dashboard  | `{ hdmi0: string, hdmi1: string, dualDisplay: bool, failover: bool }` | Toutes les 10s                                |
+| `hdmi-alert`            | Pi → Central    | `{ type: 'no_display'                                                 | 'wrong_port', hdmi0: string, hdmi1: string }` | Sur événement |
+| `tv-role-promotion`     | Server → Client | `{ displayType: 'tv' }` (secondary → TV complet)                      | Sur failover                                  |
+| `tv-role-demotion`      | Server → Client | `{ displayType: 'secondary' }` (TV → retour secondary)                | Sur restauration                              |
+| `get-connected-clients` | Central → Pi    | Callback → `[{ role, displayType, ip, userAgent, connectedAt }]`      | Sur demande                                   |
+
+### Heartbeat enrichi
+
+Le heartbeat 30s inclut maintenant les champs HDMI :
+
+```json
+{
+  "hostname": "neopro-club",
+  "uptime": 86400,
+  "hdmiStatus": {
+    "hdmi0": "connected",
+    "hdmi1": "disconnected",
+    "dualDisplay": false,
+    "failover": false,
+    "wrongPort": false
+  },
+  "connectedClients": [
+    {
+      "role": "master",
+      "displayType": "tv",
+      "ip": "127.0.0.1",
+      "userAgent": "Chromium/armv7l",
+      "isKiosk": true,
+      "connectedAt": "2026-02-27T10:00:00Z"
+    }
+  ]
+}
+```
+
+### Pipeline de détection
+
+```
+udev event → neopro-hdmi-notify.sh → /tmp/hdmi-changed
+                                           │
+kiosk-watchdog.sh (5s loop) ───────────────┤
+        │                                  │
+        ├── Lit sysfs /sys/class/drm/*/status
+        ├── Écrit /tmp/kiosk-status.json
+        ├── Active LED/buzzer selon état
+        │
+        ▼
+hdmi.service.js._getHdmiStatus()
+        │
+        ▼
+state.service.js._hdmiState
+        │
+        ├── handlers.js → hdmi-status-update (10s)
+        ├── handlers.js → hdmi-alert (événementiel)
+        └── sync-agent → heartbeat → central-server
+                                          │
+                                          ▼
+                         heartbeat.handler.ts
+                          ├── Met à jour sites.hdmi_status
+                          └── Crée alertes (no_display, hdmi_wrong_port)
+```
+
+---
+
 ## Historique des Versions
 
 | Version | Date       | Auteur        | Modifications                                                                                                        |
@@ -1190,6 +1261,7 @@ SafeNetworkOperations: hotspot channel OK { currentChannel: 6, currentCount: 2, 
 | 2.6     | 2026-02-21 | Claude/NEOPRO | Pipeline analytics unifié (video_plays), suppression sponsor-impressions.js, tables campaigns + scheduled_reports    |
 | 2.7     | 2026-02-22 | Claude/NEOPRO | Cloud remote relay chain : détection zombie, fix socket.data, handler match-info-updated, monitoring Prometheus      |
 | 2.8     | 2026-02-24 | Claude/NEOPRO | Fix race condition reboot post-OTA : `shutdown -r +0` via spawn, skip restart sync-agent quand reboot prévu          |
+| 2.9     | 2026-02-27 | Claude/NEOPRO | E-23 : événements HDMI & failover, heartbeat enrichi (hdmiStatus, connectedClients), pipeline détection              |
 
 ---
 

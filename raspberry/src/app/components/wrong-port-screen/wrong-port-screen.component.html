@@ -1,0 +1,38 @@
+<div class="wrong-port-screen">
+  <!-- Warning icon -->
+  <div class="wrong-port-icon">
+    <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="100" cy="100" r="80" fill="none" stroke="rgba(251,191,36,0.4)" stroke-width="4" />
+      <text x="100" y="125" text-anchor="middle" font-size="90" fill="rgba(251,191,36,0.9)">!</text>
+    </svg>
+  </div>
+
+  <!-- Title -->
+  <h1 class="wrong-port-title">Mauvaise prise HDMI</h1>
+
+  <!-- Instruction -->
+  <p class="wrong-port-message">
+    L'écran est branché sur <strong>HDMI-1</strong> au lieu de <strong>HDMI-0</strong>.
+  </p>
+  <p class="wrong-port-instruction">
+    Rebranchez le câble sur la prise <strong>HDMI-0</strong> (la plus proche du port USB-C).
+  </p>
+
+  <!-- Countdown -->
+  <div class="wrong-port-countdown">
+    <div class="countdown-ring">
+      <svg viewBox="0 0 100 100">
+        <circle class="countdown-track" cx="50" cy="50" r="42" />
+        <circle
+          class="countdown-progress"
+          cx="50"
+          cy="50"
+          r="42"
+          [style.stroke-dashoffset]="getProgressOffset()"
+        />
+      </svg>
+      <span class="countdown-number">{{ remaining }}</span>
+    </div>
+    <p class="countdown-label">Basculement automatique sur HDMI-1</p>
+  </div>
+</div>

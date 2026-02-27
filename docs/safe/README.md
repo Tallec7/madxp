@@ -1,6 +1,6 @@
 # SAFe Neopro — Pilotage Produit
 
-> **Dernière mise à jour** : 21 Février 2026
+> **Dernière mise à jour** : 26 Février 2026
 > **Framework** : SAFe Essential (simplifié)
 > **Cadence PI** : 6 semaines (3 sprints de 2 semaines)
 > **PI actuel** : PI-1 (Février - Mars 2026)
@@ -14,9 +14,9 @@
 | ---------------- | ------------------------------------------------------------ |
 | Value Streams    | 2 OVS + 1 DVS avec lead times, bottlenecks                   |
 | Business Pillars | 4 Thèmes Stratégiques alignés OKR                            |
-| Epics            | 21 Epics (5 pré-PI-1 + 4 PI-1 + 5 PI-2 + 7 PI-3)             |
-| Features         | 35 Features avec acceptance criteria                         |
-| User Stories     | 218 US (178 Done + 19 PI-1 + 12 PI-2 + 9 PI-3)               |
+| Epics            | 22 Epics (5 pré-PI-1 + 4 PI-1 + 6 PI-2 + 7 PI-3)             |
+| Features         | 42 Features avec acceptance criteria                         |
+| User Stories     | 254 US (178 Done + 19 PI-1 + 48 PI-2 + 9 PI-3)               |
 | Sprint Tracker   | Vélocité par sprint, formules automatiques                   |
 | Implemented      | 178 features livrées (13 domaines), traçabilité git complète |
 
@@ -37,7 +37,7 @@ Vision Stratégique (OKR 2026)
   └── Epics → Features → User Stories
        ├── Done (5 Epics, ~41 SP livrés)
        ├── PI-1 (4 Epics + 2 reliquats, 79 SP)
-       ├── PI-2 (5 Epics, 69 SP)
+       ├── PI-2 (6 Epics, 215 SP)
        └── PI-3 (7 Epics, 73 SP)
 ```
 
@@ -80,14 +80,15 @@ Vision Stratégique (OKR 2026)
 
 ### Epics PI-2
 
-| Epic                                  | Value Stream | Thème | PI   |
-| ------------------------------------- | ------------ | ----- | ---- |
-| E-05 Motion Design Personnalisé       | VS2          | TS2   | PI-2 |
-| **E-11 Régie Publicitaire Régionale** | VS2          | TS1   | PI-2 |
-| **E-15 Score Live Phase 2**           | VS1          | TS2   | PI-2 |
-| **E-16 Rapports Email Auto**          | Transverse   | TS4   | PI-2 |
-| **E-17 A/B Testing Créas**            | VS2          | TS1   | PI-2 |
-| **E-22 Contenus Différenciés TV+LED** | VS1          | TS2   | PI-2 |
+| Epic                                  | Value Stream | Thème   | PI   |
+| ------------------------------------- | ------------ | ------- | ---- |
+| E-05 Motion Design Personnalisé       | VS2          | TS2     | PI-2 |
+| **E-11 Régie Publicitaire Régionale** | VS2          | TS1     | PI-2 |
+| **E-15 Score Live Phase 2**           | VS1          | TS2     | PI-2 |
+| **E-16 Rapports Email Auto**          | Transverse   | TS4     | PI-2 |
+| **E-17 A/B Testing Créas**            | VS2          | TS1     | PI-2 |
+| **E-22 Contenus Différenciés TV+LED** | VS1          | TS2     | PI-2 |
+| **E-23 Résilience HDMI & Accès Nav**  | VS1 + Trans  | TS4+TS2 | PI-2 |
 
 ### Epics PI-3
 
@@ -103,11 +104,11 @@ Vision Stratégique (OKR 2026)
 
 ## Roadmap PI
 
-| PI   | Période        | Epics                                        | Focus                                                                 |
-| ---- | -------------- | -------------------------------------------- | --------------------------------------------------------------------- |
-| PI-1 | Fév-Mars 2026  | E-01, E-02, E-03, E-06 + reliquats E-07/E-10 | Fondations : sponsors self-service, analytics, onboarding             |
-| PI-2 | Avr-Mai 2026   | E-05, E-11, E-15, E-16, E-17, E-22           | Régie publicitaire + motion design + email auto + score live + TV+LED |
-| PI-3 | Juin-Juil 2026 | E-12 à E-14, E-18 à E-21                     | Multi-écrans, marque blanche, billetterie, ML, OAuth                  |
+| PI   | Période        | Epics                                        | Focus                                                           |
+| ---- | -------------- | -------------------------------------------- | --------------------------------------------------------------- |
+| PI-1 | Fév-Mars 2026  | E-01, E-02, E-03, E-06 + reliquats E-07/E-10 | Fondations : sponsors self-service, analytics, onboarding       |
+| PI-2 | Avr-Mai 2026   | E-05, E-11, E-15, E-16, E-17, E-22, E-23     | Régie + motion design + email auto + score live + TV+LED + HDMI |
+| PI-3 | Juin-Juil 2026 | E-12 à E-14, E-18 à E-21                     | Multi-écrans, marque blanche, billetterie, ML, OAuth            |
 
 ## Cadence
 

@@ -25,7 +25,7 @@ const path = require('path');
  * @fires io#license_update — `{ status: string, reason?: string }`
  * @fires io#license_blocked — `{ status: string, reason?: string }`
  */
-module.exports = function registerSocketHandlers({ io, stateService, configPath }) {
+module.exports = function registerSocketHandlers({ io, stateService, configPath, hdmiService }) {
   io.on('connection', (socket) => {
     console.log('Client connect\u00e9:', socket.id);
 
@@ -117,6 +117,18 @@ module.exports = function registerSocketHandlers({ io, stateService, configPath 
     });
 
     /**
+     * E-23 US-23.3.4: Boot-to-video timing metric (one-shot per boot).
+     * Emitted by the TV component when the first video frame plays after HDMI detection.
+     * @event boot-to-video
+     */
+    socket.on('boot-to-video', (data) => {
+      if (data && typeof data.bootToVideoMs === 'number') {
+        stateService.setBootToVideoMs(data.bootToVideoMs);
+        console.log(`[handlers] Boot-to-video metric: ${data.bootToVideoMs}ms`);
+      }
+    });
+
+    /**
      * Fetch transition metrics for heartbeat (get + reset).
      * @event get-transition-metrics
      */
@@ -172,9 +184,21 @@ module.exports = function registerSocketHandlers({ io, stateService, configPath 
      */
     socket.on('tv-register', (data) => {
       const displayType = data?.displayType || 'tv';
-      const role = stateService.registerTv(socket.id, displayType);
+      const userAgent = socket.handshake?.headers?.['user-agent'] || null;
+      const ip = socket.handshake?.address || null;
+      const { role, demoted } = stateService.registerTv(socket.id, displayType, { userAgent, ip });
       socket.emit('tv-role-assigned', { role });
       console.log(`[TV-Sync] Registered as ${role} (${displayType}):`, socket.id);
+
+      // If a previous master was demoted (Pi kiosk priority), notify it
+      if (demoted) {
+        const demotedSocket = io.sockets.sockets.get(demoted);
+        if (demotedSocket) {
+          demotedSocket.emit('tv-role-assigned', { role: 'slave' });
+          demotedSocket.emit('tv-loop-state', stateService.getLoopState());
+          console.log(`[TV-Sync] Demoted ${demoted} to slave (Pi kiosk priority)`);
+        }
+      }
 
       // Send current loop state to new slaves
       if (role === 'slave') {
@@ -375,6 +399,41 @@ module.exports = function registerSocketHandlers({ io, stateService, configPath 
       socket.broadcast.emit('screenshot-data', data);
     });
 
+    // =========================================================================
+    // HDMI STATUS MONITORING (E-23)
+    // =========================================================================
+
+    /**
+     * HDMI status update (from watchdog/hdmi.service) — stores and broadcasts.
+     * @event hdmi-status-update
+     * @param {object} data — `{ hdmi0: boolean, hdmi1: boolean, wrongPort?: boolean }`
+     */
+    socket.on('hdmi-status-update', (data) => {
+      stateService.updateHdmiState(data);
+      socket.broadcast.emit('hdmi-status-update', stateService.getHdmiState());
+    });
+
+    /**
+     * Get HDMI state (from sync-agent via callback).
+     * @event get-hdmi-state
+     */
+    socket.on('get-hdmi-state', (callback) => {
+      if (typeof callback === 'function') {
+        callback(stateService.getHdmiState());
+      }
+    });
+
+    /**
+     * Get connected clients (from sync-agent via callback).
+     * Returns all TV/secondary instances with metadata.
+     * @event get-connected-clients
+     */
+    socket.on('get-connected-clients', (callback) => {
+      if (typeof callback === 'function') {
+        callback(stateService.getConnectedClients());
+      }
+    });
+
     /**
      * Client disconnect — unregisters TV if applicable.
      * If the master disconnects, promotes the next slave to master.
@@ -390,4 +449,80 @@ module.exports = function registerSocketHandlers({ io, stateService, configPath 
       }
     });
   });
+
+  // --- Periodic HDMI status check (every 10s) ---
+  if (hdmiService && typeof hdmiService.getBothPortsStatus === 'function') {
+    setInterval(() => {
+      try {
+        const ports = hdmiService.getBothPortsStatus();
+        const prev = stateService.getHdmiState();
+        const changed = prev.hdmi0 !== ports.hdmi0 || prev.hdmi1 !== ports.hdmi1;
+
+        stateService.updateHdmiState(ports);
+
+        if (changed) {
+          io.emit('hdmi-status-update', stateService.getHdmiState());
+          console.log(`[HDMI] Status changed: HDMI-0=${ports.hdmi0 ? 'connected' : 'disconnected'}, HDMI-1=${ports.hdmi1 ? 'connected' : 'disconnected'}`);
+
+          // E-23 US-23.6.1: Alert when primary display lost during dual-display
+          if (!ports.hdmi0 && ports.hdmi1 && prev.hdmi0) {
+            io.emit('hdmi-alert', {
+              type: 'primary_display_lost',
+              message: 'Écran principal (HDMI-0) déconnecté pendant le dual-display',
+              hdmi0: false,
+              hdmi1: true,
+              timestamp: Date.now(),
+            });
+            console.log('[HDMI] ALERT: Primary display lost during dual-display');
+
+            // E-23 US-23.6.2: Check for failover flag — if watchdog activated failover,
+            // emit tv-role-promotion so the secondary Angular switches to full TV mode
+            try {
+              if (fs.existsSync('/tmp/hdmi-failover-active')) {
+                io.emit('tv-role-promotion', {
+                  reason: 'hdmi_failover',
+                  message: 'HDMI-0 lost, secondary promoted to primary TV mode',
+                  timestamp: Date.now(),
+                });
+                // E-23 US-23.6.5: Track failover metric
+                stateService.updateTransitionMetrics({ failoverCount: 1 });
+                console.log('[HDMI] FAILOVER: Secondary promoted to primary TV mode');
+              }
+            } catch (_e) { /* ignore fs errors */ }
+          }
+
+          // E-23 US-23.6.2: Check for failover recovery — HDMI-0 back while failover was active
+          if (ports.hdmi0 && !prev.hdmi0) {
+            try {
+              if (!fs.existsSync('/tmp/hdmi-failover-active')) {
+                // Failover was deactivated by watchdog, emit demotion
+                io.emit('tv-role-demotion', {
+                  reason: 'hdmi_recovery',
+                  message: 'HDMI-0 recovered, secondary returns to secondary mode',
+                  timestamp: Date.now(),
+                });
+                // E-23 US-23.6.5: Track failover recovery metric
+                stateService.updateTransitionMetrics({ failoverRecoveryCount: 1 });
+                console.log('[HDMI] RECOVERY: Secondary demoted back to secondary mode');
+              }
+            } catch (_e) { /* ignore fs errors */ }
+          }
+
+          // Alert when no display connected at all
+          if (!ports.hdmi0 && !ports.hdmi1) {
+            io.emit('hdmi-alert', {
+              type: 'no_display',
+              message: 'Aucun écran branché (HDMI-0 et HDMI-1 déconnectés)',
+              hdmi0: false,
+              hdmi1: false,
+              timestamp: Date.now(),
+            });
+            console.log('[HDMI] ALERT: No display connected');
+          }
+        }
+      } catch (err) {
+        // Silently ignore on non-Pi environments
+      }
+    }, 10000);
+  }
 };

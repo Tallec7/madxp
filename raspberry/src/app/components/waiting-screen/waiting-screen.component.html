@@ -1,0 +1,26 @@
+<div class="waiting-screen">
+  <!-- Neopro Logo (CSS-only text branding) -->
+  <div class="waiting-logo">
+    <svg viewBox="0 0 200 200" class="waiting-icon" xmlns="http://www.w3.org/2000/svg">
+      <circle
+        cx="100"
+        cy="100"
+        r="80"
+        fill="none"
+        stroke="rgba(255,255,255,0.15)"
+        stroke-width="4"
+      />
+      <path d="M70 70 L70 130 L130 100 Z" fill="rgba(255,255,255,0.9)" />
+    </svg>
+    <span class="waiting-brand">NEOPRO</span>
+  </div>
+
+  <!-- Spinner -->
+  <div class="waiting-spinner">
+    <div class="spinner-ring"></div>
+  </div>
+
+  <!-- Message -->
+  <p class="waiting-message">{{ message }}</p>
+  <p class="waiting-sub-message" *ngIf="subMessage">{{ subMessage }}</p>
+</div>

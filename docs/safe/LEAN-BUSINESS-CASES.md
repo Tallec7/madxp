@@ -1,6 +1,6 @@
 # Lean Business Cases — Epics NEOPRO
 
-> **Dernière mise à jour** : 18 Février 2026
+> **Dernière mise à jour** : 26 Février 2026
 > **PI actuel** : PI-1 (Février - Mars 2026)
 > Chaque Epic dispose d'un Lean Business Case conforme SAFe : problème, solution, hypothèses, coût, bénéfice, KPIs, et critère Go/No-Go.
 
@@ -799,6 +799,43 @@
 
 ---
 
+### E-23 — Résilience HDMI & Accès Navigateur
+
+| Champ                 | Détail                                           |
+| --------------------- | ------------------------------------------------ |
+| **Value Stream**      | VS1 — Club to Screen + Transverse                |
+| **Thème Stratégique** | TS4 — Excellence Opérationnelle + TS2 Expérience |
+| **WSJF**              | 14                                               |
+
+**Problème** : La gestion HDMI du Pi est fragile : polling 30s au lieu de hotplug instantané, HDMI-0 non surveillé, écran noir si branché sur la mauvaise prise, blackout de 4-8s lors des transitions dual-display, aucun failover quand l'écran principal est débranché, et les accès navigateur PC ne sont ni monitorés ni distingués dans les analytics. Score de fiabilité actuel : 64/100. C'est la source N°1 d'appels support terrain.
+
+**Solution** : Refonte complète du cycle de vie HDMI en 7 axes : (1) détection udev temps réel remplaçant le polling, (2) feedback boot sans écran, (3) priorité kiosk au hotplug, (4) transition dual zéro coupure, (5) résilience mauvaise prise avec auto-swap, (6) failover automatique perte d'écran principal, (7) monitoring des accès navigateur PC avec analytics distinctes.
+
+**Hypothèses**
+
+- Le remplacement du polling 30s par udev réduit le temps de réaction HDMI de 30s à < 1s
+- 80% des appels support "écran noir" sont liés à un branchement HDMI-1 sans HDMI-0 (mauvaise prise)
+- L'auto-swap et le failover automatique éliminent 90% des interventions manuelles terrain
+- 5-10% des clubs accèdent à `/tv` depuis un navigateur PC (usage non mesuré actuellement)
+
+**Coût estimé** : 146 SP (≈ 18 semaines dev, décomposé en 7 Features — P0: 65 SP, P1: 60 SP, P2: 21 SP)
+
+**Bénéfice attendu**
+
+- Tickets support HDMI : -80% (source N°1 éliminée)
+- Uptime perçu : 95% → 99.5% (transitions sans blackout)
+- Temps de réaction HDMI : 30s → < 1s (udev vs polling)
+- Score fiabilité HDMI : 64/100 → 95/100
+- Enabler pour E-12 (Multi-Écrans) et E-22 (Dual Display) en conditions réelles
+
+**Indicateurs avancés** : Temps moyen de détection HDMI, taux de succès transition dual, incidents "mauvaise prise"/mois
+**Indicateurs retardés** : Tickets support HDMI/mois, MTTR incidents écran, uptime moyen flotte, NPS club (fiabilité)
+
+**MVP** : F-23.1 (détection udev) + F-23.5 (auto-swap mauvaise prise) + F-23.6 (failover dual) — les 3 features P0 qui éliminent les cas les plus critiques
+**Go/No-Go** : Go (prerequisite pour fiabilité terrain à l'échelle, dépendance E-22)
+
+---
+
 ## Récapitulatif WSJF (mis à jour)
 
 | Rang | Epic                              | WSJF | PI   | Statut                    |
@@ -806,25 +843,26 @@
 | 1    | E-03 Analytics Sponsors Avancé    | 20   | PI-1 | Backlog                   |
 | 1    | E-06 Onboarding Automatisé        | 20   | PI-1 | Backlog                   |
 | 3    | E-11 Régie Publicitaire Régionale | 18   | PI-2 | Backlog                   |
-| 4    | E-01 Portail Sponsor Self-Service | 13   | PI-1 | Backlog                   |
-| 5    | E-07 Résilience WiFi V2           | 12   | PI-1 | ⚠️ Partiel (F-07.3 reste) |
-| 5    | E-22 Contenus Différenciés TV+LED | 12   | PI-2 | Backlog (nouveau)         |
-| 7    | E-02 Rotation Sponsors            | 10   | PI-1 | Backlog                   |
-| 7    | E-08 Alertes Prédictives          | 10   | PI-1 | ✅ Done                   |
-| 7    | E-16 Rapports Email Auto          | 10   | PI-2 | Backlog (nouveau)         |
-| 10   | E-15 Score Live Phase 2           | 9    | PI-2 | Backlog (nouveau)         |
-| 11   | E-04 Profils Config Match         | 8    | PI-1 | ✅ Done                   |
-| 11   | E-10 Monitoring Fleet             | 8    | PI-1 | ⚠️ Partiel (F-10.1 reste) |
-| 11   | E-12 Multi-Écrans Synchronisés    | 8    | PI-3 | Backlog                   |
-| 14   | E-05 Motion Design Personnalisé   | 7    | PI-2 | Backlog                   |
-| 14   | E-17 A/B Testing                  | 7    | PI-2 | Backlog (nouveau)         |
-| 16   | E-09 Architecture Audit           | 6    | PI-1 | ✅ Done                   |
-| 16   | E-13 Marque Blanche Club          | 6    | PI-3 | Backlog                   |
-| 16   | E-18 Billetterie                  | 6    | PI-3 | Backlog (nouveau)         |
-| 19   | E-14 Fonds de Solidarité          | 5    | PI-3 | Backlog                   |
-| 19   | E-20 Analytics ML                 | 5    | PI-3 | Backlog (nouveau)         |
-| 19   | E-21 API OAuth                    | 5    | PI-3 | Backlog (nouveau)         |
-| 22   | E-19 Capteurs Présence            | 4    | PI-3 | Backlog (nouveau)         |
+| 4    | E-23 Résilience HDMI & Accès Nav. | 14   | PI-2 | Backlog (nouveau)         |
+| 5    | E-01 Portail Sponsor Self-Service | 13   | PI-1 | Backlog                   |
+| 6    | E-07 Résilience WiFi V2           | 12   | PI-1 | ⚠️ Partiel (F-07.3 reste) |
+| 6    | E-22 Contenus Différenciés TV+LED | 12   | PI-2 | Backlog                   |
+| 8    | E-02 Rotation Sponsors            | 10   | PI-1 | Backlog                   |
+| 8    | E-08 Alertes Prédictives          | 10   | PI-1 | ✅ Done                   |
+| 8    | E-16 Rapports Email Auto          | 10   | PI-2 | Backlog                   |
+| 11   | E-15 Score Live Phase 2           | 9    | PI-2 | Backlog                   |
+| 12   | E-04 Profils Config Match         | 8    | PI-1 | ✅ Done                   |
+| 12   | E-10 Monitoring Fleet             | 8    | PI-1 | ⚠️ Partiel (F-10.1 reste) |
+| 12   | E-12 Multi-Écrans Synchronisés    | 8    | PI-3 | Backlog                   |
+| 15   | E-05 Motion Design Personnalisé   | 7    | PI-2 | Backlog                   |
+| 15   | E-17 A/B Testing                  | 7    | PI-2 | Backlog                   |
+| 17   | E-09 Architecture Audit           | 6    | PI-1 | ✅ Done                   |
+| 17   | E-13 Marque Blanche Club          | 6    | PI-3 | Backlog                   |
+| 17   | E-18 Billetterie                  | 6    | PI-3 | Backlog                   |
+| 20   | E-14 Fonds de Solidarité          | 5    | PI-3 | Backlog                   |
+| 20   | E-20 Analytics ML                 | 5    | PI-3 | Backlog                   |
+| 20   | E-21 API OAuth                    | 5    | PI-3 | Backlog                   |
+| 23   | E-19 Capteurs Présence            | 4    | PI-3 | Backlog                   |
 
 ---
 

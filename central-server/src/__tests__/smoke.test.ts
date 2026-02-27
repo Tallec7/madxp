@@ -2803,7 +2803,7 @@ describe('E-22 watchdog secondary display guard', () => {
   // With --app=, we can resize via xdotool without restarting Chromium.
   it('watchdog primary Chromium must use --app= mode (not --kiosk)', () => {
     const primaryFn = content.match(
-      /start_chromium\(\)[\s\S]*?^}/m
+      /start_chromium\(\) \{[\s\S]*?^}/m
     );
     expect(primaryFn).not.toBeNull();
     const fnContent = primaryFn![0];
@@ -2850,7 +2850,7 @@ describe('E-22 watchdog secondary display guard', () => {
   // Guard: primary Chromium in dual-display mode must also use xprop + xdotool (not F11)
   it('watchdog primary in dual-display must use xprop _MOTIF_WM_HINTS + xdotool windowsize (NOT F11)', () => {
     const primaryFn = content.match(
-      /start_chromium\(\)[\s\S]*?^}/m
+      /start_chromium\(\) \{[\s\S]*?^}/m
     );
     expect(primaryFn).not.toBeNull();
     const fnContent = primaryFn![0];
@@ -3101,8 +3101,8 @@ describe('E-23 HDMI monitoring and alerts wiring', () => {
       'utf8'
     );
     // Extract the check_secondary_chromium function body
-    const funcStart = content.indexOf('check_secondary_chromium()');
-    const funcBody = content.slice(funcStart, funcStart + 4000);
+    const funcStart = content.indexOf('check_secondary_chromium() {');
+    const funcBody = content.slice(funcStart, funcStart + 5000);
     // Dual transition logs must mention "sans restart" (zero-blackout)
     expect({
       hasDualNoRestart: funcBody.includes('sans restart'),
@@ -3112,6 +3112,81 @@ describe('E-23 HDMI monitoring and alerts wiring', () => {
       hasDualNoRestart: true,
       hasSingleNoRestart: true,
       hasXdotoolResize: true,
+    });
+  });
+
+  it('kiosk-watchdog must have activate/deactivate_hdmi_failover functions (US-23.6.2)', () => {
+    const content = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/scripts/kiosk-watchdog.sh'),
+      'utf8'
+    );
+    expect({
+      hasActivate: content.includes('activate_hdmi_failover()'),
+      hasDeactivate: content.includes('deactivate_hdmi_failover()'),
+      hasStopPrimary: content.includes('stop_chromium_primary'),
+      hasFailoverFlag: content.includes('/tmp/hdmi-failover-active'),
+      hasGpuCleanup: content.includes('GPU cleanup'),
+    }).toEqual({
+      hasActivate: true,
+      hasDeactivate: true,
+      hasStopPrimary: true,
+      hasFailoverFlag: true,
+      hasGpuCleanup: true,
+    });
+  });
+
+  it('check_secondary_chromium must handle HDMI failover (HDMI-0 lost during dual-display)', () => {
+    const content = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/scripts/kiosk-watchdog.sh'),
+      'utf8'
+    );
+    const funcStart = content.indexOf('check_secondary_chromium() {');
+    const funcBody = content.slice(funcStart, funcStart + 1500);
+    // Failover checks must come BEFORE normal dual-display logic
+    expect({
+      hasFailoverDetection: funcBody.includes('DUAL_DISPLAY_ACTIVE') && funcBody.includes('detect_hdmi0_status') && funcBody.includes('activate_hdmi_failover'),
+      hasFailoverRecovery: funcBody.includes('HDMI_FAILOVER_ACTIVE') && funcBody.includes('deactivate_hdmi_failover'),
+      hasFailoverGuard: funcBody.includes('HDMI_FAILOVER_ACTIVE') && funcBody.includes('return'),
+    }).toEqual({
+      hasFailoverDetection: true,
+      hasFailoverRecovery: true,
+      hasFailoverGuard: true,
+    });
+  });
+
+  it('stop_chromium_primary must use SIGTERM before SIGKILL (GPU-safe, US-23.6.3)', () => {
+    const content = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/scripts/kiosk-watchdog.sh'),
+      'utf8'
+    );
+    const funcStart = content.indexOf('stop_chromium_primary()');
+    const funcBody = content.slice(funcStart, funcStart + 1500);
+    expect({
+      hasSigterm: funcBody.includes('kill -TERM'),
+      hasSigkillFallback: funcBody.includes('kill -9'),
+      hasShmCleanup: funcBody.includes('.org.chromium'),
+      hasSync: funcBody.includes('sync'),
+    }).toEqual({
+      hasSigterm: true,
+      hasSigkillFallback: true,
+      hasShmCleanup: true,
+      hasSync: true,
+    });
+  });
+
+  it('handlers.js must emit tv-role-promotion and tv-role-demotion for HDMI failover', () => {
+    const content = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/server/socket/handlers.js'),
+      'utf8'
+    );
+    expect({
+      hasPromotion: content.includes("'tv-role-promotion'"),
+      hasDemotion: content.includes("'tv-role-demotion'"),
+      hasFailoverCheck: content.includes('hdmi-failover-active'),
+    }).toEqual({
+      hasPromotion: true,
+      hasDemotion: true,
+      hasFailoverCheck: true,
     });
   });
 });
@@ -3223,6 +3298,150 @@ describe('E-22 TvComponent master-slave sync guards', () => {
       searchesSponsors: true,
       searchesCategories: true,
     });
+  });
+});
+
+// ----------------------------------------------------------
+// E-23 US-23.7.5: Analytics displayType guard — the secondary
+// display must NEVER call trackVideoStart/trackVideoEnd to
+// prevent double-counting impressions in dual-display mode.
+// ----------------------------------------------------------
+describe('E-23 US-23.7.5: analytics displayType guard', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+  const tvPath = path.join(repoRoot, 'raspberry/src/app/components/tv/tv.component.ts');
+  const tvContent = fs.readFileSync(tvPath, 'utf-8');
+
+  it('all trackVideoStart calls must be guarded by displayType !== secondary', () => {
+    // Find all lines that call trackVideoStart
+    const lines = tvContent.split('\n');
+    const trackStartLines = lines
+      .map((line, i) => ({ line: line.trim(), num: i + 1 }))
+      .filter(l => l.line.includes('trackVideoStart'));
+
+    expect(trackStartLines.length).toBeGreaterThanOrEqual(3);
+
+    // Each trackVideoStart must be preceded (within 12 lines) by a displayType !== 'secondary' guard
+    for (const { num } of trackStartLines) {
+      const context = lines.slice(Math.max(0, num - 13), num).join(' ');
+      expect(context).toMatch(/displayType\s*!==\s*'secondary'/);
+    }
+  });
+
+  it('all trackVideoEnd calls must be guarded by displayType !== secondary', () => {
+    const lines = tvContent.split('\n');
+    const trackEndLines = lines
+      .map((line, i) => ({ line: line.trim(), num: i + 1 }))
+      .filter(l => l.line.includes('trackVideoEnd'));
+
+    expect(trackEndLines.length).toBeGreaterThanOrEqual(3);
+
+    for (const { num } of trackEndLines) {
+      const context = lines.slice(Math.max(0, num - 6), num).join(' ');
+      expect(context).toMatch(/displayType\s*!==\s*'secondary'/);
+    }
+  });
+});
+
+// ----------------------------------------------------------
+// E-23 S6: LED status script must exist with correct patterns
+// ----------------------------------------------------------
+describe('E-23 S6: LED status script', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+  const ledScript = path.join(repoRoot, 'raspberry/scripts/neopro-led-status.sh');
+
+  it('neopro-led-status.sh must exist and be executable', () => {
+    expect(fs.existsSync(ledScript)).toBe(true);
+    const stat = fs.statSync(ledScript);
+    expect(stat.mode & 0o111).toBeGreaterThan(0);
+  });
+
+  it('neopro-led-status.sh must support heartbeat, slow-blink, fast-blink, default patterns', () => {
+    const content = fs.readFileSync(ledScript, 'utf8');
+    expect(content).toMatch(/heartbeat/);
+    expect(content).toMatch(/slow-blink/);
+    expect(content).toMatch(/fast-blink/);
+    expect(content).toMatch(/default/);
+    expect(content).toMatch(/sys\/class\/leds/);
+  });
+});
+
+// ----------------------------------------------------------
+// E-23 S6: Buzzer script must exist with PWM constants
+// ----------------------------------------------------------
+describe('E-23 S6: buzzer script', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+  const buzzerScript = path.join(repoRoot, 'raspberry/scripts/neopro-buzzer.sh');
+
+  it('neopro-buzzer.sh must exist and be executable', () => {
+    expect(fs.existsSync(buzzerScript)).toBe(true);
+    const stat = fs.statSync(buzzerScript);
+    expect(stat.mode & 0o111).toBeGreaterThan(0);
+  });
+
+  it('neopro-buzzer.sh must use PWM on GPIO 18 with correct frequency', () => {
+    const content = fs.readFileSync(buzzerScript, 'utf8');
+    expect(content).toMatch(/pwmchip0/);
+    expect(content).toMatch(/500000/); // 2000 Hz period
+    expect(content).toMatch(/single|double|triple/);
+  });
+});
+
+// ----------------------------------------------------------
+// E-23 S6: Webapp homepage and manifest must exist
+// ----------------------------------------------------------
+describe('E-23 S6: webapp homepage and PWA manifest', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+  const webappIndex = path.join(repoRoot, 'raspberry/webapp/index.html');
+  const webappManifest = path.join(repoRoot, 'raspberry/webapp/manifest.json');
+
+  it('webapp index.html must exist with TV link', () => {
+    expect(fs.existsSync(webappIndex)).toBe(true);
+    const content = fs.readFileSync(webappIndex, 'utf8');
+    expect(content).toMatch(/displayType=secondary/);
+    expect(content).toMatch(/\/admin\//);
+    expect(content).toMatch(/\/remote/);
+  });
+
+  it('webapp manifest.json must exist with correct metadata', () => {
+    expect(fs.existsSync(webappManifest)).toBe(true);
+    const manifest = JSON.parse(fs.readFileSync(webappManifest, 'utf8'));
+    expect(manifest.name).toBeTruthy();
+    expect(manifest.start_url).toBe('/');
+    expect(manifest.display).toBe('standalone');
+  });
+});
+
+// ----------------------------------------------------------
+// E-23 S6: kiosk-watchdog must integrate LED and buzzer helpers
+// ----------------------------------------------------------
+describe('E-23 S6: kiosk-watchdog LED/buzzer integration', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+  const watchdogPath = path.join(repoRoot, 'raspberry/scripts/kiosk-watchdog.sh');
+  let content: string;
+
+  beforeAll(() => {
+    content = fs.readFileSync(watchdogPath, 'utf8');
+  });
+
+  it('kiosk-watchdog must have set_led_pattern helper function', () => {
+    expect(content).toMatch(/set_led_pattern\(\)/);
+    expect(content).toMatch(/neopro-led-status\.sh/);
+  });
+
+  it('kiosk-watchdog must have buzzer_beep helper function', () => {
+    expect(content).toMatch(/buzzer_beep\(\)/);
+    expect(content).toMatch(/neopro-buzzer\.sh/);
+  });
+
+  it('kiosk-watchdog must call LED patterns for HDMI states', () => {
+    expect(content).toMatch(/set_led_pattern\s+"fast-blink"/);
+    expect(content).toMatch(/set_led_pattern\s+"slow-blink"/);
+    expect(content).toMatch(/set_led_pattern\s+"heartbeat"/);
+  });
+
+  it('kiosk-watchdog must call buzzer for HDMI alerts', () => {
+    expect(content).toMatch(/buzzer_beep\s+"double"/);
+    expect(content).toMatch(/buzzer_beep\s+"triple"/);
   });
 });
 

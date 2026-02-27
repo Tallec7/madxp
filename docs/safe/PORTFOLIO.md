@@ -30,7 +30,7 @@ flowchart TB
     TRANS --> DVS
 
     DVS --> PI1["📦 PI-1\n4 Epics + 2 reliquats • 79 SP"]
-    DVS --> PI2["📦 PI-2\n5 Epics • 69 SP"]
+    DVS --> PI2["📦 PI-2\n7 Epics • 263 SP"]
     DVS --> PI3["📦 PI-3\n7 Epics • 73 SP"]
 
     style VISION fill:#1a237e,color:#fff
@@ -76,6 +76,7 @@ gantt
     E-16 Rapports Email Auto            :e16, 2026-04-01, 42d
     E-17 A/B Testing Créas              :e17, 2026-04-01, 42d
     E-22 Contenus Différenciés TV+LED  :e22, 2026-04-01, 42d
+    E-23 Résilience HDMI & Nav PC      :e23, 2026-04-01, 42d
 
     section PI-3 Upsells & Écosystème
     E-12 Multi-Écrans Synchronisés      :e12, 2026-06-01, 42d
@@ -124,30 +125,31 @@ xychart-beta
 
 | Value Stream                 | Epics  | Features | US (planifiées) | SP estimés |
 | ---------------------------- | ------ | -------- | --------------- | ---------- |
-| 🟢 VS1 Club to Screen        | 9      | 16       | 22              | ~113 SP    |
+| 🟢 VS1 Club to Screen        | 10     | 23       | 55              | ~259 SP    |
 | 🟠 VS2 Sponsor to Impression | 6      | 13       | 21              | ~103 SP    |
 | ⬜ Transverse                | 7      | 10       | 6               | ~44 SP     |
-| **Total**                    | **22** | **39**   | **49**          | **260 SP** |
+| **Total**                    | **23** | **46**   | **82**          | **406 SP** |
 
-> **Note** : Ce tableau concerne les 40 US futures (PI-1 à PI-3). 178 US supplémentaires ont été livrées avant le PI Planning (voir [IMPLEMENTED-BACKLOG.md](IMPLEMENTED-BACKLOG.md)).
+> **Note** : Ce tableau concerne les 76 US futures (PI-1 à PI-3). 178 US supplémentaires ont été livrées avant le PI Planning (voir [IMPLEMENTED-BACKLOG.md](IMPLEMENTED-BACKLOG.md)).
+> **Note E-23** : Epic HDMI comptabilisé VS1 (7 Features, 33 US, 146 SP). Les aspects transverses (F-23.7 Nav PC) restent sous VS1 pour simplifier.
 
 ### Par PI
 
-| PI   | Période        | Epics | SP  | Focus                                                         | Milestone                     |
-| ---- | -------------- | ----- | --- | ------------------------------------------------------------- | ----------------------------- |
-| Done | Avant PI-1     | 5     | ~41 | Profils, WiFi, Alertes, Audit, Monitoring                     | -                             |
-| PI-1 | Fév-Mars 2026  | 4+2   | 79  | Sponsors self-service, analytics, onboarding                  | 5 clubs payants               |
-| PI-2 | Avr-Mai 2026   | 6     | 117 | Régie publicitaire, score live, email auto, A/B, TV+Secondary | Lancement régie à 15 clubs    |
-| PI-3 | Juin-Juil 2026 | 7     | 73  | Multi-écrans, marque blanche, billetterie, ML, OAuth          | 20 clubs, premiers annonceurs |
+| PI   | Période        | Epics | SP  | Focus                                                  | Milestone                     |
+| ---- | -------------- | ----- | --- | ------------------------------------------------------ | ----------------------------- |
+| Done | Avant PI-1     | 5     | ~41 | Profils, WiFi, Alertes, Audit, Monitoring              | -                             |
+| PI-1 | Fév-Mars 2026  | 4+2   | 79  | Sponsors self-service, analytics, onboarding           | 5 clubs payants               |
+| PI-2 | Avr-Mai 2026   | 7     | 263 | Régie, score live, email auto, A/B, TV+Secondary, HDMI | Lancement régie à 15 clubs    |
+| PI-3 | Juin-Juil 2026 | 7     | 73  | Multi-écrans, marque blanche, billetterie, ML, OAuth   | 20 clubs, premiers annonceurs |
 
 ### Par Thème Stratégique
 
-| Thème                   | Epics                                    | OKR     | Impact principal        |
-| ----------------------- | ---------------------------------------- | ------- | ----------------------- |
-| 🟥 TS1 Monétisation     | E-01, E-02, E-03, E-05, E-11, E-17, E-21 | O2 + O4 | ARR + revenus régie     |
-| 🟦 TS2 Expérience Match | E-04, E-12, E-13, E-15, E-18, E-19, E-22 | O3 + O5 | Engagement + image pro  |
-| 🟩 TS3 Acquisition      | E-06, E-07, E-14                         | O1 + O5 | Scalabilité déploiement |
-| 🟪 TS4 Excellence Ops   | E-08, E-09, E-10, E-16, E-20             | O3 + O4 | Fiabilité + monitoring  |
+| Thème                   | Epics                                          | OKR     | Impact principal        |
+| ----------------------- | ---------------------------------------------- | ------- | ----------------------- |
+| 🟥 TS1 Monétisation     | E-01, E-02, E-03, E-05, E-11, E-17, E-21       | O2 + O4 | ARR + revenus régie     |
+| 🟦 TS2 Expérience Match | E-04, E-12, E-13, E-15, E-18, E-19, E-22, E-23 | O3 + O5 | Engagement + image pro  |
+| 🟩 TS3 Acquisition      | E-06, E-07, E-14                               | O1 + O5 | Scalabilité déploiement |
+| 🟪 TS4 Excellence Ops   | E-08, E-09, E-10, E-16, E-20, E-23             | O3 + O4 | Fiabilité + monitoring  |
 
 ---
 

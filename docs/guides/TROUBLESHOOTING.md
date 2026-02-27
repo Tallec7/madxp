@@ -3986,6 +3986,7 @@ Le serveur Socket.IO broadcast le `command` (`io.emit('action', data)`) à **tou
 ### Correction (v3.82.11)
 
 Ajout de `resolveSecondaryVariant()` qui :
+
 1. Vérifie `video.variants.secondary.path` (quand l'objet Video inclut les variants)
 2. Sinon, cherche dans la configuration complète via `findVideoInConfig(path)` : sponsors → timeCategories.loopVideos → categories.videos (récursif)
 3. Retourne le path de la variante secondaire si trouvé, ou le path original sinon
@@ -4019,4 +4020,212 @@ cat /home/pi/neopro/webapp/configuration.json | python3 -m json.tool | grep -A5 
 
 ---
 
-**Dernière mise à jour :** 26 février 2026 (ajout section variante secondaire vidéo manuelle v3.82.11)
+---
+
+## HDMI non détecté par le watchdog (v3.84+)
+
+Le watchdog ne réagit pas au branchement/débranchement d'un écran HDMI.
+
+### Symptôme
+
+L'écran est branché mais le statut HDMI reste `disconnected` dans `/tmp/kiosk-status.json` ou dans le panneau admin (port 8080). La LED ne change pas de pattern.
+
+### Causes possibles
+
+1. **udev rules manquantes** — le fichier `/etc/udev/rules.d/99-neopro-hdmi-hotplug.rules` n'existe pas
+2. **Script notify non exécutable** — `neopro-hdmi-notify.sh` n'a pas le bit +x
+3. **Sysfs path incorrect** — le Pi utilise un chemin DRM différent (Pi 4 vs Pi 5)
+4. **Watchdog pas redémarré** après mise à jour des udev rules
+
+### Diagnostic
+
+```bash
+# 1. Vérifier la présence des udev rules
+ls -la /etc/udev/rules.d/99-neopro-hdmi-hotplug.rules
+# Attendu: fichier présent
+
+# 2. Vérifier les chemins DRM sysfs
+cat /sys/class/drm/card1-HDMI-A-1/status 2>/dev/null || cat /sys/class/drm/card0-HDMI-A-1/status
+# Attendu: "connected" si un écran est branché
+
+# 3. Tester le hotplug manuellement
+udevadm monitor --property --subsystem-match=drm
+# Puis brancher/débrancher un câble HDMI — doit afficher un événement
+
+# 4. Vérifier le flag file
+ls -la /tmp/hdmi-changed
+# Doit être présent et récent après un hotplug
+
+# 5. Vérifier le statut watchdog
+cat /tmp/kiosk-status.json | python3 -m json.tool | grep -E 'hdmi|HDMI'
+
+# 6. Vérifier les logs watchdog
+journalctl -u neopro-kiosk --no-pager -n 50 | grep -i hdmi
+```
+
+### Correction
+
+```bash
+# Recharger les udev rules
+sudo udevadm control --reload-rules && sudo udevadm trigger
+
+# Redémarrer le watchdog
+sudo systemctl restart neopro-kiosk
+```
+
+### Smoke tests de régression
+
+- `udev rules file must exist for HDMI hotplug`
+- `neopro-hdmi-notify.sh must write flag file atomically`
+- `kiosk-watchdog.sh must check HDMI flag file for fast hotplug reaction`
+
+---
+
+## Écran branché sur la mauvaise prise HDMI (v3.84+)
+
+L'écran est branché sur HDMI-1 au lieu de HDMI-0 (port le plus proche de l'alimentation USB-C).
+
+### Symptôme
+
+- LED clignote rapidement (200ms on/off)
+- 2 bips courts du buzzer
+- Message "Écran branché sur le mauvais port" affiché sur l'écran
+- Après 10 secondes, auto-swap vers HDMI-1 comme écran principal
+
+### Diagnostic
+
+```bash
+# 1. Vérifier quel port est connecté
+cat /sys/class/drm/card1-HDMI-A-1/status  # HDMI-0
+cat /sys/class/drm/card1-HDMI-A-2/status  # HDMI-1
+# Si HDMI-1=connected et HDMI-0=disconnected → mauvaise prise confirmée
+
+# 2. Vérifier le flag auto-swap
+ls -la /tmp/hdmi-swapped
+# Présent = auto-swap actif, l'écran fonctionne sur HDMI-1
+
+# 3. Vérifier le statut watchdog
+cat /tmp/kiosk-status.json | python3 -m json.tool | grep wrongPort
+```
+
+### Correction
+
+1. **Solution permanente** : Débrancher et rebrancher l'écran sur HDMI-0 (port le plus proche de l'alimentation)
+2. **Solution temporaire** : Le système auto-swap gère automatiquement après 10s
+3. **Guide de marquage** : Voir `docs/guides/HDMI_MARKING_GUIDE.md` pour marquer physiquement les ports
+
+### Smoke tests de régression
+
+- `kiosk-watchdog must have detect_wrong_port function`
+- `config.txt must have hdmi_force_hotplug entries`
+
+---
+
+## Failover dual-display — HDMI-0 perdu (v3.84+)
+
+En mode dual-display, l'écran principal (HDMI-0) est déconnecté. Le système bascule automatiquement le secondaire en mode TV complet.
+
+### Symptôme
+
+- L'écran secondaire (HDMI-1) affiche soudainement le contenu complet au lieu du contenu secondaire
+- Le panneau admin affiche "Failover actif"
+- Le heartbeat remonte `hdmiStatus.failover: true`
+
+### Diagnostic
+
+```bash
+# 1. Vérifier le flag failover
+ls -la /tmp/hdmi-failover-active
+# Présent = failover en cours
+
+# 2. Vérifier l'état des ports
+cat /tmp/kiosk-status.json | python3 -m json.tool
+# Attendu: hdmi0Status=disconnected, hdmiFailoverActive=true
+
+# 3. Vérifier le processus Chromium
+pgrep -a chromium
+# En failover: un seul processus Chromium (le secondary promu)
+
+# 4. Logs du watchdog
+journalctl -u neopro-kiosk --no-pager -n 50 | grep -i failover
+
+# 5. Vérifier côté Angular (dans la console navigateur)
+# Le displayType doit être passé de 'secondary' à 'tv' après promotion
+```
+
+### Restauration automatique
+
+Quand HDMI-0 est rebranché :
+
+1. Le watchdog détecte HDMI-0 reconnecté
+2. Relance Chromium primaire sur HDMI-0
+3. Redimensionne le Chromium secondaire
+4. Émet `tv-role-demotion` → le secondary repasse en mode secondary
+5. Supprime le flag `/tmp/hdmi-failover-active`
+
+### Restauration manuelle
+
+```bash
+# Si la restauration automatique échoue
+sudo systemctl restart neopro-kiosk
+```
+
+### Smoke tests de régression
+
+- `kiosk-watchdog must have activate/deactivate_hdmi_failover functions`
+- `check_secondary_chromium must handle HDMI failover`
+- `stop_chromium_primary must use SIGTERM before SIGKILL`
+- `handlers.js must emit tv-role-promotion and tv-role-demotion`
+
+---
+
+## Accès navigateur PC ne fonctionne pas (v3.84+)
+
+Un navigateur PC sur le réseau local ne peut pas accéder à l'interface TV.
+
+### Symptôme
+
+- La page `http://neopro.local` ne charge pas ou affiche une erreur
+- L'écran TV fonctionne normalement sur le Pi
+
+### Diagnostic
+
+```bash
+# 1. Vérifier que la webapp est servie
+curl -s http://localhost/webapp/ | head -5
+# Attendu: HTML de la page d'accueil
+
+# 2. Vérifier la résolution DNS
+ping neopro.local
+# Attendu: résolution vers l'IP du Pi
+
+# 3. Vérifier nginx
+sudo nginx -t
+systemctl status nginx
+
+# 4. Vérifier l'accès depuis le PC
+# Ouvrir http://neopro.local dans le navigateur
+# Si erreur DNS → utiliser l'IP directe (ex: http://192.168.4.1)
+
+# 5. Vérifier le QR code
+# Le panneau admin (port 8080) affiche un QR code d'accès rapide
+```
+
+### Points d'entrée PC
+
+| URL                                            | Description                                 |
+| ---------------------------------------------- | ------------------------------------------- |
+| `http://neopro.local/`                         | Homepage enrichie (liens TV, Admin, Remote) |
+| `http://neopro.local/tv?displayType=secondary` | Écran TV en mode secondaire                 |
+| `http://neopro.local/admin/`                   | Panneau admin local                         |
+| `http://neopro.local/remote`                   | Télécommande                                |
+
+### Smoke tests de régression
+
+- `webapp index.html must exist with TV link`
+- `webapp manifest.json must exist`
+- `analytics displayType guard on all trackVideoStart/trackVideoEnd calls`
+
+---
+
+**Dernière mise à jour :** 27 février 2026 (ajout sections HDMI détection, mauvaise prise, failover, accès PC — E-23 v3.84)

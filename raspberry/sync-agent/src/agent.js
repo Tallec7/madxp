@@ -954,6 +954,14 @@ class NeoproSyncAgent {
     return localSocket.getRecordingState();
   }
 
+  fetchLocalHdmiState() {
+    return localSocket.request('get-hdmi-state', 2000);
+  }
+
+  fetchLocalConnectedClients() {
+    return localSocket.request('get-connected-clients', 2000);
+  }
+
   /**
    * Fetch transition metrics from local Pi server via persistent connection (get + reset).
    * @returns {Promise<{earlySwitchCount: number, safetyTimeoutCount: number, cleanupSkippedCount: number, videoErrorCount: number, totalTransitions: number} | null>}
@@ -1017,6 +1025,10 @@ class NeoproSyncAgent {
         // Fetch player state from local server (for cloud monitoring)
         const playerState = await this.fetchLocalPlayerState();
 
+        // Fetch HDMI port status and connected clients (E-23)
+        const hdmiStatus = await this.fetchLocalHdmiState();
+        const connectedClients = await this.fetchLocalConnectedClients();
+
         this.socket.emit('heartbeat', {
           siteId: config.site.id,
           timestamp: Date.now(),
@@ -1030,6 +1042,10 @@ class NeoproSyncAgent {
           wifiStatus: metrics.wifiStatus || null,
           fanStatus: metrics.fanStatus || null,
           filesystemHealth: metrics.filesystemHealth || null,
+          hdmiStatus: hdmiStatus || null,
+          connectedClients: connectedClients || null,
+          // E-23 US-23.4.4: dual-display is active when both HDMI ports are connected
+          dualDisplayActive: !!(hdmiStatus && hdmiStatus.hdmi0 && hdmiStatus.hdmi1),
         });
 
         // Enregistrer le succès du heartbeat

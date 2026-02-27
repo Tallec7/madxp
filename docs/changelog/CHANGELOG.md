@@ -1,3 +1,43 @@
+## [3.84.0](https://github.com/Tallec7/neopro/compare/v3.83.4...v3.84.0) (2026-02-27)
+
+### Features
+
+- **hdmi-detection(E-23 F-23.1):** real-time HDMI detection via DRM sysfs polling + udev hotplug rules — `detect_hdmi0_status()` + `detect_hdmi1_status()` dans kiosk-watchdog, `getBothPortsStatus()` dans hdmi.service.js, event Socket.IO `hdmi-status-update` poussé toutes les 10s, intégré au heartbeat central
+- **hdmi-alerts(E-23 F-23.1):** alerte dashboard "aucun écran branché" — `_hdmiState` dans state.service.js, `hdmi-alert` event, intégré dans heartbeat.handler.ts avec création d'alertes `no_display` et `hdmi_wrong_port`
+- **udev-hotplug(E-23 F-23.1):** règles udev `/etc/udev/rules.d/99-neopro-hdmi-hotplug.rules` → `neopro-hdmi-notify.sh` écrit flag `/tmp/hdmi-changed` — watchdog réagit en < 1s au lieu de 30s polling
+- **headless-boot(E-23 F-23.2):** splash screen d'attente Angular "En attente d'écran", LED clignotement lent, buzzer triple bip — boot sans écran démarre les services normalement
+- **led-status(E-23 F-23.2):** script `neopro-led-status.sh` — contrôle LED activité Pi (heartbeat/slow-blink/fast-blink/default) via sysfs triggers, intégré au watchdog
+- **buzzer-hdmi(E-23 F-23.2):** script `neopro-buzzer.sh` — bip sonore PWM GPIO 18 (single/double/triple), intégré au watchdog pour signaler mauvaise prise (double) et absence totale d'écran (triple, one-shot)
+- **pi-master-priority(E-23 F-23.3):** le Pi kiosk est toujours master — rétrograde automatiquement les navigateurs PC en slave avec toast notification "Rétrogradé en mode esclave"
+- **zero-blackout-transition(E-23 F-23.4):** transition dual-display sans redémarrer Chromium — xrandr + xdotool resize au lieu de cleanup + restart, Chromium toujours en `--app=` mode
+- **wrong-port-detection(E-23 F-23.5):** détection automatique "écran branché sur le mauvais port" — LED fast-blink + buzzer double bip + message aide + auto-swap après 10s
+- **hdmi-force-hotplug(E-23 F-23.5):** `config.txt` avec `hdmi_force_hotplug:0=1` et `hdmi_force_hotplug:1=1` — prérequis pour boot headless
+- **dual-display-failover(E-23 F-23.6):** failover complet quand HDMI-0 perdu en dual-display — kill Chromium primaire (SIGTERM→SIGKILL GPU-safe), promotion secondary en TV complet, restauration automatique quand HDMI-0 rebranché
+- **monitoring-clients(E-23 F-23.7):** monitoring clients connectés enrichi — userAgent, ip, isKiosk, displayType dans heartbeat
+- **webapp-homepage(E-23 F-23.7):** homepage PC enrichie `raspberry/webapp/index.html` — statut HDMI temps réel, liens TV/Admin/Remote, QR code d'accès
+- **admin-hdmi-card(E-23 F-23.2):** carte HDMI dans le panneau admin local — statut HDMI-0/HDMI-1, mode (dual/failover/wrong-port), QR code accès rapide
+- **pwa-manifest(E-23 F-23.7):** manifest PWA + service worker minimal pour autoplay son
+- **analytics-pc-source(E-23 F-23.7):** champ `source: 'kiosk' | 'pc'` dans VideoPlayEvent, distinction kiosk vs navigateur PC
+
+### Bug Fixes
+
+- **analytics:** fix double-comptage impressions sur écran secondaire — ajout guard `displayType !== 'secondary'` sur les 6 points d'appel trackVideoStart/trackVideoEnd (3 start + 3 end)
+- **transition-metrics:** enrichissement des métriques de transition dual-display (durée, type, succès)
+- **failover-metrics:** métriques failover HDMI (durée, type, restauration)
+
+### Tests
+
+- **smoke:** add 5 regression guards for E-23 S6 — LED script executable + patterns, buzzer script PWM constants, webapp index.html presence + manifest.json, kiosk-watchdog LED/buzzer integration
+
+### Documentation
+
+- **architecture:** add "Résilience HDMI & Accès Navigateur (E-23)" section — détection sysfs, signalement LED/buzzer, priorité kiosk, auto-swap, failover FSM, accès PC, métriques heartbeat
+- **reference:** add 3 scripts E-23 (neopro-led-status.sh, neopro-buzzer.sh, neopro-hdmi-notify.sh) dans la table des scripts
+- **troubleshooting:** add 4 sections (HDMI non détecté, mauvaise prise, failover, accès PC) avec diagnostic et smoke tests
+- **sync-architecture:** add section "Événements HDMI & Failover" avec payloads Socket.IO et champs heartbeat enrichis
+- **changelog:** document all 33 US of Epic E-23 across Sprint S4/S5/S6
+- **HDMI marking guide:** physical marking guide for field technicians (Pi 4/5 port diagrams, materials, procedure)
+
 ## [3.83.4](https://github.com/Tallec7/neopro/compare/v3.83.3...v3.83.4) (2026-02-26)
 
 ### Bug Fixes

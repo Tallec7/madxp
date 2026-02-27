@@ -937,6 +937,43 @@ configure_gpu_memory() {
     print_warning "Le changement de gpu_mem nécessite un reboot pour être appliqué"
 }
 
+configure_hdmi_force_hotplug() {
+    print_step "Configuration HDMI force hotplug (les 2 ports)..."
+
+    local CONFIG_FILE="/boot/config.txt"
+    if [ -f "/boot/firmware/config.txt" ]; then
+        CONFIG_FILE="/boot/firmware/config.txt"
+    fi
+
+    # Force X11 à démarrer sur les 2 ports HDMI même sans écran branché.
+    # Prérequis pour : boot headless, détection wrong port, dual-display.
+    local needs_reboot=false
+
+    for port in 0 1; do
+        local key="hdmi_force_hotplug:${port}"
+        if grep -q "^${key}=" "${CONFIG_FILE}" 2>/dev/null; then
+            local current=$(grep "^${key}=" "${CONFIG_FILE}" | cut -d= -f2)
+            if [ "${current}" != "1" ]; then
+                sed -i "s/^${key}=.*/${key}=1/" "${CONFIG_FILE}"
+                print_success "${key} mis à jour à 1"
+                needs_reboot=true
+            else
+                print_success "${key} déjà configuré à 1"
+            fi
+        else
+            echo "" >> "${CONFIG_FILE}"
+            echo "# Force HDMI port ${port} hotplug (Neopro E-23)" >> "${CONFIG_FILE}"
+            echo "${key}=1" >> "${CONFIG_FILE}"
+            print_success "${key}=1 ajouté à ${CONFIG_FILE}"
+            needs_reboot=true
+        fi
+    done
+
+    if $needs_reboot; then
+        print_warning "Le changement de hdmi_force_hotplug nécessite un reboot"
+    fi
+}
+
 ################################################################################
 # Étape 10: Configuration SSH pour accès distant
 ################################################################################
@@ -1155,6 +1192,7 @@ main() {
     configure_services
     configure_gui
     configure_gpu_memory
+    configure_hdmi_force_hotplug
     configure_ssh
     finalize
     verify_installation

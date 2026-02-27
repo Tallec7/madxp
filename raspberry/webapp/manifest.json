@@ -1,0 +1,16 @@
+{
+  "name": "Neopro - Ecran Club",
+  "short_name": "Neopro",
+  "description": "Interface de diffusion TV interactive pour clubs sportifs",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#0f172a",
+  "icons": [
+    {
+      "src": "/admin/public/logo-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    }
+  ]
+}

@@ -655,19 +655,22 @@ transitoires de Supabase/PgBouncer sans intervention manuelle.
 
 ### Scripts d'automatisation
 
-| Script                 | Emplacement          | Description                                                                             |
-| ---------------------- | -------------------- | --------------------------------------------------------------------------------------- |
-| `setup-new-club.sh`    | `raspberry/scripts/` | Configuration complète nouveau club (5-10 min)                                          |
-| `build-raspberry.sh`   | `raspberry/scripts/` | Build Angular optimisé pour Pi                                                          |
-| `build-and-deploy.sh`  | `raspberry/scripts/` | Build + déploiement combinés                                                            |
-| `deploy-remote.sh`     | `raspberry/scripts/` | Déploiement SSH + diagnostic post-deploy auto                                           |
-| `copy-to-pi.sh`        | `raspberry/scripts/` | Copie des fichiers d'installation vers Pi                                               |
-| `diagnose-pi.sh`       | `raspberry/scripts/` | Diagnostic complet Pi (16 checks, `--json`)                                             |
-| `backup-club.sh`       | `raspberry/scripts/` | Sauvegarde configuration club                                                           |
-| `restore-club.sh`      | `raspberry/scripts/` | Restauration configuration club                                                         |
-| `cleanup-pi.sh`        | `raspberry/scripts/` | Nettoyage ~/raspberry après install                                                     |
-| `setup-wifi-client.sh` | `raspberry/scripts/` | Configuration WiFi client (accès internet)                                              |
-| `fix-hostname.sh`      | `raspberry/scripts/` | Correction hostname au boot (lit `HOSTNAME_SLUG` depuis `site.conf`, fallback `neopro`) |
+| Script                  | Emplacement          | Description                                                                             |
+| ----------------------- | -------------------- | --------------------------------------------------------------------------------------- |
+| `setup-new-club.sh`     | `raspberry/scripts/` | Configuration complète nouveau club (5-10 min)                                          |
+| `build-raspberry.sh`    | `raspberry/scripts/` | Build Angular optimisé pour Pi                                                          |
+| `build-and-deploy.sh`   | `raspberry/scripts/` | Build + déploiement combinés                                                            |
+| `deploy-remote.sh`      | `raspberry/scripts/` | Déploiement SSH + diagnostic post-deploy auto                                           |
+| `copy-to-pi.sh`         | `raspberry/scripts/` | Copie des fichiers d'installation vers Pi                                               |
+| `diagnose-pi.sh`        | `raspberry/scripts/` | Diagnostic complet Pi (16 checks, `--json`)                                             |
+| `backup-club.sh`        | `raspberry/scripts/` | Sauvegarde configuration club                                                           |
+| `restore-club.sh`       | `raspberry/scripts/` | Restauration configuration club                                                         |
+| `cleanup-pi.sh`         | `raspberry/scripts/` | Nettoyage ~/raspberry après install                                                     |
+| `setup-wifi-client.sh`  | `raspberry/scripts/` | Configuration WiFi client (accès internet)                                              |
+| `fix-hostname.sh`       | `raspberry/scripts/` | Correction hostname au boot (lit `HOSTNAME_SLUG` depuis `site.conf`, fallback `neopro`) |
+| `neopro-led-status.sh`  | `raspberry/scripts/` | E-23 — Contrôle LED activité Pi (heartbeat/slow-blink/fast-blink/default)               |
+| `neopro-buzzer.sh`      | `raspberry/scripts/` | E-23 — Bip sonore PWM GPIO 18 (single/double/triple beep)                               |
+| `neopro-hdmi-notify.sh` | `raspberry/scripts/` | E-23 — Handler udev hotplug HDMI, écrit flag `/tmp/hdmi-changed`                        |
 
 > `setup-wifi-client.sh` met à jour `/etc/wpa_supplicant/wpa_supplicant.conf`, crée le lien `wpa_supplicant-wlan1.conf`, active `wpa_supplicant@wlan1.service` et relance `dhcpcd` afin que la connexion WiFi du club survive aux redémarrages.
 

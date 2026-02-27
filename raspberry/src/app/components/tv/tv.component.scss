@@ -6,6 +6,48 @@
   background: #000;
 }
 
+// E-23 US-23.3.2: Demotion notice overlay (z-index 40)
+.demotion-notice {
+  position: fixed;
+  bottom: 2rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1.5rem;
+  background: rgba(30, 30, 50, 0.9);
+  border: 1px solid rgba(251, 191, 36, 0.4);
+  border-radius: 8px;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 0.95rem;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  animation: demotionFadeInOut 8s ease-in-out forwards;
+
+  svg {
+    flex-shrink: 0;
+    color: rgba(251, 191, 36, 0.9);
+  }
+}
+
+@keyframes demotionFadeInOut {
+  0% {
+    opacity: 0;
+    transform: translateX(-50%) translateY(10px);
+  }
+  8% {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+  85% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
 // ============================================================================
 // FREEZE-FRAME CANVAS
 // Canvas utilisé pour capturer l'image actuelle pendant les transitions

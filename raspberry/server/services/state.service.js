@@ -33,13 +33,29 @@ class StateService {
       cleanupSkippedCount: 0,
       videoErrorCount: 0,
       totalTransitions: 0,
+      bootToVideoMs: null,
+      // E-23 US-23.4.5: dual-display transition metrics
+      dualDisplayTransitions: 0,   // single↔dual transitions without Chromium restart
+      dualDisplayRestarts: 0,      // fallback Chromium restarts
+      // E-23 US-23.6.5: failover metrics
+      failoverCount: 0,            // HDMI-0 lost → secondary promoted
+      failoverRecoveryCount: 0,    // HDMI-0 restored → secondary demoted back
+      failoverDurationMs: null,    // duration of last failover (ms)
       lastUpdatedAt: null,
     };
 
     // Player state (current video, phase, progress — for cloud monitoring)
     this._playerState = null;
 
-    // TV master-slave instances: socketId -> { role, connectedAt }
+    // HDMI port status (updated by hdmi.service periodic check)
+    this._hdmiState = {
+      hdmi0: false,
+      hdmi1: false,
+      wrongPort: false,
+      updatedAt: null,
+    };
+
+    // TV master-slave instances: socketId -> { role, displayType, connectedAt, userAgent, ip }
     this._tvInstances = new Map();
 
     this._loopState = {
@@ -130,8 +146,23 @@ class StateService {
     this._transitionMetrics.cleanupSkippedCount += data.cleanupSkippedCount || 0;
     this._transitionMetrics.videoErrorCount += data.videoErrorCount || 0;
     this._transitionMetrics.totalTransitions += data.totalTransitions || 0;
+    // E-23 US-23.4.5: dual-display transition metrics
+    this._transitionMetrics.dualDisplayTransitions += data.dualDisplayTransitions || 0;
+    this._transitionMetrics.dualDisplayRestarts += data.dualDisplayRestarts || 0;
+    // E-23 US-23.6.5: failover metrics
+    this._transitionMetrics.failoverCount += data.failoverCount || 0;
+    this._transitionMetrics.failoverRecoveryCount += data.failoverRecoveryCount || 0;
+    if (data.failoverDurationMs != null) {
+      this._transitionMetrics.failoverDurationMs = data.failoverDurationMs;
+    }
     this._transitionMetrics.lastUpdatedAt = Date.now();
     return this.getTransitionMetrics();
+  }
+
+  // E-23 US-23.3.4: Boot-to-video timing metric (one-shot per boot)
+  setBootToVideoMs(ms) {
+    this._transitionMetrics.bootToVideoMs = ms;
+    this._transitionMetrics.lastUpdatedAt = Date.now();
   }
 
   getAndResetTransitionMetrics() {
@@ -141,6 +172,11 @@ class StateService {
     this._transitionMetrics.cleanupSkippedCount = 0;
     this._transitionMetrics.videoErrorCount = 0;
     this._transitionMetrics.totalTransitions = 0;
+    this._transitionMetrics.dualDisplayTransitions = 0;
+    this._transitionMetrics.dualDisplayRestarts = 0;
+    this._transitionMetrics.failoverCount = 0;
+    this._transitionMetrics.failoverRecoveryCount = 0;
+    // bootToVideoMs and failoverDurationMs are NOT reset — they are one-shot/last-value metrics
     return metrics;
   }
 
@@ -168,15 +204,47 @@ class StateService {
     return this.getLoopState();
   }
 
+  // --- HDMI State ---
+  getHdmiState() {
+    return { ...this._hdmiState };
+  }
+
+  updateHdmiState(data) {
+    this._hdmiState = {
+      ...this._hdmiState,
+      ...data,
+      updatedAt: Date.now(),
+    };
+    return this.getHdmiState();
+  }
+
   // --- TV Registration (Master-Slave) ---
-  registerTv(socketId, displayType = 'tv') {
+  // Pi kiosk (displayType==='tv') always gets master priority.
+  // If a kiosk registers and a non-kiosk master exists, the kiosk takes over.
+  registerTv(socketId, displayType = 'tv', meta = {}) {
+    const { userAgent = null, ip = null } = meta;
     const masterId = this._getMasterId();
     if (!masterId) {
-      this._tvInstances.set(socketId, { role: 'master', displayType, connectedAt: Date.now() });
-      return 'master';
+      // No master → become master
+      this._tvInstances.set(socketId, { role: 'master', displayType, connectedAt: Date.now(), userAgent, ip });
+      return { role: 'master', demoted: null };
     }
-    this._tvInstances.set(socketId, { role: 'slave', displayType, connectedAt: Date.now() });
-    return 'slave';
+
+    // A master already exists — check if the new client should take priority
+    const currentMaster = this._tvInstances.get(masterId);
+    const isKiosk = displayType === 'tv';
+    const currentMasterIsKiosk = currentMaster?.displayType === 'tv';
+
+    if (isKiosk && !currentMasterIsKiosk) {
+      // Pi kiosk takes priority over PC/secondary master
+      currentMaster.role = 'slave';
+      this._tvInstances.set(socketId, { role: 'master', displayType, connectedAt: Date.now(), userAgent, ip });
+      console.log(`[TV-Sync] Pi kiosk ${socketId} takes master from PC/secondary ${masterId}`);
+      return { role: 'master', demoted: masterId };
+    }
+
+    this._tvInstances.set(socketId, { role: 'slave', displayType, connectedAt: Date.now(), userAgent, ip });
+    return { role: 'slave', demoted: null };
   }
 
   getConnectedDisplayTypes() {
@@ -185,6 +253,21 @@ class StateService {
       types.add(info.displayType || 'tv');
     }
     return Array.from(types);
+  }
+
+  getConnectedClients() {
+    const clients = [];
+    for (const [socketId, info] of this._tvInstances) {
+      clients.push({
+        socketId,
+        role: info.role,
+        displayType: info.displayType || 'tv',
+        userAgent: info.userAgent || null,
+        ip: info.ip || null,
+        connectedAt: info.connectedAt,
+      });
+    }
+    return clients;
   }
 
   unregisterTv(socketId) {
@@ -215,6 +298,7 @@ class StateService {
       timer: this.getTimer(),
       recordingState: this.getRecordingState(),
       loopState: this.getLoopState(),
+      hdmiState: this.getHdmiState(),
     };
   }
 

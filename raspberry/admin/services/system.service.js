@@ -68,6 +68,9 @@ class SystemService {
       // Status des services
       const services = await this._getServicesStatus();
 
+      // E-23 US-23.2.5: HDMI port status from kiosk watchdog status file
+      const hdmiStatus = await this._getHdmiStatus();
+
       return {
         cpu: cpuUsage,
         memory: {
@@ -83,6 +86,7 @@ class SystemService {
         hostname: os.hostname(),
         platform: os.platform(),
         arch: os.arch(),
+        hdmi: hdmiStatus,
       };
     } catch (error) {
       console.error('Error getting system info:', error);
@@ -355,6 +359,7 @@ class SystemService {
       if (ruleFiles.length > 0) {
         await execCommand('sudo udevadm control --reload-rules');
         await execCommand('sudo udevadm trigger --subsystem-match=net --action=add');
+        await execCommand('sudo udevadm trigger --subsystem-match=drm --action=change');
       }
     } catch {
       // config/udev/ directory not present, skip
@@ -421,6 +426,31 @@ class SystemService {
     }
 
     return statuses;
+  }
+
+  /**
+   * E-23 US-23.2.5: Read HDMI port status from kiosk watchdog status file.
+   * @private
+   * @returns {Promise<{hdmi0: string, hdmi1: string, dualDisplay: boolean, failover: boolean}>}
+   */
+  async _getHdmiStatus() {
+    try {
+      const statusPath = '/tmp/kiosk-status.json';
+      const result = await execCommand(`cat ${statusPath} 2>/dev/null`);
+      if (result.success && result.output) {
+        const status = JSON.parse(result.output.trim());
+        return {
+          hdmi0: status.hdmi0Status || 'unknown',
+          hdmi1: status.hdmi1Status || 'unknown',
+          dualDisplay: status.dualDisplayActive || false,
+          failover: status.hdmiFailoverActive || false,
+          wrongPort: !!status.wrongPort,
+        };
+      }
+    } catch {
+      // kiosk-status.json may not exist (non-Pi or kiosk not running)
+    }
+    return { hdmi0: 'unknown', hdmi1: 'unknown', dualDisplay: false, failover: false, wrongPort: false };
   }
 
   /**

@@ -257,6 +257,11 @@ export const recordVideoPlays = async (req: AuthRequest, res: Response) => {
         typeof play.campaign_id === 'string' && validateUuid(play.campaign_id)
           ? play.campaign_id
           : null;
+      // E-23 US-23.7.4: kiosk (Pi) vs pc (browser) source
+      const validSources = ['kiosk', 'pc'];
+      const source = typeof play.source === 'string' && validSources.includes(play.source)
+        ? play.source
+        : null;
 
       validPlays.push({
         siteId: site_id,
@@ -277,6 +282,7 @@ export const recordVideoPlays = async (req: AuthRequest, res: Response) => {
         positionInLoop,
         siteSponsorId,
         campaignId,
+        source,
       });
     }
 

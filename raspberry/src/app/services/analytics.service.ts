@@ -40,6 +40,12 @@ export interface VideoPlayEvent {
   position_in_loop?: number;
   /** UUID du site_sponsor pour jointure directe */
   site_sponsor_id?: string;
+  /**
+   * E-23 US-23.7.4: Source de la lecture
+   * - 'kiosk' : Raspberry Pi (Chromium kiosk)
+   * - 'pc' : Navigateur PC (PWA ou navigateur classique)
+   */
+  source?: 'kiosk' | 'pc';
 }
 
 /**
@@ -72,6 +78,9 @@ export class AnalyticsService {
   private readonly STORAGE_KEY = 'neopro_analytics_buffer';
   private readonly FLUSH_INTERVAL = 5 * 60 * 1000; // 5 minutes
   private readonly MAX_BUFFER_SIZE = 100;
+
+  // E-23 US-23.7.4: Detect kiosk (Pi) vs PC browser at startup
+  private readonly playbackSource: 'kiosk' | 'pc' = AnalyticsService.detectSource();
 
   /**
    * Détermine l'URL de l'API analytics dynamiquement.
@@ -226,6 +235,8 @@ export class AnalyticsService {
       period: this.currentPeriod,
       audience_estimate: this.audienceEstimate || undefined,
       site_sponsor_id: (this.currentVideo as unknown as { site_sponsor_id?: string }).site_sponsor_id,
+      // E-23 US-23.7.4: kiosk (Pi) vs pc (browser)
+      source: this.playbackSource,
     };
 
     // NE PAS tracker si la TV est éteinte ou en veille (sauf si CEC non disponible)
@@ -325,6 +336,18 @@ export class AnalyticsService {
   // ============================================================================
   // PRIVATE METHODS
   // ============================================================================
+
+  /**
+   * E-23 US-23.7.4: Detect if running on Raspberry Pi kiosk or PC browser.
+   * Pi user-agents contain 'armv7l', 'aarch64', or 'Raspbian'.
+   */
+  private static detectSource(): 'kiosk' | 'pc' {
+    const ua = navigator.userAgent.toLowerCase();
+    if (ua.includes('armv7l') || ua.includes('aarch64') || ua.includes('raspbian') || ua.includes('raspberry')) {
+      return 'kiosk';
+    }
+    return 'pc';
+  }
 
   private generateSessionId(): string {
     return `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;

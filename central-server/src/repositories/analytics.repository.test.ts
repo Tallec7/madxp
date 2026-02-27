@@ -295,12 +295,12 @@ describe('AnalyticsRepository', () => {
         playedAt: '2024-01-15T10:00:00Z', durationPlayed: 30, videoDuration: 60,
         completed: false, triggerType: 'auto', videoId: null, sponsorId: null, tvStatus: null,
         eventType: 'match', period: 'halftime', audienceEstimate: 200, positionInLoop: 3, siteSponsorId: null,
-        campaignId: null,
+        campaignId: null, source: 'kiosk',
       }]);
 
       const sql = mockQuery.mock.calls[0][0] as string;
       expect(sql).toContain('INSERT INTO video_plays');
-      expect(mockQuery.mock.calls[0][1]).toHaveLength(18);
+      expect(mockQuery.mock.calls[0][1]).toHaveLength(19);
     });
 
     it('should do nothing for empty array', async () => {

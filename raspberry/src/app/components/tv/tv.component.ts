@@ -15,6 +15,8 @@ import { PlayerStateService } from '../../services/player-state.service';
 import { ScreenshotService } from '../../services/screenshot.service';
 import { RecordingStateService } from '../../services/recording-state.service';
 import { LicenseBlockComponent } from '../license-block/license-block.component';
+import { WaitingScreenComponent } from '../waiting-screen/waiting-screen.component';
+import { WrongPortScreenComponent } from '../wrong-port-screen/wrong-port-screen.component';
 import { Video } from '../../interfaces/video.interface';
 import { Configuration, OverlayPosition, ScoreOverlayPosition, SportType, WatermarkScheduleRule } from '../../interfaces/configuration.interface';
 import { Command } from '../../interfaces/command.interface';
@@ -26,7 +28,7 @@ import { environment } from '../../../environments/environment';
   selector: 'app-tv',
   templateUrl: './tv.component.html',
   styleUrl: './tv.component.scss',
-  imports: [CommonModule, LicenseBlockComponent],
+  imports: [CommonModule, LicenseBlockComponent, WaitingScreenComponent, WrongPortScreenComponent],
   encapsulation: ViewEncapsulation.None // Désactiver l'encapsulation pour le double-buffer
 })
 export class TvComponent implements OnInit, OnDestroy {
@@ -51,6 +53,16 @@ export class TvComponent implements OnInit, OnDestroy {
 
   // Display type: 'tv' (HDMI 0 principal) ou 'secondary' (HDMI 1 écran secondaire)
   public displayType: 'tv' | 'secondary' = 'tv';
+
+  // HDMI status — E-23 US-23.2.1: splash screen when no display connected
+  public hdmiConnected = true; // Assume connected until told otherwise (PC browsers always true)
+
+  // E-23 US-23.5.3: Wrong HDMI port detected (TV on HDMI-1 instead of HDMI-0)
+  public wrongPort = false;
+
+  // E-23 US-23.3.2: Demotion notification for PC browsers (Pi took over as master)
+  public demotionNotice = false;
+  private demotionTimeout: ReturnType<typeof setTimeout> | null = null;
 
   // License status - bloque l'affichage si la licence n'est pas valide
   public licenseState: LicenseState | null = null;
@@ -183,6 +195,13 @@ export class TvComponent implements OnInit, OnDestroy {
     totalTransitions: 0,
   };
   private transitionMetricsInterval: ReturnType<typeof setInterval> | null = null;
+
+  // E-23 US-23.3.4: Boot-to-video timing metric
+  private bootMetrics = {
+    hdmiDetectedAt: 0,      // timestamp when HDMI first reported connected
+    firstVideoPlayAt: 0,    // timestamp when first video frame plays
+    emitted: false,          // true once the metric has been sent (one-shot)
+  };
 
   public ngOnInit() {
     // Lire le displayType depuis la route data (/secondary → 'secondary', /tv → 'tv')
@@ -445,12 +464,21 @@ export class TvComponent implements OnInit, OnDestroy {
     // Recevoir le rôle assigné par le serveur
     this.socketService.on<{ role: 'master' | 'slave' }>('tv-role-assigned', (data) => {
       this.ngZone.run(() => {
+        const wasMaster = this.tvRole === 'master';
         this.tvRole = data.role;
         // Secondary display syncs as slave to the primary (master)
         // so both screens show the same video at the same time.
         // When secondary variants exist, the slave uses its own variant path via getFilteredVideos().
         this.isSlaveMode = data.role === 'slave';
         console.log(`[TV] Role assigned: ${data.role}, displayType: ${this.displayType}`);
+
+        // E-23 US-23.3.2: Show demotion notice on PC when Pi takes over as master
+        if (wasMaster && this.isSlaveMode && this.displayType === 'tv') {
+          console.log('[TV] Demoted from master to slave (Pi took over)');
+          this.demotionNotice = true;
+          if (this.demotionTimeout) clearTimeout(this.demotionTimeout);
+          this.demotionTimeout = setTimeout(() => { this.demotionNotice = false; }, 8000);
+        }
 
         if (this.isSlaveMode) {
           console.log('[TV] Running as SLAVE - analytics disabled, waiting for master state');
@@ -475,6 +503,50 @@ export class TvComponent implements OnInit, OnDestroy {
       if (!this.isSlaveMode) return;
       this.ngZone.run(() => {
         this.handleMasterLoopState(state);
+      });
+    });
+
+    // E-23 US-23.2.1: HDMI status updates — show splash when no display connected
+    this.socketService.on<{ hdmi0: boolean; hdmi1: boolean; wrongPort: boolean }>('hdmi-status-update', (data) => {
+      this.ngZone.run(() => {
+        const wasDisconnected = !this.hdmiConnected;
+        // For the primary TV display: connected if HDMI-0 is active
+        // For secondary: connected if HDMI-1 is active
+        if (this.displayType === 'tv') {
+          this.hdmiConnected = data.hdmi0;
+        } else {
+          this.hdmiConnected = data.hdmi1;
+        }
+
+        // E-23 US-23.5.3: Track wrong port status
+        this.wrongPort = !!data.wrongPort;
+
+        // E-23 US-23.3.4: Capture HDMI detection timestamp for boot-to-video metric
+        if (wasDisconnected && this.hdmiConnected && !this.bootMetrics.hdmiDetectedAt) {
+          this.bootMetrics.hdmiDetectedAt = Date.now();
+          console.log('[TV] Boot metric: HDMI detected at', this.bootMetrics.hdmiDetectedAt);
+        }
+      });
+    });
+
+    // E-23 US-23.6.4: Failover promotion — secondary becomes full TV mode
+    this.socketService.on<{ reason: string }>('tv-role-promotion', (data) => {
+      this.ngZone.run(() => {
+        if (this.displayType === 'secondary') {
+          console.log(`[TV] Failover promotion: switching to TV mode (${data.reason})`);
+          this.displayType = 'tv';
+        }
+      });
+    });
+
+    // E-23 US-23.6.4: Failover demotion — TV returns to secondary mode after recovery
+    this.socketService.on<{ reason: string }>('tv-role-demotion', (data) => {
+      this.ngZone.run(() => {
+        // Only revert if this instance was originally a secondary display
+        if (this.route.snapshot.data['displayType'] === 'secondary' && this.displayType === 'tv') {
+          console.log(`[TV] Failover demotion: returning to secondary mode (${data.reason})`);
+          this.displayType = 'secondary';
+        }
       });
     });
   }
@@ -733,7 +805,10 @@ export class TvComponent implements OnInit, OnDestroy {
                   this.recordingState.startRecording(false);
                   this._manualRecordingStarted = true;
                 }
-                this.analyticsService.trackVideoStart(video, 'manual');
+                // E-23 US-23.7.5: secondary display ne doit pas tracker les analytics
+                if (this.displayType !== 'secondary') {
+                  this.analyticsService.trackVideoStart(video, 'manual');
+                }
               }
 
               // Mettre à jour l'état du player pour le monitoring cloud
@@ -810,8 +885,8 @@ export class TvComponent implements OnInit, OnDestroy {
       console.log('tv player : manual video ended', video.path);
       targetPlayer.removeEventListener('ended', onManualEnded);
 
-      // Tracker la fin (désactivé pour les slaves)
-      if (!this.isSlaveMode) {
+      // Tracker la fin (désactivé pour les slaves ET secondary — E-23 US-23.7.5)
+      if (!this.isSlaveMode && this.displayType !== 'secondary') {
         this.analyticsService.trackVideoEnd(true);
         // Auto-stop recording si on l'avait démarré pour cette vidéo manuelle
         if (this._manualRecordingStarted) {
@@ -1564,8 +1639,8 @@ export class TvComponent implements OnInit, OnDestroy {
           // Incrémenter le compteur pour le cleanup mémoire
           this.incrementVideoPlayCount();
 
-          // Tracker (désactivé pour les slaves)
-          if (!this.isSlaveMode) {
+          // Tracker (désactivé pour les slaves ET le secondary display — E-23 US-23.7.5)
+          if (!this.isSlaveMode && this.displayType !== 'secondary') {
             this.analyticsService.trackVideoStart(video, 'auto');
           }
 
@@ -1575,6 +1650,21 @@ export class TvComponent implements OnInit, OnDestroy {
           }
 
           console.log(`[TV] Now playing video ${videoIndex} on ${this.activePlayer}`);
+
+          // E-23 US-23.3.4: Emit boot-to-video metric (one-shot)
+          if (!this.bootMetrics.emitted) {
+            this.bootMetrics.firstVideoPlayAt = Date.now();
+            this.bootMetrics.emitted = true;
+            const deltaMs = this.bootMetrics.hdmiDetectedAt
+              ? this.bootMetrics.firstVideoPlayAt - this.bootMetrics.hdmiDetectedAt
+              : 0;
+            console.log(`[TV] Boot metric: first video at ${this.bootMetrics.firstVideoPlayAt}, boot-to-video=${deltaMs}ms`);
+            this.socketService.emit('boot-to-video', {
+              hdmiDetectedAt: this.bootMetrics.hdmiDetectedAt,
+              firstVideoPlayAt: this.bootMetrics.firstVideoPlayAt,
+              bootToVideoMs: deltaMs,
+            });
+          }
 
           // Mettre à jour l'état du player pour le monitoring cloud
           const nextIdx = (videoIndex + 1) % loopVideos.length;
@@ -1850,8 +1940,8 @@ export class TvComponent implements OnInit, OnDestroy {
     this.pendingSwitch = true;
 
     this.ngZone.run(() => {
-      // Tracker la fin de la vidéo actuelle (désactivé pour les slaves)
-      if (!this.isSlaveMode) {
+      // Tracker la fin de la vidéo actuelle (désactivé pour les slaves ET secondary — E-23 US-23.7.5)
+      if (!this.isSlaveMode && this.displayType !== 'secondary') {
         this.analyticsService.trackVideoEnd(true);
       }
 
@@ -2026,9 +2116,9 @@ export class TvComponent implements OnInit, OnDestroy {
           // Incrémenter le compteur pour le cleanup mémoire
           this.incrementVideoPlayCount();
 
-          // Tracker (désactivé pour les slaves)
+          // Tracker (désactivé pour les slaves ET le secondary display — E-23 US-23.7.5)
           const video = this.currentLoopVideos[nextVideoIndex];
-          if (!this.isSlaveMode) {
+          if (!this.isSlaveMode && this.displayType !== 'secondary') {
             this.analyticsService.trackVideoStart(video, 'auto');
           }
 
@@ -2199,8 +2289,8 @@ export class TvComponent implements OnInit, OnDestroy {
       }
     });
 
-    // Tracker la fin de la vidéo manuelle (interrompue) — désactivé pour les slaves
-    if (!this.isSlaveMode) {
+    // Tracker la fin de la vidéo manuelle (interrompue) — désactivé pour les slaves ET secondary (E-23 US-23.7.5)
+    if (!this.isSlaveMode && this.displayType !== 'secondary') {
       this.analyticsService.trackVideoEnd(false); // false = pas complétée
     }
 

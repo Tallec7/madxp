@@ -314,6 +314,22 @@ export interface HeartbeatMessage {
     ext4Errors: number;
     isReadOnly: boolean;
   } | null;
+  hdmiStatus?: {
+    hdmi0: boolean;
+    hdmi1: boolean;
+    wrongPort: boolean;
+    updatedAt: number | null;
+  } | null;
+  connectedClients?: Array<{
+    socketId: string;
+    role: 'master' | 'slave';
+    displayType: string;
+    userAgent: string | null;
+    ip: string | null;
+    connectedAt: number;
+  }> | null;
+  /** E-23 US-23.4.4: Both HDMI ports active (dual-display mode) */
+  dualDisplayActive?: boolean;
 }
 
 // ============================================================================

@@ -91,7 +91,7 @@ app.use(createAuthRouter({ authService }));
 // Socket.IO handlers
 // ---------------------------------------------------------------------------
 const registerSocketHandlers = require('./socket/handlers');
-registerSocketHandlers({ io, stateService, configPath: CONFIG_PATH });
+registerSocketHandlers({ io, stateService, configPath: CONFIG_PATH, hdmiService });
 
 // ---------------------------------------------------------------------------
 // Start server

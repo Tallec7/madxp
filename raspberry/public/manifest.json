@@ -1,0 +1,27 @@
+{
+  "name": "Neopro TV",
+  "short_name": "Neopro",
+  "description": "Affichage TV interactive Neopro pour clubs sportifs",
+  "start_url": "/tv",
+  "display": "standalone",
+  "background_color": "#0a0a0a",
+  "theme_color": "#0a0a0a",
+  "orientation": "landscape",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "48x48",
+      "type": "image/x-icon"
+    },
+    {
+      "src": "/neopro-logo.png",
+      "sizes": "1314x260",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ],
+  "categories": ["sports", "entertainment"],
+  "lang": "fr",
+  "dir": "ltr",
+  "prefer_related_applications": false
+}

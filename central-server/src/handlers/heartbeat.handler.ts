@@ -118,7 +118,20 @@ export async function handleHeartbeat(
       }
     }
 
-    await checkAlerts(siteId, message.metrics, message.kioskStatus, message.wifiStatus, message.fanStatus, message.filesystemHealth);
+    // Broadcast HDMI status to dashboard in real-time (E-23)
+    if (message.hdmiStatus) {
+      const io = ctx.getIO();
+      if (io) {
+        io.to('dashboard').emit('hdmi_status_updated', {
+          siteId,
+          hdmiStatus: message.hdmiStatus,
+          connectedClients: message.connectedClients || [],
+          dualDisplayActive: message.dualDisplayActive || false,
+        });
+      }
+    }
+
+    await checkAlerts(siteId, message.metrics, message.kioskStatus, message.wifiStatus, message.fanStatus, message.filesystemHealth, message.hdmiStatus);
   } catch (error) {
     logger.error('Error handling heartbeat:', error);
   }
@@ -134,7 +147,8 @@ async function checkAlerts(
   kioskStatus?: HeartbeatMessage['kioskStatus'],
   wifiStatus?: HeartbeatMessage['wifiStatus'],
   fanStatus?: HeartbeatMessage['fanStatus'],
-  filesystemHealth?: HeartbeatMessage['filesystemHealth']
+  filesystemHealth?: HeartbeatMessage['filesystemHealth'],
+  hdmiStatus?: HeartbeatMessage['hdmiStatus']
 ): Promise<void> {
   const alerts: Array<{ type: string; severity: string; message: string }> = [];
 
@@ -275,6 +289,24 @@ async function checkAlerts(
         type: 'fs_ext4_errors',
         severity: filesystemHealth.ext4Errors > 5 ? 'critical' : 'warning',
         message: `${filesystemHealth.ext4Errors} erreur(s) EXT4 détectée(s) dans dmesg — SD card à surveiller`,
+      });
+    }
+  }
+
+  // HDMI display alerts (E-23)
+  if (hdmiStatus) {
+    if (!hdmiStatus.hdmi0 && !hdmiStatus.hdmi1) {
+      alerts.push({
+        type: 'no_display',
+        severity: 'critical',
+        message: 'Aucun écran branché (HDMI-0 et HDMI-1 déconnectés)',
+      });
+    }
+    if (hdmiStatus.wrongPort) {
+      alerts.push({
+        type: 'hdmi_wrong_port',
+        severity: 'warning',
+        message: 'Écran branché sur la mauvaise prise HDMI (HDMI-1 au lieu de HDMI-0)',
       });
     }
   }

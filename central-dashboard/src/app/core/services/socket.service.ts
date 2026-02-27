@@ -129,6 +129,11 @@ export class SocketService {
     this.socket.on('screenshot-data', (data: unknown) => {
       this.eventsSubject.next({ type: 'screenshot-data', data });
     });
+
+    // E-23 US-23.4.4: HDMI & dual-display status updates
+    this.socket.on('hdmi_status_updated', (data: unknown) => {
+      this.eventsSubject.next({ type: 'hdmi_status_updated', data });
+    });
   }
 
   disconnect(): void {

@@ -1,0 +1,302 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#0f172a" />
+    <title>Neopro - Ecran Club</title>
+    <link rel="manifest" href="/manifest.json" />
+    <style>
+      :root {
+        --neo-primary: #3b82f6;
+        --neo-bg: #0f172a;
+        --neo-surface: #1e293b;
+        --neo-border: #334155;
+        --neo-text: #f1f5f9;
+        --neo-muted: #94a3b8;
+        --neo-success: #22c55e;
+        --neo-warning: #f59e0b;
+        --neo-danger: #ef4444;
+      }
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      body {
+        background: var(--neo-bg);
+        color: var(--neo-text);
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+      }
+      header {
+        background: var(--neo-surface);
+        border-bottom: 1px solid var(--neo-border);
+        padding: 16px 24px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+      .logo {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-size: 20px;
+        font-weight: 700;
+      }
+      .logo-icon {
+        width: 36px;
+        height: 36px;
+        background: var(--neo-primary);
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 18px;
+      }
+      .status-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 13px;
+        font-weight: 500;
+      }
+      .status-online {
+        background: rgba(34, 197, 94, 0.15);
+        color: var(--neo-success);
+      }
+      .status-offline {
+        background: rgba(239, 68, 68, 0.15);
+        color: var(--neo-danger);
+      }
+      main {
+        flex: 1;
+        padding: 24px;
+        max-width: 960px;
+        margin: 0 auto;
+        width: 100%;
+      }
+      .hero {
+        text-align: center;
+        padding: 48px 0 32px;
+      }
+      .hero h1 {
+        font-size: 28px;
+        margin-bottom: 8px;
+      }
+      .hero p {
+        color: var(--neo-muted);
+        font-size: 15px;
+      }
+      .cards {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 16px;
+        margin-top: 24px;
+      }
+      .card {
+        background: var(--neo-surface);
+        border: 1px solid var(--neo-border);
+        border-radius: 12px;
+        padding: 20px;
+        transition: border-color 0.2s;
+      }
+      .card:hover {
+        border-color: var(--neo-primary);
+      }
+      .card h3 {
+        font-size: 16px;
+        margin-bottom: 8px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .card p {
+        color: var(--neo-muted);
+        font-size: 13px;
+        line-height: 1.5;
+      }
+      .card-action {
+        display: inline-block;
+        margin-top: 12px;
+        padding: 8px 16px;
+        background: var(--neo-primary);
+        color: white;
+        border-radius: 6px;
+        text-decoration: none;
+        font-size: 13px;
+        font-weight: 500;
+        transition: opacity 0.2s;
+      }
+      .card-action:hover {
+        opacity: 0.85;
+      }
+      .info-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        margin-top: 12px;
+      }
+      .info-item {
+        display: flex;
+        justify-content: space-between;
+        padding: 6px 0;
+        border-bottom: 1px solid var(--neo-border);
+        font-size: 13px;
+      }
+      .info-label {
+        color: var(--neo-muted);
+      }
+      .info-value {
+        font-weight: 500;
+      }
+      footer {
+        text-align: center;
+        padding: 16px;
+        color: var(--neo-muted);
+        font-size: 12px;
+        border-top: 1px solid var(--neo-border);
+      }
+      @media (max-width: 600px) {
+        .cards {
+          grid-template-columns: 1fr;
+        }
+        .info-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="logo">
+        <div class="logo-icon">N</div>
+        <span>Neopro</span>
+      </div>
+      <div id="connection-status" class="status-badge status-offline">
+        <span id="status-dot">&#9679;</span>
+        <span id="status-text">Connexion...</span>
+      </div>
+    </header>
+
+    <main>
+      <div class="hero">
+        <h1 id="club-name">Ecran Club</h1>
+        <p>Interface de diffusion Neopro</p>
+      </div>
+
+      <div class="cards">
+        <!-- TV Display Card -->
+        <div class="card">
+          <h3>&#128250; Ecran TV</h3>
+          <p>
+            Ouvrir l'affichage TV dans ce navigateur. Fonctionne comme un ecran secondaire connecte
+            au boitier.
+          </p>
+          <a href="/tv?displayType=secondary" class="card-action">Ouvrir l'ecran TV</a>
+        </div>
+
+        <!-- Admin Card -->
+        <div class="card">
+          <h3>&#9881;&#65039; Administration</h3>
+          <p>
+            Acceder au panneau d'administration pour configurer les videos, le reseau et les
+            parametres du boitier.
+          </p>
+          <a href="/admin/" class="card-action">Panneau admin</a>
+        </div>
+
+        <!-- Remote Card -->
+        <div class="card">
+          <h3>&#127918; Telecommande</h3>
+          <p>
+            Controler l'ecran TV a distance : changer de video, gerer le score, lancer le chrono.
+          </p>
+          <a href="/remote" class="card-action">Telecommande</a>
+        </div>
+
+        <!-- System Info Card -->
+        <div class="card">
+          <h3>&#128225; Informations systeme</h3>
+          <p>Etat du boitier Neopro et des connexions.</p>
+          <div class="info-grid">
+            <div class="info-item">
+              <span class="info-label">Hostname</span>
+              <span class="info-value" id="info-hostname">--</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Version</span>
+              <span class="info-value" id="info-version">--</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">HDMI-0</span>
+              <span class="info-value" id="info-hdmi0">--</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">HDMI-1</span>
+              <span class="info-value" id="info-hdmi1">--</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <footer>Neopro &copy; 2024-2026 &mdash; Systeme TV interactive pour clubs sportifs</footer>
+
+    <script>
+      // Fetch system info for status display
+      (async function () {
+        try {
+          var resp = await fetch('/admin/api/system');
+          if (!resp.ok) throw new Error('API error');
+          var data = await resp.json();
+
+          document.getElementById('info-hostname').textContent = data.hostname || '--';
+          document.getElementById('club-name').textContent = data.hostname || 'Ecran Club';
+
+          // Connection status
+          var badge = document.getElementById('connection-status');
+          var statusText = document.getElementById('status-text');
+          badge.className = 'status-badge status-online';
+          statusText.textContent = 'En ligne';
+
+          // HDMI status
+          if (data.hdmi) {
+            document.getElementById('info-hdmi0').textContent =
+              data.hdmi.hdmi0 === 'connected'
+                ? 'Connecte'
+                : data.hdmi.hdmi0 === 'disconnected'
+                  ? 'Deconnecte'
+                  : '--';
+            document.getElementById('info-hdmi1').textContent =
+              data.hdmi.hdmi1 === 'connected'
+                ? 'Connecte'
+                : data.hdmi.hdmi1 === 'disconnected'
+                  ? 'Deconnecte'
+                  : '--';
+          }
+
+          // Version
+          try {
+            var vResp = await fetch('/admin/api/version');
+            if (vResp.ok) {
+              var vData = await vResp.json();
+              document.getElementById('info-version').textContent = vData.version || '--';
+            }
+          } catch (e) {
+            /* version endpoint optional */
+          }
+        } catch (e) {
+          console.log('[webapp] System info unavailable:', e.message);
+          var badge = document.getElementById('connection-status');
+          badge.className = 'status-badge status-offline';
+          document.getElementById('status-text').textContent = 'Hors ligne';
+        }
+      })();
+    </script>
+  </body>
+</html>
