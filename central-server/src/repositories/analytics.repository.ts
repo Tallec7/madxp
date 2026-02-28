@@ -530,6 +530,16 @@ class AnalyticsRepositoryImpl {
     return new Set(result.rows.map(r => r.id));
   }
 
+  async findExistingCampaignIds(ids: string[]): Promise<Set<string>> {
+    if (ids.length === 0) return new Set();
+    const placeholders = ids.map((_, i) => `$${i + 1}`).join(', ');
+    const result = await query<{ id: string }>(
+      `SELECT id FROM campaigns WHERE id IN (${placeholders})`,
+      ids
+    );
+    return new Set(result.rows.map(r => r.id));
+  }
+
   // ========================================================================
   // Video Plays (Batch Insert)
   // ========================================================================

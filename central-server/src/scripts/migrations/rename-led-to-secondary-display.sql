@@ -18,9 +18,24 @@
 --     en "videos-secondary/" par le sync-agent au prochain déploiement.
 -- ============================================================================
 
--- 1. Rename columns on sites table
-ALTER TABLE sites RENAME COLUMN led_enabled TO secondary_display_enabled;
-ALTER TABLE sites RENAME COLUMN led_resolution TO secondary_display_resolution;
+-- 1. Rename columns on sites table (idempotent: skip if target already exists)
+DO $$
+BEGIN
+  -- If both old and new columns exist, drop the old one (data already in new column)
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'sites' AND column_name = 'led_enabled')
+     AND EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'sites' AND column_name = 'secondary_display_enabled') THEN
+    ALTER TABLE sites DROP COLUMN led_enabled;
+  ELSIF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'sites' AND column_name = 'led_enabled') THEN
+    ALTER TABLE sites RENAME COLUMN led_enabled TO secondary_display_enabled;
+  END IF;
+
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'sites' AND column_name = 'led_resolution')
+     AND EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'sites' AND column_name = 'secondary_display_resolution') THEN
+    ALTER TABLE sites DROP COLUMN led_resolution;
+  ELSIF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'sites' AND column_name = 'led_resolution') THEN
+    ALTER TABLE sites RENAME COLUMN led_resolution TO secondary_display_resolution;
+  END IF;
+END $$;
 
 -- 2. Update display_type values in video_variants
 UPDATE video_variants SET display_type = 'secondary' WHERE display_type = 'led';
@@ -49,9 +64,14 @@ BEGIN
   END IF;
 END $$;
 
-ALTER TABLE video_variants
-  ADD CONSTRAINT video_variants_display_type_check
-  CHECK (display_type IN ('tv', 'secondary'));
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'video_variants_display_type_check') THEN
+    ALTER TABLE video_variants
+      ADD CONSTRAINT video_variants_display_type_check
+      CHECK (display_type IN ('tv', 'secondary'));
+  END IF;
+END $$;
 
 -- 4. Rename index
 ALTER INDEX IF EXISTS idx_sites_led_enabled

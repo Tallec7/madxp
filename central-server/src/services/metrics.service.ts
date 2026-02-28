@@ -683,7 +683,7 @@ class MetricsService {
     sponsorResolutionFailuresTotal.inc({ operation });
   }
 
-  recordVideoPlaysFkFallback(column: 'sponsor_id' | 'video_id' | 'session_id', count: number): void {
+  recordVideoPlaysFkFallback(column: 'sponsor_id' | 'video_id' | 'session_id' | 'campaign_id', count: number): void {
     videoPlaysFkFallbackTotal.inc({ column }, count);
   }
 

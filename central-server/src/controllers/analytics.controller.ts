@@ -215,6 +215,7 @@ export const recordVideoPlays = async (req: AuthRequest, res: Response) => {
     let invalidSessions = 0;
 
     // Valider et préparer toutes les entrées avant l'insertion batch
+    const validTriggerTypes = ['auto', 'manual'];
     const validTvStatuses = ['on', 'standby', 'disconnected', 'unknown'];
     const validEventTypes = ['match', 'training', 'tournament', 'other'];
     const validPeriods = ['pre_match', 'halftime', 'post_match', 'loop'];
@@ -272,7 +273,7 @@ export const recordVideoPlays = async (req: AuthRequest, res: Response) => {
         durationPlayed: play.duration_played || 0,
         videoDuration: play.video_duration || 0,
         completed: play.completed || false,
-        triggerType: play.trigger_type || 'auto',
+        triggerType: validTriggerTypes.includes(play.trigger_type) ? play.trigger_type : 'auto',
         videoId,
         sponsorId,
         tvStatus,
@@ -299,22 +300,26 @@ export const recordVideoPlays = async (req: AuthRequest, res: Response) => {
     const uniqueSponsorIds = [...new Set(validPlays.map(p => p.sponsorId).filter((id): id is string => id !== null))];
     const uniqueVideoIds = [...new Set(validPlays.map(p => p.videoId).filter((id): id is string => id !== null))];
     const uniqueSessionIds = [...new Set(validPlays.map(p => p.sessionId).filter((id): id is string => id !== null))];
+    const uniqueCampaignIds = [...new Set(validPlays.map(p => p.campaignId).filter((id): id is string => id !== null))];
 
-    const [existingSponsorIds, existingVideoIds, existingSessionIds] = await Promise.all([
+    const [existingSponsorIds, existingVideoIds, existingSessionIds, existingCampaignIds] = await Promise.all([
       uniqueSponsorIds.length > 0 ? advertiserRepository.findExistingIds(uniqueSponsorIds) : Promise.resolve(new Set<string>()),
       uniqueVideoIds.length > 0 ? videoRepository.findExistingIds(uniqueVideoIds) : Promise.resolve(new Set<string>()),
       uniqueSessionIds.length > 0 ? analyticsRepository.findExistingSessionIds(uniqueSessionIds) : Promise.resolve(new Set<string>()),
+      uniqueCampaignIds.length > 0 ? analyticsRepository.findExistingCampaignIds(uniqueCampaignIds) : Promise.resolve(new Set<string>()),
     ]);
 
     const missingSponsorIds = uniqueSponsorIds.filter(id => !existingSponsorIds.has(id));
     const missingVideoIds = uniqueVideoIds.filter(id => !existingVideoIds.has(id));
     const missingSessionIds = uniqueSessionIds.filter(id => !existingSessionIds.has(id));
+    const missingCampaignIds = uniqueCampaignIds.filter(id => !existingCampaignIds.has(id));
 
-    if (missingSponsorIds.length > 0 || missingVideoIds.length > 0 || missingSessionIds.length > 0) {
+    if (missingSponsorIds.length > 0 || missingVideoIds.length > 0 || missingSessionIds.length > 0 || missingCampaignIds.length > 0) {
       const missingFks: Record<string, string[]> = {};
       if (missingSponsorIds.length > 0) missingFks.sponsor_id = missingSponsorIds;
       if (missingVideoIds.length > 0) missingFks.video_id = missingVideoIds;
       if (missingSessionIds.length > 0) missingFks.session_id = missingSessionIds;
+      if (missingCampaignIds.length > 0) missingFks.campaign_id = missingCampaignIds;
 
       logger.warn('Video plays reference non-existent FK targets, falling back to null', {
         siteId: site_id,
@@ -324,6 +329,7 @@ export const recordVideoPlays = async (req: AuthRequest, res: Response) => {
       let sponsorNulled = 0;
       let videoNulled = 0;
       let sessionNulled = 0;
+      let campaignNulled = 0;
 
       for (const play of validPlays) {
         if (play.sponsorId !== null && !existingSponsorIds.has(play.sponsorId)) {
@@ -338,11 +344,16 @@ export const recordVideoPlays = async (req: AuthRequest, res: Response) => {
           play.sessionId = null;
           sessionNulled++;
         }
+        if (play.campaignId !== null && !existingCampaignIds.has(play.campaignId)) {
+          play.campaignId = null;
+          campaignNulled++;
+        }
       }
 
       if (sponsorNulled > 0) metricsService.recordVideoPlaysFkFallback('sponsor_id', sponsorNulled);
       if (videoNulled > 0) metricsService.recordVideoPlaysFkFallback('video_id', videoNulled);
       if (sessionNulled > 0) metricsService.recordVideoPlaysFkFallback('session_id', sessionNulled);
+      if (campaignNulled > 0) metricsService.recordVideoPlaysFkFallback('campaign_id', campaignNulled);
     }
 
     // Batch insert via repository (handles batching internally)
