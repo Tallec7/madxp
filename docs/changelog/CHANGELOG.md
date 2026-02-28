@@ -2,6 +2,13 @@
 
 ### Bug Fixes
 
+- **analytics:** harden video-plays INSERT — campaign_id FK pre-check, trigger_type validation, idempotent migration ([8cd96bd](https://github.com/Tallec7/neopro/commit/8cd96bd31c6b0659e21ec892a7e3b49321ada178))
+- **kiosk:** suppress Chromium MCS/GCM spam + Pi 5 VSync failures — smoke tests, docs ([e6a6b6d](https://github.com/Tallec7/neopro/commit/e6a6b6dff5254564b8d4d3436f97b305a0dcc822))
+
+## [3.84.2](https://github.com/Tallec7/neopro/compare/v3.84.1...v3.84.2) (2026-02-28)
+
+### Bug Fixes
+
 - **analytics:** harden video-plays batch INSERT — add `campaign_id` FK pre-check (was missing, causing FK violation when campaigns deleted while Pi buffers analytics), validate `trigger_type` against allowed values instead of trusting raw Pi payload
 - **kiosk:** suppress Chromium MCS/GCM spam logs — add `GCMDriver` to `--disable-features` (Neopro doesn't use Chromium push notifications, prevents "Failed to connect to MCS endpoint" noise every 30s during WiFi drops)
 - **kiosk:** fix `GetVSyncParametersIfAvailable() failed` on Pi 5 — add `--disable-gpu-vsync` to Pi 5 gpu_flags (was only on Pi 4)
