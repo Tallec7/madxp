@@ -894,6 +894,63 @@ scp raspberry/config/systemd/neopro-kiosk.service pi@neopro.local:/home/pi/neopr
 ssh pi@neopro.local 'sudo cp /home/pi/neopro/config/systemd/neopro-kiosk.service /etc/systemd/system/ && sudo systemctl daemon-reload && sudo shutdown -r now'
 ```
 
+#### Spam "Failed to connect to MCS endpoint with error -105" (v3.84.2+)
+
+**Symptômes :**
+
+- `journalctl -u neopro-kiosk` montre des centaines de lignes :
+  ```
+  google_apis/gcm/engine/connection_factory_impl.cc:434
+  Failed to connect to MCS endpoint with error -105
+  ```
+- Se produit en boucle toutes les ~30s, surtout pendant les coupures WiFi
+- Aucun impact sur la lecture vidéo locale, mais pollue les logs
+
+**Cause :** Chromium tente de se connecter à Google Cloud Messaging (`mtalk.google.com`) pour les push notifications internes. L'erreur `-105` = `ERR_NAME_NOT_RESOLVED` — le DNS échoue quand le WiFi est instable (fréquent avec les dongles USB RTL8192EU). Neopro n'utilise pas les push notifications Chromium.
+
+**Correction (v3.84.2) :** `GCMDriver` ajouté dans `--disable-features` du kiosk-watchdog.sh (primaire et secondaire). Désactive entièrement le client GCM de Chromium.
+
+**Diagnostic :**
+
+```bash
+# Vérifier que GCMDriver est bien désactivé
+grep 'GCMDriver' /home/pi/neopro/scripts/kiosk-watchdog.sh
+# Attendu: "TranslateUI,MediaRouter,XdgDesktopPortal,GCMDriver"
+# Si absent: version < 3.84.2
+
+# Vérifier en temps réel (après mise à jour, ne devrait plus apparaître)
+journalctl -u neopro-kiosk -f | grep -i "MCS endpoint"
+# Attendu: aucune ligne
+```
+
+#### VSync failures sur Pi 5 — "GetVSyncParametersIfAvailable() failed" (v3.84.2+)
+
+**Symptômes :**
+
+- `journalctl -u neopro-kiosk` montre :
+  ```
+  ui/gl/gl_surface_presentation_helper.cc:260
+  GetVSyncParametersIfAvailable() failed for 3 times!
+  ```
+- Affecte Pi 5 uniquement (driver V3D Mesa)
+- La vidéo joue mais sans synchronisation verticale optimale (possible tearing)
+
+**Cause :** Le driver GPU V3D Mesa sur Pi 5 ne supporte pas correctement la requête VSync de Chromium. Le flag `--disable-gpu-vsync` était présent sur Pi 4 mais manquait dans les gpu_flags Pi 5.
+
+**Correction (v3.84.2) :** `--disable-gpu-vsync` ajouté dans les gpu_flags Pi 5 (primaire et secondaire). Chromium utilise son propre timer de rafraîchissement au lieu du VSync driver.
+
+**Diagnostic :**
+
+```bash
+# Vérifier les flags GPU Pi 5 dans le watchdog
+grep -A5 '"pi5"' /home/pi/neopro/scripts/kiosk-watchdog.sh | grep 'disable-gpu-vsync'
+# Attendu: --disable-gpu-vsync. Si absent: version < 3.84.2
+
+# Vérifier en temps réel
+journalctl -u neopro-kiosk -f | grep -i "VSync"
+# Attendu: aucune ligne après mise à jour
+```
+
 #### TV figée — fenêtre parasite devant Chromium (v3.81+)
 
 **Symptômes :**

@@ -3749,6 +3749,26 @@ describe('Kiosk GPU crash loop regression guards', () => {
       .toEqual({ combinedDisableFeaturesCount: 2 }); // primary + secondary
   });
 
+  it('--disable-features must include GCMDriver to suppress MCS endpoint spam', () => {
+    // Without GCMDriver disabled, Chromium tries to connect to mtalk.google.com
+    // every ~30s for push notifications. When WiFi drops (common with USB dongles),
+    // this floods journalctl with "Failed to connect to MCS endpoint with error -105".
+    // Neopro doesn't use Chromium push notifications.
+    expect({ hasGcmDisable: watchdog.includes('GCMDriver') })
+      .toEqual({ hasGcmDisable: true });
+  });
+
+  it('Pi 5 gpu_flags must include --disable-gpu-vsync', () => {
+    // V3D Mesa driver on Pi 5 fails GetVSyncParametersIfAvailable() repeatedly.
+    // --disable-gpu-vsync was already present for Pi 4 but missing from Pi 5 flags,
+    // causing noisy "GetVSyncParametersIfAvailable() failed for 3 times!" in logs.
+    // Both Pi 4 AND Pi 5 gpu_flags blocks must have this flag.
+    const pi5Block = watchdog.match(/if \[\[ "\$PI_MODEL" == "pi5" \]\]; then[\s\S]*?gpu_flags=\([\s\S]*?\)/g) || [];
+    const pi5HasVsync = pi5Block.some(block => block.includes('--disable-gpu-vsync'));
+    expect({ pi5HasDisableGpuVsync: pi5HasVsync })
+      .toEqual({ pi5HasDisableGpuVsync: true });
+  });
+
   it('primary Chromium must have --user-data-dir for profile isolation', () => {
     // Without --user-data-dir, the primary Chromium uses the default profile
     // at /home/pi/.config/chromium/ which can accumulate stale state between

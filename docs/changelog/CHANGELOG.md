@@ -1,3 +1,21 @@
+## [3.84.2](https://github.com/Tallec7/neopro/compare/v3.84.1...v3.84.2) (2026-02-28)
+
+### Bug Fixes
+
+- **analytics:** harden video-plays batch INSERT — add `campaign_id` FK pre-check (was missing, causing FK violation when campaigns deleted while Pi buffers analytics), validate `trigger_type` against allowed values instead of trusting raw Pi payload
+- **kiosk:** suppress Chromium MCS/GCM spam logs — add `GCMDriver` to `--disable-features` (Neopro doesn't use Chromium push notifications, prevents "Failed to connect to MCS endpoint" noise every 30s during WiFi drops)
+- **kiosk:** fix `GetVSyncParametersIfAvailable() failed` on Pi 5 — add `--disable-gpu-vsync` to Pi 5 gpu_flags (was only on Pi 4)
+- **migration:** make `rename-led-to-secondary-display` idempotent — handle case where both old and new columns exist simultaneously (DROP old), wrap CHECK constraint in IF NOT EXISTS
+
+### Tests
+
+- **smoke:** add 2 regression guards — `GCMDriver` in disable-features, `--disable-gpu-vsync` in Pi 5 gpu_flags
+
+### Documentation
+
+- **troubleshooting:** add 2 kiosk sections (MCS endpoint spam, VSync failures on Pi 5) with diagnostic commands
+- **changelog:** document v3.84.2 fixes
+
 ## [3.84.1](https://github.com/Tallec7/neopro/compare/v3.84.0...v3.84.1) (2026-02-27)
 
 ### Bug Fixes

@@ -455,7 +455,11 @@ start_chromium() {
 
     # Features à désactiver — CRITIQUE : Chromium n'accepte qu'un seul --disable-features,
     # le dernier flag écrase les précédents ! On combine donc common + model-specific ici.
-    local disable_features="TranslateUI,MediaRouter,XdgDesktopPortal"
+    # GCMDriver : désactive Google Cloud Messaging (push notifications internes Chromium).
+    # Sans ce flag, Chromium tente de se connecter à mtalk.google.com toutes les 30s
+    # et spamme "Failed to connect to MCS endpoint with error -105" quand le WiFi tombe.
+    # Neopro n'utilise pas les push notifications Chromium.
+    local disable_features="TranslateUI,MediaRouter,XdgDesktopPortal,GCMDriver"
 
     # Flags communs à tous les modèles
     # TOUJOURS utiliser --app=URL (jamais --kiosk). Raisons :
@@ -525,6 +529,7 @@ start_chromium() {
             --ignore-gpu-blocklist
             --enable-gpu-rasterization
             --disable-gpu-memory-buffer-video-frames
+            --disable-gpu-vsync
         )
     else
         # Pi 4 et antérieurs : utiliser l'accélération GPU hardware
@@ -678,7 +683,8 @@ start_chromium_secondary() {
     fi
 
     # Features à désactiver — même combine que start_chromium() (un seul --disable-features)
-    local disable_features="TranslateUI,MediaRouter,XdgDesktopPortal"
+    # GCMDriver : désactive Google Cloud Messaging (push notifications internes Chromium)
+    local disable_features="TranslateUI,MediaRouter,XdgDesktopPortal,GCMDriver"
 
     # Flags identiques au kiosk principal + user-data-dir séparé + positionnement écran 2
     # NOTE: --app=URL au lieu de --kiosk pour le secondaire.
@@ -727,6 +733,7 @@ start_chromium_secondary() {
             --ignore-gpu-blocklist
             --enable-gpu-rasterization
             --disable-gpu-memory-buffer-video-frames
+            --disable-gpu-vsync
         )
     else
         gpu_flags=(
