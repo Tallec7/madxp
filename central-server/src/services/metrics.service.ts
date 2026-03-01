@@ -509,6 +509,12 @@ const kioskCrashesTotal = new Counter({
   registers: [register],
 });
 
+const displayFallbackTotal = new Counter({
+  name: 'neopro_display_fallback_total',
+  help: 'Total display resolution fallback events (xrandr + EDID unavailable)',
+  registers: [register],
+});
+
 // ============= Métriques Report Generation =============
 
 const sponsorSyncTotal = new Counter({
@@ -902,6 +908,10 @@ class MetricsService {
 
   recordKioskCrash(): void {
     kioskCrashesTotal.inc();
+  }
+
+  recordDisplayFallback(): void {
+    displayFallbackTotal.inc();
   }
 
   // ============= Méthodes Fan Pi =============

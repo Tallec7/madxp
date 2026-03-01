@@ -2652,6 +2652,34 @@ describe('E-22 Angular /secondary route guard', () => {
 });
 
 // ----------------------------------------------------------
+// E-23 F-23.7: Root route must use HomeComponent (landing page)
+// instead of redirecting to /tv so neopro.local shows a
+// choice page (TV / Remote / Admin) for PC browsers.
+// The kiosk Pi opens /tv directly via kiosk-watchdog.sh.
+// ----------------------------------------------------------
+describe('E-23 F-23.7 root route HomeComponent guard', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+  const routesPath = path.join(repoRoot, 'raspberry/src/app/app.routes.ts');
+
+  let content: string;
+  beforeAll(() => {
+    content = fs.readFileSync(routesPath, 'utf8');
+  });
+
+  it('app.routes.ts must use HomeComponent on root path (not redirectTo tv)', () => {
+    expect({
+      importsHomeComponent: content.includes("import { HomeComponent }"),
+      rootUsesHomeComponent: /path:\s*['"]?['"]?\s*,\s*component:\s*HomeComponent/.test(content),
+      noRootRedirectToTv: !/path:\s*['"]?['"]?\s*,\s*redirectTo:\s*['"]tv['"]/.test(content),
+    }).toEqual({
+      importsHomeComponent: true,
+      rootUsesHomeComponent: true,
+      noRootRedirectToTv: true,
+    });
+  });
+});
+
+// ----------------------------------------------------------
 // E-22 LoopVideo variants guard: LoopVideo interface must
 // use variants.secondary (not variants.led) to ensure video
 // variant selection works for the secondary display.
@@ -3179,6 +3207,57 @@ describe('E-23 HDMI monitoring and alerts wiring', () => {
       hasSleepAfterXrandr: true,
       hasRequery: true,
     });
+  });
+
+  it('setup_secondary_xrandr grep must match xrandr lines with "primary" keyword', () => {
+    const content = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/scripts/kiosk-watchdog.sh'),
+      'utf8'
+    );
+    const funcStart = content.indexOf('setup_secondary_xrandr()');
+    const funcBody = content.slice(funcStart, funcStart + 2000);
+    // The grep in setup_secondary_xrandr must handle both:
+    //   "HDMI-A-1 connected 1920x1080+0+0"          (no primary keyword)
+    //   "HDMI-A-2 connected primary 3840x2160+0+0"   (with primary keyword)
+    // Old regex '^HDMI.* connected [0-9]' misses the primary keyword case.
+    const grepLine = funcBody.match(/grep -E '\^HDMI\.\* connected.*'/)?.[0] ?? '';
+    expect(grepLine).toContain('primary');
+  });
+
+  it('deactivate_hdmi_failover must proactively restore dual-display (not rely on lazy polling)', () => {
+    const content = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/scripts/kiosk-watchdog.sh'),
+      'utf8'
+    );
+    const funcStart = content.indexOf('deactivate_hdmi_failover()');
+    const funcBody = content.slice(funcStart, funcStart + 3000);
+    expect({
+      stopsPromoted: funcBody.includes('kill -TERM') && funcBody.includes('SECONDARY_CHROMIUM_PID'),
+      reconfiguresXrandr: funcBody.includes('setup_secondary_xrandr'),
+      relaunchesPrimary: funcBody.includes('start_chromium'),
+      relaunchesSecondary: funcBody.includes('start_chromium_secondary'),
+    }).toEqual({
+      stopsPromoted: true,
+      reconfiguresXrandr: true,
+      relaunchesPrimary: true,
+      relaunchesSecondary: true,
+    });
+  });
+
+  it('main watchdog loop must skip check_chromium_alive during HDMI failover (prevents parasitic restart)', () => {
+    const content = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/scripts/kiosk-watchdog.sh'),
+      'utf8'
+    );
+    // Find the check_chromium_alive call in the main loop (not the function definition)
+    const mainLoopMatch = content.match(
+      /HDMI_FAILOVER_ACTIVE.*!=.*true.*&&.*!.*check_chromium_alive/
+    );
+    expect(mainLoopMatch).not.toBeNull();
+    // Ensure there is NO unguarded check_chromium_alive that sets need_restart
+    const unguardedPattern =
+      /if\s+!\s*check_chromium_alive;\s*then\s*\n\s*need_restart=true/;
+    expect(unguardedPattern.test(content)).toBe(false);
   });
 
   it('stop_chromium_primary must use SIGTERM before SIGKILL (GPU-safe, US-23.6.3)', () => {
@@ -4754,6 +4833,78 @@ describe('Kiosk screen dimension initialization guard', () => {
     // Defense-in-depth: even if init is wrong, runtime must catch it
     // before constructing --window-size flag
     expect(watchdog).toContain('-le 0');
+  });
+});
+
+// ----------------------------------------------------------
+// Resolution detection cascade (optimal TV resolution)
+// Ensures kiosk-watchdog.sh detects the native resolution of each
+// connected TV via a 4-level cascade: xrandr geometry → xrandr
+// preferred mode → EDID native → DEFAULT_SCREEN constants.
+// Eliminates hardcoded 1920x1080 magic numbers.
+// ----------------------------------------------------------
+describe('Resolution detection cascade', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+  const watchdog = fs.readFileSync(
+    path.join(repoRoot, 'raspberry/scripts/kiosk-watchdog.sh'),
+    'utf8'
+  );
+
+  it('DEFAULT_SCREEN_WIDTH constant must be defined as a positive integer', () => {
+    const match = watchdog.match(/^DEFAULT_SCREEN_WIDTH=(\d+)$/m);
+    expect(match).not.toBeNull();
+    expect(Number(match![1])).toBeGreaterThan(0);
+  });
+
+  it('DEFAULT_SCREEN_HEIGHT constant must be defined as a positive integer', () => {
+    const match = watchdog.match(/^DEFAULT_SCREEN_HEIGHT=(\d+)$/m);
+    expect(match).not.toBeNull();
+    expect(Number(match![1])).toBeGreaterThan(0);
+  });
+
+  it('get_output_resolution() cascade function must exist', () => {
+    expect(watchdog).toMatch(/^get_output_resolution\s*\(\)/m);
+  });
+
+  it('no raw 1920 magic number outside constant definitions and comments', () => {
+    // Split into lines, filter out constant defs and comment-only lines
+    const codeLines = watchdog.split('\n').filter((line) => {
+      const trimmed = line.trim();
+      // Skip comment lines
+      if (trimmed.startsWith('#')) return false;
+      // Skip the constant definition itself
+      if (/^DEFAULT_SCREEN_WIDTH=\d+$/.test(trimmed)) return false;
+      return true;
+    });
+    const rawUsages = codeLines.filter((line) => /\b1920\b/.test(line));
+    expect(rawUsages).toEqual([]);
+  });
+
+  it('no raw 1080 magic number outside constant definitions and comments', () => {
+    const codeLines = watchdog.split('\n').filter((line) => {
+      const trimmed = line.trim();
+      if (trimmed.startsWith('#')) return false;
+      if (/^DEFAULT_SCREEN_HEIGHT=\d+$/.test(trimmed)) return false;
+      return true;
+    });
+    const rawUsages = codeLines.filter((line) => /\b1080\b/.test(line));
+    expect(rawUsages).toEqual([]);
+  });
+
+  it('SECONDARY_X_OFFSET must derive from PRIMARY_SCREEN_WIDTH, not hardcoded', () => {
+    // Must use $PRIMARY_SCREEN_WIDTH or $DEFAULT_SCREEN_WIDTH, not a raw number
+    expect(watchdog).toMatch(/SECONDARY_X_OFFSET.*PRIMARY_SCREEN_WIDTH/);
+  });
+
+  it('DISPLAY_FALLBACK_REASON must be defined and included in kiosk status', () => {
+    expect(watchdog).toMatch(/^DISPLAY_FALLBACK_REASON=/m);
+    expect(watchdog).toContain('displayFallback');
+  });
+
+  it('xrandr preferred mode parsing (cascade level 2) must detect "+" marker', () => {
+    // The cascade must parse xrandr mode list for the preferred mode (marked with +)
+    expect(watchdog).toMatch(/preferred_res/);
+    expect(watchdog).toMatch(/\+/);
   });
 });
 

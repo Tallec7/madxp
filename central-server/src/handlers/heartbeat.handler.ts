@@ -194,6 +194,16 @@ async function checkAlerts(
     });
   }
 
+  // Display resolution fallback detection
+  if (kioskStatus?.displayFallback) {
+    alerts.push({
+      type: 'display_fallback',
+      severity: 'warning',
+      message: `Résolution écran en mode dégradé: ${kioskStatus.displayFallback}`,
+    });
+    metricsService.recordDisplayFallback();
+  }
+
   // WiFi / network alerts
   if (wifiStatus) {
     // Signal faible (seulement si connexion WiFi, pas Ethernet)
@@ -344,6 +354,8 @@ async function checkAlerts(
         alertService.usbPowerIssue(siteId, siteName, wifiStatus?.throttled || '').catch((_e) => {/* ignore */});
       } else if (alert.type === 'fan_failure') {
         alertService.fanFailure(siteId, siteName, metrics.temperature, fanStatus?.curState ?? 0, fanStatus?.maxState ?? 0).catch((_e) => {/* ignore */});
+      } else if (alert.type === 'display_fallback') {
+        alertService.displayFallback(siteId, siteName, kioskStatus?.displayFallback || '').catch((_e) => {/* ignore */});
       }
 
       logger.warn('Alert created', { siteId, ...alert });

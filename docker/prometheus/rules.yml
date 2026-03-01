@@ -423,6 +423,16 @@ groups:
           summary: "Repeated config drift detected after deployments"
           description: "{{ $value | humanize }} config drifts in 2h alongside completed deployments. Possible config-merge regression — secondary display or other settings may be silently dropped during merge. Check config-merge.js and Pi logs."
 
+      # Display resolution fallback: Pi using default resolution (xrandr + EDID unavailable)
+      - alert: DisplayFallbackDetected
+        expr: increase(neopro_display_fallback_total[1h]) > 0
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Display resolution fallback detected"
+          description: "{{ $value | humanize }} Pi(s) fell back to default screen resolution in the last hour. xrandr and EDID detection both failed — TV may be using 1920x1080 instead of native resolution."
+
       # Sponsor analytics pipeline stall: club plays flowing but no sponsor plays (unified pipeline v3.67+)
       - alert: SponsorAnalyticsPipelineStall
         expr: rate(neopro_video_plays_total{category="sponsor"}[2h]) == 0 and rate(neopro_video_plays_total{category="club"}[2h]) > 0

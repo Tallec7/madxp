@@ -27,6 +27,12 @@ MEMORY_THRESHOLD=85  # Redémarrer si mémoire > 85%
 MAX_CRASH_COUNT=3  # Après 3 crashs rapides, attendre plus longtemps
 CRASH_WINDOW=300   # Fenêtre de 5 minutes pour compter les crashs
 
+# Résolution de dernier recours — utilisée uniquement quand xrandr ET EDID échouent
+DEFAULT_SCREEN_WIDTH=1920
+DEFAULT_SCREEN_HEIGHT=1080
+# Raison du fallback (vide = résolution native détectée, sinon = mode dégradé)
+DISPLAY_FALLBACK_REASON=""
+
 # Compteur de crashs récents
 crash_times=()
 
@@ -144,6 +150,74 @@ WRONG_PORT_DETECTED_AT=0
 HDMI_SWAPPED=0
 HDMI_SWAP_DELAY=10  # seconds before auto-swap
 
+# Cascade de détection de la résolution optimale d'un écran.
+# Essaie 4 sources dans l'ordre pour obtenir la résolution native de la TV :
+#   1. xrandr geometry    → résolution actuelle (configurée par --auto = préférée)
+#   2. xrandr mode list   → mode préféré (marqué "+" dans la liste des modes)
+#   3. EDID native        → DTD 1 via edid-decode sur /sys/class/drm/
+#   4. Constante default  → DEFAULT_SCREEN_WIDTH × DEFAULT_SCREEN_HEIGHT (dernier recours)
+#
+# Usage: get_output_resolution "HDMI-A-1" "$xrandr_output"
+# Stdout: "1920x1080" (ou la résolution native détectée)
+# Return: 0 = résolution détectée, 1 = fallback default utilisé
+#
+# NOTE: grep -oP utilise les PCRE (Perl regex) pour les lookbehind (?<=...).
+# Disponible sur Raspberry Pi OS (GNU grep compilé avec --enable-perl-regexp).
+get_output_resolution() {
+    local output="$1"
+    local xrandr_out="$2"
+
+    # 1. Géométrie xrandr (résolution actuelle, sélectionnée par --auto = mode préféré)
+    local geom
+    geom=$(echo "$xrandr_out" | grep -E "^${output} connected" | grep -oP '[0-9]+x[0-9]+\+[0-9]+\+[0-9]+')
+    if [[ -n "$geom" ]]; then
+        local w h
+        w=$(echo "$geom" | grep -oP '^[0-9]+')
+        h=$(echo "$geom" | grep -oP '(?<=x)[0-9]+(?=\+)')
+        if [[ "$w" -gt 0 && "$h" -gt 0 ]] 2>/dev/null; then
+            echo "${w}x${h}"
+            return 0
+        fi
+    fi
+
+    # 2. Mode préféré xrandr (marqué "+" dans la liste des modes)
+    #    Utile quand l'écran est "connected" mais pas encore configuré (pas de geometry)
+    #    Format: "   1920x1080     60.00*+"  → le "+" indique le mode préféré de la TV
+    local preferred_res
+    preferred_res=$(echo "$xrandr_out" \
+        | sed -n "/^${output} connected/,/^[^ ]/p" \
+        | tail -n +2 \
+        | grep -E '[0-9.]+\+' \
+        | head -1 \
+        | grep -oP '^\s+\K[0-9]+x[0-9]+')
+    if [[ -n "$preferred_res" ]]; then
+        log "📺 ${output}: résolution préférée détectée via xrandr mode list: ${preferred_res}"
+        echo "$preferred_res"
+        return 0
+    fi
+
+    # 3. Résolution native via EDID (DTD 1 du fichier sysfs)
+    #    Le path DRM correspond au nom xrandr: HDMI-A-1 → card*-HDMI-A-1
+    local drm_connector edid_native
+    drm_connector=$(find /sys/class/drm -maxdepth 1 -name "card*-${output}" 2>/dev/null | head -1)
+    if [[ -n "$drm_connector" && -f "${drm_connector}/edid" ]]; then
+        if command -v edid-decode &>/dev/null; then
+            edid_native=$(edid-decode "${drm_connector}/edid" 2>/dev/null \
+                | grep -oP 'DTD\s+1:\s+\K[0-9]+x[0-9]+' | head -1)
+            if [[ -n "$edid_native" ]]; then
+                log "📺 ${output}: résolution native détectée via EDID: ${edid_native}"
+                echo "$edid_native"
+                return 0
+            fi
+        fi
+    fi
+
+    # 4. Dernier recours — constante par défaut
+    log "⚠️ ${output}: résolution non détectable, fallback ${DEFAULT_SCREEN_WIDTH}x${DEFAULT_SCREEN_HEIGHT}"
+    echo "${DEFAULT_SCREEN_WIDTH}x${DEFAULT_SCREEN_HEIGHT}"
+    return 1
+}
+
 # E-23 US-23.5.4: Auto-swap HDMI-1 as primary when wrong port detected for HDMI_SWAP_DELAY seconds.
 # Uses xrandr to make HDMI-A-2 (HDMI-1) the primary output and reconfigures Chromium.
 hdmi_auto_swap() {
@@ -166,14 +240,12 @@ hdmi_auto_swap() {
     DISPLAY=:0 xrandr --output "$hdmi1_output" --primary --auto 2>/dev/null || true
     sleep 1
 
-    # Read the new resolution
-    local geom
-    geom=$(DISPLAY=:0 xrandr --query 2>/dev/null | grep -E "^${hdmi1_output} connected" | grep -oP '[0-9]+x[0-9]+\+[0-9]+\+[0-9]+')
-    local swap_width swap_height
-    swap_width=$(echo "$geom" | grep -oP '^[0-9]+')
-    swap_height=$(echo "$geom" | grep -oP '(?<=x)[0-9]+(?=\+)')
-    swap_width=${swap_width:-1920}
-    swap_height=${swap_height:-1080}
+    # Read the new resolution via cascade (xrandr geometry → preferred → EDID → default)
+    local xrandr_after swap_res swap_width swap_height
+    xrandr_after=$(DISPLAY=:0 xrandr --query 2>/dev/null)
+    swap_res=$(get_output_resolution "$hdmi1_output" "$xrandr_after")
+    swap_width="${swap_res%x*}"
+    swap_height="${swap_res#*x}"
 
     # Resize the existing Chromium window to fit the new primary
     local wid
@@ -215,14 +287,12 @@ hdmi_reverse_swap() {
     DISPLAY=:0 xrandr --output "$hdmi0_output" --primary --auto 2>/dev/null || true
     sleep 1
 
-    # Read new resolution
-    local geom
-    geom=$(DISPLAY=:0 xrandr --query 2>/dev/null | grep -E "^${hdmi0_output} connected" | grep -oP '[0-9]+x[0-9]+\+[0-9]+\+[0-9]+')
-    local restore_width restore_height
-    restore_width=$(echo "$geom" | grep -oP '^[0-9]+')
-    restore_height=$(echo "$geom" | grep -oP '(?<=x)[0-9]+(?=\+)')
-    restore_width=${restore_width:-1920}
-    restore_height=${restore_height:-1080}
+    # Read new resolution via cascade (xrandr geometry → preferred → EDID → default)
+    local xrandr_after restore_res restore_width restore_height
+    xrandr_after=$(DISPLAY=:0 xrandr --query 2>/dev/null)
+    restore_res=$(get_output_resolution "$hdmi0_output" "$xrandr_after")
+    restore_width="${restore_res%x*}"
+    restore_height="${restore_res#*x}"
 
     # Resize Chromium back to HDMI-0
     local wid
@@ -279,7 +349,7 @@ write_kiosk_status() {
     detect_hdmi0_status && hdmi0_status="connected" || hdmi0_status="disconnected"
     detect_hdmi1_status && hdmi1_status="connected" || hdmi1_status="disconnected"
     cat > "$KIOSK_STATUS_FILE" 2>/dev/null <<EOF
-{"status":"${status}","chromiumAlive":$(pgrep -f "chromium.*$CHROMIUM_URL" > /dev/null 2>&1 && echo "true" || echo "false"),"restartCount":${#crash_times[@]},"lastEvent":"${now}","reason":"${reason}","pid":${CHROMIUM_PID:-0},"secondaryDisplayEnabled":${SECONDARY_DISPLAY_ENABLED},"secondaryChromiumAlive":${secondary_alive},"hdmi0Status":"${hdmi0_status}","hdmi1Status":"${hdmi1_status}","dualDisplayActive":${DUAL_DISPLAY_ACTIVE:-false},"hdmiFailoverActive":${HDMI_FAILOVER_ACTIVE:-false}}
+{"status":"${status}","chromiumAlive":$(pgrep -f "chromium.*$CHROMIUM_URL" > /dev/null 2>&1 && echo "true" || echo "false"),"restartCount":${#crash_times[@]},"lastEvent":"${now}","reason":"${reason}","pid":${CHROMIUM_PID:-0},"secondaryDisplayEnabled":${SECONDARY_DISPLAY_ENABLED},"secondaryChromiumAlive":${secondary_alive},"hdmi0Status":"${hdmi0_status}","hdmi1Status":"${hdmi1_status}","dualDisplayActive":${DUAL_DISPLAY_ACTIVE:-false},"hdmiFailoverActive":${HDMI_FAILOVER_ACTIVE:-false},"displayFallback":"${DISPLAY_FALLBACK_REASON}"}
 EOF
 }
 
@@ -384,11 +454,33 @@ activate_hdmi_failover() {
     # Phase 2: Reconfigurer xrandr — HDMI-1 devient le seul écran
     export DISPLAY=:0
     export XAUTHORITY=/home/pi/.Xauthority
-    local secondary_output
+    local secondary_output primary_ghost
     secondary_output=$(xrandr --query 2>/dev/null | grep -E "^HDMI.* connected" | head -1 | awk '{print $1}')
+    primary_ghost=$(xrandr --query 2>/dev/null | grep -E "^HDMI.* disconnected" | head -1 | awk '{print $1}')
     if [[ -n "$secondary_output" ]]; then
-        xrandr --output "$secondary_output" --primary 2>/dev/null || true
-        log "✓ xrandr: $secondary_output promu en primary"
+        # Désactiver la sortie fantôme (HDMI-0) pour que le layout X11 se collapse
+        if [[ -n "$primary_ghost" ]]; then
+            xrandr --output "$primary_ghost" --off 2>/dev/null || true
+            log "✓ xrandr: $primary_ghost désactivé (ghost)"
+        fi
+        # Repositionner HDMI-1 à l'origine (sinon reste à +1920+0 du dual-display)
+        xrandr --output "$secondary_output" --primary --auto --pos 0x0 2>/dev/null || true
+        log "✓ xrandr: $secondary_output promu en primary à +0+0"
+        # GPU DRM a besoin de ~500ms pour appliquer le changement de mode
+        sleep 1
+        # Re-lire les dimensions réelles après reconfiguration
+        local new_geom failover_w failover_h
+        new_geom=$(xrandr --query 2>/dev/null | grep -E "^${secondary_output} connected" | grep -oP '[0-9]+x[0-9]+\+[0-9]+\+[0-9]+')
+        if [[ -n "$new_geom" ]]; then
+            failover_w=$(echo "$new_geom" | grep -oP '^[0-9]+')
+            failover_h=$(echo "$new_geom" | grep -oP '(?<=x)[0-9]+(?=\+)')
+        else
+            failover_w="${SECONDARY_SCREEN_WIDTH:-$DEFAULT_SCREEN_WIDTH}"
+            failover_h="${SECONDARY_SCREEN_HEIGHT:-$DEFAULT_SCREEN_HEIGHT}"
+        fi
+    else
+        local failover_w="${SECONDARY_SCREEN_WIDTH:-$DEFAULT_SCREEN_WIDTH}"
+        local failover_h="${SECONDARY_SCREEN_HEIGHT:-$DEFAULT_SCREEN_HEIGHT}"
     fi
 
     # Phase 3: Redimensionner le Chromium secondaire en plein écran sur HDMI-1
@@ -396,10 +488,13 @@ activate_hdmi_failover() {
         local wid
         wid=$(DISPLAY=:0 xdotool search --pid "$SECONDARY_CHROMIUM_PID" 2>/dev/null | head -1)
         if [[ -n "$wid" ]]; then
+            # Supprimer les décorations (comme start_chromium_secondary — xprop avant resize)
+            DISPLAY=:0 xprop -id "$wid" -f _MOTIF_WM_HINTS 32c -set _MOTIF_WM_HINTS "0x2, 0x0, 0x0, 0x0, 0x0" 2>/dev/null
+            sleep 0.3
             DISPLAY=:0 xdotool windowmove "$wid" 0 0 2>/dev/null
-            DISPLAY=:0 xdotool windowsize "$wid" "${SECONDARY_SCREEN_WIDTH:-1920}" "${SECONDARY_SCREEN_HEIGHT:-1080}" 2>/dev/null
+            DISPLAY=:0 xdotool windowsize "$wid" "${failover_w}" "${failover_h}" 2>/dev/null
             DISPLAY=:0 xdotool windowactivate "$wid" 2>/dev/null
-            log "✓ Chromium secondaire promu en plein écran principal"
+            log "✓ Chromium secondaire promu en plein écran principal (${failover_w}x${failover_h})"
         fi
     fi
 
@@ -417,16 +512,60 @@ activate_hdmi_failover() {
 # 3. Repositionner le Chromium secondaire
 # 4. Supprimer le flag failover
 deactivate_hdmi_failover() {
-    log "🔄 RETOUR FAILOVER: HDMI-0 de retour, restauration du dual-display..."
+    log "🔄 RETOUR FAILOVER: HDMI-0 de retour, restauration proactive du dual-display..."
 
     HDMI_FAILOVER_ACTIVE=false
     rm -f /tmp/hdmi-failover-active
 
-    # Le primaire a été arrêté pendant le failover.
-    # Au prochain tour de boucle, le watchdog verra CHROMIUM_PID=0 et relancera start_chromium().
-    # Le check_secondary_chromium() verra HDMI-1 connecté + SECONDARY_DISPLAY_ENABLED → relancera le dual.
-    # Pas besoin de tout relancer ici, le watchdog s'en occupe naturellement.
-    log "✓ Flag failover supprimé — le watchdog relancera le primaire au prochain cycle"
+    export DISPLAY=:0
+    export XAUTHORITY=/home/pi/.Xauthority
+
+    # 1. Arrêter le Chromium secondaire promu (il crash sinon quand xrandr reconfigure)
+    if (( SECONDARY_CHROMIUM_PID > 0 )) && kill -0 "$SECONDARY_CHROMIUM_PID" 2>/dev/null; then
+        log "🔴 Arrêt du Chromium promu (PID: $SECONDARY_CHROMIUM_PID)..."
+        kill -TERM "$SECONDARY_CHROMIUM_PID" 2>/dev/null || true
+        local wait_count=0
+        while kill -0 "$SECONDARY_CHROMIUM_PID" 2>/dev/null && (( wait_count < 10 )); do
+            sleep 0.5
+            (( wait_count++ ))
+        done
+        if kill -0 "$SECONDARY_CHROMIUM_PID" 2>/dev/null; then
+            kill -9 "$SECONDARY_CHROMIUM_PID" 2>/dev/null || true
+            sleep 1
+        fi
+        SECONDARY_CHROMIUM_PID=0
+        rm -rf /tmp/kiosk-secondary 2>/dev/null || true
+        log "✓ Chromium promu arrêté"
+    fi
+
+    # 2. Reconfigurer xrandr pour dual-display
+    setup_secondary_xrandr || true
+    sleep 1
+
+    # 3. Relancer le primaire sur HDMI-0
+    log "🚀 Relance du Chromium primaire..."
+    start_chromium
+    sleep 2
+
+    # 4. Relancer le secondaire sur HDMI-1
+    DUAL_DISPLAY_ACTIVE=true
+    if detect_hdmi1_status; then
+        # Redimensionner le primaire pour le dual-display
+        if (( CHROMIUM_PID > 0 )) && kill -0 "$CHROMIUM_PID" 2>/dev/null; then
+            local wid
+            wid=$(DISPLAY=:0 xdotool search --pid "$CHROMIUM_PID" 2>/dev/null | head -1)
+            if [[ -n "$wid" ]]; then
+                DISPLAY=:0 xdotool windowmove "$wid" 0 0 2>/dev/null
+                DISPLAY=:0 xdotool windowsize "$wid" "${PRIMARY_SCREEN_WIDTH:-$DEFAULT_SCREEN_WIDTH}" "${PRIMARY_SCREEN_HEIGHT:-$DEFAULT_SCREEN_HEIGHT}" 2>/dev/null
+                log "✓ Primaire redimensionné pour dual-display (${PRIMARY_SCREEN_WIDTH:-$DEFAULT_SCREEN_WIDTH}x${PRIMARY_SCREEN_HEIGHT:-$DEFAULT_SCREEN_HEIGHT})"
+            fi
+        fi
+        start_chromium_secondary
+        log "✓ RETOUR FAILOVER complet: dual-display restauré"
+    else
+        log "⚠️ HDMI-1 non détecté — primaire seul restauré"
+        DUAL_DISPLAY_ACTIVE=false
+    fi
 }
 
 # Flag failover
@@ -474,10 +613,10 @@ start_chromium() {
     # est xprop _MOTIF_WM_HINTS (supprimer les décorations) + xdotool windowsize.
     # Runtime guard: si les dimensions sont numériques mais ≤ 0, forcer le fallback
     # Protège contre une régression où PRIMARY_SCREEN_WIDTH=0 bypass ${VAR:-default}
-    local w="${PRIMARY_SCREEN_WIDTH:-1920}"
-    local h="${PRIMARY_SCREEN_HEIGHT:-1080}"
-    if [[ "$w" -le 0 ]] 2>/dev/null || [[ -z "$w" ]]; then w=1920; fi
-    if [[ "$h" -le 0 ]] 2>/dev/null || [[ -z "$h" ]]; then h=1080; fi
+    local w="${PRIMARY_SCREEN_WIDTH:-$DEFAULT_SCREEN_WIDTH}"
+    local h="${PRIMARY_SCREEN_HEIGHT:-$DEFAULT_SCREEN_HEIGHT}"
+    if [[ "$w" -le 0 ]] 2>/dev/null || [[ -z "$w" ]]; then w=$DEFAULT_SCREEN_WIDTH; fi
+    if [[ "$h" -le 0 ]] 2>/dev/null || [[ -z "$h" ]]; then h=$DEFAULT_SCREEN_HEIGHT; fi
 
     local common_flags=(
         --app="${CHROMIUM_URL}"
@@ -574,10 +713,10 @@ start_chromium() {
             sleep 0.3
             # 2. Positionner et redimensionner exactement sur le moniteur primaire
             DISPLAY=:0 xdotool windowmove "$wid" 0 0 2>/dev/null
-            DISPLAY=:0 xdotool windowsize "$wid" "${PRIMARY_SCREEN_WIDTH:-1920}" "${PRIMARY_SCREEN_HEIGHT:-1080}" 2>/dev/null
+            DISPLAY=:0 xdotool windowsize "$wid" "${PRIMARY_SCREEN_WIDTH:-$DEFAULT_SCREEN_WIDTH}" "${PRIMARY_SCREEN_HEIGHT:-$DEFAULT_SCREEN_HEIGHT}" 2>/dev/null
             # 3. S'assurer que la fenêtre est au premier plan
             DISPLAY=:0 xdotool windowactivate "$wid" 2>/dev/null
-            log "✓ Chromium primaire plein écran par-moniteur (xprop+xdotool, WID: $wid, ${PRIMARY_SCREEN_WIDTH:-1920}x${PRIMARY_SCREEN_HEIGHT:-1080})"
+            log "✓ Chromium primaire plein écran par-moniteur (xprop+xdotool, WID: $wid, ${PRIMARY_SCREEN_WIDTH:-$DEFAULT_SCREEN_WIDTH}x${PRIMARY_SCREEN_HEIGHT:-$DEFAULT_SCREEN_HEIGHT})"
         else
             log "⚠️ Impossible de trouver la fenêtre primaire pour xprop/xdotool"
         fi
@@ -600,8 +739,17 @@ setup_secondary_xrandr() {
     export DISPLAY=:0
     export XAUTHORITY=/home/pi/.Xauthority
 
-    local xrandr_output
-    xrandr_output=$(xrandr --query 2>/dev/null)
+    # Retry xrandr — la TV peut mettre 2-6s à négocier l'EDID après un branchement
+    local xrandr_output="" attempt=0
+    while (( attempt < 3 )); do
+        xrandr_output=$(xrandr --query 2>/dev/null)
+        if [[ -n "$xrandr_output" ]] && echo "$xrandr_output" | grep -qE '^HDMI.* connected [0-9]'; then
+            break
+        fi
+        log "⚠️ xrandr: EDID en cours (tentative $((attempt+1))/3)"
+        (( attempt++ ))
+        sleep 2
+    done
 
     if [[ -z "$xrandr_output" ]]; then
         log "⚠️ xrandr: impossible d'interroger X11"
@@ -610,21 +758,22 @@ setup_secondary_xrandr() {
 
     # Identifier le primaire (offset +0+0) et le secondaire (offset non-nul)
     # Format xrandr: "HDMI-A-1 connected 1920x1080+0+0" ou "HDMI-A-2 connected 3840x2160+1920+0"
+    # NOTE: grep -oP utilise les PCRE pour les lookbehind — dispo sur Raspberry Pi OS (GNU grep)
     local primary_output="" secondary_output=""
     while IFS= read -r line; do
         local name geom
         name=$(echo "$line" | awk '{print $1}')
-        geom=$(echo "$line" | grep -oP '\d+x\d+\+\d+\+\d+')
+        geom=$(echo "$line" | grep -oP '[0-9]+x[0-9]+\+[0-9]+\+[0-9]+')
         if [[ -n "$geom" ]]; then
             local x_offset
-            x_offset=$(echo "$geom" | grep -oP '(?<=\+)\d+(?=\+)')
+            x_offset=$(echo "$geom" | grep -oP '(?<=\+)[0-9]+(?=\+)')
             if [[ "$x_offset" == "0" ]]; then
                 primary_output="$name"
             else
                 secondary_output="$name"
             fi
         fi
-    done <<< "$(echo "$xrandr_output" | grep -E '^HDMI.* connected [0-9]')"
+    done <<< "$(echo "$xrandr_output" | grep -E '^HDMI.* connected (primary )?[0-9]')"
 
     if [[ -z "$secondary_output" ]]; then
         log "⚠️ xrandr: aucune sortie HDMI secondaire avec offset non-nul détectée"
@@ -646,31 +795,32 @@ setup_secondary_xrandr() {
         return 1
     fi
 
-    # Lire la géométrie de la sortie primaire
-    # Format: "HDMI-A-1 connected 1920x1080+0+0"
-    local pgeom
-    pgeom=$(echo "$xrandr_output" | grep -E "^${primary_output} connected" | grep -oP '[0-9]+x[0-9]+\+[0-9]+\+[0-9]+')
-    if [[ -n "$pgeom" ]]; then
-        PRIMARY_SCREEN_WIDTH=$(echo "$pgeom" | grep -oP '^[0-9]+')
-        PRIMARY_SCREEN_HEIGHT=$(echo "$pgeom" | grep -oP '(?<=x)[0-9]+(?=\+)')
+    # Résolution primaire via cascade (xrandr geometry → preferred → EDID → default)
+    DISPLAY_FALLBACK_REASON=""
+    local primary_res
+    if primary_res=$(get_output_resolution "$primary_output" "$xrandr_output"); then
+        : # résolution native détectée
     else
-        PRIMARY_SCREEN_WIDTH=1920
-        PRIMARY_SCREEN_HEIGHT=1080
+        DISPLAY_FALLBACK_REASON="primary: xrandr+EDID unavailable"
     fi
+    PRIMARY_SCREEN_WIDTH="${primary_res%x*}"
+    PRIMARY_SCREEN_HEIGHT="${primary_res#*x}"
 
-    # Lire la géométrie de la sortie secondaire
-    # Format: "HDMI-A-2 connected 3840x2160+1920+0"
-    local geom
-    geom=$(echo "$xrandr_output" | grep -E "^${secondary_output} connected" | grep -oP '[0-9]+x[0-9]+\+[0-9]+\+[0-9]+')
-    if [[ -n "$geom" ]]; then
-        SECONDARY_SCREEN_WIDTH=$(echo "$geom" | grep -oP '^[0-9]+')
-        SECONDARY_SCREEN_HEIGHT=$(echo "$geom" | grep -oP '(?<=x)[0-9]+(?=\+)')
-        SECONDARY_X_OFFSET=$(echo "$geom" | grep -oP '(?<=\+)[0-9]+(?=\+)')
+    # Résolution secondaire via même cascade
+    local secondary_res
+    if secondary_res=$(get_output_resolution "$secondary_output" "$xrandr_output"); then
+        : # résolution native détectée
     else
-        SECONDARY_SCREEN_WIDTH=1920
-        SECONDARY_SCREEN_HEIGHT=1080
-        SECONDARY_X_OFFSET=1920
+        DISPLAY_FALLBACK_REASON="${DISPLAY_FALLBACK_REASON:+$DISPLAY_FALLBACK_REASON, }secondary: xrandr+EDID unavailable"
     fi
+    SECONDARY_SCREEN_WIDTH="${secondary_res%x*}"
+    SECONDARY_SCREEN_HEIGHT="${secondary_res#*x}"
+
+    # Offset secondaire = largeur réelle du primaire (dérivée, pas hardcodée)
+    local primary_geom
+    primary_geom=$(echo "$xrandr_output" | grep -E "^${primary_output} connected" | grep -oP '[0-9]+x[0-9]+\+[0-9]+\+[0-9]+')
+    SECONDARY_X_OFFSET=$(echo "$primary_geom" | grep -oP '^[0-9]+')
+    SECONDARY_X_OFFSET="${SECONDARY_X_OFFSET:-$PRIMARY_SCREEN_WIDTH}"
 
     log "✓ xrandr: ${primary_output} (primaire ${PRIMARY_SCREEN_WIDTH}x${PRIMARY_SCREEN_HEIGHT}) + ${secondary_output} (secondaire ${SECONDARY_SCREEN_WIDTH}x${SECONDARY_SCREEN_HEIGHT}+${SECONDARY_X_OFFSET})"
     return 0
@@ -728,8 +878,8 @@ start_chromium_secondary() {
         --disable-gpu-shader-disk-cache
         --password-store=basic
         --user-data-dir=/tmp/kiosk-secondary
-        --window-position=${SECONDARY_X_OFFSET:-1920},0
-        --window-size=${SECONDARY_SCREEN_WIDTH:-1920},${SECONDARY_SCREEN_HEIGHT:-1080}
+        --window-position=${SECONDARY_X_OFFSET:-$DEFAULT_SCREEN_WIDTH},0
+        --window-size=${SECONDARY_SCREEN_WIDTH:-$DEFAULT_SCREEN_WIDTH},${SECONDARY_SCREEN_HEIGHT:-$DEFAULT_SCREEN_HEIGHT}
     )
 
     # Mêmes flags GPU que le kiosk principal
@@ -770,11 +920,11 @@ start_chromium_secondary() {
             DISPLAY=:0 xprop -id "$wid" -f _MOTIF_WM_HINTS 32c -set _MOTIF_WM_HINTS "0x2, 0x0, 0x0, 0x0, 0x0" 2>/dev/null
             sleep 0.3
             # 2. Positionner et redimensionner exactement sur le moniteur secondaire
-            DISPLAY=:0 xdotool windowmove "$wid" "${SECONDARY_X_OFFSET:-1920}" 0 2>/dev/null
-            DISPLAY=:0 xdotool windowsize "$wid" "${SECONDARY_SCREEN_WIDTH:-1920}" "${SECONDARY_SCREEN_HEIGHT:-1080}" 2>/dev/null
+            DISPLAY=:0 xdotool windowmove "$wid" "${SECONDARY_X_OFFSET:-$DEFAULT_SCREEN_WIDTH}" 0 2>/dev/null
+            DISPLAY=:0 xdotool windowsize "$wid" "${SECONDARY_SCREEN_WIDTH:-$DEFAULT_SCREEN_WIDTH}" "${SECONDARY_SCREEN_HEIGHT:-$DEFAULT_SCREEN_HEIGHT}" 2>/dev/null
             # 3. S'assurer que la fenêtre est au premier plan
             DISPLAY=:0 xdotool windowactivate "$wid" 2>/dev/null
-            log "✓ Chromium secondaire plein écran par-moniteur (xprop+xdotool, WID: $wid, ${SECONDARY_SCREEN_WIDTH:-1920}x${SECONDARY_SCREEN_HEIGHT:-1080}+${SECONDARY_X_OFFSET:-1920})"
+            log "✓ Chromium secondaire plein écran par-moniteur (xprop+xdotool, WID: $wid, ${SECONDARY_SCREEN_WIDTH:-$DEFAULT_SCREEN_WIDTH}x${SECONDARY_SCREEN_HEIGHT:-$DEFAULT_SCREEN_HEIGHT}+${SECONDARY_X_OFFSET:-$DEFAULT_SCREEN_WIDTH})"
         else
             log "⚠️ Impossible de trouver la fenêtre secondaire pour xprop/xdotool"
         fi
@@ -864,8 +1014,8 @@ check_secondary_chromium() {
                     wid=$(DISPLAY=:0 xdotool search --pid "$CHROMIUM_PID" 2>/dev/null | head -1)
                     if [[ -n "$wid" ]]; then
                         DISPLAY=:0 xdotool windowmove "$wid" 0 0 2>/dev/null
-                        DISPLAY=:0 xdotool windowsize "$wid" "${PRIMARY_SCREEN_WIDTH:-1920}" "${PRIMARY_SCREEN_HEIGHT:-1080}" 2>/dev/null
-                        log "✓ Primaire redimensionné pour dual-display (${PRIMARY_SCREEN_WIDTH:-1920}x${PRIMARY_SCREEN_HEIGHT:-1080})"
+                        DISPLAY=:0 xdotool windowsize "$wid" "${PRIMARY_SCREEN_WIDTH:-$DEFAULT_SCREEN_WIDTH}" "${PRIMARY_SCREEN_HEIGHT:-$DEFAULT_SCREEN_HEIGHT}" 2>/dev/null
+                        log "✓ Primaire redimensionné pour dual-display (${PRIMARY_SCREEN_WIDTH:-$DEFAULT_SCREEN_WIDTH}x${PRIMARY_SCREEN_HEIGHT:-$DEFAULT_SCREEN_HEIGHT})"
                     fi
                 fi
             fi
@@ -888,8 +1038,8 @@ check_secondary_chromium() {
                 wid=$(DISPLAY=:0 xdotool search --pid "$CHROMIUM_PID" 2>/dev/null | head -1)
                 if [[ -n "$wid" ]]; then
                     DISPLAY=:0 xdotool windowmove "$wid" 0 0 2>/dev/null
-                    DISPLAY=:0 xdotool windowsize "$wid" "${PRIMARY_SCREEN_WIDTH:-1920}" "${PRIMARY_SCREEN_HEIGHT:-1080}" 2>/dev/null
-                    log "✓ Primaire redimensionné pour single-display (${PRIMARY_SCREEN_WIDTH:-1920}x${PRIMARY_SCREEN_HEIGHT:-1080})"
+                    DISPLAY=:0 xdotool windowsize "$wid" "${PRIMARY_SCREEN_WIDTH:-$DEFAULT_SCREEN_WIDTH}" "${PRIMARY_SCREEN_HEIGHT:-$DEFAULT_SCREEN_HEIGHT}" 2>/dev/null
+                    log "✓ Primaire redimensionné pour single-display (${PRIMARY_SCREEN_WIDTH:-$DEFAULT_SCREEN_WIDTH}x${PRIMARY_SCREEN_HEIGHT:-$DEFAULT_SCREEN_HEIGHT})"
                 fi
             fi
         fi
@@ -1085,7 +1235,10 @@ main() {
         local reason=""
 
         # Vérification 1: Chromium est-il en vie ?
-        if ! check_chromium_alive; then
+        # SKIP pendant failover: le primaire est intentionnellement arrêté,
+        # le secondaire promu tourne avec un URL différent — check_chromium_alive
+        # ne le trouverait pas et déclencherait un restart parasite.
+        if [[ "$HDMI_FAILOVER_ACTIVE" != "true" ]] && ! check_chromium_alive; then
             need_restart=true
             reason="Processus mort"
         fi

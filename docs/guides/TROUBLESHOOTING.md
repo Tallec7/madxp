@@ -966,10 +966,11 @@ journalctl -u neopro-kiosk -f | grep -i "VSync"
 Le fallback bash `${VAR:-1920}` ne se déclenche que si VAR est vide ou unset, PAS si `=0`.
 Résultat : `--window-size=0,0` → Chromium s'ouvre en 1×1 pixel → écran noir apparent.
 
-**Correction (v3.84.4) :**
+**Correction (v3.84.4 → amélioré en v3.85.0) :**
 
-1. Init changé de `=0` à `=""` (le fallback `:-1920` fonctionne)
-2. Runtime guard ajouté : si dimensions ≤ 0, forcer 1920×1080
+1. Init changé de `=0` à `=""` (le fallback `:-default` fonctionne)
+2. Runtime guard ajouté : si dimensions ≤ 0, forcer `DEFAULT_SCREEN_WIDTH`×`DEFAULT_SCREEN_HEIGHT`
+3. **(v3.85.0)** Cascade `get_output_resolution()` remplace tous les magic numbers — chaque TV obtient sa résolution native automatiquement (voir section "Résolution écran en mode dégradé" ci-dessous)
 
 **Diagnostic :**
 
@@ -981,18 +982,18 @@ grep -n 'PRIMARY_SCREEN_WIDTH=' /home/pi/neopro/scripts/kiosk-watchdog.sh | head
 
 # Vérifier la taille réelle de la fenêtre Chromium
 DISPLAY=:0 xdotool search --name "Chromium" getwindowgeometry
-# Attendu: 1920x1080 (ou la résolution de l'écran)
+# Attendu: résolution native de la TV (ex: 3840x2160 pour 4K)
 # Bug: 0x0 ou 1x1
 
 # Vérifier les arguments de lancement
 ps aux | grep chromium | grep -- '--window-size'
-# Attendu: --window-size=1920,1080
+# Attendu: --window-size=<largeur_native>,<hauteur_native>
 # Bug: --window-size=0,0
 
-# Fix immédiat (sans OTA)
-sudo sed -i 's/PRIMARY_SCREEN_WIDTH=0/PRIMARY_SCREEN_WIDTH=""/' /home/pi/neopro/scripts/kiosk-watchdog.sh
-sudo sed -i 's/PRIMARY_SCREEN_HEIGHT=0/PRIMARY_SCREEN_HEIGHT=""/' /home/pi/neopro/scripts/kiosk-watchdog.sh
-sudo systemctl restart neopro-kiosk
+# Vérifier si la cascade a fonctionné
+cat /home/pi/neopro/data/kiosk-status.json | python3 -m json.tool | grep displayFallback
+# Attendu: "displayFallback": "" (résolution détectée)
+# Dégradé: "displayFallback": "primary: xrandr+EDID unavailable"
 ```
 
 #### Services orphelins en crash-loop (v3.84.4+)
@@ -3725,6 +3726,46 @@ cat /sys/class/drm/card1-HDMI-A-1/edid | edid-decode 2>/dev/null
 - Vérifier le câble HDMI (essayer un autre câble)
 - Vérifier que l'écran est allumé (l'EDID est envoyé uniquement quand l'écran est actif)
 - Sur Pi 5 : vérifier que le driver DRM est correctement chargé (`ls /sys/class/drm/`)
+
+### Résolution écran en mode dégradé — `displayFallback` (v3.85.0+)
+
+**Symptômes :**
+
+- Le dashboard fleet affiche une alerte warning `display_fallback` pour un site
+- `kiosk-status.json` contient `"displayFallback": "primary: xrandr+EDID unavailable"` (ou `secondary:`)
+- L'image est en 1920×1080 sur une TV 4K (pas la résolution native)
+
+**Cause :** La cascade de détection `get_output_resolution()` n'a trouvé la résolution à aucun des 3 premiers niveaux (xrandr geometry, xrandr preferred mode, EDID native) et a utilisé le fallback `DEFAULT_SCREEN_WIDTH`×`DEFAULT_SCREEN_HEIGHT`.
+
+**Diagnostic :**
+
+```bash
+# 1. Vérifier xrandr
+DISPLAY=:0 xrandr --query
+# Chercher "HDMI-A-1 connected 3840x2160+0+0" (niveau 1: geometry)
+# Ou "3840x2160  60.00*+" dans la liste des modes (niveau 2: preferred)
+
+# 2. Vérifier EDID
+ls /sys/class/drm/ | grep HDMI
+# Exemple: card1-HDMI-A-1
+edid-decode /sys/class/drm/card1-HDMI-A-1/edid 2>/dev/null | grep "DTD 1"
+# Attendu: "DTD 1:  3840x2160  60.000000 Hz"
+
+# 3. Vérifier le statut kiosk
+cat /home/pi/neopro/data/kiosk-status.json | python3 -m json.tool | grep -E "displayFallback|SCREEN"
+# "displayFallback": "" → cascade a trouvé la résolution
+# "displayFallback": "primary: xrandr+EDID unavailable" → fallback default
+
+# 4. Vérifier que edid-decode est installé
+which edid-decode || echo "MANQUANT — sudo apt install edid-decode"
+```
+
+**Solutions :**
+
+1. **TV éteinte ou câble HDMI défectueux** → vérifier connexion physique, l'EDID n'est envoyé que TV allumée
+2. **`edid-decode` non installé** → `sudo apt install edid-decode` (niveau 3 de la cascade)
+3. **TV lente à négocier** → le retry 3×2s devrait suffire, sinon vérifier `journalctl -u neopro-kiosk` pour les logs "EDID en cours"
+4. **Forcer une résolution** (contournement temporaire) : `DISPLAY=:0 xrandr --output HDMI-A-1 --mode 3840x2160` puis restart kiosk
 
 ### Le type d'écran est "unknown" au lieu de "tv" ou "monitor"
 

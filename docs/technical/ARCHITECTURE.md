@@ -803,6 +803,102 @@ Tous les invariants E-23 sont protégés par des smoke tests dans `central-serve
 
 ---
 
+## Détection résolution native (E-24)
+
+> Epic E-24 — 3 Features, 8 US — implémenté v3.85.0
+
+### Problème résolu
+
+Avant v3.85.0, `kiosk-watchdog.sh` utilisait `1920×1080` en dur (~25 occurrences). Conséquences :
+
+- TV 4K/720p/1440p forcée en 1080p → image étirée ou bordures noires
+- `SECONDARY_X_OFFSET=1920` indépendant de la résolution réelle → fenêtre secondaire mal positionnée
+- TV lente à négocier l'EDID → fallback silencieux sans alerte
+
+### Cascade de détection `get_output_resolution()` (F-24.1)
+
+```
+    xrandr geometry         xrandr preferred mode      EDID native (DTD 1)       DEFAULT constants
+  (résolution actuelle)     (marqueur "+" dans        (edid-decode sur           (dernier recours)
+   configurée par --auto)    la liste des modes)     /sys/class/drm/card*-)
+         │                         │                        │                         │
+         ▼                         ▼                        ▼                         ▼
+    ┌─────────┐    échec     ┌──────────┐    échec    ┌──────────┐    échec    ┌──────────────┐
+    │ Niveau 1│ ──────────►  │ Niveau 2 │ ─────────►  │ Niveau 3 │ ─────────► │   Niveau 4   │
+    │ xrandr  │              │ preferred│              │   EDID   │            │ 1920×1080    │
+    │ geom    │              │ mode (+) │              │  native  │            │ (constants)  │
+    └────┬────┘              └────┬─────┘              └────┬─────┘            └──────┬───────┘
+         │                        │                         │                         │
+         └────────────────────────┴─────────────────────────┴─────────────────────────┘
+                                         │
+                                    WIDTHxHEIGHT
+                              return 0 (détecté) ou 1 (fallback)
+```
+
+- **Niveau 1** : `grep -oP` sur la ligne `connected` de xrandr (résolution actuelle)
+- **Niveau 2** : Ligne avec marqueur `+` dans la liste des modes (mode préféré par l'écran)
+- **Niveau 3** : `edid-decode` sur `/sys/class/drm/card*-{output}/edid` → DTD 1
+- **Niveau 4** : `DEFAULT_SCREEN_WIDTH` × `DEFAULT_SCREEN_HEIGHT` (1920×1080)
+
+### Élimination des magic numbers (F-24.2)
+
+Toutes les références `${VAR:-1920}` / `${VAR:-1080}` remplacées par `${VAR:-$DEFAULT_SCREEN_WIDTH}` / `${VAR:-$DEFAULT_SCREEN_HEIGHT}`. Le offset secondaire dérive de la largeur réelle du primaire.
+
+### Alerting fleet `displayFallback` (F-24.3)
+
+```
+kiosk-watchdog.sh                 sync-agent              central-server
+       │                              │                        │
+  get_output_resolution()              │                        │
+  return 1 (fallback)                  │                        │
+       │                              │                        │
+  DISPLAY_FALLBACK_REASON=            │                        │
+  "primary: xrandr+EDID unavailable"  │                        │
+       │                              │                        │
+  write_kiosk_status()                 │                        │
+  → kiosk-status.json                  │                        │
+  { displayFallback: "..." }           │                        │
+       │                              │                        │
+       └──── JSON.parse() ────────────► heartbeat ─────────────►│
+                                       │                   checkAlerts()
+                                       │                   │
+                                       │              displayFallback !== ""
+                                       │                   │
+                                       │              alerts.push({
+                                       │                type: 'display_fallback',
+                                       │                severity: 'warning'
+                                       │              })
+                                       │                   │
+                                       │              alertService.displayFallback()
+                                       │                   │
+                                       │              → Slack + DB
+```
+
+### Retry xrandr (3×2s)
+
+TV lente à négocier l'EDID : 3 tentatives espacées de 2s avant de passer à la cascade. Même pattern que `wait_for_x_server()`.
+
+### Métriques heartbeat (via kiosk-status.json)
+
+| Champ heartbeat   | Type   | Description                                     |
+| ----------------- | ------ | ----------------------------------------------- |
+| `displayFallback` | string | Vide = résolution native détectée, sinon raison |
+
+### Smoke tests de régression (8 guards)
+
+| Test                                          | Vérifie                                        |
+| --------------------------------------------- | ---------------------------------------------- |
+| `DEFAULT_SCREEN_WIDTH` constant               | Constante définie comme entier positif         |
+| `DEFAULT_SCREEN_HEIGHT` constant              | Constante définie comme entier positif         |
+| `get_output_resolution()` existe              | Fonction de cascade présente                   |
+| Aucun `1920` brut hors constante/commentaires | Magic number éliminé                           |
+| Aucun `1080` brut hors constante/commentaires | Magic number éliminé                           |
+| `SECONDARY_X_OFFSET` dérivé                   | Dérive de `PRIMARY_SCREEN_WIDTH`, pas hardcodé |
+| `DISPLAY_FALLBACK_REASON` dans status         | Alerte fleet active dans kiosk-status.json     |
+| xrandr preferred mode (`+` marker)            | Cascade niveau 2 présente                      |
+
+---
+
 ## Performance
 
 ### Optimisations frontend

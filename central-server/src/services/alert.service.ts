@@ -390,6 +390,17 @@ class AlertService {
     });
   }
 
+  async displayFallback(siteId: string, siteName: string, reason: string): Promise<boolean> {
+    return this.sendAlert({
+      title: 'Résolution écran dégradée',
+      message: `Le site *${siteName}* utilise une résolution par défaut (xrandr + EDID indisponibles). Raison: ${reason}`,
+      severity: 'warning',
+      siteId,
+      siteName,
+      metadata: { reason }
+    });
+  }
+
   async serverError(error: Error, context?: string): Promise<boolean> {
     return this.sendAlert({
       title: 'Erreur serveur',
