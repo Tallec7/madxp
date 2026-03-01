@@ -1747,12 +1747,14 @@ Les deux instances Chromium se synchronisent via Socket.IO master-slave :
 
 **Résolution variante secondaire** : `resolveSecondaryVariant()` vérifie d'abord `video.variants.secondary.path`, puis cherche dans la config complète via `findVideoInConfig(path)` (sponsors → timeCategories.loopVideos → categories.videos récursif). Appliqué aux 3 points d'entrée : `action` handler, BroadcastChannel, `handleMasterLoopState` CAS 1.
 
-**Révélation synchronisée (ADR-034 v3.89.0+)** :
+**Révélation synchronisée (ADR-034 v3.89.2+)** :
 
 Le déclenchement d'une vidéo manuelle est un processus en 2 étapes pour les slaves :
 
-1. **Preload** : Le slave reçoit l'event `action` (broadcast serveur) et appelle `preloadManualVideo()` au lieu de `play()`. Cela prépare le freeze-frame, l'overlay noir, charge la vidéo dans le player inactif (double-buffering) — mais ne la révèle PAS.
-2. **Reveal** : Le master émet `manualVideoVisible: true` dans `tv-loop-update` après son propre délai 2×rAF + 200ms. Le slave reçoit ce signal via `handleMasterLoopState` CAS 1b et appelle `revealPreloadedVideo()` → transition opacity 0→1.
+1. **Preload silencieux** : Le slave reçoit l'event `action` (broadcast serveur) et appelle `preloadManualVideo()` au lieu de `play()`. Cela charge la vidéo dans le player inactif (opacity 0, muted) — la boucle continue de jouer normalement en dessous. PAS de freeze-frame ni d'overlay noir (sauf transition manual→manual, voir ci-dessous).
+2. **Reveal instantané** : Le master émet `manualVideoVisible: true` dans `tv-loop-update` après son propre délai 2×rAF + 200ms. Le slave reçoit ce signal via `handleMasterLoopState` CAS 1b et appelle `revealPreloadedVideo()` → opacity 1 + unmute immédiat (pas de délai supplémentaire côté slave).
+
+**Transition manual→manual** : Quand une vidéo manuelle est déjà visible et qu'une nouvelle est déclenchée, `preloadManualVideo()` détecte le cas (`targetPlayer.style.opacity === '1' && !targetPlayer.paused`) et capture un freeze-frame pour couvrir le gap. Pour la première vidéo manuelle depuis la boucle, aucun freeze n'est nécessaire.
 
 Trois sous-cas dans `handleMasterLoopState` CAS 1 (`isManualMode: true`) :
 
@@ -1767,6 +1769,10 @@ Si le master revient à la boucle avant d'émettre `manualVideoVisible: true`, `
 > ⚠️ **Ne jamais appeler `play()` directement dans le handler `action` côté slave** — le slave doit appeler `preloadManualVideo()` et attendre le signal `manualVideoVisible: true` du master. Sinon la révélation n'est pas synchronisée. Smoke test enforced.
 >
 > ⚠️ **Ne jamais émettre `manualVideoVisible: true` dans l'émission immédiate** — seule l'émission delayed (après 2×rAF + 200ms) doit porter `manualVideoVisible: true`. L'émission immédiate doit toujours porter `manualVideoVisible: false`. Smoke test enforced.
+>
+> ⚠️ **Ne jamais afficher freeze-frame ou overlay noir dans `preloadManualVideo()` pour la première vidéo depuis la boucle** — le preload doit être silencieux (opacity 0, muted). Le freeze-frame n'est utilisé que pour les transitions manual→manual. Smoke test enforced.
+>
+> ⚠️ **Ne jamais ajouter de délai dans `revealPreloadedVideo()`** — la révélation slave est instantanée (opacity 1 + unmute). Le délai 2×rAF + 200ms est uniquement côté master dans `play()`. Smoke test enforced.
 
 **Race condition master-slave (ADR-033)** :
 

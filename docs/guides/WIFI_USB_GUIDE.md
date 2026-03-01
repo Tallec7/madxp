@@ -525,7 +525,14 @@ NetworkWatchdog (sync-agent)
 │   └── Vérifie : IP valide, ping gateway, ping 8.8.8.8
 └── Cloud Monitor (Socket.IO, toutes les 30s)
     └── Vérifie : connexion active, dernier pong
+
+Hotspot Watchdog (hotspot-watchdog.sh, service systemd dédié)
+├── Vérifie : brcmfmac firmware, hostapd, AP mode, dnsmasq, nginx, avahi, rfkill, IP
+├── Recovery séquentielle (max 3 tentatives, cooldown 5min)
+└── Monitoring : alerte Prometheus ExcessiveHotspotRecovery si >3 recovery/heure
 ```
+
+> **⚠️ Note (v3.89.2)** : Le `hotspot-watchdog.sh` contenait un bug critique dans `check_brcmfmac()` : le pattern `grep -c || echo "0"` provoquait un faux positif permanent → recovery en boucle toutes les 30s → perte d'internet. Corrigé en v3.89.2 avec `$(grep -c ... || true)` + `${var:-0}`. Les Pi reçoivent le fix automatiquement via OTA.
 
 ### Séquence de recovery Internet (progressive, v3.7.14+ / v3.30+ / v3.59+)
 

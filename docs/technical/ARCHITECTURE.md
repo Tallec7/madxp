@@ -659,8 +659,9 @@ avec des chemins différents.
 - `handleMasterLoopState()` synchronise par `videoIndex` (pas `videoPath`)
 - ADR-034 : le slave ne `play()` jamais directement sur `action` — il `preloadManualVideo()` et attend `manualVideoVisible: true`
 - ADR-034 : l'émission immédiate du master porte `manualVideoVisible: false`, seule l'émission delayed porte `true`
+- ADR-034 v3.89.2 : le preload slave est silencieux (opacity 0, muted) — pas de freeze/overlay sauf manual→manual
 
-**Vidéo manuelle synchronisée (ADR-034 v3.89.0+)** :
+**Vidéo manuelle synchronisée (ADR-034 v3.89.2+)** :
 
 ```
 Dashboard/Télécommande: "jouer vidéo X"
@@ -672,14 +673,15 @@ Dashboard/Télécommande: "jouer vidéo X"
      ▼                  ▼                  ▼
   MASTER (HDMI-0)    SLAVE (HDMI-1)     SLAVE (PC)
   play(X)            preload(X)         preload(X)
-  freeze+overlay     freeze+overlay     freeze+overlay
+  freeze+overlay     silent (opacity 0) silent (opacity 0)
   charge vidéo       charge vidéo       charge vidéo
-  ✓ révèle !
+  ✓ révèle !         (boucle visible)   (boucle visible)
   emit(visible:true)
      │
      ├──────────────────┬──────────────────┐
      ▼                  ▼                  ▼
-  (déjà visible)     reveal ≈50ms       reveal ≈50ms
+  (déjà visible)     reveal instant     reveal instant
+                     ≈10ms après master  ≈10ms après master
 ```
 
 Monitoring : `preloadRevealCount` et `preloadCleanupCount` via Prometheus (pipeline identique à ADR-033).

@@ -1373,9 +1373,9 @@ Le guard incrémente `transitionMetrics.staleLoopStateCount` à chaque occurrenc
 
 ---
 
-## Révélation Synchronisée (ADR-034 v3.89.0+)
+## Révélation Synchronisée (ADR-034 v3.89.2+)
 
-> Synchronisation de la révélation des vidéos manuelles entre master et slaves pour éliminer le décalage visuel (~300ms → ~50ms).
+> Synchronisation de la révélation des vidéos manuelles entre master et slaves pour éliminer le décalage visuel (~300ms → ~10ms).
 
 ### Le problème
 
@@ -1385,19 +1385,21 @@ Quand l'utilisateur déclenche une vidéo manuelle, le serveur broadcaste `actio
 
 **Master** : Comportement inchangé — `play()` charge et révèle la vidéo normalement.
 
-**Slaves** : Au lieu d'appeler `play()` sur `action`, appellent `preloadManualVideo()` qui prépare tout (freeze-frame, overlay noir, chargement vidéo dans le player inactif) SANS révéler.
+**Slaves** : Au lieu d'appeler `play()` sur `action`, appellent `preloadManualVideo()` qui charge la vidéo silencieusement (opacity 0, muted) — la boucle continue de jouer normalement en dessous. PAS de freeze-frame ni d'overlay noir (sauf transition manual→manual).
 
 ```
 Timeline:
 t=0     Server: io.emit('action', X) → broadcast à ALL
 t=5ms   Master: play(X) — commence le chargement
-t=5ms   Slave: preloadManualVideo(X) — commence le chargement
-t=50ms  Slave: vidéo prête, attend signal...
+t=5ms   Slave: preloadManualVideo(X) — charge en silence (opacity 0, muted)
+t=50ms  Slave: vidéo prête, attend signal (boucle visible)
 t=100ms Master: vidéo chargée + 2×rAF + 200ms → révèle !
         Master: emit tv-loop-update { isManualMode: true, manualVideoVisible: true }
-t=110ms Slave: reçoit manualVideoVisible: true → revealPreloadedVideo()
+t=110ms Slave: reçoit manualVideoVisible: true → revealPreloadedVideo() (instant: opacity 1 + unmute)
         → écart ≈ 10ms (latence Socket.IO locale)
 ```
+
+**Transition manual→manual** : Quand une vidéo manuelle est déjà visible et qu'une nouvelle est déclenchée, `preloadManualVideo()` capture un freeze-frame pour couvrir le gap (détecté via `targetPlayer.style.opacity === '1' && !targetPlayer.paused`). Pour la première vidéo depuis la boucle, pas de freeze.
 
 ### Trois sous-cas dans handleMasterLoopState CAS 1
 

@@ -53,13 +53,15 @@ Appliqué automatiquement après l'optimisation de canal au boot.
 
 ### 5. Détection crash firmware brcmfmac (hotspot-watchdog.sh)
 
-Le chip WiFi Broadcom (brcmfmac) du Pi 4 peut crasher silencieusement (`brcmf_fw_crashed: Firmware has halted or crashed` dans dmesg). Quand cela arrive, hostapd reste "actif" mais l'interface est morte.
+Le chip WiFi Broadcom (brcmfmac) du Pi 4/5 peut crasher silencieusement (`brcmf_fw_crashed: Firmware has halted or crashed` dans dmesg). Quand cela arrive, hostapd reste "actif" mais l'interface est morte.
 
-**Nouvelle détection** : `check_brcmfmac()` vérifie dmesg pour les crashs récents.
+**Détection** : `check_brcmfmac()` vérifie dmesg pour les crashs récents.
 
 **Recovery** : `recover_brcmfmac()` décharge et recharge le module kernel (`modprobe -r brcmfmac` + `modprobe brcmfmac`), puis vérifie que wlan0 réapparaît.
 
 **Priorité** : le check brcmfmac est exécuté en premier (Étape 0) dans la séquence de recovery, car les autres étapes sont inutiles si le driver est crashé.
+
+**Bug corrigé (v3.89.2)** : `check_brcmfmac()` utilisait `grep -c "brcmf_fw_crashed" || echo "0"`. Or `grep -c` retourne exit code 1 quand le count est 0, ce qui déclenchait `|| echo "0"` → la variable contenait `"0\n0"` (deux lignes) → erreur arithmétique bash dans `[[ "$crash_count" -gt 0 ]]` → le check échouait systématiquement → faux positif "firmware crash" → recovery inutile toutes les 30s → redémarrage hostapd en boucle → perte d'internet wlan1. Fix : `$(grep -c ... || true)` + `${crash_count:-0}`.
 
 ## Fichiers modifiés
 

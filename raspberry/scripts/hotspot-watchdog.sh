@@ -140,7 +140,11 @@ check_hotspot_ip() {
 check_brcmfmac() {
     # Check dmesg for recent firmware crash (last 5 minutes = 300 seconds)
     local crash_count
-    crash_count=$(dmesg --time-format iso 2>/dev/null | tail -200 | grep -c "brcmf_fw_crashed" || echo "0")
+    # grep -c returns exit code 1 when count is 0. Using `|| true` prevents
+    # the `|| echo "0"` anti-pattern which would produce "0\n0" (two lines)
+    # and cause a bash arithmetic syntax error in the comparison below.
+    crash_count=$(dmesg --time-format iso 2>/dev/null | tail -200 | grep -c "brcmf_fw_crashed" || true)
+    crash_count=${crash_count:-0}
 
     if [[ "$crash_count" -gt 0 ]]; then
         return 1
@@ -392,7 +396,8 @@ print_status() {
     echo ""
 
     # Clients connectés
-    local clients=$(iw dev "$WIFI_INTERFACE" station dump 2>/dev/null | grep -c "Station" || echo "0")
+    local clients=$(iw dev "$WIFI_INTERFACE" station dump 2>/dev/null | grep -c "Station" || true)
+    clients=${clients:-0}
     echo "Clients connectés: $clients"
 
     echo ""

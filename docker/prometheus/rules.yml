@@ -265,6 +265,24 @@ groups:
           description: "High volume of predictive alerts. Possible fleet-wide issue (orphaned videos after mass deployment, subscription wave, etc.)."
 
   # =============================================
+  # Pi Network Watchdog
+  # =============================================
+  - name: pi_network_watchdog
+    rules:
+      # Excessive hotspot recovery attempts (false-positive detection or real instability)
+      # The hotspot-watchdog runs every 30s with max 3 attempts per 5min cooldown.
+      # More than 3 recovery attempts/hour means either a false-positive bug (like the
+      # grep -c || echo antipattern in v3.89.1) or genuine persistent hotspot failure.
+      - alert: ExcessiveHotspotRecovery
+        expr: increase(neopro_network_recovery_attempts_total[1h]) > 3
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $value | humanize }} hotspot recovery attempts in 1h"
+          description: "Abnormal hotspot recovery rate. Possible causes: false-positive firmware crash detection (check grep patterns in hotspot-watchdog.sh), persistent hardware issue (brcmfmac crash, rfkill), or hostapd misconfiguration."
+
+  # =============================================
   # Sponsor Analytics (P6)
   # =============================================
   - name: sponsor_analytics

@@ -86,6 +86,11 @@ source central-server/.env && psql "$DATABASE_URL" -f central-server/src/scripts
 - Appeler `play()` directement dans le handler `action` côté slave (le slave doit appeler `preloadManualVideo()` et attendre le signal `manualVideoVisible: true` du master via `tv-loop-state` — ADR-034, smoke test enforced)
 - Émettre `manualVideoVisible: true` dans l'émission immédiate de `play()` (seule l'émission delayed après 2×rAF + 200ms doit émettre `manualVideoVisible: true` — sinon le slave révèle avant que le master soit prêt — ADR-034, smoke test enforced)
 - Oublier `manualVideoVisible: false` dans `emitLoopState()` des transitions de boucle (les slaves interpréteraient l'absence du champ comme un signal de reveal — toujours émettre explicitement `false` — ADR-034, smoke test enforced)
+- Afficher freeze-frame ou overlay noir dans `preloadManualVideo()` pour la première vidéo manuelle depuis la boucle (le preload doit être silencieux — la boucle continue de jouer en dessous pendant que la vidéo charge invisiblement en opacity 0 + muted — ADR-034 v3.89.3, smoke test enforced)
+- Ajouter un délai 2×rAF + 200ms dans `revealPreloadedVideo()` (la révélation du slave doit être instantanée — opacity 1 + unmute immédiat — le délai est uniquement côté master dans `play()` — ADR-034 v3.89.3, smoke test enforced)
+- Oublier `player.muted = true` dans `preloadManualVideo()` ou `player.muted = false` dans `revealPreloadedVideo()`/`cleanupPreloadState()` (sans mute, l'audio de la vidéo fuit pendant le preload invisible — ADR-034 v3.89.3, smoke test enforced)
+- Oublier `captureAndShowFreezeFrame()` dans la transition manual→manual de `preloadManualVideo()` (quand on remplace une vidéo manuelle visible par une autre, il faut un freeze-frame pour couvrir le gap — sinon la boucle apparaît brièvement — ADR-034 v3.89.3, smoke test enforced)
+- Utiliser `grep -c "pattern" || echo "0"` dans les scripts bash (`grep -c` sort `0` ET exit 1 quand count=0, puis `|| echo "0"` ajoute un second `0` → variable = `"0\n0"` → erreur arithmétique bash → faux positif dans les checks — utiliser `$(grep -c ... || true)` + `${var:-0}` — smoke test enforced)
 
 ## Architecture détaillée
 

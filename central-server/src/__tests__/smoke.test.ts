@@ -4888,6 +4888,50 @@ describe('Inter-process wlan1 scan coordination guard', () => {
 });
 
 // ----------------------------------------------------------
+// Bash grep -c || echo antipattern guard
+// ----------------------------------------------------------
+// Issue: `count=$(grep -c "pattern" ... || echo "0")` produces "0\n0" when
+// grep finds 0 matches: grep -c outputs "0" (exit 1), then || echo "0" runs,
+// and $() captures both lines. Using this in [[ "$count" -gt 0 ]] causes:
+//   bash: [[: 0\n0: syntax error in expression (error token is "0")
+// In hotspot-watchdog.sh this caused check_brcmfmac() to always fail,
+// triggering false-positive firmware crash recovery every 30s (restarting
+// hostapd + dnsmasq → killing wlan1 internet → requiring physical power cycle).
+// Fix: use `$(grep -c ... || true)` + `${var:-0}` fallback.
+describe('Bash grep -c || echo antipattern guard', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+  const shellScriptsDir = path.join(repoRoot, 'raspberry/scripts');
+
+  it('no shell script must use `grep -c ... || echo` (produces multiline value)', () => {
+    const scripts = fs.readdirSync(shellScriptsDir)
+      .filter(f => f.endsWith('.sh'))
+      .map(f => ({
+        name: f,
+        content: fs.readFileSync(path.join(shellScriptsDir, f), 'utf8'),
+      }));
+
+    const violations = scripts.flatMap(({ name, content }) => {
+      const lines = content.split('\n');
+      return lines
+        .map((line, i) => ({ line: line.trim(), num: i + 1, file: name }))
+        .filter(({ line }) =>
+          /grep\s+-c\b.*\|\|\s*echo/.test(line) && !line.startsWith('#')
+        );
+    });
+
+    expect({
+      violations: violations.map(v => `${v.file}:${v.num}: ${v.line}`),
+      reason: 'grep -c exits 1 when count is 0; || echo "0" adds a second "0" → "0\\n0" → bash arithmetic error',
+      fix: 'Use $(grep -c ... || true) + ${var:-0}',
+    }).toEqual({
+      violations: [],
+      reason: 'grep -c exits 1 when count is 0; || echo "0" adds a second "0" → "0\\n0" → bash arithmetic error',
+      fix: 'Use $(grep -c ... || true) + ${var:-0}',
+    });
+  });
+});
+
+// ----------------------------------------------------------
 // Kiosk screen dimension initialization guard
 // Incident: 01/03/2026 — PRIMARY_SCREEN_WIDTH/HEIGHT were initialized
 // to 0 instead of "" (empty string). The bash fallback syntax

@@ -3563,6 +3563,22 @@ Le watchdog vérifie toutes les 30 secondes :
 
 En cas de problème, il tente une récupération automatique (max 3 tentatives, cooldown 5 min).
 
+**⚠️ Bug corrigé (v3.89.2) — faux positif brcmfmac :**
+
+Avant v3.89.2, `check_brcmfmac()` utilisait `grep -c "brcmf_fw_crashed" || echo "0"`. Ce pattern est un antipattern bash classique : `grep -c` affiche `0` sur stdout ET retourne exit code 1 quand le count est 0, déclenchant `|| echo "0"` qui ajoute un second `0`. La variable contenait alors `"0\n0"` → erreur arithmétique bash → le check échouait systématiquement → **faux positif "firmware crash" → recovery toutes les 30s → hostapd redémarré en boucle → perte d'internet wlan1**.
+
+**Symptôme** : Pi perd l'internet quelques secondes après le boot, nécessite un rebranchement physique. Les logs `/var/log/neopro-hotspot-watchdog.log` montrent des recoveries brcmfmac en boucle.
+
+**Diagnostic** :
+
+```bash
+# Vérifier si le faux positif est actif (version non-patchée)
+grep "brcmfmac firmware crash detected" /var/log/neopro-hotspot-watchdog.log | tail -5
+# Si présent toutes les 30s → bug actif, mettre à jour vers v3.89.2+
+```
+
+**Monitoring (v3.89.2+)** : L'alerte Prometheus `ExcessiveHotspotRecovery` détecte >3 recovery/heure, signalant un faux positif ou une instabilité réelle.
+
 **Séquence de recovery (v3.69+) :**
 
 | Étape | Action                                                            |
@@ -4488,16 +4504,18 @@ Corrigé dans `tv.component.ts` : émission immédiate du master + guard `_lastA
 
 #### Décalage visible entre écrans (vidéo manuelle) — ADR-034
 
-Les écrans primaire et secondaire jouent la vidéo manuelle mais avec un décalage visible (~300ms). Corrigé en v3.89.0 avec le pattern preload/reveal.
+Les écrans primaire et secondaire jouent la vidéo manuelle mais avec un décalage visible (~300ms). Corrigé en v3.89.0 (preload/reveal) puis affiné en v3.89.3 (preload silencieux + reveal instantané, ~10ms de décalage).
 
 ```bash
-# Vérifier que le slave utilise bien le preload/reveal (ADR-034)
+# Vérifier que le slave utilise bien le preload/reveal silencieux (ADR-034 v3.89.3+)
 journalctl -u neopro-kiosk --no-pager | grep -E 'preloading manual video|revealing preloaded'
-# Attendu: "Slave: preloading manual video" PUIS "Slave: preloaded manual video revealed"
+# Attendu: "Slave: preloading manual video silently (no freeze/overlay)" PUIS "revealing preloaded manual video (instant)"
 
-# Si "Slave: preloading manual video" n'apparaît PAS
-# → Le slave appelle play() directement (vieille version sans ADR-034)
-# Solution: OTA update vers v3.89.0+
+# Si "preloading manual video silently" n'apparaît PAS mais "preloading manual video" oui
+# → Version v3.89.0/v3.89.1 (freeze+overlay, décalage ~50ms). OTA update vers v3.89.3+
+
+# Si "Slave: preloading manual video" n'apparaît PAS du tout
+# → Vieille version sans ADR-034. OTA update vers v3.89.3+
 
 # Vérifier les compteurs de monitoring
 journalctl -u neopro-kiosk --no-pager | grep -E 'preloadRevealCount|preloadCleanupCount'
@@ -4507,6 +4525,16 @@ Si le slave preload mais ne reveal jamais, vérifier que le master émet bien `m
 
 ```bash
 journalctl -u neopro-kiosk --no-pager | grep 'tv-loop-update.*manualVideoVisible'
+```
+
+#### Flash de boucle lors d'un remplacement manual→manual sur secondaire — ADR-034 v3.89.3
+
+Quand une vidéo manuelle est déjà en cours et qu'on en déclenche une autre, le secondaire montre brièvement la boucle. Corrigé en v3.89.3 : `preloadManualVideo()` détecte la transition manual→manual et capture un freeze-frame.
+
+```bash
+# Vérifier la détection manual→manual
+journalctl -u neopro-kiosk --no-pager | grep 'manual.*manual.*transition'
+# Attendu: "Slave: manual→manual transition, capturing freeze-frame"
 ```
 
 ### Smoke tests de régression

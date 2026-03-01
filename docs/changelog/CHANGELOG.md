@@ -1,8 +1,23 @@
+## [3.89.3](https://github.com/Tallec7/neopro/compare/v3.89.2...v3.89.3) (2026-03-01)
+
+### Bug Fixes
+
+- **dual-display:** silent preload — eliminate double-flash on slave during manual video (ADR-034)
+  - `preloadManualVideo()` no longer shows freeze-frame or black overlay; loop keeps playing while video loads invisibly (opacity 0, muted)
+  - `revealPreloadedVideo()` is now instant (removed 2×rAF + 200ms delay); reveal = opacity 1 + unmute
+  - Inter-screen desync reduced from ~50ms to ~10ms (Socket.IO latency only)
+- **dual-display:** fix manual→manual transition showing loop on secondary screen (ADR-034)
+  - When replacing one visible manual video with another, freeze-frame is captured to cover the gap
+  - First manual video from loop: no freeze (loop keeps playing underneath)
+  - `hideFreezeFrame()` called on reveal to clean up manual→manual transitions
+
 ## [3.89.2](https://github.com/Tallec7/neopro/compare/v3.89.1...v3.89.2) (2026-03-01)
 
 ### Bug Fixes
 
 - **dual-display:** cover manual→manual transition gap on slave (ADR-034) ([ee878fc](https://github.com/Tallec7/neopro/commit/ee878fc8df1dca89841f4af208204ad4688f60ac))
+- **hotspot-watchdog:** fix false-positive brcmfmac crash detection causing hostapd restart loop every 30s — `grep -c || echo "0"` antipattern produced multiline value `"0\n0"` → bash arithmetic error → `check_brcmfmac()` always failed → unnecessary recovery cascade → wlan1 internet killed
+- **monitoring:** add Prometheus alert `ExcessiveHotspotRecovery` for detecting abnormal hotspot recovery rates (>3/hour)
 
 ## [3.89.1](https://github.com/Tallec7/neopro/compare/v3.89.0...v3.89.1) (2026-03-01)
 
@@ -22,7 +37,8 @@
 
 - **dual-display:** synchronized manual video reveal — master-driven preload/reveal pattern (ADR-034)
   - Slaves preload video on `action` but wait for master's `manualVideoVisible: true` signal before revealing
-  - Reduces inter-screen desync from ~300ms to ~50ms for manual video triggers
+  - v3.89.3: preload is silent (no freeze/overlay), reveal is instant (no delay)
+  - Reduces inter-screen desync from ~300ms to ~10ms for manual video triggers
   - Backward compatible: old slaves ignore the new field, old masters trigger direct `play()`
 - **monitoring:** ADR-034 preload-reveal metrics pipeline (Prometheus `neopro_video_preload_reveal_total`, `neopro_video_preload_cleanup_total`)
 
