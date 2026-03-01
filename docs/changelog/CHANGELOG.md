@@ -2,6 +2,12 @@
 
 ### Features
 
+- **dual-display:** synchronized manual video reveal — master-driven preload/reveal (ADR-034) ([462d6a8](https://github.com/Tallec7/neopro/commit/462d6a8b6017924a5491a146b88988b965a9e6a9))
+
+# [3.89.0](https://github.com/Tallec7/neopro/compare/v3.88.2...v3.89.0) (2026-03-01)
+
+### Features
+
 - **dual-display:** synchronized manual video reveal — master-driven preload/reveal pattern (ADR-034)
   - Slaves preload video on `action` but wait for master's `manualVideoVisible: true` signal before revealing
   - Reduces inter-screen desync from ~300ms to ~50ms for manual video triggers
