@@ -62,7 +62,7 @@
   left: 0;
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
   background: #000;
   // Par défaut: invisible via opacity (PAS display:none qui cause un reflow layout
   // et un flash noir sur le GPU lent du Pi lors des transitions)
@@ -104,7 +104,7 @@
   left: 0;
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
   background: #000;
   // Par défaut: caché (opacité et z-index gérés par JS)
   opacity: 0;
@@ -127,7 +127,7 @@
   left: 0;
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
   // IMPORTANT: background noir pour éviter de voir à travers
   background: #000 !important;
   // Par défaut: caché via opacity (géré par JS)
