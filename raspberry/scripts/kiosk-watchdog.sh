@@ -483,27 +483,40 @@ activate_hdmi_failover() {
         local failover_h="${SECONDARY_SCREEN_HEIGHT:-$DEFAULT_SCREEN_HEIGHT}"
     fi
 
-    # Phase 3: Redimensionner le Chromium secondaire en plein écran sur HDMI-1
+    # Phase 3: Tuer l'ancien secondaire et relancer un Chromium frais en plein écran
+    # xdotool windowsize seul ne force pas Chromium à re-renderer le viewport CSS interne
+    # (la fenêtre X11 grandit mais le contenu reste à 1920x1080).
+    # Relancer avec --window-size=WxH garanti un viewport correct dès le départ.
     if (( SECONDARY_CHROMIUM_PID > 0 )) && kill -0 "$SECONDARY_CHROMIUM_PID" 2>/dev/null; then
-        local wid
-        wid=$(DISPLAY=:0 xdotool search --pid "$SECONDARY_CHROMIUM_PID" 2>/dev/null | head -1)
-        if [[ -n "$wid" ]]; then
-            # Supprimer les décorations (comme start_chromium_secondary — xprop avant resize)
-            DISPLAY=:0 xprop -id "$wid" -f _MOTIF_WM_HINTS 32c -set _MOTIF_WM_HINTS "0x2, 0x0, 0x0, 0x0, 0x0" 2>/dev/null
-            sleep 0.3
-            DISPLAY=:0 xdotool windowmove "$wid" 0 0 2>/dev/null
-            DISPLAY=:0 xdotool windowsize "$wid" "${failover_w}" "${failover_h}" 2>/dev/null
-            DISPLAY=:0 xdotool windowactivate "$wid" 2>/dev/null
-            log "✓ Chromium secondaire promu en plein écran principal (${failover_w}x${failover_h})"
+        log "🔴 Arrêt du Chromium secondaire pour relance en plein écran..."
+        kill -TERM "$SECONDARY_CHROMIUM_PID" 2>/dev/null || true
+        local wait_count=0
+        while kill -0 "$SECONDARY_CHROMIUM_PID" 2>/dev/null && (( wait_count < 10 )); do
+            sleep 0.5
+            (( wait_count++ ))
+        done
+        if kill -0 "$SECONDARY_CHROMIUM_PID" 2>/dev/null; then
+            kill -9 "$SECONDARY_CHROMIUM_PID" 2>/dev/null || true
+            sleep 1
         fi
+        SECONDARY_CHROMIUM_PID=0
+        rm -rf /tmp/kiosk-secondary 2>/dev/null || true
+        log "✓ Ancien Chromium secondaire arrêté"
     fi
+
+    # Relancer un Chromium primaire (--kiosk) en plein écran sur l'écran restant
+    # On met à jour les dimensions primaire avant de lancer
+    PRIMARY_SCREEN_WIDTH="${failover_w}"
+    PRIMARY_SCREEN_HEIGHT="${failover_h}"
+    start_chromium
+    sleep 2
 
     # Phase 4: Écrire le flag failover pour le server Socket.IO
     echo "failover_active" > /tmp/hdmi-failover-active
 
     HDMI_FAILOVER_ACTIVE=true
     DUAL_DISPLAY_ACTIVE=false
-    log "✓ FAILOVER activé: secondaire = TV mode complet"
+    log "✓ FAILOVER activé: Chromium relancé en plein écran (${failover_w}x${failover_h})"
 }
 
 # E-23 US-23.6.2: Retour du failover — HDMI-0 est de retour, restaurer le dual-display.
@@ -520,22 +533,22 @@ deactivate_hdmi_failover() {
     export DISPLAY=:0
     export XAUTHORITY=/home/pi/.Xauthority
 
-    # 1. Arrêter le Chromium secondaire promu (il crash sinon quand xrandr reconfigure)
-    if (( SECONDARY_CHROMIUM_PID > 0 )) && kill -0 "$SECONDARY_CHROMIUM_PID" 2>/dev/null; then
-        log "🔴 Arrêt du Chromium promu (PID: $SECONDARY_CHROMIUM_PID)..."
-        kill -TERM "$SECONDARY_CHROMIUM_PID" 2>/dev/null || true
+    # 1. Arrêter le Chromium du failover (lancé via start_chromium → CHROMIUM_PID)
+    if (( CHROMIUM_PID > 0 )) && kill -0 "$CHROMIUM_PID" 2>/dev/null; then
+        log "🔴 Arrêt du Chromium failover (PID: $CHROMIUM_PID)..."
+        kill -TERM "$CHROMIUM_PID" 2>/dev/null || true
         local wait_count=0
-        while kill -0 "$SECONDARY_CHROMIUM_PID" 2>/dev/null && (( wait_count < 10 )); do
+        while kill -0 "$CHROMIUM_PID" 2>/dev/null && (( wait_count < 10 )); do
             sleep 0.5
             (( wait_count++ ))
         done
-        if kill -0 "$SECONDARY_CHROMIUM_PID" 2>/dev/null; then
-            kill -9 "$SECONDARY_CHROMIUM_PID" 2>/dev/null || true
+        if kill -0 "$CHROMIUM_PID" 2>/dev/null; then
+            kill -9 "$CHROMIUM_PID" 2>/dev/null || true
             sleep 1
         fi
-        SECONDARY_CHROMIUM_PID=0
-        rm -rf /tmp/kiosk-secondary 2>/dev/null || true
-        log "✓ Chromium promu arrêté"
+        CHROMIUM_PID=0
+        rm -rf /tmp/kiosk-primary 2>/dev/null || true
+        log "✓ Chromium failover arrêté"
     fi
 
     # 2. Reconfigurer xrandr pour dual-display
