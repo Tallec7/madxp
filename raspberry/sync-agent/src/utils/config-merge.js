@@ -156,6 +156,13 @@ function mergeConfigurations(localConfig, neoProContent) {
   }
 
   // ========================================================================
+  // PRÉSERVATION DES VARIANTS SECONDAIRES
+  // Le central ne connaît pas les variants.secondary (injectés localement
+  // par deploySecondaryVariant). On les ré-injecte après la fusion.
+  // ========================================================================
+  restoreSecondaryVariants(localConfig, result);
+
+  // ========================================================================
   // SITE SPONSORS (métadonnées sponsors depuis le dashboard central)
   // Synchronise les sponsors du central vers localSponsors[] du Pi
   // ========================================================================
@@ -528,6 +535,78 @@ function mergeVideoFilenames(localFilenames, centralFilenames) {
   return [...set];
 }
 
+/**
+ * Ré-injecte les variants.secondary depuis la config locale vers la config fusionnée.
+ * Le central n'envoie pas les variants (elles sont ajoutées localement par deploySecondaryVariant).
+ * Après un merge qui remplace sponsors/categories/timeCategories, les variants sont perdues.
+ * Cette fonction les restaure en matchant par chemin vidéo (path).
+ *
+ * @param {object} localConfig - Configuration locale avant merge
+ * @param {object} mergedConfig - Configuration après merge (modifiée en place)
+ */
+function restoreSecondaryVariants(localConfig, mergedConfig) {
+  // 1. Build path → variants map from local config
+  const variantsMap = new Map();
+
+  for (const s of localConfig.sponsors || []) {
+    if (s.path && s.variants?.secondary) {
+      variantsMap.set(s.path, s.variants);
+    }
+  }
+  for (const cat of localConfig.categories || []) {
+    for (const v of cat.videos || []) {
+      if (v.path && v.variants?.secondary) {
+        variantsMap.set(v.path, v.variants);
+      }
+    }
+    for (const sub of cat.subCategories || []) {
+      for (const v of sub.videos || []) {
+        if (v.path && v.variants?.secondary) {
+          variantsMap.set(v.path, v.variants);
+        }
+      }
+    }
+  }
+  for (const tc of localConfig.timeCategories || []) {
+    for (const v of tc.loopVideos || []) {
+      if (v.path && v.variants?.secondary) {
+        variantsMap.set(v.path, v.variants);
+      }
+    }
+  }
+
+  if (variantsMap.size === 0) return;
+
+  // 2. Re-inject into merged config
+  let restored = 0;
+  for (const s of mergedConfig.sponsors || []) {
+    const v = variantsMap.get(s.path);
+    if (v) { s.variants = v; restored++; }
+  }
+  for (const cat of mergedConfig.categories || []) {
+    for (const video of cat.videos || []) {
+      const v = variantsMap.get(video.path);
+      if (v) { video.variants = v; restored++; }
+    }
+    for (const sub of cat.subCategories || []) {
+      for (const video of sub.videos || []) {
+        const v = variantsMap.get(video.path);
+        if (v) { video.variants = v; restored++; }
+      }
+    }
+  }
+  for (const tc of mergedConfig.timeCategories || []) {
+    for (const video of tc.loopVideos || []) {
+      const v = variantsMap.get(video.path);
+      if (v) { video.variants = v; restored++; }
+    }
+  }
+
+  if (restored > 0) {
+    logger.info(`[config-merge] Variants secondaires restaurées: ${restored} vidéos (depuis ${variantsMap.size} variants locales)`);
+  }
+}
+
 module.exports = {
   mergeConfigurations,
   mergeSponsors,
@@ -538,5 +617,6 @@ module.exports = {
   hasLockedContent,
   createBackup,
   calculateConfigHash,
+  restoreSecondaryVariants,
   LOCAL_ONLY_SETTINGS,
 };

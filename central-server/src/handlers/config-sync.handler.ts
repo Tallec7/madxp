@@ -15,6 +15,7 @@ import { metricsService } from '../services/metrics.service';
 import { SocketContext } from './socket-context';
 import { siteSponsorRepository } from '../repositories/site-sponsor.repository';
 import { autoResolveSponsorIds } from '../services/sponsor-auto-resolution.service';
+import { enrichConfigWithSecondaryVariants } from '../utils/config-secondary-variants';
 import type { SiteConfiguration } from '../types';
 
 /** Payload shape for a local sponsor sent from Pi */
@@ -400,6 +401,27 @@ async function sendPendingConfigCommand(
       siteId,
       error: (autoResolveError as Error).message,
     });
+  }
+
+  // Enrichir avec les variants secondaires depuis la base de données
+  try {
+    const { enrichedCount } = await enrichConfigWithSecondaryVariants(
+      enrichedConfiguration as SiteConfiguration
+    );
+    if (enrichedCount > 0) {
+      logger.info('Secondary variants enriched in pending config sync', {
+        siteId, enrichedCount,
+      });
+      metricsService.recordSecondaryVariantEnrichment('success', 'config_sync', enrichedCount);
+    } else {
+      metricsService.recordSecondaryVariantEnrichment('empty', 'config_sync');
+    }
+  } catch (variantError) {
+    logger.warn('Secondary variant enrichment failed in pending config sync (non-fatal)', {
+      siteId,
+      error: (variantError as Error).message,
+    });
+    metricsService.recordSecondaryVariantEnrichment('failed', 'config_sync');
   }
 
   const configWithSponsors = siteSponsors.length > 0

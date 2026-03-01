@@ -384,6 +384,10 @@ function mergeConfigurations(localConfig, neoProContent) {
   // 4. Remplacer timeCategories et categoryMappings (gérés par le central)
   if (neoProContent.timeCategories !== undefined) {
     result.timeCategories = neoProContent.timeCategories;
+    // 4b. Restaurer les variantes secondaires perdues lors du remplacement
+    //     Le central ne stocke pas toujours variants.secondary dans timeCategories,
+    //     donc on les ré-injecte depuis la config locale (voir §5.7 defense-in-depth)
+    restoreSecondaryVariants(result.timeCategories, localConfig.timeCategories);
   }
   if (neoProContent.categoryMappings !== undefined) {
     result.categoryMappings = neoProContent.categoryMappings;
@@ -557,15 +561,15 @@ Le dashboard central propose deux modes de déploiement :
 
 ### 5.3 Tableau des Règles par Champ
 
-| Champ              | Comportement en mode `merge`                                   |
-| ------------------ | -------------------------------------------------------------- |
-| `sponsors`         | Central = source de vérité + sponsors locaux préservés         |
-| `siteSponsors`     | Fusionné dans `localSponsors[]` via `mergeSiteSponsors()` (P8) |
-| `categories`       | Fusion NEOPRO/Club (locked prend le dessus)                    |
-| `timeCategories`   | Remplacement complet par le central                            |
-| `categoryMappings` | Remplacement complet par le central                            |
-| `settings`         | **JAMAIS écrasé** - Protégé localement                         |
-| `siteId`, `apiKey` | **JAMAIS écrasé** - Identifiants du boîtier                    |
+| Champ              | Comportement en mode `merge`                                                  |
+| ------------------ | ----------------------------------------------------------------------------- |
+| `sponsors`         | Central = source de vérité + sponsors locaux préservés                        |
+| `siteSponsors`     | Fusionné dans `localSponsors[]` via `mergeSiteSponsors()` (P8)                |
+| `categories`       | Fusion NEOPRO/Club (locked prend le dessus)                                   |
+| `timeCategories`   | Remplacement complet par le central + `restoreSecondaryVariants()` post-merge |
+| `categoryMappings` | Remplacement complet par le central                                           |
+| `settings`         | **JAMAIS écrasé** - Protégé localement                                        |
+| `siteId`, `apiKey` | **JAMAIS écrasé** - Identifiants du boîtier                                   |
 
 ### 5.4 Tableau des Règles pour les Catégories
 
@@ -604,6 +608,54 @@ Depuis décembre 2025, les vidéos poussées depuis le central conservent leur n
 - **Suppression sûre** : la commande `delete_video` s'appuie sur ce `filename` final tout en restant rétro-compatible avec les anciennes entrées basées sur `path`.
 
 👉 Résultat : les opérateurs voient les mêmes intitulés sur le dashboard central, la télécommande et dans les exports analytics, ce qui simplifie le support.
+
+### 5.7 Enrichissement des Variantes Secondaires
+
+En configuration dual-display, chaque vidéo peut posséder une **variante secondaire** (`variants.secondary`) destinée au second écran. Ces variantes sont fragiles car le remplacement complet de `timeCategories` lors du merge (voir 5.3) peut les perdre. Pour garantir leur présence, un pipeline **defense-in-depth** à 3 niveaux intervient :
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                  PIPELINE VARIANTES SECONDAIRES                        │
+│                     (Defense-in-Depth 3 niveaux)                       │
+│                                                                        │
+│  Niveau 1 — Central DB (avant envoi)                                   │
+│  ┌───────────────────────────────────────────────────────────────────┐ │
+│  │  enrichConfigWithSecondaryVariants()                              │ │
+│  │  → Interroge la table secondary_variants en DB                    │ │
+│  │  → Injecte variants.secondary dans chaque vidéo de la config     │ │
+│  │  → La config envoyée au Pi contient déjà les variantes           │ │
+│  └───────────────────────────────────────────────────────────────────┘ │
+│                              │                                         │
+│                              ▼                                         │
+│  Niveau 2 — Pi deploy-video (téléchargement)                          │
+│  ┌───────────────────────────────────────────────────────────────────┐ │
+│  │  deploy-video télécharge les fichiers variantes secondaires       │ │
+│  │  → Stockés dans videos-secondary/ (à côté de videos/)            │ │
+│  │  → Le fichier physique est présent sur disque même si la config   │ │
+│  │    perd temporairement la référence                               │ │
+│  └───────────────────────────────────────────────────────────────────┘ │
+│                              │                                         │
+│                              ▼                                         │
+│  Niveau 3 — Pi config-merge (restauration post-merge)                 │
+│  ┌───────────────────────────────────────────────────────────────────┐ │
+│  │  restoreSecondaryVariants()                                       │ │
+│  │  → Appelé après le remplacement de timeCategories (étape 4b)     │ │
+│  │  → Compare la config mergée avec la config locale précédente      │ │
+│  │  → Ré-injecte variants.secondary si absent dans la nouvelle      │ │
+│  │    config mais présent dans l'ancienne                            │ │
+│  └───────────────────────────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+**Pourquoi 3 niveaux ?**
+
+| Niveau | Composant                             | Quand il intervient                | Ce qu'il protège                                      |
+| ------ | ------------------------------------- | ---------------------------------- | ----------------------------------------------------- |
+| 1      | `enrichConfigWithSecondaryVariants()` | Avant l'envoi de la config au Pi   | Cas nominal : la config part complète du central      |
+| 2      | `deploy-video` → `videos-secondary/`  | Lors du téléchargement des vidéos  | Fichiers physiques présents même si config incomplète |
+| 3      | `restoreSecondaryVariants()`          | Après le merge de `timeCategories` | Rattrapage si le central n'a pas inclus les variantes |
+
+Le niveau 3 est le **filet de sécurité final** : lors d'un remplacement complet de `timeCategories` par le central, les vidéos de la boucle temporelle perdent leurs `variants.secondary`. La fonction `restoreSecondaryVariants()` dans `config-merge.js` parcourt les `loopVideos` de chaque time category et restaure les variantes depuis la config locale précédente en se basant sur le `path` de la vidéo comme clé de correspondance.
 
 ---
 

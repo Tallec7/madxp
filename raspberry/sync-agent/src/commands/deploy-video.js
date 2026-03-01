@@ -300,6 +300,25 @@ class VideoDeployHandler {
       }
     }
 
+    // Also update timeCategories[].loopVideos[] (phases de match)
+    if (configuration.timeCategories) {
+      for (const tc of configuration.timeCategories) {
+        for (const loopVideo of tc.loopVideos || []) {
+          if (loopVideo.path === relativePath) {
+            if (!loopVideo.variants) loopVideo.variants = {};
+            loopVideo.variants.secondary = {
+              path: secondaryRelativePath,
+              filename: finalFilename,
+              width: width || null,
+              height: height || null,
+              duration: duration || null,
+            };
+            delete loopVideo.variants.led; // Nettoyage rétrocompat
+          }
+        }
+      }
+    }
+
     await atomicWriteJson(configPath, configuration);
 
     const stat = await fs.stat(targetPath);

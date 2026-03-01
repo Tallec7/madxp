@@ -607,6 +607,22 @@ const sponsorHealthCheckDuration = new Histogram({
   registers: [register],
 });
 
+// ============= Métriques Secondary Variant Enrichment =============
+
+const secondaryVariantEnrichmentTotal = new Counter({
+  name: 'neopro_secondary_variant_enrichment_total',
+  help: 'Secondary variant enrichment outcomes during config deployment/sync',
+  labelNames: ['outcome', 'pipeline'],  // outcome: 'success' | 'empty' | 'failed', pipeline: 'deployment' | 'config_sync'
+  registers: [register],
+});
+
+const secondaryVariantEnrichedCount = new Histogram({
+  name: 'neopro_secondary_variant_enriched_count',
+  help: 'Number of video entries enriched with secondary variants per operation',
+  buckets: [0, 1, 2, 5, 10, 20, 50],
+  registers: [register],
+});
+
 // ============= Service Class =============
 
 class MetricsService {
@@ -981,6 +997,19 @@ class MetricsService {
 
   recordSponsorAutoResolution(outcome: 'resolved' | 'skipped' | 'unresolved', count: number): void {
     sponsorAutoResolutionTotal.inc({ outcome }, count);
+  }
+
+  // ============= Méthodes Secondary Variant Enrichment =============
+
+  recordSecondaryVariantEnrichment(
+    outcome: 'success' | 'empty' | 'failed',
+    pipeline: 'deployment' | 'config_sync',
+    enrichedCount?: number
+  ): void {
+    secondaryVariantEnrichmentTotal.inc({ outcome, pipeline });
+    if (enrichedCount !== undefined && enrichedCount > 0) {
+      secondaryVariantEnrichedCount.observe(enrichedCount);
+    }
   }
 
   // ============= Méthodes Sponsor Health (F-AUD-07) =============

@@ -1,6 +1,6 @@
 # Implemented Backlog — Features Livrées
 
-> **Dernière mise à jour** : 24 Février 2026
+> **Dernière mise à jour** : 1 Mars 2026
 > Ce document recense **toutes** les features implémentées dans le codebase NEOPRO, organisées par domaine fonctionnel. Il complète le backlog SAFe (futur) avec une vue exhaustive du produit livré.
 > **Source** : Croisement systématique de 34 changelogs, 200+ commits git (v3.47→v3.64), audit codebase, et sprint audit sponsors/analytics (26 features P0+P1+P2+P3).
 
@@ -54,6 +54,7 @@
 | IMP-VID-14 | Variantes vidéo par type d'écran (table `video_variants`, API CRUD, upload secondary) | Production | `video-variant.repository.ts`, `content.controller.ts`, `content.routes.ts` | Fév 2026         |
 | IMP-VID-15 | Dashboard gestion variantes vidéo écran secondaire (panel upload/delete par vidéo)    | Production | `video-variant-panel.component.ts`, `content-management.component.ts`       | Fév 2026         |
 | IMP-VID-16 | Déploiement conditionnel variantes écran secondaire (pipeline + sync-agent)           | Production | `deployment.service.ts`, `deploy-video.js`                                  | Fév 2026         |
+| IMP-VID-17 | Enrichissement variants secondaires dans pipeline de déploiement                      | Production | `deployment.service.ts`, `deploy-video.js`                                  | v3.88.0 Mar 2026 |
 
 ---
 
@@ -352,7 +353,7 @@
 
 | Métrique                  | Valeur                                                                                                                                                                                               |
 | ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Features implémentées** | **230** (+26 audit, +8 E-22 TV+Secondary dual, +6 sponsor UX, +2 résilience Pi/OTA, +3 hotspot WiFi, +3 debug page, +1 EDID enrichment, +1 dashboard EDID display, +1 OTA edid-decode, +1 sysfs fix) |
+| **Features implémentées** | **231** (+26 audit, +9 E-22 TV+Secondary dual, +6 sponsor UX, +2 résilience Pi/OTA, +3 hotspot WiFi, +3 debug page, +1 EDID enrichment, +1 dashboard EDID display, +1 OTA edid-decode, +1 sysfs fix) |
 | Domaines fonctionnels     | 14                                                                                                                                                                                                   |
 | Controllers API           | 29 (+sponsor-alerts)                                                                                                                                                                                 |
 | Services métier           | 40 (+sponsor-alert, sponsor-stats, sponsor-auto-resolution)                                                                                                                                          |
@@ -361,7 +362,7 @@
 | Modules dashboard         | 21 (+advertiser-health, analytics-categories)                                                                                                                                                        |
 | Services Raspberry        | 19 (+sponsor-stats)                                                                                                                                                                                  |
 | Versions publiées         | 265+ (v2.1 → v3.62)                                                                                                                                                                                  |
-| Tests (total)             | 2 386 (1590 API + 506 Angular + 148 Admin + 71 Socket + 142 Smoke)                                                                                                                                   |
+| Tests (total)             | 2 987 (1872 API + 506 Angular + 148 Admin + 71 Socket + 390 Smoke)                                                                                                                                   |
 
 ---
 
@@ -375,7 +376,7 @@
 | E-09 Architecture Audit                  | IMP-ADM-09, IMP-DOC-01                   | Admin, Documentation                |
 | E-10 Monitoring Fleet (partiel)          | IMP-ALR-16→19, IMP-ANA-14                | Monitoring, Analytics               |
 | Audit Sponsors & Analytics               | IMP-AUD-01→32 (32 features, 93 SP)       | Analytics, Sponsors, Pi, Monitoring |
-| E-22 TV + Secondary Dual (F-22.1→F-22.3) | IMP-VID-14→16, IMP-PI-23→26 (7 features) | Vidéo, Raspberry Pi, Dashboard      |
+| E-22 TV + Secondary Dual (F-22.1→F-22.3) | IMP-VID-14→17, IMP-PI-23→26 (8 features) | Vidéo, Raspberry Pi, Dashboard      |
 
 ---
 

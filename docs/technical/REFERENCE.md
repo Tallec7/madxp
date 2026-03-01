@@ -1310,6 +1310,40 @@ Le HDMI secondaire du Raspberry Pi peut alimenter un panneau LED bord de terrain
 | Cloud Remote — Cartes vidéo         | `secondaryDisplayEnabled` + `video.hasSecondaryVariant`              | API `GET /api/remote/:siteId` (`secondaryVariantPaths`) |
 | Pi Remote — Cartes vidéo            | `configuration.secondaryDisplayEnabled` + `video.variants.secondary` | `configuration.json` (écrit par `deploy-video.js`)      |
 
+**Pipeline d'enrichissement des variantes secondaires :**
+
+Lors du déploiement ou de la synchronisation d'une configuration vers un Pi, le champ `variants.secondary` doit être injecté sur chaque entrée vidéo qui possède une variante secondaire en base. Deux fonctions complémentaires assurent ce pipeline :
+
+| Fonction                              | Fichier                                                 | Rôle                                                  |
+| ------------------------------------- | ------------------------------------------------------- | ----------------------------------------------------- |
+| `enrichConfigWithSecondaryVariants()` | `central-server/src/utils/config-secondary-variants.ts` | Enrichit la config **côté central** avant envoi au Pi |
+| `restoreSecondaryVariants()`          | `raspberry/sync-agent/src/utils/config-merge.js`        | Restaure les variants **côté Pi** après un merge      |
+
+_`enrichConfigWithSecondaryVariants(config)` — Central Server :_
+
+1. Parcourt `sponsors[]`, `categories[].videos[]` (+ `subCategories[].videos[]`) et `timeCategories[].loopVideos[]`
+2. Extrait les filenames via `extractFilenameFromPath()` et construit une map `filename → setter`
+3. Interroge la base via `videoVariantRepository.findSecondaryVariantsByFilenames(filenames)` en un seul appel batch
+4. Injecte `variants: { secondary: { path, filename, width, height, duration } }` sur chaque entrée correspondante
+5. Retourne `{ config, enrichedCount }` — la config est modifiée en place
+
+_`restoreSecondaryVariants(localConfig, mergedConfig)` — Sync-Agent Pi :_
+
+Le merge central remplace intégralement `timeCategories` et peut modifier `sponsors`/`categories`. Les `variants.secondary` (injectées localement par `deploySecondaryVariant`) sont donc perdues. Cette fonction les restaure :
+
+1. Construit une map `path → variants` depuis la config locale (avant merge), en parcourant les mêmes 3 sections
+2. Parcourt la config fusionnée et ré-injecte `variants` sur chaque entrée dont le `path` correspond
+3. Loggue le nombre de variants restaurées
+
+_Métriques Prometheus :_
+
+| Métrique                                    | Type      | Labels                                                                          | Description                                                                                 |
+| ------------------------------------------- | --------- | ------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| `neopro_secondary_variant_enrichment_total` | Counter   | `outcome` (`success`/`empty`/`failed`), `pipeline` (`deployment`/`config_sync`) | Nombre d'opérations d'enrichissement et leur résultat                                       |
+| `neopro_secondary_variant_enriched_count`   | Histogram | —                                                                               | Distribution du nombre de vidéos enrichies par opération (buckets : 0, 1, 2, 5, 10, 20, 50) |
+
+Définies dans `central-server/src/services/metrics.service.ts`. Dashboard Grafana : panneau "Secondary Variant Enrichment" dans le dashboard Fleet.
+
 **Endpoints Config Profiles (multi-config) :**
 
 ```

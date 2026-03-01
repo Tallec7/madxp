@@ -13,6 +13,7 @@ import { draftService } from './draft.service';
 import { siteSponsorRepository } from '../repositories/site-sponsor.repository';
 import metricsService from './metrics.service';
 import { autoResolveSponsorIds } from './sponsor-auto-resolution.service';
+import { enrichConfigWithSecondaryVariants } from '../utils/config-secondary-variants';
 import {
   OrchestratedDeployment,
   OrchestratedDeploymentStatus,
@@ -261,6 +262,24 @@ class OrchestratedDeploymentService {
       logger.info('Sponsor auto-resolution in deployment', {
         siteId, orchestratedId, resolved, unresolved,
       });
+    }
+
+    // Enrichir avec les variants secondaires depuis la base de données
+    try {
+      const { enrichedCount } = await enrichConfigWithSecondaryVariants(enrichedConfig);
+      if (enrichedCount > 0) {
+        logger.info('Secondary variants enriched in deployment config', {
+          siteId, orchestratedId, enrichedCount,
+        });
+        metricsService.recordSecondaryVariantEnrichment('success', 'deployment', enrichedCount);
+      } else {
+        metricsService.recordSecondaryVariantEnrichment('empty', 'deployment');
+      }
+    } catch (variantError) {
+      logger.warn('Secondary variant enrichment failed (non-fatal)', {
+        siteId, orchestratedId, error: (variantError as Error).message,
+      });
+      metricsService.recordSecondaryVariantEnrichment('failed', 'deployment');
     }
 
     // Préparer le payload pour update_config (utilise la config enrichie)

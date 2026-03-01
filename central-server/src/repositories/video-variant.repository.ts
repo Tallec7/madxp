@@ -43,6 +43,15 @@ export interface CreateVideoVariantInput {
   uploaded_by: string | null;
 }
 
+export interface SecondaryVariantByFilenameRow extends QueryResultRow {
+  filename: string;
+  storage_path: string;
+  width: number | null;
+  height: number | null;
+  duration: number | null;
+  source_filename: string;
+}
+
 // --------------------------------------------------------------------------
 // Repository
 // --------------------------------------------------------------------------
@@ -136,6 +145,22 @@ class VideoVariantRepositoryImpl extends BaseRepository<VideoVariantRow> {
       `SELECT * FROM video_variants
        WHERE video_id IN (${placeholders}) AND display_type = 'secondary'`,
       videoIds
+    );
+    return result.rows;
+  }
+
+  async findSecondaryVariantsByFilenames(
+    filenames: string[]
+  ): Promise<SecondaryVariantByFilenameRow[]> {
+    if (filenames.length === 0) return [];
+    const placeholders = filenames.map((_, i) => `$${i + 1}`).join(', ');
+    const result = await query<SecondaryVariantByFilenameRow>(
+      `SELECT vv.filename, vv.storage_path, vv.width, vv.height, vv.duration,
+              v.filename AS source_filename
+       FROM video_variants vv
+       JOIN videos v ON v.id = vv.video_id
+       WHERE v.filename IN (${placeholders}) AND vv.display_type = 'secondary'`,
+      filenames
     );
     return result.rows;
   }

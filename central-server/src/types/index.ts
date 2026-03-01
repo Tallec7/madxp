@@ -426,6 +426,18 @@ export interface MissingVideoInfo {
 // Site Configuration types (structure de configuration.json)
 // ============================================================================
 
+export interface VideoVariantInfo {
+  path: string;
+  filename?: string;
+  width?: number;
+  height?: number;
+  duration?: number;
+}
+
+export interface VideoVariants {
+  secondary?: VideoVariantInfo;
+}
+
 export interface SponsorVideo {
   name: string;
   path: string;
@@ -435,6 +447,7 @@ export interface SponsorVideo {
   expiresAt?: string;
   site_sponsor_id?: string;
   display_name?: string;
+  variants?: VideoVariants;
 }
 
 /**
@@ -458,6 +471,7 @@ export interface CategoryVideo {
   path: string;
   type?: string;
   site_sponsor_id?: string; // Auto-résolu depuis site_sponsor_videos au déploiement
+  variants?: VideoVariants;
 }
 
 export interface SubCategory {
