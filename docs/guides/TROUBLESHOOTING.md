@@ -22,6 +22,7 @@
 18. [500/429 cascade sur GET /api/deployments (v3.82.1+)](#500429-cascade-sur-get-apideployments-v3821)
 19. [Second écran ne s'affiche pas (v3.82.7+)](#second-écran-ne-saffiche-pas-v3827)
 20. [Deux écrans désynchronisés (v3.82.10+)](#deux-écrans-désynchronisés-v38210)
+21. [Déploiement vidéo secondaire échoué (EACCES / race condition)](#déploiement-vidéo-secondaire-échoué-eacces--race-condition)
 
 > **WiFi USB** : Pour un guide complet sur la clé WiFi USB (installation, diagnostic, pannes, recovery), voir [WIFI_USB_GUIDE.md](WIFI_USB_GUIDE.md).
 >
@@ -4714,4 +4715,78 @@ Ceci est le **comportement normal et voulu**. Le Pi pilote la TV physique et doi
 
 ---
 
-**Dernière mise à jour :** 27 février 2026 (ajout sections mode headless, priorité kiosk — E-23 v3.84)
+## Déploiement vidéo secondaire échoué (EACCES / race condition)
+
+> **Version :** v3.87.2+ (fix), affecte toutes les versions avec secondary display
+
+### Symptôme
+
+Le dashboard affiche **"Échoué"** sur le déploiement d'une vidéo avec variante secondaire. Le Pi reçoit bien la commande mais le fichier secondaire n'est pas écrit.
+
+### Causes possibles
+
+#### 1. Permission EACCES sur `/home/pi/neopro/`
+
+Le répertoire `/home/pi/neopro/` (ou un sous-répertoire comme `videos-secondary/`) n'appartient pas à l'utilisateur `pi`. Cela peut arriver si :
+
+- Le Pi a été flashé depuis macOS (ownership `501:staff` au lieu de `pi:pi`)
+- Un `sudo` a créé des fichiers en tant que `root`
+- Une mise à jour OTA a mal restauré les permissions
+
+**Diagnostic :**
+
+```bash
+ssh pi@neopro.local 'ls -la /home/pi/neopro/'
+# Vérifier que tout est owned par pi:pi
+ssh pi@neopro.local 'journalctl -u neopro-sync-agent --since "10 min ago" | grep -i "EACCES\|permission\|permission issue"'
+```
+
+**Fix :**
+
+```bash
+ssh pi@neopro.local 'sudo chown -R pi:pi /home/pi/neopro/'
+ssh pi@neopro.local 'sudo systemctl restart neopro-sync-agent'
+```
+
+> **Note v3.87.2+ :** Le sync-agent effectue un preflight check des permissions au démarrage (`ensureDirectoryPermissions`). Si un répertoire critique n'est pas accessible en écriture, un warning explicite est loggé avec la commande `chown` à exécuter.
+
+#### 2. Race condition sur reconnexion (doublon deploy_video)
+
+Quand un Pi se reconnecte au central, la queue de commandes en attente est vidée d'un coup. Si deux commandes `deploy_video` pour la même vidéo sont envoyées quasi-simultanément, les deux tentent d'écrire le fichier `.downloading` au même chemin → corruption de checksum ou `ENOENT`.
+
+**Diagnostic :**
+
+```bash
+ssh pi@neopro.local 'journalctl -u neopro-sync-agent --since "30 min ago" | grep -i "duplicate deploy\|dedup\|in-flight"'
+```
+
+> **Fix v3.87.2+ :** Le `deploy-video.js` utilise un mutex (`activeDeployments Map`) qui déduplique les téléchargements concurrents. Si un `deploy_video` est déjà en cours pour le même `videoId`, le second attend le résultat du premier au lieu de lancer un téléchargement parallèle.
+
+#### 3. Répertoire `videos-secondary/` manquant
+
+Le répertoire peut ne pas exister si le Pi a été provisionné avant l'ajout du support dual-display.
+
+**Fix :**
+
+```bash
+ssh pi@neopro.local 'mkdir -p /home/pi/neopro/videos-secondary && chown pi:pi /home/pi/neopro/videos-secondary'
+```
+
+> **Note v3.87.2+ :** Le preflight check crée automatiquement `videos-secondary/` au démarrage si absent.
+
+### Vérification
+
+```bash
+# 1. Vérifier que le preflight a tourné
+ssh pi@neopro.local 'journalctl -u neopro-sync-agent --since "5 min ago" | grep -i "permission"'
+
+# 2. Relancer le déploiement depuis le dashboard
+# Le déploiement devrait maintenant réussir
+
+# 3. Vérifier que la vidéo secondaire est bien présente
+ssh pi@neopro.local 'ls -la /home/pi/neopro/videos-secondary/'
+```
+
+---
+
+**Dernière mise à jour :** 1 mars 2026 (ajout section déploiement vidéo secondaire échoué — v3.87.2)

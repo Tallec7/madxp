@@ -1,3 +1,19 @@
+## [3.87.2](https://github.com/Tallec7/neopro/compare/v3.87.1...v3.87.2) (2026-03-01)
+
+### Bug Fixes
+
+- **sync-agent:** add concurrent deployment mutex — deduplicate `deploy_video` commands on reconnect via `activeDeployments Map` keyed by videoId. Second command for same video awaits in-flight result instead of racing on `.downloading` file.
+- **sync-agent:** add startup directory permission preflight — `ensureDirectoryPermissions()` checks write access to `videos/`, `videos-secondary/`, `videos-processing/`, and config dir at boot. Logs explicit `chown` fix command on EACCES. Auto-creates `videos-secondary/` if missing.
+
+### Tests
+
+- **smoke:** add `deploy_video concurrent deployment mutex guard` (3 tests) — activeDeployments Map existence, has/set/delete deduplication, \_executeInternal delegation
+- **smoke:** add `Sync-agent startup directory permission preflight` (2 tests) — ensureDirectoryPermissions called in start(), videos-secondary writable check
+
+### Documentation
+
+- **troubleshooting:** add "Déploiement vidéo secondaire échoué (EACCES / race condition)" section — covers permission fix, race condition dedup, missing directory creation
+
 ## [3.86.5](https://github.com/Tallec7/neopro/compare/v3.86.4...v3.86.5) (2026-03-01)
 
 ### Bug Fixes

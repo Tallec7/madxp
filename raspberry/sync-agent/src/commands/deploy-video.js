@@ -10,6 +10,11 @@ const { atomicWriteJson, safeReadConfig } = require('../utils/safe-config-io');
 const DEFAULT_EXTENSION = '.mp4';
 const ILLEGAL_FILENAME_CHARS = /[<>:"/\\|?*\x00-\x1F]/g;
 
+// Mutex: empêche 2 deploy_video concurrents sur le même videoId
+// Bug v3.87: à la reconnexion, le central peut flusher 2x la même commande,
+// causant 2 downloads concurrents sur le même .downloading → corruption checksum + ENOENT
+const activeDeployments = new Map(); // videoId → Promise
+
 function sanitizeFilename(name) {
   const fallbackBase = 'video';
   const fallbackExt = DEFAULT_EXTENSION;
@@ -97,6 +102,49 @@ class VideoDeployHandler {
       logger.error('Video deployment rejected: no checksum provided', { filename, category });
       throw error;
     }
+
+    // Mutex: si un deploy est déjà en cours pour ce videoId, attendre qu'il finisse
+    // plutôt que de lancer 2 downloads concurrents sur le même .downloading
+    const dedupeKey = videoId || checksum;
+    if (activeDeployments.has(dedupeKey)) {
+      logger.warn('Duplicate deploy_video detected, waiting for in-flight deployment', {
+        videoId, filename: originalName || filename,
+      });
+      try {
+        const existingResult = await activeDeployments.get(dedupeKey);
+        logger.info('Returning result from in-flight deployment (deduplicated)', { videoId });
+        return existingResult;
+      } catch (existingError) {
+        logger.warn('In-flight deployment failed, retrying fresh', { videoId, error: existingError.message });
+        // L'autre a échoué → on relance proprement ci-dessous
+      }
+    }
+
+    const deployPromise = this._executeInternal(data, progressCallback, dedupeKey);
+    activeDeployments.set(dedupeKey, deployPromise);
+
+    try {
+      return await deployPromise;
+    } finally {
+      activeDeployments.delete(dedupeKey);
+    }
+  }
+
+  async _executeInternal(data, progressCallback, _dedupeKey) {
+    const {
+      videoUrl,
+      filename,
+      originalName,
+      category,
+      subcategory,
+      locked,
+      expires_at,
+      checksum,
+      videoId,
+      sponsorId,
+      analyticsCategory,
+      siteSponsorId,
+    } = data;
 
     // Déploiement depuis le central = contenu NEOPRO (verrouillé par défaut)
     const isNeoProContent = locked !== false;

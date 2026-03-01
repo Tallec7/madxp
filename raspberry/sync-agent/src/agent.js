@@ -57,6 +57,10 @@ class NeoproSyncAgent {
       process.exit(1);
     }
 
+    // Preflight: vérifier les permissions des répertoires critiques
+    // Bug v3.87: /home/pi/neopro/ owned by 501:staff bloquait mkdir videos-secondary → EACCES
+    await this.ensureDirectoryPermissions();
+
     // Démarrer l'envoi des analytics immédiatement (indépendant du WebSocket)
     // Les analytics sont envoyées via HTTP, pas besoin d'attendre la connexion WS
     this.startAnalyticsSync();
@@ -78,6 +82,38 @@ class NeoproSyncAgent {
 
     process.on('SIGTERM', () => this.shutdown());
     process.on('SIGINT', () => this.shutdown());
+  }
+
+  /**
+   * Vérifie et corrige les permissions des répertoires critiques au démarrage.
+   * Prévention: si /home/pi/neopro/ n'est pas writable (ex: owner 501:staff après
+   * un transfert rsync depuis macOS), les déploiements secondary variant échouent
+   * silencieusement avec EACCES sur mkdir videos-secondary.
+   */
+  async ensureDirectoryPermissions() {
+    const path = require('path');
+    const criticalDirs = [
+      config.paths.videos,                                                    // videos/
+      config.paths.videos.replace(/\/videos\/?$/, '/videos-secondary'),       // videos-secondary/
+      config.paths.videos.replace(/\/videos\/?$/, '/videos-processing'),      // videos-processing/
+      path.dirname(config.paths.config),                                      // parent of configuration.json
+    ];
+
+    for (const dir of criticalDirs) {
+      try {
+        await fs.ensureDir(dir);
+        // Vérifier qu'on peut écrire (touch un fichier temporaire)
+        const testFile = path.join(dir, '.neopro-permission-check');
+        await fs.writeFile(testFile, '');
+        await fs.remove(testFile);
+      } catch (err) {
+        logger.error('⚠️ Directory permission issue detected at startup', {
+          dir,
+          error: err.message,
+          fix: `sudo chown -R pi:pi ${path.dirname(dir)}`,
+        });
+      }
+    }
   }
 
   connect() {
