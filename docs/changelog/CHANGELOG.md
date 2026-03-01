@@ -1,3 +1,21 @@
+## [3.84.3](https://github.com/Tallec7/neopro/compare/v3.84.2...v3.84.3) (2026-03-01)
+
+### Bug Fixes
+
+- **network:** fix WiFi boot race condition — NetworkWatchdog fired `internetWatchLoop` at boot+10s before wlan1 (RTL8192EU USB) completed WPA auth + DHCP, triggering false recovery cascade through all 6 phases (reconfigure → interface down/up → wpa_supplicant restart → modprobe → USB power-cycle). E-23 HDMI boot operations (xrandr, DRM udev) aggravated by increasing PCIe bus contention on RP1
+- **network:** add 45s boot grace period for internet watchdog — `enableGracePeriod('internet', 45000)` in `start()` prevents false alarms during WiFi initialization
+- **network:** fix circular dependency safe-network-operations ↔ network-watchdog — module-scope `require('./network-watchdog')` returned empty object due to CommonJS circular resolution; replaced with lazy require inside `autoOptimize()` so BSSID auto-clear and grace periods work correctly
+- **network:** defer `autoOptimize` from 30s to 60s — `iwlist scan` at boot+30s destabilized RTL8192EU during initial WPA handshake; 60s gives wlan1 time to fully stabilize
+
+### Tests
+
+- **smoke:** add 5 regression guards — boot grace period presence + ≥30s threshold, no module-scope circular require, lazy require in autoOptimize, autoOptimize delay ≥60s
+
+### Documentation
+
+- **troubleshooting:** add WiFi boot race condition section with diagnostic commands and timeline
+- **changelog:** document v3.84.3 network fixes
+
 ## [3.84.2](https://github.com/Tallec7/neopro/compare/v3.84.1...v3.84.2) (2026-02-28)
 
 ### Bug Fixes

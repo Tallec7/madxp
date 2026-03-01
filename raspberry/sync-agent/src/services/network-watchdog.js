@@ -1248,6 +1248,11 @@ function start() {
     .then(() => logger.info('NetworkWatchdog: WiFi power management disabled on wlan1'))
     .catch(() => {});
 
+  // Grace period au boot : laisser le temps à wlan1 de compléter WPA auth + DHCP
+  // avant que le watchdog ne déclenche une fausse alerte de connectivité
+  enableGracePeriod('internet', 45000);
+  logger.info('NetworkWatchdog: boot grace period enabled (45s) for internet checks');
+
   // Première exécution immédiate
   setTimeout(() => hotspotWatchLoop(), 5000);
   setTimeout(() => internetWatchLoop(), 10000);

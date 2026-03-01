@@ -882,7 +882,7 @@ class NeoproSyncAgent {
       } catch (error) {
         logger.error('Failed to detect initial network profile', { error: error.message });
       }
-    }, 30000); // 30 secondes après le démarrage
+    }, 60000); // 60 secondes après le démarrage (laisse le temps à wlan1 de se stabiliser)
 
     // Puis toutes les heures
     this.networkProfileInterval = setInterval(async () => {

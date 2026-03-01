@@ -4429,3 +4429,103 @@ describe('FTP verifyFtpFileExists must use client.size()', () => {
     });
   });
 });
+
+// ----------------------------------------------------------
+// WiFi boot race condition regression guards (v3.84.3)
+// ----------------------------------------------------------
+// Issue: NetworkWatchdog fires internetWatchLoop at boot+10s. If wlan1 (RTL8192EU USB)
+// hasn't completed WPA auth + DHCP by then, watchdog detects "no connectivity" → escalates
+// 6-phase recovery → disrupts in-progress auth → cascade requiring modprobe + USB power-cycle.
+// E-23 aggravated by adding HDMI boot operations (xrandr, DRM udev) that increase PCIe
+// bus contention on RP1, delaying USB WiFi initialization.
+// Fixes: boot grace period, circular dependency break, autoOptimize delay increase.
+describe('WiFi boot race condition regression guards (v3.84.3)', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+
+  let watchdogContent: string;
+  let safeOpsContent: string;
+  let agentContent: string;
+
+  beforeAll(() => {
+    watchdogContent = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/sync-agent/src/services/network-watchdog.js'),
+      'utf8'
+    );
+    safeOpsContent = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/sync-agent/src/services/safe-network-operations.js'),
+      'utf8'
+    );
+    agentContent = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/sync-agent/src/agent.js'),
+      'utf8'
+    );
+  });
+
+  // Guard 1: Boot grace period — watchdog must not trigger false recovery before WiFi stabilizes
+  it('network-watchdog start() must enable boot grace period for internet checks', () => {
+    // The start() function must call enableGracePeriod before the first internetWatchLoop
+    const startFn = watchdogContent.match(
+      /function start\(\)\s*\{[\s\S]*?setTimeout\(\(\) => internetWatchLoop\(\)/
+    );
+    expect(startFn).not.toBeNull();
+    expect({
+      hasBootGrace: /enableGracePeriod\(\s*'internet'\s*,\s*\d+\s*\)/.test(startFn![0]),
+    }).toEqual({
+      hasBootGrace: true,
+    });
+  });
+
+  it('network-watchdog boot grace period must be >= 30s', () => {
+    // Match the enableGracePeriod call in start() that precedes the setTimeout internetWatchLoop
+    const startFn = watchdogContent.match(
+      /function start\(\)\s*\{[\s\S]*?setTimeout\(\(\) => internetWatchLoop\(\)/
+    );
+    expect(startFn).not.toBeNull();
+    const graceMatch = startFn![0].match(
+      /enableGracePeriod\(\s*'internet'\s*,\s*(\d+)\s*\)/
+    );
+    expect(graceMatch).not.toBeNull();
+    expect({
+      graceMs: Number(graceMatch![1]) >= 30000,
+    }).toEqual({
+      graceMs: true,
+    });
+  });
+
+  // Guard 2: Circular dependency — safe-network-operations must NOT require network-watchdog at module scope
+  it('safe-network-operations must NOT require network-watchdog at module scope (circular dependency)', () => {
+    // Extract top-level requires (before any class/function definition)
+    const topLevel = safeOpsContent.split(/^class /m)[0];
+    expect({
+      hasModuleScopeRequire: /^const\s+\w+\s*=\s*require\(['"]\.\/network-watchdog['"]\)/m.test(topLevel),
+    }).toEqual({
+      hasModuleScopeRequire: false,
+    });
+  });
+
+  it('safe-network-operations autoOptimize must use lazy require for network-watchdog', () => {
+    const autoOptFn = safeOpsContent.match(
+      /async autoOptimize\(\)\s*\{[\s\S]*?return \{ success: true/
+    );
+    expect(autoOptFn).not.toBeNull();
+    expect({
+      hasLazyRequire: /require\(['"]\.\/network-watchdog['"]\)/.test(autoOptFn![0]),
+    }).toEqual({
+      hasLazyRequire: true,
+    });
+  });
+
+  // Guard 3: autoOptimize delay — must wait long enough for WiFi to stabilize before scanning
+  it('agent.js autoOptimize timeout must be >= 60s (not 30s)', () => {
+    // Find the setTimeout block that contains autoOptimize and extract the delay value
+    const optimizeBlock = agentContent.match(
+      /autoOptimize\(\)[\s\S]{0,800}}\s*,\s*(\d+)\s*\)/
+    );
+    expect(optimizeBlock).not.toBeNull();
+    expect({
+      delayMs: Number(optimizeBlock![1]) >= 60000,
+    }).toEqual({
+      delayMs: true,
+    });
+  });
+});

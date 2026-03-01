@@ -3360,11 +3360,38 @@ Quand le Pi est connecté en WiFi et sain, le watchdog vérifie si le BSSID conn
 
 Avant chaque OTA, le config-watcher est mis en pause (2 min) pour éviter les 11x événements `config change detected` causés par l'extraction de l'archive. Un seul check différé est effectué à la reprise.
 
+### Boot race condition WiFi (v3.84.3)
+
+**Symptôme** : Après un reboot, wlan1 (RTL8192EU USB) perd la connectivité pendant ~2 min. Les logs montrent le watchdog escaladant les 6 phases de recovery immédiatement après le boot.
+
+**Cause racine** : Le `internetWatchLoop` démarrait 10s après le boot de l'agent. Si wlan1 n'avait pas terminé WPA auth + DHCP (typiquement 15-30s pour un dongle USB), le watchdog détectait "pas de connectivité" → lançait la recovery → perturbait l'authentification en cours → cascade complète.
+
+**Aggravé par E-23** : Les opérations HDMI au boot (xrandr, udev DRM, sysfs reads) augmentent la contention du bus PCIe RP1 du Pi 5, retardant l'initialisation USB WiFi.
+
+**Fix (v3.84.3)** :
+
+1. Grace period de 45s au boot (`enableGracePeriod('internet', 45000)` dans `start()`)
+2. `autoOptimize` différé de 30s → 60s (les `iwlist scan` déstabilisaient le RTL8192EU)
+3. Dépendance circulaire corrigée (lazy require)
+
+**Diagnostic** :
+
+```bash
+# Vérifier la timeline boot → premier check internet
+journalctl -u neopro-sync-agent --since "boot" --no-pager | grep -E "boot grace|Internet check|internetWatchLoop|Starting network"
+
+# Vérifier que le grace period est bien actif au boot
+journalctl -u neopro-sync-agent --since "boot" --no-pager | grep "grace period"
+
+# Timeline complète boot WiFi (wlan1 WPA + DHCP)
+journalctl --since "boot" --no-pager | grep -E "wlan1.*(associated|CTRL-EVENT|DHCP|inet )" | head -20
+```
+
 ### Le watchdog ne tente pas de recovery ?
 
 Causes possibles :
 
-1. **Grace period active** : après un `wpa_cli reconfigure` ou un auto-optimize, le watchdog attend 60s avant de checker. Vérifier : `grep "grace period" /tmp/neopro-watchdog-grace.json`
+1. **Grace period active** : au boot (45s) ou après un `wpa_cli reconfigure` / auto-optimize (60s), le watchdog ignore les checks internet. Vérifier : `grep "grace period" /tmp/neopro-watchdog-grace.json`
 2. **Cooldown actif** : après 6 tentatives échouées, 5 min de cooldown. Vérifier les logs pour "Trop de tentatives"
 3. **Connexion Ethernet détectée** : si eth0 a une IP, le watchdog ne tente pas de recovery WiFi (problème physique)
 

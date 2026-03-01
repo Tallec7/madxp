@@ -14,7 +14,10 @@ const fs = require('fs-extra');
 const path = require('path');
 const logger = require('../logger');
 const { networkDetector, PROFILE_TYPES } = require('./network-detector');
-const networkWatchdog = require('./network-watchdog');
+// NOTE: network-watchdog is loaded lazily in autoOptimize() to break
+// the circular dependency (network-watchdog → safe-network-operations → network-watchdog).
+// A module-scope require here would get an empty object because network-watchdog
+// replaces module.exports AFTER this file finishes loading.
 
 // Operation types
 const OPERATIONS = {
@@ -639,7 +642,9 @@ class SafeNetworkOperations {
     // Enable grace period BEFORE any wpa_cli reconfigure to prevent
     // NetworkWatchdog from triggering recovery during the reconfigure
     if (willReconfigure) {
-      networkWatchdog.enableGracePeriod('internet', 60000); // 60s grace period
+      // Lazy require to break circular dependency
+      const nwWatchdog = require('./network-watchdog');
+      nwWatchdog.enableGracePeriod('internet', 60000); // 60s grace period
       logger.info('SafeNetworkOperations: grace period enabled before auto-optimize');
     }
 
