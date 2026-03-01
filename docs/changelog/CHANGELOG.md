@@ -1,3 +1,9 @@
+## [3.89.1](https://github.com/Tallec7/neopro/compare/v3.89.0...v3.89.1) (2026-03-01)
+
+### Bug Fixes
+
+- **dual-display:** eliminate slave double-flash on manual video reveal (ADR-034) ([7ea4998](https://github.com/Tallec7/neopro/commit/7ea499809aaaca6c66fffb27e49fc72cb3aa2978))
+
 # [3.89.0](https://github.com/Tallec7/neopro/compare/v3.88.2...v3.89.0) (2026-03-01)
 
 ### Features
