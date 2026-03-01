@@ -1,3 +1,9 @@
+## [3.86.5](https://github.com/Tallec7/neopro/compare/v3.86.4...v3.86.5) (2026-03-01)
+
+### Bug Fixes
+
+- **kiosk:** re-apply xprop + windowactivate after xrandr in single→dual and failover-return transitions ([a2f0fab](https://github.com/Tallec7/neopro/commit/a2f0fab88c8a4009053a4b51f5f80b80fe884ab0))
+
 ## [3.87.1](https://github.com/Tallec7/neopro/compare/v3.86.4...v3.87.1) (2026-03-01)
 
 ### Bug Fixes
