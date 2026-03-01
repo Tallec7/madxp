@@ -951,6 +951,97 @@ journalctl -u neopro-kiosk -f | grep -i "VSync"
 # Attendu: aucune ligne après mise à jour
 ```
 
+#### Ecran noir — fenêtre Chromium 1x1 pixel (v3.84.4+)
+
+**Symptômes :**
+
+- L'écran affiche le bureau LXDE (fond d'écran, barre de tâches)
+- Un processus Chromium est bien lancé mais la fenêtre est **invisible** (1x1 pixel)
+- `systemctl status neopro-kiosk` montre `active (running)` — pas de crash
+- La télécommande cloud ne répond pas (la page n'est pas chargée dans la micro-fenêtre)
+- Le watchdog ne redémarre PAS Chromium car le processus est techniquement vivant
+
+**Cause racine :** Les variables `PRIMARY_SCREEN_WIDTH` et `PRIMARY_SCREEN_HEIGHT` dans
+`kiosk-watchdog.sh` étaient initialisées à `0` au lieu de `""` (chaîne vide).
+Le fallback bash `${VAR:-1920}` ne se déclenche que si VAR est vide ou unset, PAS si `=0`.
+Résultat : `--window-size=0,0` → Chromium s'ouvre en 1×1 pixel → écran noir apparent.
+
+**Correction (v3.84.4) :**
+
+1. Init changé de `=0` à `=""` (le fallback `:-1920` fonctionne)
+2. Runtime guard ajouté : si dimensions ≤ 0, forcer 1920×1080
+
+**Diagnostic :**
+
+```bash
+# Vérifier l'initialisation dans le watchdog
+grep -n 'PRIMARY_SCREEN_WIDTH=' /home/pi/neopro/scripts/kiosk-watchdog.sh | head -1
+# Attendu: PRIMARY_SCREEN_WIDTH=""
+# Bug: PRIMARY_SCREEN_WIDTH=0 → fenêtre 1x1
+
+# Vérifier la taille réelle de la fenêtre Chromium
+DISPLAY=:0 xdotool search --name "Chromium" getwindowgeometry
+# Attendu: 1920x1080 (ou la résolution de l'écran)
+# Bug: 0x0 ou 1x1
+
+# Vérifier les arguments de lancement
+ps aux | grep chromium | grep -- '--window-size'
+# Attendu: --window-size=1920,1080
+# Bug: --window-size=0,0
+
+# Fix immédiat (sans OTA)
+sudo sed -i 's/PRIMARY_SCREEN_WIDTH=0/PRIMARY_SCREEN_WIDTH=""/' /home/pi/neopro/scripts/kiosk-watchdog.sh
+sudo sed -i 's/PRIMARY_SCREEN_HEIGHT=0/PRIMARY_SCREEN_HEIGHT=""/' /home/pi/neopro/scripts/kiosk-watchdog.sh
+sudo systemctl restart neopro-kiosk
+```
+
+#### Services orphelins en crash-loop (v3.84.4+)
+
+**Symptômes :**
+
+- `journalctl -u neopro-*` montre des centaines de lignes de redémarrages :
+  ```
+  neopro-score-bridge.service: Main process exited, code=exited, status=1/FAILURE
+  neopro-score-bridge.service: Scheduled restart job, restart counter is at 305.
+  ```
+- Les services concernés : `neopro-score-bridge`, `neopro-playlist-manager`,
+  `neopro-ffmpeg-stream`, `neopro-vlc-kiosk`
+- Ces services consomment CPU et polluent les logs avec des centaines de restarts
+- La charge système élevée peut ralentir les services légitimes
+
+**Cause racine :** Des fichiers `.service` ont été déployés manuellement sur le Pi
+(pipeline HLS expérimental) mais le code source correspondant n'a **jamais** été créé.
+Les services ont `Restart=always` et redémarrent en boucle à chaque boot.
+
+**Diagnostic :**
+
+```bash
+# Lister TOUS les services neopro
+systemctl list-units 'neopro-*' --all --no-pager
+# Services légitimes (7) : admin, app, hotspot-optimizer, hotspot-watchdog, kiosk, sync-agent, sync-guardian
+# Tout autre service = orphelin à supprimer
+
+# Compter les restarts
+systemctl show neopro-score-bridge -p NRestarts 2>/dev/null
+# Si > 0 : service en crash-loop
+
+# Vérifier que les fichiers source n'existent pas
+ls -la /home/pi/neopro/services/score-bridge.js /home/pi/neopro/services/playlist-manager.js 2>&1
+# Attendu: "No such file or directory"
+```
+
+**Fix :**
+
+```bash
+# Désactiver et supprimer les services orphelins
+sudo systemctl disable --now neopro-vlc-kiosk neopro-ffmpeg-stream neopro-score-bridge neopro-playlist-manager 2>/dev/null
+sudo rm -f /etc/systemd/system/neopro-vlc-kiosk.service
+sudo rm -f /etc/systemd/system/neopro-ffmpeg-stream.service
+sudo rm -f /etc/systemd/system/neopro-score-bridge.service
+sudo rm -f /etc/systemd/system/neopro-playlist-manager.service
+sudo systemctl daemon-reload
+```
+
 #### TV figée — fenêtre parasite devant Chromium (v3.81+)
 
 **Symptômes :**

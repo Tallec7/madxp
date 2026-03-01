@@ -67,6 +67,7 @@ source central-server/.env && psql "$DATABASE_URL" -f central-server/src/scripts
 - Supprimer le boot grace period du NetworkWatchdog `start()` (wlan1 RTL8192EU met 15-30s pour WPA auth + DHCP — sans grace period, fausse recovery cascade dès le boot — smoke test enforced)
 - Faire un `require('./network-watchdog')` au niveau module dans `safe-network-operations.js` (dépendance circulaire CommonJS → objet vide → `enableGracePeriod` undefined — utiliser lazy require — smoke test enforced)
 - Lancer `autoOptimize` / `iwlist scan` avant 60s après le boot (déstabilise le RTL8192EU pendant le handshake WPA — smoke test enforced)
+- Initialiser des variables bash à `0` quand elles utilisent `${VAR:-default}` (le fallback ne se déclenche que si VAR est vide/unset, PAS si `=0` — résultat : `--window-size=0,0` → fenêtre 1x1 pixel invisible — smoke test enforced)
 
 ## Architecture détaillée
 

@@ -1,3 +1,22 @@
+## [3.84.4](https://github.com/Tallec7/neopro/compare/v3.84.3...v3.84.4) (2026-03-01)
+
+### Bug Fixes
+
+- **kiosk:** fix invisible Chromium window (1x1 pixel) — `PRIMARY_SCREEN_WIDTH=0` / `PRIMARY_SCREEN_HEIGHT=0` broke bash `${VAR:-1920}` fallback (only triggers when VAR is empty/unset, NOT when `=0`). Result: `--window-size=0,0` → Chromium opened as 1x1 pixel. Changed init from `=0` to `=""`.
+- **kiosk:** add runtime window-size guard — dimensions ≤ 0 are caught before `--window-size` flag construction and replaced with 1920x1080 fallback. Defense-in-depth against future init regressions.
+
+### Tests
+
+- **smoke:** add 2 regression guards — `PRIMARY_SCREEN_WIDTH` and `PRIMARY_SCREEN_HEIGHT` must NOT be initialized to numeric values in kiosk-watchdog.sh
+- **smoke:** add orphan systemd service detection — validates that no `.service` files reference scripts/services that don't exist in the codebase
+
+### Documentation
+
+- **claude:** add "NE JAMAIS FAIRE" rule for bash variable numeric init with `${VAR:-default}` fallback
+- **troubleshooting:** add "Ecran noir — fenêtre Chromium 1x1 pixel" section with diagnostic commands
+- **troubleshooting:** add "Services orphelins en crash-loop" section with cleanup procedure
+- **changelog:** document v3.84.4 kiosk display fix
+
 ## [3.84.3](https://github.com/Tallec7/neopro/compare/v3.84.2...v3.84.3) (2026-03-01)
 
 ### Bug Fixes

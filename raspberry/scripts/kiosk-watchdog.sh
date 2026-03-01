@@ -47,8 +47,8 @@ SECONDARY_CHROMIUM_PID=0
 SECONDARY_DISPLAY_ENABLED=false
 # Dual-display active = secondary is running → primary must be constrained to its monitor
 DUAL_DISPLAY_ACTIVE=false
-PRIMARY_SCREEN_WIDTH=0
-PRIMARY_SCREEN_HEIGHT=0
+PRIMARY_SCREEN_WIDTH=""
+PRIMARY_SCREEN_HEIGHT=""
 
 # Lire secondaryDisplayEnabled depuis configuration.json
 # Rétrocompat: lit aussi "ledEnabled" pour les configs existantes (avant renommage)
@@ -472,10 +472,17 @@ start_chromium() {
     # NOTE: F11 ne marche PAS pour le plein écran par-moniteur — il prend aussi tout
     # le bureau X11 virtuel (même comportement que --kiosk). La seule solution fiable
     # est xprop _MOTIF_WM_HINTS (supprimer les décorations) + xdotool windowsize.
+    # Runtime guard: si les dimensions sont numériques mais ≤ 0, forcer le fallback
+    # Protège contre une régression où PRIMARY_SCREEN_WIDTH=0 bypass ${VAR:-default}
+    local w="${PRIMARY_SCREEN_WIDTH:-1920}"
+    local h="${PRIMARY_SCREEN_HEIGHT:-1080}"
+    if [[ "$w" -le 0 ]] 2>/dev/null || [[ -z "$w" ]]; then w=1920; fi
+    if [[ "$h" -le 0 ]] 2>/dev/null || [[ -z "$h" ]]; then h=1080; fi
+
     local common_flags=(
         --app="${CHROMIUM_URL}"
         --window-position=0,0
-        --window-size=${PRIMARY_SCREEN_WIDTH:-1920},${PRIMARY_SCREEN_HEIGHT:-1080}
+        --window-size=${w},${h}
     )
     common_flags+=(
         --autoplay-policy=no-user-gesture-required

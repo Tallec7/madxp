@@ -4529,3 +4529,79 @@ describe('WiFi boot race condition regression guards (v3.84.3)', () => {
     });
   });
 });
+
+// ----------------------------------------------------------
+// Kiosk screen dimension initialization guard
+// Incident: 01/03/2026 — PRIMARY_SCREEN_WIDTH/HEIGHT were initialized
+// to 0 instead of "" (empty string). The bash fallback syntax
+// ${VAR:-default} only triggers when VAR is unset or empty, NOT when
+// it equals 0. Result: Chromium launched with --window-size=0,0
+// → 1x1 pixel window → invisible display (black screen).
+// ----------------------------------------------------------
+describe('Kiosk screen dimension initialization guard', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+  const watchdog = fs.readFileSync(
+    path.join(repoRoot, 'raspberry/scripts/kiosk-watchdog.sh'),
+    'utf8'
+  );
+
+  it('PRIMARY_SCREEN_WIDTH must NOT be initialized to a numeric value', () => {
+    // Initializing to 0 (or any number) breaks ${VAR:-1920} fallback
+    // because bash treats 0 as a non-empty value. Must use ="" or leave unset.
+    const match = watchdog.match(/^PRIMARY_SCREEN_WIDTH=(.*)$/m);
+    expect(match).not.toBeNull();
+    const initValue = match![1].trim().replace(/^["']|["']$/g, '');
+    expect({ initValue, isNumeric: /^[0-9]+$/.test(initValue) })
+      .toEqual({ initValue, isNumeric: false });
+  });
+
+  it('PRIMARY_SCREEN_HEIGHT must NOT be initialized to a numeric value', () => {
+    const match = watchdog.match(/^PRIMARY_SCREEN_HEIGHT=(.*)$/m);
+    expect(match).not.toBeNull();
+    const initValue = match![1].trim().replace(/^["']|["']$/g, '');
+    expect({ initValue, isNumeric: /^[0-9]+$/.test(initValue) })
+      .toEqual({ initValue, isNumeric: false });
+  });
+
+  it('launch_chromium must have runtime guard against dimensions ≤ 0', () => {
+    // Defense-in-depth: even if init is wrong, runtime must catch it
+    // before constructing --window-size flag
+    expect(watchdog).toContain('-le 0');
+  });
+});
+
+// ----------------------------------------------------------
+// Orphan systemd service guard
+// Incident: 01/03/2026 — 4 .service files (score-bridge, playlist-manager,
+// ffmpeg-stream, vlc-kiosk) were deployed on Pi without corresponding
+// source code. Result: 305+ crash-loop restarts per service, CPU waste,
+// log pollution. Services must reference scripts/binaries that exist
+// in the codebase.
+// ----------------------------------------------------------
+describe('Systemd service files must reference existing scripts', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+  const systemdDir = path.join(repoRoot, 'raspberry/config/systemd');
+  const serviceFiles = fs.readdirSync(systemdDir).filter(f => f.endsWith('.service'));
+
+  it('every .service ExecStart must reference a script that exists in the repo', () => {
+    const missing: string[] = [];
+    for (const file of serviceFiles) {
+      const content = fs.readFileSync(path.join(systemdDir, file), 'utf8');
+      // Extract ExecStart paths (skip systemd builtins like /bin/sleep)
+      const execMatches = content.match(/^ExecStart(?:Pre|Post)?=.*?(\/(home|opt)\/pi\/neopro\/\S+)/gm);
+      if (!execMatches) continue;
+      for (const line of execMatches) {
+        const scriptMatch = line.match(/(\/(home|opt)\/pi\/neopro\/\S+)/);
+        if (!scriptMatch) continue;
+        // Convert absolute Pi path to repo-relative path
+        const piPath = scriptMatch[1];
+        const repoPath = piPath.replace(/^\/(home|opt)\/pi\/neopro\//, 'raspberry/');
+        const fullPath = path.join(repoRoot, repoPath);
+        if (!fs.existsSync(fullPath)) {
+          missing.push(`${file}: ${piPath} → ${repoPath} (not found)`);
+        }
+      }
+    }
+    expect({ missing }).toEqual({ missing: [] });
+  });
+});
