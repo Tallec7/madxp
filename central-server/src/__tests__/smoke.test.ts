@@ -3154,6 +3154,33 @@ describe('E-23 HDMI monitoring and alerts wiring', () => {
     });
   });
 
+  it('activate_hdmi_failover must --off ghost output, --pos 0x0, xprop decorations, and sleep after xrandr', () => {
+    const content = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/scripts/kiosk-watchdog.sh'),
+      'utf8'
+    );
+    const funcStart = content.indexOf('activate_hdmi_failover()');
+    const funcBody = content.slice(funcStart, funcStart + 3000);
+    expect({
+      // Must disable ghost output so X11 virtual screen collapses
+      hasGhostOff: funcBody.includes('--off'),
+      // Must reposition remaining output to origin (otherwise stays at dual-display offset)
+      hasPos0x0: funcBody.includes('--pos 0x0'),
+      // Must remove window decorations (xprop _MOTIF_WM_HINTS) like start_chromium_secondary
+      hasXpropDecorations: funcBody.includes('_MOTIF_WM_HINTS'),
+      // Must sleep after xrandr to let GPU settle before xdotool
+      hasSleepAfterXrandr: funcBody.includes('sleep 1'),
+      // Must re-query dimensions after xrandr reconfiguration
+      hasRequery: funcBody.includes('xrandr --query') && funcBody.includes('failover_w'),
+    }).toEqual({
+      hasGhostOff: true,
+      hasPos0x0: true,
+      hasXpropDecorations: true,
+      hasSleepAfterXrandr: true,
+      hasRequery: true,
+    });
+  });
+
   it('stop_chromium_primary must use SIGTERM before SIGKILL (GPU-safe, US-23.6.3)', () => {
     const content = fs.readFileSync(
       path.join(repoRoot, 'raspberry/scripts/kiosk-watchdog.sh'),
@@ -4669,6 +4696,24 @@ describe('Inter-process wlan1 scan coordination guard', () => {
     );
     expect(funcMatch).not.toBeNull();
     expect(funcMatch![1]).toMatch(/_writeScanCache/);
+  });
+
+  // Guard 4: scan cache hit/miss must be tracked and exposed in heartbeat
+  it('must track scan cache hits/misses and expose in getSimplifiedProfile', () => {
+    const profileSection = networkDetectorSrc.slice(
+      networkDetectorSrc.indexOf('getSimplifiedProfile')
+    );
+    expect({
+      hasHitCounter: /scanCacheHits/.test(networkDetectorSrc),
+      hasMissCounter: /scanCacheMisses/.test(networkDetectorSrc),
+      hitsInProfile: /scanCacheHits/.test(profileSection),
+      missesInProfile: /scanCacheMisses/.test(profileSection),
+    }).toEqual({
+      hasHitCounter: true,
+      hasMissCounter: true,
+      hitsInProfile: true,
+      missesInProfile: true,
+    });
   });
 });
 

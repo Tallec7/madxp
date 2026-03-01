@@ -715,4 +715,29 @@ TV opérationnelle en 30 secondes après l'installation.
 
 ---
 
-**Dernière mise à jour :** 23 février 2026 (TV noire post-OTA — x11-utils manquant, corrigé v3.72)
+## Note : Stabilité boot améliorée (v3.84.9) — 1er mars 2026
+
+### Contexte
+
+Les versions 3.84.6 à 3.84.8 avaient un bug de double-scan wlan1 au boot : `hotspot-optimizer.sh` (boot +12s) ET `NetworkDetector.detect()` (boot +60s) lançaient chacun un `iwlist wlan1 scan`. Sur le RTL8192EU (single-radio), deux scans en < 120s dépassent le seuil de tolérance de la Livebox → perte de carrier au boot → recovery 2-3 min.
+
+### Correction (v3.84.9)
+
+Coordination inter-processus via `/tmp/neopro-wlan1-scan-cache` (TTL 120s) : le premier processus écrit, le second lit le cache → un seul scan physique au boot.
+
+### Impact NLF
+
+- **Boot** : amélioration — plus de perte de carrier au démarrage
+- **Déconnexions chroniques (~20 min)** : **inchangé** — ces coupures sont physiques (signal -73 dBm, roaming mesh entre 3 APs, `bgscan simple:30:-70:300`). Le fix v3.84.9 ne traite que la stabilité au boot, pas la stabilité long-terme du signal RF
+
+### À surveiller
+
+Les déconnexions chroniques NLF restent le problème #1. Pistes ouvertes :
+
+- Rapprocher physiquement l'AP le plus proche du Pi
+- Tester un canal fixe (éviter que le mesh change de canal)
+- Envisager un câble Ethernet si les déconnexions persistent
+
+---
+
+**Dernière mise à jour :** 1er mars 2026 (stabilité boot v3.84.9 — coordination inter-processus scan cache)

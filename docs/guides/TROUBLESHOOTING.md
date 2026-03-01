@@ -3531,6 +3531,13 @@ Le `hotspot-optimizer.sh` optimise automatiquement le canal du hotspot au boot. 
 
 **Attente wlan1 (v3.84.6+) :** Avant de scanner, le script attend que wlan1 obtienne une adresse IP (polling `ip addr show wlan1` toutes les 2s, max 30s). Le RTL8192EU met 15-30s pour WPA auth + DHCP au boot — scanner avant déstabilise la connexion.
 
+**Coordination inter-processus (v3.84.9+) :** Deux processus distincts scannent wlan1 au boot : `hotspot-optimizer.sh` (boot +12s) et `NetworkDetector.detect()` dans le sync-agent (boot +60s). Sans coordination, ces deux scans s'additionnent et dépassent le seuil de tolérance de la Livebox (~12s d'absence = déassociation). Le cache inter-processus `/tmp/neopro-wlan1-scan-cache` + `/tmp/neopro-wlan1-scan-ts` (TTL 120s) garantit qu'un seul scan physique est effectué : le premier écrit le cache, le second le lit.
+
+```
+Boot +12s : hotspot-optimizer.sh → iwlist wlan1 scan → écrit /tmp/neopro-wlan1-scan-cache
+Boot +60s : NetworkDetector.detect() → lit le cache (TTL 120s) → zéro scan supplémentaire
+```
+
 **Diagnostic :**
 
 ```bash
@@ -3543,10 +3550,20 @@ grep "single WiFi scan" /var/log/neopro-hotspot-optimizer.log
 # Vérifier l'attente wlan1 (doit afficher "wlan1 is ready")
 grep "wlan1 is ready" /var/log/neopro-hotspot-optimizer.log
 
+# Vérifier la coordination inter-processus (NetworkDetector doit réutiliser le cache)
+sudo journalctl -u neopro-sync-agent --since "5 min ago" | grep "scan cache"
+# Attendu : "reusing wlan1 scan cache (avoids second scan)"
+# Problème : "scan cache too old" → hotspot-optimizer n'a pas écrit le cache
+
+# Vérifier le cache directement
+cat /tmp/neopro-wlan1-scan-ts && echo "s old: $(($(date +%s) - $(cat /tmp/neopro-wlan1-scan-ts)))"
+cat /tmp/neopro-wlan1-scan-cache | head -5
+
 # Canal actuel
 grep "^channel=" /etc/hostapd/hostapd.conf
 
 # Scan manuel des réseaux par canal (utiliser wlan1, PAS wlan0 qui est l'AP !)
+# ⚠️ ATTENTION : un seul scan à la fois, jamais deux en < 120s
 sudo iwlist wlan1 scan 2>/dev/null | grep "Channel:" | sort | uniq -c | sort -rn
 ```
 

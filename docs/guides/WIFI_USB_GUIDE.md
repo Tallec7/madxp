@@ -591,12 +591,42 @@ Si la connexion cloud est perdue 30 secondes après un changement de configurati
 
 ### Services systemd associés
 
-| Service                    | Rôle                                                                                  | Logs                                    |
-| -------------------------- | ------------------------------------------------------------------------------------- | --------------------------------------- |
-| `neopro-usb-wifi`          | Init wlan1 au boot (avant sync-agent)                                                 | `journalctl -u neopro-usb-wifi`         |
-| `neopro-sync-agent`        | Watchdog réseau (wlan0 + wlan1 + cloud)                                               | `journalctl -u neopro-sync-agent`       |
-| `neopro-hotspot-watchdog`  | Surveillance dédiée hostapd                                                           | `/var/log/neopro-hotspot-watchdog.log`  |
-| `neopro-hotspot-optimizer` | Optimisation canal au boot (scan unique + cache, attente wlan1 IP, anti-interférence) | `/var/log/neopro-hotspot-optimizer.log` |
+| Service                    | Rôle                                                                                                  | Logs                                    |
+| -------------------------- | ----------------------------------------------------------------------------------------------------- | --------------------------------------- |
+| `neopro-usb-wifi`          | Init wlan1 au boot (avant sync-agent)                                                                 | `journalctl -u neopro-usb-wifi`         |
+| `neopro-sync-agent`        | Watchdog réseau (wlan0 + wlan1 + cloud)                                                               | `journalctl -u neopro-sync-agent`       |
+| `neopro-hotspot-watchdog`  | Surveillance dédiée hostapd                                                                           | `/var/log/neopro-hotspot-watchdog.log`  |
+| `neopro-hotspot-optimizer` | Optimisation canal au boot (scan unique + cache inter-processus, attente wlan1 IP, anti-interférence) | `/var/log/neopro-hotspot-optimizer.log` |
+
+### Coordination inter-processus des scans wlan1 (v3.84.9+)
+
+Le scan WiFi de `hotspot-optimizer.sh` (bash) est partagé avec `NetworkDetector` (Node.js) via un cache fichier, évitant un second `iwlist wlan1 scan` au boot :
+
+```
+Boot +12s : hotspot-optimizer.sh → iwlist wlan1 scan → /tmp/neopro-wlan1-scan-cache
+Boot +60s : NetworkDetector.detect() → lit le cache (TTL 120s) → zéro scan supplémentaire
+```
+
+| Fichier                        | Rôle                      | Écrit par                              | Lu par          |
+| ------------------------------ | ------------------------- | -------------------------------------- | --------------- |
+| `/tmp/neopro-wlan1-scan-cache` | Résultats du dernier scan | hotspot-optimizer.sh + networkDetector | networkDetector |
+| `/tmp/neopro-wlan1-scan-ts`    | Epoch du dernier scan     | hotspot-optimizer.sh + networkDetector | networkDetector |
+
+**Pourquoi c'est critique :** Le RTL8192EU est single-radio. Deux scans à moins de 120s d'intervalle causent un carrier drop prolongé (~12s d'absence radio) → la box/borne supprime l'association → perte de connexion 2-3 min.
+
+**Diagnostic :**
+
+```bash
+# Vérifier l'écriture du cache par hotspot-optimizer
+grep "Scan cache written" /var/log/neopro-hotspot-optimizer.log
+
+# Vérifier la réutilisation par NetworkDetector
+sudo journalctl -u neopro-sync-agent -b | grep "reusing wlan1 scan cache"
+
+# État des fichiers de cache
+ls -la /tmp/neopro-wlan1-scan-*
+cat /tmp/neopro-wlan1-scan-ts  # epoch du dernier scan
+```
 
 ---
 
@@ -689,6 +719,7 @@ Les environnements mesh (répéteurs, Ubiquiti, Google Nest WiFi, etc.) posent d
 11. **Le driver en prod doit être dans la liste modprobe du boot script** : `rtl8xxxu` manquait dans `usb-wifi-init.sh` alors que c'est le driver utilisé pour RTL8192EU — le script tentait les vieux drivers (`rtl8192cu`, `rtl8188eu`) sans succès
 12. **Un Pi avec Ethernet ET WiFi USB existe** : le skip « eth0 UP → pas de recovery » bloquait le modprobe de la clé USB quand un câble Ethernet était aussi branché — il faut scanner `/sys/bus/usb/` pour détecter la présence physique du dongle avant de skipper
 13. **Le temps inter-phases tue le recovery** : 60s d'attente entre chaque phase = 5 minutes en pire cas — le fast retry (10s) réduit ça à ~2min sans changer la logique
+14. **Jamais deux `iwlist wlan1 scan` dans une fenêtre de 120s** : le bash (hotspot-optimizer) et le Node.js (networkDetector) doivent coordonner leurs scans via un cache fichier (`/tmp/neopro-wlan1-scan-cache`) — smoke test enforced
 
 ---
 
@@ -754,4 +785,4 @@ Si ça ne suffit pas : `lsusb` pour identifier le chipset, puis chercher le pack
 
 ---
 
-**Dernière mise à jour :** 18 février 2026
+**Dernière mise à jour :** 1 mars 2026 (coordination inter-processus scan cache v3.84.9)

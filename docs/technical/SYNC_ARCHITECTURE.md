@@ -1165,6 +1165,38 @@ SafeNetworkOperations: hotspot channel congested, optimizing { currentChannel: 1
 SafeNetworkOperations: hotspot channel OK { currentChannel: 6, currentCount: 2, bestChannel: 6 }
 ```
 
+### Coordination inter-processus des scans wlan1 (v3.84.9+)
+
+Deux processus scannent wlan1 au boot : `hotspot-optimizer.sh` (shell, boot +12s) et `NetworkDetector.detect()` (Node.js, boot +60s). Le RTL8192EU est single-radio : chaque `iwlist wlan1 scan` coupe le carrier ~6s. Deux scans en < 120s → Livebox déassocie le client → perte carrier 2-3 min.
+
+**Mécanisme de cache :**
+
+```
+                    ┌─────────────────────────────┐
+  Boot +12s         │  hotspot-optimizer.sh        │
+  (systemd)         │  iwlist wlan1 scan           │
+                    │  → écrit /tmp/neopro-wlan1-  │
+                    │    scan-cache + scan-ts       │
+                    └──────────────┬────────────────┘
+                                   │ fichier partagé
+                    ┌──────────────▼────────────────┐
+  Boot +60s         │  NetworkDetector.detect()     │
+  (sync-agent)      │  _readScanCache()             │
+                    │  → lit le cache (TTL 120s)    │
+                    │  → ZERO scan supplémentaire   │
+                    └───────────────────────────────┘
+```
+
+| Fichier                        | Rôle                                    |
+| ------------------------------ | --------------------------------------- |
+| `/tmp/neopro-wlan1-scan-cache` | Sortie brute `iwlist wlan1 scan`        |
+| `/tmp/neopro-wlan1-scan-ts`    | Timestamp epoch du scan (pour TTL 120s) |
+
+**Code :** `network-detector.js` → `_readScanCache()` / `_writeScanCache()` / `scanWifiNetworks()`
+**Shell :** `hotspot-optimizer.sh` → `perform_single_scan()` écrit le cache si `SCAN_INTERFACE=wlan1`
+
+**Gardes de régression :** 4 smoke tests dans `smoke.test.ts` vérifient la présence du cache et la coordination inter-processus.
+
 ---
 
 ## Événements HDMI & Failover (E-23 v3.84+)

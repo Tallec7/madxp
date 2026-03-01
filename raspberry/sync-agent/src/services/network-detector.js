@@ -50,6 +50,8 @@ class NetworkDetector {
     this.lastProfile = null;
     this.lastDetectionTime = null;
     this.detectionInProgress = false;
+    this.scanCacheHits = 0;
+    this.scanCacheMisses = 0;
   }
 
   /**
@@ -171,6 +173,11 @@ class NetworkDetector {
   async scanWifiNetworks() {
     // Check inter-process cache first (written by hotspot-optimizer.sh or previous scan)
     const cachedOutput = this._readScanCache();
+    if (cachedOutput) {
+      this.scanCacheHits++;
+    } else {
+      this.scanCacheMisses++;
+    }
     const scanOutput = cachedOutput || await this._performLiveScan();
 
     if (!scanOutput) {
@@ -610,7 +617,9 @@ class NetworkDetector {
       hasIsolation: this.lastProfile.isolationInfo?.hasIsolation || false,
       stabilityScore: this.lastProfile.stabilityInfo?.score || 0,
       warningCount: this.lastProfile.warnings?.length || 0,
-      detectedAt: this.lastProfile.detectedAt
+      detectedAt: this.lastProfile.detectedAt,
+      scanCacheHits: this.scanCacheHits,
+      scanCacheMisses: this.scanCacheMisses
     };
   }
 
