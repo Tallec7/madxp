@@ -1,3 +1,9 @@
+# [3.87.0](https://github.com/Tallec7/neopro/compare/v3.86.7...v3.87.0) (2026-03-01)
+
+### Features
+
+- **dashboard:** real-time screen resolution display on site detail page (v3.87.4) ([82b844c](https://github.com/Tallec7/neopro/commit/82b844c0f62273fc2ced82d36abb5a8679331cd1))
+
 ## [3.87.4](https://github.com/Tallec7/neopro/compare/v3.87.3...v3.87.4) (2026-03-01)
 
 ### Features
