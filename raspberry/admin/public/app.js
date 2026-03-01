@@ -2,7 +2,7 @@
  * Neopro Admin Panel - JavaScript
  * FICHIER GENERE - Ne pas editer directement
  * Editer les fichiers dans modules/ puis lancer: bash build-admin.sh
- * Build: 17790ae5
+ * Build: 8fef4f57
  */
 
 
@@ -91,9 +91,13 @@ const DEMO_DATA = {
         ]
     },
     network: {
-        wlan0: [{ address: '192.168.4.1', netmask: '255.255.255.0', family: 'IPv4' }],
-        wlan1: [{ address: '192.168.1.50', netmask: '255.255.255.0', family: 'IPv4' }],
-        eth0: []
+        interfaces: {
+            wlan0: [{ address: '192.168.4.1', netmask: '255.255.255.0', mac: 'dc:a6:32:xx:xx:xx', family: 'IPv4' }],
+            wlan1: [{ address: '192.168.1.50', netmask: '255.255.255.0', mac: '00:e0:4c:xx:xx:xx', family: 'IPv4' }],
+            eth0: []
+        },
+        wlan1: { ssid: 'ClubWifi-Demo', signal: -45, frequency: 2437 },
+        hostname: 'neopro-demo'
     },
     logs: {
         app: `[2024-12-04 14:30:15] Server Socket.IO started on port 3000
@@ -222,7 +226,37 @@ if (DEMO_MODE) {
             return new Response(JSON.stringify({ success: true, message: 'Régénération simulée (mode démo)' }), { status: 200 });
         }
 
-        // Fallback: appel original
+        if (url.includes('/api/sponsors/stats')) {
+            return new Response(JSON.stringify({ totalSponsors: 3, activeSponsors: 2, totalImpressions: 1250 }), { status: 200 });
+        }
+
+        if (url.includes('/api/sponsors')) {
+            return new Response(JSON.stringify({ sponsors: [] }), { status: 200 });
+        }
+
+        if (url.includes('/api/backup')) {
+            return new Response(JSON.stringify({ backups: [], lastBackup: null }), { status: 200 });
+        }
+
+        if (url.includes('/api/cache')) {
+            return new Response(JSON.stringify({ size: '0 MB', entries: 0 }), { status: 200 });
+        }
+
+        if (url.includes('/api/email')) {
+            return new Response(JSON.stringify({ success: true }), { status: 200 });
+        }
+
+        if (url.includes('/api/auth/')) {
+            return new Response(JSON.stringify({ authenticated: true, user: 'demo' }), { status: 200 });
+        }
+
+        // Catch-all for any unhandled /api/ route — return safe JSON instead of HTML
+        if (typeof url === 'string' && url.includes('/api/')) {
+            console.warn('[DEMO] Unhandled API route:', url, '— returning empty JSON');
+            return new Response(JSON.stringify({}), { status: 200 });
+        }
+
+        // Fallback: appel original (non-API calls)
         return originalFetch(url, options);
     };
 
@@ -242,13 +276,27 @@ if (DEMO_MODE) {
     window.fetch = async function(url, options = {}) {
         // Pour les appels API, toujours inclure les credentials (cookies)
         // Vérifie à la fois les URLs relatives (/api/) et absolues (http://.../api/)
-        if (typeof url === 'string' && (url.startsWith('/api/') || url.includes('/api/'))) {
+        const isApiCall = typeof url === 'string' && (url.startsWith('/api/') || url.includes('/api/'));
+        if (isApiCall) {
             options = { ...options, credentials: 'include' };
         }
         const response = await originalFetch(url, options);
 
+        // Protection: si une réponse API renvoie du HTML au lieu de JSON,
+        // remplacer par une réponse d'erreur JSON pour éviter les SyntaxError
+        if (isApiCall && response.ok) {
+            const ct = response.headers.get('content-type') || '';
+            if (ct.includes('text/html')) {
+                console.error('[fetch] API returned HTML instead of JSON:', url, '— returning error JSON');
+                return new Response(
+                    JSON.stringify({ error: 'Réponse HTML inattendue du serveur', code: 'HTML_RESPONSE' }),
+                    { status: 502, headers: { 'Content-Type': 'application/json' } }
+                );
+            }
+        }
+
         // Si une requête API retourne 401, rediriger vers la page de login
-        if (response.status === 401 && typeof url === 'string' && (url.startsWith('/api/') || url.includes('/api/'))) {
+        if (response.status === 401 && isApiCall) {
             // Éviter les redirections multiples
             if (!window.location.pathname.includes('/login')) {
                 window.location.href = '/login';

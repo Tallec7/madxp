@@ -1,3 +1,24 @@
+## [3.87.0](https://github.com/Tallec7/neopro/compare/v3.86.1...v3.87.0) (2026-03-01)
+
+### Bug Fixes
+
+- **admin/nginx:** add missing `/admin/` proxy block to `nginx-captive-portal.conf` — without it, SPA catch-all returns `index.html` for all `/admin/api/*` requests → `SyntaxError: Unexpected token '<'` in every API call
+- **admin/nginx:** replace `alias` with `proxy_pass` for `/videos/` and `/thumbnails/` — `proxy_pass` through admin-server normalizes Unicode filenames, `alias` does not
+- **admin/nginx:** add `/socket.io/` proxy with WebSocket upgrade headers
+- **admin/demo:** fix network data structure — `loadNetwork()` expects `data.interfaces` wrapper, not flat interface map
+- **admin/demo:** add missing handlers for `/api/sponsors`, `/api/backup`, `/api/cache`, `/api/email`, `/api/auth/`
+- **admin/demo:** add catch-all for unhandled `/api/` routes — returns safe empty JSON instead of falling through to original fetch (which returns HTML on non-Pi hosts)
+- **admin/state:** add HTML content-type protection in fetch interceptor — detect `text/html` on API responses and return JSON error with code `HTML_RESPONSE` before `response.json()` crashes
+
+### Tests
+
+- **smoke:** add 8 regression guards for nginx proxy drift, demo catch-all, and HTML-as-JSON fetch protection (390 total)
+
+### Documentation
+
+- **troubleshooting:** add "Admin : toutes les API retournent du HTML (SyntaxError)" section
+- **reference:** add proxy admin v3.87 section with required blocks table
+
 ## [3.86.1](https://github.com/Tallec7/neopro/compare/v3.86.0...v3.86.1) (2026-03-01)
 
 ### Bug Fixes

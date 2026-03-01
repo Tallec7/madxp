@@ -3123,7 +3123,7 @@ describe('E-23 HDMI monitoring and alerts wiring', () => {
       hasConnectedClients: true,
     });
   });
-  it('check_secondary_chromium must use xdotool resize for zero-blackout transitions', () => {
+  it('check_secondary_chromium: dual→single uses Chromium relaunch (xdotool viewport bug), single→dual uses xdotool resize', () => {
     const content = fs.readFileSync(
       path.join(repoRoot, 'raspberry/scripts/kiosk-watchdog.sh'),
       'utf8'
@@ -3131,15 +3131,20 @@ describe('E-23 HDMI monitoring and alerts wiring', () => {
     // Extract the check_secondary_chromium function body
     const funcStart = content.indexOf('check_secondary_chromium() {');
     const funcBody = content.slice(funcStart, funcStart + 5000);
-    // Dual transition logs must mention "sans restart" (zero-blackout)
+    // Single→dual transition: xdotool resize is OK (shrinking viewport, no CSS bug)
+    // Dual→single transition: must RELAUNCH Chromium because xdotool windowsize alone
+    // does NOT force Chromium to re-render its CSS viewport (window grows but content
+    // stays at old resolution = zoom effect). Same fix as activate_hdmi_failover().
     expect({
       hasDualNoRestart: funcBody.includes('sans restart'),
-      hasSingleNoRestart: funcBody.includes('Retour en single-display: redimensionnement'),
-      hasXdotoolResize: funcBody.includes('xdotool windowsize'),
+      hasSingleRelaunch: funcBody.includes('Retour en single-display: relance'),
+      hasStopPrimary: funcBody.includes('stop_chromium_primary'),
+      hasStartChromium: funcBody.includes('start_chromium'),
     }).toEqual({
       hasDualNoRestart: true,
-      hasSingleNoRestart: true,
-      hasXdotoolResize: true,
+      hasSingleRelaunch: true,
+      hasStopPrimary: true,
+      hasStartChromium: true,
     });
   });
 
@@ -3824,6 +3829,24 @@ describe('Kiosk GPU crash loop regression guards', () => {
     expect({ hasSigterm: termIdx > -1 }).toEqual({ hasSigterm: true });
     expect({ sigtermBeforeSigkill: termIdx < killIdx })
       .toEqual({ sigtermBeforeSigkill: true });
+  });
+
+  it('stop_chromium_secondary must guard xrandr --off behind detect_hdmi1_status (DRM race)', () => {
+    // When HDMI-1 cable is physically unplugged, the kernel DRM already marks it disconnected.
+    // Running xrandr --off on a disconnected output triggers a DRM reconfiguration that can
+    // briefly destabilize HDMI-0 status in sysfs (race condition → hdmi0=false transient →
+    // primary screen shows "En attente d'écran" for a few seconds).
+    // The xrandr --off must only run when the cable is still connected (disabled by config).
+    const stopFn = watchdog.match(/stop_chromium_secondary\(\)\s*\{[\s\S]*?\n\}/);
+    expect(stopFn).not.toBeNull();
+    const fn = stopFn![0];
+    expect({
+      hasHdmi1Guard: fn.includes('detect_hdmi1_status'),
+      hasXrandrOff: fn.includes('xrandr --output') && fn.includes('--off'),
+    }).toEqual({
+      hasHdmi1Guard: true,
+      hasXrandrOff: true,
+    });
   });
 
   it('check_for_crash_page must NOT match generic "Error" window titles', () => {
@@ -5054,4 +5077,271 @@ describe('TV video cropping guard (no object-fit: cover on video players)', () =
       });
     });
   }
+});
+
+// ----------------------------------------------------------
+// E-41 Secondary variant deployment pipeline guard:
+// deploySecondaryVariant() must update timeCategories[].loopVideos[]
+// in addition to categories and sponsors. Without this, videos
+// in match phases (avant/pendant/après) never get their secondary
+// variant written to configuration.json.
+// ----------------------------------------------------------
+describe('E-41 deploySecondaryVariant timeCategories guard', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+  const deployVideoPath = path.join(repoRoot, 'raspberry/sync-agent/src/commands/deploy-video.js');
+
+  let content: string;
+  beforeAll(() => {
+    content = fs.readFileSync(deployVideoPath, 'utf8');
+  });
+
+  it('deploySecondaryVariant must update timeCategories[].loopVideos[]', () => {
+    expect({
+      handlesTimeCategories: /configuration\.timeCategories/.test(content),
+      iteratesLoopVideos: /tc\.loopVideos|loopVideos\s*\|\|/.test(content),
+    }).toEqual({
+      handlesTimeCategories: true,
+      iteratesLoopVideos: true,
+    });
+  });
+});
+
+// ----------------------------------------------------------
+// E-41 Config merge secondary variants preservation guard:
+// config-merge.js must call restoreSecondaryVariants() after
+// merging to re-inject variants.secondary from the local config.
+// Without this, every config sync from central wipes secondary
+// variant info that was locally injected by deploySecondaryVariant.
+// ----------------------------------------------------------
+describe('E-41 config-merge restoreSecondaryVariants guard', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+  const configMergePath = path.join(repoRoot, 'raspberry/sync-agent/src/utils/config-merge.js');
+
+  let content: string;
+  beforeAll(() => {
+    content = fs.readFileSync(configMergePath, 'utf8');
+  });
+
+  it('config-merge must call restoreSecondaryVariants after merge', () => {
+    expect({
+      callsRestore: /restoreSecondaryVariants\(/.test(content),
+    }).toEqual({
+      callsRestore: true,
+    });
+  });
+
+  it('config-merge must export restoreSecondaryVariants', () => {
+    expect({
+      exportsRestore: /restoreSecondaryVariants/.test(content.split('module.exports')[1] || ''),
+    }).toEqual({
+      exportsRestore: true,
+    });
+  });
+});
+
+// ----------------------------------------------------------
+// E-41 Central-side secondary variant enrichment guard:
+// orchestrated-deployment.service.ts and config-sync.handler.ts
+// must call enrichConfigWithSecondaryVariants() before sending
+// config to Pi. Without this, the central never includes
+// variants.secondary in the config payload.
+// ----------------------------------------------------------
+describe('E-41 central secondary variant enrichment guard', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+  const orchPath = path.join(repoRoot, 'central-server/src/services/orchestrated-deployment.service.ts');
+  const syncPath = path.join(repoRoot, 'central-server/src/handlers/config-sync.handler.ts');
+
+  let orchContent: string;
+  let syncContent: string;
+  beforeAll(() => {
+    orchContent = fs.readFileSync(orchPath, 'utf8');
+    syncContent = fs.readFileSync(syncPath, 'utf8');
+  });
+
+  it('orchestrated-deployment must import and call enrichConfigWithSecondaryVariants', () => {
+    expect({
+      imports: /import\s*\{[^}]*enrichConfigWithSecondaryVariants[^}]*\}/.test(orchContent),
+      calls: /enrichConfigWithSecondaryVariants\(/.test(orchContent),
+    }).toEqual({
+      imports: true,
+      calls: true,
+    });
+  });
+
+  it('config-sync handler must import and call enrichConfigWithSecondaryVariants', () => {
+    expect({
+      imports: /import\s*\{[^}]*enrichConfigWithSecondaryVariants[^}]*\}/.test(syncContent),
+      calls: /enrichConfigWithSecondaryVariants\(/.test(syncContent),
+    }).toEqual({
+      imports: true,
+      calls: true,
+    });
+  });
+});
+
+// ----------------------------------------------------------
+// E-41 SponsorVideo/CategoryVideo variants type guard:
+// The TypeScript interfaces must include variants? field
+// so secondary variant data is properly typed in the pipeline.
+// ----------------------------------------------------------
+describe('E-41 SponsorVideo/CategoryVideo variants type guard', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+  const typesPath = path.join(repoRoot, 'central-server/src/types/index.ts');
+
+  let content: string;
+  beforeAll(() => {
+    content = fs.readFileSync(typesPath, 'utf8');
+  });
+
+  it('SponsorVideo must have variants? field', () => {
+    // Find the SponsorVideo interface block and check for variants
+    const sponsorBlock = content.match(/interface SponsorVideo \{[\s\S]*?\n\}/)?.[0] || '';
+    expect({
+      hasVariants: /variants\??\s*:\s*VideoVariants/.test(sponsorBlock),
+    }).toEqual({
+      hasVariants: true,
+    });
+  });
+
+  it('CategoryVideo must have variants? field', () => {
+    const categoryBlock = content.match(/interface CategoryVideo \{[\s\S]*?\n\}/)?.[0] || '';
+    expect({
+      hasVariants: /variants\??\s*:\s*VideoVariants/.test(categoryBlock),
+    }).toEqual({
+      hasVariants: true,
+    });
+  });
+
+  it('VideoVariants interface must exist with secondary field', () => {
+    expect({
+      hasVideoVariants: /interface VideoVariants/.test(content),
+      hasSecondary: /secondary\??\s*:\s*VideoVariantInfo/.test(content),
+    }).toEqual({
+      hasVideoVariants: true,
+      hasSecondary: true,
+    });
+  });
+});
+
+// ============================================================================
+// Nginx proxy block drift prevention
+// Without /admin/ proxy, nginx SPA catch-all returns index.html for all
+// /admin/api/* requests → every API call gets HTML instead of JSON → crash.
+// Without /socket.io/ proxy, WebSocket upgrades fail → real-time broken.
+// Without /videos/ and /thumbnails/ proxy, Unicode filenames break (alias
+// doesn't normalize, only proxy_pass through admin-server does).
+// ============================================================================
+describe('Nginx captive-portal proxy blocks (config drift prevention)', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+  const nginxConf = fs.readFileSync(
+    path.join(repoRoot, 'raspberry/config/nginx-captive-portal.conf'),
+    'utf8'
+  );
+  const installSh = fs.readFileSync(
+    path.join(repoRoot, 'raspberry/install.sh'),
+    'utf8'
+  );
+
+  it('nginx-captive-portal.conf must have /admin/ proxy to port 8080', () => {
+    // Without this block, the SPA catch-all (try_files $uri $uri/ /index.html)
+    // returns webapp index.html for ALL /admin/api/* calls → HTML instead of JSON
+    expect({
+      hasAdminProxy: /location\s+\/admin\/\s*\{[^}]*proxy_pass\s+http:\/\/localhost:8080/s.test(nginxConf),
+    }).toEqual({
+      hasAdminProxy: true,
+    });
+  });
+
+  it('nginx-captive-portal.conf must have /socket.io/ proxy with WebSocket upgrade', () => {
+    // Without upgrade headers, Socket.IO falls back to long-polling → latency + broken real-time
+    expect({
+      hasSocketIoProxy: /location\s+\/socket\.io\/\s*\{[^}]*proxy_pass\s+http:\/\/localhost:3000/s.test(nginxConf),
+      hasUpgradeHeader: /location\s+\/socket\.io\/\s*\{[^}]*Upgrade\s+\$http_upgrade/s.test(nginxConf),
+    }).toEqual({
+      hasSocketIoProxy: true,
+      hasUpgradeHeader: true,
+    });
+  });
+
+  it('nginx-captive-portal.conf must proxy /videos/ to admin-server (not alias)', () => {
+    // proxy_pass normalizes Unicode filenames; alias does not → broken video paths
+    expect({
+      hasVideoProxy: /location\s+\/videos\/\s*\{[^}]*proxy_pass\s+http:\/\/127\.0\.0\.1:8080\/videos\//s.test(nginxConf),
+    }).toEqual({
+      hasVideoProxy: true,
+    });
+  });
+
+  it('nginx-captive-portal.conf must proxy /thumbnails/ to admin-server (not alias)', () => {
+    expect({
+      hasThumbnailProxy: /location\s+\/thumbnails\/\s*\{[^}]*proxy_pass\s+http:\/\/127\.0\.0\.1:8080\/thumbnails\//s.test(nginxConf),
+    }).toEqual({
+      hasThumbnailProxy: true,
+    });
+  });
+
+  it('install.sh must also have /admin/ proxy — both sources must stay in sync', () => {
+    expect({
+      installHasAdminProxy: /location\s+\/admin\/\s*\{[^}]*proxy_pass\s+http:\/\/localhost:8080/s.test(installSh),
+    }).toEqual({
+      installHasAdminProxy: true,
+    });
+  });
+
+  it('install.sh must also have /socket.io/ proxy — both sources must stay in sync', () => {
+    expect({
+      installHasSocketIo: /location\s+\/socket\.io\/\s*\{[^}]*proxy_pass\s+http:\/\/localhost:3000/s.test(installSh),
+    }).toEqual({
+      installHasSocketIo: true,
+    });
+  });
+});
+
+// ============================================================================
+// Admin demo mode catch-all (defense in depth)
+// When admin is served from a non-Pi host (cloud, demo), the demo interceptor
+// must handle ALL /api/ routes — missing handlers return undefined → crash.
+// ============================================================================
+describe('Admin demo mode safety', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+  const demoModule = fs.readFileSync(
+    path.join(repoRoot, 'raspberry/admin/public/modules/demo/index.js'),
+    'utf8'
+  );
+
+  it('demo/index.js must have a catch-all for unhandled /api/ routes', () => {
+    // Without a catch-all, any new API route added to admin will crash in demo mode
+    // because the fetch interceptor returns undefined for unhandled paths
+    expect({
+      hasCatchAll: /catch.all|unhandled.*\/api\/|\/api\//.test(demoModule) &&
+        demoModule.includes('Catch-all'),
+    }).toEqual({
+      hasCatchAll: true,
+    });
+  });
+});
+
+// ============================================================================
+// Admin fetch interceptor — HTML-as-JSON protection
+// When nginx returns HTML for API calls (config drift, missing proxy, etc.),
+// response.json() throws SyntaxError: Unexpected token '<'. The fetch
+// interceptor must detect text/html on API responses and return a clean
+// JSON error instead of letting the parser crash.
+// ============================================================================
+describe('Admin HTML-as-JSON fetch protection', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+  const stateModule = fs.readFileSync(
+    path.join(repoRoot, 'raspberry/admin/public/modules/core/state.js'),
+    'utf8'
+  );
+
+  it('state.js must detect text/html on API responses and return JSON error', () => {
+    expect({
+      checksContentType: /text\/html/.test(stateModule),
+      returnsJsonError: /HTML_RESPONSE/.test(stateModule),
+    }).toEqual({
+      checksContentType: true,
+      returnsJsonError: true,
+    });
+  });
 });
