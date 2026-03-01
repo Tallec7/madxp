@@ -1,3 +1,10 @@
+## [3.86.1](https://github.com/Tallec7/neopro/compare/v3.86.0...v3.86.1) (2026-03-01)
+
+### Bug Fixes
+
+- **failover:** relaunch Chromium on HDMI failover instead of resizing in-place ([17790ae](https://github.com/Tallec7/neopro/commit/17790ae55e1c06142b9725861e2e2ab9c4954b54))
+- **network:** prevent deploy from killing WiFi dongle via recovery cascade ([4cd59b3](https://github.com/Tallec7/neopro/commit/4cd59b332eba6070c7cf5d2d37cca2f148eba55c))
+
 # [3.86.0](https://github.com/Tallec7/neopro/compare/v3.85.0...v3.86.0) (2026-03-01)
 
 ### Features
