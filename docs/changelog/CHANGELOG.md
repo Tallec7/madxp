@@ -2,7 +2,17 @@
 
 ### Bug Fixes
 
-- **tv:** object-fit contain — show full video content without cropping ([83f78dc](https://github.com/Tallec7/neopro/commit/83f78dc7f3076c215deab024660ce1ab1c02fdad))
+- **tv:** fix video content cropping on PC fullscreen — `object-fit: cover` zoomed and cropped video edges (e.g. "NOS PARTENAIRES" text cut off) when monitor aspect ratio ≠ video ratio (16:10 vs 16:9). Replaced with `object-fit: contain` on all video players (freeze-canvas, double-buffer, manual). On Pi (1080p video + 1080p TV = same ratio), contain = cover — zero visual change. ([83f78dc](https://github.com/Tallec7/neopro/commit/83f78dc7f3076c215deab024660ce1ab1c02fdad))
+
+### Tests
+
+- **smoke:** add 4 regression guards — `tv.component.scss` must NOT use `object-fit: cover`, each video player selector (`.freeze-canvas`, `.double-buffer-player`, `.manual-player`) must have `object-fit: contain`
+
+### Documentation
+
+- **claude:** add "NE JAMAIS FAIRE" rule for `object-fit: cover` on TV video players
+- **troubleshooting:** update "Débordement viewport sur navigateur PC" section with object-fit fix
+- **changelog:** document v3.84.7 TV video cropping fix
 
 ## [3.84.6](https://github.com/Tallec7/neopro/compare/v3.84.5...v3.84.6) (2026-03-01)
 

@@ -4726,3 +4726,57 @@ describe('TV viewport overflow guard (no 100vw in TV components)', () => {
     });
   });
 });
+
+// ----------------------------------------------------------
+// TV video cropping guard
+// Incident: 01/03/2026 — TV video players used object-fit: cover.
+// On Pi kiosk (video 1080p + TV 1080p = same ratio), cover = contain.
+// On PC monitors with different aspect ratio (e.g. 16:10), cover zooms
+// and crops video edges — text like "NOS PARTENAIRES" gets cut off.
+// Fix: replaced object-fit: cover with contain on all video players.
+// contain shows full content with black bars on ratio mismatch.
+// ----------------------------------------------------------
+describe('TV video cropping guard (no object-fit: cover on video players)', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+  const tvScss = 'raspberry/src/app/components/tv/tv.component.scss';
+
+  const videoPlayerSelectors = ['.freeze-canvas', '.double-buffer-player', '.manual-player'];
+
+  it('tv.component.scss video players must use object-fit: contain (not cover)', () => {
+    const content = fs.readFileSync(path.join(repoRoot, tvScss), 'utf8');
+    const lines = content.split('\n');
+    const violations = lines
+      .map((line, i) => ({ line: line.trim(), num: i + 1 }))
+      .filter(
+        ({ line }) => !line.startsWith('//') && /object-fit:\s*cover/.test(line)
+      );
+    expect({
+      violations: violations.map(v => `line ${v.num}: ${v.line}`),
+      reason:
+        'object-fit: cover crops video edges on monitors with different aspect ratio — use contain',
+    }).toEqual({
+      violations: [],
+      reason:
+        'object-fit: cover crops video edges on monitors with different aspect ratio — use contain',
+    });
+  });
+
+  for (const selector of videoPlayerSelectors) {
+    it(`${selector} must have object-fit: contain`, () => {
+      const content = fs.readFileSync(path.join(repoRoot, tvScss), 'utf8');
+      // Extract the block for this selector
+      const selectorEscaped = selector.replace('.', '\\.');
+      const blockRegex = new RegExp(
+        `${selectorEscaped}\\s*\\{[^}]*object-fit:\\s*contain[^}]*\\}`,
+        's'
+      );
+      expect({
+        selector,
+        hasContain: blockRegex.test(content),
+      }).toEqual({
+        selector,
+        hasContain: true,
+      });
+    });
+  }
+});

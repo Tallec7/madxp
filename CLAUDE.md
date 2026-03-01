@@ -70,6 +70,7 @@ source central-server/.env && psql "$DATABASE_URL" -f central-server/src/scripts
 - Faire plusieurs `iwlist scan` sur wlan1 dans hotspot-optimizer.sh (RTL8192EU single-radio : chaque scan coupe le carrier ~6s → utiliser un scan unique + `CACHED_SCAN` — smoke test enforced)
 - Initialiser des variables bash à `0` quand elles utilisent `${VAR:-default}` (le fallback ne se déclenche que si VAR est vide/unset, PAS si `=0` — résultat : `--window-size=0,0` → fenêtre 1x1 pixel invisible — smoke test enforced)
 - Utiliser `100vw` dans les SCSS des composants TV (`tv.component`, `waiting-screen`, `wrong-port-screen`) — `100vw` inclut la largeur des scrollbars sur navigateur PC (~17px), causant un débordement horizontal. Utiliser `100%` à la place (smoke test enforced)
+- Utiliser `object-fit: cover` sur les players vidéo TV (`.freeze-canvas`, `.double-buffer-player`, `.manual-player`) — `cover` zoome et coupe les bords si le ratio écran ≠ ratio vidéo (ex: moniteur 16:10 vs vidéo 16:9). Utiliser `object-fit: contain` (smoke test enforced)
 
 ## Architecture détaillée
 

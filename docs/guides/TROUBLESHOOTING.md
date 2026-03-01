@@ -3719,17 +3719,19 @@ cat /sys/class/drm/card1-HDMI-A-1/edid | edid-decode 2>/dev/null
 
 **Solution :** Installer `cec-utils` et vérifier que CEC est activé dans les réglages de la TV (souvent sous "Anynet+", "SimpLink", "Bravia Sync", "VIERA Link" selon le fabricant).
 
-### Débordement viewport sur navigateur PC (v3.84.5+)
+### Débordement viewport et contenu coupé sur navigateur PC (v3.84.5+)
 
-**Symptôme :** Sur `neopro.local/tv` en plein écran depuis un navigateur PC, le contenu déborde horizontalement (~17px). Sur le Pi en mode kiosk, l'affichage est normal.
+**Symptôme 1 — Débordement horizontal (~17px) :** Sur `neopro.local/tv` en plein écran depuis un navigateur PC, une scrollbar horizontale apparaît. Sur le Pi en mode kiosk, l'affichage est normal.
 
-**Cause :** Les composants TV utilisaient `width: 100vw` en CSS. L'unité `100vw` inclut la largeur des scrollbars sur navigateur PC, alors qu'en mode kiosk Chromium (Pi), il n'y a pas de scrollbar. Résultat : `100vw` = viewport + 17px de scrollbar = débordement horizontal.
+**Cause :** `width: 100vw` inclut la largeur des scrollbars sur navigateur PC, alors qu'en mode kiosk Chromium (Pi), il n'y a pas de scrollbar.
 
-**Correctif (v3.84.5) :**
+**Correctif (v3.84.5) :** `100vw` → `100%` dans tous les SCSS TV + `body:has(app-tv) { overflow: hidden }` dans `styles.scss`.
 
-- Remplacement de `100vw` par `100%` dans `tv.component.scss`, `waiting-screen.component.scss`, `wrong-port-screen.component.scss`
-- Ajout de `100dvh` (dynamic viewport height) comme fallback moderne pour `:host`
-- Ajout de `body:has(app-tv) { overflow: hidden }` dans `styles.scss` (defense-in-depth)
+**Symptôme 2 — Contenu vidéo coupé sur les bords :** En plein écran sur PC, les bords de la vidéo sont rognés (ex: texte "NOS PARTENAIRES" coupé). Sur le Pi, tout est visible.
+
+**Cause :** `object-fit: cover` zoome la vidéo pour remplir le conteneur et coupe les bords qui dépassent si le ratio moniteur ≠ ratio vidéo (ex: moniteur 16:10 vs vidéo 16:9). Sur le Pi (vidéo 1080p + TV 1080p = même ratio), `cover` = `contain` → aucun crop.
+
+**Correctif (v3.84.7) :** `object-fit: cover` → `object-fit: contain` sur `.freeze-canvas`, `.double-buffer-player`, `.manual-player`. `contain` affiche tout le contenu avec bandes noires si le ratio ne matche pas.
 
 **Vérification :**
 
@@ -3737,11 +3739,14 @@ cat /sys/class/drm/card1-HDMI-A-1/edid | edid-decode 2>/dev/null
 # Vérifier qu'aucun composant TV n'utilise 100vw (doit retourner 0 résultat)
 grep -rn '100vw' raspberry/src/app/components/tv/ raspberry/src/app/components/waiting-screen/ raspberry/src/app/components/wrong-port-screen/ --include='*.scss' | grep -v '//'
 
-# Vérifier que le smoke test passe
-npm run test:smoke -- --testNamePattern="100vw"
+# Vérifier qu'aucun player vidéo TV n'utilise object-fit: cover
+grep -n 'object-fit.*cover' raspberry/src/app/components/tv/tv.component.scss | grep -v '//'
+
+# Vérifier que les smoke tests passent
+npm run test:smoke -- --testNamePattern="100vw|object-fit"
 ```
 
-**Smoke test :** 4 tests empêchent la régression — toute réintroduction de `100vw` dans les SCSS TV fait échouer le CI.
+**Smoke tests :** 8 tests empêchent la régression — 4 pour `100vw`, 4 pour `object-fit: cover`.
 
 ---
 
