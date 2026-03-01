@@ -85,15 +85,25 @@ Permet de synchroniser plusieurs instances TV (kiosk + navigateur) sur la même 
 **Architecture** :
 
 - Premier TV connecté = **master**, suivants = **slaves**
-- Master émet `tv-loop-update` à chaque changement de vidéo
-- Slaves reçoivent `tv-loop-state`, trouvent la vidéo par path, jouent + seek au temps approximatif
+- Master émet `tv-loop-update` à chaque changement de vidéo (boucle ET vidéo manuelle)
+- Slaves reçoivent `tv-loop-state`, trouvent la vidéo **par index** (PAS par path), jouent + seek au temps approximatif
 - Si master déconnecte → promotion automatique du slave le plus ancien
 - **Analytics désactivées pour les slaves** : `if (!this.isSlaveMode)` avant tout `track*()`
+- **Sync par index** : le slave utilise `videoIndex` car les variants secondaires ont des chemins différents du master
+
+**Race condition master-slave (ADR-033)** :
+
+Quand l'utilisateur déclenche une vidéo manuelle, le serveur broadcaste `action` à ALL (master+slave). Le slave traite l'action et lance `play()`. Mais un `tv-loop-state` stale (émis AVANT l'action par le master, avec `isManualMode: false`) peut arriver au slave APRÈS. `handleMasterLoopState` CAS 2 appelle alors `stopManualVideoAndReturnToLoop()` → le slave revient à la boucle alors qu'il devrait jouer la vidéo manuelle.
+
+**Protection (deux corrections complémentaires)** :
+
+1. **Master** : émet `tv-loop-update` avec `isManualMode: true` IMMÉDIATEMENT dans `play()` (pas seulement après 200ms)
+2. **Slave** : `_lastActionReceivedAt = Date.now()` dans le handler `action`. Dans `handleMasterLoopState` CAS 2, ignore les `tv-loop-state` non-manual reçus dans les 2s suivant une action (guard anti-stale). Compteur `staleLoopStateCount` incrémenté à chaque occurrence pour monitoring.
 
 **Fichiers** :
 
 - `raspberry/server/server.js` — tvInstances Map, promoteSlave(), handlers
-- `raspberry/src/app/components/tv/tv.component.ts` — tvRole, isSlaveMode, emitLoopState(), handleMasterLoopState()
+- `raspberry/src/app/components/tv/tv.component.ts` — tvRole, isSlaveMode, emitLoopState(), handleMasterLoopState(), \_lastActionReceivedAt
 
 ## RecordingStateService (v3.8.0+)
 

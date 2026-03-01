@@ -116,6 +116,14 @@ export async function handleHeartbeat(
       if (message.transitionMetrics.safetyTimeoutCount > 0) {
         alertingService.recordVideoSafetyTimeouts(siteId, message.transitionMetrics.safetyTimeoutCount);
       }
+
+      // ADR-033: Log stale loop state occurrences for visibility (race condition guard)
+      if (message.transitionMetrics.staleLoopStateCount && message.transitionMetrics.staleLoopStateCount > 0) {
+        logger.warn('Stale loop state guard triggered', {
+          siteId,
+          staleLoopStateCount: message.transitionMetrics.staleLoopStateCount,
+        });
+      }
     }
 
     // Broadcast HDMI status to dashboard in real-time (E-23)

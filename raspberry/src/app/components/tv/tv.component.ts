@@ -194,6 +194,7 @@ export class TvComponent implements OnInit, OnDestroy {
     cleanupSkippedCount: 0,
     videoErrorCount: 0,
     totalTransitions: 0,
+    staleLoopStateCount: 0, // ADR-033: nombre de tv-loop-state stales ignorés par le guard anti-race condition
   };
   private transitionMetricsInterval: ReturnType<typeof setInterval> | null = null;
 
@@ -1869,11 +1870,18 @@ export class TvComponent implements OnInit, OnDestroy {
    * Seul le master émet (les slaves ne font pas de transitions réelles).
    */
   private emitTransitionMetrics(): void {
-    if (this.isSlaveMode) return;
+    // Le slave n'émet que staleLoopStateCount (les autres métriques viennent du master)
+    const m = this.transitionMetrics;
+    if (this.isSlaveMode) {
+      if (m.staleLoopStateCount > 0) {
+        this.socketService.emit('transition-metrics', { staleLoopStateCount: m.staleLoopStateCount });
+        m.staleLoopStateCount = 0;
+      }
+      return;
+    }
 
     // Ne rien émettre si aucune activité
-    const m = this.transitionMetrics;
-    if (m.totalTransitions === 0 && m.safetyTimeoutCount === 0 && m.videoErrorCount === 0) return;
+    if (m.totalTransitions === 0 && m.safetyTimeoutCount === 0 && m.videoErrorCount === 0 && m.staleLoopStateCount === 0) return;
 
     this.socketService.emit('transition-metrics', {
       earlySwitchCount: m.earlySwitchCount,
@@ -1881,6 +1889,7 @@ export class TvComponent implements OnInit, OnDestroy {
       cleanupSkippedCount: m.cleanupSkippedCount,
       videoErrorCount: m.videoErrorCount,
       totalTransitions: m.totalTransitions,
+      staleLoopStateCount: m.staleLoopStateCount,
     });
 
     // Reset après émission
@@ -1889,6 +1898,7 @@ export class TvComponent implements OnInit, OnDestroy {
     m.cleanupSkippedCount = 0;
     m.videoErrorCount = 0;
     m.totalTransitions = 0;
+    m.staleLoopStateCount = 0;
   }
 
   /**
@@ -2411,6 +2421,7 @@ export class TvComponent implements OnInit, OnDestroy {
       const msSinceLastAction = Date.now() - this._lastActionReceivedAt;
       if (msSinceLastAction < 2000) {
         console.log(`[TV] Slave: ignoring stale loop state (action received ${msSinceLastAction}ms ago)`);
+        this.transitionMetrics.staleLoopStateCount++;
         return;
       }
       console.log('[TV] Slave: master returned to loop, stopping manual video');

@@ -424,6 +424,12 @@ const videoTransitionsTotal = new Counter({
   registers: [register],
 });
 
+const videoStaleLoopStateTotal = new Counter({
+  name: 'neopro_video_stale_loop_state_total',
+  help: 'Total stale tv-loop-state messages ignored by slave guard (ADR-033 race condition)',
+  registers: [register],
+});
+
 // ============= Métriques License Push =============
 
 const licenseStatusPushesTotal = new Counter({
@@ -975,13 +981,14 @@ class MetricsService {
 
   // ============= Méthodes Video Transition =============
 
-  recordTransitionMetrics(metrics: { earlySwitchCount?: number; safetyTimeoutCount?: number; cleanupSkippedCount?: number; videoErrorCount?: number; totalTransitions?: number } | null | undefined): void {
+  recordTransitionMetrics(metrics: { earlySwitchCount?: number; safetyTimeoutCount?: number; cleanupSkippedCount?: number; videoErrorCount?: number; totalTransitions?: number; staleLoopStateCount?: number } | null | undefined): void {
     if (!metrics) return;
     if (metrics.earlySwitchCount) videoTransitionEarlySwitchTotal.inc(metrics.earlySwitchCount);
     if (metrics.safetyTimeoutCount) videoTransitionSafetyTimeoutTotal.inc(metrics.safetyTimeoutCount);
     if (metrics.cleanupSkippedCount) videoTransitionCleanupSkippedTotal.inc(metrics.cleanupSkippedCount);
     if (metrics.videoErrorCount) videoTransitionErrorTotal.inc(metrics.videoErrorCount);
     if (metrics.totalTransitions) videoTransitionsTotal.inc(metrics.totalTransitions);
+    if (metrics.staleLoopStateCount) videoStaleLoopStateTotal.inc(metrics.staleLoopStateCount);
   }
 
   // ============= Méthodes Report Generation =============

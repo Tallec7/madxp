@@ -41,6 +41,8 @@ class StateService {
       failoverCount: 0,            // HDMI-0 lost → secondary promoted
       failoverRecoveryCount: 0,    // HDMI-0 restored → secondary demoted back
       failoverDurationMs: null,    // duration of last failover (ms)
+      // ADR-033: race condition guard metrics
+      staleLoopStateCount: 0,      // tv-loop-state stales ignored by slave guard
       lastUpdatedAt: null,
     };
 
@@ -155,6 +157,8 @@ class StateService {
     if (data.failoverDurationMs != null) {
       this._transitionMetrics.failoverDurationMs = data.failoverDurationMs;
     }
+    // ADR-033: race condition guard metrics
+    this._transitionMetrics.staleLoopStateCount += data.staleLoopStateCount || 0;
     this._transitionMetrics.lastUpdatedAt = Date.now();
     return this.getTransitionMetrics();
   }
@@ -176,6 +180,7 @@ class StateService {
     this._transitionMetrics.dualDisplayRestarts = 0;
     this._transitionMetrics.failoverCount = 0;
     this._transitionMetrics.failoverRecoveryCount = 0;
+    this._transitionMetrics.staleLoopStateCount = 0;
     // bootToVideoMs and failoverDurationMs are NOT reset — they are one-shot/last-value metrics
     return metrics;
   }

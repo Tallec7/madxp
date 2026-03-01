@@ -1747,6 +1747,23 @@ Les deux instances Chromium se synchronisent via Socket.IO master-slave :
 
 **Résolution variante secondaire** : `resolveSecondaryVariant()` vérifie d'abord `video.variants.secondary.path`, puis cherche dans la config complète via `findVideoInConfig(path)` (sponsors → timeCategories.loopVideos → categories.videos récursif). Appliqué aux 3 points d'entrée : `action` handler, BroadcastChannel, `handleMasterLoopState` CAS 1.
 
+**Race condition master-slave (ADR-033)** :
+
+Quand l'utilisateur clique une vidéo manuelle, le serveur broadcaste `action` à tous les clients (master + slaves). Le slave traite l'action et lance `play()`. Cependant, un `tv-loop-state` émis par le master **avant** l'action (avec `isManualMode: false`) peut arriver au slave **après** que celui-ci a déjà démarré la vidéo manuelle. `handleMasterLoopState` CAS 2 voit `this.isManualMode === true` + `state.isManualMode === false` et appelle `stopManualVideoAndReturnToLoop()` → le slave revient à la boucle au lieu de jouer la vidéo.
+
+**Protection (deux corrections complémentaires)** :
+
+| Fix | Côté   | Mécanisme                                                                                                                                           |
+| --- | ------ | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| A   | Master | Émet `tv-loop-update` avec `isManualMode: true` **immédiatement** dans `play()` (pas seulement après 2×rAF + 200ms)                                 |
+| B   | Slave  | `_lastActionReceivedAt = Date.now()` dans le handler `action`. Dans CAS 2, ignore les `tv-loop-state` non-manual reçus < 2s après une action locale |
+
+Le guard slave incrémente `transitionMetrics.staleLoopStateCount` à chaque occurrence, visible dans le heartbeat → central server → alerte si seuil franchi.
+
+> ⚠️ **Ne jamais émettre `tv-loop-update` avec `isManualMode: true` UNIQUEMENT après le délai 2×rAF + 200ms** — pendant ces 200ms, le master émet encore des `tv-loop-state` avec `isManualMode: false`, ce qui kill la vidéo manuelle sur le slave. L'émission immédiate dans `play()` réduit la fenêtre de race condition. Smoke test enforced.
+>
+> ⚠️ **Ne jamais appeler `stopManualVideoAndReturnToLoop()` sans vérifier `_lastActionReceivedAt`** — un `tv-loop-state` stale peut arriver après que le slave a déjà démarré une vidéo manuelle via `action`. Le guard 2s protège contre cette race condition. Smoke test enforced.
+
 **Diagnostic sync** :
 
 ```bash
@@ -1757,6 +1774,10 @@ journalctl -u neopro-kiosk --no-pager | grep '\[TV\] Role assigned'
 # Vérifier la sync
 journalctl -u neopro-kiosk --no-pager | grep '\[TV\] Slave'
 # Attendu: "paused independent loop" puis "syncing to index"
+
+# Vérifier le guard anti-stale (ADR-033)
+journalctl -u neopro-kiosk --no-pager | grep 'ignoring stale loop state'
+# Si fréquent (>5/heure): latence réseau élevée ou problème de timing
 ```
 
 ### Maintenance

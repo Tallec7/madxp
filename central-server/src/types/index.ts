@@ -243,6 +243,7 @@ export interface TransitionMetrics {
   cleanupSkippedCount: number;
   videoErrorCount: number;
   totalTransitions: number;
+  staleLoopStateCount?: number; // ADR-033: tv-loop-state stales ignored by slave guard
   lastUpdatedAt?: number | null;
 }
 

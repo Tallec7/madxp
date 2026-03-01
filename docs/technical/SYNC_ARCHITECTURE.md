@@ -1324,6 +1324,55 @@ state.service.js._hdmiState
 
 ---
 
+## Race Condition Master-Slave (ADR-033 v3.88.1+)
+
+> Protection contre les messages `tv-loop-state` obsolètes (stales) qui tuent la vidéo manuelle sur le slave.
+
+### Le problème
+
+Quand l'utilisateur déclenche une vidéo manuelle via la télécommande :
+
+```
+Timeline:
+t=0    Master émet tv-loop-state (isManualMode: false) — état boucle normal
+t=10ms Serveur reçoit "action" → io.emit('action', data) à ALL (master + slave)
+t=15ms Slave reçoit "action" → play() → isManualMode = true ✓
+t=20ms Le tv-loop-state stale (émis à t=0) arrive au slave
+       → handleMasterLoopState CAS 2 : isManualMode=true + state.isManualMode=false
+       → stopManualVideoAndReturnToLoop() ✗ (trop tôt !)
+```
+
+Résultat : le slave revient à la boucle au lieu de jouer la vidéo manuelle.
+
+### La solution (deux corrections complémentaires)
+
+**Fix A — Master** : Émettre `tv-loop-update` avec `isManualMode: true` IMMÉDIATEMENT dans `play()`, pas seulement après le délai 2×rAF + 200ms. Le serveur met à jour `loopState` avant que le stale arrive.
+
+**Fix B — Slave** : Ajouter `_lastActionReceivedAt = Date.now()` dans le handler `action`. Dans `handleMasterLoopState` CAS 2, ignorer les `tv-loop-state` avec `isManualMode: false` reçus dans les 2s suivant une action locale (guard anti-stale).
+
+### Monitoring
+
+Le guard incrémente `transitionMetrics.staleLoopStateCount` à chaque occurrence. Ce compteur :
+
+- Est émis toutes les 30s via Socket.IO `transition-metrics` (même par le slave)
+- Est agrégé dans `state.service.js` côté Pi
+- Remonte au central via heartbeat → `metricsService.recordTransitionMetrics()`
+- Exposé en Prometheus : `neopro_video_stale_loop_state_total`
+- Loggé en `logger.warn` dans `heartbeat.handler.ts` si > 0
+
+**Seuil d'alerte** : > 10 occurrences/heure indique un problème de latence réseau ou de timing.
+
+### Fichiers impactés
+
+| Fichier                                            | Modification                                                       |
+| -------------------------------------------------- | ------------------------------------------------------------------ |
+| `raspberry/src/app/components/tv/tv.component.ts`  | `_lastActionReceivedAt`, guard CAS 2, émission immédiate, compteur |
+| `raspberry/server/services/state.service.js`       | `staleLoopStateCount` dans `_transitionMetrics`                    |
+| `central-server/src/handlers/heartbeat.handler.ts` | Log warning si staleLoopStateCount > 0                             |
+| `central-server/src/services/metrics.service.ts`   | Compteur Prometheus `neopro_video_stale_loop_state_total`          |
+
+---
+
 ## Historique des Versions
 
 | Version | Date       | Auteur        | Modifications                                                                                                        |
@@ -1348,6 +1397,7 @@ state.service.js._hdmiState
 | 2.7     | 2026-02-22 | Claude/NEOPRO | Cloud remote relay chain : détection zombie, fix socket.data, handler match-info-updated, monitoring Prometheus      |
 | 2.8     | 2026-02-24 | Claude/NEOPRO | Fix race condition reboot post-OTA : `shutdown -r +0` via spawn, skip restart sync-agent quand reboot prévu          |
 | 2.9     | 2026-02-27 | Claude/NEOPRO | E-23 : événements HDMI & failover, heartbeat enrichi (hdmiStatus, connectedClients), pipeline détection              |
+| 3.0     | 2026-03-01 | Claude/NEOPRO | ADR-033 : fix race condition master-slave (guard anti-stale), monitoring staleLoopStateCount, secondary variant path |
 
 ---
 
