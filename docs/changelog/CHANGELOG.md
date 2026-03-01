@@ -1,3 +1,9 @@
+## [3.86.7](https://github.com/Tallec7/neopro/compare/v3.86.6...v3.86.7) (2026-03-01)
+
+### Bug Fixes
+
+- **sync-agent:** restore secondary variants in update_config replace mode (ADR-032) ([11e6fd9](https://github.com/Tallec7/neopro/commit/11e6fd96f4073de5b958e7c22ee1ef2430ecc128))
+
 ## [3.87.3](https://github.com/Tallec7/neopro/compare/v3.87.2...v3.87.3) (2026-03-01)
 
 ### Bug Fixes
