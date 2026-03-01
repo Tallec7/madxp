@@ -1,3 +1,9 @@
+# [3.85.0](https://github.com/Tallec7/neopro/compare/v3.84.9...v3.85.0) (2026-03-01)
+
+### Features
+
+- **display:** resolution detection cascade — auto-detect native TV resolution ([8c6fc39](https://github.com/Tallec7/neopro/commit/8c6fc398f12f10327ee8d7308ed778abaf5ddc1a))
+
 ## [3.85.0](https://github.com/Tallec7/neopro/compare/v3.84.9...v3.85.0) (2026-03-01)
 
 ### Features
