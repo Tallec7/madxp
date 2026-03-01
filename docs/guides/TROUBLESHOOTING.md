@@ -4451,15 +4451,55 @@ sudo nginx -t && sudo systemctl reload nginx
 sudo systemctl restart neopro-admin
 ```
 
+### Autres causes possibles
+
+#### Écran noir sur le secondary (path erroné dans config)
+
+`deploySecondaryVariant()` utilisait le filename du fichier primaire au lieu de `finalFilename`. Résultat : le path dans `configuration.json` pointait vers un fichier inexistant.
+
+```bash
+# Vérifier les paths dans la config
+python3 -c "
+import json
+with open('/home/pi/neopro/webapp/configuration.json') as f:
+    cfg = json.load(f)
+for s in cfg.get('sponsors', []):
+    v = s.get('variants', {}).get('secondary', {})
+    if v.get('path'):
+        import os
+        p = '/home/pi/neopro/' + v['path']
+        print(f\"{'✅' if os.path.exists(p) else '❌'} {v['path']}\")"
+```
+
+Corrigé dans `deploy-video.js` : `secondaryRelativePath` utilise `finalFilename`.
+
+#### Boucle visible au lieu de la vidéo (race condition master-slave)
+
+Le slave reçoit l'event `action` et démarre la vidéo manuelle, mais un `tv-loop-state` stale (émis par le master AVANT l'action, avec `isManualMode: false`) arrive au slave APRÈS et déclenche `stopManualVideoAndReturnToLoop()`.
+
+```bash
+# Vérifier les logs pour la race condition
+journalctl -u neopro-app --since '5 minutes ago' | grep -E 'ignoring stale|master returned to loop'
+# Si "ignoring stale loop state" apparaît = guard fonctionne
+# Si "master returned to loop" apparaît juste après "tv action received" = race condition non protégée
+```
+
+Corrigé dans `tv.component.ts` : émission immédiate du master + guard `_lastActionReceivedAt` sur le slave.
+
 ### Smoke tests de régression
 
-5 smoke tests (section E-41 dans `smoke.test.ts`) :
+10 smoke tests (sections E-41 + ADR-033 dans `smoke.test.ts`) :
 
 1. `admin-server must import SECONDARY_VIDEOS_DIR from helpers`
 2. `admin-server must register /videos-secondary static route`
 3. `helpers must define SECONDARY_VIDEOS_DIR pointing to videos-secondary`
 4. `Nginx must have location /videos-secondary/ proxying to admin-server`
 5. `install.sh must generate Nginx location for /videos-secondary/`
+6. `secondaryRelativePath must NOT use buildRelativePath directly`
+7. `secondaryRelativePath must reference finalFilename`
+8. `action handler must set _lastActionReceivedAt timestamp`
+9. `handleMasterLoopState CAS 2 must check _lastActionReceivedAt guard`
+10. `play() must emit immediate tv-loop-update with isManualMode:true for master`
 
 ---
 

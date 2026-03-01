@@ -10,6 +10,10 @@
 
 - **dashboard:** secondary display EDID info in debug tab (v3.87.5) ([0298c1d](https://github.com/Tallec7/neopro/commit/0298c1dcecc1459742157fbdc94fd393a5d82cff))
 
+### Bug Fixes
+
+- **dual-display:** fix slave race condition — stale `tv-loop-state` killed manual video on secondary (ADR-033)
+
 ## [3.87.1](https://github.com/Tallec7/neopro/compare/v3.87.0...v3.87.1) (2026-03-01)
 
 ### Bug Fixes
@@ -26,6 +30,31 @@
 ### Bug Fixes
 
 - **dual-display:** serve `/videos-secondary` via Nginx + admin-server — secondary display plays variant videos instead of falling back to loop (v3.87.6, ADR-033)
+
+## [3.88.1](https://github.com/Tallec7/neopro/compare/v3.88.0...v3.88.1) (2026-03-01)
+
+### Bug Fixes
+
+- **dual-display:** race condition — le slave recevait un `tv-loop-state` stale (isManualMode: false) émis par le master AVANT l'action, mais arrivant APRÈS que le slave avait déjà démarré la vidéo manuelle → `handleMasterLoopState` CAS 2 tuait la lecture et renvoyait le slave à la boucle
+
+### Root Cause
+
+- **Timing gap dans `play()`** : le master émet `tv-loop-update` avec `isManualMode: true` seulement après 2×rAF + 200ms (pour attendre le décodeur vidéo Pi). Pendant ce délai, un `tv-loop-state` stale (de la boucle, émis juste avant l'action) pouvait arriver au slave avec `isManualMode: false` → CAS 2 de `handleMasterLoopState` appelait `stopManualVideoAndReturnToLoop()`
+- **Bug de path précédent** : `deploySecondaryVariant()` utilisait le filename du fichier primaire au lieu de `finalFilename` (nom réel du fichier secondaire téléchargé) → chemin inexistant dans la config
+
+### Corrections
+
+- **Fix A (master)** : `tv.component.ts` — émettre `tv-loop-update` avec `isManualMode: true` **immédiatement** dans `play()` (en plus de l'émission après 200ms) pour réduire la fenêtre de race
+- **Fix B (slave)** : `tv.component.ts` — guard `_lastActionReceivedAt` dans `handleMasterLoopState` CAS 2 : ignorer les `tv-loop-state` non-manual reçus dans les 2s suivant une action locale
+- **Path fix** : `deploy-video.js` — `secondaryRelativePath` utilise `finalFilename` au lieu de `relativePath.replace()`
+
+### Tests
+
+- **smoke:** 3 nouveaux tests `ADR-033 slave race condition guard` + 2 tests `deploySecondaryVariant path` (417 total)
+
+### Documentation
+
+- **adr:** ADR-033 mis à jour — inclut les 3 bugs et leurs corrections (serving, path, race condition)
 
 ## [3.87.6](https://github.com/Tallec7/neopro/compare/v3.87.5...v3.87.6) (2026-03-01)
 

@@ -80,6 +80,9 @@ source central-server/.env && psql "$DATABASE_URL" -f central-server/src/scripts
 - Utiliser `xdotool windowsize` pour le retour dual→single display (Chromium ne re-render pas son viewport CSS après un resize X11 → contenu zoomé/coupé — relancer Chromium avec `--window-size` correct — smoke test enforced)
 - Faire `xdotool windowsize` sans `xprop _MOTIF_WM_HINTS` + `xdotool windowactivate` lors de la transition single→dual ou du retour failover (xrandr reconfigure le layout X11, le WM restack lxpanel AU-DESSUS de Chromium → barre de tâches visible — smoke test enforced)
 - Lancer `xrandr --output $X --off` sur un port HDMI physiquement déconnecté dans `stop_chromium_secondary()` (provoque une race DRM kernel qui déstabilise le statut des AUTRES ports HDMI → garde `detect_hdmi1_status` obligatoire — smoke test enforced)
+- Émettre `tv-loop-update` avec `isManualMode: true` SEULEMENT après le délai 2×rAF + 200ms dans `play()` (un `tv-loop-state` stale arriverait au slave avant et tuerait sa vidéo manuelle — émettre aussi immédiatement — smoke test enforced)
+- Appeler `stopManualVideoAndReturnToLoop()` dans `handleMasterLoopState` CAS 2 sans vérifier `_lastActionReceivedAt` (un `tv-loop-state` stale peut arriver après une action — guard 2s obligatoire — smoke test enforced)
+- Construire `secondaryRelativePath` avec `relativePath.replace()` dans `deploySecondaryVariant()` (utilise le filename du fichier primaire au lieu de `finalFilename` — le secondaire a son propre nom — smoke test enforced)
 
 ## Architecture détaillée
 

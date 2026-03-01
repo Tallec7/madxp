@@ -5745,3 +5745,60 @@ describe('E-41 secondary videos serving guard', () => {
     });
   });
 });
+
+// =============================================================================
+// ADR-033 Slave race condition guard:
+// The slave must have a guard against stale tv-loop-state (isManualMode: false)
+// arriving AFTER the slave already processed an 'action' event and started manual mode.
+// Without this guard, the stale state kills the slave's manual video.
+// =============================================================================
+describe('ADR-033 slave race condition guard (tv.component.ts)', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+  const tvComponentPath = path.join(repoRoot, 'raspberry/src/app/components/tv/tv.component.ts');
+  let content: string;
+  beforeAll(() => { content = fs.readFileSync(tvComponentPath, 'utf8'); });
+
+  it('action handler must set _lastActionReceivedAt timestamp', () => {
+    // The action handler must record a timestamp to enable the stale state guard.
+    // Pattern: _lastActionReceivedAt = Date.now() must appear in the action handler block.
+    const actionBlock = content.slice(
+      content.indexOf("socketService.on('action'"),
+      content.indexOf("socketService.on('action'") + 600
+    );
+    expect({
+      setsTimestamp: /_lastActionReceivedAt\s*=\s*Date\.now\(\)/.test(actionBlock),
+    }).toEqual({
+      setsTimestamp: true,
+    });
+  });
+
+  it('handleMasterLoopState CAS 2 must check _lastActionReceivedAt guard before stopping manual', () => {
+    // CAS 2 must NOT blindly call stopManualVideoAndReturnToLoop when isManualMode is true.
+    // It must first check if a recent action was received (guard window).
+    const cas2Block = content.slice(
+      content.indexOf('CAS 2'),
+      content.indexOf('CAS 2') + 800
+    );
+    expect({
+      hasGuard: /_lastActionReceivedAt/.test(cas2Block),
+    }).toEqual({
+      hasGuard: true,
+    });
+  });
+
+  it('play() must emit immediate tv-loop-update with isManualMode:true for master', () => {
+    // The master must emit tv-loop-update with isManualMode: true IMMEDIATELY in play(),
+    // not just after the 2×rAF + 200ms delay. This reduces the window where stale
+    // tv-loop-state (isManualMode: false) can reach slaves.
+    // Look for the emission between isManualMode = true and 'ÉTAPE 1'
+    const playMethod = content.slice(
+      content.indexOf('isManualMode = true;'),
+      content.indexOf('ÉTAPE 1')
+    );
+    expect({
+      hasImmediateEmit: /emit\('tv-loop-update'/.test(playMethod) && /isManualMode:\s*true/.test(playMethod),
+    }).toEqual({
+      hasImmediateEmit: true,
+    });
+  });
+});

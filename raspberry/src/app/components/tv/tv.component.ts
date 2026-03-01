@@ -155,6 +155,7 @@ export class TvComponent implements OnInit, OnDestroy {
   private isManualMode = false; // Est-on en train de jouer une vidéo manuelle ?
   private _manualRecordingStarted = false; // Auto-start recording pour vidéo manuelle en neutral
   private _savedLoopIndex = 0; // Index de la boucle sauvegardé avant mode manuel
+  private _lastActionReceivedAt = 0; // Timestamp de la dernière action reçue (guard anti-race condition)
 
   // Watchdog et récupération d'erreurs
   private watchdogInterval: ReturnType<typeof setInterval> | null = null;
@@ -277,6 +278,9 @@ export class TvComponent implements OnInit, OnDestroy {
       console.log('tv action received', command);
       if (command.type === 'video' && command.data) {
         this.lastTriggerType = 'manual';
+        // ADR-033: Marquer le timestamp pour protéger contre les tv-loop-state stales
+        // qui arriveraient après cette action et tueraient la vidéo manuelle
+        this._lastActionReceivedAt = Date.now();
         this.play(this.resolveSecondaryVariant(command.data as Video));
       } else if (command.type === 'sponsors') {
         this.lastTriggerType = 'auto';
@@ -756,6 +760,24 @@ export class TvComponent implements OnInit, OnDestroy {
     // Sauvegarder l'index courant pour reprendre la boucle au bon endroit après la vidéo manuelle
     this._savedLoopIndex = this.currentLoopIndex;
     this.isManualMode = true;
+
+    // ADR-033: Émettre IMMÉDIATEMENT tv-loop-update avec isManualMode: true
+    // pour que le serveur mette à jour l'état AVANT tout tv-loop-state stale.
+    // Sans cela, un tv-loop-state stale (isManualMode: false) émis par la boucle
+    // juste avant cette action peut arriver au slave et tuer sa vidéo manuelle.
+    // L'émission tardive (après 2×rAF + 200ms) met aussi à jour manualVideoStartedAt
+    // pour permettre le seek approximatif sur les slaves.
+    if (this.tvRole === 'master') {
+      this.socketService.emit('tv-loop-update', {
+        videoIndex: this.currentLoopIndex,
+        videoPath: this.currentLoopVideos[this.currentLoopIndex]?.path || '',
+        videoStartedAt: null,
+        isManualMode: true,
+        manualVideoPath: video.path,
+        manualVideoStartedAt: Date.now(),
+        updatedAt: Date.now()
+      });
+    }
 
     // ÉTAPE 1: Capturer et afficher le freeze-frame IMMÉDIATEMENT
     this.captureAndShowFreezeFrame();
@@ -2380,8 +2402,17 @@ export class TvComponent implements OnInit, OnDestroy {
     }
 
     // CAS 2: Le master est en mode boucle
-    // Si on est en mode manuel, en sortir
+    // Si on est en mode manuel, en sortir — SAUF si un 'action' vient d'être reçu
+    // ADR-033: Race condition — un tv-loop-state stale (isManualMode: false) émis
+    // par le master AVANT qu'il reçoive l'action peut arriver au slave APRÈS que
+    // le slave a déjà traité l'action et démarré la vidéo manuelle.
+    // Guard: ignorer les tv-loop-state non-manual dans les 2s suivant une action locale.
     if (this.isManualMode) {
+      const msSinceLastAction = Date.now() - this._lastActionReceivedAt;
+      if (msSinceLastAction < 2000) {
+        console.log(`[TV] Slave: ignoring stale loop state (action received ${msSinceLastAction}ms ago)`);
+        return;
+      }
       console.log('[TV] Slave: master returned to loop, stopping manual video');
       this.stopManualVideoAndReturnToLoop();
       // Cacher les overlays
