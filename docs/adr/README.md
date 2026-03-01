@@ -49,6 +49,7 @@ Un ADR documente une décision technique importante avec :
 | [ADR-030](ADR-030-multi-profile-sync-deploy.md)               | Deploy profile auto-sync + cache Nginx       | Accepté                  | Fév 2026 |
 | [ADR-031](ADR-031-master-slave-video-loop-sync.md)            | Sync master-slave boucles vidéo dual-display | Accepté                  | Fév 2026 |
 | [ADR-032](ADR-032-restore-secondary-variants-replace-mode.md) | restoreSecondaryVariants en mode replace     | Accepté                  | Mar 2026 |
+| [ADR-033](ADR-033-videos-secondary-serving.md)                | Serving /videos-secondary Nginx + admin      | Accepté                  | Mar 2026 |
 
 ### Supersédés
 
@@ -85,7 +86,7 @@ Un ADR documente une décision technique importante avec :
 
 1. Décider du format avec la [grille de décision](BEST_PRACTICES.md#quand-créer-un-adr-)
 2. Copier le template approprié (complet ou léger)
-3. Numéroter séquentiellement (prochain : **ADR-033**)
+3. Numéroter séquentiellement (prochain : **ADR-034**)
 4. Remplir les sections
 5. Commiter avec le code dans la même PR
 6. Mettre à jour ce README après merge

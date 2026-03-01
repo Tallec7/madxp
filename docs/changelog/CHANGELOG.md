@@ -3,6 +3,59 @@
 ### Features
 
 - **dashboard:** real-time screen resolution display on site detail page (v3.87.4) ([82b844c](https://github.com/Tallec7/neopro/commit/82b844c0f62273fc2ced82d36abb5a8679331cd1))
+- **dashboard:** secondary display EDID info in debug tab (v3.87.5)
+
+### Bug Fixes
+
+- **dual-display:** serve `/videos-secondary` via Nginx + admin-server — secondary display plays variant videos instead of falling back to loop (v3.87.6, ADR-033)
+
+## [3.87.6](https://github.com/Tallec7/neopro/compare/v3.87.5...v3.87.6) (2026-03-01)
+
+### Bug Fixes
+
+- **dual-display:** les vidéos secondaires (variantes dual-display) n'étaient pas servies par Nginx ni par le serveur admin — Nginx renvoyait `index.html` (fallback SPA) au lieu du fichier `.mp4`, causant un échec silencieux de `<video>.play()` côté Angular. L'écran secondaire restait sur la boucle au lieu de jouer la vidéo manuelle. (ADR-033)
+
+### Root Cause
+
+- **Nginx `neopro-hls.conf`** : aucun `location /videos-secondary/` → requêtes tombaient dans `try_files $uri $uri/ /index.html` → retourne le HTML Angular au lieu du `.mp4`
+- **admin-server.js** : pas de route `express.static` pour `/videos-secondary` → `proxy_pass` aurait échoué même avec un location block Nginx
+
+### Corrections
+
+- **`raspberry/config/nginx/neopro-hls.conf`** : ajout `location /videos-secondary/` avec `proxy_pass` vers admin-server + `proxy_cache neopro_videos` (cache 7j, stale on error)
+- **`raspberry/install.sh`** : ajout du même location block dans le heredoc Nginx du script d'installation
+- **`raspberry/admin/admin-server.js`** : import `SECONDARY_VIDEOS_DIR`, ajout route statique `/videos-secondary` avec CORS + normalisation Unicode
+- **`raspberry/admin/helpers.js`** : définition et export de `SECONDARY_VIDEOS_DIR`
+
+### Tests
+
+- **smoke:** 5 nouveaux tests `E-41 secondary videos serving guard` (412 total) — admin-server import, admin-server route, helpers export, Nginx location block, install.sh location block
+
+### Documentation
+
+- **adr:** ADR-033 — Serving `/videos-secondary` via Nginx + admin-server
+- **troubleshooting:** section diagnostic "Vidéo secondaire ne se lance pas (boucle reste visible)"
+
+## [3.87.5](https://github.com/Tallec7/neopro/compare/v3.87.4...v3.87.5) (2026-03-01)
+
+### Features
+
+- **dashboard:** infos EDID de l'écran secondaire (HDMI-A-2) dans la section "État TV" du debug tab — fabricant, modèle, résolution native, taille, taux de rafraîchissement, HDR, espaces couleur
+
+### Pipeline EDID secondaire
+
+- **metrics.js:** `_findEdidPath(portFilter)` — paramètre optionnel pour cibler un port HDMI spécifique
+- **metrics.js:** `getSecondaryDisplayInfo()` — lit l'EDID du port HDMI-A-2 avec cache dédié (TTL 5 min)
+- **metrics.js:** `getHealthStatus()` inclut `secondaryDisplayInfo` dans la réponse (uniquement si connecté)
+- **dashboard:** section conditionnelle "Écran secondaire (HDMI-2)" dans site-debug-tab avec EDID enrichi
+
+### Tests
+
+- 3 smoke tests structurels : `_findEdidPath` portFilter, `getSecondaryDisplayInfo` dans health status, dashboard template
+
+### Documentation
+
+- CHANGELOG, REFERENCE.md mis à jour
 
 ## [3.87.4](https://github.com/Tallec7/neopro/compare/v3.87.3...v3.87.4) (2026-03-01)
 

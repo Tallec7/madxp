@@ -21,6 +21,7 @@ const execAsync = promisify(exec);
 const DEFAULT_NEOPRO_DIR = path.resolve(__dirname, '..');
 const NEOPRO_DIR = process.env.NEOPRO_DIR || DEFAULT_NEOPRO_DIR;
 const VIDEOS_DIR = path.join(NEOPRO_DIR, 'videos');
+const SECONDARY_VIDEOS_DIR = path.join(NEOPRO_DIR, 'videos-secondary');
 const TEMP_UPLOAD_DIR = path.join(NEOPRO_DIR, 'uploads-temp');
 const PROCESSING_DIR = path.join(NEOPRO_DIR, 'videos-processing');
 const THUMBNAILS_DIR = path.join(NEOPRO_DIR, 'thumbnails');
@@ -320,6 +321,7 @@ module.exports = {
   // Paths
   NEOPRO_DIR,
   VIDEOS_DIR,
+  SECONDARY_VIDEOS_DIR,
   TEMP_UPLOAD_DIR,
   PROCESSING_DIR,
   THUMBNAILS_DIR,

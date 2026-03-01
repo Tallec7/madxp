@@ -38,6 +38,7 @@ const path = require('path');
 const {
   NEOPRO_DIR,
   VIDEOS_DIR,
+  SECONDARY_VIDEOS_DIR,
   TEMP_UPLOAD_DIR,
   PROCESSING_DIR,
   THUMBNAILS_DIR,
@@ -114,6 +115,7 @@ const PORT = process.env.ADMIN_PORT || 8080;
 
 console.log('[admin] NEOPRO_DIR resolved to ' + NEOPRO_DIR);
 console.log('[admin] Videos directory: ' + VIDEOS_DIR);
+console.log('[admin] Secondary videos directory: ' + SECONDARY_VIDEOS_DIR);
 
 // =============================================================================
 // SECURITY HEADERS MIDDLEWARE
@@ -215,6 +217,7 @@ const staticAssetsCors = (req, res, next) => {
 
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/videos', staticAssetsCors, normalizeUnicodePath(VIDEOS_DIR), express.static(VIDEOS_DIR));
+app.use('/videos-secondary', staticAssetsCors, normalizeUnicodePath(SECONDARY_VIDEOS_DIR), express.static(SECONDARY_VIDEOS_DIR));
 app.use('/thumbnails', staticAssetsCors, normalizeUnicodePath(THUMBNAILS_DIR), express.static(THUMBNAILS_DIR));
 
 // =============================================================================

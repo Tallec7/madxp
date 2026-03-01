@@ -709,6 +709,14 @@ server {
         proxy_set_header X-Real-IP \$remote_addr;
     }
 
+    # Vidéos secondaires (variantes dual-display)
+    location /videos-secondary/ {
+        proxy_pass http://127.0.0.1:8080/videos-secondary/;
+        proxy_http_version 1.1;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+    }
+
     # Thumbnails (proxy vers admin-server pour normalisation Unicode)
     location /thumbnails/ {
         proxy_pass http://127.0.0.1:8080/thumbnails/;

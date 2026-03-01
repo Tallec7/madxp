@@ -5064,6 +5064,48 @@ describe('Screen resolution heartbeat pipeline (Pi → Central → Dashboard)', 
 });
 
 // ----------------------------------------------------------
+// Secondary display EDID pipeline (health status → dashboard)
+// The "État TV (HDMI-CEC)" debug section must also display EDID
+// info for the secondary screen (HDMI-A-2) in dual-display setups.
+// Pipeline: metrics.js getSecondaryDisplayInfo() → getHealthStatus()
+//           → dashboard site-debug-tab secondaryDisplayInfo
+// ----------------------------------------------------------
+describe('Secondary display EDID pipeline (health status)', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+  const metricsPath = path.join(repoRoot, 'raspberry/sync-agent/src/metrics.js');
+  const metricsContent = fs.readFileSync(metricsPath, 'utf8');
+  const debugTabPath = path.join(repoRoot, 'central-dashboard/src/app/features/sites/components/site-debug-tab/site-debug-tab.component.ts');
+  const debugTab = fs.readFileSync(debugTabPath, 'utf8');
+
+  it('metrics.js _findEdidPath must accept optional port filter parameter', () => {
+    // _findEdidPath must accept a portFilter to target HDMI-A-2 specifically
+    expect(metricsContent).toContain('_findEdidPath(portFilter)');
+    // Must filter hdmiEntries when portFilter is provided
+    expect(metricsContent).toContain('portFilter');
+  });
+
+  it('metrics.js getHealthStatus must include secondaryDisplayInfo from getSecondaryDisplayInfo()', () => {
+    // getSecondaryDisplayInfo must exist as a method
+    expect(metricsContent).toContain('async getSecondaryDisplayInfo()');
+    // Must target HDMI-A-2 specifically
+    expect(metricsContent).toContain("_findEdidPath('HDMI-A-2')");
+    // Must be called in getHealthStatus Promise.all
+    expect(metricsContent).toContain('this.getSecondaryDisplayInfo()');
+    // Must be included in getHealthStatus return
+    expect(metricsContent).toContain('secondaryDisplayInfo');
+  });
+
+  it('dashboard site-debug-tab must display secondaryDisplayInfo section', () => {
+    // Must reference secondaryDisplayInfo in the template
+    expect(debugTab).toContain('secondaryDisplayInfo');
+    // Must have the interface field
+    expect(debugTab).toContain('secondaryDisplayInfo?: DisplayInfo');
+    // Must use translation key for secondary display title
+    expect(debugTab).toContain("'debug.secondaryDisplay'");
+  });
+});
+
+// ----------------------------------------------------------
 // Orphan systemd service guard
 // Incident: 01/03/2026 — 4 .service files (score-bridge, playlist-manager,
 // ffmpeg-stream, vlc-kiosk) were deployed on Pi without corresponding
@@ -5590,6 +5632,86 @@ describe('Sync-agent startup directory permission preflight', () => {
     }).toEqual({
       checksVideosSecondary: true,
       writesTestFile: true,
+    });
+  });
+});
+
+// =============================================================================
+// E-41 secondary videos must be served by admin-server AND Nginx
+// Without these routes, /videos-secondary/ returns 404 or HTML, making the
+// secondary display unable to play variant videos (loop stays visible).
+// =============================================================================
+
+describe('E-41 secondary videos serving guard', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+
+  describe('admin-server must serve /videos-secondary', () => {
+    const adminServerPath = path.join(repoRoot, 'raspberry/admin/admin-server.js');
+    let content: string;
+    beforeAll(() => { content = fs.readFileSync(adminServerPath, 'utf8'); });
+
+    it('admin-server must import SECONDARY_VIDEOS_DIR from helpers', () => {
+      expect({
+        importsSecondary: /SECONDARY_VIDEOS_DIR/.test(content),
+      }).toEqual({
+        importsSecondary: true,
+      });
+    });
+
+    it('admin-server must register /videos-secondary static route', () => {
+      expect({
+        hasRoute: /app\.use\(['"]\/videos-secondary['"]/.test(content),
+      }).toEqual({
+        hasRoute: true,
+      });
+    });
+  });
+
+  describe('helpers must export SECONDARY_VIDEOS_DIR', () => {
+    const helpersPath = path.join(repoRoot, 'raspberry/admin/helpers.js');
+    let content: string;
+    beforeAll(() => { content = fs.readFileSync(helpersPath, 'utf8'); });
+
+    it('helpers must define SECONDARY_VIDEOS_DIR pointing to videos-secondary', () => {
+      expect({
+        definesSec: /SECONDARY_VIDEOS_DIR\s*=\s*.*videos-secondary/.test(content),
+        exportsSec: /SECONDARY_VIDEOS_DIR/.test(content.split('module.exports')[1] || ''),
+      }).toEqual({
+        definesSec: true,
+        exportsSec: true,
+      });
+    });
+  });
+
+  describe('Nginx config must serve /videos-secondary', () => {
+    const nginxConfPath = path.join(repoRoot, 'raspberry/config/nginx/neopro-hls.conf');
+    let content: string;
+    beforeAll(() => { content = fs.readFileSync(nginxConfPath, 'utf8'); });
+
+    it('Nginx must have location /videos-secondary/ proxying to admin-server', () => {
+      expect({
+        hasLocation: /location\s+\/videos-secondary\//.test(content),
+        proxiesToAdmin: /proxy_pass\s+http:\/\/127\.0\.0\.1:8080\/videos-secondary\//.test(content),
+      }).toEqual({
+        hasLocation: true,
+        proxiesToAdmin: true,
+      });
+    });
+  });
+
+  describe('install.sh must include /videos-secondary location', () => {
+    const installPath = path.join(repoRoot, 'raspberry/install.sh');
+    let content: string;
+    beforeAll(() => { content = fs.readFileSync(installPath, 'utf8'); });
+
+    it('install.sh must generate Nginx location for /videos-secondary/', () => {
+      expect({
+        hasLocation: /location\s+\/videos-secondary\//.test(content),
+        proxiesToAdmin: /proxy_pass\s+http:\/\/127\.0\.0\.1:8080\/videos-secondary\//.test(content),
+      }).toEqual({
+        hasLocation: true,
+        proxiesToAdmin: true,
+      });
     });
   });
 });

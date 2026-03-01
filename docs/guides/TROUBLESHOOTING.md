@@ -4409,6 +4409,60 @@ sudo systemctl restart neopro-sync-agent
 
 ---
 
+## Vidéo secondaire ne se lance pas (boucle reste visible) — ADR-033
+
+L'écran secondaire reste sur la boucle quand on clique une vidéo manuelle depuis la télécommande, alors que l'écran principal joue bien la vidéo.
+
+### Symptôme
+
+- L'écran principal joue la vidéo manuellement déclenchée ✅
+- L'écran secondaire continue d'afficher la boucle ❌
+- Les logs du secondary montrent `tv player : error playing manual video`
+- La télécommande affiche bien le badge "2nd" (variants présentes dans la config)
+
+### Cause racine (corrigée en v3.87.4)
+
+Ni Nginx ni le admin-server (port 8080) ne servaient le dossier `/videos-secondary/`. Quand le secondary display tentait de charger `videos-secondary/xxx.mp4`, Nginx retournait `index.html` (fallback SPA Angular) au lieu du fichier vidéo. Le `<video>.play()` échouait silencieusement, le catch handler cachait les overlays, et la boucle restait visible.
+
+### Diagnostic
+
+```bash
+# 1. Tester le serving de la vidéo secondaire
+curl -sI http://localhost/videos-secondary/category/video.mp4 | head -5
+# Attendu: HTTP/1.1 200 OK, Content-Type: video/mp4
+# Bug: HTTP/1.1 200 OK, Content-Type: text/html (= retourne index.html)
+
+# 2. Vérifier que le fichier existe physiquement
+ls -la /home/pi/neopro/videos-secondary/*/
+
+# 3. Vérifier la config Nginx
+sudo nginx -T 2>/dev/null | grep -A3 'videos-secondary'
+# Attendu: location /videos-secondary/ avec proxy_pass vers 8080
+
+# 4. Vérifier le admin-server
+curl -sI http://localhost:8080/videos-secondary/category/video.mp4 | head -5
+```
+
+### Solution immédiate
+
+```bash
+# Après mise à jour OTA (le code est déjà corrigé) :
+sudo nginx -t && sudo systemctl reload nginx
+sudo systemctl restart neopro-admin
+```
+
+### Smoke tests de régression
+
+5 smoke tests (section E-41 dans `smoke.test.ts`) :
+
+1. `admin-server must import SECONDARY_VIDEOS_DIR from helpers`
+2. `admin-server must register /videos-secondary static route`
+3. `helpers must define SECONDARY_VIDEOS_DIR pointing to videos-secondary`
+4. `Nginx must have location /videos-secondary/ proxying to admin-server`
+5. `install.sh must generate Nginx location for /videos-secondary/`
+
+---
+
 ## HDMI non détecté par le watchdog (v3.84+)
 
 Le watchdog ne réagit pas au branchement/débranchement d'un écran HDMI.
