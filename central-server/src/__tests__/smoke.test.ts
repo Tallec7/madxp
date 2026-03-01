@@ -5714,4 +5714,34 @@ describe('E-41 secondary videos serving guard', () => {
       });
     });
   });
+
+  describe('deploySecondaryVariant must use finalFilename for path', () => {
+    const deployVideoPath = path.join(repoRoot, 'raspberry/sync-agent/src/commands/deploy-video.js');
+    let content: string;
+    beforeAll(() => { content = fs.readFileSync(deployVideoPath, 'utf8'); });
+
+    it('secondaryRelativePath must NOT use buildRelativePath directly (would keep primary filename)', () => {
+      // The old bug: secondaryRelativePath = relativePath.replace(/^videos\//, 'videos-secondary/')
+      // This copies the PRIMARY video filename into the secondary path, but the secondary
+      // file has its own name (finalFilename). The path must use finalFilename.
+      const lines = content.split('\n');
+      const secondaryPathLine = lines.find(l => l.includes('secondaryRelativePath') && l.includes('=') && !l.trim().startsWith('//'));
+      expect({
+        // Must NOT contain relativePath.replace — that was the bug
+        usesRelativePathReplace: secondaryPathLine ? /relativePath\.replace/.test(secondaryPathLine) : false,
+      }).toEqual({
+        usesRelativePathReplace: false,
+      });
+    });
+
+    it('secondaryRelativePath must reference finalFilename (the actual downloaded filename)', () => {
+      const lines = content.split('\n');
+      const secondaryPathLine = lines.find(l => l.includes('secondaryRelativePath') && l.includes('=') && !l.trim().startsWith('//'));
+      expect({
+        usesFinalFilename: secondaryPathLine ? /finalFilename/.test(secondaryPathLine) : false,
+      }).toEqual({
+        usesFinalFilename: true,
+      });
+    });
+  });
 });

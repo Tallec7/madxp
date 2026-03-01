@@ -298,7 +298,12 @@ class VideoDeployHandler {
     const configuration = await safeReadConfig(configPath);
 
     const relativePath = buildRelativePath(tvVideoData);
-    const secondaryRelativePath = relativePath.replace(/^videos\//, 'videos-secondary/');
+    // Build secondary path using the ACTUAL downloaded filename (finalFilename),
+    // not the primary video's filename — they differ when the secondary variant
+    // was uploaded with its own original name (e.g. "Joueur_76_entree_1.mp4"
+    // vs primary "Joueur 94 entrée (3).mp4"). ADR-033 fix.
+    const secondaryDir = path.dirname(relativePath).replace(/^videos/, 'videos-secondary');
+    const secondaryRelativePath = secondaryDir + '/' + finalFilename;
 
     // Find the video entry in categories and add variants.secondary
     if (configuration.categories) {
