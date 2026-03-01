@@ -1,3 +1,9 @@
+## [3.88.1](https://github.com/Tallec7/neopro/compare/v3.88.0...v3.88.1) (2026-03-01)
+
+### Bug Fixes
+
+- **sync-agent:** use actual filename for secondary variant path in config (ADR-033) ([7a5c801](https://github.com/Tallec7/neopro/commit/7a5c8019bb7bd165d3974d66cd6e35e737ad5ebb))
+
 # [3.88.0](https://github.com/Tallec7/neopro/compare/v3.87.1...v3.88.0) (2026-03-01)
 
 ### Features
