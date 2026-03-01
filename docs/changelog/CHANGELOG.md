@@ -1,3 +1,9 @@
+## [3.84.7](https://github.com/Tallec7/neopro/compare/v3.84.6...v3.84.7) (2026-03-01)
+
+### Bug Fixes
+
+- **tv:** object-fit contain — show full video content without cropping ([83f78dc](https://github.com/Tallec7/neopro/commit/83f78dc7f3076c215deab024660ce1ab1c02fdad))
+
 ## [3.84.6](https://github.com/Tallec7/neopro/compare/v3.84.5...v3.84.6) (2026-03-01)
 
 ### Bug Fixes
