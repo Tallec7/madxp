@@ -1,3 +1,9 @@
+## [3.84.8](https://github.com/Tallec7/neopro/compare/v3.84.7...v3.84.8) (2026-03-01)
+
+### Bug Fixes
+
+- **tv:** video cropping on PC — object-fit cover→contain, smoke tests, docs ([8e26373](https://github.com/Tallec7/neopro/commit/8e2637374558ff530d13e18cd3a9864da07db1fd))
+
 ## [3.84.7](https://github.com/Tallec7/neopro/compare/v3.84.6...v3.84.7) (2026-03-01)
 
 ### Bug Fixes
