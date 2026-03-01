@@ -701,6 +701,23 @@ async function attemptInternetRecovery() {
 
     } else if (attempt === 5) {
       // Phase 4: Nuclear - USB WiFi driver reload (modprobe) with verification
+      // GUARD: modprobe kills the USB WiFi dongle (RTL8192EU) — only allow after 5 min of sustained failure.
+      // This prevents deploy-triggered transient disconnects from escalating to hardware-level resets.
+      const MIN_OUTAGE_FOR_MODPROBE = 5 * 60 * 1000; // 5 minutes
+      const outageDuration = state.internet.recoveryStartedAt ? Date.now() - state.internet.recoveryStartedAt : 0;
+      if (outageDuration < MIN_OUTAGE_FOR_MODPROBE) {
+        logger.warn('NetworkWatchdog: Phase 4 (modprobe) SKIPPED — outage too recent', {
+          outageDurationSec: Math.round(outageDuration / 1000),
+          minRequiredSec: MIN_OUTAGE_FOR_MODPROBE / 1000,
+        });
+        // Retry Phase 3 (wpa_supplicant restart) instead — much safer
+        await restartWpaSupplicantWlan1();
+        await sleep(5000);
+        await execAsync('sudo dhclient wlan1 2>/dev/null || true');
+        await sleep(3000);
+        // Don't return — fall through to health check below
+        logger.warn('NetworkWatchdog: Phase 4 demoted to wpa_supplicant restart');
+      } else {
       logger.warn('NetworkWatchdog: Phase 4 - USB WiFi driver reload (modprobe)');
 
       // Save USB device path BEFORE modprobe -r (needed for power-cycle fallback)
@@ -758,17 +775,33 @@ async function attemptInternetRecovery() {
         await execAsync('sudo wpa_cli -i wlan1 reconfigure 2>/dev/null || true');
         await sleep(3000);
       }
+      } // end of outageDuration >= MIN_OUTAGE_FOR_MODPROBE
 
     } else {
       // Phase 5: USB power-cycle — last resort hardware reset
-      logger.warn('NetworkWatchdog: Phase 5 - USB power-cycle (unbind/rebind)');
-      await attemptUsbPowerCycleAll();
-      await sleep(5000);
-      // Try to reconnect after power-cycle
-      await restartWpaSupplicantWlan1();
-      await sleep(5000);
-      await execAsync('sudo dhclient wlan1 2>/dev/null || true');
-      await sleep(3000);
+      // GUARD: Same time-based protection as modprobe — USB unbind kills the dongle permanently
+      const MIN_OUTAGE_FOR_USB_CYCLE = 5 * 60 * 1000; // 5 minutes
+      const outageDurationPhase5 = state.internet.recoveryStartedAt ? Date.now() - state.internet.recoveryStartedAt : 0;
+      if (outageDurationPhase5 < MIN_OUTAGE_FOR_USB_CYCLE) {
+        logger.warn('NetworkWatchdog: Phase 5 (USB power-cycle) SKIPPED — outage too recent', {
+          outageDurationSec: Math.round(outageDurationPhase5 / 1000),
+          minRequiredSec: MIN_OUTAGE_FOR_USB_CYCLE / 1000,
+        });
+        // Retry gentle recovery instead
+        await execAsync('sudo wpa_cli -i wlan1 reconfigure 2>/dev/null || true');
+        await sleep(5000);
+        await execAsync('sudo dhclient wlan1 2>/dev/null || true');
+        await sleep(3000);
+      } else {
+        logger.warn('NetworkWatchdog: Phase 5 - USB power-cycle (unbind/rebind)');
+        await attemptUsbPowerCycleAll();
+        await sleep(5000);
+        // Try to reconnect after power-cycle
+        await restartWpaSupplicantWlan1();
+        await sleep(5000);
+        await execAsync('sudo dhclient wlan1 2>/dev/null || true');
+        await sleep(3000);
+      } // end of outageDuration >= MIN_OUTAGE_FOR_USB_CYCLE
     }
 
     // Vérification finale

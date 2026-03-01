@@ -266,13 +266,14 @@ ssh ${RASPBERRY_USER}@${RASPBERRY_IP} "
         sudo chmod 644 ${RASPBERRY_DIR}/release.json
     fi
 
-    # S'assurer que le WiFi client (wlan1) conserve sa configuration et redémarre
+    # Vérifier le WiFi client (wlan1) SANS le redémarrer
+    # IMPORTANT: Ne JAMAIS restart wpa_supplicant@wlan1 pendant un deploy !
+    # Le RTL8192EU met 15-30s pour WPA auth + DHCP, et le NetworkWatchdog
+    # peut escalader jusqu'à modprobe -r / USB unbind → dongle WiFi mort.
     if ip link show wlan1 >/dev/null 2>&1 && [ -f /etc/wpa_supplicant/wpa_supplicant.conf ]; then
         sudo ln -sf /etc/wpa_supplicant/wpa_supplicant.conf /etc/wpa_supplicant/wpa_supplicant-wlan1.conf
         sudo systemctl enable wpa_supplicant@wlan1.service >/dev/null 2>&1 || true
-        sudo systemctl restart wpa_supplicant@wlan1.service >/dev/null 2>&1 || true
-        sudo dhcpcd wlan1 >/dev/null 2>&1 || true
-        echo 'Service WiFi client (wlan1) vérifié'
+        echo 'Service WiFi client (wlan1) symlink vérifié (pas de restart)'
     fi
 
     # Installation des scripts runtime (compress/video, wifi, backup, etc.)
@@ -393,7 +394,12 @@ ssh ${RASPBERRY_USER}@${RASPBERRY_IP} "
     fi
 
     # Redémarrer sync-agent si installé
+    # IMPORTANT: Écrire une grace period AVANT le restart pour que le NetworkWatchdog
+    # ne déclenche pas de fausse cascade de recovery pendant le redémarrage post-deploy
     if systemctl list-unit-files neopro-sync-agent.service >/dev/null 2>&1; then
+        GRACE_UNTIL=\$(( \$(date +%s%3N) + 120000 ))
+        echo \"{\\\"internet\\\":\${GRACE_UNTIL},\\\"hotspot\\\":0}\" > /tmp/neopro-watchdog-grace.json
+        echo 'Grace period NetworkWatchdog: 120s (protège wlan1 post-deploy)'
         sudo systemctl restart neopro-sync-agent &
     fi
 
