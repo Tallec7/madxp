@@ -1,3 +1,9 @@
+# [3.86.0](https://github.com/Tallec7/neopro/compare/v3.85.0...v3.86.0) (2026-03-01)
+
+### Features
+
+- **home:** Angular HomeComponent landing page on neopro.local (US-23.7.2) ([9b9411d](https://github.com/Tallec7/neopro/commit/9b9411d2f3a985285b56ff001086217836e24129))
+
 # [3.85.0](https://github.com/Tallec7/neopro/compare/v3.84.9...v3.85.0) (2026-03-01)
 
 ### Features
