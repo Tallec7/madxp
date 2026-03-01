@@ -1,3 +1,20 @@
+## [3.84.6](https://github.com/Tallec7/neopro/compare/v3.84.5...v3.84.6) (2026-03-01)
+
+### Bug Fixes
+
+- **hotspot:** fix WiFi boot race condition in hotspot-optimizer — `count_networks_on_channel()` launched a NEW `iwlist scan` for each of the 5 calls (3 channels × find_best + 2 direct). RTL8192EU is single-radio: each scan drops carrier for ~6s while sweeping channels 1-13. After 2 consecutive scans, the Livebox considers the client gone → carrier lost → 2-3 min outage at every boot. Fixed by caching scan results in `CACHED_SCAN` variable (1 scan, parsed 5 times with grep). Added `wait_for_wlan1_ready()` to poll for wlan1 IP before scanning (max 30s), preventing scans before WPA auth + DHCP completes.
+
+### Tests
+
+- **smoke:** add 4 regression guards — `count_networks_on_channel` must NOT call `iwlist scan` (cached pattern), `CACHED_SCAN` + `perform_single_scan` must exist, `wait_for_wlan1_ready` must precede scanning, deploy copy must match source
+
+### Documentation
+
+- **claude:** add "NE JAMAIS FAIRE" rule for multiple `iwlist scan` on wlan1 in hotspot-optimizer.sh
+- **troubleshooting:** update "Auto-optimisation canal WiFi" section with cached scan pattern and wlan1 wait
+- **wifi-guide:** update `neopro-hotspot-optimizer` service description with single-scan constraint
+- **changelog:** document v3.84.6 hotspot optimizer cached scan fix
+
 ## [3.84.5](https://github.com/Tallec7/neopro/compare/v3.84.4...v3.84.5) (2026-03-01)
 
 ### Bug Fixes

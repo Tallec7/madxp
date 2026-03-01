@@ -179,6 +179,7 @@
 | IMP-PI-31 | OTA auto-installe edid-decode sur Pi existants (requiredAptPackages + diagnose-pi)                                      | Livré      | `update-software.js`, `diagnose-pi.sh`                          | Fév 2026     |
 | IMP-PI-32 | Fix \_findEdidPath sysfs (stat.size=0 → readFileSync.length) — débloque EDID enrichi                                    | Livré      | `metrics.js`, `hdmi.service.js`                                 | Fév 2026     |
 | IMP-PI-33 | Fix crash loop GPU Chromium après OTA deploy — root cause: `ExecStop=pkill -9` dans systemd bypasse le trap handler V3D | Production | `neopro-kiosk.service`, `kiosk-watchdog.sh`, `deploy-remote.sh` | Fév 2026     |
+| IMP-PI-34 | Hotspot optimizer : scan unique + cache (`CACHED_SCAN`) — élimine perte carrier wlan1 RTL8192EU au boot (5 scans → 1)   | Production | `hotspot-optimizer.sh`                                          | Mars 2026    |
 
 ---
 

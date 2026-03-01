@@ -32,6 +32,11 @@ CONGESTION_THRESHOLD=3
 HOTSPOT_TXPOWER=15
 TXPOWER_CONF="/home/pi/neopro/config/hotspot-txpower.conf"
 
+# Cached scan results — ONE scan, parsed multiple times.
+# RTL8192EU is single-radio: each iwlist scan drops carrier for ~6s.
+# Previous code ran 5 scans in ~25s → guaranteed carrier loss + 2-3 min outage.
+CACHED_SCAN=""
+
 # Detect the best interface for WiFi scanning (NOT the AP interface)
 detect_scan_interface() {
     # Prefer wlan1 (USB WiFi dongle, used as client for internet)
@@ -44,6 +49,26 @@ detect_scan_interface() {
     # No alternative interface — we must stop hostapd briefly to scan on wlan0
     SCAN_INTERFACE="wlan0"
     log "WARNING: No wlan1 available — will briefly stop hostapd to scan on wlan0"
+    return 1
+}
+
+# Wait for wlan1 to obtain an IP address before scanning.
+# RTL8192EU USB dongle takes 15-30s for WPA auth + DHCP at boot.
+# Scanning before the connection is established has no benefit and
+# can prevent the WPA association from completing.
+wait_for_wlan1_ready() {
+    local max_wait=30
+    local waited=0
+    log "Waiting for wlan1 to obtain IP (max ${max_wait}s)..."
+    while [ $waited -lt $max_wait ]; do
+        if ip addr show wlan1 2>/dev/null | grep -q "inet "; then
+            log "wlan1 is ready (IP obtained after ${waited}s)"
+            return 0
+        fi
+        sleep 2
+        waited=$((waited + 2))
+    done
+    log "WARNING: wlan1 did not obtain IP after ${max_wait}s — scanning may disrupt connection"
     return 1
 }
 
@@ -69,11 +94,24 @@ get_wlan1_channel() {
     fi
 }
 
-# Count networks on a specific channel
-# Uses SCAN_INTERFACE (wlan1 preferred) to avoid disrupting the AP on wlan0
+# Perform a SINGLE WiFi scan and cache results in CACHED_SCAN.
+# All subsequent channel queries parse the cache — no additional scans.
+perform_single_scan() {
+    log "Performing single WiFi scan on $SCAN_INTERFACE..."
+    CACHED_SCAN=$(iwlist "$SCAN_INTERFACE" scan 2>/dev/null)
+    if [ -z "$CACHED_SCAN" ]; then
+        log "WARNING: Scan returned no results"
+        return 1
+    fi
+    log "Scan completed successfully"
+    return 0
+}
+
+# Count networks on a specific channel from CACHED scan results.
+# Does NOT trigger a new scan — parses CACHED_SCAN populated by perform_single_scan().
 count_networks_on_channel() {
     local channel=$1
-    local count=$(iwlist "$SCAN_INTERFACE" scan 2>/dev/null | grep -E "Channel:$channel\$" | wc -l)
+    local count=$(echo "$CACHED_SCAN" | grep -E "Channel:$channel\$" | wc -l)
     echo "$count"
 }
 
@@ -188,8 +226,12 @@ main() {
         must_stop_hostapd=true
     fi
 
-    # Brief delay to let WiFi hardware initialize
-    sleep 2
+    # Wait for wlan1 to fully connect before scanning (WPA auth + DHCP).
+    # RTL8192EU single-radio USB dongle drops carrier during iwlist scan,
+    # so we wait for a stable connection to survive the single scan.
+    if [ "$SCAN_INTERFACE" = "wlan1" ]; then
+        wait_for_wlan1_ready
+    fi
 
     # Scan for networks
     log "Scanning WiFi environment on $SCAN_INTERFACE..."
@@ -201,14 +243,15 @@ main() {
         sleep 2
     fi
 
-    # Perform scan
-    iwlist "$SCAN_INTERFACE" scan > /dev/null 2>&1
-    sleep 1
+    # Perform ONE scan and cache results — count_networks_on_channel() and
+    # find_best_channel() parse the cache instead of triggering new scans.
+    # Previous code ran 5 scans in ~25s, each disconnecting wlan1 for ~6s.
+    perform_single_scan
 
     # Detect wlan1 channel for self-interference check
     wlan1_ch=$(get_wlan1_channel)
 
-    # Count networks on current channel
+    # Count networks on current channel (from cached scan — no new scan)
     current_count=$(count_networks_on_channel "$current_channel")
     log "Networks on current channel $current_channel: $current_count"
 

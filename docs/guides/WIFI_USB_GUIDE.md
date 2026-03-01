@@ -591,12 +591,12 @@ Si la connexion cloud est perdue 30 secondes après un changement de configurati
 
 ### Services systemd associés
 
-| Service                    | Rôle                                                 | Logs                                    |
-| -------------------------- | ---------------------------------------------------- | --------------------------------------- |
-| `neopro-usb-wifi`          | Init wlan1 au boot (avant sync-agent)                | `journalctl -u neopro-usb-wifi`         |
-| `neopro-sync-agent`        | Watchdog réseau (wlan0 + wlan1 + cloud)              | `journalctl -u neopro-sync-agent`       |
-| `neopro-hotspot-watchdog`  | Surveillance dédiée hostapd                          | `/var/log/neopro-hotspot-watchdog.log`  |
-| `neopro-hotspot-optimizer` | Optimisation canal au boot (anti-interférence wlan1) | `/var/log/neopro-hotspot-optimizer.log` |
+| Service                    | Rôle                                                                                  | Logs                                    |
+| -------------------------- | ------------------------------------------------------------------------------------- | --------------------------------------- |
+| `neopro-usb-wifi`          | Init wlan1 au boot (avant sync-agent)                                                 | `journalctl -u neopro-usb-wifi`         |
+| `neopro-sync-agent`        | Watchdog réseau (wlan0 + wlan1 + cloud)                                               | `journalctl -u neopro-sync-agent`       |
+| `neopro-hotspot-watchdog`  | Surveillance dédiée hostapd                                                           | `/var/log/neopro-hotspot-watchdog.log`  |
+| `neopro-hotspot-optimizer` | Optimisation canal au boot (scan unique + cache, attente wlan1 IP, anti-interférence) | `/var/log/neopro-hotspot-optimizer.log` |
 
 ---
 

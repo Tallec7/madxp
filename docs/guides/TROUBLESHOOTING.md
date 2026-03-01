@@ -3527,16 +3527,26 @@ Le `hotspot-optimizer.sh` optimise automatiquement le canal du hotspot au boot. 
 
 **Seuils (v3.79+) :** Congestion ≥ 3 réseaux sur le canal actuel, amélioration ≥ 2 réseaux vs meilleur canal. (Avant v3.79 : ≥5 et ≥3, ce qui ne déclenchait jamais le switch dans les environnements modérément congestionnés.)
 
+**Scan unique (v3.84.6+) :** Le scan WiFi est effectué UNE SEULE fois au boot, puis les résultats sont mis en cache dans la variable `CACHED_SCAN`. Toutes les analyses de canal (1, 6, 11) parsent ce cache avec `grep` — aucun scan supplémentaire n'est déclenché. C'est critique car le RTL8192EU est single-radio : chaque `iwlist scan` coupe le carrier pendant ~6s. Avant cette correction, 5 scans consécutifs causaient une perte de carrier de 2-3 minutes à chaque boot.
+
+**Attente wlan1 (v3.84.6+) :** Avant de scanner, le script attend que wlan1 obtienne une adresse IP (polling `ip addr show wlan1` toutes les 2s, max 30s). Le RTL8192EU met 15-30s pour WPA auth + DHCP au boot — scanner avant déstabilise la connexion.
+
 **Diagnostic :**
 
 ```bash
 # Vérifier si l'auto-optimisation a agi
-journalctl -u neopro-sync-agent --since "1 hour ago" | grep -i "hotspot channel"
+cat /var/log/neopro-hotspot-optimizer.log | tail -30
+
+# Vérifier le scan unique (doit afficher "Performing single WiFi scan" UNE seule fois)
+grep "single WiFi scan" /var/log/neopro-hotspot-optimizer.log
+
+# Vérifier l'attente wlan1 (doit afficher "wlan1 is ready")
+grep "wlan1 is ready" /var/log/neopro-hotspot-optimizer.log
 
 # Canal actuel
 grep "^channel=" /etc/hostapd/hostapd.conf
 
-# Scan des réseaux par canal (utiliser wlan1, PAS wlan0 qui est l'AP !)
+# Scan manuel des réseaux par canal (utiliser wlan1, PAS wlan0 qui est l'AP !)
 sudo iwlist wlan1 scan 2>/dev/null | grep "Channel:" | sort | uniq -c | sort -rn
 ```
 
