@@ -1,3 +1,9 @@
+## [3.86.4](https://github.com/Tallec7/neopro/compare/v3.86.3...v3.86.4) (2026-03-01)
+
+### Bug Fixes
+
+- **deploy:** update nginx config during remote deploy (missing /admin/ proxy) ([838f8a0](https://github.com/Tallec7/neopro/commit/838f8a0c4dcde4dc1cfd7591bf0d2d95bca96a25))
+
 ## [3.86.3](https://github.com/Tallec7/neopro/compare/v3.86.2...v3.86.3) (2026-03-01)
 
 ### Bug Fixes
