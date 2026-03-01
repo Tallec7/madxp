@@ -1,3 +1,9 @@
+## [3.89.2](https://github.com/Tallec7/neopro/compare/v3.89.1...v3.89.2) (2026-03-01)
+
+### Bug Fixes
+
+- **dual-display:** cover manual→manual transition gap on slave (ADR-034) ([ee878fc](https://github.com/Tallec7/neopro/commit/ee878fc8df1dca89841f4af208204ad4688f60ac))
+
 ## [3.89.1](https://github.com/Tallec7/neopro/compare/v3.89.0...v3.89.1) (2026-03-01)
 
 ### Bug Fixes
