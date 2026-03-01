@@ -1,3 +1,9 @@
+## [3.86.3](https://github.com/Tallec7/neopro/compare/v3.86.2...v3.86.3) (2026-03-01)
+
+### Bug Fixes
+
+- **deploy:** secondary variant enrichment pipeline — defense-in-depth ([b0a1228](https://github.com/Tallec7/neopro/commit/b0a1228070f250e449f51d6dd67ea7cf4de0d878))
+
 ## [3.86.2](https://github.com/Tallec7/neopro/compare/v3.86.1...v3.86.2) (2026-03-01)
 
 ### Bug Fixes
