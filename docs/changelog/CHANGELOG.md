@@ -1,3 +1,9 @@
+## [3.86.2](https://github.com/Tallec7/neopro/compare/v3.86.1...v3.86.2) (2026-03-01)
+
+### Bug Fixes
+
+- **admin:** add nginx proxy blocks + HTML-as-JSON defense + demo safety ([b3cacf4](https://github.com/Tallec7/neopro/commit/b3cacf429b996c06cd8312aef40a71f21070db0c))
+
 ## [3.87.0](https://github.com/Tallec7/neopro/compare/v3.86.1...v3.87.0) (2026-03-01)
 
 ### Bug Fixes
