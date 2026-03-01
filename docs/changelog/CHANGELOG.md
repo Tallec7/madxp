@@ -1,3 +1,9 @@
+## [3.88.2](https://github.com/Tallec7/neopro/compare/v3.88.1...v3.88.2) (2026-03-01)
+
+### Bug Fixes
+
+- **dual-display:** fix slave race condition — stale tv-loop-state killed manual video (ADR-033) ([d187501](https://github.com/Tallec7/neopro/commit/d187501b1aefb5a193fdc0fc09562b370ed841a1))
+
 ## [3.88.1](https://github.com/Tallec7/neopro/compare/v3.88.0...v3.88.1) (2026-03-01)
 
 ### Bug Fixes
