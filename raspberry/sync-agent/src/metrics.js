@@ -19,6 +19,8 @@ class MetricsCollector {
     // Cache EDID — l'écran change rarement, TTL 5 min
     this._displayInfoCache = null;
     this._displayInfoCacheTime = 0;
+    this._secondaryDisplayInfoCache = null;
+    this._secondaryDisplayInfoCacheTime = 0;
     this._DISPLAY_CACHE_TTL = 300000; // 5 minutes
   }
 
@@ -631,15 +633,18 @@ class MetricsCollector {
   /**
    * Trouve le chemin du fichier EDID de l'écran HDMI connecté.
    * Cherche dans /sys/class/drm/ les connecteurs HDMI avec un EDID non vide.
+   * @param {string} [portFilter] - Filtre optionnel sur le port (ex: 'HDMI-A-2' pour le secondaire)
    * @returns {string|null} Chemin vers le fichier EDID ou null
    */
-  _findEdidPath() {
+  _findEdidPath(portFilter) {
     try {
       const drmDir = '/sys/class/drm';
       if (!fs.existsSync(drmDir)) return null;
 
       const entries = fs.readdirSync(drmDir);
-      const hdmiEntries = entries.filter(e => e.includes('HDMI'));
+      const hdmiEntries = portFilter
+        ? entries.filter(e => e.includes(portFilter))
+        : entries.filter(e => e.includes('HDMI'));
 
       for (const entry of hdmiEntries) {
         const edidPath = `${drmDir}/${entry}/edid`;
@@ -822,6 +827,91 @@ class MetricsCollector {
 
     this._displayInfoCache = displayInfo;
     this._displayInfoCacheTime = now;
+    return displayInfo;
+  }
+
+  /**
+   * Récupère les informations EDID de l'écran secondaire (HDMI-A-2).
+   * Même structure que getDisplayInfo() mais filtrée sur le second port HDMI.
+   * @returns {Promise<{connected: boolean, manufacturer: string|null, model: string|null, serial: string|null, resolution: string|null, display_type: string, detection_method: string, edid_detailed: object|null}>}
+   */
+  async getSecondaryDisplayInfo() {
+    const now = Date.now();
+    if (this._secondaryDisplayInfoCache && (now - this._secondaryDisplayInfoCacheTime) < this._DISPLAY_CACHE_TTL) {
+      return this._secondaryDisplayInfoCache;
+    }
+
+    const displayInfo = {
+      connected: false,
+      manufacturer: null,
+      model: null,
+      serial: null,
+      resolution: null,
+      display_type: 'unknown',
+      display_category: null,
+      detection_method: 'none',
+      edid_detailed: null,
+    };
+
+    try {
+      const edidPath = this._findEdidPath('HDMI-A-2');
+
+      if (edidPath) {
+        displayInfo.connected = true;
+        try {
+          const edidBuffer = fs.readFileSync(edidPath);
+          const parsed = this._parseEdid(edidBuffer);
+          displayInfo.manufacturer = parsed.manufacturer;
+          displayInfo.model = parsed.model;
+          displayInfo.serial = parsed.serial;
+          displayInfo.resolution = parsed.resolution;
+          displayInfo.detection_method = 'edid_raw';
+
+          if (parsed.hasCeaExtension) {
+            displayInfo.display_type = 'tv';
+          }
+        } catch (error) {
+          logger.debug('Could not parse secondary EDID file:', error.message);
+        }
+
+        // Enrichir avec edid-decode si disponible
+        try {
+          const detailed = await this._runEdidDecode(edidPath);
+          if (detailed) {
+            displayInfo.edid_detailed = detailed;
+          }
+        } catch {
+          // edid-decode non disponible ou erreur — on continue avec le parsing basique
+        }
+      } else {
+        try {
+          const drmDir = '/sys/class/drm';
+          if (fs.existsSync(drmDir)) {
+            const entries = fs.readdirSync(drmDir);
+            const hdmiEntry = entries.find(e => e.includes('HDMI-A-2'));
+            if (hdmiEntry) {
+              displayInfo.detection_method = 'drm_status';
+              const statusPath = `${drmDir}/${hdmiEntry}/status`;
+              try {
+                const status = fs.readFileSync(statusPath, 'utf8').trim();
+                if (status === 'connected') {
+                  displayInfo.connected = true;
+                }
+              } catch {
+                // Fichier status inaccessible
+              }
+            }
+          }
+        } catch {
+          // Pas de DRM disponible
+        }
+      }
+    } catch (error) {
+      logger.warn('Error getting secondary display info:', error.message);
+    }
+
+    this._secondaryDisplayInfoCache = displayInfo;
+    this._secondaryDisplayInfoCacheTime = now;
     return displayInfo;
   }
 
@@ -1118,7 +1208,7 @@ class MetricsCollector {
    */
   async getHealthStatus() {
     try {
-      const [metrics, gpuInfo, services, systemInfo, hdmiCecStatus, displayInfo, fanStatus] = await Promise.all([
+      const [metrics, gpuInfo, services, systemInfo, hdmiCecStatus, displayInfo, fanStatus, secondaryDisplayInfo] = await Promise.all([
         this.collectAll(),
         this.getGpuInfo(),
         this.getServicesStatus(),
@@ -1126,6 +1216,7 @@ class MetricsCollector {
         this.getHdmiCecStatus(),
         this.getDisplayInfo(),
         this.getFanStatus(),
+        this.getSecondaryDisplayInfo(),
       ]);
 
       // Affiner le type d'écran en croisant EDID + CEC
@@ -1144,6 +1235,13 @@ class MetricsCollector {
       displayInfo.display_category = this._inferDisplayCategory(
         displayInfo.model, displayInfo.display_type, displayInfo.edid_detailed
       );
+
+      // Inférer la catégorie du secondaire (pas de CEC — CEC = primaire uniquement sur Pi)
+      if (secondaryDisplayInfo.connected) {
+        secondaryDisplayInfo.display_category = this._inferDisplayCategory(
+          secondaryDisplayInfo.model, secondaryDisplayInfo.display_type, secondaryDisplayInfo.edid_detailed
+        );
+      }
 
       // Calculer un score de santé global
       let healthScore = 100;
@@ -1286,6 +1384,7 @@ class MetricsCollector {
         metrics,
         hdmiCecStatus,
         displayInfo,
+        secondaryDisplayInfo: secondaryDisplayInfo.connected ? secondaryDisplayInfo : undefined,
         system: {
           hostname: systemInfo?.hostname,
           os: systemInfo?.os,

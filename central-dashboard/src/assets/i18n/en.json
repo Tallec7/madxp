@@ -786,6 +786,7 @@
     "displayConnected": "Display connected",
     "displayUnknown": "Unknown",
     "displayDetected": "Display detected",
+    "secondaryDisplay": "Secondary Display (HDMI-2)",
     "displayTypeTv": "TV",
     "displayTypeMonitor": "PC Monitor",
     "displayTypeProjector": "Projector",

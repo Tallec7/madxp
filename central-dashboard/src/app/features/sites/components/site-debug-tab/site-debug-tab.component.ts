@@ -110,6 +110,7 @@ interface HealthStatus {
   } | null;
   hdmiCecStatus?: HdmiCecStatus;
   displayInfo?: DisplayInfo;
+  secondaryDisplayInfo?: DisplayInfo;
   system: {
     hostname: string;
     os: string;
@@ -711,6 +712,61 @@ interface WizardStep {
               </div>
               <div class="cec-error" *ngIf="healthStatus.hdmiCecStatus.error && healthStatus.displayInfo?.display_type !== 'monitor'">
                 <span class="metric-hint metric-warning">⚠️ {{ healthStatus.hdmiCecStatus.error }}</span>
+              </div>
+            </div>
+
+            <!-- Secondary Display Info (EDID HDMI-A-2) -->
+            <div class="health-section" *ngIf="healthStatus.secondaryDisplayInfo">
+              <h5>{{ getDisplaySectionIcon(healthStatus.secondaryDisplayInfo) }} {{ 'debug.secondaryDisplay' | translate }}</h5>
+
+              <!-- Secondary Display Info (from EDID) -->
+              <div class="health-grid" *ngIf="healthStatus.secondaryDisplayInfo.connected">
+                <div class="health-metric metric-ok">
+                  <span class="metric-label">{{ 'debug.healthDisplay' | translate }}</span>
+                  <span class="metric-value">
+                    {{ getDisplayName(healthStatus.secondaryDisplayInfo) }}
+                  </span>
+                </div>
+                <div class="health-metric" *ngIf="healthStatus.secondaryDisplayInfo.resolution">
+                  <span class="metric-label">{{ 'debug.healthDisplayResolution' | translate }}</span>
+                  <span class="metric-value">{{ healthStatus.secondaryDisplayInfo.resolution }}</span>
+                </div>
+                <div class="health-metric">
+                  <span class="metric-label">{{ 'debug.healthDisplayType' | translate }}</span>
+                  <span class="metric-value">{{ getDisplayTypeLabel(healthStatus.secondaryDisplayInfo.display_type || 'unknown') }}</span>
+                </div>
+              </div>
+
+              <!-- Enriched EDID details for secondary -->
+              <div class="health-grid" *ngIf="healthStatus.secondaryDisplayInfo.edid_detailed as edid">
+                <div class="health-metric" *ngIf="healthStatus.secondaryDisplayInfo.display_category">
+                  <span class="metric-label">{{ 'debug.healthDisplayCategory' | translate }}</span>
+                  <span class="metric-value">{{ getDisplayCategoryLabel(healthStatus.secondaryDisplayInfo.display_category) }}</span>
+                </div>
+                <div class="health-metric" *ngIf="edid.diagonal_inches">
+                  <span class="metric-label">{{ 'debug.healthDisplaySize' | translate }}</span>
+                  <span class="metric-value">{{ edid.diagonal_inches }}"</span>
+                </div>
+                <div class="health-metric" *ngIf="edid.native_resolution">
+                  <span class="metric-label">{{ 'debug.healthNativeResolution' | translate }}</span>
+                  <span class="metric-value">{{ edid.native_resolution }}</span>
+                </div>
+                <div class="health-metric" *ngIf="edid.max_refresh_rate">
+                  <span class="metric-label">{{ 'debug.healthRefreshRate' | translate }}</span>
+                  <span class="metric-value">{{ edid.max_refresh_rate }} Hz</span>
+                </div>
+                <div class="health-metric" *ngIf="edid.hdmi_version">
+                  <span class="metric-label">{{ 'debug.healthHdmiVersion' | translate }}</span>
+                  <span class="metric-value">HDMI {{ edid.hdmi_version }}</span>
+                </div>
+                <div class="health-metric" *ngIf="edid.hdr_supported">
+                  <span class="metric-label">HDR</span>
+                  <span class="metric-value metric-ok-text">✅ {{ 'debug.healthHdrSupported' | translate }}</span>
+                </div>
+                <div class="health-metric" *ngIf="edid.color_spaces?.length">
+                  <span class="metric-label">{{ 'debug.healthColorSpaces' | translate }}</span>
+                  <span class="metric-value metric-small">{{ edid.color_spaces.join(', ') }}</span>
+                </div>
               </div>
             </div>
 

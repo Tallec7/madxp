@@ -541,12 +541,14 @@ Signaux "Monitor" : `display_type === 'monitor'` OU (`diagonal_inches < 28` ET p
 **Intégration :**
 
 - `sync-agent/src/metrics.js` → `getDisplayInfo()` inclus dans `getHealthStatus()` sous la clé `displayInfo` (inclut `edid_detailed` + `display_category`)
+- `sync-agent/src/metrics.js` → `getSecondaryDisplayInfo()` inclus dans `getHealthStatus()` sous la clé `secondaryDisplayInfo` (HDMI-A-2, uniquement si connecté)
+- `_findEdidPath(portFilter)` — paramètre optionnel pour cibler un port HDMI spécifique (ex: `'HDMI-A-2'`)
 - `server/services/hdmi.service.js` → `getFullStatus()` croise CEC + EDID + edid-decode
 - Route `/api/hdmi-status` retourne CEC + display info + catégorie combinés
-- Cache EDID : 5 minutes (l'écran change rarement)
+- Cache EDID : 5 minutes par port (primaire et secondaire caches séparés)
 - **Dépendance optionnelle** : `edid-decode` (apt package), parsing graceful si absent
 
-**Impact dashboard :** La section HDMI-CEC s'adapte au type d'écran. Pour un moniteur PC, les métriques CEC sont masquées et un message explicatif est affiché. Quand `edid-decode` est installé sur le Pi, la page debug affiche les infos enrichies : catégorie écran (OLED/QLED/LED/etc.), taille diagonale, résolution native, refresh rate, version HDMI, support HDR, et espaces couleur. Si `edid-decode` est absent, seules les infos basiques (fabricant, modèle, résolution, type) sont affichées.
+**Impact dashboard :** La section HDMI-CEC s'adapte au type d'écran. Pour un moniteur PC, les métriques CEC sont masquées et un message explicatif est affiché. Quand `edid-decode` est installé sur le Pi, la page debug affiche les infos enrichies : catégorie écran (OLED/QLED/LED/etc.), taille diagonale, résolution native, refresh rate, version HDMI, support HDR, et espaces couleur. Si `edid-decode` est absent, seules les infos basiques (fabricant, modèle, résolution, type) sont affichées. En dual-display, une section "Écran secondaire (HDMI-2)" affiche les mêmes infos EDID pour le second écran (v3.87.5).
 
 ### Monitoring ventilateur (v3.52+)
 
