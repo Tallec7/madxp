@@ -3,7 +3,7 @@ const util = require('util');
 const fs = require('fs-extra');
 const logger = require('../logger');
 const { config } = require('../config');
-const { mergeConfigurations, calculateConfigHash } = require('../utils/config-merge');
+const { mergeConfigurations, calculateConfigHash, restoreSecondaryVariants } = require('../utils/config-merge');
 const { atomicWriteJson, safeReadConfig } = require('../utils/safe-config-io');
 const syncHistory = require('../services/sync-history');
 
@@ -47,6 +47,22 @@ async function updateConfig(data) {
 
     if (data.mode === 'replace') {
       finalConfig = applyReplaceMode(localConfig, contentToApply);
+      // Restaurer les variants secondaires locales écrasées par le replace (ADR-032)
+      restoreSecondaryVariants(localConfig, finalConfig);
+      // Monitoring : vérifier combien de variants survivent après replace
+      const variantsBefore = countSecondaryVariants(localConfig);
+      const variantsAfter = countSecondaryVariants(finalConfig);
+      if (variantsBefore > 0 && variantsAfter < variantsBefore) {
+        logger.warn('Secondary variants partially lost after replace mode', {
+          before: variantsBefore,
+          after: variantsAfter,
+          lost: variantsBefore - variantsAfter,
+        });
+      } else if (variantsAfter > 0) {
+        logger.info('Secondary variants preserved in replace mode', {
+          count: variantsAfter,
+        });
+      }
     } else {
       // Mode merge (défaut)
       const hashBefore = calculateConfigHash(localConfig);
@@ -141,6 +157,34 @@ function applyReplaceMode(localConfig, contentToApply) {
   });
 
   return finalConfig;
+}
+
+/**
+ * Compte le nombre de vidéos ayant une variante secondaire dans la config
+ * @param {object} cfg - Configuration à inspecter
+ * @returns {number} Nombre de variants secondaires trouvées
+ */
+function countSecondaryVariants(cfg) {
+  let count = 0;
+  for (const s of cfg.sponsors || []) {
+    if (s.variants?.secondary?.path) count++;
+  }
+  for (const cat of cfg.categories || []) {
+    for (const v of cat.videos || []) {
+      if (v.variants?.secondary?.path) count++;
+    }
+    for (const sub of cat.subCategories || []) {
+      for (const v of sub.videos || []) {
+        if (v.variants?.secondary?.path) count++;
+      }
+    }
+  }
+  for (const tc of cfg.timeCategories || []) {
+    for (const lv of tc.loopVideos || []) {
+      if (lv.variants?.secondary?.path) count++;
+    }
+  }
+  return count;
 }
 
 /**

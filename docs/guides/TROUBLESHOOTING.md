@@ -4346,6 +4346,66 @@ cat /home/pi/neopro/webapp/configuration.json | python3 -m json.tool | grep -A5 
 
 ---
 
+## Variants secondaires perdues après sync replace (v3.87.3+, ADR-032)
+
+Les variantes secondaires (dual-display) disparaissent après un `update_config` en mode `replace`. L'écran secondaire joue la même vidéo que le principal, bien que le fichier secondaire soit physiquement présent sur le Pi.
+
+### Symptôme
+
+- Le fichier secondaire existe dans `videos-secondary/` mais `configuration.json` ne contient aucun `variants.secondary`
+- Les logs montrent `[TV] Secondary: no variant found for video, using primary path`
+- Le problème apparaît **après** une sync centrale, pas immédiatement après le déploiement de la variante
+
+### Cause racine (corrigée en v3.87.3)
+
+`applyReplaceMode()` dans `update-config.js` remplaçait les champs `sponsors`, `categories`, `timeCategories` en bloc sans appeler `restoreSecondaryVariants()`. Le mode `merge` appelait bien cette fonction via `mergeConfigurations()`, mais le mode `replace` l'omettait.
+
+### Diagnostic
+
+```bash
+# 1. Vérifier les variants dans configuration.json
+python3 -c "
+import json
+cfg = json.load(open('/home/pi/neopro/webapp/configuration.json'))
+found = 0
+for s in cfg.get('sponsors', []):
+    if s.get('variants', {}).get('secondary', {}).get('path'):
+        found += 1; print(f'  sponsor: {s[\"path\"]} -> {s[\"variants\"][\"secondary\"][\"path\"]}')
+for tc in cfg.get('timeCategories', []):
+    for v in tc.get('loopVideos', []):
+        if v.get('variants', {}).get('secondary', {}).get('path'):
+            found += 1; print(f'  loopVideo: {v[\"path\"]} -> {v[\"variants\"][\"secondary\"][\"path\"]}')
+for cat in cfg.get('categories', []):
+    for v in cat.get('videos', []):
+        if v.get('variants', {}).get('secondary', {}).get('path'):
+            found += 1; print(f'  category: {v[\"path\"]} -> {v[\"variants\"][\"secondary\"][\"path\"]}')
+print(f'Total variants: {found}')
+"
+
+# 2. Vérifier les fichiers secondaires physiques
+ls -la /home/pi/neopro/videos-secondary/*/
+
+# 3. Vérifier les logs de restauration
+journalctl -u neopro-sync-agent --no-pager --since "1 hour ago" | grep -E 'variants|restore|replace mode'
+# Attendu: "Secondary variants preserved in replace mode" ou "Variants secondaires restaurées"
+# Si "partially lost" → bug non résolu, contacter support
+```
+
+### Solution immédiate (si variants perdues sur Pi live)
+
+Redéployer la variante secondaire depuis le dashboard central, ou redémarrer le sync-agent après mise à jour du code :
+
+```bash
+sudo systemctl restart neopro-sync-agent
+```
+
+### Smoke tests de régression
+
+2 smoke tests (section E-41 dans `smoke.test.ts`) :
+
+1. `update-config must import restoreSecondaryVariants from config-merge`
+2. `update-config must call restoreSecondaryVariants after applyReplaceMode`
+
 ---
 
 ## HDMI non détecté par le watchdog (v3.84+)

@@ -1,3 +1,20 @@
+## [3.87.3](https://github.com/Tallec7/neopro/compare/v3.87.2...v3.87.3) (2026-03-01)
+
+### Bug Fixes
+
+- **sync-agent:** `update_config` replace mode now calls `restoreSecondaryVariants()` — previously, `applyReplaceMode()` replaced `sponsors`, `categories`, and `timeCategories` wholesale without preserving locally-injected `variants.secondary` mappings. Any `update_config` with `mode: "replace"` after a `deploySecondaryVariant` silently erased all secondary variant info from `configuration.json`, causing the secondary display to play the primary video instead of the variant. (ADR-032)
+- **sync-agent:** add `countSecondaryVariants()` monitoring in replace mode — logs warning if variants are partially lost despite restoration, logs info with preserved count on success
+
+### Tests
+
+- **smoke:** add `E-41 update-config replace mode restoreSecondaryVariants guard` (2 tests) — import check + call-in-replace-block check (399 total)
+
+### Documentation
+
+- **adr:** add ADR-032 — `restoreSecondaryVariants` obligatoire en mode replace
+- **sync-architecture:** update table 5.2 (replace mode preserves variants) + section 5.7 (defense-in-depth Niveau 3 covers both modes)
+- **troubleshooting:** add "Variants secondaires perdues après sync replace" section with diagnostic commands
+
 ## [3.86.6](https://github.com/Tallec7/neopro/compare/v3.86.5...v3.86.6) (2026-03-01)
 
 ### Bug Fixes

@@ -552,12 +552,12 @@ Depuis P9, la synchronisation des sponsors est **bidirectionnelle** et chaque di
 
 Le dashboard central propose deux modes de déploiement :
 
-| Mode      | Comportement                                                                 | Usage                                |
-| --------- | ---------------------------------------------------------------------------- | ------------------------------------ |
-| `merge`   | Fusionne le contenu NEOPRO avec la config locale, préserve les paramètres Pi | **Recommandé** - Usage courant       |
-| `replace` | Écrase tout le `configuration.json` du Pi                                    | Réinitialisation complète uniquement |
+| Mode      | Comportement                                                                                 | Usage                          |
+| --------- | -------------------------------------------------------------------------------------------- | ------------------------------ |
+| `merge`   | Fusionne le contenu NEOPRO avec la config locale, préserve les paramètres Pi                 | **Recommandé** - Usage courant |
+| `replace` | Remplace les champs de contenu envoyés + `restoreSecondaryVariants()` post-replace (ADR-032) | Réinitialisation de contenu    |
 
-> **Note** : Le mode `merge` est le mode par défaut depuis janvier 2026. Le mode `replace` peut perdre des paramètres locaux (settings, siteId, etc.).
+> **Note** : Le mode `merge` est le mode par défaut depuis janvier 2026. Le mode `replace` remplace les champs de contenu (sponsors, categories, timeCategories, etc.) mais **préserve les variantes secondaires** locales grâce à `restoreSecondaryVariants()` (ajouté dans ADR-032). Les paramètres locaux (settings, siteId, etc.) ne sont pas remplacés.
 
 ### 5.3 Tableau des Règles par Champ
 
@@ -656,6 +656,8 @@ En configuration dual-display, chaque vidéo peut posséder une **variante secon
 | 3      | `restoreSecondaryVariants()`          | Après le merge de `timeCategories` | Rattrapage si le central n'a pas inclus les variantes |
 
 Le niveau 3 est le **filet de sécurité final** : lors d'un remplacement complet de `timeCategories` par le central, les vidéos de la boucle temporelle perdent leurs `variants.secondary`. La fonction `restoreSecondaryVariants()` dans `config-merge.js` parcourt les `loopVideos` de chaque time category et restaure les variantes depuis la config locale précédente en se basant sur le `path` de la vidéo comme clé de correspondance.
+
+> **Important (ADR-032)** : `restoreSecondaryVariants()` est appelé dans **les deux modes** de `update-config.js` : après `mergeConfigurations()` en mode `merge` ET après `applyReplaceMode()` en mode `replace`. Sans cela, tout `update_config` en mode replace écrase les variants injectées localement par `deploySecondaryVariant()`. Un monitoring post-replace (`countSecondaryVariants`) log un warning si des variants sont perdues malgré la restauration.
 
 ---
 

@@ -3130,7 +3130,7 @@ describe('E-23 HDMI monitoring and alerts wiring', () => {
     );
     // Extract the check_secondary_chromium function body
     const funcStart = content.indexOf('check_secondary_chromium() {');
-    const funcBody = content.slice(funcStart, funcStart + 5000);
+    const funcBody = content.slice(funcStart, funcStart + 6000);
     // Single→dual transition: xdotool resize is OK (shrinking viewport, no CSS bug)
     // Dual→single transition: must RELAUNCH Chromium because xdotool windowsize alone
     // does NOT force Chromium to re-render its CSS viewport (window grows but content
@@ -5196,6 +5196,44 @@ describe('E-41 config-merge restoreSecondaryVariants guard', () => {
       exportsRestore: /restoreSecondaryVariants/.test(content.split('module.exports')[1] || ''),
     }).toEqual({
       exportsRestore: true,
+    });
+  });
+});
+
+// ----------------------------------------------------------
+// E-41 update-config.js replace mode must also restore variants:
+// applyReplaceMode() replaces sponsors/categories/timeCategories
+// wholesale — without restoreSecondaryVariants() the locally-
+// injected variants.secondary mappings are lost on every
+// update_config with mode: "replace". (BUG: was missing until fix)
+// ----------------------------------------------------------
+describe('E-41 update-config replace mode restoreSecondaryVariants guard', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+  const updateConfigPath = path.join(repoRoot, 'raspberry/sync-agent/src/commands/update-config.js');
+
+  let content: string;
+  beforeAll(() => {
+    content = fs.readFileSync(updateConfigPath, 'utf8');
+  });
+
+  it('update-config must import restoreSecondaryVariants from config-merge', () => {
+    // Check that the require('config-merge') destructuring includes restoreSecondaryVariants
+    const configMergeRequire = content.match(/require\(['"]\.\.\/utils\/config-merge['"]\)/)?.[0] || '';
+    const importLine = content.split('\n').find(l => l.includes('config-merge')) || '';
+    expect({
+      importsRestore: /restoreSecondaryVariants/.test(importLine),
+    }).toEqual({
+      importsRestore: true,
+    });
+  });
+
+  it('update-config must call restoreSecondaryVariants after applyReplaceMode', () => {
+    // Verify that restoreSecondaryVariants is called within the replace mode branch
+    const replaceBlock = content.split("mode === 'replace'")[1]?.split('else')[0] || '';
+    expect({
+      callsRestore: /restoreSecondaryVariants\(/.test(replaceBlock),
+    }).toEqual({
+      callsRestore: true,
     });
   });
 });
