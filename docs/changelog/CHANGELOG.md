@@ -1,3 +1,9 @@
+## [3.86.6](https://github.com/Tallec7/neopro/compare/v3.86.5...v3.86.6) (2026-03-01)
+
+### Bug Fixes
+
+- **sync-agent:** concurrent deploy mutex + startup permission preflight (v3.87.2) ([6255fc4](https://github.com/Tallec7/neopro/commit/6255fc4e2e08c6a62a8e970790279af032573ee2))
+
 ## [3.87.2](https://github.com/Tallec7/neopro/compare/v3.87.1...v3.87.2) (2026-03-01)
 
 ### Bug Fixes
