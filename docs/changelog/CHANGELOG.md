@@ -8,6 +8,7 @@
 
 ### Features
 
+- **home:** Angular `HomeComponent` landing page on `neopro.local` — replaces `redirectTo: 'tv'` root route with a dedicated CTA-focused page: logo, primary CTA "Ouvrir la télécommande" → `/remote`, secondary link "Afficher l'écran TV" → `/tv?displayType=secondary`, admin link in footer. Kiosk Pi unaffected (opens `/tv` directly). Static fallback `webapp/index.html` synced.
 - **display:** resolution detection cascade — auto-detects native TV resolution instead of forcing 1920×1080. 4-level cascade: xrandr geometry → xrandr preferred mode (`+` marker) → EDID native (DTD 1 via `edid-decode`) → `DEFAULT_SCREEN_WIDTH`×`DEFAULT_SCREEN_HEIGHT` constants. Each TV now gets its actual resolution (4K, 720p, 1440p…) automatically.
 - **display:** xrandr retry with EDID negotiation — 3 attempts × 2s before fallback, handles slow TV EDID responses at boot
 - **monitoring:** `displayFallback` field in kiosk-status.json — fleet-visible when a Pi falls back to default resolution (xrandr + EDID both unavailable)
@@ -21,15 +22,18 @@
 
 ### Tests
 
+- **smoke:** add HomeComponent root route regression guard — ensures `app.routes.ts` uses `HomeComponent` on `path: ''` (no `redirectTo: 'tv'`)
 - **smoke:** add 8 regression guards — `DEFAULT_SCREEN_WIDTH/HEIGHT` constants defined, `get_output_resolution()` cascade function exists, no raw `1920`/`1080` magic numbers outside constants/comments, `SECONDARY_X_OFFSET` derives from `PRIMARY_SCREEN_WIDTH`, `DISPLAY_FALLBACK_REASON` in kiosk status, xrandr preferred mode parsing present
 
 ### Documentation
 
+- **architecture:** update F-23.7 section — Angular `HomeComponent` routing replaces `webapp/index.html` reference
+- **safe:** US-23.7.2 → Done, acceptance criteria updated to match CTA-focused implementation
 - **architecture:** add E-24 Resolution Detection Cascade section with cascade flow diagram and heartbeat fields
 - **reference:** add `get_output_resolution()` function reference in Kiosk Watchdog section
 - **troubleshooting:** add resolution cascade troubleshooting section, update v3.84.4 section with cascade reference
 - **claude:** add "NE JAMAIS FAIRE" rules for hardcoded screen dimensions, update smoke test count 291→373
-- **changelog:** document v3.85.0 resolution detection cascade
+- **changelog:** document v3.85.0 resolution detection cascade, HomeComponent landing page
 
 ## [3.84.9](https://github.com/Tallec7/neopro/compare/v3.84.8...v3.84.9) (2026-03-01)
 

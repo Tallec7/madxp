@@ -781,7 +781,9 @@ Machine à états pour la perte de l'écran principal en mode dual-display :
 
 ### Accès navigateur PC (F-23.7)
 
-- **Homepage** : `raspberry/webapp/index.html` — page d'accueil enrichie avec statut HDMI, liens TV/Admin/Remote, QR code
+- **Homepage** : Angular `HomeComponent` (`raspberry/src/app/components/home/`) — route `path: ''` dans `app.routes.ts`. CTA "Ouvrir la télécommande" → `/remote`, lien secondaire "Afficher l'écran TV" → `/tv?displayType=secondary`, admin en footer. Le kiosk Pi ouvre `/tv` directement (`CHROMIUM_URL` dans `kiosk-watchdog.sh`), donc non impacté.
+- **Fallback statique** : `raspberry/webapp/index.html` — même design simplifié, sert avant le build Angular ou si JS désactivé
+- **Smoke test** : `E-23 F-23.7 root route HomeComponent guard` — vérifie que `app.routes.ts` utilise `HomeComponent` sur `path: ''` (pas de `redirectTo: 'tv'`)
 - **PWA** : `manifest.json` pour installation sur l'écran d'accueil
 - **Admin enrichi** : carte HDMI avec statut temps réel (HDMI-0, HDMI-1, mode dual/failover/wrong-port)
 - **Analytics** : guard `displayType !== 'secondary'` sur tous les `trackVideoStart`/`trackVideoEnd` (évite double-comptage)

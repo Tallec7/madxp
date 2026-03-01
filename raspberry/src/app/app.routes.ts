@@ -2,6 +2,7 @@ import { ResolveFn, Routes } from '@angular/router';
 import { TvComponent } from './components/tv/tv.component';
 import { RemoteComponent } from './components/remote/remote.component';
 import { LoginComponent } from './components/login/login.component';
+import { HomeComponent } from './components/home/home.component';
 import { Configuration } from './interfaces/configuration.interface';
 import { Category } from './interfaces/category.interface';
 import { inject } from '@angular/core';
@@ -80,7 +81,7 @@ const getConfiguration: ResolveFn<Configuration> = () => {
 };
 
 export const routes: Routes = [
-    { path: '', redirectTo: 'tv', pathMatch: 'full' },
+    { path: '', component: HomeComponent },
     { path: 'login', component: LoginComponent },
     { path: 'tv', component: TvComponent, resolve: { configuration: getConfiguration } },
     { path: 'secondary', component: TvComponent, resolve: { configuration: getConfiguration }, data: { displayType: 'secondary' } },

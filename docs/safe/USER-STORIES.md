@@ -475,13 +475,13 @@
 
 ##### F-23.7 — Accès navigateur PC sécurisé (5 US, 23 SP)
 
-| US        | Feature | Description                                                                                       | SP  | Sprint  | Priorité | Statut     |
-| --------- | ------- | ------------------------------------------------------------------------------------------------- | --- | ------- | -------- | ---------- |
-| US-23.7.1 | F-23.7  | Route `/tv` accessible via navigateur PC (même réseau) avec auth token temporaire (TTL 4h)        | 5   | PI-2 S4 | Must     | ⏳ Backlog |
-| US-23.7.2 | F-23.7  | Détection user-agent navigateur PC → layout responsive adapté (pas de rotation forcée, scrollbar) | 3   | PI-2 S5 | Should   | ⏳ Backlog |
-| US-23.7.3 | F-23.7  | Génération QR code temporaire dans admin local pour connexion rapide navigateur PC                | 5   | PI-2 S5 | Should   | ⏳ Backlog |
-| US-23.7.4 | F-23.7  | Guard : si navigateur PC connecté ET écran HDMI connecté → popup choix « afficher ici ou TV »     | 5   | PI-2 S6 | Could    | ⏳ Backlog |
-| US-23.7.5 | F-23.7  | Analytics : distinguer impressions « browser PC » vs « kiosk Pi » dans les rapports sponsors      | 5   | PI-2 S6 | Could    | ⏳ Backlog |
+| US        | Feature | Description                                                                                                      | SP  | Sprint  | Priorité | Statut     |
+| --------- | ------- | ---------------------------------------------------------------------------------------------------------------- | --- | ------- | -------- | ---------- |
+| US-23.7.1 | F-23.7  | Route `/tv` accessible via navigateur PC (même réseau) avec auth token temporaire (TTL 4h)                       | 5   | PI-2 S4 | Must     | ⏳ Backlog |
+| US-23.7.2 | F-23.7  | Page d'accueil `neopro.local` — Angular HomeComponent avec CTA télécommande, lien TV secondaire, admin en footer | 3   | PI-2 S5 | Should   | ✅ Done    |
+| US-23.7.3 | F-23.7  | Génération QR code temporaire dans admin local pour connexion rapide navigateur PC                               | 5   | PI-2 S5 | Should   | ⏳ Backlog |
+| US-23.7.4 | F-23.7  | Guard : si navigateur PC connecté ET écran HDMI connecté → popup choix « afficher ici ou TV »                    | 5   | PI-2 S6 | Could    | ⏳ Backlog |
+| US-23.7.5 | F-23.7  | Analytics : distinguer impressions « browser PC » vs « kiosk Pi » dans les rapports sponsors                     | 5   | PI-2 S6 | Could    | ⏳ Backlog |
 
 ---
 

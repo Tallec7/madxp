@@ -794,13 +794,13 @@ Tous les controllers utilisent le repository pattern. ESLint bloquant actif. Aud
 - [ ] Les analytics distinguent les événements PC (user-agent) vs kiosk Pi
 - [ ] Fix : un secondary qui devient master ne doit pas émettre d'analytics (guard sur `displayType`)
 
-| US        | Description                                                                                                | SP  | Sprint  | Priorité |
-| --------- | ---------------------------------------------------------------------------------------------------------- | --- | ------- | -------- |
-| US-23.7.1 | Monitoring des clients connectés sur /tv et /secondary (compteur, source IP, user-agent, type device)      | 5   | PI-2 S4 | Must     |
-| US-23.7.2 | Page d'accueil enrichie pour accès PC (statut Pi, HDMI, aide dépannage, liens rapides /tv /secondary)      | 5   | PI-2 S6 | Could    |
-| US-23.7.3 | PWA manifest + service worker pour autoplay son automatique (contourne restriction navigateur)             | 5   | PI-2 S5 | Should   |
-| US-23.7.4 | Analytics distinctes PC vs Pi (user-agent tagging, exclusion métriques kiosk pour les sessions PC)         | 5   | PI-2 S5 | Should   |
-| US-23.7.5 | Fix analytics displayType : guard `displayType !== 'secondary'` en plus de `!isSlaveMode` sur tv.component | 3   | PI-2 S6 | Should   |
+| US        | Description                                                                                                          | SP  | Sprint  | Priorité |
+| --------- | -------------------------------------------------------------------------------------------------------------------- | --- | ------- | -------- |
+| US-23.7.1 | Monitoring des clients connectés sur /tv et /secondary (compteur, source IP, user-agent, type device)                | 5   | PI-2 S4 | Must     |
+| US-23.7.2 | Page d'accueil `neopro.local` — Angular HomeComponent : CTA télécommande, lien TV secondaire, admin footer (✅ Done) | 3   | PI-2 S5 | Should   |
+| US-23.7.3 | PWA manifest + service worker pour autoplay son automatique (contourne restriction navigateur)                       | 5   | PI-2 S5 | Should   |
+| US-23.7.4 | Analytics distinctes PC vs Pi (user-agent tagging, exclusion métriques kiosk pour les sessions PC)                   | 5   | PI-2 S5 | Should   |
+| US-23.7.5 | Fix analytics displayType : guard `displayType !== 'secondary'` en plus de `!isSlaveMode` sur tv.component           | 3   | PI-2 S6 | Should   |
 
 ---
 

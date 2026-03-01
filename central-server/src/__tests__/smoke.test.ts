@@ -3182,30 +3182,33 @@ describe('E-23 HDMI monitoring and alerts wiring', () => {
     });
   });
 
-  it('activate_hdmi_failover must --off ghost output, --pos 0x0, xprop decorations, and sleep after xrandr', () => {
+  it('activate_hdmi_failover must kill secondary, reconfigure xrandr, and relaunch via start_chromium', () => {
     const content = fs.readFileSync(
       path.join(repoRoot, 'raspberry/scripts/kiosk-watchdog.sh'),
       'utf8'
     );
     const funcStart = content.indexOf('activate_hdmi_failover()');
-    const funcBody = content.slice(funcStart, funcStart + 3000);
+    const funcBody = content.slice(funcStart, funcStart + 4000);
     expect({
       // Must disable ghost output so X11 virtual screen collapses
       hasGhostOff: funcBody.includes('--off'),
       // Must reposition remaining output to origin (otherwise stays at dual-display offset)
       hasPos0x0: funcBody.includes('--pos 0x0'),
-      // Must remove window decorations (xprop _MOTIF_WM_HINTS) like start_chromium_secondary
-      hasXpropDecorations: funcBody.includes('_MOTIF_WM_HINTS'),
-      // Must sleep after xrandr to let GPU settle before xdotool
+      // Must sleep after xrandr to let GPU settle
       hasSleepAfterXrandr: funcBody.includes('sleep 1'),
       // Must re-query dimensions after xrandr reconfiguration
       hasRequery: funcBody.includes('xrandr --query') && funcBody.includes('failover_w'),
+      // Must kill old secondary (xdotool resize alone doesn't update Chromium viewport)
+      killsSecondary: funcBody.includes('kill -TERM') && funcBody.includes('SECONDARY_CHROMIUM_PID'),
+      // Must relaunch via start_chromium for correct viewport
+      relaunchesChromium: funcBody.includes('start_chromium'),
     }).toEqual({
       hasGhostOff: true,
       hasPos0x0: true,
-      hasXpropDecorations: true,
       hasSleepAfterXrandr: true,
       hasRequery: true,
+      killsSecondary: true,
+      relaunchesChromium: true,
     });
   });
 
@@ -3224,7 +3227,7 @@ describe('E-23 HDMI monitoring and alerts wiring', () => {
     expect(grepLine).toContain('primary');
   });
 
-  it('deactivate_hdmi_failover must proactively restore dual-display (not rely on lazy polling)', () => {
+  it('deactivate_hdmi_failover must kill failover Chromium (CHROMIUM_PID) and restore dual-display', () => {
     const content = fs.readFileSync(
       path.join(repoRoot, 'raspberry/scripts/kiosk-watchdog.sh'),
       'utf8'
@@ -3232,12 +3235,16 @@ describe('E-23 HDMI monitoring and alerts wiring', () => {
     const funcStart = content.indexOf('deactivate_hdmi_failover()');
     const funcBody = content.slice(funcStart, funcStart + 3000);
     expect({
-      stopsPromoted: funcBody.includes('kill -TERM') && funcBody.includes('SECONDARY_CHROMIUM_PID'),
+      // Must kill the failover Chromium (which was launched via start_chromium → CHROMIUM_PID)
+      stopsFailoverChromium: funcBody.includes('kill -TERM') && funcBody.includes('CHROMIUM_PID'),
+      // Must NOT reference SECONDARY_CHROMIUM_PID (failover now uses start_chromium)
+      noSecondaryPidKill: !funcBody.includes('kill -TERM "$SECONDARY_CHROMIUM_PID"'),
       reconfiguresXrandr: funcBody.includes('setup_secondary_xrandr'),
       relaunchesPrimary: funcBody.includes('start_chromium'),
       relaunchesSecondary: funcBody.includes('start_chromium_secondary'),
     }).toEqual({
-      stopsPromoted: true,
+      stopsFailoverChromium: true,
+      noSecondaryPidKill: true,
       reconfiguresXrandr: true,
       relaunchesPrimary: true,
       relaunchesSecondary: true,
