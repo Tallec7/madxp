@@ -1,3 +1,20 @@
+## [3.87.1](https://github.com/Tallec7/neopro/compare/v3.86.4...v3.87.1) (2026-03-01)
+
+### Bug Fixes
+
+- **kiosk:** fix taskbar visible on primary display after secondary display connect — after `xrandr` reconfigures X11 layout for dual-display, the window manager (openbox/LXDE) restacks `lxpanel` above Chromium. The single→dual and failover-return code paths now re-apply `xprop _MOTIF_WM_HINTS` (no decorations) + `xdotool windowactivate` (raise above panel) after every `xrandr` reconfiguration, matching the 4-step sequence used by `start_chromium()`.
+- **kiosk:** add `check_window_stacking()` runtime monitor — detects lxpanel above Chromium every 30s loop and auto-recovers via xprop + windowactivate. Reports `windowStacking` status in `kiosk-status.json` for remote observability.
+
+### Tests
+
+- **smoke:** add regression guard — single→dual and failover-return resize must re-apply `xprop _MOTIF_WM_HINTS` + `xdotool windowactivate`
+
+### Documentation
+
+- **claude:** add "NE JAMAIS FAIRE" rule — `xdotool windowsize` without `xprop` + `windowactivate` after xrandr transition
+- **troubleshooting:** add "Barre de tâches visible sur l'écran primaire après branchement du secondaire" section
+- **architecture:** update F-23.4 — single→dual transition must re-apply xprop + windowactivate after xrandr
+
 ## [3.86.4](https://github.com/Tallec7/neopro/compare/v3.86.3...v3.86.4) (2026-03-01)
 
 ### Bug Fixes

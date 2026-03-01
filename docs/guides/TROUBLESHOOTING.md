@@ -4504,6 +4504,50 @@ sudo systemctl restart neopro-kiosk
 
 ---
 
+## Barre de tâches visible sur l'écran primaire après branchement du secondaire (v3.87.1+)
+
+Quand l'écran secondaire est branché en mode single-display, la barre de tâches LXDE (lxpanel) apparaît sur l'écran primaire.
+
+### Symptômes
+
+1. **La barre de tâches du Pi est visible** en haut ou en bas de l'écran primaire TV
+2. **Apparaît uniquement après branchement du secondaire** — l'écran primaire seul est correct
+3. **Peut aussi apparaître au retour d'un failover HDMI**
+
+### Cause
+
+Quand `xrandr` reconfigure le layout X11 pour le dual-display, le window manager (openbox/LXDE) restack toutes les fenêtres. `lxpanel` se retrouve AU-DESSUS de Chromium dans la pile Z-order. Avant v3.87.1, le code de transition ne ré-appliquait que `xdotool windowmove` + `xdotool windowsize` sans :
+
+- `xprop _MOTIF_WM_HINTS` (re-enforcer le mode sans décoration)
+- `xdotool windowactivate` (raise Chromium au premier plan)
+
+### Diagnostic
+
+```bash
+# 1. Vérifier que le fix est appliqué (v3.87.1+)
+grep -c "windowactivate" /home/pi/neopro/scripts/kiosk-watchdog.sh
+# Attendu: >= 4 (start_chromium + single→dual + failover-return + check_window_stacking)
+
+# 2. Vérifier le monitoring dans kiosk-status.json
+cat /tmp/kiosk-status.json | python3 -m json.tool | grep windowStacking
+# Attendu: "windowStacking": "ok"
+# Si "panel_above" ou "recovered" → le bug s'est produit et a été auto-corrigé
+
+# 3. Vérifier les logs d'auto-recovery
+journalctl -u neopro-kiosk --no-pager -n 200 | grep "STACKING"
+# Si présent: le watchdog a détecté et corrigé le problème automatiquement
+```
+
+### Correction
+
+Ce bug est corrigé en v3.87.1. Le fix applique le séquence complète en 4 étapes (xprop → windowmove → windowsize → windowactivate) dans toutes les transitions xrandr. Un monitoring runtime (`check_window_stacking`) détecte et corrige automatiquement toute régression toutes les 30 secondes.
+
+### Smoke tests de régression
+
+- `single→dual and failover-return resize must re-apply xprop + windowactivate (taskbar fix)`
+
+---
+
 ## Écran primaire zoomé ou change de page après débranchement du secondaire (v3.86+)
 
 Quand l'écran secondaire est débranché en mode dual-display, l'écran primaire peut montrer un comportement incorrect.

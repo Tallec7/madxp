@@ -733,10 +733,13 @@ Le Pi physique (kiosk) est **toujours master**. Si un navigateur PC s'est enregi
 Le passage mono→dual se fait **sans restart de Chromium**, mais le retour dual→mono **relance Chromium** :
 
 1. Chromium est toujours lancé en `--app=URL` (jamais `--kiosk`) → redimensionnable via `xdotool`
-2. Activation dual : `xrandr --output HDMI-X --auto --right-of` + `xdotool windowsize` sur les 2 fenêtres
+2. Activation dual : `xrandr --output HDMI-X --auto --right-of` + séquence 4 étapes sur le primaire : `xprop _MOTIF_WM_HINTS` → `xdotool windowmove` → `xdotool windowsize` → `xdotool windowactivate`
 3. Désactivation dual : **relance complète** du Chromium primaire avec `--window-size` re-détecté via `get_output_resolution()`, kill du secondaire
 4. Plein écran par `xprop _MOTIF_WM_HINTS` (pas `F11` qui prend tout le bureau X11)
+5. **Monitoring runtime** : `check_window_stacking()` vérifie toutes les 30s que lxpanel n'est pas au-dessus de Chromium, auto-recovery si détecté. Statut reporté dans `kiosk-status.json` (`windowStacking: ok|panel_above|recovered`)
 
+> ⚠️ Après tout `xrandr` qui reconfigure le layout X11, il faut TOUJOURS ré-appliquer `xprop _MOTIF_WM_HINTS` + `xdotool windowactivate` sur le primaire. Le window manager (openbox/LXDE) restack `lxpanel` au-dessus de Chromium lors de la reconfiguration → barre de tâches visible sans ce re-raise.
+>
 > ⚠️ La désactivation dual ne peut PAS utiliser `xdotool windowsize` — Chromium ne re-render pas son viewport CSS interne après un resize X11 (le contenu reste zoomé à l'ancienne résolution). Le relaunch avec `--window-size` correct est obligatoire.
 >
 > ⚠️ `stop_chromium_secondary()` ne fait `xrandr --output $X --off` que si le câble HDMI-1 est encore physiquement connecté (vérifié via `detect_hdmi1_status`). Sinon, le `xrandr --off` sur un port déjà déconnecté provoque une race DRM kernel qui déstabilise le statut HDMI-0.

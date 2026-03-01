@@ -3148,6 +3148,50 @@ describe('E-23 HDMI monitoring and alerts wiring', () => {
     });
   });
 
+  // Bug fix: when switching single→dual display, xrandr reconfigures the X11 layout
+  // and the WM (openbox/LXDE) restacks lxpanel ABOVE Chromium. Without re-applying
+  // xprop _MOTIF_WM_HINTS + xdotool windowactivate, the taskbar stays visible on
+  // the primary screen. The same applies to deactivate_hdmi_failover() return path.
+  it('single→dual and failover-return resize must re-apply xprop + windowactivate (taskbar fix)', () => {
+    const content = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/scripts/kiosk-watchdog.sh'),
+      'utf8'
+    );
+    // Extract check_secondary_chromium function (contains single→dual transition)
+    const checkSecStart = content.indexOf('check_secondary_chromium() {');
+    const checkSecBody = content.slice(checkSecStart, checkSecStart + 5000);
+    // The single→dual transition block (DUAL_DISPLAY_ACTIVE != true) must have
+    // xprop + windowactivate alongside windowmove + windowsize
+    const singleToDualBlock = checkSecBody.match(
+      /DUAL_DISPLAY_ACTIVE.*!=.*true[\s\S]*?start_chromium_secondary/
+    );
+    expect(singleToDualBlock).not.toBeNull();
+    const block = singleToDualBlock![0];
+    expect({
+      hasXprop: block.includes('_MOTIF_WM_HINTS'),
+      hasWindowActivate: block.includes('windowactivate'),
+      hasWindowSize: block.includes('windowsize'),
+    }).toEqual({
+      hasXprop: true,
+      hasWindowActivate: true,
+      hasWindowSize: true,
+    });
+
+    // Extract deactivate_hdmi_failover function
+    const deactivateStart = content.indexOf('deactivate_hdmi_failover()');
+    const deactivateBody = content.slice(deactivateStart, deactivateStart + 3000);
+    // The resize block in deactivate_hdmi_failover must also re-apply xprop + windowactivate
+    expect({
+      hasXprop: deactivateBody.includes('_MOTIF_WM_HINTS'),
+      hasWindowActivate: deactivateBody.includes('windowactivate'),
+      hasWindowSize: deactivateBody.includes('windowsize'),
+    }).toEqual({
+      hasXprop: true,
+      hasWindowActivate: true,
+      hasWindowSize: true,
+    });
+  });
+
   it('kiosk-watchdog must have activate/deactivate_hdmi_failover functions (US-23.6.2)', () => {
     const content = fs.readFileSync(
       path.join(repoRoot, 'raspberry/scripts/kiosk-watchdog.sh'),
@@ -5359,6 +5403,91 @@ describe('Admin HTML-as-JSON fetch protection', () => {
     }).toEqual({
       checksContentType: true,
       returnsJsonError: true,
+    });
+  });
+});
+
+// ----------------------------------------------------------
+// deploy_video concurrent deployment mutex guard
+// ----------------------------------------------------------
+// Bug prevention: deploy-video.js must deduplicate concurrent downloads
+// for the same videoId. Without this, dual flush on reconnect causes 2 downloads
+// writing to the same .downloading file → checksum corruption + ENOENT.
+describe('deploy_video concurrent deployment mutex guard', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+  const deployVideoPath = path.join(repoRoot, 'raspberry/sync-agent/src/commands/deploy-video.js');
+
+  let content: string;
+  beforeAll(() => {
+    content = fs.readFileSync(deployVideoPath, 'utf8');
+  });
+
+  it('must have activeDeployments Map for deduplication', () => {
+    expect({
+      hasActiveDeployments: /activeDeployments\s*=\s*new\s+Map/.test(content),
+    }).toEqual({
+      hasActiveDeployments: true,
+    });
+  });
+
+  it('execute() must check activeDeployments before starting download', () => {
+    expect({
+      checksMap: /activeDeployments\.has\(/.test(content),
+      setsMap: /activeDeployments\.set\(/.test(content),
+      deletesMap: /activeDeployments\.delete\(/.test(content),
+    }).toEqual({
+      checksMap: true,
+      setsMap: true,
+      deletesMap: true,
+    });
+  });
+
+  it('execute() must delegate to _executeInternal (not inline download logic)', () => {
+    // execute() must be the thin mutex wrapper, _executeInternal does the real work
+    expect({
+      hasExecuteInternal: /async\s+_executeInternal\s*\(/.test(content),
+      executeDelegates: /this\._executeInternal\(/.test(content),
+    }).toEqual({
+      hasExecuteInternal: true,
+      executeDelegates: true,
+    });
+  });
+});
+
+// ----------------------------------------------------------
+// Sync-agent startup directory permission preflight
+// ----------------------------------------------------------
+// Bug prevention: agent.js must verify write permissions on critical directories
+// at startup. Without this, EACCES errors on mkdir videos-secondary/ are silent
+// (non-blocking) and only discovered when a secondary variant deployment fails.
+describe('Sync-agent startup directory permission preflight', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+  const agentPath = path.join(repoRoot, 'raspberry/sync-agent/src/agent.js');
+
+  let content: string;
+  beforeAll(() => {
+    content = fs.readFileSync(agentPath, 'utf8');
+  });
+
+  it('start() must call ensureDirectoryPermissions before connect', () => {
+    const startMethod = content.match(
+      /async\s+start\s*\(\)([\s\S]*?)(?=\n\s{2}\w|\n\s{2}\/\*\*)/
+    );
+    expect(startMethod).not.toBeNull();
+    expect({
+      callsPermissionCheck: /ensureDirectoryPermissions/.test(startMethod![1]),
+    }).toEqual({
+      callsPermissionCheck: true,
+    });
+  });
+
+  it('ensureDirectoryPermissions must check videos-secondary writable', () => {
+    expect({
+      checksVideosSecondary: /videos-secondary/.test(content),
+      writesTestFile: /permission-check/.test(content),
+    }).toEqual({
+      checksVideosSecondary: true,
+      writesTestFile: true,
     });
   });
 });

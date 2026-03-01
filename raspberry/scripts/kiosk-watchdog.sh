@@ -339,6 +339,41 @@ record_crash() {
     write_kiosk_status "crashed"
 }
 
+# Vérifie que Chromium primaire est la fenêtre active (au-dessus de lxpanel).
+# Après un changement xrandr (single→dual, failover return), le WM peut restacker
+# lxpanel au premier plan → barre de tâches visible sur l'écran TV.
+# Retourne "ok" si Chromium est au premier plan, "panel_above" si lxpanel est devant.
+WINDOW_STACKING_STATUS="ok"
+check_window_stacking() {
+    if (( CHROMIUM_PID == 0 )) || ! kill -0 "$CHROMIUM_PID" 2>/dev/null; then
+        WINDOW_STACKING_STATUS="no_chromium"
+        return 1
+    fi
+    local active_name
+    active_name=$(DISPLAY=:0 xdotool getactivewindow getwindowname 2>/dev/null || true)
+    if [[ -z "$active_name" ]]; then
+        WINDOW_STACKING_STATUS="unknown"
+        return 0
+    fi
+    # Si la fenêtre active contient "panel" ou "lxpanel" → lxpanel est devant Chromium
+    if echo "$active_name" | grep -qi "panel"; then
+        WINDOW_STACKING_STATUS="panel_above"
+        log "⚠️ STACKING: lxpanel est au-dessus de Chromium — re-raise automatique"
+        # Auto-recovery: re-raise Chromium immédiatement
+        local wid
+        wid=$(DISPLAY=:0 xdotool search --pid "$CHROMIUM_PID" 2>/dev/null | head -1)
+        if [[ -n "$wid" ]]; then
+            DISPLAY=:0 xprop -id "$wid" -f _MOTIF_WM_HINTS 32c -set _MOTIF_WM_HINTS "0x2, 0x0, 0x0, 0x0, 0x0" 2>/dev/null
+            DISPLAY=:0 xdotool windowactivate "$wid" 2>/dev/null
+            log "✓ STACKING: Chromium re-raised au premier plan (auto-recovery)"
+            WINDOW_STACKING_STATUS="recovered"
+        fi
+        return 1
+    fi
+    WINDOW_STACKING_STATUS="ok"
+    return 0
+}
+
 # Écrire le statut kiosk dans un fichier JSON lu par le sync-agent
 write_kiosk_status() {
     local status="$1"
@@ -350,7 +385,7 @@ write_kiosk_status() {
     detect_hdmi0_status && hdmi0_status="connected" || hdmi0_status="disconnected"
     detect_hdmi1_status && hdmi1_status="connected" || hdmi1_status="disconnected"
     cat > "$KIOSK_STATUS_FILE" 2>/dev/null <<EOF
-{"status":"${status}","chromiumAlive":$(pgrep -f "chromium.*$CHROMIUM_URL" > /dev/null 2>&1 && echo "true" || echo "false"),"restartCount":${#crash_times[@]},"lastEvent":"${now}","reason":"${reason}","pid":${CHROMIUM_PID:-0},"secondaryDisplayEnabled":${SECONDARY_DISPLAY_ENABLED},"secondaryChromiumAlive":${secondary_alive},"hdmi0Status":"${hdmi0_status}","hdmi1Status":"${hdmi1_status}","dualDisplayActive":${DUAL_DISPLAY_ACTIVE:-false},"hdmiFailoverActive":${HDMI_FAILOVER_ACTIVE:-false},"displayFallback":"${DISPLAY_FALLBACK_REASON}","lastHdmiTransition":"${LAST_HDMI_TRANSITION:-}"}
+{"status":"${status}","chromiumAlive":$(pgrep -f "chromium.*$CHROMIUM_URL" > /dev/null 2>&1 && echo "true" || echo "false"),"restartCount":${#crash_times[@]},"lastEvent":"${now}","reason":"${reason}","pid":${CHROMIUM_PID:-0},"secondaryDisplayEnabled":${SECONDARY_DISPLAY_ENABLED},"secondaryChromiumAlive":${secondary_alive},"hdmi0Status":"${hdmi0_status}","hdmi1Status":"${hdmi1_status}","dualDisplayActive":${DUAL_DISPLAY_ACTIVE:-false},"hdmiFailoverActive":${HDMI_FAILOVER_ACTIVE:-false},"displayFallback":"${DISPLAY_FALLBACK_REASON}","lastHdmiTransition":"${LAST_HDMI_TRANSITION:-}","windowStacking":"${WINDOW_STACKING_STATUS:-unknown}"}
 EOF
 }
 
@@ -569,8 +604,11 @@ deactivate_hdmi_failover() {
             local wid
             wid=$(DISPLAY=:0 xdotool search --pid "$CHROMIUM_PID" 2>/dev/null | head -1)
             if [[ -n "$wid" ]]; then
+                # Re-appliquer xprop + raise après xrandr (même raison que transition single→dual)
+                DISPLAY=:0 xprop -id "$wid" -f _MOTIF_WM_HINTS 32c -set _MOTIF_WM_HINTS "0x2, 0x0, 0x0, 0x0, 0x0" 2>/dev/null
                 DISPLAY=:0 xdotool windowmove "$wid" 0 0 2>/dev/null
                 DISPLAY=:0 xdotool windowsize "$wid" "${PRIMARY_SCREEN_WIDTH:-$DEFAULT_SCREEN_WIDTH}" "${PRIMARY_SCREEN_HEIGHT:-$DEFAULT_SCREEN_HEIGHT}" 2>/dev/null
+                DISPLAY=:0 xdotool windowactivate "$wid" 2>/dev/null
                 log "✓ Primaire redimensionné pour dual-display (${PRIMARY_SCREEN_WIDTH:-$DEFAULT_SCREEN_WIDTH}x${PRIMARY_SCREEN_HEIGHT:-$DEFAULT_SCREEN_HEIGHT})"
             fi
         fi
@@ -1036,8 +1074,13 @@ check_secondary_chromium() {
                     local wid
                     wid=$(DISPLAY=:0 xdotool search --pid "$CHROMIUM_PID" 2>/dev/null | head -1)
                     if [[ -n "$wid" ]]; then
+                        # Re-appliquer xprop + raise : xrandr reconfigure le layout X11,
+                        # le WM (openbox/LXDE) peut restacker lxpanel au-dessus de Chromium.
+                        # Sans xprop + windowactivate, la barre de tâches reste visible.
+                        DISPLAY=:0 xprop -id "$wid" -f _MOTIF_WM_HINTS 32c -set _MOTIF_WM_HINTS "0x2, 0x0, 0x0, 0x0, 0x0" 2>/dev/null
                         DISPLAY=:0 xdotool windowmove "$wid" 0 0 2>/dev/null
                         DISPLAY=:0 xdotool windowsize "$wid" "${PRIMARY_SCREEN_WIDTH:-$DEFAULT_SCREEN_WIDTH}" "${PRIMARY_SCREEN_HEIGHT:-$DEFAULT_SCREEN_HEIGHT}" 2>/dev/null
+                        DISPLAY=:0 xdotool windowactivate "$wid" 2>/dev/null
                         log "✓ Primaire redimensionné pour dual-display (${PRIMARY_SCREEN_WIDTH:-$DEFAULT_SCREEN_WIDTH}x${PRIMARY_SCREEN_HEIGHT:-$DEFAULT_SCREEN_HEIGHT})"
                     fi
                 fi
@@ -1402,6 +1445,10 @@ main() {
         else
             rm -f /tmp/hdmi-no-screen-beeped
         fi
+
+        # Vérifier que Chromium est bien au premier plan (pas lxpanel devant)
+        # Auto-recovery si le WM a restacké les fenêtres après un changement xrandr
+        check_window_stacking || true
 
         # Mettre à jour le statut kiosk
         write_kiosk_status "running"

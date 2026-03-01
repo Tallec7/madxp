@@ -78,6 +78,7 @@ source central-server/.env && psql "$DATABASE_URL" -f central-server/src/scripts
 - Envoyer `update_config` depuis le central sans appeler `enrichConfigWithSecondaryVariants()` (le config ne contient jamais les variants par défaut — l'enrichissement DB est obligatoire avant tout envoi au Pi — smoke test enforced)
 - Remplacer `timeCategories` dans config-merge sans restaurer les `variants.secondary` locales (`restoreSecondaryVariants()` doit être appelé après le merge pour réinjecter les variants perdues par le remplacement complet — smoke test enforced)
 - Utiliser `xdotool windowsize` pour le retour dual→single display (Chromium ne re-render pas son viewport CSS après un resize X11 → contenu zoomé/coupé — relancer Chromium avec `--window-size` correct — smoke test enforced)
+- Faire `xdotool windowsize` sans `xprop _MOTIF_WM_HINTS` + `xdotool windowactivate` lors de la transition single→dual ou du retour failover (xrandr reconfigure le layout X11, le WM restack lxpanel AU-DESSUS de Chromium → barre de tâches visible — smoke test enforced)
 - Lancer `xrandr --output $X --off` sur un port HDMI physiquement déconnecté dans `stop_chromium_secondary()` (provoque une race DRM kernel qui déstabilise le statut des AUTRES ports HDMI → garde `detect_hdmi1_status` obligatoire — smoke test enforced)
 
 ## Architecture détaillée
