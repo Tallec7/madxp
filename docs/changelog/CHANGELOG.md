@@ -2,6 +2,12 @@
 
 ### Bug Fixes
 
+- **kiosk:** invisible 1x1px Chromium window, runtime guard, orphan service detection, docs ([de50f1f](https://github.com/Tallec7/neopro/commit/de50f1f44f646ceca71dd1cced62316c2ffdd5e4))
+
+## [3.84.4](https://github.com/Tallec7/neopro/compare/v3.84.3...v3.84.4) (2026-03-01)
+
+### Bug Fixes
+
 - **kiosk:** fix invisible Chromium window (1x1 pixel) — `PRIMARY_SCREEN_WIDTH=0` / `PRIMARY_SCREEN_HEIGHT=0` broke bash `${VAR:-1920}` fallback (only triggers when VAR is empty/unset, NOT when `=0`). Result: `--window-size=0,0` → Chromium opened as 1x1 pixel. Changed init from `=0` to `=""`.
 - **kiosk:** add runtime window-size guard — dimensions ≤ 0 are caught before `--window-size` flag construction and replaced with 1920x1080 fallback. Defense-in-depth against future init regressions.
 
