@@ -1,3 +1,9 @@
+# [3.88.0](https://github.com/Tallec7/neopro/compare/v3.87.1...v3.88.0) (2026-03-01)
+
+### Features
+
+- **dashboard:** secondary display EDID info in debug tab (v3.87.5) ([0298c1d](https://github.com/Tallec7/neopro/commit/0298c1dcecc1459742157fbdc94fd393a5d82cff))
+
 ## [3.87.1](https://github.com/Tallec7/neopro/compare/v3.87.0...v3.87.1) (2026-03-01)
 
 ### Bug Fixes
