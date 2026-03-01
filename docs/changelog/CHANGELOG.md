@@ -2,6 +2,12 @@
 
 ### Bug Fixes
 
+- **hotspot-watchdog:** fix false-positive brcmfmac crash detection causing 30s restart loop ([3689cdb](https://github.com/Tallec7/neopro/commit/3689cdbf7ea0f36a6fe48b677fed139dd7613e62))
+
+## [3.89.3](https://github.com/Tallec7/neopro/compare/v3.89.2...v3.89.3) (2026-03-01)
+
+### Bug Fixes
+
 - **dual-display:** silent preload — eliminate double-flash on slave during manual video (ADR-034)
   - `preloadManualVideo()` no longer shows freeze-frame or black overlay; loop keeps playing while video loads invisibly (opacity 0, muted)
   - `revealPreloadedVideo()` is now instant (removed 2×rAF + 200ms delay); reveal = opacity 1 + unmute
