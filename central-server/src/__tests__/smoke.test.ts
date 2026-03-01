@@ -5949,3 +5949,100 @@ describe('ADR-034 synchronized manual video reveal', () => {
     });
   });
 });
+
+// ===================== ADR-034 metrics pipeline =====================
+describe('ADR-034 preload-reveal metrics pipeline', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+  let tvContent: string;
+  let stateContent: string;
+
+  beforeAll(() => {
+    tvContent = fs.readFileSync(path.join(repoRoot, 'raspberry/src/app/components/tv/tv.component.ts'), 'utf8');
+    stateContent = fs.readFileSync(path.join(repoRoot, 'raspberry/server/services/state.service.js'), 'utf8');
+  });
+
+  it('tv.component transitionMetrics MUST include preloadRevealCount and preloadCleanupCount', () => {
+    expect({
+      hasReveal: tvContent.includes('preloadRevealCount'),
+      hasCleanup: tvContent.includes('preloadCleanupCount'),
+    }).toEqual({
+      hasReveal: true,
+      hasCleanup: true,
+    });
+  });
+
+  it('revealPreloadedVideo MUST increment preloadRevealCount', () => {
+    const revealMethod = tvContent.slice(
+      tvContent.indexOf('private revealPreloadedVideo'),
+      tvContent.indexOf('private revealPreloadedVideo') + 1500
+    );
+    expect(revealMethod).toMatch(/preloadRevealCount\+\+/);
+  });
+
+  it('cleanupPreloadState MUST increment preloadCleanupCount', () => {
+    const cleanupMethod = tvContent.slice(
+      tvContent.indexOf('private cleanupPreloadState'),
+      tvContent.indexOf('private cleanupPreloadState') + 500
+    );
+    expect(cleanupMethod).toMatch(/preloadCleanupCount\+\+/);
+  });
+
+  it('emitTransitionMetrics slave branch MUST emit preloadRevealCount and preloadCleanupCount', () => {
+    const emitMethod = tvContent.slice(
+      tvContent.indexOf('private emitTransitionMetrics'),
+      tvContent.indexOf('private emitTransitionMetrics') + 800
+    );
+    expect({
+      hasRevealInSlave: /preloadRevealCount.*preloadCleanupCount|preloadCleanupCount.*preloadRevealCount/.test(emitMethod),
+    }).toEqual({
+      hasRevealInSlave: true,
+    });
+  });
+
+  it('state.service _transitionMetrics MUST include preloadRevealCount and preloadCleanupCount', () => {
+    expect({
+      hasReveal: stateContent.includes('preloadRevealCount'),
+      hasCleanup: stateContent.includes('preloadCleanupCount'),
+    }).toEqual({
+      hasReveal: true,
+      hasCleanup: true,
+    });
+  });
+
+  it('TransitionMetrics interface MUST include preloadRevealCount and preloadCleanupCount', () => {
+    const typesContent = fs.readFileSync(path.join(repoRoot, 'central-server/src/types/index.ts'), 'utf8');
+    const iface = typesContent.slice(
+      typesContent.indexOf('interface TransitionMetrics'),
+      typesContent.indexOf('interface TransitionMetrics') + 500
+    );
+    expect({
+      hasReveal: iface.includes('preloadRevealCount'),
+      hasCleanup: iface.includes('preloadCleanupCount'),
+    }).toEqual({
+      hasReveal: true,
+      hasCleanup: true,
+    });
+  });
+
+  it('metrics.service MUST have Prometheus counters for preload_reveal and preload_cleanup', () => {
+    const metricsContent = fs.readFileSync(path.join(repoRoot, 'central-server/src/services/metrics.service.ts'), 'utf8');
+    expect({
+      hasRevealCounter: metricsContent.includes('neopro_video_preload_reveal_total'),
+      hasCleanupCounter: metricsContent.includes('neopro_video_preload_cleanup_total'),
+    }).toEqual({
+      hasRevealCounter: true,
+      hasCleanupCounter: true,
+    });
+  });
+
+  it('heartbeat.handler MUST log preload metrics', () => {
+    const heartbeatContent = fs.readFileSync(path.join(repoRoot, 'central-server/src/handlers/heartbeat.handler.ts'), 'utf8');
+    expect({
+      hasRevealLog: heartbeatContent.includes('preloadRevealCount'),
+      hasCleanupLog: heartbeatContent.includes('preloadCleanupCount'),
+    }).toEqual({
+      hasRevealLog: true,
+      hasCleanupLog: true,
+    });
+  });
+});

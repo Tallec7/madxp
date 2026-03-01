@@ -430,6 +430,18 @@ const videoStaleLoopStateTotal = new Counter({
   registers: [register],
 });
 
+const videoPreloadRevealTotal = new Counter({
+  name: 'neopro_video_preload_reveal_total',
+  help: 'Total successful preload-reveal syncs on slave (ADR-034 synchronized manual video)',
+  registers: [register],
+});
+
+const videoPreloadCleanupTotal = new Counter({
+  name: 'neopro_video_preload_cleanup_total',
+  help: 'Total preload aborts before reveal (ADR-034 master returned to loop)',
+  registers: [register],
+});
+
 // ============= Métriques License Push =============
 
 const licenseStatusPushesTotal = new Counter({
@@ -981,7 +993,7 @@ class MetricsService {
 
   // ============= Méthodes Video Transition =============
 
-  recordTransitionMetrics(metrics: { earlySwitchCount?: number; safetyTimeoutCount?: number; cleanupSkippedCount?: number; videoErrorCount?: number; totalTransitions?: number; staleLoopStateCount?: number } | null | undefined): void {
+  recordTransitionMetrics(metrics: { earlySwitchCount?: number; safetyTimeoutCount?: number; cleanupSkippedCount?: number; videoErrorCount?: number; totalTransitions?: number; staleLoopStateCount?: number; preloadRevealCount?: number; preloadCleanupCount?: number } | null | undefined): void {
     if (!metrics) return;
     if (metrics.earlySwitchCount) videoTransitionEarlySwitchTotal.inc(metrics.earlySwitchCount);
     if (metrics.safetyTimeoutCount) videoTransitionSafetyTimeoutTotal.inc(metrics.safetyTimeoutCount);
@@ -989,6 +1001,8 @@ class MetricsService {
     if (metrics.videoErrorCount) videoTransitionErrorTotal.inc(metrics.videoErrorCount);
     if (metrics.totalTransitions) videoTransitionsTotal.inc(metrics.totalTransitions);
     if (metrics.staleLoopStateCount) videoStaleLoopStateTotal.inc(metrics.staleLoopStateCount);
+    if (metrics.preloadRevealCount) videoPreloadRevealTotal.inc(metrics.preloadRevealCount);
+    if (metrics.preloadCleanupCount) videoPreloadCleanupTotal.inc(metrics.preloadCleanupCount);
   }
 
   // ============= Méthodes Report Generation =============

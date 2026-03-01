@@ -43,6 +43,9 @@ class StateService {
       failoverDurationMs: null,    // duration of last failover (ms)
       // ADR-033: race condition guard metrics
       staleLoopStateCount: 0,      // tv-loop-state stales ignored by slave guard
+      // ADR-034: preload-reveal sync metrics
+      preloadRevealCount: 0,       // successful preload→reveal syncs on slave
+      preloadCleanupCount: 0,      // preload aborted (master returned to loop before reveal)
       lastUpdatedAt: null,
     };
 
@@ -160,6 +163,9 @@ class StateService {
     }
     // ADR-033: race condition guard metrics
     this._transitionMetrics.staleLoopStateCount += data.staleLoopStateCount || 0;
+    // ADR-034: preload-reveal sync metrics
+    this._transitionMetrics.preloadRevealCount += data.preloadRevealCount || 0;
+    this._transitionMetrics.preloadCleanupCount += data.preloadCleanupCount || 0;
     this._transitionMetrics.lastUpdatedAt = Date.now();
     return this.getTransitionMetrics();
   }
@@ -182,6 +188,8 @@ class StateService {
     this._transitionMetrics.failoverCount = 0;
     this._transitionMetrics.failoverRecoveryCount = 0;
     this._transitionMetrics.staleLoopStateCount = 0;
+    this._transitionMetrics.preloadRevealCount = 0;
+    this._transitionMetrics.preloadCleanupCount = 0;
     // bootToVideoMs and failoverDurationMs are NOT reset — they are one-shot/last-value metrics
     return metrics;
   }

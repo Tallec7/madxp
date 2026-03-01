@@ -1373,6 +1373,75 @@ Le guard incrémente `transitionMetrics.staleLoopStateCount` à chaque occurrenc
 
 ---
 
+## Révélation Synchronisée (ADR-034 v3.89.0+)
+
+> Synchronisation de la révélation des vidéos manuelles entre master et slaves pour éliminer le décalage visuel (~300ms → ~50ms).
+
+### Le problème
+
+Quand l'utilisateur déclenche une vidéo manuelle, le serveur broadcaste `action` à tous les clients simultanément. Chaque client charge et révèle la vidéo indépendamment, mais les temps de chargement diffèrent (fichiers primary vs secondary variants, Pi vs PC, réseau local) → décalage de 150ms à 450ms entre les écrans.
+
+### La solution (preload/reveal en 2 étapes)
+
+**Master** : Comportement inchangé — `play()` charge et révèle la vidéo normalement.
+
+**Slaves** : Au lieu d'appeler `play()` sur `action`, appellent `preloadManualVideo()` qui prépare tout (freeze-frame, overlay noir, chargement vidéo dans le player inactif) SANS révéler.
+
+```
+Timeline:
+t=0     Server: io.emit('action', X) → broadcast à ALL
+t=5ms   Master: play(X) — commence le chargement
+t=5ms   Slave: preloadManualVideo(X) — commence le chargement
+t=50ms  Slave: vidéo prête, attend signal...
+t=100ms Master: vidéo chargée + 2×rAF + 200ms → révèle !
+        Master: emit tv-loop-update { isManualMode: true, manualVideoVisible: true }
+t=110ms Slave: reçoit manualVideoVisible: true → revealPreloadedVideo()
+        → écart ≈ 10ms (latence Socket.IO locale)
+```
+
+### Trois sous-cas dans handleMasterLoopState CAS 1
+
+| Sous-cas | Condition                                          | Action                                                              |
+| -------- | -------------------------------------------------- | ------------------------------------------------------------------- |
+| 1a       | `manualVideoVisible === false`                     | Preload (safety net si `action` manqué par le slave)                |
+| 1b       | `manualVideoVisible === true` + preload en attente | `revealPreloadedVideo()` — cas normal                               |
+| 1c       | `manualVideoVisible === true` + pas de preload     | `play()` directement — backward compat (vieux master sans le champ) |
+
+### Nettoyage
+
+Si le master revient à la boucle avant d'émettre `manualVideoVisible: true` (ex: vidéo très courte, annulation), `handleMasterLoopState` CAS 2 appelle `cleanupPreloadState()` qui stop le player préchargé et reset l'état.
+
+### Monitoring
+
+Deux compteurs dédiés, pipeline identique à ADR-033 :
+
+| Métrique              | Description                         | Prometheus                           |
+| --------------------- | ----------------------------------- | ------------------------------------ |
+| `preloadRevealCount`  | Révélations preload→reveal réussies | `neopro_video_preload_reveal_total`  |
+| `preloadCleanupCount` | Preloads avortés (retour boucle)    | `neopro_video_preload_cleanup_total` |
+
+Pipeline : `tv.component.ts` (slave) → Socket.IO `transition-metrics` (30s) → `state.service.js` (agrégation) → heartbeat → `heartbeat.handler.ts` → `metricsService` → Prometheus.
+
+Un ratio `preloadCleanupCount/preloadRevealCount` élevé indique des vidéos manuelles très courtes ou des annulations fréquentes — pas un bug mais une information opérationnelle utile.
+
+### Backward compatibility
+
+- **Vieux slaves** (sans preload) : ignorent `manualVideoVisible`, continuent à `play()` sur `action` → aucune régression
+- **Vieux masters** (sans `manualVideoVisible`) : le champ est absent dans `tv-loop-state` → sous-cas 1c fait `play()` directement → aucune régression
+
+### Fichiers impactés
+
+| Fichier                                            | Modification                                                                         |
+| -------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| `raspberry/src/app/services/socket.service.ts`     | `manualVideoVisible: boolean` dans `LoopState`                                       |
+| `raspberry/src/app/components/tv/tv.component.ts`  | `preloadManualVideo()`, `revealPreloadedVideo()`, `cleanupPreloadState()`, compteurs |
+| `raspberry/server/services/state.service.js`       | `manualVideoVisible` dans `_loopState`, compteurs dans `_transitionMetrics`          |
+| `central-server/src/types/index.ts`                | `preloadRevealCount`, `preloadCleanupCount` dans `TransitionMetrics`                 |
+| `central-server/src/services/metrics.service.ts`   | 2 compteurs Prometheus                                                               |
+| `central-server/src/handlers/heartbeat.handler.ts` | Log info pour les compteurs ADR-034                                                  |
+
+---
+
 ## Historique des Versions
 
 | Version | Date       | Auteur        | Modifications                                                                                                        |
@@ -1398,6 +1467,7 @@ Le guard incrémente `transitionMetrics.staleLoopStateCount` à chaque occurrenc
 | 2.8     | 2026-02-24 | Claude/NEOPRO | Fix race condition reboot post-OTA : `shutdown -r +0` via spawn, skip restart sync-agent quand reboot prévu          |
 | 2.9     | 2026-02-27 | Claude/NEOPRO | E-23 : événements HDMI & failover, heartbeat enrichi (hdmiStatus, connectedClients), pipeline détection              |
 | 3.0     | 2026-03-01 | Claude/NEOPRO | ADR-033 : fix race condition master-slave (guard anti-stale), monitoring staleLoopStateCount, secondary variant path |
+| 3.1     | 2026-03-01 | Claude/NEOPRO | ADR-034 : révélation synchronisée preload/reveal, monitoring preloadRevealCount/preloadCleanupCount                  |
 
 ---
 

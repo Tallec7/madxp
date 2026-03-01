@@ -124,6 +124,20 @@ export async function handleHeartbeat(
           staleLoopStateCount: message.transitionMetrics.staleLoopStateCount,
         });
       }
+
+      // ADR-034: Log preload-reveal sync metrics for dual-display monitoring
+      if (message.transitionMetrics.preloadRevealCount && message.transitionMetrics.preloadRevealCount > 0) {
+        logger.info('Preload-reveal sync completed', {
+          siteId,
+          preloadRevealCount: message.transitionMetrics.preloadRevealCount,
+        });
+      }
+      if (message.transitionMetrics.preloadCleanupCount && message.transitionMetrics.preloadCleanupCount > 0) {
+        logger.info('Preload cleanup (master returned to loop before reveal)', {
+          siteId,
+          preloadCleanupCount: message.transitionMetrics.preloadCleanupCount,
+        });
+      }
     }
 
     // Broadcast HDMI status to dashboard in real-time (E-23)

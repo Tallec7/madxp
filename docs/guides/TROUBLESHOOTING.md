@@ -4486,9 +4486,32 @@ journalctl -u neopro-app --since '5 minutes ago' | grep -E 'ignoring stale|maste
 
 Corrigé dans `tv.component.ts` : émission immédiate du master + guard `_lastActionReceivedAt` sur le slave.
 
+#### Décalage visible entre écrans (vidéo manuelle) — ADR-034
+
+Les écrans primaire et secondaire jouent la vidéo manuelle mais avec un décalage visible (~300ms). Corrigé en v3.89.0 avec le pattern preload/reveal.
+
+```bash
+# Vérifier que le slave utilise bien le preload/reveal (ADR-034)
+journalctl -u neopro-kiosk --no-pager | grep -E 'preloading manual video|revealing preloaded'
+# Attendu: "Slave: preloading manual video" PUIS "Slave: preloaded manual video revealed"
+
+# Si "Slave: preloading manual video" n'apparaît PAS
+# → Le slave appelle play() directement (vieille version sans ADR-034)
+# Solution: OTA update vers v3.89.0+
+
+# Vérifier les compteurs de monitoring
+journalctl -u neopro-kiosk --no-pager | grep -E 'preloadRevealCount|preloadCleanupCount'
+```
+
+Si le slave preload mais ne reveal jamais, vérifier que le master émet bien `manualVideoVisible: true` :
+
+```bash
+journalctl -u neopro-kiosk --no-pager | grep 'tv-loop-update.*manualVideoVisible'
+```
+
 ### Smoke tests de régression
 
-10 smoke tests (sections E-41 + ADR-033 dans `smoke.test.ts`) :
+19 smoke tests (sections E-41 + ADR-033 + ADR-034 dans `smoke.test.ts`) :
 
 1. `admin-server must import SECONDARY_VIDEOS_DIR from helpers`
 2. `admin-server must register /videos-secondary static route`

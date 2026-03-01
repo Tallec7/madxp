@@ -1733,19 +1733,40 @@ Le service `neopro-kiosk` lance `kiosk-watchdog.sh` — un superviseur qui gère
 
 Les deux instances Chromium se synchronisent via Socket.IO master-slave :
 
-| Étape          | Master (`/tv`)                                     | Slave (`/secondary`)                                                             |
-| -------------- | -------------------------------------------------- | -------------------------------------------------------------------------------- |
-| Boot           | `startSeamlessLoop()` → joue vidéo 0               | `startSeamlessLoop()` → joue indépendamment                                      |
-| Rôle           | `tv-role-assigned: master` → émet `tv-loop-update` | `tv-role-assigned: slave` → **pause players** + freeze-frame                     |
-| Sync boucle    | Master transition → `emitLoopState(index, path)`   | `handleMasterLoopState()` → `playOnActivePlayer(index)` + seek                   |
-| Vidéo manuelle | `play(video)` → émet `tv-loop-update` (manual)     | `handleMasterLoopState()` CAS 1 → `resolveSecondaryVariant()` + `play()` + seek  |
-| Fin vidéo      | `onVideoEnded()` → avance boucle                   | `onVideoEnded()` → freeze-frame, **attend master**                               |
-| Phase change   | `switchToPhase()` → relance boucle                 | `startSeamlessLoop()` → retourne immédiatement, attend master                    |
-| Action directe | —                                                  | Reçoit aussi `action` via Socket.IO → `resolveSecondaryVariant()` avant `play()` |
+| Étape          | Master (`/tv`)                                     | Slave (`/secondary`)                                                                           |
+| -------------- | -------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| Boot           | `startSeamlessLoop()` → joue vidéo 0               | `startSeamlessLoop()` → joue indépendamment                                                    |
+| Rôle           | `tv-role-assigned: master` → émet `tv-loop-update` | `tv-role-assigned: slave` → **pause players** + freeze-frame                                   |
+| Sync boucle    | Master transition → `emitLoopState(index, path)`   | `handleMasterLoopState()` → `playOnActivePlayer(index)` + seek                                 |
+| Vidéo manuelle | `play(video)` → émet `tv-loop-update` (manual)     | ADR-034: `preloadManualVideo()` → attend `manualVideoVisible: true` → `revealPreloadedVideo()` |
+| Fin vidéo      | `onVideoEnded()` → avance boucle                   | `onVideoEnded()` → freeze-frame, **attend master**                                             |
+| Phase change   | `switchToPhase()` → relance boucle                 | `startSeamlessLoop()` → retourne immédiatement, attend master                                  |
+| Action directe | —                                                  | Reçoit `action` → `preloadManualVideo()` (prépare sans révéler, ADR-034)                       |
 
 **Sync par index** : le slave utilise `videoIndex` (pas `videoPath`) car les variants secondaires ont des chemins différents. Les deux boucles ont le même ordre, donc l'index est toujours fiable.
 
 **Résolution variante secondaire** : `resolveSecondaryVariant()` vérifie d'abord `video.variants.secondary.path`, puis cherche dans la config complète via `findVideoInConfig(path)` (sponsors → timeCategories.loopVideos → categories.videos récursif). Appliqué aux 3 points d'entrée : `action` handler, BroadcastChannel, `handleMasterLoopState` CAS 1.
+
+**Révélation synchronisée (ADR-034 v3.89.0+)** :
+
+Le déclenchement d'une vidéo manuelle est un processus en 2 étapes pour les slaves :
+
+1. **Preload** : Le slave reçoit l'event `action` (broadcast serveur) et appelle `preloadManualVideo()` au lieu de `play()`. Cela prépare le freeze-frame, l'overlay noir, charge la vidéo dans le player inactif (double-buffering) — mais ne la révèle PAS.
+2. **Reveal** : Le master émet `manualVideoVisible: true` dans `tv-loop-update` après son propre délai 2×rAF + 200ms. Le slave reçoit ce signal via `handleMasterLoopState` CAS 1b et appelle `revealPreloadedVideo()` → transition opacity 0→1.
+
+Trois sous-cas dans `handleMasterLoopState` CAS 1 (`isManualMode: true`) :
+
+| Sous-cas | Condition                                          | Action                                              |
+| -------- | -------------------------------------------------- | --------------------------------------------------- |
+| 1a       | `manualVideoVisible === false`                     | Preload (safety net si `action` raté)               |
+| 1b       | `manualVideoVisible === true` + preload en attente | `revealPreloadedVideo()`                            |
+| 1c       | `manualVideoVisible === true` + pas de preload     | `play()` directement (backward compat vieux master) |
+
+Si le master revient à la boucle avant d'émettre `manualVideoVisible: true`, `handleMasterLoopState` CAS 2 appelle `cleanupPreloadState()` pour nettoyer l'état de preload sans révéler.
+
+> ⚠️ **Ne jamais appeler `play()` directement dans le handler `action` côté slave** — le slave doit appeler `preloadManualVideo()` et attendre le signal `manualVideoVisible: true` du master. Sinon la révélation n'est pas synchronisée. Smoke test enforced.
+>
+> ⚠️ **Ne jamais émettre `manualVideoVisible: true` dans l'émission immédiate** — seule l'émission delayed (après 2×rAF + 200ms) doit porter `manualVideoVisible: true`. L'émission immédiate doit toujours porter `manualVideoVisible: false`. Smoke test enforced.
 
 **Race condition master-slave (ADR-033)** :
 
@@ -1777,6 +1798,9 @@ journalctl -u neopro-kiosk --no-pager | grep '\[TV\] Slave'
 
 # Vérifier le guard anti-stale (ADR-033)
 journalctl -u neopro-kiosk --no-pager | grep 'ignoring stale loop state'
+
+# Vérifier la synchronisation preload-reveal (ADR-034)
+journalctl -u neopro-kiosk --no-pager | grep -E 'preloading manual video|revealing preloaded|cleaning up preload'
 # Si fréquent (>5/heure): latence réseau élevée ou problème de timing
 ```
 

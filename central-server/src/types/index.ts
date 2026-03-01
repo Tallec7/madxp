@@ -244,6 +244,8 @@ export interface TransitionMetrics {
   videoErrorCount: number;
   totalTransitions: number;
   staleLoopStateCount?: number; // ADR-033: tv-loop-state stales ignored by slave guard
+  preloadRevealCount?: number; // ADR-034: successful preload→reveal syncs on slave
+  preloadCleanupCount?: number; // ADR-034: preload aborted before reveal
   lastUpdatedAt?: number | null;
 }
 

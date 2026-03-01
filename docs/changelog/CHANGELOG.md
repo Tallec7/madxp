@@ -1,3 +1,13 @@
+# [3.89.0](https://github.com/Tallec7/neopro/compare/v3.88.2...v3.89.0) (2026-03-01)
+
+### Features
+
+- **dual-display:** synchronized manual video reveal — master-driven preload/reveal pattern (ADR-034)
+  - Slaves preload video on `action` but wait for master's `manualVideoVisible: true` signal before revealing
+  - Reduces inter-screen desync from ~300ms to ~50ms for manual video triggers
+  - Backward compatible: old slaves ignore the new field, old masters trigger direct `play()`
+- **monitoring:** ADR-034 preload-reveal metrics pipeline (Prometheus `neopro_video_preload_reveal_total`, `neopro_video_preload_cleanup_total`)
+
 ## [3.88.2](https://github.com/Tallec7/neopro/compare/v3.88.1...v3.88.2) (2026-03-01)
 
 ### Bug Fixes

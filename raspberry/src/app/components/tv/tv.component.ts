@@ -199,6 +199,8 @@ export class TvComponent implements OnInit, OnDestroy {
     videoErrorCount: 0,
     totalTransitions: 0,
     staleLoopStateCount: 0, // ADR-033: nombre de tv-loop-state stales ignorés par le guard anti-race condition
+    preloadRevealCount: 0, // ADR-034: nombre de révélations preload→reveal synchronisées
+    preloadCleanupCount: 0, // ADR-034: nombre de nettoyages preload avortés (retour boucle avant reveal)
   };
   private transitionMetricsInterval: ReturnType<typeof setInterval> | null = null;
 
@@ -1119,6 +1121,7 @@ export class TvComponent implements OnInit, OnDestroy {
           });
 
           console.log('[TV] Slave: preloaded manual video revealed');
+          this.transitionMetrics.preloadRevealCount++;
 
           // Clear preload state (video is now playing normally)
           this._preloadedManualVideo = null;
@@ -1136,6 +1139,7 @@ export class TvComponent implements OnInit, OnDestroy {
     if (!this._preloadedManualVideo) return;
 
     console.log('[TV] Slave: cleaning up preload state');
+    this.transitionMetrics.preloadCleanupCount++;
 
     const player = this._preloadedManualPlayer;
     if (player) {
@@ -2074,9 +2078,15 @@ export class TvComponent implements OnInit, OnDestroy {
     // Le slave n'émet que staleLoopStateCount (les autres métriques viennent du master)
     const m = this.transitionMetrics;
     if (this.isSlaveMode) {
-      if (m.staleLoopStateCount > 0) {
-        this.socketService.emit('transition-metrics', { staleLoopStateCount: m.staleLoopStateCount });
+      if (m.staleLoopStateCount > 0 || m.preloadRevealCount > 0 || m.preloadCleanupCount > 0) {
+        this.socketService.emit('transition-metrics', {
+          staleLoopStateCount: m.staleLoopStateCount,
+          preloadRevealCount: m.preloadRevealCount,
+          preloadCleanupCount: m.preloadCleanupCount,
+        });
         m.staleLoopStateCount = 0;
+        m.preloadRevealCount = 0;
+        m.preloadCleanupCount = 0;
       }
       return;
     }

@@ -657,6 +657,32 @@ avec des chemins différents.
 - `startSeamlessLoop()` retourne immédiatement en mode slave
 - `onVideoEnded()` affiche un freeze-frame et attend le master
 - `handleMasterLoopState()` synchronise par `videoIndex` (pas `videoPath`)
+- ADR-034 : le slave ne `play()` jamais directement sur `action` — il `preloadManualVideo()` et attend `manualVideoVisible: true`
+- ADR-034 : l'émission immédiate du master porte `manualVideoVisible: false`, seule l'émission delayed porte `true`
+
+**Vidéo manuelle synchronisée (ADR-034 v3.89.0+)** :
+
+```
+Dashboard/Télécommande: "jouer vidéo X"
+     │
+     ▼
+  Server: io.emit('action', X)   ← broadcast à TOUS
+     │
+     ├──────────────────┬──────────────────┐
+     ▼                  ▼                  ▼
+  MASTER (HDMI-0)    SLAVE (HDMI-1)     SLAVE (PC)
+  play(X)            preload(X)         preload(X)
+  freeze+overlay     freeze+overlay     freeze+overlay
+  charge vidéo       charge vidéo       charge vidéo
+  ✓ révèle !
+  emit(visible:true)
+     │
+     ├──────────────────┬──────────────────┐
+     ▼                  ▼                  ▼
+  (déjà visible)     reveal ≈50ms       reveal ≈50ms
+```
+
+Monitoring : `preloadRevealCount` et `preloadCleanupCount` via Prometheus (pipeline identique à ADR-033).
 
 ### Dépendances critiques en mode offline
 

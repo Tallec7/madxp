@@ -83,6 +83,9 @@ source central-server/.env && psql "$DATABASE_URL" -f central-server/src/scripts
 - Émettre `tv-loop-update` avec `isManualMode: true` SEULEMENT après le délai 2×rAF + 200ms dans `play()` (un `tv-loop-state` stale arriverait au slave avant et tuerait sa vidéo manuelle — émettre aussi immédiatement — smoke test enforced)
 - Appeler `stopManualVideoAndReturnToLoop()` dans `handleMasterLoopState` CAS 2 sans vérifier `_lastActionReceivedAt` (un `tv-loop-state` stale peut arriver après une action — guard 2s obligatoire — smoke test enforced)
 - Construire `secondaryRelativePath` avec `relativePath.replace()` dans `deploySecondaryVariant()` (utilise le filename du fichier primaire au lieu de `finalFilename` — le secondaire a son propre nom — smoke test enforced)
+- Appeler `play()` directement dans le handler `action` côté slave (le slave doit appeler `preloadManualVideo()` et attendre le signal `manualVideoVisible: true` du master via `tv-loop-state` — ADR-034, smoke test enforced)
+- Émettre `manualVideoVisible: true` dans l'émission immédiate de `play()` (seule l'émission delayed après 2×rAF + 200ms doit émettre `manualVideoVisible: true` — sinon le slave révèle avant que le master soit prêt — ADR-034, smoke test enforced)
+- Oublier `manualVideoVisible: false` dans `emitLoopState()` des transitions de boucle (les slaves interpréteraient l'absence du champ comme un signal de reveal — toujours émettre explicitement `false` — ADR-034, smoke test enforced)
 
 ## Architecture détaillée
 
