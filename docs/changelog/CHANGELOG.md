@@ -1,3 +1,18 @@
+## [3.84.9](https://github.com/Tallec7/neopro/compare/v3.84.8...v3.84.9) (2026-03-01)
+
+### Bug Fixes
+
+- **network:** fix inter-process dual-scan on wlan1 at boot — hotspot-optimizer.sh scans wlan1 at boot+12s, then `networkDetector.detect()` fires a SECOND `iwlist wlan1 scan` at boot+60s via `agent.js` setTimeout. Two wlan1 scans within 48s destabilizes RTL8192EU carrier → 2-3 min outage. Fixed by: (1) hotspot-optimizer writes scan results to `/tmp/neopro-wlan1-scan-cache` + timestamp, (2) `networkDetector.scanWifiNetworks()` reads cache if fresh (<120s) instead of scanning again.
+
+### Tests
+
+- **smoke:** add 4 regression guards — hotspot-optimizer must write inter-process scan cache, networkDetector must read cache before scanning, cache check must precede live scan, live scan must write cache for future consumers
+
+### Documentation
+
+- **claude:** add "NE JAMAIS FAIRE" rule for scanning wlan1 in networkDetector without checking inter-process cache
+- **changelog:** document v3.84.9 inter-process scan coordination fix
+
 ## [3.84.8](https://github.com/Tallec7/neopro/compare/v3.84.7...v3.84.8) (2026-03-01)
 
 ### Bug Fixes

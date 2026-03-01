@@ -10,6 +10,7 @@
 const { exec } = require('child_process');
 const util = require('util');
 const execAsync = util.promisify(exec);
+const fs = require('fs');
 const logger = require('../logger');
 
 // Network profile types
@@ -32,6 +33,14 @@ const CONFIG = {
   ARP_SCAN_TIMEOUT_MS: 5000,   // ARP scan timeout
   DETECTION_COOLDOWN_MS: 120 * 1000  // 120s minimum between detections
 };
+
+// Inter-process scan coordination paths.
+// hotspot-optimizer.sh writes scan results + timestamp here after its single scan.
+// We reuse them to avoid a SECOND iwlist wlan1 scan within 120s.
+// RTL8192EU is single-radio: 2 scans in 120s → carrier loss → 2-3 min outage.
+const SCAN_CACHE_PATH = '/tmp/neopro-wlan1-scan-cache';
+const SCAN_TS_PATH = '/tmp/neopro-wlan1-scan-ts';
+const SCAN_CACHE_MAX_AGE_S = 120; // Reuse cache if less than 120s old
 
 /**
  * Main class for network environment detection
@@ -112,9 +121,69 @@ class NetworkDetector {
   }
 
   /**
-   * Scan for all visible WiFi networks
+   * Check if a recent wlan1 scan cache exists (written by hotspot-optimizer.sh
+   * or a previous scanWifiNetworks call). Returns raw scan output or null.
+   */
+  _readScanCache() {
+    try {
+      if (!fs.existsSync(SCAN_TS_PATH) || !fs.existsSync(SCAN_CACHE_PATH)) {
+        return null;
+      }
+      const tsStr = fs.readFileSync(SCAN_TS_PATH, 'utf8').trim();
+      const scanEpoch = parseInt(tsStr, 10);
+      if (isNaN(scanEpoch)) return null;
+
+      const ageSeconds = Math.floor(Date.now() / 1000) - scanEpoch;
+      if (ageSeconds > SCAN_CACHE_MAX_AGE_S) {
+        logger.info('NetworkDetector: scan cache too old, will re-scan', { ageSeconds });
+        return null;
+      }
+
+      const cached = fs.readFileSync(SCAN_CACHE_PATH, 'utf8');
+      if (!cached || cached.length < 20) return null;
+
+      logger.info('NetworkDetector: reusing wlan1 scan cache (avoids second scan)', { ageSeconds });
+      return cached;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Write scan results to the inter-process cache so that subsequent
+   * consumers (including hotspot-optimizer.sh on next boot) can reuse them.
+   */
+  _writeScanCache(output) {
+    try {
+      fs.writeFileSync(SCAN_CACHE_PATH, output, 'utf8');
+      fs.writeFileSync(SCAN_TS_PATH, String(Math.floor(Date.now() / 1000)), 'utf8');
+    } catch {
+      // Non-critical — cache write failure should not break detection
+    }
+  }
+
+  /**
+   * Scan for all visible WiFi networks.
+   * Uses inter-process scan cache when available (<120s old) to avoid
+   * a second iwlist wlan1 scan. RTL8192EU is single-radio: each scan
+   * drops carrier for ~6s. Two scans within 120s → carrier loss.
    */
   async scanWifiNetworks() {
+    // Check inter-process cache first (written by hotspot-optimizer.sh or previous scan)
+    const cachedOutput = this._readScanCache();
+    const scanOutput = cachedOutput || await this._performLiveScan();
+
+    if (!scanOutput) {
+      return [];
+    }
+
+    return this._parseScanOutput(scanOutput);
+  }
+
+  /**
+   * Perform a live iwlist wlan1 scan and write results to the inter-process cache.
+   */
+  async _performLiveScan() {
     const result = await this.execWithTimeout(
       'sudo iwlist wlan1 scan 2>/dev/null',
       CONFIG.SCAN_TIMEOUT_MS
@@ -122,11 +191,20 @@ class NetworkDetector {
 
     if (!result.success) {
       logger.warn('WiFi scan failed', { error: result.error });
-      return [];
+      return null;
     }
 
+    // Write to inter-process cache for other consumers
+    this._writeScanCache(result.output);
+    return result.output;
+  }
+
+  /**
+   * Parse raw iwlist scan output into structured network objects.
+   */
+  _parseScanOutput(output) {
     const networks = [];
-    const cells = result.output.split(/Cell \d+ - /);
+    const cells = output.split(/Cell \d+ - /);
 
     for (const cell of cells) {
       if (!cell.trim()) continue;

@@ -4598,6 +4598,78 @@ describe('Hotspot optimizer wlan1 scan regression guards', () => {
     );
     expect(deployScript).toEqual(hotspotScript);
   });
+
+  // Guard 5: hotspot-optimizer must write inter-process scan cache
+  // networkDetector (Node.js) reuses this cache to avoid a SECOND iwlist wlan1 scan.
+  it('must write scan cache to /tmp/neopro-wlan1-scan-cache for inter-process coordination', () => {
+    expect({
+      writesScanCache: /neopro-wlan1-scan-cache/.test(hotspotScript),
+      writesScanTs: /neopro-wlan1-scan-ts/.test(hotspotScript),
+      reason: 'networkDetector must reuse cached scan — 2 iwlist scans within 120s kills RTL8192EU carrier',
+    }).toEqual({
+      writesScanCache: true,
+      writesScanTs: true,
+      reason: 'networkDetector must reuse cached scan — 2 iwlist scans within 120s kills RTL8192EU carrier',
+    });
+  });
+});
+
+// ----------------------------------------------------------
+// Inter-process wlan1 scan coordination guard
+// ----------------------------------------------------------
+// Issue: hotspot-optimizer.sh scans wlan1 at boot+12s, then networkDetector.detect()
+// fires ANOTHER iwlist wlan1 scan at boot+60s via agent.js setTimeout.
+// RTL8192EU single-radio: 2 scans within 120s → carrier loss → 2-3 min outage.
+// Fix: hotspot-optimizer writes scan to /tmp/neopro-wlan1-scan-cache,
+// networkDetector reads cache if fresh (<120s) instead of scanning again.
+describe('Inter-process wlan1 scan coordination guard', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+  let networkDetectorSrc: string;
+
+  beforeAll(() => {
+    networkDetectorSrc = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/sync-agent/src/services/network-detector.js'),
+      'utf8'
+    );
+  });
+
+  // Guard 1: networkDetector must check scan cache before scanning
+  it('scanWifiNetworks must read inter-process scan cache before iwlist scan', () => {
+    expect({
+      readsScanCache: /neopro-wlan1-scan-cache/.test(networkDetectorSrc),
+      readsScanTs: /neopro-wlan1-scan-ts/.test(networkDetectorSrc),
+      hasCacheMaxAge: /SCAN_CACHE_MAX_AGE_S/.test(networkDetectorSrc),
+    }).toEqual({
+      readsScanCache: true,
+      readsScanTs: true,
+      hasCacheMaxAge: true,
+    });
+  });
+
+  // Guard 2: cache check must happen BEFORE the live scan
+  it('cache check must precede live iwlist wlan1 scan', () => {
+    const cacheCheckPos = networkDetectorSrc.indexOf('_readScanCache');
+    const liveScanPos = networkDetectorSrc.indexOf('_performLiveScan');
+    expect({
+      cacheCheckExists: cacheCheckPos > -1,
+      liveScanExists: liveScanPos > -1,
+      cacheBeforeScan: cacheCheckPos < liveScanPos,
+    }).toEqual({
+      cacheCheckExists: true,
+      liveScanExists: true,
+      cacheBeforeScan: true,
+    });
+  });
+
+  // Guard 3: live scan must write cache for next consumer
+  it('live scan must write cache after scanning for future consumers', () => {
+    // _performLiveScan method must call _writeScanCache
+    const funcMatch = networkDetectorSrc.match(
+      /_performLiveScan\(\)\s*\{([\s\S]*?)\n  \}/
+    );
+    expect(funcMatch).not.toBeNull();
+    expect(funcMatch![1]).toMatch(/_writeScanCache/);
+  });
 });
 
 // ----------------------------------------------------------
