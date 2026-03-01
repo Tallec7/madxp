@@ -730,12 +730,16 @@ Le Pi physique (kiosk) est **toujours master**. Si un navigateur PC s'est enregi
 
 ### Transition dual-display zéro coupure (F-23.4)
 
-Le passage mono→dual et dual→mono se fait **sans restart de Chromium** :
+Le passage mono→dual se fait **sans restart de Chromium**, mais le retour dual→mono **relance Chromium** :
 
 1. Chromium est toujours lancé en `--app=URL` (jamais `--kiosk`) → redimensionnable via `xdotool`
 2. Activation dual : `xrandr --output HDMI-X --auto --right-of` + `xdotool windowsize` sur les 2 fenêtres
-3. Désactivation dual : `xdotool windowsize` plein écran sur le primaire, kill du secondaire
+3. Désactivation dual : **relance complète** du Chromium primaire avec `--window-size` re-détecté via `get_output_resolution()`, kill du secondaire
 4. Plein écran par `xprop _MOTIF_WM_HINTS` (pas `F11` qui prend tout le bureau X11)
+
+> ⚠️ La désactivation dual ne peut PAS utiliser `xdotool windowsize` — Chromium ne re-render pas son viewport CSS interne après un resize X11 (le contenu reste zoomé à l'ancienne résolution). Le relaunch avec `--window-size` correct est obligatoire.
+>
+> ⚠️ `stop_chromium_secondary()` ne fait `xrandr --output $X --off` que si le câble HDMI-1 est encore physiquement connecté (vérifié via `detect_hdmi1_status`). Sinon, le `xrandr --off` sur un port déjà déconnecté provoque une race DRM kernel qui déstabilise le statut HDMI-0.
 
 Le slave se synchronise par **videoIndex** (pas `videoPath`) car les variantes secondaires ont des chemins différents.
 

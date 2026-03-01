@@ -891,6 +891,17 @@ sudo tail -f /home/pi/neopro/logs/nginx-error.log
 
 **Fix MIME type v3.43 :** Les fichiers statiques (`.js`, `.css`, `.woff2`, images, etc.) retournent désormais **404** si manquants au lieu du fallback SPA `index.html`. Cela corrige l'erreur `Failed to load module script: Expected a JavaScript module script but the server responded with a MIME type of "text/html"` qui survenait quand un fichier JS n'existait plus après un déploiement. Configs impactées : `nginx-captive-portal.conf` et `nginx/neopro-hls.conf`.
 
+**Proxy admin v3.87 :** Le bloc `location /admin/` redirige vers le serveur admin (port 8080). **Sans ce bloc**, la règle SPA catch-all retourne `index.html` pour toutes les requêtes `/admin/api/*` → `SyntaxError` en cascade. Les blocs proxy requis sont :
+
+| Location       | Proxy vers                   | Rôle                                                 |
+| -------------- | ---------------------------- | ---------------------------------------------------- |
+| `/admin/`      | `localhost:8080`             | Interface admin (API + UI)                           |
+| `/socket.io/`  | `localhost:3000`             | WebSocket TV ↔ télécommande (upgrade headers requis) |
+| `/videos/`     | `127.0.0.1:8080/videos/`     | Normalisation Unicode des noms de fichiers vidéo     |
+| `/thumbnails/` | `127.0.0.1:8080/thumbnails/` | Normalisation Unicode des thumbnails                 |
+
+**Important :** `/videos/` et `/thumbnails/` doivent utiliser `proxy_pass` et non `alias` — seul le passage par admin-server normalise les caractères Unicode (accents, espaces) dans les noms de fichiers. Les deux sources (`nginx-captive-portal.conf` et `install.sh`) doivent rester synchronisées — des smoke tests vérifient la cohérence.
+
 ---
 
 ## API et WebSocket
@@ -1675,6 +1686,10 @@ Le service `neopro-kiosk` lance `kiosk-watchdog.sh` — un superviseur qui gère
 > ⚠️ **Ne jamais utiliser `findIndex(v => v.path === state.videoPath)` pour la sync slave** — le secondary display utilise des variants de vidéos avec des chemins différents du master. Toujours synchroniser par `videoIndex`. Smoke test enforced.
 >
 > ⚠️ **Ne jamais jouer une vidéo manuelle sur le secondary sans `resolveSecondaryVariant()`** — le command `action` et le `tv-loop-state` envoient le path de la vidéo principale. Le secondary doit résoudre la variante via `resolveSecondaryVariant()` qui cherche dans `video.variants`, puis fallback dans `findVideoInConfig()` (sponsors, timeCategories, categories). Smoke test enforced.
+>
+> ⚠️ **Ne jamais utiliser `xdotool windowsize` pour le retour dual→single display** — Chromium ne re-render pas son viewport CSS interne après un resize X11 (la fenêtre change de taille mais le contenu reste rendu à l'ancienne résolution = zoom). Toujours relancer Chromium avec `--window-size` correct via `stop_chromium_primary` + `start_chromium`. Smoke test enforced.
+>
+> ⚠️ **Ne jamais lancer `xrandr --output $X --off` sur un port HDMI physiquement déconnecté** — dans `stop_chromium_secondary()`, `xrandr --off` sur un port déjà débranché provoque une race condition DRM kernel qui déstabilise le statut des autres ports HDMI (HDMI-0 marqué brièvement "disconnected"). Toujours vérifier `detect_hdmi1_status` avant. Smoke test enforced.
 
 #### Synchronisation Master-Slave (dual-display)
 

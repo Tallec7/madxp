@@ -4,7 +4,7 @@
 
 1. [Problèmes SSH](#problèmes-ssh)
 2. [Problèmes de connexion](#problèmes-de-connexion)
-3. [Erreurs 500](#erreurs-500) (MIME type, Pi /tv /remote, **rapports PDF**)
+3. [Erreurs 500](#erreurs-500) (MIME type, **Admin HTML-as-JSON**, Pi /tv /remote, **rapports PDF**)
 4. [Problèmes d'authentification](#problèmes-dauthentification)
 5. [Services qui ne démarrent pas](#services-qui-ne-démarrent-pas)
 6. [Problèmes de synchronisation](#problèmes-de-synchronisation)
@@ -382,6 +382,59 @@ sudo nginx -t && sudo systemctl reload nginx
 ```
 
 **Workaround temporaire :** un rafraîchissement forcé (Ctrl+Shift+R) résout le problème car le navigateur télécharge les nouveaux fichiers hachés.
+
+### Admin : toutes les API retournent du HTML (SyntaxError)
+
+#### Symptômes
+
+- L'interface admin (`http://neopro.local/admin/`) s'affiche mais toutes les données sont vides
+- Console : `SyntaxError: Unexpected token '<', "<!doctype "... is not valid JSON` sur chaque appel API
+- Tous les endpoints `/admin/api/*` retournent du HTML (`index.html` de la webapp Angular) au lieu de JSON
+
+#### Cause racine
+
+Le fichier `nginx-captive-portal.conf` ne contient pas le bloc `location /admin/` qui redirige vers le serveur admin (port 8080). Sans ce bloc, la règle SPA catch-all (`try_files $uri $uri/ /index.html`) intercepte toutes les requêtes `/admin/api/*` et retourne le `index.html` de la webapp Angular.
+
+**Note :** Ce problème ne se produit PAS si on accède directement à `http://neopro.local:8080` (qui bypasse nginx). Il n'apparaît que via le port 80 (nginx).
+
+#### Diagnostic
+
+```bash
+# Vérifier si le proxy admin est configuré dans nginx
+grep -c 'location /admin/' /etc/nginx/sites-enabled/neopro-captive
+# Résultat attendu : 1 (si 0 → bloc manquant)
+
+# Tester directement
+curl -sI http://neopro.local/admin/api/status | head -5
+# Si Content-Type: text/html → nginx retourne du HTML (bug)
+# Si Content-Type: application/json → OK
+```
+
+#### Solution (corrigé en v3.87)
+
+Le fichier `nginx-captive-portal.conf` contient désormais le bloc proxy admin :
+
+```nginx
+location /admin/ {
+    proxy_pass http://localhost:8080/;
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+}
+```
+
+**Si vous avez une ancienne version :**
+
+```bash
+sudo cp /home/pi/neopro/config/nginx-captive-portal.conf /etc/nginx/sites-enabled/neopro-captive
+sudo nginx -t && sudo systemctl reload nginx
+```
+
+**Protection supplémentaire :** Le fetch interceptor de l'admin (`modules/core/state.js`) détecte maintenant les réponses HTML sur les appels API et retourne un JSON d'erreur propre (status 502, code `HTML_RESPONSE`) au lieu de laisser `response.json()` crasher.
+
+---
 
 ### Erreur 500 sur /tv et /remote
 
@@ -4448,6 +4501,50 @@ sudo systemctl restart neopro-kiosk
 - `check_secondary_chromium must handle HDMI failover`
 - `stop_chromium_primary must use SIGTERM before SIGKILL`
 - `handlers.js must emit tv-role-promotion and tv-role-demotion`
+
+---
+
+## Écran primaire zoomé ou change de page après débranchement du secondaire (v3.86+)
+
+Quand l'écran secondaire est débranché en mode dual-display, l'écran primaire peut montrer un comportement incorrect.
+
+### Symptômes
+
+1. **L'écran primaire affiche "En attente de l'écran secondaire"** pendant quelques secondes après le débranchement
+2. **L'écran primaire affiche le contenu ultra-zoomé** (on ne voit que le coin supérieur gauche)
+
+### Cause
+
+Deux bugs dans le retour dual→single display (corrigés en v3.86.0) :
+
+1. **Splash "attente de l'écran secondaire"** : `stop_chromium_secondary()` exécutait `xrandr --output $HDMI1 --off` même quand le câble était déjà physiquement débranché. Cette commande provoquait une race condition DRM kernel qui marquait brièvement HDMI-0 comme "disconnected" dans `/sys/class/drm/` → Angular affichait l'écran d'attente.
+2. **Contenu zoomé** : le retour dual→single utilisait `xdotool windowsize` pour redimensionner le Chromium primaire. Or, Chromium ne re-render pas son viewport CSS interne après un resize X11 — la fenêtre X11 change de taille mais le contenu web reste rendu à l'ancienne résolution (ex: 960×1080 en dual → affiché sur 1920×1080 = zoom 2x).
+
+### Diagnostic
+
+```bash
+# 1. Vérifier que le fix est appliqué (v3.86.0+)
+grep "Retour en single-display: relance" /home/pi/neopro/scripts/kiosk-watchdog.sh
+# Attendu: la ligne existe (relaunch au lieu de resize)
+
+# 2. Vérifier les logs du dernier retour dual→single
+journalctl -u neopro-kiosk --no-pager -n 100 | grep -E "(single-display|Chromium primaire relancé)"
+# Attendu: "Retour en single-display: relance du Chromium primaire"
+#          puis "Chromium primaire relancé en single-display (WxH)"
+
+# 3. Vérifier que xrandr --off est bien gardé
+grep -A5 "detect_hdmi1_status" /home/pi/neopro/scripts/kiosk-watchdog.sh | grep "xrandr"
+# Attendu: xrandr --off est à l'intérieur du bloc if detect_hdmi1_status
+```
+
+### Correction
+
+Ce bug est corrigé en v3.86.0. Si vous êtes sur une version antérieure, mettez à jour via OTA ou `git pull && npm run deploy`.
+
+### Smoke tests de régression
+
+- `check_secondary_chromium: dual→single uses Chromium relaunch (xdotool viewport bug)`
+- `stop_chromium_secondary must guard xrandr --off behind detect_hdmi1_status (DRM race)`
 
 ---
 

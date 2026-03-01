@@ -17,7 +17,7 @@ cd central-server && npm run build # Compile TypeScript
 
 # Tests
 npm run test:server                # Jest (API central-server — 1592 tests)
-npm run test:smoke                 # Jest (Smoke tests — 373 tests, détecte régressions de wiring)
+npm run test:smoke                 # Jest (Smoke tests — 390 tests, détecte régressions de wiring)
 npm run test:central               # Karma (Angular Dashboard — 506 tests)
 cd raspberry/server && npm test    # Jest (Socket.IO server — 71 tests)
 cd raspberry/admin && npm test     # Jest (Admin server — 148 tests)
@@ -74,6 +74,11 @@ source central-server/.env && psql "$DATABASE_URL" -f central-server/src/scripts
 - Utiliser `object-fit: cover` sur les players vidéo TV (`.freeze-canvas`, `.double-buffer-player`, `.manual-player`) — `cover` zoome et coupe les bords si le ratio écran ≠ ratio vidéo (ex: moniteur 16:10 vs vidéo 16:9). Utiliser `object-fit: contain` (smoke test enforced)
 - Hardcoder `1920` ou `1080` dans kiosk-watchdog.sh (utiliser `$DEFAULT_SCREEN_WIDTH` / `$DEFAULT_SCREEN_HEIGHT` et la cascade `get_output_resolution()` — chaque TV a sa résolution native, pas forcément 1080p — smoke test enforced)
 - Dériver `SECONDARY_X_OFFSET` d'une valeur hardcodée (doit être `$PRIMARY_SCREEN_WIDTH` réel, détecté par la cascade — sinon fenêtre secondaire mal positionnée sur écran non-1080p — smoke test enforced)
+- Oublier `timeCategories[].loopVideos[]` dans `deploySecondaryVariant()` (les phases de match utilisent des `SponsorVideo` avec secondary variants — même structure que `sponsors[]` — smoke test enforced)
+- Envoyer `update_config` depuis le central sans appeler `enrichConfigWithSecondaryVariants()` (le config ne contient jamais les variants par défaut — l'enrichissement DB est obligatoire avant tout envoi au Pi — smoke test enforced)
+- Remplacer `timeCategories` dans config-merge sans restaurer les `variants.secondary` locales (`restoreSecondaryVariants()` doit être appelé après le merge pour réinjecter les variants perdues par le remplacement complet — smoke test enforced)
+- Utiliser `xdotool windowsize` pour le retour dual→single display (Chromium ne re-render pas son viewport CSS après un resize X11 → contenu zoomé/coupé — relancer Chromium avec `--window-size` correct — smoke test enforced)
+- Lancer `xrandr --output $X --off` sur un port HDMI physiquement déconnecté dans `stop_chromium_secondary()` (provoque une race DRM kernel qui déstabilise le statut des AUTRES ports HDMI → garde `detect_hdmi1_status` obligatoire — smoke test enforced)
 
 ## Architecture détaillée
 

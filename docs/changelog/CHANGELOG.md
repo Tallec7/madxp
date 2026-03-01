@@ -11,6 +11,24 @@
 
 - **home:** Angular HomeComponent landing page on neopro.local (US-23.7.2) ([9b9411d](https://github.com/Tallec7/neopro/commit/9b9411d2f3a985285b56ff001086217836e24129))
 
+### Bug Fixes
+
+- **failover:** relaunch Chromium on HDMI failover instead of resizing in-place — `xdotool windowsize` doesn't force Chromium to re-render its CSS viewport (X11 window resizes but internal content stays at old resolution = zoom effect). Dual→single return now kills and relaunches Chromium with correct `--window-size=WxH` and re-detected resolution via `get_output_resolution()`.
+- **failover:** guard `xrandr --off` behind `detect_hdmi1_status` in `stop_chromium_secondary()` — running `xrandr --output $secondary --off` on an already-disconnected HDMI port triggers a kernel DRM race condition that briefly marks other HDMI ports as disconnected → Angular shows "waiting for screen" splash on primary display.
+
+### Tests
+
+- **smoke:** update dual→single regression guard — now checks for Chromium relaunch (`stop_chromium_primary` + `start_chromium`) instead of `xdotool windowsize`
+- **smoke:** add `stop_chromium_secondary` DRM race guard — ensures `xrandr --off` is gated behind `detect_hdmi1_status`
+
+### Documentation
+
+- **claude:** add 2 "NE JAMAIS FAIRE" rules — `xdotool windowsize` for dual→single, `xrandr --off` on disconnected HDMI
+- **architecture:** update F-23.4 — dual→single transition now requires Chromium relaunch (not just xdotool resize)
+- **troubleshooting:** add section for "écran primaire zoomé/change après débranchement du secondaire"
+- **reference:** add 2 kiosk watchdog warnings — DRM race, xdotool viewport bug
+- **changelog:** document v3.86.0 HDMI failover fixes
+
 # [3.85.0](https://github.com/Tallec7/neopro/compare/v3.84.9...v3.85.0) (2026-03-01)
 
 ### Features

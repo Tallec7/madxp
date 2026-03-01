@@ -53,6 +53,7 @@ SECONDARY_CHROMIUM_PID=0
 SECONDARY_DISPLAY_ENABLED=false
 # Dual-display active = secondary is running → primary must be constrained to its monitor
 DUAL_DISPLAY_ACTIVE=false
+LAST_HDMI_TRANSITION=""
 PRIMARY_SCREEN_WIDTH=""
 PRIMARY_SCREEN_HEIGHT=""
 
@@ -349,7 +350,7 @@ write_kiosk_status() {
     detect_hdmi0_status && hdmi0_status="connected" || hdmi0_status="disconnected"
     detect_hdmi1_status && hdmi1_status="connected" || hdmi1_status="disconnected"
     cat > "$KIOSK_STATUS_FILE" 2>/dev/null <<EOF
-{"status":"${status}","chromiumAlive":$(pgrep -f "chromium.*$CHROMIUM_URL" > /dev/null 2>&1 && echo "true" || echo "false"),"restartCount":${#crash_times[@]},"lastEvent":"${now}","reason":"${reason}","pid":${CHROMIUM_PID:-0},"secondaryDisplayEnabled":${SECONDARY_DISPLAY_ENABLED},"secondaryChromiumAlive":${secondary_alive},"hdmi0Status":"${hdmi0_status}","hdmi1Status":"${hdmi1_status}","dualDisplayActive":${DUAL_DISPLAY_ACTIVE:-false},"hdmiFailoverActive":${HDMI_FAILOVER_ACTIVE:-false},"displayFallback":"${DISPLAY_FALLBACK_REASON}"}
+{"status":"${status}","chromiumAlive":$(pgrep -f "chromium.*$CHROMIUM_URL" > /dev/null 2>&1 && echo "true" || echo "false"),"restartCount":${#crash_times[@]},"lastEvent":"${now}","reason":"${reason}","pid":${CHROMIUM_PID:-0},"secondaryDisplayEnabled":${SECONDARY_DISPLAY_ENABLED},"secondaryChromiumAlive":${secondary_alive},"hdmi0Status":"${hdmi0_status}","hdmi1Status":"${hdmi1_status}","dualDisplayActive":${DUAL_DISPLAY_ACTIVE:-false},"hdmiFailoverActive":${HDMI_FAILOVER_ACTIVE:-false},"displayFallback":"${DISPLAY_FALLBACK_REASON}","lastHdmiTransition":"${LAST_HDMI_TRANSITION:-}"}
 EOF
 }
 
@@ -968,11 +969,19 @@ stop_chromium_secondary() {
         # Nettoyer le user-data-dir temporaire + shm orphelins
         rm -rf /tmp/kiosk-secondary 2>/dev/null || true
         rm -rf /dev/shm/.org.chromium.* 2>/dev/null || true
-        # Désactiver la sortie HDMI secondaire dans xrandr
-        local secondary_output
-        secondary_output=$(DISPLAY=:0 xrandr --query 2>/dev/null | grep -E "^HDMI.* connected" | grep -v "primary" | head -1 | awk '{print $1}')
-        if [[ -n "$secondary_output" ]]; then
-            DISPLAY=:0 xrandr --output "$secondary_output" --off 2>/dev/null || true
+        # Désactiver la sortie HDMI secondaire dans xrandr UNIQUEMENT si le câble est
+        # encore physiquement branché (désactivé par config, pas par débranchement).
+        # Si le câble est déjà débranché, le kernel DRM l'a déjà marqué "disconnected".
+        # Faire un xrandr --off dans ce cas force une reconfiguration DRM inutile qui
+        # peut brièvement déstabiliser le statut de HDMI-0 dans sysfs
+        # (race condition kernel → hdmi0=false transitoire → écran primaire affiche
+        # "En attente d'écran" pendant quelques secondes).
+        if detect_hdmi1_status; then
+            local secondary_output
+            secondary_output=$(DISPLAY=:0 xrandr --query 2>/dev/null | grep -E "^HDMI.* connected" | grep -v "primary" | head -1 | awk '{print $1}')
+            if [[ -n "$secondary_output" ]]; then
+                DISPLAY=:0 xrandr --output "$secondary_output" --off 2>/dev/null || true
+            fi
         fi
         log "✓ Chromium secondaire arrêté"
     fi
@@ -1019,6 +1028,7 @@ check_secondary_chromium() {
             # On configure juste xrandr et on redimensionne via xdotool (zero-blackout).
             if [[ "$DUAL_DISPLAY_ACTIVE" != "true" ]]; then
                 DUAL_DISPLAY_ACTIVE=true
+                LAST_HDMI_TRANSITION="single_to_dual:$(date -u +%Y-%m-%dT%H:%M:%SZ)"
                 setup_secondary_xrandr || true
                 log "📺 Passage en dual-display: redimensionnement du primaire (sans restart)"
                 # Redimensionner le primaire pour la nouvelle résolution (si elle a changé)
@@ -1044,17 +1054,36 @@ check_secondary_chromium() {
         # Repasser en mode single-display si nécessaire
         if [[ "$DUAL_DISPLAY_ACTIVE" == "true" ]]; then
             DUAL_DISPLAY_ACTIVE=false
-            log "📺 Retour en single-display: redimensionnement du primaire (sans restart)"
-            # Le primaire est déjà en --app= mode, on le redimensionne en plein écran
-            if (( CHROMIUM_PID > 0 )) && kill -0 "$CHROMIUM_PID" 2>/dev/null; then
-                local wid
-                wid=$(DISPLAY=:0 xdotool search --pid "$CHROMIUM_PID" 2>/dev/null | head -1)
-                if [[ -n "$wid" ]]; then
-                    DISPLAY=:0 xdotool windowmove "$wid" 0 0 2>/dev/null
-                    DISPLAY=:0 xdotool windowsize "$wid" "${PRIMARY_SCREEN_WIDTH:-$DEFAULT_SCREEN_WIDTH}" "${PRIMARY_SCREEN_HEIGHT:-$DEFAULT_SCREEN_HEIGHT}" 2>/dev/null
-                    log "✓ Primaire redimensionné pour single-display (${PRIMARY_SCREEN_WIDTH:-$DEFAULT_SCREEN_WIDTH}x${PRIMARY_SCREEN_HEIGHT:-$DEFAULT_SCREEN_HEIGHT})"
+            log "📺 Retour en single-display: relance du Chromium primaire"
+
+            # xdotool windowsize seul ne force PAS Chromium à re-renderer le viewport CSS
+            # (la fenêtre X11 change mais le contenu interne reste à l'ancienne résolution).
+            # Même bug que corrigé dans activate_hdmi_failover() — la seule solution fiable
+            # est de relancer Chromium avec --window-size=WxH pour un viewport correct.
+
+            # Re-lire la résolution primaire après suppression du secondaire xrandr
+            export DISPLAY=:0
+            export XAUTHORITY=/home/pi/.Xauthority
+            local primary_output_name primary_geom_single
+            primary_output_name=$(xrandr --query 2>/dev/null | grep -E "^HDMI.* connected" | head -1 | awk '{print $1}')
+            if [[ -n "$primary_output_name" ]]; then
+                local xr_out
+                xr_out=$(xrandr --query 2>/dev/null)
+                local single_res
+                if single_res=$(get_output_resolution "$primary_output_name" "$xr_out"); then
+                    PRIMARY_SCREEN_WIDTH="${single_res%x*}"
+                    PRIMARY_SCREEN_HEIGHT="${single_res#*x}"
+                    log "✓ Résolution primaire re-détectée: ${PRIMARY_SCREEN_WIDTH}x${PRIMARY_SCREEN_HEIGHT}"
                 fi
             fi
+
+            # Arrêter le Chromium primaire proprement puis relancer
+            stop_chromium_primary
+            sleep 1
+            start_chromium
+            LAST_HDMI_TRANSITION="dual_to_single_relaunch:$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            write_kiosk_status "running"
+            log "✓ Chromium primaire relancé en single-display (${PRIMARY_SCREEN_WIDTH:-$DEFAULT_SCREEN_WIDTH}x${PRIMARY_SCREEN_HEIGHT:-$DEFAULT_SCREEN_HEIGHT})"
         fi
     fi
 }
