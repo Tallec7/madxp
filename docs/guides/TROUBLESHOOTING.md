@@ -3709,6 +3709,30 @@ cat /sys/class/drm/card1-HDMI-A-1/edid | edid-decode 2>/dev/null
 
 **Solution :** Installer `cec-utils` et vérifier que CEC est activé dans les réglages de la TV (souvent sous "Anynet+", "SimpLink", "Bravia Sync", "VIERA Link" selon le fabricant).
 
+### Débordement viewport sur navigateur PC (v3.84.5+)
+
+**Symptôme :** Sur `neopro.local/tv` en plein écran depuis un navigateur PC, le contenu déborde horizontalement (~17px). Sur le Pi en mode kiosk, l'affichage est normal.
+
+**Cause :** Les composants TV utilisaient `width: 100vw` en CSS. L'unité `100vw` inclut la largeur des scrollbars sur navigateur PC, alors qu'en mode kiosk Chromium (Pi), il n'y a pas de scrollbar. Résultat : `100vw` = viewport + 17px de scrollbar = débordement horizontal.
+
+**Correctif (v3.84.5) :**
+
+- Remplacement de `100vw` par `100%` dans `tv.component.scss`, `waiting-screen.component.scss`, `wrong-port-screen.component.scss`
+- Ajout de `100dvh` (dynamic viewport height) comme fallback moderne pour `:host`
+- Ajout de `body:has(app-tv) { overflow: hidden }` dans `styles.scss` (defense-in-depth)
+
+**Vérification :**
+
+```bash
+# Vérifier qu'aucun composant TV n'utilise 100vw (doit retourner 0 résultat)
+grep -rn '100vw' raspberry/src/app/components/tv/ raspberry/src/app/components/waiting-screen/ raspberry/src/app/components/wrong-port-screen/ --include='*.scss' | grep -v '//'
+
+# Vérifier que le smoke test passe
+npm run test:smoke -- --testNamePattern="100vw"
+```
+
+**Smoke test :** 4 tests empêchent la régression — toute réintroduction de `100vw` dans les SCSS TV fait échouer le CI.
+
 ---
 
 ## Recording Analytics — État d'enregistrement (v3.38+)

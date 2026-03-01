@@ -1,3 +1,19 @@
+## [3.84.5](https://github.com/Tallec7/neopro/compare/v3.84.4...v3.84.5) (2026-03-01)
+
+### Bug Fixes
+
+- **tv:** fix viewport overflow on PC browsers — `100vw` includes scrollbar width (~17px), causing horizontal overflow on non-kiosk displays. Replaced with `100%` in all TV-related SCSS (tv.component, waiting-screen, wrong-port-screen). Added `100dvh` fallback for modern browsers. Added `body:has(app-tv) { overflow: hidden }` as defense-in-depth.
+
+### Tests
+
+- **smoke:** add 4 regression guards — TV SCSS files must NOT use `100vw` (3 file checks), `styles.scss` must have `body:has(app-tv)` with `overflow: hidden`
+
+### Documentation
+
+- **claude:** add "NE JAMAIS FAIRE" rule for `100vw` in TV component SCSS files
+- **troubleshooting:** add "Débordement viewport sur navigateur PC" section under Écran / HDMI
+- **changelog:** document v3.84.5 TV viewport overflow fix
+
 ## [3.84.4](https://github.com/Tallec7/neopro/compare/v3.84.3...v3.84.4) (2026-03-01)
 
 ### Bug Fixes

@@ -41,6 +41,13 @@ app-tv * {
   cursor: none !important;
 }
 
+// TV route: kill scrollbars to prevent 100vw/viewport overflow on PC browsers
+// On Pi kiosk there are no scrollbars, but on PC browsers they steal ~17px
+body:has(app-tv) {
+  overflow: hidden;
+  background: #000;
+}
+
 // =============================================================================
 // BASE STYLES
 // =============================================================================

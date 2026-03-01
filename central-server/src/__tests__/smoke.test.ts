@@ -4531,6 +4531,76 @@ describe('WiFi boot race condition regression guards (v3.84.3)', () => {
 });
 
 // ----------------------------------------------------------
+// Hotspot optimizer wlan1 scan regression guards
+// ----------------------------------------------------------
+// Issue: hotspot-optimizer.sh ran 5 iwlist scans on wlan1 in ~25s at boot.
+// RTL8192EU is single-radio: each scan drops carrier for ~6s while sweeping
+// channels 1-13. After 2 back-to-back scans, Livebox considers client gone
+// → carrier lost → 2-3 min internet outage at every boot.
+// Fix: single cached scan + wait for wlan1 IP before scanning.
+describe('Hotspot optimizer wlan1 scan regression guards', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+  let hotspotScript: string;
+
+  beforeAll(() => {
+    hotspotScript = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/scripts/hotspot-optimizer.sh'),
+      'utf8'
+    );
+  });
+
+  // Guard 1: count_networks_on_channel must NOT call iwlist scan
+  it('count_networks_on_channel must NOT call iwlist scan (must use cached results)', () => {
+    const funcMatch = hotspotScript.match(
+      /count_networks_on_channel\(\)\s*\{([\s\S]*?)\n\}/
+    );
+    expect(funcMatch).not.toBeNull();
+    const funcBody = funcMatch![1];
+    expect({
+      usesIwlistScan: /iwlist\b.*\bscan\b/.test(funcBody),
+      reason: 'Each iwlist scan disconnects RTL8192EU from WiFi for ~6s — use CACHED_SCAN',
+    }).toEqual({
+      usesIwlistScan: false,
+      reason: 'Each iwlist scan disconnects RTL8192EU from WiFi for ~6s — use CACHED_SCAN',
+    });
+  });
+
+  // Guard 2: script must use a cached scan variable
+  it('must define and use CACHED_SCAN variable for single-scan pattern', () => {
+    expect({
+      definesCachedScan: /^CACHED_SCAN=/m.test(hotspotScript),
+      performSingleScan: /perform_single_scan/.test(hotspotScript),
+      countUsesCachedScan: /\$CACHED_SCAN/.test(hotspotScript),
+    }).toEqual({
+      definesCachedScan: true,
+      performSingleScan: true,
+      countUsesCachedScan: true,
+    });
+  });
+
+  // Guard 3: must wait for wlan1 IP before scanning
+  it('must wait for wlan1 readiness before scanning (wait_for_wlan1_ready)', () => {
+    expect({
+      hasWaitFunction: /wait_for_wlan1_ready\(\)/.test(hotspotScript),
+      callsWaitBeforeScan: hotspotScript.indexOf('wait_for_wlan1_ready') <
+        hotspotScript.indexOf('perform_single_scan'),
+    }).toEqual({
+      hasWaitFunction: true,
+      callsWaitBeforeScan: true,
+    });
+  });
+
+  // Guard 4: deploy copy must be in sync
+  it('deploy copy must match source (raspberry/deploy/scripts/hotspot-optimizer.sh)', () => {
+    const deployScript = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/deploy/scripts/hotspot-optimizer.sh'),
+      'utf8'
+    );
+    expect(deployScript).toEqual(hotspotScript);
+  });
+});
+
+// ----------------------------------------------------------
 // Kiosk screen dimension initialization guard
 // Incident: 01/03/2026 — PRIMARY_SCREEN_WIDTH/HEIGHT were initialized
 // to 0 instead of "" (empty string). The bash fallback syntax
@@ -4603,5 +4673,56 @@ describe('Systemd service files must reference existing scripts', () => {
       }
     }
     expect({ missing }).toEqual({ missing: [] });
+  });
+});
+
+// ----------------------------------------------------------
+// TV viewport overflow guard
+// Incident: 01/03/2026 — TV view used 100vw/100vh CSS units everywhere.
+// On Raspberry Pi kiosk (no scrollbar) this works perfectly.
+// On PC browsers, 100vw includes the scrollbar width (~17px),
+// causing horizontal overflow and misaligned content in fullscreen.
+// Fix: replaced 100vw with 100% for positioned elements,
+// added body:has(app-tv) { overflow: hidden } safety net.
+// This guard prevents reintroduction of 100vw in TV-related SCSS.
+// ----------------------------------------------------------
+describe('TV viewport overflow guard (no 100vw in TV components)', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+  const tvScssFiles = [
+    'raspberry/src/app/components/tv/tv.component.scss',
+    'raspberry/src/app/components/waiting-screen/waiting-screen.component.scss',
+    'raspberry/src/app/components/wrong-port-screen/wrong-port-screen.component.scss',
+  ];
+
+  for (const file of tvScssFiles) {
+    it(`${file} must NOT use 100vw (causes overflow on PC browsers with scrollbars)`, () => {
+      const content = fs.readFileSync(path.join(repoRoot, file), 'utf8');
+      // Match actual CSS property usage of 100vw, not comments
+      const lines = content.split('\n');
+      const violations = lines
+        .map((line, i) => ({ line: line.trim(), num: i + 1 }))
+        .filter(({ line }) => !line.startsWith('//') && /:\s*100vw/.test(line));
+      expect({
+        violations: violations.map(v => `line ${v.num}: ${v.line}`),
+        reason: '100vw includes scrollbar width on PC browsers — use 100% instead',
+      }).toEqual({
+        violations: [],
+        reason: '100vw includes scrollbar width on PC browsers — use 100% instead',
+      });
+    });
+  }
+
+  it('styles.scss must hide scrollbars on TV route via body:has(app-tv)', () => {
+    const styles = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/src/styles.scss'),
+      'utf8'
+    );
+    expect({
+      hasBodyAppTvRule: /body:has\(app-tv\)/.test(styles),
+      hasOverflowHidden: /body:has\(app-tv\)\s*\{[^}]*overflow:\s*hidden/.test(styles),
+    }).toEqual({
+      hasBodyAppTvRule: true,
+      hasOverflowHidden: true,
+    });
   });
 });
