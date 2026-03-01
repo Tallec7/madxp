@@ -987,9 +987,14 @@ export class TvComponent implements OnInit, OnDestroy {
     this._savedLoopIndex = this.currentLoopIndex;
     this.isManualMode = true;
 
-    // ADR-034 fix: Do NOT show freeze-frame or black overlay here.
-    // The loop keeps playing normally while the manual video loads silently.
-    // Reveal happens only when master signals manualVideoVisible: true.
+    // ADR-034 fix: If replacing an already-visible manual video, capture
+    // freeze-frame to cover the gap while the new video loads.
+    // If this is the first manual video (from loop), no freeze — loop keeps playing.
+    const isReplacingManual = targetPlayer.style.opacity === '1' && !targetPlayer.paused;
+    if (isReplacingManual) {
+      console.log('[TV] Slave: manual→manual transition, capturing freeze-frame');
+      this.captureAndShowFreezeFrame();
+    }
 
     // Player invisible + muted during preload
     targetPlayer.style.opacity = '0';
@@ -1104,6 +1109,7 @@ export class TvComponent implements OnInit, OnDestroy {
     // The video is already loaded, decoded, and playing (hidden+muted).
     player.style.opacity = '1';
     player.muted = false;
+    this.hideFreezeFrame(); // Hide freeze-frame if shown (manual→manual transition)
 
     // Mettre à jour l'état du player pour le monitoring cloud
     this.emitPlayerState({
