@@ -2,6 +2,12 @@
 
 ### Bug Fixes
 
+- **hotspot:** WiFi boot race — cached scan eliminates RTL8192EU carrier loss ([6676b1b](https://github.com/Tallec7/neopro/commit/6676b1baa537f2915cc1cb9244c66ee586c61db5))
+
+## [3.84.6](https://github.com/Tallec7/neopro/compare/v3.84.5...v3.84.6) (2026-03-01)
+
+### Bug Fixes
+
 - **hotspot:** fix WiFi boot race condition in hotspot-optimizer — `count_networks_on_channel()` launched a NEW `iwlist scan` for each of the 5 calls (3 channels × find_best + 2 direct). RTL8192EU is single-radio: each scan drops carrier for ~6s while sweeping channels 1-13. After 2 consecutive scans, the Livebox considers the client gone → carrier lost → 2-3 min outage at every boot. Fixed by caching scan results in `CACHED_SCAN` variable (1 scan, parsed 5 times with grep). Added `wait_for_wlan1_ready()` to poll for wlan1 IP before scanning (max 30s), preventing scans before WPA auth + DHCP completes.
 
 ### Tests
