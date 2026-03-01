@@ -124,7 +124,11 @@ export async function handleHeartbeat(
       if (io) {
         io.to('dashboard').emit('hdmi_status_updated', {
           siteId,
-          hdmiStatus: message.hdmiStatus,
+          hdmiStatus: {
+            ...message.hdmiStatus,
+            hdmi0Resolution: message.kioskStatus?.primaryResolution || null,
+            hdmi1Resolution: message.kioskStatus?.secondaryResolution || null,
+          },
           connectedClients: message.connectedClients || [],
           dualDisplayActive: message.dualDisplayActive || false,
         });

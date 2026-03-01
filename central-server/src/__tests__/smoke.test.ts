@@ -4997,6 +4997,70 @@ describe('Resolution detection cascade', () => {
     expect(watchdog).toMatch(/preferred_res/);
     expect(watchdog).toMatch(/\+/);
   });
+
+  it('write_kiosk_status must include primaryResolution and secondaryResolution', () => {
+    // kiosk-status.json must expose screen resolutions for heartbeat → dashboard pipeline
+    expect(watchdog).toContain('primaryResolution');
+    expect(watchdog).toContain('secondaryResolution');
+    // Must use bash parameter expansion ${VAR:+...} to avoid "x" when empty
+    expect(watchdog).toMatch(/PRIMARY_SCREEN_WIDTH:\+/);
+    expect(watchdog).toMatch(/SECONDARY_SCREEN_WIDTH:\+/);
+  });
+
+  it('single-display boot must detect primary resolution via get_output_resolution', () => {
+    // Bug: PRIMARY_SCREEN_WIDTH was empty ("") in single-display mode because
+    // get_output_resolution was only called inside setup_secondary_xrandr (dual-display).
+    // The else branch of the dual-display boot check must detect the primary resolution.
+    expect(watchdog).toContain('Single-display');
+    // The boot section (anchored by "Dual-display" log at startup) must have an else branch
+    const lines = watchdog.split('\n');
+    const bootDualLog = lines.findIndex(l => l.includes('Dual-display') && l.includes('au d'));
+    expect(bootDualLog).toBeGreaterThan(0);
+    const elseIdx = lines.findIndex((l, i) => i > bootDualLog && l.trim() === 'else');
+    expect(elseIdx).toBeGreaterThan(bootDualLog);
+    const fiIdx = lines.findIndex((l, i) => i > elseIdx && /^\s{4}fi$/.test(l));
+    expect(fiIdx).toBeGreaterThan(elseIdx);
+    const elseBranch = lines.slice(elseIdx, fiIdx).join('\n');
+    expect(elseBranch).toContain('get_output_resolution');
+    expect(elseBranch).toContain('PRIMARY_SCREEN_WIDTH');
+  });
+});
+
+describe('Screen resolution heartbeat pipeline (Pi → Central → Dashboard)', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+
+  it('HeartbeatMessage type must include primaryResolution and secondaryResolution in kioskStatus', () => {
+    const types = fs.readFileSync(
+      path.join(repoRoot, 'central-server/src/types/index.ts'),
+      'utf8'
+    );
+    expect(types).toContain('primaryResolution');
+    expect(types).toContain('secondaryResolution');
+  });
+
+  it('heartbeat handler must forward resolutions as hdmi0Resolution and hdmi1Resolution', () => {
+    const handler = fs.readFileSync(
+      path.join(repoRoot, 'central-server/src/handlers/heartbeat.handler.ts'),
+      'utf8'
+    );
+    expect(handler).toContain('hdmi0Resolution');
+    expect(handler).toContain('hdmi1Resolution');
+    // Must read from kioskStatus (not hardcoded)
+    expect(handler).toMatch(/kioskStatus\?\.primaryResolution/);
+    expect(handler).toMatch(/kioskStatus\?\.secondaryResolution/);
+  });
+
+  it('dashboard site-detail component must display screen resolutions', () => {
+    const component = fs.readFileSync(
+      path.join(repoRoot, 'central-dashboard/src/app/features/sites/site-detail.component.ts'),
+      'utf8'
+    );
+    // Must reference resolution data from hdmiStatus
+    expect(component).toContain('hdmi0Resolution');
+    expect(component).toContain('hdmi1Resolution');
+    // Must have CSS class for resolution display
+    expect(component).toContain('screen-resolution');
+  });
 });
 
 // ----------------------------------------------------------

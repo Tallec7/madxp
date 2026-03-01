@@ -1,3 +1,29 @@
+## [3.87.4](https://github.com/Tallec7/neopro/compare/v3.87.3...v3.87.4) (2026-03-01)
+
+### Features
+
+- **dashboard:** affichage résolution réelle des écrans (HDMI-0/HDMI-1) sur la fiche site (onglet État) — remplace l'ancien affichage statique par un badge connecté/déconnecté + résolution détectée en temps réel via heartbeat
+
+### Bug Fixes
+
+- **kiosk:** détection résolution écran manquante en mode single-display — `PRIMARY_SCREEN_WIDTH` restait vide au boot car `get_output_resolution()` n'était appelé que dans le contexte dual-display (`setup_secondary_xrandr`). Ajout d'une branche `else` au boot qui appelle la cascade de détection (xrandr geometry → preferred mode → EDID → default) même pour un seul écran
+
+### Pipeline résolution (3-tiers)
+
+- **kiosk-watchdog.sh:** `write_kiosk_status()` inclut `primaryResolution` et `secondaryResolution` dans `kiosk-status.json`
+- **central-server:** `HeartbeatMessage.kioskStatus` type étendu avec `primaryResolution?` / `secondaryResolution?`
+- **central-server:** `heartbeat.handler.ts` forward les résolutions en `hdmi0Resolution` / `hdmi1Resolution` via `hdmi_status_updated` Socket.IO
+- **central-dashboard:** `site-detail.component.ts` affiche badges HDMI connecté/déconnecté + résolution réelle par écran
+
+### Tests
+
+- **smoke:** 5 nouveaux tests (404 total) — `write_kiosk_status` resolution fields, single-display boot detection, HeartbeatMessage type guard, heartbeat handler forwarding, dashboard component display
+
+### Documentation
+
+- **reference:** mise à jour format heartbeat (champs `primaryResolution`/`secondaryResolution`) + table kiosk-status.json + table dashboard
+- **troubleshooting:** ajout section "Résolution écran non affichée dans le dashboard"
+
 ## [3.86.7](https://github.com/Tallec7/neopro/compare/v3.86.6...v3.86.7) (2026-03-01)
 
 ### Bug Fixes

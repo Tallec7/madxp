@@ -180,21 +180,38 @@ type TabId = 'status' | 'content' | 'settings' | 'profiles' | 'sponsors' | 'subs
                   <span class="label">Modèle:</span>
                   <span class="value">{{ site.hardware_model || 'N/A' }}</span>
                 </div>
-                @if (site.secondary_display_enabled) {
+                @if (site.secondary_display_enabled || dualDisplayActive) {
+                  <div class="info-row">
+                    <span class="label">Écran principal:</span>
+                    <span class="value">
+                      @if (hdmiStatus) {
+                        <span [class]="hdmiStatus.hdmi0 ? 'badge-hdmi-connected' : 'badge-hdmi-disconnected'">
+                          {{ hdmiStatus.hdmi0 ? '✅' : '❌' }} HDMI-0
+                        </span>
+                        @if (hdmiStatus.hdmi0 && hdmiStatus.hdmi0Resolution) {
+                          <span class="screen-resolution">{{ hdmiStatus.hdmi0Resolution }}</span>
+                        }
+                      } @else {
+                        <span class="badge-secondary-display">📺 Principal</span>
+                      }
+                    </span>
+                  </div>
                   <div class="info-row">
                     <span class="label">Écran secondaire:</span>
                     <span class="value">
-                      <span class="badge-secondary-display">📺 Activé</span>
-                      <span class="secondary-resolution" *ngIf="site.secondary_display_resolution">{{ site.secondary_display_resolution }}</span>
-                    </span>
-                  </div>
-                }
-                @if (dualDisplayActive) {
-                  <div class="info-row">
-                    <span class="label">Dual-Display:</span>
-                    <span class="value">
-                      <span class="badge-dual-display">🖥️ Actif</span>
-                      <span class="hdmi-ports-status">HDMI-0: {{ hdmiStatus?.hdmi0 ? '✅' : '❌' }} · HDMI-1: {{ hdmiStatus?.hdmi1 ? '✅' : '❌' }}</span>
+                      @if (hdmiStatus) {
+                        <span [class]="hdmiStatus.hdmi1 ? 'badge-hdmi-connected' : 'badge-hdmi-disconnected'">
+                          {{ hdmiStatus.hdmi1 ? '✅' : '❌' }} HDMI-1
+                        </span>
+                        @if (hdmiStatus.hdmi1 && hdmiStatus.hdmi1Resolution) {
+                          <span class="screen-resolution">{{ hdmiStatus.hdmi1Resolution }}</span>
+                        }
+                      } @else {
+                        <span class="badge-secondary-display">📺 Activé</span>
+                        @if (site.secondary_display_resolution) {
+                          <span class="screen-resolution">{{ site.secondary_display_resolution }}</span>
+                        }
+                      }
                     </span>
                   </div>
                 }
@@ -950,14 +967,7 @@ type TabId = 'status' | 'content' | 'settings' | 'profiles' | 'sponsors' | 'subs
       border-radius: 4px;
     }
 
-    .secondary-resolution {
-      font-family: 'SF Mono', Monaco, monospace;
-      font-size: 0.75rem;
-      color: #64748b;
-      margin-left: 6px;
-    }
-
-    .badge-dual-display {
+    .badge-hdmi-connected {
       display: inline-block;
       background: #dcfce7;
       color: #15803d;
@@ -967,7 +977,17 @@ type TabId = 'status' | 'content' | 'settings' | 'profiles' | 'sponsors' | 'subs
       border-radius: 4px;
     }
 
-    .hdmi-ports-status {
+    .badge-hdmi-disconnected {
+      display: inline-block;
+      background: #fef2f2;
+      color: #dc2626;
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 4px;
+    }
+
+    .screen-resolution {
       font-family: 'SF Mono', Monaco, monospace;
       font-size: 0.75rem;
       color: #64748b;
@@ -1494,7 +1514,7 @@ export class SiteDetailComponent implements OnInit, OnDestroy {
 
   // E-23 US-23.4.4: Dual-display & HDMI port status (real-time from heartbeat)
   dualDisplayActive = false;
-  hdmiStatus: { hdmi0: boolean; hdmi1: boolean; wrongPort: boolean } | null = null;
+  hdmiStatus: { hdmi0: boolean; hdmi1: boolean; wrongPort: boolean; hdmi0Resolution?: string | null; hdmi1Resolution?: string | null } | null = null;
 
   // Hotspot status (from local_config_mirror)
   hotspotSsid: string | null = null;
@@ -1565,7 +1585,7 @@ export class SiteDetailComponent implements OnInit, OnDestroy {
     // E-23 US-23.4.4: Real-time HDMI & dual-display status updates
     this.hdmiSubscription = this.socketService.events$.subscribe((event) => {
       if (event.type === 'hdmi_status_updated') {
-        const data = event.data as { siteId: string; hdmiStatus: { hdmi0: boolean; hdmi1: boolean; wrongPort: boolean }; dualDisplayActive: boolean };
+        const data = event.data as { siteId: string; hdmiStatus: { hdmi0: boolean; hdmi1: boolean; wrongPort: boolean; hdmi0Resolution?: string | null; hdmi1Resolution?: string | null }; dualDisplayActive: boolean };
         if (data.siteId === this.siteId) {
           this.hdmiStatus = data.hdmiStatus;
           this.dualDisplayActive = data.dualDisplayActive;

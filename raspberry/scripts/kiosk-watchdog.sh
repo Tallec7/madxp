@@ -385,7 +385,7 @@ write_kiosk_status() {
     detect_hdmi0_status && hdmi0_status="connected" || hdmi0_status="disconnected"
     detect_hdmi1_status && hdmi1_status="connected" || hdmi1_status="disconnected"
     cat > "$KIOSK_STATUS_FILE" 2>/dev/null <<EOF
-{"status":"${status}","chromiumAlive":$(pgrep -f "chromium.*$CHROMIUM_URL" > /dev/null 2>&1 && echo "true" || echo "false"),"restartCount":${#crash_times[@]},"lastEvent":"${now}","reason":"${reason}","pid":${CHROMIUM_PID:-0},"secondaryDisplayEnabled":${SECONDARY_DISPLAY_ENABLED},"secondaryChromiumAlive":${secondary_alive},"hdmi0Status":"${hdmi0_status}","hdmi1Status":"${hdmi1_status}","dualDisplayActive":${DUAL_DISPLAY_ACTIVE:-false},"hdmiFailoverActive":${HDMI_FAILOVER_ACTIVE:-false},"displayFallback":"${DISPLAY_FALLBACK_REASON}","lastHdmiTransition":"${LAST_HDMI_TRANSITION:-}","windowStacking":"${WINDOW_STACKING_STATUS:-unknown}"}
+{"status":"${status}","chromiumAlive":$(pgrep -f "chromium.*$CHROMIUM_URL" > /dev/null 2>&1 && echo "true" || echo "false"),"restartCount":${#crash_times[@]},"lastEvent":"${now}","reason":"${reason}","pid":${CHROMIUM_PID:-0},"secondaryDisplayEnabled":${SECONDARY_DISPLAY_ENABLED},"secondaryChromiumAlive":${secondary_alive},"hdmi0Status":"${hdmi0_status}","hdmi1Status":"${hdmi1_status}","dualDisplayActive":${DUAL_DISPLAY_ACTIVE:-false},"hdmiFailoverActive":${HDMI_FAILOVER_ACTIVE:-false},"displayFallback":"${DISPLAY_FALLBACK_REASON}","lastHdmiTransition":"${LAST_HDMI_TRANSITION:-}","windowStacking":"${WINDOW_STACKING_STATUS:-unknown}","primaryResolution":"${PRIMARY_SCREEN_WIDTH:+${PRIMARY_SCREEN_WIDTH}x${PRIMARY_SCREEN_HEIGHT}}","secondaryResolution":"${SECONDARY_SCREEN_WIDTH:+${SECONDARY_SCREEN_WIDTH}x${SECONDARY_SCREEN_HEIGHT}}"}
 EOF
 }
 
@@ -1262,6 +1262,20 @@ main() {
         # Configurer xrandr pour connaître les résolutions des deux écrans
         setup_secondary_xrandr || true
         log "📺 Dual-display détecté au démarrage: primaire=${PRIMARY_SCREEN_WIDTH}x${PRIMARY_SCREEN_HEIGHT}"
+    else
+        # Single-display: détecter la résolution réelle du primaire pour le heartbeat
+        local primary_out_name
+        primary_out_name=$(xrandr --query 2>/dev/null | grep -E "^HDMI.* connected" | head -1 | awk '{print $1}')
+        if [[ -n "$primary_out_name" ]]; then
+            local xr_single
+            xr_single=$(xrandr --query 2>/dev/null)
+            local boot_res
+            if boot_res=$(get_output_resolution "$primary_out_name" "$xr_single"); then
+                PRIMARY_SCREEN_WIDTH="${boot_res%x*}"
+                PRIMARY_SCREEN_HEIGHT="${boot_res#*x}"
+                log "📺 Single-display: résolution primaire détectée ${PRIMARY_SCREEN_WIDTH}x${PRIMARY_SCREEN_HEIGHT}"
+            fi
+        fi
     fi
 
     start_chromium

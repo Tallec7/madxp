@@ -23,6 +23,7 @@
 19. [Second écran ne s'affiche pas (v3.82.7+)](#second-écran-ne-saffiche-pas-v3827)
 20. [Deux écrans désynchronisés (v3.82.10+)](#deux-écrans-désynchronisés-v38210)
 21. [Déploiement vidéo secondaire échoué (EACCES / race condition)](#déploiement-vidéo-secondaire-échoué-eacces--race-condition)
+22. [Résolution écran non affichée dans le dashboard (v3.87.4+)](#résolution-écran-non-affichée-dans-le-dashboard-v3874)
 
 > **WiFi USB** : Pour un guide complet sur la clé WiFi USB (installation, diagnostic, pannes, recovery), voir [WIFI_USB_GUIDE.md](WIFI_USB_GUIDE.md).
 >
@@ -4849,4 +4850,48 @@ ssh pi@neopro.local 'ls -la /home/pi/neopro/videos-secondary/'
 
 ---
 
-**Dernière mise à jour :** 1 mars 2026 (ajout section déploiement vidéo secondaire échoué — v3.87.2)
+## Résolution écran non affichée dans le dashboard (v3.87.4+)
+
+Le dashboard (fiche site, onglet État) affiche désormais la résolution réelle de chaque écran HDMI connecté. Si la résolution n'apparaît pas :
+
+### Symptômes
+
+- Le badge HDMI montre "✅ HDMI-0" mais pas de résolution à côté
+- `primaryResolution` est vide dans `kiosk-status.json`
+
+### Causes possibles
+
+| Cause                            | Diagnostic                                                                                                       | Solution                                                                                   |
+| -------------------------------- | ---------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| Version kiosk-watchdog < v3.87.4 | `cat /home/pi/neopro/data/kiosk-status.json \| python3 -m json.tool` — champ `primaryResolution` absent          | Mettre à jour le boîtier                                                                   |
+| xrandr non disponible au boot    | `journalctl -u neopro-kiosk --since "boot" \| grep "résolution"` — pas de log "Single-display" ni "Dual-display" | Vérifier que le service X11 est démarré avant kiosk                                        |
+| Écran non reconnu par xrandr     | `DISPLAY=:0 xrandr --query` — output "disconnected"                                                              | Vérifier le câble HDMI, tester avec un autre écran                                         |
+| EDID non lisible                 | `ls /sys/class/drm/card*-HDMI-*/edid` — fichier vide (0 octets)                                                  | Câble HDMI défectueux ou écran éteint au boot → résolution fallback `DEFAULT_SCREEN_WIDTH` |
+
+### Pipeline de résolution (3 tiers)
+
+```
+Pi (kiosk-watchdog.sh)          Central Server                    Dashboard
+─────────────────────          ──────────────                    ─────────
+get_output_resolution()    →   kioskStatus.primaryResolution  →  hdmiStatus.hdmi0Resolution
+  ↓ write_kiosk_status()       kioskStatus.secondaryResolution   hdmiStatus.hdmi1Resolution
+  ↓ kiosk-status.json             ↓ heartbeat.handler.ts            ↓ site-detail.component.ts
+  ↓ sync-agent heartbeat          ↓ hdmi_status_updated (WS)        ↓ badge + résolution
+```
+
+### Diagnostic rapide
+
+```bash
+# 1. Vérifier la résolution détectée sur le Pi
+ssh pi@neopro.local 'cat /home/pi/neopro/data/kiosk-status.json | python3 -m json.tool | grep -i resolution'
+
+# 2. Vérifier la détection xrandr
+ssh pi@neopro.local 'DISPLAY=:0 xrandr --query | head -20'
+
+# 3. Vérifier les logs du watchdog
+ssh pi@neopro.local 'journalctl -u neopro-kiosk --since "boot" | grep -E "résolution|Resolution|Single-display|Dual-display"'
+```
+
+---
+
+**Dernière mise à jour :** 1 mars 2026 (ajout section résolution écran non affichée — v3.87.4)

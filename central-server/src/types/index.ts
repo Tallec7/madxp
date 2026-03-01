@@ -272,6 +272,8 @@ export interface HeartbeatMessage {
     reason?: string;
     pid: number;
     displayFallback?: string;
+    primaryResolution?: string;
+    secondaryResolution?: string;
   } | null;
   recordingState?: {
     isRecording: boolean;
