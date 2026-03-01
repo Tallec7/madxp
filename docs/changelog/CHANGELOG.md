@@ -1,3 +1,9 @@
+## [3.87.1](https://github.com/Tallec7/neopro/compare/v3.87.0...v3.87.1) (2026-03-01)
+
+### Bug Fixes
+
+- **dual-display:** serve /videos-secondary via Nginx + admin-server (ADR-033) ([d461921](https://github.com/Tallec7/neopro/commit/d4619216ea4b48459cc14ee2aee9f49f29135cad))
+
 # [3.87.0](https://github.com/Tallec7/neopro/compare/v3.86.7...v3.87.0) (2026-03-01)
 
 ### Features
