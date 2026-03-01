@@ -67,6 +67,7 @@ class StateService {
       isManualMode: false,
       manualVideoPath: null,
       manualVideoStartedAt: null,
+      manualVideoVisible: false, // ADR-034: master signals when manual video is revealed
       updatedAt: Date.now(),
     };
   }

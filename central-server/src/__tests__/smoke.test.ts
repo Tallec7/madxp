@@ -5802,3 +5802,150 @@ describe('ADR-033 slave race condition guard (tv.component.ts)', () => {
     });
   });
 });
+
+// =============================================================================
+// ADR-034 Synchronized Manual Video Reveal:
+// Slaves preload manual videos on 'action' but wait for master's
+// manualVideoVisible: true signal before revealing. This reduces desync
+// between primary, secondary, and PC displays from ~300ms to ~50ms.
+// =============================================================================
+describe('ADR-034 synchronized manual video reveal', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+  const tvComponentPath = path.join(repoRoot, 'raspberry/src/app/components/tv/tv.component.ts');
+  const socketServicePath = path.join(repoRoot, 'raspberry/src/app/services/socket.service.ts');
+  const stateServicePath = path.join(repoRoot, 'raspberry/server/services/state.service.js');
+  let tvContent: string;
+  let socketContent: string;
+  let stateContent: string;
+
+  beforeAll(() => {
+    tvContent = fs.readFileSync(tvComponentPath, 'utf8');
+    socketContent = fs.readFileSync(socketServicePath, 'utf8');
+    stateContent = fs.readFileSync(stateServicePath, 'utf8');
+  });
+
+  it('LoopState interface MUST include manualVideoVisible boolean', () => {
+    const interfaceBlock = socketContent.slice(
+      socketContent.indexOf('interface LoopState'),
+      socketContent.indexOf('interface LoopState') + 400
+    );
+    expect({
+      hasField: /manualVideoVisible:\s*boolean/.test(interfaceBlock),
+    }).toEqual({
+      hasField: true,
+    });
+  });
+
+  it('state.service initial _loopState MUST include manualVideoVisible: false', () => {
+    const loopStateBlock = stateContent.slice(
+      stateContent.indexOf('_loopState'),
+      stateContent.indexOf('_loopState') + 400
+    );
+    expect({
+      hasDefault: /manualVideoVisible:\s*false/.test(loopStateBlock),
+    }).toEqual({
+      hasDefault: true,
+    });
+  });
+
+  it('Master play() immediate emission MUST include manualVideoVisible: false', () => {
+    // The FIRST emission in play() (before freeze-frame) must signal slaves to preload, not reveal
+    const playMethod = tvContent.slice(
+      tvContent.indexOf('isManualMode = true;'),
+      tvContent.indexOf('ÉTAPE 1')
+    );
+    expect({
+      hasVisibleFalse: /manualVideoVisible:\s*false/.test(playMethod),
+    }).toEqual({
+      hasVisibleFalse: true,
+    });
+  });
+
+  it('Master play() delayed emission MUST include manualVideoVisible: true', () => {
+    // The SECOND emission (after 2×rAF + 200ms) must signal slaves to reveal.
+    // play() spans ~7000 chars due to freeze-frame, double-buffer, and error recovery logic.
+    const fullPlayMethod = tvContent.slice(
+      tvContent.indexOf('private play(video: Video)'),
+      tvContent.indexOf('private play(video: Video)') + 7500
+    );
+    // Count occurrences of manualVideoVisible in play()
+    const visibleFalseCount = (fullPlayMethod.match(/manualVideoVisible:\s*false/g) || []).length;
+    const visibleTrueCount = (fullPlayMethod.match(/manualVideoVisible:\s*true/g) || []).length;
+    expect({
+      hasVisibleTrue: visibleTrueCount >= 1,
+      hasVisibleFalse: visibleFalseCount >= 1,
+    }).toEqual({
+      hasVisibleTrue: true,
+      hasVisibleFalse: true,
+    });
+  });
+
+  it('Slave action handler MUST call preloadManualVideo instead of play', () => {
+    // When isSlaveMode is true, the action handler must call preloadManualVideo, not play
+    const actionBlock = tvContent.slice(
+      tvContent.indexOf("socketService.on('action'"),
+      tvContent.indexOf("socketService.on('action'") + 800
+    );
+    expect({
+      hasSlavePreload: /isSlaveMode[\s\S]*preloadManualVideo/.test(actionBlock),
+      masterStillCallsPlay: /else\s*\{[\s\S]*?this\.play\(/.test(actionBlock),
+    }).toEqual({
+      hasSlavePreload: true,
+      masterStillCallsPlay: true,
+    });
+  });
+
+  it('handleMasterLoopState CAS 1 with manualVideoVisible:true MUST call revealPreloadedVideo', () => {
+    const cas1Block = tvContent.slice(
+      tvContent.indexOf('CAS 1'),
+      tvContent.indexOf('CAS 2')
+    );
+    expect({
+      hasReveal: /revealPreloadedVideo/.test(cas1Block),
+      checksVisibleTrue: /manualVideoVisible\s*===\s*true/.test(cas1Block),
+    }).toEqual({
+      hasReveal: true,
+      checksVisibleTrue: true,
+    });
+  });
+
+  it('handleMasterLoopState CAS 1 without manualVideoVisible MUST call play for backward compat', () => {
+    // Sous-cas 1c: when no preload exists and manualVideoVisible is true (or absent),
+    // the slave must call play() directly for backward compatibility
+    const cas1Block = tvContent.slice(
+      tvContent.indexOf('CAS 1'),
+      tvContent.indexOf('CAS 2')
+    );
+    expect({
+      hasDirectPlay: /this\.play\(resolvedVideo\)/.test(cas1Block),
+      hasBackwardCompatComment: /backward compat/i.test(cas1Block),
+    }).toEqual({
+      hasDirectPlay: true,
+      hasBackwardCompatComment: true,
+    });
+  });
+
+  it('handleMasterLoopState CAS 2 MUST call cleanupPreloadState', () => {
+    const cas2Block = tvContent.slice(
+      tvContent.indexOf('CAS 2'),
+      tvContent.indexOf('CAS 2') + 800
+    );
+    expect({
+      hasCleanup: /cleanupPreloadState/.test(cas2Block),
+    }).toEqual({
+      hasCleanup: true,
+    });
+  });
+
+  it('emitLoopState MUST include manualVideoVisible: false', () => {
+    const emitMethod = tvContent.slice(
+      tvContent.indexOf('private emitLoopState'),
+      tvContent.indexOf('private emitLoopState') + 500
+    );
+    expect({
+      hasVisibleFalse: /manualVideoVisible:\s*false/.test(emitMethod),
+    }).toEqual({
+      hasVisibleFalse: true,
+    });
+  });
+});

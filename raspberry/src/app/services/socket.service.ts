@@ -74,6 +74,7 @@ export interface LoopState {
   isManualMode: boolean;
   manualVideoPath: string | null;
   manualVideoStartedAt: number | null;
+  manualVideoVisible: boolean; // ADR-034: master signals when manual video is revealed
   updatedAt: number;
 }
 

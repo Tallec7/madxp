@@ -157,6 +157,10 @@ export class TvComponent implements OnInit, OnDestroy {
   private _savedLoopIndex = 0; // Index de la boucle sauvegardé avant mode manuel
   private _lastActionReceivedAt = 0; // Timestamp de la dernière action reçue (guard anti-race condition)
 
+  // ADR-034: Preloaded manual video state for synchronized reveal
+  private _preloadedManualVideo: Video | null = null;
+  private _preloadedManualPlayer: HTMLVideoElement | null = null;
+
   // Watchdog et récupération d'erreurs
   private watchdogInterval: ReturnType<typeof setInterval> | null = null;
   private memoryCleanupInterval: ReturnType<typeof setInterval> | null = null;
@@ -282,7 +286,13 @@ export class TvComponent implements OnInit, OnDestroy {
         // ADR-033: Marquer le timestamp pour protéger contre les tv-loop-state stales
         // qui arriveraient après cette action et tueraient la vidéo manuelle
         this._lastActionReceivedAt = Date.now();
-        this.play(this.resolveSecondaryVariant(command.data as Video));
+        const resolvedVideo = this.resolveSecondaryVariant(command.data as Video);
+        // ADR-034: Slaves preload but wait for master's reveal signal
+        if (this.isSlaveMode) {
+          this.preloadManualVideo(resolvedVideo);
+        } else {
+          this.play(resolvedVideo);
+        }
       } else if (command.type === 'sponsors') {
         this.lastTriggerType = 'auto';
         // Capturer le freeze-frame AVANT de relancer la boucle
@@ -776,6 +786,7 @@ export class TvComponent implements OnInit, OnDestroy {
         isManualMode: true,
         manualVideoPath: video.path,
         manualVideoStartedAt: Date.now(),
+        manualVideoVisible: false, // ADR-034: slaves should preload, not reveal yet
         updatedAt: Date.now()
       });
     }
@@ -846,7 +857,7 @@ export class TvComponent implements OnInit, OnDestroy {
                 lastTransitionAt: new Date().toISOString(),
               });
 
-              // Émettre l'état si master (vidéo manuelle)
+              // Émettre l'état si master (vidéo manuelle — visible maintenant)
               if (this.tvRole === 'master') {
                 this.socketService.emit('tv-loop-update', {
                   videoIndex: this.currentLoopIndex,
@@ -855,6 +866,7 @@ export class TvComponent implements OnInit, OnDestroy {
                   isManualMode: true,
                   manualVideoPath: video.path,
                   manualVideoStartedAt: Date.now(),
+                  manualVideoVisible: true, // ADR-034: signal slaves to reveal
                   updatedAt: Date.now()
                 });
               }
@@ -954,6 +966,195 @@ export class TvComponent implements OnInit, OnDestroy {
     };
 
     targetPlayer.addEventListener('ended', onManualEnded, { once: true });
+  }
+
+  /**
+   * ADR-034: Preload a manual video without revealing it.
+   * Slaves call this on 'action' and wait for master's manualVideoVisible: true signal.
+   * Same pipeline as play() but stops before the opacity 0→1 transition.
+   */
+  private preloadManualVideo(video: Video): void {
+    console.log('[TV] Slave: preloading manual video (waiting for master reveal):', video.path);
+
+    // Clean up any previous preload
+    this.cleanupPreloadState();
+
+    const targetPlayer = this.manualPlayerA;
+
+    // Same ÉTAPE 0 as play(): block loop transitions
+    this._savedLoopIndex = this.currentLoopIndex;
+    this.isManualMode = true;
+
+    // ÉTAPE 1: Freeze-frame
+    this.captureAndShowFreezeFrame();
+
+    // ÉTAPE 2: Black overlay
+    this.showBlackOverlay();
+
+    // ÉTAPE 3: Player invisible
+    targetPlayer.style.opacity = '0';
+    targetPlayer.style.zIndex = '10';
+
+    // ÉTAPE 4: Load video
+    targetPlayer.src = video.path;
+    targetPlayer.load();
+
+    // Store preload state
+    this._preloadedManualVideo = video;
+    this._preloadedManualPlayer = targetPlayer;
+
+    let preloadDone = false;
+
+    const doPreload = () => {
+      if (preloadDone) return;
+      preloadDone = true;
+
+      targetPlayer.play().then(() => {
+        // Video is playing but invisible (opacity 0). Freeze-frame covers everything.
+        // Wait for revealPreloadedVideo() to be called by handleMasterLoopState.
+        this.activeManualPlayer = 'A';
+        console.log('[TV] Slave: manual video preloaded and playing (hidden), waiting for reveal signal');
+      }).catch(err => {
+        console.error('[TV] Slave: error preloading manual video', err);
+        this.cleanupPreloadState();
+        this.hideFreezeFrame();
+        this.hideBlackOverlay();
+      });
+    };
+
+    // Same ready/fallback/timeout pattern as play()
+    const onReady = () => {
+      targetPlayer.removeEventListener('canplaythrough', onReady);
+      targetPlayer.removeEventListener('canplay', onReadyFallback);
+      clearTimeout(fallbackTimeout);
+      doPreload();
+    };
+
+    const onReadyFallback = () => {
+      setTimeout(() => {
+        if (!preloadDone) {
+          targetPlayer.removeEventListener('canplaythrough', onReady);
+          doPreload();
+        }
+      }, 500);
+    };
+
+    targetPlayer.addEventListener('canplaythrough', onReady, { once: true });
+    targetPlayer.addEventListener('canplay', onReadyFallback, { once: true });
+
+    const fallbackTimeout = setTimeout(() => {
+      if (!preloadDone) {
+        console.warn('[TV] Slave: preload timeout, forcing');
+        targetPlayer.removeEventListener('canplaythrough', onReady);
+        targetPlayer.removeEventListener('canplay', onReadyFallback);
+        doPreload();
+      }
+    }, 5000);
+
+    // Register ended handler (same as play())
+    const onManualEnded = () => {
+      console.log('[TV] Slave: preloaded manual video ended', video.path);
+      targetPlayer.removeEventListener('ended', onManualEnded);
+
+      // Tracker la fin (slaves/secondary ne trackent pas — E-23 US-23.7.5)
+
+      targetPlayer.style.opacity = '0';
+      targetPlayer.pause();
+      targetPlayer.src = '';
+
+      this.isManualMode = false;
+      this.lastTriggerType = 'auto';
+      this._preloadedManualVideo = null;
+      this._preloadedManualPlayer = null;
+
+      const activeLoopPlayer = this.getActivePlayer();
+      if (!activeLoopPlayer || activeLoopPlayer.paused || activeLoopPlayer.ended || !this.isLoopMode) {
+        const resumeAt = this._savedLoopIndex + 1;
+        console.log('[TV] Slave: loop died during preloaded manual, restarting at index', resumeAt);
+        this.captureAndShowFreezeFrame();
+        this.pendingSwitch = false;
+        this.switchTriggered = false;
+        this.startSeamlessLoop(resumeAt);
+      } else {
+        this.hideFreezeFrame();
+        this.hideBlackOverlay();
+      }
+    };
+
+    targetPlayer.addEventListener('ended', onManualEnded, { once: true });
+  }
+
+  /**
+   * ADR-034: Reveal a preloaded manual video.
+   * Called when master signals manualVideoVisible: true.
+   */
+  private revealPreloadedVideo(): void {
+    const player = this._preloadedManualPlayer;
+    const video = this._preloadedManualVideo;
+
+    if (!player || !video) {
+      console.warn('[TV] Slave: revealPreloadedVideo called but no preload state');
+      return;
+    }
+
+    console.log('[TV] Slave: revealing preloaded manual video:', video.path);
+
+    // Same reveal sequence as play() delayed emission
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        setTimeout(() => {
+          player.style.opacity = '1';
+          this.hideFreezeFrame();
+
+          // Mettre à jour l'état du player pour le monitoring cloud
+          this.emitPlayerState({
+            currentVideo: PlayerStateService.filenameFromPath(video.path),
+            currentCategory: null,
+            duration: player.duration || 0,
+            currentTime: 0,
+            isManualMode: true,
+            isPlaying: true,
+            lastError: null,
+            lastTransitionAt: new Date().toISOString(),
+          });
+
+          console.log('[TV] Slave: preloaded manual video revealed');
+
+          // Clear preload state (video is now playing normally)
+          this._preloadedManualVideo = null;
+          this._preloadedManualPlayer = null;
+        }, 200);
+      });
+    });
+  }
+
+  /**
+   * ADR-034: Clean up preload state without revealing.
+   * Called when master returns to loop before reveal signal.
+   */
+  private cleanupPreloadState(): void {
+    if (!this._preloadedManualVideo) return;
+
+    console.log('[TV] Slave: cleaning up preload state');
+
+    const player = this._preloadedManualPlayer;
+    if (player) {
+      player.pause();
+      player.style.opacity = '0';
+      player.removeAttribute('src');
+      player.load();
+    }
+
+    this._preloadedManualVideo = null;
+    this._preloadedManualPlayer = null;
+
+    // Reset manual mode if it was set by preload
+    this.isManualMode = false;
+    this.lastTriggerType = 'auto';
+
+    // Hide overlays that were shown during preload
+    this.hideFreezeFrame();
+    this.hideBlackOverlay();
   }
 
   private sponsors() {
@@ -2357,6 +2558,7 @@ export class TvComponent implements OnInit, OnDestroy {
       isManualMode,
       manualVideoPath: manualVideoPath || null,
       manualVideoStartedAt: isManualMode ? Date.now() : null,
+      manualVideoVisible: false, // ADR-034: loop emissions are never manual-visible
       updatedAt: Date.now()
     };
 
@@ -2385,12 +2587,30 @@ export class TvComponent implements OnInit, OnDestroy {
         type: 'video/mp4'
       } as Video);
 
-      // Si on n'est pas déjà en mode manuel ou si c'est une vidéo différente
+      // ADR-034: Trois sous-cas selon manualVideoVisible
+      // Sous-cas 1a: manualVideoVisible === false → preload si pas déjà fait (safety net)
+      if (state.manualVideoVisible === false) {
+        if (!this._preloadedManualVideo) {
+          console.log('[TV] Slave: master preloading manual video (safety net):', state.manualVideoPath);
+          this.preloadManualVideo(resolvedVideo);
+        }
+        return;
+      }
+
+      // Sous-cas 1b: manualVideoVisible === true + preload en attente → reveal
+      if (state.manualVideoVisible === true && this._preloadedManualVideo) {
+        console.log('[TV] Slave: master revealed, showing preloaded video');
+        this.revealPreloadedVideo();
+        return;
+      }
+
+      // Sous-cas 1c: manualVideoVisible === true (ou absent) + pas de preload → play direct
+      // Backward compat pour vieux masters sans manualVideoVisible
       const currentManualPlayer = this.getActiveManualPlayer();
       const currentManualSrc = currentManualPlayer?.src || '';
 
       if (!this.isManualMode || !currentManualSrc.includes(resolvedVideo.path)) {
-        console.log('[TV] Slave: master switched to manual video:', state.manualVideoPath,
+        console.log('[TV] Slave: master switched to manual video (direct play):', state.manualVideoPath,
           this.displayType === 'secondary' ? `(resolved: ${resolvedVideo.path})` : '');
         this.play(resolvedVideo);
 
@@ -2412,6 +2632,12 @@ export class TvComponent implements OnInit, OnDestroy {
     }
 
     // CAS 2: Le master est en mode boucle
+    // ADR-034: Cleanup any pending preload state
+    if (this._preloadedManualVideo) {
+      console.log('[TV] Slave: master returned to loop, cleaning up preload state');
+      this.cleanupPreloadState();
+    }
+
     // Si on est en mode manuel, en sortir — SAUF si un 'action' vient d'être reçu
     // ADR-033: Race condition — un tv-loop-state stale (isManualMode: false) émis
     // par le master AVANT qu'il reçoive l'action peut arriver au slave APRÈS que
