@@ -293,6 +293,20 @@ ssh ${RASPBERRY_USER}@${RASPBERRY_IP} "
         echo 'Config files installés'
     fi
 
+    # Installation de la configuration nginx (proxy blocks /admin/, /socket.io/, etc.)
+    # IMPORTANT: Sans /admin/ proxy, nginx SPA catch-all retourne du HTML pour /admin/api/*
+    if [ -f ${RASPBERRY_DIR}/config/nginx-captive-portal.conf ]; then
+        echo 'Mise à jour de la configuration nginx...'
+        sudo cp /etc/nginx/sites-available/neopro /etc/nginx/sites-available/neopro.pre-deploy 2>/dev/null || true
+        sudo cp ${RASPBERRY_DIR}/config/nginx-captive-portal.conf /etc/nginx/sites-available/neopro
+        if sudo nginx -t 2>/dev/null; then
+            echo '✓ Configuration nginx mise à jour'
+        else
+            echo '✗ Erreur config nginx, restauration du backup...'
+            sudo cp /etc/nginx/sites-available/neopro.pre-deploy /etc/nginx/sites-available/neopro 2>/dev/null || true
+        fi
+    fi
+
     # Permissions correctes pour nginx et sync-agent
     echo 'Configuration des permissions...'
     sudo chmod 755 /home/pi
