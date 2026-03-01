@@ -37,16 +37,17 @@ Dashboard: "jouer vidéo X"
      ▼                ▼                  ▼
   MASTER            SLAVE (HDMI-1)     SLAVE (PC)
   play(X)           preloadManualVideo  preloadManualVideo
-  freeze+overlay    freeze+overlay      freeze+overlay
+  freeze+overlay    silent (opacity 0)  silent (opacity 0)
   charge vidéo      charge vidéo        charge vidéo
   ...               prêt, attend        prêt, attend
+                    (boucle visible)    (boucle visible)
   visible!
   emit(visible:true)
      │
      ├────────────────┬──────────────────┐
      ▼                ▼                  ▼
-  (déjà visible)    reveal!             reveal!
-                    ~50ms après master
+  (déjà visible)    reveal instant!     reveal instant!
+                    ~10ms après master
 ```
 
 ### Émissions master dans play()
@@ -67,12 +68,31 @@ Dashboard: "jouer vidéo X"
 - **Vieux slaves** (sans preload) : ignorent `manualVideoVisible`, continuent avec `play()` sur `action`
 - **Vieux masters** (sans `manualVideoVisible`) : champ absent → sous-cas 1c → `play()` direct
 
+## Évolutions post-implémentation
+
+### v3.89.3 — Preload silencieux + Reveal instantané
+
+**Problème 1** : `preloadManualVideo()` affichait freeze-frame + overlay noir immédiatement → "double-flash" visible sur le slave avant la révélation.
+
+**Fix** : Preload silencieux — la vidéo charge en opacity 0, muted. La boucle continue de jouer normalement en dessous. Pas de freeze-frame ni d'overlay sauf pour les transitions manual→manual.
+
+**Problème 2** : `revealPreloadedVideo()` avait son propre délai 2×rAF + 200ms → latence additionnelle de ~200ms sur le slave.
+
+**Fix** : Reveal instantané — opacity 1 + unmute immédiat. Le délai 2×rAF + 200ms est uniquement côté master dans `play()`.
+
+**Problème 3** : Transition manual→manual — quand on remplace une vidéo manuelle visible par une autre, cacher le player expose la boucle brièvement.
+
+**Fix** : Détection manual→manual (`targetPlayer.style.opacity === '1' && !targetPlayer.paused`) → capture freeze-frame pour couvrir le gap.
+
 ## Consequences
 
-- Décalage réduit de ~300ms à ~50ms (latence Socket.IO uniquement)
+- Décalage réduit de ~300ms à ~10ms (latence Socket.IO uniquement)
 - 3 nouvelles méthodes : `preloadManualVideo()`, `revealPreloadedVideo()`, `cleanupPreloadState()`
 - 2 nouvelles propriétés : `_preloadedManualVideo`, `_preloadedManualPlayer`
-- 9 smoke tests ajoutés
+- Preload silencieux (opacity 0, muted) — pas de flash visible
+- Reveal instantané — pas de délai supplémentaire côté slave
+- Transition manual→manual avec freeze-frame conditionnel
+- 13 smoke tests (9 initiaux + 4 pour v3.89.3)
 
 ## Files Modified
 

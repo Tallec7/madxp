@@ -6090,3 +6090,69 @@ describe('ADR-034 preload-reveal metrics pipeline', () => {
     });
   });
 });
+
+// ===================== ADR-034 v3.89.3 silent preload + instant reveal =====================
+describe('ADR-034 v3.89.3 silent preload + instant reveal', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+  let tvContent: string;
+
+  beforeAll(() => {
+    tvContent = fs.readFileSync(path.join(repoRoot, 'raspberry/src/app/components/tv/tv.component.ts'), 'utf8');
+  });
+
+  it('preloadManualVideo MUST NOT call captureAndShowFreezeFrame unconditionally (silent preload)', () => {
+    // preloadManualVideo should only call captureAndShowFreezeFrame for manual→manual transitions,
+    // not unconditionally. The method must check if a manual video is already visible.
+    const preloadMethod = tvContent.slice(
+      tvContent.indexOf('private preloadManualVideo'),
+      tvContent.indexOf('private preloadManualVideo') + 2500
+    );
+    expect({
+      hasConditionalFreeze: /isReplacingManual|manual.*manual|opacity.*===.*'1'/.test(preloadMethod),
+      hasNotUnconditionalFreeze: !/^\s*this\.captureAndShowFreezeFrame\(\)/m.test(
+        preloadMethod.replace(/if\s*\(.*\)\s*\{[^}]*captureAndShowFreezeFrame[^}]*\}/gs, '')
+      ),
+    }).toEqual({
+      hasConditionalFreeze: true,
+      hasNotUnconditionalFreeze: true,
+    });
+  });
+
+  it('preloadManualVideo MUST mute player during preload', () => {
+    const preloadMethod = tvContent.slice(
+      tvContent.indexOf('private preloadManualVideo'),
+      tvContent.indexOf('private preloadManualVideo') + 2500
+    );
+    expect({
+      hasMuteTrue: /\.muted\s*=\s*true/.test(preloadMethod),
+    }).toEqual({
+      hasMuteTrue: true,
+    });
+  });
+
+  it('revealPreloadedVideo MUST unmute player and NOT have 2xrAF+200ms delay', () => {
+    const revealMethod = tvContent.slice(
+      tvContent.indexOf('private revealPreloadedVideo'),
+      tvContent.indexOf('private revealPreloadedVideo') + 1500
+    );
+    expect({
+      hasUnmute: /\.muted\s*=\s*false/.test(revealMethod),
+      hasNoRAFDelay: !(/requestAnimationFrame/.test(revealMethod)),
+    }).toEqual({
+      hasUnmute: true,
+      hasNoRAFDelay: true,
+    });
+  });
+
+  it('cleanupPreloadState MUST reset muted to false', () => {
+    const cleanupMethod = tvContent.slice(
+      tvContent.indexOf('private cleanupPreloadState'),
+      tvContent.indexOf('private cleanupPreloadState') + 500
+    );
+    expect({
+      hasUnmute: /\.muted\s*=\s*false/.test(cleanupMethod),
+    }).toEqual({
+      hasUnmute: true,
+    });
+  });
+});
