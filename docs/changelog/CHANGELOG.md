@@ -1,3 +1,9 @@
+## [3.94.1](https://github.com/Tallec7/neopro/compare/v3.94.0...v3.94.1) (2026-03-02)
+
+### Bug Fixes
+
+- **safe:** resolve ESLint errors in safe-parser service ([8a2257e](https://github.com/Tallec7/neopro/commit/8a2257e59befd8e0ba681346c41bf5a3d2d471ed))
+
 # [3.94.0](https://github.com/Tallec7/neopro/compare/v3.93.0...v3.94.0) (2026-03-02)
 
 ### Features
