@@ -126,6 +126,37 @@ export interface SafeProposal {
 
 export type SafeProposalSummary = Omit<SafeProposal, 'content'>;
 
+// --- Sprint types ---
+
+export type SprintStoryStatus = 'todo' | 'in-progress' | 'done' | 'removed';
+
+export interface SafeSprintStory {
+  id: string;
+  name: string;
+  epicId: string;
+  featureId: string;
+  storyPoints: number;
+  priority: string;
+  status: SprintStoryStatus;
+}
+
+export interface SafeSprint {
+  id: string;
+  name: string;
+  piId: string;
+  startDate: string;
+  endDate: string;
+  stories: SafeSprintStory[];
+  velocity: number;
+  capacity: number;
+}
+
+export interface SafeSprintTracker {
+  sprints: SafeSprint[];
+  currentSprintId: string | null;
+  averageVelocity: number;
+}
+
 interface ApiResponse<T> {
   success: boolean;
   data: T;
@@ -153,14 +184,38 @@ export class SafeService {
     );
   }
 
+  createProposal(data: { title: string; type: ProposalType; relatedEpic: string | null; content: string }): Observable<SafeProposalSummary> {
+    return this.api.post<ApiResponse<SafeProposalSummary>>('/safe/proposals', data).pipe(
+      map(res => res.data)
+    );
+  }
+
   updateProposalStatus(id: string, status: ProposalStatus): Observable<void> {
     return this.api.put<ApiResponse<void>>(`/safe/proposals/${id}`, { status }).pipe(
       map(() => void 0)
     );
   }
 
+  deleteProposal(id: string): Observable<void> {
+    return this.api.delete<ApiResponse<void>>(`/safe/proposals/${id}`).pipe(
+      map(() => void 0)
+    );
+  }
+
   updateEpicStatus(id: string, status: EpicStatus): Observable<void> {
     return this.api.put<ApiResponse<void>>(`/safe/epics/${id}/status`, { status }).pipe(
+      map(() => void 0)
+    );
+  }
+
+  getSprints(): Observable<SafeSprintTracker> {
+    return this.api.get<ApiResponse<SafeSprintTracker>>('/safe/sprints').pipe(
+      map(res => res.data)
+    );
+  }
+
+  updateStoryStatus(sprintId: string, storyId: string, status: SprintStoryStatus): Observable<void> {
+    return this.api.put<ApiResponse<void>>(`/safe/sprints/${sprintId}/stories/${storyId}/status`, { status }).pipe(
       map(() => void 0)
     );
   }

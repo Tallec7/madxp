@@ -865,10 +865,23 @@
       "roadmap": "Roadmap",
       "themes": "Temas estratégicos",
       "valueStreams": "Flujos de valor",
-      "epicKanban": "Tablero Kanban de Epics",
+      "epicBoard": "Tablero Kanban de Epics",
       "piObjectives": "Objetivos PI",
+      "objective": "Objetivo",
+      "theme": "Tema",
+      "done": "completados",
       "roam": "ROAM — Riesgos",
-      "proposals": "Propuestas & Spikes"
+      "flowMetrics": "Métricas de flujo",
+      "flowMetricName": "Métrica",
+      "flowMetricDefinition": "Definición",
+      "flowMetricUnit": "Unidad",
+      "flowMetricTarget": "Objetivo PI 1",
+      "risk": "Riesgo",
+      "category": "Categoría",
+      "owner": "Responsable",
+      "loadError": "Error al cargar el portfolio",
+      "epicStatusUpdated": "Estado del epic actualizado",
+      "epicStatusError": "Error al actualizar el estado del epic"
     },
     "proposals": {
       "title": "Propuestas & Spikes",
@@ -877,7 +890,71 @@
       "titleLabel": "Título",
       "status": "Estado",
       "file": "Archivo",
-      "empty": "Sin propuestas"
+      "empty": "Sin propuestas",
+      "loadError": "Error al cargar las propuestas",
+      "statusUpdated": "Estado de la propuesta actualizado",
+      "statusError": "Error al actualizar el estado",
+      "detailLoadError": "Error al cargar la propuesta",
+      "confirmStatusChange": "¿Mover {{id}} a \"{{status}}\"?",
+      "newProposal": "Nueva Propuesta",
+      "formTitle": "Título",
+      "relatedEpic": "Epic relacionado (opcional)",
+      "formContent": "Contenido (Markdown)",
+      "created": "Propuesta creada",
+      "createError": "Error al crear la propuesta",
+      "deleted": "Propuesta eliminada",
+      "deleteError": "Error al eliminar la propuesta",
+      "confirmDelete": "¿Eliminar la propuesta {{id}}? Esta acción no se puede deshacer."
+    },
+    "epicStatus": {
+      "funnel": "Embudo",
+      "analysis": "Análisis",
+      "backlog": "Backlog",
+      "implementing": "En curso",
+      "done": "Hecho",
+      "partial": "Parcial"
+    },
+    "proposalStatus": {
+      "draft": "Borrador",
+      "in-review": "En revisión",
+      "approved": "Aprobado",
+      "implementing": "En curso",
+      "done": "Hecho"
+    },
+    "roamStatus": {
+      "Resolved": "Resuelto",
+      "Owned": "Asignado",
+      "Accepted": "Aceptado",
+      "Mitigated": "Mitigado"
+    },
+    "sprints": {
+      "title": "Seguimiento de Sprints",
+      "selectSprint": "Sprint:",
+      "current": "actual",
+      "velocity": "Velocidad",
+      "capacity": "Capacidad",
+      "completion": "Completado",
+      "remaining": "Restantes",
+      "avgVelocity": "Veloc. media",
+      "progress": "Progreso del sprint",
+      "stories": "Stories por Feature",
+      "storyName": "Story",
+      "priority": "Prioridad",
+      "storyDone": "Hecho",
+      "storyInProgress": "En curso",
+      "storyTodo": "Por hacer",
+      "storyRemoved": "Eliminado",
+      "empty": "Sin stories en este sprint",
+      "loadError": "Error al cargar los sprints",
+      "statusUpdated": "Estado de la story actualizado",
+      "statusError": "Error al actualizar el estado",
+      "confirmStatusChange": "¿Mover {{id}} a \"{{status}}\"?"
+    },
+    "storyStatus": {
+      "todo": "Por hacer",
+      "in-progress": "En curso",
+      "done": "Hecho",
+      "removed": "Eliminado"
     }
   }
 }

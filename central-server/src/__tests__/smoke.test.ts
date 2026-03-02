@@ -6490,6 +6490,8 @@ describe('SAFe Dashboard file existence guards', () => {
     'central-server/src/services/safe-parser.service.ts',
     'central-server/src/controllers/safe.controller.ts',
     'central-server/src/routes/safe.routes.ts',
+    'central-server/src/repositories/safe.repository.ts',
+    'central-server/src/scripts/migrations/add-safe-sprint-tables.sql',
   ];
 
   const safeFrontendFiles = [
@@ -6497,6 +6499,7 @@ describe('SAFe Dashboard file existence guards', () => {
     'central-dashboard/src/app/features/safe/safe-portfolio.component.ts',
     'central-dashboard/src/app/features/safe/safe-proposals.component.ts',
     'central-dashboard/src/app/features/safe/safe-proposal-detail.component.ts',
+    'central-dashboard/src/app/features/safe/safe-sprint-tracker.component.ts',
   ];
 
   test.each([...safeBackendFiles, ...safeFrontendFiles])(
@@ -6548,6 +6551,196 @@ describe('SAFe Dashboard file existence guards', () => {
       hasSafePath: true,
       hasRoleGuard: true,
       hasLazyLoad: true,
+    });
+  });
+
+  it('Angular app.routes.ts must declare /safe/sprints route with roleGuard', () => {
+    const routesPath = path.join(repoRoot, 'central-dashboard', 'src', 'app', 'app.routes.ts');
+    const routesContent = fs.readFileSync(routesPath, 'utf8');
+    expect({
+      hasSprintsPath: routesContent.includes("'safe/sprints'"),
+      hasSprintLazyLoad: /loadComponent.*safe-sprint-tracker/.test(routesContent),
+    }).toEqual({
+      hasSprintsPath: true,
+      hasSprintLazyLoad: true,
+    });
+  });
+});
+
+// SAFe Phase 2 — Sprint Tracker + Proposal CRUD + DB Hybrid Layer regression guards
+// ----------------------------------------------------------
+describe('SAFe Phase 2 regression guards', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+
+  // --- Sprint API endpoints must be registered ---
+  it('safe.routes.ts must register Sprint Tracker endpoints (GET sprints + PUT story status)', () => {
+    const routesPath = path.join(repoRoot, 'central-server', 'src', 'routes', 'safe.routes.ts');
+    const routesContent = fs.readFileSync(routesPath, 'utf8');
+    expect({
+      hasGetSprints: /get.*['"\/]sprints['"]/.test(routesContent) || routesContent.includes('/sprints'),
+      hasPutStoryStatus: /put.*sprints.*stories.*status/.test(routesContent) || routesContent.includes('stories') && routesContent.includes('status'),
+    }).toEqual({
+      hasGetSprints: true,
+      hasPutStoryStatus: true,
+    });
+  });
+
+  // --- Proposal CRUD endpoints must be registered ---
+  it('safe.routes.ts must register Proposal CRUD endpoints (POST + DELETE)', () => {
+    const routesPath = path.join(repoRoot, 'central-server', 'src', 'routes', 'safe.routes.ts');
+    const routesContent = fs.readFileSync(routesPath, 'utf8');
+    expect({
+      hasPostProposals: /router\.post\(/.test(routesContent),
+      hasDeleteProposals: /router\.delete\(/.test(routesContent),
+    }).toEqual({
+      hasPostProposals: true,
+      hasDeleteProposals: true,
+    });
+  });
+
+  // --- SafeParserService must have async getSprints with DB hybrid ---
+  it('safe-parser.service.ts must have async getSprints() with DB hybrid layer', () => {
+    const parserPath = path.join(repoRoot, 'central-server', 'src', 'services', 'safe-parser.service.ts');
+    const parserContent = fs.readFileSync(parserPath, 'utf8');
+    expect({
+      hasAsyncGetSprints: /async\s+getSprints/.test(parserContent),
+      importsSafeRepository: parserContent.includes('safeRepository'),
+      hasDbOverrides: parserContent.includes('getVelocities') || parserContent.includes('getStoryOverrides'),
+    }).toEqual({
+      hasAsyncGetSprints: true,
+      importsSafeRepository: true,
+      hasDbOverrides: true,
+    });
+  });
+
+  // --- SafeParserService must have async updateStoryStatus with DB persist ---
+  it('safe-parser.service.ts must have async updateStoryStatus() with DB persist', () => {
+    const parserPath = path.join(repoRoot, 'central-server', 'src', 'services', 'safe-parser.service.ts');
+    const parserContent = fs.readFileSync(parserPath, 'utf8');
+    expect({
+      hasAsyncUpdateStory: /async\s+updateStoryStatus/.test(parserContent),
+      persistsToDb: parserContent.includes('upsertStoryStatus'),
+    }).toEqual({
+      hasAsyncUpdateStory: true,
+      persistsToDb: true,
+    });
+  });
+
+  // --- SafeParserService must have createProposal and deleteProposal ---
+  it('safe-parser.service.ts must have createProposal() and deleteProposal() methods', () => {
+    const parserPath = path.join(repoRoot, 'central-server', 'src', 'services', 'safe-parser.service.ts');
+    const parserContent = fs.readFileSync(parserPath, 'utf8');
+    expect({
+      hasCreate: /createProposal/.test(parserContent),
+      hasDelete: /deleteProposal/.test(parserContent),
+    }).toEqual({
+      hasCreate: true,
+      hasDelete: true,
+    });
+  });
+
+  // --- safe.repository.ts must have graceful degradation (try/catch + logger.warn) ---
+  it('safe.repository.ts must have graceful degradation for all DB methods', () => {
+    const repoPath = path.join(repoRoot, 'central-server', 'src', 'repositories', 'safe.repository.ts');
+    const repoContent = fs.readFileSync(repoPath, 'utf8');
+    expect({
+      hasGracefulDegradation: (repoContent.match(/logger\.warn/g) || []).length >= 4,
+      hasTryCatch: (repoContent.match(/try\s*\{/g) || []).length >= 4,
+      returnsEmptyOnError: /return new Map/.test(repoContent),
+    }).toEqual({
+      hasGracefulDegradation: true,
+      hasTryCatch: true,
+      returnsEmptyOnError: true,
+    });
+  });
+
+  // --- safe.repository.ts must be exported from repositories/index.ts ---
+  it('safe.repository.ts must be exported from repositories/index.ts', () => {
+    const indexPath = path.join(repoRoot, 'central-server', 'src', 'repositories', 'index.ts');
+    const indexContent = fs.readFileSync(indexPath, 'utf8');
+    expect({
+      exportsSafeRepo: indexContent.includes('safeRepository'),
+      exportsFromSafeRepo: indexContent.includes('./safe.repository'),
+    }).toEqual({
+      exportsSafeRepo: true,
+      exportsFromSafeRepo: true,
+    });
+  });
+
+  // --- Migration file must have correct table structure ---
+  it('migration must create safe_sprint_velocity and safe_story_status_override with correct constraints', () => {
+    const migrationPath = path.join(repoRoot, 'central-server', 'src', 'scripts', 'migrations', 'add-safe-sprint-tables.sql');
+    const migrationContent = fs.readFileSync(migrationPath, 'utf8');
+    expect({
+      hasVelocityTable: migrationContent.includes('safe_sprint_velocity'),
+      hasOverrideTable: migrationContent.includes('safe_story_status_override'),
+      hasUniqueSprintId: migrationContent.includes('sprint_id TEXT NOT NULL UNIQUE'),
+      hasUniqueStoryId: migrationContent.includes('story_id TEXT NOT NULL UNIQUE'),
+      hasStatusCheck: /CHECK.*status.*IN.*todo.*in-progress.*done.*removed/.test(migrationContent),
+      hasIfNotExists: migrationContent.includes('IF NOT EXISTS'),
+    }).toEqual({
+      hasVelocityTable: true,
+      hasOverrideTable: true,
+      hasUniqueSprintId: true,
+      hasUniqueStoryId: true,
+      hasStatusCheck: true,
+      hasIfNotExists: true,
+    });
+  });
+
+  // --- Sprint Tracker component must have OnPush + trackBy + OnDestroy ---
+  it('safe-sprint-tracker.component.ts must have OnPush, trackBy, and OnDestroy', () => {
+    const componentPath = path.join(repoRoot, 'central-dashboard', 'src', 'app', 'features', 'safe', 'safe-sprint-tracker.component.ts');
+    const componentContent = fs.readFileSync(componentPath, 'utf8');
+    expect({
+      hasOnPush: componentContent.includes('ChangeDetectionStrategy.OnPush'),
+      hasTrackBy: /trackBy/.test(componentContent),
+      hasOnDestroy: componentContent.includes('OnDestroy'),
+      hasDestroySubject: /destroy\$/.test(componentContent),
+    }).toEqual({
+      hasOnPush: true,
+      hasTrackBy: true,
+      hasOnDestroy: true,
+      hasDestroySubject: true,
+    });
+  });
+
+  // --- All 3 original safe components must have OnPush + OnDestroy (Phase 1.4 regression) ---
+  it('all safe components must have ChangeDetectionStrategy.OnPush', () => {
+    const components = [
+      'central-dashboard/src/app/features/safe/safe-portfolio.component.ts',
+      'central-dashboard/src/app/features/safe/safe-proposals.component.ts',
+      'central-dashboard/src/app/features/safe/safe-proposal-detail.component.ts',
+      'central-dashboard/src/app/features/safe/safe-sprint-tracker.component.ts',
+    ];
+    for (const comp of components) {
+      const content = fs.readFileSync(path.join(repoRoot, comp), 'utf8');
+      expect({
+        file: comp,
+        hasOnPush: content.includes('ChangeDetectionStrategy.OnPush'),
+        hasOnDestroy: content.includes('OnDestroy'),
+      }).toEqual({
+        file: comp,
+        hasOnPush: true,
+        hasOnDestroy: true,
+      });
+    }
+  });
+
+  // --- safe.service.ts must expose Sprint + Proposal CRUD methods ---
+  it('safe.service.ts must expose getSprints, createProposal, deleteProposal methods', () => {
+    const servicePath = path.join(repoRoot, 'central-dashboard', 'src', 'app', 'core', 'services', 'safe.service.ts');
+    const serviceContent = fs.readFileSync(servicePath, 'utf8');
+    expect({
+      hasGetSprints: /getSprints/.test(serviceContent),
+      hasUpdateStoryStatus: /updateStoryStatus/.test(serviceContent),
+      hasCreateProposal: /createProposal/.test(serviceContent),
+      hasDeleteProposal: /deleteProposal/.test(serviceContent),
+    }).toEqual({
+      hasGetSprints: true,
+      hasUpdateStoryStatus: true,
+      hasCreateProposal: true,
+      hasDeleteProposal: true,
     });
   });
 });

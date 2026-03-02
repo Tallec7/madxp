@@ -9,10 +9,12 @@ import { Response } from 'express';
 import { AuthRequest } from '../types';
 import { safeParserService } from '../services/safe-parser.service';
 import logger from '../config/logger';
-import { EpicStatus, ProposalStatus } from '../types/safe.types';
+import { EpicStatus, ProposalStatus, ProposalType, SprintStoryStatus } from '../types/safe.types';
 
 const VALID_EPIC_STATUSES: EpicStatus[] = ['funnel', 'analysis', 'backlog', 'implementing', 'done', 'partial'];
 const VALID_PROPOSAL_STATUSES: ProposalStatus[] = ['draft', 'in-review', 'approved', 'implementing', 'done'];
+const VALID_PROPOSAL_TYPES: ProposalType[] = ['prop', 'spike', 'spec'];
+const VALID_STORY_STATUSES: SprintStoryStatus[] = ['todo', 'in-progress', 'done', 'removed'];
 
 /**
  * GET /api/safe/portfolio
@@ -141,5 +143,130 @@ export const updateEpicStatus = async (req: AuthRequest, res: Response) => {
   } catch (error) {
     logger.error('Error updating SAFe epic status:', error);
     return res.status(500).json({ error: 'Failed to update epic status' });
+  }
+};
+
+/**
+ * GET /api/safe/sprints
+ * Retourne le Sprint Tracker (sprints, stories, vélocité)
+ */
+export const getSprints = async (_req: AuthRequest, res: Response) => {
+  try {
+    const tracker = await safeParserService.getSprints();
+
+    return res.json({
+      success: true,
+      data: tracker,
+    });
+  } catch (error) {
+    logger.error('Error getting SAFe sprints:', error);
+    return res.status(500).json({ error: 'Failed to get SAFe sprints' });
+  }
+};
+
+/**
+ * PUT /api/safe/sprints/:sprintId/stories/:storyId/status
+ * Met à jour le statut d'une story dans USER-STORIES.md
+ */
+export const updateStoryStatus = async (req: AuthRequest, res: Response) => {
+  try {
+    const { sprintId, storyId } = req.params;
+    const { status } = req.body;
+
+    if (!status || !VALID_STORY_STATUSES.includes(status)) {
+      return res.status(400).json({
+        error: `Invalid status. Must be one of: ${VALID_STORY_STATUSES.join(', ')}`,
+      });
+    }
+
+    const updated = await safeParserService.updateStoryStatus(sprintId, storyId, status);
+
+    if (!updated) {
+      return res.status(404).json({ error: `Story ${storyId} in sprint ${sprintId} not found` });
+    }
+
+    logger.info('SAFe story status updated', {
+      sprintId,
+      storyId,
+      newStatus: status,
+      updatedBy: req.user?.email,
+    });
+
+    return res.json({
+      success: true,
+      data: { sprintId, storyId, status },
+    });
+  } catch (error) {
+    logger.error('Error updating SAFe story status:', error);
+    return res.status(500).json({ error: 'Failed to update story status' });
+  }
+};
+
+/**
+ * POST /api/safe/proposals
+ * Crée une nouvelle proposal (fichier .md dans docs/proposals/)
+ */
+export const createProposal = async (req: AuthRequest, res: Response) => {
+  try {
+    const { title, type, relatedEpic, content } = req.body;
+
+    if (!title || typeof title !== 'string' || title.trim().length === 0) {
+      return res.status(400).json({ error: 'Title is required' });
+    }
+
+    if (type && !VALID_PROPOSAL_TYPES.includes(type)) {
+      return res.status(400).json({
+        error: `Invalid type. Must be one of: ${VALID_PROPOSAL_TYPES.join(', ')}`,
+      });
+    }
+
+    const proposal = safeParserService.createProposal({
+      title: title.trim(),
+      type: type || 'prop',
+      relatedEpic: relatedEpic || null,
+      content: content || '',
+    });
+
+    logger.info('SAFe proposal created', {
+      proposalId: proposal.id,
+      title: proposal.title,
+      createdBy: req.user?.email,
+    });
+
+    return res.status(201).json({
+      success: true,
+      data: proposal,
+    });
+  } catch (error) {
+    logger.error('Error creating SAFe proposal:', error);
+    return res.status(500).json({ error: 'Failed to create proposal' });
+  }
+};
+
+/**
+ * DELETE /api/safe/proposals/:id
+ * Supprime une proposal (fichier .md)
+ */
+export const deleteProposal = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const deleted = safeParserService.deleteProposal(id);
+
+    if (!deleted) {
+      return res.status(404).json({ error: `Proposal ${id} not found` });
+    }
+
+    logger.info('SAFe proposal deleted', {
+      proposalId: id,
+      deletedBy: req.user?.email,
+    });
+
+    return res.json({
+      success: true,
+      data: { id },
+    });
+  } catch (error) {
+    logger.error('Error deleting SAFe proposal:', error);
+    return res.status(500).json({ error: 'Failed to delete proposal' });
   }
 };

@@ -43,7 +43,18 @@ Utiliser le mapping scope → Epic pour déterminer quelle Feature est impactée
 | `oauth`, `api-partners`            | E-21             | F-21.x (PI-3)          |
 | `led`, `dual-output`, `dual-kiosk` | E-22             | F-22.x (PI-2)          |
 
+| `sprint`, `velocity` | Sprint Tracker | SPRINT-TRACKER / USER-STORIES.md |
+| `safe`, `safe-dashboard` | SAFe Dashboard | Dashboard Angular (`/safe/*`) |
+
 Si le scope ne matche aucun Epic, ou si le commit ne complète pas une Feature SAFe → **skip**, ne rien mettre à jour.
+
+### 1b. Commits Sprint Tracker
+
+Pour les commits `feat(sprint)` ou `fix(sprint)` qui modifient la vélocité ou les stories :
+
+- Mettre à jour les données sprint dans `docs/safe/USER-STORIES.md` (sections `## Sprint X.Y`)
+- Si la vélocité est recalculée, le parser l'applique automatiquement via la DB hybrid layer
+- Les overrides de statut sont persistés dans `safe_story_status_override` (pas besoin de mise à jour markdown manuelle)
 
 ### 2. Mettre à jour `docs/safe/FEATURES.md`
 

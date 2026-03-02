@@ -5,22 +5,32 @@
  * Filtrage par type et epic lié. Vue Kanban ou Liste.
  */
 
-import { Component, OnInit, inject } from '@angular/core';
+import {
+  Component,
+  OnInit,
+  OnDestroy,
+  ChangeDetectionStrategy,
+  ChangeDetectorRef,
+  inject,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
-import { TranslateModule } from '@ngx-translate/core';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { CdkDragDrop, DragDropModule, transferArrayItem, moveItemInArray } from '@angular/cdk/drag-drop';
+import { Subject, takeUntil } from 'rxjs';
 import {
   SafeService,
   SafeProposalSummary,
   ProposalStatus,
   ProposalType,
 } from '../../core/services/safe.service';
+import { NotificationService } from '../../core/services/notification.service';
+import { ConfirmDialogService } from '../../core/services/confirm-dialog.service';
 
 interface ProposalColumn {
   id: ProposalStatus;
-  label: string;
+  labelKey: string;
   items: SafeProposalSummary[];
 }
 
@@ -28,8 +38,9 @@ interface ProposalColumn {
   selector: 'app-safe-proposals',
   standalone: true,
   imports: [CommonModule, RouterModule, FormsModule, TranslateModule, DragDropModule],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <div class="safe-proposals" *ngIf="loaded; else loading">
+    <div class="safe-proposals" *ngIf="loaded; else skeleton">
 
       <!-- Header -->
       <div class="page-header">
@@ -39,6 +50,7 @@ interface ProposalColumn {
           <span class="count-badge">{{ proposals.length }}</span>
         </div>
         <div class="header-actions">
+          <button class="btn-create" (click)="showCreateModal = true">+ {{ 'safe.proposals.newProposal' | translate }}</button>
           <div class="view-toggle">
             <button [class.active]="view === 'kanban'" (click)="view = 'kanban'">Kanban</button>
             <button [class.active]="view === 'list'" (click)="view = 'list'">{{ 'safe.proposals.listView' | translate }}</button>
@@ -67,7 +79,7 @@ interface ProposalColumn {
       <div class="kanban-board" *ngIf="view === 'kanban'" cdkDropListGroup>
         <div
           class="kanban-column"
-          *ngFor="let col of columns"
+          *ngFor="let col of columns; trackBy: trackByColumnId"
           cdkDropList
           [cdkDropListData]="col.items"
           [id]="'prop-' + col.id"
@@ -75,12 +87,12 @@ interface ProposalColumn {
           (cdkDropListDropped)="onProposalDrop($event)"
         >
           <div class="kanban-column-header">
-            <span class="column-title">{{ col.label }}</span>
+            <span class="column-title">{{ col.labelKey | translate }}</span>
             <span class="column-count">{{ col.items.length }}</span>
           </div>
           <div
             class="proposal-card"
-            *ngFor="let p of col.items"
+            *ngFor="let p of col.items; trackBy: trackById"
             cdkDrag
             [routerLink]="['/safe/proposals', p.id]"
             [class]="'type-' + p.type"
@@ -106,17 +118,29 @@ interface ProposalColumn {
         <table>
           <thead>
             <tr>
-              <th>ID</th>
-              <th>{{ 'safe.proposals.titleLabel' | translate }}</th>
-              <th>Type</th>
+              <th (click)="sortBy('id')" class="sortable-th">
+                ID <span class="sort-indicator">{{ getSortIndicator('id') }}</span>
+              </th>
+              <th (click)="sortBy('title')" class="sortable-th">
+                {{ 'safe.proposals.titleLabel' | translate }}
+                <span class="sort-indicator">{{ getSortIndicator('title') }}</span>
+              </th>
+              <th (click)="sortBy('type')" class="sortable-th">
+                Type <span class="sort-indicator">{{ getSortIndicator('type') }}</span>
+              </th>
               <th>Epic</th>
-              <th>{{ 'safe.proposals.status' | translate }}</th>
-              <th>Date</th>
+              <th (click)="sortBy('status')" class="sortable-th">
+                {{ 'safe.proposals.status' | translate }}
+                <span class="sort-indicator">{{ getSortIndicator('status') }}</span>
+              </th>
+              <th (click)="sortBy('date')" class="sortable-th">
+                Date <span class="sort-indicator">{{ getSortIndicator('date') }}</span>
+              </th>
             </tr>
           </thead>
           <tbody>
             <tr
-              *ngFor="let p of filteredProposals"
+              *ngFor="let p of sortedProposals; trackBy: trackById"
               [routerLink]="['/safe/proposals', p.id]"
               class="clickable-row"
             >
@@ -124,7 +148,11 @@ interface ProposalColumn {
               <td>{{ p.title }}</td>
               <td><span class="type-badge" [class]="p.type">{{ p.type | uppercase }}</span></td>
               <td>{{ p.relatedEpic || '—' }}</td>
-              <td><span class="status-badge" [class]="p.status">{{ p.status }}</span></td>
+              <td>
+                <span class="status-badge" [class]="p.status">
+                  {{ 'safe.proposalStatus.' + p.status | translate }}
+                </span>
+              </td>
               <td class="date-cell">{{ p.date }}</td>
             </tr>
           </tbody>
@@ -133,10 +161,58 @@ interface ProposalColumn {
 
     </div>
 
-    <ng-template #loading>
-      <div class="loading-container">
-        <div class="spinner"></div>
-        <p>{{ 'common.loading' | translate }}</p>
+    <!-- Create Proposal Modal -->
+    <div class="modal-overlay" *ngIf="showCreateModal" (click)="showCreateModal = false">
+      <div class="modal-content" (click)="$event.stopPropagation()">
+        <h2>{{ 'safe.proposals.newProposal' | translate }}</h2>
+        <div class="form-group">
+          <label>{{ 'safe.proposals.formTitle' | translate }}</label>
+          <input type="text" [(ngModel)]="newProposal.title" class="form-input" />
+        </div>
+        <div class="form-group">
+          <label>Type</label>
+          <select [(ngModel)]="newProposal.type" class="form-input">
+            <option value="prop">PROP</option>
+            <option value="spike">SPIKE</option>
+            <option value="spec">SPEC</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>{{ 'safe.proposals.relatedEpic' | translate }}</label>
+          <input type="text" [(ngModel)]="newProposal.relatedEpic" class="form-input" placeholder="E-01" />
+        </div>
+        <div class="form-group">
+          <label>{{ 'safe.proposals.formContent' | translate }}</label>
+          <textarea [(ngModel)]="newProposal.content" class="form-textarea" rows="8"></textarea>
+        </div>
+        <div class="modal-actions">
+          <button class="btn-cancel" (click)="showCreateModal = false">{{ 'common.cancel' | translate }}</button>
+          <button class="btn-submit" (click)="createProposal()" [disabled]="!newProposal.title.trim()">{{ 'common.create' | translate }}</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Skeleton Loading -->
+    <ng-template #skeleton>
+      <div class="safe-proposals skeleton-container">
+        <div class="page-header">
+          <div class="header-left">
+            <div class="skel skel-back"></div>
+            <div class="skel skel-title"></div>
+            <div class="skel skel-badge"></div>
+          </div>
+          <div class="skel skel-toggle"></div>
+        </div>
+        <div class="filters-bar">
+          <div class="skel skel-select"></div>
+          <div class="skel skel-search"></div>
+        </div>
+        <div class="kanban-board">
+          <div class="kanban-column" *ngFor="let i of [1,2,3,4,5]">
+            <div class="skel skel-col-header"></div>
+            <div class="skel skel-card" *ngFor="let j of [1,2,3]"></div>
+          </div>
+        </div>
       </div>
     </ng-template>
   `,
@@ -244,6 +320,9 @@ interface ProposalColumn {
       text-align: left; padding: 10px 12px; color: var(--neo-text-secondary, #999);
       border-bottom: 1px solid var(--neo-border, #333); font-weight: 600;
     }
+    .sortable-th { cursor: pointer; user-select: none; }
+    .sortable-th:hover { color: var(--neo-text, #fff); }
+    .sort-indicator { font-size: 11px; margin-left: 4px; }
     .list-view td {
       padding: 10px 12px; color: var(--neo-text, #fff);
       border-bottom: 1px solid var(--neo-border, #222);
@@ -269,14 +348,69 @@ interface ProposalColumn {
     .status-badge.implementing { background: #0d47a1; color: #90caf9; }
     .status-badge.done { background: #2e7d32; color: #c8e6c9; }
 
-    /* Loading */
-    .loading-container { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 400px; }
-    .spinner {
-      width: 40px; height: 40px; border: 3px solid var(--neo-border, #333);
-      border-top-color: var(--neo-primary, #4f8cff); border-radius: 50%;
-      animation: spin 1s linear infinite;
+    /* Skeleton */
+    .skeleton-container .skel {
+      background: var(--neo-surface, #1e1e2e); border-radius: 8px;
+      animation: pulse 1.5s ease-in-out infinite;
     }
-    @keyframes spin { to { transform: rotate(360deg); } }
+    .skel-back { width: 30px; height: 30px; border-radius: 6px; }
+    .skel-title { width: 180px; height: 28px; }
+    .skel-badge { width: 36px; height: 22px; border-radius: 10px; }
+    .skel-toggle { width: 160px; height: 34px; }
+    .skel-select { width: 140px; height: 36px; }
+    .skel-search { flex: 1; min-width: 200px; height: 36px; }
+    .skel-col-header { height: 20px; margin-bottom: 12px; }
+    .skel-card { height: 72px; margin-bottom: 8px; }
+    @keyframes pulse {
+      0%, 100% { opacity: 0.4; }
+      50% { opacity: 0.7; }
+    }
+
+    .header-actions { display: flex; align-items: center; gap: 12px; }
+    .btn-create {
+      padding: 8px 16px; border: none; border-radius: 8px; cursor: pointer;
+      background: var(--neo-primary, #4f8cff); color: #fff; font-weight: 600; font-size: 13px;
+    }
+    .btn-create:hover { opacity: 0.9; }
+
+    /* Create Modal */
+    .modal-overlay {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center;
+      z-index: 1000;
+    }
+    .modal-content {
+      background: var(--neo-surface, #1e1e2e); border-radius: 12px; padding: 24px;
+      width: 90%; max-width: 600px; max-height: 80vh; overflow-y: auto;
+      border: 1px solid var(--neo-border, #333);
+    }
+    .modal-content h2 { margin: 0 0 20px; color: var(--neo-text, #fff); font-size: 18px; }
+    .form-group { margin-bottom: 16px; }
+    .form-group label { display: block; margin-bottom: 4px; font-size: 13px; color: var(--neo-text-secondary, #999); }
+    .form-input {
+      width: 100%; padding: 8px 12px; border-radius: 6px;
+      background: var(--neo-bg, #121220); color: var(--neo-text, #fff);
+      border: 1px solid var(--neo-border, #333); font-size: 14px;
+      box-sizing: border-box;
+    }
+    .form-input:focus { outline: none; border-color: var(--neo-primary, #4f8cff); }
+    .form-textarea {
+      width: 100%; padding: 8px 12px; border-radius: 6px;
+      background: var(--neo-bg, #121220); color: var(--neo-text, #fff);
+      border: 1px solid var(--neo-border, #333); font-size: 14px;
+      resize: vertical; font-family: monospace; box-sizing: border-box;
+    }
+    .form-textarea:focus { outline: none; border-color: var(--neo-primary, #4f8cff); }
+    .modal-actions { display: flex; gap: 12px; justify-content: flex-end; margin-top: 20px; }
+    .btn-cancel {
+      padding: 8px 16px; border: 1px solid var(--neo-border, #333); border-radius: 8px;
+      background: transparent; color: var(--neo-text-secondary, #999); cursor: pointer;
+    }
+    .btn-submit {
+      padding: 8px 20px; border: none; border-radius: 8px; cursor: pointer;
+      background: var(--neo-primary, #4f8cff); color: #fff; font-weight: 600;
+    }
+    .btn-submit:disabled { opacity: 0.5; cursor: not-allowed; }
 
     @media (max-width: 768px) {
       .safe-proposals { padding: 16px; }
@@ -285,38 +419,65 @@ interface ProposalColumn {
     }
   `]
 })
-export class SafeProposalsComponent implements OnInit {
+export class SafeProposalsComponent implements OnInit, OnDestroy {
   private readonly safeService = inject(SafeService);
+  private readonly notif = inject(NotificationService);
+  private readonly confirmDialog = inject(ConfirmDialogService);
+  private readonly translate = inject(TranslateService);
+  private readonly cdr = inject(ChangeDetectorRef);
+  private readonly destroy$ = new Subject<void>();
 
   proposals: SafeProposalSummary[] = [];
   filteredProposals: SafeProposalSummary[] = [];
+  sortedProposals: SafeProposalSummary[] = [];
   columns: ProposalColumn[] = [];
   loaded = false;
   view: 'kanban' | 'list' = 'kanban';
 
   filterType = '';
   searchQuery = '';
+  sortColumn = '';
+  sortDirection: 'asc' | 'desc' = 'asc';
+  showCreateModal = false;
+  newProposal = { title: '', type: 'prop' as ProposalType, relatedEpic: '', content: '' };
 
-  private readonly columnDefs: { id: ProposalStatus; label: string }[] = [
-    { id: 'draft', label: 'Draft' },
-    { id: 'in-review', label: 'In Review' },
-    { id: 'approved', label: 'Approved' },
-    { id: 'implementing', label: 'Implementing' },
-    { id: 'done', label: 'Done' },
+  private readonly columnDefs: { id: ProposalStatus; labelKey: string }[] = [
+    { id: 'draft', labelKey: 'safe.proposalStatus.draft' },
+    { id: 'in-review', labelKey: 'safe.proposalStatus.in-review' },
+    { id: 'approved', labelKey: 'safe.proposalStatus.approved' },
+    { id: 'implementing', labelKey: 'safe.proposalStatus.implementing' },
+    { id: 'done', labelKey: 'safe.proposalStatus.done' },
   ];
 
   ngOnInit(): void {
-    this.safeService.getProposals().subscribe({
-      next: (data) => {
-        this.proposals = data;
-        this.applyFilters();
-        this.loaded = true;
-      },
-      error: (err) => {
-        console.error('Failed to load proposals', err);
-        this.loaded = true;
-      }
-    });
+    this.safeService.getProposals()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (data) => {
+          this.proposals = data;
+          this.applyFilters();
+          this.loaded = true;
+          this.cdr.markForCheck();
+        },
+        error: () => {
+          this.notif.error(this.translate.instant('safe.proposals.loadError'));
+          this.loaded = true;
+          this.cdr.markForCheck();
+        }
+      });
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+
+  trackById(_index: number, item: SafeProposalSummary): string {
+    return item.id;
+  }
+
+  trackByColumnId(_index: number, col: ProposalColumn): string {
+    return col.id;
   }
 
   applyFilters(): void {
@@ -335,7 +496,38 @@ export class SafeProposalsComponent implements OnInit {
     }
 
     this.filteredProposals = filtered;
+    this.applySorting();
     this.buildColumns(filtered);
+  }
+
+  sortBy(column: string): void {
+    if (this.sortColumn === column) {
+      this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc';
+    } else {
+      this.sortColumn = column;
+      this.sortDirection = 'asc';
+    }
+    this.applySorting();
+    this.cdr.markForCheck();
+  }
+
+  getSortIndicator(column: string): string {
+    if (this.sortColumn !== column) return '';
+    return this.sortDirection === 'asc' ? '▲' : '▼';
+  }
+
+  private applySorting(): void {
+    if (!this.sortColumn) {
+      this.sortedProposals = [...this.filteredProposals];
+      return;
+    }
+    const dir = this.sortDirection === 'asc' ? 1 : -1;
+    const col = this.sortColumn as keyof SafeProposalSummary;
+    this.sortedProposals = [...this.filteredProposals].sort((a, b) => {
+      const va = (a[col] ?? '') as string;
+      const vb = (b[col] ?? '') as string;
+      return va.localeCompare(vb) * dir;
+    });
   }
 
   private buildColumns(proposals: SafeProposalSummary[]): void {
@@ -351,7 +543,31 @@ export class SafeProposalsComponent implements OnInit {
       .map(c => 'prop-' + c.id);
   }
 
-  onProposalDrop(event: CdkDragDrop<SafeProposalSummary[]>): void {
+  createProposal(): void {
+    if (!this.newProposal.title.trim()) return;
+
+    this.safeService.createProposal({
+      title: this.newProposal.title.trim(),
+      type: this.newProposal.type,
+      relatedEpic: this.newProposal.relatedEpic.trim() || null,
+      content: this.newProposal.content,
+    }).pipe(takeUntil(this.destroy$)).subscribe({
+      next: (created) => {
+        this.proposals.push(created);
+        this.applyFilters();
+        this.buildColumns(this.filteredProposals);
+        this.showCreateModal = false;
+        this.newProposal = { title: '', type: 'prop', relatedEpic: '', content: '' };
+        this.notif.success(this.translate.instant('safe.proposals.created'));
+        this.cdr.markForCheck();
+      },
+      error: () => {
+        this.notif.error(this.translate.instant('safe.proposals.createError'));
+      }
+    });
+  }
+
+  async onProposalDrop(event: CdkDragDrop<SafeProposalSummary[]>): Promise<void> {
     if (event.previousContainer === event.container) {
       moveItemInArray(event.container.data, event.previousIndex, event.currentIndex);
       return;
@@ -362,30 +578,44 @@ export class SafeProposalsComponent implements OnInit {
       c => event.container.id === 'prop-' + c.id
     )?.id;
 
+    if (!newStatus || !proposal) return;
+
+    const statusLabel = this.translate.instant(`safe.proposalStatus.${newStatus}`);
+    const confirmed = await this.confirmDialog.confirm(
+      this.translate.instant('safe.proposals.confirmStatusChange', {
+        id: proposal.id,
+        status: statusLabel,
+      })
+    );
+    if (!confirmed) return;
+
     transferArrayItem(
       event.previousContainer.data,
       event.container.data,
       event.previousIndex,
       event.currentIndex
     );
+    this.cdr.markForCheck();
 
-    if (newStatus && proposal) {
-      this.safeService.updateProposalStatus(proposal.id, newStatus).subscribe({
+    this.safeService.updateProposalStatus(proposal.id, newStatus)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
         next: () => {
-          // Update source data
           const src = this.proposals.find(p => p.id === proposal.id);
           if (src) src.status = newStatus;
+          this.notif.success(this.translate.instant('safe.proposals.statusUpdated'));
+          this.cdr.markForCheck();
         },
         error: () => {
-          // Revert on error
           transferArrayItem(
             event.container.data,
             event.previousContainer.data,
             event.currentIndex,
             event.previousIndex
           );
+          this.notif.error(this.translate.instant('safe.proposals.statusError'));
+          this.cdr.markForCheck();
         }
       });
-    }
   }
 }

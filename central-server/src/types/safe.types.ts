@@ -133,6 +133,37 @@ export interface SafeKpis {
   predictability: number | null;
 }
 
+// --- Sprint ---
+
+export type SprintStoryStatus = 'todo' | 'in-progress' | 'done' | 'removed';
+
+export interface SafeSprintStory {
+  id: string;           // "US-01.1.1"
+  name: string;
+  epicId: string;       // "E-01"
+  featureId: string;    // "F-01.1"
+  storyPoints: number;
+  priority: string;     // "Must" | "Should" | "Could" | "Won't"
+  status: SprintStoryStatus;
+}
+
+export interface SafeSprint {
+  id: string;           // "PI-1-S1"
+  name: string;         // "Sprint 1 (Sem 8-9)"
+  piId: string;         // "PI-1"
+  startDate: string;    // "2026-02-16"
+  endDate: string;      // "2026-02-27"
+  stories: SafeSprintStory[];
+  velocity: number;     // sum of done story points
+  capacity: number;     // sum of all story points
+}
+
+export interface SafeSprintTracker {
+  sprints: SafeSprint[];
+  currentSprintId: string | null;
+  averageVelocity: number;
+}
+
 // --- Portfolio (agrégé) ---
 
 export interface SafePortfolio {

@@ -865,10 +865,23 @@
       "roadmap": "Roadmap",
       "themes": "Strategic Themes",
       "valueStreams": "Value Streams",
-      "epicKanban": "Epic Kanban Board",
+      "epicBoard": "Epic Kanban Board",
       "piObjectives": "PI Objectives",
+      "objective": "Objective",
+      "theme": "Theme",
+      "done": "done",
       "roam": "ROAM — Risks",
-      "proposals": "Proposals & Spikes"
+      "flowMetrics": "Flow Metrics",
+      "flowMetricName": "Metric",
+      "flowMetricDefinition": "Definition",
+      "flowMetricUnit": "Unit",
+      "flowMetricTarget": "Target PI 1",
+      "risk": "Risk",
+      "category": "Category",
+      "owner": "Owner",
+      "loadError": "Failed to load portfolio",
+      "epicStatusUpdated": "Epic status updated",
+      "epicStatusError": "Failed to update epic status"
     },
     "proposals": {
       "title": "Proposals & Spikes",
@@ -877,7 +890,71 @@
       "titleLabel": "Title",
       "status": "Status",
       "file": "File",
-      "empty": "No proposals"
+      "empty": "No proposals",
+      "loadError": "Failed to load proposals",
+      "statusUpdated": "Proposal status updated",
+      "statusError": "Failed to update status",
+      "detailLoadError": "Failed to load proposal",
+      "confirmStatusChange": "Move {{id}} to \"{{status}}\"?",
+      "newProposal": "New Proposal",
+      "formTitle": "Title",
+      "relatedEpic": "Related Epic (optional)",
+      "formContent": "Content (Markdown)",
+      "created": "Proposal created",
+      "createError": "Failed to create proposal",
+      "deleted": "Proposal deleted",
+      "deleteError": "Failed to delete proposal",
+      "confirmDelete": "Delete proposal {{id}}? This cannot be undone."
+    },
+    "epicStatus": {
+      "funnel": "Funnel",
+      "analysis": "Analysis",
+      "backlog": "Backlog",
+      "implementing": "Implementing",
+      "done": "Done",
+      "partial": "Partial"
+    },
+    "proposalStatus": {
+      "draft": "Draft",
+      "in-review": "In Review",
+      "approved": "Approved",
+      "implementing": "Implementing",
+      "done": "Done"
+    },
+    "roamStatus": {
+      "Resolved": "Resolved",
+      "Owned": "Owned",
+      "Accepted": "Accepted",
+      "Mitigated": "Mitigated"
+    },
+    "sprints": {
+      "title": "Sprint Tracker",
+      "selectSprint": "Sprint:",
+      "current": "current",
+      "velocity": "Velocity",
+      "capacity": "Capacity",
+      "completion": "Completion",
+      "remaining": "Remaining",
+      "avgVelocity": "Avg Velocity",
+      "progress": "Sprint Progress",
+      "stories": "Stories by Feature",
+      "storyName": "Story",
+      "priority": "Priority",
+      "storyDone": "Done",
+      "storyInProgress": "In Progress",
+      "storyTodo": "To Do",
+      "storyRemoved": "Removed",
+      "empty": "No stories in this sprint",
+      "loadError": "Failed to load sprint data",
+      "statusUpdated": "Story status updated",
+      "statusError": "Failed to update story status",
+      "confirmStatusChange": "Move {{id}} to \"{{status}}\"?"
+    },
+    "storyStatus": {
+      "todo": "To Do",
+      "in-progress": "In Progress",
+      "done": "Done",
+      "removed": "Removed"
     }
   }
 }

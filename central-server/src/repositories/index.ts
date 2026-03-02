@@ -263,4 +263,9 @@ export {
   type SportBenchmarkRow,
   type RegionBenchmarkRow,
 } from './benchmark.repository';
+export {
+  safeRepository,
+  type SprintVelocityRow,
+  type StoryStatusOverrideRow,
+} from './safe.repository';
 export { BaseRepository } from './base.repository';

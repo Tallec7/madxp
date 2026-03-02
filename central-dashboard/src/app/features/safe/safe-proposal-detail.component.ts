@@ -4,22 +4,34 @@
  * Affiche le contenu markdown d'une proposal avec metadata et actions.
  */
 
-import { Component, OnInit, inject } from '@angular/core';
+import {
+  Component,
+  OnInit,
+  OnDestroy,
+  ChangeDetectionStrategy,
+  ChangeDetectorRef,
+  inject,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ActivatedRoute, RouterModule } from '@angular/router';
-import { TranslateModule } from '@ngx-translate/core';
+import { ActivatedRoute, Router, RouterModule } from '@angular/router';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
+import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
+import { Subject, takeUntil } from 'rxjs';
 import {
   SafeService,
   SafeProposal,
   ProposalStatus,
 } from '../../core/services/safe.service';
+import { NotificationService } from '../../core/services/notification.service';
+import { ConfirmDialogService } from '../../core/services/confirm-dialog.service';
 
 @Component({
   selector: 'app-safe-proposal-detail',
   standalone: true,
   imports: [CommonModule, RouterModule, TranslateModule],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <div class="proposal-detail" *ngIf="proposal; else loading">
+    <div class="proposal-detail" *ngIf="proposal; else skeleton">
 
       <!-- Header -->
       <div class="detail-header">
@@ -38,8 +50,11 @@ import {
               class="status-select"
               [class]="proposal.status"
             >
-              <option *ngFor="let s of statuses" [value]="s">{{ s }}</option>
+              <option *ngFor="let s of statuses; trackBy: trackByStatus" [value]="s">
+                {{ 'safe.proposalStatus.' + s | translate }}
+              </option>
             </select>
+            <button class="btn-delete" (click)="deleteProposal()">🗑</button>
           </div>
         </div>
 
@@ -67,10 +82,35 @@ import {
 
     </div>
 
-    <ng-template #loading>
-      <div class="loading-container">
-        <div class="spinner"></div>
-        <p>{{ 'common.loading' | translate }}</p>
+    <!-- Skeleton Loading -->
+    <ng-template #skeleton>
+      <div class="proposal-detail skeleton-container">
+        <div class="detail-header">
+          <div class="skel skel-back-link"></div>
+          <div class="header-main">
+            <div class="header-left">
+              <div class="skel skel-type"></div>
+              <div class="skel skel-h1"></div>
+            </div>
+            <div class="skel skel-select"></div>
+          </div>
+          <div class="meta-row">
+            <div class="skel skel-meta"></div>
+            <div class="skel skel-meta"></div>
+            <div class="skel skel-meta-wide"></div>
+          </div>
+        </div>
+        <div class="content-card">
+          <div class="skel skel-line-long"></div>
+          <div class="skel skel-line-full"></div>
+          <div class="skel skel-line-full"></div>
+          <div class="skel skel-line-medium"></div>
+          <div class="skel skel-line-full"></div>
+          <div class="skel skel-line-short"></div>
+          <div class="skel skel-line-full"></div>
+          <div class="skel skel-line-full"></div>
+          <div class="skel skel-line-medium"></div>
+        </div>
       </div>
     </ng-template>
   `,
@@ -115,6 +155,14 @@ import {
     .status-select.approved { border-color: #4caf50; }
     .status-select.implementing { border-color: #2196f3; }
     .status-select.done { border-color: #2e7d32; }
+
+    .status-control { display: flex; align-items: center; gap: 8px; }
+    .btn-delete {
+      background: transparent; border: 1px solid #c6282850; color: #ef5350;
+      padding: 6px 10px; border-radius: 8px; cursor: pointer; font-size: 15px;
+      transition: background 0.2s, border-color 0.2s;
+    }
+    .btn-delete:hover { background: #c6282820; border-color: #c62828; }
 
     .meta-row {
       display: flex; gap: 24px; margin-top: 12px; flex-wrap: wrap;
@@ -166,15 +214,27 @@ import {
     .markdown-content a { color: var(--neo-primary, #4f8cff); }
     .markdown-content strong { color: var(--neo-text, #fff); }
     .markdown-content hr { border: none; border-top: 1px solid var(--neo-border, #333); margin: 16px 0; }
+    .markdown-content img { max-width: 100%; border-radius: 8px; margin: 8px 0; }
 
-    /* Loading */
-    .loading-container { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 400px; }
-    .spinner {
-      width: 40px; height: 40px; border: 3px solid var(--neo-border, #333);
-      border-top-color: var(--neo-primary, #4f8cff); border-radius: 50%;
-      animation: spin 1s linear infinite;
+    /* Skeleton */
+    .skeleton-container .skel {
+      background: var(--neo-surface, #2a2a3e); border-radius: 6px;
+      animation: pulse 1.5s ease-in-out infinite;
     }
-    @keyframes spin { to { transform: rotate(360deg); } }
+    .skel-back-link { width: 140px; height: 20px; margin-bottom: 12px; }
+    .skel-type { width: 60px; height: 26px; border-radius: 6px; flex-shrink: 0; }
+    .skel-h1 { width: 400px; height: 26px; }
+    .skel-select { width: 130px; height: 34px; border-radius: 8px; }
+    .skel-meta { width: 80px; height: 36px; }
+    .skel-meta-wide { width: 200px; height: 36px; }
+    .skel-line-full { width: 100%; height: 16px; margin-bottom: 10px; }
+    .skel-line-long { width: 85%; height: 16px; margin-bottom: 10px; }
+    .skel-line-medium { width: 65%; height: 16px; margin-bottom: 10px; }
+    .skel-line-short { width: 40%; height: 16px; margin-bottom: 10px; }
+    @keyframes pulse {
+      0%, 100% { opacity: 0.4; }
+      50% { opacity: 0.7; }
+    }
 
     @media (max-width: 768px) {
       .proposal-detail { padding: 16px; }
@@ -182,47 +242,114 @@ import {
     }
   `]
 })
-export class SafeProposalDetailComponent implements OnInit {
+export class SafeProposalDetailComponent implements OnInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
   private readonly safeService = inject(SafeService);
+  private readonly notif = inject(NotificationService);
+  private readonly confirmDialog = inject(ConfirmDialogService);
+  private readonly translate = inject(TranslateService);
+  private readonly sanitizer = inject(DomSanitizer);
+  private readonly cdr = inject(ChangeDetectorRef);
+  private readonly destroy$ = new Subject<void>();
 
   proposal: SafeProposal | null = null;
-  renderedContent = '';
+  renderedContent: SafeHtml = '';
   statuses: ProposalStatus[] = ['draft', 'in-review', 'approved', 'implementing', 'done'];
 
   ngOnInit(): void {
     const id = this.route.snapshot.paramMap.get('id');
     if (!id) return;
 
-    this.safeService.getProposal(id).subscribe({
-      next: (data) => {
-        this.proposal = data;
-        this.renderedContent = this.renderMarkdown(data.content);
-      },
-      error: (err) => {
-        console.error('Failed to load proposal', err);
-      }
-    });
+    this.safeService.getProposal(id)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (data) => {
+          this.proposal = data;
+          this.renderedContent = this.sanitizer.bypassSecurityTrustHtml(
+            this.renderMarkdown(data.content)
+          );
+          this.cdr.markForCheck();
+        },
+        error: () => {
+          this.notif.error(this.translate.instant('safe.proposals.detailLoadError'));
+          this.cdr.markForCheck();
+        }
+      });
   }
 
-  onStatusChange(event: Event): void {
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+
+  trackByStatus(_index: number, status: ProposalStatus): string {
+    return status;
+  }
+
+  async onStatusChange(event: Event): Promise<void> {
     const target = event.target as HTMLSelectElement;
     const newStatus = target.value as ProposalStatus;
     if (!this.proposal || this.proposal.status === newStatus) return;
 
+    const statusLabel = this.translate.instant(`safe.proposalStatus.${newStatus}`);
+    const confirmed = await this.confirmDialog.confirm(
+      this.translate.instant('safe.proposals.confirmStatusChange', {
+        id: this.proposal.id,
+        status: statusLabel,
+      })
+    );
+
+    if (!confirmed) {
+      // Revert select to previous value
+      target.value = this.proposal.status;
+      return;
+    }
+
     const previousStatus = this.proposal.status;
     this.proposal.status = newStatus;
+    this.cdr.markForCheck();
 
-    this.safeService.updateProposalStatus(this.proposal.id, newStatus).subscribe({
-      error: () => {
-        if (this.proposal) this.proposal.status = previousStatus;
-      }
-    });
+    this.safeService.updateProposalStatus(this.proposal.id, newStatus)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.notif.success(this.translate.instant('safe.proposals.statusUpdated'));
+        },
+        error: () => {
+          if (this.proposal) this.proposal.status = previousStatus;
+          this.notif.error(this.translate.instant('safe.proposals.statusError'));
+          this.cdr.markForCheck();
+        }
+      });
+  }
+
+  async deleteProposal(): Promise<void> {
+    if (!this.proposal) return;
+
+    const confirmed = await this.confirmDialog.confirm(
+      this.translate.instant('safe.proposals.confirmDelete', { id: this.proposal.id }),
+      { title: this.translate.instant('common.delete'), confirmLabel: this.translate.instant('common.delete'), confirmStyle: 'danger' },
+    );
+    if (!confirmed) return;
+
+    this.safeService.deleteProposal(this.proposal.id)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.notif.success(this.translate.instant('safe.proposals.deleted'));
+          this.router.navigate(['/safe/proposals']);
+        },
+        error: () => {
+          this.notif.error(this.translate.instant('safe.proposals.deleteError'));
+        }
+      });
   }
 
   /**
-   * Basic markdown → HTML renderer.
-   * Handles headers, bold, italic, code blocks, tables, lists, links, blockquotes, hr.
+   * Markdown → HTML renderer.
+   * Handles headers, bold, italic, code blocks, tables, lists (ordered + unordered),
+   * links, images, blockquotes, hr.
    */
   private renderMarkdown(md: string): string {
     if (!md) return '';
@@ -249,6 +376,9 @@ export class SafeProposalDetailComponent implements OnInit {
     html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
     html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
 
+    // Images (before links to avoid conflict)
+    html = html.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" loading="lazy">');
+
     // Links
     html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
 
@@ -258,19 +388,73 @@ export class SafeProposalDetailComponent implements OnInit {
     // Tables
     html = this.renderTables(html);
 
-    // Lists (unordered)
-    html = html.replace(/^- (.+)$/gm, '<li>$1</li>');
-    html = html.replace(/(<li>.*<\/li>\n?)+/g, (match) => `<ul>${match}</ul>`);
+    // Lists (ordered + unordered, with nesting support)
+    html = this.renderLists(html);
 
     // Paragraphs
     html = html.replace(/\n\n/g, '</p><p>');
     html = `<p>${html}</p>`;
-    html = html.replace(/<p><(h[1-3]|pre|table|ul|ol|blockquote|hr)/g, '<$1');
+    html = html.replace(/<p><(h[1-3]|pre|table|ul|ol|blockquote|hr|img)/g, '<$1');
     html = html.replace(/<\/(h[1-3]|pre|table|ul|ol|blockquote)><\/p>/g, '</$1>');
     html = html.replace(/<hr><\/p>/g, '<hr>');
     html = html.replace(/<p><\/p>/g, '');
 
     return html;
+  }
+
+  private renderLists(html: string): string {
+    const lines = html.split('\n');
+    const result: string[] = [];
+    const stack: Array<{ tag: 'ul' | 'ol'; indent: number }> = [];
+
+    for (const rawLine of lines) {
+      const ulMatch = rawLine.match(/^(\s*)-\s+(.+)$/);
+      const olMatch = rawLine.match(/^(\s*)\d+\.\s+(.+)$/);
+      const match = ulMatch || olMatch;
+
+      if (match) {
+        const indent = match[1].length;
+        const content = match[2];
+        const tag: 'ul' | 'ol' = ulMatch ? 'ul' : 'ol';
+
+        // Close deeper or same-level lists that switched type
+        while (stack.length > 0) {
+          const top = stack[stack.length - 1];
+          if (top.indent > indent || (top.indent === indent && top.tag !== tag)) {
+            result.push(`</li></${top.tag}>`);
+            stack.pop();
+          } else {
+            break;
+          }
+        }
+
+        if (stack.length === 0 || indent > stack[stack.length - 1].indent) {
+          // Open a new nested list
+          result.push(`<${tag}>`);
+          stack.push({ tag, indent });
+        } else {
+          // Same level — close previous <li>
+          result.push('</li>');
+        }
+
+        result.push(`<li>${content}`);
+      } else {
+        // Non-list line — close all open lists
+        while (stack.length > 0) {
+          const top = stack.pop()!;
+          result.push(`</li></${top.tag}>`);
+        }
+        result.push(rawLine);
+      }
+    }
+
+    // Close remaining open lists
+    while (stack.length > 0) {
+      const top = stack.pop()!;
+      result.push(`</li></${top.tag}>`);
+    }
+
+    return result.join('\n');
   }
 
   private renderTables(html: string): string {

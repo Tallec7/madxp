@@ -9,6 +9,7 @@
 import fs from 'fs';
 import path from 'path';
 import logger from '../config/logger';
+import { safeRepository } from '../repositories/safe.repository';
 import {
   SafePortfolio,
   SafeEpic,
@@ -22,6 +23,10 @@ import {
   SafeKpis,
   SafeProposal,
   SafeProposalSummary,
+  SafeSprintTracker,
+  SafeSprint,
+  SafeSprintStory,
+  SprintStoryStatus,
   EpicStatus,
   FeatureStatus,
   RoamStatus,
@@ -41,6 +46,7 @@ interface CacheEntry<T> {
 class SafeParserService {
   private portfolioCache: CacheEntry<SafePortfolio> | null = null;
   private proposalsCache: CacheEntry<SafeProposalSummary[]> | null = null;
+  private sprintsCache: CacheEntry<SafeSprintTracker> | null = null;
 
   // --- Public API ---
 
@@ -72,6 +78,92 @@ class SafeParserService {
     const fullPath = path.resolve(PROPOSALS_DIR, summary.filePath);
     const content = this.readFileSafe(fullPath);
     return { ...summary, content };
+  }
+
+  async getSprints(): Promise<SafeSprintTracker> {
+    if (this.sprintsCache && Date.now() - this.sprintsCache.timestamp < CACHE_TTL_MS) {
+      return this.sprintsCache.data;
+    }
+
+    const tracker = this.buildSprintTracker();
+
+    // Apply DB overrides (hybrid layer)
+    try {
+      const [velocities, storyOverrides] = await Promise.all([
+        safeRepository.getVelocities(),
+        safeRepository.getStoryOverrides(),
+      ]);
+
+      // Override velocities from DB
+      for (const sprint of tracker.sprints) {
+        const dbVelocity = velocities.get(sprint.id);
+        if (dbVelocity !== undefined) {
+          sprint.velocity = dbVelocity;
+        }
+      }
+
+      // Override story statuses from DB
+      for (const sprint of tracker.sprints) {
+        for (const story of sprint.stories) {
+          const override = storyOverrides.get(story.id);
+          if (override) {
+            story.status = override as SprintStoryStatus;
+          }
+        }
+      }
+
+      // Recalculate average velocity with DB overrides applied
+      const today = new Date().toISOString().slice(0, 10);
+      const completedSprints = tracker.sprints.filter(s => s.endDate < today && s.velocity > 0);
+      tracker.averageVelocity = completedSprints.length > 0
+        ? Math.round(completedSprints.reduce((sum, s) => sum + s.velocity, 0) / completedSprints.length)
+        : 0;
+    } catch (error) {
+      logger.warn('SAFe: DB hybrid layer unavailable, using markdown-only data', { error });
+    }
+
+    this.sprintsCache = { data: tracker, timestamp: Date.now() };
+    return tracker;
+  }
+
+  async updateStoryStatus(sprintId: string, storyId: string, newStatus: SprintStoryStatus): Promise<boolean> {
+    const tracker = await this.getSprints();
+    const sprint = tracker.sprints.find(s => s.id === sprintId);
+    if (!sprint) return false;
+
+    const story = sprint.stories.find(s => s.id === storyId);
+    if (!story) return false;
+
+    // Write-back to USER-STORIES.md
+    const filePath = path.join(SAFE_DIR, 'USER-STORIES.md');
+    let content = this.readFileSafe(filePath);
+    if (!content) return false;
+
+    const statusMap: Record<SprintStoryStatus, string> = {
+      'todo': '⏳ Backlog',
+      'in-progress': '🔄 En cours',
+      'done': '✅ Livré',
+      'removed': '❌ Retiré',
+    };
+
+    // Find the row with this story ID and replace status
+    const storyEscaped = storyId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const rowRegex = new RegExp(`(\\|\\s*${storyEscaped}\\s*\\|.+?\\|\\s*)(✅\\s*(?:Done|Livré)|⏳\\s*(?:Backlog|À détailler)|🔄\\s*En cours|⚠️\\s*Partiel|🔧\\s*Partiel[^|]*|❌\\s*Retiré)(\\s*\\|)`, 'g');
+    const newContent = content.replace(rowRegex, `$1${statusMap[newStatus]}$3`);
+
+    if (newContent === content) {
+      logger.warn('SAFe: Story row not found for status update', { storyId });
+      return false;
+    }
+
+    fs.writeFileSync(filePath, newContent, 'utf-8');
+
+    // Persist override to DB (hybrid layer)
+    await safeRepository.upsertStoryStatus(storyId, newStatus);
+
+    this.invalidateCache();
+    logger.info('SAFe: Updated story status', { sprintId, storyId, newStatus });
+    return true;
   }
 
   updateProposalStatus(id: string, newStatus: ProposalStatus): boolean {
@@ -111,9 +203,71 @@ class SafeParserService {
     return true;
   }
 
+  createProposal(data: { title: string; type: ProposalType; relatedEpic: string | null; content: string }): SafeProposalSummary {
+    if (!fs.existsSync(PROPOSALS_DIR)) {
+      fs.mkdirSync(PROPOSALS_DIR, { recursive: true });
+    }
+
+    // Determine next ID
+    const existing = this.getProposals();
+    const prefix = data.type === 'spike' ? 'SPIKE' : data.type === 'spec' ? 'SPEC' : 'PROP';
+    const existingIds = existing
+      .filter(p => p.id.startsWith(prefix))
+      .map(p => {
+        const numMatch = p.id.match(/(\d+)/);
+        return numMatch ? parseInt(numMatch[1]) : 0;
+      });
+    const nextNum = existingIds.length > 0 ? Math.max(...existingIds) + 1 : 1;
+    const id = `${prefix}-${String(nextNum).padStart(3, '0')}`;
+
+    // Build markdown content
+    const today = new Date().toISOString().slice(0, 10);
+    const epicLine = data.relatedEpic ? `\n> **Epic** : ${data.relatedEpic}` : '';
+    const mdContent = `# ${id} — ${data.title}
+
+> **Type** : ${prefix}
+> **Statut** : Proposé
+> **Date** : ${today}${epicLine}
+
+${data.content}
+`;
+
+    const filename = `${id}-${data.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-+$/g, '')}.md`;
+    fs.writeFileSync(path.join(PROPOSALS_DIR, filename), mdContent, 'utf-8');
+    this.invalidateCache();
+
+    logger.info('SAFe: Created proposal', { id, title: data.title, type: data.type });
+
+    return {
+      id,
+      title: data.title,
+      type: data.type,
+      relatedEpic: data.relatedEpic,
+      status: 'draft',
+      date: today,
+      filePath: filename,
+    };
+  }
+
+  deleteProposal(id: string): boolean {
+    const proposals = this.getProposals();
+    const proposal = proposals.find(p => p.id === id);
+    if (!proposal) return false;
+
+    const fullPath = path.resolve(PROPOSALS_DIR, proposal.filePath);
+    if (!fs.existsSync(fullPath)) return false;
+
+    fs.unlinkSync(fullPath);
+    this.invalidateCache();
+
+    logger.info('SAFe: Deleted proposal', { id, filePath: proposal.filePath });
+    return true;
+  }
+
   invalidateCache(): void {
     this.portfolioCache = null;
     this.proposalsCache = null;
+    this.sprintsCache = null;
   }
 
   // --- Portfolio builder ---
@@ -672,6 +826,192 @@ class SafeParserService {
     }
 
     return map;
+  }
+
+  // --- Sprint Tracker builder ---
+
+  private buildSprintTracker(): SafeSprintTracker {
+    const sprints = this.parseSprints();
+
+    // Determine current sprint based on today's date
+    const today = new Date().toISOString().slice(0, 10);
+    let currentSprintId: string | null = null;
+    for (const sprint of sprints) {
+      if (sprint.startDate <= today && sprint.endDate >= today) {
+        currentSprintId = sprint.id;
+        break;
+      }
+    }
+    // If no current sprint found, pick the first future sprint
+    if (!currentSprintId) {
+      const future = sprints.find(s => s.startDate > today);
+      if (future) currentSprintId = future.id;
+    }
+
+    const completedSprints = sprints.filter(s => s.endDate < today && s.velocity > 0);
+    const averageVelocity = completedSprints.length > 0
+      ? Math.round(completedSprints.reduce((sum, s) => sum + s.velocity, 0) / completedSprints.length)
+      : 0;
+
+    return { sprints, currentSprintId, averageVelocity };
+  }
+
+  private parseSprints(): SafeSprint[] {
+    const content = this.readFileSafe(path.join(SAFE_DIR, 'USER-STORIES.md'));
+    if (!content) return [];
+
+    // Extract sprint date mapping from convention line
+    // "S1 (Sem 8-9), S2 (Sem 10-11), S3 (Sem 12-13)"
+    const sprintDateMap: Record<string, { start: string; end: string }> = {
+      // PI-1 sprints (Feb-Mar 2026, 2-week sprints)
+      'PI-1-S1': { start: '2026-02-16', end: '2026-02-27' },
+      'PI-1-S2': { start: '2026-03-02', end: '2026-03-13' },
+      'PI-1-S3': { start: '2026-03-16', end: '2026-03-27' },
+      // PI-2 sprints (Apr-May 2026)
+      'PI-2-S1': { start: '2026-04-01', end: '2026-04-14' },
+      'PI-2-S2': { start: '2026-04-15', end: '2026-04-28' },
+      'PI-2-S3': { start: '2026-04-29', end: '2026-05-12' },
+      'PI-2-S4': { start: '2026-05-13', end: '2026-05-26' },
+      'PI-2-S5': { start: '2026-05-27', end: '2026-06-09' },
+      'PI-2-S6': { start: '2026-06-10', end: '2026-06-23' },
+      // PI-3 sprints (Jun-Jul 2026)
+      'PI-3-S1': { start: '2026-06-24', end: '2026-07-07' },
+      'PI-3-S2': { start: '2026-07-08', end: '2026-07-21' },
+      'PI-3-S3': { start: '2026-07-22', end: '2026-08-04' },
+    };
+
+    const sprintNames: Record<string, string> = {
+      'PI-1-S1': 'Sprint 1 (Sem 8-9)',
+      'PI-1-S2': 'Sprint 2 (Sem 10-11)',
+      'PI-1-S3': 'Sprint 3 (Sem 12-13)',
+      'PI-2-S1': 'PI-2 Sprint 1',
+      'PI-2-S2': 'PI-2 Sprint 2',
+      'PI-2-S3': 'PI-2 Sprint 3',
+      'PI-2-S4': 'PI-2 Sprint 4',
+      'PI-2-S5': 'PI-2 Sprint 5',
+      'PI-2-S6': 'PI-2 Sprint 6',
+      'PI-3-S1': 'PI-3 Sprint 1',
+      'PI-3-S2': 'PI-3 Sprint 2',
+      'PI-3-S3': 'PI-3 Sprint 3',
+    };
+
+    // Collect stories per sprint from "Partie 2 — User Stories Futures"
+    const storiesBySprint: Record<string, SafeSprintStory[]> = {};
+
+    // Track current PI and epic context
+    let currentPi = 'PI-1';
+    let currentEpicId = '';
+
+    const lines = content.split('\n');
+    const partie2Start = lines.findIndex(l => l.includes('Partie 2'));
+    if (partie2Start === -1) return [];
+
+    for (let i = partie2Start; i < lines.length; i++) {
+      const line = lines[i];
+
+      // Track PI sections
+      const piMatch = line.match(/^###\s+(PI-\d+)/);
+      if (piMatch) {
+        currentPi = piMatch[1];
+        continue;
+      }
+
+      // Track epic context
+      const epicMatch = line.match(/^####\s+(E-\d+)\s*—/);
+      if (epicMatch) {
+        currentEpicId = epicMatch[1];
+        continue;
+      }
+
+      // Parse story table rows
+      // | US-XX.X.X | F-XX.X | Description | SP | Sprint | Priorité | Statut |
+      const storyMatch = line.match(
+        /\|\s*(US-[\d.]+)\s*\|\s*(F-[\d.]+)\s*\|\s*(.+?)\s*\|\s*(\d+)\s*\|\s*(\S+(?:\s+\S+)?)\s*\|\s*(\S+)\s*\|\s*(.+?)\s*\|/
+      );
+      if (storyMatch) {
+        const storyId = storyMatch[1];
+        const featureId = storyMatch[2];
+        const name = storyMatch[3].trim();
+        const sp = parseInt(storyMatch[4]);
+        const sprintRaw = storyMatch[5].trim();
+        const priority = storyMatch[6].trim();
+        const statusRaw = storyMatch[7].trim();
+
+        // Skip TBD sprints
+        if (sprintRaw === 'TBD') continue;
+
+        // Normalize sprint ID
+        const sprintId = this.normalizeSprintId(sprintRaw, currentPi);
+        if (!sprintId) continue;
+
+        // Map status
+        const status = this.mapStoryStatus(statusRaw);
+
+        // Derive epicId from featureId if no context
+        const epicId = currentEpicId || `E-${featureId.split('.')[0].replace('F-', '')}`;
+
+        if (!storiesBySprint[sprintId]) {
+          storiesBySprint[sprintId] = [];
+        }
+
+        storiesBySprint[sprintId].push({
+          id: storyId,
+          name,
+          epicId,
+          featureId,
+          storyPoints: sp,
+          priority,
+          status,
+        });
+      }
+    }
+
+    // Build sprint objects
+    const sprints: SafeSprint[] = [];
+    for (const [sprintId, dates] of Object.entries(sprintDateMap)) {
+      const stories = storiesBySprint[sprintId] || [];
+      const velocity = stories.filter(s => s.status === 'done').reduce((sum, s) => sum + s.storyPoints, 0);
+      const capacity = stories.reduce((sum, s) => sum + s.storyPoints, 0);
+
+      // Only include sprints that have stories or are in current/past timeframe
+      if (stories.length > 0 || dates.start <= new Date().toISOString().slice(0, 10)) {
+        sprints.push({
+          id: sprintId,
+          name: sprintNames[sprintId] || sprintId,
+          piId: sprintId.split('-S')[0],
+          startDate: dates.start,
+          endDate: dates.end,
+          stories,
+          velocity,
+          capacity,
+        });
+      }
+    }
+
+    return sprints.sort((a, b) => a.startDate.localeCompare(b.startDate));
+  }
+
+  private normalizeSprintId(raw: string, currentPi: string): string | null {
+    // "S1" → "PI-1-S1" (using context)
+    // "PI-2 S1" → "PI-2-S1"
+    const directMatch = raw.match(/^(PI-\d+)\s+S(\d+)$/);
+    if (directMatch) {
+      return `${directMatch[1]}-S${directMatch[2]}`;
+    }
+
+    const simpleMatch = raw.match(/^S(\d+)$/);
+    if (simpleMatch) {
+      return `${currentPi}-S${simpleMatch[1]}`;
+    }
+
+    return null;
+  }
+
+  private mapStoryStatus(raw: string): SprintStoryStatus {
+    if (raw.includes('Done') || raw.includes('Livré')) return 'done';
+    if (raw.includes('En cours')) return 'in-progress';
+    if (raw.includes('Retiré')) return 'removed';
+    return 'todo';
   }
 
   private computeKpis(epics: SafeEpic[], features: SafeFeature[], objectives: SafePiObjective[]): SafeKpis {

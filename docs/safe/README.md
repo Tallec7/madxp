@@ -1,6 +1,6 @@
 # SAFe Neopro — Pilotage Produit
 
-> **Dernière mise à jour** : 2 Mars 2026
+> **Dernière mise à jour** : 2 Mars 2026 (v3.93.0 — Sprint Tracker + Proposal CRUD + DB Hybrid)
 > **Framework** : SAFe Essential (simplifié)
 > **Cadence PI** : 6 semaines (3 sprints de 2 semaines)
 > **PI actuel** : PI-1 (Février - Mars 2026)
@@ -156,9 +156,22 @@ Vision Stratégique (OKR 2026)
 
 ## Suivi Vélocité & Équipe
 
+### Sprint Tracker
+
+Le Sprint Tracker est disponible via **trois canaux** :
+
+| Canal                        | URL / Chemin                                                               | Description                                                                              |
+| ---------------------------- | -------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| **Dashboard Angular**        | `/safe/sprints`                                                            | UI interactive : sélecteur de sprint, KPIs, stories par feature, update inline du statut |
+| **API REST**                 | `GET /api/safe/sprints`, `PUT /api/safe/sprints/:sid/stories/:stid/status` | Données JSON avec DB hybrid layer (markdown + PostgreSQL)                                |
+| **Notion**                   | [SAFe Neopro](https://www.notion.so/30bc27de363881d49d06e50eabbdd6b5)      | Visualisation read-only                                                                  |
+| **Markdown source of truth** | `docs/safe/USER-STORIES.md` (sections `## Sprint X.Y`)                     | Parsé par `SafeParserService`, overrides DB appliqués ensuite                            |
+
+**Architecture hybride** : les fichiers `.md` restent la source de vérité. Deux tables PostgreSQL (`safe_sprint_velocity`, `safe_story_status_override`) stockent les overrides dynamiques (vélocité persistée, changements de statut inline). Le parser lit d'abord le markdown, puis applique les overrides DB. Dégradation gracieuse si les tables n'existent pas encore.
+
 ### Métriques Sprint
 
-Le **Sprint Tracker** (database Notion) capture automatiquement :
+Le Sprint Tracker capture automatiquement :
 
 - **SP Planifiés vs Complétés** → Vélocité (% de complétion)
 - **US Terminées vs Reportées** → Taux de complétion
@@ -231,14 +244,15 @@ docs/safe/*.md  →  pre-commit hook  →  export-to-excel.py  →  NEOPRO_SAFe_
                                                                 (13 onglets, formules WSJF)
 ```
 
-| Outil           | Fichier                                    | Rôle                                                                                                                                 |
-| --------------- | ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------ |
-| Export Excel    | `docs/safe/scripts/export-to-excel.py`     | Génère le `.xlsx` avec 13 onglets (Dashboard, Epics, Features, Sprint Tracker, ROAM, Flow Metrics, User Stories, \_ChartData, etc.)  |
-| Recalc helper   | `docs/safe/scripts/recalc.py`              | Force le recalcul des formules Excel                                                                                                 |
-| Pre-commit hook | `.husky/pre-commit`                        | Détecte les changements `docs/safe/*.md` et régénère l'Excel automatiquement                                                         |
-| Règle Claude    | `.claude/rules/safe-update.md`             | Checklist pour que Claude mette à jour les `.md` SAFe à chaque `feat`/`fix` commit                                                   |
-| Dashboard SAFe  | `central-dashboard/src/app/features/safe/` | Dashboard Angular interactif : Portfolio Overview (KPIs, Gantt, Kanban Epics, ROAM), Proposals Kanban (drag & drop), Proposal Detail |
-| API SAFe        | `central-server/src/routes/safe.routes.ts` | 5 endpoints REST (`/api/safe/*`) — parse les `.md` en JSON, write-back atomique pour mutations de statut                             |
+| Outil           | Fichier                                              | Rôle                                                                                                                                                       |
+| --------------- | ---------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Export Excel    | `docs/safe/scripts/export-to-excel.py`               | Génère le `.xlsx` avec 13 onglets (Dashboard, Epics, Features, Sprint Tracker, ROAM, Flow Metrics, User Stories, \_ChartData, etc.)                        |
+| Recalc helper   | `docs/safe/scripts/recalc.py`                        | Force le recalcul des formules Excel                                                                                                                       |
+| Pre-commit hook | `.husky/pre-commit`                                  | Détecte les changements `docs/safe/*.md` et régénère l'Excel automatiquement                                                                               |
+| Règle Claude    | `.claude/rules/safe-update.md`                       | Checklist pour que Claude mette à jour les `.md` SAFe à chaque `feat`/`fix` commit                                                                         |
+| Dashboard SAFe  | `central-dashboard/src/app/features/safe/`           | Dashboard Angular interactif : Portfolio Overview (KPIs, Gantt, Kanban Epics, ROAM), Proposals Kanban (drag & drop, CRUD), Proposal Detail, Sprint Tracker |
+| API SAFe        | `central-server/src/routes/safe.routes.ts`           | 9 endpoints REST (`/api/safe/*`) — parse les `.md` en JSON, write-back atomique pour mutations, DB hybrid layer pour sprints                               |
+| DB Hybrid Layer | `central-server/src/repositories/safe.repository.ts` | Tables `safe_sprint_velocity` + `safe_story_status_override` — overrides dynamiques avec dégradation gracieuse                                             |
 
 ### Mise à jour automatique des .md SAFe
 

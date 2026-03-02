@@ -219,6 +219,12 @@ export const routes: Routes = [
         canActivate: [roleGuard],
         data: { roles: ['admin', 'super_admin'] },
         loadComponent: () => import('./features/safe/safe-proposal-detail.component').then(m => m.SafeProposalDetailComponent)
+      },
+      {
+        path: 'safe/sprints',
+        canActivate: [roleGuard],
+        data: { roles: ['admin', 'super_admin'] },
+        loadComponent: () => import('./features/safe/safe-sprint-tracker.component').then(m => m.SafeSprintTrackerComponent)
       }
     ]
   },

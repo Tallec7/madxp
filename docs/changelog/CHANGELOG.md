@@ -1,3 +1,24 @@
+# [3.94.0](https://github.com/Tallec7/neopro/compare/v3.93.0...v3.94.0) (2026-03-02)
+
+### Features
+
+- **safe:** SAFe dashboard Phase 2 — Sprint Tracker, Proposal CRUD, DB Hybrid Layer, UX polish
+  - **Sprint Tracker** (`/safe/sprints`): nouveau composant Angular avec sélecteur de sprint, KPI bar (vélocité, capacité, % done), stories groupées par feature, update inline du statut
+  - **Sprint API**: `GET /api/safe/sprints` (tracker complet), `PUT /api/safe/sprints/:sid/stories/:stid/status` (mise à jour statut story)
+  - **Sprint Parser**: `SafeParserService.getSprints()` async — parse `USER-STORIES.md` sections Sprint, applique les overrides DB
+  - **DB Hybrid Layer**: migration `add-safe-sprint-tables.sql` — tables `safe_sprint_velocity` + `safe_story_status_override` avec dégradation gracieuse
+  - **SAFe Repository**: `safe.repository.ts` avec 4 méthodes (getVelocities, upsertVelocity, getStoryOverrides, upsertStoryStatus)
+  - **Proposal CRUD**: `POST /api/safe/proposals` (création), `DELETE /api/safe/proposals/:id` (suppression), formulaire modal frontend, bouton delete avec ConfirmDialog
+  - **Epic Status Dropdown**: dropdown de statut inline dans les cartes epic du portfolio (en plus du Kanban drag-drop)
+  - **UX Phase 1**: toasts/confirmations, i18n complète (FR/EN/ES), skeleton loading, trackBy + OnPush + OnDestroy, flow metrics display, Gantt dynamique, tri cliquable sur tableaux, markdown nested lists + images
+  - **i18n**: 50+ nouvelles clés FR/EN/ES (safe.sprints._, safe.proposals._, safe.portfolio.\*)
+
+### Tests
+
+- **smoke:** SAFe Sprint Tracker guards — file existence, endpoint registration, Angular route, DB hybrid layer
+- **smoke:** SAFe Proposal CRUD guards — POST/DELETE endpoint registration
+- **smoke:** SAFe parser async methods + repository wiring
+
 # [3.93.0](https://github.com/Tallec7/neopro/compare/v3.92.2...v3.93.0) (2026-03-02)
 
 ### Features
