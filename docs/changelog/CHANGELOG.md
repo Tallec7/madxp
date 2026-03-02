@@ -2,6 +2,12 @@
 
 ### Features
 
+- **admin:** harden security, improve UX, modularize frontend (v3.93.0) ([36c20dc](https://github.com/Tallec7/neopro/commit/36c20dc79d21ff280ea5da2445c1aeed7d2d3de5))
+
+# [3.93.0](https://github.com/Tallec7/neopro/compare/v3.92.2...v3.93.0) (2026-03-02)
+
+### Features
+
 - **admin:** harden admin panel security — CSRF protection, rate limiting, password change, realtime Socket.IO, health monitoring
   - **CSRF double-cookie pattern**: session cookie httpOnly + CSRF cookie JS-readable, `X-CSRF-Token` header auto-injected on all mutations via fetch wrapper, `requireCsrf` middleware on all POST/PUT/DELETE routes
   - **Rate limiting**: 5 failed login attempts → 15min lockout per IP, in-memory Map, checked BEFORE password validation (defense-in-depth)
