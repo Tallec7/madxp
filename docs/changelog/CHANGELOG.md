@@ -1,3 +1,23 @@
+## [3.95.1](https://github.com/Tallec7/neopro/compare/v3.95.0...v3.95.1) (2026-03-02)
+
+### Bug Fixes
+
+- **fleet:** fix-fleet-pi.sh étendu de 8 à 10 étapes — ajoute installation des packages recommandés
+  (unclutter-xfixes, x11-utils, edid-decode), remplacement de l'ancien paquet unclutter, et correction
+  du masquage curseur TV (autostart LXDE). Garantit que tous les Pi existants seront corrigés lors de
+  l'exécution du script.
+
+### Tests
+
+- **smoke:** 7 nouveaux guards de régression — hostapd TKIP→CCMP (4 tests : template, install.sh,
+  prepare-image.sh, fix-fleet-pi.sh) + masquage curseur TV (3 tests : packages, autostart, remédiation)
+
+### Documentation
+
+- **troubleshooting:** mise à jour section fix-fleet-pi.sh (8→10 étapes)
+- **modop:** mise à jour MODOP-S04-05 diagnostic distance (7→10 étapes)
+- **installation:** description fix-fleet-pi.sh enrichie
+
 # [3.95.0](https://github.com/Tallec7/neopro/compare/v3.94.2...v3.95.0) (2026-03-02)
 
 ### Features

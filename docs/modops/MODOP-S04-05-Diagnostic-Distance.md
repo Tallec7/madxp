@@ -334,7 +334,7 @@ ip route show default
 
 #### 3.7 Script de réparation fleet (v3.7.14+)
 
-**Script tout-en-un pour corriger les problèmes courants** (TKIP, services manquants, GPU, permissions) :
+**Script tout-en-un pour corriger les problèmes courants** (TKIP, packages, curseur TV, services manquants, GPU, HDMI) :
 
 ```bash
 # Le script est livré par OTA dans /home/pi/neopro/scripts/
@@ -344,7 +344,7 @@ sudo /home/pi/neopro/scripts/fix-fleet-pi.sh
 # - Modèle Pi (4 vs 5)
 # - Type de connexion (Ethernet vs WiFi)
 # - Nom du site
-# Et applique les corrections adaptées (7 étapes)
+# Et applique les corrections adaptées (10 étapes)
 ```
 
 #### 3.8 Réparation manuelle des permissions

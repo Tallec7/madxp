@@ -6819,3 +6819,106 @@ describe('Pi admin panel security & architecture guards', () => {
     expect(content).toMatch(/admin_csrf.*httpOnly:\s*false/s);
   });
 });
+
+// Issue: hostapd template shipped with wpa_pairwise=TKIP, causing "wrong password"
+// errors on modern phones (Android 12+, iOS 16+) connecting to the club hotspot.
+// TKIP is deprecated by WPA2; modern devices refuse WPA2+TKIP silently.
+// Fix: Use CCMP only in hostapd.conf template AND install.sh.
+// Also: fix-fleet-pi.sh must fix existing Pi (sed TKIP→CCMP).
+describe('Hotspot TKIP→CCMP regression guard', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+
+  it('hostapd.conf template must use CCMP (never TKIP)', () => {
+    const template = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/config/systemd/hostapd.conf'),
+      'utf8'
+    );
+    expect({
+      hasCCMP: /wpa_pairwise=CCMP/.test(template),
+      hasTKIP: /wpa_pairwise=TKIP/.test(template),
+    }).toEqual({
+      hasCCMP: true,
+      hasTKIP: false,
+    });
+  });
+
+  it('install.sh configure_hotspot must not inject TKIP', () => {
+    const install = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/install.sh'),
+      'utf8'
+    );
+    // install.sh copies the template; ensure it doesn't sed CCMP back to TKIP
+    expect(install).not.toMatch(/wpa_pairwise=TKIP/);
+  });
+
+  it('fix-fleet-pi.sh must contain TKIP→CCMP remediation', () => {
+    const fixScript = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/scripts/fix-fleet-pi.sh'),
+      'utf8'
+    );
+    expect({
+      detectsTKIP: /wpa_pairwise=TKIP/.test(fixScript),
+      replacesCCMP: /wpa_pairwise=CCMP/.test(fixScript),
+    }).toEqual({
+      detectsTKIP: true,
+      replacesCCMP: true,
+    });
+  });
+
+  it('prepare-image.sh must use CCMP in inline hostapd config', () => {
+    const prepareImage = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/tools/prepare-image.sh'),
+      'utf8'
+    );
+    expect({
+      hasCCMP: /wpa_pairwise=CCMP/.test(prepareImage),
+      hasTKIP: /wpa_pairwise=TKIP/.test(prepareImage),
+    }).toEqual({
+      hasCCMP: true,
+      hasTKIP: false,
+    });
+  });
+});
+
+// Issue: Old Pi installed 'unclutter' (X11 grab-based, unreliable on LXDE/Pi5).
+// Fix: install.sh must use 'unclutter-xfixes' + LXDE autostart '@unclutter -idle 0 -root'.
+// fix-fleet-pi.sh must remediate existing Pi (remove old, install new, fix autostart).
+describe('TV cursor hiding regression guard', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+
+  it('install.sh must install unclutter-xfixes (not unclutter)', () => {
+    const install = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/install.sh'),
+      'utf8'
+    );
+    expect(install).toMatch(/apt-get install[^;]*unclutter-xfixes/s);
+  });
+
+  it('install.sh configure_gui must write @unclutter to LXDE autostart', () => {
+    const install = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/install.sh'),
+      'utf8'
+    );
+    expect(install).toMatch(/@unclutter -idle 0 -root/);
+  });
+
+  it('fix-fleet-pi.sh must install missing packages and fix cursor', () => {
+    const fixScript = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/scripts/fix-fleet-pi.sh'),
+      'utf8'
+    );
+    expect({
+      installsUnclutterXfixes: /unclutter-xfixes/.test(fixScript),
+      removesOldUnclutter: /apt-get remove.*unclutter/.test(fixScript),
+      fixesAutostart: /@unclutter/.test(fixScript),
+      installsX11Utils: /x11-utils/.test(fixScript),
+      installsEdidDecode: /edid-decode/.test(fixScript),
+    }).toEqual({
+      installsUnclutterXfixes: true,
+      removesOldUnclutter: true,
+      fixesAutostart: true,
+      installsX11Utils: true,
+      installsEdidDecode: true,
+    });
+  });
+});

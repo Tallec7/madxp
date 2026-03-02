@@ -13,13 +13,15 @@
 #
 # Ce que fait ce script :
 #   1. Corrige TKIP → CCMP dans hostapd.conf (éjections téléphones)
-#   2. Installe les 3 services systemd manquants (watchdog, guardian, optimizer)
-#   3. Crée le dossier videos-processing (permission denied)
-#   4. Vérifie et corrige les flags GPU du kiosk
-#   5. Vide le cache Chromium (erreurs SharedImage / AllocateRingBuffer)
-#   6. Force le flush des buffers bloqués (analytics + sponsors)
-#   7. Vérifie gpu_mem dans la config boot (Pi 5 : dynamique CMA)
-#   8. Vérifie hdmi_force_hotplug sur les 2 ports HDMI (E-23)
+#   2. Installe les packages recommandés manquants (unclutter-xfixes, x11-utils, edid-decode)
+#   3. Corrige le masquage du curseur TV (remplacement unclutter → unclutter-xfixes + autostart)
+#   4. Installe les 3 services systemd manquants (watchdog, guardian, optimizer)
+#   5. Crée le dossier videos-processing (permission denied)
+#   6. Vérifie et corrige les flags GPU du kiosk
+#   7. Vide le cache Chromium (erreurs SharedImage / AllocateRingBuffer)
+#   8. Force le flush des buffers bloqués (analytics + sponsors)
+#   9. Vérifie gpu_mem dans la config boot (Pi 5 : dynamique CMA)
+#  10. Vérifie hdmi_force_hotplug sur les 2 ports HDMI (E-23)
 #
 # Compatible : Pi 4, Pi 5, Ethernet, WiFi
 # Temps estimé : ~30 secondes
@@ -137,10 +139,86 @@ else
 fi
 
 # =============================================================================
-# 2. Services systemd manquants
+# 2. Packages recommandés manquants
 # =============================================================================
 
-log_step "2/7 — Services systemd manquants"
+log_step "2/10 — Packages recommandés"
+
+RECOMMENDED_PACKAGES=(
+    "unclutter-xfixes"
+    "x11-utils"
+    "edid-decode"
+)
+
+for pkg in "${RECOMMENDED_PACKAGES[@]}"; do
+    if dpkg -l "$pkg" 2>/dev/null | grep -q "^ii"; then
+        log_ok "$pkg déjà installé"
+    else
+        log_info "Installation de $pkg..."
+        if apt-get install -y "$pkg" >/dev/null 2>&1; then
+            log_ok "$pkg installé"
+            CHANGES=$((CHANGES + 1))
+        else
+            log_warn "$pkg : installation échouée (pas critique)"
+        fi
+    fi
+done
+
+# Supprimer l'ancien paquet 'unclutter' s'il est installé (remplacé par unclutter-xfixes)
+if dpkg -l "unclutter" 2>/dev/null | grep -q "^ii"; then
+    log_info "Suppression de l'ancien paquet 'unclutter' (remplacé par unclutter-xfixes)..."
+    apt-get remove -y unclutter >/dev/null 2>&1 && \
+        log_ok "Ancien paquet 'unclutter' supprimé" || \
+        log_warn "Impossible de supprimer 'unclutter'"
+    CHANGES=$((CHANGES + 1))
+fi
+
+# =============================================================================
+# 3. Masquage curseur TV (unclutter-xfixes + autostart LXDE)
+# =============================================================================
+
+log_step "3/10 — Masquage curseur TV"
+
+AUTOSTART_FILE="/home/pi/.config/lxsession/LXDE-pi/autostart"
+AUTOSTART_DIR=$(dirname "$AUTOSTART_FILE")
+
+# Créer le répertoire si absent
+if [ ! -d "$AUTOSTART_DIR" ]; then
+    mkdir -p "$AUTOSTART_DIR"
+    chown -R pi:pi /home/pi/.config
+    log_ok "Répertoire autostart LXDE créé"
+fi
+
+# Vérifier si @unclutter est dans l'autostart
+if [ -f "$AUTOSTART_FILE" ] && grep -q "@unclutter" "$AUTOSTART_FILE"; then
+    log_ok "@unclutter déjà dans l'autostart LXDE"
+else
+    if [ ! -f "$AUTOSTART_FILE" ]; then
+        # Créer le fichier autostart complet
+        cat > "$AUTOSTART_FILE" << 'AUTOSTART_EOF'
+@lxpanel --profile LXDE-pi
+@pcmanfm --desktop --profile LXDE-pi
+@xset s off
+@xset -dpms
+@xset s noblank
+@unclutter -idle 0 -root
+AUTOSTART_EOF
+        log_ok "Fichier autostart LXDE créé avec @unclutter"
+    else
+        # Ajouter @unclutter au fichier existant
+        echo '@unclutter -idle 0 -root' >> "$AUTOSTART_FILE"
+        log_ok "@unclutter ajouté à l'autostart LXDE"
+    fi
+    chown -R pi:pi /home/pi/.config
+    CHANGES=$((CHANGES + 1))
+    NEEDS_REBOOT=true
+fi
+
+# =============================================================================
+# 4. Services systemd manquants
+# =============================================================================
+
+log_step "4/10 — Services systemd manquants"
 
 SERVICES_TO_INSTALL=(
     "neopro-hotspot-watchdog"
@@ -230,7 +308,7 @@ fi
 # 3. Permission videos-processing
 # =============================================================================
 
-log_step "3/7 — Permission dossier videos-processing"
+log_step "5/10 — Permission dossier videos-processing"
 
 VPROC_DIR="$NEOPRO_ROOT/videos-processing"
 
@@ -248,7 +326,7 @@ fi
 # 4. Flags GPU du kiosk
 # =============================================================================
 
-log_step "4/7 — Vérification flags GPU kiosk"
+log_step "6/10 — Vérification flags GPU kiosk"
 
 KIOSK_SCRIPT="$SCRIPTS_DIR/kiosk-watchdog.sh"
 
@@ -306,7 +384,7 @@ fi
 # 5. Cache Chromium (erreurs SharedImage / AllocateRingBuffer)
 # =============================================================================
 
-log_step "5/7 — Nettoyage cache Chromium"
+log_step "7/10 — Nettoyage cache Chromium"
 
 CHROMIUM_CACHE="/home/pi/.cache/chromium"
 CHROMIUM_CONFIG="/home/pi/.config/chromium"
@@ -335,7 +413,7 @@ fi
 # 6. Flush des buffers bloqués (analytics + sponsors)
 # =============================================================================
 
-log_step "6/7 — Flush buffers bloqués"
+log_step "8/10 — Flush buffers bloqués"
 
 ANALYTICS_BUFFER="$NEOPRO_ROOT/data/analytics_buffer.json"
 SPONSOR_BUFFER="$NEOPRO_ROOT/data/sponsor_impressions.json"
@@ -410,7 +488,7 @@ fi
 # 7. Vérification gpu_mem (config boot)
 # =============================================================================
 
-log_step "7/8 — Vérification gpu_mem"
+log_step "9/10 — Vérification gpu_mem"
 
 if [ "$IS_PI5" = true ]; then
     log_ok "Pi 5 détecté — gpu_mem est dynamique (CMA), pas besoin de configurer"
@@ -468,7 +546,7 @@ fi
 # 8. Vérification hdmi_force_hotplug (E-23 Résilience HDMI)
 # =============================================================================
 
-log_step "8/8 — Vérification hdmi_force_hotplug"
+log_step "10/10 — Vérification hdmi_force_hotplug"
 
 BOOT_CONFIG_HDMI=""
 for cfg in /boot/firmware/config.txt /boot/config.txt; do

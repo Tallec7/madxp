@@ -2496,15 +2496,18 @@ scp raspberry/scripts/fix-fleet-pi.sh pi@neopro.local:/tmp/
 ssh pi@neopro.local 'chmod +x /tmp/fix-fleet-pi.sh && sudo /tmp/fix-fleet-pi.sh'
 ```
 
-**Ce que fait le script :**
+**Ce que fait le script (10 étapes) :**
 
 1. **TKIP → CCMP** dans hostapd.conf (éjections téléphones)
-2. **Installe les 3 services systemd manquants** (watchdog, guardian, optimizer)
-3. **Crée le dossier videos-processing** (permission denied)
-4. **Vérifie les flags GPU** du kiosk (Pi 4 vs Pi 5)
-5. **Vide le cache Chromium** (erreurs SharedImage/AllocateRingBuffer)
-6. **Flush les buffers** analytics et sponsors bloqués
-7. **Vérifie gpu_mem** (doit être 256 sur Pi 4)
+2. **Installe les packages recommandés** manquants (unclutter-xfixes, x11-utils, edid-decode)
+3. **Corrige le masquage curseur TV** (remplacement ancien unclutter → unclutter-xfixes + autostart LXDE)
+4. **Installe les 3 services systemd manquants** (watchdog, guardian, optimizer)
+5. **Crée le dossier videos-processing** (permission denied)
+6. **Vérifie les flags GPU** du kiosk (Pi 4 vs Pi 5)
+7. **Vide le cache Chromium** (erreurs SharedImage/AllocateRingBuffer)
+8. **Flush les buffers** analytics et sponsors bloqués
+9. **Vérifie gpu_mem** (doit être 256 sur Pi 4)
+10. **Vérifie hdmi_force_hotplug** sur les 2 ports HDMI (E-23)
 
 Le script auto-détecte le modèle de Pi, le type de connexion (Ethernet vs WiFi) et le nom du site.
 
