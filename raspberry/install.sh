@@ -36,6 +36,12 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 START_TIME=$(date +%s)
 NON_INTERACTIVE="${NEOPRO_NON_INTERACTIVE:-false}"
 
+# Log file — toute la sortie console est aussi écrite dans ce fichier
+LOG_FILE="/var/log/neopro-install-$(date +%Y%m%d-%H%M%S).log"
+exec > >(tee -a "$LOG_FILE") 2>&1
+echo "=== Installation Neopro démarrée à $(date) ==="
+echo "=== Log file: $LOG_FILE ==="
+
 ################################################################################
 # Fonctions utilitaires
 ################################################################################
@@ -1209,6 +1215,8 @@ main() {
 
     echo -e "${GREEN}Installation terminée!${NC}"
     echo -e "${YELLOW}Redémarrage recommandé: sudo reboot${NC}"
+    echo ""
+    echo -e "${BLUE}Log complet de l'installation : $LOG_FILE${NC}"
 }
 
 # Lancement

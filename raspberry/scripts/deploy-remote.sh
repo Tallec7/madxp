@@ -9,7 +9,7 @@
 #          ./deploy-remote.sh neopro.local
 ################################################################################
 
-set -e
+set -euo pipefail
 
 # Couleurs
 GREEN='\033[0;32m'
@@ -159,7 +159,14 @@ ssh ${RASPBERRY_USER}@${RASPBERRY_IP} "
     mkdir -p backups
     BACKUP_NAME=\"backup-\$(date +%Y%m%d-%H%M%S).tar\"
     # tar sans compression (-c au lieu de -czf) : 10x plus rapide sur Pi
-    tar -cf backups/\${BACKUP_NAME} webapp/ server/ 2>/dev/null || true
+    # Inclure tous les composants déployés (webapp, server, sync-agent, admin)
+    BACKUP_DIRS=''
+    for d in webapp server sync-agent admin; do
+        [ -d \"\$d\" ] && BACKUP_DIRS=\"\$BACKUP_DIRS \$d\"
+    done
+    if [ -n \"\$BACKUP_DIRS\" ]; then
+        tar -cf backups/\${BACKUP_NAME} \$BACKUP_DIRS
+    fi
     echo \"Backup créé: \${BACKUP_NAME}\"
     # Garder seulement les 3 derniers backups (plus gros sans compression)
     ls -t backups/backup-*.tar 2>/dev/null | tail -n +4 | xargs rm -f 2>/dev/null || true
@@ -211,7 +218,10 @@ ssh ${RASPBERRY_USER}@${RASPBERRY_IP} "
     # Installation serveur
     if [ -d ~/neopro-update/server ]; then
         sudo cp -r ~/neopro-update/server/* ${RASPBERRY_DIR}/server/
-        cd ${RASPBERRY_DIR}/server && sudo npm install --production 2>/dev/null || true
+        cd ${RASPBERRY_DIR}/server
+        if ! sudo npm install --production; then
+            echo 'ATTENTION: npm install server échoué — anciens node_modules conservés'
+        fi
         echo 'Serveur installé'
     fi
 
@@ -241,7 +251,10 @@ ssh ${RASPBERRY_USER}@${RASPBERRY_IP} "
             rm /tmp/sync-agent-config.env.backup
         fi
         # npm install pour sync-agent (CRITICAL - sans ça le service crash)
-        cd ${RASPBERRY_DIR}/sync-agent && sudo npm install --production 2>/dev/null || true
+        cd ${RASPBERRY_DIR}/sync-agent
+        if ! sudo npm install --production; then
+            echo 'ATTENTION: npm install sync-agent échoué — anciens node_modules conservés'
+        fi
         echo 'Sync-agent installé'
     fi
 
@@ -249,7 +262,10 @@ ssh ${RASPBERRY_USER}@${RASPBERRY_IP} "
     if [ -d ~/neopro-update/admin ]; then
         sudo mkdir -p ${RASPBERRY_DIR}/admin
         sudo cp -r ~/neopro-update/admin/* ${RASPBERRY_DIR}/admin/
-        cd ${RASPBERRY_DIR}/admin && sudo npm install --production 2>/dev/null || true
+        cd ${RASPBERRY_DIR}/admin
+        if ! sudo npm install --production; then
+            echo 'ATTENTION: npm install admin échoué — anciens node_modules conservés'
+        fi
         echo 'Admin panel installé'
     fi
 
@@ -387,7 +403,7 @@ print_success "Installation terminée"
 
 # Redémarrage des services
 print_step "Redémarrage des services..."
-ssh ${RASPBERRY_USER}@${RASPBERRY_IP} "
+DEPLOY_OUTPUT=$(ssh ${RASPBERRY_USER}@${RASPBERRY_IP} "
     # Arrêter proprement neopro-app
     sudo systemctl stop neopro-app 2>/dev/null || true
 
@@ -428,19 +444,20 @@ ssh ${RASPBERRY_USER}@${RASPBERRY_IP} "
     fi
     sleep 1
 
-    # Vérification des services
+    # Vérification des services critiques
+    CRITICAL_FAILED=false
     if systemctl is-active --quiet neopro-app; then
         echo '✓ Service neopro-app: OK'
     else
         echo '✗ Service neopro-app: ERREUR'
-        exit 1
+        CRITICAL_FAILED=true
     fi
 
     if systemctl is-active --quiet nginx; then
         echo '✓ Service nginx: OK'
     else
         echo '✗ Service nginx: ERREUR'
-        exit 1
+        CRITICAL_FAILED=true
     fi
 
     # Vérifier admin panel si installé
@@ -469,8 +486,41 @@ ssh ${RASPBERRY_USER}@${RASPBERRY_IP} "
             echo '⚠ Service neopro-kiosk: NON ACTIF'
         fi
     fi
-"
-print_success "Services redémarrés"
+
+    # ROLLBACK AUTOMATIQUE si services critiques échouent
+    if [ \"\$CRITICAL_FAILED\" = true ]; then
+        echo ''
+        echo '⚠ ROLLBACK AUTOMATIQUE — restauration de la version précédente...'
+        cd ${RASPBERRY_DIR}
+        LATEST_BACKUP=\$(ls -t backups/backup-*.tar 2>/dev/null | head -1)
+        if [ -n \"\$LATEST_BACKUP\" ]; then
+            echo \"  Restauration depuis \$LATEST_BACKUP...\"
+            tar -xf \"\$LATEST_BACKUP\"
+            cd ${RASPBERRY_DIR}/server && sudo npm install --production >/dev/null 2>&1
+            sudo systemctl restart neopro-app nginx
+            sleep 2
+            if systemctl is-active --quiet neopro-app && systemctl is-active --quiet nginx; then
+                echo '✓ Rollback réussi — ancienne version restaurée'
+            else
+                echo '✗ Rollback échoué — intervention manuelle requise'
+                exit 1
+            fi
+        else
+            echo '✗ Aucun backup disponible pour le rollback'
+            exit 1
+        fi
+    fi
+" || true)
+echo "$DEPLOY_OUTPUT"
+if echo "$DEPLOY_OUTPUT" | grep -q 'Rollback réussi'; then
+    print_warning "Déploiement échoué — rollback automatique effectué (ancienne version restaurée)"
+    print_warning "Vérifiez les logs : ssh ${RASPBERRY_USER}@${RASPBERRY_IP} 'sudo journalctl -u neopro-app --no-pager -n 50'"
+elif echo "$DEPLOY_OUTPUT" | grep -q 'Rollback échoué\|Aucun backup disponible'; then
+    print_error "Déploiement échoué — rollback échoué — intervention manuelle requise"
+    exit 1
+else
+    print_success "Services redémarrés"
+fi
 
 # Test de l'application
 print_step "Test de l'application..."

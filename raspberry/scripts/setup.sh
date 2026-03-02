@@ -22,7 +22,7 @@
 # Documentation complète : docs/ONLINE_INSTALLATION.md
 ################################################################################
 
-set -eo pipefail
+set -euo pipefail
 
 # Couleurs
 RED='\033[0;31m'
@@ -110,130 +110,83 @@ check_parameters() {
 download_installation_files() {
     print_step "Téléchargement des fichiers d'installation depuis GitHub..."
 
-    # URL de base du repository
-    GITHUB_RAW="https://raw.githubusercontent.com/Tallec7/neopro/main"
-    GITHUB_API="https://api.github.com/repos/Tallec7/neopro/contents"
-
-    # Créer le répertoire temporaire (mktemp pour éviter les collisions)
     TEMP_DIR=$(mktemp -d /tmp/neopro-install-XXXXXX)
+
+    # Télécharger l'archive du repository (1 requête HTTP vs ~40 curl individuels)
+    # Plus rapide, plus fiable, et auto-inclut les nouveaux fichiers
+    print_step "Téléchargement de l'archive repository..."
+    local ARCHIVE_DIR
+    ARCHIVE_DIR=$(mktemp -d /tmp/neopro-archive-XXXXXX)
+    if ! curl -sSLf "https://github.com/Tallec7/neopro/archive/refs/heads/main.tar.gz" \
+         | tar -xz -C "$ARCHIVE_DIR"; then
+        print_error "Échec du téléchargement de l'archive"
+        rm -rf "$ARCHIVE_DIR"
+        exit 1
+    fi
+
+    local SRC="$ARCHIVE_DIR/neopro-main/raspberry"
+
+    if [ ! -d "$SRC" ]; then
+        print_error "Structure du repository invalide (raspberry/ non trouvé)"
+        rm -rf "$ARCHIVE_DIR"
+        exit 1
+    fi
+
+    # Copier l'installeur principal
+    cp "$SRC/install.sh" "$TEMP_DIR/"
+    chmod +x "$TEMP_DIR/install.sh"
+
+    # Copier les répertoires nécessaires
+    print_step "Extraction des fichiers d'installation..."
+    for dir in config server admin sync-agent scripts; do
+        if [ -d "$SRC/$dir" ]; then
+            cp -r "$SRC/$dir" "$TEMP_DIR/$dir"
+        fi
+    done
+    chmod +x "$TEMP_DIR/scripts/"*.sh 2>/dev/null || true
+
+    # Nettoyer l'archive (~taille du repo complet, on libère l'espace)
+    rm -rf "$ARCHIVE_DIR"
+
+    # Vérifier les fichiers critiques
+    local critical_files=(
+        "install.sh"
+        "config/systemd/hostapd.conf"
+        "config/systemd/dnsmasq.conf"
+        "config/systemd/neopro.service"
+        "config/systemd/neopro-app.service"
+        "config/systemd/neopro-admin.service"
+        "server/package.json"
+        "server/server.js"
+        "admin/package.json"
+        "admin/admin-server.js"
+    )
+    for critical_file in "${critical_files[@]}"; do
+        if [ ! -f "$TEMP_DIR/$critical_file" ]; then
+            print_error "Fichier critique manquant : $critical_file"
+            exit 1
+        fi
+    done
+
     cd "$TEMP_DIR"
 
-    # Télécharger install.sh (CRITIQUE)
-    print_step "Téléchargement de install.sh..."
-    curl -sSLf "$GITHUB_RAW/raspberry/install.sh" -o install.sh || { print_error "Échec du téléchargement de install.sh"; exit 1; }
-    chmod +x install.sh
-
-    # Télécharger la structure complète pour install.sh
-    print_step "Téléchargement des configurations systemd..."
-    mkdir -p config/systemd
-    # Fichiers critiques (l'installation échoue sans eux)
-    curl -sSLf "$GITHUB_RAW/raspberry/config/systemd/hostapd.conf" -o config/systemd/hostapd.conf || { print_error "Échec: hostapd.conf"; exit 1; }
-    curl -sSLf "$GITHUB_RAW/raspberry/config/systemd/dnsmasq.conf" -o config/systemd/dnsmasq.conf || { print_error "Échec: dnsmasq.conf"; exit 1; }
-    curl -sSLf "$GITHUB_RAW/raspberry/config/systemd/neopro.service" -o config/systemd/neopro.service || { print_error "Échec: neopro.service"; exit 1; }
-    curl -sSLf "$GITHUB_RAW/raspberry/config/systemd/neopro-app.service" -o config/systemd/neopro-app.service || { print_error "Échec: neopro-app.service"; exit 1; }
-    curl -sSLf "$GITHUB_RAW/raspberry/config/systemd/neopro-admin.service" -o config/systemd/neopro-admin.service || { print_error "Échec: neopro-admin.service"; exit 1; }
-    # Fichiers optionnels (ajoutés dans des versions ultérieures)
-    curl -sSL "$GITHUB_RAW/raspberry/config/systemd/neopro-kiosk.service" -o config/systemd/neopro-kiosk.service 2>/dev/null || true
-    curl -sSL "$GITHUB_RAW/raspberry/config/systemd/neopro-sync-agent.service" -o config/systemd/neopro-sync-agent.service 2>/dev/null || true
-    # Services ajoutés v2.28+ (watchdogs réseau)
-    curl -sSL "$GITHUB_RAW/raspberry/config/systemd/neopro-hotspot-watchdog.service" -o config/systemd/neopro-hotspot-watchdog.service 2>/dev/null || true
-    curl -sSL "$GITHUB_RAW/raspberry/config/systemd/neopro-hotspot-optimizer.service" -o config/systemd/neopro-hotspot-optimizer.service 2>/dev/null || true
-    # Service ajouté v2.40+ (guardian sync-agent)
-    curl -sSL "$GITHUB_RAW/raspberry/config/systemd/neopro-sync-guardian.service" -o config/systemd/neopro-sync-guardian.service 2>/dev/null || true
-
-    print_step "Téléchargement du serveur Node.js..."
-    mkdir -p server
-    curl -sSLf "$GITHUB_RAW/raspberry/server/package.json" -o server/package.json || { print_error "Échec: server/package.json"; exit 1; }
-    curl -sSLf "$GITHUB_RAW/raspberry/server/server.js" -o server/server.js || { print_error "Échec: server/server.js"; exit 1; }
-
-    print_step "Téléchargement du serveur admin..."
-    mkdir -p admin/public/fonts
-    curl -sSLf "$GITHUB_RAW/raspberry/admin/package.json" -o admin/package.json || { print_error "Échec: admin/package.json"; exit 1; }
-    curl -sSLf "$GITHUB_RAW/raspberry/admin/admin-server.js" -o admin/admin-server.js || { print_error "Échec: admin/admin-server.js"; exit 1; }
-    curl -sSL "$GITHUB_RAW/raspberry/admin/helpers.js" -o admin/helpers.js 2>/dev/null || true
-
-    # Télécharger les fichiers public de l'admin (interface complète)
-    curl -sSL "$GITHUB_RAW/raspberry/admin/public/index.html" -o admin/public/index.html 2>/dev/null || true
-    curl -sSL "$GITHUB_RAW/raspberry/admin/public/app.js" -o admin/public/app.js 2>/dev/null || true
-    curl -sSL "$GITHUB_RAW/raspberry/admin/public/styles.css" -o admin/public/styles.css 2>/dev/null || true
-    curl -sSL "$GITHUB_RAW/raspberry/admin/public/manifest.webmanifest" -o admin/public/manifest.webmanifest 2>/dev/null || true
-    curl -sSL "$GITHUB_RAW/raspberry/admin/public/neopro-logo.png" -o admin/public/neopro-logo.png 2>/dev/null || true
-    curl -sSL "$GITHUB_RAW/raspberry/admin/public/neopro-logo-white.png" -o admin/public/neopro-logo-white.png 2>/dev/null || true
-    curl -sSL "$GITHUB_RAW/raspberry/admin/public/favicon.ico" -o admin/public/favicon.ico 2>/dev/null || true
-
-    print_step "Téléchargement du sync-agent..."
-    mkdir -p sync-agent/src/tasks sync-agent/src/utils sync-agent/src/commands sync-agent/src/watchers sync-agent/src/services
-    curl -sSL "$GITHUB_RAW/raspberry/sync-agent/package.json" -o sync-agent/package.json 2>/dev/null || true
-
-    # Fichiers principaux du sync-agent (TOUS les fichiers nécessaires)
-    for file in agent.js analytics.js config.js logger.js metrics.js; do
-        curl -sSL "$GITHUB_RAW/raspberry/sync-agent/src/$file" -o "sync-agent/src/$file" 2>/dev/null || true
-    done
-
-    # Commands du sync-agent (CRITIQUES pour update_config, deploy_video, etc.)
-    # Fichiers principaux
-    for file in index.js deploy-video.js update-software.js remote-shell.js delete-video.js; do
-        curl -sSL "$GITHUB_RAW/raspberry/sync-agent/src/commands/$file" -o "sync-agent/src/commands/$file" 2>/dev/null || true
-    done
-    # Modules extraits v2.33+ (refactoring commands/index.js)
-    for file in update-config.js diagnostics.js hotspot.js network-diagnostics.js debug-bundle.js analytics-buffer.js deploy-asset.js; do
-        curl -sSL "$GITHUB_RAW/raspberry/sync-agent/src/commands/$file" -o "sync-agent/src/commands/$file" 2>/dev/null || true
-    done
-
-    # Watchers du sync-agent (surveillance vidéos et config)
-    for file in video-watcher.js config-watcher.js; do
-        curl -sSL "$GITHUB_RAW/raspberry/sync-agent/src/watchers/$file" -o "sync-agent/src/watchers/$file" 2>/dev/null || true
-    done
-
-    # Services du sync-agent (connexion, queue offline, historique, réseau)
-    for file in connection-status.js offline-queue.js sync-history.js network-detector.js network-watchdog.js safe-network-operations.js; do
-        curl -sSL "$GITHUB_RAW/raspberry/sync-agent/src/services/$file" -o "sync-agent/src/services/$file" 2>/dev/null || true
-    done
-
-    # Tasks du sync-agent
-    for file in expiration-checker.js local-backup.js; do
-        curl -sSL "$GITHUB_RAW/raspberry/sync-agent/src/tasks/$file" -o "sync-agent/src/tasks/$file" 2>/dev/null || true
-    done
-
-    # Utils du sync-agent (TOUS les fichiers)
-    for file in config-merge.js config-validator.js version-info.js; do
-        curl -sSL "$GITHUB_RAW/raspberry/sync-agent/src/utils/$file" -o "sync-agent/src/utils/$file" 2>/dev/null || true
-    done
-
-    print_step "Téléchargement des scripts de gestion..."
-    mkdir -p scripts
-    # Scripts essentiels
-    curl -sSL "$GITHUB_RAW/raspberry/scripts/setup-new-club.sh" -o scripts/setup-new-club.sh
-    curl -sSL "$GITHUB_RAW/raspberry/scripts/setup-wifi-client.sh" -o scripts/setup-wifi-client.sh
-    curl -sSL "$GITHUB_RAW/raspberry/scripts/backup-club.sh" -o scripts/backup-club.sh 2>/dev/null || true
-    curl -sSL "$GITHUB_RAW/raspberry/scripts/restore-club.sh" -o scripts/restore-club.sh 2>/dev/null || true
-    curl -sSL "$GITHUB_RAW/raspberry/scripts/delete-club.sh" -o scripts/delete-club.sh 2>/dev/null || true
-
-    # Scripts de diagnostic et maintenance (ajoutés v2.24+)
-    curl -sSL "$GITHUB_RAW/raspberry/scripts/diagnose-pi.sh" -o scripts/diagnose-pi.sh 2>/dev/null || true
-    curl -sSL "$GITHUB_RAW/raspberry/scripts/fix-hotspot.sh" -o scripts/fix-hotspot.sh 2>/dev/null || true
-    curl -sSL "$GITHUB_RAW/raspberry/scripts/kiosk-watchdog.sh" -o scripts/kiosk-watchdog.sh 2>/dev/null || true
-    curl -sSL "$GITHUB_RAW/raspberry/scripts/generate-thumbnail.sh" -o scripts/generate-thumbnail.sh 2>/dev/null || true
-    curl -sSL "$GITHUB_RAW/raspberry/scripts/generate-all-thumbnails.sh" -o scripts/generate-all-thumbnails.sh 2>/dev/null || true
-    # Scripts watchdogs réseau (ajoutés v2.28+)
-    curl -sSL "$GITHUB_RAW/raspberry/scripts/hotspot-watchdog.sh" -o scripts/hotspot-watchdog.sh 2>/dev/null || true
-    curl -sSL "$GITHUB_RAW/raspberry/scripts/hotspot-optimizer.sh" -o scripts/hotspot-optimizer.sh 2>/dev/null || true
-    # Script guardian sync-agent (ajouté v2.40+)
-    curl -sSL "$GITHUB_RAW/raspberry/scripts/sync-agent-guardian.sh" -o scripts/sync-agent-guardian.sh 2>/dev/null || true
-
-    chmod +x scripts/*.sh 2>/dev/null || true
-
+    # Télécharger l'application web depuis la dernière release GitHub
+    # (le build Angular n'est pas dans le repo, il est dans les releases)
     print_step "Téléchargement de l'application web (build Angular)..."
     mkdir -p webapp
-    # Télécharger le build depuis la dernière release GitHub
-    LATEST_RELEASE=$(curl -sL https://api.github.com/repos/Tallec7/neopro/releases/latest | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/' || echo "")
+    local LATEST_RELEASE
+    LATEST_RELEASE=$(curl -sL "https://api.github.com/repos/Tallec7/neopro/releases/latest" \
+        | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/' || echo "")
     if [ -n "$LATEST_RELEASE" ]; then
         print_step "Téléchargement de la version $LATEST_RELEASE..."
-        curl -sSL "https://github.com/Tallec7/neopro/releases/download/$LATEST_RELEASE/neopro-webapp.tar.gz" -o webapp.tar.gz 2>/dev/null && \
-        tar -xzf webapp.tar.gz -C webapp && \
-        rm webapp.tar.gz && \
-        print_success "Application web téléchargée" || \
-        print_warning "Impossible de télécharger l'application web - elle devra être copiée manuellement"
+        if curl -sSL "https://github.com/Tallec7/neopro/releases/download/$LATEST_RELEASE/neopro-webapp.tar.gz" \
+             -o webapp.tar.gz 2>/dev/null && tar -xzf webapp.tar.gz -C webapp; then
+            rm webapp.tar.gz
+            print_success "Application web téléchargée"
+        else
+            rm -f webapp.tar.gz
+            print_warning "Impossible de télécharger l'application web - elle devra être copiée manuellement"
+        fi
     else
         print_warning "Aucune release trouvée - l'application web devra être copiée manuellement"
     fi

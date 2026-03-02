@@ -7,7 +7,7 @@
 # Usage: ./build-raspberry.sh
 ################################################################################
 
-set -e
+set -euo pipefail
 
 # Couleurs
 GREEN='\033[0;32m'
@@ -380,7 +380,7 @@ rsync -a --exclude='*.md' --exclude='node_modules' --exclude='__tests__' raspber
 if [ -f "${DEPLOY_DIR}/server/package.json" ]; then
     print_step "Installation des dépendances server..."
     cd ${DEPLOY_DIR}/server
-    npm install --production --silent 2>/dev/null || npm install --production
+    npm install --production
     cd - > /dev/null
     print_success "Server copié (avec node_modules)"
 else
@@ -395,7 +395,7 @@ if [ -d "raspberry/sync-agent" ]; then
     # Cela évite de devoir faire npm install sur chaque Pi après déploiement
     print_step "Installation des dépendances sync-agent..."
     cd ${DEPLOY_DIR}/sync-agent
-    npm install --production --silent 2>/dev/null || npm install --production
+    npm install --production
     cd - > /dev/null
 
     print_success "Sync-agent copié (avec node_modules)"
@@ -419,7 +419,7 @@ if [ -d "raspberry/admin" ]; then
     if [ -f "${DEPLOY_DIR}/admin/package.json" ]; then
         print_step "Installation des dépendances admin..."
         cd ${DEPLOY_DIR}/admin
-        npm install --production --silent 2>/dev/null || npm install --production
+        npm install --production
         cd - > /dev/null
         print_success "Admin panel copié (avec node_modules)"
     else
