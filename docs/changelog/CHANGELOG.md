@@ -1,3 +1,9 @@
+## [3.94.2](https://github.com/Tallec7/neopro/compare/v3.94.1...v3.94.2) (2026-03-02)
+
+### Bug Fixes
+
+- **deploy:** initialize SSH_RESULT before connection test ([4102c0d](https://github.com/Tallec7/neopro/commit/4102c0dd2d7a744e3e75a6481b00abe5d0d6c286))
+
 ## [3.94.1](https://github.com/Tallec7/neopro/compare/v3.94.0...v3.94.1) (2026-03-02)
 
 ### Bug Fixes
