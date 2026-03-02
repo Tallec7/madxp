@@ -1,6 +1,6 @@
 # Implemented Backlog — Features Livrées
 
-> **Dernière mise à jour** : 1 Mars 2026
+> **Dernière mise à jour** : 2 Mars 2026
 > Ce document recense **toutes** les features implémentées dans le codebase NEOPRO, organisées par domaine fonctionnel. Il complète le backlog SAFe (futur) avec une vue exhaustive du produit livré.
 > **Source** : Croisement systématique de 34 changelogs, 200+ commits git (v3.47→v3.64), audit codebase, et sprint audit sponsors/analytics (26 features P0+P1+P2+P3).
 
@@ -77,21 +77,22 @@
 
 ## 4. Déploiement & OTA
 
-| ID         | Feature                                                     | Statut     | Fichiers clés                                           | Version/Date |
-| ---------- | ----------------------------------------------------------- | ---------- | ------------------------------------------------------- | ------------ |
-| IMP-DEP-01 | Déploiement vidéo avec retry (3 max, backoff 5min)          | Production | `deployment.service.ts`                                 | 2025         |
-| IMP-DEP-02 | Déploiement orchestré multi-sites                           | Production | `orchestrated-deployment.service.ts`                    | 2025         |
-| IMP-DEP-03 | Déploiement canary progressif (10→25→50→75→100%)            | Production | `canary-deployment.service.ts`                          | 2025         |
-| IMP-DEP-04 | Mises à jour logicielles OTA avec planification redémarrage | Production | `update-deployment.service.ts`, `updates.controller.ts` | 2025         |
-| IMP-DEP-05 | File de commandes (commandes pour Pi hors-ligne)            | Production | `command-queue.service.ts`                              | 2025         |
-| IMP-DEP-06 | Déploiements planifiés (date/heure)                         | Production | `deployment.service.ts`                                 | 2025         |
-| IMP-DEP-07 | File de déploiement vidéo (pattern sendOrQueue)             | Production | `deployment.service.ts`                                 | Jan 2026     |
-| IMP-DEP-08 | OTA planification redémarrage + rollback automatique        | Production | `update-deployment.service.ts`                          | v3.55.0      |
-| IMP-DEP-09 | Exécuteur de migration + retry checksum OTA                 | Production | `migration-runner.js`                                   | v3.55.0      |
-| IMP-DEP-10 | Diagnostic santé Pi complet (mode JSON)                     | Production | `diagnose-pi.sh`, `diagnose.js`                         | 2026         |
-| IMP-DEP-11 | Scripts pré-migration (fix ownership, copie VERSION)        | Production | `pre-migration.sh`                                      | v3.55.x      |
-| IMP-DEP-12 | Scripts install/setup/build renforcés                       | Production | `install.sh`, `setup.sh`, `build-raspberry.sh`          | 2026         |
-| IMP-DEP-13 | OTA vérification intégrité node_modules + rollback auto     | Production | `update-software.js`, `diagnose-pi.sh`                  | Fév 2026     |
+| ID         | Feature                                                                     | Statut     | Fichiers clés                                                      | Version/Date |
+| ---------- | --------------------------------------------------------------------------- | ---------- | ------------------------------------------------------------------ | ------------ |
+| IMP-DEP-01 | Déploiement vidéo avec retry (3 max, backoff 5min)                          | Production | `deployment.service.ts`                                            | 2025         |
+| IMP-DEP-02 | Déploiement orchestré multi-sites                                           | Production | `orchestrated-deployment.service.ts`                               | 2025         |
+| IMP-DEP-03 | Déploiement canary progressif (10→25→50→75→100%)                            | Production | `canary-deployment.service.ts`                                     | 2025         |
+| IMP-DEP-04 | Mises à jour logicielles OTA avec planification redémarrage                 | Production | `update-deployment.service.ts`, `updates.controller.ts`            | 2025         |
+| IMP-DEP-05 | File de commandes (commandes pour Pi hors-ligne)                            | Production | `command-queue.service.ts`                                         | 2025         |
+| IMP-DEP-06 | Déploiements planifiés (date/heure)                                         | Production | `deployment.service.ts`                                            | 2025         |
+| IMP-DEP-07 | File de déploiement vidéo (pattern sendOrQueue)                             | Production | `deployment.service.ts`                                            | Jan 2026     |
+| IMP-DEP-08 | OTA planification redémarrage + rollback automatique                        | Production | `update-deployment.service.ts`                                     | v3.55.0      |
+| IMP-DEP-09 | Exécuteur de migration + retry checksum OTA                                 | Production | `migration-runner.js`                                              | v3.55.0      |
+| IMP-DEP-10 | Diagnostic santé Pi complet (mode JSON)                                     | Production | `diagnose-pi.sh`, `diagnose.js`                                    | 2026         |
+| IMP-DEP-11 | Scripts pré-migration (fix ownership, copie VERSION)                        | Production | `pre-migration.sh`                                                 | v3.55.x      |
+| IMP-DEP-12 | Scripts install/setup/build/deploy renforcés (strict mode, log, npm errors) | Production | `install.sh`, `setup.sh`, `build-raspberry.sh`, `deploy-remote.sh` | Mars 2026    |
+| IMP-DEP-13 | OTA vérification intégrité node_modules + rollback auto                     | Production | `update-software.js`, `diagnose-pi.sh`                             | Fév 2026     |
+| IMP-DEP-14 | Setup.sh archive unique GitHub (remplace ~40 curl) + deploy rollback auto   | Production | `setup.sh`, `deploy-remote.sh`                                     | Mars 2026    |
 
 ---
 

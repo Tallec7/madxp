@@ -70,7 +70,7 @@ Si une feature est **complète et déployable**, ajouter une ligne dans le bon d
 | Authentification & Sécurité     | IMP-SEC- | 13         |
 | Gestion de Contenu & Vidéo      | IMP-VID- | 13         |
 | Score en Direct & Overlays      | IMP-OVR- | 10         |
-| Déploiement & OTA               | IMP-DEP- | 13         |
+| Déploiement & OTA               | IMP-DEP- | 14         |
 | Monétisation & Sponsors         | IMP-MON- | 14         |
 | Analytics & Reporting           | IMP-ANA- | 18         |
 | Raspberry Pi (Edge)             | IMP-PI-  | 32         |
