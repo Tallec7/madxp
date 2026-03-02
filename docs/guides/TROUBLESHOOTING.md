@@ -3848,6 +3848,34 @@ which edid-decode || echo "MANQUANT — sudo apt install edid-decode"
 
 **Solution :** Installer `cec-utils` et vérifier que CEC est activé dans les réglages de la TV (souvent sous "Anynet+", "SimpLink", "Bravia Sync", "VIERA Link" selon le fabricant).
 
+### Le dashboard affiche "✅ Connecté" alors qu'aucun HDMI n'est branché (v3.90.0+)
+
+**Symptôme :** Dans le panneau "Santé système", la section "État TV (HDMI-CEC)" affiche "CONNEXION HDMI: ✅ Connecté", "CEC DISPONIBLE: ✅ Oui" et "PÉRIPHÉRIQUES CEC: 0" malgré l'absence de câble HDMI.
+
+**Cause (Pi 5 uniquement) :** Sur Pi 5 avec le southbridge RP1, `cec-client` renvoie une réponse `power status:` même sans câble HDMI physiquement connecté. Le catch-all dans `_parseCecOutput()` interprète cette réponse comme `tv_connected = true` alors qu'il n'y a rien de branché. C'est un quirk matériel spécifique au Pi 5 ; le Pi 4 n'est pas affecté.
+
+**Vérification :**
+
+```bash
+# Vérifier le statut DRM (fiable, basé sur la détection physique du câble)
+cat /sys/class/drm/card1-HDMI-A-1/status
+# "disconnected" → pas de câble → le CEC mentait
+
+# Vérifier le statut CEC (non fiable sur Pi 5 sans câble)
+echo "pow 0" | timeout 5 cec-client -s -d 1 2>/dev/null
+# Peut renvoyer "power status: unknown" même sans câble
+```
+
+**Correctif (v3.90.0) :** `getFullStatus()` dans `hdmi.service.js` croise maintenant 3 signaux avant de reporter une connexion :
+
+- `cec.tv_connected` (CEC, non fiable)
+- `display.connected` (EDID/DRM sysfs, fiable)
+- `cec.devices_found` (nombre de devices CEC)
+
+Quand les 3 convergent vers "rien de branché" (`tv_connected=true` mais `devices_found=0` et `display.connected=false`), le faux positif CEC est corrigé automatiquement.
+
+**Régression protégée par :** smoke test `hdmi.service.js getFullStatus must override CEC false positive when no EDID and no devices` + 3 unit tests dans `hdmi.service.test.js`.
+
 ### Débordement viewport et contenu coupé sur navigateur PC (v3.84.5+)
 
 **Symptôme 1 — Débordement horizontal (~17px) :** Sur `neopro.local/tv` en plein écran depuis un navigateur PC, une scrollbar horizontale apparaît. Sur le Pi en mode kiosk, l'affichage est normal.

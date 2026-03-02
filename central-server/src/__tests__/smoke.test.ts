@@ -3126,6 +3126,44 @@ describe('E-23 HDMI monitoring and alerts wiring', () => {
       hasConnectedClients: true,
     });
   });
+
+  // Pi 5 CEC false positive guard: getFullStatus() must cross-check CEC tv_connected
+  // with EDID/DRM display.connected and devices_found before returning.
+  // Without this guard, cec-client returns "power status:" even without a cable on Pi 5,
+  // causing the dashboard to show "✅ Connecté" when nothing is plugged in.
+  it('hdmi.service.js getFullStatus must override CEC false positive when no EDID and no devices', () => {
+    const content = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/server/services/hdmi.service.js'),
+      'utf8'
+    );
+    // Must have the cross-check guard in getFullStatus
+    // Use method definition boundary (newline + 2-space indent) to avoid matching
+    // the this._findEdidPath() CALL inside getDisplayInfo() which appears earlier.
+    const fullStatusFn = content.slice(
+      content.indexOf('async getFullStatus()'),
+      content.indexOf('\n  _findEdidPath()')
+    );
+    expect({
+      hasCecTvConnectedCheck: fullStatusFn.includes('cec.tv_connected'),
+      hasDevicesFoundCheck: fullStatusFn.includes('cec.devices_found === 0'),
+      hasDisplayConnectedCheck: fullStatusFn.includes('!display.connected'),
+      overridesTvConnected: fullStatusFn.includes('cec.tv_connected = false'),
+      overridesTvPower: fullStatusFn.includes('cec.tv_power = null'),
+    }).toEqual({
+      hasCecTvConnectedCheck: true,
+      hasDevicesFoundCheck: true,
+      hasDisplayConnectedCheck: true,
+      overridesTvConnected: true,
+      overridesTvPower: true,
+    });
+  });
+});
+
+// ----------------------------------------------------------
+// E-23 check_secondary_chromium transition guards
+// ----------------------------------------------------------
+describe('E-23 check_secondary_chromium transition guards', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
   it('check_secondary_chromium: dual→single uses Chromium relaunch (xdotool viewport bug), single→dual uses xdotool resize', () => {
     const content = fs.readFileSync(
       path.join(repoRoot, 'raspberry/scripts/kiosk-watchdog.sh'),

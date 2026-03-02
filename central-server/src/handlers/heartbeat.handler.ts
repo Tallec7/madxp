@@ -331,6 +331,20 @@ async function checkAlerts(
 
   // HDMI display alerts (E-23)
   if (hdmiStatus) {
+    // Monitor CEC false positive corrections (Pi 5 RP1 quirk, v3.90.0)
+    // When CEC reports cec_available but no devices and no DRM connection,
+    // the Pi-side fix in getFullStatus() corrected tv_connected to false.
+    // Log for fleet-wide monitoring of this hardware quirk.
+    if (hdmiStatus.cec_available && hdmiStatus.devices_found === 0 && !hdmiStatus.hdmi0 && !hdmiStatus.hdmi1) {
+      logger.info('HDMI CEC available but no devices and no display connected (Pi 5 CEC quirk)', {
+        siteId,
+        cecAvailable: hdmiStatus.cec_available,
+        devicesFound: hdmiStatus.devices_found,
+        hdmi0: hdmiStatus.hdmi0,
+        hdmi1: hdmiStatus.hdmi1,
+      });
+    }
+
     if (!hdmiStatus.hdmi0 && !hdmiStatus.hdmi1) {
       alerts.push({
         type: 'no_display',

@@ -28,6 +28,9 @@
 ### Bug Fixes
 
 - **hdmi:** override CEC false positive on Pi 5 when no HDMI cable plugged ([c0203f8](https://github.com/Tallec7/neopro/commit/c0203f80b4ccc3a871d6b430c72936b4121419f5))
+  - **Root cause**: `cec-client` returns `power status:` on Pi 5 RP1 even without physical HDMI cable → `_parseCecOutput` sets `tv_connected=true`
+  - **Fix**: `getFullStatus()` cross-checks CEC with EDID/DRM (`display.connected`) and `devices_found` — overrides false positive when all 3 signals agree nothing is connected
+  - **Regression protection**: smoke test enforced + 3 unit tests + CLAUDE.md rule
 
 ### Features
 
