@@ -5429,6 +5429,107 @@ describe('E-41 central secondary variant enrichment guard', () => {
 });
 
 // ----------------------------------------------------------
+// E-41 Central-side analytics metadata enrichment guard:
+// config-sync.handler.ts must call enrichConfigWithAnalyticsMetadata()
+// before sending config to Pi. Without this, the Pi receives
+// videos without video_id/advertiser_id/analytics_category →
+// detectCategory() falls back to path-based detection → sponsor
+// loop videos classified as 'other' → analytics lost.
+// ----------------------------------------------------------
+describe('E-41 central analytics metadata enrichment guard', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+  const syncPath = path.join(repoRoot, 'central-server/src/handlers/config-sync.handler.ts');
+
+  let syncContent: string;
+  beforeAll(() => {
+    syncContent = fs.readFileSync(syncPath, 'utf8');
+  });
+
+  it('config-sync handler must import enrichConfigWithAnalyticsMetadata', () => {
+    expect(
+      /import\s*\{[^}]*enrichConfigWithAnalyticsMetadata[^}]*\}/.test(syncContent)
+    ).toBe(true);
+  });
+
+  it('config-sync handler must call enrichConfigWithAnalyticsMetadata()', () => {
+    expect(
+      /enrichConfigWithAnalyticsMetadata\(/.test(syncContent)
+    ).toBe(true);
+  });
+});
+
+// ----------------------------------------------------------
+// E-41 SponsorVideo/CategoryVideo analytics metadata type guard:
+// The TypeScript interfaces must include analytics fields
+// (video_id, analytics_category) so the Pi receives them in config.
+// ----------------------------------------------------------
+describe('E-41 SponsorVideo/CategoryVideo analytics metadata type guard', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+  const typesPath = path.join(repoRoot, 'central-server/src/types/index.ts');
+
+  let content: string;
+  beforeAll(() => {
+    content = fs.readFileSync(typesPath, 'utf8');
+  });
+
+  it('SponsorVideo must have video_id? and analytics_category? fields', () => {
+    const sponsorBlock = content.match(/interface SponsorVideo \{[\s\S]*?\n\}/)?.[0] || '';
+    expect({
+      hasVideoId: /video_id\??\s*:/.test(sponsorBlock),
+      hasAnalyticsCategory: /analytics_category\??\s*:/.test(sponsorBlock),
+      hasAdvertiserId: /advertiser_id\??\s*:/.test(sponsorBlock),
+    }).toEqual({
+      hasVideoId: true,
+      hasAnalyticsCategory: true,
+      hasAdvertiserId: true,
+    });
+  });
+
+  it('CategoryVideo must have video_id? and analytics_category? fields', () => {
+    const categoryBlock = content.match(/interface CategoryVideo \{[\s\S]*?\n\}/)?.[0] || '';
+    expect({
+      hasVideoId: /video_id\??\s*:/.test(categoryBlock),
+      hasAnalyticsCategory: /analytics_category\??\s*:/.test(categoryBlock),
+    }).toEqual({
+      hasVideoId: true,
+      hasAnalyticsCategory: true,
+    });
+  });
+});
+
+// ----------------------------------------------------------
+// E-41 enrichConfigWithAnalyticsMetadata traversal guard:
+// The function must traverse ALL video arrays in SiteConfiguration
+// (sponsors, categories.videos, subCategories.videos, timeCategories.loopVideos).
+// Missing any array = missing analytics for those videos.
+// ----------------------------------------------------------
+describe('E-41 enrichConfigWithAnalyticsMetadata traversal guard', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+  const enrichPath = path.join(repoRoot, 'central-server/src/utils/config-analytics-metadata.ts');
+
+  let content: string;
+  beforeAll(() => {
+    content = fs.readFileSync(enrichPath, 'utf8');
+  });
+
+  it('must traverse config.sponsors', () => {
+    expect(/config\.sponsors/.test(content)).toBe(true);
+  });
+
+  it('must traverse category.videos', () => {
+    expect(/category\.videos/.test(content)).toBe(true);
+  });
+
+  it('must traverse subCategories[].videos', () => {
+    expect(/subCat\.videos|subCategories.*videos/.test(content)).toBe(true);
+  });
+
+  it('must traverse timeCategories[].loopVideos', () => {
+    expect(/tc\.loopVideos|loopVideos/.test(content)).toBe(true);
+  });
+});
+
+// ----------------------------------------------------------
 // E-41 SponsorVideo/CategoryVideo variants type guard:
 // The TypeScript interfaces must include variants? field
 // so secondary variant data is properly typed in the pipeline.

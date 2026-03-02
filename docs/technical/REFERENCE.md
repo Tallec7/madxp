@@ -1348,6 +1348,39 @@ _Métriques Prometheus :_
 
 Définies dans `central-server/src/services/metrics.service.ts`. Dashboard Grafana : panneau "Secondary Variant Enrichment" dans le dashboard Fleet.
 
+**Pipeline d'enrichissement des métadonnées analytics :**
+
+Lors de la synchronisation d'une configuration vers un Pi via `sendPendingConfigCommand()`, les champs `video_id`, `advertiser_id`/`sponsor_id` et `analytics_category` doivent être injectés sur chaque entrée vidéo. Sans cet enrichissement, le Pi ne peut pas classifier correctement les vidéos pour les analytics (le `detectCategory()` tombe en fallback path-based).
+
+| Fonction                              | Fichier                                                 | Rôle                                                  |
+| ------------------------------------- | ------------------------------------------------------- | ----------------------------------------------------- |
+| `enrichConfigWithAnalyticsMetadata()` | `central-server/src/utils/config-analytics-metadata.ts` | Enrichit la config **côté central** avant envoi au Pi |
+
+_`enrichConfigWithAnalyticsMetadata(config)` — Central Server :_
+
+1. Parcourt `sponsors[]`, `categories[].videos[]` (+ `subCategories[].videos[]`) et `timeCategories[].loopVideos[]`
+2. Extrait les filenames via `extractFilenameFromPath()` et construit une map `filename → setter`
+3. Interroge la base via requête SQL batch : `videos` LEFT JOIN `advertiser_videos` pour résoudre `(video_id, advertiser_id, analytics_category)`
+4. Injecte `video_id`, `advertiser_id`/`sponsor_id`, `analytics_category` sur chaque entrée correspondante
+5. Retourne `{ config, enrichedCount }` — la config est modifiée en place
+
+_Champs injectés côté Pi :_
+
+| Champ                | Source DB                                        | Usage Pi                               |
+| -------------------- | ------------------------------------------------ | -------------------------------------- |
+| `video_id`           | `videos.id`                                      | Tracking analytics `video_plays`       |
+| `advertiser_id`      | `advertiser_videos.advertiser_id`                | Filtrage contrat / analytics           |
+| `sponsor_id`         | Alias de `advertiser_id` (rétrocompat)           | Rétrocompat LoopVideo interface        |
+| `analytics_category` | `metadata->>'analytics_category'` ou `'sponsor'` | Classification dans `detectCategory()` |
+
+_Display tracking :_
+
+| Source    | Valeur  | Description                                                    |
+| --------- | ------- | -------------------------------------------------------------- |
+| `kiosk`   | Défaut  | Écran principal Pi (Chromium plein écran)                      |
+| `pc`      | Détecté | Navigateur PC/Mac (user-agent non-ARM)                         |
+| Secondary | Exclu   | Intentionnellement non-tracké (E-23 US-23.7.5, évite doublons) |
+
 **Endpoints Config Profiles (multi-config) :**
 
 ```

@@ -453,6 +453,14 @@ export interface SponsorVideo {
   site_sponsor_id?: string;
   display_name?: string;
   variants?: VideoVariants;
+  /** UUID de la vidéo en base (pour le tracking analytics côté Pi) */
+  video_id?: string;
+  /** UUID de l'advertiser associé (pour le tracking analytics côté Pi) */
+  advertiser_id?: string;
+  /** @deprecated Utiliser advertiser_id — rétrocompat Pi */
+  sponsor_id?: string;
+  /** Catégorie analytics : sponsor, jingle, ambiance, other */
+  analytics_category?: string;
 }
 
 /**
@@ -477,6 +485,12 @@ export interface CategoryVideo {
   type?: string;
   site_sponsor_id?: string; // Auto-résolu depuis site_sponsor_videos au déploiement
   variants?: VideoVariants;
+  /** UUID de la vidéo en base (pour le tracking analytics côté Pi) */
+  video_id?: string;
+  /** UUID du sponsor associé (pour le tracking analytics côté Pi) */
+  sponsor_id?: string;
+  /** Catégorie analytics : sponsor, jingle, ambiance, other */
+  analytics_category?: string;
 }
 
 export interface SubCategory {

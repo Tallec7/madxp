@@ -659,6 +659,20 @@ Le niveau 3 est le **filet de sécurité final** : lors d'un remplacement comple
 
 > **Important (ADR-032)** : `restoreSecondaryVariants()` est appelé dans **les deux modes** de `update-config.js` : après `mergeConfigurations()` en mode `merge` ET après `applyReplaceMode()` en mode `replace`. Sans cela, tout `update_config` en mode replace écrase les variants injectées localement par `deploySecondaryVariant()`. Un monitoring post-replace (`countSecondaryVariants`) log un warning si des variants sont perdues malgré la restauration.
 
+### Pipeline d'enrichissement des métadonnées analytics (v3.89.4+)
+
+En plus des variants secondaires, `sendPendingConfigCommand()` enrichit la config avec les métadonnées analytics via `enrichConfigWithAnalyticsMetadata()` (`central-server/src/utils/config-analytics-metadata.ts`). Sans cet enrichissement, le Pi ne reçoit pas `video_id`, `advertiser_id`, `analytics_category` dans les objets vidéo → `detectCategory()` tombe en fallback path-based → les vidéos sponsor de boucle sont classifiées en `'other'` → analytics perdues.
+
+**Pipeline complet dans `sendPendingConfigCommand()` :**
+
+```
+1. autoResolveSponsorIds()                  → injecte site_sponsor_id
+2. enrichConfigWithSecondaryVariants()       → injecte variants.secondary
+3. enrichConfigWithAnalyticsMetadata()       → injecte video_id, advertiser_id, analytics_category
+```
+
+Les trois enrichissements sont non-fatals (try/catch + warn log) : un échec n'empêche pas l'envoi de la config.
+
 ---
 
 ## 6. Scénarios d'Usage

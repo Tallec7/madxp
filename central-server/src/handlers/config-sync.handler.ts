@@ -16,6 +16,7 @@ import { SocketContext } from './socket-context';
 import { siteSponsorRepository } from '../repositories/site-sponsor.repository';
 import { autoResolveSponsorIds } from '../services/sponsor-auto-resolution.service';
 import { enrichConfigWithSecondaryVariants } from '../utils/config-secondary-variants';
+import { enrichConfigWithAnalyticsMetadata } from '../utils/config-analytics-metadata';
 import type { SiteConfiguration } from '../types';
 
 /** Payload shape for a local sponsor sent from Pi */
@@ -422,6 +423,23 @@ async function sendPendingConfigCommand(
       error: (variantError as Error).message,
     });
     metricsService.recordSecondaryVariantEnrichment('failed', 'config_sync');
+  }
+
+  // Enrichir avec les métadonnées analytics (video_id, advertiser_id, analytics_category)
+  try {
+    const { enrichedCount } = await enrichConfigWithAnalyticsMetadata(
+      enrichedConfiguration as SiteConfiguration
+    );
+    if (enrichedCount > 0) {
+      logger.info('Analytics metadata enriched in pending config sync', {
+        siteId, enrichedCount,
+      });
+    }
+  } catch (analyticsMetaError) {
+    logger.warn('Analytics metadata enrichment failed in pending config sync (non-fatal)', {
+      siteId,
+      error: (analyticsMetaError as Error).message,
+    });
   }
 
   const configWithSponsors = siteSponsors.length > 0
