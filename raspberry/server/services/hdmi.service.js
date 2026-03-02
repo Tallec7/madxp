@@ -150,6 +150,14 @@ class HdmiService {
       this.getDisplayInfo(),
     ]);
 
+    // Pi 5 CEC false positive: cec-client returns "power status:" even without cable,
+    // which makes _parseCecOutput set tv_connected=true. Cross-check with EDID/DRM
+    // (reliable) and device count to override the false positive.
+    if (cec.tv_connected && cec.devices_found === 0 && !display.connected) {
+      cec.tv_connected = false;
+      cec.tv_power = null;
+    }
+
     // Affiner le type d'écran en croisant CEC + EDID
     // display.connected est fiable : basé sur EDID ou DRM status file
     // Note : cec.tv_connected n'est PAS fiable (faux positif sans écran sur Pi 5)

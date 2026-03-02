@@ -395,4 +395,77 @@ Block 1, CEC Extension:
       expect(result).toBe('tv_qned');
     });
   });
+
+  describe('getFullStatus - Pi 5 CEC false positive', () => {
+    it('should override CEC tv_connected when no EDID and no CEC devices', async () => {
+      // CEC reports tv_connected=true with unknown power (Pi 5 quirk)
+      // but EDID/DRM says no display and devices_found=0
+      mockExecAsync([
+        { stdout: '/usr/bin/cec-client' },
+        { stdout: 'power status: something_unexpected' },
+      ]);
+      // Mock getDisplayInfo to return no display
+      service.getDisplayInfo = jest.fn().mockResolvedValue({
+        connected: false,
+        manufacturer: null,
+        model: null,
+        resolution: null,
+        display_type: 'unknown',
+        display_category: null,
+        edid_detailed: null,
+      });
+
+      const full = await service.getFullStatus();
+
+      // CEC false positive should be corrected
+      expect(full.tv_connected).toBe(false);
+      expect(full.tv_power).toBeNull();
+      expect(full.displayInfo.connected).toBe(false);
+    });
+
+    it('should keep CEC tv_connected when display is physically connected', async () => {
+      mockExecAsync([
+        { stdout: '/usr/bin/cec-client' },
+        { stdout: 'power status: on\ndevice #0: TV' },
+      ]);
+      service.getDisplayInfo = jest.fn().mockResolvedValue({
+        connected: true,
+        manufacturer: 'SAM',
+        model: 'SAMSUNG TV',
+        resolution: '1920x1080',
+        display_type: 'unknown',
+        display_category: null,
+        edid_detailed: null,
+      });
+
+      const full = await service.getFullStatus();
+
+      expect(full.tv_connected).toBe(true);
+      expect(full.tv_power).toBe('on');
+      expect(full.displayInfo.connected).toBe(true);
+    });
+
+    it('should keep CEC tv_connected when devices are found even without EDID', async () => {
+      mockExecAsync([
+        { stdout: '/usr/bin/cec-client' },
+        { stdout: 'power status: standby\ndevice #0: TV' },
+      ]);
+      service.getDisplayInfo = jest.fn().mockResolvedValue({
+        connected: false,
+        manufacturer: null,
+        model: null,
+        resolution: null,
+        display_type: 'unknown',
+        display_category: null,
+        edid_detailed: null,
+      });
+
+      const full = await service.getFullStatus();
+
+      // CEC found a real device, so tv_connected should stay true
+      expect(full.tv_connected).toBe(true);
+      expect(full.tv_power).toBe('standby');
+      expect(full.devices_found).toBe(1);
+    });
+  });
 });

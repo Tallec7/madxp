@@ -96,7 +96,8 @@
     "analyticsCategories": "Categorías de Analytics",
     "localConsole": "Consola local",
     "skipToContent": "Ir al contenido principal",
-    "toggleMenu": "Alternar menu"
+    "toggleMenu": "Alternar menu",
+    "safe": "SAFe Dashboard"
   },
   "status": {
     "connected": "Conectado",
@@ -853,5 +854,30 @@
     "configFromProfile": "Copiar de otro perfil",
     "configEmpty": "Comenzar con config vacia",
     "selectProfile": "Seleccionar un perfil..."
+  },
+  "safe": {
+    "portfolio": {
+      "title": "SAFe Dashboard",
+      "epics": "Epics",
+      "features": "Features",
+      "storyPoints": "Story Points",
+      "predictability": "Predictabilidad",
+      "roadmap": "Roadmap",
+      "themes": "Temas estratégicos",
+      "valueStreams": "Flujos de valor",
+      "epicKanban": "Tablero Kanban de Epics",
+      "piObjectives": "Objetivos PI",
+      "roam": "ROAM — Riesgos",
+      "proposals": "Propuestas & Spikes"
+    },
+    "proposals": {
+      "title": "Propuestas & Spikes",
+      "listView": "Lista",
+      "allTypes": "Todos los tipos",
+      "titleLabel": "Título",
+      "status": "Estado",
+      "file": "Archivo",
+      "empty": "Sin propuestas"
+    }
   }
 }
