@@ -1,0 +1,35 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "raspberry-frontend",
+      "runtimeExecutable": "/opt/homebrew/bin/node",
+      "runtimeArgs": ["node_modules/.bin/ng", "serve", "raspberry", "--port", "4200"],
+      "port": 4200
+    },
+    {
+      "name": "central-dashboard",
+      "runtimeExecutable": "/Users/gletallec/.nvm/versions/node/v22.21.1/bin/node",
+      "runtimeArgs": [
+        "/Users/gletallec/Documents/NEOPRO/neopro/node_modules/.bin/ng",
+        "serve",
+        "central-dashboard",
+        "--port",
+        "4300"
+      ],
+      "port": 4300
+    },
+    {
+      "name": "central-server",
+      "runtimeExecutable": "/Users/gletallec/.nvm/versions/node/v22.21.1/bin/node",
+      "runtimeArgs": ["central-server/node_modules/.bin/ts-node", "central-server/src/server.ts"],
+      "port": 3001
+    },
+    {
+      "name": "raspberry-admin",
+      "runtimeExecutable": "/opt/homebrew/bin/node",
+      "runtimeArgs": ["raspberry/admin/admin-server.js"],
+      "port": 8080
+    }
+  ]
+}

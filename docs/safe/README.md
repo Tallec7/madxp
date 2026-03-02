@@ -1,6 +1,6 @@
 # SAFe Neopro — Pilotage Produit
 
-> **Dernière mise à jour** : 26 Février 2026
+> **Dernière mise à jour** : 2 Mars 2026
 > **Framework** : SAFe Essential (simplifié)
 > **Cadence PI** : 6 semaines (3 sprints de 2 semaines)
 > **PI actuel** : PI-1 (Février - Mars 2026)
@@ -231,12 +231,14 @@ docs/safe/*.md  →  pre-commit hook  →  export-to-excel.py  →  NEOPRO_SAFe_
                                                                 (13 onglets, formules WSJF)
 ```
 
-| Outil           | Fichier                                | Rôle                                                                                                                                |
-| --------------- | -------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| Export Excel    | `docs/safe/scripts/export-to-excel.py` | Génère le `.xlsx` avec 13 onglets (Dashboard, Epics, Features, Sprint Tracker, ROAM, Flow Metrics, User Stories, \_ChartData, etc.) |
-| Recalc helper   | `docs/safe/scripts/recalc.py`          | Force le recalcul des formules Excel                                                                                                |
-| Pre-commit hook | `.husky/pre-commit`                    | Détecte les changements `docs/safe/*.md` et régénère l'Excel automatiquement                                                        |
-| Règle Claude    | `.claude/rules/safe-update.md`         | Checklist pour que Claude mette à jour les `.md` SAFe à chaque `feat`/`fix` commit                                                  |
+| Outil           | Fichier                                    | Rôle                                                                                                                                 |
+| --------------- | ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------ |
+| Export Excel    | `docs/safe/scripts/export-to-excel.py`     | Génère le `.xlsx` avec 13 onglets (Dashboard, Epics, Features, Sprint Tracker, ROAM, Flow Metrics, User Stories, \_ChartData, etc.)  |
+| Recalc helper   | `docs/safe/scripts/recalc.py`              | Force le recalcul des formules Excel                                                                                                 |
+| Pre-commit hook | `.husky/pre-commit`                        | Détecte les changements `docs/safe/*.md` et régénère l'Excel automatiquement                                                         |
+| Règle Claude    | `.claude/rules/safe-update.md`             | Checklist pour que Claude mette à jour les `.md` SAFe à chaque `feat`/`fix` commit                                                   |
+| Dashboard SAFe  | `central-dashboard/src/app/features/safe/` | Dashboard Angular interactif : Portfolio Overview (KPIs, Gantt, Kanban Epics, ROAM), Proposals Kanban (drag & drop), Proposal Detail |
+| API SAFe        | `central-server/src/routes/safe.routes.ts` | 5 endpoints REST (`/api/safe/*`) — parse les `.md` en JSON, write-back atomique pour mutations de statut                             |
 
 ### Mise à jour automatique des .md SAFe
 

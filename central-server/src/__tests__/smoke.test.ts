@@ -335,6 +335,9 @@ describe('Critical API routes are registered (not 404)', () => {
     { method: 'get' as const, path: '/api/alerts' },
     // benchmark.routes
     { method: 'get' as const, path: '/api/benchmark/global' },
+    // safe.routes
+    { method: 'get' as const, path: '/api/safe/portfolio' },
+    { method: 'get' as const, path: '/api/safe/proposals' },
   ];
 
   test.each(criticalRoutes)(
@@ -6395,6 +6398,79 @@ describe('ADR-034 v3.89.3 silent preload + instant reveal', () => {
       hasUnmute: /\.muted\s*=\s*false/.test(cleanupMethod),
     }).toEqual({
       hasUnmute: true,
+    });
+  });
+});
+
+// ----------------------------------------------------------
+// SAFe Dashboard — file existence & wiring guards
+// ----------------------------------------------------------
+describe('SAFe Dashboard file existence guards', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+
+  const safeBackendFiles = [
+    'central-server/src/types/safe.types.ts',
+    'central-server/src/services/safe-parser.service.ts',
+    'central-server/src/controllers/safe.controller.ts',
+    'central-server/src/routes/safe.routes.ts',
+  ];
+
+  const safeFrontendFiles = [
+    'central-dashboard/src/app/core/services/safe.service.ts',
+    'central-dashboard/src/app/features/safe/safe-portfolio.component.ts',
+    'central-dashboard/src/app/features/safe/safe-proposals.component.ts',
+    'central-dashboard/src/app/features/safe/safe-proposal-detail.component.ts',
+  ];
+
+  test.each([...safeBackendFiles, ...safeFrontendFiles])(
+    '%s must exist',
+    (filePath) => {
+      const fullPath = path.join(repoRoot, filePath);
+      expect({
+        file: filePath,
+        exists: fs.existsSync(fullPath),
+      }).toEqual({
+        file: filePath,
+        exists: true,
+      });
+    },
+  );
+
+  it('safe.routes.ts must be imported in server.ts', () => {
+    const serverPath = path.join(repoRoot, 'central-server', 'src', 'server.ts');
+    const serverContent = fs.readFileSync(serverPath, 'utf8');
+    expect({
+      imported: serverContent.includes("'./routes/safe.routes'"),
+      mounted: serverContent.includes('/api/safe'),
+    }).toEqual({
+      imported: true,
+      mounted: true,
+    });
+  });
+
+  it('safe-parser.service.ts must have memory cache with TTL', () => {
+    const parserPath = path.join(repoRoot, 'central-server', 'src', 'services', 'safe-parser.service.ts');
+    const parserContent = fs.readFileSync(parserPath, 'utf8');
+    expect({
+      hasCache: /cache|Cache/.test(parserContent),
+      hasTTL: /ttl|TTL|5\s*\*\s*60\s*\*\s*1000|300000|cacheDuration/.test(parserContent),
+    }).toEqual({
+      hasCache: true,
+      hasTTL: true,
+    });
+  });
+
+  it('Angular app.routes.ts must declare /safe routes with roleGuard', () => {
+    const routesPath = path.join(repoRoot, 'central-dashboard', 'src', 'app', 'app.routes.ts');
+    const routesContent = fs.readFileSync(routesPath, 'utf8');
+    expect({
+      hasSafePath: routesContent.includes("path: 'safe'"),
+      hasRoleGuard: /canActivate.*roleGuard/.test(routesContent),
+      hasLazyLoad: /loadComponent.*safe-portfolio/.test(routesContent),
+    }).toEqual({
+      hasSafePath: true,
+      hasRoleGuard: true,
+      hasLazyLoad: true,
     });
   });
 });

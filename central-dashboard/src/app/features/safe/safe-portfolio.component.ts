@@ -1,0 +1,530 @@
+/**
+ * SAFe Portfolio Overview
+ *
+ * Dashboard principal : KPIs, roadmap Gantt, Kanban epics, ROAM, themes, value streams.
+ */
+
+import { Component, OnInit, inject } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { RouterModule } from '@angular/router';
+import { TranslateModule } from '@ngx-translate/core';
+import { CdkDragDrop, DragDropModule, moveItemInArray, transferArrayItem } from '@angular/cdk/drag-drop';
+import {
+  SafeService,
+  SafePortfolio,
+  SafeEpic,
+  EpicStatus,
+} from '../../core/services/safe.service';
+
+interface KanbanColumn {
+  id: EpicStatus;
+  label: string;
+  items: SafeEpic[];
+}
+
+@Component({
+  selector: 'app-safe-portfolio',
+  standalone: true,
+  imports: [CommonModule, RouterModule, TranslateModule, DragDropModule],
+  template: `
+    <div class="safe-portfolio" *ngIf="portfolio; else loading">
+
+      <!-- Header -->
+      <div class="page-header">
+        <div class="header-left">
+          <h1>{{ 'safe.portfolio.title' | translate }}</h1>
+          <span class="pi-badge">{{ portfolio.kpis.currentPi }}</span>
+        </div>
+        <div class="header-actions">
+          <a routerLink="/safe/proposals" class="btn btn-secondary">
+            {{ 'safe.proposals.title' | translate }}
+          </a>
+        </div>
+      </div>
+
+      <!-- KPI Cards -->
+      <div class="kpi-grid">
+        <div class="kpi-card">
+          <div class="kpi-value">{{ portfolio.kpis.totalEpics }}</div>
+          <div class="kpi-label">{{ 'safe.portfolio.epics' | translate }}</div>
+          <div class="kpi-sub">{{ portfolio.kpis.epicsDone }} {{ 'safe.portfolio.done' | translate }}</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-value">{{ portfolio.kpis.totalFeatures }}</div>
+          <div class="kpi-label">Features</div>
+          <div class="kpi-sub">{{ portfolio.kpis.featuresDone }} {{ 'safe.portfolio.done' | translate }}</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-value">{{ portfolio.kpis.totalStoryPoints }}</div>
+          <div class="kpi-label">Story Points</div>
+        </div>
+        <div class="kpi-card" *ngIf="portfolio.kpis.predictability !== null">
+          <div class="kpi-value">{{ portfolio.kpis.predictability }}%</div>
+          <div class="kpi-label">{{ 'safe.portfolio.predictability' | translate }}</div>
+        </div>
+      </div>
+
+      <!-- Roadmap Gantt -->
+      <div class="section-card">
+        <h2>{{ 'safe.portfolio.roadmap' | translate }}</h2>
+        <div class="gantt-container">
+          <div class="gantt-row" *ngFor="let item of portfolio.roadmap">
+            <div class="gantt-label">
+              <span class="epic-id">{{ item.epicId }}</span>
+              <span class="epic-name">{{ item.name }}</span>
+            </div>
+            <div class="gantt-bar-container">
+              <div
+                class="gantt-bar"
+                [class]="'pi-' + item.pi.toLowerCase().replace(' ', '')"
+                [style.left.%]="getGanttOffset(item)"
+                [style.width.%]="getGanttWidth(item)"
+                [title]="item.pi + ' - ' + item.durationDays + 'j'"
+              >
+                {{ item.pi }}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Themes + Value Streams (side by side) -->
+      <div class="two-col">
+        <div class="section-card">
+          <h2>{{ 'safe.portfolio.themes' | translate }}</h2>
+          <div class="theme-list">
+            <div class="theme-item" *ngFor="let theme of portfolio.themes">
+              <div class="theme-header">
+                <span class="theme-dot" [style.background]="theme.color"></span>
+                <strong>{{ theme.id }}</strong> — {{ theme.name }}
+              </div>
+              <div class="theme-meta">
+                <span>{{ theme.epicIds.length }} epics</span>
+                <span>OKR: {{ theme.okr }}</span>
+              </div>
+              <div class="theme-impact">{{ theme.impact }}</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="section-card">
+          <h2>{{ 'safe.portfolio.valueStreams' | translate }}</h2>
+          <div class="vs-list">
+            <div class="vs-card" *ngFor="let vs of portfolio.valueStreams">
+              <div class="vs-name">{{ vs.id }} — {{ vs.name }}</div>
+              <div class="vs-stats">
+                <span>{{ vs.epicsCount }} epics</span>
+                <span>{{ vs.featuresCount }} features</span>
+                <span>{{ vs.storyPoints }} SP</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Epic Kanban Board -->
+      <div class="section-card">
+        <h2>{{ 'safe.portfolio.epicBoard' | translate }}</h2>
+        <div class="kanban-board" cdkDropListGroup>
+          <div
+            class="kanban-column"
+            *ngFor="let col of kanbanColumns"
+            cdkDropList
+            [cdkDropListData]="col.items"
+            [id]="'kanban-' + col.id"
+            [cdkDropListConnectedTo]="getConnectedLists(col.id)"
+            (cdkDropListDropped)="onEpicDrop($event)"
+          >
+            <div class="kanban-column-header">
+              <span class="column-title">{{ col.label }}</span>
+              <span class="column-count">{{ col.items.length }}</span>
+            </div>
+            <div
+              class="kanban-card"
+              *ngFor="let epic of col.items"
+              cdkDrag
+              [class]="'theme-' + epic.theme.toLowerCase()"
+            >
+              <div class="card-id">{{ epic.id }}</div>
+              <div class="card-name">{{ epic.name }}</div>
+              <div class="card-meta">
+                <span class="card-pi">{{ epic.pi }}</span>
+                <span class="card-sp">{{ epic.storyPoints }} SP</span>
+                <span class="card-features">{{ epic.featuresDone }}/{{ epic.featuresCount }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PI Objectives -->
+      <div class="section-card" *ngIf="portfolio.piObjectives.length > 0">
+        <h2>{{ 'safe.portfolio.piObjectives' | translate }}</h2>
+        <div class="objectives-table">
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>{{ 'safe.portfolio.objective' | translate }}</th>
+                <th>VS</th>
+                <th>{{ 'safe.portfolio.theme' | translate }}</th>
+                <th>BV</th>
+                <th>Type</th>
+                <th>SP</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let obj of portfolio.piObjectives" [class]="'obj-' + obj.type">
+                <td>{{ obj.number }}</td>
+                <td>{{ obj.description }}</td>
+                <td>{{ obj.valueStream }}</td>
+                <td>{{ obj.theme }}</td>
+                <td class="bv-cell">{{ obj.businessValue }}</td>
+                <td><span class="obj-badge" [class]="obj.type">{{ obj.type }}</span></td>
+                <td>{{ obj.storyPoints }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ROAM Summary -->
+      <div class="section-card">
+        <h2>ROAM</h2>
+        <div class="roam-grid">
+          <div class="roam-card roam-resolved">
+            <div class="roam-count">{{ getRoamCount('Resolved') }}</div>
+            <div class="roam-label">Resolved</div>
+          </div>
+          <div class="roam-card roam-owned">
+            <div class="roam-count">{{ getRoamCount('Owned') }}</div>
+            <div class="roam-label">Owned</div>
+          </div>
+          <div class="roam-card roam-accepted">
+            <div class="roam-count">{{ getRoamCount('Accepted') }}</div>
+            <div class="roam-label">Accepted</div>
+          </div>
+          <div class="roam-card roam-mitigated">
+            <div class="roam-count">{{ getRoamCount('Mitigated') }}</div>
+            <div class="roam-label">Mitigated</div>
+          </div>
+        </div>
+        <div class="risk-list" *ngIf="portfolio.risks.length > 0">
+          <div class="risk-item" *ngFor="let risk of portfolio.risks">
+            <div class="risk-header">
+              <span class="risk-id">{{ risk.id }}</span>
+              <span class="risk-title">{{ risk.title }}</span>
+              <span class="roam-badge" [class]="risk.roamStatus.toLowerCase()">{{ risk.roamStatus }}</span>
+            </div>
+            <div class="risk-meta">
+              <span>{{ risk.category }}</span>
+              <span>P: {{ risk.probability }}</span>
+              <span>I: {{ risk.impact }}</span>
+              <span>{{ risk.owner }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <ng-template #loading>
+      <div class="loading-container">
+        <div class="spinner"></div>
+        <p>{{ 'common.loading' | translate }}</p>
+      </div>
+    </ng-template>
+  `,
+  styles: [`
+    :host { display: block; }
+
+    .safe-portfolio { padding: 24px; max-width: 1400px; margin: 0 auto; }
+
+    .page-header {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 24px;
+    }
+    .header-left { display: flex; align-items: center; gap: 12px; }
+    .header-left h1 { margin: 0; font-size: 24px; color: var(--neo-text, #fff); }
+    .pi-badge {
+      background: var(--neo-primary, #4f8cff); color: #fff;
+      padding: 4px 12px; border-radius: 12px; font-size: 13px; font-weight: 600;
+    }
+    .btn { padding: 8px 16px; border-radius: 8px; border: none; cursor: pointer; font-size: 13px; text-decoration: none; }
+    .btn-secondary {
+      background: var(--neo-surface, #1e1e2e); color: var(--neo-text, #fff);
+      border: 1px solid var(--neo-border, #333);
+    }
+    .btn-secondary:hover { background: var(--neo-hover, #2a2a3e); }
+
+    /* KPI Grid */
+    .kpi-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px; margin-bottom: 24px;
+    }
+    .kpi-card {
+      background: var(--neo-surface, #1e1e2e); border-radius: 12px;
+      padding: 20px; text-align: center;
+      border: 1px solid var(--neo-border, #333);
+    }
+    .kpi-value { font-size: 32px; font-weight: 700; color: var(--neo-primary, #4f8cff); }
+    .kpi-label { font-size: 13px; color: var(--neo-text-secondary, #999); margin-top: 4px; }
+    .kpi-sub { font-size: 12px; color: var(--neo-text-muted, #666); margin-top: 2px; }
+
+    /* Section Card */
+    .section-card {
+      background: var(--neo-surface, #1e1e2e); border-radius: 12px;
+      padding: 20px; margin-bottom: 24px;
+      border: 1px solid var(--neo-border, #333);
+    }
+    .section-card h2 {
+      margin: 0 0 16px; font-size: 18px; color: var(--neo-text, #fff);
+    }
+
+    /* Two Column */
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+    @media (max-width: 900px) { .two-col { grid-template-columns: 1fr; } }
+
+    /* Gantt */
+    .gantt-container { overflow-x: auto; }
+    .gantt-row { display: flex; align-items: center; gap: 12px; margin-bottom: 6px; min-height: 28px; }
+    .gantt-label {
+      min-width: 280px; display: flex; gap: 8px; font-size: 12px;
+      color: var(--neo-text-secondary, #999);
+    }
+    .epic-id { font-weight: 600; color: var(--neo-text, #fff); min-width: 40px; }
+    .gantt-bar-container { flex: 1; position: relative; height: 22px; background: var(--neo-bg, #121220); border-radius: 4px; }
+    .gantt-bar {
+      position: absolute; height: 100%; border-radius: 4px;
+      font-size: 10px; color: #fff; display: flex; align-items: center;
+      padding: 0 6px; white-space: nowrap; min-width: 40px;
+    }
+    .pi-done { background: #4caf50; }
+    .pi-pi-1 { background: #2196f3; }
+    .pi-pi-2 { background: #ff9800; }
+    .pi-pi-3 { background: #9c27b0; }
+
+    /* Themes */
+    .theme-list { display: flex; flex-direction: column; gap: 12px; }
+    .theme-item {
+      padding: 12px; border-radius: 8px;
+      background: var(--neo-bg, #121220); border: 1px solid var(--neo-border, #333);
+    }
+    .theme-header { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--neo-text, #fff); }
+    .theme-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+    .theme-meta { font-size: 12px; color: var(--neo-text-secondary, #999); margin-top: 4px; display: flex; gap: 12px; }
+    .theme-impact { font-size: 12px; color: var(--neo-text-muted, #666); margin-top: 2px; }
+
+    /* Value Streams */
+    .vs-list { display: flex; flex-direction: column; gap: 12px; }
+    .vs-card {
+      padding: 12px; border-radius: 8px;
+      background: var(--neo-bg, #121220); border: 1px solid var(--neo-border, #333);
+    }
+    .vs-name { font-size: 14px; font-weight: 600; color: var(--neo-text, #fff); }
+    .vs-stats { font-size: 12px; color: var(--neo-text-secondary, #999); margin-top: 4px; display: flex; gap: 12px; }
+
+    /* Kanban Board */
+    .kanban-board { display: flex; gap: 12px; overflow-x: auto; padding-bottom: 8px; }
+    .kanban-column {
+      min-width: 200px; flex: 1;
+      background: var(--neo-bg, #121220); border-radius: 8px;
+      padding: 12px; min-height: 200px;
+    }
+    .kanban-column-header {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 12px; padding-bottom: 8px;
+      border-bottom: 2px solid var(--neo-border, #333);
+    }
+    .column-title { font-size: 13px; font-weight: 600; color: var(--neo-text, #fff); text-transform: uppercase; }
+    .column-count {
+      background: var(--neo-surface, #1e1e2e); color: var(--neo-text-secondary, #999);
+      padding: 2px 8px; border-radius: 10px; font-size: 11px;
+    }
+
+    .kanban-card {
+      background: var(--neo-surface, #1e1e2e); border-radius: 8px;
+      padding: 10px; margin-bottom: 8px; cursor: grab;
+      border-left: 3px solid var(--neo-border, #333);
+      transition: box-shadow 0.2s;
+    }
+    .kanban-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.3); }
+    .kanban-card.cdk-drag-preview { box-shadow: 0 4px 16px rgba(0,0,0,0.5); }
+    .kanban-card.theme-ts1 { border-left-color: #ef5350; }
+    .kanban-card.theme-ts2 { border-left-color: #42a5f5; }
+    .kanban-card.theme-ts3 { border-left-color: #66bb6a; }
+    .kanban-card.theme-ts4 { border-left-color: #ab47bc; }
+    .card-id { font-size: 11px; font-weight: 600; color: var(--neo-primary, #4f8cff); }
+    .card-name { font-size: 13px; color: var(--neo-text, #fff); margin-top: 2px; }
+    .card-meta { display: flex; gap: 8px; margin-top: 6px; font-size: 11px; color: var(--neo-text-secondary, #999); }
+
+    .cdk-drag-placeholder {
+      background: var(--neo-bg, #121220); border: 2px dashed var(--neo-border, #444);
+      border-radius: 8px; min-height: 60px; margin-bottom: 8px;
+    }
+
+    /* PI Objectives Table */
+    .objectives-table { overflow-x: auto; }
+    .objectives-table table {
+      width: 100%; border-collapse: collapse; font-size: 13px;
+    }
+    .objectives-table th {
+      text-align: left; padding: 8px 12px; color: var(--neo-text-secondary, #999);
+      border-bottom: 1px solid var(--neo-border, #333); font-weight: 600;
+    }
+    .objectives-table td {
+      padding: 8px 12px; color: var(--neo-text, #fff);
+      border-bottom: 1px solid var(--neo-border, #222);
+    }
+    .obj-stretch td { opacity: 0.7; }
+    .bv-cell { font-weight: 600; color: var(--neo-primary, #4f8cff); }
+    .obj-badge {
+      padding: 2px 8px; border-radius: 8px; font-size: 11px; text-transform: uppercase;
+    }
+    .obj-badge.committed { background: #1b5e20; color: #a5d6a7; }
+    .obj-badge.stretch { background: #4a148c; color: #ce93d8; }
+
+    /* ROAM */
+    .roam-grid {
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;
+      margin-bottom: 16px;
+    }
+    .roam-card {
+      text-align: center; padding: 16px; border-radius: 8px;
+      background: var(--neo-bg, #121220);
+    }
+    .roam-count { font-size: 28px; font-weight: 700; }
+    .roam-label { font-size: 12px; color: var(--neo-text-secondary, #999); margin-top: 2px; }
+    .roam-resolved .roam-count { color: #4caf50; }
+    .roam-owned .roam-count { color: #ff9800; }
+    .roam-accepted .roam-count { color: #2196f3; }
+    .roam-mitigated .roam-count { color: #9c27b0; }
+
+    .risk-list { display: flex; flex-direction: column; gap: 8px; }
+    .risk-item {
+      padding: 10px; border-radius: 8px; background: var(--neo-bg, #121220);
+      border: 1px solid var(--neo-border, #333);
+    }
+    .risk-header { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .risk-id { font-weight: 600; color: var(--neo-primary, #4f8cff); font-size: 12px; }
+    .risk-title { font-size: 13px; color: var(--neo-text, #fff); flex: 1; }
+    .roam-badge {
+      padding: 2px 8px; border-radius: 8px; font-size: 11px; font-weight: 600;
+    }
+    .roam-badge.resolved { background: #1b5e20; color: #a5d6a7; }
+    .roam-badge.owned { background: #e65100; color: #ffcc80; }
+    .roam-badge.accepted { background: #0d47a1; color: #90caf9; }
+    .roam-badge.mitigated { background: #4a148c; color: #ce93d8; }
+    .risk-meta { font-size: 11px; color: var(--neo-text-secondary, #999); margin-top: 4px; display: flex; gap: 12px; }
+
+    /* Loading */
+    .loading-container { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 400px; }
+    .spinner {
+      width: 40px; height: 40px; border: 3px solid var(--neo-border, #333);
+      border-top-color: var(--neo-primary, #4f8cff); border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    @media (max-width: 768px) {
+      .safe-portfolio { padding: 16px; }
+      .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+      .roam-grid { grid-template-columns: repeat(2, 1fr); }
+      .kanban-board { flex-direction: column; }
+      .kanban-column { min-width: unset; }
+    }
+  `]
+})
+export class SafePortfolioComponent implements OnInit {
+  private readonly safeService = inject(SafeService);
+
+  portfolio: SafePortfolio | null = null;
+  kanbanColumns: KanbanColumn[] = [];
+
+  // Gantt date range (2026 roadmap)
+  private readonly ganttStart = new Date('2026-01-01').getTime();
+  private readonly ganttEnd = new Date('2026-08-01').getTime();
+  private readonly ganttRange = this.ganttEnd - this.ganttStart;
+
+  ngOnInit(): void {
+    this.safeService.getPortfolio().subscribe({
+      next: (data) => {
+        this.portfolio = data;
+        this.buildKanban(data.epics);
+      },
+      error: (err) => {
+        console.error('Failed to load portfolio', err);
+      }
+    });
+  }
+
+  private buildKanban(epics: SafeEpic[]): void {
+    const statusLabels: Record<EpicStatus, string> = {
+      funnel: 'Funnel',
+      analysis: 'Analysis',
+      backlog: 'Backlog',
+      implementing: 'Implementing',
+      done: 'Done',
+      partial: 'Partial',
+    };
+
+    const statuses: EpicStatus[] = ['funnel', 'analysis', 'backlog', 'implementing', 'done'];
+    this.kanbanColumns = statuses.map(s => ({
+      id: s,
+      label: statusLabels[s],
+      items: epics.filter(e => e.status === s || (s === 'done' && e.status === 'partial')),
+    }));
+  }
+
+  getConnectedLists(current: EpicStatus): string[] {
+    return this.kanbanColumns
+      .filter(c => c.id !== current)
+      .map(c => 'kanban-' + c.id);
+  }
+
+  onEpicDrop(event: CdkDragDrop<SafeEpic[]>): void {
+    if (event.previousContainer === event.container) {
+      moveItemInArray(event.container.data, event.previousIndex, event.currentIndex);
+    } else {
+      const epic = event.previousContainer.data[event.previousIndex];
+      const newStatus = this.kanbanColumns.find(
+        c => event.container.id === 'kanban-' + c.id
+      )?.id;
+
+      transferArrayItem(
+        event.previousContainer.data,
+        event.container.data,
+        event.previousIndex,
+        event.currentIndex
+      );
+
+      if (newStatus && epic) {
+        this.safeService.updateEpicStatus(epic.id, newStatus).subscribe({
+          error: () => {
+            // Revert on error
+            transferArrayItem(
+              event.container.data,
+              event.previousContainer.data,
+              event.currentIndex,
+              event.previousIndex
+            );
+          }
+        });
+      }
+    }
+  }
+
+  getGanttOffset(item: { startDate: string }): number {
+    const start = new Date(item.startDate).getTime();
+    return Math.max(0, ((start - this.ganttStart) / this.ganttRange) * 100);
+  }
+
+  getGanttWidth(item: { durationDays: number }): number {
+    const durationMs = item.durationDays * 86400000;
+    return Math.min(100, (durationMs / this.ganttRange) * 100);
+  }
+
+  getRoamCount(status: string): number {
+    return this.portfolio?.risks.filter(r => r.roamStatus === status).length || 0;
+  }
+}

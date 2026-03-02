@@ -126,6 +126,10 @@ import { ConfirmDialogService } from '../../core/services/confirm-dialog.service
               <span class="icon" aria-hidden="true">🛠️</span>
               <span>{{ 'nav.localConsole' | translate }}</span>
             </a>
+            <a routerLink="/safe" routerLinkActive="active" class="nav-item" (click)="closeSidebar()" aria-describedby="admin-section" [attr.aria-label]="'nav.safe' | translate">
+              <span class="icon" aria-hidden="true">📊</span>
+              <span>{{ 'nav.safe' | translate }}</span>
+            </a>
           </div>
         </nav>
 

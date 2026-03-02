@@ -1,3 +1,22 @@
+## [3.91.0](https://github.com/Tallec7/neopro/compare/v3.90.0...v3.91.0) (2026-03-02)
+
+### Features
+
+- **safe:** interactive SAFe dashboard integrated into central-dashboard
+  - **Portfolio Overview**: KPI cards (Epics, Features, US, Done, Predictability), horizontal Gantt roadmap (Chart.js), theme progress bars, value stream cards, Epic mini-Kanban (CDK DragDrop), ROAM risk summary
+  - **Proposals Kanban**: drag & drop board (Draft → In Review → Approved → Implementing → Done), filters by type/epic/search, toggle Kanban/List view
+  - **Proposal Detail**: markdown rendering, epic link, status actions
+  - **Backend API**: `SafeParserService` parses 13+ markdown files from `docs/safe/` and `docs/proposals/` into JSON with 5-min memory cache, atomic write-back for status mutations
+  - **5 REST endpoints**: `GET /api/safe/portfolio`, `GET /api/safe/proposals`, `GET /api/safe/proposals/:id`, `PUT /api/safe/proposals/:id`, `PUT /api/safe/epics/:id/status`
+  - **Auth**: admin/super_admin only via `roleGuard` (frontend) + `authenticate`/`requireRole` (backend)
+  - **i18n**: FR + EN translations for all SAFe labels
+  - **Navigation**: new "Pilotage SAFe" entry in admin sidebar
+
+### Tests
+
+- **smoke:** SAFe route registration guards (portfolio + proposals endpoints must not 404)
+- **smoke:** SAFe file existence guards (parser service, types, controller, routes, Angular components)
+
 # [3.90.0](https://github.com/Tallec7/neopro/compare/v3.89.4...v3.90.0) (2026-03-02)
 
 ### Bug Fixes

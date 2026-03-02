@@ -200,6 +200,25 @@ export const routes: Routes = [
         canActivate: [roleGuard],
         data: { roles: ['admin', 'super_admin'] },
         loadComponent: () => import('./features/subscriptions/subscriptions-management.component').then(m => m.SubscriptionsManagementComponent)
+      },
+      // SAFe Dashboard
+      {
+        path: 'safe',
+        canActivate: [roleGuard],
+        data: { roles: ['admin', 'super_admin'] },
+        loadComponent: () => import('./features/safe/safe-portfolio.component').then(m => m.SafePortfolioComponent)
+      },
+      {
+        path: 'safe/proposals',
+        canActivate: [roleGuard],
+        data: { roles: ['admin', 'super_admin'] },
+        loadComponent: () => import('./features/safe/safe-proposals.component').then(m => m.SafeProposalsComponent)
+      },
+      {
+        path: 'safe/proposals/:id',
+        canActivate: [roleGuard],
+        data: { roles: ['admin', 'super_admin'] },
+        loadComponent: () => import('./features/safe/safe-proposal-detail.component').then(m => m.SafeProposalDetailComponent)
       }
     ]
   },
