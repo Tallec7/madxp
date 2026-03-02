@@ -325,6 +325,10 @@ export interface HeartbeatMessage {
     hdmi1: boolean;
     wrongPort: boolean;
     updatedAt: number | null;
+    /** CEC adapter detected (may report true even without physical HDMI on Pi 5) */
+    cec_available?: boolean;
+    /** Number of CEC devices found (0 = no TV responding to CEC) */
+    devices_found?: number;
   } | null;
   connectedClients?: Array<{
     socketId: string;
