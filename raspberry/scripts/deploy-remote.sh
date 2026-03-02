@@ -72,6 +72,7 @@ print_step "Test de connexion SSH..."
 print_warning "Vous allez devoir entrer le mot de passe SSH du Raspberry Pi"
 
 # Tenter la connexion et capturer le résultat
+SSH_RESULT=0
 SSH_OUTPUT=$(ssh -o ConnectTimeout=10 -o BatchMode=yes ${RASPBERRY_USER}@${RASPBERRY_IP} exit 2>&1) || SSH_RESULT=$?
 
 # Vérifier si c'est une erreur de clé SSH (nouveau boîtier ou réinstallation)
