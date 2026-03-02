@@ -2,6 +2,12 @@
 
 ### Features
 
+- **safe:** SAFe Dashboard Phase 1+2 — Sprint Tracker, Proposal CRUD, UX Polish (v3.94.0) ([31ee351](https://github.com/Tallec7/neopro/commit/31ee351b22e15b62840c7892ecd86728a92755f1))
+
+# [3.94.0](https://github.com/Tallec7/neopro/compare/v3.93.0...v3.94.0) (2026-03-02)
+
+### Features
+
 - **safe:** SAFe dashboard Phase 2 — Sprint Tracker, Proposal CRUD, DB Hybrid Layer, UX polish
   - **Sprint Tracker** (`/safe/sprints`): nouveau composant Angular avec sélecteur de sprint, KPI bar (vélocité, capacité, % done), stories groupées par feature, update inline du statut
   - **Sprint API**: `GET /api/safe/sprints` (tracker complet), `PUT /api/safe/sprints/:sid/stories/:stid/status` (mise à jour statut story)
