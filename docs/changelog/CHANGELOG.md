@@ -1,3 +1,9 @@
+# [3.95.0](https://github.com/Tallec7/neopro/compare/v3.94.2...v3.95.0) (2026-03-02)
+
+### Features
+
+- **safe:** add modal editing for ROAM, epics, proposals and stories ([1b277fd](https://github.com/Tallec7/neopro/commit/1b277fdf7cea63528e4297042f9214c089bb0116))
+
 ## [3.94.2](https://github.com/Tallec7/neopro/compare/v3.94.1...v3.94.2) (2026-03-02)
 
 ### Bug Fixes
