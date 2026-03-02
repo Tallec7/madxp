@@ -2,6 +2,12 @@
 
 ### Bug Fixes
 
+- **analytics:** enrich config with analytics metadata before sending to Pi ([f030416](https://github.com/Tallec7/neopro/commit/f0304168697b8886a1ed8a573d3e16cc5de88ab3))
+
+## [3.89.4](https://github.com/Tallec7/neopro/compare/v3.89.3...v3.89.4) (2026-03-02)
+
+### Bug Fixes
+
 - **analytics:** fix sponsor loop video analytics not being reported — `sendPendingConfigCommand()` sent config to Pi without `video_id`/`advertiser_id`/`analytics_category` metadata → Pi's `detectCategory()` fell back to path-based detection → sponsor videos classified as `'other'` instead of `'sponsor'` → analytics lost
   - Root cause: individual `deploy-video.js` injects metadata correctly, but `update_config` (dashboard → Pi) did not
   - Fix: new `enrichConfigWithAnalyticsMetadata()` in central-server enriches config before sending to Pi (same pattern as `enrichConfigWithSecondaryVariants()`)
