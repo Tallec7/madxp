@@ -136,7 +136,7 @@ class SafeParserService {
 
     // Write-back to USER-STORIES.md
     const filePath = path.join(SAFE_DIR, 'USER-STORIES.md');
-    let content = this.readFileSafe(filePath);
+    const content = this.readFileSafe(filePath);
     if (!content) return false;
 
     const statusMap: Record<SprintStoryStatus, string> = {
@@ -414,7 +414,6 @@ ${data.content}
     };
 
     // Parse theme table: | 🟥 TS1 Monétisation | E-01, E-02... | O2 + O4 | ARR + revenus |
-    const tableRegex = /\|\s*🟥?\s*(TS\d)\s+(\w[\w\s]+?)\s*\|\s*([^|]+)\|\s*([^|]+)\|\s*([^|]+)\|/g;
     // More general: match any theme row with emoji prefix
     const themeRowRegex = /\|\s*(?:🟥|🟦|🟩|🟪)\s*(TS\d)\s+(.+?)\s*\|\s*([^|]+)\|\s*([^|]+)\|\s*([^|]+)\|/g;
     let m;
