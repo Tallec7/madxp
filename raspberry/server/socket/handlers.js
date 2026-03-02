@@ -339,10 +339,18 @@ module.exports = function registerSocketHandlers({ io, stateService, configPath,
         // Persister dans configuration.json pour cohérence avec config_updated
         fs.writeFileSync(configPath, JSON.stringify(mergedConfig, null, 2), 'utf8');
 
+        // Monitoring: incrémenter les métriques de profile-switch
+        stateService.updateTransitionMetrics({
+          profileSwitchCount: 1,
+          lastProfileId: profileId,
+          lastProfileSwitchAt: Date.now(),
+        });
+
         console.log('[Profile] Active profile set to:', profileId, '(configuration.json updated)');
         io.emit('action', { type: 'reload-config', data: mergedConfig });
       } catch (error) {
         console.error('[Profile] Error switching profile:', error.message);
+        stateService.updateTransitionMetrics({ profileSwitchErrorCount: 1 });
       }
     });
 

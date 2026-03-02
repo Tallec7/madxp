@@ -24,6 +24,7 @@
 20. [Deux écrans désynchronisés (v3.82.10+)](#deux-écrans-désynchronisés-v38210)
 21. [Déploiement vidéo secondaire échoué (EACCES / race condition)](#déploiement-vidéo-secondaire-échoué-eacces--race-condition)
 22. [Résolution écran non affichée dans le dashboard (v3.87.4+)](#résolution-écran-non-affichée-dans-le-dashboard-v3874)
+23. [Changement de profil ne fonctionne pas (v3.92.0+)](#changement-de-profil-ne-fonctionne-pas-v3920)
 
 > **WiFi USB** : Pour un guide complet sur la clé WiFi USB (installation, diagnostic, pannes, recovery), voir [WIFI_USB_GUIDE.md](WIFI_USB_GUIDE.md).
 >
@@ -5067,4 +5068,90 @@ ssh pi@neopro.local 'journalctl -u neopro-kiosk --since "boot" | grep -E "résol
 
 ---
 
-**Dernière mise à jour :** 1 mars 2026 (ajout section résolution écran non affichée — v3.87.4)
+## Changement de profil ne fonctionne pas (v3.92.0+)
+
+### Le profil revient toujours au profil par défaut après quelques secondes
+
+**Symptômes :**
+
+- Le staff sélectionne un profil dans le club-selector sur la télécommande
+- L'écran charge brièvement le nouveau profil puis revient au profil par défaut
+- Ou bien le profil semble changer mais après un événement sync, l'ancien revient
+
+**Cause (corrigée en v3.92.2) :** Le handler `profile-switch` dans `handlers.js` ne persistait pas la config fusionnée dans `configuration.json`. Tout événement `config_updated` ultérieur (sync-agent, auto-reload) relisait `configuration.json` — toujours sur l'ancien profil — et écrasait la sélection.
+
+**Vérification :**
+
+```bash
+# 1. Vérifier que le handler persiste bien dans configuration.json
+ssh pi@neopro.local 'grep -c "writeFileSync(configPath" /home/pi/neopro/server/socket/handlers.js'
+# Attendu : au moins 1 occurrence dans le bloc profile-switch
+
+# 2. Vérifier le marqueur de profil actif
+ssh pi@neopro.local 'cat /home/pi/neopro/webapp/profiles/active-profile'
+
+# 3. Vérifier les logs du profile-switch
+ssh pi@neopro.local 'journalctl -u neopro-app --since "1 hour ago" | grep "\[Profile\]"'
+# Attendu : "[Profile] Active profile set to: {id} (configuration.json updated)"
+
+# 4. Comparer le profil actif avec configuration.json
+ssh pi@neopro.local 'ACTIVE=$(cat /home/pi/neopro/webapp/profiles/active-profile); diff <(python3 -c "import json; c=json.load(open(\"/home/pi/neopro/webapp/configuration.json\")); [c.pop(k,None) for k in [\"settings\",\"siteId\",\"siteName\",\"clubName\",\"apiKey\",\"hotspot\",\"localNetwork\",\"localSponsors\"]]; print(json.dumps(c,sort_keys=True))") <(python3 -c "import json; c=json.load(open(\"/home/pi/neopro/webapp/profiles/$ACTIVE.json\")); print(json.dumps(c,sort_keys=True))")'
+# Attendu : pas de différence (hors LOCAL_ONLY_SETTINGS)
+```
+
+**Correction si version < v3.92.2 :**
+
+```bash
+# Mettre à jour le fichier handlers.js manuellement
+scp raspberry/server/socket/handlers.js pi@neopro.local:/home/pi/neopro/server/socket/
+ssh pi@neopro.local 'sudo systemctl restart neopro-app'
+```
+
+### Le club-selector ne s'affiche pas sur la télécommande
+
+**Symptômes :**
+
+- La télécommande ne montre pas le bouton de sélection de profil
+- `ProfileConfigService.hasMultipleProfiles()` retourne `false`
+
+**Cause :** Le dossier `profiles/` n'existe pas ou `clubs.json` est absent/invalide.
+
+**Vérification :**
+
+```bash
+# Vérifier la présence des fichiers profils
+ssh pi@neopro.local 'ls -la /home/pi/neopro/webapp/profiles/'
+
+# Vérifier clubs.json
+ssh pi@neopro.local 'cat /home/pi/neopro/webapp/profiles/clubs.json | python3 -m json.tool'
+# Attendu : un tableau JSON avec au moins 2 profils
+
+# Vérifier Nginx ne cache pas les profils
+ssh pi@neopro.local 'curl -sI http://localhost/profiles/clubs.json | grep -i cache'
+# Attendu : "Cache-Control: no-cache" ou "no-store"
+```
+
+**Correction :** Cliquer "Déployer" ou "Sync" dans l'onglet Profils du dashboard (ADR-030).
+
+### Un profil a une configuration vide
+
+**Symptômes :**
+
+- Quand le staff sélectionne un profil, l'écran affiche un écran noir ou la page d'attente
+- Le fichier `profiles/{id}.json` contient `{}`
+
+**Cause :** Le profil a été créé depuis le dashboard sans configuration source (option "Vierge").
+
+**Vérification :**
+
+```bash
+# Vérifier la taille des fichiers profils
+ssh pi@neopro.local 'ls -la /home/pi/neopro/webapp/profiles/*.json'
+# Un fichier de 2 octets = configuration vide {}
+```
+
+**Correction :** Ouvrir le profil dans le dashboard → onglet Contenu/Boucles → sélectionner le profil dans le dropdown → configurer les sponsors/catégories → Déployer.
+
+---
+
+**Dernière mise à jour :** 2 mars 2026 (ajout section changement de profil — v3.92.2)

@@ -3,6 +3,9 @@
 ### Bug Fixes
 
 - **pi:** profile-switch handler must persist merged config to configuration.json ([9008d36](https://github.com/Tallec7/neopro/commit/9008d361514b50c1b1a22356dead9aab841e4545))
+  - **Root cause**: le handler `profile-switch` dans `handlers.js` diffusait la config brute du profil sans la fusionner avec les settings locaux (`siteId`, `apiKey`, `hotspot`, etc.) et sans l'ecrire dans `configuration.json`. Tout evenement `config_updated` ulterieur (sync-agent, auto-reload) relisait `configuration.json` — toujours sur l'ancien profil — et ecrasait la selection du staff
+  - **Fix**: le handler fusionne maintenant les `LOCAL_ONLY_SETTINGS` depuis `configuration.json`, ecrit le resultat fusionne, puis diffuse la config mergee
+  - **Smoke test**: regression guard ajoutee — verifie que le handler contient `writeFileSync(configPath)`, `LOCAL_ONLY_SETTINGS`, et `mergedConfig`
 
 ## [3.92.1](https://github.com/Tallec7/neopro/compare/v3.92.0...v3.92.1) (2026-03-02)
 

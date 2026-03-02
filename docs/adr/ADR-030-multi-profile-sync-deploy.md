@@ -29,9 +29,50 @@ Deuxième problème : Nginx cachait tous les `.json` 30 jours (regex `~*` gagne 
 - Légère augmentation du payload réseau (sync_profiles envoie tous les profils à chaque deploy)
 - Les fichiers JSON dynamiques sur le Pi ne sont plus cachés par Nginx
 
+## Sélection de profil côté Pi (v3.92.2)
+
+### Flux de sélection
+
+Quand le staff sélectionne un profil depuis la télécommande (club-selector) :
+
+```
+Remote Angular (club-selector)
+  │  socket.emit('profile-switch', { profileId })
+  ▼
+handlers.js (Pi server)
+  ├── 1. Écrire le marqueur active-profile dans profiles/
+  ├── 2. Lire profiles/{profileId}.json
+  ├── 3. Fusionner LOCAL_ONLY_SETTINGS depuis configuration.json
+  ├── 4. Écrire la config fusionnée dans configuration.json
+  └── 5. io.emit('action', { type: 'reload-config', data: mergedConfig })
+           │
+           ▼
+        TV Angular → recharge la configuration
+```
+
+### LOCAL_ONLY_SETTINGS préservés
+
+Ces clés sont copiées de l'ancien `configuration.json` vers la nouvelle config de profil :
+
+- `settings` — paramètres locaux du Pi (volume, langue, etc.)
+- `siteId`, `siteName`, `clubName` — identité du site
+- `apiKey` — clé d'authentification vers le central
+- `hotspot`, `localNetwork` — configuration réseau locale
+- `localSponsors` — sponsors ajoutés localement par le club
+
+### Bug critique corrigé (v3.92.2)
+
+Le handler `profile-switch` broadcastait la config brute du profil **sans** :
+
+- Fusionner les LOCAL_ONLY_SETTINGS → perte du `siteId`, `apiKey`, etc.
+- Écrire dans `configuration.json` → tout `config_updated` ultérieur écrasait la sélection
+
+**Smoke test** : vérifie que le handler contient `writeFileSync(configPath)`, `LOCAL_ONLY_SETTINGS`, et `mergedConfig`.
+
 ## Fichiers impactés
 
 - `central-server/src/controllers/config-profiles.controller.ts` — deployProfile envoie aussi sync_profiles
+- `raspberry/server/socket/handlers.js` — handler profile-switch avec merge + persistance configuration.json
 - `raspberry/config/nginx-captive-portal.conf` — location = et location /profiles/ ajoutés
 - `raspberry/config/nginx/neopro-hls.conf` — idem
 - `raspberry/src/app/app.routes.ts` — catchError + fallback sur le resolver

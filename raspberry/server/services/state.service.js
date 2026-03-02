@@ -46,6 +46,11 @@ class StateService {
       // ADR-034: preload-reveal sync metrics
       preloadRevealCount: 0,       // successful preload→reveal syncs on slave
       preloadCleanupCount: 0,      // preload aborted (master returned to loop before reveal)
+      // Multi-profile: profile-switch metrics
+      profileSwitchCount: 0,       // successful profile switches via club-selector
+      profileSwitchErrorCount: 0,  // failed profile switches (missing file, merge error, etc.)
+      lastProfileId: null,         // last successfully applied profile UUID
+      lastProfileSwitchAt: null,   // timestamp of last successful profile switch
       lastUpdatedAt: null,
     };
 
@@ -166,6 +171,15 @@ class StateService {
     // ADR-034: preload-reveal sync metrics
     this._transitionMetrics.preloadRevealCount += data.preloadRevealCount || 0;
     this._transitionMetrics.preloadCleanupCount += data.preloadCleanupCount || 0;
+    // Multi-profile: profile-switch metrics
+    this._transitionMetrics.profileSwitchCount += data.profileSwitchCount || 0;
+    this._transitionMetrics.profileSwitchErrorCount += data.profileSwitchErrorCount || 0;
+    if (data.lastProfileId != null) {
+      this._transitionMetrics.lastProfileId = data.lastProfileId;
+    }
+    if (data.lastProfileSwitchAt != null) {
+      this._transitionMetrics.lastProfileSwitchAt = data.lastProfileSwitchAt;
+    }
     this._transitionMetrics.lastUpdatedAt = Date.now();
     return this.getTransitionMetrics();
   }
@@ -190,7 +204,9 @@ class StateService {
     this._transitionMetrics.staleLoopStateCount = 0;
     this._transitionMetrics.preloadRevealCount = 0;
     this._transitionMetrics.preloadCleanupCount = 0;
-    // bootToVideoMs and failoverDurationMs are NOT reset — they are one-shot/last-value metrics
+    this._transitionMetrics.profileSwitchCount = 0;
+    this._transitionMetrics.profileSwitchErrorCount = 0;
+    // bootToVideoMs, failoverDurationMs, lastProfileId, lastProfileSwitchAt are NOT reset — they are one-shot/last-value metrics
     return metrics;
   }
 

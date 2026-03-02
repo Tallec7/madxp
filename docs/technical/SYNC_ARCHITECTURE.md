@@ -15,6 +15,7 @@
 6. [Scénarios d'Usage](#6-scénarios-dusage)
 7. [Implémentation Technique](#7-implémentation-technique)
 8. [FAQ](#8-faq)
+9. [Multi-Profile : Sync & Sélection](#9-multi-profile--sync--sélection)
 
 ---
 
@@ -1484,6 +1485,102 @@ Un ratio `preloadCleanupCount/preloadRevealCount` élevé indique des vidéos ma
 | 2.9     | 2026-02-27 | Claude/NEOPRO | E-23 : événements HDMI & failover, heartbeat enrichi (hdmiStatus, connectedClients), pipeline détection              |
 | 3.0     | 2026-03-01 | Claude/NEOPRO | ADR-033 : fix race condition master-slave (guard anti-stale), monitoring staleLoopStateCount, secondary variant path |
 | 3.1     | 2026-03-01 | Claude/NEOPRO | ADR-034 : révélation synchronisée preload/reveal, monitoring preloadRevealCount/preloadCleanupCount                  |
+| 3.2     | 2026-03-02 | Claude/NEOPRO | Multi-profile : sync_profiles, profile-switch handler avec merge + persistance, monitoring profileSwitchCount        |
+
+---
+
+## 9. Multi-Profile : Sync & Sélection
+
+### 9.1 Vue d'ensemble
+
+Un site peut avoir N profils de configuration (ex: "Standard", "Tournoi U15", "Match Pro"). Chaque profil est une configuration complète et indépendante (sponsors, catégories, vidéos). Le staff sélectionne le profil depuis la télécommande (club-selector).
+
+### 9.2 Stockage sur le Pi
+
+```
+/home/pi/neopro/webapp/
+├── configuration.json          ← Config active (profil sélectionné + settings locaux)
+├── profiles/
+│   ├── clubs.json              ← Métadonnées pour le club-selector (liste des profils)
+│   ├── active-profile          ← Marqueur du profil actif (UUID)
+│   ├── {profileId-1}.json      ← Config complète du profil 1
+│   └── {profileId-2}.json      ← Config complète du profil 2
+```
+
+### 9.3 Flux de synchronisation (Central → Pi)
+
+```
+Dashboard: "Déployer" ou "Sync"
+  │
+  ▼
+Central Server
+  ├── deployProfile(): enrichit + sauvegarde config_history + triggerPendingConfigSync
+  └── syncProfiles(): enrichit CHAQUE profil + envoie commande sync_profiles
+           │
+           │ Socket.IO: sync_profiles { profiles: [...] }
+           ▼
+Sync-Agent (Pi)
+  ├── 1. Écrire chaque profil dans profiles/{id}.json
+  ├── 2. Générer profiles/clubs.json (métadonnées pour le club-selector)
+  ├── 3. Supprimer les profils orphelins (présents sur disque mais pas dans le payload)
+  └── 4. Appliquer le profil actif (lire active-profile → mergeConfigurations → écrire configuration.json)
+```
+
+**Enrichissement obligatoire** avant envoi au Pi :
+
+1. `autoResolveSponsorIds()` — résout les placeholders sponsor
+2. `enrichConfigWithSecondaryVariants()` — ajoute les chemins de variants secondaires (dual display)
+3. `enrichConfigWithAnalyticsMetadata()` — ajoute `video_id`, `advertiser_id`, `analytics_category`
+
+### 9.4 Flux de sélection de profil (Remote → Pi)
+
+```
+Remote Angular (club-selector)
+  │  socket.emit('profile-switch', { profileId })
+  ▼
+handlers.js (Pi server, port 3000)
+  ├── 1. Valider que profiles/{profileId}.json existe
+  ├── 2. Écrire le marqueur profiles/active-profile
+  ├── 3. Lire profiles/{profileId}.json
+  ├── 4. Fusionner LOCAL_ONLY_SETTINGS depuis configuration.json
+  │      → settings, siteId, siteName, clubName, apiKey, hotspot, localNetwork, localSponsors
+  ├── 5. Écrire la config fusionnée dans configuration.json
+  └── 6. io.emit('action', { type: 'reload-config', data: mergedConfig })
+           │
+           ▼
+        TV Angular → détecte reload-config → recharge la configuration → affiche le nouveau profil
+```
+
+### 9.5 Invariants critiques
+
+| Invariant                                                     | Pourquoi                                                                    | Enforced par |
+| ------------------------------------------------------------- | --------------------------------------------------------------------------- | ------------ |
+| `configuration.json` est toujours le profil actif fusionné    | Tout `config_updated` le re-lit et le broadcast                             | smoke test   |
+| LOCAL_ONLY_SETTINGS préservés lors du switch                  | Sans `apiKey`/`siteId`, le Pi perd sa connexion au central                  | smoke test   |
+| Chaque profil est enrichi avant envoi au Pi                   | Sans enrichissement, variants secondaires et analytics perdues              | smoke test   |
+| Le profil par défaut est appliqué au boot si pas de sélection | `sync-profiles.js::applyProfile()` lit `active-profile` ou prend le default | sync-agent   |
+
+### 9.6 Monitoring
+
+Le handler `profile-switch` produit les logs suivants dans `journalctl -u neopro-app` :
+
+```
+[Profile] Switch requested to: {profileId}
+[Profile] Active profile set to: {profileId} (configuration.json updated)
+```
+
+En cas d'erreur :
+
+```
+[Profile] Missing profileId in profile-switch event
+[Profile] Profile file not found: /home/pi/neopro/webapp/profiles/{id}.json
+[Profile] Could not merge local settings: {error}
+[Profile] Error switching profile: {error}
+```
+
+### 9.7 Bug historique (v3.92.0 → v3.92.2)
+
+Le handler `profile-switch` broadcastait la config brute du profil **sans** la fusionner avec les settings locaux et **sans** l'écrire dans `configuration.json`. Résultat : tout événement `config_updated` ultérieur relisait `configuration.json` (toujours sur l'ancien profil) et écrasait la sélection du staff. Fix : le handler fusionne maintenant les LOCAL_ONLY_SETTINGS, persiste, puis broadcast.
 
 ---
 
