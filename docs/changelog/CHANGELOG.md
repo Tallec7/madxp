@@ -1,3 +1,9 @@
+## [3.92.2](https://github.com/Tallec7/neopro/compare/v3.92.1...v3.92.2) (2026-03-02)
+
+### Bug Fixes
+
+- **pi:** profile-switch handler must persist merged config to configuration.json ([9008d36](https://github.com/Tallec7/neopro/commit/9008d361514b50c1b1a22356dead9aab841e4545))
+
 ## [3.92.1](https://github.com/Tallec7/neopro/compare/v3.92.0...v3.92.1) (2026-03-02)
 
 ### Bug Fixes
