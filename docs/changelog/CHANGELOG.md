@@ -1,3 +1,9 @@
+# [3.91.0](https://github.com/Tallec7/neopro/compare/v3.90.0...v3.91.0) (2026-03-02)
+
+### Features
+
+- **safe:** interactive SAFe dashboard — portfolio overview, proposals kanban, proposal detail ([156a65c](https://github.com/Tallec7/neopro/commit/156a65c4619646f2c27e81d80028e941870f5868))
+
 ## [3.91.0](https://github.com/Tallec7/neopro/compare/v3.90.0...v3.91.0) (2026-03-02)
 
 ### Features
