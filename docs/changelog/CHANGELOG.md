@@ -1,3 +1,9 @@
+# [3.92.0](https://github.com/Tallec7/neopro/compare/v3.91.0...v3.92.0) (2026-03-02)
+
+### Features
+
+- **scripts:** harden DevOps scripts — strict mode, single-archive install, log capture, auto-rollback ([7217fdf](https://github.com/Tallec7/neopro/commit/7217fdf14b10abfa01b54f27979d602722002008))
+
 # [3.91.0](https://github.com/Tallec7/neopro/compare/v3.90.0...v3.91.0) (2026-03-02)
 
 ### Features
