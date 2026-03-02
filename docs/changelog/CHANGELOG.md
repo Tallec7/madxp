@@ -1,3 +1,13 @@
+# [3.90.0](https://github.com/Tallec7/neopro/compare/v3.89.4...v3.90.0) (2026-03-02)
+
+### Bug Fixes
+
+- **hdmi:** override CEC false positive on Pi 5 when no HDMI cable plugged ([c0203f8](https://github.com/Tallec7/neopro/commit/c0203f80b4ccc3a871d6b430c72936b4121419f5))
+
+### Features
+
+- **profiles:** redesign multi-profile architecture — independent configs, content tab selector, enrichment fix ([a61d451](https://github.com/Tallec7/neopro/commit/a61d45131838a16b55e44459587be300f2d693ea))
+
 ## [3.90.0](https://github.com/Tallec7/neopro/compare/v3.89.4...v3.90.0) (2026-03-02)
 
 ### Features
