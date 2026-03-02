@@ -16,7 +16,8 @@ import {
   LocalStorage,
   ConfigDiff,
   ConfigHistory,
-  SiteSponsor
+  SiteSponsor,
+  ConfigProfile
 } from '../../../../core/models';
 import { VideoLibraryComponent, VideoItem, VideoDeployState } from '../video-library/video-library.component';
 import { RemotePreviewComponent } from '../remote-preview/remote-preview.component';
@@ -81,6 +82,24 @@ interface HumanReadableDiff {
             {{ refreshingFromPi ? 'Synchronisation...' : 'Rafraîchir depuis le Pi' }}
           </button>
         </div>
+      </div>
+
+      <!-- Profile Selector (mode multi-profil) -->
+      <div class="profile-selector-bar" *ngIf="contentProfiles.length > 0">
+        <label class="profile-selector-label">Profil :</label>
+        <select
+          class="profile-selector"
+          [ngModel]="selectedProfileId"
+          (ngModelChange)="onProfileSelected($event)"
+          [disabled]="loading"
+        >
+          <option *ngFor="let p of contentProfiles" [value]="p.id">
+            {{ p.name }}{{ p.is_default ? ' (defaut)' : '' }}
+          </option>
+        </select>
+        <span class="profile-hint" *ngIf="selectedProfileId">
+          Les modifications s'appliquent au profil selectionne
+        </span>
       </div>
 
       <!-- Zone Upload Contextuelle -->
@@ -961,6 +980,44 @@ interface HumanReadableDiff {
     .header-actions {
       display: flex;
       gap: 0.5rem;
+    }
+
+    .profile-selector-bar {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.625rem 1rem;
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      border-radius: 8px;
+    }
+
+    .profile-selector-label {
+      font-size: 0.8125rem;
+      font-weight: 600;
+      color: #1e40af;
+      white-space: nowrap;
+    }
+
+    .profile-selector {
+      padding: 0.375rem 0.75rem;
+      border: 1px solid #93c5fd;
+      border-radius: 6px;
+      font-size: 0.8125rem;
+      background: white;
+      color: #1e3a5f;
+      min-width: 200px;
+    }
+
+    .profile-selector:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .profile-hint {
+      font-size: 0.75rem;
+      color: #3b82f6;
+      font-style: italic;
     }
 
     .btn-outline {
@@ -3233,6 +3290,10 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
   // Site sponsors — passed to loop-manager for sponsor_id dropdown
   siteSponsors: SiteSponsor[] = [];
 
+  // Profile selector (multi-profil mode)
+  contentProfiles: ConfigProfile[] = [];
+  selectedProfileId: string = '';
+
   // Remote preview panel
   showRemotePreview = false;
 
@@ -3788,6 +3849,7 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
     this.loadContent();
     this.loadDraft();
     this.loadSiteSponsors();
+    this.loadProfiles();
   }
 
   ngOnChanges(changes: SimpleChanges): void {
@@ -3795,6 +3857,7 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
       this.loadContent();
       this.loadDraft();
       this.loadSiteSponsors();
+      this.loadProfiles();
     }
   }
 
@@ -3933,6 +3996,57 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
     });
   }
 
+  /**
+   * Charge les profils du site pour le selecteur multi-profil.
+   * Si des profils existent, charge la config du profil par defaut.
+   */
+  private loadProfiles(): void {
+    if (!this.siteId) return;
+
+    this.sitesService.getProfiles(this.siteId).subscribe({
+      next: (response) => {
+        this.contentProfiles = response.profiles || [];
+        if (this.contentProfiles.length > 0) {
+          // Selectionner le profil par defaut (ou le premier)
+          const defaultProfile = this.contentProfiles.find(p => p.is_default) || this.contentProfiles[0];
+          this.selectedProfileId = defaultProfile.id;
+          this.applyProfileConfig(defaultProfile.configuration);
+        }
+        this.cdr.markForCheck();
+      },
+      error: () => {
+        // Non-bloquant : mode legacy sans profils
+        this.contentProfiles = [];
+        this.selectedProfileId = '';
+        this.cdr.markForCheck();
+      }
+    });
+  }
+
+  /**
+   * Callback du selecteur de profil — charge la config du profil selectionne
+   */
+  onProfileSelected(profileId: string): void {
+    this.selectedProfileId = profileId;
+    const profile = this.contentProfiles.find(p => p.id === profileId);
+    if (profile) {
+      this.applyProfileConfig(profile.configuration);
+    }
+  }
+
+  /**
+   * Applique une configuration de profil dans l'editeur
+   */
+  private applyProfileConfig(configuration: SiteConfiguration): void {
+    this.config = this.normalizeConfig(configuration);
+    this.originalConfig = JSON.stringify(this.config);
+    this.isDirty = false;
+    this.expandedCategories = (this.config.categories || []).map(() => false);
+    this.rebuildVideoCache();
+    this.rebuildTimeCategoriesCache();
+    this.cdr.markForCheck();
+  }
+
   private loadContent(): void {
     if (!this.siteId) return;
 
@@ -3946,17 +4060,22 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
         this.secondaryVariantVideoIds = new Set(response.secondaryVariantVideoIds || []);
         this.secondaryDisplayEnabled = response.secondaryDisplayEnabled ?? false;
 
-        if (response.configuration) {
-          this.config = this.normalizeConfig(response.configuration);
-        } else {
-          this.config = this.getEmptyConfig();
+        // En mode multi-profil, la config vient du profil selectionne (via loadProfiles)
+        // On n'applique la config site-level que si aucun profil n'est selectionne
+        if (!this.selectedProfileId) {
+          if (response.configuration) {
+            this.config = this.normalizeConfig(response.configuration);
+          } else {
+            this.config = this.getEmptyConfig();
+          }
+
+          this.originalConfig = JSON.stringify(this.config);
+          this.isDirty = false;
+          this.expandedCategories = (this.config.categories || []).map(() => false);
+          this.rebuildTimeCategoriesCache();
         }
 
-        this.originalConfig = JSON.stringify(this.config);
-        this.isDirty = false;
-        this.expandedCategories = (this.config.categories || []).map(() => false);
         this.rebuildVideoCache();
-        this.rebuildTimeCategoriesCache();
         this.refreshPendingDeployments(); // Load pending deployments
         this.cdr.markForCheck();
       },
@@ -5009,7 +5128,9 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
   }
 
   /**
-   * Confirme et exécute le déploiement après prévisualisation
+   * Confirme et exécute le déploiement après prévisualisation.
+   * En mode multi-profil : sauvegarde la config dans le profil puis sync tous les profils.
+   * En mode legacy (pas de profils) : envoi direct update_config au Pi.
    */
   confirmDeploy(): void {
     this.deploying = true;
@@ -5017,7 +5138,78 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
     this.deployError = null;
     this.cdr.markForCheck();
 
-    // Clean config before sending
+    // Mode multi-profil : sauvegarder dans le profil + sync
+    if (this.selectedProfileId && this.contentProfiles.length > 0) {
+      this.confirmDeployProfile();
+      return;
+    }
+
+    // Mode legacy : envoi direct update_config
+    this.confirmDeployLegacy();
+  }
+
+  /**
+   * Deploiement multi-profil : sauvegarde config dans le profil puis sync tous les profils au Pi
+   */
+  private confirmDeployProfile(): void {
+    const configToSave: SiteConfiguration = {
+      ...this.config,
+      sponsors: this.config.sponsors,
+      categories: this.config.categories,
+      timeCategories: this.config.timeCategories,
+      categoryMappings: this.config.categoryMappings,
+    };
+
+    // Etape 1 : sauvegarder la configuration dans le profil
+    this.sitesService.updateProfileConfiguration(this.siteId, this.selectedProfileId, configToSave).subscribe({
+      next: (updatedProfile) => {
+        // Mettre a jour le profil dans la liste locale
+        const idx = this.contentProfiles.findIndex(p => p.id === updatedProfile.id);
+        if (idx !== -1) {
+          this.contentProfiles[idx] = updatedProfile;
+        }
+
+        // Etape 2 : synchroniser tous les profils vers le Pi
+        this.sitesService.syncProfiles(this.siteId).subscribe({
+          next: () => {
+            this.deploying = false;
+            this.deployStatus = 'success';
+            this.showDiffModal = false;
+            this.originalConfig = JSON.stringify(this.config);
+            this.isDirty = false;
+            this.notificationService.success('Configuration sauvegardee et profils synchronises !');
+            this.configDeployed.emit();
+            this.cdr.markForCheck();
+          },
+          error: (syncError) => {
+            // La config est sauvegardee mais le sync a echoue
+            this.deploying = false;
+            this.deployStatus = 'error';
+            const message = ErrorExtractor.getMessage(syncError);
+            this.deployError = message;
+            this.originalConfig = JSON.stringify(this.config);
+            this.isDirty = false;
+            this.notificationService.warning('Configuration sauvegardee, mais la synchronisation vers le Pi a echoue. Reessayez depuis l\'onglet Profils.');
+            this.cdr.markForCheck();
+          }
+        });
+      },
+      error: (error) => {
+        this.deploying = false;
+        this.deployStatus = 'error';
+        const message = ErrorExtractor.getMessage(error);
+        this.deployError = message;
+        this.logger.error('Failed to save profile configuration', { error: message, siteId: this.siteId, profileId: this.selectedProfileId });
+        this.notificationService.error(`Erreur de sauvegarde: ${message}`);
+        this.cdr.markForCheck();
+      }
+    });
+  }
+
+  /**
+   * Deploiement legacy : envoi direct update_config au Pi (sites sans profils)
+   */
+  private confirmDeployLegacy(): void {
     const configToSend = this.prepareConfigForDeploy();
 
     this.sitesService.sendCommand(this.siteId, 'update_config', {

@@ -146,10 +146,6 @@ export interface Site {
   /** Couleur secondaire du club (hex #RRGGBB) */
   color_secondary?: string | null;
 
-  // === Config profiles fields ===
-  /** ID du profil actuellement actif sur le Pi */
-  active_profile_id?: string | null;
-
   // === Config sync fields ===
   /** Last config synchronization from Pi */
   last_config_sync?: string | null;

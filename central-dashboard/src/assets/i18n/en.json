@@ -95,6 +95,7 @@
     "agencies": "Agencies",
     "analyticsCategories": "Analytics Categories",
     "localConsole": "Local Console",
+    "safe": "SAFe Dashboard",
     "skipToContent": "Skip to main content",
     "toggleMenu": "Toggle menu"
   },
@@ -853,5 +854,30 @@
     "configFromProfile": "Copy from another profile",
     "configEmpty": "Start with empty config",
     "selectProfile": "Select a profile to copy..."
+  },
+  "safe": {
+    "portfolio": {
+      "title": "SAFe Dashboard",
+      "epics": "Epics",
+      "features": "Features",
+      "storyPoints": "Story Points",
+      "predictability": "Predictability",
+      "roadmap": "Roadmap",
+      "themes": "Strategic Themes",
+      "valueStreams": "Value Streams",
+      "epicKanban": "Epic Kanban Board",
+      "piObjectives": "PI Objectives",
+      "roam": "ROAM — Risks",
+      "proposals": "Proposals & Spikes"
+    },
+    "proposals": {
+      "title": "Proposals & Spikes",
+      "listView": "List",
+      "allTypes": "All types",
+      "titleLabel": "Title",
+      "status": "Status",
+      "file": "File",
+      "empty": "No proposals"
+    }
   }
 }

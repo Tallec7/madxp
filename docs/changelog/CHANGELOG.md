@@ -1,3 +1,28 @@
+## [3.90.0](https://github.com/Tallec7/neopro/compare/v3.89.4...v3.90.0) (2026-03-02)
+
+### Features
+
+- **profiles:** redesign multi-profile architecture — profiles are now independent configurations deployed simultaneously to Pi
+  - **Content tab profile selector**: dropdown in Content/Boucles tab to edit each profile's config independently
+  - **New API endpoint**: `PUT /sites/:siteId/profiles/:profileId/configuration` for updating a profile's config only
+  - **Deploy = save + sync all**: deploying from Content tab saves to the selected profile, then syncs all profiles to Pi
+  - **Pi manages selection locally**: removed `active_profile_id` concept from central — staff selects from remote's club selector
+  - **Profiles tab cleanup**: removed individual "Déployer" buttons, removed ACTIF badge, added "non synchronisé" warning banner
+
+### Bug Fixes
+
+- **profiles:** fix critical enrichment bug in `syncProfiles()` and `deployProfile()` — profiles were sent to Pi without secondary variant paths and analytics metadata
+  - Added full enrichment chain: `autoResolveSponsorIds()` → `enrichConfigWithSecondaryVariants()` → `enrichConfigWithAnalyticsMetadata()`
+  - Without this fix: slave display broken (no secondary variants) + sponsor analytics classified as 'other'
+  - 9 smoke test regression guards added to prevent re-introduction
+
+### Tests
+
+- **profiles:** 3 new unit tests for `updateProfileConfiguration` endpoint (200, 404, 400)
+- **profiles:** fixed mock chain in `deployProfile` tests (removed stale `updateSiteActiveProfile` mock)
+- **profiles:** added jest.mock for enrichment modules in controller tests
+- **smoke:** 9 new regression guards for profile enrichment pipeline (456 total smoke tests)
+
 ## [3.89.4](https://github.com/Tallec7/neopro/compare/v3.89.3...v3.89.4) (2026-03-02)
 
 ### Bug Fixes

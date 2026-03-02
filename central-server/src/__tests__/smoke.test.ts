@@ -3816,6 +3816,147 @@ describe('Multi-profile sync & cache regression guards (ADR-030)', () => {
 });
 
 // ----------------------------------------------------------
+// Multi-profile enrichment regression guards (ADR-030 ext.)
+// ----------------------------------------------------------
+// Bug prevention: syncProfiles and deployProfile must run the
+// full enrichment chain (autoResolveSponsorIds → enrichConfigWith
+// SecondaryVariants → enrichConfigWithAnalyticsMetadata) before
+// sending profiles to Pi. Without this, profiles arrive without
+// secondary variant paths and analytics metadata → slave display
+// broken + sponsor analytics classified as 'other'.
+// ----------------------------------------------------------
+describe('Multi-profile enrichment regression guards', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+  const controllerPath = path.join(
+    repoRoot,
+    'central-server/src/controllers/config-profiles.controller.ts'
+  );
+
+  let controllerContent: string;
+  beforeAll(() => {
+    controllerContent = fs.readFileSync(controllerPath, 'utf8');
+  });
+
+  // --- syncProfiles must call all 3 enrichment functions ---
+  it('syncProfiles must call autoResolveSponsorIds', () => {
+    const syncFn = controllerContent.match(
+      /export const syncProfiles[\s\S]*?(?=export const \w|$)/
+    );
+    expect(syncFn).not.toBeNull();
+    expect({
+      callsAutoResolve: syncFn![0].includes('autoResolveSponsorIds'),
+    }).toEqual({
+      callsAutoResolve: true,
+    });
+  });
+
+  it('syncProfiles must call enrichConfigWithSecondaryVariants', () => {
+    const syncFn = controllerContent.match(
+      /export const syncProfiles[\s\S]*?(?=export const \w|$)/
+    );
+    expect(syncFn).not.toBeNull();
+    expect({
+      callsVariants: syncFn![0].includes('enrichConfigWithSecondaryVariants'),
+    }).toEqual({
+      callsVariants: true,
+    });
+  });
+
+  it('syncProfiles must call enrichConfigWithAnalyticsMetadata', () => {
+    const syncFn = controllerContent.match(
+      /export const syncProfiles[\s\S]*?(?=export const \w|$)/
+    );
+    expect(syncFn).not.toBeNull();
+    expect({
+      callsAnalytics: syncFn![0].includes('enrichConfigWithAnalyticsMetadata'),
+    }).toEqual({
+      callsAnalytics: true,
+    });
+  });
+
+  // --- deployProfile must call all 3 enrichment functions ---
+  it('deployProfile must call autoResolveSponsorIds', () => {
+    const deployFn = controllerContent.match(
+      /export const deployProfile[\s\S]*?(?=export const \w|$)/
+    );
+    expect(deployFn).not.toBeNull();
+    expect({
+      callsAutoResolve: deployFn![0].includes('autoResolveSponsorIds'),
+    }).toEqual({
+      callsAutoResolve: true,
+    });
+  });
+
+  it('deployProfile must call enrichConfigWithSecondaryVariants', () => {
+    const deployFn = controllerContent.match(
+      /export const deployProfile[\s\S]*?(?=export const \w|$)/
+    );
+    expect(deployFn).not.toBeNull();
+    expect({
+      callsVariants: deployFn![0].includes('enrichConfigWithSecondaryVariants'),
+    }).toEqual({
+      callsVariants: true,
+    });
+  });
+
+  it('deployProfile must call enrichConfigWithAnalyticsMetadata', () => {
+    const deployFn = controllerContent.match(
+      /export const deployProfile[\s\S]*?(?=export const \w|$)/
+    );
+    expect(deployFn).not.toBeNull();
+    expect({
+      callsAnalytics: deployFn![0].includes('enrichConfigWithAnalyticsMetadata'),
+    }).toEqual({
+      callsAnalytics: true,
+    });
+  });
+
+  // --- deployProfile must NOT call updateSiteActiveProfile ---
+  it('deployProfile must NOT call updateSiteActiveProfile (concept removed)', () => {
+    const deployFn = controllerContent.match(
+      /export const deployProfile[\s\S]*?(?=export const \w|$)/
+    );
+    expect(deployFn).not.toBeNull();
+    expect({
+      noActiveProfile: !deployFn![0].includes('updateSiteActiveProfile'),
+    }).toEqual({
+      noActiveProfile: true,
+    });
+  });
+
+  // --- Content tab must have profile selector wired ---
+  it('site-content-tab must have profile selector with onProfileSelected', () => {
+    const contentTab = fs.readFileSync(
+      path.join(
+        repoRoot,
+        'central-dashboard/src/app/features/sites/components/site-content-tab/site-content-tab.component.ts'
+      ),
+      'utf8'
+    );
+    expect({
+      hasProfileSelector: contentTab.includes('profile-selector-bar'),
+      hasOnProfileSelected: contentTab.includes('onProfileSelected'),
+      hasApplyProfileConfig: contentTab.includes('applyProfileConfig'),
+      hasLoadProfiles: contentTab.includes('loadProfiles'),
+    }).toEqual({
+      hasProfileSelector: true,
+      hasOnProfileSelected: true,
+      hasApplyProfileConfig: true,
+      hasLoadProfiles: true,
+    });
+  });
+
+  // --- updateProfileConfiguration endpoint must exist ---
+  it('controller must export updateProfileConfiguration', () => {
+    expect({
+      hasEndpoint: controllerContent.includes('export const updateProfileConfiguration'),
+    }).toEqual({
+      hasEndpoint: true,
+    });
+  });
+});
+
+// ----------------------------------------------------------
 // Kiosk GPU crash loop regression guards
 // Incident: 24/02/2026 — After OTA deploy, Chromium enters a
 // rendering crash loop on Pi 5 because SIGKILL prevents the

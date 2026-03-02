@@ -8,11 +8,14 @@
 import { Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import Joi from 'joi';
-import { AuthRequest } from '../types';
+import { AuthRequest, SiteConfiguration } from '../types';
 import logger from '../config/logger';
 import socketService from '../services/socket.service';
 import { configProfileRepository } from '../repositories/config-profile.repository';
 import { configHistoryRepository } from '../repositories/config-history.repository';
+import { enrichConfigWithSecondaryVariants } from '../utils/config-secondary-variants';
+import { enrichConfigWithAnalyticsMetadata } from '../utils/config-analytics-metadata';
+import { autoResolveSponsorIds } from '../services/sponsor-auto-resolution.service';
 
 // --------------------------------------------------------------------------
 // Validation schemas
@@ -37,6 +40,10 @@ const updateProfileSchema = Joi.object({
   is_default: Joi.boolean(),
   configuration: Joi.object(),
 }).min(1);
+
+const updateProfileConfigurationSchema = Joi.object({
+  configuration: Joi.object().required(),
+});
 
 // --------------------------------------------------------------------------
 // GET /api/sites/:siteId/profiles
@@ -185,6 +192,43 @@ export const updateProfile = async (req: AuthRequest, res: Response) => {
 };
 
 // --------------------------------------------------------------------------
+// PUT /api/sites/:siteId/profiles/:profileId/configuration
+// --------------------------------------------------------------------------
+
+export const updateProfileConfiguration = async (req: AuthRequest, res: Response) => {
+  try {
+    const { siteId, profileId } = req.params;
+
+    const { error: validationError, value } = updateProfileConfigurationSchema.validate(req.body);
+    if (validationError) {
+      return res.status(400).json({ error: validationError.message });
+    }
+
+    const existing = await configProfileRepository.findById(profileId);
+    if (!existing || existing.site_id !== siteId) {
+      return res.status(404).json({ error: 'Profil non trouve' });
+    }
+
+    const updated = await configProfileRepository.update(profileId, {
+      configuration: value.configuration,
+      updatedBy: req.user?.id,
+    });
+
+    logger.info('Profile configuration updated', {
+      siteId,
+      profileId,
+      profileName: existing.name,
+      updatedBy: req.user?.email,
+    });
+
+    res.json(updated);
+  } catch (error) {
+    logger.error('Update profile configuration error:', error);
+    res.status(500).json({ error: 'Erreur lors de la mise a jour de la configuration du profil' });
+  }
+};
+
+// --------------------------------------------------------------------------
 // DELETE /api/sites/:siteId/profiles/:profileId
 // --------------------------------------------------------------------------
 
@@ -241,6 +285,22 @@ export const deployProfile = async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ error: 'Profil non trouve' });
     }
 
+    // Enrichir la configuration avant sauvegarde et envoi
+    let enrichedConfig = profile.configuration as SiteConfiguration;
+    try {
+      const { configuration: resolved, resolved: resolvedCount } =
+        await autoResolveSponsorIds(siteId, enrichedConfig);
+      if (resolvedCount > 0) enrichedConfig = resolved;
+    } catch { /* non-fatal */ }
+
+    try {
+      await enrichConfigWithSecondaryVariants(enrichedConfig);
+    } catch { /* non-fatal */ }
+
+    try {
+      await enrichConfigWithAnalyticsMetadata(enrichedConfig);
+    } catch { /* non-fatal */ }
+
     // Sauvegarder dans config_history avec profile_id
     const versionId = uuidv4();
     const lastVersion = await configHistoryRepository.findLastVersion(siteId);
@@ -248,7 +308,7 @@ export const deployProfile = async (req: AuthRequest, res: Response) => {
     await configHistoryRepository.insertVersion({
       id: versionId,
       site_id: siteId,
-      configuration: JSON.stringify(profile.configuration),
+      configuration: JSON.stringify(enrichedConfig),
       deployed_by: req.user?.id,
       comment: `Deploiement profil "${profile.name}"`,
       previous_version_id: lastVersion?.id || null,
@@ -258,9 +318,6 @@ export const deployProfile = async (req: AuthRequest, res: Response) => {
     // Mettre a jour le pending config
     await configHistoryRepository.updateSitePendingConfigVersion(siteId, versionId);
 
-    // Tracker le profil actif
-    await configProfileRepository.updateSiteActiveProfile(siteId, profileId);
-
     // Trigger le sync vers le Pi
     await socketService.triggerPendingConfigSync(siteId);
 
@@ -268,19 +325,38 @@ export const deployProfile = async (req: AuthRequest, res: Response) => {
     // (necessaire pour que le club-selector fonctionne sur la remote)
     const allProfiles = await configProfileRepository.findBySite(siteId);
     if (allProfiles.length > 1) {
-      const syncPayload = allProfiles.map((p) => ({
-        id: p.id,
-        name: p.name,
-        display_name: p.display_name,
-        city: p.city,
-        sport: p.sport,
-        is_default: p.is_default,
-        configuration: p.configuration,
-      }));
+      const enrichedProfiles = [];
+      for (const p of allProfiles) {
+        let enrichedConfig = p.configuration as SiteConfiguration;
+
+        try {
+          const { configuration: resolved, resolved: resolvedCount } =
+            await autoResolveSponsorIds(siteId, enrichedConfig);
+          if (resolvedCount > 0) enrichedConfig = resolved;
+        } catch { /* non-fatal */ }
+
+        try {
+          await enrichConfigWithSecondaryVariants(enrichedConfig);
+        } catch { /* non-fatal */ }
+
+        try {
+          await enrichConfigWithAnalyticsMetadata(enrichedConfig);
+        } catch { /* non-fatal */ }
+
+        enrichedProfiles.push({
+          id: p.id,
+          name: p.name,
+          display_name: p.display_name,
+          city: p.city,
+          sport: p.sport,
+          is_default: p.is_default,
+          configuration: enrichedConfig,
+        });
+      }
       socketService.sendCommand(siteId, {
         id: uuidv4(),
         type: 'sync_profiles',
-        data: { profiles: syncPayload },
+        data: { profiles: enrichedProfiles },
       });
     }
 
@@ -324,16 +400,65 @@ export const syncProfiles = async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ error: 'Aucun profil a synchroniser' });
     }
 
-    // Construire le payload pour le sync-agent
-    const syncPayload = profiles.map((p) => ({
-      id: p.id,
-      name: p.name,
-      display_name: p.display_name,
-      city: p.city,
-      sport: p.sport,
-      is_default: p.is_default,
-      configuration: p.configuration,
-    }));
+    // Enrichir chaque profil avant envoi au Pi
+    const syncPayload = [];
+    for (const p of profiles) {
+      let enrichedConfig = p.configuration as SiteConfiguration;
+
+      // Auto-résolution des sponsor IDs
+      try {
+        const { configuration: resolved, resolved: resolvedCount } =
+          await autoResolveSponsorIds(siteId, enrichedConfig);
+        if (resolvedCount > 0) {
+          enrichedConfig = resolved;
+          logger.info('Sponsor auto-resolution in profile sync', {
+            siteId, profileId: p.id, resolved: resolvedCount,
+          });
+        }
+      } catch (err) {
+        logger.warn('Sponsor auto-resolution failed in profile sync (non-fatal)', {
+          siteId, profileId: p.id, error: (err as Error).message,
+        });
+      }
+
+      // Enrichir avec les variants secondaires
+      try {
+        const { enrichedCount } = await enrichConfigWithSecondaryVariants(enrichedConfig);
+        if (enrichedCount > 0) {
+          logger.info('Secondary variants enriched in profile sync', {
+            siteId, profileId: p.id, enrichedCount,
+          });
+        }
+      } catch (err) {
+        logger.warn('Secondary variant enrichment failed in profile sync (non-fatal)', {
+          siteId, profileId: p.id, error: (err as Error).message,
+        });
+      }
+
+      // Enrichir avec les métadonnées analytics
+      try {
+        const { enrichedCount } = await enrichConfigWithAnalyticsMetadata(enrichedConfig);
+        if (enrichedCount > 0) {
+          logger.info('Analytics metadata enriched in profile sync', {
+            siteId, profileId: p.id, enrichedCount,
+          });
+        }
+      } catch (err) {
+        logger.warn('Analytics metadata enrichment failed in profile sync (non-fatal)', {
+          siteId, profileId: p.id, error: (err as Error).message,
+        });
+      }
+
+      syncPayload.push({
+        id: p.id,
+        name: p.name,
+        display_name: p.display_name,
+        city: p.city,
+        sport: p.sport,
+        is_default: p.is_default,
+        configuration: enrichedConfig,
+      });
+    }
 
     // Envoyer la commande sync_profiles au Pi
     await socketService.sendCommand(siteId, {

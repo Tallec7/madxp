@@ -26,6 +26,7 @@ Neopro est une plateforme distribuée Edge + Cloud pour la diffusion de contenu 
 │  │  - Analytics     │  │  - Auth (JWT)    │  │  - Events  │ │
 │  │  - Rapports PDF  │  │  - PostgreSQL    │  │            │ │
 │  │  - Sponsors      │  │  - Redis cache   │  │            │ │
+│  │  - SAFe Dashboard│  │  - SAFe Parser   │  │            │ │
 │  └──────┬───────────┘  └──────┬───────────┘  └──────┬─────┘ │
 │         │                     │                     │       │
 │         └─────────────────────┴─────────────────────┘       │
@@ -304,28 +305,33 @@ Native HTML5 <video> (double-buffer A/B)
 ### 4. Multi-config profiles
 
 ```
-Dashboard (Admin crée/édite profil)
+Dashboard Content Tab (sélecteur de profil)
+         │ PUT /profiles/:id/configuration
+         ▼
+Central Server API (sauvegarde config profil)
+         │ POST /profiles/sync
+         ▼
+Enrichment chain:
+  autoResolveSponsorIds()
+  enrichConfigWithSecondaryVariants()
+  enrichConfigWithAnalyticsMetadata()
          │
          ▼
-Central Server API (POST /sites/:id/profiles)
-         │
-         ▼
-PostgreSQL (config_profiles table)
-         │
-         ▼
-Socket.IO → sync_profiles command
+Socket.IO → sync_profiles command (TOUS les profils enrichis)
          │
          ▼
 Sync Agent (écrit profiles/*.json + clubs.json)
          │
          ▼
-Pi Frontend (ProfileConfigService sélectionne le profil actif)
+Pi Frontend (ProfileConfigService — sélection locale via télécommande)
 ```
 
 - Un site peut avoir **N profils** de configuration
-- Chaque profil contient un `configuration` JSON complet
-- Le Pi résout le profil actif via `clubs.json` → `activeProfileId`
-- Switch de profil possible depuis la télécommande ou le dashboard
+- Chaque profil contient un `configuration` JSON complet et indépendant
+- **TOUS les profils** sont présents simultanément sur le Pi
+- Le Pi gère la sélection localement via `clubs.json` → télécommande club-selector
+- **Pas de concept `active_profile_id`** côté central — le central synchronise, le Pi sélectionne
+- L'enrichissement (variants secondaires + analytics metadata) est **obligatoire** avant envoi au Pi
 
 ---
 
@@ -338,7 +344,7 @@ Pi Frontend (ProfileConfigService sélectionne le profil actif)
 | `raspberry/admin`      | Express, vanilla JS (dual mode: club/tech)                             | -                                             | Raspberry Pi (systemd) |
 | `raspberry/sync-agent` | Node.js 20, Axios, SHA256 checksum                                     | -                                             | Raspberry Pi (systemd) |
 | `central-server`       | Node.js 20+, Express 4.18, TypeScript 5.9, Winston, Repository Pattern | Supabase (PostgreSQL), FTP Hostinger (vidéos) | Railway                |
-| `central-dashboard`    | Angular 20.3, Chart.js 4.5, Leaflet                                    | -                                             | Hostinger (static)     |
+| `central-dashboard`    | Angular 20.3, Chart.js 4.5, Leaflet, Angular CDK (DragDrop)            | -                                             | Hostinger (static)     |
 | `e2e`                  | Playwright                                                             | -                                             | CI/CD                  |
 
 ---

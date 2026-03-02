@@ -40,6 +40,12 @@ import { Site, ConfigProfile, CreateProfilePayload, UpdateProfilePayload, SiteCo
         <span>Pi hors-ligne — les changements seront appliques a la reconnexion</span>
       </div>
 
+      <!-- Bandeau non synchronisé -->
+      <div class="sync-banner" *ngIf="profiles.length > 0 && !lastSyncedInSession">
+        <span class="sync-icon">🔄</span>
+        <span>Profils non synchronises — cliquez "Synchroniser tout" pour envoyer les profils au Pi</span>
+      </div>
+
       <!-- Info multi-config -->
       <div class="info-banner" *ngIf="profiles.length > 1">
         <span class="info-icon">ℹ️</span>
@@ -64,14 +70,10 @@ import { Site, ConfigProfile, CreateProfilePayload, UpdateProfilePayload, SiteCo
           class="profile-card"
           *ngFor="let profile of profiles"
           [class.is-default]="profile.is_default"
-          [class.is-active]="site?.active_profile_id === profile.id"
         >
           <div class="profile-header">
             <div class="profile-name">{{ profile.name }}</div>
             <div class="profile-badges">
-              <span class="badge-active" *ngIf="site?.active_profile_id === profile.id">
-                ACTIF
-              </span>
               <span class="badge-default" *ngIf="profile.is_default">
                 {{ 'profiles.default' | translate }}
               </span>
@@ -90,13 +92,6 @@ import { Site, ConfigProfile, CreateProfilePayload, UpdateProfilePayload, SiteCo
           <div class="profile-actions">
             <button class="btn btn-sm btn-secondary" (click)="openEditModal(profile)">
               ✏️ {{ 'common.edit' | translate }}
-            </button>
-            <button
-              class="btn btn-sm btn-primary"
-              (click)="deployProfile(profile)"
-              [disabled]="deploying[profile.id] || !isConnected"
-            >
-              {{ deploying[profile.id] ? ('common.deploying' | translate) : ('common.deploy' | translate) }}
             </button>
             <button
               class="btn btn-sm btn-danger"
@@ -305,21 +300,20 @@ import { Site, ConfigProfile, CreateProfilePayload, UpdateProfilePayload, SiteCo
       font-weight: 500;
     }
 
-    .badge-active {
-      background: #fef3c7;
-      color: #92400e;
-      padding: 0.125rem 0.5rem;
-      border-radius: 4px;
-      font-size: 0.75rem;
-      font-weight: 600;
+    .sync-banner {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 0.75rem;
+      background: #fff7ed;
+      border: 1px solid #fed7aa;
+      border-radius: 6px;
+      font-size: 0.8125rem;
+      color: #9a3412;
     }
 
-    .profile-card.is-active {
-      border-color: #f59e0b;
-    }
-
-    .profile-card.is-active.is-default {
-      border-color: #f59e0b;
+    .sync-icon {
+      font-size: 1rem;
     }
 
     .warning-banner {
@@ -620,9 +614,9 @@ export class SiteProfilesTabComponent implements OnInit {
   formSourceProfileId = '';
 
   // Action states
-  deploying: Record<string, boolean> = {};
   deleting: Record<string, boolean> = {};
   syncing = false;
+  lastSyncedInSession = false;
 
   ngOnInit(): void {
     this.loadProfiles();
@@ -732,25 +726,6 @@ export class SiteProfilesTabComponent implements OnInit {
   // Actions
   // ---------------------------------------------------------------------------
 
-  deployProfile(profile: ConfigProfile): void {
-    if (!confirm(`Deployer le profil "${profile.name}" sur le Pi ?`)) return;
-
-    this.deploying[profile.id] = true;
-    this.sitesService.deployProfile(this.siteId, profile.id).subscribe({
-      next: (response) => {
-        this.deploying[profile.id] = false;
-        this.notificationService.success(
-          `Profil "${profile.name}" deploye (v${response.version_id.substring(0, 8)})`
-        );
-        this.profileDeployed.emit();
-      },
-      error: (error) => {
-        this.deploying[profile.id] = false;
-        this.notificationService.error(ErrorExtractor.getMessage(error));
-      },
-    });
-  }
-
   confirmDelete(profile: ConfigProfile): void {
     if (this.profiles.length <= 1) {
       this.notificationService.warning('Impossible de supprimer le dernier profil');
@@ -777,6 +752,7 @@ export class SiteProfilesTabComponent implements OnInit {
     this.sitesService.syncProfiles(this.siteId).subscribe({
       next: (response) => {
         this.syncing = false;
+        this.lastSyncedInSession = true;
         this.notificationService.success(
           `${response.profile_count} profil(s) synchronise(s) vers le Pi`
         );

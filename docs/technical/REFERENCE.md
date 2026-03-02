@@ -1387,7 +1387,8 @@ _Display tracking :_
 GET    /sites/:siteId/profiles              - Liste des profils du site
 GET    /sites/:siteId/profiles/:profileId   - Détails d'un profil
 POST   /sites/:siteId/profiles              - Créer un profil
-PUT    /sites/:siteId/profiles/:profileId   - Modifier un profil
+PUT    /sites/:siteId/profiles/:profileId   - Modifier un profil (métadonnées)
+PUT    /sites/:siteId/profiles/:profileId/configuration - Modifier la config d'un profil
 DELETE /sites/:siteId/profiles/:profileId   - Supprimer (interdit si dernier)
 POST   /sites/:siteId/profiles/:profileId/deploy - Déployer un profil vers le Pi
 POST   /sites/:siteId/profiles/sync         - Sync tous les profils vers le Pi
@@ -1450,6 +1451,18 @@ POST   /sponsor-alerts/check                  - Vérification manuelle des alert
 ```
 
 > Calcule la santé de chaque paire annonceur-site (impressions 7j/30j, moyenne quotidienne, jours depuis dernière impression). Seuils configurables : `warningThresholdDaily` (défaut: 5), `criticalThresholdDays` (défaut: 3). Le check crée des alertes dans la table `alerts` pour les statuts critiques + notification Slack.
+
+**Endpoints SAFe Dashboard (auth JWT, admin/super_admin, montés sur /api/safe) :**
+
+```
+GET    /safe/portfolio           - Portfolio complet (vision, thèmes, value streams, epics, features, US, sprints, proposals)
+GET    /safe/proposals           - Liste des propositions/spikes
+GET    /safe/proposals/:id       - Détail d'une proposition
+PUT    /safe/proposals/:id       - Modifier statut d'une proposition (write-back .md)
+PUT    /safe/epics/:id/status    - Modifier statut d'un epic (write-back .md)
+```
+
+> Parse les fichiers `.md` de `docs/safe/` et `docs/proposals/` en JSON. Cache en mémoire 5 min (`SafeParserService`). Rate limit : `apiRateLimit` (100 req/min partagé). Write-back : modifications atomiques des fichiers markdown source.
 
 **Endpoints Fleet Benchmark (auth JWT, montés sur /api/benchmark) :**
 
@@ -1519,6 +1532,7 @@ Sponsor Portal: 100 req/min    (PUBLIC, par IP)
 | **Alerting**      | `alerting.service.ts`       | Alertes multi-canal (email, slack, webhook) — 19 seuils par défaut + `checkHourlyMetrics()` agrège WS disconnects, video safety timeouts, kiosk crashes et alimente `evaluateMetric()` toutes les 5 min              |
 | **AlertService**  | `alert.service.ts`          | Notifications Slack (Block Kit) — méthodes pré-construites : `siteOffline`, `siteOnline`, `lowWifiSignal` (6h cooldown), `wifiSignalRecovered`, `networkFailure`, `enterShutdownMode`, `info/warning/error/critical` |
 | **Health**        | `health.service.ts`         | Endpoints /health, /live, /ready                                                                                                                                                                                     |
+| **SAFe Parser**   | `safe-parser.service.ts`    | Parse les fichiers markdown SAFe (`docs/safe/`, `docs/proposals/`) en JSON. Cache mémoire 5 min. Write-back atomique pour modifications de statut                                                                    |
 | **Metrics**       | `metrics.service.ts`        | Export Prometheus — 32 métriques `neopro_*` (HTTP, WS, DB size/table, disconnect, kiosk, license push, deploy progress, OTA errors, WiFi config, video transitions)                                                  |
 
 ### Politique de rétention des données
@@ -1636,21 +1650,38 @@ Composant standalone pour gérer les profils de configuration d'un site :
 
 - **Grille de cards** : chaque profil affiché avec nom, ville, sport, badge « défaut »
 - **Modal CRUD** : création/édition avec choix de source (config actuelle, copie d'un profil, vide)
-- **Déploiement unitaire** : bouton deploy par profil → `POST /sites/:id/profiles/:id/deploy`
-- **Sync global** : synchronise tous les profils vers le Pi → `POST /sites/:id/profiles/sync`
+- **Sync global** : bouton « Synchroniser tout » envoie tous les profils vers le Pi → `POST /sites/:id/profiles/sync`
+- **Bandeau « non synchronisé »** : affiché quand des profils ont été modifiés mais pas encore synchronisés
 - **Suppression** : avec confirmation, impossible si dernier profil
+- **Pas de déploiement unitaire** : le concept `active_profile_id` a été retiré côté central — le Pi gère la sélection localement via la télécommande
+
+#### SiteContentTabComponent (sélecteur de profil)
+
+L'onglet Contenu/Boucles dispose d'un **sélecteur de profil** (dropdown) quand le site a des profils :
+
+- Chaque profil a sa propre configuration indépendante (sponsors, catégories, phases)
+- Le sélecteur charge la config du profil sélectionné dans l'éditeur
+- **Déployer** = sauvegarde la config dans le profil (`PUT .../configuration`) puis synchronise tous les profils au Pi
+- En mode legacy (0 profils), le déploiement utilise le flux `update_config` classique
+
+**Enrichissement obligatoire** : Avant envoi au Pi, chaque profil passe par la chaîne complète :
+
+1. `autoResolveSponsorIds()` — résolution des IDs sponsors
+2. `enrichConfigWithSecondaryVariants()` — injection des variants secondaires
+3. `enrichConfigWithAnalyticsMetadata()` — injection des métadonnées analytics (`video_id`, `advertiser_id`, `analytics_category`)
 
 **Méthodes SitesService :**
 
-| Méthode                                     | Endpoint API                                     |
-| ------------------------------------------- | ------------------------------------------------ |
-| `getProfiles(siteId)`                       | `GET /sites/:siteId/profiles`                    |
-| `getProfile(siteId, profileId)`             | `GET /sites/:siteId/profiles/:profileId`         |
-| `createProfile(siteId, payload)`            | `POST /sites/:siteId/profiles`                   |
-| `updateProfile(siteId, profileId, payload)` | `PUT /sites/:siteId/profiles/:profileId`         |
-| `deleteProfile(siteId, profileId)`          | `DELETE /sites/:siteId/profiles/:profileId`      |
-| `deployProfile(siteId, profileId)`          | `POST /sites/:siteId/profiles/:profileId/deploy` |
-| `syncProfiles(siteId)`                      | `POST /sites/:siteId/profiles/sync`              |
+| Méthode                                                 | Endpoint API                                           |
+| ------------------------------------------------------- | ------------------------------------------------------ |
+| `getProfiles(siteId)`                                   | `GET /sites/:siteId/profiles`                          |
+| `getProfile(siteId, profileId)`                         | `GET /sites/:siteId/profiles/:profileId`               |
+| `createProfile(siteId, payload)`                        | `POST /sites/:siteId/profiles`                         |
+| `updateProfile(siteId, profileId, payload)`             | `PUT /sites/:siteId/profiles/:profileId`               |
+| `updateProfileConfiguration(siteId, profileId, config)` | `PUT /sites/:siteId/profiles/:profileId/configuration` |
+| `deleteProfile(siteId, profileId)`                      | `DELETE /sites/:siteId/profiles/:profileId`            |
+| `deployProfile(siteId, profileId)`                      | `POST /sites/:siteId/profiles/:profileId/deploy`       |
+| `syncProfiles(siteId)`                                  | `POST /sites/:siteId/profiles/sync`                    |
 
 ### Dashboard Central — Analytics (navigation par onglets)
 

@@ -634,6 +634,10 @@ export class SitesService {
     return this.api.put<ConfigProfile>(`/sites/${siteId}/profiles/${profileId}`, payload);
   }
 
+  updateProfileConfiguration(siteId: string, profileId: string, configuration: SiteConfiguration): Observable<ConfigProfile> {
+    return this.api.put<ConfigProfile>(`/sites/${siteId}/profiles/${profileId}/configuration`, { configuration });
+  }
+
   deleteProfile(siteId: string, profileId: string): Observable<{ success: boolean; message: string }> {
     return this.api.delete<{ success: boolean; message: string }>(`/sites/${siteId}/profiles/${profileId}`);
   }

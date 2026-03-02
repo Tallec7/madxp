@@ -95,6 +95,7 @@
     "agencies": "Agences",
     "analyticsCategories": "Categories Analytics",
     "localConsole": "Console locale",
+    "safe": "Pilotage SAFe",
     "skipToContent": "Aller au contenu principal",
     "toggleMenu": "Basculer le menu"
   },
@@ -853,5 +854,30 @@
     "configFromProfile": "Copier depuis un autre profil",
     "configEmpty": "Commencer avec une config vide",
     "selectProfile": "Selectionner un profil a copier..."
+  },
+  "safe": {
+    "portfolio": {
+      "title": "Pilotage SAFe",
+      "epics": "Epics",
+      "features": "Features",
+      "storyPoints": "Story Points",
+      "predictability": "Predictabilite",
+      "roadmap": "Roadmap",
+      "themes": "Themes strategiques",
+      "valueStreams": "Value Streams",
+      "epicKanban": "Epic Kanban Board",
+      "piObjectives": "Objectifs PI",
+      "roam": "ROAM — Risques",
+      "proposals": "Proposals & Spikes"
+    },
+    "proposals": {
+      "title": "Proposals & Spikes",
+      "listView": "Liste",
+      "allTypes": "Tous les types",
+      "titleLabel": "Titre",
+      "status": "Statut",
+      "file": "Fichier",
+      "empty": "Aucune proposal"
+    }
   }
 }

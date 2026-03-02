@@ -12,6 +12,7 @@ import {
   getProfile,
   createProfile,
   updateProfile,
+  updateProfileConfiguration,
   deleteProfile,
   deployProfile,
   syncProfiles,
@@ -65,6 +66,18 @@ router.put(
   requireRole('super_admin', 'admin', 'operator'),
   sensitiveRateLimit,
   updateProfile
+);
+
+/**
+ * PUT /api/sites/:siteId/profiles/:profileId/configuration
+ * Met a jour uniquement la configuration d'un profil (boucles, categories, phases)
+ */
+router.put(
+  '/:siteId/profiles/:profileId/configuration',
+  authenticate,
+  requireRole('super_admin', 'admin', 'operator'),
+  sensitiveRateLimit,
+  updateProfileConfiguration
 );
 
 /**

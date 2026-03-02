@@ -16,9 +16,9 @@ npm run build:central              # Build dashboard
 cd central-server && npm run build # Compile TypeScript
 
 # Tests
-npm run test:server                # Jest (API central-server — 1592 tests)
-npm run test:smoke                 # Jest (Smoke tests — 390 tests, détecte régressions de wiring)
-npm run test:central               # Karma (Angular Dashboard — 506 tests)
+npm run test:server                # Jest (API central-server — 1941 tests)
+npm run test:smoke                 # Jest (Smoke tests — 456 tests, détecte régressions de wiring)
+npm run test:central               # Karma (Angular Dashboard — 520 tests)
 cd raspberry/server && npm test    # Jest (Socket.IO server — 71 tests)
 cd raspberry/admin && npm test     # Jest (Admin server — 148 tests)
 cd e2e && npx playwright test      # E2E
@@ -92,6 +92,8 @@ source central-server/.env && psql "$DATABASE_URL" -f central-server/src/scripts
 - Oublier `player.muted = true` dans `preloadManualVideo()` ou `player.muted = false` dans `revealPreloadedVideo()`/`cleanupPreloadState()` (sans mute, l'audio de la vidéo fuit pendant le preload invisible — ADR-034 v3.89.3, smoke test enforced)
 - Oublier `captureAndShowFreezeFrame()` dans la transition manual→manual de `preloadManualVideo()` (quand on remplace une vidéo manuelle visible par une autre, il faut un freeze-frame pour couvrir le gap — sinon la boucle apparaît brièvement — ADR-034 v3.89.3, smoke test enforced)
 - Utiliser `grep -c "pattern" || echo "0"` dans les scripts bash (`grep -c` sort `0` ET exit 1 quand count=0, puis `|| echo "0"` ajoute un second `0` → variable = `"0\n0"` → erreur arithmétique bash → faux positif dans les checks — utiliser `$(grep -c ... || true)` + `${var:-0}` — smoke test enforced)
+- Envoyer `sync_profiles` ou `deploy` depuis le central sans passer par la chaîne d'enrichissement complète (`autoResolveSponsorIds()` → `enrichConfigWithSecondaryVariants()` → `enrichConfigWithAnalyticsMetadata()` — sans enrichissement, les profils arrivent au Pi sans variants secondaires ni métadonnées analytics → slave display cassé + sponsor analytics perdues — smoke test enforced)
+- Utiliser `active_profile_id` ou `updateSiteActiveProfile()` dans le code central (concept retiré — le Pi gère la sélection du profil localement via la télécommande club-selector — smoke test enforced)
 
 ## Architecture détaillée
 

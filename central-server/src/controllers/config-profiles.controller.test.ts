@@ -39,11 +39,24 @@ jest.mock('uuid', () => ({
   v4: jest.fn(() => 'mock-uuid'),
 }));
 
+jest.mock('../services/sponsor-auto-resolution.service', () => ({
+  autoResolveSponsorIds: jest.fn().mockResolvedValue({ configuration: { sponsors: [] }, resolved: 0 }),
+}));
+
+jest.mock('../utils/config-secondary-variants', () => ({
+  enrichConfigWithSecondaryVariants: jest.fn().mockResolvedValue({ enrichedCount: 0 }),
+}));
+
+jest.mock('../utils/config-analytics-metadata', () => ({
+  enrichConfigWithAnalyticsMetadata: jest.fn().mockResolvedValue({ enrichedCount: 0 }),
+}));
+
 import {
   getProfiles,
   getProfile,
   createProfile,
   updateProfile,
+  updateProfileConfiguration,
   deleteProfile,
   deployProfile,
   syncProfiles,
@@ -334,6 +347,63 @@ describe('Config Profiles Controller', () => {
   });
 
   // --------------------------------------------------------------------------
+  // updateProfileConfiguration
+  // --------------------------------------------------------------------------
+
+  describe('updateProfileConfiguration', () => {
+    it('should update only the configuration of a profile', async () => {
+      const newConfig = { sponsors: [{ id: 's1' }], categories: [] };
+      const req = createAuthRequest({
+        params: { siteId: 'site-1', profileId: 'p1' },
+        body: { configuration: newConfig },
+      });
+      const res = createMockResponse();
+
+      (query as jest.Mock)
+        // findById
+        .mockResolvedValueOnce({
+          rows: [{ id: 'p1', site_id: 'site-1', name: 'Default', configuration: { sponsors: [] } }],
+        })
+        // update
+        .mockResolvedValueOnce({
+          rows: [{ id: 'p1', site_id: 'site-1', name: 'Default', configuration: newConfig }],
+        });
+
+      await updateProfileConfiguration(req, res);
+
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({ id: 'p1', configuration: newConfig })
+      );
+    });
+
+    it('should return 404 if profile not found', async () => {
+      const req = createAuthRequest({
+        params: { siteId: 'site-1', profileId: 'nonexistent' },
+        body: { configuration: { sponsors: [] } },
+      });
+      const res = createMockResponse();
+
+      (query as jest.Mock).mockResolvedValueOnce({ rows: [] });
+
+      await updateProfileConfiguration(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(404);
+    });
+
+    it('should return 400 if configuration missing', async () => {
+      const req = createAuthRequest({
+        params: { siteId: 'site-1', profileId: 'p1' },
+        body: {},
+      });
+      const res = createMockResponse();
+
+      await updateProfileConfiguration(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(400);
+    });
+  });
+
+  // --------------------------------------------------------------------------
   // deleteProfile
   // --------------------------------------------------------------------------
 
@@ -445,8 +515,6 @@ describe('Config Profiles Controller', () => {
         // insertVersion
         .mockResolvedValueOnce({ rows: [{ id: 'mock-uuid' }] })
         // updateSitePendingConfigVersion
-        .mockResolvedValueOnce({ rowCount: 1 })
-        // updateSiteActiveProfile
         .mockResolvedValueOnce({ rowCount: 1 })
         // findBySite (for auto-sync when > 1 profile)
         .mockResolvedValueOnce({
