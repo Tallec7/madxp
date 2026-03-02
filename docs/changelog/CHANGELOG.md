@@ -1,3 +1,9 @@
+## [3.92.1](https://github.com/Tallec7/neopro/compare/v3.92.0...v3.92.1) (2026-03-02)
+
+### Bug Fixes
+
+- **types:** add cec_available and devices_found to HeartbeatMessage.hdmiStatus ([f2b61dc](https://github.com/Tallec7/neopro/commit/f2b61dc18ac413f2fcd79a8905b60f91b5cfb20d))
+
 # [3.92.0](https://github.com/Tallec7/neopro/compare/v3.91.0...v3.92.0) (2026-03-02)
 
 ### Features
