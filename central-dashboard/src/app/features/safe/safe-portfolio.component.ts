@@ -166,17 +166,20 @@ interface KanbanColumn {
             >
               <div class="card-top-row">
                 <span class="card-id">{{ epic.id }}</span>
-                <select
-                  class="epic-status-select"
-                  [ngModel]="col.id"
-                  (ngModelChange)="onEpicStatusSelect(epic, $event, col.id)"
-                  (mousedown)="$event.stopPropagation()"
-                  (touchstart)="$event.stopPropagation()"
-                  cdkDragHandle
-                  [cdkDragHandleDisabled]="true"
-                >
-                  <option *ngFor="let s of epicStatuses" [value]="s">{{ 'safe.epicStatus.' + s | translate }}</option>
-                </select>
+                <div class="card-actions">
+                  <button class="btn-icon btn-icon-sm" (click)="openEpicEditModal(epic); $event.stopPropagation()" title="Modifier le statut">✏️</button>
+                  <select
+                    class="epic-status-select"
+                    [ngModel]="col.id"
+                    (ngModelChange)="onEpicStatusSelect(epic, $event, col.id)"
+                    (mousedown)="$event.stopPropagation()"
+                    (touchstart)="$event.stopPropagation()"
+                    cdkDragHandle
+                    [cdkDragHandleDisabled]="true"
+                  >
+                    <option *ngFor="let s of epicStatuses" [value]="s">{{ 'safe.epicStatus.' + s | translate }}</option>
+                  </select>
+                </div>
               </div>
               <div class="card-name">{{ epic.name }}</div>
               <div class="card-meta">
@@ -252,6 +255,7 @@ interface KanbanColumn {
                 <th class="sortable" (click)="sortRiskBy('probability')">P {{ getRiskSortIndicator('probability') }}</th>
                 <th class="sortable" (click)="sortRiskBy('impact')">I {{ getRiskSortIndicator('impact') }}</th>
                 <th class="sortable" (click)="sortRiskBy('owner')">{{ 'safe.portfolio.owner' | translate }} {{ getRiskSortIndicator('owner') }}</th>
+                <th></th>
               </tr>
             </thead>
             <tbody>
@@ -263,6 +267,7 @@ interface KanbanColumn {
                 <td>{{ risk.probability }}</td>
                 <td>{{ risk.impact }}</td>
                 <td>{{ risk.owner }}</td>
+                <td><button class="btn-icon" (click)="openRoamEditModal(risk)" title="Modifier le statut ROAM">✏️</button></td>
               </tr>
             </tbody>
           </table>
@@ -291,6 +296,65 @@ interface KanbanColumn {
               </tr>
             </tbody>
           </table>
+        </div>
+      </div>
+
+      <!-- ROAM Edit Modal -->
+      <div class="modal" *ngIf="showRoamModal" (click)="closeRoamModal()">
+        <div class="modal-content" (click)="$event.stopPropagation()">
+          <div class="modal-header">
+            <h2>Modifier le statut ROAM</h2>
+            <button class="modal-close" (click)="closeRoamModal()">×</button>
+          </div>
+          <div class="modal-body">
+            <div class="form-group">
+              <label>Risque</label>
+              <div class="read-only-field">{{ editingRisk?.id }} — {{ editingRisk?.title }}</div>
+            </div>
+            <div class="form-group">
+              <label for="roamStatus">Statut ROAM</label>
+              <select id="roamStatus" [(ngModel)]="roamEditForm.status" class="form-control">
+                <option value="Resolved">Resolved</option>
+                <option value="Owned">Owned</option>
+                <option value="Accepted">Accepted</option>
+                <option value="Mitigated">Mitigated</option>
+              </select>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-secondary" (click)="closeRoamModal()">Annuler</button>
+            <button class="btn btn-primary" (click)="saveRoamStatus()" [disabled]="savingRoam">
+              {{ savingRoam ? 'Enregistrement...' : 'Enregistrer' }}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Epic Edit Modal -->
+      <div class="modal" *ngIf="showEpicModal" (click)="closeEpicModal()">
+        <div class="modal-content" (click)="$event.stopPropagation()">
+          <div class="modal-header">
+            <h2>Modifier le statut Epic</h2>
+            <button class="modal-close" (click)="closeEpicModal()">×</button>
+          </div>
+          <div class="modal-body">
+            <div class="form-group">
+              <label>Epic</label>
+              <div class="read-only-field">{{ editingEpic?.id }} — {{ editingEpic?.name }}</div>
+            </div>
+            <div class="form-group">
+              <label for="epicStatus">Statut</label>
+              <select id="epicStatus" [(ngModel)]="epicEditForm.status" class="form-control">
+                <option *ngFor="let s of epicStatuses" [value]="s">{{ 'safe.epicStatus.' + s | translate }}</option>
+              </select>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-secondary" (click)="closeEpicModal()">Annuler</button>
+            <button class="btn btn-primary" (click)="saveEpicStatus()" [disabled]="savingEpic">
+              {{ savingEpic ? 'Enregistrement...' : 'Enregistrer' }}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -560,6 +624,55 @@ interface KanbanColumn {
     .skel-col-header { height: 20px; margin-bottom: 12px; }
     .skel-card { height: 70px; margin-bottom: 8px; border-radius: 8px; background: var(--neo-surface, #1e1e2e); }
 
+    /* Modal */
+    .modal {
+      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0, 0, 0, 0.5); display: flex; align-items: center;
+      justify-content: center; z-index: 1000; padding: 2rem;
+    }
+    .modal-content {
+      background: var(--neo-surface, #1e1e2e); border-radius: 12px;
+      max-width: 500px; width: 100%; max-height: 90vh; overflow-y: auto;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    }
+    .modal-header {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 1.5rem; border-bottom: 1px solid var(--neo-border, #333);
+    }
+    .modal-header h2 { margin: 0; font-size: 1.25rem; color: var(--neo-text, #fff); }
+    .modal-close {
+      background: none; border: none; font-size: 2rem; color: var(--neo-text-secondary, #999);
+      cursor: pointer; width: 32px; height: 32px; display: flex; align-items: center;
+      justify-content: center; border-radius: 4px;
+    }
+    .modal-close:hover { background: var(--neo-bg, #121220); color: var(--neo-text, #fff); }
+    .modal-body { padding: 1.5rem; }
+    .modal-footer {
+      display: flex; justify-content: flex-end; gap: 1rem;
+      padding: 1.5rem; border-top: 1px solid var(--neo-border, #333);
+    }
+    .form-group { margin-bottom: 1rem; }
+    .form-group label {
+      display: block; font-size: 13px; font-weight: 600;
+      color: var(--neo-text-secondary, #999); margin-bottom: 6px;
+    }
+    .form-control {
+      width: 100%; padding: 8px 12px; border-radius: 6px;
+      border: 1px solid var(--neo-border, #333); background: var(--neo-bg, #121220);
+      color: var(--neo-text, #fff); font-size: 14px;
+    }
+    .read-only-field {
+      padding: 8px 12px; background: var(--neo-bg, #121220);
+      border-radius: 6px; color: var(--neo-text, #fff); font-size: 14px;
+    }
+    .btn-icon {
+      background: none; border: none; cursor: pointer; padding: 4px;
+      font-size: 14px; opacity: 0.6; transition: opacity 0.2s;
+    }
+    .btn-icon:hover { opacity: 1; }
+    .btn-icon-sm { font-size: 12px; }
+    .card-actions { display: flex; align-items: center; gap: 4px; }
+
     @media (max-width: 768px) {
       .safe-portfolio { padding: 16px; }
       .kpi-grid { grid-template-columns: repeat(2, 1fr); }
@@ -582,6 +695,18 @@ export class SafePortfolioComponent implements OnInit, OnDestroy {
   sortedObjectives: SafePiObjective[] = [];
   sortedRisks: SafeRisk[] = [];
   readonly epicStatuses: EpicStatus[] = ['funnel', 'analysis', 'backlog', 'implementing', 'done'];
+
+  // ROAM edit modal
+  showRoamModal = false;
+  editingRisk: SafeRisk | null = null;
+  roamEditForm = { status: '' as string };
+  savingRoam = false;
+
+  // Epic edit modal
+  showEpicModal = false;
+  editingEpic: SafeEpic | null = null;
+  epicEditForm = { status: '' as string };
+  savingEpic = false;
 
   private objSortCol = '';
   private objSortDir: 'asc' | 'desc' = 'asc';
@@ -803,5 +928,94 @@ export class SafePortfolioComponent implements OnInit, OnDestroy {
 
   trackByName(_index: number, item: { name: string }): string {
     return item.name;
+  }
+
+  // --- ROAM Edit Modal ---
+
+  openRoamEditModal(risk: SafeRisk): void {
+    this.editingRisk = risk;
+    this.roamEditForm = { status: risk.roamStatus };
+    this.showRoamModal = true;
+    this.cdr.markForCheck();
+  }
+
+  closeRoamModal(): void {
+    this.showRoamModal = false;
+    this.editingRisk = null;
+    this.cdr.markForCheck();
+  }
+
+  saveRoamStatus(): void {
+    if (!this.editingRisk || this.savingRoam) return;
+
+    this.savingRoam = true;
+    this.cdr.markForCheck();
+
+    this.safeService.updateRiskRoamStatus(this.editingRisk.id, this.roamEditForm.status as SafeRisk['roamStatus'])
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.notif.success('Statut ROAM mis à jour');
+          this.closeRoamModal();
+          this.savingRoam = false;
+          this.refreshPortfolio();
+        },
+        error: () => {
+          this.notif.error('Erreur lors de la mise à jour du statut ROAM');
+          this.savingRoam = false;
+          this.cdr.markForCheck();
+        }
+      });
+  }
+
+  // --- Epic Edit Modal ---
+
+  openEpicEditModal(epic: SafeEpic): void {
+    this.editingEpic = epic;
+    this.epicEditForm = { status: epic.status };
+    this.showEpicModal = true;
+    this.cdr.markForCheck();
+  }
+
+  closeEpicModal(): void {
+    this.showEpicModal = false;
+    this.editingEpic = null;
+    this.cdr.markForCheck();
+  }
+
+  saveEpicStatus(): void {
+    if (!this.editingEpic || this.savingEpic) return;
+
+    this.savingEpic = true;
+    this.cdr.markForCheck();
+
+    this.safeService.updateEpicStatus(this.editingEpic.id, this.epicEditForm.status as EpicStatus)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.notif.success('Statut Epic mis à jour');
+          this.closeEpicModal();
+          this.savingEpic = false;
+          this.refreshPortfolio();
+        },
+        error: () => {
+          this.notif.error('Erreur lors de la mise à jour du statut Epic');
+          this.savingEpic = false;
+          this.cdr.markForCheck();
+        }
+      });
+  }
+
+  private refreshPortfolio(): void {
+    this.safeService.getPortfolio().pipe(takeUntil(this.destroy$)).subscribe({
+      next: (data) => {
+        this.portfolio = data;
+        this.sortedObjectives = [...data.piObjectives];
+        this.sortedRisks = [...data.risks];
+        this.computeGanttRange(data.roadmap);
+        this.buildKanban(data.epics);
+        this.cdr.markForCheck();
+      }
+    });
   }
 }

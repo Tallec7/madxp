@@ -9,12 +9,14 @@ import { Response } from 'express';
 import { AuthRequest } from '../types';
 import { safeParserService } from '../services/safe-parser.service';
 import logger from '../config/logger';
-import { EpicStatus, ProposalStatus, ProposalType, SprintStoryStatus } from '../types/safe.types';
+import { EpicStatus, ProposalStatus, ProposalType, RoamStatus, SprintStoryStatus } from '../types/safe.types';
 
 const VALID_EPIC_STATUSES: EpicStatus[] = ['funnel', 'analysis', 'backlog', 'implementing', 'done', 'partial'];
 const VALID_PROPOSAL_STATUSES: ProposalStatus[] = ['draft', 'in-review', 'approved', 'implementing', 'done'];
 const VALID_PROPOSAL_TYPES: ProposalType[] = ['prop', 'spike', 'spec'];
 const VALID_STORY_STATUSES: SprintStoryStatus[] = ['todo', 'in-progress', 'done', 'removed'];
+const VALID_ROAM_STATUSES: RoamStatus[] = ['Resolved', 'Owned', 'Accepted', 'Mitigated'];
+const VALID_STORY_PRIORITIES = ['Must', 'Should', 'Could', 'Nice'];
 
 /**
  * GET /api/safe/portfolio
@@ -127,18 +129,21 @@ export const updateEpicStatus = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    // V1: log + invalidate cache (write-back dans FEATURES.md en V2)
-    logger.info('SAFe epic status update requested', {
+    const updated = safeParserService.updateEpicStatus(id, status);
+
+    if (!updated) {
+      return res.status(404).json({ error: `Epic ${id} not found in FEATURES.md` });
+    }
+
+    logger.info('SAFe epic status updated', {
       epicId: id,
       newStatus: status,
       updatedBy: req.user?.email,
     });
 
-    safeParserService.invalidateCache();
-
     return res.json({
       success: true,
-      data: { id, status, note: 'Epic status update logged. Manual update in FEATURES.md required for V1.' },
+      data: { id, status },
     });
   } catch (error) {
     logger.error('Error updating SAFe epic status:', error);
@@ -268,5 +273,129 @@ export const deleteProposal = async (req: AuthRequest, res: Response) => {
   } catch (error) {
     logger.error('Error deleting SAFe proposal:', error);
     return res.status(500).json({ error: 'Failed to delete proposal' });
+  }
+};
+
+/**
+ * PUT /api/safe/risks/:id/roam-status
+ * Met à jour le statut ROAM d'un risque dans ROAM.md
+ */
+export const updateRiskRoamStatus = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+
+    if (!status || !VALID_ROAM_STATUSES.includes(status)) {
+      return res.status(400).json({
+        error: `Invalid ROAM status. Must be one of: ${VALID_ROAM_STATUSES.join(', ')}`,
+      });
+    }
+
+    const updated = safeParserService.updateRiskRoamStatus(id, status);
+
+    if (!updated) {
+      return res.status(404).json({ error: `Risk ${id} not found` });
+    }
+
+    logger.info('SAFe risk ROAM status updated', {
+      riskId: id,
+      newStatus: status,
+      updatedBy: req.user?.email,
+    });
+
+    return res.json({
+      success: true,
+      data: { id, status },
+    });
+  } catch (error) {
+    logger.error('Error updating SAFe risk ROAM status:', error);
+    return res.status(500).json({ error: 'Failed to update risk ROAM status' });
+  }
+};
+
+/**
+ * PUT /api/safe/proposals/:id/content
+ * Met à jour le titre et/ou contenu d'une proposal
+ */
+export const updateProposalContent = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { title, content } = req.body;
+
+    if (!title && content === undefined) {
+      return res.status(400).json({ error: 'At least one of title or content must be provided' });
+    }
+
+    if (title !== undefined && (typeof title !== 'string' || title.trim().length === 0)) {
+      return res.status(400).json({ error: 'Title must be a non-empty string' });
+    }
+
+    const updated = safeParserService.updateProposalContent(id, {
+      title: title?.trim(),
+      content,
+    });
+
+    if (!updated) {
+      return res.status(404).json({ error: `Proposal ${id} not found` });
+    }
+
+    logger.info('SAFe proposal content updated', {
+      proposalId: id,
+      updatedBy: req.user?.email,
+    });
+
+    return res.json({
+      success: true,
+      data: { id },
+    });
+  } catch (error) {
+    logger.error('Error updating SAFe proposal content:', error);
+    return res.status(500).json({ error: 'Failed to update proposal content' });
+  }
+};
+
+/**
+ * PUT /api/safe/sprints/:sprintId/stories/:storyId/fields
+ * Met à jour les story points et/ou priorité d'une story dans USER-STORIES.md
+ */
+export const updateStoryFields = async (req: AuthRequest, res: Response) => {
+  try {
+    const { storyId } = req.params;
+    const { storyPoints, priority } = req.body;
+
+    if (storyPoints === undefined && priority === undefined) {
+      return res.status(400).json({ error: 'At least one of storyPoints or priority must be provided' });
+    }
+
+    if (storyPoints !== undefined && (typeof storyPoints !== 'number' || storyPoints < 1 || storyPoints > 21)) {
+      return res.status(400).json({ error: 'storyPoints must be a number between 1 and 21' });
+    }
+
+    if (priority !== undefined && !VALID_STORY_PRIORITIES.includes(priority)) {
+      return res.status(400).json({
+        error: `Invalid priority. Must be one of: ${VALID_STORY_PRIORITIES.join(', ')}`,
+      });
+    }
+
+    const updated = safeParserService.updateStoryFields(storyId, { storyPoints, priority });
+
+    if (!updated) {
+      return res.status(404).json({ error: `Story ${storyId} not found` });
+    }
+
+    logger.info('SAFe story fields updated', {
+      storyId,
+      storyPoints,
+      priority,
+      updatedBy: req.user?.email,
+    });
+
+    return res.json({
+      success: true,
+      data: { storyId, storyPoints, priority },
+    });
+  } catch (error) {
+    logger.error('Error updating SAFe story fields:', error);
+    return res.status(500).json({ error: 'Failed to update story fields' });
   }
 };

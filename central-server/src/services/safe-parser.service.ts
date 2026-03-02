@@ -264,6 +264,152 @@ ${data.content}
     return true;
   }
 
+  updateRiskRoamStatus(riskId: string, newStatus: RoamStatus): boolean {
+    const filePath = path.join(SAFE_DIR, 'ROAM.md');
+    const content = this.readFileSafe(filePath);
+    if (!content) return false;
+
+    // Split by risk headers to find the right section
+    const riskIdEscaped = riskId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const sectionRegex = new RegExp(`(###\\s+${riskIdEscaped}\\s*:[\\s\\S]*?)(\\|\\s*\\*\\*Statut ROAM\\*\\*\\s*\\|\\s*)(.*?)(\\s*\\|)`, 'm');
+    const newContent = content.replace(sectionRegex, `$1$2${newStatus}$4`);
+
+    if (newContent === content) {
+      logger.warn('SAFe: Risk ROAM status field not found', { riskId });
+      return false;
+    }
+
+    fs.writeFileSync(filePath, newContent, 'utf-8');
+    this.invalidateCache();
+    logger.info('SAFe: Updated risk ROAM status', { riskId, newStatus });
+    return true;
+  }
+
+  updateEpicStatus(epicId: string, newStatus: EpicStatus): boolean {
+    const filePath = path.join(SAFE_DIR, 'FEATURES.md');
+    const content = this.readFileSafe(filePath);
+    if (!content) return false;
+
+    const epicIdEscaped = epicId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    // Match epic header: ### E-XX — Name [optional emoji suffix]
+    const epicHeaderRegex = new RegExp(`(###?\\s+${epicIdEscaped}\\s*—\\s*)(.+)`, 'g');
+
+    let found = false;
+    const newContent = content.replace(epicHeaderRegex, (_match, prefix: string, rest: string) => {
+      found = true;
+      // Remove existing status emojis
+      let name = rest.replace(/\s*✅\s*DONE\s*/g, '').replace(/\s*⚠️\s*(PARTIELLEMENT\s+DONE)?\s*/g, '').trim();
+
+      // Add new status emoji suffix
+      if (newStatus === 'done') {
+        name = `${name} ✅ DONE`;
+      } else if (newStatus === 'partial') {
+        name = `${name} ⚠️ PARTIELLEMENT DONE`;
+      }
+
+      return `${prefix}${name}`;
+    });
+
+    if (!found) {
+      logger.warn('SAFe: Epic header not found for status update', { epicId });
+      return false;
+    }
+
+    fs.writeFileSync(filePath, newContent, 'utf-8');
+    this.invalidateCache();
+    logger.info('SAFe: Updated epic status in FEATURES.md', { epicId, newStatus });
+    return true;
+  }
+
+  updateProposalContent(id: string, data: { title?: string; content?: string }): boolean {
+    const proposals = this.getProposals();
+    const proposal = proposals.find(p => p.id === id);
+    if (!proposal) return false;
+
+    const fullPath = path.resolve(PROPOSALS_DIR, proposal.filePath);
+    let fileContent = this.readFileSafe(fullPath);
+    if (!fileContent) return false;
+
+    // Update title in the markdown header: # PROP-XXX — Title
+    if (data.title) {
+      const idEscaped = id.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const titleRegex = new RegExp(`(#\\s+${idEscaped}\\s*—\\s*).+`);
+      fileContent = fileContent.replace(titleRegex, `$1${data.title}`);
+    }
+
+    // Update content: everything after the metadata block (> **...**\n lines)
+    if (data.content !== undefined) {
+      // Find end of metadata block (lines starting with >)
+      const lines = fileContent.split('\n');
+      let metaEndIndex = -1;
+      let inMeta = false;
+
+      for (let i = 0; i < lines.length; i++) {
+        if (lines[i].startsWith('#')) {
+          inMeta = true;
+          continue;
+        }
+        if (inMeta && lines[i].startsWith('>')) {
+          metaEndIndex = i;
+          continue;
+        }
+        if (inMeta && metaEndIndex >= 0 && lines[i].trim() === '') {
+          metaEndIndex = i;
+          break;
+        }
+      }
+
+      if (metaEndIndex >= 0) {
+        const metaPart = lines.slice(0, metaEndIndex + 1).join('\n');
+        fileContent = `${metaPart}\n\n${data.content}\n`;
+      }
+    }
+
+    fs.writeFileSync(fullPath, fileContent, 'utf-8');
+
+    // Rename file if title changed (slug in filename)
+    if (data.title) {
+      const newSlug = data.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-+$/g, '');
+      const newFilename = `${id}-${newSlug}.md`;
+      if (newFilename !== proposal.filePath) {
+        const newPath = path.resolve(PROPOSALS_DIR, newFilename);
+        fs.renameSync(fullPath, newPath);
+      }
+    }
+
+    this.invalidateCache();
+    logger.info('SAFe: Updated proposal content', { id, titleChanged: !!data.title, contentChanged: data.content !== undefined });
+    return true;
+  }
+
+  updateStoryFields(storyId: string, data: { storyPoints?: number; priority?: string }): boolean {
+    const filePath = path.join(SAFE_DIR, 'USER-STORIES.md');
+    const content = this.readFileSafe(filePath);
+    if (!content) return false;
+
+    const storyEscaped = storyId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    // Row format: | US-XX.X.X | F-XX.X | Description | SP | Sprint | Priorité | Statut |
+    const rowRegex = new RegExp(`(\\|\\s*${storyEscaped}\\s*\\|\\s*F-[\\d.]+\\s*\\|[^|]+\\|\\s*)(\\d+)(\\s*\\|\\s*\\S+(?:\\s+\\S+)?\\s*\\|\\s*)(\\S+)(\\s*\\|[^|]+\\|)`, 'g');
+
+    let found = false;
+    const newContent = content.replace(rowRegex, (_match, pre: string, sp: string, mid: string, prio: string, post: string) => {
+      found = true;
+      const newSp = data.storyPoints !== undefined ? String(data.storyPoints) : sp;
+      const newPrio = data.priority !== undefined ? data.priority : prio;
+      return `${pre}${newSp}${mid}${newPrio}${post}`;
+    });
+
+    if (!found) {
+      logger.warn('SAFe: Story row not found for fields update', { storyId });
+      return false;
+    }
+
+    fs.writeFileSync(filePath, newContent, 'utf-8');
+    this.invalidateCache();
+    logger.info('SAFe: Updated story fields', { storyId, ...data });
+    return true;
+  }
+
   invalidateCache(): void {
     this.portfolioCache = null;
     this.proposalsCache = null;

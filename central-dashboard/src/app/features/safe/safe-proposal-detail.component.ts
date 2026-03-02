@@ -13,6 +13,7 @@ import {
   inject,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
@@ -28,7 +29,7 @@ import { ConfirmDialogService } from '../../core/services/confirm-dialog.service
 @Component({
   selector: 'app-safe-proposal-detail',
   standalone: true,
-  imports: [CommonModule, RouterModule, TranslateModule],
+  imports: [CommonModule, FormsModule, RouterModule, TranslateModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="proposal-detail" *ngIf="proposal; else skeleton">
@@ -54,6 +55,7 @@ import { ConfirmDialogService } from '../../core/services/confirm-dialog.service
                 {{ 'safe.proposalStatus.' + s | translate }}
               </option>
             </select>
+            <button class="btn-edit" (click)="openEditModal()">✏️</button>
             <button class="btn-delete" (click)="deleteProposal()">🗑</button>
           </div>
         </div>
@@ -80,6 +82,36 @@ import { ConfirmDialogService } from '../../core/services/confirm-dialog.service
         <div class="markdown-content" [innerHTML]="renderedContent"></div>
       </div>
 
+    </div>
+
+    <!-- Edit Modal -->
+    <div class="modal" *ngIf="showEditModal" (click)="closeEditModal()">
+      <div class="modal-content" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <h3>Modifier la proposal</h3>
+          <button class="modal-close" (click)="closeEditModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label>ID</label>
+            <div class="read-only-field">{{ proposal?.id }}</div>
+          </div>
+          <div class="form-group">
+            <label>Titre</label>
+            <input type="text" class="form-control" [(ngModel)]="editForm.title">
+          </div>
+          <div class="form-group">
+            <label>Contenu (Markdown)</label>
+            <textarea class="form-control content-textarea" [(ngModel)]="editForm.content" rows="15"></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" (click)="closeEditModal()" [disabled]="savingEdit">Annuler</button>
+          <button class="btn btn-primary" (click)="saveEdit()" [disabled]="savingEdit">
+            {{ savingEdit ? 'Enregistrement...' : 'Enregistrer' }}
+          </button>
+        </div>
+      </div>
     </div>
 
     <!-- Skeleton Loading -->
@@ -157,6 +189,12 @@ import { ConfirmDialogService } from '../../core/services/confirm-dialog.service
     .status-select.done { border-color: #2e7d32; }
 
     .status-control { display: flex; align-items: center; gap: 8px; }
+    .btn-edit {
+      background: transparent; border: 1px solid var(--neo-border, #333); color: var(--neo-text-secondary, #999);
+      padding: 6px 10px; border-radius: 8px; cursor: pointer; font-size: 15px;
+      transition: background 0.2s, border-color 0.2s;
+    }
+    .btn-edit:hover { background: var(--neo-hover, #2a2a3e); border-color: var(--neo-primary, #4f8cff); color: var(--neo-text, #fff); }
     .btn-delete {
       background: transparent; border: 1px solid #c6282850; color: #ef5350;
       padding: 6px 10px; border-radius: 8px; cursor: pointer; font-size: 15px;
@@ -236,6 +274,58 @@ import { ConfirmDialogService } from '../../core/services/confirm-dialog.service
       50% { opacity: 0.7; }
     }
 
+    /* Modal */
+    .modal {
+      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.6); z-index: 1000;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .modal-content {
+      background: var(--neo-surface, #1e1e2e); border-radius: 12px;
+      width: 90%; max-width: 700px; max-height: 90vh; overflow-y: auto;
+      border: 1px solid var(--neo-border, #333);
+    }
+    .modal-header {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 16px 20px; border-bottom: 1px solid var(--neo-border, #333);
+    }
+    .modal-header h3 { margin: 0; font-size: 16px; color: var(--neo-text, #fff); }
+    .modal-close {
+      background: none; border: none; color: var(--neo-text-secondary, #999);
+      font-size: 22px; cursor: pointer; padding: 0 4px; line-height: 1;
+    }
+    .modal-close:hover { color: var(--neo-text, #fff); }
+    .modal-body { padding: 20px; }
+    .modal-footer {
+      display: flex; justify-content: flex-end; gap: 8px;
+      padding: 16px 20px; border-top: 1px solid var(--neo-border, #333);
+    }
+    .form-group { margin-bottom: 16px; }
+    .form-group label {
+      display: block; font-size: 12px; color: var(--neo-text-secondary, #999);
+      margin-bottom: 6px; text-transform: uppercase; font-weight: 600;
+    }
+    .form-control {
+      width: 100%; padding: 8px 12px; border-radius: 8px;
+      background: var(--neo-bg, #121220); color: var(--neo-text, #fff);
+      border: 1px solid var(--neo-border, #333); font-size: 14px;
+      box-sizing: border-box;
+    }
+    .form-control:focus { outline: none; border-color: var(--neo-primary, #4f8cff); }
+    .content-textarea {
+      font-family: 'Fira Code', 'Consolas', monospace; font-size: 13px;
+      line-height: 1.5; resize: vertical; min-height: 200px;
+    }
+    .read-only-field {
+      padding: 8px 12px; background: var(--neo-bg, #121220);
+      border-radius: 8px; color: var(--neo-text-secondary, #999);
+      font-size: 14px; border: 1px solid transparent;
+    }
+    .btn { padding: 8px 16px; border-radius: 8px; font-size: 13px; cursor: pointer; border: none; }
+    .btn-secondary { background: var(--neo-bg, #121220); color: var(--neo-text, #fff); border: 1px solid var(--neo-border, #333); }
+    .btn-primary { background: var(--neo-primary, #4f8cff); color: #fff; }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
     @media (max-width: 768px) {
       .proposal-detail { padding: 16px; }
       .header-main { flex-direction: column; }
@@ -256,6 +346,11 @@ export class SafeProposalDetailComponent implements OnInit, OnDestroy {
   proposal: SafeProposal | null = null;
   renderedContent: SafeHtml = '';
   statuses: ProposalStatus[] = ['draft', 'in-review', 'approved', 'implementing', 'done'];
+
+  // Edit modal state
+  showEditModal = false;
+  editForm = { title: '', content: '' };
+  savingEdit = false;
 
   ngOnInit(): void {
     const id = this.route.snapshot.paramMap.get('id');
@@ -342,6 +437,76 @@ export class SafeProposalDetailComponent implements OnInit, OnDestroy {
         },
         error: () => {
           this.notif.error(this.translate.instant('safe.proposals.deleteError'));
+        }
+      });
+  }
+
+  openEditModal(): void {
+    if (!this.proposal) return;
+    this.editForm = {
+      title: this.proposal.title,
+      content: this.proposal.content,
+    };
+    this.showEditModal = true;
+    this.cdr.markForCheck();
+  }
+
+  closeEditModal(): void {
+    this.showEditModal = false;
+    this.cdr.markForCheck();
+  }
+
+  saveEdit(): void {
+    if (!this.proposal || this.savingEdit) return;
+
+    const data: { title?: string; content?: string } = {};
+    if (this.editForm.title !== this.proposal.title) {
+      data.title = this.editForm.title;
+    }
+    if (this.editForm.content !== this.proposal.content) {
+      data.content = this.editForm.content;
+    }
+
+    if (!data.title && data.content === undefined) {
+      this.closeEditModal();
+      return;
+    }
+
+    this.savingEdit = true;
+    this.cdr.markForCheck();
+
+    this.safeService.updateProposalContent(this.proposal.id, data)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.notif.success('Proposal mise à jour');
+          this.savingEdit = false;
+          this.showEditModal = false;
+          // Refresh proposal data
+          this.refreshProposal();
+        },
+        error: () => {
+          this.notif.error('Erreur lors de la mise à jour');
+          this.savingEdit = false;
+          this.cdr.markForCheck();
+        }
+      });
+  }
+
+  private refreshProposal(): void {
+    if (!this.proposal) return;
+    this.safeService.getProposal(this.proposal.id)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (data) => {
+          this.proposal = data;
+          this.renderedContent = this.sanitizer.bypassSecurityTrustHtml(
+            this.renderMarkdown(data.content)
+          );
+          this.cdr.markForCheck();
+        },
+        error: () => {
+          this.cdr.markForCheck();
         }
       });
   }

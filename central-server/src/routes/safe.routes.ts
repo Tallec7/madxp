@@ -38,4 +38,13 @@ router.get('/sprints', authenticate, requireRole('admin'), safeController.getSpr
 // Mise à jour du statut d'une story dans un sprint
 router.put('/sprints/:sprintId/stories/:storyId/status', authenticate, requireRole('admin'), safeController.updateStoryStatus);
 
+// Mise à jour des champs d'une story (SP, priorité)
+router.put('/sprints/:sprintId/stories/:storyId/fields', authenticate, requireRole('admin'), safeController.updateStoryFields);
+
+// Mise à jour du statut ROAM d'un risque
+router.put('/risks/:id/roam-status', authenticate, requireRole('admin'), safeController.updateRiskRoamStatus);
+
+// Mise à jour du contenu d'une proposal (titre + markdown)
+router.put('/proposals/:id/content', authenticate, requireRole('admin'), safeController.updateProposalContent);
+
 export default router;

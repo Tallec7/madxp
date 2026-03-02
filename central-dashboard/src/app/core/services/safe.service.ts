@@ -219,4 +219,22 @@ export class SafeService {
       map(() => void 0)
     );
   }
+
+  updateRiskRoamStatus(id: string, status: RoamStatus): Observable<void> {
+    return this.api.put<ApiResponse<void>>(`/safe/risks/${id}/roam-status`, { status }).pipe(
+      map(() => void 0)
+    );
+  }
+
+  updateProposalContent(id: string, data: { title?: string; content?: string }): Observable<void> {
+    return this.api.put<ApiResponse<void>>(`/safe/proposals/${id}/content`, data).pipe(
+      map(() => void 0)
+    );
+  }
+
+  updateStoryFields(sprintId: string, storyId: string, data: { storyPoints?: number; priority?: string }): Observable<void> {
+    return this.api.put<ApiResponse<void>>(`/safe/sprints/${sprintId}/stories/${storyId}/fields`, data).pipe(
+      map(() => void 0)
+    );
+  }
 }

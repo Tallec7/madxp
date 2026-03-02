@@ -130,6 +130,7 @@ interface FeatureGroup {
                 <th>SP</th>
                 <th>{{ 'safe.sprints.priority' | translate }}</th>
                 <th>{{ 'safe.proposals.status' | translate }}</th>
+                <th></th>
               </tr>
             </thead>
             <tbody>
@@ -148,6 +149,7 @@ interface FeatureGroup {
                     <option *ngFor="let s of storyStatuses" [value]="s">{{ 'safe.storyStatus.' + s | translate }}</option>
                   </select>
                 </td>
+                <td><button class="btn-icon" (click)="openStoryEditModal(story)">✏️</button></td>
               </tr>
             </tbody>
           </table>
@@ -159,6 +161,38 @@ interface FeatureGroup {
         <p>{{ 'safe.sprints.empty' | translate }}</p>
       </div>
 
+    </div>
+
+    <!-- Story Edit Modal -->
+    <div class="modal" *ngIf="showStoryEditModal" (click)="closeStoryEditModal()">
+      <div class="modal-content" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <h3>Modifier la story</h3>
+          <button class="modal-close" (click)="closeStoryEditModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label>Story</label>
+            <div class="read-only-field">{{ editingStory?.id }} — {{ editingStory?.name }}</div>
+          </div>
+          <div class="form-group">
+            <label>Story Points (1-21)</label>
+            <input type="number" class="form-control" [(ngModel)]="storyEditForm.storyPoints" min="1" max="21">
+          </div>
+          <div class="form-group">
+            <label>Priorité</label>
+            <select class="form-control" [(ngModel)]="storyEditForm.priority">
+              <option *ngFor="let p of priorities" [value]="p">{{ p }}</option>
+            </select>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-cancel" (click)="closeStoryEditModal()" [disabled]="savingStoryEdit">Annuler</button>
+          <button class="btn btn-save" (click)="saveStoryEdit()" [disabled]="savingStoryEdit">
+            {{ savingStoryEdit ? 'Enregistrement...' : 'Enregistrer' }}
+          </button>
+        </div>
+      </div>
     </div>
 
     <!-- Skeleton -->
@@ -332,6 +366,59 @@ interface FeatureGroup {
     .skel-progress { height: 24px; margin-bottom: 12px; }
     .skel-table-row { height: 36px; margin-bottom: 6px; }
 
+    /* Edit button */
+    .btn-icon {
+      background: none; border: none; cursor: pointer; font-size: 14px;
+      padding: 2px 6px; border-radius: 4px; opacity: 0.5;
+      transition: opacity 0.2s;
+    }
+    .btn-icon:hover { opacity: 1; }
+
+    /* Modal */
+    .modal {
+      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.6); z-index: 1000;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .modal-content {
+      background: var(--neo-surface, #1e1e2e); border-radius: 12px;
+      width: 90%; max-width: 480px; border: 1px solid var(--neo-border, #333);
+    }
+    .modal-header {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 16px 20px; border-bottom: 1px solid var(--neo-border, #333);
+    }
+    .modal-header h3 { margin: 0; font-size: 16px; color: var(--neo-text, #fff); }
+    .modal-close {
+      background: none; border: none; color: var(--neo-text-secondary, #999);
+      font-size: 22px; cursor: pointer; padding: 0 4px; line-height: 1;
+    }
+    .modal-close:hover { color: var(--neo-text, #fff); }
+    .modal-body { padding: 20px; }
+    .modal-footer {
+      display: flex; justify-content: flex-end; gap: 8px;
+      padding: 16px 20px; border-top: 1px solid var(--neo-border, #333);
+    }
+    .form-group { margin-bottom: 16px; }
+    .form-group label {
+      display: block; font-size: 12px; color: var(--neo-text-secondary, #999);
+      margin-bottom: 6px; text-transform: uppercase; font-weight: 600;
+    }
+    .form-control {
+      width: 100%; padding: 8px 12px; border-radius: 8px;
+      background: var(--neo-bg, #121220); color: var(--neo-text, #fff);
+      border: 1px solid var(--neo-border, #333); font-size: 14px;
+      box-sizing: border-box;
+    }
+    .form-control:focus { outline: none; border-color: var(--neo-primary, #4f8cff); }
+    .read-only-field {
+      padding: 8px 12px; background: var(--neo-bg, #121220);
+      border-radius: 8px; color: var(--neo-text-secondary, #999); font-size: 14px;
+    }
+    .btn-cancel { background: var(--neo-bg, #121220); color: var(--neo-text, #fff); border: 1px solid var(--neo-border, #333); }
+    .btn-save { background: var(--neo-primary, #4f8cff); color: #fff; border: none; }
+    .btn-save:disabled { opacity: 0.5; cursor: not-allowed; }
+
     @media (max-width: 768px) {
       .sprint-tracker { padding: 16px; }
       .kpi-grid { grid-template-columns: repeat(2, 1fr); }
@@ -356,6 +443,13 @@ export class SafeSprintTrackerComponent implements OnInit, OnDestroy {
   featureGroups: FeatureGroup[] = [];
 
   readonly storyStatuses: SprintStoryStatus[] = ['todo', 'in-progress', 'done', 'removed'];
+  readonly priorities = ['Must', 'Should', 'Could', 'Nice'];
+
+  // Story edit modal state
+  showStoryEditModal = false;
+  editingStory: SafeSprintStory | null = null;
+  storyEditForm = { storyPoints: 0, priority: '' };
+  savingStoryEdit = false;
 
   // KPI computed values
   completionPercent = 0;
@@ -428,6 +522,65 @@ export class SafeSprintTrackerComponent implements OnInit, OnDestroy {
           this.recomputeKpis();
           this.cdr.markForCheck();
           this.notif.error(this.translate.instant('safe.sprints.statusError'));
+        }
+      });
+  }
+
+  openStoryEditModal(story: SafeSprintStory): void {
+    this.editingStory = story;
+    this.storyEditForm = {
+      storyPoints: story.storyPoints,
+      priority: story.priority,
+    };
+    this.showStoryEditModal = true;
+    this.cdr.markForCheck();
+  }
+
+  closeStoryEditModal(): void {
+    this.showStoryEditModal = false;
+    this.editingStory = null;
+    this.cdr.markForCheck();
+  }
+
+  saveStoryEdit(): void {
+    if (!this.editingStory || !this.selectedSprint || this.savingStoryEdit) return;
+
+    const data: { storyPoints?: number; priority?: string } = {};
+    if (this.storyEditForm.storyPoints !== this.editingStory.storyPoints) {
+      data.storyPoints = this.storyEditForm.storyPoints;
+    }
+    if (this.storyEditForm.priority !== this.editingStory.priority) {
+      data.priority = this.storyEditForm.priority;
+    }
+
+    if (data.storyPoints === undefined && data.priority === undefined) {
+      this.closeStoryEditModal();
+      return;
+    }
+
+    this.savingStoryEdit = true;
+    this.cdr.markForCheck();
+
+    const storyRef = this.editingStory;
+    this.safeService.updateStoryFields(this.selectedSprint.id, storyRef.id, data)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          // Optimistic update
+          if (data.storyPoints !== undefined) storyRef.storyPoints = data.storyPoints;
+          if (data.priority !== undefined) storyRef.priority = data.priority;
+          this.buildFeatureGroups();
+          this.recomputeKpis();
+          this.notif.success('Story mise à jour');
+          this.savingStoryEdit = false;
+          this.showStoryEditModal = false;
+          this.editingStory = null;
+          this.cdr.markForCheck();
+        },
+        error: () => {
+          this.notif.error('Erreur lors de la mise à jour');
+          this.savingStoryEdit = false;
+          this.cdr.markForCheck();
         }
       });
   }
