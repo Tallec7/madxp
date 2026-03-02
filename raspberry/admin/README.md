@@ -32,9 +32,10 @@ Le mode est persisté dans le navigateur (localStorage). Toggle accessible dans 
 
 ### 📊 Dashboard
 
-- **Mode club** : carte santé système (🟢 vert / ⚠️ jaune / 🔴 rouge) basée sur les seuils CPU, RAM, température, stockage + uptime
+- **Mode club** : carte santé système (🟢 vert / ⚠️ jaune / 🔴 rouge) basée sur les seuils CPU, RAM, température, stockage + uptime, avec compteurs vidéos/sponsors
 - **Mode technicien** : monitoring système complet en temps réel (CPU, Mémoire, Température, Stockage, Services, Uptime)
 - **Widget Sync Status** (les deux modes) : état de connexion cloud, dernière synchronisation, commandes en attente, erreurs dead-letter. Historique récent expandable en mode tech
+- **Indicateur Socket.IO temps réel** : connexion au serveur Pi (:3000), rafraîchissement automatique du dashboard/vidéos/sponsors sur événements (`config_updated`, `license_update`)
 - Rafraîchissement automatique toutes les 5s
 
 ### 🎬 Vidéos
@@ -94,6 +95,9 @@ Chaque modification met automatiquement à jour `configuration.json`.
 - Logs Nginx
 - Logs système
 - Actualisation en temps réel
+- **Colorisation** : erreurs en rouge, warnings en ambre, debug atténué
+- **Filtre texte** : recherche avec surlignage des occurrences
+- **Nombre de lignes configurable** : ajustable via sélecteur
 
 ### ⚙️ Système
 
@@ -235,6 +239,13 @@ sudo systemctl start neopro-admin
   { "success": true, "stats": { "total": 10, "generated": 3, "skipped": 7, "failed": 0 } }
   ```
 
+#### Authentification
+
+- `GET /api/auth/status` - Statut d'authentification + token CSRF
+- `POST /api/auth/login` - Connexion (crée session + cookies CSRF)
+- `POST /api/auth/logout` - Déconnexion (supprime session)
+- `POST /api/auth/change-password` - Changer le mot de passe admin (ancien + nouveau requis)
+
 #### Logs
 
 - `GET /api/logs/:service?lines=100` - Récupérer logs
@@ -313,20 +324,26 @@ admin/
 │   ├── email.js             #   Config email, test, envoi
 │   └── cache.js             #   Stats cache, vidage
 │
-├── __tests__/               # Tests unitaires (Jest, 60%+ couverture)
+├── .eslintrc.json           # Config ESLint frontend (lint:frontend)
+│
+├── __tests__/               # Tests unitaires (Jest, 194 tests, 60%+ couverture)
 │   ├── helpers.test.js
 │   ├── errors.test.js
 │   ├── configuration.service.test.js
 │   ├── system.service.test.js
 │   ├── network.service.test.js
 │   ├── video-processing.service.test.js
-│   └── backup.service.test.js
+│   ├── backup.service.test.js
+│   └── auth.routes.test.js  #   Sessions, CSRF, rate limiting, change-password (46 tests)
 │
 └── public/                  # Frontend (HTML/CSS/JS statique)
     ├── index.html
-    ├── styles.css
-    ├── app.js               # Fichier concaténé (build output)
-    └── modules/             # Sources modulaires (voir MODULES.md)
+    ├── styles.css            # Fichier concaténé (build output depuis styles/)
+    ├── app.js                # Fichier concaténé (build output depuis modules/)
+    ├── styles/               # Sources CSS modulaires (10 fichiers → build-admin.sh → styles.css)
+    └── modules/              # Sources JS modulaires (voir MODULES.md)
+        └── core/
+            └── realtime.js   #   Connexion Socket.IO au serveur Pi (:3000), auto-refresh
 ```
 
 ### Architecture
@@ -343,9 +360,12 @@ HTTP Request → Route (thin controller) → Service (business logic) → helper
 
 ### Tests
 
+194 tests Jest couvrant les services, routes et authentification (sessions, CSRF, rate limiting, changement de mot de passe).
+
 ```bash
-npm test              # Lance les tests Jest
+npm test              # Lance les 194 tests Jest
 npm run test:coverage # Tests avec rapport de couverture
+npm run lint:frontend # ESLint sur le code frontend (modules/)
 ```
 
 ## Dépannage
@@ -386,8 +406,11 @@ sudo systemctl edit neopro-admin
 
 ## Sécurité
 
+- **Authentification par session** : login obligatoire, cookie `admin_session` HttpOnly (expiration 24h)
+- **Protection CSRF** : double cookie pattern (`admin_session` HttpOnly + `admin_csrf` JS-readable), header `X-CSRF-Token` requis sur toutes les mutations
+- **Rate limiting** : 5 tentatives de login échouées → verrouillage 15 min par IP (Map en mémoire)
+- **Changement de mot de passe** : route `POST /api/auth/change-password` + formulaire dans l'onglet Système
 - Accessible uniquement sur réseau local
-- Pas d'authentification par défaut (réseau isolé)
 - Validations des uploads (type, taille)
 - Confirmations pour actions critiques
 - Backups automatiques avant mise à jour
@@ -398,7 +421,7 @@ Pour toute question : support@neopro.fr
 
 ---
 
-**Version :** 3.23.0
+**Version :** 3.93.0
 **Licence :** MIT
 **Auteur :** Neopro / Kalon Partners
-**Dernière mise à jour :** 14 février 2026
+**Dernière mise à jour :** 2 mars 2026

@@ -166,7 +166,7 @@ async function saveCategoryEdit(index) {
         } else {
             showNotification('Erreur: ' + data.error, 'error');
         }
-    } catch (error) {
+    } catch (_error) {
         showNotification('Erreur lors de la sauvegarde', 'error');
     }
 }
@@ -187,7 +187,7 @@ async function saveCategoryToServer(category) {
         } else {
             showNotification('Erreur: ' + data.error, 'error');
         }
-    } catch (error) {
+    } catch (_error) {
         showNotification('Erreur lors de la création', 'error');
     }
 }
@@ -219,7 +219,7 @@ async function deleteCategory(categoryId) {
         } else {
             showNotification('Erreur: ' + data.error, 'error');
         }
-    } catch (error) {
+    } catch (_error) {
         showNotification('Erreur lors de la suppression', 'error');
     }
 }
@@ -252,7 +252,7 @@ async function saveSubCategoryToServer(categoryId, subCategory) {
         } else {
             showNotification('Erreur: ' + data.error, 'error');
         }
-    } catch (error) {
+    } catch (_error) {
         showNotification('Erreur lors de la création', 'error');
     }
 }
@@ -284,7 +284,7 @@ async function deleteSubCategory(categoryId, subIndex) {
         } else {
             showNotification('Erreur: ' + data.error, 'error');
         }
-    } catch (error) {
+    } catch (_error) {
         showNotification('Erreur lors de la suppression', 'error');
     }
 }

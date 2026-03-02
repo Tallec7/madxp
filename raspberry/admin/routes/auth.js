@@ -22,6 +22,9 @@ const router = express.Router();
 
 const SESSION_DURATION = 8 * 60 * 60 * 1000; // 8 hours
 const SESSION_FILE = path.join(NEOPRO_DIR, 'data', 'admin-sessions.json');
+const MAX_LOGIN_ATTEMPTS = 5;
+const LOGIN_LOCKOUT_MS = 15 * 60 * 1000; // 15 minutes
+const loginAttempts = new Map();
 const sessions = new Map();
 
 async function loadSessions() {
@@ -57,14 +60,16 @@ function generateSessionToken() {
 
 function createSession() {
   const token = generateSessionToken();
+  const csrfToken = crypto.randomBytes(16).toString('hex');
   const session = {
     createdAt: Date.now(),
     expiresAt: Date.now() + SESSION_DURATION,
     lastActivity: Date.now(),
+    csrfToken,
   };
   sessions.set(token, session);
   saveSessions(); // Async, don't wait
-  return token;
+  return { token, csrfToken };
 }
 
 function validateSession(token) {
@@ -83,6 +88,39 @@ function validateSession(token) {
 function destroySession(token) {
   sessions.delete(token);
   saveSessions();
+}
+
+// =============================================================================
+// RATE LIMITING
+// =============================================================================
+
+function checkRateLimit(ip) {
+  const entry = loginAttempts.get(ip);
+  if (!entry) return { allowed: true };
+  if (entry.lockedUntil && Date.now() < entry.lockedUntil) {
+    const remainingMs = entry.lockedUntil - Date.now();
+    const remainingMin = Math.ceil(remainingMs / 60000);
+    return { allowed: false, remainingMin };
+  }
+  if (entry.lockedUntil && Date.now() >= entry.lockedUntil) {
+    loginAttempts.delete(ip);
+    return { allowed: true };
+  }
+  return { allowed: true };
+}
+
+function recordFailedAttempt(ip) {
+  const entry = loginAttempts.get(ip) || { count: 0, firstAttempt: Date.now() };
+  entry.count += 1;
+  if (entry.count >= MAX_LOGIN_ATTEMPTS) {
+    entry.lockedUntil = Date.now() + LOGIN_LOCKOUT_MS;
+    console.log('[auth] IP ' + ip + ' locked out for 15 minutes after ' + entry.count + ' failed attempts');
+  }
+  loginAttempts.set(ip, entry);
+}
+
+function clearLoginAttempts(ip) {
+  loginAttempts.delete(ip);
 }
 
 // =============================================================================
@@ -140,6 +178,32 @@ const requireAuth = async (req, res, next) => {
     return res.redirect('/login');
   }
 
+  next();
+};
+
+// =============================================================================
+// CSRF PROTECTION
+// =============================================================================
+
+function validateCsrf(req) {
+  const sessionToken = req.cookies?.admin_session;
+  const session = sessions.get(sessionToken);
+  if (!session) return false;
+  const csrfFromHeader = req.headers['x-csrf-token'];
+  return csrfFromHeader && csrfFromHeader === session.csrfToken;
+}
+
+const requireCsrf = (req, res, next) => {
+  if (req.method === 'GET' || req.method === 'OPTIONS' || req.method === 'HEAD') return next();
+  // Skip CSRF for localhost (sync-agent)
+  const clientIp = req.ip || req.socket?.remoteAddress || '';
+  const isLocal = clientIp === '127.0.0.1' || clientIp === '::1' || clientIp.includes('127.0.0.1') || clientIp === '::ffff:7f00:1';
+  if (isLocal) return next();
+  // Skip CSRF for auth routes (login doesn't have a token yet)
+  if (req.path === '/api/auth/login' || req.path === '/api/auth/logout') return next();
+  if (!validateCsrf(req)) {
+    return res.status(403).json({ error: 'CSRF token invalide', code: 'CSRF_INVALID' });
+  }
   next();
 };
 
@@ -377,6 +441,16 @@ router.post('/api/auth/login', async (req, res) => {
     return res.status(400).json({ success: false, error: 'Mot de passe requis' });
   }
 
+  // Rate limiting
+  const clientIp = req.ip || req.socket?.remoteAddress || '0.0.0.0';
+  const rateCheck = checkRateLimit(clientIp);
+  if (!rateCheck.allowed) {
+    return res.status(429).json({
+      success: false,
+      error: 'Trop de tentatives. Réessayez dans ' + rateCheck.remainingMin + ' minute(s).',
+    });
+  }
+
   const adminPassword = await getAdminPassword();
 
   if (!adminPassword) {
@@ -387,15 +461,24 @@ router.post('/api/auth/login', async (req, res) => {
   }
 
   if (password !== adminPassword) {
+    recordFailedAttempt(clientIp);
     console.log('[auth] Failed login attempt');
     return res.status(401).json({ success: false, error: 'Mot de passe incorrect' });
   }
 
-  const token = createSession();
+  clearLoginAttempts(clientIp);
+  const { token, csrfToken } = createSession();
 
   const isSecure = req.secure || req.headers['x-forwarded-proto'] === 'https';
   res.cookie('admin_session', token, {
     httpOnly: true,
+    secure: isSecure,
+    sameSite: 'lax',
+    maxAge: SESSION_DURATION,
+    path: '/',
+  });
+  res.cookie('admin_csrf', csrfToken, {
+    httpOnly: false,
     secure: isSecure,
     sameSite: 'lax',
     maxAge: SESSION_DURATION,
@@ -420,8 +503,49 @@ router.post('/api/auth/logout', (req, res) => {
 router.get('/api/auth/status', (req, res) => {
   const token = req.cookies?.admin_session;
   const authenticated = validateSession(token);
-  res.json({ authenticated });
+  const session = sessions.get(token);
+  res.json({ authenticated, csrfToken: session?.csrfToken || null });
 });
+
+// Password change API
+router.post('/api/auth/change-password', async (req, res) => {
+  const { currentPassword, newPassword } = req.body;
+
+  if (!currentPassword || !newPassword) {
+    return res.status(400).json({ success: false, error: 'Mot de passe actuel et nouveau requis' });
+  }
+
+  if (newPassword.length < 4) {
+    return res.status(400).json({ success: false, error: 'Le nouveau mot de passe doit faire au moins 4 caractères' });
+  }
+
+  const adminPassword = await getAdminPassword();
+  if (currentPassword !== adminPassword) {
+    return res.status(401).json({ success: false, error: 'Mot de passe actuel incorrect' });
+  }
+
+  try {
+    const configPath = path.join(NEOPRO_DIR, 'webapp', 'configuration.json');
+    const data = await fs.readFile(configPath, 'utf8');
+    const config = JSON.parse(data);
+    if (!config.auth) config.auth = {};
+    config.auth.password = newPassword;
+    await fs.writeFile(configPath, JSON.stringify(config, null, 2));
+    console.log('[auth] Password changed successfully');
+    res.json({ success: true });
+  } catch (error) {
+    console.error('[auth] Failed to change password:', error.message);
+    res.status(500).json({ success: false, error: 'Erreur lors du changement de mot de passe' });
+  }
+});
+
+// =============================================================================
+// SESSION HELPERS
+// =============================================================================
+
+function getSessionCount() {
+  return sessions.size;
+}
 
 // =============================================================================
 // INIT & EXPORTS
@@ -432,4 +556,6 @@ loadSessions();
 
 module.exports = router;
 module.exports.requireAuth = requireAuth;
+module.exports.requireCsrf = requireCsrf;
 module.exports.validateSession = validateSession;
+module.exports.getSessionCount = getSessionCount;

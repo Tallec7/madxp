@@ -453,7 +453,7 @@ async function updateSystem() {
         } else {
             showNotification('Erreur: ' + data.error, 'error');
         }
-    } catch (error) {
+    } catch (_error) {
         showNotification('Erreur lors de la mise à jour', 'error');
     }
 }

@@ -23,11 +23,11 @@
     <link rel="preconnect" href="//neopro.local" />
 
     <!-- Preload Critical Resources -->
-    <link rel="preload" href="/styles.css?v=3.89.4" as="style" />
-    <link rel="preload" href="/app.js?v=3.89.4" as="script" />
+    <link rel="preload" href="/styles.css?v=3.92.2" as="style" />
+    <link rel="preload" href="/app.js?v=3.92.2" as="script" />
 
     <!-- Styles -->
-    <link rel="stylesheet" href="styles.css?v=3.89.4" />
+    <link rel="stylesheet" href="styles.css?v=3.92.2" />
   </head>
   <body>
     <div class="container" role="application" aria-label="Interface d'administration Neopro">
@@ -47,6 +47,12 @@
           >
         </div>
         <div class="header-info" role="status" aria-live="polite">
+          <span
+            id="realtime-indicator"
+            class="realtime-indicator realtime-disconnected"
+            title="Temps réel inactif"
+            >&#9675;</span
+          >
           <div class="mode-switcher">
             <label class="mode-switch-label">
               <span id="mode-label">Mode club</span>
@@ -129,19 +135,19 @@
           <!-- E-23 US-23.2.5: HDMI Status Card -->
           <div id="hdmi-status-card" class="card">
             <div class="card-header">
-              <h3><span aria-hidden="true">📺</span> Sorties HDMI</h3>
+              <h3><span aria-hidden="true">📺</span> Écrans</h3>
             </div>
             <div class="card-body">
               <div class="metric">
-                <span class="metric-label">HDMI-0 (principal)</span>
+                <span class="metric-label">Écran principal</span>
                 <span class="metric-value" id="hdmi0-status">--</span>
               </div>
               <div class="metric">
-                <span class="metric-label">HDMI-1 (secondaire)</span>
+                <span class="metric-label">2e écran</span>
                 <span class="metric-value" id="hdmi1-status">--</span>
               </div>
               <div class="metric">
-                <span class="metric-label">Mode</span>
+                <span class="metric-label">Configuration</span>
                 <span class="metric-value" id="hdmi-mode">--</span>
               </div>
             </div>
@@ -940,10 +946,28 @@
               </div>
             </div>
             <div class="card-body">
-              <div class="logs-container">
-                <pre id="logs-content">Chargement des logs...</pre>
+              <div class="logs-toolbar">
+                <input
+                  type="text"
+                  id="logs-filter"
+                  class="search-input"
+                  placeholder="🔍 Filtrer les logs..."
+                  oninput="filterLogs()"
+                />
+                <select id="logs-lines" onchange="refreshLogs()">
+                  <option value="50">50 lignes</option>
+                  <option value="100" selected>100 lignes</option>
+                  <option value="200">200 lignes</option>
+                  <option value="500">500 lignes</option>
+                </select>
               </div>
-              <button class="btn btn-secondary" onclick="refreshLogs()">🔄 Actualiser</button>
+              <div class="logs-container">
+                <div id="logs-content" class="logs-output">Chargement des logs...</div>
+              </div>
+              <div class="logs-actions">
+                <button class="btn btn-secondary" onclick="refreshLogs()">🔄 Actualiser</button>
+                <span id="logs-count" class="logs-count-label"></span>
+              </div>
             </div>
           </div>
         </div>
@@ -1001,6 +1025,30 @@
                   <input type="file" id="update-file" name="package" accept=".tar.gz" required />
                 </div>
                 <button type="submit" class="btn btn-warning">📦 Mettre à jour</button>
+              </form>
+            </div>
+          </div>
+
+          <!-- Password Change -->
+          <div class="card">
+            <div class="card-header">
+              <h3>🔑 Mot de passe</h3>
+            </div>
+            <div class="card-body">
+              <form id="change-password-form" style="max-width: 400px">
+                <div class="form-group">
+                  <label for="current-password">Mot de passe actuel</label>
+                  <input type="password" id="current-password" required />
+                </div>
+                <div class="form-group">
+                  <label for="new-password">Nouveau mot de passe</label>
+                  <input type="password" id="new-password" minlength="4" required />
+                </div>
+                <div class="form-group">
+                  <label for="confirm-password">Confirmer le nouveau mot de passe</label>
+                  <input type="password" id="confirm-password" minlength="4" required />
+                </div>
+                <button type="submit" class="btn btn-primary">🔑 Changer le mot de passe</button>
               </form>
             </div>
           </div>
@@ -1116,6 +1164,25 @@
       </div>
     </div>
 
-    <script src="app.js?v=3.89.4"></script>
+    <!-- Socket.IO client for realtime updates from Pi server (:3000) -->
+    <script>
+      (function () {
+        var script = document.createElement('script');
+        script.src =
+          window.location.protocol +
+          '//' +
+          window.location.hostname +
+          ':3000/socket.io/socket.io.js';
+        script.onerror = function () {
+          console.warn('[realtime] Socket.IO client not available on :3000');
+        };
+        script.onload = function () {
+          console.log('[realtime] Socket.IO client loaded');
+        };
+        document.head.appendChild(script);
+      })();
+    </script>
+
+    <script src="app.js?v=3.92.2"></script>
   </body>
 </html>

@@ -11,6 +11,14 @@
         if (isApiCall) {
             options = { ...options, credentials: 'include' };
         }
+        // Add CSRF token for mutation API calls
+        if (isApiCall && options.method && options.method !== 'GET') {
+            var csrfMatch = document.cookie.split('; ').find(function(c) { return c.startsWith('admin_csrf='); });
+            var csrfToken = csrfMatch ? csrfMatch.split('=')[1] : null;
+            if (csrfToken) {
+                options.headers = Object.assign({}, options.headers || {}, { 'X-CSRF-Token': csrfToken });
+            }
+        }
         const response = await originalFetch(url, options);
 
         // Protection: si une réponse API renvoie du HTML au lieu de JSON,

@@ -36,8 +36,16 @@ async function loadSyncStatus() {
  */
 function renderSyncStatus(container, data) {
     const connectionDot = data.connected ? 'sync-dot-connected' : 'sync-dot-disconnected';
-    const connectionText = data.connected ? 'Connecté au cloud' : 'Déconnecté du cloud';
     const connectionClass = data.connected ? 'sync-connected' : 'sync-disconnected';
+
+    const mode = getCurrentMode();
+    const isClub = mode === MODE_CLUB;
+
+    const connectionText = data.connected
+        ? (isClub ? 'En ligne' : 'Connecté au cloud')
+        : (isClub ? 'Hors ligne' : 'Déconnecté du cloud');
+
+    const lastSyncLabel = isClub ? 'Mis à jour :' : 'Dernière sync :';
 
     // Temps relatif de la dernière sync
     const lastSyncText = data.lastSyncAt
@@ -46,16 +54,15 @@ function renderSyncStatus(container, data) {
 
     // Badge commandes en attente
     const pendingBadge = data.pendingCommands > 0
-        ? '<span class="sync-badge sync-badge-warning">' + data.pendingCommands + ' en attente</span>'
+        ? '<span class="sync-badge sync-badge-warning">' + data.pendingCommands + (isClub ? ' mises à jour en cours' : ' en attente') + '</span>'
         : '';
 
     // Badge erreurs
     const deadLetterBadge = data.deadLetters > 0
-        ? '<span class="sync-badge sync-badge-danger">' + data.deadLetters + ' erreur' + (data.deadLetters > 1 ? 's' : '') + '</span>'
+        ? '<span class="sync-badge sync-badge-danger">' + data.deadLetters + (isClub ? ' problème' : ' erreur') + (data.deadLetters > 1 ? 's' : '') + '</span>'
         : '';
 
     // Mode tech : historique expandable
-    const mode = getCurrentMode();
     let historySection = '';
     if (mode === MODE_TECH && data.recentHistory && data.recentHistory.length > 0) {
         const historyRows = data.recentHistory.map(function (entry) {
@@ -92,10 +99,11 @@ function renderSyncStatus(container, data) {
         const isRecent = contentSyncAge < 600; // < 10 minutes
         const bannerClass = isRecent ? 'content-sync-recent' : 'content-sync-old';
 
+        var contentLabel = isClub ? 'Contenu mis à jour :' : 'Contenu NEOPRO :';
         contentSyncBanner = ''
             + '<div class="content-sync-banner ' + bannerClass + '">'
             + '  <span class="content-sync-icon">' + (isRecent ? '📡' : '📋') + '</span>'
-            + '  <span>Contenu NEOPRO : ' + contentSyncText + detailText + '</span>'
+            + '  <span>' + contentLabel + ' ' + contentSyncText + detailText + '</span>'
             + '</div>';
     }
 
@@ -107,7 +115,7 @@ function renderSyncStatus(container, data) {
         + '      <span class="sync-status-text">' + connectionText + '</span>'
         + '    </div>'
         + '    <div class="sync-status-item">'
-        + '      <span class="sync-status-label">Dernière sync :</span>'
+        + '      <span class="sync-status-label">' + lastSyncLabel + '</span>'
         + '      <span class="sync-status-value">' + lastSyncText + '</span>'
         + '    </div>'
         + '    ' + pendingBadge
@@ -150,12 +158,14 @@ function checkContentSyncNotification(data) {
  * Affiche l'état d'erreur / indisponible
  */
 function renderSyncStatusError(container) {
+    var mode = getCurrentMode();
+    var errorText = mode === MODE_CLUB ? 'Vérification en cours...' : 'Statut sync indisponible';
     container.innerHTML = ''
         + '<div class="sync-status-banner sync-unavailable">'
         + '  <div class="sync-status-main">'
         + '    <div class="sync-status-item">'
         + '      <span class="sync-dot sync-dot-unknown"></span>'
-        + '      <span class="sync-status-text">Statut sync indisponible</span>'
+        + '      <span class="sync-status-text">' + errorText + '</span>'
         + '    </div>'
         + '  </div>'
         + '</div>';

@@ -1,3 +1,30 @@
+# [3.93.0](https://github.com/Tallec7/neopro/compare/v3.92.2...v3.93.0) (2026-03-02)
+
+### Features
+
+- **admin:** harden admin panel security — CSRF protection, rate limiting, password change, realtime Socket.IO, health monitoring
+  - **CSRF double-cookie pattern**: session cookie httpOnly + CSRF cookie JS-readable, `X-CSRF-Token` header auto-injected on all mutations via fetch wrapper, `requireCsrf` middleware on all POST/PUT/DELETE routes
+  - **Rate limiting**: 5 failed login attempts → 15min lockout per IP, in-memory Map, checked BEFORE password validation (defense-in-depth)
+  - **Password change**: new `POST /api/auth/change-password` route + UI form in System tab, validates current password + min length 4
+  - **Socket.IO realtime**: admin connects to Pi's `:3000` server, auto-refreshes dashboard/videos/sponsors on `config_updated` and `license_update` events, green/gray indicator in header
+  - **Health endpoint**: `GET /api/admin/health` (unauthenticated) returns uptime, version, active sessions, memory usage — for monitoring tools
+  - **46 new auth tests**: sessions, CSRF validation, rate limiting, change-password (194 total admin tests)
+  - **10 smoke regression guards**: CSRF export/wiring, rate limit ordering, realtime module, CSS build, ESLint config, fetch CSRF injection
+
+- **admin:** improve UX — hero status card, human-friendly labels, logs colorization
+  - **Hero status card**: club mode shows simplified health card (green/yellow/red) with video + sponsor counts
+  - **Human-friendly labels**: HDMI → "Ecrans", sync → "Mis a jour"/"Hors ligne", softer error messages in club mode
+  - **Logs colorization**: error lines red, warnings amber, debug muted, text search with highlight, configurable line count (50-500)
+
+- **admin:** modularize frontend — CSS split, ESLint, build system
+  - **CSS modular split**: 10 source files in `styles/` (base, layout, components, dashboard, videos, sponsors, network, logs, system, responsive) → concatenated by `build-admin.sh`
+  - **ESLint frontend**: `.eslintrc.json` with 100+ cross-file globals, `npm run lint:frontend`, 17 warnings fixed
+  - **Build system**: `build-admin.sh` now handles CSS + JS concatenation with cache-busting
+
+### Documentation
+
+- **admin:** comprehensive docs sync — README, MODULES.md, REFERENCE.md, CHANGELOG, CLAUDE.md updated with all new features, security measures, API endpoints, and architecture changes
+
 ## [3.92.2](https://github.com/Tallec7/neopro/compare/v3.92.1...v3.92.2) (2026-03-02)
 
 ### Bug Fixes

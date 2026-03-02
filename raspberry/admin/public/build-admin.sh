@@ -1,8 +1,51 @@
 #!/bin/bash
-# Concatene les modules en un seul app.js
+# Concatene les modules JS en app.js et les modules CSS en styles.css
 # Usage: cd raspberry/admin/public && bash build-admin.sh
 
 set -euo pipefail
+
+# =============================================================================
+# CSS Build — Concatenate modular CSS files into styles.css
+# =============================================================================
+
+CSS_OUTPUT="styles.css"
+CSS_BACKUP="styles.css.bak"
+
+cp "$CSS_OUTPUT" "$CSS_BACKUP" 2>/dev/null || true
+
+CSS_FILES=(
+  "styles/base.css"
+  "styles/layout.css"
+  "styles/components.css"
+  "styles/dashboard.css"
+  "styles/videos.css"
+  "styles/sponsors.css"
+  "styles/network.css"
+  "styles/logs.css"
+  "styles/system.css"
+  "styles/responsive.css"
+)
+
+echo "/* Auto-generated from styles/ modules - DO NOT EDIT DIRECTLY */" > "$CSS_OUTPUT"
+echo "/* Edit files in styles/ then run: bash build-admin.sh */" >> "$CSS_OUTPUT"
+
+for css_file in "${CSS_FILES[@]}"; do
+  if [ -f "$css_file" ]; then
+    echo "" >> "$CSS_OUTPUT"
+    echo "/* === $(basename "$css_file") === */" >> "$CSS_OUTPUT"
+    echo "" >> "$CSS_OUTPUT"
+    cat "$css_file" >> "$CSS_OUTPUT"
+  else
+    echo "WARN: CSS module not found: $css_file" >&2
+  fi
+done
+
+CSS_LINES=$(wc -l < "$CSS_OUTPUT")
+echo "CSS build complete: $CSS_OUTPUT ($CSS_LINES lines)"
+
+# =============================================================================
+# JS Build — Concatenate modular JS files into app.js
+# =============================================================================
 
 OUTPUT="app.js"
 BACKUP="app.js.bak"
@@ -24,6 +67,7 @@ MODULES=(
   "modules/core/state.js"
   "modules/core/mode-switcher.js"
   "modules/core/connection.js"
+  "modules/core/realtime.js"
   "modules/core/notifications.js"
   "modules/dashboard/sync-status.js"
   "modules/dashboard/index.js"

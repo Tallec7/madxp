@@ -55,7 +55,7 @@ async function checkConnection() {
         } else {
             throw new Error('Server returned error status');
         }
-    } catch (error) {
+    } catch (_error) {
         // If we were online, try to reconnect
         if (connectionStatus === 'online') {
             updateConnectionStatus('reconnecting');

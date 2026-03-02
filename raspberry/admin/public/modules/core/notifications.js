@@ -23,7 +23,7 @@ async function restartService(service) {
         } else {
             showNotification('Erreur: ' + data.error, 'error');
         }
-    } catch (error) {
+    } catch (_error) {
         showNotification('Erreur lors du redémarrage', 'error');
     }
 }
@@ -47,7 +47,7 @@ async function applyServices() {
         } else {
             showNotification('Erreur: ' + data.error, 'error');
         }
-    } catch (error) {
+    } catch (_error) {
         showNotification("Erreur lors de l'application des services", 'error');
     }
 }
@@ -90,7 +90,7 @@ async function executeAction(action) {
         } else {
             showNotification('Erreur: ' + data.error, 'error');
         }
-    } catch (error) {
+    } catch (_error) {
         showNotification('Erreur lors de l\'opération', 'error');
     }
 }

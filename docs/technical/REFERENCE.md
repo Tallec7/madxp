@@ -750,9 +750,13 @@ npm run deploy:raspberry 192.168.4.1
 │   ├── admin-server.js  #   Orchestrateur (wiring services ↔ routes)
 │   ├── helpers.js       #   Utilitaires partagés
 │   ├── services/        #   7 services métier
-│   ├── routes/          #   10 contrôleurs HTTP (dont sync-status)
-│   ├── __tests__/       #   Tests Jest (60%+ couverture)
-│   └── public/          #   Frontend statique (modules/ → build-admin.sh → app.js)
+│   ├── routes/          #   10 contrôleurs HTTP (dont sync-status, auth)
+│   │                    #   Protection CSRF (double cookie pattern) sur toutes les mutations
+│   │                    #   Rate limiting : 5 tentatives → verrouillage 15 min/IP
+│   ├── __tests__/       #   194 tests Jest (services + routes + auth, 60%+ couverture)
+│   └── public/          #   Frontend statique
+│       ├── modules/     #     JS modulaire (dont core/realtime.js → Socket.IO :3000)
+│       └── styles/      #     CSS modulaire (10 fichiers → build-admin.sh → styles.css)
 │
 ├── sync-agent/          # Agent de sync central
 │   ├── agent.js
@@ -1455,14 +1459,18 @@ POST   /sponsor-alerts/check                  - Vérification manuelle des alert
 **Endpoints SAFe Dashboard (auth JWT, admin/super_admin, montés sur /api/safe) :**
 
 ```
-GET    /safe/portfolio           - Portfolio complet (vision, thèmes, value streams, epics, features, US, sprints, proposals)
-GET    /safe/proposals           - Liste des propositions/spikes
-GET    /safe/proposals/:id       - Détail d'une proposition
-PUT    /safe/proposals/:id       - Modifier statut d'une proposition (write-back .md)
-PUT    /safe/epics/:id/status    - Modifier statut d'un epic (write-back .md)
+GET    /safe/portfolio                                    - Portfolio complet (vision, thèmes, value streams, epics, features, US, sprints, proposals)
+GET    /safe/proposals                                    - Liste des propositions/spikes
+GET    /safe/proposals/:id                                - Détail d'une proposition
+POST   /safe/proposals                                    - Créer une proposition (write-back .md)
+PUT    /safe/proposals/:id                                - Modifier statut d'une proposition (write-back .md)
+DELETE /safe/proposals/:id                                - Supprimer une proposition (supprime le .md)
+PUT    /safe/epics/:id/status                             - Modifier statut d'un epic (write-back .md)
+GET    /safe/sprints                                      - Sprint Tracker (sprints, stories, vélocité) — hybrid markdown + DB
+PUT    /safe/sprints/:sprintId/stories/:storyId/status    - Modifier statut d'une story (write-back .md + DB override)
 ```
 
-> Parse les fichiers `.md` de `docs/safe/` et `docs/proposals/` en JSON. Cache en mémoire 5 min (`SafeParserService`). Rate limit : `apiRateLimit` (100 req/min partagé). Write-back : modifications atomiques des fichiers markdown source.
+> Parse les fichiers `.md` de `docs/safe/` et `docs/proposals/` en JSON. Cache en mémoire 5 min (`SafeParserService`). Rate limit : `apiRateLimit` (100 req/min partagé). Write-back : modifications atomiques des fichiers markdown source. **DB Hybrid Layer** : les tables `safe_sprint_velocity` et `safe_story_status_override` stockent les overrides dynamiques. Le parser applique les overrides DB après parsing markdown. Dégradation gracieuse si migration non appliquée.
 
 **Endpoints Fleet Benchmark (auth JWT, montés sur /api/benchmark) :**
 
@@ -1520,20 +1528,21 @@ Sponsor Portal: 100 req/min    (PUBLIC, par IP)
 
 ### Services Backend Critiques
 
-| Service           | Fichier                     | Rôle                                                                                                                                                                                                                 |
-| ----------------- | --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Socket**        | `socket.service.ts`         | Orchestrateur temps réel Pi ↔ Cloud (676 lignes)                                                                                                                                                                     |
-| **Storage**       | `storage.service.ts`        | Upload/download vidéos FTP (unifié)                                                                                                                                                                                  |
-| **Deployment**    | `deployment.service.ts`     | Orchestration déploiement vidéos                                                                                                                                                                                     |
-| **CommandQueue**  | `command-queue.service.ts`  | File d'attente commandes (offline/online)                                                                                                                                                                            |
-| **MemoryManager** | `memory-manager.service.ts` | Monitoring heap, cleanup automatique                                                                                                                                                                                 |
-| **AdminOps**      | `admin-ops.service.ts`      | Opérations admin avec cleanup jobs mémoire                                                                                                                                                                           |
-| **CronScheduler** | `cron-scheduler.service.ts` | Tâches récurrentes (stats, cleanup)                                                                                                                                                                                  |
-| **Alerting**      | `alerting.service.ts`       | Alertes multi-canal (email, slack, webhook) — 19 seuils par défaut + `checkHourlyMetrics()` agrège WS disconnects, video safety timeouts, kiosk crashes et alimente `evaluateMetric()` toutes les 5 min              |
-| **AlertService**  | `alert.service.ts`          | Notifications Slack (Block Kit) — méthodes pré-construites : `siteOffline`, `siteOnline`, `lowWifiSignal` (6h cooldown), `wifiSignalRecovered`, `networkFailure`, `enterShutdownMode`, `info/warning/error/critical` |
-| **Health**        | `health.service.ts`         | Endpoints /health, /live, /ready                                                                                                                                                                                     |
-| **SAFe Parser**   | `safe-parser.service.ts`    | Parse les fichiers markdown SAFe (`docs/safe/`, `docs/proposals/`) en JSON. Cache mémoire 5 min. Write-back atomique pour modifications de statut                                                                    |
-| **Metrics**       | `metrics.service.ts`        | Export Prometheus — 32 métriques `neopro_*` (HTTP, WS, DB size/table, disconnect, kiosk, license push, deploy progress, OTA errors, WiFi config, video transitions)                                                  |
+| Service             | Fichier                     | Rôle                                                                                                                                                                                                                                                                                                                                                                               |
+| ------------------- | --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Socket**          | `socket.service.ts`         | Orchestrateur temps réel Pi ↔ Cloud (676 lignes)                                                                                                                                                                                                                                                                                                                                   |
+| **Storage**         | `storage.service.ts`        | Upload/download vidéos FTP (unifié)                                                                                                                                                                                                                                                                                                                                                |
+| **Deployment**      | `deployment.service.ts`     | Orchestration déploiement vidéos                                                                                                                                                                                                                                                                                                                                                   |
+| **CommandQueue**    | `command-queue.service.ts`  | File d'attente commandes (offline/online)                                                                                                                                                                                                                                                                                                                                          |
+| **MemoryManager**   | `memory-manager.service.ts` | Monitoring heap, cleanup automatique                                                                                                                                                                                                                                                                                                                                               |
+| **AdminOps**        | `admin-ops.service.ts`      | Opérations admin avec cleanup jobs mémoire                                                                                                                                                                                                                                                                                                                                         |
+| **CronScheduler**   | `cron-scheduler.service.ts` | Tâches récurrentes (stats, cleanup)                                                                                                                                                                                                                                                                                                                                                |
+| **Alerting**        | `alerting.service.ts`       | Alertes multi-canal (email, slack, webhook) — 19 seuils par défaut + `checkHourlyMetrics()` agrège WS disconnects, video safety timeouts, kiosk crashes et alimente `evaluateMetric()` toutes les 5 min                                                                                                                                                                            |
+| **AlertService**    | `alert.service.ts`          | Notifications Slack (Block Kit) — méthodes pré-construites : `siteOffline`, `siteOnline`, `lowWifiSignal` (6h cooldown), `wifiSignalRecovered`, `networkFailure`, `enterShutdownMode`, `info/warning/error/critical`                                                                                                                                                               |
+| **Health**          | `health.service.ts`         | Endpoints /health, /live, /ready                                                                                                                                                                                                                                                                                                                                                   |
+| **SAFe Parser**     | `safe-parser.service.ts`    | Parse les fichiers markdown SAFe (`docs/safe/`, `docs/proposals/`) en JSON. Cache mémoire 5 min. Write-back atomique pour mutations. Méthodes : `getPortfolio()`, `getProposals()`, `getProposalDetail()`, `getSprints()` (async, DB hybrid), `updateStoryStatus()` (async, DB + markdown), `createProposal()`, `deleteProposal()`, `updateProposalStatus()`, `updateEpicStatus()` |
+| **SAFe Repository** | `safe.repository.ts`        | Tables `safe_sprint_velocity` + `safe_story_status_override`. 4 méthodes : `getVelocities()`, `upsertVelocity()`, `getStoryOverrides()`, `upsertStoryStatus()`. Dégradation gracieuse (try/catch + logger.warn)                                                                                                                                                                    |
+| **Metrics**         | `metrics.service.ts`        | Export Prometheus — 32 métriques `neopro_*` (HTTP, WS, DB size/table, disconnect, kiosk, license push, deploy progress, OTA errors, WiFi config, video transitions)                                                                                                                                                                                                                |
 
 ### Politique de rétention des données
 

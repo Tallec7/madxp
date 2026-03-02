@@ -1,0 +1,349 @@
+/* ============================================================================
+   Mode Club / Technicien
+   ============================================================================ */
+
+/* Masquer les éléments tech-only en mode club */
+body.mode-club .tech-only {
+  display: none !important;
+}
+
+/* Mode Switcher Toggle */
+.mode-switcher {
+  display: flex;
+  align-items: center;
+}
+
+.mode-switch-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--text-secondary);
+  user-select: none;
+}
+
+#mode-label {
+  min-width: 110px;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.mode-switch-slider {
+  position: relative;
+  width: 44px;
+  height: 24px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  transition: all 0.3s;
+  flex-shrink: 0;
+}
+
+.mode-switch-slider::before {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 18px;
+  height: 18px;
+  background: var(--text-secondary);
+  border-radius: 50%;
+  transition: all 0.3s;
+}
+
+#mode-toggle {
+  display: none;
+}
+
+#mode-toggle:checked + .mode-switch-slider {
+  background: var(--primary);
+  border-color: var(--primary);
+}
+
+#mode-toggle:checked + .mode-switch-slider::before {
+  left: 22px;
+  background: white;
+}
+
+/* ============================================================================
+   Health Status Card (Mode Club)
+   ============================================================================ */
+
+.health-indicator {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 24px;
+  border-radius: 10px;
+  margin-bottom: 12px;
+}
+
+.health-indicator.health-green {
+  background: rgba(81, 178, 139, 0.15);
+  border: 1px solid var(--success);
+}
+
+.health-indicator.health-yellow {
+  background: rgba(253, 190, 0, 0.15);
+  border: 1px solid var(--warning);
+}
+
+.health-indicator.health-red {
+  background: rgba(254, 89, 73, 0.15);
+  border: 1px solid var(--danger);
+}
+
+.health-icon {
+  font-size: 36px;
+  flex-shrink: 0;
+}
+
+.health-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.health-text {
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.health-green .health-text {
+  color: var(--success);
+}
+
+.health-yellow .health-text {
+  color: var(--warning);
+}
+
+.health-red .health-text {
+  color: var(--danger);
+}
+
+.health-details-list {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.health-uptime {
+  color: var(--text-secondary);
+  font-size: 14px;
+  padding: 0 4px;
+}
+
+.health-quick-stats {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 12px 4px 0;
+  margin-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  font-size: 15px;
+  color: var(--text-secondary);
+}
+
+.health-stats-sep {
+  color: var(--text-tertiary, #6b7280);
+  margin: 0 2px;
+}
+
+/* ============================================================================
+   Sync Status Widget
+   ============================================================================ */
+
+#sync-status-widget {
+  margin-bottom: 20px;
+}
+
+.sync-status-banner {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px 20px;
+  transition: all 0.3s;
+}
+
+.sync-status-banner.sync-connected {
+  border-left: 4px solid var(--success);
+}
+
+.sync-status-banner.sync-disconnected {
+  border-left: 4px solid var(--danger);
+}
+
+.sync-status-banner.sync-unavailable {
+  border-left: 4px solid var(--secondary);
+}
+
+.sync-status-main {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.sync-status-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sync-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.sync-dot-connected {
+  background: var(--success);
+  box-shadow: 0 0 0 rgba(81, 178, 139, 0.4);
+  animation: pulse-online 2s infinite;
+}
+
+.sync-dot-disconnected {
+  background: var(--danger);
+}
+
+.sync-dot-unknown {
+  background: var(--secondary);
+}
+
+.sync-status-text {
+  font-weight: 500;
+  font-size: 14px;
+}
+
+.sync-connected .sync-status-text {
+  color: var(--success);
+}
+
+.sync-disconnected .sync-status-text {
+  color: var(--danger);
+}
+
+.sync-status-label {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.sync-status-value {
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.sync-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.sync-badge-warning {
+  background: rgba(253, 190, 0, 0.15);
+  color: var(--warning);
+  border: 1px solid rgba(253, 190, 0, 0.3);
+}
+
+.sync-badge-danger {
+  background: rgba(254, 89, 73, 0.15);
+  color: var(--danger);
+  border: 1px solid rgba(254, 89, 73, 0.3);
+}
+
+/* Sync History (tech mode expandable) */
+.sync-history-details {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+.sync-history-details summary {
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--text-secondary);
+  font-weight: 500;
+  padding: 4px 0;
+}
+
+.sync-history-list {
+  margin-top: 8px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.sync-history-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 8px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border);
+}
+
+.sync-history-row:last-child {
+  border-bottom: none;
+}
+
+/* F-AUD-14: Content sync notification banner */
+.content-sync-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.content-sync-recent {
+  background: rgba(78, 205, 196, 0.12);
+  color: var(--success);
+  border: 1px solid rgba(78, 205, 196, 0.25);
+  animation: contentSyncPulse 2s ease-in-out 3;
+}
+
+.content-sync-old {
+  background: var(--card-bg);
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+}
+
+.content-sync-icon {
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+@keyframes contentSyncPulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+.sync-history-type {
+  font-weight: 500;
+  min-width: 100px;
+}
+
+.sync-history-time {
+  color: var(--text-secondary);
+  min-width: 80px;
+}
+
+.sync-history-error {
+  color: var(--danger);
+  font-size: 11px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

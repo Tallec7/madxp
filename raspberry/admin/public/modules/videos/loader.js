@@ -145,7 +145,7 @@ function renderConfigurationStructure(container, config) {
 
         // Sous-catégories
         (category.subCategories || []).forEach(subcat => {
-            const subcatLocked = categoryLocked || isLocked(subcat);
+            const _subcatLocked = categoryLocked || isLocked(subcat);  
             if (subcat.videos && subcat.videos.length > 0) {
                 body.appendChild(createConfigVideoList(subcat.name || subcat.id, subcat.videos, category.id, subcat.id, categoryLocked, subcat));
             } else {
@@ -569,7 +569,7 @@ async function deleteVideo(category, filename) {
         } else {
             showNotification('Erreur: ' + data.error, 'error');
         }
-    } catch (error) {
+    } catch (_error) {
         showNotification('Erreur lors de la suppression', 'error');
     }
 }

@@ -108,7 +108,7 @@ async function bulkDeleteVideos() {
             } else {
                 errorCount++;
             }
-        } catch (error) {
+        } catch (_error) {
             errorCount++;
         }
     }
@@ -251,7 +251,7 @@ async function executeBulkMove() {
             } else {
                 errorCount++;
             }
-        } catch (error) {
+        } catch (_error) {
             errorCount++;
         }
     }

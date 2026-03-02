@@ -6551,3 +6551,78 @@ describe('SAFe Dashboard file existence guards', () => {
     });
   });
 });
+
+// ----------------------------------------------------------
+// Pi admin panel security & architecture guards
+// ----------------------------------------------------------
+describe('Pi admin panel security & architecture guards', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+  const adminDir = path.join(repoRoot, 'raspberry', 'admin');
+
+  it('auth.js must export requireCsrf middleware', () => {
+    const content = fs.readFileSync(path.join(adminDir, 'routes', 'auth.js'), 'utf8');
+    expect(content).toMatch(/module\.exports\.requireCsrf\s*=/);
+    expect(content).toMatch(/validateCsrf/);
+  });
+
+  it('admin-server.js must use requireCsrf middleware', () => {
+    const content = fs.readFileSync(path.join(adminDir, 'admin-server.js'), 'utf8');
+    expect(content).toMatch(/requireCsrf/);
+    expect(content).toMatch(/app\.use\(requireCsrf\)/);
+  });
+
+  it('auth.js must have rate limiting (MAX_LOGIN_ATTEMPTS + checkRateLimit + recordFailedAttempt)', () => {
+    const content = fs.readFileSync(path.join(adminDir, 'routes', 'auth.js'), 'utf8');
+    expect(content).toMatch(/MAX_LOGIN_ATTEMPTS/);
+    expect(content).toMatch(/checkRateLimit/);
+    expect(content).toMatch(/recordFailedAttempt/);
+  });
+
+  it('auth.js must have password change route', () => {
+    const content = fs.readFileSync(path.join(adminDir, 'routes', 'auth.js'), 'utf8');
+    expect(content).toMatch(/\/api\/auth\/change-password/);
+    expect(content).toMatch(/newPassword\.length\s*<\s*4/);
+  });
+
+  it('realtime.js module must exist and connect to :3000', () => {
+    const realtimePath = path.join(adminDir, 'public', 'modules', 'core', 'realtime.js');
+    expect(fs.existsSync(realtimePath)).toBe(true);
+    const content = fs.readFileSync(realtimePath, 'utf8');
+    expect(content).toMatch(/initRealtime/);
+    expect(content).toMatch(/:3000/);
+    expect(content).toMatch(/config_updated/);
+  });
+
+  it('build-admin.sh must concatenate CSS modules from styles/ directory', () => {
+    const buildScript = fs.readFileSync(path.join(adminDir, 'public', 'build-admin.sh'), 'utf8');
+    expect(buildScript).toMatch(/styles\/base\.css/);
+    expect(buildScript).toMatch(/styles\/responsive\.css/);
+    expect(buildScript).toMatch(/CSS_OUTPUT/);
+  });
+
+  it('.eslintrc.json must exist for frontend linting', () => {
+    expect(fs.existsSync(path.join(adminDir, '.eslintrc.json'))).toBe(true);
+  });
+
+  it('state.js fetch wrapper must inject X-CSRF-Token header on mutations', () => {
+    const content = fs.readFileSync(path.join(adminDir, 'public', 'modules', 'core', 'state.js'), 'utf8');
+    expect(content).toMatch(/X-CSRF-Token/);
+    expect(content).toMatch(/admin_csrf/);
+  });
+
+  it('auth.js login route must check rate limit before password (defense-in-depth order)', () => {
+    const content = fs.readFileSync(path.join(adminDir, 'routes', 'auth.js'), 'utf8');
+    const rateLimitPos = content.indexOf('checkRateLimit(clientIp)');
+    const passwordCheckPos = content.indexOf('password !== adminPassword');
+    expect(rateLimitPos).toBeGreaterThan(-1);
+    expect(passwordCheckPos).toBeGreaterThan(-1);
+    // Rate limit must come BEFORE password check
+    expect(rateLimitPos).toBeLessThan(passwordCheckPos);
+  });
+
+  it('auth.js must set CSRF cookie as non-httpOnly (readable by JS)', () => {
+    const content = fs.readFileSync(path.join(adminDir, 'routes', 'auth.js'), 'utf8');
+    // The admin_csrf cookie must NOT be httpOnly so JavaScript can read it
+    expect(content).toMatch(/admin_csrf.*httpOnly:\s*false/s);
+  });
+});

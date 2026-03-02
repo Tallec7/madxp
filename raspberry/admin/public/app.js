@@ -2,7 +2,7 @@
  * Neopro Admin Panel - JavaScript
  * FICHIER GENERE - Ne pas editer directement
  * Editer les fichiers dans modules/ puis lancer: bash build-admin.sh
- * Build: 9008d361
+ * Build: e127365a
  */
 
 
@@ -280,6 +280,14 @@ if (DEMO_MODE) {
         if (isApiCall) {
             options = { ...options, credentials: 'include' };
         }
+        // Add CSRF token for mutation API calls
+        if (isApiCall && options.method && options.method !== 'GET') {
+            var csrfMatch = document.cookie.split('; ').find(function(c) { return c.startsWith('admin_csrf='); });
+            var csrfToken = csrfMatch ? csrfMatch.split('=')[1] : null;
+            if (csrfToken) {
+                options.headers = Object.assign({}, options.headers || {}, { 'X-CSRF-Token': csrfToken });
+            }
+        }
         const response = await originalFetch(url, options);
 
         // Protection: si une réponse API renvoie du HTML au lieu de JSON,
@@ -470,7 +478,7 @@ async function checkConnection() {
         } else {
             throw new Error('Server returned error status');
         }
-    } catch (error) {
+    } catch (_error) {
         // If we were online, try to reconnect
         if (connectionStatus === 'online') {
             updateConnectionStatus('reconnecting');
@@ -537,6 +545,108 @@ window.fetch = async function(...args) {
 };
 
 // ============================================================================
+// MODULE: modules/core/realtime.js
+// ============================================================================
+
+// ============================================================================
+// Realtime - Socket.IO connection to Pi server (:3000)
+// ============================================================================
+
+/** @type {object|null} Socket.IO instance */
+var _realtimeSocket = null;
+var _realtimeConnected = false;
+
+/**
+ * Initialize Socket.IO connection to the Pi's TV server
+ * Falls back gracefully if Socket.IO client library is not available
+ */
+function initRealtime() {
+    if (typeof io === 'undefined') {
+        console.warn('[realtime] Socket.IO client not available, skipping realtime');
+        updateRealtimeIndicator(false);
+        return;
+    }
+
+    try {
+        var socketUrl = window.location.protocol + '//' + window.location.hostname + ':3000';
+        _realtimeSocket = io(socketUrl, {
+            transports: ['websocket', 'polling'],
+            reconnection: true,
+            reconnectionDelay: 2000,
+            reconnectionDelayMax: 10000,
+            timeout: 5000,
+        });
+
+        _realtimeSocket.on('connect', function () {
+            console.log('[realtime] Connected to Pi server');
+            _realtimeConnected = true;
+            updateRealtimeIndicator(true);
+        });
+
+        _realtimeSocket.on('disconnect', function (reason) {
+            console.log('[realtime] Disconnected:', reason);
+            _realtimeConnected = false;
+            updateRealtimeIndicator(false);
+        });
+
+        _realtimeSocket.on('connect_error', function () {
+            _realtimeConnected = false;
+            updateRealtimeIndicator(false);
+        });
+
+        // Listen for config updates (videos, sponsors, etc.)
+        _realtimeSocket.on('config_updated', function () {
+            console.log('[realtime] Config updated event received');
+            if (currentTab === 'dashboard') {
+                loadDashboard();
+            }
+            if (currentTab === 'videos') {
+                if (typeof refreshVideos === 'function') refreshVideos();
+            }
+            if (currentTab === 'sponsors') {
+                if (typeof loadSponsors === 'function') loadSponsors();
+            }
+        });
+
+        // Listen for license/sync status changes
+        _realtimeSocket.on('license_update', function () {
+            console.log('[realtime] License update event received');
+            if (currentTab === 'dashboard') {
+                loadSyncStatus();
+            }
+        });
+
+        // Listen for loop state changes (useful for dashboard current video info)
+        _realtimeSocket.on('tv-loop-state', function (data) {
+            // Could be used to show "Now playing" in dashboard
+            // For now, just log
+        });
+
+    } catch (error) {
+        console.warn('[realtime] Failed to initialize:', error.message);
+        updateRealtimeIndicator(false);
+    }
+}
+
+/**
+ * Update the connection indicator in the header
+ */
+function updateRealtimeIndicator(connected) {
+    var indicator = document.getElementById('realtime-indicator');
+    if (!indicator) return;
+
+    if (connected) {
+        indicator.className = 'realtime-indicator realtime-connected';
+        indicator.title = 'Temps réel actif';
+        indicator.textContent = '\u25CF';
+    } else {
+        indicator.className = 'realtime-indicator realtime-disconnected';
+        indicator.title = 'Temps réel inactif';
+        indicator.textContent = '\u25CB';
+    }
+}
+
+// ============================================================================
 // MODULE: modules/core/notifications.js
 // ============================================================================
 
@@ -565,7 +675,7 @@ async function restartService(service) {
         } else {
             showNotification('Erreur: ' + data.error, 'error');
         }
-    } catch (error) {
+    } catch (_error) {
         showNotification('Erreur lors du redémarrage', 'error');
     }
 }
@@ -589,7 +699,7 @@ async function applyServices() {
         } else {
             showNotification('Erreur: ' + data.error, 'error');
         }
-    } catch (error) {
+    } catch (_error) {
         showNotification("Erreur lors de l'application des services", 'error');
     }
 }
@@ -632,7 +742,7 @@ async function executeAction(action) {
         } else {
             showNotification('Erreur: ' + data.error, 'error');
         }
-    } catch (error) {
+    } catch (_error) {
         showNotification('Erreur lors de l\'opération', 'error');
     }
 }
@@ -794,8 +904,16 @@ async function loadSyncStatus() {
  */
 function renderSyncStatus(container, data) {
     const connectionDot = data.connected ? 'sync-dot-connected' : 'sync-dot-disconnected';
-    const connectionText = data.connected ? 'Connecté au cloud' : 'Déconnecté du cloud';
     const connectionClass = data.connected ? 'sync-connected' : 'sync-disconnected';
+
+    const mode = getCurrentMode();
+    const isClub = mode === MODE_CLUB;
+
+    const connectionText = data.connected
+        ? (isClub ? 'En ligne' : 'Connecté au cloud')
+        : (isClub ? 'Hors ligne' : 'Déconnecté du cloud');
+
+    const lastSyncLabel = isClub ? 'Mis à jour :' : 'Dernière sync :';
 
     // Temps relatif de la dernière sync
     const lastSyncText = data.lastSyncAt
@@ -804,16 +922,15 @@ function renderSyncStatus(container, data) {
 
     // Badge commandes en attente
     const pendingBadge = data.pendingCommands > 0
-        ? '<span class="sync-badge sync-badge-warning">' + data.pendingCommands + ' en attente</span>'
+        ? '<span class="sync-badge sync-badge-warning">' + data.pendingCommands + (isClub ? ' mises à jour en cours' : ' en attente') + '</span>'
         : '';
 
     // Badge erreurs
     const deadLetterBadge = data.deadLetters > 0
-        ? '<span class="sync-badge sync-badge-danger">' + data.deadLetters + ' erreur' + (data.deadLetters > 1 ? 's' : '') + '</span>'
+        ? '<span class="sync-badge sync-badge-danger">' + data.deadLetters + (isClub ? ' problème' : ' erreur') + (data.deadLetters > 1 ? 's' : '') + '</span>'
         : '';
 
     // Mode tech : historique expandable
-    const mode = getCurrentMode();
     let historySection = '';
     if (mode === MODE_TECH && data.recentHistory && data.recentHistory.length > 0) {
         const historyRows = data.recentHistory.map(function (entry) {
@@ -850,10 +967,11 @@ function renderSyncStatus(container, data) {
         const isRecent = contentSyncAge < 600; // < 10 minutes
         const bannerClass = isRecent ? 'content-sync-recent' : 'content-sync-old';
 
+        var contentLabel = isClub ? 'Contenu mis à jour :' : 'Contenu NEOPRO :';
         contentSyncBanner = ''
             + '<div class="content-sync-banner ' + bannerClass + '">'
             + '  <span class="content-sync-icon">' + (isRecent ? '📡' : '📋') + '</span>'
-            + '  <span>Contenu NEOPRO : ' + contentSyncText + detailText + '</span>'
+            + '  <span>' + contentLabel + ' ' + contentSyncText + detailText + '</span>'
             + '</div>';
     }
 
@@ -865,7 +983,7 @@ function renderSyncStatus(container, data) {
         + '      <span class="sync-status-text">' + connectionText + '</span>'
         + '    </div>'
         + '    <div class="sync-status-item">'
-        + '      <span class="sync-status-label">Dernière sync :</span>'
+        + '      <span class="sync-status-label">' + lastSyncLabel + '</span>'
         + '      <span class="sync-status-value">' + lastSyncText + '</span>'
         + '    </div>'
         + '    ' + pendingBadge
@@ -908,12 +1026,14 @@ function checkContentSyncNotification(data) {
  * Affiche l'état d'erreur / indisponible
  */
 function renderSyncStatusError(container) {
+    var mode = getCurrentMode();
+    var errorText = mode === MODE_CLUB ? 'Vérification en cours...' : 'Statut sync indisponible';
     container.innerHTML = ''
         + '<div class="sync-status-banner sync-unavailable">'
         + '  <div class="sync-status-main">'
         + '    <div class="sync-status-item">'
         + '      <span class="sync-dot sync-dot-unknown"></span>'
-        + '      <span class="sync-status-text">Statut sync indisponible</span>'
+        + '      <span class="sync-status-text">' + errorText + '</span>'
         + '    </div>'
         + '  </div>'
         + '</div>';
@@ -995,14 +1115,35 @@ async function loadDashboard() {
  * Dashboard simplifié pour le mode club :
  * Une seule carte "santé" avec indicateur vert/jaune/rouge
  */
-function renderClubDashboard(data) {
+async function renderClubDashboard(data) {
     const cardsGrid = document.querySelector('#tab-dashboard .cards-grid');
     const healthCard = document.getElementById('health-status-card');
 
     if (cardsGrid) cardsGrid.style.display = 'none';
     if (healthCard) {
         healthCard.style.display = 'block';
-        updateHealthStatus(data, healthCard);
+
+        // Fetch quick stats for club mode
+        let videoCount = 0;
+        let sponsorCount = 0;
+        try {
+            const [videosRes, sponsorsRes] = await Promise.all([
+                fetch('/api/videos'),
+                fetch('/api/sponsors'),
+            ]);
+            if (videosRes.ok) {
+                const videosData = await videosRes.json();
+                videoCount = Array.isArray(videosData) ? videosData.length : (videosData.videos ? videosData.videos.length : 0);
+            }
+            if (sponsorsRes.ok) {
+                const sponsorsData = await sponsorsRes.json();
+                sponsorCount = Array.isArray(sponsorsData) ? sponsorsData.length : (sponsorsData.sponsors ? sponsorsData.sponsors.length : 0);
+            }
+        } catch (err) {
+            console.warn('[admin-ui] Failed to fetch quick stats:', err.message);
+        }
+
+        updateHealthStatus(data, healthCard, videoCount, sponsorCount);
     }
 }
 
@@ -1059,41 +1200,56 @@ function renderTechDashboard(data) {
 /**
  * Calcule et affiche l'état de santé global : vert / jaune / rouge
  */
-function updateHealthStatus(data, card) {
+function updateHealthStatus(data, card, videoCount, sponsorCount) {
+    if (videoCount === undefined) videoCount = 0;
+    if (sponsorCount === undefined) sponsorCount = 0;
+
     const cpu = parseFloat(data.cpu.usage);
     const mem = parseFloat(data.memory.percent);
     const temp = parseFloat(data.temperature);
     const disk = data.disk ? parseFloat(data.disk.percent) : 0;
 
+    const mode = getCurrentMode();
+    const isClub = mode === MODE_CLUB;
+
     let status = 'green';
-    let statusText = 'Système en bon état';
+    let statusText = isClub ? 'Tout fonctionne parfaitement' : 'Système en bon état';
     let statusIcon = '✅';
     let details = [];
 
     // Seuils rouge (critique)
-    if (cpu > 90) { status = 'red'; details.push('CPU très élevé'); }
-    if (mem > 90) { status = 'red'; details.push('Mémoire critique'); }
-    if (temp > 75) { status = 'red'; details.push('Température critique'); }
-    if (disk > 95) { status = 'red'; details.push('Stockage quasi plein'); }
+    if (cpu > 90) { status = 'red'; details.push(isClub ? 'Le boîtier chauffe un peu' : 'CPU très élevé'); }
+    if (mem > 90) { status = 'red'; details.push(isClub ? 'Mémoire presque pleine' : 'Mémoire critique'); }
+    if (temp > 75) { status = 'red'; details.push(isClub ? 'Le boîtier surchauffe' : 'Température critique'); }
+    if (disk > 95) { status = 'red'; details.push(isClub ? 'Plus beaucoup d\'espace pour vos vidéos' : 'Stockage quasi plein'); }
 
     // Seuils jaune (attention) — seulement si pas déjà rouge
     if (status !== 'red') {
-        if (cpu > 70) { status = 'yellow'; details.push('CPU élevé'); }
-        if (mem > 75) { status = 'yellow'; details.push('Mémoire élevée'); }
-        if (temp > 60) { status = 'yellow'; details.push('Température élevée'); }
-        if (disk > 80) { status = 'yellow'; details.push('Stockage limité'); }
+        if (cpu > 70) { status = 'yellow'; details.push(isClub ? 'Le boîtier est très sollicité' : 'CPU élevé'); }
+        if (mem > 75) { status = 'yellow'; details.push(isClub ? 'Mémoire bien remplie' : 'Mémoire élevée'); }
+        if (temp > 60) { status = 'yellow'; details.push(isClub ? 'Le boîtier est un peu chaud' : 'Température élevée'); }
+        if (disk > 80) { status = 'yellow'; details.push(isClub ? 'Espace vidéo limité' : 'Stockage limité'); }
     }
 
     if (status === 'red') {
-        statusText = 'Problème détecté';
+        statusText = isClub ? 'Un problème nécessite votre attention' : 'Problème détecté';
         statusIcon = '🔴';
     } else if (status === 'yellow') {
-        statusText = 'Attention requise';
+        statusText = isClub ? 'Attention' : 'Attention requise';
         statusIcon = '⚠️';
     }
 
     const detailsHtml = details.length > 0
         ? '<div class="health-details-list">' + details.join(' • ') + '</div>'
+        : '';
+
+    // Quick stats row (club mode only)
+    const quickStatsHtml = isClub
+        ? '<div class="health-quick-stats">'
+          + '  <span>\uD83C\uDFAC ' + videoCount + ' vidéo' + (videoCount !== 1 ? 's' : '') + '</span>'
+          + '  <span class="health-stats-sep">\u00B7</span>'
+          + '  <span>\uD83E\uDD1D ' + sponsorCount + ' sponsor' + (sponsorCount !== 1 ? 's' : '') + '</span>'
+          + '</div>'
         : '';
 
     const bodyEl = card.querySelector('.health-body');
@@ -1108,7 +1264,8 @@ function updateHealthStatus(data, card) {
             + '</div>'
             + '<div class="health-uptime">'
             + '  ⏱️ Uptime : <strong>' + (data.uptime || '--') + '</strong>'
-            + '</div>';
+            + '</div>'
+            + quickStatsHtml;
     }
 }
 
@@ -1283,7 +1440,7 @@ function renderConfigurationStructure(container, config) {
 
         // Sous-catégories
         (category.subCategories || []).forEach(subcat => {
-            const subcatLocked = categoryLocked || isLocked(subcat);
+            const _subcatLocked = categoryLocked || isLocked(subcat);  
             if (subcat.videos && subcat.videos.length > 0) {
                 body.appendChild(createConfigVideoList(subcat.name || subcat.id, subcat.videos, category.id, subcat.id, categoryLocked, subcat));
             } else {
@@ -1707,7 +1864,7 @@ async function deleteVideo(category, filename) {
         } else {
             showNotification('Erreur: ' + data.error, 'error');
         }
-    } catch (error) {
+    } catch (_error) {
         showNotification('Erreur lors de la suppression', 'error');
     }
 }
@@ -2010,7 +2167,7 @@ function renderOrphanVideos(container, orphans, existingCategories) {
                 } else {
                     showNotification('Erreur: ' + data.error, 'error');
                 }
-            } catch (error) {
+            } catch (_error) {
                 showNotification('Erreur lors de l\'ajout', 'error');
             }
         });
@@ -2123,7 +2280,7 @@ async function addSelectedOrphansToConfig() {
         } else {
             showNotification('Erreur: ' + data.error, 'error');
         }
-    } catch (error) {
+    } catch (_error) {
         showNotification('Erreur lors de l\'ajout groupé', 'error');
     }
 }
@@ -2437,7 +2594,7 @@ async function bulkDeleteVideos() {
             } else {
                 errorCount++;
             }
-        } catch (error) {
+        } catch (_error) {
             errorCount++;
         }
     }
@@ -2580,7 +2737,7 @@ async function executeBulkMove() {
             } else {
                 errorCount++;
             }
-        } catch (error) {
+        } catch (_error) {
             errorCount++;
         }
     }
@@ -4219,37 +4376,115 @@ async function confirmHotspotReboot() {
 // ============================================================================
 
 // ============================================================================
-// Visionneuse de logs
+// Visionneuse de logs - avec coloration et filtre
 // ============================================================================
 
+/** @type {string[]} Raw log lines from last fetch */
+var _rawLogLines = [];
+
 function initLogButtons() {
-    const buttons = document.querySelectorAll('[data-log]');
-    buttons.forEach(btn => {
-        btn.addEventListener('click', () => {
-            buttons.forEach(b => b.classList.remove('active'));
+    var buttons = document.querySelectorAll('[data-log]');
+    buttons.forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            buttons.forEach(function (b) { b.classList.remove('active'); });
             btn.classList.add('active');
-            const service = btn.dataset.log;
-            currentLogService = service;
-            loadLogs(service);
+            currentLogService = btn.dataset.log;
+            loadLogs(currentLogService);
         });
     });
 }
 
 async function loadLogs(service) {
-    try {
-        const response = await fetch(`/api/logs/${service}?lines=100`);
-        const data = await response.json();
+    var linesSelect = document.getElementById('logs-lines');
+    var lines = linesSelect ? linesSelect.value : '100';
 
-        const container = document.getElementById('logs-content');
-        container.textContent = data.logs || 'Aucun log disponible';
-        container.scrollTop = container.scrollHeight;
+    try {
+        var response = await fetch('/api/logs/' + service + '?lines=' + lines);
+        var data = await response.json();
+
+        var rawText = data.logs || 'Aucun log disponible';
+        _rawLogLines = rawText.split('\n');
+
+        renderLogLines();
     } catch (error) {
         console.error('Error loading logs:', error);
+        var container = document.getElementById('logs-content');
+        if (container) {
+            container.innerHTML = '<span class="log-line log-error">Erreur de chargement des logs</span>';
+        }
     }
+}
+
+/**
+ * Render log lines with colorization and filter applied
+ */
+function renderLogLines() {
+    var container = document.getElementById('logs-content');
+    if (!container) return;
+
+    var filterInput = document.getElementById('logs-filter');
+    var filter = filterInput ? filterInput.value.toLowerCase() : '';
+
+    var visibleLines = _rawLogLines;
+    if (filter) {
+        visibleLines = _rawLogLines.filter(function (line) {
+            return line.toLowerCase().includes(filter);
+        });
+    }
+
+    var html = visibleLines.map(function (line) {
+        var cssClass = getLogLineClass(line);
+        var escaped = escapeHtml(line);
+        if (filter && escaped) {
+            var regex = new RegExp('(' + escapeRegex(filter) + ')', 'gi');
+            escaped = escaped.replace(regex, '<mark>$1</mark>');
+        }
+        return '<div class="log-line ' + cssClass + '">' + escaped + '</div>';
+    }).join('');
+
+    container.innerHTML = html || '<div class="log-line">Aucun résultat</div>';
+    container.scrollTop = container.scrollHeight;
+
+    var countLabel = document.getElementById('logs-count');
+    if (countLabel) {
+        if (filter) {
+            countLabel.textContent = visibleLines.length + ' / ' + _rawLogLines.length + ' lignes';
+        } else {
+            countLabel.textContent = _rawLogLines.length + ' lignes';
+        }
+    }
+}
+
+/**
+ * Determine CSS class for a log line based on content
+ */
+function getLogLineClass(line) {
+    var upper = line.toUpperCase();
+    if (upper.includes('ERROR') || upper.includes('ERR]') || upper.includes('FATAL') || upper.includes('CRIT')) {
+        return 'log-error';
+    }
+    if (upper.includes('WARN') || upper.includes('WARNING')) {
+        return 'log-warn';
+    }
+    if (upper.includes('DEBUG') || upper.includes('TRACE')) {
+        return 'log-debug';
+    }
+    return 'log-info';
+}
+
+function filterLogs() {
+    renderLogLines();
 }
 
 function refreshLogs() {
     loadLogs(currentLogService);
+}
+
+/**
+ * Escape regex special characters for highlight matching
+ */
+function escapeRegex(str) {
+    return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 // ============================================================================
@@ -4711,7 +4946,7 @@ async function updateSystem() {
         } else {
             showNotification('Erreur: ' + data.error, 'error');
         }
-    } catch (error) {
+    } catch (_error) {
         showNotification('Erreur lors de la mise à jour', 'error');
     }
 }
@@ -5126,7 +5361,7 @@ async function saveCategoryEdit(index) {
         } else {
             showNotification('Erreur: ' + data.error, 'error');
         }
-    } catch (error) {
+    } catch (_error) {
         showNotification('Erreur lors de la sauvegarde', 'error');
     }
 }
@@ -5147,7 +5382,7 @@ async function saveCategoryToServer(category) {
         } else {
             showNotification('Erreur: ' + data.error, 'error');
         }
-    } catch (error) {
+    } catch (_error) {
         showNotification('Erreur lors de la création', 'error');
     }
 }
@@ -5179,7 +5414,7 @@ async function deleteCategory(categoryId) {
         } else {
             showNotification('Erreur: ' + data.error, 'error');
         }
-    } catch (error) {
+    } catch (_error) {
         showNotification('Erreur lors de la suppression', 'error');
     }
 }
@@ -5212,7 +5447,7 @@ async function saveSubCategoryToServer(categoryId, subCategory) {
         } else {
             showNotification('Erreur: ' + data.error, 'error');
         }
-    } catch (error) {
+    } catch (_error) {
         showNotification('Erreur lors de la création', 'error');
     }
 }
@@ -5244,7 +5479,7 @@ async function deleteSubCategory(categoryId, subIndex) {
         } else {
             showNotification('Erreur: ' + data.error, 'error');
         }
-    } catch (error) {
+    } catch (_error) {
         showNotification('Erreur lors de la suppression', 'error');
     }
 }
@@ -5269,6 +5504,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     initMode(); // Initialize club/tech mode from localStorage
     loadDashboard();
     loadVersionLabel();
+
+    // Initialize realtime connection (with delay for Socket.IO client to load)
+    setTimeout(function() {
+        if (typeof initRealtime === 'function') {
+            initRealtime();
+        }
+    }, 1000);
 
     // Charger la configuration pour peupler les selects
     await loadConfiguration();
@@ -5368,7 +5610,7 @@ function updateVersionLabel() {
             tooltip.push(
                 `build ${new Date(currentVersionInfo.buildDate).toLocaleString('fr-FR')}`
             );
-        } catch (error) {
+        } catch (_error) {
             tooltip.push(`build ${currentVersionInfo.buildDate}`);
         }
     }

@@ -15,6 +15,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     loadDashboard();
     loadVersionLabel();
 
+    // Initialize realtime connection (with delay for Socket.IO client to load)
+    setTimeout(function() {
+        if (typeof initRealtime === 'function') {
+            initRealtime();
+        }
+    }, 1000);
+
     // Charger la configuration pour peupler les selects
     await loadConfiguration();
 
@@ -113,7 +120,7 @@ function updateVersionLabel() {
             tooltip.push(
                 `build ${new Date(currentVersionInfo.buildDate).toLocaleString('fr-FR')}`
             );
-        } catch (error) {
+        } catch (_error) {
             tooltip.push(`build ${currentVersionInfo.buildDate}`);
         }
     }

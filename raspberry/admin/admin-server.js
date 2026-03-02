@@ -79,7 +79,7 @@ const sponsorStatsService = new SponsorStatsService({ configService });
 // =============================================================================
 
 const authRouter = require('./routes/auth');
-const { requireAuth } = require('./routes/auth');
+const { requireAuth, requireCsrf, getSessionCount } = require('./routes/auth');
 const updateRouter = require('./routes/update');
 
 // Email notifications
@@ -244,10 +244,33 @@ app.post('/api/system/apply-services', (req, res, next) => {
 });
 
 // =============================================================================
+// HEALTH ENDPOINT (before auth — monitoring tools can poll without credentials)
+// =============================================================================
+
+const adminPkg = require('./package.json');
+
+app.get('/api/admin/health', (req, res) => {
+  const mem = process.memoryUsage();
+  res.json({
+    status: 'ok',
+    uptime: Math.round(process.uptime()),
+    version: adminPkg.version,
+    timestamp: new Date().toISOString(),
+    sessions: getSessionCount(),
+    memory: {
+      rss: mem.rss,
+      heapUsed: mem.heapUsed,
+      heapTotal: mem.heapTotal,
+    },
+  });
+});
+
+// =============================================================================
 // APPLY AUTHENTICATION TO ALL ROUTES BELOW
 // =============================================================================
 
 app.use(requireAuth);
+app.use(requireCsrf);
 
 // =============================================================================
 // HOMEPAGE

@@ -181,7 +181,7 @@ function renderOrphanVideos(container, orphans, existingCategories) {
                 } else {
                     showNotification('Erreur: ' + data.error, 'error');
                 }
-            } catch (error) {
+            } catch (_error) {
                 showNotification('Erreur lors de l\'ajout', 'error');
             }
         });
@@ -294,7 +294,7 @@ async function addSelectedOrphansToConfig() {
         } else {
             showNotification('Erreur: ' + data.error, 'error');
         }
-    } catch (error) {
+    } catch (_error) {
         showNotification('Erreur lors de l\'ajout groupé', 'error');
     }
 }
