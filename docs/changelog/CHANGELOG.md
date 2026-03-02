@@ -2,6 +2,12 @@
 
 ### Bug Fixes
 
+- **fleet:** add packages + cursor remediation to fix-fleet-pi.sh (8→10 steps) ([1a2096e](https://github.com/Tallec7/neopro/commit/1a2096ef17c09df132bb828efe5b3058b0430b24))
+
+## [3.95.1](https://github.com/Tallec7/neopro/compare/v3.95.0...v3.95.1) (2026-03-02)
+
+### Bug Fixes
+
 - **fleet:** fix-fleet-pi.sh étendu de 8 à 10 étapes — ajoute installation des packages recommandés
   (unclutter-xfixes, x11-utils, edid-decode), remplacement de l'ancien paquet unclutter, et correction
   du masquage curseur TV (autostart LXDE). Garantit que tous les Pi existants seront corrigés lors de
