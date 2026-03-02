@@ -311,12 +311,36 @@ module.exports = function registerSocketHandlers({ io, stateService, configPath,
         // Mettre a jour le marqueur de profil actif
         fs.writeFileSync(activeProfilePath, profileId, 'utf8');
 
-        // Lire le profil et le broadcaster comme reload-config
+        // Lire le profil
         const profileData = fs.readFileSync(profilePath, 'utf8');
         const profileConfig = JSON.parse(profileData);
 
-        console.log('[Profile] Active profile set to:', profileId);
-        io.emit('action', { type: 'reload-config', data: profileConfig });
+        // Merger avec les settings locaux de configuration.json
+        let mergedConfig = profileConfig;
+        if (fs.existsSync(configPath)) {
+          try {
+            const currentData = fs.readFileSync(configPath, 'utf8');
+            const currentConfig = JSON.parse(currentData);
+            const LOCAL_ONLY_SETTINGS = [
+              'settings', 'siteId', 'siteName', 'clubName', 'apiKey',
+              'hotspot', 'localNetwork', 'localSponsors',
+            ];
+            mergedConfig = { ...profileConfig };
+            for (const key of LOCAL_ONLY_SETTINGS) {
+              if (currentConfig[key] !== undefined) {
+                mergedConfig[key] = currentConfig[key];
+              }
+            }
+          } catch (mergeErr) {
+            console.warn('[Profile] Could not merge local settings:', mergeErr.message);
+          }
+        }
+
+        // Persister dans configuration.json pour cohérence avec config_updated
+        fs.writeFileSync(configPath, JSON.stringify(mergedConfig, null, 2), 'utf8');
+
+        console.log('[Profile] Active profile set to:', profileId, '(configuration.json updated)');
+        io.emit('action', { type: 'reload-config', data: mergedConfig });
       } catch (error) {
         console.error('[Profile] Error switching profile:', error.message);
       }

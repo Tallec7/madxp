@@ -3998,6 +3998,45 @@ describe('Multi-profile enrichment regression guards', () => {
 });
 
 // ----------------------------------------------------------
+// Pi-side profile-switch handler regression guard
+// Bug: profile-switch handler in handlers.js broadcasted
+// the raw profile config but did NOT persist it to
+// configuration.json. Any subsequent config_updated event
+// re-read configuration.json (still had old profile) and
+// overrode the user's profile selection. Fix: the handler
+// now merges local settings and writes to configuration.json.
+// ----------------------------------------------------------
+describe('Pi-side profile-switch handler regression guard', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+  const handlersPath = path.join(
+    repoRoot,
+    'raspberry/server/socket/handlers.js'
+  );
+
+  let handlersContent: string;
+  beforeAll(() => {
+    handlersContent = fs.readFileSync(handlersPath, 'utf8');
+  });
+
+  it('profile-switch handler must write to configuration.json after merge', () => {
+    // Extract the profile-switch handler block
+    const switchBlock = handlersContent.match(
+      /socket\.on\('profile-switch'[\s\S]*?(?=socket\.on\(|$)/
+    );
+    expect(switchBlock).not.toBeNull();
+    expect({
+      writesConfigFile: switchBlock![0].includes('writeFileSync(configPath'),
+      preservesLocalSettings: switchBlock![0].includes('LOCAL_ONLY_SETTINGS'),
+      mergesConfig: switchBlock![0].includes('mergedConfig'),
+    }).toEqual({
+      writesConfigFile: true,
+      preservesLocalSettings: true,
+      mergesConfig: true,
+    });
+  });
+});
+
+// ----------------------------------------------------------
 // Kiosk GPU crash loop regression guards
 // Incident: 24/02/2026 — After OTA deploy, Chromium enters a
 // rendering crash loop on Pi 5 because SIGKILL prevents the
