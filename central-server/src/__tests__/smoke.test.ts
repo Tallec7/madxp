@@ -4072,8 +4072,21 @@ describe('Kiosk GPU crash loop regression guards', () => {
   it('kiosk-watchdog.sh must check nginx readiness before launching Chromium', () => {
     // Without this, Chromium may load before nginx is ready after a deploy,
     // resulting in a blank screen or loading a stale SW-cached version.
-    expect({ hasNginxReadinessCheck: watchdog.includes('curl') && watchdog.includes('neopro.local') })
+    expect({ hasNginxReadinessCheck: watchdog.includes('curl') && watchdog.includes('localhost') })
       .toEqual({ hasNginxReadinessCheck: true });
+  });
+
+  it('kiosk-watchdog.sh CHROMIUM_URL must use localhost (never neopro.local)', () => {
+    // When multiple Pi are on the same LAN, mDNS resolves neopro.local to
+    // whichever Pi responds first — causing one Pi to display the other's loop.
+    // The kiosk Chromium always talks to its own nginx, so localhost is correct.
+    // neopro.local remains valid for external access (SSH, phone remote, admin).
+    const chromiumUrlLine = watchdog.split('\n').find(l => /^CHROMIUM_URL=/.test(l)) || '';
+    const chromiumSecondaryLine = watchdog.split('\n').find(l => /^CHROMIUM_SECONDARY_URL=/.test(l)) || '';
+    expect({ usesLocalhost: chromiumUrlLine.includes('localhost') && !chromiumUrlLine.includes('neopro.local') })
+      .toEqual({ usesLocalhost: true });
+    expect({ secondaryUsesLocalhost: chromiumSecondaryLine.includes('localhost') && !chromiumSecondaryLine.includes('neopro.local') })
+      .toEqual({ secondaryUsesLocalhost: true });
   });
 
   it('common_flags must include --disable-gpu-shader-disk-cache', () => {

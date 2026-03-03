@@ -221,6 +221,29 @@ cat /etc/hosts | grep neopro
 sudo sed -i '' '/neopro.local/d' /etc/hosts
 ```
 
+#### 3b. Collision mDNS — Un Pi affiche la boucle vidéo d'un autre Pi (v3.96+)
+
+**Symptôme :** Vous branchez un Pi sur un écran et il affiche la boucle vidéo d'un **autre** Pi du réseau au lieu de la sienne.
+
+**Cause :** Tous les Pi ont le hostname `neopro` et publient `neopro.local` via avahi/mDNS. Quand deux Pi sont sur le même LAN (ex: setup de test, même réseau Ethernet), la résolution mDNS `neopro.local` peut pointer vers l'autre Pi.
+
+**Résolu depuis v3.96 :** Le kiosk Chromium utilise désormais `http://localhost/tv` au lieu de `http://neopro.local/tv`. Le Pi parle toujours à son propre nginx via `localhost`, éliminant toute dépendance mDNS pour l'affichage interne.
+
+> **Note :** `neopro.local` reste valide et nécessaire pour l'accès **externe** : SSH (`ssh pi@neopro.local`), télécommande (`neopro.local/remote`), admin (`neopro.local:8080`). Seul le kiosk Chromium interne utilise `localhost`.
+
+**Si le problème persiste sur un Pi en version < 3.96 :**
+
+```bash
+# Vérifier vers où pointe neopro.local
+ping -c1 neopro.local
+# Si l'IP retournée n'est pas celle du Pi lui-même → collision confirmée
+
+# Fix rapide : forcer localhost dans /etc/hosts
+sudo sed -i 's/127.0.1.1.*/127.0.1.1\tneopro.local neopro/' /etc/hosts
+sudo systemctl restart avahi-daemon
+sudo systemctl restart neopro-kiosk
+```
+
 #### 4. neopro.local ne fonctionne pas sur iPhone (mais fonctionne sur Mac)
 
 **Symptômes :**

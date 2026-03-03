@@ -10,8 +10,8 @@
 # Usage: Ce script est lancé par neopro-kiosk.service
 ################################################################################
 
-CHROMIUM_URL="http://neopro.local/tv"
-CHROMIUM_SECONDARY_URL="http://neopro.local/secondary"
+CHROMIUM_URL="http://localhost/tv"
+CHROMIUM_SECONDARY_URL="http://localhost/secondary"
 CONFIG_FILE="/home/pi/neopro/webapp/configuration.json"
 LOG_DIR="/home/pi/neopro/logs"
 LOG_FILE="$LOG_DIR/kiosk-watchdog.log"
@@ -1242,7 +1242,7 @@ main() {
     # Attendre que nginx serve la webapp (évite un écran blanc si restart en parallèle)
     local nginx_wait=0
     while (( nginx_wait < 15 )); do
-        if curl -s -o /dev/null -w "%{http_code}" --max-time 2 http://neopro.local/index.html 2>/dev/null | grep -q "200"; then
+        if curl -s -o /dev/null -w "%{http_code}" --max-time 2 http://localhost/index.html 2>/dev/null | grep -q "200"; then
             log "✓ Nginx prêt (après ${nginx_wait}s)"
             break
         fi
@@ -1289,7 +1289,7 @@ main() {
         if [ -f "${NEOPRO_DIR:-/home/pi/neopro}/webapp/version.json" ]; then
             disk_version=$(python3 -c "import json; print(json.load(open('${NEOPRO_DIR:-/home/pi/neopro}/webapp/version.json'))['version'])" 2>/dev/null || echo "")
         fi
-        served_version=$(curl -s --max-time 5 http://neopro.local/version.json 2>/dev/null | python3 -c "import json,sys; print(json.load(sys.stdin)['version'])" 2>/dev/null || echo "")
+        served_version=$(curl -s --max-time 5 http://localhost/version.json 2>/dev/null | python3 -c "import json,sys; print(json.load(sys.stdin)['version'])" 2>/dev/null || echo "")
 
         if [ -n "$disk_version" ] && [ -n "$served_version" ]; then
             if [ "$disk_version" != "$served_version" ]; then

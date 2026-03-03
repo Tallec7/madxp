@@ -54,7 +54,7 @@ Le service se lance **10 secondes** après le boot pour laisser le temps:
 - À l'interface graphique (X11) de s'initialiser
 - Au réseau de se connecter
 
-**URL cible:** `http://neopro.local/tv`
+**URL cible:** `http://localhost/tv` (utilise `localhost` et non `neopro.local` pour éviter les collisions mDNS quand plusieurs Pi sont sur le même LAN)
 
 ### Flags Chromium Importants
 
@@ -166,7 +166,7 @@ journalctl -u neopro-kiosk.service -n 50
 
 # Causes courantes:
 # - Serveur web pas encore démarré → Augmenter ExecStartPre sleep
-# - URL incorrecte → Vérifier http://neopro.local/tv
+# - URL incorrecte → Vérifier http://localhost/tv
 # - Permissions X11 → Vérifier XAUTHORITY
 ```
 
@@ -194,7 +194,7 @@ Pour voir Chromium en mode fenêtré (pas kiosk):
 # Lancer manuellement sans kiosk
 DISPLAY=:0 chromium \
   --autoplay-policy=no-user-gesture-required \
-  http://neopro.local/tv
+  http://localhost/tv
 ```
 
 ### Alternatives
@@ -216,7 +216,7 @@ autologin-user-timeout=0
 chromium \
   --kiosk \
   --autoplay-policy=no-user-gesture-required \
-  http://neopro.local/tv
+  http://localhost/tv
 ```
 
 ---
