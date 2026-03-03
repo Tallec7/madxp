@@ -106,6 +106,7 @@ source central-server/.env && psql "$DATABASE_URL" -f central-server/src/scripts
 - Supprimer l'auto-completion des déploiements bloqués à 100% dans `checkStuckDeployments()` de `alerting.service.ts` (deuxième filet : rattrape les déploiements où même le progress event à 100 a été perdu — auto-complete après 5min à progress >= 100 — smoke test enforced)
 - Utiliser `$WIFI_INTERFACE` dans `hotspot-optimizer.sh` (variable indéfinie — utiliser `$AP_INTERFACE` qui est défini à `wlan0` — smoke test enforced)
 - Supprimer le boot grace period hotspot du NetworkWatchdog `start()` (sans grace period, le watchdog détecte "IP 192.168.4.1 non configurée" à boot+5s et redémarre hostapd 2-3 fois, retardant la stabilisation du hotspot de 30s+ — smoke test enforced)
+- Supprimer la boucle re-raise post-fullscreen du subshell `start_chromium()` dans kiosk-watchdog.sh (LXDE/openbox restack lxpanel 1-5s après le premier fullscreen — sans re-raise à +3s/+8s/+15s, la barre de tâches reste visible ~30s jusqu'au prochain `check_window_stacking` — smoke test enforced)
 
 ## Architecture détaillée
 

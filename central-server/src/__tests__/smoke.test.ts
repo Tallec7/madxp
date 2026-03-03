@@ -7497,6 +7497,39 @@ describe('Boot splash screen guards', () => {
     expect({ hasPlymouthFallback: kioskContent.includes('splash.png') })
       .toEqual({ hasPlymouthFallback: true });
   });
+
+  // Bug fix v3.98.2: LXDE/openbox restacks lxpanel above Chromium 1-5s after initial fullscreen.
+  // Without a re-raise loop, the taskbar stays visible ~30s until the next check_window_stacking
+  // in the main watchdog loop (CHECK_INTERVAL=30).
+  it('kiosk-watchdog.sh fullscreen subshell must re-raise after kill_boot_splash (lxpanel restack defense)', () => {
+    const kioskContent = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/scripts/kiosk-watchdog.sh'),
+      'utf8'
+    );
+    // The fullscreen subshell starts with "# Retry loop" and contains kill_boot_splash
+    // followed by a re-raise loop with xprop + xdotool commands
+    const retryIdx = kioskContent.indexOf('# Retry loop');
+    expect(retryIdx).toBeGreaterThan(0);
+    // Get the subshell region (from Retry loop to the next ') &')
+    const subshellEnd = kioskContent.indexOf(') &', retryIdx);
+    expect(subshellEnd).toBeGreaterThan(retryIdx);
+    const subshell = kioskContent.substring(retryIdx, subshellEnd);
+    // kill_boot_splash must come BEFORE the re-raise loop
+    const killSplashIdx = subshell.indexOf('kill_boot_splash');
+    const reRaiseIdx = subshell.indexOf('Re-raise');
+    expect({ killSplashBeforeReRaise: killSplashIdx > 0 && reRaiseIdx > killSplashIdx })
+      .toEqual({ killSplashBeforeReRaise: true });
+    // Must have xprop + xdotool windowmove + windowsize + windowactivate AFTER kill_boot_splash
+    const afterKill = subshell.slice(killSplashIdx);
+    expect({ hasXpropReRaise: afterKill.includes('xprop -id') })
+      .toEqual({ hasXpropReRaise: true });
+    expect({ hasWindowmoveReRaise: afterKill.includes('xdotool windowmove') })
+      .toEqual({ hasWindowmoveReRaise: true });
+    expect({ hasWindowsizeReRaise: afterKill.includes('xdotool windowsize') })
+      .toEqual({ hasWindowsizeReRaise: true });
+    expect({ hasWindowactivateReRaise: afterKill.includes('xdotool windowactivate') })
+      .toEqual({ hasWindowactivateReRaise: true });
+  });
 });
 
 // ----------------------------------------------------------
