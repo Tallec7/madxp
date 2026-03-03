@@ -100,6 +100,8 @@ source central-server/.env && psql "$DATABASE_URL" -f central-server/src/scripts
 - Faire confiance à `cec.tv_connected` seul pour déterminer si un écran est branché (`cec-client` renvoie `power status:` même sans câble HDMI sur Pi 5 → faux positif — toujours croiser avec `display.connected` (EDID/DRM) et `devices_found` dans `getFullStatus()` — smoke test enforced)
 - Utiliser un `sleep` unique sans retry dans le subshell fullscreen de `start_chromium()` (sur Pi lent/SD card usée, Chromium peut mettre >4s à créer sa fenêtre X11 — sans retry loop, le fullscreen n'est jamais appliqué — smoke test enforced)
 - Réduire `check_window_stacking()` à un simple `windowactivate` sans `windowmove`/`windowsize` (c'est le filet de sécurité qui rattrape tout échec de fullscreen init — doit toujours appliquer la séquence complète xprop + windowmove + windowsize + windowactivate — smoke test enforced)
+- Utiliser `[ngClass]="timeCategory.color"` dans le template remote (les valeurs `color` des profils ne correspondent pas forcément aux classes SCSS → cartes invisibles — toujours passer par `getTimeCategoryGradientClass()` qui fallback par `id` de catégorie — smoke test enforced)
+- Supprimer le menu item "Changer de profil" dans la remote (seul point d'entrée alternatif vers le club-selector — le bouton retour seul ne suffit pas quand `isMultiProfile` est conditionnel — smoke test enforced)
 
 ## Architecture détaillée
 

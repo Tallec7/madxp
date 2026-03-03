@@ -69,6 +69,31 @@ Le handler `profile-switch` broadcastait la config brute du profil **sans** :
 
 **Smoke test** : vérifie que le handler contient `writeFileSync(configPath)`, `LOCAL_ONLY_SETTINGS`, et `mergedConfig`.
 
+## UX télécommande multi-profil (v3.96.2)
+
+### Bug 1 : Cartes time category invisibles
+
+Quand un profil était chargé, les cartes Avant-match/Match/Après-match apparaissaient sans gradient (texte blanc sur fond transparent). Cause : `[ngClass]="timeCategory.color"` s'appuyait sur les valeurs `color` du config JSON qui ne correspondaient pas aux classes SCSS définies (`.from-blue-500`, etc.).
+
+**Fix** : Méthode `getTimeCategoryGradientClass(timeCategory)` avec fallback par `id` :
+
+- `before` → `from-blue-500 to-blue-600`
+- `during` → `from-green-500 to-green-600`
+- `after` → `from-purple-500 to-purple-600`
+
+### Bug 2 : Impossible de changer de profil
+
+Le seul moyen de revenir au club-selector était un bouton retour conditionnel. Aucune alternative dans le menu.
+
+**Fix** : Ajout d'un item "Changer de profil" dans le menu trois-points du header, avec affichage du nom du profil actif dans le sous-titre.
+
+### Smoke tests de régression (4 tests)
+
+- `getTimeCategoryGradientClass` doit exister avec fallback before/during/after
+- Template doit utiliser `getTimeCategoryGradientClass()`, pas `timeCategory.color` brut
+- Template doit contenir "Changer de profil" avec `backToClubSelector()`
+- `currentProfileName` doit être assigné lors de la sélection de profil
+
 ## Fichiers impactés
 
 - `central-server/src/controllers/config-profiles.controller.ts` — deployProfile envoie aussi sync_profiles
@@ -77,6 +102,6 @@ Le handler `profile-switch` broadcastait la config brute du profil **sans** :
 - `raspberry/config/nginx/neopro-hls.conf` — idem
 - `raspberry/src/app/app.routes.ts` — catchError + fallback sur le resolver
 - `raspberry/src/app/services/profile-config.service.ts` — résilience resetCache + loadProfile
-- `raspberry/src/app/components/remote/remote.component.html` — bouton retour multi-profil
-- `raspberry/src/app/components/remote/remote.component.ts` — suppression double reload-config
+- `raspberry/src/app/components/remote/remote.component.html` — bouton retour multi-profil + menu "Changer de profil" + affichage nom profil
+- `raspberry/src/app/components/remote/remote.component.ts` — suppression double reload-config + `getTimeCategoryGradientClass()` + `currentProfileName`
 - `central-dashboard/src/app/features/sites/components/site-profiles-tab/site-profiles-tab.component.ts` — UX Pi offline + badge actif

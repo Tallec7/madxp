@@ -65,6 +65,7 @@ export class RemoteComponent implements OnInit, OnDestroy {
   public breadcrumb: string[] = ['Télécommande'];
   public isDemoMode = false;
   public isMultiProfile = false;
+  public currentProfileName: string | null = null;
   public isReloading = false;
 
   // Donnees pour le club-selector (mode demo ou multi-profil)
@@ -323,6 +324,7 @@ export class RemoteComponent implements OnInit, OnDestroy {
       // Mode demo : charger la config depuis /demo-configs/{id}.json
       this.demoConfigService.loadClubConfiguration(club.id).subscribe({
         next: (config) => {
+          this.currentProfileName = club.name;
           this.initializeWithConfiguration(config);
           this.currentView = 'home';
           this.socketService.emit('command', { type: 'reload-config', data: config });
@@ -335,6 +337,7 @@ export class RemoteComponent implements OnInit, OnDestroy {
       // Mode production multi-profil : charger depuis /profiles/{id}.json
       this.profileConfigService.loadProfileConfiguration(club.id).subscribe({
         next: (config) => {
+          this.currentProfileName = club.name;
           this.initializeWithConfiguration(config);
           this.currentView = 'home';
           // Notifier le serveur local pour switcher le profil actif
@@ -356,6 +359,23 @@ export class RemoteComponent implements OnInit, OnDestroy {
       : this.defaultTimeCategories;
     // Charger l'état du live score depuis la config (contrôle aussi les options avancées)
     this.liveScoreEnabled = config.liveScoreEnabled ?? false;
+  }
+
+  /**
+   * Retourne la classe CSS de gradient pour une time category.
+   * Fallback par id si la valeur color de la config ne correspond pas aux classes SCSS connues.
+   */
+  public getTimeCategoryGradientClass(timeCategory: TimeCategory): string {
+    const knownPrefixes = ['from-blue-500', 'from-green-500', 'from-purple-500'];
+    if (timeCategory.color && knownPrefixes.some(p => timeCategory.color.includes(p))) {
+      return timeCategory.color;
+    }
+    switch (timeCategory.id) {
+      case 'before': return 'from-blue-500 to-blue-600';
+      case 'during': return 'from-green-500 to-green-600';
+      case 'after': return 'from-purple-500 to-purple-600';
+      default: return 'from-blue-500 to-blue-600';
+    }
   }
 
   // Navigation

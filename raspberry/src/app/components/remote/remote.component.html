@@ -101,9 +101,11 @@
                 </div>
               } @else {
                 <h1 class="header-title">{{ breadcrumb[breadcrumb.length - 1] }}</h1>
-                @if (isDemoMode && breadcrumb.length === 1 && configuration) {
+                @if (
+                  (isDemoMode || isMultiProfile) && breadcrumb.length === 1 && currentProfileName
+                ) {
                   <div class="breadcrumb-path">
-                    <span>{{ configuration.auth?.clubName || 'Club' }}</span>
+                    <span>{{ currentProfileName }}</span>
                   </div>
                 }
                 @if (breadcrumb.length > 1) {
@@ -358,6 +360,26 @@
                         />
                       </svg>
                       <span>Options</span>
+                    </button>
+                  }
+                  <!-- Changer de profil (multi-profil ou mode démo) -->
+                  @if (isMultiProfile || isDemoMode) {
+                    <button
+                      class="header-menu-item profile-switch-item"
+                      (click)="backToClubSelector(); closeHeaderMenu()"
+                    >
+                      <svg
+                        class="menu-item-icon"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                      >
+                        <path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" />
+                        <circle cx="8.5" cy="7" r="4" />
+                        <polyline points="17 11 19 13 23 9" />
+                      </svg>
+                      <span>Changer de profil</span>
                     </button>
                   }
                 </div>
@@ -621,7 +643,7 @@
                 @for (timeCategory of timeCategories; track timeCategory.name) {
                   <button
                     class="time-category-card ripple"
-                    [ngClass]="timeCategory.color"
+                    [ngClass]="getTimeCategoryGradientClass(timeCategory)"
                     (click)="selectTimeCategory(timeCategory)"
                     [attr.aria-label]="
                       timeCategory.name +
