@@ -1,3 +1,9 @@
+## [3.97.3](https://github.com/Tallec7/neopro/compare/v3.97.2...v3.97.3) (2026-03-03)
+
+### Bug Fixes
+
+- **remote:** nom du profil cliquable pour changer de profil facilement ([225d116](https://github.com/Tallec7/neopro/commit/225d116986cdf2c8c299798d522d1dfc22cb4746))
+
 ## [3.97.2](https://github.com/Tallec7/neopro/compare/v3.97.1...v3.97.2) (2026-03-03)
 
 ### Bug Fixes
