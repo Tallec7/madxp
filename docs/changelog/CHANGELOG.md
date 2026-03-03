@@ -1,3 +1,9 @@
+# [3.98.0](https://github.com/Tallec7/neopro/compare/v3.97.3...v3.98.0) (2026-03-03)
+
+### Features
+
+- **boot:** replace Plymouth Raspberry logo with NEOPRO branded splash ([1ab285e](https://github.com/Tallec7/neopro/commit/1ab285e33c4546703133f5edef270aaba9312fc5))
+
 ## [3.97.3](https://github.com/Tallec7/neopro/compare/v3.97.2...v3.97.3) (2026-03-03)
 
 ### Bug Fixes
