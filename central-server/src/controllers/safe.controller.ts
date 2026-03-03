@@ -115,39 +115,48 @@ export const updateProposalStatus = async (req: AuthRequest, res: Response) => {
 };
 
 /**
- * PUT /api/safe/epics/:id/status
- * Met à jour le statut d'un epic (placeholder pour V2 - write-back dans FEATURES.md)
+ * PUT /api/safe/epics/:id
+ * Met à jour un epic (nom et/ou statut) — write-back dans FEATURES.md
  */
-export const updateEpicStatus = async (req: AuthRequest, res: Response) => {
+export const updateEpic = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
-    const { status } = req.body;
+    const { status, name } = req.body;
 
-    if (!status || !VALID_EPIC_STATUSES.includes(status)) {
+    if (!status && !name) {
+      return res.status(400).json({ error: 'At least one of status or name is required' });
+    }
+
+    if (status && !VALID_EPIC_STATUSES.includes(status)) {
       return res.status(400).json({
         error: `Invalid status. Must be one of: ${VALID_EPIC_STATUSES.join(', ')}`,
       });
     }
 
-    const updated = safeParserService.updateEpicStatus(id, status);
+    if (name !== undefined && (typeof name !== 'string' || name.trim().length === 0)) {
+      return res.status(400).json({ error: 'Name must be a non-empty string' });
+    }
+
+    const updated = safeParserService.updateEpic(id, { status, name: name?.trim() });
 
     if (!updated) {
       return res.status(404).json({ error: `Epic ${id} not found in FEATURES.md` });
     }
 
-    logger.info('SAFe epic status updated', {
+    logger.info('SAFe epic updated', {
       epicId: id,
       newStatus: status,
+      newName: name,
       updatedBy: req.user?.email,
     });
 
     return res.json({
       success: true,
-      data: { id, status },
+      data: { id, status, name },
     });
   } catch (error) {
-    logger.error('Error updating SAFe epic status:', error);
-    return res.status(500).json({ error: 'Failed to update epic status' });
+    logger.error('Error updating SAFe epic:', error);
+    return res.status(500).json({ error: 'Failed to update epic' });
   }
 };
 

@@ -167,7 +167,7 @@ interface KanbanColumn {
               <div class="card-top-row">
                 <span class="card-id">{{ epic.id }}</span>
                 <div class="card-actions">
-                  <button class="btn-icon btn-icon-sm" (click)="openEpicEditModal(epic); $event.stopPropagation()" title="Modifier le statut">✏️</button>
+                  <button class="btn-icon btn-icon-sm" (click)="openEpicEditModal(epic); $event.stopPropagation()" title="Modifier l'Epic">✏️</button>
                   <select
                     class="epic-status-select"
                     [ngModel]="col.id"
@@ -334,13 +334,17 @@ interface KanbanColumn {
       <div class="modal" *ngIf="showEpicModal" (click)="closeEpicModal()">
         <div class="modal-content" (click)="$event.stopPropagation()">
           <div class="modal-header">
-            <h2>Modifier le statut Epic</h2>
+            <h2>Modifier l'Epic</h2>
             <button class="modal-close" (click)="closeEpicModal()">×</button>
           </div>
           <div class="modal-body">
             <div class="form-group">
               <label>Epic</label>
-              <div class="read-only-field">{{ editingEpic?.id }} — {{ editingEpic?.name }}</div>
+              <div class="read-only-field">{{ editingEpic?.id }}</div>
+            </div>
+            <div class="form-group">
+              <label for="epicName">Nom</label>
+              <input id="epicName" type="text" [(ngModel)]="epicEditForm.name" class="form-control" />
             </div>
             <div class="form-group">
               <label for="epicStatus">Statut</label>
@@ -351,7 +355,7 @@ interface KanbanColumn {
           </div>
           <div class="modal-footer">
             <button class="btn btn-secondary" (click)="closeEpicModal()">Annuler</button>
-            <button class="btn btn-primary" (click)="saveEpicStatus()" [disabled]="savingEpic">
+            <button class="btn btn-primary" (click)="saveEpic()" [disabled]="savingEpic">
               {{ savingEpic ? 'Enregistrement...' : 'Enregistrer' }}
             </button>
           </div>
@@ -705,7 +709,7 @@ export class SafePortfolioComponent implements OnInit, OnDestroy {
   // Epic edit modal
   showEpicModal = false;
   editingEpic: SafeEpic | null = null;
-  epicEditForm = { status: '' as string };
+  epicEditForm = { status: '' as string, name: '' };
   savingEpic = false;
 
   private objSortCol = '';
@@ -795,7 +799,7 @@ export class SafePortfolioComponent implements OnInit, OnDestroy {
     );
     this.cdr.markForCheck();
 
-    this.safeService.updateEpicStatus(epic.id, newStatus).pipe(takeUntil(this.destroy$)).subscribe({
+    this.safeService.updateEpic(epic.id, { status: newStatus }).pipe(takeUntil(this.destroy$)).subscribe({
       next: () => {
         this.notif.success(this.translate.instant('safe.portfolio.epicStatusUpdated'));
       },
@@ -833,7 +837,7 @@ export class SafePortfolioComponent implements OnInit, OnDestroy {
     toCol.items.push(epic);
     this.cdr.markForCheck();
 
-    this.safeService.updateEpicStatus(epic.id, newStatus).pipe(takeUntil(this.destroy$)).subscribe({
+    this.safeService.updateEpic(epic.id, { status: newStatus }).pipe(takeUntil(this.destroy$)).subscribe({
       next: () => {
         this.notif.success(this.translate.instant('safe.portfolio.epicStatusUpdated'));
       },
@@ -972,7 +976,7 @@ export class SafePortfolioComponent implements OnInit, OnDestroy {
 
   openEpicEditModal(epic: SafeEpic): void {
     this.editingEpic = epic;
-    this.epicEditForm = { status: epic.status };
+    this.epicEditForm = { status: epic.status, name: epic.name };
     this.showEpicModal = true;
     this.cdr.markForCheck();
   }
@@ -983,23 +987,37 @@ export class SafePortfolioComponent implements OnInit, OnDestroy {
     this.cdr.markForCheck();
   }
 
-  saveEpicStatus(): void {
+  saveEpic(): void {
     if (!this.editingEpic || this.savingEpic) return;
 
     this.savingEpic = true;
     this.cdr.markForCheck();
 
-    this.safeService.updateEpicStatus(this.editingEpic.id, this.epicEditForm.status as EpicStatus)
+    const data: { status?: EpicStatus; name?: string } = {};
+    if (this.epicEditForm.status !== this.editingEpic.status) {
+      data.status = this.epicEditForm.status as EpicStatus;
+    }
+    if (this.epicEditForm.name.trim() !== this.editingEpic.name) {
+      data.name = this.epicEditForm.name.trim();
+    }
+
+    if (!data.status && !data.name) {
+      this.closeEpicModal();
+      this.savingEpic = false;
+      return;
+    }
+
+    this.safeService.updateEpic(this.editingEpic.id, data)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: () => {
-          this.notif.success('Statut Epic mis à jour');
+          this.notif.success('Epic mis à jour');
           this.closeEpicModal();
           this.savingEpic = false;
           this.refreshPortfolio();
         },
         error: () => {
-          this.notif.error('Erreur lors de la mise à jour du statut Epic');
+          this.notif.error('Erreur lors de la mise à jour de l\'Epic');
           this.savingEpic = false;
           this.cdr.markForCheck();
         }

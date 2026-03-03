@@ -202,8 +202,8 @@ export class SafeService {
     );
   }
 
-  updateEpicStatus(id: string, status: EpicStatus): Observable<void> {
-    return this.api.put<ApiResponse<void>>(`/safe/epics/${id}/status`, { status }).pipe(
+  updateEpic(id: string, data: { status?: EpicStatus; name?: string }): Observable<void> {
+    return this.api.put<ApiResponse<void>>(`/safe/epics/${id}`, data).pipe(
       map(() => void 0)
     );
   }

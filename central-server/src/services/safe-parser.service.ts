@@ -285,7 +285,7 @@ ${data.content}
     return true;
   }
 
-  updateEpicStatus(epicId: string, newStatus: EpicStatus): boolean {
+  updateEpic(epicId: string, data: { status?: EpicStatus; name?: string }): boolean {
     const filePath = path.join(SAFE_DIR, 'FEATURES.md');
     const content = this.readFileSafe(filePath);
     if (!content) return false;
@@ -297,27 +297,33 @@ ${data.content}
     let found = false;
     const newContent = content.replace(epicHeaderRegex, (_match, prefix: string, rest: string) => {
       found = true;
-      // Remove existing status emojis
-      let name = rest.replace(/\s*✅\s*DONE\s*/g, '').replace(/\s*⚠️\s*(PARTIELLEMENT\s+DONE)?\s*/g, '').trim();
+      // Remove existing status emojis to get the clean name
+      let epicName = rest.replace(/\s*✅\s*DONE\s*/g, '').replace(/\s*⚠️\s*(PARTIELLEMENT\s+DONE)?\s*/g, '').trim();
 
-      // Add new status emoji suffix
-      if (newStatus === 'done') {
-        name = `${name} ✅ DONE`;
-      } else if (newStatus === 'partial') {
-        name = `${name} ⚠️ PARTIELLEMENT DONE`;
+      // Replace name if provided
+      if (data.name) {
+        epicName = data.name;
       }
 
-      return `${prefix}${name}`;
+      // Add status emoji suffix if status provided
+      if (data.status === 'done') {
+        epicName = `${epicName} ✅ DONE`;
+      } else if (data.status === 'partial') {
+        epicName = `${epicName} ⚠️ PARTIELLEMENT DONE`;
+      }
+      // Other statuses (funnel, analysis, backlog, implementing) → no emoji
+
+      return `${prefix}${epicName}`;
     });
 
     if (!found) {
-      logger.warn('SAFe: Epic header not found for status update', { epicId });
+      logger.warn('SAFe: Epic header not found for update', { epicId });
       return false;
     }
 
     fs.writeFileSync(filePath, newContent, 'utf-8');
     this.invalidateCache();
-    logger.info('SAFe: Updated epic status in FEATURES.md', { epicId, newStatus });
+    logger.info('SAFe: Updated epic in FEATURES.md', { epicId, ...data });
     return true;
   }
 

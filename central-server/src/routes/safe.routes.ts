@@ -29,8 +29,8 @@ router.put('/proposals/:id', authenticate, requireRole('admin'), safeController.
 // Suppression d'une proposal
 router.delete('/proposals/:id', authenticate, requireRole('admin'), safeController.deleteProposal);
 
-// Mise à jour du statut d'un epic (V1: log only, V2: write-back)
-router.put('/epics/:id/status', authenticate, requireRole('admin'), safeController.updateEpicStatus);
+// Mise à jour d'un epic (nom et/ou statut) — write-back dans FEATURES.md
+router.put('/epics/:id', authenticate, requireRole('admin'), safeController.updateEpic);
 
 // Sprint Tracker
 router.get('/sprints', authenticate, requireRole('admin'), safeController.getSprints);
