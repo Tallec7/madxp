@@ -1,3 +1,9 @@
+## [3.98.1](https://github.com/Tallec7/neopro/compare/v3.98.0...v3.98.1) (2026-03-03)
+
+### Bug Fixes
+
+- **boot:** use real NEOPRO logo + hide LXDE desktop during boot ([7c6eef2](https://github.com/Tallec7/neopro/commit/7c6eef2cd4d2247bbdcefe1b4ad69cc39ce46265)), closes [#0a0a0a](https://github.com/Tallec7/neopro/issues/0a0a0a)
+
 # [3.98.0](https://github.com/Tallec7/neopro/compare/v3.97.3...v3.98.0) (2026-03-03)
 
 ### Features
