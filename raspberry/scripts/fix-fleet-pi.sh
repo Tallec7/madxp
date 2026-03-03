@@ -580,6 +580,64 @@ else
 fi
 
 # =============================================================================
+# 9. Boot splash — écran noir propre (quiet/splash dans cmdline.txt)
+# =============================================================================
+
+log_step "11/11 — Configuration boot splash Neopro"
+
+# 9a. cmdline.txt — ajouter les paramètres quiet boot
+CMDLINE_FILE=""
+for cfg in /boot/firmware/cmdline.txt /boot/cmdline.txt; do
+    if [ -f "$cfg" ]; then
+        CMDLINE_FILE="$cfg"
+        break
+    fi
+done
+
+if [ -n "$CMDLINE_FILE" ]; then
+    current_cmdline=$(cat "$CMDLINE_FILE")
+    cmdline_modified=false
+    for param in quiet splash logo.nologo "vt.global_cursor_default=0" loglevel=1; do
+        if ! echo "$current_cmdline" | grep -qw "$param"; then
+            current_cmdline="$current_cmdline $param"
+            cmdline_modified=true
+        fi
+    done
+    if $cmdline_modified; then
+        echo "$current_cmdline" > "$CMDLINE_FILE"
+        log_ok "Paramètres boot splash ajoutés à $CMDLINE_FILE"
+        CHANGES=$((CHANGES + 1))
+        NEEDS_REBOOT=true
+    else
+        log_ok "Boot splash cmdline.txt déjà configuré"
+    fi
+else
+    log_warn "cmdline.txt non trouvé"
+fi
+
+# 9b. config.txt — disable_splash=1
+BOOT_CONFIG_SPLASH=""
+for cfg in /boot/firmware/config.txt /boot/config.txt; do
+    if [ -f "$cfg" ]; then
+        BOOT_CONFIG_SPLASH="$cfg"
+        break
+    fi
+done
+
+if [ -n "$BOOT_CONFIG_SPLASH" ]; then
+    if ! grep -q "^disable_splash=1" "$BOOT_CONFIG_SPLASH" 2>/dev/null; then
+        echo "" >> "$BOOT_CONFIG_SPLASH"
+        echo "# Désactiver le rainbow splash du firmware (Neopro boot)" >> "$BOOT_CONFIG_SPLASH"
+        echo "disable_splash=1" >> "$BOOT_CONFIG_SPLASH"
+        log_ok "disable_splash=1 ajouté à $BOOT_CONFIG_SPLASH"
+        CHANGES=$((CHANGES + 1))
+        NEEDS_REBOOT=true
+    else
+        log_ok "disable_splash=1 déjà configuré"
+    fi
+fi
+
+# =============================================================================
 # Résumé
 # =============================================================================
 
@@ -600,6 +658,7 @@ if [ "$NEEDS_REBOOT" = true ]; then
     echo -e "  ${YELLOW}  - Nettoyage cache GPU Chromium${NC}"
     [ "$IS_PI5" = false ] && echo -e "  ${YELLOW}  - Configuration gpu_mem${NC}"
     echo -e "  ${YELLOW}  - Configuration hdmi_force_hotplug${NC}"
+    echo -e "  ${YELLOW}  - Boot splash (écran noir propre)${NC}"
     echo ""
     read -p "  Redémarrer maintenant ? (o/N) " -n 1 -r
     echo ""

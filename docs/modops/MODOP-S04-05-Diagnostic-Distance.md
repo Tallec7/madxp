@@ -344,7 +344,7 @@ sudo /home/pi/neopro/scripts/fix-fleet-pi.sh
 # - Modèle Pi (4 vs 5)
 # - Type de connexion (Ethernet vs WiFi)
 # - Nom du site
-# Et applique les corrections adaptées (10 étapes)
+# Et applique les corrections adaptées (11 étapes)
 ```
 
 #### 3.8 Réparation manuelle des permissions

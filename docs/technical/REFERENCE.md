@@ -1772,6 +1772,36 @@ sudo journalctl -f
 
 > `diagnose-pi.sh` vérifie 16 catégories : Node.js version, packages apt, services systemd (état + installation), ports, fichiers critiques, node_modules, webapp, Nginx (syntaxe + routes), WiFi (AP + SSID + IP), permissions, GPU, espace disque, version, HTTP. En mode `--json`, le exit code = nombre d'erreurs (0 = Pi sain). `deploy-remote.sh` et l'OTA l'exécutent automatiquement après chaque déploiement.
 
+### Boot Splash (v3.96+)
+
+Le boot du Pi est optimisé pour une expérience fluide en 2 couches :
+
+**Couche 1 — Boot kernel (cmdline.txt + config.txt) :**
+
+| Paramètre                       | Effet                                          |
+| ------------------------------- | ---------------------------------------------- |
+| `quiet`                         | Supprime la majorité des messages kernel       |
+| `splash`                        | Active le mode splash framebuffer              |
+| `logo.nologo`                   | Cache les 4 logos framboises                   |
+| `vt.global_cursor_default=0`    | Cache le curseur texte clignotant              |
+| `loglevel=1`                    | Seulement les messages critiques (ALERT/EMERG) |
+| `disable_splash=1` (config.txt) | Supprime le carré arc-en-ciel du firmware      |
+
+**Couche 2 — Splash inline HTML (index.html) :**
+
+Le fichier `index.html` contient un `<div id="neopro-boot-splash">` avec le logo Neopro, un spinner animé et "Chargement..." — rendu instantanément par Chromium avant tout JavaScript. `app.component.ts` le retire avec un fade-out 0.5s dès qu'Angular est prêt (`ngOnInit`).
+
+**Chaîne de boot complète :**
+
+```
+Power On → firmware (écran noir, pas de rainbow) → kernel/systemd (écran noir propre)
+→ graphical.target → neopro-kiosk.service → kiosk-watchdog.sh → Chromium ouvre /tv
+→ index.html affiche le splash Neopro instantanément → Angular bootstrap (5-15s)
+→ app.component retire le splash (fade-out 0.5s) → waiting-screen / vidéo
+```
+
+**Configuration :** `install.sh configure_boot_splash()` (auto-détecte Pi 4 vs Pi 5 paths). Retrofitting : `fix-fleet-pi.sh` step 11. 7 smoke tests enforced.
+
 ### Kiosk Watchdog (neopro-kiosk.service)
 
 Le service `neopro-kiosk` lance `kiosk-watchdog.sh` — un superviseur qui gère le cycle de vie de Chromium en mode kiosk :

@@ -989,6 +989,61 @@ configure_hdmi_force_hotplug() {
 }
 
 ################################################################################
+# Étape 10b: Boot splash — écran noir propre pendant le démarrage
+################################################################################
+
+configure_boot_splash() {
+    print_step "Configuration du boot splash Neopro (écran noir propre)..."
+
+    # --- 1. cmdline.txt : supprimer les messages console kernel ---
+    local CMDLINE_FILE="/boot/cmdline.txt"
+    if [ -f "/boot/firmware/cmdline.txt" ]; then
+        CMDLINE_FILE="/boot/firmware/cmdline.txt"
+    fi
+
+    if [ -f "$CMDLINE_FILE" ]; then
+        local current_cmdline
+        current_cmdline=$(cat "$CMDLINE_FILE")
+        local modified=false
+
+        # Paramètres à ajouter si absents (chacun vérifié individuellement)
+        local params=("quiet" "splash" "logo.nologo" "vt.global_cursor_default=0" "loglevel=1")
+        for param in "${params[@]}"; do
+            if ! echo "$current_cmdline" | grep -qw "$param"; then
+                current_cmdline="$current_cmdline $param"
+                modified=true
+            fi
+        done
+
+        if $modified; then
+            echo "$current_cmdline" > "$CMDLINE_FILE"
+            print_success "Paramètres boot splash ajoutés à $CMDLINE_FILE"
+        else
+            print_success "Paramètres boot splash déjà présents dans $CMDLINE_FILE"
+        fi
+    else
+        print_warning "Fichier cmdline.txt non trouvé — boot splash non configuré"
+    fi
+
+    # --- 2. config.txt : désactiver le rainbow splash du firmware ---
+    local CONFIG_FILE="/boot/config.txt"
+    if [ -f "/boot/firmware/config.txt" ]; then
+        CONFIG_FILE="/boot/firmware/config.txt"
+    fi
+
+    if ! grep -q "^disable_splash=1" "$CONFIG_FILE" 2>/dev/null; then
+        echo "" >> "$CONFIG_FILE"
+        echo "# Désactiver le rainbow splash du firmware (Neopro boot)" >> "$CONFIG_FILE"
+        echo "disable_splash=1" >> "$CONFIG_FILE"
+        print_success "disable_splash=1 ajouté à $CONFIG_FILE"
+    else
+        print_success "disable_splash=1 déjà présent dans $CONFIG_FILE"
+    fi
+
+    print_warning "Le boot splash sera actif au prochain reboot"
+}
+
+################################################################################
 # Étape 10: Configuration SSH pour accès distant
 ################################################################################
 
@@ -1207,6 +1262,7 @@ main() {
     configure_gui
     configure_gpu_memory
     configure_hdmi_force_hotplug
+    configure_boot_splash
     configure_ssh
     finalize
     verify_installation

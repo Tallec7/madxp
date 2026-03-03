@@ -13,5 +13,16 @@ export class AppComponent implements OnInit {
 
   public ngOnInit() {
     this.socketService.initialize();
+    this.removeBootSplash();
+  }
+
+  /** Fade-out et suppression du splash inline affiché dans index.html pendant le bootstrap Angular. */
+  private removeBootSplash(): void {
+    const splash = document.getElementById('neopro-boot-splash');
+    if (splash) {
+      splash.style.transition = 'opacity 0.5s ease-out';
+      splash.style.opacity = '0';
+      setTimeout(() => splash.remove(), 500);
+    }
   }
 }

@@ -149,6 +149,7 @@ sudo ./install.sh NANTES VotreMotDePasseWiFi123
 - ✅ **Installe le watchdog kiosk** pour récupération automatique des crashs Chromium
 - ✅ **Installe 3 services de protection** : hotspot-watchdog, sync-guardian, hotspot-optimizer
 - ✅ **Protège `club-config.json`** en `chmod 600` (contient le mot de passe WiFi)
+- ✅ **Configure le boot splash** : paramètres `cmdline.txt` (quiet, splash, logo.nologo, loglevel=1) + `disable_splash=1` dans `config.txt` — écran noir propre pendant le boot kernel, splash Neopro brandé dès l'ouverture de Chromium
 - ✅ **Health check post-installation** : vérifie services actifs, réponse Nginx, mode AP WiFi, fichiers critiques
 - ✅ Affiche la durée totale d'installation
 
