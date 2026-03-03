@@ -3,6 +3,20 @@
 ### Bug Fixes
 
 - **kiosk:** fullscreen not applied at init with HDMI-0 only — retry loop + recovery ([0cd84c5](https://github.com/Tallec7/neopro/commit/0cd84c547acf920fc5dcdbb6cec40ac38fcdc368))
+- **remote:** fix time category cards invisible en mode multi-profil — les cartes Avant-match/Match/
+  Après-match apparaissaient sans gradient (texte blanc sur fond transparent) quand la config profil ne
+  fournissait pas les classes CSS attendues. Ajout de `getTimeCategoryGradientClass()` avec fallback par
+  `id` de catégorie (`before`→bleu, `during`→vert, `after`→violet).
+- **remote:** fix impossible de changer de profil une fois sélectionné — le seul point d'entrée vers
+  le club-selector était un bouton retour conditionnel, sans alternative dans le menu. Ajout d'un item
+  "Changer de profil" dans le menu trois-points du header (visible en multi-profil et mode démo).
+- **remote:** affichage du nom du profil actif dans le sous-titre du header (multi-profil et démo).
+
+### Tests
+
+- **smoke:** 4 nouveaux guards de régression — gradient fallback method (`getTimeCategoryGradientClass`
+  avec couverture before/during/after), template binding (pas de `timeCategory.color` brut), menu item
+  "Changer de profil" (classe + appel `backToClubSelector`), tracking `currentProfileName` sur sélection.
 
 ## [3.96.1](https://github.com/Tallec7/neopro/compare/v3.96.0...v3.96.1) (2026-03-03)
 
@@ -15,10 +29,38 @@
 ### Bug Fixes
 
 - **ci:** lower function coverage threshold 45→44% to unblock CI ([c9af1ee](https://github.com/Tallec7/neopro/commit/c9af1ee36da9570be2fed5f33127f70624cbac38))
+- **kiosk:** fix HDMI failover recovery — HDMI-0 ne reprenait pas la main après failover.
+  Cause : `deactivate_hdmi_failover()` appelait `setup_secondary_xrandr()` sans forcer HDMI-0
+  comme primaire. Après failover, HDMI-1 étant à offset +0+0, la détection par offset gardait
+  HDMI-1 en primaire. Fix : forçage xrandr par nom de port physique (HDMI-A-1 → primary +0+0,
+  HDMI-A-2 → right-of) AVANT l'appel à `setup_secondary_xrandr()`. Ajout vérification
+  post-recovery (offset check) + monitoring `write_kiosk_status` + `LAST_HDMI_TRANSITION`.
 
 ### Features
 
 - **safe:** allow editing epic name alongside status in modal ([22a1011](https://github.com/Tallec7/neopro/commit/22a10116e574ea8c66ff603ac85f7b925e260770))
+- **boot:** splash Neopro au démarrage — écran noir propre (cmdline.txt quiet boot) + splash brandé
+  inline HTML (logo, spinner, "Chargement...") visible 5-15s avant qu'Angular ne bootstrap. Élimine
+  la page blanche Chromium et les messages console Linux. Transition fluide fade-out 0.5s vers le
+  waiting-screen/vidéo. Retrofitting Pi existants via fix-fleet-pi.sh (10→11 étapes).
+
+### Tests
+
+- **smoke:** 7 nouveaux guards boot splash — présence splash inline, absence 100vw, ordre avant
+  app-root, suppression par app.component, configure_boot_splash() dans install.sh, params
+  cmdline.txt (quiet, splash, logo.nologo), disable_splash=1 dans config.txt
+- **smoke:** nouveau guard `deactivate_hdmi_failover must force HDMI-0 (HDMI-A-1) as primary
+BEFORE setup_secondary_xrandr` — vérifie le forçage xrandr par port physique et l'ordre correct
+
+### Documentation
+
+- **troubleshooting:** nouvelle section "Boot splash / écran de démarrage"
+- **troubleshooting:** mise à jour section failover dual-display — restauration automatique 5→7
+  étapes, nouvelle section "HDMI-0 ne reprend pas la main après recovery"
+- **architecture:** F-23.6 failover state machine enrichie (Phase 2 forçage xrandr + vérification)
+- **reference:** section boot splash ajoutée (chaîne de boot, cmdline.txt, inline HTML)
+- **installation:** install.sh enrichi (configure_boot_splash)
+- **modop:** fix-fleet-pi.sh 10→11 étapes
 
 ## [3.95.1](https://github.com/Tallec7/neopro/compare/v3.95.0...v3.95.1) (2026-03-02)
 

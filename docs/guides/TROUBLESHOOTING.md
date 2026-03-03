@@ -4818,15 +4818,17 @@ journalctl -u neopro-kiosk --no-pager -n 50 | grep -i failover
 # Le displayType doit être passé de 'secondary' à 'tv' après promotion
 ```
 
-### Restauration automatique
+### Restauration automatique (v3.96+)
 
-Quand HDMI-0 est rebranché :
+Quand HDMI-0 est rebranché, `deactivate_hdmi_failover()` exécute 7 phases :
 
-1. Le watchdog détecte HDMI-0 reconnecté
-2. Relance Chromium primaire sur HDMI-0
-3. Redimensionne le Chromium secondaire
-4. Émet `tv-role-demotion` → le secondary repasse en mode secondary
-5. Supprime le flag `/tmp/hdmi-failover-active`
+1. **Kill Chromium** — Arrêt de tous les processus Chromium (SIGTERM → SIGKILL) AVANT toute reconfiguration xrandr (obligatoire, sinon corruption GPU V3D sur Pi 5)
+2. **Forçage xrandr par port physique** — Force HDMI-0 (HDMI-A-1) comme primaire à `+0+0` et HDMI-1 (HDMI-A-2) en `--right-of`. Cette étape est critique : après failover, HDMI-1 est à offset `+0+0` (promu), et `setup_secondary_xrandr()` identifie le primaire par offset → sans forçage, HDMI-1 resterait primaire
+3. **setup_secondary_xrandr** — Configure la géométrie fine dual-display (résolution native, offsets)
+4. **Relance Chromium primaire** sur HDMI-0 avec `xprop _MOTIF_WM_HINTS` + `xdotool windowactivate` (évite barre de tâches visible)
+5. **Relance Chromium secondaire** sur HDMI-1
+6. **Vérification post-recovery** — Vérifie que HDMI-0 est bien à offset `+0+0` dans xrandr. Si anomalie détectée, log `RECOVERY ANOMALIE` pour diagnostic
+7. **Cleanup** — Émet `tv-role-demotion`, supprime `/tmp/hdmi-failover-active`, met à jour `kiosk-status.json`
 
 ### Restauration manuelle
 
@@ -4838,9 +4840,56 @@ sudo systemctl restart neopro-kiosk
 ### Smoke tests de régression
 
 - `kiosk-watchdog must have activate/deactivate_hdmi_failover functions`
+- `deactivate_hdmi_failover must force HDMI-0 (HDMI-A-1) as primary BEFORE setup_secondary_xrandr`
 - `check_secondary_chromium must handle HDMI failover`
 - `stop_chromium_primary must use SIGTERM before SIGKILL`
 - `handlers.js must emit tv-role-promotion and tv-role-demotion`
+
+---
+
+## HDMI-0 ne reprend pas la main après recovery failover (v3.96+)
+
+Après un failover (HDMI-0 déconnecté → HDMI-1 prend la main), HDMI-0 est rebranché mais la vidéo principale reste sur HDMI-1.
+
+### Symptôme
+
+- La vidéo principale continue à jouer sur HDMI-1 (l'écran secondaire)
+- HDMI-0 affiche le contenu secondaire, ou ne s'active pas du tout
+- Les rôles sont inversés : HDMI-0 = secondary, HDMI-1 = primary
+
+### Cause (corrigée en v3.96)
+
+`deactivate_hdmi_failover()` appelait `setup_secondary_xrandr()` directement sans forcer les rôles xrandr. Après failover, HDMI-1 (HDMI-A-2) était à l'offset `+0+0` (position primaire). `setup_secondary_xrandr()` identifie le primaire par l'offset → HDMI-1 restait primaire. HDMI-0, ayant été `--off` pendant le failover, n'avait pas de géométrie active et n'était pas détecté par le pattern grep.
+
+### Diagnostic
+
+```bash
+# 1. Vérifier les rôles xrandr actuels
+xrandr --query | grep -E '^HDMI.* connected'
+# Attendu après recovery: HDMI-A-1 ... +0+0 (primaire), HDMI-A-2 ... +1920+0 (secondaire)
+# Bug: HDMI-A-2 à +0+0 et HDMI-A-1 à +1920+0
+
+# 2. Vérifier la vérification post-recovery dans les logs
+journalctl -u neopro-kiosk --no-pager -n 100 | grep -E "RECOVERY (VÉRIFIÉ|ANOMALIE)"
+# ✅ "RECOVERY VÉRIFIÉ" = HDMI-0 est bien primaire
+# 🔴 "RECOVERY ANOMALIE" = HDMI-0 n'est PAS à offset 0
+
+# 3. Vérifier la transition dans kiosk-status.json
+cat /tmp/kiosk-status.json | python3 -m json.tool | grep -E 'lastHdmiTransition|failover'
+
+# 4. Vérifier la version du watchdog
+grep "Forçage xrandr" /home/pi/neopro/scripts/kiosk-watchdog.sh
+# Doit retourner une ligne — sinon, le fix n'est pas déployé
+```
+
+### Correction
+
+- **v3.96+** : Bug corrigé. Mettre à jour le Pi via OTA ou `fix-fleet-pi.sh`
+- **Workaround temporaire** : `sudo systemctl restart neopro-kiosk` force un redémarrage propre
+
+### Smoke tests de régression
+
+- `deactivate_hdmi_failover must force HDMI-0 (HDMI-A-1) as primary BEFORE setup_secondary_xrandr`
 
 ---
 

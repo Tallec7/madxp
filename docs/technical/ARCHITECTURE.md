@@ -807,18 +807,27 @@ Machine à états pour la perte de l'écran principal en mode dual-display :
   DUAL_ACTIVE ──── HDMI-0 perdu ────► FAILOVER_ACTIVE
        │                                     │
        │                                     ├── Chromium primaire tué (SIGTERM→SIGKILL)
-       │                                     ├── xrandr HDMI-1 → primary
+       │                                     ├── xrandr HDMI-1 → primary +0+0
        │                                     ├── Secondary → plein écran TV complet
        │                                     ├── tv-role-promotion émis
        │                                     │
        │          HDMI-0 rebranché           │
        ◄──────────────────────────────────────┘
+       │  deactivate_hdmi_failover() — 7 phases :
        │
-       ├── Chromium primaire relancé sur HDMI-0
-       ├── Secondary redimensionné
-       ├── tv-role-demotion émis
-       └── Flag failover supprimé
+       ├── 1. Kill ALL Chromium (SIGTERM→SIGKILL) — AVANT xrandr (GPU V3D)
+       ├── 2. Forçage xrandr par port physique :
+       │      HDMI-A-1 → --primary --auto --pos 0x0
+       │      HDMI-A-2 → --auto --right-of HDMI-A-1
+       │      (sans ça, HDMI-1 reste à +0+0 = détecté comme primaire)
+       ├── 3. setup_secondary_xrandr (résolution native, offsets fins)
+       ├── 4. Relance Chromium primaire sur HDMI-0 (xprop + windowactivate)
+       ├── 5. Relance Chromium secondaire sur HDMI-1
+       ├── 6. Vérification post-recovery (HDMI-0 offset == 0 ?)
+       └── 7. tv-role-demotion émis + flag failover supprimé
 ```
+
+> **Smoke test** : `deactivate_hdmi_failover must force HDMI-0 (HDMI-A-1) as primary BEFORE setup_secondary_xrandr` — empêche toute régression sur l'ordre des phases.
 
 ### Accès navigateur PC (F-23.7)
 
