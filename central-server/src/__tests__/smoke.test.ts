@@ -7229,4 +7229,20 @@ describe('Boot splash screen guards', () => {
     expect({ runsFixFleet: otaContent.includes('fix-fleet-pi.sh') })
       .toEqual({ runsFixFleet: true });
   });
+
+  it('fix-fleet-pi.sh must replace Plymouth splash with NEOPRO branding', () => {
+    const fixFleetContent = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/scripts/fix-fleet-pi.sh'),
+      'utf8'
+    );
+    // Must handle Plymouth splash replacement
+    expect({ hasPlymouthReplace: fixFleetContent.includes('plymouth') && fixFleetContent.includes('splash.png') })
+      .toEqual({ hasPlymouthReplace: true });
+    // Must generate NEOPRO splash image (not just copy a static file)
+    expect({ generatesNeoProSplash: fixFleetContent.includes('NEOPRO') && fixFleetContent.includes('Pillow') || fixFleetContent.includes('PIL') })
+      .toEqual({ generatesNeoProSplash: true });
+    // Must update initramfs after replacing splash
+    expect({ updatesInitramfs: fixFleetContent.includes('update-initramfs') })
+      .toEqual({ updatesInitramfs: true });
+  });
 });

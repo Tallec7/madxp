@@ -637,6 +637,79 @@ if [ -n "$BOOT_CONFIG_SPLASH" ]; then
     fi
 fi
 
+# 9c. Plymouth splash — remplacer le logo Raspberry par NEOPRO
+PLYMOUTH_SPLASH="/usr/share/plymouth/themes/pix/splash.png"
+if [ -f "$PLYMOUTH_SPLASH" ]; then
+    # Vérifier si c'est déjà notre splash (1920x1080) vs le splash par défaut (1024x768)
+    SPLASH_SIZE=$(python3 -c "from PIL import Image; img=Image.open('$PLYMOUTH_SPLASH'); print(f'{img.width}x{img.height}')" 2>/dev/null || echo "unknown")
+    if [ "$SPLASH_SIZE" != "1920x1080" ]; then
+        # Générer le splash NEOPRO avec Python/Pillow
+        if python3 -c "from PIL import Image" 2>/dev/null; then
+            python3 - <<'PYEOF'
+from PIL import Image, ImageDraw, ImageFont
+import math
+
+img = Image.new("RGBA", (1920, 1080), (10, 10, 10, 255))
+draw = ImageDraw.Draw(img)
+
+# Play triangle icon
+cx, cy = 960, 420
+size = 55
+points = [(cx - size, cy - size), (cx - size, cy + size), (cx + size, cy)]
+draw.polygon(points, fill=(230, 230, 230, 230))
+
+# Circle around play icon
+r = 80
+for i in range(0, 360, 1):
+    angle = math.radians(i)
+    x = cx + r * math.cos(angle)
+    y = cy + r * math.sin(angle)
+    draw.ellipse([x-1, y-1, x+1, y+1], fill=(255, 255, 255, 40))
+
+# NEOPRO text
+try:
+    font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 72)
+except Exception:
+    font = ImageFont.load_default()
+text = "NEOPRO"
+bbox = draw.textbbox((0, 0), text, font=font)
+tw = bbox[2] - bbox[0]
+draw.text(((1920 - tw) / 2, 550), text, fill=(230, 230, 230, 230), font=font)
+
+# Subtitle
+try:
+    font_small = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 28)
+except Exception:
+    font_small = ImageFont.load_default()
+sub = "Chargement..."
+bbox2 = draw.textbbox((0, 0), sub, font=font_small)
+tw2 = bbox2[2] - bbox2[0]
+draw.text(((1920 - tw2) / 2, 670), sub, fill=(180, 180, 180, 180), font=font_small)
+
+img.save("/tmp/neopro-plymouth-splash.png")
+PYEOF
+            if [ -f /tmp/neopro-plymouth-splash.png ]; then
+                cp "$PLYMOUTH_SPLASH" "${PLYMOUTH_SPLASH}.bak" 2>/dev/null || true
+                cp /tmp/neopro-plymouth-splash.png "$PLYMOUTH_SPLASH"
+                # Regénérer l'initramfs pour inclure le nouveau splash
+                update-initramfs -u >/dev/null 2>&1 || true
+                rm -f /tmp/neopro-plymouth-splash.png
+                log_ok "Plymouth splash remplacé par NEOPRO (1920x1080)"
+                CHANGES=$((CHANGES + 1))
+                NEEDS_REBOOT=true
+            else
+                log_warn "Échec génération splash NEOPRO (Python)"
+            fi
+        else
+            log_warn "Python Pillow non disponible — splash Plymouth non remplacé"
+        fi
+    else
+        log_ok "Plymouth splash NEOPRO déjà en place"
+    fi
+else
+    log_warn "Plymouth splash non trouvé ($PLYMOUTH_SPLASH)"
+fi
+
 # =============================================================================
 # Résumé
 # =============================================================================
@@ -658,7 +731,7 @@ if [ "$NEEDS_REBOOT" = true ]; then
     echo -e "  ${YELLOW}  - Nettoyage cache GPU Chromium${NC}"
     [ "$IS_PI5" = false ] && echo -e "  ${YELLOW}  - Configuration gpu_mem${NC}"
     echo -e "  ${YELLOW}  - Configuration hdmi_force_hotplug${NC}"
-    echo -e "  ${YELLOW}  - Boot splash (écran noir propre)${NC}"
+    echo -e "  ${YELLOW}  - Boot splash (écran noir propre + Plymouth NEOPRO)${NC}"
     echo ""
     read -p "  Redémarrer maintenant ? (o/N) " -n 1 -r
     echo ""
