@@ -1,3 +1,9 @@
+# [3.97.0](https://github.com/Tallec7/neopro/compare/v3.96.2...v3.97.0) (2026-03-03)
+
+### Features
+
+- **boot:** splash Neopro au démarrage — écran noir propre + splash brandé inline HTML ([8f867b7](https://github.com/Tallec7/neopro/commit/8f867b7daa12fb42d2d814508089851caed0091e)), closes [#neopro-boot-splash](https://github.com/Tallec7/neopro/issues/neopro-boot-splash)
+
 ## [3.96.2](https://github.com/Tallec7/neopro/compare/v3.96.1...v3.96.2) (2026-03-03)
 
 ### Bug Fixes
