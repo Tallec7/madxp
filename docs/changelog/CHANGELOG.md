@@ -1,3 +1,9 @@
+## [3.97.2](https://github.com/Tallec7/neopro/compare/v3.97.1...v3.97.2) (2026-03-03)
+
+### Bug Fixes
+
+- **deploy:** auto-run fix-fleet-pi.sh in SSH deploy and OTA pipelines ([5534132](https://github.com/Tallec7/neopro/commit/55341329ae7f3d0ad0daeb0c1b1d8ca57297af74))
+
 ## [3.97.1](https://github.com/Tallec7/neopro/compare/v3.97.0...v3.97.1) (2026-03-03)
 
 ### Bug Fixes
