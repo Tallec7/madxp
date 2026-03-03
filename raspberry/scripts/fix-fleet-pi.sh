@@ -637,54 +637,44 @@ if [ -n "$BOOT_CONFIG_SPLASH" ]; then
     fi
 fi
 
-# 9c. Plymouth splash — remplacer le logo Raspberry par NEOPRO
+# 9c. Plymouth splash — remplacer le logo Raspberry par le vrai logo NEOPRO
 PLYMOUTH_SPLASH="/usr/share/plymouth/themes/pix/splash.png"
+NEOPRO_LOGO="$NEOPRO_ROOT/webapp/neopro-logo-white.png"
 if [ -f "$PLYMOUTH_SPLASH" ]; then
     # Vérifier si c'est déjà notre splash (1920x1080) vs le splash par défaut (1024x768)
     SPLASH_SIZE=$(python3 -c "from PIL import Image; img=Image.open('$PLYMOUTH_SPLASH'); print(f'{img.width}x{img.height}')" 2>/dev/null || echo "unknown")
     if [ "$SPLASH_SIZE" != "1920x1080" ]; then
-        # Générer le splash NEOPRO avec Python/Pillow
-        if python3 -c "from PIL import Image" 2>/dev/null; then
-            python3 - <<'PYEOF'
+        # Générer le splash NEOPRO avec le vrai logo (neopro-logo-white.png)
+        if python3 -c "from PIL import Image" 2>/dev/null && [ -f "$NEOPRO_LOGO" ]; then
+            python3 - "$NEOPRO_LOGO" <<'PYEOF'
+import sys
 from PIL import Image, ImageDraw, ImageFont
-import math
 
+logo_path = sys.argv[1]
 img = Image.new("RGBA", (1920, 1080), (10, 10, 10, 255))
+
+# Load and scale real NEOPRO logo
+logo = Image.open(logo_path).convert("RGBA")
+target_width = 760
+scale = target_width / logo.width
+target_height = int(logo.height * scale)
+logo_resized = logo.resize((target_width, target_height), Image.LANCZOS)
+
+# Center logo (slightly above center)
+x = (1920 - target_width) // 2
+y = (1080 - target_height) // 2 - 40
+img.paste(logo_resized, (x, y), logo_resized)
+
+# "Chargement..." subtitle
 draw = ImageDraw.Draw(img)
-
-# Play triangle icon
-cx, cy = 960, 420
-size = 55
-points = [(cx - size, cy - size), (cx - size, cy + size), (cx + size, cy)]
-draw.polygon(points, fill=(230, 230, 230, 230))
-
-# Circle around play icon
-r = 80
-for i in range(0, 360, 1):
-    angle = math.radians(i)
-    x = cx + r * math.cos(angle)
-    y = cy + r * math.sin(angle)
-    draw.ellipse([x-1, y-1, x+1, y+1], fill=(255, 255, 255, 40))
-
-# NEOPRO text
-try:
-    font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 72)
-except Exception:
-    font = ImageFont.load_default()
-text = "NEOPRO"
-bbox = draw.textbbox((0, 0), text, font=font)
-tw = bbox[2] - bbox[0]
-draw.text(((1920 - tw) / 2, 550), text, fill=(230, 230, 230, 230), font=font)
-
-# Subtitle
 try:
     font_small = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 28)
 except Exception:
     font_small = ImageFont.load_default()
 sub = "Chargement..."
-bbox2 = draw.textbbox((0, 0), sub, font=font_small)
-tw2 = bbox2[2] - bbox2[0]
-draw.text(((1920 - tw2) / 2, 670), sub, fill=(180, 180, 180, 180), font=font_small)
+bbox = draw.textbbox((0, 0), sub, font=font_small)
+tw = bbox[2] - bbox[0]
+draw.text(((1920 - tw) / 2, y + target_height + 60), sub, fill=(180, 180, 180, 180), font=font_small)
 
 img.save("/tmp/neopro-plymouth-splash.png")
 PYEOF
@@ -694,20 +684,60 @@ PYEOF
                 # Regénérer l'initramfs pour inclure le nouveau splash
                 update-initramfs -u >/dev/null 2>&1 || true
                 rm -f /tmp/neopro-plymouth-splash.png
-                log_ok "Plymouth splash remplacé par NEOPRO (1920x1080)"
+                log_ok "Plymouth splash remplacé par NEOPRO (vrai logo, 1920x1080)"
                 CHANGES=$((CHANGES + 1))
                 NEEDS_REBOOT=true
             else
                 log_warn "Échec génération splash NEOPRO (Python)"
             fi
         else
-            log_warn "Python Pillow non disponible — splash Plymouth non remplacé"
+            log_warn "Python Pillow ou logo NEOPRO non disponible — splash Plymouth non remplacé"
         fi
     else
         log_ok "Plymouth splash NEOPRO déjà en place"
     fi
 else
     log_warn "Plymouth splash non trouvé ($PLYMOUTH_SPLASH)"
+fi
+
+# 9d. Desktop noir — empêcher le fond d'écran Pi de s'afficher entre Plymouth et Chromium
+LXDE_AUTOSTART="/home/pi/.config/lxsession/LXDE-pi/autostart"
+PCMANFM_CONF="/home/pi/.config/pcmanfm/LXDE-pi/desktop-items-0.conf"
+
+# Forcer fond desktop noir dans pcmanfm
+if [ ! -f "$PCMANFM_CONF" ] || ! grep -q "desktop_bg=#0a0a0a" "$PCMANFM_CONF" 2>/dev/null; then
+    mkdir -p "$(dirname "$PCMANFM_CONF")"
+    cat > "$PCMANFM_CONF" << 'DESKEOF'
+[*]
+wallpaper_mode=color
+wallpaper_common=1
+desktop_bg=#0a0a0a
+desktop_fg=#0a0a0a
+desktop_shadow=#0a0a0a
+show_documents=0
+show_trash=0
+show_mounts=0
+DESKEOF
+    log_ok "Desktop pcmanfm configuré en fond noir"
+    CHANGES=$((CHANGES + 1))
+fi
+
+# Ajouter xsetroot -solid black et retirer lxpanel de l'autostart
+if [ -f "$LXDE_AUTOSTART" ]; then
+    if ! grep -q "xsetroot -solid black" "$LXDE_AUTOSTART" 2>/dev/null || grep -q "@lxpanel" "$LXDE_AUTOSTART" 2>/dev/null; then
+        cat > "$LXDE_AUTOSTART" << 'AUTOEOF'
+@xsetroot -solid black
+@pcmanfm --desktop --profile LXDE-pi
+@xset s off
+@xset -dpms
+@xset s noblank
+@unclutter -idle 0
+AUTOEOF
+        log_ok "LXDE autostart corrigé (fond noir, pas de barre de tâches)"
+        CHANGES=$((CHANGES + 1))
+    else
+        log_ok "LXDE autostart déjà configuré"
+    fi
 fi
 
 # =============================================================================

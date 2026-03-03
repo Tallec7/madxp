@@ -7235,14 +7235,41 @@ describe('Boot splash screen guards', () => {
       path.join(repoRoot, 'raspberry/scripts/fix-fleet-pi.sh'),
       'utf8'
     );
-    // Must handle Plymouth splash replacement
+    // Must handle Plymouth splash replacement using real logo
     expect({ hasPlymouthReplace: fixFleetContent.includes('plymouth') && fixFleetContent.includes('splash.png') })
       .toEqual({ hasPlymouthReplace: true });
-    // Must generate NEOPRO splash image (not just copy a static file)
-    expect({ generatesNeoProSplash: fixFleetContent.includes('NEOPRO') && fixFleetContent.includes('Pillow') || fixFleetContent.includes('PIL') })
-      .toEqual({ generatesNeoProSplash: true });
+    expect({ usesRealLogo: fixFleetContent.includes('neopro-logo-white.png') })
+      .toEqual({ usesRealLogo: true });
     // Must update initramfs after replacing splash
     expect({ updatesInitramfs: fixFleetContent.includes('update-initramfs') })
       .toEqual({ updatesInitramfs: true });
+  });
+
+  it('fix-fleet-pi.sh must configure black desktop to hide LXDE between Plymouth and Chromium', () => {
+    const fixFleetContent = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/scripts/fix-fleet-pi.sh'),
+      'utf8'
+    );
+    // Must set pcmanfm desktop background to black
+    expect({ setsBlackDesktop: fixFleetContent.includes('desktop_bg=#0a0a0a') })
+      .toEqual({ setsBlackDesktop: true });
+    // Must add xsetroot -solid black to autostart
+    expect({ setsXsetroot: fixFleetContent.includes('xsetroot -solid black') })
+      .toEqual({ setsXsetroot: true });
+    // Must remove lxpanel from autostart (taskbar visibility)
+    expect({ removesLxpanel: fixFleetContent.includes('lxpanel') })
+      .toEqual({ removesLxpanel: true });
+  });
+
+  it('index.html boot splash must use real NEOPRO logo image (not generic SVG)', () => {
+    const indexContent = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/src/index.html'),
+      'utf8'
+    );
+    expect({ usesLogoImage: indexContent.includes('neopro-logo-white.png') })
+      .toEqual({ usesLogoImage: true });
+    // Must NOT use the generic SVG play icon
+    expect({ noGenericSVG: !indexContent.includes('viewBox="0 0 200 200"') })
+      .toEqual({ noGenericSVG: true });
   });
 });
