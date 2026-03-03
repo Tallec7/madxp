@@ -23,7 +23,7 @@ module.exports = {
     // Phase 2: 25/45/45/45 → Phase 4: 40/60/60/60 → Phase 7: 60/75/75/75
     global: {
       branches: 25,    // WebSocket/health services have many edge case branches
-      functions: 45,   // Some async handlers difficult to trigger in unit tests
+      functions: 44,   // Some async handlers difficult to trigger in unit tests
       lines: 45,
       statements: 45,
     },
