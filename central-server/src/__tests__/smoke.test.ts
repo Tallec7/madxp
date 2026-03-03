@@ -7211,4 +7211,22 @@ describe('Boot splash screen guards', () => {
     expect({ hasDisableSplash: fixFleetContent.includes('disable_splash=1') })
       .toEqual({ hasDisableSplash: true });
   });
+
+  it('deploy-remote.sh must auto-run fix-fleet-pi.sh after deployment', () => {
+    const deployContent = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/scripts/deploy-remote.sh'),
+      'utf8'
+    );
+    expect({ runsFixFleet: deployContent.includes('fix-fleet-pi.sh') })
+      .toEqual({ runsFixFleet: true });
+  });
+
+  it('OTA update-software.js must auto-run fix-fleet-pi.sh after install', () => {
+    const otaContent = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/sync-agent/src/commands/update-software.js'),
+      'utf8'
+    );
+    expect({ runsFixFleet: otaContent.includes('fix-fleet-pi.sh') })
+      .toEqual({ runsFixFleet: true });
+  });
 });

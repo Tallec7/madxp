@@ -780,6 +780,28 @@ class SoftwareUpdateHandler {
         await this.writeVersionMetadata(version);
       }
 
+      // Appliquer les corrections fleet (idempotent — n'agit que si nécessaire)
+      // Corrige cmdline.txt, config.txt, systemd, permissions, boot splash, etc.
+      const fixFleetScript = path.join(rootDir, 'scripts', 'fix-fleet-pi.sh');
+      if (await fs.pathExists(fixFleetScript)) {
+        try {
+          logger.info('Running fix-fleet-pi.sh (auto fleet corrections)...');
+          // echo 'n' pour refuser le reboot interactif — l'OTA gère le reboot via scheduleReboot
+          const { stdout: fleetOutput } = await execAsync(
+            `echo 'n' | ${fixFleetScript} 2>&1`,
+            { timeout: 120000 }
+          );
+          const corrections = fleetOutput.match(/Corrections\s*:\s*(\d+)/);
+          const errors = fleetOutput.match(/Erreurs\s*:\s*(\d+)/);
+          logger.info('fix-fleet-pi.sh completed', {
+            corrections: corrections ? corrections[1] : 'unknown',
+            errors: errors ? errors[1] : 'unknown',
+          });
+        } catch (fleetError) {
+          logger.warn('fix-fleet-pi.sh failed (non-blocking)', { error: fleetError.message });
+        }
+      }
+
       // Nettoyage
       await fs.remove(extractDir);
       await fs.remove(packagePath);

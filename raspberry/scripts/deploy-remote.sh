@@ -355,6 +355,22 @@ ssh ${RASPBERRY_USER}@${RASPBERRY_IP} "
     # Nettoyage
     rm -rf ~/neopro-update ~/neopro-deploy.tar.gz
 
+    # Appliquer les corrections fleet (idempotent — n'agit que si nécessaire)
+    # Corrige cmdline.txt, config.txt, systemd, permissions, etc.
+    # Note: echo 'n' pour refuser le reboot interactif — le deploy gère ça en fin de script
+    if [ -x ${RASPBERRY_DIR}/scripts/fix-fleet-pi.sh ]; then
+        echo ''
+        echo '=== Application automatique des corrections fleet ==='
+        FLEET_OUTPUT=\$(echo 'n' | ${RASPBERRY_DIR}/scripts/fix-fleet-pi.sh 2>&1) || true
+        # Détecter si un reboot est nécessaire (cmdline.txt / config.txt modifiés)
+        if echo \"\$FLEET_OUTPUT\" | grep -qi 'reboot.*nécessaire\|reboot est nécessaire'; then
+            echo 'DEPLOY_NEEDS_REBOOT=true'
+        fi
+        # Afficher un résumé (dernières lignes utiles)
+        echo \"\$FLEET_OUTPUT\" | tail -20
+        echo '=== Corrections fleet terminées ==='
+    fi
+
     # Installation du fichier sudoers (permissions ciblées pour le sync-agent)
     if [ -f ${RASPBERRY_DIR}/config/sudoers.d/neopro ]; then
         sudo cp ${RASPBERRY_DIR}/config/sudoers.d/neopro /etc/sudoers.d/neopro
@@ -523,6 +539,12 @@ else
     print_success "Services redémarrés"
 fi
 
+# Détecter si fix-fleet-pi.sh a demandé un reboot
+DEPLOY_NEEDS_REBOOT=false
+if echo "$DEPLOY_OUTPUT" | grep -q 'DEPLOY_NEEDS_REBOOT=true'; then
+    DEPLOY_NEEDS_REBOOT=true
+fi
+
 # Test de l'application
 print_step "Test de l'application..."
 if curl -s -o /dev/null -w "%{http_code}" http://${RASPBERRY_IP}/ | grep -q "200"; then
@@ -595,4 +617,14 @@ echo "  • Redémarrer: ssh ${RASPBERRY_USER}@${RASPBERRY_IP} 'sudo systemctl r
 echo "  • Status: ssh ${RASPBERRY_USER}@${RASPBERRY_IP} 'sudo systemctl status neopro-app'"
 echo "  • Diagnostic: ssh ${RASPBERRY_USER}@${RASPBERRY_IP} '${DIAG_SCRIPT}'"
 echo ""
+if [ "$DEPLOY_NEEDS_REBOOT" = true ]; then
+    echo -e "${YELLOW}╔════════════════════════════════════════════════════════════════╗${NC}"
+    echo -e "${YELLOW}║  REBOOT RECOMMANDÉ — des paramètres de boot ont été modifiés  ║${NC}"
+    echo -e "${YELLOW}║  (cmdline.txt / config.txt pour le boot silencieux)           ║${NC}"
+    echo -e "${YELLOW}╚════════════════════════════════════════════════════════════════╝${NC}"
+    echo ""
+    echo -e "  ${BLUE}Redémarrer maintenant :${NC}"
+    echo "    ssh ${RASPBERRY_USER}@${RASPBERRY_IP} 'sudo reboot'"
+fi
+
 echo -e "${GREEN}Déploiement terminé!${NC}"
