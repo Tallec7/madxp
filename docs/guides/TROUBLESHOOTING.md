@@ -25,10 +25,87 @@
 21. [Déploiement vidéo secondaire échoué (EACCES / race condition)](#déploiement-vidéo-secondaire-échoué-eacces--race-condition)
 22. [Résolution écran non affichée dans le dashboard (v3.87.4+)](#résolution-écran-non-affichée-dans-le-dashboard-v3874)
 23. [Changement de profil ne fonctionne pas (v3.92.0+)](#changement-de-profil-ne-fonctionne-pas-v3920)
+24. [Kiosk pas en plein écran à l'init avec HDMI-0 seul (v3.96+)](#kiosk-pas-en-plein-écran-à-linit-avec-hdmi-0-seul-v396)
 
 > **WiFi USB** : Pour un guide complet sur la clé WiFi USB (installation, diagnostic, pannes, recovery), voir [WIFI_USB_GUIDE.md](WIFI_USB_GUIDE.md).
 >
 > **Hotspot iOS** : Pour le guide dédié connexion iPhone/iPad, voir [IOS_HOTSPOT_FIX.md](IOS_HOTSPOT_FIX.md). Pour Android, voir [ANDROID_HOTSPOT_FIX.md](ANDROID_HOTSPOT_FIX.md).
+
+---
+
+## Boot splash / écran de démarrage (v3.96+)
+
+Le boot d'un Pi affiche désormais un écran noir propre (pas de texte console) suivi d'un splash Neopro brandé (logo + spinner + "Chargement...") avant qu'Angular ne bootstrap.
+
+### Le splash ne s'affiche pas (écran blanc au démarrage)
+
+**Cause possible :** `index.html` ne contient pas le bloc splash inline, ou le build Angular n'a pas été déployé.
+
+**Vérification :**
+
+```bash
+# Vérifier que le splash est présent dans le webapp déployé
+grep 'neopro-boot-splash' /home/pi/neopro/webapp/index.html
+```
+
+**Solution :** Redéployer le webapp depuis une version ≥ 3.96.
+
+### Messages console Linux visibles au boot (texte défilant)
+
+**Cause :** Les paramètres `cmdline.txt` ne sont pas configurés.
+
+**Vérification :**
+
+```bash
+# Pi 4
+cat /boot/cmdline.txt | grep -o 'quiet\|splash\|logo.nologo\|loglevel=1'
+
+# Pi 5
+cat /boot/firmware/cmdline.txt | grep -o 'quiet\|splash\|logo.nologo\|loglevel=1'
+```
+
+**Solution :** Exécuter `fix-fleet-pi.sh` (step 11) ou ajouter manuellement les paramètres :
+
+```bash
+# Pi 4
+sudo sed -i 's/$/ quiet splash logo.nologo vt.global_cursor_default=0 loglevel=1/' /boot/cmdline.txt
+
+# Pi 5
+sudo sed -i 's/$/ quiet splash logo.nologo vt.global_cursor_default=0 loglevel=1/' /boot/firmware/cmdline.txt
+
+# Supprimer le rainbow splash firmware
+echo 'disable_splash=1' | sudo tee -a /boot/config.txt  # ou /boot/firmware/config.txt
+
+sudo reboot
+```
+
+### Carré arc-en-ciel au tout début du boot
+
+**Cause :** `disable_splash=1` manquant dans `config.txt`.
+
+**Vérification :**
+
+```bash
+grep 'disable_splash=1' /boot/config.txt /boot/firmware/config.txt 2>/dev/null
+```
+
+**Solution :** Ajouter `disable_splash=1` dans le bon `config.txt` et rebooter.
+
+### Le splash reste bloqué (ne disparaît jamais)
+
+**Cause possible :** Angular ne bootstrap pas correctement (erreur JS, Socket.IO introuvable, etc.).
+
+**Vérification :**
+
+```bash
+# Vérifier les logs Chromium
+journalctl -u neopro-kiosk --no-pager -n 50 | grep -i 'error\|crash\|snap'
+
+# Vérifier que le fichier socket.io.min.js est présent
+ls -la /home/pi/neopro/webapp/assets/socket.io.min.js
+```
+
+**Solution :** Le splash est supprimé par `app.component.ts ngOnInit()`. Si Angular crashe au boot, le splash reste affiché — investiguer les erreurs Chromium dans les logs kiosk.
 
 ---
 
@@ -2519,7 +2596,7 @@ scp raspberry/scripts/fix-fleet-pi.sh pi@neopro.local:/tmp/
 ssh pi@neopro.local 'chmod +x /tmp/fix-fleet-pi.sh && sudo /tmp/fix-fleet-pi.sh'
 ```
 
-**Ce que fait le script (10 étapes) :**
+**Ce que fait le script (11 étapes) :**
 
 1. **TKIP → CCMP** dans hostapd.conf (éjections téléphones)
 2. **Installe les packages recommandés** manquants (unclutter-xfixes, x11-utils, edid-decode)
@@ -2531,6 +2608,7 @@ ssh pi@neopro.local 'chmod +x /tmp/fix-fleet-pi.sh && sudo /tmp/fix-fleet-pi.sh'
 8. **Flush les buffers** analytics et sponsors bloqués
 9. **Vérifie gpu_mem** (doit être 256 sur Pi 4)
 10. **Vérifie hdmi_force_hotplug** sur les 2 ports HDMI (E-23)
+11. **Configure le boot splash** (cmdline.txt quiet boot + config.txt disable_splash=1)
 
 Le script auto-détecte le modèle de Pi, le type de connexion (Ethernet vs WiFi) et le nom du site.
 
@@ -4807,6 +4885,60 @@ Ce bug est corrigé en v3.87.1. Le fix applique le séquence complète en 4 éta
 ### Smoke tests de régression
 
 - `single→dual and failover-return resize must re-apply xprop + windowactivate (taskbar fix)`
+- `start_chromium fullscreen subshell must have retry loop (not single sleep+attempt)`
+- `check_window_stacking must apply windowmove + windowsize (not just windowactivate)`
+
+---
+
+## Kiosk pas en plein écran à l'init avec HDMI-0 seul (v3.96+)
+
+Le kiosk Chromium s'affiche avec la barre de titre du window manager (Openbox) visible au lieu d'être en plein écran, uniquement au premier démarrage avec un seul écran HDMI-0.
+
+### Symptômes
+
+1. **Barre de titre visible** : la fenêtre Chromium affiche "neopro.local - Chromium" en haut
+2. **Le contenu n'occupe pas tout l'écran** : une bande de ~25px (title bar) réduit la zone utile
+3. **Le problème disparaît après un changement d'écran** : brancher/débrancher HDMI-1 corrige le fullscreen car les transitions dual⇔single ré-appliquent xprop+xdotool
+
+### Cause
+
+Deux problèmes combinés :
+
+1. **`start_chromium()` subshell sans retry** : le fullscreen est appliqué par un subshell background qui attend 4s puis fait un seul `xdotool search --pid`. Sur un Pi lent (SD card usée, démarrage à froid), Chromium peut mettre >4s à créer sa fenêtre X11. Si le window ID n'est pas trouvé, le fullscreen n'est jamais appliqué.
+
+2. **`check_window_stacking()` incomplet** : cette fonction dans la boucle principale (filet de sécurité) ne vérifiait que le cas "lxpanel devant Chromium" et ne faisait que `xprop` + `windowactivate` — sans `windowmove` ni `windowsize`. Si Chromium est la fenêtre active mais avec des décorations WM, aucun rattrapage n'était effectué.
+
+### Diagnostic
+
+```bash
+# 1. Vérifier que le retry loop est présent (v3.96+)
+grep -c "max_attempts" /home/pi/neopro/scripts/kiosk-watchdog.sh
+# Attendu: >= 1
+
+# 2. Vérifier que check_window_stacking applique windowmove+windowsize
+grep -c "windowmove\|windowsize" /home/pi/neopro/scripts/kiosk-watchdog.sh
+# Attendu: >= 8 (start_chromium + check_window_stacking + transitions)
+
+# 3. Vérifier les logs d'init fullscreen
+journalctl -u neopro-kiosk --no-pager -n 200 | grep -E "plein écran|retry|tentative"
+# Log normal: "✓ Chromium primaire plein écran par-moniteur (xprop+xdotool, WID: ..., tentative 1)"
+# Si tentative > 1: le Pi est lent, le retry a rattrapé
+
+# 4. Vérifier le stacking status
+cat /home/pi/neopro/data/kiosk-status.json | python3 -m json.tool | grep windowStacking
+# Attendu: "windowStacking": "ok"
+```
+
+### Correction (v3.96+)
+
+1. **Retry loop dans `start_chromium()`** : le subshell fait maintenant 5 tentatives avec délai croissant (2s, 3s, 4s, 5s, 6s = 20s max). Vérifie que Chromium est toujours vivant avant chaque retry.
+
+2. **`check_window_stacking()` fullscreen complet** : applique systématiquement la séquence complète (xprop + windowmove + windowsize + windowactivate) à chaque itération de la boucle (~30s). Les commandes sont idempotentes — pas de side effect si déjà fullscreen. Sert de filet de sécurité permanent.
+
+### Smoke tests de régression
+
+- `start_chromium fullscreen subshell must have retry loop (not single sleep+attempt)`
+- `check_window_stacking must apply windowmove + windowsize (not just windowactivate)`
 
 ---
 

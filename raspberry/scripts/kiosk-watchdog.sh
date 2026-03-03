@@ -349,25 +349,34 @@ check_window_stacking() {
         WINDOW_STACKING_STATUS="no_chromium"
         return 1
     fi
+    local wid
+    wid=$(DISPLAY=:0 xdotool search --pid "$CHROMIUM_PID" 2>/dev/null | head -1)
+    if [[ -z "$wid" ]]; then
+        WINDOW_STACKING_STATUS="no_window"
+        return 1
+    fi
     local active_name
     active_name=$(DISPLAY=:0 xdotool getactivewindow getwindowname 2>/dev/null || true)
-    if [[ -z "$active_name" ]]; then
-        WINDOW_STACKING_STATUS="unknown"
-        return 0
-    fi
     # Si la fenêtre active contient "panel" ou "lxpanel" → lxpanel est devant Chromium
     if echo "$active_name" | grep -qi "panel"; then
         WINDOW_STACKING_STATUS="panel_above"
         log "⚠️ STACKING: lxpanel est au-dessus de Chromium — re-raise automatique"
-        # Auto-recovery: re-raise Chromium immédiatement
-        local wid
-        wid=$(DISPLAY=:0 xdotool search --pid "$CHROMIUM_PID" 2>/dev/null | head -1)
-        if [[ -n "$wid" ]]; then
-            DISPLAY=:0 xprop -id "$wid" -f _MOTIF_WM_HINTS 32c -set _MOTIF_WM_HINTS "0x2, 0x0, 0x0, 0x0, 0x0" 2>/dev/null
-            DISPLAY=:0 xdotool windowactivate "$wid" 2>/dev/null
-            log "✓ STACKING: Chromium re-raised au premier plan (auto-recovery)"
-            WINDOW_STACKING_STATUS="recovered"
-        fi
+    fi
+    # Auto-recovery: toujours vérifier et appliquer xprop + xdotool windowmove/windowsize.
+    # Rattrape les cas où :
+    # 1. lxpanel est devant Chromium (panel_above)
+    # 2. Le subshell init a raté le fullscreen (fenêtre pas trouvée à temps)
+    # 3. Le WM a recréé les décorations après un changement xrandr
+    # Les commandes xprop/xdotool sont idempotentes : pas de side effect si déjà fullscreen.
+    local target_w="${PRIMARY_SCREEN_WIDTH:-$DEFAULT_SCREEN_WIDTH}"
+    local target_h="${PRIMARY_SCREEN_HEIGHT:-$DEFAULT_SCREEN_HEIGHT}"
+    DISPLAY=:0 xprop -id "$wid" -f _MOTIF_WM_HINTS 32c -set _MOTIF_WM_HINTS "0x2, 0x0, 0x0, 0x0, 0x0" 2>/dev/null
+    DISPLAY=:0 xdotool windowmove "$wid" 0 0 2>/dev/null
+    DISPLAY=:0 xdotool windowsize "$wid" "$target_w" "$target_h" 2>/dev/null
+    DISPLAY=:0 xdotool windowactivate "$wid" 2>/dev/null
+    if [[ "$WINDOW_STACKING_STATUS" == "panel_above" ]]; then
+        log "✓ STACKING: Chromium re-raised + fullscreen forcé (auto-recovery, ${target_w}x${target_h})"
+        WINDOW_STACKING_STATUS="recovered"
         return 1
     fi
     WINDOW_STACKING_STATUS="ok"
@@ -556,10 +565,11 @@ activate_hdmi_failover() {
 }
 
 # E-23 US-23.6.2: Retour du failover — HDMI-0 est de retour, restaurer le dual-display.
-# 1. Relancer le Chromium primaire sur HDMI-0
-# 2. Reconfigurer xrandr dual-display
-# 3. Repositionner le Chromium secondaire
-# 4. Supprimer le flag failover
+# 1. Arrêter le Chromium failover
+# 2. Forcer HDMI-0 (HDMI-A-1) comme primaire xrandr (sinon HDMI-1 resterait primary)
+# 3. Reconfigurer xrandr dual-display (résolutions réelles)
+# 4. Relancer le Chromium primaire sur HDMI-0
+# 5. Relancer le Chromium secondaire sur HDMI-1
 deactivate_hdmi_failover() {
     log "🔄 RETOUR FAILOVER: HDMI-0 de retour, restauration proactive du dual-display..."
 
@@ -587,16 +597,36 @@ deactivate_hdmi_failover() {
         log "✓ Chromium failover arrêté"
     fi
 
-    # 2. Reconfigurer xrandr pour dual-display
+    # 2. Forcer HDMI-0 (HDMI-A-1) comme primaire AVANT setup_secondary_xrandr
+    # Bug fix: après failover, HDMI-1 est à +0+0 (promu). setup_secondary_xrandr
+    # identifie le primaire par l'offset → HDMI-1 resterait primaire sans cette étape.
+    # On force xrandr à mettre HDMI-0 en primary à +0+0 et HDMI-1 à droite.
+    local xr_recovery hdmi0_xrandr hdmi1_xrandr
+    xr_recovery=$(xrandr --query 2>/dev/null)
+    # HDMI-A-1 = HDMI-0 physique (toujours), HDMI-A-2 = HDMI-1 physique
+    hdmi0_xrandr=$(echo "$xr_recovery" | grep -E '^HDMI.*-1 connected' | awk '{print $1}')
+    hdmi1_xrandr=$(echo "$xr_recovery" | grep -E '^HDMI.*-2 connected' | awk '{print $1}')
+    if [[ -n "$hdmi0_xrandr" && -n "$hdmi1_xrandr" ]]; then
+        log "📺 Forçage xrandr: $hdmi0_xrandr → primaire +0+0, $hdmi1_xrandr → secondaire"
+        xrandr --output "$hdmi0_xrandr" --primary --auto --pos 0x0 \
+               --output "$hdmi1_xrandr" --auto --right-of "$hdmi0_xrandr" 2>/dev/null || true
+        sleep 1
+    elif [[ -n "$hdmi0_xrandr" ]]; then
+        log "📺 Forçage xrandr: $hdmi0_xrandr → primaire (HDMI-1 non détecté)"
+        xrandr --output "$hdmi0_xrandr" --primary --auto --pos 0x0 2>/dev/null || true
+        sleep 1
+    fi
+
+    # 3. Reconfigurer xrandr pour dual-display (lit les résolutions réelles)
     setup_secondary_xrandr || true
     sleep 1
 
-    # 3. Relancer le primaire sur HDMI-0
+    # 4. Relancer le primaire sur HDMI-0
     log "🚀 Relance du Chromium primaire..."
     start_chromium
     sleep 2
 
-    # 4. Relancer le secondaire sur HDMI-1
+    # 5. Relancer le secondaire sur HDMI-1
     DUAL_DISPLAY_ACTIVE=true
     if detect_hdmi1_status; then
         # Redimensionner le primaire pour le dual-display
@@ -613,10 +643,25 @@ deactivate_hdmi_failover() {
             fi
         fi
         start_chromium_secondary
+        LAST_HDMI_TRANSITION="failover_recovery:$(date -u +%Y-%m-%dT%H:%M:%SZ)"
         log "✓ RETOUR FAILOVER complet: dual-display restauré"
+
+        # 6. Vérification post-recovery: confirmer que HDMI-0 est bien primaire xrandr
+        local verify_xr verify_primary verify_offset
+        verify_xr=$(xrandr --query 2>/dev/null)
+        verify_primary=$(echo "$verify_xr" | grep -E '^HDMI.*-1 connected' | grep -oP '[0-9]+x[0-9]+\+[0-9]+\+[0-9]+')
+        verify_offset=$(echo "$verify_primary" | grep -oP '(?<=\+)[0-9]+(?=\+)')
+        if [[ "$verify_offset" == "0" ]]; then
+            log "✅ RECOVERY VÉRIFIÉ: HDMI-0 est bien primaire (offset +0+0)"
+        else
+            log "🔴 RECOVERY ANOMALIE: HDMI-0 n'est PAS à offset 0 (offset=$verify_offset) — restart recommandé"
+        fi
+        write_kiosk_status "running" "failover_recovery_complete"
     else
+        LAST_HDMI_TRANSITION="failover_recovery_partial:$(date -u +%Y-%m-%dT%H:%M:%SZ)"
         log "⚠️ HDMI-1 non détecté — primaire seul restauré"
         DUAL_DISPLAY_ACTIVE=false
+        write_kiosk_status "running" "failover_recovery_partial"
     fi
 }
 
@@ -755,10 +800,24 @@ start_chromium() {
     # (= les deux écrans combinés, ex: 5760x2160), pas sur un seul moniteur.
     # Solution : supprimer les décorations de fenêtre (title bar) via xprop _MOTIF_WM_HINTS
     # puis forcer la taille exacte du moniteur primaire via xdotool windowmove/windowsize.
+    # Retry loop : sur Pi lent ou SD card usée, Chromium peut mettre >4s à créer sa fenêtre X11.
+    # Sans retry, le fullscreen n'est jamais appliqué et il n'y a pas de rattrapage.
     (
-        sleep 4
-        local wid
-        wid=$(DISPLAY=:0 xdotool search --pid $CHROMIUM_PID 2>/dev/null | head -1)
+        local attempt
+        local max_attempts=5
+        local wid=""
+        for attempt in $(seq 1 $max_attempts); do
+            sleep $((attempt + 1))
+            wid=$(DISPLAY=:0 xdotool search --pid $CHROMIUM_PID 2>/dev/null | head -1)
+            if [[ -n "$wid" ]]; then
+                break
+            fi
+            if ! kill -0 "$CHROMIUM_PID" 2>/dev/null; then
+                log "⚠️ Chromium (PID $CHROMIUM_PID) n'est plus actif — abandon fullscreen init"
+                break
+            fi
+            log "⏳ Fenêtre Chromium non trouvée (tentative $attempt/$max_attempts) — retry..."
+        done
         if [[ -n "$wid" ]]; then
             # 1. Supprimer les décorations (title bar, bordures)
             DISPLAY=:0 xprop -id "$wid" -f _MOTIF_WM_HINTS 32c -set _MOTIF_WM_HINTS "0x2, 0x0, 0x0, 0x0, 0x0" 2>/dev/null
@@ -768,9 +827,9 @@ start_chromium() {
             DISPLAY=:0 xdotool windowsize "$wid" "${PRIMARY_SCREEN_WIDTH:-$DEFAULT_SCREEN_WIDTH}" "${PRIMARY_SCREEN_HEIGHT:-$DEFAULT_SCREEN_HEIGHT}" 2>/dev/null
             # 3. S'assurer que la fenêtre est au premier plan
             DISPLAY=:0 xdotool windowactivate "$wid" 2>/dev/null
-            log "✓ Chromium primaire plein écran par-moniteur (xprop+xdotool, WID: $wid, ${PRIMARY_SCREEN_WIDTH:-$DEFAULT_SCREEN_WIDTH}x${PRIMARY_SCREEN_HEIGHT:-$DEFAULT_SCREEN_HEIGHT})"
+            log "✓ Chromium primaire plein écran par-moniteur (xprop+xdotool, WID: $wid, ${PRIMARY_SCREEN_WIDTH:-$DEFAULT_SCREEN_WIDTH}x${PRIMARY_SCREEN_HEIGHT:-$DEFAULT_SCREEN_HEIGHT}, tentative $attempt)"
         else
-            log "⚠️ Impossible de trouver la fenêtre primaire pour xprop/xdotool"
+            log "⚠️ Impossible de trouver la fenêtre primaire après $max_attempts tentatives"
         fi
     ) &
 

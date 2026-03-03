@@ -3220,7 +3220,7 @@ describe('E-23 check_secondary_chromium transition guards', () => {
 
     // Extract deactivate_hdmi_failover function
     const deactivateStart = content.indexOf('deactivate_hdmi_failover()');
-    const deactivateBody = content.slice(deactivateStart, deactivateStart + 3000);
+    const deactivateBody = content.slice(deactivateStart, deactivateStart + 4500);
     // The resize block in deactivate_hdmi_failover must also re-apply xprop + windowactivate
     expect({
       hasXprop: deactivateBody.includes('_MOTIF_WM_HINTS'),
@@ -3230,6 +3230,60 @@ describe('E-23 check_secondary_chromium transition guards', () => {
       hasXprop: true,
       hasWindowActivate: true,
       hasWindowSize: true,
+    });
+  });
+
+  // Bug fix: start_chromium() fullscreen subshell must have a retry loop, not a single attempt.
+  // On slow Pis (SD card wear), Chromium may take >4s to create its X11 window.
+  // Without retry, fullscreen is never applied and there is no recovery.
+  it('start_chromium fullscreen subshell must have retry loop (not single sleep+attempt)', () => {
+    const content = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/scripts/kiosk-watchdog.sh'),
+      'utf8'
+    );
+    const fnStart = content.indexOf('start_chromium() {');
+    const fnBody = content.slice(fnStart, fnStart + 8000);
+    // The fullscreen subshell must retry multiple times
+    expect({
+      hasRetryLoop: /for attempt in.*seq.*max_attempts/.test(fnBody),
+      hasMaxAttempts: /max_attempts=[0-9]/.test(fnBody),
+      hasProcessCheck: /kill -0.*CHROMIUM_PID/.test(fnBody),
+      hasRetryLog: /retry/.test(fnBody),
+      hasXprop: /_MOTIF_WM_HINTS/.test(fnBody),
+      hasWindowSize: /xdotool.*windowsize/.test(fnBody),
+      hasWindowMove: /xdotool.*windowmove/.test(fnBody),
+    }).toEqual({
+      hasRetryLoop: true,
+      hasMaxAttempts: true,
+      hasProcessCheck: true,
+      hasRetryLog: true,
+      hasXprop: true,
+      hasWindowSize: true,
+      hasWindowMove: true,
+    });
+  });
+
+  // Bug fix: check_window_stacking() must apply full fullscreen (xprop + windowmove + windowsize)
+  // on every loop iteration, not just xprop + windowactivate on panel-above.
+  // This is the safety net: if the init subshell failed, the main loop catches it.
+  it('check_window_stacking must apply windowmove + windowsize (not just windowactivate)', () => {
+    const content = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/scripts/kiosk-watchdog.sh'),
+      'utf8'
+    );
+    const fnStart = content.indexOf('check_window_stacking() {');
+    const fnEnd = content.indexOf('\n}', fnStart);
+    const fnBody = content.slice(fnStart, fnEnd);
+    expect({
+      hasXprop: fnBody.includes('_MOTIF_WM_HINTS'),
+      hasWindowMove: /xdotool.*windowmove/.test(fnBody),
+      hasWindowSize: /xdotool.*windowsize/.test(fnBody),
+      hasWindowActivate: /xdotool.*windowactivate/.test(fnBody),
+    }).toEqual({
+      hasXprop: true,
+      hasWindowMove: true,
+      hasWindowSize: true,
+      hasWindowActivate: true,
     });
   });
 
@@ -3323,7 +3377,7 @@ describe('E-23 check_secondary_chromium transition guards', () => {
       'utf8'
     );
     const funcStart = content.indexOf('deactivate_hdmi_failover()');
-    const funcBody = content.slice(funcStart, funcStart + 3000);
+    const funcBody = content.slice(funcStart, funcStart + 4500);
     expect({
       // Must kill the failover Chromium (which was launched via start_chromium → CHROMIUM_PID)
       stopsFailoverChromium: funcBody.includes('kill -TERM') && funcBody.includes('CHROMIUM_PID'),
@@ -3338,6 +3392,38 @@ describe('E-23 check_secondary_chromium transition guards', () => {
       reconfiguresXrandr: true,
       relaunchesPrimary: true,
       relaunchesSecondary: true,
+    });
+  });
+
+  it('deactivate_hdmi_failover must force HDMI-0 (HDMI-A-1) as primary BEFORE setup_secondary_xrandr', () => {
+    const content = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/scripts/kiosk-watchdog.sh'),
+      'utf8'
+    );
+    const funcStart = content.indexOf('deactivate_hdmi_failover()');
+    const funcBody = content.slice(funcStart, funcStart + 4000);
+
+    // After failover, HDMI-1 is at +0+0 (promoted). setup_secondary_xrandr identifies
+    // primary by offset → HDMI-1 would stay primary without explicit xrandr reconfiguration.
+    // deactivate_hdmi_failover MUST force HDMI-A-1 back to primary BEFORE setup_secondary_xrandr.
+    const forceHdmi0Idx = funcBody.search(/HDMI.*-1 connected/);
+    // Match the actual function call, not comments mentioning setup_secondary_xrandr
+    const setupXrandrIdx = funcBody.indexOf('setup_secondary_xrandr ||');
+
+    expect({
+      // Must detect HDMI-A-1 (physical HDMI-0) by xrandr name
+      detectsHdmi0ByName: /HDMI.*-1 connected/.test(funcBody),
+      // Must force HDMI-0 as primary with --primary --auto --pos 0x0
+      forcesHdmi0Primary: funcBody.includes('--primary --auto --pos 0x0'),
+      // Must place HDMI-1 --right-of HDMI-0
+      placesHdmi1RightOf: funcBody.includes('--right-of'),
+      // Force must happen BEFORE setup_secondary_xrandr
+      forceBeforeSetup: forceHdmi0Idx > 0 && setupXrandrIdx > 0 && forceHdmi0Idx < setupXrandrIdx,
+    }).toEqual({
+      detectsHdmi0ByName: true,
+      forcesHdmi0Primary: true,
+      placesHdmi1RightOf: true,
+      forceBeforeSetup: true,
     });
   });
 
@@ -3852,6 +3938,87 @@ describe('Multi-profile sync & cache regression guards (ADR-030)', () => {
     }).toEqual({
       hasCatchError: true,
       removesLocalStorage: true,
+    });
+  });
+});
+
+// ----------------------------------------------------------
+// Remote UX regression guards (multi-profile)
+// ----------------------------------------------------------
+// Bug 1: timeCategory cards had no gradient when color from
+// profile config didn't match SCSS classes → white text on
+// transparent bg → invisible cards.
+// Fix: getTimeCategoryGradientClass() falls back by category id.
+//
+// Bug 2: no UI to switch profiles once one was selected —
+// back button was the only entry point, and no menu alternative.
+// Fix: "Changer de profil" menu item in header dropdown.
+// ----------------------------------------------------------
+describe('Remote multi-profile UX regression guards', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+  const remoteTsPath = path.join(
+    repoRoot,
+    'raspberry/src/app/components/remote/remote.component.ts'
+  );
+  const remoteHtmlPath = path.join(
+    repoRoot,
+    'raspberry/src/app/components/remote/remote.component.html'
+  );
+  const remoteTs = fs.readFileSync(remoteTsPath, 'utf8');
+  const remoteHtml = fs.readFileSync(remoteHtmlPath, 'utf8');
+
+  // --- Gradient fallback method must exist and cover all 3 categories ---
+  it('remote.component.ts must have getTimeCategoryGradientClass with id-based fallback', () => {
+    const fnMatch = remoteTs.match(
+      /getTimeCategoryGradientClass[\s\S]*?\n  \}/
+    );
+    expect(fnMatch).not.toBeNull();
+    const fnBody = fnMatch![0];
+    expect({
+      hasBeforeFallback: fnBody.includes("case 'before'"),
+      hasDuringFallback: fnBody.includes("case 'during'"),
+      hasAfterFallback: fnBody.includes("case 'after'"),
+      hasKnownPrefixesCheck: fnBody.includes('knownPrefixes'),
+    }).toEqual({
+      hasBeforeFallback: true,
+      hasDuringFallback: true,
+      hasAfterFallback: true,
+      hasKnownPrefixesCheck: true,
+    });
+  });
+
+  // --- Template must use the fallback method, not raw timeCategory.color ---
+  it('remote.component.html must use getTimeCategoryGradientClass (not raw color)', () => {
+    expect({
+      usesMethod: remoteHtml.includes('getTimeCategoryGradientClass(timeCategory)'),
+      noRawColor: !remoteHtml.includes('[ngClass]="timeCategory.color"'),
+    }).toEqual({
+      usesMethod: true,
+      noRawColor: true,
+    });
+  });
+
+  // --- "Changer de profil" menu item must exist in template ---
+  it('remote.component.html must have "Changer de profil" menu item for multi-profile', () => {
+    expect({
+      hasProfileSwitchItem: remoteHtml.includes('Changer de profil'),
+      hasProfileSwitchClass: remoteHtml.includes('profile-switch-item'),
+      callsBackToClubSelector: remoteHtml.includes('backToClubSelector()'),
+    }).toEqual({
+      hasProfileSwitchItem: true,
+      hasProfileSwitchClass: true,
+      callsBackToClubSelector: true,
+    });
+  });
+
+  // --- currentProfileName must be set when selecting a profile ---
+  it('remote.component.ts must track currentProfileName on profile selection', () => {
+    expect({
+      hasProperty: remoteTs.includes('currentProfileName'),
+      setsOnSelection: remoteTs.includes('this.currentProfileName = club.name'),
+    }).toEqual({
+      hasProperty: true,
+      setsOnSelection: true,
     });
   });
 });
@@ -6933,5 +7100,115 @@ describe('TV cursor hiding regression guard', () => {
       installsX11Utils: true,
       installsEdidDecode: true,
     });
+  });
+});
+
+// =============================================================================
+// Boot splash screen guards
+// =============================================================================
+//
+// Ensures the Neopro boot splash is properly integrated:
+// - Inline HTML splash in index.html (visible before Angular bootstraps)
+// - app.component.ts removes the splash after bootstrap
+// - install.sh configures cmdline.txt (quiet boot) and config.txt (disable_splash)
+// - No 100vw usage in inline splash (smoke test enforced)
+
+describe('Boot splash screen guards', () => {
+  const repoRoot = path.resolve(__dirname, '../../..');
+  const indexHtml = fs.readFileSync(
+    path.join(repoRoot, 'raspberry/src/index.html'),
+    'utf8'
+  );
+  const appComponent = fs.readFileSync(
+    path.join(repoRoot, 'raspberry/src/app/app.component.ts'),
+    'utf8'
+  );
+  const installSh = fs.readFileSync(
+    path.join(repoRoot, 'raspberry/install.sh'),
+    'utf8'
+  );
+
+  it('index.html must have inline neopro-boot-splash div', () => {
+    // The inline splash renders instantly before Angular bootstraps,
+    // eliminating the 5-15s white screen gap in Chromium.
+    expect({ hasSplash: indexHtml.includes('id="neopro-boot-splash"') })
+      .toEqual({ hasSplash: true });
+  });
+
+  it('inline boot splash must NOT use 100vw (causes overflow with scrollbars)', () => {
+    // Extract the splash block to check only its styles
+    const splashMatch = indexHtml.match(
+      /id="neopro-boot-splash"[\s\S]*?<\/div>\s*<style>[^<]*<\/style>/
+    );
+    expect(splashMatch).not.toBeNull();
+    const splashBlock = splashMatch![0];
+    expect({
+      no100vw: !splashBlock.includes('100vw'),
+      reason: 'Use 100% instead of 100vw — 100vw includes scrollbar width'
+    }).toEqual({
+      no100vw: true,
+      reason: 'Use 100% instead of 100vw — 100vw includes scrollbar width'
+    });
+  });
+
+  it('inline boot splash must appear BEFORE <app-root>', () => {
+    // The splash must render before Angular's root element so it's visible immediately.
+    const splashIdx = indexHtml.indexOf('neopro-boot-splash');
+    const appRootIdx = indexHtml.indexOf('<app-root>');
+    expect(splashIdx).toBeGreaterThan(-1);
+    expect(appRootIdx).toBeGreaterThan(-1);
+    expect({ splashBeforeAppRoot: splashIdx < appRootIdx })
+      .toEqual({ splashBeforeAppRoot: true });
+  });
+
+  it('app.component.ts must remove neopro-boot-splash after bootstrap', () => {
+    // Without removal, the splash would stay on top of the TV content forever.
+    expect({ removesSplash: appComponent.includes('neopro-boot-splash') })
+      .toEqual({ removesSplash: true });
+  });
+
+  it('install.sh must have configure_boot_splash function', () => {
+    expect({ hasFunction: /configure_boot_splash\(\)/.test(installSh) })
+      .toEqual({ hasFunction: true });
+  });
+
+  it('install.sh configure_boot_splash must configure quiet boot in cmdline.txt', () => {
+    // Extract the function body
+    const fnMatch = installSh.match(
+      /configure_boot_splash\(\)\s*\{[\s\S]*?\n\}/
+    );
+    expect(fnMatch).not.toBeNull();
+    const fnBody = fnMatch![0];
+    expect({
+      hasQuiet: fnBody.includes('quiet'),
+      hasSplash: fnBody.includes('splash'),
+      hasLogoNologo: fnBody.includes('logo.nologo'),
+      hasLoglevel: fnBody.includes('loglevel'),
+    }).toEqual({
+      hasQuiet: true,
+      hasSplash: true,
+      hasLogoNologo: true,
+      hasLoglevel: true,
+    });
+  });
+
+  it('install.sh configure_boot_splash must set disable_splash=1 in config.txt', () => {
+    const fnMatch = installSh.match(
+      /configure_boot_splash\(\)\s*\{[\s\S]*?\n\}/
+    );
+    expect(fnMatch).not.toBeNull();
+    expect({ disableSplash: fnMatch![0].includes('disable_splash=1') })
+      .toEqual({ disableSplash: true });
+  });
+
+  it('fix-fleet-pi.sh must configure boot splash (cmdline.txt + config.txt)', () => {
+    const fixFleetContent = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/scripts/fix-fleet-pi.sh'),
+      'utf8'
+    );
+    expect({ hasQuiet: fixFleetContent.includes('quiet') && fixFleetContent.includes('splash') && fixFleetContent.includes('logo.nologo') })
+      .toEqual({ hasQuiet: true });
+    expect({ hasDisableSplash: fixFleetContent.includes('disable_splash=1') })
+      .toEqual({ hasDisableSplash: true });
   });
 });
