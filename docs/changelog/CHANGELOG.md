@@ -1,3 +1,9 @@
+## [3.97.1](https://github.com/Tallec7/neopro/compare/v3.97.0...v3.97.1) (2026-03-03)
+
+### Bug Fixes
+
+- **remote:** gradient invisible + impossible changer profil en multi-profil ([4b8623c](https://github.com/Tallec7/neopro/commit/4b8623c5c92cfc1cb4a63368dd00d3783bfd2f4b))
+
 # [3.97.0](https://github.com/Tallec7/neopro/compare/v3.96.2...v3.97.0) (2026-03-03)
 
 ### Features
