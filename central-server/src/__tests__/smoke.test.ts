@@ -7259,6 +7259,12 @@ describe('Boot splash screen guards', () => {
     // Must remove lxpanel from autostart (taskbar visibility)
     expect({ removesLxpanel: fixFleetContent.includes('lxpanel') })
       .toEqual({ removesLxpanel: true });
+    // CRITICAL: pcmanfm-pi wrapper uses "default" profile (NOT LXDE-pi) — must fix default profile too
+    expect({ fixesDefaultProfile: fixFleetContent.includes('pcmanfm/default/desktop-items') })
+      .toEqual({ fixesDefaultProfile: true });
+    // Must fix system-level config too (/etc/xdg)
+    expect({ fixesSystemConfig: fixFleetContent.includes('/etc/xdg/pcmanfm') })
+      .toEqual({ fixesSystemConfig: true });
   });
 
   it('index.html boot splash must use real NEOPRO logo image (not generic SVG)', () => {

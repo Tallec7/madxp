@@ -701,14 +701,11 @@ else
 fi
 
 # 9d. Desktop noir — empêcher le fond d'écran Pi de s'afficher entre Plymouth et Chromium
+# IMPORTANT: pcmanfm-pi wrapper lance `pcmanfm --desktop` SANS --profile → utilise le profil "default"
+# On doit fixer TOUS les profils (default + LXDE-pi) ET les configs système (/etc/xdg)
 LXDE_AUTOSTART="/home/pi/.config/lxsession/LXDE-pi/autostart"
-PCMANFM_CONF="/home/pi/.config/pcmanfm/LXDE-pi/desktop-items-0.conf"
 
-# Forcer fond desktop noir dans pcmanfm
-if [ ! -f "$PCMANFM_CONF" ] || ! grep -q "desktop_bg=#0a0a0a" "$PCMANFM_CONF" 2>/dev/null; then
-    mkdir -p "$(dirname "$PCMANFM_CONF")"
-    cat > "$PCMANFM_CONF" << 'DESKEOF'
-[*]
+DESKTOP_BLACK_CONF='[*]
 wallpaper_mode=color
 wallpaper_common=1
 desktop_bg=#0a0a0a
@@ -716,11 +713,26 @@ desktop_fg=#0a0a0a
 desktop_shadow=#0a0a0a
 show_documents=0
 show_trash=0
-show_mounts=0
-DESKEOF
-    log_ok "Desktop pcmanfm configuré en fond noir"
-    CHANGES=$((CHANGES + 1))
-fi
+show_mounts=0'
+
+# Tous les emplacements de config pcmanfm à fixer (user + system, default + LXDE-pi, monitor 0 + 1)
+PCMANFM_CONFIGS=(
+    "/home/pi/.config/pcmanfm/default/desktop-items-0.conf"
+    "/home/pi/.config/pcmanfm/default/desktop-items-1.conf"
+    "/home/pi/.config/pcmanfm/LXDE-pi/desktop-items-0.conf"
+    "/home/pi/.config/pcmanfm/LXDE-pi/desktop-items-1.conf"
+    "/etc/xdg/pcmanfm/default/desktop-items-0.conf"
+    "/etc/xdg/pcmanfm/default/desktop-items-1.conf"
+)
+
+for PCMANFM_CONF in "${PCMANFM_CONFIGS[@]}"; do
+    if [ ! -f "$PCMANFM_CONF" ] || ! grep -q "desktop_bg=#0a0a0a" "$PCMANFM_CONF" 2>/dev/null; then
+        mkdir -p "$(dirname "$PCMANFM_CONF")"
+        echo "$DESKTOP_BLACK_CONF" > "$PCMANFM_CONF"
+        log_ok "Desktop pcmanfm configuré en fond noir: $PCMANFM_CONF"
+        CHANGES=$((CHANGES + 1))
+    fi
+done
 
 # Ajouter xsetroot -solid black et retirer lxpanel de l'autostart
 if [ -f "$LXDE_AUTOSTART" ]; then
