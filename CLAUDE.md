@@ -17,7 +17,7 @@ cd central-server && npm run build # Compile TypeScript
 
 # Tests
 npm run test:server                # Jest (API central-server — 1941 tests)
-npm run test:smoke                 # Jest (Smoke tests — 456 tests, détecte régressions de wiring)
+npm run test:smoke                 # Jest (Smoke tests — 533 tests, détecte régressions de wiring)
 npm run test:central               # Karma (Angular Dashboard — 520 tests)
 cd raspberry/server && npm test    # Jest (Socket.IO server — 71 tests)
 cd raspberry/admin && npm test     # Jest (Admin server — 194 tests)
@@ -102,6 +102,8 @@ source central-server/.env && psql "$DATABASE_URL" -f central-server/src/scripts
 - Réduire `check_window_stacking()` à un simple `windowactivate` sans `windowmove`/`windowsize` (c'est le filet de sécurité qui rattrape tout échec de fullscreen init — doit toujours appliquer la séquence complète xprop + windowmove + windowsize + windowactivate — smoke test enforced)
 - Utiliser `[ngClass]="timeCategory.color"` dans le template remote (les valeurs `color` des profils ne correspondent pas forcément aux classes SCSS → cartes invisibles — toujours passer par `getTimeCategoryGradientClass()` qui fallback par `id` de catégorie — smoke test enforced)
 - Supprimer le menu item "Changer de profil" dans la remote (seul point d'entrée alternatif vers le club-selector — le bouton retour seul ne suffit pas quand `isMultiProfile` est conditionnel — smoke test enforced)
+- Supprimer `isCompletedByProgress` dans `deploy-progress.handler.ts` (le signal Socket.IO `completed:true` est fire-and-forget — sur WiFi instable RTL8192EU, le signal peut se perdre → déploiements bloqués à 99-100% indéfiniment — l'auto-completion à `progress >= 100` est le filet de sécurité — smoke test enforced)
+- Supprimer l'auto-completion des déploiements bloqués à 100% dans `checkStuckDeployments()` de `alerting.service.ts` (deuxième filet : rattrape les déploiements où même le progress event à 100 a été perdu — auto-complete après 5min à progress >= 100 — smoke test enforced)
 
 ## Architecture détaillée
 

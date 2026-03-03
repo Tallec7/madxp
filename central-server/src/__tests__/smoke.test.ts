@@ -7278,4 +7278,154 @@ describe('Boot splash screen guards', () => {
     expect({ noGenericSVG: !indexContent.includes('viewBox="0 0 200 200"') })
       .toEqual({ noGenericSVG: true });
   });
+
+  // ── Kiosk X11 splash overlay guards ──
+  // feh displays a fullscreen NEOPRO image BEFORE Chromium launches,
+  // covering the 2-5s gap where Chromium appears with window decorations
+  // before xdotool applies fullscreen. Killed once fullscreen is set.
+
+  it('fix-fleet-pi.sh must include feh in recommended packages', () => {
+    const fixFleetContent = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/scripts/fix-fleet-pi.sh'),
+      'utf8'
+    );
+    // feh is the lightweight image viewer used for the kiosk boot splash overlay
+    expect({ hasFeh: /RECOMMENDED_PACKAGES\s*=\s*\([\s\S]*?"feh"/.test(fixFleetContent) })
+      .toEqual({ hasFeh: true });
+  });
+
+  it('fix-fleet-pi.sh must generate kiosk boot splash image (boot-splash.png)', () => {
+    const fixFleetContent = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/scripts/fix-fleet-pi.sh'),
+      'utf8'
+    );
+    // Must generate data/boot-splash.png using Pillow
+    expect({ generatesBootSplash: fixFleetContent.includes('boot-splash.png') })
+      .toEqual({ generatesBootSplash: true });
+    expect({ usesPillow: fixFleetContent.includes('from PIL import Image') })
+      .toEqual({ usesPillow: true });
+  });
+
+  it('kiosk-watchdog.sh must call show_boot_splash before launching Chromium', () => {
+    const kioskContent = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/scripts/kiosk-watchdog.sh'),
+      'utf8'
+    );
+    // show_boot_splash must appear after start_chromium() definition
+    // and before the "$CHROMIUM_BIN" launch line in that function
+    const startChromiumIdx = kioskContent.indexOf('start_chromium()');
+    const afterStartChromium = kioskContent.slice(startChromiumIdx);
+    const showSplashIdx = afterStartChromium.indexOf('show_boot_splash');
+    const chromiumLaunchIdx = afterStartChromium.indexOf('"$CHROMIUM_BIN"');
+    expect({ hasShowSplash: showSplashIdx > -1 })
+      .toEqual({ hasShowSplash: true });
+    expect({ splashBeforeChromium: showSplashIdx < chromiumLaunchIdx })
+      .toEqual({ splashBeforeChromium: true });
+  });
+
+  it('kiosk-watchdog.sh must call kill_boot_splash after fullscreen is applied', () => {
+    const kioskContent = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/scripts/kiosk-watchdog.sh'),
+      'utf8'
+    );
+    // kill_boot_splash must be called inside the fullscreen subshell (after xdotool)
+    // and also in cleanup_chromium and the trap handler
+    expect({ killInCleanup: kioskContent.includes('cleanup_chromium') && kioskContent.match(/cleanup_chromium\(\)\s*\{[\s\S]*?kill_boot_splash/) !== null })
+      .toEqual({ killInCleanup: true });
+    expect({ killInTrap: /trap\s+['"].*kill_boot_splash/.test(kioskContent) })
+      .toEqual({ killInTrap: true });
+  });
+
+  it('kiosk-watchdog.sh show_boot_splash must use feh --fullscreen', () => {
+    const kioskContent = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/scripts/kiosk-watchdog.sh'),
+      'utf8'
+    );
+    const showSplashMatch = kioskContent.match(
+      /show_boot_splash\(\)\s*\{([\s\S]*?)\n\}/
+    );
+    expect(showSplashMatch).not.toBeNull();
+    const fnBody = showSplashMatch![1];
+    expect({ usesFehFullscreen: fnBody.includes('feh') && fnBody.includes('--fullscreen') })
+      .toEqual({ usesFehFullscreen: true });
+    // Must hide pointer and menus for kiosk mode
+    expect({ hidesPointer: fnBody.includes('--hide-pointer') })
+      .toEqual({ hidesPointer: true });
+    expect({ noMenus: fnBody.includes('--no-menus') })
+      .toEqual({ noMenus: true });
+  });
+
+  it('kiosk-watchdog.sh kill_boot_splash must pkill stale feh processes', () => {
+    const kioskContent = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/scripts/kiosk-watchdog.sh'),
+      'utf8'
+    );
+    const killSplashMatch = kioskContent.match(
+      /kill_boot_splash\(\)\s*\{([\s\S]*?)\n\}/
+    );
+    expect(killSplashMatch).not.toBeNull();
+    const fnBody = killSplashMatch![1];
+    // Must pkill stale feh processes as safety net (not just BOOT_SPLASH_PID)
+    expect({ pkillsFeh: fnBody.includes('pkill -f') && fnBody.includes('feh') })
+      .toEqual({ pkillsFeh: true });
+  });
+
+  it('kiosk-watchdog.sh must have BOOT_SPLASH_IMAGE fallback cascade', () => {
+    const kioskContent = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/scripts/kiosk-watchdog.sh'),
+      'utf8'
+    );
+    // Must check data/boot-splash.png first, then fall back to Plymouth splash.png
+    expect({ hasBootSplashImage: kioskContent.includes('BOOT_SPLASH_IMAGE') })
+      .toEqual({ hasBootSplashImage: true });
+    expect({ hasDataSplash: kioskContent.includes('data/boot-splash.png') })
+      .toEqual({ hasDataSplash: true });
+    expect({ hasPlymouthFallback: kioskContent.includes('splash.png') })
+      .toEqual({ hasPlymouthFallback: true });
+  });
+});
+
+// ----------------------------------------------------------
+// Deploy progress auto-completion guards
+// ----------------------------------------------------------
+describe('Deploy progress auto-completion guards', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+
+  it('handleDeployProgress must auto-complete at progress >= 100 (Socket.IO signal loss)', () => {
+    const content = fs.readFileSync(
+      path.join(repoRoot, 'central-server/src/handlers/deploy-progress.handler.ts'),
+      'utf8'
+    );
+    // Must have isCompletedByProgress check like handleUpdateProgress does
+    expect({
+      hasAutoComplete: /isCompletedByProgress/.test(content),
+      reason: 'deploy-progress handler must auto-complete at progress >= 100 to handle lost Socket.IO completed:true signals',
+    }).toEqual({
+      hasAutoComplete: true,
+      reason: 'deploy-progress handler must auto-complete at progress >= 100 to handle lost Socket.IO completed:true signals',
+    });
+    // Must use isCompletedByProgress in the completion condition
+    expect({
+      usedInCondition: /completed\s*\|\|\s*isCompletedByProgress/.test(content),
+      reason: 'completion branch must check (completed || isCompletedByProgress)',
+    }).toEqual({
+      usedInCondition: true,
+      reason: 'completion branch must check (completed || isCompletedByProgress)',
+    });
+  });
+
+  it('checkStuckDeployments must auto-complete deployments stuck at 100%', () => {
+    const content = fs.readFileSync(
+      path.join(repoRoot, 'central-server/src/services/alerting.service.ts'),
+      'utf8'
+    );
+    // Must UPDATE stuck deployments at progress >= 100 to 'completed'
+    expect({
+      hasAutoComplete: /progress\s*>=\s*100/.test(content) && /Auto-completed stuck deployments/.test(content),
+      reason: 'checkStuckDeployments must auto-complete deployments stuck at progress >= 100',
+    }).toEqual({
+      hasAutoComplete: true,
+      reason: 'checkStuckDeployments must auto-complete deployments stuck at progress >= 100',
+    });
+  });
 });

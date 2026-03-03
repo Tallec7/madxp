@@ -3,6 +3,23 @@
 ### Bug Fixes
 
 - **boot:** fix pcmanfm default profile for black desktop ([2faa4c5](https://github.com/Tallec7/neopro/commit/2faa4c58ef8e525188651140e906a64d56c2c42d))
+- **deploy:** fix content deployments stuck at 99-100% due to Socket.IO signal loss — added
+  `isCompletedByProgress` guard in `deploy-progress.handler.ts` matching the existing pattern in
+  `handleUpdateProgress`. Socket.IO fire-and-forget `completed:true` signal can be lost on unreliable
+  WiFi (RTL8192EU). Auto-completes when `progress >= 100` even without explicit `completed` flag.
+- **deploy:** add periodic auto-completion in `checkStuckDeployments()` for deployments at 100% for
+  >5 minutes — second safety net for cases where even the progress event at 100 is lost.
+
+### Monitoring
+
+- **prometheus:** 2 new alert rules — `ContentDeploymentStuck` (no progress events for 30min) and
+  `DeployAutoCompletionTriggered` (informational, confirms safety net working).
+- **grafana:** corresponding Grafana Cloud alert rule for stuck content deployments.
+
+### Tests
+
+- **smoke:** 2 new regression guards — `isCompletedByProgress` in deploy-progress handler and
+  auto-completion in `checkStuckDeployments()`.
 
 ## [3.98.1](https://github.com/Tallec7/neopro/compare/v3.98.0...v3.98.1) (2026-03-03)
 

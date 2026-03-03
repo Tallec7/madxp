@@ -1147,7 +1147,24 @@ class AlertingService {
    */
   async checkStuckDeployments(): Promise<void> {
     try {
-      // Chercher les déploiements content bloqués
+      // Auto-complete content deployments stuck at 100% for >5 minutes
+      // (Socket.IO fire-and-forget can lose the completed:true signal)
+      const autoCompleted = await query<{ id: string }>(`
+        UPDATE content_deployments
+        SET status = 'completed', completed_at = NOW()
+        WHERE status = 'in_progress'
+          AND progress >= 100
+          AND COALESCE(started_at, created_at) < NOW() - INTERVAL '5 minutes'
+        RETURNING id
+      `);
+      if (autoCompleted.rows.length > 0) {
+        logger.info('Auto-completed stuck deployments at 100%', {
+          count: autoCompleted.rows.length,
+          ids: autoCompleted.rows.map(r => r.id),
+        });
+      }
+
+      // Chercher les déploiements content bloqués (progress < 100)
       const contentStuck = await query<{
         id: string;
         target_id: string;
@@ -1157,6 +1174,7 @@ class AlertingService {
           EXTRACT(EPOCH FROM (NOW() - COALESCE(started_at, created_at))) / 60 AS minutes_stuck
         FROM content_deployments
         WHERE status = 'in_progress'
+          AND progress < 100
           AND COALESCE(started_at, created_at) < NOW() - INTERVAL '30 minutes'
       `);
 

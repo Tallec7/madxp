@@ -451,6 +451,31 @@ groups:
           summary: "Display resolution fallback detected"
           description: "{{ $value | humanize }} Pi(s) fell back to default screen resolution in the last hour. xrandr and EDID detection both failed — TV may be using 1920x1080 instead of native resolution."
 
+      # Content deployment stuck at progress < 100 for too long
+      # Auto-completion at 100% is handled by alerting.service.ts (checkStuckDeployments),
+      # but deployments genuinely stuck below 100% need operator attention.
+      - alert: ContentDeploymentStuck
+        expr: increase(neopro_deploy_progress_events_total{type="content",status="in_progress"}[1h]) == 0 and increase(neopro_deploy_progress_events_total{type="content",status="completed"}[1h]) == 0 and neopro_active_alerts > 0
+        for: 30m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Content deployments may be stuck"
+          description: "No content deploy progress events (in_progress or completed) for 30 minutes while alerts are active. Check content_deployments table for stuck rows and Pi connectivity."
+
+      # Auto-completed deployments detected (Socket.IO signal loss recovery)
+      # Fires when checkStuckDeployments() auto-completes deployments at 100%.
+      # Informational: confirms the safety net is working, but frequent firing
+      # suggests WiFi reliability issues across the fleet.
+      - alert: DeployAutoCompletionTriggered
+        expr: increase(neopro_deploy_progress_events_total{type="content",status="completed"}[30m]) > 0 and increase(neopro_deploy_progress_events_total{type="content",status="in_progress"}[30m]) == 0
+        for: 10m
+        labels:
+          severity: info
+        annotations:
+          summary: "Deploy auto-completion safety net triggered"
+          description: "Deployments are completing without recent progress events — likely auto-completed by checkStuckDeployments(). Frequent occurrence suggests fleet WiFi reliability issues."
+
       # Sponsor analytics pipeline stall: club plays flowing but no sponsor plays (unified pipeline v3.67+)
       - alert: SponsorAnalyticsPipelineStall
         expr: rate(neopro_video_plays_total{category="sponsor"}[2h]) == 0 and rate(neopro_video_plays_total{category="club"}[2h]) > 0

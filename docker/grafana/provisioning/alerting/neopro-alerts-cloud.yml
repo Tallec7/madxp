@@ -1707,4 +1707,46 @@ groups:
           team: neopro
         annotations:
           summary: "Kiosk Chromium restart count elevated (>5)"
+          description: "A Pi has restarted Chromium kiosk more than 5 times. Possible GPU crash or memory issue."
+
+      # Content deployment stuck (no progress events for 30min)
+      # Auto-completion at 100% is handled by alerting.service.ts,
+      # but deployments genuinely stuck below 100% need operator attention.
+      - uid: neopro-content-deploy-stuck
+        title: Content Deployment Stuck
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 3600
+              to: 0
+            datasourceUid: grafanacloud-tallec7-prom
+            model:
+              expr: increase(neopro_deploy_progress_events_total{type="content",status="in_progress"}[1h]) + increase(neopro_deploy_progress_events_total{type="content",status="completed"}[1h])
+              instant: true
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              type: reduce
+              expression: A
+              reducer: last
+              refId: B
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: B
+              conditions:
+                - evaluator:
+                    type: lt
+                    params: [1]
+              refId: C
+        for: 30m
+        labels:
+          severity: warning
+          team: neopro
+        annotations:
+          summary: "Content deployments may be stuck"
+          description: "No content deploy progress events for 30 minutes. Check content_deployments table for stuck rows and Pi connectivity."
           description: "The kiosk watchdog has restarted Chromium more than 5 times. This indicates instability — check GPU health, /dev/shm orphans, and nginx availability."

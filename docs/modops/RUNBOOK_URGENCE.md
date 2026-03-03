@@ -52,6 +52,33 @@ railway restart
 
 3. Si bloqué >5min : annuler le deploy dans le dashboard Railway et redéployer
 
+### 2.2b Deploy contenu bloqué (vidéos)
+
+**Symptôme** : Dans le dashboard, des déploiements vidéo restent à 99-100% avec statut "En cours" indéfiniment.
+
+**Cause racine** : Le signal Socket.IO `completed:true` envoyé par le Pi est fire-and-forget. Sur WiFi instable (RTL8192EU), le signal peut se perdre.
+
+**Protection automatique** (v3.98.2+) :
+
+1. **Handler-level** : `deploy-progress.handler.ts` auto-complète quand `progress >= 100` même sans `completed:true`
+2. **Periodic check** : `checkStuckDeployments()` dans `alerting.service.ts` auto-complète les déploiements à 100% bloqués >5min
+3. **Prometheus alert** : `ContentDeploymentStuck` fire si aucun progress event pendant 30min
+
+**Si malgré tout des déploiements restent bloqués** :
+
+```sql
+-- Voir les déploiements bloqués
+SELECT id, target_id, progress, status, started_at
+FROM content_deployments
+WHERE status = 'in_progress'
+ORDER BY started_at DESC;
+
+-- Forcer la completion manuelle
+UPDATE content_deployments
+SET status = 'completed', completed_at = NOW()
+WHERE id = '<deployment_id>' AND status = 'in_progress';
+```
+
 ### 2.3 Erreurs mémoire (OOM)
 
 **Symptôme** : `FATAL ERROR: CALL_AND_RETRY_LAST Allocation failed - JavaScript heap out of memory`

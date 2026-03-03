@@ -43,6 +43,11 @@ export async function handleDeployProgress(
     let resolvedDeployedCount = 0;
 
     if (deploymentId) {
+      // Auto-complete if progress >= 100 even without explicit completed flag
+      // (Socket.IO fire-and-forget can lose the completed:true signal)
+      const isCompletedByProgress =
+        typeof progressValue === 'number' && Number.isFinite(progressValue) && progressValue >= 100;
+
       if (error) {
         await query(
           `UPDATE content_deployments
@@ -51,7 +56,7 @@ export async function handleDeployProgress(
           [error, deploymentId]
         );
         resolvedStatus = 'failed';
-      } else if (completed) {
+      } else if (completed || isCompletedByProgress) {
         await query(
           `UPDATE content_deployments
            SET status = 'completed', progress = 100, completed_at = NOW()
