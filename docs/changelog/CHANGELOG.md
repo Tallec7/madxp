@@ -1,3 +1,11 @@
+## [3.98.4](https://github.com/Tallec7/neopro/compare/v3.98.3...v3.98.4) (2026-03-03)
+
+### Bug Fixes
+
+- **boot:** eliminate lxpanel taskbar — defense-in-depth across 4 layers ([07a41d9](https://github.com/Tallec7/neopro/commit/07a41d98ecbece6156a7a21f0cc46508869fe8d0))
+- **boot:** eliminate lxpanel taskbar visible 30s after fullscreen init ([eb3d86f](https://github.com/Tallec7/neopro/commit/eb3d86fd99b208d479c2efd1f8d88232985f2385))
+- **boot:** optimize boot time — eliminate 3 hostapd restarts + splash overlay ([8de7b34](https://github.com/Tallec7/neopro/commit/8de7b34464daa0c4487987561b9072c653380f46))
+
 ## [3.98.3](https://github.com/Tallec7/neopro/compare/v3.98.2...v3.98.3) (2026-03-03)
 
 ### Bug Fixes
