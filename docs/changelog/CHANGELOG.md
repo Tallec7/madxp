@@ -1,3 +1,13 @@
+# [3.96.0](https://github.com/Tallec7/neopro/compare/v3.95.1...v3.96.0) (2026-03-03)
+
+### Bug Fixes
+
+- **ci:** lower function coverage threshold 45→44% to unblock CI ([c9af1ee](https://github.com/Tallec7/neopro/commit/c9af1ee36da9570be2fed5f33127f70624cbac38))
+
+### Features
+
+- **safe:** allow editing epic name alongside status in modal ([22a1011](https://github.com/Tallec7/neopro/commit/22a10116e574ea8c66ff603ac85f7b925e260770))
+
 ## [3.95.1](https://github.com/Tallec7/neopro/compare/v3.95.0...v3.95.1) (2026-03-02)
 
 ### Bug Fixes
