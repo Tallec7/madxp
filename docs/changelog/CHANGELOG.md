@@ -1,3 +1,9 @@
+## [3.96.2](https://github.com/Tallec7/neopro/compare/v3.96.1...v3.96.2) (2026-03-03)
+
+### Bug Fixes
+
+- **kiosk:** fullscreen not applied at init with HDMI-0 only — retry loop + recovery ([0cd84c5](https://github.com/Tallec7/neopro/commit/0cd84c547acf920fc5dcdbb6cec40ac38fcdc368))
+
 ## [3.96.1](https://github.com/Tallec7/neopro/compare/v3.96.0...v3.96.1) (2026-03-03)
 
 ### Bug Fixes
