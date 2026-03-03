@@ -2,7 +2,25 @@
 
 ### Bug Fixes
 
+- **boot:** eliminate lxpanel taskbar definitively — defense-in-depth across 4 layers:
+  (1) `install.sh` : `@lxpanel` retiré de l'autostart LXDE, remplacé par `@xsetroot -solid black`
+  (2) `deploy-remote.sh` : correction rétroactive des Pi existants à chaque deploy
+  (3) `kiosk-watchdog.sh start_chromium()` : `pkill -x lxpanel` proactif
+  (4) `kiosk-watchdog.sh check_window_stacking()` : kill lxpanel quand panel_above détecté
+- **boot:** optimize boot time — eliminate 3 hostapd restarts, fix `$WIFI_INTERFACE` bug in
+  hotspot-optimizer.sh, add hotspot grace period in NetworkWatchdog, boot splash overlay with feh
+- **boot:** lxpanel re-raise defense loop at +3s/+8s/+15s after fullscreen init
 - **deploy:** auto-complete content deployments stuck at 99-100% (Socket.IO signal loss) ([cd52aaa](https://github.com/Tallec7/neopro/commit/cd52aaa0ee4a0c74378fc95489921efc29749db7))
+
+### Monitoring
+
+- **kiosk:** `lxpanelKillCount` metric in kiosk-status.json — tracks lxpanel kills at runtime
+- **sync-agent:** health alert when `lxpanelKillCount > 0` (autostart needs fixing on that Pi)
+
+### Tests
+
+- **smoke:** 7 new regression guards for lxpanel defense-in-depth (install.sh, kiosk-watchdog.sh,
+  deploy-remote.sh, metrics.js monitoring)
 
 ## [3.98.2](https://github.com/Tallec7/neopro/compare/v3.98.1...v3.98.2) (2026-03-03)
 

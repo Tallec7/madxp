@@ -107,6 +107,7 @@ source central-server/.env && psql "$DATABASE_URL" -f central-server/src/scripts
 - Utiliser `$WIFI_INTERFACE` dans `hotspot-optimizer.sh` (variable indéfinie — utiliser `$AP_INTERFACE` qui est défini à `wlan0` — smoke test enforced)
 - Supprimer le boot grace period hotspot du NetworkWatchdog `start()` (sans grace period, le watchdog détecte "IP 192.168.4.1 non configurée" à boot+5s et redémarre hostapd 2-3 fois, retardant la stabilisation du hotspot de 30s+ — smoke test enforced)
 - Supprimer la boucle re-raise post-fullscreen du subshell `start_chromium()` dans kiosk-watchdog.sh (LXDE/openbox restack lxpanel 1-5s après le premier fullscreen — sans re-raise à +3s/+8s/+15s, la barre de tâches reste visible ~30s jusqu'au prochain `check_window_stacking` — smoke test enforced)
+- Ajouter `@lxpanel` dans l'autostart LXDE de `install.sh` (la barre de tâches recouvre Chromium fullscreen — utiliser `@xsetroot -solid black` à la place — defense-in-depth : deploy-remote.sh corrige les Pi existants, kiosk-watchdog.sh tue lxpanel proactivement — smoke test enforced)
 
 ## Architecture détaillée
 

@@ -1330,6 +1330,14 @@ class MetricsCollector {
             fix: 'Vérifier les logs GPU: journalctl -u neopro-kiosk -n 50',
           });
         }
+        if (kioskStatus.lxpanelKillCount > 0) {
+          issues.push({
+            severity: 'warning',
+            component: 'Kiosk',
+            message: `lxpanel tuée ${kioskStatus.lxpanelKillCount} fois (barre de tâches parasite)`,
+            fix: 'Vérifier autostart LXDE: grep lxpanel ~/.config/lxsession/LXDE-pi/autostart — doit être absent',
+          });
+        }
       }
 
       // Mémoire système

@@ -437,6 +437,20 @@ ssh ${RASPBERRY_USER}@${RASPBERRY_IP} "
     else
         echo '  Aucun service obsolète détecté'
     fi
+
+    # Fix kiosk : retirer lxpanel de l'autostart LXDE (barre de tâches inutile en mode kiosk)
+    # L'autostart lance lxpanel sur les Pi installés avant le fix — on le corrige ici
+    LXDE_AUTOSTART=\"/home/pi/.config/lxsession/LXDE-pi/autostart\"
+    if [ -f \"\$LXDE_AUTOSTART\" ] && grep -q '@lxpanel' \"\$LXDE_AUTOSTART\" 2>/dev/null; then
+        sed -i '/@lxpanel/d' \"\$LXDE_AUTOSTART\"
+        # S'assurer que xsetroot -solid black est présent (fond noir)
+        if ! grep -q 'xsetroot -solid black' \"\$LXDE_AUTOSTART\" 2>/dev/null; then
+            sed -i '1i @xsetroot -solid black' \"\$LXDE_AUTOSTART\"
+        fi
+        echo '  ✓ lxpanel retiré de l'\''autostart LXDE (barre de tâches kiosk fix)'
+    fi
+    # Tuer lxpanel si elle tourne encore (effet immédiat sans reboot)
+    pkill -x lxpanel 2>/dev/null && echo '  ✓ lxpanel tuée (effet immédiat)' || true
 "
 print_success "Installation terminée"
 

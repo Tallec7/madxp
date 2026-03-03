@@ -4991,6 +4991,61 @@ cat /home/pi/neopro/data/kiosk-status.json | python3 -m json.tool | grep windowS
 
 ---
 
+## Barre de tâches visible au boot pendant 30-60s (v3.98.2+)
+
+La barre de tâches LXDE (lxpanel) apparaît pendant le boot, couvrant le bas ou le haut de Chromium pendant 30-60s avant de disparaître.
+
+### Symptômes
+
+1. **Barre de tâches visible** au boot pendant ~30-60s
+2. **Disparaît après un cycle de `check_window_stacking`** (~30s) ou après le re-raise loop (+15s)
+3. **Réapparaît à chaque reboot**
+
+### Cause
+
+`install.sh` incluait `@lxpanel --profile LXDE-pi` dans `/home/pi/.config/lxsession/LXDE-pi/autostart`. LXDE lance lxpanel au démarrage de la session graphique, qui se place AU-DESSUS de Chromium dans la pile Z-order. Le re-raise loop de `start_chromium()` la repousse à +3s/+8s/+15s, mais pendant ce temps la barre est visible.
+
+### Correction (v3.98.2+)
+
+Defense-in-depth en 4 couches :
+
+1. **install.sh** : `@lxpanel` retiré de l'autostart, remplacé par `@xsetroot -solid black` (prévention)
+2. **deploy-remote.sh** : corrige automatiquement l'autostart des Pi existants lors de chaque deploy (correction rétroactive)
+3. **kiosk-watchdog.sh `start_chromium()`** : `pkill -x lxpanel` proactif au démarrage de Chromium (ceinture)
+4. **kiosk-watchdog.sh `check_window_stacking()`** : détecte et tue lxpanel quand panel_above (bretelles)
+
+### Monitoring
+
+- `lxpanelKillCount` dans `kiosk-status.json` : nombre de fois que le watchdog a tué lxpanel
+- Si `lxpanelKillCount > 0` : health alert remonté au central → l'autostart de ce Pi contient encore `@lxpanel`
+- Correction : `sudo sed -i '/@lxpanel/d' ~/.config/lxsession/LXDE-pi/autostart`
+
+### Diagnostic
+
+```bash
+# 1. Vérifier que lxpanel n'est pas dans l'autostart
+grep lxpanel /home/pi/.config/lxsession/LXDE-pi/autostart
+# Attendu: aucun résultat
+
+# 2. Vérifier que lxpanel ne tourne pas
+pgrep -x lxpanel && echo "PROBLÈME: lxpanel tourne" || echo "OK"
+
+# 3. Vérifier le compteur de kills dans le statut kiosk
+cat /home/pi/neopro/data/kiosk-status.json | python3 -m json.tool | grep lxpanelKillCount
+# Attendu: 0 (si > 0, l'autostart doit être corrigé)
+```
+
+### Smoke tests de régression
+
+- `install.sh LXDE autostart must NOT contain @lxpanel (taskbar covers Chromium fullscreen)`
+- `kiosk-watchdog.sh start_chromium must kill lxpanel proactively`
+- `kiosk-watchdog.sh check_window_stacking must kill lxpanel on panel_above detection`
+- `deploy-remote.sh must remove @lxpanel from LXDE autostart on existing Pi`
+- `kiosk-watchdog.sh kiosk-status.json must include lxpanelKillCount`
+- `metrics.js health report must alert on lxpanelKillCount > 0`
+
+---
+
 ## Écran primaire zoomé ou change de page après débranchement du secondaire (v3.86+)
 
 Quand l'écran secondaire est débranché en mode dual-display, l'écran primaire peut montrer un comportement incorrect.

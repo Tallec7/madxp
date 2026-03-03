@@ -26,6 +26,7 @@ mkdir -p "$(dirname "$KIOSK_STATUS_FILE")" 2>/dev/null || true
 MEMORY_THRESHOLD=85  # Redémarrer si mémoire > 85%
 MAX_CRASH_COUNT=3  # Après 3 crashs rapides, attendre plus longtemps
 CRASH_WINDOW=300   # Fenêtre de 5 minutes pour compter les crashs
+LXPANEL_KILL_COUNT=0  # Compteur de kills lxpanel (monitoring)
 
 # Résolution de dernier recours — utilisée uniquement quand xrandr ET EDID échouent
 DEFAULT_SCREEN_WIDTH=1920
@@ -390,6 +391,12 @@ check_window_stacking() {
     DISPLAY=:0 xdotool windowsize "$wid" "$target_w" "$target_h" 2>/dev/null
     DISPLAY=:0 xdotool windowactivate "$wid" 2>/dev/null
     if [[ "$WINDOW_STACKING_STATUS" == "panel_above" ]]; then
+        # Tuer lxpanel définitivement — elle n'a aucune utilité en mode kiosk
+        if pgrep -x lxpanel >/dev/null 2>&1; then
+            pkill -x lxpanel 2>/dev/null || true
+            LXPANEL_KILL_COUNT=$((LXPANEL_KILL_COUNT + 1))
+            log "✓ STACKING: lxpanel tuée définitivement (kill #${LXPANEL_KILL_COUNT})"
+        fi
         log "✓ STACKING: Chromium re-raised + fullscreen forcé (auto-recovery, ${target_w}x${target_h})"
         WINDOW_STACKING_STATUS="recovered"
         return 1
@@ -409,7 +416,7 @@ write_kiosk_status() {
     detect_hdmi0_status && hdmi0_status="connected" || hdmi0_status="disconnected"
     detect_hdmi1_status && hdmi1_status="connected" || hdmi1_status="disconnected"
     cat > "$KIOSK_STATUS_FILE" 2>/dev/null <<EOF
-{"status":"${status}","chromiumAlive":$(pgrep -f "chromium.*$CHROMIUM_URL" > /dev/null 2>&1 && echo "true" || echo "false"),"restartCount":${#crash_times[@]},"lastEvent":"${now}","reason":"${reason}","pid":${CHROMIUM_PID:-0},"secondaryDisplayEnabled":${SECONDARY_DISPLAY_ENABLED},"secondaryChromiumAlive":${secondary_alive},"hdmi0Status":"${hdmi0_status}","hdmi1Status":"${hdmi1_status}","dualDisplayActive":${DUAL_DISPLAY_ACTIVE:-false},"hdmiFailoverActive":${HDMI_FAILOVER_ACTIVE:-false},"displayFallback":"${DISPLAY_FALLBACK_REASON}","lastHdmiTransition":"${LAST_HDMI_TRANSITION:-}","windowStacking":"${WINDOW_STACKING_STATUS:-unknown}","primaryResolution":"${PRIMARY_SCREEN_WIDTH:+${PRIMARY_SCREEN_WIDTH}x${PRIMARY_SCREEN_HEIGHT}}","secondaryResolution":"${SECONDARY_SCREEN_WIDTH:+${SECONDARY_SCREEN_WIDTH}x${SECONDARY_SCREEN_HEIGHT}}"}
+{"status":"${status}","chromiumAlive":$(pgrep -f "chromium.*$CHROMIUM_URL" > /dev/null 2>&1 && echo "true" || echo "false"),"restartCount":${#crash_times[@]},"lastEvent":"${now}","reason":"${reason}","pid":${CHROMIUM_PID:-0},"secondaryDisplayEnabled":${SECONDARY_DISPLAY_ENABLED},"secondaryChromiumAlive":${secondary_alive},"hdmi0Status":"${hdmi0_status}","hdmi1Status":"${hdmi1_status}","dualDisplayActive":${DUAL_DISPLAY_ACTIVE:-false},"hdmiFailoverActive":${HDMI_FAILOVER_ACTIVE:-false},"displayFallback":"${DISPLAY_FALLBACK_REASON}","lastHdmiTransition":"${LAST_HDMI_TRANSITION:-}","windowStacking":"${WINDOW_STACKING_STATUS:-unknown}","lxpanelKillCount":${LXPANEL_KILL_COUNT:-0},"primaryResolution":"${PRIMARY_SCREEN_WIDTH:+${PRIMARY_SCREEN_WIDTH}x${PRIMARY_SCREEN_HEIGHT}}","secondaryResolution":"${SECONDARY_SCREEN_WIDTH:+${SECONDARY_SCREEN_WIDTH}x${SECONDARY_SCREEN_HEIGHT}}"}
 EOF
 }
 
@@ -741,6 +748,15 @@ start_chromium() {
 
     export DISPLAY=:0
     export XAUTHORITY=/home/pi/.Xauthority
+
+    # Tuer lxpanel (barre de tâches LXDE) — aucune utilité en mode kiosk et elle
+    # recouvre Chromium fullscreen. L'autostart devrait ne plus la lancer (install.sh
+    # corrigé), mais ceinture-et-bretelles pour les Pi non encore redéployés.
+    if pgrep -x lxpanel >/dev/null 2>&1; then
+        pkill -x lxpanel 2>/dev/null || true
+        LXPANEL_KILL_COUNT=$((LXPANEL_KILL_COUNT + 1))
+        log "✓ lxpanel tué (barre de tâches inutile en mode kiosk, kill #${LXPANEL_KILL_COUNT})"
+    fi
 
     # Afficher le splash overlay AVANT de lancer Chromium — couvre le gap entre
     # Plymouth/desktop noir et Chromium fullscreen (2-5s de fenêtre avec décorations)

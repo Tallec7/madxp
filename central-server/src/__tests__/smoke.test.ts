@@ -7530,6 +7530,101 @@ describe('Boot splash screen guards', () => {
     expect({ hasWindowactivateReRaise: afterKill.includes('xdotool windowactivate') })
       .toEqual({ hasWindowactivateReRaise: true });
   });
+
+  // Bug fix v3.98.2: install.sh LXDE autostart must NOT launch lxpanel (taskbar covers Chromium).
+  // Root cause: @lxpanel in autostart file makes the WM launch the taskbar at boot, which sits
+  // ABOVE Chromium fullscreen. install.sh must use @xsetroot -solid black instead.
+  it('install.sh LXDE autostart must NOT contain @lxpanel (taskbar covers Chromium fullscreen)', () => {
+    const installContent = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/install.sh'),
+      'utf8'
+    );
+    // Extract the autostart heredoc content (between 'autostart << ' and 'EOF')
+    const autostartMatch = installContent.match(
+      /lxsession\/LXDE-pi\/autostart\s*<<\s*'?EOF'?\n([\s\S]*?)\nEOF/
+    );
+    expect(autostartMatch).not.toBeNull();
+    const autostartContent = autostartMatch![1];
+    // Must NOT have @lxpanel — it launches the taskbar that covers Chromium
+    expect({ noLxpanel: !autostartContent.includes('@lxpanel') })
+      .toEqual({ noLxpanel: true });
+    // Must have @xsetroot -solid black (fond noir sans taskbar)
+    expect({ hasXsetroot: autostartContent.includes('@xsetroot -solid black') })
+      .toEqual({ hasXsetroot: true });
+  });
+
+  // Defense-in-depth: kiosk-watchdog.sh start_chromium() must kill lxpanel proactively
+  // (belt-and-suspenders for Pi not yet redeployed with fixed install.sh)
+  it('kiosk-watchdog.sh start_chromium must kill lxpanel proactively', () => {
+    const kioskContent = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/scripts/kiosk-watchdog.sh'),
+      'utf8'
+    );
+    // start_chromium() must have pkill -x lxpanel before launching Chromium
+    const startFnMatch = kioskContent.match(
+      /start_chromium\s*\(\)\s*\{([\s\S]*?)^}/m
+    );
+    expect(startFnMatch).not.toBeNull();
+    const startFn = startFnMatch![1];
+    expect({ killsLxpanel: startFn.includes('pkill -x lxpanel') })
+      .toEqual({ killsLxpanel: true });
+    // Must track kill count for monitoring
+    expect({ tracksKillCount: startFn.includes('LXPANEL_KILL_COUNT') })
+      .toEqual({ tracksKillCount: true });
+  });
+
+  // Defense-in-depth: kiosk-watchdog.sh check_window_stacking must kill lxpanel when panel_above
+  it('kiosk-watchdog.sh check_window_stacking must kill lxpanel on panel_above detection', () => {
+    const kioskContent = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/scripts/kiosk-watchdog.sh'),
+      'utf8'
+    );
+    const stackingMatch = kioskContent.match(
+      /check_window_stacking\s*\(\)\s*\{([\s\S]*?)^}/m
+    );
+    expect(stackingMatch).not.toBeNull();
+    const stackingFn = stackingMatch![1];
+    // When panel_above is detected, must kill lxpanel (not just re-raise)
+    expect({ killsOnPanelAbove: stackingFn.includes('panel_above') && stackingFn.includes('pkill -x lxpanel') })
+      .toEqual({ killsOnPanelAbove: true });
+  });
+
+  // deploy-remote.sh must fix lxpanel on existing Pi (retroactive fix for pre-patch installs)
+  it('deploy-remote.sh must remove @lxpanel from LXDE autostart on existing Pi', () => {
+    const deployContent = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/scripts/deploy-remote.sh'),
+      'utf8'
+    );
+    // Must detect and remove @lxpanel from the autostart file
+    expect({ removesLxpanel: deployContent.includes("/@lxpanel/d") })
+      .toEqual({ removesLxpanel: true });
+    // Must add xsetroot -solid black if missing
+    expect({ addsXsetroot: deployContent.includes('xsetroot -solid black') })
+      .toEqual({ addsXsetroot: true });
+    // Must kill lxpanel for immediate effect
+    expect({ killsLxpanel: deployContent.includes('pkill -x lxpanel') })
+      .toEqual({ killsLxpanel: true });
+  });
+
+  // Monitoring: kiosk-status.json must include lxpanelKillCount for central server alerting
+  it('kiosk-watchdog.sh kiosk-status.json must include lxpanelKillCount', () => {
+    const kioskContent = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/scripts/kiosk-watchdog.sh'),
+      'utf8'
+    );
+    expect({ hasLxpanelMetric: kioskContent.includes('lxpanelKillCount') })
+      .toEqual({ hasLxpanelMetric: true });
+  });
+
+  // Monitoring: metrics.js health report must alert on lxpanelKillCount > 0
+  it('metrics.js health report must alert on lxpanelKillCount > 0', () => {
+    const metricsContent = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/sync-agent/src/metrics.js'),
+      'utf8'
+    );
+    expect({ alertsOnLxpanel: metricsContent.includes('lxpanelKillCount') })
+      .toEqual({ alertsOnLxpanel: true });
+  });
 });
 
 // ----------------------------------------------------------

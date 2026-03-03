@@ -899,8 +899,10 @@ configure_gui() {
 
     # Désactivation de l'économiseur d'écran
     mkdir -p /home/pi/.config/lxsession/LXDE-pi
+    # Mode kiosk : PAS de lxpanel (barre de tâches) — elle recouvre Chromium fullscreen.
+    # pcmanfm --desktop fournit le fond noir, xset désactive l'économiseur d'écran.
     cat > /home/pi/.config/lxsession/LXDE-pi/autostart << 'EOF'
-@lxpanel --profile LXDE-pi
+@xsetroot -solid black
 @pcmanfm --desktop --profile LXDE-pi
 @xset s off
 @xset -dpms

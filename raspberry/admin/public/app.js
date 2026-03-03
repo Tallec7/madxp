@@ -2,7 +2,7 @@
  * Neopro Admin Panel - JavaScript
  * FICHIER GENERE - Ne pas editer directement
  * Editer les fichiers dans modules/ puis lancer: bash build-admin.sh
- * Build: cd52aaa0
+ * Build: 792e8476
  */
 
 

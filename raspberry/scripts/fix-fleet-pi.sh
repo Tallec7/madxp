@@ -805,6 +805,12 @@ AUTOEOF
         log_ok "LXDE autostart déjà configuré"
     fi
 fi
+# Tuer lxpanel si elle tourne encore (effet immédiat sans reboot)
+if pgrep -x lxpanel >/dev/null 2>&1; then
+    pkill -x lxpanel 2>/dev/null || true
+    log_ok "lxpanel tuée (barre de tâches inutile en mode kiosk)"
+    CHANGES=$((CHANGES + 1))
+fi
 
 # =============================================================================
 # 10. Désactivation des services obsolètes / inutiles
