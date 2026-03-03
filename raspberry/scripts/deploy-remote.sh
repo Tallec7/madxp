@@ -415,6 +415,28 @@ ssh ${RASPBERRY_USER}@${RASPBERRY_IP} "
         done
         echo 'Services systemd installés'
     fi
+
+    # Nettoyage automatique des services neopro obsolètes
+    # Si un neopro-*.service existe sur le Pi mais plus dans config/systemd/,
+    # il a été retiré du repo → le désactiver et supprimer le fichier
+    echo 'Nettoyage des services obsolètes...'
+    CLEANED=0
+    for installed_svc in /etc/systemd/system/neopro-*.service; do
+        [ -f \"\$installed_svc\" ] || continue
+        svc_name=\$(basename \"\$installed_svc\")
+        if [ ! -f ${RASPBERRY_DIR}/config/systemd/\$svc_name ]; then
+            echo \"  ✗ \$svc_name obsolète — désactivation\"
+            sudo systemctl disable --now \${svc_name%.service} 2>/dev/null || true
+            sudo rm -f \"\$installed_svc\"
+            CLEANED=\$((CLEANED + 1))
+        fi
+    done
+    if [ \$CLEANED -gt 0 ]; then
+        sudo systemctl daemon-reload
+        echo \"  \$CLEANED service(s) obsolète(s) nettoyé(s)\"
+    else
+        echo '  Aucun service obsolète détecté'
+    fi
 "
 print_success "Installation terminée"
 

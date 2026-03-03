@@ -146,6 +146,21 @@ buzzer_beep() {
     fi
 }
 
+# Boot splash overlay — couvre l'écran avec le logo NEOPRO pendant que Chromium démarre
+# Élimine le flash de la fenêtre Chromium non-fullscreen (2-5s entre lancement et xdotool)
+BOOT_SPLASH_PID=0
+BOOT_SPLASH_IMAGE=""
+# Ordre de préférence pour l'image splash
+for _splash_candidate in \
+    "$NEOPRO_DIR/data/boot-splash.png" \
+    "/home/pi/neopro/data/boot-splash.png" \
+    "/usr/share/plymouth/themes/pix/splash.png"; do
+    if [ -f "$_splash_candidate" ]; then
+        BOOT_SPLASH_IMAGE="$_splash_candidate"
+        break
+    fi
+done
+
 # Flags pour le timer auto-swap et recovery (E-23 US-23.5.4 + US-23.5.5)
 WRONG_PORT_DETECTED_AT=0
 HDMI_SWAPPED=0
@@ -407,6 +422,7 @@ too_many_crashes() {
 # Nettoyer les processus Chromium zombies
 cleanup_chromium() {
     log "🧹 Nettoyage des processus Chromium..."
+    kill_boot_splash
     SECONDARY_CHROMIUM_PID=0
 
     # Phase 1: Arrêt gracieux (SIGTERM) — laisse Chromium libérer les ressources GPU
@@ -682,12 +698,53 @@ detect_chromium_path() {
 
 CHROMIUM_BIN=$(detect_chromium_path)
 
+# Afficher le splash overlay fullscreen — couvre l'écran pendant le démarrage de Chromium.
+# Utilise feh pour afficher l'image NEOPRO en plein écran. L'image est centrée avec
+# auto-zoom sur fond noir, ce qui fonctionne quelle que soit la résolution de l'écran.
+# Le splash est tué une fois que Chromium est en fullscreen (dans le subshell xdotool).
+show_boot_splash() {
+    # Tuer un éventuel splash résiduel (restart Chromium)
+    kill_boot_splash
+
+    if [[ -z "$BOOT_SPLASH_IMAGE" ]] || [[ ! -f "$BOOT_SPLASH_IMAGE" ]]; then
+        log "⚠️ Pas d'image splash trouvée — pas de splash overlay"
+        return
+    fi
+
+    if ! command -v feh &>/dev/null; then
+        log "⚠️ feh non installé — pas de splash overlay (installer avec: apt install feh)"
+        return
+    fi
+
+    DISPLAY=:0 feh --fullscreen --auto-zoom --no-menus --hide-pointer \
+        --image-bg black "$BOOT_SPLASH_IMAGE" &
+    BOOT_SPLASH_PID=$!
+    log "🎨 Boot splash overlay affiché (PID: $BOOT_SPLASH_PID, image: $BOOT_SPLASH_IMAGE)"
+}
+
+# Tuer le splash overlay — appelé après que Chromium est en fullscreen, ou lors du cleanup
+kill_boot_splash() {
+    if [[ "$BOOT_SPLASH_PID" -gt 0 ]] && kill -0 "$BOOT_SPLASH_PID" 2>/dev/null; then
+        kill "$BOOT_SPLASH_PID" 2>/dev/null || true
+        wait "$BOOT_SPLASH_PID" 2>/dev/null || true
+        log "🎨 Boot splash overlay fermé"
+    fi
+    BOOT_SPLASH_PID=0
+    # Tuer aussi tout feh résiduel (au cas où le PID a été perdu)
+    pkill -f "feh.*boot-splash" 2>/dev/null || true
+    pkill -f "feh.*splash.png" 2>/dev/null || true
+}
+
 # Lancer Chromium en mode kiosk
 start_chromium() {
     log "🚀 Lancement de Chromium (modèle: $PI_MODEL)..."
 
     export DISPLAY=:0
     export XAUTHORITY=/home/pi/.Xauthority
+
+    # Afficher le splash overlay AVANT de lancer Chromium — couvre le gap entre
+    # Plymouth/desktop noir et Chromium fullscreen (2-5s de fenêtre avec décorations)
+    show_boot_splash
 
     # Features à désactiver — CRITIQUE : Chromium n'accepte qu'un seul --disable-features,
     # le dernier flag écrase les précédents ! On combine donc common + model-specific ici.
@@ -828,8 +885,12 @@ start_chromium() {
             # 3. S'assurer que la fenêtre est au premier plan
             DISPLAY=:0 xdotool windowactivate "$wid" 2>/dev/null
             log "✓ Chromium primaire plein écran par-moniteur (xprop+xdotool, WID: $wid, ${PRIMARY_SCREEN_WIDTH:-$DEFAULT_SCREEN_WIDTH}x${PRIMARY_SCREEN_HEIGHT:-$DEFAULT_SCREEN_HEIGHT}, tentative $attempt)"
+            # 4. Tuer le splash overlay — Chromium est maintenant fullscreen
+            kill_boot_splash
         else
             log "⚠️ Impossible de trouver la fenêtre primaire après $max_attempts tentatives"
+            # Tuer le splash quand même — mieux vaut une fenêtre décorée que pas de fenêtre visible
+            kill_boot_splash
         fi
     ) &
 
@@ -1529,6 +1590,6 @@ main() {
 }
 
 # Gestion des signaux pour un arrêt propre
-trap 'log "Arrêt du watchdog..."; stop_chromium_secondary; cleanup_chromium; [ -n "$DBUS_SESSION_BUS_PID" ] && kill "$DBUS_SESSION_BUS_PID" 2>/dev/null; exit 0' SIGTERM SIGINT
+trap 'log "Arrêt du watchdog..."; kill_boot_splash; stop_chromium_secondary; cleanup_chromium; [ -n "$DBUS_SESSION_BUS_PID" ] && kill "$DBUS_SESSION_BUS_PID" 2>/dev/null; exit 0' SIGTERM SIGINT
 
 main "$@"

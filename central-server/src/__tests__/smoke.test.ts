@@ -1130,6 +1130,18 @@ describe('Raspberry Pi config conventions', () => {
     }
   });
 
+  it('neopro-hotspot-optimizer.service must be Type=simple (not oneshot — blocks boot 14s)', () => {
+    // Type=oneshot makes systemd wait for the script to finish before continuing boot.
+    // hotspot-optimizer waits for wlan1 IP + WiFi scan = ~14s blocking graphical.target.
+    // Type=simple lets systemd continue immediately — optimization runs in background.
+    const svcPath = path.join(systemdDir, 'neopro-hotspot-optimizer.service');
+    const content = fs.readFileSync(svcPath, 'utf8');
+    expect({ isSimple: /^\s*Type\s*=\s*simple/m.test(content) })
+      .toEqual({ isSimple: true });
+    expect({ isOneshot: /^\s*Type\s*=\s*oneshot/m.test(content) })
+      .toEqual({ isOneshot: false });
+  });
+
   it('sudoers file must include apt rules', () => {
     const sudoersPath = path.join(repoRoot, 'raspberry', 'config', 'sudoers.d', 'neopro');
     const content = fs.readFileSync(sudoersPath, 'utf8');
@@ -4423,6 +4435,75 @@ describe('Parasitic window detection guards', () => {
   });
 });
 
+describe('Obsolete service cleanup guards', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+  const fixFleet = fs.readFileSync(
+    path.join(repoRoot, 'raspberry/scripts/fix-fleet-pi.sh'),
+    'utf8'
+  );
+
+  it('fix-fleet-pi.sh must disable neopro-vlc-kiosk (abandoned POC, crash-loop)', () => {
+    // neopro-vlc-kiosk is an old HLS/VLC POC that was never removed.
+    // It's enabled + Restart=always + RestartSec=5 = infinite crash-loop
+    // consuming CPU, filling logs, and blocking systemd-analyze.
+    expect({ disablesVlcKiosk: fixFleet.includes('neopro-vlc-kiosk') })
+      .toEqual({ disablesVlcKiosk: true });
+  });
+
+  it('fix-fleet-pi.sh must disable neopro-ffmpeg-stream (dependency of vlc-kiosk)', () => {
+    expect({ disablesFfmpeg: fixFleet.includes('neopro-ffmpeg-stream') })
+      .toEqual({ disablesFfmpeg: true });
+  });
+
+  it('fix-fleet-pi.sh must disable neopro-playlist-manager (MODULE_NOT_FOUND crash-loop)', () => {
+    expect({ disablesPlaylistManager: fixFleet.includes('neopro-playlist-manager') })
+      .toEqual({ disablesPlaylistManager: true });
+  });
+
+  it('fix-fleet-pi.sh must disable neopro-score-bridge (MODULE_NOT_FOUND crash-loop)', () => {
+    expect({ disablesScoreBridge: fixFleet.includes('neopro-score-bridge') })
+      .toEqual({ disablesScoreBridge: true });
+  });
+
+  it('fix-fleet-pi.sh must disable cups (printing — never used on kiosk Pi)', () => {
+    expect({ disablesCups: fixFleet.includes('"cups"') })
+      .toEqual({ disablesCups: true });
+  });
+
+  it('fix-fleet-pi.sh must disable ModemManager (no 3G/4G modem on Pi)', () => {
+    expect({ disablesModemManager: fixFleet.includes('"ModemManager"') })
+      .toEqual({ disablesModemManager: true });
+  });
+
+  it('fix-fleet-pi.sh must use systemctl disable (not mask) for useless services', () => {
+    // mask prevents manual start — too aggressive for services that might be
+    // needed temporarily for debugging. disable is the right level.
+    expect({ usesDisable: fixFleet.includes('systemctl disable "$svc"') })
+      .toEqual({ usesDisable: true });
+    expect({ noMask: !fixFleet.includes('systemctl mask') })
+      .toEqual({ noMask: true });
+  });
+});
+
+describe('Deploy auto-cleanup of obsolete neopro services', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+  const deployRemote = fs.readFileSync(
+    path.join(repoRoot, 'raspberry/scripts/deploy-remote.sh'),
+    'utf8'
+  );
+
+  it('deploy-remote.sh must auto-disable neopro-*.service files absent from config/systemd/', () => {
+    // When a service is removed from the repo, the next deploy must disable it
+    // on the Pi — not rely on manually updating a hardcoded list
+    expect({ scansInstalled: deployRemote.includes('neopro-*.service') })
+      .toEqual({ scansInstalled: true });
+    expect({ checksRepo: deployRemote.includes('config/systemd/\\$svc_name') })
+      .toEqual({ checksRepo: true });
+    expect({ disablesObsolete: deployRemote.includes('systemctl disable --now') })
+      .toEqual({ disablesObsolete: true });
+  });
+});
+
 describe('Deploy script kiosk restart ordering', () => {
   const repoRoot = path.resolve(__dirname, '..', '..', '..');
   const deploy = fs.readFileSync(
@@ -5073,6 +5154,21 @@ describe('WiFi boot race condition regression guards (v3.84.3)', () => {
     });
   });
 
+  // Guard 1b: Boot grace period for HOTSPOT — prevents 3 hostapd restarts during boot
+  it('network-watchdog start() must enable boot grace period for hotspot checks', () => {
+    // Without hotspot grace period, the watchdog detects "IP 192.168.4.1 non configurée"
+    // at boot+5s and restarts hostapd 2-3 times, delaying hotspot stabilization by 30s+.
+    const startFn = watchdogContent.match(
+      /function start\(\)\s*\{[\s\S]*?setTimeout\(\(\) => hotspotWatchLoop\(\)/
+    );
+    expect(startFn).not.toBeNull();
+    expect({
+      hasHotspotBootGrace: /enableGracePeriod\(\s*'hotspot'\s*,\s*\d+\s*\)/.test(startFn![0]),
+    }).toEqual({
+      hasHotspotBootGrace: true,
+    });
+  });
+
   it('network-watchdog boot grace period must be >= 30s', () => {
     // Match the enableGracePeriod call in start() that precedes the setTimeout internetWatchLoop
     const startFn = watchdogContent.match(
@@ -5208,6 +5304,24 @@ describe('Hotspot optimizer wlan1 scan regression guards', () => {
       writesScanCache: true,
       writesScanTs: true,
       reason: 'networkDetector must reuse cached scan — 2 iwlist scans within 120s kills RTL8192EU carrier',
+    });
+  });
+
+  // Guard 6: apply_txpower must use $AP_INTERFACE (not $WIFI_INTERFACE which is undefined)
+  it('apply_txpower must use $AP_INTERFACE not $WIFI_INTERFACE (undefined variable bug)', () => {
+    const applyFn = hotspotScript.match(
+      /apply_txpower\(\)\s*\{([\s\S]*?)\n\}/
+    );
+    expect(applyFn).not.toBeNull();
+    const funcBody = applyFn![1];
+    expect({
+      usesAPInterface: /\$AP_INTERFACE/.test(funcBody),
+      usesWIFIInterface: /\$WIFI_INTERFACE/.test(funcBody),
+      reason: '$WIFI_INTERFACE is never defined — TX power was silently never applied',
+    }).toEqual({
+      usesAPInterface: true,
+      usesWIFIInterface: false,
+      reason: '$WIFI_INTERFACE is never defined — TX power was silently never applied',
     });
   });
 });

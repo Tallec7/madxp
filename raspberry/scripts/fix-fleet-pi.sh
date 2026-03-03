@@ -148,6 +148,7 @@ RECOMMENDED_PACKAGES=(
     "unclutter-xfixes"
     "x11-utils"
     "edid-decode"
+    "feh"
 )
 
 for pkg in "${RECOMMENDED_PACKAGES[@]}"; do
@@ -700,7 +701,60 @@ else
     log_warn "Plymouth splash non trouvé ($PLYMOUTH_SPLASH)"
 fi
 
-# 9d. Desktop noir — empêcher le fond d'écran Pi de s'afficher entre Plymouth et Chromium
+# 9d. Kiosk boot splash — image overlay affichée par feh pendant le démarrage de Chromium
+# Couvre le gap entre Plymouth et Chromium fullscreen (2-5s où la fenêtre apparaît avec décorations)
+KIOSK_SPLASH="$NEOPRO_ROOT/data/boot-splash.png"
+if [ ! -f "$KIOSK_SPLASH" ] || [ "$KIOSK_SPLASH" -ot "$NEOPRO_LOGO" ] 2>/dev/null; then
+    if python3 -c "from PIL import Image" 2>/dev/null && [ -f "$NEOPRO_LOGO" ]; then
+        mkdir -p "$(dirname "$KIOSK_SPLASH")"
+        python3 - "$NEOPRO_LOGO" "$KIOSK_SPLASH" <<'PYEOF'
+import sys
+from PIL import Image, ImageDraw, ImageFont
+
+logo_path = sys.argv[1]
+out_path = sys.argv[2]
+img = Image.new("RGBA", (1920, 1080), (10, 10, 10, 255))
+
+# Load and scale real NEOPRO logo
+logo = Image.open(logo_path).convert("RGBA")
+target_width = 760
+scale = target_width / logo.width
+target_height = int(logo.height * scale)
+logo_resized = logo.resize((target_width, target_height), Image.LANCZOS)
+
+# Center logo (slightly above center)
+x = (1920 - target_width) // 2
+y = (1080 - target_height) // 2 - 40
+img.paste(logo_resized, (x, y), logo_resized)
+
+# "Chargement..." subtitle
+draw = ImageDraw.Draw(img)
+try:
+    font_small = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 28)
+except Exception:
+    font_small = ImageFont.load_default()
+sub = "Chargement..."
+bbox = draw.textbbox((0, 0), sub, font=font_small)
+tw = bbox[2] - bbox[0]
+draw.text(((1920 - tw) / 2, y + target_height + 60), sub, fill=(180, 180, 180, 180), font=font_small)
+
+img.save(out_path)
+PYEOF
+        if [ -f "$KIOSK_SPLASH" ]; then
+            chown pi:pi "$KIOSK_SPLASH"
+            log_ok "Kiosk boot splash généré: $KIOSK_SPLASH"
+            CHANGES=$((CHANGES + 1))
+        else
+            log_warn "Échec génération kiosk boot splash"
+        fi
+    else
+        log_warn "Python Pillow ou logo NEOPRO non disponible — kiosk boot splash non généré"
+    fi
+else
+    log_ok "Kiosk boot splash déjà à jour"
+fi
+
+# 9e. Desktop noir — empêcher le fond d'écran Pi de s'afficher entre Plymouth et Chromium
 # IMPORTANT: pcmanfm-pi wrapper lance `pcmanfm --desktop` SANS --profile → utilise le profil "default"
 # On doit fixer TOUS les profils (default + LXDE-pi) ET les configs système (/etc/xdg)
 LXDE_AUTOSTART="/home/pi/.config/lxsession/LXDE-pi/autostart"
@@ -751,6 +805,55 @@ AUTOEOF
         log_ok "LXDE autostart déjà configuré"
     fi
 fi
+
+# =============================================================================
+# 10. Désactivation des services obsolètes / inutiles
+# =============================================================================
+# neopro-vlc-kiosk : ancien POC HLS/VLC jamais retiré — crash-loop qui empêche
+#                     systemd-analyze de finir et consomme CPU/logs
+# neopro-ffmpeg-stream : dépendance de vlc-kiosk, même POC
+# neopro-playlist-manager : ancien POC — MODULE_NOT_FOUND crash-loop (score-bridge.js absent)
+# neopro-score-bridge : ancien POC — MODULE_NOT_FOUND crash-loop (playlist-manager.js absent)
+# cups : impression — jamais utilisé sur un Pi kiosk
+# ModemManager : gestion modem 3G/4G — pas de modem sur les Pi
+# cloud-init : provisioning cloud — inutile sur Pi physique
+
+log_step "12/12 — Désactivation services obsolètes"
+
+OBSOLETE_SERVICES=(
+    "neopro-vlc-kiosk"
+    "neopro-ffmpeg-stream"
+    "neopro-playlist-manager"
+    "neopro-score-bridge"
+)
+
+USELESS_SERVICES=(
+    "cups"
+    "ModemManager"
+    "cloud-init-main"
+)
+
+for svc in "${OBSOLETE_SERVICES[@]}"; do
+    if systemctl is-enabled "$svc" &>/dev/null 2>&1; then
+        systemctl stop "$svc" 2>/dev/null || true
+        systemctl disable "$svc" 2>/dev/null || true
+        log_ok "Service obsolète désactivé: $svc"
+        CHANGES=$((CHANGES + 1))
+    else
+        log_ok "Service obsolète déjà désactivé: $svc"
+    fi
+done
+
+for svc in "${USELESS_SERVICES[@]}"; do
+    if systemctl is-enabled "$svc" &>/dev/null 2>&1; then
+        systemctl disable "$svc" 2>/dev/null || true
+        systemctl stop "$svc" 2>/dev/null || true
+        log_ok "Service inutile désactivé: $svc"
+        CHANGES=$((CHANGES + 1))
+    else
+        log_ok "Service inutile déjà désactivé: $svc"
+    fi
+done
 
 # =============================================================================
 # Résumé

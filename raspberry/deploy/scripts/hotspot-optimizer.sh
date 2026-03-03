@@ -384,11 +384,11 @@ apply_txpower() {
 
     # Get current TX power
     local current_power
-    current_power=$(iw dev "$WIFI_INTERFACE" info 2>/dev/null | grep -oP 'txpower \K[0-9.]+' | cut -d. -f1)
+    current_power=$(iw dev "$AP_INTERFACE" info 2>/dev/null | grep -oP 'txpower \K[0-9.]+' | cut -d. -f1)
 
     if [ -n "$current_power" ] && [ "$current_power" -ne "$HOTSPOT_TXPOWER" ] 2>/dev/null; then
         log "Reducing hotspot TX power: ${current_power} dBm → ${HOTSPOT_TXPOWER} dBm"
-        if iw dev "$WIFI_INTERFACE" set txpower fixed "${HOTSPOT_TXPOWER}00" 2>/dev/null; then
+        if iw dev "$AP_INTERFACE" set txpower fixed "${HOTSPOT_TXPOWER}00" 2>/dev/null; then
             log "TX power set to ${HOTSPOT_TXPOWER} dBm"
         else
             log "WARNING: Failed to set TX power (interface may not support it)"

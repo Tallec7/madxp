@@ -1286,6 +1286,13 @@ function start() {
   enableGracePeriod('internet', 45000);
   logger.info('NetworkWatchdog: boot grace period enabled (45s) for internet checks');
 
+  // Grace period hotspot au boot : hostapd + dhcpcd mettent 15-25s à configurer
+  // l'IP 192.168.4.1 après le premier démarrage. Sans grace period, le watchdog
+  // détecte "IP non configurée" et relance hostapd, créant un cycle de restarts
+  // qui retarde la stabilisation du hotspot de 30s+ (3 restarts observés en prod).
+  enableGracePeriod('hotspot', 45000);
+  logger.info('NetworkWatchdog: boot grace period enabled (45s) for hotspot checks');
+
   // Première exécution immédiate
   setTimeout(() => hotspotWatchLoop(), 5000);
   setTimeout(() => internetWatchLoop(), 10000);

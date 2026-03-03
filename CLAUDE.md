@@ -104,6 +104,8 @@ source central-server/.env && psql "$DATABASE_URL" -f central-server/src/scripts
 - Supprimer le menu item "Changer de profil" dans la remote (seul point d'entrée alternatif vers le club-selector — le bouton retour seul ne suffit pas quand `isMultiProfile` est conditionnel — smoke test enforced)
 - Supprimer `isCompletedByProgress` dans `deploy-progress.handler.ts` (le signal Socket.IO `completed:true` est fire-and-forget — sur WiFi instable RTL8192EU, le signal peut se perdre → déploiements bloqués à 99-100% indéfiniment — l'auto-completion à `progress >= 100` est le filet de sécurité — smoke test enforced)
 - Supprimer l'auto-completion des déploiements bloqués à 100% dans `checkStuckDeployments()` de `alerting.service.ts` (deuxième filet : rattrape les déploiements où même le progress event à 100 a été perdu — auto-complete après 5min à progress >= 100 — smoke test enforced)
+- Utiliser `$WIFI_INTERFACE` dans `hotspot-optimizer.sh` (variable indéfinie — utiliser `$AP_INTERFACE` qui est défini à `wlan0` — smoke test enforced)
+- Supprimer le boot grace period hotspot du NetworkWatchdog `start()` (sans grace period, le watchdog détecte "IP 192.168.4.1 non configurée" à boot+5s et redémarre hostapd 2-3 fois, retardant la stabilisation du hotspot de 30s+ — smoke test enforced)
 
 ## Architecture détaillée
 
