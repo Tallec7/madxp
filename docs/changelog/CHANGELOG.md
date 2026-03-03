@@ -1,3 +1,9 @@
+## [3.98.3](https://github.com/Tallec7/neopro/compare/v3.98.2...v3.98.3) (2026-03-03)
+
+### Bug Fixes
+
+- **deploy:** auto-complete content deployments stuck at 99-100% (Socket.IO signal loss) ([cd52aaa](https://github.com/Tallec7/neopro/commit/cd52aaa0ee4a0c74378fc95489921efc29749db7))
+
 ## [3.98.2](https://github.com/Tallec7/neopro/compare/v3.98.1...v3.98.2) (2026-03-03)
 
 ### Bug Fixes
@@ -8,7 +14,7 @@
   `handleUpdateProgress`. Socket.IO fire-and-forget `completed:true` signal can be lost on unreliable
   WiFi (RTL8192EU). Auto-completes when `progress >= 100` even without explicit `completed` flag.
 - **deploy:** add periodic auto-completion in `checkStuckDeployments()` for deployments at 100% for
-  >5 minutes — second safety net for cases where even the progress event at 100 is lost.
+  > 5 minutes — second safety net for cases where even the progress event at 100 is lost.
 
 ### Monitoring
 
