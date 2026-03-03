@@ -1,3 +1,9 @@
+## [3.98.2](https://github.com/Tallec7/neopro/compare/v3.98.1...v3.98.2) (2026-03-03)
+
+### Bug Fixes
+
+- **boot:** fix pcmanfm default profile for black desktop ([2faa4c5](https://github.com/Tallec7/neopro/commit/2faa4c58ef8e525188651140e906a64d56c2c42d))
+
 ## [3.98.1](https://github.com/Tallec7/neopro/compare/v3.98.0...v3.98.1) (2026-03-03)
 
 ### Bug Fixes
