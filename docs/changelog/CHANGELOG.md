@@ -1,3 +1,9 @@
+## [3.96.1](https://github.com/Tallec7/neopro/compare/v3.96.0...v3.96.1) (2026-03-03)
+
+### Bug Fixes
+
+- **kiosk:** use localhost instead of neopro.local to prevent mDNS collision ([367d720](https://github.com/Tallec7/neopro/commit/367d720944c301bcc56d2bdbaf82c2aa620c456e))
+
 # [3.96.0](https://github.com/Tallec7/neopro/compare/v3.95.1...v3.96.0) (2026-03-03)
 
 ### Bug Fixes
