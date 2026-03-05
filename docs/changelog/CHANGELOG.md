@@ -2,6 +2,12 @@
 
 ### Bug Fixes
 
+- **boot:** eliminate false HDMI failover on single-display Pi — guard DUAL_DISPLAY_ACTIVE ([1d0757e](https://github.com/Tallec7/neopro/commit/1d0757e9ac288cc1c8858e5a310439208c41eb34))
+
+## [3.98.6](https://github.com/Tallec7/neopro/compare/v3.98.5...v3.98.6) (2026-03-05)
+
+### Bug Fixes
+
 - **boot:** eliminate false HDMI failover on single-display Pi — root cause: `DUAL_DISPLAY_ACTIVE`
   was set to `true` unconditionally BEFORE `setup_secondary_xrandr`, which swallowed errors with
   `|| true`. On a Pi with `secondaryDisplayEnabled=true` but only one HDMI port active (e.g., only
