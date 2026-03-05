@@ -1,3 +1,16 @@
+# [3.100.0](https://github.com/Tallec7/neopro/compare/v3.99.1...v3.100.0) (2026-03-05)
+
+### Bug Fixes
+
+- **fix-fleet-pi:** orphan systemd services survive cleanup — is-enabled misses manually installed units ([fdf8772](https://github.com/Tallec7/neopro/commit/fdf87729e0ea4b197b7c3533c84fc5dc3810e5dd))
+- **hotspot:** Android captive portal — iptables HTTPS redirect port 443→nginx ([10e9a3d](https://github.com/Tallec7/neopro/commit/10e9a3de7ba80b1a3410ebc3b5b0620cf0c1683a))
+- **sync-agent:** WiFi recovery progressive back-off + mesh guards + dynamic bgscan (NLF) ([08dcc1e](https://github.com/Tallec7/neopro/commit/08dcc1eede6baec9f3d3911a7019a2186cfd510d))
+- **tests:** add missing auto-complete query mock in checkStuckDeployments tests ([9c90fcf](https://github.com/Tallec7/neopro/commit/9c90fcf860d460140f37e44ed16b38855939eddd))
+
+### Features
+
+- **kiosk:** Pi 5 GPU hardware video decode via V4L2 + monitoring pipeline ([a077665](https://github.com/Tallec7/neopro/commit/a077665dcbeb02acec6970cb3109fb043e46cea1))
+
 # [3.99.6](https://github.com/Tallec7/neopro/compare/v3.99.5...v3.99.6) (2026-03-05)
 
 ### Bug Fixes
