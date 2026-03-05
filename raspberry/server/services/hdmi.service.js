@@ -95,7 +95,12 @@ class HdmiService {
         displayInfo.manufacturer = parsed.manufacturer;
         displayInfo.model = parsed.model;
         displayInfo.resolution = parsed.resolution;
-        if (parsed.hasCeaExtension) {
+        // CEA extension indique une TV potentielle, mais de nombreux moniteurs PC
+        // modernes incluent aussi un bloc CEA pour la compatibilité HDMI (audio, YCbCr).
+        // On utilise le manufacturer EDID pour filtrer les faux positifs :
+        // les fabricants exclusivement moniteur ne doivent pas être classés "tv".
+        const monitorOnlyMfg = /^(LEN|DEL|ACI|HWP|BNQ|ACR|EIZ|NEC|AOC)$/;
+        if (parsed.hasCeaExtension && !monitorOnlyMfg.test((parsed.manufacturer || '').toUpperCase())) {
           displayInfo.display_type = 'tv';
         }
 
@@ -171,7 +176,7 @@ class HdmiService {
 
     // Inférer la catégorie d'écran (tv_oled, tv_led, monitor, projector, etc.)
     display.display_category = this._inferDisplayCategory(
-      display.model, display.display_type, display.edid_detailed
+      display.model, display.display_type, display.edid_detailed, display.manufacturer
     );
 
     return { ...cec, displayInfo: display };
@@ -400,13 +405,22 @@ class HdmiService {
    * @param {object|null} edidDetailed - Données edid-decode enrichies
    * @returns {string} 'tv_oled' | 'tv_qled' | 'tv_qned' | 'tv_led' | 'tv_lcd' | 'tv_plasma' | 'tv' | 'monitor' | 'projector' | 'unknown'
    */
-  _inferDisplayCategory(model, displayType, edidDetailed) {
+  _inferDisplayCategory(model, displayType, edidDetailed, manufacturer) {
     const modelUpper = (model || '').toUpperCase();
     const detailed = edidDetailed || {};
 
     // Projecteur détecté via EDID
     if (detailed.display_product_type && /projector/i.test(detailed.display_product_type)) {
       return 'projector';
+    }
+
+    // Moniteur PC détecté via manufacturer EDID (3-letter code)
+    // Ces fabricants ne produisent que des moniteurs PC, pas des TV
+    // LEN=Lenovo, DEL=Dell, ACI=ASUS, HWP=HP, BNQ=BenQ, ACR=Acer, EIZ=EIZO, NEC=NEC, AOC=AOC
+    const manufacturerUpper = (manufacturer || '').toUpperCase();
+    const monitorManufacturers = /^(LEN|DEL|ACI|HWP|BNQ|ACR|EIZ|NEC|AOC)$/;
+    if (monitorManufacturers.test(manufacturerUpper)) {
+      return 'monitor';
     }
 
     // Technologie de dalle détectée depuis le nom de modèle

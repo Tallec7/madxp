@@ -3169,6 +3169,75 @@ describe('E-23 HDMI monitoring and alerts wiring', () => {
       overridesTvPower: true,
     });
   });
+
+  // Display type classification: monitors with CEA extension must not be falsely classified as TV.
+  // Incident: 05/03/2026 — Lenovo L27i-30 (LEN) classified as "tv" because CEA EDID extension
+  // triggered display_type='tv'. PC-only manufacturers must be filtered out.
+  it('hdmi.service.js must filter monitor-only manufacturers in CEA extension check', () => {
+    const content = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/server/services/hdmi.service.js'),
+      'utf8'
+    );
+    // getDisplayInfo must have monitorOnlyMfg regex BEFORE the CEA extension assignment
+    const getDisplayInfoFn = content.slice(
+      content.indexOf('async getDisplayInfo()'),
+      content.indexOf('\n  async getFullStatus()')
+    );
+    expect({
+      hasMonitorMfgFilter: /monitorOnlyMfg/.test(getDisplayInfoFn),
+      filterBeforeCea: getDisplayInfoFn.indexOf('monitorOnlyMfg') < getDisplayInfoFn.indexOf("display_type = 'tv'"),
+      hasLEN: /LEN/.test(getDisplayInfoFn),
+      hasDEL: /DEL/.test(getDisplayInfoFn),
+    }).toEqual({
+      hasMonitorMfgFilter: true,
+      filterBeforeCea: true,
+      hasLEN: true,
+      hasDEL: true,
+    });
+  });
+
+  it('hdmi.service.js _inferDisplayCategory must accept manufacturer as 4th param and early-return monitor', () => {
+    const content = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/server/services/hdmi.service.js'),
+      'utf8'
+    );
+    // _inferDisplayCategory signature must have 4 params including manufacturer
+    expect({
+      has4thParam: /_inferDisplayCategory\s*\(\s*model\s*,\s*displayType\s*,\s*edidDetailed\s*,\s*manufacturer\s*\)/.test(content),
+      hasMonitorManufacturers: /monitorManufacturers/.test(content),
+      returnsMonitor: content.includes("return 'monitor'"),
+    }).toEqual({
+      has4thParam: true,
+      hasMonitorManufacturers: true,
+      returnsMonitor: true,
+    });
+    // getFullStatus must pass display.manufacturer as 4th arg
+    expect({
+      passesManufacturer: /display\.manufacturer\s*\)/.test(content),
+    }).toEqual({
+      passesManufacturer: true,
+    });
+  });
+
+  // Boot-to-video metric: hdmiDetectedAt must be captured on first HDMI status received
+  // while connected, not only on disconnected→connected transition.
+  // Incident: 05/03/2026 — hdmiConnected defaults to true (line 58), so wasDisconnected
+  // is always false at boot → hdmiDetectedAt never set → boot-to-video always 0ms.
+  it('tv.component.ts boot metric must NOT require wasDisconnected for hdmiDetectedAt', () => {
+    const content = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/src/app/components/tv/tv.component.ts'),
+      'utf8'
+    );
+    // The hdmiDetectedAt assignment must NOT be gated behind wasDisconnected
+    // (wasDisconnected is false at boot because hdmiConnected defaults to true)
+    expect({
+      hasHdmiDetectedAt: content.includes('bootMetrics.hdmiDetectedAt'),
+      noWasDisconnectedGuard: !/wasDisconnected\s*&&[^;]*hdmiDetectedAt/.test(content),
+    }).toEqual({
+      hasHdmiDetectedAt: true,
+      noWasDisconnectedGuard: true,
+    });
+  });
 });
 
 // ----------------------------------------------------------

@@ -1,3 +1,29 @@
+## [3.98.5](https://github.com/Tallec7/neopro/compare/v3.98.4...v3.98.5) (2026-03-05)
+
+### Bug Fixes
+
+- **hdmi:** fix display_type classification — PC monitors with CEA EDID extension (HDMI audio/YCbCr)
+  were falsely classified as "tv". Added manufacturer-based filtering: known PC-only manufacturers
+  (LEN=Lenovo, DEL=Dell, ACI=ASUS, HWP=HP, BNQ=BenQ, ACR=Acer, EIZ=EIZO, NEC=NEC, AOC=AOC) are
+  always classified as "monitor" in both `getDisplayInfo()` CEA check and `_inferDisplayCategory()`.
+  Incident: NLF Handball Lenovo L27i-30 showed "Type: TV" in dashboard.
+- **hdmi:** fix boot-to-video metric always reporting 0ms — `hdmiConnected` defaults to `true` so
+  `wasDisconnected` was always `false` at boot, meaning `hdmiDetectedAt` was never captured. Removed
+  the `wasDisconnected` guard: now captures timestamp on first HDMI status received while connected.
+
+### Tests
+
+- **unit:** 8 new tests in `hdmi.service.test.js` — manufacturer-based monitor classification
+  (Lenovo/Dell/ASUS/HP/BenQ → monitor, LG/Samsung → TV, null manufacturer graceful handling)
+- **smoke:** 3 new regression guards — CEA extension manufacturer filter in `getDisplayInfo()`,
+  `_inferDisplayCategory` 4th manufacturer param, `wasDisconnected` guard removal in tv.component.ts
+
+### Documentation
+
+- **CLAUDE.md:** 2 new "NE JAMAIS FAIRE" rules — CEA extension false TV classification,
+  wasDisconnected guard on hdmiDetectedAt
+- **changelog:** v3.98.5 release notes
+
 ## [3.98.4](https://github.com/Tallec7/neopro/compare/v3.98.3...v3.98.4) (2026-03-03)
 
 ### Bug Fixes

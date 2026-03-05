@@ -539,7 +539,10 @@ export class TvComponent implements OnInit, OnDestroy {
         this.wrongPort = !!data.wrongPort;
 
         // E-23 US-23.3.4: Capture HDMI detection timestamp for boot-to-video metric
-        if (wasDisconnected && this.hdmiConnected && !this.bootMetrics.hdmiDetectedAt) {
+        // Set on first HDMI status received while connected (not only on transition).
+        // hdmiConnected defaults to true so wasDisconnected is false at boot — without
+        // this, hdmiDetectedAt stays 0 and boot-to-video always reports 0ms.
+        if (this.hdmiConnected && !this.bootMetrics.hdmiDetectedAt) {
           this.bootMetrics.hdmiDetectedAt = Date.now();
           console.log('[TV] Boot metric: HDMI detected at', this.bootMetrics.hdmiDetectedAt);
         }

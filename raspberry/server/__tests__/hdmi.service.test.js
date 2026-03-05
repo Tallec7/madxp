@@ -318,7 +318,7 @@ Block 1, CEC Extension:
       const result = service._inferDisplayCategory('LG OLED55C1', 'tv', {
         audio_supported: true,
         diagonal_inches: 55,
-      });
+      }, null);
       expect(result).toBe('tv_oled');
     });
 
@@ -326,7 +326,7 @@ Block 1, CEC Extension:
       const result = service._inferDisplayCategory('SAMSUNG QLED', 'tv', {
         audio_supported: true,
         diagonal_inches: 65,
-      });
+      }, null);
       expect(result).toBe('tv_qled');
     });
 
@@ -334,7 +334,7 @@ Block 1, CEC Extension:
       const result = service._inferDisplayCategory('LED TV', 'tv', {
         audio_supported: true,
         diagonal_inches: 43,
-      });
+      }, null);
       expect(result).toBe('tv_led');
     });
 
@@ -342,7 +342,7 @@ Block 1, CEC Extension:
       const result = service._inferDisplayCategory('OLED65', 'tv', {
         audio_supported: true,
         diagonal_inches: 65,
-      });
+      }, null);
       expect(result).toBe('tv_oled');
     });
 
@@ -350,14 +350,14 @@ Block 1, CEC Extension:
       const result = service._inferDisplayCategory('DELL P2419H', 'monitor', {
         audio_supported: false,
         diagonal_inches: 24,
-      });
+      }, null);
       expect(result).toBe('monitor');
     });
 
     it('should detect projector from display_product_type', () => {
       const result = service._inferDisplayCategory('EPSON', 'unknown', {
         display_product_type: 'projector',
-      });
+      }, null);
       expect(result).toBe('projector');
     });
 
@@ -365,17 +365,17 @@ Block 1, CEC Extension:
       const result = service._inferDisplayCategory('SAMSUNG', 'unknown', {
         audio_supported: true,
         diagonal_inches: 55,
-      });
+      }, null);
       expect(result).toBe('tv');
     });
 
     it('should infer tv from display_type alone', () => {
-      const result = service._inferDisplayCategory('SAMSUNG', 'tv', null);
+      const result = service._inferDisplayCategory('SAMSUNG', 'tv', null, null);
       expect(result).toBe('tv');
     });
 
     it('should return unknown when no signals available', () => {
-      const result = service._inferDisplayCategory(null, 'unknown', null);
+      const result = service._inferDisplayCategory(null, 'unknown', null, null);
       expect(result).toBe('unknown');
     });
 
@@ -383,7 +383,7 @@ Block 1, CEC Extension:
       const result = service._inferDisplayCategory('PLASMA TV', 'tv', {
         audio_supported: true,
         diagonal_inches: 50,
-      });
+      }, null);
       expect(result).toBe('tv_plasma');
     });
 
@@ -391,8 +391,74 @@ Block 1, CEC Extension:
       const result = service._inferDisplayCategory('LG QNED81', 'tv', {
         audio_supported: true,
         diagonal_inches: 55,
-      });
+      }, null);
       expect(result).toBe('tv_qned');
+    });
+
+    // Monitor manufacturer detection — known PC-only manufacturers
+    // should always return 'monitor' regardless of other signals
+    it('should classify Lenovo as monitor even with CEA audio (LEN)', () => {
+      const result = service._inferDisplayCategory('LEN L27i-30', 'tv', {
+        audio_supported: true,
+        diagonal_inches: 27,
+      }, 'LEN');
+      expect(result).toBe('monitor');
+    });
+
+    it('should classify Dell as monitor even with large diagonal (DEL)', () => {
+      const result = service._inferDisplayCategory('DELL U3423WE', 'tv', {
+        audio_supported: true,
+        diagonal_inches: 34,
+      }, 'DEL');
+      expect(result).toBe('monitor');
+    });
+
+    it('should classify ASUS as monitor (ACI)', () => {
+      const result = service._inferDisplayCategory('ASUS VG27AQ', 'unknown', {
+        audio_supported: true,
+        diagonal_inches: 27,
+      }, 'ACI');
+      expect(result).toBe('monitor');
+    });
+
+    it('should classify HP as monitor (HWP)', () => {
+      const result = service._inferDisplayCategory('HP Z27', 'unknown', {
+        audio_supported: false,
+        diagonal_inches: 27,
+      }, 'HWP');
+      expect(result).toBe('monitor');
+    });
+
+    it('should classify BenQ as monitor (BNQ)', () => {
+      const result = service._inferDisplayCategory('BenQ PD2700U', 'unknown', {
+        audio_supported: true,
+        diagonal_inches: 27,
+      }, 'BNQ');
+      expect(result).toBe('monitor');
+    });
+
+    it('should NOT classify LG as monitor (LG makes TVs too)', () => {
+      const result = service._inferDisplayCategory('LG 55UN73', 'tv', {
+        audio_supported: true,
+        diagonal_inches: 55,
+      }, 'GSM');
+      expect(result).toBe('tv');
+    });
+
+    it('should NOT classify Samsung as monitor (Samsung makes TVs too)', () => {
+      const result = service._inferDisplayCategory('SAMSUNG QE65Q60R', 'tv', {
+        audio_supported: true,
+        diagonal_inches: 65,
+      }, 'SAM');
+      expect(result).toBe('tv');
+    });
+
+    it('should handle null manufacturer gracefully', () => {
+      const result = service._inferDisplayCategory('GENERIC DISPLAY', 'tv', {
+        audio_supported: true,
+        diagonal_inches: 43,
+      }, null);
+      expect(result).toBe('tv');
     });
   });
 
