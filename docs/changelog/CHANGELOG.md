@@ -1,3 +1,9 @@
+# [3.99.0](https://github.com/Tallec7/neopro/compare/v3.98.6...v3.99.0) (2026-03-05)
+
+### Features
+
+- **dual-display:** remove secondaryDisplayEnabled toggle — Pi 100% hardware-driven ([59fcfae](https://github.com/Tallec7/neopro/commit/59fcfae5bf8aaaf4920609f94ee22a1cc0f3a192))
+
 ## [3.98.7](https://github.com/Tallec7/neopro/compare/v3.98.6...v3.98.7) (2026-03-05)
 
 ### Breaking Changes
