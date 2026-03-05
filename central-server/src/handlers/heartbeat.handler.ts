@@ -157,7 +157,7 @@ export async function handleHeartbeat(
       }
     }
 
-    await checkAlerts(siteId, message.metrics, message.kioskStatus, message.wifiStatus, message.fanStatus, message.filesystemHealth, message.hdmiStatus);
+    await checkAlerts(siteId, message.metrics, message.kioskStatus, message.wifiStatus, message.fanStatus, message.filesystemHealth, message.hdmiStatus, message.orphanServices);
   } catch (error) {
     logger.error('Error handling heartbeat:', error);
   }
@@ -174,7 +174,8 @@ async function checkAlerts(
   wifiStatus?: HeartbeatMessage['wifiStatus'],
   fanStatus?: HeartbeatMessage['fanStatus'],
   filesystemHealth?: HeartbeatMessage['filesystemHealth'],
-  hdmiStatus?: HeartbeatMessage['hdmiStatus']
+  hdmiStatus?: HeartbeatMessage['hdmiStatus'],
+  orphanServices?: HeartbeatMessage['orphanServices']
 ): Promise<void> {
   const alerts: Array<{ type: string; severity: string; message: string }> = [];
 
@@ -376,6 +377,24 @@ async function checkAlerts(
         message: `Moniteur ${hdmiStatus.manufacturer} classifié comme TV (manufacturer filter missing)`,
       });
       metricsService.recordDisplayTypeMisclassification();
+    }
+  }
+
+  // Orphan systemd services — crash-looping non-legitimate neopro-* services
+  if (orphanServices && orphanServices.length > 0) {
+    for (const orphan of orphanServices) {
+      logger.warn('Orphan systemd service detected on Pi', {
+        siteId,
+        service: orphan.name,
+        status: orphan.status,
+        restarts: orphan.restarts,
+      });
+      alerts.push({
+        type: 'orphan_systemd_service',
+        severity: 'warning',
+        message: `Service orphelin ${orphan.name} en crash-loop (${orphan.restarts} restarts)`,
+      });
+      metricsService.recordOrphanServiceDetected(orphan.name);
     }
   }
 

@@ -533,6 +533,13 @@ const displayFallbackTotal = new Counter({
   registers: [register],
 });
 
+const orphanServiceDetectedTotal = new Counter({
+  name: 'neopro_orphan_service_detected_total',
+  help: 'Total orphan systemd services detected on Pi (crash-looping non-legitimate services)',
+  labelNames: ['service_name'],
+  registers: [register],
+});
+
 const displayTypeMisclassificationTotal = new Counter({
   name: 'neopro_display_type_misclassification_total',
   help: 'Total display_type cross-validation failures (monitor manufacturer classified as TV)',
@@ -956,6 +963,10 @@ class MetricsService {
 
   recordDisplayTypeMisclassification(): void {
     displayTypeMisclassificationTotal.inc();
+  }
+
+  recordOrphanServiceDetected(serviceName: string): void {
+    orphanServiceDetectedTotal.inc({ service_name: serviceName });
   }
 
   // ============= Méthodes Fan Pi =============

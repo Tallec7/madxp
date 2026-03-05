@@ -839,11 +839,18 @@ USELESS_SERVICES=(
     "cloud-init-main"
 )
 
+NEEDS_DAEMON_RELOAD=false
+
 for svc in "${OBSOLETE_SERVICES[@]}"; do
-    if systemctl is-enabled "$svc" &>/dev/null 2>&1; then
+    # Check both is-enabled AND is-active: manually installed services
+    # (file copied to /etc/systemd/system/ without `systemctl enable`)
+    # return "indirect" or odd states from is-enabled but still run via Restart=always
+    if systemctl is-enabled "$svc" &>/dev/null 2>&1 || systemctl is-active "$svc" &>/dev/null 2>&1; then
         systemctl stop "$svc" 2>/dev/null || true
         systemctl disable "$svc" 2>/dev/null || true
-        log_ok "Service obsolète désactivé: $svc"
+        rm -f "/etc/systemd/system/${svc}.service" 2>/dev/null || true
+        NEEDS_DAEMON_RELOAD=true
+        log_ok "Service obsolète désactivé + unit supprimé: $svc"
         CHANGES=$((CHANGES + 1))
     else
         log_ok "Service obsolète déjà désactivé: $svc"
@@ -851,15 +858,20 @@ for svc in "${OBSOLETE_SERVICES[@]}"; do
 done
 
 for svc in "${USELESS_SERVICES[@]}"; do
-    if systemctl is-enabled "$svc" &>/dev/null 2>&1; then
-        systemctl disable "$svc" 2>/dev/null || true
+    if systemctl is-enabled "$svc" &>/dev/null 2>&1 || systemctl is-active "$svc" &>/dev/null 2>&1; then
         systemctl stop "$svc" 2>/dev/null || true
+        systemctl disable "$svc" 2>/dev/null || true
         log_ok "Service inutile désactivé: $svc"
         CHANGES=$((CHANGES + 1))
     else
         log_ok "Service inutile déjà désactivé: $svc"
     fi
 done
+
+if [ "$NEEDS_DAEMON_RELOAD" = true ]; then
+    systemctl daemon-reload 2>/dev/null || true
+    systemctl reset-failed 2>/dev/null || true
+fi
 
 # =============================================================================
 # Résumé

@@ -1152,7 +1152,7 @@ cat /home/pi/neopro/data/kiosk-status.json | python3 -m json.tool | grep display
 # Dégradé: "displayFallback": "primary: xrandr+EDID unavailable"
 ```
 
-#### Services orphelins en crash-loop (v3.84.4+)
+#### Services orphelins en crash-loop (v3.84.4+, fix v3.99.3)
 
 **Symptômes :**
 
@@ -1170,13 +1170,39 @@ cat /home/pi/neopro/data/kiosk-status.json | python3 -m json.tool | grep display
 (pipeline HLS expérimental) mais le code source correspondant n'a **jamais** été créé.
 Les services ont `Restart=always` et redémarrent en boucle à chaque boot.
 
+**Pourquoi le cleanup automatique échouait (v3.84.4 → v3.99.2) :**
+
+Le script `fix-fleet-pi.sh` (lancé automatiquement lors du deploy OTA) contenait le code
+de nettoyage mais utilisait uniquement `systemctl is-enabled` pour détecter les services.
+Or, les services installés **manuellement** (fichier `.service` copié directement dans
+`/etc/systemd/system/` sans passer par `systemctl enable`) retournent une erreur ou un
+statut non-standard avec `is-enabled` — le if-block les ignorait silencieusement comme
+"déjà désactivés" alors qu'ils étaient activement en crash-loop via `Restart=always`.
+
+**Fix v3.99.3 :** Ajout de `|| systemctl is-active` comme fallback pour détecter les
+services qui tournent même sans être "enabled", suppression du fichier `.service` unitaire
+(`rm -f`), et `daemon-reload` + `reset-failed` après nettoyage.
+
+**Monitoring (v3.99.3+) :** Pipeline de détection à 3 couches :
+
+1. **Pi-side** : `metrics.js getOrphanServices()` détecte les services neopro-\* non-légitimes
+   actifs, intégrés dans le health score (-5 points) avec suggestion de fix
+2. **Transmission** : le heartbeat du sync-agent transmet `orphanServices` au central
+3. **Central** : le heartbeat handler crée des alertes `orphan_systemd_service` + incrémente
+   le compteur Prometheus `neopro_orphan_service_detected_total` pour alerting Grafana
+
 **Diagnostic :**
 
 ```bash
 # Lister TOUS les services neopro
 systemctl list-units 'neopro-*' --all --no-pager
-# Services légitimes (7) : admin, app, hotspot-optimizer, hotspot-watchdog, kiosk, sync-agent, sync-guardian
-# Tout autre service = orphelin à supprimer
+# Services légitimes (12) : admin, app, backup, hotspot-optimizer, hotspot-watchdog,
+#   kiosk, sd-health, sync-agent, sync-guardian, usb-wifi, video-processor
+# Tout autre service neopro-* = orphelin à supprimer
+
+# Vérifier is-enabled ET is-active (les deux sont nécessaires !)
+systemctl is-enabled neopro-score-bridge 2>&1  # Peut retourner "indirect" ou erreur
+systemctl is-active neopro-score-bridge 2>&1   # Active = en train de tourner
 
 # Compter les restarts
 systemctl show neopro-score-bridge -p NRestarts 2>/dev/null
@@ -1190,13 +1216,15 @@ ls -la /home/pi/neopro/services/score-bridge.js /home/pi/neopro/services/playlis
 **Fix :**
 
 ```bash
-# Désactiver et supprimer les services orphelins
-sudo systemctl disable --now neopro-vlc-kiosk neopro-ffmpeg-stream neopro-score-bridge neopro-playlist-manager 2>/dev/null
+# Désactiver, arrêter et supprimer les services orphelins
+sudo systemctl stop neopro-vlc-kiosk neopro-ffmpeg-stream neopro-score-bridge neopro-playlist-manager 2>/dev/null
+sudo systemctl disable neopro-vlc-kiosk neopro-ffmpeg-stream neopro-score-bridge neopro-playlist-manager 2>/dev/null
 sudo rm -f /etc/systemd/system/neopro-vlc-kiosk.service
 sudo rm -f /etc/systemd/system/neopro-ffmpeg-stream.service
 sudo rm -f /etc/systemd/system/neopro-score-bridge.service
 sudo rm -f /etc/systemd/system/neopro-playlist-manager.service
 sudo systemctl daemon-reload
+sudo systemctl reset-failed
 ```
 
 #### TV figée — fenêtre parasite devant Chromium (v3.81+)

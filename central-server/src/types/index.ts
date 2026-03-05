@@ -346,6 +346,12 @@ export interface HeartbeatMessage {
   }> | null;
   /** E-23 US-23.4.4: Both HDMI ports active (dual-display mode) */
   dualDisplayActive?: boolean;
+  /** Orphan systemd services detected (crash-looping non-legitimate neopro-* services) */
+  orphanServices?: Array<{
+    name: string;
+    status: string;
+    restarts: number;
+  }> | null;
 }
 
 // ============================================================================

@@ -1065,6 +1065,15 @@ class NeoproSyncAgent {
         const hdmiStatus = await this.fetchLocalHdmiState();
         const connectedClients = await this.fetchLocalConnectedClients();
 
+        // Detect orphan systemd services (crash-looping non-legitimate neopro-* units)
+        let orphanServices = null;
+        try {
+          orphanServices = await metricsCollector.getOrphanServices();
+          if (orphanServices && orphanServices.length === 0) orphanServices = null;
+        } catch {
+          // Ignore — non-critical monitoring data
+        }
+
         this.socket.emit('heartbeat', {
           siteId: config.site.id,
           timestamp: Date.now(),
@@ -1082,6 +1091,7 @@ class NeoproSyncAgent {
           connectedClients: connectedClients || null,
           // E-23 US-23.4.4: dual-display is active when both HDMI ports are connected
           dualDisplayActive: !!(hdmiStatus && hdmiStatus.hdmi0 && hdmiStatus.hdmi1),
+          orphanServices: orphanServices || null,
         });
 
         // Enregistrer le succès du heartbeat

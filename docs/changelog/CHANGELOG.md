@@ -4,6 +4,45 @@
 
 - **sync-agent:** LEN L27i-30 monitor misclassified as TV — add monitorOnlyMfg filter to metrics.js ([7ed8311](https://github.com/Tallec7/neopro/commit/7ed8311ba6ce7ad09e196f1475f2283336ce5d31))
 
+# [3.99.3](https://github.com/Tallec7/neopro/compare/v3.99.2...v3.99.3) (2026-03-05)
+
+### Bug Fixes
+
+- **fix-fleet-pi:** orphan systemd services (neopro-score-bridge, neopro-playlist-manager,
+  neopro-ffmpeg-stream, neopro-vlc-kiosk) crash-looping 305+ times on Pi despite cleanup code
+  existing in v3.99.0. Root cause: `systemctl is-enabled` returns error for manually installed
+  `.service` files (copied to `/etc/systemd/system/` without `systemctl enable`), so the cleanup
+  silently skipped them as "already disabled" while they ran via `Restart=always`.
+  Fix: added `|| systemctl is-active` fallback, `rm -f` unit file removal, `daemon-reload` +
+  `reset-failed` after cleanup.
+
+### Monitoring
+
+- **sync-agent:** new `getOrphanServices()` in metrics.js — detects non-legitimate neopro-\*
+  systemd units on Pi, integrated into health status with -5 score penalty and fix suggestions.
+- **heartbeat:** orphan service detection in heartbeat handler — creates `orphan_systemd_service`
+  alerts, logs warnings, increments `neopro_orphan_service_detected_total` Prometheus counter.
+- **agent:** heartbeat now transmits `orphanServices` array from Pi to central for cross-validation.
+
+### Tests
+
+- **smoke:** 3 new regression guards for fix-fleet-pi.sh:
+  - Must check `is-active` (not just `is-enabled`) for obsolete services
+  - Must `rm -f` unit files for obsolete services
+  - Must `daemon-reload` + `reset-failed` after removing unit files
+- **smoke:** 5 new monitoring pipeline guards:
+  - metrics.js must have `getOrphanServices()` with LEGITIMATE_SERVICES whitelist
+  - metrics.js getOrphanServices must be included in `getHealthStatus()`
+  - agent.js heartbeat must transmit orphanServices to central
+  - heartbeat.handler.ts must detect and alert on orphanServices
+  - metrics.service.ts must have Prometheus counter for orphan services
+
+### Docs
+
+- **TROUBLESHOOTING.md:** updated orphan service section with `is-enabled` vs `is-active` root
+  cause and 3-layer monitoring pipeline
+- **CLAUDE.md:** added NE JAMAIS FAIRE rule for `systemctl is-enabled` without `is-active` fallback
+
 # [3.99.2](https://github.com/Tallec7/neopro/compare/v3.99.1...v3.99.2) (2026-03-05)
 
 ### Bug Fixes

@@ -115,6 +115,7 @@ source central-server/.env && psql "$DATABASE_URL" -f central-server/src/scripts
 - Supprimer `boot_fast_checks` du main loop de kiosk-watchdog.sh (les 6 premières itérations tournent à 5s au lieu de 30s pour rattraper les restacks LXDE/openbox/D-Bus survenant entre +20s et +50s après le boot — sans ça, fenêtre de ~26s sans protection — smoke test enforced)
 - Conditionner le mode dual-display sur un flag config (`secondaryDisplayEnabled`, `secondary_display_enabled`) — le Pi détecte le dual-display par hardware via DRM sysfs + xrandr. Les colonnes DB sont DEPRECATED et le toggle dashboard a été supprimé. Le seul signal de vérité est `DUAL_DISPLAY_ACTIVE` positionné par le watchdog après détection hardware (smoke test enforced)
 - Utiliser `this.hdmiConnected = data.hdmi0` seul dans tv.component.ts (quand l'écran est sur HDMI-1, `data.hdmi0` est faux → "En attente d'écran" — utiliser `data.hdmi0 || data.hdmi1` car le watchdog gère le swap automatique — smoke test enforced)
+- Utiliser `systemctl is-enabled` seul pour détecter les services systemd à nettoyer dans fix-fleet-pi.sh (les services installés manuellement — fichier copié dans `/etc/systemd/system/` sans `systemctl enable` — retournent erreur/indirect avec `is-enabled` mais tournent via `Restart=always` → toujours ajouter `|| systemctl is-active` comme fallback — smoke test enforced)
 
 ## Architecture détaillée
 

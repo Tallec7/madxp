@@ -631,6 +631,72 @@ class MetricsCollector {
   }
 
   /**
+   * Détecte les services systemd orphelins (non-légitimes) qui tournent sous le préfixe neopro-*.
+   * Les services orphelins sont ceux qui ne font pas partie de la liste des services légitimes
+   * et qui sont soit actifs soit en état "failed" (crash-loop via Restart=always).
+   * Retourne un tableau d'objets { name, status, restarts } pour chaque orphelin détecté.
+   */
+  async getOrphanServices() {
+    const LEGITIMATE_SERVICES = new Set([
+      'neopro-app',
+      'neopro-admin',
+      'neopro-kiosk',
+      'neopro-sync-agent',
+      'neopro-sync-guardian',
+      'neopro-hotspot-watchdog',
+      'neopro-hotspot-optimizer',
+      'neopro-usb-wifi',
+      'neopro-sd-health',
+      'neopro-backup',
+      'neopro-video-processor',
+    ]);
+
+    const orphans = [];
+
+    try {
+      // List all neopro-* units known to systemd (active, failed, or loaded)
+      const { stdout } = await execAsync(
+        'systemctl list-units "neopro-*" --all --no-pager --no-legend --plain 2>/dev/null || true'
+      );
+
+      for (const line of stdout.trim().split('\n')) {
+        if (!line.trim()) continue;
+        // Format: UNIT LOAD ACTIVE SUB DESCRIPTION...
+        const parts = line.trim().split(/\s+/);
+        if (parts.length < 4) continue;
+
+        const unitName = parts[0].replace('.service', '');
+        const activeState = parts[2]; // active, inactive, failed
+
+        if (LEGITIMATE_SERVICES.has(unitName)) continue;
+        if (!unitName.startsWith('neopro-')) continue;
+        if (activeState === 'inactive') continue;
+
+        // This is an orphan that's active or failed — get restart count
+        let restarts = 0;
+        try {
+          const { stdout: nRestarts } = await execAsync(
+            `systemctl show ${unitName} -p NRestarts --value 2>/dev/null || echo "0"`
+          );
+          restarts = parseInt(nRestarts.trim(), 10) || 0;
+        } catch {
+          // ignore
+        }
+
+        orphans.push({
+          name: unitName,
+          status: activeState,
+          restarts,
+        });
+      }
+    } catch (error) {
+      logger.warn('Failed to detect orphan services:', error.message);
+    }
+
+    return orphans;
+  }
+
+  /**
    * Trouve le chemin du fichier EDID de l'écran HDMI connecté.
    * Cherche dans /sys/class/drm/ les connecteurs HDMI avec un EDID non vide.
    * @param {string} [portFilter] - Filtre optionnel sur le port (ex: 'HDMI-A-2' pour le secondaire)
@@ -1224,7 +1290,7 @@ class MetricsCollector {
    */
   async getHealthStatus() {
     try {
-      const [metrics, gpuInfo, services, systemInfo, hdmiCecStatus, displayInfo, fanStatus, secondaryDisplayInfo] = await Promise.all([
+      const [metrics, gpuInfo, services, systemInfo, hdmiCecStatus, displayInfo, fanStatus, secondaryDisplayInfo, orphanServices] = await Promise.all([
         this.collectAll(),
         this.getGpuInfo(),
         this.getServicesStatus(),
@@ -1233,6 +1299,7 @@ class MetricsCollector {
         this.getDisplayInfo(),
         this.getFanStatus(),
         this.getSecondaryDisplayInfo(),
+        this.getOrphanServices(),
       ]);
 
       // Affiner le type d'écran en croisant EDID + CEC
@@ -1408,6 +1475,19 @@ class MetricsCollector {
         });
       }
 
+      // Orphan systemd services — manually installed services crash-looping
+      if (orphanServices.length > 0) {
+        healthScore -= 5;
+        for (const orphan of orphanServices) {
+          issues.push({
+            severity: 'warning',
+            component: 'SystemdOrphan',
+            message: `Service orphelin ${orphan.name} (${orphan.status}, ${orphan.restarts} restarts)`,
+            fix: `sudo systemctl disable --now ${orphan.name} && sudo rm -f /etc/systemd/system/${orphan.name}.service && sudo systemctl daemon-reload`,
+          });
+        }
+      }
+
       return {
         success: true,
         timestamp: new Date().toISOString(),
@@ -1417,6 +1497,7 @@ class MetricsCollector {
         gpu: gpuInfo,
         fanStatus,
         services,
+        orphanServices: orphanServices.length > 0 ? orphanServices : undefined,
         metrics,
         hdmiCecStatus,
         displayInfo,

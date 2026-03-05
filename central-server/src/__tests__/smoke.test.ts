@@ -4586,6 +4586,131 @@ describe('Kiosk GPU crash loop regression guards', () => {
 });
 
 // ----------------------------------------------------------
+// GPU decode mode (Pi 5 hardware decode with auto-fallback)
+// Pi 5 BCM2712 has a H.264 hardware decoder via V4L2 stateless API.
+// Chromium V4L2FlatVideoDecoder uses this to offload decode from CPU,
+// reducing ~20% CPU usage and the associated PMIC coil whine.
+// If hardware decode crashes twice, auto-fallback to software decode
+// for the rest of the boot (cleared on reboot via tmpfs).
+// ----------------------------------------------------------
+describe('GPU decode mode (Pi 5 V4L2 hardware decode)', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+  const watchdog = fs.readFileSync(
+    path.join(repoRoot, 'raspberry/scripts/kiosk-watchdog.sh'),
+    'utf8'
+  );
+
+  it('--enable-features must NOT appear inside array definitions (common_flags/gpu_flags)', () => {
+    // CRITICAL: Same rule as --disable-features — Chromium only honours the LAST
+    // --enable-features flag. Having it in array AND as a variable means the variable
+    // silently overrides the array value. All features must be combined into the
+    // $enable_features variable and passed as a single flag at launch time.
+    const arrayEnableFeatures = watchdog.match(/^\s+--enable-features=/gm) || [];
+    // Filter out comment lines (starting with #) — only flag real array entries
+    const nonCommentEntries = (watchdog.match(/^\s+--enable-features=/gm) || []).filter(match => {
+      const lineIndex = watchdog.indexOf(match);
+      const lineStart = watchdog.lastIndexOf('\n', lineIndex) + 1;
+      const line = watchdog.substring(lineStart, watchdog.indexOf('\n', lineIndex));
+      return !line.trim().startsWith('#');
+    });
+    expect({ noEnableFeaturesInArrays: nonCommentEntries.length })
+      .toEqual({ noEnableFeaturesInArrays: 0 });
+  });
+
+  it('Chromium launch commands must use combined --enable-features variable', () => {
+    // Both start_chromium() and start_chromium_secondary() must pass the combined
+    // --enable-features="$enable_features" variable, not hardcoded values.
+    const launchLines = watchdog.match(/"\$CHROMIUM_BIN".*--enable-features="\$enable_features"/g) || [];
+    expect({ combinedEnableFeaturesCount: launchLines.length })
+      .toEqual({ combinedEnableFeaturesCount: 2 }); // primary + secondary
+  });
+
+  it('Pi 5 hardware decode mode must enable V4L2FlatVideoDecoder', () => {
+    // V4L2FlatVideoDecoder is the Chromium feature flag that enables
+    // V4L2 stateless hardware decode on Pi 5 (BCM2712).
+    // It must be added to enable_features in the "hardware" mode branch.
+    const hardwareBlock = watchdog.match(/GPU_DECODE_MODE.*==.*"hardware"[\s\S]*?(?=else)/);
+    expect(hardwareBlock).not.toBeNull();
+    expect({ hasV4L2: hardwareBlock![0].includes('V4L2FlatVideoDecoder') })
+      .toEqual({ hasV4L2: true });
+  });
+
+  it('Pi 5 hardware decode must NOT have --disable-gpu-memory-buffer-video-frames', () => {
+    // --disable-gpu-memory-buffer-video-frames forces full software video path.
+    // Hardware decode mode must NOT have this flag, otherwise V4L2 can't work.
+    const hardwareBlock = watchdog.match(/GPU_DECODE_MODE.*==.*"hardware"[\s\S]*?gpu_flags=\([\s\S]*?\)/);
+    expect(hardwareBlock).not.toBeNull();
+    expect({ noMemBufDisable: !hardwareBlock![0].includes('--disable-gpu-memory-buffer-video-frames') })
+      .toEqual({ noMemBufDisable: true });
+  });
+
+  it('Pi 5 software decode fallback must have --disable-gpu-memory-buffer-video-frames', () => {
+    // Software decode fallback (after hardware crashes) must keep the original
+    // --disable-gpu-memory-buffer-video-frames to prevent SharedImageBackingFactory crashes.
+    const softwareBlock = watchdog.match(/else\s*\n\s*log.*software decode[\s\S]*?gpu_flags=\([\s\S]*?\)/);
+    expect(softwareBlock).not.toBeNull();
+    expect({ hasMemBufDisable: softwareBlock![0].includes('--disable-gpu-memory-buffer-video-frames') })
+      .toEqual({ hasMemBufDisable: true });
+  });
+
+  it('GPU_DECODE_FALLBACK_FILE must use /tmp/ (tmpfs, cleared on reboot)', () => {
+    // The fallback file MUST be on tmpfs (/tmp/) so it's cleared on reboot.
+    // This ensures every boot re-attempts hardware decode, even if it failed before.
+    // Using a persistent path (e.g., /home/pi/) would permanently lock into software mode.
+    expect({ fallbackOnTmpfs: watchdog.includes('GPU_DECODE_FALLBACK_FILE="/tmp/') })
+      .toEqual({ fallbackOnTmpfs: true });
+  });
+
+  it('record_crash must call record_gpu_decode_crash for auto-fallback', () => {
+    // When Chromium crashes, record_crash() must call record_gpu_decode_crash()
+    // to track hardware decode crashes. Without this, the fallback mechanism
+    // never triggers and Chromium keeps crash-looping with hardware decode.
+    const recordCrashFn = watchdog.match(/record_crash\(\)\s*\{[\s\S]*?\n\}/);
+    expect(recordCrashFn).not.toBeNull();
+    expect({ callsGpuCrash: recordCrashFn![0].includes('record_gpu_decode_crash') })
+      .toEqual({ callsGpuCrash: true });
+  });
+
+  it('record_crash must call detect_gpu_decode_mode after recording crash', () => {
+    // After recording the crash, record_crash() must re-detect the GPU decode mode.
+    // This is what triggers the switch from hardware → software after enough crashes.
+    const recordCrashFn = watchdog.match(/record_crash\(\)\s*\{[\s\S]*?\n\}/);
+    expect(recordCrashFn).not.toBeNull();
+    expect({ callsDetect: recordCrashFn![0].includes('detect_gpu_decode_mode') })
+      .toEqual({ callsDetect: true });
+  });
+
+  it('kiosk-status.json must include gpuDecodeMode', () => {
+    // The kiosk status JSON must report the current GPU decode mode
+    // so the central dashboard can monitor which Pi's are using hardware vs software decode.
+    expect({ hasGpuDecodeMode: watchdog.includes('gpuDecodeMode') })
+      .toEqual({ hasGpuDecodeMode: true });
+  });
+
+  it('detect_gpu_decode_mode must be called after PI_MODEL detection', () => {
+    // GPU decode mode depends on PI_MODEL being set first.
+    // detect_gpu_decode_mode must be called AFTER detect_pi_model.
+    const initBlock = watchdog.match(/PI_MODEL=\$\(detect_pi_model\)[\s\S]{0,200}detect_gpu_decode_mode/);
+    expect({ calledAfterPiModel: initBlock !== null })
+      .toEqual({ calledAfterPiModel: true });
+  });
+
+  it('both start_chromium functions must initialize enable_features variable', () => {
+    // Both start_chromium() and start_chromium_secondary() must declare
+    // local enable_features with OverlayScrollbar as the base value.
+    // Without this, the Pi 5 hardware mode can't append V4L2FlatVideoDecoder.
+    const startPrimary = watchdog.match(/start_chromium\(\)\s*\{[\s\S]*?\n\}/);
+    const startSecondary = watchdog.match(/start_chromium_secondary\(\)\s*\{[\s\S]*?\n\}/);
+    expect(startPrimary).not.toBeNull();
+    expect(startSecondary).not.toBeNull();
+    expect({ primaryHasEnableFeatures: startPrimary![0].includes('local enable_features="OverlayScrollbar"') })
+      .toEqual({ primaryHasEnableFeatures: true });
+    expect({ secondaryHasEnableFeatures: startSecondary![0].includes('local enable_features="OverlayScrollbar"') })
+      .toEqual({ secondaryHasEnableFeatures: true });
+  });
+});
+
+// ----------------------------------------------------------
 // Parasitic window/service detection guards
 // Incident: 24/02/2026 — Manually installed VLC kiosk service
 // (neopro-vlc-kiosk.service) ran fullscreen on top of Chromium,
@@ -4685,6 +4810,32 @@ describe('Obsolete service cleanup guards', () => {
       .toEqual({ usesDisable: true });
     expect({ noMask: !fixFleet.includes('systemctl mask') })
       .toEqual({ noMask: true });
+  });
+
+  it('fix-fleet-pi.sh must check is-active (not just is-enabled) for obsolete services', () => {
+    // Incident: 05/03/2026 — manually installed .service files (copied to
+    // /etc/systemd/system/ without `systemctl enable`) return odd states from
+    // is-enabled but still run via Restart=always. The cleanup silently skipped
+    // them, leaving 225+ restart crash-loops per service.
+    // Fix: check is-active as fallback to catch running-but-not-enabled services.
+    expect({ checksIsActive: fixFleet.includes('systemctl is-active "$svc"') })
+      .toEqual({ checksIsActive: true });
+  });
+
+  it('fix-fleet-pi.sh must remove .service unit files for obsolete services', () => {
+    // Without removing the unit file, systemd can reload it after daemon-reload
+    // and the crash-loop resumes. rm -f the .service file is the definitive fix.
+    expect({ removesUnitFile: fixFleet.includes('rm -f "/etc/systemd/system/${svc}.service"') })
+      .toEqual({ removesUnitFile: true });
+  });
+
+  it('fix-fleet-pi.sh must daemon-reload after removing obsolete unit files', () => {
+    // daemon-reload tells systemd to forget removed unit files.
+    // reset-failed clears the "failed" status from systemctl list-units.
+    expect({ daemonReload: fixFleet.includes('systemctl daemon-reload') })
+      .toEqual({ daemonReload: true });
+    expect({ resetFailed: fixFleet.includes('systemctl reset-failed') })
+      .toEqual({ resetFailed: true });
   });
 });
 
@@ -8079,5 +8230,73 @@ describe('pc_mode_enabled dead code guard', () => {
       hasPcMode: false,
       reason: 'pc_mode_enabled toggle was dead UI removed in v3.99.1 — do not re-add',
     });
+  });
+});
+
+// ----------------------------------------------------------
+// Orphan systemd service monitoring pipeline
+// Incident: 05/03/2026 — 4 orphan services crash-looped 305+ times
+// on a Pi without being detected by any monitoring.
+// Fix: 3-layer detection pipeline:
+//   1. metrics.js getOrphanServices() — Pi-side detection
+//   2. agent.js heartbeat — transmits orphanServices to central
+//   3. heartbeat.handler.ts — creates alerts + Prometheus counter
+// ----------------------------------------------------------
+describe('Orphan systemd service monitoring pipeline', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+
+  const metricsJs = fs.readFileSync(
+    path.join(repoRoot, 'raspberry/sync-agent/src/metrics.js'),
+    'utf8'
+  );
+  const agentJs = fs.readFileSync(
+    path.join(repoRoot, 'raspberry/sync-agent/src/agent.js'),
+    'utf8'
+  );
+  const heartbeatHandler = fs.readFileSync(
+    path.join(repoRoot, 'central-server/src/handlers/heartbeat.handler.ts'),
+    'utf8'
+  );
+  const metricsService = fs.readFileSync(
+    path.join(repoRoot, 'central-server/src/services/metrics.service.ts'),
+    'utf8'
+  );
+
+  it('metrics.js must have getOrphanServices() with LEGITIMATE_SERVICES whitelist', () => {
+    // Pi-side detection: list all neopro-* units and filter against a known whitelist
+    expect({ hasMethod: metricsJs.includes('getOrphanServices') })
+      .toEqual({ hasMethod: true });
+    expect({ hasWhitelist: metricsJs.includes('LEGITIMATE_SERVICES') })
+      .toEqual({ hasWhitelist: true });
+  });
+
+  it('metrics.js getOrphanServices must be included in getHealthStatus()', () => {
+    // Without integration into health status, orphans are detected but never reported
+    expect({ integratedInHealth: metricsJs.includes('orphanServices') && metricsJs.includes('getHealthStatus') })
+      .toEqual({ integratedInHealth: true });
+  });
+
+  it('agent.js heartbeat must transmit orphanServices to central', () => {
+    // Without transmission, the central server never knows about orphans
+    expect({ callsGetOrphan: agentJs.includes('getOrphanServices') })
+      .toEqual({ callsGetOrphan: true });
+    expect({ emitsOrphan: agentJs.includes('orphanServices') })
+      .toEqual({ emitsOrphan: true });
+  });
+
+  it('heartbeat.handler.ts must detect and alert on orphanServices', () => {
+    // Central-side: create alerts for each orphan service and log warnings
+    expect({ checksOrphan: heartbeatHandler.includes('orphanServices') })
+      .toEqual({ checksOrphan: true });
+    expect({ createsAlert: heartbeatHandler.includes('orphan_systemd_service') })
+      .toEqual({ createsAlert: true });
+  });
+
+  it('metrics.service.ts must have Prometheus counter for orphan services', () => {
+    // Observability: Prometheus counter allows Grafana alerting on fleet-wide orphan patterns
+    expect({ hasCounter: metricsService.includes('neopro_orphan_service_detected_total') })
+      .toEqual({ hasCounter: true });
+    expect({ hasMethod: metricsService.includes('recordOrphanServiceDetected') })
+      .toEqual({ hasMethod: true });
   });
 });
