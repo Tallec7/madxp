@@ -119,6 +119,9 @@ source central-server/.env && psql "$DATABASE_URL" -f central-server/src/scripts
 - Revenir à un `FAST_RETRY_DELAY` fixe dans `internetWatchLoop` de network-watchdog.js (les environnements mesh NLF ont besoin de back-off progressif `PHASE_BACKOFF_DELAYS` [10s→120s] entre les phases de recovery — un délai fixe de 10s escalade les 6 phases en ~60s → modprobe atteint avant que le mesh ne se stabilise — smoke test enforced)
 - Hardcoder le seuil modprobe/USB à 5 min dans network-watchdog.js sans vérifier `_isMeshEnvironment()` (les environnements mesh doivent avoir un guard de 10 min minimum via `_getModprobeGuard()` / `_getUsbCycleGuard()` — les APs mesh rebootent/changent de canal périodiquement → 5 min trop court → modprobe inutile qui déstabilise le RTL8192EU — smoke test enforced)
 - Hardcoder le seuil bgscan `simple:30:-70:300` dans `autoOptimize()` de safe-network-operations.js (utiliser `_computeOptimalBgscan()` qui adapte le threshold au niveau de signal : > -72 dBm → threshold -75, ≤ -75 dBm → threshold -70 — un seuil fixe à -70 dBm oscille quand le signal est à -68 dBm → scans continus toutes les 30s — smoke test enforced)
+- Supprimer le mécanisme `GPU_DECODE_FALLBACK_FILE` de kiosk-watchdog.sh (l'auto-fallback hardware→software après 2 crashs protège contre les régressions V4L2 Chromium — sans ce filet, Chromium crash-loop en boucle avec le hardware decode sur certaines versions — smoke test enforced)
+- Mettre `--disable-gpu-memory-buffer-video-frames` dans le bloc hardware decode Pi 5 (ce flag force le chemin software complet — le hardware decode V4L2 a besoin des GPU memory buffers pour fonctionner — smoke test enforced)
+- Dupliquer `--enable-features` dans kiosk-watchdog.sh (même règle que `--disable-features` — Chromium n'accepte qu'un seul flag `--enable-features`, le dernier écrase les précédents — combiner dans la variable `$enable_features` — smoke test enforced)
 
 ## Architecture détaillée
 

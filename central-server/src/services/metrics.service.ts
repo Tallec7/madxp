@@ -546,6 +546,12 @@ const displayTypeMisclassificationTotal = new Counter({
   registers: [register],
 });
 
+const gpuDecodeFallbackTotal = new Counter({
+  name: 'neopro_gpu_decode_fallback_total',
+  help: 'Total GPU decode software fallback events (Pi 5 V4L2 hardware decode crashed)',
+  registers: [register],
+});
+
 // ============= Métriques Report Generation =============
 
 const sponsorSyncTotal = new Counter({
@@ -959,6 +965,10 @@ class MetricsService {
 
   recordDisplayFallback(): void {
     displayFallbackTotal.inc();
+  }
+
+  recordGpuDecodeFallback(): void {
+    gpuDecodeFallbackTotal.inc();
   }
 
   recordDisplayTypeMisclassification(): void {

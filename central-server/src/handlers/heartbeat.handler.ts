@@ -221,6 +221,16 @@ async function checkAlerts(
     });
   }
 
+  // GPU decode software fallback detection (Pi 5)
+  if (kioskStatus?.gpuDecodeMode === 'software') {
+    alerts.push({
+      type: 'gpu_decode_fallback',
+      severity: 'warning',
+      message: `Pi 5 GPU decode en mode software (hardware crashé ${kioskStatus.restartCount || 0}+ fois ce boot — coil whine possible)`,
+    });
+    metricsService.recordGpuDecodeFallback();
+  }
+
   // Display resolution fallback detection
   if (kioskStatus?.displayFallback) {
     alerts.push({

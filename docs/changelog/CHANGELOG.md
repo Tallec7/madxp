@@ -1,3 +1,73 @@
+# [3.99.6](https://github.com/Tallec7/neopro/compare/v3.99.5...v3.99.6) (2026-03-05)
+
+### Bug Fixes
+
+- **hotspot:** Android phones cannot access Pi hotspot — Android does HTTPS connectivity checks
+  (port 443) since Android 10+. The Pi only responds on HTTP (port 80), causing Android to detect
+  "no internet" and silently route all traffic through 4G instead of the hotspot. Fix: iptables NAT
+  PREROUTING rules redirect ports 80+443 on wlan0 to nginx port 80. Android receives an HTTP
+  response on its HTTPS check, detects a captive portal, and stays on the WiFi network.
+  iOS was not affected (correctly handles HTTP-only captive portals).
+
+### Monitoring
+
+- **hotspot-watchdog:** new `check_captive_portal_iptables()` verifies iptables NAT rules every 30s
+  cycle and auto-restores them if missing (reboot, manual flush, kernel bug). Visible in
+  `--status` as `[✓] iptables: captive portal actif (Android HTTPS → nginx)`.
+
+### Tests
+
+- **smoke:** 7 new regression guards for Android captive portal iptables:
+  - `setup-captive-portal-iptables.sh` must exist with port 443 DNAT rule
+  - Script must be idempotent (cleanup before install)
+  - `install.sh` must call the iptables script in `configure_hotspot()`
+  - `hotspot-watchdog.sh` must check iptables in health check
+  - `hotspot-watchdog.sh` must restore iptables in recovery sequence
+  - `fix-fleet-pi.sh` must configure iptables for existing fleet
+  - `dnsmasq.conf` must redirect all Android connectivity check domains
+
+### Docs
+
+- **ANDROID_HOTSPOT_FIX.md:** rewritten with v3.99.6 automatic fix, architecture diagram, debugging
+  commands, and monitoring section
+- **CHANGELOG.md:** this entry
+
+# [3.99.5](https://github.com/Tallec7/neopro/compare/v3.99.4...v3.99.5) (2026-03-05)
+
+### Features
+
+- **kiosk:** Pi 5 GPU hardware video decode via V4L2 stateless API (BCM2712). Chromium feature flag
+  `V4L2FlatVideoDecoder` active le décodeur H.264 hardware au lieu du software decode, réduisant
+  l'utilisation CPU de ~30% à ~10% et le coil whine PMIC associé. Auto-fallback : après 2 crashs
+  Chromium en hardware decode, bascule automatique en software pour le reste du boot. Le fichier
+  `/tmp/gpu-decode-fallback` (tmpfs) est effacé au reboot → re-tentative hardware à chaque boot.
+
+### Monitoring
+
+- **heartbeat:** nouvelle alerte fleet `gpu_decode_fallback` quand un Pi 5 bascule en software decode
+- **metrics:** nouveau compteur Prometheus `neopro_gpu_decode_fallback_total` pour tracking fleet
+- **kiosk-status.json:** nouveau champ `gpuDecodeMode` ("hardware" | "software") remonté via heartbeat
+- **health report:** -5 points santé quand GPU decode en mode software, avec fix recommandé
+
+### Tests
+
+- **smoke:** 11 nouveaux guards pour le GPU decode mode :
+  - `--enable-features` interdit dans les arrays (même règle que `--disable-features`)
+  - Launch commands doivent utiliser `$enable_features` combiné
+  - Pi 5 hardware mode doit activer `V4L2FlatVideoDecoder`
+  - Hardware mode ne doit PAS avoir `--disable-gpu-memory-buffer-video-frames`
+  - Software fallback doit AVOIR `--disable-gpu-memory-buffer-video-frames`
+  - Fallback file sur tmpfs (`/tmp/`)
+  - `record_crash` → `record_gpu_decode_crash` → `detect_gpu_decode_mode` chain
+  - `gpuDecodeMode` dans kiosk-status.json
+  - `detect_gpu_decode_mode` appelé après `PI_MODEL` detection
+  - `enable_features` variable dans les deux fonctions Chromium
+
+### Docs
+
+- **REFERENCE.md:** ajout ligne GPU decode mode dans le tableau watchdog + 2 warnings + heartbeat example
+- **CLAUDE.md:** 3 nouvelles règles NE JAMAIS FAIRE (fallback file, memory buffer flags, enable-features)
+
 # [3.99.4](https://github.com/Tallec7/neopro/compare/v3.99.3...v3.99.4) (2026-03-05)
 
 ### Bug Fixes

@@ -8463,3 +8463,173 @@ describe('WiFi recovery progressive back-off & mesh guards (v3.99.4)', () => {
     }).toEqual({ hasRecoveryAttempts: true });
   });
 });
+
+// ----------------------------------------------------------
+// GPU decode monitoring pipeline (v3.99.5)
+// ----------------------------------------------------------
+// Pi 5 V4L2 hardware decode reduces CPU ~20% but may crash on some Chromium versions.
+// Monitoring pipeline: kiosk-status.json → heartbeat → alert + Prometheus + health report.
+describe('GPU decode monitoring pipeline (v3.99.5)', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+
+  const heartbeatHandler = fs.readFileSync(
+    path.join(repoRoot, 'central-server/src/handlers/heartbeat.handler.ts'),
+    'utf8'
+  );
+  const metricsService = fs.readFileSync(
+    path.join(repoRoot, 'central-server/src/services/metrics.service.ts'),
+    'utf8'
+  );
+  const typesIndex = fs.readFileSync(
+    path.join(repoRoot, 'central-server/src/types/index.ts'),
+    'utf8'
+  );
+  const piMetrics = fs.readFileSync(
+    path.join(repoRoot, 'raspberry/sync-agent/src/metrics.js'),
+    'utf8'
+  );
+
+  it('HeartbeatMessage kioskStatus type must include gpuDecodeMode', () => {
+    // Without the type, TypeScript won't catch missing gpuDecodeMode handling
+    expect({ hasGpuDecodeType: typesIndex.includes('gpuDecodeMode') })
+      .toEqual({ hasGpuDecodeType: true });
+  });
+
+  it('heartbeat.handler.ts must detect gpu_decode_fallback alert', () => {
+    // When gpuDecodeMode === 'software', the heartbeat must create a warning alert
+    // so fleet operators know which Pi's have fallen back to software decode.
+    expect({ checksGpuDecode: heartbeatHandler.includes('gpu_decode_fallback') })
+      .toEqual({ checksGpuDecode: true });
+    expect({ checksMode: heartbeatHandler.includes("gpuDecodeMode") })
+      .toEqual({ checksMode: true });
+  });
+
+  it('metrics.service.ts must have Prometheus counter for GPU decode fallback', () => {
+    // Prometheus counter allows Grafana alerting on fleet-wide GPU decode failures
+    expect({ hasCounter: metricsService.includes('neopro_gpu_decode_fallback_total') })
+      .toEqual({ hasCounter: true });
+    expect({ hasMethod: metricsService.includes('recordGpuDecodeFallback') })
+      .toEqual({ hasMethod: true });
+  });
+
+  it('Pi metrics.js health report must detect gpuDecodeMode software fallback', () => {
+    // Health report must flag software decode as a warning with actionable fix
+    expect({ detectsSoftware: piMetrics.includes("gpuDecodeMode") && piMetrics.includes("software") })
+      .toEqual({ detectsSoftware: true });
+  });
+
+  it('Pi metrics.js health report must recommend reboot for GPU decode recovery', () => {
+    // The fix guidance must tell operators to reboot (tmpfs cleared → re-tries hardware)
+    expect({ hasRebootFix: piMetrics.includes('Redémarrer le boîtier') && piMetrics.includes('V4L2') })
+      .toEqual({ hasRebootFix: true });
+  });
+});
+
+// ============================================================================
+// Android captive portal iptables (v3.99.5)
+// Android does HTTPS connectivity checks (port 443). Without iptables NAT
+// rules redirecting port 443 → nginx port 80, Android detects "no internet"
+// and silently routes all traffic through 4G instead of the hotspot.
+// The fix: PREROUTING DNAT rules on wlan0 for ports 80+443 → 192.168.4.1:80.
+// ============================================================================
+describe('Android captive portal iptables (HTTPS connectivity check fix)', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+
+  // Guard 1: Dedicated iptables setup script must exist
+  it('setup-captive-portal-iptables.sh must exist with HTTPS redirect rule', () => {
+    const scriptPath = path.join(repoRoot, 'raspberry/scripts/setup-captive-portal-iptables.sh');
+    const content = fs.readFileSync(scriptPath, 'utf8');
+    expect({
+      hasPort443Rule: /--dport\s+443.*DNAT.*192\.168\.4\.1:80/.test(content),
+      hasPort80Rule: /--dport\s+80.*DNAT.*192\.168\.4\.1:80/.test(content),
+      hasCleanup: /cleanup_existing_rules/.test(content),
+    }).toEqual({
+      hasPort443Rule: true,
+      hasPort80Rule: true,
+      hasCleanup: true,
+    });
+  });
+
+  // Guard 2: Script must be idempotent (cleanup before install)
+  it('setup-captive-portal-iptables.sh must cleanup before installing (idempotent)', () => {
+    const scriptPath = path.join(repoRoot, 'raspberry/scripts/setup-captive-portal-iptables.sh');
+    const content = fs.readFileSync(scriptPath, 'utf8');
+    const cleanupPos = content.indexOf('cleanup_existing_rules');
+    const installPos = content.indexOf('install_rules');
+    expect({
+      cleanupBeforeInstall: cleanupPos > 0 && installPos > 0 && cleanupPos < installPos,
+    }).toEqual({
+      cleanupBeforeInstall: true,
+    });
+  });
+
+  // Guard 3: install.sh must call the iptables script in configure_hotspot
+  it('install.sh must setup captive portal iptables in configure_hotspot()', () => {
+    const installSh = fs.readFileSync(path.join(repoRoot, 'raspberry/install.sh'), 'utf8');
+    expect({
+      callsIptablesScript: /setup-captive-portal-iptables/.test(installSh),
+    }).toEqual({
+      callsIptablesScript: true,
+    });
+  });
+
+  // Guard 4: hotspot-watchdog must check iptables health
+  it('hotspot-watchdog.sh must check captive portal iptables in health check', () => {
+    const watchdog = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/scripts/hotspot-watchdog.sh'),
+      'utf8'
+    );
+    expect({
+      hasIptablesCheck: /check_captive_portal_iptables/.test(watchdog),
+      checksPort443: /--dport\s+443/.test(watchdog),
+    }).toEqual({
+      hasIptablesCheck: true,
+      checksPort443: true,
+    });
+  });
+
+  // Guard 5: hotspot-watchdog must recover iptables in attempt_recovery
+  it('hotspot-watchdog.sh must restore iptables in recovery sequence', () => {
+    const watchdog = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/scripts/hotspot-watchdog.sh'),
+      'utf8'
+    );
+    expect({
+      recoversIptables: /setup-captive-portal-iptables/.test(watchdog) ||
+        /iptables.*443.*DNAT/.test(watchdog),
+    }).toEqual({
+      recoversIptables: true,
+    });
+  });
+
+  // Guard 6: fix-fleet-pi.sh must install iptables for existing fleet
+  it('fix-fleet-pi.sh must configure captive portal iptables for existing Pi fleet', () => {
+    const fixFleet = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/scripts/fix-fleet-pi.sh'),
+      'utf8'
+    );
+    expect({
+      hasIptablesSection: /captive.*portal.*iptables/i.test(fixFleet),
+      hasPort443: /--dport\s+443/.test(fixFleet),
+    }).toEqual({
+      hasIptablesSection: true,
+      hasPort443: true,
+    });
+  });
+
+  // Guard 7: dnsmasq.conf must redirect Android HTTPS check domains
+  it('dnsmasq.conf must redirect all Android connectivity check domains', () => {
+    const dnsmasq = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/config/systemd/dnsmasq.conf'),
+      'utf8'
+    );
+    const requiredDomains = [
+      'connectivitycheck.gstatic.com',
+      'connectivitycheck.google.com',
+      'clients3.google.com',
+      'play.googleapis.com',
+    ];
+    const missing = requiredDomains.filter(d => !dnsmasq.includes(`address=/${d}/192.168.4.1`));
+    expect({ missingAndroidDomains: missing }).toEqual({ missingAndroidDomains: [] });
+  });
+});

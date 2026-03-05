@@ -277,6 +277,7 @@ export interface HeartbeatMessage {
     displayFallback?: string;
     primaryResolution?: string;
     secondaryResolution?: string;
+    gpuDecodeMode?: 'hardware' | 'software' | 'unknown';
   } | null;
   recordingState?: {
     isRecording: boolean;

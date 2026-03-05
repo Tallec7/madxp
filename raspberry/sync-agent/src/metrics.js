@@ -1421,6 +1421,15 @@ class MetricsCollector {
             fix: 'Vérifier autostart LXDE: grep lxpanel ~/.config/lxsession/LXDE-pi/autostart — doit être absent',
           });
         }
+        if (kioskStatus.gpuDecodeMode === 'software') {
+          healthScore -= 5;
+          issues.push({
+            severity: 'warning',
+            component: 'Kiosk',
+            message: 'GPU decode en mode software (hardware V4L2 crashé — coil whine PMIC possible)',
+            fix: 'Redémarrer le boîtier pour re-tenter le hardware decode. Si récurrent, vérifier version Chromium (128+ requis) et V4L2: v4l2-ctl --list-devices',
+          });
+        }
       }
 
       // Mémoire système
