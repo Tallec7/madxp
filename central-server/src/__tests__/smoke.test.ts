@@ -3217,6 +3217,76 @@ describe('E-23 HDMI monitoring and alerts wiring', () => {
     });
   });
 
+  // Sync-agent metrics.js must have the same monitorOnlyMfg filter as hdmi.service.js
+  // Incident: 05/03/2026 — LEN L27i-30 (Lenovo monitor) classified as TV by sync-agent
+  // because metrics.js had hasCeaExtension → 'tv' without manufacturer filter.
+  // Modern monitors include CEA extensions for HDMI audio/YCbCr compatibility.
+  it('metrics.js getDisplayInfo must filter monitorOnlyMfg BEFORE CEA → tv assignment', () => {
+    const content = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/sync-agent/src/metrics.js'),
+      'utf8'
+    );
+    const getDisplayInfoFn = content.slice(
+      content.indexOf('async getDisplayInfo()'),
+      content.indexOf('async getSecondaryDisplayInfo()')
+    );
+    expect({
+      hasMonitorMfgFilter: /monitorOnlyMfg/.test(getDisplayInfoFn),
+      filterBeforeCea: getDisplayInfoFn.indexOf('monitorOnlyMfg') < getDisplayInfoFn.indexOf("display_type = 'tv'"),
+      hasLEN: /LEN/.test(getDisplayInfoFn),
+      hasDEL: /DEL/.test(getDisplayInfoFn),
+    }).toEqual({
+      hasMonitorMfgFilter: true,
+      filterBeforeCea: true,
+      hasLEN: true,
+      hasDEL: true,
+    });
+  });
+
+  it('metrics.js getSecondaryDisplayInfo must also filter monitorOnlyMfg BEFORE CEA → tv', () => {
+    const content = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/sync-agent/src/metrics.js'),
+      'utf8'
+    );
+    const getSecondaryFn = content.slice(
+      content.indexOf('async getSecondaryDisplayInfo()'),
+      content.indexOf('async _getKioskStatus()')
+    );
+    expect({
+      hasMonitorMfgFilter: /monitorOnlyMfg/.test(getSecondaryFn),
+      filterBeforeCea: getSecondaryFn.indexOf('monitorOnlyMfg') < getSecondaryFn.indexOf("display_type = 'tv'"),
+      hasLEN: /LEN/.test(getSecondaryFn),
+    }).toEqual({
+      hasMonitorMfgFilter: true,
+      filterBeforeCea: true,
+      hasLEN: true,
+    });
+  });
+
+  it('metrics.js _inferDisplayCategory must accept manufacturer as 4th param and early-return monitor', () => {
+    const content = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/sync-agent/src/metrics.js'),
+      'utf8'
+    );
+    expect({
+      has4thParam: /_inferDisplayCategory\s*\(\s*model\s*,\s*displayType\s*,\s*edidDetailed\s*,\s*manufacturer\s*\)/.test(content),
+      hasMonitorOnlyMfg: /monitorOnlyMfg/.test(content.slice(content.indexOf('_inferDisplayCategory('))),
+      returnsMonitor: content.slice(content.indexOf('_inferDisplayCategory(')).includes("return 'monitor'"),
+    }).toEqual({
+      has4thParam: true,
+      hasMonitorOnlyMfg: true,
+      returnsMonitor: true,
+    });
+    // Callers must pass manufacturer as 4th arg
+    expect({
+      primaryPassesMfg: /displayInfo\.display_category\s*=\s*this\._inferDisplayCategory\(\s*\n?\s*displayInfo\.model,\s*displayInfo\.display_type,\s*displayInfo\.edid_detailed,\s*displayInfo\.manufacturer/.test(content),
+      secondaryPassesMfg: /secondaryDisplayInfo\.display_category\s*=\s*this\._inferDisplayCategory\(\s*\n?\s*secondaryDisplayInfo\.model,\s*secondaryDisplayInfo\.display_type,\s*secondaryDisplayInfo\.edid_detailed,\s*secondaryDisplayInfo\.manufacturer/.test(content),
+    }).toEqual({
+      primaryPassesMfg: true,
+      secondaryPassesMfg: true,
+    });
+  });
+
   // Boot-to-video metric: hdmiDetectedAt must be captured on first HDMI status received
   // while connected, not only on disconnected→connected transition.
   // Incident: 05/03/2026 — hdmiConnected defaults to true (line 58), so wasDisconnected
@@ -7905,6 +7975,59 @@ describe('Deploy progress auto-completion guards', () => {
     }).toEqual({
       hasAutoComplete: true,
       reason: 'checkStuckDeployments must auto-complete deployments stuck at progress >= 100',
+    });
+  });
+});
+
+// ----------------------------------------------------------
+// pc_mode_enabled dead code guard: column was removed in
+// v3.99.1 — never wired to any logic. Prevent re-introduction.
+// ----------------------------------------------------------
+describe('pc_mode_enabled dead code guard', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+
+  it('site.repository.ts must NOT contain pc_mode_enabled', () => {
+    const content = fs.readFileSync(
+      path.join(repoRoot, 'central-server/src/repositories/site.repository.ts'),
+      'utf8',
+    );
+    expect({
+      hasPcMode: /pc_mode_enabled/.test(content),
+      reason: 'pc_mode_enabled was dead code (E-23 placeholder) removed in v3.99.1 — do not re-add',
+    }).toEqual({
+      hasPcMode: false,
+      reason: 'pc_mode_enabled was dead code (E-23 placeholder) removed in v3.99.1 — do not re-add',
+    });
+  });
+
+  it('sites.controller.ts must NOT contain pc_mode_enabled', () => {
+    const content = fs.readFileSync(
+      path.join(repoRoot, 'central-server/src/controllers/sites.controller.ts'),
+      'utf8',
+    );
+    expect({
+      hasPcMode: /pc_mode_enabled/.test(content),
+      reason: 'pc_mode_enabled was dead code (E-23 placeholder) removed in v3.99.1 — do not re-add',
+    }).toEqual({
+      hasPcMode: false,
+      reason: 'pc_mode_enabled was dead code (E-23 placeholder) removed in v3.99.1 — do not re-add',
+    });
+  });
+
+  it('site-settings-tab template must NOT contain pc_mode_enabled', () => {
+    const content = fs.readFileSync(
+      path.join(
+        repoRoot,
+        'central-dashboard/src/app/features/sites/components/site-settings-tab/site-settings-tab.component.ts',
+      ),
+      'utf8',
+    );
+    expect({
+      hasPcMode: /pc_mode_enabled/.test(content),
+      reason: 'pc_mode_enabled toggle was dead UI removed in v3.99.1 — do not re-add',
+    }).toEqual({
+      hasPcMode: false,
+      reason: 'pc_mode_enabled toggle was dead UI removed in v3.99.1 — do not re-add',
     });
   });
 });

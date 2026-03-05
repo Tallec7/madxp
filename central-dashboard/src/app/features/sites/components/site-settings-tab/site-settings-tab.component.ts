@@ -422,29 +422,6 @@ import { QrCodeGeneratorComponent } from '../../../../shared/components/qr-code-
         </p>
       </div>
 
-      <!-- Mode PC (E-23 US-23.2.2) -->
-      <div class="settings-card">
-        <div class="settings-header">
-          <span class="settings-icon">💻</span>
-          <h4>Mode PC (navigateur)</h4>
-        </div>
-        <p class="settings-desc">
-          Permet d'acceder a l'affichage TV depuis n'importe quel navigateur (PC, tablette, smartphone). Les utilisateurs peuvent ouvrir l'URL du site pour afficher le contenu sans Raspberry Pi.
-        </p>
-        <div class="premium-toggle">
-          <label class="toggle-container">
-            <input
-              type="checkbox"
-              [checked]="site?.pc_mode_enabled"
-              (change)="togglePcModeEnabled($event)"
-              [disabled]="savingPcModeEnabled"
-            />
-            <span class="toggle-slider"></span>
-            <span class="toggle-label">Mode PC active</span>
-          </label>
-        </div>
-      </div>
-
       <!-- Watermark / Logo en surimpression -->
       <div class="settings-card">
         <div class="settings-header">
@@ -1655,7 +1632,6 @@ export class SiteSettingsTabComponent implements OnInit, OnChanges {
   fetchingHotspotConfig: boolean = false;
 
   // PC Mode (E-23)
-  savingPcModeEnabled: boolean = false;
 
   // Premium
   savingLiveScore: boolean = false;
@@ -2091,28 +2067,6 @@ export class SiteSettingsTabComponent implements OnInit, OnChanges {
     });
   }
 
-  // E-23 US-23.2.2: PC mode toggle
-  togglePcModeEnabled(event: Event): void {
-    const checkbox = event.target as HTMLInputElement;
-    const newValue = checkbox.checked;
-
-    this.savingPcModeEnabled = true;
-    this.sitesService.updateSite(this.siteId, { pc_mode_enabled: newValue }).subscribe({
-      next: (updatedSite) => {
-        this.savingPcModeEnabled = false;
-        this.notificationService.success(
-          newValue ? 'Mode PC active !' : 'Mode PC desactive !'
-        );
-        this.siteUpdated.emit(updatedSite);
-      },
-      error: (error) => {
-        this.savingPcModeEnabled = false;
-        checkbox.checked = !newValue;
-        const message = ErrorExtractor.getMessage(error);
-        this.notificationService.error(`Erreur: ${message}`);
-      }
-    });
-  }
 
   getJustify(): string {
     const pos = this.overlayConfig.position;

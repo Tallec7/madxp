@@ -85,8 +85,6 @@ export interface UpdateSiteInput {
   secondary_display_resolution?: string | null;
   remote_pin_hash?: string | null;
   hostname_slug?: string;
-  // E-23: PC browser mode
-  pc_mode_enabled?: boolean;
   // P5: Branding club pour les rapports PDF
   logo_url?: string | null;
   color_primary?: string | null;

@@ -1,3 +1,11 @@
+# [3.99.1](https://github.com/Tallec7/neopro/compare/v3.99.0...v3.99.1) (2026-03-05)
+
+### Refactors
+
+- **dashboard:** remove dead "Mode PC (navigateur)" toggle from site settings — `pc_mode_enabled`
+  was never wired to any logic (E-23 US-23.2.2 placeholder). Column dropped via migration.
+  If E-23 F-23.7 (PC Browser Access) is implemented later, it will be rebuilt from scratch.
+
 # [3.99.0](https://github.com/Tallec7/neopro/compare/v3.98.6...v3.99.0) (2026-03-05)
 
 ### Features
