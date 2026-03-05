@@ -1,3 +1,46 @@
+## [3.98.6](https://github.com/Tallec7/neopro/compare/v3.98.5...v3.98.6) (2026-03-05)
+
+### Bug Fixes
+
+- **boot:** eliminate false HDMI failover on single-display Pi — root cause: `DUAL_DISPLAY_ACTIVE`
+  was set to `true` unconditionally BEFORE `setup_secondary_xrandr`, which swallowed errors with
+  `|| true`. On a Pi with `secondaryDisplayEnabled=true` but only one HDMI port active (e.g., only
+  HDMI-A-2 visible in xrandr), `setup_secondary_xrandr` fails silently → main loop believes it's in
+  dual-display mode → triggers false failover → kills/restarts Chromium → LXDE desktop visible 3-5s.
+  Fix: `DUAL_DISPLAY_ACTIVE=true` now only set AFTER `setup_secondary_xrandr` succeeds (boot +
+  main loop `check_secondary_chromium`).
+- **boot:** add FAILOVER_GRACE_PERIOD (15s) — EDID/DRM takes ~10-15s to stabilize after boot.
+  Without this, `detect_hdmi0_status` returns false too early → false failover even when display
+  mode is correctly determined.
+- **boot:** add splash screen before failover/recovery transitions — `show_boot_splash` called in
+  `activate_hdmi_failover()` and `deactivate_hdmi_failover()` BEFORE killing Chromium, covering
+  the desktop during the kill→restart gap (~3-5s).
+- **boot:** boot fast-checks (5s interval for first 6 iterations) — replaces subshell-based stacking
+  guard with inline `boot_fast_checks` counter in main loop. Covers +20s to +50s window where LXDE/
+  openbox/D-Bus can restack panels above Chromium. No xdotool race condition (single process).
+- **boot:** `check_window_stacking` moved to TOP of main loop — ensures immediate stacking correction
+  after each sleep, before HDMI/crash/memory checks that take 5-15s on Pi.
+- **boot:** anti-spam flag `XRANDR_DUAL_WARNED` — "skip dual-display" warning logged only once when
+  `setup_secondary_xrandr` fails repeatedly (Pi with `secondaryDisplayEnabled=true` but single HDMI).
+- **boot:** secondary Chromium launch now gated on `DUAL_DISPLAY_ACTIVE` (not `SECONDARY_DISPLAY_ENABLED`)
+  — prevents launching secondary Chromium when xrandr hasn't found two displays.
+
+### Tests
+
+- **smoke:** 5 new regression guards:
+  - `DUAL_DISPLAY_ACTIVE must be set AFTER setup_secondary_xrandr succeeds`
+  - `setup_secondary_xrandr must not use || true when determining DUAL_DISPLAY_ACTIVE`
+  - `check_secondary_chromium must guard DUAL_DISPLAY_ACTIVE behind setup_secondary_xrandr`
+  - `FAILOVER_GRACE_PERIOD for boot HDMI stabilization`
+  - `boot_fast_checks for rapid stacking checks after boot`
+
+### Documentation
+
+- **CLAUDE.md:** 3 new "NE JAMAIS FAIRE" rules — `DUAL_DISPLAY_ACTIVE=true` before
+  `setup_secondary_xrandr`, `setup_secondary_xrandr || true` error swallowing,
+  `boot_fast_checks` removal
+- **changelog:** v3.98.6 release notes
+
 ## [3.98.5](https://github.com/Tallec7/neopro/compare/v3.98.4...v3.98.5) (2026-03-05)
 
 ### Bug Fixes

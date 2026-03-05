@@ -110,6 +110,9 @@ source central-server/.env && psql "$DATABASE_URL" -f central-server/src/scripts
 - Supprimer le boot grace period hotspot du NetworkWatchdog `start()` (sans grace period, le watchdog détecte "IP 192.168.4.1 non configurée" à boot+5s et redémarre hostapd 2-3 fois, retardant la stabilisation du hotspot de 30s+ — smoke test enforced)
 - Supprimer la boucle re-raise post-fullscreen du subshell `start_chromium()` dans kiosk-watchdog.sh (LXDE/openbox restack lxpanel 1-5s après le premier fullscreen — sans re-raise à +3s/+8s/+15s, la barre de tâches reste visible ~30s jusqu'au prochain `check_window_stacking` — smoke test enforced)
 - Ajouter `@lxpanel` dans l'autostart LXDE de `install.sh` (la barre de tâches recouvre Chromium fullscreen — utiliser `@xsetroot -solid black` à la place — defense-in-depth : deploy-remote.sh corrige les Pi existants, kiosk-watchdog.sh tue lxpanel proactivement — smoke test enforced)
+- Mettre `DUAL_DISPLAY_ACTIVE=true` AVANT que `setup_secondary_xrandr` réussisse (sur Pi avec un seul port HDMI actif, `setup_secondary_xrandr` échoue → si `DUAL_DISPLAY_ACTIVE` est déjà `true`, le main loop déclenche un faux failover → kill/restart Chromium → bureau LXDE visible — toujours conditionner `DUAL_DISPLAY_ACTIVE=true` au succès de `setup_secondary_xrandr` — smoke test enforced)
+- Utiliser `setup_secondary_xrandr || true` pour avaler l'erreur qui détermine le mode display (le code de retour de `setup_secondary_xrandr` est la source de vérité pour `DUAL_DISPLAY_ACTIVE` — avaler l'erreur empêche de détecter qu'un seul écran est branché — smoke test enforced)
+- Supprimer `boot_fast_checks` du main loop de kiosk-watchdog.sh (les 6 premières itérations tournent à 5s au lieu de 30s pour rattraper les restacks LXDE/openbox/D-Bus survenant entre +20s et +50s après le boot — sans ça, fenêtre de ~26s sans protection — smoke test enforced)
 
 ## Architecture détaillée
 

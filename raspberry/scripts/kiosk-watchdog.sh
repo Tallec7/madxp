@@ -58,6 +58,15 @@ LAST_HDMI_TRANSITION=""
 PRIMARY_SCREEN_WIDTH=""
 PRIMARY_SCREEN_HEIGHT=""
 
+# Boot grace period pour le failover HDMI: l'EDID/DRM met ~10-15s pour se stabiliser
+# après le boot. Sans cette grace period, detect_hdmi0_status renvoie false trop tôt
+# → faux failover → kill/restart Chromium → bureau LXDE visible pendant la transition.
+BOOT_CHROMIUM_AT=0
+FAILOVER_GRACE_PERIOD=15
+# Flag pour éviter le spam de logs quand setup_secondary_xrandr échoue en boucle
+# (Pi avec secondaryDisplayEnabled=true mais un seul port HDMI actif)
+XRANDR_DUAL_WARNED=false
+
 # Lire secondaryDisplayEnabled depuis configuration.json
 # Rétrocompat: lit aussi "ledEnabled" pour les configs existantes (avant renommage)
 read_secondary_display_enabled() {
@@ -516,6 +525,10 @@ stop_chromium_primary() {
 activate_hdmi_failover() {
     log "🔄 FAILOVER: HDMI-0 perdu pendant dual-display, promotion du secondaire..."
 
+    # Phase 0: Afficher le splash AVANT de tuer Chromium pour couvrir le desktop
+    # Sans ça, le bureau LXDE est visible pendant la transition kill→restart (~3-5s).
+    show_boot_splash 2>/dev/null || true
+
     # Phase 1: Arrêter le primaire fantôme AVANT de reconfigurer (GPU cleanup critique)
     stop_chromium_primary
 
@@ -595,6 +608,9 @@ activate_hdmi_failover() {
 # 5. Relancer le Chromium secondaire sur HDMI-1
 deactivate_hdmi_failover() {
     log "🔄 RETOUR FAILOVER: HDMI-0 de retour, restauration proactive du dual-display..."
+
+    # Splash de transition AVANT de tuer Chromium (couvre le desktop pendant kill→restart)
+    show_boot_splash 2>/dev/null || true
 
     HDMI_FAILOVER_ACTIVE=false
     rm -f /tmp/hdmi-failover-active
@@ -1195,7 +1211,14 @@ check_secondary_chromium() {
     fi
 
     # E-23 US-23.6.2: Failover — si HDMI-0 perdu pendant dual-display et HDMI-1 encore connecté
+    # Grace period boot: l'EDID/DRM met ~15s pour se stabiliser → faux positifs detect_hdmi0_status
     if [[ "$DUAL_DISPLAY_ACTIVE" == "true" ]] && ! detect_hdmi0_status && detect_hdmi1_status; then
+        local _now_failover=$(date +%s)
+        local _boot_elapsed=$(( _now_failover - BOOT_CHROMIUM_AT ))
+        if (( BOOT_CHROMIUM_AT > 0 && _boot_elapsed < FAILOVER_GRACE_PERIOD )); then
+            log "⏳ HDMI-0 absent mais grace period boot active (${_boot_elapsed}s/${FAILOVER_GRACE_PERIOD}s) — skip failover"
+            return
+        fi
         log "⚠️ HDMI-0 perdu pendant dual-display, HDMI-1 encore connecté"
         activate_hdmi_failover
         return
@@ -1221,9 +1244,20 @@ check_secondary_chromium() {
             # Le primaire est toujours en --app= mode, donc PAS besoin de le relancer.
             # On configure juste xrandr et on redimensionne via xdotool (zero-blackout).
             if [[ "$DUAL_DISPLAY_ACTIVE" != "true" ]]; then
-                DUAL_DISPLAY_ACTIVE=true
                 LAST_HDMI_TRANSITION="single_to_dual:$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-                setup_secondary_xrandr || true
+                # DUAL_DISPLAY_ACTIVE n'est activé que si xrandr trouve les DEUX sorties HDMI.
+                # Même garde que dans le boot : setup_secondary_xrandr retourne 1 si le Pi
+                # n'a qu'un seul port HDMI actif → on ne doit PAS passer en dual-display.
+                if ! setup_secondary_xrandr; then
+                    if [[ "$XRANDR_DUAL_WARNED" != "true" ]]; then
+                        log "⚠️ xrandr n'a trouvé qu'un seul écran dans le main loop — skip dual-display"
+                        XRANDR_DUAL_WARNED=true
+                    fi
+                    return
+                fi
+                # xrandr a trouvé les deux écrans → réinitialiser le flag
+                XRANDR_DUAL_WARNED=false
+                DUAL_DISPLAY_ACTIVE=true
                 log "📺 Passage en dual-display: redimensionnement du primaire (sans restart)"
                 # Redimensionner le primaire pour la nouvelle résolution (si elle a changé)
                 if (( CHROMIUM_PID > 0 )) && kill -0 "$CHROMIUM_PID" 2>/dev/null; then
@@ -1414,12 +1448,23 @@ main() {
     # si un second écran est détecté pour connaître les résolutions des deux moniteurs.
     read_secondary_display_enabled
     if [[ "$SECONDARY_DISPLAY_ENABLED" == "true" ]] && detect_hdmi1_status; then
-        DUAL_DISPLAY_ACTIVE=true
-        # Configurer xrandr pour connaître les résolutions des deux écrans
-        setup_secondary_xrandr || true
-        log "📺 Dual-display détecté au démarrage: primaire=${PRIMARY_SCREEN_WIDTH}x${PRIMARY_SCREEN_HEIGHT}"
-    else
-        # Single-display: détecter la résolution réelle du primaire pour le heartbeat
+        # Configurer xrandr pour connaître les résolutions des deux écrans.
+        # DUAL_DISPLAY_ACTIVE n'est activé que si xrandr trouve les DEUX sorties HDMI.
+        # Sur un Pi avec un seul port HDMI actif (ex: HDMI-A-1 absent de xrandr),
+        # setup_secondary_xrandr retourne 1 → on reste en single-display.
+        # Sans ça, le main loop croit être en dual-display → faux failover → kill/restart
+        # Chromium inutile → bureau LXDE visible pendant la transition.
+        if setup_secondary_xrandr; then
+            DUAL_DISPLAY_ACTIVE=true
+            log "📺 Dual-display détecté au démarrage: primaire=${PRIMARY_SCREEN_WIDTH}x${PRIMARY_SCREEN_HEIGHT}"
+        else
+            log "⚠️ secondaryDisplayEnabled=true mais xrandr n'a trouvé qu'un seul écran — mode single-display"
+            DUAL_DISPLAY_ACTIVE=false
+        fi
+    fi
+
+    # Single-display: détecter la résolution réelle du primaire pour le heartbeat
+    if [[ "$DUAL_DISPLAY_ACTIVE" != "true" ]]; then
         local primary_out_name
         primary_out_name=$(xrandr --query 2>/dev/null | grep -E "^HDMI.* connected" | head -1 | awk '{print $1}')
         if [[ -n "$primary_out_name" ]]; then
@@ -1435,6 +1480,7 @@ main() {
     fi
 
     start_chromium
+    BOOT_CHROMIUM_AT=$(date +%s)
 
     # Vérifier que Nginx sert la bonne version (détection version stale)
     # Attend 5s que Chromium charge, puis compare la version servie vs fichier disque
@@ -1462,20 +1508,43 @@ main() {
         fi
     ) &
 
-    # Lire la config écran secondaire et lancer le Chromium secondaire si nécessaire
-    read_secondary_display_enabled
-    if [[ "$SECONDARY_DISPLAY_ENABLED" == "true" ]] && detect_hdmi1_status; then
+    # Lancer le Chromium secondaire uniquement si le dual-display est RÉELLEMENT actif
+    # (setup_secondary_xrandr a trouvé les deux sorties HDMI).
+    # Ne pas re-lire secondaryDisplayEnabled — DUAL_DISPLAY_ACTIVE est la source de vérité.
+    if [[ "$DUAL_DISPLAY_ACTIVE" == "true" ]] && detect_hdmi1_status; then
         log "Écran secondaire activé et HDMI 1 connecté — lancement du Chromium secondaire"
         start_chromium_secondary
     fi
 
+    # Boot fast-check: pendant les premières ~30s, le main loop tourne toutes les 5s
+    # au lieu de 30s pour rattraper tout restack lxpanel/openbox (D-Bus, XDG portals).
+    # Le re-raise subshell couvre +3/+8/+15s, les fast-checks couvrent +20 à +50s.
+    # Pas de subshell séparé → pas de race condition xdotool.
+    local boot_fast_checks=6
+
     while true; do
+        # Stacking check EN PREMIER: rattrape immédiatement tout restack
+        # survenu pendant le sleep précédent. Doit être AVANT le sleep et les
+        # vérifications lourdes (HDMI, crash, mémoire) qui prennent 5-15s sur Pi.
+        # Idempotent (~100ms), zéro risque.
+        check_window_stacking || true
+
         # Attente interruptible: au lieu de dormir CHECK_INTERVAL d'un bloc,
         # on dort par tranches de HDMI_CHECK_INTERVAL secondes.
         # Si le flag udev HDMI apparaît, on sort immédiatement pour traiter.
+        # Pendant le boot (boot_fast_checks > 0), on ne dort que HDMI_CHECK_INTERVAL (5s)
+        # au lieu de CHECK_INTERVAL (30s) pour rattraper les restacks rapides.
+        local loop_interval=$CHECK_INTERVAL
+        if (( boot_fast_checks > 0 )); then
+            loop_interval=$HDMI_CHECK_INTERVAL
+            boot_fast_checks=$((boot_fast_checks - 1))
+            if (( boot_fast_checks == 0 )); then
+                log "✓ Boot fast-check terminé — passage à l'intervalle normal (${CHECK_INTERVAL}s)"
+            fi
+        fi
         local waited=0
         local hdmi_triggered=false
-        while (( waited < CHECK_INTERVAL )); do
+        while (( waited < loop_interval )); do
             sleep "$HDMI_CHECK_INTERVAL"
             waited=$((waited + HDMI_CHECK_INTERVAL))
             if [ -f "$HDMI_FLAG_FILE" ]; then

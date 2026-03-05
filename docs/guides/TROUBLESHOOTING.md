@@ -4847,6 +4847,52 @@ sudo systemctl restart neopro-kiosk
 
 ---
 
+## Faux failover au boot — Pi single-display avec secondaryDisplayEnabled=true (v3.98.6)
+
+Le Pi déclenche un failover HDMI au boot alors qu'un seul écran est branché. Le bureau LXDE est visible 3-5s pendant le kill/restart de Chromium.
+
+### Symptôme
+
+- Bureau LXDE visible brièvement (~3-5s) à chaque boot
+- Logs contiennent `FAILOVER: HDMI-0 perdu` dans les 15-20 premières secondes
+- `secondaryDisplayEnabled: true` dans la config mais un seul HDMI branché
+- `xrandr --query` ne montre qu'un seul port (ex: HDMI-A-2 connected, pas de HDMI-A-1)
+
+### Cause racine (corrigée en v3.98.6)
+
+`DUAL_DISPLAY_ACTIVE` était mis à `true` AVANT que `setup_secondary_xrandr` ne réussisse, avec `|| true` qui avalait l'erreur. Sur un Pi avec un seul port HDMI actif, `setup_secondary_xrandr` échoue mais `DUAL_DISPLAY_ACTIVE` reste `true` → le main loop croit être en dual-display → `detect_hdmi0_status` retourne false (car le port n'existe pas dans xrandr) → faux failover.
+
+### Corrections appliquées
+
+1. **Guard `DUAL_DISPLAY_ACTIVE`** — Ne passe à `true` que si `setup_secondary_xrandr` retourne 0 (succès). Sinon reste/passe à `false`
+2. **Grace period boot** — `FAILOVER_GRACE_PERIOD=15` bloque le failover pendant les 15 premières secondes (stabilisation EDID/DRM)
+3. **Splash de transition** — `show_boot_splash` appelé AVANT `kill Chromium` dans failover/recovery pour couvrir le desktop
+4. **Secondary launch guard** — `DUAL_DISPLAY_ACTIVE` (pas `SECONDARY_DISPLAY_ENABLED`) contrôle le lancement du Chromium secondaire
+
+### Diagnostic
+
+```bash
+# Vérifier les ports HDMI visibles par xrandr
+DISPLAY=:0 xrandr --query | grep -E "^HDMI"
+# Si un seul port "connected" → single-display correct
+
+# Vérifier les logs de boot
+journalctl -u neopro-kiosk --no-pager | grep -E "Dual-display|single|xrandr.*seul|FAILOVER"
+
+# Vérifier la valeur de DUAL_DISPLAY_ACTIVE au runtime
+cat /tmp/kiosk-status.json | python3 -m json.tool | grep -i dual
+```
+
+### Smoke tests de régression
+
+- `DUAL_DISPLAY_ACTIVE must be set AFTER setup_secondary_xrandr succeeds`
+- `setup_secondary_xrandr must not use || true when determining DUAL_DISPLAY_ACTIVE`
+- `check_secondary_chromium must guard DUAL_DISPLAY_ACTIVE behind setup_secondary_xrandr`
+- `FAILOVER_GRACE_PERIOD for boot HDMI stabilization`
+- `boot_fast_checks for rapid stacking checks after boot`
+
+---
+
 ## HDMI-0 ne reprend pas la main après recovery failover (v3.96+)
 
 Après un failover (HDMI-0 déconnecté → HDMI-1 prend la main), HDMI-0 est rebranché mais la vidéo principale reste sur HDMI-1.

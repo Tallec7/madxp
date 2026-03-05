@@ -3252,7 +3252,7 @@ describe('E-23 check_secondary_chromium transition guards', () => {
     );
     // Extract the check_secondary_chromium function body
     const funcStart = content.indexOf('check_secondary_chromium() {');
-    const funcBody = content.slice(funcStart, funcStart + 6000);
+    const funcBody = content.slice(funcStart, funcStart + 7000);
     // Single→dual transition: xdotool resize is OK (shrinking viewport, no CSS bug)
     // Dual→single transition: must RELAUNCH Chromium because xdotool windowsize alone
     // does NOT force Chromium to re-render its CSS viewport (window grows but content
@@ -5638,19 +5638,138 @@ describe('Resolution detection cascade', () => {
   it('single-display boot must detect primary resolution via get_output_resolution', () => {
     // Bug: PRIMARY_SCREEN_WIDTH was empty ("") in single-display mode because
     // get_output_resolution was only called inside setup_secondary_xrandr (dual-display).
-    // The else branch of the dual-display boot check must detect the primary resolution.
+    // The single-display fallback (DUAL_DISPLAY_ACTIVE != true) must detect the primary resolution.
     expect(watchdog).toContain('Single-display');
-    // The boot section (anchored by "Dual-display" log at startup) must have an else branch
+    // After the dual-display boot check, there must be a single-display fallback block
+    // (anchored near "start_chromium" in main()) that detects the primary resolution.
     const lines = watchdog.split('\n');
-    const bootDualLog = lines.findIndex(l => l.includes('Dual-display') && l.includes('au d'));
-    expect(bootDualLog).toBeGreaterThan(0);
-    const elseIdx = lines.findIndex((l, i) => i > bootDualLog && l.trim() === 'else');
-    expect(elseIdx).toBeGreaterThan(bootDualLog);
-    const fiIdx = lines.findIndex((l, i) => i > elseIdx && /^\s{4}fi$/.test(l));
-    expect(fiIdx).toBeGreaterThan(elseIdx);
-    const elseBranch = lines.slice(elseIdx, fiIdx).join('\n');
-    expect(elseBranch).toContain('get_output_resolution');
-    expect(elseBranch).toContain('PRIMARY_SCREEN_WIDTH');
+    // Find the boot section anchor: the "Dual-display" log that lives in main()
+    const dualDisplayLogIdx = lines.findIndex(l =>
+      l.includes('Dual-display') && l.includes('au d')
+    );
+    expect(dualDisplayLogIdx).toBeGreaterThan(0);
+    // The DUAL_DISPLAY_ACTIVE != true check must come AFTER the dual-display boot check
+    const singleDisplayCheckIdx = lines.findIndex((l, i) =>
+      i > dualDisplayLogIdx &&
+      l.includes('DUAL_DISPLAY_ACTIVE') && l.includes('!= "true"') && l.includes('then')
+    );
+    expect(singleDisplayCheckIdx).toBeGreaterThan(dualDisplayLogIdx);
+    // Find the fi that closes this block (within ~25 lines)
+    const fiIdx = lines.findIndex((l, i) =>
+      i > singleDisplayCheckIdx && i < singleDisplayCheckIdx + 25 && /^\s+fi$/.test(l)
+    );
+    expect(fiIdx).toBeGreaterThan(singleDisplayCheckIdx);
+    const singleDisplayBlock = lines.slice(singleDisplayCheckIdx, fiIdx + 1).join('\n');
+    expect(singleDisplayBlock).toContain('get_output_resolution');
+    expect(singleDisplayBlock).toContain('PRIMARY_SCREEN_WIDTH');
+  });
+
+  // Bug fix v3.98.5: DUAL_DISPLAY_ACTIVE must only be set AFTER setup_secondary_xrandr succeeds.
+  // Before this fix, DUAL_DISPLAY_ACTIVE was set to true BEFORE setup_secondary_xrandr,
+  // which swallowed failures with || true. When a Pi has secondaryDisplayEnabled=true but
+  // only one HDMI port active (e.g., only HDMI-A-2 visible in xrandr), setup_secondary_xrandr
+  // fails → but DUAL_DISPLAY_ACTIVE stays true → main loop triggers false failover → kills
+  // and restarts Chromium → LXDE desktop visible during transition.
+  it('DUAL_DISPLAY_ACTIVE must be set AFTER setup_secondary_xrandr succeeds (not before)', () => {
+    const lines = watchdog.split('\n');
+
+    // Find the boot section (anchored by "Dual-display" log) where setup_secondary_xrandr
+    // is called. Must be: if setup_secondary_xrandr; then → DUAL_DISPLAY_ACTIVE=true
+    // NOT: DUAL_DISPLAY_ACTIVE=true ... setup_secondary_xrandr || true
+    const dualDisplayLogIdx = lines.findIndex(l =>
+      l.includes('Dual-display') && l.includes('au d')
+    );
+    expect(dualDisplayLogIdx).toBeGreaterThan(0);
+
+    // Walk backwards from the "Dual-display" log to find the if setup_secondary_xrandr
+    // (it must be within 10 lines before the log)
+    const bootSetupIdx = lines.findIndex((l, i) =>
+      i > dualDisplayLogIdx - 10 && i < dualDisplayLogIdx &&
+      l.includes('setup_secondary_xrandr') && l.includes('if')
+    );
+    expect({ setupGuardedByIf: bootSetupIdx > 0 }).toEqual({ setupGuardedByIf: true });
+
+    // DUAL_DISPLAY_ACTIVE=true must be between setup check and log
+    const dualActiveIdx = lines.findIndex((l, i) =>
+      i > bootSetupIdx && i <= dualDisplayLogIdx && l.includes('DUAL_DISPLAY_ACTIVE=true')
+    );
+    expect({ dualActiveAfterSetup: dualActiveIdx > bootSetupIdx }).toEqual({ dualActiveAfterSetup: true });
+
+    // The else branch after the dual-display log must set DUAL_DISPLAY_ACTIVE=false
+    const elseIdx = lines.findIndex((l, i) =>
+      i > dualDisplayLogIdx && i < dualDisplayLogIdx + 5 && l.trim() === 'else'
+    );
+    const dualFalseIdx = lines.findIndex((l, i) =>
+      i > elseIdx && i < elseIdx + 5 && l.includes('DUAL_DISPLAY_ACTIVE=false')
+    );
+    expect({ fallbackToSingleDisplay: dualFalseIdx > elseIdx }).toEqual({ fallbackToSingleDisplay: true });
+  });
+
+  // Bug fix v3.98.5: setup_secondary_xrandr must NEVER be called with || true in sections
+  // that determine DUAL_DISPLAY_ACTIVE. The return code is the source of truth for display mode.
+  // Swallowing errors with || true prevents detecting that only one screen is connected.
+  it('setup_secondary_xrandr must not use || true when determining DUAL_DISPLAY_ACTIVE', () => {
+    const lines = watchdog.split('\n');
+
+    // Boot section: anchored by "Dual-display" log in main()
+    const dualDisplayLogIdx = lines.findIndex(l =>
+      l.includes('Dual-display') && l.includes('au d')
+    );
+    expect(dualDisplayLogIdx).toBeGreaterThan(0);
+
+    // Search the boot section (20 lines before/after the dual-display log)
+    const bootSection = lines.slice(Math.max(0, dualDisplayLogIdx - 20), dualDisplayLogIdx + 10).join('\n');
+    expect({ bootNoOrTrue: !bootSection.includes('setup_secondary_xrandr || true') })
+      .toEqual({ bootNoOrTrue: true });
+
+    // check_secondary_chromium function: anchored by "Passage en dual-display" log
+    const funcStart = watchdog.indexOf('check_secondary_chromium() {');
+    const funcBody = watchdog.slice(funcStart, funcStart + 7000);
+    // The single_to_dual transition must NOT use || true
+    const transitionSection = funcBody.slice(funcBody.indexOf('single_to_dual'));
+    const transitionBlock = transitionSection.slice(0, transitionSection.indexOf('start_chromium_secondary') > 0
+      ? transitionSection.indexOf('start_chromium_secondary')
+      : 500);
+    expect({ mainLoopNoOrTrue: !transitionBlock.includes('setup_secondary_xrandr || true') })
+      .toEqual({ mainLoopNoOrTrue: true });
+  });
+
+  // Bug fix v3.98.5: check_secondary_chromium must also guard DUAL_DISPLAY_ACTIVE behind
+  // setup_secondary_xrandr success (same pattern as boot section).
+  it('check_secondary_chromium must guard DUAL_DISPLAY_ACTIVE behind setup_secondary_xrandr', () => {
+    const funcStart = watchdog.indexOf('check_secondary_chromium() {');
+    expect(funcStart).toBeGreaterThan(0);
+    const funcBody = watchdog.slice(funcStart, funcStart + 7000);
+
+    // In the single→dual transition, setup_secondary_xrandr must be called with if/!
+    const transitionIdx = funcBody.indexOf('single_to_dual');
+    expect(transitionIdx).toBeGreaterThan(0);
+    const afterTransition = funcBody.slice(transitionIdx, transitionIdx + 1200);
+
+    // Must have: if ! setup_secondary_xrandr; then ... return
+    expect({ hasGuardedSetup: afterTransition.includes('! setup_secondary_xrandr') })
+      .toEqual({ hasGuardedSetup: true });
+    expect({ hasReturnOnFailure: afterTransition.includes('return') })
+      .toEqual({ hasReturnOnFailure: true });
+
+    // DUAL_DISPLAY_ACTIVE=true must come AFTER the guard check
+    const setupIdx = afterTransition.indexOf('! setup_secondary_xrandr');
+    const dualActiveIdx = afterTransition.indexOf('DUAL_DISPLAY_ACTIVE=true');
+    expect({ dualActiveAfterGuard: dualActiveIdx > setupIdx })
+      .toEqual({ dualActiveAfterGuard: true });
+  });
+
+  // Bug fix v3.98.5: FAILOVER_GRACE_PERIOD must exist to prevent false failover during
+  // EDID/DRM stabilization (~15s after boot).
+  it('kiosk-watchdog.sh must have FAILOVER_GRACE_PERIOD for boot HDMI stabilization', () => {
+    expect(watchdog).toContain('FAILOVER_GRACE_PERIOD=');
+    expect(watchdog).toContain('BOOT_CHROMIUM_AT=');
+
+    // The failover check must use the grace period
+    const funcStart = watchdog.indexOf('check_secondary_chromium() {');
+    const funcBody = watchdog.slice(funcStart, funcStart + 3000);
+    expect({ hasGracePeriodCheck: funcBody.includes('FAILOVER_GRACE_PERIOD') })
+      .toEqual({ hasGracePeriodCheck: true });
   });
 });
 
@@ -7598,6 +7717,31 @@ describe('Boot splash screen guards', () => {
       .toEqual({ hasWindowsizeReRaise: true });
     expect({ hasWindowactivateReRaise: afterKill.includes('xdotool windowactivate') })
       .toEqual({ hasWindowactivateReRaise: true });
+  });
+
+  // Bug fix v3.98.4: main loop must run fast (5s) for the first iterations after boot.
+  // Without this, the first check_window_stacking only happens after 30s of sleep (CHECK_INTERVAL),
+  // leaving a ~26s window where lxpanel/openbox can restack above Chromium unchecked
+  // (D-Bus portals, XDG desktop portal, network events trigger restacking during boot).
+  // Uses boot_fast_checks counter (no separate subshell — avoids xdotool race conditions).
+  it('kiosk-watchdog.sh must use boot_fast_checks for rapid stacking checks after boot', () => {
+    const kioskContent = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/scripts/kiosk-watchdog.sh'),
+      'utf8'
+    );
+    // boot_fast_checks must be initialized before the while true loop
+    const secondaryIdx = kioskContent.indexOf('start_chromium_secondary');
+    const whileIdx = kioskContent.indexOf('while true; do', secondaryIdx);
+    expect(secondaryIdx).toBeGreaterThan(0);
+    expect(whileIdx).toBeGreaterThan(secondaryIdx);
+    const betweenRegion = kioskContent.substring(secondaryIdx, whileIdx);
+    expect({ hasBootFastChecks: betweenRegion.includes('boot_fast_checks=') })
+      .toEqual({ hasBootFastChecks: true });
+
+    // Inside the while loop, boot_fast_checks must shorten the loop interval
+    const loopBody = kioskContent.substring(whileIdx);
+    expect({ usesBootFastChecksInLoop: loopBody.includes('boot_fast_checks > 0') })
+      .toEqual({ usesBootFastChecksInLoop: true });
   });
 
   // Bug fix v3.98.2: install.sh LXDE autostart must NOT launch lxpanel (taskbar covers Chromium).
