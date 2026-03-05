@@ -1,3 +1,9 @@
+## [3.99.1](https://github.com/Tallec7/neopro/compare/v3.99.0...v3.99.1) (2026-03-05)
+
+### Bug Fixes
+
+- **sync-agent:** LEN L27i-30 monitor misclassified as TV — add monitorOnlyMfg filter to metrics.js ([7ed8311](https://github.com/Tallec7/neopro/commit/7ed8311ba6ce7ad09e196f1475f2283336ce5d31))
+
 # [3.99.2](https://github.com/Tallec7/neopro/compare/v3.99.1...v3.99.2) (2026-03-05)
 
 ### Bug Fixes
