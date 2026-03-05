@@ -476,6 +476,17 @@ groups:
           summary: "Deploy auto-completion safety net triggered"
           description: "Deployments are completing without recent progress events — likely auto-completed by checkStuckDeployments(). Frequent occurrence suggests fleet WiFi reliability issues."
 
+      # Display type misclassification: monitor-only manufacturer (LEN, DEL, etc.) classified as TV
+      # Catches regressions in monitorOnlyMfg filter in metrics.js or hdmi.service.js (v3.99.2)
+      - alert: DisplayTypeMisclassification
+        expr: increase(neopro_display_type_misclassification_total[1h]) > 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Display type misclassification detected"
+          description: "{{ $value | humanize }} Pi(s) reporting a monitor-only manufacturer (LEN/DEL/ACI/HWP/BNQ) classified as TV. The monitorOnlyMfg filter may be missing or broken in sync-agent metrics.js or server hdmi.service.js."
+
       # Sponsor analytics pipeline stall: club plays flowing but no sponsor plays (unified pipeline v3.67+)
       - alert: SponsorAnalyticsPipelineStall
         expr: rate(neopro_video_plays_total{category="sponsor"}[2h]) == 0 and rate(neopro_video_plays_total{category="club"}[2h]) > 0

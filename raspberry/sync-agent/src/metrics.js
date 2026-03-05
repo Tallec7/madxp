@@ -781,7 +781,12 @@ class MetricsCollector {
           displayInfo.resolution = parsed.resolution;
           displayInfo.detection_method = 'edid_raw';
 
-          if (parsed.hasCeaExtension) {
+          // CEA extension indique une TV potentielle, mais de nombreux moniteurs PC
+          // modernes incluent aussi un bloc CEA pour la compatibilité HDMI (audio, YCbCr).
+          // On utilise le manufacturer EDID pour filtrer les faux positifs :
+          // les fabricants exclusivement moniteur ne doivent pas être classés "tv".
+          const monitorOnlyMfg = /^(LEN|DEL|ACI|HWP|BNQ|ACR|EIZ|NEC|AOC)$/;
+          if (parsed.hasCeaExtension && !monitorOnlyMfg.test((parsed.manufacturer || '').toUpperCase())) {
             displayInfo.display_type = 'tv';
           }
         } catch (error) {
@@ -867,7 +872,11 @@ class MetricsCollector {
           displayInfo.resolution = parsed.resolution;
           displayInfo.detection_method = 'edid_raw';
 
-          if (parsed.hasCeaExtension) {
+          // CEA extension indique une TV potentielle, mais de nombreux moniteurs PC
+          // modernes incluent aussi un bloc CEA pour la compatibilité HDMI (audio, YCbCr).
+          // Filtrer par manufacturer EDID pour éviter les faux positifs moniteur → tv.
+          const monitorOnlyMfg = /^(LEN|DEL|ACI|HWP|BNQ|ACR|EIZ|NEC|AOC)$/;
+          if (parsed.hasCeaExtension && !monitorOnlyMfg.test((parsed.manufacturer || '').toUpperCase())) {
             displayInfo.display_type = 'tv';
           }
         } catch (error) {
@@ -1078,9 +1087,16 @@ class MetricsCollector {
    * @param {object|null} edidDetailed - Données edid-decode enrichies
    * @returns {string} 'tv_oled' | 'tv_qled' | 'tv_qned' | 'tv_led' | 'tv_lcd' | 'tv_plasma' | 'tv' | 'monitor' | 'projector' | 'unknown'
    */
-  _inferDisplayCategory(model, displayType, edidDetailed) {
+  _inferDisplayCategory(model, displayType, edidDetailed, manufacturer) {
     const modelUpper = (model || '').toUpperCase();
     const detailed = edidDetailed || {};
+
+    // Fabricants exclusivement moniteur — toujours classifier comme 'monitor'
+    // même avec CEA audio/YCbCr (compatibilité HDMI standard sur moniteurs modernes)
+    const monitorOnlyMfg = /^(LEN|DEL|ACI|HWP|BNQ|ACR|EIZ|NEC|AOC)$/;
+    if (monitorOnlyMfg.test((manufacturer || '').toUpperCase())) {
+      return 'monitor';
+    }
 
     // Projecteur détecté via EDID
     if (detailed.display_product_type && /projector/i.test(detailed.display_product_type)) {
@@ -1233,13 +1249,13 @@ class MetricsCollector {
 
       // Inférer la catégorie d'écran (tv_oled, tv_led, monitor, projector, etc.)
       displayInfo.display_category = this._inferDisplayCategory(
-        displayInfo.model, displayInfo.display_type, displayInfo.edid_detailed
+        displayInfo.model, displayInfo.display_type, displayInfo.edid_detailed, displayInfo.manufacturer
       );
 
       // Inférer la catégorie du secondaire (pas de CEC — CEC = primaire uniquement sur Pi)
       if (secondaryDisplayInfo.connected) {
         secondaryDisplayInfo.display_category = this._inferDisplayCategory(
-          secondaryDisplayInfo.model, secondaryDisplayInfo.display_type, secondaryDisplayInfo.edid_detailed
+          secondaryDisplayInfo.model, secondaryDisplayInfo.display_type, secondaryDisplayInfo.edid_detailed, secondaryDisplayInfo.manufacturer
         );
       }
 
@@ -1359,6 +1375,18 @@ class MetricsCollector {
           component: 'Disk',
           message: `Espace disque faible: ${metrics.disk}% utilisé`,
           fix: 'Supprimer des vidéos inutilisées',
+        });
+      }
+
+      // HDMI Failover — pénaliser si le Pi fonctionne en mode failover
+      // (HDMI-0 perdu, Chromium promu sur HDMI-1)
+      if (kioskStatus && kioskStatus.hdmiFailoverActive) {
+        healthScore -= 15;
+        issues.push({
+          severity: 'warning',
+          component: 'HDMI',
+          message: 'HDMI-0 déconnecté — failover actif sur HDMI-1',
+          fix: 'Vérifier le câble HDMI sur le port HDMI-0 (le plus proche du USB-C)',
         });
       }
 

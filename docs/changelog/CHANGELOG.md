@@ -1,3 +1,45 @@
+# [3.99.2](https://github.com/Tallec7/neopro/compare/v3.99.1...v3.99.2) (2026-03-05)
+
+### Bug Fixes
+
+- **sync-agent:** LEN L27i-30 (Lenovo monitor) classified as TV by sync-agent metrics.js — the
+  `getDisplayInfo()` and `getSecondaryDisplayInfo()` methods had `hasCeaExtension → 'tv'` without
+  filtering monitor-only manufacturers. Modern PC monitors include a CEA extension block in EDID
+  for HDMI audio/YCbCr compatibility, causing false positive TV classification.
+  Fix: added `monitorOnlyMfg` regex filter (LEN, DEL, ACI, HWP, BNQ, ACR, EIZ, NEC, AOC) before
+  CEA → TV assignment, matching the existing filter in `hdmi.service.js`.
+- **sync-agent:** `_inferDisplayCategory()` only had 3 params — `audio_supported` alone made a
+  monitor classify as TV. Added 4th `manufacturer` param with early-return `'monitor'` for known
+  PC manufacturers.
+- **sync-agent:** health score showed 100/100 with HDMI failover active — added -15 penalty when
+  `hdmiFailoverActive` is set in kiosk-status.json.
+
+### Monitoring
+
+- **heartbeat:** added display_type cross-validation in heartbeat handler — logs warning when Pi
+  reports `display_type: 'tv'` but manufacturer is a known PC-only brand (LEN, DEL, ACI, etc.),
+  increments `neopro_display_type_misclassification_total` Prometheus counter for fleet-wide
+  tracking.
+- **prometheus:** new `DisplayTypeMisclassification` alert — fires when monitor-only manufacturer
+  classified as TV detected in fleet (cross-validation catch for future regressions).
+
+### Tests
+
+- **sync-agent:** 9 new tests for manufacturer-based display_type filtering (LEN, DEL, ACI, HWP,
+  BNQ as monitor; GSM, SAM as non-monitor; CEA extension with manufacturer filter)
+- **smoke:** 3 new regression guards for `metrics.js` (separate from existing `hdmi.service.js`
+  guards):
+  - `metrics.js getDisplayInfo must filter monitorOnlyMfg BEFORE CEA → tv`
+  - `metrics.js getSecondaryDisplayInfo must also filter monitorOnlyMfg BEFORE CEA → tv`
+  - `metrics.js _inferDisplayCategory must accept manufacturer as 4th param`
+- **smoke:** display_type cross-validation heartbeat handler guard
+
+### Docs
+
+- **REFERENCE.md:** updated display_type heuristic with manufacturer filter, health score HDMI
+  failover penalty, `_inferDisplayCategory` 4th param
+- **TROUBLESHOOTING.md:** added diagnostic section for PC monitor falsely classified as TV
+
 # [3.99.1](https://github.com/Tallec7/neopro/compare/v3.99.0...v3.99.1) (2026-03-05)
 
 ### Refactors

@@ -3123,6 +3123,56 @@ describe('E-23 HDMI monitoring and alerts wiring', () => {
     });
   });
 
+  // Display type cross-validation: heartbeat must detect monitor manufacturers classified as TV
+  // Incident: 05/03/2026 — LEN L27i-30 classified as TV by sync-agent, undetected by central
+  it('heartbeat.handler.ts must cross-validate display_type with manufacturer (monitorOnlyMfg)', () => {
+    const content = fs.readFileSync(
+      path.join(repoRoot, 'central-server/src/handlers/heartbeat.handler.ts'),
+      'utf8'
+    );
+    expect({
+      hasMonitorOnlyMfg: /monitorOnlyMfg/.test(content),
+      hasLEN: content.includes('LEN'),
+      hasDEL: content.includes('DEL'),
+      hasMisclassificationAlert: content.includes("'display_type_misclassification'"),
+      recordsMetric: content.includes('recordDisplayTypeMisclassification'),
+    }).toEqual({
+      hasMonitorOnlyMfg: true,
+      hasLEN: true,
+      hasDEL: true,
+      hasMisclassificationAlert: true,
+      recordsMetric: true,
+    });
+  });
+
+  it('metrics.service.ts must have neopro_display_type_misclassification_total counter', () => {
+    const content = fs.readFileSync(
+      path.join(repoRoot, 'central-server/src/services/metrics.service.ts'),
+      'utf8'
+    );
+    expect({
+      hasCounter: content.includes('neopro_display_type_misclassification_total'),
+      hasMethod: content.includes('recordDisplayTypeMisclassification'),
+    }).toEqual({
+      hasCounter: true,
+      hasMethod: true,
+    });
+  });
+
+  it('prometheus rules.yml must have DisplayTypeMisclassification alert', () => {
+    const content = fs.readFileSync(
+      path.join(repoRoot, 'docker/prometheus/rules.yml'),
+      'utf8'
+    );
+    expect({
+      hasAlert: content.includes('DisplayTypeMisclassification'),
+      hasMetric: content.includes('neopro_display_type_misclassification_total'),
+    }).toEqual({
+      hasAlert: true,
+      hasMetric: true,
+    });
+  });
+
   it('HeartbeatMessage type must include hdmiStatus and connectedClients', () => {
     const content = fs.readFileSync(
       path.join(repoRoot, 'central-server/src/types/index.ts'),

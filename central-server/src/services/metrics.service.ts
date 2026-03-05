@@ -533,6 +533,12 @@ const displayFallbackTotal = new Counter({
   registers: [register],
 });
 
+const displayTypeMisclassificationTotal = new Counter({
+  name: 'neopro_display_type_misclassification_total',
+  help: 'Total display_type cross-validation failures (monitor manufacturer classified as TV)',
+  registers: [register],
+});
+
 // ============= Métriques Report Generation =============
 
 const sponsorSyncTotal = new Counter({
@@ -946,6 +952,10 @@ class MetricsService {
 
   recordDisplayFallback(): void {
     displayFallbackTotal.inc();
+  }
+
+  recordDisplayTypeMisclassification(): void {
+    displayTypeMisclassificationTotal.inc();
   }
 
   // ============= Méthodes Fan Pi =============

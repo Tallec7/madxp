@@ -3875,6 +3875,29 @@ curl -s http://localhost:3000/api/hdmi-status | python3 -m json.tool
 
 **Résultat attendu (v3.44+) :** Le dashboard affiche "🖥️ Écran (Moniteur PC)" avec le nom du modèle, et masque les métriques CEC non pertinentes.
 
+### Un moniteur PC est classifié "📺 TV" au lieu de "🖥️ Moniteur PC"
+
+**Cause probable :** Le moniteur a un bloc CEA Extension dans son EDID (courant sur les moniteurs modernes pour la compatibilité HDMI audio/YCbCr), et le filtre `monitorOnlyMfg` est absent ou défaillant dans le code.
+
+**Diagnostic :**
+
+```bash
+# Lire le manufacturer EDID
+ssh pi@neopro.local
+curl -s http://localhost:3000/api/hdmi-status | python3 -c "import sys,json; d=json.load(sys.stdin); print(f'manufacturer={d.get(\"manufacturer\")}, display_type={d.get(\"display_type\")}, display_category={d.get(\"display_category\")}')"
+```
+
+**Fabricants PC-only (doivent toujours retourner `monitor`) :**
+`LEN` (Lenovo), `DEL` (Dell), `ACI` (ASUS), `HWP` (HP), `BNQ` (BenQ), `ACR` (Acer), `EIZ` (EIZO), `NEC` (NEC), `AOC` (AOC)
+
+**Si le manufacturer est dans la liste ci-dessus mais display_type = "tv" :**
+
+1. Vérifier que `hdmi.service.js` a le filtre `monitorOnlyMfg` dans `getDisplayInfo()` ET `getFullStatus()`
+2. Vérifier que `metrics.js` (sync-agent) a le **même** filtre dans `getDisplayInfo()` ET `getSecondaryDisplayInfo()`
+3. Le dashboard utilise les données du sync-agent, pas du server — un oubli dans `metrics.js` cause une incohérence (incident LEN L27i-30, v3.99.2)
+
+**Résolution :** Mettre à jour le Pi vers la version contenant le fix. Le heartbeat central envoie aussi une alerte `display_type_misclassification` si ce cas est détecté.
+
 ### L'écran est connecté mais le dashboard affiche "Aucun écran détecté"
 
 **Causes possibles :**

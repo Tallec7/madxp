@@ -359,6 +359,24 @@ async function checkAlerts(
         message: 'Écran branché sur la mauvaise prise HDMI (HDMI-1 au lieu de HDMI-0)',
       });
     }
+
+    // Display type cross-validation: detect monitor-only manufacturer classified as TV
+    // Catches regressions where monitorOnlyMfg filter is missing or broken (incident LEN L27i-30, v3.99.2)
+    const monitorOnlyMfg = /^(LEN|DEL|ACI|HWP|BNQ|ACR|EIZ|NEC|AOC)$/;
+    if (hdmiStatus.display_type === 'tv' && monitorOnlyMfg.test((hdmiStatus.manufacturer || '').toUpperCase())) {
+      logger.warn('Display type misclassification detected: monitor manufacturer classified as TV', {
+        siteId,
+        manufacturer: hdmiStatus.manufacturer,
+        display_type: hdmiStatus.display_type,
+        model: hdmiStatus.model,
+      });
+      alerts.push({
+        type: 'display_type_misclassification',
+        severity: 'warning',
+        message: `Moniteur ${hdmiStatus.manufacturer} classifié comme TV (manufacturer filter missing)`,
+      });
+      metricsService.recordDisplayTypeMisclassification();
+    }
   }
 
   for (const alert of alerts) {

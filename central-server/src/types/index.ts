@@ -329,6 +329,12 @@ export interface HeartbeatMessage {
     cec_available?: boolean;
     /** Number of CEC devices found (0 = no TV responding to CEC) */
     devices_found?: number;
+    /** Display type inferred from EDID + CEC (tv, monitor, unknown) */
+    display_type?: string;
+    /** EDID manufacturer code (3 letters, e.g. LEN, SAM, DEL) */
+    manufacturer?: string;
+    /** Display model name from EDID descriptor */
+    model?: string;
   } | null;
   connectedClients?: Array<{
     socketId: string;

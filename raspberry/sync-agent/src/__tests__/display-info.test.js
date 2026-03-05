@@ -332,6 +332,48 @@ describe('getDisplayInfo', () => {
     expect(result.display_type).toBe('tv');
   });
 
+  test('NE classifie PAS un moniteur Lenovo (LEN) comme TV malgré CEA extension', async () => {
+    const edidBuf = createEdidBuffer({
+      manufacturer: 'LEN',
+      model: 'L27i-30',
+      hActive: 1920,
+      vActive: 1080,
+      hasCeaExtension: true,
+    });
+
+    fs.existsSync = jest.fn(() => true);
+    fs.readdirSync = jest.fn(() => ['card1-HDMI-A-1']);
+    fs.readFileSync = jest.fn(() => edidBuf);
+
+    const result = await metricsCollector.getDisplayInfo();
+
+    expect(result.connected).toBe(true);
+    expect(result.manufacturer).toBe('LEN');
+    // Le filtre monitorOnlyMfg doit bloquer la classification 'tv'
+    expect(result.display_type).not.toBe('tv');
+    expect(result.display_type).toBe('unknown');
+  });
+
+  test('NE classifie PAS un moniteur Dell (DEL) comme TV malgré CEA extension', async () => {
+    const edidBuf = createEdidBuffer({
+      manufacturer: 'DEL',
+      model: 'DELL U2722D',
+      hActive: 2560,
+      vActive: 1440,
+      hasCeaExtension: true,
+    });
+
+    fs.existsSync = jest.fn(() => true);
+    fs.readdirSync = jest.fn(() => ['card1-HDMI-A-1']);
+    fs.readFileSync = jest.fn(() => edidBuf);
+
+    const result = await metricsCollector.getDisplayInfo();
+
+    expect(result.connected).toBe(true);
+    expect(result.manufacturer).toBe('DEL');
+    expect(result.display_type).not.toBe('tv');
+  });
+
   test('enrichit avec edid-decode quand disponible', async () => {
     const edidBuf = createEdidBuffer({
       manufacturer: 'SAM',
@@ -668,7 +710,7 @@ describe('_inferDisplayCategory', () => {
     const result = metricsCollector._inferDisplayCategory('LG OLED55C1', 'tv', {
       audio_supported: true,
       diagonal_inches: 55,
-    });
+    }, 'LGD');
     expect(result).toBe('tv_oled');
   });
 
@@ -676,7 +718,7 @@ describe('_inferDisplayCategory', () => {
     const result = metricsCollector._inferDisplayCategory('SAMSUNG QLED', 'tv', {
       audio_supported: true,
       diagonal_inches: 65,
-    });
+    }, 'SAM');
     expect(result).toBe('tv_qled');
   });
 
@@ -684,7 +726,7 @@ describe('_inferDisplayCategory', () => {
     const result = metricsCollector._inferDisplayCategory('LED TV', 'tv', {
       audio_supported: true,
       diagonal_inches: 43,
-    });
+    }, 'SAM');
     expect(result).toBe('tv_led');
   });
 
@@ -692,7 +734,7 @@ describe('_inferDisplayCategory', () => {
     const result = metricsCollector._inferDisplayCategory('OLED65', 'tv', {
       audio_supported: true,
       diagonal_inches: 65,
-    });
+    }, 'LGD');
     expect(result).toBe('tv_oled');
   });
 
@@ -700,14 +742,14 @@ describe('_inferDisplayCategory', () => {
     const result = metricsCollector._inferDisplayCategory('DELL P2419H', 'monitor', {
       audio_supported: false,
       diagonal_inches: 24,
-    });
+    }, 'DEL');
     expect(result).toBe('monitor');
   });
 
   test('détecte projector depuis display_product_type', () => {
     const result = metricsCollector._inferDisplayCategory('EPSON', 'unknown', {
       display_product_type: 'projector',
-    });
+    }, 'EPS');
     expect(result).toBe('projector');
   });
 
@@ -715,17 +757,17 @@ describe('_inferDisplayCategory', () => {
     const result = metricsCollector._inferDisplayCategory('SAMSUNG', 'unknown', {
       audio_supported: true,
       diagonal_inches: 55,
-    });
+    }, 'SAM');
     expect(result).toBe('tv');
   });
 
   test('infère tv depuis display_type seul', () => {
-    const result = metricsCollector._inferDisplayCategory('SAMSUNG', 'tv', null);
+    const result = metricsCollector._inferDisplayCategory('SAMSUNG', 'tv', null, 'SAM');
     expect(result).toBe('tv');
   });
 
   test('retourne unknown quand aucun signal disponible', () => {
-    const result = metricsCollector._inferDisplayCategory(null, 'unknown', null);
+    const result = metricsCollector._inferDisplayCategory(null, 'unknown', null, null);
     expect(result).toBe('unknown');
   });
 
@@ -733,7 +775,7 @@ describe('_inferDisplayCategory', () => {
     const result = metricsCollector._inferDisplayCategory('PLASMA TV', 'tv', {
       audio_supported: true,
       diagonal_inches: 50,
-    });
+    }, 'SAM');
     expect(result).toBe('tv_plasma');
   });
 
@@ -741,8 +783,66 @@ describe('_inferDisplayCategory', () => {
     const result = metricsCollector._inferDisplayCategory('LG QNED81', 'tv', {
       audio_supported: true,
       diagonal_inches: 55,
-    });
+    }, 'LGD');
     expect(result).toBe('tv_qned');
+  });
+
+  // Tests filtre manufacturer — moniteurs PC avec CEA audio classifiés correctement
+  test('force monitor pour Lenovo (LEN) malgré audio_supported et 27 pouces', () => {
+    const result = metricsCollector._inferDisplayCategory('L27i-30', 'unknown', {
+      audio_supported: true,
+      diagonal_inches: 27,
+      color_spaces: ['YCbCr_444', 'YCbCr_422'],
+    }, 'LEN');
+    expect(result).toBe('monitor');
+  });
+
+  test('force monitor pour Dell (DEL) malgré audio_supported et grand écran', () => {
+    const result = metricsCollector._inferDisplayCategory('DELL U3223QE', 'unknown', {
+      audio_supported: true,
+      diagonal_inches: 32,
+    }, 'DEL');
+    expect(result).toBe('monitor');
+  });
+
+  test('force monitor pour ASUS (ACI) avec CEA extension', () => {
+    const result = metricsCollector._inferDisplayCategory('VG279Q', 'unknown', {
+      audio_supported: true,
+      diagonal_inches: 27,
+    }, 'ACI');
+    expect(result).toBe('monitor');
+  });
+
+  test('force monitor pour HP (HWP) avec CEA extension', () => {
+    const result = metricsCollector._inferDisplayCategory('HP Z27', 'unknown', {
+      audio_supported: true,
+      diagonal_inches: 27,
+    }, 'HWP');
+    expect(result).toBe('monitor');
+  });
+
+  test('force monitor pour BenQ (BNQ) avec CEA extension', () => {
+    const result = metricsCollector._inferDisplayCategory('BenQ PD2700U', 'unknown', {
+      audio_supported: true,
+      diagonal_inches: 27,
+    }, 'BNQ');
+    expect(result).toBe('monitor');
+  });
+
+  test('ne force PAS monitor pour LG (GSM) — fabrique aussi des TV', () => {
+    const result = metricsCollector._inferDisplayCategory('LG 55NANO', 'unknown', {
+      audio_supported: true,
+      diagonal_inches: 55,
+    }, 'GSM');
+    expect(result).not.toBe('monitor');
+  });
+
+  test('ne force PAS monitor pour Samsung (SAM) — fabrique aussi des TV', () => {
+    const result = metricsCollector._inferDisplayCategory('SAMSUNG', 'unknown', {
+      audio_supported: true,
+      diagonal_inches: 55,
+    }, 'SAM');
+    expect(result).not.toBe('monitor');
   });
 });
 

@@ -511,17 +511,22 @@ Le Pi détecte automatiquement l'écran connecté via les données **EDID** (Ext
 
 **Heuristique de type d'écran (`display_type`) :**
 
-1. Réponse CEC (devices > 0) → `tv`
-2. CEA Extension Block dans EDID → `tv`
-3. CEC dispo + 0 devices + écran connecté (EDID ou DRM status) → `monitor`
-4. Sinon → `unknown`
+1. **Filtre fabricant PC** (v3.99.2) : si le manufacturer EDID est un fabricant PC-only (`LEN`, `DEL`, `ACI`, `HWP`, `BNQ`, `ACR`, `EIZ`, `NEC`, `AOC`), la CEA Extension est ignorée et `display_type` reste `unknown` (sera affiné par CEC en étape 3/4). Ce filtre est critique car les moniteurs PC modernes incluent un bloc CEA pour la compatibilité HDMI audio/YCbCr.
+2. Réponse CEC (devices > 0) → `tv`
+3. CEA Extension Block dans EDID **+ fabricant non PC-only** → `tv`
+4. CEC dispo + 0 devices + écran connecté (EDID ou DRM status) → `monitor`
+5. Fabricant PC-only (step 1) → `monitor`
+6. Sinon → `unknown`
+
+> **Important :** Le filtre `monitorOnlyMfg` doit être présent dans les DEUX fichiers : `hdmi.service.js` (Pi local) ET `metrics.js` (sync-agent → dashboard). Un oubli dans l'un des deux cause un affichage incohérent (incident LEN L27i-30, v3.99.2).
 
 **Catégorisation enrichie (`display_category` via `_inferDisplayCategory`) :**
 
-En complément du `display_type` basique, la méthode `_inferDisplayCategory()` croise nom de modèle, taille physique, support audio et type détecté pour produire une catégorie fine :
+En complément du `display_type` basique, la méthode `_inferDisplayCategory(model, displayType, edidDetailed, manufacturer)` croise fabricant, nom de modèle, taille physique, support audio et type détecté pour produire une catégorie fine. Le 4ème paramètre `manufacturer` (ajouté v3.99.2) permet un early-return `'monitor'` pour les fabricants PC-only :
 
 | Catégorie   | Condition                                                        |
 | ----------- | ---------------------------------------------------------------- |
+| `monitor`   | Fabricant PC-only (LEN, DEL, ACI, HWP, BNQ, ACR, EIZ, NEC, AOC)  |
 | `projector` | `display_product_type` contient "projector"                      |
 | `tv_oled`   | TV + nom de modèle contient "OLED"                               |
 | `tv_qled`   | TV + nom de modèle contient "QLED"                               |
@@ -586,6 +591,26 @@ Pi: getFanStatus() → collectAll() → heartbeat { fanStatus }
 ```
 
 **Impact santé :** Le health score perd 15 points si le ventilateur est installé mais arrêté à >70°C.
+
+### Pénalité HDMI Failover (v3.99.2)
+
+Le health score perd 15 points quand `hdmiFailoverActive` est détecté dans `kiosk-status.json`. Cela signifie que HDMI-0 est déconnecté et que le watchdog a promu Chromium sur HDMI-1. L'issue recommande de vérifier le câble HDMI sur le port HDMI-0 (le plus proche du USB-C).
+
+### Récapitulatif des pénalités health score
+
+| Condition                   | Pénalité   | Sévérité |
+| --------------------------- | ---------- | -------- |
+| GPU mémoire < 128 Mo        | -30        | critical |
+| Undervoltage (alimentation) | -25        | critical |
+| Température > 80°C          | -20        | warning  |
+| Service critique down       | -15 chacun | critical |
+| Ventilateur off à > 70°C    | -15        | warning  |
+| HDMI failover actif         | -15        | warning  |
+| Kiosk idle > 5 min          | -15        | warning  |
+| Mémoire > 90%               | -10        | warning  |
+| Disque > 90%                | -10        | warning  |
+| Écran déconnecté            | -10        | warning  |
+| HDMI-CEC indisponible       | -10        | warning  |
 
 **Rétrocompatibilité :** Les Pi sans mise à jour envoient `fanStatus: undefined` → stocké NULL → carte masquée dans le dashboard.
 
