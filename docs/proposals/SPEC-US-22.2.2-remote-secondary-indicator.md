@@ -30,11 +30,11 @@ Le nouvel indicateur se place **entre REC et Phase**, car il représente un stat
 
 ### États visuels
 
-| État           | Icône | Couleur            | Label | Tooltip                                                |
-| -------------- | ----- | ------------------ | ----- | ------------------------------------------------------ |
-| **Connecté**   | `📺`  | Vert (`$success`)  | `2nd` | "Écran secondaire : connecté (1920×384)"               |
-| **Déconnecté** | `📺`  | Gris (`$gray-400`) | `2nd` | "Écran secondaire : déconnecté"                        |
-| **Non activé** | —     | —                  | —     | Indicateur masqué si `secondaryDisplayEnabled = false` |
+| État           | Icône | Couleur            | Label | Tooltip                                                                                                    |
+| -------------- | ----- | ------------------ | ----- | ---------------------------------------------------------------------------------------------------------- |
+| **Connecté**   | `📺`  | Vert (`$success`)  | `2nd` | "Écran secondaire : connecté (1920×384)"                                                                   |
+| **Déconnecté** | `📺`  | Gris (`$gray-400`) | `2nd` | "Écran secondaire : déconnecté"                                                                            |
+| **Non activé** | —     | —                  | —     | ~~Indicateur masqué si `secondaryDisplayEnabled = false`~~ → Toujours visible si variante existe (v3.98.7) |
 
 ### Mockup ASCII
 
@@ -98,11 +98,11 @@ socket.on('secondary-display-status', (data: SecondaryDisplayStatus) => {
 // remote.component.ts
 public secondaryDisplayConnected = false;
 public secondaryDisplayResolution: string | null = null;
-public secondaryDisplayEnabled = false;
+// DEPRECATED v3.98.7: secondaryDisplayEnabled supprimé — toujours true (hardware-driven)
+public secondaryDisplayEnabled = true;
 
 ngOnInit() {
-  // Lire depuis la configuration initiale
-  this.secondaryDisplayEnabled = this.configuration?.secondaryDisplayEnabled || false;
+  // v3.98.7+: Plus de lecture depuis la config — toujours activé, le Pi détecte par hardware
 
   // S'abonner aux mises à jour
   this.socketService.on<SecondaryDisplayStatus>('secondary-display-status', (data) => {
@@ -117,7 +117,7 @@ ngOnInit() {
 ### 4. Template
 
 ```html
-<!-- Indicateur secondary display — visible uniquement si activé sur le site -->
+<!-- Indicateur secondary display — v3.98.7+: toujours visible (hardware-driven) -->
 @if (secondaryDisplayEnabled) {
 <div
   class="secondary-indicator"
@@ -192,13 +192,13 @@ ngOnInit() {
 
 ## Tests
 
-| Test                                                     | Fichier                          | Assertion                           |
-| -------------------------------------------------------- | -------------------------------- | ----------------------------------- |
-| Unit: indicateur affiché si `secondaryDisplayEnabled`    | `remote.component.spec.ts`       | `.secondary-indicator` existe       |
-| Unit: indicateur masqué si `!secondaryDisplayEnabled`    | `remote.component.spec.ts`       | `.secondary-indicator` n'existe pas |
-| Unit: classe `.connected` si `secondaryDisplayConnected` | `remote.component.spec.ts`       | `[class.connected]` toggle          |
-| Smoke: event `secondary-display-status` wired            | `smoke.test.ts`                  | Event dans la liste des events Pi   |
-| E2E: indicateur visible sur Remote (si site dual)        | `e2e/tests/cloud-remote.spec.ts` | `.secondary-indicator` visible      |
+| Test                                                         | Fichier                          | Assertion                         |
+| ------------------------------------------------------------ | -------------------------------- | --------------------------------- |
+| Unit: indicateur toujours affiché (v3.98.7+ hardware-driven) | `remote.component.spec.ts`       | `.secondary-indicator` existe     |
+| ~~Unit: indicateur masqué si `!secondaryDisplayEnabled`~~    | ~~`remote.component.spec.ts`~~   | ~~supprimé v3.98.7~~              |
+| Unit: classe `.connected` si `secondaryDisplayConnected`     | `remote.component.spec.ts`       | `[class.connected]` toggle        |
+| Smoke: event `secondary-display-status` wired                | `smoke.test.ts`                  | Event dans la liste des events Pi |
+| E2E: indicateur visible sur Remote (si site dual)            | `e2e/tests/cloud-remote.spec.ts` | `.secondary-indicator` visible    |
 
 ---
 

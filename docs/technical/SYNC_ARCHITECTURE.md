@@ -360,20 +360,21 @@ function mergeConfigurations(localConfig, neoProContent) {
     }
   }
 
-  // 2. Écran secondaire (E-22 — HDMI 1 : panneau LED, TV tribunes, écran géant)
-  //    Rétrocompat: migre les anciennes clés ledEnabled/ledResolution
-  if (neoProContent.secondaryDisplayEnabled !== undefined) {
-    result.secondaryDisplayEnabled = neoProContent.secondaryDisplayEnabled;
-    delete result.ledEnabled;
-  } else if (neoProContent.ledEnabled !== undefined) {
-    result.secondaryDisplayEnabled = neoProContent.ledEnabled;
+  // 2. Écran secondaire — supprimé (détection hardware autonome)
+  //    Le Pi détecte le dual-display via DRM sysfs + xrandr.
+  //    Les anciennes clés sont nettoyées si reçues du central.
+  if (
+    neoProContent.secondaryDisplayEnabled !== undefined ||
+    neoProContent.ledEnabled !== undefined
+  ) {
+    delete result.secondaryDisplayEnabled;
     delete result.ledEnabled;
   }
-  if (neoProContent.secondaryDisplayResolution !== undefined) {
-    result.secondaryDisplayResolution = neoProContent.secondaryDisplayResolution;
-    delete result.ledResolution;
-  } else if (neoProContent.ledResolution !== undefined) {
-    result.secondaryDisplayResolution = neoProContent.ledResolution;
+  if (
+    neoProContent.secondaryDisplayResolution !== undefined ||
+    neoProContent.ledResolution !== undefined
+  ) {
+    delete result.secondaryDisplayResolution;
     delete result.ledResolution;
   }
 

@@ -145,7 +145,7 @@ Le champ `variants` (optionnel) contient les chemins alternatifs par type d'écr
 
 **Architecture** : 2e instance Chromium ouverte sur `/secondary` (HDMI 1), même Angular app avec `displayType='secondary'`. Le watchdog détecte la connexion HDMI 1 via DRM (`/sys/class/drm/card1-HDMI-A-2/status`).
 
-**Config** : `secondaryDisplayEnabled`, `secondaryDisplayResolution` (table `sites`)
+**Config** : Détection 100% hardware (DRM sysfs + xrandr). Les anciennes colonnes DB `secondary_display_enabled` et `secondary_display_resolution` sont DEPRECATED depuis v3.98.7 — le Pi ignore ces flags.
 
 **Variantes** : Les vidéos peuvent avoir une variante `display_type='secondary'` dans `video_variants`, adaptée aux dimensions de l'écran secondaire.
 

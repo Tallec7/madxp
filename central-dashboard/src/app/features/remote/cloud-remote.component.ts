@@ -209,7 +209,6 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
   public pendingCommandsCount = 0;
 
   public configuration!: Configuration;
-  public secondaryDisplayEnabled = false;
   private secondaryVariantPaths: Set<string> = new Set();
 
   // Options locales (stockées dans localStorage du navigateur)
@@ -437,7 +436,6 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
 
         // PIN ok ou pas de PIN → charger normalement
         this.pinRequired = false;
-        this.secondaryDisplayEnabled = state.secondaryDisplayEnabled ?? false;
         this.secondaryVariantPaths = new Set(state.secondaryVariantPaths || []);
         this.configuration = {
           remote: { title: state.siteName },
@@ -810,7 +808,6 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
 
     this.remoteService.getState(this.siteId).subscribe({
       next: (state: RemoteState) => {
-        this.secondaryDisplayEnabled = state.secondaryDisplayEnabled ?? false;
         this.secondaryVariantPaths = new Set(state.secondaryVariantPaths || []);
         this.configuration = {
           remote: { title: state.siteName },
@@ -844,7 +841,7 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
    * Marque les vidéos ayant une variante secondaire (📺) pour affichage dans la télécommande.
    */
   private markSecondaryVariants(config: Configuration): Configuration {
-    if (!this.secondaryDisplayEnabled || this.secondaryVariantPaths.size === 0) return config;
+    if (this.secondaryVariantPaths.size === 0) return config;
 
     const markVideo = (video: Video): Video =>
       this.secondaryVariantPaths.has(video.path)

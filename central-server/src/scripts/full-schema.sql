@@ -64,7 +64,8 @@ CREATE TABLE IF NOT EXISTS sites (
   remote_pin_hash VARCHAR(64) DEFAULT NULL,
   -- Hostname mDNS dérivé du club_name (ex: neopro-usap)
   hostname_slug VARCHAR(63) DEFAULT NULL,
-  -- E-22: Secondary display dual output (ADR-029)
+  -- DEPRECATED: Le Pi détecte le dual-display par hardware (DRM/sysfs + xrandr).
+  -- Colonnes conservées pour rétrocompat API (anciens dashboards). Ne plus utiliser.
   secondary_display_enabled BOOLEAN DEFAULT false,
   secondary_display_resolution VARCHAR(20) DEFAULT NULL,
   CONSTRAINT check_status CHECK (status IN ('online', 'offline', 'maintenance', 'error'))

@@ -518,10 +518,10 @@ Tous les controllers utilisent le repository pattern. ESLint bloquant actif. Aud
 - [ ] Config `config.txt` : `max_framebuffers=2`, résolutions par port _(provisioning OTA à venir)_
 - [x] Watchdog vérifie `/sys/class/drm/card1-HDMI-A-2/status` avant de lancer le kiosk secondaire
 - [x] Re-check périodique (30-60s) : lance le kiosk secondaire si HDMI 1 passe à `connected`
-- [x] Si `secondaryDisplayEnabled=true` mais HDMI 1 non branché → mode TV-only, pas de 2e Chromium
+- [x] Si HDMI 1 non branché → mode TV-only, pas de 2e Chromium (détection hardware, plus de toggle config depuis v3.98.7)
 - [ ] Fallback config : `hdmi_force_hotplug:1=1` activable par site si détection auto échoue
 - [ ] RAM totale < 2GB (headroom pour Pi 4GB) _(à valider sur hardware réel)_
-- [x] Config-merge propage `secondaryDisplayEnabled` dans configuration.json (fix Fév 2026)
+- [x] ~~Config-merge propage `secondaryDisplayEnabled`~~ → Config-merge supprime les anciennes clés (v3.98.7 — détection hardware autonome)
 
 | US        | Description                                                                                                 | SP  | Sprint  | Priorité |
 | --------- | ----------------------------------------------------------------------------------------------------------- | --- | ------- | -------- |
@@ -561,15 +561,15 @@ Tous les controllers utilisent le repository pattern. ESLint bloquant actif. Aud
 - [x] API upload variante secondaire d'une vidéo existante
 - [x] Dashboard : UI pour associer variante secondaire à une vidéo TV
 - [x] Déploiement conditionnel : playlist TV = variantes `tv`, playlist secondaire = variantes `secondary`
-- [x] Pipeline adapté : n'envoie les variantes secondaires que si le site est `secondary_display_enabled`
-- [ ] Provisioning dual kiosk config poussé via OTA quand `secondary_display_enabled` est activé
+- [x] Pipeline adapté : envoie toujours les variantes secondaires (plus de gate `secondary_display_enabled` depuis v3.98.7)
+- [ ] Provisioning dual kiosk config poussé via OTA _(le Pi détecte automatiquement par hardware depuis v3.98.7)_
 - [x] Fallback : si pas de variante secondaire, redimensionner la version TV (CSS `object-fit: cover`)
 
-| US        | Description                                                                                                                           | SP  | Sprint  | Priorité |
-| --------- | ------------------------------------------------------------------------------------------------------------------------------------- | --- | ------- | -------- |
-| US-22.3.1 | Table `video_variants` + migration DB + API upload variante secondaire                                                                | 5   | PI-2 S5 | Must     |
-| US-22.3.2 | Dashboard UI variantes vidéo + déploiement conditionnel par `display_type`                                                            | 5   | PI-2 S5 | Must     |
-| US-22.3.3 | Adaptation pipeline déploiement (envoi variantes secondaires si `secondary_display_enabled`) + provisioning dual kiosk config via OTA | 5   | PI-2 S5 | Must     |
+| US        | Description                                                                                                                             | SP  | Sprint  | Priorité |
+| --------- | --------------------------------------------------------------------------------------------------------------------------------------- | --- | ------- | -------- |
+| US-22.3.1 | Table `video_variants` + migration DB + API upload variante secondaire                                                                  | 5   | PI-2 S5 | Must     |
+| US-22.3.2 | Dashboard UI variantes vidéo + déploiement conditionnel par `display_type`                                                              | 5   | PI-2 S5 | Must     |
+| US-22.3.3 | Adaptation pipeline déploiement (envoi variantes secondaires toujours — gate supprimé v3.98.7) + provisioning dual kiosk config via OTA | 5   | PI-2 S5 | Must     |
 
 ---
 

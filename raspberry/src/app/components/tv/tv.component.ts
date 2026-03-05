@@ -205,10 +205,13 @@ export class TvComponent implements OnInit, OnDestroy {
   private transitionMetricsInterval: ReturnType<typeof setInterval> | null = null;
 
   // E-23 US-23.3.4: Boot-to-video timing metric
+  // hdmiDetectedAt defaults to component creation time — if the first video plays before
+  // the hdmi-status event arrives (race condition), we still get a meaningful metric
+  // instead of 0ms. The hdmi-status handler refines this with the actual detection time.
   private bootMetrics = {
-    hdmiDetectedAt: 0,      // timestamp when HDMI first reported connected
-    firstVideoPlayAt: 0,    // timestamp when first video frame plays
-    emitted: false,          // true once the metric has been sent (one-shot)
+    hdmiDetectedAt: Date.now(), // fallback: component init time (refined by hdmi-status)
+    firstVideoPlayAt: 0,       // timestamp when first video frame plays
+    emitted: false,            // true once the metric has been sent (one-shot)
   };
 
   public ngOnInit() {
@@ -527,10 +530,11 @@ export class TvComponent implements OnInit, OnDestroy {
     this.socketService.on<{ hdmi0: boolean; hdmi1: boolean; wrongPort: boolean }>('hdmi-status-update', (data) => {
       this.ngZone.run(() => {
         const wasDisconnected = !this.hdmiConnected;
-        // For the primary TV display: connected if HDMI-0 is active
+        // For the primary TV display: connected if HDMI-0 OR HDMI-1 is active
+        // (auto-swap/failover handles routing to the correct port)
         // For secondary: connected if HDMI-1 is active
         if (this.displayType === 'tv') {
-          this.hdmiConnected = data.hdmi0;
+          this.hdmiConnected = data.hdmi0 || data.hdmi1;
         } else {
           this.hdmiConnected = data.hdmi1;
         }
@@ -538,11 +542,11 @@ export class TvComponent implements OnInit, OnDestroy {
         // E-23 US-23.5.3: Track wrong port status
         this.wrongPort = !!data.wrongPort;
 
-        // E-23 US-23.3.4: Capture HDMI detection timestamp for boot-to-video metric
-        // Set on first HDMI status received while connected (not only on transition).
-        // hdmiConnected defaults to true so wasDisconnected is false at boot — without
-        // this, hdmiDetectedAt stays 0 and boot-to-video always reports 0ms.
-        if (this.hdmiConnected && !this.bootMetrics.hdmiDetectedAt) {
+        // E-23 US-23.3.4: Refine boot-to-video metric with actual HDMI detection time.
+        // hdmiDetectedAt defaults to component init time (Date.now()) as fallback.
+        // On first hdmi-status event while connected, refine with the actual time.
+        // This only updates once (emitted flag prevents overwrite after first video).
+        if (this.hdmiConnected && !this.bootMetrics.emitted) {
           this.bootMetrics.hdmiDetectedAt = Date.now();
           console.log('[TV] Boot metric: HDMI detected at', this.bootMetrics.hdmiDetectedAt);
         }

@@ -163,11 +163,16 @@ class HdmiService {
       cec.tv_power = null;
     }
 
-    // Affiner le type d'écran en croisant CEC + EDID
+    // Affiner le type d'écran en croisant CEC + EDID + manufacturer
     // display.connected est fiable : basé sur EDID ou DRM status file
     // Note : cec.tv_connected n'est PAS fiable (faux positif sans écran sur Pi 5)
     if (display.display_type === 'unknown') {
-      if (cec.devices_found > 0) {
+      // Les fabricants exclusivement moniteur PC ne doivent JAMAIS être classés "tv",
+      // même si CEC détecte des devices (faux positif Pi 5 sur certains moniteurs HDMI).
+      const monitorOnlyMfg = /^(LEN|DEL|ACI|HWP|BNQ|ACR|EIZ|NEC|AOC)$/;
+      if (monitorOnlyMfg.test((display.manufacturer || '').toUpperCase())) {
+        display.display_type = 'monitor';
+      } else if (cec.devices_found > 0) {
         display.display_type = 'tv';
       } else if (cec.cec_available && cec.devices_found === 0 && display.connected) {
         display.display_type = 'monitor';

@@ -410,41 +410,16 @@ import { QrCodeGeneratorComponent } from '../../../../shared/components/qr-code-
         </div>
       </div>
 
-      <!-- Ecran secondaire (HDMI 1) -->
+      <!-- Ecran secondaire (HDMI 1) — detection automatique -->
       <div class="settings-card">
         <div class="settings-header">
           <span class="settings-icon">🖥️</span>
           <h4>Ecran secondaire (HDMI 1)</h4>
         </div>
         <p class="settings-desc">
-          Active la sortie HDMI 1 pour un ecran secondaire. Le Pi affichera des contenus differencies sur l'ecran principal (HDMI 0) et l'ecran secondaire (HDMI 1) : panneau LED, TV tribunes, ecran geant, etc.
+          Le mode double ecran est automatique — le boitier detecte les ecrans branches et adapte l'affichage.
+          Branchez un second ecran sur HDMI 1 (panneau LED, TV tribunes, ecran geant) et le Pi l'activera automatiquement avec la resolution native detectee.
         </p>
-        <div class="premium-toggle">
-          <label class="toggle-container">
-            <input
-              type="checkbox"
-              [checked]="site?.secondary_display_enabled"
-              (change)="toggleSecondaryDisplayEnabled($event)"
-              [disabled]="savingSecondaryDisplayEnabled"
-            />
-            <span class="toggle-slider"></span>
-            <span class="toggle-label">Ecran secondaire active</span>
-          </label>
-        </div>
-        <div class="settings-grid" *ngIf="site?.secondary_display_enabled" style="margin-top: 1rem;">
-          <div class="form-group">
-            <label>Resolution de l'ecran secondaire</label>
-            <select [(ngModel)]="secondaryDisplayResolution" class="form-input" (ngModelChange)="saveSecondaryDisplayResolution()">
-              <option [ngValue]="null">-- Non definie --</option>
-              <option value="1920x384">Bandeau LED 1920x384</option>
-              <option value="1280x384">Bandeau LED 1280x384</option>
-              <option value="768x1024">Portrait 768x1024</option>
-              <option value="1280x720">720p (1280x720)</option>
-              <option value="1920x1080">1080p (1920x1080)</option>
-            </select>
-            <small class="form-hint">Resolution native de l'ecran secondaire (panneau LED, TV, moniteur)</small>
-          </div>
-        </div>
       </div>
 
       <!-- Mode PC (E-23 US-23.2.2) -->
@@ -1679,11 +1654,6 @@ export class SiteSettingsTabComponent implements OnInit, OnChanges {
   showCurrentPassword: boolean = false;
   fetchingHotspotConfig: boolean = false;
 
-  // Secondary Display (E-22)
-  savingSecondaryDisplayEnabled: boolean = false;
-  secondaryDisplayResolution: string | null = null;
-  savingSecondaryDisplayResolution: boolean = false;
-
   // PC Mode (E-23)
   savingPcModeEnabled: boolean = false;
 
@@ -1758,7 +1728,6 @@ export class SiteSettingsTabComponent implements OnInit, OnChanges {
     if (this.site) {
       this.clubName = this.site.club_name || '';
       this.avgSpectators = this.site.avg_spectators ?? null;
-      this.secondaryDisplayResolution = this.site.secondary_display_resolution ?? null;
       // P5: Branding
       this.logoUrl = this.site.logo_url || '';
       this.colorPrimary = this.site.color_primary || '';
@@ -2116,55 +2085,6 @@ export class SiteSettingsTabComponent implements OnInit, OnChanges {
       error: (error) => {
         this.savingLiveScore = false;
         checkbox.checked = !newValue;
-        const message = ErrorExtractor.getMessage(error);
-        this.notificationService.error(`Erreur: ${message}`);
-      }
-    });
-  }
-
-  toggleSecondaryDisplayEnabled(event: Event): void {
-    const checkbox = event.target as HTMLInputElement;
-    const newValue = checkbox.checked;
-
-    this.savingSecondaryDisplayEnabled = true;
-    this.sitesService.updateSite(this.siteId, { secondary_display_enabled: newValue }).subscribe({
-      next: (updatedSite) => {
-        this.sitesService.sendCommand(this.siteId, 'update_config', {
-          neoProContent: { secondaryDisplayEnabled: newValue },
-          mode: 'merge'
-        }).subscribe({
-          next: () => {
-            this.savingSecondaryDisplayEnabled = false;
-            this.notificationService.success(
-              newValue ? 'Ecran secondaire active !' : 'Ecran secondaire desactive !'
-            );
-            this.siteUpdated.emit(updatedSite);
-          },
-          error: () => {
-            this.savingSecondaryDisplayEnabled = false;
-            this.notificationService.warning('Option sauvegardee mais erreur lors du deploiement');
-          }
-        });
-      },
-      error: (error) => {
-        this.savingSecondaryDisplayEnabled = false;
-        checkbox.checked = !newValue;
-        const message = ErrorExtractor.getMessage(error);
-        this.notificationService.error(`Erreur: ${message}`);
-      }
-    });
-  }
-
-  saveSecondaryDisplayResolution(): void {
-    this.savingSecondaryDisplayResolution = true;
-    this.sitesService.updateSite(this.siteId, { secondary_display_resolution: this.secondaryDisplayResolution }).subscribe({
-      next: (updatedSite) => {
-        this.savingSecondaryDisplayResolution = false;
-        this.notificationService.success('Resolution ecran secondaire sauvegardee');
-        this.siteUpdated.emit(updatedSite);
-      },
-      error: (error) => {
-        this.savingSecondaryDisplayResolution = false;
         const message = ErrorExtractor.getMessage(error);
         this.notificationService.error(`Erreur: ${message}`);
       }

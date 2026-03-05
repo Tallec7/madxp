@@ -4260,7 +4260,9 @@ Le Pi supporte un second écran (HDMI-A-2) affichant la route `/secondary` via u
 
 ### Symptôme
 
-Le dashboard indique `secondaryDisplayEnabled: true`, mais le second écran reste noir ou ne montre rien. Un seul écran (le principal `/tv`) est visible.
+Le second écran (HDMI-1) reste noir ou ne montre rien. Un seul écran (le principal `/tv`) est visible.
+
+> **Note v3.98.7+** : Le toggle `secondaryDisplayEnabled` a été supprimé du dashboard. Le Pi détecte désormais le dual-display par hardware (DRM sysfs + xrandr). Si vous êtes sur une version antérieure, les anciennes causes liées au toggle config sont documentées ci-dessous.
 
 ### Causes connues et corrections
 
@@ -4314,18 +4316,17 @@ ps aux | grep chromium | grep -v grep
 # Attendu: 2 groupes de processus (un avec /tv, un avec /secondary)
 ```
 
-#### 4. Pas de CONFIG_FILE ou mauvais chemin
+#### 4. ~~Pas de CONFIG_FILE ou mauvais chemin~~ (obsolète v3.98.7+)
 
-**Cause :** Le watchdog lisait `secondaryDisplayEnabled` depuis un chemin incorrect.
+**Historique :** Le watchdog lisait `secondaryDisplayEnabled` depuis la config. Depuis v3.98.7, le watchdog ignore ce flag et détecte le dual-display par hardware (DRM sysfs + xrandr). Ce problème ne peut plus se produire.
 
-**Correction (v3.82.2) :** Le chemin doit être `/home/pi/neopro/webapp/configuration.json`.
-
-**Diagnostic :**
+**Diagnostic (v3.98.7+) :**
 
 ```bash
-# Vérifier que la config existe et contient la clé
-cat /home/pi/neopro/webapp/configuration.json | python3 -c "import sys,json; print(json.load(sys.stdin).get('secondaryDisplayEnabled', 'MISSING'))"
-# Attendu: true
+# Vérifier la détection hardware directement
+cat /sys/class/drm/card1-HDMI-A-1/status  # HDMI-0
+cat /sys/class/drm/card1-HDMI-A-2/status  # HDMI-1
+# Les deux doivent afficher "connected" pour le dual-display
 ```
 
 ### Monitoring intégré
@@ -4334,7 +4335,7 @@ Le watchdog écrit l'état du second écran dans `/home/pi/neopro/data/kiosk-sta
 
 ```json
 {
-  "secondaryDisplayEnabled": true,
+  "dualDisplayActive": true,
   "secondaryChromiumAlive": true,
   "hdmi1Status": "connected"
 }
@@ -4344,7 +4345,7 @@ Le watchdog écrit l'état du second écran dans `/home/pi/neopro/data/kiosk-sta
 
 ```bash
 cat /home/pi/neopro/data/kiosk-status.json | python3 -m json.tool
-# Vérifier secondaryChromiumAlive=true et hdmi1Status="connected"
+# Vérifier dualDisplayActive=true et hdmi1Status="connected"
 ```
 
 ### Smoke tests de régression
@@ -4358,7 +4359,9 @@ cat /home/pi/neopro/data/kiosk-status.json | python3 -m json.tool
 5. Détection par offset de position (pas par mot-clé "primary")
 6. `--user-data-dir` séparé pour éviter les conflits de session
 7. `--window-position` et `--window-size` pour le positionnement
-8. Lecture de `secondaryDisplayEnabled` depuis la config
+8. ~~Lecture de `secondaryDisplayEnabled` depuis la config~~ (supprimé v3.98.7 — détection hardware)
+9. `tv.component hdmiConnected must use hdmi0 OR hdmi1` (v3.98.7+)
+10. `deployment.service must NOT gate secondary variant on secondary_display_enabled` (v3.98.7+)
 
 ### Fix manuel (Pi non encore mis à jour)
 
@@ -4847,7 +4850,7 @@ sudo systemctl restart neopro-kiosk
 
 ---
 
-## Faux failover au boot — Pi single-display avec secondaryDisplayEnabled=true (v3.98.6)
+## Faux failover au boot — Pi single-display (v3.98.6, résolu définitivement v3.98.7)
 
 Le Pi déclenche un failover HDMI au boot alors qu'un seul écran est branché. Le bureau LXDE est visible 3-5s pendant le kill/restart de Chromium.
 
@@ -4855,7 +4858,7 @@ Le Pi déclenche un failover HDMI au boot alors qu'un seul écran est branché. 
 
 - Bureau LXDE visible brièvement (~3-5s) à chaque boot
 - Logs contiennent `FAILOVER: HDMI-0 perdu` dans les 15-20 premières secondes
-- `secondaryDisplayEnabled: true` dans la config mais un seul HDMI branché
+- Un seul HDMI branché (historiquement lié à `secondaryDisplayEnabled: true` dans la config, supprimé en v3.98.7)
 - `xrandr --query` ne montre qu'un seul port (ex: HDMI-A-2 connected, pas de HDMI-A-1)
 
 ### Cause racine (corrigée en v3.98.6)

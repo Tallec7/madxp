@@ -1,3 +1,46 @@
+## [3.98.7](https://github.com/Tallec7/neopro/compare/v3.98.6...v3.98.7) (2026-03-05)
+
+### Breaking Changes
+
+- **dual-display:** `secondaryDisplayEnabled` toggle and `secondaryDisplayResolution` dropdown
+  removed from the dashboard. The Pi now detects dual-display 100% by hardware (DRM sysfs + xrandr).
+  DB columns kept as DEPRECATED for backward compatibility.
+
+### Bug Fixes
+
+- **tv.component:** "En attente d'écran" when display is on HDMI-1 only — `hdmiConnected` now uses
+  `data.hdmi0 || data.hdmi1` instead of `data.hdmi0` alone. The watchdog handles auto-swap.
+- **deployment:** secondary variant deployment no longer gated on `secondary_display_enabled` site
+  flag — variants are always deployed, the Pi decides locally based on physical HDMI presence.
+
+### Refactors
+
+- **watchdog:** remove `read_secondary_display_enabled()` and `SECONDARY_DISPLAY_ENABLED` — dual-display
+  detection is now purely hardware-driven via `DUAL_DISPLAY_ACTIVE` (set after `setup_secondary_xrandr`
+  succeeds).
+- **config-merge:** `secondaryDisplayEnabled`, `ledEnabled`, `secondaryDisplayResolution`, `ledResolution`
+  are now deleted from `configuration.json` when received from central (cleanup, not merge).
+- **dashboard:** toggle "Ecran secondaire activé" and dropdown résolution removed from site-settings.
+  Info text explains auto-detection. `remote.controller.ts` hardcodes `secondaryDisplayEnabled: true`
+  for backward compat with older cloud-remote clients.
+- **remote badges:** `📺 2nd` badge no longer conditioned on `secondaryDisplayEnabled` — shown whenever
+  a secondary variant exists.
+
+### Tests
+
+- **smoke:** 2 new regression guards:
+  - `tv.component hdmiConnected must use hdmi0 OR hdmi1 for primary display`
+  - `deployment.service must NOT gate secondary variant on secondary_display_enabled`
+- **config-merge:** replaced merge/migrate tests with cleanup behavior tests (delete old keys)
+- **smoke:** removed stale `secondaryDisplayEnabled` config-merge smoke tests
+
+### Documentation
+
+- **CLAUDE.md:** 2 new "NE JAMAIS FAIRE" rules — never condition dual-display on config flag,
+  never use `data.hdmi0` alone in tv.component
+- **ADR-029:** updated with toggle removal decision (2026-03-05)
+- **REFERENCE.md, ARCHITECTURE.md, SYNC_ARCHITECTURE.md:** updated for hardware-driven detection
+
 ## [3.98.6](https://github.com/Tallec7/neopro/compare/v3.98.5...v3.98.6) (2026-03-05)
 
 ### Bug Fixes

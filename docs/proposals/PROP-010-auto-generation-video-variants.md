@@ -30,7 +30,7 @@ Opérateur upload vidéo TV (16:9)
    [Opt-in] Bouton "Générer variante secondary"
         ↓
    Job async FFmpeg (central-server)
-        ├─ Lit résolution cible depuis config site (secondaryDisplayResolution)
+        ├─ Lit résolution cible depuis EDID rapporté par le Pi (secondaryDisplayResolution supprimé v3.98.7)
         ├─ Crop + resize intelligent
         ├─ Encode H.264 optimisé
         └─ Upload FTP → table video_variants
@@ -138,7 +138,7 @@ POST /api/content/videos/:videoId/generate-variant
 Body: {
   "display_type": "secondary",
   "strategy": "center_crop",        // center_crop | top_crop | bottom_crop | resize_pad
-  "target_width": 1920,             // Optionnel, défaut = site.secondaryDisplayResolution
+  "target_width": 1920,             // Optionnel, défaut = EDID auto-détecté (secondaryDisplayResolution supprimé v3.98.7)
   "target_height": 384              // Optionnel
 }
 
@@ -170,7 +170,7 @@ Payload: {
 ### Scénario opérateur
 
 1. Upload vidéo TV → upload normal (existant)
-2. Si `secondaryDisplayEnabled` sur au moins 1 site assigné :
+2. Si au moins 1 site a un écran secondaire détecté (hardware) ou des vidéos avec variantes :
    - Afficher bouton **"Générer variante écran secondaire"** dans le panel variantes
    - Preview de la zone de crop (overlay rectangle sur la vidéo)
 3. Click → spinner "Génération en cours..."

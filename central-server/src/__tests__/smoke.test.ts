@@ -2587,9 +2587,7 @@ describe('OTA reboot race condition guards', () => {
 
 // ----------------------------------------------------------
 // E-22 config-merge guard: secondaryDisplayEnabled must be
-// explicitly handled in config-merge.js. Without this, the
-// key is silently dropped during merge and the secondary
-// display never activates on deployed Pi.
+// cleaned up (Pi detects dual-display by hardware).
 // ----------------------------------------------------------
 describe('E-22 config-merge secondary display guard', () => {
   const repoRoot = path.resolve(__dirname, '..', '..', '..');
@@ -2600,35 +2598,23 @@ describe('E-22 config-merge secondary display guard', () => {
     content = fs.readFileSync(configMergePath, 'utf8');
   });
 
-  it('config-merge.js must handle secondaryDisplayEnabled explicitly', () => {
+  it('config-merge.js must clean up secondaryDisplayEnabled (not merge it)', () => {
     expect({
-      handlesSecondaryDisplayEnabled: /neoProContent\.secondaryDisplayEnabled/.test(content),
-    }).toEqual({
-      handlesSecondaryDisplayEnabled: true,
-    });
-  });
-
-  it('config-merge.js must handle secondaryDisplayResolution explicitly', () => {
-    expect({
-      handlesSecondaryDisplayResolution: /neoProContent\.secondaryDisplayResolution/.test(content),
-    }).toEqual({
-      handlesSecondaryDisplayResolution: true,
-    });
-  });
-
-  it('config-merge.js must migrate legacy ledEnabled to secondaryDisplayEnabled', () => {
-    expect({
-      migratesLedEnabled: /neoProContent\.ledEnabled/.test(content),
-    }).toEqual({
-      migratesLedEnabled: true,
-    });
-  });
-
-  it('config-merge.js must clean up old ledEnabled key during migration', () => {
-    expect({
+      deletesSecondaryDisplayEnabled: /delete result\.secondaryDisplayEnabled/.test(content),
       deletesLedEnabled: /delete result\.ledEnabled/.test(content),
     }).toEqual({
+      deletesSecondaryDisplayEnabled: true,
       deletesLedEnabled: true,
+    });
+  });
+
+  it('config-merge.js must clean up secondaryDisplayResolution', () => {
+    expect({
+      deletesSecondaryDisplayResolution: /delete result\.secondaryDisplayResolution/.test(content),
+      deletesLedResolution: /delete result\.ledResolution/.test(content),
+    }).toEqual({
+      deletesSecondaryDisplayResolution: true,
+      deletesLedResolution: true,
     });
   });
 });
@@ -2765,8 +2751,7 @@ describe('E-22 video variant API routes guard', () => {
 
 // ----------------------------------------------------------
 // E-22 watchdog secondary display guard: kiosk-watchdog.sh
-// must read secondaryDisplayEnabled from config (not just
-// ledEnabled) to properly manage the 2nd Chromium instance.
+// watchdog must NOT use config flags — hardware detection only.
 // ----------------------------------------------------------
 describe('E-22 watchdog secondary display guard', () => {
   const repoRoot = path.resolve(__dirname, '..', '..', '..');
@@ -2777,11 +2762,24 @@ describe('E-22 watchdog secondary display guard', () => {
     content = fs.readFileSync(watchdogPath, 'utf8');
   });
 
-  it('watchdog must read secondaryDisplayEnabled from config', () => {
+  it('watchdog must NOT read secondaryDisplayEnabled from config (hardware-driven)', () => {
     expect({
-      readsSecondaryDisplayEnabled: /secondaryDisplayEnabled/.test(content),
+      noReadFunction: !/read_secondary_display_enabled/.test(content),
+      noConfigVariable: !/SECONDARY_DISPLAY_ENABLED/.test(content),
     }).toEqual({
-      readsSecondaryDisplayEnabled: true,
+      noReadFunction: true,
+      noConfigVariable: true,
+    });
+  });
+
+  it('watchdog detect_wrong_port must use DUAL_DISPLAY_ACTIVE not config flag', () => {
+    const detectWrongPortBlock = content.match(/detect_wrong_port\(\)[\s\S]*?^}/m)?.[0] || '';
+    expect({
+      usesDualDisplayActive: /DUAL_DISPLAY_ACTIVE/.test(detectWrongPortBlock),
+      noSecondaryDisplayEnabled: !/SECONDARY_DISPLAY_ENABLED/.test(detectWrongPortBlock),
+    }).toEqual({
+      usesDualDisplayActive: true,
+      noSecondaryDisplayEnabled: true,
     });
   });
 
@@ -3236,6 +3234,22 @@ describe('E-23 HDMI monitoring and alerts wiring', () => {
     }).toEqual({
       hasHdmiDetectedAt: true,
       noWasDisconnectedGuard: true,
+    });
+  });
+
+  // tv.component primary display must accept HDMI-0 OR HDMI-1 (auto-swap/failover)
+  // When screen is on HDMI-1 only, hdmiConnected must still be true.
+  it('tv.component.ts hdmiConnected must use hdmi0 OR hdmi1 for primary display', () => {
+    const content = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/src/app/components/tv/tv.component.ts'),
+      'utf8'
+    );
+    expect({
+      usesHdmi0OrHdmi1: /hdmiConnected\s*=\s*data\.hdmi0\s*\|\|\s*data\.hdmi1/.test(content),
+      noHdmi0Only: !/hdmiConnected\s*=\s*data\.hdmi0\s*;/.test(content),
+    }).toEqual({
+      usesHdmi0OrHdmi1: true,
+      noHdmi0Only: true,
     });
   });
 });
@@ -4871,6 +4885,18 @@ describe('Deployment secondary variant persistence guard', () => {
       hasColumn: true,
     });
   });
+
+  it('deployment.service must NOT gate secondary variant lookup on secondary_display_enabled', () => {
+    expect({
+      noSiteQuery: !/query\(.*secondary_display_enabled/.test(serviceContent),
+      noSiteFlag: !/siteSecondaryEnabled/.test(serviceContent),
+      alwaysLooksUp: /findByVideoAndDisplay\(videoId,\s*'secondary'\)/.test(serviceContent),
+    }).toEqual({
+      noSiteQuery: true,
+      noSiteFlag: true,
+      alwaysLooksUp: true,
+    });
+  });
 });
 
 // ── Angular build config guards ─────────────────────────────────────────
@@ -4958,14 +4984,12 @@ describe('Secondary variant badge wiring guards', () => {
     videoInterfaceContent = fs.readFileSync(videoInterfacePath, 'utf8');
   });
 
-  it('getSiteLocalContent must return secondaryVariantVideoIds and secondaryDisplayEnabled', () => {
+  it('getSiteLocalContent must return secondaryVariantVideoIds', () => {
     expect({
       returnsVariantIds: /secondaryVariantVideoIds/.test(controllerContent),
-      returnsDisplayEnabled: /secondaryDisplayEnabled/.test(controllerContent),
       callsVariantRepo: /findSecondaryVariantsForVideos/.test(controllerContent),
     }).toEqual({
       returnsVariantIds: true,
-      returnsDisplayEnabled: true,
       callsVariantRepo: true,
     });
   });
@@ -4982,13 +5006,15 @@ describe('Secondary variant badge wiring guards', () => {
     });
   });
 
-  it('remote template must have video-secondary-badge for variant indicator', () => {
+  it('remote template must have video-secondary-badge for variant indicator (no config gate)', () => {
     expect({
       hasBadge: /video-secondary-badge/.test(remoteTemplateContent),
       checksVariants: /video\.variants\?\.secondary/.test(remoteTemplateContent),
+      noConfigGate: !/secondaryDisplayEnabled/.test(remoteTemplateContent),
     }).toEqual({
       hasBadge: true,
       checksVariants: true,
+      noConfigGate: true,
     });
   });
 
@@ -5064,11 +5090,11 @@ describe('Secondary video deployment UI guards', () => {
     expect({
       hasBadgeClass: /video-secondary-badge/.test(cloudRemoteHtml),
       checksHasSecondary: /hasSecondaryVariant/.test(cloudRemoteHtml),
-      checksDisplayEnabled: /secondaryDisplayEnabled/.test(cloudRemoteHtml),
+      noDisplayEnabledGate: !/secondaryDisplayEnabled/.test(cloudRemoteHtml),
     }).toEqual({
       hasBadgeClass: true,
       checksHasSecondary: true,
-      checksDisplayEnabled: true,
+      noDisplayEnabledGate: true,
     });
   });
 
@@ -5076,12 +5102,12 @@ describe('Secondary video deployment UI guards', () => {
     expect({
       hasMarkMethod: /markSecondaryVariants/.test(cloudRemoteTs),
       hasVariantPaths: /secondaryVariantPaths/.test(cloudRemoteTs),
-      hasDisplayEnabled: /secondaryDisplayEnabled/.test(cloudRemoteTs),
+      noDisplayEnabledProperty: !/public secondaryDisplayEnabled/.test(cloudRemoteTs),
       hasVideoFlag: /hasSecondaryVariant/.test(cloudRemoteTs),
     }).toEqual({
       hasMarkMethod: true,
       hasVariantPaths: true,
-      hasDisplayEnabled: true,
+      noDisplayEnabledProperty: true,
       hasVideoFlag: true,
     });
   });
@@ -5090,24 +5116,22 @@ describe('Secondary video deployment UI guards', () => {
     expect(/\.video-secondary-badge/.test(cloudRemoteScss)).toBe(true);
   });
 
-  it('remote controller must expose secondaryDisplayEnabled and secondaryVariantPaths', () => {
+  it('remote controller must always enrich secondary variants (no site flag gate)', () => {
     expect({
-      exportsDisplayEnabled: /secondaryDisplayEnabled/.test(remoteControllerContent),
       exportsVariantPaths: /secondaryVariantPaths/.test(remoteControllerContent),
       importsVariantRepo: /videoVariantRepository/.test(remoteControllerContent),
+      noSiteGate: !/if \(site\.secondary_display_enabled\)/.test(remoteControllerContent),
     }).toEqual({
-      exportsDisplayEnabled: true,
       exportsVariantPaths: true,
       importsVariantRepo: true,
+      noSiteGate: true,
     });
   });
 
-  it('RemoteState interface must include secondaryDisplayEnabled and secondaryVariantPaths', () => {
+  it('RemoteState interface must include secondaryVariantPaths', () => {
     expect({
-      hasDisplayEnabled: /secondaryDisplayEnabled/.test(remoteServiceContent),
       hasVariantPaths: /secondaryVariantPaths/.test(remoteServiceContent),
     }).toEqual({
-      hasDisplayEnabled: true,
       hasVariantPaths: true,
     });
   });
@@ -5666,9 +5690,9 @@ describe('Resolution detection cascade', () => {
 
   // Bug fix v3.98.5: DUAL_DISPLAY_ACTIVE must only be set AFTER setup_secondary_xrandr succeeds.
   // Before this fix, DUAL_DISPLAY_ACTIVE was set to true BEFORE setup_secondary_xrandr,
-  // which swallowed failures with || true. When a Pi has secondaryDisplayEnabled=true but
-  // only one HDMI port active (e.g., only HDMI-A-2 visible in xrandr), setup_secondary_xrandr
-  // fails → but DUAL_DISPLAY_ACTIVE stays true → main loop triggers false failover → kills
+  // which swallowed failures with || true. When a Pi has only one HDMI port active
+  // (e.g., only HDMI-A-2 visible in xrandr), setup_secondary_xrandr fails → but
+  // DUAL_DISPLAY_ACTIVE stays true → main loop triggers false failover → kills
   // and restarts Chromium → LXDE desktop visible during transition.
   it('DUAL_DISPLAY_ACTIVE must be set AFTER setup_secondary_xrandr succeeds (not before)', () => {
     const lines = watchdog.split('\n');

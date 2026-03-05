@@ -161,32 +161,30 @@ export async function getRemoteState(req: Request, res: Response) {
       };
       response.localVideos = (localConfig._localVideos as unknown[]) || [];
 
-      // Secondary display info for cloud remote badges
-      response.secondaryDisplayEnabled = site.secondary_display_enabled ?? false;
-      if (site.secondary_display_enabled) {
-        try {
-          // Build videoId → path map from _localVideos, then resolve secondary variants
-          const localVideos = (localConfig._localVideos as Array<{ videoId?: string; path?: string }>) || [];
-          const videoIdToPath = new Map<string, string>();
-          for (const v of localVideos) {
-            if (v.videoId && v.path) {
-              videoIdToPath.set(v.videoId, v.path);
-            }
+      // Secondary display: always enrich variants (Pi detects dual-display by hardware)
+      response.secondaryDisplayEnabled = true; // compat cloud-remote
+      try {
+        // Build videoId → path map from _localVideos, then resolve secondary variants
+        const localVideos = (localConfig._localVideos as Array<{ videoId?: string; path?: string }>) || [];
+        const videoIdToPath = new Map<string, string>();
+        for (const v of localVideos) {
+          if (v.videoId && v.path) {
+            videoIdToPath.set(v.videoId, v.path);
           }
-          const videoIds = [...videoIdToPath.keys()];
-          if (videoIds.length > 0) {
-            const secondaryVariants = await videoVariantRepository.findSecondaryVariantsForVideos(videoIds);
-            // Return paths (used by the cloud remote) instead of video IDs
-            response.secondaryVariantPaths = secondaryVariants
-              .map(v => videoIdToPath.get(v.video_id))
-              .filter((p): p is string => !!p);
-          } else {
-            response.secondaryVariantPaths = [];
-          }
-        } catch {
-          // Non-blocking: if variant table doesn't exist yet
+        }
+        const videoIds = [...videoIdToPath.keys()];
+        if (videoIds.length > 0) {
+          const secondaryVariants = await videoVariantRepository.findSecondaryVariantsForVideos(videoIds);
+          // Return paths (used by the cloud remote) instead of video IDs
+          response.secondaryVariantPaths = secondaryVariants
+            .map(v => videoIdToPath.get(v.video_id))
+            .filter((p): p is string => !!p);
+        } else {
           response.secondaryVariantPaths = [];
         }
+      } catch {
+        // Non-blocking: if variant table doesn't exist yet
+        response.secondaryVariantPaths = [];
       }
     }
 

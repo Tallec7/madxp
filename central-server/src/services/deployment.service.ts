@@ -322,7 +322,7 @@ class DeploymentService {
       // Non-bloquant : si la table n'existe pas encore, on continue sans
     }
 
-    // Chercher la variante secondaire si le site a secondary_display_enabled
+    // Chercher la variante secondaire (le Pi détecte le dual-display par hardware)
     let secondaryVariant: {
       filename: string;
       storagePath: string;
@@ -334,25 +334,18 @@ class DeploymentService {
     } | null = null;
 
     try {
-      const siteResult = await query(
-        `SELECT secondary_display_enabled FROM sites WHERE id = $1`,
-        [siteId]
-      );
-      const siteSecondaryEnabled = siteResult.rows[0]?.secondary_display_enabled === true;
-
-      if (siteSecondaryEnabled) {
-        const variant = await videoVariantRepository.findByVideoAndDisplay(videoId, 'secondary');
-        if (variant) {
-          secondaryVariant = {
-            filename: variant.filename,
-            storagePath: variant.storage_path,
-            checksum: variant.checksum,
-            videoUrl: getVideoUrl(variant.storage_path),
-            width: variant.width,
-            height: variant.height,
-            duration: variant.duration ? parseFloat(String(variant.duration)) : null,
-          };
-        }
+      // Toujours chercher la variante secondaire — le Pi détecte le dual-display par hardware
+      const variant = await videoVariantRepository.findByVideoAndDisplay(videoId, 'secondary');
+      if (variant) {
+        secondaryVariant = {
+          filename: variant.filename,
+          storagePath: variant.storage_path,
+          checksum: variant.checksum,
+          videoUrl: getVideoUrl(variant.storage_path),
+          width: variant.width,
+          height: variant.height,
+          duration: variant.duration ? parseFloat(String(variant.duration)) : null,
+        };
       }
     } catch (secondaryError) {
       // Non-bloquant : si la table n'existe pas encore, on continue sans variante secondaire

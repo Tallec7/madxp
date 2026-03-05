@@ -1,14 +1,14 @@
 # ADR-029 : Dual HDMI — Contenus Différenciés Écran Principal + Secondaire
 
-| Champ      | Valeur                                                            |
-| ---------- | ----------------------------------------------------------------- |
-| Statut     | Accepté                                                           |
-| Date       | 2026-02-21                                                        |
-| Mis à jour | 2026-02-24 (renommage LED → Secondary Display, fix config-merge)  |
-| Catégorie  | Edge / Display                                                    |
-| Composant  | `raspberry`, `central-server`, `central-dashboard`                |
-| Epic SAFe  | [E-22](../safe/FEATURES.md#e-22--contenus-différenciés-tv--led)   |
-| Proposal   | [PROP-002](../proposals/PROP-002-tv-led-dual-output.md) (détails) |
+| Champ      | Valeur                                                                            |
+| ---------- | --------------------------------------------------------------------------------- |
+| Statut     | Accepté                                                                           |
+| Date       | 2026-02-21                                                                        |
+| Mis à jour | 2026-03-05 (suppression toggle secondaryDisplayEnabled — Pi 100% hardware-driven) |
+| Catégorie  | Edge / Display                                                                    |
+| Composant  | `raspberry`, `central-server`, `central-dashboard`                                |
+| Epic SAFe  | [E-22](../safe/FEATURES.md#e-22--contenus-différenciés-tv--led)                   |
+| Proposal   | [PROP-002](../proposals/PROP-002-tv-led-dual-output.md) (détails)                 |
 
 ## Contexte
 
@@ -20,11 +20,14 @@ Des clubs sportifs disposent d'un **écran principal** (TV, écran géant) et d'
 > `rename-led-to-secondary-display.sql`. Le watchdog et le sync-agent gèrent la
 > rétrocompatibilité avec l'ancien format (`ledEnabled` → `secondaryDisplayEnabled`).
 
-> **Bug critique corrigé (2026-02-24)** : `config-merge.js` ne gérait pas explicitement
-> `secondaryDisplayEnabled` / `secondaryDisplayResolution`. Ces clés étaient silencieusement
-> perdues lors du merge, empêchant l'activation de l'écran secondaire via le dashboard sur
-> les Pi déployés. Fix : ajout du handling explicite + migration automatique des anciennes
-> clés `ledEnabled` / `ledResolution`. Smoke test ajouté pour empêcher la régression.
+> **Toggle supprimé (2026-03-05)** : Le toggle `secondaryDisplayEnabled` du dashboard et le
+> dropdown `secondaryDisplayResolution` ont été supprimés. Le Pi détecte désormais le
+> dual-display à 100% par hardware (DRM sysfs + xrandr). Le watchdog utilise
+> `DUAL_DISPLAY_ACTIVE` (positionné après succès de `setup_secondary_xrandr`) au lieu
+> d'un flag config. Les colonnes DB restent comme DEPRECATED pour compat.
+> `config-merge.js` supprime les anciennes clés si reçues du central.
+> tv.component.ts utilise `data.hdmi0 || data.hdmi1` pour le statut primaire.
+> Les variants secondaires sont toujours déployées (plus de gate dans deployment.service).
 
 Aujourd'hui le Pi n'utilise qu'un seul port HDMI (HDMI 0). Il n'existe pas de concept de type d'écran dans le modèle de données, ni de variantes vidéo par format.
 
@@ -43,7 +46,7 @@ Aujourd'hui le Pi n'utilise qu'un seul port HDMI (HDMI 0). Il n'existe pas de co
 
 - `hdmi_force_hotplug:0=1` (TV, toujours forcé)
 - **HDMI 1 NON forcé** par défaut — détection via `/sys/class/drm/card1-HDMI-A-2/status`
-- Watchdog vérifie toutes les 30s : si `connected` et `secondaryDisplayEnabled=true`, lance le kiosk secondaire
+- Watchdog vérifie toutes les 30s : si les deux HDMI `connected`, lance le kiosk secondaire (100% hardware-driven, plus de flag config)
 - Fallback par site dans le dashboard : réactiver `hdmi_force_hotplug:1=1` si DRM échoue
 
 **Pourquoi** : `hdmi_force_hotplug:1=1` force le Pi à toujours croire qu'un écran est branché, empêchant la détection dynamique. `tvservice` n'est plus disponible sur Pi 5 (KMS natif). DRM/KMS via sysfs est le mécanisme standard.
@@ -77,6 +80,8 @@ CREATE TABLE video_variants (
   UNIQUE(video_id, display_type)
 );
 
+-- DEPRECATED: colonnes conservées pour compat, mais le Pi ignore ces flags
+-- Le dual-display est détecté par hardware (DRM sysfs + xrandr)
 ALTER TABLE sites ADD COLUMN secondary_display_enabled BOOLEAN DEFAULT false;
 ALTER TABLE sites ADD COLUMN secondary_display_resolution VARCHAR(20);
 ```
@@ -85,7 +90,7 @@ Fallback : si pas de variante secondaire, la version TV est affichée avec `obje
 
 ### 5. Pipeline de déploiement conditionnel
 
-Le `content-deployment` filtre les vidéos par `display_type` selon la configuration du site. L'OTA inclut les paramètres `config.txt` pour le dual kiosk.
+Le `content-deployment` cherche toujours la variante secondaire (plus de gate `secondary_display_enabled`). Le Pi décide localement s'il utilise la variante en fonction de la présence physique d'un second écran.
 
 ## Alternatives considérées
 
@@ -115,12 +120,12 @@ Le `content-deployment` filtre les vidéos par `display_type` selon la configura
 
 ### Risques (ROAM)
 
-| Risque                             | Type     | Mitigation                                                     |
-| ---------------------------------- | -------- | -------------------------------------------------------------- |
-| GPU surchargé 2 flux               | Resolved | Pi 5 obligatoire, vidéos 1080p max, monitoring                 |
-| DRM/KMS instable sur Pi 5          | Accepted | Fallback `hdmi_force_hotplug:1=1` par site                     |
-| Résolution secondaire non standard | Owned    | Config par site via dashboard (`secondary_display_resolution`) |
-| Contrôleur LED incompatible        | Accepted | Spike enabler F-22.0 valide les modèles cibles                 |
+| Risque                             | Type     | Mitigation                                                       |
+| ---------------------------------- | -------- | ---------------------------------------------------------------- |
+| GPU surchargé 2 flux               | Resolved | Pi 5 obligatoire, vidéos 1080p max, monitoring                   |
+| DRM/KMS instable sur Pi 5          | Accepted | Fallback `hdmi_force_hotplug:1=1` par site                       |
+| Résolution secondaire non standard | Resolved | EDID auto-détecte la résolution native (plus de config manuelle) |
+| Contrôleur LED incompatible        | Accepted | Spike enabler F-22.0 valide les modèles cibles                   |
 
 ## Références
 

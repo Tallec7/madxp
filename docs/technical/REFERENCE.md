@@ -1243,7 +1243,7 @@ POST   /auth/reset-password     - Reset mot de passe
 GET    /sites                   - Liste paginée, filtres: status, sport, region
 GET    /sites/:id               - Détails + config + metrics
 GET    /sites/:id/dashboard     - Endpoint agrégé (connection + metrics)
-GET    /sites/:id/local-content - Vidéos locales + stockage + secondaryVariantVideoIds + secondaryDisplayEnabled
+GET    /sites/:id/local-content - Vidéos locales + stockage + secondaryVariantVideoIds
 GET    /sites/:id/connection-status - Statut connexion temps réel
 GET    /sites/:id/metrics       - Métriques système (CPU, RAM, temp)
 POST   /sites                   - Créer site (génère api_key)
@@ -1293,7 +1293,7 @@ Le HDMI secondaire du Raspberry Pi peut alimenter un panneau LED bord de terrain
 | Table                 | Colonne(s) clé                                              | Description                                    |
 | --------------------- | ----------------------------------------------------------- | ---------------------------------------------- |
 | `video_variants`      | `display_type` (`'tv'`\|`'secondary'`)                      | Fichier vidéo alternatif par type d'écran      |
-| `sites`               | `secondary_display_enabled`, `secondary_display_resolution` | Active/configure l'écran secondaire du Pi      |
+| `sites`               | `secondary_display_enabled`, `secondary_display_resolution` | DEPRECATED — le Pi détecte par hardware        |
 | `content_deployments` | `has_secondary_variant`                                     | Flag booléen persisté au moment du déploiement |
 
 **Stockage FTP :** `variants/{videoId}/{displayType}/{filename}` (ex: `variants/837ad.../secondary/Pres.mp4`)
@@ -1302,21 +1302,20 @@ Le HDMI secondaire du Raspberry Pi peut alimenter un panneau LED bord de terrain
 
 **Flux de déploiement avec variante secondaire :**
 
-1. `deployToSite()` vérifie `site.secondary_display_enabled`
-2. Si activé, charge la variante via `videoVariantRepository.findByVideoAndType(videoId, 'secondary')`
-3. Envoie les deux vidéos (principale + secondaire) via `sendOrQueue`
-4. Persiste `has_secondary_variant = true` dans `content_deployments` (non-bloquant, try/catch)
+1. `deployToSite()` cherche toujours la variante secondaire via `videoVariantRepository.findByVideoAndDisplay(videoId, 'secondary')`
+2. Si trouvée, envoie les deux vidéos (principale + secondaire) via `sendOrQueue`
+3. Persiste `has_secondary_variant = true` dans `content_deployments` (non-bloquant, try/catch)
 
 **Indicateurs UX `📺 2nd` :**
 
 | Vue                                 | Condition d'affichage                                                                        | Source de données                                                                          |
 | ----------------------------------- | -------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
 | Historique déploiements             | `has_secondary_variant` dans `content_deployments`                                           | Table `content_deployments`                                                                |
-| Dashboard — Config catégories site  | `secondaryDisplayEnabled` + vidéo dans `secondaryVariantVideoIds`                            | API `GET /sites/:id/local-content`                                                         |
+| Dashboard — Config catégories site  | Vidéo dans `secondaryVariantVideoIds`                                                        | API `GET /sites/:id/local-content`                                                         |
 | Dashboard — Déploiements en attente | `deployment.has_secondary_variant`                                                           | API `GET /deployments`                                                                     |
 | Dashboard — Fiche site (État)       | Écran principal + secondaire : badge HDMI connecté/déconnecté + résolution réelle (v3.87.4+) | Socket.IO `hdmi_status_updated` (résolutions temps réel) + API `GET /sites/:id` (fallback) |
-| Cloud Remote — Cartes vidéo         | `secondaryDisplayEnabled` + `video.hasSecondaryVariant`                                      | API `GET /api/remote/:siteId` (`secondaryVariantPaths`)                                    |
-| Pi Remote — Cartes vidéo            | `configuration.secondaryDisplayEnabled` + `video.variants.secondary`                         | `configuration.json` (écrit par `deploy-video.js`)                                         |
+| Cloud Remote — Cartes vidéo         | `video.hasSecondaryVariant`                                                                  | API `GET /api/remote/:siteId` (`secondaryVariantPaths`)                                    |
+| Pi Remote — Cartes vidéo            | `video.variants.secondary`                                                                   | `configuration.json` (écrit par `deploy-video.js`)                                         |
 
 **Pipeline d'enrichissement des variantes secondaires :**
 
