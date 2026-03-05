@@ -416,6 +416,46 @@ class SafeNetworkOperations {
   }
 
   /**
+   * Compute optimal bgscan parameters based on current signal level.
+   * Default threshold is -70 dBm, but when signal hovers around -68/-70,
+   * bgscan oscillates between short (30s) and long (300s) intervals,
+   * triggering constant roaming scans that destabilize the RTL8192EU.
+   * Lowering the threshold to -75 for "moderate signal" environments keeps
+   * the dongle in calm mode (scan/5min) and avoids unnecessary carrier drops.
+   */
+  _computeOptimalBgscan() {
+    try {
+      const profile = networkDetector.getFullProfile();
+      const signal = profile?.currentConnection?.signal;
+
+      if (signal && signal > -72) {
+        // Signal is moderate (-68 to -60 dBm range) — lower threshold to avoid
+        // constant bgscan oscillation around the -70 dBm boundary.
+        // NLF use case: signal at -68 dBm was triggering 30s scans too often.
+        logger.info('SafeNetworkOperations: using relaxed bgscan threshold for moderate signal', {
+          signal,
+          threshold: -75,
+        });
+        return 'simple:30:-75:300';
+      }
+
+      if (signal && signal <= -75) {
+        // Very weak signal — keep aggressive threshold at -70 to find better APs fast
+        logger.info('SafeNetworkOperations: using aggressive bgscan threshold for weak signal', {
+          signal,
+          threshold: -70,
+        });
+        return 'simple:30:-70:300';
+      }
+
+      // Default: standard threshold
+      return 'simple:30:-70:300';
+    } catch {
+      return 'simple:30:-70:300';
+    }
+  }
+
+  /**
    * Configure bgscan for roaming in mesh environments
    */
   async configureBgscan(bgscan = 'simple:30:-70:300') {
@@ -655,13 +695,25 @@ class SafeNetworkOperations {
       actions.push({ action: 'remove_bssid_lock', ...result });
     }
 
-    // If mesh and no bgscan, configure it
+    // If mesh, configure optimal bgscan (or update if signal conditions changed)
     if (profile.type === PROFILE_TYPES.MESH || profile.type === PROFILE_TYPES.MESH_ISOLATED) {
       try {
+        const optimalBgscan = this._computeOptimalBgscan();
         const { stdout } = await execAsync(`grep "bgscan=" ${this.wpaSupplicantPath} 2>/dev/null || echo ""`);
-        if (!stdout.includes('bgscan=')) {
-          const result = await this.executeOperation(OPERATIONS.CONFIGURE_BGSCAN, { bgscan: 'simple:30:-70:300' });
+        const currentBgscan = stdout.trim().match(/bgscan="([^"]+)"/)?.[1] || '';
+
+        if (!currentBgscan) {
+          // No bgscan configured yet — add it
+          const result = await this.executeOperation(OPERATIONS.CONFIGURE_BGSCAN, { bgscan: optimalBgscan });
           actions.push({ action: 'configure_bgscan', ...result });
+        } else if (currentBgscan !== optimalBgscan) {
+          // bgscan exists but with different threshold — update to match current signal
+          logger.info('SafeNetworkOperations: updating bgscan threshold', {
+            current: currentBgscan,
+            optimal: optimalBgscan,
+          });
+          const result = await this.executeOperation(OPERATIONS.CONFIGURE_BGSCAN, { bgscan: optimalBgscan });
+          actions.push({ action: 'update_bgscan', ...result });
         }
       } catch (e) {
         // Ignore

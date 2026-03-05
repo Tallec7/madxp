@@ -26,15 +26,70 @@ const { safeNetworkOperations, OPERATIONS } = require('./safe-network-operations
 
 const execAsync = util.promisify(exec);
 
+/**
+ * Check if the current network profile is a mesh environment.
+ * Uses lazy require to avoid circular dependency with safe-network-operations.
+ */
+function _isMeshEnvironment() {
+  try {
+    const { networkDetector } = require('./network-detector');
+    const profile = networkDetector.getFullProfile();
+    return profile?.type === 'mesh' || profile?.type === 'mesh_isolated';
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Get the appropriate back-off delay for the current recovery phase.
+ * Progressive delays give mesh networks more time to self-heal before escalation.
+ */
+function _getBackoffDelay(attempt) {
+  const index = Math.min(attempt - 1, PHASE_BACKOFF_DELAYS.length - 1);
+  return PHASE_BACKOFF_DELAYS[Math.max(0, index)];
+}
+
+/**
+ * Get the modprobe guard threshold based on network environment.
+ * Mesh environments get a longer guard (10 min) to avoid unnecessary driver reloads
+ * when APs are simply rebooting or changing channels.
+ */
+function _getModprobeGuard() {
+  return _isMeshEnvironment() ? MIN_OUTAGE_FOR_MODPROBE_MESH : MIN_OUTAGE_FOR_MODPROBE_DEFAULT;
+}
+
+function _getUsbCycleGuard() {
+  return _isMeshEnvironment() ? MIN_OUTAGE_FOR_USB_CYCLE_MESH : MIN_OUTAGE_FOR_USB_CYCLE_DEFAULT;
+}
+
 // Configuration
 const HOTSPOT_CHECK_INTERVAL = 30 * 1000; // 30 secondes
 const INTERNET_CHECK_INTERVAL = 60 * 1000; // 60 secondes
 const CLOUD_CHECK_INTERVAL = 30 * 1000; // 30 secondes
 const MAX_RECOVERY_ATTEMPTS = 6; // Phases: gentle(1-2), medium(3), aggressive(4), modprobe(5), USB power-cycle(6)
 const RECOVERY_COOLDOWN = 5 * 60 * 1000; // 5 minutes
-const FAST_RETRY_DELAY = 10 * 1000; // 10s fast retry between recovery phases (instead of waiting 60s)
 const ROLLBACK_TIMEOUT = 30 * 1000; // 30 secondes pour rollback
 const GRACE_PERIOD_DURATION = 60 * 1000; // 60s grace period after network operations
+
+// Progressive back-off delays between recovery phases (replaces fixed 10s FAST_RETRY_DELAY).
+// In mesh environments (NLF, multi-AP), transient failures resolve within 30-60s.
+// Fixed 10s retries escalated too fast → modprobe reached in ~60s, destabilizing the RTL8192EU.
+const PHASE_BACKOFF_DELAYS = [
+  10 * 1000,  // After phase 1 (gentle #1): 10s — quick retry, might just be a blip
+  20 * 1000,  // After phase 2 (gentle #2): 20s — give mesh more time to reroute
+  45 * 1000,  // After phase 3 (medium):    45s — interface cycle needs time to settle
+  60 * 1000,  // After phase 4 (aggressive): 60s — wpa_supplicant restart is expensive
+  90 * 1000,  // After phase 5 (modprobe):   90s — driver reload needs time to rebind
+  120 * 1000, // After phase 6 (USB cycle): 120s — hardware needs full reset time
+];
+
+// Modprobe/USB guard thresholds — minimum outage duration before allowing hardware-level recovery.
+// In mesh environments, APs reboot or change channels periodically → 5 min guard was too short,
+// leading to unnecessary modprobe reloads that destabilize the RTL8192EU for 30s+.
+const MIN_OUTAGE_FOR_MODPROBE_DEFAULT = 5 * 60 * 1000; // 5 min for simple networks
+const MIN_OUTAGE_FOR_MODPROBE_MESH = 10 * 60 * 1000;   // 10 min for mesh (NLF: 3+ APs, frequent roaming)
+const MIN_OUTAGE_FOR_USB_CYCLE_DEFAULT = 5 * 60 * 1000;
+const MIN_OUTAGE_FOR_USB_CYCLE_MESH = 10 * 60 * 1000;
 const GRACE_PERIOD_FILE = '/tmp/neopro-watchdog-grace.json'; // Persists across process restarts
 const BSSID_MISMATCH_THRESHOLD = 5 * 60 * 1000; // 5 min mismatch before auto-clearing lock
 
@@ -701,14 +756,17 @@ async function attemptInternetRecovery() {
 
     } else if (attempt === 5) {
       // Phase 4: Nuclear - USB WiFi driver reload (modprobe) with verification
-      // GUARD: modprobe kills the USB WiFi dongle (RTL8192EU) — only allow after 5 min of sustained failure.
-      // This prevents deploy-triggered transient disconnects from escalating to hardware-level resets.
-      const MIN_OUTAGE_FOR_MODPROBE = 5 * 60 * 1000; // 5 minutes
+      // GUARD: modprobe kills the USB WiFi dongle (RTL8192EU) — only allow after sustained failure.
+      // Mesh environments (NLF) get 10 min guard: APs reboot/change channels periodically,
+      // and the 5 min guard was reached too often, destabilizing the dongle unnecessarily.
+      const modprobeGuard = _getModprobeGuard();
+      const isMesh = _isMeshEnvironment();
       const outageDuration = state.internet.recoveryStartedAt ? Date.now() - state.internet.recoveryStartedAt : 0;
-      if (outageDuration < MIN_OUTAGE_FOR_MODPROBE) {
+      if (outageDuration < modprobeGuard) {
         logger.warn('NetworkWatchdog: Phase 4 (modprobe) SKIPPED — outage too recent', {
           outageDurationSec: Math.round(outageDuration / 1000),
-          minRequiredSec: MIN_OUTAGE_FOR_MODPROBE / 1000,
+          minRequiredSec: modprobeGuard / 1000,
+          isMesh,
         });
         // Retry Phase 3 (wpa_supplicant restart) instead — much safer
         await restartWpaSupplicantWlan1();
@@ -779,13 +837,15 @@ async function attemptInternetRecovery() {
 
     } else {
       // Phase 5: USB power-cycle — last resort hardware reset
-      // GUARD: Same time-based protection as modprobe — USB unbind kills the dongle permanently
-      const MIN_OUTAGE_FOR_USB_CYCLE = 5 * 60 * 1000; // 5 minutes
+      // GUARD: Same mesh-aware time-based protection as modprobe
+      const usbCycleGuard = _getUsbCycleGuard();
+      const isMeshPhase5 = _isMeshEnvironment();
       const outageDurationPhase5 = state.internet.recoveryStartedAt ? Date.now() - state.internet.recoveryStartedAt : 0;
-      if (outageDurationPhase5 < MIN_OUTAGE_FOR_USB_CYCLE) {
+      if (outageDurationPhase5 < usbCycleGuard) {
         logger.warn('NetworkWatchdog: Phase 5 (USB power-cycle) SKIPPED — outage too recent', {
           outageDurationSec: Math.round(outageDurationPhase5 / 1000),
-          minRequiredSec: MIN_OUTAGE_FOR_USB_CYCLE / 1000,
+          minRequiredSec: usbCycleGuard / 1000,
+          isMesh: isMeshPhase5,
         });
         // Retry gentle recovery instead
         await execAsync('sudo wpa_cli -i wlan1 reconfigure 2>/dev/null || true');
@@ -1198,8 +1258,14 @@ async function internetWatchLoop() {
       if (canAttemptRecovery('internet')) {
         const result = await attemptInternetRecovery();
         if (!result.success) {
-          // Fast retry: re-check in 10s instead of waiting the full 60s interval
-          setTimeout(() => internetWatchLoop(), FAST_RETRY_DELAY);
+          // Progressive back-off: delay increases with each phase to let mesh networks self-heal.
+          // Previously fixed 10s → phases 1-4 exhausted in ~60s → modprobe too fast.
+          const backoffDelay = _getBackoffDelay(state.internet.recoveryAttempts);
+          logger.info('NetworkWatchdog: Next retry with progressive back-off', {
+            attempt: state.internet.recoveryAttempts,
+            backoffDelaySec: backoffDelay / 1000,
+          });
+          setTimeout(() => internetWatchLoop(), backoffDelay);
         }
       } else {
         logger.error('NetworkWatchdog: Trop de tentatives de récupération internet', {
@@ -1349,6 +1415,13 @@ function getStatus() {
       gateway: state.internet.gateway,
       connectionType: state.internet.connectionType,
       recoveryAttempts: state.internet.recoveryAttempts,
+      recoveryStartedAt: state.internet.recoveryStartedAt || null,
+      isMeshEnvironment: _isMeshEnvironment(),
+      currentBackoffDelaySec: state.internet.recoveryAttempts > 0
+        ? _getBackoffDelay(state.internet.recoveryAttempts) / 1000
+        : null,
+      modprobeGuardSec: _getModprobeGuard() / 1000,
+      usbCycleGuardSec: _getUsbCycleGuard() / 1000,
     },
     cloud: {
       healthy: state.cloud.healthy,

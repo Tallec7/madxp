@@ -740,4 +740,55 @@ Les déconnexions chroniques NLF restent le problème #1. Pistes ouvertes :
 
 ---
 
-**Dernière mise à jour :** 1er mars 2026 (stabilité boot v3.84.9 — coordination inter-processus scan cache)
+---
+
+## Analyse debug bundle — 5 mars 2026
+
+### Contexte
+
+Visite sur site NLF. Export du debug bundle pour analyse des déconnexions WiFi signalées comme problématiques.
+
+### Résultats
+
+| Métrique               | 7 février    | 5 mars                 | Tendance     |
+| ---------------------- | ------------ | ---------------------- | ------------ |
+| **Signal**             | -73 dBm      | **-68 dBm**            | Amélioré     |
+| **Déconnexions/heure** | ~3 (1/20min) | **6**                  | Dégradé (×2) |
+| **Pire outage**        | 2s           | **498s (8 min)**       | Très dégradé |
+| **Phase max recovery** | —            | **Phase 5 (modprobe)** | Nouveau      |
+| **APs mesh détectés**  | 3            | 2                      | -1 AP        |
+
+### Analyse
+
+1. **Signal amélioré mais instabilité pire** : le signal est passé de -73 à -68 dBm, ce qui est bien. Mais les déconnexions ont doublé et un outage de 8 min a nécessité un modprobe (reload driver RTL8192EU). Cela pointe vers un problème de **stabilité du driver/roaming** plutôt que de signal pur.
+
+2. **Bgscan oscillation** : avec le seuil à -70 dBm et un signal à -68 dBm, le bgscan oscillait constamment entre le mode agressif (scan/30s) et le mode calme (scan/300s). Chaque scan sur le RTL8192EU single-radio coupe le carrier ~6s, aggravant l'instabilité.
+
+3. **Recovery trop rapide** : le fast retry fixe de 10s entre les phases épuisait les 4 premières phases en ~60s, atteignant le modprobe avant que le mesh ait eu le temps de se stabiliser.
+
+4. **Guard modprobe 5 min insuffisant en mesh** : le mesh NLF (3 APs) peut mettre 5-10 min à se reconfigurer quand un AP redémarre ou change de canal.
+
+### Corrections apportées (v3.99.2+)
+
+| Correction                                                                          | Impact attendu                                                                   |
+| ----------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| **Progressive back-off** entre recovery phases (10s → 20s → 45s → 60s → 90s → 120s) | Donne 3-4 min aux phases douces avant d'atteindre le modprobe (vs ~60s avant)    |
+| **Guard modprobe mesh = 10 min** (vs 5 min avant)                                   | Empêche les modprobe sur des transitions mesh transitoires                       |
+| **Guard USB power-cycle mesh = 10 min** (idem)                                      | Protection hardware identique                                                    |
+| **bgscan dynamique** : seuil abaissé à -75 dBm si signal moyen > -72 dBm            | Évite les scans agressifs quand le signal est correct mais oscille autour de -70 |
+
+### Impact attendu pour NLF
+
+- **Déconnexions/heure** : devrait diminuer significativement grâce au bgscan -75 (plus de scans agressifs inutiles)
+- **Outages longs** : le back-off progressif + guard 10 min empêchent les modprobe prématurés qui déstabilisaient le dongle
+- **Recommandation maintenue** : câble Ethernet = solution définitive pour client critique
+
+### À surveiller
+
+- Comparer le prochain debug bundle avec ces métriques de référence
+- Si déconnexions/heure passe sous 2 → bgscan dynamique efficace
+- Si plus aucun modprobe en conditions normales → guard mesh efficace
+
+---
+
+**Dernière mise à jour :** 5 mars 2026 (analyse debug bundle + progressive back-off + bgscan dynamique + guard mesh 10 min)

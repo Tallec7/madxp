@@ -1,3 +1,45 @@
+# [3.99.4](https://github.com/Tallec7/neopro/compare/v3.99.3...v3.99.4) (2026-03-05)
+
+### Bug Fixes
+
+- **sync-agent:** WiFi recovery progressive back-off — replace fixed 10s `FAST_RETRY_DELAY` with
+  `PHASE_BACKOFF_DELAYS` array [10s, 20s, 45s, 60s, 90s, 120s]. NLF Handball (3-AP mesh, RTL8192EU)
+  had 6 disconnects/hour because phases 1-4 exhausted in ~60s → modprobe reached before mesh could
+  self-heal. Progressive delays give mesh networks 30-60s to reroute before escalation.
+- **sync-agent:** mesh-aware modprobe/USB guards — raise minimum outage threshold from 5 min to
+  10 min in mesh environments (detected via `networkDetector.getFullProfile().type`). Mesh APs
+  reboot or change channels periodically; 5 min guard was reached too often, triggering unnecessary
+  modprobe reloads that destabilized the RTL8192EU for 30s+.
+- **sync-agent:** dynamic bgscan threshold — new `_computeOptimalBgscan()` in safe-network-operations
+  adapts wpa_supplicant bgscan to signal level: signal > -72 dBm → threshold -75 (avoids scan
+  oscillation at NLF's -68 dBm), signal ≤ -75 dBm → threshold -70 (aggressive scan for weak signal).
+  Previously fixed at -70 dBm, causing constant 30s scan cycles when signal was near boundary.
+
+### Monitoring
+
+- **sync-agent:** `getStatus()` in network-watchdog now exposes `recoveryStartedAt`,
+  `isMeshEnvironment`, `currentBackoffDelaySec`, `modprobeGuardSec`, `usbCycleGuardSec`
+  for remote diagnostics and Grafana dashboard correlation.
+
+### Tests
+
+- **smoke:** 11 new regression guards for WiFi recovery progressive back-off & mesh guards:
+  - `PHASE_BACKOFF_DELAYS` must exist, `FAST_RETRY_DELAY` must not
+  - Back-off array must have 6+ entries, must be non-decreasing
+  - `internetWatchLoop` must use `_getBackoffDelay()`
+  - Mesh modprobe guard must be >= 10 min
+  - Phase 4/5 must use `_getModprobeGuard()` / `_getUsbCycleGuard()`
+  - `_isMeshEnvironment()` must check profile type
+  - `_computeOptimalBgscan()` must exist with signal-based threshold
+  - `autoOptimize()` must use `_computeOptimalBgscan()`
+  - `getStatus()` must expose `recoveryAttempts`
+
+### Docs
+
+- **NLF.md:** added "Analyse debug bundle — 5 mars 2026" with comparative metrics, root cause
+  analysis, corrections table, and monitoring checklist
+- **CLAUDE.md:** 3 new NE JAMAIS FAIRE rules for progressive back-off, mesh guards, and bgscan
+
 ## [3.99.1](https://github.com/Tallec7/neopro/compare/v3.99.0...v3.99.1) (2026-03-05)
 
 ### Bug Fixes

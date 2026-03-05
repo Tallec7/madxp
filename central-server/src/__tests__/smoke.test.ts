@@ -8300,3 +8300,166 @@ describe('Orphan systemd service monitoring pipeline', () => {
       .toEqual({ hasMethod: true });
   });
 });
+
+// ----------------------------------------------------------
+// WiFi recovery progressive back-off & mesh guards (v3.99.4)
+// ----------------------------------------------------------
+// Issue: NLF Handball (3-AP mesh, RTL8192EU) — 6 disconnects/hour, 8-min outage requiring modprobe.
+// Root causes: (1) Fixed 10s FAST_RETRY_DELAY escalated through 6 phases in ~60s, reaching modprobe
+// before mesh could self-heal. (2) Modprobe 5-min guard too short for mesh where APs reboot/change
+// channels periodically. (3) bgscan threshold at -70 dBm oscillated when signal was -68 dBm.
+// Fixes: progressive back-off array, mesh-aware modprobe/USB guards (10 min), dynamic bgscan.
+describe('WiFi recovery progressive back-off & mesh guards (v3.99.4)', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+
+  let watchdogContent: string;
+  let safeOpsContent: string;
+
+  beforeAll(() => {
+    watchdogContent = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/sync-agent/src/services/network-watchdog.js'),
+      'utf8'
+    );
+    safeOpsContent = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/sync-agent/src/services/safe-network-operations.js'),
+      'utf8'
+    );
+  });
+
+  // Guard 1: Progressive back-off must exist — fixed FAST_RETRY_DELAY must NOT exist
+  it('network-watchdog must use PHASE_BACKOFF_DELAYS, not fixed FAST_RETRY_DELAY', () => {
+    expect({
+      hasBackoffArray: /PHASE_BACKOFF_DELAYS\s*=\s*\[/.test(watchdogContent),
+    }).toEqual({ hasBackoffArray: true });
+    // FAST_RETRY_DELAY as a constant definition must be gone
+    expect({
+      hasFixedRetry: /const\s+FAST_RETRY_DELAY\s*=/.test(watchdogContent),
+    }).toEqual({ hasFixedRetry: false });
+  });
+
+  // Guard 2: Back-off array must have 6 entries (one per recovery phase)
+  it('PHASE_BACKOFF_DELAYS must have at least 6 entries covering all recovery phases', () => {
+    const arrayMatch = watchdogContent.match(
+      /PHASE_BACKOFF_DELAYS\s*=\s*\[([\s\S]*?)\]/
+    );
+    expect(arrayMatch).not.toBeNull();
+    const entries = arrayMatch![1].split(',').filter((e: string) => e.trim().length > 0);
+    expect({ entryCount: entries.length >= 6 }).toEqual({ entryCount: true });
+  });
+
+  // Guard 3: Back-off must be progressive (each delay >= previous)
+  it('PHASE_BACKOFF_DELAYS must be non-decreasing (progressive)', () => {
+    const arrayMatch = watchdogContent.match(
+      /PHASE_BACKOFF_DELAYS\s*=\s*\[([\s\S]*?)\]/
+    );
+    expect(arrayMatch).not.toBeNull();
+    // Extract numeric values (in ms)
+    const delays = arrayMatch![1].match(/(\d+)\s*\*\s*1000/g)?.map((m: string) => {
+      const num = m.match(/(\d+)/);
+      return num ? Number(num[1]) * 1000 : 0;
+    }) || [];
+    let isProgressive = true;
+    for (let i = 1; i < delays.length; i++) {
+      if (delays[i] < delays[i - 1]) {
+        isProgressive = false;
+        break;
+      }
+    }
+    expect({ isProgressive }).toEqual({ isProgressive: true });
+  });
+
+  // Guard 4: internetWatchLoop must use _getBackoffDelay, not fixed delay
+  it('internetWatchLoop must use _getBackoffDelay for progressive retry timing', () => {
+    const loopFn = watchdogContent.match(
+      /function internetWatchLoop\(\)\s*\{[\s\S]*?^}/m
+    ) || watchdogContent.match(
+      /async function internetWatchLoop\(\)[\s\S]*?setTimeout\(\(\) => internetWatchLoop\(\)/
+    );
+    expect(loopFn).not.toBeNull();
+    expect({
+      usesBackoff: /_getBackoffDelay\(/.test(loopFn![0]),
+    }).toEqual({ usesBackoff: true });
+  });
+
+  // Guard 5: Mesh-aware modprobe guard must exist and be >= 10 min
+  it('network-watchdog must have mesh-specific modprobe guard >= 10 min', () => {
+    const meshGuardMatch = watchdogContent.match(
+      /MIN_OUTAGE_FOR_MODPROBE_MESH\s*=\s*(\d+)\s*\*\s*(\d+)\s*\*\s*(\d+)/
+    );
+    expect(meshGuardMatch).not.toBeNull();
+    const meshGuardMs = Number(meshGuardMatch![1]) * Number(meshGuardMatch![2]) * Number(meshGuardMatch![3]);
+    expect({
+      meshGuardAtLeast10min: meshGuardMs >= 10 * 60 * 1000,
+    }).toEqual({ meshGuardAtLeast10min: true });
+  });
+
+  // Guard 6: Phase 4 (modprobe) must call _getModprobeGuard(), not use hardcoded value
+  it('Phase 4 modprobe must use _getModprobeGuard() for mesh-aware threshold', () => {
+    // The attemptInternetRecovery function must call _getModprobeGuard
+    const recoveryFn = watchdogContent.match(
+      /async function attemptInternetRecovery\(\)[\s\S]*?Phase 5/
+    );
+    expect(recoveryFn).not.toBeNull();
+    expect({
+      usesGuardFn: /_getModprobeGuard\(\)/.test(recoveryFn![0]),
+    }).toEqual({ usesGuardFn: true });
+  });
+
+  // Guard 7: Phase 5 (USB) must call _getUsbCycleGuard(), not use hardcoded value
+  it('Phase 5 USB power-cycle must use _getUsbCycleGuard() for mesh-aware threshold', () => {
+    const recoveryFn = watchdogContent.match(
+      /async function attemptInternetRecovery\(\)[\s\S]*$/
+    );
+    expect(recoveryFn).not.toBeNull();
+    expect({
+      usesGuardFn: /_getUsbCycleGuard\(\)/.test(recoveryFn![0]),
+    }).toEqual({ usesGuardFn: true });
+  });
+
+  // Guard 8: _isMeshEnvironment helper must exist for mesh detection
+  it('network-watchdog must have _isMeshEnvironment() using networkDetector profile', () => {
+    expect({
+      hasMeshDetection: /function _isMeshEnvironment\(\)/.test(watchdogContent),
+    }).toEqual({ hasMeshDetection: true });
+    expect({
+      checksProfileType: /profile\?\.type\s*===\s*'mesh'/.test(watchdogContent),
+    }).toEqual({ checksProfileType: true });
+  });
+
+  // Guard 9: Dynamic bgscan — safe-network-operations must compute optimal threshold
+  it('safe-network-operations must have _computeOptimalBgscan() with signal-based threshold', () => {
+    expect({
+      hasCompute: /_computeOptimalBgscan\(\)/.test(safeOpsContent),
+    }).toEqual({ hasCompute: true });
+    // Must check signal level (not just use a fixed threshold)
+    const computeFn = safeOpsContent.match(
+      /_computeOptimalBgscan\(\)\s*\{[\s\S]*?return\s+'simple:/
+    );
+    expect(computeFn).not.toBeNull();
+    expect({
+      checksSignal: /signal\s*>\s*-72/.test(computeFn![0]),
+    }).toEqual({ checksSignal: true });
+  });
+
+  // Guard 10: autoOptimize must use _computeOptimalBgscan, not hardcoded bgscan
+  it('autoOptimize must use _computeOptimalBgscan() for adaptive bgscan threshold', () => {
+    const autoOptFn = safeOpsContent.match(
+      /async autoOptimize\(\)\s*\{[\s\S]*?return \{ success: true/
+    );
+    expect(autoOptFn).not.toBeNull();
+    expect({
+      usesComputed: /_computeOptimalBgscan\(\)/.test(autoOptFn![0]),
+    }).toEqual({ usesComputed: true });
+  });
+
+  // Guard 11: Monitoring — getStatus must expose recovery back-off info
+  it('network-watchdog getStatus() must expose recoveryAttempts for monitoring', () => {
+    const statusFn = watchdogContent.match(
+      /function getStatus\(\)\s*\{[\s\S]*?^}/m
+    );
+    expect(statusFn).not.toBeNull();
+    expect({
+      hasRecoveryAttempts: /recoveryAttempts/.test(statusFn![0]),
+    }).toEqual({ hasRecoveryAttempts: true });
+  });
+});
