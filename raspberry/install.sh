@@ -459,6 +459,20 @@ EOF
     else
         print_warning "Le hotspot ne signale pas encore le mode AP. Vérifiez manuellement avec 'iw dev ${WIFI_INTERFACE} info'."
     fi
+
+    # Configurer les règles iptables captive portal (Android HTTPS connectivity checks)
+    # Sans ces règles, Android détecte "pas d'internet" et bascule sur la 4G
+    if [ -x ./scripts/setup-captive-portal-iptables.sh ]; then
+        AP_INTERFACE="${WIFI_INTERFACE}" ./scripts/setup-captive-portal-iptables.sh || {
+            print_warning "Échec de la configuration iptables captive portal (non bloquant)"
+        }
+    elif [ -x "${INSTALL_DIR}/scripts/setup-captive-portal-iptables.sh" ]; then
+        AP_INTERFACE="${WIFI_INTERFACE}" "${INSTALL_DIR}/scripts/setup-captive-portal-iptables.sh" || {
+            print_warning "Échec de la configuration iptables captive portal (non bloquant)"
+        }
+    else
+        print_warning "Script setup-captive-portal-iptables.sh introuvable (sera appliqué au prochain deploy)"
+    fi
 }
 
 configure_wifi_client_support() {

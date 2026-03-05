@@ -133,6 +133,16 @@ check_hotspot_ip() {
     fi
 }
 
+# Vérifier que les règles iptables captive portal sont actives
+# Sans ces règles, Android fait son check HTTPS en timeout → bascule sur la 4G
+check_captive_portal_iptables() {
+    if iptables -t nat -C PREROUTING -i "$WIFI_INTERFACE" -p tcp --dport 443 -j DNAT --to-destination 192.168.4.1:80 2>/dev/null; then
+        return 0
+    else
+        return 1
+    fi
+}
+
 # Detect brcmfmac firmware crash (Broadcom WiFi chip on wlan0)
 # The onboard WiFi can crash with "brcmf_fw_crashed: Firmware has halted or crashed"
 # When this happens, hostapd may still appear "active" but the interface is dead.
@@ -214,6 +224,10 @@ check_hotspot_health() {
 
     if ! check_avahi; then
         issues+=("avahi-daemon inactif")
+    fi
+
+    if ! check_captive_portal_iptables; then
+        issues+=("iptables captive portal manquant")
     fi
 
     if [[ ${#issues[@]} -eq 0 ]]; then
@@ -306,13 +320,32 @@ attempt_recovery() {
 
     # Étape 6: Redémarrer avahi-daemon (résolution mDNS neopro.local)
     if ! check_avahi; then
-        log_info "Étape 6/6: Redémarrage avahi-daemon..."
+        log_info "Étape 6/7: Redémarrage avahi-daemon..."
         sudo systemctl restart avahi-daemon 2>/dev/null || {
             log_error "Échec du redémarrage avahi-daemon"
         }
         sleep 1
     else
-        log_info "Étape 6/6: avahi-daemon déjà actif"
+        log_info "Étape 6/7: avahi-daemon déjà actif"
+    fi
+
+    # Étape 7: Restaurer les règles iptables captive portal (Android HTTPS)
+    if ! check_captive_portal_iptables; then
+        log_info "Étape 7/7: Restauration iptables captive portal..."
+        local IPTABLES_SCRIPT="/home/pi/neopro/scripts/setup-captive-portal-iptables.sh"
+        if [ -x "$IPTABLES_SCRIPT" ]; then
+            AP_INTERFACE="$WIFI_INTERFACE" sudo "$IPTABLES_SCRIPT" 2>/dev/null || {
+                log_error "Échec restauration iptables captive portal"
+            }
+        else
+            # Fallback inline si le script n'est pas encore déployé
+            sudo iptables -t nat -A PREROUTING -i "$WIFI_INTERFACE" -p tcp --dport 80 -j DNAT --to-destination 192.168.4.1:80 2>/dev/null || true
+            sudo iptables -t nat -A PREROUTING -i "$WIFI_INTERFACE" -p tcp --dport 443 -j DNAT --to-destination 192.168.4.1:80 2>/dev/null || true
+            sudo iptables -t nat -A POSTROUTING -s 192.168.4.0/24 -o "$WIFI_INTERFACE" -j MASQUERADE 2>/dev/null || true
+            log_info "iptables captive portal restauré (fallback inline)"
+        fi
+    else
+        log_info "Étape 7/7: iptables captive portal déjà actif"
     fi
 
     # Vérification finale
@@ -381,6 +414,13 @@ print_status() {
         echo "[✓] IP: 192.168.4.1 configurée"
     else
         echo "[✗] IP: 192.168.4.1 NON configurée"
+    fi
+
+    # iptables captive portal (Android HTTPS)
+    if check_captive_portal_iptables; then
+        echo "[✓] iptables: captive portal actif (Android HTTPS → nginx)"
+    else
+        echo "[✗] iptables: captive portal MANQUANT — Android bascule sur 4G"
     fi
 
     echo ""

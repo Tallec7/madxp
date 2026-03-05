@@ -874,6 +874,45 @@ if [ "$NEEDS_DAEMON_RELOAD" = true ]; then
 fi
 
 # =============================================================================
+# 11/10 — Captive portal iptables (Android HTTPS connectivity checks)
+# =============================================================================
+
+log_step "11/10 — Captive portal iptables (Android)"
+
+# Android fait ses checks de connectivité en HTTPS (port 443).
+# Sans redirection iptables, le Pi ne répond pas → Android bascule sur la 4G.
+# Avec la redirection, Android détecte un captive portal et reste sur le WiFi.
+IPTABLES_SCRIPT="$NEOPRO_ROOT/scripts/setup-captive-portal-iptables.sh"
+if [ -x "$IPTABLES_SCRIPT" ]; then
+    if AP_INTERFACE=wlan0 "$IPTABLES_SCRIPT"; then
+        log_ok "Captive portal iptables configuré via script"
+        CHANGES=$((CHANGES + 1))
+    else
+        log_err "Échec du script setup-captive-portal-iptables.sh"
+    fi
+else
+    # Fallback inline si le script n'est pas encore déployé
+    log_info "Script iptables non trouvé, application inline..."
+
+    # Nettoyage (idempotent)
+    while iptables -t nat -D PREROUTING -i wlan0 -p tcp --dport 80 -j DNAT --to-destination 192.168.4.1:80 2>/dev/null; do :; done
+    while iptables -t nat -D PREROUTING -i wlan0 -p tcp --dport 443 -j DNAT --to-destination 192.168.4.1:80 2>/dev/null; do :; done
+    while iptables -t nat -D POSTROUTING -s 192.168.4.0/24 -o wlan0 -j MASQUERADE 2>/dev/null; do :; done
+
+    # Installation
+    iptables -t nat -A PREROUTING -i wlan0 -p tcp --dport 80 -j DNAT --to-destination 192.168.4.1:80 2>/dev/null || true
+    iptables -t nat -A PREROUTING -i wlan0 -p tcp --dport 443 -j DNAT --to-destination 192.168.4.1:80 2>/dev/null || true
+    iptables -t nat -A POSTROUTING -s 192.168.4.0/24 -o wlan0 -j MASQUERADE 2>/dev/null || true
+
+    if iptables -t nat -C PREROUTING -i wlan0 -p tcp --dport 443 -j DNAT --to-destination 192.168.4.1:80 2>/dev/null; then
+        log_ok "Captive portal iptables configuré (inline)"
+        CHANGES=$((CHANGES + 1))
+    else
+        log_err "Échec de la configuration iptables captive portal"
+    fi
+fi
+
+# =============================================================================
 # Résumé
 # =============================================================================
 

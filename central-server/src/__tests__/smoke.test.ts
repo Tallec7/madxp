@@ -8535,17 +8535,21 @@ describe('GPU decode monitoring pipeline (v3.99.5)', () => {
 describe('Android captive portal iptables (HTTPS connectivity check fix)', () => {
   const repoRoot = path.resolve(__dirname, '..', '..', '..');
 
-  // Guard 1: Dedicated iptables setup script must exist
+  // Guard 1: Dedicated iptables setup script must exist with HTTPS redirect
   it('setup-captive-portal-iptables.sh must exist with HTTPS redirect rule', () => {
     const scriptPath = path.join(repoRoot, 'raspberry/scripts/setup-captive-portal-iptables.sh');
     const content = fs.readFileSync(scriptPath, 'utf8');
     expect({
-      hasPort443Rule: /--dport\s+443.*DNAT.*192\.168\.4\.1:80/.test(content),
-      hasPort80Rule: /--dport\s+80.*DNAT.*192\.168\.4\.1:80/.test(content),
+      hasPort443Rule: /--dport\s+443.*DNAT/.test(content),
+      hasPort80Rule: /--dport\s+80.*DNAT/.test(content),
+      hasHotspotIP: /HOTSPOT_IP=["']?192\.168\.4\.1/.test(content),
+      hasNginxPort: /NGINX_PORT=["']?80/.test(content),
       hasCleanup: /cleanup_existing_rules/.test(content),
     }).toEqual({
       hasPort443Rule: true,
       hasPort80Rule: true,
+      hasHotspotIP: true,
+      hasNginxPort: true,
       hasCleanup: true,
     });
   });

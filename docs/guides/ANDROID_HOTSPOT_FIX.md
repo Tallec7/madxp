@@ -2,181 +2,147 @@
 
 ## Problème
 
-Android détecte automatiquement que le hotspot `NEOPRO-{CLUB}` n'a pas d'accès Internet et :
+Android detecte automatiquement que le hotspot `NEOPRO-{CLUB}` n'a pas d'acces Internet et :
 
-1. **Affiche "Pas d'accès Internet"**
-2. **Peut refuser de rester connecté** ou basculer sur les données mobiles
-3. **Bloque la résolution DNS** de `neopro.local`
+1. **Affiche "Pas d'acces Internet"**
+2. **Bascule automatiquement sur les donnees mobiles (4G/5G)** — le WiFi reste "connecte" mais le trafic passe par la 4G
+3. **Bloque la resolution DNS** de `neopro.local`
 
-Résultat : impossible d'accéder à `http://neopro.local/login` depuis Android.
+Resultat : impossible d'acceder a `http://neopro.local/login` ou `http://192.168.4.1` depuis Android.
 
-## Solutions rapides (sans modification du Pi)
+> **Note** : Les iPhones (iOS) ne sont PAS affectes par ce probleme. iOS gere correctement le captive portal HTTP.
 
-### Solution 1 : Utiliser l'IP directe ⭐ RECOMMANDÉ
+## Cause racine (v3.99.5)
 
-Sur votre téléphone Android :
+Android fait ses connectivity checks en **HTTPS** (port 443) depuis Android 10+. Le Pi ne repond pas en HTTPS, donc Android considere "pas d'internet" et bascule silencieusement sur la 4G.
+
+La solution DNS + nginx (`/generate_204`) corrige le check **HTTP** mais pas le check **HTTPS**. Il faut en plus des regles **iptables NAT** qui redirigent le port 443 vers nginx (port 80).
+
+## Solution automatique (v3.99.5+)
+
+Depuis la v3.99.5, le fix est **automatique** :
+
+1. **`install.sh`** configure les regles iptables au setup initial
+2. **`hotspot-watchdog.sh`** verifie et restaure les regles a chaque cycle (survit au reboot)
+3. **`fix-fleet-pi.sh`** applique le fix sur les Pi deja deployes
+4. **`deploy-remote.sh`** deploie le script via la mise a jour standard
+
+### Architecture du fix
+
+```
+┌──────────────────────────────────────────────────────────────┐
+│  Android phone connecte au hotspot NEOPRO                    │
+│  → Check HTTPS: https://connectivitycheck.gstatic.com/...   │
+│  → Port 443                                                  │
+└───────────────────────────┬──────────────────────────────────┘
+                            │
+                   iptables NAT PREROUTING
+                   wlan0:443 → 192.168.4.1:80
+                            │
+                            ▼
+┌──────────────────────────────────────────────────────────────┐
+│  nginx (port 80) → /generate_204 → return 204               │
+│  Android recoit HTTP 200/204 au lieu du timeout HTTPS        │
+│  → Detecte "captive portal" → reste sur le WiFi             │
+└──────────────────────────────────────────────────────────────┘
+```
+
+### Verification sur le Pi
+
+```bash
+# Verifier que les regles iptables sont actives
+sudo iptables -t nat -L PREROUTING -n | grep -E "dpt:(80|443)"
+
+# Doit afficher :
+# DNAT  tcp  --  0.0.0.0/0   0.0.0.0/0   tcp dpt:80  to:192.168.4.1:80
+# DNAT  tcp  --  0.0.0.0/0   0.0.0.0/0   tcp dpt:443 to:192.168.4.1:80
+
+# Verifier le statut complet du hotspot
+/home/pi/neopro/scripts/hotspot-watchdog.sh --status
+# Doit afficher : [✓] iptables: captive portal actif (Android HTTPS → nginx)
+```
+
+### Application manuelle sur un Pi existant
+
+```bash
+# Option 1 : Via le script dedie (recommande)
+sudo AP_INTERFACE=wlan0 /home/pi/neopro/scripts/setup-captive-portal-iptables.sh
+
+# Option 2 : Via fix-fleet-pi (applique toutes les corrections)
+sudo /home/pi/neopro/scripts/fix-fleet-pi.sh
+```
+
+## Solutions utilisateur (en attendant le deploy)
+
+### Solution 1 : Utiliser l'IP directe
 
 1. Connectez-vous au WiFi `NEOPRO-{CLUB_NAME}`
-2. Android affiche "Pas d'accès Internet" → **Tapez "Rester connecté"**
-3. Ouvrez votre navigateur et allez à :
+2. Android affiche "Pas d'acces Internet" → **Tapez "Rester connecte"**
+3. Ouvrez votre navigateur et allez a :
    ```
    http://192.168.4.1/login
    ```
-   (au lieu de `http://neopro.local/login`)
 
-### Solution 2 : Désactiver temporairement les données mobiles
+### Solution 2 : Desactiver temporairement les donnees mobiles
 
 1. Connectez-vous au WiFi `NEOPRO-{CLUB_NAME}`
-2. **Désactivez les données mobiles** (4G/5G)
-3. Android sera forcé d'utiliser le WiFi
-4. Accédez à `http://192.168.4.1/login`
+2. **Desactivez les donnees mobiles** (4G/5G)
+3. Android sera force d'utiliser le WiFi
+4. Accedez a `http://192.168.4.1/login`
 
-### Solution 3 : Forcer l'utilisation du réseau WiFi
+### Solution 3 : Forcer l'utilisation du reseau WiFi
 
-1. **Paramètres → WiFi**
+1. **Parametres → WiFi**
 2. Appuyez longuement sur `NEOPRO-{CLUB_NAME}`
-3. **Modifier le réseau**
-4. **Options avancées** → Activer
-5. Cochez **"Utiliser ce réseau même sans Internet"** (selon la version Android)
+3. **Modifier le reseau**
+4. **Options avancees** → Activer
+5. Cochez **"Utiliser ce reseau meme sans Internet"** (selon la version Android)
 
-## Solution technique : Ajouter un Captive Portal
-
-Pour que Android accepte automatiquement le hotspot, vous pouvez configurer un **Captive Portal**.
-
-### Qu'est-ce qu'un Captive Portal ?
-
-Quand Android se connecte à un WiFi, il envoie une requête HTTP vers :
-
-```
-http://connectivitycheck.gstatic.com/generate_204
-```
-
-- Si la réponse est **204 No Content** → Android considère qu'il y a Internet
-- Si pas de réponse → Android affiche "Pas d'accès Internet"
-
-### Étape 1 : Modifier la configuration nginx
-
-SSH sur le Raspberry Pi :
+## Debugging
 
 ```bash
-ssh pi@192.168.4.1
-```
+# Test captive portal HTTP (doit retourner 204)
+curl -s -o /dev/null -w "%{http_code}" http://localhost/generate_204
 
-Éditez le fichier nginx principal :
+# Verifier les domaines DNS rediriges
+grep -i "connectivitycheck\|gstatic\|googleapis" /etc/dnsmasq.conf
 
-```bash
-sudo nano /etc/nginx/sites-enabled/default
-```
+# Verifier les regles iptables NAT
+sudo iptables -t nat -L -n -v
 
-Ajoutez ces lignes **avant** les autres `location` blocks :
-
-```nginx
-# Captive Portal - Android connectivity check
-location /generate_204 {
-    return 204;
-}
-
-location /gen_204 {
-    return 204;
-}
-
-# Chrome connectivity check
-location /connecttest.txt {
-    return 200 "Microsoft Connect Test";
-    add_header Content-Type text/plain;
-}
-
-# Windows connectivity check
-location /ncsi.txt {
-    return 200 "Microsoft NCSI";
-    add_header Content-Type text/plain;
-}
-```
-
-### Étape 2 : Configurer dnsmasq pour rediriger les requêtes
-
-Éditez la configuration dnsmasq :
-
-```bash
-sudo nano /etc/dnsmasq.conf
-```
-
-Ajoutez ces lignes pour rediriger toutes les requêtes de connectivité vers le Pi :
-
-```conf
-# Rediriger les checks de connectivité Android vers le Pi
-address=/connectivitycheck.gstatic.com/192.168.4.1
-address=/connectivitycheck.google.com/192.168.4.1
-address=/clients3.google.com/192.168.4.1
-address=/www.msftconnecttest.com/192.168.4.1
-```
-
-### Étape 3 : Redémarrer les services
-
-```bash
-sudo systemctl restart nginx
-sudo systemctl restart dnsmasq
-```
-
-### Étape 4 : Tester
-
-1. **Déconnectez** votre Android du WiFi `NEOPRO-{CLUB}`
-2. **Reconnectez-vous**
-3. Android devrait maintenant accepter le réseau sans afficher "Pas d'accès Internet"
-
-## Alternative : Redirection automatique vers /login
-
-Si vous voulez que Android **ouvre automatiquement le navigateur** avec la page de login :
-
-```nginx
-# Au lieu de return 204, rediriger vers la page de login
-location /generate_204 {
-    return 302 http://192.168.4.1/login;
-}
-```
-
-**Avantage** : Le navigateur s'ouvre automatiquement
-**Inconvénient** : Peut être répétitif si l'utilisateur reste connecté longtemps
-
-## Vérification
-
-Pour tester si le captive portal fonctionne :
-
-```bash
-# Depuis le Pi
-curl -I http://localhost/generate_204
-
-# Doit retourner :
-HTTP/1.1 204 No Content
-```
-
-## Debugging Android
-
-Pour voir ce qui se passe côté Android :
-
-1. **Chrome DevTools via USB** (mode développeur Android activé)
-2. Connectez le téléphone en USB
-3. `chrome://inspect` dans Chrome sur PC
-4. Regardez les requêtes réseau du navigateur Android
-
-Ou vérifiez les logs nginx sur le Pi :
-
-```bash
+# Voir les requetes des clients hotspot dans nginx
 sudo tail -f /var/log/nginx/access.log
+
+# Statut complet du hotspot watchdog
+/home/pi/neopro/scripts/hotspot-watchdog.sh --status
 ```
 
-Vous devriez voir les requêtes `/generate_204` arriver.
+## Monitoring
 
-## Résumé
+Le **hotspot-watchdog** surveille les regles iptables a chaque cycle (30s) et les restaure automatiquement si elles disparaissent (ex: apres un flush iptables manuel ou un bug kernel).
 
-| Méthode                    | Difficulté | Efficacité   | Notes                              |
-| -------------------------- | ---------- | ------------ | ---------------------------------- |
-| IP directe `192.168.4.1`   | ⭐ Facile  | ⭐⭐⭐ Haute | Solution immédiate, pas de modif   |
-| Désactiver données mobiles | ⭐ Facile  | ⭐⭐ Moyenne | Temporaire, il faut y penser       |
-| Captive Portal (204)       | ⭐⭐ Moyen | ⭐⭐⭐ Haute | Solution permanente, config réseau |
-| Redirection vers /login    | ⭐⭐ Moyen | ⭐⭐ Moyenne | Ouvre auto le navigateur           |
+Le check est visible dans le statut :
 
-## Références
+```
+[✓] iptables: captive portal actif (Android HTTPS → nginx)
+```
+
+ou en cas de probleme :
+
+```
+[✗] iptables: captive portal MANQUANT — Android bascule sur 4G
+```
+
+## Resume
+
+| Methode                             | Difficulte | Efficacite | Notes                               |
+| ----------------------------------- | ---------- | ---------- | ----------------------------------- |
+| **iptables NAT (v3.99.5+)**         | Auto       | Haute      | Fix permanent, survit au reboot     |
+| IP directe `192.168.4.1`            | Facile     | Haute      | Solution immediate, pas de modif Pi |
+| Desactiver donnees mobiles          | Facile     | Moyenne    | Temporaire, il faut y penser        |
+| "Rester connecte" dans notification | Facile     | Haute      | Doit etre fait a chaque connexion   |
+
+## References
 
 - [Android Captive Portal Detection](https://android.googlesource.com/platform/frameworks/base/+/master/core/java/android/net/CaptivePortal.java)
 - [Google Connectivity Checks](https://www.chromium.org/chromium-os/chromiumos-design-docs/network-portal-detection/)
