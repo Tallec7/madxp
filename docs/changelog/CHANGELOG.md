@@ -2,6 +2,12 @@
 
 ### Bug Fixes
 
+- **hdmi:** display_type monitor misclassified as TV + boot-to-video always 0ms ([1060498](https://github.com/Tallec7/neopro/commit/106049839aaf4c0e0dda779dabfa1defff5b3112))
+
+## [3.98.5](https://github.com/Tallec7/neopro/compare/v3.98.4...v3.98.5) (2026-03-05)
+
+### Bug Fixes
+
 - **hdmi:** fix display_type classification — PC monitors with CEA EDID extension (HDMI audio/YCbCr)
   were falsely classified as "tv". Added manufacturer-based filtering: known PC-only manufacturers
   (LEN=Lenovo, DEL=Dell, ACI=ASUS, HWP=HP, BNQ=BenQ, ACR=Acer, EIZ=EIZO, NEC=NEC, AOC=AOC) are
