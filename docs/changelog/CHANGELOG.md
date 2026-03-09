@@ -1,3 +1,9 @@
+# [3.101.0](https://github.com/Tallec7/neopro/compare/v3.100.0...v3.101.0) (2026-03-09)
+
+### Features
+
+- **kiosk:** GPU decode auto-fallback + hardware-only dual-display detection ([b915c33](https://github.com/Tallec7/neopro/commit/b915c33e270e639454d51010240ffd772c185130))
+
 # [3.100.0](https://github.com/Tallec7/neopro/compare/v3.99.1...v3.100.0) (2026-03-05)
 
 ### Bug Fixes
