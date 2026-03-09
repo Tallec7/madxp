@@ -1,3 +1,9 @@
+# [3.102.0](https://github.com/Tallec7/neopro/compare/v3.101.2...v3.102.0) (2026-03-09)
+
+### Features
+
+- **deploy-feedback:** Pi reports real deployed video path back to central server ([b14b281](https://github.com/Tallec7/neopro/commit/b14b2815158121bfe786bf92aebc23a9dd8dc024))
+
 ## [3.102.0] (2026-03-09)
 
 ### Features
