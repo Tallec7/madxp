@@ -1,3 +1,9 @@
+# [3.103.0](https://github.com/Tallec7/neopro/compare/v3.102.0...v3.103.0) (2026-03-09)
+
+### Features
+
+- **data-pipeline:** live VIEWs for same-day dashboard data + CRON aggregation ([94d607a](https://github.com/Tallec7/neopro/commit/94d607a64803144e3c115c7a5602a26249684312))
+
 ## [3.103.0] (2026-03-09)
 
 ### Features
