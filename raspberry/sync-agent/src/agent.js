@@ -61,6 +61,9 @@ class NeoproSyncAgent {
     // Bug v3.87: /home/pi/neopro/ owned by 501:staff bloquait mkdir videos-secondary → EACCES
     await this.ensureDirectoryPermissions();
 
+    // Nettoyer les fichiers legacy des versions précédentes (non-bloquant)
+    this.cleanupLegacyFiles();
+
     // Démarrer l'envoi des analytics immédiatement (indépendant du WebSocket)
     // Les analytics sont envoyées via HTTP, pas besoin d'attendre la connexion WS
     this.startAnalyticsSync();
@@ -942,18 +945,27 @@ class NeoproSyncAgent {
 
   /**
    * Remove stale files from previous versions (non-blocking, fire-and-forget).
+   * rsync deploy sans --delete → les fichiers supprimés du repo survivent sur le Pi.
    */
   cleanupLegacyFiles() {
-    const legacyPath = require('path').join(
-      process.env.HOME || '/home/pi', 'neopro', 'data', 'sponsor_impressions.json'
-    );
-    fs.pathExists(legacyPath).then((exists) => {
-      if (!exists) return;
-      logger.info('[cleanup] Removing stale sponsor_impressions.json (pre-v3.66 remnant)');
-      fs.remove(legacyPath).catch((err) => {
-        logger.warn('[cleanup] Failed to remove legacy file', { error: err.message });
+    const pathModule = require('path');
+    const legacyFiles = [
+      // Buffer d'impressions sponsors (pipeline consolidé en v3.66)
+      pathModule.join(process.env.HOME || '/home/pi', 'neopro', 'data', 'sponsor_impressions.json'),
+      // Module sender orphelin (supprimé du repo en v3.67, survit sans --delete)
+      pathModule.join(__dirname, 'sponsor-impressions.js'),
+    ];
+
+    for (const legacyPath of legacyFiles) {
+      fs.pathExists(legacyPath).then((exists) => {
+        if (!exists) return;
+        const filename = pathModule.basename(legacyPath);
+        logger.info(`[cleanup] Removing stale ${filename} (pre-v3.67 remnant)`);
+        fs.remove(legacyPath).catch((err) => {
+          logger.warn(`[cleanup] Failed to remove ${filename}`, { error: err.message });
+        });
       });
-    });
+    }
   }
 
   /**

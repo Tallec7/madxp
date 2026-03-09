@@ -1,6 +1,6 @@
 # Implemented Backlog — Features Livrées
 
-> **Dernière mise à jour** : 2 Mars 2026
+> **Dernière mise à jour** : 9 Mars 2026
 > Ce document recense **toutes** les features implémentées dans le codebase NEOPRO, organisées par domaine fonctionnel. Il complète le backlog SAFe (futur) avec une vue exhaustive du produit livré.
 > **Source** : Croisement systématique de 34 changelogs, 200+ commits git (v3.47→v3.64), audit codebase, et sprint audit sponsors/analytics (26 features P0+P1+P2+P3).
 
@@ -119,69 +119,71 @@
 
 ## 6. Analytics & Reporting
 
-| ID         | Feature                                                                     | Statut     | Fichiers clés                                          | Version/Date |
-| ---------- | --------------------------------------------------------------------------- | ---------- | ------------------------------------------------------ | ------------ |
-| IMP-ANA-01 | Analytics club (santé, engagement, lectures vidéo)                          | Production | `analytics.controller.ts`, `analytics.repository.ts`   | 2025         |
-| IMP-ANA-02 | Analytics annonceurs (impressions par gymnase/période)                      | Production | `advertiser-analytics.controller.ts`                   | Déc 2025     |
-| IMP-ANA-03 | Rapport PDF club (6 pages avec signature SHA-256)                           | Production | `pdf-report.service.ts`                                | Déc 2025     |
-| IMP-ANA-04 | Rapports mensuels automatisés (PDF + CSV)                                   | Production | `monthly-reports.service.ts`                           | Déc 2025     |
-| IMP-ANA-05 | Export Excel analytics                                                      | Production | `excel-export.service.ts`                              | 2025         |
-| IMP-ANA-06 | Benchmark clubs anonymisé                                                   | Production | `benchmark.service.ts`, `benchmark.controller.ts`      | 2025         |
-| IMP-ANA-07 | Métriques Prometheus (performance, alertes, sync)                           | Production | `metrics.service.ts`                                   | 2025         |
-| IMP-ANA-08 | Statistiques temps réel (agrégation live)                                   | Production | `realtime-stats.service.ts`                            | 2025         |
-| IMP-ANA-09 | Métriques pitch-deck (investisseurs)                                        | Production | `pitch-deck.controller.ts`, `pitch-deck.repository.ts` | 2025         |
-| IMP-ANA-10 | Estimation d'audience et score live (champs DB)                             | Livré      | `add-audience-and-score-fields.sql`                    | Déc 2025     |
-| IMP-ANA-11 | P6 analytics : statistiques réseau, benchmark, CPI, décomposition match PDF | Production | `analytics.controller.ts`                              | v3.54.0      |
-| IMP-ANA-12 | Dashboard métriques de traction (KPIs business pour pitch)                  | Production | `pitch-deck.controller.ts`, `pitch-deck.repository.ts` | 2026         |
-| IMP-ANA-13 | Détection statut TV HDMI-CEC (filtrer vraies lectures vidéo)                | Production | `hdmi.service.js` (raspberry/server)                   | 2026         |
-| IMP-ANA-14 | Dashboard santé flotte                                                      | Production | `realtime-dashboard.component.ts`                      | 2025         |
-| IMP-ANA-15 | Dashboard temps réel + export Excel                                         | Production | `realtime-dashboard.component.ts`                      | 2025         |
-| IMP-ANA-16 | Navigation par onglets sur toutes les pages analytics                       | Production | `analytics.module.ts`                                  | 2026         |
-| IMP-ANA-17 | Analytics sponsors : 6 KPIs, graphiques (ligne + anneau), export CSV        | Production | `sponsor-analytics.component.ts`                       | Déc 2025     |
-| IMP-ANA-18 | Rapports PDF sponsors professionnels (Chart.js)                             | Production | `pdf-report.service.ts`                                | Déc 2025     |
-| IMP-ANA-19 | Refonte fleet overview business-first (KPIs, Chart.js engagement, sponsors) | Production | `analytics.component.ts`                               | Fév 2026     |
-| IMP-ANA-20 | Refonte club analytics : page unique, sponsors benchmark, tendances         | Production | `club-analytics.component.ts`                          | Fév 2026     |
+| ID         | Feature                                                                                               | Statut     | Fichiers clés                                           | Version/Date |
+| ---------- | ----------------------------------------------------------------------------------------------------- | ---------- | ------------------------------------------------------- | ------------ |
+| IMP-ANA-01 | Analytics club (santé, engagement, lectures vidéo)                                                    | Production | `analytics.controller.ts`, `analytics.repository.ts`    | 2025         |
+| IMP-ANA-02 | Analytics annonceurs (impressions par gymnase/période)                                                | Production | `advertiser-analytics.controller.ts`                    | Déc 2025     |
+| IMP-ANA-03 | Rapport PDF club (6 pages avec signature SHA-256)                                                     | Production | `pdf-report.service.ts`                                 | Déc 2025     |
+| IMP-ANA-04 | Rapports mensuels automatisés (PDF + CSV)                                                             | Production | `monthly-reports.service.ts`                            | Déc 2025     |
+| IMP-ANA-05 | Export Excel analytics                                                                                | Production | `excel-export.service.ts`                               | 2025         |
+| IMP-ANA-06 | Benchmark clubs anonymisé                                                                             | Production | `benchmark.service.ts`, `benchmark.controller.ts`       | 2025         |
+| IMP-ANA-07 | Métriques Prometheus (performance, alertes, sync)                                                     | Production | `metrics.service.ts`                                    | 2025         |
+| IMP-ANA-08 | Statistiques temps réel (agrégation live)                                                             | Production | `realtime-stats.service.ts`                             | 2025         |
+| IMP-ANA-09 | Métriques pitch-deck (investisseurs)                                                                  | Production | `pitch-deck.controller.ts`, `pitch-deck.repository.ts`  | 2025         |
+| IMP-ANA-10 | Estimation d'audience et score live (champs DB)                                                       | Livré      | `add-audience-and-score-fields.sql`                     | Déc 2025     |
+| IMP-ANA-11 | P6 analytics : statistiques réseau, benchmark, CPI, décomposition match PDF                           | Production | `analytics.controller.ts`                               | v3.54.0      |
+| IMP-ANA-12 | Dashboard métriques de traction (KPIs business pour pitch)                                            | Production | `pitch-deck.controller.ts`, `pitch-deck.repository.ts`  | 2026         |
+| IMP-ANA-13 | Détection statut TV HDMI-CEC (filtrer vraies lectures vidéo)                                          | Production | `hdmi.service.js` (raspberry/server)                    | 2026         |
+| IMP-ANA-14 | Dashboard santé flotte                                                                                | Production | `realtime-dashboard.component.ts`                       | 2025         |
+| IMP-ANA-15 | Dashboard temps réel + export Excel                                                                   | Production | `realtime-dashboard.component.ts`                       | 2025         |
+| IMP-ANA-16 | Navigation par onglets sur toutes les pages analytics                                                 | Production | `analytics.module.ts`                                   | 2026         |
+| IMP-ANA-17 | Analytics sponsors : 6 KPIs, graphiques (ligne + anneau), export CSV                                  | Production | `sponsor-analytics.component.ts`                        | Déc 2025     |
+| IMP-ANA-18 | Rapports PDF sponsors professionnels (Chart.js)                                                       | Production | `pdf-report.service.ts`                                 | Déc 2025     |
+| IMP-ANA-19 | Refonte fleet overview business-first (KPIs, Chart.js engagement, sponsors)                           | Production | `analytics.component.ts`                                | Fév 2026     |
+| IMP-ANA-20 | Refonte club analytics : page unique, sponsors benchmark, tendances                                   | Production | `club-analytics.component.ts`                           | Fév 2026     |
+| IMP-ANA-21 | Fix pipeline consolidation cleanup — stale sponsor buffer + orphan sender causant HTTP 400 sur 50+ Pi | Production | `agent.js`, `analytics-buffer.js`, `build-raspberry.sh` | Mars 2026    |
 
 ---
 
 ## 7. Raspberry Pi (Edge)
 
-| ID        | Feature                                                                                                                 | Statut     | Fichiers clés                                                   | Version/Date |
-| --------- | ----------------------------------------------------------------------------------------------------------------------- | ---------- | --------------------------------------------------------------- | ------------ |
-| IMP-PI-01 | Télécommande v2 (recherche, badge audience, modal match)                                                                | Production | `remote.component.ts`                                           | Déc 2025     |
-| IMP-PI-02 | Socket.IO mode hors-ligne autonome (lib locale)                                                                         | Production | `socket.io.min.js` local                                        | Déc 2025     |
-| IMP-PI-03 | Lecture vidéo double-buffer (transitions fluides)                                                                       | Production | `double-buffer-video.service.ts`                                | 2025         |
-| IMP-PI-04 | Profils de configuration (avant/pendant/après match)                                                                    | Production | `profile-config.service.ts`, `config-profiles.controller.ts`    | Déc 2025     |
-| IMP-PI-05 | Détection statut HDMI                                                                                                   | Production | `hdmi-status.service.ts`                                        | 2025         |
-| IMP-PI-06 | Détection HDMI EDID (type écran + 8 champs enrichis edid-decode + display_category)                                     | Production | `hdmi.service.js`, `hdmi-status.service.ts`, `metrics.js`       | 2026         |
-| IMP-PI-07 | Récupération erreur vidéo (lecture de secours)                                                                          | Production | `video-error-recovery.service.ts`                               | 2025         |
-| IMP-PI-08 | Filigrane overlay configurable                                                                                          | Production | `watermark.service.ts`                                          | 2025         |
-| IMP-PI-09 | Sélecteur de filigrane déroulant sur Dashboard                                                                          | Production | `watermark.component.ts`                                        | v3.57.0      |
-| IMP-PI-10 | Capture d'écran (à la demande depuis télécommande cloud)                                                                | Production | `screenshot.service.ts`                                         | 2025         |
-| IMP-PI-11 | Branding personnalisé par site (logo, couleurs)                                                                         | Production | `add-site-branding.sql`                                         | 2025         |
-| IMP-PI-12 | Hostname Pi dynamique dérivé du nom du club                                                                             | Production | `hostname.js` (sync-agent), `hostname.ts` (utils)               | v3.51.0      |
-| IMP-PI-13 | Enregistrement : retour auto en boucle après inactivité                                                                 | Production | `recording-state.service.ts`                                    | 2026         |
-| IMP-PI-14 | Enregistrement : popup avertissement inactivité avec décompte (ADR-021)                                                 | Production | `remote.component.ts`                                           | 2026         |
-| IMP-PI-15 | Bascule mode club/tech + widget statut sync                                                                             | Production | `admin-panel.component.ts`                                      | 2026         |
-| IMP-PI-16 | Installation apt depuis dashboard via sudoers                                                                           | Production | `sudoers`, `admin-server.js`                                    | 2026         |
-| IMP-PI-17 | Contrôle enregistrement analytics + sync TV maître-esclave                                                              | Production | `recording.service.ts`                                          | 2026         |
-| IMP-PI-18 | Masquage curseur kiosque (triple protection sur TV)                                                                     | Production | `kiosk.css`                                                     | 2026         |
-| IMP-PI-19 | Transitions TV : détection frame réel (élimine trous noirs sur Pi 5)                                                    | Production | `double-buffer-video.service.ts`                                | 2026         |
-| IMP-PI-20 | Chromium → chromium (compat Raspberry Pi OS Trixie)                                                                     | Production | `kiosk.sh`                                                      | Déc 2025     |
-| IMP-PI-21 | Programmation boucle vidéo par phase match (pré/pendant/post)                                                           | Production | `loop-scheduler.js`                                             | Déc 2025     |
-| IMP-PI-22 | Installation apt sécurisée via sudoers ciblé (pas de NoNewPrivileges)                                                   | Production | `sudoers`                                                       | 2026         |
-| IMP-PI-23 | Dual Kiosk HDMI : route `/secondary` + `displayType` dans TvComponent                                                   | Production | `app.routes.ts`, `tv.component.ts`                              | Fév 2026     |
-| IMP-PI-24 | Watchdog dual Chromium secondary (détection HDMI 1 DRM/KMS, auto start/stop)                                            | Production | `kiosk-watchdog.sh`                                             | Fév 2026     |
-| IMP-PI-25 | Overlays secondary : score bandeau compact + goal flash couleur par équipe                                              | Production | `tv.component.html`, `tv.component.scss`                        | Fév 2026     |
-| IMP-PI-26 | Socket.IO `tv-register` avec `displayType` (master-slave par écran)                                                     | Livré      | `state.service.js`, `handlers.js`                               | Fév 2026     |
-| IMP-PI-27 | Kiosk : attente active X11 avant lancement Chromium (xdpyinfo polling)                                                  | Production | `kiosk-watchdog.sh`, `neopro-kiosk.service`                     | Fév 2026     |
-| IMP-PI-28 | Hotspot : scan WiFi sur wlan1 (plus wlan0 AP) — corrige SSID invisible                                                  | Production | `hotspot-optimizer.sh`                                          | Fév 2026     |
-| IMP-PI-29 | Hotspot : auto-fix TKIP→CCMP au boot via optimizer (propagation OTA)                                                    | Production | `hotspot-optimizer.sh`                                          | Fév 2026     |
-| IMP-PI-30 | Catégorisation intelligente écran (edid-decode enrichi, \_inferDisplayCategory)                                         | Livré      | `hdmi.service.js`, `metrics.js`                                 | Fév 2026     |
-| IMP-PI-31 | OTA auto-installe edid-decode sur Pi existants (requiredAptPackages + diagnose-pi)                                      | Livré      | `update-software.js`, `diagnose-pi.sh`                          | Fév 2026     |
-| IMP-PI-32 | Fix \_findEdidPath sysfs (stat.size=0 → readFileSync.length) — débloque EDID enrichi                                    | Livré      | `metrics.js`, `hdmi.service.js`                                 | Fév 2026     |
-| IMP-PI-33 | Fix crash loop GPU Chromium après OTA deploy — root cause: `ExecStop=pkill -9` dans systemd bypasse le trap handler V3D | Production | `neopro-kiosk.service`, `kiosk-watchdog.sh`, `deploy-remote.sh` | Fév 2026     |
-| IMP-PI-34 | Hotspot optimizer : scan unique + cache (`CACHED_SCAN`) — élimine perte carrier wlan1 RTL8192EU au boot (5 scans → 1)   | Production | `hotspot-optimizer.sh`                                          | Mars 2026    |
+| ID        | Feature                                                                                                                                      | Statut     | Fichiers clés                                                              | Version/Date |
+| --------- | -------------------------------------------------------------------------------------------------------------------------------------------- | ---------- | -------------------------------------------------------------------------- | ------------ |
+| IMP-PI-01 | Télécommande v2 (recherche, badge audience, modal match)                                                                                     | Production | `remote.component.ts`                                                      | Déc 2025     |
+| IMP-PI-02 | Socket.IO mode hors-ligne autonome (lib locale)                                                                                              | Production | `socket.io.min.js` local                                                   | Déc 2025     |
+| IMP-PI-03 | Lecture vidéo double-buffer (transitions fluides)                                                                                            | Production | `double-buffer-video.service.ts`                                           | 2025         |
+| IMP-PI-04 | Profils de configuration (avant/pendant/après match)                                                                                         | Production | `profile-config.service.ts`, `config-profiles.controller.ts`               | Déc 2025     |
+| IMP-PI-05 | Détection statut HDMI                                                                                                                        | Production | `hdmi-status.service.ts`                                                   | 2025         |
+| IMP-PI-06 | Détection HDMI EDID (type écran + 8 champs enrichis edid-decode + display_category)                                                          | Production | `hdmi.service.js`, `hdmi-status.service.ts`, `metrics.js`                  | 2026         |
+| IMP-PI-07 | Récupération erreur vidéo (lecture de secours)                                                                                               | Production | `video-error-recovery.service.ts`                                          | 2025         |
+| IMP-PI-08 | Filigrane overlay configurable                                                                                                               | Production | `watermark.service.ts`                                                     | 2025         |
+| IMP-PI-09 | Sélecteur de filigrane déroulant sur Dashboard                                                                                               | Production | `watermark.component.ts`                                                   | v3.57.0      |
+| IMP-PI-10 | Capture d'écran (à la demande depuis télécommande cloud)                                                                                     | Production | `screenshot.service.ts`                                                    | 2025         |
+| IMP-PI-11 | Branding personnalisé par site (logo, couleurs)                                                                                              | Production | `add-site-branding.sql`                                                    | 2025         |
+| IMP-PI-12 | Hostname Pi dynamique dérivé du nom du club                                                                                                  | Production | `hostname.js` (sync-agent), `hostname.ts` (utils)                          | v3.51.0      |
+| IMP-PI-13 | Enregistrement : retour auto en boucle après inactivité                                                                                      | Production | `recording-state.service.ts`                                               | 2026         |
+| IMP-PI-14 | Enregistrement : popup avertissement inactivité avec décompte (ADR-021)                                                                      | Production | `remote.component.ts`                                                      | 2026         |
+| IMP-PI-15 | Bascule mode club/tech + widget statut sync                                                                                                  | Production | `admin-panel.component.ts`                                                 | 2026         |
+| IMP-PI-16 | Installation apt depuis dashboard via sudoers                                                                                                | Production | `sudoers`, `admin-server.js`                                               | 2026         |
+| IMP-PI-17 | Contrôle enregistrement analytics + sync TV maître-esclave                                                                                   | Production | `recording.service.ts`                                                     | 2026         |
+| IMP-PI-18 | Masquage curseur kiosque (triple protection sur TV)                                                                                          | Production | `kiosk.css`                                                                | 2026         |
+| IMP-PI-19 | Transitions TV : détection frame réel (élimine trous noirs sur Pi 5)                                                                         | Production | `double-buffer-video.service.ts`                                           | 2026         |
+| IMP-PI-20 | Chromium → chromium (compat Raspberry Pi OS Trixie)                                                                                          | Production | `kiosk.sh`                                                                 | Déc 2025     |
+| IMP-PI-21 | Programmation boucle vidéo par phase match (pré/pendant/post)                                                                                | Production | `loop-scheduler.js`                                                        | Déc 2025     |
+| IMP-PI-22 | Installation apt sécurisée via sudoers ciblé (pas de NoNewPrivileges)                                                                        | Production | `sudoers`                                                                  | 2026         |
+| IMP-PI-23 | Dual Kiosk HDMI : route `/secondary` + `displayType` dans TvComponent                                                                        | Production | `app.routes.ts`, `tv.component.ts`                                         | Fév 2026     |
+| IMP-PI-24 | Watchdog dual Chromium secondary (détection HDMI 1 DRM/KMS, auto start/stop)                                                                 | Production | `kiosk-watchdog.sh`                                                        | Fév 2026     |
+| IMP-PI-25 | Overlays secondary : score bandeau compact + goal flash couleur par équipe                                                                   | Production | `tv.component.html`, `tv.component.scss`                                   | Fév 2026     |
+| IMP-PI-26 | Socket.IO `tv-register` avec `displayType` (master-slave par écran)                                                                          | Livré      | `state.service.js`, `handlers.js`                                          | Fév 2026     |
+| IMP-PI-27 | Kiosk : attente active X11 avant lancement Chromium (xdpyinfo polling)                                                                       | Production | `kiosk-watchdog.sh`, `neopro-kiosk.service`                                | Fév 2026     |
+| IMP-PI-28 | Hotspot : scan WiFi sur wlan1 (plus wlan0 AP) — corrige SSID invisible                                                                       | Production | `hotspot-optimizer.sh`                                                     | Fév 2026     |
+| IMP-PI-29 | Hotspot : auto-fix TKIP→CCMP au boot via optimizer (propagation OTA)                                                                         | Production | `hotspot-optimizer.sh`                                                     | Fév 2026     |
+| IMP-PI-30 | Catégorisation intelligente écran (edid-decode enrichi, \_inferDisplayCategory)                                                              | Livré      | `hdmi.service.js`, `metrics.js`                                            | Fév 2026     |
+| IMP-PI-31 | OTA auto-installe edid-decode sur Pi existants (requiredAptPackages + diagnose-pi)                                                           | Livré      | `update-software.js`, `diagnose-pi.sh`                                     | Fév 2026     |
+| IMP-PI-32 | Fix \_findEdidPath sysfs (stat.size=0 → readFileSync.length) — débloque EDID enrichi                                                         | Livré      | `metrics.js`, `hdmi.service.js`                                            | Fév 2026     |
+| IMP-PI-33 | Fix crash loop GPU Chromium après OTA deploy — root cause: `ExecStop=pkill -9` dans systemd bypasse le trap handler V3D                      | Production | `neopro-kiosk.service`, `kiosk-watchdog.sh`, `deploy-remote.sh`            | Fév 2026     |
+| IMP-PI-34 | Hotspot optimizer : scan unique + cache (`CACHED_SCAN`) — élimine perte carrier wlan1 RTL8192EU au boot (5 scans → 1)                        | Production | `hotspot-optimizer.sh`                                                     | Mars 2026    |
+| IMP-PI-35 | Fix orphan `sponsor-impressions.js` + stale buffer HTTP 400 — `cleanupLegacyFiles()` appelé au `start()`, rsync `--delete`, defense-in-depth | Production | `agent.js`, `build-raspberry.sh`, `fix-fleet-pi.sh`, `analytics-buffer.js` | Mars 2026    |
 
 ---
 

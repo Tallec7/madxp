@@ -2487,7 +2487,7 @@ describe('Sync-agent debug bundle regression guards', () => {
   });
 
   // Issue: Stale sponsor_impressions.json from pre-v3.66.
-  // Fix: Auto-cleanup on startup.
+  // Fix: Auto-cleanup on startup (must be CALLED in start(), not just defined).
   it('agent.js must cleanup legacy sponsor_impressions.json on startup', () => {
     const agent = fs.readFileSync(
       path.join(repoRoot, 'raspberry/sync-agent/src/agent.js'),
@@ -2497,6 +2497,31 @@ describe('Sync-agent debug bundle regression guards', () => {
       .toEqual({ hasCleanup: true });
     expect({ hasSponsorPath: agent.includes('sponsor_impressions.json') })
       .toEqual({ hasSponsorPath: true });
+
+    // Must be called in start() — defining the method without calling it
+    // leaves sponsor_impressions.json (2448+ orphan entries) on the Pi forever.
+    const startMethod = agent.slice(
+      agent.indexOf('async start()'),
+      agent.indexOf('async start()') + 2000
+    );
+    expect({ calledInStart: startMethod.includes('cleanupLegacyFiles') })
+      .toEqual({ calledInStart: true });
+  });
+
+  // Issue: rsync without --delete leaves orphan sponsor-impressions.js on Pi.
+  // Fix: build-raspberry.sh must use --delete for sync-agent rsync.
+  it('build-raspberry.sh must use --delete for sync-agent rsync', () => {
+    const buildScript = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/scripts/build-raspberry.sh'),
+      'utf8'
+    );
+    // Find the sync-agent rsync line and verify --delete is present
+    const syncAgentLines = buildScript.split('\n').filter(
+      (line: string) => line.includes('rsync') && line.includes('sync-agent')
+    );
+    expect(syncAgentLines.length).toBeGreaterThan(0);
+    expect({ hasDelete: syncAgentLines.some((line: string) => line.includes('--delete')) })
+      .toEqual({ hasDelete: true });
   });
 
   // Issue: Channel auto-switch never triggered (threshold 5 too high).

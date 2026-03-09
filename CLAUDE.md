@@ -17,7 +17,7 @@ cd central-server && npm run build # Compile TypeScript
 
 # Tests
 npm run test:server                # Jest (API central-server — 1941 tests)
-npm run test:smoke                 # Jest (Smoke tests — 533 tests, détecte régressions de wiring)
+npm run test:smoke                 # Jest (Smoke tests — 612 tests, détecte régressions de wiring)
 npm run test:central               # Karma (Angular Dashboard — 520 tests)
 cd raspberry/server && npm test    # Jest (Socket.IO server — 71 tests)
 cd raspberry/admin && npm test     # Jest (Admin server — 194 tests)
@@ -122,6 +122,8 @@ source central-server/.env && psql "$DATABASE_URL" -f central-server/src/scripts
 - Supprimer le mécanisme `GPU_DECODE_FALLBACK_FILE` de kiosk-watchdog.sh (l'auto-fallback hardware→software après 2 crashs protège contre les régressions V4L2 Chromium — sans ce filet, Chromium crash-loop en boucle avec le hardware decode sur certaines versions — smoke test enforced)
 - Mettre `--disable-gpu-memory-buffer-video-frames` dans le bloc hardware decode Pi 5 (ce flag force le chemin software complet — le hardware decode V4L2 a besoin des GPU memory buffers pour fonctionner — smoke test enforced)
 - Dupliquer `--enable-features` dans kiosk-watchdog.sh (même règle que `--disable-features` — Chromium n'accepte qu'un seul flag `--enable-features`, le dernier écrase les précédents — combiner dans la variable `$enable_features` — smoke test enforced)
+- Utiliser `rsync -a` sans `--delete` pour sync-agent dans build-raspberry.sh (les fichiers supprimés du repo survivent indéfiniment sur les Pi après OTA — ex: `sponsor-impressions.js` supprimé en v3.67 envoyait encore des HTTP 400 avec 2448 impressions orphelines — smoke test enforced)
+- Définir `cleanupLegacyFiles()` dans agent.js sans l'appeler dans `start()` (méthode morte — les fichiers stale restent éternellement sur le Pi — ex: `sponsor_impressions.json` avec 2448 entrées orphelines jamais nettoyées — smoke test enforced)
 
 ## Architecture détaillée
 

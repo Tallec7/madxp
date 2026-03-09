@@ -436,13 +436,19 @@ fi
 if [ -f "$SPONSOR_BUFFER" ]; then
     SPONSOR_COUNT=$(python3 -c "import json; print(len(json.load(open('$SPONSOR_BUFFER'))))" 2>/dev/null || echo "?")
     SPONSOR_SIZE=$(du -h "$SPONSOR_BUFFER" 2>/dev/null | awk '{print $1}')
-    log_info "Buffer sponsors : $SPONSOR_COUNT événements ($SPONSOR_SIZE)"
-    if [ "$SPONSOR_COUNT" != "?" ] && [ "$SPONSOR_COUNT" != "0" ]; then
-        HAS_BUFFERS=true
-    fi
-else
-    log_info "Pas de buffer sponsors"
+    log_warn "Stale sponsor_impressions.json found (pre-v3.67 remnant) : $SPONSOR_COUNT events ($SPONSOR_SIZE) — removing"
+    rm -f "$SPONSOR_BUFFER"
     SPONSOR_COUNT="0"
+else
+    log_info "Pas de buffer sponsors (OK — consolidated pipeline)"
+    SPONSOR_COUNT="0"
+fi
+
+# Cleanup orphan sponsor-impressions.js (deleted from repo in v3.67 but rsync sans --delete)
+ORPHAN_SPONSOR_JS="$NEOPRO_ROOT/sync-agent/src/sponsor-impressions.js"
+if [ -f "$ORPHAN_SPONSOR_JS" ]; then
+    log_warn "Orphan sponsor-impressions.js found — removing"
+    rm -f "$ORPHAN_SPONSOR_JS"
 fi
 
 if [ "$HAS_BUFFERS" = true ]; then

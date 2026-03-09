@@ -4093,7 +4093,9 @@ Le tracking analytics (video plays + impressions sponsors) n'est actif que si `R
 ```bash
 # Vérifier le buffer analytics après la vidéo :
 cat ~/neopro/data/analytics_buffer.json
-cat ~/neopro/data/sponsor_impressions.json
+# Note: sponsor_impressions.json n'existe plus depuis v3.66 (pipeline consolidé).
+# Si ce fichier existe encore, il est stale et sera supprimé automatiquement
+# au prochain démarrage du sync-agent (cleanupLegacyFiles).
 ```
 
 **Solution (v3.43.2+) :** Le `TvComponent` démarre temporairement le recording dans `play()` et le coupe dans `onManualEnded()`. Vérifier que le build est à jour.

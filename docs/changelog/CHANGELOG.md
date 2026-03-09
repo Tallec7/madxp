@@ -1,3 +1,27 @@
+# [Unreleased]
+
+### Bug Fixes
+
+- **sync-agent:** orphan `sponsor-impressions.js` + stale `sponsor_impressions.json` buffer causing HTTP 400 — `cleanupLegacyFiles()` was defined but never called in `start()`, and `rsync` without `--delete` left files deleted from the repo on Pi indefinitely. Root cause: the old SponsorImpressions sender (removed v3.67.0) added `site_id` to impressions, rejected by Joi `.unknown(false)` on the central endpoint. Real-world impact: 2448 orphan impressions on RACC Handball Nantes Pi.
+- **build:** `build-raspberry.sh` sync-agent rsync lacked `--delete` flag — files deleted from the repo survived on all Pi after OTA updates
+- **fix-fleet-pi:** stale `sponsor_impressions.json` removal — direct `rm -f` instead of failed flush attempt + cleanup orphan `sponsor-impressions.js` module
+
+### Monitoring
+
+- **sync-agent:** `analytics-buffer.js` auto-deletes stale `sponsor_impressions.json` when detected during diagnostics (defense-in-depth, complements startup cleanup)
+
+### Tests
+
+- **smoke:** 2 new regression guards:
+  - `agent.js` must call `cleanupLegacyFiles()` in `start()` — defining the method without calling it leaves 2448+ orphan entries on Pi forever
+  - `build-raspberry.sh` must use `--delete` for sync-agent rsync — without it, deleted files survive OTA updates indefinitely
+
+### Docs
+
+- **TROUBLESHOOTING.md:** remove obsolete `sponsor_impressions.json` diagnostic (pipeline consolidated since v3.66)
+- **CLAUDE.md:** 2 new "NE JAMAIS FAIRE" rules preventing rsync `--delete` omission and dead cleanup method pattern
+- **SAFe:** IMP-PI-35 + IMP-ANA-21 entries for analytics pipeline consolidation cleanup
+
 # [3.101.0](https://github.com/Tallec7/neopro/compare/v3.100.0...v3.101.0) (2026-03-09)
 
 ### Features

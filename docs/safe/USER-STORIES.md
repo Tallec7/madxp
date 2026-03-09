@@ -125,57 +125,59 @@
 
 ### 6. Analytics & Reporting (20 US)
 
-| ID         | User Story                                                                                            | SP  | Statut   | Fichiers clés                                          | Date     |
-| ---------- | ----------------------------------------------------------------------------------------------------- | --- | -------- | ------------------------------------------------------ | -------- |
-| IMP-ANA-01 | En tant qu'admin, je consulte les analytics club (santé, engagement, lectures vidéo)                  | 5   | ✅ Done  | `analytics.controller.ts`, `analytics.repository.ts`   | 2025     |
-| IMP-ANA-02 | En tant qu'admin, je consulte les analytics annonceurs (impressions par gymnase/période)              | 5   | ✅ Done  | `advertiser-analytics.controller.ts`                   | Déc 2025 |
-| IMP-ANA-03 | En tant qu'admin, je génère un rapport PDF club (6 pages, signature SHA-256)                          | 5   | ✅ Done  | `pdf-report.service.ts`                                | Déc 2025 |
-| IMP-ANA-04 | En tant que système, les rapports mensuels sont générés automatiquement (PDF + CSV)                   | 5   | ✅ Done  | `monthly-reports.service.ts`                           | Déc 2025 |
-| IMP-ANA-05 | En tant qu'admin, je peux exporter les analytics en Excel                                             | 3   | ✅ Done  | `excel-export.service.ts`                              | 2025     |
-| IMP-ANA-06 | En tant qu'admin, je peux comparer mon club à un benchmark anonymisé                                  | 3   | ✅ Done  | `benchmark.service.ts`, `benchmark.controller.ts`      | 2025     |
-| IMP-ANA-07 | En tant que système, les métriques Prometheus (performance, alertes, sync) sont exposées              | 3   | ✅ Done  | `metrics.service.ts`                                   | 2025     |
-| IMP-ANA-08 | En tant qu'admin, je consulte les statistiques en temps réel (agrégation live)                        | 5   | ✅ Done  | `realtime-stats.service.ts`                            | 2025     |
-| IMP-ANA-09 | En tant qu'investisseur, je consulte les métriques pitch-deck                                         | 3   | ✅ Done  | `pitch-deck.controller.ts`, `pitch-deck.repository.ts` | 2025     |
-| IMP-ANA-10 | En tant que système, les champs audience et score live sont en base                                   | 2   | ✅ Livré | `add-audience-and-score-fields.sql`                    | Déc 2025 |
-| IMP-ANA-11 | En tant qu'admin, je dispose des analytics P6 : stats réseau, benchmark, CPI, décomposition match PDF | 5   | ✅ Done  | `analytics.controller.ts`                              | v3.54.0  |
-| IMP-ANA-12 | En tant qu'admin, le dashboard métriques de traction affiche les KPIs business pour les pitchs        | 3   | ✅ Done  | `traction-metrics.component.ts`                        | 2026     |
-| IMP-ANA-13 | En tant que système, la détection statut TV HDMI-CEC filtre les vraies lectures vidéo (ADR-010)       | 5   | ✅ Done  | `hdmi-cec.service.ts`                                  | 2026     |
-| IMP-ANA-14 | En tant qu'admin, je consulte le dashboard santé flotte avec indicateurs agrégés                      | 3   | ✅ Done  | `fleet-health.component.ts`                            | 2025     |
-| IMP-ANA-15 | En tant qu'admin, je consulte le dashboard temps réel et j'exporte en Excel                           | 3   | ✅ Done  | `realtime-dashboard.component.ts`                      | 2025     |
-| IMP-ANA-16 | En tant qu'admin, la navigation par onglets est disponible sur toutes les pages analytics             | 2   | ✅ Done  | `analytics.module.ts`                                  | 2026     |
-| IMP-ANA-17 | En tant qu'admin, les analytics sponsors affichent 6 KPIs, graphiques (ligne + anneau), export CSV    | 5   | ✅ Done  | `sponsor-analytics.component.ts`                       | Déc 2025 |
-| IMP-ANA-18 | En tant qu'admin, les rapports PDF sponsors sont professionnels avec Chart.js                         | 5   | ✅ Done  | `pdf-report.service.ts`                                | Déc 2025 |
-| IMP-ANA-19 | En tant qu'admin, la page fleet affiche les KPIs business (plays, impressions, engagement Chart.js)   | 5   | ✅ Done  | `analytics.component.ts`                               | Fév 2026 |
-| IMP-ANA-20 | En tant qu'admin, la page club analytics est une vue unique avec sponsors benchmark et tendances      | 5   | ✅ Done  | `club-analytics.component.ts`                          | Fév 2026 |
+| ID         | User Story                                                                                                 | SP  | Statut   | Fichiers clés                                           | Date      |
+| ---------- | ---------------------------------------------------------------------------------------------------------- | --- | -------- | ------------------------------------------------------- | --------- |
+| IMP-ANA-01 | En tant qu'admin, je consulte les analytics club (santé, engagement, lectures vidéo)                       | 5   | ✅ Done  | `analytics.controller.ts`, `analytics.repository.ts`    | 2025      |
+| IMP-ANA-02 | En tant qu'admin, je consulte les analytics annonceurs (impressions par gymnase/période)                   | 5   | ✅ Done  | `advertiser-analytics.controller.ts`                    | Déc 2025  |
+| IMP-ANA-03 | En tant qu'admin, je génère un rapport PDF club (6 pages, signature SHA-256)                               | 5   | ✅ Done  | `pdf-report.service.ts`                                 | Déc 2025  |
+| IMP-ANA-04 | En tant que système, les rapports mensuels sont générés automatiquement (PDF + CSV)                        | 5   | ✅ Done  | `monthly-reports.service.ts`                            | Déc 2025  |
+| IMP-ANA-05 | En tant qu'admin, je peux exporter les analytics en Excel                                                  | 3   | ✅ Done  | `excel-export.service.ts`                               | 2025      |
+| IMP-ANA-06 | En tant qu'admin, je peux comparer mon club à un benchmark anonymisé                                       | 3   | ✅ Done  | `benchmark.service.ts`, `benchmark.controller.ts`       | 2025      |
+| IMP-ANA-07 | En tant que système, les métriques Prometheus (performance, alertes, sync) sont exposées                   | 3   | ✅ Done  | `metrics.service.ts`                                    | 2025      |
+| IMP-ANA-08 | En tant qu'admin, je consulte les statistiques en temps réel (agrégation live)                             | 5   | ✅ Done  | `realtime-stats.service.ts`                             | 2025      |
+| IMP-ANA-09 | En tant qu'investisseur, je consulte les métriques pitch-deck                                              | 3   | ✅ Done  | `pitch-deck.controller.ts`, `pitch-deck.repository.ts`  | 2025      |
+| IMP-ANA-10 | En tant que système, les champs audience et score live sont en base                                        | 2   | ✅ Livré | `add-audience-and-score-fields.sql`                     | Déc 2025  |
+| IMP-ANA-11 | En tant qu'admin, je dispose des analytics P6 : stats réseau, benchmark, CPI, décomposition match PDF      | 5   | ✅ Done  | `analytics.controller.ts`                               | v3.54.0   |
+| IMP-ANA-12 | En tant qu'admin, le dashboard métriques de traction affiche les KPIs business pour les pitchs             | 3   | ✅ Done  | `traction-metrics.component.ts`                         | 2026      |
+| IMP-ANA-13 | En tant que système, la détection statut TV HDMI-CEC filtre les vraies lectures vidéo (ADR-010)            | 5   | ✅ Done  | `hdmi-cec.service.ts`                                   | 2026      |
+| IMP-ANA-14 | En tant qu'admin, je consulte le dashboard santé flotte avec indicateurs agrégés                           | 3   | ✅ Done  | `fleet-health.component.ts`                             | 2025      |
+| IMP-ANA-15 | En tant qu'admin, je consulte le dashboard temps réel et j'exporte en Excel                                | 3   | ✅ Done  | `realtime-dashboard.component.ts`                       | 2025      |
+| IMP-ANA-16 | En tant qu'admin, la navigation par onglets est disponible sur toutes les pages analytics                  | 2   | ✅ Done  | `analytics.module.ts`                                   | 2026      |
+| IMP-ANA-17 | En tant qu'admin, les analytics sponsors affichent 6 KPIs, graphiques (ligne + anneau), export CSV         | 5   | ✅ Done  | `sponsor-analytics.component.ts`                        | Déc 2025  |
+| IMP-ANA-18 | En tant qu'admin, les rapports PDF sponsors sont professionnels avec Chart.js                              | 5   | ✅ Done  | `pdf-report.service.ts`                                 | Déc 2025  |
+| IMP-ANA-19 | En tant qu'admin, la page fleet affiche les KPIs business (plays, impressions, engagement Chart.js)        | 5   | ✅ Done  | `analytics.component.ts`                                | Fév 2026  |
+| IMP-ANA-20 | En tant qu'admin, la page club analytics est une vue unique avec sponsors benchmark et tendances           | 5   | ✅ Done  | `club-analytics.component.ts`                           | Fév 2026  |
+| IMP-ANA-21 | En tant que système, le pipeline analytics consolidé nettoie les fichiers orphelins pré-v3.67 au démarrage | 3   | ✅ Done  | `agent.js`, `analytics-buffer.js`, `build-raspberry.sh` | Mars 2026 |
 
 ---
 
 ### 7. Raspberry Pi — Edge (22 US)
 
-| ID        | User Story                                                                                                             | SP  | Statut  | Fichiers clés                                                | Date     |
-| --------- | ---------------------------------------------------------------------------------------------------------------------- | --- | ------- | ------------------------------------------------------------ | -------- |
-| IMP-PI-01 | En tant que bénévole, la télécommande v2 propose recherche, badge audience et modal match                              | 5   | ✅ Done | `remote.component.ts`                                        | Déc 2025 |
-| IMP-PI-02 | En tant que système, Socket.IO fonctionne en mode hors-ligne autonome (lib locale)                                     | 3   | ✅ Done | `socket.io.min.js` local                                     | Déc 2025 |
-| IMP-PI-03 | En tant que spectateur, la lecture vidéo utilise un double-buffer pour des transitions fluides (ADR-008)               | 5   | ✅ Done | `double-buffer-video.service.ts`                             | 2025     |
-| IMP-PI-04 | En tant que bénévole, les profils de configuration (avant/pendant/après match) changent automatiquement                | 5   | ✅ Done | `profile-config.service.ts`, `config-profiles.controller.ts` | Déc 2025 |
-| IMP-PI-05 | En tant que système, le statut HDMI est détecté pour savoir si l'écran est allumé                                      | 2   | ✅ Done | `hdmi-status.service.ts`                                     | 2025     |
-| IMP-PI-06 | En tant que système, l'EDID HDMI identifie le type d'écran (moniteur PC vs TV)                                         | 2   | ✅ Done | `hdmi-edid.service.ts`                                       | 2026     |
-| IMP-PI-07 | En tant que système, une vidéo de secours est lue automatiquement en cas d'erreur                                      | 2   | ✅ Done | `video-error-recovery.service.ts`                            | 2025     |
-| IMP-PI-08 | En tant qu'admin, un filigrane overlay est configurable sur l'écran TV                                                 | 3   | ✅ Done | `watermark.service.ts`                                       | 2025     |
-| IMP-PI-09 | En tant qu'admin, je sélectionne le filigrane via un menu déroulant sur le dashboard                                   | 2   | ✅ Done | `watermark.component.ts`                                     | v3.57.0  |
-| IMP-PI-10 | En tant qu'admin, je peux capturer un screenshot du Pi à la demande (cloud)                                            | 3   | ✅ Done | `screenshot.service.ts`                                      | 2025     |
-| IMP-PI-11 | En tant qu'admin, le branding est personnalisé par site (logo, couleurs)                                               | 3   | ✅ Done | `add-site-branding.sql`                                      | 2025     |
-| IMP-PI-12 | En tant que système, le hostname Pi est dynamiquement dérivé du nom du club                                            | 1   | ✅ Done | `hostname.service.ts`                                        | v3.51.0  |
-| IMP-PI-13 | En tant que système, l'enregistrement revient auto en boucle après inactivité                                          | 2   | ✅ Done | `recording.service.ts`                                       | 2026     |
-| IMP-PI-14 | En tant que bénévole, un popup d'avertissement inactivité avec décompte est affiché pendant l'enregistrement (ADR-021) | 3   | ✅ Done | `remote.component.ts`                                        | 2026     |
-| IMP-PI-15 | En tant que staff, je bascule entre mode club/tech et vois le widget statut sync sur l'admin panel                     | 3   | ✅ Done | `admin-panel.component.ts`                                   | 2026     |
-| IMP-PI-16 | En tant qu'admin, je peux installer des paquets apt depuis le dashboard via sudoers                                    | 3   | ✅ Done | `sudoers`, `admin-server.js`                                 | 2026     |
-| IMP-PI-17 | En tant que système, le contrôle enregistrement analytics + sync TV maître-esclave fonctionne                          | 3   | ✅ Done | `recording.service.ts`                                       | 2026     |
-| IMP-PI-18 | En tant que spectateur, le curseur est masqué sur l'écran kiosque (triple protection)                                  | 1   | ✅ Done | `kiosk.css`                                                  | 2026     |
-| IMP-PI-19 | En tant que système, les transitions TV détectent la frame réelle (élimine trous noirs sur Pi 5)                       | 3   | ✅ Done | `double-buffer-video.service.ts`                             | 2026     |
-| IMP-PI-20 | En tant que système, Chromium est compatible Raspberry Pi OS Trixie                                                    | 2   | ✅ Done | `kiosk.sh`                                                   | Déc 2025 |
-| IMP-PI-21 | En tant que bénévole, la boucle vidéo est programmée par phase match (pré/pendant/post)                                | 3   | ✅ Done | `loop-scheduler.js`                                          | Déc 2025 |
-| IMP-PI-22 | En tant que système, l'installation apt sécurisée utilise sudoers ciblé (pas de NoNewPrivileges)                       | 2   | ✅ Done | `sudoers`                                                    | 2026     |
+| ID        | User Story                                                                                                                         | SP  | Statut  | Fichiers clés                                                | Date      |
+| --------- | ---------------------------------------------------------------------------------------------------------------------------------- | --- | ------- | ------------------------------------------------------------ | --------- |
+| IMP-PI-01 | En tant que bénévole, la télécommande v2 propose recherche, badge audience et modal match                                          | 5   | ✅ Done | `remote.component.ts`                                        | Déc 2025  |
+| IMP-PI-02 | En tant que système, Socket.IO fonctionne en mode hors-ligne autonome (lib locale)                                                 | 3   | ✅ Done | `socket.io.min.js` local                                     | Déc 2025  |
+| IMP-PI-03 | En tant que spectateur, la lecture vidéo utilise un double-buffer pour des transitions fluides (ADR-008)                           | 5   | ✅ Done | `double-buffer-video.service.ts`                             | 2025      |
+| IMP-PI-04 | En tant que bénévole, les profils de configuration (avant/pendant/après match) changent automatiquement                            | 5   | ✅ Done | `profile-config.service.ts`, `config-profiles.controller.ts` | Déc 2025  |
+| IMP-PI-05 | En tant que système, le statut HDMI est détecté pour savoir si l'écran est allumé                                                  | 2   | ✅ Done | `hdmi-status.service.ts`                                     | 2025      |
+| IMP-PI-06 | En tant que système, l'EDID HDMI identifie le type d'écran (moniteur PC vs TV)                                                     | 2   | ✅ Done | `hdmi-edid.service.ts`                                       | 2026      |
+| IMP-PI-07 | En tant que système, une vidéo de secours est lue automatiquement en cas d'erreur                                                  | 2   | ✅ Done | `video-error-recovery.service.ts`                            | 2025      |
+| IMP-PI-08 | En tant qu'admin, un filigrane overlay est configurable sur l'écran TV                                                             | 3   | ✅ Done | `watermark.service.ts`                                       | 2025      |
+| IMP-PI-09 | En tant qu'admin, je sélectionne le filigrane via un menu déroulant sur le dashboard                                               | 2   | ✅ Done | `watermark.component.ts`                                     | v3.57.0   |
+| IMP-PI-10 | En tant qu'admin, je peux capturer un screenshot du Pi à la demande (cloud)                                                        | 3   | ✅ Done | `screenshot.service.ts`                                      | 2025      |
+| IMP-PI-11 | En tant qu'admin, le branding est personnalisé par site (logo, couleurs)                                                           | 3   | ✅ Done | `add-site-branding.sql`                                      | 2025      |
+| IMP-PI-12 | En tant que système, le hostname Pi est dynamiquement dérivé du nom du club                                                        | 1   | ✅ Done | `hostname.service.ts`                                        | v3.51.0   |
+| IMP-PI-13 | En tant que système, l'enregistrement revient auto en boucle après inactivité                                                      | 2   | ✅ Done | `recording.service.ts`                                       | 2026      |
+| IMP-PI-14 | En tant que bénévole, un popup d'avertissement inactivité avec décompte est affiché pendant l'enregistrement (ADR-021)             | 3   | ✅ Done | `remote.component.ts`                                        | 2026      |
+| IMP-PI-15 | En tant que staff, je bascule entre mode club/tech et vois le widget statut sync sur l'admin panel                                 | 3   | ✅ Done | `admin-panel.component.ts`                                   | 2026      |
+| IMP-PI-16 | En tant qu'admin, je peux installer des paquets apt depuis le dashboard via sudoers                                                | 3   | ✅ Done | `sudoers`, `admin-server.js`                                 | 2026      |
+| IMP-PI-17 | En tant que système, le contrôle enregistrement analytics + sync TV maître-esclave fonctionne                                      | 3   | ✅ Done | `recording.service.ts`                                       | 2026      |
+| IMP-PI-18 | En tant que spectateur, le curseur est masqué sur l'écran kiosque (triple protection)                                              | 1   | ✅ Done | `kiosk.css`                                                  | 2026      |
+| IMP-PI-19 | En tant que système, les transitions TV détectent la frame réelle (élimine trous noirs sur Pi 5)                                   | 3   | ✅ Done | `double-buffer-video.service.ts`                             | 2026      |
+| IMP-PI-20 | En tant que système, Chromium est compatible Raspberry Pi OS Trixie                                                                | 2   | ✅ Done | `kiosk.sh`                                                   | Déc 2025  |
+| IMP-PI-21 | En tant que bénévole, la boucle vidéo est programmée par phase match (pré/pendant/post)                                            | 3   | ✅ Done | `loop-scheduler.js`                                          | Déc 2025  |
+| IMP-PI-22 | En tant que système, l'installation apt sécurisée utilise sudoers ciblé (pas de NoNewPrivileges)                                   | 2   | ✅ Done | `sudoers`                                                    | 2026      |
+| IMP-PI-35 | En tant que système, les fichiers orphelins du sync-agent (pré-v3.67) sont nettoyés au boot + rsync `--delete` empêche la récidive | 3   | ✅ Done | `agent.js`, `build-raspberry.sh`, `fix-fleet-pi.sh`          | Mars 2026 |
 
 ---
 

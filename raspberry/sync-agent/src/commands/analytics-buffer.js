@@ -85,13 +85,20 @@ async function getAnalyticsBufferStatus() {
     }
   }
 
-  // Detect stale legacy file (Pipeline B remnant)
+  // Detect and auto-cleanup stale legacy file (Pipeline B remnant)
+  // Defense-in-depth: cleanupLegacyFiles() should have removed this at startup,
+  // but if it didn't (old version, race condition), clean up during diagnostics too.
   if (await fs.pathExists(legacySponsorFilePath)) {
     result.legacy_sponsor_file = true;
     logger.warn(
-      'Legacy sponsor_impressions.json still exists — this file is stale since pipeline consolidation (v3.66). ' +
-      'It can be safely deleted.'
+      'Legacy sponsor_impressions.json still exists — removing stale file (pipeline consolidated in v3.66)'
     );
+    try {
+      await fs.remove(legacySponsorFilePath);
+      logger.info('Auto-deleted stale sponsor_impressions.json during diagnostics');
+    } catch (removeErr) {
+      logger.warn('Failed to auto-delete stale sponsor_impressions.json', { error: removeErr.message });
+    }
   }
 
   return result;

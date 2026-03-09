@@ -389,7 +389,7 @@ fi
 
 # Copier le sync-agent
 if [ -d "raspberry/sync-agent" ]; then
-    rsync -a --exclude='*.md' --exclude='node_modules' --exclude='__tests__' --exclude='coverage' raspberry/sync-agent/ ${DEPLOY_DIR}/sync-agent/
+    rsync -a --delete --exclude='*.md' --exclude='node_modules' --exclude='__tests__' --exclude='coverage' raspberry/sync-agent/ ${DEPLOY_DIR}/sync-agent/
 
     # Installer les dépendances du sync-agent pour les inclure dans l'archive
     # Cela évite de devoir faire npm install sur chaque Pi après déploiement
