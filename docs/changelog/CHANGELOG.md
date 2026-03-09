@@ -1,3 +1,9 @@
+## [3.101.2](https://github.com/Tallec7/neopro/compare/v3.101.1...v3.101.2) (2026-03-09)
+
+### Bug Fixes
+
+- **dashboard:** remove deprecated secondary display card and PC mode dead code ([b32d874](https://github.com/Tallec7/neopro/commit/b32d87403c4557de64479e5fdf05f04d41a5fb93))
+
 ## [3.101.1](https://github.com/Tallec7/neopro/compare/v3.101.0...v3.101.1) (2026-03-09)
 
 ### Bug Fixes
