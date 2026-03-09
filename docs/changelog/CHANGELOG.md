@@ -1,3 +1,9 @@
+## [3.101.1](https://github.com/Tallec7/neopro/compare/v3.101.0...v3.101.1) (2026-03-09)
+
+### Bug Fixes
+
+- **sync-agent:** orphan sponsor-impressions.js + stale buffer causing HTTP 400 ([f748430](https://github.com/Tallec7/neopro/commit/f74843069f69a834f7ed7607f24c9c24aea7d5dd))
+
 # [Unreleased]
 
 ### Bug Fixes
