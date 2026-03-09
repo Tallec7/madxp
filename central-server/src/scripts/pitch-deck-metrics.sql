@@ -140,7 +140,7 @@ FROM club_sessions
 WHERE duration_seconds > 0;
 
 -- =============================================================================
--- 5. SCREEN TIME AGRÉGÉ (club_daily_stats — données solides)
+-- 5. SCREEN TIME AGRÉGÉ (club_daily_stats_live — données solides)
 -- =============================================================================
 
 \echo ''
@@ -157,7 +157,7 @@ SELECT
     SUM(sponsor_plays)                                         AS "Lectures sponsors",
     ROUND(100.0 * SUM(manual_triggers) / NULLIF(SUM(videos_played), 0), 1)
                                                                AS "% interaction manuelle"
-FROM club_daily_stats
+FROM club_daily_stats_live
 GROUP BY 1
 ORDER BY 1;
 
@@ -344,7 +344,7 @@ SELECT
     ROUND(AVG(avg_cpu), 1)                                            AS "CPU moyen %",
     ROUND(AVG(avg_memory), 1)                                         AS "RAM moyenne %",
     ROUND(AVG(avg_temperature), 1)                                    AS "Température moy. °C"
-FROM club_daily_stats;
+FROM club_daily_stats_live;
 
 -- Alertes résolues
 SELECT
@@ -407,7 +407,7 @@ SELECT
     ROUND(AVG(cds.uptime_percent), 1)                                 AS "Uptime %",
     s.created_at::date                                                AS "Inscrit le"
 FROM sites s
-LEFT JOIN club_daily_stats cds ON cds.site_id = s.id
+LEFT JOIN club_daily_stats_live cds ON cds.site_id = s.id
 GROUP BY s.id, s.club_name, s.status, s.created_at
 ORDER BY "Vidéos jouées" DESC
 LIMIT 10;
@@ -495,7 +495,7 @@ SELECT
     (SELECT TO_CHAR(COUNT(*), 'FM999,999,999')
      FROM video_plays WHERE category = 'sponsor')                      AS "Impressions pub (lifetime)",
     (SELECT COUNT(*) FROM software_updates)                           AS "Releases produit",
-    (SELECT ROUND(AVG(uptime_percent), 1) FROM club_daily_stats)      AS "Uptime moyen %";
+    (SELECT ROUND(AVG(uptime_percent), 1) FROM club_daily_stats_live)      AS "Uptime moyen %";
 
 \echo ''
 \echo 'Script terminé. Données prêtes pour le pitch deck!'

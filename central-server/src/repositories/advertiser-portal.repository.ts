@@ -185,7 +185,7 @@ class AdvertiserPortalRepositoryImpl extends BaseRepository<QueryResultRow> {
        FROM advertisers a
        LEFT JOIN advertiser_videos av ON av.advertiser_id = a.id
        LEFT JOIN advertiser_sites ads ON ads.advertiser_id = a.id AND ads.is_active = true
-       LEFT JOIN advertiser_daily_stats adst ON adst.video_id = av.video_id
+       LEFT JOIN advertiser_daily_stats_live adst ON adst.video_id = av.video_id
          AND adst.date >= CURRENT_DATE - INTERVAL '30 days'
        WHERE a.id = $1
        GROUP BY a.id`,
@@ -203,7 +203,7 @@ class AdvertiserPortalRepositoryImpl extends BaseRepository<QueryResultRow> {
         DATE(adst.date) as date,
         SUM(adst.total_impressions) as impressions,
         SUM(adst.total_duration_seconds) as screen_time
-       FROM advertiser_daily_stats adst
+       FROM advertiser_daily_stats_live adst
        JOIN advertiser_videos av ON av.video_id = adst.video_id
        WHERE av.advertiser_id = $1
          AND adst.date >= CURRENT_DATE - INTERVAL '7 days'
@@ -278,7 +278,7 @@ class AdvertiserPortalRepositoryImpl extends BaseRepository<QueryResultRow> {
            adst.site_id,
            SUM(adst.total_impressions) as impressions,
            SUM(adst.total_duration_seconds) as screen_time
-         FROM advertiser_daily_stats adst
+         FROM advertiser_daily_stats_live adst
          JOIN advertiser_videos av ON av.video_id = adst.video_id
          WHERE av.advertiser_id = $1
            AND adst.date >= CURRENT_DATE - INTERVAL '30 days'
@@ -316,7 +316,7 @@ class AdvertiserPortalRepositoryImpl extends BaseRepository<QueryResultRow> {
            video_id,
            SUM(total_impressions) as impressions,
            ROUND(AVG(completion_rate)::numeric, 1) as completion_rate
-         FROM advertiser_daily_stats
+         FROM advertiser_daily_stats_live
          WHERE date >= CURRENT_DATE - INTERVAL '30 days'
          GROUP BY video_id
        ) stats ON stats.video_id = v.id
@@ -328,7 +328,7 @@ class AdvertiserPortalRepositoryImpl extends BaseRepository<QueryResultRow> {
   }
 
   // ========================================================================
-  // Portal Detailed Stats (advertiser_daily_stats based)
+  // Portal Detailed Stats (advertiser_daily_stats_live based)
   // ========================================================================
 
   /**
@@ -341,7 +341,7 @@ class AdvertiserPortalRepositoryImpl extends BaseRepository<QueryResultRow> {
         SUM(total_duration_seconds) as total_screen_time,
         ROUND(AVG(completion_rate)::numeric, 1) as completion_rate,
         COUNT(DISTINCT site_id) as active_sites
-       FROM advertiser_daily_stats
+       FROM advertiser_daily_stats_live
        WHERE video_id = ANY($1::uuid[])
          AND date >= $2::date
          AND date <= $3::date`,
@@ -351,7 +351,7 @@ class AdvertiserPortalRepositoryImpl extends BaseRepository<QueryResultRow> {
   }
 
   /**
-   * Stats par video sur une periode (advertiser_daily_stats).
+   * Stats par video sur une periode (advertiser_daily_stats_live).
    */
   async getDailyStatsByVideo(videoIds: string[], fromDate: string, toDate: string): Promise<DailyStatsByVideoRow[]> {
     const result = await query<DailyStatsByVideoRow>(
@@ -362,7 +362,7 @@ class AdvertiserPortalRepositoryImpl extends BaseRepository<QueryResultRow> {
         SUM(adst.total_duration_seconds) as screen_time,
         ROUND(AVG(adst.completion_rate)::numeric, 1) as completion_rate
        FROM videos v
-       JOIN advertiser_daily_stats adst ON adst.video_id = v.id
+       JOIN advertiser_daily_stats_live adst ON adst.video_id = v.id
        WHERE v.id = ANY($1::uuid[])
          AND adst.date >= $2::date
          AND adst.date <= $3::date
@@ -374,7 +374,7 @@ class AdvertiserPortalRepositoryImpl extends BaseRepository<QueryResultRow> {
   }
 
   /**
-   * Stats par site sur une periode (advertiser_daily_stats, top 20).
+   * Stats par site sur une periode (advertiser_daily_stats_live, top 20).
    */
   async getDailyStatsBySite(videoIds: string[], fromDate: string, toDate: string): Promise<DailyStatsBySiteRow[]> {
     const result = await query<DailyStatsBySiteRow>(
@@ -385,7 +385,7 @@ class AdvertiserPortalRepositoryImpl extends BaseRepository<QueryResultRow> {
         SUM(adst.total_impressions) as impressions,
         SUM(adst.total_duration_seconds) as screen_time
        FROM sites s
-       JOIN advertiser_daily_stats adst ON adst.site_id = s.id
+       JOIN advertiser_daily_stats_live adst ON adst.site_id = s.id
        WHERE adst.video_id = ANY($1::uuid[])
          AND adst.date >= $2::date
          AND adst.date <= $3::date
@@ -398,7 +398,7 @@ class AdvertiserPortalRepositoryImpl extends BaseRepository<QueryResultRow> {
   }
 
   /**
-   * Tendances quotidiennes sur une periode (advertiser_daily_stats).
+   * Tendances quotidiennes sur une periode (advertiser_daily_stats_live).
    */
   async getDailyStatsTrends(videoIds: string[], fromDate: string, toDate: string): Promise<PortalTrendRow[]> {
     const result = await query<PortalTrendRow>(
@@ -406,7 +406,7 @@ class AdvertiserPortalRepositoryImpl extends BaseRepository<QueryResultRow> {
         DATE(date) as date,
         SUM(total_impressions) as impressions,
         SUM(total_duration_seconds) as screen_time
-       FROM advertiser_daily_stats
+       FROM advertiser_daily_stats_live
        WHERE video_id = ANY($1::uuid[])
          AND date >= $2::date
          AND date <= $3::date
@@ -431,7 +431,7 @@ class AdvertiserPortalRepositoryImpl extends BaseRepository<QueryResultRow> {
         SUM(total_duration_seconds) as total_screen_time,
         ROUND(AVG(completion_rate)::numeric, 1) as avg_completion_rate,
         COUNT(DISTINCT site_id) as sites_count
-       FROM advertiser_daily_stats
+       FROM advertiser_daily_stats_live
        WHERE video_id = $1
          AND date >= $2::date
          AND date <= $3::date`,
@@ -453,7 +453,7 @@ class AdvertiserPortalRepositoryImpl extends BaseRepository<QueryResultRow> {
         SUM(adst.total_duration_seconds) as screen_time,
         ROUND(AVG(adst.completion_rate)::numeric, 1) as completion_rate
        FROM sites s
-       JOIN advertiser_daily_stats adst ON adst.site_id = s.id
+       JOIN advertiser_daily_stats_live adst ON adst.site_id = s.id
        WHERE adst.video_id = $1
          AND adst.date >= $2::date
          AND adst.date <= $3::date
@@ -473,7 +473,7 @@ class AdvertiserPortalRepositoryImpl extends BaseRepository<QueryResultRow> {
         DATE(date) as date,
         SUM(total_impressions) as impressions,
         SUM(total_duration_seconds) as screen_time
-       FROM advertiser_daily_stats
+       FROM advertiser_daily_stats_live
        WHERE video_id = $1
          AND date >= $2::date
          AND date <= $3::date

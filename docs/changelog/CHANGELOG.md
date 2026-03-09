@@ -1,3 +1,27 @@
+## [3.103.0] (2026-03-09)
+
+### Features
+
+- **data-pipeline:** SQL VIEWs `club_daily_stats_live` and `advertiser_daily_stats_live` — UNION ALL of CRON-aggregated history + real-time today's `video_plays`, making dashboard pages display same-day data transparently
+- **cron-scheduler:** `executeAggregationTask()` now reads `aggregation_type` from `task_config` (`club_daily_stats`, `advertiser_daily_stats`, `all`) — two independent CRON schedules at 2h00 and 2h30
+
+### Bug Fixes
+
+- **analytics:** 8 repository/service files switched from deprecated base tables to `_live` VIEWs: `analytics.repository.ts`, `advertiser-portal.repository.ts`, `excel-export.service.ts`, `pitch-deck.repository.ts`, `agency.repository.ts`, `billing.service.ts`, `cron-scheduler.service.ts`, `pitch-deck-metrics.sql`
+- **dashboard:** multi-site comparison, advertiser portal, billing, agency stats, and pitch-deck metrics now include today's data
+
+### Tests
+
+- **smoke:** 10 new regression guards ensuring all repositories/services use `_live` VIEWs (not deprecated base tables), CRON calls both aggregation functions, and migration has correct VIEWs + schedules
+
+### Docs
+
+- **REFERENCE.md:** updated retention policy (CRON aggregation + VIEWs documentation), repository table mappings to `_live` VIEWs
+- **full-schema.sql:** added `club_daily_stats_live` and `advertiser_daily_stats_live` VIEW definitions
+- **CHANGELOG.md:** documented full data pipeline fix
+
+---
+
 # [3.102.0](https://github.com/Tallec7/neopro/compare/v3.101.2...v3.102.0) (2026-03-09)
 
 ### Features

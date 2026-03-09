@@ -746,7 +746,7 @@ class AnalyticsRepositoryImpl {
             AND vp.played_at > CURRENT_DATE - $2::interval
         ), 0)::numeric(5,1) as avg_completion
        FROM sites s
-       LEFT JOIN club_daily_stats cds ON cds.site_id = s.id
+       LEFT JOIN club_daily_stats_live cds ON cds.site_id = s.id
          AND cds.date > CURRENT_DATE - $2::interval
        WHERE s.id = ANY($1::uuid[])
        GROUP BY s.id, s.site_name, s.club_name
@@ -873,12 +873,12 @@ class AnalyticsRepositoryImpl {
   }
 
   /**
-   * Export club_daily_stats.
+   * Export club_daily_stats_live.
    */
   async exportDailyStats(siteId: string, from: string, to: string): Promise<QueryResultRow[]> {
     const result = await query(
       `SELECT *
-       FROM club_daily_stats
+       FROM club_daily_stats_live
        WHERE site_id = $1
          AND date >= $2
          AND date <= $3

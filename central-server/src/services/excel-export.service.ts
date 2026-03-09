@@ -699,7 +699,7 @@ class ExcelExportService {
         screen_time_seconds,
         unique_videos,
         COALESCE(completion_rate, 0) as avg_completion_rate
-      FROM club_daily_stats
+      FROM club_daily_stats_live
       WHERE site_id = $1 AND date >= $2 AND date <= $3
       ORDER BY date`,
       [siteId, startDate, endDate]
@@ -761,7 +761,7 @@ class ExcelExportService {
   }
 
   private async getAdvertiserDailyStats(advertiserId: string, startDate: string, endDate: string): Promise<any[]> {
-    // advertiser_daily_stats is keyed by (video_id, site_id, date)
+    // advertiser_daily_stats_live is keyed by (video_id, site_id, date)
     // We need to join through advertiser_videos to get stats for a specific advertiser
     const result = await query(
       `SELECT
@@ -769,7 +769,7 @@ class ExcelExportService {
         ads.site_id,
         ads.total_impressions as impressions,
         ads.total_duration_seconds as screen_time_seconds
-      FROM advertiser_daily_stats ads
+      FROM advertiser_daily_stats_live ads
       JOIN advertiser_videos av ON av.video_id = ads.video_id
       WHERE av.advertiser_id = $1 AND ads.date >= $2 AND ads.date <= $3
       ORDER BY ads.date`,
@@ -779,7 +779,7 @@ class ExcelExportService {
   }
 
   private async getAdvertiserSiteStats(advertiserId: string, startDate: string, endDate: string): Promise<SiteStats[]> {
-    // advertiser_daily_stats is keyed by (video_id, site_id, date)
+    // advertiser_daily_stats_live is keyed by (video_id, site_id, date)
     // Join through advertiser_videos to resolve the advertiser
     const result = await query(
       `SELECT
@@ -791,7 +791,7 @@ class ExcelExportService {
         COUNT(DISTINCT ads.date) as days_active,
         COALESCE(AVG(ads.total_impressions), 0) as avg_daily_videos
       FROM sites s
-      LEFT JOIN advertiser_daily_stats ads ON ads.site_id = s.id
+      LEFT JOIN advertiser_daily_stats_live ads ON ads.site_id = s.id
         AND ads.date >= $2
         AND ads.date <= $3
       LEFT JOIN advertiser_videos av ON av.video_id = ads.video_id
@@ -847,7 +847,7 @@ class ExcelExportService {
         COUNT(DISTINCT CASE WHEN cds.videos_played > 0 THEN cds.date END) as days_active,
         COALESCE(AVG(cds.videos_played), 0) as avg_daily_videos
       FROM sites s
-      LEFT JOIN club_daily_stats cds ON cds.site_id = s.id
+      LEFT JOIN club_daily_stats_live cds ON cds.site_id = s.id
         AND cds.date >= $1
         AND cds.date <= $2
       GROUP BY s.id
@@ -872,7 +872,7 @@ class ExcelExportService {
         COALESCE(SUM(cds.videos_played), 0) as total_videos,
         COALESCE(SUM(cds.screen_time_seconds), 0) as total_screen_time,
         COALESCE(AVG(cds.videos_played), 0) as avg_videos_per_site
-      FROM club_daily_stats cds
+      FROM club_daily_stats_live cds
       WHERE cds.date >= $1 AND cds.date <= $2`,
       [startDate, endDate]
     );
@@ -890,7 +890,7 @@ class ExcelExportService {
         COUNT(DISTINCT cds.date) as days_active,
         COALESCE(AVG(cds.videos_played), 0) as avg_daily_videos
       FROM sites s
-      JOIN club_daily_stats cds ON cds.site_id = s.id
+      JOIN club_daily_stats_live cds ON cds.site_id = s.id
         AND cds.date >= $1
         AND cds.date <= $2
       GROUP BY s.id

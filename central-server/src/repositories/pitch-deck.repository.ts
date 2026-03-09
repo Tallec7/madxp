@@ -286,7 +286,7 @@ class PitchDeckRepositoryImpl {
         COUNT(DISTINCT site_id)::text                                         AS sites_reached,
         COUNT(DISTINCT video_id)::text                                        AS videos_diffused,
         (COALESCE(SUM(duration_played), 0) / 3600)::text                      AS screen_time_hours,
-        COALESCE((SELECT ROUND(AVG(completion_rate), 1) FROM advertiser_daily_stats), 0)::text AS completion_rate
+        COALESCE((SELECT ROUND(AVG(completion_rate), 1) FROM advertiser_daily_stats_live), 0)::text AS completion_rate
       FROM video_plays
       WHERE category = 'sponsor'
     `);
@@ -360,7 +360,7 @@ class PitchDeckRepositoryImpl {
         ROUND(AVG(avg_cpu), 1)::text          AS avg_cpu,
         ROUND(AVG(avg_memory), 1)::text       AS avg_memory,
         ROUND(AVG(avg_temperature), 1)::text  AS avg_temperature
-      FROM club_daily_stats
+      FROM club_daily_stats_live
     `);
     return result.rows[0] ?? null;
   }

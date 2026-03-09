@@ -8738,3 +8738,122 @@ describe('Android captive portal iptables (HTTPS connectivity check fix)', () =>
     expect({ missingAndroidDomains: missing }).toEqual({ missingAndroidDomains: [] });
   });
 });
+
+// =============================================================================
+// Live stats VIEWs guards — prevent regression to deprecated tables
+// =============================================================================
+// club_daily_stats and advertiser_daily_stats only contain J-1 data (CRON).
+// All dashboard queries MUST use the _live VIEWs that include today's data.
+// Reverting to the base tables silently drops today's data from dashboards.
+// =============================================================================
+
+describe('Live stats VIEWs guards (prevent table regression)', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+
+  // All TypeScript files that query aggregated stats must use _live VIEWs
+  const liveViewFiles: { file: string; mustUse: string; description: string }[] = [
+    {
+      file: 'central-server/src/repositories/advertiser-portal.repository.ts',
+      mustUse: 'advertiser_daily_stats_live',
+      description: 'Portail annonceur',
+    },
+    {
+      file: 'central-server/src/repositories/analytics.repository.ts',
+      mustUse: 'club_daily_stats_live',
+      description: 'Comparaison multi-sites',
+    },
+    {
+      file: 'central-server/src/services/excel-export.service.ts',
+      mustUse: 'club_daily_stats_live',
+      description: 'Export Excel clubs',
+    },
+    {
+      file: 'central-server/src/services/excel-export.service.ts',
+      mustUse: 'advertiser_daily_stats_live',
+      description: 'Export Excel annonceurs',
+    },
+    {
+      file: 'central-server/src/repositories/pitch-deck.repository.ts',
+      mustUse: 'club_daily_stats_live',
+      description: 'Pitch deck clubs',
+    },
+    {
+      file: 'central-server/src/repositories/pitch-deck.repository.ts',
+      mustUse: 'advertiser_daily_stats_live',
+      description: 'Pitch deck annonceurs',
+    },
+    {
+      file: 'central-server/src/repositories/agency.repository.ts',
+      mustUse: 'club_daily_stats_live',
+      description: 'Portail agence',
+    },
+    {
+      file: 'central-server/src/services/billing.service.ts',
+      mustUse: 'club_daily_stats_live',
+      description: 'Facturation',
+    },
+  ];
+
+  for (const { file, mustUse, description } of liveViewFiles) {
+    it(`${description}: ${path.basename(file)} must use ${mustUse} (not deprecated base table)`, () => {
+      const content = fs.readFileSync(path.join(repoRoot, file), 'utf8');
+      // Extract the base table name (without _live suffix)
+      const baseTable = mustUse.replace('_live', '');
+      // Check that _live is used and the raw base table is NOT used in FROM/JOIN
+      const usesLiveView = content.includes(mustUse);
+      // Regex: base table name NOT followed by _live (i.e. the deprecated direct usage)
+      const deprecatedPattern = new RegExp(`${baseTable}(?!_live)`, 'g');
+      // Filter out comments and strings that legitimately mention the base table
+      const codeLines = content.split('\n').filter(line => {
+        const trimmed = line.trim();
+        return !trimmed.startsWith('//') && !trimmed.startsWith('*');
+      }).join('\n');
+      const usesDeprecated = deprecatedPattern.test(codeLines);
+      expect({
+        file,
+        usesLiveView,
+        usesDeprecatedTable: usesDeprecated,
+      }).toEqual({
+        file,
+        usesLiveView: true,
+        usesDeprecatedTable: false,
+      });
+    });
+  }
+
+  it('cron-scheduler.service.ts executeAggregationTask must call both club AND advertiser aggregation', () => {
+    const content = fs.readFileSync(
+      path.join(repoRoot, 'central-server/src/services/cron-scheduler.service.ts'),
+      'utf8'
+    );
+    expect({
+      callsClubAggregation: content.includes('calculate_all_daily_stats'),
+      callsAdvertiserAggregation: content.includes('calculate_all_advertiser_daily_stats'),
+    }).toEqual({
+      callsClubAggregation: true,
+      callsAdvertiserAggregation: true,
+    });
+  });
+
+  it('migration must create both _live VIEWs with UNION ALL and CRON schedules with is_active true', () => {
+    const migration = fs.readFileSync(
+      path.join(repoRoot, 'central-server/src/scripts/migrations/add-aggregation-schedules-and-live-views.sql'),
+      'utf8'
+    );
+    expect({
+      hasClubLiveView: migration.includes('CREATE OR REPLACE VIEW club_daily_stats_live'),
+      hasAdvertiserLiveView: migration.includes('CREATE OR REPLACE VIEW advertiser_daily_stats_live'),
+      usesUnionAll: (migration.match(/UNION ALL/g) || []).length >= 2,
+      hasClubCron: migration.includes("'Agrégation stats clubs'"),
+      hasAdvertiserCron: migration.includes("'Agrégation stats annonceurs'"),
+      cronIsActive: /true\)\s*ON CONFLICT DO NOTHING/.test(migration),
+    }).toEqual({
+      hasClubLiveView: true,
+      hasAdvertiserLiveView: true,
+      usesUnionAll: true,
+      hasClubCron: true,
+      hasAdvertiserCron: true,
+      cronIsActive: true,
+    });
+  });
+});

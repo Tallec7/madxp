@@ -328,7 +328,7 @@ class CronSchedulerService {
     // Site le plus actif
     const topSiteResult = await query<{ name: string; screen_time: string }>(
       `SELECT s.name, SUM(cds.screen_time_seconds) as screen_time
-       FROM club_daily_stats cds
+       FROM club_daily_stats_live cds
        JOIN sites s ON s.id = cds.site_id
        WHERE cds.date > NOW() - INTERVAL '7 days'
        GROUP BY s.id, s.name
@@ -534,16 +534,32 @@ class CronSchedulerService {
   /**
    * Exécute une tâche d'agrégation
    */
-  private async executeAggregationTask(_schedule: RecurringSchedule): Promise<ExecutionResult> {
-    // Appeler la fonction d'agrégation des stats quotidiennes
+  private async executeAggregationTask(schedule: RecurringSchedule): Promise<ExecutionResult> {
+    const config = schedule.task_config as { aggregation_type?: string };
+    const aggregationType = config.aggregation_type || 'all';
+
     try {
-      await query(`SELECT calculate_all_daily_stats(CURRENT_DATE - 1)`, []);
+      const results: string[] = [];
+
+      if (aggregationType === 'club_daily_stats' || aggregationType === 'all') {
+        await query(`SELECT calculate_all_daily_stats(CURRENT_DATE - 1)`, []);
+        results.push('club_daily_stats');
+      }
+
+      if (aggregationType === 'advertiser_daily_stats' || aggregationType === 'all') {
+        await query(`SELECT calculate_all_advertiser_daily_stats(CURRENT_DATE - 1)`, []);
+        results.push('advertiser_daily_stats');
+      }
+
       return {
         success: true,
-        message: 'Daily stats aggregation completed',
+        message: `Aggregation completed: ${results.join(', ')}`,
       };
     } catch (error) {
-      if (error instanceof Error && error.message.includes('calculate_all_daily_stats')) {
+      if (error instanceof Error && (
+        error.message.includes('calculate_all_daily_stats') ||
+        error.message.includes('calculate_all_advertiser_daily_stats')
+      )) {
         return { success: true, message: 'Aggregation function not found, skipping' };
       }
       throw error;

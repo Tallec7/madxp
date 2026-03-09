@@ -349,7 +349,7 @@ class AgencyRepositoryImpl extends BaseRepository<AgencyRow> {
         COALESCE(SUM(cds.screen_time_seconds), 0) as total_screen_time_30d
        FROM agency_sites as2
        JOIN sites s ON s.id = as2.site_id
-       LEFT JOIN club_daily_stats cds ON cds.site_id = s.id
+       LEFT JOIN club_daily_stats_live cds ON cds.site_id = s.id
          AND cds.date >= CURRENT_DATE - INTERVAL '30 days'
        WHERE as2.agency_id = $1`,
       [agencyId]
@@ -403,7 +403,7 @@ class AgencyRepositoryImpl extends BaseRepository<AgencyRow> {
            site_id,
            SUM(videos_played) as videos_played,
            SUM(screen_time_seconds) as screen_time
-         FROM club_daily_stats
+         FROM club_daily_stats_live
          WHERE date >= CURRENT_DATE - INTERVAL '30 days'
          GROUP BY site_id
        ) stats ON stats.site_id = s.id
@@ -450,7 +450,7 @@ class AgencyRepositoryImpl extends BaseRepository<AgencyRow> {
         SUM(screen_time_seconds) as total_screen_time,
         AVG(uptime_percent) as avg_uptime,
         COUNT(*) as active_days
-       FROM club_daily_stats
+       FROM club_daily_stats_live
        WHERE site_id = $1
          AND date >= CURRENT_DATE - INTERVAL '30 days'`,
       [siteId]
@@ -467,7 +467,7 @@ class AgencyRepositoryImpl extends BaseRepository<AgencyRow> {
         date,
         videos_played,
         screen_time_seconds
-       FROM club_daily_stats
+       FROM club_daily_stats_live
        WHERE site_id = $1
          AND date >= CURRENT_DATE - INTERVAL '7 days'
        ORDER BY date ASC`,
@@ -501,7 +501,7 @@ class AgencyRepositoryImpl extends BaseRepository<AgencyRow> {
         SUM(videos_played) as total_videos,
         SUM(screen_time_seconds) as total_screen_time,
         ROUND(AVG(uptime_percent)::numeric, 1) as avg_uptime
-       FROM club_daily_stats
+       FROM club_daily_stats_live
        WHERE site_id = ANY($1::uuid[])
          AND date >= $2::date
          AND date <= $3::date`,
@@ -523,7 +523,7 @@ class AgencyRepositoryImpl extends BaseRepository<AgencyRow> {
         SUM(cds.screen_time_seconds) as screen_time,
         ROUND(AVG(cds.uptime_percent)::numeric, 1) as avg_uptime
        FROM sites s
-       JOIN club_daily_stats cds ON cds.site_id = s.id
+       JOIN club_daily_stats_live cds ON cds.site_id = s.id
        WHERE s.id = ANY($1::uuid[])
          AND cds.date >= $2::date
          AND cds.date <= $3::date
@@ -543,7 +543,7 @@ class AgencyRepositoryImpl extends BaseRepository<AgencyRow> {
         DATE(date) as date,
         SUM(videos_played) as videos_played,
         SUM(screen_time_seconds) as screen_time
-       FROM club_daily_stats
+       FROM club_daily_stats_live
        WHERE site_id = ANY($1::uuid[])
          AND date >= $2::date
          AND date <= $3::date

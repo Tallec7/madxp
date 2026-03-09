@@ -58,7 +58,7 @@ class BillingService {
         COALESCE(SUM(cds.videos_played), 0)::integer as total_videos_played,
         COALESCE(SUM(cds.screen_time_seconds), 0)::integer as total_screen_time_seconds
       FROM sites s
-      LEFT JOIN club_daily_stats cds ON cds.site_id = s.id
+      LEFT JOIN club_daily_stats_live cds ON cds.site_id = s.id
         AND cds.date >= $1
         AND cds.date < $2
       GROUP BY s.id

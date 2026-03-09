@@ -10,10 +10,10 @@
 --   - Updates: software_updates, update_deployments
 --   - Operations: remote_commands, metrics, alerts, pending_commands
 --   - Config: config_history, config_drafts, orchestrated_deployments
---   - Analytics: club_sessions, video_plays, club_daily_stats
+--   - Analytics: club_sessions, video_plays, club_daily_stats, club_daily_stats_live (VIEW)
 --   - Auth: password_reset_tokens, audit_logs
 --   - Scheduling: recurring_schedules, recurring_schedule_executions
---   - Advertisers: advertisers, agencies, advertiser_daily_stats, campaigns, scheduled_reports
+--   - Advertisers: advertisers, agencies, advertiser_daily_stats, advertiser_daily_stats_live (VIEW), campaigns, scheduled_reports
 -- =============================================================================
 
 -- Extension pour UUID
@@ -1179,6 +1179,102 @@ LEFT JOIN agency_sites agsites ON agsites.agency_id = ag.id
 GROUP BY ag.id, ag.name, ag.status;
 
 -- =============================================================================
+-- VUES LIVE (données agrégées + temps réel du jour)
+-- =============================================================================
+-- Les VIEWs _live remplacent l'accès direct aux tables agrégées dans tous
+-- les repositories et services. Elles combinent l'historique CRON (J-1)
+-- avec une agrégation temps réel de video_plays pour la journée en cours.
+
+-- club_daily_stats_live : club_daily_stats + données du jour
+CREATE OR REPLACE VIEW club_daily_stats_live AS
+  SELECT
+    id, site_id, date,
+    sessions_count, screen_time_seconds, videos_played,
+    manual_triggers, auto_plays,
+    sponsor_plays, jingle_plays, ambiance_plays, other_plays,
+    avg_cpu, avg_memory, avg_temperature, max_temperature,
+    uptime_percent, incidents_count, calculated_at
+  FROM club_daily_stats
+  WHERE date < CURRENT_DATE
+  UNION ALL
+  SELECT
+    NULL::uuid as id,
+    vp.site_id,
+    CURRENT_DATE as date,
+    COUNT(DISTINCT vp.session_id)::integer as sessions_count,
+    COALESCE(SUM(vp.duration_played), 0)::integer as screen_time_seconds,
+    COUNT(*)::integer as videos_played,
+    COUNT(*) FILTER (WHERE vp.trigger_type = 'manual')::integer as manual_triggers,
+    COUNT(*) FILTER (WHERE vp.trigger_type = 'auto')::integer as auto_plays,
+    COUNT(*) FILTER (WHERE vp.category = 'sponsor')::integer as sponsor_plays,
+    COUNT(*) FILTER (WHERE vp.category = 'jingle')::integer as jingle_plays,
+    COUNT(*) FILTER (WHERE vp.category = 'ambiance')::integer as ambiance_plays,
+    COUNT(*) FILTER (WHERE vp.category NOT IN ('sponsor', 'jingle', 'ambiance') OR vp.category IS NULL)::integer as other_plays,
+    NULL::numeric(5,2) as avg_cpu,
+    NULL::numeric(5,2) as avg_memory,
+    NULL::numeric(5,2) as avg_temperature,
+    NULL::numeric(5,2) as max_temperature,
+    NULL::numeric(5,2) as uptime_percent,
+    0::integer as incidents_count,
+    NOW() as calculated_at
+  FROM video_plays vp
+  WHERE vp.played_at >= CURRENT_DATE
+    AND vp.played_at < CURRENT_DATE + INTERVAL '1 day'
+  GROUP BY vp.site_id
+  HAVING COUNT(*) > 0;
+
+-- advertiser_daily_stats_live : advertiser_daily_stats + données sponsor du jour
+CREATE OR REPLACE VIEW advertiser_daily_stats_live AS
+  SELECT
+    id, video_id, site_id, date,
+    total_impressions, total_duration_seconds, completed_plays, completion_rate,
+    unique_events,
+    pre_match_plays, match_plays, post_match_plays, loop_plays,
+    match_events, training_events, tournament_events, other_events,
+    auto_plays, manual_plays,
+    total_audience_estimate, avg_audience_per_play,
+    calculated_at
+  FROM advertiser_daily_stats
+  WHERE date < CURRENT_DATE
+  UNION ALL
+  SELECT
+    NULL::uuid as id,
+    vp.video_id,
+    vp.site_id,
+    CURRENT_DATE as date,
+    COUNT(*)::integer as total_impressions,
+    COALESCE(SUM(vp.duration_played), 0)::integer as total_duration_seconds,
+    SUM(CASE WHEN vp.completed THEN 1 ELSE 0 END)::integer as completed_plays,
+    ROUND(
+      (SUM(CASE WHEN vp.completed THEN 1 ELSE 0 END)::float / NULLIF(COUNT(*), 0) * 100)::numeric,
+      2
+    ) as completion_rate,
+    COUNT(DISTINCT vp.event_type)::integer as unique_events,
+    SUM(CASE WHEN vp.period = 'pre_match' THEN 1 ELSE 0 END)::integer as pre_match_plays,
+    SUM(CASE WHEN vp.period = 'halftime' THEN 1 ELSE 0 END)::integer as match_plays,
+    SUM(CASE WHEN vp.period = 'post_match' THEN 1 ELSE 0 END)::integer as post_match_plays,
+    SUM(CASE WHEN vp.period = 'loop' OR vp.period IS NULL THEN 1 ELSE 0 END)::integer as loop_plays,
+    SUM(CASE WHEN vp.event_type = 'match' THEN 1 ELSE 0 END)::integer as match_events,
+    SUM(CASE WHEN vp.event_type = 'training' THEN 1 ELSE 0 END)::integer as training_events,
+    SUM(CASE WHEN vp.event_type = 'tournament' THEN 1 ELSE 0 END)::integer as tournament_events,
+    SUM(CASE WHEN vp.event_type = 'other' OR vp.event_type IS NULL THEN 1 ELSE 0 END)::integer as other_events,
+    SUM(CASE WHEN vp.trigger_type = 'auto' THEN 1 ELSE 0 END)::integer as auto_plays,
+    SUM(CASE WHEN vp.trigger_type = 'manual' THEN 1 ELSE 0 END)::integer as manual_plays,
+    COALESCE(SUM(vp.audience_estimate), 0)::integer as total_audience_estimate,
+    ROUND(AVG(vp.audience_estimate)::numeric, 2) as avg_audience_per_play,
+    NOW() as calculated_at
+  FROM video_plays vp
+  WHERE vp.category = 'sponsor'
+    AND vp.video_id IS NOT NULL
+    AND vp.played_at >= CURRENT_DATE
+    AND vp.played_at < CURRENT_DATE + INTERVAL '1 day'
+  GROUP BY vp.video_id, vp.site_id
+  HAVING COUNT(*) > 0;
+
+COMMENT ON VIEW club_daily_stats_live IS 'club_daily_stats + données live du jour depuis video_plays. Remplace club_daily_stats pour les queries dashboard.';
+COMMENT ON VIEW advertiser_daily_stats_live IS 'advertiser_daily_stats + données live du jour depuis video_plays (sponsor). Remplace advertiser_daily_stats pour les queries portail annonceur.';
+
+-- =============================================================================
 -- COMMENTAIRES
 -- =============================================================================
 
@@ -1210,8 +1306,8 @@ BEGIN
     RAISE NOTICE '  - club_sessions, video_plays, club_daily_stats';
     RAISE NOTICE '  - campaigns, scheduled_reports';
     RAISE NOTICE '';
-    RAISE NOTICE 'Vues: club_analytics_summary, top_videos_by_site';
-    RAISE NOTICE 'Fonctions: calculate_daily_stats(), calculate_all_daily_stats()';
+    RAISE NOTICE 'Vues: club_analytics_summary, top_videos_by_site, club_daily_stats_live, advertiser_daily_stats_live';
+    RAISE NOTICE 'Fonctions: calculate_daily_stats(), calculate_all_daily_stats(), calculate_all_advertiser_daily_stats()';
     RAISE NOTICE '';
     RAISE NOTICE 'Créez un utilisateur admin avec: npm run create-admin';
 END $$;
