@@ -410,18 +410,6 @@ import { QrCodeGeneratorComponent } from '../../../../shared/components/qr-code-
         </div>
       </div>
 
-      <!-- Ecran secondaire (HDMI 1) — detection automatique -->
-      <div class="settings-card">
-        <div class="settings-header">
-          <span class="settings-icon">🖥️</span>
-          <h4>Ecran secondaire (HDMI 1)</h4>
-        </div>
-        <p class="settings-desc">
-          Le mode double ecran est automatique — le boitier detecte les ecrans branches et adapte l'affichage.
-          Branchez un second ecran sur HDMI 1 (panneau LED, TV tribunes, ecran geant) et le Pi l'activera automatiquement avec la resolution native detectee.
-        </p>
-      </div>
-
       <!-- Watermark / Logo en surimpression -->
       <div class="settings-card">
         <div class="settings-header">
@@ -1630,8 +1618,6 @@ export class SiteSettingsTabComponent implements OnInit, OnChanges {
   currentHotspotActive: boolean = false;
   showCurrentPassword: boolean = false;
   fetchingHotspotConfig: boolean = false;
-
-  // PC Mode (E-23)
 
   // Premium
   savingLiveScore: boolean = false;

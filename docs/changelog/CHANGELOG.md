@@ -22,6 +22,10 @@
   - `agent.js` must call `cleanupLegacyFiles()` in `start()` — defining the method without calling it leaves 2448+ orphan entries on Pi forever
   - `build-raspberry.sh` must use `--delete` for sync-agent rsync — without it, deleted files survive OTA updates indefinitely
 
+### Cleanup
+
+- **dashboard:** remove deprecated "Ecran secondaire (HDMI 1)" info card and orphan `// PC Mode (E-23)` comment from site settings — dual-display is hardware-detected (no UI needed), PC mode column was dropped in v3.99.1
+
 ### Docs
 
 - **TROUBLESHOOTING.md:** remove obsolete `sponsor_impressions.json` diagnostic (pipeline consolidated since v3.66)
