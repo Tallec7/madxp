@@ -28,6 +28,49 @@ MAX_CRASH_COUNT=3  # Après 3 crashs rapides, attendre plus longtemps
 CRASH_WINDOW=300   # Fenêtre de 5 minutes pour compter les crashs
 LXPANEL_KILL_COUNT=0  # Compteur de kills lxpanel (monitoring)
 
+# GPU Video Decode Mode (Pi 5 uniquement)
+# "hardware" = V4L2 stateless decode (économise ~20% CPU, réduit le coil whine)
+# "software" = decode software (fallback si hardware crashe)
+# Le fichier /tmp/gpu-decode-fallback persiste les crashs hardware entre restarts Chromium.
+# Il est supprimé au reboot (tmpfs) → chaque boot re-tente le hardware decode.
+GPU_DECODE_FALLBACK_FILE="/tmp/gpu-decode-fallback"
+GPU_DECODE_CRASH_THRESHOLD=2  # Après 2 crashs rapides avec hardware decode → fallback software
+GPU_DECODE_MODE="hardware"    # Valeur par défaut, mise à jour par detect_gpu_decode_mode()
+
+# Détecte le mode de décodage GPU à utiliser (Pi 5 uniquement)
+# Vérifie si le hardware decode a crashé trop souvent → fallback software
+detect_gpu_decode_mode() {
+    if [[ "$PI_MODEL" != "pi5" ]]; then
+        GPU_DECODE_MODE="hardware"  # Pi 4 utilise toujours le hardware decode natif
+        return
+    fi
+
+    # Vérifier si le fichier de fallback existe (crashs hardware précédents)
+    if [[ -f "$GPU_DECODE_FALLBACK_FILE" ]]; then
+        local crash_count
+        crash_count=$(cat "$GPU_DECODE_FALLBACK_FILE" 2>/dev/null | grep -c "^crash:" || true)
+        crash_count=${crash_count:-0}
+
+        if (( crash_count >= GPU_DECODE_CRASH_THRESHOLD )); then
+            GPU_DECODE_MODE="software"
+            log "⚠️ GPU decode: fallback software (${crash_count} crashs hardware détectés ce boot)"
+            return
+        fi
+    fi
+
+    GPU_DECODE_MODE="hardware"
+    log "🎬 GPU decode: mode hardware (V4L2 stateless)"
+}
+
+# Enregistre un crash GPU decode (pour le mécanisme de fallback)
+record_gpu_decode_crash() {
+    if [[ "$PI_MODEL" != "pi5" ]] || [[ "$GPU_DECODE_MODE" != "hardware" ]]; then
+        return
+    fi
+    echo "crash:$(date +%s)" >> "$GPU_DECODE_FALLBACK_FILE"
+    log "⚠️ GPU decode: crash enregistré (hardware decode)"
+}
+
 # Résolution de dernier recours — utilisée uniquement quand xrandr ET EDID échouent
 DEFAULT_SCREEN_WIDTH=1920
 DEFAULT_SCREEN_HEIGHT=1080
@@ -48,10 +91,10 @@ detect_pi_model() {
 }
 
 PI_MODEL=$(detect_pi_model)
+detect_gpu_decode_mode
 
 # Secondary display Chromium state
 SECONDARY_CHROMIUM_PID=0
-SECONDARY_DISPLAY_ENABLED=false
 # Dual-display active = secondary is running → primary must be constrained to its monitor
 DUAL_DISPLAY_ACTIVE=false
 LAST_HDMI_TRANSITION=""
@@ -64,25 +107,8 @@ PRIMARY_SCREEN_HEIGHT=""
 BOOT_CHROMIUM_AT=0
 FAILOVER_GRACE_PERIOD=15
 # Flag pour éviter le spam de logs quand setup_secondary_xrandr échoue en boucle
-# (Pi avec secondaryDisplayEnabled=true mais un seul port HDMI actif)
+# (Pi avec un seul port HDMI actif mais deux ports DRM)
 XRANDR_DUAL_WARNED=false
-
-# Lire secondaryDisplayEnabled depuis configuration.json
-# Rétrocompat: lit aussi "ledEnabled" pour les configs existantes (avant renommage)
-read_secondary_display_enabled() {
-    if [ -f "$CONFIG_FILE" ]; then
-        local val
-        val=$(python3 -c "
-import json
-c = json.load(open('$CONFIG_FILE'))
-# Nouvelle clé prioritaire, fallback sur l'ancienne
-print('true' if c.get('secondaryDisplayEnabled', c.get('ledEnabled')) else 'false')
-" 2>/dev/null)
-        SECONDARY_DISPLAY_ENABLED="${val:-false}"
-    else
-        SECONDARY_DISPLAY_ENABLED=false
-    fi
-}
 
 # Détecter si HDMI 0 (écran principal) est connecté
 detect_hdmi0_status() {
@@ -125,11 +151,11 @@ detect_hdmi1_status() {
 }
 
 # Détecte si l'écran est branché sur le mauvais port HDMI.
-# "Mauvais port" = HDMI-1 connecté ET HDMI-0 déconnecté ET le mode dual-display N'est PAS activé.
-# Dans ce cas, l'écran devrait être branché sur HDMI-0 (port principal).
+# "Mauvais port" = HDMI-1 connecté ET HDMI-0 déconnecté ET le dual-display n'est PAS actif.
+# En dual-display actif, les deux ports sont légitimement utilisés.
 detect_wrong_port() {
-    # Si le mode dual-display est activé, les deux ports sont valides
-    if [[ "$SECONDARY_DISPLAY_ENABLED" == "true" ]]; then
+    # En dual-display actif, les deux ports sont valides
+    if [[ "$DUAL_DISPLAY_ACTIVE" == "true" ]]; then
         return 1
     fi
     # Mauvais port = HDMI-1 connecté mais HDMI-0 déconnecté
@@ -361,6 +387,11 @@ cleanup_old_crashes() {
 record_crash() {
     crash_times+=("$(date +%s)")
     cleanup_old_crashes
+    # Si on est en mode hardware decode sur Pi 5, enregistrer le crash GPU
+    # pour le mécanisme de fallback automatique
+    record_gpu_decode_crash
+    # Vérifier si on doit basculer en software decode pour le prochain restart
+    detect_gpu_decode_mode
     write_kiosk_status "crashed"
 }
 
@@ -425,7 +456,7 @@ write_kiosk_status() {
     detect_hdmi0_status && hdmi0_status="connected" || hdmi0_status="disconnected"
     detect_hdmi1_status && hdmi1_status="connected" || hdmi1_status="disconnected"
     cat > "$KIOSK_STATUS_FILE" 2>/dev/null <<EOF
-{"status":"${status}","chromiumAlive":$(pgrep -f "chromium.*$CHROMIUM_URL" > /dev/null 2>&1 && echo "true" || echo "false"),"restartCount":${#crash_times[@]},"lastEvent":"${now}","reason":"${reason}","pid":${CHROMIUM_PID:-0},"secondaryDisplayEnabled":${SECONDARY_DISPLAY_ENABLED},"secondaryChromiumAlive":${secondary_alive},"hdmi0Status":"${hdmi0_status}","hdmi1Status":"${hdmi1_status}","dualDisplayActive":${DUAL_DISPLAY_ACTIVE:-false},"hdmiFailoverActive":${HDMI_FAILOVER_ACTIVE:-false},"displayFallback":"${DISPLAY_FALLBACK_REASON}","lastHdmiTransition":"${LAST_HDMI_TRANSITION:-}","windowStacking":"${WINDOW_STACKING_STATUS:-unknown}","lxpanelKillCount":${LXPANEL_KILL_COUNT:-0},"primaryResolution":"${PRIMARY_SCREEN_WIDTH:+${PRIMARY_SCREEN_WIDTH}x${PRIMARY_SCREEN_HEIGHT}}","secondaryResolution":"${SECONDARY_SCREEN_WIDTH:+${SECONDARY_SCREEN_WIDTH}x${SECONDARY_SCREEN_HEIGHT}}"}
+{"status":"${status}","chromiumAlive":$(pgrep -f "chromium.*$CHROMIUM_URL" > /dev/null 2>&1 && echo "true" || echo "false"),"restartCount":${#crash_times[@]},"lastEvent":"${now}","reason":"${reason}","pid":${CHROMIUM_PID:-0},"secondaryChromiumAlive":${secondary_alive},"hdmi0Status":"${hdmi0_status}","hdmi1Status":"${hdmi1_status}","dualDisplayActive":${DUAL_DISPLAY_ACTIVE:-false},"hdmiFailoverActive":${HDMI_FAILOVER_ACTIVE:-false},"displayFallback":"${DISPLAY_FALLBACK_REASON}","lastHdmiTransition":"${LAST_HDMI_TRANSITION:-}","windowStacking":"${WINDOW_STACKING_STATUS:-unknown}","lxpanelKillCount":${LXPANEL_KILL_COUNT:-0},"primaryResolution":"${PRIMARY_SCREEN_WIDTH:+${PRIMARY_SCREEN_WIDTH}x${PRIMARY_SCREEN_HEIGHT}}","secondaryResolution":"${SECONDARY_SCREEN_WIDTH:+${SECONDARY_SCREEN_WIDTH}x${SECONDARY_SCREEN_HEIGHT}}","gpuDecodeMode":"${GPU_DECODE_MODE:-unknown}"}
 EOF
 }
 
@@ -785,6 +816,9 @@ start_chromium() {
     # et spamme "Failed to connect to MCS endpoint with error -105" quand le WiFi tombe.
     # Neopro n'utilise pas les push notifications Chromium.
     local disable_features="TranslateUI,MediaRouter,XdgDesktopPortal,GCMDriver"
+    # CRITIQUE : comme --disable-features, Chromium n'accepte qu'un seul --enable-features.
+    # On combine common + model-specific ici.
+    local enable_features="OverlayScrollbar"
 
     # Flags communs à tous les modèles
     # TOUJOURS utiliser --app=URL (jamais --kiosk). Raisons :
@@ -826,7 +860,6 @@ start_chromium() {
         --disable-print-preview
         --disable-hang-monitor
         --disable-popup-blocking
-        --enable-features=OverlayScrollbar
         --memory-pressure-off
         --disable-breakpad
         --disable-crash-reporter
@@ -844,25 +877,39 @@ start_chromium() {
     if [[ "$PI_MODEL" == "pi5" ]]; then
         # Pi 5 : Driver V3D natif (Mesa) pour le compositing GPU.
         #
-        # Historique des tentatives :
+        # Historique des tentatives (software decode) :
         # - SwiftShader (--use-gl=angle --use-angle=swiftshader) : trop lent, vidéos saccadées
         # - EGL natif avec flags (--use-gl=egl --enable-features=Vulkan) : SharedImageStub errors /5s
         # - --disable-gpu : Skia CPU, mieux que SwiftShader mais encore trop lent
         # - Aucun flag GPU (v3.24.1) : SharedImageBackingFactory crash loop sur vidéo 1080p
         #   Le GPU ne trouve pas de backend pour Y_UV 420 en shared_memory → crash toutes les 5s
         #
-        # Solution : Garder le compositing GPU (V3D Mesa) mais désactiver le décodage vidéo
-        # hardware qui cause les SharedImage errors. Chromium décode les vidéos en software
-        # (assez performant sur Pi 5 quad A76 2.4GHz) et utilise le GPU uniquement pour
-        # le compositing/rasterization. Résultat : vidéos fluides sans crash GPU.
-        log "📱 Pi 5 détecté: V3D Mesa + décodage vidéo software (évite SharedImage crash)"
-        disable_features+=",VaapiVideoDecoder,UseChromeOSDirectVideoDecoder"
-        gpu_flags=(
-            --ignore-gpu-blocklist
-            --enable-gpu-rasterization
-            --disable-gpu-memory-buffer-video-frames
-            --disable-gpu-vsync
-        )
+        # v3.99+ : Tentative de hardware decode via V4L2 stateless API (Pi 5 BCM2712).
+        # Le Pi 5 a un décodeur H.264 hardware accessible via /dev/video* (V4L2 stateless).
+        # Chromium 128+ supporte V4L2FlatVideoDecoder qui utilise cette API.
+        # Avantage : ~20% CPU en moins → réduit le coil whine PMIC.
+        # Si Chromium crashe 2 fois avec hardware decode, fallback automatique en software
+        # pour le reste du boot (re-tenté au prochain reboot via /tmp/gpu-decode-fallback).
+        if [[ "$GPU_DECODE_MODE" == "hardware" ]]; then
+            log "📱 Pi 5: V3D Mesa + V4L2 hardware decode (économie CPU)"
+            # NE PAS désactiver VaapiVideoDecoder/UseChromeOSDirectVideoDecoder
+            # Activer V4L2FlatVideoDecoder pour le décodage hardware stateless
+            enable_features="${enable_features:+${enable_features},}V4L2FlatVideoDecoder"
+            gpu_flags=(
+                --ignore-gpu-blocklist
+                --enable-gpu-rasterization
+                --disable-gpu-vsync
+            )
+        else
+            log "📱 Pi 5: V3D Mesa + software decode (fallback après crashs hardware)"
+            disable_features+=",VaapiVideoDecoder,UseChromeOSDirectVideoDecoder"
+            gpu_flags=(
+                --ignore-gpu-blocklist
+                --enable-gpu-rasterization
+                --disable-gpu-memory-buffer-video-frames
+                --disable-gpu-vsync
+            )
+        fi
     else
         # Pi 4 et antérieurs : utiliser l'accélération GPU hardware
         log "📱 Pi 4 ou antérieur: utilisation de l'accélération GPU hardware"
@@ -877,7 +924,7 @@ start_chromium() {
     fi
 
     # L'URL est toujours dans --app=, pas en argument positionnel
-    "$CHROMIUM_BIN" "${common_flags[@]}" "${gpu_flags[@]}" --disable-features="$disable_features" &
+    "$CHROMIUM_BIN" "${common_flags[@]}" "${gpu_flags[@]}" --enable-features="$enable_features" --disable-features="$disable_features" &
 
     CHROMIUM_PID=$!
     log "✓ Chromium lancé (PID: $CHROMIUM_PID)"
@@ -1066,6 +1113,7 @@ start_chromium_secondary() {
     # Features à désactiver — même combine que start_chromium() (un seul --disable-features)
     # GCMDriver : désactive Google Cloud Messaging (push notifications internes Chromium)
     local disable_features="TranslateUI,MediaRouter,XdgDesktopPortal,GCMDriver"
+    local enable_features="OverlayScrollbar"
 
     # Flags identiques au kiosk principal + user-data-dir séparé + positionnement écran 2
     # NOTE: --app=URL au lieu de --kiosk pour le secondaire.
@@ -1091,7 +1139,6 @@ start_chromium_secondary() {
         --disable-print-preview
         --disable-hang-monitor
         --disable-popup-blocking
-        --enable-features=OverlayScrollbar
         --memory-pressure-off
         --disable-breakpad
         --disable-crash-reporter
@@ -1109,13 +1156,22 @@ start_chromium_secondary() {
     # Mêmes flags GPU que le kiosk principal
     local gpu_flags=()
     if [[ "$PI_MODEL" == "pi5" ]]; then
-        disable_features+=",VaapiVideoDecoder,UseChromeOSDirectVideoDecoder"
-        gpu_flags=(
-            --ignore-gpu-blocklist
-            --enable-gpu-rasterization
-            --disable-gpu-memory-buffer-video-frames
-            --disable-gpu-vsync
-        )
+        if [[ "$GPU_DECODE_MODE" == "hardware" ]]; then
+            enable_features="${enable_features:+${enable_features},}V4L2FlatVideoDecoder"
+            gpu_flags=(
+                --ignore-gpu-blocklist
+                --enable-gpu-rasterization
+                --disable-gpu-vsync
+            )
+        else
+            disable_features+=",VaapiVideoDecoder,UseChromeOSDirectVideoDecoder"
+            gpu_flags=(
+                --ignore-gpu-blocklist
+                --enable-gpu-rasterization
+                --disable-gpu-memory-buffer-video-frames
+                --disable-gpu-vsync
+            )
+        fi
     else
         gpu_flags=(
             --disable-gpu-driver-bug-workarounds
@@ -1127,7 +1183,7 @@ start_chromium_secondary() {
         )
     fi
 
-    "$CHROMIUM_BIN" "${common_flags[@]}" "${gpu_flags[@]}" --disable-features="$disable_features" &
+    "$CHROMIUM_BIN" "${common_flags[@]}" "${gpu_flags[@]}" --enable-features="$enable_features" --disable-features="$disable_features" &
     SECONDARY_CHROMIUM_PID=$!
     log "✓ Chromium secondaire lancé (PID: $SECONDARY_CHROMIUM_PID)"
 
@@ -1197,18 +1253,23 @@ stop_chromium_secondary() {
     fi
 }
 
-# Vérifier et gérer le Chromium secondaire
+# Vérifier et gérer le Chromium secondaire (hardware-driven, pas de flag config)
 check_secondary_chromium() {
-    read_secondary_display_enabled
-
-    if [[ "$SECONDARY_DISPLAY_ENABLED" != "true" ]]; then
-        # Écran secondaire désactivé → arrêter le Chromium secondaire si en cours
+    # Plus de secondary si HDMI-1 absent
+    if ! detect_hdmi1_status; then
         if (( SECONDARY_CHROMIUM_PID > 0 )); then
-            log "Écran secondaire désactivé dans la config, arrêt du Chromium secondaire"
+            log "HDMI-1 déconnecté, arrêt du Chromium secondaire"
             stop_chromium_secondary
         fi
         return
     fi
+
+    # HDMI-1 connecté mais HDMI-0 absent → wrong-port, pas dual
+    if ! detect_hdmi0_status; then
+        return
+    fi
+
+    # Les deux HDMI connectés → dual display possible (reste de la fonction inchangé)
 
     # E-23 US-23.6.2: Failover — si HDMI-0 perdu pendant dual-display et HDMI-1 encore connecté
     # Grace period boot: l'EDID/DRM met ~15s pour se stabiliser → faux positifs detect_hdmi0_status
@@ -1244,15 +1305,19 @@ check_secondary_chromium() {
             # Le primaire est toujours en --app= mode, donc PAS besoin de le relancer.
             # On configure juste xrandr et on redimensionne via xdotool (zero-blackout).
             if [[ "$DUAL_DISPLAY_ACTIVE" != "true" ]]; then
+                # Short-circuit: si xrandr a déjà échoué (un seul écran physique), ne pas
+                # rappeler setup_secondary_xrandr toutes les 30s (log spam + charge CPU).
+                # Le flag est réinitialisé par un hotplug udev → on re-vérifie.
+                if [[ "$XRANDR_DUAL_WARNED" == "true" ]]; then
+                    return
+                fi
                 LAST_HDMI_TRANSITION="single_to_dual:$(date -u +%Y-%m-%dT%H:%M:%SZ)"
                 # DUAL_DISPLAY_ACTIVE n'est activé que si xrandr trouve les DEUX sorties HDMI.
                 # Même garde que dans le boot : setup_secondary_xrandr retourne 1 si le Pi
                 # n'a qu'un seul port HDMI actif → on ne doit PAS passer en dual-display.
                 if ! setup_secondary_xrandr; then
-                    if [[ "$XRANDR_DUAL_WARNED" != "true" ]]; then
-                        log "⚠️ xrandr n'a trouvé qu'un seul écran dans le main loop — skip dual-display"
-                        XRANDR_DUAL_WARNED=true
-                    fi
+                    log "⚠️ xrandr n'a trouvé qu'un seul écran dans le main loop — skip dual-display"
+                    XRANDR_DUAL_WARNED=true
                     return
                 fi
                 # xrandr a trouvé les deux écrans → réinitialiser le flag
@@ -1443,22 +1508,19 @@ main() {
         log "⚠️ Nginx pas encore prêt après 15s — lancement de Chromium quand même"
     fi
 
-    # Pré-check dual-display AVANT de lancer le primaire.
+    # Pré-check dual-display AVANT de lancer le primaire (hardware-driven).
     # Le primaire utilise toujours --app=URL, mais on configure xrandr en amont
-    # si un second écran est détecté pour connaître les résolutions des deux moniteurs.
-    read_secondary_display_enabled
-    if [[ "$SECONDARY_DISPLAY_ENABLED" == "true" ]] && detect_hdmi1_status; then
-        # Configurer xrandr pour connaître les résolutions des deux écrans.
+    # si les deux écrans sont détectés pour connaître les résolutions des deux moniteurs.
+    if detect_hdmi0_status && detect_hdmi1_status; then
+        # Les deux HDMI connectés → tenter le dual-display.
         # DUAL_DISPLAY_ACTIVE n'est activé que si xrandr trouve les DEUX sorties HDMI.
         # Sur un Pi avec un seul port HDMI actif (ex: HDMI-A-1 absent de xrandr),
         # setup_secondary_xrandr retourne 1 → on reste en single-display.
-        # Sans ça, le main loop croit être en dual-display → faux failover → kill/restart
-        # Chromium inutile → bureau LXDE visible pendant la transition.
         if setup_secondary_xrandr; then
             DUAL_DISPLAY_ACTIVE=true
             log "📺 Dual-display détecté au démarrage: primaire=${PRIMARY_SCREEN_WIDTH}x${PRIMARY_SCREEN_HEIGHT}"
         else
-            log "⚠️ secondaryDisplayEnabled=true mais xrandr n'a trouvé qu'un seul écran — mode single-display"
+            log "⚠️ Deux HDMI détectés mais xrandr n'a trouvé qu'un seul écran — mode single-display"
             DUAL_DISPLAY_ACTIVE=false
         fi
     fi
@@ -1510,7 +1572,6 @@ main() {
 
     # Lancer le Chromium secondaire uniquement si le dual-display est RÉELLEMENT actif
     # (setup_secondary_xrandr a trouvé les deux sorties HDMI).
-    # Ne pas re-lire secondaryDisplayEnabled — DUAL_DISPLAY_ACTIVE est la source de vérité.
     if [[ "$DUAL_DISPLAY_ACTIVE" == "true" ]] && detect_hdmi1_status; then
         log "Écran secondaire activé et HDMI 1 connecté — lancement du Chromium secondaire"
         start_chromium_secondary
@@ -1550,6 +1611,9 @@ main() {
             if [ -f "$HDMI_FLAG_FILE" ]; then
                 rm -f "$HDMI_FLAG_FILE"
                 hdmi_triggered=true
+                # Réinitialiser le flag xrandr pour re-tenter le dual-display
+                # (un nouveau câble HDMI a peut-être été branché)
+                XRANDR_DUAL_WARNED=false
                 log "⚡ HDMI hotplug détecté (udev) — vérification immédiate"
                 break
             fi
