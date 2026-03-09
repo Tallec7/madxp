@@ -1317,11 +1317,12 @@ Le HDMI secondaire du Raspberry Pi peut alimenter un panneau LED bord de terrain
 
 **Tables impliquées :**
 
-| Table                 | Colonne(s) clé                                              | Description                                    |
-| --------------------- | ----------------------------------------------------------- | ---------------------------------------------- |
-| `video_variants`      | `display_type` (`'tv'`\|`'secondary'`)                      | Fichier vidéo alternatif par type d'écran      |
-| `sites`               | `secondary_display_enabled`, `secondary_display_resolution` | DEPRECATED — le Pi détecte par hardware        |
-| `content_deployments` | `has_secondary_variant`                                     | Flag booléen persisté au moment du déploiement |
+| Table                 | Colonne(s) clé                                              | Description                                                      |
+| --------------------- | ----------------------------------------------------------- | ---------------------------------------------------------------- |
+| `video_variants`      | `display_type` (`'tv'`\|`'secondary'`)                      | Fichier vidéo alternatif par type d'écran                        |
+| `sites`               | `secondary_display_enabled`, `secondary_display_resolution` | DEPRECATED — le Pi détecte par hardware                          |
+| `content_deployments` | `has_secondary_variant`                                     | Flag booléen persisté au moment du déploiement                   |
+| `content_deployments` | `deployed_path`, `deployed_filename`                        | Chemin réel rapporté par le Pi après déploiement (feedback loop) |
 
 **Stockage FTP :** `variants/{videoId}/{displayType}/{filename}` (ex: `variants/837ad.../secondary/Pres.mp4`)
 
@@ -1332,6 +1333,10 @@ Le HDMI secondaire du Raspberry Pi peut alimenter un panneau LED bord de terrain
 1. `deployToSite()` cherche toujours la variante secondaire via `videoVariantRepository.findByVideoAndDisplay(videoId, 'secondary')`
 2. Si trouvée, envoie les deux vidéos (principale + secondaire) via `sendOrQueue`
 3. Persiste `has_secondary_variant = true` dans `content_deployments` (non-bloquant, try/catch)
+
+**Feedback deployed_path (v3.102) :**
+
+Le Pi rapporte le chemin réel du fichier déployé via `deploy_progress` completion event (`deployedPath`, `deployedFilename`). Le handler persiste ces valeurs dans `content_deployments.deployed_path` / `deployed_filename` via `COALESCE` (backward-compatible). Le dashboard utilise `deployedPathsMap` (alimenté par `GET /sites/:id/local-content` → `deploymentRepository.getDeployedPathsForSite()`) au lieu de construire des chemins spéculatifs. Cela résout les mismatch causés par `sanitizeFilename()`, `ensureUniqueFilename()`, et la préférence `originalName` du Pi
 
 **Indicateurs UX `📺 2nd` :**
 

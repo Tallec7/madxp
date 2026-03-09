@@ -230,6 +230,7 @@ export class SitesService {
     hotspotInfo: { ssid: string | null; channel: number | null; clients: number; isActive: boolean } | null;
     secondaryVariantVideoIds: string[];
     secondaryDisplayEnabled: boolean;
+    deployedPaths: Array<{ videoId: string; deployedPath: string; deployedFilename: string }>;
   }> {
     return this.api.get(`/sites/${id}/local-content`);
   }

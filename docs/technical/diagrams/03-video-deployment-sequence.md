@@ -176,9 +176,9 @@ sequenceDiagram
 
     DV-->>Pi: {success: true, path, size, checksum, filename}
     Pi-->>WS: emit('command_result', {commandId, status: 'success', result})
-    Pi-->>WS: emit('deploy_progress', {deploymentId, progress: 100, completed: true})
+    Pi-->>WS: emit('deploy_progress', {deploymentId, progress: 100, completed: true, deployedPath, deployedFilename})
 
-    WS->>DB: UPDATE content_deployments SET status='completed', completed_at=NOW()
+    WS->>DB: UPDATE content_deployments SET status='completed', completed_at=NOW(), deployed_path=COALESCE($2,deployed_path), deployed_filename=COALESCE($3,deployed_filename)
     WS->>DB: UPDATE remote_commands SET status='completed'
     WS->>Dash: emit('command_completed', {commandId, siteId})
 ```

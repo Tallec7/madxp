@@ -18,6 +18,7 @@ import {
   timelineRepository,
   configProfileRepository,
   videoVariantRepository,
+  deploymentRepository,
   type ExtendedSiteFilters,
   type SubscriptionFilter,
   type UpdateSiteInput,
@@ -1226,10 +1227,11 @@ export const getSiteLocalContent = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
 
-    // Récupérer le site et les vidéos cloud en parallèle
-    const [site, cloudVideoRows] = await Promise.all([
+    // Récupérer le site, les vidéos cloud et les chemins déployés en parallèle
+    const [site, cloudVideoRows, deployedPathRows] = await Promise.all([
       siteRepository.findWithLocalContent(id),
       timelineRepository.getCloudVideos(500),
+      deploymentRepository.getDeployedPathsForSite(id),
     ]);
 
     if (!site) {
@@ -1259,6 +1261,13 @@ export const getSiteLocalContent = async (req: AuthRequest, res: Response) => {
     const secondaryVariantVideoIds = secondaryVariants.map((v) => v.video_id);
     const secondaryDisplayEnabled = site.secondary_display_enabled ?? false;
 
+    // Chemins réels rapportés par le Pi après déploiement (videoId → path)
+    const deployedPaths = deployedPathRows.map((r) => ({
+      videoId: r.video_id,
+      deployedPath: r.deployed_path,
+      deployedFilename: r.deployed_filename,
+    }));
+
     if (!site.local_config_mirror) {
       return res.json({
         siteId: id,
@@ -1275,6 +1284,7 @@ export const getSiteLocalContent = async (req: AuthRequest, res: Response) => {
         hotspotInfo: null,
         secondaryVariantVideoIds,
         secondaryDisplayEnabled,
+        deployedPaths,
       });
     }
 
@@ -1306,6 +1316,7 @@ export const getSiteLocalContent = async (req: AuthRequest, res: Response) => {
       hotspotInfo,
       secondaryVariantVideoIds,
       secondaryDisplayEnabled,
+      deployedPaths,
     });
   } catch (error) {
     logger.error('Get site local content error:', error);

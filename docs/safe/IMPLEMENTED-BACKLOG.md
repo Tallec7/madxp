@@ -77,22 +77,23 @@
 
 ## 4. Déploiement & OTA
 
-| ID         | Feature                                                                     | Statut     | Fichiers clés                                                      | Version/Date |
-| ---------- | --------------------------------------------------------------------------- | ---------- | ------------------------------------------------------------------ | ------------ |
-| IMP-DEP-01 | Déploiement vidéo avec retry (3 max, backoff 5min)                          | Production | `deployment.service.ts`                                            | 2025         |
-| IMP-DEP-02 | Déploiement orchestré multi-sites                                           | Production | `orchestrated-deployment.service.ts`                               | 2025         |
-| IMP-DEP-03 | Déploiement canary progressif (10→25→50→75→100%)                            | Production | `canary-deployment.service.ts`                                     | 2025         |
-| IMP-DEP-04 | Mises à jour logicielles OTA avec planification redémarrage                 | Production | `update-deployment.service.ts`, `updates.controller.ts`            | 2025         |
-| IMP-DEP-05 | File de commandes (commandes pour Pi hors-ligne)                            | Production | `command-queue.service.ts`                                         | 2025         |
-| IMP-DEP-06 | Déploiements planifiés (date/heure)                                         | Production | `deployment.service.ts`                                            | 2025         |
-| IMP-DEP-07 | File de déploiement vidéo (pattern sendOrQueue)                             | Production | `deployment.service.ts`                                            | Jan 2026     |
-| IMP-DEP-08 | OTA planification redémarrage + rollback automatique                        | Production | `update-deployment.service.ts`                                     | v3.55.0      |
-| IMP-DEP-09 | Exécuteur de migration + retry checksum OTA                                 | Production | `migration-runner.js`                                              | v3.55.0      |
-| IMP-DEP-10 | Diagnostic santé Pi complet (mode JSON)                                     | Production | `diagnose-pi.sh`, `diagnose.js`                                    | 2026         |
-| IMP-DEP-11 | Scripts pré-migration (fix ownership, copie VERSION)                        | Production | `pre-migration.sh`                                                 | v3.55.x      |
-| IMP-DEP-12 | Scripts install/setup/build/deploy renforcés (strict mode, log, npm errors) | Production | `install.sh`, `setup.sh`, `build-raspberry.sh`, `deploy-remote.sh` | Mars 2026    |
-| IMP-DEP-13 | OTA vérification intégrité node_modules + rollback auto                     | Production | `update-software.js`, `diagnose-pi.sh`                             | Fév 2026     |
-| IMP-DEP-14 | Setup.sh archive unique GitHub (remplace ~40 curl) + deploy rollback auto   | Production | `setup.sh`, `deploy-remote.sh`                                     | Mars 2026    |
+| ID         | Feature                                                                     | Statut     | Fichiers clés                                                                                         | Version/Date |
+| ---------- | --------------------------------------------------------------------------- | ---------- | ----------------------------------------------------------------------------------------------------- | ------------ |
+| IMP-DEP-01 | Déploiement vidéo avec retry (3 max, backoff 5min)                          | Production | `deployment.service.ts`                                                                               | 2025         |
+| IMP-DEP-02 | Déploiement orchestré multi-sites                                           | Production | `orchestrated-deployment.service.ts`                                                                  | 2025         |
+| IMP-DEP-03 | Déploiement canary progressif (10→25→50→75→100%)                            | Production | `canary-deployment.service.ts`                                                                        | 2025         |
+| IMP-DEP-04 | Mises à jour logicielles OTA avec planification redémarrage                 | Production | `update-deployment.service.ts`, `updates.controller.ts`                                               | 2025         |
+| IMP-DEP-05 | File de commandes (commandes pour Pi hors-ligne)                            | Production | `command-queue.service.ts`                                                                            | 2025         |
+| IMP-DEP-06 | Déploiements planifiés (date/heure)                                         | Production | `deployment.service.ts`                                                                               | 2025         |
+| IMP-DEP-07 | File de déploiement vidéo (pattern sendOrQueue)                             | Production | `deployment.service.ts`                                                                               | Jan 2026     |
+| IMP-DEP-08 | OTA planification redémarrage + rollback automatique                        | Production | `update-deployment.service.ts`                                                                        | v3.55.0      |
+| IMP-DEP-09 | Exécuteur de migration + retry checksum OTA                                 | Production | `migration-runner.js`                                                                                 | v3.55.0      |
+| IMP-DEP-10 | Diagnostic santé Pi complet (mode JSON)                                     | Production | `diagnose-pi.sh`, `diagnose.js`                                                                       | 2026         |
+| IMP-DEP-11 | Scripts pré-migration (fix ownership, copie VERSION)                        | Production | `pre-migration.sh`                                                                                    | v3.55.x      |
+| IMP-DEP-12 | Scripts install/setup/build/deploy renforcés (strict mode, log, npm errors) | Production | `install.sh`, `setup.sh`, `build-raspberry.sh`, `deploy-remote.sh`                                    | Mars 2026    |
+| IMP-DEP-13 | OTA vérification intégrité node_modules + rollback auto                     | Production | `update-software.js`, `diagnose-pi.sh`                                                                | Fév 2026     |
+| IMP-DEP-14 | Setup.sh archive unique GitHub (remplace ~40 curl) + deploy rollback auto   | Production | `setup.sh`, `deploy-remote.sh`                                                                        | Mars 2026    |
+| IMP-DEP-15 | Feedback deployed_path — le Pi rapporte le chemin réel après déploiement    | Production | `agent.js`, `deploy-progress.handler.ts`, `deployment.repository.ts`, `site-content-tab.component.ts` | Mars 2026    |
 
 ---
 
@@ -371,15 +372,16 @@
 
 ## Mapping vers Epics SAFe (Terminés)
 
-| Epic SAFe                                | Features implémentées                    | Domaines                            |
-| ---------------------------------------- | ---------------------------------------- | ----------------------------------- |
-| E-04 Profils Config Match                | IMP-PI-04, IMP-ADM-17                    | Raspberry Pi, Admin                 |
-| E-07 Résilience WiFi (partiel)           | IMP-NET-07→14                            | Réseau & Sync                       |
-| E-08 Alertes Prédictives                 | IMP-ALR-02, IMP-ALR-06→22                | Monitoring                          |
-| E-09 Architecture Audit                  | IMP-ADM-09, IMP-DOC-01                   | Admin, Documentation                |
-| E-10 Monitoring Fleet (partiel)          | IMP-ALR-16→19, IMP-ANA-14                | Monitoring, Analytics               |
-| Audit Sponsors & Analytics               | IMP-AUD-01→32 (32 features, 93 SP)       | Analytics, Sponsors, Pi, Monitoring |
-| E-22 TV + Secondary Dual (F-22.1→F-22.3) | IMP-VID-14→17, IMP-PI-23→26 (8 features) | Vidéo, Raspberry Pi, Dashboard      |
+| Epic SAFe                                | Features implémentées                                                                                  | Domaines                            |
+| ---------------------------------------- | ------------------------------------------------------------------------------------------------------ | ----------------------------------- |
+| E-04 Profils Config Match                | IMP-PI-04, IMP-ADM-17                                                                                  | Raspberry Pi, Admin                 |
+| E-07 Résilience WiFi (partiel)           | IMP-NET-07→14                                                                                          | Réseau & Sync                       |
+| E-08 Alertes Prédictives                 | IMP-ALR-02, IMP-ALR-06→22                                                                              | Monitoring                          |
+| E-09 Architecture Audit                  | IMP-ADM-09, IMP-DOC-01                                                                                 | Admin, Documentation                |
+| E-10 Monitoring Fleet (partiel)          | IMP-ALR-16→19, IMP-ANA-14                                                                              | Monitoring, Analytics               |
+| E-03 Analytics Sponsors ✅ Done          | IMP-AUD-11/19, IMP-ANA-17/20 (F-03.1) + IMP-ANA-03/04/05/18 (F-03.2) — 18 SP. F-03.3 Heatmap supprimée | Analytics, Sponsors                 |
+| Audit Sponsors & Analytics               | IMP-AUD-01→32 (32 features, 93 SP)                                                                     | Analytics, Sponsors, Pi, Monitoring |
+| E-22 TV + Secondary Dual (F-22.1→F-22.3) | IMP-VID-14→17, IMP-PI-23→26 (8 features)                                                               | Vidéo, Raspberry Pi, Dashboard      |
 
 ---
 

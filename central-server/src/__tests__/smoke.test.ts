@@ -8206,6 +8206,82 @@ describe('Deploy progress auto-completion guards', () => {
 });
 
 // ----------------------------------------------------------
+// deployed_path feedback guard: the Pi MUST report the real
+// deployed path back to the central server. Without this,
+// the dashboard constructs speculative paths that mismatch
+// with the Pi filesystem (sanitization, dedup, originalName).
+// ----------------------------------------------------------
+describe('deployed_path feedback guards', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+
+  it('deploy-progress handler must persist deployed_path on completion', () => {
+    const content = fs.readFileSync(
+      path.join(repoRoot, 'central-server/src/handlers/deploy-progress.handler.ts'),
+      'utf8'
+    );
+    // Must extract deployedPath from progress event
+    expect({
+      extractsPath: /deployedPath/.test(content),
+      reason: 'deploy-progress handler must extract deployedPath from progress event for real path feedback',
+    }).toEqual({
+      extractsPath: true,
+      reason: 'deploy-progress handler must extract deployedPath from progress event for real path feedback',
+    });
+    // Must persist deployed_path in the completion UPDATE using COALESCE
+    expect({
+      persistsPath: /deployed_path\s*=\s*COALESCE/.test(content),
+      reason: 'deploy-progress handler must persist deployed_path via COALESCE on completion (backward-compatible)',
+    }).toEqual({
+      persistsPath: true,
+      reason: 'deploy-progress handler must persist deployed_path via COALESCE on completion (backward-compatible)',
+    });
+  });
+
+  it('sync-agent must emit deployedPath in deploy_progress completion event', () => {
+    const content = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/sync-agent/src/agent.js'),
+      'utf8'
+    );
+    // Must include deployedPath in the deploy_progress emit
+    expect({
+      emitsPath: /deploy_progress['"]?\s*,\s*\{[\s\S]*?deployedPath/.test(content),
+      reason: 'sync-agent must emit deployedPath in deploy_progress completion event for real path feedback',
+    }).toEqual({
+      emitsPath: true,
+      reason: 'sync-agent must emit deployedPath in deploy_progress completion event for real path feedback',
+    });
+  });
+
+  it('deployment repository must have getDeployedPathsForSite method', () => {
+    const content = fs.readFileSync(
+      path.join(repoRoot, 'central-server/src/repositories/deployment.repository.ts'),
+      'utf8'
+    );
+    expect({
+      hasMethod: /getDeployedPathsForSite/.test(content),
+      reason: 'deployment repository must expose getDeployedPathsForSite for dashboard to use real paths',
+    }).toEqual({
+      hasMethod: true,
+      reason: 'deployment repository must expose getDeployedPathsForSite for dashboard to use real paths',
+    });
+  });
+
+  it('dashboard site-content-tab must use deployedPathsMap instead of speculative paths', () => {
+    const content = fs.readFileSync(
+      path.join(repoRoot, 'central-dashboard/src/app/features/sites/components/site-content-tab/site-content-tab.component.ts'),
+      'utf8'
+    );
+    expect({
+      hasMap: /deployedPathsMap/.test(content),
+      reason: 'dashboard must use deployedPathsMap to prefer real paths over speculative construction',
+    }).toEqual({
+      hasMap: true,
+      reason: 'dashboard must use deployedPathsMap to prefer real paths over speculative construction',
+    });
+  });
+});
+
+// ----------------------------------------------------------
 // pc_mode_enabled dead code guard: column was removed in
 // v3.99.1 — never wired to any logic. Prevent re-introduction.
 // ----------------------------------------------------------

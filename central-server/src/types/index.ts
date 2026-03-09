@@ -133,6 +133,8 @@ export interface ContentDeployment {
   error_message: string | null;
   deployed_by: string | null;
   has_secondary_variant: boolean;
+  deployed_path: string | null;
+  deployed_filename: string | null;
   created_at: Date;
   started_at: Date | null;
   completed_at: Date | null;

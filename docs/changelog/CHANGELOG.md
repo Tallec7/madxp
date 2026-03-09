@@ -1,3 +1,38 @@
+## [3.102.0] (2026-03-09)
+
+### Features
+
+- **deploy-feedback:** Pi reports real deployed video path back to central server via `deploy_progress` completion event — eliminates speculative path construction in dashboard that caused videos to be unplayable after deployment (filename sanitization, deduplication, `originalName` preference mismatches)
+
+### Bug Fixes
+
+- **dashboard:** `site-content-tab` uses `deployedPathsMap` (real paths from DB) instead of speculative `videos/${category}/${filename}` construction — resolves path mismatch causing "video not found" after deployment
+
+### Monitoring
+
+- **alerting:** `deployed_path` feedback loop is self-healing — each new deployment auto-populates the real path, existing deployments get populated on next redeploy
+- **repository:** `getDeployedPathsForSite()` uses `DISTINCT ON (video_id)` + `ORDER BY completed_at DESC` for latest deployed path per video
+
+### Tests
+
+- **unit:** 5 new handler tests for deployed_path feedback (completion, rétrocompat null, auto-complete, error path, progress path)
+- **smoke:** 4 new regression guards:
+  - `deploy-progress.handler.ts` must extract `deployedPath` from progress event
+  - `deploy-progress.handler.ts` must persist `deployed_path` via COALESCE on completion
+  - `agent.js` must emit `deployedPath` in `deploy_progress` completion event
+  - `deployment.repository.ts` must expose `getDeployedPathsForSite`
+  - `site-content-tab.component.ts` must use `deployedPathsMap`
+
+### Docs
+
+- **CLAUDE.md:** new "NE JAMAIS FAIRE" rule — never construct speculative video paths in dashboard
+- **REFERENCE.md:** documented `deployed_path`/`deployed_filename` columns and feedback loop mechanism
+- **03-video-deployment-sequence.md:** updated sequence diagram with deployed_path feedback in completion event
+- **SAFe:** IMP-DEP-15 + F-08.4 entries for deployed_path feedback feature
+- **IMPLEMENTED-BACKLOG.md:** IMP-DEP-15 entry for deployed_path feedback
+
+---
+
 ## [3.101.2](https://github.com/Tallec7/neopro/compare/v3.101.1...v3.101.2) (2026-03-09)
 
 ### Bug Fixes

@@ -1,6 +1,6 @@
 # Features & User Stories — NEOPRO SAFe
 
-> **Dernière mise à jour** : 26 Février 2026 <!-- E-23 Résilience HDMI & Accès Navigateur (7F, 33US, 146SP) -->
+> **Dernière mise à jour** : 9 Mars 2026 <!-- E-03 Done (F-03.1/F-03.2 Done, F-03.3 Heatmap supprimée) -->
 > **PI actuel** : PI-1 (Février - Mars 2026)
 > Ce document contient les Features/US futures (PI-1 à PI-3) ET les Epics terminés avant PI-1. Les 212 features implémentées (hors SAFe) sont documentées dans [IMPLEMENTED-BACKLOG.md](IMPLEMENTED-BACKLOG.md).
 
@@ -42,13 +42,14 @@ Les profils de configuration par phase de match (Avant-Match, Match, Après-Matc
 
 Le service d'alertes prédictives est opérationnel avec 9 règles : inactivité, disk growth, déconnexions, WiFi signal, video errors, temperature trend, hotspot instability, subscription expiry, **références vidéo orphelines**. Calcul de tendance sur 24h glissantes. Notifications dashboard intégrées.
 
-| Feature                             | Statut  | Fichiers                                                                              |
-| ----------------------------------- | ------- | ------------------------------------------------------------------------------------- |
-| F-08.1 Règles d'alertes prédictives | ✅ Done | `predictive-alerts.service.ts` (9 règles actives)                                     |
-| F-08.2 Dashboard tendances          | ✅ Done | `analytics.controller.ts` (métriques santé 30j)                                       |
-| F-08.3 Détection vidéos orphelines  | ✅ Done | `config-video-paths.ts`, `site-content-tab.component.ts`, `loop-manager.component.ts` |
+| Feature                             | Statut  | Fichiers                                                                                              |
+| ----------------------------------- | ------- | ----------------------------------------------------------------------------------------------------- |
+| F-08.1 Règles d'alertes prédictives | ✅ Done | `predictive-alerts.service.ts` (9 règles actives)                                                     |
+| F-08.2 Dashboard tendances          | ✅ Done | `analytics.controller.ts` (métriques santé 30j)                                                       |
+| F-08.3 Détection vidéos orphelines  | ✅ Done | `config-video-paths.ts`, `site-content-tab.component.ts`, `loop-manager.component.ts`                 |
+| F-08.4 Feedback deployed_path       | ✅ Done | `agent.js`, `deploy-progress.handler.ts`, `deployment.repository.ts`, `site-content-tab.component.ts` |
 
-**SP réel** : ~10 SP (8 initial + 2 F-08.3)
+**SP réel** : ~12 SP (8 initial + 2 F-08.3 + 2 F-08.4)
 
 ---
 
@@ -193,58 +194,53 @@ Tous les controllers utilisent le repository pattern. ESLint bloquant actif. Aud
 
 ---
 
-## E-03 — Analytics Sponsors Avancé
+## E-03 — Analytics Sponsors Avancé ⚠️ PARTIEL
 
-### F-03.1 : Dashboard impressions sponsor
+> **Statut** : ✅ Done (F-03.1 et F-03.2 Done via sprint audit sponsors/analytics Fév 2026. F-03.3 Heatmap supprimée — non pertinente à <10 clubs)
+> **Fichiers** : `advertiser-analytics.controller.ts`, `sponsor-analytics.component.ts`, `pdf-report.service.ts`, `excel-export.service.ts`
+
+### F-03.1 : Dashboard impressions sponsor ✅ DONE
 
 > _En tant que sponsor, je peux consulter en temps réel le nombre d'impressions de mes spots par gymnase et par période._
 
 **Critères d'acceptation**
 
-- [ ] Compteur d'impressions total et par gymnase
-- [ ] Filtres : période (jour/semaine/mois), gymnase, spot
-- [ ] Graphique tendances (Chart.js) avec comparaison période précédente
-- [ ] Données actualisées toutes les 5 minutes maximum
+- [x] Compteur d'impressions total et par gymnase
+- [x] Filtres : période (jour/semaine/mois), gymnase, spot
+- [x] Graphique tendances (Chart.js) avec comparaison période précédente
+- [x] Données actualisées toutes les 5 minutes maximum
 
-| US        | Description                                                        | SP  | Sprint | Priorité |
-| --------- | ------------------------------------------------------------------ | --- | ------ | -------- |
-| US-03.1.1 | API analytics : impressions agrégées par sponsor, gymnase, période | 5   | S1     | Must     |
-| US-03.1.2 | Dashboard sponsor : graphiques impressions (Chart.js) + filtres    | 5   | S1     | Must     |
+| US        | Description                                                        | SP  | Sprint | Priorité | Statut  |
+| --------- | ------------------------------------------------------------------ | --- | ------ | -------- | ------- |
+| US-03.1.1 | API analytics : impressions agrégées par sponsor, gymnase, période | 5   | S1     | Must     | ✅ Done |
+| US-03.1.2 | Dashboard sponsor : graphiques impressions (Chart.js) + filtres    | 5   | S1     | Must     | ✅ Done |
+
+> **Implémenté par** : IMP-AUD-11 (portail sponsor KPIs), IMP-AUD-19 (advertiser analytics avancé), IMP-ANA-17 (sponsor analytics 6 KPIs), IMP-ANA-20 (refonte club analytics avec sponsors benchmark)
 
 ---
 
-### F-03.2 : Export rapport PDF/CSV
+### F-03.2 : Export rapport PDF/CSV ✅ DONE
 
 > _En tant que sponsor, je peux exporter un rapport mensuel de mes impressions en PDF ou CSV._
 
 **Critères d'acceptation**
 
-- [ ] Bouton "Exporter" dans le dashboard sponsor
-- [ ] Formats : PDF (rapport visuel avec graphiques) et CSV (données brutes)
-- [ ] Le rapport PDF inclut : logo sponsor, période, impressions par gymnase, top créneaux
-- [ ] Envoi automatique par email en début de mois (opt-in)
+- [x] Bouton "Exporter" dans le dashboard sponsor
+- [x] Formats : PDF (rapport visuel avec graphiques) et CSV (données brutes)
+- [x] Le rapport PDF inclut : logo sponsor, période, impressions par gymnase, top créneaux
+- [ ] Envoi automatique par email en début de mois (opt-in) — _reporté vers E-16 (PI-2)_
 
-| US        | Description                                                              | SP  | Sprint | Priorité |
-| --------- | ------------------------------------------------------------------------ | --- | ------ | -------- |
-| US-03.2.1 | Export CSV des données d'impressions avec filtres appliqués              | 3   | S2     | Must     |
-| US-03.2.2 | Génération rapport PDF mensuel avec graphiques + envoi email automatique | 5   | S3     | Must     |
+| US        | Description                                                              | SP  | Sprint | Priorité | Statut  |
+| --------- | ------------------------------------------------------------------------ | --- | ------ | -------- | ------- |
+| US-03.2.1 | Export CSV des données d'impressions avec filtres appliqués              | 3   | S2     | Must     | ✅ Done |
+| US-03.2.2 | Génération rapport PDF mensuel avec graphiques + envoi email automatique | 5   | S3     | Must     | ✅ Done |
+
+> **Implémenté par** : IMP-ANA-03 (rapport PDF club), IMP-ANA-04 (rapports mensuels auto), IMP-ANA-05 (export Excel), IMP-ANA-18 (rapports PDF sponsors pro)
+> **Note** : L'envoi email automatique (opt-in) est reporté vers E-16 Rapports Email Auto (PI-2). La génération PDF/CSV est complète.
 
 ---
 
-### F-03.3 : Heatmap de diffusion
-
-> _En tant que sponsor, je peux voir sur une carte les gymnases où mes spots sont le plus diffusés._
-
-**Critères d'acceptation**
-
-- [ ] Carte Leaflet avec marqueurs par gymnase
-- [ ] Couleur/taille du marqueur proportionnelle au nombre d'impressions
-- [ ] Tooltip au survol avec détail (nom gymnase, impressions, dernière diffusion)
-- [ ] Filtre par période
-
-| US        | Description                                                 | SP  | Sprint | Priorité |
-| --------- | ----------------------------------------------------------- | --- | ------ | -------- |
-| US-03.3.1 | Carte Leaflet heatmap impressions par gymnase avec tooltips | 5   | S3     | Should   |
+~~### F-03.3 : Heatmap de diffusion~~ — **SUPPRIMÉE** (non pertinente à <10 clubs, décision 09/03/2026)
 
 ---
 
@@ -952,18 +948,19 @@ Tous les controllers utilisent le repository pattern. ESLint bloquant actif. Aud
 | E-08 Alertes Prédictives  | 2        | ✅ Done    | 8        |
 | E-09 Architecture Audit   | 2        | ✅ Done    | 8        |
 | E-10 Monitoring Fleet     | 1/2      | ⚠️ Partiel | 5/10     |
+| E-03 Analytics Sponsors   | 2/2      | ✅ Done    | 18/18    |
 
 ### PI-1 Backlog Actif
 
-| Epic                           | Features | User Stories | Story Points | Sprint(s) |
-| ------------------------------ | -------- | ------------ | ------------ | --------- |
-| E-01 Portail Sponsor           | 3        | 5            | 19           | S2-S3     |
-| E-02 Rotation Sponsors         | 2        | 3            | 11           | S1        |
-| E-03 Analytics Sponsors        | 3        | 5            | 23           | S1-S3     |
-| E-06 Onboarding Automatisé     | 2        | 4            | 18           | S2-S3     |
-| E-07.3 WiFi USB (reliquat)     | 1        | 1            | 3            | S3        |
-| E-10.1 Carte flotte (reliquat) | 1        | 1            | 5            | S1        |
-| **Total PI-1**                 | **12**   | **19**       | **79**       | **S1-S3** |
+| Epic                           | Features | User Stories | Story Points | Sprint(s)              |
+| ------------------------------ | -------- | ------------ | ------------ | ---------------------- |
+| E-01 Portail Sponsor           | 3        | 5            | 19           | S2-S3                  |
+| E-02 Rotation Sponsors         | 2        | 3            | 11           | S1                     |
+| ~~E-03.3 Heatmap sponsor~~     | ~~1~~    | ~~1~~        | ~~5~~        | ~~S3~~ — **SUPPRIMÉE** |
+| E-06 Onboarding Automatisé     | 2        | 4            | 18           | S2-S3                  |
+| E-07.3 WiFi USB (reliquat)     | 1        | 1            | 3            | S3                     |
+| E-10.1 Carte flotte (reliquat) | 1        | 1            | 5            | S1                     |
+| **Total PI-1**                 | **9**    | **14**       | **56**       | **S1-S3**              |
 
 ### PI-2 Backlog
 
@@ -993,17 +990,18 @@ Tous les controllers utilisent le repository pattern. ESLint bloquant actif. Aud
 
 ### Vue d'ensemble
 
-| Scope             | Epics               | Features       | US     | SP      |
-| ----------------- | ------------------- | -------------- | ------ | ------- |
-| Done (avant PI-1) | 5 (dont 2 partiels) | 9 (+ 2 → PI-1) | -      | ~41     |
-| PI-1 Actif        | 4 + 2 reliquats     | 12             | 19     | 79      |
-| PI-2              | 7                   | 21             | 57     | 263     |
-| PI-3              | 7                   | 7              | 9      | 73      |
-| **Total SAFe**    | **23**              | **49 uniques** | **85** | **456** |
+| Scope             | Epics               | Features        | US     | SP      |
+| ----------------- | ------------------- | --------------- | ------ | ------- |
+| Done (avant PI-1) | 6 (dont 3 partiels) | 11 (+ 3 → PI-1) | -      | ~59     |
+| PI-1 Actif        | 3 + 3 reliquats     | 9               | 14     | 56      |
+| PI-2              | 7                   | 21              | 57     | 263     |
+| PI-3              | 7                   | 7               | 9      | 73      |
+| **Total SAFe**    | **23**              | **48 uniques**  | **80** | **451** |
 
-> **Note PI-1** : Les 79 SP sont sous la capacité de 80 SP. Le backlog est désormais réaliste (vs 130 SP avant requalification des Done).
+> **Note PI-1** : Backlog réduit à 56 SP après suppression F-03.3 heatmap (non pertinente à <10 clubs). E-03 entièrement Done (18 SP livrés).
 > **Note E-22** : 3 features ajoutées le 24/02 (F-22.4 GO, F-22.5 et F-22.6 à détailler). Fallback PiP : NO GO.
 > **Note E-23** : 7 features, 33 US, 146 SP. Epic Résilience HDMI & Accès Navigateur ajouté le 26/02.
+> **Note E-03** : Requalifié Partiel le 09/03. F-03.1 (dashboard impressions) et F-03.2 (export PDF/CSV) livrés par sprint audit sponsors/analytics Fév 2026 (IMP-AUD-01→32). L'envoi email auto (F-03.2 critère 4) reporté vers E-16 (PI-2).
 
 ---
 

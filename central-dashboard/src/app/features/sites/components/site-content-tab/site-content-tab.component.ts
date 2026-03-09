@@ -3277,6 +3277,9 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
   // Cloud video paths (not yet on Pi) — passed to loop-manager
   cloudVideoPaths: Set<string> = new Set();
 
+  // Deployed paths — real paths reported by the Pi after deployment (videoId → path)
+  deployedPathsMap: Map<string, { deployedPath: string; deployedFilename: string }> = new Map();
+
   // Orphaned video detection — paths in config that don't match any available video
   allKnownVideoPaths: Set<string> = new Set();
   filenameToPathsMap: Map<string, string[]> = new Map(); // filename.lower → [path1, path2, ...]
@@ -4060,6 +4063,12 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
         this.secondaryVariantVideoIds = new Set(response.secondaryVariantVideoIds || []);
         this.secondaryDisplayEnabled = response.secondaryDisplayEnabled ?? false;
 
+        // Chemins réels rapportés par le Pi après déploiement
+        this.deployedPathsMap = new Map();
+        for (const dp of response.deployedPaths || []) {
+          this.deployedPathsMap.set(dp.videoId, { deployedPath: dp.deployedPath, deployedFilename: dp.deployedFilename });
+        }
+
         // En mode multi-profil, la config vient du profil selectionne (via loadProfiles)
         // On n'applique la config site-level que si aucun profil n'est selectionne
         if (!this.selectedProfileId) {
@@ -4562,9 +4571,11 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
         existing.displayName = cloud.title || cloud.originalName || cloud.filename;
         existing.hasSecondaryVariant = this.secondaryVariantVideoIds.has(cloud.id);
       } else {
-        // Vidéo uniquement dans le cloud
-        // Utiliser l'URL cloud comme path (sera transformé en path local lors du déploiement)
-        const localPath = `videos/${cloud.category || 'UPLOADS'}/${cloud.filename}`;
+        // Vidéo uniquement dans le cloud — utiliser le chemin réel si le Pi l'a rapporté,
+        // sinon fallback sur un chemin calculé (sera corrigé après le prochain déploiement)
+        const deployed = this.deployedPathsMap.get(cloud.id);
+        const localPath = deployed?.deployedPath
+          ?? `videos/${cloud.category || 'UPLOADS'}/${cloud.filename}`;
         optionsMap.set(key, {
           path: localPath,
           filename: cloud.filename,

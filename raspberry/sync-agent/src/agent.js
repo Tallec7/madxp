@@ -749,12 +749,18 @@ class NeoproSyncAgent {
             progress,
           });
         });
-        // Signaler la fin du déploiement
+        // Signaler la fin du déploiement avec le chemin réel sur le Pi
+        // Construire le chemin relatif à partir des données réelles (category/subcategory/finalFilename)
+        const deployedSegments = ['videos', data.category];
+        if (data.subcategory) deployedSegments.push(data.subcategory);
+        if (result?.filename) deployedSegments.push(result.filename);
         this.socket.emit('deploy_progress', {
           deploymentId: data.deploymentId,
           videoId: data.videoId,
           progress: 100,
           completed: true,
+          deployedPath: result?.filename ? deployedSegments.join('/') : undefined,
+          deployedFilename: result?.filename || undefined,
         });
       } else if (type === 'update_software') {
         // Pause config-watcher during OTA to avoid event spam (11x duplicate syncs)

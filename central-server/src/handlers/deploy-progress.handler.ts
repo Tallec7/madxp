@@ -37,7 +37,7 @@ export async function handleDeployProgress(
   progress: Record<string, unknown>
 ): Promise<void> {
   try {
-    const { deploymentId, videoId, progress: progressValue, completed, error } = progress;
+    const { deploymentId, videoId, progress: progressValue, completed, error, deployedPath, deployedFilename } = progress;
 
     let resolvedStatus: string = 'in_progress';
     let resolvedDeployedCount = 0;
@@ -59,9 +59,11 @@ export async function handleDeployProgress(
       } else if (completed || isCompletedByProgress) {
         await query(
           `UPDATE content_deployments
-           SET status = 'completed', progress = 100, completed_at = NOW()
+           SET status = 'completed', progress = 100, completed_at = NOW(),
+               deployed_path = COALESCE($2, deployed_path),
+               deployed_filename = COALESCE($3, deployed_filename)
            WHERE id = $1`,
-          [deploymentId]
+          [deploymentId, deployedPath || null, deployedFilename || null]
         );
         resolvedStatus = 'completed';
         const depRow = await query<{ target_type: string; target_id: string }>(

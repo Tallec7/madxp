@@ -320,6 +320,29 @@ class DeploymentRepositoryImpl extends BaseRepository<ContentDeployment> {
   }
 
   // --------------------------------------------------------------------------
+  // Deployed Paths (real paths reported by Pi after deployment)
+  // --------------------------------------------------------------------------
+
+  /**
+   * Retourne les chemins reels deployes pour un site (le dernier chemin par video).
+   * Utilise par le dashboard pour afficher les vrais chemins au lieu de chemins speculatifs.
+   */
+  async getDeployedPathsForSite(siteId: string): Promise<Array<{ video_id: string; deployed_path: string; deployed_filename: string }>> {
+    const result = await query<{ video_id: string; deployed_path: string; deployed_filename: string }>(
+      `SELECT DISTINCT ON (video_id) video_id, deployed_path, deployed_filename
+       FROM content_deployments
+       WHERE deployed_path IS NOT NULL
+         AND status = 'completed'
+         AND (target_id = $1 OR target_id IN (
+           SELECT group_id FROM site_groups WHERE site_id = $1
+         ))
+       ORDER BY video_id, completed_at DESC`,
+      [siteId]
+    );
+    return result.rows;
+  }
+
+  // --------------------------------------------------------------------------
   // Orchestrated Deployments
   // --------------------------------------------------------------------------
 
