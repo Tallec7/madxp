@@ -1,3 +1,9 @@
+## [3.104.1](https://github.com/Tallec7/neopro/compare/v3.104.0...v3.104.1) (2026-03-10)
+
+### Bug Fixes
+
+- **admin:** remove git hash from generated app.js header ([7bf248f](https://github.com/Tallec7/neopro/commit/7bf248f124de53fb29f12a93cb7dba5dcfc63cde))
+
 # [3.104.0](https://github.com/Tallec7/neopro/compare/v3.103.0...v3.104.0) (2026-03-10)
 
 ### Features
