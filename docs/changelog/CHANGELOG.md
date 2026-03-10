@@ -2,6 +2,12 @@
 
 ### Features
 
+- **video-library:** contextual config badges, advertiser column, duplicate detection, filename collision fix ([1c3fcf6](https://github.com/Tallec7/neopro/commit/1c3fcf668774c9e3a043c52c52196744def76198))
+
+# [3.105.0](https://github.com/Tallec7/neopro/compare/v3.104.3...v3.105.0) (2026-03-10)
+
+### Features
+
 - **video-library:** contextual config badges BOUCLE/MATCH/ACTION replacing generic "EN BOUCLE" — each badge indicates the video's role in the configuration: green BOUCLE (default sponsor loop), orange MATCH (match phase), purple ACTION (remote-triggered)
 - **video-library:** advertiser name column — JOINs `advertiser_videos` + `advertisers` in timeline.repository to display the advertiser company name alongside each video
 - **video-library:** secondary variant `2nd` badge — shows which videos have a dual-display variant available
