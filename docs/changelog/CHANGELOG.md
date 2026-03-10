@@ -1,3 +1,9 @@
+# [3.104.0](https://github.com/Tallec7/neopro/compare/v3.103.0...v3.104.0) (2026-03-10)
+
+### Features
+
+- **deploy-backfill:** auto-heal deployed_path for pre-existing deployments ([a54f8fd](https://github.com/Tallec7/neopro/commit/a54f8fdbcc5523873b481cf705990cfdea1e3811))
+
 # [3.103.1](https://github.com/Tallec7/neopro/compare/v3.103.0...v3.103.1) (2026-03-10)
 
 ### Features
