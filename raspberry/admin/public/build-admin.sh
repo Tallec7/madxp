@@ -57,7 +57,6 @@ echo "/** " > "$OUTPUT"
 echo " * Neopro Admin Panel - JavaScript" >> "$OUTPUT"
 echo " * FICHIER GENERE - Ne pas editer directement" >> "$OUTPUT"
 echo " * Editer les fichiers dans modules/ puis lancer: bash build-admin.sh" >> "$OUTPUT"
-echo " * Build: $(git rev-parse --short HEAD)" >> "$OUTPUT"
 echo " */" >> "$OUTPUT"
 echo "" >> "$OUTPUT"
 
