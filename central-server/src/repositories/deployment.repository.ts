@@ -342,6 +342,64 @@ class DeploymentRepositoryImpl extends BaseRepository<ContentDeployment> {
     return result.rows;
   }
 
+  /**
+   * Backfill deployed_path for completed deployments that have NULL paths.
+   * Matches Pi's local videos (from sync_local_state) against completed deployments
+   * using the video checksum or filename as correlation key.
+   *
+   * Called automatically on every sync_local_state — self-healing for pre-existing deployments.
+   */
+  async backfillDeployedPaths(
+    siteId: string,
+    localVideos: Array<{ filename: string; path: string; checksum?: string | null }>
+  ): Promise<number> {
+    if (!localVideos || localVideos.length === 0) return 0;
+
+    // Find completed deployments for this site that are missing deployed_path
+    const missing = await query<{ id: string; video_id: string; video_filename: string; video_checksum: string | null }>(
+      `SELECT cd.id, cd.video_id, v.filename AS video_filename, v.checksum AS video_checksum
+       FROM content_deployments cd
+       JOIN videos v ON cd.video_id = v.id
+       WHERE cd.deployed_path IS NULL
+         AND cd.status = 'completed'
+         AND (cd.target_id = $1 OR cd.target_id IN (
+           SELECT group_id FROM site_groups WHERE site_id = $1
+         ))`,
+      [siteId]
+    );
+
+    if (missing.rows.length === 0) return 0;
+
+    // Build lookup maps from Pi's local videos
+    const byChecksum = new Map<string, { path: string; filename: string }>();
+    const byFilename = new Map<string, { path: string; filename: string }>();
+    for (const lv of localVideos) {
+      if (lv.checksum) {
+        byChecksum.set(lv.checksum, { path: lv.path, filename: lv.filename });
+      }
+      byFilename.set(lv.filename, { path: lv.path, filename: lv.filename });
+    }
+
+    let backfilled = 0;
+    for (const row of missing.rows) {
+      // Priority: match by checksum (most reliable), then by filename
+      const match = (row.video_checksum && byChecksum.get(row.video_checksum))
+        || byFilename.get(row.video_filename);
+
+      if (match) {
+        await query(
+          `UPDATE content_deployments
+           SET deployed_path = $1, deployed_filename = $2
+           WHERE id = $3`,
+          [match.path, match.filename, row.id]
+        );
+        backfilled++;
+      }
+    }
+
+    return backfilled;
+  }
+
   // --------------------------------------------------------------------------
   // Orchestrated Deployments
   // --------------------------------------------------------------------------

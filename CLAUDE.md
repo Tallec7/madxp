@@ -125,6 +125,7 @@ source central-server/.env && psql "$DATABASE_URL" -f central-server/src/scripts
 - Utiliser `rsync -a` sans `--delete` pour sync-agent dans build-raspberry.sh (les fichiers supprimés du repo survivent indéfiniment sur les Pi après OTA — ex: `sponsor-impressions.js` supprimé en v3.67 envoyait encore des HTTP 400 avec 2448 impressions orphelines — smoke test enforced)
 - Définir `cleanupLegacyFiles()` dans agent.js sans l'appeler dans `start()` (méthode morte — les fichiers stale restent éternellement sur le Pi — ex: `sponsor_impressions.json` avec 2448 entrées orphelines jamais nettoyées — smoke test enforced)
 - Construire des chemins vidéo spéculatifs dans le dashboard avec `videos/${category}/${filename}` (le Pi sanitize, déduplique et préfère `originalName` → mismatch → vidéos injouables — toujours utiliser `deployedPathsMap` alimenté par le feedback `deployed_path` de `content_deployments` — smoke test enforced)
+- Supprimer l'appel `backfillDeployedPaths()` dans `config-sync.handler.ts` (auto-healing des `deployed_path` NULL pour les déploiements pré-v3.102 — à chaque `sync_local_state`, le Pi rapporte ses vidéos locales → matching checksum-first, filename-fallback → comble le gap sans intervention manuelle — smoke test enforced)
 
 ## Architecture détaillée
 

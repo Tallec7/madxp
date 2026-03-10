@@ -14,6 +14,7 @@ import logger from '../config/logger';
 import { metricsService } from '../services/metrics.service';
 import { SocketContext } from './socket-context';
 import { siteSponsorRepository } from '../repositories/site-sponsor.repository';
+import { deploymentRepository } from '../repositories/deployment.repository';
 import { autoResolveSponsorIds } from '../services/sponsor-auto-resolution.service';
 import { enrichConfigWithSecondaryVariants } from '../utils/config-secondary-variants';
 import { enrichConfigWithAnalyticsMetadata } from '../utils/config-analytics-metadata';
@@ -202,6 +203,27 @@ export async function handleSyncLocalState(
 
     // Record sync operation metric
     metricsService.recordSyncOperation('local_state', 'success');
+
+    // Backfill deployed_path for pre-existing deployments using Pi's real video paths
+    if (Array.isArray(videos) && videos.length > 0) {
+      try {
+        const backfilled = await deploymentRepository.backfillDeployedPaths(
+          siteId,
+          videos as Array<{ filename: string; path: string; checksum?: string | null }>
+        );
+        if (backfilled > 0) {
+          logger.info('Backfilled deployed_path from sync_local_state', {
+            siteId,
+            backfilled,
+          });
+        }
+      } catch (backfillError) {
+        logger.error('Failed to backfill deployed_path (non-fatal):', {
+          siteId,
+          error: (backfillError as Error).message,
+        });
+      }
+    }
 
     // Config drift detection: compare Pi hash to expected hash in DB
     if (configHash && !isConfigUpdatePending) {

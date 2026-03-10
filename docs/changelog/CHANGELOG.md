@@ -1,3 +1,16 @@
+# [3.103.1](https://github.com/Tallec7/neopro/compare/v3.103.0...v3.103.1) (2026-03-10)
+
+### Features
+
+- **deploy-backfill:** auto-heal `deployed_path` for pre-existing deployments on every `sync_local_state` — Pi's local videos are cross-referenced with completed `content_deployments` missing `deployed_path` using checksum-first, filename-fallback matching
+
+### Tests
+
+- **unit:** 11 new tests (4 handler integration + 7 repository unit) for backfill logic
+- **smoke:** 2 new guards ensuring `config-sync.handler.ts` calls `backfillDeployedPaths` and `deployment.repository.ts` exposes the method
+
+---
+
 # [3.103.0](https://github.com/Tallec7/neopro/compare/v3.102.0...v3.103.0) (2026-03-09)
 
 ### Features

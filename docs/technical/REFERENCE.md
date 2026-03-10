@@ -1338,6 +1338,10 @@ Le HDMI secondaire du Raspberry Pi peut alimenter un panneau LED bord de terrain
 
 Le Pi rapporte le chemin réel du fichier déployé via `deploy_progress` completion event (`deployedPath`, `deployedFilename`). Le handler persiste ces valeurs dans `content_deployments.deployed_path` / `deployed_filename` via `COALESCE` (backward-compatible). Le dashboard utilise `deployedPathsMap` (alimenté par `GET /sites/:id/local-content` → `deploymentRepository.getDeployedPathsForSite()`) au lieu de construire des chemins spéculatifs. Cela résout les mismatch causés par `sanitizeFilename()`, `ensureUniqueFilename()`, et la préférence `originalName` du Pi
 
+**Backfill deployed_path (v3.102 — self-healing) :**
+
+Les déploiements antérieurs à v3.102 ont `deployed_path = NULL`. Le backfill automatique comble ce gap : à chaque `sync_local_state`, `config-sync.handler.ts` appelle `deploymentRepository.backfillDeployedPaths(siteId, videos)` qui croise les vidéos locales du Pi avec les `content_deployments` complétés sans `deployed_path`. Stratégie de matching : checksum d'abord (fiable même si le Pi a renommé le fichier), puis fallback par filename. Non-fatal : une erreur de backfill ne casse pas la synchronisation
+
 **Indicateurs UX `📺 2nd` :**
 
 | Vue                                 | Condition d'affichage                                                                        | Source de données                                                                          |

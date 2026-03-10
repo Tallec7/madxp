@@ -8282,6 +8282,42 @@ describe('deployed_path feedback guards', () => {
 });
 
 // ----------------------------------------------------------
+// deployed_path backfill guards: sync_local_state must
+// auto-heal pre-existing deployments missing deployed_path
+// ----------------------------------------------------------
+describe('deployed_path backfill guards', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+
+  it('config-sync handler must call backfillDeployedPaths on sync_local_state', () => {
+    const content = fs.readFileSync(
+      path.join(repoRoot, 'central-server/src/handlers/config-sync.handler.ts'),
+      'utf8'
+    );
+    expect({
+      callsBackfill: /backfillDeployedPaths/.test(content),
+      reason: 'config-sync handler must call backfillDeployedPaths to auto-heal pre-existing deployments',
+    }).toEqual({
+      callsBackfill: true,
+      reason: 'config-sync handler must call backfillDeployedPaths to auto-heal pre-existing deployments',
+    });
+  });
+
+  it('deployment repository must have backfillDeployedPaths method', () => {
+    const content = fs.readFileSync(
+      path.join(repoRoot, 'central-server/src/repositories/deployment.repository.ts'),
+      'utf8'
+    );
+    expect({
+      hasMethod: /async backfillDeployedPaths/.test(content),
+      reason: 'deployment repository must expose backfillDeployedPaths for auto-healing pre-existing deployments',
+    }).toEqual({
+      hasMethod: true,
+      reason: 'deployment repository must expose backfillDeployedPaths for auto-healing pre-existing deployments',
+    });
+  });
+});
+
+// ----------------------------------------------------------
 // pc_mode_enabled dead code guard: column was removed in
 // v3.99.1 — never wired to any logic. Prevent re-introduction.
 // ----------------------------------------------------------
