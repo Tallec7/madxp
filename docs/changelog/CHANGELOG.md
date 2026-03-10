@@ -1,3 +1,9 @@
+## [3.104.3](https://github.com/Tallec7/neopro/compare/v3.104.2...v3.104.3) (2026-03-10)
+
+### Bug Fixes
+
+- **pi5:** enable Active Cooler PWM fan control via dtparam=cooling_fan ([8a53290](https://github.com/Tallec7/neopro/commit/8a5329013a83c1bbd44fec3eea5e7ba5158d6148))
+
 # [3.104.3](https://github.com/Tallec7/neopro/compare/v3.104.2...v3.104.3) (2026-03-09)
 
 ### Bug Fixes
