@@ -1060,7 +1060,40 @@ configure_boot_splash() {
 }
 
 ################################################################################
-# Étape 10: Configuration SSH pour accès distant
+# Étape 10b: Active Cooler Pi 5 — activer le contrôle PWM du ventilateur
+################################################################################
+
+configure_pi5_cooling_fan() {
+    print_step "Configuration du ventilateur Active Cooler Pi 5..."
+
+    # Uniquement applicable au Pi 5
+    if ! grep -qi "Raspberry Pi 5" /proc/device-tree/model 2>/dev/null; then
+        print_success "Pas un Pi 5 — cooling_fan non applicable"
+        return 0
+    fi
+
+    local CONFIG_FILE="/boot/config.txt"
+    if [ -f "/boot/firmware/config.txt" ]; then
+        CONFIG_FILE="/boot/firmware/config.txt"
+    fi
+
+    # Sans dtparam=cooling_fan, le device-tree marque le noeud cooling_fan comme
+    # "disabled" → le kernel ne charge pas le driver pwm-fan → pas de
+    # /sys/class/thermal/cooling_device0 → getFanStatus() retourne present:false
+    # → aucune alerte fan_failure possible + fan tourne à 100% en permanence
+    if ! grep -q "^dtparam=cooling_fan" "${CONFIG_FILE}" 2>/dev/null; then
+        echo "" >> "${CONFIG_FILE}"
+        echo "# Active Cooler Pi 5 — contrôle PWM ventilateur (surveillance Neopro)" >> "${CONFIG_FILE}"
+        echo "dtparam=cooling_fan" >> "${CONFIG_FILE}"
+        print_success "dtparam=cooling_fan ajouté à ${CONFIG_FILE}"
+        print_warning "Activation du ventilateur effective au prochain reboot"
+    else
+        print_success "dtparam=cooling_fan déjà présent dans ${CONFIG_FILE}"
+    fi
+}
+
+################################################################################
+# Étape 10c: Configuration SSH pour accès distant
 ################################################################################
 
 configure_ssh() {
@@ -1279,6 +1312,7 @@ main() {
     configure_gpu_memory
     configure_hdmi_force_hotplug
     configure_boot_splash
+    configure_pi5_cooling_fan
     configure_ssh
     finalize
     verify_installation

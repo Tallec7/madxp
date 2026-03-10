@@ -541,6 +541,42 @@ check_gpu_config() {
     fi
 }
 
+check_fan_config() {
+    local CONFIG_FILE="/boot/config.txt"
+    if [ -f "/boot/firmware/config.txt" ]; then
+        CONFIG_FILE="/boot/firmware/config.txt"
+    fi
+
+    # Uniquement pertinent sur Pi 5
+    if grep -qi "Raspberry Pi 5" /proc/device-tree/model 2>/dev/null; then
+        if grep -q "^dtparam=cooling_fan" "$CONFIG_FILE" 2>/dev/null; then
+            print_success "dtparam=cooling_fan configuré dans $CONFIG_FILE"
+            json_add "system" "cooling_fan_config" "ok" "activé"
+        else
+            print_warning "dtparam=cooling_fan absent de $CONFIG_FILE — ventilateur non contrôlé par le kernel"
+            json_add "system" "cooling_fan_config" "warn" "absent (fan invisible au monitoring)"
+            TOTAL_WARNINGS=$((TOTAL_WARNINGS + 1))
+        fi
+
+        # Vérification sysfs (état runtime)
+        if [ -d "/sys/class/thermal/cooling_device0" ]; then
+            local FAN_TYPE FAN_CUR FAN_MAX
+            FAN_TYPE=$(cat /sys/class/thermal/cooling_device0/type 2>/dev/null || echo "inconnu")
+            FAN_CUR=$(cat /sys/class/thermal/cooling_device0/cur_state 2>/dev/null || echo "?")
+            FAN_MAX=$(cat /sys/class/thermal/cooling_device0/max_state 2>/dev/null || echo "?")
+            print_success "Ventilateur détecté en sysfs — type=$FAN_TYPE état=$FAN_CUR/$FAN_MAX"
+            json_add "system" "cooling_fan_sysfs" "ok" "type=$FAN_TYPE cur=$FAN_CUR max=$FAN_MAX"
+        else
+            print_warning "cooling_device0 absent du sysfs — driver pwm-fan non chargé"
+            json_add "system" "cooling_fan_sysfs" "warn" "cooling_device0 absent"
+            TOTAL_WARNINGS=$((TOTAL_WARNINGS + 1))
+        fi
+    else
+        print_success "Pas un Pi 5 — surveillance ventilateur Active Cooler non applicable"
+        json_add "system" "cooling_fan_config" "ok" "N/A (Pi 4)"
+    fi
+}
+
 check_disk_space() {
     local AVAILABLE_KB
     AVAILABLE_KB=$(df /home/pi 2>/dev/null | tail -1 | awk '{print $4}')
@@ -779,6 +815,10 @@ check_permissions
 # 12. GPU et mémoire vidéo
 print_section "12. Configuration GPU"
 check_gpu_config
+
+# 12b. Ventilateur Active Cooler (Pi 5)
+print_section "12b. Active Cooler (Pi 5)"
+check_fan_config
 
 # 13. Espace disque
 print_section "13. Espace disque"

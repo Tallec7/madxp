@@ -8920,3 +8920,83 @@ describe('Live stats VIEWs guards (prevent table regression)', () => {
     });
   });
 });
+
+// ============================================================================
+// Pi 5 Active Cooler fan control (v3.104.3)
+// Without dtparam=cooling_fan in config.txt, the device-tree marks the
+// cooling_fan node as "disabled" → kernel doesn't load pwm-fan driver →
+// /sys/class/thermal/cooling_device0 is never created → getFanStatus()
+// returns present:false → no fan_failure alerts + fan runs at 100% permanently.
+// ============================================================================
+describe('Pi 5 Active Cooler fan control (dtparam=cooling_fan)', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+
+  it('install.sh must have configure_pi5_cooling_fan function', () => {
+    const content = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/install.sh'),
+      'utf8',
+    );
+    expect({ hasFunction: /configure_pi5_cooling_fan\(\)/.test(content) })
+      .toEqual({ hasFunction: true });
+  });
+
+  it('install.sh configure_pi5_cooling_fan must add dtparam=cooling_fan to config.txt', () => {
+    const content = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/install.sh'),
+      'utf8',
+    );
+    const fnMatch = content.match(/configure_pi5_cooling_fan\(\)\s*\{[\s\S]*?\n\}/);
+    expect(fnMatch).toBeTruthy();
+    expect({ hasDtparam: /dtparam=cooling_fan/.test(fnMatch![0]) })
+      .toEqual({ hasDtparam: true });
+    // Must only apply to Pi 5
+    expect({ checksPi5: /Raspberry Pi 5/.test(fnMatch![0]) })
+      .toEqual({ checksPi5: true });
+  });
+
+  it('install.sh main() must call configure_pi5_cooling_fan', () => {
+    const content = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/install.sh'),
+      'utf8',
+    );
+    const mainMatch = content.match(/^main\(\)\s*\{[\s\S]*?\n\}/m);
+    expect(mainMatch).toBeTruthy();
+    expect({ callsConfigure: /configure_pi5_cooling_fan/.test(mainMatch![0]) })
+      .toEqual({ callsConfigure: true });
+  });
+
+  it('fix-fleet-pi.sh must add dtparam=cooling_fan for Pi 5', () => {
+    const content = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/scripts/fix-fleet-pi.sh'),
+      'utf8',
+    );
+    expect({ hasDtparam: /dtparam=cooling_fan/.test(content) })
+      .toEqual({ hasDtparam: true });
+    // Must be guarded by IS_PI5 check
+    expect({ hasPi5Guard: /IS_PI5.*true[\s\S]*?dtparam=cooling_fan/s.test(content) })
+      .toEqual({ hasPi5Guard: true });
+  });
+
+  it('diagnose-pi.sh must check cooling_fan config on Pi 5', () => {
+    const content = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/scripts/diagnose-pi.sh'),
+      'utf8',
+    );
+    expect({ checksDtparam: /dtparam=cooling_fan/.test(content) })
+      .toEqual({ checksDtparam: true });
+    expect({ checksCoolingDevice: /cooling_device0/.test(content) })
+      .toEqual({ checksCoolingDevice: true });
+  });
+
+  it('heartbeat.handler.ts must detect fan_config_disabled alert on Pi 5 without fan', () => {
+    const content = fs.readFileSync(
+      path.join(repoRoot, 'central-server/src/handlers/heartbeat.handler.ts'),
+      'utf8',
+    );
+    expect({ hasFanConfigAlert: /fan_config_disabled/.test(content) })
+      .toEqual({ hasFanConfigAlert: true });
+    // Must check is_pi5 + !present (fan not visible to kernel despite being a Pi 5)
+    expect({ checksPi5AndNotPresent: /is_pi5[\s\S]*?!.*present|present[\s\S]*?is_pi5/s.test(content) })
+      .toEqual({ checksPi5AndNotPresent: true });
+  });
+});

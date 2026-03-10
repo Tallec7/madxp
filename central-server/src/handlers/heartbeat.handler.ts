@@ -311,6 +311,17 @@ async function checkAlerts(
     metricsService.recordFanFailure();
   }
 
+  // Fan config disabled detection: Pi 5 with Active Cooler but kernel can't see it
+  // Root cause: dtparam=cooling_fan absent de config.txt → device-tree "disabled"
+  // → pas de /sys/class/thermal/cooling_device0 → fan tourne à 100% sans contrôle
+  if (fanStatus && fanStatus.is_pi5 && !fanStatus.present) {
+    alerts.push({
+      type: 'fan_config_disabled',
+      severity: 'warning',
+      message: 'Pi 5 sans ventilateur détecté par le kernel — dtparam=cooling_fan probablement absent de config.txt (fan non contrôlé, tourne à 100%)',
+    });
+  }
+
   // Record fan status metrics for Prometheus
   if (fanStatus) {
     metricsService.recordFanStatus(fanStatus.present, fanStatus.curState);

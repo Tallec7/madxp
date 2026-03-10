@@ -830,7 +830,7 @@ fi
 # ModemManager : gestion modem 3G/4G — pas de modem sur les Pi
 # cloud-init : provisioning cloud — inutile sur Pi physique
 
-log_step "12/12 — Désactivation services obsolètes"
+log_step "12/13 — Désactivation services obsolètes"
 
 OBSOLETE_SERVICES=(
     "neopro-vlc-kiosk"
@@ -919,6 +919,43 @@ else
 fi
 
 # =============================================================================
+# 13/13 — Pi 5 Active Cooler: activer dtparam=cooling_fan dans config.txt
+# =============================================================================
+# Sans dtparam=cooling_fan, le device-tree marque le noeud cooling_fan comme
+# "disabled" → le kernel ne charge pas le driver pwm-fan → pas de
+# /sys/class/thermal/cooling_device0 → getFanStatus() retourne present:false
+# → aucune alerte fan_failure possible + fan tourne à 100% en permanence
+
+log_step "13/13 — Pi 5 Active Cooler fan (dtparam=cooling_fan)"
+
+if [ "$IS_PI5" = true ]; then
+    BOOT_CONFIG_FAN=""
+    for cfg in /boot/firmware/config.txt /boot/config.txt; do
+        if [ -f "$cfg" ]; then
+            BOOT_CONFIG_FAN="$cfg"
+            break
+        fi
+    done
+
+    if [ -n "$BOOT_CONFIG_FAN" ]; then
+        if grep -q "^dtparam=cooling_fan" "$BOOT_CONFIG_FAN" 2>/dev/null; then
+            log_ok "dtparam=cooling_fan déjà configuré dans $BOOT_CONFIG_FAN"
+        else
+            echo "" >> "$BOOT_CONFIG_FAN"
+            echo "# Active Cooler Pi 5 — contrôle PWM ventilateur (surveillance Neopro)" >> "$BOOT_CONFIG_FAN"
+            echo "dtparam=cooling_fan" >> "$BOOT_CONFIG_FAN"
+            log_ok "dtparam=cooling_fan ajouté à $BOOT_CONFIG_FAN"
+            CHANGES=$((CHANGES + 1))
+            NEEDS_REBOOT=true
+        fi
+    else
+        log_warn "config.txt non trouvé — dtparam=cooling_fan non configuré"
+    fi
+else
+    log_ok "Pas un Pi 5 — cooling_fan non applicable"
+fi
+
+# =============================================================================
 # Résumé
 # =============================================================================
 
@@ -940,6 +977,7 @@ if [ "$NEEDS_REBOOT" = true ]; then
     [ "$IS_PI5" = false ] && echo -e "  ${YELLOW}  - Configuration gpu_mem${NC}"
     echo -e "  ${YELLOW}  - Configuration hdmi_force_hotplug${NC}"
     echo -e "  ${YELLOW}  - Boot splash (écran noir propre + Plymouth NEOPRO)${NC}"
+    [ "$IS_PI5" = true ] && echo -e "  ${YELLOW}  - Activation Active Cooler Pi 5 (dtparam=cooling_fan)${NC}"
     echo ""
     read -p "  Redémarrer maintenant ? (o/N) " -n 1 -r
     echo ""

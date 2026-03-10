@@ -26,6 +26,7 @@
 22. [Résolution écran non affichée dans le dashboard (v3.87.4+)](#résolution-écran-non-affichée-dans-le-dashboard-v3874)
 23. [Changement de profil ne fonctionne pas (v3.92.0+)](#changement-de-profil-ne-fonctionne-pas-v3920)
 24. [Kiosk pas en plein écran à l'init avec HDMI-0 seul (v3.96+)](#kiosk-pas-en-plein-écran-à-linit-avec-hdmi-0-seul-v396)
+25. [Ventilateur Active Cooler Pi 5 non détecté (v3.104.3+)](#ventilateur-active-cooler-pi-5-non-détecté-v31043)
 
 > **WiFi USB** : Pour un guide complet sur la clé WiFi USB (installation, diagnostic, pannes, recovery), voir [WIFI_USB_GUIDE.md](WIFI_USB_GUIDE.md).
 >
@@ -5518,4 +5519,102 @@ ssh pi@neopro.local 'ls -la /home/pi/neopro/webapp/profiles/*.json'
 
 ---
 
-**Dernière mise à jour :** 2 mars 2026 (ajout section changement de profil — v3.92.2)
+## Ventilateur Active Cooler Pi 5 non détecté (v3.104.3+)
+
+Le ventilateur officiel Active Cooler du Pi 5 tourne à 100% en permanence au lieu d'être régulé par PWM, et n'est pas détecté par le monitoring Neopro.
+
+### Symptômes
+
+1. **Ventilateur à pleine vitesse en permanence** — bruit constant, même quand le CPU est froid
+2. **Température CPU élevée si le ventilateur se bloque** — `temp=98.8°C`, `throttled=0xe0006` (throttling actif + sous-tension)
+3. **Pas de `cooling_device0`** dans `/sys/class/thermal/` → `getFanStatus()` retourne `present: false`
+4. **Pas d'alerte `fan_failure`** dans le dashboard central — le monitoring ne peut pas détecter un ventilateur qu'il ne voit pas
+5. **Alerte `fan_config_disabled`** (v3.104.3+) si Pi 5 détecté sans ventilateur kernel
+
+### Cause racine
+
+Le device-tree du Pi 5 contient un nœud `cooling_fan` (RP1 GPIO 45 = FAN_PWM sur le connecteur J2), mais son `status` est `disabled` par défaut. Le paramètre `dtparam=cooling_fan` dans `/boot/firmware/config.txt` active ce nœud → le kernel charge le driver `pwm-fan` → création de `/sys/class/thermal/cooling_device0` avec 5 états PWM (0-4).
+
+**Sans ce paramètre** : le GPIO 45 n'est pas configuré en PWM → le ventilateur reçoit du 5V direct → tourne à 100% → pas de contrôle thermique, pas de monitoring possible.
+
+### Diagnostic
+
+```bash
+# 1. Vérifier le modèle (Pi 5 uniquement)
+cat /proc/device-tree/model
+# Attendu: "Raspberry Pi 5 Model B Rev 1.0"
+
+# 2. Vérifier que dtparam=cooling_fan est dans config.txt
+grep "cooling_fan" /boot/firmware/config.txt
+# Attendu: "dtparam=cooling_fan"
+# Si absent → cause racine confirmée
+
+# 3. Vérifier le device-tree runtime
+cat /proc/device-tree/cooling_fan/status 2>/dev/null || echo "noeud absent"
+# Attendu: "okay"
+# Si "disabled" ou absent → dtparam manquant
+
+# 4. Vérifier la présence du cooling_device kernel
+ls /sys/class/thermal/cooling_device0/ 2>/dev/null && echo "OK" || echo "ABSENT"
+# Si ABSENT → ventilateur non contrôlé par le kernel
+
+# 5. Vérifier la température et l'état PWM
+cat /sys/class/thermal/thermal_zone0/temp  # en millidegrés (ex: 39500 = 39.5°C)
+cat /sys/class/thermal/cooling_device0/cur_state  # 0-4 (0=off, 4=max)
+cat /sys/class/thermal/cooling_device0/max_state  # 4
+
+# 6. Vérifier le throttling
+vcgencmd get_throttled
+# 0x0 = OK, 0xe0006 = throttling actif + historique sous-tension
+```
+
+### Correction
+
+**Ajouter `dtparam=cooling_fan` au config.txt et redémarrer :**
+
+```bash
+# Ajouter le paramètre
+echo "" >> /boot/firmware/config.txt
+echo "# Active Cooler Pi 5 — contrôle PWM ventilateur (surveillance Neopro)" >> /boot/firmware/config.txt
+echo "dtparam=cooling_fan" >> /boot/firmware/config.txt
+
+# Redémarrer pour appliquer
+sudo reboot
+```
+
+**Après reboot**, vérifier :
+
+```bash
+cat /sys/class/thermal/cooling_device0/type   # "pwm-fan"
+cat /sys/class/thermal/cooling_device0/cur_state  # 0-3 selon température
+cat /proc/device-tree/cooling_fan/status  # "okay"
+```
+
+### Prévention
+
+- **`install.sh`** (v3.104.3+) : `configure_pi5_cooling_fan()` ajoute automatiquement `dtparam=cooling_fan` pour les Pi 5
+- **`fix-fleet-pi.sh`** (v3.104.3+) : step 13/13 corrige les Pi existants de la flotte
+- **`heartbeat.handler.ts`** : alerte `fan_config_disabled` si Pi 5 sans `cooling_device` détecté
+- **`diagnose-pi.sh`** : section "12b. Active Cooler" vérifie la configuration et l'état runtime
+
+### Problème physique : faux contact / interférence mécanique
+
+Si le ventilateur s'arrête uniquement quand le capot du boîtier est installé :
+
+1. Le capot exerce une pression sur les pales ou le câble du ventilateur
+2. Vérifier que le clip du Active Cooler est correctement encliqué sur le J2 connector
+3. Vérifier que le câble FFC/ribbon ne passe pas sous le capot
+4. Tester sans capot — si `temp` reste < 50°C, le problème est mécanique
+
+### Smoke tests de régression
+
+- `install.sh must have configure_pi5_cooling_fan function`
+- `install.sh configure_pi5_cooling_fan must add dtparam=cooling_fan to config.txt`
+- `install.sh main() must call configure_pi5_cooling_fan`
+- `fix-fleet-pi.sh must add dtparam=cooling_fan for Pi 5`
+- `diagnose-pi.sh must check cooling_fan config on Pi 5`
+- `heartbeat.handler.ts must detect fan_config_disabled alert on Pi 5 without fan`
+
+---
+
+**Dernière mise à jour :** 9 mars 2026 (ajout section ventilateur Active Cooler Pi 5 — v3.104.3)

@@ -1,8 +1,22 @@
-## [3.104.2](https://github.com/Tallec7/neopro/compare/v3.104.1...v3.104.2) (2026-03-10)
+# [3.104.3](https://github.com/Tallec7/neopro/compare/v3.104.2...v3.104.3) (2026-03-09)
 
 ### Bug Fixes
 
-- **tv-component:** slave display freeze on manual video — LocalBroadcast + handleMasterLoopState guards ([41c1e19](https://github.com/Tallec7/neopro/commit/41c1e19b7cf2b02da521734973cef7bd46ff5808))
+- **install:** add `configure_pi5_cooling_fan()` — automatically enables `dtparam=cooling_fan` in config.txt for Pi 5, preventing fan running at 100% without PWM control
+- **fix-fleet:** add step 13/13 to retrofit `dtparam=cooling_fan` on existing Pi 5 fleet (with `IS_PI5` guard and reboot flag)
+- **heartbeat:** detect `fan_config_disabled` alert when Pi 5 reports no kernel cooling_device — catches missing `dtparam=cooling_fan` before overheating occurs
+- **diagnose:** add `check_fan_config()` section "12b. Active Cooler (Pi 5)" — checks model, config.txt parameter, and sysfs cooling_device
+
+### Tests
+
+- **smoke:** 6 new regression guards for Pi 5 Active Cooler fan configuration (install.sh function + main call, fix-fleet-pi.sh step, diagnose-pi.sh check, heartbeat.handler.ts alert)
+
+### Documentation
+
+- **troubleshooting:** add section #25 "Ventilateur Active Cooler Pi 5 non détecté" — symptom, root cause (dtparam=cooling_fan absent), diagnostic commands, fix, prevention, and physical interference troubleshooting
+- **CLAUDE.md:** add "NE JAMAIS FAIRE" rule for omitting `dtparam=cooling_fan` on Pi 5
+
+---
 
 # [3.104.2](https://github.com/Tallec7/neopro/compare/v3.104.1...v3.104.2) (2026-03-10)
 
