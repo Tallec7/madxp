@@ -1,3 +1,9 @@
+## [3.105.2](https://github.com/Tallec7/neopro/compare/v3.105.1...v3.105.2) (2026-03-10)
+
+### Bug Fixes
+
+- **local-content:** use correct column name for advertiser in getCloudVideos query ([83833d9](https://github.com/Tallec7/neopro/commit/83833d9ed270b78c2af4e2f7db43bf8a0c45a6db))
+
 ## [3.105.1](https://github.com/Tallec7/neopro/compare/v3.105.0...v3.105.1) (2026-03-10)
 
 ### Bug Fixes
