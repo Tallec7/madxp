@@ -180,7 +180,7 @@ class TimelineRepositoryImpl {
          v.created_at,
          v.updated_at,
          v.metadata,
-         a.company_name as advertiser_name
+         a.name as advertiser_name
        FROM videos v
        LEFT JOIN advertiser_videos av ON av.video_id = v.id
        LEFT JOIN advertisers a ON a.id = av.advertiser_id
