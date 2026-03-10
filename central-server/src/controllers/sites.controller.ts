@@ -1252,7 +1252,8 @@ export const getSiteLocalContent = async (req: AuthRequest, res: Response) => {
       url: v.storage_path ? getVideoUrl(v.storage_path) : null,
       uploadedForSiteId: v.uploaded_for_site_id,
       createdAt: v.created_at,
-      updatedAt: v.updated_at
+      updatedAt: v.updated_at,
+      advertiserName: v.advertiser_name,
     }));
 
     // Récupérer les IDs des vidéos ayant une variante secondaire

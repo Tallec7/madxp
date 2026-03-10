@@ -256,6 +256,7 @@ export interface CloudVideo {
   uploadedForSiteId: string | null; // Site for which this video was uploaded (contextual upload)
   createdAt: Date;
   updatedAt: Date;
+  advertiserName?: string | null;
 }
 
 /**

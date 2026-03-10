@@ -9000,3 +9000,169 @@ describe('Pi 5 Active Cooler fan control (dtparam=cooling_fan)', () => {
       .toEqual({ checksPi5AndNotPresent: true });
   });
 });
+
+// ── Video Library UX regression guards ─────────────────────────────────
+// Prevents regression of the video library table improvements:
+// - Filename collision bug (processVideos keying by filename lost videos with same name)
+// - Config role badges (BOUCLE/MATCH/ACTION replacing generic EN BOUCLE)
+// - Advertiser name column & secondary variant badge wiring
+// - Duplicate detection by checksum
+describe('Video Library UX regression guards', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+  const videoLibraryPath = path.join(
+    repoRoot,
+    'central-dashboard/src/app/features/sites/components/video-library/video-library.component.ts',
+  );
+  const siteContentTabPath = path.join(
+    repoRoot,
+    'central-dashboard/src/app/features/sites/components/site-content-tab/site-content-tab.component.ts',
+  );
+  const modelsPath = path.join(
+    repoRoot,
+    'central-dashboard/src/app/core/models/index.ts',
+  );
+  const sitesControllerPath = path.join(
+    repoRoot,
+    'central-server/src/controllers/sites.controller.ts',
+  );
+  const timelineRepoPath = path.join(
+    repoRoot,
+    'central-server/src/repositories/timeline.repository.ts',
+  );
+
+  let videoLibContent: string;
+  let siteContentTabContent: string;
+  let modelsContent: string;
+  let controllerContent: string;
+  let timelineRepoContent: string;
+
+  beforeAll(() => {
+    videoLibContent = fs.readFileSync(videoLibraryPath, 'utf8');
+    siteContentTabContent = fs.readFileSync(siteContentTabPath, 'utf8');
+    modelsContent = fs.readFileSync(modelsPath, 'utf8');
+    controllerContent = fs.readFileSync(sitesControllerPath, 'utf8');
+    timelineRepoContent = fs.readFileSync(timelineRepoPath, 'utf8');
+  });
+
+  // ── Filename collision guard ──────────────────────────────────────────
+  // processVideos() must index localByFilename as Map<string, array> (not single value)
+  // to preserve multiple videos with the same filename but different paths.
+  it('processVideos must use array-valued localByFilename map (not single-value)', () => {
+    // Must NOT have the old pattern: new Map(this.videos.map(v => [v.filename...
+    expect({ hasSingleValueMap: /localByFilename\s*=\s*new\s+Map\(\s*this\.videos\.map/.test(videoLibContent) })
+      .toEqual({ hasSingleValueMap: false });
+    // Must have array push pattern
+    expect({ hasArrayPush: /localByFilename\.get\([^)]+\)!\.push\(/.test(videoLibContent) })
+      .toEqual({ hasArrayPush: true });
+  });
+
+  it('processVideos must NOT filter cloud videos by seenFilenames', () => {
+    // The seenFilenames Set was the root cause of losing cloud videos with duplicate filenames
+    expect({ hasSeenFilenames: /seenFilenames/.test(videoLibContent) })
+      .toEqual({ hasSeenFilenames: false });
+  });
+
+  it('processVideos must pick first unmatched local video via matchedLocalPaths guard', () => {
+    expect({ hasMatchedLocalPaths: /matchedLocalPaths/.test(videoLibContent) })
+      .toEqual({ hasMatchedLocalPaths: true });
+    // Must use .find() with !matchedLocalPaths.has() to pick first unmatched
+    expect({ hasUnmatchedFind: /\.find\(.*!matchedLocalPaths\.has/.test(videoLibContent) })
+      .toEqual({ hasUnmatchedFind: true });
+  });
+
+  // ── Config role badges guard (BOUCLE/MATCH/ACTION) ────────────────────
+  // Replaces generic "EN BOUCLE" badge with contextual roles.
+  it('video-library must use configRoles (not configVideoPaths or isInConfig)', () => {
+    expect({ hasOldConfigPaths: /configVideoPaths/.test(videoLibContent) })
+      .toEqual({ hasOldConfigPaths: false });
+    expect({ hasOldIsInConfig: /isInConfig/.test(videoLibContent) })
+      .toEqual({ hasOldIsInConfig: false });
+    expect({ hasConfigRoles: /configRoles/.test(videoLibContent) })
+      .toEqual({ hasConfigRoles: true });
+  });
+
+  it('video-library template must have BOUCLE, MATCH, and ACTION badges', () => {
+    expect({ hasBoucleBadge: /badge-boucle/.test(videoLibContent) })
+      .toEqual({ hasBoucleBadge: true });
+    expect({ hasMatchBadge: /badge-match/.test(videoLibContent) })
+      .toEqual({ hasMatchBadge: true });
+    expect({ hasActionBadge: /badge-action/.test(videoLibContent) })
+      .toEqual({ hasActionBadge: true });
+  });
+
+  it('site-content-tab must use configVideoRoles Map (not configVideoPaths Set)', () => {
+    expect({ hasOldSet: /configVideoPaths:\s*Set<string>/.test(siteContentTabContent) })
+      .toEqual({ hasOldSet: false });
+    expect({ hasRolesMap: /configVideoRoles:\s*Map<string,\s*Set<string>>/.test(siteContentTabContent) })
+      .toEqual({ hasRolesMap: true });
+  });
+
+  it('rebuildConfigVideoRoles must tag sponsors as boucle, categories as action, timeCategories as match', () => {
+    // Must NOT have old method name
+    expect({ hasOldMethod: /rebuildConfigVideoPaths/.test(siteContentTabContent) })
+      .toEqual({ hasOldMethod: false });
+    // Must tag each source correctly
+    expect({ tagsBoucle: /addRole\([^,]+,\s*'boucle'\)/.test(siteContentTabContent) })
+      .toEqual({ tagsBoucle: true });
+    expect({ tagsAction: /addRole\([^,]+,\s*'action'\)/.test(siteContentTabContent) })
+      .toEqual({ tagsAction: true });
+    expect({ tagsMatch: /addRole\([^,]+,\s*'match'\)/.test(siteContentTabContent) })
+      .toEqual({ tagsMatch: true });
+  });
+
+  // ── Duplicate detection guard ─────────────────────────────────────────
+  it('video-library must detect duplicates by checksum', () => {
+    expect({ hasDuplicateDetection: /isDuplicate/.test(videoLibContent) })
+      .toEqual({ hasDuplicateDetection: true });
+    expect({ hasChecksumCounts: /checksumCounts/.test(videoLibContent) })
+      .toEqual({ hasChecksumCounts: true });
+    expect({ hasDuplicateBadge: /duplicate-badge/.test(videoLibContent) })
+      .toEqual({ hasDuplicateBadge: true });
+  });
+
+  // ── Advertiser name pipeline guard ────────────────────────────────────
+  it('timeline.repository must JOIN advertiser_videos+advertisers for advertiser_name', () => {
+    expect({ hasAdvertiserJoin: /LEFT\s+JOIN\s+advertiser_videos/i.test(timelineRepoContent) })
+      .toEqual({ hasAdvertiserJoin: true });
+    expect({ hasAdvertiserName: /advertiser_name/.test(timelineRepoContent) })
+      .toEqual({ hasAdvertiserName: true });
+  });
+
+  it('sites.controller must pass advertiserName in cloud video response', () => {
+    expect({ hasAdvertiserName: /advertiserName.*advertiser_name|advertiser_name.*advertiserName/.test(controllerContent) })
+      .toEqual({ hasAdvertiserName: true });
+  });
+
+  it('CloudVideo interface must have advertiserName field', () => {
+    expect({ hasAdvertiserName: /advertiserName\??:\s*string\s*\|\s*null/.test(modelsContent) })
+      .toEqual({ hasAdvertiserName: true });
+  });
+
+  // ── Secondary variant badge in video-library ──────────────────────────
+  it('video-library must have secondaryVariantVideoIds input and 2nd badge', () => {
+    expect({ hasInput: /secondaryVariantVideoIds/.test(videoLibContent) })
+      .toEqual({ hasInput: true });
+    expect({ hasBadge: /badge-2nd/.test(videoLibContent) })
+      .toEqual({ hasBadge: true });
+  });
+
+  // ── CSV export guard ──────────────────────────────────────────────────
+  it('video-library must have CSV export functionality', () => {
+    expect({ hasExportCsv: /exportCsv\(\)/.test(videoLibContent) })
+      .toEqual({ hasExportCsv: true });
+    expect({ hasCsvButton: /btn-export/.test(videoLibContent) })
+      .toEqual({ hasCsvButton: true });
+  });
+
+  // ── rebuildUnifiedVideoOptions must key by path (not filename) ────────
+  it('rebuildUnifiedVideoOptions must key optionsMap by path (not filename)', () => {
+    // Must use filenameToKeys secondary index for cloud↔local matching
+    expect({ hasFilenameToKeys: /filenameToKeys/.test(siteContentTabContent) })
+      .toEqual({ hasFilenameToKeys: true });
+    // Must NOT key optionsMap by filename.toLowerCase() as primary key
+    // The old pattern was: optionsMap.set(key, ...) where key = cloud.filename.toLowerCase()
+    // Check the local video section uses local.path as key
+    expect({ keysLocalByPath: /const\s+key\s*=\s*local\.path/.test(siteContentTabContent) })
+      .toEqual({ keysLocalByPath: true });
+  });
+});

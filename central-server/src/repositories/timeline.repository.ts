@@ -68,6 +68,7 @@ export interface CloudVideoRow extends QueryResultRow {
   created_at: Date;
   updated_at: Date;
   metadata: Record<string, unknown> | null;
+  advertiser_name: string | null;
 }
 
 // --------------------------------------------------------------------------
@@ -178,8 +179,11 @@ class TimelineRepositoryImpl {
          v.uploaded_for_site_id,
          v.created_at,
          v.updated_at,
-         v.metadata
+         v.metadata,
+         a.company_name as advertiser_name
        FROM videos v
+       LEFT JOIN advertiser_videos av ON av.video_id = v.id
+       LEFT JOIN advertisers a ON a.id = av.advertiser_id
        ORDER BY v.created_at DESC
        LIMIT $1`,
       [limit]

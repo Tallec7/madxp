@@ -20,6 +20,11 @@ export interface VideoItem {
   uploadedForSiteId?: string | null; // Site for which this video was uploaded
   piCategory?: string | null;       // Category from Pi filesystem (for delete_video command)
   piSubcategory?: string | null;    // Subcategory from Pi filesystem
+  advertiserName?: string | null;   // Advertiser company name (from advertiser_videos junction)
+  hasSecondaryVariant?: boolean;    // Whether this video has a secondary display variant
+  checksum?: string | null;         // File integrity checksum
+  configRoles?: Set<string>;         // Roles in config: 'boucle', 'match', 'action' (empty = not in config)
+  isDuplicate?: boolean;            // Whether another video shares the same checksum (duplicate file)
 }
 
 export type VideoDeployStatus = 'idle' | 'deploying' | 'success' | 'error' | 'timeout';
@@ -51,6 +56,8 @@ export type SortDirection = 'asc' | 'desc';
           <span class="stat relevant" *ngIf="statsRelevant > 0" title="Vidéos pertinentes pour ce site">🎯 {{ statsRelevant }}</span>
           <span class="stat on-pi" *ngIf="statsOnPi > 0">✅ {{ statsOnPi }}</span>
           <span class="stat to-deploy" *ngIf="statsToDeploy > 0">⏳ {{ statsToDeploy }}</span>
+          <span class="stat" *ngIf="statsInConfig > 0" title="Utilisées dans la config">⚙️ {{ statsInConfig }}</span>
+          <span class="stat" *ngIf="statsWithVariant > 0" title="Avec variante secondaire">📺 {{ statsWithVariant }}</span>
           <span class="stat" *ngIf="totalSize && totalSize > 0 && !isNaN(totalSize)">{{ formatBytes(totalSize) }}</span>
           <span class="stat" *ngIf="totalDuration && totalDuration > 0">🕐 {{ formatDuration(totalDuration) }}</span>
         </div>
@@ -88,6 +95,9 @@ export type SortDirection = 'asc' | 'desc';
           <option value="all">Tous les statuts</option>
           <option value="on_pi">✅ Sur le Pi</option>
           <option value="to_deploy">⏳ À déployer</option>
+          <option value="in_config">⚙️ Dans la config</option>
+          <option value="deploy_error">❌ Erreur deploy</option>
+          <option value="with_variant">📺 Avec variante 2nd</option>
         </select>
         <select [(ngModel)]="ownerFilter" (ngModelChange)="applyFilters()" class="filter-select">
           <option value="all">Tous</option>
@@ -105,6 +115,13 @@ export type SortDirection = 'asc' | 'desc';
           title="Mode sélection multiple"
         >
           ☑️
+        </button>
+        <button
+          class="btn-export"
+          (click)="exportCsv()"
+          title="Exporter la liste filtrée en CSV"
+        >
+          📥 CSV
         </button>
       </div>
 
@@ -153,6 +170,9 @@ export type SortDirection = 'asc' | 'desc';
         <button class="sort-btn col-date" [class.active]="sortField === 'lastModified'" (click)="toggleSort('lastModified')">
           Date {{ getSortIcon('lastModified') }}
         </button>
+        <span class="col-advertiser" title="Annonceur">Annonceur</span>
+        <span class="col-variant" title="Variante secondaire (dual-display)">2nd</span>
+        <span class="col-config" title="Utilisé dans la config active">Cfg</span>
         <span class="col-owner">Source</span>
         <span class="col-status">Statut</span>
         <span class="col-actions">Actions</span>
@@ -165,16 +185,18 @@ export type SortDirection = 'asc' | 'desc';
           *ngFor="let video of filteredVideos"
           [class.selected]="selectedPath === video.path || isSelected(video)"
           [class.to-deploy]="!video.isOnPi"
+          [class.deploy-failed]="isDeployFailed(video)"
           (click)="selectVideo(video)"
         >
           <span class="col-checkbox" *ngIf="selectionMode" (click)="$event.stopPropagation()">
             <input type="checkbox" [checked]="isSelected(video)" (change)="toggleSelection(video, $event)" />
           </span>
           <span class="col-lock"></span>
-          <span class="col-name video-name" [title]="video.filename">
+          <span class="col-name video-name" [title]="video.checksum ? video.filename + ' — checksum: ' + video.checksum : video.filename">
             {{ video.displayName }}
             <span class="video-subcat" *ngIf="video.subcategory">{{ video.subcategory }}</span>
             <span class="for-this-site-badge" *ngIf="isUploadedForThisSite(video)" title="Uploadée pour ce site">⭐</span>
+            <span class="duplicate-badge" *ngIf="video.isDuplicate" title="Doublon détecté — même fichier qu'une autre vidéo (checksum identique)">DOUBLON</span>
           </span>
           <span class="col-category video-category" [title]="video.category || ''">
             {{ video.category || '-' }}
@@ -182,6 +204,17 @@ export type SortDirection = 'asc' | 'desc';
           <span class="col-duration video-duration">{{ video.duration ? formatDuration(video.duration) : '-' }}</span>
           <span class="col-size video-size">{{ formatBytes(video.size) }}</span>
           <span class="col-date video-date">{{ video.lastModified ? formatDate(video.lastModified) : '-' }}</span>
+          <span class="col-advertiser video-advertiser" [title]="video.advertiserName || ''">
+            {{ video.advertiserName || '-' }}
+          </span>
+          <span class="col-variant video-variant">
+            <span class="badge-2nd" *ngIf="video.hasSecondaryVariant" title="Variante secondaire disponible pour le dual-display (2e écran)">2nd</span>
+          </span>
+          <span class="col-config video-config">
+            <span class="badge-cfg badge-boucle" *ngIf="video.configRoles?.has('boucle')" title="Dans la boucle de diffusion par défaut (sponsors)">BOUCLE</span>
+            <span class="badge-cfg badge-match" *ngIf="video.configRoles?.has('match')" title="Dans une phase de match (avant-match, mi-temps...)">MATCH</span>
+            <span class="badge-cfg badge-action" *ngIf="video.configRoles?.has('action')" title="Vidéo d'action (télécommande : but, essai...)">ACTION</span>
+          </span>
           <span class="col-owner video-owner" [class.owner-neopro]="video.owner === 'neopro'" [class.owner-club]="video.owner === 'club'">
             {{ video.owner === 'neopro' ? 'NEOPRO' : 'CLUB' }}
           </span>
@@ -218,14 +251,29 @@ export type SortDirection = 'asc' | 'desc';
               class="action-btn deploy"
               (click)="onDeploy(video, $event)"
               [title]="'videoLibrary.deployToPi' | translate"
-              *ngIf="!video.isOnPi && video.source === 'cloud' && !isDeploying(video)"
+              *ngIf="!video.isOnPi && video.source === 'cloud' && !isDeploying(video) && !isDeployFailed(video)"
               [disabled]="isDeploying(video)"
             >
               🚀
             </button>
+            <button
+              class="action-btn retry"
+              (click)="onDeploy(video, $event)"
+              title="Relancer le déploiement"
+              *ngIf="isDeployFailed(video)"
+            >
+              🔄
+            </button>
             <span class="deploy-progress" *ngIf="isDeploying(video)" [title]="'content.deploymentInProgress' | translate">
               {{ getDeployState(video)?.progress ?? 0 }}%
             </span>
+            <button
+              class="action-btn copy-name"
+              (click)="onCopyFilename(video, $event)"
+              title="Copier le nom de fichier"
+            >
+              📋
+            </button>
             <button
               class="action-btn delete"
               (click)="onDelete(video, $event)"
@@ -249,6 +297,8 @@ export type SortDirection = 'asc' | 'desc';
       <div class="library-legend">
         <span class="legend-item"><span class="legend-icon">✅</span> Sur le Pi</span>
         <span class="legend-item"><span class="legend-icon">⏳</span> À déployer</span>
+        <span class="legend-item"><span class="legend-icon">📺</span> Variante 2nd écran</span>
+        <span class="legend-item"><span class="legend-icon">⚙️</span> Dans la config</span>
       </div>
 
       <!-- Video Preview Popup -->
@@ -451,6 +501,30 @@ export type SortDirection = 'asc' | 'desc';
       border-color: #2563eb;
     }
 
+    .btn-export {
+      padding: 0.375rem 0.625rem;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      background: white;
+      font-size: 0.75rem;
+      cursor: pointer;
+      color: #64748b;
+      transition: all 0.15s;
+    }
+
+    .btn-export:hover {
+      background: #f1f5f9;
+      color: #1e293b;
+    }
+
+    .action-btn.retry {
+      color: #f59e0b;
+    }
+
+    .action-btn.copy-name {
+      color: #94a3b8;
+    }
+
     .bulk-actions {
       display: flex;
       gap: 0.5rem;
@@ -548,6 +622,9 @@ export type SortDirection = 'asc' | 'desc';
     .col-duration { width: 55px; text-align: right; flex-shrink: 0; }
     .col-size { width: 65px; text-align: right; flex-shrink: 0; }
     .col-date { width: 70px; text-align: right; flex-shrink: 0; }
+    .col-advertiser { width: 80px; text-align: left; flex-shrink: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .col-variant { width: 36px; text-align: center; flex-shrink: 0; }
+    .col-config { width: 52px; text-align: center; flex-shrink: 0; }
     .col-owner { width: 55px; text-align: center; flex-shrink: 0; }
     .col-status { width: 35px; text-align: center; flex-shrink: 0; }
     .col-actions { width: 85px; text-align: right; flex-shrink: 0; }
@@ -1050,8 +1127,83 @@ export type SortDirection = 'asc' | 'desc';
       vertical-align: middle;
     }
 
+    /* Duplicate badge */
+    .duplicate-badge {
+      display: inline-block;
+      margin-left: 0.375rem;
+      font-size: 0.6rem;
+      font-weight: 600;
+      color: #dc2626;
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      padding: 0 0.3rem;
+      border-radius: 3px;
+      vertical-align: middle;
+      cursor: help;
+      letter-spacing: 0.02em;
+    }
+
+    /* Badge "2nd" for secondary variant */
+    .badge-2nd {
+      display: inline-block;
+      font-size: 0.6rem;
+      font-weight: 600;
+      color: #2563eb;
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      padding: 0 0.25rem;
+      border-radius: 3px;
+      cursor: help;
+      letter-spacing: 0.02em;
+    }
+
+    /* Config role badges */
+    .badge-cfg {
+      display: inline-block;
+      font-size: 0.5rem;
+      font-weight: 600;
+      padding: 0 0.2rem;
+      border-radius: 3px;
+      cursor: help;
+      white-space: nowrap;
+      letter-spacing: 0.02em;
+      line-height: 1.4;
+    }
+    .badge-boucle {
+      color: #16a34a;
+      background: #f0fdf4;
+      border: 1px solid #bbf7d0;
+    }
+    .badge-match {
+      color: #d97706;
+      background: #fffbeb;
+      border: 1px solid #fde68a;
+    }
+    .badge-action {
+      color: #7c3aed;
+      background: #f5f3ff;
+      border: 1px solid #ddd6fe;
+    }
+    .video-config {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1px;
+    }
+
+    /* Advertiser column */
+    .video-advertiser {
+      font-size: 0.75rem;
+      color: #64748b;
+    }
+
     .video-item.for-this-site {
       background: linear-gradient(90deg, #fffbeb 0%, transparent 20%);
+    }
+
+    .video-item.deploy-failed {
+      background: linear-gradient(90deg, #fef2f2 0%, transparent 20%);
+      border-left: 2px solid #ef4444;
     }
   `]
 })
@@ -1062,8 +1214,9 @@ export class VideoLibraryComponent implements OnChanges {
   @Input() selectedPath: string = '';
   @Input() deployStates: Map<string, VideoDeployState> = new Map();
   @Input() siteId: string | null = null; // Current site ID for showing "for this site" badge
-  @Input() configVideoPaths: Set<string> = new Set(); // Paths of videos used in current config
+  @Input() configVideoRoles: Map<string, Set<string>> = new Map(); // path → Set<'boucle'|'match'|'action'>
   @Input() pendingDeploymentVideoIds: Set<string> = new Set(); // IDs of videos with pending deployments
+  @Input() secondaryVariantVideoIds: Set<string> = new Set(); // IDs of videos with secondary display variants
 
   @Output() videoSelect = new EventEmitter<VideoItem>();
   @Output() videoPreview = new EventEmitter<VideoItem>();
@@ -1080,13 +1233,15 @@ export class VideoLibraryComponent implements OnChanges {
   statsOnPi: number = 0;
   statsToDeploy: number = 0;
   statsRelevant: number = 0; // Count of videos relevant to this site
+  statsInConfig: number = 0; // Count of videos used in current config
+  statsWithVariant: number = 0; // Count of videos with secondary variant
   storagePercent: number = 0;
 
   // Expose isNaN to template
   isNaN = isNaN;
 
   searchQuery: string = '';
-  statusFilter: 'relevant' | 'all' | 'on_pi' | 'to_deploy' = 'relevant'; // Default to relevant
+  statusFilter: 'relevant' | 'all' | 'on_pi' | 'to_deploy' | 'in_config' | 'deploy_error' | 'with_variant' = 'relevant';
   ownerFilter: 'all' | 'club' | 'neopro' = 'all';
   categoryFilter: string = 'all';
 
@@ -1103,7 +1258,7 @@ export class VideoLibraryComponent implements OnChanges {
   previewVideo: VideoItem | null = null;
 
   ngOnChanges(changes: SimpleChanges): void {
-    if (changes['videos'] || changes['cloudVideos']) {
+    if (changes['videos'] || changes['cloudVideos'] || changes['secondaryVariantVideoIds'] || changes['configVideoRoles']) {
       this.processVideos();
       this.applyFilters();
     }
@@ -1114,16 +1269,21 @@ export class VideoLibraryComponent implements OnChanges {
 
   private processVideos(): void {
     // Build maps for comparison - using multiple keys for robust matching
-    const localByFilename = new Map(
-      this.videos.map(v => [v.filename.toLowerCase(), v])
-    );
+    // Index filename → ALL local videos with that name (not just one)
+    const localByFilename = new Map<string, typeof this.videos>();
+    for (const v of this.videos) {
+      const fnKey = v.filename.toLowerCase();
+      if (!localByFilename.has(fnKey)) {
+        localByFilename.set(fnKey, []);
+      }
+      localByFilename.get(fnKey)!.push(v);
+    }
     const localByChecksum = new Map(
       this.videos.filter(v => v.checksum).map(v => [v.checksum!, v])
     );
 
     // Track which cloud videos we've already added to avoid duplicates
     const seenCloudIds = new Set<string>();
-    const seenFilenames = new Set<string>();
     // Track matched local video paths to avoid losing locals with duplicate filenames
     const matchedLocalPaths = new Set<string>();
 
@@ -1135,22 +1295,18 @@ export class VideoLibraryComponent implements OnChanges {
         continue;
       }
 
-      // Skip if we've already processed a video with this filename (case-insensitive)
-      const filenameLower = cloud.filename.toLowerCase();
-      if (seenFilenames.has(filenameLower)) {
-        continue;
-      }
-
       seenCloudIds.add(cloud.id);
-      seenFilenames.add(filenameLower);
 
       // Try to find matching local video by checksum first, then by filename
+      const filenameLower = cloud.filename.toLowerCase();
       let isOnPi = false;
       let localMatch = cloud.checksum ? localByChecksum.get(cloud.checksum) : undefined;
       if (localMatch) {
         isOnPi = true;
       } else {
-        localMatch = localByFilename.get(filenameLower);
+        // Pick the first unmatched local video with same filename
+        const locals = localByFilename.get(filenameLower) || [];
+        localMatch = locals.find(l => !matchedLocalPaths.has(l.path));
         if (localMatch) {
           isOnPi = true;
         }
@@ -1176,7 +1332,11 @@ export class VideoLibraryComponent implements OnChanges {
         lastModified: cloud.updatedAt?.toString(),
         uploadedForSiteId: cloud.uploadedForSiteId,
         piCategory: localMatch?.category ?? null,
-        piSubcategory: localMatch?.subcategory ?? null
+        piSubcategory: localMatch?.subcategory ?? null,
+        advertiserName: cloud.advertiserName ?? null,
+        hasSecondaryVariant: this.secondaryVariantVideoIds.has(cloud.id),
+        checksum: cloud.checksum ?? null,
+        configRoles: this.configVideoRoles.get(cloud.url),
       });
     }
 
@@ -1196,10 +1356,23 @@ export class VideoLibraryComponent implements OnChanges {
         isOnPi: true,
         owner: this.detectOwner(local.path),
         source: 'local' as const,
-        lastModified: local.lastModified
+        lastModified: local.lastModified,
+        checksum: local.checksum ?? null,
+        configRoles: this.configVideoRoles.get(local.path),
       }));
 
     this.allVideos = [...cloudMapped, ...localOnlyMapped];
+
+    // Detect duplicates by checksum
+    const checksumCounts = new Map<string, number>();
+    for (const v of this.allVideos) {
+      if (v.checksum) {
+        checksumCounts.set(v.checksum, (checksumCounts.get(v.checksum) || 0) + 1);
+      }
+    }
+    for (const v of this.allVideos) {
+      v.isDuplicate = !!v.checksum && (checksumCounts.get(v.checksum!) || 0) > 1;
+    }
 
     const cats = new Set<string>();
     this.allVideos.forEach(v => {
@@ -1212,6 +1385,8 @@ export class VideoLibraryComponent implements OnChanges {
     this.statsOnPi = this.allVideos.filter(v => v.isOnPi).length;
     this.statsToDeploy = this.allVideos.filter(v => !v.isOnPi).length;
     this.statsRelevant = this.allVideos.filter(v => this.isVideoRelevant(v)).length;
+    this.statsInConfig = this.allVideos.filter(v => v.configRoles?.size).length;
+    this.statsWithVariant = this.allVideos.filter(v => v.hasSecondaryVariant).length;
   }
 
   /**
@@ -1226,7 +1401,7 @@ export class VideoLibraryComponent implements OnChanges {
     if (video.isOnPi) return true;
 
     // Used in current configuration
-    if (video.path && this.configVideoPaths.has(video.path)) return true;
+    if (video.path && this.configVideoRoles.has(video.path)) return true;
 
     // Specifically uploaded for this site
     if (this.siteId && video.uploadedForSiteId === this.siteId) return true;
@@ -1261,11 +1436,12 @@ export class VideoLibraryComponent implements OnChanges {
     let filtered = [...this.allVideos];
 
     if (this.searchQuery) {
-      const query = this.searchQuery.toLowerCase();
+      const q = this.searchQuery.toLowerCase();
       filtered = filtered.filter(v =>
-        v.displayName.toLowerCase().includes(query) ||
-        v.filename.toLowerCase().includes(query) ||
-        v.path.toLowerCase().includes(query)
+        v.displayName.toLowerCase().includes(q) ||
+        v.filename.toLowerCase().includes(q) ||
+        v.path.toLowerCase().includes(q) ||
+        (v.advertiserName && v.advertiserName.toLowerCase().includes(q))
       );
     }
 
@@ -1275,6 +1451,12 @@ export class VideoLibraryComponent implements OnChanges {
       filtered = filtered.filter(v => v.isOnPi);
     } else if (this.statusFilter === 'to_deploy') {
       filtered = filtered.filter(v => !v.isOnPi);
+    } else if (this.statusFilter === 'in_config') {
+      filtered = filtered.filter(v => v.configRoles?.size);
+    } else if (this.statusFilter === 'deploy_error') {
+      filtered = filtered.filter(v => this.isDeployFailed(v));
+    } else if (this.statusFilter === 'with_variant') {
+      filtered = filtered.filter(v => v.hasSecondaryVariant);
     }
 
     if (this.ownerFilter !== 'all') {
@@ -1413,6 +1595,42 @@ export class VideoLibraryComponent implements OnChanges {
     }
   }
 
+  onCopyFilename(video: VideoItem, event: Event): void {
+    event.stopPropagation();
+    navigator.clipboard.writeText(video.filename).catch(() => {
+      // Fallback silencieux
+    });
+  }
+
+  exportCsv(): void {
+    const headers = ['Nom', 'Fichier', 'Catégorie', 'Durée (s)', 'Taille (octets)', 'Source', 'Sur Pi', 'Annonceur', 'Variante 2nd', 'En config', 'Checksum'];
+    const rows = this.filteredVideos.map(v => [
+      v.displayName,
+      v.filename,
+      v.category || '',
+      v.duration?.toString() || '',
+      v.size?.toString() || '',
+      v.owner,
+      v.isOnPi ? 'Oui' : 'Non',
+      v.advertiserName || '',
+      v.hasSecondaryVariant ? 'Oui' : 'Non',
+      v.configRoles?.size ? Array.from(v.configRoles).join('+') : 'Non',
+      v.checksum || '',
+    ]);
+
+    const csvContent = [headers, ...rows]
+      .map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+      .join('\n');
+
+    const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `video-library-${new Date().toISOString().slice(0, 10)}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+
   formatBytes(bytes: number | null | undefined): string {
     if (bytes == null || !Number.isFinite(bytes) || bytes <= 0) return '0 B';
     const k = 1024;
@@ -1450,6 +1668,11 @@ export class VideoLibraryComponent implements OnChanges {
   isDeploying(video: VideoItem): boolean {
     const state = this.getDeployState(video);
     return state?.status === 'deploying';
+  }
+
+  isDeployFailed(video: VideoItem): boolean {
+    const state = this.getDeployState(video);
+    return state?.status === 'error' || state?.status === 'timeout';
   }
 
   /**

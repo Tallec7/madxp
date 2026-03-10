@@ -248,8 +248,9 @@ interface HumanReadableDiff {
           [selectedPath]="selectedVideoPath"
           [deployStates]="videoDeployStates"
           [siteId]="siteId"
-          [configVideoPaths]="configVideoPaths"
+          [configVideoRoles]="configVideoRoles"
           [pendingDeploymentVideoIds]="pendingDeploymentVideoIds"
+          [secondaryVariantVideoIds]="secondaryVariantVideoIds"
           (videoSelect)="onVideoSelect($event)"
           (videoPreview)="onVideoPreview($event)"
           (videoDeploy)="onVideoDeploy($event)"
@@ -3272,7 +3273,8 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
   videoOptionGroups: { key: VideoOptionGroup; label: string; icon: string; videos: UnifiedVideoOption[] }[] = [];
 
   // Video relevance tracking for filtered view in video-library
-  configVideoPaths: Set<string> = new Set();
+  // Map<path, Set<role>> where role = 'boucle' | 'match' | 'action'
+  configVideoRoles: Map<string, Set<string>> = new Map();
 
   // Cloud video paths (not yet on Pi) — passed to loop-manager
   cloudVideoPaths: Set<string> = new Set();
@@ -4168,7 +4170,7 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
   markDirty(): void {
     this.isDirty = JSON.stringify(this.config) !== this.originalConfig;
     // Recalculate config video paths when config changes
-    this.rebuildConfigVideoPaths();
+    this.rebuildConfigVideoRoles();
   }
 
   onVideoSelect(video: VideoItem): void {
@@ -4532,7 +4534,7 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
     this.rebuildUnifiedVideoOptions();
 
     // Recalculate video paths used in config (for filtered video library view)
-    this.rebuildConfigVideoPaths();
+    this.rebuildConfigVideoRoles();
   }
 
   /**
@@ -4540,58 +4542,85 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
    * Fusionne localVideos + cloudVideos avec déduplication et indicateurs de statut
    */
   private rebuildUnifiedVideoOptions(): void {
+    // Clé par PATH (unique) au lieu de filename pour ne pas perdre les homonymes
     const optionsMap = new Map<string, UnifiedVideoOption>();
+    // Index secondaire filename → paths[] pour le matching cloud↔local
+    const filenameToKeys = new Map<string, string[]>();
 
-    // 1. D'abord, ajouter les vidéos locales (sur le Pi)
+    // 1. D'abord, ajouter les vidéos locales (sur le Pi) — clé = path unique
     for (const local of this.localVideos) {
-      const key = local.filename.toLowerCase();
+      const key = local.path;
+      const fnKey = local.filename.toLowerCase();
       optionsMap.set(key, {
         path: local.path,
         filename: local.filename,
         displayName: local.filename,
         category: local.category,
         isOnPi: true,
-        isForThisSite: false, // Sera mis à jour si trouvé dans cloud
+        isForThisSite: false,
         isCloud: false,
         source: 'local'
       });
+      if (!filenameToKeys.has(fnKey)) {
+        filenameToKeys.set(fnKey, []);
+      }
+      filenameToKeys.get(fnKey)!.push(key);
     }
 
     // 2. Ensuite, ajouter/enrichir avec les vidéos cloud
     for (const cloud of this.cloudVideos) {
-      const key = cloud.filename.toLowerCase();
-      const existing = optionsMap.get(key);
+      const fnKey = cloud.filename.toLowerCase();
+      const localKeys = filenameToKeys.get(fnKey) || [];
 
-      if (existing) {
-        // La vidéo existe localement ET dans le cloud
-        existing.isCloud = true;
-        existing.isForThisSite = cloud.uploadedForSiteId === this.siteId;
-        existing.cloudId = cloud.id;
-        existing.source = 'both';
-        existing.displayName = cloud.title || cloud.originalName || cloud.filename;
-        existing.hasSecondaryVariant = this.secondaryVariantVideoIds.has(cloud.id);
+      if (localKeys.length > 0) {
+        // La vidéo existe localement — enrichir TOUTES les entrées locales correspondantes
+        for (const key of localKeys) {
+          const existing = optionsMap.get(key)!;
+          existing.isCloud = true;
+          existing.isForThisSite = cloud.uploadedForSiteId === this.siteId;
+          existing.cloudId = cloud.id;
+          existing.source = 'both';
+          existing.displayName = cloud.title || cloud.originalName || cloud.filename;
+          existing.hasSecondaryVariant = this.secondaryVariantVideoIds.has(cloud.id);
+        }
       } else {
         // Vidéo uniquement dans le cloud — utiliser le chemin réel si le Pi l'a rapporté,
         // sinon fallback sur un chemin calculé (sera corrigé après le prochain déploiement)
         const deployed = this.deployedPathsMap.get(cloud.id);
         const localPath = deployed?.deployedPath
           ?? `videos/${cloud.category || 'UPLOADS'}/${cloud.filename}`;
-        optionsMap.set(key, {
-          path: localPath,
-          filename: cloud.filename,
-          displayName: cloud.title || cloud.originalName || cloud.filename,
-          category: cloud.category,
-          isOnPi: false,
-          isForThisSite: cloud.uploadedForSiteId === this.siteId,
-          isCloud: true,
-          source: 'cloud',
-          cloudId: cloud.id,
-          hasSecondaryVariant: this.secondaryVariantVideoIds.has(cloud.id),
-        });
+        // Éviter d'écraser si un cloud avec le même path calculé existe déjà
+        if (!optionsMap.has(localPath)) {
+          optionsMap.set(localPath, {
+            path: localPath,
+            filename: cloud.filename,
+            displayName: cloud.title || cloud.originalName || cloud.filename,
+            category: cloud.category,
+            isOnPi: false,
+            isForThisSite: cloud.uploadedForSiteId === this.siteId,
+            isCloud: true,
+            source: 'cloud',
+            cloudId: cloud.id,
+            hasSecondaryVariant: this.secondaryVariantVideoIds.has(cloud.id),
+          });
+        }
       }
     }
 
-    // 3. Convertir en array et trier
+    // 3. Désambiguïser les noms quand plusieurs vidéos ont le même filename
+    for (const [, keys] of filenameToKeys) {
+      if (keys.length > 1) {
+        for (const key of keys) {
+          const opt = optionsMap.get(key);
+          if (opt) {
+            const cat = opt.category || 'sans catégorie';
+            opt.displayName = `${opt.displayName} (${cat})`;
+          }
+        }
+      }
+    }
+
+    // 4. Convertir en array et trier
     this.unifiedVideoOptions = Array.from(optionsMap.values())
       .sort((a, b) => a.displayName.localeCompare(b.displayName, 'fr', { numeric: true }));
 
@@ -4945,38 +4974,44 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
   }
 
   /**
-   * Reconstruit l'ensemble des chemins vidéo utilisés dans la configuration actuelle
-   * Utilisé pour filtrer la bibliothèque vidéo par pertinence
+   * Reconstruit la map path → rôles des vidéos dans la configuration actuelle.
+   * Rôles possibles : 'boucle' (sponsors), 'match' (timeCategories), 'action' (categories)
    */
-  private rebuildConfigVideoPaths(): void {
-    const paths = new Set<string>();
+  private rebuildConfigVideoRoles(): void {
+    const roles = new Map<string, Set<string>>();
+
+    const addRole = (path: string, role: string): void => {
+      if (!roles.has(path)) {
+        roles.set(path, new Set());
+      }
+      roles.get(path)!.add(role);
+    };
 
     // 1. Vidéos de la boucle par défaut (sponsors)
     if (this.config.sponsors) {
       for (const sponsor of this.config.sponsors) {
         if (sponsor.path) {
-          paths.add(sponsor.path);
+          addRole(sponsor.path, 'boucle');
         }
       }
     }
 
-    // 2. Vidéos des catégories
+    // 2. Vidéos des catégories (actions télécommande)
     if (this.config.categories) {
       for (const cat of this.config.categories) {
         if (cat.videos) {
           for (const video of cat.videos) {
             if (video.path) {
-              paths.add(video.path);
+              addRole(video.path, 'action');
             }
           }
         }
-        // Sous-catégories
         if (cat.subCategories) {
           for (const subcat of cat.subCategories) {
             if (subcat.videos) {
               for (const video of subcat.videos) {
                 if (video.path) {
-                  paths.add(video.path);
+                  addRole(video.path, 'action');
                 }
               }
             }
@@ -4991,14 +5026,14 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
         if (tc.loopVideos) {
           for (const video of tc.loopVideos) {
             if (video.path) {
-              paths.add(video.path);
+              addRole(video.path, 'match');
             }
           }
         }
       }
     }
 
-    this.configVideoPaths = paths;
+    this.configVideoRoles = roles;
   }
 
   getVideoCategories(): string[] {

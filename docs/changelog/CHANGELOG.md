@@ -1,8 +1,28 @@
-## [3.104.3](https://github.com/Tallec7/neopro/compare/v3.104.2...v3.104.3) (2026-03-10)
+# [3.105.0](https://github.com/Tallec7/neopro/compare/v3.104.3...v3.105.0) (2026-03-10)
+
+### Features
+
+- **video-library:** contextual config badges BOUCLE/MATCH/ACTION replacing generic "EN BOUCLE" — each badge indicates the video's role in the configuration: green BOUCLE (default sponsor loop), orange MATCH (match phase), purple ACTION (remote-triggered)
+- **video-library:** advertiser name column — JOINs `advertiser_videos` + `advertisers` in timeline.repository to display the advertiser company name alongside each video
+- **video-library:** secondary variant `2nd` badge — shows which videos have a dual-display variant available
+- **video-library:** duplicate detection by checksum — DOUBLON badge highlights videos with identical file content
+- **video-library:** CSV export — one-click download of the filtered video list with all columns
+- **video-library:** new filters "Dans la config", "Erreur deploy", "Avec variante 2nd" and deploy retry button for failed deployments
+- **video-library:** copy filename button + checksum tooltip on hover
 
 ### Bug Fixes
 
-- **pi5:** enable Active Cooler PWM fan control via dtparam=cooling_fan ([8a53290](https://github.com/Tallec7/neopro/commit/8a5329013a83c1bbd44fec3eea5e7ba5158d6148))
+- **video-library:** fix filename collision in `processVideos()` — `localByFilename` changed from `Map(filename → single video)` to `Map<string, video[]>` preserving all videos with same name but different paths (e.g. `intro.mp4` in multiple categories)
+- **video-library:** remove `seenFilenames` filter that silently dropped cloud videos with duplicate filenames
+- **video-library:** local matching now uses `matchedLocalPaths` guard to pick first unmatched local video
+- **site-content-tab:** `rebuildUnifiedVideoOptions()` rewritten to key by path instead of filename — fixes identical-filename videos overwriting each other in the unified video picker
+- **site-content-tab:** `configVideoPaths: Set<string>` replaced by `configVideoRoles: Map<string, Set<string>>` — video paths now carry their config role for contextual display
+
+### Tests
+
+- **smoke:** 14 new regression guards for video library UX: filename collision (3 guards), config role badges (4 guards), duplicate detection (1 guard), advertiser pipeline (3 guards), secondary variant badge (1 guard), CSV export (1 guard), unified video options keying (1 guard)
+
+---
 
 # [3.104.3](https://github.com/Tallec7/neopro/compare/v3.104.2...v3.104.3) (2026-03-09)
 
