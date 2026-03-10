@@ -53,13 +53,11 @@ export type SortDirection = 'asc' | 'desc';
         </h4>
         <div class="library-stats">
           <span class="stat">{{ filteredVideos.length }} vidéo(s)</span>
-          <span class="stat relevant" *ngIf="statsRelevant > 0" title="Vidéos pertinentes pour ce site">🎯 {{ statsRelevant }}</span>
-          <span class="stat on-pi" *ngIf="statsOnPi > 0">✅ {{ statsOnPi }}</span>
-          <span class="stat to-deploy" *ngIf="statsToDeploy > 0">⏳ {{ statsToDeploy }}</span>
-          <span class="stat" *ngIf="statsInConfig > 0" title="Utilisées dans la config">⚙️ {{ statsInConfig }}</span>
-          <span class="stat" *ngIf="statsWithVariant > 0" title="Avec variante secondaire">📺 {{ statsWithVariant }}</span>
-          <span class="stat" *ngIf="totalSize && totalSize > 0 && !isNaN(totalSize)">{{ formatBytes(totalSize) }}</span>
-          <span class="stat" *ngIf="totalDuration && totalDuration > 0">🕐 {{ formatDuration(totalDuration) }}</span>
+          <span class="stat on-pi" *ngIf="filteredStatsOnPi > 0" title="Sur le Pi">✅ {{ filteredStatsOnPi }}</span>
+          <span class="stat" *ngIf="filteredStatsInConfig > 0" title="Utilisées dans la config active">⚙️ {{ filteredStatsInConfig }}</span>
+          <span class="stat" *ngIf="filteredStatsWithVariant > 0" title="Avec variante secondaire">📺 {{ filteredStatsWithVariant }}</span>
+          <span class="stat" *ngIf="filteredTotalSize > 0">{{ formatBytes(filteredTotalSize) }}</span>
+          <span class="stat" *ngIf="filteredTotalDuration > 0">🕐 {{ formatDuration(filteredTotalDuration) }}</span>
         </div>
       </div>
 
@@ -403,19 +401,9 @@ export type SortDirection = 'asc' | 'desc';
       border-radius: 999px;
     }
 
-    .stat.relevant {
-      background: #e0e7ff;
-      color: #3730a3;
-    }
-
     .stat.on-pi {
       background: #dcfce7;
       color: #166534;
-    }
-
-    .stat.to-deploy {
-      background: #fef3c7;
-      color: #92400e;
     }
 
     /* Storage bar */
@@ -1228,17 +1216,13 @@ export class VideoLibraryComponent implements OnChanges {
   filteredVideos: VideoItem[] = [];
   allVideos: VideoItem[] = [];
   categories: string[] = [];
-  totalSize: number = 0;
-  totalDuration: number = 0;
-  statsOnPi: number = 0;
-  statsToDeploy: number = 0;
-  statsRelevant: number = 0; // Count of videos relevant to this site
-  statsInConfig: number = 0; // Count of videos used in current config
-  statsWithVariant: number = 0; // Count of videos with secondary variant
+  // Stats computed on filteredVideos (scoped to what's displayed)
+  filteredTotalSize: number = 0;
+  filteredTotalDuration: number = 0;
+  filteredStatsOnPi: number = 0;
+  filteredStatsInConfig: number = 0;
+  filteredStatsWithVariant: number = 0;
   storagePercent: number = 0;
-
-  // Expose isNaN to template
-  isNaN = isNaN;
 
   searchQuery: string = '';
   statusFilter: 'relevant' | 'all' | 'on_pi' | 'to_deploy' | 'in_config' | 'deploy_error' | 'with_variant' = 'relevant';
@@ -1380,13 +1364,7 @@ export class VideoLibraryComponent implements OnChanges {
     });
     this.categories = Array.from(cats).sort();
 
-    this.totalSize = this.allVideos.reduce((sum, v) => sum + (v.size || 0), 0);
-    this.totalDuration = this.allVideos.reduce((sum, v) => sum + (v.duration || 0), 0);
-    this.statsOnPi = this.allVideos.filter(v => v.isOnPi).length;
-    this.statsToDeploy = this.allVideos.filter(v => !v.isOnPi).length;
-    this.statsRelevant = this.allVideos.filter(v => this.isVideoRelevant(v)).length;
-    this.statsInConfig = this.allVideos.filter(v => v.configRoles?.size).length;
-    this.statsWithVariant = this.allVideos.filter(v => v.hasSecondaryVariant).length;
+    // Stats are computed in applyFilters() on the filtered set
   }
 
   /**
@@ -1494,6 +1472,13 @@ export class VideoLibraryComponent implements OnChanges {
     });
 
     this.filteredVideos = filtered;
+
+    // Compute stats scoped to the displayed videos
+    this.filteredTotalSize = filtered.reduce((sum, v) => sum + (v.size || 0), 0);
+    this.filteredTotalDuration = filtered.reduce((sum, v) => sum + (v.duration || 0), 0);
+    this.filteredStatsOnPi = filtered.filter(v => v.isOnPi).length;
+    this.filteredStatsInConfig = filtered.filter(v => v.configRoles?.size).length;
+    this.filteredStatsWithVariant = filtered.filter(v => v.hasSecondaryVariant).length;
   }
 
   selectVideo(video: VideoItem): void {

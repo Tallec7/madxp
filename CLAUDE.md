@@ -129,6 +129,7 @@ source central-server/.env && psql "$DATABASE_URL" -f central-server/src/scripts
 - Appeler `play()` directement dans le handler LocalBroadcast `onCommand()` de tv.component.ts sans vérifier `isSlaveMode` (le LocalBroadcast est reçu par TOUS les onglets — le slave doit appeler `preloadManualVideo()` et attendre le reveal du master via `tv-loop-state`, pas `play()` direct qui affiche freeze-frame + overlay noir — même pattern que le handler Socket.IO `action` — ADR-034, smoke test enforced)
 - Utiliser `manualVideoVisible === false` (strict equality) dans `handleMasterLoopState` CAS 1 (quand `manualVideoVisible` est `undefined` ou absent, `=== false` rate le cas → tombe en fallback `play()` direct → freeze-frame + overlay — utiliser `!== true` qui couvre false, undefined ET absent — smoke test enforced)
 - Omettre `dtparam=cooling_fan` dans `/boot/firmware/config.txt` sur Pi 5 avec Active Cooler (sans ce paramètre, le device-tree garde `cooling_fan` en `status=disabled` → pas de driver `pwm-fan` → pas de `/sys/class/thermal/cooling_device0` → ventilateur non contrôlé tourne à 100%, monitoring `getFanStatus()` retourne `present:false` → surchauffe silencieuse — smoke test enforced)
+- Calculer les stats de la barre `library-stats` sur `allVideos` dans `processVideos()` (mélange stats globales du catalogue cloud 500 vidéos avec l'affichage filtré par site — toujours calculer sur `filteredVideos` dans `applyFilters()` via les propriétés `filtered*` — smoke test enforced)
 
 ## Architecture détaillée
 

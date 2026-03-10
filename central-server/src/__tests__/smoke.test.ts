@@ -9154,6 +9154,38 @@ describe('Video Library UX regression guards', () => {
       .toEqual({ hasCsvButton: true });
   });
 
+  // ── Stats bar must be scoped to filteredVideos (not allVideos) ────────
+  // The stats bar previously mixed global catalog stats (allVideos) with
+  // site-specific display (filteredVideos), confusing users.
+  // Stats must be computed on the filtered set in applyFilters().
+  it('video-library stats must use filtered* properties (not global allVideos stats)', () => {
+    // Must NOT have old global stats properties
+    expect({ hasOldStatsOnPi: /\bstatsOnPi\b/.test(videoLibContent) })
+      .toEqual({ hasOldStatsOnPi: false });
+    expect({ hasOldStatsToDeploy: /\bstatsToDeploy\b/.test(videoLibContent) })
+      .toEqual({ hasOldStatsToDeploy: false });
+    expect({ hasOldStatsRelevant: /\bstatsRelevant\b/.test(videoLibContent) })
+      .toEqual({ hasOldStatsRelevant: false });
+    // Must have filtered stats computed in applyFilters()
+    expect({ hasFilteredStatsOnPi: /filteredStatsOnPi/.test(videoLibContent) })
+      .toEqual({ hasFilteredStatsOnPi: true });
+    expect({ hasFilteredStatsInConfig: /filteredStatsInConfig/.test(videoLibContent) })
+      .toEqual({ hasFilteredStatsInConfig: true });
+    expect({ hasFilteredTotalSize: /filteredTotalSize/.test(videoLibContent) })
+      .toEqual({ hasFilteredTotalSize: true });
+    expect({ hasFilteredTotalDuration: /filteredTotalDuration/.test(videoLibContent) })
+      .toEqual({ hasFilteredTotalDuration: true });
+  });
+
+  it('video-library stats must NOT have misleading global badges (relevant count, to-deploy count)', () => {
+    // The 🎯 "relevant" badge was redundant with the dropdown filter
+    expect({ hasRelevantBadge: /stat\.relevant/.test(videoLibContent) })
+      .toEqual({ hasRelevantBadge: false });
+    // The ⏳ "to-deploy" badge showed global count, not site-specific
+    expect({ hasToDeployBadge: /stat\.to-deploy/.test(videoLibContent) })
+      .toEqual({ hasToDeployBadge: false });
+  });
+
   // ── rebuildUnifiedVideoOptions must key by path (not filename) ────────
   it('rebuildUnifiedVideoOptions must key optionsMap by path (not filename)', () => {
     // Must use filenameToKeys secondary index for cloud↔local matching

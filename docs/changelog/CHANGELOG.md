@@ -1,3 +1,16 @@
+# [3.105.1](https://github.com/Tallec7/neopro/compare/v3.105.0...v3.105.1) (2026-03-10)
+
+### Bug Fixes
+
+- **video-library:** stats bar now scoped to filtered videos — all counters (✅ sur le Pi, ⚙️ dans config, 📺 variantes, taille, durée) sont calculés sur `filteredVideos` dans `applyFilters()` au lieu de `allVideos` dans `processVideos()`, éliminant le mélange entre stats globales du catalogue (500 vidéos cloud) et stats spécifiques au site affiché
+- **video-library:** suppression des badges trompeurs 🎯 (vidéos pertinentes — redondant avec le filtre dropdown) et ⏳ (à déployer — affichait un compteur global, pas spécifique au site)
+
+### Tests
+
+- **smoke:** 2 nouveaux guards : stats bar doit utiliser `filtered*` properties (pas `statsOnPi`/`statsToDeploy`/`statsRelevant` globaux), et ne doit plus contenir `.stat.relevant` ni `.stat.to-deploy`
+
+---
+
 # [3.105.0](https://github.com/Tallec7/neopro/compare/v3.104.3...v3.105.0) (2026-03-10)
 
 ### Features
