@@ -1,3 +1,17 @@
+# [3.104.2](https://github.com/Tallec7/neopro/compare/v3.104.1...v3.104.2) (2026-03-10)
+
+### Bug Fixes
+
+- **tv-component:** LocalBroadcast `onCommand()` handler now checks `isSlaveMode` — slaves use `preloadManualVideo()` (ADR-034 preload-reveal protocol) instead of calling `play()` directly, which caused freeze-frame + black overlay on slave displays when launching manual videos from PC browser
+- **tv-component:** `handleMasterLoopState` CAS 1a guard changed from `manualVideoVisible === false` to `!== true` — catches `undefined`/absent values that caused fallthrough to direct `play()` → intermittent screen freeze on both displays
+
+### Tests
+
+- **smoke:** new guard: LocalBroadcast command handler must check `isSlaveMode` and call `preloadManualVideo` instead of `play` (ADR-034)
+- **smoke:** updated guard: `handleMasterLoopState` CAS 1a must use `!== true` (not `=== false`) for `manualVideoVisible`
+
+---
+
 ## [3.104.1](https://github.com/Tallec7/neopro/compare/v3.104.0...v3.104.1) (2026-03-10)
 
 ### Bug Fixes

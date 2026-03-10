@@ -431,7 +431,15 @@ export class TvComponent implements OnInit, OnDestroy {
         console.log('[TV] Local command received:', command);
         if (command.type === 'video' && command.data) {
           this.lastTriggerType = 'manual';
-          this.play(this.resolveSecondaryVariant(command.data as Video));
+          // ADR-033: Marquer le timestamp pour protéger contre les tv-loop-state stales
+          this._lastActionReceivedAt = Date.now();
+          const resolvedVideo = this.resolveSecondaryVariant(command.data as Video);
+          // ADR-034: Slaves preload but wait for master's reveal signal
+          if (this.isSlaveMode) {
+            this.preloadManualVideo(resolvedVideo);
+          } else {
+            this.play(resolvedVideo);
+          }
         } else if (command.type === 'sponsors') {
           this.lastTriggerType = 'auto';
           // Capturer le freeze-frame AVANT de relancer la boucle
@@ -2601,30 +2609,31 @@ export class TvComponent implements OnInit, OnDestroy {
         type: 'video/mp4'
       } as Video);
 
-      // ADR-034: Trois sous-cas selon manualVideoVisible
-      // Sous-cas 1a: manualVideoVisible === false → preload si pas déjà fait (safety net)
-      if (state.manualVideoVisible === false) {
+      // ADR-034: Deux sous-cas selon manualVideoVisible
+      // Sous-cas 1a: manualVideoVisible !== true → preload si pas déjà fait
+      // Couvre: manualVideoVisible à false, undefined, ou absent (backward compat)
+      if (state.manualVideoVisible !== true) {
         if (!this._preloadedManualVideo) {
-          console.log('[TV] Slave: master preloading manual video (safety net):', state.manualVideoPath);
+          console.log('[TV] Slave: preloading manual video from master state:', state.manualVideoPath,
+            this.displayType === 'secondary' ? `(resolved: ${resolvedVideo.path})` : '');
           this.preloadManualVideo(resolvedVideo);
         }
         return;
       }
 
-      // Sous-cas 1b: manualVideoVisible === true + preload en attente → reveal
-      if (state.manualVideoVisible === true && this._preloadedManualVideo) {
+      // Sous-cas 1b: manualVideoVisible === true → reveal ou play direct
+      if (this._preloadedManualVideo) {
         console.log('[TV] Slave: master revealed, showing preloaded video');
         this.revealPreloadedVideo();
         return;
       }
 
-      // Sous-cas 1c: manualVideoVisible === true (ou absent) + pas de preload → play direct
-      // Backward compat pour vieux masters sans manualVideoVisible
+      // Fallback: manualVideoVisible === true mais pas de preload (backward compat / race condition)
       const currentManualPlayer = this.getActiveManualPlayer();
       const currentManualSrc = currentManualPlayer?.src || '';
 
       if (!this.isManualMode || !currentManualSrc.includes(resolvedVideo.path)) {
-        console.log('[TV] Slave: master switched to manual video (direct play):', state.manualVideoPath,
+        console.log('[TV] Slave: master revealed but no preload ready, direct play:', state.manualVideoPath,
           this.displayType === 'secondary' ? `(resolved: ${resolvedVideo.path})` : '');
         this.play(resolvedVideo);
 

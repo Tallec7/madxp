@@ -7063,25 +7063,52 @@ describe('ADR-034 synchronized manual video reveal', () => {
     });
   });
 
-  it('handleMasterLoopState CAS 1 with manualVideoVisible:true MUST call revealPreloadedVideo', () => {
-    const cas1Block = tvContent.slice(
-      tvContent.indexOf('CAS 1'),
-      tvContent.indexOf('CAS 2')
+  it('LocalBroadcast command handler MUST check isSlaveMode and preload instead of play (ADR-034)', () => {
+    // Bug: LocalBroadcast handler called play() directly without checking isSlaveMode,
+    // causing slaves to show freeze-frame + overlay on manual video launch.
+    // Fix: same pattern as Socket.IO action handler — preloadManualVideo for slaves, play for master.
+    const localBroadcastBlock = tvContent.slice(
+      tvContent.indexOf("localBroadcast.onCommand()"),
+      tvContent.indexOf("localBroadcast.onCommand()") + 1200
     );
     expect({
-      hasReveal: /revealPreloadedVideo/.test(cas1Block),
-      checksVisibleTrue: /manualVideoVisible\s*===\s*true/.test(cas1Block),
+      hasSlaveCheck: /isSlaveMode/.test(localBroadcastBlock),
+      hasPreload: /preloadManualVideo/.test(localBroadcastBlock),
+      hasLastActionTimestamp: /_lastActionReceivedAt/.test(localBroadcastBlock),
+      masterStillCallsPlay: /else\s*\{[\s\S]*?this\.play\(/.test(localBroadcastBlock),
     }).toEqual({
-      hasReveal: true,
-      checksVisibleTrue: true,
+      hasSlaveCheck: true,
+      hasPreload: true,
+      hasLastActionTimestamp: true,
+      masterStillCallsPlay: true,
     });
   });
 
-  it('handleMasterLoopState CAS 1 without manualVideoVisible MUST call play for backward compat', () => {
-    // Sous-cas 1c: when no preload exists and manualVideoVisible is true (or absent),
-    // the slave must call play() directly for backward compatibility
+  it('handleMasterLoopState CAS 1a MUST use !== true (not === false) for manualVideoVisible guard', () => {
+    // Bug: using === false missed undefined/absent values → fell through to play() direct → freeze.
+    // Fix: use !== true to catch false, undefined, and absent → always preload.
     const cas1Block = tvContent.slice(
-      tvContent.indexOf('CAS 1'),
+      tvContent.indexOf('handleMasterLoopState'),
+      tvContent.indexOf('CAS 2')
+    );
+    expect({
+      usesNotTrue: /manualVideoVisible\s*!==\s*true/.test(cas1Block),
+      doesNotUseStrictFalse: !/manualVideoVisible\s*===\s*false/.test(cas1Block),
+      hasPreload: /preloadManualVideo/.test(cas1Block),
+      hasReveal: /revealPreloadedVideo/.test(cas1Block),
+    }).toEqual({
+      usesNotTrue: true,
+      doesNotUseStrictFalse: true,
+      hasPreload: true,
+      hasReveal: true,
+    });
+  });
+
+  it('handleMasterLoopState CAS 1 fallback MUST call play for backward compat (manualVideoVisible:true + no preload)', () => {
+    // Fallback: when manualVideoVisible === true but no preload exists (race condition / backward compat),
+    // the slave must call play() directly.
+    const cas1Block = tvContent.slice(
+      tvContent.indexOf('handleMasterLoopState'),
       tvContent.indexOf('CAS 2')
     );
     expect({

@@ -126,6 +126,8 @@ source central-server/.env && psql "$DATABASE_URL" -f central-server/src/scripts
 - Définir `cleanupLegacyFiles()` dans agent.js sans l'appeler dans `start()` (méthode morte — les fichiers stale restent éternellement sur le Pi — ex: `sponsor_impressions.json` avec 2448 entrées orphelines jamais nettoyées — smoke test enforced)
 - Construire des chemins vidéo spéculatifs dans le dashboard avec `videos/${category}/${filename}` (le Pi sanitize, déduplique et préfère `originalName` → mismatch → vidéos injouables — toujours utiliser `deployedPathsMap` alimenté par le feedback `deployed_path` de `content_deployments` — smoke test enforced)
 - Supprimer l'appel `backfillDeployedPaths()` dans `config-sync.handler.ts` (auto-healing des `deployed_path` NULL pour les déploiements pré-v3.102 — à chaque `sync_local_state`, le Pi rapporte ses vidéos locales → matching checksum-first, filename-fallback → comble le gap sans intervention manuelle — smoke test enforced)
+- Appeler `play()` directement dans le handler LocalBroadcast `onCommand()` de tv.component.ts sans vérifier `isSlaveMode` (le LocalBroadcast est reçu par TOUS les onglets — le slave doit appeler `preloadManualVideo()` et attendre le reveal du master via `tv-loop-state`, pas `play()` direct qui affiche freeze-frame + overlay noir — même pattern que le handler Socket.IO `action` — ADR-034, smoke test enforced)
+- Utiliser `manualVideoVisible === false` (strict equality) dans `handleMasterLoopState` CAS 1 (quand `manualVideoVisible` est `undefined` ou absent, `=== false` rate le cas → tombe en fallback `play()` direct → freeze-frame + overlay — utiliser `!== true` qui couvre false, undefined ET absent — smoke test enforced)
 
 ## Architecture détaillée
 
