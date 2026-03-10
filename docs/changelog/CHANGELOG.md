@@ -1,3 +1,9 @@
+## [3.105.1](https://github.com/Tallec7/neopro/compare/v3.105.0...v3.105.1) (2026-03-10)
+
+### Bug Fixes
+
+- **video-library:** scope stats bar to filtered videos instead of global catalog ([a605492](https://github.com/Tallec7/neopro/commit/a605492d5bfa498757dea454744359b78f686d79))
+
 # [3.105.1](https://github.com/Tallec7/neopro/compare/v3.105.0...v3.105.1) (2026-03-10)
 
 ### Bug Fixes
