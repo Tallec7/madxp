@@ -1,6 +1,6 @@
 # SAFe Neopro — Pilotage Produit
 
-> **Dernière mise à jour** : 2 Mars 2026 (v3.93.0 — Sprint Tracker + Proposal CRUD + DB Hybrid)
+> **Dernière mise à jour** : 9 Mars 2026 (requalification E-03 Analytics ⚠️ Partiel)
 > **Framework** : SAFe Essential (simplifié)
 > **Cadence PI** : 6 semaines (3 sprints de 2 semaines)
 > **PI actuel** : PI-1 (Février - Mars 2026)
@@ -10,15 +10,15 @@
 
 ## Databases Notion
 
-| Database         | Contenu                                                      |
-| ---------------- | ------------------------------------------------------------ |
-| Value Streams    | 2 OVS + 1 DVS avec lead times, bottlenecks                   |
-| Business Pillars | 4 Thèmes Stratégiques alignés OKR                            |
-| Epics            | 22 Epics (5 pré-PI-1 + 4 PI-1 + 6 PI-2 + 7 PI-3)             |
-| Features         | 42 Features avec acceptance criteria                         |
-| User Stories     | 254 US (178 Done + 19 PI-1 + 48 PI-2 + 9 PI-3)               |
-| Sprint Tracker   | Vélocité par sprint, formules automatiques                   |
-| Implemented      | 178 features livrées (13 domaines), traçabilité git complète |
+| Database         | Contenu                                                          |
+| ---------------- | ---------------------------------------------------------------- |
+| Value Streams    | 2 OVS + 1 DVS avec lead times, bottlenecks                       |
+| Business Pillars | 4 Thèmes Stratégiques alignés OKR                                |
+| Epics            | 22 Epics (6 pré-PI-1 dont 3 partiels + 3 PI-1 + 6 PI-2 + 7 PI-3) |
+| Features         | 42 Features avec acceptance criteria                             |
+| User Stories     | 254 US (182 Done + 15 PI-1 + 48 PI-2 + 9 PI-3)                   |
+| Sprint Tracker   | Vélocité par sprint, formules automatiques                       |
+| Implemented      | 178 features livrées (13 domaines), traçabilité git complète     |
 
 ---
 
@@ -35,8 +35,8 @@ Vision Stratégique (OKR 2026)
   │    ├── TS3: Acquisition (O1+O5)
   │    └── TS4: Excellence Ops (O3+O4)
   └── Epics → Features → User Stories
-       ├── Done (5 Epics, ~41 SP livrés)
-       ├── PI-1 (4 Epics + 2 reliquats, 79 SP)
+       ├── Done (6 Epics dont 3 partiels, ~59 SP livrés)
+       ├── PI-1 (3 Epics + 3 reliquats, 61 SP)
        ├── PI-2 (6 Epics, 215 SP)
        └── PI-3 (7 Epics, 73 SP)
 ```
@@ -71,12 +71,12 @@ Vision Stratégique (OKR 2026)
 
 ### Epics PI-1 (Backlog Actif)
 
-| Epic                              | Value Stream | Thème | PI   |
-| --------------------------------- | ------------ | ----- | ---- |
-| E-01 Portail Sponsor Self-Service | VS2          | TS1   | PI-1 |
-| E-02 Rotation Sponsors            | VS2          | TS1   | PI-1 |
-| E-03 Analytics Sponsors Avancé    | VS2          | TS1   | PI-1 |
-| E-06 Onboarding Automatisé        | VS1          | TS3   | PI-1 |
+| Epic                              | Value Stream | Thème | PI                                                    |
+| --------------------------------- | ------------ | ----- | ----------------------------------------------------- |
+| E-01 Portail Sponsor Self-Service | VS2          | TS1   | PI-1                                                  |
+| E-02 Rotation Sponsors            | VS2          | TS1   | PI-1                                                  |
+| E-03 Analytics Sponsors ✅ Done   | VS2          | TS1   | Done (F-03.1+F-03.2 livrés, F-03.3 Heatmap supprimée) |
+| E-06 Onboarding Automatisé        | VS1          | TS3   | PI-1                                                  |
 
 ### Epics PI-2
 
@@ -104,11 +104,11 @@ Vision Stratégique (OKR 2026)
 
 ## Roadmap PI
 
-| PI   | Période        | Epics                                        | Focus                                                           |
-| ---- | -------------- | -------------------------------------------- | --------------------------------------------------------------- |
-| PI-1 | Fév-Mars 2026  | E-01, E-02, E-03, E-06 + reliquats E-07/E-10 | Fondations : sponsors self-service, analytics, onboarding       |
-| PI-2 | Avr-Mai 2026   | E-05, E-11, E-15, E-16, E-17, E-22, E-23     | Régie + motion design + email auto + score live + TV+LED + HDMI |
-| PI-3 | Juin-Juil 2026 | E-12 à E-14, E-18 à E-21                     | Multi-écrans, marque blanche, billetterie, ML, OAuth            |
+| PI   | Période        | Epics                                         | Focus                                                           |
+| ---- | -------------- | --------------------------------------------- | --------------------------------------------------------------- |
+| PI-1 | Fév-Mars 2026  | E-01, E-02, E-06 + reliquats E-03.3/E-07/E-10 | Fondations : sponsors self-service, onboarding + reliquats      |
+| PI-2 | Avr-Mai 2026   | E-05, E-11, E-15, E-16, E-17, E-22, E-23      | Régie + motion design + email auto + score live + TV+LED + HDMI |
+| PI-3 | Juin-Juil 2026 | E-12 à E-14, E-18 à E-21                      | Multi-écrans, marque blanche, billetterie, ML, OAuth            |
 
 ## Cadence
 
@@ -126,7 +126,7 @@ Vision Stratégique (OKR 2026)
 
 **Durée** : 6 semaines (3 sprints de 2 semaines)
 **Capacité** : ~80 story points
-**Backlog réel** : 79 SP (après requalification des Done)
+**Backlog réel** : 61 SP (après requalification E-03 Partiel → Done)
 
 ### Objectifs PI-1
 
@@ -139,18 +139,18 @@ Vision Stratégique (OKR 2026)
 
 ### Répartition par Sprint
 
-| Sprint   | Dates     | Story Points | Focus                                                  |
-| -------- | --------- | ------------ | ------------------------------------------------------ |
-| Sprint 1 | Sem 8-9   | 26 SP        | Rotation sponsors, analytics API, carte flotte         |
-| Sprint 2 | Sem 10-11 | 25 SP        | Portail sponsor, wizard onboarding, WiFi USB           |
-| Sprint 3 | Sem 12-13 | 28 SP        | Validation admin, auto-provisioning, heatmap, rapports |
+| Sprint   | Dates     | Story Points | Focus                                          |
+| -------- | --------- | ------------ | ---------------------------------------------- |
+| Sprint 1 | Sem 8-9   | 26 SP        | Rotation sponsors, analytics API, carte flotte |
+| Sprint 2 | Sem 10-11 | 25 SP        | Portail sponsor, wizard onboarding, WiFi USB   |
+| Sprint 3 | Sem 12-13 | 23 SP        | Validation admin, auto-provisioning, rapports  |
 
 ### Velocity Cible
 
 - Sprint 1 : 26 SP (6 US)
 - Sprint 2 : 25 SP (7 US)
-- Sprint 3 : 28 SP (6 US)
-- **Total PI-1 : 79 SP / 19 User Stories**
+- Sprint 3 : 23 SP (5 US)
+- **Total PI-1 : 56 SP / 14 User Stories**
 
 ---
 
@@ -221,7 +221,7 @@ Le Sprint Tracker capture automatiquement :
 | ------------------------------------------------ | ------------------------------------------------------ |
 | [📋 Lean Business Cases](LEAN-BUSINESS-CASES.md) | LBC pour les 21 Epics (problème, solution, coût, KPIs) |
 | [🎯 Features & Critères](FEATURES.md)            | 35 Features avec acceptance criteria et SP             |
-| [📝 User Stories Complètes](USER-STORIES.md)     | 218 US (178 Done + 40 futures) avec traçabilité ADR    |
+| [📝 User Stories Complètes](USER-STORIES.md)     | 254 US (182 Done + 72 futures) avec traçabilité ADR    |
 | [🏁 PI Objectives](PI-OBJECTIVES.md)             | Objectifs PI avec scoring Business Value (1-10)        |
 | [⚠️ Registre ROAM](ROAM.md)                      | 8 risques identifiés avec matrice probabilité × impact |
 | [🔄 Inspect & Adapt](INSPECT-ADAPT.md)           | Template I&A avec quantitative review et retrospective |
@@ -231,7 +231,7 @@ Le Sprint Tracker capture automatiquement :
 
 | Page                                             | Description                                              |
 | ------------------------------------------------ | -------------------------------------------------------- |
-| [✅ Implemented Backlog](IMPLEMENTED-BACKLOG.md) | 178 features livrées avec traçabilité code (13 domaines) |
+| [✅ Implemented Backlog](IMPLEMENTED-BACKLOG.md) | 182 features livrées avec traçabilité code (14 domaines) |
 
 ## Tooling & Automatisation
 

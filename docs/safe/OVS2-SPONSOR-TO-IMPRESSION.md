@@ -120,14 +120,14 @@ flowchart LR
 
 ## Epics alignés
 
-| Epic                              | PI   | Statut  |
-| --------------------------------- | ---- | ------- |
-| E-01 Portail Sponsor Self-Service | PI-1 | Backlog |
-| E-02 Rotation Sponsors            | PI-1 | Backlog |
-| E-03 Analytics Sponsors Avancé    | PI-1 | Backlog |
-| E-05 Motion Design Personnalisé   | PI-2 | Backlog |
-| E-11 Régie Publicitaire Régionale | PI-2 | Backlog |
-| E-17 A/B Testing Créas            | PI-2 | Backlog |
+| Epic                              | PI   | Statut                                                   |
+| --------------------------------- | ---- | -------------------------------------------------------- |
+| E-01 Portail Sponsor Self-Service | PI-1 | Backlog                                                  |
+| E-02 Rotation Sponsors            | PI-1 | Backlog                                                  |
+| E-03 Analytics Sponsors Avancé    | Done | ✅ Done (F-03.1 + F-03.2 Done, F-03.3 Heatmap supprimée) |
+| E-05 Motion Design Personnalisé   | PI-2 | Backlog                                                  |
+| E-11 Régie Publicitaire Régionale | PI-2 | Backlog                                                  |
+| E-17 A/B Testing Créas            | PI-2 | Backlog                                                  |
 
 ## KPIs
 

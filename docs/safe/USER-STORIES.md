@@ -1,11 +1,11 @@
 # User Stories — NEOPRO SAFe
 
-> **Dernière mise à jour** : 26 Février 2026 _(+33 US E-23 Résilience HDMI & Accès Navigateur)_
+> **Dernière mise à jour** : 9 Mars 2026 _(E-03 requalifié Partiel — 4 US Done, 1 US reste)_
 > **PI actuel** : PI-1 (Février - Mars 2026)
 > Ce document recense **toutes** les User Stories du produit NEOPRO :
 >
-> - **178 US livrées** (13 domaines, traçabilité code + ADR)
-> - **76 US futures** (PI-1 à PI-3, issues de [FEATURES.md](FEATURES.md))
+> - **182 US livrées** (13 domaines, traçabilité code + ADR) — dont 4 requalifiées depuis E-03
+> - **72 US futures** (PI-1 à PI-3, issues de [FEATURES.md](FEATURES.md))
 >
 > **Convention** : Les US livrées reprennent les IDs `IMP-XXX-NN` de [IMPLEMENTED-BACKLOG.md](IMPLEMENTED-BACKLOG.md). Les US futures reprennent les IDs `US-XX.X.X` de [FEATURES.md](FEATURES.md).
 
@@ -325,15 +325,17 @@
 | US-02.1.2 | F-02.1  | API compteur passages temps réel par sponsor par match                  | 3   | S1     | Must     | ⏳ Backlog |
 | US-02.2.1 | F-02.2  | Page config rotation par site avec fréquence, priorités et preview      | 3   | S1     | Should   | ⏳ Backlog |
 
-#### E-03 — Analytics Sponsors Avancé (5 US, 23 SP)
+#### E-03 — Analytics Sponsors Avancé ⚠️ PARTIEL (4/5 US Done, 18/23 SP livrés)
 
-| US        | Feature | Description                                                              | SP  | Sprint | Priorité | Statut     |
-| --------- | ------- | ------------------------------------------------------------------------ | --- | ------ | -------- | ---------- |
-| US-03.1.1 | F-03.1  | API analytics : impressions agrégées par sponsor, gymnase, période       | 5   | S1     | Must     | ⏳ Backlog |
-| US-03.1.2 | F-03.1  | Dashboard sponsor : graphiques impressions (Chart.js) + filtres          | 5   | S1     | Must     | ⏳ Backlog |
-| US-03.2.1 | F-03.2  | Export CSV des données d'impressions avec filtres appliqués              | 3   | S2     | Must     | ⏳ Backlog |
-| US-03.2.2 | F-03.2  | Génération rapport PDF mensuel avec graphiques + envoi email automatique | 5   | S3     | Must     | ⏳ Backlog |
-| US-03.3.1 | F-03.3  | Carte Leaflet heatmap impressions par gymnase avec tooltips              | 5   | S3     | Should   | ⏳ Backlog |
+| US            | Feature    | Description                                                              | SP    | Sprint | Priorité   | Statut                                   |
+| ------------- | ---------- | ------------------------------------------------------------------------ | ----- | ------ | ---------- | ---------------------------------------- |
+| US-03.1.1     | F-03.1     | API analytics : impressions agrégées par sponsor, gymnase, période       | 5     | S1     | Must       | ✅ Done                                  |
+| US-03.1.2     | F-03.1     | Dashboard sponsor : graphiques impressions (Chart.js) + filtres          | 5     | S1     | Must       | ✅ Done                                  |
+| US-03.2.1     | F-03.2     | Export CSV des données d'impressions avec filtres appliqués              | 3     | S2     | Must       | ✅ Done                                  |
+| US-03.2.2     | F-03.2     | Génération rapport PDF mensuel avec graphiques + envoi email automatique | 5     | S3     | Must       | ✅ Done                                  |
+| ~~US-03.3.1~~ | ~~F-03.3~~ | ~~Carte Leaflet heatmap impressions par gymnase avec tooltips~~          | ~~5~~ | ~~S3~~ | ~~Should~~ | **SUPPRIMÉE** (non pertinente <10 clubs) |
+
+> **Traçabilité** : US-03.1.1/1.2 → IMP-AUD-11, IMP-AUD-19, IMP-ANA-17. US-03.2.1 → IMP-ANA-05, IMP-AUD-19. US-03.2.2 → IMP-ANA-03, IMP-ANA-04, IMP-ANA-18. Envoi email auto reporté vers E-16 (PI-2).
 
 #### E-06 — Onboarding Automatisé (4 US, 18 SP)
 

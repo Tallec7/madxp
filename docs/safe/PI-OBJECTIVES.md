@@ -45,7 +45,7 @@ Le ratio **Actual / Planned** mesure la **Program Predictability** (cible : > 80
 | #   | Objectif PI                                                                                                                                            | VS  | Thème | BV (Planned) | Features liées         | SP estimés |
 | --- | ------------------------------------------------------------------------------------------------------------------------------------------------------ | --- | ----- | ------------ | ---------------------- | ---------- |
 | 1   | **Lancer le portail sponsor self-service** — Les sponsors peuvent s'inscrire, uploader un spot et sélectionner leurs gymnases sans intervention NEOPRO | VS2 | TS1   | **9**        | F-01.1, F-01.2, F-01.3 | 19         |
-| 2   | **Livrer les analytics sponsors avec rapport PDF** — Dashboard impressions temps réel + export rapport mensuel automatisé                              | VS2 | TS1   | **10**       | F-03.1, F-03.2, F-03.3 | 23         |
+| 2   | **Livrer les analytics sponsors avec rapport PDF** — Dashboard impressions temps réel + export rapport mensuel automatisé                              | VS2 | TS1   | **10**       | F-03.1, F-03.2         | 18         |
 | 3   | **Implémenter la rotation sponsor équitable** — Algorithme garantissant ≥ 20 passages/match/sponsor avec tracking                                      | VS2 | TS1   | **8**        | F-02.1, F-02.2         | 11         |
 | 4   | **Créer le wizard onboarding club** — Nouveau club opérationnel en < 30 min via QR code + auto-provisioning                                            | VS1 | TS3   | **10**       | F-06.1, F-06.2         | 18         |
 

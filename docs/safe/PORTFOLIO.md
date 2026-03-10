@@ -61,7 +61,7 @@ gantt
     section PI-1 Fondations
     E-01 Portail Sponsor Self-Service   :e01, 2026-02-16, 42d
     E-02 Rotation Sponsors              :e02, 2026-02-16, 42d
-    E-03 Analytics Sponsors Avancé      :e03, 2026-02-16, 42d
+    E-03 Analytics Sponsors (Partiel)   :done, e03, 2026-02-16, 42d
     E-04 Profils Config Match           :e04, 2026-02-16, 42d
     E-06 Onboarding Automatisé          :e06, 2026-02-16, 42d
     E-07 Résilience WiFi V2             :e07, 2026-02-16, 42d
@@ -126,21 +126,21 @@ xychart-beta
 | Value Stream                 | Epics  | Features | US (planifiées) | SP estimés |
 | ---------------------------- | ------ | -------- | --------------- | ---------- |
 | 🟢 VS1 Club to Screen        | 10     | 23       | 55              | ~259 SP    |
-| 🟠 VS2 Sponsor to Impression | 6      | 13       | 21              | ~103 SP    |
+| 🟠 VS2 Sponsor to Impression | 6      | 13       | 17              | ~85 SP     |
 | ⬜ Transverse                | 7      | 10       | 6               | ~44 SP     |
-| **Total**                    | **23** | **46**   | **82**          | **406 SP** |
+| **Total**                    | **23** | **46**   | **78**          | **388 SP** |
 
-> **Note** : Ce tableau concerne les 76 US futures (PI-1 à PI-3). 178 US supplémentaires ont été livrées avant le PI Planning (voir [IMPLEMENTED-BACKLOG.md](IMPLEMENTED-BACKLOG.md)).
+> **Note** : Ce tableau concerne les 72 US futures (PI-1 à PI-3). 182 US supplémentaires ont été livrées avant le PI Planning (voir [IMPLEMENTED-BACKLOG.md](IMPLEMENTED-BACKLOG.md)).
 > **Note E-23** : Epic HDMI comptabilisé VS1 (7 Features, 33 US, 146 SP). Les aspects transverses (F-23.7 Nav PC) restent sous VS1 pour simplifier.
 
 ### Par PI
 
-| PI   | Période        | Epics | SP  | Focus                                                  | Milestone                     |
-| ---- | -------------- | ----- | --- | ------------------------------------------------------ | ----------------------------- |
-| Done | Avant PI-1     | 5     | ~41 | Profils, WiFi, Alertes, Audit, Monitoring              | -                             |
-| PI-1 | Fév-Mars 2026  | 4+2   | 79  | Sponsors self-service, analytics, onboarding           | 5 clubs payants               |
-| PI-2 | Avr-Mai 2026   | 7     | 263 | Régie, score live, email auto, A/B, TV+Secondary, HDMI | Lancement régie à 15 clubs    |
-| PI-3 | Juin-Juil 2026 | 7     | 73  | Multi-écrans, marque blanche, billetterie, ML, OAuth   | 20 clubs, premiers annonceurs |
+| PI   | Période        | Epics | SP  | Focus                                                   | Milestone                     |
+| ---- | -------------- | ----- | --- | ------------------------------------------------------- | ----------------------------- |
+| Done | Avant PI-1     | 6     | ~59 | Profils, WiFi, Alertes, Audit, Monitoring, Analytics ⚠️ | -                             |
+| PI-1 | Fév-Mars 2026  | 3+3   | 61  | Sponsors self-service, onboarding + reliquats           | 5 clubs payants               |
+| PI-2 | Avr-Mai 2026   | 7     | 263 | Régie, score live, email auto, A/B, TV+Secondary, HDMI  | Lancement régie à 15 clubs    |
+| PI-3 | Juin-Juil 2026 | 7     | 73  | Multi-écrans, marque blanche, billetterie, ML, OAuth    | 20 clubs, premiers annonceurs |
 
 ### Par Thème Stratégique
 

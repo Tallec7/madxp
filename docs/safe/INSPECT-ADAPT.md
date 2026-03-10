@@ -52,7 +52,7 @@
 - F-02.2 Configuration rotation par site
 - F-03.1 Dashboard analytics impressions
 - F-03.2 Export CSV + rapport PDF
-- F-03.3 Heatmap Leaflet impressions
+- ~~F-03.3 Heatmap Leaflet impressions~~ — **SUPPRIMÉE** (non pertinente <10 clubs)
 - F-06.1 Auto-provisioning Pi
 - F-06.2 Wizard onboarding 4 étapes
 - F-07.3 WiFi USB auto-détection (reliquat)

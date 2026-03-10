@@ -1,6 +1,6 @@
 # Lean Business Cases — Epics NEOPRO
 
-> **Dernière mise à jour** : 26 Février 2026
+> **Dernière mise à jour** : 9 Mars 2026 (requalification E-03 ⚠️ Partiel)
 > **PI actuel** : PI-1 (Février - Mars 2026)
 > Chaque Epic dispose d'un Lean Business Case conforme SAFe : problème, solution, hypothèses, coût, bénéfice, KPIs, et critère Go/No-Go.
 
@@ -78,17 +78,18 @@
 
 ---
 
-### E-03 — Analytics Sponsors Avancé
+### E-03 — Analytics Sponsors Avancé ⚠️ PARTIEL
 
-| Champ                 | Détail                      |
-| --------------------- | --------------------------- |
-| **Value Stream**      | VS2 — Sponsor to Impression |
-| **Thème Stratégique** | TS1 — Monétisation          |
-| **WSJF**              | 20 (priorité maximale)      |
+| Champ                 | Détail                                                                                      |
+| --------------------- | ------------------------------------------------------------------------------------------- |
+| **Value Stream**      | VS2 — Sponsor to Impression                                                                 |
+| **Thème Stratégique** | TS1 — Monétisation                                                                          |
+| **WSJF**              | 20 (priorité maximale)                                                                      |
+| **Statut**            | ✅ Done — F-03.1 + F-03.2 Done (18 SP). F-03.3 Heatmap supprimée (non pertinente <10 clubs) |
 
 **Problème** : Aucun rapport de diffusion pour les sponsors. Impossible de prouver le ROI. Les sponsors renouvellent au "feeling", sans data. Frein majeur à l'acquisition de nouveaux sponsors et à la régie publicitaire.
 
-**Solution** : Dashboard analytics sponsor avec compteur d'impressions temps réel, heatmap de diffusion par gymnase, tendances temporelles, et export rapport PDF/CSV mensuel automatisé.
+**Solution** : Dashboard analytics sponsor avec compteur d'impressions temps réel, tendances temporelles, et export rapport PDF/CSV mensuel automatisé.
 
 **Hypothèses**
 
@@ -108,7 +109,7 @@
 **Indicateurs retardés** : Taux de renouvellement sponsor, ARR régie
 
 **MVP** : Dashboard impressions + export PDF mensuel
-**Go/No-Go** : Go (WSJF max, critique pour VS2)
+**Go/No-Go** : Go (WSJF max, critique pour VS2) — **✅ Done** (F-03.1 Dashboard + F-03.2 Export livrés. F-03.3 Heatmap supprimée le 09/03/2026)
 
 ---
 
@@ -497,23 +498,23 @@
 
 ## Récapitulatif WSJF
 
-| Rang | Epic                              | WSJF | PI   | Statut  |
-| ---- | --------------------------------- | ---- | ---- | ------- |
-| 1    | E-03 Analytics Sponsors Avancé    | 20   | PI-1 | Backlog |
-| 1    | E-06 Onboarding Automatisé        | 20   | PI-1 | Backlog |
-| 3    | E-11 Régie Publicitaire Régionale | 18   | PI-2 | Backlog |
-| 4    | E-01 Portail Sponsor Self-Service | 13   | PI-1 | Backlog |
-| 5    | E-07 Résilience WiFi V2           | 12   | PI-1 | Backlog |
-| 5    | E-22 Contenus Différenciés TV+LED | 12   | PI-2 | Backlog |
-| 7    | E-02 Rotation Sponsors            | 10   | PI-1 | Backlog |
-| 7    | E-08 Alertes Prédictives          | 10   | PI-1 | Backlog |
-| 9    | E-04 Profils Config Match         | 8    | PI-1 | Backlog |
-| 9    | E-10 Monitoring Fleet             | 8    | PI-1 | Backlog |
-| 9    | E-12 Multi-Écrans Synchronisés    | 8    | PI-3 | Backlog |
-| 12   | E-05 Motion Design Personnalisé   | 7    | PI-2 | Backlog |
-| 13   | E-09 Architecture Audit           | 6    | PI-1 | Backlog |
-| 13   | E-13 Marque Blanche Club          | 6    | PI-3 | Backlog |
-| 15   | E-14 Fonds de Solidarité          | 5    | PI-3 | Backlog |
+| Rang | Epic                              | WSJF | PI   | Statut                    |
+| ---- | --------------------------------- | ---- | ---- | ------------------------- |
+| 1    | E-03 Analytics Sponsors Avancé    | 20   | PI-1 | ⚠️ Partiel (18/23 SP)     |
+| 1    | E-06 Onboarding Automatisé        | 20   | PI-1 | Backlog                   |
+| 3    | E-11 Régie Publicitaire Régionale | 18   | PI-2 | Backlog                   |
+| 4    | E-01 Portail Sponsor Self-Service | 13   | PI-1 | Backlog                   |
+| 5    | E-07 Résilience WiFi V2           | 12   | PI-1 | ⚠️ Partiel (F-07.3 reste) |
+| 5    | E-22 Contenus Différenciés TV+LED | 12   | PI-2 | Backlog                   |
+| 7    | E-02 Rotation Sponsors            | 10   | PI-1 | Backlog                   |
+| 7    | E-08 Alertes Prédictives          | 10   | PI-1 | ✅ Done                   |
+| 9    | E-04 Profils Config Match         | 8    | PI-1 | ✅ Done                   |
+| 9    | E-10 Monitoring Fleet             | 8    | PI-1 | ⚠️ Partiel (F-10.1 reste) |
+| 9    | E-12 Multi-Écrans Synchronisés    | 8    | PI-3 | Backlog                   |
+| 12   | E-05 Motion Design Personnalisé   | 7    | PI-2 | Backlog                   |
+| 13   | E-09 Architecture Audit           | 6    | PI-1 | ✅ Done                   |
+| 13   | E-13 Marque Blanche Club          | 6    | PI-3 | Backlog                   |
+| 15   | E-14 Fonds de Solidarité          | 5    | PI-3 | Backlog                   |
 
 ---
 
@@ -840,7 +841,7 @@
 
 | Rang | Epic                              | WSJF | PI   | Statut                    |
 | ---- | --------------------------------- | ---- | ---- | ------------------------- |
-| 1    | E-03 Analytics Sponsors Avancé    | 20   | PI-1 | Backlog                   |
+| 1    | E-03 Analytics Sponsors Avancé    | 20   | PI-1 | ⚠️ Partiel (18/23 SP)     |
 | 1    | E-06 Onboarding Automatisé        | 20   | PI-1 | Backlog                   |
 | 3    | E-11 Régie Publicitaire Régionale | 18   | PI-2 | Backlog                   |
 | 4    | E-23 Résilience HDMI & Accès Nav. | 14   | PI-2 | Backlog (nouveau)         |
