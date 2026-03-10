@@ -1,3 +1,9 @@
+## [3.104.2](https://github.com/Tallec7/neopro/compare/v3.104.1...v3.104.2) (2026-03-10)
+
+### Bug Fixes
+
+- **tv-component:** slave display freeze on manual video — LocalBroadcast + handleMasterLoopState guards ([41c1e19](https://github.com/Tallec7/neopro/commit/41c1e19b7cf2b02da521734973cef7bd46ff5808))
+
 # [3.104.2](https://github.com/Tallec7/neopro/compare/v3.104.1...v3.104.2) (2026-03-10)
 
 ### Bug Fixes
