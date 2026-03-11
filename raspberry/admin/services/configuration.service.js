@@ -365,6 +365,62 @@ class ConfigurationService {
   }
 
   /**
+   * Construire un récapitulatif des vidéos sponsor par phase.
+   * @returns {Promise<Array>} Array de { id, name, loopVideos: [{ path, sponsorName, _sponsorLocalId }] }
+   */
+  async buildPhaseRecap() {
+    const config = await this.loadConfig();
+    const timeCategories = config.timeCategories || [];
+    const localSponsors = config.localSponsors || [];
+
+    return timeCategories.map(tc => {
+      const loopVideos = (tc.loopVideos || []).map(v => {
+        // Resolve sponsor name from localSponsors if available
+        let sponsorName = v.name || 'Inconnu';
+        if (v._sponsorLocalId) {
+          const sponsor = localSponsors.find(s => s.localId === v._sponsorLocalId);
+          if (sponsor) sponsorName = sponsor.name;
+        }
+        return {
+          path: v.path,
+          sponsorName,
+          _sponsorLocalId: v._sponsorLocalId || null,
+        };
+      });
+
+      return {
+        id: tc.id,
+        name: tc.name,
+        loopVideoCount: loopVideos.length,
+        loopVideos,
+      };
+    });
+  }
+
+  /**
+   * Retirer une vidéo de loopVideos d'une phase par index.
+   * @param {string} phaseId
+   * @param {number} videoIndex
+   */
+  async removeLoopVideo(phaseId, videoIndex) {
+    const config = await this.loadConfig();
+    const tc = (config.timeCategories || []).find(t => t.id === phaseId);
+    if (!tc) {
+      throw new NotFoundError(`Phase '${phaseId}' non trouvée`);
+    }
+
+    const loopVideos = tc.loopVideos || [];
+    if (videoIndex < 0 || videoIndex >= loopVideos.length) {
+      throw new ValidationError(`Index vidéo invalide: ${videoIndex}`);
+    }
+
+    tc.loopVideos.splice(videoIndex, 1);
+    await this.saveConfig(config);
+
+    console.log(`[admin] Removed loopVideo index ${videoIndex} from phase ${phaseId}`);
+  }
+
+  /**
    * Mettre à jour les timeCategories.
    * @param {Array} timeCategories
    * @returns {Promise<Array>} les timeCategories mises à jour

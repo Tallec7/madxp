@@ -12,6 +12,9 @@
  * - DELETE /api/sponsors/:localId/videos/:filename -> Délier vidéo
  * - POST   /api/sponsors/:localId/loop            -> Ajouter à la boucle
  * - DELETE /api/sponsors/:localId/loop            -> Retirer de la boucle
+ * - POST   /api/sponsors/:localId/phase           -> Ajouter à une phase
+ * - DELETE /api/sponsors/:localId/phase           -> Retirer d'une phase
+ * - GET    /api/sponsors/:localId/phases          -> Phases du sponsor
  */
 
 const express = require('express');
@@ -159,6 +162,42 @@ module.exports = function createSponsorsRouter({ sponsorService, sponsorStatsSer
     try {
       const sponsor = await sponsorService.removeFromLoop(req.params.localId);
       res.json({ sponsor });
+    } catch (error) {
+      handleError(res, error);
+    }
+  });
+
+  // ===========================================================================
+  // PHASE MANAGEMENT (timeCategories[].loopVideos[])
+  // ===========================================================================
+
+  // Add sponsor's videos to a specific phase
+  router.post('/api/sponsors/:localId/phase', async (req, res) => {
+    try {
+      const { phaseId } = req.body;
+      const sponsor = await sponsorService.addToPhase(req.params.localId, phaseId);
+      res.json({ sponsor });
+    } catch (error) {
+      handleError(res, error);
+    }
+  });
+
+  // Remove sponsor's videos from a specific phase
+  router.delete('/api/sponsors/:localId/phase', async (req, res) => {
+    try {
+      const { phaseId } = req.body;
+      const sponsor = await sponsorService.removeFromPhase(req.params.localId, phaseId);
+      res.json({ sponsor });
+    } catch (error) {
+      handleError(res, error);
+    }
+  });
+
+  // Get phases where a sponsor has entries
+  router.get('/api/sponsors/:localId/phases', async (req, res) => {
+    try {
+      const phases = await sponsorService.getSponsorPhases(req.params.localId);
+      res.json({ phases });
     } catch (error) {
       handleError(res, error);
     }

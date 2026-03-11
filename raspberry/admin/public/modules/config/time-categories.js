@@ -43,7 +43,7 @@ async function loadTimeCategories() {
             ? data.timeCategories
             : [...defaultTimeCategories];
 
-        renderTimeCategories();
+        await renderTimeCategories();
     } catch (error) {
         console.error('Erreur lors du chargement des timeCategories:', error);
     }
@@ -53,9 +53,23 @@ function refreshTimeCategories() {
     loadTimeCategories();
 }
 
-function renderTimeCategories() {
+async function renderTimeCategories() {
     const container = document.getElementById('time-categories-list');
     if (!container) return;
+
+    // Fetch phase recap (loopVideos per phase)
+    let phaseRecapMap = {};
+    try {
+        const recapResp = await fetch('/api/configuration/phase-recap');
+        if (recapResp.ok) {
+            const recapData = await recapResp.json();
+            (recapData.phases || []).forEach(p => {
+                phaseRecapMap[p.id] = p;
+            });
+        }
+    } catch (err) {
+        console.warn('[time-categories] Could not load phase recap:', err);
+    }
 
     container.innerHTML = '';
 
@@ -71,6 +85,40 @@ function renderTimeCategories() {
                 return cat ? cat.name : id;
             })
             .join(', ') || 'Aucune catégorie assignée';
+
+        // Build loopVideos section from phase recap
+        const recap = phaseRecapMap[tc.id];
+        let loopVideosHtml = '';
+        if (recap && recap.loopVideos && recap.loopVideos.length > 0) {
+            // Group by sponsor name for cleaner display
+            const byName = {};
+            recap.loopVideos.forEach((v, vIdx) => {
+                const name = v.sponsorName || 'Sponsor';
+                if (!byName[name]) byName[name] = [];
+                byName[name].push(vIdx);
+            });
+            const pills = Object.entries(byName).map(([name, indices]) => {
+                const count = indices.length > 1 ? ` (×${indices.length})` : '';
+                // Remove all entries for this sponsor (highest index first to avoid shift)
+                const sortedIndices = [...indices].sort((a, b) => b - a);
+                const removeCall = sortedIndices.map(i => `removeLoopVideo('${tc.id}', ${i})`).join('; ');
+                return `<span class="phase-sponsor-pill">
+                    <span class="pill-name">${escapeHtml(name)}${count}</span>
+                    <button class="pill-remove" onclick="event.stopPropagation(); ${removeCall}" title="Retirer ${escapeHtml(name)} de cette phase">&times;</button>
+                </span>`;
+            }).join('');
+            loopVideosHtml = `
+                <div class="phase-sponsors-section">
+                    <span class="phase-sponsors-label">🎬 Sponsors boucle <span class="phase-sponsors-count">${recap.loopVideoCount}</span></span>
+                    <div class="phase-sponsors-pills">${pills}</div>
+                </div>`;
+        } else {
+            loopVideosHtml = `
+                <div class="phase-sponsors-section phase-sponsors-empty">
+                    <span class="phase-sponsors-label">🎬 Sponsors boucle</span>
+                    <span class="phase-sponsors-none">Aucun sponsor assigné</span>
+                </div>`;
+        }
 
         item.innerHTML = `
             <div class="time-category-header">
@@ -89,6 +137,7 @@ function renderTimeCategories() {
             <div class="time-category-categories">
                 <span class="label">Catégories:</span> ${assignedNames}
             </div>
+            ${loopVideosHtml}
         `;
 
         container.appendChild(item);
@@ -96,6 +145,29 @@ function renderTimeCategories() {
 
     if (cachedTimeCategories.length === 0) {
         container.innerHTML = '<p class="info-text">Aucun bloc temps configuré. Cliquez sur "Ajouter un bloc temps" pour commencer.</p>';
+    }
+}
+
+/**
+ * Retirer une vidéo sponsor d'une phase (par index dans loopVideos)
+ */
+async function removeLoopVideo(phaseId, videoIndex) {
+    if (!confirm('Retirer cette vidéo sponsor de la phase ?')) return;
+
+    try {
+        const response = await fetch(`/api/configuration/phase-recap/${phaseId}/loop-videos/${videoIndex}`, {
+            method: 'DELETE',
+        });
+        const data = await response.json();
+        if (data.success) {
+            showNotification('Vidéo retirée de la phase', 'success');
+            renderTimeCategories();
+        } else {
+            showNotification('Erreur: ' + (data.error || 'Inconnue'), 'error');
+        }
+    } catch (error) {
+        console.error('[time-categories] Erreur suppression loopVideo:', error);
+        showNotification('Erreur lors de la suppression', 'error');
     }
 }
 

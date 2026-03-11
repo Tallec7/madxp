@@ -1,3 +1,31 @@
+# [3.106.0](https://github.com/Tallec7/neopro/compare/v3.105.2...v3.106.0) (2026-03-11)
+
+### Features
+
+- **admin-sponsors:** sélection de phase par sponsor — checkboxes avant-match/match/après-match remplacent le toggle binaire "Ajouter à la boucle". Les vidéos sponsor sont écrites directement dans `timeCategories[].loopVideos[]` (compatible TV component `getLoopVideosForPhase()`)
+- **admin-sponsors:** réconciliation auto des `loopVideos` orphelins poussés par le dashboard central — `_reconcileOrphanedLoopVideos()` reconstruit les entrées `_sponsorLocalId` manquantes à chaque `listSponsors()`
+- **admin-config:** récap phases — l'onglet Config > Phases affiche les vidéos sponsor assignées à chaque phase avec pills cliquables et bouton retirer (`GET /api/configuration/phase-recap`)
+- **admin-videos:** séparation "Retirer de la config" vs "Supprimer le fichier" — nouveau `POST /api/videos/remove-from-config` retire la vidéo de la configuration et des boucles sans supprimer le fichier du disque
+- **admin-ux:** skeleton loading — shimmer animation pendant le chargement du dashboard et de la liste vidéos
+- **admin-ux:** validation inline formulaires — `.has-error` avec messages d'erreur et auto-clear sur input
+- **admin-ux:** empty states consistants — classes `.empty-state` avec icônes, titres et CTA pour sponsors et vidéos
+- **admin-ux:** transitions modales CSS — `@keyframes modalFadeIn` + `modalSlideUp` compatibles avec les deux patterns d'ouverture (`.active` et `style.display`)
+- **central-sync:** `syncVideoAssociations()` dans `resolveLocalSponsors()` — sync les `videoFilenames[]` des sponsors locaux vers `site_sponsor_videos` en central (ajouts/suppressions par diff)
+
+### Bug Fixes
+
+- **admin-sponsors:** suppression de la fonctionnalité "Fréquence de diffusion" (Basse/Normale/Haute/Maximum) — le champ `frequency` est fixé à 1, plus de boucle de duplication d'entrées
+- **admin-ux:** fix modales invisibles — le CSS `visibility:hidden` + `opacity:0` empêchait l'ouverture des modales sponsor qui utilisent `style.display = 'flex'` (pas `.active`). Revert vers `display:none` avec `@keyframes` animations
+
+### Tests
+
+- **smoke:** 13 nouveaux guards de régression :
+  - Sponsor frequency removal (5 guards) — bloque le retour des éléments UI fréquence, CSS et boucle de duplication
+  - Admin UI modal CSS (3 guards) — vérifie `display:none` par défaut, `display:flex` sur `.active`, animation `modalSlideUp`
+  - Admin UI UX foundations (5 guards) — skeleton shimmer, form validation `.has-error`, `.empty-state` classes, input clear listener, pas d'inline styles sur empty state
+
+---
+
 ## [3.105.2](https://github.com/Tallec7/neopro/compare/v3.105.1...v3.105.2) (2026-03-10)
 
 ### Bug Fixes

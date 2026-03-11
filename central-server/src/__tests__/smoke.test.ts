@@ -9198,3 +9198,174 @@ describe('Video Library UX regression guards', () => {
       .toEqual({ keysLocalByPath: true });
   });
 });
+
+// =================================================================
+// Sponsor frequency removal guard (v3.106)
+// Frequency feature duplicated sponsor videos N× in the loop —
+// useless complexity, never exposed on central dashboard, removed.
+// Guard: ensure frequency never creeps back into UI or service.
+// =================================================================
+
+describe('Sponsor frequency removal guard', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+  const adminPublic = path.join(repoRoot, 'raspberry', 'admin', 'public');
+
+  const sponsorService = fs.readFileSync(
+    path.join(repoRoot, 'raspberry', 'admin', 'services', 'sponsor.service.js'),
+    'utf8'
+  );
+  const sponsorIndex = fs.readFileSync(
+    path.join(adminPublic, 'modules', 'sponsors', 'index.js'),
+    'utf8'
+  );
+  const sponsorsCss = fs.readFileSync(
+    path.join(adminPublic, 'styles', 'sponsors.css'),
+    'utf8'
+  );
+  const indexHtml = fs.readFileSync(
+    path.join(adminPublic, 'index.html'),
+    'utf8'
+  );
+
+  it('index.html must NOT contain sponsor-frequency select element', () => {
+    // The frequency dropdown was removed — central never had it
+    expect({ hasFreqSelect: /id="sponsor-frequency"/.test(indexHtml) })
+      .toEqual({ hasFreqSelect: false });
+    expect({ hasEditFreqSelect: /id="sponsor-edit-frequency"/.test(indexHtml) })
+      .toEqual({ hasEditFreqSelect: false });
+  });
+
+  it('sponsors/index.js must NOT reference sponsor-frequency element', () => {
+    expect({ refsFreqElement: /sponsor-frequency/.test(sponsorIndex) })
+      .toEqual({ refsFreqElement: false });
+    expect({ refsEditFreqElement: /sponsor-edit-frequency/.test(sponsorIndex) })
+      .toEqual({ refsEditFreqElement: false });
+  });
+
+  it('sponsors.css must NOT contain frequency-badge styles', () => {
+    expect({ hasFreqBadge: /frequency-badge/.test(sponsorsCss) })
+      .toEqual({ hasFreqBadge: false });
+    expect({ hasFreqLow: /freq-low/.test(sponsorsCss) })
+      .toEqual({ hasFreqLow: false });
+  });
+
+  it('sponsor.service.js _rebuildLoopEntries must NOT have frequency duplication loop', () => {
+    // Old pattern: for (let rep = 0; rep < freq; rep++) — duplicated entries
+    // New pattern: one entry per video, no _frequency field
+    expect({ hasRepLoop: /rep\s*<\s*freq/.test(sponsorService) })
+      .toEqual({ hasRepLoop: false });
+    expect({ hasFrequencyField: /_frequency/.test(sponsorService) })
+      .toEqual({ hasFrequencyField: false });
+  });
+
+  it('sponsor.service.js _rebuildPhaseEntries must NOT have frequency duplication loop', () => {
+    expect({ hasRepLoopPhase: /rep\s*<\s*frequency/.test(sponsorService) })
+      .toEqual({ hasRepLoopPhase: false });
+  });
+});
+
+// =================================================================
+// Admin UI modal CSS guard (v3.106)
+// The modal system uses TWO opening patterns:
+//   1. .modal.active { display: flex } — for system modals (reboot, shutdown)
+//   2. modal.style.display = 'flex' — for sponsor/video modals
+// Using visibility:hidden/opacity:0 instead of display:none breaks pattern #2
+// because those modals never get .active class, staying invisible+blocking.
+// Guard: modals MUST use display:none by default.
+// =================================================================
+
+describe('Admin UI modal CSS guard', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+  const componentsCss = fs.readFileSync(
+    path.join(repoRoot, 'raspberry', 'admin', 'public', 'styles', 'components.css'),
+    'utf8'
+  );
+
+  it('components.css .modal must use display:none (not visibility:hidden)', () => {
+    // visibility:hidden + pointer-events:none breaks sponsor modals that open
+    // via style.display='flex' without adding .active class
+    const modalBlock = componentsCss.match(/\.modal\s*\{[^}]+\}/);
+    expect(modalBlock).toBeTruthy();
+    const block = modalBlock![0];
+    expect({ usesDisplayNone: /display:\s*none/.test(block) })
+      .toEqual({ usesDisplayNone: true });
+    expect({ usesVisibilityHidden: /visibility:\s*hidden/.test(block) })
+      .toEqual({ usesVisibilityHidden: false });
+  });
+
+  it('components.css .modal.active must use display:flex', () => {
+    const activeBlock = componentsCss.match(/\.modal\.active\s*\{[^}]+\}/);
+    expect(activeBlock).toBeTruthy();
+    expect({ usesDisplayFlex: /display:\s*flex/.test(activeBlock![0]) })
+      .toEqual({ usesDisplayFlex: true });
+  });
+
+  it('components.css must have modalSlideUp animation for modal-content', () => {
+    expect({ hasSlideUp: /@keyframes\s+modalSlideUp/.test(componentsCss) })
+      .toEqual({ hasSlideUp: true });
+    expect({ contentUsesAnim: /\.modal-content[\s\S]*animation:\s*modalSlideUp/.test(componentsCss) })
+      .toEqual({ contentUsesAnim: true });
+  });
+});
+
+// =================================================================
+// Admin UI UX foundations guard (v3.106)
+// Skeleton loading, form validation, and empty states are CSS-class
+// foundations. Guard: ensure the CSS classes exist so future JS can
+// rely on them without re-adding the CSS.
+// =================================================================
+
+describe('Admin UI UX foundations guard', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+  const componentsCss = fs.readFileSync(
+    path.join(repoRoot, 'raspberry', 'admin', 'public', 'styles', 'components.css'),
+    'utf8'
+  );
+  const sponsorIndex = fs.readFileSync(
+    path.join(repoRoot, 'raspberry', 'admin', 'public', 'modules', 'sponsors', 'index.js'),
+    'utf8'
+  );
+
+  it('components.css must have skeleton loading classes with shimmer animation', () => {
+    expect({ hasSkeleton: /\.skeleton\s*\{/.test(componentsCss) })
+      .toEqual({ hasSkeleton: true });
+    expect({ hasShimmer: /@keyframes\s+shimmer/.test(componentsCss) })
+      .toEqual({ hasShimmer: true });
+    expect({ hasSkeletonCard: /\.skeleton-card/.test(componentsCss) })
+      .toEqual({ hasSkeletonCard: true });
+  });
+
+  it('components.css must have form validation classes (has-error + error message)', () => {
+    expect({ hasError: /\.form-group\.has-error/.test(componentsCss) })
+      .toEqual({ hasError: true });
+    expect({ hasErrorMsg: /\.form-error-message/.test(componentsCss) })
+      .toEqual({ hasErrorMsg: true });
+  });
+
+  it('components.css must have empty-state classes', () => {
+    expect({ hasEmptyState: /\.empty-state\s*\{/.test(componentsCss) })
+      .toEqual({ hasEmptyState: true });
+    expect({ hasEmptyIcon: /\.empty-state-icon/.test(componentsCss) })
+      .toEqual({ hasEmptyIcon: true });
+    expect({ hasEmptyTitle: /\.empty-state-title/.test(componentsCss) })
+      .toEqual({ hasEmptyTitle: true });
+  });
+
+  it('sponsors/index.js must clear form validation errors on input', () => {
+    // Event delegation clears .has-error + .form-error-message on input
+    expect({ hasInputClear: /\.form-group\.has-error/.test(sponsorIndex) })
+      .toEqual({ hasInputClear: true });
+    expect({ removesErrMsg: /form-error-message/.test(sponsorIndex) })
+      .toEqual({ removesErrMsg: true });
+  });
+
+  it('sponsors empty state must use .empty-state class (not inline styles)', () => {
+    // Old pattern: inline style="text-align: center; padding: 40px; color:..."
+    // New pattern: CSS class .empty-state
+    const emptySection = sponsorIndex.match(/Aucun sponsor[\s\S]{0,300}/);
+    expect(emptySection).toBeTruthy();
+    // Must NOT have inline padding style on the empty state container
+    expect({ hasInlineStyle: /style="[^"]*padding:\s*40px/.test(emptySection![0]) })
+      .toEqual({ hasInlineStyle: false });
+  });
+});

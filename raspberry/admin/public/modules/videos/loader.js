@@ -28,6 +28,16 @@ async function loadVideos() {
         cachedVideos = [];
         cachedOrphanVideos = [];
 
+        // Afficher le skeleton pendant le chargement
+        const list = document.getElementById('videos-list');
+        if (list) {
+            list.innerHTML = `
+                <div class="skeleton-row"><div class="skeleton skeleton-card"></div></div>
+                <div class="skeleton-row"><div class="skeleton skeleton-card"></div></div>
+                <div class="skeleton-row"><div class="skeleton skeleton-card"></div></div>
+            `;
+        }
+
         // Charger la configuration ET les vidéos orphelines en parallèle
         const [configResponse, orphansResponse] = await Promise.all([
             fetch('/api/configuration'),
@@ -37,7 +47,6 @@ async function loadVideos() {
         const config = configResponse.ok ? await configResponse.json() : { categories: [] };
         const orphansData = orphansResponse.ok ? await orphansResponse.json() : { orphans: [] };
 
-        const list = document.getElementById('videos-list');
         if (!list) {
             return;
         }
@@ -91,10 +100,14 @@ function getOwnerBadgeHtml(item) {
 function renderConfigurationStructure(container, config) {
     const categories = config.categories || [];
 
+    // Wrapper carte pour séparer visuellement de la recherche
+    const configWrapper = document.createElement('div');
+    configWrapper.className = 'config-section-wrapper';
+
     const header = document.createElement('div');
     header.className = 'section-header';
     header.innerHTML = '<h3>📁 Configuration télécommande</h3>';
-    container.appendChild(header);
+    configWrapper.appendChild(header);
 
     // Message d'info sur le contenu verrouillé si présent
     const hasLockedContent = categories.some(cat => isLocked(cat));
@@ -105,14 +118,19 @@ function renderConfigurationStructure(container, config) {
             <span class="info-icon">🔒</span>
             <span>Les éléments avec un cadenas sont gérés par NEOPRO et ne peuvent pas être modifiés.</span>
         `;
-        container.appendChild(infoMsg);
+        configWrapper.appendChild(infoMsg);
     }
 
     if (categories.length === 0) {
         const empty = document.createElement('div');
-        empty.className = 'config-empty';
-        empty.innerHTML = '<p class="video-empty-state">Aucune catégorie configurée</p>';
-        container.appendChild(empty);
+        empty.className = 'empty-state';
+        empty.innerHTML = `
+            <div class="empty-state-icon">📁</div>
+            <div class="empty-state-title">Aucune catégorie configurée</div>
+            <div class="empty-state-text">La configuration vidéo n'a pas encore été initialisée depuis le dashboard central.</div>
+        `;
+        configWrapper.appendChild(empty);
+        container.appendChild(configWrapper);
         return;
     }
 
@@ -170,8 +188,10 @@ function renderConfigurationStructure(container, config) {
         }
 
         groupEl.appendChild(body);
-        container.appendChild(groupEl);
+        configWrapper.appendChild(groupEl);
     });
+
+    container.appendChild(configWrapper);
 }
 
 function createConfigVideoList(title, videos, categoryId, subcategoryId = null, parentLocked = false, subcategoryObj = null) {
@@ -260,13 +280,14 @@ function createConfigVideoList(title, videos, categoryId, subcategoryId = null, 
             </div>
             <div class="video-row-info">
                 <div class="video-row-title">${video.name || 'Sans nom'}</div>
-                <div class="video-row-path">${video.path || ''}</div>
+                <div class="video-row-path tech-only">${video.path || ''}</div>
                 ${video.duration ? `<div class="video-row-meta">${formatDuration(video.duration)}</div>` : ''}
             </div>
             <div class="video-row-actions">
-                <button class="btn btn-secondary btn-sm preview-video-btn" data-video-url="${videoUrl}" title="Prévisualiser">👁️</button>
-                <button class="btn btn-secondary btn-sm edit-video-btn${lockedBtnClass}" data-path="${video.path}" ${videoLocked ? 'disabled title="Contenu NEOPRO - Non modifiable"' : ''}>✏️</button>
-                <button class="btn btn-danger btn-sm delete-video-btn${lockedBtnClass}" data-path="${video.path}" data-category="${categoryId}" data-subcategory="${subcategoryId || ''}" ${videoLocked ? 'disabled title="Contenu NEOPRO - Non supprimable"' : ''}>🗑️</button>
+                <button class="btn btn-secondary btn-sm preview-video-btn" data-video-url="${videoUrl}" title="Prévisualiser">👁️ Voir</button>
+                <button class="btn btn-secondary btn-sm edit-video-btn${lockedBtnClass}" data-path="${video.path}" ${videoLocked ? 'disabled title="Contenu NEOPRO - Non modifiable"' : 'title="Modifier"'}>✏️ Modifier</button>
+                <button class="btn btn-warning btn-sm remove-video-btn${lockedBtnClass}" data-path="${video.path}" ${videoLocked ? 'disabled title="Contenu NEOPRO - Non modifiable"' : ''} title="Retirer de la configuration">✕ Retirer</button>
+                <button class="btn btn-danger btn-sm delete-video-btn${lockedBtnClass}" data-path="${video.path}" data-category="${categoryId}" data-subcategory="${subcategoryId || ''}" ${videoLocked ? 'disabled title="Contenu NEOPRO - Non supprimable"' : ''} title="Supprimer le fichier">🗑️ Suppr.</button>
             </div>
         `;
 
@@ -281,6 +302,7 @@ function createConfigVideoList(title, videos, categoryId, subcategoryId = null, 
         const thumbnail = row.querySelector('.video-thumbnail');
         const previewBtn = row.querySelector('.preview-video-btn');
         const editBtn = row.querySelector('.edit-video-btn');
+        const removeBtn = row.querySelector('.remove-video-btn');
         const deleteBtn = row.querySelector('.delete-video-btn');
 
         // La sélection et prévisualisation sont toujours permises
@@ -290,9 +312,10 @@ function createConfigVideoList(title, videos, categoryId, subcategoryId = null, 
         thumbnail.addEventListener('click', () => openVideoPreview(videoUrl, video.name));
         previewBtn.addEventListener('click', () => openVideoPreview(videoUrl, video.name));
 
-        // Édition et suppression uniquement si non verrouillé
+        // Édition, retrait et suppression uniquement si non verrouillé
         if (!videoLocked) {
             editBtn.addEventListener('click', () => openEditModal(video.path));
+            removeBtn.addEventListener('click', () => removeConfigVideo(video.path));
             deleteBtn.addEventListener('click', () => deleteConfigVideo(video.path, categoryId, subcategoryId));
         }
 
@@ -447,7 +470,7 @@ function createVideoRow(video) {
     meta.textContent = metaParts.join(' • ');
 
     const pathInfo = document.createElement('div');
-    pathInfo.className = 'video-row-path';
+    pathInfo.className = 'video-row-path tech-only';
     pathInfo.textContent = video.fullPath;
 
     info.appendChild(title);
@@ -571,6 +594,39 @@ async function deleteVideo(category, filename) {
         }
     } catch (_error) {
         showNotification('Erreur lors de la suppression', 'error');
+    }
+}
+
+/**
+ * Retirer une vidéo de la configuration (fichier reste sur disque)
+ */
+async function removeConfigVideo(videoPath) {
+    const video = cachedVideos.find(v => v.path === videoPath);
+    const videoName = video?.displayName || videoPath.split('/').pop();
+
+    if (!confirm(`Retirer "${videoName}" de la configuration ?\n\nLe fichier restera sur le disque.`)) {
+        return;
+    }
+
+    try {
+        const response = await fetch('/api/videos/remove-from-config', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ videoPath })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            showNotification('Vidéo retirée de la configuration', 'success');
+            await loadConfiguration();
+            loadVideos();
+        } else {
+            showNotification('Erreur: ' + data.error, 'error');
+        }
+    } catch (error) {
+        console.error('Error removing video from config:', error);
+        showNotification('Erreur lors du retrait', 'error');
     }
 }
 

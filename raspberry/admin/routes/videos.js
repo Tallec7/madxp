@@ -11,6 +11,7 @@
  * - GET    /api/videos/orphans          -> Vidéos orphelines
  * - POST   /api/videos/add-to-config    -> Ajouter une orpheline à la config
  * - POST   /api/videos/add-to-config-bulk -> Ajouter plusieurs orphelines
+ * - POST   /api/videos/remove-from-config -> Retirer vidéo de la config (fichier reste)
  * - DELETE /api/videos/delete-from-config -> Supprimer vidéo du disque et de la config
  * - PUT    /api/videos/reorder          -> Réordonner une vidéo
  * - PUT    /api/videos/move             -> Déplacer vers une autre catégorie
@@ -256,6 +257,16 @@ module.exports = function createVideosRouter({ videoService, videoProcessingServ
         message: `${results.added.length} vidéo(s) ajoutée(s)`,
         results,
       });
+    } catch (error) {
+      handleError(res, error);
+    }
+  });
+
+  // Remove from config only (file stays on disk)
+  router.post('/api/videos/remove-from-config', async (req, res) => {
+    try {
+      const result = await videoService.removeFromConfig(req.body.videoPath);
+      res.json({ success: true, message: 'Vidéo retirée de la configuration', path: result.path });
     } catch (error) {
       handleError(res, error);
     }

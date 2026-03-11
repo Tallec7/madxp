@@ -2,9 +2,45 @@
 // Dashboard systeme + grille services
 // ============================================================================
 
+/**
+ * Affiche un squelette de chargement dans la grille dashboard
+ */
+function showDashboardSkeleton() {
+    const mode = getCurrentMode();
+    if (mode === MODE_CLUB) {
+        const healthCard = document.getElementById('health-status-card');
+        if (healthCard) {
+            healthCard.style.display = 'block';
+            const indicator = healthCard.querySelector('.health-indicator');
+            if (indicator) {
+                indicator.innerHTML = `
+                    <div class="skeleton" style="width:36px;height:36px;border-radius:50%;flex-shrink:0"></div>
+                    <div style="flex:1">
+                        <div class="skeleton skeleton-title"></div>
+                        <div class="skeleton skeleton-text"></div>
+                        <div class="skeleton skeleton-text short"></div>
+                    </div>
+                `;
+                indicator.className = 'health-indicator';
+            }
+        }
+    } else {
+        const cardsGrid = document.querySelector('#tab-dashboard .cards-grid');
+        if (cardsGrid) {
+            cardsGrid.style.display = '';
+            cardsGrid.querySelectorAll('.metric-value, .progress-bar span').forEach(el => {
+                el.style.opacity = '0.3';
+            });
+        }
+    }
+}
+
 async function loadDashboard() {
     // Charger le sync status (indépendant des métriques système)
     loadSyncStatus();
+
+    // Afficher le skeleton pendant le chargement
+    showDashboardSkeleton();
 
     try {
         const response = await fetch('/api/system');

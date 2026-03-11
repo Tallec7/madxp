@@ -199,7 +199,7 @@ function switchTab(tab) {
             loadCategoriesForManager();
             break;
         case 'sponsors':
-            loadSponsors();
+            loadAvailablePhases().then(() => loadSponsors());
             break;
         case 'network':
             loadNetwork();
@@ -230,6 +230,7 @@ window.refreshNetwork = refreshNetwork;
 window.refreshLogs = refreshLogs;
 window.refreshCategories = refreshCategories;
 window.refreshTimeCategories = refreshTimeCategories;
+window.removeLoopVideo = removeLoopVideo;
 window.addCategory = addCategory;
 window.addTimeCategory = addTimeCategory;
 window.clearSelectedFiles = clearSelectedFiles;

@@ -240,6 +240,16 @@
 
 .modal.active {
   display: flex;
+  animation: modalFadeIn 0.25s ease;
+}
+
+@keyframes modalFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 .modal-content {
@@ -249,6 +259,18 @@
   padding: 24px;
   max-width: 500px;
   width: 90%;
+  animation: modalSlideUp 0.25s ease;
+}
+
+@keyframes modalSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 .modal-content-wide {
@@ -886,4 +908,127 @@
 
 .realtime-indicator.realtime-disconnected {
   color: var(--text-tertiary, #6b7280);
+}
+
+/* ===== Skeleton Loading ===== */
+@keyframes shimmer {
+  0% {
+    background-position: -400px 0;
+  }
+  100% {
+    background-position: 400px 0;
+  }
+}
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--bg-tertiary) 25%,
+    rgba(255, 255, 255, 0.06) 50%,
+    var(--bg-tertiary) 75%
+  );
+  background-size: 800px 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+  border-radius: 6px;
+}
+
+.skeleton-text {
+  height: 14px;
+  margin-bottom: 10px;
+  width: 80%;
+}
+
+.skeleton-text.short {
+  width: 40%;
+}
+
+.skeleton-text.medium {
+  width: 60%;
+}
+
+.skeleton-title {
+  height: 22px;
+  width: 50%;
+  margin-bottom: 14px;
+}
+
+.skeleton-card {
+  height: 100px;
+  border-radius: 10px;
+}
+
+.skeleton-metric {
+  height: 72px;
+  border-radius: 10px;
+}
+
+.skeleton-row {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.skeleton-row > * {
+  flex: 1;
+}
+
+/* ===== Form Validation ===== */
+.form-group.has-error input,
+.form-group.has-error select,
+.form-group.has-error textarea {
+  border-color: var(--danger);
+  box-shadow: 0 0 0 2px rgba(254, 89, 73, 0.15);
+}
+
+.form-group.has-error label {
+  color: var(--danger);
+}
+
+.form-error-message {
+  display: block;
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--danger);
+  animation: fadeIn 0.2s ease;
+}
+
+.form-group.has-success input,
+.form-group.has-success select {
+  border-color: var(--success);
+}
+
+/* ===== Empty States ===== */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 24px;
+  text-align: center;
+  animation: fadeIn 0.3s ease;
+}
+
+.empty-state-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+  opacity: 0.8;
+}
+
+.empty-state-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+}
+
+.empty-state-text {
+  font-size: 14px;
+  color: var(--text-secondary);
+  max-width: 320px;
+  line-height: 1.5;
+  margin-bottom: 20px;
+}
+
+.empty-state .btn {
+  margin-top: 4px;
 }

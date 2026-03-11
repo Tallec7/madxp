@@ -519,6 +519,7 @@ async function sendPendingConfigCommand(
 /**
  * Resolve local sponsors from Pi into site_sponsors table.
  * For each sponsor without a centralId: find or create in DB.
+ * Then sync their videoFilenames into site_sponsor_videos.
  * Returns a mapping of { localId: centralUUID }.
  */
 async function resolveLocalSponsors(
@@ -570,5 +571,77 @@ async function resolveLocalSponsors(
     }
   }
 
+  // Sync video associations for all resolved sponsors
+  for (const sponsor of sponsors) {
+    const centralId = sponsor.centralId || mapping[sponsor.localId];
+    if (!centralId) continue;
+
+    const filenames = sponsor.videoFilenames || [];
+    if (filenames.length === 0) continue;
+
+    try {
+      await syncVideoAssociations(centralId, filenames, siteId);
+    } catch (error) {
+      logger.error('Failed to sync video associations (non-fatal):', {
+        localId: sponsor.localId,
+        centralId,
+        error: (error as Error).message,
+      });
+    }
+  }
+
   return mapping;
+}
+
+/**
+ * Sync video associations for a site_sponsor.
+ * Adds new filenames, removes obsolete ones.
+ * Tries to resolve video_id from content_deployments for each filename.
+ */
+async function syncVideoAssociations(
+  siteSponsorId: string,
+  videoFilenames: string[],
+  siteId: string
+): Promise<void> {
+  // Get current associations
+  const currentVideos = await siteSponsorRepository.getVideos(siteSponsorId);
+  const currentFilenames = new Set(currentVideos.map(v => v.video_filename));
+  const desiredFilenames = new Set(videoFilenames);
+
+  // Resolve deployed paths once for all filenames
+  const deployedPaths = await deploymentRepository.getDeployedPathsForSite(siteId);
+  const filenameToVideoId = new Map<string, string>();
+  for (const dp of deployedPaths) {
+    if (dp.deployed_filename) {
+      filenameToVideoId.set(dp.deployed_filename, dp.video_id);
+    }
+  }
+
+  // Add new associations
+  let added = 0;
+  for (const filename of desiredFilenames) {
+    if (!currentFilenames.has(filename)) {
+      const videoId = filenameToVideoId.get(filename) || null;
+      await siteSponsorRepository.addVideo(siteSponsorId, videoId, filename);
+      added++;
+    }
+  }
+
+  // Remove obsolete associations
+  let removed = 0;
+  for (const filename of currentFilenames) {
+    if (!desiredFilenames.has(filename)) {
+      await siteSponsorRepository.removeVideo(siteSponsorId, filename);
+      removed++;
+    }
+  }
+
+  if (added > 0 || removed > 0) {
+    logger.info('🤝 Synced sponsor video associations:', {
+      siteSponsorId,
+      added,
+      removed,
+      total: desiredFilenames.size,
+    });
+  }
 }

@@ -571,6 +571,39 @@ class VideoService {
   }
 
   // ===========================================================================
+  // REMOVE FROM CONFIG (config only — file stays on disk)
+  // ===========================================================================
+
+  /**
+   * Remove a video from configuration.json without deleting the file from disk.
+   *
+   * Removes the video entry from its category/subcategory and also cleans up
+   * any references in `config.sponsors[]` and `timeCategories[].loopVideos[]`.
+   *
+   * @param {string} videoPath - Relative path (e.g. `'videos/BASKET/match.mp4'` or `'BASKET/match.mp4'`)
+   * @returns {Promise<{path: string}>}
+   * @throws {ValidationError} If videoPath is missing
+   */
+  async removeFromConfig(videoPath) {
+    if (!videoPath) {
+      throw new ValidationError('videoPath requis');
+    }
+
+    const normalizedPath = videoPath.replace(/\\/g, '/');
+    const configVideoPath = normalizedPath.startsWith('videos/')
+      ? normalizedPath
+      : `videos/${normalizedPath}`;
+
+    // Remove from categories
+    await this._removeVideoFromConfig(configVideoPath);
+
+    // Remove from sponsor loops (config.sponsors[] + timeCategories[].loopVideos[])
+    await this._removeVideoFromLoops(configVideoPath);
+
+    return { path: videoPath };
+  }
+
+  // ===========================================================================
   // DELETE FROM CONFIG (+ disk)
   // ===========================================================================
 
@@ -602,11 +635,12 @@ class VideoService {
       console.warn('[admin] File not found or already deleted:', fullPath);
     }
 
-    // Remove from config
+    // Remove from config + loops
     const configVideoPath = videoPath.startsWith('videos/')
       ? videoPath
       : `videos/${normalizedPath}`;
     await this._removeVideoFromConfig(configVideoPath);
+    await this._removeVideoFromLoops(configVideoPath);
 
     return { path: videoPath };
   }
@@ -1104,6 +1138,44 @@ class VideoService {
       } else {
         break;
       }
+    }
+  }
+
+  /**
+   * Remove a video from all loop arrays in configuration.json.
+   *
+   * Cleans up `config.sponsors[]` and each `timeCategories[].loopVideos[]`
+   * entry that references the given path.
+   *
+   * @private
+   * @param {string} videoPath - Full config path (e.g. `'videos/BASKET/match.mp4'`)
+   */
+  async _removeVideoFromLoops(videoPath) {
+    const config = await this._configService.loadConfig();
+    let updated = false;
+
+    // Clean config.sponsors[]
+    if (Array.isArray(config.sponsors)) {
+      const before = config.sponsors.length;
+      config.sponsors = config.sponsors.filter((s) => s.path !== videoPath);
+      if (config.sponsors.length < before) updated = true;
+    }
+
+    // Clean timeCategories[].loopVideos[]
+    if (Array.isArray(config.timeCategories)) {
+      for (const tc of config.timeCategories) {
+        if (Array.isArray(tc.loopVideos)) {
+          const before = tc.loopVideos.length;
+          tc.loopVideos = tc.loopVideos.filter((v) => v.path !== videoPath);
+          if (tc.loopVideos.length < before) updated = true;
+        }
+      }
+    }
+
+    if (updated) {
+      await this._configService.saveConfig(config);
+      this._configService.invalidateVideoCaches();
+      console.log('[admin] Video removed from loops:', videoPath);
     }
   }
 

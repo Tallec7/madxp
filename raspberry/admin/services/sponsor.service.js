@@ -32,11 +32,18 @@ class SponsorService {
    */
   async listSponsors() {
     const config = await this._configService.loadConfig();
+
+    // Auto-reconcile orphaned loopVideos from central push
+    if (this._reconcileOrphanedLoopVideos(config)) {
+      await this._configService.saveConfig(config);
+    }
+
     const localSponsors = (config.localSponsors || []).map(s => ({
       ...s,
       // Sponsors avec centralId et source 'neopro' = créés depuis le dashboard (lecture seule)
       source: (s.centralId && s.source === 'neopro') ? 'neopro' : 'local',
       inLoop: this._isSponsorInLoop(config, s),
+      phases: this._getSponsorPhasesInternal(config, s),
     }));
 
     const neoProSponsors = this._extractNeoProSponsors(config);
@@ -60,6 +67,7 @@ class SponsorService {
       ...sponsor,
       source: 'local',
       inLoop: this._isSponsorInLoop(config, sponsor),
+      phases: this._getSponsorPhasesInternal(config, sponsor),
     };
   }
 
@@ -102,7 +110,7 @@ class SponsorService {
       contactEmail: (contactEmail || '').trim(),
       contactPhone: (contactPhone || '').trim(),
       videoFilenames: [],
-      frequency: 2, // 1=Basse, 2=Normale, 3=Haute, 4=Maximum
+      frequency: 1,
       isActive: true,
       createdAt: new Date().toISOString(),
       syncedAt: null,
@@ -163,18 +171,6 @@ class SponsorService {
     }
     if (updates.isActive !== undefined) {
       sponsor.isActive = Boolean(updates.isActive);
-    }
-    if (updates.frequency !== undefined) {
-      const freq = parseInt(updates.frequency, 10);
-      if (freq >= 1 && freq <= 4) {
-        const oldFreq = sponsor.frequency || 2;
-        sponsor.frequency = freq;
-
-        // Si le sponsor est dans la boucle, recalculer les entrées
-        if (oldFreq !== freq && this._isSponsorInLoop(config, sponsor)) {
-          this._rebuildLoopEntries(config, sponsor);
-        }
-      }
     }
 
     await this._configService.saveConfig(config);
@@ -281,6 +277,14 @@ class SponsorService {
     config.sponsors = (config.sponsors || []).filter(
       s => !(s.path === filename && s.owner === 'club' && s._sponsorLocalId === localId)
     );
+    // Also clean timeCategories[].loopVideos[]
+    for (const tc of config.timeCategories || []) {
+      if (tc.loopVideos) {
+        tc.loopVideos = tc.loopVideos.filter(
+          v => !(v.path === filename && v._sponsorLocalId === localId)
+        );
+      }
+    }
 
     await this._configService.saveConfig(config);
     console.log('[admin] Vidéo déliée du sponsor:', filename, '←', sponsor.name);
@@ -293,7 +297,104 @@ class SponsorService {
   }
 
   // ===========================================================================
-  // LOOP MANAGEMENT
+  // PHASE MANAGEMENT (timeCategories[].loopVideos[])
+  // ===========================================================================
+
+  /**
+   * Ajoute les vidéos d'un sponsor à une phase spécifique.
+   * @param {string} localId
+   * @param {string} phaseId - ex: 'avant-match', 'match', 'apres-match'
+   * @returns {Promise<Object>} le sponsor mis à jour
+   * @throws {NotFoundError|ValidationError}
+   */
+  async addToPhase(localId, phaseId) {
+    if (!phaseId) {
+      throw new ValidationError('phaseId requis');
+    }
+
+    const config = await this._configService.loadConfig();
+    config.localSponsors = config.localSponsors || [];
+
+    const sponsor = config.localSponsors.find(s => s.localId === localId);
+    if (!sponsor) {
+      throw new NotFoundError('Sponsor non trouvé');
+    }
+
+    const tc = (config.timeCategories || []).find(t => t.id === phaseId);
+    if (!tc) {
+      throw new NotFoundError('Phase non trouvée: ' + phaseId);
+    }
+
+    // Clean old entries for this sponsor in this phase, then rebuild
+    tc.loopVideos = (tc.loopVideos || []).filter(v => v._sponsorLocalId !== localId);
+    this._rebuildPhaseEntries(tc, sponsor);
+
+    await this._configService.saveConfig(config);
+    console.log('[admin] Sponsor ajouté à la phase:', sponsor.name, phaseId);
+
+    return {
+      ...sponsor,
+      source: 'local',
+      inLoop: this._isSponsorInLoop(config, sponsor),
+      phases: this._getSponsorPhasesInternal(config, sponsor),
+    };
+  }
+
+  /**
+   * Retire les vidéos d'un sponsor d'une phase spécifique.
+   * @param {string} localId
+   * @param {string} phaseId
+   * @returns {Promise<Object>} le sponsor mis à jour
+   * @throws {NotFoundError|ValidationError}
+   */
+  async removeFromPhase(localId, phaseId) {
+    if (!phaseId) {
+      throw new ValidationError('phaseId requis');
+    }
+
+    const config = await this._configService.loadConfig();
+    config.localSponsors = config.localSponsors || [];
+
+    const sponsor = config.localSponsors.find(s => s.localId === localId);
+    if (!sponsor) {
+      throw new NotFoundError('Sponsor non trouvé');
+    }
+
+    const tc = (config.timeCategories || []).find(t => t.id === phaseId);
+    if (!tc) {
+      throw new NotFoundError('Phase non trouvée: ' + phaseId);
+    }
+
+    tc.loopVideos = (tc.loopVideos || []).filter(v => v._sponsorLocalId !== localId);
+
+    await this._configService.saveConfig(config);
+    console.log('[admin] Sponsor retiré de la phase:', sponsor.name, phaseId);
+
+    return {
+      ...sponsor,
+      source: 'local',
+      inLoop: this._isSponsorInLoop(config, sponsor),
+      phases: this._getSponsorPhasesInternal(config, sponsor),
+    };
+  }
+
+  /**
+   * Retourne les IDs de phases où un sponsor est présent.
+   * @param {string} localId
+   * @returns {Promise<string[]>} ex: ['avant-match', 'apres-match']
+   * @throws {NotFoundError}
+   */
+  async getSponsorPhases(localId) {
+    const config = await this._configService.loadConfig();
+    const sponsor = (config.localSponsors || []).find(s => s.localId === localId);
+    if (!sponsor) {
+      throw new NotFoundError('Sponsor non trouvé');
+    }
+    return this._getSponsorPhasesInternal(config, sponsor);
+  }
+
+  // ===========================================================================
+  // LOOP MANAGEMENT (legacy config.sponsors[])
   // ===========================================================================
 
   /**
@@ -317,7 +418,7 @@ class SponsorService {
     this._rebuildLoopEntries(config, sponsor);
 
     await this._configService.saveConfig(config);
-    console.log('[admin] Sponsor ajouté à la boucle:', sponsor.name, `(freq=${sponsor.frequency || 2})`);
+    console.log('[admin] Sponsor ajouté à la boucle:', sponsor.name);
 
     return {
       ...sponsor,
@@ -364,16 +465,21 @@ class SponsorService {
    * @returns {boolean}
    */
   _isSponsorInLoop(config, sponsor) {
-    const sponsors = config.sponsors || [];
-    return sponsors.some(s => s._sponsorLocalId === sponsor.localId);
+    // Check legacy config.sponsors[]
+    if ((config.sponsors || []).some(s => s._sponsorLocalId === sponsor.localId)) {
+      return true;
+    }
+    // Check timeCategories[].loopVideos[]
+    for (const tc of config.timeCategories || []) {
+      if ((tc.loopVideos || []).some(v => v._sponsorLocalId === sponsor.localId)) {
+        return true;
+      }
+    }
+    return false;
   }
 
   /**
-   * Reconstruit les entrées de boucle pour un sponsor selon sa fréquence.
-   * frequency=1 → 1 entrée par vidéo (basse)
-   * frequency=2 → 2 entrées par vidéo (normale)
-   * frequency=3 → 3 entrées par vidéo (haute)
-   * frequency=4 → 4 entrées par vidéo (maximum)
+   * Reconstruit les entrées de boucle pour un sponsor (1 entrée par vidéo).
    *
    * Les entrées sont réparties de manière espacée dans la boucle existante
    * pour éviter que toutes les vidéos d'un même sponsor soient consécutives.
@@ -382,7 +488,6 @@ class SponsorService {
    * @param {Object} sponsor
    */
   _rebuildLoopEntries(config, sponsor) {
-    const freq = sponsor.frequency || 2;
     const filenames = sponsor.videoFilenames || [];
 
     if (filenames.length === 0) return;
@@ -392,32 +497,24 @@ class SponsorService {
       s => s._sponsorLocalId !== sponsor.localId
     );
 
-    // Créer les nouvelles entrées pour ce sponsor
-    const newEntries = [];
-    for (let rep = 0; rep < freq; rep++) {
-      for (const filename of filenames) {
-        newEntries.push({
-          name: sponsor.name,
-          path: filename,
-          type: 'video/mp4',
-          owner: 'club',
-          locked: false,
-          analytics_category: 'sponsor',
-          site_sponsor_id: sponsor.centralId || null,
-          _sponsorLocalId: sponsor.localId,
-          _frequency: freq,
-        });
-      }
-    }
+    // Créer une entrée par vidéo
+    const newEntries = filenames.map(filename => ({
+      name: sponsor.name,
+      path: filename,
+      type: 'video/mp4',
+      owner: 'club',
+      locked: false,
+      analytics_category: 'sponsor',
+      site_sponsor_id: sponsor.centralId || null,
+      _sponsorLocalId: sponsor.localId,
+    }));
 
     // Intercaler les entrées du sponsor parmi les autres
     // pour éviter des blocs consécutifs du même sponsor
     const result = [...otherEntries];
     if (result.length === 0) {
-      // Aucun autre sponsor — ajouter simplement
       result.push(...newEntries);
     } else {
-      // Répartir uniformément
       const step = Math.max(1, Math.floor(result.length / newEntries.length));
       let insertPos = Math.min(step, result.length);
       for (const entry of newEntries) {
@@ -438,9 +535,197 @@ class SponsorService {
    * @param {Object} sponsor
    */
   _removeFromLoopInternal(config, sponsor) {
+    // Clean legacy config.sponsors[]
     config.sponsors = (config.sponsors || []).filter(
       s => s._sponsorLocalId !== sponsor.localId
     );
+    // Clean timeCategories[].loopVideos[]
+    for (const tc of config.timeCategories || []) {
+      if (tc.loopVideos) {
+        tc.loopVideos = tc.loopVideos.filter(v => v._sponsorLocalId !== sponsor.localId);
+      }
+    }
+  }
+
+  /**
+   * Retourne les IDs de phases où un sponsor a des entrées loopVideos[].
+   * @param {Object} config
+   * @param {Object} sponsor
+   * @returns {string[]}
+   */
+  _getSponsorPhasesInternal(config, sponsor) {
+    const phases = [];
+    for (const tc of config.timeCategories || []) {
+      if ((tc.loopVideos || []).some(v => v._sponsorLocalId === sponsor.localId)) {
+        phases.push(tc.id);
+      }
+    }
+    return phases;
+  }
+
+  /**
+   * Reconstruit les entrées loopVideos[] d'un sponsor dans une phase spécifique.
+   * Même logique d'intercalage que _rebuildLoopEntries() mais
+   * opère sur timeCategory.loopVideos[] au lieu de config.sponsors[].
+   *
+   * @param {Object} timeCategory - la timeCategory ciblée (mutée en place)
+   * @param {Object} sponsor
+   */
+  _rebuildPhaseEntries(timeCategory, sponsor) {
+    const filenames = sponsor.videoFilenames || [];
+
+    if (filenames.length === 0) return;
+
+    // Entrées qui ne sont PAS ce sponsor (pour intercaler)
+    const otherEntries = (timeCategory.loopVideos || []).filter(
+      v => v._sponsorLocalId !== sponsor.localId
+    );
+
+    // Une entrée par vidéo
+    const newEntries = filenames.map(filename => ({
+      name: sponsor.name,
+      path: filename,
+      type: 'video/mp4',
+      owner: 'club',
+      locked: false,
+      analytics_category: 'sponsor',
+      site_sponsor_id: sponsor.centralId || null,
+      _sponsorLocalId: sponsor.localId,
+    }));
+
+    // Intercaler les entrées du sponsor parmi les autres
+    const result = [...otherEntries];
+    if (result.length === 0) {
+      result.push(...newEntries);
+    } else {
+      const step = Math.max(1, Math.floor(result.length / newEntries.length));
+      let insertPos = Math.min(step, result.length);
+      for (const entry of newEntries) {
+        result.splice(insertPos, 0, entry);
+        insertPos += step + 1;
+        if (insertPos > result.length) {
+          insertPos = result.length;
+        }
+      }
+    }
+
+    timeCategory.loopVideos = result;
+  }
+
+  /**
+   * Reconcile orphaned loopVideos entries that have no _sponsorLocalId.
+   *
+   * When the central pushes config, it writes sponsor videos directly into
+   * timeCategories[].loopVideos[] but does NOT create localSponsors[] entries.
+   * This method detects those orphaned entries, auto-creates localSponsors[],
+   * and links them back via _sponsorLocalId so the Sponsors tab shows them.
+   *
+   * Also reconciles orphaned entries in legacy config.sponsors[].
+   *
+   * @param {Object} config - mutated in place
+   * @returns {boolean} true if config was modified
+   */
+  _reconcileOrphanedLoopVideos(config) {
+    config.localSponsors = config.localSponsors || [];
+
+    // Collect all orphaned entries (no _sponsorLocalId) grouped by name
+    const orphansByName = new Map();
+
+    for (const tc of config.timeCategories || []) {
+      for (const v of tc.loopVideos || []) {
+        if (v._sponsorLocalId) continue; // already linked
+        const name = (v.name || v.sponsorName || '').trim();
+        if (!name) continue;
+        if (!orphansByName.has(name)) {
+          orphansByName.set(name, { paths: new Set(), siteSponsorId: null });
+        }
+        const group = orphansByName.get(name);
+        if (v.path) group.paths.add(v.path);
+        if (v.site_sponsor_id) group.siteSponsorId = v.site_sponsor_id;
+      }
+    }
+
+    // Also check legacy config.sponsors[]
+    for (const s of config.sponsors || []) {
+      if (s._sponsorLocalId) continue;
+      if (s.locked || s.owner === 'neopro') continue; // skip Neopro entries
+      const name = (s.name || s.display_name || '').trim();
+      if (!name) continue;
+      if (!orphansByName.has(name)) {
+        orphansByName.set(name, { paths: new Set(), siteSponsorId: null });
+      }
+      const group = orphansByName.get(name);
+      if (s.path) group.paths.add(s.path);
+      if (s.site_sponsor_id) group.siteSponsorId = s.site_sponsor_id;
+    }
+
+    if (orphansByName.size === 0) return false;
+
+    let modified = false;
+
+    for (const [name, { paths, siteSponsorId }] of orphansByName) {
+      // Check if a localSponsor already exists with this name (case-insensitive)
+      let existing = config.localSponsors.find(
+        s => s.name.toLowerCase().trim() === name.toLowerCase()
+      );
+
+      if (!existing) {
+        // Auto-create a new localSponsor
+        const localId = `ls_reconciled_${Date.now()}_${crypto.randomBytes(3).toString('hex')}`;
+        existing = {
+          localId,
+          centralId: siteSponsorId || null,
+          name,
+          contactEmail: '',
+          contactPhone: '',
+          videoFilenames: [...paths],
+          frequency: 1,
+          isActive: true,
+          source: siteSponsorId ? 'neopro' : 'local',
+          createdAt: new Date().toISOString(),
+          syncedAt: null,
+          _reconciledAt: new Date().toISOString(),
+        };
+        config.localSponsors.push(existing);
+        console.log('[admin] Sponsor auto-réconcilié:', name, `(${localId}, ${paths.size} vidéos)`);
+      } else {
+        // Merge any new paths into existing sponsor
+        existing.videoFilenames = existing.videoFilenames || [];
+        for (const p of paths) {
+          if (!existing.videoFilenames.includes(p)) {
+            existing.videoFilenames.push(p);
+          }
+        }
+        if (siteSponsorId && !existing.centralId) {
+          existing.centralId = siteSponsorId;
+        }
+      }
+
+      // Link all orphaned loopVideos entries to this localSponsor
+      for (const tc of config.timeCategories || []) {
+        for (const v of tc.loopVideos || []) {
+          if (v._sponsorLocalId) continue;
+          const vName = (v.name || v.sponsorName || '').trim();
+          if (vName.toLowerCase() === name.toLowerCase()) {
+            v._sponsorLocalId = existing.localId;
+          }
+        }
+      }
+
+      // Link orphaned legacy sponsors[] entries too
+      for (const s of config.sponsors || []) {
+        if (s._sponsorLocalId) continue;
+        if (s.locked || s.owner === 'neopro') continue;
+        const sName = (s.name || s.display_name || '').trim();
+        if (sName.toLowerCase() === name.toLowerCase()) {
+          s._sponsorLocalId = existing.localId;
+        }
+      }
+
+      modified = true;
+    }
+
+    return modified;
   }
 
   /**

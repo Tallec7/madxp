@@ -15,6 +15,7 @@
  * - DELETE /api/configuration/categories/:categoryId/subcategories/:subCategoryId -> Delete subcategory
  * - GET    /api/configuration/time-categories                       -> Get timeCategories
  * - PUT    /api/configuration/time-categories                       -> Update timeCategories
+ * - GET    /api/configuration/phase-recap                           -> Récap vidéos sponsor par phase
  */
 
 const express = require('express');
@@ -133,6 +134,27 @@ module.exports = function createConfigRouter({ configService }) {
     try {
       await configService.deleteSubcategory(req.params.categoryId, req.params.subCategoryId);
       res.json({ success: true, message: 'Sous-catégorie supprimée' });
+    } catch (error) {
+      handleError(res, error);
+    }
+  });
+
+  // GET /api/configuration/phase-recap
+  router.get('/api/configuration/phase-recap', async (req, res) => {
+    try {
+      const recap = await configService.buildPhaseRecap();
+      res.json({ phases: recap });
+    } catch (error) {
+      handleError(res, error);
+    }
+  });
+
+  // DELETE /api/configuration/phase-recap/:phaseId/loop-videos/:videoIndex
+  router.delete('/api/configuration/phase-recap/:phaseId/loop-videos/:videoIndex', async (req, res) => {
+    try {
+      const videoIndex = parseInt(req.params.videoIndex, 10);
+      await configService.removeLoopVideo(req.params.phaseId, videoIndex);
+      res.json({ success: true, message: 'Vidéo retirée de la phase' });
     } catch (error) {
       handleError(res, error);
     }

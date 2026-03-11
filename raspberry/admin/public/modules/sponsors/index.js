@@ -2,6 +2,18 @@
 // MODULE: Sponsors — Gestion des sponsors locaux
 // ============================================================================
 
+/**
+ * Clear inline form validation error on input
+ */
+document.addEventListener('input', function(e) {
+    const group = e.target.closest('.form-group.has-error');
+    if (group) {
+        group.classList.remove('has-error');
+        const errMsg = group.querySelector('.form-error-message');
+        if (errMsg) errMsg.remove();
+    }
+});
+
 // ============================================================================
 // SPONSOR STATS — Statistiques locales des passages sponsors
 // ============================================================================
@@ -171,10 +183,11 @@ async function loadSponsors() {
 function renderSponsorsList(container, sponsors) {
     if (!sponsors || sponsors.length === 0) {
         container.innerHTML = `
-            <div class="empty-state" style="text-align: center; padding: 40px; color: var(--neo-text-secondary);">
-                <div style="font-size: 48px; margin-bottom: 16px;">🤝</div>
-                <h3>Aucun sponsor</h3>
-                <p>Ajoutez votre premier sponsor local pour commencer.</p>
+            <div class="empty-state">
+                <div class="empty-state-icon">🤝</div>
+                <div class="empty-state-title">Aucun sponsor</div>
+                <div class="empty-state-text">Ajoutez votre premier sponsor local pour diffuser des publicités sur la TV du club.</div>
+                <button class="btn btn-primary" onclick="openCreateWizard()">+ Ajouter un sponsor</button>
             </div>
         `;
         return;
@@ -218,25 +231,20 @@ function renderSponsorCard(sponsor) {
         ? '<span class="badge badge-success" title="Synchronisé avec le central">✓ Sync</span>'
         : '<span class="badge badge-warning" title="En attente de synchronisation">⏳ Sync</span>';
 
-    const loopBadge = sponsor.inLoop
-        ? '<span class="badge badge-success">▶ Boucle</span>'
+    const phases = sponsor.phases || [];
+    const loopBadge = phases.length > 0
+        ? '<span class="badge badge-success">▶ ' + phases.length + ' phase' + (phases.length > 1 ? 's' : '') + '</span>'
         : '<span class="badge badge-muted">⏸ Hors boucle</span>';
 
     const activeBadge = sponsor.isActive
         ? ''
         : '<span class="badge badge-danger">Inactif</span>';
 
-    const freq = sponsor.frequency || 2;
-    const freqLabels = { 1: 'Basse', 2: 'Normale', 3: 'Haute', 4: 'Maximum' };
-    const freqClasses = { 1: 'freq-low', 2: 'freq-normal', 3: 'freq-high', 4: 'freq-max' };
-    const freqBadge = `<span class="frequency-badge ${freqClasses[freq] || 'freq-normal'}" title="Fréquence: ${freqLabels[freq] || 'Normale'}">${freq}x ${freqLabels[freq] || 'Normale'}</span>`;
-
     return `
         <div class="card sponsor-card" data-local-id="${sponsor.localId}">
             <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
                 <h3 style="margin: 0; font-size: 16px;">${escapeHtml(sponsor.name)}</h3>
                 <div style="display: flex; gap: 4px;">
-                    ${freqBadge}
                     ${syncBadge}
                     ${loopBadge}
                     ${activeBadge}
@@ -247,13 +255,12 @@ function renderSponsorCard(sponsor) {
                     <span>🎬 ${videoCount} vidéo${videoCount !== 1 ? 's' : ''}</span>
                     ${sponsor.contactEmail ? '<span>✉ ' + escapeHtml(sponsor.contactEmail) + '</span>' : ''}
                 </div>
+                <div class="sponsor-phases" style="display: flex; gap: 10px; margin-bottom: 8px; flex-wrap: wrap;">
+                    ${renderPhaseCheckboxes(sponsor.localId, phases)}
+                </div>
                 <div style="display: flex; gap: 8px; flex-wrap: wrap;">
                     <button class="btn btn-small" onclick="openSponsorModal('${sponsor.localId}')">
                         ✏️ Modifier
-                    </button>
-                    <button class="btn btn-small ${sponsor.inLoop ? 'btn-warning' : 'btn-success'}"
-                            onclick="toggleSponsorLoop('${sponsor.localId}', ${sponsor.inLoop})">
-                        ${sponsor.inLoop ? '⏸ Retirer boucle' : '▶ Ajouter boucle'}
                     </button>
                     <button class="btn btn-small btn-danger" onclick="confirmDeleteSponsor('${sponsor.localId}', '${escapeHtml(sponsor.name)}')">
                         🗑️ Supprimer
@@ -293,6 +300,27 @@ let currentWizardStep = 1;
 let wizardUploadedFile = null; // File object selected for upload in wizard
 let wizardUploadedFilename = null; // Filename returned after upload
 let wizardIsEditMode = false;
+
+// Available phases from configuration.json timeCategories (loaded dynamically)
+let cachedAvailablePhases = [];
+
+/**
+ * Charge les phases disponibles depuis la configuration.
+ * Appelé au chargement du module sponsors.
+ */
+async function loadAvailablePhases() {
+    try {
+        const response = await fetch('/api/configuration/time-categories');
+        if (!response.ok) return;
+        const data = await response.json();
+        cachedAvailablePhases = (data.timeCategories || []).map(tc => ({
+            id: tc.id,
+            label: tc.name || tc.id,
+        }));
+    } catch (error) {
+        console.error('[sponsors] Erreur chargement phases:', error);
+    }
+}
 
 /**
  * Ouvre le modal de création/édition de sponsor.
@@ -335,9 +363,20 @@ async function openSponsorModal(localId) {
             document.getElementById('sponsor-edit-name').value = sponsor.name || '';
             document.getElementById('sponsor-edit-email').value = sponsor.contactEmail || '';
             document.getElementById('sponsor-edit-phone').value = sponsor.contactPhone || '';
-            document.getElementById('sponsor-edit-loop').checked = sponsor.inLoop;
-            const editFreqEl = document.getElementById('sponsor-edit-frequency');
-            if (editFreqEl) editFreqEl.value = String(sponsor.frequency || 2);
+            // Populate phase checkboxes in edit mode
+            const editPhasesContainer = document.getElementById('sponsor-edit-phases');
+            if (editPhasesContainer) {
+                const sponsorPhases = sponsor.phases || [];
+                const allPhases = cachedAvailablePhases.length > 0
+                    ? cachedAvailablePhases
+                    : [{ id: 'before', label: 'Avant-match' }, { id: 'during', label: 'Match' }, { id: 'after', label: 'Après-match' }];
+                editPhasesContainer.innerHTML = allPhases.map(p => {
+                    const checked = sponsorPhases.includes(p.id) ? 'checked' : '';
+                    return `<label style="display: flex; align-items: center; gap: 4px; cursor: pointer;">
+                        <input type="checkbox" name="edit-phase" value="${p.id}" ${checked} /> ${p.label}
+                    </label>`;
+                }).join('');
+            }
 
             await populateSponsorVideoSelect(editVideosSelect, sponsor.videoFilenames || []);
         } catch (error) {
@@ -363,10 +402,21 @@ async function openSponsorModal(localId) {
         document.getElementById('sponsor-name').value = '';
         document.getElementById('sponsor-email').value = '';
         document.getElementById('sponsor-phone').value = '';
-        const loopCheckbox = document.getElementById('sponsor-add-to-loop');
-        if (loopCheckbox) loopCheckbox.checked = true;
-        const frequencySelect = document.getElementById('sponsor-frequency');
-        if (frequencySelect) frequencySelect.value = '2';
+        // Populate create-phase checkboxes dynamically
+        const createPhasesContainer = document.getElementById('sponsor-create-phases');
+        if (createPhasesContainer) {
+            const allPhases = cachedAvailablePhases.length > 0
+                ? cachedAvailablePhases
+                : [{ id: 'before', label: 'Avant-match' }, { id: 'during', label: 'Match' }, { id: 'after', label: 'Après-match' }];
+            // Check all phases by default except the middle one (match/during)
+            createPhasesContainer.innerHTML = allPhases.map((p, idx) => {
+                const isMiddle = allPhases.length === 3 && idx === 1;
+                const checked = isMiddle ? '' : 'checked';
+                return `<label style="display: flex; align-items: center; gap: 4px; cursor: pointer;">
+                    <input type="checkbox" name="create-phase" value="${p.id}" ${checked} /> ${p.label}
+                </label>`;
+            }).join('');
+        }
 
         // Reset wizard video state
         clearWizardUpload();
@@ -391,11 +441,24 @@ function goToWizardStep(step) {
     // Validate current step before advancing
     if (step > currentWizardStep) {
         if (currentWizardStep === 1) {
-            const name = document.getElementById('sponsor-name').value.trim();
+            const nameInput = document.getElementById('sponsor-name');
+            const name = nameInput.value.trim();
+            const nameGroup = nameInput.closest('.form-group');
             if (!name) {
-                showNotification('Le nom du sponsor est requis', 'error');
-                document.getElementById('sponsor-name').focus();
+                if (nameGroup) nameGroup.classList.add('has-error');
+                let errMsg = nameGroup && nameGroup.querySelector('.form-error-message');
+                if (!errMsg && nameGroup) {
+                    errMsg = document.createElement('span');
+                    errMsg.className = 'form-error-message';
+                    errMsg.textContent = 'Le nom du sponsor est requis';
+                    nameGroup.appendChild(errMsg);
+                }
+                nameInput.focus();
                 return;
+            } else if (nameGroup) {
+                nameGroup.classList.remove('has-error');
+                const errMsg = nameGroup.querySelector('.form-error-message');
+                if (errMsg) errMsg.remove();
             }
         }
         if (currentWizardStep === 2 && step === 3) {
@@ -609,16 +672,6 @@ function updateWizardSummary() {
         }
     }
     document.getElementById('wizard-sum-video').textContent = videoLabel;
-
-    // Frequency
-    const freqEl = document.getElementById('sponsor-frequency');
-    const freqLabels = { '1': 'Basse (1x)', '2': 'Normale (2x)', '3': 'Haute (3x)', '4': 'Maximum (4x)' };
-    document.getElementById('wizard-sum-freq').textContent = freqLabels[freqEl.value] || 'Normale (2x)';
-
-    // Live-update when frequency changes
-    freqEl.onchange = function () {
-        document.getElementById('wizard-sum-freq').textContent = freqLabels[freqEl.value] || 'Normale (2x)';
-    };
 }
 
 /**
@@ -659,9 +712,10 @@ async function saveSponsor() {
         const contactEmail = document.getElementById('sponsor-edit-email').value.trim();
         const contactPhone = document.getElementById('sponsor-edit-phone').value.trim();
         const videosSelect = document.getElementById('sponsor-edit-videos');
-        const addToLoop = document.getElementById('sponsor-edit-loop').checked;
-        const frequencyEl = document.getElementById('sponsor-edit-frequency');
-        const frequency = frequencyEl ? parseInt(frequencyEl.value, 10) : 2;
+
+        // Collect checked phases from edit form
+        const editPhaseCheckboxes = document.querySelectorAll('#sponsor-edit-phases input[name="edit-phase"]');
+        const selectedPhases = Array.from(editPhaseCheckboxes).filter(cb => cb.checked).map(cb => cb.value);
 
         if (!name) {
             showNotification('Le nom du sponsor est requis', 'error');
@@ -674,7 +728,7 @@ async function saveSponsor() {
             const response = await fetch('/api/sponsors/' + editId, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name, contactEmail, contactPhone, frequency }),
+                body: JSON.stringify({ name, contactEmail, contactPhone }),
             });
             if (!response.ok) {
                 const err = await response.json();
@@ -686,11 +740,25 @@ async function saveSponsor() {
             // Synchroniser les vidéos liées
             await syncSponsorVideos(editId, selectedVideos);
 
-            // Gérer la boucle
-            if (addToLoop && !sponsor.inLoop) {
-                await fetch('/api/sponsors/' + editId + '/loop', { method: 'POST' });
-            } else if (!addToLoop && sponsor.inLoop) {
-                await fetch('/api/sponsors/' + editId + '/loop', { method: 'DELETE' });
+            // Synchroniser les phases
+            const currentPhases = sponsor.phases || [];
+            for (const phaseId of selectedPhases) {
+                if (!currentPhases.includes(phaseId)) {
+                    await fetch('/api/sponsors/' + editId + '/phase', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ phaseId }),
+                    });
+                }
+            }
+            for (const phaseId of currentPhases) {
+                if (!selectedPhases.includes(phaseId)) {
+                    await fetch('/api/sponsors/' + editId + '/phase', {
+                        method: 'DELETE',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ phaseId }),
+                    });
+                }
             }
 
             showNotification('Sponsor mis à jour', 'success');
@@ -702,14 +770,18 @@ async function saveSponsor() {
         }
     } else {
         // ── CREATE MODE (wizard) ──
-        const name = document.getElementById('sponsor-name').value.trim();
+        const nameInput = document.getElementById('sponsor-name');
+        const name = nameInput.value.trim();
         const contactEmail = document.getElementById('sponsor-email').value.trim();
         const contactPhone = document.getElementById('sponsor-phone').value.trim();
-        const addToLoop = document.getElementById('sponsor-add-to-loop').checked;
-        const frequencyEl = document.getElementById('sponsor-frequency');
-        const frequency = frequencyEl ? parseInt(frequencyEl.value, 10) : 2;
+
+        // Collect checked phases from create form
+        const createPhaseCheckboxes = document.querySelectorAll('#sponsor-create-phases input[name="create-phase"]');
+        const selectedPhases = Array.from(createPhaseCheckboxes).filter(cb => cb.checked).map(cb => cb.value);
 
         if (!name) {
+            const nameGroup = nameInput.closest('.form-group');
+            if (nameGroup) nameGroup.classList.add('has-error');
             showNotification('Le nom du sponsor est requis', 'error');
             return;
         }
@@ -726,7 +798,7 @@ async function saveSponsor() {
             const response = await fetch('/api/sponsors', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name, contactEmail, contactPhone, frequency }),
+                body: JSON.stringify({ name, contactEmail, contactPhone }),
             });
             if (!response.ok) {
                 const err = await response.json();
@@ -744,9 +816,15 @@ async function saveSponsor() {
                 });
             }
 
-            // Add to loop if requested and has videos
-            if (addToLoop && selectedVideos.length > 0) {
-                await fetch('/api/sponsors/' + sponsor.localId + '/loop', { method: 'POST' });
+            // Add to selected phases if sponsor has videos
+            if (selectedPhases.length > 0 && selectedVideos.length > 0) {
+                for (const phaseId of selectedPhases) {
+                    await fetch('/api/sponsors/' + sponsor.localId + '/phase', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ phaseId }),
+                    });
+                }
             }
 
             // Show success screen
@@ -863,7 +941,53 @@ function closeSponsorDeleteModal() {
 }
 
 /**
- * Toggle l'état boucle d'un sponsor.
+ * Rend les 3 checkboxes de phase pour un sponsor.
+ */
+function renderPhaseCheckboxes(localId, activePhasesArray) {
+    const allPhases = cachedAvailablePhases.length > 0
+        ? cachedAvailablePhases
+        : [{ id: 'before', label: 'Avant-match' }, { id: 'during', label: 'Match' }, { id: 'after', label: 'Après-match' }];
+    return allPhases.map(p => {
+        const checked = activePhasesArray.includes(p.id) ? 'checked' : '';
+        return `
+            <label class="phase-checkbox" style="display: flex; align-items: center; gap: 4px; font-size: 13px; cursor: pointer;">
+                <input type="checkbox" ${checked}
+                    onchange="toggleSponsorPhase('${localId}', '${p.id}', this.checked)" />
+                ${p.label}
+            </label>
+        `;
+    }).join('');
+}
+
+/**
+ * Toggle une phase pour un sponsor (ajouter/retirer).
+ */
+async function toggleSponsorPhase(localId, phaseId, checked) {
+    try {
+        const method = checked ? 'POST' : 'DELETE';
+        const response = await fetch('/api/sponsors/' + localId + '/phase', {
+            method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ phaseId }),
+        });
+        if (!response.ok) {
+            const err = await response.json();
+            throw new Error(err.error || 'Erreur');
+        }
+
+        const phaseMatch = cachedAvailablePhases.find(p => p.id === phaseId);
+        const action = checked ? 'ajouté à' : 'retiré de';
+        showNotification('Sponsor ' + action + ' ' + (phaseMatch ? phaseMatch.label : phaseId), 'success');
+        loadSponsors();
+    } catch (error) {
+        console.error('[sponsors] Erreur toggle phase:', error);
+        showNotification(error.message, 'error');
+        loadSponsors(); // Refresh to restore correct checkbox state
+    }
+}
+
+/**
+ * Toggle l'état boucle d'un sponsor (legacy — kept for backward compat).
  */
 async function toggleSponsorLoop(localId, currentlyInLoop) {
     try {
