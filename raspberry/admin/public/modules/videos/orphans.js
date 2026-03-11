@@ -84,7 +84,7 @@ function renderOrphanVideos(container, orphans, existingCategories) {
             <div class="orphan-info">
                 <div class="orphan-title">${video.displayName || video.name}</div>
                 <div class="orphan-meta">${video.size} • ${video.category || 'racine'}</div>
-                <div class="orphan-path">videos/${video.path}</div>
+                <div class="orphan-path tech-only">videos/${video.path}</div>
             </div>
             <div class="orphan-actions">
                 <select class="orphan-category-select" data-path="${video.path}">

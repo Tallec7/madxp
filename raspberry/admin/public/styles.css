@@ -1623,7 +1623,7 @@ body.mode-club .tech-only {
 .videos-list {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
 }
 
 .video-empty-state {
@@ -1645,7 +1645,7 @@ body.mode-club .tech-only {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 16px 20px;
+  padding: 12px 16px;
   background: var(--bg-tertiary);
   border-bottom: 1px solid var(--border);
 }
@@ -1663,14 +1663,14 @@ body.mode-club .tech-only {
 .video-subgroups {
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  padding: 16px 20px;
+  gap: 12px;
+  padding: 12px 16px;
 }
 
 .video-subgroup {
   border: 1px solid var(--border);
   border-radius: 10px;
-  padding: 16px;
+  padding: 12px;
   background: var(--bg-primary);
 }
 
@@ -1678,7 +1678,7 @@ body.mode-club .tech-only {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 12px;
+  margin-bottom: 8px;
 }
 
 .video-subgroup-header h5 {
@@ -1689,15 +1689,15 @@ body.mode-club .tech-only {
 .video-rows {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 4px;
 }
 
 .video-row {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   flex-wrap: wrap;
-  padding: 12px;
+  padding: 8px 12px;
   border-bottom: 1px solid var(--border);
   border-radius: 8px;
   transition: background 0.2s;
@@ -1751,7 +1751,7 @@ body.mode-club .tech-only {
 
 .video-row-title {
   font-weight: 600;
-  margin-bottom: 4px;
+  margin-bottom: 2px;
 }
 
 .video-row-meta {
@@ -1771,6 +1771,36 @@ body.mode-club .tech-only {
   display: flex;
   gap: 8px;
   align-items: center;
+}
+
+/* Config section wrapper — visual separation from search */
+.config-section-wrapper {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  margin-top: 8px;
+}
+
+.config-section-wrapper .section-header {
+  margin-bottom: 12px;
+}
+
+.config-section-wrapper .section-header h3 {
+  margin: 0;
+}
+
+/* Search hint label — force onto its own line within flex .search-bar */
+.search-hint {
+  flex-basis: 100%;
+  font-size: 11px;
+  color: var(--text-secondary);
+  opacity: 0.7;
+  margin-top: 2px;
+}
+
+#subtab-library .search-bar {
+  flex-wrap: wrap;
 }
 
 /* Upload Progress */
