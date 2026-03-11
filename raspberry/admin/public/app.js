@@ -1430,10 +1430,14 @@ function getOwnerBadgeHtml(item) {
 function renderConfigurationStructure(container, config) {
     const categories = config.categories || [];
 
+    // Wrapper carte pour séparer visuellement de la recherche
+    const configWrapper = document.createElement('div');
+    configWrapper.className = 'config-section-wrapper';
+
     const header = document.createElement('div');
     header.className = 'section-header';
     header.innerHTML = '<h3>📁 Configuration télécommande</h3>';
-    container.appendChild(header);
+    configWrapper.appendChild(header);
 
     // Message d'info sur le contenu verrouillé si présent
     const hasLockedContent = categories.some(cat => isLocked(cat));
@@ -1444,7 +1448,7 @@ function renderConfigurationStructure(container, config) {
             <span class="info-icon">🔒</span>
             <span>Les éléments avec un cadenas sont gérés par NEOPRO et ne peuvent pas être modifiés.</span>
         `;
-        container.appendChild(infoMsg);
+        configWrapper.appendChild(infoMsg);
     }
 
     if (categories.length === 0) {
@@ -1455,7 +1459,8 @@ function renderConfigurationStructure(container, config) {
             <div class="empty-state-title">Aucune catégorie configurée</div>
             <div class="empty-state-text">La configuration vidéo n'a pas encore été initialisée depuis le dashboard central.</div>
         `;
-        container.appendChild(empty);
+        configWrapper.appendChild(empty);
+        container.appendChild(configWrapper);
         return;
     }
 
@@ -1513,8 +1518,10 @@ function renderConfigurationStructure(container, config) {
         }
 
         groupEl.appendChild(body);
-        container.appendChild(groupEl);
+        configWrapper.appendChild(groupEl);
     });
+
+    container.appendChild(configWrapper);
 }
 
 function createConfigVideoList(title, videos, categoryId, subcategoryId = null, parentLocked = false, subcategoryObj = null) {
@@ -1603,14 +1610,14 @@ function createConfigVideoList(title, videos, categoryId, subcategoryId = null, 
             </div>
             <div class="video-row-info">
                 <div class="video-row-title">${video.name || 'Sans nom'}</div>
-                <div class="video-row-path">${video.path || ''}</div>
+                <div class="video-row-path tech-only">${video.path || ''}</div>
                 ${video.duration ? `<div class="video-row-meta">${formatDuration(video.duration)}</div>` : ''}
             </div>
             <div class="video-row-actions">
-                <button class="btn btn-secondary btn-sm preview-video-btn" data-video-url="${videoUrl}" title="Prévisualiser">👁️</button>
-                <button class="btn btn-secondary btn-sm edit-video-btn${lockedBtnClass}" data-path="${video.path}" ${videoLocked ? 'disabled title="Contenu NEOPRO - Non modifiable"' : ''}>✏️</button>
-                <button class="btn btn-warning btn-sm remove-video-btn${lockedBtnClass}" data-path="${video.path}" ${videoLocked ? 'disabled title="Contenu NEOPRO - Non modifiable"' : ''} title="Retirer de la configuration">✕</button>
-                <button class="btn btn-danger btn-sm delete-video-btn${lockedBtnClass}" data-path="${video.path}" data-category="${categoryId}" data-subcategory="${subcategoryId || ''}" ${videoLocked ? 'disabled title="Contenu NEOPRO - Non supprimable"' : ''} title="Supprimer le fichier">🗑️</button>
+                <button class="btn btn-secondary btn-sm preview-video-btn" data-video-url="${videoUrl}" title="Prévisualiser">👁️ Voir</button>
+                <button class="btn btn-secondary btn-sm edit-video-btn${lockedBtnClass}" data-path="${video.path}" ${videoLocked ? 'disabled title="Contenu NEOPRO - Non modifiable"' : 'title="Modifier"'}>✏️ Modifier</button>
+                <button class="btn btn-warning btn-sm remove-video-btn${lockedBtnClass}" data-path="${video.path}" ${videoLocked ? 'disabled title="Contenu NEOPRO - Non modifiable"' : ''} title="Retirer de la configuration">✕ Retirer</button>
+                <button class="btn btn-danger btn-sm delete-video-btn${lockedBtnClass}" data-path="${video.path}" data-category="${categoryId}" data-subcategory="${subcategoryId || ''}" ${videoLocked ? 'disabled title="Contenu NEOPRO - Non supprimable"' : ''} title="Supprimer le fichier">🗑️ Suppr.</button>
             </div>
         `;
 
@@ -1793,7 +1800,7 @@ function createVideoRow(video) {
     meta.textContent = metaParts.join(' • ');
 
     const pathInfo = document.createElement('div');
-    pathInfo.className = 'video-row-path';
+    pathInfo.className = 'video-row-path tech-only';
     pathInfo.textContent = video.fullPath;
 
     info.appendChild(title);

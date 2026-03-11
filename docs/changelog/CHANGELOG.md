@@ -2,6 +2,12 @@
 
 ### Features
 
+- **admin:** autonomie club — phases sponsor, récap, split vidéo, UX polish ([b5e3693](https://github.com/Tallec7/neopro/commit/b5e36930403733da39411448929d215c5ac090a9))
+
+# [3.106.0](https://github.com/Tallec7/neopro/compare/v3.105.2...v3.106.0) (2026-03-11)
+
+### Features
+
 - **admin-sponsors:** sélection de phase par sponsor — checkboxes avant-match/match/après-match remplacent le toggle binaire "Ajouter à la boucle". Les vidéos sponsor sont écrites directement dans `timeCategories[].loopVideos[]` (compatible TV component `getLoopVideosForPhase()`)
 - **admin-sponsors:** réconciliation auto des `loopVideos` orphelins poussés par le dashboard central — `_reconcileOrphanedLoopVideos()` reconstruit les entrées `_sponsorLocalId` manquantes à chaque `listSponsors()`
 - **admin-config:** récap phases — l'onglet Config > Phases affiche les vidéos sponsor assignées à chaque phase avec pills cliquables et bouton retirer (`GET /api/configuration/phase-recap`)
