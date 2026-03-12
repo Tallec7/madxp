@@ -9369,3 +9369,200 @@ describe('Admin UI UX foundations guard', () => {
       .toEqual({ hasInlineStyle: false });
   });
 });
+
+// =================================================================
+// Admin UX batch 2 guards (v3.106)
+// 1. Search feedback: filterVideos() must update .search-hint with
+//    count or "Aucune vidéo" — never leave stale hint text.
+// 2. Video delete modal: styled modal replaces native confirm() —
+//    same pattern as sponsor-delete-modal.
+// 3. Responsive buttons: flex-wrap at 768px, grid at 480px.
+// 4. Accessibility: tabindex/role/aria-label on video rows, focus-visible.
+// =================================================================
+
+describe('Admin UX batch 2 — search feedback guard', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+  const loaderJs = fs.readFileSync(
+    path.join(repoRoot, 'raspberry', 'admin', 'public', 'modules', 'videos', 'loader.js'),
+    'utf8'
+  );
+  const videosCss = fs.readFileSync(
+    path.join(repoRoot, 'raspberry', 'admin', 'public', 'styles', 'videos.css'),
+    'utf8'
+  );
+
+  it('filterVideos() must update search-hint with visible count', () => {
+    const filterFn = loaderJs.match(/function filterVideos\(\)[\s\S]*?^}/m);
+    expect(filterFn).toBeTruthy();
+    const body = filterFn![0];
+    expect({ countsVisible: /visibleCount/.test(body) })
+      .toEqual({ countsVisible: true });
+    expect({ updatesHint: /searchHint\.textContent/.test(body) })
+      .toEqual({ updatesHint: true });
+  });
+
+  it('filterVideos() must show "Aucune vidéo" on zero results', () => {
+    const filterFn = loaderJs.match(/function filterVideos\(\)[\s\S]*?^}/m);
+    expect(filterFn).toBeTruthy();
+    expect({ hasEmptyMsg: /Aucune vidéo/.test(filterFn![0]) })
+      .toEqual({ hasEmptyMsg: true });
+  });
+
+  it('filterVideos() must add/remove .no-results class', () => {
+    const filterFn = loaderJs.match(/function filterVideos\(\)[\s\S]*?^}/m);
+    expect(filterFn).toBeTruthy();
+    const body = filterFn![0];
+    expect({ addsNoResults: /classList\.add\(['"]no-results['"]\)/.test(body) })
+      .toEqual({ addsNoResults: true });
+    expect({ removesNoResults: /classList\.remove\(['"]no-results['"]\)/.test(body) })
+      .toEqual({ removesNoResults: true });
+  });
+
+  it('filterVideos() must reset hint when search is empty', () => {
+    const filterFn = loaderJs.match(/function filterVideos\(\)[\s\S]*?^}/m);
+    expect(filterFn).toBeTruthy();
+    expect({ resetsHint: /Filtre les vidéos ci-dessous/.test(filterFn![0]) })
+      .toEqual({ resetsHint: true });
+  });
+
+  it('videos.css must have .search-hint.no-results with warning color', () => {
+    expect({ hasNoResults: /\.search-hint\.no-results/.test(videosCss) })
+      .toEqual({ hasNoResults: true });
+    expect({ hasWarning: /var\(--neo-warning\)/.test(videosCss) })
+      .toEqual({ hasWarning: true });
+  });
+});
+
+describe('Admin UX batch 2 — video delete modal guard', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+  const indexHtml = fs.readFileSync(
+    path.join(repoRoot, 'raspberry', 'admin', 'public', 'index.html'),
+    'utf8'
+  );
+  const loaderJs = fs.readFileSync(
+    path.join(repoRoot, 'raspberry', 'admin', 'public', 'modules', 'videos', 'loader.js'),
+    'utf8'
+  );
+
+  it('index.html must have #video-delete-modal with role=alertdialog', () => {
+    expect({ hasModal: /id="video-delete-modal"/.test(indexHtml) })
+      .toEqual({ hasModal: true });
+    expect({ hasRole: /role="alertdialog"/.test(indexHtml) })
+      .toEqual({ hasRole: true });
+  });
+
+  it('index.html must have video-delete-name and video-delete-warning elements', () => {
+    expect({ hasName: /id="video-delete-name"/.test(indexHtml) })
+      .toEqual({ hasName: true });
+    expect({ hasWarning: /id="video-delete-warning"/.test(indexHtml) })
+      .toEqual({ hasWarning: true });
+  });
+
+  it('loader.js must NOT use native confirm() for video deletion', () => {
+    // deleteVideo, removeConfigVideo, deleteConfigVideo must use modal
+    const deleteVideo = loaderJs.match(/function deleteVideo\([^)]*\)[\s\S]*?^}/m);
+    const removeConfigVideo = loaderJs.match(/function removeConfigVideo\([^)]*\)[\s\S]*?^}/m);
+    const deleteConfigVideo = loaderJs.match(/function deleteConfigVideo\([^)]*\)[\s\S]*?^}/m);
+    expect(deleteVideo).toBeTruthy();
+    expect(removeConfigVideo).toBeTruthy();
+    expect(deleteConfigVideo).toBeTruthy();
+    expect({ deleteUsesConfirm: /\bconfirm\(/.test(deleteVideo![0]) })
+      .toEqual({ deleteUsesConfirm: false });
+    expect({ removeUsesConfirm: /\bconfirm\(/.test(removeConfigVideo![0]) })
+      .toEqual({ removeUsesConfirm: false });
+    expect({ deleteConfigUsesConfirm: /\bconfirm\(/.test(deleteConfigVideo![0]) })
+      .toEqual({ deleteConfigUsesConfirm: false });
+  });
+
+  it('loader.js must have openVideoDeleteModal with Escape key handler', () => {
+    expect({ hasOpenFn: /function openVideoDeleteModal/.test(loaderJs) })
+      .toEqual({ hasOpenFn: true });
+    expect({ hasCloseFn: /function closeVideoDeleteModal/.test(loaderJs) })
+      .toEqual({ hasCloseFn: true });
+    expect({ hasEscapeKey: /Escape.*closeVideoDeleteModal|closeVideoDeleteModal.*Escape/.test(loaderJs) })
+      .toEqual({ hasEscapeKey: true });
+  });
+});
+
+describe('Admin UX batch 2 — responsive buttons guard', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+  const responsiveCss = fs.readFileSync(
+    path.join(repoRoot, 'raspberry', 'admin', 'public', 'styles', 'responsive.css'),
+    'utf8'
+  );
+
+  it('responsive.css must have flex-wrap on video-row-actions at 768px', () => {
+    // Extract 768px media block
+    const block768 = responsiveCss.match(/@media[^{]*768px[^{]*\{[\s\S]*?\n\}/);
+    expect(block768).toBeTruthy();
+    expect({ hasFlexWrap: /flex-wrap:\s*wrap/.test(block768![0]) })
+      .toEqual({ hasFlexWrap: true });
+  });
+
+  it('responsive.css must have grid layout for video-row-actions at 480px', () => {
+    const block480 = responsiveCss.match(/@media[^{]*480px[^{]*\{[\s\S]*?\n\}/);
+    expect(block480).toBeTruthy();
+    const block = block480![0];
+    expect({ hasGrid: /display:\s*grid/.test(block) })
+      .toEqual({ hasGrid: true });
+    expect({ has2Col: /grid-template-columns:\s*1fr 1fr/.test(block) })
+      .toEqual({ has2Col: true });
+  });
+});
+
+describe('Admin UX batch 2 — accessibility guard', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+  const loaderJs = fs.readFileSync(
+    path.join(repoRoot, 'raspberry', 'admin', 'public', 'modules', 'videos', 'loader.js'),
+    'utf8'
+  );
+  const videosCss = fs.readFileSync(
+    path.join(repoRoot, 'raspberry', 'admin', 'public', 'styles', 'videos.css'),
+    'utf8'
+  );
+
+  it('loader.js must set tabindex and role on video rows', () => {
+    expect({ hasTabindex: /tabIndex\s*=\s*0/.test(loaderJs) })
+      .toEqual({ hasTabindex: true });
+    expect({ hasRole: /setAttribute\(\s*['"]role['"],\s*['"]group['"]\)/.test(loaderJs) })
+      .toEqual({ hasRole: true });
+  });
+
+  it('loader.js must set aria-label on video rows', () => {
+    expect({ hasAriaLabel: /setAttribute\(\s*['"]aria-label['"]/.test(loaderJs) })
+      .toEqual({ hasAriaLabel: true });
+  });
+
+  it('videos.css must have focus-visible outline on video rows', () => {
+    expect({ hasFocusVisible: /\.video-row:focus-visible/.test(videosCss) })
+      .toEqual({ hasFocusVisible: true });
+    expect({ hasOutline: /outline:\s*2px\s+solid/.test(videosCss) })
+      .toEqual({ hasOutline: true });
+  });
+});
+
+describe('Admin UX batch 2 — button labels guard', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+  const loaderJs = fs.readFileSync(
+    path.join(repoRoot, 'raspberry', 'admin', 'public', 'modules', 'videos', 'loader.js'),
+    'utf8'
+  );
+
+  it('createConfigVideoList must have distinct "Retirer" and "Supprimer le fichier" buttons', () => {
+    // "Retirer de la configuration" = remove from config (file stays on disk)
+    // "Supprimer le fichier" = delete file from disk
+    // Both must exist as separate buttons — never a single "Supprimer"
+    expect({ hasRetirer: /Retirer de la configuration/.test(loaderJs) })
+      .toEqual({ hasRetirer: true });
+    expect({ hasSupprimerFichier: /Supprimer le fichier/.test(loaderJs) })
+      .toEqual({ hasSupprimerFichier: true });
+  });
+
+  it('config video buttons must use btn-warning for remove and btn-danger for delete', () => {
+    // Semantic colors: warning (yellow) for soft action, danger (red) for destructive
+    expect({ removeIsWarning: /btn-warning[^"]*remove-video-btn/.test(loaderJs) })
+      .toEqual({ removeIsWarning: true });
+    expect({ deleteIsDanger: /btn-danger[^"]*delete-video-btn/.test(loaderJs) })
+      .toEqual({ deleteIsDanger: true });
+  });
+});

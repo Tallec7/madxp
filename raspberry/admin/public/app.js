@@ -1568,6 +1568,9 @@ function createConfigVideoList(title, videos, categoryId, subcategoryId = null, 
         const row = document.createElement('div');
         row.className = `video-row${videoLocked ? ' locked-video' : ''}`;
         row.draggable = !videoLocked;
+        row.tabIndex = 0;
+        row.setAttribute('role', 'group');
+        row.setAttribute('aria-label', video.name || video.path?.split('/').pop() || 'Vidéo');
         row.dataset.videoPath = video.path;
         row.dataset.videoIndex = index;
         row.dataset.categoryId = categoryId;
@@ -1614,10 +1617,10 @@ function createConfigVideoList(title, videos, categoryId, subcategoryId = null, 
                 ${video.duration ? `<div class="video-row-meta">${formatDuration(video.duration)}</div>` : ''}
             </div>
             <div class="video-row-actions">
-                <button class="btn btn-secondary btn-sm preview-video-btn" data-video-url="${videoUrl}" title="Prévisualiser">👁️ Voir</button>
-                <button class="btn btn-secondary btn-sm edit-video-btn${lockedBtnClass}" data-path="${video.path}" ${videoLocked ? 'disabled title="Contenu NEOPRO - Non modifiable"' : 'title="Modifier"'}>✏️ Modifier</button>
-                <button class="btn btn-warning btn-sm remove-video-btn${lockedBtnClass}" data-path="${video.path}" ${videoLocked ? 'disabled title="Contenu NEOPRO - Non modifiable"' : ''} title="Retirer de la configuration">✕ Retirer</button>
-                <button class="btn btn-danger btn-sm delete-video-btn${lockedBtnClass}" data-path="${video.path}" data-category="${categoryId}" data-subcategory="${subcategoryId || ''}" ${videoLocked ? 'disabled title="Contenu NEOPRO - Non supprimable"' : ''} title="Supprimer le fichier">🗑️ Suppr.</button>
+                <button class="btn btn-secondary btn-sm preview-video-btn" data-video-url="${videoUrl}" title="Prévisualiser" aria-label="Prévisualiser la vidéo">👁️ Voir</button>
+                <button class="btn btn-secondary btn-sm edit-video-btn${lockedBtnClass}" data-path="${video.path}" ${videoLocked ? 'disabled title="Contenu NEOPRO - Non modifiable"' : 'title="Modifier"'} aria-label="Modifier la vidéo">✏️ Modifier</button>
+                <button class="btn btn-warning btn-sm remove-video-btn${lockedBtnClass}" data-path="${video.path}" ${videoLocked ? 'disabled title="Contenu NEOPRO - Non modifiable"' : ''} title="Retirer de la configuration" aria-label="Retirer de la configuration">✕ Retirer</button>
+                <button class="btn btn-danger btn-sm delete-video-btn${lockedBtnClass}" data-path="${video.path}" data-category="${categoryId}" data-subcategory="${subcategoryId || ''}" ${videoLocked ? 'disabled title="Contenu NEOPRO - Non supprimable"' : ''} title="Supprimer le fichier" aria-label="Supprimer le fichier">🗑️ Suppr.</button>
             </div>
         `;
 
@@ -1783,6 +1786,9 @@ function createVideoSubgroup(name, videos) {
 function createVideoRow(video) {
     const row = document.createElement('div');
     row.className = 'video-row';
+    row.tabIndex = 0;
+    row.setAttribute('role', 'group');
+    row.setAttribute('aria-label', video.displayLabel || video.name || 'Vidéo');
 
     const info = document.createElement('div');
     info.className = 'video-row-info';
@@ -1813,11 +1819,13 @@ function createVideoRow(video) {
     const editBtn = document.createElement('button');
     editBtn.className = 'btn btn-secondary btn-sm';
     editBtn.textContent = '✏️ Modifier';
+    editBtn.setAttribute('aria-label', 'Modifier la vidéo');
     editBtn.addEventListener('click', () => openEditModal(video.path));
 
     const deleteBtn = document.createElement('button');
     deleteBtn.className = 'btn btn-danger btn-sm';
     deleteBtn.textContent = '🗑️ Supprimer';
+    deleteBtn.setAttribute('aria-label', 'Supprimer le fichier');
     deleteBtn.addEventListener('click', () => deleteVideo(video.category, video.name));
 
     actions.appendChild(editBtn);
@@ -1905,26 +1913,24 @@ function refreshVideos() {
 }
 
 async function deleteVideo(category, filename) {
-    if (!confirm(`Supprimer la vidéo "${filename}" ?`)) {
-        return;
-    }
+    openVideoDeleteModal(filename, 'Le fichier sera supprimé définitivement.', async () => {
+        try {
+            const response = await fetch(`/api/videos/${encodeURIComponent(category)}/${encodeURIComponent(filename)}`, {
+                method: 'DELETE'
+            });
 
-    try {
-        const response = await fetch(`/api/videos/${encodeURIComponent(category)}/${encodeURIComponent(filename)}`, {
-            method: 'DELETE'
-        });
+            const data = await response.json();
 
-        const data = await response.json();
-
-        if (data.success) {
-            showNotification('Vidéo supprimée avec succès', 'success');
-            loadVideos();
-        } else {
-            showNotification('Erreur: ' + data.error, 'error');
+            if (data.success) {
+                showNotification('Vidéo supprimée avec succès', 'success');
+                loadVideos();
+            } else {
+                showNotification('Erreur: ' + data.error, 'error');
+            }
+        } catch (_error) {
+            showNotification('Erreur lors de la suppression', 'error');
         }
-    } catch (_error) {
-        showNotification('Erreur lors de la suppression', 'error');
-    }
+    });
 }
 
 /**
@@ -1934,30 +1940,28 @@ async function removeConfigVideo(videoPath) {
     const video = cachedVideos.find(v => v.path === videoPath);
     const videoName = video?.displayName || videoPath.split('/').pop();
 
-    if (!confirm(`Retirer "${videoName}" de la configuration ?\n\nLe fichier restera sur le disque.`)) {
-        return;
-    }
+    openVideoDeleteModal(videoName, 'Le fichier restera sur le disque.', async () => {
+        try {
+            const response = await fetch('/api/videos/remove-from-config', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ videoPath })
+            });
 
-    try {
-        const response = await fetch('/api/videos/remove-from-config', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ videoPath })
-        });
+            const data = await response.json();
 
-        const data = await response.json();
-
-        if (data.success) {
-            showNotification('Vidéo retirée de la configuration', 'success');
-            await loadConfiguration();
-            loadVideos();
-        } else {
-            showNotification('Erreur: ' + data.error, 'error');
+            if (data.success) {
+                showNotification('Vidéo retirée de la configuration', 'success');
+                await loadConfiguration();
+                loadVideos();
+            } else {
+                showNotification('Erreur: ' + data.error, 'error');
+            }
+        } catch (error) {
+            console.error('Error removing video from config:', error);
+            showNotification('Erreur lors du retrait', 'error');
         }
-    } catch (error) {
-        console.error('Error removing video from config:', error);
-        showNotification('Erreur lors du retrait', 'error');
-    }
+    });
 }
 
 /**
@@ -1967,33 +1971,66 @@ async function deleteConfigVideo(videoPath, categoryId, subcategoryId) {
     const video = cachedVideos.find(v => v.path === videoPath);
     const videoName = video?.displayName || videoPath.split('/').pop();
 
-    if (!confirm(`Supprimer la vidéo "${videoName}" ?\n\nCette action supprimera le fichier du disque.`)) {
-        return;
-    }
+    openVideoDeleteModal(videoName, 'Cette action supprimera le fichier du disque.', async () => {
+        try {
+            const response = await fetch('/api/videos/delete-from-config', {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    videoPath,
+                    categoryId,
+                    subcategoryId: subcategoryId || null
+                })
+            });
 
-    try {
-        const response = await fetch('/api/videos/delete-from-config', {
-            method: 'DELETE',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                videoPath,
-                categoryId,
-                subcategoryId: subcategoryId || null
-            })
-        });
+            const data = await response.json();
 
-        const data = await response.json();
-
-        if (data.success) {
-            showNotification('Vidéo supprimée avec succès', 'success');
-            await loadConfiguration();
-            loadVideos();
-        } else {
-            showNotification('Erreur: ' + data.error, 'error');
+            if (data.success) {
+                showNotification('Vidéo supprimée avec succès', 'success');
+                await loadConfiguration();
+                loadVideos();
+            } else {
+                showNotification('Erreur: ' + data.error, 'error');
+            }
+        } catch (error) {
+            console.error('Error deleting video:', error);
+            showNotification('Erreur lors de la suppression', 'error');
         }
-    } catch (error) {
-        console.error('Error deleting video:', error);
-        showNotification('Erreur lors de la suppression', 'error');
+    });
+}
+
+/**
+ * Ouvre la modale de confirmation de suppression vidéo
+ */
+let _videoDeleteEscapeHandler = null;
+
+function openVideoDeleteModal(videoName, warningText, onConfirm) {
+    const modal = document.getElementById('video-delete-modal');
+    const nameEl = document.getElementById('video-delete-name');
+    const warningEl = document.getElementById('video-delete-warning');
+    const confirmBtn = document.getElementById('video-delete-confirm-btn');
+
+    nameEl.textContent = videoName;
+    warningEl.textContent = warningText;
+    confirmBtn.onclick = async () => {
+        closeVideoDeleteModal();
+        await onConfirm();
+    };
+
+    _videoDeleteEscapeHandler = (e) => {
+        if (e.key === 'Escape') closeVideoDeleteModal();
+    };
+    document.addEventListener('keydown', _videoDeleteEscapeHandler);
+
+    modal.style.display = 'flex';
+}
+
+function closeVideoDeleteModal() {
+    const modal = document.getElementById('video-delete-modal');
+    modal.style.display = 'none';
+    if (_videoDeleteEscapeHandler) {
+        document.removeEventListener('keydown', _videoDeleteEscapeHandler);
+        _videoDeleteEscapeHandler = null;
     }
 }
 
@@ -2042,11 +2079,17 @@ function filterVideos() {
     const videoGroups = document.querySelectorAll('#videos-list .video-group');
     const videoSubgroups = document.querySelectorAll('#videos-list .video-subgroup');
 
+    const searchHint = document.querySelector('.search-hint');
+
     // Si pas de terme de recherche, tout afficher
     if (!searchTerm) {
         videoRows.forEach(row => row.style.display = '');
         videoSubgroups.forEach(sg => sg.style.display = '');
         videoGroups.forEach(g => g.style.display = '');
+        if (searchHint) {
+            searchHint.textContent = 'Filtre les vidéos ci-dessous';
+            searchHint.classList.remove('no-results');
+        }
         return;
     }
 
@@ -2069,6 +2112,18 @@ function filterVideos() {
         const visibleSubgroups = g.querySelectorAll('.video-subgroup:not([style*="display: none"])');
         g.style.display = visibleSubgroups.length > 0 ? '' : 'none';
     });
+
+    // Feedback compteur
+    if (searchHint) {
+        const visibleCount = document.querySelectorAll('#videos-list .video-row:not([style*="display: none"])').length;
+        if (visibleCount === 0) {
+            searchHint.textContent = 'Aucune vidéo trouvée';
+            searchHint.classList.add('no-results');
+        } else {
+            searchHint.textContent = `${visibleCount} vidéo(s) trouvée(s)`;
+            searchHint.classList.remove('no-results');
+        }
+    }
 }
 
 // ============================================================================

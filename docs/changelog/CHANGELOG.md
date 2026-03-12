@@ -16,6 +16,10 @@
 - **admin-ux:** validation inline formulaires — `.has-error` avec messages d'erreur et auto-clear sur input
 - **admin-ux:** empty states consistants — classes `.empty-state` avec icônes, titres et CTA pour sponsors et vidéos
 - **admin-ux:** transitions modales CSS — `@keyframes modalFadeIn` + `modalSlideUp` compatibles avec les deux patterns d'ouverture (`.active` et `style.display`)
+- **admin-ux:** feedback de recherche — compteur dynamique dans `.search-hint` affiche le nombre de vidéos trouvées ou "Aucune vidéo trouvée" avec classe `.no-results` (couleur warning)
+- **admin-ux:** modale de suppression vidéo — remplace les `confirm()` natifs par `#video-delete-modal` stylisée (même pattern que `#sponsor-delete-modal`), avec `role="alertdialog"`, Escape key, et warning contextuel
+- **admin-ux:** boutons responsifs vidéos — `flex-wrap` à 768px, grille CSS `1fr 1fr` à 480px pour les actions vidéo
+- **admin-ux:** accessibilité vidéos — `tabindex="0"`, `role="group"`, `aria-label` sur les rangées vidéo, `aria-label` explicites sur les boutons d'action, `:focus-visible` outline
 - **central-sync:** `syncVideoAssociations()` dans `resolveLocalSponsors()` — sync les `videoFilenames[]` des sponsors locaux vers `site_sponsor_videos` en central (ajouts/suppressions par diff)
 
 ### Bug Fixes
@@ -29,6 +33,12 @@
   - Sponsor frequency removal (5 guards) — bloque le retour des éléments UI fréquence, CSS et boucle de duplication
   - Admin UI modal CSS (3 guards) — vérifie `display:none` par défaut, `display:flex` sur `.active`, animation `modalSlideUp`
   - Admin UI UX foundations (5 guards) — skeleton shimmer, form validation `.has-error`, `.empty-state` classes, input clear listener, pas d'inline styles sur empty state
+- **smoke:** 16 nouveaux guards UX batch 2 :
+  - Search feedback (5 guards) — `filterVideos()` doit compter les résultats, afficher "Aucune vidéo", gérer `.no-results`, reset du hint
+  - Video delete modal (4 guards) — HTML `#video-delete-modal` avec `role=alertdialog`, pas de `confirm()` natif, Escape key
+  - Responsive buttons (2 guards) — `flex-wrap` à 768px, grille `1fr 1fr` à 480px
+  - Accessibility (3 guards) — `tabindex`/`role`/`aria-label` sur les rows, `:focus-visible` outline
+  - Labels batch 1 (2 guards) — boutons "Retirer" / "Supprimer le fichier" distincts dans le template
 
 ---
 
