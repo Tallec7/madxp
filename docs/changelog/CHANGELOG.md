@@ -1,3 +1,13 @@
+# [3.107.0](https://github.com/Tallec7/neopro/compare/v3.106.0...v3.107.0) (2026-03-12)
+
+### Bug Fixes
+
+- **admin-ux:** improve videos tab usability — labels, density, mode awareness ([c79acc2](https://github.com/Tallec7/neopro/commit/c79acc22d018b63d35be65eda8399929c39ed405))
+
+### Features
+
+- **admin-ux:** videos tab UX batch 2 — modal, search feedback, responsive, a11y ([c2dfd7e](https://github.com/Tallec7/neopro/commit/c2dfd7ea951d580fd383f6dc4559fff398f9b5cb)), closes [#video-delete-modal](https://github.com/Tallec7/neopro/issues/video-delete-modal)
+
 # [3.106.0](https://github.com/Tallec7/neopro/compare/v3.105.2...v3.106.0) (2026-03-11)
 
 ### Features
