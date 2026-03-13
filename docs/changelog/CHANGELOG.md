@@ -1,3 +1,9 @@
+## [3.107.1](https://github.com/Tallec7/neopro/compare/v3.107.0...v3.107.1) (2026-03-13)
+
+### Bug Fixes
+
+- **deploy:** fix-fleet-pi.sh appelé sans sudo — 13 étapes fleet silencieusement ignorées ([8d9b801](https://github.com/Tallec7/neopro/commit/8d9b8012bff8ef170a40d86dbec6769a6a8c4f5d))
+
 # [3.107.0](https://github.com/Tallec7/neopro/compare/v3.106.0...v3.107.0) (2026-03-12)
 
 ### Bug Fixes
