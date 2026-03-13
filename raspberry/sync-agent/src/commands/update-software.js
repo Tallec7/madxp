@@ -788,7 +788,7 @@ class SoftwareUpdateHandler {
           logger.info('Running fix-fleet-pi.sh (auto fleet corrections)...');
           // echo 'n' pour refuser le reboot interactif — l'OTA gère le reboot via scheduleReboot
           const { stdout: fleetOutput } = await execAsync(
-            `echo 'n' | ${fixFleetScript} 2>&1`,
+            `echo 'n' | sudo ${fixFleetScript} 2>&1`,
             { timeout: 120000 }
           );
           const corrections = fleetOutput.match(/Corrections\s*:\s*(\d+)/);

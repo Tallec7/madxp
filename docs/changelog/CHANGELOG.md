@@ -8,6 +8,27 @@
 
 - **admin-ux:** videos tab UX batch 2 — modal, search feedback, responsive, a11y ([c2dfd7e](https://github.com/Tallec7/neopro/commit/c2dfd7ea951d580fd383f6dc4559fff398f9b5cb)), closes [#video-delete-modal](https://github.com/Tallec7/neopro/issues/video-delete-modal)
 
+## [3.106.1](https://github.com/Tallec7/neopro/compare/v3.106.0...v3.106.1) (2026-03-13)
+
+### Bug Fixes
+
+- **deploy:** `fix-fleet-pi.sh` appelé sans `sudo` dans `deploy-remote.sh` (ligne 364) et `update-software.js` (ligne 791) — le script vérifie `id -u == 0` et quitte silencieusement si non-root, `|| true` / `catch` avalent l'erreur → les 13 étapes de remédiation fleet (boot splash, systemd, GPU, HDMI, ventilateur Pi 5…) n'étaient jamais appliquées via deploy ni OTA
+- **deploy:** ajout de `sudo` avant `fix-fleet-pi.sh` dans les 2 callers (deploy SSH + OTA)
+
+### Tests
+
+- **smoke:** 2 nouveaux guards de régression :
+  - `deploy-remote.sh must run fix-fleet-pi.sh with sudo` — vérifie la présence de `sudo` dans l'invocation deploy SSH
+  - `OTA update-software.js must run fix-fleet-pi.sh with sudo` — vérifie la présence de `sudo` dans l'invocation OTA
+
+### Documentation
+
+- **CLAUDE.md:** ajout règle NE JAMAIS FAIRE — `fix-fleet-pi.sh` sans `sudo`
+- **troubleshooting:** mise à jour `fix-fleet-pi.sh` 11→13 étapes, ajout note bug historique sudo
+- **changelog:** entrée v3.106.1
+
+---
+
 # [3.106.0](https://github.com/Tallec7/neopro/compare/v3.105.2...v3.106.0) (2026-03-11)
 
 ### Features

@@ -361,7 +361,12 @@ ssh ${RASPBERRY_USER}@${RASPBERRY_IP} "
     if [ -x ${RASPBERRY_DIR}/scripts/fix-fleet-pi.sh ]; then
         echo ''
         echo '=== Application automatique des corrections fleet ==='
-        FLEET_OUTPUT=\$(echo 'n' | ${RASPBERRY_DIR}/scripts/fix-fleet-pi.sh 2>&1) || true
+        FLEET_EXIT_CODE=0
+        FLEET_OUTPUT=\$(echo 'n' | sudo ${RASPBERRY_DIR}/scripts/fix-fleet-pi.sh 2>&1) || FLEET_EXIT_CODE=\$?
+        if [ \"\$FLEET_EXIT_CODE\" -ne 0 ]; then
+            echo \"[WARN] fix-fleet-pi.sh exited with code \$FLEET_EXIT_CODE\"
+            echo 'DEPLOY_FLEET_FIX_FAILED=true'
+        fi
         # Détecter si un reboot est nécessaire (cmdline.txt / config.txt modifiés)
         if echo \"\$FLEET_OUTPUT\" | grep -qi 'reboot.*nécessaire\|reboot est nécessaire'; then
             echo 'DEPLOY_NEEDS_REBOOT=true'

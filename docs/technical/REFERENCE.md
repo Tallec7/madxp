@@ -1837,7 +1837,7 @@ Power On → firmware (écran noir, pas de rainbow) → kernel/systemd (écran n
 → app.component retire le splash (fade-out 0.5s) → waiting-screen / vidéo
 ```
 
-**Configuration :** `install.sh configure_boot_splash()` (auto-détecte Pi 4 vs Pi 5 paths). Retrofitting : `fix-fleet-pi.sh` step 11. 7 smoke tests enforced.
+**Configuration :** `install.sh configure_boot_splash()` (auto-détecte Pi 4 vs Pi 5 paths). Retrofitting : `fix-fleet-pi.sh` step 11 (cmdline.txt + config.txt + Plymouth + desktop noir + splash image). Appliqué automatiquement par `deploy-remote.sh` et `update-software.js` (OTA) avec `sudo`. 9 smoke tests enforced.
 
 ### Kiosk Watchdog (neopro-kiosk.service)
 

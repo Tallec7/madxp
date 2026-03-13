@@ -130,6 +130,7 @@ source central-server/.env && psql "$DATABASE_URL" -f central-server/src/scripts
 - Utiliser `manualVideoVisible === false` (strict equality) dans `handleMasterLoopState` CAS 1 (quand `manualVideoVisible` est `undefined` ou absent, `=== false` rate le cas → tombe en fallback `play()` direct → freeze-frame + overlay — utiliser `!== true` qui couvre false, undefined ET absent — smoke test enforced)
 - Omettre `dtparam=cooling_fan` dans `/boot/firmware/config.txt` sur Pi 5 avec Active Cooler (sans ce paramètre, le device-tree garde `cooling_fan` en `status=disabled` → pas de driver `pwm-fan` → pas de `/sys/class/thermal/cooling_device0` → ventilateur non contrôlé tourne à 100%, monitoring `getFanStatus()` retourne `present:false` → surchauffe silencieuse — smoke test enforced)
 - Calculer les stats de la barre `library-stats` sur `allVideos` dans `processVideos()` (mélange stats globales du catalogue cloud 500 vidéos avec l'affichage filtré par site — toujours calculer sur `filteredVideos` dans `applyFilters()` via les propriétés `filtered*` — smoke test enforced)
+- Appeler `fix-fleet-pi.sh` sans `sudo` dans `deploy-remote.sh` ou `update-software.js` (le script vérifie `id -u == 0` et exit 1 si non-root — sans sudo, les 13 étapes de remédiation fleet sont silencieusement ignorées : boot splash, systemd, GPU, HDMI, ventilateur Pi 5… — `|| true` / `catch` avalent l'erreur — smoke test enforced)
 
 ## Architecture détaillée
 

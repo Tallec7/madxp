@@ -2625,10 +2625,10 @@ scp raspberry/scripts/fix-fleet-pi.sh pi@neopro.local:/tmp/
 ssh pi@neopro.local 'chmod +x /tmp/fix-fleet-pi.sh && sudo /tmp/fix-fleet-pi.sh'
 ```
 
-**Ce que fait le script (11 étapes) :**
+**Ce que fait le script (13 étapes) :**
 
 1. **TKIP → CCMP** dans hostapd.conf (éjections téléphones)
-2. **Installe les packages recommandés** manquants (unclutter-xfixes, x11-utils, edid-decode)
+2. **Installe les packages recommandés** manquants (unclutter-xfixes, x11-utils, edid-decode, feh)
 3. **Corrige le masquage curseur TV** (remplacement ancien unclutter → unclutter-xfixes + autostart LXDE)
 4. **Installe les 3 services systemd manquants** (watchdog, guardian, optimizer)
 5. **Crée le dossier videos-processing** (permission denied)
@@ -2637,9 +2637,13 @@ ssh pi@neopro.local 'chmod +x /tmp/fix-fleet-pi.sh && sudo /tmp/fix-fleet-pi.sh'
 8. **Flush les buffers** analytics et sponsors bloqués
 9. **Vérifie gpu_mem** (doit être 256 sur Pi 4)
 10. **Vérifie hdmi_force_hotplug** sur les 2 ports HDMI (E-23)
-11. **Configure le boot splash** (cmdline.txt quiet boot + config.txt disable_splash=1)
+11. **Configure le boot splash** (cmdline.txt quiet boot + config.txt disable_splash=1 + Plymouth NEOPRO + desktop noir + image splash kiosk)
+12. **Captive portal iptables** (Android HTTPS connectivity checks)
+13. **Pi 5 Active Cooler** (dtparam=cooling_fan dans config.txt)
 
 Le script auto-détecte le modèle de Pi, le type de connexion (Ethernet vs WiFi) et le nom du site.
+
+> **⚠️ Bug historique (corrigé v3.106.1) :** `deploy-remote.sh` et `update-software.js` appelaient `fix-fleet-pi.sh` sans `sudo`. Le script vérifie `id -u == 0` et quittait silencieusement — les 13 étapes n'étaient jamais appliquées via deploy/OTA. Corrigé par ajout de `sudo` dans les 2 callers + smoke tests.
 
 **Voir aussi :** [MODOP-S04-05 Section 3.7](../modops/MODOP-S04-05-Diagnostic-Distance.md#37-script-fix-fleet-pish-v3714)
 

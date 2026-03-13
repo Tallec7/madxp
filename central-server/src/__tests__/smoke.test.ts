@@ -7870,6 +7870,28 @@ describe('Boot splash screen guards', () => {
       .toEqual({ runsFixFleet: true });
   });
 
+  it('deploy-remote.sh must run fix-fleet-pi.sh with sudo (requires root for boot config)', () => {
+    const deployContent = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/scripts/deploy-remote.sh'),
+      'utf8'
+    );
+    // fix-fleet-pi.sh checks id -u == 0 and exits if not root
+    // Without sudo, it silently fails and boot splash / config.txt changes are never applied
+    expect({ usesSudo: deployContent.includes('sudo') && deployContent.includes('fix-fleet-pi.sh') })
+      .toEqual({ usesSudo: true });
+  });
+
+  it('deploy-remote.sh must capture fix-fleet-pi.sh exit code (not silently swallow)', () => {
+    const deployContent = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/scripts/deploy-remote.sh'),
+      'utf8'
+    );
+    // Capturing exit code ensures failures are visible in deploy logs
+    // instead of being silently eaten by || true
+    expect({ capturesExitCode: deployContent.includes('FLEET_EXIT_CODE') && deployContent.includes('DEPLOY_FLEET_FIX_FAILED') })
+      .toEqual({ capturesExitCode: true });
+  });
+
   it('OTA update-software.js must auto-run fix-fleet-pi.sh after install', () => {
     const otaContent = fs.readFileSync(
       path.join(repoRoot, 'raspberry/sync-agent/src/commands/update-software.js'),
@@ -7877,6 +7899,17 @@ describe('Boot splash screen guards', () => {
     );
     expect({ runsFixFleet: otaContent.includes('fix-fleet-pi.sh') })
       .toEqual({ runsFixFleet: true });
+  });
+
+  it('OTA update-software.js must run fix-fleet-pi.sh with sudo (requires root for boot config)', () => {
+    const otaContent = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/sync-agent/src/commands/update-software.js'),
+      'utf8'
+    );
+    // fix-fleet-pi.sh checks id -u == 0 and exits if not root
+    // Without sudo, it silently fails and all 13 fleet remediation steps are skipped
+    expect({ usesSudo: otaContent.includes('sudo') && otaContent.includes('fix-fleet-pi.sh') })
+      .toEqual({ usesSudo: true });
   });
 
   it('fix-fleet-pi.sh must replace Plymouth splash with NEOPRO branding', () => {
