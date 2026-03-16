@@ -1,3 +1,9 @@
+## [3.108.3](https://github.com/Tallec7/neopro/compare/v3.108.2...v3.108.3) (2026-03-16)
+
+### Bug Fixes
+
+- **sponsor-portal:** GROUP BY vp.period brut causait le doublon "Boucle continue" ([637a685](https://github.com/Tallec7/neopro/commit/637a68588a59b3b5a41d529c3c1929a76f107fa3))
+
 ## [3.108.2](https://github.com/Tallec7/neopro/compare/v3.108.1...v3.108.2) (2026-03-16)
 
 ### Bug Fixes
