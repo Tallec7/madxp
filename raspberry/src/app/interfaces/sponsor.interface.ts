@@ -30,6 +30,8 @@ export interface LoopVideo {
     site_sponsor_id?: string;
     /** Poids de rotation (defaut 1). Plus le poids est eleve, plus la video passe souvent. */
     weight?: number;
+    /** Epingle a sa position dans la boucle (ne participe pas au scheduling Bresenham) */
+    pinned?: boolean;
     /** Variantes video par type d'ecran (secondary, etc.) */
     variants?: {
         secondary?: {

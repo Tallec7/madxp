@@ -482,6 +482,8 @@ export interface SponsorVideo {
   analytics_category?: string;
   /** Poids de rotation (défaut 1). Plus le poids est élevé, plus la vidéo passe souvent. */
   weight?: number;
+  /** Épinglée à sa position dans la boucle (ne participe pas au scheduling Bresenham) */
+  pinned?: boolean;
 }
 
 /**

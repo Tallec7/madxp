@@ -2,7 +2,7 @@ import { LoopVideo } from '../interfaces/sponsor.interface';
 
 /**
  * Génère une playlist pondérée via un algorithme Bresenham (smooth scheduling)
- * avec contrainte anti-consécutif par sponsor.
+ * avec contrainte anti-consécutif par sponsor et support des vidéos épinglées.
  *
  * Bresenham distribue les vidéos de façon RÉGULIÈRE sur toute la playlist,
  * contrairement au greedy qui front-load le sponsor dominant :
@@ -13,6 +13,7 @@ import { LoopVideo } from '../interfaces/sponsor.interface';
  * Cela rend la pondération visuellement perceptible :
  *   ×4 → ~1 vidéo sur 3 | ×10 → ~1 vidéo sur 2
  *
+ * Les vidéos avec `pinned: true` restent à leur position d'origine.
  * L'algorithme est déterministe : même input → même output (pas de random).
  * Rétro-compatible : weight absent/0/undefined → traité comme 1.
  */
@@ -23,11 +24,74 @@ export function generateWeightedPlaylist(videos: LoopVideo[]): LoopVideo[] {
         return Array(w).fill(videos[0]);
     }
 
-    // Vérifier si tous les poids sont 1 (ou absents) → retourner tel quel (fast path)
+    // Vérifier si tous les poids sont 1 (ou absents) ET pas de pinned → retourner tel quel
     const allDefaultWeight = videos.every(v => getWeight(v) === 1);
-    if (allDefaultWeight) return [...videos];
+    const hasPinned = videos.some(v => v.pinned);
+    if (allDefaultWeight && !hasPinned) return [...videos];
 
-    // Bresenham smooth scheduling avec anti-consécutif
+    // Séparer les vidéos épinglées (restent à leur position) des vidéos mobiles (Bresenham)
+    const pinnedSlots = new Map<number, LoopVideo>(); // index original → vidéo
+    const mobileVideos: LoopVideo[] = [];
+
+    for (let i = 0; i < videos.length; i++) {
+        if (videos[i].pinned) {
+            pinnedSlots.set(i, videos[i]);
+        } else {
+            mobileVideos.push(videos[i]);
+        }
+    }
+
+    // Si toutes les vidéos sont épinglées, retourner l'ordre original
+    if (mobileVideos.length === 0) return [...videos];
+
+    // Si tous les mobiles ont weight 1 et aucun pinned → fast path
+    const allMobileDefault = mobileVideos.every(v => getWeight(v) === 1);
+    if (allMobileDefault && pinnedSlots.size === 0) return [...videos];
+
+    // Bresenham smooth scheduling sur les vidéos mobiles uniquement
+    const bresenhamResult = bresenhamSchedule(mobileVideos);
+
+    // Si pas de vidéos épinglées, retourner directement le résultat Bresenham
+    if (pinnedSlots.size === 0) {
+        fixWrapAround(bresenhamResult);
+        return bresenhamResult;
+    }
+
+    // Fusionner : insérer les vidéos épinglées à leurs positions
+    const totalLength = bresenhamResult.length + pinnedSlots.size;
+    const result: LoopVideo[] = [];
+    let bresenhamIdx = 0;
+
+    for (let i = 0; i < totalLength; i++) {
+        if (pinnedSlots.has(i)) {
+            result.push(pinnedSlots.get(i)!);
+        } else if (bresenhamIdx < bresenhamResult.length) {
+            result.push(bresenhamResult[bresenhamIdx]);
+            bresenhamIdx++;
+        }
+    }
+
+    // Ajouter les éventuels restants (cas weight > 1 qui expand la playlist)
+    while (bresenhamIdx < bresenhamResult.length) {
+        result.push(bresenhamResult[bresenhamIdx]);
+        bresenhamIdx++;
+    }
+
+    fixWrapAround(result);
+    return result;
+}
+
+/**
+ * Bresenham smooth scheduling avec contrainte anti-consécutif par sponsor.
+ * Distribue les vidéos uniformément selon leur poids.
+ */
+function bresenhamSchedule(videos: LoopVideo[]): LoopVideo[] {
+    if (videos.length === 0) return [];
+    if (videos.length === 1) {
+        const w = getWeight(videos[0]);
+        return Array(w).fill(videos[0]);
+    }
+
     const entries = videos.map(v => ({
         video: v,
         weight: getWeight(v),
@@ -73,11 +137,6 @@ export function generateWeightedPlaylist(videos: LoopVideo[]): LoopVideo[] {
         lastSponsorId = entries[bestIdx].sponsorId;
     }
 
-    // Fix wrap-around : la boucle TV cycle en continu, donc position N → position 1.
-    // Si le premier et le dernier ont le même sponsor, on déplace le dernier au milieu
-    // pour éviter un double passage à la jonction.
-    fixWrapAround(result);
-
     return result;
 }
 
@@ -99,6 +158,7 @@ function hasOtherSponsorOptions(
  * Corrige le cas wrap-around : la boucle TV cycle (pos N → pos 1).
  * Si premier et dernier ont le même sponsor, le dernier est déplacé
  * au milieu de la playlist pour éviter un double passage à la jonction.
+ * Les vidéos épinglées ne sont jamais déplacées.
  */
 function fixWrapAround(result: LoopVideo[]): void {
     if (result.length <= 2) return;
@@ -108,6 +168,9 @@ function fixWrapAround(result: LoopVideo[]): void {
     const lastSid = getSponsorId(result[result.length - 1]);
 
     if (firstSid !== lastSid) return;
+
+    // Ne pas déplacer si le dernier est épinglé
+    if (result[result.length - 1].pinned) return;
 
     // Retirer le dernier élément et trouver un emplacement au milieu
     const removed = result.pop()!;

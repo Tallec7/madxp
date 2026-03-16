@@ -137,6 +137,7 @@ interface SponsorWeightGroup {
               class="loop-video-row"
               *ngFor="let video of getPhaseVideos(); let i = index"
               [class.orphaned]="isOrphanedVideo(video.path)"
+              [class.pinned-row]="video.pinned"
             >
               <span class="video-order">{{ i + 1 }}</span>
               <div class="video-fields">
@@ -172,6 +173,14 @@ interface SponsorWeightGroup {
                 <button class="weight-btn" (click)="updateSponsorWeight(sid, (video.weight || 1) + 1)" [disabled]="(video.weight || 1) >= 10">+</button>
                 <span class="weight-pct-inline">{{ getWeightPercentage(sid) }}%</span>
               </div>
+              <button
+                class="btn-pin"
+                [class.pinned]="video.pinned"
+                (click)="togglePinVideo(i)"
+                [title]="video.pinned ? 'Désépingler (participe au scheduling)' : 'Épingler à la position ' + (i + 1)"
+              >
+                {{ video.pinned ? '📌' : '📍' }}
+              </button>
               <span class="video-duration" *ngIf="getVideoDuration(video.path) as dur">{{ formatDuration(dur) }}</span>
               <button class="btn-remove-sm" (click)="removePhaseVideo(i)">×</button>
             </div>
@@ -209,10 +218,11 @@ interface SponsorWeightGroup {
             <div
               *ngFor="let item of getPlaylistPreview(); let i = index"
               class="preview-chip"
+              [class.preview-chip-pinned]="item.pinned"
               [style.background-color]="item.color"
-              [title]="(i + 1) + '. ' + item.name + (item.sponsorName ? ' (' + item.sponsorName + ')' : '')"
+              [title]="(i + 1) + '. ' + item.name + (item.sponsorName ? ' (' + item.sponsorName + ')' : '') + (item.pinned ? ' 📌' : '')"
             >
-              <span class="preview-chip-index">{{ i + 1 }}</span>
+              <span class="preview-chip-index">{{ item.pinned ? '📌' : (i + 1) }}</span>
             </div>
           </div>
           <div class="playlist-preview-legend">
@@ -502,6 +512,38 @@ interface SponsorWeightGroup {
       color: #92400e;
     }
 
+    .loop-video-row.pinned-row {
+      background: #fefce8;
+      border-color: #fde047;
+      border-left: 3px solid #f59e0b;
+    }
+
+    .btn-pin {
+      width: 24px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid #e2e8f0;
+      border-radius: 4px;
+      background: #f8fafc;
+      font-size: 0.75rem;
+      cursor: pointer;
+      transition: all 0.15s;
+      padding: 0;
+      flex-shrink: 0;
+    }
+
+    .btn-pin:hover {
+      background: #fef3c7;
+      border-color: #fcd34d;
+    }
+
+    .btn-pin.pinned {
+      background: #fef3c7;
+      border-color: #f59e0b;
+    }
+
     .btn-remove, .btn-remove-sm {
       border: none;
       border-radius: 4px;
@@ -730,6 +772,11 @@ interface SponsorWeightGroup {
       color: white;
       text-shadow: 0 1px 2px rgba(0,0,0,0.3);
       font-variant-numeric: tabular-nums;
+    }
+
+    .preview-chip-pinned {
+      border: 2px solid #f59e0b;
+      box-shadow: 0 0 0 1px rgba(245, 158, 11, 0.3);
     }
 
     .playlist-preview-legend {
@@ -980,6 +1027,13 @@ export class LoopManagerComponent implements OnInit, OnChanges {
     }));
   }
 
+  togglePinVideo(index: number): void {
+    const tc = this.config.timeCategories?.find(t => t.id === this.activeTab);
+    if (!tc?.loopVideos?.[index]) return;
+    tc.loopVideos[index].pinned = !tc.loopVideos[index].pinned;
+    this.onChanged();
+  }
+
   updateSponsorWeight(sponsorId: string, newWeight: number): void {
     const weight = Math.max(1, Math.min(10, Math.round(newWeight)));
     const videos = this.getPhaseVideos();
@@ -1060,28 +1114,49 @@ export class LoopManagerComponent implements OnInit, OnChanges {
    * Simule l'algorithme Bresenham du Pi pour afficher l'ordre de diffusion.
    * Retourne un tableau de pastilles avec couleur et nom.
    */
-  getPlaylistPreview(): Array<{ name: string; sponsorName: string; color: string }> {
+  getPlaylistPreview(): Array<{ name: string; sponsorName: string; color: string; pinned?: boolean }> {
     const videos = this.getPhaseVideos();
     if (videos.length === 0) return [];
 
     // Assigner une couleur par sponsor
     const colorMap = this.buildSponsorColorMap(videos);
 
-    // Vérifier si tous les poids sont 1 → retourner l'ordre brut
-    const allDefault = videos.every(v => !v.weight || v.weight <= 1);
-    if (allDefault) {
-      return videos.map(v => {
-        const sid = this.getVideoSponsorId(v);
-        return {
-          name: v.name || v.path?.split('/').pop() || 'Vidéo',
-          sponsorName: sid ? (this.siteSponsors.find(sp => sp.id === sid)?.name || '') : '',
-          color: sid ? (colorMap.get(sid) || LoopManagerComponent.NON_SPONSOR_COLOR) : LoopManagerComponent.NON_SPONSOR_COLOR,
-        };
-      });
+    const toChip = (v: LoopVideoConfig, isPinned?: boolean): { name: string; sponsorName: string; color: string; pinned?: boolean } => {
+      const sid = this.getVideoSponsorId(v);
+      return {
+        name: v.name || v.path?.split('/').pop() || 'Vidéo',
+        sponsorName: sid ? (this.siteSponsors.find(sp => sp.id === sid)?.name || '') : '',
+        color: sid ? (colorMap.get(sid) || LoopManagerComponent.NON_SPONSOR_COLOR) : LoopManagerComponent.NON_SPONSOR_COLOR,
+        pinned: isPinned || undefined,
+      };
+    };
+
+    // Séparer les vidéos épinglées des vidéos mobiles
+    const pinnedSlots = new Map<number, LoopVideoConfig>();
+    const mobileVideos: LoopVideoConfig[] = [];
+    const hasPinned = videos.some(v => v.pinned);
+
+    for (let i = 0; i < videos.length; i++) {
+      if (videos[i].pinned) {
+        pinnedSlots.set(i, videos[i]);
+      } else {
+        mobileVideos.push(videos[i]);
+      }
     }
 
-    // Bresenham smooth scheduling (même algo que le Pi)
-    const entries = videos.map(v => {
+    // Vérifier si tous les poids mobiles sont 1 ET pas de pinned → retourner l'ordre brut
+    const allDefault = mobileVideos.every(v => !v.weight || v.weight <= 1);
+    if (allDefault && !hasPinned) {
+      return videos.map(v => toChip(v));
+    }
+
+    // Si toutes les vidéos sont épinglées, retourner l'ordre original
+    if (mobileVideos.length === 0) {
+      return videos.map(v => toChip(v, true));
+    }
+
+    // Bresenham smooth scheduling sur les vidéos mobiles uniquement
+    const entries = mobileVideos.map(v => {
       const w = v.weight && v.weight >= 1 ? Math.round(v.weight) : 1;
       const sid = this.getVideoSponsorId(v);
       return {
@@ -1094,7 +1169,7 @@ export class LoopManagerComponent implements OnInit, OnChanges {
     });
 
     const totalSlots = entries.reduce((sum, e) => sum + e.remaining, 0);
-    const result: Array<{ name: string; sponsorName: string; color: string }> = [];
+    const bresenhamResult: Array<{ name: string; sponsorName: string; color: string; pinned?: boolean }> = [];
     let lastSponsorId = '';
 
     for (let i = 0; i < totalSlots; i++) {
@@ -1121,20 +1196,36 @@ export class LoopManagerComponent implements OnInit, OnChanges {
       }
 
       const picked = entries[bestIdx];
-      const sid = picked.sponsorId;
-      result.push({
-        name: picked.video.name || picked.video.path?.split('/').pop() || 'Vidéo',
-        sponsorName: sid ? (this.siteSponsors.find(sp => sp.id === sid)?.name || '') : '',
-        color: sid ? (colorMap.get(sid) || LoopManagerComponent.NON_SPONSOR_COLOR) : LoopManagerComponent.NON_SPONSOR_COLOR,
-      });
+      bresenhamResult.push(toChip(picked.video));
       picked.remaining--;
       picked.accumulator -= totalSlots;
       lastSponsorId = picked.sponsorId;
     }
 
-    // Fix wrap-around : même logique que le Pi (fixWrapAround)
-    this.fixPreviewWrapAround(result, entries);
+    // Fusionner : insérer les vidéos épinglées à leurs positions
+    if (pinnedSlots.size === 0) {
+      this.fixPreviewWrapAround(bresenhamResult, entries);
+      return bresenhamResult;
+    }
 
+    const mergedLength = bresenhamResult.length + pinnedSlots.size;
+    const result: Array<{ name: string; sponsorName: string; color: string; pinned?: boolean }> = [];
+    let bresenhamIdx = 0;
+
+    for (let i = 0; i < mergedLength; i++) {
+      if (pinnedSlots.has(i)) {
+        result.push(toChip(pinnedSlots.get(i)!, true));
+      } else if (bresenhamIdx < bresenhamResult.length) {
+        result.push(bresenhamResult[bresenhamIdx]);
+        bresenhamIdx++;
+      }
+    }
+    while (bresenhamIdx < bresenhamResult.length) {
+      result.push(bresenhamResult[bresenhamIdx]);
+      bresenhamIdx++;
+    }
+
+    this.fixPreviewWrapAround(result, entries);
     return result;
   }
 

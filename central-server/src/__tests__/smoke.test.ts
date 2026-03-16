@@ -10215,6 +10215,74 @@ describe('Weighted sponsor rotation guards', () => {
       reason: 'The TV loop cycles continuously — without wrap-around fix, same sponsor at position 1 AND last = double passage at boundary',
     });
   });
+
+  it('LoopVideo interface must have pinned field', () => {
+    const interfacePath = path.join(repoRoot, 'raspberry/src/app/interfaces/sponsor.interface.ts');
+    const content = fs.readFileSync(interfacePath, 'utf8');
+    expect({
+      hasPinned: content.includes('pinned?: boolean'),
+      reason: 'LoopVideo needs pinned field to keep videos at their original position in the loop',
+    }).toEqual({
+      hasPinned: true,
+      reason: 'LoopVideo needs pinned field to keep videos at their original position in the loop',
+    });
+  });
+
+  it('SponsorVideo server type must have pinned field', () => {
+    const typesPath = path.join(repoRoot, 'central-server/src/types/index.ts');
+    const content = fs.readFileSync(typesPath, 'utf8');
+    const sponsorBlock = content.match(/export interface SponsorVideo \{[\s\S]*?\n\}/);
+    expect({
+      hasPinned: sponsorBlock ? sponsorBlock[0].includes('pinned?: boolean') : false,
+      reason: 'SponsorVideo needs pinned field — config enrichment must preserve it through the pipeline',
+    }).toEqual({
+      hasPinned: true,
+      reason: 'SponsorVideo needs pinned field — config enrichment must preserve it through the pipeline',
+    });
+  });
+
+  it('LoopVideoConfig dashboard model must have pinned field', () => {
+    const modelPath = path.join(repoRoot, 'central-dashboard/src/app/core/models/site-config.model.ts');
+    const content = fs.readFileSync(modelPath, 'utf8');
+    const loopVideoBlock = content.match(/export interface LoopVideoConfig \{[\s\S]*?\n\}/);
+    expect({
+      hasPinned: loopVideoBlock ? loopVideoBlock[0].includes('pinned?: boolean') : false,
+      reason: 'LoopVideoConfig needs pinned field for dashboard pin toggle UI',
+    }).toEqual({
+      hasPinned: true,
+      reason: 'LoopVideoConfig needs pinned field for dashboard pin toggle UI',
+    });
+  });
+
+  it('weighted-playlist must handle pinned videos (separate from Bresenham)', () => {
+    const algoPath = path.join(repoRoot, 'raspberry/src/app/utils/weighted-playlist.ts');
+    const content = fs.readFileSync(algoPath, 'utf8');
+    expect({
+      hasPinnedSlots: content.includes('pinnedSlots'),
+      hasMobileVideos: content.includes('mobileVideos'),
+      checksPinned: content.includes('.pinned'),
+      reason: 'Pinned videos must stay at their original position — Bresenham fills remaining slots only',
+    }).toEqual({
+      hasPinnedSlots: true,
+      hasMobileVideos: true,
+      checksPinned: true,
+      reason: 'Pinned videos must stay at their original position — Bresenham fills remaining slots only',
+    });
+  });
+
+  it('loop-manager must have pin toggle for videos', () => {
+    const loopMgrPath = path.join(repoRoot, 'central-dashboard/src/app/features/sites/components/loop-manager/loop-manager.component.ts');
+    const content = fs.readFileSync(loopMgrPath, 'utf8');
+    expect({
+      hasTogglePin: content.includes('togglePinVideo'),
+      hasPinButton: content.includes('btn-pin'),
+      reason: 'Dashboard must allow pinning videos to their position in the loop',
+    }).toEqual({
+      hasTogglePin: true,
+      hasPinButton: true,
+      reason: 'Dashboard must allow pinning videos to their position in the loop',
+    });
+  });
 });
 
 // =============================================================================

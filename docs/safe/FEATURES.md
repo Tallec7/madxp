@@ -171,6 +171,7 @@ Tous les controllers utilisent le repository pattern. ESLint bloquant actif. Aud
 - [ ] Minimum garanti de 20 passages/match/sponsor
 - [x] Rotation déterministe au sein de chaque créneau pour éviter la répétition (v3.110)
 - [x] Distribution uniforme sur toute la boucle : ×4 = gap ~3.3, ×10 = gap ~1.8 (v3.111)
+- [x] Vidéos épinglées (`pinned: true`) restent à leur position, ne participent pas au Bresenham (v3.111.2)
 - [ ] Compteur de passages en temps réel stocké dans la DB
 - [ ] Les spots non validés ne sont jamais diffusés
 
@@ -190,6 +191,7 @@ Tous les controllers utilisent le repository pattern. ESLint bloquant actif. Aud
 - [ ] Configuration par site : fréquence de rotation (toutes les X minutes)
 - [x] Priorité par sponsor (pondération manuelle weight 1-10 par sponsor par phase, UI dashboard) (v3.110)
 - [x] Prévisualisation de l'ordre de rotation en temps réel dans le dashboard (v3.111)
+- [x] Bouton épingler/désépingler (📌) par vidéo dans la boucle (v3.111.2)
 - [ ] Historique des changements de configuration
 
 | US        | Description                                                        | SP  | Sprint | Priorité |

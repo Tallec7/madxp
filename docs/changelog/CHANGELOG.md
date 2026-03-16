@@ -1,5 +1,10 @@
 ## [3.111.2](https://github.com/Tallec7/neopro/compare/v3.111.1...v3.111.2) (2026-03-16)
 
+### Features
+
+- **sponsors:** vidéos épinglées (`pinned: true`) — une vidéo épinglée reste à sa position dans la boucle (ex: intro Neopro toujours 1ère). Les vidéos épinglées ne participent pas au scheduling Bresenham.
+- **dashboard:** bouton épingler/désépingler (📌) par vidéo dans le loop-manager + prévisualisation avec indicateur visuel des vidéos épinglées
+
 ### Bug Fixes
 
 - **sponsors:** wrap-around — évite double passage à la jonction de boucle ([b86afe9](https://github.com/Tallec7/neopro/commit/b86afe9de36ae6166a7f46fbc95be8571f159688))

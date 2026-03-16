@@ -1,13 +1,14 @@
 import { generateWeightedPlaylist } from './weighted-playlist';
 import { LoopVideo } from '../interfaces/sponsor.interface';
 
-function makeVideo(name: string, sponsorId?: string, weight?: number): LoopVideo {
+function makeVideo(name: string, sponsorId?: string, weight?: number, pinned?: boolean): LoopVideo {
     return {
         name,
         type: 'video/mp4',
         path: `videos/${name}.mp4`,
         site_sponsor_id: sponsorId,
         weight,
+        pinned,
     };
 }
 
@@ -269,6 +270,70 @@ describe('generateWeightedPlaylist', () => {
         for (const video of result) {
             expect(video === a || video === b).toBe(true);
         }
+    });
+
+    // --- Pinned videos ---
+
+    it('keeps pinned video at its original position', () => {
+        const intro = makeVideo('Intro', 'sponsor-neopro', 1, true);
+        const a = makeVideo('A', 'sponsor-1', 2);
+        const b = makeVideo('B', 'sponsor-2', 1);
+        const c = makeVideo('C', 'sponsor-3', 1);
+        const result = generateWeightedPlaylist([intro, a, b, c]);
+
+        // Intro pinned at position 0 → must stay first
+        expect(result[0]).toBe(intro);
+        // Total = 1 (intro pinned) + 2 + 1 + 1 = 5 slots
+        expect(result.length).toBe(5);
+        expect(result.filter(v => v === intro).length).toBe(1);
+        expect(result.filter(v => v === a).length).toBe(2);
+    });
+
+    it('keeps multiple pinned videos at their positions', () => {
+        const intro = makeVideo('Intro', 'sponsor-neopro', 1, true);
+        const a = makeVideo('A', 'sponsor-1', 1);
+        const outro = makeVideo('Outro', 'sponsor-neopro', 1, true);
+        const result = generateWeightedPlaylist([intro, a, outro]);
+
+        // intro at 0, outro at 2 → pinned stay
+        expect(result[0]).toBe(intro);
+        expect(result[2]).toBe(outro);
+        expect(result.length).toBe(3);
+    });
+
+    it('returns original order when all videos are pinned', () => {
+        const a = makeVideo('A', 'sponsor-1', 1, true);
+        const b = makeVideo('B', 'sponsor-2', 1, true);
+        const c = makeVideo('C', 'sponsor-3', 1, true);
+        const result = generateWeightedPlaylist([a, b, c]);
+
+        expect(result).toEqual([a, b, c]);
+    });
+
+    it('pinned videos do not participate in Bresenham scheduling', () => {
+        const intro = makeVideo('Intro', 'sponsor-neopro', 1, true);
+        const a = makeVideo('A', 'sponsor-1', 3);
+        const b = makeVideo('B', 'sponsor-2', 1);
+        const result = generateWeightedPlaylist([intro, a, b]);
+
+        // Intro stays at 0 (pinned), Bresenham fills the rest (3 + 1 = 4 mobile slots)
+        expect(result[0]).toBe(intro);
+        expect(result.length).toBe(5); // 1 pinned + 4 mobile
+        expect(result.filter(v => v === a).length).toBe(3);
+        expect(result.filter(v => v === b).length).toBe(1);
+    });
+
+    it('pinned videos are not moved by wrap-around fix', () => {
+        // Set up scenario where wrap-around would normally move the last element
+        const a = makeVideo('A', 'sponsor-1', 2);
+        const b = makeVideo('B', 'sponsor-2', 1);
+        const c = makeVideo('C', 'sponsor-3', 1);
+        const outro = makeVideo('Outro', 'sponsor-neopro', 1, true);
+        // outro is pinned at position 3
+        const result = generateWeightedPlaylist([a, b, c, outro]);
+
+        // Outro pinned at position 3 → stays there regardless of wrap-around
+        expect(result[3]).toBe(outro);
     });
 });
 

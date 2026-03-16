@@ -145,6 +145,8 @@ source central-server/.env && psql "$DATABASE_URL" -f central-server/src/scripts
 - Revenir à l'algorithme greedy (pick highest remaining) dans `generateWeightedPlaylist()` (le greedy front-load le sponsor dominant → ×4 et ×10 produisent tous les deux "1 sur 2" → pondération invisible. L'algo Bresenham (accumulator += weight, pick max, accumulator -= totalSlots) distribue uniformément : ×4 = gap ~3.3, ×10 = gap ~1.8 → différence perceptible — smoke test enforced)
 - Supprimer la prévisualisation playlist (`getPlaylistPreview`, `playlist-preview-track`) du loop-manager (seul feedback visuel en temps réel de l'effet des poids sur l'ordre de diffusion — sans elle, le manager configure à l'aveugle — smoke test enforced)
 - Supprimer `fixWrapAround()` de `generateWeightedPlaylist()` (la boucle TV cycle en continu — sans wrap-around fix, le même sponsor en position 1 ET dernière = double passage à la jonction de boucle — smoke test enforced)
+- Supprimer le champ `pinned` de `LoopVideo`, `LoopVideoConfig` ou `SponsorVideo` (le pinned permet de fixer une vidéo à sa position dans la boucle — ex: intro Neopro toujours en 1ère position — les vidéos épinglées ne participent pas au scheduling Bresenham — smoke test enforced)
+- Supprimer le support `pinnedSlots`/`mobileVideos` de `generateWeightedPlaylist()` (les vidéos épinglées doivent rester à leur position d'origine — sans ce mécanisme, le Bresenham les déplacerait — smoke test enforced)
 
 ## Architecture détaillée
 
