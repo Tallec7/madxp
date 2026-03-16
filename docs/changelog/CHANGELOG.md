@@ -1,3 +1,9 @@
+## [3.109.1](https://github.com/Tallec7/neopro/compare/v3.109.0...v3.109.1) (2026-03-16)
+
+### Bug Fixes
+
+- **sponsors:** badge "Hors boucle" faux positif + auto-résolution sponsor cassée ([f21d769](https://github.com/Tallec7/neopro/commit/f21d76905978b3b0fd4b294bb5e15b4d3d726cd3))
+
 # [3.109.0](https://github.com/Tallec7/neopro/compare/v3.108.4...v3.109.0) (2026-03-16)
 
 ### Features
