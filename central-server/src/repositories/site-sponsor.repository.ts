@@ -922,7 +922,7 @@ class SiteSponsorRepositoryImpl extends BaseRepository<SiteSponsorRow> {
   ): Promise<{ rows: PeriodBreakdownRow[] }> {
     return query<PeriodBreakdownRow>(
       `SELECT
-         COALESCE(vp.period, 'loop') AS period,
+         COALESCE(NULLIF(TRIM(vp.period), ''), 'loop') AS period,
          COUNT(*)::text AS impressions,
          COALESCE(SUM(vp.duration_played), 0)::text AS screen_time_seconds,
          CASE WHEN COUNT(*) > 0
