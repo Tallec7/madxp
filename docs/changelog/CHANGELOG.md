@@ -1,3 +1,9 @@
+# [3.111.0](https://github.com/Tallec7/neopro/compare/v3.110.3...v3.111.0) (2026-03-16)
+
+### Features
+
+- **sponsors:** Bresenham smooth scheduling + prévisualisation playlist ([1cbfe19](https://github.com/Tallec7/neopro/commit/1cbfe197e7ded874f480962e2844109ba9d984bb))
+
 ## [3.111.0](https://github.com/Tallec7/neopro/compare/v3.110.3...v3.111.0) (2026-03-16)
 
 ### Features
