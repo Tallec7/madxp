@@ -1,3 +1,13 @@
+# [3.113.0](https://github.com/Tallec7/neopro/compare/v3.112.1...v3.113.0) (2026-03-16)
+
+### Bug Fixes
+
+- **kiosk:** hdmiSwapped/wrongPort dans kiosk-status + version bump admin ([2b38b2f](https://github.com/Tallec7/neopro/commit/2b38b2f85cc4012142a2400e84218edd25fe9b19))
+
+### Features
+
+- **dev:** kit de simulation locale complet — dev-seed ([71c8a35](https://github.com/Tallec7/neopro/commit/71c8a35d91026b33103cd1f52ea8b1102666ffd7))
+
 ## [3.112.1](https://github.com/Tallec7/neopro/compare/v3.112.0...v3.112.1) (2026-03-16)
 
 ### Bug Fixes
