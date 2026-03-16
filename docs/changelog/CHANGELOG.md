@@ -2,6 +2,12 @@
 
 ### Features
 
+- **sponsor-portal:** PoC Proof of Play — 7 features portail sponsor + regression guards ([1f1d11b](https://github.com/Tallec7/neopro/commit/1f1d11b95708058a854278647113803b8089b514))
+
+# [3.108.0](https://github.com/Tallec7/neopro/compare/v3.107.1...v3.108.0) (2026-03-16)
+
+### Features
+
 - **sponsor-portal:** PoC Proof of Play complet — 7 features pour le portail sponsor :
   - P1: Taux de complétion dans les KPIs
   - P2: `interruption_reason` tracking (migration DB + Pi analytics + validation API)
