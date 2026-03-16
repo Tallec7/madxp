@@ -1,3 +1,9 @@
+## [3.112.1](https://github.com/Tallec7/neopro/compare/v3.112.0...v3.112.1) (2026-03-16)
+
+### Bug Fixes
+
+- **dashboard:** responsive loop-manager et video-library — mobile/tablet adaptatif ([a603dff](https://github.com/Tallec7/neopro/commit/a603dff338a97b7f50c42a5bb8ba97b4db7de09b))
+
 # [3.112.0](https://github.com/Tallec7/neopro/compare/v3.111.2...v3.112.0) (2026-03-16)
 
 ### Features
