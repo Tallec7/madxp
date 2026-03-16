@@ -198,6 +198,31 @@ interface SponsorWeightGroup {
             Effacer (utiliser boucle par défaut)
           </button>
         </div>
+
+        <!-- Prévisualisation playlist pondérée -->
+        <div class="playlist-preview" *ngIf="getPlaylistPreview().length > 1">
+          <div class="playlist-preview-header">
+            <span class="preview-icon">📺</span>
+            <span class="preview-title">Ordre de diffusion ({{ getPlaylistPreview().length }} passages)</span>
+          </div>
+          <div class="playlist-preview-track">
+            <div
+              *ngFor="let item of getPlaylistPreview(); let i = index"
+              class="preview-chip"
+              [style.background-color]="item.color"
+              [title]="(i + 1) + '. ' + item.name + (item.sponsorName ? ' (' + item.sponsorName + ')' : '')"
+            >
+              <span class="preview-chip-index">{{ i + 1 }}</span>
+            </div>
+          </div>
+          <div class="playlist-preview-legend">
+            <div *ngFor="let entry of getPlaylistLegend()" class="preview-legend-item">
+              <span class="preview-legend-dot" [style.background-color]="entry.color"></span>
+              <span class="preview-legend-name">{{ entry.name }}</span>
+              <span class="preview-legend-pct">{{ entry.percentage }}%</span>
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- Footer durée totale -->
@@ -647,6 +672,100 @@ interface SponsorWeightGroup {
       text-align: right;
       font-variant-numeric: tabular-nums;
     }
+
+    /* Playlist preview */
+    .playlist-preview {
+      margin: 0.75rem 1.25rem;
+      padding: 0.75rem;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+    }
+
+    .playlist-preview-header {
+      display: flex;
+      align-items: center;
+      gap: 0.375rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .preview-icon {
+      font-size: 0.875rem;
+    }
+
+    .preview-title {
+      font-size: 0.6875rem;
+      font-weight: 600;
+      color: #475569;
+      text-transform: uppercase;
+      letter-spacing: 0.025em;
+    }
+
+    .playlist-preview-track {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 3px;
+      margin-bottom: 0.5rem;
+    }
+
+    .preview-chip {
+      width: 24px;
+      height: 20px;
+      border-radius: 3px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: default;
+      transition: transform 0.1s;
+    }
+
+    .preview-chip:hover {
+      transform: scale(1.2);
+      z-index: 1;
+    }
+
+    .preview-chip-index {
+      font-size: 0.5625rem;
+      font-weight: 600;
+      color: white;
+      text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .playlist-preview-legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.625rem;
+    }
+
+    .preview-legend-item {
+      display: flex;
+      align-items: center;
+      gap: 0.25rem;
+    }
+
+    .preview-legend-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .preview-legend-name {
+      font-size: 0.625rem;
+      color: #475569;
+      max-width: 80px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .preview-legend-pct {
+      font-size: 0.625rem;
+      font-weight: 600;
+      color: #1e40af;
+      font-variant-numeric: tabular-nums;
+    }
   `]
 })
 export class LoopManagerComponent implements OnInit, OnChanges {
@@ -926,6 +1045,130 @@ export class LoopManagerComponent implements OnInit, OnChanges {
     const total = this.getActiveTabTotalDuration();
     if (total <= 0) return 0;
     return Math.round(3600 / total);
+  }
+
+  // === Playlist preview (Bresenham simulation) ===
+
+  private static readonly SPONSOR_COLORS = [
+    '#3b82f6', '#ef4444', '#22c55e', '#f59e0b', '#8b5cf6',
+    '#ec4899', '#06b6d4', '#f97316', '#14b8a6', '#6366f1',
+  ];
+
+  private static readonly NON_SPONSOR_COLOR = '#94a3b8';
+
+  /**
+   * Simule l'algorithme Bresenham du Pi pour afficher l'ordre de diffusion.
+   * Retourne un tableau de pastilles avec couleur et nom.
+   */
+  getPlaylistPreview(): Array<{ name: string; sponsorName: string; color: string }> {
+    const videos = this.getPhaseVideos();
+    if (videos.length === 0) return [];
+
+    // Assigner une couleur par sponsor
+    const colorMap = this.buildSponsorColorMap(videos);
+
+    // Vérifier si tous les poids sont 1 → retourner l'ordre brut
+    const allDefault = videos.every(v => !v.weight || v.weight <= 1);
+    if (allDefault) {
+      return videos.map(v => {
+        const sid = this.getVideoSponsorId(v);
+        return {
+          name: v.name || v.path?.split('/').pop() || 'Vidéo',
+          sponsorName: sid ? (this.siteSponsors.find(sp => sp.id === sid)?.name || '') : '',
+          color: sid ? (colorMap.get(sid) || LoopManagerComponent.NON_SPONSOR_COLOR) : LoopManagerComponent.NON_SPONSOR_COLOR,
+        };
+      });
+    }
+
+    // Bresenham smooth scheduling (même algo que le Pi)
+    const entries = videos.map(v => {
+      const w = v.weight && v.weight >= 1 ? Math.round(v.weight) : 1;
+      const sid = this.getVideoSponsorId(v);
+      return {
+        video: v,
+        weight: w,
+        remaining: w,
+        accumulator: 0,
+        sponsorId: sid || v.path || '',
+      };
+    });
+
+    const totalSlots = entries.reduce((sum, e) => sum + e.remaining, 0);
+    const result: Array<{ name: string; sponsorName: string; color: string }> = [];
+    let lastSponsorId = '';
+
+    for (let i = 0; i < totalSlots; i++) {
+      for (const entry of entries) {
+        if (entry.remaining > 0) {
+          entry.accumulator += entry.weight;
+        }
+      }
+
+      let bestIdx = -1;
+      let bestAcc = -Infinity;
+
+      for (let j = 0; j < entries.length; j++) {
+        if (entries[j].remaining <= 0) continue;
+        if (entries[j].sponsorId === lastSponsorId && entries.some(e => e.remaining > 0 && e.sponsorId !== lastSponsorId)) continue;
+        if (entries[j].accumulator > bestAcc) {
+          bestAcc = entries[j].accumulator;
+          bestIdx = j;
+        }
+      }
+
+      if (bestIdx === -1) {
+        bestIdx = entries.findIndex(e => e.remaining > 0);
+      }
+
+      const picked = entries[bestIdx];
+      const sid = picked.sponsorId;
+      result.push({
+        name: picked.video.name || picked.video.path?.split('/').pop() || 'Vidéo',
+        sponsorName: sid ? (this.siteSponsors.find(sp => sp.id === sid)?.name || '') : '',
+        color: sid ? (colorMap.get(sid) || LoopManagerComponent.NON_SPONSOR_COLOR) : LoopManagerComponent.NON_SPONSOR_COLOR,
+      });
+      picked.remaining--;
+      picked.accumulator -= totalSlots;
+      lastSponsorId = picked.sponsorId;
+    }
+
+    return result;
+  }
+
+  /**
+   * Légende des sponsors pour la preview.
+   */
+  getPlaylistLegend(): Array<{ name: string; color: string; percentage: number }> {
+    const preview = this.getPlaylistPreview();
+    if (preview.length === 0) return [];
+
+    const countMap = new Map<string, { name: string; color: string; count: number }>();
+    for (const item of preview) {
+      const key = item.color;
+      if (!countMap.has(key)) {
+        countMap.set(key, { name: item.sponsorName || item.name, color: item.color, count: 0 });
+      }
+      countMap.get(key)!.count++;
+    }
+
+    return Array.from(countMap.values()).map(entry => ({
+      name: entry.name,
+      color: entry.color,
+      percentage: Math.round((entry.count / preview.length) * 100),
+    }));
+  }
+
+  private buildSponsorColorMap(videos: LoopVideoConfig[]): Map<string, string> {
+    const colorMap = new Map<string, string>();
+    let colorIdx = 0;
+    for (const video of videos) {
+      const sid = this.getVideoSponsorId(video);
+      if (sid && !colorMap.has(sid)) {
+        colorMap.set(sid, LoopManagerComponent.SPONSOR_COLORS[colorIdx % LoopManagerComponent.SPONSOR_COLORS.length]);
+        colorIdx++;
+      }
+    }
+    return colorMap;
   }
 
   onChanged(): void {

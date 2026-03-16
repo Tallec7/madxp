@@ -158,7 +158,7 @@ Tous les controllers utilisent le repository pattern. ESLint bloquant actif. Aud
 
 ## E-02 — Rotation Sponsors ⚠️ PARTIEL
 
-> **Statut** : ⚠️ V1 implémentée (rotation pondérée par weight, UI dashboard, smoke tests). V2 prévue (min garanti, compteur temps réel, prévisualisation).
+> **Statut** : ⚠️ V1.1 implémentée (Bresenham smooth scheduling, prévisualisation playlist, UI dashboard, smoke tests). V2 prévue (min garanti, compteur temps réel).
 > **Fichiers** : `raspberry/src/app/utils/weighted-playlist.ts`, `loop-manager.component.ts`, `tv.component.ts`
 
 ### F-02.1 : Algorithme de rotation équitable ⚠️ PARTIEL
@@ -167,9 +167,10 @@ Tous les controllers utilisent le repository pattern. ESLint bloquant actif. Aud
 
 **Critères d'acceptation**
 
-- [x] Algorithme round-robin pondéré par weight (1-10) avec interleaving anti-consécutif (v3.110)
+- [x] Algorithme Bresenham smooth scheduling pondéré par weight (1-10) avec anti-consécutif (v3.111 — remplace greedy v3.110)
 - [ ] Minimum garanti de 20 passages/match/sponsor
 - [x] Rotation déterministe au sein de chaque créneau pour éviter la répétition (v3.110)
+- [x] Distribution uniforme sur toute la boucle : ×4 = gap ~3.3, ×10 = gap ~1.8 (v3.111)
 - [ ] Compteur de passages en temps réel stocké dans la DB
 - [ ] Les spots non validés ne sont jamais diffusés
 
@@ -188,7 +189,7 @@ Tous les controllers utilisent le repository pattern. ESLint bloquant actif. Aud
 
 - [ ] Configuration par site : fréquence de rotation (toutes les X minutes)
 - [x] Priorité par sponsor (pondération manuelle weight 1-10 par sponsor par phase, UI dashboard) (v3.110)
-- [ ] Prévisualisation de l'ordre de rotation avant activation
+- [x] Prévisualisation de l'ordre de rotation en temps réel dans le dashboard (v3.111)
 - [ ] Historique des changements de configuration
 
 | US        | Description                                                        | SP  | Sprint | Priorité |

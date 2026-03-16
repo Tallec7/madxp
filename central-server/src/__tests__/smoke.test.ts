@@ -10171,6 +10171,38 @@ describe('Weighted sponsor rotation guards', () => {
       reason: 'LoopVideoConfig needs weight field for dashboard sponsor weight UI',
     });
   });
+
+  it('weighted-playlist must use Bresenham accumulator — not greedy remaining-only', () => {
+    const algoPath = path.join(repoRoot, 'raspberry/src/app/utils/weighted-playlist.ts');
+    const content = fs.readFileSync(algoPath, 'utf8');
+    expect({
+      hasAccumulator: content.includes('accumulator'),
+      hasTotalSlotsSubtract: /accumulator\s*-=\s*totalSlots/.test(content),
+      noGreedyBestRemaining: !content.includes('bestRemaining'),
+      reason: 'Bresenham distributes evenly (×4=gap~3, ×10=gap~1.8). Greedy front-loads → all weights look like "1 sur 2"',
+    }).toEqual({
+      hasAccumulator: true,
+      hasTotalSlotsSubtract: true,
+      noGreedyBestRemaining: true,
+      reason: 'Bresenham distributes evenly (×4=gap~3, ×10=gap~1.8). Greedy front-loads → all weights look like "1 sur 2"',
+    });
+  });
+
+  it('loop-manager must have playlist preview for visual weight feedback', () => {
+    const loopMgrPath = path.join(repoRoot, 'central-dashboard/src/app/features/sites/components/loop-manager/loop-manager.component.ts');
+    const content = fs.readFileSync(loopMgrPath, 'utf8');
+    expect({
+      hasPreviewMethod: content.includes('getPlaylistPreview'),
+      hasLegendMethod: content.includes('getPlaylistLegend'),
+      hasPreviewTemplate: content.includes('playlist-preview-track'),
+      reason: 'Dashboard must show playlist preview so club managers can see the effect of weight changes in real-time',
+    }).toEqual({
+      hasPreviewMethod: true,
+      hasLegendMethod: true,
+      hasPreviewTemplate: true,
+      reason: 'Dashboard must show playlist preview so club managers can see the effect of weight changes in real-time',
+    });
+  });
 });
 
 // =============================================================================

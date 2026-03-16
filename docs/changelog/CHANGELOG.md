@@ -1,3 +1,14 @@
+## [3.111.0](https://github.com/Tallec7/neopro/compare/v3.110.3...v3.111.0) (2026-03-16)
+
+### Features
+
+- **sponsors:** algorithme Bresenham smooth scheduling — distribution uniforme des poids (×4 = gap ~3.3, ×10 = gap ~1.8) remplace le greedy qui front-loadait (tout semblait "1 sur 2")
+- **dashboard:** prévisualisation playlist pondérée en temps réel dans le loop-manager (pastilles colorées + légende % par sponsor)
+
+### Bug Fixes
+
+- **smoke:** variable `repoRoot` manquante dans le describe WiFi connectWifi regression guards
+
 ## [3.110.3](https://github.com/Tallec7/neopro/compare/v3.110.2...v3.110.3) (2026-03-16)
 
 ### Bug Fixes
