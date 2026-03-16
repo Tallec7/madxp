@@ -1,3 +1,9 @@
+# [3.110.0](https://github.com/Tallec7/neopro/compare/v3.109.1...v3.110.0) (2026-03-16)
+
+### Features
+
+- **sponsors:** rotation pondérée par weight — régie club V1 ([c73002e](https://github.com/Tallec7/neopro/commit/c73002e2375966c7e4bc29c4948c62455f34d424))
+
 ## [3.109.1](https://github.com/Tallec7/neopro/compare/v3.109.0...v3.109.1) (2026-03-16)
 
 ### Bug Fixes
