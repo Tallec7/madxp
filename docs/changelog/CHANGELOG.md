@@ -1,3 +1,9 @@
+# [3.109.0](https://github.com/Tallec7/neopro/compare/v3.108.4...v3.109.0) (2026-03-16)
+
+### Features
+
+- **sponsor-portal:** ajout KPI "Lancements manuels" + colonne par vidéo ([b83850e](https://github.com/Tallec7/neopro/commit/b83850e97eb2430e1c37573af79d533b33230d0f))
+
 ## [3.108.4](https://github.com/Tallec7/neopro/compare/v3.108.3...v3.108.4) (2026-03-16)
 
 ### Bug Fixes
