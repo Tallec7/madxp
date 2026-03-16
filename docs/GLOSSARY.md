@@ -120,9 +120,15 @@ Moment du match qui détermine **quelle playlist de vidéos est jouée** :
 
 ### LoopVideo
 
-Une **vidéo dans une boucle de phase**. Structure : `{ name, path, type, variants? }`.
+Une **vidéo dans une boucle de phase**. Structure : `{ name, path, type, weight?, pinned?, variants? }`.
 
-Le champ `variants` (optionnel) contient les chemins alternatifs par type d'écran : `{ secondary?: string }`. Si une variante `secondary` existe, l'écran secondaire utilisera ce chemin au lieu du `path` principal.
+- **`weight`** (1-10, défaut 1) : Facteur de pondération. Plus le poids est élevé, plus la vidéo passe souvent. Ex: sponsor Or ×4, Argent ×2, Bronze ×1.
+- **`pinned`** (boolean) : Si `true`, la vidéo reste fixée à sa position d'origine dans la boucle (ex: intro Neopro toujours en 1ère position). Les vidéos épinglées ne participent pas au scheduling Bresenham.
+- **`variants`** (optionnel) : chemins alternatifs par type d'écran : `{ secondary?: string }`. Si une variante `secondary` existe, l'écran secondaire utilisera ce chemin au lieu du `path` principal.
+
+### Bresenham (smooth scheduling)
+
+**Algorithme de distribution** des vidéos pondérées dans la boucle de lecture (v3.111+). Chaque vidéo accumule son poids à chaque itération → la vidéo avec le plus gros accumulateur est sélectionnée → son accumulateur est réduit du total. Distribue les vidéos de façon régulière sur toute la playlist (×4 = gap ~3.3, ×10 = gap ~1.8), contrairement à un algorithme greedy qui front-load le sponsor dominant. Contrainte anti-consécutif par sponsor préservée. Déterministe : même input → même output (essentiel pour la sync dual-display). Fichier : `raspberry/src/app/utils/weighted-playlist.ts`.
 
 ### CategoryMapping
 

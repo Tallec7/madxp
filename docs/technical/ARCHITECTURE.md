@@ -265,6 +265,8 @@ sponsor-auto-resolution.service.ts → autoResolveSponsorIds(siteId, config)
          Config enrichie envoyée au Pi → impressions trackées avec site_sponsor_id
 
 Metrics: neopro_sponsor_auto_resolution_total{outcome="resolved|skipped|unresolved"}
+
+⚠️ **Préservation weight/pinned** : toute la chaîne d'enrichissement (`autoResolveSponsorIds` → `enrichConfigWithSecondaryVariants` → `enrichConfigWithAnalyticsMetadata`) **mute les champs** des objets sponsor existants au lieu de reconstruire les objets. Reconstruire = perdre `weight`, `pinned` et tout champ futur. Smoke test enforced.
 ```
 
 ### 2c. Sponsor health monitoring (F-AUD-07)
@@ -984,6 +986,7 @@ TV lente à négocier l'EDID : 3 tentatives espacées de 2s avant de passer à l
 - Cleanup agressif des buffers décodeur GPU après chaque switch (~50MB mémoire stable)
 - Disk cache warming via `fetch()` pour boucles 20-100+ vidéos (page cache kernel)
 - Freeze-frame pré-capturé (500ms) pour transitions sans flash
+- Rotation pondérée Bresenham : `generateWeightedPlaylist()` distribue les vidéos selon leur `weight` (1-10) avec contrainte anti-consécutif par sponsor. Les vidéos `pinned` restent à leur position d'origine. Algorithme déterministe → sync dual-display fiable.
 
 ---
 
