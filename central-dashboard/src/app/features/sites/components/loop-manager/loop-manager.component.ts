@@ -863,6 +863,10 @@ export class LoopManagerComponent implements OnInit, OnChanges {
 
   // === Sponsor weight management ===
 
+  /**
+   * Regroupe les vidéos par sponsor détecté (site_sponsor_id ou auto-détection par filename).
+   * Les vidéos sans sponsor sont exclues — pas de contrôle de poids dessus.
+   */
   getSponsorGroups(): SponsorWeightGroup[] {
     const videos = this.getPhaseVideos();
     if (videos.length === 0) return [];
@@ -870,11 +874,14 @@ export class LoopManagerComponent implements OnInit, OnChanges {
     const groupMap = new Map<string, { name: string; weight: number; count: number }>();
 
     for (const video of videos) {
-      const sponsorId = video.site_sponsor_id || video.path;
+      // Identifier le sponsor : d'abord site_sponsor_id, sinon auto-détection par filename
+      const sponsorId = video.site_sponsor_id || this.getAutoDetectedSponsor(video.path)?.id;
+      if (!sponsorId) continue; // Vidéo sans sponsor → pas de pondération
+
       if (!groupMap.has(sponsorId)) {
-        const sponsor = video.site_sponsor_id ? this.getAutoDetectedSponsor(video.path) : null;
+        const sponsor = this.siteSponsors.find(sp => sp.id === sponsorId);
         groupMap.set(sponsorId, {
-          name: sponsor?.name || video.name || video.path?.split('/').pop() || 'Sans sponsor',
+          name: sponsor?.name || video.name || video.path?.split('/').pop() || 'Sponsor',
           weight: video.weight || 1,
           count: 0,
         });
@@ -897,7 +904,8 @@ export class LoopManagerComponent implements OnInit, OnChanges {
     const weight = Math.max(1, Math.min(10, Math.round(newWeight)));
     const videos = this.getPhaseVideos();
     for (const video of videos) {
-      const videoSponsorId = video.site_sponsor_id || video.path;
+      // Matcher par site_sponsor_id ou auto-détection
+      const videoSponsorId = video.site_sponsor_id || this.getAutoDetectedSponsor(video.path)?.id;
       if (videoSponsorId === sponsorId) {
         video.weight = weight;
       }
