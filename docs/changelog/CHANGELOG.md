@@ -1,3 +1,9 @@
+## [3.110.1](https://github.com/Tallec7/neopro/compare/v3.110.0...v3.110.1) (2026-03-16)
+
+### Bug Fixes
+
+- **sponsors:** pondération affiche uniquement les vrais sponsors ([4a0f9c8](https://github.com/Tallec7/neopro/commit/4a0f9c8b1005519b7767dc6a3430307e5b2fe551))
+
 # [3.110.0](https://github.com/Tallec7/neopro/compare/v3.109.1...v3.110.0) (2026-03-16)
 
 ### Features
