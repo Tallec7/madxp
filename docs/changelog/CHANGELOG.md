@@ -1,3 +1,9 @@
+## [3.110.2](https://github.com/Tallec7/neopro/compare/v3.110.1...v3.110.2) (2026-03-16)
+
+### Bug Fixes
+
+- **sponsors:** poids inline dans chaque ligne vidéo — supprime le bloc séparé ([bcfb0cf](https://github.com/Tallec7/neopro/commit/bcfb0cfd350ed2464e082987d3aa8ee48c235b2a))
+
 ## [3.110.1](https://github.com/Tallec7/neopro/compare/v3.110.0...v3.110.1) (2026-03-16)
 
 ### Bug Fixes
