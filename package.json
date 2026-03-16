@@ -30,6 +30,8 @@
     "i18n:fix": "node scripts/check-i18n.js --fix",
     "i18n:hardcoded": "node scripts/check-hardcoded-i18n.js",
     "i18n:hardcoded:staged": "node scripts/check-hardcoded-i18n.js --staged",
+    "dev:seed": "bash scripts/setup-dev-seed.sh",
+    "dev:seed:clean": "bash scripts/setup-dev-seed.sh --clean",
     "server": "node raspberry/server/server.js",
     "prepare": "husky"
   },
@@ -70,7 +72,9 @@
     "@types/pdfkit": "^0.17.4",
     "chart.js": "^4.5.1",
     "chrome-launcher": "^1.2.1",
+    "leaflet": "^1.9.4",
     "pdfkit": "^0.17.2",
+    "qrcode": "^1.5.4",
     "rxjs": "~7.8.0",
     "socket.io-client": "^4.8.1",
     "tslib": "^2.3.0",

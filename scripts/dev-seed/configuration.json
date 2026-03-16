@@ -1,0 +1,266 @@
+{
+  "auth": {
+    "password": "dev123",
+    "clubName": "DEV Club Local",
+    "sessionDuration": 28800000
+  },
+  "sync": {
+    "enabled": false,
+    "siteName": "Dev Local",
+    "clubName": "DEV Club Local",
+    "location": {
+      "city": "Nantes",
+      "region": "Bretagne",
+      "country": "France"
+    },
+    "sports": ["handball"],
+    "contact": {
+      "email": "dev@neopro.local",
+      "phone": ""
+    }
+  },
+  "version": "1.0",
+  "liveScoreEnabled": false,
+  "categories": [
+    {
+      "id": "entrée",
+      "name": "ENTRÉE",
+      "owner": "club",
+      "locked": false,
+      "videos": [
+        {
+          "name": "28 - Frida Vatn RIIBER",
+          "path": "videos/video_nlf/joueur_28_vide_o.mp4",
+          "type": "video/mp4",
+          "owner": "club",
+          "locked": false
+        },
+        {
+          "name": "62 - Astou GUEYE N'DEYE",
+          "path": "videos/video_nlf/joueur_62.mp4",
+          "type": "video/mp4",
+          "owner": "club",
+          "locked": false
+        },
+        {
+          "name": "70 - Margot GEFFROY",
+          "path": "videos/video_nlf/joueur_70.mp4",
+          "type": "video/mp4",
+          "owner": "club",
+          "locked": false
+        }
+      ],
+      "subCategories": []
+    },
+    {
+      "id": "category-match",
+      "name": "MATCH",
+      "owner": "club",
+      "locked": false,
+      "videos": [],
+      "subCategories": [
+        {
+          "id": "subcategory-but",
+          "name": "BUT / FAITS DE JEU",
+          "owner": "club",
+          "locked": false,
+          "videos": [
+            {
+              "name": "SANCTION 2 MIN",
+              "path": "videos/video_nlf/MATCH/JINGLE/2_MIN.mp4",
+              "type": "video/mp4",
+              "owner": "club",
+              "locked": false
+            },
+            {
+              "name": "JET DE 7M",
+              "path": "videos/default/JET_DE_7M.mp4",
+              "type": "video/mp4",
+              "owner": "club",
+              "locked": false
+            },
+            {
+              "name": "TEMPS MORT",
+              "path": "videos/video_nlf/MATCH/JINGLE/TEMPS_MORT.mp4",
+              "type": "video/mp4",
+              "owner": "club",
+              "locked": false
+            },
+            {
+              "name": "MI TEMPS",
+              "path": "videos/video_nlf/MATCH/JINGLE/MI_TEMPS.mp4",
+              "type": "video/mp4",
+              "owner": "club",
+              "locked": false
+            },
+            {
+              "name": "VICTOIRE",
+              "path": "videos/video_nlf/MATCH/JINGLE/VICTOIRE.mp4",
+              "type": "video/mp4",
+              "owner": "club",
+              "locked": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "category-infos",
+      "name": "INFOS CLUB",
+      "owner": "club",
+      "locked": false,
+      "videos": [
+        {
+          "name": "RESEAUX SOCIAUX",
+          "path": "videos/video_nlf/INFOS CLUB/RESEAUX_SOCIAUX.mp4",
+          "type": "video/mp4",
+          "owner": "club",
+          "locked": false
+        }
+      ],
+      "subCategories": []
+    },
+    {
+      "id": "category-sponsors",
+      "name": "FOCUS PARTENAIRES",
+      "owner": "club",
+      "locked": false,
+      "videos": [
+        {
+          "name": "Lidl",
+          "path": "videos/default/03_LIDL.mp4",
+          "type": "video/mp4",
+          "owner": "club",
+          "locked": false
+        },
+        {
+          "name": "Cofap",
+          "path": "videos/default/04_COFAP.mp4",
+          "type": "video/mp4",
+          "owner": "club",
+          "locked": false
+        },
+        {
+          "name": "Elsan",
+          "path": "videos/default/05_ELSAN.mp4",
+          "type": "video/mp4",
+          "owner": "club",
+          "locked": false
+        }
+      ],
+      "subCategories": []
+    }
+  ],
+  "sponsors": [
+    {
+      "name": "Intro Neopro",
+      "path": "videos/default/01_NEOPRO.mp4",
+      "type": "video/mp4",
+      "owner": "neopro",
+      "locked": true
+    }
+  ],
+  "timeCategories": [
+    {
+      "id": "before",
+      "icon": "🏁",
+      "name": "Avant-match",
+      "color": "from-blue-500 to-blue-600",
+      "loopVideos": [
+        { "name": "Intro Neopro", "path": "videos/default/01_NEOPRO.mp4", "type": "video/mp4" },
+        {
+          "name": "Viaweb",
+          "path": "videos/default/02_VIAWEB.mp4",
+          "type": "video/mp4",
+          "weight": 10
+        },
+        { "name": "Lidl", "path": "videos/default/03_LIDL.mp4", "type": "video/mp4" },
+        { "name": "Cofap", "path": "videos/default/04_COFAP.mp4", "type": "video/mp4" },
+        { "name": "Elsan", "path": "videos/default/05_ELSAN.mp4", "type": "video/mp4" },
+        { "name": "Laugier", "path": "videos/default/06_LAUGIER.mp4", "type": "video/mp4" },
+        { "name": "A l'affut", "path": "videos/default/07_A_L_AFFUT.mp4", "type": "video/mp4" },
+        { "name": "Appart City", "path": "videos/default/08_APPART_CITY.mp4", "type": "video/mp4" },
+        {
+          "name": "Kamineo",
+          "path": "videos/default/09_KAMINEO.mp4",
+          "type": "video/mp4",
+          "weight": 5
+        }
+      ],
+      "categoryIds": ["entrée", "category-infos", "category-sponsors"],
+      "description": "Échauffement & présentation"
+    },
+    {
+      "id": "during",
+      "icon": "▶️",
+      "name": "Match",
+      "color": "from-green-500 to-green-600",
+      "loopVideos": [
+        { "name": "Intro Neopro", "path": "videos/default/01_NEOPRO.mp4", "type": "video/mp4" },
+        { "name": "Viaweb", "path": "videos/default/02_VIAWEB.mp4", "type": "video/mp4" },
+        { "name": "Lidl", "path": "videos/default/03_LIDL.mp4", "type": "video/mp4" },
+        { "name": "Cofap", "path": "videos/default/04_COFAP.mp4", "type": "video/mp4" },
+        { "name": "Elsan", "path": "videos/default/05_ELSAN.mp4", "type": "video/mp4" },
+        { "name": "Laugier", "path": "videos/default/06_LAUGIER.mp4", "type": "video/mp4" },
+        { "name": "A l'affut", "path": "videos/default/07_A_L_AFFUT.mp4", "type": "video/mp4" },
+        { "name": "Appart City", "path": "videos/default/08_APPART_CITY.mp4", "type": "video/mp4" },
+        { "name": "Kamineo", "path": "videos/default/09_KAMINEO.mp4", "type": "video/mp4" }
+      ],
+      "categoryIds": ["category-match", "category-sponsors", "category-infos"],
+      "description": "Live & animations"
+    },
+    {
+      "id": "after",
+      "icon": "🏆",
+      "name": "Après-match",
+      "color": "from-purple-500 to-purple-600",
+      "loopVideos": [
+        { "name": "Intro Neopro", "path": "videos/default/01_NEOPRO.mp4", "type": "video/mp4" },
+        { "name": "Viaweb", "path": "videos/default/02_VIAWEB.mp4", "type": "video/mp4" },
+        { "name": "Lidl", "path": "videos/default/03_LIDL.mp4", "type": "video/mp4" },
+        { "name": "Cofap", "path": "videos/default/04_COFAP.mp4", "type": "video/mp4" },
+        { "name": "Elsan", "path": "videos/default/05_ELSAN.mp4", "type": "video/mp4" },
+        { "name": "Laugier", "path": "videos/default/06_LAUGIER.mp4", "type": "video/mp4" },
+        { "name": "A l'affut", "path": "videos/default/07_A_L_AFFUT.mp4", "type": "video/mp4" },
+        { "name": "Appart City", "path": "videos/default/08_APPART_CITY.mp4", "type": "video/mp4" },
+        { "name": "Kamineo", "path": "videos/default/09_KAMINEO.mp4", "type": "video/mp4" }
+      ],
+      "categoryIds": ["category-infos", "category-sponsors"],
+      "description": "Résultats & remerciements"
+    }
+  ],
+  "categoryMappings": {
+    "entrée": "ambiance",
+    "category-match": "live_game",
+    "category-infos": "other",
+    "category-sponsors": "sponsor",
+    "subcategory-but": "jingle"
+  },
+  "scoreOverlay": {
+    "offsetX": 20,
+    "offsetY": 20,
+    "position": "bottom-left",
+    "scoreSize": 280,
+    "scoreColor": "#4caf50",
+    "borderRadius": 12,
+    "teamNameSize": 160,
+    "teamNameColor": "#ffffff",
+    "backgroundColor": "rgba(0, 0, 0, 0.85)"
+  },
+  "watermark": {
+    "width": 150,
+    "height": 0,
+    "enabled": false,
+    "offsetX": 20,
+    "offsetY": 20,
+    "opacity": 100,
+    "position": "bottom-right",
+    "schedule": { "rules": [], "enabled": false },
+    "animation": "fade",
+    "imagePath": "",
+    "fullscreen": true,
+    "borderRadius": 0,
+    "animationDuration": 500
+  },
+  "secondaryDisplayEnabled": false
+}

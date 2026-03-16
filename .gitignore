@@ -21,6 +21,17 @@ central-server/tmp/
 coverage/
 *.lcov
 
+# Dev seed (videos symlinks + config backups)
+raspberry/public/videos
+raspberry/public/configuration.json.bak
+raspberry/webapp/configuration.json.bak
+raspberry/videos
+raspberry/data
+raspberry/uploads-temp
+raspberry/logs
+raspberry/thumbnails
+raspberry/VERSION
+
 # Configurations avec mots de passe
 raspberry/config/templates/*-configuration.json
 !raspberry/config/templates/TEMPLATE-configuration.json

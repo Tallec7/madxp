@@ -10,6 +10,10 @@ npm start                          # Frontend Raspberry (port 4200)
 npm run start:central              # Dashboard central (port 4300)
 cd central-server && npm run dev   # API Backend (port 3001)
 
+# Simulation locale complète (dev-seed)
+npm run dev:seed                   # Installe config + vidéos + data pour les 3 serveurs
+npm run dev:seed:clean             # Nettoie les fichiers dev-seed
+
 # Build
 npm run build:raspberry            # Build Angular Pi
 npm run build:central              # Build dashboard

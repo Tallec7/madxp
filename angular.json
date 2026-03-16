@@ -129,6 +129,9 @@
             "production": {
               "buildTarget": "raspberry:build:production"
             },
+            "demo": {
+              "buildTarget": "raspberry:build:demo"
+            },
             "development": {
               "buildTarget": "raspberry:build:development"
             }
