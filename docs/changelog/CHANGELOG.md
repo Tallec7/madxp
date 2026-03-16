@@ -1,3 +1,9 @@
+## [3.111.2](https://github.com/Tallec7/neopro/compare/v3.111.1...v3.111.2) (2026-03-16)
+
+### Bug Fixes
+
+- **sponsors:** wrap-around — évite double passage à la jonction de boucle ([b86afe9](https://github.com/Tallec7/neopro/commit/b86afe9de36ae6166a7f46fbc95be8571f159688))
+
 ## [3.111.1](https://github.com/Tallec7/neopro/compare/v3.111.0...v3.111.1) (2026-03-16)
 
 ### Bug Fixes
