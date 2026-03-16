@@ -1,3 +1,9 @@
+# [3.112.0](https://github.com/Tallec7/neopro/compare/v3.111.2...v3.112.0) (2026-03-16)
+
+### Features
+
+- **sponsors:** vidéos épinglées — bloquer une vidéo à sa position dans la boucle ([3acb2a4](https://github.com/Tallec7/neopro/commit/3acb2a4e2217895ccb3ef9d7a1a33968a593edf8))
+
 ## [3.111.2](https://github.com/Tallec7/neopro/compare/v3.111.1...v3.111.2) (2026-03-16)
 
 ### Features
