@@ -1193,6 +1193,116 @@ export type SortDirection = 'asc' | 'desc';
       background: linear-gradient(90deg, #fef2f2 0%, transparent 20%);
       border-left: 2px solid #ef4444;
     }
+
+    /* === Responsive === */
+    @media (max-width: 768px) {
+      .video-library {
+        padding: 0.5rem;
+      }
+
+      .library-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+      }
+
+      .library-filters {
+        gap: 0.375rem;
+      }
+
+      .filter-select {
+        min-width: 0;
+        flex: 1;
+        font-size: 0.75rem;
+        padding: 0.375rem 0.5rem;
+      }
+
+      .search-input {
+        min-width: 0;
+        flex-basis: 100%;
+        font-size: 0.75rem;
+      }
+
+      /* Hide less critical columns on mobile */
+      .col-advertiser,
+      .col-variant,
+      .col-config,
+      .col-duration,
+      .col-date {
+        display: none;
+      }
+
+      .col-category {
+        width: 70px;
+      }
+
+      .col-size {
+        width: 50px;
+        font-size: 0.65rem;
+      }
+
+      .col-owner {
+        width: 42px;
+        font-size: 0.55rem;
+      }
+
+      .col-actions {
+        width: 50px;
+      }
+
+      .sort-header {
+        gap: 0.25rem;
+        padding: 0.375rem 0.5rem;
+        font-size: 0.65rem;
+      }
+
+      .sort-btn {
+        font-size: 0.65rem;
+        padding: 0.2rem 0.375rem;
+      }
+
+      .video-item {
+        gap: 0.25rem;
+        padding: 0.375rem 0.5rem;
+      }
+
+      .video-actions {
+        opacity: 1;
+      }
+
+      .action-btn {
+        padding: 0.2rem 0.3rem;
+        font-size: 0.75rem;
+      }
+
+      .preview-overlay {
+        padding: 0.5rem;
+      }
+
+      .preview-modal {
+        max-height: 85vh;
+      }
+
+      .bulk-actions {
+        flex-wrap: wrap;
+        gap: 0.375rem;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .col-category,
+      .col-status {
+        display: none;
+      }
+
+      .col-owner {
+        width: 38px;
+      }
+
+      .video-name {
+        font-size: 0.75rem;
+      }
+    }
   `]
 })
 export class VideoLibraryComponent implements OnChanges {

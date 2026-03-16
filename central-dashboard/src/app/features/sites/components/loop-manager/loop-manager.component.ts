@@ -813,6 +813,77 @@ interface SponsorWeightGroup {
       color: #1e40af;
       font-variant-numeric: tabular-nums;
     }
+
+    /* === Responsive === */
+    @media (max-width: 768px) {
+      .loop-tabs {
+        flex-wrap: wrap;
+        gap: 0.25rem;
+        padding: 0.5rem 0.75rem 0;
+      }
+
+      .loop-tab {
+        padding: 0.375rem 0.5rem;
+        font-size: 0.75rem;
+        gap: 0.25rem;
+      }
+
+      .loop-tab.fallback {
+        margin-left: 0;
+      }
+
+      .tab-count {
+        display: none;
+      }
+
+      .loop-content {
+        padding: 0.75rem;
+      }
+
+      .loop-manager-header {
+        padding: 0.75rem 0.75rem 0;
+      }
+
+      .loop-video-row {
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        padding: 0.625rem;
+      }
+
+      .video-fields {
+        flex-basis: calc(100% - 36px);
+        flex-wrap: wrap;
+      }
+
+      .video-name-input {
+        width: 100%;
+      }
+
+      .video-select {
+        width: 100%;
+      }
+
+      .video-owner {
+        margin-left: auto;
+      }
+
+      .weight-control-inline {
+        order: 10;
+      }
+
+      .playlist-preview {
+        margin: 0.5rem 0;
+      }
+
+      .default-loop-warning {
+        margin: 0.75rem 0.75rem 0;
+        font-size: 0.75rem;
+      }
+
+      .loop-footer {
+        padding: 0.5rem 0.75rem;
+      }
+    }
   `]
 })
 export class LoopManagerComponent implements OnInit, OnChanges {
