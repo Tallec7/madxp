@@ -207,6 +207,58 @@ describe('generateWeightedPlaylist', () => {
         expect(countB).toBe(1);
     });
 
+    // --- Wrap-around fix ---
+
+    it('avoids same-sponsor at first AND last position (loop cycles)', () => {
+        // Cofap(×2) + 8 others(×1) = 10 slots
+        // Without wrap-around fix: Cofap at pos 0 AND pos 9 → double passage à la jonction
+        const cofap = makeVideo('Cofap', 'sponsor-cofap', 2);
+        const others = ['Intro', 'Viaweb', 'Lidl', 'Elsan', 'Laugier', 'Affut', 'AppartCity', 'Kamineo'].map((n, i) =>
+            makeVideo(n, `sponsor-${i + 2}`, 1),
+        );
+        const result = generateWeightedPlaylist([cofap, ...others]);
+
+        expect(result.length).toBe(10);
+        expect(result.filter(v => v === cofap).length).toBe(2);
+
+        // First and last must NOT be the same sponsor
+        const firstSponsor = result[0].site_sponsor_id;
+        const lastSponsor = result[result.length - 1].site_sponsor_id;
+        expect({
+            wrapAroundSafe: firstSponsor !== lastSponsor,
+            first: firstSponsor,
+            last: lastSponsor,
+        }).toEqual({
+            wrapAroundSafe: true,
+            first: firstSponsor,
+            last: lastSponsor,
+        });
+
+        // Internal anti-consecutive must still hold
+        for (let i = 1; i < result.length; i++) {
+            const prev = result[i - 1].site_sponsor_id;
+            const curr = result[i].site_sponsor_id;
+            if (prev === curr) {
+                // Only OK if no other sponsor available (shouldn't happen here)
+                expect({ index: i, consecutive: true }).toEqual({ index: i, consecutive: false });
+            }
+        }
+    });
+
+    it('wrap-around fix preserves video count', () => {
+        // Multiple weighted sponsors
+        const a = makeVideo('A', 'sponsor-1', 3);
+        const b = makeVideo('B', 'sponsor-2', 2);
+        const others = ['C', 'D', 'E', 'F', 'G'].map((n, i) =>
+            makeVideo(n, `sponsor-${i + 3}`, 1),
+        );
+        const result = generateWeightedPlaylist([a, b, ...others]);
+
+        expect(result.length).toBe(10); // 3 + 2 + 5
+        expect(result.filter(v => v === a).length).toBe(3);
+        expect(result.filter(v => v === b).length).toBe(2);
+    });
+
     // --- Object identity ---
 
     it('preserves object references (same LoopVideo instances)', () => {

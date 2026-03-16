@@ -10203,6 +10203,18 @@ describe('Weighted sponsor rotation guards', () => {
       reason: 'Dashboard must show playlist preview so club managers can see the effect of weight changes in real-time',
     });
   });
+
+  it('weighted-playlist must have fixWrapAround to prevent double passage at loop boundary', () => {
+    const algoPath = path.join(repoRoot, 'raspberry/src/app/utils/weighted-playlist.ts');
+    const content = fs.readFileSync(algoPath, 'utf8');
+    expect({
+      hasFixWrapAround: content.includes('fixWrapAround'),
+      reason: 'The TV loop cycles continuously — without wrap-around fix, same sponsor at position 1 AND last = double passage at boundary',
+    }).toEqual({
+      hasFixWrapAround: true,
+      reason: 'The TV loop cycles continuously — without wrap-around fix, same sponsor at position 1 AND last = double passage at boundary',
+    });
+  });
 });
 
 // =============================================================================

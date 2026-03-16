@@ -1132,7 +1132,45 @@ export class LoopManagerComponent implements OnInit, OnChanges {
       lastSponsorId = picked.sponsorId;
     }
 
+    // Fix wrap-around : même logique que le Pi (fixWrapAround)
+    this.fixPreviewWrapAround(result, entries);
+
     return result;
+  }
+
+  /**
+   * Corrige le wrap-around : si premier et dernier ont le même sponsor,
+   * déplace le dernier au milieu pour éviter un double passage à la jonction.
+   */
+  private fixPreviewWrapAround(
+    result: Array<{ name: string; sponsorName: string; color: string }>,
+    entries: Array<{ video: LoopVideoConfig; sponsorId: string }>,
+  ): void {
+    if (result.length <= 2) return;
+
+    // Retrouver le sponsorId du premier et dernier via les entries
+    const firstVideo = entries.find(e => (e.video.name || e.video.path?.split('/').pop() || 'Vidéo') === result[0].name);
+    const lastVideo = entries.find(e => (e.video.name || e.video.path?.split('/').pop() || 'Vidéo') === result[result.length - 1].name);
+    if (!firstVideo || !lastVideo || firstVideo.sponsorId !== lastVideo.sponsorId) return;
+
+    const removedSid = lastVideo.sponsorId;
+    const removed = result.pop()!;
+    const mid = Math.floor(result.length / 2);
+
+    for (let offset = 0; offset <= result.length; offset++) {
+      const candidates = offset === 0 ? [mid] : [mid + offset, mid - offset];
+      for (const pos of candidates) {
+        if (pos < 1 || pos >= result.length) continue;
+        const prevEntry = entries.find(e => (e.video.name || e.video.path?.split('/').pop() || 'Vidéo') === result[pos - 1].name);
+        const nextEntry = entries.find(e => (e.video.name || e.video.path?.split('/').pop() || 'Vidéo') === result[pos].name);
+        if (prevEntry?.sponsorId !== removedSid && nextEntry?.sponsorId !== removedSid) {
+          result.splice(pos, 0, removed);
+          return;
+        }
+      }
+    }
+
+    result.push(removed);
   }
 
   /**

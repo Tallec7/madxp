@@ -73,6 +73,11 @@ export function generateWeightedPlaylist(videos: LoopVideo[]): LoopVideo[] {
         lastSponsorId = entries[bestIdx].sponsorId;
     }
 
+    // Fix wrap-around : la boucle TV cycle en continu, donc position N → position 1.
+    // Si le premier et le dernier ont le même sponsor, on déplace le dernier au milieu
+    // pour éviter un double passage à la jonction.
+    fixWrapAround(result);
+
     return result;
 }
 
@@ -88,4 +93,40 @@ function hasOtherSponsorOptions(
     excludeSponsorId: string,
 ): boolean {
     return entries.some(e => e.remaining > 0 && e.sponsorId !== excludeSponsorId);
+}
+
+/**
+ * Corrige le cas wrap-around : la boucle TV cycle (pos N → pos 1).
+ * Si premier et dernier ont le même sponsor, le dernier est déplacé
+ * au milieu de la playlist pour éviter un double passage à la jonction.
+ */
+function fixWrapAround(result: LoopVideo[]): void {
+    if (result.length <= 2) return;
+
+    const getSponsorId = (v: LoopVideo): string => v.site_sponsor_id || v.path;
+    const firstSid = getSponsorId(result[0]);
+    const lastSid = getSponsorId(result[result.length - 1]);
+
+    if (firstSid !== lastSid) return;
+
+    // Retirer le dernier élément et trouver un emplacement au milieu
+    const removed = result.pop()!;
+    const mid = Math.floor(result.length / 2);
+
+    // Chercher autour du milieu un emplacement où les voisins sont d'autres sponsors
+    for (let offset = 0; offset <= result.length; offset++) {
+        const candidates = offset === 0 ? [mid] : [mid + offset, mid - offset];
+        for (const pos of candidates) {
+            if (pos < 1 || pos >= result.length) continue;
+            const prevSid = getSponsorId(result[pos - 1]);
+            const nextSid = getSponsorId(result[pos]);
+            if (prevSid !== lastSid && nextSid !== lastSid) {
+                result.splice(pos, 0, removed);
+                return;
+            }
+        }
+    }
+
+    // Fallback : remettre à la fin (ne devrait pas arriver avec des sponsors variés)
+    result.push(removed);
 }
