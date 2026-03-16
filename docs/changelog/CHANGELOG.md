@@ -1,3 +1,9 @@
+## [3.108.2](https://github.com/Tallec7/neopro/compare/v3.108.1...v3.108.2) (2026-03-16)
+
+### Bug Fixes
+
+- **sponsor-portal:** doublon "Boucle continue" dans répartition par période ([0605103](https://github.com/Tallec7/neopro/commit/06051034b256c408796b3797e859c6f060fc3ed7))
+
 ## [3.108.1](https://github.com/Tallec7/neopro/compare/v3.108.0...v3.108.1) (2026-03-16)
 
 ### Bug Fixes
