@@ -1023,7 +1023,8 @@ CREATE OR REPLACE VIEW sponsor_impressions_bridge AS
 SELECT vp.id, vp.site_id, vp.sponsor_id AS advertiser_id, vp.video_id,
        vp.video_filename, vp.played_at, vp.duration_played, vp.video_duration,
        vp.completed, vp.event_type, vp.period, vp.trigger_type,
-       vp.position_in_loop, vp.audience_estimate, vp.site_sponsor_id, vp.tv_status
+       vp.position_in_loop, vp.audience_estimate, vp.site_sponsor_id, vp.tv_status,
+       vp.interruption_reason
 FROM video_plays vp
 WHERE vp.category = 'sponsor'
   AND (vp.tv_status IN ('on', 'unknown') OR vp.tv_status IS NULL);

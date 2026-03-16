@@ -98,6 +98,7 @@ export const getSponsorPortalStats = async (req: Request, res: Response): Promis
           screen_time_seconds: Number(r.screen_time_seconds) || 0,
           completion_rate: Number(r.completion_rate) || 0,
           avg_duration_played: Number(r.avg_duration_played) || 0,
+          manual_triggers: Number(r.manual_triggers) || 0,
         })),
         period_breakdown: periodBreakdownResult.rows.map((r: PeriodBreakdownRow) => ({
           period: r.period,
@@ -261,6 +262,7 @@ export const getSponsorPortalCsv = async (req: Request, res: Response): Promise<
     lines.push(`Taux de complétion (%);${summary.completion_rate}`);
     lines.push(`Spectateurs estimés;${summary.estimated_reach}`);
     lines.push(`Jours actifs;${summary.active_days}`);
+    lines.push(`Lancements manuels;${summary.manual_triggers}`);
     lines.push('');
 
     // Daily trends
@@ -273,9 +275,9 @@ export const getSponsorPortalCsv = async (req: Request, res: Response): Promise<
 
     // Video stats
     lines.push('=== STATS PAR VIDÉO ===');
-    lines.push('Vidéo;Passages;Temps écran (sec);Complétion (%);Durée moy. (sec)');
+    lines.push('Vidéo;Passages;Temps écran (sec);Complétion (%);Durée moy. (sec);Lancements manuels');
     for (const v of videoStatsResult.rows) {
-      lines.push(`${v.video_filename};${v.impressions};${v.screen_time_seconds};${v.completion_rate};${v.avg_duration_played}`);
+      lines.push(`${v.video_filename};${v.impressions};${v.screen_time_seconds};${v.completion_rate};${v.avg_duration_played};${v.manual_triggers}`);
     }
     lines.push('');
 

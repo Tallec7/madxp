@@ -1205,6 +1205,7 @@ Reçoit les événements de lecture vidéo depuis l'application Angular et les s
       "video_duration": 30,
       "completed": true,
       "trigger_type": "auto",
+      "interruption_reason": null,
       "session_id": "session_123456789"
     }
   ]
@@ -1536,10 +1537,10 @@ GET    /reports/stats                            - Statistiques des rapports (ad
 
 ```
 GET    /sponsor-portal/verify     - Vérifie un magic link token → { valid, sponsor }
-GET    /sponsor-portal/stats      - Stats sponsor via token (période configurable, inclut video_stats + period_breakdown)
+GET    /sponsor-portal/stats      - Stats sponsor via token (inclut video_stats + period_breakdown + manual_triggers)
 GET    /sponsor-portal/report     - Téléchargement rapport PDF via token (page 2 conditionnelle match-by-match si matchs) [P6.4]
 GET    /sponsor-portal/benchmark  - Benchmark intra-club anonymisé (classement des sponsors, moyennes) [PoC Proof of Play]
-GET    /sponsor-portal/export-csv - Export CSV des données sponsor (summary + daily + vidéos + périodes) [PoC Proof of Play]
+GET    /sponsor-portal/export-csv - Export CSV des données sponsor (summary + daily + vidéos + périodes + lancements manuels)
 ```
 
 **Authentification :** JWT HttpOnly cookie + Bearer token

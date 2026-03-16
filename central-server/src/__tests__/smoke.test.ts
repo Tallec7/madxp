@@ -9989,3 +9989,109 @@ describe('Sponsor video_filename path normalization guard', () => {
     });
   });
 });
+
+// =============================================================================
+// Sponsor period breakdown GROUP BY alignment guard
+// =============================================================================
+// When SELECT uses COALESCE(NULLIF(TRIM(vp.period), ''), 'loop'), the GROUP BY
+// must use the SAME expression. Using raw `vp.period` causes duplicate rows
+// (e.g., two "Boucle continue" entries — one for empty string, one for null).
+// =============================================================================
+
+describe('Sponsor period breakdown GROUP BY alignment guard', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+  const repoPath = path.join(repoRoot, 'central-server/src/repositories/site-sponsor.repository.ts');
+
+  let content: string;
+  beforeAll(() => {
+    content = fs.readFileSync(repoPath, 'utf8');
+  });
+
+  it('getStatsByPeriod GROUP BY must use COALESCE expression, not raw vp.period', () => {
+    // The GROUP BY must match the SELECT COALESCE to avoid duplicate rows
+    expect({
+      hasCoalesceGroupBy: /GROUP BY\s+COALESCE\(NULLIF\(TRIM\(vp\.period\)/.test(content),
+      reason: 'GROUP BY raw vp.period splits null/empty/whitespace into separate rows → duplicate display entries',
+    }).toEqual({
+      hasCoalesceGroupBy: true,
+      reason: 'GROUP BY raw vp.period splits null/empty/whitespace into separate rows → duplicate display entries',
+    });
+  });
+});
+
+// =============================================================================
+// Sponsor portal manual_triggers guard
+// =============================================================================
+// The sponsor portal must expose manual_triggers (trigger_type='manual' count)
+// in both the summary and per-video stats. Without it, sponsors can't see
+// which videos were played manually by club staff.
+// =============================================================================
+
+describe('Sponsor portal manual_triggers guard', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+
+  let repoContent: string;
+  let controllerContent: string;
+
+  beforeAll(() => {
+    repoContent = fs.readFileSync(
+      path.join(repoRoot, 'central-server/src/repositories/site-sponsor.repository.ts'),
+      'utf8'
+    );
+    controllerContent = fs.readFileSync(
+      path.join(repoRoot, 'central-server/src/controllers/sponsor-portal.controller.ts'),
+      'utf8'
+    );
+  });
+
+  it('repository must count manual triggers in summary and per-video queries', () => {
+    const manualFilterCount = (repoContent.match(/FILTER\s*\(\s*WHERE\s+.*trigger_type\s*=\s*'manual'\s*\)/g) || []).length;
+    expect({
+      manualFilterCount,
+      hasAtLeast2: manualFilterCount >= 2,
+      reason: 'getStatsSummary + getStatsByVideo must both COUNT manual triggers',
+    }).toEqual({
+      manualFilterCount,
+      hasAtLeast2: true,
+      reason: 'getStatsSummary + getStatsByVideo must both COUNT manual triggers',
+    });
+  });
+
+  it('controller must map manual_triggers in video_stats response', () => {
+    expect({
+      hasMappingInVideoStats: /manual_triggers.*Number/.test(controllerContent),
+      reason: 'video_stats response must include manual_triggers for per-video display',
+    }).toEqual({
+      hasMappingInVideoStats: true,
+      reason: 'video_stats response must include manual_triggers for per-video display',
+    });
+  });
+});
+
+// =============================================================================
+// sponsor_impressions_bridge VIEW must include interruption_reason
+// =============================================================================
+// The bridge view is used by advertiser dashboards. Without interruption_reason,
+// advertiser analytics can't distinguish completed vs interrupted plays.
+// =============================================================================
+
+describe('sponsor_impressions_bridge VIEW completeness guard', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+  const schemaPath = path.join(repoRoot, 'central-server/src/scripts/full-schema.sql');
+
+  let content: string;
+  beforeAll(() => {
+    content = fs.readFileSync(schemaPath, 'utf8');
+  });
+
+  it('sponsor_impressions_bridge must include interruption_reason column', () => {
+    const viewBlock = content.match(/CREATE OR REPLACE VIEW sponsor_impressions_bridge[\s\S]*?;/);
+    expect({
+      hasInterruptionReason: viewBlock ? /interruption_reason/.test(viewBlock[0]) : false,
+      reason: 'advertiser analytics need interruption context for completion analysis',
+    }).toEqual({
+      hasInterruptionReason: true,
+      reason: 'advertiser analytics need interruption context for completion analysis',
+    });
+  });
+});

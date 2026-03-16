@@ -135,6 +135,8 @@ source central-server/.env && psql "$DATABASE_URL" -f central-server/src/scripts
 - Supprimer les endpoints `/benchmark` ou `/export-csv` du sponsor-portal (essentiels pour le PoC Proof of Play — sans eux, pas de classement intra-club ni d'export données — smoke test enforced)
 - Retirer `interruption_reason` de l'INSERT `video_plays` dans analytics.repository.ts (alimente le taux de complétion du portail sponsor — sans contexte d'interruption, les stats de complétion sont imprécises — smoke test enforced)
 - Afficher le canvas Chart.js du portail sponsor sans conteneur `.chart-container` à hauteur fixe (`maintainAspectRatio: false` sans hauteur parent = graphe qui s'étire indéfiniment — smoke test enforced)
+- Utiliser `GROUP BY vp.column` quand le SELECT utilise `COALESCE(NULLIF(TRIM(vp.column), ''), 'default')` (le GROUP BY brut ne coalese pas les variantes vide/null/whitespace → lignes dupliquées dans l'affichage — toujours aligner le GROUP BY sur l'expression COALESCE du SELECT — smoke test enforced)
+- Utiliser `video_duration: durationPlayed` dans analytics.service.ts (c'est la durée jouée, pas la durée réelle de la vidéo HTMLVideoElement.duration — utiliser `setCurrentVideoDuration()` qui capture `player.duration` depuis tv.component.ts → completion_rate = duration_played / video_duration devient significatif — smoke test enforced)
 - Appeler `fix-fleet-pi.sh` sans `sudo` dans `deploy-remote.sh` ou `update-software.js` (le script vérifie `id -u == 0` et exit 1 si non-root — sans sudo, les 13 étapes de remédiation fleet sont silencieusement ignorées : boot splash, systemd, GPU, HDMI, ventilateur Pi 5… — `|| true` / `catch` avalent l'erreur — smoke test enforced)
 
 ## Architecture détaillée
