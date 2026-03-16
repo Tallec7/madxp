@@ -5974,9 +5974,11 @@ describe('Resolution detection cascade', () => {
       l.includes('DUAL_DISPLAY_ACTIVE') && l.includes('!= "true"') && l.includes('then')
     );
     expect(singleDisplayCheckIdx).toBeGreaterThan(dualDisplayLogIdx);
-    // Find the fi that closes this block (within ~25 lines)
+    // Find the fi that closes this block at the SAME indentation level (not inner fi's)
+    const openingIndent = lines[singleDisplayCheckIdx].match(/^(\s*)/)?.[1] ?? '';
     const fiIdx = lines.findIndex((l, i) =>
-      i > singleDisplayCheckIdx && i < singleDisplayCheckIdx + 25 && /^\s+fi$/.test(l)
+      i > singleDisplayCheckIdx && i < singleDisplayCheckIdx + 30 &&
+      new RegExp(`^${openingIndent}fi$`).test(l)
     );
     expect(fiIdx).toBeGreaterThan(singleDisplayCheckIdx);
     const singleDisplayBlock = lines.slice(singleDisplayCheckIdx, fiIdx + 1).join('\n');
