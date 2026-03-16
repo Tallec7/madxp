@@ -100,6 +100,7 @@ export interface SiteSponsorStatsSummary extends QueryResultRow {
   completion_rate: string;
   estimated_reach: string;
   active_days: string;
+  manual_triggers: string;
 }
 
 export interface SiteSponsorDailyTrendRow extends QueryResultRow {
@@ -168,6 +169,7 @@ export interface VideoStatsRow extends QueryResultRow {
   screen_time_seconds: string;
   completion_rate: string;
   avg_duration_played: string;
+  manual_triggers: string;
 }
 
 export interface PeriodBreakdownRow extends QueryResultRow {
@@ -476,7 +478,8 @@ class SiteSponsorRepositoryImpl extends BaseRepository<SiteSponsorRow> {
       `SELECT ss.id
        FROM site_sponsors ss
        JOIN site_sponsor_videos ssv ON ssv.site_sponsor_id = ss.id
-       WHERE ssv.video_filename = $1 AND ss.site_id = $2
+       WHERE (ssv.video_filename = $1 OR ssv.video_filename LIKE '%/' || $1)
+         AND ss.site_id = $2
        LIMIT 1`,
       [videoFilename, siteId]
     );
@@ -542,10 +545,10 @@ class SiteSponsorRepositoryImpl extends BaseRepository<SiteSponsorRow> {
     const queryResult = await query<{ site_sponsor_id: string; video_filename: string; site_id: string }>(
       `SELECT DISTINCT ON (v.video_filename, v.site_id)
          ss.id AS site_sponsor_id,
-         ssv.video_filename,
-         ss.site_id
+         v.video_filename,
+         v.site_id::text AS site_id
        FROM (VALUES ${values.join(', ')}) AS v(video_filename, site_id)
-       JOIN site_sponsor_videos ssv ON ssv.video_filename = v.video_filename
+       JOIN site_sponsor_videos ssv ON (ssv.video_filename = v.video_filename OR ssv.video_filename LIKE '%/' || v.video_filename)
        JOIN site_sponsors ss ON ss.id = ssv.site_sponsor_id AND ss.site_id = v.site_id`,
       params
     );
@@ -572,7 +575,8 @@ class SiteSponsorRepositoryImpl extends BaseRepository<SiteSponsorRow> {
           THEN ROUND(SUM(CASE WHEN completed THEN 1 ELSE 0 END)::numeric / COUNT(*) * 100, 1)
           ELSE 0 END as completion_rate,
         COALESCE(SUM(audience_estimate), 0) as estimated_reach,
-        COUNT(DISTINCT DATE(played_at)) as active_days
+        COUNT(DISTINCT DATE(played_at)) as active_days,
+        COUNT(*) FILTER (WHERE trigger_type = 'manual') as manual_triggers
        FROM video_plays
        WHERE site_sponsor_id = $1
          AND category = 'sponsor'
@@ -900,7 +904,8 @@ class SiteSponsorRepositoryImpl extends BaseRepository<SiteSponsorRow> {
          CASE WHEN COUNT(*) > 0
            THEN ROUND(SUM(CASE WHEN vp.completed THEN 1 ELSE 0 END)::numeric / COUNT(*) * 100, 1)::text
            ELSE '0' END AS completion_rate,
-         ROUND(AVG(vp.duration_played)::numeric, 1)::text AS avg_duration_played
+         ROUND(AVG(vp.duration_played)::numeric, 1)::text AS avg_duration_played,
+         COUNT(*) FILTER (WHERE vp.trigger_type = 'manual')::text AS manual_triggers
        FROM video_plays vp
        WHERE vp.site_sponsor_id = $1
          AND vp.category = 'sponsor'

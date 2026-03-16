@@ -25,6 +25,7 @@ export interface SponsorPortalVideoStats {
   screen_time_seconds: number;
   completion_rate: number;
   avg_duration_played: number;
+  manual_triggers: number;
 }
 
 export interface SponsorPortalPeriodBreakdown {
@@ -70,6 +71,7 @@ export interface SponsorPortalStats {
     completion_rate: number;
     estimated_reach: number;
     active_days: number;
+    manual_triggers: number;
   };
   daily_trends: Array<{
     date: string;

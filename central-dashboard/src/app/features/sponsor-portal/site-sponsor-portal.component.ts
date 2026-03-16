@@ -107,6 +107,10 @@ const PERIOD_LABELS: Record<string, string> = {
             <div class="kpi-value">{{ formatDuration(stats.summary.total_screen_time_seconds) }}</div>
             <div class="kpi-label">Temps d'&eacute;cran total</div>
           </div>
+          <div class="kpi-card" *ngIf="stats.summary.manual_triggers > 0">
+            <div class="kpi-value">{{ stats.summary.manual_triggers }}</div>
+            <div class="kpi-label">Lancements manuels</div>
+          </div>
         </div>
 
         <!-- Trends Chart -->
@@ -125,6 +129,7 @@ const PERIOD_LABELS: Record<string, string> = {
               <tr>
                 <th>Vid&eacute;o</th>
                 <th>Passages</th>
+                <th>Manuel</th>
                 <th>Compl&eacute;tion</th>
                 <th>Dur&eacute;e moy.</th>
                 <th>Temps &eacute;cran</th>
@@ -134,6 +139,7 @@ const PERIOD_LABELS: Record<string, string> = {
               <tr *ngFor="let v of stats!.video_stats">
                 <td class="video-name-cell">{{ v.video_filename }}</td>
                 <td>{{ v.impressions }}</td>
+                <td>{{ v.manual_triggers || 0 }}</td>
                 <td>{{ v.completion_rate | number:'1.0-0' }}%</td>
                 <td>{{ formatDuration(v.avg_duration_played) }}</td>
                 <td>{{ formatDuration(v.screen_time_seconds) }}</td>
