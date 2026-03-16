@@ -9902,3 +9902,90 @@ describe('Sponsor queries tv_status filter guard', () => {
     });
   });
 });
+
+// =============================================================================
+// Sponsor video_filename path normalization guard
+// =============================================================================
+// site_sponsor_videos.video_filename may store full paths ("videos/default/X.mp4")
+// sent by the Pi via syncVideoAssociations, while the config loop uses bare filenames
+// ("X.mp4"). Both the SQL queries and the dashboard must normalize before comparing.
+// Without this, sponsors show "Hors boucle" and auto-resolution fails silently.
+// =============================================================================
+
+describe('Sponsor video_filename path normalization guard', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+
+  let repoContent: string;
+  let dashboardContent: string;
+
+  beforeAll(() => {
+    repoContent = fs.readFileSync(
+      path.join(repoRoot, 'central-server/src/repositories/site-sponsor.repository.ts'),
+      'utf8'
+    );
+    dashboardContent = fs.readFileSync(
+      path.join(repoRoot, 'central-dashboard/src/app/features/sites/components/site-sponsors-tab/site-sponsors-tab.component.ts'),
+      'utf8'
+    );
+  });
+
+  it('resolveSiteSponsorIdByFilename must use LIKE fallback for full-path matching', () => {
+    expect({
+      hasLikeFallback: /LIKE\s+'%\/'\s*\|\|\s*\$1/.test(repoContent),
+      reason: 'video_filename may be a full path — exact match alone misses "videos/default/X.mp4" when querying "X.mp4"',
+    }).toEqual({
+      hasLikeFallback: true,
+      reason: 'video_filename may be a full path — exact match alone misses "videos/default/X.mp4" when querying "X.mp4"',
+    });
+  });
+
+  it('resolveSiteSponsorIdsByFilenameBulk must use LIKE fallback for full-path matching', () => {
+    expect({
+      hasLikeFallback: /LIKE\s+'%\/'\s*\|\|\s*v\.video_filename/.test(repoContent),
+      reason: 'bulk resolver must also handle full-path video_filenames in site_sponsor_videos',
+    }).toEqual({
+      hasLikeFallback: true,
+      reason: 'bulk resolver must also handle full-path video_filenames in site_sponsor_videos',
+    });
+  });
+
+  it('resolveSiteSponsorIdsByFilenameBulk must return v.video_filename (not ssv.video_filename) for Map key consistency', () => {
+    // The caller builds Map keys with the bare filename it sent, so the query must return
+    // v.video_filename (the input) not ssv.video_filename (the DB value which may be a full path)
+    const selectBlock = repoContent.match(/SELECT DISTINCT ON \(v\.video_filename.*?FROM \(VALUES/s);
+    expect({
+      returnsInputFilename: selectBlock ? /v\.video_filename/.test(selectBlock[0]) : false,
+      doesNotReturnSsvFilename: selectBlock ? !/ssv\.video_filename/.test(selectBlock[0]) : false,
+      reason: 'Map key must match the bare filename the caller sent, not the full path from DB',
+    }).toEqual({
+      returnsInputFilename: true,
+      doesNotReturnSsvFilename: true,
+      reason: 'Map key must match the bare filename the caller sent, not the full path from DB',
+    });
+  });
+
+  it('dashboard isFilenameInLoop must normalize full paths to bare filenames', () => {
+    expect({
+      hasBareFilenameExtraction: /split\('\/'\)\.pop\(\)/.test(dashboardContent),
+      hasHelperMethod: /isFilenameInLoop/.test(dashboardContent),
+      reason: 'sponsor video_filenames from DB may be full paths — must extract bare filename before Set lookup',
+    }).toEqual({
+      hasBareFilenameExtraction: true,
+      hasHelperMethod: true,
+      reason: 'sponsor video_filenames from DB may be full paths — must extract bare filename before Set lookup',
+    });
+  });
+
+  it('buildVideosInLoopsSet must add full path (not just bare filename) to the Set', () => {
+    // The addToSet helper adds both path (full) and extractFilename(path) (bare) to the Set
+    expect({
+      hasAddToSetHelper: /addToSet\s*=\s*\(/.test(dashboardContent),
+      addsBothFullAndBare: /videosInLoops\.add\(path\)/.test(dashboardContent) && /videosInLoops\.add\(extractFilename\(path\)\)/.test(dashboardContent),
+      reason: 'Set must contain both full paths and bare filenames to handle either format in video_filenames',
+    }).toEqual({
+      hasAddToSetHelper: true,
+      addsBothFullAndBare: true,
+      reason: 'Set must contain both full paths and bare filenames to handle either format in video_filenames',
+    });
+  });
+});

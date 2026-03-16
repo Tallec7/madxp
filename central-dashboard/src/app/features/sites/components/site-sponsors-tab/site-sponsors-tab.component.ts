@@ -1966,49 +1966,52 @@ export class SiteSponsorsTabComponent implements OnInit, OnDestroy {
       return parts[parts.length - 1];
     };
 
+    // Helper to add both the full path and bare filename to the set
+    const addToSet = (path?: string, name?: string): void => {
+      if (path) {
+        this.videosInLoops.add(path); // full path for exact match
+        this.videosInLoops.add(extractFilename(path)); // bare filename
+      }
+      if (name) {
+        this.videosInLoops.add(name);
+      }
+    };
+
     // 1. Global loop (config.sponsors[] — legacy name for loop videos)
     for (const loopVideo of config.sponsors ?? []) {
-      if (loopVideo.path) {
-        this.videosInLoops.add(extractFilename(loopVideo.path));
-      }
-      if (loopVideo.name) {
-        this.videosInLoops.add(loopVideo.name);
-      }
+      addToSet(loopVideo.path, loopVideo.name);
     }
 
     // 2. Time categories loop videos
     for (const tc of config.timeCategories ?? []) {
       for (const loopVideo of tc.loopVideos ?? []) {
-        if (loopVideo.path) {
-          this.videosInLoops.add(extractFilename(loopVideo.path));
-        }
-        if (loopVideo.name) {
-          this.videosInLoops.add(loopVideo.name);
-        }
+        addToSet(loopVideo.path, loopVideo.name);
       }
     }
 
     // 3. Category videos and subcategory videos
     for (const cat of config.categories ?? []) {
       for (const video of cat.videos ?? []) {
-        if (video.path) {
-          this.videosInLoops.add(extractFilename(video.path));
-        }
-        if (video.name) {
-          this.videosInLoops.add(video.name);
-        }
+        addToSet(video.path, video.name);
       }
       for (const subCat of cat.subCategories ?? []) {
         for (const video of subCat.videos ?? []) {
-          if (video.path) {
-            this.videosInLoops.add(extractFilename(video.path));
-          }
-          if (video.name) {
-            this.videosInLoops.add(video.name);
-          }
+          addToSet(video.path, video.name);
         }
       }
     }
+  }
+
+  /**
+   * Checks if a filename (possibly a full path) matches any entry in videosInLoops.
+   * Handles both bare filenames ("06 datalian.mp4") and full paths
+   * ("videos/default/06 datalian.mp4") since site_sponsor_videos may store full paths
+   * while the loop config stores bare filenames.
+   */
+  private isFilenameInLoop(filename: string): boolean {
+    if (this.videosInLoops.has(filename)) return true;
+    const bare = filename.split('/').pop() || filename;
+    return bare !== filename && this.videosInLoops.has(bare);
   }
 
   /**
@@ -2018,7 +2021,7 @@ export class SiteSponsorsTabComponent implements OnInit, OnDestroy {
     if (!this.configLoaded) return false;
     const filenames = sponsor.video_filenames ?? [];
     if (filenames.length === 0) return false;
-    return filenames.some(f => !this.videosInLoops.has(f));
+    return filenames.some(f => !this.isFilenameInLoop(f));
   }
 
   /**
@@ -2026,7 +2029,7 @@ export class SiteSponsorsTabComponent implements OnInit, OnDestroy {
    */
   isVideoNotInLoop(filename: string): boolean {
     if (!this.configLoaded) return false;
-    return !this.videosInLoops.has(filename);
+    return !this.isFilenameInLoop(filename);
   }
 
   /**
@@ -2035,7 +2038,7 @@ export class SiteSponsorsTabComponent implements OnInit, OnDestroy {
   getVideosNotInLoopCount(sponsor: SiteSponsor): number {
     if (!this.configLoaded) return 0;
     const filenames = sponsor.video_filenames ?? [];
-    return filenames.filter(f => !this.videosInLoops.has(f)).length;
+    return filenames.filter(f => !this.isFilenameInLoop(f)).length;
   }
 
   // =========================================================================

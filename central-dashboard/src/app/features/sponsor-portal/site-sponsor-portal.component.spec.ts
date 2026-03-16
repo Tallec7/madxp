@@ -29,6 +29,7 @@ describe('SiteSponsorPortalComponent', () => {
       completion_rate: 92.0,
       estimated_reach: 800,
       active_days: 15,
+      manual_triggers: 5,
     },
     daily_trends: [
       { date: '2026-01-15', impressions: 10, screen_time: 300 },
@@ -36,13 +37,21 @@ describe('SiteSponsorPortalComponent', () => {
     videos: [
       { id: 'v-1', video_filename: 'pub-sponsor.mp4', is_primary: true },
     ],
+    video_stats: [
+      { video_filename: 'pub-sponsor.mp4', impressions: 150, screen_time_seconds: 4500, completion_rate: 92.0, avg_duration_played: 30, manual_triggers: 5 },
+    ],
+    period_breakdown: [
+      { period: '2026-01', impressions: 150, screen_time_seconds: 4500, completion_rate: 92.0 },
+    ],
   };
 
   beforeEach(async () => {
     mockSponsorAccessService = jasmine.createSpyObj('SponsorAccessService', [
-      'verifyToken', 'getStats', 'getReportUrl',
+      'verifyToken', 'getStats', 'getReportUrl', 'getCsvUrl', 'getBenchmark',
     ]);
     mockSponsorAccessService.getReportUrl.and.returnValue('http://localhost/api/sponsor-portal/report?token=abc');
+    mockSponsorAccessService.getCsvUrl.and.returnValue('http://localhost/api/sponsor-portal/export-csv?token=abc');
+    mockSponsorAccessService.getBenchmark.and.returnValue(of({ current_sponsor_id: 'sponsor-1', period: { from: '2026-01-01', to: '2026-01-31' }, sponsors: [], averages: { impressions: 0, screen_time_seconds: 0, completion_rate: 0, active_days: 0 }, total_sponsors: 0 }));
 
     mockActivatedRoute = {
       snapshot: {
@@ -108,7 +117,7 @@ describe('SiteSponsorPortalComponent', () => {
     mockSponsorAccessService.verifyToken.and.returnValue(of(mockVerification));
     mockSponsorAccessService.getStats.and.returnValue(of(mockStats));
     fixture.detectChanges();
-    expect(mockSponsorAccessService.getReportUrl).toHaveBeenCalledWith('test-token-abc');
+    expect(mockSponsorAccessService.getReportUrl).toHaveBeenCalledWith('test-token-abc', jasmine.any(String), jasmine.any(String));
     expect(component.reportUrl).toContain('report');
   });
 
