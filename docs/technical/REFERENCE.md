@@ -1470,7 +1470,7 @@ DELETE /sites/:siteId/sponsors/:sponsorId/videos/:fname  - Retirer une vidéo (a
 POST   /sites/:siteId/sponsors/:sponsorId/access-link    - Générer magic link d'accès (admin, operator)
 ```
 
-> **Magic Link URL (v3.59+) :** L'URL du lien d'accès sponsor utilise `FRONTEND_URL` > `CENTRAL_DASHBOARD_URL` > `https://admin-neopro.kalonpartners.bzh` (fallback prod).
+> **Magic Link URL (v3.59+) :** L'URL du lien d'accès sponsor utilise `FRONTEND_URL` > `CENTRAL_DASHBOARD_URL` > `https://neopro-admin.kalonpartners.bzh` (fallback prod).
 
 **Endpoints Network Sponsors (auth JWT, montés sur /api/network) — P6.1 :**
 
@@ -1535,9 +1535,11 @@ GET    /reports/stats                            - Statistiques des rapports (ad
 **Endpoints Sponsor Portal (public, token-based, montés sur /api/sponsor-portal) :**
 
 ```
-GET    /sponsor-portal/verify   - Vérifie un magic link token → { valid, sponsor }
-GET    /sponsor-portal/stats    - Stats sponsor via token (période configurable)
-GET    /sponsor-portal/report   - Téléchargement rapport PDF via token (page 2 conditionnelle match-by-match si matchs) [P6.4]
+GET    /sponsor-portal/verify     - Vérifie un magic link token → { valid, sponsor }
+GET    /sponsor-portal/stats      - Stats sponsor via token (période configurable, inclut video_stats + period_breakdown)
+GET    /sponsor-portal/report     - Téléchargement rapport PDF via token (page 2 conditionnelle match-by-match si matchs) [P6.4]
+GET    /sponsor-portal/benchmark  - Benchmark intra-club anonymisé (classement des sponsors, moyennes) [PoC Proof of Play]
+GET    /sponsor-portal/export-csv - Export CSV des données sponsor (summary + daily + vidéos + périodes) [PoC Proof of Play]
 ```
 
 **Authentification :** JWT HttpOnly cookie + Bearer token
@@ -1583,15 +1585,15 @@ Sponsor Portal: 100 req/min    (PUBLIC, par IP)
 
 Les données volumineuses sont nettoyées automatiquement par le `CronScheduler` :
 
-| Table                           | Rétention        | Heure cleanup   | Notes                                                                                                                      |
-| ------------------------------- | ---------------- | --------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| `video_plays`                   | **30 jours**     | 3h15            | Agrégées dans `club_daily_stats` / `advertiser_daily_stats` avant nettoyage. Données du jour accessibles via VIEWs `_live` |
-| `metrics`                       | 7 jours          | 3h45            | Diagnostics système court terme                                                                                            |
-| `remote_commands`               | 30 jours         | 4h00            | Historique debug                                                                                                           |
-| `alerts`                        | 90 jours         | 4h15            | Analyse patterns incidents                                                                                                 |
-| `config_history`                | 20 versions/site | 4h30            | Rollback configurations                                                                                                    |
-| `audit_logs`                    | 90 jours         | (logs schedule) | Conformité/audit                                                                                                           |
-| `recurring_schedule_executions` | 90 jours         | (logs schedule) | Historique exécution crons                                                                                                 |
+| Table                           | Rétention        | Heure cleanup   | Notes                                                                                                                                                                                                                                                                                    |
+| ------------------------------- | ---------------- | --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `video_plays`                   | **30 jours**     | 3h15            | Agrégées dans `club_daily_stats` / `advertiser_daily_stats` avant nettoyage. Données du jour accessibles via VIEWs `_live`. Colonne `interruption_reason` (v3.108+) : `manual_action`, `profile_switch`, `video_error`, `hdmi_lost`, `loop_advance`, `browser_close`, `NULL` (completed) |
+| `metrics`                       | 7 jours          | 3h45            | Diagnostics système court terme                                                                                                                                                                                                                                                          |
+| `remote_commands`               | 30 jours         | 4h00            | Historique debug                                                                                                                                                                                                                                                                         |
+| `alerts`                        | 90 jours         | 4h15            | Analyse patterns incidents                                                                                                                                                                                                                                                               |
+| `config_history`                | 20 versions/site | 4h30            | Rollback configurations                                                                                                                                                                                                                                                                  |
+| `audit_logs`                    | 90 jours         | (logs schedule) | Conformité/audit                                                                                                                                                                                                                                                                         |
+| `recurring_schedule_executions` | 90 jours         | (logs schedule) | Historique exécution crons                                                                                                                                                                                                                                                               |
 
 > **Agrégation CRON :** `club_daily_stats` (2h00) et `advertiser_daily_stats` (2h30) agrègent les `video_plays` de J-1. Les VIEWs `club_daily_stats_live` et `advertiser_daily_stats_live` combinent l'historique agrégé + les données temps réel du jour (UNION ALL). Tous les repositories et services utilisent les VIEWs `_live` — 10 smoke tests gardent cette convention.
 

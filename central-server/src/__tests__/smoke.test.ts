@@ -9599,3 +9599,206 @@ describe('Admin UX batch 2 — button labels guard', () => {
       .toEqual({ deleteIsDanger: true });
   });
 });
+
+// ----------------------------------------------------------
+// Sponsor Portal magic link fallback URL guard:
+// The fallback URL in site-sponsor.controller.ts MUST be
+// 'neopro-admin.kalonpartners.bzh' (NOT 'admin-neopro.kalonpartners.bzh').
+// The wrong subdomain is NXDOMAIN → sponsors get dead links.
+// ----------------------------------------------------------
+describe('Sponsor Portal magic link URL guard', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+  const controllerPath = path.join(repoRoot, 'central-server/src/controllers/site-sponsor.controller.ts');
+
+  let content: string;
+  beforeAll(() => {
+    content = fs.readFileSync(controllerPath, 'utf8');
+  });
+
+  it('fallback URL must use neopro-admin (NOT admin-neopro) subdomain', () => {
+    expect({
+      hasWrongUrl: /admin-neopro\.kalonpartners/.test(content),
+    }).toEqual({
+      hasWrongUrl: false,
+    });
+  });
+
+  it('fallback URL must point to neopro-admin.kalonpartners.bzh', () => {
+    expect({
+      hasCorrectUrl: /neopro-admin\.kalonpartners\.bzh/.test(content),
+    }).toEqual({
+      hasCorrectUrl: true,
+    });
+  });
+});
+
+// ----------------------------------------------------------
+// Sponsor Portal public endpoints registration guard:
+// All 5 sponsor-portal endpoints must exist in sponsor-portal.routes.ts
+// and the router must be mounted on /api/sponsor-portal in server.ts.
+// Missing endpoint = 404 for sponsors = broken PoC.
+// ----------------------------------------------------------
+describe('Sponsor Portal endpoints registration guard', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+  const routesPath = path.join(repoRoot, 'central-server/src/routes/sponsor-portal.routes.ts');
+  const serverPath = path.join(repoRoot, 'central-server/src/server.ts');
+
+  let routesContent: string;
+  let serverContent: string;
+  beforeAll(() => {
+    routesContent = fs.readFileSync(routesPath, 'utf8');
+    serverContent = fs.readFileSync(serverPath, 'utf8');
+  });
+
+  it('must declare all 5 public sponsor-portal routes', () => {
+    expect({
+      verify: /router\.get\(\s*['"]\/verify['"]/.test(routesContent),
+      stats: /router\.get\(\s*['"]\/stats['"]/.test(routesContent),
+      report: /router\.get\(\s*['"]\/report['"]/.test(routesContent),
+      benchmark: /router\.get\(\s*['"]\/benchmark['"]/.test(routesContent),
+      exportCsv: /router\.get\(\s*['"]\/export-csv['"]/.test(routesContent),
+    }).toEqual({
+      verify: true,
+      stats: true,
+      report: true,
+      benchmark: true,
+      exportCsv: true,
+    });
+  });
+
+  it('server.ts must mount sponsor-portal routes on /api/sponsor-portal', () => {
+    expect({
+      mounted: /app\.use\(\s*['"]\/api\/sponsor-portal['"]/.test(serverContent),
+    }).toEqual({
+      mounted: true,
+    });
+  });
+});
+
+// ----------------------------------------------------------
+// Sponsor Portal stats must include video_stats + period_breakdown:
+// The getSponsorPortalStats controller must return video_stats and
+// period_breakdown in its response — otherwise the PoC portal is
+// missing per-video performance and match period breakdowns.
+// ----------------------------------------------------------
+describe('Sponsor Portal stats completeness guard', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+  const controllerPath = path.join(repoRoot, 'central-server/src/controllers/sponsor-portal.controller.ts');
+
+  let content: string;
+  beforeAll(() => {
+    content = fs.readFileSync(controllerPath, 'utf8');
+  });
+
+  it('getSponsorPortalStats must return video_stats', () => {
+    expect({
+      hasVideoStats: /video_stats/.test(content),
+    }).toEqual({
+      hasVideoStats: true,
+    });
+  });
+
+  it('getSponsorPortalStats must return period_breakdown', () => {
+    expect({
+      hasPeriodBreakdown: /period_breakdown/.test(content),
+    }).toEqual({
+      hasPeriodBreakdown: true,
+    });
+  });
+
+  it('repository must have getStatsByVideo and getStatsByPeriod methods', () => {
+    const repoPath = path.join(repoRoot, 'central-server/src/repositories/site-sponsor.repository.ts');
+    const repoContent = fs.readFileSync(repoPath, 'utf8');
+    expect({
+      hasStatsByVideo: /getStatsByVideo/.test(repoContent),
+      hasStatsByPeriod: /getStatsByPeriod/.test(repoContent),
+    }).toEqual({
+      hasStatsByVideo: true,
+      hasStatsByPeriod: true,
+    });
+  });
+});
+
+// ----------------------------------------------------------
+// video_plays interruption_reason column guard:
+// The analytics repository must include interruption_reason in
+// the INSERT for recordVideoPlays. Without it, the completion rate
+// in the sponsor portal lacks context on why videos were interrupted.
+// ----------------------------------------------------------
+describe('video_plays interruption_reason guard', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+  const analyticsRepoPath = path.join(repoRoot, 'central-server/src/repositories/analytics.repository.ts');
+  const analyticsControllerPath = path.join(repoRoot, 'central-server/src/controllers/analytics.controller.ts');
+  const fullSchemaPath = path.join(repoRoot, 'central-server/src/scripts/full-schema.sql');
+
+  let repoContent: string;
+  let controllerContent: string;
+  let schemaContent: string;
+  beforeAll(() => {
+    repoContent = fs.readFileSync(analyticsRepoPath, 'utf8');
+    controllerContent = fs.readFileSync(analyticsControllerPath, 'utf8');
+    schemaContent = fs.readFileSync(fullSchemaPath, 'utf8');
+  });
+
+  it('analytics repository INSERT must include interruption_reason', () => {
+    expect({
+      hasColumn: /interruption_reason/.test(repoContent),
+    }).toEqual({
+      hasColumn: true,
+    });
+  });
+
+  it('analytics controller must validate interruption_reason values', () => {
+    expect({
+      hasValidation: /interruption_reason/.test(controllerContent),
+      hasManualAction: /manual_action/.test(controllerContent),
+      hasLoopAdvance: /loop_advance/.test(controllerContent),
+    }).toEqual({
+      hasValidation: true,
+      hasManualAction: true,
+      hasLoopAdvance: true,
+    });
+  });
+
+  it('full-schema.sql must declare interruption_reason column', () => {
+    expect({
+      hasColumn: /interruption_reason/.test(schemaContent),
+    }).toEqual({
+      hasColumn: true,
+    });
+  });
+});
+
+// ----------------------------------------------------------
+// Sponsor Portal chart container guard:
+// The trends chart canvas must be wrapped in a .chart-container
+// with a fixed height. Without it, Chart.js with
+// maintainAspectRatio:false stretches infinitely.
+// ----------------------------------------------------------
+describe('Sponsor Portal chart container guard', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+  const portalPath = path.join(repoRoot, 'central-dashboard/src/app/features/sponsor-portal/site-sponsor-portal.component.ts');
+
+  let content: string;
+  beforeAll(() => {
+    content = fs.readFileSync(portalPath, 'utf8');
+  });
+
+  it('trends canvas must be wrapped in .chart-container', () => {
+    expect({
+      hasContainer: /chart-container[\s\S]*?trendsCanvas/.test(content),
+    }).toEqual({
+      hasContainer: true,
+    });
+  });
+
+  it('.chart-container must have position:relative and a fixed height', () => {
+    expect({
+      hasPositionRelative: /\.chart-container\s*\{[^}]*position:\s*relative/.test(content),
+      hasHeight: /\.chart-container\s*\{[^}]*height:\s*\d+px/.test(content),
+    }).toEqual({
+      hasPositionRelative: true,
+      hasHeight: true,
+    });
+  });
+});

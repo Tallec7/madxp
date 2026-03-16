@@ -162,6 +162,21 @@ export interface MatchDayBreakdownRow extends QueryResultRow {
   audience_estimate: string;
 }
 
+export interface VideoStatsRow extends QueryResultRow {
+  video_filename: string;
+  impressions: string;
+  screen_time_seconds: string;
+  completion_rate: string;
+  avg_duration_played: string;
+}
+
+export interface PeriodBreakdownRow extends QueryResultRow {
+  period: string;
+  impressions: string;
+  screen_time_seconds: string;
+  completion_rate: string;
+}
+
 // --------------------------------------------------------------------------
 // Repository
 // --------------------------------------------------------------------------
@@ -861,6 +876,58 @@ class SiteSponsorRepositoryImpl extends BaseRepository<SiteSponsorRow> {
          AND played_at < ($3::date + INTERVAL '1 day')
        GROUP BY DATE(played_at)
        ORDER BY match_date ASC`,
+      [siteSponsorId, from, to]
+    );
+  }
+  // =========================================================================
+  // P-PoC — Stats par vidéo pour un sponsor
+  // =========================================================================
+
+  async getStatsByVideo(
+    siteSponsorId: string, from: string, to: string
+  ): Promise<{ rows: VideoStatsRow[] }> {
+    return query<VideoStatsRow>(
+      `SELECT
+         vp.video_filename,
+         COUNT(*)::text AS impressions,
+         COALESCE(SUM(vp.duration_played), 0)::text AS screen_time_seconds,
+         CASE WHEN COUNT(*) > 0
+           THEN ROUND(SUM(CASE WHEN vp.completed THEN 1 ELSE 0 END)::numeric / COUNT(*) * 100, 1)::text
+           ELSE '0' END AS completion_rate,
+         ROUND(AVG(vp.duration_played)::numeric, 1)::text AS avg_duration_played
+       FROM video_plays vp
+       WHERE vp.site_sponsor_id = $1
+         AND vp.category = 'sponsor'
+         AND vp.played_at >= $2::date
+         AND vp.played_at < ($3::date + INTERVAL '1 day')
+       GROUP BY vp.video_filename
+       ORDER BY impressions DESC`,
+      [siteSponsorId, from, to]
+    );
+  }
+
+  // =========================================================================
+  // P-PoC — Répartition par période de match
+  // =========================================================================
+
+  async getStatsByPeriod(
+    siteSponsorId: string, from: string, to: string
+  ): Promise<{ rows: PeriodBreakdownRow[] }> {
+    return query<PeriodBreakdownRow>(
+      `SELECT
+         COALESCE(vp.period, 'loop') AS period,
+         COUNT(*)::text AS impressions,
+         COALESCE(SUM(vp.duration_played), 0)::text AS screen_time_seconds,
+         CASE WHEN COUNT(*) > 0
+           THEN ROUND(SUM(CASE WHEN vp.completed THEN 1 ELSE 0 END)::numeric / COUNT(*) * 100, 1)::text
+           ELSE '0' END AS completion_rate
+       FROM video_plays vp
+       WHERE vp.site_sponsor_id = $1
+         AND vp.category = 'sponsor'
+         AND vp.played_at >= $2::date
+         AND vp.played_at < ($3::date + INTERVAL '1 day')
+       GROUP BY vp.period
+       ORDER BY impressions DESC`,
       [siteSponsorId, from, to]
     );
   }

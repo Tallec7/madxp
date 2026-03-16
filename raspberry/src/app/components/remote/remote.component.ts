@@ -1107,9 +1107,18 @@ export class RemoteComponent implements OnInit, OnDestroy {
    * Les thumbnails sont générés par le video-processor et stockés dans /home/pi/neopro/thumbnails/
    * Structure: thumbnails/{category}/{subcategory?}/{videoname}.jpg
    * Servies par le serveur admin sur le port 8080
+   *
+   * En mode demo, retourne video.thumbnailUrl si présent, sinon null
+   * (pas de serveur admin pour servir les thumbnails générés par ffmpeg)
    */
   public getVideoThumbnailUrl(video: Video): string | null {
+    // Priorité au thumbnailUrl direct (mode demo, cloud thumbnails)
+    if (video.thumbnailUrl) return video.thumbnailUrl;
+
     if (!video.path) return null;
+
+    // En mode demo, pas de serveur admin pour servir les thumbnails → null (le template affiche un placeholder)
+    if (this.isDemoMode) return null;
 
     // Le path de la vidéo est relatif: videos/{category}/{subcategory?}/{filename}.mp4
     // On remplace "videos/" par "thumbnails/" et l'extension par ".jpg"
@@ -1118,6 +1127,36 @@ export class RemoteComponent implements OnInit, OnDestroy {
       .replace(/\.\w+$/, '.jpg');
 
     return `${this.ADMIN_BASE_URL}/${thumbnailPath}?t=${this.thumbnailCacheBuster}`;
+  }
+
+  /**
+   * Retourne les initiales d'une vidéo pour le placeholder thumbnail
+   * Prend les 2 premières lettres du nom (ou 1 si nom court)
+   */
+  public getVideoInitials(video: Video): string {
+    if (!video.name) return '▶';
+    const words = video.name.trim().split(/\s+/);
+    if (words.length >= 2) {
+      return (words[0][0] + words[1][0]).toUpperCase();
+    }
+    return video.name.substring(0, 2).toUpperCase();
+  }
+
+  /**
+   * Retourne une classe de couleur déterministe basée sur le nom de la vidéo
+   * pour les placeholder thumbnails en mode demo
+   */
+  public getVideoPlaceholderColor(video: Video): string {
+    const colors = [
+      'placeholder-pink', 'placeholder-blue', 'placeholder-green',
+      'placeholder-purple', 'placeholder-orange', 'placeholder-teal',
+    ];
+    let hash = 0;
+    const name = video.name || video.path || '';
+    for (let i = 0; i < name.length; i++) {
+      hash = name.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    return colors[Math.abs(hash) % colors.length];
   }
 
   /**

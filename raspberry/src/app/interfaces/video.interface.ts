@@ -22,6 +22,8 @@ export interface Video {
     analytics_category?: string;
     /** UUID du site_sponsor unifié (P1 — tracking granulaire par site) */
     site_sponsor_id?: string;
+    /** URL directe du thumbnail (utilisé en mode demo ou quand le thumbnail est hébergé en cloud) */
+    thumbnailUrl?: string;
     /** Variantes vidéo (écrites par deploy-video.js dans configuration.json) */
     variants?: {
         secondary?: {

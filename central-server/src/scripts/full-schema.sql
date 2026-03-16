@@ -991,6 +991,10 @@ CREATE INDEX IF NOT EXISTS idx_video_plays_campaign ON video_plays(campaign_id) 
 ALTER TABLE video_plays ADD COLUMN IF NOT EXISTS source VARCHAR(10) DEFAULT NULL;
 CREATE INDEX IF NOT EXISTS idx_video_plays_source ON video_plays (source) WHERE source IS NOT NULL;
 
+-- Interruption reason: why a video stopped before completion
+-- Values: manual_action, profile_switch, video_error, hdmi_lost, loop_advance, browser_close
+ALTER TABLE video_plays ADD COLUMN IF NOT EXISTS interruption_reason VARCHAR(30) DEFAULT NULL;
+
 -- =============================================================================
 -- SCHEDULED REPORTS (PI-2 : E-16 Rapports Automatiques)
 -- =============================================================================

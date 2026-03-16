@@ -38,7 +38,19 @@
       "icon": "🏁",
       "color": "from-blue-500 to-blue-600",
       "description": "Échauffement & présentation",
-      "categoryIds": ["Focus-partenaires", "Info-club"]
+      "categoryIds": ["Focus-partenaires", "Info-club"],
+      "loopVideos": [
+        {
+          "name": "Boucle partenaires",
+          "path": "videos/BOUCLE_PARTENAIRES/BOUCLE_PARTENAIRES_H264.mp4",
+          "type": "video/mp4"
+        },
+        {
+          "name": "Boucle partenaire H265",
+          "path": "videos/FOCUS_PARTENAIRE/BOUCLE_PARTENAIRES_H265.mp4",
+          "type": "video/mp4"
+        }
+      ]
     },
     {
       "id": "during",
@@ -46,7 +58,14 @@
       "icon": "▶️",
       "color": "from-green-500 to-green-600",
       "description": "Live & animations",
-      "categoryIds": ["Match_SM1"]
+      "categoryIds": ["Match_SM1"],
+      "loopVideos": [
+        {
+          "name": "Boucle partenaires",
+          "path": "videos/BOUCLE_PARTENAIRES/BOUCLE_PARTENAIRES_H264.mp4",
+          "type": "video/mp4"
+        }
+      ]
     },
     {
       "id": "after",
@@ -54,7 +73,14 @@
       "icon": "🏆",
       "color": "from-purple-500 to-purple-600",
       "description": "Résultats & remerciements",
-      "categoryIds": ["Info-club"]
+      "categoryIds": ["Info-club"],
+      "loopVideos": [
+        {
+          "name": "Octobre rose",
+          "path": "videos/INFOS_CLUB/OCTOBRE_ROSE.mp4",
+          "type": "video/mp4"
+        }
+      ]
     }
   ],
   "categories": [

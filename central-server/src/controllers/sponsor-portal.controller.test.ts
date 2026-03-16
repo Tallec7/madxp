@@ -16,6 +16,9 @@ jest.mock('../repositories/site-sponsor.repository', () => ({
     getStatsSummary: jest.fn(),
     getDailyTrends: jest.fn(),
     getVideos: jest.fn(),
+    getStatsByVideo: jest.fn(),
+    getStatsByPeriod: jest.fn(),
+    getBenchmark: jest.fn(),
   },
 }));
 
@@ -40,6 +43,8 @@ const mockVerifyToken = sponsorAccessService.verifyToken as jest.MockedFunction<
 const mockGetStatsSummary = siteSponsorRepository.getStatsSummary as jest.Mock;
 const mockGetDailyTrends = siteSponsorRepository.getDailyTrends as jest.Mock;
 const mockGetVideos = siteSponsorRepository.getVideos as jest.Mock;
+const mockGetStatsByVideo = siteSponsorRepository.getStatsByVideo as jest.Mock;
+const mockGetStatsByPeriod = siteSponsorRepository.getStatsByPeriod as jest.Mock;
 const mockGenerateReport = generateSiteSponsorReport as jest.Mock;
 
 // Create test app
@@ -123,6 +128,14 @@ describe('Sponsor Portal Controller', () => {
         { id: 'v-1', video_filename: 'pub.mp4', is_primary: true },
       ]);
 
+      mockGetStatsByVideo.mockResolvedValue({ rows: [
+        { video_filename: 'pub.mp4', impressions: '100', screen_time_seconds: '3600', completion_rate: '95.5', avg_duration_played: '15.0' },
+      ] });
+
+      mockGetStatsByPeriod.mockResolvedValue({ rows: [
+        { period: 'halftime', impressions: '50', screen_time_seconds: '1800', completion_rate: '97.0' },
+      ] });
+
       const res = await request(app).get('/api/sponsor-portal/stats?token=valid-token');
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
@@ -130,6 +143,10 @@ describe('Sponsor Portal Controller', () => {
       expect(res.body.data.summary.total_impressions).toBe(100);
       expect(res.body.data.daily_trends).toHaveLength(1);
       expect(res.body.data.videos).toHaveLength(1);
+      expect(res.body.data.video_stats).toHaveLength(1);
+      expect(res.body.data.video_stats[0].video_filename).toBe('pub.mp4');
+      expect(res.body.data.period_breakdown).toHaveLength(1);
+      expect(res.body.data.period_breakdown[0].period).toBe('halftime');
     });
   });
 

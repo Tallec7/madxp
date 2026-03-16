@@ -1,1 +1,20 @@
-[]
+[
+  {
+    "id": "nlfhandball",
+    "name": "NLF Handball",
+    "city": "Nantes",
+    "sport": "handball"
+  },
+  {
+    "id": "narh",
+    "name": "NARH",
+    "city": "Nantes",
+    "sport": "handball"
+  },
+  {
+    "id": "demo-club",
+    "name": "Demo Club",
+    "city": "Paris",
+    "sport": "football"
+  }
+]

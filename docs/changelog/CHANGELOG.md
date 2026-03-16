@@ -1,3 +1,41 @@
+# [3.108.0](https://github.com/Tallec7/neopro/compare/v3.107.1...v3.108.0) (2026-03-16)
+
+### Features
+
+- **sponsor-portal:** PoC Proof of Play complet — 7 features pour le portail sponsor :
+  - P1: Taux de complétion dans les KPIs
+  - P2: `interruption_reason` tracking (migration DB + Pi analytics + validation API)
+  - P3: Date picker avec presets 30j / 90j / mois en cours
+  - P4: Benchmark intra-club anonymisé (classement sponsors + moyennes)
+  - P5: Stats par vidéo (passages, complétion, durée moyenne, temps écran)
+  - P6: Répartition par période de match (avant-match, mi-temps, après-match, boucle)
+  - P7: Export CSV (summary + daily trends + vidéos + périodes, BOM UTF-8 Excel)
+- **sponsor-portal:** 2 nouveaux endpoints API publics : `GET /benchmark`, `GET /export-csv`
+- **analytics:** colonne `interruption_reason` sur `video_plays` (6 valeurs possibles)
+
+### Bug Fixes
+
+- **sponsor-portal:** fix fallback URL magic link `admin-neopro` → `neopro-admin.kalonpartners.bzh` (NXDOMAIN → liens sponsors cassés)
+- **sponsor-portal:** fix graphe tendances qui s'étire indéfiniment (canvas sans conteneur à hauteur fixe)
+
+### Tests
+
+- **smoke:** 5 nouveaux guards de régression :
+  - `Sponsor Portal magic link URL guard` — interdit `admin-neopro` dans le fallback URL
+  - `Sponsor Portal endpoints registration guard` — vérifie les 5 routes publiques + montage server.ts
+  - `Sponsor Portal stats completeness guard` — vérifie `video_stats` et `period_breakdown` dans la réponse
+  - `video_plays interruption_reason guard` — vérifie INSERT, validation, et schema SQL
+  - `Sponsor Portal chart container guard` — vérifie `.chart-container` avec hauteur fixe
+
+### Documentation
+
+- **REFERENCE.md:** ajout 2 endpoints sponsor-portal (benchmark, export-csv) + note `interruption_reason`
+- **full-schema.sql:** ajout colonne `interruption_reason` sur `video_plays`
+- **CLAUDE.md:** ajout règle NE JAMAIS FAIRE — `admin-neopro` dans les URLs (NXDOMAIN)
+- **changelog:** entrée v3.108.0
+
+---
+
 ## [3.107.1](https://github.com/Tallec7/neopro/compare/v3.107.0...v3.107.1) (2026-03-13)
 
 ### Bug Fixes

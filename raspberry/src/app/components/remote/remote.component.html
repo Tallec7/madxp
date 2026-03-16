@@ -484,6 +484,12 @@
                           (error)="onThumbnailError($event)"
                           loading="lazy"
                         />
+                      } @else {
+                        <span
+                          class="video-placeholder"
+                          [ngClass]="getVideoPlaceholderColor(video)"
+                          >{{ getVideoInitials(video) }}</span
+                        >
                       }
                       <svg
                         class="video-icon-svg video-icon-fallback"
@@ -582,6 +588,12 @@
                             class="recent-thumbnail-img"
                             (error)="onThumbnailError($event)"
                           />
+                        } @else {
+                          <span
+                            class="video-placeholder"
+                            [ngClass]="getVideoPlaceholderColor(video)"
+                            >{{ getVideoInitials(video) }}</span
+                          >
                         }
                         <div class="recent-video-icon">
                           <svg
@@ -777,6 +789,12 @@
                           (error)="onThumbnailError($event)"
                           loading="lazy"
                         />
+                      } @else {
+                        <span
+                          class="video-placeholder"
+                          [ngClass]="getVideoPlaceholderColor(video)"
+                          >{{ getVideoInitials(video) }}</span
+                        >
                       }
                       <svg
                         class="video-icon-svg video-icon-fallback"
@@ -1033,6 +1051,12 @@
                           (error)="onThumbnailError($event)"
                           loading="lazy"
                         />
+                      } @else {
+                        <span
+                          class="video-placeholder"
+                          [ngClass]="getVideoPlaceholderColor(video)"
+                          >{{ getVideoInitials(video) }}</span
+                        >
                       }
                       <svg
                         class="video-icon-svg video-icon-fallback"

@@ -1076,11 +1076,43 @@ input:focus-visible {
     display: none;
   }
   &.thumbnail-error .video-icon-fallback,
-  &:not(:has(.video-thumbnail)) .video-icon-fallback {
+  &:not(:has(.video-thumbnail)):not(:has(.video-placeholder)) .video-icon-fallback {
     display: block;
   }
   &:has(.video-thumbnail:not([style*='display: none'])) .video-icon-fallback {
     display: none;
+  }
+  &:has(.video-placeholder) .video-icon-fallback {
+    display: none;
+  }
+}
+// Placeholder thumbnails (demo mode ou fallback quand pas de thumbnail)
+.video-placeholder {
+  @include flex-center;
+  width: 100%;
+  height: 100%;
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  letter-spacing: 0.5px;
+  &.placeholder-pink {
+    background: linear-gradient(135deg, #ec4899, #be185d);
+  }
+  &.placeholder-blue {
+    background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+  }
+  &.placeholder-green {
+    background: linear-gradient(135deg, #10b981, #047857);
+  }
+  &.placeholder-purple {
+    background: linear-gradient(135deg, #8b5cf6, #6d28d9);
+  }
+  &.placeholder-orange {
+    background: linear-gradient(135deg, #f97316, #c2410c);
+  }
+  &.placeholder-teal {
+    background: linear-gradient(135deg, #14b8a6, #0f766e);
   }
 }
 .video-icon {
@@ -1713,6 +1745,11 @@ input:focus-visible {
     width: 100%;
     height: 100%;
     object-fit: cover;
+  }
+  .video-placeholder {
+    position: absolute;
+    inset: 0;
+    font-size: 1rem;
   }
   .recent-video-icon {
     position: absolute;

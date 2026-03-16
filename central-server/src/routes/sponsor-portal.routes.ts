@@ -3,6 +3,8 @@ import {
   verifySponsorToken,
   getSponsorPortalStats,
   getSponsorPortalReport,
+  getSponsorPortalBenchmark,
+  getSponsorPortalCsv,
 } from '../controllers/sponsor-portal.controller';
 
 const router = express.Router();
@@ -20,7 +22,7 @@ router.get('/verify', verifySponsorToken);
 
 /**
  * GET /api/sponsor-portal/stats?token=xxx&from=...&to=...
- * Stats du sponsor sur une période.
+ * Stats du sponsor sur une période (inclut video_stats + period_breakdown).
  */
 router.get('/stats', getSponsorPortalStats);
 
@@ -29,5 +31,17 @@ router.get('/stats', getSponsorPortalStats);
  * Télécharge un rapport PDF.
  */
 router.get('/report', getSponsorPortalReport);
+
+/**
+ * GET /api/sponsor-portal/benchmark?token=xxx&from=...&to=...
+ * Benchmark intra-club (classement anonymisé des sponsors).
+ */
+router.get('/benchmark', getSponsorPortalBenchmark);
+
+/**
+ * GET /api/sponsor-portal/export-csv?token=xxx&from=...&to=...
+ * Export CSV des données du sponsor.
+ */
+router.get('/export-csv', getSponsorPortalCsv);
 
 export default router;

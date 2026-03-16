@@ -19,6 +19,44 @@ export interface SponsorVerification {
   error?: string;
 }
 
+export interface SponsorPortalVideoStats {
+  video_filename: string;
+  impressions: number;
+  screen_time_seconds: number;
+  completion_rate: number;
+  avg_duration_played: number;
+}
+
+export interface SponsorPortalPeriodBreakdown {
+  period: string;
+  impressions: number;
+  screen_time_seconds: number;
+  completion_rate: number;
+}
+
+export interface SponsorPortalBenchmarkEntry {
+  site_sponsor_id: string;
+  sponsor_name: string;
+  impressions: number;
+  screen_time_seconds: number;
+  completion_rate: number;
+  active_days: number;
+  rank: number;
+}
+
+export interface SponsorPortalBenchmark {
+  current_sponsor_id: string;
+  period: { from: string; to: string };
+  sponsors: SponsorPortalBenchmarkEntry[];
+  averages: {
+    impressions: number;
+    screen_time_seconds: number;
+    completion_rate: number;
+    active_days: number;
+  };
+  total_sponsors: number;
+}
+
 export interface SponsorPortalStats {
   sponsor: {
     id: string;
@@ -43,6 +81,8 @@ export interface SponsorPortalStats {
     video_filename: string;
     is_primary: boolean;
   }>;
+  video_stats: SponsorPortalVideoStats[];
+  period_breakdown: SponsorPortalPeriodBreakdown[];
 }
 
 @Injectable({ providedIn: 'root' })
@@ -72,5 +112,22 @@ export class SponsorAccessService {
     if (from) params.set('from', from);
     if (to) params.set('to', to);
     return `${this.baseUrl}/sponsor-portal/report?${params.toString()}`;
+  }
+
+  getBenchmark(token: string, from?: string, to?: string): Observable<SponsorPortalBenchmark> {
+    const params: Record<string, string> = { token };
+    if (from) params['from'] = from;
+    if (to) params['to'] = to;
+    return this.http.get<{ success: boolean; data: SponsorPortalBenchmark }>(
+      `${this.baseUrl}/sponsor-portal/benchmark`,
+      { params }
+    ).pipe(map(r => r.data));
+  }
+
+  getCsvUrl(token: string, from?: string, to?: string): string {
+    const params = new URLSearchParams({ token });
+    if (from) params.set('from', from);
+    if (to) params.set('to', to);
+    return `${this.baseUrl}/sponsor-portal/export-csv?${params.toString()}`;
   }
 }

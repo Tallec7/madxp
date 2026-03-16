@@ -46,6 +46,16 @@ export interface VideoPlayEvent {
    * - 'pc' : Navigateur PC (PWA ou navigateur classique)
    */
   source?: 'kiosk' | 'pc';
+  /**
+   * Raison de l'interruption (si completed === false)
+   * - 'manual_action' : action manuelle (télécommande / dashboard)
+   * - 'profile_switch' : changement de profil
+   * - 'video_error' : erreur de lecture
+   * - 'hdmi_lost' : perte de signal HDMI
+   * - 'loop_advance' : avancement normal dans la boucle
+   * - 'browser_close' : fermeture du navigateur
+   */
+  interruption_reason?: 'manual_action' | 'profile_switch' | 'video_error' | 'hdmi_lost' | 'loop_advance' | 'browser_close';
 }
 
 /**
@@ -179,7 +189,7 @@ export class AnalyticsService {
 
     // Si une vidéo était en cours, la terminer comme incomplète
     if (this.currentVideo && this.currentVideoStart) {
-      this.trackVideoEnd(false);
+      this.trackVideoEnd(false, triggerType === 'manual' ? 'manual_action' : 'loop_advance');
     }
 
     this.currentVideo = video;
@@ -199,8 +209,10 @@ export class AnalyticsService {
 
   /**
    * Tracker la fin d'une lecture vidéo
+   * @param completed - true si la vidéo a été jouée en entier
+   * @param interruptionReason - raison de l'interruption si completed=false
    */
-  public trackVideoEnd(completed = true): void {
+  public trackVideoEnd(completed = true, interruptionReason?: VideoPlayEvent['interruption_reason']): void {
     if (!this.currentVideo || !this.currentVideoStart) {
       return;
     }
@@ -237,6 +249,8 @@ export class AnalyticsService {
       site_sponsor_id: (this.currentVideo as unknown as { site_sponsor_id?: string }).site_sponsor_id,
       // E-23 US-23.7.4: kiosk (Pi) vs pc (browser)
       source: this.playbackSource,
+      // PoC Proof of Play: raison d'interruption
+      interruption_reason: completed ? undefined : (interruptionReason || 'loop_advance'),
     };
 
     // NE PAS tracker si la TV est éteinte ou en veille (sauf si CEC non disponible)
@@ -294,7 +308,7 @@ export class AnalyticsService {
 
     // Terminer la vidéo comme incomplète
     if (this.currentVideo && this.currentVideo.path === video.path) {
-      this.trackVideoEnd(false);
+      this.trackVideoEnd(false, 'video_error');
     }
   }
 

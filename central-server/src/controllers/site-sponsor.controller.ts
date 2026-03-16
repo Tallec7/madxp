@@ -421,7 +421,7 @@ export const createAccessLink = async (req: AuthRequest, res: Response): Promise
       return;
     }
 
-    const frontendUrl = process.env.FRONTEND_URL || process.env.CENTRAL_DASHBOARD_URL || 'https://admin-neopro.kalonpartners.bzh';
+    const frontendUrl = process.env.FRONTEND_URL || process.env.CENTRAL_DASHBOARD_URL || 'https://neopro-admin.kalonpartners.bzh';
     const accessUrl = `${frontendUrl}/sponsor-access?token=${result.token}`;
 
     // Send email if contact_email exists

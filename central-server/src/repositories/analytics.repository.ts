@@ -191,6 +191,8 @@ export interface VideoPlaysBatchItem {
   campaignId: string | null;
   /** E-23 US-23.7.4: kiosk (Pi) or pc (browser) */
   source: string | null;
+  /** PoC Proof of Play: why video was interrupted */
+  interruptionReason: string | null;
 }
 
 // --------------------------------------------------------------------------
@@ -557,21 +559,21 @@ class AnalyticsRepositoryImpl {
       const placeholders: string[] = [];
 
       batch.forEach((play, idx) => {
-        const offset = idx * 19;
+        const offset = idx * 20;
         placeholders.push(
-          `($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4}, $${offset + 5}, $${offset + 6}, $${offset + 7}, $${offset + 8}, $${offset + 9}, $${offset + 10}, $${offset + 11}, $${offset + 12}, $${offset + 13}, $${offset + 14}, $${offset + 15}, $${offset + 16}, $${offset + 17}, $${offset + 18}, $${offset + 19})`
+          `($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4}, $${offset + 5}, $${offset + 6}, $${offset + 7}, $${offset + 8}, $${offset + 9}, $${offset + 10}, $${offset + 11}, $${offset + 12}, $${offset + 13}, $${offset + 14}, $${offset + 15}, $${offset + 16}, $${offset + 17}, $${offset + 18}, $${offset + 19}, $${offset + 20})`
         );
         values.push(
           play.siteId, play.sessionId, play.videoFilename, play.category,
           play.playedAt, play.durationPlayed, play.videoDuration, play.completed,
           play.triggerType, play.videoId, play.sponsorId, play.tvStatus,
           play.eventType, play.period, play.audienceEstimate, play.positionInLoop, play.siteSponsorId,
-          play.campaignId, play.source
+          play.campaignId, play.source, play.interruptionReason
         );
       });
 
       await query(
-        `INSERT INTO video_plays (site_id, session_id, video_filename, category, played_at, duration_played, video_duration, completed, trigger_type, video_id, sponsor_id, tv_status, event_type, period, audience_estimate, position_in_loop, site_sponsor_id, campaign_id, source)
+        `INSERT INTO video_plays (site_id, session_id, video_filename, category, played_at, duration_played, video_duration, completed, trigger_type, video_id, sponsor_id, tv_status, event_type, period, audience_estimate, position_in_loop, site_sponsor_id, campaign_id, source, interruption_reason)
          VALUES ${placeholders.join(', ')}
          ON CONFLICT (site_id, played_at, video_filename) DO NOTHING`,
         values

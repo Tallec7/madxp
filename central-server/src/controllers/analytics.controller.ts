@@ -264,6 +264,12 @@ export const recordVideoPlays = async (req: AuthRequest, res: Response) => {
         ? play.source
         : null;
 
+      // PoC Proof of Play: interruption reason
+      const validInterruptionReasons = ['manual_action', 'profile_switch', 'video_error', 'hdmi_lost', 'loop_advance', 'browser_close'];
+      const interruptionReason = typeof play.interruption_reason === 'string' && validInterruptionReasons.includes(play.interruption_reason)
+        ? play.interruption_reason
+        : null;
+
       validPlays.push({
         siteId: site_id,
         sessionId,
@@ -284,6 +290,7 @@ export const recordVideoPlays = async (req: AuthRequest, res: Response) => {
         siteSponsorId,
         campaignId,
         source,
+        interruptionReason,
       });
     }
 
