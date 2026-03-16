@@ -934,7 +934,7 @@ class SiteSponsorRepositoryImpl extends BaseRepository<SiteSponsorRow> {
          AND vp.played_at >= $2::date
          AND vp.played_at < ($3::date + INTERVAL '1 day')
          AND (vp.tv_status IN ('on', 'unknown') OR vp.tv_status IS NULL)
-       GROUP BY vp.period
+       GROUP BY COALESCE(NULLIF(TRIM(vp.period), ''), 'loop')
        ORDER BY impressions DESC`,
       [siteSponsorId, from, to]
     );
