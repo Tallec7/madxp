@@ -1,3 +1,9 @@
+## [3.113.1](https://github.com/Tallec7/neopro/compare/v3.113.0...v3.113.1) (2026-03-16)
+
+### Bug Fixes
+
+- **dashboard:** responsive tous les onglets site-detail — 9 composants adaptés mobile/tablet ([2adefba](https://github.com/Tallec7/neopro/commit/2adefba67894dfedb838c454886ced15e2368691))
+
 # [3.113.0](https://github.com/Tallec7/neopro/compare/v3.112.1...v3.113.0) (2026-03-16)
 
 ### Bug Fixes
