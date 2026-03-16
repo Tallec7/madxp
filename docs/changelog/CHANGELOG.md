@@ -1,3 +1,9 @@
+## [3.108.4](https://github.com/Tallec7/neopro/compare/v3.108.3...v3.108.4) (2026-03-16)
+
+### Bug Fixes
+
+- **deploy:** Railway build fails — devDependencies skipped in production ([b425258](https://github.com/Tallec7/neopro/commit/b4252587a20d50d8c3522cefc2ec9f7115232745))
+
 ## [3.108.3](https://github.com/Tallec7/neopro/compare/v3.108.2...v3.108.3) (2026-03-16)
 
 ### Bug Fixes
