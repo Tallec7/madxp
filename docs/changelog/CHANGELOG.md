@@ -1,3 +1,9 @@
+## [3.113.2](https://github.com/Tallec7/neopro/compare/v3.113.1...v3.113.2) (2026-03-16)
+
+### Bug Fixes
+
+- **smoke:** match outer fi by indentation in single-display resolution test ([10a623b](https://github.com/Tallec7/neopro/commit/10a623bd96d1b6ad93773fae51f8a4df5aaae67b))
+
 ## [3.113.1](https://github.com/Tallec7/neopro/compare/v3.113.0...v3.113.1) (2026-03-16)
 
 ### Bug Fixes
