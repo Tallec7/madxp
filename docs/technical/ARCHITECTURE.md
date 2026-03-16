@@ -785,19 +785,21 @@ Le slave se synchronise par **videoIndex** (pas `videoPath`) car les variantes s
 ```
 HDMI-1 connecté && HDMI-0 déconnecté && !dual_display
         │
-        ▼
-  detect_wrong_port() = true
+        ├── [AU BOOT] xrandr --output HDMI-A-2 --primary --auto IMMÉDIAT
+        │   (avant start_chromium → fullscreen garanti dès le premier lancement)
+        │   Flag /tmp/hdmi-swapped + HDMI_SWAPPED=1
         │
-        ├── LED fast-blink + buzzer double
-        ├── Message aide affiché sur HDMI-1 (countdown 10s)
-        │
-        ▼  (après 10s)
-  xrandr --output HDMI-1 --primary
-  Flag /tmp/hdmi-swapped
+        ├── [RUNTIME] detect_wrong_port() = true
+        │   ├── LED fast-blink + buzzer double
+        │   ├── Message aide affiché sur HDMI-1 (countdown 10s)
+        │   └── xrandr --output HDMI-1 --primary (après 10s)
+        │       Flag /tmp/hdmi-swapped
         │
         ▼  (HDMI-0 rebranché)
   Reverse swap automatique → retour HDMI-0 primary
 ```
+
+**Monitoring** : `kiosk-status.json` expose `hdmiSwapped` et `wrongPort` (bool), propagés via heartbeat au central.
 
 ### Failover dual-display (F-23.6)
 

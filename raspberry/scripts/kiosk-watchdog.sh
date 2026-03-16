@@ -456,7 +456,7 @@ write_kiosk_status() {
     detect_hdmi0_status && hdmi0_status="connected" || hdmi0_status="disconnected"
     detect_hdmi1_status && hdmi1_status="connected" || hdmi1_status="disconnected"
     cat > "$KIOSK_STATUS_FILE" 2>/dev/null <<EOF
-{"status":"${status}","chromiumAlive":$(pgrep -f "chromium.*$CHROMIUM_URL" > /dev/null 2>&1 && echo "true" || echo "false"),"restartCount":${#crash_times[@]},"lastEvent":"${now}","reason":"${reason}","pid":${CHROMIUM_PID:-0},"secondaryChromiumAlive":${secondary_alive},"hdmi0Status":"${hdmi0_status}","hdmi1Status":"${hdmi1_status}","dualDisplayActive":${DUAL_DISPLAY_ACTIVE:-false},"hdmiFailoverActive":${HDMI_FAILOVER_ACTIVE:-false},"displayFallback":"${DISPLAY_FALLBACK_REASON}","lastHdmiTransition":"${LAST_HDMI_TRANSITION:-}","windowStacking":"${WINDOW_STACKING_STATUS:-unknown}","lxpanelKillCount":${LXPANEL_KILL_COUNT:-0},"primaryResolution":"${PRIMARY_SCREEN_WIDTH:+${PRIMARY_SCREEN_WIDTH}x${PRIMARY_SCREEN_HEIGHT}}","secondaryResolution":"${SECONDARY_SCREEN_WIDTH:+${SECONDARY_SCREEN_WIDTH}x${SECONDARY_SCREEN_HEIGHT}}","gpuDecodeMode":"${GPU_DECODE_MODE:-unknown}"}
+{"status":"${status}","chromiumAlive":$(pgrep -f "chromium.*$CHROMIUM_URL" > /dev/null 2>&1 && echo "true" || echo "false"),"restartCount":${#crash_times[@]},"lastEvent":"${now}","reason":"${reason}","pid":${CHROMIUM_PID:-0},"secondaryChromiumAlive":${secondary_alive},"hdmi0Status":"${hdmi0_status}","hdmi1Status":"${hdmi1_status}","dualDisplayActive":${DUAL_DISPLAY_ACTIVE:-false},"hdmiFailoverActive":${HDMI_FAILOVER_ACTIVE:-false},"hdmiSwapped":$([ "${HDMI_SWAPPED:-0}" = "1" ] && echo "true" || echo "false"),"wrongPort":$([ -f /tmp/hdmi-wrong-port ] && echo "true" || echo "false"),"displayFallback":"${DISPLAY_FALLBACK_REASON}","lastHdmiTransition":"${LAST_HDMI_TRANSITION:-}","windowStacking":"${WINDOW_STACKING_STATUS:-unknown}","lxpanelKillCount":${LXPANEL_KILL_COUNT:-0},"primaryResolution":"${PRIMARY_SCREEN_WIDTH:+${PRIMARY_SCREEN_WIDTH}x${PRIMARY_SCREEN_HEIGHT}}","secondaryResolution":"${SECONDARY_SCREEN_WIDTH:+${SECONDARY_SCREEN_WIDTH}x${SECONDARY_SCREEN_HEIGHT}}","gpuDecodeMode":"${GPU_DECODE_MODE:-unknown}"}
 EOF
 }
 
@@ -1530,6 +1530,18 @@ main() {
         local primary_out_name
         primary_out_name=$(xrandr --query 2>/dev/null | grep -E "^HDMI.* connected" | head -1 | awk '{print $1}')
         if [[ -n "$primary_out_name" ]]; then
+            # E-23 US-23.5.4b: Si l'écran est sur HDMI-1 (HDMI-A-2) et HDMI-0 absent,
+            # configurer xrandr --primary --auto IMMÉDIATEMENT au boot, pas 10s plus tard.
+            # Sans ça, X peut ne pas avoir activé HDMI-A-2 → Chromium se lance sur un
+            # framebuffer non configuré → fenêtre dans un coin au lieu de plein écran.
+            if detect_hdmi1_status && ! detect_hdmi0_status; then
+                log "🔄 BOOT SWAP: écran sur HDMI-1 uniquement — activation xrandr immédiate"
+                DISPLAY=:0 xrandr --output "$primary_out_name" --primary --auto 2>/dev/null || true
+                sleep 1
+                HDMI_SWAPPED=1
+                echo "hdmi_swapped" > /tmp/hdmi-swapped
+            fi
+
             local xr_single
             xr_single=$(xrandr --query 2>/dev/null)
             local boot_res

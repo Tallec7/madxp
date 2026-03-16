@@ -445,12 +445,13 @@ class SystemService {
           dualDisplay: status.dualDisplayActive || false,
           failover: status.hdmiFailoverActive || false,
           wrongPort: !!status.wrongPort,
+          hdmiSwapped: !!status.hdmiSwapped,
         };
       }
     } catch {
       // kiosk-status.json may not exist (non-Pi or kiosk not running)
     }
-    return { hdmi0: 'unknown', hdmi1: 'unknown', dualDisplay: false, failover: false, wrongPort: false };
+    return { hdmi0: 'unknown', hdmi1: 'unknown', dualDisplay: false, failover: false, wrongPort: false, hdmiSwapped: false };
   }
 
   /**

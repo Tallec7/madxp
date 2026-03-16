@@ -488,7 +488,8 @@ module.exports = function registerSocketHandlers({ io, stateService, configPath,
       try {
         const ports = hdmiService.getBothPortsStatus();
         const prev = stateService.getHdmiState();
-        const changed = prev.hdmi0 !== ports.hdmi0 || prev.hdmi1 !== ports.hdmi1;
+        const changed = prev.hdmi0 !== ports.hdmi0 || prev.hdmi1 !== ports.hdmi1
+          || prev.wrongPort !== ports.wrongPort || prev.hdmiSwapped !== ports.hdmiSwapped;
 
         stateService.updateHdmiState(ports);
 

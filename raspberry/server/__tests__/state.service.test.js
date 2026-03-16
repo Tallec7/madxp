@@ -250,6 +250,7 @@ describe('StateService', () => {
         hdmi0: false,
         hdmi1: false,
         wrongPort: false,
+        hdmiSwapped: false,
         updatedAt: null,
       });
     });

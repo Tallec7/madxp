@@ -1,3 +1,11 @@
+## [3.111.1](https://github.com/Tallec7/neopro/compare/v3.111.0...v3.111.1) (2026-03-16)
+
+### Bug Fixes
+
+- **kiosk:** boot swap xrandr immédiat quand HDMI-1 seul — plein écran garanti dès le premier lancement (évite fenêtre dans un coin pendant 10s)
+- **monitoring:** `kiosk-status.json` expose `hdmiSwapped` et `wrongPort` pour supervision centrale
+- **hdmi:** `getBothPortsStatus()` remonte les flags watchdog `/tmp/hdmi-swapped` et `/tmp/hdmi-wrong-port`
+
 # [3.111.0](https://github.com/Tallec7/neopro/compare/v3.110.3...v3.111.0) (2026-03-16)
 
 ### Features

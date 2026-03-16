@@ -535,6 +535,10 @@ class HdmiService {
       // Not available
     }
 
+    // Wrong-port and swap flags (set by kiosk-watchdog.sh)
+    result.wrongPort = fs.existsSync('/tmp/hdmi-wrong-port');
+    result.hdmiSwapped = fs.existsSync('/tmp/hdmi-swapped');
+
     return result;
   }
 }

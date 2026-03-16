@@ -27,6 +27,7 @@
 23. [Changement de profil ne fonctionne pas (v3.92.0+)](#changement-de-profil-ne-fonctionne-pas-v3920)
 24. [Kiosk pas en plein écran à l'init avec HDMI-0 seul (v3.96+)](#kiosk-pas-en-plein-écran-à-linit-avec-hdmi-0-seul-v396)
 25. [Ventilateur Active Cooler Pi 5 non détecté (v3.104.3+)](#ventilateur-active-cooler-pi-5-non-détecté-v31043)
+26. [Kiosk pas en plein écran sur HDMI-1 (v3.111.1+)](#kiosk-pas-en-plein-écran-sur-hdmi-1-v31111)
 
 > **WiFi USB** : Pour un guide complet sur la clé WiFi USB (installation, diagnostic, pannes, recovery), voir [WIFI_USB_GUIDE.md](WIFI_USB_GUIDE.md).
 >
@@ -4816,7 +4817,14 @@ L'écran est branché sur HDMI-1 au lieu de HDMI-0 (port le plus proche de l'ali
 - LED clignote rapidement (200ms on/off)
 - 2 bips courts du buzzer
 - Message "Écran branché sur le mauvais port" affiché sur l'écran
-- Après 10 secondes, auto-swap vers HDMI-1 comme écran principal
+- Kiosk Chromium pas en plein écran (fenêtre dans un coin) — **corrigé en v3.111.1**
+
+### Comportement actuel (v3.111.1+)
+
+1. **Boot swap immédiat** : Si seul HDMI-1 est connecté au boot, le watchdog exécute `xrandr --output HDMI-A-2 --primary --auto` **immédiatement avant** de lancer Chromium. Pas de délai 10s.
+2. **Monitoring** : Le heartbeat remonte `hdmiStatus.hdmiSwapped: true` et `hdmiStatus.wrongPort: true` au central. Le champ est visible dans `kiosk-status.json`.
+3. **Runtime auto-swap** : Si le wrong-port est détecté en cours de fonctionnement (pas au boot), l'auto-swap se déclenche après 10s dans le watchdog loop.
+4. **Reverse swap** : Si HDMI-0 est rebranché, le système revient automatiquement sur HDMI-0.
 
 ### Diagnostic
 
@@ -4826,23 +4834,26 @@ cat /sys/class/drm/card1-HDMI-A-1/status  # HDMI-0
 cat /sys/class/drm/card1-HDMI-A-2/status  # HDMI-1
 # Si HDMI-1=connected et HDMI-0=disconnected → mauvaise prise confirmée
 
-# 2. Vérifier le flag auto-swap
-ls -la /tmp/hdmi-swapped
-# Présent = auto-swap actif, l'écran fonctionne sur HDMI-1
+# 2. Vérifier les flags watchdog
+ls -la /tmp/hdmi-swapped      # Présent = swap actif, l'écran fonctionne sur HDMI-1
+ls -la /tmp/hdmi-wrong-port   # Présent = wrong port détecté (avant swap)
 
-# 3. Vérifier le statut watchdog
-cat /tmp/kiosk-status.json | python3 -m json.tool | grep wrongPort
+# 3. Vérifier le statut watchdog complet
+cat /home/pi/neopro/data/kiosk-status.json | python3 -m json.tool
+# Champs clés : hdmiSwapped, wrongPort, primaryResolution
 ```
 
 ### Correction
 
 1. **Solution permanente** : Débrancher et rebrancher l'écran sur HDMI-0 (port le plus proche de l'alimentation)
-2. **Solution temporaire** : Le système auto-swap gère automatiquement après 10s
+2. **Solution automatique** : Le boot swap immédiat gère le cas transparently — plein écran garanti même sur HDMI-1
 3. **Guide de marquage** : Voir `docs/guides/HDMI_MARKING_GUIDE.md` pour marquer physiquement les ports
 
 ### Smoke tests de régression
 
 - `kiosk-watchdog must have detect_wrong_port function`
+- `kiosk-watchdog must do xrandr --primary --auto BEFORE start_chromium when only HDMI-1`
+- `kiosk-status.json must include hdmiSwapped and wrongPort fields`
 - `config.txt must have hdmi_force_hotplug entries`
 
 ---
@@ -5621,4 +5632,52 @@ Si le ventilateur s'arrête uniquement quand le capot du boîtier est installé 
 
 ---
 
-**Dernière mise à jour :** 9 mars 2026 (ajout section ventilateur Active Cooler Pi 5 — v3.104.3)
+## Kiosk pas en plein écran sur HDMI-1 (v3.111.1+)
+
+Le kiosk Chromium apparaît dans un coin (petite fenêtre) au lieu d'être en plein écran quand l'écran est branché sur HDMI-1 (au lieu de HDMI-0).
+
+### Cause racine
+
+Au boot, le watchdog détectait la résolution mais ne configurait **pas** `xrandr --output HDMI-A-2 --primary --auto` avant de lancer Chromium. Résultat : X n'avait pas activé HDMI-A-2 comme sortie principale → Chromium se lançait sur un framebuffer non configuré → fenêtre positionnée à 0,0 avec des dimensions incorrectes.
+
+L'auto-swap du watchdog loop ne se déclenchait qu'après **10 secondes**, et le `xdotool windowsize` post-swap ne force pas toujours Chromium à re-render son viewport CSS.
+
+### Fix (v3.111.1)
+
+Le watchdog exécute maintenant `xrandr --output HDMI-A-2 --primary --auto` **immédiatement au boot** (dans `main()`, avant `start_chromium()`) quand seul HDMI-1 est détecté. La séquence :
+
+1. `detect_hdmi1_status && ! detect_hdmi0_status` → boot swap immédiat
+2. `xrandr --output HDMI-A-2 --primary --auto` + `sleep 1`
+3. Lecture résolution via `get_output_resolution()` (tier 1 geometry fonctionne maintenant)
+4. `start_chromium` avec les bonnes dimensions dès le départ
+
+### Monitoring
+
+- **`kiosk-status.json`** : nouveaux champs `hdmiSwapped` (bool) et `wrongPort` (bool)
+- **Heartbeat central** : `hdmiStatus.hdmiSwapped` et `hdmiStatus.wrongPort` remontés dans le heartbeat sync-agent
+- **Dashboard admin Pi** : `_getHdmiStatus()` expose `hdmiSwapped` en plus de `wrongPort`
+
+### Diagnostic
+
+```bash
+# Vérifier que le boot swap a fonctionné
+cat /home/pi/neopro/data/kiosk-status.json | python3 -m json.tool | grep -E 'hdmiSwapped|wrongPort|primaryResolution'
+# Attendu: hdmiSwapped=true, primaryResolution=1920x1080 (ou résolution native)
+
+# Vérifier xrandr
+DISPLAY=:0 xrandr --query | grep -E 'HDMI.*connected'
+# HDMI-A-2 doit être primary avec une géométrie (ex: 1920x1080+0+0)
+
+# Vérifier les flags
+ls -la /tmp/hdmi-swapped /tmp/hdmi-wrong-port 2>/dev/null
+```
+
+### Smoke tests de régression
+
+- `kiosk-watchdog must do xrandr --primary --auto BEFORE start_chromium when only HDMI-1 connected`
+- `kiosk-status.json must include hdmiSwapped and wrongPort fields`
+- `hdmi.service.js getBothPortsStatus must read /tmp/hdmi-swapped flag`
+
+---
+
+**Dernière mise à jour :** 16 mars 2026 (ajout section kiosk HDMI-1 plein écran — v3.111.1)
