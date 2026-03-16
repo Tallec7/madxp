@@ -1,3 +1,9 @@
+## [3.108.1](https://github.com/Tallec7/neopro/compare/v3.108.0...v3.108.1) (2026-03-16)
+
+### Bug Fixes
+
+- **analytics:** 3 bugs Proof of Play — video_duration, completion_rate, tv_status ([3488e0a](https://github.com/Tallec7/neopro/commit/3488e0ab879ca68ffb4fb7c71a185e74a2182b1e))
+
 # [3.108.0](https://github.com/Tallec7/neopro/compare/v3.107.1...v3.108.0) (2026-03-16)
 
 ### Features
