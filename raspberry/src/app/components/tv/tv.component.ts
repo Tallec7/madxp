@@ -21,6 +21,7 @@ import { Video } from '../../interfaces/video.interface';
 import { Configuration, OverlayPosition, ScoreOverlayPosition, SportType, WatermarkScheduleRule } from '../../interfaces/configuration.interface';
 import { Command } from '../../interfaces/command.interface';
 import { Sponsor } from '../../interfaces/sponsor.interface';
+import { generateWeightedPlaylist } from '../../utils/weighted-playlist';
 import { Category } from '../../interfaces/category.interface';
 import { environment } from '../../../environments/environment';
 
@@ -1796,7 +1797,8 @@ export class TvComponent implements OnInit, OnDestroy {
     if (validVideos.length !== loopVideos.length) {
       console.warn(`[TV] Filtered out ${loopVideos.length - validVideos.length} step(s) with no video path`);
     }
-    this.currentLoopVideos = validVideos;
+    // Générer la playlist pondérée (weight absent = 1 → round-robin classique)
+    this.currentLoopVideos = generateWeightedPlaylist(validVideos);
 
     if (validVideos.length === 0) {
       console.warn('[TV] No videos in loop');

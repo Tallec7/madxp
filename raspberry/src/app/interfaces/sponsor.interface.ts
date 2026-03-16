@@ -28,6 +28,8 @@ export interface LoopVideo {
     analytics_category?: string;
     /** UUID du site_sponsor unifie (P1 — tracking granulaire par site) */
     site_sponsor_id?: string;
+    /** Poids de rotation (defaut 1). Plus le poids est eleve, plus la video passe souvent. */
+    weight?: number;
     /** Variantes video par type d'ecran (secondary, etc.) */
     variants?: {
         secondary?: {

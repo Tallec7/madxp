@@ -10095,3 +10095,80 @@ describe('sponsor_impressions_bridge VIEW completeness guard', () => {
     });
   });
 });
+
+// ----------------------------------------------------------
+// Weighted sponsor rotation guards
+// ----------------------------------------------------------
+// The weighted playlist must be used in the TV component, and
+// the weight field must survive config enrichment unchanged.
+// Without this, sponsor rotation weights configured in the
+// dashboard would be silently stripped → equal rotation for all.
+// ----------------------------------------------------------
+describe('Weighted sponsor rotation guards', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+
+  it('TV component must use generateWeightedPlaylist in startSeamlessLoop', () => {
+    const tvPath = path.join(repoRoot, 'raspberry/src/app/components/tv/tv.component.ts');
+    const tvContent = fs.readFileSync(tvPath, 'utf8');
+    const startLoop = tvContent.match(/private startSeamlessLoop[\s\S]*?(?=private \w|\n  \/\*\*)/);
+    expect({
+      usesWeightedPlaylist: startLoop ? startLoop[0].includes('generateWeightedPlaylist') : false,
+      reason: 'startSeamlessLoop must apply weighted rotation — removing it silently reverts to equal rotation',
+    }).toEqual({
+      usesWeightedPlaylist: true,
+      reason: 'startSeamlessLoop must apply weighted rotation — removing it silently reverts to equal rotation',
+    });
+  });
+
+  it('LoopVideo interface must have weight field', () => {
+    const interfacePath = path.join(repoRoot, 'raspberry/src/app/interfaces/sponsor.interface.ts');
+    const content = fs.readFileSync(interfacePath, 'utf8');
+    expect({
+      hasWeight: content.includes('weight?: number'),
+      reason: 'LoopVideo needs weight field for weighted sponsor rotation',
+    }).toEqual({
+      hasWeight: true,
+      reason: 'LoopVideo needs weight field for weighted sponsor rotation',
+    });
+  });
+
+  it('SponsorVideo server type must have weight field', () => {
+    const typesPath = path.join(repoRoot, 'central-server/src/types/index.ts');
+    const content = fs.readFileSync(typesPath, 'utf8');
+    const sponsorBlock = content.match(/export interface SponsorVideo \{[\s\S]*?\n\}/);
+    expect({
+      hasWeight: sponsorBlock ? sponsorBlock[0].includes('weight?: number') : false,
+      reason: 'SponsorVideo needs weight field — config enrichment must preserve it through the pipeline',
+    }).toEqual({
+      hasWeight: true,
+      reason: 'SponsorVideo needs weight field — config enrichment must preserve it through the pipeline',
+    });
+  });
+
+  it('config-analytics-metadata must not strip unknown fields from sponsor objects', () => {
+    const utilPath = path.join(repoRoot, 'central-server/src/utils/config-analytics-metadata.ts');
+    const content = fs.readFileSync(utilPath, 'utf8');
+    // The enrichment must NOT rebuild sponsor objects from scratch (which would drop weight).
+    // It should only SET specific fields on the existing object.
+    expect({
+      doesNotRebuildObject: !content.includes('= { name:') && !content.includes('= { path:'),
+      reason: 'enrichment must mutate existing sponsor objects, not rebuild them — rebuilding drops weight field',
+    }).toEqual({
+      doesNotRebuildObject: true,
+      reason: 'enrichment must mutate existing sponsor objects, not rebuild them — rebuilding drops weight field',
+    });
+  });
+
+  it('LoopVideoConfig dashboard model must have weight field', () => {
+    const modelPath = path.join(repoRoot, 'central-dashboard/src/app/core/models/site-config.model.ts');
+    const content = fs.readFileSync(modelPath, 'utf8');
+    const loopVideoBlock = content.match(/export interface LoopVideoConfig \{[\s\S]*?\n\}/);
+    expect({
+      hasWeight: loopVideoBlock ? loopVideoBlock[0].includes('weight?: number') : false,
+      reason: 'LoopVideoConfig needs weight field for dashboard sponsor weight UI',
+    }).toEqual({
+      hasWeight: true,
+      reason: 'LoopVideoConfig needs weight field for dashboard sponsor weight UI',
+    });
+  });
+});

@@ -138,6 +138,9 @@ source central-server/.env && psql "$DATABASE_URL" -f central-server/src/scripts
 - Utiliser `GROUP BY vp.column` quand le SELECT utilise `COALESCE(NULLIF(TRIM(vp.column), ''), 'default')` (le GROUP BY brut ne coalese pas les variantes vide/null/whitespace → lignes dupliquées dans l'affichage — toujours aligner le GROUP BY sur l'expression COALESCE du SELECT — smoke test enforced)
 - Utiliser `video_duration: durationPlayed` dans analytics.service.ts (c'est la durée jouée, pas la durée réelle de la vidéo HTMLVideoElement.duration — utiliser `setCurrentVideoDuration()` qui capture `player.duration` depuis tv.component.ts → completion_rate = duration_played / video_duration devient significatif — smoke test enforced)
 - Appeler `fix-fleet-pi.sh` sans `sudo` dans `deploy-remote.sh` ou `update-software.js` (le script vérifie `id -u == 0` et exit 1 si non-root — sans sudo, les 13 étapes de remédiation fleet sont silencieusement ignorées : boot splash, systemd, GPU, HDMI, ventilateur Pi 5… — `|| true` / `catch` avalent l'erreur — smoke test enforced)
+- Supprimer `generateWeightedPlaylist()` de `startSeamlessLoop()` dans tv.component.ts (sans weighted playlist, la rotation pondérée est silencieusement désactivée → tous les sponsors reçoivent le même temps d'antenne quel que soit leur weight — smoke test enforced)
+- Supprimer le champ `weight` de `LoopVideo`, `LoopVideoConfig` ou `SponsorVideo` (le weight est le seul mécanisme de pondération de la rotation sponsor — le supprimer casse la différenciation sponsor Or/Argent/Bronze — smoke test enforced)
+- Reconstruire les objets sponsor dans `enrichConfigWithAnalyticsMetadata()` ou `enrichConfigWithSecondaryVariants()` au lieu de muter les champs (reconstruire l'objet = perdre `weight` et tout autre champ futur — toujours SET des champs spécifiques sur l'objet existant — smoke test enforced)
 
 ## Architecture détaillée
 

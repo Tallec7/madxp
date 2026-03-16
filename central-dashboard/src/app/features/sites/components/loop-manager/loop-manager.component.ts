@@ -10,6 +10,14 @@ interface LoopTab {
   isFallback: boolean;
 }
 
+interface SponsorWeightGroup {
+  sponsorId: string;
+  sponsorName: string;
+  weight: number;
+  percentage: number;
+  videoCount: number;
+}
+
 @Component({
   selector: 'app-loop-manager',
   standalone: true,
@@ -163,6 +171,29 @@ interface LoopTab {
             </div>
           </div>
         </ng-container>
+
+        <!-- Pondération sponsors -->
+        <div class="sponsor-weights" *ngIf="getSponsorGroups().length > 1">
+          <h5 class="weights-title">Pondération sponsors</h5>
+          <div class="sponsor-weight-row" *ngFor="let group of getSponsorGroups()">
+            <span class="weight-sponsor-name" [title]="group.videoCount + ' vidéo(s)'">
+              {{ group.sponsorName }}
+            </span>
+            <div class="weight-control">
+              <button class="weight-btn" (click)="updateSponsorWeight(group.sponsorId, group.weight - 1)" [disabled]="group.weight <= 1">−</button>
+              <input
+                type="number"
+                class="weight-input"
+                [value]="group.weight"
+                (change)="updateSponsorWeight(group.sponsorId, +$any($event.target).value)"
+                min="1"
+                max="10"
+              />
+              <button class="weight-btn" (click)="updateSponsorWeight(group.sponsorId, group.weight + 1)" [disabled]="group.weight >= 10">+</button>
+            </div>
+            <span class="weight-pct">{{ group.percentage }}%</span>
+          </div>
+        </div>
 
         <!-- Empty state pour la phase -->
         <div class="phase-empty" *ngIf="getPhaseVideos().length === 0">
@@ -582,6 +613,98 @@ interface LoopTab {
       background: #f8fafc;
       color: #334155;
     }
+
+    /* Sponsor weights */
+    .sponsor-weights {
+      margin: 0.75rem 0;
+      padding: 0.75rem;
+      background: #f0f9ff;
+      border: 1px solid #bae6fd;
+      border-radius: 8px;
+    }
+
+    .weights-title {
+      margin: 0 0 0.5rem;
+      font-size: 0.8125rem;
+      font-weight: 600;
+      color: #0369a1;
+    }
+
+    .sponsor-weight-row {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.375rem 0;
+    }
+
+    .sponsor-weight-row + .sponsor-weight-row {
+      border-top: 1px solid #e0f2fe;
+    }
+
+    .weight-sponsor-name {
+      flex: 1;
+      font-size: 0.8125rem;
+      font-weight: 500;
+      color: #334155;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .weight-control {
+      display: flex;
+      align-items: center;
+      gap: 0.25rem;
+    }
+
+    .weight-btn {
+      width: 24px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid #cbd5e1;
+      border-radius: 4px;
+      background: white;
+      color: #475569;
+      font-size: 0.875rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .weight-btn:hover:not(:disabled) {
+      background: #e2e8f0;
+    }
+
+    .weight-btn:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+    }
+
+    .weight-input {
+      width: 40px;
+      text-align: center;
+      padding: 0.25rem;
+      border: 1px solid #cbd5e1;
+      border-radius: 4px;
+      font-size: 0.8125rem;
+      font-weight: 600;
+    }
+
+    .weight-input::-webkit-inner-spin-button,
+    .weight-input::-webkit-outer-spin-button {
+      -webkit-appearance: none;
+    }
+
+    .weight-pct {
+      min-width: 36px;
+      text-align: right;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: #0369a1;
+      font-variant-numeric: tabular-nums;
+    }
   `]
 })
 export class LoopManagerComponent implements OnInit, OnChanges {
@@ -735,6 +858,50 @@ export class LoopManagerComponent implements OnInit, OnChanges {
     const tc = this.config.timeCategories?.find(t => t.id === this.activeTab);
     if (!tc) return;
     tc.loopVideos = [];
+    this.onChanged();
+  }
+
+  // === Sponsor weight management ===
+
+  getSponsorGroups(): SponsorWeightGroup[] {
+    const videos = this.getPhaseVideos();
+    if (videos.length === 0) return [];
+
+    const groupMap = new Map<string, { name: string; weight: number; count: number }>();
+
+    for (const video of videos) {
+      const sponsorId = video.site_sponsor_id || video.path;
+      if (!groupMap.has(sponsorId)) {
+        const sponsor = video.site_sponsor_id ? this.getAutoDetectedSponsor(video.path) : null;
+        groupMap.set(sponsorId, {
+          name: sponsor?.name || video.name || video.path?.split('/').pop() || 'Sans sponsor',
+          weight: video.weight || 1,
+          count: 0,
+        });
+      }
+      groupMap.get(sponsorId)!.count++;
+    }
+
+    const totalWeight = Array.from(groupMap.values()).reduce((sum, g) => sum + g.weight, 0);
+
+    return Array.from(groupMap.entries()).map(([sponsorId, data]) => ({
+      sponsorId,
+      sponsorName: data.name,
+      weight: data.weight,
+      percentage: totalWeight > 0 ? Math.round((data.weight / totalWeight) * 100) : 0,
+      videoCount: data.count,
+    }));
+  }
+
+  updateSponsorWeight(sponsorId: string, newWeight: number): void {
+    const weight = Math.max(1, Math.min(10, Math.round(newWeight)));
+    const videos = this.getPhaseVideos();
+    for (const video of videos) {
+      const videoSponsorId = video.site_sponsor_id || video.path;
+      if (videoSponsorId === sponsorId) {
+        video.weight = weight;
+      }
+    }
     this.onChanged();
   }
 

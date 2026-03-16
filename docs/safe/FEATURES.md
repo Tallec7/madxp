@@ -156,17 +156,20 @@ Tous les controllers utilisent le repository pattern. ESLint bloquant actif. Aud
 
 ---
 
-## E-02 — Rotation Sponsors
+## E-02 — Rotation Sponsors ⚠️ PARTIEL
 
-### F-02.1 : Algorithme de rotation équitable
+> **Statut** : ⚠️ V1 implémentée (rotation pondérée par weight, UI dashboard, smoke tests). V2 prévue (min garanti, compteur temps réel, prévisualisation).
+> **Fichiers** : `raspberry/src/app/utils/weighted-playlist.ts`, `loop-manager.component.ts`, `tv.component.ts`
+
+### F-02.1 : Algorithme de rotation équitable ⚠️ PARTIEL
 
 > _En tant que système, je distribue les spots sponsors de manière équitable pendant un match avec un minimum garanti de passages._
 
 **Critères d'acceptation**
 
-- [ ] Algorithme round-robin pondéré par formule (Essentiel < Autonomie < Premium)
+- [x] Algorithme round-robin pondéré par weight (1-10) avec interleaving anti-consécutif (v3.110)
 - [ ] Minimum garanti de 20 passages/match/sponsor
-- [ ] Rotation aléatoire au sein de chaque créneau pour éviter la répétition
+- [x] Rotation déterministe au sein de chaque créneau pour éviter la répétition (v3.110)
 - [ ] Compteur de passages en temps réel stocké dans la DB
 - [ ] Les spots non validés ne sont jamais diffusés
 
@@ -177,14 +180,14 @@ Tous les controllers utilisent le repository pattern. ESLint bloquant actif. Aud
 
 ---
 
-### F-02.2 : Configuration rotation par gymnase
+### F-02.2 : Configuration rotation par gymnase ⚠️ PARTIEL
 
 > _En tant qu'admin, je peux configurer les règles de rotation pour chaque gymnase (fréquence, priorité)._
 
 **Critères d'acceptation**
 
 - [ ] Configuration par site : fréquence de rotation (toutes les X minutes)
-- [ ] Priorité par sponsor (pondération manuelle possible)
+- [x] Priorité par sponsor (pondération manuelle weight 1-10 par sponsor par phase, UI dashboard) (v3.110)
 - [ ] Prévisualisation de l'ordre de rotation avant activation
 - [ ] Historique des changements de configuration
 

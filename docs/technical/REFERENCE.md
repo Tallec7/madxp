@@ -1406,12 +1406,13 @@ _`enrichConfigWithAnalyticsMetadata(config)` — Central Server :_
 
 _Champs injectés côté Pi :_
 
-| Champ                | Source DB                                        | Usage Pi                               |
-| -------------------- | ------------------------------------------------ | -------------------------------------- |
-| `video_id`           | `videos.id`                                      | Tracking analytics `video_plays`       |
-| `advertiser_id`      | `advertiser_videos.advertiser_id`                | Filtrage contrat / analytics           |
-| `sponsor_id`         | Alias de `advertiser_id` (rétrocompat)           | Rétrocompat LoopVideo interface        |
-| `analytics_category` | `metadata->>'analytics_category'` ou `'sponsor'` | Classification dans `detectCategory()` |
+| Champ                | Source DB                                        | Usage Pi                                      |
+| -------------------- | ------------------------------------------------ | --------------------------------------------- |
+| `video_id`           | `videos.id`                                      | Tracking analytics `video_plays`              |
+| `advertiser_id`      | `advertiser_videos.advertiser_id`                | Filtrage contrat / analytics                  |
+| `sponsor_id`         | Alias de `advertiser_id` (rétrocompat)           | Rétrocompat LoopVideo interface               |
+| `analytics_category` | `metadata->>'analytics_category'` ou `'sponsor'` | Classification dans `detectCategory()`        |
+| `weight`             | Config dashboard (non enrichi — passthrough)     | Pondération rotation sponsor (1-10, défaut 1) |
 
 _Display tracking :_
 
@@ -1895,7 +1896,9 @@ Les deux instances Chromium se synchronisent via Socket.IO master-slave :
 | Phase change   | `switchToPhase()` → relance boucle                 | `startSeamlessLoop()` → retourne immédiatement, attend master                                  |
 | Action directe | —                                                  | Reçoit `action` → `preloadManualVideo()` (prépare sans révéler, ADR-034)                       |
 
-**Sync par index** : le slave utilise `videoIndex` (pas `videoPath`) car les variants secondaires ont des chemins différents. Les deux boucles ont le même ordre, donc l'index est toujours fiable.
+**Rotation pondérée (v3.110+)** : `startSeamlessLoop()` applique `generateWeightedPlaylist()` (`raspberry/src/app/utils/weighted-playlist.ts`) sur les vidéos filtrées. Chaque vidéo a un `weight` optionnel (défaut 1, range 1-10). L'algo expand la playlist (ex: weight 3 → 3 occurrences) et interleave pour éviter les passages consécutifs du même sponsor. La playlist étendue remplace `currentLoopVideos` — tout le code downstream (next index, prefetch, analytics) fonctionne sans changement. L'algo est **déterministe** : même input → même output → sync dual-display fiable.
+
+**Sync par index** : le slave utilise `videoIndex` (pas `videoPath`) car les variants secondaires ont des chemins différents. Les deux boucles ont le même ordre, donc l'index est toujours fiable. Avec la rotation pondérée, les index réfèrent à la playlist étendue (pas au tableau original) — les deux côtés génèrent la même playlist car l'algo est déterministe.
 
 **Résolution variante secondaire** : `resolveSecondaryVariant()` vérifie d'abord `video.variants.secondary.path`, puis cherche dans la config complète via `findVideoInConfig(path)` (sponsors → timeCategories.loopVideos → categories.videos récursif). Appliqué aux 3 points d'entrée : `action` handler, BroadcastChannel, `handleMasterLoopState` CAS 1.
 

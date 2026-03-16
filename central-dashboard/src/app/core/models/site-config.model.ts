@@ -40,6 +40,8 @@ export interface LoopVideoConfig {
   /** @deprecated Utiliser site_sponsor_id */
   sponsor_id?: string; // Ancien champ — conservé pour rétrocompatibilité configs existantes
   site_sponsor_id?: string; // UUID du site_sponsor unifié (tracking granulaire par site)
+  /** Poids de rotation (défaut 1). Plus le poids est élevé, plus la vidéo passe souvent. */
+  weight?: number;
 }
 
 /**
