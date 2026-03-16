@@ -4385,6 +4385,86 @@ interface WizardStep {
     .wizard-nav-spacer {
       flex: 1;
     }
+
+    /* === Responsive === */
+    @media (max-width: 768px) {
+      .debug-tab {
+        padding: 0.75rem;
+      }
+
+      .debug-card {
+        padding: 0.75rem;
+      }
+
+      .summary-bar {
+        flex-wrap: wrap;
+        gap: 0.375rem;
+      }
+
+      .info-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .file-row {
+        grid-template-columns: 1fr;
+        gap: 0.25rem;
+      }
+
+      .service-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .debug-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+      }
+
+      .history-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.375rem;
+      }
+
+      .json-viewer {
+        font-size: 0.7rem;
+      }
+
+      .config-diff-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .wizard-modal {
+        width: 95vw;
+      }
+
+      .thermal-grid,
+      .gpio-grid,
+      .process-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .disk-partitions-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .network-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .cec-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .display-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .timeline-item {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+    }
   `]
 })
 export class SiteDebugTabComponent implements OnInit, AfterViewChecked, OnDestroy {

@@ -724,6 +724,43 @@ import { SubscriptionBadgeComponent } from '../../../../shared/components/subscr
       color: #6b7280;
       margin-left: auto;
     }
+
+    /* === Responsive === */
+    @media (max-width: 768px) {
+      .subscription-tab {
+        padding: 0.75rem;
+      }
+
+      .details-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .actions-grid {
+        flex-direction: column;
+      }
+
+      .subscription-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+      }
+
+      .status-card {
+        padding: 0.75rem;
+      }
+
+      .modal {
+        width: 95vw;
+      }
+
+      .license-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .plan-option {
+        padding: 0.75rem;
+      }
+    }
   `]
 })
 export class SiteSubscriptionTabComponent implements OnInit, OnChanges {

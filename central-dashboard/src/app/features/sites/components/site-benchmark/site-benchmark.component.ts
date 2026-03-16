@@ -252,6 +252,31 @@ interface BenchmarkResult {
     .no-data small {
       color: #94a3b8;
     }
+
+    /* === Responsive === */
+    @media (max-width: 768px) {
+      .benchmark-container {
+        padding: 0.75rem;
+      }
+
+      .metrics-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .metric-card {
+        padding: 0.75rem;
+      }
+
+      .benchmark-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.375rem;
+      }
+
+      .comparison-labels {
+        font-size: 0.6rem;
+      }
+    }
   `]
 })
 export class SiteBenchmarkComponent implements OnInit, OnChanges {

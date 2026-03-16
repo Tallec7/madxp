@@ -196,6 +196,26 @@ interface UploadState {
     .upload-status .error {
       color: var(--color-error, #f44336);
     }
+
+    /* === Responsive === */
+    @media (max-width: 768px) {
+      .upload-zone {
+        padding: 1rem;
+      }
+
+      .upload-zone p {
+        font-size: 0.75rem;
+      }
+
+      .upload-item {
+        flex-wrap: wrap;
+        gap: 0.375rem;
+      }
+
+      .upload-name {
+        flex-basis: 100%;
+      }
+    }
   `]
 })
 export class VideoUploadZoneComponent {

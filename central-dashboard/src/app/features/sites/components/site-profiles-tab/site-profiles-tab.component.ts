@@ -582,6 +582,36 @@ import { Site, ConfigProfile, CreateProfilePayload, UpdateProfilePayload, SiteCo
       display: block;
       margin-bottom: 0.5rem;
     }
+
+    /* === Responsive === */
+    @media (max-width: 768px) {
+      .profiles-tab {
+        padding: 0.75rem;
+      }
+
+      .profiles-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .profile-card {
+        padding: 0.75rem;
+      }
+
+      .profile-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.375rem;
+      }
+
+      .profile-actions {
+        width: 100%;
+        justify-content: flex-end;
+      }
+
+      .modal {
+        width: 95vw;
+      }
+    }
   `]
 })
 export class SiteProfilesTabComponent implements OnInit {

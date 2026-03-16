@@ -1275,6 +1275,65 @@ Chart.register(...registerables);
       border-radius: 50%;
       animation: spin 0.8s linear infinite;
     }
+
+    /* === Responsive === */
+    @media (max-width: 768px) {
+      .tab-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+      }
+
+      .header-actions {
+        width: 100%;
+        flex-wrap: wrap;
+      }
+
+      .kpi-grid-4, .kpi-grid-5 {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .sponsor-row {
+        flex-wrap: wrap;
+        gap: 0.375rem;
+      }
+
+      .sponsor-info {
+        flex-basis: calc(100% - 40px);
+      }
+
+      .sponsor-actions {
+        margin-left: auto;
+      }
+
+      .modal-content {
+        width: 95vw;
+      }
+
+      .wizard-modal {
+        width: 95vw;
+      }
+
+      .wizard-video-row {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.375rem;
+      }
+
+      .benchmark-table {
+        font-size: 0.7rem;
+      }
+
+      .video-chips {
+        gap: 0.25rem;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .kpi-grid-4, .kpi-grid-5 {
+        grid-template-columns: 1fr;
+      }
+    }
   `],
 })
 export class SiteSponsorsTabComponent implements OnInit, OnDestroy {

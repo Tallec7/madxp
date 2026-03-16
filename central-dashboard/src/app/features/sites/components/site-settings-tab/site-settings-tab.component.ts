@@ -1576,6 +1576,43 @@ import { QrCodeGeneratorComponent } from '../../../../shared/components/qr-code-
       padding: 0.375rem 0.75rem;
       font-size: 0.875rem;
     }
+
+    /* === Responsive === */
+    @media (max-width: 768px) {
+      .settings-tab {
+        padding: 0.75rem;
+      }
+
+      .settings-card {
+        padding: 0.75rem;
+      }
+
+      .settings-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .form-group {
+        min-width: 0;
+      }
+
+      .overlay-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .settings-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+      }
+
+      .theme-options {
+        flex-wrap: wrap;
+      }
+
+      .reports-actions {
+        flex-wrap: wrap;
+      }
+    }
   `]
 })
 export class SiteSettingsTabComponent implements OnInit, OnChanges {

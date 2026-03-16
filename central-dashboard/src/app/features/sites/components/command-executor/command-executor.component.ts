@@ -425,6 +425,40 @@ interface HistoryEntry {
       opacity: 0.5;
       cursor: not-allowed;
     }
+
+    /* === Responsive === */
+    @media (max-width: 768px) {
+      .command-executor {
+        padding: 0.75rem;
+      }
+
+      .input-row {
+        flex-direction: column;
+        gap: 0.375rem;
+      }
+
+      .command-input {
+        width: 100%;
+      }
+
+      .history-select {
+        width: 100%;
+      }
+
+      .quick-commands {
+        flex-wrap: wrap;
+        gap: 0.25rem;
+      }
+
+      .quick-btn {
+        font-size: 0.7rem;
+        padding: 0.25rem 0.5rem;
+      }
+
+      .output-box {
+        font-size: 0.7rem;
+      }
+    }
   `]
 })
 export class CommandExecutorComponent implements OnInit, OnDestroy {

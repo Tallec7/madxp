@@ -236,6 +236,18 @@ interface VideoVariant {
       opacity: 0.5;
       cursor: not-allowed;
     }
+
+    /* === Responsive === */
+    @media (max-width: 768px) {
+      .variant-item {
+        flex-wrap: wrap;
+        gap: 0.375rem;
+      }
+
+      .variant-body {
+        padding: 0.5rem;
+      }
+    }
   `]
 })
 export class VideoVariantPanelComponent {
