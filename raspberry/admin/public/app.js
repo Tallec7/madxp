@@ -209,10 +209,6 @@ if (DEMO_MODE) {
             return new Response(JSON.stringify({ success: true, message: 'Service redémarré (mode démo)' }), { status: 200 });
         }
 
-        if (url.includes('/api/wifi/client')) {
-            return new Response(JSON.stringify({ success: true, message: 'WiFi configuré (mode démo)' }), { status: 200 });
-        }
-
         if (url.includes('/api/system/reboot') || url.includes('/api/system/shutdown')) {
             return new Response(JSON.stringify({ success: true, message: 'Action simulée (mode démo)' }), { status: 200 });
         }

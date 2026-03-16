@@ -7603,7 +7603,7 @@ describe('Pi admin panel security & architecture guards', () => {
   it('auth.js must have password change route', () => {
     const content = fs.readFileSync(path.join(adminDir, 'routes', 'auth.js'), 'utf8');
     expect(content).toMatch(/\/api\/auth\/change-password/);
-    expect(content).toMatch(/newPassword\.length\s*<\s*4/);
+    expect(content).toMatch(/newPassword\.length\s*<\s*8/);
   });
 
   it('realtime.js module must exist and connect to :3000', () => {
@@ -10169,6 +10169,106 @@ describe('Weighted sponsor rotation guards', () => {
     }).toEqual({
       hasWeight: true,
       reason: 'LoopVideoConfig needs weight field for dashboard sponsor weight UI',
+    });
+  });
+});
+
+// =============================================================================
+// Admin :8080 WiFi flow regression guards
+// =============================================================================
+//
+// Issue: admin connectWifi() was broken — used wpa_cli reconfigure (no service
+// restart), stored plaintext passwords, no DHCP trigger, single 3s poll.
+// Users had to use central dashboard (sync-agent) to connect WiFi dongle.
+//
+// Fix: aligned admin flow with sync-agent: PSK hash, systemctl restart,
+// dhcpcd trigger, 5×2s polling, rfkill unblock.
+//
+// These guards prevent regression to the broken flow.
+describe('Admin :8080 WiFi connectWifi() regression guards', () => {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const fs = require('fs');
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const path = require('path');
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+  const networkServicePath = path.join(repoRoot, 'raspberry/admin/services/network.service.js');
+  const networkService = fs.readFileSync(networkServicePath, 'utf8');
+
+  it('must hash WiFi password via wpa_passphrase — never store plaintext PSK', () => {
+    expect({
+      usesWpaPassphrase: networkService.includes('wpa_passphrase'),
+      noPlaintextPsk: !networkService.includes('psk="${password}"'),
+      reason: 'connectWifi must hash password via wpa_passphrase, never store plaintext in wpa_supplicant.conf',
+    }).toEqual({
+      usesWpaPassphrase: true,
+      noPlaintextPsk: true,
+      reason: 'connectWifi must hash password via wpa_passphrase, never store plaintext in wpa_supplicant.conf',
+    });
+  });
+
+  it('must restart wpa_supplicant@wlan1 service — wpa_cli reconfigure alone is unreliable', () => {
+    expect({
+      restartsService: networkService.includes('systemctl restart wpa_supplicant@wlan1'),
+      enablesService: networkService.includes('systemctl enable wpa_supplicant@wlan1'),
+      reason: 'wpa_cli reconfigure alone does not reliably bring up wlan1 — must restart systemd service',
+    }).toEqual({
+      restartsService: true,
+      enablesService: true,
+      reason: 'wpa_cli reconfigure alone does not reliably bring up wlan1 — must restart systemd service',
+    });
+  });
+
+  it('must trigger DHCP after WiFi connection — without it, no IP address is obtained', () => {
+    expect({
+      triggersDhcp: networkService.includes('dhcpcd wlan1'),
+      reason: 'without dhcpcd trigger, wlan1 connects to WiFi but never gets an IP address',
+    }).toEqual({
+      triggersDhcp: true,
+      reason: 'without dhcpcd trigger, wlan1 connects to WiFi but never gets an IP address',
+    });
+  });
+
+  it('must unblock WiFi radio before connecting — dongle may be rfkill-blocked', () => {
+    expect({
+      unblocksWifi: networkService.includes('rfkill unblock wifi'),
+      reason: 'USB WiFi dongle may be rfkill-blocked — must unblock before any WiFi operation',
+    }).toEqual({
+      unblocksWifi: true,
+      reason: 'USB WiFi dongle may be rfkill-blocked — must unblock before any WiFi operation',
+    });
+  });
+
+  it('must poll connection multiple times — RTL8192EU needs 10-30s for WPA+DHCP', () => {
+    // Ensure there's a retry loop (for loop with sleep) not a single check
+    const hasRetryLoop = /for\s*\(\s*let\s+i\s*=\s*0;\s*i\s*<\s*5/.test(networkService);
+    expect({
+      hasRetryLoop,
+      reason: 'single 3s wait is too short for RTL8192EU — must poll 5×2s minimum',
+    }).toEqual({
+      hasRetryLoop: true,
+      reason: 'single 3s wait is too short for RTL8192EU — must poll 5×2s minimum',
+    });
+  });
+
+  it('must NOT expose deprecated /api/wifi/client route', () => {
+    const routesPath = path.join(repoRoot, 'raspberry/admin/routes/network.js');
+    const routes = fs.readFileSync(routesPath, 'utf8');
+    expect({
+      noClientRoute: !routes.includes('/api/wifi/client'),
+      reason: '/api/wifi/client delegated to interactive script — use /api/wifi/connect instead',
+    }).toEqual({
+      noClientRoute: true,
+      reason: '/api/wifi/client delegated to interactive script — use /api/wifi/connect instead',
+    });
+  });
+
+  it('must create wlan1-specific symlink for wpa_supplicant config', () => {
+    expect({
+      createsSymlink: networkService.includes('wpa_supplicant-wlan1.conf'),
+      reason: 'wpa_supplicant@wlan1.service reads wpa_supplicant-wlan1.conf — symlink is required',
+    }).toEqual({
+      createsSymlink: true,
+      reason: 'wpa_supplicant@wlan1.service reads wpa_supplicant-wlan1.conf — symlink is required',
     });
   });
 });

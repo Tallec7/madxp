@@ -515,8 +515,8 @@ router.post('/api/auth/change-password', async (req, res) => {
     return res.status(400).json({ success: false, error: 'Mot de passe actuel et nouveau requis' });
   }
 
-  if (newPassword.length < 4) {
-    return res.status(400).json({ success: false, error: 'Le nouveau mot de passe doit faire au moins 4 caractères' });
+  if (newPassword.length < 8) {
+    return res.status(400).json({ success: false, error: 'Le nouveau mot de passe doit faire au moins 8 caractères' });
   }
 
   const adminPassword = await getAdminPassword();

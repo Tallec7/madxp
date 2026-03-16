@@ -10,9 +10,8 @@
 
 const fs = require('fs').promises;
 const os = require('os');
-const path = require('path');
 
-const { NEOPRO_DIR, execCommand, execFileCommand } = require('../helpers');
+const { execCommand, shellEscape } = require('../helpers');
 const { ValidationError, NotFoundError, CommandError } = require('./errors');
 
 class NetworkService {
@@ -89,18 +88,6 @@ class NetworkService {
     // Sort by signal strength (best first)
     networks.sort((a, b) => (b.signal || -100) - (a.signal || -100));
     return networks;
-  }
-
-  /**
-   * Build a wpa_supplicant network block string.
-   */
-  buildWpaNetworkBlock({ ssid, password, bssid, lockBssid }) {
-    let block = `\n\nnetwork={\n    ssid="${ssid}"\n    psk="${password}"\n    key_mgmt=WPA-PSK`;
-    if (lockBssid && bssid) {
-      block += `\n    bssid=${bssid}`;
-    }
-    block += `\n    priority=1\n}\n`;
-    return block;
   }
 
   // ---------------------------------------------------------------------------
@@ -184,40 +171,15 @@ class NetworkService {
   }
 
   // ---------------------------------------------------------------------------
-  // WiFi client configuration
-  // ---------------------------------------------------------------------------
-
-  async configureWifiClient(ssid, password) {
-    if (!ssid || !password) {
-      throw new ValidationError('SSID et mot de passe requis');
-    }
-
-    const scriptPath = path.join(NEOPRO_DIR, 'scripts', 'setup-wifi-client.sh');
-
-    try {
-      const fsCore = require('fs');
-      await fs.access(scriptPath, fsCore.constants.X_OK);
-    } catch {
-      throw new NotFoundError(
-        'Script WiFi introuvable. Re-déployez les scripts (npm run deploy:raspberry) ou vérifiez /home/pi/neopro/scripts.',
-      );
-    }
-
-    // Use execFileCommand (no shell interpolation) to safely pass credentials
-    const result = await execFileCommand('sudo', [scriptPath, ssid, password]);
-    if (!result.success) {
-      throw new CommandError(result.error);
-    }
-    return { output: result.output };
-  }
-
-  // ---------------------------------------------------------------------------
   // WiFi connect (with BSSID lock)
   // ---------------------------------------------------------------------------
 
   async connectWifi({ ssid, password, bssid, lockBssid }) {
     if (!ssid || !password) {
       throw new ValidationError('SSID et mot de passe requis');
+    }
+    if (password.length < 8 || password.length > 63) {
+      throw new ValidationError('Le mot de passe doit contenir entre 8 et 63 caractères (WPA2)');
     }
 
     // SAFETY: Detect mesh environment and block BSSID lock
@@ -244,10 +206,32 @@ class NetworkService {
       }
     }
 
-    // Read current wpa_supplicant.conf
+    // Step 1: Check wlan1 exists
+    const linkCheck = await execCommand('ip link show wlan1 2>/dev/null');
+    if (!linkCheck.success) {
+      throw new NotFoundError('Interface wlan1 non détectée. Vérifiez que la clé WiFi USB est branchée.');
+    }
+
+    // Step 2: Bring wlan1 up + unblock WiFi radio
+    await execCommand('sudo ip link set wlan1 up 2>/dev/null');
+    await execCommand('sudo rfkill unblock wifi 2>/dev/null');
+
+    // Step 3: Hash password via wpa_passphrase (never store plaintext)
+    const pskResult = await execCommand(
+      `wpa_passphrase ${shellEscape(ssid)} ${shellEscape(password)}`,
+    );
+    if (!pskResult.success || !pskResult.output) {
+      throw new CommandError('Échec de la génération du hash PSK');
+    }
+    const pskMatch = pskResult.output.match(/^\s+psk=([a-f0-9]{64})/m);
+    if (!pskMatch) {
+      throw new CommandError('Échec de la génération du hash PSK');
+    }
+    const pskHash = pskMatch[1];
+
+    // Step 4: Read existing wpa_supplicant config
     const wpaConfPath = '/etc/wpa_supplicant/wpa_supplicant.conf';
     let wpaConf = '';
-
     try {
       const readResult = await execCommand(`sudo cat ${wpaConfPath}`);
       wpaConf = readResult.output || '';
@@ -255,37 +239,84 @@ class NetworkService {
       wpaConf = 'ctrl_interface=DIR=/var/run/wpa_supplicant GROUP=netdev\nupdate_config=1\ncountry=FR\n';
     }
 
-    // Remove existing network block for this SSID
-    const escapedSsid = ssid.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const networkRegex = new RegExp(`network=\\{[^}]*ssid="${escapedSsid}"[^}]*\\}`, 'g');
-    wpaConf = wpaConf.replace(networkRegex, '');
-    wpaConf = wpaConf.replace(/\n{3,}/g, '\n\n').trim();
+    // Step 5: Clean slate — keep header, remove all network blocks
+    const headerLines = wpaConf
+      .split('\n')
+      .filter((line) => {
+        const trimmed = line.trim();
+        return (
+          trimmed &&
+          !trimmed.startsWith('network=') &&
+          !trimmed.startsWith('ssid=') &&
+          !trimmed.startsWith('psk=') &&
+          !trimmed.startsWith('#psk=') &&
+          !trimmed.startsWith('key_mgmt=') &&
+          !trimmed.startsWith('priority=') &&
+          !trimmed.startsWith('id_str=') &&
+          !trimmed.startsWith('bssid=') &&
+          !trimmed.startsWith('bgscan=') &&
+          !trimmed.startsWith('scan_ssid=') &&
+          trimmed !== '}'
+        );
+      })
+      .join('\n')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim();
 
-    // Build new network block
-    const networkBlock = this.buildWpaNetworkBlock({ ssid, password, bssid, lockBssid });
-    const newConf = wpaConf + networkBlock;
+    // Step 6: Build new config with hashed PSK
+    let networkBlock = `\n\nnetwork={\n    ssid="${ssid}"\n    psk=${pskHash}\n    key_mgmt=WPA-PSK`;
+    if (lockBssid && bssid) {
+      networkBlock += `\n    bssid=${bssid}`;
+    }
+    networkBlock += `\n    priority=10\n}\n`;
+    const newConf = headerLines + networkBlock;
 
-    // Write updated config
+    // Step 7: Write config safely via temp file
     const tempFile = '/tmp/wpa_supplicant_new.conf';
     await fs.writeFile(tempFile, newConf);
     await execCommand(`sudo cp ${tempFile} ${wpaConfPath}`);
     await execCommand(`sudo chmod 600 ${wpaConfPath}`);
 
-    // Reconfigure wlan1
-    await execCommand('sudo wpa_cli -i wlan1 reconfigure');
+    // Step 8: Create symlink for wlan1-specific config + enable/restart service
+    await execCommand(
+      'sudo ln -sf /etc/wpa_supplicant/wpa_supplicant.conf /etc/wpa_supplicant/wpa_supplicant-wlan1.conf',
+    );
+    await execCommand('sudo systemctl enable wpa_supplicant@wlan1.service 2>/dev/null');
+    await execCommand('sudo systemctl restart wpa_supplicant@wlan1.service 2>/dev/null');
 
-    // Wait for connection
-    await new Promise((resolve) => setTimeout(resolve, 3000));
+    // Step 9: Trigger DHCP on wlan1
+    await execCommand('sudo dhcpcd wlan1 2>/dev/null');
 
-    // Check connection status
-    const statusResult = await execCommand('iwconfig wlan1 2>/dev/null');
-    const connected = statusResult.output ? statusResult.output.includes(`ESSID:"${ssid}"`) : false;
+    // Step 10: Wait for connection (up to 10s, 5 attempts)
+    let connected = false;
+    let ipAddress = null;
+
+    for (let i = 0; i < 5; i++) {
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+
+      const iwResult = await execCommand('iwconfig wlan1 2>/dev/null');
+      if (iwResult.success && iwResult.output && iwResult.output.includes(`ESSID:"${ssid}"`)) {
+        connected = true;
+
+        // Check for IP address
+        const ipResult = await execCommand('ip -4 addr show wlan1 2>/dev/null');
+        if (ipResult.success && ipResult.output) {
+          const ipMatch = ipResult.output.match(/inet (\d+\.\d+\.\d+\.\d+)/);
+          ipAddress = ipMatch ? ipMatch[1] : null;
+        }
+
+        if (ipAddress) break;
+      }
+    }
 
     return {
       connected,
+      ipAddress,
       message: connected
-        ? `Connect\u00e9 \u00e0 ${ssid}` + (lockBssid && bssid ? ` (BSSID fix\u00e9: ${bssid})` : '')
-        : `Configuration enregistr\u00e9e pour ${ssid}. La connexion peut prendre quelques secondes.`,
+        ? `Connecté à ${ssid}` +
+          (ipAddress ? ` (IP: ${ipAddress})` : '') +
+          (lockBssid && bssid ? ` (BSSID fixé: ${bssid})` : '')
+        : `Configuration enregistrée pour ${ssid}. La connexion peut prendre quelques secondes.`,
       bssidLocked: lockBssid && bssid ? bssid : null,
     };
   }

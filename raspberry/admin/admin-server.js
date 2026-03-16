@@ -25,8 +25,6 @@
  * - routes/network.js -> Réseau (délègue au NetworkService)
  * - routes/backup.js  -> Backups (délègue au BackupService)
  * - routes/update.js  -> Mise à jour (upload .tar.gz, deploy)
- * - routes/email.js   -> Email (config, test, send)
- * - routes/cache.js   -> Cache (stats, clear, info)
  */
 
 const express = require('express');
@@ -91,8 +89,6 @@ const createVideosRouter = require('./routes/videos');
 const createConfigRouter = require('./routes/config');
 const createNetworkRouter = require('./routes/network');
 const createBackupRouter = require('./routes/backup');
-const createEmailRouter = require('./routes/email');
-const createCacheRouter = require('./routes/cache');
 const createSyncStatusRouter = require('./routes/sync-status');
 const createSponsorsRouter = require('./routes/sponsors');
 
@@ -101,8 +97,6 @@ const videosRouter = createVideosRouter({ videoService, videoProcessingService, 
 const configRouter = createConfigRouter({ configService });
 const networkRouter = createNetworkRouter({ networkService });
 const backupRouter = createBackupRouter({ backupService });
-const emailRouter = createEmailRouter(emailNotifier);
-const cacheRouter = createCacheRouter(cache, NAMESPACES);
 const syncStatusRouter = createSyncStatusRouter();
 const sponsorsRouter = createSponsorsRouter({ sponsorService, sponsorStatsService });
 
@@ -290,8 +284,6 @@ app.use(configRouter);
 app.use(networkRouter);
 app.use(backupRouter);
 app.use(updateRouter);
-app.use(emailRouter);
-app.use(cacheRouter);
 app.use(syncStatusRouter);
 app.use(sponsorsRouter);
 

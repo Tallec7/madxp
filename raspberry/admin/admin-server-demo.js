@@ -199,21 +199,6 @@ app.get('/api/network', (req, res) => {
 });
 
 /**
- * API: Configuration WiFi client (simulé)
- */
-app.post('/api/wifi/client', (req, res) => {
-  console.log('[DEMO] POST /api/wifi/client', req.body);
-
-  setTimeout(() => {
-    res.json({
-      success: true,
-      message: 'WiFi client configuré (mode démo)',
-      ssid: req.body.ssid
-    });
-  }, 2000);
-});
-
-/**
  * API: Logs
  */
 app.get('/api/logs/:service', (req, res) => {

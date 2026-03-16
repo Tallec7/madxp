@@ -729,7 +729,7 @@ describe('POST /api/auth/change-password', () => {
     const handler = findRouteHandler('post', '/api/auth/change-password');
     const req = mockReq({
       path: '/api/auth/change-password',
-      body: { currentPassword: 'wrong', newPassword: 'newpass' },
+      body: { currentPassword: 'wrong', newPassword: 'newpass123' },
     });
     const res = mockRes();
     await handler(req, res);

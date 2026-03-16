@@ -5,7 +5,6 @@
  *
  * - GET    /api/network        -> Informations interfaces réseau
  * - GET    /api/wifi/scan      -> Scanner les réseaux WiFi disponibles
- * - POST   /api/wifi/client    -> Configurer le client WiFi
  * - POST   /api/wifi/connect   -> Connexion WiFi avec option BSSID lock
  * - GET    /api/wifi/current   -> Statut WiFi actuel
  * - DELETE /api/wifi/bssid-lock -> Supprimer le verrouillage BSSID
@@ -47,16 +46,6 @@ module.exports = function createNetworkRouter({ networkService }) {
     try {
       const result = await networkService.scanWifiNetworks();
       res.json(result);
-    } catch (error) {
-      handleError(res, error);
-    }
-  });
-
-  // POST /api/wifi/client
-  router.post('/api/wifi/client', async (req, res) => {
-    try {
-      const result = await networkService.configureWifiClient(req.body.ssid, req.body.password);
-      res.json({ success: true, ...result });
     } catch (error) {
       handleError(res, error);
     }

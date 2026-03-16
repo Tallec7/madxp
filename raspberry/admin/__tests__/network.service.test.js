@@ -128,46 +128,4 @@ describe('NetworkService', () => {
     });
   });
 
-  // ===========================================================================
-  // buildWpaNetworkBlock
-  // ===========================================================================
-
-  describe('buildWpaNetworkBlock', () => {
-    it('should build basic network block', () => {
-      const block = service.buildWpaNetworkBlock({
-        ssid: 'MySSID',
-        password: 'MyPass123',
-        bssid: null,
-        lockBssid: false,
-      });
-
-      expect(block).toContain('ssid="MySSID"');
-      expect(block).toContain('psk="MyPass123"');
-      expect(block).toContain('key_mgmt=WPA-PSK');
-      expect(block).toContain('priority=1');
-      expect(block).not.toContain('bssid=');
-    });
-
-    it('should include bssid when lockBssid is true', () => {
-      const block = service.buildWpaNetworkBlock({
-        ssid: 'MySSID',
-        password: 'MyPass123',
-        bssid: 'AA:BB:CC:DD:EE:FF',
-        lockBssid: true,
-      });
-
-      expect(block).toContain('bssid=AA:BB:CC:DD:EE:FF');
-    });
-
-    it('should NOT include bssid when lockBssid is false', () => {
-      const block = service.buildWpaNetworkBlock({
-        ssid: 'MySSID',
-        password: 'MyPass123',
-        bssid: 'AA:BB:CC:DD:EE:FF',
-        lockBssid: false,
-      });
-
-      expect(block).not.toContain('bssid=');
-    });
-  });
 });

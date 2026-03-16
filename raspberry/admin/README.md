@@ -250,12 +250,20 @@ sudo systemctl start neopro-admin
 
 - `GET /api/logs/:service?lines=100` - Récupérer logs
 
-#### Configuration
+#### WiFi
 
-- `POST /api/wifi/client` - Config WiFi client
+- `POST /api/wifi/connect` - Connexion WiFi avec option BSSID lock
   ```json
-  { "ssid": "WiFi-Club", "password": "pass123" }
+  {
+    "ssid": "WiFi-Club",
+    "password": "motdepasse8+",
+    "bssid": "AA:BB:CC:DD:EE:FF",
+    "lockBssid": false
+  }
   ```
+- `GET /api/wifi/scan` - Scanner les réseaux WiFi
+- `GET /api/wifi/current` - Statut WiFi actuel
+- `DELETE /api/wifi/bssid-lock` - Supprimer le verrouillage BSSID
 
 #### Services
 
