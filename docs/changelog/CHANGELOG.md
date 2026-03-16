@@ -1,3 +1,9 @@
+## [3.110.3](https://github.com/Tallec7/neopro/compare/v3.110.2...v3.110.3) (2026-03-16)
+
+### Bug Fixes
+
+- **admin:** align WiFi connectWifi() with sync-agent — hash PSK, restart service, trigger DHCP ([4d80741](https://github.com/Tallec7/neopro/commit/4d80741d1eb62295a77523762db850609099d191))
+
 ## [3.110.2](https://github.com/Tallec7/neopro/compare/v3.110.1...v3.110.2) (2026-03-16)
 
 ### Bug Fixes
