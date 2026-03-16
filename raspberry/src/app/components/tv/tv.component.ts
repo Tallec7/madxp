@@ -713,6 +713,8 @@ export class TvComponent implements OnInit, OnDestroy {
           progress: Math.round((player.currentTime / player.duration) * 100),
           isPlaying: true,
         });
+        // B1-fix: Capturer la durée réelle de la vidéo pour analytics (PoC Proof of Play)
+        this.analyticsService.setCurrentVideoDuration(player.duration);
       }
     }, 5000);
   }

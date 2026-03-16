@@ -9802,3 +9802,103 @@ describe('Sponsor Portal chart container guard', () => {
     });
   });
 });
+
+// ----------------------------------------------------------
+// B1: video_duration must use real HTMLVideoElement.duration, not durationPlayed.
+// Without this, video_duration === duration_played always → completion_rate
+// based on duration_played/video_duration is meaningless (~100% always).
+// ----------------------------------------------------------
+describe('Analytics video_duration real duration guard', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+  const analyticsPath = path.join(repoRoot, 'raspberry/src/app/services/analytics.service.ts');
+
+  let content: string;
+  beforeAll(() => {
+    content = fs.readFileSync(analyticsPath, 'utf8');
+  });
+
+  it('must have setCurrentVideoDuration setter', () => {
+    expect({
+      hasSetter: /setCurrentVideoDuration\(/.test(content),
+    }).toEqual({
+      hasSetter: true,
+    });
+  });
+
+  it('video_duration must use currentVideoDuration (not durationPlayed)', () => {
+    expect({
+      usesRealDuration: /video_duration:\s*this\.currentVideoDuration/.test(content),
+    }).toEqual({
+      usesRealDuration: true,
+    });
+  });
+
+  it('currentVideoDuration must be reset to null in trackVideoEnd', () => {
+    expect({
+      resetsToNull: /this\.currentVideoDuration\s*=\s*null/.test(content),
+    }).toEqual({
+      resetsToNull: true,
+    });
+  });
+});
+
+// ----------------------------------------------------------
+// B2: completion_rate must use COUNT(completed)/COUNT(total) consistently.
+// AVG(CASE WHEN completed THEN 100 ELSE duration/video_duration*100)
+// gives wrong results when video_duration === duration_played.
+// ----------------------------------------------------------
+describe('Sponsor stats completion_rate consistency guard', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+  const repoPath = path.join(repoRoot, 'central-server/src/repositories/site-sponsor.repository.ts');
+
+  let content: string;
+  beforeAll(() => {
+    content = fs.readFileSync(repoPath, 'utf8');
+  });
+
+  it('getStatsSummary must NOT use AVG(CASE WHEN completed) for completion_rate', () => {
+    // The old broken formula: AVG(CASE WHEN completed THEN 100 ELSE (duration_played / video_duration * 100))
+    // This gives ~100% always when video_duration === duration_played
+    expect({
+      hasOldFormula: /AVG\s*\(\s*CASE\s+WHEN\s+completed\s+THEN\s+100/.test(content),
+    }).toEqual({
+      hasOldFormula: false,
+    });
+  });
+
+  it('getStatsSummary must use SUM(CASE completed)/COUNT(*) for completion_rate', () => {
+    expect({
+      hasCorrectFormula: /SUM\s*\(\s*CASE\s+WHEN\s+completed\s+THEN\s+1\s+ELSE\s+0\s+END\s*\)/.test(content),
+    }).toEqual({
+      hasCorrectFormula: true,
+    });
+  });
+});
+
+// ----------------------------------------------------------
+// B3: Sponsor queries must filter tv_status to count only visible plays.
+// Without this, plays with tv_status='standby' (TV off) inflate stats.
+// The Pi filters client-side but defense-in-depth requires DB-level filter.
+// ----------------------------------------------------------
+describe('Sponsor queries tv_status filter guard', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+  const repoPath = path.join(repoRoot, 'central-server/src/repositories/site-sponsor.repository.ts');
+
+  let content: string;
+  beforeAll(() => {
+    content = fs.readFileSync(repoPath, 'utf8');
+  });
+
+  it('must filter tv_status in sponsor queries (defense-in-depth)', () => {
+    // Count occurrences of the tv_status filter pattern
+    const matches = content.match(/tv_status\s+IN\s*\(\s*'on'\s*,\s*'unknown'\s*\)/g);
+    // At minimum: getStatsSummary, getDailyTrends, getBenchmark, getStatsByVideo, getStatsByPeriod = 5
+    expect({
+      filterCount: matches ? matches.length : 0,
+      hasAtLeast5: (matches?.length || 0) >= 5,
+    }).toEqual({
+      filterCount: matches ? matches.length : 0,
+      hasAtLeast5: true,
+    });
+  });
+});

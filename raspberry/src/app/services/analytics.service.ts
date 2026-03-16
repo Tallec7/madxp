@@ -74,6 +74,7 @@ export class AnalyticsService {
   private currentVideo: Video | null = null;
   private currentTriggerType: 'auto' | 'manual' = 'auto';
   private currentTvStatus: 'on' | 'standby' | 'disconnected' | 'unknown' = 'unknown';
+  private currentVideoDuration: number | null = null;
   private isSending = false;
 
   // Contexte sponsor (unifié depuis SponsorAnalyticsService)
@@ -178,6 +179,16 @@ export class AnalyticsService {
   }
 
   /**
+   * Capturer la durée réelle de la vidéo (depuis HTMLVideoElement.duration)
+   * Doit être appelé quand loadedmetadata est disponible.
+   */
+  public setCurrentVideoDuration(seconds: number): void {
+    if (seconds > 0 && isFinite(seconds)) {
+      this.currentVideoDuration = Math.round(seconds);
+    }
+  }
+
+  /**
    * Tracker le début d'une lecture vidéo
    * Capture également l'état de la TV via HDMI-CEC
    */
@@ -222,6 +233,7 @@ export class AnalyticsService {
       this.currentVideo = null;
       this.currentVideoStart = null;
       this.currentTvStatus = 'unknown';
+      this.currentVideoDuration = null;
       return;
     }
 
@@ -233,7 +245,7 @@ export class AnalyticsService {
       category: this.detectCategory(this.currentVideo),
       played_at: this.currentVideoStart.toISOString(),
       duration_played: durationPlayed,
-      video_duration: durationPlayed,
+      video_duration: this.currentVideoDuration || durationPlayed,
       completed,
       trigger_type: this.currentTriggerType,
       session_id: this.currentSession || undefined,
@@ -264,6 +276,7 @@ export class AnalyticsService {
       this.currentVideo = null;
       this.currentVideoStart = null;
       this.currentTvStatus = 'unknown';
+      this.currentVideoDuration = null;
       return;
     }
 
@@ -290,6 +303,7 @@ export class AnalyticsService {
     this.currentVideo = null;
     this.currentVideoStart = null;
     this.currentTvStatus = 'unknown';
+    this.currentVideoDuration = null;
 
     // Flush si le buffer est plein
     if (this.buffer.length >= this.MAX_BUFFER_SIZE) {

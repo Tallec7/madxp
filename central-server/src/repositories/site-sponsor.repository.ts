@@ -568,14 +568,17 @@ class SiteSponsorRepositoryImpl extends BaseRepository<SiteSponsorRow> {
       `SELECT
         COUNT(*) as total_impressions,
         COALESCE(SUM(duration_played), 0) as total_screen_time_seconds,
-        ROUND(AVG(CASE WHEN completed THEN 100 ELSE (duration_played::float / NULLIF(video_duration, 0) * 100) END)::numeric, 1) as completion_rate,
+        CASE WHEN COUNT(*) > 0
+          THEN ROUND(SUM(CASE WHEN completed THEN 1 ELSE 0 END)::numeric / COUNT(*) * 100, 1)
+          ELSE 0 END as completion_rate,
         COALESCE(SUM(audience_estimate), 0) as estimated_reach,
         COUNT(DISTINCT DATE(played_at)) as active_days
        FROM video_plays
        WHERE site_sponsor_id = $1
          AND category = 'sponsor'
          AND played_at >= $2::date
-         AND played_at < ($3::date + INTERVAL '1 day')`,
+         AND played_at < ($3::date + INTERVAL '1 day')
+         AND (tv_status IN ('on', 'unknown') OR tv_status IS NULL)`,
       [siteSponsorId, from, to]
     );
     return result.rows[0];
@@ -595,6 +598,7 @@ class SiteSponsorRepositoryImpl extends BaseRepository<SiteSponsorRow> {
          AND category = 'sponsor'
          AND played_at >= $2::date
          AND played_at < ($3::date + INTERVAL '1 day')
+         AND (tv_status IN ('on', 'unknown') OR tv_status IS NULL)
        GROUP BY DATE(played_at)
        ORDER BY date ASC`,
       [siteSponsorId, from, to]
@@ -847,6 +851,7 @@ class SiteSponsorRepositoryImpl extends BaseRepository<SiteSponsorRow> {
          AND vp.category = 'sponsor'
          AND vp.played_at >= $2::date
          AND vp.played_at < ($3::date + INTERVAL '1 day')
+         AND (vp.tv_status IN ('on', 'unknown') OR vp.tv_status IS NULL)
        WHERE ss.site_id = $1
          AND ss.status = 'active'
        GROUP BY ss.id
@@ -874,6 +879,7 @@ class SiteSponsorRepositoryImpl extends BaseRepository<SiteSponsorRow> {
          AND event_type = 'match'
          AND played_at >= $2::date
          AND played_at < ($3::date + INTERVAL '1 day')
+         AND (tv_status IN ('on', 'unknown') OR tv_status IS NULL)
        GROUP BY DATE(played_at)
        ORDER BY match_date ASC`,
       [siteSponsorId, from, to]
@@ -900,6 +906,7 @@ class SiteSponsorRepositoryImpl extends BaseRepository<SiteSponsorRow> {
          AND vp.category = 'sponsor'
          AND vp.played_at >= $2::date
          AND vp.played_at < ($3::date + INTERVAL '1 day')
+         AND (vp.tv_status IN ('on', 'unknown') OR vp.tv_status IS NULL)
        GROUP BY vp.video_filename
        ORDER BY impressions DESC`,
       [siteSponsorId, from, to]
@@ -926,6 +933,7 @@ class SiteSponsorRepositoryImpl extends BaseRepository<SiteSponsorRow> {
          AND vp.category = 'sponsor'
          AND vp.played_at >= $2::date
          AND vp.played_at < ($3::date + INTERVAL '1 day')
+         AND (vp.tv_status IN ('on', 'unknown') OR vp.tv_status IS NULL)
        GROUP BY vp.period
        ORDER BY impressions DESC`,
       [siteSponsorId, from, to]
