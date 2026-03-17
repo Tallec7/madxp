@@ -163,17 +163,27 @@ video_plays
 **Risque** : Moyen — nécessite OTA Pi, rétrocompatibilité pendant la transition
 **Implémenté** : v3.113.5 (migration DB : `adr035-sponsor-category-split.sql`)
 
-### Phase 3 — Campagnes opérationnelles
+### Phase 3 — Campagnes opérationnelles ✅ (3a: CRUD + targeting)
 
-- `campaign_videos` : associer vidéos à une campagne
-- `target_criteria` JSONB : ciblage par sport, région, taille club, tier
-- Résolution dynamique des sites : `campaign_sites` peuplée automatiquement
-- Déploiement auto : campagne active → déploie sur les sites matchés
-- Dashboard campagne : objectifs, progression, CPM
+- `campaign_videos` : table d'association vidéos-campagne (avec `weight`)
+- `campaign_sites` : table de sites résolus (remplace `target_sites UUID[]`)
+- `target_criteria` JSONB : ciblage par sport, région, groupes (`{ sports: [], regions: [], group_ids: [] }`)
+- Résolution dynamique des sites via `resolveSitesByCriteria()` + endpoint preview `POST /campaigns/resolve-sites`
+- `campaign_stats_live` : vue temps réel (impressions, CPM effectif, progression vs objectif)
+- API CRUD complète : `GET/POST/PUT/DELETE /api/campaigns`, sous-ressources `/videos`, `/sites`, `/stats`
+- Budget tracking : `budget_cents`, `target_cpm_cents`, CPM effectif calculé automatiquement
+- Repository + Controller + Routes enregistrés dans server.ts
+- Smoke tests : routes, repository wiring, schema guards
+
+**Reste à faire (3b-3d)** :
+
+- Déploiement auto : campagne active → déploie config sur les sites matchés
+- Dashboard Angular : composants campagne, onglet dans advertiser-detail
 - Portail annonceur dédié (distinct du portail sponsor local)
 
-**Effort** : ~1 semaine
+**Effort** : ~1 semaine total (3a: 2h ✅, 3b-3d: restant)
 **Risque** : Moyen — nouveau workflow, tests E2E nécessaires
+**Implémenté (3a)** : v3.114.x (migration DB : `adr035-phase3-campaigns-operational.sql`)
 
 ### Phase 4 — Nettoyage
 

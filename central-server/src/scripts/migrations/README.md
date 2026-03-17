@@ -683,6 +683,25 @@ psql $DATABASE_URL -f central-server/src/scripts/migrations/adr035-sponsor-categ
 
 ---
 
+### `adr035-phase3-campaigns-operational.sql`
+
+**Date:** 2026-03-17
+**Statut:** Prêt pour exécution
+**Durée estimée:** < 5 secondes
+
+**Description:**
+ADR-035 Phase 3 : Campagnes opérationnelles. Crée les tables `campaign_videos` (association vidéos-campagne) et `campaign_sites` (sites résolus pour une campagne), ajoute `target_criteria` JSONB + `budget_cents` + `target_cpm_cents` sur `campaigns`, et crée la vue `campaign_stats_live` pour le suivi en temps réel des performances campagne. Migre les données de `target_sites UUID[]` vers `campaign_sites`.
+
+**Idempotent:** Oui — `CREATE TABLE IF NOT EXISTS`, `ALTER TABLE ADD COLUMN IF NOT EXISTS`, `CREATE OR REPLACE VIEW`.
+
+**Commande:**
+
+```bash
+psql $DATABASE_URL -f central-server/src/scripts/migrations/adr035-phase3-campaigns-operational.sql
+```
+
+---
+
 **Dernière mise à jour:** 17 mars 2026
 **Auteur:** Claude Code
-**Version migrations:** 3.2
+**Version migrations:** 3.3

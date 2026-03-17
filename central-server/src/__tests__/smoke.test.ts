@@ -338,6 +338,14 @@ describe('Critical API routes are registered (not 404)', () => {
     // safe.routes
     { method: 'get' as const, path: '/api/safe/portfolio' },
     { method: 'get' as const, path: '/api/safe/proposals' },
+    // campaign.routes (ADR-035 Phase 3)
+    { method: 'get' as const, path: '/api/campaigns' },
+    { method: 'get' as const, path: '/api/campaigns/test-campaign-id' },
+    { method: 'post' as const, path: '/api/campaigns' },
+    { method: 'get' as const, path: '/api/campaigns/test-campaign-id/videos' },
+    { method: 'get' as const, path: '/api/campaigns/test-campaign-id/sites' },
+    { method: 'get' as const, path: '/api/campaigns/test-campaign-id/stats' },
+    { method: 'post' as const, path: '/api/campaigns/resolve-sites' },
   ];
 
   test.each(criticalRoutes)(
@@ -822,6 +830,7 @@ describe('Repository layer wiring', () => {
       'advertiserPortalRepository',
       'videoRepository',
       'softwareUpdateRepository',
+      'campaignRepository',
     ];
 
     for (const repoName of expectedRepos) {
@@ -10612,5 +10621,69 @@ describe('Pi Socket.IO resilience guards', () => {
       isAtLeast5s: true,
       reason: 'remote WiFi access needs >= 5s preload timeout — 2s causes freeze-frame on slow connections',
     });
+  });
+});
+
+// ----------------------------------------------------------
+// ADR-035 Phase 3: Campaign operational wiring
+// ----------------------------------------------------------
+describe('ADR-035 Phase 3: Campaign operational wiring', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+
+  it('campaign.controller exports all required handlers', async () => {
+    const controller = await import('../controllers/campaign.controller');
+    const requiredExports = [
+      'listCampaigns', 'getCampaign', 'createCampaign', 'updateCampaign', 'deleteCampaign',
+      'listCampaignVideos', 'addCampaignVideo', 'removeCampaignVideo',
+      'listCampaignSites', 'addCampaignSite', 'removeCampaignSite',
+      'resolveSites', 'getCampaignStats',
+    ];
+    for (const name of requiredExports) {
+      expect(controller).toHaveProperty(name);
+      expect(typeof (controller as Record<string, unknown>)[name]).toBe('function');
+    }
+  });
+
+  it('campaign.repository exports campaignRepository with required methods', async () => {
+    const { campaignRepository } = await import('../repositories');
+    const requiredMethods = [
+      'create', 'update', 'findByIdWithDetails', 'listByAdvertiser', 'listAll',
+      'addVideo', 'removeVideo', 'listVideos',
+      'addSite', 'removeSite', 'listSites',
+      'resolveSitesByCriteria', 'resolveAndPopulateSites',
+      'getStats', 'getStatsByAdvertiser', 'getImpressionsByDay',
+    ];
+    for (const method of requiredMethods) {
+      expect(typeof (campaignRepository as unknown as Record<string, unknown>)[method]).toBe('function');
+    }
+  });
+
+  it('full-schema.sql must include campaign_videos and campaign_sites tables', () => {
+    const schemaContent = fs.readFileSync(
+      path.join(repoRoot, 'central-server/src/scripts/full-schema.sql'), 'utf-8'
+    );
+    expect(schemaContent).toContain('CREATE TABLE IF NOT EXISTS campaign_videos');
+    expect(schemaContent).toContain('CREATE TABLE IF NOT EXISTS campaign_sites');
+    expect(schemaContent).toContain('target_criteria');
+    expect(schemaContent).toContain('campaign_stats_live');
+  });
+
+  it('campaign.routes.ts is imported and mounted in server.ts', () => {
+    const serverContent = fs.readFileSync(
+      path.join(repoRoot, 'central-server/src/server.ts'), 'utf-8'
+    );
+    expect(serverContent).toContain("import campaignRoutes from './routes/campaign.routes'");
+    expect(serverContent).toContain("app.use('/api/campaigns'");
+  });
+
+  it('migration file exists for Phase 3', () => {
+    const migrationPath = path.join(
+      repoRoot, 'central-server/src/scripts/migrations/adr035-phase3-campaigns-operational.sql'
+    );
+    expect(fs.existsSync(migrationPath)).toBe(true);
+    const content = fs.readFileSync(migrationPath, 'utf-8');
+    expect(content).toContain('campaign_videos');
+    expect(content).toContain('campaign_sites');
+    expect(content).toContain('target_criteria');
   });
 });

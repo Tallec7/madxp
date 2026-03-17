@@ -250,6 +250,18 @@ export {
 } from './pitch-deck.repository';
 export { siteSponsorRepository } from './site-sponsor.repository';
 export {
+  campaignRepository,
+  type CampaignRow,
+  type CreateCampaignInput,
+  type UpdateCampaignInput,
+  type CampaignVideoRow,
+  type CampaignSiteRow,
+  type CampaignStatsRow,
+  type CampaignWithDetails,
+  type TargetCriteria,
+  type ResolvedSiteRow,
+} from './campaign.repository';
+export {
   videoVariantRepository,
   type VideoVariantRow,
   type CreateVideoVariantInput,
