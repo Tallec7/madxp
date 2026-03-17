@@ -381,7 +381,7 @@ export class DoubleBufferVideoService {
       };
       newPlayer.addEventListener('canplay', onCanPlay);
 
-      // Timeout de sécurité
+      // Timeout de sécurité (5s pour supporter l'accès distant via réseau WiFi)
       setTimeout(() => {
         clearInterval(checkInterval);
         newPlayer.removeEventListener('canplay', onCanPlay);
@@ -389,7 +389,7 @@ export class DoubleBufferVideoService {
           console.warn('[DoubleBuffer] Preload timeout, forcing switch');
           executeSwitchOnce();
         }
-      }, 2000);
+      }, 5000);
     } else {
       doSwitch();
     }

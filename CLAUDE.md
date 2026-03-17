@@ -153,6 +153,11 @@ source central-server/.env && psql "$DATABASE_URL" -f central-server/src/scripts
 - Supprimer le support `pinnedSlots`/`mobileVideos` de `generateWeightedPlaylist()` (les vidéos épinglées doivent rester à leur position d'origine — sans ce mécanisme, le Bresenham les déplacerait — smoke test enforced)
 - Réconcilier des loopVideos sans marqueurs sponsor dans `_reconcileOrphanedLoopVideos()` (seules les entrées avec `site_sponsor_id`, `analytics_category === 'sponsor'` ou `owner === 'club'` sont de vrais sponsors — sans ce filtre, TOUTES les vidéos de boucle sont auto-créées comme sponsors parasites : "Intro Neopro", doublons "Laugier"… — smoke test enforced)
 - Utiliser un match exact seul dans `getAutoDetectedSponsor()` / `getCategorySponsor()` (les vidéos de boucle ont des préfixes numériques `07_A_L_AFFUT.mp4` mais `site_sponsor_videos` stocke le nom catégorie `A_L_AFFUT.mp4` → badges sponsors absents — toujours fallback strip `^\d+_` — smoke test enforced)
+- Initialiser Socket.IO client (`raspberry/src/app/services/socket.service.ts`) sans options de reconnexion (sans `reconnection: true`, `reconnectionDelay`, `reconnectionAttempts: Infinity` — un drop socket laisse la TV gelée sans recovery automatique → l'utilisateur doit refresh — smoke test enforced)
+- Initialiser Socket.IO serveur (`raspberry/server/server.js`) sans `pingInterval`/`pingTimeout`/`transports` (sans ping explicite, les connexions zombie restent 45s sans détection → le slave ne reçoit plus `tv-loop-state` → vidéo gelée — smoke test enforced)
+- Supprimer les handlers lifecycle `disconnect`/`reconnect`/`connect_error` de `socket.service.ts` (sans eux, l'app ne détecte pas la perte de connexion et ne re-register pas après reconnexion — smoke test enforced)
+- Supprimer `onReconnect()` de `socket.service.ts` ou le re-register `tv-register` dans `tv.component.ts` (après un reconnect, le serveur a perdu le client → sans re-emit `tv-register`, le slave reste gelé indéfiniment — smoke test enforced)
+- Réduire le timeout preload du double-buffer sous 5000ms (`double-buffer-video.service.ts`) (l'accès distant via WiFi PC charge les vidéos par HTTP → 2s trop court → forced switch prématuré → freeze-frame bloqué — smoke test enforced)
 
 ## Architecture détaillée
 

@@ -490,6 +490,12 @@ export class TvComponent implements OnInit, OnDestroy {
     // S'enregistrer en tant qu'instance TV (avec le type d'écran)
     this.socketService.emit('tv-register', { displayType: this.displayType } as unknown as Command);
 
+    // Re-register on reconnection (socket drop → zombie state → no tv-loop-state)
+    this.socketService.onReconnect(() => {
+      console.log('[TV] Socket reconnected — re-registering as', this.displayType);
+      this.socketService.emit('tv-register', { displayType: this.displayType } as unknown as Command);
+    });
+
     // Recevoir le rôle assigné par le serveur
     this.socketService.on<{ role: 'master' | 'slave' }>('tv-role-assigned', (data) => {
       this.ngZone.run(() => {

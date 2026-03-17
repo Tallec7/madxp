@@ -83,16 +83,28 @@ export interface TvRegister {
   // Empty interface - just a signal to register as TV instance
 }
 
+interface SocketIOOptions {
+  transports: string[];
+  reconnection: boolean;
+  reconnectionDelay: number;
+  reconnectionDelayMax: number;
+  reconnectionAttempts: number;
+}
+
 interface Socket {
   on<T>(event: string, callback: (data: T) => void): void;
   emit(event: string, data: unknown): void;
+  connected: boolean;
+  id: string;
 }
 
-declare const io: (url: string) => Socket;
+declare const io: (url: string, opts?: SocketIOOptions) => Socket;
 
 @Injectable({providedIn: 'root'})
 export class SocketService {
   private socket: Socket | undefined;
+  private _connected = false;
+  private _reconnectCallbacks: Array<() => void> = [];
 
   /**
    * Détermine l'URL du serveur Socket.IO dynamiquement.
@@ -114,16 +126,58 @@ export class SocketService {
     return `${protocol}//${hostname}:3000`;
   }
 
+  get connected(): boolean {
+    return this._connected;
+  }
+
   public initialize() {
     try {
       const socketUrl = this.getSocketUrl();
       console.log('Connecting to socket server:', socketUrl);
-      this.socket = io(socketUrl);
+      this.socket = io(socketUrl, {
+        transports: ['websocket', 'polling'],
+        reconnection: true,
+        reconnectionDelay: 1000,
+        reconnectionDelayMax: 5000,
+        reconnectionAttempts: Infinity,
+      });
+
+      // Connection lifecycle handlers
+      this.socket.on<void>('connect', () => {
+        this._connected = true;
+        console.log('[Socket] Connected, id:', this.socket?.id);
+      });
+
+      this.socket.on<string>('disconnect', (reason) => {
+        this._connected = false;
+        console.warn('[Socket] Disconnected, reason:', reason);
+      });
+
+      this.socket.on<number>('reconnect', (attempt) => {
+        this._connected = true;
+        console.log('[Socket] Reconnected after', attempt, 'attempts');
+        // Notify all reconnect subscribers (e.g. tv-register re-emit)
+        for (const cb of this._reconnectCallbacks) {
+          try { cb(); } catch (err) { console.error('[Socket] Reconnect callback error:', err); }
+        }
+      });
+
+      this.socket.on<Error>('connect_error', (err) => {
+        console.warn('[Socket] Connection error:', err);
+      });
     } catch (e) {
       if (e instanceof ReferenceError) {
           console.error('socket service : not initialized, reference error')
       }
     }
+  }
+
+  /**
+   * Register a callback to be called on reconnection.
+   * Useful for re-emitting registration events (tv-register, etc.)
+   */
+  public onReconnect(callback: () => void): void {
+    this._reconnectCallbacks.push(callback);
   }
 
   public on<T = Command>(action: string, callback: (data: T) => void) {

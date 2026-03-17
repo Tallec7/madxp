@@ -10422,3 +10422,126 @@ describe('Admin :8080 WiFi connectWifi() regression guards', () => {
     });
   });
 });
+
+// ----------------------------------------------------------
+// Socket.IO local (Pi) resilience guards
+// Prevents regression of zombie socket / video lag when accessing Pi from PC browser
+// ----------------------------------------------------------
+describe('Pi Socket.IO resilience guards', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+  const serverPath = path.join(repoRoot, 'raspberry/server/server.js');
+  const socketServicePath = path.join(repoRoot, 'raspberry/src/app/services/socket.service.ts');
+  const doubleBufferPath = path.join(repoRoot, 'raspberry/src/app/services/double-buffer-video.service.ts');
+  const tvComponentPath = path.join(repoRoot, 'raspberry/src/app/components/tv/tv.component.ts');
+
+  let serverContent: string;
+  let socketServiceContent: string;
+  let doubleBufferContent: string;
+  let tvComponentContent: string;
+
+  beforeAll(() => {
+    serverContent = fs.readFileSync(serverPath, 'utf8');
+    socketServiceContent = fs.readFileSync(socketServicePath, 'utf8');
+    doubleBufferContent = fs.readFileSync(doubleBufferPath, 'utf8');
+    tvComponentContent = fs.readFileSync(tvComponentPath, 'utf8');
+  });
+
+  it('server.js must configure pingInterval and pingTimeout for Socket.IO', () => {
+    // Without explicit ping config, zombie sockets go undetected for 45s (default 25s+20s)
+    // causing slaves to never receive tv-loop-state → video freezes
+    expect({
+      hasPingInterval: /pingInterval\s*:\s*\d+/.test(serverContent),
+      hasPingTimeout: /pingTimeout\s*:\s*\d+/.test(serverContent),
+      reason: 'zombie socket detection requires explicit ping config — default 45s is too slow for local TV sync',
+    }).toEqual({
+      hasPingInterval: true,
+      hasPingTimeout: true,
+      reason: 'zombie socket detection requires explicit ping config — default 45s is too slow for local TV sync',
+    });
+  });
+
+  it('server.js must configure transports for Socket.IO', () => {
+    // Without explicit transports, Socket.IO may start with long-polling
+    // adding 200-500ms latency per message on local network
+    expect({
+      hasTransports: /transports\s*:\s*\[/.test(serverContent),
+      reason: 'explicit transports config prevents slow HTTP long-polling fallback on local network',
+    }).toEqual({
+      hasTransports: true,
+      reason: 'explicit transports config prevents slow HTTP long-polling fallback on local network',
+    });
+  });
+
+  it('socket.service.ts must configure reconnection options', () => {
+    // Without reconnection config, a dropped socket leaves the TV frozen
+    // with no automatic recovery — user must refresh the page
+    expect({
+      hasReconnection: /reconnection\s*:\s*true/.test(socketServiceContent),
+      hasReconnectionDelay: /reconnectionDelay\s*:\s*\d+/.test(socketServiceContent),
+      hasReconnectionAttempts: /reconnectionAttempts\s*:/.test(socketServiceContent),
+      reason: 'dropped sockets must auto-reconnect — without this, TV freezes until page refresh',
+    }).toEqual({
+      hasReconnection: true,
+      hasReconnectionDelay: true,
+      hasReconnectionAttempts: true,
+      reason: 'dropped sockets must auto-reconnect — without this, TV freezes until page refresh',
+    });
+  });
+
+  it('socket.service.ts must have disconnect and reconnect lifecycle handlers', () => {
+    // Without lifecycle handlers, the app has no way to detect connection loss
+    // or re-register after reconnection
+    expect({
+      hasDisconnectHandler: socketServiceContent.includes("'disconnect'"),
+      hasReconnectHandler: socketServiceContent.includes("'reconnect'"),
+      hasConnectErrorHandler: socketServiceContent.includes("'connect_error'"),
+      reason: 'lifecycle handlers detect connection loss and trigger re-registration',
+    }).toEqual({
+      hasDisconnectHandler: true,
+      hasReconnectHandler: true,
+      hasConnectErrorHandler: true,
+      reason: 'lifecycle handlers detect connection loss and trigger re-registration',
+    });
+  });
+
+  it('socket.service.ts must expose onReconnect callback mechanism', () => {
+    // Components (tv.component) must re-emit tv-register after reconnection
+    // to restore master/slave roles — without this, the TV stays frozen
+    expect({
+      hasOnReconnect: /onReconnect\s*\(/.test(socketServiceContent),
+      reason: 'tv-register must be re-emitted on reconnect to restore master/slave sync',
+    }).toEqual({
+      hasOnReconnect: true,
+      reason: 'tv-register must be re-emitted on reconnect to restore master/slave sync',
+    });
+  });
+
+  it('tv.component.ts must re-emit tv-register on socket reconnection', () => {
+    // After a socket reconnect, the server has lost the client's registration.
+    // Without re-emitting tv-register, the slave never receives tv-loop-state
+    // and the video stays frozen until a manual page refresh.
+    expect({
+      hasReconnectRegister: /onReconnect\s*\(\s*\(\s*\)\s*=>\s*\{[\s\S]*tv-register/.test(tvComponentContent),
+      reason: 'socket reconnect without tv-register re-emit → slave frozen until refresh',
+    }).toEqual({
+      hasReconnectRegister: true,
+      reason: 'socket reconnect without tv-register re-emit → slave frozen until refresh',
+    });
+  });
+
+  it('double-buffer preload timeout must be >= 5000ms for remote network access', () => {
+    // When accessing the Pi from a PC browser over WiFi, videos load via HTTP
+    // instead of local disk. A 2s timeout causes premature forced switch → freeze frame.
+    const timeoutMatch = doubleBufferContent.match(/Preload timeout.*?}\s*,\s*(\d+)\s*\)/s);
+    const timeoutMs = timeoutMatch ? parseInt(timeoutMatch[1], 10) : 0;
+    expect({
+      timeoutMs,
+      isAtLeast5s: timeoutMs >= 5000,
+      reason: 'remote WiFi access needs >= 5s preload timeout — 2s causes freeze-frame on slow connections',
+    }).toEqual({
+      timeoutMs,
+      isAtLeast5s: true,
+      reason: 'remote WiFi access needs >= 5s preload timeout — 2s causes freeze-frame on slow connections',
+    });
+  });
+});

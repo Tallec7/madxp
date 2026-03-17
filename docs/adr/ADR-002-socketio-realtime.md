@@ -279,4 +279,17 @@ SIGTERM reçu
 
 ---
 
-_Créé le 9 janvier 2026 — Mis à jour le 17 février 2026_
+### Résilience Socket.IO local Pi (v3.114)
+
+**Problème** : En accédant à `neopro.local/tv` depuis un navigateur PC, les vidéos se gelaient après quelques minutes. Le Socket.IO local du Pi (serveur + client Angular) n'avait aucune configuration de résilience : pas de ping/pong, pas de reconnexion, pas de re-register après reconnexion.
+
+**Solution** :
+
+1. **Serveur** (`raspberry/server/server.js`) : `pingInterval: 10000`, `pingTimeout: 5000`, `transports: ['websocket', 'polling']`
+2. **Client** (`socket.service.ts`) : reconnexion agressive (1s→5s, Infinity), handlers lifecycle (`disconnect`, `reconnect`, `connect_error`)
+3. **Re-register** (`tv.component.ts`) : `onReconnect()` ré-émet `tv-register` pour restaurer le rôle master/slave
+4. **Double-buffer** (`double-buffer-video.service.ts`) : timeout preload 2s → 5s pour accès WiFi distant
+
+**Note** : Cette config est distincte du serveur central (sync-agent → cloud) qui a sa propre config dans `agent.js`. Ici on parle du Socket.IO **local** entre le navigateur et le serveur Pi (port 3000).
+
+_Créé le 9 janvier 2026 — Mis à jour le 17 mars 2026_

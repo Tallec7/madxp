@@ -28,6 +28,7 @@
 24. [Kiosk pas en plein écran à l'init avec HDMI-0 seul (v3.96+)](#kiosk-pas-en-plein-écran-à-linit-avec-hdmi-0-seul-v396)
 25. [Ventilateur Active Cooler Pi 5 non détecté (v3.104.3+)](#ventilateur-active-cooler-pi-5-non-détecté-v31043)
 26. [Kiosk pas en plein écran sur HDMI-1 (v3.111.1+)](#kiosk-pas-en-plein-écran-sur-hdmi-1-v31111)
+27. [Vidéo gelée/lag sur navigateur PC (v3.114+)](#vidéo-geléelag-sur-navigateur-pc-v3114)
 
 > **WiFi USB** : Pour un guide complet sur la clé WiFi USB (installation, diagnostic, pannes, recovery), voir [WIFI_USB_GUIDE.md](WIFI_USB_GUIDE.md).
 >
@@ -5711,4 +5712,58 @@ ls -la /tmp/hdmi-swapped /tmp/hdmi-wrong-port 2>/dev/null
 
 ---
 
-**Dernière mise à jour :** 16 mars 2026 (ajout section kiosk HDMI-1 plein écran — v3.111.1)
+## Vidéo gelée/lag sur navigateur PC (v3.114+)
+
+### Symptômes
+
+- En accédant à `http://neopro.local/tv` ou `http://neopro.local/secondary` depuis un navigateur PC
+- Les vidéos sont gelées (freeze-frame visible) ou en lag
+- Un refresh de la page fait repartir les vidéos temporairement
+- Le problème revient après quelques minutes ou après une micro-coupure WiFi
+
+### Cause racine
+
+Le Socket.IO local du Pi (serveur `raspberry/server/server.js` + client Angular `socket.service.ts`) n'avait **aucune configuration de résilience** :
+
+1. **Serveur sans ping/pong** : les connexions zombie restaient ouvertes 45s (défaut Socket.IO) → le slave ne recevait plus `tv-loop-state` → vidéo gelée
+2. **Client sans options de reconnexion** : un drop socket (latence WiFi, micro-coupure) → pas de tentative de reconnexion → TV gelée indéfiniment
+3. **Pas de re-register après reconnexion** : même si le socket reconnectait, le serveur avait perdu le `tv-register` → le slave ne recevait plus les événements master
+4. **Double-buffer timeout trop court (2s)** : en accès distant via WiFi, les vidéos chargent par HTTP au lieu du disque local → 2s insuffisant → freeze-frame forcé prématurément
+
+### Correction (v3.114)
+
+| Fichier                                                     | Correction                                                                                                               |
+| ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `raspberry/server/server.js`                                | `pingInterval: 10000`, `pingTimeout: 5000`, `transports: ['websocket', 'polling']`                                       |
+| `raspberry/src/app/services/socket.service.ts`              | Reconnexion agressive (1s→5s, Infinity attempts), handlers `disconnect`/`reconnect`/`connect_error`, API `onReconnect()` |
+| `raspberry/src/app/components/tv/tv.component.ts`           | Re-emit `tv-register` on `onReconnect()` pour restaurer le rôle master/slave                                             |
+| `raspberry/src/app/services/double-buffer-video.service.ts` | Timeout preload 2000ms → 5000ms                                                                                          |
+
+### Diagnostic
+
+```bash
+# Vérifier la connexion Socket.IO depuis le navigateur PC
+# Ouvrir la console du navigateur (F12) et chercher :
+# [Socket] Connected, id: ...
+# [Socket] Disconnected, reason: ...
+# [Socket] Reconnected after X attempts
+# [TV] Socket reconnected — re-registering as tv/secondary
+
+# Vérifier côté serveur Pi
+ssh pi@neopro.local
+journalctl -u neopro-server -f --no-pager | grep -E 'register|disconnect|reconnect'
+```
+
+### Smoke tests de régression
+
+- `server.js must configure pingInterval and pingTimeout for Socket.IO`
+- `server.js must configure transports for Socket.IO`
+- `socket.service.ts must configure reconnection options`
+- `socket.service.ts must have disconnect and reconnect lifecycle handlers`
+- `socket.service.ts must expose onReconnect callback mechanism`
+- `tv.component.ts must re-emit tv-register on socket reconnection`
+- `double-buffer preload timeout must be >= 5000ms for remote network access`
+
+---
+
+**Dernière mise à jour :** 17 mars 2026 (ajout section vidéo gelée navigateur PC — v3.114)

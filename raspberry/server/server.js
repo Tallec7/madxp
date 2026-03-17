@@ -67,6 +67,9 @@ const io = socketIO(server, {
     methods: ['GET', 'POST'],
     credentials: true,
   },
+  pingInterval: 10000,
+  pingTimeout: 5000,
+  transports: ['websocket', 'polling'],
 });
 
 // Auth service needs io reference for broadcasting config reload
