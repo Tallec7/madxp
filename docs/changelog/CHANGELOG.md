@@ -2,6 +2,12 @@
 
 ### Bug Fixes
 
+- **sponsors:** parasitic sponsor creation + missing badges — reconciliation filter + prefix fallback ([94ab1f2](https://github.com/Tallec7/neopro/commit/94ab1f25d4f01940883ffaa2f6f54fdd996c4dca))
+
+## [3.113.3](https://github.com/Tallec7/neopro/compare/v3.113.2...v3.113.3) (2026-03-17)
+
+### Bug Fixes
+
 - **admin-sponsors:** fix parasitic sponsor creation in `_reconcileOrphanedLoopVideos()` — method reconciled ALL loopVideos entries without checking sponsor markers, creating spurious sponsors ("Intro Neopro", duplicate "Laugier") for non-sponsor content videos. Now filters on `site_sponsor_id`, `analytics_category === 'sponsor'`, or `owner === 'club'` before reconciling
 - **dashboard:** fix missing sponsor badges in loop-manager and site-content — `getAutoDetectedSponsor()` used exact filename match only, but loop videos have numeric prefixes (`07_A_L_AFFUT.mp4`) while `site_sponsor_videos` stores bare category names (`A_L_AFFUT.mp4`). Added fallback `strip ^\d+_` prefix matching
 
