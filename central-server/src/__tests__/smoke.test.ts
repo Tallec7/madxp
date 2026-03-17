@@ -9942,6 +9942,75 @@ describe('Sponsor queries tv_status filter guard', () => {
 });
 
 // =============================================================================
+// getTvStatusForAnalytics must return 'unknown' (not 'disconnected') when
+// tv_power is null — CEC adapter present but cannot query TV (no HDMI cable,
+// PC-only usage, ioctl error). Returning 'disconnected' causes the analytics
+// guard to silently drop ALL events → zero analytics for sites without HDMI.
+// =============================================================================
+
+describe('HdmiStatusService getTvStatusForAnalytics null tv_power guard', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+  const hdmiPath = path.join(repoRoot, 'raspberry/src/app/services/hdmi-status.service.ts');
+
+  let content: string;
+  beforeAll(() => {
+    content = fs.readFileSync(hdmiPath, 'utf8');
+  });
+
+  it('must NOT return disconnected when tv_power is null (PC-only / no HDMI)', () => {
+    // The guard must check tv_power !== null before returning 'disconnected'
+    // Without this, CEC available + tv_power=null + tv_connected=false → 'disconnected'
+    // → analytics guard drops ALL events silently
+    expect({
+      hasTvPowerNullGuard: /tv_power\s*!==?\s*null/.test(content),
+    }).toEqual({
+      hasTvPowerNullGuard: true,
+    });
+  });
+
+  it('must return unknown as last fallback (not disconnected)', () => {
+    // The last return statement of getTvStatusForAnalytics must be 'unknown'
+    const methodMatch = content.match(/getTvStatusForAnalytics[\s\S]*?return\s+'(\w+)'\s*;\s*\}/);
+    expect({
+      lastReturn: methodMatch ? methodMatch[1] : 'not found',
+    }).toEqual({
+      lastReturn: 'unknown',
+    });
+  });
+});
+
+// =============================================================================
+// Analytics guard must only block 'standby' and 'disconnected', never 'unknown'
+// Without this, sites with unreliable CEC lose all analytics silently.
+// =============================================================================
+
+describe('Analytics service tv_status guard must not block unknown', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+  const analyticsPath = path.join(repoRoot, 'raspberry/src/app/services/analytics.service.ts');
+
+  let content: string;
+  beforeAll(() => {
+    content = fs.readFileSync(analyticsPath, 'utf8');
+  });
+
+  it('must block standby and disconnected only (not unknown)', () => {
+    // The guard should check for 'standby' || 'disconnected' but NOT 'unknown'
+    const hasStandbyGuard = /currentTvStatus\s*===?\s*'standby'/.test(content);
+    const hasDisconnectedGuard = /currentTvStatus\s*===?\s*'disconnected'/.test(content);
+    const hasUnknownGuard = /currentTvStatus\s*===?\s*'unknown'/.test(content);
+    expect({
+      blocksStandby: hasStandbyGuard,
+      blocksDisconnected: hasDisconnectedGuard,
+      blocksUnknown: hasUnknownGuard,
+    }).toEqual({
+      blocksStandby: true,
+      blocksDisconnected: true,
+      blocksUnknown: false,  // MUST NOT block 'unknown'
+    });
+  });
+});
+
+// =============================================================================
 // Sponsor video_filename path normalization guard
 // =============================================================================
 // site_sponsor_videos.video_filename may store full paths ("videos/default/X.mp4")

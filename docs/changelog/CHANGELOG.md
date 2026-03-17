@@ -1,3 +1,14 @@
+## [3.113.5](https://github.com/Tallec7/neopro/compare/v3.113.4...v3.113.5) (2026-03-17)
+
+### Bug Fixes
+
+- **analytics:** `getTvStatusForAnalytics()` returned `'disconnected'` when `tv_power` was `null` (CEC adapter present but unable to query TV — no HDMI cable, PC-only usage, ioctl error). The analytics guard then silently dropped ALL events. Now returns `'unknown'` when `tv_power` is `null`, allowing analytics to pass through. Affected all sites without physical HDMI connection (PC browser access, monitors without CEC).
+
+### Smoke Tests
+
+- **smoke:** add regression guard for `getTvStatusForAnalytics` null `tv_power` — must return `'unknown'` not `'disconnected'`
+- **smoke:** add regression guard for analytics `tv_status` guard — must not block `'unknown'` status
+
 ## [3.113.4](https://github.com/Tallec7/neopro/compare/v3.113.3...v3.113.4) (2026-03-17)
 
 ### Bug Fixes

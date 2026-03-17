@@ -157,7 +157,11 @@ export class HdmiStatusService {
       return 'standby';
     }
 
-    if (!status.tv_connected) {
+    // tv_power === null signifie que CEC n'a pas pu interroger la TV
+    // (ex: CEC adapter présent mais HDMI DRM disconnected, erreur ioctl)
+    // → on ne sait pas → 'unknown' plutôt que 'disconnected'
+    // Seul tv_power explicitement absent + tv_connected === false = disconnected
+    if (!status.tv_connected && status.tv_power !== null) {
       return 'disconnected';
     }
 
