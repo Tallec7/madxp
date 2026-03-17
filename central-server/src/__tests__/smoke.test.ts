@@ -9297,6 +9297,42 @@ describe('Sponsor frequency removal guard', () => {
     expect({ hasRepLoopPhase: /rep\s*<\s*frequency/.test(sponsorService) })
       .toEqual({ hasRepLoopPhase: false });
   });
+
+  it('_reconcileOrphanedLoopVideos must NOT reconcile entries without sponsor markers', () => {
+    // Bug v3.113: reconciliation created sponsors for ALL loopVideos entries,
+    // including "Intro Neopro" (owner: 'neopro') and regular content videos.
+    // The method MUST check for sponsor markers before creating localSponsors:
+    // - site_sponsor_id (identified by central auto-resolution)
+    // - analytics_category === 'sponsor'
+    // - owner === 'club' (placed by club admin)
+    // Without this check, every video name becomes a spurious sponsor.
+    const reconcileMethod = sponsorService.match(
+      /_reconcileOrphanedLoopVideos[\s\S]*?(?=\n  _extract|\n  \/\*\*\s*\n\s*\*\s*Extrait)/
+    );
+    expect(reconcileMethod).toBeTruthy();
+    const body = reconcileMethod![0];
+    // Must filter on sponsor markers (site_sponsor_id, analytics_category, owner)
+    expect({ checksSponsorMarkers: /site_sponsor_id|analytics_category.*sponsor|_isSponsorEntry/.test(body) })
+      .toEqual({ checksSponsorMarkers: true });
+  });
+
+  it('getAutoDetectedSponsor must have numeric prefix fallback matching', () => {
+    // Bug v3.113: loop videos use numbered filenames (07_A_L_AFFUT.mp4) but
+    // site_sponsor_videos stores category filenames (A_L_AFFUT.mp4).
+    // Exact match fails → no sponsor badges. Must strip numeric prefix as fallback.
+    const loopManager = fs.readFileSync(
+      path.join(repoRoot, 'central-dashboard', 'src', 'app', 'features', 'sites',
+        'components', 'loop-manager', 'loop-manager.component.ts'),
+      'utf8'
+    );
+    // The function must exist and contain numeric prefix stripping logic
+    const fnStart = loopManager.indexOf('getAutoDetectedSponsor(videoPath: string)');
+    expect(fnStart).toBeGreaterThan(-1);
+    const fnBody = loopManager.substring(fnStart, fnStart + 800);
+    // Must have fallback that strips numeric prefix (withoutPrefix = bareFilename.replace(/^\d+_/, ''))
+    expect({ hasNumericPrefixFallback: fnBody.includes('withoutPrefix') })
+      .toEqual({ hasNumericPrefixFallback: true });
+  });
 });
 
 // =================================================================

@@ -2053,6 +2053,37 @@ Si la réponse contient `advertisers` au lieu de `sponsors`, mettre à jour le b
 
 **Fix :** Mettre à jour vers v3.58.1+ (backend) et redéployer le dashboard Angular sur Hostinger.
 
+### Sponsors parasites créés automatiquement ("Intro Neopro", doublons) (corrigé v3.113.3)
+
+**Symptômes :**
+
+- L'onglet Sponsors affiche des sponsors indésirables ("Intro Neopro", doublons "Laugier") avec 0 impressions
+- Le nombre de sponsors est supérieur à ce qui a été configuré manuellement
+- Les sponsors parasites réapparaissent après suppression
+
+**Cause :** Bug dans `_reconcileOrphanedLoopVideos()` du Pi admin `sponsor.service.js`. La méthode réconciliait TOUTES les entrées `loopVideos` sans vérifier si elles étaient réellement des sponsors. Les vidéos de contenu (intro, vidéos club sans marqueur sponsor) étaient auto-créées comme `localSponsors`.
+
+**Fix (v3.113.3) :** La réconciliation filtre maintenant sur les marqueurs sponsor (`site_sponsor_id`, `analytics_category === 'sponsor'`, `owner === 'club'`). Smoke test enforced.
+
+**Nettoyage des sponsors parasites existants :**
+
+1. Aller sur l'onglet Sponsors du site
+2. Identifier les sponsors avec 0 impressions qui ne devraient pas exister
+3. Les supprimer manuellement via le bouton poubelle
+4. Vérifier après le prochain `sync_local_state` qu'ils ne réapparaissent pas
+
+### Badges sponsors absents dans le loop-manager (corrigé v3.113.3)
+
+**Symptômes :**
+
+- Le loop-manager affiche les vidéos de boucle sans badge sponsor
+- Les sponsors sont bien configurés dans l'onglet Sponsors avec les bonnes vidéos
+- Seules les vidéos dont le filename exact correspond au `site_sponsor_videos` affichent un badge
+
+**Cause :** Les vidéos de boucle utilisent des noms préfixés pour l'ordre (`07_A_L_AFFUT.mp4`) mais `site_sponsor_videos` stocke le nom de catégorie (`A_L_AFFUT.mp4`). Le match exact échouait.
+
+**Fix (v3.113.3) :** `getAutoDetectedSponsor()` a maintenant un fallback qui supprime le préfixe numérique (`^\d+_`) avant de re-chercher. Smoke test enforced.
+
 ### Le site affiche "Connexion instable" alors qu'il est connecté
 
 **Symptômes :**

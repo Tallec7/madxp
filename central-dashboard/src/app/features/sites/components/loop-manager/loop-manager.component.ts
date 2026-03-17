@@ -1129,9 +1129,23 @@ export class LoopManagerComponent implements OnInit, OnChanges {
     if (!videoPath || this.siteSponsors.length === 0) return null;
     const parts = videoPath.split('/');
     const bareFilename = parts[parts.length - 1] || videoPath;
-    return this.siteSponsors.find(
+    // Try exact match first
+    const exact = this.siteSponsors.find(
       sp => sp.video_filenames?.includes(bareFilename)
-    ) ?? null;
+    );
+    if (exact) return exact;
+    // Fallback: strip numeric prefix (e.g. "07_A_L_AFFUT.mp4" → "A_L_AFFUT.mp4")
+    // Loop videos often have numbered prefixes that don't match category filenames
+    const withoutPrefix = bareFilename.replace(/^\d+_/, '');
+    if (withoutPrefix !== bareFilename) {
+      return this.siteSponsors.find(
+        sp => sp.video_filenames?.some(f => {
+          const fBare = f.split('/').pop() || f;
+          return fBare === withoutPrefix || fBare === bareFilename;
+        })
+      ) ?? null;
+    }
+    return null;
   }
 
   // === Helpers ===

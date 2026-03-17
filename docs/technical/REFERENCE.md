@@ -1136,6 +1136,31 @@ Le serveur peut redémarrer/scaler sans que le Pi reçoive l'événement `discon
 
 Toutes les 2 minutes, le service vérifie et synchronise les statuts entre la base de données et les connexions WebSocket réelles. Si un site est marqué "online" en DB mais n'est plus connecté via WebSocket, il est automatiquement passé en "offline".
 
+### SponsorService (Pi Admin — `raspberry/admin/services/sponsor.service.js`)
+
+Service de gestion des sponsors locaux sur le Raspberry Pi. Orchestre la réconciliation entre les sponsors poussés par le central et les vidéos de boucle locales.
+
+**Méthodes clés :**
+
+| Méthode                          | Rôle                                                                                                                                   |
+| -------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `listSponsors()`                 | Liste les sponsors locaux + appelle `_reconcileOrphanedLoopVideos()`                                                                   |
+| `_reconcileOrphanedLoopVideos()` | Auto-crée des `localSponsors` pour les entrées `loopVideos` orphelines (sans `_sponsorLocalId`)                                        |
+| `_isSponsorEntry(v)`             | Guard : vérifie qu'une entrée est réellement un sponsor (`site_sponsor_id`, `analytics_category === 'sponsor'`, ou `owner === 'club'`) |
+
+**Règle critique (v3.113.3)** : `_reconcileOrphanedLoopVideos()` ne doit réconcilier QUE les entrées avec marqueurs sponsor. Sans ce filtre, les vidéos de contenu (intro Neopro, vidéos club) sont auto-créées comme sponsors parasites. Smoke test enforced.
+
+### Sponsor Badge Resolution (Dashboard — `getAutoDetectedSponsor()`)
+
+Présent dans `loop-manager.component.ts` et `site-content-tab.component.ts`. Détecte quel sponsor correspond à une vidéo de boucle pour afficher le badge dans le dashboard.
+
+**Algorithme (v3.113.3) :**
+
+1. **Match exact** : `bareFilename` dans `sponsor.video_filenames[]`
+2. **Fallback strip prefix** : supprime le préfixe numérique (`07_A_L_AFFUT.mp4` → `A_L_AFFUT.mp4`) et re-cherche
+
+Les vidéos de boucle utilisent des noms préfixés (`07_A_L_AFFUT.mp4`) pour l'ordre d'affichage, mais `site_sponsor_videos` stocke le nom de catégorie (`A_L_AFFUT.mp4`). Sans le fallback, aucun badge sponsor ne s'affiche. Smoke test enforced.
+
 ### RecordingStateService (Angular — Raspberry Pi)
 
 Service Angular (`raspberry/src/app/services/recording-state.service.ts`) contrôlant l'activation du tracking analytics. Tous les appels `trackVideoStart()`/`trackVideoEnd()` dans `AnalyticsService` sont gardés par `isRecording`. Depuis v3.66, le pipeline est unifié : `AnalyticsService` gère à la fois les vidéos club et sponsor (l'ancien `SponsorAnalyticsService` a été supprimé).

@@ -151,6 +151,8 @@ source central-server/.env && psql "$DATABASE_URL" -f central-server/src/scripts
 - Supprimer `fixWrapAround()` de `generateWeightedPlaylist()` (la boucle TV cycle en continu — sans wrap-around fix, le même sponsor en position 1 ET dernière = double passage à la jonction de boucle — smoke test enforced)
 - Supprimer le champ `pinned` de `LoopVideo`, `LoopVideoConfig` ou `SponsorVideo` (le pinned permet de fixer une vidéo à sa position dans la boucle — ex: intro Neopro toujours en 1ère position — les vidéos épinglées ne participent pas au scheduling Bresenham — smoke test enforced)
 - Supprimer le support `pinnedSlots`/`mobileVideos` de `generateWeightedPlaylist()` (les vidéos épinglées doivent rester à leur position d'origine — sans ce mécanisme, le Bresenham les déplacerait — smoke test enforced)
+- Réconcilier des loopVideos sans marqueurs sponsor dans `_reconcileOrphanedLoopVideos()` (seules les entrées avec `site_sponsor_id`, `analytics_category === 'sponsor'` ou `owner === 'club'` sont de vrais sponsors — sans ce filtre, TOUTES les vidéos de boucle sont auto-créées comme sponsors parasites : "Intro Neopro", doublons "Laugier"… — smoke test enforced)
+- Utiliser un match exact seul dans `getAutoDetectedSponsor()` / `getCategorySponsor()` (les vidéos de boucle ont des préfixes numériques `07_A_L_AFFUT.mp4` mais `site_sponsor_videos` stocke le nom catégorie `A_L_AFFUT.mp4` → badges sponsors absents — toujours fallback strip `^\d+_` — smoke test enforced)
 
 ## Architecture détaillée
 

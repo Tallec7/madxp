@@ -628,12 +628,23 @@ class SponsorService {
   _reconcileOrphanedLoopVideos(config) {
     config.localSponsors = config.localSponsors || [];
 
-    // Collect all orphaned entries (no _sponsorLocalId) grouped by name
+    // Collect all orphaned entries (no _sponsorLocalId) grouped by name.
+    // ONLY reconcile entries that are actually sponsor videos:
+    // - has site_sponsor_id (identified by central auto-resolution), OR
+    // - has analytics_category === 'sponsor', OR
+    // - has owner === 'club' (placed by club admin as sponsor entry)
+    // Regular content videos (no markers) are NOT sponsors.
     const orphansByName = new Map();
+
+    const _isSponsorEntry = (v) =>
+      v.site_sponsor_id ||
+      v.analytics_category === 'sponsor' ||
+      (v.owner === 'club' && !v.locked);
 
     for (const tc of config.timeCategories || []) {
       for (const v of tc.loopVideos || []) {
         if (v._sponsorLocalId) continue; // already linked
+        if (!_isSponsorEntry(v)) continue; // skip non-sponsor videos
         const name = (v.name || v.sponsorName || '').trim();
         if (!name) continue;
         if (!orphansByName.has(name)) {
@@ -649,6 +660,7 @@ class SponsorService {
     for (const s of config.sponsors || []) {
       if (s._sponsorLocalId) continue;
       if (s.locked || s.owner === 'neopro') continue; // skip Neopro entries
+      if (!_isSponsorEntry(s)) continue; // skip non-sponsor videos
       const name = (s.name || s.display_name || '').trim();
       if (!name) continue;
       if (!orphansByName.has(name)) {
