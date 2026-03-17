@@ -1,6 +1,7 @@
 import { QueryResultRow } from 'pg';
 import { query } from '../config/database';
 import { BaseRepository } from './base.repository';
+import { ALL_SPONSOR_CATEGORIES } from '../utils/sponsor-categories';
 
 // --------------------------------------------------------------------------
 // Types
@@ -338,7 +339,7 @@ class AdvertiserRepositoryImpl extends BaseRepository<AdvertiserRow> {
         COUNT(DISTINCT DATE(played_at)) as active_days
        FROM video_plays
        WHERE video_id = ANY($1::uuid[])
-         AND category = 'sponsor'
+         AND category IN ${ALL_SPONSOR_CATEGORIES}
          AND played_at >= $2::date
          AND played_at < ($3::date + INTERVAL '1 day')`,
       [videoIds, from, to]
@@ -358,7 +359,7 @@ class AdvertiserRepositoryImpl extends BaseRepository<AdvertiserRow> {
         SUM(vp.duration_played) as screen_time_seconds,
         ROUND(AVG(CASE WHEN vp.completed THEN 100 ELSE (vp.duration_played::float / NULLIF(vp.video_duration, 0) * 100) END)::numeric, 1) as completion_rate
        FROM videos v
-       JOIN video_plays vp ON vp.video_id = v.id AND vp.category = 'sponsor'
+       JOIN video_plays vp ON vp.video_id = v.id AND vp.category IN ${ALL_SPONSOR_CATEGORIES}
        WHERE v.id = ANY($1::uuid[])
          AND vp.played_at >= $2::date
          AND vp.played_at < ($3::date + INTERVAL '1 day')
@@ -381,7 +382,7 @@ class AdvertiserRepositoryImpl extends BaseRepository<AdvertiserRow> {
         COUNT(*) as impressions,
         SUM(vp.duration_played) as screen_time_seconds
        FROM sites s
-       JOIN video_plays vp ON vp.site_id = s.id AND vp.category = 'sponsor'
+       JOIN video_plays vp ON vp.site_id = s.id AND vp.category IN ${ALL_SPONSOR_CATEGORIES}
        WHERE vp.video_id = ANY($1::uuid[])
          AND vp.played_at >= $2::date
          AND vp.played_at < ($3::date + INTERVAL '1 day')
@@ -403,7 +404,7 @@ class AdvertiserRepositoryImpl extends BaseRepository<AdvertiserRow> {
         COUNT(*) as count
        FROM video_plays
        WHERE video_id = ANY($1::uuid[])
-         AND category = 'sponsor'
+         AND category IN ${ALL_SPONSOR_CATEGORIES}
          AND played_at >= $2::date
          AND played_at < ($3::date + INTERVAL '1 day')
        GROUP BY period`,
@@ -422,7 +423,7 @@ class AdvertiserRepositoryImpl extends BaseRepository<AdvertiserRow> {
         COUNT(*) as count
        FROM video_plays
        WHERE video_id = ANY($1::uuid[])
-         AND category = 'sponsor'
+         AND category IN ${ALL_SPONSOR_CATEGORIES}
          AND played_at >= $2::date
          AND played_at < ($3::date + INTERVAL '1 day')
        GROUP BY event_type`,
@@ -442,7 +443,7 @@ class AdvertiserRepositoryImpl extends BaseRepository<AdvertiserRow> {
         SUM(duration_played) as screen_time
        FROM video_plays
        WHERE video_id = ANY($1::uuid[])
-         AND category = 'sponsor'
+         AND category IN ${ALL_SPONSOR_CATEGORIES}
          AND played_at >= $2::date
          AND played_at < ($3::date + INTERVAL '1 day')
        GROUP BY DATE(played_at)
@@ -475,7 +476,7 @@ class AdvertiserRepositoryImpl extends BaseRepository<AdvertiserRow> {
         COALESCE(SUM(duration_played), 0) as total_screen_time_seconds
        FROM video_plays
        WHERE sponsor_id = $1
-         AND category = 'sponsor'
+         AND category IN ${ALL_SPONSOR_CATEGORIES}
          AND played_at >= $2::date
          AND played_at < ($3::date + INTERVAL '1 day')
          AND (tv_status IN ('on', 'unknown') OR tv_status IS NULL)`,
@@ -495,7 +496,7 @@ class AdvertiserRepositoryImpl extends BaseRepository<AdvertiserRow> {
         COALESCE(SUM(duration_played), 0) as screen_time
        FROM video_plays
        WHERE sponsor_id = $1
-         AND category = 'sponsor'
+         AND category IN ${ALL_SPONSOR_CATEGORIES}
          AND played_at >= $2::date
          AND played_at < ($3::date + INTERVAL '1 day')
          AND (tv_status IN ('on', 'unknown') OR tv_status IS NULL)
@@ -517,7 +518,7 @@ class AdvertiserRepositoryImpl extends BaseRepository<AdvertiserRow> {
         COUNT(*) as play_count
        FROM video_plays
        WHERE sponsor_id = $1
-         AND category = 'sponsor'
+         AND category IN ${ALL_SPONSOR_CATEGORIES}
          AND played_at >= $2::date
          AND played_at < ($3::date + INTERVAL '1 day')
          AND (tv_status IN ('on', 'unknown') OR tv_status IS NULL)
@@ -593,7 +594,7 @@ class AdvertiserRepositoryImpl extends BaseRepository<AdvertiserRow> {
        JOIN videos v ON v.id = vp.video_id
        JOIN sites s ON s.id = vp.site_id
        WHERE vp.video_id = ANY($1::uuid[])
-         AND vp.category = 'sponsor'
+         AND vp.category IN ${ALL_SPONSOR_CATEGORIES}
          AND vp.played_at >= $2::date
          AND vp.played_at < ($3::date + INTERVAL '1 day')
        ORDER BY vp.played_at DESC`,

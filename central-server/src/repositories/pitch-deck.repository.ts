@@ -1,5 +1,6 @@
 import { QueryResultRow } from 'pg';
 import { query } from '../config/database';
+import { ALL_SPONSOR_CATEGORIES } from '../utils/sponsor-categories';
 
 // --------------------------------------------------------------------------
 // Types
@@ -288,7 +289,7 @@ class PitchDeckRepositoryImpl {
         (COALESCE(SUM(duration_played), 0) / 3600)::text                      AS screen_time_hours,
         COALESCE((SELECT ROUND(AVG(completion_rate), 1) FROM advertiser_daily_stats_live), 0)::text AS completion_rate
       FROM video_plays
-      WHERE category = 'sponsor'
+      WHERE category IN ${ALL_SPONSOR_CATEGORIES}
     `);
     return result.rows[0] ?? null;
   }
@@ -302,7 +303,7 @@ class PitchDeckRepositoryImpl {
         COUNT(DISTINCT video_id)::text                    AS videos,
         (COALESCE(SUM(duration_played), 0) / 3600)::text  AS screen_time_hours
       FROM video_plays
-      WHERE category = 'sponsor'
+      WHERE category IN ${ALL_SPONSOR_CATEGORIES}
       GROUP BY 1
       ORDER BY 1
     `);

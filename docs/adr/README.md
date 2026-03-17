@@ -51,6 +51,7 @@ Un ADR documente une décision technique importante avec :
 | [ADR-032](ADR-032-restore-secondary-variants-replace-mode.md) | restoreSecondaryVariants en mode replace               | Accepté                  | Mar 2026 |
 | [ADR-033](ADR-033-videos-secondary-serving.md)                | Secondary variant serving, path & race condition fixes | Accepté                  | Mar 2026 |
 | [ADR-034](ADR-034-synchronized-manual-video-reveal.md)        | Synchronized manual video reveal (dual-display sync)   | Accepté                  | Mar 2026 |
+| [ADR-035](ADR-035-advertiser-sponsor-separation.md)           | Séparation Annonceurs Neopro / Sponsors Club           | Proposé                  | Mar 2026 |
 
 ### Supersédés
 

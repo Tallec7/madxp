@@ -1691,11 +1691,11 @@ describe('Sponsor loop analytics category wiring', () => {
     'utf8'
   );
 
-  it('_rebuildLoopEntries sets analytics_category sponsor on loop entries', () => {
-    // Loop entries MUST have analytics_category: 'sponsor' otherwise detectCategory()
+  it('_rebuildLoopEntries sets analytics_category sponsor_local on loop entries (ADR-035)', () => {
+    // Loop entries MUST have analytics_category: 'sponsor_local' otherwise detectCategory()
     // on the Pi falls back to path-based detection and categorizes as 'other',
-    // making impressions invisible in listBySite (filters on category = 'sponsor')
-    expect(sponsorService).toContain("analytics_category: 'sponsor'");
+    // making impressions invisible in listBySite (filters on sponsor categories)
+    expect(sponsorService).toContain("analytics_category: 'sponsor_local'");
   });
 
   it('_rebuildLoopEntries includes name and type for loop entries', () => {
@@ -9303,7 +9303,7 @@ describe('Sponsor frequency removal guard', () => {
     // including "Intro Neopro" (owner: 'neopro') and regular content videos.
     // The method MUST check for sponsor markers before creating localSponsors:
     // - site_sponsor_id (identified by central auto-resolution)
-    // - analytics_category === 'sponsor'
+    // - analytics_category starts with 'sponsor' (sponsor_local, sponsor_neopro, sponsor)
     // - owner === 'club' (placed by club admin)
     // Without this check, every video name becomes a spurious sponsor.
     const reconcileMethod = sponsorService.match(

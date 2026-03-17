@@ -17,6 +17,7 @@
 
 import { query } from '../config/database';
 import logger from '../config/logger';
+import { ALL_SPONSOR_CATEGORIES } from '../utils/sponsor-categories';
 import PDFDocument from 'pdfkit';
 import { ChartJSNodeCanvas } from 'chartjs-node-canvas';
 import * as crypto from 'crypto';
@@ -129,7 +130,7 @@ export async function generateAdvertiserReport(
         COUNT(DISTINCT DATE(played_at)) as active_days
        FROM video_plays
        WHERE video_id = ANY($1::uuid[])
-         AND category = 'sponsor'
+         AND category IN ${ALL_SPONSOR_CATEGORIES}
          AND played_at >= $2::date
          AND played_at < ($3::date + INTERVAL '1 day')`,
       [vids, from, to]
@@ -143,7 +144,7 @@ export async function generateAdvertiserReport(
         SUM(duration_played) as screen_time
        FROM video_plays
        WHERE video_id = ANY($1::uuid[])
-         AND category = 'sponsor'
+         AND category IN ${ALL_SPONSOR_CATEGORIES}
          AND played_at >= $2::date
          AND played_at < ($3::date + INTERVAL '1 day')
        GROUP BY DATE(played_at)
@@ -166,7 +167,7 @@ export async function generateAdvertiserReport(
         ) as completion_rate_verified
        FROM video_plays
        WHERE sponsor_id = $1
-         AND category = 'sponsor'
+         AND category IN ${ALL_SPONSOR_CATEGORIES}
          AND played_at >= $2::date
          AND played_at < ($3::date + INTERVAL '1 day')`,
       [advertiserId, from, to]
@@ -1723,7 +1724,7 @@ export async function generateSiteSponsorReport(
         COUNT(DISTINCT DATE(played_at)) as active_days
        FROM video_plays
        WHERE site_sponsor_id = $1
-         AND category = 'sponsor'
+         AND category IN ${ALL_SPONSOR_CATEGORIES}
          AND played_at >= $2::date
          AND played_at < ($3::date + INTERVAL '1 day')`,
       [siteSponsorId, from, to]
@@ -1740,7 +1741,7 @@ export async function generateSiteSponsorReport(
       `SELECT COUNT(DISTINCT DATE(played_at))::text as count
        FROM video_plays
        WHERE site_sponsor_id = $1
-         AND category = 'sponsor'
+         AND category IN ${ALL_SPONSOR_CATEGORIES}
          AND event_type = 'match'
          AND played_at >= $2::date
          AND played_at < ($3::date + INTERVAL '1 day')`,
@@ -1772,7 +1773,7 @@ export async function generateSiteSponsorReport(
         COALESCE(SUM(duration_played), 0)::text as total_screen_time
        FROM video_plays
        WHERE site_sponsor_id = $1
-         AND category = 'sponsor'
+         AND category IN ${ALL_SPONSOR_CATEGORIES}
          AND played_at >= $2::date
          AND played_at < ($3::date + INTERVAL '1 day')
        GROUP BY event_type

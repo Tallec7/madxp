@@ -504,7 +504,7 @@ class SponsorService {
       type: 'video/mp4',
       owner: 'club',
       locked: false,
-      analytics_category: 'sponsor',
+      analytics_category: 'sponsor_local',
       site_sponsor_id: sponsor.centralId || null,
       _sponsorLocalId: sponsor.localId,
     }));
@@ -588,7 +588,7 @@ class SponsorService {
       type: 'video/mp4',
       owner: 'club',
       locked: false,
-      analytics_category: 'sponsor',
+      analytics_category: 'sponsor_local',
       site_sponsor_id: sponsor.centralId || null,
       _sponsorLocalId: sponsor.localId,
     }));
@@ -638,7 +638,7 @@ class SponsorService {
 
     const _isSponsorEntry = (v) =>
       v.site_sponsor_id ||
-      v.analytics_category === 'sponsor' ||
+      (v.analytics_category && v.analytics_category.startsWith('sponsor')) ||
       (v.owner === 'club' && !v.locked);
 
     for (const tc of config.timeCategories || []) {

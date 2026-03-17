@@ -1750,27 +1750,19 @@ export class SponsorDetailComponent implements OnInit {
 
     this.removingVideo = videoId;
 
-    try {
-      const response = await fetch(
-        `/api/analytics/advertisers/${this.sponsorId}/videos/${videoId}`,
-        {
-          method: 'DELETE',
-          credentials: 'include'
+    this.api.delete<{ success: boolean }>(`/analytics/advertisers/${this.sponsorId}/videos/${videoId}`)
+      .subscribe({
+        next: () => {
+          this.sponsorVideos = this.sponsorVideos.filter(v => v.video_id !== videoId);
+          this.notification.success('Vidéo retirée avec succès');
+        },
+        error: () => {
+          this.notification.error('Erreur lors de la suppression');
+        },
+        complete: () => {
+          this.removingVideo = null;
         }
-      );
-
-      if (!response.ok) {
-        throw new Error('Erreur lors de la suppression');
-      }
-
-      // Remove from local list
-      this.sponsorVideos = this.sponsorVideos.filter(v => v.video_id !== videoId);
-
-    } catch (err: any) {
-      this.notification.error(err.message || 'Erreur lors de la suppression');
-    } finally {
-      this.removingVideo = null;
-    }
+      });
   }
 
   // Utility Functions

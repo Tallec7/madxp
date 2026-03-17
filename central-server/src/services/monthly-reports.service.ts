@@ -9,6 +9,7 @@
  */
 
 import { query } from '../config/database';
+import { ALL_SPONSOR_CATEGORIES } from '../utils/sponsor-categories';
 import { uploadAsset, getAssetUrl } from './storage.service';
 import { generateClubReport, generateAdvertiserReport, generateSiteSponsorReport } from './pdf-report.service';
 import emailService from './email.service';
@@ -264,7 +265,7 @@ async function generateAdvertiserReports(
     SELECT DISTINCT a.id, a.name
     FROM advertisers a
     JOIN advertiser_videos av ON av.advertiser_id = a.id
-    JOIN video_plays vp ON vp.video_id = av.video_id AND vp.category = 'sponsor'
+    JOIN video_plays vp ON vp.video_id = av.video_id AND vp.category IN ${ALL_SPONSOR_CATEGORIES}
     WHERE vp.played_at >= $1::date
       AND vp.played_at <= $2::date
       AND a.status = 'active'
@@ -409,7 +410,7 @@ async function generateSiteSponsorReports(
            s.club_name
     FROM site_sponsors ss
     JOIN sites s ON s.id = ss.site_id
-    JOIN video_plays vp ON vp.site_sponsor_id = ss.id AND vp.category = 'sponsor'
+    JOIN video_plays vp ON vp.site_sponsor_id = ss.id AND vp.category IN ${ALL_SPONSOR_CATEGORIES}
     WHERE vp.played_at >= $1::date
       AND vp.played_at <= $2::date
       AND ss.status = 'active'

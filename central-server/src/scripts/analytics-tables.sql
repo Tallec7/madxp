@@ -180,10 +180,10 @@ BEGIN
         COUNT(*),
         COUNT(*) FILTER (WHERE trigger_type = 'manual'),
         COUNT(*) FILTER (WHERE trigger_type = 'auto'),
-        COUNT(*) FILTER (WHERE category = 'sponsor'),
+        COUNT(*) FILTER (WHERE category IN ('sponsor', 'sponsor_local', 'sponsor_neopro')),
         COUNT(*) FILTER (WHERE category = 'jingle'),
         COUNT(*) FILTER (WHERE category = 'ambiance'),
-        COUNT(*) FILTER (WHERE category NOT IN ('sponsor', 'jingle', 'ambiance') OR category IS NULL)
+        COUNT(*) FILTER (WHERE category NOT IN ('sponsor', 'sponsor_local', 'sponsor_neopro', 'jingle', 'ambiance') OR category IS NULL)
     INTO
         v_sessions_count,
         v_screen_time,

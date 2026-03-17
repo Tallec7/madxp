@@ -8,6 +8,7 @@
 
 import { query } from '../config/database';
 import logger from '../config/logger';
+import { ALL_SPONSOR_CATEGORIES } from '../utils/sponsor-categories';
 import { alertRepository } from '../repositories/alert.repository';
 import { alertService } from './alert.service';
 
@@ -144,7 +145,7 @@ class SponsorAlertService {
         LEFT JOIN video_plays vp
           ON vp.sponsor_id = a.id
           AND vp.site_id = s.id
-          AND vp.category = 'sponsor'
+          AND vp.category IN ${ALL_SPONSOR_CATEGORIES}
           AND vp.played_at >= NOW() - INTERVAL '30 days'
         ${whereClause}
         GROUP BY a.id, a.name, s.id, s.site_name, s.club_name

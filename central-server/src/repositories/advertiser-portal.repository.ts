@@ -1,6 +1,7 @@
 import { QueryResultRow } from 'pg';
 import { query } from '../config/database';
 import { BaseRepository } from './base.repository';
+import { ALL_SPONSOR_CATEGORIES } from '../utils/sponsor-categories';
 
 // --------------------------------------------------------------------------
 // Types
@@ -233,7 +234,7 @@ class AdvertiserPortalRepositoryImpl extends BaseRepository<QueryResultRow> {
            AND cs.audience_estimate IS NOT NULL
          WHERE av.advertiser_id = $1
            AND vp.played_at >= CURRENT_DATE - INTERVAL '30 days'
-           AND vp.category = 'sponsor'
+           AND vp.category IN ${ALL_SPONSOR_CATEGORIES}
        ) unique_sessions`,
       [advertiserId]
     );

@@ -8,6 +8,7 @@
 import { Server as SocketIOServer } from 'socket.io';
 import { query } from '../config/database';
 import logger from '../config/logger';
+import { ALL_SPONSOR_CATEGORIES } from '../utils/sponsor-categories';
 import { dbCircuitBreaker } from './db-circuit-breaker.service';
 
 export interface RealtimeStats {
@@ -193,7 +194,7 @@ class RealtimeStatsService {
     const impressionsResult = await query(`
       SELECT COUNT(*) as count
       FROM video_plays
-      WHERE category = 'sponsor'
+      WHERE category IN ${ALL_SPONSOR_CATEGORIES}
         AND played_at >= NOW() - INTERVAL '1 hour'
     `);
 

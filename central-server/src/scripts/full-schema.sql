@@ -509,10 +509,10 @@ BEGIN
         COUNT(*),
         COUNT(*) FILTER (WHERE trigger_type = 'manual'),
         COUNT(*) FILTER (WHERE trigger_type = 'auto'),
-        COUNT(*) FILTER (WHERE category = 'sponsor'),
+        COUNT(*) FILTER (WHERE category IN ('sponsor', 'sponsor_local', 'sponsor_neopro')),
         COUNT(*) FILTER (WHERE category = 'jingle'),
         COUNT(*) FILTER (WHERE category = 'ambiance'),
-        COUNT(*) FILTER (WHERE category NOT IN ('sponsor', 'jingle', 'ambiance') OR category IS NULL)
+        COUNT(*) FILTER (WHERE category NOT IN ('sponsor', 'sponsor_local', 'sponsor_neopro', 'jingle', 'ambiance') OR category IS NULL)
     INTO
         v_sessions_count,
         v_screen_time,
@@ -954,7 +954,7 @@ ALTER TABLE video_plays ADD COLUMN IF NOT EXISTS position_in_loop INTEGER;
 ALTER TABLE video_plays ADD COLUMN IF NOT EXISTS site_sponsor_id UUID;
 CREATE INDEX IF NOT EXISTS idx_video_plays_event_type ON video_plays(event_type);
 CREATE INDEX IF NOT EXISTS idx_video_plays_site_sponsor ON video_plays(site_sponsor_id);
-CREATE INDEX IF NOT EXISTS idx_video_plays_sponsor_analytics ON video_plays(site_id, category, played_at DESC) WHERE category = 'sponsor';
+CREATE INDEX IF NOT EXISTS idx_video_plays_sponsor_analytics ON video_plays(site_id, category, played_at DESC) WHERE category IN ('sponsor', 'sponsor_local', 'sponsor_neopro');
 
 -- =============================================================================
 -- CAMPAIGNS (PI-2 : E-11 Régie, E-17 A/B Testing)
@@ -1026,7 +1026,7 @@ SELECT vp.id, vp.site_id, vp.sponsor_id AS advertiser_id, vp.video_id,
        vp.position_in_loop, vp.audience_estimate, vp.site_sponsor_id, vp.tv_status,
        vp.interruption_reason
 FROM video_plays vp
-WHERE vp.category = 'sponsor'
+WHERE vp.category IN ('sponsor', 'sponsor_local', 'sponsor_neopro')
   AND (vp.tv_status IN ('on', 'unknown') OR vp.tv_status IS NULL);
 
 -- Vue pending_commands_summary
@@ -1099,7 +1099,7 @@ SELECT
   COUNT(vp.id) AS total_impressions,
   COALESCE(SUM(vp.duration_played), 0) AS total_duration
 FROM advertisers a
-LEFT JOIN video_plays vp ON vp.sponsor_id = a.id AND vp.category = 'sponsor'
+LEFT JOIN video_plays vp ON vp.sponsor_id = a.id AND vp.category IN ('sponsor', 'sponsor_local', 'sponsor_neopro')
 GROUP BY a.id, a.name;
 
 -- Vue advertiser_performance_by_site (performance par site pour un annonceur)
@@ -1113,7 +1113,7 @@ SELECT
   COALESCE(SUM(vp.duration_played), 0) AS total_duration
 FROM video_plays vp
 JOIN sites s ON s.id = vp.site_id
-WHERE vp.category = 'sponsor'
+WHERE vp.category IN ('sponsor', 'sponsor_local', 'sponsor_neopro')
 GROUP BY vp.sponsor_id, vp.site_id, s.site_name, s.club_name;
 
 -- Vue advertiser_stats_summary (résumé stats annonceurs)
@@ -1127,7 +1127,7 @@ SELECT
   COUNT(vp.id) AS total_impressions
 FROM advertisers a
 LEFT JOIN advertiser_videos av ON av.advertiser_id = a.id
-LEFT JOIN video_plays vp ON vp.sponsor_id = a.id AND vp.category = 'sponsor'
+LEFT JOIN video_plays vp ON vp.sponsor_id = a.id AND vp.category IN ('sponsor', 'sponsor_local', 'sponsor_neopro')
 GROUP BY a.id, a.name, a.status;
 
 -- Vue top_advertiser_videos (vidéos sponsors les plus jouées)
@@ -1140,7 +1140,7 @@ SELECT
   SUM(vp.duration_played) AS total_duration
 FROM video_plays vp
 JOIN advertisers a ON a.id = vp.sponsor_id
-WHERE vp.category = 'sponsor' AND vp.played_at > NOW() - INTERVAL '30 days'
+WHERE vp.category IN ('sponsor', 'sponsor_local', 'sponsor_neopro') AND vp.played_at > NOW() - INTERVAL '30 days'
 GROUP BY vp.sponsor_id, a.name, vp.video_filename
 ORDER BY play_count DESC;
 
@@ -1211,10 +1211,10 @@ CREATE OR REPLACE VIEW club_daily_stats_live AS
     COUNT(*)::integer as videos_played,
     COUNT(*) FILTER (WHERE vp.trigger_type = 'manual')::integer as manual_triggers,
     COUNT(*) FILTER (WHERE vp.trigger_type = 'auto')::integer as auto_plays,
-    COUNT(*) FILTER (WHERE vp.category = 'sponsor')::integer as sponsor_plays,
+    COUNT(*) FILTER (WHERE vp.category IN ('sponsor', 'sponsor_local', 'sponsor_neopro'))::integer as sponsor_plays,
     COUNT(*) FILTER (WHERE vp.category = 'jingle')::integer as jingle_plays,
     COUNT(*) FILTER (WHERE vp.category = 'ambiance')::integer as ambiance_plays,
-    COUNT(*) FILTER (WHERE vp.category NOT IN ('sponsor', 'jingle', 'ambiance') OR vp.category IS NULL)::integer as other_plays,
+    COUNT(*) FILTER (WHERE vp.category NOT IN ('sponsor', 'sponsor_local', 'sponsor_neopro', 'jingle', 'ambiance') OR vp.category IS NULL)::integer as other_plays,
     NULL::numeric(5,2) as avg_cpu,
     NULL::numeric(5,2) as avg_memory,
     NULL::numeric(5,2) as avg_temperature,
@@ -1269,7 +1269,7 @@ CREATE OR REPLACE VIEW advertiser_daily_stats_live AS
     ROUND(AVG(vp.audience_estimate)::numeric, 2) as avg_audience_per_play,
     NOW() as calculated_at
   FROM video_plays vp
-  WHERE vp.category = 'sponsor'
+  WHERE vp.category IN ('sponsor', 'sponsor_local', 'sponsor_neopro')
     AND vp.video_id IS NOT NULL
     AND vp.played_at >= CURRENT_DATE
     AND vp.played_at < CURRENT_DATE + INTERVAL '1 day'

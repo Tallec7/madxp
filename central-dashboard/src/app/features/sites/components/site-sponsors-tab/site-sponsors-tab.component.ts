@@ -30,7 +30,6 @@ Chart.register(...registerables);
         <thead>
           <tr>
             <th>Sponsor</th>
-            <th>Source</th>
             <th>Vidéos</th>
             <th>Impressions</th>
             <th>Config</th>
@@ -43,9 +42,6 @@ Chart.register(...registerables);
             <td class="sponsor-name-cell">
               <div class="skeleton-shimmer skeleton-text" style="width: 70%; height: 14px;"></div>
               <div class="skeleton-shimmer skeleton-text" style="width: 50%; height: 11px; margin-top: 4px;"></div>
-            </td>
-            <td>
-              <div class="skeleton-shimmer skeleton-text" style="width: 65px; height: 22px; border-radius: 4px;"></div>
             </td>
             <td>
               <div class="skeleton-shimmer skeleton-text" style="width: 20px; height: 14px;"></div>
@@ -105,7 +101,6 @@ Chart.register(...registerables);
         <thead>
           <tr>
             <th>Sponsor</th>
-            <th>Source</th>
             <th>Vidéos</th>
             <th>Impressions</th>
             <th>Config</th>
@@ -115,16 +110,10 @@ Chart.register(...registerables);
         </thead>
         <tbody>
           <ng-container *ngFor="let sponsor of sponsors">
-            <tr [class.expanded]="expandedSponsorId === sponsor.id"
-                [class.neopro-row]="sponsor.source === 'neopro'">
+            <tr [class.expanded]="expandedSponsorId === sponsor.id">
               <td class="sponsor-name-cell">
                 <strong>{{ sponsor.name }}</strong>
                 <span class="contact-sub" *ngIf="sponsor.contact_email">{{ sponsor.contact_email }}</span>
-              </td>
-              <td>
-                <span class="source-badge" [ngClass]="'source-' + sponsor.source">
-                  {{ sponsor.source === 'neopro' ? '📡 NEOPRO' : '🏠 Club' }}
-                </span>
               </td>
               <td>
                 {{ sponsor.video_count || 0 }}
@@ -140,7 +129,7 @@ Chart.register(...registerables);
                       [title]="getConfigTooltip(sponsor)">
                   {{ isConfigComplete(sponsor) ? '🟢 Complet' : '🔴 Incomplet' }}
                 </span>
-                <button class="btn-config-cta" *ngIf="!isConfigComplete(sponsor) && sponsor.source !== 'neopro'"
+                <button class="btn-config-cta" *ngIf="!isConfigComplete(sponsor)"
                         (click)="toggleDetail(sponsor)"
                         [title]="getConfigCta(sponsor)">
                   {{ getConfigCta(sponsor) }}
@@ -160,11 +149,11 @@ Chart.register(...registerables);
                   {{ generatingReportId === sponsor.id ? '⏳' : '📥' }}
                 </button>
                 <button class="btn-icon" title="Modifier" (click)="openEditModal(sponsor)"
-                        *ngIf="sponsor.source !== 'neopro'">
+                        >
                   ✏️
                 </button>
                 <button class="btn-icon btn-icon-danger" title="Supprimer" (click)="confirmDelete(sponsor)"
-                        *ngIf="sponsor.source !== 'neopro'">
+                        >
                   🗑️
                 </button>
               </td>
@@ -172,7 +161,7 @@ Chart.register(...registerables);
 
             <!-- Detail expand row -->
             <tr class="detail-row" *ngIf="expandedSponsorId === sponsor.id">
-              <td colspan="7">
+              <td colspan="6">
                 <div class="detail-panel" *ngIf="detailLoading">
                   <div class="spinner"></div>
                   <p>Chargement des statistiques...</p>
@@ -688,8 +677,6 @@ Chart.register(...registerables);
     }
     .data-table tbody tr:hover { background: #f8fafc; }
     .data-table tbody tr.expanded { background: #eff6ff; }
-    .data-table tbody tr.neopro-row { background: #fafbff; }
-
     .sponsor-name-cell {
       display: flex;
       flex-direction: column;
@@ -699,17 +686,6 @@ Chart.register(...registerables);
       font-size: 0.75rem;
       color: #94a3b8;
     }
-
-    /* Badges */
-    .source-badge {
-      display: inline-block;
-      padding: 0.2rem 0.5rem;
-      border-radius: 4px;
-      font-size: 0.75rem;
-      font-weight: 500;
-    }
-    .source-local { background: #dcfce7; color: #166534; }
-    .source-neopro { background: #dbeafe; color: #1e40af; }
 
     .status-badge {
       font-size: 0.8rem;
@@ -1424,7 +1400,8 @@ export class SiteSponsorsTabComponent implements OnInit, OnDestroy {
     this.error = '';
     this.sitesService.listSiteSponsors(this.siteId, true).subscribe({
       next: (res) => {
-        this.sponsors = res?.sponsors ?? [];
+        // ADR-035 Phase 1: filtrer les sponsors neopro (visibles uniquement côté admin annonceurs)
+        this.sponsors = (res?.sponsors ?? []).filter(s => s.source !== 'neopro');
         this.loading = false;
         this.cdr.markForCheck();
       },

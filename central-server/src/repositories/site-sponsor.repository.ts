@@ -1,6 +1,7 @@
 import { QueryResultRow } from 'pg';
 import { query } from '../config/database';
 import { BaseRepository } from './base.repository';
+import { ALL_SPONSOR_CATEGORIES } from '../utils/sponsor-categories';
 
 // --------------------------------------------------------------------------
 // Types
@@ -229,13 +230,13 @@ class SiteSponsorRepositoryImpl extends BaseRepository<SiteSponsorRow> {
          FROM (
            SELECT site_sponsor_id AS ss_id
            FROM video_plays
-           WHERE site_sponsor_id IS NOT NULL AND category = 'sponsor'
+           WHERE site_sponsor_id IS NOT NULL AND category IN ${ALL_SPONSOR_CATEGORIES}
            UNION ALL
            SELECT ssv.site_sponsor_id AS ss_id
            FROM video_plays vp
            JOIN site_sponsor_videos ssv ON ssv.video_filename = vp.video_filename
            JOIN site_sponsors ss2 ON ss2.id = ssv.site_sponsor_id AND ss2.site_id = vp.site_id
-           WHERE vp.site_sponsor_id IS NULL AND vp.category = 'sponsor'
+           WHERE vp.site_sponsor_id IS NULL AND vp.category IN ${ALL_SPONSOR_CATEGORIES}
          ) resolved
          GROUP BY ss_id
        ) imp ON imp.ss_id = ss.id
@@ -579,7 +580,7 @@ class SiteSponsorRepositoryImpl extends BaseRepository<SiteSponsorRow> {
         COUNT(*) FILTER (WHERE trigger_type = 'manual') as manual_triggers
        FROM video_plays
        WHERE site_sponsor_id = $1
-         AND category = 'sponsor'
+         AND category IN ${ALL_SPONSOR_CATEGORIES}
          AND played_at >= $2::date
          AND played_at < ($3::date + INTERVAL '1 day')
          AND (tv_status IN ('on', 'unknown') OR tv_status IS NULL)`,
@@ -599,7 +600,7 @@ class SiteSponsorRepositoryImpl extends BaseRepository<SiteSponsorRow> {
         SUM(duration_played) as screen_time
        FROM video_plays
        WHERE site_sponsor_id = $1
-         AND category = 'sponsor'
+         AND category IN ${ALL_SPONSOR_CATEGORIES}
          AND played_at >= $2::date
          AND played_at < ($3::date + INTERVAL '1 day')
          AND (tv_status IN ('on', 'unknown') OR tv_status IS NULL)
@@ -639,13 +640,13 @@ class SiteSponsorRepositoryImpl extends BaseRepository<SiteSponsorRow> {
          FROM (
            SELECT site_sponsor_id AS ss_id
            FROM video_plays
-           WHERE site_sponsor_id IS NOT NULL AND category = 'sponsor'
+           WHERE site_sponsor_id IS NOT NULL AND category IN ${ALL_SPONSOR_CATEGORIES}
            UNION ALL
            SELECT ssv.site_sponsor_id AS ss_id
            FROM video_plays vp
            JOIN site_sponsor_videos ssv ON ssv.video_filename = vp.video_filename
            JOIN site_sponsors ss2 ON ss2.id = ssv.site_sponsor_id AND ss2.site_id = vp.site_id
-           WHERE vp.site_sponsor_id IS NULL AND vp.category = 'sponsor'
+           WHERE vp.site_sponsor_id IS NULL AND vp.category IN ${ALL_SPONSOR_CATEGORIES}
          ) resolved
          GROUP BY ss_id
        ) imp ON imp.ss_id = ss.id
@@ -676,7 +677,7 @@ class SiteSponsorRepositoryImpl extends BaseRepository<SiteSponsorRow> {
         COALESCE(SUM(duration_played), 0)::text as total_screen_time
        FROM video_plays
        WHERE site_sponsor_id = $1
-         AND category = 'sponsor'
+         AND category IN ${ALL_SPONSOR_CATEGORIES}
          AND played_at >= $2::date
          AND played_at < ($3::date + INTERVAL '1 day')
        GROUP BY event_type
@@ -698,7 +699,7 @@ class SiteSponsorRepositoryImpl extends BaseRepository<SiteSponsorRow> {
       `SELECT COUNT(DISTINCT DATE(played_at))::text as count
        FROM video_plays
        WHERE site_sponsor_id = $1
-         AND category = 'sponsor'
+         AND category IN ${ALL_SPONSOR_CATEGORIES}
          AND event_type = 'match'
          AND played_at >= $2::date
          AND played_at < ($3::date + INTERVAL '1 day')`,
@@ -727,7 +728,7 @@ class SiteSponsorRepositoryImpl extends BaseRepository<SiteSponsorRow> {
        FROM video_plays vp
        JOIN site_sponsors ss ON ss.id = vp.site_sponsor_id
        WHERE ss.advertiser_id = $1
-         AND vp.category = 'sponsor'
+         AND vp.category IN ${ALL_SPONSOR_CATEGORIES}
          AND vp.played_at >= $2::date
          AND vp.played_at < ($3::date + INTERVAL '1 day')`,
       [advertiserId, from, to]
@@ -751,7 +752,7 @@ class SiteSponsorRepositoryImpl extends BaseRepository<SiteSponsorRow> {
        JOIN site_sponsors ss ON ss.id = vp.site_sponsor_id
        JOIN sites s ON s.id = ss.site_id
        WHERE ss.advertiser_id = $1
-         AND vp.category = 'sponsor'
+         AND vp.category IN ${ALL_SPONSOR_CATEGORIES}
          AND vp.played_at >= $2::date
          AND vp.played_at < ($3::date + INTERVAL '1 day')
        GROUP BY ss.site_id, s.site_name, s.club_name
@@ -771,7 +772,7 @@ class SiteSponsorRepositoryImpl extends BaseRepository<SiteSponsorRow> {
        FROM video_plays vp
        JOIN site_sponsors ss ON ss.id = vp.site_sponsor_id
        WHERE ss.advertiser_id = $1
-         AND vp.category = 'sponsor'
+         AND vp.category IN ${ALL_SPONSOR_CATEGORIES}
          AND vp.played_at >= $2::date
          AND vp.played_at < ($3::date + INTERVAL '1 day')
        GROUP BY DATE(vp.played_at)
@@ -791,7 +792,7 @@ class SiteSponsorRepositoryImpl extends BaseRepository<SiteSponsorRow> {
        FROM video_plays vp
        JOIN site_sponsors ss ON ss.id = vp.site_sponsor_id
        WHERE ss.advertiser_id = $1
-         AND vp.category = 'sponsor'
+         AND vp.category IN ${ALL_SPONSOR_CATEGORIES}
          AND vp.played_at >= $2::date
          AND vp.played_at < ($3::date + INTERVAL '1 day')
        GROUP BY vp.event_type
@@ -852,12 +853,13 @@ class SiteSponsorRepositoryImpl extends BaseRepository<SiteSponsorRow> {
        FROM site_sponsors ss
        LEFT JOIN video_plays vp
          ON vp.site_sponsor_id = ss.id
-         AND vp.category = 'sponsor'
+         AND vp.category IN ${ALL_SPONSOR_CATEGORIES}
          AND vp.played_at >= $2::date
          AND vp.played_at < ($3::date + INTERVAL '1 day')
          AND (vp.tv_status IN ('on', 'unknown') OR vp.tv_status IS NULL)
        WHERE ss.site_id = $1
          AND ss.status = 'active'
+         AND ss.source = 'local'
        GROUP BY ss.id
        ORDER BY impressions DESC`,
       [siteId, from, to]
@@ -879,7 +881,7 @@ class SiteSponsorRepositoryImpl extends BaseRepository<SiteSponsorRow> {
          COALESCE(SUM(audience_estimate), 0)::text AS audience_estimate
        FROM video_plays
        WHERE site_sponsor_id = $1
-         AND category = 'sponsor'
+         AND category IN ${ALL_SPONSOR_CATEGORIES}
          AND event_type = 'match'
          AND played_at >= $2::date
          AND played_at < ($3::date + INTERVAL '1 day')
@@ -908,7 +910,7 @@ class SiteSponsorRepositoryImpl extends BaseRepository<SiteSponsorRow> {
          COUNT(*) FILTER (WHERE vp.trigger_type = 'manual')::text AS manual_triggers
        FROM video_plays vp
        WHERE vp.site_sponsor_id = $1
-         AND vp.category = 'sponsor'
+         AND vp.category IN ${ALL_SPONSOR_CATEGORIES}
          AND vp.played_at >= $2::date
          AND vp.played_at < ($3::date + INTERVAL '1 day')
          AND (vp.tv_status IN ('on', 'unknown') OR vp.tv_status IS NULL)
@@ -935,7 +937,7 @@ class SiteSponsorRepositoryImpl extends BaseRepository<SiteSponsorRow> {
            ELSE '0' END AS completion_rate
        FROM video_plays vp
        WHERE vp.site_sponsor_id = $1
-         AND vp.category = 'sponsor'
+         AND vp.category IN ${ALL_SPONSOR_CATEGORIES}
          AND vp.played_at >= $2::date
          AND vp.played_at < ($3::date + INTERVAL '1 day')
          AND (vp.tv_status IN ('on', 'unknown') OR vp.tv_status IS NULL)

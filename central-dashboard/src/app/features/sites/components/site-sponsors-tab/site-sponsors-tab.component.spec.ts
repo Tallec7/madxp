@@ -209,7 +209,8 @@ describe('SiteSponsorsTabComponent', () => {
       tick();
 
       expect(sitesService.listSiteSponsors).toHaveBeenCalledWith('s1', true);
-      expect(component.sponsors.length).toBe(3);
+      // ADR-035: neopro sponsors are filtered out (sp2 source=neopro)
+      expect(component.sponsors.length).toBe(2);
       expect(component.loading).toBe(false);
     }));
 
@@ -231,9 +232,10 @@ describe('SiteSponsorsTabComponent', () => {
       fixture.detectChanges();
     }));
 
-    it('should display all sponsors in the list', () => {
+    it('should display only local sponsors in the list (ADR-035)', () => {
       const rows = fixture.nativeElement.querySelectorAll('.data-table tbody tr:not(.detail-row)');
-      expect(rows.length).toBe(3);
+      // ADR-035: neopro sponsors are filtered out
+      expect(rows.length).toBe(2);
     });
 
     it('should display sponsor name', () => {
@@ -618,10 +620,11 @@ describe('SiteSponsorsTabComponent', () => {
       expect(modal).toBeTruthy();
     });
 
-    it('should show count badge with sponsor count', () => {
+    it('should show count badge with local sponsor count (ADR-035)', () => {
       const badge = fixture.nativeElement.querySelector('.count-badge');
       expect(badge).toBeTruthy();
-      expect(badge.textContent.trim()).toBe('3');
+      // ADR-035: neopro sponsors are filtered out
+      expect(badge.textContent.trim()).toBe('2');
     });
   });
 });

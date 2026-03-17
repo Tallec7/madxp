@@ -406,9 +406,9 @@ export class AnalyticsService {
     const filename = this.getFilename(video.path).toLowerCase();
     const path = video.path.toLowerCase();
 
-    // Détecter la catégorie basée sur le chemin ou le nom
+    // ADR-035: fallback path-based → sponsor_local (les vidéos sur le Pi sont locales par défaut)
     if (path.includes('sponsor') || path.includes('partenaire')) {
-      return 'sponsor';
+      return 'sponsor_local';
     }
     if (path.includes('jingle') || path.includes('but') || filename.includes('but') || filename.includes('goal') || filename.includes('timeout')) {
       return 'jingle';

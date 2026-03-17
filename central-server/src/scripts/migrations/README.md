@@ -664,6 +664,25 @@ psql $DATABASE_URL -f central-server/src/scripts/migrations/backfill-site-sponso
 
 ---
 
-**Dernière mise à jour:** 22 février 2026
+### `adr035-sponsor-category-split.sql`
+
+**Date:** 2026-03-17
+**Statut:** Prêt pour exécution
+**Durée estimée:** < 5 secondes
+
+**Description:**
+ADR-035 Phase 2 : Sépare `analytics_category` en `sponsor_local` (sponsors club) et `sponsor_neopro` (annonceurs Neopro). Met à jour l'index partiel, 6 vues matérialisées et la fonction `calculate_daily_stats` pour matcher les 3 valeurs (`sponsor`, `sponsor_local`, `sponsor_neopro`). La valeur `sponsor` reste en rétrocompat pour les Pi non mis à jour.
+
+**Idempotent:** Oui — `CREATE OR REPLACE VIEW`, `CREATE OR REPLACE FUNCTION`, `DROP INDEX IF EXISTS`.
+
+**Commande:**
+
+```bash
+psql $DATABASE_URL -f central-server/src/scripts/migrations/adr035-sponsor-category-split.sql
+```
+
+---
+
+**Dernière mise à jour:** 17 mars 2026
 **Auteur:** Claude Code
-**Version migrations:** 3.1
+**Version migrations:** 3.2

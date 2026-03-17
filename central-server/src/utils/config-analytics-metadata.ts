@@ -43,7 +43,15 @@ export async function enrichConfigWithAnalyticsMetadata(
     filenameToEntries.get(filename)!.push({
       setMetadata: (m: AnalyticsMetadata) => {
         entry.video_id = m.video_id;
-        entry.analytics_category = m.analytics_category ?? undefined;
+        // ADR-035 Phase 2: analytics_category split
+        // - 'sponsor_neopro' si advertiser_id (depuis la requête DB)
+        // - 'sponsor_local' si site_sponsor_id (résolu par autoResolveSponsorIds avant enrichment)
+        // - undefined sinon (Pi detectCategory() fallback)
+        if (m.analytics_category) {
+          entry.analytics_category = m.analytics_category;
+        } else if ((entry as SponsorVideo).site_sponsor_id) {
+          entry.analytics_category = 'sponsor_local';
+        }
         // SponsorVideo a advertiser_id + sponsor_id (rétrocompat)
         if ('advertiser_id' in entry || 'sponsor_id' in entry || m.advertiser_id) {
           (entry as SponsorVideo).advertiser_id = m.advertiser_id ?? undefined;
@@ -98,7 +106,7 @@ export async function enrichConfigWithAnalyticsMetadata(
             av.advertiser_id,
             COALESCE(
               v.metadata->>'analytics_category',
-              CASE WHEN av.advertiser_id IS NOT NULL THEN 'sponsor' ELSE NULL END
+              CASE WHEN av.advertiser_id IS NOT NULL THEN 'sponsor_neopro' ELSE NULL END
             ) as analytics_category
      FROM videos v
      LEFT JOIN advertiser_videos av ON av.video_id = v.id AND av.is_primary = true

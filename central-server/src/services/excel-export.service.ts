@@ -4,6 +4,7 @@
  */
 import ExcelJS from 'exceljs';
 import { query } from '../config/database';
+import { ALL_SPONSOR_CATEGORIES } from '../utils/sponsor-categories';
 
 
 export interface ExcelExportOptions {
@@ -826,7 +827,7 @@ class ExcelExportService {
       FROM videos v
       JOIN advertiser_videos av ON av.video_id = v.id AND av.advertiser_id = $1
       LEFT JOIN video_plays vp ON vp.video_id = v.id
-        AND vp.category = 'sponsor'
+        AND vp.category IN ${ALL_SPONSOR_CATEGORIES}
         AND vp.played_at >= $2
         AND vp.played_at <= $3::date + 1
       GROUP BY v.id, v.filename
