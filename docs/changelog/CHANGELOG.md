@@ -1,3 +1,9 @@
+## [3.113.4](https://github.com/Tallec7/neopro/compare/v3.113.3...v3.113.4) (2026-03-17)
+
+### Bug Fixes
+
+- **pi-socket:** video freeze on PC browser — Socket.IO resilience + reconnection ([ae17d84](https://github.com/Tallec7/neopro/commit/ae17d84c8f88f0b949bf8cb7ee5a7aacf23aaf05))
+
 ## [3.113.3](https://github.com/Tallec7/neopro/compare/v3.113.2...v3.113.3) (2026-03-17)
 
 ### Bug Fixes
