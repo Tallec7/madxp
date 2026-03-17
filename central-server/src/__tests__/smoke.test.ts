@@ -346,6 +346,9 @@ describe('Critical API routes are registered (not 404)', () => {
     { method: 'get' as const, path: '/api/campaigns/test-campaign-id/sites' },
     { method: 'get' as const, path: '/api/campaigns/test-campaign-id/stats' },
     { method: 'post' as const, path: '/api/campaigns/resolve-sites' },
+    // campaign.routes (ADR-035 Phase 3b — deployment)
+    { method: 'post' as const, path: '/api/campaigns/test-campaign-id/deploy' },
+    { method: 'post' as const, path: '/api/campaigns/test-campaign-id/undeploy' },
   ];
 
   test.each(criticalRoutes)(
@@ -10685,5 +10688,75 @@ describe('ADR-035 Phase 3: Campaign operational wiring', () => {
     expect(content).toContain('campaign_videos');
     expect(content).toContain('campaign_sites');
     expect(content).toContain('target_criteria');
+  });
+});
+
+// ----------------------------------------------------------
+// ADR-035 Phase 3b: Campaign auto-deployment wiring
+// ----------------------------------------------------------
+describe('ADR-035 Phase 3b: Campaign auto-deployment wiring', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+
+  it('campaign.controller exports deploy and undeploy handlers', async () => {
+    const controller = await import('../controllers/campaign.controller');
+    expect(controller).toHaveProperty('deployCampaign');
+    expect(typeof controller.deployCampaign).toBe('function');
+    expect(controller).toHaveProperty('undeployCampaign');
+    expect(typeof controller.undeployCampaign).toBe('function');
+  });
+
+  it('campaign.repository exports deployment methods (getActiveCampaignsForSite, listPendingSites, batchUpdateDeploymentStatus)', async () => {
+    const { campaignRepository } = await import('../repositories');
+    const repo = campaignRepository as unknown as Record<string, unknown>;
+    expect(typeof repo.getActiveCampaignsForSite).toBe('function');
+    expect(typeof repo.listPendingSites).toBe('function');
+    expect(typeof repo.batchUpdateDeploymentStatus).toBe('function');
+  });
+
+  it('campaign-deployment.service exports deployCampaign and undeployCampaign', async () => {
+    const service = await import('../services/campaign-deployment.service');
+    expect(typeof service.deployCampaign).toBe('function');
+    expect(typeof service.undeployCampaign).toBe('function');
+  });
+
+  it('enrichConfigWithCampaignVideos exists and is a function', async () => {
+    const { enrichConfigWithCampaignVideos } = await import('../utils/config-campaign-videos');
+    expect(typeof enrichConfigWithCampaignVideos).toBe('function');
+  });
+
+  it('config-sync.handler.ts imports enrichConfigWithCampaignVideos', () => {
+    const handlerContent = fs.readFileSync(
+      path.join(repoRoot, 'central-server/src/handlers/config-sync.handler.ts'), 'utf-8'
+    );
+    expect(handlerContent).toContain("import { enrichConfigWithCampaignVideos }");
+    expect(handlerContent).toContain('enrichConfigWithCampaignVideos');
+  });
+
+  it('campaign.routes.ts registers deploy and undeploy endpoints', () => {
+    const routesContent = fs.readFileSync(
+      path.join(repoRoot, 'central-server/src/routes/campaign.routes.ts'), 'utf-8'
+    );
+    expect(routesContent).toContain("/:id/deploy");
+    expect(routesContent).toContain("/:id/undeploy");
+    expect(routesContent).toContain('deployCampaign');
+    expect(routesContent).toContain('undeployCampaign');
+  });
+
+  it('SponsorVideo type includes campaign_id field', () => {
+    const typesContent = fs.readFileSync(
+      path.join(repoRoot, 'central-server/src/types/index.ts'), 'utf-8'
+    );
+    expect(typesContent).toContain('campaign_id?: string');
+  });
+
+  it('enrichConfigWithCampaignVideos must be called BEFORE autoResolveSponsorIds in the config sync pipeline', () => {
+    const handlerContent = fs.readFileSync(
+      path.join(repoRoot, 'central-server/src/handlers/config-sync.handler.ts'), 'utf-8'
+    );
+    const campaignIdx = handlerContent.indexOf('enrichConfigWithCampaignVideos');
+    const autoResolveIdx = handlerContent.indexOf('autoResolveSponsorIds(siteId');
+    expect(campaignIdx).toBeGreaterThan(0);
+    expect(autoResolveIdx).toBeGreaterThan(0);
+    expect(campaignIdx).toBeLessThan(autoResolveIdx);
   });
 });

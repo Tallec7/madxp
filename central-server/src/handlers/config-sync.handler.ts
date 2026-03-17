@@ -18,6 +18,7 @@ import { deploymentRepository } from '../repositories/deployment.repository';
 import { autoResolveSponsorIds } from '../services/sponsor-auto-resolution.service';
 import { enrichConfigWithSecondaryVariants } from '../utils/config-secondary-variants';
 import { enrichConfigWithAnalyticsMetadata } from '../utils/config-analytics-metadata';
+import { enrichConfigWithCampaignVideos } from '../utils/config-campaign-videos';
 import type { SiteConfiguration } from '../types';
 
 /** Payload shape for a local sponsor sent from Pi */
@@ -408,8 +409,26 @@ async function sendPendingConfigCommand(
     });
   }
 
-  // Auto-résolution : injecter site_sponsor_id dans toutes les vidéos de la config
+  // ADR-035 Phase 3b: Injecter les vidéos des campagnes actives ciblant ce site
   let enrichedConfiguration = configuration;
+  try {
+    const { injectedCount } = await enrichConfigWithCampaignVideos(
+      siteId,
+      enrichedConfiguration as SiteConfiguration
+    );
+    if (injectedCount > 0) {
+      logger.info('Campaign videos injected in pending config sync', {
+        siteId, injectedCount,
+      });
+    }
+  } catch (campaignError) {
+    logger.warn('Campaign video injection failed in pending config sync (non-fatal)', {
+      siteId,
+      error: (campaignError as Error).message,
+    });
+  }
+
+  // Auto-résolution : injecter site_sponsor_id dans toutes les vidéos de la config
   try {
     const { configuration: resolved, resolved: resolvedCount } =
       await autoResolveSponsorIds(siteId, configuration as SiteConfiguration);

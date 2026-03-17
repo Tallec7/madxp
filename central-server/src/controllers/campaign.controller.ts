@@ -3,6 +3,7 @@ import { AuthRequest } from '../types';
 import logger from '../config/logger';
 import { validate as validateUuid } from 'uuid';
 import { campaignRepository } from '../repositories';
+import { deployCampaign as deployCampaignService, undeployCampaign as undeployCampaignService } from '../services/campaign-deployment.service';
 
 // ============================================================================
 // CAMPAIGN CRUD
@@ -379,5 +380,60 @@ export const getCampaignStats = async (req: AuthRequest, res: Response): Promise
   } catch (error) {
     logger.error('Error getting campaign stats:', error);
     res.status(500).json({ success: false, error: 'Failed to get campaign stats' });
+  }
+};
+
+// ============================================================================
+// CAMPAIGN DEPLOYMENT (ADR-035 Phase 3b)
+// ============================================================================
+
+/**
+ * POST /api/campaigns/:id/deploy
+ * Activate a campaign and deploy its videos to all target sites.
+ */
+export const deployCampaign = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    if (!validateUuid(id)) {
+      res.status(400).json({ success: false, error: 'Invalid campaign ID' });
+      return;
+    }
+
+    const result = await deployCampaignService(id);
+
+    const httpStatus = result.status === 'failed' ? 500 : 200;
+    res.status(httpStatus).json({ success: result.status !== 'failed', data: result });
+  } catch (error) {
+    const message = (error as Error).message;
+    logger.error('Error deploying campaign:', error);
+
+    // Validation errors → 400, not 500
+    if (message.includes('not found') || message.includes('no videos') || message.includes('no target sites')) {
+      res.status(400).json({ success: false, error: message });
+      return;
+    }
+    res.status(500).json({ success: false, error: 'Failed to deploy campaign' });
+  }
+};
+
+/**
+ * POST /api/campaigns/:id/undeploy
+ * Pause a campaign and remove its videos from all target sites.
+ */
+export const undeployCampaign = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    if (!validateUuid(id)) {
+      res.status(400).json({ success: false, error: 'Invalid campaign ID' });
+      return;
+    }
+
+    const result = await undeployCampaignService(id);
+
+    const httpStatus = result.status === 'failed' ? 500 : 200;
+    res.status(httpStatus).json({ success: result.status !== 'failed', data: result });
+  } catch (error) {
+    logger.error('Error undeploying campaign:', error);
+    res.status(500).json({ success: false, error: 'Failed to undeploy campaign' });
   }
 };

@@ -16,6 +16,8 @@ import {
   removeCampaignSite,
   resolveSites,
   getCampaignStats,
+  deployCampaign,
+  undeployCampaign,
 } from '../controllers/campaign.controller';
 
 const router = express.Router();
@@ -51,6 +53,13 @@ router.delete('/:id/sites/:siteId', authenticate, requireRole('admin', 'operator
 // ============================================================================
 
 router.post('/resolve-sites', authenticate, requireRole('admin', 'operator'), apiRateLimit, resolveSites);
+
+// ============================================================================
+// CAMPAIGN DEPLOYMENT (ADR-035 Phase 3b)
+// ============================================================================
+
+router.post('/:id/deploy', authenticate, requireRole('admin', 'operator'), apiRateLimit, deployCampaign);
+router.post('/:id/undeploy', authenticate, requireRole('admin', 'operator'), apiRateLimit, undeployCampaign);
 
 // ============================================================================
 // CAMPAIGN STATS

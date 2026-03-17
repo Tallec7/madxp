@@ -163,7 +163,9 @@ video_plays
 **Risque** : Moyen — nécessite OTA Pi, rétrocompatibilité pendant la transition
 **Implémenté** : v3.113.5 (migration DB : `adr035-sponsor-category-split.sql`)
 
-### Phase 3 — Campagnes opérationnelles ✅ (3a: CRUD + targeting)
+### Phase 3 — Campagnes opérationnelles ✅ (3a: CRUD + targeting, 3b: auto-deploy)
+
+**Phase 3a — CRUD + targeting ✅** :
 
 - `campaign_videos` : table d'association vidéos-campagne (avec `weight`)
 - `campaign_sites` : table de sites résolus (remplace `target_sites UUID[]`)
@@ -175,13 +177,22 @@ video_plays
 - Repository + Controller + Routes enregistrés dans server.ts
 - Smoke tests : routes, repository wiring, schema guards
 
-**Reste à faire (3b-3d)** :
+**Phase 3b — Déploiement auto ✅** :
 
-- Déploiement auto : campagne active → déploie config sur les sites matchés
+- `enrichConfigWithCampaignVideos()` : injecte les vidéos des campagnes actives dans `sponsors[]` lors du déploiement config
+- Intégré dans le pipeline d'enrichissement config-sync (AVANT `autoResolveSponsorIds`)
+- `campaign_id` ajouté à `SponsorVideo` pour le tracking analytics côté Pi
+- `deployCampaign()` / `undeployCampaign()` : service de déploiement orchestré
+- `POST /api/campaigns/:id/deploy` + `POST /api/campaigns/:id/undeploy` : endpoints REST
+- Repository : `getActiveCampaignsForSite()`, `listPendingSites()`, `batchUpdateDeploymentStatus()`
+- Smoke tests : wiring, export guards, pipeline ordering
+
+**Reste à faire (3c-3d)** :
+
 - Dashboard Angular : composants campagne, onglet dans advertiser-detail
 - Portail annonceur dédié (distinct du portail sponsor local)
 
-**Effort** : ~1 semaine total (3a: 2h ✅, 3b-3d: restant)
+**Effort** : ~1 semaine total (3a: 2h ✅, 3b: 2h ✅, 3c-3d: restant)
 **Risque** : Moyen — nouveau workflow, tests E2E nécessaires
 **Implémenté (3a)** : v3.114.x (migration DB : `adr035-phase3-campaigns-operational.sql`)
 

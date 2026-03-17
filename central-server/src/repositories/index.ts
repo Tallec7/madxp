@@ -260,6 +260,7 @@ export {
   type CampaignWithDetails,
   type TargetCriteria,
   type ResolvedSiteRow,
+  type ActiveCampaignForSite,
 } from './campaign.repository';
 export {
   videoVariantRepository,

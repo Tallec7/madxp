@@ -107,6 +107,17 @@ export interface CampaignWithDetails extends CampaignRow {
   progress_percent: number | null;
 }
 
+export interface ActiveCampaignForSite extends QueryResultRow {
+  campaign_id: string;
+  advertiser_id: string;
+  campaign_name: string;
+  video_id: string;
+  weight: number;
+  filename: string;
+  original_name: string | null;
+  duration: number | null;
+}
+
 export interface ResolvedSiteRow extends QueryResultRow {
   id: string;
   site_name: string;
@@ -424,6 +435,73 @@ class CampaignRepository extends BaseRepository<CampaignRow> {
       [advertiserId]
     );
     return result.rows;
+  }
+
+  // ========================================================================
+  // Deployment (Phase 3b)
+  // ========================================================================
+
+  /**
+   * Get all active campaigns targeting a specific site, with their videos.
+   * Used during config enrichment to inject campaign videos into site configs.
+   */
+  async getActiveCampaignsForSite(siteId: string): Promise<ActiveCampaignForSite[]> {
+    const result = await query<ActiveCampaignForSite>(
+      `SELECT
+        c.id AS campaign_id,
+        c.advertiser_id,
+        c.name AS campaign_name,
+        cv.video_id,
+        cv.weight,
+        v.filename,
+        v.original_name,
+        v.duration
+      FROM campaigns c
+      JOIN campaign_sites cs ON cs.campaign_id = c.id
+      JOIN campaign_videos cv ON cv.campaign_id = c.id
+      JOIN videos v ON v.id = cv.video_id
+      WHERE c.status = 'active'
+        AND cs.site_id = $1
+        AND cs.deployment_status != 'removed'
+        AND (c.start_date IS NULL OR c.start_date <= CURRENT_DATE)
+        AND (c.end_date IS NULL OR c.end_date >= CURRENT_DATE)
+      ORDER BY c.id, cv.weight DESC`,
+      [siteId]
+    );
+    return result.rows;
+  }
+
+  /**
+   * Get all pending sites for a campaign (deployment_status = 'pending').
+   */
+  async listPendingSites(campaignId: string): Promise<CampaignSiteRow[]> {
+    const result = await query<CampaignSiteRow>(
+      `SELECT cs.*, s.site_name, s.club_name, s.status
+      FROM campaign_sites cs
+      JOIN sites s ON s.id = cs.site_id
+      WHERE cs.campaign_id = $1 AND cs.deployment_status = 'pending'
+      ORDER BY s.club_name ASC`,
+      [campaignId]
+    );
+    return result.rows;
+  }
+
+  /**
+   * Batch update deployment_status for multiple sites of a campaign.
+   */
+  async batchUpdateDeploymentStatus(
+    campaignId: string,
+    siteIds: string[],
+    status: string
+  ): Promise<void> {
+    if (siteIds.length === 0) return;
+    await query(
+      `UPDATE campaign_sites
+      SET deployment_status = $3,
+          deployed_at = CASE WHEN $3 = 'deployed' THEN NOW() ELSE deployed_at END
+      WHERE campaign_id = $1 AND site_id = ANY($2)`,
+      [campaignId, siteIds, status]
+    );
   }
 
   async getImpressionsByDay(campaignId: string, from?: string, to?: string): Promise<{ date: string; impressions: number }[]> {

@@ -480,6 +480,8 @@ export interface SponsorVideo {
   sponsor_id?: string;
   /** Catégorie analytics : sponsor, jingle, ambiance, other */
   analytics_category?: string;
+  /** UUID de la campagne associée (pour le tracking analytics côté Pi) */
+  campaign_id?: string;
   /** Poids de rotation (défaut 1). Plus le poids est élevé, plus la vidéo passe souvent. */
   weight?: number;
   /** Épinglée à sa position dans la boucle (ne participe pas au scheduling Bresenham) */
