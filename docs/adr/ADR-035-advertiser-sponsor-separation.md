@@ -187,12 +187,20 @@ video_plays
 - Repository : `getActiveCampaignsForSite()`, `listPendingSites()`, `batchUpdateDeploymentStatus()`
 - Smoke tests : wiring, export guards, pipeline ordering
 
-**Reste à faire (3c-3d)** :
+**Phase 3c — Dashboard Angular ✅** :
 
-- Dashboard Angular : composants campagne, onglet dans advertiser-detail
+- Onglet "Campagnes" dans advertiser-detail avec liste, stats, deploy/undeploy
+- CRUD campagne (create/edit/delete) via modal integre
+- Boutons "Deployer" / "Mettre en pause" appelant `/deploy` et `/undeploy`
+- Status badges (draft/active/paused/completed/failed)
+- Stats inline : videos, sites, impressions, progression, budget
+- Smoke tests : wiring, API calls
+
+**Reste à faire (3d)** :
+
 - Portail annonceur dédié (distinct du portail sponsor local)
 
-**Effort** : ~1 semaine total (3a: 2h ✅, 3b: 2h ✅, 3c-3d: restant)
+**Effort** : ~1 semaine total (3a: 2h ✅, 3b: 2h ✅, 3c: 1h ✅, 3d: restant)
 **Risque** : Moyen — nouveau workflow, tests E2E nécessaires
 **Implémenté (3a)** : v3.114.x (migration DB : `adr035-phase3-campaigns-operational.sql`)
 

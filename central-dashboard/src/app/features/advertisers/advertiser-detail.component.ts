@@ -58,6 +58,32 @@ interface SponsorVideo {
   total_screen_time?: number;
 }
 
+interface Campaign {
+  id: string;
+  name: string;
+  campaign_type?: string;
+  target_impressions?: number;
+  budget_cents?: number;
+  target_cpm_cents?: number;
+  status: string;
+  start_date?: string;
+  end_date?: string;
+  videos_count?: number;
+  sites_count?: number;
+  total_impressions?: number;
+  progress_percent?: number;
+  created_at: string;
+  updated_at: string;
+}
+
+interface CampaignSite {
+  site_id: string;
+  site_name: string;
+  club_name: string;
+  deployment_status: string;
+  deployed_at?: string;
+}
+
 @Component({
   selector: 'app-sponsor-detail',
   standalone: true,
@@ -127,6 +153,13 @@ interface SponsorVideo {
           (click)="switchToSitesTab()"
         >
           🏟️ Sites ({{ assignedSites.length }})
+        </button>
+        <button
+          class="tab-btn"
+          [class.active]="activeTab === 'campaigns'"
+          (click)="switchToCampaignsTab()"
+        >
+          📢 Campagnes ({{ campaigns.length }})
         </button>
       </div>
 
@@ -336,6 +369,195 @@ interface SponsorVideo {
               </div>
             </div>
           </div>
+        </div>
+
+        <!-- Campaigns Tab -->
+        <div *ngIf="activeTab === 'campaigns'" class="campaigns-tab">
+          <div class="campaigns-header">
+            <h2>Campagnes ({{ campaigns.length }})</h2>
+            <button class="btn btn-primary" (click)="openCampaignModal()">
+              + Nouvelle campagne
+            </button>
+          </div>
+
+          <div *ngIf="loadingCampaigns" class="loading">
+            <div class="spinner"></div>
+            <p>Chargement des campagnes...</p>
+          </div>
+
+          <div *ngIf="!loadingCampaigns && campaigns.length === 0" class="empty-state">
+            <p>Aucune campagne pour cet annonceur</p>
+            <p class="empty-hint">Creez une campagne pour deployer des videos sur les clubs cibles</p>
+            <button class="btn btn-primary" (click)="openCampaignModal()">
+              Creer une campagne
+            </button>
+          </div>
+
+          <div *ngIf="!loadingCampaigns && campaigns.length > 0" class="campaigns-list">
+            <div *ngFor="let campaign of campaigns" class="campaign-card">
+              <div class="campaign-card-header">
+                <div class="campaign-title-row">
+                  <h4>{{ campaign.name }}</h4>
+                  <span class="campaign-status" [class]="'cs-' + campaign.status">
+                    {{ getCampaignStatusLabel(campaign.status) }}
+                  </span>
+                </div>
+                <div class="campaign-meta">
+                  <span *ngIf="campaign.start_date">{{ formatDate(campaign.start_date) }} → {{ formatDate(campaign.end_date) || '...' }}</span>
+                  <span *ngIf="campaign.campaign_type && campaign.campaign_type !== 'standard'">{{ campaign.campaign_type }}</span>
+                </div>
+              </div>
+
+              <div class="campaign-stats-row">
+                <div class="campaign-stat">
+                  <span class="cs-value">{{ campaign.videos_count || 0 }}</span>
+                  <span class="cs-label">Videos</span>
+                </div>
+                <div class="campaign-stat">
+                  <span class="cs-value">{{ campaign.sites_count || 0 }}</span>
+                  <span class="cs-label">Sites</span>
+                </div>
+                <div class="campaign-stat">
+                  <span class="cs-value">{{ (campaign.total_impressions || 0).toLocaleString() }}</span>
+                  <span class="cs-label">Impressions</span>
+                </div>
+                <div class="campaign-stat" *ngIf="campaign.target_impressions">
+                  <span class="cs-value">{{ campaign.progress_percent || 0 }}%</span>
+                  <span class="cs-label">Progression</span>
+                </div>
+                <div class="campaign-stat" *ngIf="campaign.budget_cents">
+                  <span class="cs-value">{{ (campaign.budget_cents / 100).toFixed(0) }} EUR</span>
+                  <span class="cs-label">Budget</span>
+                </div>
+              </div>
+
+              <div class="campaign-actions-row">
+                <button
+                  *ngIf="campaign.status !== 'active'"
+                  class="btn btn-sm btn-primary"
+                  (click)="deployCampaignAction(campaign.id)"
+                  [disabled]="deployingCampaign === campaign.id"
+                >
+                  {{ deployingCampaign === campaign.id ? 'Deploiement...' : 'Deployer' }}
+                </button>
+                <button
+                  *ngIf="campaign.status === 'active'"
+                  class="btn btn-sm btn-warning"
+                  (click)="undeployCampaignAction(campaign.id)"
+                  [disabled]="deployingCampaign === campaign.id"
+                >
+                  {{ deployingCampaign === campaign.id ? 'Arret...' : 'Mettre en pause' }}
+                </button>
+                <button
+                  class="btn btn-sm btn-secondary"
+                  (click)="editCampaign(campaign)"
+                >
+                  Editer
+                </button>
+                <button
+                  class="btn btn-sm btn-danger"
+                  (click)="deleteCampaign(campaign.id)"
+                  [disabled]="removingCampaign === campaign.id"
+                >
+                  {{ removingCampaign === campaign.id ? '...' : 'Supprimer' }}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Campaign Create/Edit Modal -->
+      <div class="modal-overlay" *ngIf="showCampaignModal" (click)="closeCampaignModal()">
+        <div class="modal modal-lg" (click)="$event.stopPropagation()">
+          <div class="modal-header">
+            <h2>{{ isEditingCampaign ? 'Modifier' : 'Nouvelle' }} campagne</h2>
+            <button class="close-btn" (click)="closeCampaignModal()">x</button>
+          </div>
+
+          <form (submit)="saveCampaign($event)" class="modal-form">
+            <div class="modal-body">
+              <div class="form-group">
+                <label>Nom *</label>
+                <input
+                  type="text"
+                  [(ngModel)]="campaignForm.name"
+                  name="campaignName"
+                  required
+                  placeholder="Promotion ete 2026"
+                />
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Type</label>
+                  <select [(ngModel)]="campaignForm.campaign_type" name="campaignType">
+                    <option value="standard">Standard</option>
+                    <option value="exclusive">Exclusive</option>
+                    <option value="seasonal">Saisonniere</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label>Impressions cibles</label>
+                  <input
+                    type="number"
+                    [(ngModel)]="campaignForm.target_impressions"
+                    name="targetImpressions"
+                    placeholder="10000"
+                  />
+                </div>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Budget (EUR)</label>
+                  <input
+                    type="number"
+                    [(ngModel)]="campaignForm.budget_cents"
+                    name="budgetCents"
+                    placeholder="500"
+                  />
+                </div>
+                <div class="form-group">
+                  <label>CPM cible (centimes)</label>
+                  <input
+                    type="number"
+                    [(ngModel)]="campaignForm.target_cpm_cents"
+                    name="targetCpm"
+                    placeholder="500"
+                  />
+                </div>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Date debut</label>
+                  <input
+                    type="date"
+                    [(ngModel)]="campaignForm.start_date"
+                    name="startDate"
+                  />
+                </div>
+                <div class="form-group">
+                  <label>Date fin</label>
+                  <input
+                    type="date"
+                    [(ngModel)]="campaignForm.end_date"
+                    name="endDate"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div class="modal-actions">
+              <button type="button" class="btn btn-secondary" (click)="closeCampaignModal()">
+                Annuler
+              </button>
+              <button type="submit" class="btn btn-primary" [disabled]="savingCampaign">
+                {{ savingCampaign ? 'Enregistrement...' : 'Enregistrer' }}
+              </button>
+            </div>
+          </form>
         </div>
       </div>
 
@@ -1333,6 +1555,121 @@ interface SponsorVideo {
       margin-bottom: 1.5rem;
     }
 
+    /* Campaigns Tab */
+    .campaigns-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.5rem;
+    }
+
+    .campaigns-header h2 {
+      margin: 0;
+      font-size: 1.5rem;
+    }
+
+    .campaigns-list {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .campaign-card {
+      background: white;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 1.25rem;
+      transition: box-shadow 0.2s;
+    }
+
+    .campaign-card:hover {
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    }
+
+    .campaign-card-header {
+      margin-bottom: 1rem;
+    }
+
+    .campaign-title-row {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 0.25rem;
+    }
+
+    .campaign-title-row h4 {
+      margin: 0;
+      font-size: 1.1rem;
+      color: #111827;
+    }
+
+    .campaign-status {
+      display: inline-block;
+      padding: 0.2rem 0.6rem;
+      border-radius: 10px;
+      font-size: 0.75rem;
+      font-weight: 500;
+    }
+
+    .cs-draft { background: #f3f4f6; color: #6b7280; }
+    .cs-active { background: #dcfce7; color: #166534; }
+    .cs-paused { background: #fef3c7; color: #92400e; }
+    .cs-completed { background: #d1fae5; color: #065f46; }
+    .cs-failed { background: #fee2e2; color: #991b1b; }
+
+    .campaign-meta {
+      font-size: 0.85rem;
+      color: #6b7280;
+      display: flex;
+      gap: 1rem;
+    }
+
+    .campaign-stats-row {
+      display: flex;
+      gap: 1.5rem;
+      margin-bottom: 1rem;
+      padding: 0.75rem;
+      background: #f9fafb;
+      border-radius: 6px;
+    }
+
+    .campaign-stat {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .cs-value {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: #111827;
+    }
+
+    .cs-label {
+      font-size: 0.75rem;
+      color: #6b7280;
+    }
+
+    .campaign-actions-row {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    .btn-warning {
+      background: #f59e0b;
+      color: white;
+      border: none;
+      padding: 0.5rem 1rem;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      transition: background 0.2s;
+    }
+
+    .btn-warning:hover {
+      background: #d97706;
+    }
+
     @media (max-width: 768px) {
       .sponsor-detail-container {
         padding: 1rem;
@@ -1362,7 +1699,7 @@ export class SponsorDetailComponent implements OnInit {
   sponsorVideos: SponsorVideo[] = [];
   quickStats: any = null;
 
-  activeTab: 'info' | 'videos' | 'analytics' | 'sites' = 'info';
+  activeTab: 'info' | 'videos' | 'analytics' | 'sites' | 'campaigns' = 'info';
   loading = false;
   error = '';
 
@@ -1394,6 +1731,16 @@ export class SponsorDetailComponent implements OnInit {
   siteSearchTerm = '';
   loadingAvailableSites = false;
   assigningSites = false;
+
+  // Campaigns Tab
+  campaigns: Campaign[] = [];
+  loadingCampaigns = false;
+  deployingCampaign: string | null = null;
+  removingCampaign: string | null = null;
+  showCampaignModal = false;
+  isEditingCampaign = false;
+  savingCampaign = false;
+  campaignForm: Partial<Campaign> = {};
 
   editForm: Partial<Sponsor> = {};
 
@@ -1731,6 +2078,161 @@ export class SponsorDetailComponent implements OnInit {
           this.removingSite = null;
         }
       });
+  }
+
+  // ========================================================================
+  // Campaign Management (ADR-035 Phase 3c)
+  // ========================================================================
+
+  switchToCampaignsTab(): void {
+    this.activeTab = 'campaigns';
+    if (this.campaigns.length === 0 && !this.loadingCampaigns) {
+      this.loadCampaigns();
+    }
+  }
+
+  loadCampaigns(): void {
+    this.loadingCampaigns = true;
+
+    this.api.get<{ success: boolean; data: { campaigns: Campaign[] } }>(
+      '/campaigns', { advertiser_id: this.sponsorId }
+    ).subscribe({
+      next: (response) => {
+        this.campaigns = response.data?.campaigns || [];
+      },
+      error: () => {
+        this.notification.error('Erreur lors du chargement des campagnes');
+      },
+      complete: () => {
+        this.loadingCampaigns = false;
+      }
+    });
+  }
+
+  openCampaignModal(): void {
+    this.isEditingCampaign = false;
+    this.campaignForm = { campaign_type: 'standard' };
+    this.showCampaignModal = true;
+  }
+
+  editCampaign(campaign: Campaign): void {
+    this.isEditingCampaign = true;
+    this.campaignForm = { ...campaign };
+    this.showCampaignModal = true;
+  }
+
+  closeCampaignModal(): void {
+    this.showCampaignModal = false;
+    this.campaignForm = {};
+  }
+
+  saveCampaign(event: Event): void {
+    event.preventDefault();
+    if (!this.campaignForm.name) {
+      this.notification.error('Le nom de la campagne est requis');
+      return;
+    }
+
+    this.savingCampaign = true;
+
+    const payload = {
+      ...this.campaignForm,
+      advertiser_id: this.sponsorId,
+    };
+
+    const request$ = this.isEditingCampaign
+      ? this.api.put<{ success: boolean }>(`/campaigns/${this.campaignForm.id}`, payload)
+      : this.api.post<{ success: boolean }>('/campaigns', payload);
+
+    request$.subscribe({
+      next: () => {
+        this.notification.success(
+          this.isEditingCampaign ? 'Campagne mise a jour' : 'Campagne creee'
+        );
+        this.closeCampaignModal();
+        this.loadCampaigns();
+      },
+      error: () => {
+        this.notification.error('Erreur lors de l\'enregistrement');
+      },
+      complete: () => {
+        this.savingCampaign = false;
+      }
+    });
+  }
+
+  async deleteCampaign(campaignId: string): Promise<void> {
+    const ok = await this.confirmDialog.confirm(
+      'Supprimer cette campagne ? Les videos ne seront plus deployees sur les sites cibles.',
+      { title: 'Supprimer la campagne', confirmLabel: 'Supprimer', confirmStyle: 'danger' }
+    );
+    if (!ok) return;
+
+    this.removingCampaign = campaignId;
+
+    this.api.delete<{ success: boolean }>(`/campaigns/${campaignId}`).subscribe({
+      next: () => {
+        this.campaigns = this.campaigns.filter(c => c.id !== campaignId);
+        this.notification.success('Campagne supprimee');
+      },
+      error: () => {
+        this.notification.error('Erreur lors de la suppression');
+      },
+      complete: () => {
+        this.removingCampaign = null;
+      }
+    });
+  }
+
+  deployCampaignAction(campaignId: string): void {
+    this.deployingCampaign = campaignId;
+
+    this.api.post<{ success: boolean; data: { sitesTriggered: number } }>(
+      `/campaigns/${campaignId}/deploy`, {}
+    ).subscribe({
+      next: (response) => {
+        const count = response.data?.sitesTriggered || 0;
+        this.notification.success(`Campagne deployee sur ${count} site(s)`);
+        this.loadCampaigns();
+      },
+      error: () => {
+        this.notification.error('Erreur lors du deploiement');
+      },
+      complete: () => {
+        this.deployingCampaign = null;
+      }
+    });
+  }
+
+  undeployCampaignAction(campaignId: string): void {
+    this.deployingCampaign = campaignId;
+
+    this.api.post<{ success: boolean; data: { sitesTriggered: number } }>(
+      `/campaigns/${campaignId}/undeploy`, {}
+    ).subscribe({
+      next: (response) => {
+        const count = response.data?.sitesTriggered || 0;
+        this.notification.success(`Campagne mise en pause (${count} site(s) mis a jour)`);
+        this.loadCampaigns();
+      },
+      error: () => {
+        this.notification.error('Erreur lors de la mise en pause');
+      },
+      complete: () => {
+        this.deployingCampaign = null;
+      }
+    });
+  }
+
+  getCampaignStatusLabel(status: string): string {
+    const labels: Record<string, string> = {
+      draft: 'Brouillon',
+      active: 'Active',
+      paused: 'En pause',
+      completed: 'Terminee',
+      failed: 'Echouee',
+    };
+    return labels[status] || status;
   }
 
   formatVideoDuration(seconds: number): string {

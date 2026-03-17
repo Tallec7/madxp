@@ -10760,3 +10760,41 @@ describe('ADR-035 Phase 3b: Campaign auto-deployment wiring', () => {
     expect(campaignIdx).toBeLessThan(autoResolveIdx);
   });
 });
+
+// ----------------------------------------------------------
+// ADR-035 Phase 3c: Campaign dashboard components
+// ----------------------------------------------------------
+describe('ADR-035 Phase 3c: Campaign dashboard components', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+
+  it('advertiser-detail.component.ts includes campaigns tab', () => {
+    const content = fs.readFileSync(
+      path.join(repoRoot, 'central-dashboard/src/app/features/advertisers/advertiser-detail.component.ts'), 'utf-8'
+    );
+    expect(content).toContain("activeTab === 'campaigns'");
+    expect(content).toContain('switchToCampaignsTab');
+    expect(content).toContain('loadCampaigns');
+    expect(content).toContain('deployCampaignAction');
+    expect(content).toContain('undeployCampaignAction');
+  });
+
+  it('advertiser-detail.component.ts has campaign CRUD methods', () => {
+    const content = fs.readFileSync(
+      path.join(repoRoot, 'central-dashboard/src/app/features/advertisers/advertiser-detail.component.ts'), 'utf-8'
+    );
+    expect(content).toContain('openCampaignModal');
+    expect(content).toContain('saveCampaign');
+    expect(content).toContain('deleteCampaign');
+    expect(content).toContain('editCampaign');
+    expect(content).toContain('closeCampaignModal');
+  });
+
+  it('advertiser-detail.component.ts calls /campaigns API endpoints', () => {
+    const content = fs.readFileSync(
+      path.join(repoRoot, 'central-dashboard/src/app/features/advertisers/advertiser-detail.component.ts'), 'utf-8'
+    );
+    expect(content).toContain("'/campaigns'");
+    expect(content).toContain('/campaigns/${campaignId}/deploy');
+    expect(content).toContain('/campaigns/${campaignId}/undeploy');
+  });
+});
