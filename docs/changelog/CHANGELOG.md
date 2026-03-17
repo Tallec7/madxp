@@ -2,6 +2,12 @@
 
 ### Bug Fixes
 
+- **analytics:** null tv_power classified as disconnected — all analytics lost for PC-only sites ([80f55a8](https://github.com/Tallec7/neopro/commit/80f55a804773623feb125f5c7769966022d39289))
+
+## [3.113.5](https://github.com/Tallec7/neopro/compare/v3.113.4...v3.113.5) (2026-03-17)
+
+### Bug Fixes
+
 - **analytics:** `getTvStatusForAnalytics()` returned `'disconnected'` when `tv_power` was `null` (CEC adapter present but unable to query TV — no HDMI cable, PC-only usage, ioctl error). The analytics guard then silently dropped ALL events. Now returns `'unknown'` when `tv_power` is `null`, allowing analytics to pass through. Affected all sites without physical HDMI connection (PC browser access, monitors without CEC).
 
 ### Smoke Tests
