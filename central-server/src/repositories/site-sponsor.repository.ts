@@ -10,7 +10,6 @@ import { ALL_SPONSOR_CATEGORIES } from '../utils/sponsor-categories';
 export interface SiteSponsorRow extends QueryResultRow {
   id: string;
   site_id: string;
-  advertiser_id: string | null;
   name: string;
   contact_name: string | null;
   contact_email: string | null;
@@ -28,7 +27,6 @@ export interface SiteSponsorRow extends QueryResultRow {
 export interface SiteSponsorListRow extends QueryResultRow {
   id: string;
   site_id: string;
-  advertiser_id: string | null;
   name: string;
   contact_name: string | null;
   contact_email: string | null;
@@ -45,7 +43,6 @@ export interface SiteSponsorListRow extends QueryResultRow {
 
 export interface CreateSiteSponsorInput {
   siteId: string;
-  advertiserId?: string | null;
   name: string;
   contactName?: string | null;
   contactEmail?: string | null;
@@ -202,7 +199,6 @@ class SiteSponsorRepositoryImpl extends BaseRepository<SiteSponsorRow> {
       `SELECT
         ss.id,
         ss.site_id,
-        ss.advertiser_id,
         ss.name,
         ss.contact_name,
         ss.contact_email,
@@ -257,20 +253,6 @@ class SiteSponsorRepositoryImpl extends BaseRepository<SiteSponsorRow> {
   }
 
   /**
-   * Trouve un site_sponsor par couple (advertiser_id, site_id).
-   * Utilisé pour l'auto-création / résolution.
-   */
-  async findByAdvertiserAndSite(advertiserId: string, siteId: string): Promise<SiteSponsorRow | null> {
-    const result = await query<SiteSponsorRow>(
-      `SELECT *
-       FROM site_sponsors
-       WHERE advertiser_id = $1 AND site_id = $2`,
-      [advertiserId, siteId]
-    );
-    return result.rows[0] || null;
-  }
-
-  /**
    * Trouve un sponsor local par nom (case-insensitive, trimmed) et site_id.
    * Utilisé pour la résolution idempotente des sponsors créés sur le Pi.
    */
@@ -292,13 +274,12 @@ class SiteSponsorRepositoryImpl extends BaseRepository<SiteSponsorRow> {
   async create(input: CreateSiteSponsorInput): Promise<SiteSponsorRow> {
     const result = await query<SiteSponsorRow>(
       `INSERT INTO site_sponsors
-        (site_id, advertiser_id, name, contact_name, contact_email, contact_phone,
+        (site_id, name, contact_name, contact_email, contact_phone,
          logo_url, contract_amount, contract_start, contract_end, metadata)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
        RETURNING *`,
       [
         input.siteId,
-        input.advertiserId || null,
         input.name,
         input.contactName || null,
         input.contactEmail || null,
@@ -571,51 +552,8 @@ class SiteSponsorRepositoryImpl extends BaseRepository<SiteSponsorRow> {
     return result.rows;
   }
 
-  /**
-   * Liste tous les site_sponsors pour un advertiser (tous sites confondus).
-   * Utile pour le portail annonceur.
-   */
-  async listByAdvertiser(advertiserId: string): Promise<SiteSponsorListRow[]> {
-    const result = await query<SiteSponsorListRow>(
-      `SELECT
-        ss.id,
-        ss.site_id,
-        ss.advertiser_id,
-        ss.name,
-        ss.contact_name,
-        ss.contact_email,
-        ss.logo_url,
-        ss.contract_amount,
-        ss.contract_start,
-        ss.contract_end,
-        ss.status,
-        ss.created_at,
-        COUNT(DISTINCT ssv.id)::text as video_count,
-        COALESCE(imp.cnt, 0)::text as total_impressions
-       FROM site_sponsors ss
-       LEFT JOIN site_sponsor_videos ssv ON ssv.site_sponsor_id = ss.id
-       LEFT JOIN (
-         SELECT ss_id, COUNT(*) as cnt
-         FROM (
-           SELECT site_sponsor_id AS ss_id
-           FROM video_plays
-           WHERE site_sponsor_id IS NOT NULL AND category IN ${ALL_SPONSOR_CATEGORIES}
-           UNION ALL
-           SELECT ssv.site_sponsor_id AS ss_id
-           FROM video_plays vp
-           JOIN site_sponsor_videos ssv ON ssv.video_filename = vp.video_filename
-           JOIN site_sponsors ss2 ON ss2.id = ssv.site_sponsor_id AND ss2.site_id = vp.site_id
-           WHERE vp.site_sponsor_id IS NULL AND vp.category IN ${ALL_SPONSOR_CATEGORIES}
-         ) resolved
-         GROUP BY ss_id
-       ) imp ON imp.ss_id = ss.id
-       WHERE ss.advertiser_id = $1
-       GROUP BY ss.id, imp.cnt
-       ORDER BY ss.name ASC`,
-      [advertiserId]
-    );
-    return result.rows;
-  }
+  // ADR-035 Phase 4: listByAdvertiser supprimé — site_sponsors n'a plus de lien advertiser.
+  // Les stats réseau annonceur passent par video_plays.sponsor_id directement.
 
   // ========================================================================
   // Stats by Event Type (P2 — Rapports PDF)
@@ -682,11 +620,10 @@ class SiteSponsorRepositoryImpl extends BaseRepository<SiteSponsorRow> {
            THEN ROUND(SUM(CASE WHEN vp.completed THEN 1 ELSE 0 END)::numeric / COUNT(*) * 100, 1)::text
            ELSE '0' END AS completion_rate,
          COALESCE(SUM(vp.audience_estimate), 0)::text AS estimated_reach,
-         COUNT(DISTINCT ss.site_id)::text AS active_sites,
+         COUNT(DISTINCT vp.site_id)::text AS active_sites,
          COUNT(DISTINCT DATE(vp.played_at))::text AS active_days
        FROM video_plays vp
-       JOIN site_sponsors ss ON ss.id = vp.site_sponsor_id
-       WHERE ss.advertiser_id = $1
+       WHERE vp.sponsor_id = $1
          AND vp.category IN ${ALL_SPONSOR_CATEGORIES}
          AND vp.played_at >= $2::date
          AND vp.played_at < ($3::date + INTERVAL '1 day')`,
@@ -699,7 +636,7 @@ class SiteSponsorRepositoryImpl extends BaseRepository<SiteSponsorRow> {
   ): Promise<{ rows: NetworkSiteBreakdownRow[] }> {
     return query<NetworkSiteBreakdownRow>(
       `SELECT
-         ss.site_id,
+         vp.site_id,
          s.site_name,
          s.club_name,
          COUNT(*)::text AS impressions,
@@ -708,13 +645,12 @@ class SiteSponsorRepositoryImpl extends BaseRepository<SiteSponsorRow> {
            THEN ROUND(SUM(CASE WHEN vp.completed THEN 1 ELSE 0 END)::numeric / COUNT(*) * 100, 1)::text
            ELSE '0' END AS completion_rate
        FROM video_plays vp
-       JOIN site_sponsors ss ON ss.id = vp.site_sponsor_id
-       JOIN sites s ON s.id = ss.site_id
-       WHERE ss.advertiser_id = $1
+       JOIN sites s ON s.id = vp.site_id
+       WHERE vp.sponsor_id = $1
          AND vp.category IN ${ALL_SPONSOR_CATEGORIES}
          AND vp.played_at >= $2::date
          AND vp.played_at < ($3::date + INTERVAL '1 day')
-       GROUP BY ss.site_id, s.site_name, s.club_name
+       GROUP BY vp.site_id, s.site_name, s.club_name
        ORDER BY impressions DESC`,
       [advertiserId, from, to]
     );
@@ -729,8 +665,7 @@ class SiteSponsorRepositoryImpl extends BaseRepository<SiteSponsorRow> {
          COUNT(*)::text AS impressions,
          COALESCE(SUM(vp.duration_played), 0)::text AS screen_time
        FROM video_plays vp
-       JOIN site_sponsors ss ON ss.id = vp.site_sponsor_id
-       WHERE ss.advertiser_id = $1
+       WHERE vp.sponsor_id = $1
          AND vp.category IN ${ALL_SPONSOR_CATEGORIES}
          AND vp.played_at >= $2::date
          AND vp.played_at < ($3::date + INTERVAL '1 day')
@@ -749,8 +684,7 @@ class SiteSponsorRepositoryImpl extends BaseRepository<SiteSponsorRow> {
          COUNT(*)::text AS count,
          COALESCE(SUM(vp.duration_played), 0)::text AS total_screen_time
        FROM video_plays vp
-       JOIN site_sponsors ss ON ss.id = vp.site_sponsor_id
-       WHERE ss.advertiser_id = $1
+       WHERE vp.sponsor_id = $1
          AND vp.category IN ${ALL_SPONSOR_CATEGORIES}
          AND vp.played_at >= $2::date
          AND vp.played_at < ($3::date + INTERVAL '1 day')

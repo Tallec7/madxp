@@ -2,7 +2,8 @@ import { Response } from 'express';
 import { AuthRequest } from '../types';
 import logger from '../config/logger';
 import { validate as validateUuid } from 'uuid';
-import { siteSponsorRepository, NetworkSiteBreakdownRow, NetworkDailyTrendRow, NetworkEventTypeRow, SiteBenchmarkRow, SiteSponsorListRow } from '../repositories/site-sponsor.repository';
+import { siteSponsorRepository, NetworkSiteBreakdownRow, NetworkDailyTrendRow, NetworkEventTypeRow, SiteBenchmarkRow } from '../repositories/site-sponsor.repository';
+import { campaignRepository } from '../repositories/campaign.repository';
 import { siteRepository } from '../repositories';
 import { sponsorAccessService } from '../services/sponsor-access.service';
 import { emailService } from '../services/email.service';
@@ -484,14 +485,14 @@ export const getNetworkSponsorStats = async (req: AuthRequest, res: Response): P
       completion_rate: '0', estimated_reach: '0', active_sites: '0', active_days: '0',
     };
 
-    // P6.3: CPI reseau — somme des contract_amount / total impressions
-    const sponsorRows = await siteSponsorRepository.listByAdvertiser(advertiserId);
-    const totalContractAmount = sponsorRows.reduce((sum: number, s: SiteSponsorListRow) => {
-      return sum + (s.contract_amount ? Number(s.contract_amount) : 0);
+    // P6.3: CPI reseau — somme budget campagnes / total impressions (ADR-035 Phase 4)
+    const campaigns = await campaignRepository.listByAdvertiser(advertiserId);
+    const totalBudgetCents = campaigns.reduce((sum: number, c) => {
+      return sum + (c.budget_cents ? Number(c.budget_cents) : 0);
     }, 0);
     const totalImpressions = Number(summary.total_impressions) || 0;
-    const cpi = totalContractAmount > 0 && totalImpressions > 0
-      ? totalContractAmount / totalImpressions
+    const cpi = totalBudgetCents > 0 && totalImpressions > 0
+      ? (totalBudgetCents / 100) / totalImpressions
       : null;
 
     res.json({

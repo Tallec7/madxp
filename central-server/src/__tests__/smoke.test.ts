@@ -10939,6 +10939,33 @@ describe('ADR-035 Phase 4: Cleanup — neopro bridge removed', () => {
     }
   });
 
+  test('site-sponsor.repository.ts does NOT reference advertiser_id column', () => {
+    const repoSrc = fs.readFileSync(
+      path.join(repoRoot, 'central-server/src/repositories/site-sponsor.repository.ts'),
+      'utf-8'
+    );
+    // ADR-035 Phase 4: advertiser_id column removed from site_sponsors table
+    // All queries should use video_plays.sponsor_id directly instead
+    expect(repoSrc).not.toContain('ss.advertiser_id');
+    expect(repoSrc).not.toContain('findByAdvertiserAndSite');
+    // The INSERT should not reference advertiser_id
+    const createMatch = repoSrc.match(/INSERT INTO site_sponsors\s*\(([^)]+)\)/);
+    if (createMatch) {
+      expect(createMatch[1]).not.toContain('advertiser_id');
+    }
+    // Interfaces should not have advertiser_id
+    expect(repoSrc).not.toContain('advertiser_id:');
+  });
+
+  test('site-sponsor.repository.ts network stats query video_plays.sponsor_id directly', () => {
+    const repoSrc = fs.readFileSync(
+      path.join(repoRoot, 'central-server/src/repositories/site-sponsor.repository.ts'),
+      'utf-8'
+    );
+    // After Phase 4, network stats bypass site_sponsors JOIN and query video_plays directly
+    expect(repoSrc).toContain('vp.sponsor_id = $1');
+  });
+
   test('orchestrated-deployment.service.ts does NOT map source field', () => {
     const svcSrc = fs.readFileSync(
       path.join(repoRoot, 'central-server/src/services/orchestrated-deployment.service.ts'),
