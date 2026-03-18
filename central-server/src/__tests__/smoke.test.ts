@@ -11023,3 +11023,115 @@ describe('ADR-035 Phase 4: Cleanup — neopro bridge removed', () => {
     expect(campaignIdx).toBeLessThan(resolveIdx);
   });
 });
+
+// Advertiser video display field alignment guard
+// ----------------------------------------------------------
+// The advertiser-detail template MUST use the actual API fields from
+// advertiser.repository.getVideos (filename, original_name, duration, added_at, file_size),
+// NOT phantom fields (video_title, video_duration, total_impressions, total_screen_time, priority, associated_at).
+// Misalignment produces NaN/empty display — see v3.115.1 fix.
+describe('Advertiser video display: template-API field alignment guard', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+
+  it('advertiser-detail videos tab uses actual API fields (original_name, filename, duration, added_at)', () => {
+    const content = fs.readFileSync(
+      path.join(repoRoot, 'central-dashboard/src/app/features/advertisers/advertiser-detail.component.ts'), 'utf-8'
+    );
+
+    // Template MUST reference actual API fields
+    expect(content).toContain('video.original_name');
+    expect(content).toContain('video.filename');
+    expect(content).toContain('video.added_at');
+
+    // Template MUST NOT use phantom fields that don't exist in the API
+    // video.video_title as standalone display (not fallback) would mean mismatch
+    const videosTabMatch = content.match(/<!-- Videos Tab -->[\s\S]*?<!-- Analytics Tab -->/);
+    expect(videosTabMatch).toBeTruthy();
+    const videosTab = videosTabMatch![0];
+
+    // These phantom fields must NOT appear as primary display in the videos tab
+    expect(videosTab).not.toMatch(/\{\{\s*video\.total_impressions/);
+    expect(videosTab).not.toMatch(/\{\{\s*video\.total_screen_time/);
+    // video_title can appear as fallback but not as sole display
+    expect(videosTab).not.toMatch(/\{\{\s*video\.video_title\s*\}\}/);
+  });
+
+  it('SponsorVideo interface includes actual API fields from advertiser.repository.getVideos', () => {
+    const content = fs.readFileSync(
+      path.join(repoRoot, 'central-dashboard/src/app/features/advertisers/advertiser-detail.component.ts'), 'utf-8'
+    );
+    const ifaceMatch = content.match(/interface SponsorVideo \{[\s\S]*?\n\}/);
+    expect(ifaceMatch).toBeTruthy();
+    const iface = ifaceMatch![0];
+
+    // Must have actual API fields
+    expect(iface).toContain('filename');
+    expect(iface).toContain('original_name');
+    expect(iface).toContain('added_at');
+    expect(iface).toContain('duration');
+  });
+
+  it('advertiser.repository.getVideos returns fields that match frontend expectations', () => {
+    const repoSrc = fs.readFileSync(
+      path.join(repoRoot, 'central-server/src/repositories/advertiser.repository.ts'), 'utf-8'
+    );
+    // The SQL query must select these fields
+    expect(repoSrc).toContain('v.filename');
+    expect(repoSrc).toContain('v.original_name');
+    expect(repoSrc).toContain('v.duration');
+    expect(repoSrc).toContain('av.added_at');
+  });
+
+  it('formatDuration guards against NaN input', () => {
+    const content = fs.readFileSync(
+      path.join(repoRoot, 'central-dashboard/src/app/features/advertisers/advertiser-detail.component.ts'), 'utf-8'
+    );
+    const fnMatch = content.match(/formatDuration\(seconds: number\): string \{[\s\S]*?\n  \}/);
+    expect(fnMatch).toBeTruthy();
+    const fn = fnMatch![0];
+    // Must guard against NaN/falsy input
+    expect(fn).toMatch(/isNaN|!seconds/);
+  });
+});
+
+// Campaign deploy error messaging guard
+// ----------------------------------------------------------
+// The deployCampaignAction error handler MUST surface the specific server error
+// (no videos, no target sites, not found) — not a generic "Erreur lors du deploiement".
+// Generic messages hide actionable information from the user — see v3.115.1 fix.
+describe('Campaign deploy: meaningful error messages guard', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+
+  it('deployCampaignAction error handler checks for specific server error messages', () => {
+    const content = fs.readFileSync(
+      path.join(repoRoot, 'central-dashboard/src/app/features/advertisers/advertiser-detail.component.ts'), 'utf-8'
+    );
+    // Must check for the 3 specific error cases from campaign-deployment.service.ts
+    expect(content).toContain("'no videos'");
+    expect(content).toContain("'no target sites'");
+    expect(content).toContain("'not found'");
+    // Must access the server error message
+    expect(content).toMatch(/err\?\.error\?\.error|error\.error\.error/);
+  });
+
+  it('campaign-deployment.service.ts throws identifiable errors for each validation case', () => {
+    const serviceSrc = fs.readFileSync(
+      path.join(repoRoot, 'central-server/src/services/campaign-deployment.service.ts'), 'utf-8'
+    );
+    // Each validation case must throw with a recognizable message
+    expect(serviceSrc).toContain('no videos');
+    expect(serviceSrc).toContain('no target sites');
+    expect(serviceSrc).toContain('not found');
+  });
+
+  it('campaign.controller.ts maps validation errors to 400 status', () => {
+    const controllerSrc = fs.readFileSync(
+      path.join(repoRoot, 'central-server/src/controllers/campaign.controller.ts'), 'utf-8'
+    );
+    // Must check for all 3 validation patterns and return 400
+    expect(controllerSrc).toContain("'not found'");
+    expect(controllerSrc).toContain("'no videos'");
+    expect(controllerSrc).toContain("'no target sites'");
+    expect(controllerSrc).toContain('res.status(400)');
+  });
+});

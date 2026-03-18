@@ -50,16 +50,18 @@ interface Sponsor {
 
 interface SponsorVideo {
   video_id: string;
-  video_title: string;
-  video_duration: number;
-  priority: number;
-  associated_at: string;
-  total_impressions?: number;
-  total_screen_time?: number;
   // Champs bruts de l'API (advertiser.repository.getVideos)
-  filename?: string;
-  original_name?: string;
-  duration?: number;
+  filename: string;
+  original_name: string | null;
+  duration: number | null;
+  is_primary: boolean;
+  added_at: string;
+  thumbnail_url: string | null;
+  file_size: number | null;
+  // Champs legacy (compatibilité)
+  video_title?: string;
+  video_duration?: number;
+  associated_at?: string;
 }
 
 interface Campaign {
@@ -281,15 +283,13 @@ interface GroupOption {
           <div *ngIf="sponsorVideos.length > 0" class="videos-list">
             <div *ngFor="let video of sponsorVideos" class="video-item">
               <div class="video-info">
-                <h4>{{ video.video_title }}</h4>
+                <h4>{{ video.original_name || video.filename || video.video_title || 'Sans titre' }}</h4>
                 <div class="video-meta">
-                  <span>⏱️ {{ formatDuration(video.video_duration) }}</span>
-                  <span>📊 {{ video.total_impressions || 0 }} impressions</span>
-                  <span>🕐 {{ formatDuration(video.total_screen_time || 0) }} temps écran</span>
-                  <span>🔢 Priorité: {{ video.priority }}</span>
+                  <span *ngIf="video.duration || video.video_duration">⏱️ {{ formatDuration(video.duration || video.video_duration || 0) }}</span>
+                  <span *ngIf="video.file_size">📁 {{ formatFileSize(video.file_size) }}</span>
                 </div>
-                <div class="video-date">
-                  Associée le {{ formatDate(video.associated_at) }}
+                <div class="video-date" *ngIf="video.added_at || video.associated_at">
+                  Associée le {{ formatDate(video.added_at || video.associated_at) }}
                 </div>
               </div>
               <div class="video-actions">
@@ -595,7 +595,7 @@ interface GroupOption {
             <div *ngFor="let v of getAvailableAdvertiserVideos()" class="campaign-video-row available-video">
               <div class="cv-info">
                 <span class="cv-name">{{ v.original_name || v.filename || v.video_title || v.video_id }}</span>
-                <span class="cv-duration" *ngIf="v.duration || v.video_duration">{{ formatDuration(v.duration || v.video_duration) }}</span>
+                <span class="cv-duration" *ngIf="v.duration || v.video_duration">{{ formatDuration(v.duration || v.video_duration || 0) }}</span>
               </div>
               <button class="btn btn-sm btn-primary" (click)="addCampaignVideo(v.video_id)" [disabled]="addingCampaignVideo">
                 + Ajouter
@@ -2592,8 +2592,17 @@ export class SponsorDetailComponent implements OnInit {
         this.notification.success(`Campagne deployee sur ${count} site(s)`);
         this.loadCampaigns();
       },
-      error: () => {
-        this.notification.error('Erreur lors du deploiement');
+      error: (err) => {
+        const serverMsg = err?.error?.error;
+        if (serverMsg?.includes('no videos')) {
+          this.notification.error('La campagne n\'a pas de vidéos — ajoutez au moins une vidéo avant de déployer');
+        } else if (serverMsg?.includes('no target sites')) {
+          this.notification.error('La campagne n\'a pas de sites cibles — ajoutez des sites ou configurez les critères de ciblage');
+        } else if (serverMsg?.includes('not found')) {
+          this.notification.error('Campagne introuvable');
+        } else {
+          this.notification.error('Erreur lors du deploiement');
+        }
       },
       complete: () => {
         this.deployingCampaign = null;
@@ -2696,9 +2705,11 @@ export class SponsorDetailComponent implements OnInit {
   }
 
   formatDuration(seconds: number): string {
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    const secs = seconds % 60;
+    if (!seconds || isNaN(seconds)) return '0s';
+    const s = Math.round(seconds);
+    const hours = Math.floor(s / 3600);
+    const minutes = Math.floor((s % 3600) / 60);
+    const secs = s % 60;
 
     if (hours > 0) {
       return `${hours}h ${minutes}m`;

@@ -1,3 +1,15 @@
+## [3.115.1](https://github.com/Tallec7/neopro/compare/v3.115.0...v3.115.1) (2026-03-18)
+
+### Bug Fixes
+
+- **dashboard:** fix advertiser video display — NaN duration, missing title/date due to API field mismatch
+- **dashboard:** campaign deploy error now shows specific cause (no videos / no target sites / not found)
+
+### Tests
+
+- **smoke:** add field alignment guard for advertiser video template vs API
+- **smoke:** add campaign deploy error messaging guard
+
 # [3.115.0](https://github.com/Tallec7/neopro/compare/v3.114.3...v3.115.0) (2026-03-18)
 
 ### Features

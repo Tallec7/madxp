@@ -159,6 +159,8 @@ source central-server/.env && psql "$DATABASE_URL" -f central-server/src/scripts
 - Supprimer les handlers lifecycle `disconnect`/`reconnect`/`connect_error` de `socket.service.ts` (sans eux, l'app ne détecte pas la perte de connexion et ne re-register pas après reconnexion — smoke test enforced)
 - Supprimer `onReconnect()` de `socket.service.ts` ou le re-register `tv-register` dans `tv.component.ts` (après un reconnect, le serveur a perdu le client → sans re-emit `tv-register`, le slave reste gelé indéfiniment — smoke test enforced)
 - Réduire le timeout preload du double-buffer sous 5000ms (`double-buffer-video.service.ts`) (l'accès distant via WiFi PC charge les vidéos par HTTP → 2s trop court → forced switch prématuré → freeze-frame bloqué — smoke test enforced)
+- Utiliser des champs fantômes (`video_title`, `video_duration`, `total_impressions`, `total_screen_time`, `priority`, `associated_at`) dans le template vidéos de `advertiser-detail.component.ts` (l'API `advertiser.repository.getVideos` retourne `filename`, `original_name`, `duration`, `added_at`, `file_size` — mismatch = NaN + données vides — smoke test enforced)
+- Masquer le message d'erreur serveur dans `deployCampaignAction()` avec un message générique (le serveur retourne 3 erreurs identifiables : `no videos`, `no target sites`, `not found` — le handler DOIT les afficher en français pour guider l'utilisateur — smoke test enforced)
 
 ## Architecture détaillée
 
