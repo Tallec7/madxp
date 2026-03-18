@@ -131,7 +131,6 @@ export const createSiteSponsor = async (req: AuthRequest, res: Response): Promis
       contractAmount: contract_amount ?? null,
       contractStart: contract_start || null,
       contractEnd: contract_end || null,
-      source: 'local',
       metadata: metadata || {},
     });
 

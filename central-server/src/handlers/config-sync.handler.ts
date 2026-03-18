@@ -392,7 +392,6 @@ async function sendPendingConfigCommand(
       contactEmail: row.contact_email,
       contactPhone: row.contact_phone,
       logoUrl: row.logo_url,
-      source: row.source,
       videoFilenames: row.video_filenames || [],
       isActive: true,
     }));
@@ -571,7 +570,6 @@ async function resolveLocalSponsors(
           name: sponsor.name,
           contactEmail: sponsor.contactEmail || undefined,
           contactPhone: sponsor.contactPhone || undefined,
-          source: 'local',
           metadata: { local_id: sponsor.localId },
         });
         mapping[sponsor.localId] = created.id;

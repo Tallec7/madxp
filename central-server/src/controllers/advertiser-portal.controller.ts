@@ -7,7 +7,7 @@ import { readFile } from 'fs/promises';
 import { v4 as uuidv4 } from 'uuid';
 import { uploadAsset, deleteVideo } from '../services/storage.service';
 import { cleanupTempFile } from '../middleware/upload';
-import { advertiserRepository } from '../repositories';
+import { advertiserRepository, campaignRepository } from '../repositories';
 import { advertiserPortalRepository } from '../repositories/advertiser-portal.repository';
 
 // ============================================================================
@@ -741,6 +741,115 @@ export const getAdvertiserVideoStats = async (req: AuthRequest, res: Response): 
       success: false,
       error: 'Erreur lors du chargement des statistiques',
     });
+  }
+};
+
+// ============================================================================
+// BACKWARD COMPATIBILITY - Alias for old 'sponsor' endpoints
+// These will be removed after migration period
+// ============================================================================
+
+// ============================================================================
+// CAMPAIGNS (ADR-035 Phase 3d)
+// ============================================================================
+
+/**
+ * GET /api/advertiser/campaigns
+ * List campaigns belonging to the authenticated advertiser, with stats
+ */
+export const getAdvertiserCampaigns = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const advertiserId = req.user?.advertiser_id;
+    if (!advertiserId) {
+      res.json({ success: true, data: { campaigns: [], total: 0 } });
+      return;
+    }
+
+    const { status } = req.query;
+
+    const [campaigns, allStats] = await Promise.all([
+      campaignRepository.listByAdvertiser(advertiserId),
+      campaignRepository.getStatsByAdvertiser(advertiserId),
+    ]);
+
+    // Merge stats into campaigns
+    const statsMap = new Map(allStats.map(s => [s.campaign_id, s]));
+
+    const filteredCampaigns = status && typeof status === 'string'
+      ? campaigns.filter(c => c.status === status)
+      : campaigns;
+
+    const enriched = filteredCampaigns.map(campaign => {
+      const stats = statsMap.get(campaign.id);
+      return {
+        ...campaign,
+        total_impressions: parseInt(stats?.total_impressions || '0', 10),
+        total_screen_time_seconds: parseInt(stats?.total_screen_time_seconds || '0', 10),
+        avg_completion_rate: parseFloat(stats?.avg_completion_rate || '0'),
+        active_sites: parseInt(stats?.active_sites || '0', 10),
+        effective_cpm_cents: stats?.effective_cpm_cents ? parseFloat(stats.effective_cpm_cents) : null,
+      };
+    });
+
+    res.json({ success: true, data: { campaigns: enriched, total: enriched.length } });
+  } catch (error: unknown) {
+    logger.error('Error listing advertiser campaigns:', error);
+    res.status(500).json({ success: false, error: 'Failed to list campaigns' });
+  }
+};
+
+/**
+ * GET /api/advertiser/campaigns/:campaignId
+ * Get a single campaign detail with stats, only if it belongs to the advertiser
+ */
+export const getAdvertiserCampaignDetail = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const advertiserId = req.user?.advertiser_id;
+    if (!advertiserId) {
+      res.status(403).json({ success: false, error: 'No advertiser associated' });
+      return;
+    }
+
+    const { campaignId } = req.params;
+    const campaign = await campaignRepository.findByIdWithDetails(campaignId);
+
+    if (!campaign || campaign.advertiser_id !== advertiserId) {
+      res.status(404).json({ success: false, error: 'Campaign not found' });
+      return;
+    }
+
+    const [stats, dailyImpressions, videos, sites] = await Promise.all([
+      campaignRepository.getStats(campaignId),
+      campaignRepository.getImpressionsByDay(
+        campaignId,
+        typeof req.query.from === 'string' ? req.query.from : undefined,
+        typeof req.query.to === 'string' ? req.query.to : undefined,
+      ),
+      campaignRepository.listVideos(campaignId),
+      campaignRepository.listSites(campaignId),
+    ]);
+
+    res.json({
+      success: true,
+      data: {
+        campaign,
+        stats: stats ? {
+          total_impressions: parseInt(stats.total_impressions || '0', 10),
+          total_screen_time_seconds: parseInt(stats.total_screen_time_seconds || '0', 10),
+          avg_completion_rate: parseFloat(stats.avg_completion_rate || '0'),
+          active_sites: parseInt(stats.active_sites || '0', 10),
+          unique_videos: parseInt(stats.unique_videos || '0', 10),
+          effective_cpm_cents: stats.effective_cpm_cents ? parseFloat(stats.effective_cpm_cents) : null,
+          progress_percent: stats.progress_percent ? parseFloat(stats.progress_percent) : null,
+        } : null,
+        daily_impressions: dailyImpressions,
+        videos,
+        sites,
+      },
+    });
+  } catch (error: unknown) {
+    logger.error('Error getting advertiser campaign detail:', error);
+    res.status(500).json({ success: false, error: 'Failed to get campaign detail' });
   }
 };
 

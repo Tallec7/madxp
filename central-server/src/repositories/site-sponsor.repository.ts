@@ -19,7 +19,6 @@ export interface SiteSponsorRow extends QueryResultRow {
   contract_amount: number | null;
   contract_start: string | null;
   contract_end: string | null;
-  source: 'local' | 'neopro';
   status: 'active' | 'expired' | 'paused';
   metadata: Record<string, unknown>;
   created_at: Date;
@@ -37,7 +36,6 @@ export interface SiteSponsorListRow extends QueryResultRow {
   contract_amount: number | null;
   contract_start: string | null;
   contract_end: string | null;
-  source: string;
   status: string;
   created_at: Date;
   video_count: string;
@@ -56,7 +54,6 @@ export interface CreateSiteSponsorInput {
   contractAmount?: number | null;
   contractStart?: string | null;
   contractEnd?: string | null;
-  source?: 'local' | 'neopro';
   metadata?: Record<string, unknown>;
 }
 
@@ -91,7 +88,6 @@ export interface SiteSponsorDeploymentRow extends QueryResultRow {
   contact_email: string | null;
   contact_phone: string | null;
   logo_url: string | null;
-  source: string;
   video_filenames: string[];
 }
 
@@ -214,7 +210,6 @@ class SiteSponsorRepositoryImpl extends BaseRepository<SiteSponsorRow> {
         ss.contract_amount,
         ss.contract_start,
         ss.contract_end,
-        ss.source,
         ss.status,
         ss.created_at,
         COUNT(DISTINCT ssv.id)::text as video_count,
@@ -285,7 +280,6 @@ class SiteSponsorRepositoryImpl extends BaseRepository<SiteSponsorRow> {
        FROM site_sponsors
        WHERE LOWER(TRIM(name)) = LOWER(TRIM($1))
          AND site_id = $2
-         AND source = 'local'
        LIMIT 1`,
       [name, siteId]
     );
@@ -299,8 +293,8 @@ class SiteSponsorRepositoryImpl extends BaseRepository<SiteSponsorRow> {
     const result = await query<SiteSponsorRow>(
       `INSERT INTO site_sponsors
         (site_id, advertiser_id, name, contact_name, contact_email, contact_phone,
-         logo_url, contract_amount, contract_start, contract_end, source, metadata)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+         logo_url, contract_amount, contract_start, contract_end, metadata)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
        RETURNING *`,
       [
         input.siteId,
@@ -313,7 +307,6 @@ class SiteSponsorRepositoryImpl extends BaseRepository<SiteSponsorRow> {
         input.contractAmount ?? null,
         input.contractStart || null,
         input.contractEnd || null,
-        input.source || 'local',
         input.metadata || {},
       ]
     );
@@ -357,39 +350,6 @@ class SiteSponsorRepositoryImpl extends BaseRepository<SiteSponsorRow> {
       [id]
     );
     return (result.rowCount ?? 0) > 0;
-  }
-
-  /**
-   * Auto-crée (upsert) un site_sponsor quand un advertiser est assigné à un site.
-   * Retourne l'ID du site_sponsor créé ou existant.
-   */
-  async upsertForAdvertiserSite(
-    advertiserId: string,
-    siteId: string,
-    advertiserName: string,
-    contactName: string | null,
-    contactEmail: string | null,
-    contractStart: Date | null,
-    contractEnd: Date | null
-  ): Promise<string> {
-    const result = await query<{ id: string }>(
-      `INSERT INTO site_sponsors
-        (site_id, advertiser_id, name, contact_name, contact_email,
-         contract_start, contract_end, source, status)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, 'neopro', 'active')
-       ON CONFLICT (advertiser_id, site_id) WHERE advertiser_id IS NOT NULL
-       DO UPDATE SET
-         name = EXCLUDED.name,
-         contact_name = COALESCE(EXCLUDED.contact_name, site_sponsors.contact_name),
-         contact_email = COALESCE(EXCLUDED.contact_email, site_sponsors.contact_email),
-         contract_start = COALESCE(EXCLUDED.contract_start, site_sponsors.contract_start),
-         contract_end = COALESCE(EXCLUDED.contract_end, site_sponsors.contract_end),
-         status = 'active',
-         updated_at = NOW()
-       RETURNING id`,
-      [siteId, advertiserId, advertiserName, contactName, contactEmail, contractStart, contractEnd]
-    );
-    return result.rows[0].id;
   }
 
   // ========================================================================
@@ -628,7 +588,6 @@ class SiteSponsorRepositoryImpl extends BaseRepository<SiteSponsorRow> {
         ss.contract_amount,
         ss.contract_start,
         ss.contract_end,
-        ss.source,
         ss.status,
         ss.created_at,
         COUNT(DISTINCT ssv.id)::text as video_count,
@@ -817,7 +776,6 @@ class SiteSponsorRepositoryImpl extends BaseRepository<SiteSponsorRow> {
         ss.contact_email,
         ss.contact_phone,
         ss.logo_url,
-        ss.source,
         COALESCE(
           array_agg(ssv.video_filename) FILTER (WHERE ssv.video_filename IS NOT NULL),
           '{}'
@@ -859,7 +817,6 @@ class SiteSponsorRepositoryImpl extends BaseRepository<SiteSponsorRow> {
          AND (vp.tv_status IN ('on', 'unknown') OR vp.tv_status IS NULL)
        WHERE ss.site_id = $1
          AND ss.status = 'active'
-         AND ss.source = 'local'
        GROUP BY ss.id
        ORDER BY impressions DESC`,
       [siteId, from, to]

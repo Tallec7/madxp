@@ -2,7 +2,7 @@
 
 ## Status
 
-Proposed
+Accepted
 
 ## Context
 
@@ -163,7 +163,7 @@ video_plays
 **Risque** : Moyen — nécessite OTA Pi, rétrocompatibilité pendant la transition
 **Implémenté** : v3.113.5 (migration DB : `adr035-sponsor-category-split.sql`)
 
-### Phase 3 — Campagnes opérationnelles ✅ (3a: CRUD + targeting, 3b: auto-deploy)
+### Phase 3 — Campagnes opérationnelles ✅ (3a: CRUD + targeting, 3b: auto-deploy, 3c: dashboard, 3d: advertiser portal)
 
 **Phase 3a — CRUD + targeting ✅** :
 
@@ -196,15 +196,21 @@ video_plays
 - Stats inline : videos, sites, impressions, progression, budget
 - Smoke tests : wiring, API calls
 
-**Reste à faire (3d)** :
+**Phase 3d — Portail annonceur campagnes ✅** :
 
-- Portail annonceur dédié (distinct du portail sponsor local)
+- Endpoints API `getAdvertiserCampaigns` / `getAdvertiserCampaignDetail` dans `advertiser-portal.controller.ts`
+- Routes `/campaigns` et `/campaigns/:campaignId` dans `advertiser-portal.routes.ts`
+- Vérification ownership advertiser (`advertiser_id !== advertiserId`)
+- `PortalCampaign` / `PortalCampaignDetail` interfaces + `getCampaigns` / `getCampaignDetail` dans `sponsor-portal.service.ts`
+- Onglet campagnes dans `sponsor-dashboard.component.ts` avec liste + vue détail
+- Smoke tests : controller exports, route wiring, service interfaces, component tabs
 
-**Effort** : ~1 semaine total (3a: 2h ✅, 3b: 2h ✅, 3c: 1h ✅, 3d: restant)
+**Effort** : ~1 semaine total (3a: 2h ✅, 3b: 2h ✅, 3c: 1h ✅, 3d: 1h ✅)
 **Risque** : Moyen — nouveau workflow, tests E2E nécessaires
 **Implémenté (3a)** : v3.114.x (migration DB : `adr035-phase3-campaigns-operational.sql`)
+**Implémenté (3d)** : v3.114.x
 
-### Phase 4 — Nettoyage
+### Phase 4 — Nettoyage ✅
 
 - Backfill `advertiser_id` sur `video_plays` historiques (via les `site_sponsors` source=neopro existants)
 - Supprimer les `site_sponsors` source=neopro
@@ -212,9 +218,12 @@ video_plays
 - Supprimer `upsertForAdvertiserSite()` et l'auto-création dans `addSitesToAdvertiser`
 - Renommer `sponsor_id` → `advertiser_id` dans `video_plays` (ou supprimer si doublon)
 - Supprimer `advertiser_daily_stats` (remplacée par requêtes directes sur `video_plays` + `campaign_sites`)
+- Supprimer le `source` field de `SiteSponsorDeployment` dans `types/index.ts`
+- Mettre à jour `full-schema.sql` (retrait table `advertiser_daily_stats`)
 
 **Effort** : ~1 jour
 **Risque** : Faible (données migrées en Phase 2)
+**Implémenté** : v3.114.x (migration DB : `adr035-phase4-cleanup.sql`)
 
 ## Consequences
 

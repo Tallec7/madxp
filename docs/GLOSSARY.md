@@ -14,6 +14,18 @@ Un **club sportif** équipé d'un Raspberry Pi connecté à une télévision. Ch
 
 **Exemple** : "Le site RENNES-VOLLEY est offline depuis 2 heures."
 
+### Campagne (Campaign)
+
+**Stratégie de déploiement annonceur** avec ciblage par sports, régions ou groupes. Contient des vidéos avec poids de rotation et des sites résolus dynamiquement. Statuts : `draft` → `active` → `paused` → `completed`.
+
+**Tables** : `campaigns`, `campaign_videos`, `campaign_sites`
+
+**Voir aussi** : Target Criteria, Advertiser
+
+### CPM Effectif (Effective CPM)
+
+**Coût réel pour 1000 impressions**, calculé depuis `budget_cents / (total_impressions / 1000)`. Affiché dans les stats campagne.
+
 ### Boîtier
 
 Le **Raspberry Pi 4** physique installé dans un club. Contient l'application Angular, le serveur Socket.IO local, le sync-agent, et les vidéos.
@@ -95,6 +107,12 @@ Rôle en **lecture seule** : peut voir les sites et statistiques mais ne peut ri
 
 **Voir aussi** : Advertiser, Magic Link
 
+### Portail Annonceur (Advertiser Portal)
+
+**Espace authentifié pour annonceurs Neopro** (`/advertiser-portal`). Vue cross-clubs avec KPIs, sites, vidéos et campagnes. Distinct du portail sponsor local (magic link, mono-club).
+
+**Voir aussi** : Advertiser, Campagne, Sponsor Portal
+
 ### Magic Link
 
 **Lien d'accès token-based** permettant à un sponsor d'accéder à ses statistiques de visibilité sans compte utilisateur. Généré par l'opérateur via `POST /api/sites/:siteId/sponsors/:sponsorId/access-link`. Le token est hashé (SHA-256) et stocké dans `sponsor_access_tokens` avec une expiration de 30 jours. URL : `/sponsor-access?token=xxx`.
@@ -102,6 +120,12 @@ Rôle en **lecture seule** : peut voir les sites et statistiques mais ne peut ri
 ---
 
 ## Termes Techniques
+
+### Target Criteria
+
+**Critères JSONB de ciblage campagne** (`sports[]`, `regions[]`, `group_ids[]`, `min_audience`). Résolus dynamiquement via `resolveSitesByCriteria()`.
+
+**Voir aussi** : Campagne
 
 ### Phase de Match
 
@@ -303,4 +327,4 @@ Classe abstraite générique fournissant les opérations CRUD communes (findById
 
 ---
 
-_Dernière mise à jour : 24 février 2026_
+_Dernière mise à jour : 18 mars 2026_

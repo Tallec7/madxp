@@ -13,7 +13,7 @@
 --   - Analytics: club_sessions, video_plays, club_daily_stats, club_daily_stats_live (VIEW)
 --   - Auth: password_reset_tokens, audit_logs
 --   - Scheduling: recurring_schedules, recurring_schedule_executions
---   - Advertisers: advertisers, agencies, advertiser_daily_stats, advertiser_daily_stats_live (VIEW), campaigns, scheduled_reports
+--   - Advertisers: advertisers, agencies, advertiser_daily_stats_live (VIEW), campaigns, scheduled_reports
 -- =============================================================================
 
 -- Extension pour UUID
@@ -844,42 +844,12 @@ CREATE INDEX IF NOT EXISTS idx_agency_sites_agency ON agency_sites(agency_id);
 CREATE INDEX IF NOT EXISTS idx_agency_sites_site ON agency_sites(site_id);
 
 -- NOTE: advertiser_impressions table removed — consolidated into video_plays (category = 'sponsor')
+-- NOTE: advertiser_daily_stats table removed — replaced by advertiser_daily_stats_live view (ADR-035 Phase 4)
 
--- Table advertiser_daily_stats (agrégation quotidienne des impressions par vidéo et site)
-CREATE TABLE IF NOT EXISTS advertiser_daily_stats (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  video_id UUID REFERENCES videos(id) ON DELETE CASCADE,
-  site_id UUID REFERENCES sites(id) ON DELETE CASCADE,
-  date DATE NOT NULL,
-  total_impressions INTEGER DEFAULT 0,
-  total_duration_seconds INTEGER DEFAULT 0,
-  completed_plays INTEGER DEFAULT 0,
-  completion_rate NUMERIC(5,2) DEFAULT 0,
-  unique_events INTEGER DEFAULT 0,
-  pre_match_plays INTEGER DEFAULT 0,
-  match_plays INTEGER DEFAULT 0,
-  post_match_plays INTEGER DEFAULT 0,
-  loop_plays INTEGER DEFAULT 0,
-  match_events INTEGER DEFAULT 0,
-  training_events INTEGER DEFAULT 0,
-  tournament_events INTEGER DEFAULT 0,
-  other_events INTEGER DEFAULT 0,
-  auto_plays INTEGER DEFAULT 0,
-  manual_plays INTEGER DEFAULT 0,
-  total_audience_estimate INTEGER DEFAULT 0,
-  avg_audience_per_play NUMERIC(10,2) DEFAULT 0,
-  calculated_at TIMESTAMP DEFAULT NOW(),
-  UNIQUE(video_id, site_id, date)
-);
-
-CREATE INDEX IF NOT EXISTS idx_advertiser_daily_stats_date ON advertiser_daily_stats(date);
-CREATE INDEX IF NOT EXISTS idx_advertiser_daily_stats_video ON advertiser_daily_stats(video_id);
-
--- Table site_sponsors (modèle unifié : un sponsor PAR site)
+-- Table site_sponsors (sponsors locaux de club)
 CREATE TABLE IF NOT EXISTS site_sponsors (
     id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     site_id         UUID NOT NULL REFERENCES sites(id) ON DELETE CASCADE,
-    advertiser_id   UUID REFERENCES advertisers(id) ON DELETE SET NULL,
     name            VARCHAR(255) NOT NULL,
     contact_name    VARCHAR(255),
     contact_email   VARCHAR(255),
@@ -888,20 +858,16 @@ CREATE TABLE IF NOT EXISTS site_sponsors (
     contract_amount DECIMAL(10,2),
     contract_start  DATE,
     contract_end    DATE,
-    source          VARCHAR(20) NOT NULL DEFAULT 'local',
     status          VARCHAR(20) NOT NULL DEFAULT 'active',
     metadata        JSONB DEFAULT '{}',
     created_at      TIMESTAMPTZ DEFAULT NOW(),
     updated_at      TIMESTAMPTZ DEFAULT NOW(),
 
-    CONSTRAINT chk_site_sponsor_source CHECK (source IN ('local', 'neopro')),
     CONSTRAINT chk_site_sponsor_status CHECK (status IN ('active', 'expired', 'paused'))
 );
 
 CREATE INDEX IF NOT EXISTS idx_site_sponsors_site ON site_sponsors(site_id);
-CREATE INDEX IF NOT EXISTS idx_site_sponsors_advertiser ON site_sponsors(advertiser_id);
 CREATE INDEX IF NOT EXISTS idx_site_sponsors_active ON site_sponsors(site_id, status) WHERE status = 'active';
-CREATE UNIQUE INDEX IF NOT EXISTS idx_site_sponsors_advertiser_site ON site_sponsors(advertiser_id, site_id) WHERE advertiser_id IS NOT NULL;
 
 -- Table site_sponsor_videos (vidéos par sponsor de site)
 CREATE TABLE IF NOT EXISTS site_sponsor_videos (
@@ -1309,56 +1275,28 @@ CREATE OR REPLACE VIEW club_daily_stats_live AS
   GROUP BY vp.site_id
   HAVING COUNT(*) > 0;
 
--- advertiser_daily_stats_live : advertiser_daily_stats + données sponsor du jour
+-- advertiser_daily_stats_live : stats annonceur agrégées depuis video_plays (ADR-035 Phase 4)
 CREATE OR REPLACE VIEW advertiser_daily_stats_live AS
-  SELECT
-    id, video_id, site_id, date,
-    total_impressions, total_duration_seconds, completed_plays, completion_rate,
-    unique_events,
-    pre_match_plays, match_plays, post_match_plays, loop_plays,
-    match_events, training_events, tournament_events, other_events,
-    auto_plays, manual_plays,
-    total_audience_estimate, avg_audience_per_play,
-    calculated_at
-  FROM advertiser_daily_stats
-  WHERE date < CURRENT_DATE
-  UNION ALL
-  SELECT
-    NULL::uuid as id,
-    vp.video_id,
-    vp.site_id,
-    CURRENT_DATE as date,
-    COUNT(*)::integer as total_impressions,
-    COALESCE(SUM(vp.duration_played), 0)::integer as total_duration_seconds,
-    SUM(CASE WHEN vp.completed THEN 1 ELSE 0 END)::integer as completed_plays,
-    ROUND(
-      (SUM(CASE WHEN vp.completed THEN 1 ELSE 0 END)::float / NULLIF(COUNT(*), 0) * 100)::numeric,
-      2
-    ) as completion_rate,
-    COUNT(DISTINCT vp.event_type)::integer as unique_events,
-    SUM(CASE WHEN vp.period = 'pre_match' THEN 1 ELSE 0 END)::integer as pre_match_plays,
-    SUM(CASE WHEN vp.period = 'halftime' THEN 1 ELSE 0 END)::integer as match_plays,
-    SUM(CASE WHEN vp.period = 'post_match' THEN 1 ELSE 0 END)::integer as post_match_plays,
-    SUM(CASE WHEN vp.period = 'loop' OR vp.period IS NULL THEN 1 ELSE 0 END)::integer as loop_plays,
-    SUM(CASE WHEN vp.event_type = 'match' THEN 1 ELSE 0 END)::integer as match_events,
-    SUM(CASE WHEN vp.event_type = 'training' THEN 1 ELSE 0 END)::integer as training_events,
-    SUM(CASE WHEN vp.event_type = 'tournament' THEN 1 ELSE 0 END)::integer as tournament_events,
-    SUM(CASE WHEN vp.event_type = 'other' OR vp.event_type IS NULL THEN 1 ELSE 0 END)::integer as other_events,
-    SUM(CASE WHEN vp.trigger_type = 'auto' THEN 1 ELSE 0 END)::integer as auto_plays,
-    SUM(CASE WHEN vp.trigger_type = 'manual' THEN 1 ELSE 0 END)::integer as manual_plays,
-    COALESCE(SUM(vp.audience_estimate), 0)::integer as total_audience_estimate,
-    ROUND(AVG(vp.audience_estimate)::numeric, 2) as avg_audience_per_play,
-    NOW() as calculated_at
-  FROM video_plays vp
-  WHERE vp.category IN ('sponsor', 'sponsor_local', 'sponsor_neopro')
-    AND vp.video_id IS NOT NULL
-    AND vp.played_at >= CURRENT_DATE
-    AND vp.played_at < CURRENT_DATE + INTERVAL '1 day'
-  GROUP BY vp.video_id, vp.site_id
-  HAVING COUNT(*) > 0;
+SELECT
+  vp.video_id,
+  vp.site_id,
+  DATE(vp.played_at) AS date,
+  COUNT(*) AS total_impressions,
+  SUM(vp.duration_played) AS total_screen_time,
+  ROUND(AVG(
+    CASE WHEN vp.video_duration > 0
+      THEN LEAST(vp.duration_played::numeric / vp.video_duration, 1.0) * 100
+      ELSE 0
+    END
+  ), 1) AS completion_rate,
+  vp.sponsor_id AS advertiser_id
+FROM video_plays vp
+WHERE vp.category IN ('sponsor', 'sponsor_local', 'sponsor_neopro')
+  AND vp.video_id IS NOT NULL
+GROUP BY vp.video_id, vp.site_id, DATE(vp.played_at), vp.sponsor_id;
 
 COMMENT ON VIEW club_daily_stats_live IS 'club_daily_stats + données live du jour depuis video_plays. Remplace club_daily_stats pour les queries dashboard.';
-COMMENT ON VIEW advertiser_daily_stats_live IS 'advertiser_daily_stats + données live du jour depuis video_plays (sponsor). Remplace advertiser_daily_stats pour les queries portail annonceur.';
+COMMENT ON VIEW advertiser_daily_stats_live IS 'Stats annonceur agrégées par vidéo/site/jour depuis video_plays. Remplace l''ancienne table advertiser_daily_stats (ADR-035 Phase 4).';
 
 -- =============================================================================
 -- COMMENTAIRES
@@ -1393,7 +1331,7 @@ BEGIN
     RAISE NOTICE '  - campaigns, scheduled_reports';
     RAISE NOTICE '';
     RAISE NOTICE 'Vues: club_analytics_summary, top_videos_by_site, club_daily_stats_live, advertiser_daily_stats_live';
-    RAISE NOTICE 'Fonctions: calculate_daily_stats(), calculate_all_daily_stats(), calculate_all_advertiser_daily_stats()';
+    RAISE NOTICE 'Fonctions: calculate_daily_stats(), calculate_all_daily_stats()';
     RAISE NOTICE '';
     RAISE NOTICE 'Créez un utilisateur admin avec: npm run create-admin';
 END $$;

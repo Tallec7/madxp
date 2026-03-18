@@ -1,3 +1,55 @@
+## v3.114.0 — 18 Mars 2026
+
+### ADR-035 Phase 3: Campagnes opérationnelles (3a → 3d)
+
+**Phase 3a — CRUD + Ciblage** ✅
+
+- Tables `campaigns`, `campaign_videos`, `campaign_sites` avec `target_criteria` JSONB
+- Résolution dynamique des sites par critères (sports, régions, groupes)
+- Vue `campaign_stats_live` (impressions, CPM effectif, progression)
+- API CRUD complète : `GET/POST/PUT/DELETE /api/campaigns` + sous-ressources
+- Migration : `adr035-phase3-campaigns-operational.sql`
+
+**Phase 3b — Auto-déploiement** ✅
+
+- `enrichConfigWithCampaignVideos()` dans le pipeline d'enrichissement config
+- Service d'orchestration : `deployCampaign()` / `undeployCampaign()`
+- Endpoints `POST /api/campaigns/:id/deploy` et `/undeploy`
+- `campaign_id` ajouté à `SponsorVideo` pour tracking analytics Pi
+
+**Phase 3c — Dashboard campagnes** ✅
+
+- Onglet "Campagnes" dans advertiser-detail avec liste et stats
+- CRUD campagnes via modal intégré
+- Boutons Deploy/Pause, badges de statut, barre de progression
+
+**Phase 3d — Portail annonceur campagnes** ✅
+
+- Endpoints `GET /api/advertiser/campaigns` et `/campaigns/:campaignId`
+- Vérification de propriété `advertiser_id` sur chaque requête
+- Onglet "Campagnes" dans sponsor-dashboard avec vue liste et détail
+- KPI cards, graphe impressions quotidiennes, tables vidéos/sites
+
+### ADR-035 Phase 4: Nettoyage
+
+- Migration `adr035-phase4-cleanup.sql` :
+  - Backfill `sponsor_id` sur `video_plays` historiques
+  - Suppression des `site_sponsors` source='neopro'
+  - Retrait des colonnes `source` et `advertiser_id` de `site_sponsors`
+  - Vue `advertiser_daily_stats_live` → requête directe sur `video_plays`
+  - Table `advertiser_daily_stats` supprimée
+  - Fonctions d'agrégation remplacées par no-op
+- Code cleanup :
+  - `upsertForAdvertiserSite()` supprimé
+  - Auto-création site_sponsors retirée de `addSitesToAdvertiser`
+  - Type `SiteSponsorDeployment` nettoyé (champ `source` retiré)
+
+### Tests
+
+- 777 smoke tests (+17 nouveaux ADR-035)
+- 2314 server tests passent
+- Build Angular dashboard OK
+
 ## [3.113.5](https://github.com/Tallec7/neopro/compare/v3.113.4...v3.113.5) (2026-03-17)
 
 ### Bug Fixes

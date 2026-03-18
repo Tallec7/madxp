@@ -1559,6 +1559,33 @@ GET    /reports/stats                            - Statistiques des rapports (ad
 
 > **⚠️ Convention payload** : `POST /reports/generate` attend des clés **camelCase** (`entityId`, `periodStart`, `periodEnd`). Les clés snake_case (`entity_id`, `period_start`) sont rejetées 400.
 
+**Endpoints Campagnes (auth JWT, montés sur /api/campaigns) :**
+
+```
+GET    /campaigns                        - Liste des campagnes (filtre: status, advertiser_id)
+GET    /campaigns/:id                    - Détail campagne avec counts
+POST   /campaigns                        - Créer une campagne
+PUT    /campaigns/:id                    - Modifier une campagne
+DELETE /campaigns/:id                    - Supprimer une campagne
+GET    /campaigns/:id/videos             - Vidéos de la campagne
+POST   /campaigns/:id/videos             - Ajouter vidéo (avec weight)
+DELETE /campaigns/:id/videos/:videoId    - Retirer vidéo
+GET    /campaigns/:id/sites              - Sites ciblés
+POST   /campaigns/:id/sites              - Ajouter site ou auto-resolve
+DELETE /campaigns/:id/sites/:siteId      - Retirer site
+POST   /campaigns/resolve-sites          - Preview ciblage (sans mutation)
+POST   /campaigns/:id/deploy             - Déployer campagne
+POST   /campaigns/:id/undeploy           - Mettre en pause
+GET    /campaigns/:id/stats              - Stats live + impressions/jour
+```
+
+**Endpoints Portail Annonceur — Campagnes (auth JWT, montés sur /api/advertiser/campaigns) :**
+
+```
+GET    /advertiser/campaigns                  - Campagnes de l'annonceur connecté
+GET    /advertiser/campaigns/:campaignId      - Détail campagne (ownership vérifié)
+```
+
 **Endpoints Sponsor Portal (public, token-based, montés sur /api/sponsor-portal) :**
 
 ```
@@ -1672,7 +1699,10 @@ Tous les accès PostgreSQL passent par des repositories typés héritant de `Bas
 | `email`             | Notifications email (templates)                                                   |
 | `pitch-deck`        | Vue agrégée multi-tables (`club_daily_stats_live`, `advertiser_daily_stats_live`) |
 | `site-sponsor`      | `site_sponsors`, `site_sponsor_videos`                                            |
-| `benchmark`         | `sites`, `club_sessions`, `video_plays`, `metrics` (lecture)                      |
+| `campaign`          | `campaigns`, `campaign_videos`, `campaign_sites`                                  |
+
+> **ADR-035 Phase 4** : Les colonnes `source` et `advertiser_id` ont été retirées de `site_sponsors`. La table ne contient plus que les sponsors locaux de club. Les annonceurs Neopro utilisent désormais le système de campagnes (`campaigns`, `campaign_videos`, `campaign_sites`).
+> | `benchmark` | `sites`, `club_sessions`, `video_plays`, `metrics` (lecture) |
 
 ### Gestion Mémoire (Railway Hobby Plan)
 
@@ -1741,9 +1771,10 @@ L'onglet Contenu/Boucles dispose d'un **sélecteur de profil** (dropdown) quand 
 
 **Enrichissement obligatoire** : Avant envoi au Pi, chaque profil passe par la chaîne complète :
 
-1. `autoResolveSponsorIds()` — résolution des IDs sponsors
-2. `enrichConfigWithSecondaryVariants()` — injection des variants secondaires
-3. `enrichConfigWithAnalyticsMetadata()` — injection des métadonnées analytics (`video_id`, `advertiser_id`, `analytics_category`)
+1. `enrichConfigWithCampaignVideos()` — injection des vidéos des campagnes actives
+2. `autoResolveSponsorIds()` — résolution des IDs sponsors
+3. `enrichConfigWithSecondaryVariants()` — injection des variants secondaires
+4. `enrichConfigWithAnalyticsMetadata()` — injection des métadonnées analytics (`video_id`, `advertiser_id`, `analytics_category`)
 
 **Méthodes SitesService :**
 

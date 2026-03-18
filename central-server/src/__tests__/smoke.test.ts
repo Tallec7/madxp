@@ -10798,3 +10798,175 @@ describe('ADR-035 Phase 3c: Campaign dashboard components', () => {
     expect(content).toContain('/campaigns/${campaignId}/undeploy');
   });
 });
+
+// ADR-035 Phase 3d: Advertiser portal campaign views
+// ----------------------------------------------------------
+describe('ADR-035 Phase 3d: Advertiser portal campaign views', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+
+  it('advertiser-portal.controller.ts exports getAdvertiserCampaigns and getAdvertiserCampaignDetail', () => {
+    const controllerSrc = fs.readFileSync(
+      path.join(repoRoot, 'central-server/src/controllers/advertiser-portal.controller.ts'),
+      'utf-8'
+    );
+    expect(controllerSrc).toContain('getAdvertiserCampaigns');
+    expect(controllerSrc).toContain('getAdvertiserCampaignDetail');
+    // Must check advertiser ownership
+    expect(controllerSrc).toContain('advertiser_id !== advertiserId');
+  });
+
+  it('advertiser-portal.routes.ts registers campaign endpoints', () => {
+    const routesSrc = fs.readFileSync(
+      path.join(repoRoot, 'central-server/src/routes/advertiser-portal.routes.ts'),
+      'utf-8'
+    );
+    expect(routesSrc).toContain("'/campaigns'");
+    expect(routesSrc).toContain("'/campaigns/:campaignId'");
+    expect(routesSrc).toContain('getAdvertiserCampaigns');
+    expect(routesSrc).toContain('getAdvertiserCampaignDetail');
+  });
+
+  it('sponsor-portal.service.ts exports PortalCampaign interface and getCampaigns method', () => {
+    const serviceSrc = fs.readFileSync(
+      path.join(repoRoot, 'central-dashboard/src/app/core/services/sponsor-portal.service.ts'),
+      'utf-8'
+    );
+    expect(serviceSrc).toContain('PortalCampaign');
+    expect(serviceSrc).toContain('PortalCampaignDetail');
+    expect(serviceSrc).toContain('getCampaigns');
+    expect(serviceSrc).toContain('getCampaignDetail');
+    expect(serviceSrc).toContain('/advertiser/campaigns');
+  });
+
+  it('sponsor-dashboard.component.ts includes campaigns tab with detail view', () => {
+    const componentSrc = fs.readFileSync(
+      path.join(repoRoot, 'central-dashboard/src/app/features/sponsor-portal/sponsor-dashboard.component.ts'),
+      'utf-8'
+    );
+    // Tab navigation
+    expect(componentSrc).toContain('activeTab');
+    expect(componentSrc).toContain("'campaigns'");
+    expect(componentSrc).toContain("'campaign-detail'");
+    // Campaign list
+    expect(componentSrc).toContain('loadCampaigns');
+    expect(componentSrc).toContain('campaigns');
+    // Campaign detail
+    expect(componentSrc).toContain('openCampaignDetail');
+    expect(componentSrc).toContain('selectedCampaign');
+    expect(componentSrc).toContain('backToCampaigns');
+  });
+});
+
+// ADR-035 Phase 4: Cleanup — neopro bridge removed
+// ----------------------------------------------------------
+describe('ADR-035 Phase 4: Cleanup — neopro bridge removed', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+
+  test('site-sponsor.repository.ts does NOT contain upsertForAdvertiserSite', () => {
+    const repoSrc = fs.readFileSync(
+      path.join(repoRoot, 'central-server/src/repositories/site-sponsor.repository.ts'),
+      'utf-8'
+    );
+    expect(repoSrc).not.toContain('upsertForAdvertiserSite');
+  });
+
+  test('site-sponsor.repository.ts does NOT reference source column', () => {
+    const repoSrc = fs.readFileSync(
+      path.join(repoRoot, 'central-server/src/repositories/site-sponsor.repository.ts'),
+      'utf-8'
+    );
+    // Should not have source:'local'|'neopro' type or source column refs
+    expect(repoSrc).not.toContain("'neopro'");
+    expect(repoSrc).not.toContain("source: 'local' | 'neopro'");
+  });
+
+  test('advertiser-sites.controller.ts does NOT auto-create site_sponsors', () => {
+    const ctrlSrc = fs.readFileSync(
+      path.join(repoRoot, 'central-server/src/controllers/advertiser-sites.controller.ts'),
+      'utf-8'
+    );
+    expect(ctrlSrc).not.toContain('upsertForAdvertiserSite');
+    expect(ctrlSrc).not.toContain('Site sponsors auto-created');
+  });
+
+  test('adr035-phase4-cleanup.sql migration exists with all cleanup steps', () => {
+    const migrationSrc = fs.readFileSync(
+      path.join(repoRoot, 'central-server/src/scripts/migrations/adr035-phase4-cleanup.sql'),
+      'utf-8'
+    );
+    // Backfill sponsor_id
+    expect(migrationSrc).toContain('UPDATE video_plays');
+    expect(migrationSrc).toContain("source = 'neopro'");
+    // Delete neopro site_sponsors
+    expect(migrationSrc).toContain("DELETE FROM site_sponsors");
+    // Drop source column
+    expect(migrationSrc).toContain('DROP COLUMN IF EXISTS source');
+    // Drop advertiser_id from site_sponsors
+    expect(migrationSrc).toContain('DROP COLUMN IF EXISTS advertiser_id');
+    // Replace view
+    expect(migrationSrc).toContain('advertiser_daily_stats_live');
+    // Drop table
+    expect(migrationSrc).toContain('DROP TABLE IF EXISTS advertiser_daily_stats');
+  });
+
+  test('full-schema.sql does NOT define advertiser_daily_stats table', () => {
+    const schemaSrc = fs.readFileSync(
+      path.join(repoRoot, 'central-server/src/scripts/full-schema.sql'),
+      'utf-8'
+    );
+    expect(schemaSrc).not.toContain('CREATE TABLE IF NOT EXISTS advertiser_daily_stats');
+  });
+
+  test('types/index.ts SiteSponsorDeployment does NOT have source field', () => {
+    const typesSrc = fs.readFileSync(
+      path.join(repoRoot, 'central-server/src/types/index.ts'),
+      'utf-8'
+    );
+    // Should not have source: 'local' | 'neopro' in SiteSponsorDeployment
+    expect(typesSrc).not.toMatch(/source:\s*'local'\s*\|\s*'neopro'/);
+  });
+
+  // Guard: prevent regression — source column must stay removed
+  test('site-sponsor.repository.ts create() does NOT insert source column', () => {
+    const repoSrc = fs.readFileSync(
+      path.join(repoRoot, 'central-server/src/repositories/site-sponsor.repository.ts'),
+      'utf-8'
+    );
+    // The INSERT INTO site_sponsors should not include 'source' in column list
+    const createMatch = repoSrc.match(/INSERT INTO site_sponsors\s*\(([^)]+)\)/);
+    if (createMatch) {
+      expect(createMatch[1]).not.toContain('source');
+    }
+  });
+
+  test('orchestrated-deployment.service.ts does NOT map source field', () => {
+    const svcSrc = fs.readFileSync(
+      path.join(repoRoot, 'central-server/src/services/orchestrated-deployment.service.ts'),
+      'utf-8'
+    );
+    expect(svcSrc).not.toMatch(/source:\s*row\.source/);
+  });
+
+  test('config-sync.handler.ts does NOT set source on sponsor objects', () => {
+    const handlerSrc = fs.readFileSync(
+      path.join(repoRoot, 'central-server/src/handlers/config-sync.handler.ts'),
+      'utf-8'
+    );
+    expect(handlerSrc).not.toMatch(/source:\s*['"]local['"]/);
+    expect(handlerSrc).not.toMatch(/source:\s*row\.source/);
+  });
+
+  test('enrichConfigWithCampaignVideos is FIRST in the enrichment pipeline (before autoResolveSponsorIds)', () => {
+    const handlerSrc = fs.readFileSync(
+      path.join(repoRoot, 'central-server/src/handlers/config-sync.handler.ts'),
+      'utf-8'
+    );
+    // Strip import section to only check call order in function body
+    const bodySrc = handlerSrc.replace(/^import\s.*$/gm, '');
+    const campaignIdx = bodySrc.indexOf('enrichConfigWithCampaignVideos');
+    const resolveIdx = bodySrc.indexOf('autoResolveSponsorIds');
+    expect(campaignIdx).toBeGreaterThan(-1);
+    expect(resolveIdx).toBeGreaterThan(-1);
+    expect(campaignIdx).toBeLessThan(resolveIdx);
+  });
+});

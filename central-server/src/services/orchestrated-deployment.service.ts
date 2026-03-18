@@ -185,7 +185,6 @@ class OrchestratedDeploymentService {
       contactEmail: row.contact_email,
       contactPhone: row.contact_phone,
       logoUrl: row.logo_url,
-      source: row.source as 'local' | 'neopro',
       videoFilenames: row.video_filenames || [],
       isActive: true,
     }));

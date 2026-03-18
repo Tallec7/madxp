@@ -10,6 +10,8 @@ import {
   updateAdvertiserVideo,
   deleteAdvertiserVideo,
   getAdvertiserVideoStats,
+  getAdvertiserCampaigns,
+  getAdvertiserCampaignDetail,
 } from '../controllers/advertiser-portal.controller';
 
 const router = express.Router();
@@ -51,6 +53,26 @@ router.get(
   authenticate,
   requireRole('advertiser', 'admin'),
   getAdvertiserDetailedStats
+);
+
+// ============================================================================
+// CAMPAIGNS (ADR-035 Phase 3d)
+// ============================================================================
+
+// Liste des campagnes de l'annonceur
+router.get(
+  '/campaigns',
+  authenticate,
+  requireRole('advertiser', 'admin'),
+  getAdvertiserCampaigns
+);
+
+// Détail d'une campagne
+router.get(
+  '/campaigns/:campaignId',
+  authenticate,
+  requireRole('advertiser', 'admin'),
+  getAdvertiserCampaignDetail
 );
 
 // ============================================================================

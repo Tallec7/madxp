@@ -48,6 +48,53 @@ export interface SponsorVideo {
   completion_rate: number;
 }
 
+export interface PortalCampaign {
+  id: string;
+  name: string;
+  status: string;
+  campaign_type: string;
+  start_date: string | null;
+  end_date: string | null;
+  target_impressions: number | null;
+  budget_cents: number | null;
+  videos_count: number;
+  sites_count: number;
+  total_impressions: number;
+  total_screen_time_seconds: number;
+  avg_completion_rate: number;
+  active_sites: number;
+  effective_cpm_cents: number | null;
+  progress_percent: number | null;
+  created_at: string;
+}
+
+export interface PortalCampaignDetail {
+  campaign: PortalCampaign;
+  stats: {
+    total_impressions: number;
+    total_screen_time_seconds: number;
+    avg_completion_rate: number;
+    active_sites: number;
+    unique_videos: number;
+    effective_cpm_cents: number | null;
+    progress_percent: number | null;
+  } | null;
+  daily_impressions: Array<{ date: string; impressions: number }>;
+  videos: Array<{
+    video_id: string;
+    filename: string;
+    original_name: string | null;
+    weight: number;
+    duration: number | null;
+  }>;
+  sites: Array<{
+    site_id: string;
+    site_name: string;
+    club_name: string;
+    deployment_status: string;
+  }>;
+}
+
 export interface SponsorStats {
   period: { from: string; to: string };
   summary: {
@@ -101,5 +148,15 @@ export class SponsorPortalService {
     if (from) params['from'] = from;
     if (to) params['to'] = to;
     return this.api.get('/advertiser/stats', params);
+  }
+
+  getCampaigns(status?: string): Observable<{ success: boolean; data: { campaigns: PortalCampaign[]; total: number } }> {
+    const params: Record<string, string> = {};
+    if (status) params['status'] = status;
+    return this.api.get('/advertiser/campaigns', params);
+  }
+
+  getCampaignDetail(campaignId: string): Observable<{ success: boolean; data: PortalCampaignDetail }> {
+    return this.api.get(`/advertiser/campaigns/${campaignId}`);
   }
 }

@@ -499,7 +499,6 @@ export interface SiteSponsorDeployment {
   contactEmail: string | null;
   contactPhone: string | null;
   logoUrl: string | null;
-  source: 'local' | 'neopro';
   videoFilenames: string[];
   isActive: boolean;
 }
