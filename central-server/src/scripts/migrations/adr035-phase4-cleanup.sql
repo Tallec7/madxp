@@ -41,11 +41,13 @@ DROP INDEX IF EXISTS idx_site_sponsors_advertiser_site;
 ALTER TABLE site_sponsors DROP COLUMN IF EXISTS advertiser_id;
 
 -- -------------------------------------------------------------------------
--- 5. Replace advertiser_daily_stats_live view
---    Remove dependency on advertiser_daily_stats table.
---    The new view queries video_plays directly for all dates.
+-- 5. Drop advertiser_daily_stats_live view (columns change, can't replace)
+--    Then drop the underlying table, then recreate the view.
 -- -------------------------------------------------------------------------
-CREATE OR REPLACE VIEW advertiser_daily_stats_live AS
+DROP VIEW IF EXISTS advertiser_daily_stats_live;
+DROP TABLE IF EXISTS advertiser_daily_stats CASCADE;
+
+CREATE VIEW advertiser_daily_stats_live AS
 SELECT
   vp.video_id,
   vp.site_id,
@@ -65,11 +67,6 @@ WHERE vp.category IN ('sponsor', 'sponsor_local', 'sponsor_neopro')
 GROUP BY vp.video_id, vp.site_id, DATE(vp.played_at), vp.sponsor_id;
 
 COMMENT ON VIEW advertiser_daily_stats_live IS 'Stats annonceur agrégées par vidéo/site/jour depuis video_plays. Remplace l''ancienne table advertiser_daily_stats (ADR-035 Phase 4).';
-
--- -------------------------------------------------------------------------
--- 6. Drop advertiser_daily_stats table
--- -------------------------------------------------------------------------
-DROP TABLE IF EXISTS advertiser_daily_stats CASCADE;
 
 -- -------------------------------------------------------------------------
 -- 7. Replace calculate_all_advertiser_daily_stats() with no-op
