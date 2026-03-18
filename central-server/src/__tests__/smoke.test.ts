@@ -10797,6 +10797,32 @@ describe('ADR-035 Phase 3c: Campaign dashboard components', () => {
     expect(content).toContain('/campaigns/${campaignId}/deploy');
     expect(content).toContain('/campaigns/${campaignId}/undeploy');
   });
+
+  it('advertiser-detail.component.ts has campaign modal with videos and targeting tabs', () => {
+    const content = fs.readFileSync(
+      path.join(repoRoot, 'central-dashboard/src/app/features/advertisers/advertiser-detail.component.ts'), 'utf-8'
+    );
+    // Modal tabs
+    expect(content).toContain("campaignModalTab");
+    expect(content).toContain("switchCampaignTab('videos')");
+    expect(content).toContain("switchCampaignTab('targeting')");
+    // Video management methods
+    expect(content).toContain('loadCampaignVideos');
+    expect(content).toContain('addCampaignVideo');
+    expect(content).toContain('removeCampaignVideo');
+    // API calls for videos
+    expect(content).toContain('/campaigns/${this.campaignForm.id}/videos');
+    // Site targeting methods
+    expect(content).toContain('previewTargetSites');
+    expect(content).toContain('applyCriteriaToSites');
+    expect(content).toContain('loadCampaignSites');
+    // API calls for sites
+    expect(content).toContain('/campaigns/${this.campaignForm.id}/sites');
+    expect(content).toContain('/campaigns/resolve-sites');
+    // Interfaces
+    expect(content).toContain('interface CampaignVideo');
+    expect(content).toContain('interface ResolvedSite');
+  });
 });
 
 // ADR-035 Phase 3d: Advertiser portal campaign views

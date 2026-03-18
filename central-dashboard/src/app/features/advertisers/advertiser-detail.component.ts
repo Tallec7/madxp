@@ -56,6 +56,10 @@ interface SponsorVideo {
   associated_at: string;
   total_impressions?: number;
   total_screen_time?: number;
+  // Champs bruts de l'API (advertiser.repository.getVideos)
+  filename?: string;
+  original_name?: string;
+  duration?: number;
 }
 
 interface Campaign {
@@ -82,6 +86,27 @@ interface CampaignSite {
   club_name: string;
   deployment_status: string;
   deployed_at?: string;
+}
+
+interface CampaignVideo {
+  id: string;
+  video_id: string;
+  filename: string;
+  original_name: string | null;
+  duration: number | null;
+  weight: number;
+}
+
+interface ResolvedSite {
+  id: string;
+  site_name: string;
+  club_name: string;
+  status: string;
+}
+
+interface GroupOption {
+  id: string;
+  name: string;
 }
 
 @Component({
@@ -469,25 +494,32 @@ interface CampaignSite {
 
       <!-- Campaign Create/Edit Modal -->
       <div class="modal-overlay" *ngIf="showCampaignModal" (click)="closeCampaignModal()">
-        <div class="modal modal-lg" (click)="$event.stopPropagation()">
+        <div class="modal modal-xl" (click)="$event.stopPropagation()">
           <div class="modal-header">
             <h2>{{ isEditingCampaign ? 'Modifier' : 'Nouvelle' }} campagne</h2>
             <button class="close-btn" (click)="closeCampaignModal()">x</button>
           </div>
 
-          <form (submit)="saveCampaign($event)" class="modal-form">
+          <!-- Modal Tabs -->
+          <div class="modal-tabs">
+            <button class="modal-tab" [class.active]="campaignModalTab === 'info'" (click)="campaignModalTab = 'info'">
+              Informations
+            </button>
+            <button class="modal-tab" [class.active]="campaignModalTab === 'videos'" (click)="switchCampaignTab('videos')" [disabled]="!campaignForm.id">
+              Videos ({{ campaignVideos.length }})
+            </button>
+            <button class="modal-tab" [class.active]="campaignModalTab === 'targeting'" (click)="switchCampaignTab('targeting')" [disabled]="!campaignForm.id">
+              Ciblage ({{ campaignSites.length }} sites)
+            </button>
+          </div>
+
+          <!-- Info Tab -->
+          <form *ngIf="campaignModalTab === 'info'" (submit)="saveCampaign($event)" class="modal-form">
             <div class="modal-body">
               <div class="form-group">
                 <label>Nom *</label>
-                <input
-                  type="text"
-                  [(ngModel)]="campaignForm.name"
-                  name="campaignName"
-                  required
-                  placeholder="Promotion ete 2026"
-                />
+                <input type="text" [(ngModel)]="campaignForm.name" name="campaignName" required placeholder="Promotion ete 2026" />
               </div>
-
               <div class="form-row">
                 <div class="form-group">
                   <label>Type</label>
@@ -499,65 +531,155 @@ interface CampaignSite {
                 </div>
                 <div class="form-group">
                   <label>Impressions cibles</label>
-                  <input
-                    type="number"
-                    [(ngModel)]="campaignForm.target_impressions"
-                    name="targetImpressions"
-                    placeholder="10000"
-                  />
+                  <input type="number" [(ngModel)]="campaignForm.target_impressions" name="targetImpressions" placeholder="10000" />
                 </div>
               </div>
-
               <div class="form-row">
                 <div class="form-group">
                   <label>Budget (EUR)</label>
-                  <input
-                    type="number"
-                    [(ngModel)]="campaignForm.budget_cents"
-                    name="budgetCents"
-                    placeholder="500"
-                  />
+                  <input type="number" [(ngModel)]="campaignForm.budget_cents" name="budgetCents" placeholder="500" />
                 </div>
                 <div class="form-group">
                   <label>CPM cible (centimes)</label>
-                  <input
-                    type="number"
-                    [(ngModel)]="campaignForm.target_cpm_cents"
-                    name="targetCpm"
-                    placeholder="500"
-                  />
+                  <input type="number" [(ngModel)]="campaignForm.target_cpm_cents" name="targetCpm" placeholder="500" />
                 </div>
               </div>
-
               <div class="form-row">
                 <div class="form-group">
                   <label>Date debut</label>
-                  <input
-                    type="date"
-                    [(ngModel)]="campaignForm.start_date"
-                    name="startDate"
-                  />
+                  <input type="date" [(ngModel)]="campaignForm.start_date" name="startDate" />
                 </div>
                 <div class="form-group">
                   <label>Date fin</label>
-                  <input
-                    type="date"
-                    [(ngModel)]="campaignForm.end_date"
-                    name="endDate"
-                  />
+                  <input type="date" [(ngModel)]="campaignForm.end_date" name="endDate" />
                 </div>
               </div>
+              <p *ngIf="!campaignForm.id" class="hint-text">Enregistrez pour acceder aux onglets Videos et Ciblage.</p>
             </div>
-
             <div class="modal-actions">
-              <button type="button" class="btn btn-secondary" (click)="closeCampaignModal()">
-                Annuler
-              </button>
+              <button type="button" class="btn btn-secondary" (click)="closeCampaignModal()">Annuler</button>
               <button type="submit" class="btn btn-primary" [disabled]="savingCampaign">
                 {{ savingCampaign ? 'Enregistrement...' : 'Enregistrer' }}
               </button>
             </div>
           </form>
+
+          <!-- Videos Tab -->
+          <div *ngIf="campaignModalTab === 'videos'" class="modal-body">
+            <p class="section-desc">Selectionnez les videos de l'annonceur a inclure dans cette campagne.</p>
+
+            <div *ngIf="loadingCampaignVideos" class="loading-text">Chargement...</div>
+
+            <!-- Already added videos -->
+            <div *ngIf="campaignVideos.length > 0" class="campaign-video-list">
+              <div *ngFor="let cv of campaignVideos" class="campaign-video-row">
+                <div class="cv-info">
+                  <span class="cv-name">{{ cv.original_name || cv.filename }}</span>
+                  <span class="cv-duration" *ngIf="cv.duration">{{ formatDuration(cv.duration) }}</span>
+                </div>
+                <div class="cv-actions">
+                  <label class="cv-weight-label">Poids:
+                    <input type="number" min="1" max="10" [value]="cv.weight" class="cv-weight-input"
+                      (change)="updateCampaignVideoWeight(cv.video_id, $event)" />
+                  </label>
+                  <button class="btn btn-sm btn-danger" (click)="removeCampaignVideo(cv.video_id)">Retirer</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Available videos to add -->
+            <h4 class="subsection-title">Ajouter des videos</h4>
+            <div *ngIf="getAvailableAdvertiserVideos().length === 0 && !loadingCampaignVideos" class="empty-hint">
+              Toutes les videos sont deja dans la campagne.
+            </div>
+            <div *ngFor="let v of getAvailableAdvertiserVideos()" class="campaign-video-row available-video">
+              <div class="cv-info">
+                <span class="cv-name">{{ v.original_name || v.filename || v.video_title || v.video_id }}</span>
+                <span class="cv-duration" *ngIf="v.duration || v.video_duration">{{ formatDuration(v.duration || v.video_duration) }}</span>
+              </div>
+              <button class="btn btn-sm btn-primary" (click)="addCampaignVideo(v.video_id)" [disabled]="addingCampaignVideo">
+                + Ajouter
+              </button>
+            </div>
+          </div>
+
+          <!-- Targeting Tab -->
+          <div *ngIf="campaignModalTab === 'targeting'" class="modal-body">
+            <p class="section-desc">Definissez les criteres de ciblage pour selectionner automatiquement les clubs.</p>
+
+            <!-- Current sites -->
+            <div *ngIf="campaignSites.length > 0" class="campaign-sites-section">
+              <h4>Sites cibles ({{ campaignSites.length }})</h4>
+              <div class="campaign-sites-list">
+                <div *ngFor="let s of campaignSites" class="campaign-site-row">
+                  <div class="cs-info">
+                    <span class="cs-name">{{ s.club_name || s.site_name }}</span>
+                    <span class="cs-status" [class]="'ds-' + s.deployment_status">{{ s.deployment_status }}</span>
+                  </div>
+                  <button class="btn btn-sm btn-danger" (click)="removeCampaignSite(s.site_id)">Retirer</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Quick add from advertiser's assigned sites -->
+            <div *ngIf="assignedSites.length > 0" class="quick-add-section">
+              <h4 class="subsection-title">Ajouter depuis les sites de l'annonceur</h4>
+              <div class="quick-add-sites">
+                <div *ngFor="let advSite of getUnassignedAdvertiserSites()" class="campaign-site-row">
+                  <div class="cs-info">
+                    <span class="cs-name">{{ advSite.club_name || advSite.site_name }}</span>
+                  </div>
+                  <button class="btn btn-sm btn-primary" (click)="addSiteToCampaign(advSite.site_id)">+ Ajouter</button>
+                </div>
+                <div *ngIf="getUnassignedAdvertiserSites().length === 0" class="empty-hint">
+                  Tous les sites de l'annonceur sont deja dans la campagne.
+                </div>
+              </div>
+            </div>
+
+            <!-- Targeting criteria -->
+            <h4 class="subsection-title">Ou ciblage par criteres</h4>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Sports</label>
+                <input type="text" [(ngModel)]="targetCriteriaSports" name="targetSports" placeholder="Football, Basketball" />
+                <span class="form-hint">Separes par des virgules</span>
+              </div>
+              <div class="form-group">
+                <label>Regions</label>
+                <input type="text" [(ngModel)]="targetCriteriaRegions" name="targetRegions" placeholder="Bretagne, Ile-de-France" />
+                <span class="form-hint">Separes par des virgules</span>
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Groupes</label>
+                <select [(ngModel)]="targetCriteriaGroupId" name="targetGroup">
+                  <option value="">-- Aucun --</option>
+                  <option *ngFor="let g of availableGroups" [value]="g.id">{{ g.name }}</option>
+                </select>
+              </div>
+              <div class="form-group targeting-actions">
+                <button class="btn btn-secondary" (click)="previewTargetSites()" [disabled]="resolvingSites">
+                  {{ resolvingSites ? 'Recherche...' : 'Previsualiser' }}
+                </button>
+              </div>
+            </div>
+
+            <!-- Preview results -->
+            <div *ngIf="resolvedSites.length > 0" class="resolved-sites-section">
+              <h4>{{ resolvedSites.length }} site(s) correspondent</h4>
+              <div class="resolved-sites-list">
+                <div *ngFor="let rs of resolvedSites" class="resolved-site-row">
+                  <span>{{ rs.club_name || rs.site_name }}</span>
+                  <span class="rs-status" [class]="'st-' + rs.status">{{ rs.status }}</span>
+                </div>
+              </div>
+              <button class="btn btn-primary" (click)="applyCriteriaToSites()" [disabled]="addingSitesToCampaign">
+                {{ addingSitesToCampaign ? 'Ajout...' : resolvedSites.length + ' site(s) → ajouter' }}
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -1254,6 +1376,80 @@ interface CampaignSite {
     .modal-lg {
       max-width: 700px;
     }
+    .modal-xl {
+      max-width: 850px;
+    }
+    .modal-tabs {
+      display: flex;
+      gap: 0;
+      border-bottom: 2px solid #e5e7eb;
+      padding: 0 1.5rem;
+    }
+    .modal-tab {
+      padding: 0.6rem 1.2rem;
+      border: none;
+      background: none;
+      cursor: pointer;
+      color: #6b7280;
+      font-size: 0.9rem;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -2px;
+      &.active { color: #2563eb; border-bottom-color: #2563eb; font-weight: 600; }
+      &:disabled { opacity: 0.4; cursor: not-allowed; }
+    }
+    .hint-text { color: #9ca3af; font-size: 0.85rem; margin-top: 0.5rem; }
+    .section-desc { color: #6b7280; font-size: 0.9rem; margin-bottom: 1rem; }
+    .subsection-title { font-size: 0.95rem; margin: 1.2rem 0 0.5rem; color: #374151; }
+
+    .campaign-video-list { margin-bottom: 1rem; }
+    .campaign-video-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.5rem 0.75rem;
+      border: 1px solid #e5e7eb;
+      border-radius: 6px;
+      margin-bottom: 0.4rem;
+      &.available-video { background: #f9fafb; border-style: dashed; }
+    }
+    .cv-info { display: flex; gap: 0.75rem; align-items: center; }
+    .cv-name { font-weight: 500; font-size: 0.9rem; }
+    .cv-duration { color: #9ca3af; font-size: 0.8rem; }
+    .cv-actions { display: flex; gap: 0.5rem; align-items: center; }
+    .cv-weight-label { font-size: 0.8rem; color: #6b7280; display: flex; gap: 0.3rem; align-items: center; }
+    .cv-weight-input { width: 50px; padding: 0.2rem 0.3rem; border: 1px solid #d1d5db; border-radius: 4px; text-align: center; }
+
+    .campaign-sites-section { margin-bottom: 1.2rem; }
+    .campaign-sites-list { max-height: 200px; overflow-y: auto; }
+    .campaign-site-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.4rem 0.5rem;
+      border-bottom: 1px solid #f3f4f6;
+    }
+    .cs-info { display: flex; gap: 0.5rem; align-items: center; }
+    .cs-name { font-size: 0.9rem; }
+    .cs-status, .rs-status { font-size: 0.75rem; padding: 0.1rem 0.4rem; border-radius: 4px; }
+    .ds-deployed { background: #d1fae5; color: #065f46; }
+    .ds-pending { background: #fef3c7; color: #92400e; }
+    .ds-failed { background: #fee2e2; color: #991b1b; }
+    .st-online { color: #059669; }
+    .st-offline { color: #dc2626; }
+
+    .quick-add-section { margin-bottom: 1.2rem; padding: 0.75rem; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0; }
+    .quick-add-sites { max-height: 180px; overflow-y: auto; }
+    .targeting-actions { display: flex; align-items: flex-end; }
+    .form-hint { font-size: 0.75rem; color: #9ca3af; }
+    .resolved-sites-section { margin-top: 1rem; padding: 0.75rem; background: #f0fdf4; border-radius: 8px; border: 1px solid #bbf7d0; }
+    .resolved-sites-list { max-height: 200px; overflow-y: auto; margin-bottom: 0.75rem; }
+    .resolved-site-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 0.3rem 0.5rem;
+      font-size: 0.9rem;
+      border-bottom: 1px solid #d1fae5;
+    }
 
     /* Add Videos Modal Styles */
     .search-box {
@@ -1741,6 +1937,24 @@ export class SponsorDetailComponent implements OnInit {
   isEditingCampaign = false;
   savingCampaign = false;
   campaignForm: Partial<Campaign> = {};
+  campaignModalTab: 'info' | 'videos' | 'targeting' = 'info';
+
+  // Campaign Videos
+  campaignVideos: CampaignVideo[] = [];
+  loadingCampaignVideos = false;
+  addingCampaignVideo = false;
+
+  // Campaign Targeting
+  campaignSites: CampaignSite[] = [];
+  loadingCampaignSites = false;
+  targetCriteria: { sports: string[]; regions: string[]; group_ids: string[] } = { sports: [], regions: [], group_ids: [] };
+  resolvedSites: ResolvedSite[] = [];
+  resolvingSites = false;
+  availableGroups: GroupOption[] = [];
+  addingSitesToCampaign = false;
+  targetCriteriaSports = '';
+  targetCriteriaRegions = '';
+  targetCriteriaGroupId = '';
 
   editForm: Partial<Sponsor> = {};
 
@@ -2112,18 +2326,43 @@ export class SponsorDetailComponent implements OnInit {
   openCampaignModal(): void {
     this.isEditingCampaign = false;
     this.campaignForm = { campaign_type: 'standard' };
+    this.campaignModalTab = 'info';
+    this.campaignVideos = [];
+    this.campaignSites = [];
+    this.resolvedSites = [];
     this.showCampaignModal = true;
   }
 
   editCampaign(campaign: Campaign): void {
     this.isEditingCampaign = true;
     this.campaignForm = { ...campaign };
+    this.campaignModalTab = 'info';
+    this.campaignVideos = [];
+    this.campaignSites = [];
+    this.resolvedSites = [];
     this.showCampaignModal = true;
   }
 
   closeCampaignModal(): void {
     this.showCampaignModal = false;
     this.campaignForm = {};
+    this.campaignModalTab = 'info';
+    this.campaignVideos = [];
+    this.campaignSites = [];
+    this.resolvedSites = [];
+  }
+
+  switchCampaignTab(tab: 'videos' | 'targeting'): void {
+    if (!this.campaignForm.id) return;
+    this.campaignModalTab = tab;
+    if (tab === 'videos' && this.campaignVideos.length === 0) {
+      this.loadCampaignVideos();
+    }
+    if (tab === 'targeting') {
+      if (this.campaignSites.length === 0) this.loadCampaignSites();
+      if (this.assignedSites.length === 0) this.loadAssignedSites();
+      if (this.availableGroups.length === 0) this.loadGroups();
+    }
   }
 
   saveCampaign(event: Event): void {
@@ -2140,24 +2379,182 @@ export class SponsorDetailComponent implements OnInit {
       advertiser_id: this.sponsorId,
     };
 
-    const request$ = this.isEditingCampaign
-      ? this.api.put<{ success: boolean }>(`/campaigns/${this.campaignForm.id}`, payload)
-      : this.api.post<{ success: boolean }>('/campaigns', payload);
+    if (this.isEditingCampaign) {
+      this.api.put<{ success: boolean }>(`/campaigns/${this.campaignForm.id}`, payload).subscribe({
+        next: () => {
+          this.notification.success('Campagne mise a jour');
+          this.loadCampaigns();
+        },
+        error: () => this.notification.error('Erreur lors de l\'enregistrement'),
+        complete: () => { this.savingCampaign = false; }
+      });
+    } else {
+      this.api.post<{ success: boolean; data: { campaign: { id: string } } }>('/campaigns', payload).subscribe({
+        next: (response) => {
+          const newId = response.data?.campaign?.id;
+          if (newId) {
+            this.campaignForm.id = newId;
+            this.isEditingCampaign = true;
+            this.notification.success('Campagne creee — ajoutez des videos et des sites');
+            this.switchCampaignTab('videos');
+          } else {
+            this.notification.success('Campagne creee');
+            this.closeCampaignModal();
+          }
+          this.loadCampaigns();
+        },
+        error: () => this.notification.error('Erreur lors de la creation'),
+        complete: () => { this.savingCampaign = false; }
+      });
+    }
+  }
 
-    request$.subscribe({
+  // ================================================================
+  // Campaign Videos Management
+  // ================================================================
+
+  loadCampaignVideos(): void {
+    if (!this.campaignForm.id) return;
+    this.loadingCampaignVideos = true;
+    this.api.get<{ success: boolean; data: { videos: CampaignVideo[] } }>(
+      `/campaigns/${this.campaignForm.id}/videos`
+    ).subscribe({
+      next: (r) => { this.campaignVideos = r.data?.videos || []; },
+      error: () => this.notification.error('Erreur chargement videos'),
+      complete: () => { this.loadingCampaignVideos = false; }
+    });
+  }
+
+  getAvailableAdvertiserVideos(): SponsorVideo[] {
+    const usedIds = new Set(this.campaignVideos.map(cv => cv.video_id));
+    return this.sponsorVideos.filter(v => !usedIds.has(v.video_id));
+  }
+
+  addCampaignVideo(videoId: string): void {
+    if (!this.campaignForm.id) return;
+    this.addingCampaignVideo = true;
+    this.api.post(`/campaigns/${this.campaignForm.id}/videos`, { video_id: videoId, weight: 1 }).subscribe({
+      next: () => { this.loadCampaignVideos(); this.loadCampaigns(); },
+      error: () => this.notification.error('Erreur ajout video'),
+      complete: () => { this.addingCampaignVideo = false; }
+    });
+  }
+
+  removeCampaignVideo(videoId: string): void {
+    if (!this.campaignForm.id) return;
+    this.api.delete(`/campaigns/${this.campaignForm.id}/videos/${videoId}`).subscribe({
+      next: () => { this.loadCampaignVideos(); this.loadCampaigns(); },
+      error: () => this.notification.error('Erreur retrait video'),
+    });
+  }
+
+  updateCampaignVideoWeight(videoId: string, event: Event): void {
+    const weight = Number((event.target as HTMLInputElement).value) || 1;
+    if (!this.campaignForm.id) return;
+    this.api.post(`/campaigns/${this.campaignForm.id}/videos`, { video_id: videoId, weight }).subscribe({
+      error: () => this.notification.error('Erreur mise a jour poids'),
+    });
+  }
+
+
+  // ================================================================
+  // Campaign Sites / Targeting Management
+  // ================================================================
+
+  loadCampaignSites(): void {
+    if (!this.campaignForm.id) return;
+    this.loadingCampaignSites = true;
+    this.api.get<{ success: boolean; data: { sites: CampaignSite[] } }>(
+      `/campaigns/${this.campaignForm.id}/sites`
+    ).subscribe({
+      next: (r) => { this.campaignSites = r.data?.sites || []; },
+      error: () => this.notification.error('Erreur chargement sites'),
+      complete: () => { this.loadingCampaignSites = false; }
+    });
+  }
+
+  loadGroups(): void {
+    this.api.get<{ success: boolean; data: GroupOption[] }>('/groups').subscribe({
+      next: (r) => { this.availableGroups = r.data || []; },
+    });
+  }
+
+  previewTargetSites(): void {
+    const criteria: Record<string, unknown> = {};
+    if (this.targetCriteriaSports.trim()) {
+      criteria['sports'] = this.targetCriteriaSports.split(',').map(s => s.trim()).filter(Boolean);
+    }
+    if (this.targetCriteriaRegions.trim()) {
+      criteria['regions'] = this.targetCriteriaRegions.split(',').map(s => s.trim()).filter(Boolean);
+    }
+    if (this.targetCriteriaGroupId) {
+      criteria['group_ids'] = [this.targetCriteriaGroupId];
+    }
+    if (Object.keys(criteria).length === 0) {
+      this.notification.error('Saisissez au moins un critere de ciblage');
+      return;
+    }
+
+    this.resolvingSites = true;
+    this.api.post<{ success: boolean; data: { sites: ResolvedSite[] } }>(
+      '/campaigns/resolve-sites', { target_criteria: criteria }
+    ).subscribe({
+      next: (r) => { this.resolvedSites = r.data?.sites || []; },
+      error: () => this.notification.error('Erreur resolution sites'),
+      complete: () => { this.resolvingSites = false; }
+    });
+  }
+
+  applyCriteriaToSites(): void {
+    if (!this.campaignForm.id || this.resolvedSites.length === 0) return;
+    this.addingSitesToCampaign = true;
+
+    // Save target_criteria on the campaign, then add each site
+    const criteria: Record<string, unknown> = {};
+    if (this.targetCriteriaSports.trim()) criteria['sports'] = this.targetCriteriaSports.split(',').map(s => s.trim()).filter(Boolean);
+    if (this.targetCriteriaRegions.trim()) criteria['regions'] = this.targetCriteriaRegions.split(',').map(s => s.trim()).filter(Boolean);
+    if (this.targetCriteriaGroupId) criteria['group_ids'] = [this.targetCriteriaGroupId];
+
+    // Update campaign with target_criteria then resolve+populate via API
+    this.api.put(`/campaigns/${this.campaignForm.id}`, { target_criteria: criteria }).subscribe({
       next: () => {
-        this.notification.success(
-          this.isEditingCampaign ? 'Campagne mise a jour' : 'Campagne creee'
-        );
-        this.closeCampaignModal();
-        this.loadCampaigns();
+        // Now tell the API to resolve and populate
+        this.api.post(`/campaigns/${this.campaignForm.id}/sites`, { resolve: true }).subscribe({
+          next: () => {
+            this.notification.success(`${this.resolvedSites.length} site(s) ajoutes`);
+            this.resolvedSites = [];
+            this.loadCampaignSites();
+            this.loadCampaigns();
+          },
+          error: () => this.notification.error('Erreur ajout sites'),
+          complete: () => { this.addingSitesToCampaign = false; }
+        });
       },
       error: () => {
-        this.notification.error('Erreur lors de l\'enregistrement');
-      },
-      complete: () => {
-        this.savingCampaign = false;
+        this.notification.error('Erreur sauvegarde criteres');
+        this.addingSitesToCampaign = false;
       }
+    });
+  }
+
+  getUnassignedAdvertiserSites(): AssignedSite[] {
+    const campaignSiteIds = new Set(this.campaignSites.map(cs => cs.site_id));
+    return this.assignedSites.filter(as => !campaignSiteIds.has(as.site_id));
+  }
+
+  addSiteToCampaign(siteId: string): void {
+    if (!this.campaignForm.id) return;
+    this.api.post(`/campaigns/${this.campaignForm.id}/sites`, { site_id: siteId }).subscribe({
+      next: () => { this.loadCampaignSites(); this.loadCampaigns(); },
+      error: () => this.notification.error('Erreur ajout site'),
+    });
+  }
+
+  removeCampaignSite(siteId: string): void {
+    if (!this.campaignForm.id) return;
+    this.api.delete(`/campaigns/${this.campaignForm.id}/sites/${siteId}`).subscribe({
+      next: () => { this.loadCampaignSites(); this.loadCampaigns(); },
+      error: () => this.notification.error('Erreur retrait site'),
     });
   }
 
