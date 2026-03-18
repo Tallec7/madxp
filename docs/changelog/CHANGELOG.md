@@ -1,3 +1,17 @@
+# [3.114.0](https://github.com/Tallec7/neopro/compare/v3.113.5...v3.114.0) (2026-03-18)
+
+### Bug Fixes
+
+- **security:** resolve Supabase linter alerts for SECURITY DEFINER views and missing RLS ([b6918ba](https://github.com/Tallec7/neopro/commit/b6918ba448d19c06c3e064ee4abbc193ea149762))
+
+### Features
+
+- **analytics:** ADR-035 Phase 2 — split sponsor category into sponsor_local/sponsor_neopro ([608973e](https://github.com/Tallec7/neopro/commit/608973eb2380025cea0b89d84680d69307a1039f))
+- **campaigns:** ADR-035 Phase 3a — operational campaign CRUD, targeting, and stats ([adb095f](https://github.com/Tallec7/neopro/commit/adb095fd09205c53ee56985ebcaf37d62c0ff389))
+- **campaigns:** ADR-035 Phase 3b — auto-deploy campaign videos to target sites ([3aa468d](https://github.com/Tallec7/neopro/commit/3aa468d4530ffdb4c2630b9565137dc03af68051))
+- **campaigns:** ADR-035 Phase 3c — campaigns tab in advertiser dashboard ([275c1c2](https://github.com/Tallec7/neopro/commit/275c1c2764e0f4e66a3bd106326ce9dae2a6ac4e))
+- **campaigns:** ADR-035 Phases 3d + 4 — advertiser portal campaigns & cleanup ([f981d2b](https://github.com/Tallec7/neopro/commit/f981d2b11bf872722ad2f5a840d7d7b15cc9d3fe))
+
 ## v3.114.0 — 18 Mars 2026
 
 ### ADR-035 Phase 3: Campagnes opérationnelles (3a → 3d)
