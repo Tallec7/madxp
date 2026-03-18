@@ -824,7 +824,7 @@ export class SponsorVideosComponent implements OnInit {
   }
 
   async loadAvailableVideos() {
-    const response = await fetch('/api/videos', { credentials: 'include' });
+    const response = await fetch('/api/videos?limit=500', { credentials: 'include' });
 
     if (response.ok) {
       const data = await response.json();

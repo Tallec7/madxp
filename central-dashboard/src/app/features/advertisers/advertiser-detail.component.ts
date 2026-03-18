@@ -1884,7 +1884,7 @@ export class SponsorDetailComponent implements OnInit {
   loadAvailableVideos() {
     this.loadingVideos = true;
 
-    this.api.get<{ data: AvailableVideo[]; pagination: any }>('/videos')
+    this.api.get<{ data: AvailableVideo[]; pagination: any }>('/videos?limit=500')
       .subscribe({
         next: (response) => {
           const allVideos = response.data || [];
