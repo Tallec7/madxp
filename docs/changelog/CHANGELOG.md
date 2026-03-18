@@ -1,3 +1,9 @@
+## [3.114.2](https://github.com/Tallec7/neopro/compare/v3.114.1...v3.114.2) (2026-03-18)
+
+### Bug Fixes
+
+- **ci:** lower functions coverage threshold after ADR-035 dead code cleanup ([03872cd](https://github.com/Tallec7/neopro/commit/03872cd8c4598f81f95a6471f9ee623c2b384b74))
+
 ## [3.114.1](https://github.com/Tallec7/neopro/compare/v3.114.0...v3.114.1) (2026-03-18)
 
 ### Bug Fixes
