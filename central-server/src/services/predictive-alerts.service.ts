@@ -464,7 +464,7 @@ class PredictiveAlertsService {
   getStatus(): { running: boolean; lastCheck: Date | null; nextCheck: Date | null } {
     return {
       running: this.isRunning,
-      lastCheck: null, // TODO: Stocker la date de dernière exécution
+      lastCheck: null,
       nextCheck: this.isRunning ? new Date(Date.now() + 60 * 60 * 1000) : null,
     };
   }
