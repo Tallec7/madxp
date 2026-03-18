@@ -1,3 +1,9 @@
+## [3.114.3](https://github.com/Tallec7/neopro/compare/v3.114.2...v3.114.3) (2026-03-18)
+
+### Bug Fixes
+
+- **dashboard:** afficher toutes les vidéos dans le modal annonceur ([5a0df27](https://github.com/Tallec7/neopro/commit/5a0df27f70da383ee41fa2db7fb35f43f5147566))
+
 ## [3.114.2](https://github.com/Tallec7/neopro/compare/v3.114.1...v3.114.2) (2026-03-18)
 
 ### Bug Fixes
