@@ -1,3 +1,11 @@
+## [3.114.1](https://github.com/Tallec7/neopro/compare/v3.114.0...v3.114.1) (2026-03-18)
+
+### Bug Fixes
+
+- **cleanup:** ADR-035 Phase 4 — remove dead advertiser_id references from site-sponsor repository ([d4d4930](https://github.com/Tallec7/neopro/commit/d4d4930f0886565cb00d118145af08445184e4e9))
+- **migration:** drop view before recreate in adr035-phase4-cleanup ([87246b4](https://github.com/Tallec7/neopro/commit/87246b447183b759df82e7b00d742aa2686874f4))
+- **security:** set search_path on 22 functions and drop duplicate index ([e1fa2c5](https://github.com/Tallec7/neopro/commit/e1fa2c56a97d2f308fa91cb8cc5f256d9d30180b))
+
 # [3.114.0](https://github.com/Tallec7/neopro/compare/v3.113.5...v3.114.0) (2026-03-18)
 
 ### Bug Fixes
