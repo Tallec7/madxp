@@ -1,3 +1,9 @@
+# [3.115.0](https://github.com/Tallec7/neopro/compare/v3.114.3...v3.115.0) (2026-03-18)
+
+### Features
+
+- **campaigns:** campaign modal with video selection and site targeting ([7e30db9](https://github.com/Tallec7/neopro/commit/7e30db9fbfa2c01c142fa9291e81e2ad63f85dff))
+
 ## [3.114.3](https://github.com/Tallec7/neopro/compare/v3.114.2...v3.114.3) (2026-03-18)
 
 ### Bug Fixes
