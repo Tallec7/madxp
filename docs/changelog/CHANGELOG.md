@@ -2,6 +2,12 @@
 
 ### Bug Fixes
 
+- **dashboard:** advertiser video display NaN + campaign deploy error messages ([65b729e](https://github.com/Tallec7/neopro/commit/65b729eab97936ecbf171b1c9d1406a187fe2b1a))
+
+## [3.115.1](https://github.com/Tallec7/neopro/compare/v3.115.0...v3.115.1) (2026-03-18)
+
+### Bug Fixes
+
 - **dashboard:** fix advertiser video display — NaN duration, missing title/date due to API field mismatch
 - **dashboard:** campaign deploy error now shows specific cause (no videos / no target sites / not found)
 
