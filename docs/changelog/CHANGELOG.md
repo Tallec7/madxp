@@ -1,3 +1,9 @@
+## [3.115.2](https://github.com/Tallec7/neopro/compare/v3.115.1...v3.115.2) (2026-03-19)
+
+### Bug Fixes
+
+- **dashboard:** align speculative path fallback category with deployment service ([fcb55e6](https://github.com/Tallec7/neopro/commit/fcb55e61f837a7a39d4bef5779cbc9b8bb1066d7))
+
 ## [3.115.2] (2026-03-19)
 
 ### Bug Fixes
