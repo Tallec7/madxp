@@ -8353,6 +8353,35 @@ describe('deployed_path feedback guards', () => {
       reason: 'dashboard must use deployedPathsMap to prefer real paths over speculative construction',
     });
   });
+
+  it('dashboard speculative path fallback must use "default" not "UPLOADS" to match deployment.service', () => {
+    const dashboardContent = fs.readFileSync(
+      path.join(repoRoot, 'central-dashboard/src/app/features/sites/components/site-content-tab/site-content-tab.component.ts'),
+      'utf8'
+    );
+    const deploymentContent = fs.readFileSync(
+      path.join(repoRoot, 'central-server/src/services/deployment.service.ts'),
+      'utf8'
+    );
+    // The deployment service sends category 'default' to the Pi (line ~361)
+    const deploymentFallback = /category.*\|\|.*'default'/.test(deploymentContent);
+    // The dashboard fallback must match — using 'UPLOADS' causes path mismatch
+    // when offline sites reconnect (Pi has videos/default/X.mp4 but config has videos/UPLOADS/X.mp4)
+    const dashboardHasUploads = /category \|\| 'UPLOADS'/.test(dashboardContent);
+    const dashboardHasDefault = /category \|\| 'default'/.test(dashboardContent);
+    expect({
+      deploymentFallback,
+      dashboardHasUploads,
+      dashboardHasDefault,
+      reason: 'dashboard and deployment.service must use same category fallback to prevent path mismatch on offline sites',
+    }).toEqual({
+      deploymentFallback: true,
+      dashboardHasUploads: false,
+      dashboardHasDefault: true,
+      reason: 'dashboard and deployment.service must use same category fallback to prevent path mismatch on offline sites',
+    });
+  });
+
 });
 
 // ----------------------------------------------------------

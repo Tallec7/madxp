@@ -4588,7 +4588,7 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
         // sinon fallback sur un chemin calculé (sera corrigé après le prochain déploiement)
         const deployed = this.deployedPathsMap.get(cloud.id);
         const localPath = deployed?.deployedPath
-          ?? `videos/${cloud.category || 'UPLOADS'}/${cloud.filename}`;
+          ?? `videos/${cloud.category || 'default'}/${cloud.filename}`;
         // Éviter d'écraser si un cloud avec le même path calculé existe déjà
         if (!optionsMap.has(localPath)) {
           optionsMap.set(localPath, {

@@ -1,3 +1,18 @@
+## [3.115.2] (2026-03-19)
+
+### Bug Fixes
+
+- **dashboard:** fix vidéos de boucle "introuvables" après reconnexion site hors ligne — alignement fallback catégorie `'UPLOADS'` → `'default'` dans `site-content-tab.component.ts` pour matcher `deployment.service.ts`
+
+### Tests
+
+- **smoke:** add category fallback alignment guard (dashboard vs deployment.service)
+
+### Documentation
+
+- **troubleshooting:** add section 28 — vidéos introuvables après reconnexion hors ligne
+- **reference:** document fallback catégorie et alignement `'default'`
+
 ## [3.115.1](https://github.com/Tallec7/neopro/compare/v3.115.0...v3.115.1) (2026-03-18)
 
 ### Bug Fixes

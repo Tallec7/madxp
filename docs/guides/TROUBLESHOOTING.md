@@ -29,6 +29,7 @@
 25. [Ventilateur Active Cooler Pi 5 non détecté (v3.104.3+)](#ventilateur-active-cooler-pi-5-non-détecté-v31043)
 26. [Kiosk pas en plein écran sur HDMI-1 (v3.111.1+)](#kiosk-pas-en-plein-écran-sur-hdmi-1-v31111)
 27. [Vidéo gelée/lag sur navigateur PC (v3.114+)](#vidéo-geléelag-sur-navigateur-pc-v3114)
+28. [Vidéos de boucle "introuvables" après reconnexion site hors ligne (v3.115.2+)](#vidéos-de-boucle-introuvables-après-reconnexion-site-hors-ligne-v31152)
 
 > **WiFi USB** : Pour un guide complet sur la clé WiFi USB (installation, diagnostic, pannes, recovery), voir [WIFI_USB_GUIDE.md](WIFI_USB_GUIDE.md).
 >
@@ -5766,4 +5767,28 @@ journalctl -u neopro-server -f --no-pager | grep -E 'register|disconnect|reconne
 
 ---
 
-**Dernière mise à jour :** 17 mars 2026 (ajout section vidéo gelée navigateur PC — v3.114)
+## 28. Vidéos de boucle "introuvables" après reconnexion site hors ligne (v3.115.2+)
+
+**Symptôme :** Après déploiement de vidéos sur un site hors ligne, quand le site se reconnecte (heures/jours plus tard), le dashboard affiche _"N vidéo(s) introuvable(s)"_ dans la configuration des boucles avec un bouton "Réparer automatiquement". Les vidéos pointent vers `videos/UPLOADS/X.mp4` alors que le Pi les a stockées à `videos/default/X.mp4`.
+
+**Cause :** Mismatch de fallback catégorie. Quand une vidéo est uploadée sans catégorie (`category = NULL` en DB), le dashboard construisait un chemin spéculatif avec le fallback `'UPLOADS'` (`videos/UPLOADS/X.mp4`). Mais le `deployment.service.ts` envoie `category: 'default'` au Pi, qui stocke le fichier à `videos/default/X.mp4`. Quand l'utilisateur sélectionne cette vidéo dans la boucle, le chemin `videos/UPLOADS/X.mp4` se retrouve dans la config. Quand le site se reconnecte et rapporte ses fichiers réels, le mismatch est détecté → vidéo "introuvable".
+
+**Correctif (v3.115.2) :** Alignement du fallback catégorie dans `site-content-tab.component.ts` : `'UPLOADS'` → `'default'`, en cohérence avec `deployment.service.ts`. Le chemin spéculatif est maintenant identique au chemin réel du Pi.
+
+**Réparation des sites déjà affectés :**
+
+1. **Automatique (bouton)** : Cliquer "Réparer automatiquement" dans la bannière d'alerte — corrige les chemins dans la config boucle par correspondance de filename
+2. **Automatique (backfill)** : Le mécanisme `backfillDeployedPaths()` corrige les `deployed_path` NULL à chaque `sync_local_state` — le prochain rechargement du dashboard utilisera le chemin réel
+3. **Manuel** : Re-sélectionner la vidéo dans le dropdown du loop-manager
+
+**Smoke tests :**
+
+- `dashboard speculative path fallback must use "default" not "UPLOADS" to match deployment.service`
+
+**Monitoring :**
+
+Le mécanisme de détection d'orphelins (`detectOrphanedVideoPaths()`) dans le dashboard agit comme moniteur en temps réel : toute vidéo dans la config dont le chemin ne correspond à aucun fichier connu (local Pi + cloud) génère la bannière d'alerte. Ce monitoring est passif (détection côté dashboard, pas de push) mais couvre 100% des cas car il est exécuté à chaque chargement de la fiche site.
+
+---
+
+**Dernière mise à jour :** 19 mars 2026 (ajout section vidéos introuvables après reconnexion hors ligne — v3.115.2)
