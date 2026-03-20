@@ -87,8 +87,10 @@ check_app_health() {
 }
 
 check_admin_health() {
-  if curl -sf --connect-timeout 5 --max-time 8 http://localhost:8080/api/version >/dev/null 2>&1; then
-    log_pass "admin_health" "Admin server responding on port 8080"
+  local http_code
+  http_code=$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout 5 --max-time 8 http://localhost:8080/api/version 2>/dev/null || echo "000")
+  if [ "$http_code" != "000" ]; then
+    log_pass "admin_health" "Admin server responding on port 8080 (HTTP $http_code)"
   else
     log_critical "admin_health" "Admin server not responding on port 8080"
   fi

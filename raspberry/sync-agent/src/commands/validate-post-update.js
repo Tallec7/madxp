@@ -138,9 +138,13 @@ class PostUpdateValidator {
 
   async _checkAdminHealth(report) {
     try {
-      const response = await axios.get('http://localhost:8080/api/version', { timeout: 8000 });
-      report.checks.adminHealth = { responding: true, version: response.data };
+      const response = await axios.get('http://localhost:8080/api/version', {
+        timeout: 8000,
+        validateStatus: () => true, // Accept any HTTP status (401 = server is running)
+      });
+      report.checks.adminHealth = { responding: true, httpStatus: response.status };
     } catch (error) {
+      // Network error (ECONNREFUSED, timeout) = server truly not responding
       report.checks.adminHealth = { responding: false, error: error.message };
       report.critical.push({
         check: 'adminHealth',
