@@ -1,3 +1,10 @@
+# [3.116.0](https://github.com/Tallec7/neopro/compare/v3.115.4...v3.116.0) (2026-03-20)
+
+### Features
+
+- **canary:** add post-OTA canary monitoring with health checks ([bc8b140](https://github.com/Tallec7/neopro/commit/bc8b1408446f44268619ca3b940557809f0cdd44))
+- **ota:** add post-OTA validation with auto-rollback on critical failure ([7324b8e](https://github.com/Tallec7/neopro/commit/7324b8ee65fb07597e93257b5faeb16370f07bb1))
+
 ## [3.116.0] (2026-03-20)
 
 ### Features
