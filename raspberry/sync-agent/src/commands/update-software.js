@@ -6,6 +6,7 @@ const axios = require('axios');
 const logger = require('../logger');
 const { config } = require('../config');
 const { getVersionInfo } = require('../utils/version-info');
+const postUpdateValidator = require('./validate-post-update');
 
 const execAsync = util.promisify(exec);
 
@@ -88,6 +89,17 @@ class SoftwareUpdateHandler {
 
       await this.startServices();
 
+      progressCallback(85);
+
+      // Validation post-OTA : vérifie que les services critiques fonctionnent
+      // Échec critique = throw = rollback automatique AVANT de reporter le succès
+      const validationReport = await postUpdateValidator.validate({ throwOnCritical: true });
+      logger.info('Post-OTA validation passed', {
+        criticalCount: validationReport.critical.length,
+        warningCount: validationReport.warnings.length,
+        durationMs: validationReport.durationMs,
+      });
+
       progressCallback(90);
 
       const newVersion = await this.getCurrentVersion(true);
@@ -99,6 +111,7 @@ class SoftwareUpdateHandler {
 
       // Générer le rapport post-mise à jour
       const report = await this.generatePostUpdateReport(newVersion);
+      report.validation = validationReport;
 
       progressCallback(100);
 

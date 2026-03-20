@@ -14,7 +14,11 @@
  */
 
 const express = require('express');
+const { exec } = require('child_process');
+const util = require('util');
+const path = require('path');
 
+const execAsync = util.promisify(exec);
 const { ValidationError, CommandError } = require('../services/errors');
 
 /**
@@ -97,6 +101,53 @@ module.exports = function createSystemRouter({ systemService }) {
       res.json({ success: true, ...result });
     } catch (error) {
       res.status(500).json({ error: error.message });
+    }
+  });
+
+  // POST /api/system/validate
+  // Run post-OTA validation checks and return structured report.
+  // Called by dashboard or manually via SSH to verify Pi health.
+  router.post('/api/system/validate', async (req, res) => {
+    try {
+      const scriptPath = path.join(__dirname, '../../scripts/validate-pi.sh');
+      const { stdout } = await execAsync(`bash ${scriptPath} --json`, { timeout: 60000 });
+      const report = JSON.parse(stdout.trim());
+      const status = report.healthy ? 200 : 503;
+      res.status(status).json(report);
+    } catch (error) {
+      // validate-pi.sh exits 1 on critical failure — parse stdout anyway
+      if (error.stdout) {
+        try {
+          const report = JSON.parse(error.stdout.trim());
+          res.status(503).json(report);
+          return;
+        } catch {
+          // JSON parse failed, fall through
+        }
+      }
+      res.status(500).json({ error: error.message, healthy: false });
+    }
+  });
+
+  // GET /api/system/validate — same as POST but for easy browser/curl testing
+  router.get('/api/system/validate', async (req, res) => {
+    try {
+      const scriptPath = path.join(__dirname, '../../scripts/validate-pi.sh');
+      const { stdout } = await execAsync(`bash ${scriptPath} --json`, { timeout: 60000 });
+      const report = JSON.parse(stdout.trim());
+      const status = report.healthy ? 200 : 503;
+      res.status(status).json(report);
+    } catch (error) {
+      if (error.stdout) {
+        try {
+          const report = JSON.parse(error.stdout.trim());
+          res.status(503).json(report);
+          return;
+        } catch {
+          // JSON parse failed, fall through
+        }
+      }
+      res.status(500).json({ error: error.message, healthy: false });
     }
   });
 

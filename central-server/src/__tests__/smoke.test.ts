@@ -11289,3 +11289,109 @@ describe('Campaign deploy: meaningful error messages guard', () => {
     expect(controllerSrc).toContain('res.status(400)');
   });
 });
+
+// =============================================================================
+// Post-OTA Validation Guards
+// =============================================================================
+
+describe('Post-OTA validation integration', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+
+  it('update-software.js must import and call validate-post-update before reporting success', () => {
+    const otaContent = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/sync-agent/src/commands/update-software.js'),
+      'utf8'
+    );
+    // Must require the validation module
+    expect({ importsValidator: otaContent.includes("require('./validate-post-update')") })
+      .toEqual({ importsValidator: true });
+    // Must call validate() with throwOnCritical: true (so failures trigger rollback)
+    expect({ callsValidate: otaContent.includes('postUpdateValidator.validate') })
+      .toEqual({ callsValidate: true });
+    expect({ throwsOnCritical: otaContent.includes('throwOnCritical: true') })
+      .toEqual({ throwsOnCritical: true });
+  });
+
+  it('validate-post-update.js must check critical services (neopro-app, neopro-admin)', () => {
+    const validatorContent = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/sync-agent/src/commands/validate-post-update.js'),
+      'utf8'
+    );
+    expect({ checksNeoproApp: validatorContent.includes('neopro-app') })
+      .toEqual({ checksNeoproApp: true });
+    expect({ checksNeoproAdmin: validatorContent.includes('neopro-admin') })
+      .toEqual({ checksNeoproAdmin: true });
+  });
+
+  it('validate-post-update.js must check HTTP health of app (port 3000) and admin (port 8080)', () => {
+    const validatorContent = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/sync-agent/src/commands/validate-post-update.js'),
+      'utf8'
+    );
+    expect({ checksPort3000: validatorContent.includes('localhost:3000') })
+      .toEqual({ checksPort3000: true });
+    expect({ checksPort8080: validatorContent.includes('localhost:8080') })
+      .toEqual({ checksPort8080: true });
+  });
+
+  it('validate-post-update.js must check configuration.json integrity', () => {
+    const validatorContent = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/sync-agent/src/commands/validate-post-update.js'),
+      'utf8'
+    );
+    expect({ checksConfig: validatorContent.includes('configuration.json') || validatorContent.includes('config.paths.config') })
+      .toEqual({ checksConfig: true });
+    expect({ parsesJson: validatorContent.includes('JSON.parse') })
+      .toEqual({ parsesJson: true });
+  });
+
+  it('validate-post-update.js must check webapp/index.html exists', () => {
+    const validatorContent = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/sync-agent/src/commands/validate-post-update.js'),
+      'utf8'
+    );
+    expect({ checksIndexHtml: validatorContent.includes('index.html') })
+      .toEqual({ checksIndexHtml: true });
+  });
+
+  it('validate-post-update.js must check HDMI display status via DRM sysfs', () => {
+    const validatorContent = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/sync-agent/src/commands/validate-post-update.js'),
+      'utf8'
+    );
+    // Must use /sys/class/drm/ (not cec-client alone — smoke test enforced)
+    expect({ checksDrmSysfs: validatorContent.includes('/sys/class/drm/') })
+      .toEqual({ checksDrmSysfs: true });
+  });
+
+  it('validate-pi.sh must exist and be executable', () => {
+    const scriptPath = path.join(repoRoot, 'raspberry/scripts/validate-pi.sh');
+    expect({ exists: fs.existsSync(scriptPath) }).toEqual({ exists: true });
+    const stat = fs.statSync(scriptPath);
+    // Check owner-executable bit
+    // eslint-disable-next-line no-bitwise
+    expect({ executable: (stat.mode & 0o100) !== 0 }).toEqual({ executable: true });
+  });
+
+  it('validate-pi.sh must support --json output mode', () => {
+    const scriptContent = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/scripts/validate-pi.sh'),
+      'utf8'
+    );
+    expect({ supportsJson: scriptContent.includes('--json') })
+      .toEqual({ supportsJson: true });
+    expect({ outputsJsonFormat: scriptContent.includes('"healthy"') })
+      .toEqual({ outputsJsonFormat: true });
+  });
+
+  it('admin routes must expose POST /api/system/validate endpoint', () => {
+    const systemRoutes = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/admin/routes/system.js'),
+      'utf8'
+    );
+    expect({ hasValidateRoute: systemRoutes.includes('/api/system/validate') })
+      .toEqual({ hasValidateRoute: true });
+    expect({ callsValidatePiSh: systemRoutes.includes('validate-pi.sh') })
+      .toEqual({ callsValidatePiSh: true });
+  });
+});
