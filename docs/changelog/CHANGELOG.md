@@ -1,3 +1,9 @@
+## [3.116.2](https://github.com/Tallec7/neopro/compare/v3.116.1...v3.116.2) (2026-03-20)
+
+### Bug Fixes
+
+- **validation:** accept HTTP 401 as healthy admin server response ([e539fe7](https://github.com/Tallec7/neopro/commit/e539fe7fadb667e7ea40adeeb1ad497948f50329))
+
 ## [3.116.1](https://github.com/Tallec7/neopro/compare/v3.116.0...v3.116.1) (2026-03-20)
 
 ### Bug Fixes
