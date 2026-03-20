@@ -1,3 +1,9 @@
+## [3.116.1](https://github.com/Tallec7/neopro/compare/v3.116.0...v3.116.1) (2026-03-20)
+
+### Bug Fixes
+
+- **build:** include validate-pi.sh and validate-post-update.js in OTA package ([1e4cf9b](https://github.com/Tallec7/neopro/commit/1e4cf9bc9344fb9becf55562a353fde686f0a738))
+
 # [3.116.0](https://github.com/Tallec7/neopro/compare/v3.115.4...v3.116.0) (2026-03-20)
 
 ### Features
