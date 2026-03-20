@@ -7,6 +7,7 @@ import logger from '../config/logger';
 import metricsService from './metrics.service';
 import emailService from './email.service';
 import { dbCircuitBreaker } from './db-circuit-breaker.service';
+import { canaryMonitorService } from './canary-monitor.service';
 
 // Configuration des notifications externes (via variables d'environnement)
 const WEBHOOK_URL = process.env.ALERTING_WEBHOOK_URL;
@@ -1132,6 +1133,7 @@ class AlertingService {
       tickCount++;
       await this.checkEscalations();
       await this.checkStuckDeployments();
+      await canaryMonitorService.runChecks();
       // Run hourly metrics check every 5 minutes (every 5th tick)
       if (tickCount % 5 === 0) {
         await this.checkHourlyMetrics();

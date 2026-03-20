@@ -11449,3 +11449,59 @@ describe('Hardware matrix E2E tests existence', () => {
       .toEqual({ usesBroadcastChannel: true });
   });
 });
+
+describe('Canary monitoring post-OTA', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+
+  it('canary-monitor.service.ts must exist and check site health', () => {
+    const canaryContent = fs.readFileSync(
+      path.join(repoRoot, 'central-server/src/services/canary-monitor.service.ts'),
+      'utf8'
+    );
+    // Must check site online status
+    expect({ checksOnline: canaryContent.includes('last_seen_at') })
+      .toEqual({ checksOnline: true });
+    // Must check version match
+    expect({ checksVersion: canaryContent.includes('software_version') })
+      .toEqual({ checksVersion: true });
+    // Must create canary alerts via alertRepository
+    expect({ createsAlerts: canaryContent.includes('alertRepository.create') })
+      .toEqual({ createsAlerts: true });
+    // Must deduplicate alerts
+    expect({ deduplicates: canaryContent.includes('existsActive') })
+      .toEqual({ deduplicates: true });
+  });
+
+  it('deploy-progress.handler.ts must start canary watch on OTA completion', () => {
+    const handlerContent = fs.readFileSync(
+      path.join(repoRoot, 'central-server/src/handlers/deploy-progress.handler.ts'),
+      'utf8'
+    );
+    expect({ importsCanary: handlerContent.includes('canaryMonitorService') })
+      .toEqual({ importsCanary: true });
+    expect({ startsWatch: handlerContent.includes('canaryMonitorService.startWatch') })
+      .toEqual({ startsWatch: true });
+  });
+
+  it('alerting.service.ts must run canary checks in its periodic loop', () => {
+    const alertingContent = fs.readFileSync(
+      path.join(repoRoot, 'central-server/src/services/alerting.service.ts'),
+      'utf8'
+    );
+    expect({ runsCanaryChecks: alertingContent.includes('canaryMonitorService.runChecks') })
+      .toEqual({ runsCanaryChecks: true });
+  });
+
+  it('canary-monitor.service.ts must have configurable window and not auto-rollback', () => {
+    const canaryContent = fs.readFileSync(
+      path.join(repoRoot, 'central-server/src/services/canary-monitor.service.ts'),
+      'utf8'
+    );
+    // Must use env var for window duration
+    expect({ configurableWindow: canaryContent.includes('CANARY_WINDOW_MS') })
+      .toEqual({ configurableWindow: true });
+    // Must NOT contain automatic rollback (manual decision)
+    expect({ noAutoRollback: !canaryContent.includes('rollback()') })
+      .toEqual({ noAutoRollback: true });
+  });
+});

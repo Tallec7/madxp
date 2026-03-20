@@ -11,6 +11,7 @@
 import { query } from '../config/database';
 import logger from '../config/logger';
 import { metricsService } from '../services/metrics.service';
+import { canaryMonitorService } from '../services/canary-monitor.service';
 import { SocketContext } from './socket-context';
 
 // Lazy import to avoid circular dependency
@@ -176,6 +177,13 @@ export async function handleUpdateProgress(
             resolvedDeployedCount = countRow.rows[0]?.cnt ?? 0;
           }
         }
+
+        // Start canary health watch for the deployed site
+        canaryMonitorService.startWatch(
+          deploymentId as string,
+          siteId,
+          (version as string) || 'unknown'
+        );
       } else {
         await updateService.updateProgress(deploymentId as string, (progressValue as number) || 0);
       }
