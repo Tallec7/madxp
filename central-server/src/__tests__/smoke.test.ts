@@ -11396,6 +11396,28 @@ describe('Post-OTA validation integration', () => {
   });
 });
 
+describe('Build includes OTA validation files', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+
+  it('build-raspberry.sh must include validate-pi.sh in RUNTIME_SCRIPTS', () => {
+    const buildScript = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/scripts/build-raspberry.sh'),
+      'utf8'
+    );
+    expect({ includesValidatePi: buildScript.includes('validate-pi.sh') })
+      .toEqual({ includesValidatePi: true });
+  });
+
+  it('build-raspberry.sh must include validate-post-update.js in SYNC_AGENT_CRITICAL', () => {
+    const buildScript = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/scripts/build-raspberry.sh'),
+      'utf8'
+    );
+    expect({ includesValidatePostUpdate: buildScript.includes('validate-post-update.js') })
+      .toEqual({ includesValidatePostUpdate: true });
+  });
+});
+
 describe('Hardware matrix E2E tests existence', () => {
   const repoRoot = path.resolve(__dirname, '..', '..', '..');
 

@@ -181,6 +181,7 @@ verify_build_integrity() {
         "sync-agent/src/metrics.js"
         "sync-agent/src/commands/index.js"
         "sync-agent/src/commands/update-software.js"
+        "sync-agent/src/commands/validate-post-update.js"
         "sync-agent/src/commands/deploy-video.js"
         "sync-agent/src/utils/version-info.js"
         "sync-agent/src/utils/config-merge.js"
@@ -442,6 +443,7 @@ RUNTIME_SCRIPTS=(
     "raspberry/scripts/fix-fleet-pi.sh"
     "raspberry/scripts/diagnose-pi.sh"
     "raspberry/scripts/neopro-hdmi-notify.sh"
+    "raspberry/scripts/validate-pi.sh"
 )
 mkdir -p ${DEPLOY_DIR}/scripts
 for script_path in "${RUNTIME_SCRIPTS[@]}"; do
