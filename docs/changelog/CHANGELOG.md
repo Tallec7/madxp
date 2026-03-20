@@ -1,3 +1,9 @@
+## [3.115.4](https://github.com/Tallec7/neopro/compare/v3.115.3...v3.115.4) (2026-03-20)
+
+### Bug Fixes
+
+- **tv:** resolve manual video freeze on browser /tv and /secondary displays ([dfbe7ad](https://github.com/Tallec7/neopro/commit/dfbe7ad84406a02bb844f00f8bb5323a104b4348))
+
 ## [3.115.4] (2026-03-20)
 
 ### Bug Fixes
