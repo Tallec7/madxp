@@ -1,3 +1,9 @@
+## [3.115.3](https://github.com/Tallec7/neopro/compare/v3.115.2...v3.115.3) (2026-03-20)
+
+### Bug Fixes
+
+- **ota:** restore applyPreUpdateMigration removed in 173aaa5a — OTA stuck at 0% ([54cab08](https://github.com/Tallec7/neopro/commit/54cab0817db86c539cc783c8804adea62fcabf54))
+
 ## [3.115.3] (2026-03-20)
 
 ### Bug Fixes
