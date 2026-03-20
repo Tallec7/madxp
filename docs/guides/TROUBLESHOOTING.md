@@ -30,6 +30,8 @@
 26. [Kiosk pas en plein écran sur HDMI-1 (v3.111.1+)](#kiosk-pas-en-plein-écran-sur-hdmi-1-v31111)
 27. [Vidéo gelée/lag sur navigateur PC (v3.114+)](#vidéo-geléelag-sur-navigateur-pc-v3114)
 28. [Vidéos de boucle "introuvables" après reconnexion site hors ligne (v3.115.2+)](#vidéos-de-boucle-introuvables-après-reconnexion-site-hors-ligne-v31152)
+29. [Échec validation post-OTA (v3.116+)](#échec-validation-post-ota-v3116)
+30. [Alerte canary post-OTA (v3.116+)](#alerte-canary-post-ota-v3116)
 
 > **WiFi USB** : Pour un guide complet sur la clé WiFi USB (installation, diagnostic, pannes, recovery), voir [WIFI_USB_GUIDE.md](WIFI_USB_GUIDE.md).
 >
@@ -5791,4 +5793,70 @@ Le mécanisme de détection d'orphelins (`detectOrphanedVideoPaths()`) dans le d
 
 ---
 
-**Dernière mise à jour :** 19 mars 2026 (ajout section vidéos introuvables après reconnexion hors ligne — v3.115.2)
+## 29. Échec validation post-OTA (v3.116+)
+
+**Symptôme :** La mise à jour OTA échoue à 85% avec le message `Post-OTA validation failed: <N> critical check(s) failed` suivi d'un rollback automatique vers la version précédente.
+
+**Cause :** La validation post-OTA (`validate-post-update.js`) a détecté un ou plusieurs checks critiques en échec après l'installation de la nouvelle version.
+
+**Diagnostic :**
+
+```bash
+# Exécuter la validation manuellement
+bash ~/neopro/scripts/validate-pi.sh
+
+# Mode JSON (pour dashboard/scripts)
+bash ~/neopro/scripts/validate-pi.sh --json
+
+# Via l'admin API
+curl http://localhost:8080/api/system/validate
+```
+
+**Checks critiques et solutions :**
+
+| Check                        | Cause probable                                         | Solution                                                                           |
+| ---------------------------- | ------------------------------------------------------ | ---------------------------------------------------------------------------------- |
+| `neopro-app inactive`        | Crash au démarrage (dépendance manquante, port occupé) | `sudo journalctl -u neopro-app -n 50`                                              |
+| `neopro-admin inactive`      | Même cause                                             | `sudo journalctl -u neopro-admin -n 50`                                            |
+| `HTTP 3000 unreachable`      | Service démarré mais serveur pas encore ready          | Augmenter le délai de grâce dans `validate-post-update.js`                         |
+| `HTTP 8080 unreachable`      | Admin crashé                                           | Vérifier les logs admin                                                            |
+| `configuration.json invalid` | Fichier corrompu pendant l'OTA                         | Restaurer depuis backup : `cp ~/neopro/backup/configuration.json ~/neopro/public/` |
+| `webapp/index.html missing`  | Build Angular non déployé                              | Re-déployer via OTA                                                                |
+
+**Warnings (informationnels, pas de rollback) :**
+
+Les warnings HDMI, nginx, espace disque, analytics et Chromium sont loggés dans le rapport mais ne déclenchent pas de rollback. Ils sont visibles dans le dashboard (onglet État du site).
+
+---
+
+## 30. Alerte canary post-OTA (v3.116+)
+
+**Symptôme :** Une alerte `canary_post_ota` (sévérité critique) apparaît dans le dashboard 1 à 5 minutes après un déploiement OTA réussi.
+
+**Cause :** Le monitoring canary a détecté un problème sur le Pi après le déploiement. Trois raisons possibles :
+
+| Raison             | Message alerte                                | Action                                                                                                                             |
+| ------------------ | --------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `site_offline`     | "Site went offline N checks after OTA"        | Vérifier que le Pi est alimenté et connecté au réseau. 1 check offline est toléré (reboot post-OTA), l'alerte se déclenche au 2ème |
+| `version_mismatch` | "Version mismatch: expected X, got Y"         | Le Pi a potentiellement fait un auto-rollback local. Vérifier `cat ~/neopro/VERSION` et les logs sync-agent                        |
+| `crash_loop`       | "Possible crash-loop: N disconnects in 5 min" | Services instables après OTA. `sudo journalctl -u neopro-app -n 100` + vérifier kiosk-watchdog                                     |
+
+**Important :** Le canary monitoring ne fait PAS d'auto-rollback. C'est une décision manuelle. L'alerte signale un problème à investiguer.
+
+**Configuration :**
+
+```bash
+# Variables d'environnement (central-server)
+CANARY_WINDOW_MS=300000       # Durée monitoring (défaut: 5 min)
+CANARY_CHECK_INTERVAL_MS=30000 # Intervalle checks (défaut: 30s)
+```
+
+**Smoke tests :**
+
+- `canary-monitor.service.ts must exist and check site health`
+- `deploy-progress.handler.ts must start canary watch on OTA completion`
+- `alerting.service.ts must run canary checks in its periodic loop`
+
+---
+
+**Dernière mise à jour :** 20 mars 2026 (ajout sections validation post-OTA et canary monitoring — v3.116.0)

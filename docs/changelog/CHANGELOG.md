@@ -1,3 +1,20 @@
+## [3.116.0] (2026-03-20)
+
+### Features
+
+- **ota:** add post-OTA validation with auto-rollback on critical failure — validates services (neopro-app, neopro-admin), HTTP health (port 3000 + 8080), configuration.json integrity, webapp/index.html existence. Warnings for HDMI, nginx, disk, analytics, Chromium. Standalone `validate-pi.sh` script (SSH/JSON/quiet modes) + admin API `POST /api/system/validate`
+- **canary:** add post-OTA canary monitoring — 5-minute health watch (30s interval) after successful OTA deployment. Checks: site online (heartbeat freshness < 90s), version match, crash-loops (3+ disconnects in 5 min). Creates `canary_post_ota` critical alerts with deduplication. No auto-rollback (manual decision). Integrated in `alerting.service.ts` periodic loop
+
+### Tests
+
+- **e2e:** add hardware matrix E2E Playwright tests — 20 scenarios covering HDMI-0 only, HDMI-1 only (failover), dual HDMI, no HDMI, hot-plug transitions, single↔dual, Socket.IO reconnection, rapid HDMI changes, browser mode. Uses BroadcastChannel event injection (same path as real Pi)
+- **smoke:** add 17 regression guards: post-OTA validation (9), hardware matrix (4), canary monitoring (4) — 817 tests total
+
+### Documentation
+
+- **docs:** sync ARCHITECTURE.md, REFERENCE.md, TROUBLESHOOTING.md, 01-START-HERE.md with OTA validation, canary monitoring, and hardware matrix testing
+- **claude.md:** add 3 "NE JAMAIS FAIRE" rules for post-OTA validation, canary monitoring, and hardware matrix safety
+
 ## [3.115.4](https://github.com/Tallec7/neopro/compare/v3.115.3...v3.115.4) (2026-03-20)
 
 ### Bug Fixes

@@ -371,8 +371,18 @@ Pi Frontend (ProfileConfigService — sélection locale via télécommande)
 
 - Via Dashboard Central : déploiement planifié ou immédiat
 - `updateDeploymentService.startDeployment()` déclenche la mise à jour
-- Le Raspberry Pi : backup, téléchargement, installation, redémarrage
+- Le Raspberry Pi : backup, téléchargement, installation, **validation post-OTA**, redémarrage
 - ~10 minutes (backup + download + restart)
+- **Validation post-OTA (v3.116+)** : après `startServices()`, `validate-post-update.js` vérifie :
+  - **Critiques** (échec → auto-rollback) : services actifs (neopro-app, neopro-admin), HTTP health (port 3000 + 8080), configuration.json valide, webapp/index.html existe
+  - **Warnings** (informationnel) : HDMI display, nginx, espace disque, buffer analytics, Chromium, Socket.IO
+- **Canary monitoring (v3.116+)** : après OTA réussi, le central surveille le Pi pendant 5 min (checks toutes les 30s) :
+  - Site encore en ligne (heartbeat < 90s)
+  - Version software = version cible
+  - Pas de crash-loop (< 3 disconnects en 5 min)
+  - Alerte `canary_post_ota` (critique) si échec — pas d'auto-rollback (décision manuelle)
+- **Script standalone** : `raspberry/scripts/validate-pi.sh` (SSH, `--json`, `--quiet`)
+- **Admin API** : `POST /api/system/validate` retourne le rapport structuré (200 = sain, 503 = critique)
 
 ### Cloud
 
@@ -451,7 +461,9 @@ Pi Frontend (ProfileConfigService — sélection locale via télécommande)
   - _NeoPro Business & Fleet_ : content pipeline (video uploads), fleet Pi (WebSocket par type, heartbeats, network stability, socket disconnects), video transitions, deployments (canary, sync, drift), subscriptions & predictive alerts, **kiosk Chromium** (status, crashes, restarts, **dual TV+Secondary**), **Fan Pi** (présence, état, failures)
   - _NeoPro Sponsor Analytics_ (cloud) : sync & deployment (rate, sponsors/deploy, auto-resolution), impression attribution (méthodes de résolution, FK fallback, Pi auth), **sponsor health F-AUD-07** (matrice santé, health checks, alertes proactives), reports & API quality (génération PDF, latence network stats/benchmark)
 - **Scrape targets** : Docker local, `host.docker.internal:3001` (dev), Railway HTTPS (prod)
-- **Smoke tests** : `npm run test:smoke` — 247 tests détectent les régressions de wiring API (routes, middlewares, repositories, services, handlers, error types, métriques Prometheus critiques, hourly metric alerting wiring) + conventions Pi (systemd, sudoers, kiosk Chromium GPU guards) + benchmark query patterns
+- **Canary monitoring post-OTA** (v3.116+) : `canary-monitor.service.ts` surveille les Pi après OTA — 5 min window, 30s interval, alertes `canary_post_ota` via `alertRepository`, intégré dans le periodic loop de `alerting.service.ts`
+- **E2E hardware matrix** (v3.116+) : 20 tests Playwright (`e2e/tests/hardware-matrix.spec.ts`) couvrant tous les scénarios HDMI Pi via injection BroadcastChannel
+- **Smoke tests** : `npm run test:smoke` — 817 tests détectent les régressions de wiring API (routes, middlewares, repositories, services, handlers, error types, métriques Prometheus critiques, hourly metric alerting wiring) + conventions Pi (systemd, sudoers, kiosk Chromium GPU guards) + benchmark query patterns
 - Systemd journald logs
 - Winston structured logging with Correlation ID
 - Memory Manager Service (heap monitoring, pressure cleanup at 93%/97%)

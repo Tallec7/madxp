@@ -44,6 +44,16 @@
 - Problèmes courants
 - Solutions pas à pas
 - Diagnostic complet
+- Sections 29-30 : validation post-OTA et canary monitoring (v3.116+)
+
+#### Valider un déploiement OTA
+
+→ **[REFERENCE.md](REFERENCE.md)** (section "Validation post-OTA")
+
+- Checks critiques et warnings
+- Script `validate-pi.sh` (SSH/JSON/quiet)
+- Admin API `POST /api/system/validate`
+- Canary monitoring (surveillance 5 min post-deploy)
 
 ---
 

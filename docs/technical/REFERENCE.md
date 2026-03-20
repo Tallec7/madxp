@@ -318,6 +318,38 @@ Avant chaque OTA, le serveur envoie une commande `remote_shell` de pré-migratio
 - `sudo chown -R pi:pi /home/pi/neopro/VERSION` ✅ (matche `/usr/bin/chown -R pi\:pi /home/pi/neopro/*`)
 - `sudo chown pi:pi /home/pi/neopro/VERSION` ❌ (pas de `-R` → sudoers refuse silencieusement)
 
+**Validation post-OTA (v3.116+) :**
+
+Après `startServices()` et avant le rapport de succès, `validate-post-update.js` exécute une validation en 2 niveaux :
+
+| Niveau                    | Check            | Détail                                                        |
+| ------------------------- | ---------------- | ------------------------------------------------------------- |
+| **Critique** (→ rollback) | Services actifs  | `systemctl is-active neopro-app neopro-admin`                 |
+| **Critique** (→ rollback) | HTTP health      | `GET localhost:3000/health` + `GET localhost:8080/api/health` |
+| **Critique** (→ rollback) | Config intégrité | `configuration.json` parseable JSON                           |
+| **Critique** (→ rollback) | Webapp existe    | `webapp/index.html` présent                                   |
+| Warning                   | HDMI display     | DRM sysfs `/sys/class/drm/card?-HDMI-*/status`                |
+| Warning                   | Nginx            | Port 4200 accessible                                          |
+| Warning                   | Espace disque    | > 500 MB libre                                                |
+| Warning                   | Analytics buffer | < 5 MB                                                        |
+| Warning                   | Chromium         | Process actif                                                 |
+| Warning                   | Socket.IO        | Connexions au serveur local                                   |
+
+**Script standalone :** `raspberry/scripts/validate-pi.sh` — 3 modes : humain (couleurs), `--json` (dashboard), `--quiet` (exit code : 0=ok, 1=critique, 2=warnings)
+
+**Admin API :** `POST /api/system/validate` / `GET /api/system/validate` — exécute `validate-pi.sh --json`, retourne JSON structuré (200 = sain, 503 = critique)
+
+**Canary monitoring post-OTA (v3.116+) :**
+
+Après OTA réussi, `canary-monitor.service.ts` surveille le Pi pendant 5 min (interval 30s) :
+
+- **Site en ligne** : `last_seen_at` < 90s (1 check offline toléré = grace period reboot)
+- **Version match** : `sites.software_version` = version cible
+- **Crash-loop** : < 3 disconnects dans `site_connection_events` en 5 min
+- **Alerte** : `canary_post_ota` (sévérité critique) via `alertRepository.create()`, déduplication via `alertRepository.existsActive()`
+- **Pas d'auto-rollback** (décision manuelle)
+- **Variables d'env** : `CANARY_WINDOW_MS` (défaut 300000), `CANARY_CHECK_INTERVAL_MS` (défaut 30000)
+
 **Monitoring OTA :** La métrique `neopro_ota_errors_total{error_type}` catégorise les erreurs :
 | error_type | Déclencheur |
 |-------------|-------------|
