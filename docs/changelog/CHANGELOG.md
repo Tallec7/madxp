@@ -1,3 +1,17 @@
+## [3.115.3] (2026-03-20)
+
+### Bug Fixes
+
+- **ota:** restore `applyPreUpdateMigration()` accidentally removed in 173aaa5a — OTA stuck at 0% because root:root VERSION/release.json files cause EACCES on `fs.copy()`. Pre-migration sends `remote_shell` to fix ownership 3s BEFORE `update_software`
+
+### Tests
+
+- **smoke:** add OTA pre-migration guard — prevents regression of `applyPreUpdateMigration()` removal from `update-deployment.service.ts`
+
+### Documentation
+
+- **claude.md:** add "NE JAMAIS FAIRE" rule for `applyPreUpdateMigration()` removal
+
 ## [3.115.2](https://github.com/Tallec7/neopro/compare/v3.115.1...v3.115.2) (2026-03-19)
 
 ### Bug Fixes

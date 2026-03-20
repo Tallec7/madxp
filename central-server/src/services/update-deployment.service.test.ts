@@ -83,6 +83,8 @@ describe('UpdateDeploymentService', () => {
     mockIsConnected.mockReset();
     mockSendCommand.mockReset();
     mockSendOrQueue.mockReset();
+    // Mock delay to avoid real timers in tests (pre-migration wait)
+    jest.spyOn(updateDeploymentService, 'delay').mockResolvedValue(undefined);
     mockSendOrQueue.mockImplementation((siteId: string) => {
       const isConnected = mockIsConnected(siteId);
       return Promise.resolve({

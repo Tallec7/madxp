@@ -3,6 +3,7 @@
  * Gère l'envoi des commandes update_software aux Raspberry Pi
  */
 
+import { v4 as uuidv4 } from 'uuid';
 import { query } from '../config/database';
 import socketService from './socket.service';
 import { commandQueueService } from './command-queue.service';
@@ -311,6 +312,68 @@ class UpdateDeploymentService {
   }
 
   /**
+   * Pré-migration avant OTA : supprime les fichiers VERSION/release.json root:root
+   * AVANT que le sync-agent n'exécute l'update.
+   *
+   * Problème : les anciennes versions du sync-agent créaient ces fichiers en root:root
+   * via "sudo cp/tee". Le code OTA v3.17.1 (et antérieur) fait fs.copy(VERSION,
+   * { overwrite: true }) qui appelle fs.unlink() sur le fichier root → EACCES.
+   *
+   * Solution : SUPPRIMER les fichiers root:root avant l'OTA.
+   * Stratégie en 4 niveaux (pour chaque fichier) :
+   * 1. rm -f (sans sudo) → marche si le dossier parent est pi:pi (cas standard)
+   * 2. sudo chown pi:pi → marche si NoNewPrivileges=false ET sudoers installé
+   * 3. sudo rm -f → marche si NoNewPrivileges=false
+   * 4. Diagnostic → log les permissions pour debug futur
+   */
+  private applyPreUpdateMigration(siteId: string): boolean {
+    if (!socketService.isConnected(siteId)) {
+      return false;
+    }
+
+    const diagnostic =
+      'echo "=== PRE-MIGRATION DIAG ==="; ' +
+      'stat -c "dir %n owner=%U:%G perms=%a" /home/pi/neopro/ 2>/dev/null; ' +
+      'stat -c "dir %n owner=%U:%G perms=%a" /home/pi/neopro/webapp/ 2>/dev/null; ' +
+      'for f in /home/pi/neopro/VERSION /home/pi/neopro/release.json /home/pi/neopro/webapp/version.json; do ' +
+      'stat -c "file %n owner=%U:%G perms=%a uid=%u" "$f" 2>/dev/null || echo "file $f ABSENT"; ' +
+      'done';
+
+    const fixFiles =
+      'for f in /home/pi/neopro/VERSION /home/pi/neopro/release.json /home/pi/neopro/webapp/version.json; do ' +
+      'if [ -f "$f" ] && [ "$(stat -c %u "$f" 2>/dev/null)" = "0" ]; then ' +
+      'rm -f "$f" 2>/dev/null && echo "FIXED rm: $f" && continue; ' +
+      'sudo chown pi:pi "$f" 2>/dev/null && echo "FIXED chown: $f" && continue; ' +
+      'sudo rm -f "$f" 2>/dev/null && echo "FIXED sudo-rm: $f" && continue; ' +
+      'echo "FAIL: cannot fix $f (dir may be root:root or NoNewPrivileges)"; ' +
+      'fi; done; ' +
+      'for d in /home/pi/neopro /home/pi/neopro/webapp; do ' +
+      'if [ "$(stat -c %u "$d" 2>/dev/null)" = "0" ]; then ' +
+      'sudo chown pi:pi "$d" 2>/dev/null && echo "FIXED dir: $d" || echo "FAIL dir: $d"; ' +
+      'fi; done; ' +
+      'echo "=== PRE-MIGRATION DONE ==="; true';
+
+    const fixOwnershipCommand = `${diagnostic}; ${fixFiles}`;
+
+    try {
+      const commandId = uuidv4();
+
+      socketService.sendCommand(siteId, {
+        id: commandId,
+        type: 'remote_shell',
+        data: { command: fixOwnershipCommand, timeout: 10000 },
+      });
+
+      logger.info('Pre-update migration sent', { siteId });
+      return true;
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      logger.warn('Pre-update migration failed (non-blocking)', { siteId, error: errorMessage });
+      return false;
+    }
+  }
+
+  /**
    * Envoie la commande de mise à jour à un site spécifique
    * Utilise commandQueueService.sendOrQueue() pour gérer les sites offline
    * (même comportement que update_config)
@@ -323,6 +386,14 @@ class UpdateDeploymentService {
     autoRollback = true
   ): Promise<boolean> {
     logger.info('deployToSite called', { deploymentId, siteId, updateVersion: update.version });
+
+    // Pré-migration : supprimer les fichiers VERSION/release.json root:root avant l'OTA
+    // Les commandes s'exécutent en parallèle sur le Pi, il faut attendre que le rm
+    // termine avant d'envoyer update_software sinon fs.copy() → EACCES.
+    const migrationSent = this.applyPreUpdateMigration(siteId);
+    if (migrationSent) {
+      await this.delay(3000);
+    }
 
     const commandData = {
       deploymentId,
@@ -521,6 +592,12 @@ class UpdateDeploymentService {
     }
   }
 
+  /**
+   * Délai asynchrone — méthode séparée pour permettre le mock dans les tests
+   */
+  delay(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
 }
 
 export const updateDeploymentService = new UpdateDeploymentService();

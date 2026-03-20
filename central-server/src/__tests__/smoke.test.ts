@@ -5207,6 +5207,49 @@ describe('Deployment secondary variant persistence guard', () => {
   });
 });
 
+// ── OTA pre-migration guard ─────────────────────────────────────────────
+// Regression guard: applyPreUpdateMigration() was accidentally removed in
+// commit 173aaa5a as "dead code" → OTA stuck at 0% because root:root
+// VERSION/release.json files cause EACCES on fs.copy().
+// The pre-migration sends a remote_shell to fix ownership BEFORE update_software.
+describe('OTA pre-migration guard (update-deployment.service)', () => {
+  const servicePath = path.resolve(
+    __dirname, '..', 'services', 'update-deployment.service.ts'
+  );
+  let serviceSource: string;
+
+  beforeAll(() => {
+    serviceSource = fs.readFileSync(servicePath, 'utf8');
+  });
+
+  it('must define applyPreUpdateMigration method', () => {
+    expect(serviceSource).toMatch(/applyPreUpdateMigration\s*\(/);
+  });
+
+  it('deployToSite must call applyPreUpdateMigration before sending update_software', () => {
+    // Extract deployToSite method body (from declaration to next method or end)
+    const deployStart = serviceSource.indexOf('private async deployToSite(');
+    const firstSendOrQueue = serviceSource.indexOf('sendOrQueue(', deployStart);
+    const deployToSiteBody = serviceSource.slice(deployStart, firstSendOrQueue);
+    expect(deployToSiteBody).toMatch(/applyPreUpdateMigration/);
+  });
+
+  it('applyPreUpdateMigration must send remote_shell with ownership fix', () => {
+    expect(serviceSource).toMatch(/remote_shell/);
+    expect(serviceSource).toMatch(/chown.*pi:pi/);
+    expect(serviceSource).toMatch(/VERSION/);
+    expect(serviceSource).toMatch(/release\.json/);
+  });
+
+  it('deployToSite must wait after pre-migration before sending update_software', () => {
+    // There must be a delay between migration and sendOrQueue within deployToSite
+    const deployStart = serviceSource.indexOf('private async deployToSite(');
+    const firstSendOrQueue = serviceSource.indexOf('sendOrQueue(', deployStart);
+    const deployToSiteBody = serviceSource.slice(deployStart, firstSendOrQueue);
+    expect(deployToSiteBody).toMatch(/\.delay\s*\(\s*\d{4}/);
+  });
+});
+
 // ── Angular build config guards ─────────────────────────────────────────
 // Prevents regression of build warnings fixed in 3.80.18:
 // - Missing allowedCommonJsDependencies (leaflet → optimization bailout)
