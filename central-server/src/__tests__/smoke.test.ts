@@ -11395,3 +11395,57 @@ describe('Post-OTA validation integration', () => {
       .toEqual({ callsValidatePiSh: true });
   });
 });
+
+describe('Hardware matrix E2E tests existence', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+
+  it('hardware-matrix.spec.ts must exist and cover HDMI scenarios', () => {
+    const specContent = fs.readFileSync(
+      path.join(repoRoot, 'e2e/tests/hardware-matrix.spec.ts'),
+      'utf8'
+    );
+    // Must test all 4 HDMI configurations
+    expect({ hasHdmi0Only: specContent.includes('HDMI-0 Only') })
+      .toEqual({ hasHdmi0Only: true });
+    expect({ hasHdmi1Only: specContent.includes('HDMI-1 Only') })
+      .toEqual({ hasHdmi1Only: true });
+    expect({ hasDualHdmi: specContent.includes('Dual HDMI') })
+      .toEqual({ hasDualHdmi: true });
+    expect({ hasNoHdmi: specContent.includes('No HDMI') })
+      .toEqual({ hasNoHdmi: true });
+  });
+
+  it('hardware-matrix.spec.ts must test hot-plug transitions', () => {
+    const specContent = fs.readFileSync(
+      path.join(repoRoot, 'e2e/tests/hardware-matrix.spec.ts'),
+      'utf8'
+    );
+    expect({ hasHotPlug: specContent.includes('Hot-Plug') })
+      .toEqual({ hasHotPlug: true });
+    expect({ hasSingleToDual: specContent.includes('single to dual') || specContent.includes('single→dual') })
+      .toEqual({ hasSingleToDual: true });
+    expect({ hasDualToSingle: specContent.includes('dual to single') || specContent.includes('dual→single') })
+      .toEqual({ hasDualToSingle: true });
+  });
+
+  it('hardware-matrix.spec.ts must test socket reconnection', () => {
+    const specContent = fs.readFileSync(
+      path.join(repoRoot, 'e2e/tests/hardware-matrix.spec.ts'),
+      'utf8'
+    );
+    expect({ hasReconnect: specContent.includes('Reconnection') || specContent.includes('reconnect') })
+      .toEqual({ hasReconnect: true });
+  });
+
+  it('hardware-matrix.spec.ts must use hdmi-status-update events (not mock hdmiConnected directly)', () => {
+    const specContent = fs.readFileSync(
+      path.join(repoRoot, 'e2e/tests/hardware-matrix.spec.ts'),
+      'utf8'
+    );
+    // Must inject events via BroadcastChannel, simulating real Pi behavior
+    expect({ usesHdmiEvent: specContent.includes('hdmi-status-update') })
+      .toEqual({ usesHdmiEvent: true });
+    expect({ usesBroadcastChannel: specContent.includes('BroadcastChannel') })
+      .toEqual({ usesBroadcastChannel: true });
+  });
+});
