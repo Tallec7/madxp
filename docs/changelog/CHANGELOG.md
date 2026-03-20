@@ -1,3 +1,19 @@
+## [3.115.4] (2026-03-20)
+
+### Bug Fixes
+
+- **tv:** fix manual video freeze on browser — BroadcastChannel + Socket.IO double-delivery caused `play()` to be called twice, second `load()` cancelling the first. Added `isDuplicateCommand()` guard in centralized `handleTvCommand()` handler
+- **tv:** fix /secondary display freeze on manual video reveal — Chrome autoplay policy pauses a playing video when programmatically unmuted on a tab without user interaction. Added safe unmute with muted fallback in `revealPreloadedVideo()`
+- **tv:** fix deferred reveal race condition — master signals `manualVideoVisible: true` before slave finishes HTTP preload. Added `_preloadReady` / `_pendingReveal` mechanism to buffer reveal signals until preload completes
+
+### Tests
+
+- **smoke:** add 3 regression guards: safe unmute autoplay policy, deferred reveal mechanism, `isDuplicateCommand` guard (800 tests total)
+
+### Documentation
+
+- **claude.md:** add 4 "NE JAMAIS FAIRE" rules for browser command dedup, safe unmute, and deferred reveal patterns
+
 ## [3.115.3](https://github.com/Tallec7/neopro/compare/v3.115.2...v3.115.3) (2026-03-20)
 
 ### Bug Fixes

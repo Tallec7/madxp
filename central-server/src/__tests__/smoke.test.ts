@@ -3813,10 +3813,11 @@ describe('E-22 TvComponent master-slave sync guards', () => {
 
   // Guard: manual videos must resolve secondary variant before play
   it('manual video commands must use resolveSecondaryVariant before play', () => {
-    // Socket action handler must resolve secondary variant
-    const actionHandler = content.match(/on\('action'[\s\S]*?}\);/);
-    expect(actionHandler).not.toBeNull();
-    expect(actionHandler![0]).toMatch(/resolveSecondaryVariant/);
+    // handleTvCommand (or inline action handler) must resolve secondary variant
+    const commandHandler = content.match(/private handleTvCommand[\s\S]*?^  \}/m)
+      || content.match(/on\('action'[\s\S]*?}\);/);
+    expect(commandHandler).not.toBeNull();
+    expect(commandHandler![0]).toMatch(/resolveSecondaryVariant/);
 
     // handleMasterLoopState CAS 1 must resolve secondary variant
     const masterHandler = content.match(/private handleMasterLoopState[\s\S]*?^  \}/m);
@@ -6984,12 +6985,15 @@ describe('ADR-033 slave race condition guard (tv.component.ts)', () => {
   beforeAll(() => { content = fs.readFileSync(tvComponentPath, 'utf8'); });
 
   it('action handler must set _lastActionReceivedAt timestamp', () => {
-    // The action handler must record a timestamp to enable the stale state guard.
-    // Pattern: _lastActionReceivedAt = Date.now() must appear in the action handler block.
-    const actionBlock = content.slice(
-      content.indexOf("socketService.on('action'"),
-      content.indexOf("socketService.on('action'") + 600
-    );
+    // The action/command handler must record a timestamp to enable the stale state guard.
+    // Pattern: _lastActionReceivedAt = Date.now() must appear in handleTvCommand or inline action handler.
+    const handleTvBlock = content.match(/private handleTvCommand[\s\S]*?^  \}/m);
+    const actionBlock = handleTvBlock
+      ? handleTvBlock[0]
+      : content.slice(
+          content.indexOf("socketService.on('action'"),
+          content.indexOf("socketService.on('action'") + 600
+        );
     expect({
       setsTimestamp: /_lastActionReceivedAt\s*=\s*Date\.now\(\)/.test(actionBlock),
     }).toEqual({
@@ -7106,11 +7110,15 @@ describe('ADR-034 synchronized manual video reveal', () => {
   });
 
   it('Slave action handler MUST call preloadManualVideo instead of play', () => {
-    // When isSlaveMode is true, the action handler must call preloadManualVideo, not play
-    const actionBlock = tvContent.slice(
-      tvContent.indexOf("socketService.on('action'"),
-      tvContent.indexOf("socketService.on('action'") + 800
-    );
+    // When isSlaveMode is true, the command handler must call preloadManualVideo, not play.
+    // The logic can be in handleTvCommand (centralized) or inline in the action handler.
+    const handleTvBlock = tvContent.match(/private handleTvCommand[\s\S]*?^  \}/m);
+    const actionBlock = handleTvBlock
+      ? handleTvBlock[0]
+      : tvContent.slice(
+          tvContent.indexOf("socketService.on('action'"),
+          tvContent.indexOf("socketService.on('action'") + 800
+        );
     expect({
       hasSlavePreload: /isSlaveMode[\s\S]*preloadManualVideo/.test(actionBlock),
       masterStillCallsPlay: /else\s*\{[\s\S]*?this\.play\(/.test(actionBlock),
@@ -7124,10 +7132,14 @@ describe('ADR-034 synchronized manual video reveal', () => {
     // Bug: LocalBroadcast handler called play() directly without checking isSlaveMode,
     // causing slaves to show freeze-frame + overlay on manual video launch.
     // Fix: same pattern as Socket.IO action handler — preloadManualVideo for slaves, play for master.
-    const localBroadcastBlock = tvContent.slice(
-      tvContent.indexOf("localBroadcast.onCommand()"),
-      tvContent.indexOf("localBroadcast.onCommand()") + 1200
-    );
+    // The logic can be in handleTvCommand (centralized) or inline in the BroadcastChannel handler.
+    const handleTvBlock = tvContent.match(/private handleTvCommand[\s\S]*?^  \}/m);
+    const localBroadcastBlock = handleTvBlock
+      ? handleTvBlock[0]
+      : tvContent.slice(
+          tvContent.indexOf("localBroadcast.onCommand()"),
+          tvContent.indexOf("localBroadcast.onCommand()") + 1200
+        );
     expect({
       hasSlaveCheck: /isSlaveMode/.test(localBroadcastBlock),
       hasPreload: /preloadManualVideo/.test(localBroadcastBlock),
@@ -7138,6 +7150,25 @@ describe('ADR-034 synchronized manual video reveal', () => {
       hasPreload: true,
       hasLastActionTimestamp: true,
       masterStillCallsPlay: true,
+    });
+  });
+
+  it('tv.component MUST have isDuplicateCommand guard for BroadcastChannel+Socket.IO race', () => {
+    // When remote and TV are in the same browser, both BroadcastChannel and Socket.IO
+    // deliver the same command. Without deduplication, play() is called twice — the second
+    // load() cancels the first → race condition → freeze.
+    expect({
+      hasGuardMethod: /private isDuplicateCommand/.test(tvContent),
+      hasCommandKey: /_lastCommandKey/.test(tvContent),
+      hasCommandAt: /_lastCommandAt/.test(tvContent),
+      handleTvCommandUsesGuard: /isDuplicateCommand/.test(
+        (tvContent.match(/private handleTvCommand[\s\S]*?^  \}/m) || [''])[0]
+      ),
+    }).toEqual({
+      hasGuardMethod: true,
+      hasCommandKey: true,
+      hasCommandAt: true,
+      handleTvCommandUsesGuard: true,
     });
   });
 
@@ -7226,7 +7257,7 @@ describe('ADR-034 preload-reveal metrics pipeline', () => {
   it('revealPreloadedVideo MUST increment preloadRevealCount', () => {
     const revealMethod = tvContent.slice(
       tvContent.indexOf('private revealPreloadedVideo'),
-      tvContent.indexOf('private revealPreloadedVideo') + 1500
+      tvContent.indexOf('private revealPreloadedVideo') + 2500
     );
     expect(revealMethod).toMatch(/preloadRevealCount\+\+/);
   });
@@ -7341,7 +7372,7 @@ describe('ADR-034 v3.89.3 silent preload + instant reveal', () => {
   it('revealPreloadedVideo MUST unmute player and NOT have 2xrAF+200ms delay', () => {
     const revealMethod = tvContent.slice(
       tvContent.indexOf('private revealPreloadedVideo'),
-      tvContent.indexOf('private revealPreloadedVideo') + 1500
+      tvContent.indexOf('private revealPreloadedVideo') + 2000
     );
     expect({
       hasUnmute: /\.muted\s*=\s*false/.test(revealMethod),
@@ -7349,6 +7380,57 @@ describe('ADR-034 v3.89.3 silent preload + instant reveal', () => {
     }).toEqual({
       hasUnmute: true,
       hasNoRAFDelay: true,
+    });
+  });
+
+  it('revealPreloadedVideo MUST have safe unmute guard for autoplay policy (browser /secondary freeze)', () => {
+    // Chrome pauses a playing video when programmatically unmuted on a tab without user interaction.
+    // /secondary tab has no user gesture → muted=false triggers pause → video frozen.
+    // Fix: detect pause after unmute, fallback to muted playback.
+    const revealMethod = tvContent.slice(
+      tvContent.indexOf('private revealPreloadedVideo'),
+      tvContent.indexOf('private revealPreloadedVideo') + 2000
+    );
+    expect({
+      hasPauseCheck: /player\.paused/.test(revealMethod),
+      hasMuteFallback: /player\.muted\s*=\s*true/.test(revealMethod),
+      hasPlayRecovery: /player\.play\(\)/.test(revealMethod),
+    }).toEqual({
+      hasPauseCheck: true,
+      hasMuteFallback: true,
+      hasPlayRecovery: true,
+    });
+  });
+
+  it('preloadManualVideo MUST support deferred reveal (_preloadReady + _pendingReveal)', () => {
+    // When master signals reveal before slave's preload finishes (frequent on browser where
+    // HTTP loading is slower than Pi's local files), the reveal must be deferred until play() resolves.
+    const preloadMethod = tvContent.slice(
+      tvContent.indexOf('private preloadManualVideo'),
+      tvContent.indexOf('private preloadManualVideo') + 2500
+    );
+    expect({
+      setsPreloadReady: /_preloadReady\s*=\s*true/.test(preloadMethod),
+      checksPendingReveal: /_pendingReveal/.test(preloadMethod),
+      callsRevealOnPending: /revealPreloadedVideo/.test(preloadMethod),
+    }).toEqual({
+      setsPreloadReady: true,
+      checksPendingReveal: true,
+      callsRevealOnPending: true,
+    });
+  });
+
+  it('revealPreloadedVideo MUST defer reveal when _preloadReady is false', () => {
+    const revealMethod = tvContent.slice(
+      tvContent.indexOf('private revealPreloadedVideo'),
+      tvContent.indexOf('private revealPreloadedVideo') + 2000
+    );
+    expect({
+      checksPreloadReady: /_preloadReady/.test(revealMethod),
+      setsPendingReveal: /_pendingReveal\s*=\s*true/.test(revealMethod),
+    }).toEqual({
+      checksPreloadReady: true,
+      setsPendingReveal: true,
     });
   });
 

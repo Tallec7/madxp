@@ -157,10 +157,14 @@ export class TvComponent implements OnInit, OnDestroy {
   private _manualRecordingStarted = false; // Auto-start recording pour vidéo manuelle en neutral
   private _savedLoopIndex = 0; // Index de la boucle sauvegardé avant mode manuel
   private _lastActionReceivedAt = 0; // Timestamp de la dernière action reçue (guard anti-race condition)
+  private _lastCommandKey: string | null = null; // Guard déduplication BroadcastChannel + Socket.IO
+  private _lastCommandAt = 0; // Timestamp de la dernière commande traitée
 
   // ADR-034: Preloaded manual video state for synchronized reveal
   private _preloadedManualVideo: Video | null = null;
   private _preloadedManualPlayer: HTMLVideoElement | null = null;
+  private _preloadReady = false; // true quand play() a résolu (vidéo décodée et en lecture)
+  private _pendingReveal = false; // true si le master a signalé reveal avant que le preload soit prêt
 
   // Watchdog et récupération d'erreurs
   private watchdogInterval: ReturnType<typeof setInterval> | null = null;
@@ -287,29 +291,7 @@ export class TvComponent implements OnInit, OnDestroy {
 
     this.socketService.on('action', (command: Command) => {
       console.log('tv action received', command);
-      if (command.type === 'video' && command.data) {
-        this.lastTriggerType = 'manual';
-        // ADR-033: Marquer le timestamp pour protéger contre les tv-loop-state stales
-        // qui arriveraient après cette action et tueraient la vidéo manuelle
-        this._lastActionReceivedAt = Date.now();
-        const resolvedVideo = this.resolveSecondaryVariant(command.data as Video);
-        // ADR-034: Slaves preload but wait for master's reveal signal
-        if (this.isSlaveMode) {
-          this.preloadManualVideo(resolvedVideo);
-        } else {
-          this.play(resolvedVideo);
-        }
-      } else if (command.type === 'sponsors') {
-        this.lastTriggerType = 'auto';
-        // Capturer le freeze-frame AVANT de relancer la boucle
-        // pour éviter un flash noir pendant le rechargement
-        this.captureAndShowFreezeFrame();
-        this.sponsors();
-      } else if (command.type === 'reload-config' && command.data) {
-        // Recharger la config d'un nouveau club (mode démo)
-        console.log('tv: reloading config for club', command.data);
-        this.reloadConfiguration(command.data as Configuration);
-      }
+      this.handleTvCommand(command);
     });
 
     // Live Score - Écouter les mises à jour de score
@@ -430,25 +412,7 @@ export class TvComponent implements OnInit, OnDestroy {
     this.localBroadcastSubscriptions.push(
       this.localBroadcast.onCommand().subscribe((command) => {
         console.log('[TV] Local command received:', command);
-        if (command.type === 'video' && command.data) {
-          this.lastTriggerType = 'manual';
-          // ADR-033: Marquer le timestamp pour protéger contre les tv-loop-state stales
-          this._lastActionReceivedAt = Date.now();
-          const resolvedVideo = this.resolveSecondaryVariant(command.data as Video);
-          // ADR-034: Slaves preload but wait for master's reveal signal
-          if (this.isSlaveMode) {
-            this.preloadManualVideo(resolvedVideo);
-          } else {
-            this.play(resolvedVideo);
-          }
-        } else if (command.type === 'sponsors') {
-          this.lastTriggerType = 'auto';
-          // Capturer le freeze-frame AVANT de relancer la boucle
-          this.captureAndShowFreezeFrame();
-          this.sponsors();
-        } else if (command.type === 'reload-config' && command.data) {
-          this.reloadConfiguration(command.data as Configuration);
-        }
+        this.handleTvCommand(command);
       })
     );
 
@@ -772,6 +736,55 @@ export class TvComponent implements OnInit, OnDestroy {
 
   }
 
+  /**
+   * Guard contre les doubles appels de commande via BroadcastChannel + Socket.IO.
+   * Quand remote et TV sont dans le même navigateur web, les deux canaux délivrent
+   * le même 'command'. Le second appel (ex: load() dans play()) annule le premier
+   * → race condition → freeze. Retourne true si l'appel est un doublon à ignorer.
+   */
+  private isDuplicateCommand(commandKey: string): boolean {
+    const now = Date.now();
+    if (this._lastCommandKey === commandKey && now - this._lastCommandAt < 1000) {
+      console.log('[TV] Ignoring duplicate command (BroadcastChannel+Socket.IO race):', commandKey);
+      return true;
+    }
+    this._lastCommandKey = commandKey;
+    this._lastCommandAt = now;
+    return false;
+  }
+
+  /**
+   * Gestionnaire centralisé des commandes TV (BroadcastChannel + Socket.IO).
+   * Le guard isDuplicateCommand() empêche le double-traitement quand les deux canaux
+   * délivrent le même message (navigateur web avec remote+TV dans le même browser).
+   */
+  private handleTvCommand(command: Command | { type: string; data?: unknown }): void {
+    if (command.type === 'video' && command.data) {
+      const video = command.data as Video;
+      // Guard: ignorer le doublon BroadcastChannel/Socket.IO pour la même vidéo
+      if (this.isDuplicateCommand(`video:${video.path}`)) return;
+      this.lastTriggerType = 'manual';
+      // ADR-033: Marquer le timestamp pour protéger contre les tv-loop-state stales
+      this._lastActionReceivedAt = Date.now();
+      const resolvedVideo = this.resolveSecondaryVariant(video);
+      // ADR-034: Slaves preload but wait for master's reveal signal
+      if (this.isSlaveMode) {
+        this.preloadManualVideo(resolvedVideo);
+      } else {
+        this.play(resolvedVideo);
+      }
+    } else if (command.type === 'sponsors') {
+      if (this.isDuplicateCommand('sponsors')) return;
+      this.lastTriggerType = 'auto';
+      this.captureAndShowFreezeFrame();
+      this.sponsors();
+    } else if (command.type === 'reload-config' && command.data) {
+      if (this.isDuplicateCommand('reload-config')) return;
+      console.log('tv: reloading config for club', command.data);
+      this.reloadConfiguration(command.data as Configuration);
+    }
+  }
+
   private play(video: Video) {
     console.log('tv player : play manual video', video.path);
 
@@ -1044,9 +1057,20 @@ export class TvComponent implements OnInit, OnDestroy {
         // Loop keeps playing normally underneath.
         // Wait for revealPreloadedVideo() to be called by handleMasterLoopState.
         this.activeManualPlayer = 'A';
+        this._preloadReady = true;
         console.log('[TV] Slave: manual video preloaded and playing (hidden+muted), waiting for reveal signal');
+
+        // Si le master a signalé le reveal avant que le preload soit prêt
+        // (fréquent sur navigateur web où le chargement HTTP est plus lent que sur Pi),
+        // révéler maintenant que la vidéo est prête
+        if (this._pendingReveal) {
+          console.log('[TV] Slave: executing pending reveal (master signaled before preload was ready)');
+          this._pendingReveal = false;
+          this.revealPreloadedVideo();
+        }
       }).catch(err => {
         console.error('[TV] Slave: error preloading manual video', err);
+        this._pendingReveal = false;
         this.cleanupPreloadState();
       });
     };
@@ -1126,13 +1150,36 @@ export class TvComponent implements OnInit, OnDestroy {
       return;
     }
 
+    // Si le preload n'est pas encore prêt (vidéo encore en chargement HTTP),
+    // différer le reveal jusqu'à ce que play() résolve dans doPreload().
+    // Fréquent sur navigateur web où le master finit avant le slave.
+    if (!this._preloadReady) {
+      console.log('[TV] Slave: reveal requested but preload not ready yet, deferring');
+      this._pendingReveal = true;
+      return;
+    }
+
     console.log('[TV] Slave: revealing preloaded manual video (instant):', video.path);
 
     // ADR-034 fix: Reveal instantly — no 2×rAF+200ms delay needed.
     // The master already waited that long before signaling manualVideoVisible: true.
-    // The video is already loaded, decoded, and playing (hidden+muted).
+    // The video is loaded, decoded, and playing (hidden+muted).
     player.style.opacity = '1';
+
+    // Safe unmute: Chrome's autoplay policy pauses a playing video when
+    // programmatically unmuted on a tab with no user interaction (/secondary).
+    // The master's play() never unmutes (keeps HTML muted attribute), so
+    // consistency + safety = try unmuting, detect pause, fallback to muted.
     player.muted = false;
+    if (player.paused) {
+      console.warn('[TV] Slave: video paused on unmute (autoplay policy), resuming muted');
+      player.muted = true;
+      player.play().catch(() => {
+        // Last resort: if even muted play fails, at least show the frame
+        console.error('[TV] Slave: muted play also failed after unmute pause');
+      });
+    }
+
     this.hideFreezeFrame(); // Hide freeze-frame if shown (manual→manual transition)
 
     // Mettre à jour l'état du player pour le monitoring cloud
@@ -1153,6 +1200,8 @@ export class TvComponent implements OnInit, OnDestroy {
     // Clear preload state (video is now playing normally)
     this._preloadedManualVideo = null;
     this._preloadedManualPlayer = null;
+    this._preloadReady = false;
+    this._pendingReveal = false;
   }
 
   /**
@@ -1176,6 +1225,8 @@ export class TvComponent implements OnInit, OnDestroy {
 
     this._preloadedManualVideo = null;
     this._preloadedManualPlayer = null;
+    this._preloadReady = false;
+    this._pendingReveal = false;
 
     // Reset manual mode if it was set by preload
     this.isManualMode = false;
