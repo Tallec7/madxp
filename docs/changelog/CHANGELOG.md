@@ -1,3 +1,9 @@
+## [3.116.7](https://github.com/Tallec7/neopro/compare/v3.116.6...v3.116.7) (2026-03-22)
+
+### Bug Fixes
+
+- **build:** restore relative COPY paths in Dockerfile for Railway ([a51d4fd](https://github.com/Tallec7/neopro/commit/a51d4fd7561dc37adf329c8c1447eb25162e9fea))
+
 ## [3.116.6](https://github.com/Tallec7/neopro/compare/v3.116.5...v3.116.6) (2026-03-22)
 
 ### Bug Fixes
