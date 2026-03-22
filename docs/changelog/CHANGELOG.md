@@ -1,3 +1,9 @@
+## [3.116.4](https://github.com/Tallec7/neopro/compare/v3.116.3...v3.116.4) (2026-03-22)
+
+### Bug Fixes
+
+- **build:** add native dependencies for canvas in Nixpacks ([6a7db35](https://github.com/Tallec7/neopro/commit/6a7db358957cea5568c5660f75a11393a6995681))
+
 ## [3.116.3](https://github.com/Tallec7/neopro/compare/v3.116.2...v3.116.3) (2026-03-22)
 
 ### Bug Fixes
