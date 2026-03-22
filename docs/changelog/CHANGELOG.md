@@ -1,3 +1,9 @@
+## [3.116.27](https://github.com/Tallec7/neopro/compare/v3.116.26...v3.116.27) (2026-03-22)
+
+### Bug Fixes
+
+- **hotspot:** prevent channel flapping and unnecessary hostapd restarts ([92d3b59](https://github.com/Tallec7/neopro/commit/92d3b5950a892415c5a566726c46d881f66d2ab4))
+
 ## [3.116.26](https://github.com/Tallec7/neopro/compare/v3.116.25...v3.116.26) (2026-03-22)
 
 ### Bug Fixes
