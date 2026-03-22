@@ -1,6 +1,6 @@
 /**
  * Utilitaire d'extraction des chemins vidéo depuis une SiteConfiguration.
- * Partagé entre draft.service et predictive-alerts.service.
+ * Partagé entre draft.service et d'autres services.
  */
 
 import { SiteConfiguration } from '../types';

@@ -21,8 +21,6 @@ import { adminOpsService } from './services/admin-ops.service';
 import { alertingService } from './services/alerting.service';
 import { alertService } from './services/alert.service';
 import { realtimeStatsService } from './services/realtime-stats.service';
-// predictiveAlertsService disabled — see startServices() comments
-// import { predictiveAlertsService } from './services/predictive-alerts.service';
 import { subscriptionService } from './services/subscription.service';
 import { cleanupStaleTempFiles } from './middleware/upload';
 
@@ -409,7 +407,7 @@ app.use('/api/remote', remoteRoutes); // Remote cloud - rate limits per-route
 app.use('/api/subscriptions', subscriptionRoutes); // Subscription management - rate limits per-route
 app.use('/api/billing', billingRoutes); // Billing export - admin only
 app.use('/api/reports', apiRateLimit, reportsRoutes); // Generated PDF reports
-app.use('/api/alerts', apiRateLimit, alertsRoutes); // System and predictive alerts
+app.use('/api/alerts', apiRateLimit, alertsRoutes); // System alerts
 app.use('/api/benchmark', benchmarkRoutes); // Anonymous benchmarks - rate limits per-route in benchmark.routes.ts
 app.use('/api/network', apiRateLimit, networkSponsorRoutes); // Network sponsor stats (P6.1 cross-club)
 app.use('/api/sponsor-alerts', apiRateLimit, sponsorAlertsRoutes); // Proactive sponsor impression alerts (F-AUD-07)
@@ -463,11 +461,6 @@ const startServer = async () => {
     networkAlertsService.start();
     logger.info('Network alerts service started');
 
-    // DISABLED: Alertes prédictives - UI commentée dans le dashboard, cron inutile
-    // TODO: Réactiver quand le dashboard affichera les alertes prédictives (Phase 5)
-    // predictiveAlertsService.start();
-    // logger.info('Predictive alerts service started');
-
     // Initialiser et démarrer le service de stats temps réel
     const io = socketService.getIO();
     if (io) {
@@ -510,7 +503,6 @@ process.on('SIGTERM', async () => {
   schedulerService.stop();
   cronSchedulerService.stop();
   memoryManagerService.stop();
-  // predictiveAlertsService.stop(); // DISABLED: see start() comment above
   alertingService.cleanup();
   adminOpsService.stopCleanup();
 

@@ -174,18 +174,6 @@ describe('AlertRepository', () => {
       expect(mockQuery.mock.calls[0][1]).toContain('site-123');
     });
 
-    it('should filter predictive alerts', async () => {
-      mockQuery
-        .mockResolvedValueOnce({ rows: [] })
-        .mockResolvedValueOnce({ rows: [{ total: '0' }] });
-
-      await alertRepository.findWithFilters({ type: 'predictive' }, { limit: 10, offset: 0 });
-
-      const dataCall = mockQuery.mock.calls[0][0] as string;
-      expect(dataCall).toContain('days_since_last_video');
-      expect(dataCall).toContain('disk_growth_rate');
-    });
-
     it('should filter by specific alert type', async () => {
       mockQuery
         .mockResolvedValueOnce({ rows: [] })

@@ -15,8 +15,4 @@ router.post('/clients/:id/sync', authenticate, requireRole('admin'), adminContro
 // Debug endpoint pour l'état des connexions Socket.IO
 router.get('/socket-debug', authenticate, requireRole('admin'), adminController.getSocketDebugInfo);
 
-// Alertes prédictives
-router.get('/predictive-alerts/status', authenticate, requireRole('admin'), adminController.getPredictiveAlertsStatus);
-router.post('/predictive-alerts/run', authenticate, requireRole('admin'), adminController.runPredictiveAlertsNow);
-
 export default router;

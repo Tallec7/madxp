@@ -188,16 +188,6 @@ class ConfigProfileRepositoryImpl extends BaseRepository<ConfigProfileRow> {
     );
     return result.rows;
   }
-
-  /**
-   * Met a jour le active_profile_id d'un site.
-   */
-  async updateSiteActiveProfile(siteId: string, profileId: string | null): Promise<void> {
-    await query(
-      'UPDATE sites SET active_profile_id = $1 WHERE id = $2',
-      [profileId, siteId]
-    );
-  }
 }
 
 export const configProfileRepository = new ConfigProfileRepositoryImpl();

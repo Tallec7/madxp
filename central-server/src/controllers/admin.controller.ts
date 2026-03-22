@@ -6,7 +6,7 @@ import logger from '../config/logger';
 import { PassThrough } from 'stream';
 import socketService from '../services/socket.service';
 import { siteRepository } from '../repositories';
-import { predictiveAlertsService } from '../services/predictive-alerts.service';
+
 
 export const listJobs = (_req: AuthRequest, res: Response) => {
   return res.json({ jobs: adminOpsService.listJobs() });
@@ -126,35 +126,3 @@ export const getSocketDebugInfo = async (_req: AuthRequest, res: Response) => {
   }
 };
 
-/**
- * Retourne le statut du service d'alertes prédictives
- */
-export const getPredictiveAlertsStatus = async (_req: AuthRequest, res: Response) => {
-  try {
-    const status = predictiveAlertsService.getStatus();
-    return res.json({
-      success: true,
-      data: status,
-    });
-  } catch (error) {
-    logger.error('Error getting predictive alerts status:', error);
-    return res.status(500).json({ error: 'Failed to get predictive alerts status' });
-  }
-};
-
-/**
- * Déclenche une vérification prédictive immédiate
- */
-export const runPredictiveAlertsNow = async (_req: AuthRequest, res: Response) => {
-  try {
-    logger.info('[Admin] Manual predictive alerts check requested');
-    const result = await predictiveAlertsService.runNow();
-    return res.json({
-      success: true,
-      data: result,
-    });
-  } catch (error) {
-    logger.error('Error running predictive alerts:', error);
-    return res.status(500).json({ error: 'Failed to run predictive alerts check' });
-  }
-};

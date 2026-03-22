@@ -9,7 +9,6 @@
  * - update
  * - setDefault
  * - findProfilesMetadata
- * - updateSiteActiveProfile
  * - findById (inherited)
  * - deleteById (inherited)
  */
@@ -305,34 +304,6 @@ describe('ConfigProfileRepository', () => {
       const result = await configProfileRepository.findProfilesMetadata('site-1');
 
       expect(result).toHaveLength(0);
-    });
-  });
-
-  // --------------------------------------------------------------------------
-  // updateSiteActiveProfile
-  // --------------------------------------------------------------------------
-
-  describe('updateSiteActiveProfile', () => {
-    it('should update the active_profile_id on the site', async () => {
-      mockQuery.mockResolvedValue({ rowCount: 1 });
-
-      await configProfileRepository.updateSiteActiveProfile('site-1', 'p2');
-
-      expect(mockQuery).toHaveBeenCalledWith(
-        'UPDATE sites SET active_profile_id = $1 WHERE id = $2',
-        ['p2', 'site-1']
-      );
-    });
-
-    it('should allow setting active_profile_id to null', async () => {
-      mockQuery.mockResolvedValue({ rowCount: 1 });
-
-      await configProfileRepository.updateSiteActiveProfile('site-1', null);
-
-      expect(mockQuery).toHaveBeenCalledWith(
-        'UPDATE sites SET active_profile_id = $1 WHERE id = $2',
-        [null, 'site-1']
-      );
     });
   });
 

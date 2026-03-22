@@ -84,13 +84,7 @@ jest.mock('../services/realtime-stats.service', () => ({
   },
 }));
 
-jest.mock('../services/predictive-alerts.service', () => ({
-  __esModule: true,
-  predictiveAlertsService: {
-    start: jest.fn(),
-    stop: jest.fn(),
-  },
-}));
+
 
 jest.mock('../middleware/upload', () => ({
   ...(jest.requireActual('../middleware/upload') as Record<string, unknown>),
@@ -1371,7 +1365,7 @@ describe('ADR README ↔ file consistency', () => {
     'ADR-006-subscription-license-system.md',
     'ADR-007-network-resilience-layers.md',
     'ADR-008-double-buffer-video-pi.md',
-    'ADR-009-predictive-alerts.md',
+
     'ADR-010-analytics-ui-removal.md',
     'ADR-011-multi-tv-single-pi.md',
     'ADR-012-tv-led-dual-output.md',
@@ -1564,20 +1558,6 @@ describe('Hourly metric alerting wiring', () => {
     });
   });
 
-  it('predictive-alerts service checks orphaned video references', () => {
-    const predictivePath = path.join(repoRoot, 'central-server', 'src', 'services', 'predictive-alerts.service.ts');
-    const content = fs.readFileSync(predictivePath, 'utf8');
-
-    expect({
-      importsExtractVideoPaths: content.includes("from '../utils/config-video-paths'"),
-      hasCheckOrphanedMethod: content.includes('checkOrphanedVideoReferences'),
-      callsEvaluateMetric: content.includes("'orphaned_video_references'"),
-    }).toEqual({
-      importsExtractVideoPaths: true,
-      hasCheckOrphanedMethod: true,
-      callsEvaluateMetric: true,
-    });
-  });
 });
 
 // ─── #30 Cloud remote relay chain completeness ──────────────────────────────

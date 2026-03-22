@@ -6,7 +6,7 @@ const angular = require("angular-eslint");
 
 module.exports = defineConfig([
   {
-    // Ignore central-server which has its own ESLint 8 config
+    // Ignore central-server which has its own ESLint config
     ignores: ["central-server/**", "node_modules/**"],
   },
   {

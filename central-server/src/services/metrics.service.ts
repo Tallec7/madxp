@@ -307,34 +307,6 @@ const memoryGcFreedBytes = new Counter({
   registers: [register],
 });
 
-// ============= Métriques Predictive Alerts =============
-
-const predictiveChecksTotal = new Counter({
-  name: 'neopro_predictive_checks_total',
-  help: 'Total predictive alert check runs',
-  labelNames: ['status'],
-  registers: [register],
-});
-
-const predictiveAlertsGeneratedTotal = new Counter({
-  name: 'neopro_predictive_alerts_generated_total',
-  help: 'Total predictive alerts generated',
-  registers: [register],
-});
-
-const predictiveCheckDuration = new Histogram({
-  name: 'neopro_predictive_check_duration_seconds',
-  help: 'Duration of predictive alert checks in seconds',
-  buckets: [1, 5, 10, 30, 60, 120, 300],
-  registers: [register],
-});
-
-const predictiveSitesCheckedGauge = new Gauge({
-  name: 'neopro_predictive_sites_checked',
-  help: 'Number of sites checked in last predictive run',
-  registers: [register],
-});
-
 // ============= Métriques Subscriptions/Billing =============
 
 const subscriptionStatusGauge = new Gauge({
@@ -883,17 +855,6 @@ class MetricsService {
     if (freedBytes > 0) {
       memoryGcFreedBytes.inc(freedBytes);
     }
-  }
-
-  // ============= Méthodes Predictive Alerts =============
-
-  recordPredictiveCheck(status: 'success' | 'failed', sitesChecked: number, alertsGenerated: number, durationSeconds: number): void {
-    predictiveChecksTotal.inc({ status });
-    predictiveSitesCheckedGauge.set(sitesChecked);
-    if (alertsGenerated > 0) {
-      predictiveAlertsGeneratedTotal.inc(alertsGenerated);
-    }
-    predictiveCheckDuration.observe(durationSeconds);
   }
 
   // ============= Méthodes Subscriptions/Billing =============
