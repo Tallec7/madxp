@@ -1,6 +1,6 @@
 {
   "name": "neopro",
-  "version": "3.116.16",
+  "version": "3.116.17",
   "engines": {
     "node": ">=20.19.0"
   },

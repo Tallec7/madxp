@@ -1,3 +1,9 @@
+## [3.116.17](https://github.com/Tallec7/neopro/compare/v3.116.16...v3.116.17) (2026-03-22)
+
+### Bug Fixes
+
+- **build:** use .node-version + NIXPACKS_NODE_VERSION for Node 22 ([8079507](https://github.com/Tallec7/neopro/commit/80795075fa63730cf530f4a98a34ebdbc2669c4e))
+
 ## [3.116.16](https://github.com/Tallec7/neopro/compare/v3.116.15...v3.116.16) (2026-03-22)
 
 ### Bug Fixes
