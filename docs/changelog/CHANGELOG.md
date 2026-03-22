@@ -1,3 +1,9 @@
+## [3.116.9](https://github.com/Tallec7/neopro/compare/v3.116.8...v3.116.9) (2026-03-22)
+
+### Bug Fixes
+
+- **ci:** add RAILWAY_ENVIRONMENT_NAME to weekly restart workflow ([3e1fb0a](https://github.com/Tallec7/neopro/commit/3e1fb0aa0be6ae5ba093c0d7a159d6718164dced))
+
 ## [3.116.8](https://github.com/Tallec7/neopro/compare/v3.116.7...v3.116.8) (2026-03-22)
 
 ### Bug Fixes
