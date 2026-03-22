@@ -1,3 +1,9 @@
+## [3.116.10](https://github.com/Tallec7/neopro/compare/v3.116.9...v3.116.10) (2026-03-22)
+
+### Bug Fixes
+
+- **build:** make canvas/chartjs-node-canvas optional to prevent OOM on Railway ([1ea23e4](https://github.com/Tallec7/neopro/commit/1ea23e4b3654cdce7c720d35e611e61b2ac5723c))
+
 ## [3.116.9](https://github.com/Tallec7/neopro/compare/v3.116.8...v3.116.9) (2026-03-22)
 
 ### Bug Fixes
