@@ -1250,6 +1250,23 @@ class AlertingService {
           minutesStuck: stuck.minutesStuck,
           severity,
         });
+
+        // Auto-fail update deployments stuck for >2 hours (Pi never responded)
+        if (stuck.type === 'update' && stuck.minutesStuck >= 120) {
+          const table = 'update_deployments';
+          await query(
+            `UPDATE ${table}
+             SET status = 'failed',
+                 error_message = 'Timeout : aucune réponse du Pi après ' || $2 || ' minutes — le site était probablement hors ligne',
+                 completed_at = NOW()
+             WHERE id = $1 AND status = 'in_progress'`,
+            [stuck.deploymentId, stuck.minutesStuck]
+          );
+          logger.warn('Auto-failed stuck update deployment', {
+            deploymentId: stuck.deploymentId,
+            minutesStuck: stuck.minutesStuck,
+          });
+        }
       }
     } catch (error) {
       // Ne pas faire planter le check périodique si les tables n'existent pas encore

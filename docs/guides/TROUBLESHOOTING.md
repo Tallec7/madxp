@@ -36,6 +36,7 @@
 32. [OTA bloquée à 5% sur WiFi mesh (v3.116.24+)](#ota-bloquée-à-5-sur-wifi-mesh-v311624)
 33. [Hotspot channel flapping au boot (v3.116.26+)](#hotspot-channel-flapping-au-boot-v311626)
 34. [Hotspot recovery disproportionnée — restart complet pour IP manquante (v3.116.26+)](#hotspot-recovery-disproportionnée--restart-complet-pour-ip-manquante-v311626)
+35. [Déploiement OTA "Échoué" sans message d'erreur (v3.116.28+)](#déploiement-ota-échoué-sans-message-derreur-v311628)
 
 > **WiFi USB** : Pour un guide complet sur la clé WiFi USB (installation, diagnostic, pannes, recovery), voir [WIFI_USB_GUIDE.md](WIFI_USB_GUIDE.md).
 >
@@ -5981,4 +5982,55 @@ sudo ip addr add 192.168.4.1/24 dev wlan0 2>/dev/null || true
 
 ---
 
-**Dernière mise à jour :** 22 mars 2026 (ajout bgscan reconfigure loop, OTA stall detection, hotspot channel flapping, hotspot recovery proportionnelle — v3.116.22-26)
+---
+
+## 35. Déploiement OTA "Échoué" sans message d'erreur (v3.116.28+)
+
+**Symptôme :** Dans le dashboard Historique des mises à jour, un déploiement affiche le badge "Échoué" (rouge) mais aucun message d'erreur n'apparaît — impossible de diagnostiquer la cause.
+
+**Causes racines (3 bugs corrigés) :**
+
+1. **Événement temps réel incomplet** : `subscribeToDeploymentProgress()` dans le dashboard recevait les events `update_progress` via Socket.IO mais ne récupérait pas le champ `error` → le status passait à "Échoué" mais `error_message` restait null dans le composant Angular.
+
+2. **Template trop restrictif** : le bloc d'erreur avait `*ngIf="deployment.status === 'failed' && deployment.error_message"` → quand `error_message` est null (Pi jamais répondu), le bloc n'était jamais affiché.
+
+3. **Pas d'auto-fail backend** : `checkStuckDeployments()` dans `alerting.service.ts` créait une alerte pour les déploiements bloqués >30min mais ne les marquait jamais comme `failed` → un déploiement où le Pi ne répond jamais restait en `in_progress` indéfiniment.
+
+**Fix (v3.116.28) :**
+
+- **Dashboard temps réel** : `error` est maintenant propagé depuis l'event `update_progress` vers `deployment.error_message`
+- **Fallback UX** : les déploiements échoués sans `error_message` affichent : _"Aucune réponse du Pi — le site était probablement hors ligne ou la commande a expiré"_
+- **Auto-fail backend** : les déploiements OTA bloqués en `in_progress` depuis >2h sont automatiquement marqués `failed` avec message _"Timeout : aucune réponse du Pi après N minutes"_
+- **Résumé visuel** : les déploiements réussis affichent maintenant la durée (_"Déployé avec succès en 3min 42s"_), et les déploiements en cours montrent le temps écoulé
+
+**Diagnostic :**
+
+```bash
+# Vérifier l'état d'un déploiement en DB
+source central-server/.env && psql "$DATABASE_URL" -c "
+  SELECT id, status, progress, error_message, started_at, completed_at
+  FROM update_deployments
+  ORDER BY created_at DESC LIMIT 5;
+"
+
+# Vérifier les déploiements bloqués en in_progress
+source central-server/.env && psql "$DATABASE_URL" -c "
+  SELECT ud.id, s.site_name, ud.status, ud.progress,
+    EXTRACT(EPOCH FROM (NOW() - COALESCE(ud.started_at, ud.created_at))) / 60 AS minutes_stuck
+  FROM update_deployments ud
+  JOIN sites s ON ud.target_id = s.id
+  WHERE ud.status = 'in_progress'
+  ORDER BY ud.created_at DESC;
+"
+```
+
+**Fichiers modifiés :**
+
+| Fichier                                                 | Changement                                                                 |
+| ------------------------------------------------------- | -------------------------------------------------------------------------- |
+| `central-dashboard/.../updates-management.component.ts` | Propagation `error` dans events temps réel, fallback message, résumé durée |
+| `central-server/.../alerting.service.ts`                | Auto-fail déploiements OTA bloqués >2h                                     |
+
+---
+
+**Dernière mise à jour :** 22 mars 2026 (ajout déploiement OTA sans message d'erreur, bgscan reconfigure loop, OTA stall detection, hotspot channel flapping, hotspot recovery proportionnelle — v3.116.22-28)

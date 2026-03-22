@@ -277,7 +277,25 @@ interface UpdateDeployment {
               </div>
               <div class="progress-label">
                 <span>{{ deployment.deployed_count || 0 }} / {{ deployment.total_count || '?' }} sites</span>
-                <span>{{ deployment.progress }}%</span>
+                <span>{{ deployment.progress | number:'1.0-1' }}%</span>
+              </div>
+            </div>
+
+            <div class="deployment-summary" *ngIf="deployment.status === 'completed'">
+              <div class="summary-content summary-success">
+                <span class="summary-icon">✅</span>
+                <span class="summary-text">
+                  Déployé avec succès{{ getDeploymentDuration(deployment) ? ' en ' + getDeploymentDuration(deployment) : '' }}
+                </span>
+              </div>
+            </div>
+
+            <div class="deployment-summary" *ngIf="deployment.status === 'in_progress'">
+              <div class="summary-content summary-progress">
+                <span class="summary-icon">🔄</span>
+                <span class="summary-text">
+                  En cours{{ getDeploymentElapsed(deployment) ? ' depuis ' + getDeploymentElapsed(deployment) : '' }}{{ deployment.error_message ? ' — ' + deployment.error_message : '' }}
+                </span>
               </div>
             </div>
 
@@ -288,10 +306,10 @@ interface UpdateDeployment {
               </div>
             </div>
 
-            <div class="deployment-error" *ngIf="deployment.status === 'failed' && deployment.error_message">
+            <div class="deployment-error" *ngIf="deployment.status === 'failed'">
               <div class="error-content">
                 <span class="error-icon">⚠️</span>
-                <span class="error-text">{{ deployment.error_message }}</span>
+                <span class="error-text">{{ deployment.error_message || 'Aucune réponse du Pi — le site était probablement hors ligne ou la commande a expiré' }}</span>
               </div>
             </div>
 
@@ -908,6 +926,38 @@ interface UpdateDeployment {
       word-break: break-word;
     }
 
+    .deployment-summary {
+      margin-top: 0.75rem;
+    }
+
+    .deployment-summary .summary-content {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.5rem;
+      border-radius: 0.5rem;
+      padding: 0.75rem 1rem;
+    }
+
+    .deployment-summary .summary-success {
+      background: #f0fdf4;
+      border: 1px solid #bbf7d0;
+    }
+
+    .deployment-summary .summary-progress {
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+    }
+
+    .deployment-summary .summary-icon {
+      flex-shrink: 0;
+    }
+
+    .deployment-summary .summary-text {
+      font-size: 0.875rem;
+      line-height: 1.4;
+      color: #374151;
+    }
+
     .deployment-error {
       background: #fef2f2;
       border: 1px solid #fecaca;
@@ -1298,12 +1348,16 @@ export class UpdatesManagementComponent implements OnInit, OnDestroy {
         progress: number;
         deployedCount: number;
         status: UpdateDeployment['status'];
+        error?: string;
       };
       const deployment = this.deployments.find(d => d.id === data.deploymentId);
       if (deployment) {
         deployment.progress = data.progress;
         deployment.deployed_count = data.deployedCount;
         deployment.status = data.status;
+        if (data.error) {
+          deployment.error_message = data.error;
+        }
       }
     });
     this.subscriptions.add(sub);
@@ -1496,6 +1550,34 @@ export class UpdatesManagementComponent implements OnInit, OnDestroy {
       failed: 'Échoué'
     };
     return labels[status] || status;
+  }
+
+  getDeploymentDuration(deployment: UpdateDeployment): string {
+    if (!deployment.started_at || !deployment.completed_at) return '';
+    const start = new Date(deployment.started_at).getTime();
+    const end = new Date(deployment.completed_at).getTime();
+    const diffMs = end - start;
+    if (diffMs < 0) return '';
+    return this.formatDurationMs(diffMs);
+  }
+
+  getDeploymentElapsed(deployment: UpdateDeployment): string {
+    const start = deployment.started_at || deployment.created_at;
+    if (!start) return '';
+    const diffMs = Date.now() - new Date(start).getTime();
+    if (diffMs < 0) return '';
+    return this.formatDurationMs(diffMs);
+  }
+
+  private formatDurationMs(ms: number): string {
+    const seconds = Math.floor(ms / 1000);
+    if (seconds < 60) return `${seconds}s`;
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    if (minutes < 60) return remainingSeconds > 0 ? `${minutes}min ${remainingSeconds}s` : `${minutes}min`;
+    const hours = Math.floor(minutes / 60);
+    const remainingMinutes = minutes % 60;
+    return remainingMinutes > 0 ? `${hours}h ${remainingMinutes}min` : `${hours}h`;
   }
 
   getVersionDistribution(): { version: string; count: number; percentage: number }[] {

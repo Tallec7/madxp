@@ -11717,3 +11717,73 @@ describe('Canary monitoring post-OTA', () => {
       .toEqual({ noAutoRollback: true });
   });
 });
+
+// =============================================================================
+// OTA deployment observability guards
+// =============================================================================
+// Issue: Failed deployments showed "Échoué" badge with no error explanation.
+// Root causes:
+// 1. Dashboard subscribeToDeploymentProgress() didn't propagate `error` from
+//    real-time update_progress events → error_message stayed null in the UI
+// 2. Template hid the error block entirely when error_message was null
+// 3. Deployments stuck in_progress forever when Pi never responded (no auto-fail)
+// Fix: propagate error in real-time, show fallback message, auto-fail after 2h.
+
+describe('OTA deployment observability guards', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+
+  it('dashboard subscribeToDeploymentProgress must propagate error from update_progress events', () => {
+    const component = fs.readFileSync(
+      path.join(repoRoot, 'central-dashboard/src/app/features/updates/updates-management.component.ts'),
+      'utf8'
+    );
+    // The real-time event type cast must include error field
+    expect({ hasErrorInType: component.includes("error?: string") || component.includes("error: string") })
+      .toEqual({ hasErrorInType: true });
+    // Must assign error to deployment.error_message
+    expect({ propagatesError: component.includes("deployment.error_message = data.error") })
+      .toEqual({ propagatesError: true });
+  });
+
+  it('dashboard must show fallback message when deployment failed without error_message', () => {
+    const component = fs.readFileSync(
+      path.join(repoRoot, 'central-dashboard/src/app/features/updates/updates-management.component.ts'),
+      'utf8'
+    );
+    // The error block must NOT require error_message to be truthy
+    // (it used to have *ngIf="deployment.status === 'failed' && deployment.error_message")
+    expect({ noErrorMessageGate: !component.includes("status === 'failed' && deployment.error_message") })
+      .toEqual({ noErrorMessageGate: true });
+    // Must have a fallback text for null error_message
+    expect({ hasFallback: component.includes("deployment.error_message || '") })
+      .toEqual({ hasFallback: true });
+  });
+
+  it('dashboard must show deployment duration/elapsed for completed and in_progress deployments', () => {
+    const component = fs.readFileSync(
+      path.join(repoRoot, 'central-dashboard/src/app/features/updates/updates-management.component.ts'),
+      'utf8'
+    );
+    // Must have duration calculation methods
+    expect({ hasDuration: component.includes('getDeploymentDuration(') })
+      .toEqual({ hasDuration: true });
+    expect({ hasElapsed: component.includes('getDeploymentElapsed(') })
+      .toEqual({ hasElapsed: true });
+    // Must display summary for completed deployments
+    expect({ hasCompletedSummary: component.includes("deployment.status === 'completed'") && component.includes('Déployé avec succès') })
+      .toEqual({ hasCompletedSummary: true });
+  });
+
+  it('checkStuckDeployments must auto-fail update deployments stuck >2h', () => {
+    const alerting = fs.readFileSync(
+      path.join(repoRoot, 'central-server/src/services/alerting.service.ts'),
+      'utf8'
+    );
+    // Must mark stuck update deployments as failed (not just create alert)
+    expect({ autoFailsStuck: alerting.includes("SET status = 'failed'") && alerting.includes('minutesStuck >= 120') })
+      .toEqual({ autoFailsStuck: true });
+    // Must include descriptive error_message with timeout info
+    expect({ hasTimeoutMessage: alerting.includes('Timeout') && alerting.includes('aucune réponse') })
+      .toEqual({ hasTimeoutMessage: true });
+  });
+});
