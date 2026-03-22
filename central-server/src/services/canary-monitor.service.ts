@@ -125,7 +125,7 @@ class CanaryMonitorService {
    * Force-expire all watches for a deployment (e.g. manual rollback).
    */
   cancelWatch(deploymentId: string): void {
-    for (const [key, watch] of this.activeWatches.entries()) {
+    for (const [, watch] of this.activeWatches.entries()) {
       if (watch.deploymentId === deploymentId) {
         watch.resolved = true;
         logger.info('Canary watch cancelled', { deploymentId, siteId: watch.siteId });
