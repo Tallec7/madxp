@@ -2,7 +2,7 @@
   "$schema": "https://railway.app/railway.schema.json",
   "build": {
     "builder": "NIXPACKS",
-    "watchPatterns": ["central-server/**"]
+    "watchPatterns": ["central-server/**", "nixpacks.toml", "railway.json"]
   },
   "deploy": {
     "healthcheckPath": "/live",
