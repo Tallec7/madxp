@@ -1,3 +1,9 @@
+## [3.116.29](https://github.com/Tallec7/neopro/compare/v3.116.28...v3.116.29) (2026-03-22)
+
+### Bug Fixes
+
+- **ota:** use 127.0.0.1 instead of localhost for local health checks ([ece75f5](https://github.com/Tallec7/neopro/commit/ece75f5586ba66d1e1fe3312d26ca80b57efd866))
+
 ## [3.116.28](https://github.com/Tallec7/neopro/compare/v3.116.27...v3.116.28) (2026-03-22)
 
 ### Bug Fixes
