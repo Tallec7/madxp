@@ -1,3 +1,9 @@
+## [3.116.14](https://github.com/Tallec7/neopro/compare/v3.116.13...v3.116.14) (2026-03-22)
+
+### Bug Fixes
+
+- **build:** add engines.node >= 20.19 for Nixpacks Node version detection ([f7c9951](https://github.com/Tallec7/neopro/commit/f7c99510430485dab39e7b8a77d361f74b3fc2e4))
+
 ## [3.116.13](https://github.com/Tallec7/neopro/compare/v3.116.12...v3.116.13) (2026-03-22)
 
 ### Bug Fixes
