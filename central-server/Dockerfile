@@ -12,11 +12,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     pkg-config \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy package files (relative to dockerContext)
-COPY package*.json ./
+# Copy central-server package files only
+COPY central-server/package*.json ./
 
 # Install all dependencies (including dev for build)
-RUN HUSKY=0 npm ci
+RUN npm ci
 
 # ============================================
 # Stage 2: Builder
@@ -27,7 +27,7 @@ WORKDIR /app
 
 # Copy dependencies from deps stage
 COPY --from=deps /app/node_modules ./node_modules
-COPY . .
+COPY central-server/ .
 
 # Build TypeScript
 RUN npm run build
@@ -46,10 +46,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     pkg-config \
     && rm -rf /var/lib/apt/lists/*
 
-COPY package*.json ./
+COPY central-server/package*.json ./
 
 # Install only production dependencies
-RUN HUSKY=0 npm ci --omit=dev && npm cache clean --force
+RUN npm ci --omit=dev && npm cache clean --force
 
 # ============================================
 # Stage 4: Production Runtime
