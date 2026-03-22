@@ -3,9 +3,11 @@ aptPkgs = ["libcairo2-dev", "libpango1.0-dev", "libjpeg-dev", "libgif-dev", "lib
 
 [phases.install]
 cmds = ["cd central-server && npm install --include=dev"]
+onlyIncludeFiles = ["central-server/**"]
 
 [phases.build]
 cmds = ["cd central-server && npm run build"]
+onlyIncludeFiles = ["central-server/**"]
 
 [start]
 cmd = "cd central-server && npm start"
