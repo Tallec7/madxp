@@ -428,10 +428,15 @@ class SafeNetworkOperations {
       const profile = networkDetector.getFullProfile();
       const signal = profile?.currentConnection?.signal;
 
-      if (signal && signal > -72) {
-        // Signal is moderate (-68 to -60 dBm range) — lower threshold to avoid
-        // constant bgscan oscillation around the -70 dBm boundary.
-        // NLF use case: signal at -68 dBm was triggering 30s scans too often.
+      // Hysteresis: use wider bands to prevent threshold oscillation.
+      // Without hysteresis, signal oscillating between -68 and -73 dBm
+      // caused the threshold to flip between -75 and -70 every ~90s,
+      // each flip triggering wpa_cli reconfigure → deauth → WiFi drop.
+      // Fix: use -70 dBm as decision boundary with 5 dBm hysteresis band:
+      //   - Switch to relaxed (-75) only when signal > -67 (clearly moderate)
+      //   - Switch to aggressive (-70) only when signal <= -78 (clearly weak)
+      //   - In between (-78 to -67): keep whatever threshold is currently configured
+      if (signal && signal > -67) {
         logger.info('SafeNetworkOperations: using relaxed bgscan threshold for moderate signal', {
           signal,
           threshold: -75,
@@ -439,13 +444,29 @@ class SafeNetworkOperations {
         return 'simple:30:-75:300';
       }
 
-      if (signal && signal <= -75) {
-        // Very weak signal — keep aggressive threshold at -70 to find better APs fast
+      if (signal && signal <= -78) {
         logger.info('SafeNetworkOperations: using aggressive bgscan threshold for weak signal', {
           signal,
           threshold: -70,
         });
         return 'simple:30:-70:300';
+      }
+
+      // Hysteresis band (-78 to -67 dBm): keep current config to avoid flip-flopping
+      // Read current bgscan from config file (sync — this is a compute function, not async)
+      try {
+        const { execSync } = require('child_process');
+        const grepOut = execSync(`grep "bgscan=" ${this.wpaSupplicantPath} 2>/dev/null || echo ""`, { encoding: 'utf8' });
+        const currentBgscan = grepOut.trim().match(/bgscan="([^"]+)"/)?.[1] || '';
+        if (currentBgscan) {
+          logger.info('SafeNetworkOperations: signal in hysteresis band, keeping current bgscan', {
+            signal,
+            currentBgscan,
+          });
+          return currentBgscan;
+        }
+      } catch {
+        // Fall through to default
       }
 
       // Default: standard threshold
@@ -456,10 +477,26 @@ class SafeNetworkOperations {
   }
 
   /**
-   * Configure bgscan for roaming in mesh environments
+   * Configure bgscan for roaming in mesh environments.
+   * Skips wpa_cli reconfigure if the config file already has the desired value —
+   * reconfigure triggers a full deauth+reassociation that drops WiFi for 5-15s.
    */
   async configureBgscan(bgscan = 'simple:30:-70:300') {
     try {
+      // Check current config BEFORE writing — skip if already correct
+      // This prevents the deauth→reconnect→reconfigure→deauth loop
+      // that was causing 15+ disconnects/hour on NLF mesh.
+      try {
+        const { stdout } = await execAsync(`grep "bgscan=" ${this.wpaSupplicantPath} 2>/dev/null || echo ""`);
+        const currentBgscan = stdout.trim().match(/bgscan="([^"]+)"/)?.[1] || '';
+        if (currentBgscan === bgscan) {
+          logger.info('SafeNetworkOperations: bgscan already configured, skipping reconfigure', { bgscan });
+          return { success: true, message: `bgscan already configured: ${bgscan}`, skipped: true };
+        }
+      } catch {
+        // If grep fails, proceed with write
+      }
+
       // Atomically: remove old bgscan + add new one (single file write)
       await this.atomicWpaSupplicantEdit(this.wpaSupplicantPath, (content) => {
         const lines = content.split('\n');

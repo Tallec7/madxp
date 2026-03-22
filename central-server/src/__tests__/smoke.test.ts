@@ -5650,6 +5650,49 @@ describe('WiFi boot race condition regression guards (v3.84.3)', () => {
 });
 
 // ----------------------------------------------------------
+// Bgscan reconfigure deauth prevention
+// ----------------------------------------------------------
+// Issue: on NLF mesh, signal oscillated between -68 and -73 dBm,
+// causing _computeOptimalBgscan() to flip between -75 and -70 every ~90s.
+// Each flip triggered wpa_cli reconfigure → deauth → WiFi drop → reconnect → flip again.
+// Result: 15+ self-inflicted disconnections/hour, OTA downloads always stalling.
+describe('Bgscan reconfigure deauth prevention', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+  let safeOps: string;
+
+  beforeAll(() => {
+    safeOps = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/sync-agent/src/services/safe-network-operations.js'),
+      'utf8'
+    );
+  });
+
+  // Guard: configureBgscan must skip reconfigure if config already matches
+  it('configureBgscan must check current config before calling wpa_cli reconfigure', () => {
+    // Must grep current bgscan value and compare before writing
+    expect({ checksCurrentConfig: safeOps.includes('already configured, skipping reconfigure') })
+      .toEqual({ checksCurrentConfig: true });
+  });
+
+  // Guard: _computeOptimalBgscan must use hysteresis to prevent threshold oscillation
+  it('_computeOptimalBgscan must use hysteresis band (not sharp threshold)', () => {
+    // Must have hysteresis band where current config is preserved
+    expect({ hasHysteresisBand: safeOps.includes('hysteresis band') })
+      .toEqual({ hasHysteresisBand: true });
+    // Must NOT use -72 as sharp boundary (oscillation zone for NLF signal)
+    const computeFn = safeOps.match(/_computeOptimalBgscan[\s\S]*?return 'simple:30:-70:300';\s*\}/);
+    expect(computeFn).not.toBeNull();
+    // The decision boundaries must have >5 dBm gap (hysteresis)
+    const upperBound = computeFn![0].match(/signal > (-\d+)/);
+    const lowerBound = computeFn![0].match(/signal <= (-\d+)/);
+    if (upperBound && lowerBound) {
+      const gap = Number(upperBound[1]) - Number(lowerBound[1]);
+      expect({ hysteresisGap: Math.abs(gap) >= 5 }).toEqual({ hysteresisGap: true });
+    }
+  });
+});
+
+// ----------------------------------------------------------
 // Hotspot optimizer wlan1 scan regression guards
 // ----------------------------------------------------------
 // Issue: hotspot-optimizer.sh ran 5 iwlist scans on wlan1 in ~25s at boot.
@@ -8781,8 +8824,9 @@ describe('WiFi recovery progressive back-off & mesh guards (v3.99.4)', () => {
       /_computeOptimalBgscan\(\)\s*\{[\s\S]*?return\s+'simple:/
     );
     expect(computeFn).not.toBeNull();
+    // Must check signal level with hysteresis (not a sharp -72 boundary)
     expect({
-      checksSignal: /signal\s*>\s*-72/.test(computeFn![0]),
+      checksSignal: /signal\s*>\s*-6[5-9]/.test(computeFn![0]),
     }).toEqual({ checksSignal: true });
   });
 
