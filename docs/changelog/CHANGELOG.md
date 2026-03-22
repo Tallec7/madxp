@@ -1,3 +1,9 @@
+## [3.116.25](https://github.com/Tallec7/neopro/compare/v3.116.24...v3.116.25) (2026-03-22)
+
+### Bug Fixes
+
+- **network:** prevent self-inflicted WiFi disconnections from bgscan reconfigure loop ([c1677f7](https://github.com/Tallec7/neopro/commit/c1677f76faf21f9ece49e9913117570dde852202))
+
 ## [3.116.24](https://github.com/Tallec7/neopro/compare/v3.116.23...v3.116.24) (2026-03-22)
 
 ### Bug Fixes
