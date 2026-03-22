@@ -1,3 +1,9 @@
+## [3.116.21](https://github.com/Tallec7/neopro/compare/v3.116.20...v3.116.21) (2026-03-22)
+
+### Bug Fixes
+
+- **build:** use root context in Dockerfile with central-server/ paths ([131c52d](https://github.com/Tallec7/neopro/commit/131c52d5c151858ffdbe59566a70e992ed32ea7b))
+
 ## [3.116.20](https://github.com/Tallec7/neopro/compare/v3.116.19...v3.116.20) (2026-03-22)
 
 ### Bug Fixes
