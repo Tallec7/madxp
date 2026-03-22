@@ -1,3 +1,9 @@
+## [3.116.20](https://github.com/Tallec7/neopro/compare/v3.116.19...v3.116.20) (2026-03-22)
+
+### Bug Fixes
+
+- **build:** disable husky in Docker builds with HUSKY=0 ([d131eff](https://github.com/Tallec7/neopro/commit/d131effc4e8c876fc7cfa92d580860ecc742b0ac))
+
 ## [3.116.19](https://github.com/Tallec7/neopro/compare/v3.116.18...v3.116.19) (2026-03-22)
 
 ### Bug Fixes
