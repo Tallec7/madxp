@@ -11426,6 +11426,59 @@ describe('Post-OTA validation integration', () => {
   });
 });
 
+describe('OTA download resilience', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+
+  // Guard: OTA download must have stall detection for silent WiFi drops
+  // On RTL8192EU mesh, WiFi drops silently without triggering stream errors —
+  // without stall detection, the download hangs indefinitely at 5%.
+  it('downloadPackage must have stall detection timer (no infinite hang on WiFi drop)', () => {
+    const updateSoftware = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/sync-agent/src/commands/update-software.js'),
+      'utf8'
+    );
+    expect({ hasStallTimer: updateSoftware.includes('stallTimer') })
+      .toEqual({ hasStallTimer: true });
+    expect({ hasStallTimeout: updateSoftware.includes('STALL_TIMEOUT') })
+      .toEqual({ hasStallTimeout: true });
+    // Must destroy the stream on stall (not just log)
+    expect({ destroysStream: updateSoftware.includes('.destroy(') })
+      .toEqual({ destroysStream: true });
+  });
+
+  // Guard: OTA download must have retry logic with progressive backoff
+  it('OTA download must retry on failure (not fail on first stall)', () => {
+    const updateSoftware = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/sync-agent/src/commands/update-software.js'),
+      'utf8'
+    );
+    expect({ hasDownloadRetry: updateSoftware.includes('MAX_DOWNLOAD_RETRIES') })
+      .toEqual({ hasDownloadRetry: true });
+    expect({ hasRetryDelay: updateSoftware.includes('retryDelay') })
+      .toEqual({ hasRetryDelay: true });
+  });
+
+  // Guard: stall timer must listen to 'data' events on response stream (not just writer)
+  it('stall timer must reset on response data events', () => {
+    const updateSoftware = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/sync-agent/src/commands/update-software.js'),
+      'utf8'
+    );
+    expect({ listensToData: updateSoftware.includes("response.data.on('data'") })
+      .toEqual({ listensToData: true });
+  });
+
+  // Guard: stall timer must be cleared on finish/error (prevent memory leak)
+  it('stall timer must be cleared on stream finish and error', () => {
+    const updateSoftware = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/sync-agent/src/commands/update-software.js'),
+      'utf8'
+    );
+    expect({ clearsOnFinish: updateSoftware.includes('clearTimeout(stallTimer)') })
+      .toEqual({ clearsOnFinish: true });
+  });
+});
+
 describe('Build includes OTA validation files', () => {
   const repoRoot = path.resolve(__dirname, '..', '..', '..');
 

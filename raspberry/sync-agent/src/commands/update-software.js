@@ -51,9 +51,31 @@ class SoftwareUpdateHandler {
 
       const packagePath = `/tmp/neopro-update-${version}.tar.gz`;
 
-      await this.downloadPackage(updateUrl, packagePath, (progress) => {
-        progressCallback(5 + progress * 0.3);
-      });
+      const MAX_DOWNLOAD_RETRIES = 3;
+      for (let downloadAttempt = 1; downloadAttempt <= MAX_DOWNLOAD_RETRIES; downloadAttempt++) {
+        try {
+          await this.downloadPackage(updateUrl, packagePath, (progress) => {
+            progressCallback(5 + progress * 0.3);
+          });
+          break; // Download succeeded
+        } catch (dlError) {
+          const isStall = dlError.message && dlError.message.includes('stalled');
+          logger.warn('Download attempt failed', {
+            attempt: downloadAttempt,
+            maxRetries: MAX_DOWNLOAD_RETRIES,
+            isStall,
+            error: dlError.message,
+          });
+          await fs.remove(packagePath).catch(() => {});
+          if (downloadAttempt >= MAX_DOWNLOAD_RETRIES) {
+            throw new Error(`Download failed after ${MAX_DOWNLOAD_RETRIES} attempts: ${dlError.message}`);
+          }
+          // Wait before retry (progressive: 5s, 10s, 15s)
+          const retryDelay = downloadAttempt * 5000;
+          logger.info('Retrying download after delay', { retryDelay, nextAttempt: downloadAttempt + 1 });
+          await new Promise(r => setTimeout(r, retryDelay));
+        }
+      }
 
       progressCallback(35);
 
@@ -177,11 +199,41 @@ class SoftwareUpdateHandler {
       });
 
       const writer = fs.createWriteStream(targetPath);
+
+      // Stall detection: abort if no data received for 30s
+      // On WiFi mesh (RTL8192EU), silent drops don't trigger stream errors —
+      // the stream hangs indefinitely waiting for data that never arrives.
+      const STALL_TIMEOUT_MS = 30000;
+      let stallTimer = null;
+      const resetStallTimer = () => {
+        if (stallTimer) clearTimeout(stallTimer);
+        stallTimer = setTimeout(() => {
+          const err = new Error(`Download stalled: no data received for ${STALL_TIMEOUT_MS / 1000}s`);
+          logger.warn('Download stall detected, aborting stream', { targetPath });
+          response.data.destroy(err);
+          writer.destroy(err);
+        }, STALL_TIMEOUT_MS);
+      };
+
+      response.data.on('data', resetStallTimer);
+      resetStallTimer(); // Start the first timer
+
       response.data.pipe(writer);
 
       return new Promise((resolve, reject) => {
-        writer.on('finish', resolve);
-        writer.on('error', reject);
+        writer.on('finish', () => {
+          if (stallTimer) clearTimeout(stallTimer);
+          resolve();
+        });
+        writer.on('error', (err) => {
+          if (stallTimer) clearTimeout(stallTimer);
+          reject(err);
+        });
+        response.data.on('error', (err) => {
+          if (stallTimer) clearTimeout(stallTimer);
+          writer.destroy(err);
+          reject(err);
+        });
       });
     } catch (error) {
       logger.error('Package download failed:', error);
