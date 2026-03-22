@@ -1,3 +1,9 @@
+## [3.116.15](https://github.com/Tallec7/neopro/compare/v3.116.14...v3.116.15) (2026-03-22)
+
+### Bug Fixes
+
+- **build:** scope Nixpacks to central-server only with onlyIncludeFiles ([9bd8608](https://github.com/Tallec7/neopro/commit/9bd8608e4752c616ca86d97a39d378aeda70af4e))
+
 ## [3.116.14](https://github.com/Tallec7/neopro/compare/v3.116.13...v3.116.14) (2026-03-22)
 
 ### Bug Fixes
