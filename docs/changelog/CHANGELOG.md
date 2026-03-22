@@ -1,3 +1,9 @@
+## [3.116.19](https://github.com/Tallec7/neopro/compare/v3.116.18...v3.116.19) (2026-03-22)
+
+### Bug Fixes
+
+- **build:** use node:20-slim (Debian) in Dockerfile for canvas compat ([de44c4b](https://github.com/Tallec7/neopro/commit/de44c4bb00d9855bd6da65e7819d5f2111362587))
+
 ## [3.116.18](https://github.com/Tallec7/neopro/compare/v3.116.17...v3.116.18) (2026-03-22)
 
 ### Bug Fixes
