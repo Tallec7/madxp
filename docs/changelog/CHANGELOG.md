@@ -1,3 +1,9 @@
+## [3.116.5](https://github.com/Tallec7/neopro/compare/v3.116.4...v3.116.5) (2026-03-22)
+
+### Bug Fixes
+
+- **build:** include nodejs_20 and npm in Nixpacks config ([5c2e040](https://github.com/Tallec7/neopro/commit/5c2e040720e2ade4332210de363eb7587877e71b))
+
 ## [3.116.4](https://github.com/Tallec7/neopro/compare/v3.116.3...v3.116.4) (2026-03-22)
 
 ### Bug Fixes
