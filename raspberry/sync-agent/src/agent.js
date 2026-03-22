@@ -898,10 +898,20 @@ class NeoproSyncAgent {
   startNetworkProfileDetection() {
     const NETWORK_PROFILE_INTERVAL = 60 * 60 * 1000; // 1 heure
 
+    // Guard: prevent duplicate detection loops on reconnection.
+    // onAuthenticated() calls this on EVERY reconnect — without guard,
+    // each reconnection creates a new setTimeout + setInterval, causing
+    // N parallel autoOptimize runs after N reconnections.
+    if (this._networkProfileStarted) {
+      logger.debug('Network profile detection already running, skipping duplicate start');
+      return;
+    }
+    this._networkProfileStarted = true;
+
     logger.info('Starting network profile detection', { interval: NETWORK_PROFILE_INTERVAL });
 
     // Première détection au démarrage (avec délai pour laisser le réseau se stabiliser)
-    setTimeout(async () => {
+    this._networkProfileTimeout = setTimeout(async () => {
       try {
         const profile = await networkDetector.detect();
         logger.info('Initial network profile detected', {

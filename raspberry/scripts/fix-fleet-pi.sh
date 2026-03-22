@@ -955,6 +955,65 @@ else
     log_ok "Pas un Pi 5 — cooling_fan non applicable"
 fi
 
+log_step "14/14 — Hotspot IP statique (Debian 13 Trixie compatibilité)"
+
+# Sur Debian 13 (Trixie), dhcpcd n'est plus le gestionnaire réseau par défaut.
+# L'IP 192.168.4.1 configurée dans /etc/dhcpcd.conf peut ne jamais être appliquée
+# si dhcpcd n'est pas actif, causant une boucle de restarts hostapd :
+#   watchdog détecte IP absente → restart hostapd → flush IP → IP absente → boucle
+#
+# Fix : ajouter une config systemd-networkd comme fallback robuste.
+# systemd-networkd est présent sur toutes les Debian et n'entre pas en conflit
+# avec dhcpcd (seul l'un des deux gérera wlan0 en pratique).
+
+HOTSPOT_INTERFACE="wlan0"
+HOTSPOT_IP="192.168.4.1/24"
+NETWORKD_CONF="/etc/systemd/network/10-wlan0-hotspot.network"
+
+if [ -f "$NETWORKD_CONF" ] && grep -q "$HOTSPOT_IP" "$NETWORKD_CONF" 2>/dev/null; then
+    log_ok "Configuration systemd-networkd hotspot déjà en place"
+else
+    cat > "$NETWORKD_CONF" << 'NETEOF'
+# Neopro hotspot — IP statique pour wlan0 (AP mode)
+# Fallback pour Debian 13+ où dhcpcd n'est plus le défaut.
+# Compatible avec dhcpcd : si dhcpcd gère wlan0, cette config est ignorée.
+[Match]
+Name=wlan0
+
+[Network]
+Address=192.168.4.1/24
+DHCPServer=no
+LinkLocalAddressing=no
+
+[Link]
+# Ne pas gérer la route par défaut (internet passe par wlan1)
+RequiredForOnline=no
+NETEOF
+
+    chmod 644 "$NETWORKD_CONF"
+
+    # Activer systemd-networkd s'il ne l'est pas (safe — n'interfère pas avec dhcpcd)
+    if ! systemctl is-enabled systemd-networkd >/dev/null 2>&1; then
+        systemctl enable systemd-networkd 2>/dev/null || true
+    fi
+    # Restart pour appliquer immédiatement
+    systemctl restart systemd-networkd 2>/dev/null || true
+
+    log_ok "Configuration systemd-networkd hotspot créée ($NETWORKD_CONF)"
+    CHANGES=$((CHANGES + 1))
+
+    # Vérifier que l'IP est maintenant appliquée
+    sleep 2
+    if ip addr show "$HOTSPOT_INTERFACE" 2>/dev/null | grep -q "192.168.4.1"; then
+        log_ok "IP 192.168.4.1 confirmée sur $HOTSPOT_INTERFACE"
+    else
+        # Fallback immédiat : application manuelle
+        ip addr add "$HOTSPOT_IP" dev "$HOTSPOT_INTERFACE" 2>/dev/null || true
+        log_warn "IP appliquée manuellement (systemd-networkd pas encore actif — reboot recommandé)"
+        NEEDS_REBOOT=true
+    fi
+fi
+
 # =============================================================================
 # Résumé
 # =============================================================================

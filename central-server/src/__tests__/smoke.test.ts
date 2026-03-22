@@ -5699,6 +5699,37 @@ describe('Bgscan reconfigure deauth prevention', () => {
 // RTL8192EU is single-radio: each scan drops carrier for ~6s while sweeping
 // channels 1-13. After 2 back-to-back scans, Livebox considers client gone
 // → carrier lost → 2-3 min internet outage at every boot.
+// Guard: startNetworkProfileDetection must not create duplicate intervals on reconnection
+describe('Network profile detection deduplication', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+
+  it('startNetworkProfileDetection must have a guard against duplicate starts', () => {
+    const agentContent = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/sync-agent/src/agent.js'),
+      'utf8'
+    );
+    // Must check _networkProfileStarted before creating intervals
+    expect({ hasGuard: agentContent.includes('_networkProfileStarted') })
+      .toEqual({ hasGuard: true });
+  });
+});
+
+// Guard: fix-fleet-pi.sh must configure hotspot IP via systemd-networkd for Debian 13
+describe('Hotspot IP Debian 13 compatibility', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+
+  it('fix-fleet-pi.sh must create systemd-networkd config for wlan0 hotspot IP', () => {
+    const fixFleet = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/scripts/fix-fleet-pi.sh'),
+      'utf8'
+    );
+    expect({ hasNetworkdConfig: fixFleet.includes('10-wlan0-hotspot.network') })
+      .toEqual({ hasNetworkdConfig: true });
+    expect({ configuresIp: fixFleet.includes('192.168.4.1/24') })
+      .toEqual({ configuresIp: true });
+  });
+});
+
 // Fix: single cached scan + wait for wlan1 IP before scanning.
 describe('Hotspot optimizer wlan1 scan regression guards', () => {
   const repoRoot = path.resolve(__dirname, '..', '..', '..');
