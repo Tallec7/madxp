@@ -1,3 +1,9 @@
+## [3.116.13](https://github.com/Tallec7/neopro/compare/v3.116.12...v3.116.13) (2026-03-22)
+
+### Bug Fixes
+
+- **build:** include root config files in Railway watchPatterns ([cf4fec3](https://github.com/Tallec7/neopro/commit/cf4fec307cbc2851a7f063c5b3ffed51d1437cf7))
+
 ## [3.116.12](https://github.com/Tallec7/neopro/compare/v3.116.11...v3.116.12) (2026-03-22)
 
 ### Bug Fixes
