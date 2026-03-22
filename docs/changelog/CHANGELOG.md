@@ -1,3 +1,9 @@
+## [3.116.11](https://github.com/Tallec7/neopro/compare/v3.116.10...v3.116.11) (2026-03-22)
+
+### Bug Fixes
+
+- **build:** override Nixpacks install/build to target central-server only ([790b1f8](https://github.com/Tallec7/neopro/commit/790b1f818d07e5db95f8a24d1278a40d198951c5))
+
 ## [3.116.10](https://github.com/Tallec7/neopro/compare/v3.116.9...v3.116.10) (2026-03-22)
 
 ### Bug Fixes
