@@ -182,6 +182,7 @@ source central-server/.env && psql "$DATABASE_URL" -f central-server/src/scripts
 - Remettre `&& deployment.error_message` dans le `*ngIf` du bloc `.deployment-error` de updates-management.component.ts (les déploiements échoués sans `error_message` — Pi jamais répondu, timeout — n'afficheraient aucun message d'erreur — toujours afficher un fallback explicatif — smoke test enforced)
 - Supprimer l'auto-fail des déploiements OTA bloqués >2h dans `checkStuckDeployments()` de alerting.service.ts (sans auto-fail, les déploiements où le Pi ne répond jamais restent en `in_progress` indéfiniment → l'opérateur ne sait pas qu'il faut relancer — smoke test enforced)
 - Supprimer `getDeploymentDuration()` / `getDeploymentElapsed()` / le bloc `.deployment-summary` de updates-management.component.ts (seul feedback visuel de la durée d'un déploiement réussi ou en cours — sans lui, l'opérateur n'a aucune visibilité sur ce qui s'est passé — smoke test enforced)
+- Utiliser `http://localhost` au lieu de `http://127.0.0.1` dans les connexions HTTP locales du sync-agent (`validate-post-update.js`, `local-socket.js`, `update-software.js`) — sur Debian 12+ Bookworm, `localhost` résout en `::1` (IPv6) mais Express écoute sur `0.0.0.0` (IPv4 only) → ECONNREFUSED → validation post-OTA échoue → rollback inutile — smoke test enforced)
 
 ## Architecture détaillée
 

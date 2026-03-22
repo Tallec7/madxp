@@ -1208,7 +1208,7 @@ class SoftwareUpdateHandler {
 
     // 3. Vérifier qu'il n'y a pas de session TV active
     try {
-      const response = await axios.get('http://localhost:3000/api/status', { timeout: 2000 });
+      const response = await axios.get('http://127.0.0.1:3000/api/status', { timeout: 2000 });
       checks.noActiveSession.passed = !response.data?.isPlaying;
       checks.noActiveSession.currentState = response.data?.isPlaying ? 'playing' : 'idle';
     } catch {
@@ -1319,7 +1319,7 @@ class SoftwareUpdateHandler {
 
     // Vérifier que l'application répond
     try {
-      await axios.get('http://localhost:3000/api/health', { timeout: 5000 });
+      await axios.get('http://127.0.0.1:3000/api/health', { timeout: 5000 });
       report.appResponding = true;
     } catch {
       report.appResponding = false;

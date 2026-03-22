@@ -11446,9 +11446,10 @@ describe('Post-OTA validation integration', () => {
       path.join(repoRoot, 'raspberry/sync-agent/src/commands/validate-post-update.js'),
       'utf8'
     );
-    expect({ checksPort3000: validatorContent.includes('localhost:3000') })
+    // Must use 127.0.0.1 (not localhost) to avoid IPv6 ECONNREFUSED on Debian 12+
+    expect({ checksPort3000: validatorContent.includes('127.0.0.1:3000') })
       .toEqual({ checksPort3000: true });
-    expect({ checksPort8080: validatorContent.includes('localhost:8080') })
+    expect({ checksPort8080: validatorContent.includes('127.0.0.1:8080') })
       .toEqual({ checksPort8080: true });
   });
 
@@ -11785,5 +11786,54 @@ describe('OTA deployment observability guards', () => {
     // Must include descriptive error_message with timeout info
     expect({ hasTimeoutMessage: alerting.includes('Timeout') && alerting.includes('aucune réponse') })
       .toEqual({ hasTimeoutMessage: true });
+  });
+});
+
+// =============================================================================
+// IPv6 localhost resolution guard
+// =============================================================================
+// Issue: On Debian 12+ (Bookworm), `localhost` resolves to `::1` (IPv6) first.
+// Express servers listening on `0.0.0.0` (IPv4-only) refuse IPv6 connections.
+// axios/Node.js HTTP client tries `::1` first, gets ECONNREFUSED, and does NOT
+// fallback to `127.0.0.1`. This broke post-OTA validation on Pi (admin server
+// appeared dead despite running fine on IPv4).
+// Fix: use `127.0.0.1` instead of `localhost` for all local HTTP connections.
+
+describe('IPv6 localhost resolution guard (sync-agent)', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+
+  it('validate-post-update.js must use 127.0.0.1 instead of localhost for health checks', () => {
+    const content = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/sync-agent/src/commands/validate-post-update.js'),
+      'utf8'
+    );
+    // Must NOT use http://localhost for local connections (IPv6 ECONNREFUSED on Debian 12+)
+    expect({ noLocalhost: !content.includes("http://localhost:") })
+      .toEqual({ noLocalhost: true });
+    // Must use IPv4 explicit addresses
+    expect({ usesIPv4: content.includes("http://127.0.0.1:") })
+      .toEqual({ usesIPv4: true });
+  });
+
+  it('local-socket.js must use 127.0.0.1 for Socket.IO connection', () => {
+    const content = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/sync-agent/src/services/local-socket.js'),
+      'utf8'
+    );
+    expect({ noLocalhost: !content.includes("http://localhost:") })
+      .toEqual({ noLocalhost: true });
+    expect({ usesIPv4: content.includes("http://127.0.0.1:") })
+      .toEqual({ usesIPv4: true });
+  });
+
+  it('update-software.js must use 127.0.0.1 for local health checks', () => {
+    const content = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/sync-agent/src/commands/update-software.js'),
+      'utf8'
+    );
+    expect({ noLocalhost: !content.includes("http://localhost:3000") })
+      .toEqual({ noLocalhost: true });
+    expect({ usesIPv4: content.includes("http://127.0.0.1:3000") })
+      .toEqual({ usesIPv4: true });
   });
 });

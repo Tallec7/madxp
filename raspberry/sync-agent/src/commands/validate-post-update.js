@@ -113,7 +113,7 @@ class PostUpdateValidator {
 
   async _checkAppHealth(report) {
     try {
-      const response = await axios.get('http://localhost:3000/', { timeout: 8000 });
+      const response = await axios.get('http://127.0.0.1:3000/', { timeout: 8000 });
       const data = response.data;
       report.checks.appHealth = {
         status: data.status,
@@ -138,7 +138,7 @@ class PostUpdateValidator {
 
   async _checkAdminHealth(report) {
     try {
-      const response = await axios.get('http://localhost:8080/api/version', {
+      const response = await axios.get('http://127.0.0.1:8080/api/version', {
         timeout: 8000,
         validateStatus: () => true, // Accept any HTTP status (401 = server is running)
       });
@@ -239,7 +239,7 @@ class PostUpdateValidator {
   async _checkNginx(report) {
     try {
       // nginx sert le webapp Angular sur le port 4200 (ou 80)
-      const response = await axios.get('http://localhost:4200/', {
+      const response = await axios.get('http://127.0.0.1:4200/', {
         timeout: 5000,
         validateStatus: () => true, // Accept any HTTP status
       });
@@ -364,7 +364,7 @@ class PostUpdateValidator {
 
   async _checkSocketConnections(report) {
     try {
-      const response = await axios.get('http://localhost:3000/', { timeout: 5000 });
+      const response = await axios.get('http://127.0.0.1:3000/', { timeout: 5000 });
       const connections = response.data?.connections || 0;
       report.checks.socketConnections = { count: connections };
 

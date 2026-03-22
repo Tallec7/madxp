@@ -2,7 +2,7 @@
 const io = require('socket.io-client');
 const logger = require('../logger');
 
-const LOCAL_SERVER_URL = 'http://localhost:3000';
+const LOCAL_SERVER_URL = 'http://127.0.0.1:3000';
 
 class LocalSocketService {
   constructor() {

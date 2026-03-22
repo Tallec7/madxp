@@ -37,6 +37,7 @@
 33. [Hotspot channel flapping au boot (v3.116.26+)](#hotspot-channel-flapping-au-boot-v311626)
 34. [Hotspot recovery disproportionnée — restart complet pour IP manquante (v3.116.26+)](#hotspot-recovery-disproportionnée--restart-complet-pour-ip-manquante-v311626)
 35. [Déploiement OTA "Échoué" sans message d'erreur (v3.116.28+)](#déploiement-ota-échoué-sans-message-derreur-v311628)
+36. [Post-OTA validation failed: ECONNREFUSED ::1 (v3.116.28+)](#post-ota-validation-failed-econnrefused-1-v311628)
 
 > **WiFi USB** : Pour un guide complet sur la clé WiFi USB (installation, diagnostic, pannes, recovery), voir [WIFI_USB_GUIDE.md](WIFI_USB_GUIDE.md).
 >
@@ -6033,4 +6034,38 @@ source central-server/.env && psql "$DATABASE_URL" -c "
 
 ---
 
-**Dernière mise à jour :** 22 mars 2026 (ajout déploiement OTA sans message d'erreur, bgscan reconfigure loop, OTA stall detection, hotspot channel flapping, hotspot recovery proportionnelle — v3.116.22-28)
+## 36. Post-OTA validation failed: ECONNREFUSED ::1 (v3.116.28+)
+
+**Symptôme :** Après une mise à jour OTA, la validation post-update échoue avec `Admin server not responding on port 8080: connect ECONNREFUSED ::1:8080`. Le rollback automatique se déclenche alors que tous les services fonctionnent correctement.
+
+**Cause racine :** Sur Debian 12+ (Bookworm), `/etc/gai.conf` préfère IPv6. Quand axios/Node.js résout `localhost`, il essaie `::1` (IPv6) en premier. Mais Express écoute sur `0.0.0.0` (IPv4 only) → ECONNREFUSED. Node.js ne fait **pas** de fallback automatique vers `127.0.0.1`.
+
+**Impact :** Toute validation post-OTA échoue sur Pi sous Debian 12+ → rollback systématique → le Pi revient à l'ancienne version → déploiement rapporté comme échoué.
+
+**Fix (v3.116.28) :**
+
+Remplacement de `http://localhost` par `http://127.0.0.1` dans tous les fichiers du sync-agent qui font des connexions HTTP locales :
+
+- `validate-post-update.js` (ports 3000, 4200, 8080)
+- `local-socket.js` (Socket.IO port 3000)
+- `update-software.js` (health checks port 3000)
+
+**Diagnostic :**
+
+```bash
+# Vérifier la résolution de localhost sur le Pi
+getent ahosts localhost
+# Si ::1 apparaît avant 127.0.0.1, IPv6 est préféré
+
+# Tester la connexion IPv4 explicite
+curl -s http://127.0.0.1:8080/api/version
+# Devrait retourner la version admin
+
+# Tester la connexion via localhost (échoue si IPv6 préféré)
+curl -s http://localhost:8080/api/version
+# ECONNREFUSED si IPv6 only
+```
+
+---
+
+**Dernière mise à jour :** 22 mars 2026 (ajout ECONNREFUSED IPv6, déploiement OTA sans message d'erreur, bgscan reconfigure loop, OTA stall detection, hotspot channel flapping, hotspot recovery proportionnelle — v3.116.22-28)
