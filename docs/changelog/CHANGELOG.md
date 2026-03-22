@@ -1,3 +1,9 @@
+## [3.116.28](https://github.com/Tallec7/neopro/compare/v3.116.27...v3.116.28) (2026-03-22)
+
+### Bug Fixes
+
+- **dashboard:** show error details and duration for OTA deployments ([e451baf](https://github.com/Tallec7/neopro/commit/e451baf152b8adc86d16d764583217abcb0926e1)), closes [#35](https://github.com/Tallec7/neopro/issues/35)
+
 ## [3.116.27](https://github.com/Tallec7/neopro/compare/v3.116.26...v3.116.27) (2026-03-22)
 
 ### Bug Fixes
