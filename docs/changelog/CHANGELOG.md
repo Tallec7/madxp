@@ -1,3 +1,9 @@
+## [3.116.24](https://github.com/Tallec7/neopro/compare/v3.116.23...v3.116.24) (2026-03-22)
+
+### Bug Fixes
+
+- **ota:** add download stall detection and retry for WiFi mesh environments ([aaf2c68](https://github.com/Tallec7/neopro/commit/aaf2c686552a842b16400fe07bedbe464669c7a9))
+
 ## [3.116.23](https://github.com/Tallec7/neopro/compare/v3.116.22...v3.116.23) (2026-03-22)
 
 ### Bug Fixes
