@@ -1,5 +1,2 @@
 [phases.setup]
-# nodejs: runtime Node.js
-# ffmpeg: conversion image-to-video
-# python3, gcc, gnumake, pkg-config, pixman, cairo, pango: compilation du package canvas (dépendance pdfkit)
-nixPkgs = ["nodejs", "ffmpeg", "python3", "gcc", "gnumake", "pkg-config", "pixman", "cairo", "pango"]
+nixPkgs = ["pkg-config", "cairo", "pango", "libjpeg", "giflib", "librsvg", "pixman"]
