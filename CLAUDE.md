@@ -20,8 +20,8 @@ npm run build:central              # Build dashboard
 cd central-server && npm run build # Compile TypeScript
 
 # Tests
-npm run test:server                # Jest (API central-server — 1941 tests)
-npm run test:smoke                 # Jest (Smoke tests — 612 tests, détecte régressions de wiring)
+npm run test:server                # Jest (API central-server — 2352 tests)
+npm run test:smoke                 # Jest (Smoke tests — 819 tests, détecte régressions de wiring)
 npm run test:central               # Karma (Angular Dashboard — 520 tests)
 cd raspberry/server && npm test    # Jest (Socket.IO server — 71 tests)
 cd raspberry/admin && npm test     # Jest (Admin server — 194 tests)
@@ -53,6 +53,7 @@ source central-server/.env && psql "$DATABASE_URL" -f central-server/src/scripts
 - Modifier les migrations déjà en production
 - Changer le format des `api_key` des sites (casserait tous les Pi)
 - Utiliser `console.log` dans central-server (utiliser Winston)
+- Revenir à Nixpacks pour Railway (Nixpacks auto-détecte le root package.json et lance `ng build` qui OOM — utiliser le Dockerfile builder `central-server/Dockerfile` avec `COPY central-server/` pour isoler le build)
 - Importer `../config/database` dans les controllers (ESLint bloque tout import, utiliser les repositories)
 - Commit des secrets ou fichiers `.env`
 - Push directement sur `main` sans PR
