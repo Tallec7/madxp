@@ -17,6 +17,7 @@ jobs:
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
           RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
+          RAILWAY_ENVIRONMENT_NAME: production
         run: |
           railway redeploy --yes --service neopro-central
           echo "✅ Railway service restarted successfully"
