@@ -1,3 +1,9 @@
+## [3.116.22](https://github.com/Tallec7/neopro/compare/v3.116.21...v3.116.22) (2026-03-22)
+
+### Bug Fixes
+
+- **hotspot:** reorder recovery to apply IP after hostapd restart ([f53bb70](https://github.com/Tallec7/neopro/commit/f53bb70a0f7fddfd5c54a034425c4f20a5d7a28f))
+
 ## [3.116.21](https://github.com/Tallec7/neopro/compare/v3.116.20...v3.116.21) (2026-03-22)
 
 ### Bug Fixes
