@@ -11375,6 +11375,25 @@ describe('Post-OTA validation integration', () => {
       .toEqual({ checksDrmSysfs: true });
   });
 
+  // Guard: heartbeat handler must detect silent OTA rollback
+  // (if socket was down during OTA failure, the completed signal is lost and the
+  // dashboard shows "Terminé" while the Pi rolled back to the old version)
+  it('heartbeat handler must detect silent OTA rollback via version mismatch', () => {
+    const heartbeatHandler = fs.readFileSync(
+      path.join(repoRoot, 'central-server/src/handlers/heartbeat.handler.ts'),
+      'utf8'
+    );
+    expect({
+      checksUpdateDeployments: heartbeatHandler.includes('update_deployments'),
+      detectsRollback: /rollback.*detect|silent.*rollback/i.test(heartbeatHandler),
+      marksAsFailed: heartbeatHandler.includes("status = 'failed'"),
+    }).toEqual({
+      checksUpdateDeployments: true,
+      detectsRollback: true,
+      marksAsFailed: true,
+    });
+  });
+
   it('validate-pi.sh must exist and be executable', () => {
     const scriptPath = path.join(repoRoot, 'raspberry/scripts/validate-pi.sh');
     expect({ exists: fs.existsSync(scriptPath) }).toEqual({ exists: true });

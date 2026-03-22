@@ -72,6 +72,58 @@ export async function handleHeartbeat(
         'UPDATE sites SET software_version = $2 WHERE id = $1',
         [siteId, softwareVersion]
       );
+
+      // Detect silent OTA rollback: if a deployment was marked 'completed' but the
+      // Pi is still running a different version, the OTA rolled back while the socket
+      // was disconnected and the failure signal was lost. Mark it as failed so the
+      // dashboard shows the real state instead of a false "Terminé".
+      try {
+        const rolledBack = await query<{ id: string; version: string }>(
+          `UPDATE update_deployments
+           SET status = 'failed',
+               error_message = 'Silent rollback detected: Pi reports version ' || $2 || ' instead of target version ' || version,
+               completed_at = NOW()
+           WHERE status = 'completed'
+             AND target_type = 'site'
+             AND target_id = $1
+             AND version IS NOT NULL
+             AND version != $2
+             AND completed_at > NOW() - INTERVAL '1 hour'
+           RETURNING id, version`,
+          [siteId, softwareVersion]
+        );
+
+        if (rolledBack.rows.length > 0) {
+          for (const dep of rolledBack.rows) {
+            logger.error('Silent OTA rollback detected via heartbeat', {
+              siteId,
+              deploymentId: dep.id,
+              targetVersion: dep.version,
+              actualVersion: softwareVersion,
+            });
+          }
+
+          // Alert the dashboard in real-time
+          const io = ctx.getIO();
+          if (io) {
+            for (const dep of rolledBack.rows) {
+              io.to('dashboard').emit('update_progress', {
+                siteId,
+                deploymentId: dep.id,
+                progress: 0,
+                status: 'failed',
+                error: `Rollback silencieux détecté : le Pi tourne en ${softwareVersion} au lieu de ${dep.version}`,
+                version: dep.version,
+              });
+            }
+          }
+        }
+      } catch (rollbackCheckError) {
+        logger.warn('Failed to check for silent OTA rollback', {
+          siteId,
+          error: (rollbackCheckError as Error).message,
+        });
+      }
     }
 
     // Update recording state in memory (ephemeral)
