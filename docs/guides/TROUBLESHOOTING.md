@@ -32,6 +32,10 @@
 28. [Vidéos de boucle "introuvables" après reconnexion site hors ligne (v3.115.2+)](#vidéos-de-boucle-introuvables-après-reconnexion-site-hors-ligne-v31152)
 29. [Échec validation post-OTA (v3.116+)](#échec-validation-post-ota-v3116)
 30. [Alerte canary post-OTA (v3.116+)](#alerte-canary-post-ota-v3116)
+31. [Bgscan reconfigure loop — déconnexions WiFi auto-infligées (v3.116.25+)](#bgscan-reconfigure-loop--déconnexions-wifi-auto-infligées-v311625)
+32. [OTA bloquée à 5% sur WiFi mesh (v3.116.24+)](#ota-bloquée-à-5-sur-wifi-mesh-v311624)
+33. [Hotspot channel flapping au boot (v3.116.26+)](#hotspot-channel-flapping-au-boot-v311626)
+34. [Hotspot recovery disproportionnée — restart complet pour IP manquante (v3.116.26+)](#hotspot-recovery-disproportionnée--restart-complet-pour-ip-manquante-v311626)
 
 > **WiFi USB** : Pour un guide complet sur la clé WiFi USB (installation, diagnostic, pannes, recovery), voir [WIFI_USB_GUIDE.md](WIFI_USB_GUIDE.md).
 >
@@ -3218,10 +3222,10 @@ network={
 
 **Explication des paramètres :**
 
-| Paramètre     | Valeur              | Effet                                                                                      |
-| ------------- | ------------------- | ------------------------------------------------------------------------------------------ |
-| `bgscan`      | `simple:30:-70:300` | Scan en background : toutes les 300s si signal > -70dBm, toutes les 30s si signal < -70dBm |
-| `scan_ssid=0` | Désactivé           | Pas de probe actif (optimisation si le SSID n'est pas caché)                               |
+| Paramètre     | Valeur              | Effet                                                                                                                                                                                                                            |
+| ------------- | ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `bgscan`      | `simple:30:-70:300` | Scan en background : toutes les 300s si signal > -70dBm, toutes les 30s si signal < -70dBm. **Note (v3.116.25+)** : `autoOptimize()` ajuste dynamiquement le seuil avec hystérésis (-67/-78 dBm) pour éviter le reconfigure loop |
+| `scan_ssid=0` | Désactivé           | Pas de probe actif (optimisation si le SSID n'est pas caché)                                                                                                                                                                     |
 
 **Appliquer sans reboot :**
 
@@ -3744,6 +3748,8 @@ Le watchdog vérifie toutes les 30 secondes :
 
 En cas de problème, il tente une récupération automatique (max 3 tentatives, cooldown 5 min).
 
+**Recovery proportionnelle (v3.116.26+) :** Si hostapd et dnsmasq sont actifs mais l'IP 192.168.4.1 est absente, le NetworkWatchdog applique un fast-path `ip addr add` sans redémarrer les services. Le restart complet hostapd+dnsmasq n'est déclenché que si un service est réellement down. Cela évite de couper tous les clients AP pour une simple IP manquante (dhcpcd lent).
+
 **⚠️ Bug corrigé (v3.89.2) — faux positif brcmfmac :**
 
 Avant v3.89.2, `check_brcmfmac()` utilisait `grep -c "brcmf_fw_crashed" || echo "0"`. Ce pattern est un antipattern bash classique : `grep -c` affiche `0` sur stdout ET retourne exit code 1 quand le count est 0, déclenchant `|| echo "0"` qui ajoute un second `0`. La variable contenait alors `"0\n0"` → erreur arithmétique bash → le check échouait systématiquement → **faux positif "firmware crash" → recovery toutes les 30s → hostapd redémarré en boucle → perte d'internet wlan1**.
@@ -3772,13 +3778,15 @@ grep "brcmfmac firmware crash detected" /var/log/neopro-hotspot-watchdog.log | t
 | 5     | Redémarrage nginx                                                 |
 | 6     | Redémarrage avahi-daemon                                          |
 
+**Compatibilité Debian 13 (v3.116.26+) :** Sur Debian 13 (trixie), `dhcpcd` est remplacé par `systemd-networkd`. `fix-fleet-pi.sh` crée `/etc/systemd/network/10-wlan0-hotspot.network` comme fallback pour assigner 192.168.4.1 au hotspot quand dhcpcd est absent.
+
 **Installation :** Depuis la v3.7.14, `install.sh` enregistre automatiquement le service `neopro-hotspot-watchdog` ainsi que `neopro-sync-guardian` et `neopro-hotspot-optimizer`. Pour les Pi installés avant cette version, utiliser `fix-fleet-pi.sh` pour installer les services manquants.
 
 ### Auto-optimisation canal WiFi (v3.61+)
 
 Le `hotspot-optimizer.sh` optimise automatiquement le canal du hotspot au boot. Il scanne les réseaux WiFi visibles via wlan1 (sans perturber l'AP sur wlan0) et bascule vers le canal le moins congestionné (1, 6 ou 11). Depuis v3.69, il corrige aussi automatiquement TKIP → CCMP si détecté.
 
-**Seuils (v3.79+) :** Congestion ≥ 3 réseaux sur le canal actuel, amélioration ≥ 2 réseaux vs meilleur canal. (Avant v3.79 : ≥5 et ≥3, ce qui ne déclenchait jamais le switch dans les environnements modérément congestionnés.)
+**Seuils (v3.116.26+) :** Congestion ≥ 5 réseaux sur le canal actuel, amélioration ≥ 3 réseaux vs meilleur canal. (v3.79 avait abaissé à ≥3/≥2, ce qui causait du channel flapping sur les signaux fluctuants. Les seuils ont été relevés en v3.116.26 avec un guard once-per-boot.)
 
 **Scan unique (v3.84.6+) :** Le scan WiFi est effectué UNE SEULE fois au boot, puis les résultats sont mis en cache dans la variable `CACHED_SCAN`. Toutes les analyses de canal (1, 6, 11) parsent ce cache avec `grep` — aucun scan supplémentaire n'est déclenché. C'est critique car le RTL8192EU est single-radio : chaque `iwlist scan` coupe le carrier pendant ~6s. Avant cette correction, 5 scans consécutifs causaient une perte de carrier de 2-3 minutes à chaque boot.
 
@@ -5866,4 +5874,111 @@ CANARY_CHECK_INTERVAL_MS=30000 # Intervalle checks (défaut: 30s)
 
 ---
 
-**Dernière mise à jour :** 20 mars 2026 (ajout sections validation post-OTA et canary monitoring — v3.116.0)
+---
+
+## 31. Bgscan reconfigure loop — déconnexions WiFi auto-infligées (v3.116.25+)
+
+**Symptôme :** 15+ déconnexions WiFi par heure, site oscille "En ligne / Hors ligne" toutes les 90 secondes. Les logs montrent des `wpa_cli reconfigure` en boucle.
+
+**Cause racine :** Le signal WiFi oscillait entre -68 et -73 dBm (typique en environnement mesh). Le seuil bgscan fixe à -72 dBm dans `_computeOptimalBgscan()` causait un flip-flop :
+
+1. Signal -68 dBm → `_computeOptimalBgscan()` retourne threshold -75 (signal "bon")
+2. `autoOptimize()` détecte que la config actuelle (-70) diffère → `wpa_cli reconfigure`
+3. Le reconfigure coupe le carrier RTL8192EU ~3s → signal tombe à -73 dBm
+4. Prochain check : signal -73 dBm → `_computeOptimalBgscan()` retourne threshold -70 (signal "moyen")
+5. Config (-75) diffère → `wpa_cli reconfigure` → retour à l'étape 1
+
+Chaque cycle prenait ~90s, causant 15+ déconnexions/heure auto-infligées.
+
+**Fix (v3.116.25) — deux corrections :**
+
+1. **Hystérésis dans `_computeOptimalBgscan()`** : seuils -67/-78 au lieu de -72 → dead zone de 11 dBm qui absorbe les oscillations normales
+2. **Skip reconfigure si config identique** : `autoOptimize()` compare la bgscan actuelle dans wpa_supplicant avant d'appeler `wpa_cli reconfigure`
+
+**Diagnostic :**
+
+```bash
+# Vérifier si le reconfigure loop est actif (version non-patchée)
+sudo journalctl -u neopro-sync-agent --since "1 hour ago" | grep -c "wpa_cli.*reconfigure"
+# Si > 5 en 1 heure → loop actif, mettre à jour vers v3.116.25+
+
+# Vérifier le signal moyen
+sudo journalctl -u neopro-sync-agent --since "1 hour ago" | grep "signal_dbm"
+```
+
+**Impact :** Principalement les sites mesh avec signal -65 à -75 dBm (NLF, NTES). Les sites avec signal stable (> -60 ou < -80) ne sont pas affectés.
+
+---
+
+## 32. OTA bloquée à 5% sur WiFi mesh (v3.116.24+)
+
+**Symptôme :** Le déploiement OTA reste bloqué à ~5% indéfiniment. Le dashboard affiche "En cours" mais le progrès ne bouge plus. Plus fréquent sur les sites mesh WiFi.
+
+**Cause racine :** Le stream HTTP de téléchargement du paquet OTA se bloque silencieusement (stall) quand le WiFi mesh change d'AP ou subit une micro-coupure. Node.js `http.get()` n'a pas de timeout sur le data stream (seulement sur la connexion initiale). Le download restait ouvert indéfiniment sans recevoir de données.
+
+**Fix (v3.116.24) :**
+
+- **Stall detection** : timer 30s sur le data stream — si aucune donnée reçue pendant 30s, le stream est détruit
+- **3 retries** avec backoff progressif (5s / 10s / 15s) avant de reporter l'échec
+- Log `Download stall detected at X%, retrying (attempt N/3)` pour le diagnostic
+
+**Diagnostic :**
+
+```bash
+# Vérifier si un OTA est bloqué
+sudo journalctl -u neopro-sync-agent --since "1 hour ago" | grep -i "download\|stall\|retry"
+
+# Forcer un retry manuellement
+# Depuis le dashboard : relancer le déploiement via le bouton "Retry"
+```
+
+---
+
+## 33. Hotspot channel flapping au boot (v3.116.26+)
+
+**Symptôme :** Après un reboot, les clients connectés au hotspot (télécommande) perdent la connexion 2 à 3 fois dans les premières minutes. Les logs `hotspot-optimizer.log` montrent des changements de canal répétés.
+
+**Cause racine :** `hotspot-optimizer.sh` pouvait être relancé plusieurs fois au boot (via systemd restart/retry ou manuellement). Chaque exécution re-scannait les canaux WiFi et pouvait choisir un canal différent (le scan est non-déterministe, les interférences fluctuent). Les seuils de congestion (3 réseaux / 2 d'amélioration) étaient trop bas, déclenchant des switchs sur des différences insignifiantes.
+
+**Fix (v3.116.26) :**
+
+1. **Once-per-boot optimization** : un flag `/tmp/neopro-hotspot-channel-optimized` empêche les optimisations multiples
+2. **Seuils relevés** : congestion >=5 (vs 3), amélioration >=3 (vs 2)
+3. **Skip si clients connectés** : `hostapd_cli all_sta` vérifie si des clients sont connectés avant de scanner wlan0 (chaque scan wlan0 cause un micro-dropout de 1-2s pour les clients AP)
+
+**Diagnostic :**
+
+```bash
+# Vérifier si l'optimisation a été faite au boot
+ls -la /tmp/neopro-hotspot-channel-optimized
+
+# Voir les changements de canal
+grep "Switching channel" /var/log/neopro-hotspot-optimizer.log
+```
+
+---
+
+## 34. Hotspot recovery disproportionnée — restart complet pour IP manquante (v3.116.26+)
+
+**Symptôme :** Le hotspot perd sa connectivité pendant ~10s alors que seule l'IP 192.168.4.1 avait disparu (dhcpcd lent). Les clients doivent se reconnecter.
+
+**Cause racine :** Le NetworkWatchdog (hotspot monitor) détectait "IP 192.168.4.1 absente" et déclenchait un restart complet hostapd + dnsmasq. Le restart hostapd fait perdre la connexion à tous les clients AP, alors qu'un simple `ip addr add` aurait suffi.
+
+**Fix (v3.116.26) :**
+
+- **Fast-path IP fix** : si hostapd et dnsmasq sont actifs mais l'IP est absente, applique `ip addr add 192.168.4.1/24 dev wlan0` sans redémarrer les services
+- **Full restart** seulement quand hostapd ou dnsmasq sont réellement down (`systemctl is-active` retourne `inactive`/`failed`)
+
+**Diagnostic :**
+
+```bash
+# Vérifier si l'IP est présente
+ip addr show wlan0 | grep 192.168.4.1
+
+# Appliquer manuellement si absente
+sudo ip addr add 192.168.4.1/24 dev wlan0 2>/dev/null || true
+```
+
+---
+
+**Dernière mise à jour :** 22 mars 2026 (ajout bgscan reconfigure loop, OTA stall detection, hotspot channel flapping, hotspot recovery proportionnelle — v3.116.22-26)

@@ -20,12 +20,12 @@
 
 ### Environnement WiFi
 
-| Paramètre      | Valeur              | Notes                          |
-| -------------- | ------------------- | ------------------------------ |
-| **SSID**       | NLFH                | Réseau mesh avec plusieurs APs |
-| **Type**       | Mesh WiFi           | 3+ points d'accès détectés     |
-| **BSSID lock** | ❌ INTERDIT         | Ne JAMAIS verrouiller          |
-| **bgscan**     | `simple:30:-70:300` | Recommandé pour stabilité      |
+| Paramètre      | Valeur              | Notes                                                                                    |
+| -------------- | ------------------- | ---------------------------------------------------------------------------------------- |
+| **SSID**       | NLFH                | Réseau mesh avec plusieurs APs                                                           |
+| **Type**       | Mesh WiFi           | 3+ points d'accès détectés                                                               |
+| **BSSID lock** | ❌ INTERDIT         | Ne JAMAIS verrouiller                                                                    |
+| **bgscan**     | `simple:30:-70:300` | Seuil ajusté dynamiquement par `autoOptimize()` avec hystérésis -67/-78 dBm (v3.116.25+) |
 
 ### Points d'accès connus
 
@@ -791,4 +791,41 @@ Visite sur site NLF. Export du debug bundle pour analyse des déconnexions WiFi 
 
 ---
 
-**Dernière mise à jour :** 5 mars 2026 (analyse debug bundle + progressive back-off + bgscan dynamique + guard mesh 10 min)
+### 22 mars 2026 — ROOT CAUSE identifiée : bgscan reconfigure loop
+
+**Contexte :** Analyse approfondie des 15+ déconnexions/heure persistantes malgré les corrections v3.99.2.
+
+**Cause racine identifiée :** Le signal NLF oscille entre -68 et -73 dBm (3 APs mesh sur canaux 1/6/11). Le seuil bgscan dynamique de `_computeOptimalBgscan()` était fixé a -72 dBm sans hystérésis. Chaque oscillation du signal au-dessus/en-dessous de -72 dBm changeait le seuil bgscan optimal, déclenchant un `wpa_cli reconfigure`. Chaque reconfigure coupait le carrier RTL8192EU pendant ~3s, faisant chuter le signal, ce qui re-déclenchait un changement de seuil dans l'autre sens. Boucle de ~90s.
+
+**Problemes secondaires identifies :**
+
+1. **N autoOptimize paralleles** : chaque événement `reconnected` dans agent.js relançait `autoOptimize()` sans guard, causant N appels concurrents après une reconnexion
+2. **Channel flapping hotspot** : `hotspot-optimizer.sh` pouvait re-optimiser le canal à chaque restart, avec des seuils trop bas (3/2) déclenchant des switchs sur des différences insignifiantes
+3. **Hotspot recovery disproportionnée** : le NetworkWatchdog redémarrait hostapd pour une simple IP manquante, coupant tous les clients AP
+
+**Corrections apportées (v3.116.22-26) :**
+
+| Correction                                                    | Version   | Impact pour NLF                                                       |
+| ------------------------------------------------------------- | --------- | --------------------------------------------------------------------- |
+| IP hotspot appliquée APRES restart hostapd                    | v3.116.22 | Hotspot stable après recovery                                         |
+| OTA download stall detection (30s timer + 3 retries)          | v3.116.24 | OTA ne bloque plus a 5% sur mesh                                      |
+| Hysteresis bgscan -67/-78 dBm + skip reconfigure si identique | v3.116.25 | Elimine le reconfigure loop (cause racine des 15+ deconnexions/heure) |
+| Guard `_networkProfileStarted` contre N autoOptimize          | v3.116.26 | Plus de storms de reconfigure a la reconnexion                        |
+| Hotspot channel once-per-boot + seuils 5/3                    | v3.116.26 | Plus de channel flapping                                              |
+| Fast-path IP fix sans restart hostapd                         | v3.116.26 | Clients AP ne perdent plus la connexion pour une IP manquante         |
+| systemd-networkd fallback pour Debian 13                      | v3.116.26 | Compatibilite future                                                  |
+
+**Impact attendu :**
+
+- **Deconnexions/heure** : devrait passer de 15+ a <2 (elimination du reconfigure loop)
+- **OTA** : plus de blocage a 5% sur le mesh NLF
+- **Hotspot** : stabilite des clients AP (telecommande) amelioree significativement
+
+**A surveiller :**
+
+- Prochain debug bundle : verifier que les `wpa_cli reconfigure` sont <2/heure (au lieu de 40+)
+- Confirmer que le signal reste dans la dead zone -67/-78 dBm sans basculer
+
+---
+
+**Dernière mise à jour :** 22 mars 2026 (ROOT CAUSE bgscan reconfigure loop, OTA stall, hotspot channel flapping, hotspot recovery proportionnelle — v3.116.22-26)

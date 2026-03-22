@@ -1107,6 +1107,7 @@ Dashboard ──POST /api/update-deployments──▶ Central Server
                                           Pi (sync-agent)
                                                │
                                                ├─ Download .tar.gz depuis CDN
+                                               │      └─ (v3.116.24+) Stall detection 30s + 3 retries backoff 5s/10s/15s
                                                ├─ SHA256 checksum verify (retry 1x on mismatch)
                                                ├─ Extraction dans /tmp
                                                ├─ fixFileOwnership(VERSION, release.json)
@@ -1184,6 +1185,18 @@ Le sync-agent vérifie le SHA256 du package téléchargé avant extraction. En c
 
 Code : `raspberry/sync-agent/src/commands/update-software.js` → `verifyChecksumWithRetry()`
 
+### Download stall detection (v3.116.24+)
+
+Le stream HTTP de téléchargement peut se bloquer silencieusement sur WiFi mesh (changement d'AP, micro-coupure). Un timer de 30s surveille le flux de données :
+
+1. **Stall détecté** (30s sans `data` event) → stream détruit, retry
+2. **3 retries** avec backoff progressif (5s / 10s / 15s)
+3. **Échec final** après 3 retries → OTA échoue avec erreur `network`
+
+### Détection rollback OTA silencieux (v3.116.23+)
+
+Le `heartbeat.handler.ts` compare la version du Pi dans chaque heartbeat avec les déploiements récents marqués `completed`. Si la version ne correspond pas et le déploiement a été complété il y a moins de 30 min → le déploiement est remarqué `failed` (raison `silent_rollback_detected`). Cela corrige les faux "Terminé" quand le socket était down pendant le rollback local.
+
 ### Monitoring
 
 Métrique Prometheus : `neopro_ota_errors_total{error_type}` avec labels `permission`, `timeout`, `network`, `disk_full`, `cancelled`, `other`. Le retry côté Pi réduit les erreurs checksum remontées au serveur central.
@@ -1192,7 +1205,7 @@ La pré-migration logge un bloc `=== PRE-MIGRATION DIAG ===` avec les permission
 
 ## Auto-optimisation canal hotspot (v3.61+)
 
-Depuis la v3.61, le sync-agent optimise automatiquement le canal WiFi du hotspot au boot (30s après démarrage, puis toutes les heures).
+Depuis la v3.61, le sync-agent optimise automatiquement le canal WiFi du hotspot au boot (30s après démarrage). Depuis v3.116.26, l'optimisation canal est **once-per-boot** (flag `/tmp/neopro-hotspot-channel-optimized`) et skip si des clients AP sont connectés.
 
 ### Fonctionnement
 
@@ -1234,6 +1247,20 @@ SafeNetworkOperations: hotspot channel congested, optimizing { currentChannel: 1
 # Canal OK, pas de changement
 SafeNetworkOperations: hotspot channel OK { currentChannel: 6, currentCount: 2, bestChannel: 6 }
 ```
+
+### Bgscan dynamique avec hystérésis (v3.116.25+)
+
+`autoOptimize()` ajuste également le seuil `bgscan` de wpa_supplicant via `_computeOptimalBgscan()`. Depuis v3.116.25, la fonction utilise une hystérésis pour éviter le reconfigure loop :
+
+| Signal moyen       | Seuil bgscan       | Transition                                  |
+| ------------------ | ------------------ | ------------------------------------------- |
+| > -67 dBm (bon)    | -75 dBm (calme)    | Monte uniquement si signal dépasse -67      |
+| < -78 dBm (faible) | -70 dBm (agressif) | Descend uniquement si signal passe sous -78 |
+| -67 a -78 dBm      | Inchangé           | Dead zone — pas de changement               |
+
+De plus, `autoOptimize()` compare la config bgscan actuelle dans wpa_supplicant avant d'appeler `wpa_cli reconfigure`. Si la config est identique, le reconfigure est skip (chaque reconfigure coupe le carrier RTL8192EU ~3s).
+
+**Guard anti-duplication (v3.116.26+) :** `agent.js` utilise un flag `_networkProfileStarted` pour empêcher N appels parallèles a `autoOptimize()` lors de reconnexions multiples.
 
 ### Coordination inter-processus des scans wlan1 (v3.84.9+)
 

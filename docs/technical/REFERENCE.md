@@ -350,12 +350,23 @@ Après OTA réussi, `canary-monitor.service.ts` surveille le Pi pendant 5 min (i
 - **Pas d'auto-rollback** (décision manuelle)
 - **Variables d'env** : `CANARY_WINDOW_MS` (défaut 300000), `CANARY_CHECK_INTERVAL_MS` (défaut 30000)
 
+**Détection rollback OTA silencieux via heartbeat (v3.116.23+) :**
+
+Quand le socket est down pendant un rollback OTA local, le signal d'échec est perdu. Le `heartbeat.handler.ts` compare `software_version` du heartbeat avec les déploiements récents marqués `completed` :
+
+- Si `heartbeat.version` != `deployment.target_version` et le déploiement a été complété < 30 min → marque le déploiement `failed` avec raison `silent_rollback_detected`
+- Cela corrige les faux "Terminé" dans le dashboard quand le Pi a silencieusement rollback
+
+**Download stall detection (v3.116.24+) :**
+
+Le téléchargement OTA dans `update-software.js` détecte les stalls (aucune donnée reçue pendant 30s) et retry automatiquement avec backoff progressif (5s/10s/15s, max 3 retries). Cela empêche les OTA bloquées indéfiniment à ~5% sur les réseaux WiFi mesh instables.
+
 **Monitoring OTA :** La métrique `neopro_ota_errors_total{error_type}` catégorise les erreurs :
 | error_type | Déclencheur |
 |-------------|-------------|
 | `permission` | EACCES, permission denied (fichier root, sudoers mismatch) |
 | `timeout` | Déploiement dépassant le timeout (15 min) |
-| `network` | Téléchargement du paquet échoue (ECONNREFUSED, ENOTFOUND) |
+| `network` | Téléchargement du paquet échoue (ECONNREFUSED, ENOTFOUND) ou stall détecté (30s sans données, 3 retries avec backoff 5s/10s/15s — v3.116.24+) |
 | `disk_full` | ENOSPC, pas d'espace disque |
 | `cancelled` | Annulé manuellement depuis le dashboard |
 | `other` | Erreur non catégorisée |
