@@ -1,3 +1,9 @@
+## [3.116.26](https://github.com/Tallec7/neopro/compare/v3.116.25...v3.116.26) (2026-03-22)
+
+### Bug Fixes
+
+- **hotspot:** add systemd-networkd fallback for Debian 13 hotspot IP + deduplicate autoOptimize ([f122b00](https://github.com/Tallec7/neopro/commit/f122b00917ef43eee6266523323213e1044d13fc))
+
 ## [3.116.25](https://github.com/Tallec7/neopro/compare/v3.116.24...v3.116.25) (2026-03-22)
 
 ### Bug Fixes
