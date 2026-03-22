@@ -1,3 +1,9 @@
+## [3.116.8](https://github.com/Tallec7/neopro/compare/v3.116.7...v3.116.8) (2026-03-22)
+
+### Bug Fixes
+
+- **build:** revert to Nixpacks with aptPkgs for canvas native deps ([d8951b4](https://github.com/Tallec7/neopro/commit/d8951b49029a533d0db96e8367fd8b7f4700e19a))
+
 ## [3.116.7](https://github.com/Tallec7/neopro/compare/v3.116.6...v3.116.7) (2026-03-22)
 
 ### Bug Fixes
