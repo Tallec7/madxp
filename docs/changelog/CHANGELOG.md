@@ -1,3 +1,9 @@
+## [3.116.18](https://github.com/Tallec7/neopro/compare/v3.116.17...v3.116.18) (2026-03-22)
+
+### Bug Fixes
+
+- **build:** switch Railway from Nixpacks to Dockerfile builder ([c4482f8](https://github.com/Tallec7/neopro/commit/c4482f87a4fd16ac4fba3579dc8a2f4b0bc36f84))
+
 ## [3.116.17](https://github.com/Tallec7/neopro/compare/v3.116.16...v3.116.17) (2026-03-22)
 
 ### Bug Fixes
