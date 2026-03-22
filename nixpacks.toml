@@ -1,2 +1,0 @@
-[phases.setup]
-nixPkgs = ["nodejs_20", "npm", "pkg-config", "cairo", "pango", "libjpeg", "giflib", "librsvg", "pixman"]

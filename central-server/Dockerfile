@@ -5,11 +5,11 @@ FROM node:20-alpine AS deps
 
 WORKDIR /app
 
-# Install dependencies for native modules
-RUN apk add --no-cache python3 make g++
+# Install dependencies for native modules (canvas/node-gyp)
+RUN apk add --no-cache python3 make g++ cairo-dev pango-dev libjpeg-turbo-dev giflib-dev librsvg-dev pixman-dev
 
-# Copy package files
-COPY package*.json ./
+# Copy package files from central-server
+COPY central-server/package*.json ./
 
 # Install all dependencies (including dev for build)
 RUN npm ci
@@ -23,7 +23,7 @@ WORKDIR /app
 
 # Copy dependencies from deps stage
 COPY --from=deps /app/node_modules ./node_modules
-COPY . .
+COPY central-server/ .
 
 # Build TypeScript
 RUN npm run build
@@ -35,7 +35,10 @@ FROM node:20-alpine AS prod-deps
 
 WORKDIR /app
 
-COPY package*.json ./
+# Install dependencies for native modules (canvas needs native compilation)
+RUN apk add --no-cache python3 make g++ cairo-dev pango-dev libjpeg-turbo-dev giflib-dev librsvg-dev pixman-dev
+
+COPY central-server/package*.json ./
 
 # Install only production dependencies
 RUN npm ci --only=production && npm cache clean --force
@@ -47,9 +50,8 @@ FROM node:20-alpine AS runner
 
 WORKDIR /app
 
-# Install ffmpeg with full codec support for image-to-video conversion
-# libx264 is required for H.264 encoding, available in community repo
-RUN apk add --no-cache ffmpeg
+# Install runtime dependencies (ffmpeg + canvas native libs)
+RUN apk add --no-cache ffmpeg cairo pango libjpeg-turbo giflib librsvg pixman
 
 # Add non-root user for security
 RUN addgroup --system --gid 1001 nodejs && \
@@ -80,4 +82,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD node -e "require('http').get('http://localhost:3001/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1))"
 
 # Start the application
-CMD ["node", "dist/server.js"]
+CMD ["node", "--max-old-space-size=256", "--expose-gc", "dist/server.js"]
