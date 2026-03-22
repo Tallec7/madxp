@@ -647,11 +647,28 @@ class SafeNetworkOperations {
         return null;
       }
 
-      // Scan surrounding networks (iwlist works even in AP mode on bcm43455)
-      const { stdout: scanOut } = await execAsync(
+      // Scan surrounding networks on wlan0 (AP interface)
+      // CAUTION: iwlist scan on wlan0 in AP mode causes micro-dropouts for connected clients.
+      // If clients are connected, skip the scan entirely — hotspot stability > channel optimization.
+      let scanOut = '';
+      try {
+        const { stdout: stationCount } = await execAsync(
+          'iw dev wlan0 station dump 2>/dev/null | grep -c "^Station" || echo "0"'
+        );
+        const connectedClients = parseInt(stationCount.trim()) || 0;
+        if (connectedClients > 0) {
+          logger.info('SafeNetworkOperations: skipping wlan0 scan — clients connected', { connectedClients });
+          return null; // Don't scan while clients are connected
+        }
+      } catch {
+        // If iw fails, proceed cautiously
+      }
+
+      const { stdout: rawScan } = await execAsync(
         'sudo iwlist wlan0 scan 2>/dev/null | grep "Channel:" || echo ""',
         { timeout: 15000 }
       );
+      scanOut = rawScan;
 
       const channelCounts = { 1: 0, 6: 0, 11: 0 };
       let totalNetworks = 0;
@@ -759,46 +776,64 @@ class SafeNetworkOperations {
 
     // Auto-optimize hotspot channel if current channel is congested
     // Applies to ALL profile types (hotspot runs on wlan0, independent of wlan1 connection)
+    //
+    // IMPORTANT: Channel changes are DANGEROUS for connected clients.
+    // Even "deferred to reboot", hostapd may be restarted by the watchdog,
+    // which picks up the new channel and disconnects all clients silently.
+    // On NLF, this caused 4 channel changes in 35 minutes → hotspot unusable.
+    //
+    // Safeguards:
+    // 1. Only optimize once per boot (not every hour)
+    // 2. Higher congestion threshold (>=5 networks, not 3)
+    // 3. Require >=3 improvement (not 2) to justify client disruption
     try {
-      const channelInfo = await this._scanAndGetBestChannel();
-      if (channelInfo) {
-        const { currentChannel, bestChannel, channelCounts, totalNetworks } = channelInfo;
-        const currentCount = channelCounts[currentChannel] || 0;
-        const bestCount = channelCounts[bestChannel] || 0;
+      // Skip if we already optimized the channel this boot cycle
+      if (this._hotspotChannelOptimizedThisBoot) {
+        logger.info('SafeNetworkOperations: hotspot channel already optimized this boot, skipping');
+      } else {
+        const channelInfo = await this._scanAndGetBestChannel();
+        if (channelInfo) {
+          const { currentChannel, bestChannel, channelCounts, totalNetworks } = channelInfo;
+          const currentCount = channelCounts[currentChannel] || 0;
+          const bestCount = channelCounts[bestChannel] || 0;
 
-        // Only switch if current channel is congested (>=3 networks)
-        // AND the best alternative has at least 2 fewer networks (avoid flapping)
-        const CONGESTION_THRESHOLD = 3;
-        const MIN_IMPROVEMENT = 2;
+          // Higher thresholds to prevent channel flapping:
+          // - >=5 networks on current channel (was 3 — too sensitive to transient hotspots)
+          // - >=3 fewer networks on best channel (was 2 — marginal improvements not worth disruption)
+          const CONGESTION_THRESHOLD = 5;
+          const MIN_IMPROVEMENT = 3;
 
-        if (currentChannel !== bestChannel
-            && currentCount >= CONGESTION_THRESHOLD
-            && (currentCount - bestCount) >= MIN_IMPROVEMENT) {
-          logger.info('SafeNetworkOperations: hotspot channel congested, optimizing', {
-            currentChannel,
-            currentCount,
-            bestChannel,
-            bestCount,
-            totalNetworks,
-            channelCounts
-          });
+          if (currentChannel !== bestChannel
+              && currentCount >= CONGESTION_THRESHOLD
+              && (currentCount - bestCount) >= MIN_IMPROVEMENT) {
+            logger.info('SafeNetworkOperations: hotspot channel congested, optimizing', {
+              currentChannel,
+              currentCount,
+              bestChannel,
+              bestCount,
+              totalNetworks,
+              channelCounts
+            });
 
-          const result = await this.executeOperation(OPERATIONS.UPDATE_HOTSPOT_CHANNEL, { channel: bestChannel });
-          actions.push({
-            action: 'optimize_hotspot_channel',
-            previousChannel: currentChannel,
-            newChannel: bestChannel,
-            reason: `Channel ${currentChannel} congested (${currentCount} networks), switched to channel ${bestChannel} (${bestCount} networks)`,
-            ...result
-          });
-        } else {
-          logger.info('SafeNetworkOperations: hotspot channel OK', {
-            currentChannel,
-            currentCount,
-            bestChannel,
-            bestCount,
-            totalNetworks
-          });
+            const result = await this.executeOperation(OPERATIONS.UPDATE_HOTSPOT_CHANNEL, { channel: bestChannel });
+            actions.push({
+              action: 'optimize_hotspot_channel',
+              previousChannel: currentChannel,
+              newChannel: bestChannel,
+              reason: `Channel ${currentChannel} congested (${currentCount} networks), switched to channel ${bestChannel} (${bestCount} networks)`,
+              ...result
+            });
+          } else {
+            logger.info('SafeNetworkOperations: hotspot channel OK', {
+              currentChannel,
+              currentCount,
+              bestChannel,
+              bestCount,
+              totalNetworks
+            });
+          }
+          // Mark as done for this boot cycle — don't flip-flop
+          this._hotspotChannelOptimizedThisBoot = true;
         }
       }
     } catch (error) {

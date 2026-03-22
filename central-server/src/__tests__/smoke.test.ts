@@ -2516,9 +2516,11 @@ describe('Sync-agent debug bundle regression guards', () => {
       .toEqual({ hasDelete: true });
   });
 
-  // Issue: Channel auto-switch never triggered (threshold 5 too high).
-  // Fix: CONGESTION_THRESHOLD=3, MIN_IMPROVEMENT=2.
-  it('hotspot channel congestion threshold must be 3 (not 5)', () => {
+  // Issue: Channel flapping — threshold 3 was too sensitive, causing 4 channel changes
+  // in 35 minutes on NLF mesh (transient phone hotspots triggered switches).
+  // Fix: CONGESTION_THRESHOLD=5 (real congestion, not noise), MIN_IMPROVEMENT=3.
+  // Combined with once-per-boot guard, this prevents channel oscillation.
+  it('hotspot channel congestion threshold must be 5 (not 3) to prevent flapping', () => {
     const safeOps = fs.readFileSync(
       path.join(repoRoot, 'raspberry/sync-agent/src/services/safe-network-operations.js'),
       'utf8'
@@ -2528,9 +2530,39 @@ describe('Sync-agent debug bundle regression guards', () => {
     expect(thresholdMatch).not.toBeNull();
     expect(improvementMatch).not.toBeNull();
     expect({ congestionThreshold: Number(thresholdMatch![1]) })
-      .toEqual({ congestionThreshold: 3 });
+      .toEqual({ congestionThreshold: 5 });
     expect({ minImprovement: Number(improvementMatch![1]) })
-      .toEqual({ minImprovement: 2 });
+      .toEqual({ minImprovement: 3 });
+  });
+
+  // Guard: channel optimization must only run once per boot cycle
+  it('hotspot channel optimization must have once-per-boot guard', () => {
+    const safeOps = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/sync-agent/src/services/safe-network-operations.js'),
+      'utf8'
+    );
+    expect({ hasBootGuard: safeOps.includes('_hotspotChannelOptimizedThisBoot') })
+      .toEqual({ hasBootGuard: true });
+  });
+
+  // Guard: wlan0 scan must not run while clients are connected (micro-dropouts)
+  it('wlan0 channel scan must skip when clients are connected', () => {
+    const safeOps = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/sync-agent/src/services/safe-network-operations.js'),
+      'utf8'
+    );
+    expect({ checksClients: safeOps.includes('station dump') || safeOps.includes('connectedClients') })
+      .toEqual({ checksClients: true });
+  });
+
+  // Guard: hotspot recovery must try adding IP before restarting hostapd
+  it('hotspot recovery must have fast-path IP fix without hostapd restart', () => {
+    const watchdog = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/sync-agent/src/services/network-watchdog.js'),
+      'utf8'
+    );
+    expect({ hasFastPath: watchdog.includes('clients préservés') || watchdog.includes('sans restart hostapd') })
+      .toEqual({ hasFastPath: true });
   });
 
   // Issue: network_alert handler only used issues[] for message, missing message field.

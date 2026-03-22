@@ -575,6 +575,41 @@ async function attemptHotspotRecovery() {
   });
 
   try {
+    // Étape 0: Diagnostic — identifier le problème exact AVANT d'agir
+    // Ne pas redémarrer hostapd si seule l'IP est manquante :
+    // restart hostapd déconnecte TOUS les clients et flush l'IP → aggrave le problème.
+    const ipMissing = !(await checkHotspotIp());
+    const hostapdActive = await execAsync('systemctl is-active hostapd 2>/dev/null')
+      .then(({ stdout }) => stdout.trim() === 'active')
+      .catch(() => false);
+    const dnsmasqActive = await execAsync('systemctl is-active dnsmasq 2>/dev/null')
+      .then(({ stdout }) => stdout.trim() === 'active')
+      .catch(() => false);
+
+    // Fast path: IP manquante mais services OK → ajouter l'IP sans redémarrer
+    // Ceci évite de déconnecter les clients connectés sur le hotspot.
+    if (ipMissing && hostapdActive && dnsmasqActive) {
+      logger.info('NetworkWatchdog: IP absente mais hostapd/dnsmasq actifs — ajout IP sans restart');
+      await execAsync(`sudo ip addr add 192.168.4.1/24 dev ${HOTSPOT_INTERFACE} 2>/dev/null || true`);
+      await execAsync(`sudo ip link set ${HOTSPOT_INTERFACE} up 2>/dev/null || true`);
+      await sleep(2000);
+
+      if (await checkHotspotIp()) {
+        logger.info('NetworkWatchdog: IP restaurée sans restart hostapd (clients préservés)');
+        // Vérification complète
+        const health = await checkHotspotHealth();
+        if (health.healthy) {
+          state.hotspot.recoveryAttempts = 0;
+          state.hotspot.healthy = true;
+          state.hotspot.issues = [];
+          return { success: true };
+        }
+      }
+      // Si l'IP ne tient toujours pas, fall through au restart complet
+      logger.warn('NetworkWatchdog: IP ajoutée mais toujours absente — restart complet nécessaire');
+    }
+
+    // Full restart: quand hostapd ou dnsmasq sont vraiment morts
     // Étape 1: Débloquer rfkill
     await execAsync('sudo rfkill unblock wifi 2>/dev/null || true');
     await sleep(1000);
@@ -588,16 +623,14 @@ async function attemptHotspotRecovery() {
     await execAsync('sudo systemctl restart dnsmasq 2>/dev/null');
     await sleep(2000);
 
-    // Étape 4: Configurer l'IP si dhcpcd ne l'a pas ré-appliquée
-    // (dhcpcd peut mettre 2-5s à ré-appliquer l'IP statique depuis /etc/dhcpcd.conf
-    // après le restart hostapd — ce sleep additionnel donne le temps)
+    // Étape 4: Configurer l'IP si dhcpcd/systemd-networkd ne l'a pas ré-appliquée
     if (!(await checkHotspotIp())) {
-      logger.warn('NetworkWatchdog: IP absente après restart hostapd, attente dhcpcd...');
+      logger.warn('NetworkWatchdog: IP absente après restart hostapd, attente...');
       await sleep(3000);
 
-      // Si dhcpcd n'a toujours pas ré-appliqué, forcer manuellement
+      // Si toujours absent, forcer manuellement
       if (!(await checkHotspotIp())) {
-        logger.warn('NetworkWatchdog: dhcpcd timeout, application manuelle de l\'IP');
+        logger.warn('NetworkWatchdog: application manuelle de l\'IP');
         await execAsync(`sudo ip addr add 192.168.4.1/24 dev ${HOTSPOT_INTERFACE} 2>/dev/null || true`);
         await execAsync(`sudo ip link set ${HOTSPOT_INTERFACE} up 2>/dev/null || true`);
         await sleep(1000);
