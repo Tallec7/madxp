@@ -1,3 +1,9 @@
+## [3.116.16](https://github.com/Tallec7/neopro/compare/v3.116.15...v3.116.16) (2026-03-22)
+
+### Bug Fixes
+
+- **build:** disable Nixpacks auto-detection with providers=[] ([73aa4e4](https://github.com/Tallec7/neopro/commit/73aa4e41a9c448a41950952887f17e4394f1bfee))
+
 ## [3.116.15](https://github.com/Tallec7/neopro/compare/v3.116.14...v3.116.15) (2026-03-22)
 
 ### Bug Fixes
