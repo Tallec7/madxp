@@ -1,14 +1,18 @@
 # ============================================
 # Stage 1: Dependencies
 # ============================================
-FROM node:20-alpine AS deps
+FROM node:20-slim AS deps
 
 WORKDIR /app
 
 # Install dependencies for native modules (canvas/node-gyp)
-RUN apk add --no-cache python3 make g++ cairo-dev pango-dev libjpeg-turbo-dev giflib-dev librsvg-dev pixman-dev
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3 make g++ \
+    libcairo2-dev libpango1.0-dev libjpeg-dev libgif-dev librsvg2-dev libpixman-1-dev \
+    pkg-config \
+    && rm -rf /var/lib/apt/lists/*
 
-# Copy package files
+# Copy package files (relative to dockerContext)
 COPY package*.json ./
 
 # Install all dependencies (including dev for build)
@@ -17,7 +21,7 @@ RUN npm ci
 # ============================================
 # Stage 2: Builder
 # ============================================
-FROM node:20-alpine AS builder
+FROM node:20-slim AS builder
 
 WORKDIR /app
 
@@ -31,31 +35,33 @@ RUN npm run build
 # ============================================
 # Stage 3: Production Dependencies
 # ============================================
-FROM node:20-alpine AS prod-deps
+FROM node:20-slim AS prod-deps
 
 WORKDIR /app
 
 # Install dependencies for native modules (canvas needs native compilation)
-RUN apk add --no-cache python3 make g++ cairo-dev pango-dev libjpeg-turbo-dev giflib-dev librsvg-dev pixman-dev
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3 make g++ \
+    libcairo2-dev libpango1.0-dev libjpeg-dev libgif-dev librsvg2-dev libpixman-1-dev \
+    pkg-config \
+    && rm -rf /var/lib/apt/lists/*
 
 COPY package*.json ./
 
 # Install only production dependencies
-RUN npm ci --only=production && npm cache clean --force
+RUN npm ci --omit=dev && npm cache clean --force
 
 # ============================================
 # Stage 4: Production Runtime
 # ============================================
-FROM node:20-alpine AS runner
+FROM node:20-slim AS runner
 
 WORKDIR /app
 
 # Install runtime dependencies (ffmpeg + canvas native libs)
-RUN apk add --no-cache ffmpeg cairo pango libjpeg-turbo giflib librsvg pixman
-
-# Add non-root user for security
-RUN addgroup --system --gid 1001 nodejs && \
-    adduser --system --uid 1001 neopro
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ffmpeg libcairo2 libpango-1.0-0 libpangocairo-1.0-0 libjpeg62-turbo libgif7 librsvg2-2 libpixman-1-0 \
+    && rm -rf /var/lib/apt/lists/*
 
 # Set environment
 ENV NODE_ENV=production \
@@ -67,12 +73,6 @@ COPY --from=prod-deps /app/node_modules ./node_modules
 # Copy built application
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/package.json ./
-
-# Set ownership
-RUN chown -R neopro:nodejs /app
-
-# Switch to non-root user
-USER neopro
 
 # Expose port
 EXPOSE 3001
