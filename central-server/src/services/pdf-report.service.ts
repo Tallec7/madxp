@@ -19,7 +19,14 @@ import { query } from '../config/database';
 import logger from '../config/logger';
 import { ALL_SPONSOR_CATEGORIES } from '../utils/sponsor-categories';
 import PDFDocument from 'pdfkit';
-import { ChartJSNodeCanvas } from 'chartjs-node-canvas';
+// chartjs-node-canvas is optional (requires native canvas module)
+let ChartJSNodeCanvas: typeof import('chartjs-node-canvas').ChartJSNodeCanvas | null = null;
+try {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  ChartJSNodeCanvas = require('chartjs-node-canvas').ChartJSNodeCanvas;
+} catch {
+  logger.warn('chartjs-node-canvas not available — PDF charts will be skipped');
+}
 import * as crypto from 'crypto';
 import { siteSponsorRepository } from '../repositories/site-sponsor.repository';
 
@@ -724,6 +731,7 @@ async function generatePlaceholderPdf(data: ReportData, options: PdfReportOption
       if (data.trends.daily.length > 0) {
         try {
           const chartBuffer = await generateDailyImpressionsChart(data.trends.daily, COLORS);
+          if (!chartBuffer) throw new Error('canvas not available');
           doc.image(chartBuffer, 50, yPosition, { width: 500 });
           yPosition += 300;
         } catch (chartError) {
@@ -750,6 +758,7 @@ async function generatePlaceholderPdf(data: ReportData, options: PdfReportOption
 
         try {
           const pieChartBuffer = await generateEventTypePieChart(data.by_event_type, COLORS);
+          if (!pieChartBuffer) throw new Error('canvas not available');
           doc.image(pieChartBuffer, 50, yPosition, { width: 400 });
           yPosition += 250;
         } catch (chartError) {
@@ -884,7 +893,8 @@ async function generatePlaceholderPdf(data: ReportData, options: PdfReportOption
 async function generateDailyImpressionsChart(
   dailyData: Array<{ date: string; impressions: number; screen_time: number }>,
   colors: any
-): Promise<Buffer> {
+): Promise<Buffer | null> {
+  if (!ChartJSNodeCanvas) return null;
   const width = 800;
   const height = 400;
 
@@ -955,7 +965,8 @@ async function generateDailyImpressionsChart(
 async function generateEventTypePieChart(
   eventTypeData: Record<string, number>,
   colors: any
-): Promise<Buffer> {
+): Promise<Buffer | null> {
+  if (!ChartJSNodeCanvas) return null;
   const width = 600;
   const height = 400;
 

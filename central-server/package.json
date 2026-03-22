@@ -29,7 +29,7 @@
     "@types/pdfkit": "^0.17.4",
     "basic-ftp": "^5.1.0",
     "bcryptjs": "^2.4.3",
-    "chartjs-node-canvas": "^5.0.0",
+    "chart.js": "^4.4.0",
     "compression": "^1.7.4",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
@@ -84,6 +84,10 @@
     "ts-jest": "^29.4.6",
     "ts-node": "^10.9.2",
     "typescript": "^5.9.3"
+  },
+  "optionalDependencies": {
+    "canvas": "^3.1.0",
+    "chartjs-node-canvas": "^5.0.0"
   },
   "engines": {
     "node": ">=18.0.0"
