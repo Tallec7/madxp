@@ -1,5 +1,4 @@
 [phases.setup]
-nixPkgs = ["nodejs_22"]
 aptPkgs = ["libcairo2-dev", "libpango1.0-dev", "libjpeg-dev", "libgif-dev", "librsvg2-dev", "libpixman-1-dev", "pkg-config", "python3", "build-essential"]
 
 [phases.install]

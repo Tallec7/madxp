@@ -1,6 +1,9 @@
 {
   "name": "neopro",
   "version": "3.116.13",
+  "engines": {
+    "node": ">=20.19.0"
+  },
   "scripts": {
     "ng": "ng",
     "start": "ng serve raspberry",
