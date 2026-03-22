@@ -1,3 +1,9 @@
+## [3.116.12](https://github.com/Tallec7/neopro/compare/v3.116.11...v3.116.12) (2026-03-22)
+
+### Bug Fixes
+
+- **build:** use Node 22 in Nixpacks for Angular 20 CLI compatibility ([cbca891](https://github.com/Tallec7/neopro/commit/cbca891253d8b2052bf52d3e92793b719a777245))
+
 ## [3.116.11](https://github.com/Tallec7/neopro/compare/v3.116.10...v3.116.11) (2026-03-22)
 
 ### Bug Fixes
