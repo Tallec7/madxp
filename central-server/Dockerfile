@@ -8,8 +8,8 @@ WORKDIR /app
 # Install dependencies for native modules (canvas/node-gyp)
 RUN apk add --no-cache python3 make g++ cairo-dev pango-dev libjpeg-turbo-dev giflib-dev librsvg-dev pixman-dev
 
-# Copy package files from central-server
-COPY central-server/package*.json ./
+# Copy package files
+COPY package*.json ./
 
 # Install all dependencies (including dev for build)
 RUN npm ci
@@ -23,7 +23,7 @@ WORKDIR /app
 
 # Copy dependencies from deps stage
 COPY --from=deps /app/node_modules ./node_modules
-COPY central-server/ .
+COPY . .
 
 # Build TypeScript
 RUN npm run build
@@ -38,7 +38,7 @@ WORKDIR /app
 # Install dependencies for native modules (canvas needs native compilation)
 RUN apk add --no-cache python3 make g++ cairo-dev pango-dev libjpeg-turbo-dev giflib-dev librsvg-dev pixman-dev
 
-COPY central-server/package*.json ./
+COPY package*.json ./
 
 # Install only production dependencies
 RUN npm ci --only=production && npm cache clean --force
