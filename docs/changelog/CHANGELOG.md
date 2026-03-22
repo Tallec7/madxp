@@ -1,3 +1,10 @@
+## [3.116.3](https://github.com/Tallec7/neopro/compare/v3.116.2...v3.116.3) (2026-03-22)
+
+### Bug Fixes
+
+- **ci:** remove unsupported --environment flag from Railway CLI ([6d78f19](https://github.com/Tallec7/neopro/commit/6d78f19a29e7c634084dc103e11386b106426276))
+- **lint:** remove unused destructured variable in canary-monitor ([88e5b57](https://github.com/Tallec7/neopro/commit/88e5b57db69eea390f634c296b1145b0628de6c2))
+
 ## [3.116.2](https://github.com/Tallec7/neopro/compare/v3.116.1...v3.116.2) (2026-03-20)
 
 ### Bug Fixes
