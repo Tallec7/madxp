@@ -281,41 +281,50 @@ attempt_recovery() {
     sudo rfkill unblock wifi 2>/dev/null || true
     sleep 1
 
-    # Étape 2: Configurer l'IP statique si manquante
-    if ! check_hotspot_ip; then
-        log_info "Étape 2/6: Configuration IP statique..."
-        sudo ip addr add 192.168.4.1/24 dev "$WIFI_INTERFACE" 2>/dev/null || true
-        sudo ip link set "$WIFI_INTERFACE" up 2>/dev/null || true
-        sleep 1
-    else
-        log_info "Étape 2/6: IP déjà configurée"
-    fi
-
-    # Étape 3: Redémarrer hostapd
-    log_info "Étape 3/6: Redémarrage hostapd..."
+    # Étape 2: Redémarrer hostapd (AVANT de configurer l'IP —
+    # hostapd restart réinitialise wlan0 et flush les IPs manuelles)
+    log_info "Étape 2/7: Redémarrage hostapd..."
     sudo systemctl restart hostapd 2>/dev/null || {
         log_error "Échec du redémarrage hostapd"
         return 1
     }
     sleep 3
 
-    # Étape 4: Redémarrer dnsmasq
-    log_info "Étape 4/6: Redémarrage dnsmasq..."
+    # Étape 3: Redémarrer dnsmasq
+    log_info "Étape 3/7: Redémarrage dnsmasq..."
     sudo systemctl restart dnsmasq 2>/dev/null || {
         log_error "Échec du redémarrage dnsmasq"
         return 1
     }
     sleep 2
 
+    # Étape 4: Configurer l'IP statique si dhcpcd ne l'a pas ré-appliquée
+    if ! check_hotspot_ip; then
+        log_warn "Étape 4/7: IP absente après restart hostapd, attente dhcpcd..."
+        sleep 3
+
+        # Si dhcpcd n'a toujours pas ré-appliqué, forcer manuellement
+        if ! check_hotspot_ip; then
+            log_warn "Étape 4/7: dhcpcd timeout, application manuelle de l'IP"
+            sudo ip addr add 192.168.4.1/24 dev "$WIFI_INTERFACE" 2>/dev/null || true
+            sudo ip link set "$WIFI_INTERFACE" up 2>/dev/null || true
+            sleep 1
+        else
+            log_info "Étape 4/7: IP ré-appliquée par dhcpcd"
+        fi
+    else
+        log_info "Étape 4/7: IP déjà configurée"
+    fi
+
     # Étape 5: Redémarrer nginx (captive portal + webapp)
     if ! check_nginx; then
-        log_info "Étape 5/6: Redémarrage nginx..."
+        log_info "Étape 5/7: Redémarrage nginx..."
         sudo systemctl restart nginx 2>/dev/null || {
             log_error "Échec du redémarrage nginx"
         }
         sleep 1
     else
-        log_info "Étape 5/6: nginx déjà actif"
+        log_info "Étape 5/7: nginx déjà actif"
     fi
 
     # Étape 6: Redémarrer avahi-daemon (résolution mDNS neopro.local)

@@ -2883,7 +2883,14 @@ cat /etc/dnsmasq.conf
 # Relancer
 sudo systemctl restart hostapd
 sudo systemctl restart dnsmasq
+
+# IMPORTANT: après restart hostapd, l'IP peut disparaître temporairement
+# dhcpcd la ré-applique en 2-5s depuis /etc/dhcpcd.conf
+# Si absente après 5s :
+sudo ip addr add 192.168.4.1/24 dev wlan0 2>/dev/null || true
 ```
+
+> **Note (v3.116.22+):** La recovery automatique (NetworkWatchdog + hotspot-watchdog.sh) applique l'IP **apres** le restart hostapd. Avant v3.116.22, l'IP etait ajoutee avant le restart et systematiquement flushee par la reinitialisation wlan0.
 
 ### 3c. "Mauvais mot de passe" malgré le bon mot de passe (TKIP)
 

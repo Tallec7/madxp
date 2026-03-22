@@ -579,20 +579,30 @@ async function attemptHotspotRecovery() {
     await execAsync('sudo rfkill unblock wifi 2>/dev/null || true');
     await sleep(1000);
 
-    // Étape 2: Configurer l'IP si manquante
-    if (!(await checkHotspotIp())) {
-      await execAsync(`sudo ip addr add 192.168.4.1/24 dev ${HOTSPOT_INTERFACE} 2>/dev/null || true`);
-      await execAsync(`sudo ip link set ${HOTSPOT_INTERFACE} up 2>/dev/null || true`);
-      await sleep(1000);
-    }
-
-    // Étape 3: Redémarrer hostapd
+    // Étape 2: Redémarrer hostapd (AVANT de configurer l'IP —
+    // hostapd restart réinitialise wlan0 et flush les IPs manuelles)
     await execAsync('sudo systemctl restart hostapd 2>/dev/null');
     await sleep(3000);
 
-    // Étape 4: Redémarrer dnsmasq
+    // Étape 3: Redémarrer dnsmasq
     await execAsync('sudo systemctl restart dnsmasq 2>/dev/null');
     await sleep(2000);
+
+    // Étape 4: Configurer l'IP si dhcpcd ne l'a pas ré-appliquée
+    // (dhcpcd peut mettre 2-5s à ré-appliquer l'IP statique depuis /etc/dhcpcd.conf
+    // après le restart hostapd — ce sleep additionnel donne le temps)
+    if (!(await checkHotspotIp())) {
+      logger.warn('NetworkWatchdog: IP absente après restart hostapd, attente dhcpcd...');
+      await sleep(3000);
+
+      // Si dhcpcd n'a toujours pas ré-appliqué, forcer manuellement
+      if (!(await checkHotspotIp())) {
+        logger.warn('NetworkWatchdog: dhcpcd timeout, application manuelle de l\'IP');
+        await execAsync(`sudo ip addr add 192.168.4.1/24 dev ${HOTSPOT_INTERFACE} 2>/dev/null || true`);
+        await execAsync(`sudo ip link set ${HOTSPOT_INTERFACE} up 2>/dev/null || true`);
+        await sleep(1000);
+      }
+    }
 
     // Vérification finale
     const health = await checkHotspotHealth();

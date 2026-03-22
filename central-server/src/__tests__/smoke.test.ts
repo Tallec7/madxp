@@ -8951,7 +8951,38 @@ describe('Android captive portal iptables (HTTPS connectivity check fix)', () =>
     });
   });
 
-  // Guard 6: fix-fleet-pi.sh must install iptables for existing fleet
+  // Guard 6: hotspot recovery must restart hostapd BEFORE adding IP
+  // (hostapd restart flushes manually-added IPs on wlan0 — adding IP before
+  // restart means the IP is always lost → recovery always fails)
+  it('hotspot recovery must restart hostapd BEFORE adding static IP', () => {
+    // Check network-watchdog.js
+    const watchdogJs = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/sync-agent/src/services/network-watchdog.js'),
+      'utf8'
+    );
+    const jsHostapdIdx = watchdogJs.indexOf('systemctl restart hostapd');
+    const jsIpAddIdx = watchdogJs.indexOf('ip addr add 192.168.4.1', jsHostapdIdx);
+    expect({
+      hostapdBeforeIpAdd_js: jsHostapdIdx > 0 && jsIpAddIdx > jsHostapdIdx,
+    }).toEqual({
+      hostapdBeforeIpAdd_js: true,
+    });
+
+    // Check hotspot-watchdog.sh
+    const watchdogSh = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/scripts/hotspot-watchdog.sh'),
+      'utf8'
+    );
+    const shHostapdIdx = watchdogSh.indexOf('systemctl restart hostapd');
+    const shIpAddIdx = watchdogSh.indexOf('ip addr add 192.168.4.1', shHostapdIdx);
+    expect({
+      hostapdBeforeIpAdd_sh: shHostapdIdx > 0 && shIpAddIdx > shHostapdIdx,
+    }).toEqual({
+      hostapdBeforeIpAdd_sh: true,
+    });
+  });
+
+  // Guard 7: fix-fleet-pi.sh must install iptables for existing fleet
   it('fix-fleet-pi.sh must configure captive portal iptables for existing Pi fleet', () => {
     const fixFleet = fs.readFileSync(
       path.join(repoRoot, 'raspberry/scripts/fix-fleet-pi.sh'),
