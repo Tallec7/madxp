@@ -16,7 +16,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY package*.json ./
 
 # Install all dependencies (including dev for build)
-RUN npm ci
+RUN HUSKY=0 npm ci
 
 # ============================================
 # Stage 2: Builder
@@ -49,7 +49,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY package*.json ./
 
 # Install only production dependencies
-RUN npm ci --omit=dev && npm cache clean --force
+RUN HUSKY=0 npm ci --omit=dev && npm cache clean --force
 
 # ============================================
 # Stage 4: Production Runtime
