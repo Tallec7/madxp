@@ -1,3 +1,9 @@
+## [3.116.23](https://github.com/Tallec7/neopro/compare/v3.116.22...v3.116.23) (2026-03-22)
+
+### Bug Fixes
+
+- **ota:** detect silent OTA rollback via heartbeat version mismatch ([dbf672a](https://github.com/Tallec7/neopro/commit/dbf672aa8fca5070da054b2f7f31a5f7cf625d7e))
+
 ## [3.116.22](https://github.com/Tallec7/neopro/compare/v3.116.21...v3.116.22) (2026-03-22)
 
 ### Bug Fixes
