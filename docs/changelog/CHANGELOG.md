@@ -9,14 +9,16 @@
 ### Bug Fixes
 
 - **ota:** cache-bust validate-post-update.js after extraction to fix bootstrapping issue (Pi upgrading from pre-3.116.29 used stale `localhost` validator in memory → ECONNREFUSED ::1 → false rollback)
+- **pi:** bind admin-server.js and server.js on dual-stack `::` instead of `0.0.0.0` — accepts both IPv4 (127.0.0.1) and IPv6 (::1) connections, fixing ECONNREFUSED for old sync-agents using `localhost`
 
 ### Tests
 
 - **smoke:** add cache-bust enforcement for OTA validator (`delete require.cache` must be present in update-software.js)
+- **smoke:** add dual-stack binding enforcement (admin-server.js and server.js must listen on `::`)
 
 ### Docs
 
-- **troubleshooting:** document bootstrapping problem and cache-bust fix for ECONNREFUSED ::1
+- **troubleshooting:** document bootstrapping problem, cache-bust fix, and dual-stack solution for ECONNREFUSED ::1
 - **reference:** update OTA validation flow with cache-bust mechanism, fix localhost→127.0.0.1 in health check table
 - **claude.md:** add rule preventing removal of require.cache cache-bust in update-software.js
 

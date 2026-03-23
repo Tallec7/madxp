@@ -99,6 +99,9 @@ registerSocketHandlers({ io, stateService, configPath: CONFIG_PATH, hdmiService 
 // ---------------------------------------------------------------------------
 // Start server
 // ---------------------------------------------------------------------------
-server.listen(PORT, () => {
+// Listen on '::' (dual-stack: IPv4 + IPv6) so both 127.0.0.1 and ::1 work.
+// Required because Debian 12+ resolves 'localhost' to ::1 (IPv6) first,
+// and old sync-agent versions use localhost for post-OTA health checks.
+server.listen(PORT, '::', () => {
   console.log(`\u2713 Serveur Socket.IO lanc\u00e9 sur le port ${PORT}`);
 });

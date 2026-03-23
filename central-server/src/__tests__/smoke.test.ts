@@ -11932,3 +11932,37 @@ describe('IPv6 localhost resolution guard (sync-agent)', () => {
       .toEqual({ usesIPv4: true });
   });
 });
+
+// =============================================================================
+// Dual-stack server binding (IPv4 + IPv6)
+// =============================================================================
+// Bootstrapping problem: old sync-agent versions use http://localhost for health checks.
+// On Debian 12+, localhost → ::1 (IPv6). If servers listen on '0.0.0.0' (IPv4 only),
+// the old validator gets ECONNREFUSED — and since the OLD update-software.js runs the
+// OTA, our cache-bust fix is never reached. The only solution: servers must listen on
+// '::' (dual-stack) so both 127.0.0.1 AND ::1 are accepted.
+
+describe('Dual-stack server binding (IPv4 + IPv6)', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+
+  it('admin-server.js must listen on dual-stack (::) not IPv4-only (0.0.0.0)', () => {
+    const content = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/admin/admin-server.js'),
+      'utf8'
+    );
+    // Must bind to '::' for dual-stack (accepts both IPv4 and IPv6)
+    const listenMatch = content.match(/\.listen\(PORT,\s*['"]([^'"]+)['"]/);
+    expect({ hasDualStack: listenMatch && listenMatch[1] === '::' })
+      .toEqual({ hasDualStack: true });
+  });
+
+  it('server.js (Socket.IO) must listen on dual-stack (::) not IPv4-only', () => {
+    const content = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/server/server.js'),
+      'utf8'
+    );
+    const listenMatch = content.match(/\.listen\(PORT,\s*['"]([^'"]+)['"]/);
+    expect({ hasDualStack: listenMatch && listenMatch[1] === '::' })
+      .toEqual({ hasDualStack: true });
+  });
+});

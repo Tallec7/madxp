@@ -6054,7 +6054,11 @@ Remplacement de `http://localhost` par `http://127.0.0.1` dans tous les fichiers
 
 Le fix v3.116.29 ne prenait pas effet sur les Pi upgradeant **depuis** une version pré-3.116.29. Raison : `update-software.js` charge `validate-post-update.js` via `require()` au démarrage du module — le validateur en mémoire est l'**ancienne** version (avec `localhost`). Même si `extractAndInstall()` écrase les fichiers sur disque avec le nouveau code, Node.js utilise le module déjà en cache.
 
-**Fix bootstrapping (v3.116.31) :** Après `extractAndInstall()`, `update-software.js` vide `require.cache` et recharge `validate-post-update.js` depuis le disque (`delete require.cache[path]` + `require()`) pour utiliser la version nouvellement installée. Ce mécanisme de cache-bust est protégé par un smoke test.
+**Fix bootstrapping (v3.116.31) :**
+
+Le cache-bust `require.cache` dans `update-software.js` ne suffit pas : c'est l'**ancien** `update-software.js` (chargé en mémoire avant l'OTA) qui exécute la mise à jour — le cache-bust dans le nouveau code n'est jamais atteint.
+
+**Solution définitive :** Les serveurs Pi (`admin-server.js` port 8080, `server.js` port 3000) écoutent maintenant sur `'::'` (dual-stack IPv4+IPv6) au lieu de `'0.0.0.0'` (IPv4-only). Ainsi, que le validateur utilise `localhost` (→ `::1`) ou `127.0.0.1`, la connexion aboutit. Ce fix s'applique dès le redémarrage des services après l'OTA (avant la validation), résolvant le problème de bootstrapping. Protégé par smoke test.
 
 **Diagnostic :**
 
@@ -6067,11 +6071,15 @@ getent ahosts localhost
 curl -s http://127.0.0.1:8080/api/version
 # Devrait retourner la version admin
 
-# Tester la connexion via localhost (échoue si IPv6 préféré)
+# Tester la connexion via localhost (maintenant OK avec dual-stack)
 curl -s http://localhost:8080/api/version
-# ECONNREFUSED si IPv6 only
+# Fonctionne depuis v3.116.31 (dual-stack ::)
+
+# Vérifier que le serveur écoute sur IPv6
+ss -tlnp | grep 8080
+# Devrait montrer [::]:8080 (pas 0.0.0.0:8080)
 ```
 
 ---
 
-**Dernière mise à jour :** 23 mars 2026 (ajout bootstrapping cache-bust OTA validator, ECONNREFUSED IPv6, déploiement OTA sans message d'erreur, bgscan reconfigure loop, OTA stall detection, hotspot channel flapping, hotspot recovery proportionnelle — v3.116.22-31)
+**Dernière mise à jour :** 23 mars 2026 (dual-stack server binding, bootstrapping cache-bust OTA validator, ECONNREFUSED IPv6, déploiement OTA sans message d'erreur, bgscan reconfigure loop, OTA stall detection, hotspot channel flapping, hotspot recovery proportionnelle — v3.116.22-31)

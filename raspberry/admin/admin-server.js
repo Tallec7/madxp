@@ -291,7 +291,10 @@ app.use(sponsorsRouter);
 // SERVER START
 // =============================================================================
 
-app.listen(PORT, '0.0.0.0', async () => {
+// Listen on '::' (dual-stack: IPv4 + IPv6) so both 127.0.0.1 and ::1 work.
+// Required because Debian 12+ resolves 'localhost' to ::1 (IPv6) first,
+// and old sync-agent versions use localhost for post-OTA health checks.
+app.listen(PORT, '::', async () => {
   console.log('✓ Serveur Web Admin Neopro lancé sur le port ' + PORT);
   console.log('  Accessible sur:');
   console.log('  - http://neopro.local:' + PORT);
