@@ -55,13 +55,15 @@ describe('AlertService', () => {
       // Wait for boot grace period to pass
       (alertService as any).serverStartTime = Date.now() - 120_000;
 
+      // siteOffline now defers (returns false), but creates a pending timer
       const result1 = await alertService.siteOffline('site-1', 'Club A');
-      expect(result1).toBe(true);
-      expect(mockFetch).toHaveBeenCalledTimes(1);
+      expect(result1).toBe(false); // Deferred, not sent yet
+      expect((alertService as any).pendingOfflineAlerts.has('site-1')).toBe(true);
 
-      mockFetch.mockClear();
       alertService.enterShutdownMode();
 
+      // After shutdown, pending alerts are cancelled and new ones are suppressed
+      expect((alertService as any).pendingOfflineAlerts.size).toBe(0);
       const result2 = await alertService.siteOffline('site-2', 'Club B');
       expect(result2).toBe(false);
       expect(mockFetch).not.toHaveBeenCalled();
@@ -119,12 +121,15 @@ describe('AlertService', () => {
       expect(mockFetch).toHaveBeenCalledTimes(1);
     });
 
-    it('should allow siteOffline after boot grace period', async () => {
+    it('should defer siteOffline after boot grace period (grace period timer)', async () => {
       (alertService as any).serverStartTime = Date.now() - 120_000;
 
       const result = await alertService.siteOffline('site-1', 'Club A');
-      expect(result).toBe(true);
-      expect(mockFetch).toHaveBeenCalledTimes(1);
+      // siteOffline now defers the alert (60s grace period), returns false immediately
+      expect(result).toBe(false);
+      expect((alertService as any).pendingOfflineAlerts.has('site-1')).toBe(true);
+      // Alert not sent yet — will fire after 60s if site doesn't reconnect
+      expect(mockFetch).not.toHaveBeenCalled();
     });
   });
 
@@ -223,12 +228,13 @@ describe('AlertService', () => {
       (alertService as any).serverStartTime = Date.now() - 120_000;
     });
 
-    it('should suppress duplicate siteOffline within 5min cooldown', async () => {
+    it('should deduplicate pending siteOffline for same site', async () => {
       await alertService.siteOffline('site-1', 'Club A');
-      mockFetch.mockClear();
-
+      // Second call replaces the pending timer (no duplicate)
       const result = await alertService.siteOffline('site-1', 'Club A');
       expect(result).toBe(false);
+      // Only one pending alert exists
+      expect((alertService as any).pendingOfflineAlerts.size).toBe(1);
     });
 
     it('should suppress duplicate siteOnline within 5min cooldown', async () => {
@@ -239,12 +245,16 @@ describe('AlertService', () => {
       expect(result).toBe(false);
     });
 
-    it('should allow offline and online for same site (different keys)', async () => {
+    it('should cancel pending offline when site comes back online (grace period)', async () => {
       await alertService.siteOffline('site-1', 'Club A');
+      expect((alertService as any).pendingOfflineAlerts.has('site-1')).toBe(true);
       mockFetch.mockClear();
 
+      // Site reconnects within grace period — both alerts suppressed
       const result = await alertService.siteOnline('site-1', 'Club A');
-      expect(result).toBe(true);
+      expect(result).toBe(false); // Suppressed (brief blip)
+      expect((alertService as any).pendingOfflineAlerts.has('site-1')).toBe(false);
+      expect(mockFetch).not.toHaveBeenCalled();
     });
   });
 });
