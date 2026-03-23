@@ -782,6 +782,7 @@ class NeoproSyncAgent {
           version: data.version,
           progress: 100,
           completed: true,
+          steps: result?.steps || [],
         });
         // Laisser le temps à Socket.IO de flush l'event avant le restart
         await new Promise(resolve => setTimeout(resolve, 2000));
@@ -818,6 +819,7 @@ class NeoproSyncAgent {
           deploymentId: data.deploymentId,
           version: data.version,
           error: error.message,
+          steps: error.steps || [],
         });
       }
 

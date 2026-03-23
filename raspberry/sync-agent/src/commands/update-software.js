@@ -10,6 +10,38 @@ const postUpdateValidator = require('./validate-post-update');
 
 const execAsync = util.promisify(exec);
 
+/**
+ * Tracks OTA steps with timing and status for structured deployment reporting.
+ * Sent to the central server on completion for dashboard "Voir détail" panel.
+ */
+class OtaStepTracker {
+  constructor() {
+    this.steps = [];
+    this._current = null;
+  }
+
+  start(name, label) {
+    this._current = { name, label, startedAt: Date.now() };
+  }
+
+  end(status, detail) {
+    if (!this._current) return;
+    const step = {
+      name: this._current.name,
+      label: this._current.label,
+      status,
+      durationMs: Date.now() - this._current.startedAt,
+    };
+    if (detail) step.detail = detail;
+    this.steps.push(step);
+    this._current = null;
+  }
+
+  toJSON() {
+    return this.steps;
+  }
+}
+
 class SoftwareUpdateHandler {
   constructor() {
     this.previousVersion = null;
@@ -20,6 +52,8 @@ class SoftwareUpdateHandler {
     this._scheduleReboot = !!scheduleReboot;
 
     logger.info('Starting software update', { version, scheduleReboot: !!scheduleReboot, autoRollback: autoRollback !== false });
+
+    this.stepTracker = new OtaStepTracker();
 
     // Déduplication côté Pi : lock file pour empêcher les exécutions concurrentes
     const LOCK_FILE = '/tmp/neopro-update.lock';
@@ -45,13 +79,17 @@ class SoftwareUpdateHandler {
       this.previousVersion = await this.getCurrentVersion();
 
       // Vérifications pré-mise à jour
+      this.stepTracker.start('pre_checks', 'Vérifications pré-update');
       await this.preUpdateChecks(packageSize || 100 * 1024 * 1024); // Default 100MB
+      this.stepTracker.end('ok');
 
       progressCallback(5);
 
       const packagePath = `/tmp/neopro-update-${version}.tar.gz`;
 
+      this.stepTracker.start('download', 'Téléchargement package');
       const MAX_DOWNLOAD_RETRIES = 3;
+      let downloadRetries = 0;
       for (let downloadAttempt = 1; downloadAttempt <= MAX_DOWNLOAD_RETRIES; downloadAttempt++) {
         try {
           await this.downloadPackage(updateUrl, packagePath, (progress) => {
@@ -59,6 +97,7 @@ class SoftwareUpdateHandler {
           });
           break; // Download succeeded
         } catch (dlError) {
+          downloadRetries++;
           const isStall = dlError.message && dlError.message.includes('stalled');
           logger.warn('Download attempt failed', {
             attempt: downloadAttempt,
@@ -68,6 +107,7 @@ class SoftwareUpdateHandler {
           });
           await fs.remove(packagePath).catch(() => {});
           if (downloadAttempt >= MAX_DOWNLOAD_RETRIES) {
+            this.stepTracker.end('fail', `${MAX_DOWNLOAD_RETRIES} tentatives échouées`);
             throw new Error(`Download failed after ${MAX_DOWNLOAD_RETRIES} attempts: ${dlError.message}`);
           }
           // Wait before retry (progressive: 5s, 10s, 15s)
@@ -76,22 +116,28 @@ class SoftwareUpdateHandler {
           await new Promise(r => setTimeout(r, retryDelay));
         }
       }
+      this.stepTracker.end('ok', downloadRetries > 0 ? `${downloadRetries} retry(s)` : undefined);
 
       progressCallback(35);
 
       if (checksum) {
+        this.stepTracker.start('checksum', 'Vérification checksum');
         const verified = await this.verifyChecksumWithRetry(packagePath, checksum, packageSize, {
           updateUrl,
           progressCallback,
         });
         if (!verified) {
+          this.stepTracker.end('fail', 'Checksum invalide');
           throw new Error('Checksum verification failed after retry');
         }
+        this.stepTracker.end('ok');
       }
 
       progressCallback(40);
 
+      this.stepTracker.start('backup', 'Sauvegarde configuration');
       await this.createBackup();
+      this.stepTracker.end('ok');
 
       progressCallback(45);
 
@@ -101,21 +147,33 @@ class SoftwareUpdateHandler {
 
       progressCallback(50);
 
+      this.stepTracker.start('stop_services', 'Arrêt des services');
       await this.stopServices();
+      this.stepTracker.end('ok');
 
       progressCallback(60);
 
+      this.stepTracker.start('install', 'Extraction et installation');
       await this.extractAndInstall(packagePath, version);
+      this.stepTracker.end('ok');
 
       progressCallback(80);
 
+      this.stepTracker.start('start_services', 'Démarrage des services');
       await this.startServices();
+      this.stepTracker.end('ok');
 
       progressCallback(85);
 
       // Validation post-OTA : vérifie que les services critiques fonctionnent
       // Échec critique = throw = rollback automatique AVANT de reporter le succès
+      this.stepTracker.start('validate', 'Validation post-OTA');
       const validationReport = await postUpdateValidator.validate({ throwOnCritical: true });
+      const warnCount = validationReport.warnings.length;
+      this.stepTracker.end(
+        warnCount > 0 ? 'warn' : 'ok',
+        warnCount > 0 ? `${warnCount} warning(s)` : undefined
+      );
       logger.info('Post-OTA validation passed', {
         criticalCount: validationReport.critical.length,
         warningCount: validationReport.warnings.length,
@@ -157,6 +215,7 @@ class SoftwareUpdateHandler {
         version: newVersion,
         previousVersion: this.previousVersion,
         report,
+        steps: this.stepTracker.toJSON(),
       };
     } catch (error) {
       logger.error('Software update failed', { error: error.message, stack: error.stack });
@@ -172,6 +231,8 @@ class SoftwareUpdateHandler {
         logger.warn('Auto-rollback disabled, leaving system in current state');
       }
 
+      // Attach partial steps to the error for the agent to include in the failure report
+      error.steps = this.stepTracker.toJSON();
       throw error;
     } finally {
       await fs.remove(LOCK_FILE).catch(() => {});
@@ -658,9 +719,13 @@ class SoftwareUpdateHandler {
       }
 
       // Installer les nouveaux services systemd si présents dans l'archive
-      const systemdConfigDir = path.join(rootDir, 'config', 'systemd');
+      // IMPORTANT: lire depuis l'archive extraite (sourcePath), PAS depuis rootDir
+      // rootDir (/home/pi/neopro) peut contenir des .service orphelins d'anciennes versions
+      // qui seraient réinstallés à chaque OTA avant que fix-fleet-pi.sh ne les supprime
+      const systemdConfigDir = path.join(sourcePath, 'config', 'systemd');
       if (await fs.pathExists(systemdConfigDir)) {
         logger.info('Installing systemd services...');
+        this.stepTracker.start('systemd', 'Services systemd');
         try {
           await execAsync('sudo systemctl daemon-reload');
           const serviceFiles = await fs.readdir(systemdConfigDir);
@@ -705,19 +770,23 @@ class SoftwareUpdateHandler {
             }
           }
 
+          const totalSvc = serviceFiles.filter(f => f.endsWith('.service')).length;
           logger.info('Systemd services installed and enabled', {
-            total: serviceFiles.filter(f => f.endsWith('.service')).length,
+            total: totalSvc,
             newlyInstalled: newlyInstalledServices.length,
             started: newlyInstalledServices.filter(s => !managedServices.includes(s)).length
           });
+          this.stepTracker.end('ok', `${totalSvc}/${totalSvc} services`);
         } catch (e) {
           logger.warn('Failed to install systemd services via sudo, falling back to admin-server', { error: e.message });
           // Fallback: delegate to admin-server which runs without NoNewPrivileges
           try {
             await execAsync('curl -s -X POST http://127.0.0.1:8080/api/system/apply-services');
             logger.info('Systemd services applied via admin-server fallback');
+            this.stepTracker.end('warn', 'Fallback admin-server');
           } catch (fallbackError) {
             logger.warn('Admin-server fallback also failed', { error: fallbackError.message });
+            this.stepTracker.end('fail', e.message);
           }
         }
       } else {
@@ -849,6 +918,7 @@ class SoftwareUpdateHandler {
       // Corrige cmdline.txt, config.txt, systemd, permissions, boot splash, etc.
       const fixFleetScript = path.join(rootDir, 'scripts', 'fix-fleet-pi.sh');
       if (await fs.pathExists(fixFleetScript)) {
+        this.stepTracker.start('fleet_fix', 'Corrections fleet');
         try {
           logger.info('Running fix-fleet-pi.sh (auto fleet corrections)...');
           // echo 'n' pour refuser le reboot interactif — l'OTA gère le reboot via scheduleReboot
@@ -858,12 +928,20 @@ class SoftwareUpdateHandler {
           );
           const corrections = fleetOutput.match(/Corrections\s*:\s*(\d+)/);
           const errors = fleetOutput.match(/Erreurs\s*:\s*(\d+)/);
+          const corrCount = corrections ? corrections[1] : 'unknown';
+          const errCount = errors ? errors[1] : 'unknown';
           logger.info('fix-fleet-pi.sh completed', {
-            corrections: corrections ? corrections[1] : 'unknown',
-            errors: errors ? errors[1] : 'unknown',
+            corrections: corrCount,
+            errors: errCount,
           });
+          const hasErrors = errCount !== '0' && errCount !== 'unknown';
+          this.stepTracker.end(
+            hasErrors ? 'warn' : 'ok',
+            `${corrCount} correction(s), ${errCount} erreur(s)`
+          );
         } catch (fleetError) {
           logger.warn('fix-fleet-pi.sh failed (non-blocking)', { error: fleetError.message });
+          this.stepTracker.end('warn', fleetError.message);
         }
       }
 

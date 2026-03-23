@@ -134,7 +134,7 @@ export async function handleUpdateProgress(
   progress: Record<string, unknown>
 ): Promise<void> {
   try {
-    const { deploymentId, progress: progressValue, completed, error, version } = progress;
+    const { deploymentId, progress: progressValue, completed, error, version, steps } = progress;
 
     logger.info('Update progress received', {
       siteId,
@@ -158,6 +158,13 @@ export async function handleUpdateProgress(
       if (error) {
         await updateService.handleDeploymentResult(deploymentId as string, siteId, false, error as string);
         resolvedStatus = 'failed';
+        // Store partial OTA steps on failure too (shows which steps succeeded before crash)
+        if (Array.isArray(steps) && steps.length > 0) {
+          await query(
+            `UPDATE update_deployments SET deployment_details = $1 WHERE id = $2`,
+            [JSON.stringify(steps), deploymentId]
+          );
+        }
       } else if (completed || isCompletedByProgress) {
         await updateService.handleDeploymentResult(deploymentId as string, siteId, true);
         resolvedStatus = 'completed';
@@ -184,6 +191,14 @@ export async function handleUpdateProgress(
           siteId,
           (version as string) || 'unknown'
         );
+
+        // Store structured OTA step report if provided
+        if (Array.isArray(steps) && steps.length > 0) {
+          await query(
+            `UPDATE update_deployments SET deployment_details = $1 WHERE id = $2`,
+            [JSON.stringify(steps), deploymentId]
+          );
+        }
       } else {
         await updateService.updateProgress(deploymentId as string, (progressValue as number) || 0);
       }
@@ -201,6 +216,7 @@ export async function handleUpdateProgress(
         completed,
         error,
         version,
+        ...(Array.isArray(steps) && steps.length > 0 ? { steps } : {}),
       });
     }
   } catch (err) {

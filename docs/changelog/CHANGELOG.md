@@ -1,3 +1,14 @@
+## [3.116.30] (2026-03-23)
+
+### Bug Fixes
+
+- **ota:** read systemd services from extracted archive instead of installed dir (prevents orphan services reinstallation)
+
+### Features
+
+- **dashboard:** add "Voir détail" panel for OTA deployments with step-by-step checklist (migration: `deployment_details JSONB`)
+- **ota:** structured OTA step tracking via OtaStepTracker (timing, status, detail per step)
+
 ## [3.116.29](https://github.com/Tallec7/neopro/compare/v3.116.28...v3.116.29) (2026-03-22)
 
 ### Bug Fixes

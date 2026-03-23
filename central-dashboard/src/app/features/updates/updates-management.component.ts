@@ -20,6 +20,14 @@ interface SoftwareUpdate {
   is_critical: boolean;
 }
 
+interface OtaStep {
+  name: string;
+  label: string;
+  status: 'ok' | 'warn' | 'fail' | 'skip';
+  durationMs: number;
+  detail?: string;
+}
+
 interface UpdateDeployment {
   id: string;
   update_id: string;
@@ -35,6 +43,7 @@ interface UpdateDeployment {
   started_at?: Date;
   created_at: Date;
   completed_at?: Date;
+  deployment_details?: OtaStep[] | null;
 }
 
 @Component({
@@ -322,6 +331,13 @@ interface UpdateDeployment {
               </div>
               <div class="deployment-actions">
                 <button
+                  *ngIf="deployment.deployment_details?.length"
+                  class="btn btn-sm btn-secondary"
+                  (click)="toggleDeploymentDetails(deployment.id)"
+                >
+                  {{ expandedDeploymentId === deployment.id ? 'Masquer détail' : 'Voir détail' }}
+                </button>
+                <button
                   *ngIf="deployment.status === 'failed'"
                   class="btn btn-sm btn-primary"
                   (click)="retryDeployment(deployment)"
@@ -335,6 +351,22 @@ interface UpdateDeployment {
                 >
                   Annuler
                 </button>
+              </div>
+            </div>
+
+            <div class="deployment-steps" *ngIf="expandedDeploymentId === deployment.id && deployment.deployment_details?.length">
+              <div
+                class="step-row"
+                *ngFor="let step of deployment.deployment_details"
+                [class.step-ok]="step.status === 'ok'"
+                [class.step-warn]="step.status === 'warn'"
+                [class.step-fail]="step.status === 'fail'"
+                [class.step-skip]="step.status === 'skip'"
+              >
+                <span class="step-icon">{{ getStepIcon(step.status) }}</span>
+                <span class="step-label">{{ step.label }}</span>
+                <span class="step-duration">{{ formatStepDuration(step.durationMs) }}</span>
+                <span class="step-detail" *ngIf="step.detail">{{ step.detail }}</span>
               </div>
             </div>
           </div>
@@ -901,6 +933,45 @@ interface UpdateDeployment {
       gap: 0.5rem;
     }
 
+    .deployment-steps {
+      margin-top: 0.75rem;
+      padding-top: 0.75rem;
+      border-top: 1px solid #e2e8f0;
+    }
+
+    .step-row {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.35rem 0.5rem;
+      font-size: 0.8rem;
+      border-left: 3px solid transparent;
+      border-radius: 2px;
+    }
+
+    .step-row.step-ok { border-left-color: #22c55e; }
+    .step-row.step-warn { border-left-color: #f59e0b; }
+    .step-row.step-fail { border-left-color: #ef4444; }
+    .step-row.step-skip { border-left-color: #94a3b8; }
+
+    .step-icon { flex-shrink: 0; width: 1.2rem; text-align: center; }
+
+    .step-label { flex: 1; color: #334155; }
+
+    .step-duration {
+      flex-shrink: 0;
+      color: #94a3b8;
+      font-size: 0.7rem;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .step-detail {
+      flex-shrink: 0;
+      color: #64748b;
+      font-size: 0.7rem;
+      font-style: italic;
+    }
+
     .deployment-info {
       background: #eff6ff;
       border: 1px solid #bfdbfe;
@@ -1267,6 +1338,7 @@ export class UpdatesManagementComponent implements OnInit, OnDestroy {
 
   showCreateModal = false;
   expandedNotes = new Set<string>();
+  expandedDeploymentId: string | null = null;
 
   createForm = {
     version: '',
@@ -1349,6 +1421,7 @@ export class UpdatesManagementComponent implements OnInit, OnDestroy {
         deployedCount: number;
         status: UpdateDeployment['status'];
         error?: string;
+        steps?: OtaStep[];
       };
       const deployment = this.deployments.find(d => d.id === data.deploymentId);
       if (deployment) {
@@ -1357,6 +1430,9 @@ export class UpdatesManagementComponent implements OnInit, OnDestroy {
         deployment.status = data.status;
         if (data.error) {
           deployment.error_message = data.error;
+        }
+        if (data.steps?.length) {
+          deployment.deployment_details = data.steps;
         }
       }
     });
@@ -1374,6 +1450,25 @@ export class UpdatesManagementComponent implements OnInit, OnDestroy {
     if (!date) return '';
     const d = new Date(date);
     return d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  }
+
+  toggleDeploymentDetails(deploymentId: string): void {
+    this.expandedDeploymentId = this.expandedDeploymentId === deploymentId ? null : deploymentId;
+  }
+
+  getStepIcon(status: string): string {
+    switch (status) {
+      case 'ok': return '\u2705';
+      case 'warn': return '\u26A0\uFE0F';
+      case 'fail': return '\u274C';
+      case 'skip': return '\u23ED\uFE0F';
+      default: return '\u2753';
+    }
+  }
+
+  formatStepDuration(ms: number): string {
+    if (ms < 1000) return `${ms}ms`;
+    return `${(ms / 1000).toFixed(1)}s`;
   }
 
   toggleNotes(updateId: string): void {

@@ -11775,6 +11775,86 @@ describe('OTA deployment observability guards', () => {
       .toEqual({ hasCompletedSummary: true });
   });
 
+  it('update-software.js must read systemd services from sourcePath (archive), not rootDir', () => {
+    // Issue: using rootDir (/home/pi/neopro) reads stale .service files from previous OTAs
+    // (e.g. neopro-vlc-kiosk, neopro-ffmpeg-stream) that fix-fleet-pi.sh deletes but the OTA
+    // re-installs before fix-fleet runs → orphan services crash-loop + restart hostapd ~22x/hour.
+    // Fix: use sourcePath (the extracted archive in /tmp/) to only install services from the package.
+    const updateSoftware = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/sync-agent/src/commands/update-software.js'),
+      'utf8'
+    );
+    // Must use sourcePath for the systemd config directory
+    expect({ usesSourcePath: updateSoftware.includes("path.join(sourcePath, 'config', 'systemd')") })
+      .toEqual({ usesSourcePath: true });
+    // Must NOT use rootDir for systemd config (the old broken pattern)
+    expect({ noRootDir: !updateSoftware.includes("path.join(rootDir, 'config', 'systemd')") })
+      .toEqual({ noRootDir: true });
+  });
+
+  it('update-software.js must report OTA steps via OtaStepTracker for dashboard visibility', () => {
+    const updateSoftware = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/sync-agent/src/commands/update-software.js'),
+      'utf8'
+    );
+    // Must have the step tracker class
+    expect({ hasTracker: updateSoftware.includes('class OtaStepTracker') })
+      .toEqual({ hasTracker: true });
+    // Must return steps in the result
+    expect({ returnsSteps: updateSoftware.includes('steps: this.stepTracker.toJSON()') })
+      .toEqual({ returnsSteps: true });
+    // Must attach partial steps on error for failed deployment visibility
+    expect({ stepsOnError: updateSoftware.includes('error.steps = this.stepTracker.toJSON()') })
+      .toEqual({ stepsOnError: true });
+  });
+
+  it('agent.js must include steps in update_progress emission', () => {
+    const agent = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/sync-agent/src/agent.js'),
+      'utf8'
+    );
+    // Must include steps in the completion event
+    expect({ stepsInCompletion: agent.includes("steps: result?.steps") })
+      .toEqual({ stepsInCompletion: true });
+    // Must include partial steps in the error event
+    expect({ stepsInError: agent.includes("steps: error.steps") })
+      .toEqual({ stepsInError: true });
+  });
+
+  it('deploy-progress.handler.ts must store deployment_details on completion', () => {
+    const handler = fs.readFileSync(
+      path.join(repoRoot, 'central-server/src/handlers/deploy-progress.handler.ts'),
+      'utf8'
+    );
+    expect({ storesDetails: handler.includes('deployment_details') })
+      .toEqual({ storesDetails: true });
+  });
+
+  it('dashboard must have Voir detail button and step checklist for OTA deployments', () => {
+    const component = fs.readFileSync(
+      path.join(repoRoot, 'central-dashboard/src/app/features/updates/updates-management.component.ts'),
+      'utf8'
+    );
+    expect({ hasVoirDetail: component.includes('Voir détail') })
+      .toEqual({ hasVoirDetail: true });
+    expect({ hasStepChecklist: component.includes('deployment-steps') && component.includes('step-row') })
+      .toEqual({ hasStepChecklist: true });
+    expect({ hasStepIcon: component.includes('getStepIcon(') })
+      .toEqual({ hasStepIcon: true });
+  });
+
+  it('orphan .service files must NOT exist in raspberry/config/systemd/', () => {
+    // These old POC services were removed from the codebase but survived on Pi
+    // because rsync didn't use --delete for config/. Guard against re-addition.
+    const orphans = ['neopro-vlc-kiosk', 'neopro-ffmpeg-stream', 'neopro-playlist-manager', 'neopro-score-bridge'];
+    const systemdDir = path.join(repoRoot, 'raspberry/config/systemd');
+    const files = fs.readdirSync(systemdDir);
+    for (const orphan of orphans) {
+      expect({ [`noOrphan_${orphan}`]: !files.includes(`${orphan}.service`) })
+        .toEqual({ [`noOrphan_${orphan}`]: true });
+    }
+  });
+
   it('checkStuckDeployments must auto-fail update deployments stuck >2h', () => {
     const alerting = fs.readFileSync(
       path.join(repoRoot, 'central-server/src/services/alerting.service.ts'),

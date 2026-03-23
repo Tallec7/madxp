@@ -56,6 +56,14 @@ export interface PackageCheckRow {
 // Types — Update Deployments
 // --------------------------------------------------------------------------
 
+export interface OtaStep {
+  name: string;
+  label: string;
+  status: 'ok' | 'warn' | 'fail' | 'skip';
+  durationMs: number;
+  detail?: string;
+}
+
 export interface UpdateDeploymentRow {
   [key: string]: unknown;
   id: string;
@@ -71,6 +79,7 @@ export interface UpdateDeploymentRow {
   backup_path: string | null;
   update_version: string;
   target_name: string;
+  deployment_details: OtaStep[] | null;
 }
 
 export interface CreateUpdateDeploymentInput {
@@ -211,7 +220,7 @@ class SoftwareUpdateRepositoryImpl extends BaseRepository<SoftwareUpdateRow> {
     const result = await query<UpdateDeploymentRow>(
       `SELECT ud.id, ud.update_id, ud.target_type, ud.target_id, ud.status, ud.progress,
               ud.error_message, ud.started_at, ud.completed_at, ud.created_at,
-              ud.backup_path, ud.deployed_by,
+              ud.backup_path, ud.deployed_by, ud.deployment_details,
               su.version as update_version,
               CASE
                 WHEN ud.target_type = 'site' THEN s.site_name
@@ -247,7 +256,7 @@ class SoftwareUpdateRepositoryImpl extends BaseRepository<SoftwareUpdateRow> {
     const result = await query<UpdateDeploymentRow>(
       `SELECT ud.id, ud.update_id, ud.target_type, ud.target_id, ud.status, ud.progress,
               ud.error_message, ud.started_at, ud.completed_at, ud.created_at,
-              ud.backup_path, ud.deployed_by,
+              ud.backup_path, ud.deployed_by, ud.deployment_details,
               su.version as update_version,
               CASE
                 WHEN ud.target_type = 'site' THEN s.site_name

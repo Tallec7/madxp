@@ -361,6 +361,27 @@ Quand le socket est down pendant un rollback OTA local, le signal d'échec est p
 
 Le téléchargement OTA dans `update-software.js` détecte les stalls (aucune donnée reçue pendant 30s) et retry automatiquement avec backoff progressif (5s/10s/15s, max 3 retries). Cela empêche les OTA bloquées indéfiniment à ~5% sur les réseaux WiFi mesh instables.
 
+**Rapport structuré OTA (v3.116.30+) :**
+
+Chaque OTA génère un rapport step-by-step via `OtaStepTracker` dans `update-software.js`. Les étapes trackées :
+
+| Step             | Label                      | Quand                                  |
+| ---------------- | -------------------------- | -------------------------------------- |
+| `pre_checks`     | Vérifications pré-update   | Espace disque, état services           |
+| `download`       | Téléchargement package     | Avec retry count si applicable         |
+| `checksum`       | Vérification checksum      | Si checksum fourni                     |
+| `backup`         | Sauvegarde configuration   | Avant installation                     |
+| `stop_services`  | Arrêt des services         | neopro-app, neopro-admin               |
+| `install`        | Extraction et installation | extractAndInstall()                    |
+| `systemd`        | Services systemd           | Installation/update des .service       |
+| `fleet_fix`      | Corrections fleet          | fix-fleet-pi.sh (corrections, erreurs) |
+| `start_services` | Démarrage des services     | Redémarrage post-install               |
+| `validate`       | Validation post-OTA        | Checks critiques + warnings            |
+
+Le rapport est envoyé via `update_progress` (Socket.IO) à la complétion ou l'échec, stocké en `update_deployments.deployment_details` (JSONB), et affiché via le bouton "Voir détail" dans le dashboard.
+
+**IMPORTANT :** Le code OTA lit les `.service` depuis l'archive extraite (`sourcePath`), PAS depuis `rootDir` (`/home/pi/neopro/config/systemd/`). Ce dernier peut contenir des fichiers orphelins d'anciennes versions. Smoke test enforced.
+
 **Monitoring OTA :** La métrique `neopro_ota_errors_total{error_type}` catégorise les erreurs :
 | error_type | Déclencheur |
 |-------------|-------------|
