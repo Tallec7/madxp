@@ -1,3 +1,9 @@
+## [3.117.2](https://github.com/Tallec7/neopro/compare/v3.117.1...v3.117.2) (2026-03-23)
+
+### Bug Fixes
+
+- **tests:** update alert.service tests for 60s offline grace period ([93a69e9](https://github.com/Tallec7/neopro/commit/93a69e94417fae857b50c758f22e2e86936a7540))
+
 ## [3.117.1](https://github.com/Tallec7/neopro/compare/v3.117.0...v3.117.1) (2026-03-23)
 
 ### Bug Fixes
