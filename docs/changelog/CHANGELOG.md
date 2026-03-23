@@ -1,3 +1,9 @@
+# [3.117.0](https://github.com/Tallec7/neopro/compare/v3.116.33...v3.117.0) (2026-03-23)
+
+### Features
+
+- **alerting:** add 60s grace period for site offline alerts ([af7816e](https://github.com/Tallec7/neopro/commit/af7816e547a07df14e2ae07137e9f3bff7dfb93b))
+
 ## [3.116.33](https://github.com/Tallec7/neopro/compare/v3.116.32...v3.116.33) (2026-03-23)
 
 ### Bug Fixes
