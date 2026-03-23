@@ -1,3 +1,9 @@
+## [3.116.32](https://github.com/Tallec7/neopro/compare/v3.116.31...v3.116.32) (2026-03-23)
+
+### Bug Fixes
+
+- **pi:** dual-stack server binding (::) to fix ECONNREFUSED ::1 bootstrapping ([8d56cbb](https://github.com/Tallec7/neopro/commit/8d56cbbc83b1e76b30697855552d8598a0f53fc8))
+
 ## [3.116.31](https://github.com/Tallec7/neopro/compare/v3.116.30...v3.116.31) (2026-03-23)
 
 ### Bug Fixes
