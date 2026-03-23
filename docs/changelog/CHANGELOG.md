@@ -1,3 +1,9 @@
+## [3.117.1](https://github.com/Tallec7/neopro/compare/v3.117.0...v3.117.1) (2026-03-23)
+
+### Bug Fixes
+
+- **network:** use scan cache in wifi-bssid.js to prevent RTL8192EU WiFi drop ([66ef7ca](https://github.com/Tallec7/neopro/commit/66ef7cab153f46bc1abf0038044345bc15c4393a))
+
 # [3.117.0](https://github.com/Tallec7/neopro/compare/v3.116.33...v3.117.0) (2026-03-23)
 
 ### Features
