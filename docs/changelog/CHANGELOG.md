@@ -1,3 +1,9 @@
+## [3.116.30](https://github.com/Tallec7/neopro/compare/v3.116.29...v3.116.30) (2026-03-23)
+
+### Bug Fixes
+
+- **ota:** prevent orphan service reinstallation + add deployment detail report ([e25e833](https://github.com/Tallec7/neopro/commit/e25e833bf8b437299dae2d3982c897b426c7f71e))
+
 ## [3.116.30] (2026-03-23)
 
 ### Bug Fixes
