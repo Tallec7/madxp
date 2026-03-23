@@ -1,3 +1,9 @@
+## [3.116.33](https://github.com/Tallec7/neopro/compare/v3.116.32...v3.116.33) (2026-03-23)
+
+### Bug Fixes
+
+- **hotspot:** fix watchdog restart loop on Debian 13 Trixie (iptables removed) ([c801b5d](https://github.com/Tallec7/neopro/commit/c801b5d4d10c0fb3a1a612dd0747ac0ec9ca9c6d))
+
 ## [3.116.33] (2026-03-23)
 
 ### Bug Fixes
