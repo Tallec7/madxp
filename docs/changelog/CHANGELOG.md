@@ -1,3 +1,9 @@
+## [3.116.31](https://github.com/Tallec7/neopro/compare/v3.116.30...v3.116.31) (2026-03-23)
+
+### Bug Fixes
+
+- **ota:** cache-bust validate-post-update.js after extraction to fix bootstrapping ECONNREFUSED ::1 ([008c778](https://github.com/Tallec7/neopro/commit/008c7786c39d72c9e77cd5e3f555e70573ce3e32)), closes [#36](https://github.com/Tallec7/neopro/issues/36)
+
 ## [3.116.31] (2026-03-23)
 
 ### Bug Fixes
