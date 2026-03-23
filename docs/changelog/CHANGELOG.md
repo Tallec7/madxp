@@ -2,13 +2,23 @@
 
 ### Bug Fixes
 
-- **network:** use scan cache in wifi-bssid.js to prevent RTL8192EU WiFi drop ([66ef7ca](https://github.com/Tallec7/neopro/commit/66ef7cab153f46bc1abf0038044345bc15c4393a))
+- **network:** fix RTL8192EU WiFi drop caused by double `iwlist wlan1 scan` in <120s — `wifi-bssid.js` (called by `export_debug_bundle`) did a direct scan without checking `/tmp/neopro-wlan1-scan-cache`, triggering a second scan 2min after `networkDetector` → carrier killed → auth timeout → 5min WiFi outage
+- **network:** `wifi-client.js` now writes scan cache after user-initiated scans to protect subsequent consumers
+
+### Tests
+
+- **smoke:** guard ensuring `wifi-bssid.js` uses scan cache for mesh detection
 
 # [3.117.0](https://github.com/Tallec7/neopro/compare/v3.116.33...v3.117.0) (2026-03-23)
 
 ### Features
 
-- **alerting:** add 60s grace period for site offline alerts ([af7816e](https://github.com/Tallec7/neopro/commit/af7816e547a07df14e2ae07137e9f3bff7dfb93b))
+- **alerting:** add 60s grace period for site offline alerts — when a Pi disconnects (Railway recycle, brief network blip), the offline alert is deferred 60s. If the site reconnects within that window, both offline and online alerts are suppressed. Eliminates flip-flop alert noise from Railway container recycling (Pi reconnects in 3-16s typically)
+
+### Docs
+
+- **troubleshooting:** add section 28 — hotspot-watchdog restart loop on Debian 13 Trixie diagnostic and fix
+- **changelog:** document complete session: hotspot-watchdog nftables, grace period alerts, WiFi scan cache
 
 ## [3.116.33](https://github.com/Tallec7/neopro/compare/v3.116.32...v3.116.33) (2026-03-23)
 

@@ -30,15 +30,16 @@
 26. [Kiosk pas en plein écran sur HDMI-1 (v3.111.1+)](#kiosk-pas-en-plein-écran-sur-hdmi-1-v31111)
 27. [Vidéo gelée/lag sur navigateur PC (v3.114+)](#vidéo-geléelag-sur-navigateur-pc-v3114)
 28. [Hotspot-watchdog restart loop sur Debian 13 Trixie (v3.116.33+)](#hotspot-watchdog-restart-loop-sur-debian-13-trixie-v311633)
-29. [Vidéos de boucle "introuvables" après reconnexion site hors ligne (v3.115.2+)](#vidéos-de-boucle-introuvables-après-reconnexion-site-hors-ligne-v31152)
-30. [Échec validation post-OTA (v3.116+)](#échec-validation-post-ota-v3116)
-31. [Alerte canary post-OTA (v3.116+)](#alerte-canary-post-ota-v3116)
-32. [Bgscan reconfigure loop — déconnexions WiFi auto-infligées (v3.116.25+)](#bgscan-reconfigure-loop--déconnexions-wifi-auto-infligées-v311625)
-33. [OTA bloquée à 5% sur WiFi mesh (v3.116.24+)](#ota-bloquée-à-5-sur-wifi-mesh-v311624)
-34. [Hotspot channel flapping au boot (v3.116.26+)](#hotspot-channel-flapping-au-boot-v311626)
-35. [Hotspot recovery disproportionnée — restart complet pour IP manquante (v3.116.26+)](#hotspot-recovery-disproportionnée--restart-complet-pour-ip-manquante-v311626)
-36. [Déploiement OTA "Échoué" sans message d'erreur (v3.116.28+)](#déploiement-ota-échoué-sans-message-derreur-v311628)
-37. [Post-OTA validation failed: ECONNREFUSED ::1 (v3.116.28+)](#post-ota-validation-failed-econnrefused-1-v311628)
+29. [WiFi wlan1 drop après double scan RTL8192EU (v3.117.1+)](#wifi-wlan1-drop-après-double-scan-rtl8192eu-v31171)
+30. [Vidéos de boucle "introuvables" après reconnexion site hors ligne (v3.115.2+)](#vidéos-de-boucle-introuvables-après-reconnexion-site-hors-ligne-v31152)
+31. [Échec validation post-OTA (v3.116+)](#échec-validation-post-ota-v3116)
+32. [Alerte canary post-OTA (v3.116+)](#alerte-canary-post-ota-v3116)
+33. [Bgscan reconfigure loop — déconnexions WiFi auto-infligées (v3.116.25+)](#bgscan-reconfigure-loop--déconnexions-wifi-auto-infligées-v311625)
+34. [OTA bloquée à 5% sur WiFi mesh (v3.116.24+)](#ota-bloquée-à-5-sur-wifi-mesh-v311624)
+35. [Hotspot channel flapping au boot (v3.116.26+)](#hotspot-channel-flapping-au-boot-v311626)
+36. [Hotspot recovery disproportionnée — restart complet pour IP manquante (v3.116.26+)](#hotspot-recovery-disproportionnée--restart-complet-pour-ip-manquante-v311626)
+37. [Déploiement OTA "Échoué" sans message d'erreur (v3.116.28+)](#déploiement-ota-échoué-sans-message-derreur-v311628)
+38. [Post-OTA validation failed: ECONNREFUSED ::1 (v3.116.28+)](#post-ota-validation-failed-econnrefused-1-v311628)
 
 > **WiFi USB** : Pour un guide complet sur la clé WiFi USB (installation, diagnostic, pannes, recovery), voir [WIFI_USB_GUIDE.md](WIFI_USB_GUIDE.md).
 >
@@ -6131,4 +6132,40 @@ sleep 60 && journalctl --since "1 minute ago" | grep -c "restart hostapd"
 
 ---
 
-**Dernière mise à jour :** 23 mars 2026 (hotspot-watchdog nftables Debian 13, dual-stack server binding, bootstrapping cache-bust OTA validator, ECONNREFUSED IPv6, déploiement OTA sans message d'erreur, bgscan reconfigure loop, OTA stall detection, hotspot channel flapping, hotspot recovery proportionnelle — v3.116.22-33)
+## WiFi wlan1 drop après double scan RTL8192EU (v3.117.1+)
+
+### Symptôme
+
+La connexion WiFi du Pi (wlan1, clé USB RTL8192EU) tombe soudainement. Le dmesg montre `wlan1: authentication timed out` après 3 tentatives. Le NetworkWatchdog escalade les phases de recovery (gentle → aggressive) sans succès pendant 5 minutes.
+
+### Cause racine
+
+Le RTL8192EU est **single-radio** : chaque `iwlist wlan1 scan` coupe le carrier pendant ~6 secondes. Si **deux scans se produisent en moins de 120 secondes**, le carrier ne se rétablit pas et l'association WPA est perdue définitivement.
+
+Scénario typique : `networkDetector` fait un scan au boot/toutes les heures, puis une commande `export_debug_bundle` ou `get_wifi_bssid_status` déclenche un second scan immédiatement après.
+
+### Diagnostic
+
+```bash
+# Vérifier le dmesg pour auth timeout
+sudo dmesg | grep "authentication.*timed out"
+
+# Vérifier les scans récents dans les logs
+journalctl --since "30 min ago" | grep "iwlist wlan1 scan"
+# Si 2+ scans en <120s → cause confirmée
+```
+
+### Solution (v3.117.1+)
+
+Tous les consommateurs de scan wlan1 partagent un cache inter-processus `/tmp/neopro-wlan1-scan-cache` :
+
+- `network-detector.js` : vérifie le cache avant de scanner
+- `wifi-bssid.js` : vérifie le cache avant le scan mesh detection
+- `wifi-client.js` : écrit le cache après un scan utilisateur
+- `hotspot-optimizer.sh` : écrit le cache au boot
+
+Un scan frais n'est fait que si le cache est absent ou plus vieux que 120s.
+
+---
+
+**Dernière mise à jour :** 23 mars 2026 (WiFi scan cache RTL8192EU, alerting grace period 60s, hotspot-watchdog nftables Debian 13, dual-stack server binding, bootstrapping cache-bust OTA validator — v3.116.22 → v3.117.1)

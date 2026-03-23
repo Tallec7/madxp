@@ -187,6 +187,8 @@ source central-server/.env && psql "$DATABASE_URL" -f central-server/src/scripts
 - Utiliser `http://localhost` au lieu de `http://127.0.0.1` dans les connexions HTTP locales du sync-agent (`validate-post-update.js`, `local-socket.js`, `update-software.js`) — sur Debian 12+ Bookworm, `localhost` résout en `::1` (IPv6) mais Express écoute sur `0.0.0.0` (IPv4 only) → ECONNREFUSED → validation post-OTA échoue → rollback inutile — smoke test enforced)
 - Inclure le check captive portal iptables/nftables dans les issues critiques de `check_hotspot_health()` du hotspot-watchdog (le captive portal est un WARNING non-critique — l'absence d'iptables/nft ne doit JAMAIS déclencher la recovery complète rfkill+hostapd+dnsmasq — sur Debian 13 Trixie, iptables est supprimé → boucle de restart toutes les 30s pendant des heures — smoke test enforced)
 - Utiliser `iptables` sans vérifier `command -v iptables` dans les scripts Pi (Debian 13 Trixie a supprimé iptables du système de base — toujours vérifier la disponibilité et fallback sur `nft` — smoke test enforced)
+- Faire un `iwlist wlan1 scan` dans `wifi-bssid.js` / `getWifiBssidStatus()` sans vérifier le cache inter-processus `/tmp/neopro-wlan1-scan-cache` (le debug-bundle appelle cette fonction — 2 scans wlan1 en <120s tue le carrier RTL8192EU → auth timeout → WiFi drop 5min — incident 2026-03-23 22:32 — smoke test enforced)
+- Envoyer l'alerte "Site Offline" immédiatement dans `alertService.siteOffline()` (utiliser le délai de grâce `OFFLINE_GRACE_PERIOD_MS` de 60s — si le site revient dans ce délai, annuler les deux alertes offline+online — les flip-flops Railway de 3-16s ne doivent pas générer de bruit Slack — smoke test: vérifier `pendingOfflineAlerts` dans alert.service.ts)
 
 ## Architecture détaillée
 
