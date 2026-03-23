@@ -320,20 +320,20 @@ Avant chaque OTA, le serveur envoie une commande `remote_shell` de pré-migratio
 
 **Validation post-OTA (v3.116+) :**
 
-Après `startServices()` et avant le rapport de succès, `validate-post-update.js` exécute une validation en 2 niveaux :
+Après `startServices()` et avant le rapport de succès, `update-software.js` cache-bust le module `validate-post-update.js` (`delete require.cache` + re-`require`) pour charger la version **nouvellement installée** depuis le disque, puis exécute une validation en 2 niveaux :
 
-| Niveau                    | Check            | Détail                                                        |
-| ------------------------- | ---------------- | ------------------------------------------------------------- |
-| **Critique** (→ rollback) | Services actifs  | `systemctl is-active neopro-app neopro-admin`                 |
-| **Critique** (→ rollback) | HTTP health      | `GET localhost:3000/health` + `GET localhost:8080/api/health` |
-| **Critique** (→ rollback) | Config intégrité | `configuration.json` parseable JSON                           |
-| **Critique** (→ rollback) | Webapp existe    | `webapp/index.html` présent                                   |
-| Warning                   | HDMI display     | DRM sysfs `/sys/class/drm/card?-HDMI-*/status`                |
-| Warning                   | Nginx            | Port 4200 accessible                                          |
-| Warning                   | Espace disque    | > 500 MB libre                                                |
-| Warning                   | Analytics buffer | < 5 MB                                                        |
-| Warning                   | Chromium         | Process actif                                                 |
-| Warning                   | Socket.IO        | Connexions au serveur local                                   |
+| Niveau                    | Check            | Détail                                                         |
+| ------------------------- | ---------------- | -------------------------------------------------------------- |
+| **Critique** (→ rollback) | Services actifs  | `systemctl is-active neopro-app neopro-admin`                  |
+| **Critique** (→ rollback) | HTTP health      | `GET 127.0.0.1:3000/health` + `GET 127.0.0.1:8080/api/version` |
+| **Critique** (→ rollback) | Config intégrité | `configuration.json` parseable JSON                            |
+| **Critique** (→ rollback) | Webapp existe    | `webapp/index.html` présent                                    |
+| Warning                   | HDMI display     | DRM sysfs `/sys/class/drm/card?-HDMI-*/status`                 |
+| Warning                   | Nginx            | Port 4200 accessible                                           |
+| Warning                   | Espace disque    | > 500 MB libre                                                 |
+| Warning                   | Analytics buffer | < 5 MB                                                         |
+| Warning                   | Chromium         | Process actif                                                  |
+| Warning                   | Socket.IO        | Connexions au serveur local                                    |
 
 **Script standalone :** `raspberry/scripts/validate-pi.sh` — 3 modes : humain (couleurs), `--json` (dashboard), `--quiet` (exit code : 0=ok, 1=critique, 2=warnings)
 

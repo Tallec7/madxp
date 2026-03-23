@@ -11424,7 +11424,8 @@ describe('Post-OTA validation integration', () => {
     expect({ importsValidator: otaContent.includes("require('./validate-post-update')") })
       .toEqual({ importsValidator: true });
     // Must call validate() with throwOnCritical: true (so failures trigger rollback)
-    expect({ callsValidate: otaContent.includes('postUpdateValidator.validate') })
+    // freshValidator: cache-busted require to pick up fixes from newly installed code
+    expect({ callsValidate: otaContent.includes('freshValidator.validate') || otaContent.includes('postUpdateValidator.validate') })
       .toEqual({ callsValidate: true });
     expect({ throwsOnCritical: otaContent.includes('throwOnCritical: true') })
       .toEqual({ throwsOnCritical: true });
@@ -11451,6 +11452,20 @@ describe('Post-OTA validation integration', () => {
       .toEqual({ checksPort3000: true });
     expect({ checksPort8080: validatorContent.includes('127.0.0.1:8080') })
       .toEqual({ checksPort8080: true });
+  });
+
+  it('update-software.js must cache-bust validate-post-update.js after extraction (bootstrapping fix)', () => {
+    const otaContent = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/sync-agent/src/commands/update-software.js'),
+      'utf8'
+    );
+    // After extractAndInstall copies new sync-agent files, the old module is stale in require.cache.
+    // Without cache-busting, a Pi upgrading from pre-3.116.29 would run the OLD validator
+    // (with localhost instead of 127.0.0.1) → ECONNREFUSED ::1 → false rollback.
+    expect({ clearsCache: otaContent.includes('delete require.cache') })
+      .toEqual({ clearsCache: true });
+    expect({ reloadsValidator: otaContent.includes("require('./validate-post-update')") })
+      .toEqual({ reloadsValidator: true });
   });
 
   it('validate-post-update.js must check configuration.json integrity', () => {

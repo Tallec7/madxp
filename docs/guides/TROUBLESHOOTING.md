@@ -6042,13 +6042,19 @@ source central-server/.env && psql "$DATABASE_URL" -c "
 
 **Impact :** Toute validation post-OTA échoue sur Pi sous Debian 12+ → rollback systématique → le Pi revient à l'ancienne version → déploiement rapporté comme échoué.
 
-**Fix (v3.116.28) :**
+**Fix (v3.116.29) :**
 
 Remplacement de `http://localhost` par `http://127.0.0.1` dans tous les fichiers du sync-agent qui font des connexions HTTP locales :
 
 - `validate-post-update.js` (ports 3000, 4200, 8080)
 - `local-socket.js` (Socket.IO port 3000)
 - `update-software.js` (health checks port 3000)
+
+**Problème de bootstrapping (v3.116.31) :**
+
+Le fix v3.116.29 ne prenait pas effet sur les Pi upgradeant **depuis** une version pré-3.116.29. Raison : `update-software.js` charge `validate-post-update.js` via `require()` au démarrage du module — le validateur en mémoire est l'**ancienne** version (avec `localhost`). Même si `extractAndInstall()` écrase les fichiers sur disque avec le nouveau code, Node.js utilise le module déjà en cache.
+
+**Fix bootstrapping (v3.116.31) :** Après `extractAndInstall()`, `update-software.js` vide `require.cache` et recharge `validate-post-update.js` depuis le disque (`delete require.cache[path]` + `require()`) pour utiliser la version nouvellement installée. Ce mécanisme de cache-bust est protégé par un smoke test.
 
 **Diagnostic :**
 
@@ -6068,4 +6074,4 @@ curl -s http://localhost:8080/api/version
 
 ---
 
-**Dernière mise à jour :** 22 mars 2026 (ajout ECONNREFUSED IPv6, déploiement OTA sans message d'erreur, bgscan reconfigure loop, OTA stall detection, hotspot channel flapping, hotspot recovery proportionnelle — v3.116.22-28)
+**Dernière mise à jour :** 23 mars 2026 (ajout bootstrapping cache-bust OTA validator, ECONNREFUSED IPv6, déploiement OTA sans message d'erreur, bgscan reconfigure loop, OTA stall detection, hotspot channel flapping, hotspot recovery proportionnelle — v3.116.22-31)

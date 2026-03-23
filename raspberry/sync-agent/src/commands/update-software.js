@@ -167,8 +167,13 @@ class SoftwareUpdateHandler {
 
       // Validation post-OTA : vérifie que les services critiques fonctionnent
       // Échec critique = throw = rollback automatique AVANT de reporter le succès
+      // Dynamically load the newly installed validator to pick up fixes (e.g. 127.0.0.1 vs localhost)
+      // instead of using the stale module cached by require() from the old version
       this.stepTracker.start('validate', 'Validation post-OTA');
-      const validationReport = await postUpdateValidator.validate({ throwOnCritical: true });
+      const freshValidatorPath = require.resolve('./validate-post-update');
+      delete require.cache[freshValidatorPath];
+      const freshValidator = require(freshValidatorPath);
+      const validationReport = await freshValidator.validate({ throwOnCritical: true });
       const warnCount = validationReport.warnings.length;
       this.stepTracker.end(
         warnCount > 0 ? 'warn' : 'ok',

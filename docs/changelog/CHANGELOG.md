@@ -1,3 +1,19 @@
+## [3.116.31] (2026-03-23)
+
+### Bug Fixes
+
+- **ota:** cache-bust validate-post-update.js after extraction to fix bootstrapping issue (Pi upgrading from pre-3.116.29 used stale `localhost` validator in memory → ECONNREFUSED ::1 → false rollback)
+
+### Tests
+
+- **smoke:** add cache-bust enforcement for OTA validator (`delete require.cache` must be present in update-software.js)
+
+### Docs
+
+- **troubleshooting:** document bootstrapping problem and cache-bust fix for ECONNREFUSED ::1
+- **reference:** update OTA validation flow with cache-bust mechanism, fix localhost→127.0.0.1 in health check table
+- **claude.md:** add rule preventing removal of require.cache cache-bust in update-software.js
+
 ## [3.116.30](https://github.com/Tallec7/neopro/compare/v3.116.29...v3.116.30) (2026-03-23)
 
 ### Bug Fixes
