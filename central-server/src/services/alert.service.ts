@@ -48,6 +48,10 @@ const SITE_STATUS_COOLDOWN_MS = 5 * 60 * 1000; // 5 minutes
 const MAX_COOLDOWN_ENTRIES = 200;
 // Grace period after server boot: suppress online/offline alerts while Pi reconnect post-deploy
 const BOOT_GRACE_PERIOD_MS = 90 * 1000; // 90 seconds (covers Socket.IO reconnection cycle)
+// Grace period before sending offline alert: if site reconnects within this window,
+// both offline and online alerts are suppressed. Prevents noisy flip-flop alerts
+// from Railway container recycling (Pi reconnects in 3-16s typically).
+const OFFLINE_GRACE_PERIOD_MS = 60 * 1000; // 60 seconds
 // WiFi alert cooldown: avoid repeating the same low-signal alert every hour
 const WIFI_ALERT_COOLDOWN_MS = 6 * 60 * 60 * 1000; // 6 hours
 
@@ -60,6 +64,8 @@ class AlertService {
   private shuttingDown = false;
   /** Track active low-WiFi alerts per site for resolve-on-recovery pattern */
   private activeWifiAlerts: Map<string, number> = new Map(); // siteId → timestamp of last Slack alert
+  /** Pending offline alerts waiting for grace period before sending */
+  private pendingOfflineAlerts: Map<string, { timer: ReturnType<typeof setTimeout>; siteName: string }> = new Map();
 
   constructor() {
     this.webhookUrl = process.env.SLACK_WEBHOOK_URL || null;
@@ -72,6 +78,12 @@ class AlertService {
    */
   enterShutdownMode(): void {
     this.shuttingDown = true;
+    // Cancel all pending offline alerts — server is shutting down, not a real outage
+    for (const [siteId, { timer }] of this.pendingOfflineAlerts) {
+      clearTimeout(timer);
+      logger.debug('Cancelled pending offline alert (shutdown)', { siteId });
+    }
+    this.pendingOfflineAlerts.clear();
     logger.info('AlertService entering shutdown mode — site status alerts suppressed');
   }
 
@@ -203,29 +215,49 @@ class AlertService {
     return this.sendAlert({ title, message, severity: 'critical', ...options });
   }
 
-  // Pre-built alert types (with cooldown to prevent flapping spam)
+  // Pre-built alert types (with cooldown + grace period to prevent flapping spam)
+
+  /**
+   * Schedule a "Site Offline" alert after a grace period.
+   * If the site reconnects within OFFLINE_GRACE_PERIOD_MS (60s), both the
+   * offline and online alerts are suppressed — no Slack noise for Railway
+   * container recycling or brief network blips.
+   */
   async siteOffline(siteId: string, siteName: string): Promise<boolean> {
-    // Suppress during server shutdown (SIGTERM) — all sites disconnect, not a real outage
     if (this.shuttingDown) {
       logger.debug('Skipping siteOffline alert (server shutting down)', { siteId, siteName });
       return false;
     }
-    // Suppress during boot grace period — sites reconnecting after deploy
     if (Date.now() - this.serverStartTime < BOOT_GRACE_PERIOD_MS) {
       logger.debug('Skipping siteOffline alert (boot grace period)', { siteId, siteName });
       return false;
     }
-    if (this.isInCooldown(`offline:${siteId}`)) {
-      logger.debug('Skipping siteOffline alert (cooldown)', { siteId, siteName });
-      return false;
+
+    // Cancel any existing pending alert for this site (prevents duplicates)
+    const existing = this.pendingOfflineAlerts.get(siteId);
+    if (existing) {
+      clearTimeout(existing.timer);
     }
-    return this.sendAlert({
-      title: 'Site Offline',
-      message: `Le site *${siteName}* est passé hors ligne.`,
-      severity: 'error',
-      siteId,
-      siteName
-    });
+
+    // Defer the alert — if the site reconnects within the grace period, it's cancelled
+    const timer = setTimeout(async () => {
+      this.pendingOfflineAlerts.delete(siteId);
+      if (this.isInCooldown(`offline:${siteId}`)) {
+        logger.debug('Skipping siteOffline alert (cooldown)', { siteId, siteName });
+        return;
+      }
+      await this.sendAlert({
+        title: 'Site Offline',
+        message: `Le site *${siteName}* est passé hors ligne.`,
+        severity: 'error',
+        siteId,
+        siteName
+      });
+    }, OFFLINE_GRACE_PERIOD_MS);
+
+    this.pendingOfflineAlerts.set(siteId, { timer, siteName });
+    logger.debug('Offline alert deferred (grace period)', { siteId, siteName, graceMs: OFFLINE_GRACE_PERIOD_MS });
+    return false; // Not sent yet
   }
 
   async siteOnline(siteId: string, siteName: string): Promise<boolean> {
@@ -237,6 +269,17 @@ class AlertService {
       logger.debug('Skipping siteOnline alert (boot grace period)', { siteId, siteName });
       return false;
     }
+
+    // If there's a pending offline alert, cancel it — the site came back quickly.
+    // Suppress BOTH offline and online alerts (brief blip, not worth alerting).
+    const pending = this.pendingOfflineAlerts.get(siteId);
+    if (pending) {
+      clearTimeout(pending.timer);
+      this.pendingOfflineAlerts.delete(siteId);
+      logger.info('Offline alert cancelled — site reconnected within grace period', { siteId, siteName });
+      return false;
+    }
+
     if (this.isInCooldown(`online:${siteId}`)) {
       logger.debug('Skipping siteOnline alert (cooldown)', { siteId, siteName });
       return false;
