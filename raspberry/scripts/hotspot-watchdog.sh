@@ -133,14 +133,30 @@ check_hotspot_ip() {
     fi
 }
 
-# Vérifier que les règles iptables captive portal sont actives
+# Vérifier que les règles captive portal sont actives (iptables ou nftables)
 # Sans ces règles, Android fait son check HTTPS en timeout → bascule sur la 4G
+# Retourne : 0=OK, 1=manquant, 2=outil indisponible (ni iptables ni nft)
 check_captive_portal_iptables() {
-    if iptables -t nat -C PREROUTING -i "$WIFI_INTERFACE" -p tcp --dport 443 -j DNAT --to-destination 192.168.4.1:80 2>/dev/null; then
-        return 0
-    else
-        return 1
+    # Essayer iptables d'abord (Debian ≤12 Bookworm)
+    if command -v iptables &>/dev/null; then
+        if iptables -t nat -C PREROUTING -i "$WIFI_INTERFACE" -p tcp --dport 443 -j DNAT --to-destination 192.168.4.1:80 2>/dev/null; then
+            return 0
+        else
+            return 1
+        fi
     fi
+
+    # Fallback nftables (Debian 13 Trixie — iptables supprimé)
+    if command -v nft &>/dev/null; then
+        if nft list ruleset 2>/dev/null | grep -q "dnat.*192.168.4.1.*:80"; then
+            return 0
+        else
+            return 1
+        fi
+    fi
+
+    # Ni iptables ni nft disponible — ne pas déclencher de recovery pour ça
+    return 2
 }
 
 # Detect brcmfmac firmware crash (Broadcom WiFi chip on wlan0)
@@ -190,8 +206,19 @@ recover_brcmfmac() {
 }
 
 # Check complet de la santé du hotspot
+# Issues critiques (déclenchent la recovery complète) vs warnings (log seulement)
+# Les warnings sont des problèmes non-critiques qui ne justifient pas de restart
+# hostapd/dnsmasq (ex: iptables absent sur Debian 13 Trixie).
+#
+# Résultats écrits dans des variables globales (pas stdout) pour éviter le
+# piège du subshell $(cmd) qui perd les assignations de variables.
+HEALTH_ISSUES=""
+CAPTIVE_PORTAL_WARNING=""
+
 check_hotspot_health() {
     local issues=()
+    HEALTH_ISSUES=""
+    CAPTIVE_PORTAL_WARNING=""
 
     # Check for brcmfmac firmware crash first (takes priority)
     if ! check_brcmfmac; then
@@ -226,14 +253,20 @@ check_hotspot_health() {
         issues+=("avahi-daemon inactif")
     fi
 
-    if ! check_captive_portal_iptables; then
-        issues+=("iptables captive portal manquant")
+    # Captive portal iptables/nftables — warning seulement, pas recovery
+    local iptables_ret
+    check_captive_portal_iptables
+    iptables_ret=$?
+    if [[ $iptables_ret -eq 2 ]]; then
+        CAPTIVE_PORTAL_WARNING="iptables/nft indisponible (Debian 13?) — captive portal Android inactif"
+    elif [[ $iptables_ret -eq 1 ]]; then
+        CAPTIVE_PORTAL_WARNING="captive portal règles manquantes"
     fi
 
     if [[ ${#issues[@]} -eq 0 ]]; then
         return 0
     else
-        echo "${issues[*]}"
+        HEALTH_ISSUES="${issues[*]}"
         return 1
     fi
 }
@@ -338,32 +371,46 @@ attempt_recovery() {
         log_info "Étape 6/7: avahi-daemon déjà actif"
     fi
 
-    # Étape 7: Restaurer les règles iptables captive portal (Android HTTPS)
-    if ! check_captive_portal_iptables; then
-        log_info "Étape 7/7: Restauration iptables captive portal..."
+    # Étape 7: Restaurer les règles captive portal (iptables ou nftables)
+    local iptables_ret
+    check_captive_portal_iptables
+    iptables_ret=$?
+    if [[ $iptables_ret -eq 1 ]]; then
+        log_info "Étape 7/7: Restauration captive portal..."
         local IPTABLES_SCRIPT="/home/pi/neopro/scripts/setup-captive-portal-iptables.sh"
         if [ -x "$IPTABLES_SCRIPT" ]; then
             AP_INTERFACE="$WIFI_INTERFACE" sudo "$IPTABLES_SCRIPT" 2>/dev/null || {
-                log_error "Échec restauration iptables captive portal"
+                log_error "Échec restauration captive portal"
             }
-        else
-            # Fallback inline si le script n'est pas encore déployé
+        elif command -v iptables &>/dev/null; then
             sudo iptables -t nat -A PREROUTING -i "$WIFI_INTERFACE" -p tcp --dport 80 -j DNAT --to-destination 192.168.4.1:80 2>/dev/null || true
             sudo iptables -t nat -A PREROUTING -i "$WIFI_INTERFACE" -p tcp --dport 443 -j DNAT --to-destination 192.168.4.1:80 2>/dev/null || true
             sudo iptables -t nat -A POSTROUTING -s 192.168.4.0/24 -o "$WIFI_INTERFACE" -j MASQUERADE 2>/dev/null || true
             log_info "iptables captive portal restauré (fallback inline)"
+        elif command -v nft &>/dev/null; then
+            sudo nft add table ip neopro_captive 2>/dev/null || true
+            sudo nft add chain ip neopro_captive prerouting '{ type nat hook prerouting priority -100 ; }' 2>/dev/null || true
+            sudo nft add rule ip neopro_captive prerouting iifname "$WIFI_INTERFACE" tcp dport 80 dnat to 192.168.4.1:80 2>/dev/null || true
+            sudo nft add rule ip neopro_captive prerouting iifname "$WIFI_INTERFACE" tcp dport 443 dnat to 192.168.4.1:80 2>/dev/null || true
+            sudo nft add chain ip neopro_captive postrouting '{ type nat hook postrouting priority 100 ; }' 2>/dev/null || true
+            sudo nft add rule ip neopro_captive postrouting ip saddr 192.168.4.0/24 oifname "$WIFI_INTERFACE" masquerade 2>/dev/null || true
+            log_info "nftables captive portal restauré"
+        else
+            log_warn "Étape 7/7: ni iptables ni nft disponible — captive portal Android inactif"
         fi
+    elif [[ $iptables_ret -eq 2 ]]; then
+        log_info "Étape 7/7: iptables/nft indisponible — skip (non-critique)"
     else
-        log_info "Étape 7/7: iptables captive portal déjà actif"
+        log_info "Étape 7/7: captive portal déjà actif"
     fi
 
-    # Vérification finale
-    if issues=$(check_hotspot_health); then
+    # Vérification finale (ignore le warning captive portal — non-critique)
+    if check_hotspot_health; then
         log_success "Hotspot récupéré avec succès"
-        RECOVERY_ATTEMPTS=0  # Reset le compteur après succès
+        RECOVERY_ATTEMPTS=0
         return 0
     else
-        log_error "Récupération échouée, problèmes restants: $issues"
+        log_error "Récupération échouée, problèmes restants: $HEALTH_ISSUES"
         return 1
     fi
 }
@@ -425,11 +472,16 @@ print_status() {
         echo "[✗] IP: 192.168.4.1 NON configurée"
     fi
 
-    # iptables captive portal (Android HTTPS)
-    if check_captive_portal_iptables; then
-        echo "[✓] iptables: captive portal actif (Android HTTPS → nginx)"
+    # Captive portal (iptables ou nftables)
+    local iptables_ret
+    check_captive_portal_iptables
+    iptables_ret=$?
+    if [[ $iptables_ret -eq 0 ]]; then
+        echo "[✓] captive portal: actif (Android HTTPS → nginx)"
+    elif [[ $iptables_ret -eq 2 ]]; then
+        echo "[~] captive portal: iptables/nft indisponible (non-critique)"
     else
-        echo "[✗] iptables: captive portal MANQUANT — Android bascule sur 4G"
+        echo "[✗] captive portal: règles MANQUANTES — Android bascule sur 4G"
     fi
 
     echo ""
@@ -467,11 +519,15 @@ print_status() {
 run_check() {
     rotate_logs
 
-    if issues=$(check_hotspot_health); then
-        # Tout va bien
+    if check_hotspot_health; then
+        # Services critiques OK — log le warning captive portal une seule fois
+        if [[ -n "$CAPTIVE_PORTAL_WARNING" && "${_CAPTIVE_PORTAL_WARNED:-false}" != "true" ]]; then
+            log_warn "Warning (non-critique): $CAPTIVE_PORTAL_WARNING"
+            _CAPTIVE_PORTAL_WARNED=true
+        fi
         return 0
     else
-        log_warn "Problèmes détectés: $issues"
+        log_warn "Problèmes détectés: $HEALTH_ISSUES"
 
         if can_attempt_recovery; then
             attempt_recovery

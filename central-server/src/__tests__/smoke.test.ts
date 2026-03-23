@@ -8987,35 +8987,45 @@ describe('GPU decode monitoring pipeline (v3.99.5)', () => {
 describe('Android captive portal iptables (HTTPS connectivity check fix)', () => {
   const repoRoot = path.resolve(__dirname, '..', '..', '..');
 
-  // Guard 1: Dedicated iptables setup script must exist with HTTPS redirect
+  // Guard 1: Dedicated iptables/nftables setup script must exist with HTTPS redirect
   it('setup-captive-portal-iptables.sh must exist with HTTPS redirect rule', () => {
     const scriptPath = path.join(repoRoot, 'raspberry/scripts/setup-captive-portal-iptables.sh');
     const content = fs.readFileSync(scriptPath, 'utf8');
     expect({
-      hasPort443Rule: /--dport\s+443.*DNAT/.test(content),
-      hasPort80Rule: /--dport\s+80.*DNAT/.test(content),
+      hasPort443Rule: /dport\s+443/.test(content),
+      hasPort80Rule: /dport\s+80/.test(content),
       hasHotspotIP: /HOTSPOT_IP=["']?192\.168\.4\.1/.test(content),
       hasNginxPort: /NGINX_PORT=["']?80/.test(content),
-      hasCleanup: /cleanup_existing_rules/.test(content),
+      hasIptablesCleanup: /iptables_cleanup/.test(content),
+      hasNftablesCleanup: /nftables_cleanup/.test(content),
+      hasBackendDetection: /FIREWALL_BACKEND/.test(content),
     }).toEqual({
       hasPort443Rule: true,
       hasPort80Rule: true,
       hasHotspotIP: true,
       hasNginxPort: true,
-      hasCleanup: true,
+      hasIptablesCleanup: true,
+      hasNftablesCleanup: true,
+      hasBackendDetection: true,
     });
   });
 
-  // Guard 2: Script must be idempotent (cleanup before install)
+  // Guard 2: Script must be idempotent (cleanup before install for both backends)
   it('setup-captive-portal-iptables.sh must cleanup before installing (idempotent)', () => {
     const scriptPath = path.join(repoRoot, 'raspberry/scripts/setup-captive-portal-iptables.sh');
     const content = fs.readFileSync(scriptPath, 'utf8');
-    const cleanupPos = content.indexOf('cleanup_existing_rules');
-    const installPos = content.indexOf('install_rules');
+    // iptables backend: cleanup before install
+    const iptCleanupPos = content.indexOf('iptables_cleanup');
+    const iptInstallPos = content.indexOf('iptables_install');
+    // nftables backend: cleanup before install
+    const nftCleanupPos = content.indexOf('nftables_cleanup');
+    const nftInstallPos = content.indexOf('nftables_install');
     expect({
-      cleanupBeforeInstall: cleanupPos > 0 && installPos > 0 && cleanupPos < installPos,
+      iptablesCleanupBeforeInstall: iptCleanupPos > 0 && iptInstallPos > 0 && iptCleanupPos < iptInstallPos,
+      nftablesCleanupBeforeInstall: nftCleanupPos > 0 && nftInstallPos > 0 && nftCleanupPos < nftInstallPos,
     }).toEqual({
-      cleanupBeforeInstall: true,
+      iptablesCleanupBeforeInstall: true,
+      nftablesCleanupBeforeInstall: true,
     });
   });
 
@@ -9029,23 +9039,48 @@ describe('Android captive portal iptables (HTTPS connectivity check fix)', () =>
     });
   });
 
-  // Guard 4: hotspot-watchdog must check iptables health
-  it('hotspot-watchdog.sh must check captive portal iptables in health check', () => {
+  // Guard 4: hotspot-watchdog must check iptables/nftables health with command detection
+  it('hotspot-watchdog.sh must check captive portal with iptables/nftables support', () => {
     const watchdog = fs.readFileSync(
       path.join(repoRoot, 'raspberry/scripts/hotspot-watchdog.sh'),
       'utf8'
     );
     expect({
       hasIptablesCheck: /check_captive_portal_iptables/.test(watchdog),
-      checksPort443: /--dport\s+443/.test(watchdog),
+      checksPort443: /dport\s+443/.test(watchdog),
+      detectsIptablesAvailability: /command -v iptables/.test(watchdog),
+      detectsNftAvailability: /command -v nft/.test(watchdog),
     }).toEqual({
       hasIptablesCheck: true,
       checksPort443: true,
+      detectsIptablesAvailability: true,
+      detectsNftAvailability: true,
     });
   });
 
-  // Guard 5: hotspot-watchdog must recover iptables in attempt_recovery
-  it('hotspot-watchdog.sh must restore iptables in recovery sequence', () => {
+  // Guard 4b: CRITICAL — captive portal must NOT be in critical issues that trigger recovery
+  // On Debian 13 Trixie, iptables is removed → check always fails → if treated as critical,
+  // hostapd+dnsmasq restart every 30s in an infinite loop (8h+ outage observed 2026-03-23).
+  // Captive portal must be a WARNING only, stored in CAPTIVE_PORTAL_WARNING, not in HEALTH_ISSUES.
+  it('hotspot-watchdog.sh must NOT include captive portal in critical health issues', () => {
+    const watchdog = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/scripts/hotspot-watchdog.sh'),
+      'utf8'
+    );
+    // The captive portal result must go to CAPTIVE_PORTAL_WARNING, not issues[]
+    expect({
+      hasCaptivePortalWarningVar: /CAPTIVE_PORTAL_WARNING/.test(watchdog),
+      hasHealthIssuesVar: /HEALTH_ISSUES/.test(watchdog),
+      captivePortalNotInIssuesArray: !/issues\+=\(.*iptables.*captive/.test(watchdog),
+    }).toEqual({
+      hasCaptivePortalWarningVar: true,
+      hasHealthIssuesVar: true,
+      captivePortalNotInIssuesArray: true,
+    });
+  });
+
+  // Guard 5: hotspot-watchdog must recover iptables/nftables in attempt_recovery
+  it('hotspot-watchdog.sh must restore captive portal in recovery sequence (iptables or nftables)', () => {
     const watchdog = fs.readFileSync(
       path.join(repoRoot, 'raspberry/scripts/hotspot-watchdog.sh'),
       'utf8'
@@ -9053,8 +9088,10 @@ describe('Android captive portal iptables (HTTPS connectivity check fix)', () =>
     expect({
       recoversIptables: /setup-captive-portal-iptables/.test(watchdog) ||
         /iptables.*443.*DNAT/.test(watchdog),
+      recoversNftables: /nft add/.test(watchdog),
     }).toEqual({
       recoversIptables: true,
+      recoversNftables: true,
     });
   });
 

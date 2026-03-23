@@ -27,77 +27,93 @@ NGINX_PORT="80"
 # Couleurs (optionnel — silencieux si appelé depuis un autre script)
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
+RED='\033[0;31m'
 NC='\033[0m'
 
 log_ok()   { echo -e "${GREEN}[✓]${NC} $1" 2>/dev/null || echo "[✓] $1"; }
 log_info() { echo -e "${YELLOW}[i]${NC} $1" 2>/dev/null || echo "[i] $1"; }
+log_err()  { echo -e "${RED}[✗]${NC} $1" 2>/dev/null || echo "[✗] $1"; }
 
 # =============================================================================
-# Nettoyage des anciennes règles (idempotence)
+# Détection du backend firewall (iptables ou nftables)
+# Debian ≤12 Bookworm → iptables disponible
+# Debian 13 Trixie   → iptables supprimé, nftables uniquement
 # =============================================================================
 
-cleanup_existing_rules() {
-    # Supprimer les règles PREROUTING existantes pour wlan0 port 80/443
+FIREWALL_BACKEND=""
+if command -v iptables &>/dev/null; then
+    FIREWALL_BACKEND="iptables"
+elif command -v nft &>/dev/null; then
+    FIREWALL_BACKEND="nftables"
+else
+    log_err "Ni iptables ni nft disponible — captive portal Android impossible"
+    exit 1
+fi
+
+NFT_TABLE="neopro_captive"
+
+# =============================================================================
+# iptables backend
+# =============================================================================
+
+iptables_cleanup() {
     while iptables -t nat -D PREROUTING -i "$AP_INTERFACE" -p tcp --dport 80 -j DNAT --to-destination "${HOTSPOT_IP}:${NGINX_PORT}" 2>/dev/null; do :; done
     while iptables -t nat -D PREROUTING -i "$AP_INTERFACE" -p tcp --dport 443 -j DNAT --to-destination "${HOTSPOT_IP}:${NGINX_PORT}" 2>/dev/null; do :; done
-
-    # Supprimer les règles POSTROUTING MASQUERADE pour le subnet hotspot
     while iptables -t nat -D POSTROUTING -s 192.168.4.0/24 -o "$AP_INTERFACE" -j MASQUERADE 2>/dev/null; do :; done
 }
 
-# =============================================================================
-# Installation des règles
-# =============================================================================
-
-install_rules() {
-    # Rediriger HTTP (port 80) des clients hotspot vers nginx local
-    # Intercepte les connectivity checks Android/iOS/Windows en HTTP
+iptables_install() {
     iptables -t nat -A PREROUTING -i "$AP_INTERFACE" -p tcp --dport 80 -j DNAT --to-destination "${HOTSPOT_IP}:${NGINX_PORT}"
-
-    # Rediriger HTTPS (port 443) des clients hotspot vers nginx local port 80
-    # C'est LA règle critique : Android fait ses checks en HTTPS depuis ~Android 10.
-    # Sans cette règle, le check HTTPS timeout → Android bascule sur la 4G.
-    # Avec cette règle, nginx répond en HTTP sur le port 443 → Android détecte
-    # un captive portal et propose "Se connecter au réseau".
     iptables -t nat -A PREROUTING -i "$AP_INTERFACE" -p tcp --dport 443 -j DNAT --to-destination "${HOTSPOT_IP}:${NGINX_PORT}"
-
-    # MASQUERADE pour les paquets du subnet hotspot
-    # Nécessaire pour que les réponses reviennent correctement aux clients
     iptables -t nat -A POSTROUTING -s 192.168.4.0/24 -o "$AP_INTERFACE" -j MASQUERADE
 }
 
+iptables_verify() {
+    iptables -t nat -C PREROUTING -i "$AP_INTERFACE" -p tcp --dport 80 -j DNAT --to-destination "${HOTSPOT_IP}:${NGINX_PORT}" 2>/dev/null &&
+    iptables -t nat -C PREROUTING -i "$AP_INTERFACE" -p tcp --dport 443 -j DNAT --to-destination "${HOTSPOT_IP}:${NGINX_PORT}" 2>/dev/null
+}
+
 # =============================================================================
-# Vérification
+# nftables backend (Debian 13 Trixie)
 # =============================================================================
 
-verify_rules() {
-    local ok=true
+nftables_cleanup() {
+    nft delete table ip "$NFT_TABLE" 2>/dev/null || true
+}
 
-    if ! iptables -t nat -C PREROUTING -i "$AP_INTERFACE" -p tcp --dport 80 -j DNAT --to-destination "${HOTSPOT_IP}:${NGINX_PORT}" 2>/dev/null; then
-        ok=false
-    fi
+nftables_install() {
+    nft add table ip "$NFT_TABLE"
+    nft add chain ip "$NFT_TABLE" prerouting '{ type nat hook prerouting priority -100 ; }'
+    nft add rule ip "$NFT_TABLE" prerouting iifname "$AP_INTERFACE" tcp dport 80 dnat to "${HOTSPOT_IP}:${NGINX_PORT}"
+    nft add rule ip "$NFT_TABLE" prerouting iifname "$AP_INTERFACE" tcp dport 443 dnat to "${HOTSPOT_IP}:${NGINX_PORT}"
+    nft add chain ip "$NFT_TABLE" postrouting '{ type nat hook postrouting priority 100 ; }'
+    nft add rule ip "$NFT_TABLE" postrouting ip saddr 192.168.4.0/24 oifname "$AP_INTERFACE" masquerade
+}
 
-    if ! iptables -t nat -C PREROUTING -i "$AP_INTERFACE" -p tcp --dport 443 -j DNAT --to-destination "${HOTSPOT_IP}:${NGINX_PORT}" 2>/dev/null; then
-        ok=false
-    fi
-
-    if [ "$ok" = true ]; then
-        return 0
-    else
-        return 1
-    fi
+nftables_verify() {
+    nft list ruleset 2>/dev/null | grep -q "dnat.*${HOTSPOT_IP}.*:${NGINX_PORT}"
 }
 
 # =============================================================================
 # Main
 # =============================================================================
 
-cleanup_existing_rules
-install_rules
-
-if verify_rules; then
-    log_ok "Captive portal iptables actif (HTTP+HTTPS → nginx sur ${AP_INTERFACE})"
+if [[ "$FIREWALL_BACKEND" == "iptables" ]]; then
+    iptables_cleanup
+    iptables_install
+    if iptables_verify; then
+        log_ok "Captive portal iptables actif (HTTP+HTTPS → nginx sur ${AP_INTERFACE})"
+    else
+        log_err "Erreur lors de l'installation des règles iptables"
+        exit 1
+    fi
 else
-    log_info "Erreur lors de l'installation des règles iptables"
-    exit 1
+    nftables_cleanup
+    nftables_install
+    if nftables_verify; then
+        log_ok "Captive portal nftables actif (HTTP+HTTPS → nginx sur ${AP_INTERFACE})"
+    else
+        log_err "Erreur lors de l'installation des règles nftables"
+        exit 1
+    fi
 fi

@@ -29,15 +29,16 @@
 25. [Ventilateur Active Cooler Pi 5 non détecté (v3.104.3+)](#ventilateur-active-cooler-pi-5-non-détecté-v31043)
 26. [Kiosk pas en plein écran sur HDMI-1 (v3.111.1+)](#kiosk-pas-en-plein-écran-sur-hdmi-1-v31111)
 27. [Vidéo gelée/lag sur navigateur PC (v3.114+)](#vidéo-geléelag-sur-navigateur-pc-v3114)
-28. [Vidéos de boucle "introuvables" après reconnexion site hors ligne (v3.115.2+)](#vidéos-de-boucle-introuvables-après-reconnexion-site-hors-ligne-v31152)
-29. [Échec validation post-OTA (v3.116+)](#échec-validation-post-ota-v3116)
-30. [Alerte canary post-OTA (v3.116+)](#alerte-canary-post-ota-v3116)
-31. [Bgscan reconfigure loop — déconnexions WiFi auto-infligées (v3.116.25+)](#bgscan-reconfigure-loop--déconnexions-wifi-auto-infligées-v311625)
-32. [OTA bloquée à 5% sur WiFi mesh (v3.116.24+)](#ota-bloquée-à-5-sur-wifi-mesh-v311624)
-33. [Hotspot channel flapping au boot (v3.116.26+)](#hotspot-channel-flapping-au-boot-v311626)
-34. [Hotspot recovery disproportionnée — restart complet pour IP manquante (v3.116.26+)](#hotspot-recovery-disproportionnée--restart-complet-pour-ip-manquante-v311626)
-35. [Déploiement OTA "Échoué" sans message d'erreur (v3.116.28+)](#déploiement-ota-échoué-sans-message-derreur-v311628)
-36. [Post-OTA validation failed: ECONNREFUSED ::1 (v3.116.28+)](#post-ota-validation-failed-econnrefused-1-v311628)
+28. [Hotspot-watchdog restart loop sur Debian 13 Trixie (v3.116.33+)](#hotspot-watchdog-restart-loop-sur-debian-13-trixie-v311633)
+29. [Vidéos de boucle "introuvables" après reconnexion site hors ligne (v3.115.2+)](#vidéos-de-boucle-introuvables-après-reconnexion-site-hors-ligne-v31152)
+30. [Échec validation post-OTA (v3.116+)](#échec-validation-post-ota-v3116)
+31. [Alerte canary post-OTA (v3.116+)](#alerte-canary-post-ota-v3116)
+32. [Bgscan reconfigure loop — déconnexions WiFi auto-infligées (v3.116.25+)](#bgscan-reconfigure-loop--déconnexions-wifi-auto-infligées-v311625)
+33. [OTA bloquée à 5% sur WiFi mesh (v3.116.24+)](#ota-bloquée-à-5-sur-wifi-mesh-v311624)
+34. [Hotspot channel flapping au boot (v3.116.26+)](#hotspot-channel-flapping-au-boot-v311626)
+35. [Hotspot recovery disproportionnée — restart complet pour IP manquante (v3.116.26+)](#hotspot-recovery-disproportionnée--restart-complet-pour-ip-manquante-v311626)
+36. [Déploiement OTA "Échoué" sans message d'erreur (v3.116.28+)](#déploiement-ota-échoué-sans-message-derreur-v311628)
+37. [Post-OTA validation failed: ECONNREFUSED ::1 (v3.116.28+)](#post-ota-validation-failed-econnrefused-1-v311628)
 
 > **WiFi USB** : Pour un guide complet sur la clé WiFi USB (installation, diagnostic, pannes, recovery), voir [WIFI_USB_GUIDE.md](WIFI_USB_GUIDE.md).
 >
@@ -6082,4 +6083,52 @@ ss -tlnp | grep 8080
 
 ---
 
-**Dernière mise à jour :** 23 mars 2026 (dual-stack server binding, bootstrapping cache-bust OTA validator, ECONNREFUSED IPv6, déploiement OTA sans message d'erreur, bgscan reconfigure loop, OTA stall detection, hotspot channel flapping, hotspot recovery proportionnelle — v3.116.22-31)
+## Hotspot-watchdog restart loop sur Debian 13 Trixie (v3.116.33+)
+
+### Symptôme
+
+`hostapd` et `dnsmasq` redémarrés toutes les ~40 secondes en groupes de 3, avec un cooldown de 5 minutes entre chaque cycle. Le Pi fonctionne normalement (WiFi, internet) mais le hotspot est perturbé par les restarts constants.
+
+### Cause racine
+
+Debian 13 (Trixie) a **supprimé `iptables`** du système de base — tout est migré vers `nftables`. Le `neopro-hotspot-watchdog` exécutait `iptables -t nat -C PREROUTING ...` pour vérifier le captive portal Android. Sur Trixie, `iptables: command not found` (exit 127) était interprété comme "captive portal manquant" → recovery complète déclenchée (rfkill unblock → restart hostapd → restart dnsmasq) toutes les 30s.
+
+### Diagnostic
+
+```bash
+# Vérifier si iptables est disponible
+which iptables 2>/dev/null || echo "iptables absent"
+
+# Vérifier la version Debian
+cat /etc/debian_version
+# Si ≥13.x → Debian Trixie, iptables absent par défaut
+
+# Vérifier les restarts hostapd récents
+journalctl --since "1 hour ago" | grep "restart hostapd" | wc -l
+# Si >10 → boucle de restart confirmée
+
+# Vérifier les logs du watchdog
+tail -30 /var/log/neopro-hotspot-watchdog.log
+# Chercher "iptables captive portal manquant" en boucle
+```
+
+### Solution (v3.116.33+)
+
+Le fix est intégré dans le code :
+
+1. **`check_captive_portal_iptables()`** : détecte automatiquement `iptables` (Debian ≤12) ou `nft` (Debian 13+), retourne code 2 si aucun n'est disponible
+2. **Le captive portal est un warning** (logué une seule fois), pas un trigger de recovery — seuls les services critiques déclenchent la recovery complète
+3. **`setup-captive-portal-iptables.sh`** : support dual backend (iptables + nftables natif)
+
+Pour un Pi déjà affecté, déployer les scripts mis à jour et redémarrer le watchdog :
+
+```bash
+sudo systemctl restart neopro-hotspot-watchdog
+# Vérifier que la boucle a cessé
+sleep 60 && journalctl --since "1 minute ago" | grep -c "restart hostapd"
+# Doit retourner 0
+```
+
+---
+
+**Dernière mise à jour :** 23 mars 2026 (hotspot-watchdog nftables Debian 13, dual-stack server binding, bootstrapping cache-bust OTA validator, ECONNREFUSED IPv6, déploiement OTA sans message d'erreur, bgscan reconfigure loop, OTA stall detection, hotspot channel flapping, hotspot recovery proportionnelle — v3.116.22-33)

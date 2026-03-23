@@ -185,6 +185,8 @@ source central-server/.env && psql "$DATABASE_URL" -f central-server/src/scripts
 - Supprimer l'auto-fail des déploiements OTA bloqués >2h dans `checkStuckDeployments()` de alerting.service.ts (sans auto-fail, les déploiements où le Pi ne répond jamais restent en `in_progress` indéfiniment → l'opérateur ne sait pas qu'il faut relancer — smoke test enforced)
 - Supprimer `getDeploymentDuration()` / `getDeploymentElapsed()` / le bloc `.deployment-summary` de updates-management.component.ts (seul feedback visuel de la durée d'un déploiement réussi ou en cours — sans lui, l'opérateur n'a aucune visibilité sur ce qui s'est passé — smoke test enforced)
 - Utiliser `http://localhost` au lieu de `http://127.0.0.1` dans les connexions HTTP locales du sync-agent (`validate-post-update.js`, `local-socket.js`, `update-software.js`) — sur Debian 12+ Bookworm, `localhost` résout en `::1` (IPv6) mais Express écoute sur `0.0.0.0` (IPv4 only) → ECONNREFUSED → validation post-OTA échoue → rollback inutile — smoke test enforced)
+- Inclure le check captive portal iptables/nftables dans les issues critiques de `check_hotspot_health()` du hotspot-watchdog (le captive portal est un WARNING non-critique — l'absence d'iptables/nft ne doit JAMAIS déclencher la recovery complète rfkill+hostapd+dnsmasq — sur Debian 13 Trixie, iptables est supprimé → boucle de restart toutes les 30s pendant des heures — smoke test enforced)
+- Utiliser `iptables` sans vérifier `command -v iptables` dans les scripts Pi (Debian 13 Trixie a supprimé iptables du système de base — toujours vérifier la disponibilité et fallback sur `nft` — smoke test enforced)
 
 ## Architecture détaillée
 

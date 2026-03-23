@@ -1,3 +1,22 @@
+## [3.116.33] (2026-03-23)
+
+### Bug Fixes
+
+- **hotspot:** fix hotspot-watchdog restart loop on Debian 13 Trixie — `iptables` removed from base system, causing `check_captive_portal_iptables()` to always fail (command not found) → full recovery (hostapd+dnsmasq restart) triggered every 30s for 8h+ on affected Pi
+- **hotspot:** captive portal check is now a warning, not a recovery trigger — only critical services (hostapd, dnsmasq, rfkill, nginx, avahi) trigger the full restart sequence
+- **hotspot:** add nftables backend support for captive portal (Debian 13 Trixie compatibility) — auto-detect iptables vs nft, fallback gracefully if neither available
+
+### Tests
+
+- **smoke:** adapt captive portal guards for dual iptables/nftables backend (cleanup/install idempotence verified for both)
+- **smoke:** add regression guard preventing non-critical issues from triggering hostapd/dnsmasq restart
+
+### Docs
+
+- **troubleshooting:** add Debian 13 Trixie captive portal section (iptables→nftables migration, hotspot-watchdog restart loop diagnostic)
+- **changelog:** document hotspot-watchdog nftables fix
+- **claude.md:** add rule preventing captive portal check from triggering full hotspot recovery
+
 ## [3.116.32](https://github.com/Tallec7/neopro/compare/v3.116.31...v3.116.32) (2026-03-23)
 
 ### Bug Fixes
