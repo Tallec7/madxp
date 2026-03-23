@@ -121,11 +121,15 @@ async function scanWifiNetworks() {
     // Small delay for interface to be ready
     await new Promise((resolve) => setTimeout(resolve, 1000));
 
-    // Run the scan
+    // Run the scan and update inter-process cache
+    // (protects subsequent consumers from triggering a second scan within 120s)
     const { stdout: scanOutput } = await execAsync(
       'sudo iwlist wlan1 scan 2>/dev/null',
       { timeout: 20000 }
     );
+    const fse = require('fs-extra');
+    await fse.writeFile('/tmp/neopro-wlan1-scan-cache', scanOutput).catch(() => {});
+    await fse.writeFile('/tmp/neopro-wlan1-scan-ts', String(Date.now())).catch(() => {});
 
     // Parse results
     const networks = parseWifiScanResults(scanOutput);

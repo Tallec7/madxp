@@ -69,9 +69,39 @@ async function getWifiBssidStatus() {
     }
 
     // Scan for mesh detection (count APs with same SSID)
+    // IMPORTANT: Use inter-process scan cache to avoid a second iwlist wlan1 scan
+    // within 120s. RTL8192EU is single-radio: 2 scans in <120s kills the carrier
+    // and causes auth timeout → WiFi drop (incident 2026-03-23 22:32).
     if (result.ssid) {
       try {
-        const { stdout: scanOutput } = await execAsync('sudo iwlist wlan1 scan 2>/dev/null');
+        const SCAN_CACHE_PATH = '/tmp/neopro-wlan1-scan-cache';
+        const SCAN_TS_PATH = '/tmp/neopro-wlan1-scan-ts';
+        const SCAN_CACHE_MAX_AGE_S = 120;
+
+        let scanOutput = '';
+        let usedCache = false;
+
+        // Check cache first
+        try {
+          const tsStr = await fs.readFile(SCAN_TS_PATH, 'utf8');
+          const ageS = (Date.now() - parseInt(tsStr, 10)) / 1000;
+          if (ageS < SCAN_CACHE_MAX_AGE_S) {
+            scanOutput = await fs.readFile(SCAN_CACHE_PATH, 'utf8');
+            usedCache = true;
+            logger.info('wifi-bssid: reusing scan cache for mesh detection', { ageSeconds: Math.round(ageS) });
+          }
+        } catch {
+          // No cache — will scan
+        }
+
+        if (!usedCache) {
+          const { stdout } = await execAsync('sudo iwlist wlan1 scan 2>/dev/null');
+          scanOutput = stdout;
+          // Write cache for other consumers
+          await fs.writeFile(SCAN_CACHE_PATH, scanOutput).catch(() => {});
+          await fs.writeFile(SCAN_TS_PATH, String(Date.now())).catch(() => {});
+        }
+
         const ssidRegex = new RegExp(`ESSID:"${result.ssid.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"`, 'g');
         const matches = scanOutput.match(ssidRegex);
         result.meshApCount = matches ? matches.length : 1;

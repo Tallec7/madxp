@@ -5933,6 +5933,30 @@ describe('Inter-process wlan1 scan coordination guard', () => {
   });
 });
 
+// Guard 5: wifi-bssid.js must use scan cache, not direct iwlist wlan1 scan
+// Incident 2026-03-23 22:32: debug-bundle called getWifiBssidStatus() which did
+// a direct iwlist wlan1 scan 2min after networkDetector scan → RTL8192EU auth
+// timeout → WiFi drop → 5min outage.
+describe('wifi-bssid.js must use scan cache for mesh detection', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+
+  it('getWifiBssidStatus must check scan cache before iwlist wlan1 scan', () => {
+    const wifiBssid = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/sync-agent/src/commands/wifi-bssid.js'),
+      'utf8'
+    );
+    expect({
+      readsScanCache: /neopro-wlan1-scan-cache/.test(wifiBssid),
+      readsScanTs: /neopro-wlan1-scan-ts/.test(wifiBssid),
+      hasCacheMaxAge: /SCAN_CACHE_MAX_AGE_S/.test(wifiBssid),
+    }).toEqual({
+      readsScanCache: true,
+      readsScanTs: true,
+      hasCacheMaxAge: true,
+    });
+  });
+});
+
 // ----------------------------------------------------------
 // Bash grep -c || echo antipattern guard
 // ----------------------------------------------------------
