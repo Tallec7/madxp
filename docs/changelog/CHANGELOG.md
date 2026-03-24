@@ -1,3 +1,9 @@
+# [3.118.0](https://github.com/Tallec7/neopro/compare/v3.117.2...v3.118.0) (2026-03-24)
+
+### Features
+
+- **network:** background wlan1 reconnect when Ethernet is active ([8d799a4](https://github.com/Tallec7/neopro/commit/8d799a4a49450117ce6f6cf2c40556cf67f6256d))
+
 ## [3.117.2](https://github.com/Tallec7/neopro/compare/v3.117.1...v3.117.2) (2026-03-23)
 
 ### Bug Fixes
