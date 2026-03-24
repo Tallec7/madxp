@@ -92,6 +92,7 @@ const MIN_OUTAGE_FOR_USB_CYCLE_DEFAULT = 5 * 60 * 1000;
 const MIN_OUTAGE_FOR_USB_CYCLE_MESH = 10 * 60 * 1000;
 const GRACE_PERIOD_FILE = '/tmp/neopro-watchdog-grace.json'; // Persists across process restarts
 const BSSID_MISMATCH_THRESHOLD = 5 * 60 * 1000; // 5 min mismatch before auto-clearing lock
+const WLAN1_RECONNECT_INTERVAL = 5 * 60 * 1000; // 5 min between wlan1 reconnect attempts when on Ethernet
 
 // Interfaces
 const HOTSPOT_INTERFACE = 'wlan0';
@@ -141,6 +142,7 @@ let hotspotInterval = null;
 let internetInterval = null;
 let cloudInterval = null;
 let rollbackTimeout = null;
+let wlan1ReconnectInterval = null;
 
 // Référence au socket (injectée par l'agent)
 let socketRef = null;
@@ -1200,6 +1202,72 @@ async function checkBssidMismatch() {
 }
 
 /**
+ * Background wlan1 reconnection when Ethernet is active.
+ * When the Pi falls back to Ethernet, wlan1 stays disassociated indefinitely
+ * because the internet watchdog sees "healthy" via eth0 and skips WiFi recovery.
+ * This loop gently tries to bring wlan1 back so the Pi can survive if Ethernet
+ * is unplugged later (e.g. temporary debug cable).
+ */
+async function wlan1ReconnectLoop() {
+  try {
+    // Check if wlan1 already has a valid IP — if so, stop trying
+    const wlan1Ip = await getInternetIp();
+    if (wlan1Ip) {
+      logger.info('NetworkWatchdog: wlan1 reconnected in background', { ip: wlan1Ip });
+      stopWlan1Reconnect();
+      return;
+    }
+
+    // Check if Ethernet is still active — if not, the main watchdog handles it
+    const ethernet = await checkEthernetConnection();
+    if (!ethernet.connected) {
+      logger.info('NetworkWatchdog: Ethernet lost, stopping wlan1 background reconnect (main watchdog takes over)');
+      stopWlan1Reconnect();
+      return;
+    }
+
+    // Gentle reconnect: wpa_cli reconfigure + DHCP (no modprobe, no USB cycle)
+    logger.info('NetworkWatchdog: Background wlan1 reconnect attempt (Ethernet active)');
+
+    await execAsync('sudo wpa_cli -i wlan1 reconfigure 2>/dev/null').catch(() => {});
+    // Wait 5s for WPA handshake
+    await new Promise(resolve => setTimeout(resolve, 5000));
+
+    // Try DHCP
+    await execAsync('sudo dhclient wlan1 -timeout 8 2>/dev/null || sudo dhcpcd -n wlan1 2>/dev/null').catch(() => {});
+    // Wait 3s for IP
+    await new Promise(resolve => setTimeout(resolve, 3000));
+
+    const newIp = await getInternetIp();
+    if (newIp) {
+      logger.info('NetworkWatchdog: wlan1 reconnected via background loop', { ip: newIp });
+      await execAsync('sudo iwconfig wlan1 power off 2>/dev/null || true').catch(() => {});
+      stopWlan1Reconnect();
+    } else {
+      logger.info('NetworkWatchdog: wlan1 still disconnected, will retry in 5min');
+    }
+  } catch (error) {
+    logger.error('NetworkWatchdog: wlan1 background reconnect error', { error: error.message });
+  }
+}
+
+function startWlan1Reconnect() {
+  if (wlan1ReconnectInterval) return; // Already running
+  logger.info('NetworkWatchdog: Starting background wlan1 reconnect loop', {
+    intervalMs: WLAN1_RECONNECT_INTERVAL,
+  });
+  // First attempt after 30s (not immediately — let things settle)
+  setTimeout(() => wlan1ReconnectLoop(), 30 * 1000);
+  wlan1ReconnectInterval = setInterval(wlan1ReconnectLoop, WLAN1_RECONNECT_INTERVAL);
+}
+
+function stopWlan1Reconnect() {
+  if (!wlan1ReconnectInterval) return;
+  clearInterval(wlan1ReconnectInterval);
+  wlan1ReconnectInterval = null;
+}
+
+/**
  * Boucle de surveillance internet
  */
 async function internetWatchLoop() {
@@ -1256,6 +1324,14 @@ async function internetWatchLoop() {
     // Check for BSSID lock mismatch when healthy and on WiFi
     if (health.healthy && health.connectionType === 'wifi') {
       await checkBssidMismatch();
+      // WiFi is working — stop background reconnect if running
+      stopWlan1Reconnect();
+    }
+
+    // When healthy via Ethernet, start background wlan1 reconnect
+    // so the Pi can survive if the Ethernet cable is unplugged later
+    if (health.healthy && health.connectionType === 'ethernet') {
+      startWlan1Reconnect();
     }
 
     if (!health.healthy) {
@@ -1437,6 +1513,8 @@ function stop() {
     clearTimeout(rollbackTimeout);
     rollbackTimeout = null;
   }
+
+  stopWlan1Reconnect();
 }
 
 /**

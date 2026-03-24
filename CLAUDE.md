@@ -71,6 +71,8 @@ source central-server/.env && psql "$DATABASE_URL" -f central-server/src/scripts
 - Lancer `nginx -t` sans `sudo` dans les scripts de diagnostic (Permission denied sur PID = faux positif — smoke test enforced)
 - Supprimer le boot grace period du NetworkWatchdog `start()` (wlan1 RTL8192EU met 15-30s pour WPA auth + DHCP — sans grace period, fausse recovery cascade dès le boot — smoke test enforced)
 - Faire un `require('./network-watchdog')` au niveau module dans `safe-network-operations.js` (dépendance circulaire CommonJS → objet vide → `enableGracePeriod` undefined — utiliser lazy require — smoke test enforced)
+- Supprimer `startWlan1Reconnect()` / `wlan1ReconnectLoop()` du NetworkWatchdog (quand le Pi bascule sur Ethernet, wlan1 reste déconnecté indéfiniment — sans reconnexion en arrière-plan, débrancher l'Ethernet = perte totale de connectivité — smoke test enforced)
+- Utiliser `iwlist wlan1 scan` dans `wlan1ReconnectLoop()` (le reconnect utilise `wpa_cli reconfigure` + `dhclient` qui sont safe — un `iwlist scan` tuerait le carrier RTL8192EU — smoke test enforced)
 - Lancer `autoOptimize` / `iwlist scan` avant 60s après le boot (déstabilise le RTL8192EU pendant le handshake WPA — smoke test enforced)
 - Faire plusieurs `iwlist scan` sur wlan1 dans hotspot-optimizer.sh (RTL8192EU single-radio : chaque scan coupe le carrier ~6s → utiliser un scan unique + `CACHED_SCAN` — smoke test enforced)
 - Lancer `iwlist wlan1 scan` dans `networkDetector.scanWifiNetworks()` sans vérifier le cache inter-processus `/tmp/neopro-wlan1-scan-cache` (hotspot-optimizer écrit le cache au boot — 2 scans wlan1 en <120s tue le carrier RTL8192EU — smoke test enforced)

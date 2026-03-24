@@ -8938,6 +8938,34 @@ describe('WiFi recovery progressive back-off & mesh guards (v3.99.4)', () => {
       hasRecoveryAttempts: /recoveryAttempts/.test(statusFn![0]),
     }).toEqual({ hasRecoveryAttempts: true });
   });
+
+  // Guard 12: Background wlan1 reconnect when Ethernet is active
+  // When Pi falls back to Ethernet, wlan1 stays disassociated indefinitely.
+  // Without background reconnect, unplugging Ethernet = total loss of connectivity.
+  it('network-watchdog must have background wlan1 reconnect when on Ethernet', () => {
+    expect({
+      hasWlan1Reconnect: /wlan1ReconnectLoop/.test(watchdogContent),
+      hasStartWlan1Reconnect: /startWlan1Reconnect/.test(watchdogContent),
+      hasStopWlan1Reconnect: /stopWlan1Reconnect/.test(watchdogContent),
+      triggeredOnEthernet: /connectionType.*===.*'ethernet'[\s\S]*?startWlan1Reconnect/.test(watchdogContent),
+    }).toEqual({
+      hasWlan1Reconnect: true,
+      hasStartWlan1Reconnect: true,
+      hasStopWlan1Reconnect: true,
+      triggeredOnEthernet: true,
+    });
+  });
+
+  // Guard 13: wlan1 reconnect must NOT use iwlist scan (kills RTL8192EU carrier)
+  it('wlan1ReconnectLoop must not use iwlist scan', () => {
+    const reconnectFn = watchdogContent.match(
+      /async function wlan1ReconnectLoop\(\)\s*\{[\s\S]*?^}/m
+    );
+    expect(reconnectFn).not.toBeNull();
+    expect({
+      usesIwlistScan: /iwlist.*scan/.test(reconnectFn![0]),
+    }).toEqual({ usesIwlistScan: false });
+  });
 });
 
 // ----------------------------------------------------------
