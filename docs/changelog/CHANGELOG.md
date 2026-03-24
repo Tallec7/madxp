@@ -2,7 +2,19 @@
 
 ### Bug Fixes
 
-- **socket:** prevent false offline alerts on rapid reconnection ([68a8fec](https://github.com/Tallec7/neopro/commit/68a8fecb170fcc82785d7d6bfb306ab24f224129))
+- **socket:** prevent false offline alerts on rapid reconnection ([68a8fec](https://github.com/Tallec7/neopro/commit/68a8fecb170fcc82785d7d6bfb306ab24f224129)) — server-side `handleDisconnection` now checks `socket.id` before marking a site offline; during rapid reconnection (~1s), the old socket's disconnect handler was deleting the NEW socket from `connectedSites` and triggering false Slack offline alerts (root cause of 20+ offline/online flaps per day on Gymnase Mangin-Beaulieu despite perfect network)
+- **agent:** fix watcher + listener leak on Socket.IO reconnection — `onAuthenticated()` now calls `stopWatchers()` before creating new ConfigWatcher/VideoWatcher, and `removeAllListeners('pong')` before adding new pong handlers; previously each reconnection leaked file watchers (inotify + polling) and accumulated pong callbacks
+- **network:** fix wlan1 reconnect loop spam when wlan1 already connected — `internetWatchLoop` now checks `getInternetIp()` before calling `startWlan1Reconnect()`; previously the loop stopped itself (wlan1 has IP), then was restarted 30s later by `internetWatchLoop` → infinite start/stop cycle logging every 30s
+
+### Tests
+
+- **smoke:** 4 new guards preventing reconnection stability regressions: stale socket ID check, watcher cleanup on reconnect, pong listener dedup, wlan1 IP check before reconnect loop
+
+### Docs
+
+- **troubleshooting:** add section 39 — fausses alertes offline/online Slack (v3.118.2+)
+- **claude.md:** 4 new rules preventing reconnection resource leaks and false offline alerts
+- **changelog:** document complete 2026-03-24 afternoon session
 
 ## [3.118.1](https://github.com/Tallec7/neopro/compare/v3.118.0...v3.118.1) (2026-03-24)
 

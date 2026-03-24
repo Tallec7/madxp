@@ -40,6 +40,7 @@
 36. [Hotspot recovery disproportionnée — restart complet pour IP manquante (v3.116.26+)](#hotspot-recovery-disproportionnée--restart-complet-pour-ip-manquante-v311626)
 37. [Déploiement OTA "Échoué" sans message d'erreur (v3.116.28+)](#déploiement-ota-échoué-sans-message-derreur-v311628)
 38. [Post-OTA validation failed: ECONNREFUSED ::1 (v3.116.28+)](#post-ota-validation-failed-econnrefused-1-v311628)
+39. [Fausses alertes offline/online Slack — flapping Socket.IO (v3.118.2+)](#fausses-alertes-offlineonline-slack--flapping-socketio-v31182)
 
 > **WiFi USB** : Pour un guide complet sur la clé WiFi USB (installation, diagnostic, pannes, recovery), voir [WIFI_USB_GUIDE.md](WIFI_USB_GUIDE.md).
 >
@@ -6168,4 +6169,65 @@ Un scan frais n'est fait que si le cache est absent ou plus vieux que 120s.
 
 ---
 
-**Dernière mise à jour :** 23 mars 2026 (WiFi scan cache RTL8192EU, alerting grace period 60s, hotspot-watchdog nftables Debian 13, dual-stack server binding, bootstrapping cache-bust OTA validator — v3.116.22 → v3.117.1)
+## Fausses alertes offline/online Slack — flapping Socket.IO (v3.118.2+)
+
+**Symptôme :** Un site reçoit 10-20+ alertes Slack offline/online par jour en alternance rapide (cycles de 2-5 minutes), malgré un réseau parfait (Ethernet 1Gbps, 113ms vers Railway, Pi UP).
+
+**Exemple typique :**
+
+```
+08:00 ✅ Site Online
+08:02 ❌ Site Offline
+08:04 ✅ Site Online
+08:06 ❌ Site Offline
+... (toute la journée)
+```
+
+### Diagnostic
+
+```bash
+# 1. Vérifier le réseau (doit être parfait)
+ip -br addr && cat /sys/class/net/eth0/operstate
+curl -s -o /dev/null -w "HTTP %{http_code} in %{time_total}s\n" https://neopro-central-production.up.railway.app/health
+
+# 2. Logs sync-agent (chercher transport close)
+journalctl -u neopro-sync-agent --since "2 hours ago" --no-pager | grep -v "wlan1\|NetworkWatchdog" | tail -50
+
+# 3. Vérifier le spam wlan1 reconnect (si > 1 par minute = bug v3.118.0)
+journalctl -u neopro-sync-agent --since "1 hour ago" --no-pager | grep -c "wlan1 reconnected"
+```
+
+### Causes (3 bugs corrigés en v3.118.2)
+
+**Bug 1 — Race condition server-side (cause principale des fausses alertes) :**
+
+Lors d'une reconnexion rapide (Pi reconnecte en ~1s), l'ancien socket se déconnecte APRES que le nouveau s'est authentifié. Sans vérification `socket.id`, le handler de l'ancien socket supprimait le nouveau de `connectedSites` et marquait le site offline → fausse alerte, alors que le Pi est connecté.
+
+**Bug 2 — Fuite de watchers/listeners côté Pi :**
+
+Chaque `onAuthenticated()` créait de nouveaux ConfigWatcher + VideoWatcher sans stopper les anciens. Après N reconnexions = N watchers polling en parallèle + N listeners pong accumulés.
+
+**Bug 3 — Spam boucle reconnect wlan1 :**
+
+Quand le Pi est sur Ethernet et que wlan1 est connecté, la boucle `wlan1ReconnectLoop` se stoppait (wlan1 a une IP) puis `internetWatchLoop` la redémarrait 30s plus tard → cycle infini de logs toutes les 30s.
+
+### Solution (v3.118.2+)
+
+1. `socket.service.ts` : vérifie `currentSocket.id !== socket.id` avant de marquer offline
+2. `agent.js` : `stopWatchers()` + `removeAllListeners('pong')` avant chaque reconnexion
+3. `network-watchdog.js` : vérifie `getInternetIp()` avant `startWlan1Reconnect()`
+
+### Vérification post-fix
+
+```bash
+# Les alertes Slack devraient cesser immédiatement après deploy central (Fix 1)
+# Les Fixes 2-3 nécessitent OTA vers v3.118.2 sur le Pi
+
+# Vérifier côté central que les stale sockets sont détectés
+# (chercher dans les logs Railway)
+# "Stale socket disconnected, newer connection exists — skipping offline"
+```
+
+---
+
+**Dernière mise à jour :** 24 mars 2026 (fix fausses alertes offline Socket.IO reconnection race, watcher/listener leak, wlan1 reconnect spam — v3.117.1 → v3.118.2)

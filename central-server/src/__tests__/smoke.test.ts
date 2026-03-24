@@ -12055,3 +12055,100 @@ describe('Dual-stack server binding (IPv4 + IPv6)', () => {
       .toEqual({ hasDualStack: true });
   });
 });
+
+// ----------------------------------------------------------
+// Socket reconnection stability guards (v3.118.2)
+// ----------------------------------------------------------
+// Rapid reconnection (Pi reconnects in ~1s after transport close) causes
+// three classes of bugs if not handled correctly:
+// 1. Server-side: old socket disconnect marks site offline despite new socket being connected
+// 2. Pi-side: watchers/listeners leak on each reconnection, accumulating over time
+// 3. Pi-side: wlan1 reconnect loop spam when wlan1 is already connected on Ethernet
+describe('Socket reconnection stability guards', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+
+  // Guard: Server must check socket.id before marking site offline on disconnect.
+  // Without this, during rapid reconnection the OLD socket's disconnect handler
+  // deletes the NEW socket from connectedSites and marks the site offline
+  // → false Slack alerts despite Pi being connected.
+  it('socket.service.ts handleDisconnection must check socket.id before marking offline', () => {
+    const content = fs.readFileSync(
+      path.join(repoRoot, 'central-server/src/services/socket.service.ts'),
+      'utf8'
+    );
+    // Must compare socket IDs to detect stale disconnects
+    expect({
+      checksSocketId: /currentSocket\.id\s*!==\s*socket\.id/.test(content)
+        || /socket\.id\s*!==\s*currentSocket\.id/.test(content),
+      getsCurrentSocket: /connectedSites\.get\(siteId\)/.test(content),
+      skipsOfflineForStale: /skipping offline|stale.*socket/i.test(content),
+    }).toEqual({
+      checksSocketId: true,
+      getsCurrentSocket: true,
+      skipsOfflineForStale: true,
+    });
+  });
+
+  // Guard: agent.js must stop old watchers before creating new ones in onAuthenticated.
+  // Without stopWatchers(), each reconnection leaks ConfigWatcher + VideoWatcher
+  // (inotify descriptors + polling intervals). After N reconnects = N watchers.
+  it('agent.js must stop watchers before creating new ones on reconnection', () => {
+    const content = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/sync-agent/src/agent.js'),
+      'utf8'
+    );
+    expect({
+      hasStopWatchers: /stopWatchers\(\)/.test(content),
+      calledBeforeStart: /stopWatchers\(\)[\s\S]*?startConfigWatcher\(\)/.test(content),
+      calledOnDisconnect: /handleDisconnect[\s\S]*?stopWatchers\(\)/.test(content),
+    }).toEqual({
+      hasStopWatchers: true,
+      calledBeforeStart: true,
+      calledOnDisconnect: true,
+    });
+  });
+
+  // Guard: agent.js must remove pong listeners before adding new ones in onAuthenticated.
+  // Socket.IO reuses the same socket object — without removeAllListeners, each reconnect
+  // adds another pong handler → N× updateLastPong() calls after N reconnections
+  // → Node.js MaxListenersExceededWarning.
+  it('agent.js must remove pong listeners before adding new ones on reconnection', () => {
+    const content = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/sync-agent/src/agent.js'),
+      'utf8'
+    );
+    expect({
+      removesPong: /removeAllListeners\(['"]pong['"]\)/.test(content),
+      removesPongResponse: /removeAllListeners\(['"]pong_response['"]\)/.test(content),
+      removesBeforeAdds: /removeAllListeners\(['"]pong['"]\)[\s\S]*?\.on\(['"]pong['"]/.test(content),
+    }).toEqual({
+      removesPong: true,
+      removesPongResponse: true,
+      removesBeforeAdds: true,
+    });
+  });
+
+  // Guard: wlan1 reconnect loop must check wlan1 IP before starting.
+  // Without this check, the loop stops itself (wlan1 already has IP),
+  // then internetWatchLoop restarts it 30s later → infinite start/stop cycle
+  // logging every 30s, potential wpa_cli reconfigure on edge cases.
+  it('network-watchdog must check wlan1 IP before starting reconnect loop', () => {
+    const content = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/sync-agent/src/services/network-watchdog.js'),
+      'utf8'
+    );
+    // The ethernet block must call getInternetIp() to check wlan1 before startWlan1Reconnect
+    const ethernetBlock = content.match(
+      /connectionType.*===.*'ethernet'\)\s*\{[\s\S]*?startWlan1Reconnect/
+    );
+    expect({
+      hasEthernetBlock: ethernetBlock !== null,
+      checksWlan1Ip: ethernetBlock ? /getInternetIp/.test(ethernetBlock[0]) : false,
+      conditionalStart: ethernetBlock ? /if\s*\(!wlan1Ip\)/.test(ethernetBlock[0]) : false,
+    }).toEqual({
+      hasEthernetBlock: true,
+      checksWlan1Ip: true,
+      conditionalStart: true,
+    });
+  });
+});
