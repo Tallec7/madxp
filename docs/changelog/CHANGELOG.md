@@ -1,3 +1,9 @@
+## [3.118.1](https://github.com/Tallec7/neopro/compare/v3.118.0...v3.118.1) (2026-03-24)
+
+### Performance Improvements
+
+- **network:** faster WiFi reconnection after signal drop ([ea64a27](https://github.com/Tallec7/neopro/commit/ea64a278e5c6b47d3a125bc8cf0e48bf150ac703))
+
 # [3.118.0](https://github.com/Tallec7/neopro/compare/v3.117.2...v3.118.0) (2026-03-24)
 
 ### Features
