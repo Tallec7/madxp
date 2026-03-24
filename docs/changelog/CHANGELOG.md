@@ -1,3 +1,9 @@
+## [3.118.2](https://github.com/Tallec7/neopro/compare/v3.118.1...v3.118.2) (2026-03-24)
+
+### Bug Fixes
+
+- **socket:** prevent false offline alerts on rapid reconnection ([68a8fec](https://github.com/Tallec7/neopro/commit/68a8fecb170fcc82785d7d6bfb306ab24f224129))
+
 ## [3.118.1](https://github.com/Tallec7/neopro/compare/v3.118.0...v3.118.1) (2026-03-24)
 
 ### Performance Improvements
