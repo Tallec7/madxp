@@ -125,9 +125,9 @@ class NeoproSyncAgent {
     this.socket = io(config.central.url, {
       transports: ['websocket', 'polling'],
       reconnection: true,
-      reconnectionDelay: 5000,
-      reconnectionDelayMax: 30000,
-      randomizationFactor: 0.5,
+      reconnectionDelay: 1000,
+      reconnectionDelayMax: 15000,
+      randomizationFactor: 0.3,
       timeout: 20000,
     });
 

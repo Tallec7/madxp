@@ -1376,7 +1376,19 @@ async function internetWatchLoop() {
 
       if (canAttemptRecovery('internet')) {
         const result = await attemptInternetRecovery();
-        if (!result.success) {
+        if (result.success) {
+          // Recovery succeeded — force Socket.IO reconnect immediately instead of
+          // waiting for the next reconnectionDelay cycle (5-30s). This cuts reconnection
+          // time from ~30s to ~2s after WiFi recovery.
+          if (socketRef && !socketRef.connected) {
+            logger.info('NetworkWatchdog: WiFi recovered, forcing immediate Socket.IO reconnect');
+            socketRef.disconnect();
+            setTimeout(() => socketRef.connect(), 500);
+          }
+          // Schedule a fast re-check in 5s to emit network_recovered to central
+          // instead of waiting the full 60s INTERNET_CHECK_INTERVAL
+          setTimeout(() => internetWatchLoop(), 5000);
+        } else {
           // Progressive back-off: delay increases with each phase to let mesh networks self-heal.
           // Previously fixed 10s → phases 1-4 exhausted in ~60s → modprobe too fast.
           const backoffDelay = _getBackoffDelay(state.internet.recoveryAttempts);
