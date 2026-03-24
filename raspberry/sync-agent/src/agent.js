@@ -383,6 +383,12 @@ class NeoproSyncAgent {
     // Enregistrer la connexion dans l'historique
     syncHistory.recordConnection(true, { siteId: config.site.id });
 
+    // Stop old watchers before creating new ones (prevent leak on reconnection).
+    // onAuthenticated() fires on EVERY reconnect — without cleanup, each reconnection
+    // leaks file watchers (inotify descriptors + polling intervals) that keep syncing
+    // duplicate state. After 10 reconnects = 10 ConfigWatchers + 10 VideoWatchers.
+    this.stopWatchers();
+
     // Démarrer la surveillance des changements de configuration ET des vidéos
     // IMPORTANT: Doit être fait AVANT syncLocalState pour que videoWatcher soit initialisé
     this.startConfigWatcher();
@@ -403,11 +409,31 @@ class NeoproSyncAgent {
     // Mettre à jour la ref socket et binder les events pong pour le watchdog cloud
     // (le watchdog tourne déjà depuis start(), on lui donne juste la socket authentifiée)
     networkWatchdog.setSocketRef(this.socket);
+
+    // Remove old pong listeners before adding new ones (prevent accumulation on reconnect).
+    // Socket.IO reuses the same socket object — without removeListener, each reconnect
+    // adds another pong handler, causing N× updateLastPong() calls after N reconnections.
+    this.socket.removeAllListeners('pong');
+    this.socket.removeAllListeners('pong_response');
     this.socket.on('pong', () => networkWatchdog.updateLastPong());
     this.socket.on('pong_response', () => networkWatchdog.updateLastPong());
 
     // Traiter les commandes en attente dans la queue offline
     this.processOfflineQueue();
+  }
+
+  /**
+   * Stop config and video watchers to prevent leaks on reconnection.
+   */
+  stopWatchers() {
+    if (this.configWatcher) {
+      this.configWatcher.stop();
+      this.configWatcher = null;
+    }
+    if (this.videoWatcher) {
+      this.videoWatcher.stop();
+      this.videoWatcher = null;
+    }
   }
 
   /**
@@ -672,6 +698,10 @@ class NeoproSyncAgent {
       clearInterval(this.connectionHealthCheckInterval);
       this.connectionHealthCheckInterval = null;
     }
+
+    // Stop watchers on disconnect — they'll be recreated in onAuthenticated.
+    // Without this, watchers from a previous connection leak alongside the new ones.
+    this.stopWatchers();
 
     // Note: On ne clear pas networkProfileInterval car la détection doit continuer
     // même en offline pour avoir des données fraîches à la reconnexion

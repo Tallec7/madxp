@@ -1328,10 +1328,18 @@ async function internetWatchLoop() {
       stopWlan1Reconnect();
     }
 
-    // When healthy via Ethernet, start background wlan1 reconnect
-    // so the Pi can survive if the Ethernet cable is unplugged later
+    // When healthy via Ethernet AND wlan1 has no IP, start background wlan1 reconnect
+    // so the Pi can survive if the Ethernet cable is unplugged later.
+    // IMPORTANT: Check wlan1 IP first — without this check, the reconnect loop
+    // stops itself (wlan1 already connected), then internetWatchLoop restarts it 30s later
+    // → infinite start/stop/start cycle logging every 30s.
     if (health.healthy && health.connectionType === 'ethernet') {
-      startWlan1Reconnect();
+      const wlan1Ip = await getInternetIp();
+      if (!wlan1Ip) {
+        startWlan1Reconnect();
+      } else {
+        stopWlan1Reconnect(); // wlan1 is healthy, no need for reconnect loop
+      }
     }
 
     if (!health.healthy) {

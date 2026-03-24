@@ -565,23 +565,41 @@ class SocketService {
 
     if (siteId) {
       const siteName = ((socket as any).siteName as string) || siteId;
-      this.connectedSites.delete(siteId);
-      this.lastPongReceived.delete(siteId);
-      this.recordingStates.delete(siteId);
-      this.playerStates.delete(siteId);
 
-      query(
-        'UPDATE sites SET status = $1, last_seen_at = NOW() WHERE id = $2',
-        ['offline', siteId]
-      ).catch((error) => {
-        logger.error('Error updating site status on disconnect:', error);
-      });
+      // Guard: only mark offline if this socket is still the current one for this site.
+      // During rapid reconnection (Pi reconnects in ~1s), a newer socket may already be
+      // authenticated and registered in connectedSites. Without this check, the OLD socket's
+      // disconnect handler would delete the NEW socket's entry and mark the site offline
+      // even though it's actually connected via the new socket.
+      const currentSocket = this.connectedSites.get(siteId);
+      if (currentSocket && currentSocket.id !== socket.id) {
+        logger.info('Stale socket disconnected, newer connection exists — skipping offline', {
+          siteId,
+          staleSocketId: socket.id,
+          currentSocketId: currentSocket.id,
+          reason,
+        });
+        // Still clean up pong/recording/player state for the old socket
+        this.lastPongReceived.delete(siteId);
+      } else {
+        this.connectedSites.delete(siteId);
+        this.lastPongReceived.delete(siteId);
+        this.recordingStates.delete(siteId);
+        this.playerStates.delete(siteId);
 
-      alertService.siteOffline(siteId, siteName).catch((error) => {
-        logger.error('Error sending offline alert:', error);
-      });
+        query(
+          'UPDATE sites SET status = $1, last_seen_at = NOW() WHERE id = $2',
+          ['offline', siteId]
+        ).catch((error) => {
+          logger.error('Error updating site status on disconnect:', error);
+        });
 
-      logger.info('Agent disconnected', { siteId, reason });
+        alertService.siteOffline(siteId, siteName).catch((error) => {
+          logger.error('Error sending offline alert:', error);
+        });
+
+        logger.info('Agent disconnected', { siteId, reason });
+      }
     }
 
     logger.info('Socket disconnected', { socketId: socket.id, reason });
