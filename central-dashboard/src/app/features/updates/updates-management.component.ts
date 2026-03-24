@@ -366,7 +366,10 @@ interface UpdateDeployment {
                 <span class="step-icon">{{ getStepIcon(step.status) }}</span>
                 <span class="step-label">{{ step.label }}</span>
                 <span class="step-duration">{{ formatStepDuration(step.durationMs) }}</span>
-                <span class="step-detail" *ngIf="step.detail">{{ step.detail }}</span>
+                <span class="step-detail" *ngIf="step.detail && !step.detail.includes(' | ')">{{ step.detail }}</span>
+                <div class="step-detail-expanded" *ngIf="step.detail?.includes(' | ')">
+                  <div *ngFor="let item of step.detail!.split(' | ')">• {{ item }}</div>
+                </div>
               </div>
             </div>
           </div>
@@ -942,7 +945,8 @@ interface UpdateDeployment {
     .step-row {
       display: flex;
       align-items: center;
-      gap: 0.5rem;
+      flex-wrap: wrap;
+      gap: 0.35rem 0.5rem;
       padding: 0.35rem 0.5rem;
       font-size: 0.8rem;
       border-left: 3px solid transparent;
@@ -966,10 +970,18 @@ interface UpdateDeployment {
     }
 
     .step-detail {
-      flex-shrink: 0;
       color: #64748b;
       font-size: 0.7rem;
       font-style: italic;
+    }
+
+    .step-detail-expanded {
+      flex-basis: 100%;
+      margin-left: 1.7rem;
+      color: #64748b;
+      font-size: 0.7rem;
+      font-style: italic;
+      line-height: 1.5;
     }
 
     .deployment-info {

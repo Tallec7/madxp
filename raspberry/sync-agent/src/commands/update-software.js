@@ -175,9 +175,14 @@ class SoftwareUpdateHandler {
       const freshValidator = require(freshValidatorPath);
       const validationReport = await freshValidator.validate({ throwOnCritical: true });
       const warnCount = validationReport.warnings.length;
+      let validationDetail;
+      if (warnCount > 0) {
+        const warnMessages = validationReport.warnings.map(w => w.message);
+        validationDetail = `${warnCount} warning(s) : ${warnMessages.join(' | ')}`;
+      }
       this.stepTracker.end(
         warnCount > 0 ? 'warn' : 'ok',
-        warnCount > 0 ? `${warnCount} warning(s)` : undefined
+        validationDetail
       );
       logger.info('Post-OTA validation passed', {
         criticalCount: validationReport.critical.length,
@@ -935,6 +940,26 @@ class SoftwareUpdateHandler {
           const errors = fleetOutput.match(/Erreurs\s*:\s*(\d+)/);
           const corrCount = corrections ? corrections[1] : 'unknown';
           const errCount = errors ? errors[1] : 'unknown';
+          // Extraire les lignes de corrections [✓] et erreurs [✗] pour le détail
+          const fixedLines = fleetOutput.match(/\[✓\]\s*.+/g) || [];
+          const errorLines = fleetOutput.match(/\[✗\]\s*.+/g) || [];
+          // Ne garder que les corrections actives (pas "Déjà ...", "rien à faire")
+          const activeFixLines = fixedLines.filter(l =>
+            !l.includes('Déjà') && !l.includes('déjà') && !l.includes('rien à faire')
+          );
+          const detailParts = [];
+          if (activeFixLines.length > 0) {
+            const labels = activeFixLines.map(l => l.replace(/\[✓\]\s*/, '').trim());
+            detailParts.push(`${labels.length} correction(s) : ${labels.join(' | ')}`);
+          } else {
+            detailParts.push(`${corrCount} correction(s)`);
+          }
+          if (errorLines.length > 0) {
+            const labels = errorLines.map(l => l.replace(/\[✗\]\s*/, '').trim());
+            detailParts.push(`${labels.length} erreur(s) : ${labels.join(' | ')}`);
+          } else {
+            detailParts.push(`${errCount} erreur(s)`);
+          }
           logger.info('fix-fleet-pi.sh completed', {
             corrections: corrCount,
             errors: errCount,
@@ -942,7 +967,7 @@ class SoftwareUpdateHandler {
           const hasErrors = errCount !== '0' && errCount !== 'unknown';
           this.stepTracker.end(
             hasErrors ? 'warn' : 'ok',
-            `${corrCount} correction(s), ${errCount} erreur(s)`
+            detailParts.join(', ')
           );
         } catch (fleetError) {
           logger.warn('fix-fleet-pi.sh failed (non-blocking)', { error: fleetError.message });

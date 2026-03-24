@@ -6217,6 +6217,33 @@ Quand le Pi est sur Ethernet et que wlan1 est connecté, la boucle `wlan1Reconne
 2. `agent.js` : `stopWatchers()` + `removeAllListeners('pong')` avant chaque reconnexion
 3. `network-watchdog.js` : vérifie `getInternetIp()` avant `startWlan1Reconnect()`
 
+### Cause 4 — Railway heap memory pressure (cause des `transport close`)
+
+Si après les fixes v3.118.2 les `transport close` persistent (décos toutes les 10-30s), le problème est **côté Railway**, pas côté Pi. Le central-server tourne avec un heap V8 très limité (~40-44MB sur Railway Hobby plan). Quand le heap atteint 87-94%, les pauses GC bloquent le event loop → Socket.IO ne peut pas répondre aux pings → `transport close`.
+
+**Diagnostic :**
+
+```bash
+# Health check mémoire (depuis n'importe où)
+curl -s https://neopro-central-production.up.railway.app/health | python3 -c "
+import json, sys; d = json.load(sys.stdin)
+m = d['checks']['memory']['details']
+print(f\"Heap: {m['heapUsedMB']:.0f}/{m['heapTotalMB']:.0f}MB ({m['heapUsagePercent']:.0f}%) RSS: {m['rssMB']:.0f}MB\")
+print(f\"Status: {d['checks']['memory']['status']}  Uptime: {d['uptime']//60:.0f}min\")
+"
+```
+
+- Heap > 88% → warning (`memory-manager.service.ts` tente un GC)
+- Heap > 93% → critique (cleanup agressif)
+- Heap > 97% → urgence (force GC + dump)
+
+**Solutions :**
+
+1. **Restart Railway** (résout les états corrompus post-deploy)
+2. **Vérifier le plan Railway** — le Hobby plan ($5/mo) a ~512MB RAM, le heap V8 est limité à 256MB (`--max-old-space-size=256` dans Dockerfile). Les librairies natives (canvas, ffmpeg) consomment ~90MB de RSS hors-heap
+3. **Si ça persiste après restart** → vérifier les métriques Railway (Memory Usage dans Metrics) pour détecter un memory leak progressif
+4. **Le monitoring existant** (`memory-manager.service.ts`) gère les seuils automatiquement et log les warnings dans Railway logs
+
 ### Vérification post-fix
 
 ```bash
@@ -6226,8 +6253,11 @@ Quand le Pi est sur Ethernet et que wlan1 est connecté, la boucle `wlan1Reconne
 # Vérifier côté central que les stale sockets sont détectés
 # (chercher dans les logs Railway)
 # "Stale socket disconnected, newer connection exists — skipping offline"
+
+# Vérifier la mémoire Railway
+curl -s https://neopro-central-production.up.railway.app/health | python3 -m json.tool | grep -A5 memory
 ```
 
 ---
 
-**Dernière mise à jour :** 24 mars 2026 (fix fausses alertes offline Socket.IO reconnection race, watcher/listener leak, wlan1 reconnect spam — v3.117.1 → v3.118.2)
+**Dernière mise à jour :** 24 mars 2026 (fix fausses alertes offline Socket.IO reconnection race, watcher/listener leak, wlan1 reconnect spam, diagnostic Railway heap pressure — v3.117.1 → v3.118.2)
