@@ -552,6 +552,16 @@ async function resolveLocalSponsors(
       continue;
     }
 
+    // Skip sponsors with invalid names (single-char artifacts from auto-reconciliation)
+    if (!sponsor.name || sponsor.name.trim().length < 2) {
+      logger.warn('Skipping local sponsor with invalid name (too short):', {
+        localId: sponsor.localId,
+        name: sponsor.name,
+        siteId,
+      });
+      continue;
+    }
+
     try {
       // Try to find an existing local sponsor with matching name
       const existing = await siteSponsorRepository.findByNameAndSite(sponsor.name, siteId);

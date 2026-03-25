@@ -9689,6 +9689,36 @@ describe('Sponsor frequency removal guard', () => {
       .toEqual({ checksSponsorMarkers: true });
   });
 
+  it('_reconcileOrphanedLoopVideos must skip single-char names (auto-generated artifacts)', () => {
+    // Bug: single-char video names like "B", "J", "P" were auto-reconciled as sponsors.
+    // These are artifacts from incomplete form entries, not real sponsor names.
+    // The reconciliation must skip names shorter than 2 characters.
+    const reconcileMethod = sponsorService.match(
+      /_reconcileOrphanedLoopVideos[\s\S]*?(?=\n  _extract|\n  \/\*\*\s*\n\s*\*\s*Extrait)/
+    );
+    expect(reconcileMethod).toBeTruthy();
+    const body = reconcileMethod![0];
+    // Must have length check on name (name.length < 2)
+    expect({ hasMinLengthCheck: /name\.length\s*<\s*2/.test(body) })
+      .toEqual({ hasMinLengthCheck: true });
+  });
+
+  it('resolveLocalSponsors must skip sponsors with single-char names', () => {
+    // Defense-in-depth: even if Pi sends single-char sponsor names,
+    // the central must not create site_sponsors entries for them.
+    const configSyncHandler = fs.readFileSync(
+      path.join(repoRoot, 'central-server', 'src', 'handlers', 'config-sync.handler.ts'),
+      'utf8'
+    );
+    const resolveLocalFn = configSyncHandler.match(
+      /async function resolveLocalSponsors[\s\S]*?^}/m
+    );
+    expect(resolveLocalFn).toBeTruthy();
+    const body = resolveLocalFn![0];
+    expect({ hasMinLengthCheck: /\.length\s*<\s*2/.test(body) })
+      .toEqual({ hasMinLengthCheck: true });
+  });
+
   it('getAutoDetectedSponsor must have numeric prefix fallback matching', () => {
     // Bug v3.113: loop videos use numbered filenames (07_A_L_AFFUT.mp4) but
     // site_sponsor_videos stores category filenames (A_L_AFFUT.mp4).

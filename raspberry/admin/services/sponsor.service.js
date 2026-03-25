@@ -646,7 +646,7 @@ class SponsorService {
         if (v._sponsorLocalId) continue; // already linked
         if (!_isSponsorEntry(v)) continue; // skip non-sponsor videos
         const name = (v.name || v.sponsorName || '').trim();
-        if (!name) continue;
+        if (!name || name.length < 2) continue; // Skip empty or single-char names (auto-generated artifacts)
         if (!orphansByName.has(name)) {
           orphansByName.set(name, { paths: new Set(), siteSponsorId: null });
         }
@@ -662,7 +662,7 @@ class SponsorService {
       if (s.locked || s.owner === 'neopro') continue; // skip Neopro entries
       if (!_isSponsorEntry(s)) continue; // skip non-sponsor videos
       const name = (s.name || s.display_name || '').trim();
-      if (!name) continue;
+      if (!name || name.length < 2) continue; // Skip empty or single-char names (auto-generated artifacts)
       if (!orphansByName.has(name)) {
         orphansByName.set(name, { paths: new Set(), siteSponsorId: null });
       }
