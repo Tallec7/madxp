@@ -9677,16 +9677,23 @@ describe('Sponsor frequency removal guard', () => {
     // The method MUST check for sponsor markers before creating localSponsors:
     // - site_sponsor_id (identified by central auto-resolution)
     // - analytics_category starts with 'sponsor' (sponsor_local, sponsor_neopro, sponsor)
-    // - owner === 'club' (placed by club admin)
+    // owner === 'club' alone is NOT a sponsor marker — clubs can have non-sponsor videos
+    // in the loop (presentations, ambiance, etc.).
     // Without this check, every video name becomes a spurious sponsor.
     const reconcileMethod = sponsorService.match(
       /_reconcileOrphanedLoopVideos[\s\S]*?(?=\n  _extract|\n  \/\*\*\s*\n\s*\*\s*Extrait)/
     );
     expect(reconcileMethod).toBeTruthy();
     const body = reconcileMethod![0];
-    // Must filter on sponsor markers (site_sponsor_id, analytics_category, owner)
+    // Must filter on sponsor markers (site_sponsor_id, analytics_category)
     expect({ checksSponsorMarkers: /site_sponsor_id|analytics_category.*sponsor|_isSponsorEntry/.test(body) })
       .toEqual({ checksSponsorMarkers: true });
+    // _isSponsorEntry must NOT use owner === 'club' alone as a sponsor marker
+    // (clubs have non-sponsor videos in loops — presentation, ambiance, etc.)
+    const isSponsorFn = body.match(/_isSponsorEntry[\s\S]*?;/);
+    expect(isSponsorFn).toBeTruthy();
+    expect({ noOwnerClubAlone: !/owner\s*===?\s*['"]club['"]/.test(isSponsorFn![0]) })
+      .toEqual({ noOwnerClubAlone: true });
   });
 
   it('_reconcileOrphanedLoopVideos must skip single-char names (auto-generated artifacts)', () => {
