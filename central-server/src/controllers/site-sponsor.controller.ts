@@ -115,6 +115,11 @@ export const createSiteSponsor = async (req: AuthRequest, res: Response): Promis
       return;
     }
 
+    if (name.trim().length < 2) {
+      res.status(400).json({ success: false, error: 'Sponsor name must be at least 2 characters' });
+      return;
+    }
+
     // Vérifier que le site existe
     const site = await siteRepository.findById(siteId);
     if (!site) {
