@@ -1,3 +1,9 @@
+## [3.118.3](https://github.com/Tallec7/neopro/compare/v3.118.2...v3.118.3) (2026-03-25)
+
+### Bug Fixes
+
+- **sponsors:** prevent auto-creation of single-char sponsor names ([#433](https://github.com/Tallec7/neopro/issues/433)) ([81b53ea](https://github.com/Tallec7/neopro/commit/81b53ead238b211e23161002c47db6ee16db7f8d))
+
 ## [3.118.2](https://github.com/Tallec7/neopro/compare/v3.118.1...v3.118.2) (2026-03-24)
 
 ### Bug Fixes
