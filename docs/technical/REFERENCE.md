@@ -1206,13 +1206,13 @@ Service de gestion des sponsors locaux sur le Raspberry Pi. Orchestre la réconc
 
 **Méthodes clés :**
 
-| Méthode                          | Rôle                                                                                                                                   |
-| -------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| `listSponsors()`                 | Liste les sponsors locaux + appelle `_reconcileOrphanedLoopVideos()`                                                                   |
-| `_reconcileOrphanedLoopVideos()` | Auto-crée des `localSponsors` pour les entrées `loopVideos` orphelines (sans `_sponsorLocalId`)                                        |
-| `_isSponsorEntry(v)`             | Guard : vérifie qu'une entrée est réellement un sponsor (`site_sponsor_id`, `analytics_category === 'sponsor'`, ou `owner === 'club'`) |
+| Méthode                          | Rôle                                                                                                                                                                                                                                                                      |
+| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `listSponsors()`                 | Liste les sponsors locaux + appelle `_reconcileOrphanedLoopVideos()`                                                                                                                                                                                                      |
+| `_reconcileOrphanedLoopVideos()` | Auto-crée des `localSponsors` pour les entrées `loopVideos` orphelines (sans `_sponsorLocalId`)                                                                                                                                                                           |
+| `_isSponsorEntry(v)`             | Guard : vérifie qu'une entrée est réellement un sponsor (`site_sponsor_id` ou `analytics_category` commençant par `'sponsor'`). **`owner === 'club'` seul n'est PAS un marqueur sponsor** — les clubs ont des vidéos non-sponsor dans la boucle (présentation, ambiance). |
 
-**Règle critique (v3.113.3)** : `_reconcileOrphanedLoopVideos()` ne doit réconcilier QUE les entrées avec marqueurs sponsor. Sans ce filtre, les vidéos de contenu (intro Neopro, vidéos club) sont auto-créées comme sponsors parasites. Smoke test enforced.
+**Règle critique (v3.113.3 → renforcée v3.118.3)** : `_reconcileOrphanedLoopVideos()` ne doit réconcilier QUE les entrées avec marqueurs sponsor explicites du central (`site_sponsor_id` ou `analytics_category`). Le critère `owner === 'club'` seul créait des sponsors parasites à une lettre ("B", "J", "P") à partir de vidéos club non-sponsor. Défense en profondeur : le central refuse aussi les sponsors < 2 caractères (`resolveLocalSponsors`, `createSiteSponsor`), et l'alerting auto-désactive les sponsors fantômes existants. Smoke test enforced.
 
 ### Sponsor Badge Resolution (Dashboard — `getAutoDetectedSponsor()`)
 

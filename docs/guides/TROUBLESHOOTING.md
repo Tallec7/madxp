@@ -2070,20 +2070,25 @@ Si la réponse contient `advertisers` au lieu de `sponsors`, mettre à jour le b
 
 **Symptômes :**
 
-- L'onglet Sponsors affiche des sponsors indésirables ("Intro Neopro", doublons "Laugier") avec 0 impressions
+- L'onglet Sponsors affiche des sponsors indésirables ("B", "J", "P", "Intro Neopro") avec 0 impressions
 - Le nombre de sponsors est supérieur à ce qui a été configuré manuellement
 - Les sponsors parasites réapparaissent après suppression
 
-**Cause :** Bug dans `_reconcileOrphanedLoopVideos()` du Pi admin `sponsor.service.js`. La méthode réconciliait TOUTES les entrées `loopVideos` sans vérifier si elles étaient réellement des sponsors. Les vidéos de contenu (intro, vidéos club sans marqueur sponsor) étaient auto-créées comme `localSponsors`.
+**Cause :** Bug dans `_reconcileOrphanedLoopVideos()` du Pi admin `sponsor.service.js`. Le critère `owner === 'club'` était utilisé comme marqueur sponsor, mais les clubs ont des vidéos non-sponsor dans la boucle (présentation, ambiance). Toute vidéo club sans `_sponsorLocalId` était auto-créée comme sponsor parasite avec le `name` de la loopVideo (parfois une seule lettre).
 
-**Fix (v3.113.3) :** La réconciliation filtre maintenant sur les marqueurs sponsor (`site_sponsor_id`, `analytics_category === 'sponsor'`, `owner === 'club'`). Smoke test enforced.
+**Fix (v3.113.3 initial, renforcé v3.118.3) :**
+
+- **Pi** : `_isSponsorEntry()` ne garde que `site_sponsor_id` et `analytics_category` comme marqueurs. `owner === 'club'` seul n'est plus suffisant.
+- **Central** : `resolveLocalSponsors()` et `createSiteSponsor()` refusent les noms < 2 caractères.
+- **Monitoring** : `checkPhantomSponsors()` dans `alerting.service.ts` auto-désactive les sponsors à 1 caractère toutes les 5 minutes. Smoke test enforced.
 
 **Nettoyage des sponsors parasites existants :**
 
-1. Aller sur l'onglet Sponsors du site
-2. Identifier les sponsors avec 0 impressions qui ne devraient pas exister
-3. Les supprimer manuellement via le bouton poubelle
-4. Vérifier après le prochain `sync_local_state` qu'ils ne réapparaissent pas
+1. Les sponsors à 1 caractère sont auto-désactivés par le monitoring (statut → `inactive`)
+2. Pour les sponsors parasites avec des noms plus longs, aller sur l'onglet Sponsors du site
+3. Identifier les sponsors avec 0 impressions qui ne devraient pas exister
+4. Les supprimer manuellement via le bouton poubelle
+5. Vérifier après le prochain `sync_local_state` qu'ils ne réapparaissent pas
 
 ### Badges sponsors absents dans le loop-manager (corrigé v3.113.3)
 

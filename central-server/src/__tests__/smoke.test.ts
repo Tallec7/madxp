@@ -11996,6 +11996,25 @@ describe('OTA deployment observability guards', () => {
     }
   });
 
+  it('checkPhantomSponsors must auto-deactivate single-char sponsor names', () => {
+    const alerting = fs.readFileSync(
+      path.join(repoRoot, 'central-server/src/services/alerting.service.ts'),
+      'utf8'
+    );
+    // Must have the method
+    expect({ hasMethod: alerting.includes('checkPhantomSponsors') })
+      .toEqual({ hasMethod: true });
+    // Must check for single-char names
+    expect({ checksLength: /LENGTH.*TRIM.*name.*<=\s*1/.test(alerting) })
+      .toEqual({ checksLength: true });
+    // Must deactivate (not delete) for audit trail
+    expect({ deactivates: alerting.includes("status = 'inactive'") && alerting.includes('phantom_single_char_name') })
+      .toEqual({ deactivates: true });
+    // Must be called in the periodic loop
+    expect({ calledPeriodically: /checkPhantomSponsors\(\)/.test(alerting) })
+      .toEqual({ calledPeriodically: true });
+  });
+
   it('checkStuckDeployments must auto-fail update deployments stuck >2h', () => {
     const alerting = fs.readFileSync(
       path.join(repoRoot, 'central-server/src/services/alerting.service.ts'),
