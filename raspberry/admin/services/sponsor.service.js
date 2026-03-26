@@ -629,17 +629,18 @@ class SponsorService {
     config.localSponsors = config.localSponsors || [];
 
     // Collect all orphaned entries (no _sponsorLocalId) grouped by name.
-    // ONLY reconcile entries that are actually sponsor videos:
+    // ONLY reconcile entries that have an explicit sponsor marker:
     // - has site_sponsor_id (identified by central auto-resolution), OR
-    // - has analytics_category === 'sponsor', OR
-    // - has owner === 'club' (placed by club admin as sponsor entry)
+    // - has analytics_category starting with 'sponsor'
     // Regular content videos (no markers) are NOT sponsors.
     const orphansByName = new Map();
 
+    // Only reconcile entries that have an explicit sponsor marker from the central.
+    // Clubs can have non-sponsor videos in the loop (presentation, ambiance) — without
+    // a central marker (site_sponsor_id or analytics_category), these are not sponsors.
     const _isSponsorEntry = (v) =>
       v.site_sponsor_id ||
-      (v.analytics_category && v.analytics_category.startsWith('sponsor')) ||
-      (v.owner === 'club' && !v.locked);
+      (v.analytics_category && v.analytics_category.startsWith('sponsor'));
 
     for (const tc of config.timeCategories || []) {
       for (const v of tc.loopVideos || []) {

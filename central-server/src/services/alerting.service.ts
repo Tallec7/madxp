@@ -1138,6 +1138,7 @@ class AlertingService {
       if (tickCount % 5 === 0) {
         await this.checkHourlyMetrics();
         this.pruneLastAlertTime();
+        await this.checkPhantomSponsors();
       }
     }, 60 * 1000);
   }
@@ -1430,6 +1431,53 @@ class AlertingService {
       clearedWsDisconnectEntries: wsSize,
       clearedVideoTimeoutEntries: videoSize,
     });
+  }
+
+  /**
+   * Détecte et auto-nettoie les sponsors fantômes (noms d'1 caractère).
+   * Ces sponsors sont des artefacts du bug de réconciliation loopVideos
+   * (owner='club' sans marqueur sponsor → auto-création parasite).
+   * Exécuté toutes les 5 minutes dans le periodic loop.
+   */
+  private async checkPhantomSponsors(): Promise<void> {
+    try {
+      const phantoms = await query<{ id: string; name: string; site_id: string; site_name: string }>(
+        `SELECT ss.id, ss.name, ss.site_id, s.name as site_name
+         FROM site_sponsors ss
+         JOIN sites s ON s.id = ss.site_id
+         WHERE LENGTH(TRIM(ss.name)) <= 1
+           AND ss.status = 'active'`,
+        []
+      );
+
+      if (phantoms.rows.length === 0) return;
+
+      // Auto-deactivate phantom sponsors (don't delete — keep audit trail)
+      for (const phantom of phantoms.rows) {
+        await query(
+          `UPDATE site_sponsors SET status = 'inactive', metadata = jsonb_set(
+             COALESCE(metadata, '{}'), '{auto_deactivated_reason}',
+             '"phantom_single_char_name"'
+           ) WHERE id = $1`,
+          [phantom.id]
+        );
+      }
+
+      logger.warn('Phantom sponsors auto-deactivated (single-char names)', {
+        count: phantoms.rows.length,
+        phantoms: phantoms.rows.map(p => ({
+          id: p.id,
+          name: p.name,
+          siteId: p.site_id,
+          siteName: p.site_name,
+        })),
+      });
+    } catch (error) {
+      // Non-fatal — don't crash the periodic loop
+      if (error instanceof Error && !error.message.includes('does not exist')) {
+        logger.error('Error checking phantom sponsors:', error);
+      }
+    }
   }
 
   /**

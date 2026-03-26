@@ -9677,16 +9677,23 @@ describe('Sponsor frequency removal guard', () => {
     // The method MUST check for sponsor markers before creating localSponsors:
     // - site_sponsor_id (identified by central auto-resolution)
     // - analytics_category starts with 'sponsor' (sponsor_local, sponsor_neopro, sponsor)
-    // - owner === 'club' (placed by club admin)
+    // owner === 'club' alone is NOT a sponsor marker — clubs can have non-sponsor videos
+    // in the loop (presentations, ambiance, etc.).
     // Without this check, every video name becomes a spurious sponsor.
     const reconcileMethod = sponsorService.match(
       /_reconcileOrphanedLoopVideos[\s\S]*?(?=\n  _extract|\n  \/\*\*\s*\n\s*\*\s*Extrait)/
     );
     expect(reconcileMethod).toBeTruthy();
     const body = reconcileMethod![0];
-    // Must filter on sponsor markers (site_sponsor_id, analytics_category, owner)
+    // Must filter on sponsor markers (site_sponsor_id, analytics_category)
     expect({ checksSponsorMarkers: /site_sponsor_id|analytics_category.*sponsor|_isSponsorEntry/.test(body) })
       .toEqual({ checksSponsorMarkers: true });
+    // _isSponsorEntry must NOT use owner === 'club' alone as a sponsor marker
+    // (clubs have non-sponsor videos in loops — presentation, ambiance, etc.)
+    const isSponsorFn = body.match(/_isSponsorEntry[\s\S]*?;/);
+    expect(isSponsorFn).toBeTruthy();
+    expect({ noOwnerClubAlone: !/owner\s*===?\s*['"]club['"]/.test(isSponsorFn![0]) })
+      .toEqual({ noOwnerClubAlone: true });
   });
 
   it('_reconcileOrphanedLoopVideos must skip single-char names (auto-generated artifacts)', () => {
@@ -11987,6 +11994,25 @@ describe('OTA deployment observability guards', () => {
       expect({ [`noOrphan_${orphan}`]: !files.includes(`${orphan}.service`) })
         .toEqual({ [`noOrphan_${orphan}`]: true });
     }
+  });
+
+  it('checkPhantomSponsors must auto-deactivate single-char sponsor names', () => {
+    const alerting = fs.readFileSync(
+      path.join(repoRoot, 'central-server/src/services/alerting.service.ts'),
+      'utf8'
+    );
+    // Must have the method
+    expect({ hasMethod: alerting.includes('checkPhantomSponsors') })
+      .toEqual({ hasMethod: true });
+    // Must check for single-char names
+    expect({ checksLength: /LENGTH.*TRIM.*name.*<=\s*1/.test(alerting) })
+      .toEqual({ checksLength: true });
+    // Must deactivate (not delete) for audit trail
+    expect({ deactivates: alerting.includes("status = 'inactive'") && alerting.includes('phantom_single_char_name') })
+      .toEqual({ deactivates: true });
+    // Must be called in the periodic loop
+    expect({ calledPeriodically: /checkPhantomSponsors\(\)/.test(alerting) })
+      .toEqual({ calledPeriodically: true });
   });
 
   it('checkStuckDeployments must auto-fail update deployments stuck >2h', () => {

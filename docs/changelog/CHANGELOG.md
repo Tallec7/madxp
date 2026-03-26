@@ -2,7 +2,23 @@
 
 ### Bug Fixes
 
-- **sponsors:** prevent auto-creation of single-char sponsor names ([#433](https://github.com/Tallec7/neopro/issues/433)) ([81b53ea](https://github.com/Tallec7/neopro/commit/81b53ead238b211e23161002c47db6ee16db7f8d))
+- **sponsors:** fix phantom sponsor auto-creation ("B", "J", "P") — `_reconcileOrphanedLoopVideos()` used `owner === 'club'` as a sponsor marker, but clubs have non-sponsor videos in loops (presentations, ambiance). Removed `owner === 'club'` from `_isSponsorEntry()` — only `site_sponsor_id` and `analytics_category` are valid sponsor markers
+- **sponsors:** add minimum name length validation (≥ 2 chars) in `resolveLocalSponsors()` and `createSiteSponsor()` API endpoint — defense-in-depth against single-char sponsor names reaching the database
+
+### Monitoring
+
+- **alerting:** add `checkPhantomSponsors()` periodic check — auto-deactivates sponsors with single-char names every 5 minutes, with audit trail in metadata (`auto_deactivated_reason: phantom_single_char_name`)
+
+### Smoke Tests
+
+- **smoke:** add regression guard for `_isSponsorEntry` — must NOT use `owner === 'club'` alone as sponsor marker
+- **smoke:** add regression guard for single-char name filtering in reconciliation and `resolveLocalSponsors`
+
+### Docs
+
+- **reference:** update SponsorService documentation — `owner === 'club'` is no longer a sponsor marker
+- **troubleshooting:** update parasitic sponsors section with reinforced fix and auto-cleanup monitoring
+- **claude.md:** update reconciliation rule — `owner === 'club'` alone is not a sponsor marker
 
 ## [3.118.2](https://github.com/Tallec7/neopro/compare/v3.118.1...v3.118.2) (2026-03-24)
 
@@ -539,7 +555,7 @@
 
 ### Bug Fixes
 
-- **admin-sponsors:** fix parasitic sponsor creation in `_reconcileOrphanedLoopVideos()` — method reconciled ALL loopVideos entries without checking sponsor markers, creating spurious sponsors ("Intro Neopro", duplicate "Laugier") for non-sponsor content videos. Now filters on `site_sponsor_id`, `analytics_category === 'sponsor'`, or `owner === 'club'` before reconciling
+- **admin-sponsors:** fix parasitic sponsor creation in `_reconcileOrphanedLoopVideos()` — method reconciled ALL loopVideos entries without checking sponsor markers, creating spurious sponsors ("Intro Neopro", duplicate "Laugier") for non-sponsor content videos. Now filters on `site_sponsor_id`, `analytics_category === 'sponsor'`, or `owner === 'club'` before reconciling (NOTE: `owner === 'club'` was later removed as a marker in v3.118.3 — it still created phantom sponsors "B", "J", "P" from non-sponsor club videos)
 - **dashboard:** fix missing sponsor badges in loop-manager and site-content — `getAutoDetectedSponsor()` used exact filename match only, but loop videos have numeric prefixes (`07_A_L_AFFUT.mp4`) while `site_sponsor_videos` stores bare category names (`A_L_AFFUT.mp4`). Added fallback `strip ^\d+_` prefix matching
 
 ### Smoke Tests
