@@ -1,3 +1,9 @@
+# [3.119.0](https://github.com/Tallec7/neopro/compare/v3.118.8...v3.119.0) (2026-04-01)
+
+### Features
+
+- **templates:** add video template overlay renderer (Lottie/CSS + MP4 → MP4) ([e80d55b](https://github.com/Tallec7/neopro/commit/e80d55b27736e1a6e3f7cfb7f4f1f746ed335fec))
+
 ## [3.118.8](https://github.com/Tallec7/neopro/compare/v3.118.7...v3.118.8) (2026-04-01)
 
 ### Bug Fixes
