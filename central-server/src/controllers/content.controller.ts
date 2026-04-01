@@ -12,6 +12,7 @@ import { uploadVideo, uploadVideoFromDisk, deleteVideo as deleteStorageVideo, ge
 import { formatPaginatedResponse } from '../middleware/pagination';
 import { uploadVerificationService, UploadStatus } from '../services/upload-verification.service';
 import { imageToVideoService } from '../services/image-to-video.service';
+import { templateRendererService } from '../services/template-renderer.service';
 import { cleanupTempFile } from '../middleware/upload';
 import metricsService from '../services/metrics.service';
 
@@ -984,5 +985,193 @@ export const deleteVideoVariant = async (req: AuthRequest, res: Response) => {
   } catch (error) {
     logger.error('Error deleting video variant:', error);
     res.status(500).json({ error: 'Erreur lors de la suppression de la variante' });
+  }
+};
+
+// ============================================================================
+// Template Rendering (overlay animation on existing MP4)
+// ============================================================================
+
+/**
+ * GET /api/content/templates/available
+ * Returns list of available built-in overlay templates with their variable schemas.
+ */
+export const getAvailableTemplates = async (_req: AuthRequest, res: Response) => {
+  try {
+    const templateSchemas = [
+      {
+        id: 'tpl_player',
+        name: 'Bandeau Joueur',
+        description: 'Bandeau nom/prénom/numéro en bas de la vidéo',
+        variables: [
+          { key: 'nom', label: 'Nom', type: 'text', required: true, placeholder: 'DUPONT' },
+          { key: 'prenom', label: 'Prénom', type: 'text', required: false, placeholder: 'Thomas' },
+          { key: 'numero', label: 'Numéro', type: 'text', required: false, placeholder: '7' },
+          { key: 'accent', label: 'Couleur accent', type: 'color', required: false, placeholder: '#FFD700' },
+          { key: 'position', label: 'Position', type: 'select', required: false, options: ['bottom', 'top', 'center'], placeholder: 'bottom' },
+        ],
+      },
+      {
+        id: 'tpl_score_plus',
+        name: 'Score +N',
+        description: 'Overlay score (+1, +2, +3) avec nom joueur et club',
+        variables: [
+          { key: 'score', label: 'Score', type: 'text', required: true, placeholder: '+1' },
+          { key: 'nom', label: 'Nom joueur', type: 'text', required: false, placeholder: 'DUPONT' },
+          { key: 'club', label: 'Nom du club', type: 'text', required: false, placeholder: 'UCKNEF BASKET' },
+          { key: 'color', label: 'Couleur score', type: 'color', required: false, placeholder: '#FF3333' },
+        ],
+      },
+      {
+        id: 'tpl_buteur',
+        name: 'Annonce Buteur',
+        description: 'Animation BUUUUT ! avec numéro et nom',
+        variables: [
+          { key: 'nom', label: 'Nom', type: 'text', required: true, placeholder: 'DUPONT' },
+          { key: 'numero', label: 'Numéro', type: 'text', required: false, placeholder: '7' },
+          { key: 'club', label: 'Club', type: 'text', required: false, placeholder: 'UCKNEF BASKET' },
+        ],
+      },
+    ];
+
+    res.json({ templates: templateSchemas });
+  } catch (error) {
+    logger.error('Error getting available templates:', error);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+};
+
+/**
+ * POST /api/content/render-template
+ * Renders an animated overlay on top of an uploaded MP4 video.
+ *
+ * multipart/form-data:
+ *   - video: MP4 file (the base video)
+ *   - templateId: string (e.g. 'tpl_player')
+ *   - variables: JSON string (e.g. '{"nom":"DUPONT","numero":"7"}')
+ *   - site_id: string (optional, tag the result for a specific site)
+ */
+export const renderTemplate = async (req: AuthRequest, res: Response) => {
+  try {
+    const file = req.file;
+    if (!file) {
+      return res.status(400).json({ error: 'Aucune vidéo fournie' });
+    }
+
+    const { templateId, site_id } = req.body;
+    if (!templateId) {
+      return res.status(400).json({ error: 'templateId est requis' });
+    }
+
+    // Parse variables
+    let variables: Record<string, string> = {};
+    if (req.body.variables) {
+      try {
+        variables = typeof req.body.variables === 'string'
+          ? JSON.parse(req.body.variables)
+          : req.body.variables;
+      } catch {
+        return res.status(400).json({ error: 'variables doit être un JSON valide' });
+      }
+    }
+
+    // Validate site_id if provided
+    if (site_id) {
+      const siteExists = await siteRepository.exists(site_id);
+      if (!siteExists) {
+        return res.status(400).json({ error: 'Site non trouvé' });
+      }
+    }
+
+    // Check renderer availability
+    const available = await templateRendererService.isAvailable();
+    if (!available) {
+      logger.error('Template renderer not available (ffmpeg or puppeteer missing)');
+      return res.status(503).json({
+        error: 'Le service de rendu n\'est pas disponible. ffmpeg ou puppeteer manquant.',
+      });
+    }
+
+    const correctedOriginalname = fixMulterEncoding(file.originalname);
+
+    logger.info('Starting template render', {
+      templateId,
+      variables,
+      originalFilename: correctedOriginalname,
+      videoSize: file.size,
+      siteId: site_id,
+    });
+
+    // Render the composite video
+    const result = await templateRendererService.render(
+      file.buffer,
+      correctedOriginalname,
+      { templateId, variables }
+    );
+
+    // Generate unique filename and checksum
+    const filename = await generateUniqueFilename(result.filename);
+    const checksum = calculateChecksum(result.buffer);
+
+    // Upload to FTP storage
+    const uploadResult = await uploadVideo(result.buffer, filename, result.mimetype);
+    if (!uploadResult) {
+      logger.error('Failed to upload rendered video to storage');
+      return res.status(500).json({ error: 'Erreur lors de l\'upload de la vidéo rendue' });
+    }
+
+    const uploadStatus: UploadStatus = uploadResult.verified ? 'ready' : 'failed';
+    const baseName = path.basename(correctedOriginalname, path.extname(correctedOriginalname));
+    const videoTitle = `${baseName} (${templateId})`;
+
+    // Insert in database
+    const video = await videoRepository.create({
+      filename,
+      original_name: result.filename,
+      category: null,
+      subcategory: null,
+      file_size: result.size,
+      mime_type: result.mimetype,
+      storage_path: uploadResult.path,
+      checksum,
+      metadata: {
+        title: videoTitle,
+        renderedFromTemplate: true,
+        templateId,
+        variables,
+        sourceVideo: correctedOriginalname,
+      },
+      uploaded_by: req.user?.id || null,
+      uploaded_for_site_id: site_id || null,
+      upload_status: uploadStatus,
+      upload_verified_at: uploadResult.verified ? new Date() : null,
+      upload_verified_size: uploadResult.actualSize ?? null,
+      duration: result.durationSeconds,
+    });
+
+    const videoResponse = { ...video, title: videoTitle, url: uploadResult.url };
+
+    logger.info('Template rendered and uploaded successfully', {
+      id: videoResponse.id,
+      filename,
+      title: videoTitle,
+      templateId,
+      outputSize: result.size,
+      durationSeconds: result.durationSeconds,
+      siteId: site_id,
+    });
+
+    res.status(201).json({
+      success: true,
+      message: `Vidéo rendue avec le template "${templateId}"`,
+      video: videoResponse,
+    });
+  } catch (error) {
+    logger.error('Error rendering template:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue';
+    res.status(500).json({
+      error: 'Erreur lors du rendu du template',
+      details: errorMessage,
+    });
   }
 };

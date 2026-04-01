@@ -1,0 +1,15 @@
+{
+  "name": "neopro-lottie-renderer",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Prototype: composite Lottie animation overlay on MP4 video → new MP4",
+  "type": "module",
+  "scripts": {
+    "render": "node render.js",
+    "test-video": "node create-test-video.js && node render.js"
+  },
+  "dependencies": {
+    "lottie-web": "^5.12.2",
+    "puppeteer": "^23.0.0"
+  }
+}

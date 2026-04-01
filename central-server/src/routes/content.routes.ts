@@ -25,6 +25,10 @@ router.delete('/videos/:videoId/variants/:displayType', authenticate, requireRol
 // Image to video conversion
 router.post('/image-to-video', authenticate, requireRole('admin', 'operator'), uploadImage.single('image'), contentController.convertImageToVideo);
 
+// Template rendering (overlay animation on existing MP4)
+router.post('/render-template', authenticate, requireRole('admin', 'operator'), uploadVideo.single('video'), contentController.renderTemplate);
+router.get('/templates/available', authenticate, contentController.getAvailableTemplates);
+
 // Deployment routes
 router.get('/deployments', authenticate, contentController.getDeployments);
 router.get('/deployments/:id', authenticate, contentController.getDeployment);
