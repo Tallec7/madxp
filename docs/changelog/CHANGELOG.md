@@ -1,3 +1,9 @@
+## [3.118.8](https://github.com/Tallec7/neopro/compare/v3.118.7...v3.118.8) (2026-04-01)
+
+### Bug Fixes
+
+- **ci:** correct FTP server-dir to root for dedicated account ([1a03261](https://github.com/Tallec7/neopro/commit/1a0326169750a4fcd0f0609964b359c95e8c67b3))
+
 ## [3.118.7](https://github.com/Tallec7/neopro/compare/v3.118.6...v3.118.7) (2026-04-01)
 
 ### Bug Fixes
