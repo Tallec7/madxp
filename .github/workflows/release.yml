@@ -151,12 +151,10 @@ jobs:
           node-version: '22'
 
       - name: Install dependencies
-        working-directory: central-dashboard
         run: npm ci
 
       - name: Build dashboard
-        working-directory: central-dashboard
-        run: npx ng build --configuration=production
+        run: npm run build:central
 
       - name: Deploy to Hostinger via FTP
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
@@ -164,6 +162,6 @@ jobs:
           server: ${{ secrets.HOSTINGER_FTP_SERVER }}
           username: ${{ secrets.HOSTINGER_FTP_USERNAME }}
           password: ${{ secrets.HOSTINGER_FTP_PASSWORD }}
-          local-dir: central-dashboard/dist/neopro-central-dashboard/browser/
+          local-dir: dist/central-dashboard/browser/
           server-dir: public_html/neopro-admin/
           dangerous-clean-slate: true
