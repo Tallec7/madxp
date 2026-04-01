@@ -1,3 +1,9 @@
+## [3.118.5](https://github.com/Tallec7/neopro/compare/v3.118.4...v3.118.5) (2026-04-01)
+
+### Bug Fixes
+
+- **dashboard:** add lottie-web to allowedCommonJsDependencies ([3d91725](https://github.com/Tallec7/neopro/commit/3d91725f675e5dd324e8d8bc031e5676735a87a9))
+
 ## [3.118.4](https://github.com/Tallec7/neopro/compare/v3.118.3...v3.118.4) (2026-04-01)
 
 ### Bug Fixes
