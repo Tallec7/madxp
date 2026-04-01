@@ -1,3 +1,10 @@
+## [3.118.4](https://github.com/Tallec7/neopro/compare/v3.118.3...v3.118.4) (2026-04-01)
+
+### Bug Fixes
+
+- **safe-dashboard:** fix .dockerignore excluding markdown files + add watch patterns ([b58f510](https://github.com/Tallec7/neopro/commit/b58f510b391b1cba2a831362746109110a797fe8))
+- **safe-dashboard:** include docs/safe/ in Docker image for SAFe parser ([0eb11c5](https://github.com/Tallec7/neopro/commit/0eb11c5f4ce126a3ea29dc2340be26b35c92e118))
+
 ## [3.118.3](https://github.com/Tallec7/neopro/compare/v3.118.2...v3.118.3) (2026-03-25)
 
 ### Bug Fixes
