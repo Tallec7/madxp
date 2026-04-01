@@ -163,5 +163,5 @@ jobs:
           username: ${{ secrets.HOSTINGER_FTP_USERNAME }}
           password: ${{ secrets.HOSTINGER_FTP_PASSWORD }}
           local-dir: dist/central-dashboard/browser/
-          server-dir: public_html/neopro-admin/
+          server-dir: /
           dangerous-clean-slate: true
