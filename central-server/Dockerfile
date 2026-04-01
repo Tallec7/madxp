@@ -28,6 +28,8 @@ WORKDIR /app
 # Copy dependencies from deps stage
 COPY --from=deps /app/node_modules ./node_modules
 COPY central-server/ .
+COPY docs/safe/ ./docs-safe/
+COPY docs/proposals/ ./docs-proposals/
 
 # Build TypeScript
 RUN npm run build
@@ -73,6 +75,10 @@ COPY --from=prod-deps /app/node_modules ./node_modules
 # Copy built application
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/package.json ./
+
+# Copy SAFe docs (source of truth for SAFe dashboard parser)
+COPY --from=builder /app/docs-safe/ ./docs/safe/
+COPY --from=builder /app/docs-proposals/ ./docs/proposals/
 
 # Expose port
 EXPOSE 3001

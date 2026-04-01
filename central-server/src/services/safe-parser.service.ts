@@ -34,8 +34,13 @@ import {
   ProposalStatus,
 } from '../types/safe.types';
 
-const SAFE_DIR = path.resolve(__dirname, '../../../docs/safe');
-const PROPOSALS_DIR = path.resolve(__dirname, '../../../docs/proposals');
+// In dev: __dirname = central-server/src/services/ → ../../../docs/safe
+// In prod (Docker): __dirname = /app/dist/services/ → /app/docs/safe (copied by Dockerfile)
+const PROJECT_ROOT = process.env.NODE_ENV === 'production'
+  ? path.resolve(__dirname, '../..')  // /app/dist/services → /app
+  : path.resolve(__dirname, '../../..');  // central-server/src/services → project root
+const SAFE_DIR = path.join(PROJECT_ROOT, 'docs/safe');
+const PROPOSALS_DIR = path.join(PROJECT_ROOT, 'docs/proposals');
 const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
 interface CacheEntry<T> {
