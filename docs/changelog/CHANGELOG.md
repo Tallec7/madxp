@@ -1,3 +1,9 @@
+## [3.118.7](https://github.com/Tallec7/neopro/compare/v3.118.6...v3.118.7) (2026-04-01)
+
+### Bug Fixes
+
+- **ci:** add @types/leaflet and @types/qrcode to root devDependencies ([e19f78e](https://github.com/Tallec7/neopro/commit/e19f78e7fbabaee7ef56840b5279abf28334285d))
+
 ## [3.118.6](https://github.com/Tallec7/neopro/compare/v3.118.5...v3.118.6) (2026-04-01)
 
 ### Bug Fixes
