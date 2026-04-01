@@ -99,9 +99,13 @@ import { ConfirmDialogService } from '../../core/services/confirm-dialog.service
             </a>
           </div>
 
-          <a routerLink="/content" routerLinkActive="active" class="nav-item" (click)="closeSidebar()" *ngIf="canManageContent()" [attr.aria-label]="'nav.content' | translate">
+          <a routerLink="/content" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" class="nav-item" (click)="closeSidebar()" *ngIf="canManageContent()" [attr.aria-label]="'nav.content' | translate">
             <span class="icon" aria-hidden="true">📹</span>
             <span>{{ 'nav.content' | translate }}</span>
+          </a>
+          <a routerLink="/content/templates" routerLinkActive="active" class="nav-item" (click)="closeSidebar()" *ngIf="isAdmin()" aria-label="Templates Lottie">
+            <span class="icon" aria-hidden="true">🎬</span>
+            <span>Templates</span>
           </a>
           <a routerLink="/updates" routerLinkActive="active" class="nav-item" (click)="closeSidebar()" *ngIf="canManageContent()" [attr.aria-label]="'nav.updates' | translate">
             <span class="icon" aria-hidden="true">🔄</span>

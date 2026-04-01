@@ -99,6 +99,18 @@ export const routes: Routes = [
         loadComponent: () => import('./features/content/content-management.component').then(m => m.ContentManagementComponent)
       },
       {
+        path: 'content/templates',
+        canActivate: [roleGuard],
+        data: { roles: ['super_admin', 'admin'] },
+        loadComponent: () => import('./features/content/lottie-templates.component').then(m => m.LottieTemplatesComponent)
+      },
+      {
+        path: 'content/templates/:id',
+        canActivate: [roleGuard],
+        data: { roles: ['super_admin', 'admin'] },
+        loadComponent: () => import('./features/content/lottie-templates.component').then(m => m.LottieTemplatesComponent)
+      },
+      {
         path: 'updates',
         canActivate: [roleGuard],
         data: { roles: ['super_admin', 'admin', 'operator'] },
