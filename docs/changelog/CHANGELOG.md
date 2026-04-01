@@ -1,3 +1,9 @@
+# [3.120.0](https://github.com/Tallec7/neopro/compare/v3.119.0...v3.120.0) (2026-04-01)
+
+### Features
+
+- **dashboard:** add Lottie templates page and navigation ([ee46279](https://github.com/Tallec7/neopro/commit/ee462792d4c37c6f6f6c137b4f666caee88f2022))
+
 # [3.119.0](https://github.com/Tallec7/neopro/compare/v3.118.8...v3.119.0) (2026-04-01)
 
 ### Features
