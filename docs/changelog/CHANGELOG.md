@@ -1,3 +1,9 @@
+## [3.118.6](https://github.com/Tallec7/neopro/compare/v3.118.5...v3.118.6) (2026-04-01)
+
+### Bug Fixes
+
+- **ci:** fix dashboard deploy — install from root and correct output path ([68d2572](https://github.com/Tallec7/neopro/commit/68d2572f8fd7e923e8b5418df3d44dfc22e468f3))
+
 ## [3.118.5](https://github.com/Tallec7/neopro/compare/v3.118.4...v3.118.5) (2026-04-01)
 
 ### Bug Fixes
