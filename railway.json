@@ -3,7 +3,7 @@
   "build": {
     "builder": "DOCKERFILE",
     "dockerfilePath": "central-server/Dockerfile",
-    "watchPatterns": ["central-server/**", "railway.json"]
+    "watchPatterns": ["central-server/**", "docs/safe/**", "docs/proposals/**", "railway.json"]
   },
   "deploy": {
     "healthcheckPath": "/live",

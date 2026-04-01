@@ -6,7 +6,6 @@ npm-debug.log
 dist
 
 # Development files
-*.md
 .git
 .gitignore
 .env*
