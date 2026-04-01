@@ -134,3 +134,36 @@ jobs:
             neopro-webapp.tar.gz
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  deploy-dashboard:
+    name: Deploy Central Dashboard to Hostinger
+    needs: release
+    if: needs.release.outputs.new_release_published == 'true'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install dependencies
+        working-directory: central-dashboard
+        run: npm ci
+
+      - name: Build dashboard
+        working-directory: central-dashboard
+        run: npx ng build --configuration=production
+
+      - name: Deploy to Hostinger via FTP
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.HOSTINGER_FTP_SERVER }}
+          username: ${{ secrets.HOSTINGER_FTP_USERNAME }}
+          password: ${{ secrets.HOSTINGER_FTP_PASSWORD }}
+          local-dir: central-dashboard/dist/neopro-central-dashboard/browser/
+          server-dir: public_html/neopro-admin/
+          dangerous-clean-slate: true
