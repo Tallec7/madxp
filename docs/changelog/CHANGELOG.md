@@ -1,3 +1,9 @@
+# [3.121.0](https://github.com/Tallec7/neopro/compare/v3.120.8...v3.121.0) (2026-04-02)
+
+### Features
+
+- **templates:** browser-side video rendering (Canvas + MediaRecorder) ([2917223](https://github.com/Tallec7/neopro/commit/29172232b50d400cd206bcef4b506d75750afc93))
+
 ## [3.120.8](https://github.com/Tallec7/neopro/compare/v3.120.7...v3.120.8) (2026-04-02)
 
 ### Bug Fixes
