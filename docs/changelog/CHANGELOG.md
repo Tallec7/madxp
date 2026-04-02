@@ -1,3 +1,9 @@
+## [3.120.1](https://github.com/Tallec7/neopro/compare/v3.120.0...v3.120.1) (2026-04-02)
+
+### Bug Fixes
+
+- **templates:** correct API paths for template endpoints ([2f8db05](https://github.com/Tallec7/neopro/commit/2f8db058249b9c8a7f63550b6284e4df2e5967ec))
+
 # [3.120.0](https://github.com/Tallec7/neopro/compare/v3.119.0...v3.120.0) (2026-04-01)
 
 ### Features
