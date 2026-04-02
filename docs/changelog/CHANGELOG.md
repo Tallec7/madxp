@@ -1,3 +1,9 @@
+## [3.120.6](https://github.com/Tallec7/neopro/compare/v3.120.5...v3.120.6) (2026-04-02)
+
+### Bug Fixes
+
+- **templates:** correct API endpoint paths for render-template ([dd50178](https://github.com/Tallec7/neopro/commit/dd50178961e4fd2d78b9ac531b3d2e1b0d96b25a))
+
 ## [3.120.5](https://github.com/Tallec7/neopro/compare/v3.120.4...v3.120.5) (2026-04-02)
 
 ### Bug Fixes
