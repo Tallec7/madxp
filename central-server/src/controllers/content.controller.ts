@@ -1102,9 +1102,13 @@ export const renderTemplate = async (req: AuthRequest, res: Response) => {
       siteId: site_id,
     });
 
-    // Render the composite video
+    // Render the composite video (pass file.path for disk storage, file.buffer for memory)
+    const videoInput = file.path || file.buffer;
+    if (!videoInput) {
+      return res.status(400).json({ error: 'Fichier vidéo non accessible' });
+    }
     const result = await templateRendererService.render(
-      file.buffer,
+      videoInput,
       correctedOriginalname,
       { templateId, variables }
     );

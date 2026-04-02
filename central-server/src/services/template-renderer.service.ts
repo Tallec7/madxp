@@ -204,19 +204,23 @@ class TemplateRendererService {
    * @returns Buffer of the composited MP4
    */
   async render(
-    videoBuffer: Buffer,
+    videoInput: Buffer | string,
     originalFilename: string,
     options: TemplateRenderOptions
   ): Promise<TemplateRenderResult> {
     const tempDir = os.tmpdir();
     const tempId = uuidv4();
-    const inputPath = path.join(tempDir, `neopro-tpl-input-${tempId}.mp4`);
+    const inputPath = typeof videoInput === 'string'
+      ? videoInput
+      : path.join(tempDir, `neopro-tpl-input-${tempId}.mp4`);
     const framesDir = path.join(tempDir, `neopro-tpl-frames-${tempId}`);
     const outputPath = path.join(tempDir, `neopro-tpl-output-${tempId}.mp4`);
 
     try {
-      // 1. Write source video to temp file
-      await fs.promises.writeFile(inputPath, videoBuffer);
+      // 1. Write source video to temp file (skip if path provided)
+      if (typeof videoInput !== 'string') {
+        await fs.promises.writeFile(inputPath, videoInput);
+      }
 
       // 2. Probe source video metadata
       const probe = await this.probeVideo(inputPath);
