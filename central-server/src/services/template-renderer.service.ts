@@ -393,7 +393,7 @@ class TemplateRendererService {
   #c { width: 1920px; height: 1080px; }
   #c svg { width: 100% !important; height: 100% !important; }
 </style>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js"><\/script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js"><` + `/script>
 </head><body>
 <div id="c"></div>
 <script>
@@ -408,7 +408,7 @@ class TemplateRendererService {
   window.totalFrames = anim.totalFrames;
   window.isLottieMode = true;
   window.ready = true;
-<\/script></body></html>`;
+<` + `/script></body></html>`;
   }
 
   private async cleanupTemp(inputPath: string, framesDir: string, outputPath: string): Promise<void> {
