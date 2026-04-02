@@ -1,3 +1,9 @@
+## [3.120.4](https://github.com/Tallec7/neopro/compare/v3.120.3...v3.120.4) (2026-04-02)
+
+### Bug Fixes
+
+- **templates:** use file.path instead of file.buffer for disk-stored uploads ([da4c565](https://github.com/Tallec7/neopro/commit/da4c565e837bfd8b11447a8ce2e70cab4e441878))
+
 ## [3.120.3](https://github.com/Tallec7/neopro/compare/v3.120.2...v3.120.3) (2026-04-02)
 
 ### Bug Fixes
