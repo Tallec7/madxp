@@ -1,3 +1,9 @@
+## [3.120.8](https://github.com/Tallec7/neopro/compare/v3.120.7...v3.120.8) (2026-04-02)
+
+### Bug Fixes
+
+- **templates:** use PUPPETEER_EXECUTABLE_PATH env var on Railway ([c95dec8](https://github.com/Tallec7/neopro/commit/c95dec85a2d7e6a61fc00c1393ac1b7343cf6951))
+
 ## [3.120.7](https://github.com/Tallec7/neopro/compare/v3.120.6...v3.120.7) (2026-04-02)
 
 ### Bug Fixes
