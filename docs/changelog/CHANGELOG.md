@@ -1,3 +1,9 @@
+## [3.120.7](https://github.com/Tallec7/neopro/compare/v3.120.6...v3.120.7) (2026-04-02)
+
+### Bug Fixes
+
+- **templates:** remove /content prefix from API paths ([7d9f26a](https://github.com/Tallec7/neopro/commit/7d9f26ab8130e09b1932f439c07c8b1b277c3598))
+
 ## [3.120.6](https://github.com/Tallec7/neopro/compare/v3.120.5...v3.120.6) (2026-04-02)
 
 ### Bug Fixes
