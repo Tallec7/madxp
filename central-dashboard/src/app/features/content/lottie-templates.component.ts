@@ -392,7 +392,7 @@ export class LottieTemplatesComponent implements OnInit, OnDestroy {
 
   private loadTemplates(): void {
     this.loadingTemplates = true;
-    const sub = this.api.get<{ templates: OverlayTemplate[] }>('/templates/available').subscribe({
+    const sub = this.api.get<{ templates: OverlayTemplate[] }>('/content/templates/available').subscribe({
       next: (res) => {
         this.templates = res.templates;
         this.loadingTemplates = false;
@@ -490,7 +490,7 @@ export class LottieTemplatesComponent implements OnInit, OnDestroy {
     }
 
     const sub = this.api.uploadWithProgress<{ success: boolean; video: { id: string; title: string; url: string } }>(
-      '/render-template',
+      '/content/render-template',
       formData
     ).subscribe({
       next: (progress) => {
