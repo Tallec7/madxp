@@ -1,3 +1,9 @@
+## [3.120.3](https://github.com/Tallec7/neopro/compare/v3.120.2...v3.120.3) (2026-04-02)
+
+### Bug Fixes
+
+- **templates:** fix ESLint no-useless-escape in template renderer ([6e7fd67](https://github.com/Tallec7/neopro/commit/6e7fd67818228853fffa2bd9ddff12c51fba8f68))
+
 ## [3.120.2](https://github.com/Tallec7/neopro/compare/v3.120.1...v3.120.2) (2026-04-02)
 
 ### Bug Fixes
