@@ -1,3 +1,9 @@
+## [3.120.2](https://github.com/Tallec7/neopro/compare/v3.120.1...v3.120.2) (2026-04-02)
+
+### Bug Fixes
+
+- **templates:** add Chromium to Docker image for Puppeteer rendering ([77e4ee6](https://github.com/Tallec7/neopro/commit/77e4ee639cdfd8c8f4db532b90dfcf17875dd44b))
+
 ## [3.120.1](https://github.com/Tallec7/neopro/compare/v3.120.0...v3.120.1) (2026-04-02)
 
 ### Bug Fixes
