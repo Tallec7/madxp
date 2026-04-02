@@ -1,3 +1,9 @@
+## [3.120.5](https://github.com/Tallec7/neopro/compare/v3.120.4...v3.120.5) (2026-04-02)
+
+### Bug Fixes
+
+- **templates:** fix remaining videoBuffer reference in render logging ([9e95289](https://github.com/Tallec7/neopro/commit/9e95289684b69c5414382c7f9536cb44824c46fb))
+
 ## [3.120.4](https://github.com/Tallec7/neopro/compare/v3.120.3...v3.120.4) (2026-04-02)
 
 ### Bug Fixes
