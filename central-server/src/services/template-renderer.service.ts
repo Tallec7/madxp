@@ -232,7 +232,7 @@ class TemplateRendererService {
         variables: options.variables,
         fps,
         durationS,
-        inputSize: videoBuffer.length,
+        inputSize: typeof videoInput === 'string' ? 'file' : videoInput.length,
       });
 
       // 3. Build overlay HTML
