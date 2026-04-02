@@ -5,8 +5,9 @@ import { ActivatedRoute } from '@angular/router';
 import { SitesService } from '../../core/services/sites.service';
 import { NotificationService } from '../../core/services/notification.service';
 import { ApiService, UploadProgress } from '../../core/services/api.service';
+import { BrowserRendererService, RenderProgress } from './browser-renderer.service';
 import { Site } from '../../core/models';
-import { Subscription, Subject, debounceTime } from 'rxjs';
+import { Subscription } from 'rxjs';
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -161,9 +162,9 @@ interface OverlayTemplate {
             </div>
 
             <!-- Progress bar -->
-            <div class="progress-bar-container" *ngIf="renderProgress">
+            <div class="progress-bar-container" *ngIf="rendering">
               <div class="progress-bar">
-                <div class="progress-fill" [style.width.%]="renderProgress.progress"></div>
+                <div class="progress-fill" [style.width.%]="renderPercent"></div>
               </div>
               <span class="progress-text">{{ getRenderStatusText() }}</span>
             </div>
@@ -337,6 +338,7 @@ export class LottieTemplatesComponent implements OnInit, OnDestroy {
   private readonly notifications = inject(NotificationService);
   private readonly api = inject(ApiService);
   private readonly route = inject(ActivatedRoute);
+  private readonly browserRenderer = inject(BrowserRendererService);
 
   sites: Site[] = [];
   selectedSiteId = '';
@@ -354,7 +356,8 @@ export class LottieTemplatesComponent implements OnInit, OnDestroy {
   // Render state
   rendering = false;
   rendered = false;
-  renderProgress: UploadProgress | null = null;
+  renderPhase: 'idle' | 'rendering' | 'uploading' | 'done' = 'idle';
+  renderPercent = 0;
   renderedVideo: { id: string; title: string; url: string } | null = null;
 
   private subscriptions: Subscription[] = [];
@@ -471,7 +474,7 @@ export class LottieTemplatesComponent implements OnInit, OnDestroy {
     this.renderedVideo = null;
   }
 
-  // ── Render ────────────────────────────────────────────────────────
+  // ── Render (browser-side) ───────────────────────────────────────
 
   render(): void {
     if (!this.canRender || !this.sourceFile || !this.selectedTemplate) return;
@@ -479,39 +482,64 @@ export class LottieTemplatesComponent implements OnInit, OnDestroy {
     this.rendering = true;
     this.rendered = false;
     this.renderedVideo = null;
-    this.renderProgress = { status: 'uploading', progress: 0 };
+    this.renderPhase = 'rendering';
+    this.renderPercent = 0;
 
-    const formData = new FormData();
-    formData.append('video', this.sourceFile);
-    formData.append('templateId', this.selectedTemplate.id);
-    formData.append('variables', JSON.stringify(this.variableValues));
-    if (this.selectedSiteId) {
-      formData.append('site_id', this.selectedSiteId);
-    }
+    const templateId = this.selectedTemplate.id;
+    const variables = { ...this.variableValues };
 
-    const sub = this.api.uploadWithProgress<{ success: boolean; video: { id: string; title: string; url: string } }>(
-      '/render-template',
-      formData
-    ).subscribe({
-      next: (progress) => {
-        this.renderProgress = progress;
-
-        if (progress.status === 'complete' && progress.response) {
-          const resp = progress.response as { success: boolean; video: { id: string; title: string; url: string } };
-          this.rendering = false;
-          this.rendered = true;
-          this.renderedVideo = resp.video;
-          this.notifications.success('Video generee avec succes !');
-        }
-      },
-      error: (err) => {
-        this.rendering = false;
-        this.renderProgress = null;
-        const msg = err?.error?.details || err?.error?.error || 'Erreur lors du rendu';
-        this.notifications.error(msg);
+    // Step 1: Render in the browser (Canvas + MediaRecorder)
+    this.browserRenderer.render(
+      this.sourceFile,
+      { templateId, variables },
+      (p) => {
+        this.renderPhase = p.phase === 'done' ? 'uploading' : 'rendering';
+        this.renderPercent = p.progress;
       }
+    ).then((blob) => {
+      // Step 2: Upload the rendered video as a regular video file
+      this.renderPhase = 'uploading';
+      this.renderPercent = 0;
+
+      const baseName = this.sourceFile!.name.replace(/\.\w+$/, '');
+      const filename = `${baseName}_${templateId}.webm`;
+      const file = new File([blob], filename, { type: blob.type });
+
+      const formData = new FormData();
+      formData.append('video', file);
+      if (this.selectedSiteId) {
+        formData.append('site_id', this.selectedSiteId);
+      }
+
+      const sub = this.api.uploadWithProgress<{ success: boolean; video: { id: string; title: string; url: string } }>(
+        '/videos',
+        formData
+      ).subscribe({
+        next: (progress) => {
+          this.renderPercent = progress.progress;
+
+          if (progress.status === 'complete' && progress.response) {
+            const resp = progress.response as { success: boolean; video: { id: string; title: string; url: string } };
+            this.rendering = false;
+            this.rendered = true;
+            this.renderPhase = 'done';
+            this.renderedVideo = resp.video;
+            this.notifications.success('Video generee et uploadee !');
+          }
+        },
+        error: (err) => {
+          this.rendering = false;
+          this.renderPhase = 'idle';
+          const msg = err?.error?.details || err?.error?.error || 'Erreur lors de l\'upload';
+          this.notifications.error(msg);
+        }
+      });
+      this.subscriptions.push(sub);
+    }).catch((err) => {
+      this.rendering = false;
+      this.renderPhase = 'idle';
+      this.notifications.error(`Erreur rendu: ${err.message || 'Erreur inconnue'}`);
     });
-    this.subscriptions.push(sub);
   }
 
   // ── Helpers ───────────────────────────────────────────────────────
@@ -534,13 +562,9 @@ export class LottieTemplatesComponent implements OnInit, OnDestroy {
   }
 
   getRenderStatusText(): string {
-    if (!this.renderProgress) return '';
-    if (this.renderProgress.status === 'uploading') {
-      return `Upload: ${this.renderProgress.progress}%`;
-    }
-    if (this.renderProgress.status === 'processing') {
-      return 'Rendu en cours...';
-    }
+    if (this.renderPhase === 'rendering') return `Rendu dans le navigateur: ${this.renderPercent}%`;
+    if (this.renderPhase === 'uploading') return `Upload: ${this.renderPercent}%`;
+    if (this.renderPhase === 'done') return 'Termine !';
     return '';
   }
 
