@@ -12208,3 +12208,97 @@ describe('Socket reconnection stability guards', () => {
     });
   });
 });
+
+// Central Dashboard — 404 page and error boundary regression guards
+// ----------------------------------------------------------
+describe('Central Dashboard error handling guards', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+
+  it('app.routes.ts wildcard must load NotFoundComponent (not redirectTo)', () => {
+    const routesPath = path.join(repoRoot, 'central-dashboard', 'src', 'app', 'app.routes.ts');
+    const routesContent = fs.readFileSync(routesPath, 'utf8');
+    expect({
+      hasWildcard: routesContent.includes("path: '**'"),
+      loadsNotFound: /loadComponent.*not-found\.component/.test(routesContent),
+      noRedirectToEmpty: !/path:\s*'\*\*'[\s\S]{0,50}redirectTo:\s*''/.test(routesContent),
+    }).toEqual({
+      hasWildcard: true,
+      loadsNotFound: true,
+      noRedirectToEmpty: true,
+    });
+  });
+
+  it('NotFoundComponent must exist with 404 message and dashboard link', () => {
+    const componentPath = path.join(repoRoot, 'central-dashboard', 'src', 'app', 'features', 'error', 'not-found.component.ts');
+    const content = fs.readFileSync(componentPath, 'utf8');
+    expect({
+      has404: content.includes('404'),
+      hasMessage: content.includes('introuvable'),
+      hasDashboardLink: /routerLink.*dashboard/.test(content),
+      isStandalone: content.includes('standalone: true'),
+    }).toEqual({
+      has404: true,
+      hasMessage: true,
+      hasDashboardLink: true,
+      isStandalone: true,
+    });
+  });
+
+  it('ErrorBoundaryComponent must exist and wrap content with error state', () => {
+    const componentPath = path.join(repoRoot, 'central-dashboard', 'src', 'app', 'core', 'components', 'error-boundary.component.ts');
+    const content = fs.readFileSync(componentPath, 'utf8');
+    expect({
+      hasNgContent: content.includes('<ng-content>'),
+      hasErrorCheck: /errorBoundary\.hasError/.test(content),
+      hasReload: content.includes('reload()'),
+      hasDismiss: content.includes('dismiss()'),
+      isStandalone: content.includes('standalone: true'),
+    }).toEqual({
+      hasNgContent: true,
+      hasErrorCheck: true,
+      hasReload: true,
+      hasDismiss: true,
+      isStandalone: true,
+    });
+  });
+
+  it('ErrorBoundaryService must exist with triggerError and navigation auto-clear', () => {
+    const servicePath = path.join(repoRoot, 'central-dashboard', 'src', 'app', 'core', 'services', 'error-boundary.service.ts');
+    const content = fs.readFileSync(servicePath, 'utf8');
+    expect({
+      hasTrigger: content.includes('triggerError'),
+      hasClear: content.includes('clear()'),
+      hasNavigationClear: content.includes('NavigationStart'),
+      hasSignal: content.includes('signal'),
+    }).toEqual({
+      hasTrigger: true,
+      hasClear: true,
+      hasNavigationClear: true,
+      hasSignal: true,
+    });
+  });
+
+  it('GlobalErrorHandler must use ErrorBoundaryService (not just notification toast)', () => {
+    const handlerPath = path.join(repoRoot, 'central-dashboard', 'src', 'app', 'core', 'handlers', 'global-error.handler.ts');
+    const content = fs.readFileSync(handlerPath, 'utf8');
+    expect({
+      importsErrorBoundary: content.includes('ErrorBoundaryService'),
+      callsTriggerError: content.includes('errorBoundary.triggerError()'),
+    }).toEqual({
+      importsErrorBoundary: true,
+      callsTriggerError: true,
+    });
+  });
+
+  it('AppComponent must wrap router-outlet with error-boundary', () => {
+    const appPath = path.join(repoRoot, 'central-dashboard', 'src', 'app', 'app.component.ts');
+    const content = fs.readFileSync(appPath, 'utf8');
+    expect({
+      importsErrorBoundary: content.includes('ErrorBoundaryComponent'),
+      wrapsRouterOutlet: /app-error-boundary[\s\S]*?router-outlet[\s\S]*?app-error-boundary/.test(content),
+    }).toEqual({
+      importsErrorBoundary: true,
+      wrapsRouterOutlet: true,
+    });
+  });
+});

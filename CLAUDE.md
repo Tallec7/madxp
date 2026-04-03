@@ -195,6 +195,7 @@ source central-server/.env && psql "$DATABASE_URL" -f central-server/src/scripts
 - Utiliser `iptables` sans vérifier `command -v iptables` dans les scripts Pi (Debian 13 Trixie a supprimé iptables du système de base — toujours vérifier la disponibilité et fallback sur `nft` — smoke test enforced)
 - Faire un `iwlist wlan1 scan` dans `wifi-bssid.js` / `getWifiBssidStatus()` sans vérifier le cache inter-processus `/tmp/neopro-wlan1-scan-cache` (le debug-bundle appelle cette fonction — 2 scans wlan1 en <120s tue le carrier RTL8192EU → auth timeout → WiFi drop 5min — incident 2026-03-23 22:32 — smoke test enforced)
 - Envoyer l'alerte "Site Offline" immédiatement dans `alertService.siteOffline()` (utiliser le délai de grâce `OFFLINE_GRACE_PERIOD_MS` de 60s — si le site revient dans ce délai, annuler les deux alertes offline+online — les flip-flops Railway de 3-16s ne doivent pas générer de bruit Slack — smoke test: vérifier `pendingOfflineAlerts` dans alert.service.ts)
+- Revenir à `redirectTo: ''` sur la route wildcard `**` dans `central-dashboard/src/app/app.routes.ts` (redirige silencieusement vers la homepage pour toute URL cassée — masque les erreurs de navigation — toujours charger `NotFoundComponent` — smoke test enforced)
 
 ## Architecture détaillée
 

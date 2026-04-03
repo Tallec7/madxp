@@ -2,6 +2,7 @@ import { ErrorHandler, Injectable, inject, isDevMode } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { LoggerService } from '../services/logger.service';
 import { NotificationService } from '../services/notification.service';
+import { ErrorBoundaryService } from '../services/error-boundary.service';
 import { ErrorExtractor } from '../utils/error-extractor';
 
 /**
@@ -25,6 +26,7 @@ export class GlobalErrorHandler implements ErrorHandler {
   // Use inject() for compatibility with standalone components
   private logger = inject(LoggerService);
   private notificationService = inject(NotificationService);
+  private errorBoundary = inject(ErrorBoundaryService);
 
   handleError(error: Error | HttpErrorResponse | unknown): void {
     // Extract error details
@@ -57,9 +59,8 @@ export class GlobalErrorHandler implements ErrorHandler {
     // Show user notification only for non-HTTP errors
     // HTTP errors are handled by the interceptor to avoid double notifications
     if (!(error instanceof HttpErrorResponse)) {
-      this.notificationService.error(
-        'Une erreur inattendue est survenue. Veuillez rafraîchir la page.'
-      );
+      // Show error boundary for critical rendering errors, toast for others
+      this.errorBoundary.triggerError();
     }
 
     // In development mode, also log to console with stack trace

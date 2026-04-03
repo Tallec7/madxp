@@ -1886,6 +1886,28 @@ Le module Analytics est organisé en **4 onglets** accessibles via une navigatio
 
 **Page Fleet enrichie** : L'onglet Fleet (`/analytics`) affiche désormais 6 KPI cards traction en haut (boîtiers déployés, lectures totales, screen time, impressions, annonceurs actifs, rétention) avec un lien vers la page Traction détaillée. Visible uniquement pour les admins.
 
+### Dashboard Central — Gestion des erreurs
+
+Le dashboard implémente 3 niveaux de gestion d'erreurs :
+
+| Niveau                   | Composant                                         | Rôle                                                                                                                          |
+| ------------------------ | ------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| **Page 404**             | `NotFoundComponent`                               | Route wildcard `**` → page "Page introuvable" avec lien dashboard                                                             |
+| **Error Boundary**       | `ErrorBoundaryComponent` + `ErrorBoundaryService` | Wraps `<router-outlet>` — affiche un écran d'erreur avec boutons "Rafraîchir" / "Retour au dashboard" lors d'erreurs de rendu |
+| **Global Error Handler** | `GlobalErrorHandler`                              | Catch-all Angular `ErrorHandler` — log backend via `LoggerService`, déclenche l'error boundary pour les erreurs non-HTTP      |
+
+**Fichiers impliqués :**
+
+- `src/app/features/error/not-found.component.ts` — Page 404
+- `src/app/features/error/forbidden.component.ts` — Page 403 (accès refusé)
+- `src/app/core/components/error-boundary.component.ts` — Wrapper error boundary
+- `src/app/core/services/error-boundary.service.ts` — Signal-based state, auto-clear à chaque `NavigationStart`
+- `src/app/core/handlers/global-error.handler.ts` — ErrorHandler Angular global
+
+**Smoke tests :** 6 guards vérifient la présence de la page 404, de l'error boundary, du wiring `GlobalErrorHandler` → `ErrorBoundaryService`, et du wrapping dans `AppComponent`.
+
+> ⚠️ **Ne jamais revenir à `redirectTo: ''` sur la route wildcard `**`** — redirige silencieusement vers la homepage pour toute URL cassée, masquant les erreurs de navigation. Toujours charger `NotFoundComponent`. Smoke test enforced.
+
 ---
 
 ## Sécurité
