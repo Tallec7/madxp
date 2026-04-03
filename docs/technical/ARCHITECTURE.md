@@ -114,12 +114,20 @@ neopro/ (monorepo)
 │   │   │   ├── sites/
 │   │   │   │   ├── site-detail.component.ts     # Page détail (6 onglets) — onglet État : métriques système + hotspot + actions rapides
 │   │   │   │   └── components/
-│   │   │   │       ├── site-content-tab/        # Pipeline contenu (bibliothèque → boucles → télécommande → analytics)
+│   │   │   │       ├── site-content-tab/        # Pipeline contenu (coordinateur)
+│   │   │   │       │   ├── video-manager/       #   Upload, bibliothèque, suppression vidéos
+│   │   │   │       │   ├── config-editor/       #   Catégories, boucles, télécommande, analytics
+│   │   │   │       │   ├── deployment-status/   #   Déploiement, diff preview, validation
+│   │   │   │       │   └── config-draft/        #   Brouillons, historique modifications
 │   │   │   │       ├── loop-manager/            # Gestion unifiée boucles (défaut + 3 phases)
 │   │   │   │       ├── site-sponsors-tab/       # Sponsors locaux : CRUD, KPIs, association vidéos, benchmark, magic link
 │   │   │   │       ├── site-settings-tab/       # Config réseau, hotspot, branding club
 │   │   │   │       ├── site-profiles-tab/       # Multi-config CRUD + deploy
-│   │   │   │       └── site-debug-tab/          # Logs, commandes, diagnostic hotspot avancé
+│   │   │   │       └── site-debug-tab/          # Diagnostic site (coordinateur)
+│   │   │   │           ├── health-monitor/      #   Santé GPU, fan, display/HDMI, services, diagnostics
+│   │   │   │           ├── command-panel/       #   Terminal, logs, export bundle, connexion zombie
+│   │   │   │           ├── service-status/      #   Réseau, buffer analytics, hotspot, WiFi
+│   │   │   │           └── system-info/         #   Fichiers Pi, config historique, timeline
 │   │   │   └── sponsor-portal/                  # Page publique portail sponsor (token-based)
 │   │   ├── core/                                # Models, services, guards
 │   │   └── shared/                              # Composants réutilisables

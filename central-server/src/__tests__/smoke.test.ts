@@ -2080,8 +2080,23 @@ describe('Deployment repository query safety', () => {
 // ----------------------------------------------------------
 describe('Debug page architecture guards', () => {
   const repoRoot = path.resolve(__dirname, '..', '..', '..');
-  const debugTabPath = path.join(repoRoot, 'central-dashboard/src/app/features/sites/components/site-debug-tab/site-debug-tab.component.ts');
+  const debugTabDir = path.join(repoRoot, 'central-dashboard/src/app/features/sites/components/site-debug-tab');
+  const debugTabPath = path.join(debugTabDir, 'site-debug-tab.component.ts');
   const debugTab = fs.readFileSync(debugTabPath, 'utf8');
+  // Read all .ts files in the debug-tab directory tree for pattern checks across sub-components
+  const readAllTsFiles = (dir: string): string => {
+    let result = '';
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const fullPath = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        result += readAllTsFiles(fullPath);
+      } else if (entry.name.endsWith('.ts') && !entry.name.endsWith('.spec.ts')) {
+        result += fs.readFileSync(fullPath, 'utf8') + '\n';
+      }
+    }
+    return result;
+  };
+  const debugTabAll = readAllTsFiles(debugTabDir);
 
   it('site-debug-tab must import DebugSummaryBarComponent (extracted sub-component)', () => {
     // Phase B extracted the summary bar into a standalone sub-component.
@@ -2179,11 +2194,12 @@ describe('Debug page architecture guards', () => {
   it('site-debug-tab must use confirmModal for dangerous actions (reboot, restore)', () => {
     // The custom modal pattern replaces native confirm() for reboot and config restore.
     // Both actions need explicit confirmation to prevent accidental triggers.
-    expect({ hasShowConfirmModal: debugTab.includes('showConfirmModal(') })
+    // After refactoring, these patterns live in sub-components (command-panel, system-info).
+    expect({ hasShowConfirmModal: debugTabAll.includes('showConfirmModal(') })
       .toEqual({ hasShowConfirmModal: true });
-    expect({ hasDoExecuteCommand: debugTab.includes('doExecuteCommand(') })
+    expect({ hasDoExecuteCommand: debugTabAll.includes('doExecuteCommand(') })
       .toEqual({ hasDoExecuteCommand: true });
-    expect({ hasDoRestoreVersion: debugTab.includes('doRestoreVersion(') })
+    expect({ hasDoRestoreVersion: debugTabAll.includes('doRestoreVersion(') })
       .toEqual({ hasDoRestoreVersion: true });
   });
 
@@ -2252,13 +2268,14 @@ describe('Debug page architecture guards', () => {
   it('site-debug-tab quick-commands must include restart_kiosk and restart_app', () => {
     // Quick-command buttons for Kiosk and App restart are essential for remote debug.
     // Missing buttons would force operators to use the terminal for common operations.
-    expect({ hasRestartKiosk: debugTab.includes("case 'restart_kiosk':") })
+    // After refactoring, command execution lives in command-panel sub-component.
+    expect({ hasRestartKiosk: debugTabAll.includes("case 'restart_kiosk':") })
       .toEqual({ hasRestartKiosk: true });
-    expect({ hasRestartApp: debugTab.includes("case 'restart_app':") })
+    expect({ hasRestartApp: debugTabAll.includes("case 'restart_app':") })
       .toEqual({ hasRestartApp: true });
-    expect({ kioskMapsToService: debugTab.includes("service: 'neopro-kiosk'") })
+    expect({ kioskMapsToService: debugTabAll.includes("service: 'neopro-kiosk'") })
       .toEqual({ kioskMapsToService: true });
-    expect({ appMapsToService: debugTab.includes("service: 'neopro-app'") })
+    expect({ appMapsToService: debugTabAll.includes("service: 'neopro-app'") })
       .toEqual({ appMapsToService: true });
   });
 
@@ -4399,12 +4416,20 @@ describe('Multi-profile enrichment regression guards', () => {
 
   // --- Content tab must have profile selector wired ---
   it('site-content-tab must have profile selector with onProfileSelected', () => {
-    const contentTab = fs.readFileSync(
+    const readAllTs = (dir: string): string => {
+      let result = '';
+      for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+        const fullPath = path.join(dir, entry.name);
+        if (entry.isDirectory()) result += readAllTs(fullPath);
+        else if (entry.name.endsWith('.ts') && !entry.name.endsWith('.spec.ts')) result += fs.readFileSync(fullPath, 'utf8') + '\n';
+      }
+      return result;
+    };
+    const contentTab = readAllTs(
       path.join(
         repoRoot,
-        'central-dashboard/src/app/features/sites/components/site-content-tab/site-content-tab.component.ts'
-      ),
-      'utf8'
+        'central-dashboard/src/app/features/sites/components/site-content-tab'
+      )
     );
     expect({
       hasProfileSelector: contentTab.includes('profile-selector-bar'),
@@ -5321,10 +5346,10 @@ describe('Secondary variant badge wiring guards', () => {
     repoRoot,
     'central-server/src/controllers/sites.controller.ts',
   );
-  // Dashboard
-  const siteContentTabPath = path.join(
+  // Dashboard — read all .ts files in content-tab dir (includes sub-components)
+  const contentTabDir = path.join(
     repoRoot,
-    'central-dashboard/src/app/features/sites/components/site-content-tab/site-content-tab.component.ts',
+    'central-dashboard/src/app/features/sites/components/site-content-tab',
   );
   // Pi Remote
   const remoteTemplatePath = path.join(
@@ -5336,6 +5361,16 @@ describe('Secondary variant badge wiring guards', () => {
     'raspberry/src/app/interfaces/video.interface.ts',
   );
 
+  const readAllTsInDir = (dir: string): string => {
+    let result = '';
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const fullPath = path.join(dir, entry.name);
+      if (entry.isDirectory()) result += readAllTsInDir(fullPath);
+      else if (entry.name.endsWith('.ts') && !entry.name.endsWith('.spec.ts')) result += fs.readFileSync(fullPath, 'utf8') + '\n';
+    }
+    return result;
+  };
+
   let controllerContent: string;
   let siteContentTabContent: string;
   let remoteTemplateContent: string;
@@ -5343,7 +5378,7 @@ describe('Secondary variant badge wiring guards', () => {
 
   beforeAll(() => {
     controllerContent = fs.readFileSync(sitesControllerPath, 'utf8');
-    siteContentTabContent = fs.readFileSync(siteContentTabPath, 'utf8');
+    siteContentTabContent = readAllTsInDir(contentTabDir);
     remoteTemplateContent = fs.readFileSync(remoteTemplatePath, 'utf8');
     videoInterfaceContent = fs.readFileSync(videoInterfacePath, 'utf8');
   });
@@ -5417,9 +5452,9 @@ describe('Secondary video deployment UI guards', () => {
     repoRoot,
     'central-server/src/controllers/remote.controller.ts',
   );
-  const siteContentTabPath = path.join(
+  const contentTabDir2 = path.join(
     repoRoot,
-    'central-dashboard/src/app/features/sites/components/site-content-tab/site-content-tab.component.ts',
+    'central-dashboard/src/app/features/sites/components/site-content-tab',
   );
   const remoteServicePath = path.join(
     repoRoot,
@@ -5429,6 +5464,16 @@ describe('Secondary video deployment UI guards', () => {
     repoRoot,
     'central-dashboard/src/app/core/services/sites.service.ts',
   );
+
+  const readAllTsInDir2 = (dir: string): string => {
+    let result = '';
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const fullPath = path.join(dir, entry.name);
+      if (entry.isDirectory()) result += readAllTsInDir2(fullPath);
+      else if (entry.name.endsWith('.ts') && !entry.name.endsWith('.spec.ts')) result += fs.readFileSync(fullPath, 'utf8') + '\n';
+    }
+    return result;
+  };
 
   let cloudRemoteHtml: string;
   let cloudRemoteTs: string;
@@ -5445,7 +5490,7 @@ describe('Secondary video deployment UI guards', () => {
     cloudRemoteScss = fs.readFileSync(cloudRemoteScssPath, 'utf8');
     siteDetailContent = fs.readFileSync(siteDetailPath, 'utf8');
     remoteControllerContent = fs.readFileSync(remoteControllerPath, 'utf8');
-    siteContentTabContent = fs.readFileSync(siteContentTabPath, 'utf8');
+    siteContentTabContent = readAllTsInDir2(contentTabDir2);
     remoteServiceContent = fs.readFileSync(remoteServicePath, 'utf8');
     sitesServiceContent = fs.readFileSync(sitesServicePath, 'utf8');
   });
@@ -6309,8 +6354,18 @@ describe('Secondary display EDID pipeline (health status)', () => {
   const repoRoot = path.resolve(__dirname, '..', '..', '..');
   const metricsPath = path.join(repoRoot, 'raspberry/sync-agent/src/metrics.js');
   const metricsContent = fs.readFileSync(metricsPath, 'utf8');
-  const debugTabPath = path.join(repoRoot, 'central-dashboard/src/app/features/sites/components/site-debug-tab/site-debug-tab.component.ts');
-  const debugTab = fs.readFileSync(debugTabPath, 'utf8');
+  const debugTabDir = path.join(repoRoot, 'central-dashboard/src/app/features/sites/components/site-debug-tab');
+  // Read all .ts files in the debug-tab directory tree (sub-components included)
+  const readAllTsInDir = (dir: string): string => {
+    let result = '';
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const fullPath = path.join(dir, entry.name);
+      if (entry.isDirectory()) result += readAllTsInDir(fullPath);
+      else if (entry.name.endsWith('.ts') && !entry.name.endsWith('.spec.ts')) result += fs.readFileSync(fullPath, 'utf8') + '\n';
+    }
+    return result;
+  };
+  const debugTab = readAllTsInDir(debugTabDir);
 
   it('metrics.js _findEdidPath must accept optional port filter parameter', () => {
     // _findEdidPath must accept a portFilter to target HDMI-A-2 specifically
@@ -8576,9 +8631,17 @@ describe('deployed_path feedback guards', () => {
   });
 
   it('dashboard site-content-tab must use deployedPathsMap instead of speculative paths', () => {
-    const content = fs.readFileSync(
-      path.join(repoRoot, 'central-dashboard/src/app/features/sites/components/site-content-tab/site-content-tab.component.ts'),
-      'utf8'
+    const readAllTs = (dir: string): string => {
+      let r = '';
+      for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+        const p = path.join(dir, e.name);
+        if (e.isDirectory()) r += readAllTs(p);
+        else if (e.name.endsWith('.ts') && !e.name.endsWith('.spec.ts')) r += fs.readFileSync(p, 'utf8') + '\n';
+      }
+      return r;
+    };
+    const content = readAllTs(
+      path.join(repoRoot, 'central-dashboard/src/app/features/sites/components/site-content-tab')
     );
     expect({
       hasMap: /deployedPathsMap/.test(content),
@@ -8590,9 +8653,17 @@ describe('deployed_path feedback guards', () => {
   });
 
   it('dashboard speculative path fallback must use "default" not "UPLOADS" to match deployment.service', () => {
-    const dashboardContent = fs.readFileSync(
-      path.join(repoRoot, 'central-dashboard/src/app/features/sites/components/site-content-tab/site-content-tab.component.ts'),
-      'utf8'
+    const readAllTs2 = (dir: string): string => {
+      let r = '';
+      for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+        const p = path.join(dir, e.name);
+        if (e.isDirectory()) r += readAllTs2(p);
+        else if (e.name.endsWith('.ts') && !e.name.endsWith('.spec.ts')) r += fs.readFileSync(p, 'utf8') + '\n';
+      }
+      return r;
+    };
+    const dashboardContent = readAllTs2(
+      path.join(repoRoot, 'central-dashboard/src/app/features/sites/components/site-content-tab')
     );
     const deploymentContent = fs.readFileSync(
       path.join(repoRoot, 'central-server/src/services/deployment.service.ts'),
@@ -9421,9 +9492,9 @@ describe('Video Library UX regression guards', () => {
     repoRoot,
     'central-dashboard/src/app/features/sites/components/video-library/video-library.component.ts',
   );
-  const siteContentTabPath = path.join(
+  const siteContentTabDir = path.join(
     repoRoot,
-    'central-dashboard/src/app/features/sites/components/site-content-tab/site-content-tab.component.ts',
+    'central-dashboard/src/app/features/sites/components/site-content-tab',
   );
   const modelsPath = path.join(
     repoRoot,
@@ -9438,6 +9509,16 @@ describe('Video Library UX regression guards', () => {
     'central-server/src/repositories/timeline.repository.ts',
   );
 
+  const readAllTsFiles = (dir: string): string => {
+    let result = '';
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const fullPath = path.join(dir, entry.name);
+      if (entry.isDirectory()) result += readAllTsFiles(fullPath);
+      else if (entry.name.endsWith('.ts') && !entry.name.endsWith('.spec.ts')) result += fs.readFileSync(fullPath, 'utf8') + '\n';
+    }
+    return result;
+  };
+
   let videoLibContent: string;
   let siteContentTabContent: string;
   let modelsContent: string;
@@ -9446,7 +9527,7 @@ describe('Video Library UX regression guards', () => {
 
   beforeAll(() => {
     videoLibContent = fs.readFileSync(videoLibraryPath, 'utf8');
-    siteContentTabContent = fs.readFileSync(siteContentTabPath, 'utf8');
+    siteContentTabContent = readAllTsFiles(siteContentTabDir);
     modelsContent = fs.readFileSync(modelsPath, 'utf8');
     controllerContent = fs.readFileSync(sitesControllerPath, 'utf8');
     timelineRepoContent = fs.readFileSync(timelineRepoPath, 'utf8');
