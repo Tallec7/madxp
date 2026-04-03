@@ -1,3 +1,9 @@
+# [3.122.0](https://github.com/Tallec7/neopro/compare/v3.121.0...v3.122.0) (2026-04-03)
+
+### Features
+
+- **dashboard:** add 404 page and error boundary for graceful error handling ([84ecab9](https://github.com/Tallec7/neopro/commit/84ecab952692edd41ecd79ffc720ca252b8c73d0))
+
 # [3.121.0](https://github.com/Tallec7/neopro/compare/v3.120.8...v3.121.0) (2026-04-02)
 
 ### Features
