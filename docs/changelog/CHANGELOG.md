@@ -1,3 +1,14 @@
+# [3.123.0](https://github.com/Tallec7/neopro/compare/v3.122.0...v3.123.0) (2026-04-03)
+
+### Features
+
+- **dashboard:** decompose SitesService into 4 focused services (SiteMetricsService, SiteCommandService, SiteSponsorService) ([COMMIT])
+- **dashboard:** decompose advertiser-detail into orchestrator + 3 sub-components (sponsor-videos-tab, sponsor-sites-tab, sponsor-campaigns-tab) ([COMMIT])
+
+### Tests
+
+- **smoke:** add architectural boundary guards preventing re-monolithification of services and components ([COMMIT])
+
 # [3.122.0](https://github.com/Tallec7/neopro/compare/v3.121.0...v3.122.0) (2026-04-03)
 
 ### Features

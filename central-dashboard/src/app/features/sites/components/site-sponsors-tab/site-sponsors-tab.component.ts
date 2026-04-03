@@ -6,6 +6,7 @@ import { FormsModule } from '@angular/forms';
 import { TranslateModule } from '@ngx-translate/core';
 import { Chart, ChartConfiguration, registerables } from 'chart.js';
 import { SitesService } from '../../../../core/services/sites.service';
+import { SiteSponsorService } from '../../../../core/services/site-sponsor.service';
 import { NotificationService } from '../../../../core/services/notification.service';
 import { ConfirmDialogService } from '../../../../core/services/confirm-dialog.service';
 import { Site, SiteSponsor, SiteSponsorVideo, SiteSponsorStatsResponse, SiteSponsorDailyTrend, GeneratedReport, SiteSponsorBenchmarkResponse, CloudVideo, SiteConfiguration } from '../../../../core/models';
@@ -1319,6 +1320,7 @@ export class SiteSponsorsTabComponent implements OnInit, OnDestroy {
   @ViewChild('trendsChart') trendsChartRef!: ElementRef<HTMLCanvasElement>;
 
   private readonly sitesService = inject(SitesService);
+  private readonly sponsorService = inject(SiteSponsorService);
   private readonly notification = inject(NotificationService);
   private readonly confirmDialog = inject(ConfirmDialogService);
   private readonly cdr = inject(ChangeDetectorRef);
@@ -1398,7 +1400,7 @@ export class SiteSponsorsTabComponent implements OnInit, OnDestroy {
   loadSponsors(): void {
     this.loading = true;
     this.error = '';
-    this.sitesService.listSiteSponsors(this.siteId, true).subscribe({
+    this.sponsorService.listSiteSponsors(this.siteId, true).subscribe({
       next: (res) => {
         // ADR-035 Phase 1: filtrer les sponsors neopro (visibles uniquement côté admin annonceurs)
         this.sponsors = (res?.sponsors ?? []).filter(s => s.source !== 'neopro');
@@ -1447,7 +1449,7 @@ export class SiteSponsorsTabComponent implements OnInit, OnDestroy {
     this.cdr.markForCheck();
 
     // Load stats + reports + benchmark in parallel
-    this.sitesService.getSiteSponsorStats(this.siteId, sponsor.id).subscribe({
+    this.sponsorService.getSiteSponsorStats(this.siteId, sponsor.id).subscribe({
       next: (stats) => {
         this.detailStats = stats;
         this.detailLoading = false;
@@ -1464,7 +1466,7 @@ export class SiteSponsorsTabComponent implements OnInit, OnDestroy {
     });
 
     this.reportsLoading = true;
-    this.sitesService.getSponsorReports(sponsor.id).subscribe({
+    this.sponsorService.getSponsorReports(sponsor.id).subscribe({
       next: (reports) => {
         this.reports = reports;
         this.reportsLoading = false;
@@ -1477,7 +1479,7 @@ export class SiteSponsorsTabComponent implements OnInit, OnDestroy {
     });
 
     this.benchmarkLoading = true;
-    this.sitesService.getSiteSponsorBenchmark(this.siteId).subscribe({
+    this.sponsorService.getSiteSponsorBenchmark(this.siteId).subscribe({
       next: (benchmark) => {
         this.benchmarkData = benchmark;
         this.benchmarkHasCpi = benchmark?.sponsors?.some(s => s.cpi !== null) ?? false;
@@ -1601,8 +1603,8 @@ export class SiteSponsorsTabComponent implements OnInit, OnDestroy {
     };
 
     const obs = this.isEditing
-      ? this.sitesService.updateSiteSponsor(this.siteId, this.editingSponsorId, payload)
-      : this.sitesService.createSiteSponsor(this.siteId, payload);
+      ? this.sponsorService.updateSiteSponsor(this.siteId, this.editingSponsorId, payload)
+      : this.sponsorService.createSiteSponsor(this.siteId, payload);
 
     obs.subscribe({
       next: () => {
@@ -1674,11 +1676,11 @@ export class SiteSponsorsTabComponent implements OnInit, OnDestroy {
       status: 'active' as SiteSponsor['status'],
     };
 
-    this.sitesService.createSiteSponsor(this.siteId, payload).subscribe({
+    this.sponsorService.createSiteSponsor(this.siteId, payload).subscribe({
       next: (created) => {
         // If video selected, associate it
         if (this.wizardSelectedVideo && created?.id) {
-          this.sitesService.addVideoToSiteSponsor(this.siteId, created.id, this.wizardSelectedVideo).subscribe({
+          this.sponsorService.addVideoToSiteSponsor(this.siteId, created.id, this.wizardSelectedVideo).subscribe({
             next: () => {
               this.saving = false;
               this.wizardStep = 4; // success screen
@@ -1716,7 +1718,7 @@ export class SiteSponsorsTabComponent implements OnInit, OnDestroy {
     );
     if (!ok) return;
 
-    this.sitesService.deleteSiteSponsor(this.siteId, sponsor.id).subscribe({
+    this.sponsorService.deleteSiteSponsor(this.siteId, sponsor.id).subscribe({
       next: () => {
         this.notification.success('Sponsor supprimé');
         if (this.expandedSponsorId === sponsor.id) {
@@ -1744,7 +1746,7 @@ export class SiteSponsorsTabComponent implements OnInit, OnDestroy {
     const periodEnd = new Date(now.getFullYear(), now.getMonth(), 1); // 1st of current month
     const periodStart = new Date(periodEnd.getFullYear(), periodEnd.getMonth() - 1, 1); // 1st of prev month
 
-    this.sitesService.generateSponsorReport(
+    this.sponsorService.generateSponsorReport(
       this.siteId,
       sponsor.id,
       periodStart.toISOString().split('T')[0],
@@ -1770,7 +1772,7 @@ export class SiteSponsorsTabComponent implements OnInit, OnDestroy {
 
   private loadReports(sponsorId: string): void {
     this.reportsLoading = true;
-    this.sitesService.getSponsorReports(sponsorId).subscribe({
+    this.sponsorService.getSponsorReports(sponsorId).subscribe({
       next: (reports) => {
         this.reports = reports;
         this.reportsLoading = false;
@@ -1793,7 +1795,7 @@ export class SiteSponsorsTabComponent implements OnInit, OnDestroy {
     this.accessLinkCopied = false;
     this.cdr.markForCheck();
 
-    this.sitesService.createSponsorAccessLink(this.siteId, sponsor.id).subscribe({
+    this.sponsorService.createSponsorAccessLink(this.siteId, sponsor.id).subscribe({
       next: (result: { accessUrl: string; expiresAt: string; emailSent: boolean; sentTo: string | null }) => {
         this.creatingAccessLink = false;
         this.accessLinkUrl = result.accessUrl;
@@ -1845,7 +1847,7 @@ export class SiteSponsorsTabComponent implements OnInit, OnDestroy {
     this.addingVideo = true;
     this.cdr.markForCheck();
 
-    this.sitesService.addVideoToSiteSponsor(
+    this.sponsorService.addVideoToSiteSponsor(
       this.siteId, this.expandedSponsorId, this.selectedVideoFilename
     ).subscribe({
       next: () => {
@@ -1872,7 +1874,7 @@ export class SiteSponsorsTabComponent implements OnInit, OnDestroy {
     this.removingVideoFilename = filename;
     this.cdr.markForCheck();
 
-    this.sitesService.removeVideoFromSiteSponsor(
+    this.sponsorService.removeVideoFromSiteSponsor(
       this.siteId, this.expandedSponsorId, filename
     ).subscribe({
       next: () => {
@@ -1894,7 +1896,7 @@ export class SiteSponsorsTabComponent implements OnInit, OnDestroy {
     if (!this.expandedSponsorId) return;
     const sponsorId = this.expandedSponsorId;
 
-    this.sitesService.getSiteSponsorStats(this.siteId, sponsorId).subscribe({
+    this.sponsorService.getSiteSponsorStats(this.siteId, sponsorId).subscribe({
       next: (stats) => {
         this.detailStats = stats;
         this.cdr.markForCheck();

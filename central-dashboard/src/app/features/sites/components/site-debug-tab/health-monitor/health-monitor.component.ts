@@ -1,7 +1,7 @@
 import { Component, Input, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
-import { SitesService } from '../../../../../core/services/sites.service';
+import { SiteMetricsService } from '../../../../../core/services/site-metrics.service';
 import { NotificationService } from '../../../../../core/services/notification.service';
 import { LoggerService } from '../../../../../core/services/logger.service';
 import { ErrorExtractor } from '../../../../../core/utils/error-extractor';
@@ -490,7 +490,7 @@ export class HealthMonitorComponent {
   runningDiagnostics: boolean = false;
 
   constructor(
-    private sitesService: SitesService,
+    private metricsService: SiteMetricsService,
     private notificationService: NotificationService,
     private logger: LoggerService,
     private translate: TranslateService
@@ -511,7 +511,7 @@ export class HealthMonitorComponent {
 
     this.loadingHealthStatus = true;
 
-    this.sitesService.getHealthStatus(this.siteId).subscribe({
+    this.metricsService.getHealthStatus(this.siteId).subscribe({
       next: (result) => {
         this.loadingHealthStatus = false;
         this.logger.info('Health status received', { result });
@@ -623,7 +623,7 @@ export class HealthMonitorComponent {
     this.runningDiagnostics = true;
     this.diagnosticsResult = null;
 
-    this.sitesService.runDiagnostics(this.siteId).subscribe({
+    this.metricsService.runDiagnostics(this.siteId).subscribe({
       next: (result) => {
         this.runningDiagnostics = false;
         this.logger.info('Diagnostics received', { result });

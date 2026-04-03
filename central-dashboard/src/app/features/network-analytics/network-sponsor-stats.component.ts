@@ -5,7 +5,7 @@ import {
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { Chart, ChartConfiguration, registerables } from 'chart.js';
-import { SitesService } from '../../core/services/sites.service';
+import { SiteSponsorService } from '../../core/services/site-sponsor.service';
 import {
   NetworkSponsorStatsResponse,
   NetworkSponsorSiteBreakdown,
@@ -265,7 +265,7 @@ export class NetworkSponsorStatsComponent implements OnInit, OnDestroy {
   @ViewChild('eventTypeCanvas') eventTypeCanvasRef!: ElementRef<HTMLCanvasElement>;
 
   private readonly route = inject(ActivatedRoute);
-  private readonly sitesService = inject(SitesService);
+  private readonly sponsorService = inject(SiteSponsorService);
   private readonly cdr = inject(ChangeDetectorRef);
 
   advertiserId = '';
@@ -295,7 +295,7 @@ export class NetworkSponsorStatsComponent implements OnInit, OnDestroy {
     this.error = '';
     this.cdr.markForCheck();
 
-    this.sitesService.getNetworkSponsorStats(this.advertiserId).subscribe({
+    this.sponsorService.getNetworkSponsorStats(this.advertiserId).subscribe({
       next: (data) => {
         this.data = data;
         this.loading = false;

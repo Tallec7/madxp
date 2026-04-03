@@ -2,7 +2,8 @@ import { Component, Input, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
-import { SitesService } from '../../../../../core/services/sites.service';
+import { SiteCommandService } from '../../../../../core/services/site-command.service';
+import { SiteMetricsService } from '../../../../../core/services/site-metrics.service';
 import { NotificationService } from '../../../../../core/services/notification.service';
 import { LoggerService } from '../../../../../core/services/logger.service';
 import { ErrorExtractor } from '../../../../../core/utils/error-extractor';
@@ -291,7 +292,8 @@ export class CommandPanelComponent {
   private confirmCallback: (() => void) | null = null;
 
   constructor(
-    private sitesService: SitesService,
+    private commandService: SiteCommandService,
+    private metricsService: SiteMetricsService,
     private notificationService: NotificationService,
     private logger: LoggerService,
     private translate: TranslateService
@@ -378,7 +380,7 @@ export class CommandPanelComponent {
     this.executingCommand = true;
     this.commandResult = '';
 
-    this.sitesService.sendCommand(this.siteId, commandType, params).subscribe({
+    this.commandService.sendCommand(this.siteId, commandType, params).subscribe({
       next: (response) => {
         this.executingCommand = false;
         this.commandResult = JSON.stringify(response, null, 2);
@@ -400,7 +402,7 @@ export class CommandPanelComponent {
     }
     this.loadingLogs = true;
     this.logsContent = '';
-    this.sitesService.getLogs(this.siteId, this.logLines, this.selectedLogService).subscribe({
+    this.commandService.getLogs(this.siteId, this.logLines, this.selectedLogService).subscribe({
       next: (response) => {
         this.loadingLogs = false;
         if (response?.logs && Array.isArray(response.logs)) {
@@ -456,7 +458,7 @@ export class CommandPanelComponent {
     this.exportingBundle = true;
     this.exportError = null;
 
-    this.sitesService.exportDebugBundle(this.siteId).subscribe({
+    this.metricsService.exportDebugBundle(this.siteId).subscribe({
       next: (response) => {
         this.exportingBundle = false;
         if (response?.success && response?.bundle) {

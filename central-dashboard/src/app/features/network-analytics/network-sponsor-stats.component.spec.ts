@@ -3,13 +3,13 @@ import { ActivatedRoute } from '@angular/router';
 import { of, throwError } from 'rxjs';
 
 import { NetworkSponsorStatsComponent } from './network-sponsor-stats.component';
-import { SitesService } from '../../core/services/sites.service';
+import { SiteSponsorService } from '../../core/services/site-sponsor.service';
 import { NetworkSponsorStatsResponse } from '../../core/models';
 
 describe('NetworkSponsorStatsComponent', () => {
   let component: NetworkSponsorStatsComponent;
   let fixture: ComponentFixture<NetworkSponsorStatsComponent>;
-  let sitesService: jasmine.SpyObj<SitesService>;
+  let sitesService: jasmine.SpyObj<SiteSponsorService>;
 
   const mockResponse: NetworkSponsorStatsResponse = {
     advertiser_id: 'adv-1',
@@ -38,13 +38,13 @@ describe('NetworkSponsorStatsComponent', () => {
   };
 
   beforeEach(async () => {
-    const sitesServiceMock = jasmine.createSpyObj('SitesService', ['getNetworkSponsorStats']);
+    const sitesServiceMock = jasmine.createSpyObj('SiteSponsorService', ['getNetworkSponsorStats']);
     sitesServiceMock.getNetworkSponsorStats.and.returnValue(of(mockResponse));
 
     await TestBed.configureTestingModule({
       imports: [NetworkSponsorStatsComponent],
       providers: [
-        { provide: SitesService, useValue: sitesServiceMock },
+        { provide: SiteSponsorService, useValue: sitesServiceMock },
         {
           provide: ActivatedRoute,
           useValue: {
@@ -60,7 +60,7 @@ describe('NetworkSponsorStatsComponent', () => {
 
     fixture = TestBed.createComponent(NetworkSponsorStatsComponent);
     component = fixture.componentInstance;
-    sitesService = TestBed.inject(SitesService) as jasmine.SpyObj<SitesService>;
+    sitesService = TestBed.inject(SiteSponsorService) as jasmine.SpyObj<SiteSponsorService>;
   });
 
   it('should create', () => {

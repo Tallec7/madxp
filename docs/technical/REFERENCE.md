@@ -1842,7 +1842,18 @@ L'onglet Contenu/Boucles dispose d'un **sélecteur de profil** (dropdown) quand 
 3. `enrichConfigWithSecondaryVariants()` — injection des variants secondaires
 4. `enrichConfigWithAnalyticsMetadata()` — injection des métadonnées analytics (`video_id`, `advertiser_id`, `analytics_category`)
 
-**Méthodes SitesService :**
+**Architecture Services Dashboard (refactoré v3.123) :**
+
+Le service monolithique `SitesService` a été décomposé en 4 services focalisés :
+
+| Service              | Fichier                   | Responsabilité                                         |
+| -------------------- | ------------------------- | ------------------------------------------------------ |
+| `SitesService`       | `sites.service.ts`        | CRUD sites, config profiles, connexion, déploiements   |
+| `SiteMetricsService` | `site-metrics.service.ts` | Health, diagnostics, WiFi/BSSID, réseau, debug bundles |
+| `SiteCommandService` | `site-command.service.ts` | Commandes distantes, logs, queue, hotspot              |
+| `SiteSponsorService` | `site-sponsor.service.ts` | Sponsors par site, stats, rapports, magic links        |
+
+**Méthodes SitesService (profils) :**
 
 | Méthode                                                 | Endpoint API                                           |
 | ------------------------------------------------------- | ------------------------------------------------------ |

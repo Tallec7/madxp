@@ -2,6 +2,7 @@ import { Component, Input, Output, EventEmitter, ViewChild, ElementRef, AfterVie
 import { CommonModule } from '@angular/common';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { SitesService } from '../../../../../core/services/sites.service';
+import { SiteCommandService } from '../../../../../core/services/site-command.service';
 import { NotificationService } from '../../../../../core/services/notification.service';
 import { LoggerService } from '../../../../../core/services/logger.service';
 import { ErrorExtractor } from '../../../../../core/utils/error-extractor';
@@ -393,6 +394,7 @@ export class SystemInfoComponent implements AfterViewChecked {
 
   constructor(
     private sitesService: SitesService,
+    private commandService: SiteCommandService,
     private notificationService: NotificationService,
     private logger: LoggerService,
     private translate: TranslateService
@@ -492,7 +494,7 @@ export class SystemInfoComponent implements AfterViewChecked {
   private doRestoreVersion(item: ConfigHistory): void {
     this.confirmModal.visible = false;
     this.restoringVersion = item.id;
-    this.sitesService.sendCommand(this.siteId, 'update_config', { configuration: item.configuration, mode: 'replace' }).subscribe({
+    this.commandService.sendCommand(this.siteId, 'update_config', { configuration: item.configuration, mode: 'replace' }).subscribe({
       next: () => {
         this.restoringVersion = null;
         this.notificationService.success(this.translate.instant('debug.notifyConfigRestored'));

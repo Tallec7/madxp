@@ -11246,20 +11246,17 @@ describe('ADR-035 Phase 3b: Campaign auto-deployment wiring', () => {
 describe('ADR-035 Phase 3c: Campaign dashboard components', () => {
   const repoRoot = path.resolve(__dirname, '..', '..', '..');
 
-  it('advertiser-detail.component.ts includes campaigns tab', () => {
+  it('advertiser-detail orchestrator references campaigns tab and sub-component', () => {
     const content = fs.readFileSync(
       path.join(repoRoot, 'central-dashboard/src/app/features/advertisers/advertiser-detail.component.ts'), 'utf-8'
     );
     expect(content).toContain("activeTab === 'campaigns'");
-    expect(content).toContain('switchToCampaignsTab');
-    expect(content).toContain('loadCampaigns');
-    expect(content).toContain('deployCampaignAction');
-    expect(content).toContain('undeployCampaignAction');
+    expect(content).toContain('app-sponsor-campaigns-tab');
   });
 
-  it('advertiser-detail.component.ts has campaign CRUD methods', () => {
+  it('sponsor-campaigns-tab.component.ts has campaign CRUD methods', () => {
     const content = fs.readFileSync(
-      path.join(repoRoot, 'central-dashboard/src/app/features/advertisers/advertiser-detail.component.ts'), 'utf-8'
+      path.join(repoRoot, 'central-dashboard/src/app/features/advertisers/sponsor-campaigns-tab.component.ts'), 'utf-8'
     );
     expect(content).toContain('openCampaignModal');
     expect(content).toContain('saveCampaign');
@@ -11268,18 +11265,18 @@ describe('ADR-035 Phase 3c: Campaign dashboard components', () => {
     expect(content).toContain('closeCampaignModal');
   });
 
-  it('advertiser-detail.component.ts calls /campaigns API endpoints', () => {
+  it('sponsor-campaigns-tab.component.ts calls /campaigns API endpoints', () => {
     const content = fs.readFileSync(
-      path.join(repoRoot, 'central-dashboard/src/app/features/advertisers/advertiser-detail.component.ts'), 'utf-8'
+      path.join(repoRoot, 'central-dashboard/src/app/features/advertisers/sponsor-campaigns-tab.component.ts'), 'utf-8'
     );
     expect(content).toContain("'/campaigns'");
     expect(content).toContain('/campaigns/${campaignId}/deploy');
     expect(content).toContain('/campaigns/${campaignId}/undeploy');
   });
 
-  it('advertiser-detail.component.ts has campaign modal with videos and targeting tabs', () => {
+  it('sponsor-campaigns-tab.component.ts has campaign modal with videos and targeting tabs', () => {
     const content = fs.readFileSync(
-      path.join(repoRoot, 'central-dashboard/src/app/features/advertisers/advertiser-detail.component.ts'), 'utf-8'
+      path.join(repoRoot, 'central-dashboard/src/app/features/advertisers/sponsor-campaigns-tab.component.ts'), 'utf-8'
     );
     // Modal tabs
     expect(content).toContain("campaignModalTab");
@@ -11298,7 +11295,12 @@ describe('ADR-035 Phase 3c: Campaign dashboard components', () => {
     // API calls for sites
     expect(content).toContain('/campaigns/${this.campaignForm.id}/sites');
     expect(content).toContain('/campaigns/resolve-sites');
-    // Interfaces
+  });
+
+  it('shared campaign interfaces are in advertiser-detail.models.ts', () => {
+    const content = fs.readFileSync(
+      path.join(repoRoot, 'central-dashboard/src/app/features/advertisers/advertiser-detail.models.ts'), 'utf-8'
+    );
     expect(content).toContain('interface CampaignVideo');
     expect(content).toContain('interface ResolvedSite');
   });
@@ -11512,9 +11514,9 @@ describe('ADR-035 Phase 4: Cleanup — neopro bridge removed', () => {
 describe('Advertiser video display: template-API field alignment guard', () => {
   const repoRoot = path.resolve(__dirname, '..', '..', '..');
 
-  it('advertiser-detail videos tab uses actual API fields (original_name, filename, duration, added_at)', () => {
+  it('sponsor-videos-tab videos tab uses actual API fields (original_name, filename, duration, added_at)', () => {
     const content = fs.readFileSync(
-      path.join(repoRoot, 'central-dashboard/src/app/features/advertisers/advertiser-detail.component.ts'), 'utf-8'
+      path.join(repoRoot, 'central-dashboard/src/app/features/advertisers/sponsor-videos-tab.component.ts'), 'utf-8'
     );
 
     // Template MUST reference actual API fields
@@ -11523,21 +11525,16 @@ describe('Advertiser video display: template-API field alignment guard', () => {
     expect(content).toContain('video.added_at');
 
     // Template MUST NOT use phantom fields that don't exist in the API
-    // video.video_title as standalone display (not fallback) would mean mismatch
-    const videosTabMatch = content.match(/<!-- Videos Tab -->[\s\S]*?<!-- Analytics Tab -->/);
-    expect(videosTabMatch).toBeTruthy();
-    const videosTab = videosTabMatch![0];
-
     // These phantom fields must NOT appear as primary display in the videos tab
-    expect(videosTab).not.toMatch(/\{\{\s*video\.total_impressions/);
-    expect(videosTab).not.toMatch(/\{\{\s*video\.total_screen_time/);
+    expect(content).not.toMatch(/\{\{\s*video\.total_impressions/);
+    expect(content).not.toMatch(/\{\{\s*video\.total_screen_time/);
     // video_title can appear as fallback but not as sole display
-    expect(videosTab).not.toMatch(/\{\{\s*video\.video_title\s*\}\}/);
+    expect(content).not.toMatch(/\{\{\s*video\.video_title\s*\}\}/);
   });
 
   it('SponsorVideo interface includes actual API fields from advertiser.repository.getVideos', () => {
     const content = fs.readFileSync(
-      path.join(repoRoot, 'central-dashboard/src/app/features/advertisers/advertiser-detail.component.ts'), 'utf-8'
+      path.join(repoRoot, 'central-dashboard/src/app/features/advertisers/advertiser-detail.models.ts'), 'utf-8'
     );
     const ifaceMatch = content.match(/interface SponsorVideo \{[\s\S]*?\n\}/);
     expect(ifaceMatch).toBeTruthy();
@@ -11583,7 +11580,7 @@ describe('Campaign deploy: meaningful error messages guard', () => {
 
   it('deployCampaignAction error handler checks for specific server error messages', () => {
     const content = fs.readFileSync(
-      path.join(repoRoot, 'central-dashboard/src/app/features/advertisers/advertiser-detail.component.ts'), 'utf-8'
+      path.join(repoRoot, 'central-dashboard/src/app/features/advertisers/sponsor-campaigns-tab.component.ts'), 'utf-8'
     );
     // Must check for the 3 specific error cases from campaign-deployment.service.ts
     expect(content).toContain("'no videos'");
@@ -11612,6 +11609,115 @@ describe('Campaign deploy: meaningful error messages guard', () => {
     expect(controllerSrc).toContain("'no videos'");
     expect(controllerSrc).toContain("'no target sites'");
     expect(controllerSrc).toContain('res.status(400)');
+  });
+});
+
+// =============================================================================
+// Advertiser detail component decomposition guard
+// =============================================================================
+
+describe('Advertiser detail component decomposition guard', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+  const advDir = path.join(repoRoot, 'central-dashboard/src/app/features/advertisers');
+
+  it('advertiser-detail orchestrator imports sub-components', () => {
+    const content = fs.readFileSync(path.join(advDir, 'advertiser-detail.component.ts'), 'utf-8');
+    expect(content).toContain('SponsorVideosTabComponent');
+    expect(content).toContain('SponsorSitesTabComponent');
+    expect(content).toContain('SponsorCampaignsTabComponent');
+    expect(content).toContain('app-sponsor-videos-tab');
+    expect(content).toContain('app-sponsor-sites-tab');
+    expect(content).toContain('app-sponsor-campaigns-tab');
+  });
+
+  it('advertiser-detail orchestrator must NOT contain campaign CRUD methods (delegated to sub-component)', () => {
+    const content = fs.readFileSync(path.join(advDir, 'advertiser-detail.component.ts'), 'utf-8');
+    expect(content).not.toContain('openCampaignModal');
+    expect(content).not.toContain('saveCampaign');
+    expect(content).not.toContain('deployCampaignAction');
+    expect(content).not.toContain('loadCampaignVideos');
+  });
+
+  it('advertiser-detail orchestrator must NOT contain video modal methods (delegated to sub-component)', () => {
+    const content = fs.readFileSync(path.join(advDir, 'advertiser-detail.component.ts'), 'utf-8');
+    expect(content).not.toContain('openAddVideosModal');
+    expect(content).not.toContain('loadAvailableVideos');
+    expect(content).not.toContain('addSelectedVideos');
+  });
+
+  it('advertiser-detail orchestrator must NOT contain site assignment methods (delegated to sub-component)', () => {
+    const content = fs.readFileSync(path.join(advDir, 'advertiser-detail.component.ts'), 'utf-8');
+    expect(content).not.toContain('openAddSitesModal');
+    expect(content).not.toContain('loadAvailableSites');
+    expect(content).not.toContain('assignSelectedSites');
+  });
+
+  it('shared interfaces are in advertiser-detail.models.ts', () => {
+    const content = fs.readFileSync(path.join(advDir, 'advertiser-detail.models.ts'), 'utf-8');
+    expect(content).toContain('interface SponsorVideo');
+    expect(content).toContain('interface Campaign');
+    expect(content).toContain('interface CampaignVideo');
+    expect(content).toContain('interface AssignedSite');
+    expect(content).toContain('interface ResolvedSite');
+  });
+});
+
+// =============================================================================
+// SitesService decomposition guard
+// =============================================================================
+
+describe('SitesService decomposition guard', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+  const servicesDir = path.join(repoRoot, 'central-dashboard/src/app/core/services');
+
+  it('SiteMetricsService exists with diagnostics methods', () => {
+    const content = fs.readFileSync(path.join(servicesDir, 'site-metrics.service.ts'), 'utf-8');
+    expect(content).toContain('class SiteMetricsService');
+    expect(content).toContain('getHealthStatus');
+    expect(content).toContain('runDiagnostics');
+    expect(content).toContain('getNetworkDiagnostics');
+    expect(content).toContain('exportDebugBundle');
+    expect(content).toContain('getSystemInfo');
+    expect(content).toContain('fixHotspot');
+  });
+
+  it('SiteCommandService exists with command methods', () => {
+    const content = fs.readFileSync(path.join(servicesDir, 'site-command.service.ts'), 'utf-8');
+    expect(content).toContain('class SiteCommandService');
+    expect(content).toContain('sendCommand');
+    expect(content).toContain('restartService');
+    expect(content).toContain('rebootSite');
+    expect(content).toContain('getLogs');
+    expect(content).toContain('getCommandStatus');
+    expect(content).toContain('getPendingCommands');
+  });
+
+  it('SiteSponsorService exists with sponsor methods', () => {
+    const content = fs.readFileSync(path.join(servicesDir, 'site-sponsor.service.ts'), 'utf-8');
+    expect(content).toContain('class SiteSponsorService');
+    expect(content).toContain('listSiteSponsors');
+    expect(content).toContain('createSiteSponsor');
+    expect(content).toContain('getSiteSponsorStats');
+    expect(content).toContain('generateSponsorReport');
+    expect(content).toContain('createSponsorAccessLink');
+  });
+
+  it('SitesService must NOT contain extracted methods (prevents re-monolithification)', () => {
+    const content = fs.readFileSync(path.join(servicesDir, 'sites.service.ts'), 'utf-8');
+    // Metrics methods must NOT be in SitesService
+    expect(content).not.toContain('getHealthStatus');
+    expect(content).not.toContain('runDiagnostics');
+    expect(content).not.toContain('exportDebugBundle');
+    expect(content).not.toContain('getSystemInfo');
+    // Command methods must NOT be in SitesService
+    expect(content).not.toContain('sendCommand');
+    expect(content).not.toContain('restartService');
+    expect(content).not.toContain('rebootSite');
+    expect(content).not.toContain('getLogs(');
+    // Sponsor methods must NOT be in SitesService
+    expect(content).not.toContain('listSiteSponsors');
+    expect(content).not.toContain('createSiteSponsor');
+    expect(content).not.toContain('getSiteSponsorStats');
   });
 });
 

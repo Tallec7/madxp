@@ -4,6 +4,7 @@ import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { Subscription } from 'rxjs';
 import { pollCommand, CommandPollResult } from './command-poller.util';
 import { SitesService } from '../../../../core/services/sites.service';
+import { SiteCommandService } from '../../../../core/services/site-command.service';
 import { LoggerService } from '../../../../core/services/logger.service';
 import { ErrorExtractor } from '../../../../core/utils/error-extractor';
 import { LocalVideo, LocalStorage, SiteConfiguration, ConnectionHealth } from '../../../../core/models';
@@ -253,6 +254,7 @@ export class SiteDebugTabComponent implements OnInit, OnDestroy {
 
   constructor(
     private sitesService: SitesService,
+    private commandService: SiteCommandService,
     private logger: LoggerService,
     private translate: TranslateService
   ) {}
@@ -500,8 +502,8 @@ export class SiteDebugTabComponent implements OnInit, OnDestroy {
     this.wizardBufferPollSub?.unsubscribe();
     const { result$, cancel } = pollCommand<BufferStatus>({
       siteId: this.siteId, commandName: 'get_analytics_buffer_status', timeoutSeconds: 12,
-      sendCommand: (id, cmd, params) => this.sitesService.sendCommand(id, cmd, params),
-      getCommandStatus: (id, cmdId) => this.sitesService.getCommandStatus(id, cmdId),
+      sendCommand: (id, cmd, params) => this.commandService.sendCommand(id, cmd, params),
+      getCommandStatus: (id, cmdId) => this.commandService.getCommandStatus(id, cmdId),
     });
     this.wizardBufferPollSub = new Subscription(() => cancel());
     result$.subscribe((pollResult: CommandPollResult<BufferStatus>) => {

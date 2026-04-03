@@ -3,6 +3,8 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TranslateModule } from '@ngx-translate/core';
 import { SitesService } from '../../../../core/services/sites.service';
+import { SiteCommandService } from '../../../../core/services/site-command.service';
+import { SiteMetricsService } from '../../../../core/services/site-metrics.service';
 import { NotificationService } from '../../../../core/services/notification.service';
 import { LoggerService } from '../../../../core/services/logger.service';
 import { AssetService, WatermarkConfig, WatermarkFileInfo, OverlayPosition as WmOverlayPosition, WatermarkAnimation, WatermarkScheduleRule } from '../../../../core/services/asset.service';
@@ -1712,6 +1714,8 @@ export class SiteSettingsTabComponent implements OnInit, OnChanges {
 
   constructor(
     private sitesService: SitesService,
+    private commandService: SiteCommandService,
+    private metricsService: SiteMetricsService,
     private notificationService: NotificationService,
     private logger: LoggerService,
     private assetService: AssetService,
@@ -1862,7 +1866,7 @@ export class SiteSettingsTabComponent implements OnInit, OnChanges {
     if (!this.siteId || !this.isConnected) return;
 
     this.fetchingHotspotConfig = true;
-    this.sitesService.getHotspotConfig(this.siteId).subscribe({
+    this.metricsService.getHotspotConfig(this.siteId).subscribe({
       next: (response) => {
         this.fetchingHotspotConfig = false;
         if (response.configured) {
@@ -1920,7 +1924,7 @@ export class SiteSettingsTabComponent implements OnInit, OnChanges {
   }
 
   private deployClubAuth(neoProContent: { clubName?: string; remotePassword?: string }): void {
-    this.sitesService.sendCommand(this.siteId, 'update_config', {
+    this.commandService.sendCommand(this.siteId, 'update_config', {
       neoProContent,
       mode: 'merge'
     }).subscribe({
@@ -2034,7 +2038,7 @@ export class SiteSettingsTabComponent implements OnInit, OnChanges {
     if (!confirm('Modifier la configuration du hotspot WiFi ?')) return;
 
     this.updatingHotspot = true;
-    this.sitesService.updateHotspot(
+    this.commandService.updateHotspot(
       this.siteId,
       this.hotspotSsid || undefined,
       this.hotspotPassword || undefined
@@ -2064,7 +2068,7 @@ export class SiteSettingsTabComponent implements OnInit, OnChanges {
     this.savingLiveScore = true;
     this.sitesService.updateSite(this.siteId, { live_score_enabled: newValue }).subscribe({
       next: (updatedSite) => {
-        this.sitesService.sendCommand(this.siteId, 'update_config', {
+        this.commandService.sendCommand(this.siteId, 'update_config', {
           neoProContent: { liveScoreEnabled: newValue },
           mode: 'merge'
         }).subscribe({
@@ -2107,7 +2111,7 @@ export class SiteSettingsTabComponent implements OnInit, OnChanges {
 
   saveOverlayConfig(): void {
     this.savingOverlay = true;
-    this.sitesService.sendCommand(this.siteId, 'update_config', {
+    this.commandService.sendCommand(this.siteId, 'update_config', {
       neoProContent: { scoreOverlay: this.overlayConfig },
       mode: 'merge'
     }).subscribe({
@@ -2171,7 +2175,7 @@ export class SiteSettingsTabComponent implements OnInit, OnChanges {
 
     // Sinon, récupérer le SSID réel via l'endpoint dédié
     this.fetchingSsid = true;
-    this.sitesService.getHotspotConfig(this.siteId).subscribe({
+    this.metricsService.getHotspotConfig(this.siteId).subscribe({
       next: (response) => {
         this.fetchingSsid = false;
         if (response.ssid) {
@@ -2416,7 +2420,7 @@ export class SiteSettingsTabComponent implements OnInit, OnChanges {
     this.savingWatermark = true;
 
     // 1. Toujours envoyer la config (update_config)
-    this.sitesService.sendCommand(this.siteId, 'update_config', {
+    this.commandService.sendCommand(this.siteId, 'update_config', {
       neoProContent: { watermark: this.watermarkConfig },
       mode: 'merge'
     }).subscribe({

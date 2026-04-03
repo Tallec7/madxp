@@ -1,7 +1,7 @@
 import { Component, Input, OnInit, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { SitesService } from '../../../../core/services/sites.service';
+import { SiteCommandService } from '../../../../core/services/site-command.service';
 import { AuthService } from '../../../../core/services/auth.service';
 import { SocketService } from '../../../../core/services/socket.service';
 import { Subject, takeUntil, finalize, filter } from 'rxjs';
@@ -488,7 +488,7 @@ export class CommandExecutorComponent implements OnInit, OnDestroy {
   private readonly MAX_HISTORY = 20;
   private pendingCommandId: string | null = null;
 
-  private readonly sitesService = inject(SitesService);
+  private readonly commandService = inject(SiteCommandService);
   private readonly authService = inject(AuthService);
   private readonly socketService = inject(SocketService);
 
@@ -585,7 +585,7 @@ export class CommandExecutorComponent implements OnInit, OnDestroy {
     this.error = null;
     this.pendingCommandId = null;
 
-    this.sitesService.sendCommand(this.siteId, 'remote_shell', { command: this.command.trim() })
+    this.commandService.sendCommand(this.siteId, 'remote_shell', { command: this.command.trim() })
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (response) => {

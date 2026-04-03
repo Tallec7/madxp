@@ -3,6 +3,8 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { interval, Subscription, filter, take } from 'rxjs';
 import { SitesService, PendingDeployment } from '../../../../core/services/sites.service';
+import { SiteCommandService } from '../../../../core/services/site-command.service';
+import { SiteSponsorService } from '../../../../core/services/site-sponsor.service';
 import { NotificationService } from '../../../../core/services/notification.service';
 import { LoggerService } from '../../../../core/services/logger.service';
 import { SocketService } from '../../../../core/services/socket.service';
@@ -475,6 +477,8 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
 
   constructor(
     private sitesService: SitesService,
+    private commandService: SiteCommandService,
+    private sponsorService: SiteSponsorService,
     private notificationService: NotificationService,
     private logger: LoggerService,
     private socketService: SocketService,
@@ -566,7 +570,7 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
       }
     }, 30000);
 
-    this.sitesService.getConfiguration(this.siteId).subscribe({
+    this.commandService.getConfiguration(this.siteId).subscribe({
       next: (response) => {
         if (response.commandId) {
           this.refreshCommandId = response.commandId;
@@ -604,7 +608,7 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
         return;
       }
 
-      this.sitesService.getCommandStatus(this.siteId, this.refreshCommandId!).subscribe({
+      this.commandService.getCommandStatus(this.siteId, this.refreshCommandId!).subscribe({
         next: (status) => {
           if (status.status === 'completed') {
             clearTimeout(timeoutId);
@@ -637,7 +641,7 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
 
   private loadSiteSponsors(): void {
     if (!this.siteId) return;
-    this.sitesService.listSiteSponsors(this.siteId).subscribe({
+    this.sponsorService.listSiteSponsors(this.siteId).subscribe({
       next: (response) => {
         this.siteSponsors = (response.sponsors || []).filter(s => s.status === 'active');
         this.cdr.markForCheck();
@@ -781,7 +785,7 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
       this.videoDeployStates.set(videoId, { status: 'deploying', progress: 0 });
       this.cdr.markForCheck();
 
-      this.sitesService.sendCommand(this.siteId, 'deploy_video', {
+      this.commandService.sendCommand(this.siteId, 'deploy_video', {
         videoId: video.id,
         filename: video.filename,
         url: video.path

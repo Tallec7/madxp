@@ -4,6 +4,8 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterModule } from '@angular/router';
 import { TranslateModule } from '@ngx-translate/core';
 import { SitesService } from '../../core/services/sites.service';
+import { SiteCommandService } from '../../core/services/site-command.service';
+import { SiteMetricsService } from '../../core/services/site-metrics.service';
 import { NotificationService } from '../../core/services/notification.service';
 import { LoggerService } from '../../core/services/logger.service';
 import { SocketService } from '../../core/services/socket.service';
@@ -1566,6 +1568,8 @@ export class SiteDetailComponent implements OnInit, OnDestroy {
 
   private readonly route = inject(ActivatedRoute);
   private readonly sitesService = inject(SitesService);
+  private readonly commandService = inject(SiteCommandService);
+  private readonly metricsService = inject(SiteMetricsService);
   private readonly notificationService = inject(NotificationService);
   private readonly logger = inject(LoggerService);
   private readonly socketService = inject(SocketService);
@@ -1741,7 +1745,7 @@ export class SiteDetailComponent implements OnInit, OnDestroy {
 
     if (confirm(confirmMsg)) {
       this.sendingCommand = true;
-      this.sitesService.restartService(this.siteId, service).subscribe({
+      this.commandService.restartService(this.siteId, service).subscribe({
         next: (response: any) => {
           this.sendingCommand = false;
           this.notificationService.success(
@@ -1764,7 +1768,7 @@ export class SiteDetailComponent implements OnInit, OnDestroy {
 
   refreshLogs(): void {
     this.logsLoading = true;
-    this.sitesService.getLogs(this.siteId, 200).subscribe({
+    this.commandService.getLogs(this.siteId, 200).subscribe({
       next: (response) => {
         this.logs = response.logs;
         this.logsLoading = false;
@@ -1780,7 +1784,7 @@ export class SiteDetailComponent implements OnInit, OnDestroy {
   getSystemInfo(): void {
     this.showSystemInfoModal = true;
     this.systemInfoLoading = true;
-    this.sitesService.getSystemInfo(this.siteId).subscribe({
+    this.metricsService.getSystemInfo(this.siteId).subscribe({
       next: (response) => {
         this.systemInfo = response;
         this.systemInfoLoading = false;
@@ -1801,7 +1805,7 @@ export class SiteDetailComponent implements OnInit, OnDestroy {
 
     if (confirm(confirmMsg)) {
       this.sendingCommand = true;
-      this.sitesService.rebootSite(this.siteId).subscribe({
+      this.commandService.rebootSite(this.siteId).subscribe({
         next: (response: any) => {
           this.sendingCommand = false;
           this.notificationService.success(
@@ -1856,7 +1860,7 @@ export class SiteDetailComponent implements OnInit, OnDestroy {
   restartHotspot(): void {
     if (confirm('Redémarrer le hotspot WiFi (hostapd + dnsmasq) ?')) {
       this.sendingCommand = true;
-      this.sitesService.fixHotspot(this.siteId, true).subscribe({
+      this.metricsService.fixHotspot(this.siteId, true).subscribe({
         next: (result) => {
           this.sendingCommand = false;
           if (result.success) {

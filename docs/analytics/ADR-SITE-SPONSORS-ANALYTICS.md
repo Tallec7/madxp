@@ -973,7 +973,7 @@ L'expérience dashboard pour le suivi.
 - Loop manager : `@Input() siteSponsors`, dropdown sponsor dans chaque video row
 - `SiteContentTabComponent` charge les sponsors actifs et les passe au loop manager
 
-**Décision architecturale** : pas de service séparé `site-sponsor.service.ts` — toutes les méthodes intégrées dans `SitesService` (cohérent avec le pattern existant, un seul service par feature domain).
+**Décision architecturale** : ~~pas de service séparé~~ — **Révisé v3.123** : les méthodes sponsor ont été extraites dans `SiteSponsorService` (`site-sponsor.service.ts`) lors de la décomposition de `SitesService` en 4 services focalisés (SitesService, SiteMetricsService, SiteCommandService, SiteSponsorService). Les interfaces restent dans `models/index.ts`.
 
 **Tests :** 520 Karma pass, 1472 server pass, 139 smoke pass
 

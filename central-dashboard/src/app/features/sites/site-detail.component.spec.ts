@@ -7,6 +7,8 @@ import { TranslateModule } from '@ngx-translate/core';
 import { of, throwError } from 'rxjs';
 import { SiteDetailComponent } from './site-detail.component';
 import { SitesService } from '../../core/services/sites.service';
+import { SiteCommandService } from '../../core/services/site-command.service';
+import { SiteMetricsService } from '../../core/services/site-metrics.service';
 import { NotificationService } from '../../core/services/notification.service';
 import { LoggerService } from '../../core/services/logger.service';
 
@@ -14,6 +16,8 @@ describe('SiteDetailComponent', () => {
   let component: SiteDetailComponent;
   let fixture: ComponentFixture<SiteDetailComponent>;
   let sitesService: jasmine.SpyObj<SitesService>;
+  let commandService: jasmine.SpyObj<SiteCommandService>;
+  let metricsService: jasmine.SpyObj<SiteMetricsService>;
   let notificationService: jasmine.SpyObj<NotificationService>;
   let loggerService: jasmine.SpyObj<LoggerService>;
 
@@ -76,6 +80,23 @@ describe('SiteDetailComponent', () => {
     sitesServiceMock.sendCommand.and.returnValue(of({ success: true, message: 'OK' }));
     sitesServiceMock.regenerateApiKey.and.returnValue(of({ ...mockSite, api_key: 'new-key-123' } as any));
 
+    const commandServiceMock = jasmine.createSpyObj('SiteCommandService', [
+      'sendCommand', 'restartService', 'rebootSite', 'getLogs', 'getCommandStatus',
+      'getConfiguration', 'updateHotspot', 'updateSiteSettings',
+    ]);
+    commandServiceMock.sendCommand.and.returnValue(of({ success: true, message: 'OK' }));
+    commandServiceMock.restartService.and.returnValue(of({ success: true, message: 'OK' }));
+    commandServiceMock.rebootSite.and.returnValue(of({ success: true, message: 'OK' }));
+    commandServiceMock.getLogs.and.returnValue(of({ logs: ['log line 1'] }));
+    commandServiceMock.getCommandStatus.and.returnValue(of({ status: 'completed' }));
+    commandServiceMock.getConfiguration.and.returnValue(of({ success: true, message: 'OK' }));
+
+    const metricsServiceMock = jasmine.createSpyObj('SiteMetricsService', [
+      'getSystemInfo', 'fixHotspot', 'getHealthStatus', 'runDiagnostics',
+    ]);
+    metricsServiceMock.getSystemInfo.and.returnValue(of({ hostname: 'pi-test', os: 'Linux', kernel: '5.10', architecture: 'arm64', cpu_model: 'Cortex-A72', cpu_cores: 4, total_memory: 4096, ip_address: '192.168.1.100', mac_address: '00:00:00:00:00:00' }));
+    metricsServiceMock.fixHotspot.and.returnValue(of({ success: true, timestamp: new Date().toISOString() }));
+
     const notificationServiceMock = jasmine.createSpyObj('NotificationService', ['error', 'success', 'info']);
     const loggerServiceMock = jasmine.createSpyObj('LoggerService', ['debug', 'info', 'warn', 'error', 'addBreadcrumb']);
 
@@ -83,6 +104,8 @@ describe('SiteDetailComponent', () => {
       imports: [SiteDetailComponent, RouterTestingModule, HttpClientTestingModule, FormsModule, TranslateModule.forRoot()],
       providers: [
         { provide: SitesService, useValue: sitesServiceMock },
+        { provide: SiteCommandService, useValue: commandServiceMock },
+        { provide: SiteMetricsService, useValue: metricsServiceMock },
         { provide: NotificationService, useValue: notificationServiceMock },
         { provide: LoggerService, useValue: loggerServiceMock },
         {
@@ -106,6 +129,8 @@ describe('SiteDetailComponent', () => {
     fixture = TestBed.createComponent(SiteDetailComponent);
     component = fixture.componentInstance;
     sitesService = TestBed.inject(SitesService) as jasmine.SpyObj<SitesService>;
+    commandService = TestBed.inject(SiteCommandService) as jasmine.SpyObj<SiteCommandService>;
+    metricsService = TestBed.inject(SiteMetricsService) as jasmine.SpyObj<SiteMetricsService>;
     notificationService = TestBed.inject(NotificationService) as jasmine.SpyObj<NotificationService>;
     loggerService = TestBed.inject(LoggerService) as jasmine.SpyObj<LoggerService>;
   });
@@ -220,18 +245,18 @@ describe('SiteDetailComponent', () => {
     describe('restartService', () => {
       it('should send restart command on confirm', fakeAsync(() => {
         spyOn(window, 'confirm').and.returnValue(true);
-        sitesService.restartService.and.returnValue(of({ success: true, message: 'OK' }));
+        commandService.restartService.and.returnValue(of({ success: true, message: 'OK' }));
 
         component.restartService('neopro-app');
         tick();
 
-        expect(sitesService.restartService).toHaveBeenCalledWith('s1', 'neopro-app');
+        expect(commandService.restartService).toHaveBeenCalledWith('s1', 'neopro-app');
         expect(notificationService.success).toHaveBeenCalled();
       }));
 
       it('should show error on failure', fakeAsync(() => {
         spyOn(window, 'confirm').and.returnValue(true);
-        sitesService.restartService.and.returnValue(throwError(() => new Error('Command failed')));
+        commandService.restartService.and.returnValue(throwError(() => new Error('Command failed')));
 
         component.restartService('neopro-app');
         tick();
@@ -243,12 +268,12 @@ describe('SiteDetailComponent', () => {
     describe('rebootSite', () => {
       it('should send reboot command on confirm', fakeAsync(() => {
         spyOn(window, 'confirm').and.returnValue(true);
-        sitesService.rebootSite.and.returnValue(of({ success: true, message: 'OK' }));
+        commandService.rebootSite.and.returnValue(of({ success: true, message: 'OK' }));
 
         component.rebootSite();
         tick();
 
-        expect(sitesService.rebootSite).toHaveBeenCalledWith('s1');
+        expect(commandService.rebootSite).toHaveBeenCalledWith('s1');
       }));
 
       it('should not reboot on cancel', () => {
@@ -256,7 +281,7 @@ describe('SiteDetailComponent', () => {
 
         component.rebootSite();
 
-        expect(sitesService.rebootSite).not.toHaveBeenCalled();
+        expect(commandService.rebootSite).not.toHaveBeenCalled();
       });
     });
 
@@ -283,25 +308,25 @@ describe('SiteDetailComponent', () => {
 
     describe('getLogs', () => {
       it('should open logs modal and request logs from service', fakeAsync(() => {
-        sitesService.getLogs.and.returnValue(of({ logs: ['log content'] }));
+        commandService.getLogs.and.returnValue(of({ logs: ['log content'] }));
 
         component.getLogs();
         tick();
 
         expect(component.showLogsModal).toBe(true);
-        expect(sitesService.getLogs).toHaveBeenCalledWith('s1', 200);
+        expect(commandService.getLogs).toHaveBeenCalledWith('s1', 200);
       }));
     });
 
     describe('getSystemInfo', () => {
       it('should open system info modal and request info', fakeAsync(() => {
-        sitesService.getSystemInfo.and.returnValue(of({ hostname: 'pi-test', os: 'Linux', kernel: '5.10', architecture: 'arm64', cpu_model: 'Cortex-A72', cpu_cores: 4, total_memory: 4096, ip_address: '192.168.1.100', mac_address: '00:00:00:00:00:00' }));
+        metricsService.getSystemInfo.and.returnValue(of({ hostname: 'pi-test', os: 'Linux', kernel: '5.10', architecture: 'arm64', cpu_model: 'Cortex-A72', cpu_cores: 4, total_memory: 4096, ip_address: '192.168.1.100', mac_address: '00:00:00:00:00:00' }));
 
         component.getSystemInfo();
         tick();
 
         expect(component.showSystemInfoModal).toBe(true);
-        expect(sitesService.getSystemInfo).toHaveBeenCalledWith('s1');
+        expect(metricsService.getSystemInfo).toHaveBeenCalledWith('s1');
       }));
     });
   });

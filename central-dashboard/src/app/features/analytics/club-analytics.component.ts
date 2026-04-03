@@ -15,6 +15,7 @@ import {
   AlertData
 } from '../../core/services/analytics.service';
 import { SitesService } from '../../core/services/sites.service';
+import { SiteSponsorService } from '../../core/services/site-sponsor.service';
 import { NotificationService } from '../../core/services/notification.service';
 import { LoggerService } from '../../core/services/logger.service';
 import { ErrorExtractor } from '../../core/utils/error-extractor';
@@ -429,6 +430,7 @@ export class ClubAnalyticsComponent implements OnInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);
   private readonly analyticsService = inject(AnalyticsService);
   private readonly sitesService = inject(SitesService);
+  private readonly sponsorService = inject(SiteSponsorService);
   private readonly notificationService = inject(NotificationService);
   private readonly logger = inject(LoggerService);
   private refreshSubscription?: Subscription;
@@ -476,7 +478,7 @@ export class ClubAnalyticsComponent implements OnInit, OnDestroy {
       content: this.analyticsService.getClubContent(this.siteId, days),
       availability: this.analyticsService.getClubAvailability(this.siteId, days),
       alerts: this.analyticsService.getClubAlerts(this.siteId, days),
-      sponsors: this.sitesService.getSiteSponsorBenchmark(this.siteId, fromStr, toStr).pipe(catchError(() => of(null)))
+      sponsors: this.sponsorService.getSiteSponsorBenchmark(this.siteId, fromStr, toStr).pipe(catchError(() => of(null)))
     }).subscribe({
       next: (data) => {
         this.health = data.health;

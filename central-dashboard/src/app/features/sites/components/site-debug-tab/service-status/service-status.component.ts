@@ -4,7 +4,8 @@ import { FormsModule } from '@angular/forms';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { Subscription } from 'rxjs';
 import { pollCommand, CommandPollResult } from '../command-poller.util';
-import { SitesService } from '../../../../../core/services/sites.service';
+import { SiteCommandService } from '../../../../../core/services/site-command.service';
+import { SiteMetricsService } from '../../../../../core/services/site-metrics.service';
 import { NotificationService } from '../../../../../core/services/notification.service';
 import { LoggerService } from '../../../../../core/services/logger.service';
 import { ErrorExtractor } from '../../../../../core/utils/error-extractor';
@@ -518,7 +519,8 @@ export class ServiceStatusComponent implements OnDestroy {
   wifiConnectResult: { connected: boolean; ipAddress: string | null; message: string } | null = null;
 
   constructor(
-    private sitesService: SitesService,
+    private commandService: SiteCommandService,
+    private metricsService: SiteMetricsService,
     private notificationService: NotificationService,
     private logger: LoggerService,
     private translate: TranslateService
@@ -549,7 +551,7 @@ export class ServiceStatusComponent implements OnDestroy {
   loadNetworkInfo(): void {
     if (!this.isConnected) { this.notificationService.warning(this.translate.instant('debug.notifyDeviceOffline')); return; }
     this.loadingNetworkInfo = true;
-    this.sitesService.getNetworkDiagnostics(this.siteId).subscribe({
+    this.metricsService.getNetworkDiagnostics(this.siteId).subscribe({
       next: (result) => {
         this.loadingNetworkInfo = false;
         if (result && result.success !== false) { this.networkInfo = result as NetworkDiagnostics; this.networkInfoLoaded.emit(this.networkInfo); }
@@ -570,8 +572,8 @@ export class ServiceStatusComponent implements OnDestroy {
     this.bufferPollSubscription?.unsubscribe();
     const { result$, cancel } = pollCommand<BufferStatus>({
       siteId: this.siteId, commandName: 'get_analytics_buffer_status', timeoutSeconds: 15,
-      sendCommand: (id, cmd, params) => this.sitesService.sendCommand(id, cmd, params),
-      getCommandStatus: (id, cmdId) => this.sitesService.getCommandStatus(id, cmdId),
+      sendCommand: (id, cmd, params) => this.commandService.sendCommand(id, cmd, params),
+      getCommandStatus: (id, cmdId) => this.commandService.getCommandStatus(id, cmdId),
     });
     this.bufferPollSubscription = new Subscription(() => cancel());
     result$.subscribe((pollResult: CommandPollResult<BufferStatus>) => {
@@ -589,7 +591,7 @@ export class ServiceStatusComponent implements OnDestroy {
     this.fixingHotspot = true;
     this.hotspotResult = null;
     this.showRebootConfirmModal = false;
-    this.sitesService.fixHotspot(this.siteId, autoFix).subscribe({
+    this.metricsService.fixHotspot(this.siteId, autoFix).subscribe({
       next: (result) => {
         this.fixingHotspot = false;
         if (result) {
@@ -621,7 +623,7 @@ export class ServiceStatusComponent implements OnDestroy {
   confirmReboot(): void {
     if (!this.isConnected) { this.notificationService.warning(this.translate.instant('debug.notifyDeviceOffline')); return; }
     this.rebooting = true;
-    this.sitesService.sendCommand(this.siteId, 'reboot', {}).subscribe({
+    this.commandService.sendCommand(this.siteId, 'reboot', {}).subscribe({
       next: () => {
         this.rebooting = false;
         this.showRebootConfirmModal = false;
@@ -645,7 +647,7 @@ export class ServiceStatusComponent implements OnDestroy {
   loadWifiBssidStatus(): void {
     if (!this.siteId || !this.isConnected) return;
     this.loadingWifiBssid = true;
-    this.sitesService.getWifiBssidStatus(this.siteId).subscribe({
+    this.metricsService.getWifiBssidStatus(this.siteId).subscribe({
       next: (response) => { this.loadingWifiBssid = false; this.wifiBssidStatus = response; },
       error: (error) => {
         this.loadingWifiBssid = false;
@@ -659,7 +661,7 @@ export class ServiceStatusComponent implements OnDestroy {
   removeBssidLock(): void {
     if (!this.siteId || !this.isConnected) return;
     this.removingBssidLock = true;
-    this.sitesService.removeBssidLock(this.siteId).subscribe({
+    this.metricsService.removeBssidLock(this.siteId).subscribe({
       next: (response) => {
         this.removingBssidLock = false;
         if (response.success) { this.notificationService.success(this.translate.instant('debug.notifyBssidRemoved')); this.loadWifiBssidStatus(); }
@@ -677,7 +679,7 @@ export class ServiceStatusComponent implements OnDestroy {
   optimizeForMesh(): void {
     if (!this.siteId || !this.isConnected) return;
     this.optimizingMesh = true;
-    this.sitesService.optimizeForMesh(this.siteId).subscribe({
+    this.metricsService.optimizeForMesh(this.siteId).subscribe({
       next: (response) => {
         this.optimizingMesh = false;
         if (response.success) { this.notificationService.success(this.translate.instant('debug.notifyMeshOptimized')); this.loadWifiBssidStatus(); }
@@ -698,7 +700,7 @@ export class ServiceStatusComponent implements OnDestroy {
     this.selectedWifiNetwork = null;
     this.wifiPassword = '';
     this.wifiConnectResult = null;
-    this.sitesService.scanWifiNetworks(this.siteId).subscribe({
+    this.metricsService.scanWifiNetworks(this.siteId).subscribe({
       next: (response) => {
         this.scanningWifi = false;
         this.wifiScanResult = response;
@@ -729,7 +731,7 @@ export class ServiceStatusComponent implements OnDestroy {
     }
     this.connectingWifi = true;
     this.wifiConnectResult = null;
-    this.sitesService.connectWifiClient(this.siteId, this.selectedWifiNetwork.ssid, this.wifiPassword).subscribe({
+    this.metricsService.connectWifiClient(this.siteId, this.selectedWifiNetwork.ssid, this.wifiPassword).subscribe({
       next: (response) => {
         this.connectingWifi = false;
         this.wifiConnectResult = { connected: response.connected, ipAddress: response.ipAddress, message: response.message };

@@ -4,6 +4,7 @@ import { TranslateModule } from '@ngx-translate/core';
 import { of, throwError, delay } from 'rxjs';
 import { SiteSponsorsTabComponent } from './site-sponsors-tab.component';
 import { SitesService } from '../../../../core/services/sites.service';
+import { SiteSponsorService } from '../../../../core/services/site-sponsor.service';
 import { NotificationService } from '../../../../core/services/notification.service';
 import { ConfirmDialogService } from '../../../../core/services/confirm-dialog.service';
 import { SiteSponsor, GeneratedReport } from '../../../../core/models';
@@ -12,6 +13,7 @@ describe('SiteSponsorsTabComponent', () => {
   let component: SiteSponsorsTabComponent;
   let fixture: ComponentFixture<SiteSponsorsTabComponent>;
   let sitesService: jasmine.SpyObj<SitesService>;
+  let sponsorService: jasmine.SpyObj<SiteSponsorService>;
   let notificationService: jasmine.SpyObj<NotificationService>;
   let confirmDialogService: jasmine.SpyObj<ConfirmDialogService>;
 
@@ -122,6 +124,10 @@ describe('SiteSponsorsTabComponent', () => {
 
   beforeEach(async () => {
     const sitesServiceMock = jasmine.createSpyObj('SitesService', [
+      'getLocalContent',
+    ]);
+
+    const sponsorServiceMock = jasmine.createSpyObj('SiteSponsorService', [
       'listSiteSponsors',
       'getSiteSponsor',
       'createSiteSponsor',
@@ -131,18 +137,17 @@ describe('SiteSponsorsTabComponent', () => {
       'generateSponsorReport',
       'getSponsorReports',
       'getSiteSponsorBenchmark',
-      'getLocalContent',
       'addVideoToSiteSponsor',
       'removeVideoFromSiteSponsor',
       'createSponsorAccessLink',
     ]);
-    sitesServiceMock.listSiteSponsors.and.returnValue(of(mockListResponse));
-    sitesServiceMock.getSiteSponsorStats.and.returnValue(of(mockStatsResponse));
-    sitesServiceMock.getSponsorReports.and.returnValue(of(mockReports));
-    sitesServiceMock.createSiteSponsor.and.returnValue(of(mockSponsors[0]));
-    sitesServiceMock.updateSiteSponsor.and.returnValue(of(mockSponsors[0]));
-    sitesServiceMock.deleteSiteSponsor.and.returnValue(of(undefined));
-    sitesServiceMock.generateSponsorReport.and.returnValue(of({ reportId: 'r2', url: 'https://example.com/report2.pdf' }));
+    sponsorServiceMock.listSiteSponsors.and.returnValue(of(mockListResponse));
+    sponsorServiceMock.getSiteSponsorStats.and.returnValue(of(mockStatsResponse));
+    sponsorServiceMock.getSponsorReports.and.returnValue(of(mockReports));
+    sponsorServiceMock.createSiteSponsor.and.returnValue(of(mockSponsors[0]));
+    sponsorServiceMock.updateSiteSponsor.and.returnValue(of(mockSponsors[0]));
+    sponsorServiceMock.deleteSiteSponsor.and.returnValue(of(undefined));
+    sponsorServiceMock.generateSponsorReport.and.returnValue(of({ reportId: 'r2', url: 'https://example.com/report2.pdf' }));
     sitesServiceMock.getLocalContent.and.returnValue(of({
       siteId: 's1', siteName: 'Site Test', clubName: 'Club Test',
       hasContent: true, lastSync: null, configHash: null,
@@ -161,10 +166,10 @@ describe('SiteSponsorsTabComponent', () => {
         { id: 'cv3', filename: 'promo.mp4', originalName: 'promo.mp4', title: 'Promo', category: 'sponsor', subcategory: null, size: 3072, duration: 60, checksum: null, url: 'https://example.com/promo.mp4', uploadedForSiteId: null, createdAt: new Date(), updatedAt: new Date() },
       ],
     }));
-    sitesServiceMock.addVideoToSiteSponsor.and.returnValue(of(undefined));
-    sitesServiceMock.removeVideoFromSiteSponsor.and.returnValue(of(undefined));
-    sitesServiceMock.createSponsorAccessLink.and.returnValue(of({ accessUrl: 'https://example.com/access/abc', expiresAt: '2024-06-01T00:00:00Z', emailSent: false, sentTo: null }));
-    sitesServiceMock.getSiteSponsorBenchmark.and.returnValue(of({
+    sponsorServiceMock.addVideoToSiteSponsor.and.returnValue(of(undefined));
+    sponsorServiceMock.removeVideoFromSiteSponsor.and.returnValue(of(undefined));
+    sponsorServiceMock.createSponsorAccessLink.and.returnValue(of({ accessUrl: 'https://example.com/access/abc', expiresAt: '2024-06-01T00:00:00Z', emailSent: false, sentTo: null }));
+    sponsorServiceMock.getSiteSponsorBenchmark.and.returnValue(of({
       site_id: 's1',
       period: { from: '2024-01-01', to: '2024-01-31' },
       sponsors: [
@@ -182,6 +187,7 @@ describe('SiteSponsorsTabComponent', () => {
       imports: [SiteSponsorsTabComponent, FormsModule, TranslateModule.forRoot()],
       providers: [
         { provide: SitesService, useValue: sitesServiceMock },
+        { provide: SiteSponsorService, useValue: sponsorServiceMock },
         { provide: NotificationService, useValue: notificationServiceMock },
         { provide: ConfirmDialogService, useValue: confirmDialogServiceMock },
       ],
@@ -191,6 +197,7 @@ describe('SiteSponsorsTabComponent', () => {
     component = fixture.componentInstance;
     component.siteId = 's1';
     sitesService = TestBed.inject(SitesService) as jasmine.SpyObj<SitesService>;
+    sponsorService = TestBed.inject(SiteSponsorService) as jasmine.SpyObj<SiteSponsorService>;
     notificationService = TestBed.inject(NotificationService) as jasmine.SpyObj<NotificationService>;
     confirmDialogService = TestBed.inject(ConfirmDialogService) as jasmine.SpyObj<ConfirmDialogService>;
   });
@@ -208,14 +215,14 @@ describe('SiteSponsorsTabComponent', () => {
       fixture.detectChanges();
       tick();
 
-      expect(sitesService.listSiteSponsors).toHaveBeenCalledWith('s1', true);
+      expect(sponsorService.listSiteSponsors).toHaveBeenCalledWith('s1', true);
       // ADR-035: neopro sponsors are filtered out (sp2 source=neopro)
       expect(component.sponsors.length).toBe(2);
       expect(component.loading).toBe(false);
     }));
 
     it('should handle error when loading sponsors', fakeAsync(() => {
-      sitesService.listSiteSponsors.and.returnValue(throwError(() => new Error('API Error')));
+      sponsorService.listSiteSponsors.and.returnValue(throwError(() => new Error('API Error')));
 
       fixture.detectChanges();
       tick();
@@ -244,7 +251,7 @@ describe('SiteSponsorsTabComponent', () => {
     });
 
     it('should show empty state when no sponsors', fakeAsync(() => {
-      sitesService.listSiteSponsors.and.returnValue(of({
+      sponsorService.listSiteSponsors.and.returnValue(of({
         site: { id: 's1', site_name: 'Site Test', club_name: 'Club Test' },
         sponsors: [],
         total: 0,
@@ -307,7 +314,7 @@ describe('SiteSponsorsTabComponent', () => {
       component.saveSponsor(mockEvent);
       tick();
 
-      expect(sitesService.createSiteSponsor).toHaveBeenCalledWith('s1', jasmine.objectContaining({
+      expect(sponsorService.createSiteSponsor).toHaveBeenCalledWith('s1', jasmine.objectContaining({
         name: 'New Sponsor',
         contact_name: 'Contact',
         contact_email: 'contact@test.fr',
@@ -324,7 +331,7 @@ describe('SiteSponsorsTabComponent', () => {
       component.saveSponsor(mockEvent);
       tick();
 
-      expect(sitesService.updateSiteSponsor).toHaveBeenCalledWith('s1', 'sp1', jasmine.objectContaining({
+      expect(sponsorService.updateSiteSponsor).toHaveBeenCalledWith('s1', 'sp1', jasmine.objectContaining({
         name: 'Updated Name',
       }));
       expect(notificationService.success).toHaveBeenCalledWith('Sponsor mis à jour');
@@ -340,7 +347,7 @@ describe('SiteSponsorsTabComponent', () => {
     }));
 
     it('should show error notification on save failure', fakeAsync(() => {
-      sitesService.createSiteSponsor.and.returnValue(throwError(() => new Error('API Error')));
+      sponsorService.createSiteSponsor.and.returnValue(throwError(() => new Error('API Error')));
 
       component.openCreateModal();
       component.formData.name = 'New Sponsor';
@@ -357,7 +364,7 @@ describe('SiteSponsorsTabComponent', () => {
       component.saveSponsor(mockEvent);
       tick();
 
-      expect(sitesService.createSiteSponsor).not.toHaveBeenCalled();
+      expect(sponsorService.createSiteSponsor).not.toHaveBeenCalled();
     }));
 
     it('should delete a sponsor with confirmation', fakeAsync(() => {
@@ -366,10 +373,10 @@ describe('SiteSponsorsTabComponent', () => {
       component.confirmDelete(mockSponsors[0]);
       tick();
 
-      expect(sitesService.deleteSiteSponsor).toHaveBeenCalledWith('s1', 'sp1');
+      expect(sponsorService.deleteSiteSponsor).toHaveBeenCalledWith('s1', 'sp1');
       expect(notificationService.success).toHaveBeenCalledWith('Sponsor supprimé');
       // Should reload the list after deletion
-      expect(sitesService.listSiteSponsors).toHaveBeenCalledTimes(2); // 1 init + 1 after delete
+      expect(sponsorService.listSiteSponsors).toHaveBeenCalledTimes(2); // 1 init + 1 after delete
     }));
 
     it('should not delete when confirmation is cancelled', fakeAsync(() => {
@@ -378,7 +385,7 @@ describe('SiteSponsorsTabComponent', () => {
       component.confirmDelete(mockSponsors[0]);
       tick();
 
-      expect(sitesService.deleteSiteSponsor).not.toHaveBeenCalled();
+      expect(sponsorService.deleteSiteSponsor).not.toHaveBeenCalled();
     }));
 
     it('should collapse expanded detail on delete', fakeAsync(() => {
@@ -403,8 +410,8 @@ describe('SiteSponsorsTabComponent', () => {
       tick();
 
       expect(component.expandedSponsorId).toBe('sp1');
-      expect(sitesService.getSiteSponsorStats).toHaveBeenCalled();
-      const callArgs = sitesService.getSiteSponsorStats.calls.mostRecent().args;
+      expect(sponsorService.getSiteSponsorStats).toHaveBeenCalled();
+      const callArgs = sponsorService.getSiteSponsorStats.calls.mostRecent().args;
       expect(callArgs[0]).toBe('s1');
       expect(callArgs[1]).toBe('sp1');
     }));
@@ -422,12 +429,12 @@ describe('SiteSponsorsTabComponent', () => {
       component.toggleDetail(mockSponsors[0]);
       tick();
 
-      expect(sitesService.getSiteSponsorStats).toHaveBeenCalled();
-      expect(sitesService.getSponsorReports).toHaveBeenCalledWith('sp1');
+      expect(sponsorService.getSiteSponsorStats).toHaveBeenCalled();
+      expect(sponsorService.getSponsorReports).toHaveBeenCalledWith('sp1');
     }));
 
     it('should set detailLoading while fetching', fakeAsync(() => {
-      sitesService.getSiteSponsorStats.and.returnValue(of(mockStatsResponse).pipe(delay(100)));
+      sponsorService.getSiteSponsorStats.and.returnValue(of(mockStatsResponse).pipe(delay(100)));
 
       component.toggleDetail(mockSponsors[0]);
 
@@ -449,7 +456,7 @@ describe('SiteSponsorsTabComponent', () => {
       component.generateReport(mockSponsors[0]);
       tick();
 
-      expect(sitesService.generateSponsorReport).toHaveBeenCalledWith('s1', 'sp1', jasmine.any(String), jasmine.any(String));
+      expect(sponsorService.generateSponsorReport).toHaveBeenCalledWith('s1', 'sp1', jasmine.any(String), jasmine.any(String));
       expect(notificationService.success).toHaveBeenCalled();
     }));
 
@@ -470,7 +477,7 @@ describe('SiteSponsorsTabComponent', () => {
     }));
 
     it('should set generatingReportId during generation', fakeAsync(() => {
-      sitesService.generateSponsorReport.and.returnValue(
+      sponsorService.generateSponsorReport.and.returnValue(
         of({ reportId: 'r2', url: 'https://example.com/report2.pdf' }).pipe(delay(100))
       );
 
@@ -484,7 +491,7 @@ describe('SiteSponsorsTabComponent', () => {
     }));
 
     it('should handle report generation error', fakeAsync(() => {
-      sitesService.generateSponsorReport.and.returnValue(throwError(() => new Error('API Error')));
+      sponsorService.generateSponsorReport.and.returnValue(throwError(() => new Error('API Error')));
 
       component.generateReport(mockSponsors[0]);
       tick();
@@ -516,7 +523,7 @@ describe('SiteSponsorsTabComponent', () => {
       component.addVideo();
       tick();
 
-      expect(sitesService.addVideoToSiteSponsor).toHaveBeenCalledWith('s1', 'sp1', 'sponsor-b.mp4');
+      expect(sponsorService.addVideoToSiteSponsor).toHaveBeenCalledWith('s1', 'sp1', 'sponsor-b.mp4');
       expect(notificationService.success).toHaveBeenCalledWith('Vidéo associée au sponsor');
       expect(component.selectedVideoFilename).toBe('');
       expect(component.addingVideo).toBe(false);
@@ -527,11 +534,11 @@ describe('SiteSponsorsTabComponent', () => {
       component.addVideo();
       tick();
 
-      expect(sitesService.addVideoToSiteSponsor).not.toHaveBeenCalled();
+      expect(sponsorService.addVideoToSiteSponsor).not.toHaveBeenCalled();
     }));
 
     it('should handle add video error', fakeAsync(() => {
-      sitesService.addVideoToSiteSponsor.and.returnValue(throwError(() => new Error('fail')));
+      sponsorService.addVideoToSiteSponsor.and.returnValue(throwError(() => new Error('fail')));
       component.selectedVideoFilename = 'sponsor-b.mp4';
       component.addVideo();
       tick();
@@ -545,7 +552,7 @@ describe('SiteSponsorsTabComponent', () => {
       component.removeVideo('sponsor-a.mp4');
       tick();
 
-      expect(sitesService.removeVideoFromSiteSponsor).toHaveBeenCalledWith('s1', 'sp1', 'sponsor-a.mp4');
+      expect(sponsorService.removeVideoFromSiteSponsor).toHaveBeenCalledWith('s1', 'sp1', 'sponsor-a.mp4');
       expect(notificationService.success).toHaveBeenCalledWith('Vidéo retirée du sponsor');
       expect(component.removingVideoFilename).toBeNull();
     }));
@@ -555,12 +562,12 @@ describe('SiteSponsorsTabComponent', () => {
       component.removeVideo('sponsor-a.mp4');
       tick();
 
-      expect(sitesService.removeVideoFromSiteSponsor).not.toHaveBeenCalled();
+      expect(sponsorService.removeVideoFromSiteSponsor).not.toHaveBeenCalled();
     }));
 
     it('should handle remove video error', fakeAsync(() => {
       confirmDialogService.confirm.and.returnValue(Promise.resolve(true));
-      sitesService.removeVideoFromSiteSponsor.and.returnValue(throwError(() => new Error('fail')));
+      sponsorService.removeVideoFromSiteSponsor.and.returnValue(throwError(() => new Error('fail')));
       component.removeVideo('sponsor-a.mp4');
       tick();
 
@@ -602,7 +609,7 @@ describe('SiteSponsorsTabComponent', () => {
     });
 
     it('should show error banner on error', fakeAsync(() => {
-      sitesService.listSiteSponsors.and.returnValue(throwError(() => new Error('API Error')));
+      sponsorService.listSiteSponsors.and.returnValue(throwError(() => new Error('API Error')));
       component.loadSponsors();
       tick();
       fixture.detectChanges();

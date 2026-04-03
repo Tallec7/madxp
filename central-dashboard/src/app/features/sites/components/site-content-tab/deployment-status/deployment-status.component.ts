@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Subscription, filter, take } from 'rxjs';
 import { SitesService, PendingDeployment } from '../../../../../core/services/sites.service';
+import { SiteCommandService } from '../../../../../core/services/site-command.service';
 import { NotificationService } from '../../../../../core/services/notification.service';
 import { LoggerService } from '../../../../../core/services/logger.service';
 import { SocketService } from '../../../../../core/services/socket.service';
@@ -477,6 +478,7 @@ export class DeploymentStatusComponent implements OnDestroy {
 
   constructor(
     private sitesService: SitesService,
+    private commandService: SiteCommandService,
     private notificationService: NotificationService,
     private logger: LoggerService,
     private socketService: SocketService,
@@ -615,7 +617,7 @@ export class DeploymentStatusComponent implements OnDestroy {
       categoryMappings: this.config.categoryMappings
     };
 
-    this.sitesService.sendCommand(this.siteId, 'update_config', {
+    this.commandService.sendCommand(this.siteId, 'update_config', {
       neoProContent: configToSend,
       mode: this.deployMode
     }).subscribe({

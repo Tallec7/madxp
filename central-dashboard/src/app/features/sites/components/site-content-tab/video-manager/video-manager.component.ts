@@ -2,6 +2,7 @@ import { Component, Input, Output, EventEmitter, ChangeDetectionStrategy, Change
 import { CommonModule } from '@angular/common';
 import { forkJoin } from 'rxjs';
 import { SitesService } from '../../../../../core/services/sites.service';
+import { SiteCommandService } from '../../../../../core/services/site-command.service';
 import { NotificationService } from '../../../../../core/services/notification.service';
 import { ErrorExtractor } from '../../../../../core/utils/error-extractor';
 import { LocalVideo, CloudVideo, LocalStorage } from '../../../../../core/models';
@@ -174,6 +175,7 @@ export class VideoManagerComponent {
 
   constructor(
     private sitesService: SitesService,
+    private commandService: SiteCommandService,
     private notificationService: NotificationService,
     private cdr: ChangeDetectorRef
   ) {}
@@ -208,7 +210,7 @@ export class VideoManagerComponent {
 
     const piCat = video.piCategory ?? video.category;
     const piSubcat = video.piSubcategory ?? video.subcategory;
-    const deletePi$ = this.sitesService.sendCommand(this.siteId, 'delete_video', {
+    const deletePi$ = this.commandService.sendCommand(this.siteId, 'delete_video', {
       filename: video.filename,
       category: piCat || undefined,
       subcategory: piSubcat || undefined

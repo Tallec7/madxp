@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { Subscription, interval } from 'rxjs';
 import { SitesService } from '../../../core/services/sites.service';
+import { SiteCommandService } from '../../../core/services/site-command.service';
 import { NotificationService } from '../../../core/services/notification.service';
 import { AnalyticsService } from '../../../core/services/analytics.service';
 import {
@@ -2321,6 +2322,7 @@ export class ConfigEditorComponent implements OnInit, OnDestroy {
 
   constructor(
     private sitesService: SitesService,
+    private commandService: SiteCommandService,
     private notificationService: NotificationService,
     private analyticsService: AnalyticsService,
     private cdr: ChangeDetectorRef
@@ -2393,7 +2395,7 @@ export class ConfigEditorComponent implements OnInit, OnDestroy {
       }
     }, 10000);
 
-    this.sitesService.getConfiguration(this.siteId).subscribe({
+    this.commandService.getConfiguration(this.siteId).subscribe({
       next: (response) => {
         clearTimeout(timeoutId);
         if (response.commandId) {
@@ -2463,7 +2465,7 @@ export class ConfigEditorComponent implements OnInit, OnDestroy {
       }
       isPolling = true;
 
-      this.sitesService.getCommandStatus(this.siteId, this.configCommandId!).subscribe({
+      this.commandService.getCommandStatus(this.siteId, this.configCommandId!).subscribe({
         next: (status) => {
           isPolling = false;
           if (status.status === 'completed') {
@@ -3064,7 +3066,7 @@ export class ConfigEditorComponent implements OnInit, OnDestroy {
     this.sitesService.saveConfigVersion(this.siteId, this.config, 'Déploiement depuis le dashboard').subscribe({
       next: () => {
         // Puis déployer sur le site
-        this.sitesService.sendCommand(this.siteId, 'update_config', {
+        this.commandService.sendCommand(this.siteId, 'update_config', {
           configuration: this.config,
           mode: this.deployMode
         }).subscribe({
