@@ -1,3 +1,9 @@
+## [3.122.1](https://github.com/Tallec7/neopro/compare/v3.122.0...v3.122.1) (2026-04-03)
+
+### Bug Fixes
+
+- **dashboard:** remove extracted method tests from SitesService spec ([4c0c573](https://github.com/Tallec7/neopro/commit/4c0c5737e175bd486425c69e0b787f3a71fd5979))
+
 # [3.123.0](https://github.com/Tallec7/neopro/compare/v3.122.0...v3.123.0) (2026-04-03)
 
 ### Features
