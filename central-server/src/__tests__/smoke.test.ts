@@ -12489,3 +12489,123 @@ describe('Central Dashboard error handling guards', () => {
     });
   });
 });
+
+// =============================================================================
+// AdvertiserDetailDataService extraction guard
+// =============================================================================
+// API calls (load, update, delete sponsor) MUST live in AdvertiserDetailDataService,
+// NOT inline in the component. The component should only handle UI state and template binding.
+// Re-inlining API calls into the component makes it harder for AI tools to reason about.
+
+describe('AdvertiserDetailDataService extraction guard', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+  const advDir = path.join(repoRoot, 'central-dashboard/src/app/features/advertisers');
+
+  it('AdvertiserDetailDataService exists with all sponsor API methods', () => {
+    const content = fs.readFileSync(path.join(advDir, 'advertiser-detail-data.service.ts'), 'utf-8');
+    expect(content).toContain('class AdvertiserDetailDataService');
+    expect(content).toContain('loadSponsorWithRelations');
+    expect(content).toContain('updateSponsor');
+    expect(content).toContain('deleteSponsor');
+    expect(content).toContain('forkJoin');
+  });
+
+  it('advertiser-detail component uses AdvertiserDetailDataService (not raw ApiService)', () => {
+    const content = fs.readFileSync(path.join(advDir, 'advertiser-detail.component.ts'), 'utf-8');
+    expect(content).toContain('AdvertiserDetailDataService');
+    expect(content).not.toMatch(/private\s+(readonly\s+)?api\s*=\s*inject\(ApiService\)/);
+  });
+
+  it('advertiser-detail component must NOT contain inline API URLs (delegated to service)', () => {
+    const content = fs.readFileSync(path.join(advDir, 'advertiser-detail.component.ts'), 'utf-8');
+    expect(content).not.toContain("this.api.get");
+    expect(content).not.toContain("this.api.put");
+    expect(content).not.toContain("this.api.delete");
+    expect(content).not.toContain("/analytics/advertisers/");
+  });
+
+  it('SponsorQuickStats interface replaces any type for quickStats', () => {
+    const serviceContent = fs.readFileSync(path.join(advDir, 'advertiser-detail-data.service.ts'), 'utf-8');
+    const componentContent = fs.readFileSync(path.join(advDir, 'advertiser-detail.component.ts'), 'utf-8');
+    expect(serviceContent).toContain('interface SponsorQuickStats');
+    expect(componentContent).toContain('SponsorQuickStats');
+    // Must not have untyped quickStats
+    expect(componentContent).not.toMatch(/quickStats:\s*any/);
+  });
+});
+
+// =============================================================================
+// AnalyticsTractionComponent decomposition guard
+// =============================================================================
+// The traction dashboard MUST be decomposed into focused section components
+// in analytics/components/. Data transformations MUST live in TractionDataService.
+// Re-monolithifying the template back into one 800+ line component degrades AI reasoning.
+
+describe('AnalyticsTractionComponent decomposition guard', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+  const analyticsDir = path.join(repoRoot, 'central-dashboard/src/app/features/analytics');
+  const componentsDir = path.join(analyticsDir, 'components');
+
+  it('TractionDataService exists with data transformation methods', () => {
+    const content = fs.readFileSync(path.join(analyticsDir, 'traction-data.service.ts'), 'utf-8');
+    expect(content).toContain('class TractionDataService');
+    expect(content).toContain('calculateAverageRetention');
+    expect(content).toContain('computeFleetGrowthWithCumulative');
+    expect(content).toContain('formatNumber');
+    expect(content).toContain('formatMonth');
+  });
+
+  it('all traction section components exist in components/ subfolder', () => {
+    const expectedComponents = [
+      'traction-kpi-summary.component.ts',
+      'traction-fleet-growth.component.ts',
+      'traction-engagement.component.ts',
+      'traction-subscriptions.component.ts',
+      'traction-advertisers.component.ts',
+      'traction-deployments.component.ts',
+      'traction-product-velocity.component.ts',
+      'traction-retention.component.ts',
+      'traction-distribution.component.ts',
+    ];
+    for (const file of expectedComponents) {
+      expect(fs.existsSync(path.join(componentsDir, file))).toBe(true);
+    }
+  });
+
+  it('shared styles file exists for traction sub-components', () => {
+    const content = fs.readFileSync(path.join(componentsDir, 'traction-shared.styles.ts'), 'utf-8');
+    expect(content).toContain('TRACTION_SHARED_STYLES');
+    expect(content).toContain('.kpi-card');
+    expect(content).toContain('.data-table');
+  });
+
+  it('analytics-traction orchestrator imports all sub-components (not inline templates)', () => {
+    const content = fs.readFileSync(path.join(analyticsDir, 'analytics-traction.component.ts'), 'utf-8');
+    expect(content).toContain('TractionKpiSummaryComponent');
+    expect(content).toContain('TractionFleetGrowthComponent');
+    expect(content).toContain('TractionEngagementComponent');
+    expect(content).toContain('TractionSubscriptionsComponent');
+    expect(content).toContain('TractionAdvertisersComponent');
+    expect(content).toContain('TractionDeploymentsComponent');
+    expect(content).toContain('TractionProductVelocityComponent');
+    expect(content).toContain('TractionRetentionComponent');
+    expect(content).toContain('TractionDistributionComponent');
+    expect(content).toContain('TractionDataService');
+  });
+
+  it('analytics-traction orchestrator must NOT contain inline data-table HTML (delegated to sub-components)', () => {
+    const content = fs.readFileSync(path.join(analyticsDir, 'analytics-traction.component.ts'), 'utf-8');
+    // The orchestrator should not have raw table markup — it delegates to child components
+    expect(content).not.toContain('<table class="data-table">');
+    expect(content).not.toContain('.kpi-card-small');
+  });
+
+  it('analytics-traction orchestrator must NOT contain formatting methods (delegated to TractionDataService)', () => {
+    const content = fs.readFileSync(path.join(analyticsDir, 'analytics-traction.component.ts'), 'utf-8');
+    expect(content).not.toMatch(/formatNumber\s*\(/);
+    expect(content).not.toMatch(/formatMonth\s*\(/);
+    // calculateAverageRetention and getFleetGrowthWithCumulative also delegated
+    expect(content).not.toMatch(/calculateAverageRetention\s*\(\s*\)/);
+    expect(content).not.toMatch(/getFleetGrowthWithCumulative\s*\(\s*\)/);
+  });
+});

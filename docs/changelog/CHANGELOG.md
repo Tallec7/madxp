@@ -1,3 +1,15 @@
+# [3.124.0](https://github.com/Tallec7/neopro/compare/v3.122.1...v3.124.0) (2026-04-03)
+
+### Refactoring
+
+- **dashboard:** extract AdvertiserDetailDataService from advertiser-detail component (API calls, forkJoin parallel loading, typed SponsorQuickStats) ([COMMIT])
+- **dashboard:** extract TractionDataService for analytics data transformations (calculateAverageRetention, computeFleetGrowthWithCumulative, formatNumber, formatMonth) ([COMMIT])
+- **dashboard:** decompose analytics-traction into 9 focused section components in components/ subfolder with shared styles ([COMMIT])
+
+### Tests
+
+- **smoke:** add decomposition guards for AdvertiserDetailDataService extraction and AnalyticsTractionComponent decomposition ([COMMIT])
+
 ## [3.122.1](https://github.com/Tallec7/neopro/compare/v3.122.0...v3.122.1) (2026-04-03)
 
 ### Bug Fixes

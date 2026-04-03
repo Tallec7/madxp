@@ -3,9 +3,9 @@ import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { TranslateModule } from '@ngx-translate/core';
-import { ApiService } from '../../core/services/api.service';
 import { NotificationService } from '../../core/services/notification.service';
 import { Sponsor, SponsorVideo, AssignedSite } from './advertiser-detail.models';
+import { AdvertiserDetailDataService, SponsorQuickStats } from './advertiser-detail-data.service';
 import { SponsorVideosTabComponent } from './sponsor-videos-tab.component';
 import { SponsorSitesTabComponent } from './sponsor-sites-tab.component';
 import { SponsorCampaignsTabComponent } from './sponsor-campaigns-tab.component';
@@ -187,7 +187,7 @@ import { SponsorCampaignsTabComponent } from './sponsor-campaigns-tab.component'
               <h3>Aperçu Rapide</h3>
               <div class="stats-grid">
                 <div class="stat-card">
-                  <span class="stat-value">{{ quickStats.total_impressions?.toLocaleString() || 0 }}</span>
+                  <span class="stat-value">{{ quickStats.total_impressions.toLocaleString() || 0 }}</span>
                   <span class="stat-label">Impressions totales</span>
                 </div>
                 <div class="stat-card">
@@ -195,7 +195,7 @@ import { SponsorCampaignsTabComponent } from './sponsor-campaigns-tab.component'
                   <span class="stat-label">Temps écran total</span>
                 </div>
                 <div class="stat-card">
-                  <span class="stat-value">{{ quickStats.completion_rate?.toFixed(1) || 0 }}%</span>
+                  <span class="stat-value">{{ quickStats.completion_rate.toFixed(1) || 0 }}%</span>
                   <span class="stat-label">Taux de complétion</span>
                 </div>
                 <div class="stat-card">
@@ -815,8 +815,7 @@ export class SponsorDetailComponent implements OnInit {
   sponsor: Sponsor | null = null;
   sponsorVideos: SponsorVideo[] = [];
   assignedSites: AssignedSite[] = [];
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic stats shape from API
-  quickStats: any = null;
+  quickStats: SponsorQuickStats | null = null;
 
   activeTab: 'info' | 'videos' | 'analytics' | 'sites' | 'campaigns' = 'info';
   loading = false;
@@ -829,10 +828,10 @@ export class SponsorDetailComponent implements OnInit {
 
   editForm: Partial<Sponsor> = {};
 
-  private api = inject(ApiService);
-  private notification = inject(NotificationService);
-  private route = inject(ActivatedRoute);
-  private router = inject(Router);
+  private readonly dataService = inject(AdvertiserDetailDataService);
+  private readonly notification = inject(NotificationService);
+  private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
 
   ngOnInit() {
     this.sponsorId = this.route.snapshot.params['id'];
@@ -843,43 +842,19 @@ export class SponsorDetailComponent implements OnInit {
     this.loading = true;
     this.error = '';
 
-    this.api.get<{ success: boolean; data: { advertiser: Sponsor } }>(`/analytics/advertisers/${this.sponsorId}`)
-      .subscribe({
-        next: (response) => {
-          this.sponsor = response.data.advertiser;
-
-          // Load associated videos
-          this.api.get<{ success: boolean; data: { videos: SponsorVideo[] } }>(`/analytics/advertisers/${this.sponsorId}/videos`)
-            .subscribe({
-              next: (videoResponse) => {
-                this.sponsorVideos = videoResponse.data.videos || [];
-              },
-              error: () => {
-                // Silencieux - les vidéos ne sont pas critiques
-              }
-            });
-
-          // Load quick stats (last 30 days)
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic stats shape
-          this.api.get<{ success: boolean; data: { summary: any } }>(`/analytics/advertisers/${this.sponsorId}/stats`, { days: '30' })
-            .subscribe({
-              next: (statsResponse) => {
-                this.quickStats = statsResponse.data.summary;
-              },
-              error: () => {
-                // Silencieux - les stats ne sont pas critiques
-              },
-              complete: () => {
-                this.loading = false;
-              }
-            });
-        },
-        error: () => {
-          this.error = 'Sponsor non trouvé';
-          this.notification.error('Erreur lors du chargement des données');
-          this.loading = false;
-        }
-      });
+    this.dataService.loadSponsorWithRelations(this.sponsorId).subscribe({
+      next: (result) => {
+        this.sponsor = result.sponsor;
+        this.sponsorVideos = result.videos;
+        this.quickStats = result.quickStats;
+        this.loading = false;
+      },
+      error: () => {
+        this.error = 'Sponsor non trouvé';
+        this.notification.error('Erreur lors du chargement des données');
+        this.loading = false;
+      }
+    });
   }
 
   goBack() {
@@ -905,21 +880,20 @@ export class SponsorDetailComponent implements OnInit {
     event.preventDefault();
     this.saving = true;
 
-    this.api.put<{ success: boolean; data: { advertiser: Sponsor } }>(`/analytics/advertisers/${this.sponsorId}`, this.editForm)
-      .subscribe({
-        next: (response) => {
-          this.sponsor = response.data.advertiser;
-          this.notification.success('Sponsor modifié avec succès');
-          this.closeEditModal();
-        },
-        error: () => {
-          this.notification.error('Erreur lors de la sauvegarde');
-          this.saving = false;
-        },
-        complete: () => {
-          this.saving = false;
-        }
-      });
+    this.dataService.updateSponsor(this.sponsorId, this.editForm).subscribe({
+      next: (sponsor) => {
+        this.sponsor = sponsor;
+        this.notification.success('Sponsor modifié avec succès');
+        this.closeEditModal();
+      },
+      error: () => {
+        this.notification.error('Erreur lors de la sauvegarde');
+        this.saving = false;
+      },
+      complete: () => {
+        this.saving = false;
+      }
+    });
   }
 
   // Delete Functions
@@ -934,19 +908,18 @@ export class SponsorDetailComponent implements OnInit {
   deleteSponsor() {
     this.deleting = true;
 
-    this.api.delete<{ success: boolean }>(`/analytics/advertisers/${this.sponsorId}`)
-      .subscribe({
-        next: () => {
-          this.notification.success('Sponsor supprimé avec succès');
-          this.router.navigate(['/advertisers']);
-        },
-        error: () => {
-          this.notification.error('Erreur lors de la suppression');
-        },
-        complete: () => {
-          this.deleting = false;
-        }
-      });
+    this.dataService.deleteSponsor(this.sponsorId).subscribe({
+      next: () => {
+        this.notification.success('Sponsor supprimé avec succès');
+        this.router.navigate(['/advertisers']);
+      },
+      error: () => {
+        this.notification.error('Erreur lors de la suppression');
+      },
+      complete: () => {
+        this.deleting = false;
+      }
+    });
   }
 
   // Utility Functions
