@@ -1,0 +1,868 @@
+<div class="config-editor-container">
+  <!-- Tabs -->
+  <div class="tabs">
+    <button class="tab" [class.active]="activeTab === 'form'" (click)="activeTab = 'form'">
+      Formulaire
+    </button>
+    <button class="tab" [class.active]="activeTab === 'json'" (click)="activeTab = 'json'">
+      JSON
+    </button>
+    <button
+      class="tab"
+      [class.active]="activeTab === 'history'"
+      (click)="activeTab = 'history'; loadHistory()"
+    >
+      Historique ({{ historyCount }})
+    </button>
+  </div>
+
+  <!-- Loading indicator -->
+  <div class="loading-banner" *ngIf="isLoading()">
+    <div class="spinner-small"></div>
+    <span>Chargement de la configuration...</span>
+  </div>
+
+  <!-- Form Tab -->
+  <div *ngIf="activeTab === 'form'" class="tab-content">
+    <div class="form-sections">
+      <!-- Section Authentification -->
+      <div class="form-section">
+        <h4 class="section-title">
+          <span class="section-icon">🔐</span>
+          Authentification
+        </h4>
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="clubName">Nom du club *</label>
+            <input
+              type="text"
+              id="clubName"
+              [(ngModel)]="config.auth.clubName"
+              (ngModelChange)="onConfigChange()"
+              placeholder="Mon Club"
+              [class.error]="hasError('auth.clubName')"
+            />
+            <span class="field-error" *ngIf="hasError('auth.clubName')">
+              {{ getError('auth.clubName') }}
+            </span>
+          </div>
+          <div class="form-group">
+            <label for="password">Mot de passe WiFi</label>
+            <input
+              type="text"
+              id="password"
+              [(ngModel)]="config.auth.password"
+              (ngModelChange)="onConfigChange()"
+              placeholder="MotDePasse123"
+            />
+          </div>
+          <div class="form-group">
+            <label for="sessionDuration">Durée de session</label>
+            <select
+              id="sessionDuration"
+              [(ngModel)]="config.auth.sessionDuration"
+              (ngModelChange)="onConfigChange()"
+            >
+              <option [value]="3600000">1 heure</option>
+              <option [value]="7200000">2 heures</option>
+              <option [value]="14400000">4 heures</option>
+              <option [value]="28800000">8 heures</option>
+              <option [value]="86400000">24 heures</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Section Remote -->
+      <div class="form-section">
+        <h4 class="section-title">
+          <span class="section-icon">📱</span>
+          Télécommande
+        </h4>
+        <div class="form-grid">
+          <div class="form-group full-width">
+            <label for="remoteTitle">Titre de la télécommande</label>
+            <input
+              type="text"
+              id="remoteTitle"
+              [(ngModel)]="config.remote.title"
+              (ngModelChange)="onConfigChange()"
+              placeholder="Telecommande Neopro - Mon Club"
+            />
+          </div>
+        </div>
+      </div>
+
+      <!-- Section Synchronisation -->
+      <div class="form-section">
+        <h4 class="section-title">
+          <span class="section-icon">🔄</span>
+          Synchronisation
+        </h4>
+        <div class="form-grid">
+          <div class="form-group">
+            <label class="checkbox-label">
+              <input
+                type="checkbox"
+                [(ngModel)]="config.sync.enabled"
+                (ngModelChange)="onConfigChange()"
+              />
+              Synchronisation activée
+            </label>
+          </div>
+          <div class="form-group full-width" *ngIf="config.sync.enabled">
+            <label for="serverUrl">URL du serveur</label>
+            <input
+              type="url"
+              id="serverUrl"
+              [(ngModel)]="config.sync.serverUrl"
+              (ngModelChange)="onConfigChange()"
+              placeholder="https://neopro-central-production.up.railway.app"
+            />
+          </div>
+          <div class="form-group" *ngIf="config.sync.enabled">
+            <label for="syncSiteName">ID du site</label>
+            <input
+              type="text"
+              id="syncSiteName"
+              [(ngModel)]="config.sync.siteName"
+              (ngModelChange)="onConfigChange()"
+              [placeholder]="siteId"
+            />
+          </div>
+          <div class="form-group" *ngIf="config.sync.enabled">
+            <label for="syncClubName">Nom du club (sync)</label>
+            <input
+              type="text"
+              id="syncClubName"
+              [(ngModel)]="config.sync.clubName"
+              (ngModelChange)="onConfigChange()"
+            />
+          </div>
+        </div>
+      </div>
+
+      <!-- Section Boucle par défaut (ex-Sponsors) -->
+      <div class="form-section">
+        <h4 class="section-title">
+          <span class="section-icon">🔄</span>
+          Boucle par défaut
+          <button class="btn-add" (click)="addSponsor()">+ Ajouter</button>
+        </h4>
+        <p class="section-info">
+          Vidéos diffusées en boucle quand aucune vidéo n'est sélectionnée sur la télécommande.
+          Cette boucle est utilisée par défaut pour toutes les phases, sauf si une boucle spécifique
+          est configurée ci-dessous.
+        </p>
+        <div class="items-list" *ngIf="config.sponsors.length > 0">
+          <div
+            class="item-card"
+            *ngFor="let sponsor of config.sponsors; let i = index"
+            [class.empty-path]="!sponsor.path.trim()"
+          >
+            <div class="item-header">
+              <span class="item-name">{{ sponsor.name || 'Nouvelle vidéo' }}</span>
+              <div class="ownership-controls inline">
+                <label class="ownership-option">
+                  <input
+                    type="radio"
+                    [name]="'owner-sponsor-' + i"
+                    [(ngModel)]="sponsor.owner"
+                    [value]="'club'"
+                    (ngModelChange)="onConfigChange(); sponsor.locked = false"
+                  />
+                  <span class="ownership-label club small">Club</span>
+                </label>
+                <label class="ownership-option">
+                  <input
+                    type="radio"
+                    [name]="'owner-sponsor-' + i"
+                    [(ngModel)]="sponsor.owner"
+                    [value]="'neopro'"
+                    (ngModelChange)="onConfigChange(); sponsor.locked = true"
+                  />
+                  <span class="ownership-label neopro small">NEOPRO</span>
+                </label>
+              </div>
+              <button class="btn-remove" (click)="removeSponsor(i)">×</button>
+            </div>
+            <div class="item-form">
+              <input
+                type="text"
+                [(ngModel)]="sponsor.name"
+                (ngModelChange)="onConfigChange()"
+                placeholder="Nom du sponsor"
+              />
+              <app-video-selector
+                *ngIf="localVideos.length > 0"
+                [videos]="localVideos"
+                [selectedPath]="sponsor.path"
+                (pathChange)="sponsor.path = $event; onConfigChange()"
+                [placeholder]="'common.selectVideo' | translate"
+              ></app-video-selector>
+              <input
+                *ngIf="localVideos.length === 0"
+                type="text"
+                [(ngModel)]="sponsor.path"
+                (ngModelChange)="onConfigChange()"
+                placeholder="Chemin vidéo (ex: videos/SPONSORS/video.mp4)"
+              />
+              <input
+                type="text"
+                [(ngModel)]="sponsor.type"
+                (ngModelChange)="onConfigChange()"
+                placeholder="Type (ex: video/mp4)"
+                class="type-input"
+              />
+            </div>
+          </div>
+        </div>
+        <p class="empty-message" *ngIf="config.sponsors.length === 0">
+          Aucune vidéo dans la boucle par défaut
+        </p>
+      </div>
+
+      <!-- Section Catégories -->
+      <div class="form-section">
+        <h4 class="section-title">
+          <span class="section-icon">📁</span>
+          Catégories et Vidéos
+          <button class="btn-add" (click)="addCategory()">+ Nouvelle catégorie</button>
+        </h4>
+        <div class="categories-list" *ngIf="config.categories.length > 0">
+          <div
+            class="category-card"
+            *ngFor="let category of config.categories; let catIndex = index"
+            [class.expanded]="expandedCategory === catIndex"
+          >
+            <div class="category-header" (click)="toggleCategory(catIndex)">
+              <span class="expand-icon">{{ expandedCategory === catIndex ? '▼' : '▶' }}</span>
+              <input
+                type="text"
+                [(ngModel)]="category.name"
+                (ngModelChange)="onConfigChange()"
+                (click)="$event.stopPropagation()"
+                placeholder="Nom de la catégorie"
+                class="category-name-input"
+              />
+              <div class="ownership-controls" (click)="$event.stopPropagation()">
+                <label class="ownership-option">
+                  <input
+                    type="radio"
+                    [name]="'owner-category-' + catIndex"
+                    [(ngModel)]="category.owner"
+                    [value]="'club'"
+                    (ngModelChange)="onConfigChange(); category.locked = false"
+                  />
+                  <span class="ownership-label club">Club</span>
+                </label>
+                <label class="ownership-option">
+                  <input
+                    type="radio"
+                    [name]="'owner-category-' + catIndex"
+                    [(ngModel)]="category.owner"
+                    [value]="'neopro'"
+                    (ngModelChange)="onConfigChange(); category.locked = true"
+                  />
+                  <span class="ownership-label neopro">NEOPRO</span>
+                </label>
+              </div>
+              <select
+                *ngIf="!category.subCategories?.length"
+                class="analytics-type-select"
+                [ngModel]="getCategoryMapping(category.id)"
+                (ngModelChange)="setCategoryMapping(category.id, $event)"
+                (click)="$event.stopPropagation()"
+                title="Type Analytics"
+              >
+                <option value="">📊 --</option>
+                <option *ngFor="let ac of analyticsCategories" [value]="ac.id">
+                  📊 {{ ac.name }}
+                </option>
+              </select>
+              <span
+                *ngIf="category.subCategories?.length"
+                class="analytics-hint"
+                (click)="$event.stopPropagation()"
+                title="Le mapping analytics se fait sur les sous-catégories"
+              >
+                📊 (sous-cat.)
+              </span>
+              <span class="category-stats">
+                {{ category.videos.length || 0 }} vidéo(s)
+                <span *ngIf="category.subCategories?.length">
+                  · {{ category.subCategories.length }} sous-cat.</span
+                >
+              </span>
+              <button
+                class="btn-remove"
+                (click)="removeCategory(catIndex); $event.stopPropagation()"
+              >
+                ×
+              </button>
+            </div>
+
+            <div class="category-content" *ngIf="expandedCategory === catIndex">
+              <!-- Vidéos de la catégorie -->
+              <div class="videos-section">
+                <div class="section-subheader">
+                  <span>Vidéos directes</span>
+                  <button class="btn-add-small" (click)="addVideo(catIndex, null)">
+                    + Ajouter vidéo
+                  </button>
+                </div>
+                <div class="videos-list" *ngIf="category.videos && category.videos.length > 0">
+                  <div
+                    class="video-item-editable"
+                    *ngFor="let video of category.videos; let vidIndex = index"
+                  >
+                    <span class="video-icon">🎬</span>
+                    <div class="ownership-controls inline">
+                      <label class="ownership-option">
+                        <input
+                          type="radio"
+                          [name]="'owner-video-' + catIndex + '-' + vidIndex"
+                          [(ngModel)]="video.owner"
+                          [value]="'club'"
+                          (ngModelChange)="onConfigChange(); video.locked = false"
+                        />
+                        <span class="ownership-label club small">Club</span>
+                      </label>
+                      <label class="ownership-option">
+                        <input
+                          type="radio"
+                          [name]="'owner-video-' + catIndex + '-' + vidIndex"
+                          [(ngModel)]="video.owner"
+                          [value]="'neopro'"
+                          (ngModelChange)="onConfigChange(); video.locked = true"
+                        />
+                        <span class="ownership-label neopro small">NEOPRO</span>
+                      </label>
+                    </div>
+                    <input
+                      type="text"
+                      [value]="video.name"
+                      (input)="
+                        updateVideo(catIndex, null, vidIndex, 'name', $any($event.target).value)
+                      "
+                      placeholder="Nom de la vidéo"
+                      class="video-name-input"
+                    />
+                    <app-video-selector
+                      *ngIf="localVideos.length > 0"
+                      [videos]="localVideos"
+                      [selectedPath]="video.path"
+                      (pathChange)="updateVideo(catIndex, null, vidIndex, 'path', $event)"
+                      [placeholder]="'common.selectVideo' | translate"
+                      class="video-path-selector"
+                    ></app-video-selector>
+                    <input
+                      *ngIf="localVideos.length === 0"
+                      type="text"
+                      [value]="video.path"
+                      (input)="
+                        updateVideo(catIndex, null, vidIndex, 'path', $any($event.target).value)
+                      "
+                      placeholder="videos/CATEGORIE/fichier.mp4"
+                      class="video-path-input"
+                    />
+                    <button
+                      class="btn-remove-small"
+                      (click)="removeVideo(catIndex, null, vidIndex)"
+                    >
+                      ×
+                    </button>
+                  </div>
+                </div>
+                <p class="empty-message-small" *ngIf="!category.videos?.length">
+                  Aucune vidéo dans cette catégorie
+                </p>
+              </div>
+
+              <!-- Sous-catégories -->
+              <div class="subcategories-section">
+                <div class="section-subheader">
+                  <span>Sous-catégories</span>
+                  <button class="btn-add-small" (click)="addSubcategory(catIndex)">
+                    + Ajouter
+                  </button>
+                </div>
+                <div
+                  class="subcategories-list"
+                  *ngIf="category.subCategories && category.subCategories.length > 0"
+                >
+                  <div
+                    class="subcategory-card"
+                    *ngFor="let subcat of category.subCategories; let subIndex = index"
+                  >
+                    <div class="subcategory-header">
+                      <input
+                        type="text"
+                        [(ngModel)]="subcat.name"
+                        (ngModelChange)="onConfigChange()"
+                        placeholder="Nom de la sous-catégorie"
+                        class="subcategory-name-input"
+                      />
+                      <div class="ownership-controls inline">
+                        <label class="ownership-option">
+                          <input
+                            type="radio"
+                            [name]="'owner-subcat-' + catIndex + '-' + subIndex"
+                            [(ngModel)]="subcat.owner"
+                            [value]="'club'"
+                            (ngModelChange)="onConfigChange(); subcat.locked = false"
+                          />
+                          <span class="ownership-label club small">Club</span>
+                        </label>
+                        <label class="ownership-option">
+                          <input
+                            type="radio"
+                            [name]="'owner-subcat-' + catIndex + '-' + subIndex"
+                            [(ngModel)]="subcat.owner"
+                            [value]="'neopro'"
+                            (ngModelChange)="onConfigChange(); subcat.locked = true"
+                          />
+                          <span class="ownership-label neopro small">NEOPRO</span>
+                        </label>
+                      </div>
+                      <select
+                        class="analytics-type-select small"
+                        [ngModel]="getCategoryMapping(subcat.id)"
+                        (ngModelChange)="setCategoryMapping(subcat.id, $event)"
+                        title="Type Analytics"
+                      >
+                        <option value="">📊 --</option>
+                        <option *ngFor="let ac of analyticsCategories" [value]="ac.id">
+                          📊 {{ ac.name }}
+                        </option>
+                      </select>
+                      <span class="subcategory-stats"
+                        >{{ subcat.videos.length || 0 }} vidéo(s)</span
+                      >
+                      <button class="btn-add-small" (click)="addVideo(catIndex, subIndex)">
+                        + Vidéo
+                      </button>
+                      <button
+                        class="btn-remove-small"
+                        (click)="removeSubcategory(catIndex, subIndex)"
+                      >
+                        ×
+                      </button>
+                    </div>
+                    <div class="videos-list" *ngIf="subcat.videos && subcat.videos.length > 0">
+                      <div
+                        class="video-item-editable"
+                        *ngFor="let video of subcat.videos; let vidIndex = index"
+                      >
+                        <span class="video-icon">🎬</span>
+                        <input
+                          type="text"
+                          [value]="video.name"
+                          (input)="
+                            updateVideo(
+                              catIndex,
+                              subIndex,
+                              vidIndex,
+                              'name',
+                              $any($event.target).value
+                            )
+                          "
+                          placeholder="Nom de la vidéo"
+                          class="video-name-input"
+                        />
+                        <app-video-selector
+                          *ngIf="localVideos.length > 0"
+                          [videos]="localVideos"
+                          [selectedPath]="video.path"
+                          (pathChange)="updateVideo(catIndex, subIndex, vidIndex, 'path', $event)"
+                          [placeholder]="'common.selectVideo' | translate"
+                          class="video-path-selector"
+                        ></app-video-selector>
+                        <input
+                          *ngIf="localVideos.length === 0"
+                          type="text"
+                          [value]="video.path"
+                          (input)="
+                            updateVideo(
+                              catIndex,
+                              subIndex,
+                              vidIndex,
+                              'path',
+                              $any($event.target).value
+                            )
+                          "
+                          placeholder="videos/CATEGORIE/fichier.mp4"
+                          class="video-path-input"
+                        />
+                        <button
+                          class="btn-remove-small"
+                          (click)="removeVideo(catIndex, subIndex, vidIndex)"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    </div>
+                    <p class="empty-message-small" *ngIf="!subcat.videos?.length">Aucune vidéo</p>
+                  </div>
+                </div>
+                <p class="empty-message-small" *ngIf="!category.subCategories?.length">
+                  Aucune sous-catégorie
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p class="empty-message" *ngIf="configCategories.length === 0">
+          Aucune catégorie configurée
+        </p>
+      </div>
+
+      <!-- Section Organisation Télécommande (TimeCategories) -->
+      <div class="form-section">
+        <h4 class="section-title">
+          <span class="section-icon">📱</span>
+          Organisation Télécommande
+          <span class="section-hint"
+            >(Assigner les catégories aux blocs Avant-match / Match / Après-match)</span
+          >
+        </h4>
+        <div class="time-categories-grid" *ngIf="config.timeCategories?.length">
+          <div
+            class="time-category-card"
+            *ngFor="let timeCategory of config.timeCategories; let tcIndex = index"
+          >
+            <div
+              class="time-category-header"
+              [style.background]="'linear-gradient(135deg, var(--tc-color-start), var(--tc-color-end))'"
+            >
+              <span class="tc-icon">{{ timeCategory.icon }}</span>
+              <span class="tc-name">{{ timeCategory.name }}</span>
+              <span class="tc-count">{{ getCategoriesInTimeCategory(tcIndex).length }} cat.</span>
+            </div>
+            <div class="time-category-content">
+              <p class="tc-description">{{ timeCategory.description }}</p>
+              <div class="tc-categories-list">
+                <label class="tc-category-checkbox" *ngFor="let category of config.categories">
+                  <input
+                    type="checkbox"
+                    [checked]="isCategoryInTimeCategory(tcIndex, category.id)"
+                    (change)="toggleCategoryInTimeCategory(tcIndex, category.id)"
+                  />
+                  <span class="checkbox-label">{{ category.name || '(Sans nom)' }}</span>
+                </label>
+              </div>
+              <p class="empty-message-small" *ngIf="config.categories.length === 0">
+                Créez d'abord des catégories
+              </p>
+            </div>
+          </div>
+        </div>
+        <div class="unassigned-warning" *ngIf="getUnassignedCategories().length > 0">
+          <span class="warning-icon">⚠️</span>
+          <span>Catégories non assignées : {{ getUnassignedCategoriesNames() }}</span>
+        </div>
+      </div>
+
+      <!-- Section Boucles Vidéo par Phase -->
+      <div class="form-section">
+        <h4 class="section-title">
+          <span class="section-icon">⏱️</span>
+          Boucles par phase (optionnel)
+          <span class="section-hint">(Override la boucle par défaut selon le temps de match)</span>
+        </h4>
+        <p class="section-info">
+          Configurez une boucle différente pour chaque phase du match. Si une phase n'a pas de
+          boucle configurée, la "Boucle par défaut" ci-dessus sera utilisée.
+        </p>
+        <div class="phase-loops-grid" *ngIf="config.timeCategories?.length">
+          <div
+            class="phase-loop-card"
+            *ngFor="let timeCategory of config.timeCategories; let tcIndex = index"
+          >
+            <div class="phase-loop-header">
+              <span class="phase-loop-icon">{{ timeCategory.icon }}</span>
+              <span class="phase-loop-name">{{ timeCategory.name }}</span>
+              <span class="phase-loop-count">{{ getLoopVideoCount(tcIndex) }} vidéo(s)</span>
+              <button class="btn-add-small" (click)="addLoopVideo(tcIndex)">+ Ajouter</button>
+            </div>
+            <div class="phase-loop-content">
+              <div class="phase-loop-videos" *ngIf="timeCategory.loopVideos?.length">
+                <div
+                  class="loop-video-item"
+                  *ngFor="let video of timeCategory.loopVideos; let vidIndex = index"
+                  [class.empty-path]="!video.path.trim()"
+                  draggable="true"
+                  (dragstart)="onLoopDragStart($event, tcIndex, vidIndex)"
+                  (dragover)="onLoopDragOver($event)"
+                  (drop)="onLoopDrop($event, tcIndex, vidIndex)"
+                  [class.dragging]="
+                    draggingLoopIndex?.tcIndex === tcIndex &&
+                    draggingLoopIndex?.vidIndex === vidIndex
+                  "
+                >
+                  <span class="drag-handle">⋮⋮</span>
+                  <span class="loop-video-number">{{ vidIndex + 1 }}</span>
+                  <input
+                    type="text"
+                    [value]="video.name"
+                    (input)="updateLoopVideo(tcIndex, vidIndex, 'name', $any($event.target).value)"
+                    placeholder="Nom de la vidéo"
+                    class="loop-video-name"
+                  />
+                  <app-video-selector
+                    *ngIf="localVideos.length > 0"
+                    [videos]="localVideos"
+                    [selectedPath]="video.path"
+                    (pathChange)="updateLoopVideo(tcIndex, vidIndex, 'path', $event)"
+                    [placeholder]="'common.selectVideo' | translate"
+                    class="loop-video-path-selector"
+                  ></app-video-selector>
+                  <input
+                    *ngIf="localVideos.length === 0"
+                    type="text"
+                    [value]="video.path"
+                    (input)="updateLoopVideo(tcIndex, vidIndex, 'path', $any($event.target).value)"
+                    placeholder="videos/BOUCLE/video.mp4"
+                    class="loop-video-path"
+                  />
+                  <button class="btn-remove-small" (click)="removeLoopVideo(tcIndex, vidIndex)">
+                    ×
+                  </button>
+                </div>
+              </div>
+              <div class="phase-loop-empty" *ngIf="!timeCategory.loopVideos?.length">
+                <span class="empty-icon">📋</span>
+                <span>Utilise la boucle par défaut ({{ config.sponsors.length }} vidéos)</span>
+              </div>
+              <div class="phase-loop-actions" *ngIf="config.sponsors.length > 0">
+                <button
+                  class="btn btn-secondary btn-sm"
+                  (click)="copySponsorsToLoop(tcIndex)"
+                  *ngIf="!timeCategory.loopVideos?.length"
+                >
+                  Copier depuis la boucle par défaut
+                </button>
+                <button
+                  class="btn btn-secondary btn-sm"
+                  (click)="clearLoopVideos(tcIndex)"
+                  *ngIf="timeCategory.loopVideos?.length"
+                >
+                  Effacer (utiliser boucle par défaut)
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Note: Analytics Mapping est maintenant intégré dans le header de chaque catégorie (📊 select) -->
+
+      <!-- Aperçu Télécommande -->
+      <div class="form-section preview-section">
+        <app-remote-preview [config]="config" [localVideos]="localVideos"></app-remote-preview>
+      </div>
+    </div>
+  </div>
+
+  <!-- JSON Tab -->
+  <div *ngIf="activeTab === 'json'" class="tab-content">
+    <div class="json-editor">
+      <div class="json-toolbar">
+        <button class="btn btn-secondary btn-sm" (click)="formatJsonInput()">Formater</button>
+        <button class="btn btn-secondary btn-sm" (click)="validateJson()">Valider</button>
+      </div>
+      <textarea
+        class="json-textarea"
+        [(ngModel)]="jsonString"
+        (ngModelChange)="onJsonChange()"
+        [placeholder]="jsonPlaceholder"
+        rows="25"
+      ></textarea>
+      <div *ngIf="jsonError" class="json-error">{{ jsonError }}</div>
+    </div>
+  </div>
+
+  <!-- History Tab -->
+  <div *ngIf="activeTab === 'history'" class="tab-content">
+    <div class="history-container">
+      <div *ngIf="loadingHistory" class="loading-inline">
+        <div class="spinner-small"></div>
+        <span>Chargement de l'historique...</span>
+      </div>
+      <div *ngIf="!loadingHistory && history.length === 0" class="empty-history">
+        <p>Aucun historique disponible</p>
+        <p class="hint">L'historique sera créé lors du premier déploiement</p>
+      </div>
+      <div *ngIf="!loadingHistory && history.length > 0" class="history-list">
+        <div
+          class="history-item"
+          *ngFor="let item of history"
+          [class.selected]="selectedHistoryId === item.id"
+        >
+          <div class="history-item-header">
+            <span class="history-date">{{ item.deployed_at | date: 'dd/MM/yyyy HH:mm' }}</span>
+            <span class="history-user">{{ item.deployed_by_email || 'Système' }}</span>
+          </div>
+          <div class="history-item-comment" *ngIf="item.comment">
+            {{ item.comment }}
+          </div>
+          <div class="history-item-changes" *ngIf="item.changes_summary?.length">
+            {{ item.changes_summary!.length }} modification(s)
+          </div>
+          <div class="history-item-actions">
+            <button class="btn btn-secondary btn-sm" (click)="viewHistoryVersion(item)">
+              Voir
+            </button>
+            <button class="btn btn-primary btn-sm" (click)="restoreVersion(item)">Restaurer</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Diff Preview Modal -->
+  <div class="modal" *ngIf="showDiffModal" (click)="showDiffModal = false">
+    <div class="modal-content modal-large" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h2>Aperçu des changements</h2>
+        <button class="modal-close" (click)="showDiffModal = false">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="mode-section">
+          <div class="mode-header">
+            <span class="mode-title">Mode de déploiement</span>
+            <span class="mode-subtitle"
+              >Fusionner pour préserver le contenu club, ou remplacer pour imposer la config
+              centrale.</span
+            >
+          </div>
+          <div class="mode-options">
+            <label class="mode-card" [class.active]="deployMode === 'replace'">
+              <input type="radio" name="deployMode" value="replace" [(ngModel)]="deployMode" />
+              <div class="mode-card-content">
+                <div class="mode-card-title">Remplacer</div>
+                <div class="mode-card-desc">
+                  Écrase totalement la configuration du boîtier par celle du central.
+                </div>
+              </div>
+            </label>
+            <label class="mode-card" [class.active]="deployMode === 'merge'">
+              <input type="radio" name="deployMode" value="merge" [(ngModel)]="deployMode" />
+              <div class="mode-card-content">
+                <div class="mode-card-title">Fusionner</div>
+                <div class="mode-card-desc">
+                  Préserve le contenu club existant et applique uniquement les éléments NEOPRO.
+                </div>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        <div *ngIf="diffLoading" class="loading-inline">
+          <div class="spinner-small"></div>
+          <span>Calcul des différences...</span>
+        </div>
+        <div *ngIf="!diffLoading && diffItems.length === 0" class="no-changes">
+          Aucun changement détecté
+        </div>
+        <div *ngIf="!diffLoading && diffItems.length > 0" class="diff-list">
+          <div class="diff-summary">
+            <div class="diff-total">{{ diffItems.length }} changement(s) détecté(s)</div>
+            <div class="diff-pill added">+ {{ diffCounts.added }}</div>
+            <div class="diff-pill changed">~ {{ diffCounts.changed }}</div>
+            <div class="diff-pill removed">- {{ diffCounts.removed }}</div>
+          </div>
+          <div class="diff-item" *ngFor="let diff of diffItems" [class]="'diff-' + diff.type">
+            <div class="diff-head">
+              <div class="diff-field">{{ diff.path }}</div>
+              <div class="diff-type">
+                <span *ngIf="diff.type === 'added'" class="badge badge-success">Ajouté</span>
+                <span *ngIf="diff.type === 'removed'" class="badge badge-danger">Supprimé</span>
+                <span *ngIf="diff.type === 'changed'" class="badge badge-warning">Modifié</span>
+              </div>
+              <span
+                *ngIf="ownershipLabel(diff.newValue || diff.oldValue)"
+                class="ownership-badge"
+                [class.neopro]="ownershipLabel(diff.newValue || diff.oldValue) === 'neopro'"
+                [class.club]="ownershipLabel(diff.newValue || diff.oldValue) === 'club'"
+              >
+                {{
+                  ownershipLabel(diff.newValue || diff.oldValue) === 'neopro' ? 'NEOPRO' : 'Club'
+                }}
+              </span>
+            </div>
+
+            <div class="diff-values" *ngIf="diff.type === 'changed'">
+              <div class="diff-old">
+                <span class="diff-label">Avant:</span>
+                <pre class="diff-json">{{ formatJson(diff.oldValue) }}</pre>
+              </div>
+              <div class="diff-new">
+                <span class="diff-label">Après:</span>
+                <pre class="diff-json">{{ formatJson(diff.newValue) }}</pre>
+              </div>
+            </div>
+            <div class="diff-values" *ngIf="diff.type === 'added'">
+              <div class="diff-new">
+                <span class="diff-label">Valeur:</span>
+                <pre class="diff-json">{{ formatJson(diff.newValue) }}</pre>
+              </div>
+            </div>
+            <div class="diff-values" *ngIf="diff.type === 'removed'">
+              <div class="diff-old">
+                <span class="diff-label">Valeur:</span>
+                <pre class="diff-json">{{ formatJson(diff.oldValue) }}</pre>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" (click)="showDiffModal = false">
+          {{ 'common.cancel' | translate }}
+        </button>
+        <button class="btn btn-primary" (click)="confirmDeploy()" [disabled]="deploying">
+          {{
+            deploying
+              ? ('common.deploying' | translate)
+              : ('configEditor.confirmDeployment' | translate)
+          }}
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer Actions -->
+  <div class="editor-footer">
+    <div class="footer-left">
+      <button class="btn btn-secondary" (click)="reloadConfig()" [disabled]="loading">
+        Recharger depuis le site
+      </button>
+    </div>
+    <div class="footer-right">
+      <span class="status-indicator" *ngIf="hasChanges">
+        <span class="status-dot warning"></span>
+        Modifications non déployées
+      </span>
+      <span class="status-indicator" *ngIf="!hasChanges && !validationResult?.errors?.length">
+        <span class="status-dot success"></span>
+        Configuration synchronisée
+      </span>
+      <div class="deploy-warnings" *ngIf="validationResult?.warnings?.length">
+        <div class="deploy-warning" *ngFor="let warn of validationResult?.warnings">
+          <span class="warning-icon">⚠️</span>
+          <span>{{ warn.message }}</span>
+        </div>
+      </div>
+      <button
+        class="btn btn-primary"
+        (click)="previewAndDeploy()"
+        [disabled]="!isValid || deploying"
+      >
+        {{
+          deploying ? ('common.deploying' | translate) : ('configEditor.deployConfig' | translate)
+        }}
+      </button>
+    </div>
+  </div>
+</div>

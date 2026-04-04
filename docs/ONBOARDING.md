@@ -146,14 +146,14 @@ cd e2e && npx playwright test  # E2E (avant merge sur main)
 
 ### Par Fonctionnalité
 
-| Fonctionnalité    | Fichiers clés                                                |
-| ----------------- | ------------------------------------------------------------ |
-| Auth & JWT        | `middleware/auth.ts`, `controllers/auth.controller.ts`       |
-| Gestion sites     | `controllers/sites.controller.ts`, `features/sites/`         |
-| Déploiement vidéo | `services/deployment.service.ts`, `commands/deploy-video.js` |
-| Analytics         | `controllers/analytics.controller.ts`, `features/analytics/` |
-| WebSocket         | `services/socket.service.ts`, `sync-agent/src/agent.js`      |
-| Stockage vidéo    | `services/ftp-storage.ts`, `config/supabase.ts`              |
+| Fonctionnalité    | Fichiers clés                                                                                                                                         |
+| ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Auth & JWT        | `middleware/auth.ts`, `controllers/auth.controller.ts`                                                                                                |
+| Gestion sites     | `controllers/sites.controller.ts` (CRUD) + `site-commands.controller.ts` + `site-debug.controller.ts` + `site-fleet.controller.ts`, `features/sites/` |
+| Déploiement vidéo | `services/deployment.service.ts`, `commands/deploy-video.js`                                                                                          |
+| Analytics         | `controllers/analytics.controller.ts`, `features/analytics/`                                                                                          |
+| WebSocket         | `services/socket.service.ts`, `sync-agent/src/agent.js`                                                                                               |
+| Stockage vidéo    | `services/ftp-storage.ts`, `config/supabase.ts`                                                                                                       |
 
 ---
 

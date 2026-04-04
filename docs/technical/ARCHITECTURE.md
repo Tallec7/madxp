@@ -100,7 +100,12 @@ neopro/ (monorepo)
 │
 ├── central-server/                 # Cloud API backend
 │   ├── src/
-│   │   ├── controllers/            # HTTP route handlers
+│   │   ├── controllers/            # HTTP route handlers (split par domaine)
+│   │   │   ├── sites.controller.ts          # CRUD sites + re-exports sub-controllers
+│   │   │   ├── site-commands.controller.ts  # Commandes remote + queue
+│   │   │   ├── site-debug.controller.ts     # Debug/diagnostic endpoints
+│   │   │   ├── site-fleet.controller.ts     # Fleet overview, dashboard, metrics, timeline
+│   │   │   └── ...                          # auth, content, analytics, advertisers...
 │   │   ├── routes/                 # Express route definitions
 │   │   ├── middleware/             # Auth, RLS, rate-limit, error-handler
 │   │   ├── services/              # Business logic (socket, deployment, alerting…)
@@ -121,9 +126,13 @@ neopro/ (monorepo)
 │   │   │   │   ├── user-filters.service.ts               # Filtres : search, role, status
 │   │   │   │   └── user-validation.service.ts            # Validation : create/update forms
 │   │   │   ├── sites/
-│   │   │   │   ├── site-detail.component.ts     # Page détail (6 onglets) — onglet État : métriques système + hotspot + actions rapides
+│   │   │   │   ├── site-detail.component.ts     # Page détail (6 onglets) — coordinateur onglets + état
+│   │   │   │   ├── site-detail.component.html   # Template externe (618 lignes)
+│   │   │   │   ├── site-detail.component.scss   # Styles externes (823 lignes)
 │   │   │   │   ├── config-editor/               # Éditeur de configuration site
-│   │   │   │   │   ├── config-editor.component.ts      # UI : formulaire, JSON, historique, diff
+│   │   │   │   │   ├── config-editor.component.ts      # Logique : formulaire, JSON, historique, diff (744 lignes)
+│   │   │   │   │   ├── config-editor.component.html    # Template externe (784 lignes)
+│   │   │   │   │   ├── config-editor.component.scss    # Styles externes (1433 lignes)
 │   │   │   │   │   └── config-editor-data.service.ts   # Data : loading/polling, validation, deploy, analytics
 │   │   │   │   └── components/
 │   │   │   │       ├── site-content-tab/        # Pipeline contenu (coordinateur)
@@ -134,8 +143,10 @@ neopro/ (monorepo)
 │   │   │   │       ├── loop-manager/            # Gestion unifiée boucles (défaut + 3 phases)
 │   │   │   │       ├── site-sponsors-tab/       # Sponsors locaux : CRUD, KPIs, association vidéos, benchmark, magic link
 │   │   │   │       ├── site-settings-tab/       # Config réseau, hotspot, branding club
-│   │   │   │       │   ├── site-settings-tab.component.ts  # UI : formulaires, toggles, aperçu
-│   │   │   │       │   └── site-settings-data.service.ts   # Data : auth, hotspot, watermark, reports, PIN
+│   │   │   │       │   ├── site-settings-tab.component.ts   # Logique : formulaires, toggles, aperçu (817 lignes)
+│   │   │   │       │   ├── site-settings-tab.component.html # Template externe (628 lignes)
+│   │   │   │       │   ├── site-settings-tab.component.scss # Styles externes (967 lignes)
+│   │   │   │       │   └── site-settings-data.service.ts    # Data : auth, hotspot, watermark, reports, PIN
 │   │   │   │       ├── site-profiles-tab/       # Multi-config CRUD + deploy
 │   │   │   │       └── site-debug-tab/          # Diagnostic site (coordinateur)
 │   │   │   │           ├── health-monitor/      #   Santé GPU, fan, display/HDMI, services, diagnostics

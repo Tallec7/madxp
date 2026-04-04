@@ -1,0 +1,670 @@
+<div class="page-container" *ngIf="site; else loading">
+  <!-- Header -->
+  <div class="page-header">
+    <button class="btn btn-secondary" routerLink="/sites">← Retour</button>
+    <h1>{{ site.club_name }}</h1>
+    <button class="btn btn-primary btn-analytics" [routerLink]="['/sites', siteId, 'analytics']">
+      📊 Analytics
+    </button>
+    <div class="header-badges">
+      <!-- Badge profil réseau -->
+      <span
+        class="network-badge"
+        [ngClass]="getNetworkBadgeClass()"
+        [title]="getNetworkBadgeTooltip()"
+      >
+        {{ getNetworkBadgeIcon() }} {{ getNetworkBadgeLabel() }}
+      </span>
+      <app-connection-indicator
+        [siteId]="siteId"
+        [showText]="true"
+        [showDetails]="true"
+        [externalStatus]="connectionStatus"
+      ></app-connection-indicator>
+    </div>
+  </div>
+
+  <!-- Network Alert Banner -->
+  <div class="network-alert" *ngIf="showNetworkAlert()" [ngClass]="getNetworkAlertClass()">
+    <div class="alert-icon">{{ getNetworkAlertIcon() }}</div>
+    <div class="alert-content">
+      <strong>{{ getNetworkAlertTitle() }}</strong>
+      <p>{{ getNetworkAlertMessage() }}</p>
+    </div>
+    <div class="alert-actions" *ngIf="getNetworkAlertAction()">
+      <button class="btn btn-sm" (click)="handleNetworkAlertAction()">
+        {{ getNetworkAlertActionLabel() }}
+      </button>
+    </div>
+    <button class="alert-dismiss" (click)="dismissNetworkAlert()">×</button>
+  </div>
+
+  <!-- Tabs Navigation -->
+  <div class="tabs-nav">
+    <button class="tab-btn" [class.active]="activeTab === 'status'" (click)="activeTab = 'status'">
+      <span class="tab-icon">📊</span>
+      <span class="tab-label">État</span>
+    </button>
+    <button
+      class="tab-btn"
+      [class.active]="activeTab === 'content'"
+      (click)="activeTab = 'content'"
+    >
+      <span class="tab-icon">📱</span>
+      <span class="tab-label">Contenu</span>
+    </button>
+    <button
+      class="tab-btn"
+      [class.active]="activeTab === 'settings'"
+      (click)="activeTab = 'settings'"
+    >
+      <span class="tab-icon">⚙️</span>
+      <span class="tab-label">Paramètres</span>
+    </button>
+    <button
+      class="tab-btn"
+      [class.active]="activeTab === 'profiles'"
+      (click)="activeTab = 'profiles'"
+    >
+      <span class="tab-icon">📑</span>
+      <span class="tab-label">Profils</span>
+    </button>
+    <button
+      class="tab-btn"
+      [class.active]="activeTab === 'sponsors'"
+      (click)="activeTab = 'sponsors'"
+    >
+      <span class="tab-icon">💼</span>
+      <span class="tab-label">Sponsors</span>
+    </button>
+    <button
+      class="tab-btn"
+      [class.active]="activeTab === 'subscription'"
+      (click)="activeTab = 'subscription'"
+    >
+      <span class="tab-icon">💳</span>
+      <span class="tab-label">Abonnement</span>
+    </button>
+    <button class="tab-btn" [class.active]="activeTab === 'debug'" (click)="activeTab = 'debug'">
+      <span class="tab-icon">🔧</span>
+      <span class="tab-label">Debug</span>
+    </button>
+  </div>
+
+  <!-- Tab Content -->
+  <div class="tab-content">
+    <!-- TAB: État -->
+    <div *ngIf="activeTab === 'status'" class="tab-panel">
+      <div class="status-grid">
+        <!-- Informations principales -->
+        <div class="card">
+          <h3>Informations</h3>
+          <div class="info-list">
+            <div class="info-row">
+              <span class="label">Site ID:</span>
+              <span class="value monospace">{{ site.id }}</span>
+            </div>
+            <div class="info-row">
+              <span class="label">Nom du site:</span>
+              <span class="value">{{ site.site_name }}</span>
+            </div>
+            <div class="info-row">
+              <span class="label">Club:</span>
+              <span class="value">{{ site.club_name }}</span>
+            </div>
+            @if (site.hostname_slug) {
+              <div class="info-row">
+                <span class="label">Hostname:</span>
+                <span class="value monospace">{{ site.hostname_slug }}.local</span>
+              </div>
+            }
+            <div class="info-row">
+              <span class="label">Localisation:</span>
+              <span class="value">{{ getLocation() }}</span>
+            </div>
+            <div class="info-row">
+              <span class="label">Sports:</span>
+              <span class="value">{{ site.sports?.join(', ') || 'N/A' }}</span>
+            </div>
+            <div class="info-row">
+              <span class="label">Version:</span>
+              <span class="value">{{ formatVersion(site.software_version) }}</span>
+            </div>
+            <div class="info-row">
+              <span class="label">Modèle:</span>
+              <span class="value">{{ site.hardware_model || 'N/A' }}</span>
+            </div>
+            @if (site.secondary_display_enabled || dualDisplayActive) {
+              <div class="info-row">
+                <span class="label">Écran principal:</span>
+                <span class="value">
+                  @if (hdmiStatus) {
+                    <span
+                      [class]="
+                        hdmiStatus.hdmi0 ? 'badge-hdmi-connected' : 'badge-hdmi-disconnected'
+                      "
+                    >
+                      {{ hdmiStatus.hdmi0 ? '✅' : '❌' }} HDMI-0
+                    </span>
+                    @if (hdmiStatus.hdmi0 && hdmiStatus.hdmi0Resolution) {
+                      <span class="screen-resolution">{{ hdmiStatus.hdmi0Resolution }}</span>
+                    }
+                  } @else {
+                    <span class="badge-secondary-display">📺 Principal</span>
+                  }
+                </span>
+              </div>
+              <div class="info-row">
+                <span class="label">Écran secondaire:</span>
+                <span class="value">
+                  @if (hdmiStatus) {
+                    <span
+                      [class]="
+                        hdmiStatus.hdmi1 ? 'badge-hdmi-connected' : 'badge-hdmi-disconnected'
+                      "
+                    >
+                      {{ hdmiStatus.hdmi1 ? '✅' : '❌' }} HDMI-1
+                    </span>
+                    @if (hdmiStatus.hdmi1 && hdmiStatus.hdmi1Resolution) {
+                      <span class="screen-resolution">{{ hdmiStatus.hdmi1Resolution }}</span>
+                    }
+                  } @else {
+                    <span class="badge-secondary-display">📺 Activé</span>
+                    @if (site.secondary_display_resolution) {
+                      <span class="screen-resolution">{{ site.secondary_display_resolution }}</span>
+                    }
+                  }
+                </span>
+              </div>
+            }
+            <div class="info-row">
+              <span class="label">Dernière vue:</span>
+              <span class="value">{{ formatLastSeen(site.last_seen_at) }}</span>
+            </div>
+            <div class="info-row" *ngIf="site.last_ip">
+              <span class="label">IP publique:</span>
+              <span class="value monospace">{{ site.last_ip }}</span>
+            </div>
+            <div class="info-row" *ngIf="site.local_ip">
+              <span class="label">IP locale:</span>
+              <span class="value monospace">{{ site.local_ip }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Métriques -->
+        <div class="card">
+          <h3>Métriques actuelles</h3>
+          <div class="metrics-grid" *ngIf="currentMetrics; else noMetrics">
+            <div class="metric" [class.warning]="(currentMetrics.cpu_usage ?? 0) > 80">
+              <div class="metric-icon">💻</div>
+              <div class="metric-info">
+                <div class="metric-label">CPU</div>
+                <div class="metric-value">{{ currentMetrics.cpu_usage?.toFixed(1) || 0 }}%</div>
+              </div>
+              <div class="metric-bar">
+                <div class="metric-fill" [style.width.%]="currentMetrics.cpu_usage ?? 0"></div>
+              </div>
+            </div>
+
+            <div class="metric" [class.warning]="(currentMetrics.memory_usage ?? 0) > 80">
+              <div class="metric-icon">🧠</div>
+              <div class="metric-info">
+                <div class="metric-label">RAM</div>
+                <div class="metric-value">{{ currentMetrics.memory_usage?.toFixed(1) || 0 }}%</div>
+              </div>
+              <div class="metric-bar">
+                <div class="metric-fill" [style.width.%]="currentMetrics.memory_usage ?? 0"></div>
+              </div>
+            </div>
+
+            <div class="metric" [class.warning]="(currentMetrics.temperature ?? 0) > 70">
+              <div class="metric-icon">🌡️</div>
+              <div class="metric-info">
+                <div class="metric-label">Température</div>
+                <div class="metric-value">{{ currentMetrics.temperature?.toFixed(1) || 0 }}°C</div>
+              </div>
+              <div class="metric-bar">
+                <div
+                  class="metric-fill"
+                  [style.width.%]="Math.min(currentMetrics.temperature ?? 0, 100)"
+                ></div>
+              </div>
+            </div>
+
+            <div class="metric" [class.warning]="(currentMetrics.disk_usage ?? 0) > 80">
+              <div class="metric-icon">💾</div>
+              <div class="metric-info">
+                <div class="metric-label">Disque</div>
+                <div class="metric-value">{{ currentMetrics.disk_usage?.toFixed(1) || 0 }}%</div>
+              </div>
+              <div class="metric-bar">
+                <div class="metric-fill" [style.width.%]="currentMetrics.disk_usage ?? 0"></div>
+              </div>
+            </div>
+
+            <div class="metric uptime-metric">
+              <div class="metric-icon">⏱️</div>
+              <div class="metric-info">
+                <div class="metric-label">Uptime</div>
+                <div class="metric-value">{{ formatUptime(currentMetrics.uptime) }}</div>
+              </div>
+            </div>
+
+            <div
+              class="metric"
+              [class.warning]="wifiSignalWeak"
+              [class.critical]="wifiSignalCritical"
+              *ngIf="wifiStatus"
+            >
+              <div class="metric-icon">{{ connectionIcon }}</div>
+              <div class="metric-info">
+                <div class="metric-label">Connexion</div>
+                <div class="metric-value">{{ wifiSignalDisplay }}</div>
+              </div>
+              <div class="metric-bar" *ngIf="wifiStatus.connectionType === 'wifi'">
+                <div class="metric-fill" [style.width.%]="wifiStatus.quality ?? 0"></div>
+              </div>
+            </div>
+
+            <div class="metric" [class.warning]="fanWarning" *ngIf="fanStatus?.present">
+              <div class="metric-icon">🌀</div>
+              <div class="metric-info">
+                <div class="metric-label">Ventilateur</div>
+                <div class="metric-value">{{ fanStatusDisplay }}</div>
+              </div>
+              <div class="metric-bar">
+                <div class="metric-fill" [style.width.%]="fanStatus?.speedPercent ?? 0"></div>
+              </div>
+            </div>
+
+            <div class="metric" [class.warning]="!hotspotActive" *ngIf="hotspotSsid">
+              <div class="metric-icon">📡</div>
+              <div class="metric-info">
+                <div class="metric-label">Hotspot</div>
+                <div class="metric-value">{{ hotspotActive ? hotspotSsid : 'Inactif' }}</div>
+              </div>
+              <div class="metric-details" *ngIf="hotspotActive">
+                <span class="metric-detail">Ch. {{ hotspotChannel || '?' }}</span>
+                <span class="metric-detail" *ngIf="hotspotClients > 0"
+                  >{{ hotspotClients }} client{{ hotspotClients > 1 ? 's' : '' }}</span
+                >
+              </div>
+            </div>
+
+            <div
+              class="metric"
+              [class.warning]="
+                networkProfileType === 'mesh' || networkProfileType === 'mesh_isolated'
+              "
+              [class.critical]="networkStabilityScore !== null && networkStabilityScore < 25"
+              *ngIf="networkProfileType"
+            >
+              <div class="metric-icon">{{ networkProfileType === 'ethernet' ? '🔌' : '🌐' }}</div>
+              <div class="metric-info">
+                <div class="metric-label">Réseau</div>
+                <div class="metric-value">{{ networkProfileLabel }}</div>
+              </div>
+              <div class="metric-details">
+                <span class="metric-detail" *ngIf="networkStabilityScore !== null"
+                  >Stabilité {{ networkStabilityScore }}%</span
+                >
+                <span class="metric-detail" *ngIf="networkApCount > 1"
+                  >{{ networkApCount }} AP</span
+                >
+              </div>
+            </div>
+          </div>
+          <ng-template #noMetrics>
+            <p class="no-data">Aucune métrique disponible</p>
+          </ng-template>
+        </div>
+      </div>
+
+      <!-- Actions rapides -->
+      <div class="card actions-card">
+        <h3>Actions rapides</h3>
+        <p class="connection-hint" *ngIf="!isConnected">
+          <strong>Site hors ligne.</strong> Les commandes temps réel sont désactivées. Les autres
+          actions seront mises en file d'attente.
+        </p>
+        <p
+          class="connection-hint warning"
+          *ngIf="isConnected && connectionHealth && !connectionHealth.isHealthy"
+        >
+          <strong>⚠️ Connexion instable.</strong>
+          {{ getHealthReason() }}
+          Les commandes peuvent échouer ou être mises en file d'attente.
+        </p>
+        <div class="actions-grid">
+          <button
+            class="action-card"
+            (click)="restartService('neopro-app')"
+            [disabled]="sendingCommand"
+          >
+            <span class="action-icon">🔄</span>
+            <div class="action-content">
+              <div class="action-title">Redémarrer l'app</div>
+              <div class="action-desc">
+                {{
+                  isConnected ? ('debug.restartsService' | translate) : ('debug.queued' | translate)
+                }}
+              </div>
+            </div>
+          </button>
+
+          <button class="action-card" (click)="getLogs()" [disabled]="!isConnected">
+            <span class="action-icon">📄</span>
+            <div class="action-content">
+              <div class="action-title">Voir les logs</div>
+              <div class="action-desc">
+                {{ isConnected ? 'Logs récents' : '⚡ Temps réel requis' }}
+              </div>
+            </div>
+          </button>
+
+          <button class="action-card" (click)="getSystemInfo()" [disabled]="!isConnected">
+            <span class="action-icon">ℹ️</span>
+            <div class="action-content">
+              <div class="action-title">Infos système</div>
+              <div class="action-desc">
+                {{ isConnected ? 'Détails matériel' : '⚡ Temps réel requis' }}
+              </div>
+            </div>
+          </button>
+
+          <button
+            class="action-card"
+            (click)="restartHotspot()"
+            [disabled]="sendingCommand"
+            *ngIf="hotspotSsid"
+          >
+            <span class="action-icon">📡</span>
+            <div class="action-content">
+              <div class="action-title">Relancer Hotspot</div>
+              <div class="action-desc">
+                {{ isConnected ? 'Redémarre hostapd + dnsmasq' : ('debug.queued' | translate) }}
+              </div>
+            </div>
+          </button>
+
+          <button class="action-card warning" (click)="rebootSite()" [disabled]="sendingCommand">
+            <span class="action-icon">⚡</span>
+            <div class="action-content">
+              <div class="action-title">Redémarrer Pi</div>
+              <div class="action-desc">
+                {{ isConnected ? ('debug.fullReboot' | translate) : ('debug.queued' | translate) }}
+              </div>
+            </div>
+          </button>
+
+          <button class="action-card" (click)="showApiKey = !showApiKey">
+            <span class="action-icon">🔑</span>
+            <div class="action-content">
+              <div class="action-title">API Key</div>
+              <div class="action-desc">{{ showApiKey ? 'Masquer' : 'Afficher' }}</div>
+            </div>
+          </button>
+
+          <button class="action-card" (click)="regenerateApiKey()">
+            <span class="action-icon">🔄</span>
+            <div class="action-content">
+              <div class="action-title">Régénérer clé</div>
+              <div class="action-desc">Nouvelle API key</div>
+            </div>
+          </button>
+        </div>
+
+        <div class="api-key-display" *ngIf="showApiKey">
+          <div class="api-key-label">API Key:</div>
+          <code class="api-key-value">{{ site.api_key }}</code>
+          <button class="btn-icon" (click)="copyApiKey()" title="Copier">📋</button>
+        </div>
+      </div>
+
+      <!-- Historique métriques -->
+      <div class="card">
+        <h3>Historique des métriques (24h)</h3>
+        <div class="metrics-history" *ngIf="metricsHistory.length > 0; else noHistory">
+          <div class="history-item" *ngFor="let metric of metricsHistory.slice(0, 10)">
+            <div class="history-time">{{ metric.recorded_at | date: 'HH:mm' }}</div>
+            <div class="history-values">
+              <span class="history-badge">CPU: {{ metric.cpu_usage?.toFixed(1) }}%</span>
+              <span class="history-badge">RAM: {{ metric.memory_usage?.toFixed(1) }}%</span>
+              <span class="history-badge">{{ metric.temperature?.toFixed(1) }}°C</span>
+              <span class="history-badge">Disque: {{ metric.disk_usage?.toFixed(1) }}%</span>
+            </div>
+          </div>
+        </div>
+        <ng-template #noHistory>
+          <p class="no-data">Aucun historique disponible</p>
+        </ng-template>
+      </div>
+
+      <!-- Historique des matchs -->
+      <div class="card">
+        <div class="card-header-flex">
+          <h3>🏆 Historique des matchs</h3>
+          <button
+            class="btn btn-sm btn-secondary"
+            (click)="loadMatchHistory()"
+            [disabled]="matchHistoryLoading"
+          >
+            {{ matchHistoryLoading ? 'Chargement...' : '🔄 Actualiser' }}
+          </button>
+        </div>
+
+        <div *ngIf="matchHistoryLoading" class="loading-inline">
+          <div class="spinner-small"></div>
+          <span>Chargement...</span>
+        </div>
+
+        <div *ngIf="!matchHistoryLoading && matchHistory">
+          <!-- Stats agrégées -->
+          <div class="match-stats-grid" *ngIf="matchHistory.stats.totalMatches > 0">
+            <div class="match-stat">
+              <div class="match-stat-value">{{ matchHistory.stats.totalMatches }}</div>
+              <div class="match-stat-label">Matchs</div>
+            </div>
+            <div class="match-stat">
+              <div class="match-stat-value">{{ matchHistory.stats.totalAudience | number }}</div>
+              <div class="match-stat-label">Spectateurs total</div>
+            </div>
+            <div class="match-stat">
+              <div class="match-stat-value">{{ matchHistory.stats.avgAudience }}</div>
+              <div class="match-stat-label">Moyenne / match</div>
+            </div>
+            <div class="match-stat">
+              <div class="match-stat-value">{{ matchHistory.stats.totalVideos }}</div>
+              <div class="match-stat-label">Vidéos diffusées</div>
+            </div>
+          </div>
+
+          <!-- Liste des matchs -->
+          <div class="matches-list" *ngIf="matchHistory.matches.length > 0; else noMatches">
+            <div class="match-item" *ngFor="let match of matchHistory.matches">
+              <div class="match-date">{{ formatMatchDate(match.matchDate) }}</div>
+              <div class="match-details">
+                <div class="match-name">{{ match.matchName }}</div>
+                <div class="match-meta">
+                  <span class="match-badge" *ngIf="match.audienceEstimate">
+                    👥 {{ match.audienceEstimate }} spectateurs
+                  </span>
+                  <span class="match-badge"> 📺 {{ match.videosPlayed }} vidéos </span>
+                  <span class="match-badge" *ngIf="match.durationMinutes">
+                    ⏱️ {{ match.durationMinutes }} min
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <ng-template #noMatches>
+            <p class="no-data">
+              Aucun match enregistré. Les matchs apparaîtront ici quand vous configurerez un match
+              depuis la télécommande.
+            </p>
+          </ng-template>
+        </div>
+
+        <div *ngIf="!matchHistoryLoading && !matchHistory">
+          <p class="no-data">Impossible de charger l'historique des matchs</p>
+        </div>
+      </div>
+
+      <!-- Benchmark anonymisé -->
+      <div class="card">
+        <app-site-benchmark [siteId]="siteId"></app-site-benchmark>
+      </div>
+    </div>
+
+    <!-- TAB: Contenu -->
+    <div *ngIf="activeTab === 'content'" class="tab-panel">
+      <app-site-content-tab
+        [siteId]="siteId"
+        [siteName]="site.site_name || site.club_name || ''"
+        [isConnected]="isConnected"
+        (configDeployed)="onConfigDeployed()"
+      ></app-site-content-tab>
+    </div>
+
+    <!-- TAB: Paramètres -->
+    <div *ngIf="activeTab === 'settings'" class="tab-panel">
+      <app-site-settings-tab
+        [siteId]="siteId"
+        [site]="site"
+        [isConnected]="isConnected"
+        (siteUpdated)="onSiteUpdated($event)"
+      ></app-site-settings-tab>
+    </div>
+
+    <!-- TAB: Profils -->
+    <div *ngIf="activeTab === 'profiles'" class="tab-panel">
+      <app-site-profiles-tab
+        [siteId]="siteId"
+        [site]="site"
+        [isConnected]="isConnected"
+        (profileDeployed)="onConfigDeployed()"
+      ></app-site-profiles-tab>
+    </div>
+
+    <!-- TAB: Sponsors -->
+    <div *ngIf="activeTab === 'sponsors'" class="tab-panel">
+      <app-site-sponsors-tab [siteId]="siteId" [site]="site"></app-site-sponsors-tab>
+    </div>
+
+    <!-- TAB: Abonnement -->
+    <div *ngIf="activeTab === 'subscription'" class="tab-panel">
+      <app-site-subscription-tab
+        [site]="site"
+        (subscriptionChanged)="loadSite()"
+      ></app-site-subscription-tab>
+    </div>
+
+    <!-- TAB: Debug -->
+    <div *ngIf="activeTab === 'debug'" class="tab-panel">
+      <app-site-debug-tab
+        [siteId]="siteId"
+        [isConnected]="isConnected"
+        [connectionHealth]="connectionHealth"
+      ></app-site-debug-tab>
+    </div>
+  </div>
+
+  <!-- Modals -->
+  <!-- Logs Modal -->
+  <div class="modal" *ngIf="showLogsModal" (click)="showLogsModal = false">
+    <div class="modal-content modal-large" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h2>Logs - {{ site.club_name }}</h2>
+        <button class="modal-close" (click)="showLogsModal = false">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="logs-container" *ngIf="!logsLoading; else logsLoadingTpl">
+          <pre class="logs-content" *ngIf="logs.length > 0; else noLogs">{{ logs.join('\n') }}</pre>
+          <ng-template #noLogs>
+            <p class="no-data">Aucun log disponible</p>
+          </ng-template>
+        </div>
+        <ng-template #logsLoadingTpl>
+          <div class="loading-inline">
+            <div class="spinner-small"></div>
+            <span>Chargement des logs...</span>
+          </div>
+        </ng-template>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" (click)="showLogsModal = false">Fermer</button>
+        <button class="btn btn-primary" (click)="refreshLogs()">Rafraîchir</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- System Info Modal -->
+  <div class="modal" *ngIf="showSystemInfoModal" (click)="showSystemInfoModal = false">
+    <div class="modal-content" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h2>Infos système - {{ site.club_name }}</h2>
+        <button class="modal-close" (click)="showSystemInfoModal = false">×</button>
+      </div>
+      <div class="modal-body">
+        <div *ngIf="!systemInfoLoading; else sysInfoLoadingTpl">
+          <div class="info-list" *ngIf="systemInfo; else noSysInfo">
+            <div class="info-row">
+              <span class="label">Hostname:</span>
+              <span class="value">{{ systemInfo.hostname }}</span>
+            </div>
+            <div class="info-row">
+              <span class="label">OS:</span>
+              <span class="value">{{ systemInfo.os }}</span>
+            </div>
+            <div class="info-row">
+              <span class="label">Kernel:</span>
+              <span class="value">{{ systemInfo.kernel }}</span>
+            </div>
+            <div class="info-row">
+              <span class="label">Architecture:</span>
+              <span class="value">{{ systemInfo.architecture }}</span>
+            </div>
+            <div class="info-row">
+              <span class="label">CPU:</span>
+              <span class="value"
+                >{{ systemInfo.cpu_model }} ({{ systemInfo.cpu_cores }} cores)</span
+              >
+            </div>
+            <div class="info-row">
+              <span class="label">RAM:</span>
+              <span class="value">{{ formatMemory(systemInfo.total_memory) }}</span>
+            </div>
+            <div class="info-row">
+              <span class="label">IP:</span>
+              <span class="value monospace">{{ systemInfo.ip_address }}</span>
+            </div>
+            <div class="info-row">
+              <span class="label">MAC:</span>
+              <span class="value monospace">{{ systemInfo.mac_address }}</span>
+            </div>
+          </div>
+          <ng-template #noSysInfo>
+            <p class="no-data">Impossible de récupérer les informations système</p>
+          </ng-template>
+        </div>
+        <ng-template #sysInfoLoadingTpl>
+          <div class="loading-inline">
+            <div class="spinner-small"></div>
+            <span>Chargement...</span>
+          </div>
+        </ng-template>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" (click)="showSystemInfoModal = false">Fermer</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<ng-template #loading>
+  <div class="loading-container">
+    <div class="spinner"></div>
+    <span>Chargement...</span>
+  </div>
+</ng-template>

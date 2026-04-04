@@ -5382,7 +5382,12 @@ describe('Secondary variant badge wiring guards', () => {
   let videoInterfaceContent: string;
 
   beforeAll(() => {
-    controllerContent = fs.readFileSync(sitesControllerPath, 'utf8');
+    // Read main controller + sub-controllers (split from monolithic sites.controller.ts)
+    const controllerDir = path.dirname(sitesControllerPath);
+    controllerContent = fs.readFileSync(sitesControllerPath, 'utf8')
+      + '\n' + fs.readFileSync(path.join(controllerDir, 'site-fleet.controller.ts'), 'utf8')
+      + '\n' + fs.readFileSync(path.join(controllerDir, 'site-commands.controller.ts'), 'utf8')
+      + '\n' + fs.readFileSync(path.join(controllerDir, 'site-debug.controller.ts'), 'utf8');
     siteContentTabContent = readAllTsInDir(contentTabDir);
     remoteTemplateContent = fs.readFileSync(remoteTemplatePath, 'utf8');
     videoInterfaceContent = fs.readFileSync(videoInterfacePath, 'utf8');
@@ -5493,7 +5498,8 @@ describe('Secondary video deployment UI guards', () => {
     cloudRemoteHtml = fs.readFileSync(cloudRemoteHtmlPath, 'utf8');
     cloudRemoteTs = fs.readFileSync(cloudRemoteTsPath, 'utf8');
     cloudRemoteScss = fs.readFileSync(cloudRemoteScssPath, 'utf8');
-    siteDetailContent = fs.readFileSync(siteDetailPath, 'utf8');
+    siteDetailContent = fs.readFileSync(siteDetailPath, 'utf8') +
+      fs.readFileSync(siteDetailPath.replace('.component.ts', '.component.html'), 'utf8');
     remoteControllerContent = fs.readFileSync(remoteControllerPath, 'utf8');
     siteContentTabContent = readAllTsInDir2(contentTabDir2);
     remoteServiceContent = fs.readFileSync(remoteServicePath, 'utf8');
@@ -6336,10 +6342,9 @@ describe('Screen resolution heartbeat pipeline (Pi → Central → Dashboard)', 
   });
 
   it('dashboard site-detail component must display screen resolutions', () => {
-    const component = fs.readFileSync(
-      path.join(repoRoot, 'central-dashboard/src/app/features/sites/site-detail.component.ts'),
-      'utf8'
-    );
+    const tsFile = path.join(repoRoot, 'central-dashboard/src/app/features/sites/site-detail.component.ts');
+    const htmlFile = tsFile.replace('.component.ts', '.component.html');
+    const component = fs.readFileSync(tsFile, 'utf8') + fs.readFileSync(htmlFile, 'utf8');
     // Must reference resolution data from hdmiStatus
     expect(component).toContain('hdmi0Resolution');
     expect(component).toContain('hdmi1Resolution');
@@ -9534,7 +9539,12 @@ describe('Video Library UX regression guards', () => {
     videoLibContent = fs.readFileSync(videoLibraryPath, 'utf8');
     siteContentTabContent = readAllTsFiles(siteContentTabDir);
     modelsContent = fs.readFileSync(modelsPath, 'utf8');
-    controllerContent = fs.readFileSync(sitesControllerPath, 'utf8');
+    // Read main controller + sub-controllers (split from monolithic sites.controller.ts)
+    const controllerDir = path.dirname(sitesControllerPath);
+    controllerContent = fs.readFileSync(sitesControllerPath, 'utf8')
+      + '\n' + fs.readFileSync(path.join(controllerDir, 'site-fleet.controller.ts'), 'utf8')
+      + '\n' + fs.readFileSync(path.join(controllerDir, 'site-commands.controller.ts'), 'utf8')
+      + '\n' + fs.readFileSync(path.join(controllerDir, 'site-debug.controller.ts'), 'utf8');
     timelineRepoContent = fs.readFileSync(timelineRepoPath, 'utf8');
   });
 
@@ -13531,4 +13541,120 @@ describe('SQL injection prevention — no string interpolation in queries', () =
       sqlInterpolationViolations: [],
     });
   });
+});
+
+// =============================================================================
+// Sites controller split guard
+// =============================================================================
+// sites.controller.ts was split into 4 focused controllers (2026-04).
+// Re-merging them back into a monolith degrades AI reasoning and maintainability.
+
+describe('sites.controller split guard (prevents re-monolithification)', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+  const controllerDir = path.join(repoRoot, 'central-server/src/controllers');
+
+  it('sub-controllers must exist as separate files', () => {
+    const expected = [
+      'site-commands.controller.ts',
+      'site-debug.controller.ts',
+      'site-fleet.controller.ts',
+    ];
+    for (const file of expected) {
+      expect(fs.existsSync(path.join(controllerDir, file))).toBe(true);
+    }
+  });
+
+  it('sites.controller.ts must NOT exceed 600 lines (CRUD only)', () => {
+    const content = fs.readFileSync(path.join(controllerDir, 'sites.controller.ts'), 'utf-8');
+    const lineCount = content.split('\n').length;
+    expect(lineCount).toBeLessThan(600);
+  });
+
+  it('sites.controller.ts must re-export sub-controllers for backward compatibility', () => {
+    const content = fs.readFileSync(path.join(controllerDir, 'sites.controller.ts'), 'utf-8');
+    expect(content).toContain("from './site-commands.controller'");
+    expect(content).toContain("from './site-debug.controller'");
+    expect(content).toContain("from './site-fleet.controller'");
+  });
+
+  it('sendCommand must live in site-commands.controller.ts (not sites.controller.ts)', () => {
+    const main = fs.readFileSync(path.join(controllerDir, 'sites.controller.ts'), 'utf-8');
+    const commands = fs.readFileSync(path.join(controllerDir, 'site-commands.controller.ts'), 'utf-8');
+    // The function definition must be in site-commands, not in main
+    expect(commands).toContain('export const sendCommand');
+    expect(main).not.toMatch(/export const sendCommand\s*=/);
+  });
+
+  it('getHealthStatus must live in site-debug.controller.ts (not sites.controller.ts)', () => {
+    const main = fs.readFileSync(path.join(controllerDir, 'sites.controller.ts'), 'utf-8');
+    const debug = fs.readFileSync(path.join(controllerDir, 'site-debug.controller.ts'), 'utf-8');
+    expect(debug).toContain('export const getHealthStatus');
+    expect(main).not.toMatch(/export const getHealthStatus\s*=/);
+  });
+
+  it('getFleetHealthData must live in site-fleet.controller.ts (not sites.controller.ts)', () => {
+    const main = fs.readFileSync(path.join(controllerDir, 'sites.controller.ts'), 'utf-8');
+    const fleet = fs.readFileSync(path.join(controllerDir, 'site-fleet.controller.ts'), 'utf-8');
+    expect(fleet).toContain('export const getFleetHealthData');
+    expect(main).not.toMatch(/export const getFleetHealthData\s*=/);
+  });
+});
+
+// =============================================================================
+// Dashboard template externalization guard
+// =============================================================================
+// config-editor, site-settings-tab, and site-detail had their templates/styles
+// extracted to separate .html/.scss files (2026-04). Re-inlining them degrades
+// AI reasoning by bloating .ts files to 2000-3000 lines.
+
+describe('Dashboard template externalization guard (prevents re-inlining)', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+
+  const components = [
+    {
+      name: 'config-editor',
+      dir: 'central-dashboard/src/app/features/sites/config-editor',
+      maxTsLines: 900,
+    },
+    {
+      name: 'site-settings-tab',
+      dir: 'central-dashboard/src/app/features/sites/components/site-settings-tab',
+      maxTsLines: 1000,
+    },
+    {
+      name: 'site-detail',
+      dir: 'central-dashboard/src/app/features/sites',
+      maxTsLines: 1000,
+    },
+  ];
+
+  for (const comp of components) {
+    const fullDir = path.join(repoRoot, comp.dir);
+
+    it(`${comp.name}.component.ts must use templateUrl (not inline template)`, () => {
+      const content = fs.readFileSync(path.join(fullDir, `${comp.name}.component.ts`), 'utf-8');
+      expect(content).toContain('templateUrl:');
+      expect(content).not.toMatch(/template\s*:\s*`/);
+    });
+
+    it(`${comp.name}.component.ts must use styleUrls (not inline styles)`, () => {
+      const content = fs.readFileSync(path.join(fullDir, `${comp.name}.component.ts`), 'utf-8');
+      expect(content).toMatch(/styleUrls?\s*:/);
+      expect(content).not.toMatch(/styles\s*:\s*\[?\s*`/);
+    });
+
+    it(`${comp.name}.component.html must exist`, () => {
+      expect(fs.existsSync(path.join(fullDir, `${comp.name}.component.html`))).toBe(true);
+    });
+
+    it(`${comp.name}.component.scss must exist`, () => {
+      expect(fs.existsSync(path.join(fullDir, `${comp.name}.component.scss`))).toBe(true);
+    });
+
+    it(`${comp.name}.component.ts must NOT exceed ${comp.maxTsLines} lines`, () => {
+      const content = fs.readFileSync(path.join(fullDir, `${comp.name}.component.ts`), 'utf-8');
+      const lineCount = content.split('\n').length;
+      expect(lineCount).toBeLessThan(comp.maxTsLines);
+    });
+  }
 });

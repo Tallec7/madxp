@@ -481,7 +481,7 @@ Le serveur central calcule le statut de connexion des sites selon **deux critèr
 **Logique de calcul du statut (`displayStatus`) :**
 
 ```typescript
-// Fichier: central-server/src/controllers/sites.controller.ts
+// Fichier: central-server/src/controllers/site-fleet.controller.ts (ex-sites.controller.ts)
 
 const isConnectedNow = socketService.isConnected(siteId); // Vérifie Socket.IO
 const secondsSinceLastSeen = (now - last_seen_at) / 1000;
@@ -532,7 +532,7 @@ Les deux vues utilisent la même logique basée sur `socketService.getConnection
 L'uptime affiché sur la page détail d'un site est calculé à partir du nombre de heartbeats reçus dans les dernières 24 heures :
 
 ```typescript
-// Backend: central-server/src/controllers/sites.controller.ts
+// Backend: central-server/src/controllers/site-fleet.controller.ts (ex-sites.controller.ts)
 // Frontend: central-dashboard/src/app/features/sites/site-detail.component.ts
 const heartbeatCount24h = stats.heartbeat_count; // COUNT(*) FROM metrics WHERE recorded_at > NOW() - 24h
 const uptime24h = Math.min(100, (heartbeatCount24h / 2880) * 100);

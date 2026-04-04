@@ -1,0 +1,815 @@
+<div class="settings-tab">
+  <!-- Authentification Club -->
+  <div class="settings-card">
+    <div class="settings-header">
+      <span class="settings-icon">🔐</span>
+      <h4>Authentification Club</h4>
+    </div>
+    <div class="settings-grid">
+      <div class="form-group">
+        <label>Nom du club</label>
+        <input type="text" [(ngModel)]="clubName" placeholder="Mon Club" class="form-input" />
+      </div>
+      <div class="form-group">
+        <label>Mot de passe télécommande</label>
+        <input
+          type="text"
+          [(ngModel)]="remotePassword"
+          [placeholder]="'AUTH.password' | translate"
+          class="form-input"
+        />
+      </div>
+    </div>
+    <button
+      class="btn btn-primary"
+      (click)="saveClubAuth()"
+      [disabled]="savingClubAuth || (!clubName && !remotePassword)"
+    >
+      {{
+        savingClubAuth
+          ? ('common.deploying' | translate)
+          : isConnected
+            ? ('common.deploy' | translate)
+            : ('common.deployQueued' | translate)
+      }}
+    </button>
+  </div>
+
+  <!-- Spectateurs moyens -->
+  <div class="settings-card">
+    <div class="settings-header">
+      <span class="settings-icon">👥</span>
+      <h4>Audience</h4>
+    </div>
+    <p class="settings-desc">
+      Nombre moyen de spectateurs par match. Utilisé pour calculer le reach des sponsors dans les
+      rapports PDF.
+    </p>
+    <div class="settings-grid">
+      <div class="form-group">
+        <label>Spectateurs moyens par match</label>
+        <input
+          type="number"
+          [(ngModel)]="avgSpectators"
+          placeholder="Ex: 200"
+          min="0"
+          max="100000"
+          class="form-input"
+        />
+        <small class="form-hint"
+          >Estimation moyenne. Sera mentionnée dans les rapports sponsors.</small
+        >
+      </div>
+    </div>
+    <button
+      class="btn btn-primary"
+      (click)="saveAvgSpectators()"
+      [disabled]="savingAvgSpectators || avgSpectators === null || avgSpectators === undefined"
+    >
+      {{ savingAvgSpectators ? ('common.saving' | translate) : ('common.save' | translate) }}
+    </button>
+  </div>
+
+  <!-- Branding Club (P5) -->
+  <div class="settings-card">
+    <div class="settings-header">
+      <span class="settings-icon">🎨</span>
+      <h4>Branding Club</h4>
+    </div>
+    <p class="settings-desc">
+      Logo et couleurs du club. Utilisés pour personnaliser les rapports PDF sponsors.
+    </p>
+    <div class="settings-grid">
+      <div class="form-group">
+        <label>URL du logo</label>
+        <input
+          type="url"
+          [(ngModel)]="logoUrl"
+          placeholder="https://example.com/logo.png"
+          class="form-input"
+        />
+        <small class="form-hint"
+          >Image PNG, JPEG ou SVG. S'affiche dans l'en-tête du rapport PDF.</small
+        >
+        <div *ngIf="logoUrl" class="logo-preview" style="margin-top: 8px">
+          <img
+            [src]="logoUrl"
+            alt="Logo preview"
+            style="
+              max-height: 48px;
+              max-width: 200px;
+              border-radius: 4px;
+              background: #f3f4f6;
+              padding: 4px;
+            "
+            (error)="logoUrl && onLogoError()"
+          />
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Couleur primaire</label>
+        <div style="display: flex; gap: 8px; align-items: center">
+          <input
+            type="color"
+            [(ngModel)]="colorPrimary"
+            style="
+              width: 40px;
+              height: 32px;
+              border: 1px solid var(--border-color);
+              border-radius: 4px;
+              cursor: pointer;
+              padding: 2px;
+            "
+          />
+          <input
+            type="text"
+            [(ngModel)]="colorPrimary"
+            placeholder="#1e3a8a"
+            maxlength="7"
+            class="form-input"
+            style="width: 120px"
+          />
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Couleur secondaire</label>
+        <div style="display: flex; gap: 8px; align-items: center">
+          <input
+            type="color"
+            [(ngModel)]="colorSecondary"
+            style="
+              width: 40px;
+              height: 32px;
+              border: 1px solid var(--border-color);
+              border-radius: 4px;
+              cursor: pointer;
+              padding: 2px;
+            "
+          />
+          <input
+            type="text"
+            [(ngModel)]="colorSecondary"
+            placeholder="#3b82f6"
+            maxlength="7"
+            class="form-input"
+            style="width: 120px"
+          />
+        </div>
+      </div>
+    </div>
+    <div
+      *ngIf="colorPrimary || colorSecondary"
+      class="branding-preview"
+      style="margin: 12px 0; padding: 12px; border-radius: 8px; background: linear-gradient(135deg, {{
+        colorPrimary || '#1e3a8a'
+      }} 0%, {{
+        colorSecondary || '#3b82f6'
+      }} 100%); color: white; font-size: 0.85rem; text-align: center;"
+    >
+      Aperçu bandeau rapport
+    </div>
+    <button class="btn btn-primary" (click)="saveBranding()" [disabled]="brandingSaving">
+      {{
+        brandingSaving ? ('common.saving' | translate) : ('siteSettings.saveBranding' | translate)
+      }}
+    </button>
+  </div>
+
+  <!-- PIN Télécommande Cloud -->
+  <div class="settings-card">
+    <div class="settings-header">
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        width="20"
+        height="20"
+        style="vertical-align: text-bottom; margin-right: 6px"
+      >
+        <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+        <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+      </svg>
+      <h4>{{ 'remotePin.title' | translate }}</h4>
+    </div>
+    <p class="settings-desc">
+      {{ 'remotePin.description' | translate }}
+    </p>
+
+    <ng-container *ngIf="remotePinEnabled; else noPinActive">
+      <div class="pin-status-badge active">
+        <span class="pin-badge-icon">&#128274;</span>
+        <span>{{ 'remotePin.pinActive' | translate }}</span>
+      </div>
+      <button
+        class="btn btn-danger btn-sm"
+        (click)="clearRemotePin()"
+        [disabled]="clearingRemotePin"
+      >
+        {{
+          clearingRemotePin
+            ? ('remotePin.clearingPin' | translate)
+            : ('remotePin.clearPin' | translate)
+        }}
+      </button>
+    </ng-container>
+    <ng-template #noPinActive>
+      <div class="pin-status-badge inactive">
+        <span class="pin-badge-icon">&#128275;</span>
+        <span>{{ 'remotePin.pinInactive' | translate }}</span>
+      </div>
+      <div class="form-group">
+        <label>{{ 'remotePin.newPinLabel' | translate }}</label>
+        <input
+          type="text"
+          [(ngModel)]="remotePin"
+          placeholder="1234"
+          maxlength="6"
+          pattern="[0-9]*"
+          inputmode="numeric"
+          class="form-input pin-input"
+        />
+      </div>
+      <button
+        class="btn btn-primary btn-sm"
+        (click)="saveRemotePin()"
+        [disabled]="savingRemotePin || !remotePin || remotePin.length < 4"
+      >
+        {{
+          savingRemotePin ? ('remotePin.settingPin' | translate) : ('remotePin.setPin' | translate)
+        }}
+      </button>
+    </ng-template>
+  </div>
+
+  <!-- QR Code Telecommande -->
+  <div class="settings-card">
+    <div class="settings-header">
+      <span class="settings-icon">📱</span>
+      <h4>QR Code Telecommande</h4>
+    </div>
+    <p class="settings-desc">
+      Generez un QR code a imprimer et afficher pres de la TV. Les utilisateurs pourront scanner
+      pour acceder directement a la telecommande.
+    </p>
+    <div class="qr-modes-info">
+      <div class="qr-mode-card">
+        <div class="mode-header">
+          <span class="mode-icon">📶</span>
+          <span class="mode-title">Mode Local (Hotspot)</span>
+        </div>
+        <p class="mode-desc">Necessite d'etre connecte au WiFi du boitier</p>
+        <div class="qr-detail">
+          <span class="qr-label">WiFi :</span>
+          <code>{{ getWifiSsid() }}</code>
+          <span class="ssid-source" *ngIf="realSsid">(reel)</span>
+          <span class="ssid-source ssid-generated" *ngIf="!realSsid">(genere)</span>
+        </div>
+      </div>
+      <div class="qr-mode-card cloud-mode">
+        <div class="mode-header">
+          <span class="mode-icon">☁️</span>
+          <span class="mode-title">Mode Cloud</span>
+          <span class="mode-badge">Nouveau</span>
+        </div>
+        <p class="mode-desc">
+          Fonctionne depuis n'importe quel reseau avec Internet. Ideal pour les reseaux avec
+          isolation client (mesh WiFi).
+        </p>
+        <a class="cloud-remote-link" [href]="'/remote/' + siteId" target="_blank" rel="noopener">
+          ↗️ Ouvrir la telecommande cloud
+        </a>
+      </div>
+    </div>
+    <button class="btn btn-primary" (click)="openQrCode()" [disabled]="fetchingSsid">
+      {{ fetchingSsid ? 'Chargement...' : 'Generer le QR Code' }}
+    </button>
+  </div>
+
+  <!-- Configuration Hotspot WiFi -->
+  <div class="settings-card">
+    <div class="settings-header">
+      <span class="settings-icon">📶</span>
+      <h4>Hotspot WiFi</h4>
+      <button
+        class="btn-icon-sm refresh-btn"
+        (click)="fetchHotspotConfig()"
+        [disabled]="fetchingHotspotConfig || !isConnected"
+        title="Actualiser depuis le boîtier"
+      >
+        {{ fetchingHotspotConfig ? '⏳' : '🔄' }}
+      </button>
+    </div>
+    <p class="settings-desc">Configuration du réseau WiFi du boîtier</p>
+
+    <!-- Affichage des valeurs actuelles -->
+    <div class="current-hotspot-info" *ngIf="currentHotspotSsid">
+      <div class="info-row">
+        <span class="info-label">SSID actuel :</span>
+        <code class="info-value">{{ currentHotspotSsid }}</code>
+        <span
+          class="info-badge"
+          [class.online]="currentHotspotActive"
+          [class.offline]="!currentHotspotActive"
+        >
+          {{
+            currentHotspotActive
+              ? '✓ ' + ('status.active' | translate)
+              : '○ ' + ('status.inactive' | translate)
+          }}
+        </span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Mot de passe :</span>
+        <ng-container *ngIf="currentHotspotPassword; else noPassword">
+          <code class="info-value password-value">{{
+            showCurrentPassword ? currentHotspotPassword : '••••••••'
+          }}</code>
+          <button
+            class="btn-icon"
+            (click)="toggleShowPassword()"
+            type="button"
+            [title]="showCurrentPassword ? 'Masquer' : 'Afficher'"
+          >
+            {{ showCurrentPassword ? '🙈' : '👁️' }}
+          </button>
+        </ng-container>
+        <ng-template #noPassword>
+          <span class="info-value info-muted">Cliquez 🔄 pour charger</span>
+        </ng-template>
+      </div>
+      <div class="info-row" *ngIf="currentHotspotChannel">
+        <span class="info-label">Canal :</span>
+        <span class="info-value">{{ currentHotspotChannel }}</span>
+      </div>
+      <div class="info-row" *ngIf="currentHotspotClients !== null">
+        <span class="info-label">Clients connectés :</span>
+        <span class="info-value">{{ currentHotspotClients }}</span>
+      </div>
+    </div>
+    <div
+      class="no-hotspot-info"
+      *ngIf="!currentHotspotSsid && isConnected && !fetchingHotspotConfig"
+    >
+      <button
+        class="btn btn-secondary btn-sm"
+        (click)="fetchHotspotConfig()"
+        [disabled]="fetchingHotspotConfig"
+      >
+        🔄 Charger les informations
+      </button>
+    </div>
+    <div class="no-hotspot-info" *ngIf="!currentHotspotSsid && fetchingHotspotConfig">
+      <span class="loading-hint">⏳ Chargement des informations hotspot...</span>
+    </div>
+    <div class="no-hotspot-info" *ngIf="!currentHotspotSsid && !isConnected">
+      <span class="offline-hint">Site hors ligne - informations hotspot non disponibles</span>
+    </div>
+
+    <hr class="settings-divider" *ngIf="currentHotspotSsid" />
+    <h5 class="subsection-title" *ngIf="currentHotspotSsid">Modifier la configuration</h5>
+
+    <div class="settings-grid">
+      <div class="form-group">
+        <label>SSID (nom du réseau)</label>
+        <input
+          type="text"
+          [(ngModel)]="hotspotSsid"
+          [placeholder]="currentHotspotSsid || 'NEOPRO-MonClub'"
+          maxlength="32"
+          class="form-input"
+        />
+        <small class="form-hint">Max 32 caractères. Laissez vide pour conserver l'actuel.</small>
+      </div>
+      <div class="form-group">
+        <label>Mot de passe WiFi</label>
+        <input
+          type="password"
+          [(ngModel)]="hotspotPassword"
+          placeholder="••••••••"
+          minlength="8"
+          maxlength="63"
+          class="form-input"
+        />
+        <small class="form-hint"
+          >8-63 caractères (WPA2). Laissez vide pour conserver l'actuel.</small
+        >
+      </div>
+    </div>
+    <button
+      class="btn btn-primary"
+      (click)="updateHotspot()"
+      [disabled]="updatingHotspot || (!hotspotSsid && !hotspotPassword)"
+    >
+      {{
+        updatingHotspot
+          ? ('common.updating' | translate)
+          : isConnected
+            ? ('common.apply' | translate)
+            : ('common.applyQueued' | translate)
+      }}
+    </button>
+    <p class="warning-text" *ngIf="hotspotSsid || hotspotPassword">
+      ⚠️ Après modification, vous devrez vous reconnecter au nouveau réseau WiFi.
+    </p>
+  </div>
+
+  <!-- Options Premium -->
+  <div class="settings-card">
+    <div class="settings-header">
+      <span class="settings-icon">⭐</span>
+      <h4>Options Premium</h4>
+    </div>
+    <div class="premium-toggle">
+      <label class="toggle-container">
+        <input
+          type="checkbox"
+          [checked]="site?.live_score_enabled"
+          (change)="toggleLiveScore($event)"
+          [disabled]="savingLiveScore"
+        />
+        <span class="toggle-slider"></span>
+        <span class="toggle-label">Option Premium activée</span>
+      </label>
+      <p class="premium-desc">
+        Active le score en live, le chronomètre, les options d'overlay et les annonces sur la
+        télécommande.
+      </p>
+    </div>
+
+    <!-- Score Overlay Config -->
+    <div class="overlay-config" *ngIf="site?.live_score_enabled">
+      <button class="btn btn-secondary btn-sm" (click)="showOverlayConfig = !showOverlayConfig">
+        {{ showOverlayConfig ? 'Fermer' : 'Personnaliser l'overlay' }}
+      </button>
+
+      <div class="overlay-form" *ngIf="showOverlayConfig">
+        <h5>Thème</h5>
+        <div class="overlay-grid">
+          <button
+            class="theme-card"
+            [class.active]="overlayConfig.theme === 'broadcast'"
+            (click)="overlayConfig.theme = 'broadcast'"
+          >
+            <div class="theme-preview broadcast">
+              <span class="tp-team">DOM</span>
+              <span class="tp-score">2 - 1</span>
+              <span class="tp-team">EXT</span>
+            </div>
+            <span class="theme-label">Broadcast</span>
+          </button>
+          <button
+            class="theme-card"
+            [class.active]="overlayConfig.theme === 'minimal'"
+            (click)="overlayConfig.theme = 'minimal'"
+          >
+            <div class="theme-preview minimal">
+              <span class="tp-score">2 - 1</span>
+            </div>
+            <span class="theme-label">Minimal</span>
+          </button>
+        </div>
+
+        <h5>Position</h5>
+        <div class="overlay-grid">
+          <div class="form-group">
+            <select [(ngModel)]="overlayConfig.position" class="form-input">
+              <option value="top-left">Haut gauche</option>
+              <option value="top-center">Haut centre</option>
+              <option value="top-right">Haut droite</option>
+              <option value="bottom-left">Bas gauche</option>
+              <option value="bottom-center">Bas centre</option>
+              <option value="bottom-right">Bas droite</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Preview -->
+        <div class="overlay-preview">
+          <div class="preview-label">Aperçu</div>
+          <div
+            class="preview-container"
+            [style.justify-content]="getJustify()"
+            [style.align-items]="getAlign()"
+          >
+            <div class="preview-overlay" *ngIf="overlayConfig.theme === 'broadcast'">
+              <span class="preview-team">DOM</span>
+              <span class="preview-score">2 - 1</span>
+              <span class="preview-team">EXT</span>
+            </div>
+            <div class="preview-overlay minimal" *ngIf="overlayConfig.theme === 'minimal'">
+              <span class="preview-score">2 - 1</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="overlay-actions">
+          <button class="btn btn-primary" (click)="saveOverlayConfig()" [disabled]="savingOverlay">
+            {{ savingOverlay ? ('common.deploying' | translate) : ('common.deploy' | translate) }}
+          </button>
+          <button class="btn btn-secondary" (click)="showOverlayConfig = false">
+            {{ 'common.cancel' | translate }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Watermark / Logo en surimpression -->
+  <div class="settings-card">
+    <div class="settings-header">
+      <span class="settings-icon">🖼️</span>
+      <h4>Logo en surimpression (Watermark)</h4>
+    </div>
+    <p class="settings-desc">
+      Ajoutez un logo ou une image qui s'affichera en permanence sur la TV (ex: logo du club,
+      sponsor principal).
+    </p>
+
+    <!-- Watermark selector dropdown -->
+    <div class="watermark-selector">
+      <div class="form-group">
+        <label>Image watermark</label>
+        <div class="selector-row">
+          <select
+            class="form-input"
+            [(ngModel)]="selectedWatermarkName"
+            (ngModelChange)="onWatermarkSelected($event)"
+            [disabled]="loadingWatermarks"
+          >
+            <option value="">-- Aucun watermark --</option>
+            <option *ngFor="let wm of availableWatermarks" [value]="wm.name">
+              {{ wm.name }}
+            </option>
+          </select>
+          <button
+            class="btn btn-secondary btn-sm"
+            (click)="loadAvailableWatermarks()"
+            [disabled]="loadingWatermarks"
+            title="Rafraichir la liste"
+          >
+            {{ loadingWatermarks ? '...' : 'Rafraichir' }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Preview of selected watermark -->
+    <div class="watermark-current" *ngIf="watermarkConfig.imagePath">
+      <div class="watermark-preview-box">
+        <img
+          [src]="getWatermarkPreviewUrl()"
+          alt="Watermark"
+          class="watermark-img"
+          (error)="onWatermarkImageError($event)"
+        />
+      </div>
+      <div class="watermark-info">
+        <span class="watermark-path">{{ getWatermarkFilename() }}</span>
+      </div>
+    </div>
+
+    <!-- Upload new watermark -->
+    <div class="watermark-upload-new">
+      <label class="upload-zone-compact">
+        <input
+          type="file"
+          accept="image/png,image/jpeg,image/gif,image/webp,image/svg+xml"
+          (change)="onWatermarkFileSelected($event)"
+          hidden
+        />
+        Uploader un nouveau watermark
+      </label>
+      <span class="upload-hint-inline">PNG, JPEG, GIF, WebP ou SVG (max 5 MB)</span>
+    </div>
+
+    <!-- Watermark config form -->
+    <div class="watermark-config" *ngIf="watermarkConfig.imagePath">
+      <div class="config-row">
+        <label class="toggle-container">
+          <input type="checkbox" [(ngModel)]="watermarkConfig.enabled" />
+          <span class="toggle-slider"></span>
+          <span class="toggle-label">Activer le watermark</span>
+        </label>
+      </div>
+
+      <div class="config-row" *ngIf="watermarkConfig.enabled">
+        <label class="toggle-container">
+          <input type="checkbox" [(ngModel)]="watermarkConfig.fullscreen" />
+          <span class="toggle-slider"></span>
+          <span class="toggle-label">Plein ecran (couvre toute la TV)</span>
+        </label>
+      </div>
+
+      <div class="settings-grid" *ngIf="watermarkConfig.enabled">
+        <!-- Options de position (masquees en mode fullscreen) -->
+        <div class="form-group" *ngIf="!watermarkConfig.fullscreen">
+          <label>Position</label>
+          <select [(ngModel)]="watermarkConfig.position" class="form-input">
+            <option *ngFor="let pos of positionOptions" [value]="pos.value">{{ pos.label }}</option>
+          </select>
+        </div>
+        <div class="form-group" *ngIf="!watermarkConfig.fullscreen">
+          <label>Decalage X (px)</label>
+          <input
+            type="number"
+            [(ngModel)]="watermarkConfig.offsetX"
+            min="0"
+            max="500"
+            class="form-input"
+          />
+        </div>
+        <div class="form-group" *ngIf="!watermarkConfig.fullscreen">
+          <label>Decalage Y (px)</label>
+          <input
+            type="number"
+            [(ngModel)]="watermarkConfig.offsetY"
+            min="0"
+            max="500"
+            class="form-input"
+          />
+        </div>
+        <div class="form-group" *ngIf="!watermarkConfig.fullscreen">
+          <label>Largeur (px)</label>
+          <input
+            type="number"
+            [(ngModel)]="watermarkConfig.width"
+            min="20"
+            max="800"
+            class="form-input"
+          />
+        </div>
+        <!-- Opacite toujours visible -->
+        <div class="form-group">
+          <label>Opacite (%)</label>
+          <input
+            type="range"
+            [(ngModel)]="watermarkConfig.opacity"
+            min="10"
+            max="100"
+            class="form-range"
+          />
+          <span class="range-value">{{ watermarkConfig.opacity }}%</span>
+        </div>
+        <div class="form-group" *ngIf="!watermarkConfig.fullscreen">
+          <label>Arrondi (px)</label>
+          <input
+            type="number"
+            [(ngModel)]="watermarkConfig.borderRadius"
+            min="0"
+            max="50"
+            class="form-input"
+          />
+        </div>
+        <!-- Animation toujours visible -->
+        <div class="form-group">
+          <label>Animation</label>
+          <select [(ngModel)]="watermarkConfig.animation" class="form-input">
+            <option *ngFor="let anim of animationOptions" [value]="anim.value">
+              {{ anim.label }}
+            </option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Scheduling -->
+      <div class="watermark-scheduling" *ngIf="watermarkConfig.enabled">
+        <div class="scheduling-header">
+          <label class="toggle-container">
+            <input type="checkbox" [(ngModel)]="watermarkConfig.schedule!.enabled" />
+            <span class="toggle-slider"></span>
+            <span class="toggle-label">Programmation horaire</span>
+          </label>
+        </div>
+
+        <div class="scheduling-rules" *ngIf="watermarkConfig.schedule?.enabled">
+          <div
+            class="rule-item"
+            *ngFor="let rule of watermarkConfig.schedule!.rules; let i = index"
+          >
+            <div class="rule-row">
+              <div class="form-group">
+                <label>Debut</label>
+                <input type="time" [(ngModel)]="rule.startTime" class="form-input" />
+              </div>
+              <div class="form-group">
+                <label>Fin</label>
+                <input type="time" [(ngModel)]="rule.endTime" class="form-input" />
+              </div>
+              <button class="btn btn-danger btn-sm btn-icon" (click)="removeScheduleRule(i)">
+                ✕
+              </button>
+            </div>
+            <div class="rule-days">
+              <label *ngFor="let day of daysOfWeekOptions" class="day-checkbox">
+                <input
+                  type="checkbox"
+                  [checked]="rule.daysOfWeek.includes(day.value)"
+                  (change)="toggleRuleDay(rule, day.value)"
+                />
+                <span>{{ day.shortLabel }}</span>
+              </label>
+            </div>
+          </div>
+          <button class="btn btn-secondary btn-sm" (click)="addScheduleRule()">
+            + Ajouter une plage horaire
+          </button>
+        </div>
+      </div>
+
+      <div class="watermark-save">
+        <button
+          class="btn btn-primary"
+          (click)="saveWatermarkConfig()"
+          [disabled]="savingWatermark"
+        >
+          {{
+            savingWatermark
+              ? 'Deploiement...'
+              : isConnected
+                ? 'Deployer le watermark'
+                : 'Deployer (en file)'
+          }}
+        </button>
+      </div>
+    </div>
+
+    <!-- Upload progress -->
+    <div class="upload-progress" *ngIf="uploadingWatermark">
+      <div class="progress-bar">
+        <div class="progress-fill" [style.width.%]="uploadProgress"></div>
+      </div>
+      <span class="progress-text">{{ uploadProgressText }}</span>
+    </div>
+  </div>
+
+  <!-- Rapports PDF -->
+  <div class="settings-card">
+    <div class="settings-header">
+      <span class="settings-icon">📊</span>
+      <h4>Rapports mensuels</h4>
+    </div>
+    <p class="settings-desc">
+      Téléchargez les rapports d'activité générés automatiquement chaque mois.
+    </p>
+
+    <div class="reports-list" *ngIf="clubReports.length > 0">
+      <div class="report-item" *ngFor="let report of clubReports">
+        <div class="report-info">
+          <span class="report-period">{{ report.period_label }}</span>
+          <span class="report-meta"
+            >{{ formatReportDate(report.completed_at) }} •
+            {{ formatFileSize(report.file_size_bytes) }}</span
+          >
+        </div>
+        <a
+          [href]="report.storage_url"
+          target="_blank"
+          class="btn btn-sm btn-secondary"
+          *ngIf="report.storage_url"
+        >
+          📥 Télécharger
+        </a>
+      </div>
+    </div>
+
+    <div class="reports-empty" *ngIf="clubReports.length === 0 && !loadingReports">
+      <span class="empty-icon">📋</span>
+      <p>Aucun rapport disponible pour l'instant.</p>
+      <p class="empty-hint">Les rapports sont générés automatiquement le 1er de chaque mois.</p>
+    </div>
+
+    <div class="reports-loading" *ngIf="loadingReports">
+      <span class="loading-spinner"></span>
+      Chargement des rapports...
+    </div>
+
+    <div class="reports-actions" *ngIf="!loadingReports">
+      <button
+        class="btn btn-secondary btn-sm"
+        (click)="loadClubReports()"
+        [disabled]="loadingReports"
+      >
+        🔄 Actualiser
+      </button>
+      <button
+        class="btn btn-primary btn-sm"
+        (click)="generateReport()"
+        [disabled]="generatingReport"
+      >
+        {{ generatingReport ? 'Génération...' : '➕ Générer un rapport' }}
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- QR Code Modal -->
+<app-qr-code-generator
+  *ngIf="showQrCode"
+  [clubName]="site?.club_name || site?.site_name || 'Club'"
+  [wifiSsid]="getWifiSsid()"
+  [siteId]="site?.id || ''"
+  [visible]="showQrCode"
+  [defaultMode]="getQrCodeDefaultMode()"
+  (visibleChange)="showQrCode = $event"
+></app-qr-code-generator>
