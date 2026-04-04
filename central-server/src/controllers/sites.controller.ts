@@ -19,12 +19,6 @@ import {
 // Helpers & Constants
 // ============================================================================
 
-class HttpError extends Error {
-  constructor(public status: number, message: string) {
-    super(message);
-  }
-}
-
 // Seuils de connexion (en secondes)
 // Un site est considéré "online" si heartbeat reçu dans ce délai
 export const ONLINE_THRESHOLD_SECONDS = 90; // 1min30 (3 heartbeats manqués max)
