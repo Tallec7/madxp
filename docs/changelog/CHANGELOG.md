@@ -1,3 +1,9 @@
+## [3.123.5](https://github.com/Tallec7/neopro/compare/v3.123.4...v3.123.5) (2026-04-04)
+
+### Bug Fixes
+
+- **security:** add missing Joi validateParams/validateQuery to 50+ routes ([7863288](https://github.com/Tallec7/neopro/commit/786328839f0a11005f2bd4dc320654f97b48e972))
+
 ## [3.123.4](https://github.com/Tallec7/neopro/compare/v3.123.3...v3.123.4) (2026-04-04)
 
 ### Bug Fixes
