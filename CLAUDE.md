@@ -203,6 +203,9 @@ source central-server/.env && psql "$DATABASE_URL" -f central-server/src/scripts
 - Remettre la logique de chargement config (`pollConfigResult`, `loadFromLocalContent`), validation (`validateConfig`), ou déploiement (`deployConfig`) dans `config-editor.component.ts` (décomposé en `ConfigEditorDataService` — smoke test enforced)
 - Remettre les appels API (`SiteCommandService`, `SiteMetricsService`, `AssetService`, `ReportsService`) ou la logique save/deploy dans `site-settings-tab.component.ts` (décomposé en `SiteSettingsDataService` — smoke test enforced)
 - Remettre les appels API bruts (`this.api.get`, `this.api.post`, `this.api.delete`, `this.api.upload`) dans `content-management.component.ts` (décomposé en `ContentManagementDataService` avec `loadVideos()`, `createDeployment()`, `convertImageToVideo()` — smoke test enforced)
+- Remettre `UsersService`, `AgencyPortalService` ou `ApiService` directement dans `users-management.component.ts` (décomposé en `UsersManagementDataService` pour le CRUD, `UserFiltersService` pour les filtres, `UserValidationService` pour la validation — smoke test enforced)
+- Remettre la gestion d'état des modals (`showEditModal`, `showDeleteModal`) ou du formulaire (`saving`, `deleting`, `editForm`) directement dans `advertiser-detail.component.ts` (décomposé en `AdvertiserModalService` + `AdvertiserFormService` — smoke test enforced)
+- Remettre `video-upload-zone` ou `remote-preview` dans `features/sites/components/` (déplacés vers `shared/components/` — composants réutilisables cross-features — smoke test enforced)
 
 ## Architecture détaillée
 

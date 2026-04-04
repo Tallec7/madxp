@@ -1,39 +1,24 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TranslateModule } from '@ngx-translate/core';
 import {
-  UsersService,
   User,
-  UserRole,
   UserStatus,
   CreateUserData,
   UpdateUserData,
 } from '../../../core/services/users.service';
-import { AgencyPortalService, Agency } from '../../../core/services/agency-portal.service';
-import { ApiService } from '../../../core/services/api.service';
-import { LoggerService } from '../../../core/services/logger.service';
 import { ErrorExtractor } from '../../../core/utils/error-extractor';
-
-interface Advertiser {
-  id: string;
-  name: string;
-  status: string;
-}
-
-interface UserForm {
-  email: string;
-  password: string;
-  full_name: string;
-  role: UserRole;
-  advertiser_id: string | null;
-  agency_id: string | null;
-}
+import { LoggerService } from '../../../core/services/logger.service';
+import { UsersManagementDataService } from './users-management-data.service';
+import { UserFiltersService } from './user-filters.service';
+import { UserValidationService, UserForm } from './user-validation.service';
 
 @Component({
   selector: 'app-users-management',
   standalone: true,
   imports: [CommonModule, FormsModule, TranslateModule],
+  providers: [UsersManagementDataService, UserFiltersService, UserValidationService],
   template: `
     <div class="container">
       <div class="header">
@@ -728,17 +713,21 @@ interface UserForm {
   ],
 })
 export class UsersManagementComponent implements OnInit {
-  readonly usersService = inject(UsersService);
-  private readonly agencyService = inject(AgencyPortalService);
-  private readonly api = inject(ApiService);
+  readonly dataService = inject(UsersManagementDataService);
+  readonly filtersService = inject(UserFiltersService);
+  private readonly validationService = inject(UserValidationService);
   private readonly logger = inject(LoggerService);
 
-  users = signal<User[]>([]);
-  agencies = signal<Agency[]>([]);
-  advertisers = signal<Advertiser[]>([]);
-  loading = signal(false);
-  saving = signal(false);
-  error = signal<string | null>(null);
+  // Expose service signals to template
+  readonly users = this.dataService.users;
+  readonly agencies = this.dataService.agencies;
+  readonly advertisers = this.dataService.advertisers;
+  readonly loading = this.dataService.loading;
+  readonly saving = this.dataService.saving;
+  readonly error = this.dataService.error;
+
+  // Expose usersService for getRoleLabel in template
+  readonly usersService = this.dataService.usersService;
 
   showCreateModal = false;
   editingUser: User | null = null;
@@ -748,75 +737,23 @@ export class UsersManagementComponent implements OnInit {
   filterRole = '';
   filterStatus = '';
 
-  userForm: UserForm = {
-    email: '',
-    password: '',
-    full_name: '',
-    role: 'viewer',
-    advertiser_id: null,
-    agency_id: null,
-  };
+  userForm: UserForm = this.validationService.createEmptyForm();
 
   ngOnInit(): void {
-    this.loadUsers();
-    this.loadAgencies();
-    this.loadAdvertisers();
+    this.refreshData();
   }
 
-  loadUsers(): void {
-    this.loading.set(true);
-    this.error.set(null);
-
-    const filters: Record<string, string> = {};
-    if (this.filterRole) filters['role'] = this.filterRole;
-    if (this.filterStatus) filters['status'] = this.filterStatus;
-    if (this.searchQuery) filters['search'] = this.searchQuery;
-
-    this.usersService.list(filters).subscribe({
-      next: (response) => {
-        if (response.success) {
-          this.users.set(response.data.users);
-        } else {
-          this.error.set('Erreur lors du chargement des utilisateurs');
-        }
-        this.loading.set(false);
-      },
-      error: (err) => {
-        const message = ErrorExtractor.getMessage(err);
-        this.logger.error('Failed to load users', { error: message });
-        this.error.set(message);
-        this.loading.set(false);
-      },
-    });
-  }
-
-  loadAgencies(): void {
-    this.agencyService.listAgencies().subscribe({
-      next: (response) => {
-        if (response.success) {
-          this.agencies.set(response.data.agencies);
-        }
-      },
-    });
-  }
-
-  loadAdvertisers(): void {
-    this.api
-      .get<{ success: boolean; data: { advertisers: Advertiser[] } }>('/analytics/advertisers')
-      .subscribe({
-        next: (response) => {
-          if (response.success) {
-            this.advertisers.set(response.data.advertisers);
-          }
-        },
-        error: () => {
-          // Advertisers list may not be available, silently ignore
-        },
-      });
+  private refreshData(): void {
+    this.dataService.loadUsers(this.filtersService.buildFilters());
+    this.dataService.loadAgencies();
+    this.dataService.loadAdvertisers();
   }
 
   applyFilters(): void {
-    this.loadUsers();
+    this.filtersService.searchQuery.set(this.searchQuery);
+    this.filtersService.filterRole.set(this.filterRole as never);
+    this.filtersService.filterStatus.set(this.filterStatus as never);
+    this.dataService.loadUsers(this.filtersService.buildFilters());
   }
 
   editUser(user: User): void {
@@ -834,25 +771,17 @@ export class UsersManagementComponent implements OnInit {
   cancelEdit(): void {
     this.showCreateModal = false;
     this.editingUser = null;
-    this.resetForm();
-  }
-
-  resetForm(): void {
-    this.userForm = {
-      email: '',
-      password: '',
-      full_name: '',
-      role: 'viewer',
-      advertiser_id: null,
-      agency_id: null,
-    };
+    this.userForm = this.validationService.createEmptyForm();
   }
 
   saveUser(): void {
-    if (!this.userForm.email.trim() || !this.userForm.full_name.trim()) return;
-    if (!this.editingUser && !this.userForm.password) return;
+    const validation = this.editingUser
+      ? this.validationService.validateForUpdate(this.userForm)
+      : this.validationService.validateForCreate(this.userForm);
 
-    this.saving.set(true);
+    if (!validation.valid) return;
+
+    this.dataService.saving.set(true);
 
     if (this.editingUser) {
       const data: UpdateUserData = {
@@ -863,21 +792,21 @@ export class UsersManagementComponent implements OnInit {
         agency_id: this.userForm.agency_id,
       };
 
-      this.usersService.update(this.editingUser.id, data).subscribe({
+      this.dataService.updateUser(this.editingUser.id, data).subscribe({
         next: (response) => {
           if (response.success) {
-            this.loadUsers();
+            this.dataService.loadUsers(this.filtersService.buildFilters());
             this.cancelEdit();
           } else {
-            this.error.set('Erreur lors de la mise a jour');
+            this.dataService.error.set('Erreur lors de la mise a jour');
           }
-          this.saving.set(false);
+          this.dataService.saving.set(false);
         },
         error: (err) => {
           const message = ErrorExtractor.getMessage(err);
           this.logger.error('Failed to update user', { error: message, userId: this.editingUser?.id });
-          this.error.set(message);
-          this.saving.set(false);
+          this.dataService.error.set(message);
+          this.dataService.saving.set(false);
         },
       });
     } else {
@@ -890,21 +819,21 @@ export class UsersManagementComponent implements OnInit {
         agency_id: this.userForm.agency_id,
       };
 
-      this.usersService.create(data).subscribe({
+      this.dataService.createUser(data).subscribe({
         next: (response) => {
           if (response.success) {
-            this.loadUsers();
+            this.dataService.loadUsers(this.filtersService.buildFilters());
             this.cancelEdit();
           } else {
-            this.error.set('Erreur lors de la creation');
+            this.dataService.error.set('Erreur lors de la creation');
           }
-          this.saving.set(false);
+          this.dataService.saving.set(false);
         },
         error: (err) => {
           const message = ErrorExtractor.getMessage(err);
           this.logger.error('Failed to create user', { error: message, email: data.email });
-          this.error.set(message);
-          this.saving.set(false);
+          this.dataService.error.set(message);
+          this.dataService.saving.set(false);
         },
       });
     }
@@ -917,40 +846,40 @@ export class UsersManagementComponent implements OnInit {
   deleteUser(): void {
     if (!this.deletingUser) return;
 
-    this.saving.set(true);
+    this.dataService.saving.set(true);
 
-    this.usersService.delete(this.deletingUser.id).subscribe({
+    this.dataService.deleteUser(this.deletingUser.id).subscribe({
       next: (response) => {
         if (response.success) {
-          this.loadUsers();
+          this.dataService.loadUsers(this.filtersService.buildFilters());
           this.deletingUser = null;
         } else {
-          this.error.set('Erreur lors de la suppression');
+          this.dataService.error.set('Erreur lors de la suppression');
         }
-        this.saving.set(false);
+        this.dataService.saving.set(false);
       },
       error: (err) => {
         const message = ErrorExtractor.getMessage(err);
         this.logger.error('Failed to delete user', { error: message, userId: this.deletingUser?.id });
-        this.error.set(message);
-        this.saving.set(false);
+        this.dataService.error.set(message);
+        this.dataService.saving.set(false);
       },
     });
   }
 
   toggleStatus(user: User, newStatus: UserStatus): void {
-    this.usersService.toggleStatus(user.id, newStatus).subscribe({
+    this.dataService.toggleUserStatus(user.id, newStatus).subscribe({
       next: (response) => {
         if (response.success) {
-          this.loadUsers();
+          this.dataService.loadUsers(this.filtersService.buildFilters());
         } else {
-          this.error.set('Erreur lors du changement de statut');
+          this.dataService.error.set('Erreur lors du changement de statut');
         }
       },
       error: (err) => {
         const message = ErrorExtractor.getMessage(err);
         this.logger.error('Failed to toggle user status', { error: message, userId: user.id, newStatus });
-        this.error.set(message);
+        this.dataService.error.set(message);
       },
     });
   }

@@ -7,7 +7,7 @@ import { NotificationService } from '../../../../../core/services/notification.s
 import { ErrorExtractor } from '../../../../../core/utils/error-extractor';
 import { LocalVideo, CloudVideo, LocalStorage } from '../../../../../core/models';
 import { VideoLibraryComponent, VideoItem, VideoDeployState } from '../../video-library/video-library.component';
-import { VideoUploadZoneComponent, UploadedVideo } from '../../video-upload-zone/video-upload-zone.component';
+import { VideoUploadZoneComponent, UploadedVideo } from '../../../../../shared/components/video-upload-zone/video-upload-zone.component';
 
 @Component({
   selector: 'app-video-manager',

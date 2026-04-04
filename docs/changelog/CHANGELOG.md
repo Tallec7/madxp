@@ -1,3 +1,20 @@
+# [3.126.0](https://github.com/Tallec7/neopro/compare/v3.125.0...v3.126.0) (2026-04-04)
+
+### Refactoring
+
+- **dashboard:** extract UsersManagementDataService, UserFiltersService, UserValidationService from users-management component (CRUD, filters, form validation) ([COMMIT])
+- **dashboard:** extract AdvertiserModalService and AdvertiserFormService from advertiser-detail component (modal state, form state/validation) ([COMMIT])
+- **dashboard:** move video-upload-zone and remote-preview from sites/components/ to shared/components/ (cross-feature reuse, eliminate duplicate remote-preview) ([COMMIT])
+
+### Tests
+
+- **smoke:** add regression guards for users-management service extraction, advertiser-detail modal/form services, and shared components flattening (18 new assertions) ([COMMIT])
+
+### Docs
+
+- **architecture:** update ARCHITECTURE.md tree with admin/users services, advertisers services, and shared/components inventory ([COMMIT])
+- **claude.md:** add 3 re-monolithification prevention rules for new extractions ([COMMIT])
+
 # [3.125.0](https://github.com/Tallec7/neopro/compare/v3.124.0...v3.125.0) (2026-04-04)
 
 ### Refactoring

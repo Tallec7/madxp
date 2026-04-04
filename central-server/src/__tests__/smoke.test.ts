@@ -12711,3 +12711,137 @@ describe('ContentManagementDataService extraction guard', () => {
     expect(content).not.toMatch(/this\.api\.upload\(/);
   });
 });
+
+// ============================================================
+// UsersManagement service extraction guard
+// ============================================================
+
+describe('UsersManagement service extraction guard', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+  const usersDir = path.join(repoRoot, 'central-dashboard/src/app/features/admin/users');
+  it('UsersManagementDataService exists with CRUD methods', () => {
+    const content = fs.readFileSync(path.join(usersDir, 'users-management-data.service.ts'), 'utf-8');
+    expect(content).toContain('class UsersManagementDataService');
+    expect(content).toContain('loadUsers');
+    expect(content).toContain('loadAgencies');
+    expect(content).toContain('loadAdvertisers');
+    expect(content).toContain('createUser');
+    expect(content).toContain('updateUser');
+    expect(content).toContain('deleteUser');
+    expect(content).toContain('toggleUserStatus');
+  });
+
+  it('UserFiltersService exists with filter methods', () => {
+    const content = fs.readFileSync(path.join(usersDir, 'user-filters.service.ts'), 'utf-8');
+    expect(content).toContain('class UserFiltersService');
+    expect(content).toContain('buildFilters');
+    expect(content).toContain('searchQuery');
+    expect(content).toContain('filterRole');
+    expect(content).toContain('filterStatus');
+  });
+
+  it('UserValidationService exists with validation methods', () => {
+    const content = fs.readFileSync(path.join(usersDir, 'user-validation.service.ts'), 'utf-8');
+    expect(content).toContain('class UserValidationService');
+    expect(content).toContain('validateForCreate');
+    expect(content).toContain('validateForUpdate');
+    expect(content).toContain('createEmptyForm');
+  });
+
+  it('users-management component uses extracted services (not raw UsersService/ApiService directly)', () => {
+    const content = fs.readFileSync(path.join(usersDir, 'users-management.component.ts'), 'utf-8');
+    expect(content).toContain('UsersManagementDataService');
+    expect(content).toContain('UserFiltersService');
+    expect(content).toContain('UserValidationService');
+    expect(content).not.toMatch(/inject\(ApiService\)/);
+    expect(content).not.toMatch(/inject\(AgencyPortalService\)/);
+  });
+
+  it('users-management component must NOT contain direct API calls (delegated to data service)', () => {
+    const content = fs.readFileSync(path.join(usersDir, 'users-management.component.ts'), 'utf-8');
+    expect(content).not.toMatch(/this\.api\./);
+    expect(content).not.toMatch(/this\.agencyService\./);
+  });
+});
+
+// ============================================================
+// AdvertiserDetail modal/form service extraction guard
+// ============================================================
+
+describe('AdvertiserDetail modal/form service extraction guard', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+  const advertiserModalDir = path.join(repoRoot, 'central-dashboard/src/app/features/advertisers');
+  it('AdvertiserModalService exists with modal management methods', () => {
+    const content = fs.readFileSync(path.join(advertiserModalDir, 'advertiser-modal.service.ts'), 'utf-8');
+    expect(content).toContain('class AdvertiserModalService');
+    expect(content).toContain('showEditModal');
+    expect(content).toContain('showDeleteModal');
+    expect(content).toContain('openEditModal');
+    expect(content).toContain('closeEditModal');
+    expect(content).toContain('openDeleteModal');
+    expect(content).toContain('closeDeleteModal');
+  });
+
+  it('AdvertiserFormService exists with form management methods', () => {
+    const content = fs.readFileSync(path.join(advertiserModalDir, 'advertiser-form.service.ts'), 'utf-8');
+    expect(content).toContain('class AdvertiserFormService');
+    expect(content).toContain('editForm');
+    expect(content).toContain('initFromSponsor');
+    expect(content).toContain('resetForm');
+    expect(content).toContain('saving');
+    expect(content).toContain('deleting');
+  });
+
+  it('advertiser-detail component uses AdvertiserModalService and AdvertiserFormService', () => {
+    const content = fs.readFileSync(path.join(advertiserModalDir, 'advertiser-detail.component.ts'), 'utf-8');
+    expect(content).toContain('AdvertiserModalService');
+    expect(content).toContain('AdvertiserFormService');
+    expect(content).toContain('modalService');
+    expect(content).toContain('formService');
+  });
+});
+
+// ============================================================
+// Shared components flattening guard (video-upload-zone + remote-preview)
+// ============================================================
+
+describe('Shared components flattening guard', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+  const sharedComponentsDir = path.join(repoRoot, 'central-dashboard/src/app/shared/components');
+  const sitesComponentsDir2 = path.join(repoRoot, 'central-dashboard/src/app/features/sites/components');
+  it('video-upload-zone lives in shared/components/ (not sites/components/)', () => {
+    const sharedPath = path.join(sharedComponentsDir, 'video-upload-zone/video-upload-zone.component.ts');
+    expect(fs.existsSync(sharedPath)).toBe(true);
+    const oldPath = path.join(sitesComponentsDir2, 'video-upload-zone/video-upload-zone.component.ts');
+    expect(fs.existsSync(oldPath)).toBe(false);
+  });
+
+  it('remote-preview consolidated in shared/components/ (no duplicate in sites/components/)', () => {
+    const sharedPath = path.join(sharedComponentsDir, 'remote-preview/remote-preview.component.ts');
+    expect(fs.existsSync(sharedPath)).toBe(true);
+    const content = fs.readFileSync(sharedPath, 'utf-8');
+    // Must be the OnPush version (not the legacy version)
+    expect(content).toContain('ChangeDetectionStrategy.OnPush');
+    expect(content).toContain('phone-mockup');
+    const oldPath = path.join(sitesComponentsDir2, 'remote-preview/remote-preview.component.ts');
+    expect(fs.existsSync(oldPath)).toBe(false);
+  });
+
+  it('site-content-tab imports video-upload-zone from shared (not sites/components)', () => {
+    const content = fs.readFileSync(path.join(sitesComponentsDir2, 'site-content-tab/site-content-tab.component.ts'), 'utf-8');
+    expect(content).toContain('shared/components/video-upload-zone');
+    expect(content).not.toMatch(/\.\.\/video-upload-zone/);
+  });
+
+  it('site-content-tab imports remote-preview from shared (not sites/components)', () => {
+    const content = fs.readFileSync(path.join(sitesComponentsDir2, 'site-content-tab/site-content-tab.component.ts'), 'utf-8');
+    expect(content).toContain('shared/components/remote-preview');
+    expect(content).not.toMatch(/\.\.\/remote-preview/);
+  });
+
+  it('video-manager imports video-upload-zone from shared (not sites/components)', () => {
+    const content = fs.readFileSync(path.join(sitesComponentsDir2, 'site-content-tab/video-manager/video-manager.component.ts'), 'utf-8');
+    expect(content).toContain('shared/components/video-upload-zone');
+    expect(content).not.toMatch(/\.\.\/\.\.\/video-upload-zone/);
+  });
+});

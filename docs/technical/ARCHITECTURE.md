@@ -111,6 +111,11 @@ neopro/ (monorepo)
 ├── central-dashboard/              # Cloud admin dashboard
 │   ├── src/app/
 │   │   ├── features/
+│   │   │   ├── admin/users/                     # Gestion utilisateurs
+│   │   │   │   ├── users-management.component.ts         # UI : table, modals, filtres
+│   │   │   │   ├── users-management-data.service.ts      # Data : CRUD users, agencies, advertisers
+│   │   │   │   ├── user-filters.service.ts               # Filtres : search, role, status
+│   │   │   │   └── user-validation.service.ts            # Validation : create/update forms
 │   │   │   ├── sites/
 │   │   │   │   ├── site-detail.component.ts     # Page détail (6 onglets) — onglet État : métriques système + hotspot + actions rapides
 │   │   │   │   ├── config-editor/               # Éditeur de configuration site
@@ -133,12 +138,27 @@ neopro/ (monorepo)
 │   │   │   │           ├── command-panel/       #   Terminal, logs, export bundle, connexion zombie
 │   │   │   │           ├── service-status/      #   Réseau, buffer analytics, hotspot, WiFi
 │   │   │   │           └── system-info/         #   Fichiers Pi, config historique, timeline
+│   │   │   ├── advertisers/                     # Gestion sponsors/annonceurs
+│   │   │   │   ├── advertiser-detail.component.ts        # UI : orchestrateur onglets, header, modals
+│   │   │   │   ├── advertiser-detail-data.service.ts     # Data : CRUD sponsor, forkJoin loading
+│   │   │   │   ├── advertiser-modal.service.ts           # Modals : edit/delete visibility state
+│   │   │   │   ├── advertiser-form.service.ts            # Form : edit state, validation, saving/deleting
+│   │   │   │   ├── sponsor-videos-tab.component.ts       # Onglet vidéos sponsor
+│   │   │   │   ├── sponsor-sites-tab.component.ts        # Onglet sites assignés
+│   │   │   │   └── sponsor-campaigns-tab.component.ts    # Onglet campagnes
 │   │   │   ├── content/                         # Gestion contenu cloud
 │   │   │   │   ├── content-management.component.ts       # UI : vidéos, upload, deploy wizard
 │   │   │   │   └── content-management-data.service.ts    # Data : CRUD vidéos, déploiements, image-to-video
 │   │   │   └── sponsor-portal/                  # Page publique portail sponsor (token-based)
 │   │   ├── core/                                # Models, services, guards
-│   │   └── shared/                              # Composants réutilisables
+│   │   └── shared/components/                   # Composants réutilisables cross-features
+│   │       ├── video-upload-zone/               # Upload drag-and-drop vidéo (générique)
+│   │       ├── remote-preview/                  # Mockup télécommande (OnPush, cachés)
+│   │       ├── video-selector/                  # Sélecteur vidéo
+│   │       ├── confirm-dialog/                  # Dialog de confirmation
+│   │       ├── language-selector/               # Sélecteur de langue
+│   │       ├── subscription-badge/              # Badge abonnement
+│   │       └── qr-code-generator/               # Générateur QR code
 │   └── package.json
 │
 ├── e2e/                           # End-to-end tests

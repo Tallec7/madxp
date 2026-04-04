@@ -6,6 +6,8 @@ import { TranslateModule } from '@ngx-translate/core';
 import { NotificationService } from '../../core/services/notification.service';
 import { Sponsor, SponsorVideo, AssignedSite } from './advertiser-detail.models';
 import { AdvertiserDetailDataService, SponsorQuickStats } from './advertiser-detail-data.service';
+import { AdvertiserModalService } from './advertiser-modal.service';
+import { AdvertiserFormService } from './advertiser-form.service';
 import { SponsorVideosTabComponent } from './sponsor-videos-tab.component';
 import { SponsorSitesTabComponent } from './sponsor-sites-tab.component';
 import { SponsorCampaignsTabComponent } from './sponsor-campaigns-tab.component';
@@ -14,6 +16,7 @@ import { SponsorCampaignsTabComponent } from './sponsor-campaigns-tab.component'
   selector: 'app-sponsor-detail',
   standalone: true,
   imports: [CommonModule, RouterModule, FormsModule, TranslateModule, SponsorVideosTabComponent, SponsorSitesTabComponent, SponsorCampaignsTabComponent],
+  providers: [AdvertiserModalService, AdvertiserFormService],
   template: `
     <div class="sponsor-detail-container">
       <!-- Header -->
@@ -224,7 +227,7 @@ import { SponsorCampaignsTabComponent } from './sponsor-campaigns-tab.component'
       </div>
 
       <!-- Edit Modal -->
-      <div class="modal-overlay" *ngIf="showEditModal" (click)="closeEditModal()">
+      <div class="modal-overlay" *ngIf="modalService.showEditModal()" (click)="closeEditModal()">
         <div class="modal" (click)="$event.stopPropagation()">
           <div class="modal-header">
             <h2>Modifier le sponsor</h2>
@@ -328,8 +331,8 @@ import { SponsorCampaignsTabComponent } from './sponsor-campaigns-tab.component'
               <button type="button" class="btn btn-secondary" (click)="closeEditModal()">
                 Annuler
               </button>
-              <button type="submit" class="btn btn-primary" [disabled]="saving">
-                {{ saving ? 'Enregistrement...' : 'Enregistrer' }}
+              <button type="submit" class="btn btn-primary" [disabled]="formService.saving()">
+                {{ formService.saving() ? 'Enregistrement...' : 'Enregistrer' }}
               </button>
             </div>
           </form>
@@ -337,7 +340,7 @@ import { SponsorCampaignsTabComponent } from './sponsor-campaigns-tab.component'
       </div>
 
       <!-- Delete Confirmation Modal -->
-      <div class="modal-overlay" *ngIf="showDeleteModal" (click)="closeDeleteModal()">
+      <div class="modal-overlay" *ngIf="modalService.showDeleteModal()" (click)="closeDeleteModal()">
         <div class="modal modal-sm" (click)="$event.stopPropagation()">
           <div class="modal-header">
             <h2>Confirmer la suppression</h2>
@@ -353,8 +356,8 @@ import { SponsorCampaignsTabComponent } from './sponsor-campaigns-tab.component'
             <button class="btn btn-secondary" (click)="closeDeleteModal()">
               Annuler
             </button>
-            <button class="btn btn-danger" (click)="deleteSponsor()" [disabled]="deleting">
-              {{ deleting ? ('common.deleting' | translate) : ('common.deletePermanently' | translate) }}
+            <button class="btn btn-danger" (click)="deleteSponsor()" [disabled]="formService.deleting()">
+              {{ formService.deleting() ? ('common.deleting' | translate) : ('common.deletePermanently' | translate) }}
             </button>
           </div>
         </div>
@@ -821,14 +824,12 @@ export class SponsorDetailComponent implements OnInit {
   loading = false;
   error = '';
 
-  showEditModal = false;
-  showDeleteModal = false;
-  saving = false;
-  deleting = false;
-
+  // Template-bound alias for editForm (two-way binding with ngModel)
   editForm: Partial<Sponsor> = {};
 
   private readonly dataService = inject(AdvertiserDetailDataService);
+  readonly modalService = inject(AdvertiserModalService);
+  readonly formService = inject(AdvertiserFormService);
   private readonly notification = inject(NotificationService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
@@ -865,20 +866,22 @@ export class SponsorDetailComponent implements OnInit {
     this.router.navigate(['/advertisers', this.sponsorId, 'analytics']);
   }
 
-  // Edit Functions
+  // Edit — delegates to modal + form services
   editSponsor() {
-    this.editForm = { ...this.sponsor! };
-    this.showEditModal = true;
+    this.formService.initFromSponsor(this.sponsor!);
+    this.editForm = this.formService.editForm();
+    this.modalService.openEditModal();
   }
 
   closeEditModal() {
-    this.showEditModal = false;
+    this.modalService.closeEditModal();
+    this.formService.resetForm();
     this.editForm = {};
   }
 
   saveEdit(event: Event) {
     event.preventDefault();
-    this.saving = true;
+    this.formService.saving.set(true);
 
     this.dataService.updateSponsor(this.sponsorId, this.editForm).subscribe({
       next: (sponsor) => {
@@ -888,25 +891,25 @@ export class SponsorDetailComponent implements OnInit {
       },
       error: () => {
         this.notification.error('Erreur lors de la sauvegarde');
-        this.saving = false;
+        this.formService.saving.set(false);
       },
       complete: () => {
-        this.saving = false;
+        this.formService.saving.set(false);
       }
     });
   }
 
-  // Delete Functions
+  // Delete — delegates to modal + form services
   confirmDelete() {
-    this.showDeleteModal = true;
+    this.modalService.openDeleteModal();
   }
 
   closeDeleteModal() {
-    this.showDeleteModal = false;
+    this.modalService.closeDeleteModal();
   }
 
   deleteSponsor() {
-    this.deleting = true;
+    this.formService.deleting.set(true);
 
     this.dataService.deleteSponsor(this.sponsorId).subscribe({
       next: () => {
@@ -917,7 +920,7 @@ export class SponsorDetailComponent implements OnInit {
         this.notification.error('Erreur lors de la suppression');
       },
       complete: () => {
-        this.deleting = false;
+        this.formService.deleting.set(false);
       }
     });
   }

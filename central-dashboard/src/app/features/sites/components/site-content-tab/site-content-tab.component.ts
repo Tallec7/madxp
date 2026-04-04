@@ -20,8 +20,8 @@ import {
   ContentOwner
 } from '../../../../core/models';
 import { VideoDeployState, VideoItem } from '../video-library/video-library.component';
-import { UploadedVideo } from '../video-upload-zone/video-upload-zone.component';
-import { RemotePreviewComponent } from '../remote-preview/remote-preview.component';
+import { UploadedVideo } from '../../../../shared/components/video-upload-zone/video-upload-zone.component';
+import { RemotePreviewComponent } from '../../../../shared/components/remote-preview/remote-preview.component';
 import { TranslateModule } from '@ngx-translate/core';
 
 import { UnifiedVideoOption, VideoOptionGroupEntry, OrphanedVideoDetail } from './content-tab.models';
