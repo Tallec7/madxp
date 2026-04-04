@@ -1,3 +1,9 @@
+# [3.123.0](https://github.com/Tallec7/neopro/compare/v3.122.1...v3.123.0) (2026-04-04)
+
+### Features
+
+- **dashboard:** integrate @bworlds/launchkit SDK for uptime monitoring and error capture ([ec742dd](https://github.com/Tallec7/neopro/commit/ec742dd2fed0a7ff7f9965fba3fae7582340e2e7))
+
 # [3.129.0](https://github.com/Tallec7/neopro/compare/v3.128.0...v3.129.0) (2026-04-04)
 
 ### Features
