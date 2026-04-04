@@ -3,7 +3,7 @@ import * as sitesController from '../controllers/sites.controller';
 import * as configHistoryController from '../controllers/config-history.controller';
 import { siteSubscriptionRouter } from './subscription.routes';
 import { authenticate, requireRole } from '../middleware/auth';
-import { validate, schemas } from '../middleware/validation';
+import { validate, validateParams, validateQuery, paramSchemas, querySchemas, schemas } from '../middleware/validation';
 import { paginationMiddleware } from '../middleware/pagination';
 import { monitoringRateLimit, adminRateLimit, sensitiveRateLimit } from '../middleware/user-rate-limit';
 
@@ -210,6 +210,8 @@ router.get(
   '/:id/config-history',
   authenticate,
   adminRateLimit,
+  validateParams(paramSchemas.id),
+  validateQuery(querySchemas.configHistory),
   configHistoryController.getConfigHistory
 );
 
@@ -217,6 +219,7 @@ router.get(
   '/:id/config-history/:versionId',
   authenticate,
   adminRateLimit,
+  validateParams(paramSchemas.siteIdAndVersionId),
   configHistoryController.getConfigVersion
 );
 
@@ -225,6 +228,8 @@ router.post(
   authenticate,
   requireRole('admin', 'operator'),
   sensitiveRateLimit,
+  validateParams(paramSchemas.id),
+  validate(schemas.saveConfigVersion),
   configHistoryController.saveConfigVersion
 );
 
@@ -232,6 +237,8 @@ router.get(
   '/:id/config-history-compare',
   authenticate,
   adminRateLimit,
+  validateParams(paramSchemas.id),
+  validateQuery(querySchemas.configDiff),
   configHistoryController.compareConfigVersions
 );
 
@@ -240,6 +247,8 @@ router.post(
   authenticate,
   requireRole('admin', 'operator'),
   adminRateLimit,
+  validateParams(paramSchemas.id),
+  validate(schemas.previewConfigRestore),
   configHistoryController.previewConfigDiff
 );
 

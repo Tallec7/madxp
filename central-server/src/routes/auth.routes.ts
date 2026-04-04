@@ -17,7 +17,7 @@ router.post('/logout', apiRateLimit, authenticate, authController.logout);
 // and is not a security-sensitive operation (just reads current user)
 router.get('/me', monitoringRateLimit, authenticate, authController.me);
 
-router.post('/change-password', apiRateLimit, authenticate, authController.changePassword);
+router.post('/change-password', apiRateLimit, authenticate, validate(schemas.changePassword), authController.changePassword);
 
 // Password reset routes (public - no auth required)
 // These need strict rate limit to prevent email enumeration and abuse

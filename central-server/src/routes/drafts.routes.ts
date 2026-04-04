@@ -6,6 +6,7 @@
 
 import { Router } from 'express';
 import { authenticate, requireRole } from '../middleware/auth';
+import { validate, validateParams, paramSchemas, schemas } from '../middleware/validation';
 import { adminRateLimit, sensitiveRateLimit, monitoringRateLimit } from '../middleware/user-rate-limit';
 import {
   getDraft,
@@ -27,6 +28,7 @@ router.get(
   authenticate,
   requireRole('super_admin', 'admin', 'operator'),
   adminRateLimit,
+  validateParams(paramSchemas.siteId),
   getDraft
 );
 
@@ -39,6 +41,8 @@ router.put(
   authenticate,
   requireRole('super_admin', 'admin', 'operator'),
   sensitiveRateLimit,
+  validateParams(paramSchemas.siteId),
+  validate(schemas.saveDraft),
   saveDraft
 );
 
@@ -51,6 +55,7 @@ router.delete(
   authenticate,
   requireRole('super_admin', 'admin', 'operator'),
   sensitiveRateLimit,
+  validateParams(paramSchemas.siteId),
   deleteDraft
 );
 
@@ -63,6 +68,7 @@ router.post(
   authenticate,
   requireRole('super_admin', 'admin', 'operator'),
   adminRateLimit,
+  validateParams(paramSchemas.siteId),
   validateDraft
 );
 
@@ -75,6 +81,7 @@ router.post(
   authenticate,
   requireRole('super_admin', 'admin', 'operator'),
   sensitiveRateLimit,
+  validateParams(paramSchemas.siteId),
   deployDraft
 );
 
@@ -86,6 +93,7 @@ router.get(
   '/:siteId/draft/deployment/:deploymentId',
   authenticate,
   monitoringRateLimit,
+  validateParams(paramSchemas.siteIdAndDeploymentId),
   getDeploymentProgress
 );
 

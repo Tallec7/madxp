@@ -1,5 +1,6 @@
 import express from 'express';
 import { authenticate, requireRole } from '../middleware/auth';
+import { validate, validateParams, validateQuery, paramSchemas, querySchemas, schemas } from '../middleware/validation';
 import { uploadVideo } from '../middleware/upload';
 import {
   getAdvertiserDashboard,
@@ -52,6 +53,7 @@ router.get(
   '/stats',
   authenticate,
   requireRole('advertiser', 'admin'),
+  validateQuery(querySchemas.dateRange),
   getAdvertiserDetailedStats
 );
 
@@ -72,6 +74,7 @@ router.get(
   '/campaigns/:campaignId',
   authenticate,
   requireRole('advertiser', 'admin'),
+  validateParams(paramSchemas.campaignId),
   getAdvertiserCampaignDetail
 );
 
@@ -86,6 +89,7 @@ router.post(
   authenticate,
   requireRole('advertiser', 'admin'),
   uploadVideo.single('video'),
+  validate(schemas.uploadAdvertiserVideo),
   uploadAdvertiserVideo
 );
 
@@ -94,6 +98,8 @@ router.put(
   '/videos/:videoId',
   authenticate,
   requireRole('advertiser', 'admin'),
+  validateParams(paramSchemas.videoId),
+  validate(schemas.updateAdvertiserVideo),
   updateAdvertiserVideo
 );
 
@@ -102,6 +108,7 @@ router.delete(
   '/videos/:videoId',
   authenticate,
   requireRole('advertiser', 'admin'),
+  validateParams(paramSchemas.videoId),
   deleteAdvertiserVideo
 );
 
@@ -110,6 +117,8 @@ router.get(
   '/videos/:videoId/stats',
   authenticate,
   requireRole('advertiser', 'admin'),
+  validateParams(paramSchemas.videoId),
+  validateQuery(querySchemas.dateRange),
   getAdvertiserVideoStats
 );
 

@@ -1,6 +1,6 @@
 import express from 'express';
 import { authenticate, requireRole, requireSuperAdmin } from '../middleware/auth';
-import { validate, schemas } from '../middleware/validation';
+import { validate, validateParams, validateQuery, paramSchemas, querySchemas, schemas } from '../middleware/validation';
 import {
   listUsers,
   getUser,
@@ -43,6 +43,7 @@ router.get(
   '/',
   authenticate,
   requireRole('admin'),
+  validateQuery(querySchemas.listUsers),
   listUsers
 );
 
@@ -51,6 +52,7 @@ router.get(
   '/:id',
   authenticate,
   requireRole('admin'),
+  validateParams(paramSchemas.id),
   getUser
 );
 
@@ -68,6 +70,7 @@ router.put(
   '/:id',
   authenticate,
   requireSuperAdmin(),
+  validateParams(paramSchemas.id),
   validate(schemas.updateUser),
   updateUser
 );
@@ -77,6 +80,7 @@ router.delete(
   '/:id',
   authenticate,
   requireSuperAdmin(),
+  validateParams(paramSchemas.id),
   deleteUser
 );
 
@@ -85,6 +89,8 @@ router.patch(
   '/:id/status',
   authenticate,
   requireSuperAdmin(),
+  validateParams(paramSchemas.id),
+  validate(schemas.changeUserStatus),
   toggleUserStatus
 );
 
@@ -93,6 +99,8 @@ router.post(
   '/:id/reset-password',
   authenticate,
   requireSuperAdmin(),
+  validateParams(paramSchemas.id),
+  validate(schemas.adminResetPassword),
   adminResetPassword
 );
 

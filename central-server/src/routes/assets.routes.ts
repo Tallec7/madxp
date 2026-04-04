@@ -2,6 +2,7 @@ import { Router } from 'express';
 import multer from 'multer';
 import * as assetsController from '../controllers/assets.controller';
 import { authenticate, requireRole } from '../middleware/auth';
+import { validate, validateParams, paramSchemas, schemas } from '../middleware/validation';
 
 const router = Router();
 
@@ -36,6 +37,7 @@ router.post(
   '/watermark/:siteId',
   authenticate,
   requireRole('admin', 'operator'),
+  validateParams(paramSchemas.siteId),
   uploadImage.single('image'),
   assetsController.uploadWatermark
 );
@@ -44,6 +46,7 @@ router.post(
 router.post(
   '/watermark/validate',
   authenticate,
+  validate(schemas.validateWatermarkConfig),
   assetsController.validateWatermarkConfig
 );
 
@@ -53,6 +56,8 @@ router.post(
   '/deploy/:siteId',
   authenticate,
   requireRole('admin', 'operator'),
+  validateParams(paramSchemas.siteId),
+  validate(schemas.deployAsset),
   assetsController.deployAsset
 );
 

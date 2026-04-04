@@ -1,5 +1,6 @@
 import express from 'express';
 import { authenticate, requireRole, requireAdmin } from '../middleware/auth';
+import { validate, validateParams, validateQuery, paramSchemas, querySchemas, schemas } from '../middleware/validation';
 import {
   // CRUD Agences (admin)
   listAgencies,
@@ -44,6 +45,7 @@ router.get(
   '/portal/sites/:siteId',
   authenticate,
   requireRole('agency', 'admin', 'super_admin'),
+  validateParams(paramSchemas.siteId),
   getAgencySiteDetails
 );
 
@@ -52,6 +54,7 @@ router.get(
   '/portal/stats',
   authenticate,
   requireRole('agency', 'admin', 'super_admin'),
+  validateQuery(querySchemas.dateRange),
   getAgencyStats
 );
 
@@ -72,6 +75,7 @@ router.get(
   '/:id',
   authenticate,
   requireRole('admin', 'super_admin', 'agency'),
+  validateParams(paramSchemas.id),
   getAgency
 );
 
@@ -80,6 +84,7 @@ router.post(
   '/',
   authenticate,
   requireAdmin(),
+  validate(schemas.createAgency),
   createAgency
 );
 
@@ -88,6 +93,8 @@ router.put(
   '/:id',
   authenticate,
   requireAdmin(),
+  validateParams(paramSchemas.id),
+  validate(schemas.updateAgency),
   updateAgency
 );
 
@@ -96,6 +103,7 @@ router.delete(
   '/:id',
   authenticate,
   requireAdmin(),
+  validateParams(paramSchemas.id),
   deleteAgency
 );
 
@@ -108,6 +116,7 @@ router.get(
   '/:id/sites',
   authenticate,
   requireAdmin(),
+  validateParams(paramSchemas.id),
   getAgencySitesAdmin
 );
 
@@ -116,6 +125,8 @@ router.post(
   '/:id/sites',
   authenticate,
   requireAdmin(),
+  validateParams(paramSchemas.id),
+  validate(schemas.addSitesToAgency),
   addSitesToAgency
 );
 
@@ -124,6 +135,7 @@ router.delete(
   '/:id/sites/:siteId',
   authenticate,
   requireAdmin(),
+  validateParams(paramSchemas.idAndSiteId),
   removeSiteFromAgency
 );
 

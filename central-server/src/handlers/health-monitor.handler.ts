@@ -71,11 +71,13 @@ export async function syncDbWithWebSocketState(ctx: SocketContext): Promise<void
   try {
     const now = Date.now();
 
+    const staleThresholdSeconds = Math.floor(STALE_ONLINE_THRESHOLD_MS / 1000);
     const result = await query<{ id: string; site_name: string; last_seen_at: Date }>(
       `SELECT id, site_name, last_seen_at
        FROM sites
        WHERE status = 'online'
-         AND last_seen_at < NOW() - INTERVAL '${Math.floor(STALE_ONLINE_THRESHOLD_MS / 1000)} seconds'`
+         AND last_seen_at < NOW() - ($1 || ' seconds')::interval`,
+      [staleThresholdSeconds]
     );
 
     let correctedCount = 0;

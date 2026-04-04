@@ -1,5 +1,6 @@
 import express from 'express';
 import { authenticate } from '../middleware/auth';
+import { validate, schemas } from '../middleware/validation';
 import { ingestFrontendLog } from '../controllers/logs.controller';
 
 const router = express.Router();
@@ -25,6 +26,6 @@ const router = express.Router();
  * @body {string} [url] - Current page URL
  * @body {object[]} [breadcrumbs] - User journey breadcrumbs (for errors)
  */
-router.post('/frontend', authenticate, ingestFrontendLog);
+router.post('/frontend', authenticate, validate(schemas.frontendLog), ingestFrontendLog);
 
 export default router;
