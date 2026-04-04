@@ -58,6 +58,8 @@ source central-server/.env && psql "$DATABASE_URL" -f central-server/src/scripts
 - Commit des secrets ou fichiers `.env`
 - Push directement sur `main` sans PR
 - Requêtes SQL non paramétrées (`'${email}'` → injection SQL)
+- Ajouter une route avec paramètre (`:id`, `:siteId`) sans `validateParams(paramSchemas.X)` dans le fichier routes (la validation se fait au niveau routes, pas controllers — smoke test enforced)
+- Ajouter une route POST/PUT/PATCH avec body sans `validate(schemas.X)` dans le fichier routes (smoke test enforced)
 - Ajouter `NoNewPrivileges=true` dans les fichiers `.service` systemd (bloque sudo, deadlock OTA — smoke test enforced)
 - Ajouter `ExecStop=pkill -9` dans `neopro-kiosk.service` (bypasse le trap handler du watchdog, corrompt l'état GPU V3D sur Pi 5 — smoke test enforced)
 - Dupliquer `--disable-features` dans kiosk-watchdog.sh (Chromium n'accepte qu'un seul flag, le dernier écrase les précédents — smoke test enforced)

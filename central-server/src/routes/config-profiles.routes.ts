@@ -6,6 +6,7 @@
 
 import { Router } from 'express';
 import { authenticate, requireRole } from '../middleware/auth';
+import { validate, validateParams, paramSchemas, schemas } from '../middleware/validation';
 import { adminRateLimit, sensitiveRateLimit } from '../middleware/user-rate-limit';
 import {
   getProfiles,
@@ -29,6 +30,7 @@ router.get(
   authenticate,
   requireRole('super_admin', 'admin', 'operator'),
   adminRateLimit,
+  validateParams(paramSchemas.siteId),
   getProfiles
 );
 
@@ -41,6 +43,7 @@ router.get(
   authenticate,
   requireRole('super_admin', 'admin', 'operator'),
   adminRateLimit,
+  validateParams(paramSchemas.siteIdAndProfileId),
   getProfile
 );
 
@@ -53,6 +56,8 @@ router.post(
   authenticate,
   requireRole('super_admin', 'admin', 'operator'),
   sensitiveRateLimit,
+  validateParams(paramSchemas.siteId),
+  validate(schemas.createProfile),
   createProfile
 );
 
@@ -65,6 +70,8 @@ router.put(
   authenticate,
   requireRole('super_admin', 'admin', 'operator'),
   sensitiveRateLimit,
+  validateParams(paramSchemas.siteIdAndProfileId),
+  validate(schemas.updateProfile),
   updateProfile
 );
 
@@ -77,6 +84,8 @@ router.put(
   authenticate,
   requireRole('super_admin', 'admin', 'operator'),
   sensitiveRateLimit,
+  validateParams(paramSchemas.siteIdAndProfileId),
+  validate(schemas.updateProfileConfiguration),
   updateProfileConfiguration
 );
 
@@ -89,6 +98,7 @@ router.delete(
   authenticate,
   requireRole('super_admin', 'admin', 'operator'),
   sensitiveRateLimit,
+  validateParams(paramSchemas.siteIdAndProfileId),
   deleteProfile
 );
 
@@ -101,6 +111,7 @@ router.post(
   authenticate,
   requireRole('super_admin', 'admin', 'operator'),
   sensitiveRateLimit,
+  validateParams(paramSchemas.siteIdAndProfileId),
   deployProfile
 );
 
@@ -113,6 +124,7 @@ router.post(
   authenticate,
   requireRole('super_admin', 'admin', 'operator'),
   sensitiveRateLimit,
+  validateParams(paramSchemas.siteId),
   syncProfiles
 );
 

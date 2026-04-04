@@ -508,14 +508,15 @@ Toutes les routes API sont protégées par validation Joi au niveau middleware :
 - **`validateParams(paramSchemas.X)`** — valide les paramètres d'URL (`:id`, `:siteId`, etc.), vérifie les UUIDs
 - **`validateQuery(querySchemas.X)`** — valide les query strings (`?from=`, `?limit=`, etc.)
 
-Fichier central : `src/middleware/validation.ts` (40+ schémas body, 15 schémas params, 12 schémas query).
+Fichier central : `src/middleware/validation.ts` (45+ schémas body, 17 schémas params, 13 schémas query).
 Fichier analytics complémentaire : `src/middleware/analytics-validation.ts` (advertisers, site-sponsors).
 
-16 fichiers routes couverts : admin, agency, analytics, assets, auth, campaign, drafts, logs,
-objectives, playlist-schedules, reports, safe, sites (config-history), updates, users,
-advertiser-portal, advertiser-sites.
+21 fichiers routes couverts : admin, agency, analytics, assets, auth, campaign, config-profiles,
+drafts, groups, logs, objectives, playlist-schedules, remote, reports, safe,
+sites (CRUD + diagnostics + WiFi + PIN + commands + config-history), subscription,
+updates, users, advertiser-portal, advertiser-sites.
 
-29 smoke tests enforced (`Input validation coverage` + `SQL injection prevention`).
+Smoke tests enforced (`Input validation coverage` + `SQL injection prevention` + `validateParams on parameterized routes`).
 
 ### 5. Repository Pattern (central-server)
 

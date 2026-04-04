@@ -27,26 +27,27 @@ router.get('/debug/connections', authenticate, requireRole('admin'), adminRateLi
 // Route globale pour le résumé de la queue (doit être avant /:id)
 router.get('/queue/summary', authenticate, adminRateLimit, sitesController.getQueueSummary);
 
-router.get('/:id', authenticate, adminRateLimit, sitesController.getSite);
+router.get('/:id', authenticate, adminRateLimit, validateParams(paramSchemas.id), sitesController.getSite);
 
-router.get('/:id/metrics', authenticate, monitoringRateLimit, sitesController.getSiteMetrics);
+router.get('/:id/metrics', authenticate, monitoringRateLimit, validateParams(paramSchemas.id), sitesController.getSiteMetrics);
 
-router.get('/:id/connection-status', authenticate, monitoringRateLimit, sitesController.getSiteConnectionStatus);
+router.get('/:id/connection-status', authenticate, monitoringRateLimit, validateParams(paramSchemas.id), sitesController.getSiteConnectionStatus);
 
 // Endpoint agrégé pour dashboard (réduit de 3 requêtes à 1)
-router.get('/:id/dashboard', authenticate, monitoringRateLimit, sitesController.getSiteDashboardData);
+router.get('/:id/dashboard', authenticate, monitoringRateLimit, validateParams(paramSchemas.id), sitesController.getSiteDashboardData);
 
 // Timeline des événements récents (P3.4 - déploiements, commandes, alertes, configs)
-router.get('/:id/timeline', authenticate, adminRateLimit, sitesController.getSiteTimeline);
+router.get('/:id/timeline', authenticate, adminRateLimit, validateParams(paramSchemas.id), sitesController.getSiteTimeline);
 
 // Match history for clubs (Phase 1.2 - audience, videos played per match)
-router.get('/:id/match-history', authenticate, monitoringRateLimit, sitesController.getSiteMatchHistory);
+router.get('/:id/match-history', authenticate, monitoringRateLimit, validateParams(paramSchemas.id), sitesController.getSiteMatchHistory);
 
 router.get(
   '/:id/logs',
   authenticate,
   requireRole('admin', 'operator'),
   adminRateLimit,
+  validateParams(paramSchemas.id),
   sitesController.getSiteLogs
 );
 
@@ -55,6 +56,7 @@ router.get(
   authenticate,
   requireRole('admin', 'operator'),
   adminRateLimit,
+  validateParams(paramSchemas.id),
   sitesController.getSystemInfo
 );
 
@@ -63,6 +65,7 @@ router.get(
   authenticate,
   requireRole('admin', 'operator'),
   adminRateLimit,
+  validateParams(paramSchemas.id),
   sitesController.getHotspotConfig
 );
 
@@ -71,6 +74,7 @@ router.get(
   authenticate,
   requireRole('admin', 'operator'),
   adminRateLimit,
+  validateParams(paramSchemas.id),
   sitesController.getHealthStatus
 );
 
@@ -79,6 +83,7 @@ router.get(
   authenticate,
   requireRole('admin', 'operator'),
   adminRateLimit,
+  validateParams(paramSchemas.id),
   sitesController.runDiagnostics
 );
 
@@ -87,6 +92,7 @@ router.get(
   authenticate,
   requireRole('admin', 'operator'),
   adminRateLimit,
+  validateParams(paramSchemas.id),
   sitesController.getNetworkDiagnostics
 );
 
@@ -95,6 +101,7 @@ router.post(
   authenticate,
   requireRole('admin', 'operator'),
   sensitiveRateLimit,
+  validateParams(paramSchemas.id),
   sitesController.fixHotspot
 );
 
@@ -104,6 +111,7 @@ router.get(
   authenticate,
   requireRole('admin', 'operator'),
   adminRateLimit,
+  validateParams(paramSchemas.id),
   sitesController.getWifiBssidStatus
 );
 
@@ -112,6 +120,7 @@ router.delete(
   authenticate,
   requireRole('admin', 'operator'),
   sensitiveRateLimit,
+  validateParams(paramSchemas.id),
   sitesController.removeBssidLock
 );
 
@@ -120,6 +129,7 @@ router.post(
   authenticate,
   requireRole('admin', 'operator'),
   sensitiveRateLimit,
+  validateParams(paramSchemas.id),
   sitesController.optimizeForMesh
 );
 
@@ -129,6 +139,7 @@ router.get(
   authenticate,
   requireRole('admin', 'operator'),
   adminRateLimit,
+  validateParams(paramSchemas.id),
   sitesController.scanWifiNetworks
 );
 
@@ -137,6 +148,7 @@ router.post(
   authenticate,
   requireRole('admin', 'operator'),
   sensitiveRateLimit,
+  validateParams(paramSchemas.id),
   sitesController.connectWifiClient
 );
 
@@ -145,6 +157,7 @@ router.get(
   authenticate,
   requireRole('admin', 'operator'),
   adminRateLimit,
+  validateParams(paramSchemas.id),
   sitesController.exportDebugBundle
 );
 
@@ -162,6 +175,7 @@ router.put(
   authenticate,
   requireRole('admin', 'operator'),
   sensitiveRateLimit,
+  validateParams(paramSchemas.id),
   validate(schemas.updateSite),
   sitesController.updateSite
 );
@@ -171,6 +185,7 @@ router.delete(
   authenticate,
   requireRole('admin'),
   sensitiveRateLimit,
+  validateParams(paramSchemas.id),
   sitesController.deleteSite
 );
 
@@ -179,6 +194,7 @@ router.post(
   authenticate,
   requireRole('admin'),
   sensitiveRateLimit,
+  validateParams(paramSchemas.id),
   sitesController.regenerateApiKey
 );
 
@@ -187,6 +203,7 @@ router.post(
   authenticate,
   requireRole('admin', 'operator'),
   sensitiveRateLimit,
+  validateParams(paramSchemas.id),
   sitesController.sendCommand
 );
 
@@ -194,6 +211,7 @@ router.get(
   '/:id/command/:commandId',
   authenticate,
   adminRateLimit,
+  validateParams(paramSchemas.idAndCommandId),
   sitesController.getCommandStatus
 );
 
@@ -202,6 +220,7 @@ router.get(
   '/:id/local-content',
   authenticate,
   monitoringRateLimit,
+  validateParams(paramSchemas.id),
   sitesController.getSiteLocalContent
 );
 
@@ -257,6 +276,7 @@ router.get(
   '/:id/pending-commands',
   authenticate,
   adminRateLimit,
+  validateParams(paramSchemas.id),
   sitesController.getPendingCommands
 );
 
@@ -265,6 +285,7 @@ router.delete(
   authenticate,
   requireRole('admin', 'operator'),
   sensitiveRateLimit,
+  validateParams(paramSchemas.idAndCommandId),
   sitesController.cancelPendingCommand
 );
 
@@ -273,6 +294,7 @@ router.delete(
   authenticate,
   requireRole('admin', 'operator'),
   sensitiveRateLimit,
+  validateParams(paramSchemas.id),
   sitesController.clearPendingCommands
 );
 
@@ -282,6 +304,7 @@ router.get(
   authenticate,
   requireRole('admin', 'operator'),
   adminRateLimit,
+  validateParams(paramSchemas.id),
   sitesController.getRemotePinStatus
 );
 
@@ -290,6 +313,7 @@ router.post(
   authenticate,
   requireRole('admin', 'operator'),
   sensitiveRateLimit,
+  validateParams(paramSchemas.id),
   validate(schemas.setRemotePin),
   sitesController.setRemotePin
 );
@@ -299,6 +323,7 @@ router.delete(
   authenticate,
   requireRole('admin', 'operator'),
   sensitiveRateLimit,
+  validateParams(paramSchemas.id),
   sitesController.clearRemotePin
 );
 

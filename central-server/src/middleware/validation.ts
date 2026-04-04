@@ -628,6 +628,25 @@ export const schemas = {
   }),
 
   // ============================================================================
+  // Config Profiles schemas
+  // ============================================================================
+
+  createProfile: Joi.object({
+    name: Joi.string().min(1).max(255).required(),
+    description: Joi.string().max(1000).optional().allow(null, ''),
+    configuration: Joi.object().optional(),
+  }),
+
+  updateProfile: Joi.object({
+    name: Joi.string().min(1).max(255).optional(),
+    description: Joi.string().max(1000).optional().allow(null, ''),
+  }),
+
+  updateProfileConfiguration: Joi.object({
+    configuration: Joi.object().required(),
+  }),
+
+  // ============================================================================
   // Advertiser Portal schemas
   // ============================================================================
 
@@ -717,6 +736,14 @@ export const paramSchemas = {
     sponsorId: Joi.string().uuid().required(),
     siteId: Joi.string().uuid().required(),
   }),
+  idAndCommandId: Joi.object({
+    id: Joi.string().uuid().required(),
+    commandId: Joi.string().uuid().required(),
+  }),
+  siteIdAndProfileId: Joi.object({
+    siteId: Joi.string().uuid().required(),
+    profileId: Joi.string().uuid().required(),
+  }),
 };
 
 // ============================================================================
@@ -799,5 +826,9 @@ export const querySchemas = {
   configDiff: Joi.object({
     version1: Joi.string().uuid().required(),
     version2: Joi.string().uuid().required(),
+  }),
+
+  verifyResetToken: Joi.object({
+    token: Joi.string().min(1).max(500).required(),
   }),
 };

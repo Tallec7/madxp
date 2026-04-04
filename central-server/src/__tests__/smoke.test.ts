@@ -13307,10 +13307,13 @@ describe('Input validation coverage — Joi middleware on all routes', () => {
     'assets.routes.ts',
     'auth.routes.ts',
     'campaign.routes.ts',
+    'config-profiles.routes.ts',
     'drafts.routes.ts',
+    'groups.routes.ts',
     'logs.routes.ts',
     'objectives.routes.ts',
     'playlist-schedules.routes.ts',
+    'remote.routes.ts',
     'reports.routes.ts',
     'safe.routes.ts',
     'updates.routes.ts',
@@ -13359,6 +13362,9 @@ describe('Input validation coverage — Joi middleware on all routes', () => {
     { file: 'users.routes.ts', description: 'id param on user routes' },
     { file: 'advertiser-portal.routes.ts', description: 'videoId param on video routes' },
     { file: 'advertiser-sites.routes.ts', description: 'id param on advertiser-sites routes' },
+    { file: 'groups.routes.ts', description: 'id param on group routes' },
+    { file: 'remote.routes.ts', description: 'siteId param on remote routes' },
+    { file: 'config-profiles.routes.ts', description: 'siteId param on config-profiles routes' },
   ];
 
   for (const check of paramValidationChecks) {
@@ -13383,6 +13389,93 @@ describe('Input validation coverage — Joi middleware on all routes', () => {
       hasConfigHistorySaveValidation: true,
       hasConfigHistoryDiffValidation: true,
       hasConfigPreviewValidation: true,
+    });
+  });
+
+  // ---------------------------------------------------------------
+  // COMPREHENSIVE: Every route with parameterized path segments
+  // (e.g. /:id, /:siteId) MUST have validateParams() middleware.
+  // This prevents unvalidated UUIDs/strings reaching controllers.
+  // ---------------------------------------------------------------
+  const routeFilesWithParams: Array<{ file: string; exemptPatterns?: string[] }> = [
+    { file: 'sites.routes.ts', exemptPatterns: ['siteSubscriptionRouter'] },
+    { file: 'groups.routes.ts' },
+    { file: 'remote.routes.ts' },
+    { file: 'config-profiles.routes.ts' },
+    { file: 'admin.routes.ts' },
+    { file: 'agency.routes.ts' },
+    { file: 'analytics.routes.ts' },
+    { file: 'campaign.routes.ts' },
+    { file: 'updates.routes.ts' },
+    { file: 'users.routes.ts' },
+    { file: 'safe.routes.ts' },
+    { file: 'reports.routes.ts' },
+    { file: 'objectives.routes.ts' },
+    { file: 'playlist-schedules.routes.ts' },
+    { file: 'drafts.routes.ts' },
+    { file: 'assets.routes.ts' },
+    { file: 'advertiser-portal.routes.ts' },
+    { file: 'advertiser-sites.routes.ts' },
+    { file: 'auth.routes.ts' },
+  ];
+
+  for (const { file, exemptPatterns } of routeFilesWithParams) {
+    it(`${file} every parameterized route must have validateParams()`, () => {
+      const content = fs.readFileSync(path.join(routesDir, file), 'utf8');
+      const lines = content.split('\n');
+      const violations: string[] = [];
+
+      // Match route definitions with path parameters: router.get('/:id/...', ...)
+      // Group lines into route blocks (router.method call may span multiple lines)
+      const routeRegex = /router\.(get|post|put|patch|delete)\(\s*['"`]\/:([a-zA-Z]+)/;
+
+      for (let i = 0; i < lines.length; i++) {
+        const match = routeRegex.exec(lines[i]);
+        if (!match) continue;
+
+        // Check if any exempt pattern is on this line
+        if (exemptPatterns?.some(p => lines[i].includes(p))) continue;
+
+        // Look ahead up to 10 lines for validateParams in the same route definition
+        const routeBlock = lines.slice(i, i + 10).join('\n');
+        const hasValidateParams = routeBlock.includes('validateParams(') ||
+          routeBlock.includes('siteSponsorValidation.') ||
+          routeBlock.includes('analyticsValidation.');
+
+        if (!hasValidateParams) {
+          violations.push(`line ${i + 1}: ${lines[i].trim()}`);
+        }
+      }
+
+      expect({
+        routesWithoutParamValidation: violations,
+      }).toEqual({
+        routesWithoutParamValidation: [],
+      });
+    });
+  }
+
+  // auth.routes.ts verifyResetToken must validate the token query param
+  it('auth.routes.ts GET /verify-reset-token must have validateQuery()', () => {
+    const content = fs.readFileSync(path.join(routesDir, 'auth.routes.ts'), 'utf8');
+    expect({
+      hasQueryValidation: content.includes('validateQuery(querySchemas.verifyResetToken)'),
+    }).toEqual({
+      hasQueryValidation: true,
+    });
+  });
+
+  // config-profiles.routes.ts POST/PUT must have body validation
+  it('config-profiles.routes.ts POST/PUT must have body validation', () => {
+    const content = fs.readFileSync(path.join(routesDir, 'config-profiles.routes.ts'), 'utf8');
+    expect({
+      hasCreateValidation: content.includes('validate(schemas.createProfile)'),
+      hasUpdateValidation: content.includes('validate(schemas.updateProfile)'),
+      hasConfigValidation: content.includes('validate(schemas.updateProfileConfiguration)'),
+    }).toEqual({
+      hasCreateValidation: true,
+      hasUpdateValidation: true,
+      hasConfigValidation: true,
     });
   });
 });

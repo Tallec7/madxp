@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import * as authController from '../controllers/auth.controller';
 import { authenticate } from '../middleware/auth';
-import { validate, schemas } from '../middleware/validation';
+import { validate, validateQuery, querySchemas, schemas } from '../middleware/validation';
 import { authRateLimit, apiRateLimit, monitoringRateLimit } from '../middleware/user-rate-limit';
 
 const router = Router();
@@ -22,7 +22,7 @@ router.post('/change-password', apiRateLimit, authenticate, validate(schemas.cha
 // Password reset routes (public - no auth required)
 // These need strict rate limit to prevent email enumeration and abuse
 router.post('/forgot-password', authRateLimit, validate(schemas.forgotPassword), authController.forgotPassword);
-router.get('/verify-reset-token', apiRateLimit, authController.verifyResetToken);
+router.get('/verify-reset-token', apiRateLimit, validateQuery(querySchemas.verifyResetToken), authController.verifyResetToken);
 router.post('/reset-password', authRateLimit, validate(schemas.resetPassword), authController.resetPassword);
 
 export default router;
