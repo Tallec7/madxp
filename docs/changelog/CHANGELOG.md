@@ -1,3 +1,9 @@
+## [3.123.2](https://github.com/Tallec7/neopro/compare/v3.123.1...v3.123.2) (2026-04-04)
+
+### Bug Fixes
+
+- **server:** use string-based param validation for admin client sync route ([c2e97be](https://github.com/Tallec7/neopro/commit/c2e97be2b1fdb121b08bc59c3142c2962aa4ca43))
+
 ## [3.123.1](https://github.com/Tallec7/neopro/compare/v3.123.0...v3.123.1) (2026-04-04)
 
 ### Bug Fixes
