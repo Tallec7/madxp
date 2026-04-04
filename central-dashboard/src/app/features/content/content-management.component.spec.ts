@@ -10,6 +10,7 @@ import { SocketService } from '../../core/services/socket.service';
 import { NotificationService } from '../../core/services/notification.service';
 import { ConfirmDialogService } from '../../core/services/confirm-dialog.service';
 import { LoggerService } from '../../core/services/logger.service';
+import { VideoUploadService } from './video-upload.service';
 
 describe('ContentManagementComponent', () => {
   let component: ContentManagementComponent;
@@ -229,7 +230,8 @@ describe('ContentManagementComponent', () => {
 
     it('should not close modal while uploading', () => {
       component.showUploadModal = true;
-      component.isUploading = true;
+      const uploadService = TestBed.inject(VideoUploadService);
+      uploadService.isUploading = true;
 
       component.closeUploadModal();
 
