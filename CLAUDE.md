@@ -219,6 +219,7 @@ source central-server/.env && psql "$DATABASE_URL" -f central-server/src/scripts
 - Remettre les templates inline des KPIs, top clubs, clubs dormants, résumé sponsors, ou santé flotte dans `analytics.component.ts` (décomposé en `analytics-kpi-grid`, `top-clubs-card`, `dormant-clubs-card`, `sponsor-summary-card`, `fleet-health-card` — l'orchestrateur ne contient que le data loading et le layout grid — smoke test enforced)
 - Remettre `formatNumber`, `getClubBarWidth` ou `healthExpanded` dans `analytics.component.ts` (déplacés respectivement vers `analytics-kpi-grid`, `top-clubs-card`, `fleet-health-card` — smoke test enforced)
 - Ajouter `launchkit.check()`, `getGateUrl()` ou `session.valid` dans le dashboard (l'access gate bworlds redirige les utilisateurs vers une page tierce — le dashboard a sa propre auth JWT+MFA — seul `init()` heartbeat/error-capture est autorisé dans `main.ts` — smoke test enforced)
+- Supprimer `authenticateSiteApiKeyOptional` des routes `POST /video-plays` et `POST /sessions` dans `analytics.routes.ts` (sans ce middleware, n'importe quel client peut POST des analytics avec un `site_id` arbitraire — l'API key optionnelle vérifie le site quand la clé est présente, tout en gardant le fallback body pour les Pi non encore configurés — smoke test enforced)
 
 ## Architecture détaillée
 

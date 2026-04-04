@@ -13200,3 +13200,46 @@ describe('Third-party SDK safety: @bworlds/launchkit access gate prevention', ()
     }
   });
 });
+
+// ----------------------------------------------------------
+// Pi analytics routes must use authenticateSiteApiKeyOptional
+// Without this middleware, /video-plays and /sessions are
+// fully unauthenticated — any client can POST analytics data
+// with an arbitrary site_id. The optional API key auth ties
+// the request to a verified site when the key is present.
+// ----------------------------------------------------------
+describe('Pi analytics routes auth guard', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+  const analyticsRoutesPath = path.join(repoRoot, 'central-server', 'src', 'routes', 'analytics.routes.ts');
+
+  let content: string;
+  beforeAll(() => {
+    content = fs.readFileSync(analyticsRoutesPath, 'utf8');
+  });
+
+  it('analytics.routes.ts must import authenticateSiteApiKeyOptional', () => {
+    expect({
+      importsOptionalAuth: content.includes('authenticateSiteApiKeyOptional'),
+    }).toEqual({
+      importsOptionalAuth: true,
+    });
+  });
+
+  it('POST /video-plays must use authenticateSiteApiKeyOptional', () => {
+    // Match: router.post('/video-plays', authenticateSiteApiKeyOptional, ...)
+    expect({
+      hasAuth: /router\.post\(\s*['"]\/video-plays['"][\s\S]*?authenticateSiteApiKeyOptional/.test(content),
+    }).toEqual({
+      hasAuth: true,
+    });
+  });
+
+  it('POST /sessions must use authenticateSiteApiKeyOptional', () => {
+    // Match: router.post('/sessions', authenticateSiteApiKeyOptional, ...)
+    expect({
+      hasAuth: /router\.post\(\s*['"]\/sessions['"][\s\S]*?authenticateSiteApiKeyOptional/.test(content),
+    }).toEqual({
+      hasAuth: true,
+    });
+  });
+});

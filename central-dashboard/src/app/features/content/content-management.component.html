@@ -1,0 +1,653 @@
+<div class="page-container">
+  <h1>Gestion du contenu</h1>
+
+  <div class="tabs">
+    <button class="tab" [class.active]="activeTab === 'videos'" (click)="activeTab = 'videos'">
+      📹 Vidéos ({{ videoPagination.total || videos.length }})
+    </button>
+    <button class="tab" [class.active]="activeTab === 'deploy'" (click)="activeTab = 'deploy'">
+      🚀 Déployer
+    </button>
+    <button class="tab" [class.active]="activeTab === 'history'" (click)="activeTab = 'history'">
+      📊 Historique ({{ deployments.length }})
+    </button>
+  </div>
+
+  <!-- Videos Tab -->
+  <div class="tab-content" *ngIf="activeTab === 'videos'">
+    <div class="content-header">
+      <div class="search-bar">
+        <input
+          type="text"
+          [placeholder]="'content.searchVideo' | translate"
+          [(ngModel)]="videoSearch"
+          (input)="onSearchDebounce()"
+          class="search-input"
+        />
+      </div>
+      <div class="header-actions">
+        <button class="btn btn-secondary" (click)="showImageModal = true">
+          + Ajouter une image
+        </button>
+        <button class="btn btn-primary" (click)="showUploadModal = true">
+          + Ajouter une vidéo
+        </button>
+      </div>
+    </div>
+
+    <div class="videos-grid" *ngIf="videos.length > 0; else noVideos">
+      <div class="video-card card" *ngFor="let video of videos">
+        <div class="video-thumbnail">
+          <span class="video-icon">🎬</span>
+        </div>
+        <div class="video-info">
+          <h3>{{ video.title }}</h3>
+          <div class="video-meta">
+            <span>{{ formatFileSize(video.file_size) }}</span>
+            <span class="separator">•</span>
+            <span *ngIf="video.duration">{{ formatDuration(video.duration) }}</span>
+            <span class="separator" *ngIf="video.duration">•</span>
+            <span>{{ formatDate(video.created_at) }}</span>
+          </div>
+          <div class="video-filename">{{ video.filename }}</div>
+        </div>
+        <div class="video-actions">
+          <button
+            class="btn btn-sm btn-secondary"
+            (click)="previewVideo(video)"
+            title="Prévisualiser"
+            *ngIf="video.url"
+          >
+            👁️
+          </button>
+          <button
+            class="btn btn-sm btn-secondary"
+            (click)="showVideoHistory(video)"
+            title="Historique des déploiements"
+          >
+            📋
+          </button>
+          <button class="btn btn-sm btn-primary" (click)="deployVideo(video)">🚀 Déployer</button>
+          <button class="btn-icon btn-danger" (click)="deleteVideo(video)" title="Supprimer">
+            🗑️
+          </button>
+        </div>
+        <app-video-variant-panel [videoId]="video.id"></app-video-variant-panel>
+      </div>
+    </div>
+
+    <!-- Pagination -->
+    <div class="pagination" *ngIf="videoPagination.totalPages > 1">
+      <button
+        class="btn btn-secondary btn-sm"
+        [disabled]="!videoPagination.hasPrev"
+        (click)="goToPage(videoPagination.page - 1)"
+      >
+        ← Précédent
+      </button>
+      <div class="pagination-pages">
+        <button
+          *ngFor="let p of getPageNumbers()"
+          class="pagination-page"
+          [class.active]="p === videoPagination.page"
+          [class.ellipsis]="p === -1"
+          [disabled]="p === -1"
+          (click)="p !== -1 && goToPage(p)"
+        >
+          {{ p === -1 ? '…' : p }}
+        </button>
+      </div>
+      <button
+        class="btn btn-secondary btn-sm"
+        [disabled]="!videoPagination.hasNext"
+        (click)="goToPage(videoPagination.page + 1)"
+      >
+        Suivant →
+      </button>
+    </div>
+    <div class="pagination-info" *ngIf="videoPagination.total > 0">
+      {{ (videoPagination.page - 1) * videoPagination.limit + 1 }}–{{
+        videoPagination.page * videoPagination.limit > videoPagination.total
+          ? videoPagination.total
+          : videoPagination.page * videoPagination.limit
+      }}
+      sur {{ videoPagination.total }} vidéos
+    </div>
+
+    <ng-template #noVideos>
+      <div class="empty-state card">
+        <div class="empty-icon">📹</div>
+        <h3>Aucune vidéo</h3>
+        <p>Commencez par ajouter votre première vidéo pour la déployer sur vos sites.</p>
+        <button class="btn btn-primary" (click)="showUploadModal = true">
+          + Ajouter une vidéo
+        </button>
+      </div>
+    </ng-template>
+  </div>
+
+  <!-- Deploy Tab -->
+  <div class="tab-content" *ngIf="activeTab === 'deploy'">
+    <div class="deploy-wizard card">
+      <h2>Déployer du contenu</h2>
+
+      <div class="wizard-step">
+        <div class="step-header">
+          <span class="step-number">1</span>
+          <h3>Sélectionner une vidéo</h3>
+        </div>
+        <select multiple size="6" [(ngModel)]="deployForm.videoIds" class="form-select">
+          <option *ngFor="let video of allVideos" [ngValue]="video.id">
+            {{ video.title }} ({{ formatFileSize(video.file_size) }})
+          </option>
+        </select>
+        <div class="selection-hint">
+          Astuce : maintenez Cmd (Mac) ou Ctrl (Windows) pour sélectionner plusieurs vidéos.
+        </div>
+        <div class="selected-videos" *ngIf="deployForm.videoIds.length > 0">
+          <div class="selected-videos-header">
+            <span>{{ deployForm.videoIds.length }} vidéo(s) sélectionnée(s)</span>
+            <button type="button" class="btn btn-sm btn-secondary" (click)="clearSelectedVideos()">
+              Tout effacer
+            </button>
+          </div>
+          <ul>
+            <li *ngFor="let videoId of deployForm.videoIds">
+              <span>{{ getVideoTitleById(videoId) }}</span>
+              <button
+                type="button"
+                class="btn-icon"
+                (click)="removeSelectedVideo(videoId)"
+                aria-label="Retirer"
+              >
+                ✕
+              </button>
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="wizard-step">
+        <div class="step-header">
+          <span class="step-number">2</span>
+          <h3>Choisir la cible</h3>
+        </div>
+        <div class="target-type-selector">
+          <label class="radio-card">
+            <input
+              type="radio"
+              name="targetType"
+              value="site"
+              [(ngModel)]="deployForm.targetType"
+            />
+            <div class="radio-content">
+              <span class="radio-icon">🖥️</span>
+              <div>
+                <div class="radio-title">Site individuel</div>
+                <div class="radio-desc">Déployer vers un site spécifique</div>
+              </div>
+            </div>
+          </label>
+          <label class="radio-card">
+            <input
+              type="radio"
+              name="targetType"
+              value="group"
+              [(ngModel)]="deployForm.targetType"
+            />
+            <div class="radio-content">
+              <span class="radio-icon">👥</span>
+              <div>
+                <div class="radio-title">Groupe de sites</div>
+                <div class="radio-desc">Déployer vers plusieurs sites</div>
+              </div>
+            </div>
+          </label>
+        </div>
+
+        <select
+          *ngIf="deployForm.targetType === 'site'"
+          [(ngModel)]="deployForm.targetId"
+          class="form-select"
+        >
+          <option value="">-- Choisir un site --</option>
+          <option *ngFor="let site of sites" [value]="site.id">
+            {{ site.club_name }} - {{ site.site_name }}
+          </option>
+        </select>
+
+        <select
+          *ngIf="deployForm.targetType === 'group'"
+          [(ngModel)]="deployForm.targetId"
+          class="form-select"
+        >
+          <option value="">-- Choisir un groupe --</option>
+          <option *ngFor="let group of groups" [value]="group.id">
+            {{ group.name }} ({{ group.site_count }} sites)
+          </option>
+        </select>
+      </div>
+
+      <div class="wizard-actions">
+        <button
+          class="btn btn-primary btn-lg"
+          (click)="startDeployment()"
+          [disabled]="!canDeploy() || isDeploying"
+        >
+          🚀
+          {{
+            isDeploying
+              ? ('content.deploymentInProgress' | translate)
+              : ('content.startDeployment' | translate)
+          }}
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- History Tab -->
+  <div class="tab-content" *ngIf="activeTab === 'history'">
+    <div class="deployments-list" *ngIf="deployments.length > 0; else noDeployments">
+      <div class="deployment-card card" *ngFor="let deployment of deployments">
+        <div class="deployment-header">
+          <div class="deployment-title">
+            <h3>{{ deployment.video_title || 'Vidéo inconnue' }}</h3>
+            <span class="badge" [class]="'badge-' + getDeploymentStatusBadge(deployment.status)">
+              {{ getDeploymentStatusLabel(deployment.status) }}
+            </span>
+          </div>
+          <div class="deployment-meta">
+            {{ deployment.target_type === 'site' ? '🖥️' : '👥' }}
+            {{ deployment.target_name }}
+            <span
+              class="secondary-variant-badge"
+              *ngIf="deployment.has_secondary_variant"
+              title="Variante écran secondaire incluse"
+              >📺 2nd</span
+            >
+          </div>
+        </div>
+
+        <div class="deployment-progress">
+          <div class="progress-bar">
+            <div
+              class="progress-fill"
+              [class]="'progress-' + deployment.status"
+              [style.width.%]="deployment.progress"
+            ></div>
+          </div>
+          <div class="progress-label">
+            <span>{{ deployment.deployed_count }} / {{ deployment.total_count }} sites</span>
+            <span>{{ deployment.progress }}%</span>
+          </div>
+        </div>
+
+        <div class="deployment-footer">
+          <span class="deployment-date">{{ formatDate(deployment.created_at) }}</span>
+          <span *ngIf="deployment.completed_at" class="deployment-completed">
+            Terminé: {{ formatDate(deployment.completed_at) }}
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <ng-template #noDeployments>
+      <div class="empty-state card">
+        <div class="empty-icon">📊</div>
+        <h3>Aucun déploiement</h3>
+        <p>L'historique de vos déploiements apparaîtra ici.</p>
+      </div>
+    </ng-template>
+  </div>
+
+  <!-- Upload Video Modal -->
+  <div class="modal" *ngIf="showUploadModal" (click)="closeUploadModal()">
+    <div class="modal-content modal-large" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h2>Ajouter des vidéos</h2>
+        <button class="modal-close" (click)="closeUploadModal()">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group" *ngIf="uploadForm.files.length === 0">
+          <label>Titre de la vidéo (optionnel pour upload unique)</label>
+          <input type="text" [(ngModel)]="uploadForm.title" placeholder="Ex: Présentation club" />
+        </div>
+        <div class="form-group">
+          <label>Fichiers vidéo *</label>
+          <div
+            class="drop-zone"
+            [class.drag-over]="isDragOver"
+            (dragover)="onDragOver($event)"
+            (dragleave)="onDragLeave($event)"
+            (drop)="onDrop($event)"
+            (click)="fileInput.click()"
+          >
+            <div class="drop-zone-content">
+              <span class="drop-zone-icon">📁</span>
+              <p>Glissez-déposez vos vidéos ici</p>
+              <p class="drop-zone-hint">ou cliquez pour sélectionner (max 20 fichiers)</p>
+            </div>
+            <input
+              #fileInput
+              type="file"
+              accept="video/*"
+              multiple
+              (change)="onFilesSelected($event)"
+              style="display: none"
+            />
+          </div>
+        </div>
+
+        <!-- Selected Files List -->
+        <div class="selected-files" *ngIf="uploadForm.files.length > 0">
+          <div class="selected-files-header">
+            <span>{{ uploadForm.files.length }} fichier(s) sélectionné(s)</span>
+            <button class="btn btn-sm btn-secondary" (click)="clearSelectedFiles()">Effacer</button>
+          </div>
+          <ul class="files-list">
+            <li class="file-item" *ngFor="let file of uploadForm.files; let i = index">
+              <span class="file-name">🎬 {{ file.name }}</span>
+              <span class="file-size">{{ formatFileSize(file.size) }}</span>
+              <button class="btn-icon btn-danger" (click)="removeFile(i)">✕</button>
+            </li>
+          </ul>
+        </div>
+
+        <!-- Upload Progress -->
+        <div class="upload-progress" *ngIf="isUploading">
+          <div class="progress-bar">
+            <div class="progress-fill progress-in_progress" [style.width.%]="uploadProgress"></div>
+          </div>
+          <div class="progress-label">
+            <span>Upload en cours...</span>
+            <span>{{ uploadProgress }}%</span>
+          </div>
+        </div>
+
+        <!-- Upload Results -->
+        <div class="upload-results" *ngIf="uploadResults.length > 0">
+          <ul>
+            <li
+              *ngFor="let result of uploadResults"
+              [class.result-success]="result.success"
+              [class.result-error]="!result.success"
+            >
+              {{ result.success ? '✅' : '❌' }} {{ result.name }}
+              <span *ngIf="result.error">: {{ result.error }}</span>
+            </li>
+          </ul>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" (click)="closeUploadModal()">
+          {{ uploadResults.length > 0 ? 'Fermer' : 'Annuler' }}
+        </button>
+        <button
+          class="btn btn-primary"
+          (click)="uploadVideos()"
+          [disabled]="!canUpload() || isUploading"
+          *ngIf="uploadResults.length === 0"
+        >
+          Uploader
+          {{ uploadForm.files.length > 1 ? '(' + uploadForm.files.length + ' fichiers)' : '' }}
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Video Deployment History Modal -->
+  <div class="modal" *ngIf="showHistoryModal" (click)="closeHistoryModal()">
+    <div class="modal-content modal-large" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h2>Historique des déploiements</h2>
+        <button class="modal-close" (click)="closeHistoryModal()">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="history-video-info" *ngIf="selectedVideoForHistory">
+          <h3>{{ selectedVideoForHistory.title }}</h3>
+          <span class="video-meta">{{ formatFileSize(selectedVideoForHistory.file_size) }}</span>
+        </div>
+
+        <div class="history-loading" *ngIf="isLoadingHistory">
+          <span>Chargement de l'historique...</span>
+        </div>
+
+        <div class="history-stats" *ngIf="videoHistory && !isLoadingHistory">
+          <div class="stat-card stat-total">
+            <span class="stat-value">{{ videoHistory.stats.total }}</span>
+            <span class="stat-label">Total</span>
+          </div>
+          <div class="stat-card stat-completed">
+            <span class="stat-value">{{ videoHistory.stats.completed }}</span>
+            <span class="stat-label">Terminés</span>
+          </div>
+          <div class="stat-card stat-failed">
+            <span class="stat-value">{{ videoHistory.stats.failed }}</span>
+            <span class="stat-label">Echoués</span>
+          </div>
+          <div class="stat-card stat-pending">
+            <span class="stat-value">{{
+              videoHistory.stats.pending + videoHistory.stats.in_progress
+            }}</span>
+            <span class="stat-label">En cours</span>
+          </div>
+        </div>
+
+        <div class="history-list" *ngIf="videoHistory && videoHistory.deployments.length > 0">
+          <div class="history-item" *ngFor="let dep of videoHistory.deployments">
+            <div class="history-item-header">
+              <span class="history-target">
+                {{ dep.target_type === 'site' ? '🖥️' : '👥' }}
+                {{ dep.target_name }}
+                <span class="club-name" *ngIf="dep.club_name">({{ dep.club_name }})</span>
+                <span
+                  class="secondary-variant-badge"
+                  *ngIf="dep.has_secondary_variant"
+                  title="Variante écran secondaire incluse"
+                  >📺 2nd</span
+                >
+              </span>
+              <span class="badge" [class]="'badge-' + getDeploymentStatusBadge(dep.status)">
+                {{ getDeploymentStatusLabel(dep.status) }}
+              </span>
+            </div>
+            <div class="history-item-details">
+              <span class="history-date">{{ formatDate(dep.created_at) }}</span>
+              <span class="history-by" *ngIf="dep.deployed_by_name"
+                >par {{ dep.deployed_by_name }}</span
+              >
+            </div>
+            <div class="history-item-error" *ngIf="dep.error">
+              {{ dep.error }}
+            </div>
+          </div>
+        </div>
+
+        <div
+          class="empty-state"
+          *ngIf="videoHistory && videoHistory.deployments.length === 0 && !isLoadingHistory"
+        >
+          <div class="empty-icon">📭</div>
+          <h4>Aucun déploiement</h4>
+          <p>Cette vidéo n'a pas encore été déployée.</p>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" (click)="closeHistoryModal()">Fermer</button>
+        <button
+          class="btn btn-primary"
+          (click)="deployVideoFromHistory()"
+          *ngIf="selectedVideoForHistory"
+        >
+          🚀 Déployer cette vidéo
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Video Preview Modal -->
+  <div class="modal video-preview-modal" *ngIf="previewingVideo" (click)="closePreview()">
+    <div class="modal-content modal-video" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <div class="preview-title-info">
+          <h2>{{ previewingVideo.title }}</h2>
+          <span class="preview-meta"
+            >{{ formatFileSize(previewingVideo.file_size) }}
+            <span *ngIf="previewingVideo.duration"
+              >• {{ formatDuration(previewingVideo.duration) }}</span
+            ></span
+          >
+        </div>
+        <button class="modal-close" (click)="closePreview()">×</button>
+      </div>
+      <div class="modal-body video-preview-body">
+        <video
+          *ngIf="previewingVideo.url"
+          [src]="previewingVideo.url"
+          controls
+          autoplay
+          class="preview-video-player"
+        >
+          Votre navigateur ne supporte pas la lecture vidéo.
+        </video>
+        <div *ngIf="!previewingVideo.url" class="preview-unavailable">
+          URL de prévisualisation non disponible
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" (click)="closePreview()">Fermer</button>
+        <button class="btn btn-primary" (click)="deployFromPreview()">
+          🚀 Déployer cette vidéo
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Image to Video Modal -->
+  <div class="modal" *ngIf="showImageModal" (click)="closeImageModal()">
+    <div class="modal-content" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h2>Convertir une image en vidéo</h2>
+        <button class="modal-close" (click)="closeImageModal()">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group" *ngIf="!imageForm.file">
+          <label>Image *</label>
+          <div
+            class="drop-zone"
+            [class.drag-over]="isImageDragOver"
+            (dragover)="onImageDragOver($event)"
+            (dragleave)="onImageDragLeave($event)"
+            (drop)="onImageDrop($event)"
+            (click)="imageFileInput.click()"
+          >
+            <div class="drop-zone-content">
+              <span class="drop-zone-icon">🖼️</span>
+              <p>Glissez-déposez une image ici</p>
+              <p class="drop-zone-hint">Formats acceptés : JPG, PNG, WEBP</p>
+            </div>
+            <input
+              #imageFileInput
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              (change)="onImageSelected($event)"
+              style="display: none"
+            />
+          </div>
+        </div>
+
+        <!-- Image Preview avec prévisualisation du rendu final -->
+        <div class="image-preview" *ngIf="imageForm.file">
+          <div class="image-preview-header">
+            <span class="file-name">🖼️ {{ imageForm.file.name }}</span>
+            <span class="file-size">{{ formatFileSize(imageForm.file.size) }}</span>
+            <button class="btn-icon btn-danger" (click)="clearImageFile()">✕</button>
+          </div>
+
+          <!-- Prévisualisation du rendu final (16:9) -->
+          <div class="preview-container-16-9" *ngIf="imagePreviewUrl">
+            <!-- Fond flou (visible uniquement si option activée) -->
+            <img
+              *ngIf="imageForm.blurBackground"
+              [src]="imagePreviewUrl"
+              alt="Background blur"
+              class="preview-blur-background"
+            />
+            <!-- Image principale centrée -->
+            <img
+              [src]="imagePreviewUrl"
+              alt="Preview"
+              class="preview-image-centered"
+              [class.with-blur-bg]="imageForm.blurBackground"
+            />
+          </div>
+          <p class="preview-hint">Aperçu du rendu TV (format 16:9)</p>
+        </div>
+
+        <div class="form-group" *ngIf="imageForm.file">
+          <label>Durée d'affichage</label>
+          <div class="duration-options">
+            <label class="radio-option" *ngFor="let opt of durationOptions">
+              <input
+                type="radio"
+                name="duration"
+                [value]="opt.value"
+                [(ngModel)]="imageForm.duration"
+              />
+              <span class="radio-label">{{ opt.label }}</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Option fond flou -->
+        <div class="form-group blur-option" *ngIf="imageForm.file">
+          <label class="checkbox-label">
+            <input type="checkbox" [(ngModel)]="imageForm.blurBackground" />
+            <span class="checkbox-text"> ✨ Fond flou automatique </span>
+          </label>
+          <p class="option-hint">
+            Active un effet de fond flou esthétique pour les images portrait. L'image sera
+            superposée sur une version floue d'elle-même.
+          </p>
+        </div>
+
+        <!-- Conversion Progress -->
+        <div class="upload-progress" *ngIf="isConvertingImage">
+          <div class="progress-bar">
+            <div
+              class="progress-fill progress-in_progress"
+              [style.width.%]="imageConversionProgress"
+            ></div>
+          </div>
+          <div class="progress-label">
+            <span>Conversion en cours...</span>
+            <span>{{ imageConversionProgress }}%</span>
+          </div>
+        </div>
+
+        <!-- Conversion Result -->
+        <div class="conversion-result" *ngIf="imageConversionResult">
+          <div class="result-success" *ngIf="imageConversionResult.success">
+            ✅ {{ imageConversionResult.message }}
+          </div>
+          <div class="result-error" *ngIf="!imageConversionResult.success">
+            ❌ {{ imageConversionResult.message }}
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" (click)="closeImageModal()">
+          {{ imageConversionResult ? 'Fermer' : 'Annuler' }}
+        </button>
+        <button
+          class="btn btn-primary"
+          (click)="convertImageToVideo()"
+          [disabled]="!imageForm.file || isConvertingImage"
+          *ngIf="!imageConversionResult"
+        >
+          🚀 Créer la vidéo
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,12 +1,13 @@
 ---
 paths:
-  - "central-server/src/routes/**"
-  - "central-server/src/controllers/**"
+  - 'central-server/src/routes/**'
+  - 'central-server/src/controllers/**'
 ---
 
 # API Routes Reference
 
 ## Auth
+
 ```
 POST /api/auth/login          → { email, password } → cookie + user
 POST /api/auth/logout         → clear cookie
@@ -16,6 +17,7 @@ POST /api/auth/reset-password
 ```
 
 ## Sites (clubs)
+
 ```
 GET    /api/sites             → liste paginée, filtres: status, sport, region
 GET    /api/sites/:id         → détails + config + metrics
@@ -28,6 +30,7 @@ POST   /api/sites/:id/command → envoyer commande au Pi
 ```
 
 ## Debug endpoints (requièrent connexion Pi active)
+
 ```
 GET    /api/sites/:id/health-status → santé système
 GET    /api/sites/:id/diagnostics → diagnostic complet
@@ -38,6 +41,7 @@ POST   /api/sites/:id/fix-hotspot → diagnostiquer/réparer le hotspot
 ```
 
 ## Contenu
+
 ```
 POST   /api/content/upload    → multipart/form-data (vidéo)
 GET    /api/content/videos    → liste vidéos
@@ -48,6 +52,7 @@ POST   /api/content/image-to-video → image → vidéo MP4
 ```
 
 ## Config Drafts
+
 ```
 GET    /api/sites/:siteId/draft         → brouillon du site (ou null)
 PUT    /api/sites/:siteId/draft         → crée/met à jour le brouillon
@@ -57,6 +62,7 @@ POST   /api/sites/:siteId/draft/deploy  → déploie (vidéos + config orchestr�
 ```
 
 ## Subscriptions (v2.47+)
+
 ```
 GET    /api/subscriptions/stats
 GET    /api/subscriptions/at-risk
@@ -68,6 +74,7 @@ POST   /api/sites/:id/subscription/reactivate
 ```
 
 ## Alerts & Benchmark
+
 ```
 GET    /api/alerts
 POST   /api/alerts/:id/resolve
@@ -75,7 +82,26 @@ GET    /api/benchmark/sites/:siteId
 GET    /api/benchmark/global
 ```
 
+## Pi Analytics (depuis sync-agent — API key optionnelle)
+
+```
+POST /api/analytics/video-plays   → { site_id, plays[] } — authenticateSiteApiKeyOptional
+POST /api/analytics/sessions      → { site_id, action }  — authenticateSiteApiKeyOptional
+POST /api/analytics/impressions   → { impressions[] }     — authenticateSiteApiKeyOptional
+```
+
+## Sponsor Portal (PUBLIQUE — magic link token)
+
+```
+GET  /api/sponsor-portal/verify      → ?token=xxx
+GET  /api/sponsor-portal/stats       → ?token=xxx&from=...&to=...
+GET  /api/sponsor-portal/report      → ?token=xxx (PDF)
+GET  /api/sponsor-portal/benchmark   → ?token=xxx
+GET  /api/sponsor-portal/export-csv  → ?token=xxx (CSV)
+```
+
 ## Remote Cloud (PUBLIQUE - pas d'auth)
+
 ```
 GET  /api/remote/:siteId/state    → État du site
 POST /api/remote/:siteId/command  → Envoyer commande
@@ -83,6 +109,7 @@ GET  /api/remote/:siteId/videos   → Vidéos par catégorie
 ```
 
 ## Rate Limiting
+
 ```
 Auth:         60 req/min
 Monitoring:   300 req/min (status, metrics, dashboard, benchmark)
