@@ -1,3 +1,9 @@
+## [3.123.3](https://github.com/Tallec7/neopro/compare/v3.123.2...v3.123.3) (2026-04-04)
+
+### Bug Fixes
+
+- **dashboard:** add @bworlds/launchkit to root package.json for CI build ([148ffeb](https://github.com/Tallec7/neopro/commit/148ffeb17dacbb338a96c974caaf7b2b20e34e1e))
+
 ## [3.123.2](https://github.com/Tallec7/neopro/compare/v3.123.1...v3.123.2) (2026-04-04)
 
 ### Bug Fixes
