@@ -1,3 +1,19 @@
+# [3.125.0](https://github.com/Tallec7/neopro/compare/v3.124.0...v3.125.0) (2026-04-04)
+
+### Refactoring
+
+- **dashboard:** extract ConfigEditorDataService from config-editor component (config loading/polling, normalization, validation, history, deploy, analytics categories) ([COMMIT])
+- **dashboard:** extract SiteSettingsDataService from site-settings-tab component (auth, hotspot, watermark, branding, PIN, overlay, reports, SSID) ([COMMIT])
+- **dashboard:** extract ContentManagementDataService from content-management component (video CRUD, deployments, image-to-video, formatting helpers) ([COMMIT])
+
+### Tests
+
+- **smoke:** add data service extraction guards for ConfigEditorDataService, SiteSettingsDataService, ContentManagementDataService (prevents re-monolithification) ([COMMIT])
+
+### Docs
+
+- **architecture:** update ARCHITECTURE.md tree with new data service files alongside their components ([COMMIT])
+
 # [3.124.0](https://github.com/Tallec7/neopro/compare/v3.122.1...v3.124.0) (2026-04-03)
 
 ### Refactoring

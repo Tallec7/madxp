@@ -2,68 +2,19 @@ import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TranslateModule } from '@ngx-translate/core';
-import { ApiService } from '../../core/services/api.service';
-import { SitesService } from '../../core/services/sites.service';
-import { GroupsService } from '../../core/services/groups.service';
-import { SocketService } from '../../core/services/socket.service';
 import { NotificationService } from '../../core/services/notification.service';
 import { ConfirmDialogService } from '../../core/services/confirm-dialog.service';
-import { LoggerService } from '../../core/services/logger.service';
-import { ErrorExtractor } from '../../core/utils/error-extractor';
 import { Site, Group } from '../../core/models';
 import { Subscription, firstValueFrom } from 'rxjs';
 import { VideoVariantPanelComponent } from './video-variant-panel.component';
-
-interface Video {
-  id: string;
-  title: string;
-  filename: string;
-  file_size: number;
-  duration?: number;
-  created_at: Date;
-  url?: string;
-}
-
-interface PaginationInfo {
-  page: number;
-  limit: number;
-  total: number;
-  totalPages: number;
-  hasNext: boolean;
-  hasPrev: boolean;
-}
-
-interface Deployment {
-  id: string;
-  video_id: string;
-  video_title?: string;
-  target_type: 'site' | 'group';
-  target_id: string;
-  target_name?: string;
-  club_name?: string;
-  deployed_by_name?: string;
-  status: 'pending' | 'in_progress' | 'completed' | 'failed';
-  progress: number;
-  deployed_count: number;
-  total_count: number;
-  created_at: Date;
-  started_at?: Date;
-  completed_at?: Date;
-  error?: string;
-  has_secondary_variant?: boolean;
-}
-
-interface VideoDeploymentHistory {
-  video_id: string;
-  stats: {
-    total: number;
-    completed: number;
-    failed: number;
-    pending: number;
-    in_progress: number;
-  };
-  deployments: Deployment[];
-}
+import {
+  ContentManagementDataService,
+  Video,
+  PaginationInfo,
+  Deployment,
+  VideoDeploymentHistory,
+  VideoName,
+} from './content-management-data.service';
 
 @Component({
   selector: 'app-content-management',
@@ -1840,7 +1791,7 @@ export class ContentManagementComponent implements OnInit, OnDestroy {
   activeTab: 'videos' | 'deploy' | 'history' = 'videos';
 
   videos: Video[] = [];
-  allVideos: { id: string; title: string; file_size: number }[] = [];
+  allVideos: VideoName[] = [];
   deployments: Deployment[] = [];
   sites: Site[] = [];
   groups: Group[] = [];
@@ -1890,13 +1841,9 @@ export class ContentManagementComponent implements OnInit, OnDestroy {
     targetId: ''
   };
 
-  private readonly apiService = inject(ApiService);
-  private readonly sitesService = inject(SitesService);
-  private readonly groupsService = inject(GroupsService);
-  private readonly socketService = inject(SocketService);
+  private readonly dataService = inject(ContentManagementDataService);
   private readonly notificationService = inject(NotificationService);
   private readonly confirmDialog = inject(ConfirmDialogService);
-  private readonly logger = inject(LoggerService);
   private subscriptions = new Subscription();
   private searchTimeout: ReturnType<typeof setTimeout> | null = null;
 
@@ -1916,39 +1863,95 @@ export class ContentManagementComponent implements OnInit, OnDestroy {
     }
   }
 
-  loadVideos(): void {
-    const params: Record<string, string> = {
-      page: this.videoPagination.page.toString(),
-      limit: this.videoPagination.limit.toString(),
-    };
-    if (this.videoSearch) {
-      params['search'] = this.videoSearch;
-    }
+  // ── Delegate formatting to data service ──
 
-    const query = new URLSearchParams(params).toString();
-    this.apiService.get<{ data: Video[]; pagination: PaginationInfo }>(`/videos?${query}`).subscribe({
+  formatFileSize(bytes: number): string {
+    return this.dataService.formatFileSize(bytes);
+  }
+
+  formatDuration(seconds: number): string {
+    return this.dataService.formatDuration(seconds);
+  }
+
+  formatDate(date: Date | null): string {
+    return this.dataService.formatDate(date);
+  }
+
+  getDeploymentStatusBadge(status: string): string {
+    return this.dataService.getDeploymentStatusBadge(status);
+  }
+
+  getDeploymentStatusLabel(status: string): string {
+    return this.dataService.getDeploymentStatusLabel(status);
+  }
+
+  // ── Data loading ──
+
+  loadVideos(): void {
+    this.dataService.loadVideos(this.videoPagination.page, this.videoPagination.limit, this.videoSearch).subscribe({
       next: (response) => {
         this.videos = response.data || [];
         if (response.pagination) {
           this.videoPagination = response.pagination;
         }
       },
-      error: (error) => {
-        this.logger.warn('Failed to load videos', { error: ErrorExtractor.getMessage(error) });
+      error: () => {
+        // Logged by data service / interceptor
       }
     });
   }
 
   loadAllVideos(): void {
-    this.apiService.get<{ id: string; title: string; file_size: number }[]>('/videos/names').subscribe({
+    this.dataService.loadAllVideoNames().subscribe({
       next: (names) => {
         this.allVideos = names || [];
       },
-      error: (error) => {
-        this.logger.warn('Failed to load video names for deploy', { error: ErrorExtractor.getMessage(error) });
+      error: () => {
+        // Logged by data service / interceptor
       }
     });
   }
+
+  loadDeployments(): void {
+    this.dataService.loadDeployments().subscribe({
+      next: (deployments) => {
+        this.deployments = deployments;
+      },
+      error: () => {
+        // Logged by data service / interceptor
+      }
+    });
+  }
+
+  loadSites(): void {
+    this.dataService.loadSites().subscribe({
+      next: (sites) => {
+        this.sites = sites;
+      }
+    });
+  }
+
+  loadGroups(): void {
+    this.dataService.loadGroups().subscribe({
+      next: (groups) => {
+        this.groups = groups;
+      }
+    });
+  }
+
+  subscribeToDeploymentProgress(): void {
+    const sub = this.dataService.subscribeToDeploymentProgress().subscribe(data => {
+      const deployment = this.deployments.find(d => d.id === data.deploymentId);
+      if (deployment) {
+        deployment.progress = data.progress;
+        deployment.deployed_count = data.deployedCount;
+        deployment.status = data.status;
+      }
+    });
+    this.subscriptions.add(sub);
+  }
+
+  // ── Pagination & search ──
 
   goToPage(page: number): void {
     if (page < 1 || page > this.videoPagination.totalPages) return;
@@ -1984,70 +1987,7 @@ export class ContentManagementComponent implements OnInit, OnDestroy {
     return pages;
   }
 
-  loadDeployments(): void {
-    this.apiService.get<Deployment[]>('/deployments').subscribe({
-      next: (deployments) => {
-        // Deployments endpoint returns array directly (not paginated)
-        this.deployments = deployments;
-      },
-      error: (error) => {
-        this.logger.warn('Failed to load deployments', { error: ErrorExtractor.getMessage(error) });
-      }
-    });
-  }
-
-  loadSites(): void {
-    this.sitesService.loadSites().subscribe({
-      next: (response) => {
-        this.sites = response.sites;
-      }
-    });
-  }
-
-  loadGroups(): void {
-    this.groupsService.loadGroups().subscribe({
-      next: (response) => {
-        this.groups = response.groups;
-      }
-    });
-  }
-
-  subscribeToDeploymentProgress(): void {
-    const sub = this.socketService.on('deploy_progress').subscribe(event => {
-      const data = event as {
-        deploymentId: string;
-        progress: number;
-        deployedCount: number;
-        status: Deployment['status'];
-      };
-      const deployment = this.deployments.find(d => d.id === data.deploymentId);
-      if (deployment) {
-        deployment.progress = data.progress;
-        deployment.deployed_count = data.deployedCount;
-        deployment.status = data.status;
-      }
-    });
-    this.subscriptions.add(sub);
-  }
-
-  formatFileSize(bytes: number): string {
-    if (bytes < 1024) return bytes + ' B';
-    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
-    if (bytes < 1024 * 1024 * 1024) return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
-    return (bytes / (1024 * 1024 * 1024)).toFixed(1) + ' GB';
-  }
-
-  formatDuration(seconds: number): string {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-  }
-
-  formatDate(date: Date | null): string {
-    if (!date) return '';
-    const d = new Date(date);
-    return d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
-  }
+  // ── File selection UI handlers ──
 
   onFilesSelected(event: Event): void {
     const target = event.target as HTMLInputElement;
@@ -2107,6 +2047,8 @@ export class ContentManagementComponent implements OnInit, OnDestroy {
     return this.uploadForm.files.length > 0;
   }
 
+  // ── Upload ──
+
   uploadVideos(): void {
     if (!this.canUpload()) return;
 
@@ -2124,8 +2066,8 @@ export class ContentManagementComponent implements OnInit, OnDestroy {
       }
       formData.append('video', files[0]);
 
-      this.apiService.upload<Video>('/videos', formData).subscribe({
-        next: (_video) => {
+      this.dataService.uploadVideo(formData).subscribe({
+        next: () => {
           this.uploadProgress = 100;
           this.uploadResults = [{ name: files[0].name, success: true }];
           this.isUploading = false;
@@ -2133,12 +2075,11 @@ export class ContentManagementComponent implements OnInit, OnDestroy {
           this.loadVideos();
           this.loadAllVideos();
         },
-        error: (error) => {
-          const message = ErrorExtractor.getMessage(error);
+        error: (error: unknown) => {
+          const message = this.dataService.getErrorMessage(error);
           this.uploadResults = [{ name: files[0].name, success: false, error: message }];
-          this.logger.error('Video upload failed', { error: message, fileName: files[0].name });
           this.notificationService.error('Erreur lors de l\'upload', {
-            correlationId: ErrorExtractor.getCorrelationId(error)
+            correlationId: this.dataService.getCorrelationId(error)
           });
           this.uploadProgress = 0;
           this.isUploading = false;
@@ -2151,12 +2092,7 @@ export class ContentManagementComponent implements OnInit, OnDestroy {
         formData.append('videos', file);
       });
 
-      this.apiService.upload<{
-        success: boolean;
-        message: string;
-        files?: Array<{ id: string; name: string; title: string; size: number; success: true }>;
-        errors?: Array<{ name: string; error: string }>;
-      }>('/videos/bulk', formData).subscribe({
+      this.dataService.uploadVideoBulk(formData).subscribe({
         next: (response) => {
           this.uploadProgress = 100;
           this.isUploading = false;
@@ -2183,11 +2119,10 @@ export class ContentManagementComponent implements OnInit, OnDestroy {
           this.loadVideos();
           this.loadAllVideos();
         },
-        error: (error) => {
-          const message = ErrorExtractor.getMessage(error);
-          this.logger.error('Bulk video upload failed', { error: message, fileCount: files.length });
+        error: (error: unknown) => {
+          const message = this.dataService.getErrorMessage(error);
           this.notificationService.error(`Erreur lors de l'upload: ${message}`, {
-            correlationId: ErrorExtractor.getCorrelationId(error)
+            correlationId: this.dataService.getCorrelationId(error)
           });
           this.uploadProgress = 0;
           this.isUploading = false;
@@ -2196,27 +2131,30 @@ export class ContentManagementComponent implements OnInit, OnDestroy {
     }
   }
 
+  // ── Video CRUD actions ──
+
   async deleteVideo(video: Video): Promise<void> {
     const ok = await this.confirmDialog.confirm(
       `Supprimer la vidéo "${video.title}" ?`,
       { title: 'Suppression', confirmLabel: 'Supprimer' },
     );
     if (ok) {
-      this.apiService.delete(`/videos/${video.id}`).subscribe({
+      this.dataService.deleteVideo(video.id).subscribe({
         next: () => {
           this.videos = this.videos.filter(v => v.id !== video.id);
           this.allVideos = this.allVideos.filter(v => v.id !== video.id);
         },
-        error: (error) => {
-          const message = ErrorExtractor.getMessage(error);
-          this.logger.error('Video deletion failed', { error: message, videoId: video.id });
+        error: (error: unknown) => {
+          const message = this.dataService.getErrorMessage(error);
           this.notificationService.error(`Erreur lors de la suppression: ${message}`, {
-            correlationId: ErrorExtractor.getCorrelationId(error)
+            correlationId: this.dataService.getCorrelationId(error)
           });
         }
       });
     }
   }
+
+  // ── Video history modal ──
 
   showVideoHistory(video: Video): void {
     this.selectedVideoForHistory = video;
@@ -2224,16 +2162,15 @@ export class ContentManagementComponent implements OnInit, OnDestroy {
     this.isLoadingHistory = true;
     this.videoHistory = null;
 
-    this.apiService.get<VideoDeploymentHistory>(`/videos/${video.id}/deployments`).subscribe({
+    this.dataService.loadVideoHistory(video.id).subscribe({
       next: (history) => {
         this.videoHistory = history;
         this.isLoadingHistory = false;
       },
-      error: (error) => {
-        const message = ErrorExtractor.getMessage(error);
-        this.logger.error('Video history load failed', { error: message, videoId: video.id });
+      error: (error: unknown) => {
+        const message = this.dataService.getErrorMessage(error);
         this.notificationService.error('Erreur lors du chargement de l\'historique', {
-          correlationId: ErrorExtractor.getCorrelationId(error)
+          correlationId: this.dataService.getCorrelationId(error)
         });
         this.isLoadingHistory = false;
       }
@@ -2253,6 +2190,8 @@ export class ContentManagementComponent implements OnInit, OnDestroy {
     }
   }
 
+  // ── Video preview modal ──
+
   previewVideo(video: Video): void {
     this.previewingVideo = video;
   }
@@ -2268,6 +2207,8 @@ export class ContentManagementComponent implements OnInit, OnDestroy {
       this.deployVideo(video);
     }
   }
+
+  // ── Deploy actions ──
 
   deployVideo(video: Video): void {
     if (!this.deployForm.videoIds.includes(video.id)) {
@@ -2302,22 +2243,16 @@ export class ContentManagementComponent implements OnInit, OnDestroy {
 
     for (const videoId of videoIds) {
       const videoTitle = this.getVideoTitleById(videoId);
-      const payload = {
-        video_id: videoId,
-        target_type: targetType,
-        target_id: targetId
-      };
 
       try {
-        const deployment = await firstValueFrom(this.apiService.post<Deployment>('/deployments', payload));
+        const deployment = await firstValueFrom(this.dataService.createDeployment(videoId, targetType, targetId));
         this.deployments.unshift({
           ...deployment,
           video_title: videoTitle
         });
         successes.push(videoTitle);
       } catch (error) {
-        const message = ErrorExtractor.getMessage(error);
-        this.logger.error('Deployment failed', { error: message, videoId, videoTitle, targetId, targetType });
+        const message = this.dataService.getErrorMessage(error);
         failures.push({
           title: videoTitle,
           error: message
@@ -2338,26 +2273,6 @@ export class ContentManagementComponent implements OnInit, OnDestroy {
       const names = failures.map(f => f.title).join(', ');
       this.notificationService.error(`Erreur lors du déploiement pour ${names}`);
     }
-  }
-
-  getDeploymentStatusBadge(status: string): string {
-    const badges: Record<string, string> = {
-      pending: 'secondary',
-      in_progress: 'primary',
-      completed: 'success',
-      failed: 'danger'
-    };
-    return badges[status] || 'secondary';
-  }
-
-  getDeploymentStatusLabel(status: string): string {
-    const labels: Record<string, string> = {
-      pending: 'En attente',
-      in_progress: 'En cours',
-      completed: 'Terminé',
-      failed: 'Échoué'
-    };
-    return labels[status] || status;
   }
 
   // === Image to Video Methods ===
@@ -2446,7 +2361,7 @@ export class ContentManagementComponent implements OnInit, OnDestroy {
       }
     }, 500);
 
-    this.apiService.upload<{ success: boolean; message: string; video?: Video }>('/image-to-video', formData).subscribe({
+    this.dataService.convertImageToVideo(formData).subscribe({
       next: (response) => {
         clearInterval(progressInterval);
         this.imageConversionProgress = 100;
@@ -2459,18 +2374,17 @@ export class ContentManagementComponent implements OnInit, OnDestroy {
         this.loadVideos();
         this.loadAllVideos();
       },
-      error: (error) => {
+      error: (error: unknown) => {
         clearInterval(progressInterval);
         this.isConvertingImage = false;
         this.imageConversionProgress = 0;
-        const message = ErrorExtractor.getMessage(error);
+        const message = this.dataService.getErrorMessage(error);
         this.imageConversionResult = {
           success: false,
           message: message
         };
-        this.logger.error('Image to video conversion failed', { error: message });
         this.notificationService.error(`Erreur: ${message}`, {
-          correlationId: ErrorExtractor.getCorrelationId(error)
+          correlationId: this.dataService.getCorrelationId(error)
         });
       }
     });

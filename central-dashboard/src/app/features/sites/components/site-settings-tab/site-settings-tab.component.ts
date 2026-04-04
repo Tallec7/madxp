@@ -2,16 +2,14 @@ import { Component, Input, Output, EventEmitter, OnInit, OnChanges, SimpleChange
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TranslateModule } from '@ngx-translate/core';
-import { SitesService } from '../../../../core/services/sites.service';
-import { SiteCommandService } from '../../../../core/services/site-command.service';
-import { SiteMetricsService } from '../../../../core/services/site-metrics.service';
 import { NotificationService } from '../../../../core/services/notification.service';
 import { LoggerService } from '../../../../core/services/logger.service';
-import { AssetService, WatermarkConfig, WatermarkFileInfo, OverlayPosition as WmOverlayPosition, WatermarkAnimation, WatermarkScheduleRule } from '../../../../core/services/asset.service';
-import { ReportsService, GeneratedReport } from '../../../../core/services/reports.service';
+import { WatermarkConfig, WatermarkFileInfo, OverlayPosition as WmOverlayPosition, WatermarkAnimation, WatermarkScheduleRule } from '../../../../core/services/asset.service';
+import { GeneratedReport } from '../../../../core/services/reports.service';
 import { ErrorExtractor } from '../../../../core/utils/error-extractor';
 import { Site, OverlayTheme, ScoreOverlayPosition } from '../../../../core/models';
 import { QrCodeGeneratorComponent } from '../../../../shared/components/qr-code-generator/qr-code-generator.component';
+import { SiteSettingsDataService } from './site-settings-data.service';
 
 @Component({
   selector: 'app-site-settings-tab',
@@ -1713,20 +1711,16 @@ export class SiteSettingsTabComponent implements OnInit, OnChanges {
   generatingReport: boolean = false;
 
   constructor(
-    private sitesService: SitesService,
-    private commandService: SiteCommandService,
-    private metricsService: SiteMetricsService,
+    private dataService: SiteSettingsDataService,
     private notificationService: NotificationService,
-    private logger: LoggerService,
-    private assetService: AssetService,
-    private reportsService: ReportsService
+    private logger: LoggerService
   ) {}
 
   ngOnInit(): void {
     // Initialiser les options pour les selects
-    this.positionOptions = this.assetService.getPositionOptions();
-    this.animationOptions = this.assetService.getAnimationOptions();
-    this.daysOfWeekOptions = this.assetService.getDaysOfWeekOptions();
+    this.positionOptions = this.dataService.getPositionOptions();
+    this.animationOptions = this.dataService.getAnimationOptions();
+    this.daysOfWeekOptions = this.dataService.getDaysOfWeekOptions();
 
     if (this.site) {
       this.clubName = this.site.club_name || '';
@@ -1737,32 +1731,18 @@ export class SiteSettingsTabComponent implements OnInit, OnChanges {
       this.colorSecondary = this.site.color_secondary || '';
 
       // Charger les infos hotspot depuis local_config_mirror (synchronisé par le Pi)
-      this.loadHotspotInfo(this.site);
+      this.applyHotspotInfo(this.dataService.loadHotspotInfo(this.site));
 
       // Charger la config scoreOverlay depuis local_config_mirror (synchronisé par le Pi)
-      const mirrorScoreOverlay = this.site.local_config_mirror?.['scoreOverlay'] as Record<string, unknown> | undefined;
-      if (mirrorScoreOverlay) {
-        if (mirrorScoreOverlay['theme'] === 'broadcast' || mirrorScoreOverlay['theme'] === 'minimal') {
-          this.overlayConfig.theme = mirrorScoreOverlay['theme'];
-        }
-        const pos = mirrorScoreOverlay['position'] as string | undefined;
-        if (pos && ['top-left', 'top-center', 'top-right', 'bottom-left', 'bottom-center', 'bottom-right'].includes(pos)) {
-          this.overlayConfig.position = pos as ScoreOverlayPosition;
-        }
-      }
+      this.overlayConfig = this.dataService.extractOverlayConfig(this.site);
 
       // Charger la config watermark existante depuis local_config_mirror (synchronisé par le Pi)
-      // Note: La config est stockée dans local_config_mirror.watermark après déploiement via update_config
-      const mirrorWatermark = this.site.local_config_mirror?.['watermark'] as WatermarkConfig | undefined;
+      const mirrorWatermark = this.dataService.extractWatermarkConfig(this.site);
       if (mirrorWatermark) {
         this.watermarkConfig = {
           ...this.watermarkConfig,
           ...mirrorWatermark
         };
-        this.logger.info('Watermark config loaded from local_config_mirror', {
-          enabled: mirrorWatermark.enabled,
-          imagePath: mirrorWatermark.imagePath
-        });
       }
 
       // Charger la liste des watermarks disponibles
@@ -1777,7 +1757,7 @@ export class SiteSettingsTabComponent implements OnInit, OnChanges {
   }
 
   private loadRemotePinStatus(): void {
-    this.sitesService.getRemotePinStatus(this.siteId).subscribe({
+    this.dataService.loadRemotePinStatus(this.siteId).subscribe({
       next: (response) => {
         this.remotePinEnabled = response.pinEnabled;
       },
@@ -1797,22 +1777,13 @@ export class SiteSettingsTabComponent implements OnInit, OnChanges {
       this.realSsid = null;
 
       // Recharger les infos hotspot
-      this.loadHotspotInfo(site);
+      this.applyHotspotInfo(this.dataService.loadHotspotInfo(site));
 
       // Recharger scoreOverlay
-      const mirrorScoreOverlay = site.local_config_mirror?.['scoreOverlay'] as Record<string, unknown> | undefined;
-      if (mirrorScoreOverlay) {
-        if (mirrorScoreOverlay['theme'] === 'broadcast' || mirrorScoreOverlay['theme'] === 'minimal') {
-          this.overlayConfig.theme = mirrorScoreOverlay['theme'];
-        }
-        const pos = mirrorScoreOverlay['position'] as string | undefined;
-        if (pos && ['top-left', 'top-center', 'top-right', 'bottom-left', 'bottom-center', 'bottom-right'].includes(pos)) {
-          this.overlayConfig.position = pos as ScoreOverlayPosition;
-        }
-      }
+      this.overlayConfig = this.dataService.extractOverlayConfig(site);
 
       // Recharger watermark config
-      const mirrorWatermark = site.local_config_mirror?.['watermark'] as WatermarkConfig | undefined;
+      const mirrorWatermark = this.dataService.extractWatermarkConfig(site);
       if (mirrorWatermark) {
         // Ne pas écraser si on est en train d'éditer (fichier sélectionné mais pas encore déployé)
         if (!this.selectedWatermarkFile) {
@@ -1820,39 +1791,20 @@ export class SiteSettingsTabComponent implements OnInit, OnChanges {
             ...this.watermarkConfig,
             ...mirrorWatermark
           };
-          this.logger.info('Watermark config reloaded from site update', {
-            enabled: mirrorWatermark.enabled,
-            imagePath: mirrorWatermark.imagePath
-          });
         }
       }
     }
   }
 
   /**
-   * Load hotspot info from local_config_mirror (synced from Pi)
+   * Apply hotspot info from data service to component state
    */
-  private loadHotspotInfo(site: Site): void {
-    // Try _hotspotInfo first (complete info)
-    const hotspotInfo = site.local_config_mirror?._hotspotInfo;
-    if (hotspotInfo) {
-      this.currentHotspotSsid = hotspotInfo.ssid || null;
-      this.currentHotspotPassword = hotspotInfo.password || null;
-      this.currentHotspotChannel = hotspotInfo.channel || null;
-      this.currentHotspotClients = hotspotInfo.clients ?? null;
-      this.currentHotspotActive = hotspotInfo.isActive || false;
-      return;
-    }
-
-    // Fallback to _hotspotSsid (backward compatibility)
-    const ssid = site.local_config_mirror?._hotspotSsid;
-    if (ssid) {
-      this.currentHotspotSsid = ssid;
-      this.currentHotspotPassword = null;
-      this.currentHotspotChannel = null;
-      this.currentHotspotClients = null;
-      this.currentHotspotActive = true; // Assume active if we have SSID
-    }
+  private applyHotspotInfo(info: { ssid: string | null; password: string | null; channel: number | null; clients: number | null; isActive: boolean }): void {
+    this.currentHotspotSsid = info.ssid;
+    this.currentHotspotPassword = info.password;
+    this.currentHotspotChannel = info.channel;
+    this.currentHotspotClients = info.clients;
+    this.currentHotspotActive = info.isActive;
   }
 
   toggleShowPassword(): void {
@@ -1866,7 +1818,7 @@ export class SiteSettingsTabComponent implements OnInit, OnChanges {
     if (!this.siteId || !this.isConnected) return;
 
     this.fetchingHotspotConfig = true;
-    this.metricsService.getHotspotConfig(this.siteId).subscribe({
+    this.dataService.fetchHotspotConfig(this.siteId).subscribe({
       next: (response) => {
         this.fetchingHotspotConfig = false;
         if (response.configured) {
@@ -1896,42 +1848,14 @@ export class SiteSettingsTabComponent implements OnInit, OnChanges {
 
     this.savingClubAuth = true;
 
-    // Build neoProContent with only non-empty fields
-    const neoProContent: { clubName?: string; remotePassword?: string } = {};
-    if (this.clubName) neoProContent.clubName = this.clubName;
-    if (this.remotePassword) neoProContent.remotePassword = this.remotePassword;
-
-    // Also update the site in the database if clubName changed
-    const updateDbAndDeploy = () => {
-      if (this.clubName) {
-        this.sitesService.updateSite(this.siteId, { club_name: this.clubName }).subscribe({
-          next: (updatedSite) => {
-            this.deployClubAuth(neoProContent);
-            this.siteUpdated.emit(updatedSite);
-          },
-          error: (error) => {
-            this.savingClubAuth = false;
-            const message = ErrorExtractor.getMessage(error);
-            this.notificationService.error(`Erreur: ${message}`);
-          }
-        });
-      } else {
-        this.deployClubAuth(neoProContent);
-      }
-    };
-
-    updateDbAndDeploy();
-  }
-
-  private deployClubAuth(neoProContent: { clubName?: string; remotePassword?: string }): void {
-    this.commandService.sendCommand(this.siteId, 'update_config', {
-      neoProContent,
-      mode: 'merge'
-    }).subscribe({
-      next: (response: { queued?: boolean }) => {
+    this.dataService.saveClubAuth(this.siteId, this.clubName, this.remotePassword).subscribe({
+      next: ({ commandResponse, updatedSite }) => {
         this.savingClubAuth = false;
+        if (updatedSite) {
+          this.siteUpdated.emit(updatedSite);
+        }
         this.notificationService.success(
-          response.queued
+          commandResponse.queued
             ? '📥 Configuration mise en file d\'attente'
             : 'Configuration déployée avec succès !'
         );
@@ -1939,7 +1863,7 @@ export class SiteSettingsTabComponent implements OnInit, OnChanges {
       error: (error) => {
         this.savingClubAuth = false;
         const message = ErrorExtractor.getMessage(error);
-        this.notificationService.error(`Erreur déploiement: ${message}`);
+        this.notificationService.error(`Erreur: ${message}`);
       }
     });
   }
@@ -1948,7 +1872,7 @@ export class SiteSettingsTabComponent implements OnInit, OnChanges {
     if (this.avgSpectators === null || this.avgSpectators === undefined) return;
 
     this.savingAvgSpectators = true;
-    this.sitesService.updateSite(this.siteId, { avg_spectators: this.avgSpectators }).subscribe({
+    this.dataService.saveAvgSpectators(this.siteId, this.avgSpectators).subscribe({
       next: (updatedSite) => {
         this.savingAvgSpectators = false;
         this.notificationService.success('Spectateurs moyens mis à jour');
@@ -1965,12 +1889,7 @@ export class SiteSettingsTabComponent implements OnInit, OnChanges {
   // P5: Branding
   saveBranding(): void {
     this.brandingSaving = true;
-    const data: Record<string, string | null> = {
-      logo_url: this.logoUrl || null,
-      color_primary: this.colorPrimary || null,
-      color_secondary: this.colorSecondary || null,
-    };
-    this.sitesService.updateSite(this.siteId, data).subscribe({
+    this.dataService.saveBranding(this.siteId, this.logoUrl, this.colorPrimary, this.colorSecondary).subscribe({
       next: (updatedSite) => {
         this.brandingSaving = false;
         this.notificationService.success('Branding du club mis à jour');
@@ -1995,7 +1914,7 @@ export class SiteSettingsTabComponent implements OnInit, OnChanges {
     }
 
     this.savingRemotePin = true;
-    this.sitesService.setRemotePin(this.siteId, this.remotePin).subscribe({
+    this.dataService.setRemotePin(this.siteId, this.remotePin).subscribe({
       next: () => {
         this.remotePinEnabled = true;
         this.remotePin = '';
@@ -2011,7 +1930,7 @@ export class SiteSettingsTabComponent implements OnInit, OnChanges {
 
   clearRemotePin(): void {
     this.clearingRemotePin = true;
-    this.sitesService.clearRemotePin(this.siteId).subscribe({
+    this.dataService.clearRemotePin(this.siteId).subscribe({
       next: () => {
         this.remotePinEnabled = false;
         this.clearingRemotePin = false;
@@ -2038,12 +1957,12 @@ export class SiteSettingsTabComponent implements OnInit, OnChanges {
     if (!confirm('Modifier la configuration du hotspot WiFi ?')) return;
 
     this.updatingHotspot = true;
-    this.commandService.updateHotspot(
+    this.dataService.updateHotspot(
       this.siteId,
       this.hotspotSsid || undefined,
       this.hotspotPassword || undefined
     ).subscribe({
-      next: (response: any) => {
+      next: (response) => {
         this.updatingHotspot = false;
         this.notificationService.success(
           response.queued
@@ -2066,27 +1985,18 @@ export class SiteSettingsTabComponent implements OnInit, OnChanges {
     const newValue = checkbox.checked;
 
     this.savingLiveScore = true;
-    this.sitesService.updateSite(this.siteId, { live_score_enabled: newValue }).subscribe({
-      next: (updatedSite) => {
-        this.commandService.sendCommand(this.siteId, 'update_config', {
-          neoProContent: { liveScoreEnabled: newValue },
-          mode: 'merge'
-        }).subscribe({
-          next: () => {
-            this.savingLiveScore = false;
-            this.notificationService.success(
-              newValue ? 'Option Premium activée !' : 'Option Premium désactivée !'
-            );
-            this.siteUpdated.emit(updatedSite);
-          },
-          error: () => {
-            this.savingLiveScore = false;
-            this.notificationService.warning('Option sauvegardée mais erreur lors du déploiement');
-          }
-        });
+    this.dataService.toggleLiveScore(this.siteId, newValue).subscribe({
+      next: ({ updatedSite }) => {
+        this.savingLiveScore = false;
+        this.notificationService.success(
+          newValue ? 'Option Premium activée !' : 'Option Premium désactivée !'
+        );
+        this.siteUpdated.emit(updatedSite);
       },
       error: (error) => {
         this.savingLiveScore = false;
+        // Check if the DB update succeeded but the deploy failed
+        // The switchMap in the service means any error could be from either step
         checkbox.checked = !newValue;
         const message = ErrorExtractor.getMessage(error);
         this.notificationService.error(`Erreur: ${message}`);
@@ -2111,10 +2021,7 @@ export class SiteSettingsTabComponent implements OnInit, OnChanges {
 
   saveOverlayConfig(): void {
     this.savingOverlay = true;
-    this.commandService.sendCommand(this.siteId, 'update_config', {
-      neoProContent: { scoreOverlay: this.overlayConfig },
-      mode: 'merge'
-    }).subscribe({
+    this.dataService.saveOverlayConfig(this.siteId, this.overlayConfig).subscribe({
       next: () => {
         this.savingOverlay = false;
         this.notificationService.success('Configuration de l\'overlay déployée !');
@@ -2129,41 +2036,11 @@ export class SiteSettingsTabComponent implements OnInit, OnChanges {
   }
 
   getWifiSsid(): string {
-    // Utiliser le vrai SSID si déjà récupéré via fetch
-    if (this.realSsid) {
-      return this.realSsid;
+    const result = this.dataService.getWifiSsid(this.site, this.currentHotspotSsid, this.realSsid);
+    if (result.isReal) {
+      this.realSsid = result.ssid;
     }
-
-    // Utiliser currentHotspotSsid (depuis _hotspotInfo, nouveau format)
-    if (this.currentHotspotSsid) {
-      this.realSsid = this.currentHotspotSsid;
-      return this.currentHotspotSsid;
-    }
-
-    // Fallback: utiliser _hotspotSsid depuis local_config_mirror (ancien format)
-    const mirrorSsid = this.site?.local_config_mirror?._hotspotSsid;
-    if (mirrorSsid) {
-      this.realSsid = mirrorSsid;
-      return mirrorSsid;
-    }
-
-    // Fallback: utiliser _hotspotInfo.ssid directement (si pas encore chargé dans currentHotspotSsid)
-    const hotspotInfoSsid = this.site?.local_config_mirror?._hotspotInfo?.ssid;
-    if (hotspotInfoSsid) {
-      this.realSsid = hotspotInfoSsid;
-      return hotspotInfoSsid;
-    }
-
-    // Dernier fallback: générer un SSID depuis le nom du club
-    const name = this.site?.club_name || this.site?.site_name || 'CLUB';
-    const sanitized = name
-      .toUpperCase()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .replace(/[^A-Z0-9]/g, '-')
-      .replace(/-+/g, '-')
-      .substring(0, 20);
-    return `NEOPRO-${sanitized}`;
+    return result.ssid;
   }
 
   openQrCode(): void {
@@ -2175,7 +2052,7 @@ export class SiteSettingsTabComponent implements OnInit, OnChanges {
 
     // Sinon, récupérer le SSID réel via l'endpoint dédié
     this.fetchingSsid = true;
-    this.metricsService.getHotspotConfig(this.siteId).subscribe({
+    this.dataService.fetchHotspotConfig(this.siteId).subscribe({
       next: (response) => {
         this.fetchingSsid = false;
         if (response.ssid) {
@@ -2198,11 +2075,7 @@ export class SiteSettingsTabComponent implements OnInit, OnChanges {
    * Returns 'cloud' for mesh_isolated sites, 'local' otherwise
    */
   getQrCodeDefaultMode(): 'local' | 'cloud' {
-    const networkProfile = this.site?.network_profile;
-    if (networkProfile?.type === 'mesh_isolated') {
-      return 'cloud';
-    }
-    return 'local';
+    return this.dataService.getQrCodeDefaultMode(this.site);
   }
 
   // ============================================================================
@@ -2211,7 +2084,7 @@ export class SiteSettingsTabComponent implements OnInit, OnChanges {
 
   loadAvailableWatermarks(): void {
     this.loadingWatermarks = true;
-    this.assetService.listWatermarks().subscribe({
+    this.dataService.loadAvailableWatermarks().subscribe({
       next: (response) => {
         this.availableWatermarks = response.watermarks;
         this.loadingWatermarks = false;
@@ -2301,7 +2174,7 @@ export class SiteSettingsTabComponent implements OnInit, OnChanges {
     this.uploadProgress = 0;
     this.uploadProgressText = 'Uploading...';
 
-    this.assetService.uploadWatermark(this.siteId, file).subscribe({
+    this.dataService.uploadWatermarkFile(this.siteId, file).subscribe({
       next: (response) => {
         this.uploadingWatermark = false;
         this.uploadProgress = 100;
@@ -2420,24 +2293,13 @@ export class SiteSettingsTabComponent implements OnInit, OnChanges {
     this.savingWatermark = true;
 
     // 1. Toujours envoyer la config (update_config)
-    this.commandService.sendCommand(this.siteId, 'update_config', {
-      neoProContent: { watermark: this.watermarkConfig },
-      mode: 'merge'
-    }).subscribe({
-      next: (response: { queued?: boolean }) => {
+    this.dataService.saveWatermarkConfig(this.siteId, this.watermarkConfig).subscribe({
+      next: (response) => {
         // 2. Re-déployer l'image si cloudUrl est disponible
         // Cela garantit que l'image est présente sur le Pi même si le premier
         // deploy_asset a échoué ou n'a jamais été reçu
         if (this.watermarkConfig.cloudUrl && this.watermarkConfig.imagePath) {
-          const filename = this.watermarkConfig.imagePath.split('/').pop() || 'watermark.png';
-          this.assetService.deployAsset(
-            this.siteId,
-            this.watermarkConfig.cloudUrl,
-            filename,
-            this.watermarkConfig.imagePath,
-            undefined,
-            'watermark'
-          ).subscribe({
+          this.dataService.deployWatermarkAsset(this.siteId, this.watermarkConfig).subscribe({
             next: () => {
               this.savingWatermark = false;
               this.notificationService.success(
@@ -2481,7 +2343,7 @@ export class SiteSettingsTabComponent implements OnInit, OnChanges {
     if (!this.watermarkConfig.schedule) {
       this.watermarkConfig.schedule = { enabled: true, rules: [] };
     }
-    this.watermarkConfig.schedule.rules.push(this.assetService.createDefaultScheduleRule());
+    this.watermarkConfig.schedule.rules.push(this.dataService.createDefaultScheduleRule());
   }
 
   removeScheduleRule(index: number): void {
@@ -2506,12 +2368,12 @@ export class SiteSettingsTabComponent implements OnInit, OnChanges {
     if (!this.siteId) return;
 
     this.loadingReports = true;
-    this.reportsService.getClubReports(this.siteId, 12).subscribe({
+    this.dataService.loadClubReports(this.siteId, 12).subscribe({
       next: (reports) => {
         this.clubReports = reports;
         this.loadingReports = false;
       },
-      error: (error) => {
+      error: (error: { status?: number }) => {
         this.loadingReports = false;
         // Ne pas afficher d'erreur si simplement pas de rapports
         if (error.status !== 404) {
@@ -2524,22 +2386,9 @@ export class SiteSettingsTabComponent implements OnInit, OnChanges {
   generateReport(): void {
     if (!this.siteId) return;
 
-    // Calculer la période du mois précédent
-    const now = new Date();
-    const firstDayLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-    const lastDayLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
-
-    const periodStart = firstDayLastMonth.toISOString().split('T')[0];
-    const periodEnd = lastDayLastMonth.toISOString().split('T')[0];
-
     this.generatingReport = true;
-    this.reportsService.generateReport({
-      type: 'club',
-      entityId: this.siteId,
-      periodStart,
-      periodEnd
-    }).subscribe({
-      next: (result) => {
+    this.dataService.generateReport(this.siteId).subscribe({
+      next: () => {
         this.generatingReport = false;
         this.notificationService.success('Rapport généré avec succès!');
         // Recharger la liste des rapports
@@ -2560,6 +2409,6 @@ export class SiteSettingsTabComponent implements OnInit, OnChanges {
   }
 
   formatFileSize(bytes: number | null): string {
-    return this.reportsService.formatFileSize(bytes);
+    return this.dataService.formatFileSize(bytes);
   }
 }

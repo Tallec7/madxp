@@ -113,6 +113,9 @@ neopro/ (monorepo)
 │   │   ├── features/
 │   │   │   ├── sites/
 │   │   │   │   ├── site-detail.component.ts     # Page détail (6 onglets) — onglet État : métriques système + hotspot + actions rapides
+│   │   │   │   ├── config-editor/               # Éditeur de configuration site
+│   │   │   │   │   ├── config-editor.component.ts      # UI : formulaire, JSON, historique, diff
+│   │   │   │   │   └── config-editor-data.service.ts   # Data : loading/polling, validation, deploy, analytics
 │   │   │   │   └── components/
 │   │   │   │       ├── site-content-tab/        # Pipeline contenu (coordinateur)
 │   │   │   │       │   ├── video-manager/       #   Upload, bibliothèque, suppression vidéos
@@ -122,12 +125,17 @@ neopro/ (monorepo)
 │   │   │   │       ├── loop-manager/            # Gestion unifiée boucles (défaut + 3 phases)
 │   │   │   │       ├── site-sponsors-tab/       # Sponsors locaux : CRUD, KPIs, association vidéos, benchmark, magic link
 │   │   │   │       ├── site-settings-tab/       # Config réseau, hotspot, branding club
+│   │   │   │       │   ├── site-settings-tab.component.ts  # UI : formulaires, toggles, aperçu
+│   │   │   │       │   └── site-settings-data.service.ts   # Data : auth, hotspot, watermark, reports, PIN
 │   │   │   │       ├── site-profiles-tab/       # Multi-config CRUD + deploy
 │   │   │   │       └── site-debug-tab/          # Diagnostic site (coordinateur)
 │   │   │   │           ├── health-monitor/      #   Santé GPU, fan, display/HDMI, services, diagnostics
 │   │   │   │           ├── command-panel/       #   Terminal, logs, export bundle, connexion zombie
 │   │   │   │           ├── service-status/      #   Réseau, buffer analytics, hotspot, WiFi
 │   │   │   │           └── system-info/         #   Fichiers Pi, config historique, timeline
+│   │   │   ├── content/                         # Gestion contenu cloud
+│   │   │   │   ├── content-management.component.ts       # UI : vidéos, upload, deploy wizard
+│   │   │   │   └── content-management-data.service.ts    # Data : CRUD vidéos, déploiements, image-to-video
 │   │   │   └── sponsor-portal/                  # Page publique portail sponsor (token-based)
 │   │   ├── core/                                # Models, services, guards
 │   │   └── shared/                              # Composants réutilisables

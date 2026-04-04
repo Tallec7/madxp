@@ -12609,3 +12609,105 @@ describe('AnalyticsTractionComponent decomposition guard', () => {
     expect(content).not.toMatch(/getFleetGrowthWithCumulative\s*\(\s*\)/);
   });
 });
+
+// =============================================================================
+// ConfigEditorDataService extraction guard
+// =============================================================================
+// Config loading, validation, history, and deploy logic MUST live in ConfigEditorDataService,
+// NOT inline in the component. The component should only handle UI state and template binding.
+// Re-inlining API calls into the component makes it harder for AI tools to reason about.
+
+describe('ConfigEditorDataService extraction guard', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+  const configEditorDir = path.join(repoRoot, 'central-dashboard/src/app/features/sites/config-editor');
+
+  it('ConfigEditorDataService exists with all data methods', () => {
+    const content = fs.readFileSync(path.join(configEditorDir, 'config-editor-data.service.ts'), 'utf-8');
+    expect(content).toContain('class ConfigEditorDataService');
+    expect(content).toContain('loadConfigFromPi');
+    expect(content).toContain('normalizeConfig');
+    expect(content).toContain('validateConfig');
+    expect(content).toContain('deployConfig');
+    expect(content).toContain('loadAnalyticsCategories');
+  });
+
+  it('config-editor component uses ConfigEditorDataService (not raw SitesService for config loading)', () => {
+    const content = fs.readFileSync(path.join(configEditorDir, 'config-editor.component.ts'), 'utf-8');
+    expect(content).toContain('ConfigEditorDataService');
+  });
+
+  it('config-editor component must NOT contain config polling logic (delegated to service)', () => {
+    const content = fs.readFileSync(path.join(configEditorDir, 'config-editor.component.ts'), 'utf-8');
+    // pollConfigResult and loadFromLocalContent are now in the service
+    expect(content).not.toMatch(/private\s+pollConfigResult\s*\(/);
+    expect(content).not.toMatch(/private\s+loadFromLocalContent\s*\(/);
+  });
+});
+
+// =============================================================================
+// SiteSettingsDataService extraction guard
+// =============================================================================
+// All save/deploy/fetch operations MUST live in SiteSettingsDataService,
+// NOT inline in the component. The component handles UI state and form binding only.
+
+describe('SiteSettingsDataService extraction guard', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+  const settingsDir = path.join(repoRoot, 'central-dashboard/src/app/features/sites/components/site-settings-tab');
+
+  it('SiteSettingsDataService exists with all domain methods', () => {
+    const content = fs.readFileSync(path.join(settingsDir, 'site-settings-data.service.ts'), 'utf-8');
+    expect(content).toContain('class SiteSettingsDataService');
+    expect(content).toContain('saveClubAuth');
+    expect(content).toContain('saveBranding');
+    expect(content).toContain('fetchHotspotConfig');
+    expect(content).toContain('saveWatermarkConfig');
+    expect(content).toContain('loadClubReports');
+    expect(content).toContain('generateReport');
+  });
+
+  it('site-settings-tab component uses SiteSettingsDataService', () => {
+    const content = fs.readFileSync(path.join(settingsDir, 'site-settings-tab.component.ts'), 'utf-8');
+    expect(content).toContain('SiteSettingsDataService');
+  });
+
+  it('site-settings-tab component must NOT directly inject SiteCommandService (delegated to data service)', () => {
+    const content = fs.readFileSync(path.join(settingsDir, 'site-settings-tab.component.ts'), 'utf-8');
+    expect(content).not.toMatch(/inject\(SiteCommandService\)/);
+    expect(content).not.toMatch(/private\s+(readonly\s+)?commandService/);
+  });
+});
+
+// =============================================================================
+// ContentManagementDataService extraction guard
+// =============================================================================
+// Video CRUD, deployment operations, and data fetching MUST live in ContentManagementDataService,
+// NOT inline in the component. The component handles UI state, forms, and drag-drop only.
+
+describe('ContentManagementDataService extraction guard', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+  const contentDir = path.join(repoRoot, 'central-dashboard/src/app/features/content');
+
+  it('ContentManagementDataService exists with all data methods', () => {
+    const content = fs.readFileSync(path.join(contentDir, 'content-management-data.service.ts'), 'utf-8');
+    expect(content).toContain('class ContentManagementDataService');
+    expect(content).toContain('loadVideos');
+    expect(content).toContain('loadDeployments');
+    expect(content).toContain('deleteVideo');
+    expect(content).toContain('createDeployment');
+    expect(content).toContain('convertImageToVideo');
+  });
+
+  it('content-management component uses ContentManagementDataService (not raw ApiService)', () => {
+    const content = fs.readFileSync(path.join(contentDir, 'content-management.component.ts'), 'utf-8');
+    expect(content).toContain('ContentManagementDataService');
+    expect(content).not.toMatch(/inject\(ApiService\)/);
+  });
+
+  it('content-management component must NOT contain direct API URLs (delegated to service)', () => {
+    const content = fs.readFileSync(path.join(contentDir, 'content-management.component.ts'), 'utf-8');
+    expect(content).not.toMatch(/this\.api\.get\(/);
+    expect(content).not.toMatch(/this\.api\.post\(/);
+    expect(content).not.toMatch(/this\.api\.delete\(/);
+    expect(content).not.toMatch(/this\.api\.upload\(/);
+  });
+});

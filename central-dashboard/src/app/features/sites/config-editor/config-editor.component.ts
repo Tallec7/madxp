@@ -1,21 +1,15 @@
 import { Component, Input, Output, EventEmitter, OnInit, OnDestroy, ChangeDetectorRef, signal, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { TranslateModule, TranslateService } from '@ngx-translate/core';
-import { Subscription, interval } from 'rxjs';
-import { SitesService } from '../../../core/services/sites.service';
-import { SiteCommandService } from '../../../core/services/site-command.service';
+import { TranslateModule } from '@ngx-translate/core';
+import { Subscription } from 'rxjs';
 import { NotificationService } from '../../../core/services/notification.service';
-import { AnalyticsService } from '../../../core/services/analytics.service';
 import {
   SiteConfiguration,
   ConfigHistory,
   ConfigDiff,
   ConfigValidationResult,
-  ConfigValidationError,
-  ConfigValidationWarning,
   CategoryConfig,
-  SubcategoryConfig,
   VideoConfig,
   DEFAULT_CONFIG,
   AnalyticsCategory,
@@ -23,6 +17,7 @@ import {
 } from '../../../core/models';
 import { VideoSelectorComponent } from '../../../shared/components/video-selector/video-selector.component';
 import { RemotePreviewComponent } from '../../../shared/components/remote-preview/remote-preview.component';
+import { ConfigEditorDataService } from './config-editor-data.service';
 
 @Component({
   selector: 'app-config-editor',
@@ -2316,17 +2311,12 @@ export class ConfigEditorComponent implements OnInit, OnDestroy {
   analyticsCategories: AnalyticsCategory[] = [];
   loadingAnalyticsCategories = false;
 
-  // Polling
-  private configCommandId: string | null = null;
-  private configPollSubscription?: Subscription;
+  // Subscriptions
+  private configLoadSubscription?: Subscription;
 
-  constructor(
-    private sitesService: SitesService,
-    private commandService: SiteCommandService,
-    private notificationService: NotificationService,
-    private analyticsService: AnalyticsService,
-    private cdr: ChangeDetectorRef
-  ) {}
+  private readonly dataService = inject(ConfigEditorDataService);
+  private readonly notificationService = inject(NotificationService);
+  private readonly cdr = inject(ChangeDetectorRef);
 
   ngOnInit(): void {
     this.reloadConfig();
@@ -2335,7 +2325,7 @@ export class ConfigEditorComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
-    this.configPollSubscription?.unsubscribe();
+    this.configLoadSubscription?.unsubscribe();
   }
 
   get diffCounts() {
@@ -2351,183 +2341,42 @@ export class ConfigEditorComponent implements OnInit, OnDestroy {
   }
 
   private getEmptyConfig(): SiteConfiguration {
-    return {
-      version: '1.0',
-      remote: { title: '' },
-      auth: { password: '', clubName: '', sessionDuration: 28800000 },
-      sync: { enabled: true, serverUrl: 'https://neopro-central-production.up.railway.app', siteName: '', clubName: '' },
-      sponsors: [],
-      categories: [],
-      timeCategories: [
-        { id: 'before', name: 'Avant-match', icon: '🏁', color: 'from-blue-500 to-blue-600', description: 'Échauffement & présentation', categoryIds: [] },
-        { id: 'during', name: 'Match', icon: '▶️', color: 'from-green-500 to-green-600', description: 'Live & animations', categoryIds: [] },
-        { id: 'after', name: 'Après-match', icon: '🏆', color: 'from-purple-500 to-purple-600', description: 'Résultats & remerciements', categoryIds: [] },
-      ],
-      categoryMappings: {},
-    };
+    return this.dataService.getEmptyConfig();
   }
 
-  private resetToEmptyConfig(_reason: string): void {
+  private resetToEmptyConfig(): void {
     this.loading = false;
     this.config = this.getEmptyConfig();
     this.originalConfig = null;
-    this.configCommandId = null;
     this.syncJsonFromConfig();
     this.hasChanges = false;
   }
 
   reloadConfig(): void {
     this.loading = true;
-    this.configPollSubscription?.unsubscribe();
+    this.configLoadSubscription?.unsubscribe();
 
-    // Si le site est offline, charger la dernière config connue depuis local_content
-    if (!this.isConnected) {
-      this.loadFromLocalContent();
-      return;
-    }
-
-    // Site connecté : essayer de récupérer la config en temps réel
-    // Timeout global de 10 secondes pour la requête initiale
-    const timeoutId = setTimeout(() => {
-      if (this.loading && !this.configCommandId) {
-        // Fallback sur local_content si le site ne répond pas
-        this.loadFromLocalContent();
-      }
-    }, 10000);
-
-    this.commandService.getConfiguration(this.siteId).subscribe({
-      next: (response) => {
-        clearTimeout(timeoutId);
-        if (response.commandId) {
-          this.configCommandId = response.commandId;
-          this.pollConfigResult();
-        } else {
-          // Pas de commandId, fallback sur local_content
-          this.loadFromLocalContent();
-        }
-      },
-      error: () => {
-        clearTimeout(timeoutId);
-        // Fallback sur local_content en cas d'erreur
-        this.loadFromLocalContent();
-      }
-    });
-  }
-
-  /**
-   * Charge la configuration depuis le miroir local (dernière config connue du site)
-   */
-  private loadFromLocalContent(): void {
-    this.sitesService.getLocalContent(this.siteId).subscribe({
-      next: (response) => {
+    this.configLoadSubscription = this.dataService.loadConfigFromPi(this.siteId, this.isConnected).subscribe({
+      next: (result) => {
         this.loading = false;
-        // Stocker les vidéos locales pour le sélecteur
-        this.localVideos = response.localVideos || [];
-        if (response.configuration) {
-          this.setConfig(response.configuration);
-          const lastSyncInfo = response.lastSync
-            ? ` (dernière sync: ${new Date(response.lastSync).toLocaleString()})`
-            : '';
-          this.notificationService.info(`Configuration chargée depuis le miroir local${lastSyncInfo}`);
+        this.localVideos = result.localVideos;
+        if (result.config) {
+          this.setConfig(result.config);
         } else {
-          this.resetToEmptyConfig('No local content found');
-          this.notificationService.info('Aucune configuration connue. Vous pouvez en créer une nouvelle.');
+          this.resetToEmptyConfig();
         }
       },
       error: () => {
-        this.resetToEmptyConfig('getLocalContent error');
-        this.notificationService.warning('Impossible de charger la configuration. Vous pouvez en créer une nouvelle.');
-      }
-    });
-  }
-
-  private pollConfigResult(): void {
-    if (!this.configCommandId) {
-      return;
-    }
-
-    const POLL_TIMEOUT_SECONDS = 30;
-    let pollCount = 0;
-    let isPolling = false;
-
-    this.configPollSubscription = interval(1000).subscribe(() => {
-      pollCount++;
-
-      if (pollCount > POLL_TIMEOUT_SECONDS) {
-        this.configPollSubscription?.unsubscribe();
-        this.resetToEmptyConfig('Poll timeout reached');
-        this.notificationService.warning('Le site ne répond pas. Vous pouvez créer une nouvelle configuration.');
-        return;
-      }
-
-      if (isPolling) {
-        return;
-      }
-      isPolling = true;
-
-      this.commandService.getCommandStatus(this.siteId, this.configCommandId!).subscribe({
-        next: (status) => {
-          isPolling = false;
-          if (status.status === 'completed') {
-            this.configPollSubscription?.unsubscribe();
-            this.loading = false;
-
-            if (status.result?.configuration) {
-              this.setConfig(status.result.configuration);
-              this.notificationService.success('Configuration chargée');
-            } else if (status.result?.message === 'No configuration file found') {
-              this.resetToEmptyConfig('No configuration file found');
-              this.notificationService.info('Aucune configuration sur le site. Créez-en une nouvelle.');
-            } else {
-              this.resetToEmptyConfig('Configuration empty');
-              this.notificationService.info('Configuration vide. Vous pouvez en créer une nouvelle.');
-            }
-          } else if (status.status === 'failed') {
-            this.configPollSubscription?.unsubscribe();
-            this.resetToEmptyConfig('Command failed');
-            this.notificationService.warning('Échec de récupération. Vous pouvez créer une nouvelle configuration.');
-          }
-        },
-        error: () => {
-          isPolling = false;
-        }
-      });
+        this.resetToEmptyConfig();
+      },
     });
   }
 
   private setConfig(configuration: SiteConfiguration): void {
-    // Normalize categories to ensure videos and subCategories arrays exist
-    const normalizedCategories = (configuration.categories || []).map(cat => ({
-      ...cat,
-      videos: cat.videos || [],
-      subCategories: (cat.subCategories || []).map(subcat => ({
-        ...subcat,
-        videos: subcat.videos || [],
-      })),
-    }));
-
-    // Normalize timeCategories - use config values or defaults
-    const defaultTimeCategories = this.getEmptyConfig().timeCategories!;
-    const normalizedTimeCategories = configuration.timeCategories?.length
-      ? configuration.timeCategories.map(tc => ({
-          ...tc,
-          categoryIds: tc.categoryIds || [],
-        }))
-      : defaultTimeCategories;
-
-    this.config = {
-      ...this.getEmptyConfig(),
-      ...configuration,
-      remote: { ...this.getEmptyConfig().remote, ...configuration.remote },
-      auth: { ...this.getEmptyConfig().auth, ...configuration.auth },
-      sync: { ...this.getEmptyConfig().sync, ...configuration.sync },
-      sponsors: configuration.sponsors || [],
-      categories: normalizedCategories,
-      timeCategories: normalizedTimeCategories,
-    };
+    this.config = this.dataService.normalizeConfig(configuration);
 
     // Update configCategories for template binding
-    this.configCategories = [...normalizedCategories];
+    this.configCategories = [...this.config.categories];
 
     // Update the cached array for analytics mapping
     this.updateAllVideoCategoriesCache();
@@ -2554,26 +2403,8 @@ export class ConfigEditorComponent implements OnInit, OnDestroy {
 
   onJsonChange(): void {
     try {
-      const parsed = JSON.parse(this.jsonString);
-      // Normalize categories to ensure videos and subCategories arrays exist
-      const normalizedCategories = (parsed.categories || []).map((cat: CategoryConfig) => ({
-        ...cat,
-        videos: cat.videos || [],
-        subCategories: (cat.subCategories || []).map((subcat: SubcategoryConfig) => ({
-          ...subcat,
-          videos: subcat.videos || [],
-        })),
-      }));
-
-      this.config = {
-        ...this.getEmptyConfig(),
-        ...parsed,
-        remote: { ...this.getEmptyConfig().remote, ...parsed.remote },
-        auth: { ...this.getEmptyConfig().auth, ...parsed.auth },
-        sync: { ...this.getEmptyConfig().sync, ...parsed.sync },
-        sponsors: parsed.sponsors || [],
-        categories: normalizedCategories,
-      };
+      const parsed = JSON.parse(this.jsonString) as Record<string, unknown>;
+      this.config = this.dataService.normalizeConfigFromJson(parsed);
       this.jsonError = '';
       this.hasChanges = JSON.stringify(this.config) !== JSON.stringify(this.originalConfig);
       this.validate();
@@ -2608,58 +2439,15 @@ export class ConfigEditorComponent implements OnInit, OnDestroy {
 
   private validate(): void {
     this.validationErrors.clear();
-    const errors: ConfigValidationError[] = [];
 
-    // Validation des champs requis
-    if (!this.config.auth?.clubName?.trim()) {
-      errors.push({ field: 'auth.clubName', message: 'Le nom du club est requis' });
-      this.validationErrors.set('auth.clubName', 'Le nom du club est requis');
+    this.validationResult = this.dataService.validateConfig(this.config);
+
+    // Populate validationErrors map for template field-level error display
+    for (const error of this.validationResult.errors) {
+      this.validationErrors.set(error.field, error.message);
     }
 
-    // Validation URL serveur si sync activé
-    if (this.config.sync?.enabled && this.config.sync.serverUrl) {
-      try {
-        new URL(this.config.sync.serverUrl);
-      } catch {
-        errors.push({ field: 'sync.serverUrl', message: 'URL du serveur invalide' });
-        this.validationErrors.set('sync.serverUrl', 'URL invalide');
-      }
-    }
-
-    // Warnings pour les étapes de boucle sans vidéo (cause écran noir sur le Pi)
-    const warnings: ConfigValidationWarning[] = [];
-
-    const emptySponsors = this.config.sponsors?.filter(s => !s.path?.trim()) || [];
-    if (emptySponsors.length > 0) {
-      warnings.push({
-        field: 'sponsors',
-        message: `${emptySponsors.length} vidéo(s) de la boucle par défaut sans chemin — causera un écran noir sur le Pi`,
-        suggestion: 'Sélectionnez une vidéo ou supprimez les étapes vides',
-      });
-    }
-
-    if (this.config.timeCategories) {
-      for (const tc of this.config.timeCategories) {
-        if (tc.loopVideos?.length) {
-          const emptyPhaseVideos = tc.loopVideos.filter(v => !v.path?.trim());
-          if (emptyPhaseVideos.length > 0) {
-            warnings.push({
-              field: `timeCategory.${tc.id}`,
-              message: `Phase "${tc.name}" : ${emptyPhaseVideos.length} vidéo(s) sans chemin — causera un écran noir`,
-              suggestion: 'Sélectionnez une vidéo ou supprimez les étapes vides',
-            });
-          }
-        }
-      }
-    }
-
-    this.validationResult = {
-      valid: errors.length === 0,
-      errors,
-      warnings,
-    };
-
-    this.isValid = errors.length === 0;
+    this.isValid = this.validationResult.valid;
   }
 
   hasError(field: string): boolean {
@@ -2984,9 +2772,9 @@ export class ConfigEditorComponent implements OnInit, OnDestroy {
 
   // History
   loadHistoryCount(): void {
-    this.sitesService.getConfigHistory(this.siteId, 1, 0).subscribe({
-      next: (response) => {
-        this.historyCount = response.total;
+    this.dataService.loadHistoryCount(this.siteId).subscribe({
+      next: (total) => {
+        this.historyCount = total;
       },
       error: () => {
         this.historyCount = 0;
@@ -2996,13 +2784,13 @@ export class ConfigEditorComponent implements OnInit, OnDestroy {
 
   loadHistory(): void {
     this.loadingHistory = true;
-    this.sitesService.getConfigHistory(this.siteId, 20, 0).subscribe({
-      next: (response) => {
-        this.history = response.history;
-        this.historyCount = response.total;
+    this.dataService.loadHistory(this.siteId).subscribe({
+      next: (result) => {
+        this.history = result.history;
+        this.historyCount = result.total;
         this.loadingHistory = false;
       },
-      error: (_error) => {
+      error: () => {
         this.loadingHistory = false;
         this.notificationService.error('Erreur lors du chargement de l\'historique');
       }
@@ -3040,86 +2828,55 @@ export class ConfigEditorComponent implements OnInit, OnDestroy {
     this.showDiffModal = true;
     this.diffLoading = true;
 
-    this.sitesService.previewConfigDiff(this.siteId, this.config).subscribe({
-      next: (response) => {
-        this.diffItems = response.diff;
+    this.dataService.previewDiff(this.siteId, this.config).subscribe({
+      next: (diffItems) => {
+        this.diffItems = diffItems;
         this.diffLoading = false;
       },
-      error: (_error) => {
+      error: () => {
         this.diffLoading = false;
-        // Si pas d'historique, on peut quand même déployer
+        // Si pas d'historique, on peut quand meme deployer
         this.diffItems = [];
       }
     });
   }
 
   confirmDeploy(): void {
-    // Validation : vérifier que la config n'est pas vide
+    // Validation : verifier que la config n'est pas vide
     if (!this.config || Object.keys(this.config).length === 0) {
-      this.notificationService.error('Configuration vide - impossible de déployer');
+      this.notificationService.error('Configuration vide - impossible de deployer');
       return;
     }
 
     this.deploying = true;
 
-    // D'abord sauvegarder dans l'historique
-    this.sitesService.saveConfigVersion(this.siteId, this.config, 'Déploiement depuis le dashboard').subscribe({
+    this.dataService.deployConfig(this.siteId, this.config, this.deployMode).subscribe({
       next: () => {
-        // Puis déployer sur le site
-        this.commandService.sendCommand(this.siteId, 'update_config', {
-          configuration: this.config,
-          mode: this.deployMode
-        }).subscribe({
-          next: () => {
-            this.deploying = false;
-            this.showDiffModal = false;
-            this.originalConfig = JSON.parse(JSON.stringify(this.config));
-            this.hasChanges = false;
-            this.loadHistoryCount();
-            this.notificationService.success('Configuration déployée avec succès');
-            this.configDeployed.emit();
-          },
-          error: (error) => {
-            this.deploying = false;
-            this.notificationService.error('Erreur lors du déploiement: ' + (error.error?.error || error.message));
-          }
-        });
+        this.deploying = false;
+        this.showDiffModal = false;
+        this.originalConfig = JSON.parse(JSON.stringify(this.config));
+        this.hasChanges = false;
+        this.loadHistoryCount();
+        this.notificationService.success('Configuration deployee avec succes');
+        this.configDeployed.emit();
       },
       error: (error) => {
         this.deploying = false;
-        this.notificationService.error('Erreur lors de la sauvegarde: ' + (error.error?.error || error.message));
+        this.notificationService.error('Erreur lors du deploiement: ' + (error.error?.error || error.message));
       }
     });
   }
 
   formatJson(value: unknown): string {
-    try {
-      if (typeof value === 'string') {
-        // Essayer de parser pour pretty-print s'il s'agit d'un JSON
-        const parsed = JSON.parse(value);
-        return JSON.stringify(parsed, null, 2);
-      }
-      if (typeof value === 'object') {
-        return JSON.stringify(value, null, 2);
-      }
-      return String(value);
-    } catch (_e) {
-      return String(value);
-    }
+    return this.dataService.formatJson(value);
   }
 
   ownershipLabel(value: unknown): 'neopro' | 'club' | null {
-    if (!value || typeof value !== 'object') return null;
-    const v = value as { owner?: string; locked?: boolean };
-    if (v.owner === 'neopro' || v.locked === true) return 'neopro';
-    if (v.owner === 'club') return 'club';
-    return null;
+    return this.dataService.ownershipLabel(value);
   }
 
   formatDiffValue(value: unknown): string {
-    if (value === null || value === undefined) return 'null';
-    if (typeof value === 'object') return JSON.stringify(value);
-    return String(value);
+    return this.dataService.formatDiffValue(value);
   }
 
   // ============================================================================
@@ -3128,14 +2885,14 @@ export class ConfigEditorComponent implements OnInit, OnDestroy {
 
   loadAnalyticsCategories(): void {
     this.loadingAnalyticsCategories = true;
-    this.analyticsService.getAnalyticsCategories().subscribe({
+    this.dataService.loadAnalyticsCategories().subscribe({
       next: (categories) => {
         this.analyticsCategories = categories;
         this.loadingAnalyticsCategories = false;
       },
       error: () => {
         this.loadingAnalyticsCategories = false;
-        // Silencieux - fallback sur catégories par défaut
+        // Silencieux - fallback sur categories par defaut
       }
     });
   }
