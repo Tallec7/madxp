@@ -30,7 +30,7 @@ export class ContentDeploymentService {
   }
 
   getVideoTitleById(videoId: string, allVideos: VideoName[]): string {
-    return allVideos.find(v => v.id === videoId)?.title || 'Video inconnue';
+    return allVideos.find(v => v.id === videoId)?.title || 'Vidéo inconnue';
   }
 
   removeSelectedVideo(videoId: string): void {

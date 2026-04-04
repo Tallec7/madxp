@@ -11,7 +11,7 @@ router.get('/jobs/stream', authenticate, requireRole('admin'), adminController.s
 
 router.get('/clients', authenticate, requireRole('admin'), adminController.listClients);
 router.post('/clients', authenticate, requireRole('admin'), validate(schemas.createClient), adminController.createClient);
-router.post('/clients/:id/sync', authenticate, requireRole('admin'), validateParams(paramSchemas.id), adminController.syncClient);
+router.post('/clients/:id/sync', authenticate, requireRole('admin'), validateParams(paramSchemas.idString), adminController.syncClient);
 
 // Debug endpoint pour l'état des connexions Socket.IO
 router.get('/socket-debug', authenticate, requireRole('admin'), adminController.getSocketDebugInfo);

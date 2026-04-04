@@ -681,6 +681,7 @@ export const schemas = {
 
 export const paramSchemas = {
   id: Joi.object({ id: Joi.string().uuid().required() }),
+  idString: Joi.object({ id: Joi.string().min(1).required() }),
   siteId: Joi.object({ siteId: Joi.string().uuid().required() }),
   idAndSiteId: Joi.object({
     id: Joi.string().uuid().required(),
