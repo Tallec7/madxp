@@ -1,3 +1,9 @@
+## [3.123.4](https://github.com/Tallec7/neopro/compare/v3.123.3...v3.123.4) (2026-04-04)
+
+### Bug Fixes
+
+- **server:** align Pi analytics routes on piAnalyticsRateLimit (500/min) ([cefaa9f](https://github.com/Tallec7/neopro/commit/cefaa9fcabff54cf3472488575b7b61662d08566))
+
 ## [3.123.3](https://github.com/Tallec7/neopro/compare/v3.123.2...v3.123.3) (2026-04-04)
 
 ### Bug Fixes
