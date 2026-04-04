@@ -12994,3 +12994,165 @@ describe('Analytics UI decomposition guard', () => {
     expect(content).not.toContain('class="kpi-accent');
   });
 });
+
+// =============================================================================
+// VideoUploadService + ContentDeploymentService extraction guard
+// =============================================================================
+// Upload logic (file selection, single/bulk upload, image-to-video) MUST live in VideoUploadService.
+// Deployment wizard logic (deploy form, sequential deployment, progress) MUST live in ContentDeploymentService.
+// The content-management component should only handle UI state (modals, tabs, drag-over flags).
+
+describe('VideoUploadService + ContentDeploymentService extraction guard', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+  const contentDir = path.join(repoRoot, 'central-dashboard/src/app/features/content');
+
+  it('VideoUploadService exists with upload methods', () => {
+    const content = fs.readFileSync(path.join(contentDir, 'video-upload.service.ts'), 'utf-8');
+    expect(content).toContain('class VideoUploadService');
+    expect(content).toContain('addFilesToSelection');
+    expect(content).toContain('uploadVideos');
+    expect(content).toContain('setImageFile');
+    expect(content).toContain('convertImageToVideo');
+    expect(content).toContain('canUpload');
+    expect(content).toContain('durationOptions');
+  });
+
+  it('ContentDeploymentService exists with deployment methods', () => {
+    const content = fs.readFileSync(path.join(contentDir, 'content-deployment.service.ts'), 'utf-8');
+    expect(content).toContain('class ContentDeploymentService');
+    expect(content).toContain('canDeploy');
+    expect(content).toContain('startDeployment');
+    expect(content).toContain('addVideoToDeploy');
+    expect(content).toContain('subscribeToDeploymentProgress');
+  });
+
+  it('content-management component delegates to VideoUploadService and ContentDeploymentService', () => {
+    const content = fs.readFileSync(path.join(contentDir, 'content-management.component.ts'), 'utf-8');
+    expect(content).toContain('VideoUploadService');
+    expect(content).toContain('ContentDeploymentService');
+  });
+
+  it('content-management component must NOT contain upload logic inline (delegated to VideoUploadService)', () => {
+    const content = fs.readFileSync(path.join(contentDir, 'content-management.component.ts'), 'utf-8');
+    // Upload state must be delegated, not declared inline
+    expect(content).not.toMatch(/isUploading\s*=\s*false/);
+    expect(content).not.toMatch(/uploadProgress\s*=\s*0/);
+    expect(content).not.toMatch(/isConvertingImage\s*=\s*false/);
+  });
+
+  it('content-management component must NOT contain deployment loop inline (delegated to ContentDeploymentService)', () => {
+    const content = fs.readFileSync(path.join(contentDir, 'content-management.component.ts'), 'utf-8');
+    expect(content).not.toContain('firstValueFrom');
+    expect(content).not.toMatch(/isDeploying\s*=\s*false/);
+  });
+});
+
+// =============================================================================
+// SponsorVideoDataService + DragDropService extraction guard
+// =============================================================================
+// All API calls in advertiser-videos MUST use SponsorVideoDataService (Observable-based via ApiService).
+// Raw fetch() calls are forbidden. Drag-and-drop reordering MUST use the generic DragDropService.
+
+describe('SponsorVideoDataService + DragDropService extraction guard', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+  const advertisersDir = path.join(repoRoot, 'central-dashboard/src/app/features/advertisers');
+
+  it('SponsorVideoDataService exists with all CRUD methods', () => {
+    const content = fs.readFileSync(path.join(advertisersDir, 'sponsor-video-data.service.ts'), 'utf-8');
+    expect(content).toContain('class SponsorVideoDataService');
+    expect(content).toContain('loadSponsor');
+    expect(content).toContain('loadSponsorVideos');
+    expect(content).toContain('loadAvailableVideos');
+    expect(content).toContain('addVideosToSponsor');
+    expect(content).toContain('removeVideoFromSponsor');
+    expect(content).toContain('updateVideoPriority');
+    expect(content).toContain('reorderVideos');
+  });
+
+  it('SponsorVideoDataService uses ApiService (not raw fetch)', () => {
+    const content = fs.readFileSync(path.join(advertisersDir, 'sponsor-video-data.service.ts'), 'utf-8');
+    expect(content).toContain('ApiService');
+    expect(content).not.toContain('fetch(');
+  });
+
+  it('DragDropService exists as a generic reusable service', () => {
+    const content = fs.readFileSync(path.join(advertisersDir, 'drag-drop.service.ts'), 'utf-8');
+    expect(content).toContain('class DragDropService');
+    expect(content).toContain('startDrag');
+    expect(content).toContain('drop');
+    expect(content).toContain('cancel');
+  });
+
+  it('advertiser-videos component must NOT use raw fetch() (delegated to SponsorVideoDataService)', () => {
+    const content = fs.readFileSync(path.join(advertisersDir, 'advertiser-videos.component.ts'), 'utf-8');
+    expect(content).toContain('SponsorVideoDataService');
+    expect(content).toContain('DragDropService');
+    expect(content).not.toContain('fetch(');
+    expect(content).not.toContain('await fetch');
+  });
+});
+
+// =============================================================================
+// ClubAnalyticsChartService + ClubExportService + utils extraction guard
+// =============================================================================
+// Chart.js rendering MUST live in ClubAnalyticsChartService (not inline in the component).
+// CSV/PDF export MUST live in ClubExportService.
+// Pure formatting/transformation functions MUST live in club-analytics.utils.ts.
+
+describe('ClubAnalytics service extraction guard', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+  const analyticsDir = path.join(repoRoot, 'central-dashboard/src/app/features/analytics');
+
+  it('ClubAnalyticsChartService exists with chart methods', () => {
+    const content = fs.readFileSync(path.join(analyticsDir, 'club-analytics-chart.service.ts'), 'utf-8');
+    expect(content).toContain('class ClubAnalyticsChartService');
+    expect(content).toContain('renderDailyChart');
+    expect(content).toContain('destroyChart');
+  });
+
+  it('ClubExportService exists with export methods', () => {
+    const content = fs.readFileSync(path.join(analyticsDir, 'club-export.service.ts'), 'utf-8');
+    expect(content).toContain('class ClubExportService');
+    expect(content).toContain('exportCsv');
+    expect(content).toContain('exportPdf');
+  });
+
+  it('club-analytics.utils.ts exists with pure formatting functions', () => {
+    const content = fs.readFileSync(path.join(analyticsDir, 'club-analytics.utils.ts'), 'utf-8');
+    expect(content).toContain('computePlaysTrend');
+    expect(content).toContain('formatDuration');
+    expect(content).toContain('formatDate');
+    expect(content).toContain('getVideoName');
+    expect(content).toContain('getCategoryPercent');
+    expect(content).toContain('getCategoryColor');
+    expect(content).toContain('getSeverityIcon');
+  });
+
+  it('club-analytics component delegates to extracted services and utils', () => {
+    const content = fs.readFileSync(path.join(analyticsDir, 'club-analytics.component.ts'), 'utf-8');
+    expect(content).toContain('ClubAnalyticsChartService');
+    expect(content).toContain('ClubExportService');
+    expect(content).toContain('club-analytics.utils');
+  });
+
+  it('club-analytics component must NOT contain Chart.js config inline (delegated to ClubAnalyticsChartService)', () => {
+    const content = fs.readFileSync(path.join(analyticsDir, 'club-analytics.component.ts'), 'utf-8');
+    expect(content).not.toContain('ChartConfiguration');
+    expect(content).not.toContain('new Chart(');
+    expect(content).not.toContain('Chart.register');
+  });
+
+  it('club-analytics component must NOT contain blob download logic (delegated to ClubExportService)', () => {
+    const content = fs.readFileSync(path.join(analyticsDir, 'club-analytics.component.ts'), 'utf-8');
+    expect(content).not.toContain('createObjectURL');
+    expect(content).not.toContain('revokeObjectURL');
+    expect(content).not.toContain('createElement(');
+  });
+
+  it('club-analytics component must NOT contain categoryColors map (delegated to utils)', () => {
+    const content = fs.readFileSync(path.join(analyticsDir, 'club-analytics.component.ts'), 'utf-8');
+    expect(content).not.toContain('categoryColors');
+    // Check the JS map is gone (not inline CSS which legitimately uses hex colors)
+    expect(content).not.toMatch(/categoryColors\s*[:=]/);
+  });
+});

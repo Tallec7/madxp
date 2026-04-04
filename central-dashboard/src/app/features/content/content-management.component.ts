@@ -5,7 +5,7 @@ import { TranslateModule } from '@ngx-translate/core';
 import { NotificationService } from '../../core/services/notification.service';
 import { ConfirmDialogService } from '../../core/services/confirm-dialog.service';
 import { Site, Group } from '../../core/models';
-import { Subscription, firstValueFrom } from 'rxjs';
+import { Subscription } from 'rxjs';
 import { VideoVariantPanelComponent } from './video-variant-panel.component';
 import {
   ContentManagementDataService,
@@ -15,6 +15,8 @@ import {
   VideoDeploymentHistory,
   VideoName,
 } from './content-management-data.service';
+import { VideoUploadService } from './video-upload.service';
+import { ContentDeploymentService } from './content-deployment.service';
 
 @Component({
   selector: 'app-content-management',
@@ -1801,51 +1803,36 @@ export class ContentManagementComponent implements OnInit, OnDestroy {
   showUploadModal = false;
   showHistoryModal = false;
   showImageModal = false;
-  uploadProgress = 0;
-  isUploading = false;
-  isDeploying = false;
   isLoadingHistory = false;
   isDragOver = false;
   isImageDragOver = false;
-  isConvertingImage = false;
-  imageConversionProgress = 0;
-  imagePreviewUrl: string | null = null;
-  imageConversionResult: { success: boolean; message: string } | null = null;
-  uploadResults: Array<{ name: string; success: boolean; error?: string }> = [];
   selectedVideoForHistory: Video | null = null;
   videoHistory: VideoDeploymentHistory | null = null;
   previewingVideo: Video | null = null;
 
-  uploadForm = {
-    title: '',
-    file: null as File | null,
-    files: [] as File[]
-  };
-
-  imageForm = {
-    file: null as File | null,
-    duration: 10,
-    blurBackground: false
-  };
-
-  durationOptions = [
-    { value: 5, label: '5 secondes' },
-    { value: 10, label: '10 secondes' },
-    { value: 15, label: '15 secondes' },
-    { value: 30, label: '30 secondes' },
-  ];
-
-  deployForm = {
-    videoIds: [] as string[],
-    targetType: 'site' as 'site' | 'group',
-    targetId: ''
-  };
-
   private readonly dataService = inject(ContentManagementDataService);
   private readonly notificationService = inject(NotificationService);
   private readonly confirmDialog = inject(ConfirmDialogService);
+  readonly uploadService = inject(VideoUploadService);
+  readonly deployService = inject(ContentDeploymentService);
   private subscriptions = new Subscription();
   private searchTimeout: ReturnType<typeof setTimeout> | null = null;
+
+  // ── Delegate to upload service ──
+  get uploadForm() { return this.uploadService.uploadForm; }
+  get isUploading() { return this.uploadService.isUploading; }
+  get uploadProgress() { return this.uploadService.uploadProgress; }
+  get uploadResults() { return this.uploadService.uploadResults; }
+  get imageForm() { return this.uploadService.imageForm; }
+  get isConvertingImage() { return this.uploadService.isConvertingImage; }
+  get imageConversionProgress() { return this.uploadService.imageConversionProgress; }
+  get imageConversionResult() { return this.uploadService.imageConversionResult; }
+  get imagePreviewUrl() { return this.uploadService.imagePreviewUrl; }
+  get durationOptions() { return this.uploadService.durationOptions; }
+
+  // ── Delegate to deploy service ──
+  get deployForm() { return this.deployService.deployForm; }
+  get isDeploying() { return this.deployService.isDeploying; }
 
   ngOnInit(): void {
     this.loadVideos();
@@ -1853,7 +1840,7 @@ export class ContentManagementComponent implements OnInit, OnDestroy {
     this.loadDeployments();
     this.loadSites();
     this.loadGroups();
-    this.subscribeToDeploymentProgress();
+    this.subscriptions.add(this.deployService.subscribeToDeploymentProgress(this.deployments));
   }
 
   ngOnDestroy(): void {
@@ -1895,60 +1882,30 @@ export class ContentManagementComponent implements OnInit, OnDestroy {
           this.videoPagination = response.pagination;
         }
       },
-      error: () => {
-        // Logged by data service / interceptor
-      }
+      error: () => {}
     });
   }
 
   loadAllVideos(): void {
     this.dataService.loadAllVideoNames().subscribe({
-      next: (names) => {
-        this.allVideos = names || [];
-      },
-      error: () => {
-        // Logged by data service / interceptor
-      }
+      next: (names) => { this.allVideos = names || []; },
+      error: () => {}
     });
   }
 
   loadDeployments(): void {
     this.dataService.loadDeployments().subscribe({
-      next: (deployments) => {
-        this.deployments = deployments;
-      },
-      error: () => {
-        // Logged by data service / interceptor
-      }
+      next: (deployments) => { this.deployments = deployments; },
+      error: () => {}
     });
   }
 
   loadSites(): void {
-    this.dataService.loadSites().subscribe({
-      next: (sites) => {
-        this.sites = sites;
-      }
-    });
+    this.dataService.loadSites().subscribe({ next: (sites) => { this.sites = sites; } });
   }
 
   loadGroups(): void {
-    this.dataService.loadGroups().subscribe({
-      next: (groups) => {
-        this.groups = groups;
-      }
-    });
-  }
-
-  subscribeToDeploymentProgress(): void {
-    const sub = this.dataService.subscribeToDeploymentProgress().subscribe(data => {
-      const deployment = this.deployments.find(d => d.id === data.deploymentId);
-      if (deployment) {
-        deployment.progress = data.progress;
-        deployment.deployed_count = data.deployedCount;
-        deployment.status = data.status;
-      }
-    });
-    this.subscriptions.add(sub);
+    this.dataService.loadGroups().subscribe({ next: (groups) => { this.groups = groups; } });
   }
 
   // ── Pagination & search ──
@@ -1976,159 +1933,45 @@ export class ContentManagementComponent implements OnInit, OnDestroy {
     if (totalPages <= 7) {
       return Array.from({ length: totalPages }, (_, i) => i + 1);
     }
-
     const pages: number[] = [1];
-    if (page > 3) pages.push(-1); // ellipsis
+    if (page > 3) pages.push(-1);
     for (let i = Math.max(2, page - 1); i <= Math.min(totalPages - 1, page + 1); i++) {
       pages.push(i);
     }
-    if (page < totalPages - 2) pages.push(-1); // ellipsis
+    if (page < totalPages - 2) pages.push(-1);
     pages.push(totalPages);
     return pages;
   }
 
-  // ── File selection UI handlers ──
+  // ── File selection UI handlers (delegate to uploadService) ──
 
   onFilesSelected(event: Event): void {
     const target = event.target as HTMLInputElement;
-    const files = Array.from(target.files || []) as File[];
-    this.addFilesToSelection(files);
+    this.uploadService.addFilesToSelection(Array.from(target.files || []) as File[]);
   }
 
-  onDragOver(event: DragEvent): void {
-    event.preventDefault();
-    event.stopPropagation();
-    this.isDragOver = true;
-  }
-
-  onDragLeave(event: DragEvent): void {
-    event.preventDefault();
-    event.stopPropagation();
-    this.isDragOver = false;
-  }
+  onDragOver(event: DragEvent): void { event.preventDefault(); event.stopPropagation(); this.isDragOver = true; }
+  onDragLeave(event: DragEvent): void { event.preventDefault(); event.stopPropagation(); this.isDragOver = false; }
 
   onDrop(event: DragEvent): void {
-    event.preventDefault();
-    event.stopPropagation();
-    this.isDragOver = false;
-
+    event.preventDefault(); event.stopPropagation(); this.isDragOver = false;
     const files = Array.from(event.dataTransfer?.files || []).filter(f => f.type.startsWith('video/'));
-    this.addFilesToSelection(files);
+    this.uploadService.addFilesToSelection(files);
   }
 
-  addFilesToSelection(files: File[]): void {
-    const maxFiles = 20;
-    const remaining = maxFiles - this.uploadForm.files.length;
-    const filesToAdd = files.slice(0, remaining);
-    this.uploadForm.files = [...this.uploadForm.files, ...filesToAdd];
-
-    if (files.length > remaining) {
-      this.notificationService.warning(`Seulement ${remaining} fichier(s) ajouté(s). Maximum ${maxFiles} fichiers.`);
-    }
-  }
-
-  removeFile(index: number): void {
-    this.uploadForm.files.splice(index, 1);
-  }
-
-  clearSelectedFiles(): void {
-    this.uploadForm.files = [];
-  }
+  addFilesToSelection(files: File[]): void { this.uploadService.addFilesToSelection(files); }
+  removeFile(index: number): void { this.uploadService.removeFile(index); }
+  clearSelectedFiles(): void { this.uploadService.clearSelectedFiles(); }
+  canUpload(): boolean { return this.uploadService.canUpload(); }
 
   closeUploadModal(): void {
-    if (this.isUploading) return;
+    if (this.uploadService.isUploading) return;
     this.showUploadModal = false;
-    this.uploadForm = { title: '', file: null, files: [] };
-    this.uploadProgress = 0;
-    this.uploadResults = [];
+    this.uploadService.resetUploadForm();
   }
-
-  canUpload(): boolean {
-    return this.uploadForm.files.length > 0;
-  }
-
-  // ── Upload ──
 
   uploadVideos(): void {
-    if (!this.canUpload()) return;
-
-    this.isUploading = true;
-    this.uploadProgress = 10;
-    this.uploadResults = [];
-
-    const files = this.uploadForm.files;
-
-    if (files.length === 1) {
-      // Single file upload
-      const formData = new FormData();
-      if (this.uploadForm.title) {
-        formData.append('title', this.uploadForm.title);
-      }
-      formData.append('video', files[0]);
-
-      this.dataService.uploadVideo(formData).subscribe({
-        next: () => {
-          this.uploadProgress = 100;
-          this.uploadResults = [{ name: files[0].name, success: true }];
-          this.isUploading = false;
-          this.notificationService.success('Vidéo uploadée avec succès !');
-          this.loadVideos();
-          this.loadAllVideos();
-        },
-        error: (error: unknown) => {
-          const message = this.dataService.getErrorMessage(error);
-          this.uploadResults = [{ name: files[0].name, success: false, error: message }];
-          this.notificationService.error('Erreur lors de l\'upload', {
-            correlationId: this.dataService.getCorrelationId(error)
-          });
-          this.uploadProgress = 0;
-          this.isUploading = false;
-        }
-      });
-    } else {
-      // Multiple files upload
-      const formData = new FormData();
-      files.forEach(file => {
-        formData.append('videos', file);
-      });
-
-      this.dataService.uploadVideoBulk(formData).subscribe({
-        next: (response) => {
-          this.uploadProgress = 100;
-          this.isUploading = false;
-
-          // Build results
-          this.uploadResults = [];
-          if (response.files) {
-            response.files.forEach(f => {
-              this.uploadResults.push({ name: f.title, success: true });
-            });
-          }
-          if (response.errors) {
-            response.errors.forEach(e => {
-              this.uploadResults.push({ name: e.name, success: false, error: e.error });
-            });
-          }
-
-          if (response.success) {
-            this.notificationService.success(response.message);
-          } else {
-            this.notificationService.warning(response.message);
-          }
-
-          this.loadVideos();
-          this.loadAllVideos();
-        },
-        error: (error: unknown) => {
-          const message = this.dataService.getErrorMessage(error);
-          this.notificationService.error(`Erreur lors de l'upload: ${message}`, {
-            correlationId: this.dataService.getCorrelationId(error)
-          });
-          this.uploadProgress = 0;
-          this.isUploading = false;
-        }
-      });
-    }
+    this.uploadService.uploadVideos(() => { this.loadVideos(); this.loadAllVideos(); });
   }
 
   // ── Video CRUD actions ──
@@ -2163,12 +2006,8 @@ export class ContentManagementComponent implements OnInit, OnDestroy {
     this.videoHistory = null;
 
     this.dataService.loadVideoHistory(video.id).subscribe({
-      next: (history) => {
-        this.videoHistory = history;
-        this.isLoadingHistory = false;
-      },
+      next: (history) => { this.videoHistory = history; this.isLoadingHistory = false; },
       error: (error: unknown) => {
-        const message = this.dataService.getErrorMessage(error);
         this.notificationService.error('Erreur lors du chargement de l\'historique', {
           correlationId: this.dataService.getCorrelationId(error)
         });
@@ -2192,13 +2031,8 @@ export class ContentManagementComponent implements OnInit, OnDestroy {
 
   // ── Video preview modal ──
 
-  previewVideo(video: Video): void {
-    this.previewingVideo = video;
-  }
-
-  closePreview(): void {
-    this.previewingVideo = null;
-  }
+  previewVideo(video: Video): void { this.previewingVideo = video; }
+  closePreview(): void { this.previewingVideo = null; }
 
   deployFromPreview(): void {
     if (this.previewingVideo) {
@@ -2208,185 +2042,55 @@ export class ContentManagementComponent implements OnInit, OnDestroy {
     }
   }
 
-  // ── Deploy actions ──
+  // ── Deploy actions (delegate to deployService) ──
 
   deployVideo(video: Video): void {
-    if (!this.deployForm.videoIds.includes(video.id)) {
-      this.deployForm.videoIds = [...this.deployForm.videoIds, video.id];
-    }
+    this.deployService.addVideoToDeploy(video.id);
     this.activeTab = 'deploy';
   }
 
   getVideoTitleById(videoId: string): string {
-    return this.allVideos.find(v => v.id === videoId)?.title || 'Vidéo inconnue';
+    return this.deployService.getVideoTitleById(videoId, this.allVideos);
   }
 
-  removeSelectedVideo(videoId: string): void {
-    this.deployForm.videoIds = this.deployForm.videoIds.filter(id => id !== videoId);
-  }
-
-  clearSelectedVideos(): void {
-    this.deployForm.videoIds = [];
-  }
-
-  canDeploy(): boolean {
-    return this.deployForm.videoIds.length > 0 && !!(this.deployForm.targetType && this.deployForm.targetId);
-  }
+  removeSelectedVideo(videoId: string): void { this.deployService.removeSelectedVideo(videoId); }
+  clearSelectedVideos(): void { this.deployService.clearSelectedVideos(); }
+  canDeploy(): boolean { return this.deployService.canDeploy(); }
 
   async startDeployment(): Promise<void> {
-    if (!this.canDeploy() || this.isDeploying) return;
-
-    this.isDeploying = true;
-    const { videoIds, targetId, targetType } = this.deployForm;
-    const successes: string[] = [];
-    const failures: Array<{ title: string; error: string }> = [];
-
-    for (const videoId of videoIds) {
-      const videoTitle = this.getVideoTitleById(videoId);
-
-      try {
-        const deployment = await firstValueFrom(this.dataService.createDeployment(videoId, targetType, targetId));
-        this.deployments.unshift({
-          ...deployment,
-          video_title: videoTitle
-        });
-        successes.push(videoTitle);
-      } catch (error) {
-        const message = this.dataService.getErrorMessage(error);
-        failures.push({
-          title: videoTitle,
-          error: message
-        });
-      }
-    }
-
-    this.isDeploying = false;
-    this.deployForm = { videoIds: [], targetType: 'site', targetId: '' };
-
-    if (successes.length > 0) {
-      const label = successes.length === 1 ? successes[0] : `${successes.length} vidéos`;
-      this.notificationService.success(`Déploiement lancé pour ${label}`);
+    const result = await this.deployService.startDeployment(this.allVideos, this.deployments);
+    if (result.switchToHistory) {
       this.activeTab = 'history';
     }
-
-    if (failures.length > 0) {
-      const names = failures.map(f => f.title).join(', ');
-      this.notificationService.error(`Erreur lors du déploiement pour ${names}`);
-    }
   }
 
-  // === Image to Video Methods ===
+  // ── Image to Video (delegate to uploadService) ──
 
   closeImageModal(): void {
-    if (this.isConvertingImage) return;
+    if (this.uploadService.isConvertingImage) return;
     this.showImageModal = false;
-    this.imageForm = { file: null, duration: 10, blurBackground: false };
-    this.imagePreviewUrl = null;
-    this.imageConversionProgress = 0;
-    this.imageConversionResult = null;
+    this.uploadService.resetImageForm();
   }
 
-  onImageDragOver(event: DragEvent): void {
-    event.preventDefault();
-    event.stopPropagation();
-    this.isImageDragOver = true;
-  }
-
-  onImageDragLeave(event: DragEvent): void {
-    event.preventDefault();
-    event.stopPropagation();
-    this.isImageDragOver = false;
-  }
+  onImageDragOver(event: DragEvent): void { event.preventDefault(); event.stopPropagation(); this.isImageDragOver = true; }
+  onImageDragLeave(event: DragEvent): void { event.preventDefault(); event.stopPropagation(); this.isImageDragOver = false; }
 
   onImageDrop(event: DragEvent): void {
-    event.preventDefault();
-    event.stopPropagation();
-    this.isImageDragOver = false;
-
+    event.preventDefault(); event.stopPropagation(); this.isImageDragOver = false;
     const files = Array.from(event.dataTransfer?.files || []).filter(f => f.type.startsWith('image/'));
-    if (files.length > 0) {
-      this.setImageFile(files[0]);
-    }
+    if (files.length > 0) { this.uploadService.setImageFile(files[0]); }
   }
 
   onImageSelected(event: Event): void {
     const target = event.target as HTMLInputElement;
     const file = target.files?.[0];
-    if (file) {
-      this.setImageFile(file);
-    }
+    if (file) { this.uploadService.setImageFile(file); }
   }
 
-  setImageFile(file: File): void {
-    // Validate mime type
-    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
-    if (!allowedTypes.includes(file.type)) {
-      this.notificationService.error('Format non supporté. Utilisez JPG, PNG ou WEBP.');
-      return;
-    }
-
-    this.imageForm.file = file;
-
-    // Create preview URL
-    if (this.imagePreviewUrl) {
-      URL.revokeObjectURL(this.imagePreviewUrl);
-    }
-    this.imagePreviewUrl = URL.createObjectURL(file);
-  }
-
-  clearImageFile(): void {
-    this.imageForm.file = null;
-    if (this.imagePreviewUrl) {
-      URL.revokeObjectURL(this.imagePreviewUrl);
-      this.imagePreviewUrl = null;
-    }
-  }
+  setImageFile(file: File): void { this.uploadService.setImageFile(file); }
+  clearImageFile(): void { this.uploadService.clearImageFile(); }
 
   convertImageToVideo(): void {
-    if (!this.imageForm.file || this.isConvertingImage) return;
-
-    this.isConvertingImage = true;
-    this.imageConversionProgress = 10;
-    this.imageConversionResult = null;
-
-    const formData = new FormData();
-    formData.append('image', this.imageForm.file);
-    formData.append('duration', this.imageForm.duration.toString());
-    formData.append('blurBackground', this.imageForm.blurBackground.toString());
-
-    // Simulate progress since we can't track actual ffmpeg progress
-    const progressInterval = setInterval(() => {
-      if (this.imageConversionProgress < 90) {
-        this.imageConversionProgress += 10;
-      }
-    }, 500);
-
-    this.dataService.convertImageToVideo(formData).subscribe({
-      next: (response) => {
-        clearInterval(progressInterval);
-        this.imageConversionProgress = 100;
-        this.isConvertingImage = false;
-        this.imageConversionResult = {
-          success: true,
-          message: response.message || `Vidéo créée avec succès !`
-        };
-        this.notificationService.success(response.message || 'Image convertie en vidéo !');
-        this.loadVideos();
-        this.loadAllVideos();
-      },
-      error: (error: unknown) => {
-        clearInterval(progressInterval);
-        this.isConvertingImage = false;
-        this.imageConversionProgress = 0;
-        const message = this.dataService.getErrorMessage(error);
-        this.imageConversionResult = {
-          success: false,
-          message: message
-        };
-        this.notificationService.error(`Erreur: ${message}`, {
-          correlationId: this.dataService.getCorrelationId(error)
-        });
-      }
-    });
+    this.uploadService.convertImageToVideo(() => { this.loadVideos(); this.loadAllVideos(); });
   }
 }

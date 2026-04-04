@@ -153,15 +153,24 @@ neopro/ (monorepo)
 │   │   │   │   ├── advertiser-form.service.ts            # Form : edit state, validation, saving/deleting
 │   │   │   │   ├── sponsor-videos-tab.component.ts       # Onglet vidéos sponsor
 │   │   │   │   ├── sponsor-sites-tab.component.ts        # Onglet sites assignés
-│   │   │   │   └── sponsor-campaigns-tab.component.ts    # Onglet campagnes
+│   │   │   │   ├── sponsor-campaigns-tab.component.ts    # Onglet campagnes
+│   │   │   │   ├── advertiser-videos.component.ts        # Gestion vidéos sponsor (drag-and-drop, priorités)
+│   │   │   │   ├── sponsor-video-data.service.ts         # Data : CRUD vidéos sponsor (ApiService, Observable)
+│   │   │   │   └── drag-drop.service.ts                  # Générique : réordonnancement drag-and-drop
 │   │   │   ├── content/                         # Gestion contenu cloud
-│   │   │   │   ├── content-management.component.ts       # UI : vidéos, upload, deploy wizard
-│   │   │   │   └── content-management-data.service.ts    # Data : CRUD vidéos, déploiements, image-to-video
+│   │   │   │   ├── content-management.component.ts       # UI : onglets, modals, drag-over (orchestrateur)
+│   │   │   │   ├── content-management-data.service.ts    # Data : CRUD vidéos, déploiements, image-to-video
+│   │   │   │   ├── video-upload.service.ts               # Upload : fichiers, bulk, image-to-video, état
+│   │   │   │   └── content-deployment.service.ts         # Deploy : wizard form, exécution séquentielle, progress
 │   │   │   ├── analytics/                       # Analytics & vue d'ensemble
 │   │   │   │   ├── analytics.component.ts                # Orchestrateur : état, data loading, refresh
 │   │   │   │   ├── analytics-traction.component.ts       # Page traction (décomposé en 9 sous-composants)
 │   │   │   │   ├── analytics-comparison.component.ts     # Comparaison inter-sites
 │   │   │   │   ├── analytics-nav.component.ts            # Navigation onglets analytics
+│   │   │   │   ├── club-analytics.component.ts           # Analytics club (orchestrateur KPIs + chart)
+│   │   │   │   ├── club-analytics-chart.service.ts       # Chart.js : config, rendu, cleanup daily chart
+│   │   │   │   ├── club-export.service.ts                # Export : CSV blob + PDF blob download
+│   │   │   │   ├── club-analytics.utils.ts               # Fonctions pures : formatage, couleurs, tendances
 │   │   │   │   └── components/                           # Sous-composants analytics
 │   │   │   │       ├── analytics-kpi-grid.component.ts   #   KPIs : vidéos, écran, impressions, flotte
 │   │   │   │       ├── engagement-chart.component.ts     #   Graphique Chart.js engagement mensuel

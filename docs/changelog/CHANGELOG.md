@@ -1,3 +1,24 @@
+# [3.128.0](https://github.com/Tallec7/neopro/compare/v3.127.0...v3.128.0) (2026-04-04)
+
+### Refactoring
+
+- **dashboard:** extract VideoUploadService from content-management (upload single/bulk, image-to-video, file selection state) ([COMMIT])
+- **dashboard:** extract ContentDeploymentService from content-management (deploy wizard, sequential execution, socket progress) ([COMMIT])
+- **dashboard:** extract SponsorVideoDataService from advertiser-videos — replace raw fetch() with Observable-based ApiService ([COMMIT])
+- **dashboard:** extract DragDropService<T> generic reusable service from advertiser-videos drag-and-drop logic ([COMMIT])
+- **dashboard:** extract ClubAnalyticsChartService from club-analytics (Chart.js rendering/cleanup encapsulated) ([COMMIT])
+- **dashboard:** extract ClubExportService from club-analytics (CSV/PDF blob download) ([COMMIT])
+- **dashboard:** extract club-analytics.utils.ts — pure formatting functions (trends, duration, colors, severity) ([COMMIT])
+
+### Tests
+
+- **smoke:** add 3 decomposition guard test suites (VideoUploadService+ContentDeploymentService, SponsorVideoDataService+DragDropService, ClubAnalytics services+utils) with 25+ assertions preventing re-monolithification ([COMMIT])
+
+### Docs
+
+- **architecture:** update ARCHITECTURE.md tree with 10 new service/util entries across content, advertisers, and analytics modules ([COMMIT])
+- **claude.md:** add 8 re-monolithification prevention rules for new service extractions (smoke test enforced) ([COMMIT])
+
 # [3.127.0](https://github.com/Tallec7/neopro/compare/v3.126.0...v3.127.0) (2026-04-04)
 
 ### Refactoring

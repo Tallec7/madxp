@@ -5,7 +5,7 @@ import { ActivatedRoute, RouterModule } from '@angular/router';
 import { TranslateModule } from '@ngx-translate/core';
 import { Subscription, interval, forkJoin, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
-import { Chart, ChartConfiguration, registerables } from 'chart.js';
+import { Chart } from 'chart.js';
 import {
   AnalyticsService,
   ClubHealthData,
@@ -16,12 +16,20 @@ import {
 } from '../../core/services/analytics.service';
 import { SitesService } from '../../core/services/sites.service';
 import { SiteSponsorService } from '../../core/services/site-sponsor.service';
-import { NotificationService } from '../../core/services/notification.service';
 import { LoggerService } from '../../core/services/logger.service';
 import { ErrorExtractor } from '../../core/utils/error-extractor';
-import { Site, SiteSponsorBenchmarkResponse, SiteSponsorBenchmarkEntry } from '../../core/models';
-
-Chart.register(...registerables);
+import { Site, SiteSponsorBenchmarkResponse } from '../../core/models';
+import { ClubAnalyticsChartService } from './club-analytics-chart.service';
+import { ClubExportService } from './club-export.service';
+import {
+  computePlaysTrend,
+  formatDuration,
+  formatDate,
+  getVideoName,
+  getCategoryPercent,
+  getCategoryColor,
+  getSeverityIcon,
+} from './club-analytics.utils';
 
 @Component({
   selector: 'app-club-analytics',
@@ -431,19 +439,11 @@ export class ClubAnalyticsComponent implements OnInit, OnDestroy {
   private readonly analyticsService = inject(AnalyticsService);
   private readonly sitesService = inject(SitesService);
   private readonly sponsorService = inject(SiteSponsorService);
-  private readonly notificationService = inject(NotificationService);
+  private readonly chartService = inject(ClubAnalyticsChartService);
+  private readonly exportService = inject(ClubExportService);
   private readonly logger = inject(LoggerService);
   private refreshSubscription?: Subscription;
   private dailyChart: Chart | null = null;
-
-  private readonly categoryColors: Record<string, string> = {
-    sponsor: '#f59e0b',
-    jingle: '#2563eb',
-    ambiance: '#10b981',
-    pub: '#ef4444',
-    info: '#8b5cf6',
-    animation: '#ec4899',
-  };
 
   ngOnInit(): void {
     this.siteId = this.route.snapshot.paramMap.get('id')!;
@@ -453,7 +453,7 @@ export class ClubAnalyticsComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.refreshSubscription?.unsubscribe();
-    this.dailyChart?.destroy();
+    this.chartService.destroyChart(this.dailyChart);
   }
 
   loadData(): void {
@@ -464,7 +464,6 @@ export class ClubAnalyticsComponent implements OnInit, OnDestroy {
       error: (err) => this.logger.warn('Failed to load site', { error: ErrorExtractor.getMessage(err), siteId: this.siteId })
     });
 
-    // Calculate date range for sponsors
     const to = new Date();
     const from = new Date();
     from.setDate(from.getDate() - days);
@@ -489,13 +488,13 @@ export class ClubAnalyticsComponent implements OnInit, OnDestroy {
         this.recentAlerts = data.alerts.alerts;
         this.sponsorBenchmark = data.sponsors;
 
-        // Compute trend
-        this.computePlaysTrend(data.usage, data.previousUsage);
+        this.playsTrend = computePlaysTrend(
+          data.usage?.total_plays || 0,
+          data.previousUsage?.total_plays || 0
+        );
 
-        // Compute total sponsor impressions
         this.totalSponsorImpressions = data.sponsors?.sponsors?.reduce((sum, s) => sum + (s.impressions || 0), 0) || 0;
 
-        // Render chart
         setTimeout(() => this.renderDailyChart(), 0);
       },
       error: (err) => {
@@ -505,150 +504,44 @@ export class ClubAnalyticsComponent implements OnInit, OnDestroy {
   }
 
   onPeriodChange(): void {
-    this.dailyChart?.destroy();
+    this.chartService.destroyChart(this.dailyChart);
     this.dailyChart = null;
     this.loadData();
   }
 
-  private computePlaysTrend(current: UsageStats | null, extended: UsageStats | null): void {
-    if (!current || !extended) {
-      this.playsTrend = null;
-      return;
-    }
-
-    const currentPlays = current.total_plays || 0;
-    const extendedPlays = extended.total_plays || 0;
-    const previousPlays = extendedPlays - currentPlays;
-
-    if (previousPlays <= 0) {
-      this.playsTrend = currentPlays > 0 ? 100 : null;
-      return;
-    }
-
-    this.playsTrend = Math.round(((currentPlays - previousPlays) / previousPlays) * 100);
-  }
-
   private renderDailyChart(): void {
     if (!this.dailyChartRef?.nativeElement || !this.usage?.daily_breakdown?.length) return;
-    this.dailyChart?.destroy();
-
-    const breakdown = this.usage.daily_breakdown;
-    const labels = breakdown.map(d => {
-      const date = new Date(d.date);
-      return date.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' });
-    });
-
-    const config: ChartConfiguration = {
-      type: 'bar',
-      data: {
-        labels,
-        datasets: [{
-          label: 'Lectures',
-          data: breakdown.map(d => d.plays),
-          backgroundColor: '#2563eb',
-          borderRadius: 4,
-          maxBarThickness: 32,
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: { display: false },
-          tooltip: {
-            backgroundColor: '#0f172a',
-            padding: 10,
-            cornerRadius: 8,
-            callbacks: {
-              label: (ctx) => `${ctx.parsed.y} lectures`
-            }
-          }
-        },
-        scales: {
-          x: { grid: { display: false } },
-          y: { beginAtZero: true, grid: { color: '#f1f5f9' } }
-        }
-      }
-    };
-
-    this.dailyChart = new Chart(this.dailyChartRef.nativeElement, config);
+    this.chartService.destroyChart(this.dailyChart);
+    this.dailyChart = this.chartService.renderDailyChart(this.dailyChartRef.nativeElement, this.usage.daily_breakdown);
   }
 
   exportData(): void {
-    this.exporting = true;
     const days = parseInt(this.selectedPeriod, 10);
-
-    this.analyticsService.exportClubData(this.siteId, 'csv', days).subscribe({
-      next: (blob) => {
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `analytics-${this.site?.club_name || this.siteId}-${days}j.csv`;
-        a.click();
-        window.URL.revokeObjectURL(url);
-        this.exporting = false;
-      },
-      error: (err) => {
-        this.notificationService.error(`Erreur export: ${ErrorExtractor.getMessage(err)}`);
-        this.exporting = false;
-      }
-    });
+    this.exportService.exportCsv(
+      this.siteId, this.site?.club_name || this.siteId, days,
+      () => { this.exporting = true; },
+      () => { this.exporting = false; }
+    );
   }
 
   downloadPdf(): void {
-    this.exportingPdf = true;
     const days = parseInt(this.selectedPeriod, 10);
-    const to = new Date();
-    const from = new Date();
-    from.setDate(from.getDate() - days);
-
-    this.analyticsService.getClubPdfReport(this.siteId, from.toISOString().split('T')[0], to.toISOString().split('T')[0]).subscribe({
-      next: (blob) => {
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `rapport-${this.site?.club_name || this.siteId}.pdf`;
-        a.click();
-        window.URL.revokeObjectURL(url);
-        this.exportingPdf = false;
-      },
-      error: (err) => {
-        this.notificationService.error(`Erreur PDF: ${ErrorExtractor.getMessage(err)}`);
-        this.exportingPdf = false;
-      }
-    });
+    this.exportService.exportPdf(
+      this.siteId, this.site?.club_name || this.siteId, days,
+      () => { this.exportingPdf = true; },
+      () => { this.exportingPdf = false; }
+    );
   }
 
-  // Helpers
-  formatDuration(seconds: number): string {
-    if (!seconds) return '0min';
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    if (hours > 0) return `${hours}h${minutes}m`;
-    return `${minutes}min`;
-  }
+  // ── Template helpers (delegate to pure functions) ──
 
-  formatDate(date: string): string {
-    return new Date(date).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
-  }
-
-  getVideoName(filename: string): string {
-    return filename.replace(/\.[^/.]+$/, '').replace(/_/g, ' ');
-  }
+  formatDuration(seconds: number): string { return formatDuration(seconds); }
+  formatDate(date: string): string { return formatDate(date); }
+  getVideoName(filename: string): string { return getVideoName(filename); }
+  getCategoryColor(category: string): string { return getCategoryColor(category); }
+  getSeverityIcon(severity: string): string { return getSeverityIcon(severity); }
 
   getCategoryPercent(playCount: number): number {
-    if (!this.content?.categories_breakdown?.length) return 0;
-    const total = this.content.categories_breakdown.reduce((sum, c) => sum + c.play_count, 0);
-    return total > 0 ? (playCount / total) * 100 : 0;
-  }
-
-  getCategoryColor(category: string): string {
-    const key = (category || '').toLowerCase();
-    return this.categoryColors[key] || '#94a3b8';
-  }
-
-  getSeverityIcon(severity: string): string {
-    const icons: Record<string, string> = { critical: '🔴', warning: '🟠', info: '🔵' };
-    return icons[severity] || '⚪';
+    return getCategoryPercent(playCount, this.content?.categories_breakdown);
   }
 }
