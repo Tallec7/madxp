@@ -1,3 +1,17 @@
+# [3.127.0](https://github.com/Tallec7/neopro/compare/v3.126.0...v3.127.0) (2026-04-04)
+
+### Refactoring
+
+- **dashboard:** decompose advertiser-detail UI into 4 focused components: sponsor-info-tab, sponsor-quick-stats, sponsor-edit-modal, sponsor-delete-modal (978→458 lines orchestrator) ([COMMIT])
+- **dashboard:** decompose users-management UI into 4 focused components: users-table, users-filters, user-form-modal, user-delete-modal (918→373 lines orchestrator) ([COMMIT])
+- **dashboard:** decompose analytics UI into 6 focused components: analytics-kpi-grid, engagement-chart, top-clubs-card, dormant-clubs-card, sponsor-summary-card, fleet-health-card (683→312 lines orchestrator) ([COMMIT])
+
+### Docs
+
+- **architecture:** update ARCHITECTURE.md tree with 14 new sub-component entries across admin/users, advertisers, and analytics modules ([COMMIT])
+- **claude.md:** add 6 re-monolithification prevention rules for UI component extractions (smoke test enforced) ([COMMIT])
+- **changelog:** add v3.127.0 entry documenting full UI decomposition ([COMMIT])
+
 # [3.126.0](https://github.com/Tallec7/neopro/compare/v3.125.0...v3.126.0) (2026-04-04)
 
 ### Refactoring

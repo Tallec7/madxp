@@ -112,7 +112,11 @@ neopro/ (monorepo)
 │   ├── src/app/
 │   │   ├── features/
 │   │   │   ├── admin/users/                     # Gestion utilisateurs
-│   │   │   │   ├── users-management.component.ts         # UI : table, modals, filtres
+│   │   │   │   ├── users-management.component.ts         # Orchestrateur : état, routing, coordination
+│   │   │   │   ├── users-filters.component.ts            # UI : search input, filtres role/status
+│   │   │   │   ├── users-table.component.ts              # UI : table utilisateurs, badges, actions
+│   │   │   │   ├── user-form-modal.component.ts          # UI : modal create/edit utilisateur
+│   │   │   │   ├── user-delete-modal.component.ts        # UI : modal confirmation suppression
 │   │   │   │   ├── users-management-data.service.ts      # Data : CRUD users, agencies, advertisers
 │   │   │   │   ├── user-filters.service.ts               # Filtres : search, role, status
 │   │   │   │   └── user-validation.service.ts            # Validation : create/update forms
@@ -139,7 +143,11 @@ neopro/ (monorepo)
 │   │   │   │           ├── service-status/      #   Réseau, buffer analytics, hotspot, WiFi
 │   │   │   │           └── system-info/         #   Fichiers Pi, config historique, timeline
 │   │   │   ├── advertisers/                     # Gestion sponsors/annonceurs
-│   │   │   │   ├── advertiser-detail.component.ts        # UI : orchestrateur onglets, header, modals
+│   │   │   │   ├── advertiser-detail.component.ts        # Orchestrateur : onglets, état, routing
+│   │   │   │   ├── sponsor-info-tab.component.ts         # UI : contact, contrat, notes, métadonnées
+│   │   │   │   ├── sponsor-quick-stats.component.ts      # UI : aperçu analytics rapide (KPIs)
+│   │   │   │   ├── sponsor-edit-modal.component.ts       # UI : modal édition sponsor
+│   │   │   │   ├── sponsor-delete-modal.component.ts     # UI : modal confirmation suppression
 │   │   │   │   ├── advertiser-detail-data.service.ts     # Data : CRUD sponsor, forkJoin loading
 │   │   │   │   ├── advertiser-modal.service.ts           # Modals : edit/delete visibility state
 │   │   │   │   ├── advertiser-form.service.ts            # Form : edit state, validation, saving/deleting
@@ -149,6 +157,28 @@ neopro/ (monorepo)
 │   │   │   ├── content/                         # Gestion contenu cloud
 │   │   │   │   ├── content-management.component.ts       # UI : vidéos, upload, deploy wizard
 │   │   │   │   └── content-management-data.service.ts    # Data : CRUD vidéos, déploiements, image-to-video
+│   │   │   ├── analytics/                       # Analytics & vue d'ensemble
+│   │   │   │   ├── analytics.component.ts                # Orchestrateur : état, data loading, refresh
+│   │   │   │   ├── analytics-traction.component.ts       # Page traction (décomposé en 9 sous-composants)
+│   │   │   │   ├── analytics-comparison.component.ts     # Comparaison inter-sites
+│   │   │   │   ├── analytics-nav.component.ts            # Navigation onglets analytics
+│   │   │   │   └── components/                           # Sous-composants analytics
+│   │   │   │       ├── analytics-kpi-grid.component.ts   #   KPIs : vidéos, écran, impressions, flotte
+│   │   │   │       ├── engagement-chart.component.ts     #   Graphique Chart.js engagement mensuel
+│   │   │   │       ├── top-clubs-card.component.ts       #   Top clubs actifs (ranked list)
+│   │   │   │       ├── dormant-clubs-card.component.ts   #   Clubs à relancer (alert list)
+│   │   │   │       ├── sponsor-summary-card.component.ts #   Résumé sponsors (KPIs)
+│   │   │   │       ├── fleet-health-card.component.ts    #   Santé flotte (CPU/RAM/Temp)
+│   │   │   │       ├── traction-kpi-summary.component.ts #   KPIs traction
+│   │   │   │       ├── traction-fleet-growth.component.ts#   Croissance flotte
+│   │   │   │       ├── traction-engagement.component.ts  #   Engagement mensuel
+│   │   │   │       ├── traction-subscriptions.component.ts #  Abonnements
+│   │   │   │       ├── traction-advertisers.component.ts #   Métriques annonceurs
+│   │   │   │       ├── traction-deployments.component.ts #   Métriques déploiements
+│   │   │   │       ├── traction-product-velocity.component.ts # Vélocité produit
+│   │   │   │       ├── traction-retention.component.ts   #   Rétention
+│   │   │   │       ├── traction-distribution.component.ts#   Distribution
+│   │   │   │       └── traction-shared.styles.ts         #   Styles partagés traction
 │   │   │   └── sponsor-portal/                  # Page publique portail sponsor (token-based)
 │   │   ├── core/                                # Models, services, guards
 │   │   └── shared/components/                   # Composants réutilisables cross-features

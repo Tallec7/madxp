@@ -1,6 +1,5 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
 import { TranslateModule } from '@ngx-translate/core';
 import {
   User,
@@ -12,12 +11,23 @@ import { ErrorExtractor } from '../../../core/utils/error-extractor';
 import { LoggerService } from '../../../core/services/logger.service';
 import { UsersManagementDataService } from './users-management-data.service';
 import { UserFiltersService } from './user-filters.service';
-import { UserValidationService, UserForm } from './user-validation.service';
+import { UserValidationService } from './user-validation.service';
+import { UsersFiltersComponent } from './users-filters.component';
+import { UsersTableComponent } from './users-table.component';
+import { UserFormModalComponent, UserFormSaveEvent } from './user-form-modal.component';
+import { UserDeleteModalComponent } from './user-delete-modal.component';
 
 @Component({
   selector: 'app-users-management',
   standalone: true,
-  imports: [CommonModule, FormsModule, TranslateModule],
+  imports: [
+    CommonModule,
+    TranslateModule,
+    UsersFiltersComponent,
+    UsersTableComponent,
+    UserFormModalComponent,
+    UserDeleteModalComponent,
+  ],
   providers: [UsersManagementDataService, UserFiltersService, UserValidationService],
   template: `
     <div class="container">
@@ -29,30 +39,11 @@ import { UserValidationService, UserForm } from './user-validation.service';
       </div>
 
       <!-- Filters -->
-      <div class="filters">
-        <input
-          type="text"
-          [(ngModel)]="searchQuery"
-          (ngModelChange)="applyFilters()"
-          [placeholder]="'common.search' | translate"
-          class="search-input"
-        />
-        <select [(ngModel)]="filterRole" (ngModelChange)="applyFilters()" class="filter-select">
-          <option value="">{{ 'users.allRoles' | translate }}</option>
-          <option value="super_admin">Super Admin</option>
-          <option value="admin">{{ 'roles.admin' | translate }}</option>
-          <option value="operator">{{ 'roles.operator' | translate }}</option>
-          <option value="viewer">{{ 'roles.viewer' | translate }}</option>
-          <option value="advertiser">Annonceur</option>
-          <option value="agency">Agence</option>
-        </select>
-        <select [(ngModel)]="filterStatus" (ngModelChange)="applyFilters()" class="filter-select">
-          <option value="">{{ 'status.all' | translate }}</option>
-          <option value="active">{{ 'users.active' | translate }}</option>
-          <option value="inactive">{{ 'users.inactive' | translate }}</option>
-          <option value="suspended">Suspendu</option>
-        </select>
-      </div>
+      <app-users-filters
+        (searchChange)="onSearchChange($event)"
+        (roleChange)="onRoleChange($event)"
+        (statusChange)="onStatusChange($event)"
+      />
 
       <!-- Loading state -->
       @if (loading()) {
@@ -70,81 +61,12 @@ import { UserValidationService, UserForm } from './user-validation.service';
 
       <!-- Users list -->
       @if (!loading() && users().length > 0) {
-        <div class="card">
-          <table class="users-table">
-            <thead>
-              <tr>
-                <th>{{ 'users.email' | translate }}</th>
-                <th>{{ 'users.fullName' | translate }}</th>
-                <th>{{ 'users.role' | translate }}</th>
-                <th>{{ 'users.status' | translate }}</th>
-                <th>MFA</th>
-                <th>{{ 'users.lastLogin' | translate }}</th>
-                <th>{{ 'common.actions' | translate }}</th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (user of users(); track user.id) {
-                <tr>
-                  <td>
-                    <div class="user-cell">
-                      <div class="avatar">{{ getInitials(user) }}</div>
-                      <span class="email">{{ user.email }}</span>
-                    </div>
-                  </td>
-                  <td>
-                    <div class="name-cell">
-                      <span>{{ user.full_name || '-' }}</span>
-                      @if (user.advertiser_name) {
-                        <span class="sub-info advertiser">Annonceur: {{ user.advertiser_name }}</span>
-                      }
-                      @if (user.agency_name) {
-                        <span class="sub-info agency">Agence: {{ user.agency_name }}</span>
-                      }
-                    </div>
-                  </td>
-                  <td>
-                    <span class="badge" [class]="'badge-' + user.role">
-                      {{ usersService.getRoleLabel(user.role) }}
-                    </span>
-                  </td>
-                  <td>
-                    <span class="badge" [class]="'badge-status-' + user.status">
-                      {{ getStatusLabel(user.status) }}
-                    </span>
-                  </td>
-                  <td>
-                    @if (user.mfa_enabled) {
-                      <span class="mfa-active">Actif</span>
-                    } @else {
-                      <span class="mfa-inactive">-</span>
-                    }
-                  </td>
-                  <td class="date-cell">
-                    {{ user.last_login_at ? formatDate(user.last_login_at) : '-' }}
-                  </td>
-                  <td class="actions-cell">
-                    <button class="btn-link btn-edit" (click)="editUser(user)">
-                      {{ 'common.edit' | translate }}
-                    </button>
-                    @if (user.status === 'active') {
-                      <button class="btn-link btn-warning" (click)="toggleStatus(user, 'inactive')">
-                        Desactiver
-                      </button>
-                    } @else {
-                      <button class="btn-link btn-success" (click)="toggleStatus(user, 'active')">
-                        Activer
-                      </button>
-                    }
-                    <button class="btn-link btn-danger" (click)="confirmDelete(user)">
-                      {{ 'common.delete' | translate }}
-                    </button>
-                  </td>
-                </tr>
-              }
-            </tbody>
-          </table>
-        </div>
+        <app-users-table
+          [users]="users()"
+          (edit)="editUser($event)"
+          (toggleStatus)="toggleStatus($event.user, $event.status)"
+          (delete)="confirmDelete($event)"
+        />
       }
 
       <!-- Empty state -->
@@ -160,109 +82,23 @@ import { UserValidationService, UserForm } from './user-validation.service';
       }
 
       <!-- Create/Edit Modal -->
-      @if (showCreateModal || editingUser) {
-        <div class="modal-overlay" (click)="cancelEdit()">
-          <div class="modal" (click)="$event.stopPropagation()">
-            <div class="modal-header">
-              <h3>{{ editingUser ? ('users.editUser' | translate) : ('users.addUser' | translate) }}</h3>
-            </div>
-            <form (ngSubmit)="saveUser()" class="modal-body">
-              <div class="form-group">
-                <label>{{ 'users.email' | translate }} *</label>
-                <input type="email" [(ngModel)]="userForm.email" name="email" required />
-              </div>
-              @if (!editingUser) {
-                <div class="form-group">
-                  <label>{{ 'auth.password' | translate }} *</label>
-                  <input
-                    type="password"
-                    [(ngModel)]="userForm.password"
-                    name="password"
-                    required
-                    minlength="8"
-                  />
-                  <span class="hint">Minimum 8 caracteres</span>
-                </div>
-              }
-              <div class="form-group">
-                <label>{{ 'users.fullName' | translate }} *</label>
-                <input type="text" [(ngModel)]="userForm.full_name" name="full_name" required />
-              </div>
-              <div class="form-group">
-                <label>{{ 'users.role' | translate }} *</label>
-                <select [(ngModel)]="userForm.role" name="role" required>
-                  <option value="super_admin">Super Admin</option>
-                  <option value="admin">{{ 'roles.admin' | translate }}</option>
-                  <option value="operator">{{ 'roles.operator' | translate }}</option>
-                  <option value="viewer">{{ 'roles.viewer' | translate }}</option>
-                  <option value="advertiser">Annonceur</option>
-                  <option value="agency">Agence</option>
-                </select>
-              </div>
-              @if (userForm.role === 'advertiser') {
-                <div class="form-group">
-                  <label>Annonceur associe</label>
-                  <select [(ngModel)]="userForm.advertiser_id" name="advertiser_id">
-                    <option [ngValue]="null">Selectionnez un annonceur</option>
-                    @for (advertiser of advertisers(); track advertiser.id) {
-                      <option [ngValue]="advertiser.id">{{ advertiser.name }}</option>
-                    }
-                  </select>
-                </div>
-              }
-              @if (userForm.role === 'agency') {
-                <div class="form-group">
-                  <label>Agence associee</label>
-                  <select [(ngModel)]="userForm.agency_id" name="agency_id">
-                    <option [ngValue]="null">Selectionnez une agence</option>
-                    @for (agency of agencies(); track agency.id) {
-                      <option [ngValue]="agency.id">{{ agency.name }}</option>
-                    }
-                  </select>
-                </div>
-              }
-              <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" (click)="cancelEdit()">
-                  {{ 'common.cancel' | translate }}
-                </button>
-                <button type="submit" class="btn btn-primary" [disabled]="saving()">
-                  {{ saving() ? ('common.loading' | translate) : ('common.save' | translate) }}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      }
+      <app-user-form-modal
+        [visible]="showCreateModal"
+        [editingUser]="editingUser"
+        [saving]="saving()"
+        [agencies]="agencies()"
+        [advertisers]="advertisers()"
+        (save)="saveUser($event)"
+        (closeModal)="cancelEdit()"
+      />
 
       <!-- Delete Confirmation Modal -->
-      @if (deletingUser) {
-        <div class="modal-overlay" (click)="deletingUser = null">
-          <div class="modal modal-small" (click)="$event.stopPropagation()">
-            <div class="modal-header">
-              <h3>{{ 'users.deleteConfirm' | translate }}</h3>
-            </div>
-            <div class="modal-body">
-              <p>
-                Etes-vous sur de vouloir supprimer l'utilisateur "{{ deletingUser.email }}" ? Cette
-                action est irreversible.
-              </p>
-            </div>
-            <div class="modal-footer">
-              <button type="button" class="btn btn-secondary" (click)="deletingUser = null">
-                {{ 'common.cancel' | translate }}
-              </button>
-              <button
-                type="button"
-                class="btn btn-danger"
-                (click)="deleteUser()"
-                [disabled]="saving()"
-              >
-                {{ saving() ? 'Suppression...' : ('common.delete' | translate) }}
-              </button>
-            </div>
-          </div>
-        </div>
-      }
+      <app-user-delete-modal
+        [user]="deletingUser"
+        [saving]="saving()"
+        (confirm)="deleteUser()"
+        (closeModal)="deletingUser = null"
+      />
     </div>
   `,
   styles: [
@@ -287,222 +123,6 @@ import { UserValidationService, UserForm } from './user-validation.service';
         margin: 0;
       }
 
-      .filters {
-        display: flex;
-        gap: 1rem;
-        margin-bottom: 1.5rem;
-        flex-wrap: wrap;
-      }
-
-      .search-input {
-        flex: 1;
-        min-width: 200px;
-        padding: 0.625rem 1rem;
-        border: 1px solid #e2e8f0;
-        border-radius: 8px;
-        font-size: 0.875rem;
-        background: white;
-      }
-
-      .search-input:focus {
-        outline: none;
-        border-color: #2563eb;
-        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
-      }
-
-      .filter-select {
-        padding: 0.625rem 1rem;
-        border: 1px solid #e2e8f0;
-        border-radius: 8px;
-        font-size: 0.875rem;
-        background: white;
-        cursor: pointer;
-      }
-
-      .filter-select:focus {
-        outline: none;
-        border-color: #2563eb;
-      }
-
-      .card {
-        background: white;
-        border-radius: 12px;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-        overflow: hidden;
-      }
-
-      .users-table {
-        width: 100%;
-        border-collapse: collapse;
-      }
-
-      .users-table th {
-        text-align: left;
-        padding: 1rem;
-        font-size: 0.75rem;
-        font-weight: 600;
-        color: #64748b;
-        text-transform: uppercase;
-        background: #f8fafc;
-        border-bottom: 1px solid #e2e8f0;
-      }
-
-      .users-table td {
-        padding: 1rem;
-        border-bottom: 1px solid #f1f5f9;
-        font-size: 0.875rem;
-        color: #334155;
-      }
-
-      .users-table tr:hover {
-        background: #f8fafc;
-      }
-
-      .user-cell {
-        display: flex;
-        align-items: center;
-        gap: 0.75rem;
-      }
-
-      .avatar {
-        width: 36px;
-        height: 36px;
-        border-radius: 50%;
-        background: #dbeafe;
-        color: #2563eb;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-weight: 600;
-        font-size: 0.875rem;
-      }
-
-      .email {
-        font-weight: 500;
-        color: #0f172a;
-      }
-
-      .name-cell {
-        display: flex;
-        flex-direction: column;
-        gap: 0.25rem;
-      }
-
-      .sub-info {
-        font-size: 0.75rem;
-      }
-
-      .sub-info.advertiser {
-        color: #7c3aed;
-      }
-
-      .sub-info.agency {
-        color: #059669;
-      }
-
-      .badge {
-        display: inline-block;
-        padding: 0.25rem 0.75rem;
-        border-radius: 9999px;
-        font-size: 0.75rem;
-        font-weight: 500;
-      }
-
-      .badge-super_admin {
-        background: #fee2e2;
-        color: #991b1b;
-      }
-      .badge-admin {
-        background: #f3e8ff;
-        color: #6b21a8;
-      }
-      .badge-operator {
-        background: #dbeafe;
-        color: #1e40af;
-      }
-      .badge-viewer {
-        background: #f1f5f9;
-        color: #475569;
-      }
-      .badge-advertiser {
-        background: #fef3c7;
-        color: #92400e;
-      }
-      .badge-agency {
-        background: #dcfce7;
-        color: #166534;
-      }
-
-      .badge-status-active {
-        background: #dcfce7;
-        color: #166534;
-      }
-      .badge-status-inactive {
-        background: #fef3c7;
-        color: #92400e;
-      }
-      .badge-status-suspended {
-        background: #fee2e2;
-        color: #991b1b;
-      }
-
-      .mfa-active {
-        color: #059669;
-        font-weight: 500;
-      }
-      .mfa-inactive {
-        color: #94a3b8;
-      }
-
-      .date-cell {
-        color: #64748b;
-        font-size: 0.8125rem;
-      }
-
-      .actions-cell {
-        display: flex;
-        gap: 0.5rem;
-        flex-wrap: wrap;
-      }
-
-      .btn-link {
-        background: none;
-        border: none;
-        padding: 0.25rem 0.5rem;
-        font-size: 0.8125rem;
-        cursor: pointer;
-        border-radius: 4px;
-        transition: background 0.2s;
-      }
-
-      .btn-edit {
-        color: #2563eb;
-      }
-      .btn-edit:hover {
-        background: #dbeafe;
-      }
-
-      .btn-warning {
-        color: #d97706;
-      }
-      .btn-warning:hover {
-        background: #fef3c7;
-      }
-
-      .btn-success {
-        color: #059669;
-      }
-      .btn-success:hover {
-        background: #dcfce7;
-      }
-
-      .btn-danger {
-        color: #dc2626;
-      }
-      .btn-danger:hover {
-        background: #fee2e2;
-      }
-
       .btn {
         padding: 0.625rem 1.25rem;
         border-radius: 8px;
@@ -519,28 +139,6 @@ import { UserValidationService, UserForm } from './user-validation.service';
       }
       .btn-primary:hover {
         background: #1d4ed8;
-      }
-      .btn-primary:disabled {
-        background: #93c5fd;
-        cursor: not-allowed;
-      }
-
-      .btn-secondary {
-        background: #f1f5f9;
-        color: #475569;
-        border: 1px solid #e2e8f0;
-      }
-      .btn-secondary:hover {
-        background: #e2e8f0;
-      }
-
-      .btn.btn-danger {
-        background: #dc2626;
-        color: white;
-        padding: 0.625rem 1.25rem;
-      }
-      .btn.btn-danger:hover {
-        background: #b91c1c;
       }
 
       .loading {
@@ -598,97 +196,6 @@ import { UserValidationService, UserForm } from './user-validation.service';
         margin: 0 0 1.5rem 0;
       }
 
-      .modal-overlay {
-        position: fixed;
-        inset: 0;
-        background: rgba(15, 23, 42, 0.5);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        z-index: 1000;
-        padding: 1rem;
-      }
-
-      .modal {
-        background: white;
-        border-radius: 12px;
-        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-        width: 100%;
-        max-width: 480px;
-        max-height: 90vh;
-        overflow-y: auto;
-      }
-
-      .modal-small {
-        max-width: 400px;
-      }
-
-      .modal-header {
-        padding: 1.25rem 1.5rem;
-        border-bottom: 1px solid #e2e8f0;
-      }
-
-      .modal-header h3 {
-        margin: 0;
-        font-size: 1.125rem;
-        font-weight: 600;
-        color: #0f172a;
-      }
-
-      .modal-body {
-        padding: 1.5rem;
-      }
-
-      .modal-body p {
-        color: #64748b;
-        line-height: 1.5;
-        margin: 0;
-      }
-
-      .modal-footer {
-        display: flex;
-        justify-content: flex-end;
-        gap: 0.75rem;
-        padding-top: 1.5rem;
-      }
-
-      .form-group {
-        margin-bottom: 1.25rem;
-      }
-
-      .form-group label {
-        display: block;
-        font-size: 0.875rem;
-        font-weight: 500;
-        color: #374151;
-        margin-bottom: 0.5rem;
-      }
-
-      .form-group input,
-      .form-group select {
-        width: 100%;
-        padding: 0.625rem 0.875rem;
-        border: 1px solid #e2e8f0;
-        border-radius: 8px;
-        font-size: 0.875rem;
-        background: white;
-        box-sizing: border-box;
-      }
-
-      .form-group input:focus,
-      .form-group select:focus {
-        outline: none;
-        border-color: #2563eb;
-        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
-      }
-
-      .hint {
-        display: block;
-        font-size: 0.75rem;
-        color: #64748b;
-        margin-top: 0.375rem;
-      }
-
       @media (max-width: 768px) {
         .container {
           padding: 1rem;
@@ -698,15 +205,6 @@ import { UserValidationService, UserForm } from './user-validation.service';
           flex-direction: column;
           align-items: flex-start;
           gap: 1rem;
-        }
-
-        .users-table {
-          display: block;
-          overflow-x: auto;
-        }
-
-        .actions-cell {
-          flex-direction: column;
         }
       }
     `,
@@ -718,7 +216,6 @@ export class UsersManagementComponent implements OnInit {
   private readonly validationService = inject(UserValidationService);
   private readonly logger = inject(LoggerService);
 
-  // Expose service signals to template
   readonly users = this.dataService.users;
   readonly agencies = this.dataService.agencies;
   readonly advertisers = this.dataService.advertisers;
@@ -726,18 +223,9 @@ export class UsersManagementComponent implements OnInit {
   readonly saving = this.dataService.saving;
   readonly error = this.dataService.error;
 
-  // Expose usersService for getRoleLabel in template
-  readonly usersService = this.dataService.usersService;
-
   showCreateModal = false;
   editingUser: User | null = null;
   deletingUser: User | null = null;
-
-  searchQuery = '';
-  filterRole = '';
-  filterStatus = '';
-
-  userForm: UserForm = this.validationService.createEmptyForm();
 
   ngOnInit(): void {
     this.refreshData();
@@ -749,47 +237,46 @@ export class UsersManagementComponent implements OnInit {
     this.dataService.loadAdvertisers();
   }
 
-  applyFilters(): void {
-    this.filtersService.searchQuery.set(this.searchQuery);
-    this.filtersService.filterRole.set(this.filterRole as never);
-    this.filtersService.filterStatus.set(this.filterStatus as never);
+  onSearchChange(query: string): void {
+    this.filtersService.searchQuery.set(query);
+    this.dataService.loadUsers(this.filtersService.buildFilters());
+  }
+
+  onRoleChange(role: string): void {
+    this.filtersService.filterRole.set(role as never);
+    this.dataService.loadUsers(this.filtersService.buildFilters());
+  }
+
+  onStatusChange(status: string): void {
+    this.filtersService.filterStatus.set(status as never);
     this.dataService.loadUsers(this.filtersService.buildFilters());
   }
 
   editUser(user: User): void {
     this.editingUser = user;
-    this.userForm = {
-      email: user.email,
-      password: '',
-      full_name: user.full_name || '',
-      role: user.role,
-      advertiser_id: user.advertiser_id,
-      agency_id: user.agency_id,
-    };
   }
 
   cancelEdit(): void {
     this.showCreateModal = false;
     this.editingUser = null;
-    this.userForm = this.validationService.createEmptyForm();
   }
 
-  saveUser(): void {
-    const validation = this.editingUser
-      ? this.validationService.validateForUpdate(this.userForm)
-      : this.validationService.validateForCreate(this.userForm);
+  saveUser(event: UserFormSaveEvent): void {
+    const validation = event.isEdit
+      ? this.validationService.validateForUpdate(event.form)
+      : this.validationService.validateForCreate(event.form);
 
     if (!validation.valid) return;
 
     this.dataService.saving.set(true);
 
-    if (this.editingUser) {
+    if (event.isEdit && this.editingUser) {
       const data: UpdateUserData = {
-        email: this.userForm.email.trim(),
-        full_name: this.userForm.full_name.trim(),
-        role: this.userForm.role,
-        advertiser_id: this.userForm.advertiser_id,
-        agency_id: this.userForm.agency_id,
+        email: event.form.email.trim(),
+        full_name: event.form.full_name.trim(),
+        role: event.form.role,
+        advertiser_id: event.form.advertiser_id,
+        agency_id: event.form.agency_id,
       };
 
       this.dataService.updateUser(this.editingUser.id, data).subscribe({
@@ -811,12 +298,12 @@ export class UsersManagementComponent implements OnInit {
       });
     } else {
       const data: CreateUserData = {
-        email: this.userForm.email.trim(),
-        password: this.userForm.password,
-        full_name: this.userForm.full_name.trim(),
-        role: this.userForm.role,
-        advertiser_id: this.userForm.advertiser_id,
-        agency_id: this.userForm.agency_id,
+        email: event.form.email.trim(),
+        password: event.form.password,
+        full_name: event.form.full_name.trim(),
+        role: event.form.role,
+        advertiser_id: event.form.advertiser_id,
+        agency_id: event.form.agency_id,
       };
 
       this.dataService.createUser(data).subscribe({
@@ -881,38 +368,6 @@ export class UsersManagementComponent implements OnInit {
         this.logger.error('Failed to toggle user status', { error: message, userId: user.id, newStatus });
         this.dataService.error.set(message);
       },
-    });
-  }
-
-  getInitials(user: User): string {
-    if (user.full_name) {
-      const parts = user.full_name.split(' ');
-      return parts
-        .map((p) => p.charAt(0).toUpperCase())
-        .slice(0, 2)
-        .join('');
-    }
-    return user.email.charAt(0).toUpperCase();
-  }
-
-  getStatusLabel(status: UserStatus): string {
-    const labels: Record<UserStatus, string> = {
-      active: 'Actif',
-      inactive: 'Inactif',
-      suspended: 'Suspendu',
-    };
-    return labels[status] || status;
-  }
-
-  formatDate(date: Date | string): string {
-    if (!date) return '-';
-    const d = new Date(date);
-    return d.toLocaleDateString('fr-FR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
     });
   }
 }

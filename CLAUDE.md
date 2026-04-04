@@ -206,6 +206,11 @@ source central-server/.env && psql "$DATABASE_URL" -f central-server/src/scripts
 - Remettre `UsersService`, `AgencyPortalService` ou `ApiService` directement dans `users-management.component.ts` (décomposé en `UsersManagementDataService` pour le CRUD, `UserFiltersService` pour les filtres, `UserValidationService` pour la validation — smoke test enforced)
 - Remettre la gestion d'état des modals (`showEditModal`, `showDeleteModal`) ou du formulaire (`saving`, `deleting`, `editForm`) directement dans `advertiser-detail.component.ts` (décomposé en `AdvertiserModalService` + `AdvertiserFormService` — smoke test enforced)
 - Remettre `video-upload-zone` ou `remote-preview` dans `features/sites/components/` (déplacés vers `shared/components/` — composants réutilisables cross-features — smoke test enforced)
+- Remettre le template inline des modals edit/delete, du info tab, ou du quick stats dans `advertiser-detail.component.ts` (décomposé en `sponsor-info-tab`, `sponsor-quick-stats`, `sponsor-edit-modal`, `sponsor-delete-modal` — l'orchestrateur ne contient que le header, les onglets et la coordination — smoke test enforced)
+- Remettre le template inline de la table, des filtres ou des modals dans `users-management.component.ts` (décomposé en `users-table`, `users-filters`, `user-form-modal`, `user-delete-modal` — l'orchestrateur ne contient que le layout, loading/error/empty states et la coordination — smoke test enforced)
+- Remettre la logique Chart.js (`renderEngagementChart`, `Chart.register`, `ViewChild engagementChart`) dans `analytics.component.ts` (décomposé en `engagement-chart` component — toute la création/destruction Chart.js est encapsulée dans le sous-composant — smoke test enforced)
+- Remettre les templates inline des KPIs, top clubs, clubs dormants, résumé sponsors, ou santé flotte dans `analytics.component.ts` (décomposé en `analytics-kpi-grid`, `top-clubs-card`, `dormant-clubs-card`, `sponsor-summary-card`, `fleet-health-card` — l'orchestrateur ne contient que le data loading et le layout grid — smoke test enforced)
+- Remettre `formatNumber`, `getClubBarWidth` ou `healthExpanded` dans `analytics.component.ts` (déplacés respectivement vers `analytics-kpi-grid`, `top-clubs-card`, `fleet-health-card` — smoke test enforced)
 
 ## Architecture détaillée
 

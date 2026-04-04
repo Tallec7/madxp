@@ -2391,7 +2391,12 @@ describe('Analytics pages business-first architecture', () => {
   it('fleet analytics must import Chart.js (not CSS-only charts)', () => {
     // Incident: original fleet page used CSS div bars instead of Chart.js.
     // Chart.js is installed (^4.5.1) and must be used for engagement charts.
-    expect({ usesChartJs: analyticsFleet.includes("from 'chart.js'") })
+    // Since v3.127.0, Chart.js logic is in engagement-chart sub-component.
+    const engagementChart = fs.readFileSync(
+      path.join(analyticsRoot, 'central-dashboard/src/app/features/analytics/components/engagement-chart.component.ts'),
+      'utf8'
+    );
+    expect({ usesChartJs: engagementChart.includes("from 'chart.js'") })
       .toEqual({ usesChartJs: true });
   });
 
@@ -11560,7 +11565,7 @@ describe('Advertiser video display: template-API field alignment guard', () => {
 
   it('formatDuration guards against NaN input', () => {
     const content = fs.readFileSync(
-      path.join(repoRoot, 'central-dashboard/src/app/features/advertisers/advertiser-detail.component.ts'), 'utf-8'
+      path.join(repoRoot, 'central-dashboard/src/app/features/advertisers/sponsor-quick-stats.component.ts'), 'utf-8'
     );
     const fnMatch = content.match(/formatDuration\(seconds: number\): string \{[\s\S]*?\n  \}/);
     expect(fnMatch).toBeTruthy();
@@ -12843,5 +12848,149 @@ describe('Shared components flattening guard', () => {
     const content = fs.readFileSync(path.join(sitesComponentsDir2, 'site-content-tab/video-manager/video-manager.component.ts'), 'utf-8');
     expect(content).toContain('shared/components/video-upload-zone');
     expect(content).not.toMatch(/\.\.\/\.\.\/video-upload-zone/);
+  });
+});
+
+// =============================================================================
+// UI decomposition guard: advertiser-detail sub-components (v3.127.0)
+// =============================================================================
+
+describe('Advertiser-detail UI decomposition guard', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+  const advDir = path.join(repoRoot, 'central-dashboard/src/app/features/advertisers');
+
+  it('sub-component files exist', () => {
+    expect(fs.existsSync(path.join(advDir, 'sponsor-info-tab.component.ts'))).toBe(true);
+    expect(fs.existsSync(path.join(advDir, 'sponsor-quick-stats.component.ts'))).toBe(true);
+    expect(fs.existsSync(path.join(advDir, 'sponsor-edit-modal.component.ts'))).toBe(true);
+    expect(fs.existsSync(path.join(advDir, 'sponsor-delete-modal.component.ts'))).toBe(true);
+  });
+
+  it('orchestrator imports all 4 new sub-components', () => {
+    const content = fs.readFileSync(path.join(advDir, 'advertiser-detail.component.ts'), 'utf-8');
+    expect(content).toContain('SponsorInfoTabComponent');
+    expect(content).toContain('SponsorQuickStatsComponent');
+    expect(content).toContain('SponsorEditModalComponent');
+    expect(content).toContain('SponsorDeleteModalComponent');
+  });
+
+  it('orchestrator must NOT contain inline edit form template (delegated to sponsor-edit-modal)', () => {
+    const content = fs.readFileSync(path.join(advDir, 'advertiser-detail.component.ts'), 'utf-8');
+    expect(content).not.toContain('class="modal-form"');
+    expect(content).not.toContain('name="contact_email"');
+    expect(content).not.toContain('name="contract_start"');
+  });
+
+  it('orchestrator must NOT contain inline info-grid template (delegated to sponsor-info-tab)', () => {
+    const content = fs.readFileSync(path.join(advDir, 'advertiser-detail.component.ts'), 'utf-8');
+    expect(content).not.toContain('class="info-grid"');
+    expect(content).not.toContain('class="info-card"');
+  });
+
+  it('orchestrator must NOT contain formatDate/formatDateTime utility methods (delegated to sub-components)', () => {
+    const content = fs.readFileSync(path.join(advDir, 'advertiser-detail.component.ts'), 'utf-8');
+    expect(content).not.toMatch(/formatDate\s*\(/);
+    expect(content).not.toMatch(/formatDateTime\s*\(/);
+    expect(content).not.toMatch(/formatDuration\s*\(/);
+  });
+});
+
+// =============================================================================
+// UI decomposition guard: users-management sub-components (v3.127.0)
+// =============================================================================
+
+describe('Users-management UI decomposition guard', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+  const usersDir = path.join(repoRoot, 'central-dashboard/src/app/features/admin/users');
+
+  it('sub-component files exist', () => {
+    expect(fs.existsSync(path.join(usersDir, 'users-filters.component.ts'))).toBe(true);
+    expect(fs.existsSync(path.join(usersDir, 'users-table.component.ts'))).toBe(true);
+    expect(fs.existsSync(path.join(usersDir, 'user-form-modal.component.ts'))).toBe(true);
+    expect(fs.existsSync(path.join(usersDir, 'user-delete-modal.component.ts'))).toBe(true);
+  });
+
+  it('orchestrator imports all 4 new sub-components', () => {
+    const content = fs.readFileSync(path.join(usersDir, 'users-management.component.ts'), 'utf-8');
+    expect(content).toContain('UsersFiltersComponent');
+    expect(content).toContain('UsersTableComponent');
+    expect(content).toContain('UserFormModalComponent');
+    expect(content).toContain('UserDeleteModalComponent');
+  });
+
+  it('orchestrator must NOT contain inline users-table HTML (delegated to users-table)', () => {
+    const content = fs.readFileSync(path.join(usersDir, 'users-management.component.ts'), 'utf-8');
+    expect(content).not.toContain('class="users-table"');
+    expect(content).not.toContain('class="user-cell"');
+    expect(content).not.toContain('class="avatar"');
+  });
+
+  it('orchestrator must NOT contain getInitials/getStatusLabel/formatDate (delegated to sub-components)', () => {
+    const content = fs.readFileSync(path.join(usersDir, 'users-management.component.ts'), 'utf-8');
+    expect(content).not.toMatch(/getInitials\s*\(/);
+    expect(content).not.toMatch(/getStatusLabel\s*\(/);
+    expect(content).not.toMatch(/formatDate\s*\(/);
+  });
+
+  it('orchestrator must NOT contain inline modal form HTML (delegated to user-form-modal)', () => {
+    const content = fs.readFileSync(path.join(usersDir, 'users-management.component.ts'), 'utf-8');
+    expect(content).not.toContain('name="email"');
+    expect(content).not.toContain('name="password"');
+    expect(content).not.toContain('ngSubmit');
+  });
+});
+
+// =============================================================================
+// UI decomposition guard: analytics sub-components (v3.127.0)
+// =============================================================================
+
+describe('Analytics UI decomposition guard', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+  const analyticsDir = path.join(repoRoot, 'central-dashboard/src/app/features/analytics');
+  const componentsDir = path.join(analyticsDir, 'components');
+
+  it('sub-component files exist', () => {
+    expect(fs.existsSync(path.join(componentsDir, 'analytics-kpi-grid.component.ts'))).toBe(true);
+    expect(fs.existsSync(path.join(componentsDir, 'engagement-chart.component.ts'))).toBe(true);
+    expect(fs.existsSync(path.join(componentsDir, 'top-clubs-card.component.ts'))).toBe(true);
+    expect(fs.existsSync(path.join(componentsDir, 'dormant-clubs-card.component.ts'))).toBe(true);
+    expect(fs.existsSync(path.join(componentsDir, 'sponsor-summary-card.component.ts'))).toBe(true);
+    expect(fs.existsSync(path.join(componentsDir, 'fleet-health-card.component.ts'))).toBe(true);
+  });
+
+  it('orchestrator imports all 6 new sub-components', () => {
+    const content = fs.readFileSync(path.join(analyticsDir, 'analytics.component.ts'), 'utf-8');
+    expect(content).toContain('AnalyticsKpiGridComponent');
+    expect(content).toContain('EngagementChartComponent');
+    expect(content).toContain('TopClubsCardComponent');
+    expect(content).toContain('DormantClubsCardComponent');
+    expect(content).toContain('SponsorSummaryCardComponent');
+    expect(content).toContain('FleetHealthCardComponent');
+  });
+
+  it('orchestrator must NOT contain Chart.js rendering logic (delegated to engagement-chart)', () => {
+    const content = fs.readFileSync(path.join(analyticsDir, 'analytics.component.ts'), 'utf-8');
+    expect(content).not.toContain('renderEngagementChart');
+    expect(content).not.toContain('Chart.register');
+    expect(content).not.toContain('engagementChartRef');
+    expect(content).not.toContain('new Chart(');
+  });
+
+  it('orchestrator must NOT contain formatNumber or getClubBarWidth (delegated to sub-components)', () => {
+    const content = fs.readFileSync(path.join(analyticsDir, 'analytics.component.ts'), 'utf-8');
+    expect(content).not.toMatch(/formatNumber\s*\(/);
+    expect(content).not.toMatch(/getClubBarWidth\s*\(/);
+  });
+
+  it('orchestrator must NOT contain healthExpanded state (delegated to fleet-health-card)', () => {
+    const content = fs.readFileSync(path.join(analyticsDir, 'analytics.component.ts'), 'utf-8');
+    expect(content).not.toContain('healthExpanded');
+  });
+
+  it('orchestrator must NOT contain inline KPI template (delegated to analytics-kpi-grid)', () => {
+    const content = fs.readFileSync(path.join(analyticsDir, 'analytics.component.ts'), 'utf-8');
+    expect(content).not.toContain('class="kpi-grid"');
+    expect(content).not.toContain('class="kpi-card"');
+    expect(content).not.toContain('class="kpi-accent');
   });
 });
