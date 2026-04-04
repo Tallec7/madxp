@@ -1,3 +1,10 @@
+## [3.123.1](https://github.com/Tallec7/neopro/compare/v3.123.0...v3.123.1) (2026-04-04)
+
+### Bug Fixes
+
+- **dashboard:** use VideoUploadService to set isUploading in spec ([ebe18ea](https://github.com/Tallec7/neopro/commit/ebe18ea175ec27f9c997da98317a1e538c53ce47))
+- **server:** add missing validation middleware exports and route-level validation ([d201b78](https://github.com/Tallec7/neopro/commit/d201b785a62b43acb7c8eebc7f80198b971ea05e))
+
 # [3.123.0](https://github.com/Tallec7/neopro/compare/v3.122.1...v3.123.0) (2026-04-04)
 
 ### Features
