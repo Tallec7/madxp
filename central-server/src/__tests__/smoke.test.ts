@@ -13156,3 +13156,47 @@ describe('ClubAnalytics service extraction guard', () => {
     expect(content).not.toMatch(/categoryColors\s*[:=]/);
   });
 });
+
+// ────────────────────────────────────────────────────────────────────────────────
+// Third-party SDK safety guards
+// ────────────────────────────────────────────────────────────────────────────────
+
+describe('Third-party SDK safety: @bworlds/launchkit access gate prevention', () => {
+  const mainTsPath = path.join(__dirname, '../../../central-dashboard/src/main.ts');
+
+  it('main.ts must NOT contain launchkit.check() access gate', () => {
+    const content = fs.readFileSync(mainTsPath, 'utf-8');
+    expect(content).not.toMatch(/launchkit\s*\.\s*check\s*\(/);
+  });
+
+  it('main.ts must NOT contain getGateUrl() redirect', () => {
+    const content = fs.readFileSync(mainTsPath, 'utf-8');
+    expect(content).not.toMatch(/getGateUrl\s*\(/);
+  });
+
+  it('main.ts must NOT contain session.valid guard pattern', () => {
+    const content = fs.readFileSync(mainTsPath, 'utf-8');
+    expect(content).not.toMatch(/session\s*\.\s*valid/);
+  });
+
+  it('no dashboard source file should import launchkit.check or getGateUrl', () => {
+    const dashboardAppDir = path.join(__dirname, '../../../central-dashboard/src/app');
+    const readAllTs = (dir: string): { file: string; content: string }[] => {
+      const results: { file: string; content: string }[] = [];
+      for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+        const fullPath = path.join(dir, entry.name);
+        if (entry.isDirectory()) {
+          results.push(...readAllTs(fullPath));
+        } else if (entry.name.endsWith('.ts') && !entry.name.endsWith('.spec.ts')) {
+          results.push({ file: fullPath, content: fs.readFileSync(fullPath, 'utf-8') });
+        }
+      }
+      return results;
+    };
+    const tsFiles = readAllTs(dashboardAppDir);
+    for (const { file, content } of tsFiles) {
+      expect({ file, hasCheck: /launchkit\s*\.\s*check\s*\(/.test(content) }).toEqual({ file, hasCheck: false });
+      expect({ file, hasGateUrl: /getGateUrl\s*\(/.test(content) }).toEqual({ file, hasGateUrl: false });
+    }
+  });
+});

@@ -1,3 +1,18 @@
+# [3.129.0](https://github.com/Tallec7/neopro/compare/v3.128.0...v3.129.0) (2026-04-04)
+
+### Features
+
+- **dashboard:** integrate @bworlds/launchkit SDK for uptime monitoring and error capture (`central-dashboard/src/main.ts`) ([COMMIT])
+
+### Tests
+
+- **smoke:** add 4 access gate prevention tests — block `launchkit.check()`, `getGateUrl()`, `session.valid` patterns across all dashboard source files ([COMMIT])
+
+### Docs
+
+- **architecture:** add bworlds LaunchKit entry in Monitoring & Observability section, update smoke test count ([COMMIT])
+- **claude.md:** add access gate prevention rule for @bworlds/launchkit (smoke test enforced) ([COMMIT])
+
 # [3.128.0](https://github.com/Tallec7/neopro/compare/v3.127.0...v3.128.0) (2026-04-04)
 
 ### Refactoring

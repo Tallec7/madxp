@@ -538,7 +538,8 @@ Pi Frontend (ProfileConfigService — sélection locale via télécommande)
 - **Scrape targets** : Docker local, `host.docker.internal:3001` (dev), Railway HTTPS (prod)
 - **Canary monitoring post-OTA** (v3.116+) : `canary-monitor.service.ts` surveille les Pi après OTA — 5 min window, 30s interval, alertes `canary_post_ota` via `alertRepository`, intégré dans le periodic loop de `alerting.service.ts`
 - **E2E hardware matrix** (v3.116+) : 20 tests Playwright (`e2e/tests/hardware-matrix.spec.ts`) couvrant tous les scénarios HDMI Pi via injection BroadcastChannel
-- **Smoke tests** : `npm run test:smoke` — 817 tests détectent les régressions de wiring API (routes, middlewares, repositories, services, handlers, error types, métriques Prometheus critiques, hourly metric alerting wiring) + conventions Pi (systemd, sudoers, kiosk Chromium GPU guards) + benchmark query patterns
+- **Smoke tests** : `npm run test:smoke` — 819+ tests détectent les régressions de wiring API (routes, middlewares, repositories, services, handlers, error types, métriques Prometheus critiques, hourly metric alerting wiring) + conventions Pi (systemd, sudoers, kiosk Chromium GPU guards) + benchmark query patterns + third-party SDK safety guards
+- **bworlds LaunchKit** (v3.129+, temporaire) : `@bworlds/launchkit` dans `central-dashboard/src/main.ts` — heartbeat uptime monitoring + error capture automatique. Access gate (`launchkit.check()`/`getGateUrl()`) interdit par smoke test. À évaluer juin 2026
 - Systemd journald logs
 - Winston structured logging with Correlation ID
 - Memory Manager Service (heap monitoring, pressure cleanup at 93%/97%)

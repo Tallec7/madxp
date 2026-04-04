@@ -218,6 +218,7 @@ source central-server/.env && psql "$DATABASE_URL" -f central-server/src/scripts
 - Remettre la logique Chart.js (`renderEngagementChart`, `Chart.register`, `ViewChild engagementChart`) dans `analytics.component.ts` (décomposé en `engagement-chart` component — toute la création/destruction Chart.js est encapsulée dans le sous-composant — smoke test enforced)
 - Remettre les templates inline des KPIs, top clubs, clubs dormants, résumé sponsors, ou santé flotte dans `analytics.component.ts` (décomposé en `analytics-kpi-grid`, `top-clubs-card`, `dormant-clubs-card`, `sponsor-summary-card`, `fleet-health-card` — l'orchestrateur ne contient que le data loading et le layout grid — smoke test enforced)
 - Remettre `formatNumber`, `getClubBarWidth` ou `healthExpanded` dans `analytics.component.ts` (déplacés respectivement vers `analytics-kpi-grid`, `top-clubs-card`, `fleet-health-card` — smoke test enforced)
+- Ajouter `launchkit.check()`, `getGateUrl()` ou `session.valid` dans le dashboard (l'access gate bworlds redirige les utilisateurs vers une page tierce — le dashboard a sa propre auth JWT+MFA — seul `init()` heartbeat/error-capture est autorisé dans `main.ts` — smoke test enforced)
 
 ## Architecture détaillée
 
