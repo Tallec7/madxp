@@ -82,12 +82,12 @@ GET    /api/benchmark/sites/:siteId
 GET    /api/benchmark/global
 ```
 
-## Pi Analytics (depuis sync-agent — API key optionnelle)
+## Pi Analytics (depuis sync-agent — API key optionnelle, piAnalyticsRateLimit 500/min)
 
 ```
-POST /api/analytics/video-plays   → { site_id, plays[] } — authenticateSiteApiKeyOptional
-POST /api/analytics/sessions      → { site_id, action }  — authenticateSiteApiKeyOptional
-POST /api/analytics/impressions   → { impressions[] }     — authenticateSiteApiKeyOptional
+POST /api/analytics/video-plays   → { site_id, plays[] } — piAnalyticsRateLimit + authenticateSiteApiKeyOptional
+POST /api/analytics/sessions      → { site_id, action }  — piAnalyticsRateLimit + authenticateSiteApiKeyOptional
+POST /api/analytics/impressions   → { impressions[] }     — piAnalyticsRateLimit + authenticateSiteApiKeyOptional
 ```
 
 ## Sponsor Portal (PUBLIQUE — magic link token)

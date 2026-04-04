@@ -13245,6 +13245,50 @@ describe('Pi analytics routes auth guard', () => {
 });
 
 // ----------------------------------------------------------
+// Pi analytics routes must use piAnalyticsRateLimit (500/min)
+// Without this per-route limiter, /video-plays and /sessions
+// inherit apiRateLimit (100/min) from the mount — too low for
+// Pi devices sending backlogged analytics batches. The
+// /impressions route already uses piAnalyticsRateLimit; these
+// two must match to avoid silent 429s on legitimate Pi traffic.
+// ----------------------------------------------------------
+describe('Pi analytics routes rate limit guard', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+  const analyticsRoutesPath = path.join(repoRoot, 'central-server', 'src', 'routes', 'analytics.routes.ts');
+
+  let content: string;
+  beforeAll(() => {
+    content = fs.readFileSync(analyticsRoutesPath, 'utf8');
+  });
+
+  it('analytics.routes.ts must import piAnalyticsRateLimit', () => {
+    expect({
+      importsPiRateLimit: content.includes('piAnalyticsRateLimit'),
+    }).toEqual({
+      importsPiRateLimit: true,
+    });
+  });
+
+  it('POST /video-plays must use piAnalyticsRateLimit', () => {
+    // Match: router.post('/video-plays', piAnalyticsRateLimit, ...)
+    expect({
+      hasRateLimit: /router\.post\(\s*['"]\/video-plays['"],\s*piAnalyticsRateLimit/.test(content),
+    }).toEqual({
+      hasRateLimit: true,
+    });
+  });
+
+  it('POST /sessions must use piAnalyticsRateLimit', () => {
+    // Match: router.post('/sessions', piAnalyticsRateLimit, ...)
+    expect({
+      hasRateLimit: /router\.post\(\s*['"]\/sessions['"],\s*piAnalyticsRateLimit/.test(content),
+    }).toEqual({
+      hasRateLimit: true,
+    });
+  });
+});
+
+// ----------------------------------------------------------
 // Input validation coverage — Joi middleware on all routes
 // Every route that accepts req.body (POST/PUT/PATCH) must have
 // validate(schemas.X) middleware, and every route with UUID

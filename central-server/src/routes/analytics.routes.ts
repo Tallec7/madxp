@@ -3,6 +3,7 @@ import * as analyticsController from '../controllers/analytics.controller';
 import * as pitchDeckController from '../controllers/pitch-deck.controller';
 import { authenticate, authenticateSiteApiKeyOptional, requireRole } from '../middleware/auth';
 import { validate, validateParams, validateQuery, paramSchemas, querySchemas, schemas } from '../middleware/validation';
+import { piAnalyticsRateLimit } from '../middleware/user-rate-limit';
 
 const router = Router();
 
@@ -25,11 +26,11 @@ router.get('/clubs/:siteId/alerts', authenticate, validateParams(paramSchemas.si
 
 // POST /api/analytics/video-plays - Enregistrer lectures vidéo (depuis sync-agent)
 // Auth: Bearer <site_api_key> (optionnel — fallback sur site_id dans le body)
-router.post('/video-plays', authenticateSiteApiKeyOptional, validate(schemas.recordVideoPlays), analyticsController.recordVideoPlays);
+router.post('/video-plays', piAnalyticsRateLimit, authenticateSiteApiKeyOptional, validate(schemas.recordVideoPlays), analyticsController.recordVideoPlays);
 
 // POST /api/analytics/sessions - Gérer sessions (start/end)
 // Auth: Bearer <site_api_key> (optionnel — fallback sur site_id dans le body)
-router.post('/sessions', authenticateSiteApiKeyOptional, validate(schemas.manageSession), analyticsController.manageSession);
+router.post('/sessions', piAnalyticsRateLimit, authenticateSiteApiKeyOptional, validate(schemas.manageSession), analyticsController.manageSession);
 
 // GET /api/analytics/clubs/:siteId/usage - Stats d'utilisation
 router.get('/clubs/:siteId/usage', authenticate, validateParams(paramSchemas.siteId), validateQuery(querySchemas.analyticsClub), analyticsController.getClubUsage);
