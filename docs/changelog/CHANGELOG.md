@@ -1,3 +1,9 @@
+## [3.123.6](https://github.com/Tallec7/neopro/compare/v3.123.5...v3.123.6) (2026-04-04)
+
+### Bug Fixes
+
+- **lint:** remove unused HttpError class from sites.controller ([1d7e187](https://github.com/Tallec7/neopro/commit/1d7e1874ef73839b33b47662ef628f14ba378fc9))
+
 ## [3.123.5](https://github.com/Tallec7/neopro/compare/v3.123.4...v3.123.5) (2026-04-04)
 
 ### Bug Fixes
