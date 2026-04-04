@@ -500,6 +500,23 @@ Pi Frontend (ProfileConfigService — sélection locale via télécommande)
 - Merge intelligent (central overrides)
 - Schema validation
 
+### 4b. Input Validation (Joi — central-server)
+
+Toutes les routes API sont protégées par validation Joi au niveau middleware :
+
+- **`validate(schemas.X)`** — valide `req.body` (POST/PUT/PATCH), strip les champs inconnus
+- **`validateParams(paramSchemas.X)`** — valide les paramètres d'URL (`:id`, `:siteId`, etc.), vérifie les UUIDs
+- **`validateQuery(querySchemas.X)`** — valide les query strings (`?from=`, `?limit=`, etc.)
+
+Fichier central : `src/middleware/validation.ts` (40+ schémas body, 15 schémas params, 12 schémas query).
+Fichier analytics complémentaire : `src/middleware/analytics-validation.ts` (advertisers, site-sponsors).
+
+16 fichiers routes couverts : admin, agency, analytics, assets, auth, campaign, drafts, logs,
+objectives, playlist-schedules, reports, safe, sites (config-history), updates, users,
+advertiser-portal, advertiser-sites.
+
+29 smoke tests enforced (`Input validation coverage` + `SQL injection prevention`).
+
 ### 5. Repository Pattern (central-server)
 
 - Accès base de données exclusivement via repositories typés (`siteRepository`, `alertRepository`, etc.)

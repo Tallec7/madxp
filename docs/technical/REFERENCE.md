@@ -1942,6 +1942,9 @@ Le dashboard implémente 3 niveaux de gestion d'erreurs :
 - ✅ Routes protégées (AuthGuard)
 - ✅ Session avec expiration
 - ✅ Validation uploads
+- ✅ Validation Joi sur 100% des routes API (body, params, query) — 40+ schémas dans `validation.ts`
+- ✅ Requêtes SQL paramétrées uniquement ($1, $2) — pas d'interpolation string
+- ✅ 29 smoke tests enforced (couverture validation + prévention injection SQL)
 
 ---
 

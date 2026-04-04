@@ -13243,3 +13243,155 @@ describe('Pi analytics routes auth guard', () => {
     });
   });
 });
+
+// ----------------------------------------------------------
+// Input validation coverage — Joi middleware on all routes
+// Every route that accepts req.body (POST/PUT/PATCH) must have
+// validate(schemas.X) middleware, and every route with UUID
+// params must have validateParams(paramSchemas.X).
+// Without this, unvalidated input reaches controllers directly
+// — enabling injection, type confusion, and denial of service.
+// ----------------------------------------------------------
+describe('Input validation coverage — Joi middleware on all routes', () => {
+  const routesDir = path.join(__dirname, '..', 'routes');
+
+  // Route files that MUST import validation middleware
+  const routeFilesRequiringValidation = [
+    'admin.routes.ts',
+    'agency.routes.ts',
+    'analytics.routes.ts',
+    'assets.routes.ts',
+    'auth.routes.ts',
+    'campaign.routes.ts',
+    'drafts.routes.ts',
+    'logs.routes.ts',
+    'objectives.routes.ts',
+    'playlist-schedules.routes.ts',
+    'reports.routes.ts',
+    'safe.routes.ts',
+    'updates.routes.ts',
+    'users.routes.ts',
+    'advertiser-portal.routes.ts',
+    'advertiser-sites.routes.ts',
+  ];
+
+  for (const file of routeFilesRequiringValidation) {
+    it(`${file} must import validation middleware from validation.ts`, () => {
+      const filePath = path.join(routesDir, file);
+      const content = fs.readFileSync(filePath, 'utf8');
+      expect({
+        importsValidate: content.includes("from '../middleware/validation'"),
+      }).toEqual({
+        importsValidate: true,
+      });
+    });
+  }
+
+  // Every router.post() with a body (not file-upload-only) must have validate(schemas.X)
+  // We check specific critical routes that previously lacked validation
+  const bodyValidationChecks = [
+    { file: 'drafts.routes.ts', route: 'draft', method: 'put', schema: 'validate(schemas.saveDraft)' },
+    { file: 'auth.routes.ts', route: 'change-password', method: 'post', schema: 'validate(schemas.changePassword)' },
+    { file: 'users.routes.ts', route: 'reset-password', method: 'post', schema: 'validate(schemas.adminResetPassword)' },
+    { file: 'users.routes.ts', route: 'status', method: 'patch', schema: 'validate(schemas.changeUserStatus)' },
+    { file: 'advertiser-portal.routes.ts', route: 'videos/:videoId', method: 'put', schema: 'validate(schemas.updateAdvertiserVideo)' },
+    { file: 'advertiser-sites.routes.ts', route: 'advertisers/:id/sites', method: 'post', schema: 'validate(schemas.addSitesToAdvertiser)' },
+  ];
+
+  for (const check of bodyValidationChecks) {
+    it(`${check.file} ${check.method.toUpperCase()} /${check.route} must have body validation`, () => {
+      const content = fs.readFileSync(path.join(routesDir, check.file), 'utf8');
+      expect({
+        hasValidation: content.includes(check.schema),
+      }).toEqual({
+        hasValidation: true,
+      });
+    });
+  }
+
+  // Every route with :id, :siteId, :videoId etc. must have validateParams()
+  const paramValidationChecks = [
+    { file: 'drafts.routes.ts', description: 'siteId param on draft routes' },
+    { file: 'users.routes.ts', description: 'id param on user routes' },
+    { file: 'advertiser-portal.routes.ts', description: 'videoId param on video routes' },
+    { file: 'advertiser-sites.routes.ts', description: 'id param on advertiser-sites routes' },
+  ];
+
+  for (const check of paramValidationChecks) {
+    it(`${check.file} must use validateParams() for ${check.description}`, () => {
+      const content = fs.readFileSync(path.join(routesDir, check.file), 'utf8');
+      expect({
+        hasParamValidation: content.includes('validateParams(paramSchemas.'),
+      }).toEqual({
+        hasParamValidation: true,
+      });
+    });
+  }
+
+  // Config-history routes in sites.routes.ts must have validation
+  it('sites.routes.ts config-history POST must have validate(schemas.saveConfigVersion)', () => {
+    const content = fs.readFileSync(path.join(routesDir, 'sites.routes.ts'), 'utf8');
+    expect({
+      hasConfigHistorySaveValidation: content.includes('validate(schemas.saveConfigVersion)'),
+      hasConfigHistoryDiffValidation: content.includes('validateQuery(querySchemas.configDiff)'),
+      hasConfigPreviewValidation: content.includes('validate(schemas.previewConfigRestore)'),
+    }).toEqual({
+      hasConfigHistorySaveValidation: true,
+      hasConfigHistoryDiffValidation: true,
+      hasConfigPreviewValidation: true,
+    });
+  });
+});
+
+// ----------------------------------------------------------
+// SQL injection prevention — no string interpolation in queries
+// All SQL must use parameterized queries ($1, $2).
+// String interpolation in SQL templates enables injection even
+// when the interpolated value is a constant today — a future
+// refactor could change that. Parameterized queries are safe
+// regardless of value source.
+// ----------------------------------------------------------
+describe('SQL injection prevention — no string interpolation in queries', () => {
+  const handlersDir = path.join(__dirname, '..', 'handlers');
+
+  it('health-monitor.handler.ts must use parameterized interval (not string interpolation)', () => {
+    const content = fs.readFileSync(path.join(handlersDir, 'health-monitor.handler.ts'), 'utf8');
+    // Must NOT have template literal interpolation inside SQL INTERVAL
+    expect({
+      noInterpolatedInterval: !(/INTERVAL\s*'\$\{/.test(content)),
+      hasParameterizedInterval: content.includes("($1 || ' seconds')::interval"),
+    }).toEqual({
+      noInterpolatedInterval: true,
+      hasParameterizedInterval: true,
+    });
+  });
+
+  // Scan all handler files for SQL string interpolation patterns
+  it('no handler file should contain SQL string interpolation', () => {
+    const handlerFiles = fs.readdirSync(handlersDir).filter((f: string) => f.endsWith('.ts'));
+    const violations: string[] = [];
+
+    for (const file of handlerFiles) {
+      const content = fs.readFileSync(path.join(handlersDir, file), 'utf8');
+      // Match template literals containing SQL keywords + ${} interpolation
+      // Pattern: backtick...SELECT/INSERT/UPDATE/DELETE...${...backtick
+      if (/`[^`]*(?:SELECT|INSERT|UPDATE|DELETE|WHERE|FROM|JOIN)\b[^`]*\$\{[^`]*`/.test(content)) {
+        // Allow safe patterns like ${tableName} in non-query contexts
+        // Flag only patterns where interpolation is inside a query() or pool.query() call
+        const lines = content.split('\n');
+        for (let i = 0; i < lines.length; i++) {
+          const line = lines[i];
+          if (/\$\{/.test(line) && /(?:query|pool\.query)\s*\(/.test(lines.slice(Math.max(0, i - 5), i + 1).join('\n'))) {
+            violations.push(`${file}:${i + 1}`);
+          }
+        }
+      }
+    }
+
+    expect({
+      sqlInterpolationViolations: violations,
+    }).toEqual({
+      sqlInterpolationViolations: [],
+    });
+  });
+});
