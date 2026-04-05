@@ -1,3 +1,9 @@
+## [3.124.10](https://github.com/Tallec7/neopro/compare/v3.124.9...v3.124.10) (2026-04-05)
+
+### Bug Fixes
+
+- **tests:** update upload-verification tests for checksum/file_size gate ([9f5078f](https://github.com/Tallec7/neopro/commit/9f5078fc52991cbdfd8220f3b4397c9206ebac25))
+
 ## [3.124.9](https://github.com/Tallec7/neopro/compare/v3.124.8...v3.124.9) (2026-04-05)
 
 ### Bug Fixes
