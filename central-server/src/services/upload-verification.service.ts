@@ -333,8 +333,8 @@ class UploadVerificationService {
     status: UploadStatus | null;
     error?: string;
   }> {
-    const result = await query<{ upload_status: UploadStatus; upload_error_message: string | null }>(
-      `SELECT upload_status, upload_error_message FROM videos WHERE id = $1`,
+    const result = await query<{ upload_status: UploadStatus; upload_error_message: string | null; checksum: string | null; file_size: number }>(
+      `SELECT upload_status, upload_error_message, checksum, file_size FROM videos WHERE id = $1`,
       [videoId]
     );
 
@@ -342,7 +342,16 @@ class UploadVerificationService {
       return { ready: false, status: null, error: 'Video not found' };
     }
 
-    const { upload_status, upload_error_message } = result.rows[0];
+    const { upload_status, upload_error_message, checksum, file_size } = result.rows[0];
+
+    // Block deployment if video has no checksum or is empty (ghost/failed upload)
+    if (!checksum || file_size === 0) {
+      return {
+        ready: false,
+        status: 'failed' as UploadStatus,
+        error: 'Vidéo incomplète (fichier absent ou upload échoué). Supprimez-la et re-uploadez.',
+      };
+    }
 
     return {
       ready: upload_status === 'ready',

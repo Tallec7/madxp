@@ -311,7 +311,7 @@ class DeploymentService {
     // Vérifier que le checksum est présent (OBLIGATOIRE pour l'intégrité)
     if (!deployment.checksum) {
       logger.error('Cannot deploy video without checksum', { videoId, deploymentId });
-      throw new Error('Video checksum is required for deployment');
+      throw new Error(`La vidéo "${videoTitle}" est incomplète (fichier absent ou upload échoué). Supprimez-la et re-uploadez.`);
     }
 
     // Résoudre le site_sponsor_id pour ce couple vidéo/site (P1 — modèle unifié)
