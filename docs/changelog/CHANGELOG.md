@@ -1,3 +1,9 @@
+## [3.125.2](https://github.com/Tallec7/neopro/compare/v3.125.1...v3.125.2) (2026-04-05)
+
+### Bug Fixes
+
+- **ci:** add missing build:saas script to root package.json ([973d02a](https://github.com/Tallec7/neopro/commit/973d02a750bcc75dbd0402bf9766d6d763e9507b))
+
 ## [3.125.1](https://github.com/Tallec7/neopro/compare/v3.125.0...v3.125.1) (2026-04-05)
 
 ### Bug Fixes
