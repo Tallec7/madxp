@@ -155,6 +155,7 @@ describe('Analytics Controller', () => {
         pending_config_version_id: null,
         remote_pin_hash: null,
         hostname_slug: null,
+        site_type: 'pi',
       });
 
       mockedAnalytics.getLatestMetrics.mockResolvedValueOnce({

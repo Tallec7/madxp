@@ -252,6 +252,7 @@ describe('SitesListComponent', () => {
         club_name: 'Test Club',
         location: { city: 'Paris', region: 'Ile-de-France', country: 'France' },
         hardware_model: '',
+        site_type: 'pi',
       };
 
       expect(component.isValid()).toBe(false);
@@ -263,6 +264,7 @@ describe('SitesListComponent', () => {
         club_name: '',
         location: { city: 'Paris', region: 'Ile-de-France', country: 'France' },
         hardware_model: '',
+        site_type: 'pi',
       };
 
       expect(component.isValid()).toBe(false);
@@ -274,6 +276,7 @@ describe('SitesListComponent', () => {
         club_name: 'Test Club',
         location: { city: '', region: 'Ile-de-France', country: 'France' },
         hardware_model: '',
+        site_type: 'pi',
       };
 
       expect(component.isValid()).toBe(false);
@@ -285,6 +288,7 @@ describe('SitesListComponent', () => {
         club_name: 'Test Club',
         location: { city: 'Paris', region: 'Ile-de-France', country: 'France' },
         hardware_model: '',
+        site_type: 'pi',
       };
 
       expect(component.isValid()).toBe(true);
@@ -298,6 +302,7 @@ describe('SitesListComponent', () => {
         club_name: 'New Club',
         location: { city: 'Paris', region: 'Ile-de-France', country: 'France' },
         hardware_model: 'Raspberry Pi 4',
+        site_type: 'pi',
       };
       component.sportsInput = 'football, rugby';
       component.showCreateModal = true;
@@ -320,6 +325,7 @@ describe('SitesListComponent', () => {
         club_name: 'New Club',
         location: { city: 'Paris', region: 'Ile-de-France', country: 'France' },
         hardware_model: 'Raspberry Pi 4',
+        site_type: 'pi',
         sports: ['football', 'rugby'],
       });
     }));
@@ -361,6 +367,7 @@ describe('SitesListComponent', () => {
         club_name: 'Test Club',
         location: { city: 'Paris', region: 'Ile-de-France', country: 'France' },
         hardware_model: 'Model',
+        site_type: 'pi',
       };
       component.sportsInput = 'football';
 
