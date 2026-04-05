@@ -1,3 +1,9 @@
+## [3.127.4](https://github.com/Tallec7/neopro/compare/v3.127.3...v3.127.4) (2026-04-05)
+
+### Bug Fixes
+
+- **dashboard:** filter SaaS sites from OTA deployment selector ([25b5282](https://github.com/Tallec7/neopro/commit/25b52828ce800b51dcffdb91f7f84527ce3293e7))
+
 ## [3.127.3](https://github.com/Tallec7/neopro/compare/v3.127.2...v3.127.3) (2026-04-05)
 
 ### Bug Fixes
