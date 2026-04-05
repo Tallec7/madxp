@@ -15,7 +15,7 @@ router.get('/videos/:id/deployments', authenticate, contentController.getVideoDe
 router.post('/videos', authenticate, requireRole('admin', 'operator', 'club'), uploadVideo.single('video'), contentController.createVideo);
 router.post('/videos/bulk', authenticate, requireRole('admin', 'operator'), uploadVideo.array('videos', 20), contentController.createVideos);
 router.put('/videos/:id', authenticate, requireRole('admin', 'operator', 'club'), contentController.updateVideo);
-router.delete('/videos/:id', authenticate, requireRole('admin'), contentController.deleteVideo);
+router.delete('/videos/:id', authenticate, requireRole('admin', 'club'), contentController.deleteVideo);
 
 // Video variant routes (E-22: LED variants)
 router.get('/videos/:id/variants', authenticate, contentController.getVideoVariants);

@@ -449,6 +449,15 @@ export const createVideos = async (req: AuthRequest, res: Response) => {
 export const updateVideo = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
+
+    // Club users can only modify their own videos
+    if (req.user?.role === 'club' && req.user.site_id) {
+      const video = await videoRepository.findVideoById(id);
+      if (!video || video.uploaded_for_site_id !== req.user.site_id) {
+        return res.status(403).json({ error: 'Vous ne pouvez modifier que vos propres vidéos' });
+      }
+    }
+
     const { filename, original_name, category, subcategory, file_size, duration, storage_path, thumbnail_url, metadata } = req.body;
 
     const result = await videoRepository.update(id, {
@@ -471,6 +480,14 @@ export const updateVideo = async (req: AuthRequest, res: Response) => {
 export const deleteVideo = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
+
+    // Club users can only delete their own videos
+    if (req.user?.role === 'club' && req.user.site_id) {
+      const video = await videoRepository.findVideoById(id);
+      if (!video || video.uploaded_for_site_id !== req.user.site_id) {
+        return res.status(403).json({ error: 'Vous ne pouvez supprimer que vos propres vidéos' });
+      }
+    }
 
     // Récupérer le chemin de stockage avant suppression
     const storagePath = await videoRepository.findStoragePath(id);
