@@ -105,7 +105,7 @@ export const schemas = {
       }).optional(),
     }).optional(),
     sports: Joi.array().items(Joi.string()).optional(),
-    hardware_model: Joi.string().optional(),
+    hardware_model: Joi.string().allow('').optional(),
     site_type: Joi.string().valid('pi', 'saas', 'demo').default('pi'),
   }),
 
