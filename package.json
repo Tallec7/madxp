@@ -12,6 +12,7 @@
     "build": "ng build raspberry --configuration=raspberry && ng build central-dashboard",
     "build:raspberry": "./raspberry/scripts/build-raspberry.sh",
     "build:central": "ng build central-dashboard",
+    "build:saas": "ng build raspberry --configuration=saas",
     "deploy:raspberry": "./raspberry/scripts/build-and-deploy.sh",
     "watch": "ng build raspberry --watch --configuration development",
     "watch:central": "ng build central-dashboard --watch --configuration development",
