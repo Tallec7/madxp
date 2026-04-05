@@ -1,3 +1,9 @@
+# [3.127.0](https://github.com/Tallec7/neopro/compare/v3.126.0...v3.127.0) (2026-04-05)
+
+### Features
+
+- **saas:** adapt site-detail view for SaaS sites with dedicated metrics ([2c995fa](https://github.com/Tallec7/neopro/commit/2c995fa526213da427b5aea9bf7f14676247baff))
+
 # [3.126.0](https://github.com/Tallec7/neopro/compare/v3.125.10...v3.126.0) (2026-04-05)
 
 ### Features
