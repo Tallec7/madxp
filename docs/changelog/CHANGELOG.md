@@ -1,3 +1,9 @@
+## [3.124.9](https://github.com/Tallec7/neopro/compare/v3.124.8...v3.124.9) (2026-04-05)
+
+### Bug Fixes
+
+- **club-portal:** allow club users to delete/update their own videos ([a40c1c6](https://github.com/Tallec7/neopro/commit/a40c1c6a135b51fbf2a66c8c668cb292919e0599))
+
 ## [3.124.8](https://github.com/Tallec7/neopro/compare/v3.124.7...v3.124.8) (2026-04-05)
 
 ### Bug Fixes
