@@ -31,6 +31,7 @@ jest.mock('../services/metrics.service', () => ({
 
 const mockFindByNameAndSite = jest.fn();
 const mockCreate = jest.fn();
+const mockFindByIdFull = jest.fn();
 const mockGetVideos = jest.fn();
 const mockAddVideo = jest.fn();
 const mockRemoveVideo = jest.fn();
@@ -39,6 +40,7 @@ jest.mock('../repositories/site-sponsor.repository', () => ({
   siteSponsorRepository: {
     findByNameAndSite: (...args: unknown[]) => mockFindByNameAndSite(...args),
     create: (...args: unknown[]) => mockCreate(...args),
+    findByIdFull: (...args: unknown[]) => mockFindByIdFull(...args),
     getSponsorsForDeployment: jest.fn().mockResolvedValue([]),
     getVideos: (...args: unknown[]) => mockGetVideos(...args),
     addVideo: (...args: unknown[]) => mockAddVideo(...args),
@@ -85,6 +87,8 @@ describe('resolveLocalSponsors — video association sync', () => {
     mockQuery.mockResolvedValue({ rows: [{ config_update_pending_until: null, count: '0' }] });
     // Default: no deployed paths
     mockGetDeployedPaths.mockResolvedValue([]);
+    // Default: sponsor exists (for FK check in syncVideoAssociations)
+    mockFindByIdFull.mockResolvedValue({ id: 'some-id', name: 'Sponsor' });
     // Default: no existing videos
     mockGetVideos.mockResolvedValue([]);
     mockAddVideo.mockResolvedValue(undefined);
