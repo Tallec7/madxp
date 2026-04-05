@@ -1,6 +1,6 @@
 {
   "name": "neopro-socket-server",
-  "version": "v3.124.13",
+  "version": "v3.124.14",
   "description": "Socket.IO server for Neopro application",
   "main": "server.js",
   "scripts": {

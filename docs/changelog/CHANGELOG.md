@@ -1,3 +1,9 @@
+## [3.124.14](https://github.com/Tallec7/neopro/compare/v3.124.13...v3.124.14) (2026-04-05)
+
+### Bug Fixes
+
+- **dashboard:** include checksum in deploy_video from site-content-tab ([1e4ca74](https://github.com/Tallec7/neopro/commit/1e4ca74b1207f4eb79b6ed10b0a19879208e79bf))
+
 ## [3.124.13](https://github.com/Tallec7/neopro/compare/v3.124.12...v3.124.13) (2026-04-05)
 
 ### Bug Fixes
