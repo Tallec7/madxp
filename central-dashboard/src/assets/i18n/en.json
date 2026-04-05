@@ -97,7 +97,11 @@
     "localConsole": "Local Console",
     "safe": "SAFe Dashboard",
     "skipToContent": "Skip to main content",
-    "toggleMenu": "Toggle menu"
+    "toggleMenu": "Toggle menu",
+    "clubDashboard": "My club",
+    "clubContent": "Content",
+    "clubLoop": "Video loop",
+    "clubSponsors": "Sponsors"
   },
   "status": {
     "connected": "Connected",
@@ -120,7 +124,19 @@
     "viewer": "Viewer",
     "advertiser": "Advertiser",
     "sponsor": "Advertiser",
-    "agency": "Agency"
+    "agency": "Agency",
+    "club": "Club"
+  },
+  "clubPortal": {
+    "connectionStatus": "Connection status",
+    "lastSeen": "Last seen",
+    "storage": "Storage",
+    "videoCount": "Videos on device",
+    "lastSync": "Last sync",
+    "version": "Software version",
+    "contentDescription": "Manage your club's videos and configure the content displayed on your screen.",
+    "loopDescription": "Organize the order and weighting of videos in the broadcast loop.",
+    "sponsorsDescription": "Manage your club's local sponsors and track their performance."
   },
   "notifications": {
     "commandExecuted": "Command executed successfully",

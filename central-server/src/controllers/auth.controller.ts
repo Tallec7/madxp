@@ -85,6 +85,7 @@ export const login = async (req: Request, res: Response): Promise<Response> => {
       advertiser_id: advertiserId,
       sponsor_id: sponsorId,
       agency_id: user.agency_id,
+      site_id: user.site_id ?? null,
     });
 
     logger.info('User logged in', {
@@ -93,6 +94,7 @@ export const login = async (req: Request, res: Response): Promise<Response> => {
       mfaUsed: user.mfa_enabled,
       sponsor_id: user.sponsor_id,
       agency_id: user.agency_id,
+      site_id: user.site_id,
     });
 
     // Définir le cookie HttpOnly sécurisé
@@ -109,6 +111,7 @@ export const login = async (req: Request, res: Response): Promise<Response> => {
         advertiser_id: advertiserId,
         sponsor_id: sponsorId,
         agency_id: user.agency_id,
+        site_id: user.site_id ?? null,
       },
     });
   } catch (error) {
@@ -148,6 +151,7 @@ export const me = async (req: AuthRequest, res: Response) => {
       advertiser_id: advertiserId,
       sponsor_id: sponsorId,
       agency_id: user.agency_id,
+      site_id: user.site_id ?? null,
     });
 
     return res.json({

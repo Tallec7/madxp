@@ -61,80 +61,103 @@ import { ConfirmDialogService } from '../../core/services/confirm-dialog.service
         </div>
 
         <nav class="sidebar-nav" [attr.aria-label]="'nav.dashboard' | translate">
-          <a routerLink="/dashboard" routerLinkActive="active" class="nav-item" (click)="closeSidebar()" [attr.aria-label]="'nav.dashboard' | translate">
-            <span class="icon" aria-hidden="true">🏠</span>
-            <span>{{ 'nav.dashboard' | translate }}</span>
-          </a>
-          <a routerLink="/analytics" routerLinkActive="active" class="nav-item" (click)="closeSidebar()">
-            <span class="icon" aria-hidden="true">📈</span>
-            <span>Analytics</span>
-          </a>
-          <a routerLink="/sites" routerLinkActive="active" class="nav-item" (click)="closeSidebar()" [attr.aria-label]="'nav.sites' | translate">
-            <span class="icon" aria-hidden="true">🖥️</span>
-            <span>{{ 'nav.sites' | translate }}</span>
-          </a>
-          <a routerLink="/groups" routerLinkActive="active" class="nav-item" (click)="closeSidebar()" [attr.aria-label]="'nav.groups' | translate">
-            <span class="icon" aria-hidden="true">👥</span>
-            <span>{{ 'nav.groups' | translate }}</span>
-          </a>
-          <a routerLink="/advertisers" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" class="nav-item" (click)="closeSidebar()" [attr.aria-label]="'nav.advertisers' | translate">
-            <span class="icon" aria-hidden="true">💼</span>
-            <span>{{ 'nav.advertisers' | translate }}</span>
-          </a>
-          <a routerLink="/advertisers/health" routerLinkActive="active" class="nav-item" (click)="closeSidebar()" *ngIf="canManageContent()" aria-label="Sante Annonceurs">
-            <span class="icon" aria-hidden="true">🩺</span>
-            <span>Sante Annonceurs</span>
-          </a>
+          <!-- Club portal navigation (club role only) -->
+          <ng-container *ngIf="isClub(); else defaultNav">
+            <a routerLink="/club" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" class="nav-item" (click)="closeSidebar()">
+              <span class="icon" aria-hidden="true">🏠</span>
+              <span>{{ 'nav.clubDashboard' | translate }}</span>
+            </a>
+            <a routerLink="/club/content" routerLinkActive="active" class="nav-item" (click)="closeSidebar()">
+              <span class="icon" aria-hidden="true">📹</span>
+              <span>{{ 'nav.clubContent' | translate }}</span>
+            </a>
+            <a routerLink="/club/loop" routerLinkActive="active" class="nav-item" (click)="closeSidebar()">
+              <span class="icon" aria-hidden="true">🔄</span>
+              <span>{{ 'nav.clubLoop' | translate }}</span>
+            </a>
+            <a routerLink="/club/sponsors" routerLinkActive="active" class="nav-item" (click)="closeSidebar()">
+              <span class="icon" aria-hidden="true">💼</span>
+              <span>{{ 'nav.clubSponsors' | translate }}</span>
+            </a>
+          </ng-container>
 
-          <!-- Portals section for admin users -->
-          <div class="nav-section" *ngIf="isAdmin()" role="group" aria-label="Portails">
-            <div class="nav-section-title" id="portals-section">Portails</div>
-            <a routerLink="/advertiser-portal" routerLinkActive="active" class="nav-item" (click)="closeSidebar()" aria-describedby="portals-section">
-              <span class="icon" aria-hidden="true">🎯</span>
-              <span>Portail Annonceur</span>
+          <!-- Default navigation (admin/operator/viewer) -->
+          <ng-template #defaultNav>
+            <a routerLink="/dashboard" routerLinkActive="active" class="nav-item" (click)="closeSidebar()" [attr.aria-label]="'nav.dashboard' | translate">
+              <span class="icon" aria-hidden="true">🏠</span>
+              <span>{{ 'nav.dashboard' | translate }}</span>
             </a>
-            <a routerLink="/agency-portal" routerLinkActive="active" class="nav-item" (click)="closeSidebar()" aria-describedby="portals-section">
-              <span class="icon" aria-hidden="true">🏢</span>
-              <span>Portail Agence</span>
+            <a routerLink="/analytics" routerLinkActive="active" class="nav-item" (click)="closeSidebar()">
+              <span class="icon" aria-hidden="true">📈</span>
+              <span>Analytics</span>
             </a>
-          </div>
+            <a routerLink="/sites" routerLinkActive="active" class="nav-item" (click)="closeSidebar()" [attr.aria-label]="'nav.sites' | translate">
+              <span class="icon" aria-hidden="true">🖥️</span>
+              <span>{{ 'nav.sites' | translate }}</span>
+            </a>
+            <a routerLink="/groups" routerLinkActive="active" class="nav-item" (click)="closeSidebar()" [attr.aria-label]="'nav.groups' | translate">
+              <span class="icon" aria-hidden="true">👥</span>
+              <span>{{ 'nav.groups' | translate }}</span>
+            </a>
+            <a routerLink="/advertisers" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" class="nav-item" (click)="closeSidebar()" [attr.aria-label]="'nav.advertisers' | translate">
+              <span class="icon" aria-hidden="true">💼</span>
+              <span>{{ 'nav.advertisers' | translate }}</span>
+            </a>
+            <a routerLink="/advertisers/health" routerLinkActive="active" class="nav-item" (click)="closeSidebar()" *ngIf="canManageContent()" aria-label="Sante Annonceurs">
+              <span class="icon" aria-hidden="true">🩺</span>
+              <span>Sante Annonceurs</span>
+            </a>
 
-          <a routerLink="/content" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" class="nav-item" (click)="closeSidebar()" *ngIf="canManageContent()" [attr.aria-label]="'nav.content' | translate">
-            <span class="icon" aria-hidden="true">📹</span>
-            <span>{{ 'nav.content' | translate }}</span>
-          </a>
-          <a routerLink="/content/templates" routerLinkActive="active" class="nav-item" (click)="closeSidebar()" *ngIf="isAdmin()" aria-label="Templates Lottie">
-            <span class="icon" aria-hidden="true">🎬</span>
-            <span>Templates</span>
-          </a>
-          <a routerLink="/updates" routerLinkActive="active" class="nav-item" (click)="closeSidebar()" *ngIf="canManageContent()" [attr.aria-label]="'nav.updates' | translate">
-            <span class="icon" aria-hidden="true">🔄</span>
-            <span>{{ 'nav.updates' | translate }}</span>
-          </a>
+            <!-- Portals section for admin users -->
+            <div class="nav-section" *ngIf="isAdmin()" role="group" aria-label="Portails">
+              <div class="nav-section-title" id="portals-section">Portails</div>
+              <a routerLink="/advertiser-portal" routerLinkActive="active" class="nav-item" (click)="closeSidebar()" aria-describedby="portals-section">
+                <span class="icon" aria-hidden="true">🎯</span>
+                <span>Portail Annonceur</span>
+              </a>
+              <a routerLink="/agency-portal" routerLinkActive="active" class="nav-item" (click)="closeSidebar()" aria-describedby="portals-section">
+                <span class="icon" aria-hidden="true">🏢</span>
+                <span>Portail Agence</span>
+              </a>
+            </div>
 
-          <div class="nav-section" *ngIf="isAdmin()" role="group" [attr.aria-label]="'nav.administration' | translate">
-            <div class="nav-section-title" id="admin-section">{{ 'nav.administration' | translate }}</div>
-            <a routerLink="/subscriptions" routerLinkActive="active" class="nav-item" (click)="closeSidebar()" aria-describedby="admin-section">
-              <span class="icon" aria-hidden="true">💳</span>
-              <span>Abonnements</span>
+            <a routerLink="/content" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" class="nav-item" (click)="closeSidebar()" *ngIf="canManageContent()" [attr.aria-label]="'nav.content' | translate">
+              <span class="icon" aria-hidden="true">📹</span>
+              <span>{{ 'nav.content' | translate }}</span>
             </a>
-            <a routerLink="/admin/users" routerLinkActive="active" class="nav-item" (click)="closeSidebar()" aria-describedby="admin-section" [attr.aria-label]="'nav.users' | translate">
-              <span class="icon" aria-hidden="true">👤</span>
-              <span>{{ 'nav.users' | translate }}</span>
+            <a routerLink="/content/templates" routerLinkActive="active" class="nav-item" (click)="closeSidebar()" *ngIf="isAdmin()" aria-label="Templates Lottie">
+              <span class="icon" aria-hidden="true">🎬</span>
+              <span>Templates</span>
             </a>
-            <a routerLink="/admin/agencies" routerLinkActive="active" class="nav-item" (click)="closeSidebar()" aria-describedby="admin-section" [attr.aria-label]="'nav.agencies' | translate">
-              <span class="icon" aria-hidden="true">🏢</span>
-              <span>{{ 'nav.agencies' | translate }}</span>
+            <a routerLink="/updates" routerLinkActive="active" class="nav-item" (click)="closeSidebar()" *ngIf="canManageContent()" [attr.aria-label]="'nav.updates' | translate">
+              <span class="icon" aria-hidden="true">🔄</span>
+              <span>{{ 'nav.updates' | translate }}</span>
             </a>
-            <a routerLink="/admin/local" routerLinkActive="active" class="nav-item" (click)="closeSidebar()" aria-describedby="admin-section" [attr.aria-label]="'nav.localConsole' | translate">
-              <span class="icon" aria-hidden="true">🛠️</span>
-              <span>{{ 'nav.localConsole' | translate }}</span>
-            </a>
-            <a routerLink="/safe" routerLinkActive="active" class="nav-item" (click)="closeSidebar()" aria-describedby="admin-section" [attr.aria-label]="'nav.safe' | translate">
-              <span class="icon" aria-hidden="true">📊</span>
-              <span>{{ 'nav.safe' | translate }}</span>
-            </a>
-          </div>
+
+            <div class="nav-section" *ngIf="isAdmin()" role="group" [attr.aria-label]="'nav.administration' | translate">
+              <div class="nav-section-title" id="admin-section">{{ 'nav.administration' | translate }}</div>
+              <a routerLink="/subscriptions" routerLinkActive="active" class="nav-item" (click)="closeSidebar()" aria-describedby="admin-section">
+                <span class="icon" aria-hidden="true">💳</span>
+                <span>Abonnements</span>
+              </a>
+              <a routerLink="/admin/users" routerLinkActive="active" class="nav-item" (click)="closeSidebar()" aria-describedby="admin-section" [attr.aria-label]="'nav.users' | translate">
+                <span class="icon" aria-hidden="true">👤</span>
+                <span>{{ 'nav.users' | translate }}</span>
+              </a>
+              <a routerLink="/admin/agencies" routerLinkActive="active" class="nav-item" (click)="closeSidebar()" aria-describedby="admin-section" [attr.aria-label]="'nav.agencies' | translate">
+                <span class="icon" aria-hidden="true">🏢</span>
+                <span>{{ 'nav.agencies' | translate }}</span>
+              </a>
+              <a routerLink="/admin/local" routerLinkActive="active" class="nav-item" (click)="closeSidebar()" aria-describedby="admin-section" [attr.aria-label]="'nav.localConsole' | translate">
+                <span class="icon" aria-hidden="true">🛠️</span>
+                <span>{{ 'nav.localConsole' | translate }}</span>
+              </a>
+              <a routerLink="/safe" routerLinkActive="active" class="nav-item" (click)="closeSidebar()" aria-describedby="admin-section" [attr.aria-label]="'nav.safe' | translate">
+                <span class="icon" aria-hidden="true">📊</span>
+                <span>{{ 'nav.safe' | translate }}</span>
+              </a>
+            </div>
+          </ng-template>
         </nav>
 
         <div class="sidebar-footer" role="contentinfo">
@@ -703,6 +726,10 @@ export class LayoutComponent implements OnInit, OnDestroy {
 
   isAdmin(): boolean {
     return this.authService.hasRole('admin', 'super_admin');
+  }
+
+  isClub(): boolean {
+    return this.currentUser?.role === 'club';
   }
 
   getUserInitials(): string {

@@ -2,7 +2,7 @@ import { Request } from 'express';
 
 // Types de rôles disponibles
 // Note: 'advertiser' remplace 'sponsor' - 'sponsor' gardé pour rétrocompatibilité
-export type UserRole = 'super_admin' | 'superadmin' | 'admin' | 'operator' | 'viewer' | 'advertiser' | 'sponsor' | 'agency';
+export type UserRole = 'super_admin' | 'superadmin' | 'admin' | 'operator' | 'viewer' | 'advertiser' | 'sponsor' | 'agency' | 'club';
 
 // User types
 export interface User {
@@ -14,6 +14,7 @@ export interface User {
   advertiser_id: string | null;  // Pour les utilisateurs annonceurs
   sponsor_id?: string | null;    // @deprecated - Utiliser advertiser_id
   agency_id: string | null;      // Pour les utilisateurs agence
+  site_id: string | null;        // Pour les utilisateurs club (accès scopé à 1 site)
   created_at: Date;
   updated_at: Date;
   last_login_at: Date | null;

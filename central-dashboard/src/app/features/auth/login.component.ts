@@ -382,7 +382,17 @@ export class LoginComponent implements OnInit {
 
     this.authService.login(email, password).subscribe({
       next: () => {
-        this.router.navigate(['/dashboard']);
+        const user = this.authService.getCurrentUser();
+        // Role-based redirect after login
+        if (user?.role === 'club') {
+          this.router.navigate(['/club']);
+        } else if (user?.role === 'advertiser' || user?.role === 'sponsor') {
+          this.router.navigate(['/advertiser-portal']);
+        } else if (user?.role === 'agency') {
+          this.router.navigate(['/agency-portal']);
+        } else {
+          this.router.navigate(['/dashboard']);
+        }
       },
       error: (error) => {
         this.loading = false;

@@ -21,8 +21,9 @@ import { SiteSubscriptionTabComponent } from './components/site-subscription-tab
 import { SiteProfilesTabComponent } from './components/site-profiles-tab/site-profiles-tab.component';
 import { SiteBenchmarkComponent } from './components/site-benchmark/site-benchmark.component';
 import { SiteSponsorsTabComponent } from './components/site-sponsors-tab/site-sponsors-tab.component';
+import { ClubAccessTabComponent } from './components/club-access-tab/club-access-tab.component';
 
-type TabId = 'status' | 'content' | 'settings' | 'profiles' | 'sponsors' | 'subscription' | 'debug';
+type TabId = 'status' | 'content' | 'settings' | 'profiles' | 'sponsors' | 'subscription' | 'debug' | 'club-access';
 
 @Component({
   selector: 'app-site-detail',
@@ -39,7 +40,8 @@ type TabId = 'status' | 'content' | 'settings' | 'profiles' | 'sponsors' | 'subs
     SiteSubscriptionTabComponent,
     SiteProfilesTabComponent,
     SiteBenchmarkComponent,
-    SiteSponsorsTabComponent
+    SiteSponsorsTabComponent,
+    ClubAccessTabComponent
   ],
   templateUrl: './site-detail.component.html',
   styleUrls: ['./site-detail.component.scss']

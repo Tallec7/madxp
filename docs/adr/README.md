@@ -52,6 +52,7 @@ Un ADR documente une décision technique importante avec :
 | [ADR-033](ADR-033-videos-secondary-serving.md)                | Secondary variant serving, path & race condition fixes | Accepté                  | Mar 2026 |
 | [ADR-034](ADR-034-synchronized-manual-video-reveal.md)        | Synchronized manual video reveal (dual-display sync)   | Accepté                  | Mar 2026 |
 | [ADR-035](ADR-035-advertiser-sponsor-separation.md)           | Séparation Annonceurs Neopro / Sponsors Club           | Proposé                  | Mar 2026 |
+| [ADR-036](ADR-036-club-portal-scoped-access.md)               | Club Portal — Accès scopé par site                     | Accepté                  | Avr 2026 |
 
 ### Supersédés
 
@@ -88,7 +89,7 @@ Un ADR documente une décision technique importante avec :
 
 1. Décider du format avec la [grille de décision](BEST_PRACTICES.md#quand-créer-un-adr-)
 2. Copier le template approprié (complet ou léger)
-3. Numéroter séquentiellement (prochain : **ADR-035**)
+3. Numéroter séquentiellement (prochain : **ADR-037**)
 4. Remplir les sections
 5. Commiter avec le code dans la même PR
 6. Mettre à jour ce README après merge

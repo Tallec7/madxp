@@ -97,7 +97,11 @@
     "localConsole": "Console locale",
     "safe": "Pilotage SAFe",
     "skipToContent": "Aller au contenu principal",
-    "toggleMenu": "Basculer le menu"
+    "toggleMenu": "Basculer le menu",
+    "clubDashboard": "Mon club",
+    "clubContent": "Contenu",
+    "clubLoop": "Boucle video",
+    "clubSponsors": "Sponsors"
   },
   "status": {
     "connected": "Connecté",
@@ -120,7 +124,19 @@
     "viewer": "Observateur",
     "advertiser": "Annonceur",
     "sponsor": "Annonceur",
-    "agency": "Agence"
+    "agency": "Agence",
+    "club": "Club"
+  },
+  "clubPortal": {
+    "connectionStatus": "Statut de connexion",
+    "lastSeen": "Derniere connexion",
+    "storage": "Stockage",
+    "videoCount": "Videos sur le boitier",
+    "lastSync": "Derniere synchro",
+    "version": "Version logicielle",
+    "contentDescription": "Gerez les videos de votre club et configurez le contenu diffuse sur votre ecran.",
+    "loopDescription": "Organisez l'ordre et la ponderation des videos dans la boucle de diffusion.",
+    "sponsorsDescription": "Gerez les sponsors locaux de votre club et suivez leurs performances."
   },
   "notifications": {
     "commandExecuted": "Commande exécutée avec succès",

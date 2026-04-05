@@ -21,6 +21,7 @@ export interface JwtPayload {
   advertiser_id?: string | null;
   sponsor_id?: string | null;
   agency_id?: string | null;
+  site_id?: string | null;
 }
 
 export const authenticate = (
@@ -74,6 +75,7 @@ const ROLE_HIERARCHY: Record<UserRole, number> = {
   'advertiser': 30,
   'sponsor': 30,  // @deprecated - alias pour advertiser
   'agency': 30,
+  'club': 35,     // Club users: above external partners, below internal viewers
 };
 
 // Rôles considérés comme "admin" (accès complet NeoPro)
@@ -204,6 +206,80 @@ export const requireAgencyAccess = (getAgencyIdFromRequest: (req: AuthRequest) =
     }
 
     return res.status(403).json({ error: 'Accès refusé' });
+  };
+};
+
+/**
+ * Middleware for club users: forces site_id scope on the request.
+ * If the user is a club user, req.params.siteId (or the field returned by getSiteIdFromRequest)
+ * MUST match their site_id. Admins/operators bypass.
+ *
+ * @param getSiteIdFromRequest - extracts the site ID the request is targeting
+ */
+export const requireClubScope = (getSiteIdFromRequest: (req: AuthRequest) => string | undefined) => {
+  return (req: AuthRequest, res: Response, next: NextFunction) => {
+    if (!req.user) {
+      return res.status(401).json({ error: 'Non authentifié' });
+    }
+
+    // Admins and internal roles bypass club scope
+    if (INTERNAL_ROLES.includes(req.user.role)) {
+      return next();
+    }
+
+    // Club users can only access their own site
+    if (req.user.role === 'club') {
+      const requestedSiteId = getSiteIdFromRequest(req);
+      if (!requestedSiteId || requestedSiteId !== req.user.site_id) {
+        return res.status(403).json({
+          error: 'Accès refusé',
+          message: 'Vous ne pouvez accéder qu\'aux données de votre club'
+        });
+      }
+      return next();
+    }
+
+    return res.status(403).json({ error: 'Accès refusé' });
+  };
+};
+
+/**
+ * Middleware that checks a club user has a specific permission.
+ * Admins/operators bypass. Non-club roles are rejected.
+ */
+export const requireClubPermission = (permission: string) => {
+  return async (req: AuthRequest, res: Response, next: NextFunction) => {
+    if (!req.user) {
+      return res.status(401).json({ error: 'Non authentifié' });
+    }
+
+    // Admins and internal roles bypass
+    if (INTERNAL_ROLES.includes(req.user.role)) {
+      return next();
+    }
+
+    if (req.user.role !== 'club' || !req.user.site_id) {
+      return res.status(403).json({ error: 'Acc��s refusé' });
+    }
+
+    try {
+      const result = await query<{ permission: string }>(
+        'SELECT permission FROM club_permissions WHERE site_id = $1 AND permission = $2',
+        [req.user.site_id, permission]
+      );
+
+      if (result.rowCount === 0) {
+        return res.status(403).json({
+          error: 'Permission manquante',
+          message: `Permission '${permission}' non accordée pour ce club`
+        });
+      }
+
+      return next();
+    } catch (error) {
+      logger.error('Club permission check error:', error);
+      return res.status(500).json({ error: 'Erreur serveur interne' });
+    }
   };
 };
 

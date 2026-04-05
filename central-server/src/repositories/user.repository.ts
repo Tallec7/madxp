@@ -15,6 +15,7 @@ export interface UserRow extends QueryResultRow {
   advertiser_id: string | null;
   sponsor_id: string | null;
   agency_id: string | null;
+  site_id: string | null;
   mfa_enabled: boolean;
   status: string;
   created_at: Date;
@@ -29,6 +30,7 @@ export interface UserWithRelations extends QueryResultRow {
   role: string;
   advertiser_id: string | null;
   agency_id: string | null;
+  site_id: string | null;
   mfa_enabled: boolean;
   status: string;
   created_at: Date;
@@ -36,6 +38,7 @@ export interface UserWithRelations extends QueryResultRow {
   last_login_at: Date | null;
   advertiser_name: string | null;
   agency_name: string | null;
+  site_name: string | null;
 }
 
 export interface UserListFilters {
@@ -51,6 +54,7 @@ export interface CreateUserInput {
   role: string;
   advertiserId: string | null;
   agencyId: string | null;
+  siteId: string | null;
 }
 
 export interface UpdateUserInput {
@@ -59,6 +63,7 @@ export interface UpdateUserInput {
   role?: string;
   advertiserId?: string | null;
   agencyId?: string | null;
+  siteId?: string | null;
   status?: string;
 }
 
@@ -112,13 +117,15 @@ class UserRepositoryImpl extends BaseRepository<UserRow> {
 
     const result = await query<UserWithRelations>(
       `SELECT
-        u.id, u.email, u.full_name, u.role, u.advertiser_id, u.agency_id,
+        u.id, u.email, u.full_name, u.role, u.advertiser_id, u.agency_id, u.site_id,
         u.mfa_enabled, u.status, u.created_at, u.updated_at, u.last_login_at,
         adv.name as advertiser_name,
-        a.name as agency_name
+        a.name as agency_name,
+        s.site_name as site_name
        FROM users u
        LEFT JOIN advertisers adv ON adv.id = u.advertiser_id
        LEFT JOIN agencies a ON a.id = u.agency_id
+       LEFT JOIN sites s ON s.id = u.site_id
        ${whereClause}
        ORDER BY u.created_at DESC`,
       params
@@ -133,13 +140,15 @@ class UserRepositoryImpl extends BaseRepository<UserRow> {
   async findByIdWithRelations(id: string): Promise<UserWithRelations | null> {
     const result = await query<UserWithRelations>(
       `SELECT
-        u.id, u.email, u.full_name, u.role, u.advertiser_id, u.agency_id,
+        u.id, u.email, u.full_name, u.role, u.advertiser_id, u.agency_id, u.site_id,
         u.mfa_enabled, u.status, u.created_at, u.updated_at, u.last_login_at,
         adv.name as advertiser_name,
-        a.name as agency_name
+        a.name as agency_name,
+        s.site_name as site_name
        FROM users u
        LEFT JOIN advertisers adv ON adv.id = u.advertiser_id
        LEFT JOIN agencies a ON a.id = u.agency_id
+       LEFT JOIN sites s ON s.id = u.site_id
        WHERE u.id = $1`,
       [id]
     );
@@ -153,7 +162,7 @@ class UserRepositoryImpl extends BaseRepository<UserRow> {
   async findByEmail(email: string): Promise<UserRow | null> {
     try {
       const result = await query<UserRow>(
-        'SELECT id, email, password_hash, full_name, role, mfa_enabled, advertiser_id, agency_id FROM users WHERE email = $1',
+        'SELECT id, email, password_hash, full_name, role, mfa_enabled, advertiser_id, agency_id, site_id FROM users WHERE email = $1',
         [email]
       );
       return result.rows[0] || null;
@@ -177,7 +186,7 @@ class UserRepositoryImpl extends BaseRepository<UserRow> {
   async findForAuth(id: string): Promise<UserRow | null> {
     try {
       const result = await query<UserRow>(
-        'SELECT id, email, full_name, role, advertiser_id, agency_id, created_at, last_login_at FROM users WHERE id = $1',
+        'SELECT id, email, full_name, role, advertiser_id, agency_id, site_id, created_at, last_login_at FROM users WHERE id = $1',
         [id]
       );
       return result.rows[0] || null;
@@ -217,10 +226,10 @@ class UserRepositoryImpl extends BaseRepository<UserRow> {
    */
   async create(input: CreateUserInput): Promise<UserRow> {
     const result = await query<UserRow>(
-      `INSERT INTO users (email, password_hash, full_name, role, advertiser_id, agency_id, status)
-       VALUES ($1, $2, $3, $4, $5, $6, 'active')
-       RETURNING id, email, full_name, role, advertiser_id, agency_id, mfa_enabled, status, created_at, updated_at`,
-      [input.email, input.passwordHash, input.fullName, input.role, input.advertiserId, input.agencyId]
+      `INSERT INTO users (email, password_hash, full_name, role, advertiser_id, agency_id, site_id, status)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, 'active')
+       RETURNING id, email, full_name, role, advertiser_id, agency_id, site_id, mfa_enabled, status, created_at, updated_at`,
+      [input.email, input.passwordHash, input.fullName, input.role, input.advertiserId, input.agencyId, input.siteId]
     );
     return result.rows[0];
   }
@@ -231,6 +240,7 @@ class UserRepositoryImpl extends BaseRepository<UserRow> {
   async update(id: string, data: UpdateUserInput): Promise<UserRow | null> {
     const advertiserId = data.advertiserId === null ? 'null' : data.advertiserId;
     const agencyId = data.agencyId === null ? 'null' : data.agencyId;
+    const siteId = data.siteId === null ? 'null' : data.siteId;
 
     const result = await query<UserRow>(
       `UPDATE users
@@ -239,11 +249,12 @@ class UserRepositoryImpl extends BaseRepository<UserRow> {
            role = COALESCE($3, role),
            advertiser_id = CASE WHEN $4::text = 'null' THEN NULL ELSE COALESCE($4::uuid, advertiser_id) END,
            agency_id = CASE WHEN $5::text = 'null' THEN NULL ELSE COALESCE($5::uuid, agency_id) END,
-           status = COALESCE($6, status),
+           site_id = CASE WHEN $6::text = 'null' THEN NULL ELSE COALESCE($6::uuid, site_id) END,
+           status = COALESCE($7, status),
            updated_at = NOW()
-       WHERE id = $7
-       RETURNING id, email, full_name, role, advertiser_id, agency_id, mfa_enabled, status, created_at, updated_at, last_login_at`,
-      [data.email, data.fullName, data.role, advertiserId, agencyId, data.status, id]
+       WHERE id = $8
+       RETURNING id, email, full_name, role, advertiser_id, agency_id, site_id, mfa_enabled, status, created_at, updated_at, last_login_at`,
+      [data.email, data.fullName, data.role, advertiserId, agencyId, siteId, data.status, id]
     );
     return result.rows[0] || null;
   }

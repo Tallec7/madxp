@@ -116,7 +116,7 @@ export const getUser = async (req: AuthRequest, res: Response): Promise<void> =>
  */
 export const createUser = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const { email, password, full_name, role, advertiser_id, sponsor_id, agency_id } = req.body as {
+    const { email, password, full_name, role, advertiser_id, sponsor_id, agency_id, site_id } = req.body as {
       email: string;
       password: string;
       full_name: string;
@@ -124,6 +124,7 @@ export const createUser = async (req: AuthRequest, res: Response): Promise<void>
       advertiser_id?: string | null;
       sponsor_id?: string | null;
       agency_id?: string | null;
+      site_id?: string | null;
     };
     const resolvedAdvertiserId = advertiser_id ?? sponsor_id ?? null;
 
@@ -155,6 +156,14 @@ export const createUser = async (req: AuthRequest, res: Response): Promise<void>
       return;
     }
 
+    if (role === 'club' && !site_id) {
+      res.status(400).json({
+        success: false,
+        error: 'site_id est requis pour le role club',
+      });
+      return;
+    }
+
     // Hasher le mot de passe
     const password_hash = await bcrypt.hash(password, 10);
 
@@ -165,6 +174,7 @@ export const createUser = async (req: AuthRequest, res: Response): Promise<void>
       role,
       advertiserId: resolvedAdvertiserId,
       agencyId: agency_id || null,
+      siteId: site_id || null,
     });
 
     logger.info('User created', { userId: newUser.id, email, role, by: req.user?.email });

@@ -46,6 +46,31 @@ export const routes: Routes = [
         path: 'dashboard',
         loadComponent: () => import('./features/dashboard/dashboard.component').then(m => m.DashboardComponent)
       },
+      // Club Portal (role 'club' only — redirected here after login)
+      {
+        path: 'club',
+        canActivate: [roleGuard],
+        data: { roles: ['club'] },
+        loadComponent: () => import('./features/club-portal/club-dashboard.component').then(m => m.ClubDashboardComponent)
+      },
+      {
+        path: 'club/content',
+        canActivate: [roleGuard],
+        data: { roles: ['club'] },
+        loadComponent: () => import('./features/club-portal/club-content.component').then(m => m.ClubContentComponent)
+      },
+      {
+        path: 'club/loop',
+        canActivate: [roleGuard],
+        data: { roles: ['club'] },
+        loadComponent: () => import('./features/club-portal/club-loop.component').then(m => m.ClubLoopComponent)
+      },
+      {
+        path: 'club/sponsors',
+        canActivate: [roleGuard],
+        data: { roles: ['club'] },
+        loadComponent: () => import('./features/club-portal/club-sponsors.component').then(m => m.ClubSponsorsComponent)
+      },
       {
         path: 'analytics',
         canActivate: [roleGuard],

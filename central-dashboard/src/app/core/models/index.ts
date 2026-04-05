@@ -29,7 +29,7 @@ export interface ScoreOverlayConfig {
   position?: ScoreOverlayPosition;
 }
 
-export type UserRole = 'super_admin' | 'admin' | 'operator' | 'viewer' | 'advertiser' | 'sponsor' | 'agency';
+export type UserRole = 'super_admin' | 'admin' | 'operator' | 'viewer' | 'advertiser' | 'sponsor' | 'agency' | 'club';
 
 export interface User {
   id: string;
@@ -39,6 +39,7 @@ export interface User {
   advertiser_id?: string | null;
   sponsor_id?: string | null;
   agency_id?: string | null;
+  site_id?: string | null;
   created_at: Date;
   last_login_at: Date;
 }

@@ -68,6 +68,12 @@ export {
   type PasswordResetTokenRow,
 } from './user.repository';
 export {
+  clubPermissionRepository,
+  type ClubPermissionKey,
+  type ClubPermissionRow,
+  ALL_CLUB_PERMISSIONS,
+} from './club-permission.repository';
+export {
   groupRepository,
   type GroupRow,
   type CreateGroupInput,

@@ -89,6 +89,14 @@
       <span class="tab-icon">🔧</span>
       <span class="tab-label">Debug</span>
     </button>
+    <button
+      class="tab-btn"
+      [class.active]="activeTab === 'club-access'"
+      (click)="activeTab = 'club-access'"
+    >
+      <span class="tab-icon">���️</span>
+      <span class="tab-label">Acces club</span>
+    </button>
   </div>
 
   <!-- Tab Content -->
@@ -567,6 +575,11 @@
         [isConnected]="isConnected"
         [connectionHealth]="connectionHealth"
       ></app-site-debug-tab>
+    </div>
+
+    <!-- TAB: Acces club -->
+    <div *ngIf="activeTab === 'club-access'" class="tab-panel">
+      <app-club-access-tab [siteId]="siteId"></app-club-access-tab>
     </div>
   </div>
 
