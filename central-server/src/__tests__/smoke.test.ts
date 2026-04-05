@@ -14185,3 +14185,105 @@ describe('SaaS deployment pipeline guards', () => {
     });
   });
 });
+
+// ============================================================
+// SaaS site-detail dashboard guards
+// ============================================================
+
+describe('SaaS site-detail dashboard guards', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+
+  // --- site-detail.component.ts must have isSaas getter ---
+  it('site-detail.component.ts must have isSaas getter for conditional rendering', () => {
+    const filePath = path.join(repoRoot, 'central-dashboard', 'src', 'app', 'features', 'sites', 'site-detail.component.ts');
+    const content = fs.readFileSync(filePath, 'utf8');
+    expect({
+      hasIsSaasGetter: content.includes('get isSaas'),
+      checksSiteType: content.includes("site_type === 'saas'"),
+    }).toEqual({
+      hasIsSaasGetter: true,
+      checksSiteType: true,
+    });
+  });
+
+  // --- site-detail.component.html must use isSaas conditional ---
+  it('site-detail.component.html must conditionally render SaaS vs Pi view', () => {
+    const filePath = path.join(repoRoot, 'central-dashboard', 'src', 'app', 'features', 'sites', 'site-detail.component.html');
+    const content = fs.readFileSync(filePath, 'utf8');
+    expect({
+      hasIsSaasConditional: content.includes('isSaas'),
+      hasSaasMetricsGrid: content.includes('saas-metrics-grid'),
+      hasSaasAccessBlock: content.includes('saas-access-block') || content.includes('saas-url-row'),
+    }).toEqual({
+      hasIsSaasConditional: true,
+      hasSaasMetricsGrid: true,
+      hasSaasAccessBlock: true,
+    });
+  });
+
+  // --- site-detail.component.html must hide debug tab for SaaS ---
+  it('site-detail.component.html must hide debug tab for SaaS sites', () => {
+    const filePath = path.join(repoRoot, 'central-dashboard', 'src', 'app', 'features', 'sites', 'site-detail.component.html');
+    const content = fs.readFileSync(filePath, 'utf8');
+    // The debug tab button must be wrapped in a @if (!isSaas) or *ngIf="!isSaas" guard
+    // Look for the pattern: isSaas guard followed by debug tab within ~200 chars
+    const hasIsSaasBeforeDebugTab = /!isSaas[\s\S]{0,200}debug/.test(content);
+    expect({
+      debugTabGuarded: hasIsSaasBeforeDebugTab,
+    }).toEqual({
+      debugTabGuarded: true,
+    });
+  });
+
+  // --- socket.service.ts must expose getSaasClientCount ---
+  it('central socket.service.ts must expose getSaasClientCount method', () => {
+    const filePath = path.join(repoRoot, 'central-server', 'src', 'services', 'socket.service.ts');
+    const content = fs.readFileSync(filePath, 'utf8');
+    expect({
+      hasGetSaasClientCount: content.includes('getSaasClientCount'),
+    }).toEqual({
+      hasGetSaasClientCount: true,
+    });
+  });
+
+  // --- site-fleet.controller.ts must return saasMetrics for SaaS sites ---
+  it('site-fleet.controller.ts must return saasMetrics in dashboard data', () => {
+    const filePath = path.join(repoRoot, 'central-server', 'src', 'controllers', 'site-fleet.controller.ts');
+    const content = fs.readFileSync(filePath, 'utf8');
+    expect({
+      hasSaasMetrics: content.includes('saasMetrics'),
+      checksSiteType: content.includes("site_type") && content.includes("saas"),
+    }).toEqual({
+      hasSaasMetrics: true,
+      checksSiteType: true,
+    });
+  });
+
+  // --- analytics.repository.ts must have SaaS metric methods ---
+  it('analytics.repository.ts must have countSessions, countSponsorsDisplayed, getCompletionRate', () => {
+    const filePath = path.join(repoRoot, 'central-server', 'src', 'repositories', 'analytics.repository.ts');
+    const content = fs.readFileSync(filePath, 'utf8');
+    expect({
+      hasCountSessions: content.includes('countSessions'),
+      hasCountSponsorsDisplayed: content.includes('countSponsorsDisplayed'),
+      hasGetCompletionRate: content.includes('getCompletionRate'),
+    }).toEqual({
+      hasCountSessions: true,
+      hasCountSponsorsDisplayed: true,
+      hasGetCompletionRate: true,
+    });
+  });
+
+  // --- site.repository.ts findConnectionInfo must return site_type ---
+  it('site.repository.ts findConnectionInfo must include site_type in query', () => {
+    const filePath = path.join(repoRoot, 'central-server', 'src', 'repositories', 'site.repository.ts');
+    const content = fs.readFileSync(filePath, 'utf8');
+    const findConnInfoFn = content.match(/findConnectionInfo[\s\S]*?(?=async \w|$)/);
+    expect(findConnInfoFn).not.toBeNull();
+    expect({
+      hasSiteType: findConnInfoFn![0].includes('site_type'),
+    }).toEqual({
+      hasSiteType: true,
+    });
+  });
+});
