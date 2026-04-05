@@ -346,6 +346,11 @@ else
     print_success "Dépendances à jour"
 fi
 
+print_step "Injection de la version dans l'application Angular..."
+echo "// Auto-generated at build time by CI pipeline.
+export const APP_VERSION = '${RELEASE_VERSION}';" > raspberry/src/app/version.ts
+print_success "Version injectée : ${RELEASE_VERSION}"
+
 print_step "Build de l'application Angular pour Raspberry Pi..."
 # Build avec configuration raspberry (utilise environment.raspberry.ts)
 # Utiliser npx si ng n'est pas disponible globalement

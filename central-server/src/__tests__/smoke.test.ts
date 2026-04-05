@@ -14102,4 +14102,86 @@ describe('SaaS deployment pipeline guards', () => {
       hasSaasModeGuardOnAdmin: true,
     });
   });
+
+  // --- version.ts exists and exports APP_VERSION ---
+  it('version.ts must exist and export APP_VERSION', () => {
+    const filePath = path.join(repoRoot, 'raspberry', 'src', 'app', 'version.ts');
+    const content = fs.readFileSync(filePath, 'utf8');
+    expect({
+      exportsAppVersion: content.includes('export const APP_VERSION'),
+    }).toEqual({
+      exportsAppVersion: true,
+    });
+  });
+
+  // --- build-raspberry.sh injects version into version.ts ---
+  it('build-raspberry.sh must inject RELEASE_VERSION into version.ts before Angular build', () => {
+    const filePath = path.join(repoRoot, 'raspberry', 'scripts', 'build-raspberry.sh');
+    const content = fs.readFileSync(filePath, 'utf8');
+    const versionInjectionIndex = content.indexOf('version.ts');
+    const angularBuildIndex = content.indexOf('ng build raspberry');
+    expect({
+      hasVersionInjection: versionInjectionIndex > -1,
+      injectionBeforeBuild: versionInjectionIndex < angularBuildIndex,
+    }).toEqual({
+      hasVersionInjection: true,
+      injectionBeforeBuild: true,
+    });
+  });
+
+  // --- release.yml injects version for SaaS build ---
+  it('release.yml must inject version into version.ts before SaaS build', () => {
+    const filePath = path.join(repoRoot, '.github', 'workflows', 'release.yml');
+    const content = fs.readFileSync(filePath, 'utf8');
+    const versionInjectionIndex = content.indexOf('Inject version into SaaS app');
+    const saasBuildIndex = content.indexOf('Build SaaS app');
+    expect({
+      hasVersionInjection: versionInjectionIndex > -1,
+      injectionBeforeBuild: versionInjectionIndex < saasBuildIndex,
+    }).toEqual({
+      hasVersionInjection: true,
+      injectionBeforeBuild: true,
+    });
+  });
+
+  // --- Home component displays APP_VERSION ---
+  it('home.component.ts must import and expose APP_VERSION', () => {
+    const filePath = path.join(repoRoot, 'raspberry', 'src', 'app', 'components', 'home', 'home.component.ts');
+    const content = fs.readFileSync(filePath, 'utf8');
+    expect({
+      importsAppVersion: content.includes("import { APP_VERSION }"),
+      exposesVersion: content.includes('appVersion'),
+    }).toEqual({
+      importsAppVersion: true,
+      exposesVersion: true,
+    });
+  });
+
+  // --- Socket service emits saas-register with version ---
+  it('socket.service.ts must emit saas-register with APP_VERSION in SaaS mode', () => {
+    const filePath = path.join(repoRoot, 'raspberry', 'src', 'app', 'services', 'socket.service.ts');
+    const content = fs.readFileSync(filePath, 'utf8');
+    expect({
+      importVersion: content.includes("import { APP_VERSION }"),
+      emitsSaasRegister: content.includes("'saas-register'"),
+      includesVersion: content.includes('version: APP_VERSION'),
+    }).toEqual({
+      importVersion: true,
+      emitsSaasRegister: true,
+      includesVersion: true,
+    });
+  });
+
+  // --- Central server handles saas-register and updates software_version ---
+  it('central socket.service.ts must handle saas-register and update software_version', () => {
+    const filePath = path.join(repoRoot, 'central-server', 'src', 'services', 'socket.service.ts');
+    const content = fs.readFileSync(filePath, 'utf8');
+    expect({
+      handlesSaasRegister: content.includes("'saas-register'"),
+      updatesSoftwareVersion: content.includes('software_version') && content.includes('saas'),
+    }).toEqual({
+      handlesSaasRegister: true,
+      updatesSoftwareVersion: true,
+    });
+  });
 });

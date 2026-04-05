@@ -201,6 +201,13 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Inject version into SaaS app
+        run: |
+          VERSION="v${{ needs.release.outputs.new_release_version }}"
+          echo "// Auto-generated at build time by CI pipeline.
+          export const APP_VERSION = '${VERSION}';" > raspberry/src/app/version.ts
+          echo "Injected version: ${VERSION}"
+
       - name: Build SaaS app
         run: npm run build:saas
 

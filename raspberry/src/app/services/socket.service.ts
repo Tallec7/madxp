@@ -2,6 +2,7 @@ import { Injectable } from "@angular/core";
 import { Command } from "../interfaces/command.interface";
 import { PlayerState } from "./player-state.service";
 import { environment } from "../../environments/environment";
+import { APP_VERSION } from "../version";
 
 // Interfaces pour les nouveaux événements socket
 export interface MatchConfig {
@@ -146,6 +147,7 @@ export class SocketService {
       this.socket.on<void>('connect', () => {
         this._connected = true;
         console.log('[Socket] Connected, id:', this.socket?.id);
+        this.emitSaasRegisterIfNeeded();
       });
 
       this.socket.on<string>('disconnect', (reason) => {
@@ -156,6 +158,7 @@ export class SocketService {
       this.socket.on<number>('reconnect', (attempt) => {
         this._connected = true;
         console.log('[Socket] Reconnected after', attempt, 'attempts');
+        this.emitSaasRegisterIfNeeded();
         // Notify all reconnect subscribers (e.g. tv-register re-emit)
         for (const cb of this._reconnectCallbacks) {
           try { cb(); } catch (err) { console.error('[Socket] Reconnect callback error:', err); }
@@ -178,6 +181,23 @@ export class SocketService {
    */
   public onReconnect(callback: () => void): void {
     this._reconnectCallbacks.push(callback);
+  }
+
+  /**
+   * In SaaS mode, register with central server on connect/reconnect
+   * so the dashboard can track which version each SaaS site runs.
+   */
+  private emitSaasRegisterIfNeeded(): void {
+    if (!(environment as { saasMode?: boolean }).saasMode) return;
+    const params = new URLSearchParams(window.location.search);
+    const siteId = params.get('site') || localStorage.getItem('neopro_saas_site_id') || '';
+    if (!siteId || !this.socket) return;
+    this.socket.emit('saas-register', {
+      siteId,
+      version: APP_VERSION,
+      clientType: 'saas-tv',
+    });
+    console.log('[Socket] SaaS register emitted', { siteId, version: APP_VERSION });
   }
 
   public on<T = Command>(action: string, callback: (data: T) => void) {

@@ -333,6 +333,40 @@ class SocketService {
       }
     });
 
+    // SaaS client registration — lightweight, no auth required (siteId is UUID)
+    socket.on('saas-register', async (data: { siteId?: string; version?: string; clientType?: string }) => {
+      if (!data?.siteId) return;
+      try {
+        // Verify the site exists and is SaaS type
+        const result = await query(
+          'SELECT id, site_name, site_type FROM sites WHERE id = $1',
+          [data.siteId]
+        );
+        if (result.rows.length === 0 || result.rows[0].site_type !== 'saas') return;
+
+        (socket as any).siteId = data.siteId;
+        (socket as any).clientType = data.clientType || 'saas-tv';
+        socket.join(data.siteId);
+
+        // Update version and last_seen_at
+        if (data.version) {
+          await query(
+            'UPDATE sites SET software_version = $2, last_seen_at = NOW(), status = $3 WHERE id = $1',
+            [data.siteId, data.version, 'online']
+          );
+        }
+
+        logger.info('SaaS client registered', {
+          siteId: data.siteId,
+          siteName: result.rows[0].site_name,
+          version: data.version,
+          clientType: data.clientType,
+        });
+      } catch (error) {
+        logger.error('SaaS register error', { error, siteId: data.siteId });
+      }
+    });
+
     socket.on('disconnect', (reason: string) => {
       clearTimeout(authTimeout);
       this.handleDisconnection(socket, reason);

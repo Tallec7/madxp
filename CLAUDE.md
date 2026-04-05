@@ -238,6 +238,8 @@ source central-server/.env && psql "$DATABASE_URL" -f central-server/src/scripts
 - Supprimer la dépendance `deploy-dashboard` du job `deploy-saas` dans `release.yml` (le dashboard `dangerous-clean-slate` supprime `/saas/` — le SaaS doit se déployer APRÈS — smoke test enforced)
 - Supprimer la règle `^saas(/.*)?$` du `.htaccess` dashboard (sans elle, le SPA catch-all du dashboard intercepte les requêtes `/saas/` et affiche sa 404 — smoke test enforced)
 - Ajouter un environnement Angular Raspberry sans `saasMode` (tous les fichiers `environment*.ts` doivent déclarer `saasMode` — le `HomeComponent` et le `SaasConfigService` lisent ce flag — smoke test enforced)
+- Supprimer `version.ts` ou l'injection de `APP_VERSION` dans `build-raspberry.sh` / `release.yml` (sans injection, le build n'a pas de version traçable — les sites affichent "dev" et le dashboard ne peut pas tracker les versions SaaS — smoke test enforced)
+- Supprimer l'émission `saas-register` du `socket.service.ts` Angular ou le handler `saas-register` du `socket.service.ts` central (sans eux, les sites SaaS n'ont pas de `software_version` dans la DB → le dashboard affiche "N/A" et le monitoring est aveugle — smoke test enforced)
 
 ## Architecture détaillée
 
