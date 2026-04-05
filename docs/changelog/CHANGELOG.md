@@ -1,3 +1,9 @@
+## [3.124.4](https://github.com/Tallec7/neopro/compare/v3.124.3...v3.124.4) (2026-04-05)
+
+### Bug Fixes
+
+- **club-portal:** allow club users to access their own site endpoints ([23f74f8](https://github.com/Tallec7/neopro/commit/23f74f8720f3b25611aff6e70877b29432b8e54e))
+
 ## [3.124.3](https://github.com/Tallec7/neopro/compare/v3.124.2...v3.124.3) (2026-04-05)
 
 ### Bug Fixes
