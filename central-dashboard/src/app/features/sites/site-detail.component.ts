@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, inject } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject, ViewChild, ElementRef, AfterViewChecked } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterModule } from '@angular/router';
@@ -13,6 +13,7 @@ import { ErrorExtractor } from '../../core/utils/error-extractor';
 import { Site, Metrics, FanStatus, SiteConnectionStatus, ConnectionHealth, MatchHistoryData, Match } from '../../core/models';
 import { formatVersion } from './utils/version';
 import { Subscription, interval } from 'rxjs';
+import * as QRCode from 'qrcode';
 import { ConnectionIndicatorComponent } from '../../shared/components/connection-indicator.component';
 import { SiteContentTabComponent } from './components/site-content-tab/site-content-tab.component';
 import { SiteSettingsTabComponent } from './components/site-settings-tab/site-settings-tab.component';
@@ -46,13 +47,18 @@ type TabId = 'status' | 'content' | 'settings' | 'profiles' | 'sponsors' | 'subs
   templateUrl: './site-detail.component.html',
   styleUrls: ['./site-detail.component.scss']
 })
-export class SiteDetailComponent implements OnInit, OnDestroy {
+export class SiteDetailComponent implements OnInit, OnDestroy, AfterViewChecked {
   site: Site | null = null;
   currentMetrics: Metrics | null = null;
   metricsHistory: Metrics[] = [];
   siteId!: string;
   Math = Math;
   readonly formatVersion = formatVersion;
+
+  // SaaS QR code
+  showSaasQrCode = false;
+  private saasQrGenerated = false;
+  @ViewChild('saasQrCanvas') saasQrCanvas?: ElementRef<HTMLCanvasElement>;
 
   // Active tab
   activeTab: TabId = 'status';
@@ -256,6 +262,52 @@ export class SiteDetailComponent implements OnInit, OnDestroy {
         this.loadingDashboard = false;
       }
     });
+  }
+
+  ngAfterViewChecked(): void {
+    if (this.showSaasQrCode && this.saasQrCanvas && !this.saasQrGenerated) {
+      this.saasQrGenerated = true;
+      this.generateSaasQrCode();
+    }
+    if (!this.showSaasQrCode) {
+      this.saasQrGenerated = false;
+    }
+  }
+
+  getSaasUrl(): string {
+    return `https://neopro-admin.kalonpartners.bzh/saas/?site=${this.site?.id || ''}`;
+  }
+
+  copySaasUrl(): void {
+    if (!this.site) return;
+    navigator.clipboard.writeText(this.getSaasUrl()).then(() => {
+      this.notificationService.success('URL SaaS copiée');
+    });
+  }
+
+  private generateSaasQrCode(): void {
+    if (!this.saasQrCanvas?.nativeElement) return;
+    QRCode.toCanvas(this.saasQrCanvas.nativeElement, this.getSaasUrl(), {
+      width: 200, margin: 2,
+      color: { dark: '#1e293b', light: '#ffffff' }
+    }).catch((err: Error) => console.error('QR generation error:', err));
+  }
+
+  async downloadSaasQr(): Promise<void> {
+    if (!this.site) return;
+    try {
+      const dataUrl = await QRCode.toDataURL(this.getSaasUrl(), {
+        width: 400, margin: 2,
+        color: { dark: '#1e293b', light: '#ffffff' }
+      });
+      const link = document.createElement('a');
+      const safeName = this.site.club_name.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
+      link.download = `qr-saas-${safeName}.png`;
+      link.href = dataUrl;
+      link.click();
+    } catch (err) {
+      console.error('QR download error:', err);
+    }
   }
 
   getLocation(): string {

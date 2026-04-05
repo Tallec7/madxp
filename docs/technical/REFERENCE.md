@@ -1700,6 +1700,14 @@ GET    /advertiser/campaigns                  - Campagnes de l'annonceur connect
 GET    /advertiser/campaigns/:campaignId      - Détail campagne (ownership vérifié)
 ```
 
+**Endpoints SaaS (public, UUID-based, montés sur /api/saas) :**
+
+```
+GET    /saas/:siteId/config                     - Config complète du site SaaS (URLs vidéo résolues en FTP publiques)
+GET    /saas/:siteId/profiles                   - Liste des profils disponibles (multi-profil)
+GET    /saas/:siteId/profiles/:profileId/config - Config d'un profil spécifique (URLs résolues)
+```
+
 **Endpoints Sponsor Portal (public, token-based, montés sur /api/sponsor-portal) :**
 
 ```
@@ -1721,6 +1729,7 @@ Monitoring:     300 req/min     (status, metrics polling)
 Logging:        200 req/min     (frontend logs - silently dropped if exceeded)
 Sensitive:       30 req/min     (commands, deployments)
 Remote Cloud:    60 req/min     (télécommande cloud - PUBLIC, par IP)
+SaaS:            60 req/min     (config SaaS - PUBLIC, par IP, remoteRateLimit partagé)
 Upload:          10 req/hour    (video uploads)
 Admin:          400 req/min     (dashboard ops — sponsors, admin panel, multiple components loading)
 Pi Analytics:   500 req/min     (impressions sponsors depuis les Pi - par IP)
@@ -1729,7 +1738,7 @@ Sponsor Portal: 100 req/min    (PUBLIC, par IP)
 
 **Note** : Chaque appel à `rateLimit()` crée un **compteur séparé**. Les routes utilisant `apiRateLimit` partagent un même compteur de 100 req/min. Les routes sponsors (`siteSponsorRoutes`) utilisent `adminRateLimit` (compteur séparé à 400 req/min) car le dashboard charge liste + stats + benchmark + rapports en parallèle.
 
-**Note** : Les rate limits sont basés sur le `user_id` (et non sur l'IP) en production, sauf Remote Cloud, Pi Analytics et Sponsor Portal qui sont par IP (endpoints publics). En test (supertest), tous les requêtes partagent la même IP, donc le rate limiter peut se déclencher avant le middleware d'auth — les smoke tests RBAC acceptent 403 ou 429.
+**Note** : Les rate limits sont basés sur le `user_id` (et non sur l'IP) en production, sauf Remote Cloud, SaaS, Pi Analytics et Sponsor Portal qui sont par IP (endpoints publics). En test (supertest), tous les requêtes partagent la même IP, donc le rate limiter peut se déclencher avant le middleware d'auth — les smoke tests RBAC acceptent 403 ou 429.
 
 ### Services Backend Critiques
 

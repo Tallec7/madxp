@@ -86,6 +86,7 @@ export interface Site {
   pending_config_version_id: string | null;
   remote_pin_hash: string | null;
   hostname_slug: string | null;
+  site_type: 'pi' | 'saas' | 'demo';
 }
 
 // Group types

@@ -115,6 +115,28 @@
               ],
               "outputHashing": "all"
             },
+            "saas": {
+              "baseHref": "/saas/",
+              "fileReplacements": [
+                {
+                  "replace": "raspberry/src/environments/environment.ts",
+                  "with": "raspberry/src/environments/environment.saas.ts"
+                }
+              ],
+              "budgets": [
+                {
+                  "type": "initial",
+                  "maximumWarning": "3MB",
+                  "maximumError": "5MB"
+                },
+                {
+                  "type": "anyComponentStyle",
+                  "maximumWarning": "50kB",
+                  "maximumError": "64kB"
+                }
+              ],
+              "outputHashing": "all"
+            },
             "development": {
               "optimization": false,
               "extractLicenses": false,
@@ -131,6 +153,9 @@
             },
             "demo": {
               "buildTarget": "raspberry:build:demo"
+            },
+            "saas": {
+              "buildTarget": "raspberry:build:saas"
             },
             "development": {
               "buildTarget": "raspberry:build:development"

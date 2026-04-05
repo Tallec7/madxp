@@ -13801,3 +13801,129 @@ describe('Club Portal video ownership guards', () => {
     });
   });
 });
+
+// ---------------------------------------------------------------------------
+// SaaS mode guards (ADR-037 — regression prevention)
+// ---------------------------------------------------------------------------
+describe('SaaS mode guards (ADR-037)', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+
+  // --- saas.controller.ts must verify site_type === 'saas' ---
+  it('saas.controller.ts must check site_type before serving config', () => {
+    const filePath = path.join(repoRoot, 'central-server', 'src', 'controllers', 'saas.controller.ts');
+    const content = fs.readFileSync(filePath, 'utf8');
+    expect({
+      checksSiteType: content.includes("site_type !== 'saas'"),
+    }).toEqual({
+      checksSiteType: true,
+    });
+  });
+
+  // --- saas.routes.ts must have rate limiting on all routes ---
+  it('saas.routes.ts must apply rate limiting on all routes', () => {
+    const filePath = path.join(repoRoot, 'central-server', 'src', 'routes', 'saas.routes.ts');
+    const content = fs.readFileSync(filePath, 'utf8');
+    const routeLines = content.split('\n').filter(l => /router\.(get|post|put|delete)\(/.test(l));
+    const allHaveRateLimit = routeLines.every(l => l.includes('RateLimit') || l.includes('rateLimit'));
+    expect({
+      routeCount: routeLines.length,
+      allHaveRateLimit,
+    }).toEqual({
+      routeCount: 3,
+      allHaveRateLimit: true,
+    });
+  });
+
+  // --- saas.routes.ts must have validateParams on all routes ---
+  it('saas.routes.ts must have validateParams on all routes', () => {
+    const filePath = path.join(repoRoot, 'central-server', 'src', 'routes', 'saas.routes.ts');
+    const content = fs.readFileSync(filePath, 'utf8');
+    const routeLines = content.split('\n').filter(l => /router\.(get|post|put|delete)\(/.test(l));
+    const allHaveValidation = routeLines.every(l => l.includes('validateParams'));
+    expect({
+      allHaveValidation,
+    }).toEqual({
+      allHaveValidation: true,
+    });
+  });
+
+  // --- site.repository.ts must support siteType in create ---
+  it('site.repository.ts create() must accept siteType parameter', () => {
+    const filePath = path.join(repoRoot, 'central-server', 'src', 'repositories', 'site.repository.ts');
+    const content = fs.readFileSync(filePath, 'utf8');
+    expect({
+      hasSiteTypeInCreate: content.includes('siteType') && content.includes('site_type'),
+    }).toEqual({
+      hasSiteTypeInCreate: true,
+    });
+  });
+
+  // --- sites.controller.ts must pass site_type to repository ---
+  it('sites.controller.ts createSite must forward site_type to repository', () => {
+    const filePath = path.join(repoRoot, 'central-server', 'src', 'controllers', 'sites.controller.ts');
+    const content = fs.readFileSync(filePath, 'utf8');
+    const createFn = content.match(/export const createSite[\s\S]*?(?=export const \w|$)/);
+    expect(createFn).not.toBeNull();
+    expect({
+      extractsSiteType: createFn![0].includes('site_type'),
+      passesSiteType: createFn![0].includes('siteType'),
+    }).toEqual({
+      extractsSiteType: true,
+      passesSiteType: true,
+    });
+  });
+
+  // --- Site type in types/index.ts ---
+  it('Site interface must include site_type field', () => {
+    const filePath = path.join(repoRoot, 'central-server', 'src', 'types', 'index.ts');
+    const content = fs.readFileSync(filePath, 'utf8');
+    expect({
+      hasSiteType: content.includes('site_type'),
+    }).toEqual({
+      hasSiteType: true,
+    });
+  });
+
+  // --- saas.controller.ts must resolve video URLs via getVideoUrl ---
+  it('saas.controller.ts must resolve video paths to public URLs', () => {
+    const filePath = path.join(repoRoot, 'central-server', 'src', 'controllers', 'saas.controller.ts');
+    const content = fs.readFileSync(filePath, 'utf8');
+    expect({
+      importsGetVideoUrl: content.includes('getVideoUrl'),
+      hasResolveFunction: content.includes('resolveVideoUrl'),
+    }).toEqual({
+      importsGetVideoUrl: true,
+      hasResolveFunction: true,
+    });
+  });
+
+  // --- environment.saas.ts must exist ---
+  it('environment.saas.ts must exist for Angular SaaS build', () => {
+    const filePath = path.join(repoRoot, 'raspberry', 'src', 'environments', 'environment.saas.ts');
+    expect(fs.existsSync(filePath)).toBe(true);
+  });
+
+  // --- angular.json must have saas build configuration ---
+  it('angular.json must include saas build configuration', () => {
+    const angularJsonPath = path.join(repoRoot, 'angular.json');
+    const content = fs.readFileSync(angularJsonPath, 'utf8');
+    const angularJson = JSON.parse(content);
+    const raspberryBuildConfigs = angularJson?.projects?.raspberry?.architect?.build?.configurations;
+    expect({
+      hasSaasConfig: !!raspberryBuildConfigs?.saas,
+    }).toEqual({
+      hasSaasConfig: true,
+    });
+  });
+
+  // --- Dashboard Site model must include site_type ---
+  it('Dashboard Site model must include site_type', () => {
+    const filePath = path.join(repoRoot, 'central-dashboard', 'src', 'app', 'core', 'models', 'index.ts');
+    const content = fs.readFileSync(filePath, 'utf8');
+    expect({
+      hasSiteType: content.includes('site_type'),
+    }).toEqual({
+      hasSiteType: true,
+    });
+  });
+});

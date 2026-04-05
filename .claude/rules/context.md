@@ -12,9 +12,10 @@
      Admin                       Cloud                        Edge
 ```
 
-- **Un "site"** = Un club sportif avec un Raspberry Pi connecté à une TV
-- **Les vidéos** sont uploadées dans le cloud, puis déployées vers les Pi
-- **La flotte** = 50+ boîtiers Pi gérés depuis un dashboard central
+- **Un "site"** = Un club sportif avec un Raspberry Pi connecté à une TV, ou un site SaaS (navigateur uniquement, sans matériel — ADR-037)
+- **Les vidéos** sont uploadées dans le cloud, puis déployées vers les Pi (mode Pi) ou servies directement via URLs FTP (mode SaaS)
+- **La flotte** = 50+ boîtiers Pi + sites SaaS gérés depuis un dashboard central
+- **`site_type`** : `'pi'` (matériel), `'saas'` (navigateur uniquement), `'demo'` (vitrine)
 - **Multi-tenant** : super_admin > admin > operator > viewer | advertiser | agency | club
 
 ## Stack

@@ -229,6 +229,11 @@ source central-server/.env && psql "$DATABASE_URL" -f central-server/src/scripts
 - Retirer `uploaded_for_site_id` du SELECT de `findVideoById()` dans `video.repository.ts` (le guard ownership club dans `deleteVideo`/`updateVideo` compare ce champ — sans lui, `video.uploaded_for_site_id` est toujours `undefined` → guard rejette TOUTES les suppressions club avec 403 — smoke test enforced)
 - Permettre aux utilisateurs `club` de supprimer ou modifier des vidéos catégorie `NEOPRO` (contenu corporate géré par les admins — le guard `category?.toUpperCase() === 'NEOPRO'` dans `deleteVideo`/`updateVideo` de `content.controller.ts` protège ce contenu — smoke test enforced)
 - Oublier `uploaded_for_site_id` dans les endpoints upload club (`createVideo`, `createVideos`, `convertImageToVideo`, `renderTemplate`) — sans auto-tagging serveur, les vidéos club ont `uploaded_for_site_id = NULL` → invisibles dans le filtre club → ne peuvent pas être supprimées (ownership guard échoue) — smoke test enforced)
+- Supprimer le check `site_type !== 'saas'` dans `saas.controller.ts` (sans ce guard, les endpoints SaaS retournent la config de n'importe quel site Pi/demo — leak de données configs vers des URLs publiques sans auth — smoke test enforced)
+- Supprimer `resolveVideoUrl()` / `resolveVideoUrls()` de `saas.controller.ts` (les paths vidéo dans la config sont des chemins relatifs FTP — sans résolution en URLs publiques `https://kalonpartners.bzh/neopro-video/...`, le navigateur SaaS ne peut pas jouer les vidéos — smoke test enforced)
+- Supprimer le rate limiting (`remoteRateLimit`) des routes `saas.routes.ts` (endpoints publics sans auth — sans rate limit, un attaquant peut brute-forcer les UUIDs de sites — smoke test enforced)
+- Supprimer `validateParams(paramSchemas.siteId)` des routes `saas.routes.ts` (sans validation, un `siteId` malformé passe directement en SQL — smoke test enforced)
+- Supprimer `environment.saas.ts` ou la configuration `saas` dans `angular.json` (le build SaaS nécessite les deux — sans eux, `npm run build:saas` échoue silencieusement ou utilise l'environment de prod Pi — smoke test enforced)
 
 ## Architecture détaillée
 

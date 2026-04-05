@@ -1,0 +1,8 @@
+RewriteEngine On
+
+# Si le fichier ou répertoire existe, le servir directement
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+
+# Réécrire toutes les autres requêtes vers index.html (SPA Angular)
+RewriteRule ^(.*)$ /saas/index.html [L]

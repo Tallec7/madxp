@@ -103,7 +103,7 @@ export const getSite = async (req: AuthRequest, res: Response) => {
 
 export const createSite = async (req: AuthRequest, res: Response) => {
   try {
-    const { site_name, club_name, location, sports, hardware_model } = req.body;
+    const { site_name, club_name, location, sports, hardware_model, site_type } = req.body;
 
     // Check for existing sites with same name and generate unique name if needed
     let uniqueSiteName = site_name;
@@ -139,6 +139,7 @@ export const createSite = async (req: AuthRequest, res: Response) => {
       sports,
       hardwareModel: hardware_model || 'Unknown',
       apiKeyHash: api_key_hash,
+      siteType: site_type || 'pi',
     });
 
     // Derive hostname from club_name

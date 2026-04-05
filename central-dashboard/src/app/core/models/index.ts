@@ -80,6 +80,8 @@ export interface Site {
   live_score_enabled?: boolean;
   /** Hostname mDNS dérivé du club_name (ex: neopro-usap) */
   hostname_slug?: string;
+  /** Type de site: pi (hardware), saas (browser-only), demo (vitrine) */
+  site_type?: 'pi' | 'saas' | 'demo';
   /**
    * Configuration NEOPRO déployée sur le site
    * Contient les paramètres gérés centralement (catégories, vidéos, etc.)

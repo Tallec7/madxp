@@ -193,6 +193,13 @@ import { SitesMapComponent } from './components/sites-map/sites-map.component';
               <input type="text" [(ngModel)]="sportsInput" placeholder="Ex: football, rugby">
             </div>
             <div class="form-group">
+              <label>Type de site</label>
+              <select [(ngModel)]="newSite.site_type">
+                <option value="pi">Pi (matériel Raspberry Pi)</option>
+                <option value="saas">SaaS (navigateur uniquement)</option>
+              </select>
+            </div>
+            <div class="form-group" *ngIf="newSite.site_type !== 'saas'">
               <label>Modèle du boîtier</label>
               <input type="text" [(ngModel)]="newSite.hardware_model" placeholder="Ex: Raspberry Pi 4 Model B">
             </div>
@@ -613,7 +620,7 @@ export class SitesListComponent implements OnInit, OnDestroy {
   private connectionStatusSubscription?: Subscription;
   private refreshSubscription?: Subscription;
 
-  newSite = {
+  newSite: { site_name: string; club_name: string; location: { city: string; region: string; country: string }; hardware_model: string; site_type: 'pi' | 'saas' | 'demo' } = {
     site_name: '',
     club_name: '',
     location: {
@@ -621,7 +628,8 @@ export class SitesListComponent implements OnInit, OnDestroy {
       region: '',
       country: 'France'
     },
-    hardware_model: ''
+    hardware_model: '',
+    site_type: 'pi'
   };
 
   sportsInput = '';
@@ -867,7 +875,8 @@ export class SitesListComponent implements OnInit, OnDestroy {
         region: '',
         country: 'France'
       },
-      hardware_model: ''
+      hardware_model: '',
+      site_type: 'pi'
     };
     this.sportsInput = '';
   }

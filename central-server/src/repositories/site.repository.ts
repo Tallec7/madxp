@@ -71,6 +71,7 @@ export interface CreateSiteInput {
   sports: unknown;
   hardwareModel: string;
   apiKeyHash: string;
+  siteType?: 'pi' | 'saas' | 'demo';
 }
 
 export interface UpdateSiteInput {
@@ -401,9 +402,9 @@ class SiteRepositoryImpl extends BaseRepository<Site> {
    */
   async create(input: CreateSiteInput): Promise<Site> {
     const result = await query<Site>(
-      `INSERT INTO sites (id, site_name, club_name, location, sports, hardware_model, api_key)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
-       RETURNING id, site_name, club_name, location, sports, hardware_model, status, created_at`,
+      `INSERT INTO sites (id, site_name, club_name, location, sports, hardware_model, api_key, site_type)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+       RETURNING id, site_name, club_name, location, sports, hardware_model, status, site_type, created_at`,
       [
         input.id,
         input.siteName,
@@ -412,6 +413,7 @@ class SiteRepositoryImpl extends BaseRepository<Site> {
         input.sports ? JSON.stringify(input.sports) : null,
         input.hardwareModel || 'Unknown',
         input.apiKeyHash,
+        input.siteType || 'pi',
       ]
     );
     return result.rows[0];

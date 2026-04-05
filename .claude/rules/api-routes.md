@@ -117,6 +117,14 @@ POST /api/remote/:siteId/command  → Envoyer commande
 GET  /api/remote/:siteId/videos   → Vidéos par catégorie
 ```
 
+## SaaS (PUBLIQUE — UUID site, ADR-037)
+
+```
+GET  /api/saas/:siteId/config                     → Config complète (URLs vidéo résolues)
+GET  /api/saas/:siteId/profiles                   → Liste des profils disponibles
+GET  /api/saas/:siteId/profiles/:profileId/config → Config d'un profil spécifique
+```
+
 ## Rate Limiting
 
 ```
@@ -126,6 +134,7 @@ Admin:        400 req/min (lecture sites, logs)
 API General:  100 req/min
 Sensitive:    30 req/min (commands, deployments)
 Remote Cloud: 60 req/min (par IP)
+SaaS:         60 req/min (par IP, remoteRateLimit partagé)
 Upload:       10 req/hour
 Pi Analytics: 500 req/min (par IP)
 ```

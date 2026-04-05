@@ -165,3 +165,52 @@ jobs:
           local-dir: dist/central-dashboard/browser/
           server-dir: /
           dangerous-clean-slate: true
+          timeout: 60000
+
+      - name: Retry deploy on failure
+        if: failure()
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.HOSTINGER_FTP_SERVER }}
+          username: ${{ secrets.HOSTINGER_FTP_USERNAME }}
+          password: ${{ secrets.HOSTINGER_FTP_PASSWORD }}
+          local-dir: dist/central-dashboard/browser/
+          server-dir: /
+          dangerous-clean-slate: true
+          timeout: 120000
+
+  deploy-saas:
+    name: Deploy SaaS App to Hostinger
+    needs: release
+    if: needs.release.outputs.new_release_published == 'true'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build SaaS app
+        run: npm run build:saas
+
+      - name: Prepare SaaS deploy directory
+        run: |
+          cp raspberry/src/saas-htaccess dist/raspberry/browser/.htaccess
+
+      - name: Deploy SaaS to Hostinger /saas/
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.HOSTINGER_FTP_SERVER }}
+          username: ${{ secrets.HOSTINGER_FTP_USERNAME }}
+          password: ${{ secrets.HOSTINGER_FTP_PASSWORD }}
+          local-dir: dist/raspberry/browser/
+          server-dir: /saas/
+          dangerous-clean-slate: true
+          timeout: 60000

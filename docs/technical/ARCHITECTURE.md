@@ -69,6 +69,34 @@ Neopro est une plateforme distribuée Edge + Cloud pour la diffusion de contenu 
 └─────────────────────────────────────────────────────────────┘
 ```
 
+### Mode SaaS (ADR-037 — sans Raspberry Pi)
+
+En plus de l'architecture Edge (Pi), Neopro propose un mode **100% SaaS** : le club accède à sa TV interactive via une URL navigateur, sans matériel.
+
+```
+┌──────────────────────────────────────────────────────────┐
+│                    MODE SaaS (navigateur)                 │
+├──────────────────────────────────────────────────────────┤
+│                                                          │
+│  URL: https://neopro-admin.kalonpartners.bzh/saas/       │
+│       ?site={siteId}                                     │
+│                                                          │
+│  ┌───────────────┐  ┌───────────────┐  ┌──────────────┐ │
+│  │ Télécommande  │  │  Écran TV     │  │  Secondaire  │ │
+│  │  /remote      │  │  /tv          │  │  /secondary  │ │
+│  └───────────────┘  └───────────────┘  └──────────────┘ │
+│                                                          │
+│  Config:  HTTP GET /api/saas/{siteId}/config             │
+│  Vidéos:  URLs FTP publiques (kalonpartners.bzh)         │
+│  Comm:    LocalBroadcastService (même navigateur)        │
+│  Live:    Socket.IO vers central (saas-register)         │
+└──────────────────────────────────────────────────────────┘
+```
+
+- **`site_type`** colonne DB : `'pi'` (matériel), `'saas'` (navigateur), `'demo'` (vitrine)
+- Composants Angular réutilisés tel quel : `TvComponent`, `RemoteComponent`, `LocalBroadcastService`
+- Config servie par `saas.controller.ts` avec résolution des chemins vidéo en URLs FTP publiques
+
 ---
 
 ## Architecture multi-packages

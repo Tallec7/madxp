@@ -139,9 +139,55 @@
               <span class="value">{{ formatVersion(site.software_version) }}</span>
             </div>
             <div class="info-row">
-              <span class="label">Modèle:</span>
-              <span class="value">{{ site.hardware_model || 'N/A' }}</span>
+              <span class="label">Type:</span>
+              <span class="value">
+                @if (site.site_type === 'saas') {
+                  <span class="badge-saas">SaaS</span>
+                } @else {
+                  <span>{{ site.hardware_model || 'Pi' }}</span>
+                }
+              </span>
             </div>
+            @if (site.site_type === 'saas') {
+              <div class="info-row">
+                <span class="label">URL SaaS:</span>
+                <span class="value saas-url">
+                  <a
+                    [href]="'https://neopro-admin.kalonpartners.bzh/saas/?site=' + site.id"
+                    target="_blank"
+                  >
+                    Ouvrir l'application SaaS
+                  </a>
+                  <button class="btn-copy" (click)="copySaasUrl()" title="Copier l'URL">📋</button>
+                  <button
+                    class="btn-copy"
+                    (click)="showSaasQrCode = !showSaasQrCode"
+                    title="QR Code"
+                  >
+                    {{ showSaasQrCode ? '✕' : 'QR' }}
+                  </button>
+                </span>
+              </div>
+              @if (showSaasQrCode) {
+                <div class="saas-qr-section">
+                  <div class="saas-qr-card">
+                    <h3 class="saas-qr-title">{{ site.club_name }}</h3>
+                    <div class="saas-qr-divider"></div>
+                    <canvas #saasQrCanvas class="saas-qr-canvas"></canvas>
+                    <p class="saas-qr-subtitle">Scannez pour accéder à votre TV</p>
+                    <p class="saas-qr-url">{{ getSaasUrl() }}</p>
+                    <div class="saas-qr-actions">
+                      <button class="btn btn-sm btn-primary" (click)="downloadSaasQr()">
+                        Télécharger PNG
+                      </button>
+                      <button class="btn btn-sm btn-secondary" (click)="copySaasUrl()">
+                        Copier l'URL
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              }
+            }
             @if (site.secondary_display_enabled || dualDisplayActive) {
               <div class="info-row">
                 <span class="label">Écran principal:</span>
