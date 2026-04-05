@@ -123,6 +123,18 @@
                   "with": "raspberry/src/environments/environment.saas.ts"
                 }
               ],
+              "assets": [
+                {
+                  "glob": "**/*",
+                  "input": "raspberry/src/assets",
+                  "output": "assets"
+                },
+                {
+                  "glob": "socket.io.min.js",
+                  "input": "raspberry/src/assets",
+                  "output": "assets"
+                }
+              ],
               "budgets": [
                 {
                   "type": "initial",
