@@ -1115,7 +1115,10 @@ socket.emit('command_result', {
 ```javascript
 // Déployer une vidéo
 socket.on('deploy_video', (data) => {
-  // data: { deploymentId, videoUrl, filename, checksum, ... }
+  // data: { deploymentId, videoUrl, filename, checksum, category, originalName, ... }
+  // IMPORTANT: checksum est OBLIGATOIRE — le sync-agent rejette sans (CHECKSUM_REQUIRED)
+  // Tous les chemins d'envoi (deployment.service.ts, site-content-tab sendCommand)
+  // doivent inclure le checksum SHA256 de la vidéo.
 });
 
 // Mettre à jour la configuration

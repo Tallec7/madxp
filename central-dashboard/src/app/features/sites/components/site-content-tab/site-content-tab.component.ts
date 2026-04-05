@@ -774,6 +774,11 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
       return;
     }
 
+    if (!video.checksum) {
+      this.notificationService.error('Vidéo incomplète (upload échoué). Supprimez-la et re-uploadez.');
+      return;
+    }
+
     const currentState = this.videoDeployStates.get(video.id);
     if (currentState?.status === 'deploying') {
       this.notificationService.warning('Déploiement déjà en cours pour cette vidéo');
@@ -788,7 +793,10 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
       this.commandService.sendCommand(this.siteId, 'deploy_video', {
         videoId: video.id,
         filename: video.filename,
-        url: video.path
+        url: video.path,
+        checksum: video.checksum,
+        category: video.category || 'default',
+        originalName: video.displayName,
       }).subscribe({
         next: (response) => {
           if (response.queued) {

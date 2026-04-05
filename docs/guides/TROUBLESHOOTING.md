@@ -2232,6 +2232,36 @@ SELECT id, filename, checksum FROM videos WHERE checksum IS NULL;
 
 Mettre à jour `central-server` vers v2.21.x+ où le fix est inclus dans `content.controller.ts`.
 
+### Déploiement vidéo échoue avec "Checksum is required" depuis l'onglet site
+
+**Symptômes**
+
+- L'upload depuis l'onglet contenu d'un site fonctionne (la vidéo apparaît dans la bibliothèque)
+- Cliquer « Déployer » échoue silencieusement ou affiche une erreur
+- En base : `remote_commands.error_message = 'Checksum is required for video deployment. Video rejected for security.'`
+- Le même fichier se déploie sans problème depuis la page **Contenu** (menu principal)
+
+**Cause (fixé en v3.124.13)**
+
+Le `site-content-tab` envoyait `deploy_video` via `sendCommand()` directement, sans inclure le `checksum` dans le payload. Le sync-agent Pi rejette tout deploy sans checksum (ligne 99 de `deploy-video.js`).
+
+La page Contenu passait par `deployment.service.ts` qui récupère le checksum depuis la DB automatiquement.
+
+**Vérification**
+
+```sql
+-- Chercher les deploy_video failed avec cette erreur
+SELECT id, command_data, error_message, created_at
+FROM remote_commands
+WHERE command_type = 'deploy_video'
+  AND error_message LIKE '%Checksum is required%'
+ORDER BY created_at DESC LIMIT 10;
+```
+
+**Résolution**
+
+Mettre à jour le dashboard vers v3.124.13+. Le fix ajoute `checksum`, `category` et `originalName` au payload, et un guard frontend empêche le deploy si le checksum est absent.
+
 ---
 
 ## Problèmes de watermark (v3.50+)

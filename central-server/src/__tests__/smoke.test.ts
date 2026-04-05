@@ -7000,6 +7000,53 @@ describe('deploy_video concurrent deployment mutex guard', () => {
 });
 
 // ----------------------------------------------------------
+// site-content-tab deploy_video must send checksum
+// ----------------------------------------------------------
+// Bug prevention: site-content-tab.component.ts sends deploy_video via sendCommand.
+// The Pi sync-agent REQUIRES checksum in deploy_video data — without it, the Pi
+// rejects the deployment with "Checksum is required for video deployment".
+// The content-management page goes through deployment.service.ts which includes it,
+// but the site-content-tab bypass must also include checksum.
+describe('site-content-tab deploy_video must include checksum', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+  const siteContentTabPath = path.join(
+    repoRoot,
+    'central-dashboard/src/app/features/sites/components/site-content-tab/site-content-tab.component.ts'
+  );
+
+  let content: string;
+  beforeAll(() => {
+    content = fs.readFileSync(siteContentTabPath, 'utf8');
+  });
+
+  it('sendCommand deploy_video payload must include checksum field', () => {
+    // Find the deploy_video sendCommand call and verify it includes checksum
+    const deployMatch = content.match(
+      /sendCommand\([^,]+,\s*'deploy_video'\s*,\s*\{([\s\S]*?)\}\s*\)\s*\.subscribe/
+    );
+    expect({ hasDeployCall: !!deployMatch }).toEqual({ hasDeployCall: true });
+    expect({
+      includesChecksum: /checksum\s*:/.test(deployMatch![1]),
+    }).toEqual({
+      includesChecksum: true,
+    });
+  });
+
+  it('onVideoDeploy must guard against missing checksum before sending', () => {
+    // The method must check video.checksum and show error if absent
+    const methodMatch = content.match(
+      /onVideoDeploy\(video[\s\S]*?(?=\n\s{2}\w|\n\s{2}\/\/\s*={3,})/
+    );
+    expect({ hasMethod: !!methodMatch }).toEqual({ hasMethod: true });
+    expect({
+      guardsChecksum: /!video\.checksum/.test(methodMatch![0]),
+    }).toEqual({
+      guardsChecksum: true,
+    });
+  });
+});
+
+// ----------------------------------------------------------
 // Sync-agent startup directory permission preflight
 // ----------------------------------------------------------
 // Bug prevention: agent.js must verify write permissions on critical directories

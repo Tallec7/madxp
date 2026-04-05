@@ -1279,6 +1279,55 @@ class AlertingService {
       }
       logger.error('Error checking stuck deployments:', error);
     }
+
+    // Détecter les deploy_video rejetés par le Pi pour "Checksum is required"
+    // Cela signifie qu'un client envoie deploy_video sans checksum (bug dashboard pré-v3.124.13)
+    try {
+      const checksumRejected = await query<{
+        site_id: string;
+        count: string;
+      }>(`
+        SELECT site_id, COUNT(*) as count
+        FROM remote_commands
+        WHERE command_type = 'deploy_video'
+          AND status = 'failed'
+          AND error_message LIKE '%Checksum is required%'
+          AND created_at > NOW() - INTERVAL '1 hour'
+        GROUP BY site_id
+      `);
+
+      for (const row of checksumRejected.rows) {
+        const count = parseInt(row.count, 10);
+        if (count < 2) continue; // Ignore single failures
+
+        const cooldownKey = `deploy_checksum_missing:${row.site_id}`;
+        const lastAlert = this.lastAlertTime.get(cooldownKey);
+        if (lastAlert) {
+          const cooldownEnd = new Date(lastAlert.getTime() + 60 * 60 * 1000);
+          if (new Date() < cooldownEnd) continue;
+        }
+
+        logger.warn('deploy_video rejected: checksum missing in payload', {
+          siteId: row.site_id,
+          failedCount: count,
+        });
+
+        await this.createAlert({
+          siteId: row.site_id,
+          type: 'Deploy vidéo sans checksum',
+          severity: 'warning',
+          message: `${count} deploy_video rejeté(s) en 1h pour checksum manquant — le dashboard utilise peut-être une version obsolète (pré-v3.124.13)`,
+          metadata: {
+            metric: 'deploy_video_checksum_missing',
+            value: count,
+          },
+        });
+
+        this.lastAlertTime.set(cooldownKey, new Date());
+      }
+    } catch {
+      // Non-bloquant si remote_commands n'existe pas
+    }
   }
 
   private async checkEscalations(): Promise<void> {

@@ -225,6 +225,7 @@ source central-server/.env && psql "$DATABASE_URL" -f central-server/src/scripts
 - Ajouter `launchkit.check()`, `getGateUrl()` ou `session.valid` dans le dashboard (l'access gate bworlds redirige les utilisateurs vers une page tierce — le dashboard a sa propre auth JWT+MFA — seul `init()` heartbeat/error-capture est autorisé dans `main.ts` — smoke test enforced)
 - Supprimer `authenticateSiteApiKeyOptional` des routes `POST /video-plays` et `POST /sessions` dans `analytics.routes.ts` (sans ce middleware, n'importe quel client peut POST des analytics avec un `site_id` arbitraire — l'API key optionnelle vérifie le site quand la clé est présente, tout en gardant le fallback body pour les Pi non encore configurés — smoke test enforced)
 - Supprimer `piAnalyticsRateLimit` des routes `POST /video-plays` et `POST /sessions` dans `analytics.routes.ts` (sans ce rate limiter per-route, les deux routes héritent de `apiRateLimit` 100/min du mount — trop bas pour les Pi en backlog qui envoient des batches analytics — `/impressions` utilise déjà `piAnalyticsRateLimit` 500/min, les trois routes Pi doivent être alignées — smoke test enforced)
+- Envoyer `deploy_video` via `sendCommand` sans inclure `checksum` dans le payload (le sync-agent Pi EXIGE le checksum pour l'intégrité — sans lui, le deploy est rejeté avec "Checksum is required" — le chemin `deployment.service.ts` l'inclut via la DB, mais tout bypass direct (site-content-tab, futur bulk deploy) doit aussi passer `video.checksum` — smoke test enforced)
 
 ## Architecture détaillée
 
