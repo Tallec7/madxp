@@ -1,3 +1,9 @@
+# [3.124.0](https://github.com/Tallec7/neopro/compare/v3.123.6...v3.124.0) (2026-04-05)
+
+### Features
+
+- **club-portal:** add scoped club access with granular permissions (ADR-036) ([b1949a8](https://github.com/Tallec7/neopro/commit/b1949a8ebb0df313afb91056868622804035f1e0))
+
 ## [3.123.6](https://github.com/Tallec7/neopro/compare/v3.123.5...v3.123.6) (2026-04-04)
 
 ### Bug Fixes
