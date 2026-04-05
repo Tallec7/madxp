@@ -1,3 +1,9 @@
+## [3.125.5](https://github.com/Tallec7/neopro/compare/v3.125.4...v3.125.5) (2026-04-05)
+
+### Bug Fixes
+
+- **ci:** exclude Pi admin panel from SaaS build assets ([1fea4b9](https://github.com/Tallec7/neopro/commit/1fea4b9a96b526cc0b1d6024087b1ce1b2408630))
+
 ## [3.125.4](https://github.com/Tallec7/neopro/compare/v3.125.3...v3.125.4) (2026-04-05)
 
 ### Bug Fixes
