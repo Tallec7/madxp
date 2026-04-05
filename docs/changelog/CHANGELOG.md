@@ -1,3 +1,9 @@
+## [3.124.11](https://github.com/Tallec7/neopro/compare/v3.124.10...v3.124.11) (2026-04-05)
+
+### Bug Fixes
+
+- **club-portal:** auto-tag uploaded_for_site_id for club users ([63e2904](https://github.com/Tallec7/neopro/commit/63e2904510b7634acf64a742af2649440825d384))
+
 ## [3.124.10](https://github.com/Tallec7/neopro/compare/v3.124.9...v3.124.10) (2026-04-05)
 
 ### Bug Fixes
