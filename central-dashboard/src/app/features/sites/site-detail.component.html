@@ -17,12 +17,14 @@
           {{ getNetworkBadgeIcon() }} {{ getNetworkBadgeLabel() }}
         </span>
       }
-      <app-connection-indicator
-        [siteId]="siteId"
-        [showText]="true"
-        [showDetails]="true"
-        [externalStatus]="connectionStatus"
-      ></app-connection-indicator>
+      @if (!isSaas) {
+        <app-connection-indicator
+          [siteId]="siteId"
+          [showText]="true"
+          [showDetails]="true"
+          [externalStatus]="connectionStatus"
+        ></app-connection-indicator>
+      }
     </div>
   </div>
 
