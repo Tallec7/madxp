@@ -1,3 +1,9 @@
+## [3.124.5](https://github.com/Tallec7/neopro/compare/v3.124.4...v3.124.5) (2026-04-05)
+
+### Bug Fixes
+
+- **club-portal:** allow club users to upload videos and deploy content ([6d0c80d](https://github.com/Tallec7/neopro/commit/6d0c80d772f5781f6d3e3769497032565c8cc979))
+
 ## [3.124.4](https://github.com/Tallec7/neopro/compare/v3.124.3...v3.124.4) (2026-04-05)
 
 ### Bug Fixes
