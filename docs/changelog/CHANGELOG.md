@@ -1,3 +1,9 @@
+## [3.124.13](https://github.com/Tallec7/neopro/compare/v3.124.12...v3.124.13) (2026-04-05)
+
+### Bug Fixes
+
+- **club:** prevent club users from deleting NEOPRO corporate videos ([a446052](https://github.com/Tallec7/neopro/commit/a446052fefb01e1c6bebda8e9e1e8b163feb017b))
+
 ## [3.124.12](https://github.com/Tallec7/neopro/compare/v3.124.11...v3.124.12) (2026-04-05)
 
 ### Bug Fixes
