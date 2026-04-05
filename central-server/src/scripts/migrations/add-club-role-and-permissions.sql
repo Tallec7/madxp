@@ -18,7 +18,11 @@ CREATE TABLE IF NOT EXISTS club_permissions (
   PRIMARY KEY (site_id, permission)
 );
 
--- 3. Index for fast lookup by site_id
+-- 3. Update check_role constraint to include 'club'
+ALTER TABLE users DROP CONSTRAINT IF EXISTS check_role;
+ALTER TABLE users ADD CONSTRAINT check_role CHECK (role IN ('super_admin', 'superadmin', 'admin', 'operator', 'viewer', 'advertiser', 'sponsor', 'agency', 'club'));
+
+-- 4. Index for fast lookup by site_id
 CREATE INDEX IF NOT EXISTS idx_users_site_id ON users(site_id) WHERE site_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_club_permissions_site_id ON club_permissions(site_id);
 
