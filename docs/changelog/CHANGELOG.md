@@ -1,3 +1,9 @@
+## [3.125.6](https://github.com/Tallec7/neopro/compare/v3.125.5...v3.125.6) (2026-04-05)
+
+### Bug Fixes
+
+- **sites:** allow empty hardware_model in Joi validation ([befe97e](https://github.com/Tallec7/neopro/commit/befe97e8accc16e136c92d3fe285fb2f2f9386f4))
+
 ## [3.125.5](https://github.com/Tallec7/neopro/compare/v3.125.4...v3.125.5) (2026-04-05)
 
 ### Bug Fixes
