@@ -177,7 +177,8 @@ class VideoRepositoryImpl extends BaseRepository<VideoRow> {
     const result = await query<VideoRow>(
       `SELECT id, filename, original_name, category, subcategory,
               file_size, duration, storage_path as url,
-              thumbnail_url, metadata, checksum, created_at, updated_at
+              thumbnail_url, metadata, checksum, uploaded_for_site_id,
+              created_at, updated_at
        FROM videos
        WHERE id = $1`,
       [id]
