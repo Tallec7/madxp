@@ -1,3 +1,9 @@
+# [3.126.0](https://github.com/Tallec7/neopro/compare/v3.125.10...v3.126.0) (2026-04-05)
+
+### Features
+
+- **saas:** add version tracking for both Pi and SaaS builds ([fd83ff0](https://github.com/Tallec7/neopro/commit/fd83ff0e6db28df855c931a1ac7a63882ad27740))
+
 ## [3.125.10](https://github.com/Tallec7/neopro/compare/v3.125.9...v3.125.10) (2026-04-05)
 
 ### Bug Fixes
