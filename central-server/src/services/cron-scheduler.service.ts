@@ -327,11 +327,11 @@ class CronSchedulerService {
 
     // Site le plus actif
     const topSiteResult = await query<{ name: string; screen_time: string }>(
-      `SELECT s.name, SUM(cds.screen_time_seconds) as screen_time
+      `SELECT s.site_name as name, SUM(cds.screen_time_seconds) as screen_time
        FROM club_daily_stats_live cds
        JOIN sites s ON s.id = cds.site_id
        WHERE cds.date > NOW() - INTERVAL '7 days'
-       GROUP BY s.id, s.name
+       GROUP BY s.id, s.site_name
        ORDER BY screen_time DESC
        LIMIT 1`,
       []
@@ -488,7 +488,7 @@ class CronSchedulerService {
         `SELECT
           co.id,
           co.site_id,
-          s.name as site_name,
+          s.site_name as site_name,
           co.name,
           co.metric_type,
           co.target_value,

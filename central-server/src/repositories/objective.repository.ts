@@ -116,7 +116,7 @@ class ObjectiveRepositoryImpl extends BaseRepository<ClubObjectiveRow> {
    */
   async findWithFilters(filters: ObjectiveListFilters): Promise<ObjectiveWithProgressRow[]> {
     let sql = `
-      SELECT o.*, s.name as site_name,
+      SELECT o.*, s.site_name as site_name,
              (SELECT row_to_json(p.*) FROM club_objectives_progress p
               WHERE p.objective_id = o.id
               ORDER BY p.period_start DESC LIMIT 1) as latest_progress
@@ -158,7 +158,7 @@ class ObjectiveRepositoryImpl extends BaseRepository<ClubObjectiveRow> {
    */
   async findByIdWithSite(id: string): Promise<ObjectiveWithSiteRow | null> {
     const result = await query<ObjectiveWithSiteRow>(
-      `SELECT o.*, s.name as site_name
+      `SELECT o.*, s.site_name as site_name
        FROM club_objectives o
        JOIN sites s ON s.id = o.site_id
        WHERE o.id = $1`,

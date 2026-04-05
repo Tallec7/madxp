@@ -142,7 +142,7 @@ class PlaylistScheduleRepositoryImpl extends BaseRepository<PlaylistScheduleRow>
    */
   async findBySite(siteId: string, activeOnly: boolean): Promise<PlaylistScheduleWithJoins[]> {
     let sql = `
-      SELECT ps.*, s.name as site_name,
+      SELECT ps.*, s.site_name as site_name,
              cp.name as playlist_name
       FROM playlist_schedules ps
       JOIN sites s ON s.id = ps.site_id
@@ -166,7 +166,7 @@ class PlaylistScheduleRepositoryImpl extends BaseRepository<PlaylistScheduleRow>
    */
   async findByIdWithJoins(id: string): Promise<PlaylistScheduleWithJoins | null> {
     const result = await query<PlaylistScheduleWithJoins>(
-      `SELECT ps.*, s.name as site_name, cp.name as playlist_name
+      `SELECT ps.*, s.site_name as site_name, cp.name as playlist_name
        FROM playlist_schedules ps
        JOIN sites s ON s.id = ps.site_id
        LEFT JOIN custom_playlists cp ON cp.id = ps.custom_playlist_id
@@ -339,7 +339,7 @@ class PlaylistScheduleRepositoryImpl extends BaseRepository<PlaylistScheduleRow>
    */
   async findCustomPlaylistsBySite(siteId: string): Promise<CustomPlaylistWithJoins[]> {
     const result = await query<CustomPlaylistWithJoins>(
-      `SELECT cp.*, s.name as site_name,
+      `SELECT cp.*, s.site_name as site_name,
               array_length(cp.video_ids, 1) as video_count
        FROM custom_playlists cp
        LEFT JOIN sites s ON s.id = cp.site_id

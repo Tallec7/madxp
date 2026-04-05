@@ -630,6 +630,13 @@ async function syncVideoAssociations(
   videoFilenames: string[],
   siteId: string
 ): Promise<void> {
+  // Verify the sponsor still exists before syncing (Pi may reference deleted sponsors)
+  const sponsorExists = await siteSponsorRepository.findByIdFull(siteSponsorId);
+  if (!sponsorExists) {
+    logger.warn('Skipping video sync for non-existent site_sponsor:', { siteSponsorId, siteId });
+    return;
+  }
+
   // Get current associations
   const currentVideos = await siteSponsorRepository.getVideos(siteSponsorId);
   const currentFilenames = new Set(currentVideos.map(v => v.video_filename));

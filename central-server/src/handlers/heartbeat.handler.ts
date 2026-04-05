@@ -79,17 +79,19 @@ export async function handleHeartbeat(
       // dashboard shows the real state instead of a false "Terminé".
       try {
         const rolledBack = await query<{ id: string; version: string }>(
-          `UPDATE update_deployments
+          `UPDATE update_deployments ud
            SET status = 'failed',
-               error_message = 'Silent rollback detected: Pi reports version ' || $2 || ' instead of target version ' || version,
+               error_message = 'Silent rollback detected: Pi reports version ' || $2 || ' instead of target version ' || su.version,
                completed_at = NOW()
-           WHERE status = 'completed'
-             AND target_type = 'site'
-             AND target_id = $1
-             AND version IS NOT NULL
-             AND version != $2
-             AND completed_at > NOW() - INTERVAL '1 hour'
-           RETURNING id, version`,
+           FROM software_updates su
+           WHERE su.id = ud.update_id
+             AND ud.status = 'completed'
+             AND ud.target_type = 'site'
+             AND ud.target_id = $1
+             AND su.version IS NOT NULL
+             AND su.version != $2
+             AND ud.completed_at > NOW() - INTERVAL '1 hour'
+           RETURNING ud.id, su.version`,
           [siteId, softwareVersion]
         );
 

@@ -1491,7 +1491,7 @@ class AlertingService {
   private async checkPhantomSponsors(): Promise<void> {
     try {
       const phantoms = await query<{ id: string; name: string; site_id: string; site_name: string }>(
-        `SELECT ss.id, ss.name, ss.site_id, s.name as site_name
+        `SELECT ss.id, ss.name, ss.site_id, s.site_name as site_name
          FROM site_sponsors ss
          JOIN sites s ON s.id = ss.site_id
          WHERE LENGTH(TRIM(ss.name)) <= 1
