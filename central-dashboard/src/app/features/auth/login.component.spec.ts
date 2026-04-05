@@ -19,7 +19,8 @@ describe('LoginComponent', () => {
   let loggerService: jasmine.SpyObj<LoggerService>;
 
   beforeEach(async () => {
-    const authServiceSpy = jasmine.createSpyObj('AuthService', ['login']);
+    const authServiceSpy = jasmine.createSpyObj('AuthService', ['login', 'getCurrentUser']);
+    authServiceSpy.getCurrentUser.and.returnValue(null);
     const translationServiceSpy = jasmine.createSpyObj('TranslationService', [
       'initializeLanguage', 'setLanguage', 'getCurrentLanguage', 'instant'
     ], {

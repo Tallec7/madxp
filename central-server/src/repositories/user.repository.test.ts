@@ -125,6 +125,7 @@ describe('UserRepository', () => {
         role: 'admin',
         advertiserId: null,
         agencyId: null,
+        siteId: null,
       });
 
       expect(result).toEqual(mockUser);
