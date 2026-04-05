@@ -165,6 +165,8 @@ jobs:
           local-dir: dist/central-dashboard/browser/
           server-dir: /
           dangerous-clean-slate: true
+          exclude: |
+            saas/**
           timeout: 60000
 
       - name: Retry deploy on failure
@@ -177,6 +179,8 @@ jobs:
           local-dir: dist/central-dashboard/browser/
           server-dir: /
           dangerous-clean-slate: true
+          exclude: |
+            saas/**
           timeout: 120000
 
   deploy-saas:
@@ -203,6 +207,12 @@ jobs:
       - name: Prepare SaaS deploy directory
         run: |
           cp raspberry/src/saas-htaccess dist/raspberry/browser/.htaccess
+
+      - name: Create /saas/ directory on Hostinger
+        run: |
+          curl -s ftp://${{ secrets.HOSTINGER_FTP_SERVER }}/saas/ \
+            --user "${{ secrets.HOSTINGER_FTP_USERNAME }}:${{ secrets.HOSTINGER_FTP_PASSWORD }}" \
+            --ftp-create-dirs -Q "MKD /saas" 2>/dev/null || true
 
       - name: Deploy SaaS to Hostinger /saas/
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
