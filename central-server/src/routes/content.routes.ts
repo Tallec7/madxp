@@ -12,9 +12,9 @@ router.get('/videos/names', authenticate, contentController.getVideoNames);  // 
 router.get('/videos/for-site/:siteId', authenticate, paginationMiddleware, contentController.getVideosForSite);  // Vidéos priorisées pour un site
 router.get('/videos/:id', authenticate, contentController.getVideo);
 router.get('/videos/:id/deployments', authenticate, contentController.getVideoDeployments);
-router.post('/videos', authenticate, requireRole('admin', 'operator'), uploadVideo.single('video'), contentController.createVideo);
+router.post('/videos', authenticate, requireRole('admin', 'operator', 'club'), uploadVideo.single('video'), contentController.createVideo);
 router.post('/videos/bulk', authenticate, requireRole('admin', 'operator'), uploadVideo.array('videos', 20), contentController.createVideos);
-router.put('/videos/:id', authenticate, requireRole('admin', 'operator'), contentController.updateVideo);
+router.put('/videos/:id', authenticate, requireRole('admin', 'operator', 'club'), contentController.updateVideo);
 router.delete('/videos/:id', authenticate, requireRole('admin'), contentController.deleteVideo);
 
 // Video variant routes (E-22: LED variants)
@@ -32,7 +32,7 @@ router.get('/templates/available', authenticate, contentController.getAvailableT
 // Deployment routes
 router.get('/deployments', authenticate, contentController.getDeployments);
 router.get('/deployments/:id', authenticate, contentController.getDeployment);
-router.post('/deployments', authenticate, requireRole('admin', 'operator'), contentController.createDeployment);
+router.post('/deployments', authenticate, requireRole('admin', 'operator', 'club'), contentController.createDeployment);
 router.put('/deployments/:id', authenticate, requireRole('admin', 'operator'), contentController.updateDeployment);
 router.delete('/deployments/:id', authenticate, requireRole('admin'), contentController.deleteDeployment);
 
