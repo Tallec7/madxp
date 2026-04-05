@@ -76,7 +76,7 @@ describe('UploadVerificationService', () => {
   describe('isVideoReadyForDeployment', () => {
     it('returns ready true when status is ready', async () => {
       mockQuery.mockResolvedValueOnce({
-        rows: [{ upload_status: 'ready', upload_error_message: null }],
+        rows: [{ upload_status: 'ready', upload_error_message: null, checksum: 'abc123', file_size: 1024 }],
       });
       const result = await uploadVerificationService.isVideoReadyForDeployment('vid-1');
       expect(result.ready).toBe(true);
@@ -93,11 +93,20 @@ describe('UploadVerificationService', () => {
 
     it('returns ready false when status is uploading', async () => {
       mockQuery.mockResolvedValueOnce({
-        rows: [{ upload_status: 'uploading', upload_error_message: null }],
+        rows: [{ upload_status: 'uploading', upload_error_message: null, checksum: 'abc123', file_size: 1024 }],
       });
       const result = await uploadVerificationService.isVideoReadyForDeployment('vid-2');
       expect(result.ready).toBe(false);
       expect(result.status).toBe('uploading');
+    });
+
+    it('returns ready false when checksum is missing (ghost video)', async () => {
+      mockQuery.mockResolvedValueOnce({
+        rows: [{ upload_status: 'ready', upload_error_message: null, checksum: null, file_size: 0 }],
+      });
+      const result = await uploadVerificationService.isVideoReadyForDeployment('vid-ghost');
+      expect(result.ready).toBe(false);
+      expect(result.status).toBe('failed');
     });
   });
 
