@@ -230,7 +230,10 @@ export const createVideo = async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ error: 'Aucun fichier vidéo fourni' });
     }
 
-    const { title, category, subcategory, site_id } = req.body;
+    const { title, category, subcategory, site_id: body_site_id } = req.body;
+
+    // Club users: auto-tag with their site_id (even if not in body)
+    const site_id = (req.user?.role === 'club' && req.user.site_id) ? req.user.site_id : body_site_id;
 
     // Valider site_id si fourni (upload contextuel)
     if (site_id) {
@@ -341,7 +344,10 @@ export const createVideos = async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ error: 'Aucun fichier vidéo fourni' });
     }
 
-    const { category, subcategory, site_id } = req.body;
+    const { category, subcategory, site_id: body_site_id } = req.body;
+
+    // Club users: auto-tag with their site_id (even if not in body)
+    const site_id = (req.user?.role === 'club' && req.user.site_id) ? req.user.site_id : body_site_id;
 
     // Valider site_id si fourni (upload contextuel)
     if (site_id) {
@@ -714,8 +720,11 @@ export const convertImageToVideo = async (req: AuthRequest, res: Response) => {
 
     // Récupérer les paramètres
     const duration = parseInt(req.body.duration as string, 10) || 10;
-    const { site_id } = req.body;
+    const { site_id: body_site_id } = req.body;
     const blurBackground = req.body.blurBackground === 'true' || req.body.blurBackground === true;
+
+    // Club users: auto-tag with their site_id
+    const site_id = (req.user?.role === 'club' && req.user.site_id) ? req.user.site_id : body_site_id;
 
     // Valider la durée (entre 1 et 60 secondes)
     if (duration < 1 || duration > 60) {
@@ -1078,10 +1087,13 @@ export const renderTemplate = async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ error: 'Aucune vidéo fournie' });
     }
 
-    const { templateId, site_id } = req.body;
+    const { templateId, site_id: body_site_id } = req.body;
     if (!templateId) {
       return res.status(400).json({ error: 'templateId est requis' });
     }
+
+    // Club users: auto-tag with their site_id
+    const site_id = (req.user?.role === 'club' && req.user.site_id) ? req.user.site_id : body_site_id;
 
     // Parse variables
     let variables: Record<string, string> = {};
