@@ -13927,3 +13927,179 @@ describe('SaaS mode guards (ADR-037)', () => {
     });
   });
 });
+
+// ============================================================
+// SaaS deployment pipeline guards
+// ============================================================
+
+describe('SaaS deployment pipeline guards', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+
+  // --- Joi createSite schema accepts site_type ---
+  it('Joi createSite schema must accept site_type with valid pi/saas/demo', () => {
+    const filePath = path.join(repoRoot, 'central-server', 'src', 'middleware', 'validation.ts');
+    const content = fs.readFileSync(filePath, 'utf8');
+    // Extract the portion of the file from createSite up to the next top-level schema key
+    const createSiteStart = content.indexOf('createSite:');
+    const updateSiteStart = content.indexOf('updateSite:');
+    expect(createSiteStart).toBeGreaterThan(-1);
+    expect(updateSiteStart).toBeGreaterThan(createSiteStart);
+    const createSiteBlock = content.slice(createSiteStart, updateSiteStart);
+    expect({
+      hasSiteType: createSiteBlock.includes('site_type'),
+      hasValidValues: createSiteBlock.includes("valid('pi', 'saas', 'demo')"),
+    }).toEqual({
+      hasSiteType: true,
+      hasValidValues: true,
+    });
+  });
+
+  // --- Joi createSite allows empty hardware_model ---
+  it('Joi createSite hardware_model must allow empty string', () => {
+    const filePath = path.join(repoRoot, 'central-server', 'src', 'middleware', 'validation.ts');
+    const content = fs.readFileSync(filePath, 'utf8');
+    const createSiteStart = content.indexOf('createSite:');
+    const updateSiteStart = content.indexOf('updateSite:');
+    expect(createSiteStart).toBeGreaterThan(-1);
+    const createSiteBlock = content.slice(createSiteStart, updateSiteStart);
+    expect({
+      hardwareModelAllowsEmpty:
+        createSiteBlock.includes('hardware_model') && createSiteBlock.includes(".allow('')"),
+    }).toEqual({
+      hardwareModelAllowsEmpty: true,
+    });
+  });
+
+  // --- Joi updateSite schema accepts site_type ---
+  it('Joi updateSite schema must accept site_type', () => {
+    const filePath = path.join(repoRoot, 'central-server', 'src', 'middleware', 'validation.ts');
+    const content = fs.readFileSync(filePath, 'utf8');
+    // Extract from updateSite to the next top-level schema key (createGroup)
+    const updateSiteStart = content.indexOf('updateSite:');
+    const createGroupStart = content.indexOf('createGroup:');
+    expect(updateSiteStart).toBeGreaterThan(-1);
+    expect(createGroupStart).toBeGreaterThan(updateSiteStart);
+    const updateSiteBlock = content.slice(updateSiteStart, createGroupStart);
+    expect({
+      hasSiteType: updateSiteBlock.includes('site_type'),
+    }).toEqual({
+      hasSiteType: true,
+    });
+  });
+
+  // --- Dashboard .htaccess excludes /saas/ from SPA catch-all ---
+  it('Dashboard .htaccess must exclude /saas/ from SPA catch-all', () => {
+    const filePath = path.join(repoRoot, 'central-dashboard', '.htaccess');
+    const content = fs.readFileSync(filePath, 'utf8');
+    expect({
+      hasSaasExclusion: content.includes('^saas(/.*)?$'),
+    }).toEqual({
+      hasSaasExclusion: true,
+    });
+  });
+
+  // --- SaaS .htaccess rewrites to /saas/index.html ---
+  it('SaaS .htaccess must rewrite all requests to /saas/index.html', () => {
+    const filePath = path.join(repoRoot, 'raspberry', 'src', 'saas-htaccess');
+    const content = fs.readFileSync(filePath, 'utf8');
+    expect({
+      rewritesToSaasIndex: content.includes('/saas/index.html'),
+    }).toEqual({
+      rewritesToSaasIndex: true,
+    });
+  });
+
+  // --- angular.json SaaS config excludes admin assets ---
+  it('angular.json SaaS build config must not include raspberry/admin/public assets', () => {
+    const filePath = path.join(repoRoot, 'angular.json');
+    const content = fs.readFileSync(filePath, 'utf8');
+    const angularJson = JSON.parse(content);
+    const saasConfig = angularJson?.projects?.raspberry?.architect?.build?.configurations?.saas;
+    expect(saasConfig).toBeDefined();
+    const assetsStr = JSON.stringify(saasConfig.assets ?? []);
+    expect({
+      excludesAdminPublic: !assetsStr.includes('raspberry/admin/public'),
+    }).toEqual({
+      excludesAdminPublic: true,
+    });
+  });
+
+  // --- angular.json SaaS config excludes demo-configs glob ---
+  it('angular.json SaaS build config must not glob all assets (would include demo-configs)', () => {
+    const filePath = path.join(repoRoot, 'angular.json');
+    const content = fs.readFileSync(filePath, 'utf8');
+    const angularJson = JSON.parse(content);
+    const saasConfig = angularJson?.projects?.raspberry?.architect?.build?.configurations?.saas;
+    expect(saasConfig).toBeDefined();
+    const assetsStr = JSON.stringify(saasConfig.assets ?? []);
+    // The SaaS build should NOT have a wildcard glob from raspberry/src/assets (which contains demo-configs)
+    const hasWildcardSrcAssets =
+      saasConfig.assets?.some(
+        (a: { glob?: string; input?: string }) =>
+          typeof a === 'object' &&
+          a.glob === '**/*' &&
+          typeof a.input === 'string' &&
+          a.input.includes('raspberry/src/assets') &&
+          !a.input.includes('i18n'),
+      ) ?? false;
+    expect({
+      excludesDemoConfigsGlob: !hasWildcardSrcAssets,
+    }).toEqual({
+      excludesDemoConfigsGlob: true,
+    });
+  });
+
+  // --- release.yml deploy-saas depends on deploy-dashboard ---
+  it('release.yml deploy-saas job must declare deploy-dashboard as a dependency', () => {
+    const filePath = path.join(repoRoot, '.github', 'workflows', 'release.yml');
+    const content = fs.readFileSync(filePath, 'utf8');
+    // Extract deploy-saas block and verify it needs deploy-dashboard
+    const deploySaasBlock = content.match(/deploy-saas:[\s\S]*?(?=\n  \w|$)/);
+    expect(deploySaasBlock).not.toBeNull();
+    expect({
+      needsDeployDashboard: deploySaasBlock![0].includes('deploy-dashboard'),
+    }).toEqual({
+      needsDeployDashboard: true,
+    });
+  });
+
+  // --- Home component uses routerLink not href for navigation ---
+  it('home.component.html must use routerLink="/remote" not href="/remote"', () => {
+    const filePath = path.join(repoRoot, 'raspberry', 'src', 'app', 'components', 'home', 'home.component.html');
+    const content = fs.readFileSync(filePath, 'utf8');
+    expect({
+      hasRouterLinkRemote: content.includes('routerLink="/remote"'),
+      hasHrefRemote: content.includes('href="/remote"'),
+    }).toEqual({
+      hasRouterLinkRemote: true,
+      hasHrefRemote: false,
+    });
+  });
+
+  // --- All environment files declare saasMode ---
+  it('all environment files must declare saasMode property', () => {
+    const envDir = path.join(repoRoot, 'raspberry', 'src', 'environments');
+    const envFiles = fs.readdirSync(envDir).filter(f => f.startsWith('environment') && f.endsWith('.ts'));
+    expect(envFiles.length).toBeGreaterThan(0);
+    const missing = envFiles.filter(f => {
+      const content = fs.readFileSync(path.join(envDir, f), 'utf8');
+      return !content.includes('saasMode');
+    });
+    expect({
+      filesWithoutSaasMode: missing,
+    }).toEqual({
+      filesWithoutSaasMode: [],
+    });
+  });
+
+  // --- Home component hides admin link in SaaS mode ---
+  it('home.component.html must hide admin link with *ngIf="!isSaasMode"', () => {
+    const filePath = path.join(repoRoot, 'raspberry', 'src', 'app', 'components', 'home', 'home.component.html');
+    const content = fs.readFileSync(filePath, 'utf8');
+    expect({
+      hasSaasModeGuardOnAdmin: content.includes('*ngIf="!isSaasMode"'),
+    }).toEqual({
+      hasSaasModeGuardOnAdmin: true,
+    });
+  });
+});

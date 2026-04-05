@@ -1978,6 +1978,67 @@ Le dashboard implémente 3 niveaux de gestion d'erreurs :
 
 ---
 
+## Pipeline de déploiement SaaS (Hostinger)
+
+### Principe de séquencement
+
+Le dashboard central et le build SaaS partagent le même hébergement Hostinger. Le job CI/CD `deploy-dashboard` utilise `dangerous-clean-slate: true` qui **supprime l'intégralité** du répertoire distant avant de déposer les fichiers — y compris le sous-répertoire `/saas/`. Le job `deploy-saas` doit donc s'exécuter **après** `deploy-dashboard`.
+
+```
+release.yml
+├── deploy-dashboard      → clean-slate / (exclut saas/**)
+│                           → déploie central-dashboard/dist/
+│                           → déploie .htaccess avec règle ^saas(/.*)?$
+│
+└── deploy-saas           → needs: [release, deploy-dashboard]
+                            → crée le répertoire /saas/ via FTP MKD
+                            → déploie dist/raspberry/browser/ dans /saas/
+                            → déploie saas-htaccess en tant que /saas/.htaccess
+```
+
+### Routage HTTP
+
+**Dashboard .htaccess** (à la racine `/`) :
+
+```apache
+# SaaS app lives in /saas/ — let it handle its own routing
+RewriteRule ^saas(/.*)?$ - [L]
+```
+
+Cette règle empêche le catch-all SPA du dashboard d'intercepter les requêtes `/saas/*`. Sans elle, toutes les navigations Angular SaaS retourneraient la page 404 du dashboard.
+
+**SaaS .htaccess** (déployé dans `/saas/`) :
+
+```apache
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^(.*)$ /saas/index.html [L]
+```
+
+Réécrit toutes les routes Angular vers `/saas/index.html` pour le mode SPA avec `baseHref=/saas/`.
+
+### Assets SaaS (angular.json)
+
+Le build SaaS n'inclut que les assets nécessaires (pas les assets Pi ni les démo-configs) :
+
+- `raspberry/src/assets/i18n/**/*` — traductions
+- `raspberry/src/assets/socket.io.min.js` — Socket.IO client
+
+Les assets exclus : `raspberry/admin/public/`, `raspberry/src/assets/demo-configs/`.
+
+### Navigation Angular — baseHref
+
+Le `baseHref` diffère entre les builds :
+
+| Build | baseHref | Navigation                      |
+| ----- | -------- | ------------------------------- |
+| Pi    | `/`      | `href="/remote"` fonctionnerait |
+| SaaS  | `/saas/` | `href="/remote"` → URL cassée   |
+
+Pour cette raison, **tous les liens de navigation** dans `raspberry/src/` doivent utiliser `routerLink` (respecte le `baseHref` configuré au build) et jamais `href` absolu.
+
+---
+
 ## Sécurité
 
 ### Mots de passe

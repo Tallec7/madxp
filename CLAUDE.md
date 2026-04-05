@@ -234,6 +234,10 @@ source central-server/.env && psql "$DATABASE_URL" -f central-server/src/scripts
 - Supprimer le rate limiting (`remoteRateLimit`) des routes `saas.routes.ts` (endpoints publics sans auth — sans rate limit, un attaquant peut brute-forcer les UUIDs de sites — smoke test enforced)
 - Supprimer `validateParams(paramSchemas.siteId)` des routes `saas.routes.ts` (sans validation, un `siteId` malformé passe directement en SQL — smoke test enforced)
 - Supprimer `environment.saas.ts` ou la configuration `saas` dans `angular.json` (le build SaaS nécessite les deux — sans eux, `npm run build:saas` échoue silencieusement ou utilise l'environment de prod Pi — smoke test enforced)
+- Utiliser `href="/remote"` ou `href="/tv"` dans les templates du projet `raspberry/` (utiliser `routerLink` pour respecter le `baseHref` qui diffère entre Pi `/` et SaaS `/saas/` — smoke test enforced)
+- Supprimer la dépendance `deploy-dashboard` du job `deploy-saas` dans `release.yml` (le dashboard `dangerous-clean-slate` supprime `/saas/` — le SaaS doit se déployer APRÈS — smoke test enforced)
+- Supprimer la règle `^saas(/.*)?$` du `.htaccess` dashboard (sans elle, le SPA catch-all du dashboard intercepte les requêtes `/saas/` et affiche sa 404 — smoke test enforced)
+- Ajouter un environnement Angular Raspberry sans `saasMode` (tous les fichiers `environment*.ts` doivent déclarer `saasMode` — le `HomeComponent` et le `SaasConfigService` lisent ce flag — smoke test enforced)
 
 ## Architecture détaillée
 

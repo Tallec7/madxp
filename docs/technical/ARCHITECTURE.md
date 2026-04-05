@@ -96,6 +96,9 @@ En plus de l'architecture Edge (Pi), Neopro propose un mode **100% SaaS** : le c
 - **`site_type`** colonne DB : `'pi'` (matériel), `'saas'` (navigateur), `'demo'` (vitrine)
 - Composants Angular réutilisés tel quel : `TvComponent`, `RemoteComponent`, `LocalBroadcastService`
 - Config servie par `saas.controller.ts` avec résolution des chemins vidéo en URLs FTP publiques
+- **Deploy pipeline** : `deploy-dashboard` s'exécute en premier (clean-slate Hostinger `/`), puis `deploy-saas` déploie dans `/saas/` — le job CI `deploy-saas` doit déclarer `needs: [deploy-dashboard]` pour éviter que le clean-slate efface le build SaaS
+- **Routage** : le `.htaccess` dashboard exclut `/saas/` (`RewriteRule ^saas(/.*)?$ - [L]`) ; le `.htaccess` SaaS redirige vers `/saas/index.html`
+- **Navigation** : utiliser `routerLink` (pas `href` absolu) dans `raspberry/src/` — le `baseHref` est `/saas/` en mode SaaS vs `/` en mode Pi
 
 ---
 
