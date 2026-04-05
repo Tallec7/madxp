@@ -15,12 +15,13 @@ import { userRepository } from '../repositories';
  */
 export const listUsers = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const { role, status, search } = req.query;
+    const { role, status, search, site_id } = req.query;
 
     const filters = {
       role: typeof role === 'string' ? role : undefined,
       status: typeof status === 'string' ? status : undefined,
       search: typeof search === 'string' ? search : undefined,
+      siteId: typeof site_id === 'string' ? site_id : undefined,
     };
 
     const { users, total } = await userRepository.listWithRelations(filters);

@@ -169,19 +169,21 @@ export const schemas = {
     email: Joi.string().email().required(),
     password: Joi.string().min(8).required(),
     full_name: Joi.string().required(),
-    role: Joi.string().valid('super_admin', 'admin', 'operator', 'viewer', 'advertiser', 'sponsor', 'agency').required(),
+    role: Joi.string().valid('super_admin', 'admin', 'operator', 'viewer', 'advertiser', 'sponsor', 'agency', 'club').required(),
     advertiser_id: Joi.string().uuid().optional().allow(null),
     sponsor_id: Joi.string().uuid().optional().allow(null),
     agency_id: Joi.string().uuid().optional().allow(null),
+    site_id: Joi.string().uuid().optional().allow(null),
   }),
 
   updateUser: Joi.object({
     email: Joi.string().email().optional(),
     full_name: Joi.string().optional(),
-    role: Joi.string().valid('super_admin', 'admin', 'operator', 'viewer', 'advertiser', 'sponsor', 'agency').optional(),
+    role: Joi.string().valid('super_admin', 'admin', 'operator', 'viewer', 'advertiser', 'sponsor', 'agency', 'club').optional(),
     advertiser_id: Joi.string().uuid().optional().allow(null),
     sponsor_id: Joi.string().uuid().optional().allow(null),
     agency_id: Joi.string().uuid().optional().allow(null),
+    site_id: Joi.string().uuid().optional().allow(null),
     status: Joi.string().valid('active', 'inactive', 'suspended').optional(),
   }),
 
@@ -813,9 +815,10 @@ export const querySchemas = {
   }),
 
   listUsers: Joi.object({
-    role: Joi.string().valid('super_admin', 'admin', 'operator', 'viewer', 'advertiser', 'sponsor', 'agency').optional(),
+    role: Joi.string().valid('super_admin', 'admin', 'operator', 'viewer', 'advertiser', 'sponsor', 'agency', 'club').optional(),
     status: Joi.string().valid('active', 'inactive', 'suspended').optional(),
     search: Joi.string().max(255).optional(),
+    site_id: Joi.string().uuid().optional(),
   }),
 
   configHistory: Joi.object({

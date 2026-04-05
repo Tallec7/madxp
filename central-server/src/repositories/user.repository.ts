@@ -45,6 +45,7 @@ export interface UserListFilters {
   role?: string;
   status?: string;
   search?: string;
+  siteId?: string;
 }
 
 export interface CreateUserInput {
@@ -112,6 +113,12 @@ class UserRepositoryImpl extends BaseRepository<UserRow> {
     if (filters.search) {
       whereClause += ` AND (u.email ILIKE $${paramIndex} OR u.full_name ILIKE $${paramIndex})`;
       params.push(`%${filters.search}%`);
+      paramIndex++;
+    }
+
+    if (filters.siteId) {
+      whereClause += ` AND u.site_id = $${paramIndex}`;
+      params.push(filters.siteId);
       paramIndex++;
     }
 

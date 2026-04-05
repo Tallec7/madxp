@@ -68,7 +68,7 @@ const PERMISSION_LABELS: Record<string, { fr: string; icon: string }> = {
           </div>
           <div class="form-group">
             <label>Mot de passe</label>
-            <input type="password" [(ngModel)]="newUserPassword" placeholder="Min. 6 caracteres" />
+            <input type="password" [(ngModel)]="newUserPassword" placeholder="Min. 8 caracteres" />
           </div>
         </div>
         <button class="btn btn-primary" [disabled]="!canCreate()" (click)="createClubUser()">
@@ -174,9 +174,9 @@ export class ClubAccessTabComponent implements OnInit, OnChanges {
     });
 
     // Load club user for this site
-    this.api.get<{ users: ClubUser[] }>(`/admin/users?role=club&site_id=${this.siteId}`).subscribe({
-      next: (data) => {
-        this.clubUser = data.users?.[0] ?? null;
+    this.api.get<{ success: boolean; data: { users: ClubUser[] } }>(`/users?role=club&site_id=${this.siteId}`).subscribe({
+      next: (res) => {
+        this.clubUser = res.data?.users?.[0] ?? null;
         this.loading = false;
       },
       error: () => { this.loading = false; }
@@ -192,11 +192,11 @@ export class ClubAccessTabComponent implements OnInit, OnChanges {
   }
 
   canCreate(): boolean {
-    return this.newUserEmail.includes('@') && this.newUserPassword.length >= 6;
+    return this.newUserEmail.includes('@') && this.newUserPassword.length >= 8;
   }
 
   createClubUser(): void {
-    this.api.post('/admin/users', {
+    this.api.post('/users', {
       email: this.newUserEmail,
       full_name: this.newUserName || null,
       password: this.newUserPassword,
@@ -218,7 +218,7 @@ export class ClubAccessTabComponent implements OnInit, OnChanges {
 
   deleteClubUser(): void {
     if (!this.clubUser) return;
-    this.api.delete(`/admin/users/${this.clubUser.id}`).subscribe({
+    this.api.delete(`/users/${this.clubUser.id}`).subscribe({
       next: () => {
         this.notification.success( 'Compte club supprime');
         this.clubUser = null;
