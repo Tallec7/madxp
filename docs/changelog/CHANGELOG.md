@@ -1,3 +1,9 @@
+## [3.124.7](https://github.com/Tallec7/neopro/compare/v3.124.6...v3.124.7) (2026-04-05)
+
+### Bug Fixes
+
+- **club-portal:** block deployment of ghost videos (0 B / no checksum) ([2e16fe6](https://github.com/Tallec7/neopro/commit/2e16fe61b575398aa8769fa3d9a3f1c9aa6a3dfb))
+
 ## [3.124.6](https://github.com/Tallec7/neopro/compare/v3.124.5...v3.124.6) (2026-04-05)
 
 ### Bug Fixes
