@@ -1,3 +1,9 @@
+## [3.125.1](https://github.com/Tallec7/neopro/compare/v3.125.0...v3.125.1) (2026-04-05)
+
+### Bug Fixes
+
+- **tests:** add site_type to test mock objects for SaaS compatibility ([fd148eb](https://github.com/Tallec7/neopro/commit/fd148eb4372d12af36704eb1495bff031f92ab2a))
+
 # [3.125.0](https://github.com/Tallec7/neopro/compare/v3.124.14...v3.125.0) (2026-04-05)
 
 ### Features
