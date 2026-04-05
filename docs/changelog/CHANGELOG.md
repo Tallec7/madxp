@@ -1,3 +1,9 @@
+## [3.127.1](https://github.com/Tallec7/neopro/compare/v3.127.0...v3.127.1) (2026-04-05)
+
+### Bug Fixes
+
+- **server:** fix 3 production DB errors spamming logs every ~30s ([4d40933](https://github.com/Tallec7/neopro/commit/4d4093320b4a0f82365840b62afff6c9a1de5095))
+
 # [3.127.0](https://github.com/Tallec7/neopro/compare/v3.126.0...v3.127.0) (2026-04-05)
 
 ### Features
