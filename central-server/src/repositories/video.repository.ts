@@ -17,6 +17,7 @@ export interface VideoRow {
   url: string | null;
   thumbnail_url: string | null;
   metadata: Record<string, unknown>;
+  checksum: string | null;
   uploaded_for_site_id: string | null;
   upload_status: string;
   created_at: Date;
@@ -176,7 +177,7 @@ class VideoRepositoryImpl extends BaseRepository<VideoRow> {
     const result = await query<VideoRow>(
       `SELECT id, filename, original_name, category, subcategory,
               file_size, duration, storage_path as url,
-              thumbnail_url, metadata, created_at, updated_at
+              thumbnail_url, metadata, checksum, created_at, updated_at
        FROM videos
        WHERE id = $1`,
       [id]

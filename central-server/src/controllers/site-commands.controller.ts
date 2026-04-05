@@ -9,6 +9,7 @@ import {
   siteRepository,
   remoteCommandRepository,
   timelineRepository,
+  videoRepository,
 } from '../repositories';
 
 class HttpError extends Error {
@@ -221,6 +222,17 @@ export const sendCommand = async (req: AuthRequest, res: Response) => {
         status: 'pending',
         message: 'Commande envoyée. Le résultat sera reçu via WebSocket (événement command_completed).',
       });
+    }
+
+    // Gate: bloquer le déploiement de vidéos fantômes (0 B / sans checksum)
+    if (command === 'deploy_video' && data?.videoId) {
+      const video = await videoRepository.findVideoById(data.videoId);
+      if (video && (!video.checksum || video.file_size === 0)) {
+        return res.status(409).json({
+          error: 'Vidéo incomplète',
+          message: `La vidéo "${video.original_name || video.filename}" est incomplète (fichier absent ou upload échoué). Supprimez-la et re-uploadez.`,
+        });
+      }
     }
 
     // Si la commande update_config arrive avec "configuration", convertir en "neoProContent"
