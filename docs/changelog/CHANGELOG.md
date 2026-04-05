@@ -1,3 +1,9 @@
+## [3.125.7](https://github.com/Tallec7/neopro/compare/v3.125.6...v3.125.7) (2026-04-05)
+
+### Bug Fixes
+
+- **ci:** exclude demo-configs from SaaS build assets ([28ea6a0](https://github.com/Tallec7/neopro/commit/28ea6a0e0715761cb8b4d3445c86b600030ac8ae))
+
 ## [3.125.6](https://github.com/Tallec7/neopro/compare/v3.125.5...v3.125.6) (2026-04-05)
 
 ### Bug Fixes
