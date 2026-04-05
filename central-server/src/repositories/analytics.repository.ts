@@ -906,6 +906,50 @@ class AnalyticsRepositoryImpl {
     return result.rows;
   }
 
+  // ========================================================================
+  // SaaS Metrics
+  // ========================================================================
+
+  /**
+   * Count distinct sessions for a site since a given date.
+   */
+  async countSessions(siteId: string, since: string): Promise<number> {
+    const result = await query<{ count: string }>(
+      `SELECT COUNT(DISTINCT session_id) as count FROM video_plays
+       WHERE site_id = $1 AND played_at >= $2`,
+      [siteId, since]
+    );
+    return parseInt(result.rows[0]?.count || '0');
+  }
+
+  /**
+   * Count distinct sponsors displayed for a site since a given date.
+   */
+  async countSponsorsDisplayed(siteId: string, since: string): Promise<number> {
+    const result = await query<{ count: string }>(
+      `SELECT COUNT(DISTINCT sponsor_id) as count FROM video_plays
+       WHERE site_id = $1 AND played_at >= $2 AND sponsor_id IS NOT NULL`,
+      [siteId, since]
+    );
+    return parseInt(result.rows[0]?.count || '0');
+  }
+
+  /**
+   * Completion rate (percentage) for a site since a given date.
+   */
+  async getCompletionRate(siteId: string, since: string): Promise<number> {
+    const result = await query<{ rate: string }>(
+      `SELECT
+        CASE WHEN COUNT(*) = 0 THEN 0
+             ELSE ROUND(100.0 * COUNT(*) FILTER (WHERE completed = true) / COUNT(*))
+        END as rate
+       FROM video_plays
+       WHERE site_id = $1 AND played_at >= $2`,
+      [siteId, since]
+    );
+    return parseInt(result.rows[0]?.rate || '0');
+  }
+
   /**
    * Calcule les stats journalieres via fonction PG.
    */

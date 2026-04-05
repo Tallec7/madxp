@@ -710,6 +710,20 @@ class SocketService {
     };
   }
 
+  /**
+   * Count SaaS browser clients connected to a site's room.
+   * SaaS clients join the room via saas-register but are NOT in connectedSites (Pi agents only).
+   */
+  getSaasClientCount(siteId: string): number {
+    if (!this.io) return 0;
+    const room = this.io.sockets.adapter.rooms.get(siteId);
+    if (!room) return 0;
+    // Subtract the Pi agent socket if present
+    const piSocket = this.connectedSites.get(siteId);
+    const piInRoom = piSocket ? room.has(piSocket.id) : false;
+    return room.size - (piInRoom ? 1 : 0);
+  }
+
   getConnectionHealth(siteId: string): {
     inMap: boolean;
     socketConnected: boolean;

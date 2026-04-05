@@ -9,6 +9,7 @@ import {
   timelineRepository,
   deploymentRepository,
   videoVariantRepository,
+  analyticsRepository,
 } from '../repositories';
 
 // Seuils de connexion (en secondes) — identiques à sites.controller.ts
@@ -508,6 +509,47 @@ export const getSiteDashboardData = async (req: AuthRequest, res: Response) => {
     // Récupérer l'état de santé détaillé de la connexion WebSocket
     const connectionHealth = socketService.getConnectionHealth(id);
 
+    // SaaS-specific metrics: connected browsers + video activity
+    let saasMetrics: {
+      connectedClients: number;
+      todayVideosPlayed: number;
+      todayScreenTime: number;
+      todaySessions: number;
+      weekVideosPlayed: number;
+      weekScreenTime: number;
+      weekCompletionRate: number;
+      weekSponsorsDisplayed: number;
+    } | null = null;
+
+    if (site.site_type === 'saas') {
+      const saasClientCount = socketService.getSaasClientCount(id);
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
+      const weekStart = new Date();
+      weekStart.setDate(weekStart.getDate() - 7);
+      weekStart.setHours(0, 0, 0, 0);
+      const now = new Date();
+
+      const [todayUsage, weekUsage, todaySessions, weekSponsors, weekCompletion] = await Promise.all([
+        analyticsRepository.getDashboardUsage(id, todayStart.toISOString(), now.toISOString()),
+        analyticsRepository.getDashboardUsage(id, weekStart.toISOString(), now.toISOString()),
+        analyticsRepository.countSessions(id, todayStart.toISOString()),
+        analyticsRepository.countSponsorsDisplayed(id, weekStart.toISOString()),
+        analyticsRepository.getCompletionRate(id, weekStart.toISOString()),
+      ]);
+
+      saasMetrics = {
+        connectedClients: saasClientCount,
+        todayVideosPlayed: parseInt(todayUsage.videos_played),
+        todayScreenTime: parseInt(todayUsage.screen_time_seconds),
+        todaySessions,
+        weekVideosPlayed: parseInt(weekUsage.videos_played),
+        weekScreenTime: parseInt(weekUsage.screen_time_seconds),
+        weekCompletionRate: weekCompletion,
+        weekSponsorsDisplayed: weekSponsors,
+      };
+    }
+
     // Réponse combinée
     res.json({
       site: {
@@ -540,6 +582,8 @@ export const getSiteDashboardData = async (req: AuthRequest, res: Response) => {
         period_hours: hours,
         data: metricsRows,
       },
+      // SaaS-specific metrics (null for Pi sites)
+      saasMetrics,
     });
   } catch (error) {
     logger.error('Get site dashboard data error:', error);

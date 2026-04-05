@@ -131,6 +131,18 @@ export class SiteDetailComponent implements OnInit, OnDestroy, AfterViewChecked 
   matchHistory: MatchHistoryData | null = null;
   matchHistoryLoading = false;
 
+  // SaaS metrics (null for Pi sites)
+  saasMetrics: {
+    connectedClients: number;
+    todayVideosPlayed: number;
+    todayScreenTime: number;
+    todaySessions: number;
+    weekVideosPlayed: number;
+    weekScreenTime: number;
+    weekCompletionRate: number;
+    weekSponsorsDisplayed: number;
+  } | null = null;
+
   private readonly route = inject(ActivatedRoute);
   private readonly sitesService = inject(SitesService);
   private readonly commandService = inject(SiteCommandService);
@@ -140,6 +152,10 @@ export class SiteDetailComponent implements OnInit, OnDestroy, AfterViewChecked 
   private readonly socketService = inject(SocketService);
   private refreshSubscription?: Subscription;
   private hdmiSubscription?: Subscription;
+
+  get isSaas(): boolean {
+    return this.site?.site_type === 'saas';
+  }
 
   ngOnInit(): void {
     this.siteId = this.route.snapshot.paramMap.get('id')!;
@@ -172,8 +188,10 @@ export class SiteDetailComponent implements OnInit, OnDestroy, AfterViewChecked 
     this.sitesService.getSite(this.siteId).subscribe({
       next: (site) => {
         this.site = site;
-        this.updateHotspotStatus(site);
-        this.loadMatchHistory();
+        if (site.site_type !== 'saas') {
+          this.updateHotspotStatus(site);
+          this.loadMatchHistory();
+        }
       },
       error: (error) => {
         const message = ErrorExtractor.getMessage(error);
@@ -252,6 +270,9 @@ export class SiteDetailComponent implements OnInit, OnDestroy, AfterViewChecked 
             this.fanStatus = fanData as FanStatus;
           }
         }
+        // SaaS metrics
+        this.saasMetrics = data.saasMetrics || null;
+
         this.loadingDashboard = false;
       },
       error: (error) => {
@@ -341,6 +362,14 @@ export class SiteDetailComponent implements OnInit, OnDestroy, AfterViewChecked 
     if (days > 0) return `${days}j ${hours}h`;
     if (hours > 0) return `${hours}h ${minutes}m`;
     return `${minutes}m`;
+  }
+
+  formatScreenTime(seconds: number): string {
+    if (!seconds || seconds <= 0) return '0min';
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    if (hours > 0) return `${hours}h${minutes > 0 ? minutes + 'min' : ''}`;
+    return `${minutes}min`;
   }
 
   formatMemory(bytes: number): string {

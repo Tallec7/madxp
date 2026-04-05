@@ -598,6 +598,7 @@ class SiteRepositoryImpl extends BaseRepository<Site> {
     site_name: string;
     club_name: string;
     status: string;
+    site_type: string;
     last_seen_at: Date | null;
     local_ip: string | null;
     last_config_sync: Date | null;
@@ -607,11 +608,12 @@ class SiteRepositoryImpl extends BaseRepository<Site> {
       site_name: string;
       club_name: string;
       status: string;
+      site_type: string;
       last_seen_at: Date | null;
       local_ip: string | null;
       last_config_sync: Date | null;
     }>(
-      `SELECT id, site_name, club_name, status, last_seen_at, local_ip, last_config_sync
+      `SELECT id, site_name, club_name, status, site_type, last_seen_at, local_ip, last_config_sync
        FROM sites WHERE id = $1`,
       [id]
     );

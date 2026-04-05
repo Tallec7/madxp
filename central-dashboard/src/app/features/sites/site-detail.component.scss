@@ -933,4 +933,81 @@
   .tab-btn {
     padding: 0.75rem 1rem;
   }
+
+  .saas-metrics-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+/* ============================================================ */
+/* SaaS-specific styles */
+/* ============================================================ */
+
+.saas-access-block {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.saas-url-row {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.text-muted {
+  color: #94a3b8;
+  font-style: italic;
+}
+
+.saas-activity-card,
+.saas-performance-card {
+  margin-top: 1rem;
+}
+
+.saas-metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1.5rem;
+}
+
+.saas-metric {
+  text-align: center;
+  padding: 1.25rem 1rem;
+  background: #f8fafc;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  transition: border-color 0.2s;
+
+  &:hover {
+    border-color: #cbd5e1;
+  }
+}
+
+.saas-metric-value {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #1e293b;
+  line-height: 1.2;
+
+  &.active {
+    color: #16a34a;
+  }
+}
+
+.saas-metric-label {
+  font-size: 0.8rem;
+  color: #64748b;
+  margin-top: 0.35rem;
+  font-weight: 500;
+}
+
+@media (max-width: 768px) {
+  .saas-metrics-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .saas-url-row {
+    flex-direction: column;
+  }
 }

@@ -7,14 +7,16 @@
       📊 Analytics
     </button>
     <div class="header-badges">
-      <!-- Badge profil réseau -->
-      <span
-        class="network-badge"
-        [ngClass]="getNetworkBadgeClass()"
-        [title]="getNetworkBadgeTooltip()"
-      >
-        {{ getNetworkBadgeIcon() }} {{ getNetworkBadgeLabel() }}
-      </span>
+      @if (!isSaas) {
+        <!-- Badge profil réseau (Pi only) -->
+        <span
+          class="network-badge"
+          [ngClass]="getNetworkBadgeClass()"
+          [title]="getNetworkBadgeTooltip()"
+        >
+          {{ getNetworkBadgeIcon() }} {{ getNetworkBadgeLabel() }}
+        </span>
+      }
       <app-connection-indicator
         [siteId]="siteId"
         [showText]="true"
@@ -24,8 +26,12 @@
     </div>
   </div>
 
-  <!-- Network Alert Banner -->
-  <div class="network-alert" *ngIf="showNetworkAlert()" [ngClass]="getNetworkAlertClass()">
+  <!-- Network Alert Banner (Pi only) -->
+  <div
+    class="network-alert"
+    *ngIf="!isSaas && showNetworkAlert()"
+    [ngClass]="getNetworkAlertClass()"
+  >
     <div class="alert-icon">{{ getNetworkAlertIcon() }}</div>
     <div class="alert-content">
       <strong>{{ getNetworkAlertTitle() }}</strong>
@@ -85,10 +91,12 @@
       <span class="tab-icon">💳</span>
       <span class="tab-label">Abonnement</span>
     </button>
-    <button class="tab-btn" [class.active]="activeTab === 'debug'" (click)="activeTab = 'debug'">
-      <span class="tab-icon">🔧</span>
-      <span class="tab-label">Debug</span>
-    </button>
+    @if (!isSaas) {
+      <button class="tab-btn" [class.active]="activeTab === 'debug'" (click)="activeTab = 'debug'">
+        <span class="tab-icon">🔧</span>
+        <span class="tab-label">Debug</span>
+      </button>
+    }
     <button
       class="tab-btn"
       [class.active]="activeTab === 'club-access'"
@@ -103,70 +111,68 @@
   <div class="tab-content">
     <!-- TAB: État -->
     <div *ngIf="activeTab === 'status'" class="tab-panel">
-      <div class="status-grid">
-        <!-- Informations principales -->
-        <div class="card">
-          <h3>Informations</h3>
-          <div class="info-list">
-            <div class="info-row">
-              <span class="label">Site ID:</span>
-              <span class="value monospace">{{ site.id }}</span>
-            </div>
-            <div class="info-row">
-              <span class="label">Nom du site:</span>
-              <span class="value">{{ site.site_name }}</span>
-            </div>
-            <div class="info-row">
-              <span class="label">Club:</span>
-              <span class="value">{{ site.club_name }}</span>
-            </div>
-            @if (site.hostname_slug) {
+      @if (isSaas) {
+        <!-- ============================================================ -->
+        <!-- SaaS État view -->
+        <!-- ============================================================ -->
+        <div class="status-grid">
+          <!-- Informations SaaS -->
+          <div class="card">
+            <h3>Informations</h3>
+            <div class="info-list">
               <div class="info-row">
-                <span class="label">Hostname:</span>
-                <span class="value monospace">{{ site.hostname_slug }}.local</span>
+                <span class="label">Site ID:</span>
+                <span class="value monospace">{{ site.id }}</span>
               </div>
-            }
-            <div class="info-row">
-              <span class="label">Localisation:</span>
-              <span class="value">{{ getLocation() }}</span>
-            </div>
-            <div class="info-row">
-              <span class="label">Sports:</span>
-              <span class="value">{{ site.sports?.join(', ') || 'N/A' }}</span>
-            </div>
-            <div class="info-row">
-              <span class="label">Version:</span>
-              <span class="value">{{ formatVersion(site.software_version) }}</span>
-            </div>
-            <div class="info-row">
-              <span class="label">Type:</span>
-              <span class="value">
-                @if (site.site_type === 'saas') {
-                  <span class="badge-saas">SaaS</span>
-                } @else {
-                  <span>{{ site.hardware_model || 'Pi' }}</span>
-                }
-              </span>
-            </div>
-            @if (site.site_type === 'saas') {
               <div class="info-row">
-                <span class="label">URL SaaS:</span>
-                <span class="value saas-url">
-                  <a
-                    [href]="'https://neopro-admin.kalonpartners.bzh/saas/?site=' + site.id"
-                    target="_blank"
-                  >
-                    Ouvrir l'application SaaS
-                  </a>
-                  <button class="btn-copy" (click)="copySaasUrl()" title="Copier l'URL">📋</button>
-                  <button
-                    class="btn-copy"
-                    (click)="showSaasQrCode = !showSaasQrCode"
-                    title="QR Code"
-                  >
-                    {{ showSaasQrCode ? '✕' : 'QR' }}
-                  </button>
+                <span class="label">Nom du site:</span>
+                <span class="value">{{ site.site_name }}</span>
+              </div>
+              <div class="info-row">
+                <span class="label">Club:</span>
+                <span class="value">{{ site.club_name }}</span>
+              </div>
+              <div class="info-row">
+                <span class="label">Localisation:</span>
+                <span class="value">{{ getLocation() }}</span>
+              </div>
+              <div class="info-row">
+                <span class="label">Sports:</span>
+                <span class="value">{{ site.sports?.join(', ') || 'N/A' }}</span>
+              </div>
+              <div class="info-row">
+                <span class="label">Version:</span>
+                <span class="value">
+                  @if (site.software_version) {
+                    {{ formatVersion(site.software_version) }}
+                  } @else {
+                    <span class="text-muted">En attente de connexion</span>
+                  }
                 </span>
+              </div>
+              <div class="info-row">
+                <span class="label">Type:</span>
+                <span class="value"><span class="badge-saas">SaaS</span></span>
+              </div>
+              <div class="info-row">
+                <span class="label">Dernière connexion:</span>
+                <span class="value">{{ formatLastSeen(site.last_seen_at) }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Accès SaaS -->
+          <div class="card">
+            <h3>Accès SaaS</h3>
+            <div class="saas-access-block">
+              <div class="saas-url-row">
+                <a [href]="getSaasUrl()" target="_blank" class="btn btn-primary">
+                  Ouvrir l'application SaaS
+                </a>
+                <button class="btn btn-secondary" (click)="copySaasUrl()">Copier l'URL</button>
+                <button class="btn btn-secondary" (click)="showSaasQrCode = !showSaasQrCode">
+                  {{ showSaasQrCode ? 'Masquer QR' : 'QR Code' }}
+                </button>
               </div>
               @if (showSaasQrCode) {
                 <div class="saas-qr-section">
@@ -187,388 +193,509 @@
                   </div>
                 </div>
               }
-            }
-            @if (site.secondary_display_enabled || dualDisplayActive) {
+            </div>
+          </div>
+        </div>
+
+        <!-- SaaS Activité -->
+        <div class="card saas-activity-card">
+          <h3>Activité SaaS</h3>
+          @if (saasMetrics) {
+            <div class="saas-metrics-grid">
+              <div class="saas-metric">
+                <div class="saas-metric-value" [class.active]="saasMetrics.connectedClients > 0">
+                  {{ saasMetrics.connectedClients }}
+                </div>
+                <div class="saas-metric-label">
+                  Connecté{{ saasMetrics.connectedClients > 1 ? 's' : '' }} maintenant
+                </div>
+              </div>
+              <div class="saas-metric">
+                <div class="saas-metric-value">{{ saasMetrics.todayVideosPlayed }}</div>
+                <div class="saas-metric-label">Vidéos jouées aujourd'hui</div>
+              </div>
+              <div class="saas-metric">
+                <div class="saas-metric-value">
+                  {{ formatScreenTime(saasMetrics.todayScreenTime) }}
+                </div>
+                <div class="saas-metric-label">Temps d'écran aujourd'hui</div>
+              </div>
+              <div class="saas-metric">
+                <div class="saas-metric-value">{{ saasMetrics.todaySessions }}</div>
+                <div class="saas-metric-label">Sessions aujourd'hui</div>
+              </div>
+            </div>
+          } @else {
+            <p class="no-data">Chargement des métriques...</p>
+          }
+        </div>
+
+        <!-- SaaS Performance 7j -->
+        <div class="card saas-performance-card">
+          <h3>Performance contenu (7 jours)</h3>
+          @if (saasMetrics) {
+            <div class="saas-metrics-grid">
+              <div class="saas-metric">
+                <div class="saas-metric-value">{{ saasMetrics.weekVideosPlayed }}</div>
+                <div class="saas-metric-label">Vidéos jouées</div>
+              </div>
+              <div class="saas-metric">
+                <div class="saas-metric-value">
+                  {{ formatScreenTime(saasMetrics.weekScreenTime) }}
+                </div>
+                <div class="saas-metric-label">Temps d'écran total</div>
+              </div>
+              <div class="saas-metric">
+                <div class="saas-metric-value">{{ saasMetrics.weekCompletionRate }}%</div>
+                <div class="saas-metric-label">Taux de complétion</div>
+              </div>
+              <div class="saas-metric">
+                <div class="saas-metric-value">{{ saasMetrics.weekSponsorsDisplayed }}</div>
+                <div class="saas-metric-label">Sponsors diffusés</div>
+              </div>
+            </div>
+          } @else {
+            <p class="no-data">Chargement...</p>
+          }
+        </div>
+      } @else {
+        <!-- ============================================================ -->
+        <!-- Pi État view (original) -->
+        <!-- ============================================================ -->
+        <div class="status-grid">
+          <!-- Informations principales -->
+          <div class="card">
+            <h3>Informations</h3>
+            <div class="info-list">
               <div class="info-row">
-                <span class="label">Écran principal:</span>
+                <span class="label">Site ID:</span>
+                <span class="value monospace">{{ site.id }}</span>
+              </div>
+              <div class="info-row">
+                <span class="label">Nom du site:</span>
+                <span class="value">{{ site.site_name }}</span>
+              </div>
+              <div class="info-row">
+                <span class="label">Club:</span>
+                <span class="value">{{ site.club_name }}</span>
+              </div>
+              @if (site.hostname_slug) {
+                <div class="info-row">
+                  <span class="label">Hostname:</span>
+                  <span class="value monospace">{{ site.hostname_slug }}.local</span>
+                </div>
+              }
+              <div class="info-row">
+                <span class="label">Localisation:</span>
+                <span class="value">{{ getLocation() }}</span>
+              </div>
+              <div class="info-row">
+                <span class="label">Sports:</span>
+                <span class="value">{{ site.sports?.join(', ') || 'N/A' }}</span>
+              </div>
+              <div class="info-row">
+                <span class="label">Version:</span>
+                <span class="value">{{ formatVersion(site.software_version) }}</span>
+              </div>
+              <div class="info-row">
+                <span class="label">Type:</span>
                 <span class="value">
-                  @if (hdmiStatus) {
-                    <span
-                      [class]="
-                        hdmiStatus.hdmi0 ? 'badge-hdmi-connected' : 'badge-hdmi-disconnected'
-                      "
-                    >
-                      {{ hdmiStatus.hdmi0 ? '✅' : '❌' }} HDMI-0
-                    </span>
-                    @if (hdmiStatus.hdmi0 && hdmiStatus.hdmi0Resolution) {
-                      <span class="screen-resolution">{{ hdmiStatus.hdmi0Resolution }}</span>
-                    }
-                  } @else {
-                    <span class="badge-secondary-display">📺 Principal</span>
-                  }
+                  <span>{{ site.hardware_model || 'Pi' }}</span>
                 </span>
               </div>
+              @if (site.secondary_display_enabled || dualDisplayActive) {
+                <div class="info-row">
+                  <span class="label">Écran principal:</span>
+                  <span class="value">
+                    @if (hdmiStatus) {
+                      <span
+                        [class]="
+                          hdmiStatus.hdmi0 ? 'badge-hdmi-connected' : 'badge-hdmi-disconnected'
+                        "
+                      >
+                        {{ hdmiStatus.hdmi0 ? '✅' : '❌' }} HDMI-0
+                      </span>
+                      @if (hdmiStatus.hdmi0 && hdmiStatus.hdmi0Resolution) {
+                        <span class="screen-resolution">{{ hdmiStatus.hdmi0Resolution }}</span>
+                      }
+                    } @else {
+                      <span class="badge-secondary-display">📺 Principal</span>
+                    }
+                  </span>
+                </div>
+                <div class="info-row">
+                  <span class="label">Écran secondaire:</span>
+                  <span class="value">
+                    @if (hdmiStatus) {
+                      <span
+                        [class]="
+                          hdmiStatus.hdmi1 ? 'badge-hdmi-connected' : 'badge-hdmi-disconnected'
+                        "
+                      >
+                        {{ hdmiStatus.hdmi1 ? '✅' : '❌' }} HDMI-1
+                      </span>
+                      @if (hdmiStatus.hdmi1 && hdmiStatus.hdmi1Resolution) {
+                        <span class="screen-resolution">{{ hdmiStatus.hdmi1Resolution }}</span>
+                      }
+                    } @else {
+                      <span class="badge-secondary-display">📺 Activé</span>
+                      @if (site.secondary_display_resolution) {
+                        <span class="screen-resolution">{{
+                          site.secondary_display_resolution
+                        }}</span>
+                      }
+                    }
+                  </span>
+                </div>
+              }
               <div class="info-row">
-                <span class="label">Écran secondaire:</span>
-                <span class="value">
-                  @if (hdmiStatus) {
-                    <span
-                      [class]="
-                        hdmiStatus.hdmi1 ? 'badge-hdmi-connected' : 'badge-hdmi-disconnected'
-                      "
-                    >
-                      {{ hdmiStatus.hdmi1 ? '✅' : '❌' }} HDMI-1
-                    </span>
-                    @if (hdmiStatus.hdmi1 && hdmiStatus.hdmi1Resolution) {
-                      <span class="screen-resolution">{{ hdmiStatus.hdmi1Resolution }}</span>
-                    }
-                  } @else {
-                    <span class="badge-secondary-display">📺 Activé</span>
-                    @if (site.secondary_display_resolution) {
-                      <span class="screen-resolution">{{ site.secondary_display_resolution }}</span>
-                    }
-                  }
-                </span>
+                <span class="label">Dernière vue:</span>
+                <span class="value">{{ formatLastSeen(site.last_seen_at) }}</span>
               </div>
-            }
-            <div class="info-row">
-              <span class="label">Dernière vue:</span>
-              <span class="value">{{ formatLastSeen(site.last_seen_at) }}</span>
-            </div>
-            <div class="info-row" *ngIf="site.last_ip">
-              <span class="label">IP publique:</span>
-              <span class="value monospace">{{ site.last_ip }}</span>
-            </div>
-            <div class="info-row" *ngIf="site.local_ip">
-              <span class="label">IP locale:</span>
-              <span class="value monospace">{{ site.local_ip }}</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- Métriques -->
-        <div class="card">
-          <h3>Métriques actuelles</h3>
-          <div class="metrics-grid" *ngIf="currentMetrics; else noMetrics">
-            <div class="metric" [class.warning]="(currentMetrics.cpu_usage ?? 0) > 80">
-              <div class="metric-icon">💻</div>
-              <div class="metric-info">
-                <div class="metric-label">CPU</div>
-                <div class="metric-value">{{ currentMetrics.cpu_usage?.toFixed(1) || 0 }}%</div>
+              <div class="info-row" *ngIf="site.last_ip">
+                <span class="label">IP publique:</span>
+                <span class="value monospace">{{ site.last_ip }}</span>
               </div>
-              <div class="metric-bar">
-                <div class="metric-fill" [style.width.%]="currentMetrics.cpu_usage ?? 0"></div>
-              </div>
-            </div>
-
-            <div class="metric" [class.warning]="(currentMetrics.memory_usage ?? 0) > 80">
-              <div class="metric-icon">🧠</div>
-              <div class="metric-info">
-                <div class="metric-label">RAM</div>
-                <div class="metric-value">{{ currentMetrics.memory_usage?.toFixed(1) || 0 }}%</div>
-              </div>
-              <div class="metric-bar">
-                <div class="metric-fill" [style.width.%]="currentMetrics.memory_usage ?? 0"></div>
-              </div>
-            </div>
-
-            <div class="metric" [class.warning]="(currentMetrics.temperature ?? 0) > 70">
-              <div class="metric-icon">🌡️</div>
-              <div class="metric-info">
-                <div class="metric-label">Température</div>
-                <div class="metric-value">{{ currentMetrics.temperature?.toFixed(1) || 0 }}°C</div>
-              </div>
-              <div class="metric-bar">
-                <div
-                  class="metric-fill"
-                  [style.width.%]="Math.min(currentMetrics.temperature ?? 0, 100)"
-                ></div>
-              </div>
-            </div>
-
-            <div class="metric" [class.warning]="(currentMetrics.disk_usage ?? 0) > 80">
-              <div class="metric-icon">💾</div>
-              <div class="metric-info">
-                <div class="metric-label">Disque</div>
-                <div class="metric-value">{{ currentMetrics.disk_usage?.toFixed(1) || 0 }}%</div>
-              </div>
-              <div class="metric-bar">
-                <div class="metric-fill" [style.width.%]="currentMetrics.disk_usage ?? 0"></div>
-              </div>
-            </div>
-
-            <div class="metric uptime-metric">
-              <div class="metric-icon">⏱️</div>
-              <div class="metric-info">
-                <div class="metric-label">Uptime</div>
-                <div class="metric-value">{{ formatUptime(currentMetrics.uptime) }}</div>
-              </div>
-            </div>
-
-            <div
-              class="metric"
-              [class.warning]="wifiSignalWeak"
-              [class.critical]="wifiSignalCritical"
-              *ngIf="wifiStatus"
-            >
-              <div class="metric-icon">{{ connectionIcon }}</div>
-              <div class="metric-info">
-                <div class="metric-label">Connexion</div>
-                <div class="metric-value">{{ wifiSignalDisplay }}</div>
-              </div>
-              <div class="metric-bar" *ngIf="wifiStatus.connectionType === 'wifi'">
-                <div class="metric-fill" [style.width.%]="wifiStatus.quality ?? 0"></div>
-              </div>
-            </div>
-
-            <div class="metric" [class.warning]="fanWarning" *ngIf="fanStatus?.present">
-              <div class="metric-icon">🌀</div>
-              <div class="metric-info">
-                <div class="metric-label">Ventilateur</div>
-                <div class="metric-value">{{ fanStatusDisplay }}</div>
-              </div>
-              <div class="metric-bar">
-                <div class="metric-fill" [style.width.%]="fanStatus?.speedPercent ?? 0"></div>
-              </div>
-            </div>
-
-            <div class="metric" [class.warning]="!hotspotActive" *ngIf="hotspotSsid">
-              <div class="metric-icon">📡</div>
-              <div class="metric-info">
-                <div class="metric-label">Hotspot</div>
-                <div class="metric-value">{{ hotspotActive ? hotspotSsid : 'Inactif' }}</div>
-              </div>
-              <div class="metric-details" *ngIf="hotspotActive">
-                <span class="metric-detail">Ch. {{ hotspotChannel || '?' }}</span>
-                <span class="metric-detail" *ngIf="hotspotClients > 0"
-                  >{{ hotspotClients }} client{{ hotspotClients > 1 ? 's' : '' }}</span
-                >
-              </div>
-            </div>
-
-            <div
-              class="metric"
-              [class.warning]="
-                networkProfileType === 'mesh' || networkProfileType === 'mesh_isolated'
-              "
-              [class.critical]="networkStabilityScore !== null && networkStabilityScore < 25"
-              *ngIf="networkProfileType"
-            >
-              <div class="metric-icon">{{ networkProfileType === 'ethernet' ? '🔌' : '🌐' }}</div>
-              <div class="metric-info">
-                <div class="metric-label">Réseau</div>
-                <div class="metric-value">{{ networkProfileLabel }}</div>
-              </div>
-              <div class="metric-details">
-                <span class="metric-detail" *ngIf="networkStabilityScore !== null"
-                  >Stabilité {{ networkStabilityScore }}%</span
-                >
-                <span class="metric-detail" *ngIf="networkApCount > 1"
-                  >{{ networkApCount }} AP</span
-                >
+              <div class="info-row" *ngIf="site.local_ip">
+                <span class="label">IP locale:</span>
+                <span class="value monospace">{{ site.local_ip }}</span>
               </div>
             </div>
           </div>
-          <ng-template #noMetrics>
-            <p class="no-data">Aucune métrique disponible</p>
-          </ng-template>
-        </div>
-      </div>
 
-      <!-- Actions rapides -->
-      <div class="card actions-card">
-        <h3>Actions rapides</h3>
-        <p class="connection-hint" *ngIf="!isConnected">
-          <strong>Site hors ligne.</strong> Les commandes temps réel sont désactivées. Les autres
-          actions seront mises en file d'attente.
-        </p>
-        <p
-          class="connection-hint warning"
-          *ngIf="isConnected && connectionHealth && !connectionHealth.isHealthy"
-        >
-          <strong>⚠️ Connexion instable.</strong>
-          {{ getHealthReason() }}
-          Les commandes peuvent échouer ou être mises en file d'attente.
-        </p>
-        <div class="actions-grid">
-          <button
-            class="action-card"
-            (click)="restartService('neopro-app')"
-            [disabled]="sendingCommand"
-          >
-            <span class="action-icon">🔄</span>
-            <div class="action-content">
-              <div class="action-title">Redémarrer l'app</div>
-              <div class="action-desc">
-                {{
-                  isConnected ? ('debug.restartsService' | translate) : ('debug.queued' | translate)
-                }}
+          <!-- Métriques -->
+          <div class="card">
+            <h3>Métriques actuelles</h3>
+            <div class="metrics-grid" *ngIf="currentMetrics; else noMetrics">
+              <div class="metric" [class.warning]="(currentMetrics.cpu_usage ?? 0) > 80">
+                <div class="metric-icon">💻</div>
+                <div class="metric-info">
+                  <div class="metric-label">CPU</div>
+                  <div class="metric-value">{{ currentMetrics.cpu_usage?.toFixed(1) || 0 }}%</div>
+                </div>
+                <div class="metric-bar">
+                  <div class="metric-fill" [style.width.%]="currentMetrics.cpu_usage ?? 0"></div>
+                </div>
               </div>
-            </div>
-          </button>
 
-          <button class="action-card" (click)="getLogs()" [disabled]="!isConnected">
-            <span class="action-icon">📄</span>
-            <div class="action-content">
-              <div class="action-title">Voir les logs</div>
-              <div class="action-desc">
-                {{ isConnected ? 'Logs récents' : '⚡ Temps réel requis' }}
+              <div class="metric" [class.warning]="(currentMetrics.memory_usage ?? 0) > 80">
+                <div class="metric-icon">🧠</div>
+                <div class="metric-info">
+                  <div class="metric-label">RAM</div>
+                  <div class="metric-value">
+                    {{ currentMetrics.memory_usage?.toFixed(1) || 0 }}%
+                  </div>
+                </div>
+                <div class="metric-bar">
+                  <div class="metric-fill" [style.width.%]="currentMetrics.memory_usage ?? 0"></div>
+                </div>
               </div>
-            </div>
-          </button>
 
-          <button class="action-card" (click)="getSystemInfo()" [disabled]="!isConnected">
-            <span class="action-icon">ℹ️</span>
-            <div class="action-content">
-              <div class="action-title">Infos système</div>
-              <div class="action-desc">
-                {{ isConnected ? 'Détails matériel' : '⚡ Temps réel requis' }}
+              <div class="metric" [class.warning]="(currentMetrics.temperature ?? 0) > 70">
+                <div class="metric-icon">🌡️</div>
+                <div class="metric-info">
+                  <div class="metric-label">Température</div>
+                  <div class="metric-value">
+                    {{ currentMetrics.temperature?.toFixed(1) || 0 }}°C
+                  </div>
+                </div>
+                <div class="metric-bar">
+                  <div
+                    class="metric-fill"
+                    [style.width.%]="Math.min(currentMetrics.temperature ?? 0, 100)"
+                  ></div>
+                </div>
               </div>
-            </div>
-          </button>
 
-          <button
-            class="action-card"
-            (click)="restartHotspot()"
-            [disabled]="sendingCommand"
-            *ngIf="hotspotSsid"
-          >
-            <span class="action-icon">📡</span>
-            <div class="action-content">
-              <div class="action-title">Relancer Hotspot</div>
-              <div class="action-desc">
-                {{ isConnected ? 'Redémarre hostapd + dnsmasq' : ('debug.queued' | translate) }}
+              <div class="metric" [class.warning]="(currentMetrics.disk_usage ?? 0) > 80">
+                <div class="metric-icon">💾</div>
+                <div class="metric-info">
+                  <div class="metric-label">Disque</div>
+                  <div class="metric-value">{{ currentMetrics.disk_usage?.toFixed(1) || 0 }}%</div>
+                </div>
+                <div class="metric-bar">
+                  <div class="metric-fill" [style.width.%]="currentMetrics.disk_usage ?? 0"></div>
+                </div>
               </div>
-            </div>
-          </button>
 
-          <button class="action-card warning" (click)="rebootSite()" [disabled]="sendingCommand">
-            <span class="action-icon">⚡</span>
-            <div class="action-content">
-              <div class="action-title">Redémarrer Pi</div>
-              <div class="action-desc">
-                {{ isConnected ? ('debug.fullReboot' | translate) : ('debug.queued' | translate) }}
+              <div class="metric uptime-metric">
+                <div class="metric-icon">⏱️</div>
+                <div class="metric-info">
+                  <div class="metric-label">Uptime</div>
+                  <div class="metric-value">{{ formatUptime(currentMetrics.uptime) }}</div>
+                </div>
               </div>
-            </div>
-          </button>
 
-          <button class="action-card" (click)="showApiKey = !showApiKey">
-            <span class="action-icon">🔑</span>
-            <div class="action-content">
-              <div class="action-title">API Key</div>
-              <div class="action-desc">{{ showApiKey ? 'Masquer' : 'Afficher' }}</div>
-            </div>
-          </button>
+              <div
+                class="metric"
+                [class.warning]="wifiSignalWeak"
+                [class.critical]="wifiSignalCritical"
+                *ngIf="wifiStatus"
+              >
+                <div class="metric-icon">{{ connectionIcon }}</div>
+                <div class="metric-info">
+                  <div class="metric-label">Connexion</div>
+                  <div class="metric-value">{{ wifiSignalDisplay }}</div>
+                </div>
+                <div class="metric-bar" *ngIf="wifiStatus.connectionType === 'wifi'">
+                  <div class="metric-fill" [style.width.%]="wifiStatus.quality ?? 0"></div>
+                </div>
+              </div>
 
-          <button class="action-card" (click)="regenerateApiKey()">
-            <span class="action-icon">🔄</span>
-            <div class="action-content">
-              <div class="action-title">Régénérer clé</div>
-              <div class="action-desc">Nouvelle API key</div>
-            </div>
-          </button>
-        </div>
+              <div class="metric" [class.warning]="fanWarning" *ngIf="fanStatus?.present">
+                <div class="metric-icon">🌀</div>
+                <div class="metric-info">
+                  <div class="metric-label">Ventilateur</div>
+                  <div class="metric-value">{{ fanStatusDisplay }}</div>
+                </div>
+                <div class="metric-bar">
+                  <div class="metric-fill" [style.width.%]="fanStatus?.speedPercent ?? 0"></div>
+                </div>
+              </div>
 
-        <div class="api-key-display" *ngIf="showApiKey">
-          <div class="api-key-label">API Key:</div>
-          <code class="api-key-value">{{ site.api_key }}</code>
-          <button class="btn-icon" (click)="copyApiKey()" title="Copier">📋</button>
-        </div>
-      </div>
+              <div class="metric" [class.warning]="!hotspotActive" *ngIf="hotspotSsid">
+                <div class="metric-icon">📡</div>
+                <div class="metric-info">
+                  <div class="metric-label">Hotspot</div>
+                  <div class="metric-value">{{ hotspotActive ? hotspotSsid : 'Inactif' }}</div>
+                </div>
+                <div class="metric-details" *ngIf="hotspotActive">
+                  <span class="metric-detail">Ch. {{ hotspotChannel || '?' }}</span>
+                  <span class="metric-detail" *ngIf="hotspotClients > 0"
+                    >{{ hotspotClients }} client{{ hotspotClients > 1 ? 's' : '' }}</span
+                  >
+                </div>
+              </div>
 
-      <!-- Historique métriques -->
-      <div class="card">
-        <h3>Historique des métriques (24h)</h3>
-        <div class="metrics-history" *ngIf="metricsHistory.length > 0; else noHistory">
-          <div class="history-item" *ngFor="let metric of metricsHistory.slice(0, 10)">
-            <div class="history-time">{{ metric.recorded_at | date: 'HH:mm' }}</div>
-            <div class="history-values">
-              <span class="history-badge">CPU: {{ metric.cpu_usage?.toFixed(1) }}%</span>
-              <span class="history-badge">RAM: {{ metric.memory_usage?.toFixed(1) }}%</span>
-              <span class="history-badge">{{ metric.temperature?.toFixed(1) }}°C</span>
-              <span class="history-badge">Disque: {{ metric.disk_usage?.toFixed(1) }}%</span>
-            </div>
-          </div>
-        </div>
-        <ng-template #noHistory>
-          <p class="no-data">Aucun historique disponible</p>
-        </ng-template>
-      </div>
-
-      <!-- Historique des matchs -->
-      <div class="card">
-        <div class="card-header-flex">
-          <h3>🏆 Historique des matchs</h3>
-          <button
-            class="btn btn-sm btn-secondary"
-            (click)="loadMatchHistory()"
-            [disabled]="matchHistoryLoading"
-          >
-            {{ matchHistoryLoading ? 'Chargement...' : '🔄 Actualiser' }}
-          </button>
-        </div>
-
-        <div *ngIf="matchHistoryLoading" class="loading-inline">
-          <div class="spinner-small"></div>
-          <span>Chargement...</span>
-        </div>
-
-        <div *ngIf="!matchHistoryLoading && matchHistory">
-          <!-- Stats agrégées -->
-          <div class="match-stats-grid" *ngIf="matchHistory.stats.totalMatches > 0">
-            <div class="match-stat">
-              <div class="match-stat-value">{{ matchHistory.stats.totalMatches }}</div>
-              <div class="match-stat-label">Matchs</div>
-            </div>
-            <div class="match-stat">
-              <div class="match-stat-value">{{ matchHistory.stats.totalAudience | number }}</div>
-              <div class="match-stat-label">Spectateurs total</div>
-            </div>
-            <div class="match-stat">
-              <div class="match-stat-value">{{ matchHistory.stats.avgAudience }}</div>
-              <div class="match-stat-label">Moyenne / match</div>
-            </div>
-            <div class="match-stat">
-              <div class="match-stat-value">{{ matchHistory.stats.totalVideos }}</div>
-              <div class="match-stat-label">Vidéos diffusées</div>
-            </div>
-          </div>
-
-          <!-- Liste des matchs -->
-          <div class="matches-list" *ngIf="matchHistory.matches.length > 0; else noMatches">
-            <div class="match-item" *ngFor="let match of matchHistory.matches">
-              <div class="match-date">{{ formatMatchDate(match.matchDate) }}</div>
-              <div class="match-details">
-                <div class="match-name">{{ match.matchName }}</div>
-                <div class="match-meta">
-                  <span class="match-badge" *ngIf="match.audienceEstimate">
-                    👥 {{ match.audienceEstimate }} spectateurs
-                  </span>
-                  <span class="match-badge"> 📺 {{ match.videosPlayed }} vidéos </span>
-                  <span class="match-badge" *ngIf="match.durationMinutes">
-                    ⏱️ {{ match.durationMinutes }} min
-                  </span>
+              <div
+                class="metric"
+                [class.warning]="
+                  networkProfileType === 'mesh' || networkProfileType === 'mesh_isolated'
+                "
+                [class.critical]="networkStabilityScore !== null && networkStabilityScore < 25"
+                *ngIf="networkProfileType"
+              >
+                <div class="metric-icon">{{ networkProfileType === 'ethernet' ? '🔌' : '🌐' }}</div>
+                <div class="metric-info">
+                  <div class="metric-label">Réseau</div>
+                  <div class="metric-value">{{ networkProfileLabel }}</div>
+                </div>
+                <div class="metric-details">
+                  <span class="metric-detail" *ngIf="networkStabilityScore !== null"
+                    >Stabilité {{ networkStabilityScore }}%</span
+                  >
+                  <span class="metric-detail" *ngIf="networkApCount > 1"
+                    >{{ networkApCount }} AP</span
+                  >
                 </div>
               </div>
             </div>
+            <ng-template #noMetrics>
+              <p class="no-data">Aucune métrique disponible</p>
+            </ng-template>
           </div>
-          <ng-template #noMatches>
-            <p class="no-data">
-              Aucun match enregistré. Les matchs apparaîtront ici quand vous configurerez un match
-              depuis la télécommande.
-            </p>
+        </div>
+
+        <!-- Actions rapides (Pi only) -->
+        <div class="card actions-card">
+          <h3>Actions rapides</h3>
+          <p class="connection-hint" *ngIf="!isConnected">
+            <strong>Site hors ligne.</strong> Les commandes temps réel sont désactivées. Les autres
+            actions seront mises en file d'attente.
+          </p>
+          <p
+            class="connection-hint warning"
+            *ngIf="isConnected && connectionHealth && !connectionHealth.isHealthy"
+          >
+            <strong>⚠️ Connexion instable.</strong>
+            {{ getHealthReason() }}
+            Les commandes peuvent échouer ou être mises en file d'attente.
+          </p>
+          <div class="actions-grid">
+            <button
+              class="action-card"
+              (click)="restartService('neopro-app')"
+              [disabled]="sendingCommand"
+            >
+              <span class="action-icon">🔄</span>
+              <div class="action-content">
+                <div class="action-title">Redémarrer l'app</div>
+                <div class="action-desc">
+                  {{
+                    isConnected
+                      ? ('debug.restartsService' | translate)
+                      : ('debug.queued' | translate)
+                  }}
+                </div>
+              </div>
+            </button>
+
+            <button class="action-card" (click)="getLogs()" [disabled]="!isConnected">
+              <span class="action-icon">📄</span>
+              <div class="action-content">
+                <div class="action-title">Voir les logs</div>
+                <div class="action-desc">
+                  {{ isConnected ? 'Logs récents' : '⚡ Temps réel requis' }}
+                </div>
+              </div>
+            </button>
+
+            <button class="action-card" (click)="getSystemInfo()" [disabled]="!isConnected">
+              <span class="action-icon">ℹ️</span>
+              <div class="action-content">
+                <div class="action-title">Infos système</div>
+                <div class="action-desc">
+                  {{ isConnected ? 'Détails matériel' : '⚡ Temps réel requis' }}
+                </div>
+              </div>
+            </button>
+
+            <button
+              class="action-card"
+              (click)="restartHotspot()"
+              [disabled]="sendingCommand"
+              *ngIf="hotspotSsid"
+            >
+              <span class="action-icon">📡</span>
+              <div class="action-content">
+                <div class="action-title">Relancer Hotspot</div>
+                <div class="action-desc">
+                  {{ isConnected ? 'Redémarre hostapd + dnsmasq' : ('debug.queued' | translate) }}
+                </div>
+              </div>
+            </button>
+
+            <button class="action-card warning" (click)="rebootSite()" [disabled]="sendingCommand">
+              <span class="action-icon">⚡</span>
+              <div class="action-content">
+                <div class="action-title">Redémarrer Pi</div>
+                <div class="action-desc">
+                  {{
+                    isConnected ? ('debug.fullReboot' | translate) : ('debug.queued' | translate)
+                  }}
+                </div>
+              </div>
+            </button>
+
+            <button class="action-card" (click)="showApiKey = !showApiKey">
+              <span class="action-icon">🔑</span>
+              <div class="action-content">
+                <div class="action-title">API Key</div>
+                <div class="action-desc">{{ showApiKey ? 'Masquer' : 'Afficher' }}</div>
+              </div>
+            </button>
+
+            <button class="action-card" (click)="regenerateApiKey()">
+              <span class="action-icon">🔄</span>
+              <div class="action-content">
+                <div class="action-title">Régénérer clé</div>
+                <div class="action-desc">Nouvelle API key</div>
+              </div>
+            </button>
+          </div>
+
+          <div class="api-key-display" *ngIf="showApiKey">
+            <div class="api-key-label">API Key:</div>
+            <code class="api-key-value">{{ site.api_key }}</code>
+            <button class="btn-icon" (click)="copyApiKey()" title="Copier">📋</button>
+          </div>
+        </div>
+
+        <!-- Historique métriques -->
+        <div class="card">
+          <h3>Historique des métriques (24h)</h3>
+          <div class="metrics-history" *ngIf="metricsHistory.length > 0; else noHistory">
+            <div class="history-item" *ngFor="let metric of metricsHistory.slice(0, 10)">
+              <div class="history-time">{{ metric.recorded_at | date: 'HH:mm' }}</div>
+              <div class="history-values">
+                <span class="history-badge">CPU: {{ metric.cpu_usage?.toFixed(1) }}%</span>
+                <span class="history-badge">RAM: {{ metric.memory_usage?.toFixed(1) }}%</span>
+                <span class="history-badge">{{ metric.temperature?.toFixed(1) }}°C</span>
+                <span class="history-badge">Disque: {{ metric.disk_usage?.toFixed(1) }}%</span>
+              </div>
+            </div>
+          </div>
+          <ng-template #noHistory>
+            <p class="no-data">Aucun historique disponible</p>
           </ng-template>
         </div>
 
-        <div *ngIf="!matchHistoryLoading && !matchHistory">
-          <p class="no-data">Impossible de charger l'historique des matchs</p>
-        </div>
-      </div>
+        <!-- Historique des matchs -->
+        <div class="card">
+          <div class="card-header-flex">
+            <h3>🏆 Historique des matchs</h3>
+            <button
+              class="btn btn-sm btn-secondary"
+              (click)="loadMatchHistory()"
+              [disabled]="matchHistoryLoading"
+            >
+              {{ matchHistoryLoading ? 'Chargement...' : '🔄 Actualiser' }}
+            </button>
+          </div>
 
-      <!-- Benchmark anonymisé -->
-      <div class="card">
-        <app-site-benchmark [siteId]="siteId"></app-site-benchmark>
-      </div>
+          <div *ngIf="matchHistoryLoading" class="loading-inline">
+            <div class="spinner-small"></div>
+            <span>Chargement...</span>
+          </div>
+
+          <div *ngIf="!matchHistoryLoading && matchHistory">
+            <!-- Stats agrégées -->
+            <div class="match-stats-grid" *ngIf="matchHistory.stats.totalMatches > 0">
+              <div class="match-stat">
+                <div class="match-stat-value">{{ matchHistory.stats.totalMatches }}</div>
+                <div class="match-stat-label">Matchs</div>
+              </div>
+              <div class="match-stat">
+                <div class="match-stat-value">{{ matchHistory.stats.totalAudience | number }}</div>
+                <div class="match-stat-label">Spectateurs total</div>
+              </div>
+              <div class="match-stat">
+                <div class="match-stat-value">{{ matchHistory.stats.avgAudience }}</div>
+                <div class="match-stat-label">Moyenne / match</div>
+              </div>
+              <div class="match-stat">
+                <div class="match-stat-value">{{ matchHistory.stats.totalVideos }}</div>
+                <div class="match-stat-label">Vidéos diffusées</div>
+              </div>
+            </div>
+
+            <!-- Liste des matchs -->
+            <div class="matches-list" *ngIf="matchHistory.matches.length > 0; else noMatches">
+              <div class="match-item" *ngFor="let match of matchHistory.matches">
+                <div class="match-date">{{ formatMatchDate(match.matchDate) }}</div>
+                <div class="match-details">
+                  <div class="match-name">{{ match.matchName }}</div>
+                  <div class="match-meta">
+                    <span class="match-badge" *ngIf="match.audienceEstimate">
+                      👥 {{ match.audienceEstimate }} spectateurs
+                    </span>
+                    <span class="match-badge"> 📺 {{ match.videosPlayed }} vidéos </span>
+                    <span class="match-badge" *ngIf="match.durationMinutes">
+                      ⏱️ {{ match.durationMinutes }} min
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <ng-template #noMatches>
+              <p class="no-data">
+                Aucun match enregistré. Les matchs apparaîtront ici quand vous configurerez un match
+                depuis la télécommande.
+              </p>
+            </ng-template>
+          </div>
+
+          <div *ngIf="!matchHistoryLoading && !matchHistory">
+            <p class="no-data">Impossible de charger l'historique des matchs</p>
+          </div>
+        </div>
+
+        <!-- Benchmark anonymisé -->
+        <div class="card">
+          <app-site-benchmark [siteId]="siteId"></app-site-benchmark>
+        </div>
+      }
+      <!-- end Pi view -->
     </div>
 
     <!-- TAB: Contenu -->
@@ -629,9 +756,9 @@
     </div>
   </div>
 
-  <!-- Modals -->
+  <!-- Modals (Pi only) -->
   <!-- Logs Modal -->
-  <div class="modal" *ngIf="showLogsModal" (click)="showLogsModal = false">
+  <div class="modal" *ngIf="!isSaas && showLogsModal" (click)="showLogsModal = false">
     <div class="modal-content modal-large" (click)="$event.stopPropagation()">
       <div class="modal-header">
         <h2>Logs - {{ site.club_name }}</h2>
@@ -659,7 +786,7 @@
   </div>
 
   <!-- System Info Modal -->
-  <div class="modal" *ngIf="showSystemInfoModal" (click)="showSystemInfoModal = false">
+  <div class="modal" *ngIf="!isSaas && showSystemInfoModal" (click)="showSystemInfoModal = false">
     <div class="modal-content" (click)="$event.stopPropagation()">
       <div class="modal-header">
         <h2>Infos système - {{ site.club_name }}</h2>
