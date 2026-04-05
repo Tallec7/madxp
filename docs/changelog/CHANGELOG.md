@@ -1,3 +1,9 @@
+## [3.124.1](https://github.com/Tallec7/neopro/compare/v3.124.0...v3.124.1) (2026-04-05)
+
+### Bug Fixes
+
+- **club-portal:** fix API URLs, Joi validation, CSP for bworlds heartbeat ([98e1dfb](https://github.com/Tallec7/neopro/commit/98e1dfb45a93142b24c1d339d9b810d1cadae67f))
+
 # [3.124.0](https://github.com/Tallec7/neopro/compare/v3.123.6...v3.124.0) (2026-04-05)
 
 ### Features
