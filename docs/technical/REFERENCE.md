@@ -1872,6 +1872,7 @@ Le getter `isSaas` (`site?.site_type === 'saas'`) dans `site-detail.component.ts
 | Onglet État            | Hardware, réseau, HDMI, alertes | Accès SaaS (URL, QR), activité, performance 7j          |
 | Onglet Debug           | Visible                         | **Masqué**                                              |
 | Badge réseau (header)  | Visible                         | Masqué                                                  |
+| Indicateur connexion   | Visible (online/offline/uptime) | **Masqué** (métriques agent Pi)                         |
 | Bannière alerte réseau | Visible                         | Masquée                                                 |
 | Version (En attente)   | "N/A"                           | "En attente de connexion"                               |
 | Métriques État         | CPU, RAM, GPU, ventilateur      | Clients connectés, vidéos jouées, temps écran, sessions |

@@ -14286,4 +14286,17 @@ describe('SaaS site-detail dashboard guards', () => {
       hasSiteType: true,
     });
   });
+
+  // --- site-detail.component.html must hide connection indicator for SaaS ---
+  it('site-detail.component.html must guard app-connection-indicator with !isSaas', () => {
+    const filePath = path.join(repoRoot, 'central-dashboard', 'src', 'app', 'features', 'sites', 'site-detail.component.html');
+    const content = fs.readFileSync(filePath, 'utf8');
+    // The connection indicator in the header must be wrapped in @if (!isSaas)
+    const hasGuardBeforeIndicator = /!isSaas[\s\S]{0,200}app-connection-indicator/.test(content);
+    expect({
+      connectionIndicatorGuarded: hasGuardBeforeIndicator,
+    }).toEqual({
+      connectionIndicatorGuarded: true,
+    });
+  });
 });
