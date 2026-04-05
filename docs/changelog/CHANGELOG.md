@@ -1,3 +1,9 @@
+## [3.125.4](https://github.com/Tallec7/neopro/compare/v3.125.3...v3.125.4) (2026-04-05)
+
+### Bug Fixes
+
+- **ci:** fix SaaS FTP deploy — create /saas/ dir and exclude from dashboard clean ([e765b2f](https://github.com/Tallec7/neopro/commit/e765b2f8d7679c1a4de93af674af0adf158ac6fd))
+
 ## [3.125.3](https://github.com/Tallec7/neopro/compare/v3.125.2...v3.125.3) (2026-04-05)
 
 ### Bug Fixes
