@@ -1,3 +1,9 @@
+## [3.124.12](https://github.com/Tallec7/neopro/compare/v3.124.11...v3.124.12) (2026-04-05)
+
+### Bug Fixes
+
+- **club:** add uploaded_for_site_id to findVideoById SELECT query ([45bf60e](https://github.com/Tallec7/neopro/commit/45bf60edb5ec967cf25155924a6dc3b5e907fd58))
+
 ## [3.124.11](https://github.com/Tallec7/neopro/compare/v3.124.10...v3.124.11) (2026-04-05)
 
 ### Bug Fixes
