@@ -26,6 +26,7 @@ export interface VideoRow {
 export interface VideoFilters {
   category?: string;
   search?: string;
+  siteId?: string;  // Club portal: only show videos uploaded for this site
 }
 
 export interface CreateVideoInput {
@@ -138,6 +139,12 @@ class VideoRepositoryImpl extends BaseRepository<VideoRow> {
     if (filters.search) {
       whereClause += ` AND (original_name ILIKE $${paramIndex} OR filename ILIKE $${paramIndex})`;
       params.push(`%${filters.search}%`);
+      paramIndex++;
+    }
+
+    if (filters.siteId) {
+      whereClause += ` AND uploaded_for_site_id = $${paramIndex}`;
+      params.push(filters.siteId);
       paramIndex++;
     }
 

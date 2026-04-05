@@ -129,8 +129,11 @@ export const getVideos = async (req: AuthRequest, res: Response) => {
     const { category, search } = req.query;
     const pagination = req.pagination || { page: 1, limit: 20, offset: 0 };
 
+    // Club users only see videos uploaded for their site
+    const siteId = req.user?.role === 'club' ? req.user.site_id ?? undefined : undefined;
+
     const { rows, total } = await videoRepository.findAllPaginated(
-      { category: category as string | undefined, search: search as string | undefined },
+      { category: category as string | undefined, search: search as string | undefined, siteId },
       pagination.limit,
       pagination.offset
     );
