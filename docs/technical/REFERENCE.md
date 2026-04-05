@@ -443,6 +443,51 @@ Si aucun mot de passe n'est configuré, un setup initial est requis au premier d
 
 ---
 
+## Club Portal (v3.124.4+)
+
+Accès dashboard scoped pour le personnel de club. Un utilisateur `club` est lié à un seul `site_id`.
+
+### Rôle et permissions
+
+| Action                  | Autorisé | Guard                                                 |
+| ----------------------- | -------- | ----------------------------------------------------- |
+| Voir son site           | ✅       | `requireRole` bypass si `:id` === `user.site_id`      |
+| Upload vidéos           | ✅       | `uploaded_for_site_id` auto-tagué serveur             |
+| Supprimer ses vidéos    | ✅       | Ownership: `uploaded_for_site_id === user.site_id`    |
+| Supprimer vidéos NEOPRO | ❌       | Guard catégorie `NEOPRO` dans `content.controller.ts` |
+| Modifier ses vidéos     | ✅       | Même guard ownership                                  |
+| Modifier vidéos NEOPRO  | ❌       | Même guard catégorie                                  |
+| Déployer sur son Pi     | ✅       | Bypass site-scoped                                    |
+| Voir d'autres sites     | ❌       | `requireRole` rejette                                 |
+
+### Architecture technique
+
+```
+JWT payload: { id, email, role: 'club', site_id: 'uuid' }
+                                          │
+                        ┌─────────────────┴─────────────────┐
+                        │ middleware/auth.ts requireRole()   │
+                        │ if role === 'club' &&             │
+                        │    route :id === user.site_id      │
+                        │    → bypass autorisé               │
+                        └───────────────────────────────────┘
+                                          │
+              ┌───────────────────────────┼───────────────────────┐
+              │ Upload                    │ Delete/Update          │ List
+              │ auto-tag                  │ ownership guard        │ filtre par
+              │ uploaded_for_site_id      │ + NEOPRO block         │ uploaded_for_site_id
+              │ côté serveur              │                        │ + vidéos NEOPRO
+              └───────────────────────────┴───────────────────────┘
+```
+
+### Fichiers clés
+
+- `central-server/src/middleware/auth.ts` — Bypass site-scoped pour rôle `club`
+- `central-server/src/controllers/content.controller.ts` — Guards ownership + NEOPRO
+- `central-server/src/repositories/video.repository.ts` — `findVideoById` (doit inclure `uploaded_for_site_id`), `findVideosForSite`
+
+---
+
 ## Serveur central
 
 ### URLs

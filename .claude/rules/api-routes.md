@@ -51,6 +51,15 @@ POST   /api/content/deploy    → { videoId, targetType, targetId }
 POST   /api/content/image-to-video → image → vidéo MP4
 ```
 
+### Permissions Club Portal (rôle `club`)
+
+Les utilisateurs `club` ont accès aux endpoints contenu avec des restrictions :
+
+- **Upload** : `uploaded_for_site_id` auto-tagué côté serveur avec `user.site_id`
+- **Liste** : filtrée par `uploaded_for_site_id` = site du club + vidéos NEOPRO
+- **Delete/Update** : uniquement les vidéos avec `uploaded_for_site_id` = `user.site_id` ET `category ≠ NEOPRO`
+- **Deploy** : uniquement vers leur propre site
+
 ## Config Drafts
 
 ```

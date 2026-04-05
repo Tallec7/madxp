@@ -13705,3 +13705,99 @@ describe('Dashboard template externalization guard (prevents re-inlining)', () =
     });
   }
 });
+
+// ---------------------------------------------------------------------------
+// Club Portal: video ownership & NEOPRO guards (regression prevention)
+// ---------------------------------------------------------------------------
+describe('Club Portal video ownership guards', () => {
+  const repoRoot = path.resolve(__dirname, '../../..');
+
+  const videoRepoPath = path.join(repoRoot, 'central-server/src/repositories/video.repository.ts');
+  const contentControllerPath = path.join(repoRoot, 'central-server/src/controllers/content.controller.ts');
+
+  let videoRepoContent: string;
+  let contentControllerContent: string;
+
+  beforeAll(() => {
+    videoRepoContent = fs.readFileSync(videoRepoPath, 'utf8');
+    contentControllerContent = fs.readFileSync(contentControllerPath, 'utf8');
+  });
+
+  // --- findVideoById must SELECT uploaded_for_site_id ---
+  it('findVideoById must SELECT uploaded_for_site_id (ownership guard depends on it)', () => {
+    const findFn = videoRepoContent.match(
+      /async findVideoById[\s\S]*?(?=\n  async \w|$)/
+    );
+    expect(findFn).not.toBeNull();
+    expect({
+      selectsUploadedForSiteId: findFn![0].includes('uploaded_for_site_id'),
+    }).toEqual({
+      selectsUploadedForSiteId: true,
+    });
+  });
+
+  // --- deleteVideo must have ownership guard ---
+  it('deleteVideo must check uploaded_for_site_id for club users', () => {
+    const deleteFn = contentControllerContent.match(
+      /export const deleteVideo[\s\S]*?(?=export const \w|$)/
+    );
+    expect(deleteFn).not.toBeNull();
+    expect({
+      checksOwnership: deleteFn![0].includes('uploaded_for_site_id'),
+    }).toEqual({
+      checksOwnership: true,
+    });
+  });
+
+  // --- deleteVideo must block NEOPRO category ---
+  it('deleteVideo must block NEOPRO category for club users', () => {
+    const deleteFn = contentControllerContent.match(
+      /export const deleteVideo[\s\S]*?(?=export const \w|$)/
+    );
+    expect(deleteFn).not.toBeNull();
+    expect({
+      blocksNeopro: /category.*NEOPRO|NEOPRO.*category/i.test(deleteFn![0]),
+    }).toEqual({
+      blocksNeopro: true,
+    });
+  });
+
+  // --- updateVideo must have ownership guard ---
+  it('updateVideo must check uploaded_for_site_id for club users', () => {
+    const updateFn = contentControllerContent.match(
+      /export const updateVideo[\s\S]*?(?=export const \w|$)/
+    );
+    expect(updateFn).not.toBeNull();
+    expect({
+      checksOwnership: updateFn![0].includes('uploaded_for_site_id'),
+    }).toEqual({
+      checksOwnership: true,
+    });
+  });
+
+  // --- updateVideo must block NEOPRO category ---
+  it('updateVideo must block NEOPRO category for club users', () => {
+    const updateFn = contentControllerContent.match(
+      /export const updateVideo[\s\S]*?(?=export const \w|$)/
+    );
+    expect(updateFn).not.toBeNull();
+    expect({
+      blocksNeopro: /category.*NEOPRO|NEOPRO.*category/i.test(updateFn![0]),
+    }).toEqual({
+      blocksNeopro: true,
+    });
+  });
+
+  // --- createVideo must auto-tag uploaded_for_site_id for club users ---
+  it('createVideo must auto-tag uploaded_for_site_id for club users', () => {
+    const createFn = contentControllerContent.match(
+      /export const createVideo[\s\S]*?(?=export const \w|$)/
+    );
+    expect(createFn).not.toBeNull();
+    expect({
+      autoTags: createFn![0].includes('uploaded_for_site_id'),
+    }).toEqual({
+      autoTags: true,
+    });
+  });
+});

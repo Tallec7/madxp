@@ -15,7 +15,7 @@
 - **Un "site"** = Un club sportif avec un Raspberry Pi connecté à une TV
 - **Les vidéos** sont uploadées dans le cloud, puis déployées vers les Pi
 - **La flotte** = 50+ boîtiers Pi gérés depuis un dashboard central
-- **Multi-tenant** : super_admin > admin > operator > viewer | advertiser | agency
+- **Multi-tenant** : super_admin > admin > operator > viewer | advertiser | agency | club
 
 ## Stack
 
@@ -32,13 +32,14 @@
 
 ## Rôles utilisateurs
 
-| Rôle        | Actions                                   |
-| ----------- | ----------------------------------------- |
-| Super Admin | Tout (users, sites, content, abonnements) |
-| Operator    | Gère ses clubs assignés, upload vidéos    |
-| Advertiser  | Upload pubs, gère ses vidéos              |
-| Agency      | Gère plusieurs advertisers                |
-| Club Staff  | Utilise la télécommande locale            |
+| Rôle        | Actions                                                                    |
+| ----------- | -------------------------------------------------------------------------- |
+| Super Admin | Tout (users, sites, content, abonnements)                                  |
+| Operator    | Gère ses clubs assignés, upload vidéos                                     |
+| Advertiser  | Upload pubs, gère ses vidéos                                               |
+| Agency      | Gère plusieurs advertisers                                                 |
+| Club        | Portail club : upload/supprime ses vidéos, déploie sur son Pi (pas NEOPRO) |
+| Club Staff  | Utilise la télécommande locale (pas de compte dashboard)                   |
 
 ## Glossaire
 

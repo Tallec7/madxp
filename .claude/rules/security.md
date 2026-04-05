@@ -50,6 +50,16 @@ Smoke tests dans `smoke.test.ts` vérifient automatiquement que chaque route par
 - Correlation ID sur chaque requête
 - Passwords et tokens jamais loggés
 
+## Club Portal (JWT avec scope site)
+
+Rôle `club` = accès scoped à un seul site via `user.site_id` :
+
+- `requireRole('admin', 'club')` avec bypass automatique dans `auth.ts` quand `:id`/`:siteId` === `user.site_id`
+- **Ownership guard vidéo** : `findVideoById()` → `uploaded_for_site_id !== user.site_id` → 403
+- **Guard NEOPRO** : les vidéos `category = 'NEOPRO'` ne peuvent être ni supprimées ni modifiées par les clubs
+- **Auto-tagging upload** : `uploaded_for_site_id` est injecté côté serveur (jamais confié au client)
+- Smoke tests : 7 tests dans `smoke.test.ts` (section "Club Portal video ownership guards")
+
 ## Remote Cloud (sans JWT)
 
 Routes `/api/remote/*` sont **PUBLIQUES** :

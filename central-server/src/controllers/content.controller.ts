@@ -456,11 +456,14 @@ export const updateVideo = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
 
-    // Club users can only modify their own videos
+    // Club users can only modify their own videos (not NEOPRO corporate content)
     if (req.user?.role === 'club' && req.user.site_id) {
       const video = await videoRepository.findVideoById(id);
       if (!video || video.uploaded_for_site_id !== req.user.site_id) {
         return res.status(403).json({ error: 'Vous ne pouvez modifier que vos propres vidéos' });
+      }
+      if (video.category?.toUpperCase() === 'NEOPRO') {
+        return res.status(403).json({ error: 'Les vidéos Neopro ne peuvent pas être modifiées' });
       }
     }
 
