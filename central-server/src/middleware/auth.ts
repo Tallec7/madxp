@@ -109,6 +109,14 @@ export const requireRole = (...allowedRoles: UserRole[]) => {
       return next();
     }
 
+    // Club users can access their own site's endpoints (GET only by default)
+    if (req.user.role === 'club' && req.user.site_id) {
+      const requestedSiteId = req.params.siteId || req.params.id;
+      if (requestedSiteId && requestedSiteId === req.user.site_id) {
+        return next();
+      }
+    }
+
     if (!allowedRoles.includes(req.user.role)) {
       return res.status(403).json({
         error: 'Accès refusé',
