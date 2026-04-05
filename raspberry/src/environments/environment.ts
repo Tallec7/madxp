@@ -1,5 +1,6 @@
 export const environment = {
   production: false,
   socketUrl: 'http://localhost:3000',
-  demoMode: false
+  demoMode: false,
+  saasMode: false,
 };

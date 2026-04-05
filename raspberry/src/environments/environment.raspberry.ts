@@ -6,5 +6,6 @@ export const environment = {
   socketUrl: '', // Sera déterminé dynamiquement dans socket.service.ts
   mode: 'raspberry', // Identifie l'environnement Raspberry Pi local
   apiUrl: '', // Sera déterminé dynamiquement
-  demoMode: false
+  demoMode: false,
+  saasMode: false,
 };

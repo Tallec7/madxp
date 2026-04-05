@@ -1,21 +1,22 @@
 <main>
   <div class="hero">
-    <img class="logo" src="/neopro-logo-white.png" alt="Neopro" />
+    <img *ngIf="!isSaasMode" class="logo" src="/neopro-logo-white.png" alt="Neopro" />
+    <h1 *ngIf="isSaasMode" class="saas-title">Neopro TV</h1>
   </div>
 
-  <a class="cta" href="/remote">
+  <a class="cta" routerLink="/remote">
     <span class="cta-icon">&#127918;</span>
     <span class="cta-label">Ouvrir la télécommande</span>
   </a>
 
-  <a class="secondary-link" href="/tv?displayType=secondary">
+  <a class="secondary-link" routerLink="/tv" [queryParams]="{ displayType: 'secondary' }">
     <span>&#128250;</span>
     <span>Afficher l'écran TV sur ce navigateur</span>
   </a>
 </main>
 
 <footer>
-  <a class="admin-link" href="/admin/">Administration</a>
-  <span class="sep">&middot;</span>
+  <a *ngIf="!isSaasMode" class="admin-link" href="/admin/">Administration</a>
+  <span *ngIf="!isSaasMode" class="sep">&middot;</span>
   <span>Neopro &copy; 2024-2026</span>
 </footer>
