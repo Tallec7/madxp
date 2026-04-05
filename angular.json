@@ -126,8 +126,8 @@
               "assets": [
                 {
                   "glob": "**/*",
-                  "input": "raspberry/src/assets",
-                  "output": "assets"
+                  "input": "raspberry/src/assets/i18n",
+                  "output": "assets/i18n"
                 },
                 {
                   "glob": "socket.io.min.js",
