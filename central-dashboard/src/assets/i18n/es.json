@@ -99,9 +99,8 @@
     "toggleMenu": "Alternar menu",
     "safe": "SAFe Dashboard",
     "clubDashboard": "Mi club",
-    "clubContent": "Contenido",
-    "clubLoop": "Bucle de video",
-    "clubSponsors": "Patrocinadores"
+    "clubLoop": "Mi bucle",
+    "clubSponsors": "Mis patrocinadores"
   },
   "status": {
     "connected": "Conectado",
@@ -134,8 +133,7 @@
     "videoCount": "Videos en el dispositivo",
     "lastSync": "Ultima sincronizacion",
     "version": "Version del software",
-    "contentDescription": "Gestione los videos de su club y configure el contenido mostrado en su pantalla.",
-    "loopDescription": "Organice el orden y la ponderacion de los videos en el bucle de emision.",
+    "loopDescription": "Suba sus videos, organice el orden de emision y despliegue en su pantalla.",
     "sponsorsDescription": "Gestione los patrocinadores locales de su club y siga su rendimiento."
   },
   "notifications": {

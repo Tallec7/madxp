@@ -67,12 +67,8 @@ import { ConfirmDialogService } from '../../core/services/confirm-dialog.service
               <span class="icon" aria-hidden="true">🏠</span>
               <span>{{ 'nav.clubDashboard' | translate }}</span>
             </a>
-            <a routerLink="/club/content" routerLinkActive="active" class="nav-item" (click)="closeSidebar()">
-              <span class="icon" aria-hidden="true">📹</span>
-              <span>{{ 'nav.clubContent' | translate }}</span>
-            </a>
             <a routerLink="/club/loop" routerLinkActive="active" class="nav-item" (click)="closeSidebar()">
-              <span class="icon" aria-hidden="true">🔄</span>
+              <span class="icon" aria-hidden="true">🎬</span>
               <span>{{ 'nav.clubLoop' | translate }}</span>
             </a>
             <a routerLink="/club/sponsors" routerLinkActive="active" class="nav-item" (click)="closeSidebar()">
