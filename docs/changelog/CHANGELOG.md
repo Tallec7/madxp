@@ -1,3 +1,9 @@
+## [3.124.6](https://github.com/Tallec7/neopro/compare/v3.124.5...v3.124.6) (2026-04-05)
+
+### Bug Fixes
+
+- **club-portal:** filter videos by site for club users, fix upload/deploy access ([8cd7b47](https://github.com/Tallec7/neopro/commit/8cd7b47bfbab8859d7ce053f8ca72194928d7775))
+
 ## [3.124.5](https://github.com/Tallec7/neopro/compare/v3.124.4...v3.124.5) (2026-04-05)
 
 ### Bug Fixes
