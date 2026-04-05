@@ -1,3 +1,9 @@
+## [3.124.2](https://github.com/Tallec7/neopro/compare/v3.124.1...v3.124.2) (2026-04-05)
+
+### Bug Fixes
+
+- **club-portal:** fix CI failures — add siteId to test, getCurrentUser to mock ([69a4ef2](https://github.com/Tallec7/neopro/commit/69a4ef2efcd9623f01fd09c877941450bdacd684))
+
 ## [3.124.1](https://github.com/Tallec7/neopro/compare/v3.124.0...v3.124.1) (2026-04-05)
 
 ### Bug Fixes
