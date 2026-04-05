@@ -1,3 +1,9 @@
+## [3.127.2](https://github.com/Tallec7/neopro/compare/v3.127.1...v3.127.2) (2026-04-05)
+
+### Bug Fixes
+
+- **server:** add findByIdFull mock to sponsor video sync test ([d621c32](https://github.com/Tallec7/neopro/commit/d621c3281b653d5404873a2c3f14f6d8ffc87fab))
+
 ## [3.127.1](https://github.com/Tallec7/neopro/compare/v3.127.0...v3.127.1) (2026-04-05)
 
 ### Bug Fixes
