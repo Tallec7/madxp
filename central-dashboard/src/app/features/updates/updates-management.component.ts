@@ -207,7 +207,7 @@ interface UpdateDeployment {
               class="form-select"
             >
               <option value="">-- Choisir un site --</option>
-              <option *ngFor="let site of sites" [value]="site.id">
+              <option *ngFor="let site of deployableSites" [value]="site.id">
                 {{ site.club_name }} - {{ site.site_name }} (v{{ site.software_version }})
               </option>
             </select>
@@ -1347,6 +1347,10 @@ export class UpdatesManagementComponent implements OnInit, OnDestroy {
   deployments: UpdateDeployment[] = [];
   sites: Site[] = [];
   groups: Group[] = [];
+
+  get deployableSites(): Site[] {
+    return this.sites.filter(s => s.site_type !== 'saas');
+  }
 
   showCreateModal = false;
   expandedNotes = new Set<string>();
