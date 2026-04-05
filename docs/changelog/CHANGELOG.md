@@ -1,3 +1,9 @@
+## [3.124.3](https://github.com/Tallec7/neopro/compare/v3.124.2...v3.124.3) (2026-04-05)
+
+### Bug Fixes
+
+- **club-portal:** add 'club' to check_role DB constraint ([2ed1c3c](https://github.com/Tallec7/neopro/commit/2ed1c3cc3d85edbf9f511ee8e8480b8fd0539b9f))
+
 ## [3.124.2](https://github.com/Tallec7/neopro/compare/v3.124.1...v3.124.2) (2026-04-05)
 
 ### Bug Fixes
