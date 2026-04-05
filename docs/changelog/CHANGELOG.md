@@ -1,3 +1,9 @@
+## [3.125.8](https://github.com/Tallec7/neopro/compare/v3.125.7...v3.125.8) (2026-04-05)
+
+### Bug Fixes
+
+- **ci:** exclude /saas/ from dashboard .htaccess SPA catch-all ([7e90d10](https://github.com/Tallec7/neopro/commit/7e90d10a640f2b847145ea74d77dd2830bbc9d72))
+
 ## [3.125.7](https://github.com/Tallec7/neopro/compare/v3.125.6...v3.125.7) (2026-04-05)
 
 ### Bug Fixes
