@@ -1,3 +1,9 @@
+## [3.125.10](https://github.com/Tallec7/neopro/compare/v3.125.9...v3.125.10) (2026-04-05)
+
+### Bug Fixes
+
+- **saas:** use routerLink for SaaS navigation and hide Pi-only elements ([567a447](https://github.com/Tallec7/neopro/commit/567a447c40f26dd7a7059a4f34e2d27d38bf9630))
+
 ## [3.125.9](https://github.com/Tallec7/neopro/compare/v3.125.8...v3.125.9) (2026-04-05)
 
 ### Bug Fixes
