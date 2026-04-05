@@ -1,3 +1,9 @@
+# [3.125.0](https://github.com/Tallec7/neopro/compare/v3.124.14...v3.125.0) (2026-04-05)
+
+### Features
+
+- **saas:** implement SaaS mode — TV interactive sans Raspberry Pi (ADR-037) ([2db5799](https://github.com/Tallec7/neopro/commit/2db5799b921fedf72b4ebddc45468ecc75b9ed5a))
+
 ## [3.124.14](https://github.com/Tallec7/neopro/compare/v3.124.13...v3.124.14) (2026-04-05)
 
 ### Bug Fixes
