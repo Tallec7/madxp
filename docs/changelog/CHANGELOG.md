@@ -1,3 +1,9 @@
+## [3.127.3](https://github.com/Tallec7/neopro/compare/v3.127.2...v3.127.3) (2026-04-05)
+
+### Bug Fixes
+
+- **saas:** hide connection indicator badges for SaaS sites ([b2c2679](https://github.com/Tallec7/neopro/commit/b2c2679b3dfc81212bc9280dd8fc4e2a4545e609))
+
 ## [3.127.2](https://github.com/Tallec7/neopro/compare/v3.127.1...v3.127.2) (2026-04-05)
 
 ### Bug Fixes
