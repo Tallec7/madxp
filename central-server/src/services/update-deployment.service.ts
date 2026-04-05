@@ -291,9 +291,13 @@ class UpdateDeploymentService {
   private async getTargetSites(targetType: string, targetId: string): Promise<DeploymentTarget[]> {
     if (targetType === 'site') {
       const result = await query<{ siteId: string; siteName: string }>(
-        'SELECT id as "siteId", site_name as "siteName" FROM sites WHERE id = $1',
-        [targetId]
+        `SELECT id as "siteId", site_name as "siteName" FROM sites
+         WHERE id = $1 AND (site_type IS NULL OR site_type != 'saas')`,
+        [targetId],
       );
+      if (result.rows.length === 0) {
+        logger.warn('OTA deployment target rejected: site is SaaS or not found', { targetId });
+      }
       return result.rows;
     }
 
@@ -302,8 +306,8 @@ class UpdateDeploymentService {
         `SELECT s.id as "siteId", s.site_name as "siteName"
          FROM sites s
          JOIN site_groups sg ON s.id = sg.site_id
-         WHERE sg.group_id = $1`,
-        [targetId]
+         WHERE sg.group_id = $1 AND (s.site_type IS NULL OR s.site_type != 'saas')`,
+        [targetId],
       );
       return result.rows;
     }

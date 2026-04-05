@@ -14300,3 +14300,34 @@ describe('SaaS site-detail dashboard guards', () => {
     });
   });
 });
+
+// OTA deployment must exclude SaaS sites (no hardware — no OTA)
+describe('OTA deployment must exclude SaaS sites', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+
+  it('dashboard OTA selector must use deployableSites (not raw sites)', () => {
+    const filePath = path.join(repoRoot, 'central-dashboard', 'src', 'app', 'features', 'updates', 'updates-management.component.ts');
+    const content = fs.readFileSync(filePath, 'utf8');
+    expect({
+      usesDeployableSites: content.includes('deployableSites'),
+      filtersSaas: content.includes("site_type !== 'saas'"),
+      doesNotUseRawSitesInSelector: !/ \*ngFor="let site of sites"/.test(content),
+    }).toEqual({
+      usesDeployableSites: true,
+      filtersSaas: true,
+      doesNotUseRawSitesInSelector: true,
+    });
+  });
+
+  it('server getTargetSites must exclude SaaS sites from OTA targets', () => {
+    const filePath = path.join(repoRoot, 'central-server', 'src', 'services', 'update-deployment.service.ts');
+    const content = fs.readFileSync(filePath, 'utf8');
+    expect({
+      siteQueryExcludesSaas: content.includes("site_type != 'saas'"),
+      groupQueryExcludesSaas: content.includes("s.site_type != 'saas'") || content.includes("site_type != 'saas'"),
+    }).toEqual({
+      siteQueryExcludesSaas: true,
+      groupQueryExcludesSaas: true,
+    });
+  });
+});

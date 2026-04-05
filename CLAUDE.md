@@ -247,6 +247,7 @@ source central-server/.env && psql "$DATABASE_URL" -f central-server/src/scripts
 - Supprimer `getSaasClientCount()` de `socket.service.ts` central (compte les navigateurs SaaS connectés en temps réel — utilisé par le dashboard État SaaS — smoke test enforced)
 - Supprimer `countSessions()`, `countSponsorsDisplayed()` ou `getCompletionRate()` de `analytics.repository.ts` (métriques SaaS utilisées par le dashboard site-detail — smoke test enforced)
 - Supprimer `saasMetrics` de la réponse `getSiteDashboardData` dans `site-fleet.controller.ts` (alimente les 8 métriques de l'onglet État SaaS — smoke test enforced)
+- Proposer un déploiement OTA sur un site SaaS (les sites SaaS n'ont pas de Raspberry Pi — le sélecteur dashboard utilise `deployableSites` filtré par `site_type !== 'saas'`, et `getTargetSites()` dans `update-deployment.service.ts` exclut les SaaS côté serveur en defense-in-depth — smoke test enforced)
 
 ## Architecture détaillée
 
