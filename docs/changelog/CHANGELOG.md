@@ -1,3 +1,9 @@
+## [3.125.3](https://github.com/Tallec7/neopro/compare/v3.125.2...v3.125.3) (2026-04-05)
+
+### Bug Fixes
+
+- **sites:** add site_type to Joi validation schema for create/update ([c7ddd4c](https://github.com/Tallec7/neopro/commit/c7ddd4c070026e8db016e4a04d10e72b0aad2f2b))
+
 ## [3.125.2](https://github.com/Tallec7/neopro/compare/v3.125.1...v3.125.2) (2026-04-05)
 
 ### Bug Fixes
