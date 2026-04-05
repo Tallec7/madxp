@@ -1,3 +1,9 @@
+## [3.125.9](https://github.com/Tallec7/neopro/compare/v3.125.8...v3.125.9) (2026-04-05)
+
+### Bug Fixes
+
+- **ci:** deploy SaaS after dashboard to prevent clean-slate deletion ([3928c8f](https://github.com/Tallec7/neopro/commit/3928c8f792ab7f4e20701abf2ab478d180798ee0))
+
 ## [3.125.8](https://github.com/Tallec7/neopro/compare/v3.125.7...v3.125.8) (2026-04-05)
 
 ### Bug Fixes
