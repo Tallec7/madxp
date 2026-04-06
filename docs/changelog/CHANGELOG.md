@@ -1,3 +1,9 @@
+## [3.128.3](https://github.com/Tallec7/neopro/compare/v3.128.2...v3.128.3) (2026-04-06)
+
+### Bug Fixes
+
+- **saas:** bypass auth guard and propagate siteId in URL for SaaS mode ([acee47b](https://github.com/Tallec7/neopro/commit/acee47b812313f9779b231be0c6dc5a33676b53e))
+
 ## [3.128.2](https://github.com/Tallec7/neopro/compare/v3.128.1...v3.128.2) (2026-04-06)
 
 ### Bug Fixes
