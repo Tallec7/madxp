@@ -1,3 +1,9 @@
+# [3.128.0](https://github.com/Tallec7/neopro/compare/v3.127.16...v3.128.0) (2026-04-06)
+
+### Features
+
+- **analytics:** extend site_sponsor_daily_stats with full Proof of Play breakdowns ([c2910e7](https://github.com/Tallec7/neopro/commit/c2910e7fac06b6c7cb19d9933d0c2f4fba957b88))
+
 ## [3.127.16](https://github.com/Tallec7/neopro/compare/v3.127.15...v3.127.16) (2026-04-06)
 
 ### Bug Fixes
