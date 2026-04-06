@@ -1140,6 +1140,7 @@ class AlertingService {
         this.pruneLastAlertTime();
         await this.checkPhantomSponsors();
         await this.checkAggregationStaleness();
+        await this.checkEmptySaasProfiles();
       }
     }, 60 * 1000);
   }
@@ -1598,6 +1599,53 @@ class AlertingService {
       // Non-fatal — tables might not exist yet
       if (error instanceof Error && !error.message.includes('does not exist')) {
         logger.error('Error checking aggregation staleness:', error);
+      }
+    }
+  }
+
+  /**
+   * Détecte les sites SaaS dont le profil par défaut a une configuration vide.
+   * Symptôme : settings sauvegardés dans local_config_mirror au lieu de config_profiles,
+   * ou profil créé mais jamais configuré.
+   * Exécuté toutes les 5 minutes dans le periodic loop.
+   */
+  async checkEmptySaasProfiles(): Promise<void> {
+    try {
+      const emptyProfiles = await query<{ site_id: string; site_name: string; profile_id: string; profile_name: string }>(
+        `SELECT s.id AS site_id, s.site_name, cp.id AS profile_id, cp.name AS profile_name
+         FROM sites s
+         JOIN config_profiles cp ON cp.site_id = s.id AND cp.is_default = true
+         WHERE s.site_type = 'saas'
+           AND (
+             cp.configuration IS NULL
+             OR cp.configuration = '{}'::jsonb
+             OR (
+               NOT cp.configuration ? 'sponsors'
+               AND NOT cp.configuration ? 'categories'
+               AND NOT cp.configuration ? 'timeCategories'
+             )
+           )`,
+        []
+      );
+
+      for (const row of emptyProfiles.rows) {
+        logger.warn('SaaS site has empty default profile configuration', {
+          siteId: row.site_id,
+          siteName: row.site_name,
+          profileId: row.profile_id,
+          profileName: row.profile_name,
+        });
+        await this.createAlert({
+          siteId: row.site_id,
+          type: 'saas_empty_profile',
+          severity: 'warning',
+          message: `Site SaaS "${row.site_name}" a un profil par défaut "${row.profile_name}" avec une configuration vide. Les settings ne seront pas visibles sur la TV.`,
+          metadata: { profileId: row.profile_id, profileName: row.profile_name },
+        });
+      }
+    } catch (error) {
+      if (error instanceof Error && !error.message.includes('does not exist')) {
+        logger.error('Error checking empty SaaS profiles:', error);
       }
     }
   }

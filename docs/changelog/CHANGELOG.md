@@ -4,6 +4,23 @@
 
 - **saas:** write SaaS settings to config_profiles instead of local_config_mirror ([f94dd69](https://github.com/Tallec7/neopro/commit/f94dd69b6457ad603ab9da086501bb51571b91d0))
 
+### Backend
+
+- **repository:** `mergeConfiguration()` method in `config-profile.repository.ts` (JSONB merge `||` operator)
+- **controller:** merge mode support in `updateProfileConfiguration` (`mode: 'merge'` param)
+- **monitoring:** `checkEmptySaasProfiles()` in `alerting.service.ts` — detects empty default profiles on SaaS sites every 5 min
+
+### Dashboard
+
+- **site-settings-data.service:** `mergeDefaultProfileConfig()` — SaaS settings saves via default profile JSONB merge
+- **deployment-status:** `confirmSaveSaas()` refactored from `saveConfigDirect` to profile-based merge
+
+### Docs
+
+- **ADR-037:** updated with config_profiles as SaaS source of truth, monitoring section, risk table
+- **REFERENCE.md:** updated SaaS config save flow to reflect profile-based approach
+- **CLAUDE.md:** new regression prevention rule for SaaS config saves
+
 ## [3.128.4](https://github.com/Tallec7/neopro/compare/v3.128.3...v3.128.4) (2026-04-06)
 
 ### Bug Fixes

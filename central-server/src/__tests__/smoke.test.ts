@@ -12357,6 +12357,31 @@ describe('OTA deployment observability guards', () => {
       .toEqual({ calledPeriodically: true });
   });
 
+  it('checkEmptySaasProfiles must detect SaaS sites with empty default profile config', () => {
+    const alerting = fs.readFileSync(
+      path.join(repoRoot, 'central-server/src/services/alerting.service.ts'),
+      'utf8'
+    );
+    // Must have the method
+    expect({ hasMethod: alerting.includes('checkEmptySaasProfiles') })
+      .toEqual({ hasMethod: true });
+    // Must filter by site_type = 'saas'
+    expect({ filtersSaas: alerting.includes("site_type = 'saas'") })
+      .toEqual({ filtersSaas: true });
+    // Must check for empty configuration (null, {}, or missing key fields)
+    expect({ checksEmpty: alerting.includes("= '{}'::jsonb") })
+      .toEqual({ checksEmpty: true });
+    // Must check for missing sponsors/categories/timeCategories
+    expect({ checksMissingKeys: alerting.includes('sponsors') && alerting.includes('categories') && alerting.includes('timeCategories') })
+      .toEqual({ checksMissingKeys: true });
+    // Must create warning alert with type saas_empty_profile
+    expect({ createsAlert: alerting.includes("type: 'saas_empty_profile'") && alerting.includes("severity: 'warning'") })
+      .toEqual({ createsAlert: true });
+    // Must be called in the periodic loop
+    expect({ calledPeriodically: /checkEmptySaasProfiles\(\)/.test(alerting) })
+      .toEqual({ calledPeriodically: true });
+  });
+
   it('checkStuckDeployments must auto-fail update deployments stuck >2h', () => {
     const alerting = fs.readFileSync(
       path.join(repoRoot, 'central-server/src/services/alerting.service.ts'),
@@ -15193,6 +15218,17 @@ describe('SaaS config save flow', () => {
       noEmptyConfigGuard: !content.includes("Object.keys(configuration).length === 0"),
     }).toEqual({
       noEmptyConfigGuard: true,
+    });
+  });
+
+  it('CLAUDE.md must have regression rule against writing SaaS config to local_config_mirror', () => {
+    const claudeMd = fs.readFileSync(path.join(repoRoot, 'CLAUDE.md'), 'utf8');
+    expect({
+      hasLocalConfigMirrorRule: claudeMd.includes('local_config_mirror') && claudeMd.includes('config_profiles') && claudeMd.includes('mergeDefaultProfileConfig'),
+      hasAdr037Ref: claudeMd.includes('ADR-037'),
+    }).toEqual({
+      hasLocalConfigMirrorRule: true,
+      hasAdr037Ref: true,
     });
   });
 

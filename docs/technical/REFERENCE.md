@@ -1477,15 +1477,16 @@ Le HDMI secondaire du Raspberry Pi peut alimenter un panneau LED bord de terrain
 
 > **Monitoring :** `checkStuckDeployments()` dans `alerting.service.ts` exclut les sites SaaS des alertes "Déploiement bloqué" via `JOIN sites WHERE site_type != 'saas'`. Les déploiements Pi bloqu��s >30min génèrent une alerte warning, >60min critical, et les OTA >2h sont auto-failed.
 
-**Flux de sauvegarde config par type de site (v3.127.12+) :**
+**Flux de sauvegarde config par type de site (v3.128.5+) :**
 
-| `site_type`        | Comportement                                                                            |
-| ------------------ | --------------------------------------------------------------------------------------- |
-| `'pi'`             | `sendCommand('update_config')` ou `syncProfiles()` → config envoyée au Pi via WebSocket |
-| `'saas'`           | `PUT /api/sites/:id/config` → DB direct (`local_config_mirror` + `config_history`)      |
-| `'saas'` + profils | `updateProfileConfiguration()` → skip `syncProfiles()` (DB save suffit)                 |
+| `site_type` | Comportement                                                                                |
+| ----------- | ------------------------------------------------------------------------------------------- |
+| `'pi'`      | `sendCommand('update_config')` ou `syncProfiles()` → config envoyée au Pi via WebSocket     |
+| `'saas'`    | `mergeDefaultProfileConfig()` → JSONB merge sur le profil par défaut dans `config_profiles` |
 
-> **Guard :** `saveConfigDirect()` dans `config-history.controller.ts` refuse les sites non-SaaS (`site_type !== 'saas'` → 400). Smoke test enforced.
+> **Source de vérité SaaS** : `config_profiles` (profil `is_default = true`). `local_config_mirror` n'est plus la cible des saves SaaS depuis v3.128.5. Le contrôleur `getSaasConfig` lit `config_profiles` en priorité — écrire dans `local_config_mirror` est inutile car le profil par défaut a toujours la priorité. Voir ADR-037.
+>
+> **Monitoring** : `checkEmptySaasProfiles()` dans `alerting.service.ts` détecte les profils SaaS vides toutes les 5 minutes. Smoke test enforced.
 
 **Flux de déploiement avec variante secondaire (sites Pi) :**
 
@@ -1960,35 +1961,36 @@ Le service monolithique `SitesService` a été décomposé en 4 services focalis
 
 **Méthodes SitesService (profils) :**
 
-| Méthode                                                 | Endpoint API                                           |
-| ------------------------------------------------------- | ------------------------------------------------------ |
-| `getProfiles(siteId)`                                   | `GET /sites/:siteId/profiles`                          |
-| `getProfile(siteId, profileId)`                         | `GET /sites/:siteId/profiles/:profileId`               |
-| `createProfile(siteId, payload)`                        | `POST /sites/:siteId/profiles`                         |
-| `updateProfile(siteId, profileId, payload)`             | `PUT /sites/:siteId/profiles/:profileId`               |
-| `updateProfileConfiguration(siteId, profileId, config)` | `PUT /sites/:siteId/profiles/:profileId/configuration` |
-| `deleteProfile(siteId, profileId)`                      | `DELETE /sites/:siteId/profiles/:profileId`            |
-| `deployProfile(siteId, profileId)`                      | `POST /sites/:siteId/profiles/:profileId/deploy`       |
-| `syncProfiles(siteId)`                                  | `POST /sites/:siteId/profiles/sync`                    |
-| `saveConfigDirect(siteId, configuration)`               | `PUT /sites/:siteId/config` (SaaS uniquement)          |
+| Méthode                                                        | Endpoint API                                           |
+| -------------------------------------------------------------- | ------------------------------------------------------ |
+| `getProfiles(siteId)`                                          | `GET /sites/:siteId/profiles`                          |
+| `getProfile(siteId, profileId)`                                | `GET /sites/:siteId/profiles/:profileId`               |
+| `createProfile(siteId, payload)`                               | `POST /sites/:siteId/profiles`                         |
+| `updateProfile(siteId, profileId, payload)`                    | `PUT /sites/:siteId/profiles/:profileId`               |
+| `updateProfileConfiguration(siteId, profileId, config, mode?)` | `PUT /sites/:siteId/profiles/:profileId/configuration` |
+| `deleteProfile(siteId, profileId)`                             | `DELETE /sites/:siteId/profiles/:profileId`            |
+| `deployProfile(siteId, profileId)`                             | `POST /sites/:siteId/profiles/:profileId/deploy`       |
+| `syncProfiles(siteId)`                                         | `POST /sites/:siteId/profiles/sync`                    |
+| `saveConfigDirect(siteId, configuration)`                      | `PUT /sites/:siteId/config` (SaaS uniquement)          |
 
-#### Flux de sauvegarde config SaaS (v3.127.12+)
+#### Flux de sauvegarde config SaaS (v3.128.5+)
 
-Les sites SaaS n'ont pas de Pi — la config est sauvegardée directement en DB :
+Les sites SaaS n'ont pas de Pi — la config est sauvegardée via le profil par défaut dans `config_profiles` :
 
-| Scénario              | Flux                                                   | Endpoint                                     |
-| --------------------- | ------------------------------------------------------ | -------------------------------------------- |
-| **SaaS avec profils** | `updateProfileConfiguration()` → skip `syncProfiles()` | `PUT /sites/:id/profiles/:pid/configuration` |
-| **SaaS sans profils** | `saveConfigDirect()` → DB direct                       | `PUT /sites/:id/config`                      |
-| **Pi avec profils**   | `updateProfileConfiguration()` → `syncProfiles()`      | (sync envoyé au Pi via WebSocket)            |
-| **Pi sans profils**   | `sendCommand('update_config')`                         | (commande WebSocket)                         |
+| Scénario                 | Flux                                                          | Endpoint                                                   |
+| ------------------------ | ------------------------------------------------------------- | ---------------------------------------------------------- |
+| **SaaS (settings)**      | `mergeDefaultProfileConfig()` → JSONB merge profil par défaut | `PUT /sites/:id/profiles/:pid/configuration` (mode: merge) |
+| **SaaS (config-editor)** | `confirmSaveSaas()` → JSONB merge profil par défaut           | `PUT /sites/:id/profiles/:pid/configuration` (mode: merge) |
+| **Pi avec profils**      | `updateProfileConfiguration()` → `syncProfiles()`             | (sync envoyé au Pi via WebSocket)                          |
+| **Pi sans profils**      | `sendCommand('update_config')`                                | (commande WebSocket)                                       |
 
-Le endpoint `PUT /api/sites/:id/config` :
+Le merge JSONB sur le profil (`configProfileRepository.mergeConfiguration()`) :
 
-- Refuse les sites non-SaaS (`site_type !== 'saas'` → 400)
-- Écrit dans `local_config_mirror` + crée une entrée `config_history`
-- Validation Joi : `{ configuration: Joi.object().required() }`
-- Rate limit : `sensitiveRateLimit` (30 req/min)
+- `COALESCE(configuration, '{}'::jsonb) || $1::jsonb` — fusion partielle sans écraser les champs non envoyés
+- Permet aux 4 saves settings (`saveClubAuth`, `toggleLiveScore`, `saveOverlayConfig`, `saveWatermarkConfig`) de modifier indépendamment leur portion de la config
+- Le endpoint `PUT /api/sites/:id/config` (`saveConfigDirect`) reste disponible comme fallback legacy pour écriture directe dans `local_config_mirror`
+
+> **Source de vérité** : `config_profiles` (profil `is_default = true`). Le contrôleur `getSaasConfig` lit `config_profiles` en priorité — `local_config_mirror` n'est plus la cible des saves SaaS.
 
 **UI SaaS** : Le `deployment-status` affiche "Enregistrer"/"Enregistrement..." au lieu de "Déployer"/"Envoi en cours...", la modal diff masque le sélecteur merge/replace, et les messages de succès sont adaptés. Clés i18n : `common.save`, `common.saving`, `common.confirmSave` (fr/en/es).
 

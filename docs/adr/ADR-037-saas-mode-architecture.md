@@ -64,6 +64,34 @@ Ajouter les composants TV/remote directement dans le dashboard Angular.
 **Inconvénients** : Mélange admin et club-facing, bundle size, complexité routing
 **Verdict** : Rejeté — séparation des responsabilités
 
+## Source de vérité config SaaS (v3.128.5+)
+
+**`config_profiles` est la source de vérité unique pour la config SaaS.** Plus précisément, le **profil par défaut** (`is_default = true`) du site.
+
+### Pourquoi pas `local_config_mirror` ?
+
+`local_config_mirror` est un concept Pi : le Pi sync sa config locale vers le central. Les sites SaaS n'ont pas de Pi, donc `local_config_mirror` reste vide. Le contrôleur `getSaasConfig` lit `config_profiles` en priorité — si le profil par défaut existe avec `configuration: {}`, il retourne du vide et ne tombe **jamais** sur `local_config_mirror`.
+
+### Flux de sauvegarde settings SaaS
+
+```
+Dashboard (site-settings-tab / deployment-status)
+  │  mergeDefaultProfileConfig(siteId, partialConfig)
+  ▼
+SiteSettingsDataService
+  ├── 1. GET /sites/:siteId/profiles → trouve le profil is_default=true
+  └── 2. PUT /sites/:siteId/profiles/:profileId/configuration
+         { configuration: partialConfig, mode: 'merge' }
+           │
+           ▼
+        configProfileRepository.mergeConfiguration()
+           COALESCE(configuration, '{}'::jsonb) || $1::jsonb
+```
+
+### Monitoring
+
+`checkEmptySaasProfiles()` dans `alerting.service.ts` détecte les sites SaaS dont le profil par défaut a une configuration vide ou sans `sponsors`/`categories`. Exécuté toutes les 5 minutes. Alerte warning Slack + log.
+
 ## Conséquences
 
 ### Positives
@@ -72,6 +100,7 @@ Ajouter les composants TV/remote directement dans le dashboard Angular.
 2. Pas de nouvelle infrastructure serveur — coût marginal nul
 3. Réutilisation complète des composants TV existants
 4. Multi-profil supporté nativement (via configProfileRepository)
+5. Source de vérité unique (`config_profiles`) — pas de divergence entre `local_config_mirror` et profils
 
 ### Négatives
 
@@ -80,29 +109,36 @@ Ajouter les composants TV/remote directement dans le dashboard Angular.
 
 ### Risques
 
-| Risque                                             | Mitigation                                                                                                                                    |
-| -------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| Bande passante insuffisante dans le club           | Vidéos optimisées, preload double-buffer                                                                                                      |
-| CORS FTP Hostinger                                 | .htaccess configuré, fallback proxy                                                                                                           |
-| Sécurité endpoint public                           | UUID siteId (128 bits), rate limiting                                                                                                         |
-| Déploiement vidéo bloqué (pas de Pi pour recevoir) | `deployment.service.ts` détecte `siteType === 'saas'` et marque `completed` immédiatement — smoke test enforced (v3.127.5)                    |
-| Alertes "Déploiement bloqué" sur sites SaaS        | `checkStuckDeployments()` exclut les sites SaaS via `JOIN sites WHERE site_type != 'saas'` — smoke test enforced (v3.127.5)                   |
-| OTA envoyé par erreur à un site SaaS               | `update-deployment.service.ts` filtre `site_type != 'saas'`, dashboard filtre `deployableSites` — double guard smoke test enforced (v3.127.4) |
-| Route resolver charge `/configuration.json` local  | `app.routes.ts` vérifie `saasConfigService.isSaasMode()` AVANT le fallback local — smoke test enforced (v3.127.10)                            |
-| AuthService fetch `/configuration.json` en SaaS    | Guard `saasMode` dans `loadConfiguration()` + auto-authenticate — smoke test enforced (v3.127.10)                                             |
-| Config profile vide retourne 404                   | `getSaasConfig` retourne des defaults vides au lieu de 404 pour les profils fraîchement créés — smoke test enforced (v3.127.10)               |
+| Risque                                                  | Mitigation                                                                                                                                                                 |
+| ------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Bande passante insuffisante dans le club                | Vidéos optimisées, preload double-buffer                                                                                                                                   |
+| CORS FTP Hostinger                                      | .htaccess configuré, fallback proxy                                                                                                                                        |
+| Sécurité endpoint public                                | UUID siteId (128 bits), rate limiting                                                                                                                                      |
+| Déploiement vidéo bloqué (pas de Pi pour recevoir)      | `deployment.service.ts` détecte `siteType === 'saas'` et marque `completed` immédiatement — smoke test enforced (v3.127.5)                                                 |
+| Alertes "Déploiement bloqué" sur sites SaaS             | `checkStuckDeployments()` exclut les sites SaaS via `JOIN sites WHERE site_type != 'saas'` — smoke test enforced (v3.127.5)                                                |
+| OTA envoyé par erreur à un site SaaS                    | `update-deployment.service.ts` filtre `site_type != 'saas'`, dashboard filtre `deployableSites` — double guard smoke test enforced (v3.127.4)                              |
+| Route resolver charge `/configuration.json` local       | `app.routes.ts` vérifie `saasConfigService.isSaasMode()` AVANT le fallback local — smoke test enforced (v3.127.10)                                                         |
+| AuthService fetch `/configuration.json` en SaaS         | Guard `saasMode` dans `loadConfiguration()` + auto-authenticate — smoke test enforced (v3.127.10)                                                                          |
+| Config profile vide retourne 404                        | `getSaasConfig` retourne des defaults vides au lieu de 404 pour les profils fraîchement créés — smoke test enforced (v3.127.10)                                            |
+| Settings SaaS écrits dans `local_config_mirror`         | Corrigé v3.128.5 : les saves passent par `mergeDefaultProfileConfig()` → `config_profiles` (JSONB merge) — `local_config_mirror` n'est plus la cible — smoke test enforced |
+| Profil par défaut avec `configuration: {}` indéfiniment | `checkEmptySaasProfiles()` dans `alerting.service.ts` détecte et alerte — monitoring continu toutes les 5 min                                                              |
 
 ## Fichiers clés
 
-| Fichier                                                   | Rôle                                        |
-| --------------------------------------------------------- | ------------------------------------------- |
-| `raspberry/src/environments/environment.saas.ts`          | Config build SaaS                           |
-| `raspberry/src/app/services/saas-config.service.ts`       | Chargement config depuis API                |
-| `central-server/src/controllers/saas.controller.ts`       | API endpoints SaaS                          |
-| `central-server/src/routes/saas.routes.ts`                | Routes publiques SaaS                       |
-| `central-server/src/scripts/migrations/add-site-type.sql` | Colonne `site_type`                         |
-| `angular.json`                                            | Build config `saas` avec `baseHref: /saas/` |
-| `.github/workflows/release.yml`                           | CI/CD deploy vers Hostinger `/saas/`        |
+| Fichier                                                        | Rôle                                                  |
+| -------------------------------------------------------------- | ----------------------------------------------------- |
+| `raspberry/src/environments/environment.saas.ts`               | Config build SaaS                                     |
+| `raspberry/src/app/services/saas-config.service.ts`            | Chargement config depuis API                          |
+| `central-server/src/controllers/saas.controller.ts`            | API endpoints SaaS                                    |
+| `central-server/src/routes/saas.routes.ts`                     | Routes publiques SaaS                                 |
+| `central-server/src/controllers/config-profiles.controller.ts` | CRUD profils + merge mode JSONB                       |
+| `central-server/src/repositories/config-profile.repository.ts` | `mergeConfiguration()` — JSONB merge sur profils      |
+| `central-server/src/services/alerting.service.ts`              | `checkEmptySaasProfiles()` — monitoring configs vides |
+| `central-dashboard/.../site-settings-data.service.ts`          | `mergeDefaultProfileConfig()` — saves SaaS via profil |
+| `central-dashboard/.../deployment-status.component.ts`         | `confirmSaveSaas()` — save config-editor via profil   |
+| `central-server/src/scripts/migrations/add-site-type.sql`      | Colonne `site_type`                                   |
+| `angular.json`                                                 | Build config `saas` avec `baseHref: /saas/`           |
+| `.github/workflows/release.yml`                                | CI/CD deploy vers Hostinger `/saas/`                  |
 
 ## Références
 
