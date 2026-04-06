@@ -80,11 +80,14 @@ Ajouter les composants TV/remote directement dans le dashboard Angular.
 
 ### Risques
 
-| Risque                                   | Mitigation                               |
-| ---------------------------------------- | ---------------------------------------- |
-| Bande passante insuffisante dans le club | Vidéos optimisées, preload double-buffer |
-| CORS FTP Hostinger                       | .htaccess configuré, fallback proxy      |
-| Sécurité endpoint public                 | UUID siteId (128 bits), rate limiting    |
+| Risque                                             | Mitigation                                                                                                                                    |
+| -------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| Bande passante insuffisante dans le club           | Vidéos optimisées, preload double-buffer                                                                                                      |
+| CORS FTP Hostinger                                 | .htaccess configuré, fallback proxy                                                                                                           |
+| Sécurité endpoint public                           | UUID siteId (128 bits), rate limiting                                                                                                         |
+| Déploiement vidéo bloqué (pas de Pi pour recevoir) | `deployment.service.ts` détecte `siteType === 'saas'` et marque `completed` immédiatement — smoke test enforced (v3.127.5)                    |
+| Alertes "Déploiement bloqué" sur sites SaaS        | `checkStuckDeployments()` exclut les sites SaaS via `JOIN sites WHERE site_type != 'saas'` — smoke test enforced (v3.127.5)                   |
+| OTA envoyé par erreur à un site SaaS               | `update-deployment.service.ts` filtre `site_type != 'saas'`, dashboard filtre `deployableSites` — double guard smoke test enforced (v3.127.4) |
 
 ## Fichiers clés
 

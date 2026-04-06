@@ -695,6 +695,7 @@ Les trois enrichissements sont non-fatals (try/catch + warn log) : un échec n'e
 5. **Sync-agents** des Pi connectés reçoivent la commande `deploy_video`
    - Si le site est **online** : commande envoyée immédiatement
    - Si le site est **offline** : commande mise en queue via `sendOrQueue()`, envoyée automatiquement à la reconnexion
+   - Si le site est **SaaS** (`site_type = 'saas'`) : skip `sendOrQueue()`, déploiement marqué `completed` immédiatement (vidéos servies via URL FTP, pas de Pi — v3.127.5+)
 6. **Pi télécharge** la vidéo depuis Supabase
 7. **Pi merge** la config : vidéo ajoutée dans catégorie verrouillée
 8. **Opérateur Jean** voit la nouvelle vidéo avec un cadenas dans l'Admin UI

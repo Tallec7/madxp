@@ -868,6 +868,7 @@ describe('AlertingService', () => {
 
     it('should not create alert when no stuck deployments', async () => {
       mockQuery
+        .mockResolvedValueOnce({ rows: [] }) // SaaS auto-complete (defense-in-depth)
         .mockResolvedValueOnce({ rows: [] }) // auto-complete stuck at 100%
         .mockResolvedValueOnce({ rows: [] }) // content_deployments
         .mockResolvedValueOnce({ rows: [] }); // update_deployments
@@ -883,6 +884,7 @@ describe('AlertingService', () => {
 
     it('should create warning alert for OTA deployment stuck > 30 minutes', async () => {
       mockQuery
+        .mockResolvedValueOnce({ rows: [] }) // SaaS auto-complete (defense-in-depth)
         .mockResolvedValueOnce({ rows: [] }) // auto-complete stuck at 100%
         .mockResolvedValueOnce({ rows: [] }) // content_deployments: none
         .mockResolvedValueOnce({
@@ -915,6 +917,7 @@ describe('AlertingService', () => {
 
     it('should create critical alert for deployment stuck > 60 minutes', async () => {
       mockQuery
+        .mockResolvedValueOnce({ rows: [] }) // SaaS auto-complete (defense-in-depth)
         .mockResolvedValueOnce({ rows: [] }) // auto-complete stuck at 100%
         .mockResolvedValueOnce({ rows: [] }) // content_deployments
         .mockResolvedValueOnce({
@@ -938,6 +941,7 @@ describe('AlertingService', () => {
 
     it('should handle both content and update stuck deployments', async () => {
       mockQuery
+        .mockResolvedValueOnce({ rows: [] }) // SaaS auto-complete (defense-in-depth)
         .mockResolvedValueOnce({ rows: [] }) // auto-complete stuck at 100%
         .mockResolvedValueOnce({
           rows: [{ id: 'content-stuck-1', target_id: 'site-1', minutes_stuck: 35 }],

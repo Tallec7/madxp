@@ -1466,7 +1466,17 @@ Le HDMI secondaire du Raspberry Pi peut alimenter un panneau LED bord de terrain
 
 **Vérification post-upload FTP :** Après chaque upload, `verifyFtpFileExists()` confirme la présence du fichier via `client.size(filename)`. Cette méthode supporte les chemins complets imbriqués. Ne **jamais** utiliser `client.list()` sans argument (ne liste que la racine, échoue pour les sous-dossiers). Alertes Grafana : `neopro-ftp-verify-failures` (taux d'échec > 50%) et `neopro-ftp-excessive-retries` (bande passante gaspillée).
 
-**Flux de déploiement avec variante secondaire :**
+**Flux de déploiement par type de site :**
+
+| `site_type` | Comportement `deployment.service.ts`                                                                      |
+| ----------- | --------------------------------------------------------------------------------------------------------- |
+| `'pi'`      | `deployToSite()` → `sendOrQueue(deploy_video)` → Pi télécharge, confirme via `deploy_progress`            |
+| `'saas'`    | Skip `deployToSite()`, mark `completed` immédiatement (vidéos servies via URL FTP, pas de Pi) — v3.127.5+ |
+| `'demo'`    | Traité comme `pi` (mais généralement pas ciblé par un déploiement)                                        |
+
+> **Monitoring :** `checkStuckDeployments()` dans `alerting.service.ts` exclut les sites SaaS des alertes "Déploiement bloqué" via `JOIN sites WHERE site_type != 'saas'`. Les déploiements Pi bloqués >30min génèrent une alerte warning, >60min critical, et les OTA >2h sont auto-failed.
+
+**Flux de déploiement avec variante secondaire (sites Pi) :**
 
 1. `deployToSite()` cherche toujours la variante secondaire via `videoVariantRepository.findByVideoAndDisplay(videoId, 'secondary')`
 2. Si trouvée, envoie les deux vidéos (principale + secondaire) via `sendOrQueue`

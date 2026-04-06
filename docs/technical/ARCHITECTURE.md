@@ -99,6 +99,8 @@ En plus de l'architecture Edge (Pi), Neopro propose un mode **100% SaaS** : le c
 - **Deploy pipeline** : `deploy-dashboard` s'exécute en premier (clean-slate Hostinger `/`), puis `deploy-saas` déploie dans `/saas/` — le job CI `deploy-saas` doit déclarer `needs: [deploy-dashboard]` pour éviter que le clean-slate efface le build SaaS
 - **Routage** : le `.htaccess` dashboard exclut `/saas/` (`RewriteRule ^saas(/.*)?$ - [L]`) ; le `.htaccess` SaaS redirige vers `/saas/index.html`
 - **Navigation** : utiliser `routerLink` (pas `href` absolu) dans `raspberry/src/` — le `baseHref` est `/saas/` en mode SaaS vs `/` en mode Pi
+- **Déploiement vidéo SaaS** : les sites SaaS n'ont pas de Pi — `deployment.service.ts` détecte `siteType === 'saas'` et marque le déploiement `completed` immédiatement (pas de `sendOrQueue` qui attendrait un Pi inexistant). Les vidéos sont servies directement via URL FTP, aucun transfert physique nécessaire. Le monitoring `checkStuckDeployments()` exclut les sites SaaS des alertes "Déploiement bloqué" (v3.127.5+)
+- **OTA SaaS** : les sites SaaS sont exclus des déploiements OTA — `update-deployment.service.ts` filtre `site_type != 'saas'` dans `getTargetSites()`, et le dashboard filtre via `deployableSites`
 
 ---
 

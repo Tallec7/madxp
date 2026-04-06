@@ -38,9 +38,10 @@
 34. [OTA bloquée à 5% sur WiFi mesh (v3.116.24+)](#ota-bloquée-à-5-sur-wifi-mesh-v311624)
 35. [Hotspot channel flapping au boot (v3.116.26+)](#hotspot-channel-flapping-au-boot-v311626)
 36. [Hotspot recovery disproportionnée — restart complet pour IP manquante (v3.116.26+)](#hotspot-recovery-disproportionnée--restart-complet-pour-ip-manquante-v311626)
-37. [Déploiement OTA "Échoué" sans message d'erreur (v3.116.28+)](#déploiement-ota-échoué-sans-message-derreur-v311628)
-38. [Post-OTA validation failed: ECONNREFUSED ::1 (v3.116.28+)](#post-ota-validation-failed-econnrefused-1-v311628)
-39. [Fausses alertes offline/online Slack — flapping Socket.IO (v3.118.2+)](#fausses-alertes-offlineonline-slack--flapping-socketio-v31182)
+37. [Déploiement vidéo SaaS bloqué indéfiniment (v3.127.5+)](#déploiement-vidéo-saas-bloqué-indéfiniment-v31275)
+38. [Déploiement OTA "Échoué" sans message d'erreur (v3.116.28+)](#déploiement-ota-échoué-sans-message-derreur-v311628)
+39. [Post-OTA validation failed: ECONNREFUSED ::1 (v3.116.28+)](#post-ota-validation-failed-econnrefused-1-v311628)
+40. [Fausses alertes offline/online Slack — flapping Socket.IO (v3.118.2+)](#fausses-alertes-offlineonline-slack--flapping-socketio-v31182)
 
 > **WiFi USB** : Pour un guide complet sur la clé WiFi USB (installation, diagnostic, pannes, recovery), voir [WIFI_USB_GUIDE.md](WIFI_USB_GUIDE.md).
 >
@@ -6295,4 +6296,60 @@ curl -s https://neopro-central-production.up.railway.app/health | python3 -m jso
 
 ---
 
-**Dernière mise à jour :** 24 mars 2026 (fix fausses alertes offline Socket.IO reconnection race, watcher/listener leak, wlan1 reconnect spam, diagnostic Railway heap pressure — v3.117.1 → v3.118.2)
+---
+
+## 37. Déploiement vidéo SaaS bloqué indéfiniment (v3.127.5+)
+
+**Symptôme :** Les déploiements vidéo vers des sites `site_type = 'saas'` restent en `in_progress` à 0% indéfiniment. Des alertes "Déploiement bloqué" apparaissent toutes les 30 minutes dans Slack.
+
+**Cause (pré-v3.127.5) :** `deployment.service.ts` traitait les sites SaaS comme des sites Pi : il envoyait un `deploy_video` via `commandQueueService.sendOrQueue()` qui attendait un Raspberry Pi pour confirmer le téléchargement. Les sites SaaS n'ont pas de Pi → la commande restait en queue indéfiniment → `checkStuckDeployments()` créait des alertes critiques.
+
+**Vérification**
+
+```sql
+-- Chercher les déploiements SaaS bloqués
+SELECT cd.id, cd.status, cd.progress,
+       EXTRACT(EPOCH FROM (NOW() - COALESCE(cd.started_at, cd.created_at))) / 60 AS minutes_stuck,
+       s.site_name, s.site_type
+FROM content_deployments cd
+JOIN sites s ON cd.target_id = s.id
+WHERE cd.status = 'in_progress'
+  AND s.site_type = 'saas';
+
+-- Vérifier les alertes liées
+SELECT id, type, severity, created_at
+FROM alerts
+WHERE site_id IN (SELECT id FROM sites WHERE site_type = 'saas')
+  AND type = 'Déploiement bloqué'
+ORDER BY created_at DESC LIMIT 20;
+```
+
+**Résolution (si encore sur version < 3.127.5)**
+
+```sql
+-- Compléter manuellement les déploiements SaaS bloqués
+UPDATE content_deployments cd
+SET status = 'completed', completed_at = NOW(), progress = 100
+FROM sites s
+WHERE cd.target_id = s.id
+  AND s.site_type = 'saas'
+  AND cd.status = 'in_progress';
+```
+
+**Fix définitif (v3.127.5+) :**
+
+- `deployment.service.ts` : détecte `siteType === 'saas'` et marque le déploiement `completed` immédiatement (pas de `sendOrQueue`)
+- `alerting.service.ts` : `checkStuckDeployments()` exclut les sites SaaS via `JOIN sites WHERE site_type != 'saas'`
+- Smoke tests enforced pour prévenir la régression
+
+| Fichier modifié                              | Rôle                                                  |
+| -------------------------------------------- | ----------------------------------------------------- |
+| `central-server/.../deployment.service.ts`   | Skip `deployToSite()` pour SaaS, completion immédiate |
+| `central-server/.../alerting.service.ts`     | Exclut SaaS de `checkStuckDeployments()`              |
+| `central-server/.../__tests__/smoke.test.ts` | 2 smoke tests : SaaS skip + alerting exclusion        |
+
+**Voir aussi :** ADR-037 (Architecture SaaS), [COMMAND_QUEUE.md](/docs/technical/COMMAND_QUEUE.md)
+
+---
+
+**Dernière mise à jour :** 6 avril 2026 (fix déploiements vidéo SaaS bloqués indéfiniment — deployment.service.ts skip SaaS + alerting exclusion — v3.127.5)

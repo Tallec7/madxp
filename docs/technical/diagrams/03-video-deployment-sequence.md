@@ -79,6 +79,25 @@ sequenceDiagram
     API-->>Dash: 200 {deploymentId, sites: [...]}
 ```
 
+## Phase 2b : Short-circuit SaaS (v3.127.5+)
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant DS as Deployment Service
+    participant DB as PostgreSQL
+
+    Note over DS,DB: === PHASE 2b : SITE SaaS (pas de Pi) ===
+
+    DS->>DS: getTargetSites() retourne siteType='saas'
+    DS->>DS: Skip deployToSite() / sendOrQueue()
+    Note right of DS: Les vidéos SaaS sont servies<br/>directement via URL FTP —<br/>aucun transfert physique nécessaire
+
+    DS->>DB: UPDATE content_deployments<br/>SET status='completed', progress=100,<br/>completed_at=NOW()
+
+    Note over DS,DB: Pas de commande queued,<br/>pas d'attente de Pi,<br/>pas d'alerte "bloqué"
+```
+
 ## Phase 3 : Envoi vers le Raspberry Pi
 
 ```mermaid

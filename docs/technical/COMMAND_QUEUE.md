@@ -110,6 +110,8 @@ central-dashboard/
 
 Ces commandes ont du sens même si le site est offline car elles seront appliquées au réveil.
 
+> **⚠️ Sites SaaS (v3.127.5+) :** Les sites `site_type = 'saas'` n'ont pas de Raspberry Pi. Les commandes `deploy_video` ne doivent **jamais** être envoyées via `sendOrQueue()` pour un site SaaS — le déploiement est marqué `completed` immédiatement dans `deployment.service.ts`. De même, `update_software` est exclu pour les sites SaaS dans `update-deployment.service.ts`. Voir ADR-037.
+
 ### Commandes "temps réel uniquement" (non queueables)
 
 | Commande                | Description                  | Raison              |

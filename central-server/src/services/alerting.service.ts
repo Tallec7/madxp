@@ -1150,9 +1150,28 @@ class AlertingService {
    */
   async checkStuckDeployments(): Promise<void> {
     try {
+      // Defense-in-depth: auto-complete SaaS content deployments stuck in_progress
+      // (pre-v3.127.5 deployments or edge cases where a SaaS deployment slipped through)
+      const saasAutoCompleted = await query<{ id: string }>(`
+        UPDATE content_deployments cd
+        SET status = 'completed', completed_at = NOW(), progress = 100
+        FROM sites s
+        WHERE cd.target_id = s.id
+          AND cd.target_type = 'site'
+          AND s.site_type = 'saas'
+          AND cd.status IN ('in_progress', 'pending')
+        RETURNING cd.id
+      `);
+      if (saasAutoCompleted.rows.length > 0) {
+        logger.info('Auto-completed SaaS deployments (no Pi needed)', {
+          count: saasAutoCompleted.rows.length,
+          ids: saasAutoCompleted.rows.map(r => r.id),
+        });
+      }
+
       // Auto-complete content deployments stuck at 100% for >5 minutes
       // (Socket.IO fire-and-forget can lose the completed:true signal)
-      // Exclut les sites SaaS qui n'ont pas de Pi (leurs déploiements sont complétés immédiatement)
+      // Exclut les sites SaaS (déjà traités au-dessus)
       const autoCompleted = await query<{ id: string }>(`
         UPDATE content_deployments cd
         SET status = 'completed', completed_at = NOW()

@@ -14211,6 +14211,17 @@ describe('SaaS deployment pipeline guards', () => {
       joinsOrFiltersSiteType: true,
     });
   });
+
+  // --- alerting.service.ts must auto-complete SaaS deployments as defense-in-depth ---
+  it('alerting.service.ts must auto-complete SaaS deployments stuck in_progress/pending', () => {
+    const filePath = path.join(repoRoot, 'central-server', 'src', 'services', 'alerting.service.ts');
+    const content = fs.readFileSync(filePath, 'utf8');
+    expect({
+      hasSaasAutoComplete: content.includes("site_type = 'saas'") && content.includes('saasAutoCompleted'),
+    }).toEqual({
+      hasSaasAutoComplete: true,
+    });
+  });
 });
 
 // ============================================================
