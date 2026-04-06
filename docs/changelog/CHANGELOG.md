@@ -1,3 +1,9 @@
+## [3.127.6](https://github.com/Tallec7/neopro/compare/v3.127.5...v3.127.6) (2026-04-06)
+
+### Bug Fixes
+
+- **dashboard:** fix 3 video library bugs — false DOUBLON, SaaS deploy, 0 B size ([cf99adf](https://github.com/Tallec7/neopro/commit/cf99adf9c6d00d02125bfe9cdbe367b501567511))
+
 ## [3.127.5](https://github.com/Tallec7/neopro/compare/v3.127.4...v3.127.5) (2026-04-06)
 
 ### Bug Fixes
