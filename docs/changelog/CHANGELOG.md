@@ -1,3 +1,9 @@
+## [3.128.6](https://github.com/Tallec7/neopro/compare/v3.128.5...v3.128.6) (2026-04-06)
+
+### Bug Fixes
+
+- **saas:** use link prefetch instead of fetch for cross-origin video cache warming ([ed634cb](https://github.com/Tallec7/neopro/commit/ed634cb2d2187b3d08a0ecb4d70252ef088bb79b))
+
 ## [3.128.5](https://github.com/Tallec7/neopro/compare/v3.128.4...v3.128.5) (2026-04-06)
 
 ### Bug Fixes
