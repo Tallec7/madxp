@@ -126,6 +126,10 @@
               "assets": [
                 {
                   "glob": "**/*",
+                  "input": "raspberry/public"
+                },
+                {
+                  "glob": "**/*",
                   "input": "raspberry/src/assets/i18n",
                   "output": "assets/i18n"
                 },
