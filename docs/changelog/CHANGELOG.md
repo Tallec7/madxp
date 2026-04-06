@@ -1,3 +1,9 @@
+## [3.127.16](https://github.com/Tallec7/neopro/compare/v3.127.15...v3.127.16) (2026-04-06)
+
+### Bug Fixes
+
+- **dashboard:** show full config JSON instead of 4-field subset in config-editor toggle ([210002f](https://github.com/Tallec7/neopro/commit/210002ffe2260e8dd72877fc6228145f04f62c61))
+
 ## [3.127.15](https://github.com/Tallec7/neopro/compare/v3.127.14...v3.127.15) (2026-04-06)
 
 ### Bug Fixes
