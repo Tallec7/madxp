@@ -1,3 +1,9 @@
+## [3.128.7](https://github.com/Tallec7/neopro/compare/v3.128.6...v3.128.7) (2026-04-06)
+
+### Bug Fixes
+
+- **club-portal:** restrict club user visibility on SaaS sites ([802343e](https://github.com/Tallec7/neopro/commit/802343e8b61df525c74c52ac7fe169dc06964343))
+
 ## [3.128.6](https://github.com/Tallec7/neopro/compare/v3.128.5...v3.128.6) (2026-04-06)
 
 ### Bug Fixes
