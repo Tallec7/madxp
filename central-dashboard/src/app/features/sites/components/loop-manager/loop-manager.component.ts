@@ -100,7 +100,7 @@ interface SponsorWeightGroup {
                   </option>
                 </optgroup>
               </select>
-              <span class="cloud-hint" *ngIf="isCloudVideo(video.path)">⏳ Sera déployée</span>
+              <span class="cloud-hint" *ngIf="siteType !== 'saas' && isCloudVideo(video.path)">⏳ Sera déployée</span>
               <span class="error-hint" *ngIf="!video.path">Vidéo requise</span>
               <span class="sponsor-badge-readonly" *ngIf="getAutoDetectedSponsor(video.path) as sponsor"
                     [title]="'Associé au sponsor ' + sponsor.name + ' (onglet Sponsors)'">
@@ -161,7 +161,7 @@ interface SponsorWeightGroup {
                     </option>
                   </optgroup>
                 </select>
-                <span class="cloud-badge" *ngIf="isCloudVideo(video.path)" title="Sera déployée automatiquement">⏳</span>
+                <span class="cloud-badge" *ngIf="siteType !== 'saas' && isCloudVideo(video.path)" title="Sera déployée automatiquement">⏳</span>
                 <span class="sponsor-badge-readonly" *ngIf="getAutoDetectedSponsor(video.path) as sponsor"
                       [title]="'Associé au sponsor ' + sponsor.name + ' (onglet Sponsors)'">
                   🔗 {{ sponsor.name }}
