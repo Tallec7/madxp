@@ -1,3 +1,9 @@
+## [3.127.11](https://github.com/Tallec7/neopro/compare/v3.127.10...v3.127.11) (2026-04-06)
+
+### Bug Fixes
+
+- **saas:** add missing public assets to SaaS build config ([871255c](https://github.com/Tallec7/neopro/commit/871255c07fdb5d179af1362d0175a1832704bc43))
+
 ## [3.127.10](https://github.com/Tallec7/neopro/compare/v3.127.9...v3.127.10) (2026-04-06)
 
 ### Bug Fixes
