@@ -1,3 +1,9 @@
+## [3.128.9](https://github.com/Tallec7/neopro/compare/v3.128.8...v3.128.9) (2026-04-06)
+
+### Bug Fixes
+
+- **club-portal:** include admin shared videos in club cloud filter ([ac4d40a](https://github.com/Tallec7/neopro/commit/ac4d40aa786ac966cb8bcfb3b24e960a95dad33b))
+
 ## [3.128.8](https://github.com/Tallec7/neopro/compare/v3.128.7...v3.128.8) (2026-04-06)
 
 ### Bug Fixes
