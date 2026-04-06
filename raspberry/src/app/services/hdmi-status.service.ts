@@ -38,6 +38,10 @@ export class HdmiStatusService {
   private readonly CACHE_DURATION = 10 * 1000; // 10 secondes
 
   constructor() {
+    // En mode SaaS, pas de matériel HDMI — ne pas poller
+    if ((environment as { saasMode?: boolean }).saasMode) {
+      return;
+    }
     // Démarrer le polling de l'état HDMI
     this.startPolling();
   }

@@ -14,6 +14,7 @@ import { LicenseService, LicenseState } from '../../services/license.service';
 import { PlayerStateService } from '../../services/player-state.service';
 import { ScreenshotService } from '../../services/screenshot.service';
 import { RecordingStateService } from '../../services/recording-state.service';
+import { SaasConfigService } from '../../services/saas-config.service';
 import { LicenseBlockComponent } from '../license-block/license-block.component';
 import { WaitingScreenComponent } from '../waiting-screen/waiting-screen.component';
 import { WrongPortScreenComponent } from '../wrong-port-screen/wrong-port-screen.component';
@@ -49,6 +50,7 @@ export class TvComponent implements OnInit, OnDestroy {
   private readonly playerStateService = inject(PlayerStateService);
   private readonly screenshotService = inject(ScreenshotService);
   private readonly recordingState = inject(RecordingStateService);
+  private readonly saasConfigService = inject(SaasConfigService);
 
   private localBroadcastSubscriptions: Subscription[] = [];
 
@@ -1624,6 +1626,17 @@ export class TvComponent implements OnInit, OnDestroy {
    * Récupère le site_id depuis l'API du serveur local et configure le service analytics
    */
   private loadSiteId(): void {
+    // En mode SaaS, le siteId provient du SaasConfigService (URL param + localStorage)
+    // Pas d'API locale /api/site-info disponible
+    if (this.saasConfigService.isSaasMode()) {
+      const siteId = this.saasConfigService.getSiteId();
+      if (siteId) {
+        this.analyticsService.setSiteId(siteId);
+        console.log('[TV] Site ID loaded for analytics (SaaS):', siteId);
+      }
+      return;
+    }
+
     const siteInfoUrl = `${environment.socketUrl}/api/site-info`;
     this.http.get<{ siteId: string | null; siteName: string | null; configured: boolean }>(siteInfoUrl)
       .subscribe({
