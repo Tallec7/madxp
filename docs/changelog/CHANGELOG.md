@@ -1,3 +1,9 @@
+## [3.127.14](https://github.com/Tallec7/neopro/compare/v3.127.13...v3.127.14) (2026-04-06)
+
+### Bug Fixes
+
+- **saas:** hide 'Sera déployée' cloud badges in loop-manager for SaaS sites ([6ffe380](https://github.com/Tallec7/neopro/commit/6ffe380aaab51dcf7910b2e5d87ea4305b98e339))
+
 ## [3.127.13](https://github.com/Tallec7/neopro/compare/v3.127.12...v3.127.13) (2026-04-06)
 
 ### Bug Fixes
