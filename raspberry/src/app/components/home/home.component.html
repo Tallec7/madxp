@@ -4,12 +4,16 @@
     <h1 *ngIf="isSaasMode" class="saas-title">Neopro TV</h1>
   </div>
 
-  <a class="cta" routerLink="/remote">
+  <a class="cta" routerLink="/remote" [queryParams]="siteQueryParams">
     <span class="cta-icon">&#127918;</span>
     <span class="cta-label">Ouvrir la télécommande</span>
   </a>
 
-  <a class="secondary-link" routerLink="/tv" [queryParams]="{ displayType: 'secondary' }">
+  <a
+    class="secondary-link"
+    routerLink="/tv"
+    [queryParams]="isSaasMode ? siteQueryParams : { displayType: 'secondary' }"
+  >
     <span>&#128250;</span>
     <span>Afficher l'écran TV sur ce navigateur</span>
   </a>

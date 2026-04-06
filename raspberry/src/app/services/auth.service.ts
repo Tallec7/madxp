@@ -206,6 +206,9 @@ export class AuthService {
    * Retourne l'état d'authentification actuel
    */
   public isAuthenticated(): boolean {
+    if ((environment as { saasMode?: boolean }).saasMode) {
+      return true;
+    }
     return this.checkAuth();
   }
 
