@@ -1140,11 +1140,8 @@ export class ConfigEditorComponent {
     try {
       const parsed = JSON.parse(value) as SiteConfiguration;
       this.jsonError = '';
-      // Apply parsed JSON to config
-      if (parsed.sponsors) this.config.sponsors = parsed.sponsors;
-      if (parsed.categories) this.config.categories = parsed.categories;
-      if (parsed.timeCategories) this.config.timeCategories = parsed.timeCategories;
-      if (parsed.categoryMappings) this.config.categoryMappings = parsed.categoryMappings;
+      // Apply all parsed JSON fields to config
+      Object.assign(this.config, parsed);
       this.emitConfigChanged();
     } catch (e) {
       this.jsonError = `JSON invalide: ${e instanceof Error ? e.message : 'Erreur inconnue'}`;
@@ -1168,13 +1165,7 @@ export class ConfigEditorComponent {
   }
 
   syncJsonFromConfig(): void {
-    const configSubset = {
-      sponsors: this.config.sponsors,
-      categories: this.config.categories,
-      timeCategories: this.config.timeCategories,
-      categoryMappings: this.config.categoryMappings,
-    };
-    this.configJsonString = JSON.stringify(configSubset, null, 2);
+    this.configJsonString = JSON.stringify(this.config, null, 2);
     this.jsonError = '';
   }
 }
