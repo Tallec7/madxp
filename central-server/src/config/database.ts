@@ -1,8 +1,17 @@
 import fs from 'fs';
 import path from 'path';
 import { Pool, PoolConfig, QueryResultRow } from 'pg';
+import { setTypeParser } from 'pg-types';
 import dotenv from 'dotenv';
 import logger from './logger';
+
+// PostgreSQL BIGINT (OID 20) is returned as string by default because JS Number
+// cannot represent the full int8 range. Our BIGINT columns (file_size, duration)
+// are well within safe integer range, so parse them as numbers for the frontend.
+setTypeParser(20, (val: string) => {
+  const n = parseInt(val, 10);
+  return Number.isSafeInteger(n) ? n : val; // Keep string if exceeds safe range
+});
 
 dotenv.config();
 

@@ -14512,3 +14512,26 @@ describe('Video library formatBytes null handling', () => {
     });
   });
 });
+
+// ----------------------------------------------------------
+// PostgreSQL BIGINT type parser
+// ----------------------------------------------------------
+describe('PostgreSQL BIGINT type parser', () => {
+  it('database.ts must import setTypeParser from pg-types', () => {
+    const content = fs.readFileSync(
+      path.join(__dirname, '..', 'config', 'database.ts'),
+      'utf8',
+    );
+    expect(content).toContain("import { setTypeParser } from 'pg-types'");
+  });
+
+  it('database.ts must parse BIGINT (OID 20) as number', () => {
+    const content = fs.readFileSync(
+      path.join(__dirname, '..', 'config', 'database.ts'),
+      'utf8',
+    );
+    expect(content).toContain('setTypeParser(20,');
+    expect(content).toContain('parseInt(val, 10)');
+    expect(content).toContain('Number.isSafeInteger');
+  });
+});

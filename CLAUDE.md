@@ -253,6 +253,7 @@ source central-server/.env && psql "$DATABASE_URL" -f central-server/src/scripts
 - Laisser `onVideoDeploy()` dans `site-content-tab.component.ts` sans guard `siteType === 'saas'` (un clic deploy sur un site SaaS envoie `sendOrQueue` qui queue indéfiniment → notification "en file d'attente" trompeuse — le composant DOIT recevoir `@Input() siteType` et return early pour SaaS — smoke test enforced)
 - Accepter un upload vidéo de 0 octets dans `createVideo` / `createVideos` de `content.controller.ts` (un fichier vide passe multer et s'insère en DB avec `file_size: 0` → vidéo cassée sans durée ni contenu — guard `file.size === 0` → 400 obligatoire — smoke test enforced)
 - Retourner `'0 B'` dans `formatBytes()` pour `null`/`undefined` (masque les vidéos à taille inconnue en les confondant avec les fichiers réellement vides — retourner `'-'` pour null/undefined, réserver `'0 B'` pour un vrai 0 — smoke test enforced)
+- Supprimer `setTypeParser(20, ...)` de `database.ts` (PostgreSQL BIGINT OID 20 est retourné comme string par le driver `pg` — sans ce parser, `file_size` et `duration` arrivent comme `"12345"` au frontend → `Number.isFinite("12345")` = false → taille affichée `'-'` — le parser convertit en number côté serveur, avec fallback string si hors safe integer range — smoke test enforced)
 
 ## Architecture détaillée
 
