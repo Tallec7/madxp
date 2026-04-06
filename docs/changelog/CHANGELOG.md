@@ -1,3 +1,9 @@
+## [3.127.10](https://github.com/Tallec7/neopro/compare/v3.127.9...v3.127.10) (2026-04-06)
+
+### Bug Fixes
+
+- **saas:** return default config for empty profiles and handle API errors gracefully ([1c774ff](https://github.com/Tallec7/neopro/commit/1c774ff2382264da7a60a02b705e7d34a62865ac))
+
 ## [3.127.9](https://github.com/Tallec7/neopro/compare/v3.127.8...v3.127.9) (2026-04-06)
 
 ### Bug Fixes
