@@ -96,11 +96,22 @@ En plus de l'architecture Edge (Pi), Neopro propose un mode **100% SaaS** : le c
 - **`site_type`** colonne DB : `'pi'` (matériel), `'saas'` (navigateur), `'demo'` (vitrine)
 - Composants Angular réutilisés tel quel : `TvComponent`, `RemoteComponent`, `LocalBroadcastService`
 - Config servie par `saas.controller.ts` avec résolution des chemins vidéo en URLs FTP publiques
+- **Build assets SaaS** : la config `saas` dans `angular.json` override les `assets` par défaut — elle DOIT inclure le glob `raspberry/public` (contient `neopro-logo-white.png`, `favicon.ico`, `manifest.json`, `service-worker.js`). Sans ce glob, le splash screen logo request hit le SPA catch-all et retourne `index.html` (422 + MIME `text/html`). Smoke test enforced.
 - **Deploy pipeline** : `deploy-dashboard` s'exécute en premier (clean-slate Hostinger `/`), puis `deploy-saas` déploie dans `/saas/` — le job CI `deploy-saas` doit déclarer `needs: [deploy-dashboard]` pour éviter que le clean-slate efface le build SaaS
 - **Routage** : le `.htaccess` dashboard exclut `/saas/` (`RewriteRule ^saas(/.*)?$ - [L]`) ; le `.htaccess` SaaS redirige vers `/saas/index.html`
 - **Navigation** : utiliser `routerLink` (pas `href` absolu) dans `raspberry/src/` — le `baseHref` est `/saas/` en mode SaaS vs `/` en mode Pi
 - **Déploiement vidéo SaaS** : les sites SaaS n'ont pas de Pi — `deployment.service.ts` détecte `siteType === 'saas'` et marque le déploiement `completed` immédiatement (pas de `sendOrQueue` qui attendrait un Pi inexistant). Les vidéos sont servies directement via URL FTP, aucun transfert physique nécessaire. Le monitoring `checkStuckDeployments()` exclut les sites SaaS des alertes "Déploiement bloqué" (v3.127.5+)
 - **OTA SaaS** : les sites SaaS sont exclus des déploiements OTA — `update-deployment.service.ts` filtre `site_type != 'saas'` dans `getTargetSites()`, et le dashboard filtre via `deployableSites`
+- **Dashboard SaaS guards** : les composants enfants de `site-detail` reçoivent `@Input() siteType` propagé via la chaîne `site-detail → site-content-tab → config-editor / video-manager / deployment-status / loop-manager / site-settings-tab`. Chaque composant utilise un getter `get isSaas(): boolean { return this.siteType === 'saas'; }` pour masquer les éléments Pi-only. Éléments gardés :
+  - `site-detail` : onglet Debug masqué, État affiche métriques SaaS au lieu de hardware Pi, pas de "En attente de connexion"
+  - `loop-manager` : badges ⏳ "Sera déployée" / cloud-hint / cloud-badge masqués
+  - `site-settings-tab` : boutons "Enregistrer" au lieu de "Deployer", pas de `deployWatermarkAsset()`, notifications "enregistrée" au lieu de "déployée"
+  - `config-editor` (standalone) : section merge/replace masquée, footer "Configuration à jour" au lieu de "Configuration synchronisée"
+  - `video-library` : barre stockage Pi, badge "Sur le Pi", bouton deploy 🚀, filtres "Sur le Pi"/"À déployer" masqués
+  - `video-manager` : boutons "Supprimer du Pi" masqués
+  - `deployment-status` : section "Pending Deployments", texte "confirmation du Pi" masqués
+  - `site-profiles-tab` : warning "Pi hors-ligne", bannière sync Pi masqués
+  - Régression prévenue par smoke tests (`SaaS child component guards` dans `smoke.test.ts`) et règles CLAUDE.md
 
 ---
 

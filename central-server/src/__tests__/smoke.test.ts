@@ -14063,6 +14063,27 @@ describe('SaaS deployment pipeline guards', () => {
     });
   });
 
+  // --- angular.json SaaS config must include raspberry/public assets (logo, favicon, manifest) ---
+  it('angular.json SaaS build config must include raspberry/public assets glob', () => {
+    const filePath = path.join(repoRoot, 'angular.json');
+    const content = fs.readFileSync(filePath, 'utf8');
+    const angularJson = JSON.parse(content);
+    const saasConfig = angularJson?.projects?.raspberry?.architect?.build?.configurations?.saas;
+    expect(saasConfig).toBeDefined();
+    // The SaaS build MUST include raspberry/public (contains neopro-logo-white.png, favicon.ico, manifest.json)
+    // Without it, the splash screen logo request hits the SPA catch-all and returns index.html (422 + wrong MIME)
+    const hasPublicAssets =
+      saasConfig.assets?.some(
+        (a: { glob?: string; input?: string }) =>
+          typeof a === 'object' && a.glob === '**/*' && a.input === 'raspberry/public',
+      ) ?? false;
+    expect({
+      includesPublicAssets: hasPublicAssets,
+    }).toEqual({
+      includesPublicAssets: true,
+    });
+  });
+
   // --- release.yml deploy-saas depends on deploy-dashboard ---
   it('release.yml deploy-saas job must declare deploy-dashboard as a dependency', () => {
     const filePath = path.join(repoRoot, '.github', 'workflows', 'release.yml');
@@ -14353,6 +14374,62 @@ describe('SaaS site-detail dashboard guards', () => {
   });
 });
 
+// =============================================================================
+// SaaS Pi-local API guards — Pi endpoints must not be called in SaaS mode
+// =============================================================================
+describe('SaaS Pi-local API guards (no /api/site-info or /api/hdmi-status on SaaS)', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+
+  // --- HdmiStatusService must skip polling in SaaS mode ---
+  it('hdmi-status.service.ts must have saasMode guard in constructor to skip polling', () => {
+    const filePath = path.join(repoRoot, 'raspberry', 'src', 'app', 'services', 'hdmi-status.service.ts');
+    const content = fs.readFileSync(filePath, 'utf8');
+    expect({
+      hasSaasModeCheck: content.includes('saasMode'),
+      constructorReturnsEarlyForSaas: /constructor[\s\S]*?saasMode[\s\S]*?return[\s\S]*?startPolling/.test(content),
+    }).toEqual({
+      hasSaasModeCheck: true,
+      constructorReturnsEarlyForSaas: true,
+    });
+  });
+
+  // --- tv.component.ts loadSiteId must use SaasConfigService in SaaS mode ---
+  it('tv.component.ts loadSiteId must guard with isSaasMode and use SaasConfigService', () => {
+    const filePath = path.join(repoRoot, 'raspberry', 'src', 'app', 'components', 'tv', 'tv.component.ts');
+    const content = fs.readFileSync(filePath, 'utf8');
+
+    // Extract loadSiteId method
+    const methodStart = content.indexOf('private loadSiteId()');
+    expect(methodStart).toBeGreaterThan(-1);
+    const methodBlock = content.slice(methodStart, methodStart + 600);
+
+    expect({
+      checksSaasMode: methodBlock.includes('isSaasMode()'),
+      usesSaasConfigServiceGetSiteId: methodBlock.includes('getSiteId()'),
+      setsAnalyticsSiteIdForSaas: methodBlock.includes('setSiteId'),
+      returnsEarlyForSaas: /isSaasMode[\s\S]*?return;/.test(methodBlock),
+    }).toEqual({
+      checksSaasMode: true,
+      usesSaasConfigServiceGetSiteId: true,
+      setsAnalyticsSiteIdForSaas: true,
+      returnsEarlyForSaas: true,
+    });
+  });
+
+  // --- tv.component.ts must import and inject SaasConfigService ---
+  it('tv.component.ts must inject SaasConfigService', () => {
+    const filePath = path.join(repoRoot, 'raspberry', 'src', 'app', 'components', 'tv', 'tv.component.ts');
+    const content = fs.readFileSync(filePath, 'utf8');
+    expect({
+      importsSaasConfigService: content.includes("import { SaasConfigService }"),
+      injectsSaasConfigService: content.includes('inject(SaasConfigService)'),
+    }).toEqual({
+      importsSaasConfigService: true,
+      injectsSaasConfigService: true,
+    });
+  });
+});
+
 // OTA deployment must exclude SaaS sites (no hardware — no OTA)
 describe('OTA deployment must exclude SaaS sites', () => {
   const repoRoot = path.resolve(__dirname, '..', '..', '..');
@@ -14617,16 +14694,20 @@ describe('SaaS child component guards (Pi-specific UI hidden for SaaS)', () => {
     });
   });
 
-  // --- loop-manager must not show ⏳ suffix for SaaS ---
-  it('loop-manager must have siteType @Input and hide deploy status suffix for SaaS', () => {
+  // --- loop-manager must not show ⏳ suffix or cloud badges for SaaS ---
+  it('loop-manager must have siteType @Input and hide deploy status suffix and cloud badges for SaaS', () => {
     const filePath = path.join(dashboardRoot, 'components', 'loop-manager', 'loop-manager.component.ts');
     const content = fs.readFileSync(filePath, 'utf8');
     expect({
       hasSiteTypeInput: content.includes("@Input() siteType"),
       guardsSuffix: content.includes("siteType !== 'saas'") && content.includes('isOnPi'),
+      guardsCloudHint: /siteType !== 'saas'[\s\S]{0,30}isCloudVideo[\s\S]{0,50}Sera déployée/.test(content),
+      guardsCloudBadge: /siteType !== 'saas'[\s\S]{0,30}isCloudVideo[\s\S]{0,50}cloud-badge/.test(content) || /siteType !== 'saas'[\s\S]{0,30}isCloudVideo/.test(content),
     }).toEqual({
       hasSiteTypeInput: true,
       guardsSuffix: true,
+      guardsCloudHint: true,
+      guardsCloudBadge: true,
     });
   });
 
@@ -14687,6 +14768,65 @@ describe('SaaS child component guards (Pi-specific UI hidden for SaaS)', () => {
       debugPanelGuarded,
     }).toEqual({
       debugPanelGuarded: true,
+    });
+  });
+
+  // --- site-detail SaaS État must NOT show "En attente de connexion" ---
+  it('site-detail SaaS État must not show "En attente de connexion" for version field', () => {
+    const filePath = path.join(dashboardRoot, 'site-detail.component.html');
+    const content = fs.readFileSync(filePath, 'utf8');
+    // Extract the SaaS section (between "SaaS État view" and "Pi État view")
+    const saasSection = content.match(/SaaS État view[\s\S]*?Pi État view/)?.[0] || '';
+    expect({
+      noAttenteConnexion: !saasSection.includes('En attente de connexion'),
+      hasDerniereSession: saasSection.includes('Dernière session'),
+      noDerniereConnexion: !saasSection.includes('Dernière connexion'),
+    }).toEqual({
+      noAttenteConnexion: true,
+      hasDerniereSession: true,
+      noDerniereConnexion: true,
+    });
+  });
+
+  // --- standalone config-editor must have siteType and SaaS label guards ---
+  it('standalone config-editor must have siteType @Input and SaaS-aware labels', () => {
+    const tsPath = path.join(dashboardRoot, 'config-editor', 'config-editor.component.ts');
+    const htmlPath = path.join(dashboardRoot, 'config-editor', 'config-editor.component.html');
+    const tsContent = fs.readFileSync(tsPath, 'utf8');
+    const htmlContent = fs.readFileSync(htmlPath, 'utf8');
+    expect({
+      hasSiteTypeInput: tsContent.includes("@Input() siteType"),
+      hasIsSaasGetter: tsContent.includes('get isSaas'),
+      hidesMergeReplace: htmlContent.includes('*ngIf="!isSaas"') && htmlContent.includes('Mode de déploiement'),
+      hasSaasFooterLabels: htmlContent.includes('Modifications non enregistrées') && htmlContent.includes('Configuration à jour'),
+      hasSaasSaveButton: /isSaas[\s\S]{0,30}common\.save/.test(htmlContent),
+    }).toEqual({
+      hasSiteTypeInput: true,
+      hasIsSaasGetter: true,
+      hidesMergeReplace: true,
+      hasSaasFooterLabels: true,
+      hasSaasSaveButton: true,
+    });
+  });
+
+  // --- site-settings-tab must use SaaS-appropriate notification messages ---
+  it('site-settings-tab must use "enregistrée" notifications for SaaS instead of "déployée"', () => {
+    const tsPath = path.join(dashboardRoot, 'components', 'site-settings-tab', 'site-settings-tab.component.ts');
+    const htmlPath = path.join(dashboardRoot, 'components', 'site-settings-tab', 'site-settings-tab.component.html');
+    const tsContent = fs.readFileSync(tsPath, 'utf8');
+    const htmlContent = fs.readFileSync(htmlPath, 'utf8');
+    expect({
+      clubAuthSaasNotif: tsContent.includes('isSaas') && tsContent.includes('Configuration enregistrée avec succès'),
+      overlaySaasNotif: /isSaas[\s\S]{0,5}\?[\s\S]{0,50}overlay enregistrée/.test(tsContent),
+      watermarkSkipsDeployAsset: /!this\.isSaas[\s\S]{0,30}watermarkConfig\.cloudUrl/.test(tsContent),
+      watermarkSaasNotif: tsContent.includes('watermark enregistrée'),
+      overlaySaveLabel: /isSaas[\s\S]{0,80}common\.save[\s\S]{0,80}common\.deploy/.test(htmlContent),
+    }).toEqual({
+      clubAuthSaasNotif: true,
+      overlaySaasNotif: true,
+      watermarkSkipsDeployAsset: true,
+      watermarkSaasNotif: true,
+      overlaySaveLabel: true,
     });
   });
 });
@@ -14770,6 +14910,77 @@ describe('SaaS config save flow', () => {
       hasToggleJsonView: true,
       hasJsonTextarea: true,
       hasSyncJsonFromConfig: true,
+    });
+  });
+
+  // --- SaaS config loading regression prevention (v3.127.10) ---
+
+  // --- app.routes.ts must use SaasConfigService in SaaS mode, not /configuration.json ---
+  it('app.routes.ts getConfiguration resolver must use SaasConfigService for SaaS mode', () => {
+    const filePath = path.join(repoRoot, 'raspberry', 'src', 'app', 'app.routes.ts');
+    const content = fs.readFileSync(filePath, 'utf8');
+    expect({
+      importsSaasConfigService: content.includes("import { SaasConfigService }"),
+      injectsSaasConfigService: content.includes('inject(SaasConfigService)'),
+      checksSaasMode: content.includes('saasConfigService.isSaasMode()'),
+      callsGetSelectedConfiguration: content.includes('saasConfigService.getSelectedConfiguration()'),
+    }).toEqual({
+      importsSaasConfigService: true,
+      injectsSaasConfigService: true,
+      checksSaasMode: true,
+      callsGetSelectedConfiguration: true,
+    });
+  });
+
+  // --- app.routes.ts must NOT fetch /configuration.json in SaaS mode ---
+  it('app.routes.ts SaaS branch must not fall through to /configuration.json', () => {
+    const filePath = path.join(repoRoot, 'raspberry', 'src', 'app', 'app.routes.ts');
+    const content = fs.readFileSync(filePath, 'utf8');
+    // The SaaS mode block must appear BEFORE the /configuration.json fallback
+    const saasCheckIndex = content.indexOf('saasConfigService.isSaasMode()');
+    const configJsonIndex = content.indexOf("'/configuration.json'");
+    expect({
+      saasCheckBeforeConfigJson: saasCheckIndex > -1 && configJsonIndex > -1 && saasCheckIndex < configJsonIndex,
+    }).toEqual({
+      saasCheckBeforeConfigJson: true,
+    });
+  });
+
+  // --- auth.service.ts must skip local configuration.json in SaaS mode ---
+  it('auth.service.ts must skip /configuration.json fetch in SaaS mode', () => {
+    const filePath = path.join(repoRoot, 'raspberry', 'src', 'app', 'services', 'auth.service.ts');
+    const content = fs.readFileSync(filePath, 'utf8');
+    expect({
+      importsSaasEnvironment: content.includes("import { environment }"),
+      checksSaasMode: content.includes('saasMode'),
+      autoAuthenticatesSaas: content.includes('isAuthenticatedSubject.next(true)'),
+    }).toEqual({
+      importsSaasEnvironment: true,
+      checksSaasMode: true,
+      autoAuthenticatesSaas: true,
+    });
+  });
+
+  // --- login.component.ts must skip local configuration.json fetch in SaaS mode ---
+  it('login.component.ts loadSiteInfo must skip fetch in SaaS mode', () => {
+    const filePath = path.join(repoRoot, 'raspberry', 'src', 'app', 'components', 'login', 'login.component.ts');
+    const content = fs.readFileSync(filePath, 'utf8');
+    expect({
+      checksSaasMode: content.includes('saasMode'),
+    }).toEqual({
+      checksSaasMode: true,
+    });
+  });
+
+  // --- saas.controller.ts must NOT return 404 for empty config profiles ---
+  it('saas.controller.ts getSaasConfig must not 404 on empty configuration object', () => {
+    const filePath = path.join(repoRoot, 'central-server', 'src', 'controllers', 'saas.controller.ts');
+    const content = fs.readFileSync(filePath, 'utf8');
+    // The guard that returned 404 for empty config was removed — a fresh site should get valid defaults
+    expect({
+      noEmptyConfigGuard: !content.includes("Object.keys(configuration).length === 0"),
+    }).toEqual({
+      noEmptyConfigGuard: true,
     });
   });
 
