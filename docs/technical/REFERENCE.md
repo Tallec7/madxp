@@ -768,6 +768,7 @@ transitoires de Supabase/PgBouncer sans intervention manuelle.
 
 | Mécanisme         | Fichier                                   | Rôle                                                                                                        |
 | ----------------- | ----------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| BIGINT parser     | `config/database.ts`                      | `setTypeParser(20, parseInt)` — convertit BIGINT (file_size, duration) en JS number au lieu de string       |
 | Statement timeout | `config/database.ts`                      | `SET statement_timeout = 8000` sur chaque connexion — tue les requêtes bloquées avant le pool timeout (10s) |
 | Circuit breaker   | `services/db-circuit-breaker.service.ts`  | CLOSED → OPEN (après 3 échecs) → HALF_OPEN (après 30s) → CLOSED (si probe OK)                               |
 | Background skip   | realtime-stats, scheduler, alerting       | `dbCircuitBreaker.isAvailable()` avant chaque tick — zéro requête DB quand circuit OPEN                     |

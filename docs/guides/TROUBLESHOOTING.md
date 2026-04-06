@@ -42,6 +42,7 @@
 38. [Déploiement OTA "Échoué" sans message d'erreur (v3.116.28+)](#déploiement-ota-échoué-sans-message-derreur-v311628)
 39. [Post-OTA validation failed: ECONNREFUSED ::1 (v3.116.28+)](#post-ota-validation-failed-econnrefused-1-v311628)
 40. [Fausses alertes offline/online Slack — flapping Socket.IO (v3.118.2+)](#fausses-alertes-offlineonline-slack--flapping-socketio-v31182)
+41. [Taille vidéo affichée "-" au lieu de la vraie taille (v3.127.7+)](#taille-vidéo-affichée---au-lieu-de-la-vraie-taille-v31277)
 
 > **WiFi USB** : Pour un guide complet sur la clé WiFi USB (installation, diagnostic, pannes, recovery), voir [WIFI_USB_GUIDE.md](WIFI_USB_GUIDE.md).
 >
@@ -6352,4 +6353,41 @@ WHERE cd.target_id = s.id
 
 ---
 
-**Dernière mise à jour :** 6 avril 2026 (fix déploiements vidéo SaaS bloqués indéfiniment — deployment.service.ts skip SaaS + alerting exclusion — v3.127.5)
+---
+
+## 41. Taille vidéo affichée "-" au lieu de la vraie taille (v3.127.7+)
+
+**Symptôme :** Après upload d'une vidéo, la colonne "Taille" dans la vidéothèque du dashboard affiche `"-"` au lieu de la taille réelle (ex: `12.5 MB`).
+
+**Cause racine :** Le driver PostgreSQL `pg` retourne les colonnes `BIGINT` (OID 20) comme des **strings** JavaScript (`"12345678"` au lieu de `12345678`). La colonne `file_size` en DB est de type `BIGINT`. Côté frontend, `Number.isFinite("12345678")` retourne `false` → `formatBytes()` retourne `'-'`.
+
+**Diagnostic :**
+
+```sql
+-- Vérifier que file_size est bien renseigné en DB
+SELECT id, filename, file_size, pg_typeof(file_size) FROM videos ORDER BY created_at DESC LIMIT 5;
+```
+
+```typescript
+// Le driver pg retourne file_size comme string :
+// typeof row.file_size === 'string'  // "12345678" — PAS un number !
+// Number.isFinite("12345678")        // false — le test échoue sur les strings
+```
+
+**Fix (3 niveaux — defense-in-depth) :**
+
+1. **Cause racine (serveur)** : `database.ts` — `setTypeParser(20, ...)` de `pg-types` convertit tous les BIGINT en `number` au niveau driver, globalement pour toutes les requêtes
+2. **Defense-in-depth (frontend)** : `formatBytes()` accepte `string | number | null` et coerce via `Number()` avant le test `isFinite`
+3. **Smoke tests** : 2 tests vérifient la présence de `setTypeParser` et du parsing BIGINT dans `database.ts`
+
+| Fichier modifié                                    | Rôle                                                                  |
+| -------------------------------------------------- | --------------------------------------------------------------------- |
+| `central-server/src/config/database.ts`            | `setTypeParser(20, parseInt)` — parse BIGINT comme number globalement |
+| `central-dashboard/.../video-library.component.ts` | `formatBytes` accepte strings, coerce via `Number()`                  |
+| `central-server/src/__tests__/smoke.test.ts`       | 2 smoke tests : import pg-types + parsing OID 20                      |
+
+**Voir aussi :** CLAUDE.md (règle `setTypeParser`), [REFERENCE.md](/docs/technical/REFERENCE.md)
+
+---
+
+**Dernière mise à jour :** 6 avril 2026 (fix BIGINT type parser — tailles vidéo affichées correctement — v3.127.7)
