@@ -610,6 +610,46 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+-- Fonction d'agrégation des stats sponsors de site (video_plays → site_sponsor_daily_stats)
+CREATE OR REPLACE FUNCTION calculate_site_sponsor_daily_stats(p_date DATE)
+RETURNS INTEGER AS $$
+DECLARE
+  v_count INTEGER := 0;
+BEGIN
+  INSERT INTO site_sponsor_daily_stats (
+    site_sponsor_id, site_id, date,
+    total_impressions, total_screen_time_seconds, completed_plays,
+    estimated_reach, manual_triggers, active_videos, calculated_at
+  )
+  SELECT
+    vp.site_sponsor_id, vp.site_id, p_date,
+    COUNT(*),
+    COALESCE(SUM(vp.duration_played), 0),
+    SUM(CASE WHEN vp.completed THEN 1 ELSE 0 END),
+    COALESCE(SUM(vp.audience_estimate), 0),
+    COUNT(*) FILTER (WHERE vp.trigger_type = 'manual'),
+    COUNT(DISTINCT vp.video_filename),
+    NOW()
+  FROM video_plays vp
+  WHERE vp.site_sponsor_id IS NOT NULL
+    AND vp.category IN ('sponsor', 'sponsor_local', 'sponsor_neopro')
+    AND vp.played_at >= p_date
+    AND vp.played_at < p_date + INTERVAL '1 day'
+    AND (vp.tv_status IN ('on', 'unknown') OR vp.tv_status IS NULL)
+  GROUP BY vp.site_sponsor_id, vp.site_id
+  ON CONFLICT (site_sponsor_id, date) DO UPDATE SET
+    total_impressions = EXCLUDED.total_impressions,
+    total_screen_time_seconds = EXCLUDED.total_screen_time_seconds,
+    completed_plays = EXCLUDED.completed_plays,
+    estimated_reach = EXCLUDED.estimated_reach,
+    manual_triggers = EXCLUDED.manual_triggers,
+    active_videos = EXCLUDED.active_videos,
+    calculated_at = NOW();
+  GET DIAGNOSTICS v_count = ROW_COUNT;
+  RETURN v_count;
+END;
+$$ LANGUAGE plpgsql;
+
 -- =============================================================================
 -- COMMENTAIRES
 -- =============================================================================
@@ -883,6 +923,26 @@ CREATE TABLE IF NOT EXISTS site_sponsor_videos (
 
 CREATE INDEX IF NOT EXISTS idx_site_sponsor_videos_sponsor ON site_sponsor_videos(site_sponsor_id);
 CREATE INDEX IF NOT EXISTS idx_site_sponsor_videos_filename ON site_sponsor_videos(video_filename);
+
+-- Table site_sponsor_daily_stats (stats agrégées par sponsor par jour, préservées indéfiniment)
+CREATE TABLE IF NOT EXISTS site_sponsor_daily_stats (
+    id                          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    site_sponsor_id             UUID NOT NULL REFERENCES site_sponsors(id) ON DELETE CASCADE,
+    site_id                     UUID NOT NULL REFERENCES sites(id) ON DELETE CASCADE,
+    date                        DATE NOT NULL,
+    total_impressions           INTEGER DEFAULT 0,
+    total_screen_time_seconds   INTEGER DEFAULT 0,
+    completed_plays             INTEGER DEFAULT 0,
+    estimated_reach             INTEGER DEFAULT 0,
+    manual_triggers             INTEGER DEFAULT 0,
+    active_videos               INTEGER DEFAULT 0,
+    calculated_at               TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE(site_sponsor_id, date)
+);
+
+CREATE INDEX IF NOT EXISTS idx_ssds_sponsor ON site_sponsor_daily_stats(site_sponsor_id, date DESC);
+CREATE INDEX IF NOT EXISTS idx_ssds_site ON site_sponsor_daily_stats(site_id, date DESC);
+CREATE INDEX IF NOT EXISTS idx_ssds_date ON site_sponsor_daily_stats(date);
 
 -- P5: Branding club pour les rapports PDF
 ALTER TABLE sites ADD COLUMN IF NOT EXISTS logo_url TEXT DEFAULT NULL;

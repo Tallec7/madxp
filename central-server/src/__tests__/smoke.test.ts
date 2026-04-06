@@ -10457,9 +10457,12 @@ describe('Sponsor stats completion_rate consistency guard', () => {
     });
   });
 
-  it('getStatsSummary must use SUM(CASE completed)/COUNT(*) for completion_rate', () => {
+  it('getStatsSummary must use SUM(CASE completed)/COUNT(*) or SUM(completed_plays) for completion_rate', () => {
+    // Accepts both patterns: direct formula on video_plays OR pre-aggregated from site_sponsor_daily_stats
+    const hasDirectFormula = /SUM\s*\(\s*CASE\s+WHEN\s+completed\s+THEN\s+1\s+ELSE\s+0\s+END\s*\)/.test(content);
+    const hasPreAggregated = /SUM\s*\(\s*completed_plays\s*\)/.test(content);
     expect({
-      hasCorrectFormula: /SUM\s*\(\s*CASE\s+WHEN\s+completed\s+THEN\s+1\s+ELSE\s+0\s+END\s*\)/.test(content),
+      hasCorrectFormula: hasDirectFormula || hasPreAggregated,
     }).toEqual({
       hasCorrectFormula: true,
     });
@@ -10481,15 +10484,18 @@ describe('Sponsor queries tv_status filter guard', () => {
   });
 
   it('must filter tv_status in sponsor queries (defense-in-depth)', () => {
-    // Count occurrences of the tv_status filter pattern
+    // Count occurrences of the tv_status filter pattern in video_plays queries.
+    // Queries migrated to site_sponsor_daily_stats apply tv_status filter during aggregation
+    // (in calculate_site_sponsor_daily_stats PG function), not at read time.
+    // Remaining video_plays queries: getStatsByEventType, getMatchSessionCount, getMatchDayBreakdown,
+    // getStatsByVideo, getStatsByPeriod = at least 3 (getMatchDayBreakdown, getStatsByVideo, getStatsByPeriod)
     const matches = content.match(/tv_status\s+IN\s*\(\s*'on'\s*,\s*'unknown'\s*\)/g);
-    // At minimum: getStatsSummary, getDailyTrends, getBenchmark, getStatsByVideo, getStatsByPeriod = 5
     expect({
       filterCount: matches ? matches.length : 0,
-      hasAtLeast5: (matches?.length || 0) >= 5,
+      hasAtLeast3: (matches?.length || 0) >= 3,
     }).toEqual({
       filterCount: matches ? matches.length : 0,
-      hasAtLeast5: true,
+      hasAtLeast3: true,
     });
   });
 });
@@ -10705,7 +10711,12 @@ describe('Sponsor portal manual_triggers guard', () => {
   });
 
   it('repository must count manual triggers in summary and per-video queries', () => {
-    const manualFilterCount = (repoContent.match(/FILTER\s*\(\s*WHERE\s+.*trigger_type\s*=\s*'manual'\s*\)/g) || []).length;
+    // getStatsSummary uses SUM(manual_triggers) from pre-aggregated site_sponsor_daily_stats,
+    // getStatsByVideo uses FILTER (WHERE trigger_type = 'manual') on video_plays.
+    // Both patterns count manual triggers.
+    const filterPattern = (repoContent.match(/FILTER\s*\(\s*WHERE\s+.*trigger_type\s*=\s*'manual'\s*\)/g) || []).length;
+    const preAggPattern = (repoContent.match(/SUM\s*\(\s*manual_triggers\s*\)/g) || []).length;
+    const manualFilterCount = filterPattern + preAggPattern;
     expect({
       manualFilterCount,
       hasAtLeast2: manualFilterCount >= 2,

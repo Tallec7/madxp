@@ -551,6 +551,11 @@ class CronSchedulerService {
         results.push('advertiser_daily_stats');
       }
 
+      if (aggregationType === 'site_sponsor_daily_stats' || aggregationType === 'all') {
+        await query(`SELECT calculate_site_sponsor_daily_stats(CURRENT_DATE - 1)`, []);
+        results.push('site_sponsor_daily_stats');
+      }
+
       return {
         success: true,
         message: `Aggregation completed: ${results.join(', ')}`,
@@ -558,7 +563,8 @@ class CronSchedulerService {
     } catch (error) {
       if (error instanceof Error && (
         error.message.includes('calculate_all_daily_stats') ||
-        error.message.includes('calculate_all_advertiser_daily_stats')
+        error.message.includes('calculate_all_advertiser_daily_stats') ||
+        error.message.includes('calculate_site_sponsor_daily_stats')
       )) {
         return { success: true, message: 'Aggregation function not found, skipping' };
       }

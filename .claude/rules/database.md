@@ -1,8 +1,8 @@
 ---
 paths:
-  - "central-server/src/config/database*"
-  - "central-server/src/scripts/**"
-  - "central-server/src/middleware/rls*"
+  - 'central-server/src/config/database*'
+  - 'central-server/src/scripts/**'
+  - 'central-server/src/middleware/rls*'
 ---
 
 # Base de Données
@@ -33,15 +33,15 @@ await query(`SELECT set_config('app.user_role', $1, false)`, [role]);
 
 ## Rétention des données
 
-| Table | Rétention |
-|-------|----------|
-| video_plays, advertiser_impressions | 90 jours |
-| metrics | 7 jours |
-| config_history | 20 versions/site |
-| remote_commands | 30 jours |
-| alerts, audit_logs | 90 jours |
+| Table                               | Rétention       |
+| ----------------------------------- | --------------- |
+| video_plays, advertiser_impressions | 15 jours        |
+| metrics                             | 3 jours         |
+| config_history                      | 5 versions/site |
+| remote_commands                     | 7 jours         |
+| alerts, audit_logs                  | 30 jours        |
 
-Tables préservées indéfiniment : `club_daily_stats`, `advertiser_daily_stats`
+Tables préservées indéfiniment : `club_daily_stats`, `site_sponsor_daily_stats`
 
 ## Règles
 

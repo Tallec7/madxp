@@ -217,19 +217,9 @@ class SiteSponsorRepositoryImpl extends BaseRepository<SiteSponsorRow> {
        FROM site_sponsors ss
        LEFT JOIN site_sponsor_videos ssv ON ssv.site_sponsor_id = ss.id
        LEFT JOIN (
-         SELECT ss_id, COUNT(*) as cnt
-         FROM (
-           SELECT site_sponsor_id AS ss_id
-           FROM video_plays
-           WHERE site_sponsor_id IS NOT NULL AND category IN ${ALL_SPONSOR_CATEGORIES}
-           UNION ALL
-           SELECT ssv.site_sponsor_id AS ss_id
-           FROM video_plays vp
-           JOIN site_sponsor_videos ssv ON ssv.video_filename = vp.video_filename
-           JOIN site_sponsors ss2 ON ss2.id = ssv.site_sponsor_id AND ss2.site_id = vp.site_id
-           WHERE vp.site_sponsor_id IS NULL AND vp.category IN ${ALL_SPONSOR_CATEGORIES}
-         ) resolved
-         GROUP BY ss_id
+         SELECT site_sponsor_id AS ss_id, SUM(total_impressions) as cnt
+         FROM site_sponsor_daily_stats
+         GROUP BY site_sponsor_id
        ) imp ON imp.ss_id = ss.id
        WHERE ss.site_id = $1 ${statusFilter}
        GROUP BY ss.id, imp.cnt
@@ -511,20 +501,18 @@ class SiteSponsorRepositoryImpl extends BaseRepository<SiteSponsorRow> {
   async getStatsSummary(siteSponsorId: string, from: string, to: string): Promise<SiteSponsorStatsSummary> {
     const result = await query<SiteSponsorStatsSummary>(
       `SELECT
-        COUNT(*) as total_impressions,
-        COALESCE(SUM(duration_played), 0) as total_screen_time_seconds,
-        CASE WHEN COUNT(*) > 0
-          THEN ROUND(SUM(CASE WHEN completed THEN 1 ELSE 0 END)::numeric / COUNT(*) * 100, 1)
+        COALESCE(SUM(total_impressions), 0) as total_impressions,
+        COALESCE(SUM(total_screen_time_seconds), 0) as total_screen_time_seconds,
+        CASE WHEN SUM(total_impressions) > 0
+          THEN ROUND(SUM(completed_plays)::numeric / SUM(total_impressions) * 100, 1)
           ELSE 0 END as completion_rate,
-        COALESCE(SUM(audience_estimate), 0) as estimated_reach,
-        COUNT(DISTINCT DATE(played_at)) as active_days,
-        COUNT(*) FILTER (WHERE trigger_type = 'manual') as manual_triggers
-       FROM video_plays
+        COALESCE(SUM(estimated_reach), 0) as estimated_reach,
+        COUNT(*) FILTER (WHERE total_impressions > 0) as active_days,
+        COALESCE(SUM(manual_triggers), 0) as manual_triggers
+       FROM site_sponsor_daily_stats
        WHERE site_sponsor_id = $1
-         AND category IN ${ALL_SPONSOR_CATEGORIES}
-         AND played_at >= $2::date
-         AND played_at < ($3::date + INTERVAL '1 day')
-         AND (tv_status IN ('on', 'unknown') OR tv_status IS NULL)`,
+         AND date >= $2::date
+         AND date <= $3::date`,
       [siteSponsorId, from, to]
     );
     return result.rows[0];
@@ -536,16 +524,13 @@ class SiteSponsorRepositoryImpl extends BaseRepository<SiteSponsorRow> {
   async getDailyTrends(siteSponsorId: string, from: string, to: string): Promise<SiteSponsorDailyTrendRow[]> {
     const result = await query<SiteSponsorDailyTrendRow>(
       `SELECT
-        DATE(played_at) as date,
-        COUNT(*) as impressions,
-        SUM(duration_played) as screen_time
-       FROM video_plays
+        date,
+        total_impressions as impressions,
+        total_screen_time_seconds as screen_time
+       FROM site_sponsor_daily_stats
        WHERE site_sponsor_id = $1
-         AND category IN ${ALL_SPONSOR_CATEGORIES}
-         AND played_at >= $2::date
-         AND played_at < ($3::date + INTERVAL '1 day')
-         AND (tv_status IN ('on', 'unknown') OR tv_status IS NULL)
-       GROUP BY DATE(played_at)
+         AND date >= $2::date
+         AND date <= $3::date
        ORDER BY date ASC`,
       [siteSponsorId, from, to]
     );
@@ -735,20 +720,18 @@ class SiteSponsorRepositoryImpl extends BaseRepository<SiteSponsorRow> {
       `SELECT
          ss.id AS site_sponsor_id,
          ss.name AS sponsor_name,
-         COUNT(vp.id)::text AS impressions,
-         COALESCE(SUM(vp.duration_played), 0)::text AS screen_time_seconds,
-         CASE WHEN COUNT(vp.id) > 0
-           THEN ROUND(SUM(CASE WHEN vp.completed THEN 1 ELSE 0 END)::numeric / COUNT(vp.id) * 100, 1)::text
+         COALESCE(SUM(ssds.total_impressions), 0)::text AS impressions,
+         COALESCE(SUM(ssds.total_screen_time_seconds), 0)::text AS screen_time_seconds,
+         CASE WHEN SUM(ssds.total_impressions) > 0
+           THEN ROUND(SUM(ssds.completed_plays)::numeric / SUM(ssds.total_impressions) * 100, 1)::text
            ELSE '0' END AS completion_rate,
-         COUNT(DISTINCT DATE(vp.played_at))::text AS active_days,
+         COUNT(ssds.date) FILTER (WHERE ssds.total_impressions > 0)::text AS active_days,
          ss.contract_amount::text AS contract_amount
        FROM site_sponsors ss
-       LEFT JOIN video_plays vp
-         ON vp.site_sponsor_id = ss.id
-         AND vp.category IN ${ALL_SPONSOR_CATEGORIES}
-         AND vp.played_at >= $2::date
-         AND vp.played_at < ($3::date + INTERVAL '1 day')
-         AND (vp.tv_status IN ('on', 'unknown') OR vp.tv_status IS NULL)
+       LEFT JOIN site_sponsor_daily_stats ssds
+         ON ssds.site_sponsor_id = ss.id
+         AND ssds.date >= $2::date
+         AND ssds.date <= $3::date
        WHERE ss.site_id = $1
          AND ss.status = 'active'
        GROUP BY ss.id
