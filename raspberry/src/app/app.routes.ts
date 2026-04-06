@@ -7,7 +7,7 @@ import { Configuration } from './interfaces/configuration.interface';
 import { Category } from './interfaces/category.interface';
 import { inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { map, tap, catchError } from 'rxjs';
+import { map, tap, catchError, of } from 'rxjs';
 import { authGuard } from './guards/auth.guard';
 import { DemoConfigService } from './services/demo-config.service';
 import { ProfileConfigService } from './services/profile-config.service';
@@ -68,20 +68,40 @@ const getConfiguration: ResolveFn<Configuration> = () => {
         catchError(err => {
           console.error('SaaS config load failed:', err);
           saasConfigService.clearSelection();
-          // Retry with default profile
+          // Retry with default profile (no selected profile)
           const siteId = saasConfigService.getSiteId();
-          return saasConfigService.loadConfiguration(siteId).pipe(
-            map(enrichVideosWithCategoryId),
-            tap(data => console.log('load configuration (saas fallback)', data))
-          );
+          if (siteId) {
+            return saasConfigService.loadConfiguration(siteId).pipe(
+              map(enrichVideosWithCategoryId),
+              tap(data => console.log('load configuration (saas fallback)', data)),
+              catchError(() => {
+                console.warn('SaaS fallback also failed, using minimal config');
+                return of({
+                  remote: { title: 'Neopro SaaS' },
+                  version: '1.0',
+                  sponsors: [],
+                  categories: [],
+                } as Configuration);
+              })
+            );
+          }
+          return of({
+            remote: { title: 'Neopro SaaS' },
+            version: '1.0',
+            sponsors: [],
+            categories: [],
+          } as Configuration);
         })
       );
     }
     // No siteId available — return minimal config
-    return saasConfigService.loadConfiguration('').pipe(
-      map(enrichVideosWithCategoryId),
-      tap(data => console.log('load configuration (saas empty)', data))
-    );
+    console.warn('SaaS mode: no siteId available');
+    return of({
+      remote: { title: 'Neopro SaaS' },
+      version: '1.0',
+      sponsors: [],
+      categories: [],
+    } as Configuration);
   }
 
   // En mode production : si un profil est selectionne, le charger

@@ -116,11 +116,7 @@ export async function getSaasConfig(req: Request, res: Response) {
       configuration = site.local_config_mirror as Record<string, unknown>;
     }
 
-    if (!configuration || Object.keys(configuration).length === 0) {
-      return res.status(404).json({ error: 'Aucune configuration trouvée pour ce site' });
-    }
-
-    // Résoudre toutes les URLs vidéo
+    // Résoudre toutes les URLs vidéo (config vide = site fraîchement créé, retourner les defaults)
     const sponsors = (configuration.sponsors as VideoLike[]) || [];
     const categories = (configuration.categories as CategoryLike[]) || [];
     const timeCategories = (configuration.timeCategories as TimeCategoryLike[]) || [];
