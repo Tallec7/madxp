@@ -1,3 +1,9 @@
+## [3.128.4](https://github.com/Tallec7/neopro/compare/v3.128.3...v3.128.4) (2026-04-06)
+
+### Bug Fixes
+
+- **saas:** strip Pi-local path prefix in resolveVideoUrl for SaaS sites ([890a469](https://github.com/Tallec7/neopro/commit/890a469c97cc1afffc88f642a3f990f9b41b73a0))
+
 ## [3.128.3](https://github.com/Tallec7/neopro/compare/v3.128.2...v3.128.3) (2026-04-06)
 
 ### Bug Fixes
