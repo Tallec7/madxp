@@ -1,3 +1,9 @@
+## [3.127.8](https://github.com/Tallec7/neopro/compare/v3.127.7...v3.127.8) (2026-04-06)
+
+### Bug Fixes
+
+- **saas:** load configuration from central API instead of missing local file ([682563f](https://github.com/Tallec7/neopro/commit/682563fb9992ce22e7f771015be05e33d8375bd6))
+
 ## [3.127.7](https://github.com/Tallec7/neopro/compare/v3.127.6...v3.127.7) (2026-04-06)
 
 ### Bug Fixes
