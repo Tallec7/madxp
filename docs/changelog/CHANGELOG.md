@@ -1,3 +1,9 @@
+## [3.127.15](https://github.com/Tallec7/neopro/compare/v3.127.14...v3.127.15) (2026-04-06)
+
+### Bug Fixes
+
+- **analytics:** add site_sponsor_daily_stats to preserve impressions after video_plays purge ([bca2dd7](https://github.com/Tallec7/neopro/commit/bca2dd76cde6adee91e68e901c1942c9f7479482))
+
 ## [3.127.14](https://github.com/Tallec7/neopro/compare/v3.127.13...v3.127.14) (2026-04-06)
 
 ### Bug Fixes
