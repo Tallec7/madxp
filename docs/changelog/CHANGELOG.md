@@ -1,3 +1,9 @@
+## [3.127.12](https://github.com/Tallec7/neopro/compare/v3.127.11...v3.127.12) (2026-04-06)
+
+### Bug Fixes
+
+- **saas:** skip Pi-local API calls (site-info, hdmi-status) on SaaS sites ([03c5589](https://github.com/Tallec7/neopro/commit/03c55898a2b91dc6c62c537bb6dbcd03afa6ec6c))
+
 ## [3.127.11](https://github.com/Tallec7/neopro/compare/v3.127.10...v3.127.11) (2026-04-06)
 
 ### Bug Fixes
