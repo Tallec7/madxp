@@ -28,9 +28,11 @@
       {{
         savingClubAuth
           ? ('common.deploying' | translate)
-          : isConnected
-            ? ('common.deploy' | translate)
-            : ('common.deployQueued' | translate)
+          : isSaas
+            ? ('common.save' | translate)
+            : isConnected
+              ? ('common.deploy' | translate)
+              : ('common.deployQueued' | translate)
       }}
     </button>
   </div>
@@ -253,7 +255,7 @@
       pour acceder directement a la telecommande.
     </p>
     <div class="qr-modes-info">
-      <div class="qr-mode-card">
+      <div class="qr-mode-card" *ngIf="!isSaas">
         <div class="mode-header">
           <span class="mode-icon">📶</span>
           <span class="mode-title">Mode Local (Hotspot)</span>
@@ -286,8 +288,8 @@
     </button>
   </div>
 
-  <!-- Configuration Hotspot WiFi -->
-  <div class="settings-card">
+  <!-- Configuration Hotspot WiFi (Pi only) -->
+  <div class="settings-card" *ngIf="!isSaas">
     <div class="settings-header">
       <span class="settings-icon">📶</span>
       <h4>Hotspot WiFi</h4>
@@ -726,9 +728,11 @@
           {{
             savingWatermark
               ? 'Deploiement...'
-              : isConnected
-                ? 'Deployer le watermark'
-                : 'Deployer (en file)'
+              : isSaas
+                ? ('common.save' | translate)
+                : isConnected
+                  ? 'Deployer le watermark'
+                  : 'Deployer (en file)'
           }}
         </button>
       </div>

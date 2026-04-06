@@ -34,14 +34,14 @@ import { Site, ConfigProfile, CreateProfilePayload, UpdateProfilePayload, SiteCo
         </div>
       </div>
 
-      <!-- Warning Pi offline -->
-      <div class="warning-banner" *ngIf="!isConnected">
+      <!-- Warning Pi offline (Pi only) -->
+      <div class="warning-banner" *ngIf="!isConnected && site?.site_type !== 'saas'">
         <span class="warning-icon">⚠️</span>
         <span>Pi hors-ligne — les changements seront appliques a la reconnexion</span>
       </div>
 
-      <!-- Bandeau non synchronisé -->
-      <div class="sync-banner" *ngIf="profiles.length > 0 && !lastSyncedInSession">
+      <!-- Bandeau non synchronisé (Pi only) -->
+      <div class="sync-banner" *ngIf="site?.site_type !== 'saas' && profiles.length > 0 && !lastSyncedInSession">
         <span class="sync-icon">🔄</span>
         <span>Profils non synchronises — cliquez "Synchroniser tout" pour envoyer les profils au Pi</span>
       </div>

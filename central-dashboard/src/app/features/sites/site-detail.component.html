@@ -744,8 +744,8 @@
       ></app-site-subscription-tab>
     </div>
 
-    <!-- TAB: Debug -->
-    <div *ngIf="activeTab === 'debug'" class="tab-panel">
+    <!-- TAB: Debug (Pi only) -->
+    <div *ngIf="activeTab === 'debug' && !isSaas" class="tab-panel">
       <app-site-debug-tab
         [siteId]="siteId"
         [isConnected]="isConnected"

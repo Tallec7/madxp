@@ -54,6 +54,7 @@ import { ConfigDraftComponent } from './config-draft/config-draft.component';
         <div class="header-actions">
           <button
             class="btn btn-sm btn-outline"
+            *ngIf="siteType !== 'saas'"
             (click)="refreshFromPi()"
             [disabled]="!isConnected || refreshingFromPi"
             [title]="isConnected ? 'Récupérer la configuration actuelle du Pi' : 'Le Pi doit être connecté'"
@@ -87,6 +88,7 @@ import { ConfigDraftComponent } from './config-draft/config-draft.component';
       <app-video-manager
         [siteId]="siteId"
         [siteName]="siteName"
+        [siteType]="siteType"
         [localVideos]="localVideos"
         [cloudVideos]="cloudVideos"
         [localStorage]="localStorage"
@@ -100,8 +102,8 @@ import { ConfigDraftComponent } from './config-draft/config-draft.component';
         (videoDeleted)="loadContent()"
       ></app-video-manager>
 
-      <!-- Draft Indicator + History -->
-      <app-config-draft
+      <!-- Draft Indicator + History (Pi only) -->
+      <app-config-draft *ngIf="siteType !== 'saas'"
         [siteId]="siteId"
         [config]="config"
         [isDirty]="isDirty"
@@ -114,6 +116,7 @@ import { ConfigDraftComponent } from './config-draft/config-draft.component';
       <!-- Deployment Status (orchestrated, pending, banner, actions, diff modal) -->
       <app-deployment-status
         [siteId]="siteId"
+        [siteType]="siteType"
         [isConnected]="isConnected"
         [config]="config"
         [isDirty]="isDirty"
@@ -134,6 +137,7 @@ import { ConfigDraftComponent } from './config-draft/config-draft.component';
 
       <!-- Config Editor (health bar, impact counters, orphans, categories, loops, remote, analytics) -->
       <app-config-editor
+        [siteType]="siteType"
         [config]="config"
         [localVideos]="localVideos"
         [cloudVideos]="{ length: cloudVideos.length }"

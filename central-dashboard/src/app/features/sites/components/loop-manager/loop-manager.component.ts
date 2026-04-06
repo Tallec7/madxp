@@ -96,7 +96,7 @@ interface SponsorWeightGroup {
                 <option value="">-- Sélectionner --</option>
                 <optgroup *ngFor="let group of videoOptionGroups" [label]="group.icon + ' ' + group.label">
                   <option *ngFor="let v of group.videos" [value]="v.path">
-                    {{ v.displayName }}{{ v.isOnPi ? '' : ' ⏳' }}
+                    {{ v.displayName }}{{ siteType !== 'saas' && !v.isOnPi ? ' ⏳' : '' }}
                   </option>
                 </optgroup>
               </select>
@@ -157,7 +157,7 @@ interface SponsorWeightGroup {
                   <option value="">-- Sélectionner --</option>
                   <optgroup *ngFor="let group of videoOptionGroups" [label]="group.icon + ' ' + group.label">
                     <option *ngFor="let v of group.videos" [value]="v.path">
-                      {{ v.displayName }}{{ v.isOnPi ? '' : ' ⏳' }}
+                      {{ v.displayName }}{{ siteType !== 'saas' && !v.isOnPi ? ' ⏳' : '' }}
                     </option>
                   </optgroup>
                 </select>
@@ -887,6 +887,7 @@ interface SponsorWeightGroup {
   `]
 })
 export class LoopManagerComponent implements OnInit, OnChanges {
+  @Input() siteType: string = '';
   @Input() config!: SiteConfiguration;
   @Input() videoOptionGroups: { key: string; label: string; icon: string; videos: { path: string; displayName: string; isOnPi: boolean }[] }[] = [];
   @Input() cloudVideoPaths: Set<string> = new Set();

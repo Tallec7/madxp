@@ -24,6 +24,10 @@ export class SiteSettingsTabComponent implements OnInit, OnChanges {
   @Input() isConnected: boolean = false;
   @Output() siteUpdated = new EventEmitter<Site>();
 
+  get isSaas(): boolean {
+    return this.site?.site_type === 'saas';
+  }
+
   // Auth
   clubName: string = '';
   remotePassword: string = '';

@@ -14535,3 +14535,144 @@ describe('PostgreSQL BIGINT type parser', () => {
     expect(content).toContain('Number.isSafeInteger');
   });
 });
+
+// =============================================================================
+// SaaS dashboard child components must hide Pi-specific UI
+// =============================================================================
+describe('SaaS child component guards (Pi-specific UI hidden for SaaS)', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+  const dashboardRoot = path.join(repoRoot, 'central-dashboard', 'src', 'app', 'features', 'sites');
+
+  // --- video-library must have siteType @Input and hide Pi elements ---
+  it('video-library must have siteType @Input and hide Pi-specific UI', () => {
+    const filePath = path.join(dashboardRoot, 'components', 'video-library', 'video-library.component.ts');
+    const content = fs.readFileSync(filePath, 'utf8');
+    expect({
+      hasSiteTypeInput: content.includes("@Input() siteType"),
+      hidesStorageBar: content.includes("siteType !== 'saas'") && content.includes('storage'),
+      hidesDeployButton: /siteType !== 'saas'[\s\S]{0,200}deploy/.test(content),
+      hidesStatusColumn: /siteType !== 'saas'[\s\S]{0,60}Statut/.test(content),
+      hidesPiLegend: /siteType !== 'saas'[\s\S]{0,100}Sur le Pi/.test(content),
+    }).toEqual({
+      hasSiteTypeInput: true,
+      hidesStorageBar: true,
+      hidesDeployButton: true,
+      hidesStatusColumn: true,
+      hidesPiLegend: true,
+    });
+  });
+
+  // --- video-manager must propagate siteType to video-library ---
+  it('video-manager must have siteType @Input and pass it to video-library', () => {
+    const filePath = path.join(dashboardRoot, 'components', 'site-content-tab', 'video-manager', 'video-manager.component.ts');
+    const content = fs.readFileSync(filePath, 'utf8');
+    expect({
+      hasSiteTypeInput: content.includes("@Input() siteType"),
+      passesSiteTypeToLibrary: content.includes('[siteType]="siteType"'),
+      guardsDeletePi: /siteType !== 'saas'[\s\S]{0,100}deleteCanPi/.test(content),
+    }).toEqual({
+      hasSiteTypeInput: true,
+      passesSiteTypeToLibrary: true,
+      guardsDeletePi: true,
+    });
+  });
+
+  // --- deployment-status must hide Pi-specific sections for SaaS ---
+  it('deployment-status must have siteType @Input and hide pending deployments for SaaS', () => {
+    const filePath = path.join(dashboardRoot, 'components', 'site-content-tab', 'deployment-status', 'deployment-status.component.ts');
+    const content = fs.readFileSync(filePath, 'utf8');
+    expect({
+      hasSiteTypeInput: content.includes("@Input() siteType"),
+      guardsPendingDeployments: /siteType !== 'saas'[\s\S]{0,100}pendingDeployments/.test(content),
+    }).toEqual({
+      hasSiteTypeInput: true,
+      guardsPendingDeployments: true,
+    });
+  });
+
+  // --- site-profiles-tab must hide Pi offline warning for SaaS ---
+  it('site-profiles-tab must hide Pi offline warning and sync banner for SaaS', () => {
+    const filePath = path.join(dashboardRoot, 'components', 'site-profiles-tab', 'site-profiles-tab.component.ts');
+    const content = fs.readFileSync(filePath, 'utf8');
+    expect({
+      guardsPiOfflineWarning: /site_type !== 'saas'[\s\S]{0,200}Pi hors-ligne/.test(content),
+      guardsSyncBanner: /site_type !== 'saas'[\s\S]{0,200}profils au Pi/.test(content),
+    }).toEqual({
+      guardsPiOfflineWarning: true,
+      guardsSyncBanner: true,
+    });
+  });
+
+  // --- loop-manager must not show ⏳ suffix for SaaS ---
+  it('loop-manager must have siteType @Input and hide deploy status suffix for SaaS', () => {
+    const filePath = path.join(dashboardRoot, 'components', 'loop-manager', 'loop-manager.component.ts');
+    const content = fs.readFileSync(filePath, 'utf8');
+    expect({
+      hasSiteTypeInput: content.includes("@Input() siteType"),
+      guardsSuffix: content.includes("siteType !== 'saas'") && content.includes('isOnPi'),
+    }).toEqual({
+      hasSiteTypeInput: true,
+      guardsSuffix: true,
+    });
+  });
+
+  // --- site-settings-tab must hide hotspot config for SaaS ---
+  it('site-settings-tab must have isSaas getter and hide hotspot for SaaS', () => {
+    const tsPath = path.join(dashboardRoot, 'components', 'site-settings-tab', 'site-settings-tab.component.ts');
+    const htmlPath = path.join(dashboardRoot, 'components', 'site-settings-tab', 'site-settings-tab.component.html');
+    const tsContent = fs.readFileSync(tsPath, 'utf8');
+    const htmlContent = fs.readFileSync(htmlPath, 'utf8');
+    expect({
+      hasIsSaasGetter: tsContent.includes('get isSaas'),
+      hidesHotspot: /\*ngIf="!isSaas"[\s\S]{0,50}/.test(htmlContent) && htmlContent.includes('Hotspot WiFi'),
+      hidesLocalQrMode: /\*ngIf="!isSaas"[\s\S]{0,50}/.test(htmlContent) && htmlContent.includes('Mode Local'),
+    }).toEqual({
+      hasIsSaasGetter: true,
+      hidesHotspot: true,
+      hidesLocalQrMode: true,
+    });
+  });
+
+  // --- site-content-tab must hide "Rafraîchir depuis le Pi" for SaaS ---
+  it('site-content-tab must hide Pi-specific refresh button for SaaS', () => {
+    const filePath = path.join(dashboardRoot, 'components', 'site-content-tab', 'site-content-tab.component.ts');
+    const content = fs.readFileSync(filePath, 'utf8');
+    expect({
+      guardsRefreshButton: /siteType !== 'saas'[\s\S]{0,500}Rafra/.test(content),
+      passesSiteTypeToVideoManager: content.includes('[siteType]="siteType"'),
+      passesSiteTypeToDeploymentStatus: /app-deployment-status[\s\S]{0,200}\[siteType\]/.test(content),
+      passesSiteTypeToConfigEditor: /app-config-editor[\s\S]{0,200}\[siteType\]/.test(content),
+    }).toEqual({
+      guardsRefreshButton: true,
+      passesSiteTypeToVideoManager: true,
+      passesSiteTypeToDeploymentStatus: true,
+      passesSiteTypeToConfigEditor: true,
+    });
+  });
+
+  // --- config-editor must propagate siteType to loop-manager ---
+  it('config-editor must have siteType @Input and pass it to loop-manager', () => {
+    const filePath = path.join(dashboardRoot, 'components', 'site-content-tab', 'config-editor', 'config-editor.component.ts');
+    const content = fs.readFileSync(filePath, 'utf8');
+    expect({
+      hasSiteTypeInput: content.includes("@Input() siteType"),
+      passesSiteTypeToLoopManager: /app-loop-manager[\s\S]{0,200}\[siteType\]/.test(content),
+    }).toEqual({
+      hasSiteTypeInput: true,
+      passesSiteTypeToLoopManager: true,
+    });
+  });
+
+  // --- site-detail debug tab panel must be guarded (not just button) ---
+  it('site-detail debug tab panel must have !isSaas guard', () => {
+    const filePath = path.join(dashboardRoot, 'site-detail.component.html');
+    const content = fs.readFileSync(filePath, 'utf8');
+    // The debug tab panel (not just the button) must have the guard
+    const debugPanelGuarded = /!isSaas[\s\S]{0,20}class="tab-panel"[\s\S]{0,50}app-site-debug-tab/.test(content);
+    expect({
+      debugPanelGuarded,
+    }).toEqual({
+      debugPanelGuarded: true,
+    });
+  });
+});

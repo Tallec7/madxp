@@ -53,7 +53,7 @@ export type SortDirection = 'asc' | 'desc';
         </h4>
         <div class="library-stats">
           <span class="stat">{{ filteredVideos.length }} vidéo(s)</span>
-          <span class="stat on-pi" *ngIf="filteredStatsOnPi > 0" title="Sur le Pi">✅ {{ filteredStatsOnPi }}</span>
+          <span class="stat on-pi" *ngIf="siteType !== 'saas' && filteredStatsOnPi > 0" title="Sur le Pi">✅ {{ filteredStatsOnPi }}</span>
           <span class="stat" *ngIf="filteredStatsInConfig > 0" title="Utilisées dans la config active">⚙️ {{ filteredStatsInConfig }}</span>
           <span class="stat" *ngIf="filteredStatsWithVariant > 0" title="Avec variante secondaire">📺 {{ filteredStatsWithVariant }}</span>
           <span class="stat" *ngIf="filteredTotalSize > 0">{{ formatBytes(filteredTotalSize) }}</span>
@@ -61,8 +61,8 @@ export type SortDirection = 'asc' | 'desc';
         </div>
       </div>
 
-      <!-- Barre de stockage -->
-      <div class="storage-bar-container" *ngIf="storage">
+      <!-- Barre de stockage (Pi only) -->
+      <div class="storage-bar-container" *ngIf="siteType !== 'saas' && storage">
         <div class="storage-info">
           <span class="storage-label">Stockage Pi</span>
           <span class="storage-values">{{ formatBytes(storage.used) }} / {{ formatBytes(storage.total) }}</span>
@@ -91,10 +91,10 @@ export type SortDirection = 'asc' | 'desc';
                 title="Pertinentes = vidéos utilisées dans la config ou uploadées pour ce site. Sur le Pi = déjà présentes sur le boîtier. À déployer = dans le cloud, en attente de transfert.">
           <option value="relevant">🎯 Pertinentes</option>
           <option value="all">Tous les statuts</option>
-          <option value="on_pi">✅ Sur le Pi</option>
-          <option value="to_deploy">⏳ À déployer</option>
+          <option value="on_pi" *ngIf="siteType !== 'saas'">✅ Sur le Pi</option>
+          <option value="to_deploy" *ngIf="siteType !== 'saas'">⏳ À déployer</option>
           <option value="in_config">⚙️ Dans la config</option>
-          <option value="deploy_error">❌ Erreur deploy</option>
+          <option value="deploy_error" *ngIf="siteType !== 'saas'">❌ Erreur deploy</option>
           <option value="with_variant">📺 Avec variante 2nd</option>
         </select>
         <select [(ngModel)]="ownerFilter" (ngModelChange)="applyFilters()" class="filter-select">
@@ -131,6 +131,7 @@ export type SortDirection = 'asc' | 'desc';
           (click)="onBulkDeploy()"
           [disabled]="getSelectedToDeploy().length === 0"
           [title]="'videoLibrary.deploySelectedVideos' | translate"
+          *ngIf="siteType !== 'saas'"
         >
           🚀 {{ 'common.deploy' | translate }} ({{ getSelectedToDeploy().length }})
         </button>
@@ -172,7 +173,7 @@ export type SortDirection = 'asc' | 'desc';
         <span class="col-variant" title="Variante secondaire (dual-display)">2nd</span>
         <span class="col-config" title="Utilisé dans la config active">Cfg</span>
         <span class="col-owner">Source</span>
-        <span class="col-status">Statut</span>
+        <span class="col-status" *ngIf="siteType !== 'saas'">Statut</span>
         <span class="col-actions">Actions</span>
       </div>
 
@@ -216,7 +217,7 @@ export type SortDirection = 'asc' | 'desc';
           <span class="col-owner video-owner" [class.owner-neopro]="video.owner === 'neopro'" [class.owner-club]="video.owner === 'club'">
             {{ video.owner === 'neopro' ? 'NEOPRO' : 'CLUB' }}
           </span>
-          <span class="col-status video-status"
+          <span class="col-status video-status" *ngIf="siteType !== 'saas'"
                 [class.on-pi]="video.isOnPi && !getDeployState(video)"
                 [class.pending]="!video.isOnPi && !getDeployState(video)"
                 [class.deploying]="getDeployState(video)?.status === 'deploying'"
@@ -249,7 +250,7 @@ export type SortDirection = 'asc' | 'desc';
               class="action-btn deploy"
               (click)="onDeploy(video, $event)"
               [title]="'videoLibrary.deployToPi' | translate"
-              *ngIf="!video.isOnPi && video.source === 'cloud' && !isDeploying(video) && !isDeployFailed(video)"
+              *ngIf="siteType !== 'saas' && !video.isOnPi && video.source === 'cloud' && !isDeploying(video) && !isDeployFailed(video)"
               [disabled]="isDeploying(video)"
             >
               🚀
@@ -258,11 +259,11 @@ export type SortDirection = 'asc' | 'desc';
               class="action-btn retry"
               (click)="onDeploy(video, $event)"
               title="Relancer le déploiement"
-              *ngIf="isDeployFailed(video)"
+              *ngIf="siteType !== 'saas' && isDeployFailed(video)"
             >
               🔄
             </button>
-            <span class="deploy-progress" *ngIf="isDeploying(video)" [title]="'content.deploymentInProgress' | translate">
+            <span class="deploy-progress" *ngIf="siteType !== 'saas' && isDeploying(video)" [title]="'content.deploymentInProgress' | translate">
               {{ getDeployState(video)?.progress ?? 0 }}%
             </span>
             <button
@@ -293,8 +294,10 @@ export type SortDirection = 'asc' | 'desc';
 
       <!-- Légende -->
       <div class="library-legend">
-        <span class="legend-item"><span class="legend-icon">✅</span> Sur le Pi</span>
-        <span class="legend-item"><span class="legend-icon">⏳</span> À déployer</span>
+        <ng-container *ngIf="siteType !== 'saas'">
+          <span class="legend-item"><span class="legend-icon">✅</span> Sur le Pi</span>
+          <span class="legend-item"><span class="legend-icon">⏳</span> À déployer</span>
+        </ng-container>
         <span class="legend-item"><span class="legend-icon">📺</span> Variante 2nd écran</span>
         <span class="legend-item"><span class="legend-icon">⚙️</span> Dans la config</span>
       </div>
@@ -330,7 +333,7 @@ export type SortDirection = 'asc' | 'desc';
           <div class="preview-footer">
             <span class="preview-info">{{ formatBytes(previewVideo.size) }}</span>
             <span class="preview-info" *ngIf="previewVideo.duration">{{ formatDuration(previewVideo.duration) }}</span>
-            <span class="preview-status" [class.on-pi]="previewVideo.isOnPi" [class.pending]="!previewVideo.isOnPi">
+            <span class="preview-status" *ngIf="siteType !== 'saas'" [class.on-pi]="previewVideo.isOnPi" [class.pending]="!previewVideo.isOnPi">
               {{ previewVideo.isOnPi ? '✅ Sur le Pi' : '⏳ À déployer' }}
             </span>
           </div>
@@ -1306,6 +1309,7 @@ export type SortDirection = 'asc' | 'desc';
   `]
 })
 export class VideoLibraryComponent implements OnChanges {
+  @Input() siteType: string = '';
   @Input() videos: LocalVideo[] = [];
   @Input() cloudVideos: CloudVideo[] = [];
   @Input() storage: LocalStorage | null = null;

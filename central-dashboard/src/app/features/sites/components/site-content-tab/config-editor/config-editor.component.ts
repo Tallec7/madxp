@@ -219,6 +219,7 @@ import { LoopManagerComponent } from '../../loop-manager/loop-manager.component'
     <!-- Loop Manager -->
     <div class="section" id="section-loops">
       <app-loop-manager
+        [siteType]="siteType"
         [config]="config"
         [videoOptionGroups]="videoOptionGroups"
         [cloudVideoPaths]="cloudVideoPaths"
@@ -817,6 +818,7 @@ import { LoopManagerComponent } from '../../loop-manager/loop-manager.component'
   `]
 })
 export class ConfigEditorComponent {
+  @Input() siteType: string = '';
   @Input() config!: SiteConfiguration;
   @Input() localVideos: LocalVideo[] = [];
   @Input() cloudVideos: { length: number } = { length: 0 };

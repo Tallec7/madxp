@@ -34,6 +34,7 @@ import { VideoUploadZoneComponent, UploadedVideo } from '../../../../../shared/c
         [selectedPath]="selectedVideoPath"
         [deployStates]="videoDeployStates"
         [siteId]="siteId"
+        [siteType]="siteType"
         [configVideoRoles]="configVideoRoles"
         [pendingDeploymentVideoIds]="pendingDeploymentVideoIds"
         [secondaryVariantVideoIds]="secondaryVariantVideoIds"
@@ -53,25 +54,25 @@ import { VideoUploadZoneComponent, UploadedVideo } from '../../../../../shared/c
         </div>
         <div class="modal-body">
           <p class="delete-filename">"{{ deleteTarget?.displayName || deleteTarget?.filename }}"</p>
-          <div *ngIf="deleteCanPi && !deleteCanCloud">
+          <div *ngIf="siteType !== 'saas' && deleteCanPi && !deleteCanCloud">
             <p class="delete-description">Cette vidéo est uniquement sur le <strong>Pi</strong>.</p>
           </div>
           <div *ngIf="!deleteCanPi && deleteCanCloud">
             <p class="delete-description">Cette vidéo est uniquement dans le <strong>cloud</strong>.</p>
           </div>
-          <div *ngIf="deleteCanPi && deleteCanCloud" class="delete-choices">
+          <div *ngIf="siteType !== 'saas' && deleteCanPi && deleteCanCloud" class="delete-choices">
             <p class="delete-description">Cette vidéo est sur le <strong>Pi</strong> et dans le <strong>cloud</strong>. Que souhaitez-vous supprimer ?</p>
           </div>
         </div>
         <div class="modal-footer delete-actions">
           <button class="btn btn-secondary" (click)="showDeleteModal = false">Annuler</button>
-          <button *ngIf="deleteCanPi" class="btn btn-delete-pi" (click)="executeDelete('pi')">
+          <button *ngIf="siteType !== 'saas' && deleteCanPi" class="btn btn-delete-pi" (click)="executeDelete('pi')">
             Supprimer du Pi
           </button>
           <button *ngIf="deleteCanCloud" class="btn btn-delete-cloud" (click)="executeDelete('cloud')">
             Supprimer du cloud
           </button>
-          <button *ngIf="deleteCanPi && deleteCanCloud" class="btn btn-delete-both" (click)="executeDelete('both')">
+          <button *ngIf="siteType !== 'saas' && deleteCanPi && deleteCanCloud" class="btn btn-delete-both" (click)="executeDelete('both')">
             Supprimer des deux
           </button>
         </div>
@@ -154,6 +155,7 @@ import { VideoUploadZoneComponent, UploadedVideo } from '../../../../../shared/c
 export class VideoManagerComponent {
   @Input() siteId!: string;
   @Input() siteName = '';
+  @Input() siteType: string = '';
   @Input() localVideos: LocalVideo[] = [];
   @Input() cloudVideos: CloudVideo[] = [];
   @Input() localStorage: LocalStorage | null = null;

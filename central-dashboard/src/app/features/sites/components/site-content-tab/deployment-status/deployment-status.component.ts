@@ -20,7 +20,7 @@ import { TranslateModule } from '@ngx-translate/core';
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <!-- Orchestrated Deployment Progress -->
-    <div class="orchestrated-deployment" *ngIf="orchestratedDeployment">
+    <div class="orchestrated-deployment" *ngIf="siteType !== 'saas' && orchestratedDeployment">
       <div class="deployment-header">
         <span class="deployment-icon">🚀</span>
         <span class="deployment-title">Déploiement en cours</span>
@@ -48,8 +48,8 @@ import { TranslateModule } from '@ngx-translate/core';
       </div>
     </div>
 
-    <!-- Pending Deployments -->
-    <div class="pending-deployments" *ngIf="pendingDeployments.length > 0">
+    <!-- Pending Deployments (Pi only) -->
+    <div class="pending-deployments" *ngIf="siteType !== 'saas' && pendingDeployments.length > 0">
       <div class="pending-header">
         <span class="pending-icon">⏳</span>
         <span class="pending-title">{{ 'content.pendingDeployments' | translate }} ({{ pendingDeployments.length }})</span>
@@ -91,7 +91,7 @@ import { TranslateModule } from '@ngx-translate/core';
       </div>
       <div class="status-content">
         <span class="status-text" *ngIf="deployStatus === 'sending'">Envoi de la configuration...</span>
-        <span class="status-text" *ngIf="deployStatus === 'pending'">En attente de confirmation du Pi...</span>
+        <span class="status-text" *ngIf="deployStatus === 'pending'">{{ siteType === 'saas' ? 'Enregistrement en cours...' : 'En attente de confirmation du Pi...' }}</span>
         <span class="status-text" *ngIf="deployStatus === 'success'">Configuration appliquée avec succès !</span>
         <span class="status-text" *ngIf="deployStatus === 'error'">Erreur : {{ deployError }}</span>
         <span class="status-text" *ngIf="deployStatus === 'timeout'">{{ deployError }}</span>
@@ -137,7 +137,7 @@ import { TranslateModule } from '@ngx-translate/core';
                 <input type="radio" name="deployMode" value="merge" [(ngModel)]="deployMode" />
                 <div class="mode-option-content">
                   <span class="mode-option-title">🔀 Fusionner (recommandé)</span>
-                  <span class="mode-option-desc">Préserve les paramètres locaux du Pi (langue, timezone, etc.)</span>
+                  <span class="mode-option-desc">{{ siteType === 'saas' ? 'Fusionne avec la configuration existante' : 'Préserve les paramètres locaux du Pi (langue, timezone, etc.)' }}</span>
                 </div>
               </label>
               <label class="mode-option" [class.active]="deployMode === 'replace'">
@@ -417,6 +417,7 @@ import { TranslateModule } from '@ngx-translate/core';
 })
 export class DeploymentStatusComponent implements OnDestroy {
   @Input() siteId!: string;
+  @Input() siteType: string = '';
   @Input() isConnected = false;
   @Input() config!: SiteConfiguration;
   @Input() isDirty = false;
