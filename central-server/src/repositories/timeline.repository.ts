@@ -192,7 +192,11 @@ class TimelineRepositoryImpl {
   }
 
   /**
-   * Recupere les videos cloud filtrees pour un club (uniquement ses propres videos + NEOPRO).
+   * Recupere les videos cloud filtrees pour un club :
+   * - Ses propres videos (uploaded_for_site_id = siteId)
+   * - Videos admin partagees (uploaded_for_site_id IS NULL)
+   * - Videos NEOPRO
+   * Exclut les videos des AUTRES clubs (uploaded_for_site_id = autre site).
    */
   async getCloudVideosForClub(siteId: string, limit = 500): Promise<CloudVideoRow[]> {
     const result = await query<CloudVideoRow>(
@@ -214,7 +218,9 @@ class TimelineRepositoryImpl {
        FROM videos v
        LEFT JOIN advertiser_videos av ON av.video_id = v.id
        LEFT JOIN advertisers a ON a.id = av.advertiser_id
-       WHERE v.uploaded_for_site_id = $1 OR UPPER(v.category) = 'NEOPRO'
+       WHERE v.uploaded_for_site_id = $1
+          OR v.uploaded_for_site_id IS NULL
+          OR UPPER(v.category) = 'NEOPRO'
        ORDER BY v.created_at DESC
        LIMIT $2`,
       [siteId, limit]
