@@ -1,3 +1,9 @@
+## [3.128.2](https://github.com/Tallec7/neopro/compare/v3.128.1...v3.128.2) (2026-04-06)
+
+### Bug Fixes
+
+- **saas:** write settings directly to DB instead of sending Pi commands ([f29687e](https://github.com/Tallec7/neopro/commit/f29687ef1395003ea6b68e66afdd9394019529be))
+
 ## [3.128.1](https://github.com/Tallec7/neopro/compare/v3.128.0...v3.128.1) (2026-04-06)
 
 ### Bug Fixes
