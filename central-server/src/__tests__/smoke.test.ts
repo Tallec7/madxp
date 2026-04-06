@@ -10484,19 +10484,15 @@ describe('Sponsor queries tv_status filter guard', () => {
   });
 
   it('must filter tv_status in sponsor queries (defense-in-depth)', () => {
-    // Count occurrences of the tv_status filter pattern in video_plays queries.
-    // Queries migrated to site_sponsor_daily_stats apply tv_status filter during aggregation
-    // (in calculate_site_sponsor_daily_stats PG function), not at read time.
-    // Remaining video_plays queries: getStatsByEventType, getMatchSessionCount, getMatchDayBreakdown,
-    // getStatsByVideo, getStatsByPeriod = at least 3 (getMatchDayBreakdown, getStatsByVideo, getStatsByPeriod)
-    const matches = content.match(/tv_status\s+IN\s*\(\s*'on'\s*,\s*'unknown'\s*\)/g);
-    expect({
-      filterCount: matches ? matches.length : 0,
-      hasAtLeast3: (matches?.length || 0) >= 3,
-    }).toEqual({
-      filterCount: matches ? matches.length : 0,
-      hasAtLeast3: true,
-    });
+    // All site_sponsor_daily_stats queries are pre-aggregated from video_plays
+    // with tv_status filter applied at aggregation time in calculate_site_sponsor_daily_stats().
+    // The repository no longer queries video_plays directly, so tv_status filters
+    // are 0 in the repository — the defense is in the PG function.
+    // Verify the PG function in full-schema.sql applies the filter.
+    const schemaPath = path.resolve(__dirname, '../../src/scripts/full-schema.sql');
+    const schemaSrc = fs.readFileSync(schemaPath, 'utf8');
+    const schemaMatches = schemaSrc.match(/tv_status\s+IN\s*\(\s*'on'\s*,\s*'unknown'\s*\)/g);
+    expect((schemaMatches?.length || 0) >= 1).toBe(true);
   });
 });
 
@@ -10673,14 +10669,20 @@ describe('Sponsor period breakdown GROUP BY alignment guard', () => {
     content = fs.readFileSync(repoPath, 'utf8');
   });
 
-  it('getStatsByPeriod GROUP BY must use COALESCE expression, not raw vp.period', () => {
-    // The GROUP BY must match the SELECT COALESCE to avoid duplicate rows
+  it('getStatsByPeriod must use COALESCE unpivot or COALESCE GROUP BY, not raw vp.period', () => {
+    // After migration to site_sponsor_daily_stats, getStatsByPeriod uses UNION ALL unpivot
+    // of pre-aggregated period columns. The COALESCE is applied at aggregation time in the PG function.
+    // Accept either: COALESCE GROUP BY (old pattern) or UNION ALL with named period constants (new pattern)
+    const hasCoalesceGroupBy = /GROUP BY\s+COALESCE\(NULLIF\(TRIM\(vp\.period\)/.test(content);
+    const hasUnionAllUnpivot = /SELECT\s+'pre_match'\s+AS\s+period/.test(content) &&
+      /SELECT\s+'halftime'/.test(content) &&
+      /SELECT\s+'loop'/.test(content);
     expect({
-      hasCoalesceGroupBy: /GROUP BY\s+COALESCE\(NULLIF\(TRIM\(vp\.period\)/.test(content),
-      reason: 'GROUP BY raw vp.period splits null/empty/whitespace into separate rows → duplicate display entries',
+      hasValidPattern: hasCoalesceGroupBy || hasUnionAllUnpivot,
+      reason: 'Period breakdown must avoid duplicate rows from null/empty/whitespace period values',
     }).toEqual({
-      hasCoalesceGroupBy: true,
-      reason: 'GROUP BY raw vp.period splits null/empty/whitespace into separate rows → duplicate display entries',
+      hasValidPattern: true,
+      reason: 'Period breakdown must avoid duplicate rows from null/empty/whitespace period values',
     });
   });
 });
@@ -10715,7 +10717,7 @@ describe('Sponsor portal manual_triggers guard', () => {
     // getStatsByVideo uses FILTER (WHERE trigger_type = 'manual') on video_plays.
     // Both patterns count manual triggers.
     const filterPattern = (repoContent.match(/FILTER\s*\(\s*WHERE\s+.*trigger_type\s*=\s*'manual'\s*\)/g) || []).length;
-    const preAggPattern = (repoContent.match(/SUM\s*\(\s*manual_triggers\s*\)/g) || []).length;
+    const preAggPattern = (repoContent.match(/SUM\s*\(\s*\w*\.?manual_triggers\s*\)/g) || []).length;
     const manualFilterCount = filterPattern + preAggPattern;
     expect({
       manualFilterCount,
@@ -11537,13 +11539,14 @@ describe('ADR-035 Phase 4: Cleanup — neopro bridge removed', () => {
     expect(repoSrc).not.toContain('advertiser_id:');
   });
 
-  test('site-sponsor.repository.ts network stats query video_plays.sponsor_id directly', () => {
+  test('site-sponsor.repository.ts network stats query by sponsor_id directly', () => {
     const repoSrc = fs.readFileSync(
       path.join(repoRoot, 'central-server/src/repositories/site-sponsor.repository.ts'),
       'utf-8'
     );
-    // After Phase 4, network stats bypass site_sponsors JOIN and query video_plays directly
-    expect(repoSrc).toContain('vp.sponsor_id = $1');
+    // After migration to site_sponsor_daily_stats, network stats query ssds.sponsor_id
+    // instead of vp.sponsor_id (pre-aggregated table instead of video_plays)
+    expect(repoSrc).toContain('sponsor_id = $1');
   });
 
   test('orchestrated-deployment.service.ts does NOT map source field', () => {

@@ -1725,19 +1725,20 @@ export async function generateSiteSponsorReport(
 
     const sponsor = sponsorResult.rows[0];
 
-    // 2. Stats summary
+    // 2. Stats summary (from pre-aggregated site_sponsor_daily_stats)
     const summaryResult = await query(
       `SELECT
-        COUNT(*) as total_impressions,
-        COALESCE(SUM(duration_played), 0) as total_screen_time_seconds,
-        ROUND(AVG(CASE WHEN completed THEN 100 ELSE (duration_played::float / NULLIF(video_duration, 0) * 100) END)::numeric, 1) as completion_rate,
-        COALESCE(SUM(audience_estimate), 0) as estimated_reach_fallback,
-        COUNT(DISTINCT DATE(played_at)) as active_days
-       FROM video_plays
+        COALESCE(SUM(total_impressions), 0) as total_impressions,
+        COALESCE(SUM(total_screen_time_seconds), 0) as total_screen_time_seconds,
+        CASE WHEN SUM(total_impressions) > 0
+          THEN ROUND(SUM(completed_plays)::numeric / SUM(total_impressions) * 100, 1)
+          ELSE 0 END as completion_rate,
+        COALESCE(SUM(estimated_reach), 0) as estimated_reach_fallback,
+        COUNT(*) FILTER (WHERE total_impressions > 0) as active_days
+       FROM site_sponsor_daily_stats
        WHERE site_sponsor_id = $1
-         AND category IN ${ALL_SPONSOR_CATEGORIES}
-         AND played_at >= $2::date
-         AND played_at < ($3::date + INTERVAL '1 day')`,
+         AND date >= $2::date
+         AND date <= $3::date`,
       [siteSponsorId, from, to]
     );
 
@@ -1747,15 +1748,14 @@ export async function generateSiteSponsorReport(
     const activeDays = parseInt(summary.active_days as string) || 0;
     const estimatedReachFallback = parseInt(summary.estimated_reach_fallback as string) || 0;
 
-    // 3. Match session count
+    // 3. Match session count (from pre-aggregated daily stats)
     const matchResult = await query(
-      `SELECT COUNT(DISTINCT DATE(played_at))::text as count
-       FROM video_plays
+      `SELECT COUNT(*)::text as count
+       FROM site_sponsor_daily_stats
        WHERE site_sponsor_id = $1
-         AND category IN ${ALL_SPONSOR_CATEGORIES}
-         AND event_type = 'match'
-         AND played_at >= $2::date
-         AND played_at < ($3::date + INTERVAL '1 day')`,
+         AND date >= $2::date
+         AND date <= $3::date
+         AND impressions_match > 0`,
       [siteSponsorId, from, to]
     );
     const matchSessionCount = parseInt(matchResult.rows[0]?.count as string || '0');
@@ -1776,18 +1776,23 @@ export async function generateSiteSponsorReport(
       reachExplanation = `Base sur les estimations d'audience par session`;
     }
 
-    // 5. Event type breakdown
+    // 5. Event type breakdown (from pre-aggregated daily stats)
     const eventTypeResult = await query(
-      `SELECT
-        COALESCE(event_type, 'other') as event_type,
-        COUNT(*)::text as count,
-        COALESCE(SUM(duration_played), 0)::text as total_screen_time
-       FROM video_plays
-       WHERE site_sponsor_id = $1
-         AND category IN ${ALL_SPONSOR_CATEGORIES}
-         AND played_at >= $2::date
-         AND played_at < ($3::date + INTERVAL '1 day')
-       GROUP BY event_type
+      `SELECT event_type, count::text, total_screen_time::text
+       FROM (
+         SELECT 'match' AS event_type, SUM(impressions_match) AS count, SUM(screen_time_match) AS total_screen_time
+         FROM site_sponsor_daily_stats WHERE site_sponsor_id = $1 AND date >= $2::date AND date <= $3::date
+         UNION ALL
+         SELECT 'training', SUM(impressions_training), SUM(screen_time_training)
+         FROM site_sponsor_daily_stats WHERE site_sponsor_id = $1 AND date >= $2::date AND date <= $3::date
+         UNION ALL
+         SELECT 'tournament', SUM(impressions_tournament), SUM(screen_time_tournament)
+         FROM site_sponsor_daily_stats WHERE site_sponsor_id = $1 AND date >= $2::date AND date <= $3::date
+         UNION ALL
+         SELECT 'other', SUM(impressions_other), SUM(screen_time_other)
+         FROM site_sponsor_daily_stats WHERE site_sponsor_id = $1 AND date >= $2::date AND date <= $3::date
+       ) sub
+       WHERE count > 0
        ORDER BY count DESC`,
       [siteSponsorId, from, to]
     );
