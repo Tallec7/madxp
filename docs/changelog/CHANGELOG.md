@@ -1,3 +1,9 @@
+## [3.127.9](https://github.com/Tallec7/neopro/compare/v3.127.8...v3.127.9) (2026-04-06)
+
+### Bug Fixes
+
+- **dashboard:** hide Pi-specific UI elements on SaaS sites across 9 child components ([4015f8f](https://github.com/Tallec7/neopro/commit/4015f8f33ff2a08055585f3d8090842b8a1fe64b))
+
 ## [3.127.8](https://github.com/Tallec7/neopro/compare/v3.127.7...v3.127.8) (2026-04-06)
 
 ### Bug Fixes
