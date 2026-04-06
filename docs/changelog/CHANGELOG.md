@@ -1,3 +1,9 @@
+## [3.128.1](https://github.com/Tallec7/neopro/compare/v3.128.0...v3.128.1) (2026-04-06)
+
+### Bug Fixes
+
+- **analytics:** replace MAX(uuid) with array_agg for sponsor_id aggregation ([ae5ffdd](https://github.com/Tallec7/neopro/commit/ae5ffdd4af2dbf1551913596c53cd254f60d7ee1))
+
 # [3.128.0](https://github.com/Tallec7/neopro/compare/v3.127.16...v3.128.0) (2026-04-06)
 
 ### Features
