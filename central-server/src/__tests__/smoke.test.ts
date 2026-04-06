@@ -12278,6 +12278,30 @@ describe('OTA deployment observability guards', () => {
       .toEqual({ calledPeriodically: true });
   });
 
+  it('checkAggregationStaleness must alert when CRON aggregation is late (>36h)', () => {
+    const alerting = fs.readFileSync(
+      path.join(repoRoot, 'central-server/src/services/alerting.service.ts'),
+      'utf8'
+    );
+    // Must have the method
+    expect({ hasMethod: alerting.includes('checkAggregationStaleness') })
+      .toEqual({ hasMethod: true });
+    // Must check both tables
+    expect({ checksClubStats: alerting.includes('club_daily_stats') })
+      .toEqual({ checksClubStats: true });
+    expect({ checksSponsorStats: alerting.includes('site_sponsor_daily_stats') })
+      .toEqual({ checksSponsorStats: true });
+    // Must use 36h threshold
+    expect({ has36hThreshold: /hours_ago\s*>\s*36/.test(alerting) })
+      .toEqual({ has36hThreshold: true });
+    // Must create critical alert
+    expect({ createsCriticalAlert: alerting.includes("type: 'aggregation_stale'") && alerting.includes("severity: 'critical'") })
+      .toEqual({ createsCriticalAlert: true });
+    // Must be called in the periodic loop
+    expect({ calledPeriodically: /checkAggregationStaleness\(\)/.test(alerting) })
+      .toEqual({ calledPeriodically: true });
+  });
+
   it('checkStuckDeployments must auto-fail update deployments stuck >2h', () => {
     const alerting = fs.readFileSync(
       path.join(repoRoot, 'central-server/src/services/alerting.service.ts'),

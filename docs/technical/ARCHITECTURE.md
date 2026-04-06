@@ -102,16 +102,18 @@ En plus de l'architecture Edge (Pi), Neopro propose un mode **100% SaaS** : le c
 - **Navigation** : utiliser `routerLink` (pas `href` absolu) dans `raspberry/src/` — le `baseHref` est `/saas/` en mode SaaS vs `/` en mode Pi
 - **Déploiement vidéo SaaS** : les sites SaaS n'ont pas de Pi — `deployment.service.ts` détecte `siteType === 'saas'` et marque le déploiement `completed` immédiatement (pas de `sendOrQueue` qui attendrait un Pi inexistant). Les vidéos sont servies directement via URL FTP, aucun transfert physique nécessaire. Le monitoring `checkStuckDeployments()` exclut les sites SaaS des alertes "Déploiement bloqué" (v3.127.5+)
 - **OTA SaaS** : les sites SaaS sont exclus des déploiements OTA — `update-deployment.service.ts` filtre `site_type != 'saas'` dans `getTargetSites()`, et le dashboard filtre via `deployableSites`
+- **Config save SaaS** : les sites SaaS utilisent `PUT /api/sites/:id/config` pour sauvegarder la configuration directement en DB (`local_config_mirror` + `config_history`). Le endpoint refuse les sites Pi (`site_type !== 'saas'` → 400). Pour les profils SaaS, `updateProfileConfiguration()` sauvegarde en DB et `syncProfiles()` est skippé (pas de Pi). Le bouton affiche "Enregistrer" au lieu de "Déployer", la modal diff masque le sélecteur merge/replace, et les messages de succès disent "enregistrée" au lieu de "déployée".
+- **JSON editor** : le config-editor offre un toggle JSON/Formulaire qui affiche la configuration complète en JSON brut, avec formatage et copie. Les modifications JSON sont appliquées via `Object.assign()` au config object.
 - **Dashboard SaaS guards** : les composants enfants de `site-detail` reçoivent `@Input() siteType` propagé via la chaîne `site-detail → site-content-tab → config-editor / video-manager / deployment-status / loop-manager / site-settings-tab`. Chaque composant utilise un getter `get isSaas(): boolean { return this.siteType === 'saas'; }` pour masquer les éléments Pi-only. Éléments gardés :
   - `site-detail` : onglet Debug masqué, État affiche métriques SaaS au lieu de hardware Pi, pas de "En attente de connexion"
   - `loop-manager` : badges ⏳ "Sera déployée" / cloud-hint / cloud-badge masqués
   - `site-settings-tab` : boutons "Enregistrer" au lieu de "Deployer", pas de `deployWatermarkAsset()`, notifications "enregistrée" au lieu de "déployée"
   - `config-editor` (standalone) : section merge/replace masquée, footer "Configuration à jour" au lieu de "Configuration synchronisée"
+  - `deployment-status` : bouton "Enregistrer" au lieu de "Déployer", `confirmSaveSaas()` au lieu de `sendCommand`, modal diff sans merge/replace, messages i18n adaptés (fr/en/es)
   - `video-library` : barre stockage Pi, badge "Sur le Pi", bouton deploy 🚀, filtres "Sur le Pi"/"À déployer" masqués
   - `video-manager` : boutons "Supprimer du Pi" masqués
-  - `deployment-status` : section "Pending Deployments", texte "confirmation du Pi" masqués
   - `site-profiles-tab` : warning "Pi hors-ligne", bannière sync Pi masqués
-  - Régression prévenue par smoke tests (`SaaS child component guards` dans `smoke.test.ts`) et règles CLAUDE.md
+  - Régression prévenue par smoke tests (`SaaS child component guards` + `SaaS config save flow` dans `smoke.test.ts`) et règles CLAUDE.md
 
 ---
 
@@ -347,6 +349,10 @@ Central Server API (POST /api/analytics/video-plays)
          ▼
 PostgreSQL (video_plays table, category = 'sponsor' pour sponsors)
          │
+         ├── CRON 1h50 → site_sponsor_daily_stats (J-1, breakdowns complets)
+         │                + site_sponsor_daily_video_stats (per-vidéo)
+         │                Préservé indéfiniment (Proof of Play saison)
+         │
          ├── KPIs avancés (GET /api/analytics/advertisers/:id/kpis)
          │         → verified_impressions (tv_status='on'), match_day, rotation_fairness,
          │           renewal_score, peak_hours heatmap
@@ -354,13 +360,13 @@ PostgreSQL (video_plays table, category = 'sponsor' pour sponsors)
 Dashboard Analytics (Chart.js graphs + KPI cards)
 
 Site Sponsor flow (local sponsors) :
-  site_sponsors → site_sponsor_videos → video_plays (site_sponsor_id, category='sponsor')
+  site_sponsors → site_sponsor_videos → site_sponsor_daily_stats (pré-agrégé)
          │
          ├── Site detail > Sponsors tab (KPIs, Chart.js trends, CPI)
          │         │
          │         └── Benchmark panel (P6.2 — sponsor vs site average)
          │
-         ├── Network Stats (P6.1 — cross-club via site_sponsors.advertiser_id)
+         ├── Network Stats (P6.1 — cross-club via site_sponsor_daily_stats.sponsor_id)
          │         GET /api/network/advertisers/:id/stats
          │         → trends, by_site, by_event_type, CPI réseau
          │

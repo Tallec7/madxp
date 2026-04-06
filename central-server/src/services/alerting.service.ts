@@ -1139,6 +1139,7 @@ class AlertingService {
         await this.checkHourlyMetrics();
         this.pruneLastAlertTime();
         await this.checkPhantomSponsors();
+        await this.checkAggregationStaleness();
       }
     }, 60 * 1000);
   }
@@ -1552,6 +1553,51 @@ class AlertingService {
       // Non-fatal — don't crash the periodic loop
       if (error instanceof Error && !error.message.includes('does not exist')) {
         logger.error('Error checking phantom sponsors:', error);
+      }
+    }
+  }
+
+  /**
+   * Détecte si les agrégations CRON (club_daily_stats, advertiser_daily_stats,
+   * site_sponsor_daily_stats) n'ont pas tourné depuis >36h.
+   * Sans agrégation, les données du jour sont perdues après le cleanup video_plays (15j).
+   */
+  private async checkAggregationStaleness(): Promise<void> {
+    try {
+      const staleResult = await query<{ table_name: string; last_calculated: string; hours_ago: number }>(
+        `SELECT table_name, last_calculated::text, hours_ago FROM (
+           SELECT 'club_daily_stats' AS table_name,
+             MAX(calculated_at) AS last_calculated,
+             EXTRACT(EPOCH FROM (NOW() - MAX(calculated_at))) / 3600 AS hours_ago
+           FROM club_daily_stats
+           UNION ALL
+           SELECT 'site_sponsor_daily_stats',
+             MAX(calculated_at),
+             EXTRACT(EPOCH FROM (NOW() - MAX(calculated_at))) / 3600
+           FROM site_sponsor_daily_stats
+         ) sub
+         WHERE hours_ago > 36 OR last_calculated IS NULL`,
+        []
+      );
+
+      for (const row of staleResult.rows) {
+        const hoursAgo = Math.round(row.hours_ago || 999);
+        logger.error('Aggregation CRON stale — data loss risk', {
+          table: row.table_name,
+          lastCalculated: row.last_calculated,
+          hoursAgo,
+        });
+        await this.createAlert({
+          type: 'aggregation_stale',
+          severity: 'critical',
+          message: `Agrégation ${row.table_name} en retard (${hoursAgo}h). Risque de perte de données après cleanup video_plays.`,
+          metadata: { table: row.table_name, hoursAgo, lastCalculated: row.last_calculated },
+        });
+      }
+    } catch (error) {
+      // Non-fatal — tables might not exist yet
+      if (error instanceof Error && !error.message.includes('does not exist')) {
+        logger.error('Error checking aggregation staleness:', error);
       }
     }
   }

@@ -88,6 +88,9 @@ Ajouter les composants TV/remote directement dans le dashboard Angular.
 | Déploiement vidéo bloqué (pas de Pi pour recevoir) | `deployment.service.ts` détecte `siteType === 'saas'` et marque `completed` immédiatement — smoke test enforced (v3.127.5)                    |
 | Alertes "Déploiement bloqué" sur sites SaaS        | `checkStuckDeployments()` exclut les sites SaaS via `JOIN sites WHERE site_type != 'saas'` — smoke test enforced (v3.127.5)                   |
 | OTA envoyé par erreur à un site SaaS               | `update-deployment.service.ts` filtre `site_type != 'saas'`, dashboard filtre `deployableSites` — double guard smoke test enforced (v3.127.4) |
+| Route resolver charge `/configuration.json` local  | `app.routes.ts` vérifie `saasConfigService.isSaasMode()` AVANT le fallback local — smoke test enforced (v3.127.10)                            |
+| AuthService fetch `/configuration.json` en SaaS    | Guard `saasMode` dans `loadConfiguration()` + auto-authenticate — smoke test enforced (v3.127.10)                                             |
+| Config profile vide retourne 404                   | `getSaasConfig` retourne des defaults vides au lieu de 404 pour les profils fraîchement créés — smoke test enforced (v3.127.10)               |
 
 ## Fichiers clés
 

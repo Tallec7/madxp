@@ -1773,17 +1773,19 @@ Sponsor Portal: 100 req/min    (PUBLIC, par IP)
 
 Les données volumineuses sont nettoyées automatiquement par le `CronScheduler` :
 
-| Table                           | Rétention        | Heure cleanup   | Notes                                                                                                                                                                                                                                                                                    |
-| ------------------------------- | ---------------- | --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `video_plays`                   | **30 jours**     | 3h15            | Agrégées dans `club_daily_stats` / `advertiser_daily_stats` avant nettoyage. Données du jour accessibles via VIEWs `_live`. Colonne `interruption_reason` (v3.108+) : `manual_action`, `profile_switch`, `video_error`, `hdmi_lost`, `loop_advance`, `browser_close`, `NULL` (completed) |
-| `metrics`                       | 7 jours          | 3h45            | Diagnostics système court terme                                                                                                                                                                                                                                                          |
-| `remote_commands`               | 30 jours         | 4h00            | Historique debug                                                                                                                                                                                                                                                                         |
-| `alerts`                        | 90 jours         | 4h15            | Analyse patterns incidents                                                                                                                                                                                                                                                               |
-| `config_history`                | 20 versions/site | 4h30            | Rollback configurations                                                                                                                                                                                                                                                                  |
-| `audit_logs`                    | 90 jours         | (logs schedule) | Conformité/audit                                                                                                                                                                                                                                                                         |
-| `recurring_schedule_executions` | 90 jours         | (logs schedule) | Historique exécution crons                                                                                                                                                                                                                                                               |
+| Table                           | Rétention        | Heure cleanup   | Notes                                                                                                                                                                                                                                                                                                                 |
+| ------------------------------- | ---------------- | --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `video_plays`                   | **15 jours**     | 3h15            | Agrégées dans `club_daily_stats` / `advertiser_daily_stats` / `site_sponsor_daily_stats` avant nettoyage. Données du jour accessibles via VIEWs `_live`. Colonne `interruption_reason` (v3.108+) : `manual_action`, `profile_switch`, `video_error`, `hdmi_lost`, `loop_advance`, `browser_close`, `NULL` (completed) |
+| `metrics`                       | 7 jours          | 3h45            | Diagnostics système court terme                                                                                                                                                                                                                                                                                       |
+| `remote_commands`               | 30 jours         | 4h00            | Historique debug                                                                                                                                                                                                                                                                                                      |
+| `alerts`                        | 90 jours         | 4h15            | Analyse patterns incidents                                                                                                                                                                                                                                                                                            |
+| `config_history`                | 20 versions/site | 4h30            | Rollback configurations                                                                                                                                                                                                                                                                                               |
+| `audit_logs`                    | 90 jours         | (logs schedule) | Conformité/audit                                                                                                                                                                                                                                                                                                      |
+| `recurring_schedule_executions` | 90 jours         | (logs schedule) | Historique exécution crons                                                                                                                                                                                                                                                                                            |
 
-> **Agrégation CRON :** `club_daily_stats` (2h00) et `advertiser_daily_stats` (2h30) agrègent les `video_plays` de J-1. Les VIEWs `club_daily_stats_live` et `advertiser_daily_stats_live` combinent l'historique agrégé + les données temps réel du jour (UNION ALL). Tous les repositories et services utilisent les VIEWs `_live` — 10 smoke tests gardent cette convention.
+> **Agrégation CRON :** `club_daily_stats` (2h00), `advertiser_daily_stats` (2h30) et `site_sponsor_daily_stats` (1h50) agrègent les `video_plays` de J-1. Les VIEWs `club_daily_stats_live` et `advertiser_daily_stats_live` combinent l'historique agrégé + les données temps réel du jour (UNION ALL). `site_sponsor_daily_stats` stocke les breakdowns complets (event_type, period, audience, per-video) pour le Proof of Play saison. Table enfant `site_sponsor_daily_video_stats` pour la granularité par vidéo. Tous les repositories et services utilisent les VIEWs `_live` — 10 smoke tests gardent cette convention.
+>
+> **Monitoring agrégation :** `alerting.service.ts` vérifie toutes les 5 min que `club_daily_stats` et `site_sponsor_daily_stats` ont été agrégées dans les 36 dernières heures. Si le CRON ne tourne pas, alerte `aggregation_stale` critique — sans agrégation, les données sont perdues après le cleanup `video_plays` (15j).
 
 > **Monitoring :** `neopro_db_size_bytes` et `neopro_db_table_size_bytes{table}` sont collectés toutes les 5 min. Alertes Prometheus : `DbSizeWarning` (>400 MB), `DbSizeCritical` (>475 MB), `DbTableSizeHigh` (>200 MB/table). Supabase free tier = 500 MB.
 
@@ -1807,33 +1809,33 @@ Le service Socket.IO délègue le traitement des événements à 9 handlers spé
 
 Tous les accès PostgreSQL passent par des repositories typés héritant de `BaseRepository<T>` :
 
-| Repository          | Table(s) principale(s)                                                            |
-| ------------------- | --------------------------------------------------------------------------------- |
-| `site`              | `sites`                                                                           |
-| `user`              | `users`                                                                           |
-| `video`             | `videos`                                                                          |
-| `group`             | `groups`, `group_sites`                                                           |
-| `deployment`        | `content_deployments`, `deployment_targets`                                       |
-| `software-update`   | `software_updates`, `update_deployments`                                          |
-| `alert`             | `alerts`, `alert_thresholds`                                                      |
-| `analytics`         | `video_plays`, `club_sessions`, `club_daily_stats_live` (VIEW)                    |
-| `sponsor`           | `video_plays` (category='sponsor'), `advertiser_daily_stats_live` (VIEW)          |
-| `config-history`    | `config_drafts`, `config_history`                                                 |
-| `config-profile`    | `config_profiles`                                                                 |
-| `advertising`       | `advertiser_videos`, `advertiser_sites`                                           |
-| `advertiser-portal` | `advertisers`, `advertiser_daily_stats_live` (VIEW)                               |
-| `agency`            | `agencies`, `agency_sites`, `club_daily_stats_live` (VIEW)                        |
-| `subscription`      | `subscription_history`                                                            |
-| `metrics`           | `site_metrics`                                                                    |
-| `objective`         | `objectives`                                                                      |
-| `playlist-schedule` | `playlist_schedules`                                                              |
-| `remote-command`    | `remote_commands`, `pending_commands`                                             |
-| `report`            | `reports`, `generated_reports`                                                    |
-| `timeline`          | `timeline_events`                                                                 |
-| `email`             | Notifications email (templates)                                                   |
-| `pitch-deck`        | Vue agrégée multi-tables (`club_daily_stats_live`, `advertiser_daily_stats_live`) |
-| `site-sponsor`      | `site_sponsors`, `site_sponsor_videos`                                            |
-| `campaign`          | `campaigns`, `campaign_videos`, `campaign_sites`                                  |
+| Repository          | Table(s) principale(s)                                                                               |
+| ------------------- | ---------------------------------------------------------------------------------------------------- |
+| `site`              | `sites`                                                                                              |
+| `user`              | `users`                                                                                              |
+| `video`             | `videos`                                                                                             |
+| `group`             | `groups`, `group_sites`                                                                              |
+| `deployment`        | `content_deployments`, `deployment_targets`                                                          |
+| `software-update`   | `software_updates`, `update_deployments`                                                             |
+| `alert`             | `alerts`, `alert_thresholds`                                                                         |
+| `analytics`         | `video_plays`, `club_sessions`, `club_daily_stats_live` (VIEW)                                       |
+| `sponsor`           | `video_plays` (category='sponsor'), `advertiser_daily_stats_live` (VIEW)                             |
+| `config-history`    | `config_drafts`, `config_history`                                                                    |
+| `config-profile`    | `config_profiles`                                                                                    |
+| `advertising`       | `advertiser_videos`, `advertiser_sites`                                                              |
+| `advertiser-portal` | `advertisers`, `advertiser_daily_stats_live` (VIEW)                                                  |
+| `agency`            | `agencies`, `agency_sites`, `club_daily_stats_live` (VIEW)                                           |
+| `subscription`      | `subscription_history`                                                                               |
+| `metrics`           | `site_metrics`                                                                                       |
+| `objective`         | `objectives`                                                                                         |
+| `playlist-schedule` | `playlist_schedules`                                                                                 |
+| `remote-command`    | `remote_commands`, `pending_commands`                                                                |
+| `report`            | `reports`, `generated_reports`                                                                       |
+| `timeline`          | `timeline_events`                                                                                    |
+| `email`             | Notifications email (templates)                                                                      |
+| `pitch-deck`        | Vue agrégée multi-tables (`club_daily_stats_live`, `advertiser_daily_stats_live`)                    |
+| `site-sponsor`      | `site_sponsors`, `site_sponsor_videos`, `site_sponsor_daily_stats`, `site_sponsor_daily_video_stats` |
+| `campaign`          | `campaigns`, `campaign_videos`, `campaign_sites`                                                     |
 
 > **ADR-035 Phase 4** : Les colonnes `source` et `advertiser_id` ont été retirées de `site_sponsors`. La table ne contient plus que les sponsors locaux de club. Les annonceurs Neopro utilisent désormais le système de campagnes (`campaigns`, `campaign_videos`, `campaign_sites`).
 > | `benchmark` | `sites`, `club_sessions`, `video_plays`, `metrics` (lecture) |

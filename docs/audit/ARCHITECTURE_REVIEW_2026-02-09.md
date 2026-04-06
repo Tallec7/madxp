@@ -566,8 +566,10 @@ users (7 roles)
   │     ├── remote_commands (30 jours)
   │     ├── alerts (90 jours)
   │     ├── club_sessions
-  │     ├── video_plays (90 jours)
+  │     ├── video_plays (15 jours)
   │     ├── club_daily_stats (indefini)
+  │     ├── site_sponsor_daily_stats (indefini)
+  │     ├── site_sponsor_daily_video_stats (indefini)
   │     └── subscription_history
   │
   ├── videos
@@ -586,17 +588,19 @@ users (7 roles)
 
 #### Politique de retention
 
-| Table                  | Retention        | Justification                                      |
-| ---------------------- | ---------------- | -------------------------------------------------- |
-| video_plays            | 90 jours         | Donnees granulaires, agreges dans club_daily_stats |
-| advertiser_impressions | 90 jours         | Agreges dans advertiser_daily_stats                |
-| metrics                | 7 jours          | Debug court terme uniquement                       |
-| config_history         | 20 versions/site | Rollback realiste                                  |
-| remote_commands        | 30 jours         | Historique debug                                   |
-| alerts                 | 90 jours         | Patterns d'incidents                               |
-| audit_logs             | 90 jours         | Conformite                                         |
-| club_daily_stats       | Indefini         | Historique long terme                              |
-| advertiser_daily_stats | Indefini         | Historique long terme                              |
+| Table                          | Retention        | Justification                                                              |
+| ------------------------------ | ---------------- | -------------------------------------------------------------------------- |
+| video_plays                    | 15 jours         | Donnees granulaires, agreges dans club/advertiser/site_sponsor_daily_stats |
+| advertiser_impressions         | (supprimée)      | Remplacee par video_plays category='sponsor' (v3.66+)                      |
+| metrics                        | 7 jours          | Debug court terme uniquement                                               |
+| config_history                 | 20 versions/site | Rollback realiste                                                          |
+| remote_commands                | 30 jours         | Historique debug                                                           |
+| alerts                         | 90 jours         | Patterns d'incidents                                                       |
+| audit_logs                     | 90 jours         | Conformite                                                                 |
+| club_daily_stats               | Indefini         | Historique long terme                                                      |
+| advertiser_daily_stats         | Indefini         | Historique long terme                                                      |
+| site_sponsor_daily_stats       | Indefini         | Proof of Play saison + historique 3 ans                                    |
+| site_sponsor_daily_video_stats | Indefini         | Detail per-video pour rapports sponsors                                    |
 
 #### Points forts
 

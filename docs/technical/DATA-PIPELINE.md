@@ -38,13 +38,16 @@ analytics_buffer.json  →  AnalyticsCollector  →  POST /api/analytics/video-p
 
 ### Tables agrégées (CRON J-1)
 
-| Table                    | Granularité         | Agrégé depuis                            |
-| ------------------------ | ------------------- | ---------------------------------------- |
-| `club_daily_stats`       | site × date         | `video_plays` (toutes catégories)        |
-| `advertiser_daily_stats` | video × site × date | `video_plays` WHERE category = 'sponsor' |
+| Table                            | Granularité                                 | Agrégé depuis                                                                           |
+| -------------------------------- | ------------------------------------------- | --------------------------------------------------------------------------------------- |
+| `club_daily_stats`               | site × date                                 | `video_plays` (toutes catégories)                                                       |
+| `advertiser_daily_stats`         | video × site × date                         | `video_plays` WHERE category = 'sponsor'                                                |
+| `site_sponsor_daily_stats`       | site_sponsor × site × date                  | `video_plays` WHERE site_sponsor_id IS NOT NULL + breakdowns event_type/period/audience |
+| `site_sponsor_daily_video_stats` | site_sponsor × site × date × video_filename | `video_plays` (child table per-vidéo)                                                   |
 
-- CRON quotidien à 2h00 / 2h30 (`recurring_schedules`, `is_active = true`)
+- CRON quotidien à 1h50 / 2h00 / 2h30 (`recurring_schedules`, `is_active = true`)
 - Agrège **uniquement J-1** (hier)
+- **Monitoring** : `alerting.service.ts` alerte `aggregation_stale` (critique) si `calculated_at` > 36h
 
 ### VIEWs live (historique + aujourd'hui)
 
@@ -68,12 +71,15 @@ Ces VIEWs sont transparentes : même colonnes que les tables agrégées, mais in
 | KPIs & Network Stats | `video_plays`             |
 | Traction Metrics     | `video_plays`             |
 
-### Pages qui utilisent les VIEWs live
+### Pages qui utilisent les tables agrégées / VIEWs live
 
-| Page                            | VIEW                          |
-| ------------------------------- | ----------------------------- |
-| Comparaison multi-sites         | `club_daily_stats_live`       |
-| Portail annonceur (11 méthodes) | `advertiser_daily_stats_live` |
+| Page                            | Source                                                        |
+| ------------------------------- | ------------------------------------------------------------- |
+| Comparaison multi-sites         | `club_daily_stats_live`                                       |
+| Portail annonceur (11 méthodes) | `advertiser_daily_stats_live`                                 |
+| Site Sponsors (onglet Sponsors) | `site_sponsor_daily_stats` + `site_sponsor_daily_video_stats` |
+| Rapport PDF sponsor site        | `site_sponsor_daily_stats` (summary, match count, event type) |
+| Proof of Play (saison complète) | `site_sponsor_daily_stats` (préservé indéfiniment)            |
 
 ## 5. Schéma global
 
@@ -96,6 +102,7 @@ Ces VIEWs sont transparentes : même colonnes que les tables agrégées, mais in
 │       ↓                                                                 │
 │  PostgreSQL : video_plays (source de vérité)                            │
 │       ↓                                                                 │
+│  CRON 1h50 → site_sponsor_daily_stats (J-1) + child video stats          │
 │  CRON 2h00 → club_daily_stats (J-1)                                     │
 │  CRON 2h30 → advertiser_daily_stats (J-1)                               │
 │       ↓                                                                 │
@@ -110,6 +117,7 @@ Ces VIEWs sont transparentes : même colonnes que les tables agrégées, mais in
 │  Club Analytics, Fleet, KPIs ──→ video_plays (temps réel)              │
 │  Comparaison multi-sites     ──→ club_daily_stats_live                  │
 │  Portail annonceur           ──→ advertiser_daily_stats_live            │
+│  Site Sponsors / Proof of Play ─→ site_sponsor_daily_stats             │
 │  Realtime Dashboard          ──→ video_plays + Socket.IO               │
 └─────────────────────────────────────────────────────────────────────────┘
 ```
@@ -121,3 +129,7 @@ Ces VIEWs sont transparentes : même colonnes que les tables agrégées, mais in
 2. **FK nullification** : Si `video_id` ou `sponsor_id` n'existe pas en base, le champ est mis à NULL au lieu de rejeter le batch. Les analytics de base (comptage, durée) sont préservées, seul le lien sponsor est perdu.
 
 3. **Metadata enrichment** : Le Pi doit recevoir `enrichConfigWithAnalyticsMetadata()` avant déploiement pour que `video_id`/`advertiser_id`/`analytics_category` soient présents dans les events. Sans enrichissement, `detectCategory()` tombe en fallback path-based.
+
+4. **Rétention critique (15j)** : `video_plays` est purgé après 15 jours. Les tables agrégées (`club_daily_stats`, `site_sponsor_daily_stats`, `advertiser_daily_stats`) sont préservées indéfiniment. **Si le CRON d'agrégation ne tourne pas, les données sont perdues définitivement.** Monitoring : `alerting.service.ts` → alerte `aggregation_stale` critique si `calculated_at` > 36h. Incident 2026-04-06 : rétention réduite 90j→15j sans agrégation sponsor → perte impressions sponsors.
+
+5. **Proof of Play sponsor** : Les analytics sponsors doivent couvrir la saison complète (sept→juin, historique 3 ans). `site_sponsor_daily_stats` agrège event_type (match/training/tournament/other), period (pre_match/halftime/post_match/loop), audience, et `site_sponsor_daily_video_stats` le détail par vidéo. Le repository `site-sponsor.repository.ts` ne requête plus jamais `video_plays` directement.
