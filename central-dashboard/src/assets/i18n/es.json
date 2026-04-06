@@ -36,6 +36,8 @@
     "deploying": "Desplegando...",
     "deployQueued": "Desplegar (en cola)",
     "confirmDeploy": "Confirmar despliegue",
+    "saving": "Guardando...",
+    "confirmSave": "Confirmar guardado",
     "deployConfig": "Desplegar configuración",
     "apply": "Aplicar",
     "applying": "Aplicando...",

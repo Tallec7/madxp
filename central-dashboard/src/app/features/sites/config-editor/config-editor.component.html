@@ -728,7 +728,7 @@
         <button class="modal-close" (click)="showDiffModal = false">×</button>
       </div>
       <div class="modal-body">
-        <div class="mode-section">
+        <div class="mode-section" *ngIf="!isSaas">
           <div class="mode-header">
             <span class="mode-title">Mode de déploiement</span>
             <span class="mode-subtitle"
@@ -825,7 +825,9 @@
           {{
             deploying
               ? ('common.deploying' | translate)
-              : ('configEditor.confirmDeployment' | translate)
+              : isSaas
+                ? ('common.save' | translate)
+                : ('configEditor.confirmDeployment' | translate)
           }}
         </button>
       </div>
@@ -836,17 +838,17 @@
   <div class="editor-footer">
     <div class="footer-left">
       <button class="btn btn-secondary" (click)="reloadConfig()" [disabled]="loading">
-        Recharger depuis le site
+        {{ isSaas ? 'Recharger' : 'Recharger depuis le site' }}
       </button>
     </div>
     <div class="footer-right">
       <span class="status-indicator" *ngIf="hasChanges">
         <span class="status-dot warning"></span>
-        Modifications non déployées
+        {{ isSaas ? 'Modifications non enregistrées' : 'Modifications non déployées' }}
       </span>
       <span class="status-indicator" *ngIf="!hasChanges && !validationResult?.errors?.length">
         <span class="status-dot success"></span>
-        Configuration synchronisée
+        {{ isSaas ? 'Configuration à jour' : 'Configuration synchronisée' }}
       </span>
       <div class="deploy-warnings" *ngIf="validationResult?.warnings?.length">
         <div class="deploy-warning" *ngFor="let warn of validationResult?.warnings">
@@ -860,7 +862,11 @@
         [disabled]="!isValid || deploying"
       >
         {{
-          deploying ? ('common.deploying' | translate) : ('configEditor.deployConfig' | translate)
+          deploying
+            ? ('common.deploying' | translate)
+            : isSaas
+              ? ('common.save' | translate)
+              : ('configEditor.deployConfig' | translate)
         }}
       </button>
     </div>

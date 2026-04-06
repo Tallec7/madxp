@@ -3,6 +3,25 @@
 ### Bug Fixes
 
 - **saas:** skip Pi-local API calls (site-info, hdmi-status) on SaaS sites ([03c5589](https://github.com/Tallec7/neopro/commit/03c55898a2b91dc6c62c537bb6dbcd03afa6ec6c))
+- **saas:** remove Pi-specific labels and deploy wording from SaaS site views
+
+### Features
+
+- **saas:** SaaS config save flow - direct DB save without Pi command (`PUT /api/sites/:id/config`)
+- **saas:** "Enregistrer" labels replace "Deployer" in deployment-status for SaaS sites (i18n: fr/en/es)
+- **saas:** skip `syncProfiles()` for SaaS sites (DB save sufficient, no Pi to sync)
+- **saas:** hide merge/replace mode selector in diff modal for SaaS sites
+- **dashboard:** JSON toggle view in config-editor (view/edit raw config JSON)
+
+### Backend
+
+- **api:** new endpoint `PUT /api/sites/:id/config` - direct config save for SaaS sites (guards `site_type === 'saas'`)
+- **repository:** `updateLocalConfigMirror()` method in `site.repository.ts`
+- **validation:** `saveConfigDirect` Joi schema in validation middleware
+
+### Tests
+
+- 7 new smoke tests covering SaaS config save flow, JSON editor, i18n keys, route validation
 
 ## [3.127.11](https://github.com/Tallec7/neopro/compare/v3.127.10...v3.127.11) (2026-04-06)
 

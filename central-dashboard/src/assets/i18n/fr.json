@@ -36,6 +36,8 @@
     "deploying": "Déploiement...",
     "deployQueued": "Déployer (file d'attente)",
     "confirmDeploy": "Confirmer le déploiement",
+    "saving": "Enregistrement...",
+    "confirmSave": "Confirmer l'enregistrement",
     "deployConfig": "Déployer la configuration",
     "apply": "Appliquer",
     "applying": "Application...",

@@ -4,6 +4,7 @@ import { AuthRequest } from '../types';
 import logger from '../config/logger';
 import socketService from '../services/socket.service';
 import { configHistoryRepository } from '../repositories/config-history.repository';
+import { siteRepository } from '../repositories/site.repository';
 
 /**
  * Calcule les différences entre deux configurations
@@ -376,5 +377,55 @@ export const previewConfigDiff = async (req: AuthRequest, res: Response) => {
   } catch (error) {
     logger.error('Preview config diff error:', error);
     res.status(500).json({ error: 'Erreur lors de la génération du diff' });
+  }
+};
+
+// --------------------------------------------------------------------------
+// PUT /api/sites/:id/config
+// Sauvegarde directe de la configuration en DB (pour sites SaaS sans Pi).
+// --------------------------------------------------------------------------
+
+export const saveConfigDirect = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    const site = await siteRepository.findById(id);
+    if (!site) {
+      return res.status(404).json({ error: 'Site non trouvé' });
+    }
+
+    if (site.site_type !== 'saas') {
+      return res.status(400).json({ error: 'La sauvegarde directe est réservée aux sites SaaS. Utilisez update_config pour les sites Pi.' });
+    }
+
+    const { configuration } = req.body;
+    if (!configuration || typeof configuration !== 'object') {
+      return res.status(400).json({ error: 'Configuration invalide' });
+    }
+
+    await siteRepository.updateLocalConfigMirror(id, configuration);
+
+    // Sauvegarder aussi dans l'historique
+    const versionId = uuidv4();
+    await configHistoryRepository.insertVersion({
+      id: versionId,
+      site_id: id,
+      configuration: JSON.stringify(configuration),
+      deployed_by: req.user?.email,
+      comment: 'Sauvegarde SaaS depuis le dashboard',
+      previous_version_id: null,
+      changes_summary: 'Sauvegarde directe SaaS',
+    });
+
+    logger.info('SaaS config saved directly', {
+      siteId: id,
+      versionId,
+      savedBy: req.user?.email,
+    });
+
+    res.json({ success: true, versionId });
+  } catch (error) {
+    logger.error('Save SaaS config error:', error);
+    res.status(500).json({ error: 'Erreur lors de la sauvegarde de la configuration' });
   }
 };

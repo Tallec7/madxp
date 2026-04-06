@@ -142,24 +142,22 @@
                 <span class="label">Sports:</span>
                 <span class="value">{{ site.sports?.join(', ') || 'N/A' }}</span>
               </div>
-              <div class="info-row">
-                <span class="label">Version:</span>
-                <span class="value">
-                  @if (site.software_version) {
-                    {{ formatVersion(site.software_version) }}
-                  } @else {
-                    <span class="text-muted">En attente de connexion</span>
-                  }
-                </span>
-              </div>
+              @if (site.software_version) {
+                <div class="info-row">
+                  <span class="label">Version:</span>
+                  <span class="value">{{ formatVersion(site.software_version) }}</span>
+                </div>
+              }
               <div class="info-row">
                 <span class="label">Type:</span>
                 <span class="value"><span class="badge-saas">SaaS</span></span>
               </div>
-              <div class="info-row">
-                <span class="label">Dernière connexion:</span>
-                <span class="value">{{ formatLastSeen(site.last_seen_at) }}</span>
-              </div>
+              @if (site.last_seen_at) {
+                <div class="info-row">
+                  <span class="label">Dernière session:</span>
+                  <span class="value">{{ formatLastSeen(site.last_seen_at) }}</span>
+                </div>
+              }
             </div>
           </div>
 

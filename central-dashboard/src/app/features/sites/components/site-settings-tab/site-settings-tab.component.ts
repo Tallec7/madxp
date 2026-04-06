@@ -262,9 +262,11 @@ export class SiteSettingsTabComponent implements OnInit, OnChanges {
           this.siteUpdated.emit(updatedSite);
         }
         this.notificationService.success(
-          commandResponse.queued
-            ? '📥 Configuration mise en file d\'attente'
-            : 'Configuration déployée avec succès !'
+          this.isSaas
+            ? 'Configuration enregistrée avec succès !'
+            : commandResponse.queued
+              ? '📥 Configuration mise en file d\'attente'
+              : 'Configuration déployée avec succès !'
         );
       },
       error: (error) => {
@@ -431,7 +433,7 @@ export class SiteSettingsTabComponent implements OnInit, OnChanges {
     this.dataService.saveOverlayConfig(this.siteId, this.overlayConfig).subscribe({
       next: () => {
         this.savingOverlay = false;
-        this.notificationService.success('Configuration de l\'overlay déployée !');
+        this.notificationService.success(this.isSaas ? 'Configuration de l\'overlay enregistrée !' : 'Configuration de l\'overlay déployée !');
         this.showOverlayConfig = false;
       },
       error: (error) => {
@@ -705,7 +707,7 @@ export class SiteSettingsTabComponent implements OnInit, OnChanges {
         // 2. Re-déployer l'image si cloudUrl est disponible
         // Cela garantit que l'image est présente sur le Pi même si le premier
         // deploy_asset a échoué ou n'a jamais été reçu
-        if (this.watermarkConfig.cloudUrl && this.watermarkConfig.imagePath) {
+        if (!this.isSaas && this.watermarkConfig.cloudUrl && this.watermarkConfig.imagePath) {
           this.dataService.deployWatermarkAsset(this.siteId, this.watermarkConfig).subscribe({
             next: () => {
               this.savingWatermark = false;
@@ -731,9 +733,11 @@ export class SiteSettingsTabComponent implements OnInit, OnChanges {
         } else {
           this.savingWatermark = false;
           this.notificationService.success(
-            response.queued
-              ? 'Configuration mise en file d\'attente'
-              : 'Configuration du watermark déployée!'
+            this.isSaas
+              ? 'Configuration du watermark enregistrée !'
+              : response.queued
+                ? 'Configuration mise en file d\'attente'
+                : 'Configuration du watermark déployée!'
           );
         }
       },

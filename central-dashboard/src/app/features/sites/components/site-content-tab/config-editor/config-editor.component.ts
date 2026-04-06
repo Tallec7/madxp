@@ -83,6 +83,34 @@ import { LoopManagerComponent } from '../../loop-manager/loop-manager.component'
       </div>
     </div>
 
+    <!-- JSON Toggle -->
+    <div class="json-toggle-bar" *ngIf="config">
+      <button class="btn btn-sm btn-outline" (click)="toggleJsonView()">
+        <span>{{ showJson ? '📝 Formulaire' : 'JSON' }}</span>
+      </button>
+    </div>
+
+    <div class="json-editor-section" *ngIf="showJson && config">
+      <div class="section card">
+        <div class="section-header">
+          <h4><span class="section-icon">📋</span> Configuration JSON</h4>
+          <div class="json-actions">
+            <button class="btn btn-sm btn-outline" (click)="formatJson()">Formater</button>
+            <button class="btn btn-sm btn-outline" (click)="copyJson()">Copier</button>
+          </div>
+        </div>
+        <textarea
+          class="json-textarea"
+          [value]="configJsonString"
+          (input)="onJsonInput($event)"
+          spellcheck="false"
+        ></textarea>
+        <div class="json-error" *ngIf="jsonError">{{ jsonError }}</div>
+      </div>
+    </div>
+
+    <ng-container *ngIf="!showJson">
+
     <!-- Categories -->
     <div class="section card">
       <div class="section-header">
@@ -344,6 +372,8 @@ import { LoopManagerComponent } from '../../loop-manager/loop-manager.component'
         <p>Créez d'abord des catégories pour configurer les analytics</p>
       </div>
     </div>
+
+    </ng-container>
   `,
   styles: [`
     .config-health-bar {
@@ -810,6 +840,29 @@ import { LoopManagerComponent } from '../../loop-manager/loop-manager.component'
     .btn-secondary { background: white; color: #475569; border: 1px solid #e2e8f0; }
     .btn-secondary:hover { background: #f8fafc; }
 
+    .json-toggle-bar {
+      display: flex;
+      justify-content: flex-end;
+      margin-bottom: 0.75rem;
+    }
+    .json-textarea {
+      width: 100%;
+      min-height: 400px;
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+      font-size: 0.8125rem;
+      line-height: 1.5;
+      padding: 1rem;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      background: #f8fafc;
+      color: #1e293b;
+      resize: vertical;
+      tab-size: 2;
+    }
+    .json-textarea:focus { outline: none; border-color: #2563eb; box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15); }
+    .json-error { color: #dc2626; font-size: 0.8125rem; margin-top: 0.5rem; padding: 0.5rem; background: #fef2f2; border-radius: 4px; }
+    .json-actions { display: flex; gap: 0.5rem; }
+
     @media (max-width: 768px) {
       .time-org-grid { grid-template-columns: 1fr; }
       .analytics-row { grid-template-columns: 1fr; gap: 0.5rem; }
@@ -838,6 +891,9 @@ export class ConfigEditorComponent {
   @Output() repairOrphans = new EventEmitter<void>();
 
   expandedCategories: boolean[] = [];
+  showJson = false;
+  configJsonString = '';
+  jsonError = '';
 
   get totalVideoCount(): number {
     return this.localVideos.length + (this.cloudVideos?.length || 0);
@@ -1064,5 +1120,61 @@ export class ConfigEditorComponent {
         { id: 'after', name: 'Après-match', icon: '🏆', color: '#3b82f6', description: 'Résultats & remerciements', categoryIds: [] }
       ];
     }
+  }
+
+  // ============================================================================
+  // JSON Editor
+  // ============================================================================
+
+  toggleJsonView(): void {
+    this.showJson = !this.showJson;
+    if (this.showJson) {
+      this.syncJsonFromConfig();
+    }
+    this.cdr.markForCheck();
+  }
+
+  onJsonInput(event: Event): void {
+    const value = (event.target as HTMLTextAreaElement).value;
+    this.configJsonString = value;
+    try {
+      const parsed = JSON.parse(value) as SiteConfiguration;
+      this.jsonError = '';
+      // Apply parsed JSON to config
+      if (parsed.sponsors) this.config.sponsors = parsed.sponsors;
+      if (parsed.categories) this.config.categories = parsed.categories;
+      if (parsed.timeCategories) this.config.timeCategories = parsed.timeCategories;
+      if (parsed.categoryMappings) this.config.categoryMappings = parsed.categoryMappings;
+      this.emitConfigChanged();
+    } catch (e) {
+      this.jsonError = `JSON invalide: ${e instanceof Error ? e.message : 'Erreur inconnue'}`;
+    }
+  }
+
+  formatJson(): void {
+    try {
+      const parsed = JSON.parse(this.configJsonString);
+      this.configJsonString = JSON.stringify(parsed, null, 2);
+      this.jsonError = '';
+    } catch (e) {
+      this.jsonError = `JSON invalide: ${e instanceof Error ? e.message : 'Erreur inconnue'}`;
+    }
+  }
+
+  copyJson(): void {
+    navigator.clipboard.writeText(this.configJsonString).then(() => {
+      // Feedback visuel optionnel
+    });
+  }
+
+  syncJsonFromConfig(): void {
+    const configSubset = {
+      sponsors: this.config.sponsors,
+      categories: this.config.categories,
+      timeCategories: this.config.timeCategories,
+      categoryMappings: this.config.categoryMappings,
+    };
+    this.configJsonString = JSON.stringify(configSubset, null, 2);
+    this.jsonError = '';
   }
 }

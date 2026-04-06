@@ -507,7 +507,13 @@
 
         <div class="overlay-actions">
           <button class="btn btn-primary" (click)="saveOverlayConfig()" [disabled]="savingOverlay">
-            {{ savingOverlay ? ('common.deploying' | translate) : ('common.deploy' | translate) }}
+            {{
+              savingOverlay
+                ? ('common.deploying' | translate)
+                : isSaas
+                  ? ('common.save' | translate)
+                  : ('common.deploy' | translate)
+            }}
           </button>
           <button class="btn btn-secondary" (click)="showOverlayConfig = false">
             {{ 'common.cancel' | translate }}
@@ -727,7 +733,7 @@
         >
           {{
             savingWatermark
-              ? 'Deploiement...'
+              ? ('common.deploying' | translate)
               : isSaas
                 ? ('common.save' | translate)
                 : isConnected

@@ -255,6 +255,9 @@ source central-server/.env && psql "$DATABASE_URL" -f central-server/src/scripts
 - Accepter un upload vidéo de 0 octets dans `createVideo` / `createVideos` de `content.controller.ts` (un fichier vide passe multer et s'insère en DB avec `file_size: 0` → vidéo cassée sans durée ni contenu — guard `file.size === 0` → 400 obligatoire — smoke test enforced)
 - Retourner `'0 B'` dans `formatBytes()` pour `null`/`undefined` (masque les vidéos à taille inconnue en les confondant avec les fichiers réellement vides — retourner `'-'` pour null/undefined, réserver `'0 B'` pour un vrai 0 — smoke test enforced)
 - Supprimer `setTypeParser(20, ...)` de `database.ts` (PostgreSQL BIGINT OID 20 est retourné comme string par le driver `pg` — sans ce parser, `file_size` et `duration` arrivent comme `"12345"` au frontend → `Number.isFinite("12345")` = false → taille affichée `'-'` — le parser convertit en number côté serveur, avec fallback string si hors safe integer range — smoke test enforced)
+- Utiliser `sendCommand('update_config')` ou `confirmDeployLegacy()` pour sauver la config d'un site SaaS (les sites SaaS n'ont pas de Pi — la commande est mise en file d'attente indéfiniment — utiliser `confirmSaveSaas()` qui appelle `PUT /api/sites/:id/config` → sauvegarde directe en DB — pour les profils, utiliser `updateProfileConfiguration()` et skipper `syncProfiles()` — smoke test enforced)
+- Afficher "Déployer" / "Déployer (file d'attente)" / "Confirmer le déploiement" dans `deployment-status.component.ts` pour les sites SaaS (utiliser "Enregistrer" / "Enregistrement..." / "Confirmer l'enregistrement" via `common.save` / `common.saving` / `common.confirmSave` — smoke test enforced)
+- Afficher le sélecteur merge/replace dans la modal diff pour les sites SaaS (les modes merge/replace sont Pi-only — le `mode-selector` doit être gardé par `siteType !== 'saas'` — smoke test enforced)
 
 ## Architecture détaillée
 

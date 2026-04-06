@@ -266,6 +266,10 @@ export class SitesService {
     return this.api.post<SyncProfilesResponse>(`/sites/${siteId}/profiles/sync`, {});
   }
 
+  saveConfigDirect(siteId: string, configuration: Record<string, unknown>): Observable<{ success: boolean; versionId: string }> {
+    return this.api.put<{ success: boolean; versionId: string }>(`/sites/${siteId}/config`, { configuration });
+  }
+
 }
 
 export interface PendingDeployment {

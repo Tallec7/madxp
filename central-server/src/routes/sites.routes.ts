@@ -224,6 +224,17 @@ router.get(
   sitesController.getSiteLocalContent
 );
 
+// Sauvegarde directe de la config (SaaS uniquement, pas de Pi)
+router.put(
+  '/:id/config',
+  authenticate,
+  requireRole('admin', 'operator'),
+  sensitiveRateLimit,
+  validateParams(paramSchemas.id),
+  validate(schemas.saveConfigDirect),
+  configHistoryController.saveConfigDirect
+);
+
 // Routes pour l'historique des configurations
 router.get(
   '/:id/config-history',

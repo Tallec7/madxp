@@ -591,6 +591,16 @@ class SiteRepositoryImpl extends BaseRepository<Site> {
   }
 
   /**
+   * Met a jour le local_config_mirror d'un site (sauvegarde directe DB, utilise par SaaS).
+   */
+  async updateLocalConfigMirror(id: string, config: Record<string, unknown>): Promise<void> {
+    await query(
+      `UPDATE sites SET local_config_mirror = $1, last_config_sync = NOW() WHERE id = $2`,
+      [JSON.stringify(config), id]
+    );
+  }
+
+  /**
    * Recupere un site avec les champs de connexion (pour dashboard et connection status).
    */
   async findConnectionInfo(id: string): Promise<{

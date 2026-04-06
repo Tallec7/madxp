@@ -30,8 +30,13 @@ import { ConfigEditorDataService } from './config-editor-data.service';
 export class ConfigEditorComponent implements OnInit, OnDestroy {
   @Input() siteId!: string;
   @Input() siteName!: string;
+  @Input() siteType: string = '';
   @Input() isConnected: boolean = false;
   @Output() configDeployed = new EventEmitter<void>();
+
+  get isSaas(): boolean {
+    return this.siteType === 'saas';
+  }
 
   // Vidéos disponibles sur le Pi (chargées automatiquement)
   localVideos: LocalVideo[] = [];

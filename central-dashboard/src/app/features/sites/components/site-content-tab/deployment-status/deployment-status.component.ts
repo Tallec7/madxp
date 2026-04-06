@@ -90,9 +90,9 @@ import { TranslateModule } from '@ngx-translate/core';
         <span *ngIf="deployStatus === 'timeout'">⏱️</span>
       </div>
       <div class="status-content">
-        <span class="status-text" *ngIf="deployStatus === 'sending'">Envoi de la configuration...</span>
+        <span class="status-text" *ngIf="deployStatus === 'sending'">{{ siteType === 'saas' ? 'Enregistrement de la configuration...' : 'Envoi de la configuration...' }}</span>
         <span class="status-text" *ngIf="deployStatus === 'pending'">{{ siteType === 'saas' ? 'Enregistrement en cours...' : 'En attente de confirmation du Pi...' }}</span>
-        <span class="status-text" *ngIf="deployStatus === 'success'">Configuration appliquée avec succès !</span>
+        <span class="status-text" *ngIf="deployStatus === 'success'">{{ siteType === 'saas' ? 'Configuration enregistrée avec succès !' : 'Configuration appliquée avec succès !' }}</span>
         <span class="status-text" *ngIf="deployStatus === 'error'">Erreur : {{ deployError }}</span>
         <span class="status-text" *ngIf="deployStatus === 'timeout'">{{ deployError }}</span>
       </div>
@@ -117,7 +117,7 @@ import { TranslateModule } from '@ngx-translate/core';
       <div class="actions-buttons">
         <button class="btn btn-secondary" (click)="resetRequested.emit()">{{ 'common.cancel' | translate }}</button>
         <button class="btn btn-primary" (click)="onPreviewDeploy()" [disabled]="deploying || validationErrors.length > 0">
-          {{ deploying ? ('common.deploying' | translate) : (isConnected ? ('common.deploy' | translate) : ('common.deployQueued' | translate)) }}
+          {{ deploying ? (siteType === 'saas' ? ('common.saving' | translate) : ('common.deploying' | translate)) : (siteType === 'saas' ? ('common.save' | translate) : (isConnected ? ('common.deploy' | translate) : ('common.deployQueued' | translate))) }}
         </button>
       </div>
     </div>
@@ -130,14 +130,14 @@ import { TranslateModule } from '@ngx-translate/core';
           <button class="modal-close" (click)="showDiffModal = false">×</button>
         </div>
         <div class="modal-body">
-          <div class="mode-selector">
+          <div class="mode-selector" *ngIf="siteType !== 'saas'">
             <div class="mode-title">Mode de déploiement</div>
             <div class="mode-options">
               <label class="mode-option" [class.active]="deployMode === 'merge'">
                 <input type="radio" name="deployMode" value="merge" [(ngModel)]="deployMode" />
                 <div class="mode-option-content">
                   <span class="mode-option-title">🔀 Fusionner (recommandé)</span>
-                  <span class="mode-option-desc">{{ siteType === 'saas' ? 'Fusionne avec la configuration existante' : 'Préserve les paramètres locaux du Pi (langue, timezone, etc.)' }}</span>
+                  <span class="mode-option-desc">Préserve les paramètres locaux du Pi (langue, timezone, etc.)</span>
                 </div>
               </label>
               <label class="mode-option" [class.active]="deployMode === 'replace'">
@@ -227,7 +227,7 @@ import { TranslateModule } from '@ngx-translate/core';
             (click)="onConfirmDeploy()"
             [disabled]="deploying"
           >
-            {{ deploying ? ('common.deploying' | translate) : ('common.confirmDeploy' | translate) }}
+            {{ deploying ? (siteType === 'saas' ? ('common.saving' | translate) : ('common.deploying' | translate)) : (siteType === 'saas' ? ('common.confirmSave' | translate) : ('common.confirmDeploy' | translate)) }}
           </button>
         </div>
       </div>
@@ -563,6 +563,12 @@ export class DeploymentStatusComponent implements OnDestroy {
       return;
     }
 
+    // SaaS sans profils : sauvegarde directe en DB
+    if (this.siteType === 'saas') {
+      this.confirmSaveSaas();
+      return;
+    }
+
     this.confirmDeployLegacy();
   }
 
@@ -578,6 +584,18 @@ export class DeploymentStatusComponent implements OnDestroy {
     this.sitesService.updateProfileConfiguration(this.siteId, this.selectedProfileId, configToSave).subscribe({
       next: (updatedProfile) => {
         this.configSynced.emit(updatedProfile.id);
+
+        // SaaS : pas de Pi à synchroniser, la sauvegarde DB suffit
+        if (this.siteType === 'saas') {
+          this.deploying = false;
+          this.deployStatus = 'success';
+          this.showDiffModal = false;
+          this.notificationService.success('Configuration enregistree !');
+          this.deployed.emit();
+          this.cdr.markForCheck();
+          return;
+        }
+
         this.sitesService.syncProfiles(this.siteId).subscribe({
           next: () => {
             this.deploying = false;
@@ -653,6 +671,35 @@ export class DeploymentStatusComponent implements OnDestroy {
         this.deployError = message;
         this.logger.error('Failed to deploy config', { error: message, siteId: this.siteId });
         this.notificationService.error(`Erreur d'envoi: ${message}`);
+        this.cdr.markForCheck();
+      }
+    });
+  }
+
+  private confirmSaveSaas(): void {
+    const configToSave = {
+      sponsors: this.config.sponsors,
+      categories: this.config.categories,
+      timeCategories: this.config.timeCategories,
+      categoryMappings: this.config.categoryMappings,
+    };
+
+    this.sitesService.saveConfigDirect(this.siteId, configToSave as unknown as Record<string, unknown>).subscribe({
+      next: () => {
+        this.deploying = false;
+        this.deployStatus = 'success';
+        this.showDiffModal = false;
+        this.notificationService.success('Configuration enregistree !');
+        this.deployed.emit();
+        this.cdr.markForCheck();
+      },
+      error: (error) => {
+        this.deploying = false;
+        this.deployStatus = 'error';
+        const message = ErrorExtractor.getMessage(error);
+        this.deployError = message;
+        this.logger.error('Failed to save SaaS config', { error: message, siteId: this.siteId });
+        this.notificationService.error(`Erreur de sauvegarde: ${message}`);
         this.cdr.markForCheck();
       }
     });

@@ -14676,3 +14676,110 @@ describe('SaaS child component guards (Pi-specific UI hidden for SaaS)', () => {
     });
   });
 });
+
+describe('SaaS config save flow', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+  const dashboardRoot = path.join(repoRoot, 'central-dashboard', 'src', 'app', 'features', 'sites');
+
+  it('deployment-status must use "save" labels for SaaS and have confirmSaveSaas method', () => {
+    const filePath = path.join(dashboardRoot, 'components', 'site-content-tab', 'deployment-status', 'deployment-status.component.ts');
+    const content = fs.readFileSync(filePath, 'utf8');
+    expect({
+      hasSaveLabelButton: /siteType === 'saas'[\s\S]{0,50}common\.save/.test(content),
+      hasSavingLabel: /siteType === 'saas'[\s\S]{0,50}common\.saving/.test(content),
+      hasConfirmSaveLabel: /siteType === 'saas'[\s\S]{0,50}common\.confirmSave/.test(content),
+      hasConfirmSaveSaas: content.includes('confirmSaveSaas'),
+      hasModeHiddenForSaas: /class="mode-selector"[\s\S]{0,30}siteType !== 'saas'/.test(content),
+      skipsSyncProfilesForSaas: /siteType === 'saas'[\s\S]{0,200}Configuration enregistree/.test(content),
+    }).toEqual({
+      hasSaveLabelButton: true,
+      hasSavingLabel: true,
+      hasConfirmSaveLabel: true,
+      hasConfirmSaveSaas: true,
+      hasModeHiddenForSaas: true,
+      skipsSyncProfilesForSaas: true,
+    });
+  });
+
+  it('sites.service must have saveConfigDirect method', () => {
+    const filePath = path.join(repoRoot, 'central-dashboard', 'src', 'app', 'core', 'services', 'sites.service.ts');
+    const content = fs.readFileSync(filePath, 'utf8');
+    expect(content).toContain('saveConfigDirect');
+  });
+
+  it('site.repository must have updateLocalConfigMirror method', () => {
+    const filePath = path.join(repoRoot, 'central-server', 'src', 'repositories', 'site.repository.ts');
+    const content = fs.readFileSync(filePath, 'utf8');
+    expect(content).toContain('updateLocalConfigMirror');
+  });
+
+  it('sites.routes must have PUT /:id/config with saveConfigDirect and validation', () => {
+    const filePath = path.join(repoRoot, 'central-server', 'src', 'routes', 'sites.routes.ts');
+    const content = fs.readFileSync(filePath, 'utf8');
+    expect({
+      hasPutConfig: /router\.put[\s\S]{0,20}'\/:id\/config'/.test(content),
+      hasSaveConfigDirect: content.includes('saveConfigDirect'),
+      hasValidation: /validate\(schemas\.saveConfigDirect\)/.test(content),
+      hasParamValidation: /validateParams\(paramSchemas\.id\)[\s\S]{0,200}saveConfigDirect/.test(content),
+    }).toEqual({
+      hasPutConfig: true,
+      hasSaveConfigDirect: true,
+      hasValidation: true,
+      hasParamValidation: true,
+    });
+  });
+
+  it('saveConfigDirect controller must verify site_type is saas', () => {
+    const filePath = path.join(repoRoot, 'central-server', 'src', 'controllers', 'config-history.controller.ts');
+    const content = fs.readFileSync(filePath, 'utf8');
+    expect({
+      hasSaveConfigDirect: content.includes('saveConfigDirect'),
+      checksSiteType: /site_type !== 'saas'/.test(content),
+      savesToLocalConfigMirror: content.includes('updateLocalConfigMirror'),
+    }).toEqual({
+      hasSaveConfigDirect: true,
+      checksSiteType: true,
+      savesToLocalConfigMirror: true,
+    });
+  });
+
+  it('config-editor must have JSON toggle view', () => {
+    const filePath = path.join(dashboardRoot, 'components', 'site-content-tab', 'config-editor', 'config-editor.component.ts');
+    const content = fs.readFileSync(filePath, 'utf8');
+    expect({
+      hasShowJson: content.includes('showJson'),
+      hasToggleJsonView: content.includes('toggleJsonView'),
+      hasJsonTextarea: content.includes('json-textarea'),
+      hasSyncJsonFromConfig: content.includes('syncJsonFromConfig'),
+    }).toEqual({
+      hasShowJson: true,
+      hasToggleJsonView: true,
+      hasJsonTextarea: true,
+      hasSyncJsonFromConfig: true,
+    });
+  });
+
+  it('i18n files must have saving and confirmSave keys', () => {
+    const frPath = path.join(repoRoot, 'central-dashboard', 'src', 'assets', 'i18n', 'fr.json');
+    const enPath = path.join(repoRoot, 'central-dashboard', 'src', 'assets', 'i18n', 'en.json');
+    const esPath = path.join(repoRoot, 'central-dashboard', 'src', 'assets', 'i18n', 'es.json');
+    const fr = JSON.parse(fs.readFileSync(frPath, 'utf8'));
+    const en = JSON.parse(fs.readFileSync(enPath, 'utf8'));
+    const es = JSON.parse(fs.readFileSync(esPath, 'utf8'));
+    expect({
+      frSaving: fr.common.saving,
+      frConfirmSave: fr.common.confirmSave,
+      enSaving: en.common.saving,
+      enConfirmSave: en.common.confirmSave,
+      esSaving: es.common.saving,
+      esConfirmSave: es.common.confirmSave,
+    }).toEqual({
+      frSaving: 'Enregistrement...',
+      frConfirmSave: "Confirmer l'enregistrement",
+      enSaving: 'Saving...',
+      enConfirmSave: 'Confirm save',
+      esSaving: 'Guardando...',
+      esConfirmSave: 'Confirmar guardado',
+    });
+  });
+});

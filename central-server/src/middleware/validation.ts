@@ -484,6 +484,10 @@ export const schemas = {
     newConfiguration: Joi.object().required(),
   }),
 
+  saveConfigDirect: Joi.object({
+    configuration: Joi.object().required(),
+  }),
+
   // ============================================================================
   // Logs schemas
   // ============================================================================

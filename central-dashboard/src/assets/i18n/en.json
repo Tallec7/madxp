@@ -36,6 +36,8 @@
     "deploying": "Deploying...",
     "deployQueued": "Deploy (queued)",
     "confirmDeploy": "Confirm deployment",
+    "saving": "Saving...",
+    "confirmSave": "Confirm save",
     "deployConfig": "Deploy configuration",
     "apply": "Apply",
     "applying": "Applying...",

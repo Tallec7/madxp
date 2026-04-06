@@ -60,6 +60,12 @@ Les utilisateurs `club` ont accès aux endpoints contenu avec des restrictions :
 - **Delete/Update** : uniquement les vidéos avec `uploaded_for_site_id` = `user.site_id` ET `category ≠ NEOPRO`
 - **Deploy** : uniquement vers leur propre site
 
+## Config Save (SaaS direct)
+
+```
+PUT    /api/sites/:id/config            → sauvegarde directe config (SaaS uniquement, refuse Pi)
+```
+
 ## Config Drafts
 
 ```
