@@ -10497,7 +10497,8 @@ describe('Sponsor stats migration to site_sponsor_daily_stats guard', () => {
   });
 
   it('getBenchmark must query site_sponsor_daily_stats, not video_plays', () => {
-    const fnMatch = content.match(/async getBenchmark[\s\S]*?return result\.rows/);
+    // getBenchmark returns query() directly, extract until closing brace of the method
+    const fnMatch = content.match(/async getBenchmark\([^)]*\)[^{]*\{[\s\S]*?^\s{2}\}/m);
     expect(fnMatch).toBeTruthy();
     const fn = fnMatch![0];
     expect({ usesPreAgg: fn.includes('site_sponsor_daily_stats'), usesVideoPlays: fn.includes('FROM video_plays') })
@@ -14972,6 +14973,64 @@ describe('SaaS config save flow', () => {
       hasSaveConfigDirect: true,
       checksSiteType: true,
       savesToLocalConfigMirror: true,
+    });
+  });
+
+  it('saveConfigDirect controller must support merge mode via mergeLocalConfigMirror', () => {
+    const controllerPath = path.join(repoRoot, 'central-server', 'src', 'controllers', 'config-history.controller.ts');
+    const controllerContent = fs.readFileSync(controllerPath, 'utf8');
+    const repoPath = path.join(repoRoot, 'central-server', 'src', 'repositories', 'site.repository.ts');
+    const repoContent = fs.readFileSync(repoPath, 'utf8');
+    expect({
+      controllerChecksMergeMode: controllerContent.includes("mode === 'merge'"),
+      controllerCallsMerge: controllerContent.includes('mergeLocalConfigMirror'),
+      repoHasMergeMethod: repoContent.includes('mergeLocalConfigMirror'),
+      repoUsesCOALESCE: /mergeLocalConfigMirror[\s\S]{0,200}COALESCE/.test(repoContent),
+    }).toEqual({
+      controllerChecksMergeMode: true,
+      controllerCallsMerge: true,
+      repoHasMergeMethod: true,
+      repoUsesCOALESCE: true,
+    });
+  });
+
+  it('saveConfigDirect validation schema must accept optional mode field', () => {
+    const filePath = path.join(repoRoot, 'central-server', 'src', 'middleware', 'validation.ts');
+    const content = fs.readFileSync(filePath, 'utf8');
+    expect({
+      hasMode: /saveConfigDirect[\s\S]{0,200}mode[\s\S]{0,50}merge/.test(content),
+    }).toEqual({
+      hasMode: true,
+    });
+  });
+
+  it('site-settings-data.service must pass isSaas to save methods for SaaS direct DB writes', () => {
+    const filePath = path.join(dashboardRoot, 'components', 'site-settings-tab', 'site-settings-data.service.ts');
+    const content = fs.readFileSync(filePath, 'utf8');
+    expect({
+      saveClubAuthHasIsSaas: /saveClubAuth\([^)]*isSaas/.test(content),
+      toggleLiveScoreHasIsSaas: /toggleLiveScore\([^)]*isSaas/.test(content),
+      saveOverlayConfigHasIsSaas: /saveOverlayConfig\([^)]*isSaas/.test(content),
+      saveWatermarkConfigHasIsSaas: /saveWatermarkConfig\([^)]*isSaas/.test(content),
+      hasSaveConfigMerge: content.includes('saveConfigMerge'),
+      usesDirectSaveForSaas: content.includes("saveConfigDirect") && content.includes("'merge'"),
+    }).toEqual({
+      saveClubAuthHasIsSaas: true,
+      toggleLiveScoreHasIsSaas: true,
+      saveOverlayConfigHasIsSaas: true,
+      saveWatermarkConfigHasIsSaas: true,
+      hasSaveConfigMerge: true,
+      usesDirectSaveForSaas: true,
+    });
+  });
+
+  it('deployment-status confirmSaveSaas must use merge mode', () => {
+    const filePath = path.join(dashboardRoot, 'components', 'site-content-tab', 'deployment-status', 'deployment-status.component.ts');
+    const content = fs.readFileSync(filePath, 'utf8');
+    expect({
+      usesMergeMode: /saveConfigDirect\([^)]*'merge'/.test(content),
+    }).toEqual({
+      usesMergeMode: true,
     });
   });
 

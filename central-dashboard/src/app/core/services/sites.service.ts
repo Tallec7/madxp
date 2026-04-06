@@ -266,8 +266,8 @@ export class SitesService {
     return this.api.post<SyncProfilesResponse>(`/sites/${siteId}/profiles/sync`, {});
   }
 
-  saveConfigDirect(siteId: string, configuration: Record<string, unknown>): Observable<{ success: boolean; versionId: string }> {
-    return this.api.put<{ success: boolean; versionId: string }>(`/sites/${siteId}/config`, { configuration });
+  saveConfigDirect(siteId: string, configuration: Record<string, unknown>, mode?: 'replace' | 'merge'): Observable<{ success: boolean; versionId: string }> {
+    return this.api.put<{ success: boolean; versionId: string }>(`/sites/${siteId}/config`, { configuration, mode });
   }
 
 }

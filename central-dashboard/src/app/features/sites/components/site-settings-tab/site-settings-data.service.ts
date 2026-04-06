@@ -77,34 +77,38 @@ export class SiteSettingsDataService {
 
   /**
    * Save club auth: update DB (if clubName provided) then deploy to Pi.
-   * Returns Observable of the command response. Emits the updated Site
-   * via the second callback if the DB was updated.
+   * For SaaS sites, writes directly to local_config_mirror instead of sending a Pi command.
    */
   saveClubAuth(
     siteId: string,
     clubName: string,
-    remotePassword: string
+    remotePassword: string,
+    isSaas: boolean = false
   ): Observable<{ commandResponse: CommandResponse; updatedSite?: Site }> {
     const neoProContent: { clubName?: string; remotePassword?: string } = {};
     if (clubName) neoProContent.clubName = clubName;
     if (remotePassword) neoProContent.remotePassword = remotePassword;
 
+    const deploy$ = isSaas
+      ? this.saveConfigMerge(siteId, { auth: { clubName, password: remotePassword, sessionDuration: 86400000 } })
+      : this.deployClubAuth(siteId, neoProContent);
+
     if (clubName) {
       return this.sitesService.updateSite(siteId, { club_name: clubName }).pipe(
         switchMap((updatedSite) =>
-          this.deployClubAuth(siteId, neoProContent).pipe(
+          deploy$.pipe(
             map((commandResponse) => ({ commandResponse, updatedSite }))
           )
         )
       );
     }
 
-    return this.deployClubAuth(siteId, neoProContent).pipe(
+    return deploy$.pipe(
       map((commandResponse) => ({ commandResponse }))
     );
   }
 
-  deployClubAuth(
+  private deployClubAuth(
     siteId: string,
     neoProContent: { clubName?: string; remotePassword?: string }
   ): Observable<CommandResponse> {
@@ -112,6 +116,15 @@ export class SiteSettingsDataService {
       neoProContent,
       mode: 'merge',
     });
+  }
+
+  /**
+   * Save partial config directly to local_config_mirror (SaaS only, merge mode).
+   */
+  private saveConfigMerge(siteId: string, partialConfig: Record<string, unknown>): Observable<CommandResponse> {
+    return this.sitesService.saveConfigDirect(siteId, partialConfig, 'merge').pipe(
+      map(() => ({ success: true, message: 'Configuration enregistrée' }))
+    );
   }
 
   // ========================================================================
@@ -214,20 +227,27 @@ export class SiteSettingsDataService {
   // 6. Premium / Overlay
   // ========================================================================
 
-  toggleLiveScore(siteId: string, enabled: boolean): Observable<{ updatedSite: Site; commandResponse: CommandResponse }> {
-    return this.sitesService.updateSite(siteId, { live_score_enabled: enabled }).pipe(
-      switchMap((updatedSite) =>
-        this.commandService.sendCommand(siteId, 'update_config', {
+  toggleLiveScore(siteId: string, enabled: boolean, isSaas: boolean = false): Observable<{ updatedSite: Site; commandResponse: CommandResponse }> {
+    const deploy$ = isSaas
+      ? this.saveConfigMerge(siteId, { liveScoreEnabled: enabled })
+      : this.commandService.sendCommand(siteId, 'update_config', {
           neoProContent: { liveScoreEnabled: enabled },
           mode: 'merge',
-        }).pipe(
+        });
+
+    return this.sitesService.updateSite(siteId, { live_score_enabled: enabled }).pipe(
+      switchMap((updatedSite) =>
+        deploy$.pipe(
           map((commandResponse) => ({ updatedSite, commandResponse }))
         )
       )
     );
   }
 
-  saveOverlayConfig(siteId: string, config: OverlayConfig): Observable<CommandResponse> {
+  saveOverlayConfig(siteId: string, config: OverlayConfig, isSaas: boolean = false): Observable<CommandResponse> {
+    if (isSaas) {
+      return this.saveConfigMerge(siteId, { scoreOverlay: config });
+    }
     return this.commandService.sendCommand(siteId, 'update_config', {
       neoProContent: { scoreOverlay: config },
       mode: 'merge',
@@ -246,7 +266,10 @@ export class SiteSettingsDataService {
     return this.assetService.uploadWatermark(siteId, file);
   }
 
-  saveWatermarkConfig(siteId: string, config: WatermarkConfig): Observable<CommandResponse> {
+  saveWatermarkConfig(siteId: string, config: WatermarkConfig, isSaas: boolean = false): Observable<CommandResponse> {
+    if (isSaas) {
+      return this.saveConfigMerge(siteId, { watermark: config });
+    }
     return this.commandService.sendCommand(siteId, 'update_config', {
       neoProContent: { watermark: config },
       mode: 'merge',

@@ -684,7 +684,7 @@ export class DeploymentStatusComponent implements OnDestroy {
       categoryMappings: this.config.categoryMappings,
     };
 
-    this.sitesService.saveConfigDirect(this.siteId, configToSave as unknown as Record<string, unknown>).subscribe({
+    this.sitesService.saveConfigDirect(this.siteId, configToSave as unknown as Record<string, unknown>, 'merge').subscribe({
       next: () => {
         this.deploying = false;
         this.deployStatus = 'success';

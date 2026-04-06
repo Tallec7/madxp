@@ -255,7 +255,7 @@ export class SiteSettingsTabComponent implements OnInit, OnChanges {
 
     this.savingClubAuth = true;
 
-    this.dataService.saveClubAuth(this.siteId, this.clubName, this.remotePassword).subscribe({
+    this.dataService.saveClubAuth(this.siteId, this.clubName, this.remotePassword, this.isSaas).subscribe({
       next: ({ commandResponse, updatedSite }) => {
         this.savingClubAuth = false;
         if (updatedSite) {
@@ -394,7 +394,7 @@ export class SiteSettingsTabComponent implements OnInit, OnChanges {
     const newValue = checkbox.checked;
 
     this.savingLiveScore = true;
-    this.dataService.toggleLiveScore(this.siteId, newValue).subscribe({
+    this.dataService.toggleLiveScore(this.siteId, newValue, this.isSaas).subscribe({
       next: ({ updatedSite }) => {
         this.savingLiveScore = false;
         this.notificationService.success(
@@ -430,7 +430,7 @@ export class SiteSettingsTabComponent implements OnInit, OnChanges {
 
   saveOverlayConfig(): void {
     this.savingOverlay = true;
-    this.dataService.saveOverlayConfig(this.siteId, this.overlayConfig).subscribe({
+    this.dataService.saveOverlayConfig(this.siteId, this.overlayConfig, this.isSaas).subscribe({
       next: () => {
         this.savingOverlay = false;
         this.notificationService.success(this.isSaas ? 'Configuration de l\'overlay enregistrée !' : 'Configuration de l\'overlay déployée !');
@@ -702,7 +702,7 @@ export class SiteSettingsTabComponent implements OnInit, OnChanges {
     this.savingWatermark = true;
 
     // 1. Toujours envoyer la config (update_config)
-    this.dataService.saveWatermarkConfig(this.siteId, this.watermarkConfig).subscribe({
+    this.dataService.saveWatermarkConfig(this.siteId, this.watermarkConfig, this.isSaas).subscribe({
       next: (response) => {
         // 2. Re-déployer l'image si cloudUrl est disponible
         // Cela garantit que l'image est présente sur le Pi même si le premier

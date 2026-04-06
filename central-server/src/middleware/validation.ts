@@ -486,6 +486,7 @@ export const schemas = {
 
   saveConfigDirect: Joi.object({
     configuration: Joi.object().required(),
+    mode: Joi.string().valid('replace', 'merge').optional(),
   }),
 
   // ============================================================================

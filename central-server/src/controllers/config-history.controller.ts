@@ -398,12 +398,16 @@ export const saveConfigDirect = async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ error: 'La sauvegarde directe est réservée aux sites SaaS. Utilisez update_config pour les sites Pi.' });
     }
 
-    const { configuration } = req.body;
+    const { configuration, mode } = req.body;
     if (!configuration || typeof configuration !== 'object') {
       return res.status(400).json({ error: 'Configuration invalide' });
     }
 
-    await siteRepository.updateLocalConfigMirror(id, configuration);
+    if (mode === 'merge') {
+      await siteRepository.mergeLocalConfigMirror(id, configuration);
+    } else {
+      await siteRepository.updateLocalConfigMirror(id, configuration);
+    }
 
     // Sauvegarder aussi dans l'historique
     const versionId = uuidv4();

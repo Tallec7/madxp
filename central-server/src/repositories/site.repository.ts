@@ -600,6 +600,13 @@ class SiteRepositoryImpl extends BaseRepository<Site> {
     );
   }
 
+  async mergeLocalConfigMirror(id: string, partialConfig: Record<string, unknown>): Promise<void> {
+    await query(
+      `UPDATE sites SET local_config_mirror = COALESCE(local_config_mirror, '{}'::jsonb) || $1::jsonb, last_config_sync = NOW() WHERE id = $2`,
+      [JSON.stringify(partialConfig), id]
+    );
+  }
+
   /**
    * Recupere un site avec les champs de connexion (pour dashboard et connection status).
    */
