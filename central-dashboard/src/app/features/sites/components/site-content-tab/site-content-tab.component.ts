@@ -358,6 +358,7 @@ import { ConfigDraftComponent } from './config-draft/config-draft.component';
 export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
   @Input() siteId!: string;
   @Input() siteName = '';
+  @Input() siteType = '';
   @Input() isConnected = false;
   @Output() configDeployed = new EventEmitter<void>();
 
@@ -769,6 +770,11 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
   // ============================================================================
 
   onVideoDeploy(video: VideoItem): void {
+    if (this.siteType === 'saas') {
+      this.notificationService.warning('Les sites SaaS n\'utilisent pas de déploiement vidéo');
+      return;
+    }
+
     if (!video.id) {
       this.notificationService.error('Impossible de déployer cette vidéo');
       return;

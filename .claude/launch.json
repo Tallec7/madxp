@@ -23,13 +23,7 @@
     {
       "name": "central-dashboard",
       "runtimeExecutable": "/Users/gletallec/.nvm/versions/node/v22.21.1/bin/node",
-      "runtimeArgs": [
-        "/Users/gletallec/Documents/NEOPRO/neopro/node_modules/.bin/ng",
-        "serve",
-        "central-dashboard",
-        "--port",
-        "4300"
-      ],
+      "runtimeArgs": ["node_modules/.bin/ng", "serve", "central-dashboard", "--port", "4300"],
       "port": 4300
     },
     {

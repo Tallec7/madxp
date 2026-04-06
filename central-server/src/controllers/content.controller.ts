@@ -230,6 +230,11 @@ export const createVideo = async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ error: 'Aucun fichier vidéo fourni' });
     }
 
+    if (!file.size || file.size === 0) {
+      cleanupTempFile(tempFilePath!);
+      return res.status(400).json({ error: 'Le fichier vidéo est vide (0 octets)' });
+    }
+
     const { title, category, subcategory, site_id: body_site_id } = req.body;
 
     // Club users: auto-tag with their site_id (even if not in body)
@@ -367,6 +372,12 @@ export const createVideos = async (req: AuthRequest, res: Response) => {
       const correctedOriginalname = fixMulterEncoding(file.originalname);
 
       try {
+        if (!file.size || file.size === 0) {
+          cleanupTempFile(tempFilePath);
+          errors.push({ name: correctedOriginalname, error: 'Fichier vide (0 octets)' });
+          continue;
+        }
+
         // Générer un nom de fichier unique basé sur le nom original
         const filename = await generateUniqueFilename(correctedOriginalname);
 

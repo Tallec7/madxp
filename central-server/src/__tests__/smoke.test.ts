@@ -14358,3 +14358,146 @@ describe('OTA deployment must exclude SaaS sites', () => {
     });
   });
 });
+
+// =============================================================================
+// Video library duplicate detection must run on filtered set only
+// =============================================================================
+describe('Video library duplicate detection scope', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+
+  it('isDuplicate must be computed in applyFilters() not processVideos()', () => {
+    const filePath = path.join(repoRoot, 'central-dashboard', 'src', 'app', 'features', 'sites', 'components', 'video-library', 'video-library.component.ts');
+    const content = fs.readFileSync(filePath, 'utf8');
+
+    // Extract processVideos method body
+    const processStart = content.indexOf('private processVideos()');
+    const applyStart = content.indexOf('applyFilters(): void');
+    expect(processStart).toBeGreaterThan(-1);
+    expect(applyStart).toBeGreaterThan(processStart);
+
+    const processBody = content.slice(processStart, applyStart);
+    const applyBody = content.slice(applyStart);
+
+    expect({
+      processVideosHasNoChecksumCounts: !processBody.includes('checksumCounts'),
+      processVideosHasNoIsDuplicate: !processBody.includes('isDuplicate'),
+      applyFiltersHasChecksumCounts: applyBody.includes('checksumCounts'),
+      applyFiltersHasIsDuplicate: applyBody.includes('isDuplicate'),
+    }).toEqual({
+      processVideosHasNoChecksumCounts: true,
+      processVideosHasNoIsDuplicate: true,
+      applyFiltersHasChecksumCounts: true,
+      applyFiltersHasIsDuplicate: true,
+    });
+  });
+});
+
+// =============================================================================
+// SaaS site-content-tab must guard video deploy
+// =============================================================================
+describe('SaaS video deploy guard in site-content-tab', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+
+  it('site-content-tab must have siteType @Input', () => {
+    const filePath = path.join(repoRoot, 'central-dashboard', 'src', 'app', 'features', 'sites', 'components', 'site-content-tab', 'site-content-tab.component.ts');
+    const content = fs.readFileSync(filePath, 'utf8');
+    expect(content.includes("@Input() siteType")).toBe(true);
+  });
+
+  it('onVideoDeploy must guard against SaaS sites', () => {
+    const filePath = path.join(repoRoot, 'central-dashboard', 'src', 'app', 'features', 'sites', 'components', 'site-content-tab', 'site-content-tab.component.ts');
+    const content = fs.readFileSync(filePath, 'utf8');
+
+    // Extract onVideoDeploy method definition (not template binding)
+    const methodStart = content.indexOf('onVideoDeploy(video:');
+    expect(methodStart).toBeGreaterThan(-1);
+    const methodBlock = content.slice(methodStart, methodStart + 400);
+
+    expect({
+      checksSaasType: methodBlock.includes("siteType === 'saas'"),
+      returnsEarly: methodBlock.includes('return'),
+    }).toEqual({
+      checksSaasType: true,
+      returnsEarly: true,
+    });
+  });
+
+  it('site-detail must pass siteType to site-content-tab', () => {
+    const filePath = path.join(repoRoot, 'central-dashboard', 'src', 'app', 'features', 'sites', 'site-detail.component.html');
+    const content = fs.readFileSync(filePath, 'utf8');
+    expect(content.includes('[siteType]=')).toBe(true);
+  });
+});
+
+// =============================================================================
+// Upload endpoints must reject empty files (0 bytes)
+// =============================================================================
+describe('Upload empty file guard', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+
+  it('createVideo must reject file.size === 0', () => {
+    const filePath = path.join(repoRoot, 'central-server', 'src', 'controllers', 'content.controller.ts');
+    const content = fs.readFileSync(filePath, 'utf8');
+
+    // Find the createVideo function body (between export const createVideo and export const createVideos)
+    const createVideoStart = content.indexOf('export const createVideo = ');
+    const createVideosStart = content.indexOf('export const createVideos = ');
+    expect(createVideoStart).toBeGreaterThan(-1);
+    expect(createVideosStart).toBeGreaterThan(createVideoStart);
+
+    const createVideoBody = content.slice(createVideoStart, createVideosStart);
+
+    expect({
+      checksFileSize: createVideoBody.includes('file.size === 0') || createVideoBody.includes('!file.size'),
+      returns400: createVideoBody.includes('0 octets'),
+    }).toEqual({
+      checksFileSize: true,
+      returns400: true,
+    });
+  });
+
+  it('createVideos (bulk) must skip file.size === 0', () => {
+    const filePath = path.join(repoRoot, 'central-server', 'src', 'controllers', 'content.controller.ts');
+    const content = fs.readFileSync(filePath, 'utf8');
+
+    // Find the createVideos function body
+    const createVideosStart = content.indexOf('export const createVideos = ');
+    const getVideosStart = content.indexOf('export const getVideos = ') || content.indexOf('export const getVideo = ');
+    expect(createVideosStart).toBeGreaterThan(-1);
+
+    const createVideosBody = content.slice(createVideosStart, getVideosStart > createVideosStart ? getVideosStart : createVideosStart + 3000);
+
+    expect({
+      checksFileSize: createVideosBody.includes('file.size === 0') || createVideosBody.includes('!file.size'),
+      reportsError: createVideosBody.includes('0 octets'),
+    }).toEqual({
+      checksFileSize: true,
+      reportsError: true,
+    });
+  });
+});
+
+// =============================================================================
+// formatBytes must display '-' for null/undefined, not '0 B'
+// =============================================================================
+describe('Video library formatBytes null handling', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+
+  it('formatBytes must return dash for null/undefined, not 0 B', () => {
+    const filePath = path.join(repoRoot, 'central-dashboard', 'src', 'app', 'features', 'sites', 'components', 'video-library', 'video-library.component.ts');
+    const content = fs.readFileSync(filePath, 'utf8');
+
+    // Extract formatBytes method
+    const methodStart = content.indexOf('formatBytes(bytes:');
+    expect(methodStart).toBeGreaterThan(-1);
+    const methodBlock = content.slice(methodStart, methodStart + 300);
+
+    expect({
+      returnsHyphenForNull: methodBlock.includes("return '-'"),
+      separatesNullFromZero: methodBlock.includes("bytes <= 0") && methodBlock.includes("return '0 B'"),
+    }).toEqual({
+      returnsHyphenForNull: true,
+      separatesNullFromZero: true,
+    });
+  });
+});

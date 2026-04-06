@@ -1457,16 +1457,7 @@ export class VideoLibraryComponent implements OnChanges {
 
     this.allVideos = [...cloudMapped, ...localOnlyMapped];
 
-    // Detect duplicates by checksum
-    const checksumCounts = new Map<string, number>();
-    for (const v of this.allVideos) {
-      if (v.checksum) {
-        checksumCounts.set(v.checksum, (checksumCounts.get(v.checksum) || 0) + 1);
-      }
-    }
-    for (const v of this.allVideos) {
-      v.isDuplicate = !!v.checksum && (checksumCounts.get(v.checksum!) || 0) > 1;
-    }
+    // Duplicate detection is deferred to applyFilters() so it runs on the visible set only
 
     const cats = new Set<string>();
     this.allVideos.forEach(v => {
@@ -1582,6 +1573,17 @@ export class VideoLibraryComponent implements OnChanges {
     });
 
     this.filteredVideos = filtered;
+
+    // Detect duplicates by checksum within the visible set only
+    const checksumCounts = new Map<string, number>();
+    for (const v of filtered) {
+      if (v.checksum) {
+        checksumCounts.set(v.checksum, (checksumCounts.get(v.checksum) || 0) + 1);
+      }
+    }
+    for (const v of filtered) {
+      v.isDuplicate = !!v.checksum && (checksumCounts.get(v.checksum!) || 0) > 1;
+    }
 
     // Compute stats scoped to the displayed videos
     this.filteredTotalSize = filtered.reduce((sum, v) => sum + (v.size || 0), 0);
@@ -1727,7 +1729,8 @@ export class VideoLibraryComponent implements OnChanges {
   }
 
   formatBytes(bytes: number | null | undefined): string {
-    if (bytes == null || !Number.isFinite(bytes) || bytes <= 0) return '0 B';
+    if (bytes == null || !Number.isFinite(bytes)) return '-';
+    if (bytes <= 0) return '0 B';
     const k = 1024;
     const sizes = ['B', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));

@@ -249,6 +249,10 @@ source central-server/.env && psql "$DATABASE_URL" -f central-server/src/scripts
 - Supprimer `saasMetrics` de la réponse `getSiteDashboardData` dans `site-fleet.controller.ts` (alimente les 8 métriques de l'onglet État SaaS — smoke test enforced)
 - Proposer un déploiement OTA sur un site SaaS (les sites SaaS n'ont pas de Raspberry Pi — le sélecteur dashboard utilise `deployableSites` filtré par `site_type !== 'saas'`, et `getTargetSites()` dans `update-deployment.service.ts` exclut les SaaS côté serveur en defense-in-depth — smoke test enforced)
 - Envoyer `deploy_video` via `commandQueueService.sendOrQueue()` à un site SaaS (les sites SaaS n'ont pas de Pi — `sendOrQueue` met la commande en queue indéfiniment → déploiement bloqué à 0% → alertes "Déploiement bloqué" en boucle — `deployment.service.ts` doit checker `siteType === 'saas'` et marquer `completed` immédiatement — smoke test enforced)
+- Calculer `isDuplicate` (badge DOUBLON) dans `processVideos()` sur `allVideos` (500 vidéos cloud non filtrées → faux doublons quand le même checksum existe pour un autre site — toujours calculer dans `applyFilters()` sur le set filtré visible — smoke test enforced)
+- Laisser `onVideoDeploy()` dans `site-content-tab.component.ts` sans guard `siteType === 'saas'` (un clic deploy sur un site SaaS envoie `sendOrQueue` qui queue indéfiniment → notification "en file d'attente" trompeuse — le composant DOIT recevoir `@Input() siteType` et return early pour SaaS — smoke test enforced)
+- Accepter un upload vidéo de 0 octets dans `createVideo` / `createVideos` de `content.controller.ts` (un fichier vide passe multer et s'insère en DB avec `file_size: 0` → vidéo cassée sans durée ni contenu — guard `file.size === 0` → 400 obligatoire — smoke test enforced)
+- Retourner `'0 B'` dans `formatBytes()` pour `null`/`undefined` (masque les vidéos à taille inconnue en les confondant avec les fichiers réellement vides — retourner `'-'` pour null/undefined, réserver `'0 B'` pour un vrai 0 — smoke test enforced)
 
 ## Architecture détaillée
 

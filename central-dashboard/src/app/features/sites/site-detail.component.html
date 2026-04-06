@@ -705,6 +705,7 @@
       <app-site-content-tab
         [siteId]="siteId"
         [siteName]="site.site_name || site.club_name || ''"
+        [siteType]="site.site_type || ''"
         [isConnected]="isConnected"
         (configDeployed)="onConfigDeployed()"
       ></app-site-content-tab>
