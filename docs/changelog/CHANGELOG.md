@@ -1,3 +1,9 @@
+## [3.128.5](https://github.com/Tallec7/neopro/compare/v3.128.4...v3.128.5) (2026-04-06)
+
+### Bug Fixes
+
+- **saas:** write SaaS settings to config_profiles instead of local_config_mirror ([f94dd69](https://github.com/Tallec7/neopro/commit/f94dd69b6457ad603ab9da086501bb51571b91d0))
+
 ## [3.128.4](https://github.com/Tallec7/neopro/compare/v3.128.3...v3.128.4) (2026-04-06)
 
 ### Bug Fixes
