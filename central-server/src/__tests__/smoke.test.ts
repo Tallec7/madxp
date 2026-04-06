@@ -14015,6 +14015,24 @@ describe('SaaS mode guards (ADR-037)', () => {
     });
   });
 
+  // --- resolveVideoUrl must strip Pi-local path prefix before calling getVideoUrl ---
+  // Config profiles store Pi-local paths like "videos/default/file.mp4" but FTP stores
+  // files flat at the root. Without stripping, the URL resolves to a 404 (HTML page served
+  // as video → MEDIA_ELEMENT_ERROR crash loop on SaaS sites).
+  it('resolveVideoUrl must strip Pi-local directory prefix (videos/default/, videos/sponsors/) before getVideoUrl', () => {
+    const filePath = path.join(repoRoot, 'central-server', 'src', 'controllers', 'saas.controller.ts');
+    const content = fs.readFileSync(filePath, 'utf8');
+    const resolveFunction = content.match(/function resolveVideoUrl\([\s\S]*?\n\}/);
+    expect(resolveFunction).not.toBeNull();
+    expect({
+      stripsPathPrefix: /\.split\(['"]\/['"]\)\.pop\(\)/.test(resolveFunction![0]),
+      doesNotPassRawPath: !resolveFunction![0].includes('return getVideoUrl(path)'),
+    }).toEqual({
+      stripsPathPrefix: true,
+      doesNotPassRawPath: true,
+    });
+  });
+
   // --- environment.saas.ts must exist ---
   it('environment.saas.ts must exist for Angular SaaS build', () => {
     const filePath = path.join(repoRoot, 'raspberry', 'src', 'environments', 'environment.saas.ts');

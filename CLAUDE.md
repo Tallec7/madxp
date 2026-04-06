@@ -277,6 +277,7 @@ source central-server/.env && psql "$DATABASE_URL" -f central-server/src/scripts
 - Remettre `getStatsSummary`, `getDailyTrends` ou `getBenchmark` sur `video_plays` dans `site-sponsor.repository.ts` (migrées vers `site_sponsor_daily_stats` pré-agrégée — `video_plays` a une rétention de 15 jours, les stats seraient perdues après cleanup — seules les requêtes nécessitant une granularité par vidéo/événement restent sur `video_plays` — smoke test enforced)
 - Supprimer `calculate_site_sponsor_daily_stats()` de `full-schema.sql` ou son appel dans `cron-scheduler.service.ts` (sans cette fonction, les stats sponsors du jour sont perdues après le cleanup `video_plays` 15 jours — `checkAggregationStaleness()` alerte si >36h sans agrégation — smoke test enforced)
 - Revenir à `syncJsonFromConfig()` avec un subset de 4 champs dans `config-editor.component.ts` (le JSON editor doit montrer la config complète `this.config` pour permettre au super_admin de voir/éditer tous les champs — smoke test enforced)
+- Passer un chemin Pi-local (`videos/default/X.mp4`, `videos/sponsors/X.mp4`) directement à `getVideoUrl()` dans `resolveVideoUrl()` de `saas.controller.ts` (le FTP stocke les fichiers à plat à la racine — le préfixe `videos/{category}/` est un chemin de déploiement Pi uniquement — toujours extraire le filename avec `path.split('/').pop()` avant d'appeler `getVideoUrl()` — sinon l'URL résout en 404 HTML → MEDIA_ELEMENT_ERROR → crash loop vidéo SaaS — smoke test enforced)
 
 ## Architecture détaillée
 
