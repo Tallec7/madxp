@@ -271,6 +271,9 @@ source central-server/.env && psql "$DATABASE_URL" -f central-server/src/scripts
 - Afficher "Deployer" / "Deployer (en file)" dans les boutons overlay et watermark de `site-settings-tab` pour les sites SaaS (utiliser "Enregistrer" via `common.save` — les notifications doivent aussi dire "enregistrée" au lieu de "déployée" ou "en file d'attente" — smoke test enforced)
 - Appeler `deployWatermarkAsset()` pour un site SaaS dans `site-settings-tab.component.ts` (les sites SaaS n'ont pas de Pi pour recevoir l'asset — garder par `!this.isSaas` — smoke test enforced)
 - Afficher "Modifications non déployées" / "Configuration synchronisée" dans le standalone `config-editor` pour les sites SaaS (utiliser "Modifications non enregistrées" / "Configuration à jour" — le composant doit avoir `@Input() siteType` et un getter `isSaas` — masquer le mode merge/replace avec `*ngIf="!isSaas"` — smoke test enforced)
+- Remettre `getStatsSummary`, `getDailyTrends` ou `getBenchmark` sur `video_plays` dans `site-sponsor.repository.ts` (migrées vers `site_sponsor_daily_stats` pré-agrégée — `video_plays` a une rétention de 15 jours, les stats seraient perdues après cleanup — seules les requêtes nécessitant une granularité par vidéo/événement restent sur `video_plays` — smoke test enforced)
+- Supprimer `calculate_site_sponsor_daily_stats()` de `full-schema.sql` ou son appel dans `cron-scheduler.service.ts` (sans cette fonction, les stats sponsors du jour sont perdues après le cleanup `video_plays` 15 jours — `checkAggregationStaleness()` alerte si >36h sans agrégation — smoke test enforced)
+- Revenir à `syncJsonFromConfig()` avec un subset de 4 champs dans `config-editor.component.ts` (le JSON editor doit montrer la config complète `this.config` pour permettre au super_admin de voir/éditer tous les champs — smoke test enforced)
 
 ## Architecture détaillée
 

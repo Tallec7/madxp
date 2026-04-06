@@ -43,6 +43,8 @@ await query(`SELECT set_config('app.user_role', $1, false)`, [role]);
 
 Tables préservées indéfiniment : `club_daily_stats`, `site_sponsor_daily_stats`
 
+**Agrégation CRON obligatoire** : `video_plays` est purgée après 15 jours. Les fonctions PG `calculate_all_daily_stats()`, `calculate_all_advertiser_daily_stats()` et `calculate_site_sponsor_daily_stats()` agrègent les données de J-1 vers les tables permanentes. `alerting.service.ts` alerte si l'agrégation n'a pas tourné depuis >36h (`aggregation_stale` critique). Les requêtes sponsor `getStatsSummary`, `getDailyTrends`, `getBenchmark` lisent `site_sponsor_daily_stats` (pas `video_plays`).
+
 ## Règles
 
 - **JAMAIS** modifier les migrations déjà en production
