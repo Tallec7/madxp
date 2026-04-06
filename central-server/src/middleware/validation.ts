@@ -653,6 +653,7 @@ export const schemas = {
 
   updateProfileConfiguration: Joi.object({
     configuration: Joi.object().required(),
+    mode: Joi.string().valid('replace', 'merge').optional(),
   }),
 
   // ============================================================================

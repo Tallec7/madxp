@@ -250,8 +250,8 @@ export class SitesService {
     return this.api.put<ConfigProfile>(`/sites/${siteId}/profiles/${profileId}`, payload);
   }
 
-  updateProfileConfiguration(siteId: string, profileId: string, configuration: SiteConfiguration): Observable<ConfigProfile> {
-    return this.api.put<ConfigProfile>(`/sites/${siteId}/profiles/${profileId}/configuration`, { configuration });
+  updateProfileConfiguration(siteId: string, profileId: string, configuration: SiteConfiguration, mode?: 'replace' | 'merge'): Observable<ConfigProfile> {
+    return this.api.put<ConfigProfile>(`/sites/${siteId}/profiles/${profileId}/configuration`, { configuration, mode });
   }
 
   deleteProfile(siteId: string, profileId: string): Observable<{ success: boolean; message: string }> {

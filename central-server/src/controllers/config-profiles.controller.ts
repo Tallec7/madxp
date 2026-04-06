@@ -43,6 +43,7 @@ const updateProfileSchema = Joi.object({
 
 const updateProfileConfigurationSchema = Joi.object({
   configuration: Joi.object().required(),
+  mode: Joi.string().valid('replace', 'merge').optional(),
 });
 
 // --------------------------------------------------------------------------
@@ -209,10 +210,12 @@ export const updateProfileConfiguration = async (req: AuthRequest, res: Response
       return res.status(404).json({ error: 'Profil non trouve' });
     }
 
-    const updated = await configProfileRepository.update(profileId, {
-      configuration: value.configuration,
-      updatedBy: req.user?.id,
-    });
+    const updated = value.mode === 'merge'
+      ? await configProfileRepository.mergeConfiguration(profileId, value.configuration, req.user?.id)
+      : await configProfileRepository.update(profileId, {
+          configuration: value.configuration,
+          updatedBy: req.user?.id,
+        });
 
     logger.info('Profile configuration updated', {
       siteId,

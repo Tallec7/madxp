@@ -158,6 +158,23 @@ class ConfigProfileRepositoryImpl extends BaseRepository<ConfigProfileRow> {
     return result.rows[0] || null;
   }
 
+  async mergeConfiguration(profileId: string, partialConfig: Record<string, unknown>, updatedBy?: string): Promise<ConfigProfileRow | null> {
+    const setClauses = ['configuration = COALESCE(configuration, \'{}\'::jsonb) || $1::jsonb'];
+    const values: unknown[] = [JSON.stringify(partialConfig)];
+
+    if (updatedBy) {
+      setClauses.push(`updated_by = $${values.length + 1}`);
+      values.push(updatedBy);
+    }
+
+    const paramIndex = values.length + 1;
+    const result = await query<ConfigProfileRow>(
+      `UPDATE config_profiles SET ${setClauses.join(', ')} WHERE id = $${paramIndex} RETURNING *`,
+      [...values, profileId]
+    );
+    return result.rows[0] || null;
+  }
+
   /**
    * Definit un profil comme profil par defaut (et unset l'ancien).
    * Utilise une transaction pour garantir la coherence.

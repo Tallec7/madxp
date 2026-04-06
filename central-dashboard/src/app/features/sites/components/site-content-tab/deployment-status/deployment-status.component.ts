@@ -1,7 +1,7 @@
 import { Component, Input, Output, EventEmitter, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Subscription, filter, take } from 'rxjs';
+import { Subscription, filter, take, switchMap } from 'rxjs';
 import { SitesService, PendingDeployment } from '../../../../../core/services/sites.service';
 import { SiteCommandService } from '../../../../../core/services/site-command.service';
 import { NotificationService } from '../../../../../core/services/notification.service';
@@ -684,7 +684,21 @@ export class DeploymentStatusComponent implements OnDestroy {
       categoryMappings: this.config.categoryMappings,
     };
 
-    this.sitesService.saveConfigDirect(this.siteId, configToSave as unknown as Record<string, unknown>, 'merge').subscribe({
+    // Fetch default profile and merge config into it (source of truth for SaaS)
+    this.sitesService.getProfiles(this.siteId).pipe(
+      switchMap(response => {
+        const defaultProfile = response.profiles.find(p => p.is_default);
+        if (!defaultProfile) {
+          throw new Error('Aucun profil par defaut trouve');
+        }
+        return this.sitesService.updateProfileConfiguration(
+          this.siteId,
+          defaultProfile.id,
+          configToSave as unknown as SiteConfiguration,
+          'merge'
+        );
+      })
+    ).subscribe({
       next: () => {
         this.deploying = false;
         this.deployStatus = 'success';

@@ -77,7 +77,7 @@ export class SiteSettingsDataService {
 
   /**
    * Save club auth: update DB (if clubName provided) then deploy to Pi.
-   * For SaaS sites, writes directly to local_config_mirror instead of sending a Pi command.
+   * For SaaS sites, writes directly to the default profile config.
    */
   saveClubAuth(
     siteId: string,
@@ -90,7 +90,7 @@ export class SiteSettingsDataService {
     if (remotePassword) neoProContent.remotePassword = remotePassword;
 
     const deploy$ = isSaas
-      ? this.saveConfigMerge(siteId, { auth: { clubName, password: remotePassword, sessionDuration: 86400000 } })
+      ? this.mergeDefaultProfileConfig(siteId, { auth: { clubName, password: remotePassword, sessionDuration: 86400000 } })
       : this.deployClubAuth(siteId, neoProContent);
 
     if (clubName) {
@@ -119,11 +119,24 @@ export class SiteSettingsDataService {
   }
 
   /**
-   * Save partial config directly to local_config_mirror (SaaS only, merge mode).
+   * Merge partial config into the default profile (SaaS only).
+   * Fetches the default profile ID, then calls updateProfileConfiguration with merge mode.
    */
-  private saveConfigMerge(siteId: string, partialConfig: Record<string, unknown>): Observable<CommandResponse> {
-    return this.sitesService.saveConfigDirect(siteId, partialConfig, 'merge').pipe(
-      map(() => ({ success: true, message: 'Configuration enregistrée' }))
+  mergeDefaultProfileConfig(siteId: string, partialConfig: Record<string, unknown>): Observable<CommandResponse> {
+    return this.sitesService.getProfiles(siteId).pipe(
+      switchMap(response => {
+        const defaultProfile = response.profiles.find(p => p.is_default);
+        if (!defaultProfile) {
+          throw new Error('Aucun profil par defaut trouve');
+        }
+        return this.sitesService.updateProfileConfiguration(
+          siteId,
+          defaultProfile.id,
+          partialConfig as never,
+          'merge'
+        );
+      }),
+      map(() => ({ success: true, message: 'Configuration enregistree' }))
     );
   }
 
@@ -229,7 +242,7 @@ export class SiteSettingsDataService {
 
   toggleLiveScore(siteId: string, enabled: boolean, isSaas: boolean = false): Observable<{ updatedSite: Site; commandResponse: CommandResponse }> {
     const deploy$ = isSaas
-      ? this.saveConfigMerge(siteId, { liveScoreEnabled: enabled })
+      ? this.mergeDefaultProfileConfig(siteId, { liveScoreEnabled: enabled })
       : this.commandService.sendCommand(siteId, 'update_config', {
           neoProContent: { liveScoreEnabled: enabled },
           mode: 'merge',
@@ -246,7 +259,7 @@ export class SiteSettingsDataService {
 
   saveOverlayConfig(siteId: string, config: OverlayConfig, isSaas: boolean = false): Observable<CommandResponse> {
     if (isSaas) {
-      return this.saveConfigMerge(siteId, { scoreOverlay: config });
+      return this.mergeDefaultProfileConfig(siteId, { scoreOverlay: config });
     }
     return this.commandService.sendCommand(siteId, 'update_config', {
       neoProContent: { scoreOverlay: config },
@@ -268,7 +281,7 @@ export class SiteSettingsDataService {
 
   saveWatermarkConfig(siteId: string, config: WatermarkConfig, isSaas: boolean = false): Observable<CommandResponse> {
     if (isSaas) {
-      return this.saveConfigMerge(siteId, { watermark: config });
+      return this.mergeDefaultProfileConfig(siteId, { watermark: config });
     }
     return this.commandService.sendCommand(siteId, 'update_config', {
       neoProContent: { watermark: config },
