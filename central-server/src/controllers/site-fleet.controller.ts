@@ -346,25 +346,74 @@ export const getSiteConnectionStatus = async (req: AuthRequest, res: Response) =
   }
 };
 
+/**
+ * Extrait tous les filenames de vidéos référencés dans la config d'un site
+ * (boucle par défaut sponsors[] + boucles par phase timeCategories[].loopVideos[]).
+ */
+function extractConfigVideoFilenames(config: Record<string, unknown>): Set<string> {
+  const filenames = new Set<string>();
+
+  const extractFromPath = (path: string): void => {
+    if (!path) return;
+    // Le path peut être "videos/default/01_NEOPRO.mp4" → extraire le filename
+    const filename = path.split('/').pop();
+    if (filename) filenames.add(filename.toLowerCase());
+  };
+
+  // Boucle par défaut
+  const sponsors = config.sponsors as Array<{ path?: string }> | undefined;
+  if (Array.isArray(sponsors)) {
+    for (const s of sponsors) {
+      if (s.path) extractFromPath(s.path);
+    }
+  }
+
+  // Boucles par phase (timeCategories[].loopVideos[])
+  const timeCategories = config.timeCategories as Array<{ loopVideos?: Array<{ path?: string }> }> | undefined;
+  if (Array.isArray(timeCategories)) {
+    for (const tc of timeCategories) {
+      if (Array.isArray(tc.loopVideos)) {
+        for (const lv of tc.loopVideos) {
+          if (lv.path) extractFromPath(lv.path);
+        }
+      }
+    }
+  }
+
+  return filenames;
+}
+
 export const getSiteLocalContent = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
 
-    // Club users: only see their own videos + NEOPRO
     const isClub = req.user?.role === 'club';
-    const cloudVideosPromise = isClub
-      ? timelineRepository.getCloudVideosForClub(id, 500)
-      : timelineRepository.getCloudVideos(500);
 
     // Récupérer le site, les vidéos cloud et les chemins déployés en parallèle
-    const [site, cloudVideoRows, deployedPathRows] = await Promise.all([
+    const [site, allCloudVideoRows, deployedPathRows] = await Promise.all([
       siteRepository.findWithLocalContent(id),
-      cloudVideosPromise,
+      timelineRepository.getCloudVideos(500),
       deploymentRepository.getDeployedPathsForSite(id),
     ]);
 
     if (!site) {
       return res.status(404).json({ error: 'Site non trouvé' });
+    }
+
+    // Club users: filter cloud videos to only show their own + NEOPRO + videos in config
+    let cloudVideoRows = allCloudVideoRows;
+    if (isClub && site.local_config_mirror) {
+      const configFilenames = extractConfigVideoFilenames(site.local_config_mirror as Record<string, unknown>);
+      cloudVideoRows = allCloudVideoRows.filter((v) =>
+        v.uploaded_for_site_id === id
+        || (v.category && v.category.toUpperCase() === 'NEOPRO')
+        || configFilenames.has(v.filename.toLowerCase())
+      );
+    } else if (isClub) {
+      cloudVideoRows = allCloudVideoRows.filter((v) =>
+        v.uploaded_for_site_id === id
+        || (v.category && v.category.toUpperCase() === 'NEOPRO')
+      );
     }
 
     // Formatter les vidéos cloud
