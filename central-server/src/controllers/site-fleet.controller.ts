@@ -350,10 +350,16 @@ export const getSiteLocalContent = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
 
+    // Club users: only see their own videos + NEOPRO
+    const isClub = req.user?.role === 'club';
+    const cloudVideosPromise = isClub
+      ? timelineRepository.getCloudVideosForClub(id, 500)
+      : timelineRepository.getCloudVideos(500);
+
     // Récupérer le site, les vidéos cloud et les chemins déployés en parallèle
     const [site, cloudVideoRows, deployedPathRows] = await Promise.all([
       siteRepository.findWithLocalContent(id),
-      timelineRepository.getCloudVideos(500),
+      cloudVideosPromise,
       deploymentRepository.getDeployedPathsForSite(id),
     ]);
 

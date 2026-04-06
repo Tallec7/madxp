@@ -34,14 +34,16 @@ import { LoopManagerComponent } from '../../loop-manager/loop-manager.component'
         <span class="health-label">Télécommande</span>
         <span class="health-value">{{ getAssignedCategoryCount() }} catég.</span>
       </a>
-      <span class="health-arrow">→</span>
-      <a class="health-step" (click)="scrollToSection('analytics')" [class.ok]="getUnmappedAnalyticsCount() === 0" [class.warn]="getUnmappedAnalyticsCount() > 0"
-         title="Chaque catégorie doit être mappée à un type analytics (sponsor, jingle, ambiance) pour apparaître dans les rapports">
-        <span class="health-icon">📊</span>
-        <span class="health-label">Analytics</span>
-        <span class="health-value" *ngIf="getUnmappedAnalyticsCount() === 0">✅</span>
-        <span class="health-value warn" *ngIf="getUnmappedAnalyticsCount() > 0">⚠️ {{ getUnmappedAnalyticsCount() }} non mappés</span>
-      </a>
+      <ng-container *ngIf="!isClubUser">
+        <span class="health-arrow">→</span>
+        <a class="health-step" (click)="scrollToSection('analytics')" [class.ok]="getUnmappedAnalyticsCount() === 0" [class.warn]="getUnmappedAnalyticsCount() > 0"
+           title="Chaque catégorie doit être mappée à un type analytics (sponsor, jingle, ambiance) pour apparaître dans les rapports">
+          <span class="health-icon">📊</span>
+          <span class="health-label">Analytics</span>
+          <span class="health-value" *ngIf="getUnmappedAnalyticsCount() === 0">✅</span>
+          <span class="health-value warn" *ngIf="getUnmappedAnalyticsCount() > 0">⚠️ {{ getUnmappedAnalyticsCount() }} non mappés</span>
+        </a>
+      </ng-container>
     </div>
 
     <!-- Impact Counters -->
@@ -83,8 +85,8 @@ import { LoopManagerComponent } from '../../loop-manager/loop-manager.component'
       </div>
     </div>
 
-    <!-- JSON Toggle -->
-    <div class="json-toggle-bar" *ngIf="config">
+    <!-- JSON Toggle (hidden for club users) -->
+    <div class="json-toggle-bar" *ngIf="config && !isClubUser">
       <button class="btn btn-sm btn-outline" (click)="toggleJsonView()">
         <span>{{ showJson ? '📝 Formulaire' : 'JSON' }}</span>
       </button>
@@ -248,6 +250,7 @@ import { LoopManagerComponent } from '../../loop-manager/loop-manager.component'
     <div class="section" id="section-loops">
       <app-loop-manager
         [siteType]="siteType"
+        [isClubUser]="isClubUser"
         [config]="config"
         [videoOptionGroups]="videoOptionGroups"
         [cloudVideoPaths]="cloudVideoPaths"
@@ -297,8 +300,8 @@ import { LoopManagerComponent } from '../../loop-manager/loop-manager.component'
       </div>
     </div>
 
-    <!-- Analytics Categories -->
-    <div class="section card" id="section-analytics">
+    <!-- Analytics Categories (hidden for club users) -->
+    <div class="section card" id="section-analytics" *ngIf="!isClubUser">
       <div class="section-header">
         <h4>
           <span class="section-icon">📊</span>
@@ -872,6 +875,7 @@ import { LoopManagerComponent } from '../../loop-manager/loop-manager.component'
 })
 export class ConfigEditorComponent {
   @Input() siteType: string = '';
+  @Input() isClubUser = false;
   @Input() config!: SiteConfiguration;
   @Input() localVideos: LocalVideo[] = [];
   @Input() cloudVideos: { length: number } = { length: 0 };

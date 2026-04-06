@@ -9,6 +9,7 @@ import { NotificationService } from '../../../../core/services/notification.serv
 import { LoggerService } from '../../../../core/services/logger.service';
 import { SocketService } from '../../../../core/services/socket.service';
 import { DraftService, ConfigDraft, OrchestratedDeploymentProgress } from '../../../../core/services/draft.service';
+import { AuthService } from '../../../../core/services/auth.service';
 import { ErrorExtractor } from '../../../../core/utils/error-extractor';
 import {
   SiteConfiguration,
@@ -66,8 +67,8 @@ import { ConfigDraftComponent } from './config-draft/config-draft.component';
         </div>
       </div>
 
-      <!-- Profile Selector -->
-      <div class="profile-selector-bar" *ngIf="contentProfiles.length > 0">
+      <!-- Profile Selector (hidden for club users) -->
+      <div class="profile-selector-bar" *ngIf="contentProfiles.length > 0 && !isClub">
         <label class="profile-selector-label">Profil :</label>
         <select
           class="profile-selector"
@@ -138,6 +139,7 @@ import { ConfigDraftComponent } from './config-draft/config-draft.component';
       <!-- Config Editor (health bar, impact counters, orphans, categories, loops, remote, analytics) -->
       <app-config-editor
         [siteType]="siteType"
+        [isClubUser]="isClub"
         [config]="config"
         [localVideos]="localVideos"
         [cloudVideos]="{ length: cloudVideos.length }"
@@ -488,8 +490,13 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
     private logger: LoggerService,
     private socketService: SocketService,
     private draftService: DraftService,
+    private authService: AuthService,
     private cdr: ChangeDetectorRef
   ) {}
+
+  get isClub(): boolean {
+    return this.authService.getCurrentUser()?.role === 'club';
+  }
 
   ngOnInit(): void {
     this.loadContent();

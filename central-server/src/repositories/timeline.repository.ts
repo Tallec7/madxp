@@ -192,6 +192,37 @@ class TimelineRepositoryImpl {
   }
 
   /**
+   * Recupere les videos cloud filtrees pour un club (uniquement ses propres videos + NEOPRO).
+   */
+  async getCloudVideosForClub(siteId: string, limit = 500): Promise<CloudVideoRow[]> {
+    const result = await query<CloudVideoRow>(
+      `SELECT
+         v.id,
+         v.filename,
+         v.original_name,
+         v.category,
+         v.subcategory,
+         v.file_size,
+         v.duration,
+         v.checksum,
+         v.storage_path,
+         v.uploaded_for_site_id,
+         v.created_at,
+         v.updated_at,
+         v.metadata,
+         a.name as advertiser_name
+       FROM videos v
+       LEFT JOIN advertiser_videos av ON av.video_id = v.id
+       LEFT JOIN advertisers a ON a.id = av.advertiser_id
+       WHERE v.uploaded_for_site_id = $1 OR UPPER(v.category) = 'NEOPRO'
+       ORDER BY v.created_at DESC
+       LIMIT $2`,
+      [siteId, limit]
+    );
+    return result.rows;
+  }
+
+  /**
    * Recupere une commande en attente pour verification d'appartenance.
    */
   async findPendingCommand(commandId: string, siteId: string): Promise<{ id: string } | null> {

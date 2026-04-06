@@ -85,6 +85,7 @@ interface SponsorWeightGroup {
                 (ngModelChange)="onChanged()"
                 placeholder="Nom"
                 class="video-name-input"
+                [disabled]="isClubUser && video.owner === 'neopro'"
               />
               <select
                 [(ngModel)]="video.path"
@@ -92,6 +93,7 @@ interface SponsorWeightGroup {
                 class="video-select"
                 [class.input-error]="!video.path"
                 [class.has-cloud-video]="isCloudVideo(video.path)"
+                [disabled]="isClubUser && video.owner === 'neopro'"
               >
                 <option value="">-- Sélectionner --</option>
                 <optgroup *ngFor="let group of videoOptionGroups" [label]="group.icon + ' ' + group.label">
@@ -108,7 +110,7 @@ interface SponsorWeightGroup {
               </span>
             </div>
             <span class="video-duration" *ngIf="getVideoDuration(video.path) as dur">{{ formatDuration(dur) }}</span>
-            <div class="video-owner">
+            <div class="video-owner" *ngIf="!isClubUser">
               <label class="owner-radio">
                 <input type="radio" [name]="'owner-default-' + i" [(ngModel)]="video.owner" value="club" (ngModelChange)="onChanged()"/>
                 <span class="owner-label club">Club</span>
@@ -118,7 +120,8 @@ interface SponsorWeightGroup {
                 <span class="owner-label neopro">NEOPRO</span>
               </label>
             </div>
-            <button class="btn-remove" (click)="removeDefaultVideo(i)">×</button>
+            <span class="owner-label neopro" *ngIf="isClubUser && video.owner === 'neopro'" title="Vidéo gérée par Neopro">🔒 NEOPRO</span>
+            <button class="btn-remove" (click)="removeDefaultVideo(i)" *ngIf="!(isClubUser && video.owner === 'neopro')">×</button>
           </div>
         </div>
         <div class="loop-empty" *ngIf="!config.sponsors || config.sponsors.length === 0">
@@ -888,6 +891,7 @@ interface SponsorWeightGroup {
 })
 export class LoopManagerComponent implements OnInit, OnChanges {
   @Input() siteType: string = '';
+  @Input() isClubUser = false;
   @Input() config!: SiteConfiguration;
   @Input() videoOptionGroups: { key: string; label: string; icon: string; videos: { path: string; displayName: string; isOnPi: boolean }[] }[] = [];
   @Input() cloudVideoPaths: Set<string> = new Set();
