@@ -14271,6 +14271,42 @@ describe('SaaS deployment pipeline guards', () => {
     });
   });
 
+  // --- Home component must propagate siteId in SaaS navigation links ---
+  it('home.component must propagate ?site= queryParam on remote and tv links in SaaS mode', () => {
+    const tsPath = path.join(repoRoot, 'raspberry', 'src', 'app', 'components', 'home', 'home.component.ts');
+    const htmlPath = path.join(repoRoot, 'raspberry', 'src', 'app', 'components', 'home', 'home.component.html');
+    const tsContent = fs.readFileSync(tsPath, 'utf8');
+    const htmlContent = fs.readFileSync(htmlPath, 'utf8');
+    expect({
+      importsSaasConfigService: tsContent.includes('SaasConfigService'),
+      hasSiteQueryParams: tsContent.includes('siteQueryParams'),
+      callsGetSiteId: tsContent.includes('getSiteId()'),
+      remoteUsesQueryParams: htmlContent.includes('routerLink="/remote"') && htmlContent.includes('siteQueryParams'),
+      tvUsesQueryParams: htmlContent.includes('routerLink="/tv"') && htmlContent.includes('siteQueryParams'),
+    }).toEqual({
+      importsSaasConfigService: true,
+      hasSiteQueryParams: true,
+      callsGetSiteId: true,
+      remoteUsesQueryParams: true,
+      tvUsesQueryParams: true,
+    });
+  });
+
+  // --- auth.service.ts isAuthenticated() must bypass token check in SaaS mode ---
+  it('auth.service.ts isAuthenticated() must return true in SaaS mode without token', () => {
+    const filePath = path.join(repoRoot, 'raspberry', 'src', 'app', 'services', 'auth.service.ts');
+    const content = fs.readFileSync(filePath, 'utf8');
+    // Extract the isAuthenticated method body
+    const methodMatch = content.match(/isAuthenticated\(\)[\s\S]*?return this\.checkAuth/);
+    expect({
+      methodExists: !!methodMatch,
+      checksSaasModeBeforeCheckAuth: !!methodMatch && methodMatch[0].includes('saasMode'),
+    }).toEqual({
+      methodExists: true,
+      checksSaasModeBeforeCheckAuth: true,
+    });
+  });
+
   // --- Socket service emits saas-register with version ---
   it('socket.service.ts must emit saas-register with APP_VERSION in SaaS mode', () => {
     const filePath = path.join(repoRoot, 'raspberry', 'src', 'app', 'services', 'socket.service.ts');
@@ -15004,7 +15040,7 @@ describe('SaaS config save flow', () => {
     });
   });
 
-  it('site-settings-data.service must pass isSaas to save methods for SaaS direct DB writes', () => {
+  it('site-settings-data.service must use profile-based saves for SaaS (not local_config_mirror)', () => {
     const filePath = path.join(dashboardRoot, 'components', 'site-settings-tab', 'site-settings-data.service.ts');
     const content = fs.readFileSync(filePath, 'utf8');
     expect({
@@ -15012,25 +15048,57 @@ describe('SaaS config save flow', () => {
       toggleLiveScoreHasIsSaas: /toggleLiveScore\([^)]*isSaas/.test(content),
       saveOverlayConfigHasIsSaas: /saveOverlayConfig\([^)]*isSaas/.test(content),
       saveWatermarkConfigHasIsSaas: /saveWatermarkConfig\([^)]*isSaas/.test(content),
-      hasSaveConfigMerge: content.includes('saveConfigMerge'),
-      usesDirectSaveForSaas: content.includes("saveConfigDirect") && content.includes("'merge'"),
+      hasMergeDefaultProfile: content.includes('mergeDefaultProfileConfig'),
+      usesGetProfiles: content.includes('getProfiles'),
+      usesUpdateProfileConfig: content.includes('updateProfileConfiguration'),
+      doesNotUseSaveConfigDirect: !content.includes('saveConfigDirect'),
     }).toEqual({
       saveClubAuthHasIsSaas: true,
       toggleLiveScoreHasIsSaas: true,
       saveOverlayConfigHasIsSaas: true,
       saveWatermarkConfigHasIsSaas: true,
-      hasSaveConfigMerge: true,
-      usesDirectSaveForSaas: true,
+      hasMergeDefaultProfile: true,
+      usesGetProfiles: true,
+      usesUpdateProfileConfig: true,
+      doesNotUseSaveConfigDirect: true,
     });
   });
 
-  it('deployment-status confirmSaveSaas must use merge mode', () => {
+  it('deployment-status confirmSaveSaas must use profile-based save (not saveConfigDirect)', () => {
     const filePath = path.join(dashboardRoot, 'components', 'site-content-tab', 'deployment-status', 'deployment-status.component.ts');
     const content = fs.readFileSync(filePath, 'utf8');
     expect({
-      usesMergeMode: /saveConfigDirect\([^)]*'merge'/.test(content),
+      usesGetProfiles: /confirmSaveSaas[\s\S]{0,500}getProfiles/.test(content),
+      usesUpdateProfileConfig: /confirmSaveSaas[\s\S]{0,500}updateProfileConfiguration/.test(content),
+      doesNotUseSaveConfigDirect: !/confirmSaveSaas[\s\S]{0,500}saveConfigDirect/.test(content),
     }).toEqual({
-      usesMergeMode: true,
+      usesGetProfiles: true,
+      usesUpdateProfileConfig: true,
+      doesNotUseSaveConfigDirect: true,
+    });
+  });
+
+  it('config-profile.repository must have mergeConfiguration method with JSONB merge', () => {
+    const filePath = path.join(repoRoot, 'central-server', 'src', 'repositories', 'config-profile.repository.ts');
+    const content = fs.readFileSync(filePath, 'utf8');
+    expect({
+      hasMergeMethod: content.includes('mergeConfiguration'),
+      usesJsonbConcat: /mergeConfiguration[\s\S]{0,300}COALESCE[\s\S]{0,100}\|\|/.test(content),
+    }).toEqual({
+      hasMergeMethod: true,
+      usesJsonbConcat: true,
+    });
+  });
+
+  it('updateProfileConfiguration controller must support merge mode', () => {
+    const filePath = path.join(repoRoot, 'central-server', 'src', 'controllers', 'config-profiles.controller.ts');
+    const content = fs.readFileSync(filePath, 'utf8');
+    expect({
+      checksMergeMode: content.includes("mode === 'merge'"),
+      callsMergeConfiguration: content.includes('mergeConfiguration'),
+    }).toEqual({
+      checksMergeMode: true,
+      callsMergeConfiguration: true,
     });
   });
 
