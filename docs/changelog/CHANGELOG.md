@@ -1,3 +1,9 @@
+## [3.128.8](https://github.com/Tallec7/neopro/compare/v3.128.7...v3.128.8) (2026-04-06)
+
+### Bug Fixes
+
+- **club-portal:** pass siteType to site-content-tab in club loop ([00c6eab](https://github.com/Tallec7/neopro/commit/00c6eab519551d81d61176ff67f3ab119c3e8afc))
+
 ## [3.128.7](https://github.com/Tallec7/neopro/compare/v3.128.6...v3.128.7) (2026-04-06)
 
 ### Bug Fixes
