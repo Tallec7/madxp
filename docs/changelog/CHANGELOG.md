@@ -1,3 +1,9 @@
+## [3.128.11](https://github.com/Tallec7/neopro/compare/v3.128.10...v3.128.11) (2026-04-06)
+
+### Bug Fixes
+
+- **club:** load SaaS config from config_profiles for club video filter ([8e4549a](https://github.com/Tallec7/neopro/commit/8e4549ab3eb78a046313c614443ada65458ade0e))
+
 ## [3.128.10](https://github.com/Tallec7/neopro/compare/v3.128.9...v3.128.10) (2026-04-06)
 
 ### Bug Fixes
