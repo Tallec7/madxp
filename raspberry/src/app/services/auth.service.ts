@@ -2,6 +2,7 @@ import { inject, Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { BehaviorSubject, Observable, firstValueFrom } from 'rxjs';
 import { Configuration } from '../interfaces/configuration.interface';
+import { environment } from '../../environments/environment';
 
 @Injectable({
   providedIn: 'root'
@@ -46,8 +47,17 @@ export class AuthService {
 
   /**
    * Charge la configuration depuis configuration.json
+   * En mode SaaS, skip car la config est chargée via l'API centrale.
    */
   private async loadConfiguration(): Promise<void> {
+    if ((environment as { saasMode?: boolean }).saasMode) {
+      // SaaS mode: pas de configuration.json locale, pas d'auth locale
+      this.configLoaded = true;
+      this.configLoadedSubject.next(true);
+      this.isAuthenticatedSubject.next(true);
+      return;
+    }
+
     try {
       const config = await firstValueFrom(
         this.http.get<Configuration>('/configuration.json')

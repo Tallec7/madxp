@@ -8,6 +8,19 @@
       "port": 4200
     },
     {
+      "name": "raspberry-saas",
+      "runtimeExecutable": "/opt/homebrew/bin/node",
+      "runtimeArgs": [
+        "node_modules/.bin/ng",
+        "serve",
+        "raspberry",
+        "--configuration=saas",
+        "--port",
+        "4202"
+      ],
+      "port": 4202
+    },
+    {
       "name": "raspberry-demo",
       "runtimeExecutable": "/opt/homebrew/bin/node",
       "runtimeArgs": [

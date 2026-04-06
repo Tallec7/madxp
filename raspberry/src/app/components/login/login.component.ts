@@ -7,6 +7,7 @@ import { TranslateModule } from '@ngx-translate/core';
 import { AuthService } from '../../services/auth.service';
 import { TranslationService } from '../../services/translation.service';
 import { LanguageSelectorComponent } from '../language-selector/language-selector.component';
+import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-login',
@@ -77,6 +78,8 @@ export class LoginComponent implements OnInit, OnDestroy {
   }
 
   private async loadSiteInfo(): Promise<void> {
+    if ((environment as { saasMode?: boolean }).saasMode) return;
+
     try {
       const response = await fetch('/configuration.json');
       const config = await response.json();

@@ -11,6 +11,7 @@ import { map, tap, catchError } from 'rxjs';
 import { authGuard } from './guards/auth.guard';
 import { DemoConfigService } from './services/demo-config.service';
 import { ProfileConfigService } from './services/profile-config.service';
+import { SaasConfigService } from './services/saas-config.service';
 
 /**
  * Enrichit les vidéos avec le categoryId de leur catégorie parente
@@ -36,6 +37,7 @@ const getConfiguration: ResolveFn<Configuration> = () => {
   const http = inject(HttpClient);
   const demoConfigService = inject(DemoConfigService);
   const profileConfigService = inject(ProfileConfigService);
+  const saasConfigService = inject(SaasConfigService);
 
   console.log('start loading configuration');
 
@@ -53,6 +55,32 @@ const getConfiguration: ResolveFn<Configuration> = () => {
     return http.get<Configuration>('/demo-configs/default.json').pipe(
       map(enrichVideosWithCategoryId),
       tap(data => console.log('load configuration (demo default)', data))
+    );
+  }
+
+  // En mode SaaS : charger la config depuis l'API centrale
+  if (saasConfigService.isSaasMode()) {
+    const selectedConfig$ = saasConfigService.getSelectedConfiguration();
+    if (selectedConfig$) {
+      return selectedConfig$.pipe(
+        map(enrichVideosWithCategoryId),
+        tap(data => console.log('load configuration (saas)', data)),
+        catchError(err => {
+          console.error('SaaS config load failed:', err);
+          saasConfigService.clearSelection();
+          // Retry with default profile
+          const siteId = saasConfigService.getSiteId();
+          return saasConfigService.loadConfiguration(siteId).pipe(
+            map(enrichVideosWithCategoryId),
+            tap(data => console.log('load configuration (saas fallback)', data))
+          );
+        })
+      );
+    }
+    // No siteId available — return minimal config
+    return saasConfigService.loadConfiguration('').pipe(
+      map(enrichVideosWithCategoryId),
+      tap(data => console.log('load configuration (saas empty)', data))
     );
   }
 
