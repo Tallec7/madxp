@@ -2230,25 +2230,38 @@ export class TvComponent implements OnInit, OnDestroy {
 
       this.prefetchedIndices.add(targetIndex);
 
-      // fetch() lit le fichier → données vont dans le page cache kernel
-      // On consomme le body avec arrayBuffer() puis on le laisse GC
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      fetch(video.path, { signal, priority: 'low' } as any)
-        .then((response: Response) => {
-          if (response.ok) {
-            return response.arrayBuffer();
-          }
-          return undefined;
-        })
-        .then(() => {
-          if (!signal.aborted) {
-            console.log(`[TV] Disk cache warmed for video ${targetIndex}: ${video.name || video.path}`);
-          }
-        })
-        .catch(() => {
-          // Silencieux : abort ou erreur réseau
-          // Le preload normal fonctionnera quand même, juste plus lentement
-        });
+      const isCrossOrigin = video.path.startsWith('http://') || video.path.startsWith('https://');
+
+      if (isCrossOrigin) {
+        // SaaS mode: cross-origin URLs → use <link rel="prefetch"> (no CORS restriction)
+        const link = document.createElement('link');
+        link.rel = 'prefetch';
+        link.as = 'video';
+        link.href = video.path;
+        document.head.appendChild(link);
+        // Cleanup after browser has had time to initiate the prefetch
+        setTimeout(() => link.remove(), 10000);
+        console.log(`[TV] Prefetch hint added for video ${targetIndex}: ${video.name || video.path}`);
+      } else {
+        // Pi mode: local files → fetch() warms kernel page cache
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        fetch(video.path, { signal, priority: 'low' } as any)
+          .then((response: Response) => {
+            if (response.ok) {
+              return response.arrayBuffer();
+            }
+            return undefined;
+          })
+          .then(() => {
+            if (!signal.aborted) {
+              console.log(`[TV] Disk cache warmed for video ${targetIndex}: ${video.name || video.path}`);
+            }
+          })
+          .catch(() => {
+            // Silencieux : abort ou erreur réseau
+            // Le preload normal fonctionnera quand même, juste plus lentement
+          });
+      }
     }
   }
 
