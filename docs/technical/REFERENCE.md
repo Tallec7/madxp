@@ -1475,7 +1475,17 @@ Le HDMI secondaire du Raspberry Pi peut alimenter un panneau LED bord de terrain
 | `'saas'`    | Skip `deployToSite()`, mark `completed` immédiatement (vidéos servies via URL FTP, pas de Pi) — v3.127.5+ |
 | `'demo'`    | Traité comme `pi` (mais généralement pas ciblé par un déploiement)                                        |
 
-> **Monitoring :** `checkStuckDeployments()` dans `alerting.service.ts` exclut les sites SaaS des alertes "Déploiement bloqué" via `JOIN sites WHERE site_type != 'saas'`. Les déploiements Pi bloqués >30min génèrent une alerte warning, >60min critical, et les OTA >2h sont auto-failed.
+> **Monitoring :** `checkStuckDeployments()` dans `alerting.service.ts` exclut les sites SaaS des alertes "Déploiement bloqué" via `JOIN sites WHERE site_type != 'saas'`. Les déploiements Pi bloqu��s >30min génèrent une alerte warning, >60min critical, et les OTA >2h sont auto-failed.
+
+**Flux de sauvegarde config par type de site (v3.127.12+) :**
+
+| `site_type`        | Comportement                                                                            |
+| ------------------ | --------------------------------------------------------------------------------------- |
+| `'pi'`             | `sendCommand('update_config')` ou `syncProfiles()` → config envoyée au Pi via WebSocket |
+| `'saas'`           | `PUT /api/sites/:id/config` → DB direct (`local_config_mirror` + `config_history`)      |
+| `'saas'` + profils | `updateProfileConfiguration()` → skip `syncProfiles()` (DB save suffit)                 |
+
+> **Guard :** `saveConfigDirect()` dans `config-history.controller.ts` refuse les sites non-SaaS (`site_type !== 'saas'` → 400). Smoke test enforced.
 
 **Flux de déploiement avec variante secondaire (sites Pi) :**
 
@@ -1838,6 +1848,8 @@ Tous les accès PostgreSQL passent par des repositories typés héritant de `Bas
 | `campaign`          | `campaigns`, `campaign_videos`, `campaign_sites`                                                     |
 
 > **ADR-035 Phase 4** : Les colonnes `source` et `advertiser_id` ont été retirées de `site_sponsors`. La table ne contient plus que les sponsors locaux de club. Les annonceurs Neopro utilisent désormais le système de campagnes (`campaigns`, `campaign_videos`, `campaign_sites`).
+>
+> **Migration sponsor stats (v3.127.15+)** : Les requêtes lourdes sur `video_plays` dans `site-sponsor.repository.ts` ont été migrées vers `site_sponsor_daily_stats` (table pré-agrégée, rétention indéfinie). Requêtes migrées : `getStatsSummary`, `getDailyTrends`, `getBenchmark`, `listForSite` (impression count). Requêtes encore sur `video_plays` : `getStatsByVideo`, `getStatsByPeriod`, `getStatsByEventType`, `getMatchDayBreakdown` (nécessitent granularité par vidéo/événement). Fonction PG : `calculate_site_sponsor_daily_stats(date)` exécutée par le CRON à 1h50 pour J-1. Monitoring : `checkAggregationStaleness()` alerte si >36h sans agrégation.
 > | `benchmark` | `sites`, `club_sessions`, `video_plays`, `metrics` (lecture) |
 
 ### Gestion Mémoire (Railway Hobby Plan)
@@ -1958,6 +1970,29 @@ Le service monolithique `SitesService` a été décomposé en 4 services focalis
 | `deleteProfile(siteId, profileId)`                      | `DELETE /sites/:siteId/profiles/:profileId`            |
 | `deployProfile(siteId, profileId)`                      | `POST /sites/:siteId/profiles/:profileId/deploy`       |
 | `syncProfiles(siteId)`                                  | `POST /sites/:siteId/profiles/sync`                    |
+| `saveConfigDirect(siteId, configuration)`               | `PUT /sites/:siteId/config` (SaaS uniquement)          |
+
+#### Flux de sauvegarde config SaaS (v3.127.12+)
+
+Les sites SaaS n'ont pas de Pi — la config est sauvegardée directement en DB :
+
+| Scénario              | Flux                                                   | Endpoint                                     |
+| --------------------- | ------------------------------------------------------ | -------------------------------------------- |
+| **SaaS avec profils** | `updateProfileConfiguration()` → skip `syncProfiles()` | `PUT /sites/:id/profiles/:pid/configuration` |
+| **SaaS sans profils** | `saveConfigDirect()` → DB direct                       | `PUT /sites/:id/config`                      |
+| **Pi avec profils**   | `updateProfileConfiguration()` → `syncProfiles()`      | (sync envoyé au Pi via WebSocket)            |
+| **Pi sans profils**   | `sendCommand('update_config')`                         | (commande WebSocket)                         |
+
+Le endpoint `PUT /api/sites/:id/config` :
+
+- Refuse les sites non-SaaS (`site_type !== 'saas'` → 400)
+- Écrit dans `local_config_mirror` + crée une entrée `config_history`
+- Validation Joi : `{ configuration: Joi.object().required() }`
+- Rate limit : `sensitiveRateLimit` (30 req/min)
+
+**UI SaaS** : Le `deployment-status` affiche "Enregistrer"/"Enregistrement..." au lieu de "Déployer"/"Envoi en cours...", la modal diff masque le sélecteur merge/replace, et les messages de succès sont adaptés. Clés i18n : `common.save`, `common.saving`, `common.confirmSave` (fr/en/es).
+
+**JSON Editor** : Le `config-editor` offre un toggle JSON/Formulaire (bouton en haut à droite). Affiche la configuration complète en JSON brut avec formatage et copie. Les modifications JSON sont appliquées via `Object.assign()` et répercutées dans le formulaire.
 
 ### Dashboard Central — Analytics (navigation par onglets)
 

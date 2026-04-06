@@ -10470,6 +10470,60 @@ describe('Sponsor stats completion_rate consistency guard', () => {
 });
 
 // ----------------------------------------------------------
+// B2b: Sponsor stats migrated queries must use site_sponsor_daily_stats,
+// NOT video_plays directly. Without this, queries scan millions of rows
+// and data is lost after 15-day video_plays retention cleanup.
+// ----------------------------------------------------------
+describe('Sponsor stats migration to site_sponsor_daily_stats guard', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+  const repoPath = path.join(repoRoot, 'central-server/src/repositories/site-sponsor.repository.ts');
+  let content: string;
+  beforeAll(() => { content = fs.readFileSync(repoPath, 'utf8'); });
+
+  it('getStatsSummary must query site_sponsor_daily_stats, not video_plays', () => {
+    const fnMatch = content.match(/async getStatsSummary[\s\S]*?return result\.rows/);
+    expect(fnMatch).toBeTruthy();
+    const fn = fnMatch![0];
+    expect({ usesPreAgg: fn.includes('site_sponsor_daily_stats'), usesVideoPlays: fn.includes('FROM video_plays') })
+      .toEqual({ usesPreAgg: true, usesVideoPlays: false });
+  });
+
+  it('getDailyTrends must query site_sponsor_daily_stats, not video_plays', () => {
+    const fnMatch = content.match(/async getDailyTrends[\s\S]*?return result\.rows/);
+    expect(fnMatch).toBeTruthy();
+    const fn = fnMatch![0];
+    expect({ usesPreAgg: fn.includes('site_sponsor_daily_stats'), usesVideoPlays: fn.includes('FROM video_plays') })
+      .toEqual({ usesPreAgg: true, usesVideoPlays: false });
+  });
+
+  it('getBenchmark must query site_sponsor_daily_stats, not video_plays', () => {
+    const fnMatch = content.match(/async getBenchmark[\s\S]*?return result\.rows/);
+    expect(fnMatch).toBeTruthy();
+    const fn = fnMatch![0];
+    expect({ usesPreAgg: fn.includes('site_sponsor_daily_stats'), usesVideoPlays: fn.includes('FROM video_plays') })
+      .toEqual({ usesPreAgg: true, usesVideoPlays: false });
+  });
+
+  it('calculate_site_sponsor_daily_stats function must exist in full-schema.sql', () => {
+    const schemaPath = path.join(repoRoot, 'central-server/src/scripts/full-schema.sql');
+    const schema = fs.readFileSync(schemaPath, 'utf8');
+    expect(schema).toContain('calculate_site_sponsor_daily_stats');
+  });
+
+  it('cron-scheduler must call calculate_site_sponsor_daily_stats', () => {
+    const cronPath = path.join(repoRoot, 'central-server/src/services/cron-scheduler.service.ts');
+    const cron = fs.readFileSync(cronPath, 'utf8');
+    expect(cron).toContain('calculate_site_sponsor_daily_stats');
+  });
+
+  it('alerting must monitor site_sponsor_daily_stats staleness', () => {
+    const alertPath = path.join(repoRoot, 'central-server/src/services/alerting.service.ts');
+    const alerting = fs.readFileSync(alertPath, 'utf8');
+    expect(alerting).toContain('site_sponsor_daily_stats');
+  });
+});
+
+// ----------------------------------------------------------
 // B3: Sponsor queries must filter tv_status to count only visible plays.
 // Without this, plays with tv_status='standby' (TV off) inflate stats.
 // The Pi filters client-side but defense-in-depth requires DB-level filter.
@@ -14921,19 +14975,26 @@ describe('SaaS config save flow', () => {
     });
   });
 
-  it('config-editor must have JSON toggle view', () => {
+  it('config-editor must have JSON toggle view showing full config', () => {
     const filePath = path.join(dashboardRoot, 'components', 'site-content-tab', 'config-editor', 'config-editor.component.ts');
     const content = fs.readFileSync(filePath, 'utf8');
+    // syncJsonFromConfig must serialize this.config (full), not a subset
+    const showsFullConfig = /JSON\.stringify\(this\.config,/.test(content);
+    const showsSubset = /configSubset\s*=\s*\{/.test(content);
     expect({
       hasShowJson: content.includes('showJson'),
       hasToggleJsonView: content.includes('toggleJsonView'),
       hasJsonTextarea: content.includes('json-textarea'),
       hasSyncJsonFromConfig: content.includes('syncJsonFromConfig'),
+      showsFullConfig,
+      showsSubset,
     }).toEqual({
       hasShowJson: true,
       hasToggleJsonView: true,
       hasJsonTextarea: true,
       hasSyncJsonFromConfig: true,
+      showsFullConfig: true,
+      showsSubset: false,
     });
   });
 
