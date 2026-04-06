@@ -146,7 +146,7 @@ BEGIN
     SUM(CASE WHEN vp.completed AND COALESCE(NULLIF(TRIM(vp.period), ''), 'loop') = 'loop' THEN 1 ELSE 0 END),
     -- Match-day audience + network linkage
     COALESCE(SUM(vp.audience_estimate) FILTER (WHERE vp.event_type = 'match'), 0),
-    MAX(vp.sponsor_id),
+    (array_agg(vp.sponsor_id) FILTER (WHERE vp.sponsor_id IS NOT NULL))[1],
     NOW()
   FROM video_plays vp
   WHERE vp.site_sponsor_id IS NOT NULL
