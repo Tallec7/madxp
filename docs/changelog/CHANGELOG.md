@@ -1,3 +1,9 @@
+## [3.128.10](https://github.com/Tallec7/neopro/compare/v3.128.9...v3.128.10) (2026-04-06)
+
+### Bug Fixes
+
+- **club-portal:** filter cloud videos based on config + ownership ([30cc642](https://github.com/Tallec7/neopro/commit/30cc64265a333197af27fb509301419500aa35c6))
+
 ## [3.128.9](https://github.com/Tallec7/neopro/compare/v3.128.8...v3.128.9) (2026-04-06)
 
 ### Bug Fixes
