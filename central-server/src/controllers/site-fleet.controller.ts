@@ -10,6 +10,7 @@ import {
   deploymentRepository,
   videoVariantRepository,
   analyticsRepository,
+  configProfileRepository,
 } from '../repositories';
 
 // Seuils de connexion (en secondes) — identiques à sites.controller.ts
@@ -402,17 +403,24 @@ export const getSiteLocalContent = async (req: AuthRequest, res: Response) => {
 
     // Club users: filter cloud videos to only show their own + NEOPRO + videos in config
     let cloudVideoRows = allCloudVideoRows;
-    if (isClub && site.local_config_mirror) {
-      const configFilenames = extractConfigVideoFilenames(site.local_config_mirror as Record<string, unknown>);
+    if (isClub) {
+      // For SaaS sites, config lives in config_profiles, not local_config_mirror
+      let siteConfig: Record<string, unknown> | null = site.local_config_mirror as Record<string, unknown> | null;
+      if (!siteConfig && site.site_type === 'saas') {
+        const defaultProfile = await configProfileRepository.findDefaultForSite(id);
+        if (defaultProfile) {
+          siteConfig = defaultProfile.configuration;
+        }
+      }
+
+      const configFilenames = siteConfig
+        ? extractConfigVideoFilenames(siteConfig)
+        : new Set<string>();
+
       cloudVideoRows = allCloudVideoRows.filter((v) =>
         v.uploaded_for_site_id === id
         || (v.category && v.category.toUpperCase() === 'NEOPRO')
         || configFilenames.has(v.filename.toLowerCase())
-      );
-    } else if (isClub) {
-      cloudVideoRows = allCloudVideoRows.filter((v) =>
-        v.uploaded_for_site_id === id
-        || (v.category && v.category.toUpperCase() === 'NEOPRO')
       );
     }
 

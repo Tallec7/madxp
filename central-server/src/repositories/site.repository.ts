@@ -129,6 +129,7 @@ export interface SiteLocalContentRow extends QueryResultRow {
   id: string;
   site_name: string;
   club_name: string;
+  site_type: string;
   local_config_mirror: Record<string, unknown> | null;
   local_config_hash: string | null;
   last_config_sync: Date | null;
@@ -583,7 +584,7 @@ class SiteRepositoryImpl extends BaseRepository<Site> {
    */
   async findWithLocalContent(id: string): Promise<SiteLocalContentRow | null> {
     const result = await query<SiteLocalContentRow>(
-      `SELECT id, site_name, club_name, local_config_mirror, local_config_hash, last_config_sync, secondary_display_enabled
+      `SELECT id, site_name, club_name, site_type, local_config_mirror, local_config_hash, last_config_sync, secondary_display_enabled
        FROM sites WHERE id = $1`,
       [id]
     );
