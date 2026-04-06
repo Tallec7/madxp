@@ -1152,13 +1152,18 @@ class AlertingService {
     try {
       // Auto-complete content deployments stuck at 100% for >5 minutes
       // (Socket.IO fire-and-forget can lose the completed:true signal)
+      // Exclut les sites SaaS qui n'ont pas de Pi (leurs déploiements sont complétés immédiatement)
       const autoCompleted = await query<{ id: string }>(`
-        UPDATE content_deployments
+        UPDATE content_deployments cd
         SET status = 'completed', completed_at = NOW()
-        WHERE status = 'in_progress'
-          AND progress >= 100
-          AND COALESCE(started_at, created_at) < NOW() - INTERVAL '5 minutes'
-        RETURNING id
+        FROM sites s
+        WHERE cd.target_id = s.id
+          AND cd.target_type = 'site'
+          AND s.site_type != 'saas'
+          AND cd.status = 'in_progress'
+          AND cd.progress >= 100
+          AND COALESCE(cd.started_at, cd.created_at) < NOW() - INTERVAL '5 minutes'
+        RETURNING cd.id
       `);
       if (autoCompleted.rows.length > 0) {
         logger.info('Auto-completed stuck deployments at 100%', {
@@ -1168,17 +1173,20 @@ class AlertingService {
       }
 
       // Chercher les déploiements content bloqués (progress < 100)
+      // Exclut les sites SaaS qui n'ont pas de Pi (leurs déploiements sont complétés immédiatement)
       const contentStuck = await query<{
         id: string;
         target_id: string;
         minutes_stuck: number;
       }>(`
-        SELECT id, target_id,
-          EXTRACT(EPOCH FROM (NOW() - COALESCE(started_at, created_at))) / 60 AS minutes_stuck
-        FROM content_deployments
-        WHERE status = 'in_progress'
-          AND progress < 100
-          AND COALESCE(started_at, created_at) < NOW() - INTERVAL '30 minutes'
+        SELECT cd.id, cd.target_id,
+          EXTRACT(EPOCH FROM (NOW() - COALESCE(cd.started_at, cd.created_at))) / 60 AS minutes_stuck
+        FROM content_deployments cd
+        JOIN sites s ON cd.target_id = s.id AND cd.target_type = 'site'
+        WHERE s.site_type != 'saas'
+          AND cd.status = 'in_progress'
+          AND cd.progress < 100
+          AND COALESCE(cd.started_at, cd.created_at) < NOW() - INTERVAL '30 minutes'
       `);
 
       // Chercher les déploiements OTA bloqués

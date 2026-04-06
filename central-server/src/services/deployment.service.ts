@@ -25,6 +25,7 @@ const RETRY_CONFIG = {
 interface DeploymentTarget {
   siteId: string;
   siteName: string;
+  siteType: string;
 }
 
 interface DeploymentRow {
@@ -111,6 +112,19 @@ class DeploymentService {
       const commandFailedSites: string[] = [];
 
       for (const target of targets) {
+        // Les sites SaaS n'ont pas de Pi — la vidéo est servie directement via URL FTP
+        // Le déploiement est considéré comme immédiatement réussi
+        if (target.siteType === 'saas') {
+          logger.info('SaaS site: video deployment completed immediately (no Pi)', {
+            deploymentId,
+            siteId: target.siteId,
+            siteName: target.siteName,
+          });
+          successCount++;
+          commandSentSites.push(target.siteName);
+          continue;
+        }
+
         const isConnected = socketService.isConnected(target.siteId);
         logger.info('Processing site for video deployment', {
           deploymentId,
@@ -140,31 +154,50 @@ class DeploymentService {
         }
       }
 
+      // Si TOUS les sites cibles sont SaaS, le déploiement est immédiatement terminé
+      // (pas de Pi à attendre, les vidéos sont servies via URL FTP)
+      const allSaas = targets.every(t => t.siteType === 'saas');
+
       // Mettre à jour le statut avec des informations détaillées
       if (successCount > 0) {
-        // Au moins une commande envoyée ou mise en queue
-        const statusMessage = [];
-        if (commandSentSites.length > 0) {
-          statusMessage.push(`Envoyé: ${commandSentSites.join(', ')}`);
-        }
-        if (commandQueuedSites.length > 0) {
-          statusMessage.push(`En attente de reconnexion: ${commandQueuedSites.join(', ')}`);
-        }
+        if (allSaas) {
+          await query(
+            `UPDATE content_deployments
+             SET status = 'completed', started_at = NOW(), completed_at = NOW(), progress = 100
+             WHERE id = $1`,
+            [deploymentId]
+          );
 
-        await query(
-          `UPDATE content_deployments
-           SET status = 'in_progress', started_at = NOW(), error_message = $1
-           WHERE id = $2`,
-          [statusMessage.join(' | ') || null, deploymentId]
-        );
+          metricsService.recordDeployment('completed', 'site');
+          logger.info('SaaS video deployment completed immediately', {
+            deploymentId,
+            sites: commandSentSites,
+          });
+        } else {
+          // Au moins une commande envoyée ou mise en queue vers un Pi
+          const statusMessage = [];
+          if (commandSentSites.length > 0) {
+            statusMessage.push(`Envoyé: ${commandSentSites.join(', ')}`);
+          }
+          if (commandQueuedSites.length > 0) {
+            statusMessage.push(`En attente de reconnexion: ${commandQueuedSites.join(', ')}`);
+          }
 
-        metricsService.recordDeployment('in_progress', 'site');
-        logger.info('Video deployment in progress', {
-          deploymentId,
-          commandSentSites,
-          commandQueuedSites,
-          commandFailedSites,
-        });
+          await query(
+            `UPDATE content_deployments
+             SET status = 'in_progress', started_at = NOW(), error_message = $1
+             WHERE id = $2`,
+            [statusMessage.join(' | ') || null, deploymentId]
+          );
+
+          metricsService.recordDeployment('in_progress', 'site');
+          logger.info('Video deployment in progress', {
+            deploymentId,
+            commandSentSites,
+            commandQueuedSites,
+            commandFailedSites,
+          });
+        }
       } else {
         // Aucune commande n'a pu être envoyée ou mise en queue
         await query(
@@ -273,7 +306,7 @@ class DeploymentService {
   private async getTargetSites(targetType: string, targetId: string): Promise<DeploymentTarget[]> {
     if (targetType === 'site') {
       const result = await query(
-        'SELECT id as "siteId", site_name as "siteName" FROM sites WHERE id = $1',
+        'SELECT id as "siteId", site_name as "siteName", site_type as "siteType" FROM sites WHERE id = $1',
         [targetId]
       );
       return result.rows as unknown as DeploymentTarget[];
@@ -281,7 +314,7 @@ class DeploymentService {
 
     if (targetType === 'group') {
       const result = await query(
-        `SELECT s.id as "siteId", s.site_name as "siteName"
+        `SELECT s.id as "siteId", s.site_name as "siteName", s.site_type as "siteType"
          FROM sites s
          JOIN site_groups sg ON s.id = sg.site_id
          WHERE sg.group_id = $1`,

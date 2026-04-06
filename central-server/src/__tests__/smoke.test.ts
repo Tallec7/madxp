@@ -14184,6 +14184,33 @@ describe('SaaS deployment pipeline guards', () => {
       updatesSoftwareVersion: true,
     });
   });
+
+  // --- deployment.service.ts must handle SaaS sites without sending deploy_video to Pi ---
+  it('deployment.service.ts must skip sendOrQueue for SaaS sites and complete immediately', () => {
+    const filePath = path.join(repoRoot, 'central-server', 'src', 'services', 'deployment.service.ts');
+    const content = fs.readFileSync(filePath, 'utf8');
+    expect({
+      hasSiteTypeInTarget: content.includes('siteType'),
+      hasSaasCheck: content.includes("siteType === 'saas'"),
+      hasImmediateComplete: content.includes("status = 'completed'") && content.includes('allSaas'),
+    }).toEqual({
+      hasSiteTypeInTarget: true,
+      hasSaasCheck: true,
+      hasImmediateComplete: true,
+    });
+  });
+
+  // --- alerting.service.ts must exclude SaaS sites from stuck deployment detection ---
+  it('alerting.service.ts checkStuckDeployments must join sites table to exclude SaaS', () => {
+    const filePath = path.join(repoRoot, 'central-server', 'src', 'services', 'alerting.service.ts');
+    const content = fs.readFileSync(filePath, 'utf8');
+    // The stuck deployment query must filter out SaaS sites
+    expect({
+      joinsOrFiltersSiteType: content.includes("site_type != 'saas'") || content.includes("site_type <> 'saas'"),
+    }).toEqual({
+      joinsOrFiltersSiteType: true,
+    });
+  });
 });
 
 // ============================================================
