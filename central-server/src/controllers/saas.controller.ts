@@ -49,7 +49,10 @@ interface TimeCategoryLike {
 function resolveVideoUrl(path: string | undefined): string {
   if (!path) return '';
   if (path.startsWith('http://') || path.startsWith('https://')) return path;
-  return getVideoUrl(path);
+  // Config profiles store Pi-local paths like "videos/default/file.mp4"
+  // but FTP stores files flat at the root — strip the Pi-local prefix
+  const filename = path.split('/').pop() || path;
+  return getVideoUrl(filename);
 }
 
 /**
