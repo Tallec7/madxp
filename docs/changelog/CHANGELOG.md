@@ -1,3 +1,9 @@
+## [3.127.7](https://github.com/Tallec7/neopro/compare/v3.127.6...v3.127.7) (2026-04-06)
+
+### Bug Fixes
+
+- **database:** parse PostgreSQL BIGINT as number to fix video file size display ([e96aee6](https://github.com/Tallec7/neopro/commit/e96aee63c64f1340b64490aa6af4b9fd2676fee9))
+
 ## [3.127.6](https://github.com/Tallec7/neopro/compare/v3.127.5...v3.127.6) (2026-04-06)
 
 ### Bug Fixes
