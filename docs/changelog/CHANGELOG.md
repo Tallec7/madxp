@@ -1,3 +1,9 @@
+## [3.127.5](https://github.com/Tallec7/neopro/compare/v3.127.4...v3.127.5) (2026-04-06)
+
+### Bug Fixes
+
+- **deploy:** complete SaaS video deployments immediately instead of queuing to Pi ([8157e37](https://github.com/Tallec7/neopro/commit/8157e3732731c1f9f8b3c731ab218bdf8eae2528))
+
 ## [3.127.4](https://github.com/Tallec7/neopro/compare/v3.127.3...v3.127.4) (2026-04-05)
 
 ### Bug Fixes
