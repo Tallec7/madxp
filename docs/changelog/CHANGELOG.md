@@ -1,3 +1,9 @@
+## [3.127.13](https://github.com/Tallec7/neopro/compare/v3.127.12...v3.127.13) (2026-04-06)
+
+### Bug Fixes
+
+- **saas:** remove Pi-specific labels and deploy wording from SaaS site views ([e37c5d3](https://github.com/Tallec7/neopro/commit/e37c5d3df791ed98677588650b1c5cecd1197e86))
+
 ## [3.127.12](https://github.com/Tallec7/neopro/compare/v3.127.11...v3.127.12) (2026-04-06)
 
 ### Bug Fixes
