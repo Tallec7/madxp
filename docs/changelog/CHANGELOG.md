@@ -1,3 +1,9 @@
+## [3.130.1](https://github.com/Tallec7/neopro/compare/v3.130.0...v3.130.1) (2026-04-07)
+
+### Bug Fixes
+
+- **templates:** flush MediaRecorder tail to avoid truncated WebM ([5451444](https://github.com/Tallec7/neopro/commit/54514442ae0d1d47aa9865a32fd881cbb21ca922))
+
 # [3.130.0](https://github.com/Tallec7/neopro/compare/v3.129.0...v3.130.0) (2026-04-07)
 
 ### Features
