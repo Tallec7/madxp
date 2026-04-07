@@ -1,3 +1,9 @@
+## [3.128.13](https://github.com/Tallec7/neopro/compare/v3.128.12...v3.128.13) (2026-04-07)
+
+### Bug Fixes
+
+- **templates:** allow blob: in media-src CSP for browser-rendered videos ([0e6f883](https://github.com/Tallec7/neopro/commit/0e6f883e7ae24ab91466a42f4e7ae9cadaa63dba))
+
 ## [3.128.12](https://github.com/Tallec7/neopro/compare/v3.128.11...v3.128.12) (2026-04-07)
 
 ### Bug Fixes
