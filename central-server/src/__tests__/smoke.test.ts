@@ -15250,6 +15250,130 @@ describe('SaaS config save flow', () => {
     });
   });
 
+  // --- Club portal security: cloud video filter ---
+  it('site-fleet.controller.ts must filter cloud videos for club users', () => {
+    const filePath = path.join(repoRoot, 'central-server', 'src', 'controllers', 'site-fleet.controller.ts');
+    const content = fs.readFileSync(filePath, 'utf8');
+    expect({
+      hasExtractHelper: /function\s+extractConfigVideoFilenames/.test(content),
+      checksClubRole: /req\.user\?\.role\s*===\s*'club'/.test(content),
+      filtersByOwnership: /uploaded_for_site_id\s*===\s*id/.test(content),
+      filtersByNeoproCategory: /toUpperCase\(\)\s*===\s*'NEOPRO'/.test(content),
+      filtersByConfigFilenames: /configFilenames\.has/.test(content),
+      saasProfileFallback: /site\.site_type\s*===\s*'saas'/.test(content)
+        && /configProfileRepository\.findDefaultForSite/.test(content),
+    }).toEqual({
+      hasExtractHelper: true,
+      checksClubRole: true,
+      filtersByOwnership: true,
+      filtersByNeoproCategory: true,
+      filtersByConfigFilenames: true,
+      saasProfileFallback: true,
+    });
+  });
+
+  it('site.repository.findWithLocalContent must return site_type', () => {
+    const filePath = path.join(repoRoot, 'central-server', 'src', 'repositories', 'site.repository.ts');
+    const content = fs.readFileSync(filePath, 'utf8');
+    expect({
+      typeHasField: /SiteLocalContentRow[\s\S]*?site_type:\s*string/.test(content),
+      querySelectsField: /findWithLocalContent[\s\S]*?SELECT[^;]*site_type/.test(content),
+    }).toEqual({
+      typeHasField: true,
+      querySelectsField: true,
+    });
+  });
+
+  // --- Club portal security: dashboard guards ---
+  it('site-content-tab must guard JSON editor and profile selector for club users', () => {
+    const dir = path.join(repoRoot, 'central-dashboard', 'src', 'app', 'features', 'sites', 'components', 'site-content-tab');
+    const collectTs = (d: string): string => {
+      let acc = '';
+      for (const entry of fs.readdirSync(d, { withFileTypes: true })) {
+        const full = path.join(d, entry.name);
+        if (entry.isDirectory()) acc += collectTs(full);
+        else if (entry.name.endsWith('.ts') || entry.name.endsWith('.html')) acc += '\n' + fs.readFileSync(full, 'utf8');
+      }
+      return acc;
+    };
+    const tabContent = collectTs(dir);
+    expect({
+      hasIsClubGetter: /get\s+isClub\s*\(\)/.test(tabContent),
+      passesIsClubUserToEditor: /\[isClubUser\]="isClub"/.test(tabContent),
+      hidesProfileSelectorForClub: /contentProfiles\.length\s*>\s*0\s*&&\s*!isClub/.test(tabContent),
+      jsonToggleHiddenForClub: /config\s*&&\s*!isClubUser/.test(tabContent),
+      analyticsCategoriesHiddenForClub: /\*ngIf="!isClubUser"/.test(tabContent),
+    }).toEqual({
+      hasIsClubGetter: true,
+      passesIsClubUserToEditor: true,
+      hidesProfileSelectorForClub: true,
+      jsonToggleHiddenForClub: true,
+      analyticsCategoriesHiddenForClub: true,
+    });
+  });
+
+  it('loop-manager must lock NEOPRO videos and hide owner radios for club users', () => {
+    const filePath = path.join(repoRoot, 'central-dashboard', 'src', 'app', 'features', 'sites', 'components', 'loop-manager', 'loop-manager.component.ts');
+    const content = fs.readFileSync(filePath, 'utf8');
+    expect({
+      hasInput: /@Input\(\)\s+isClubUser/.test(content),
+      disablesNameInput: /\[disabled\]="isClubUser\s*&&\s*video\.owner\s*===\s*'neopro'"/.test(content),
+      hidesRemoveForNeopro: /\*ngIf="!\(isClubUser\s*&&\s*video\.owner\s*===\s*'neopro'\)"/.test(content),
+      showsLockBadge: /isClubUser\s*&&\s*video\.owner\s*===\s*'neopro'[\s\S]*?NEOPRO/.test(content),
+    }).toEqual({
+      hasInput: true,
+      disablesNameInput: true,
+      hidesRemoveForNeopro: true,
+      showsLockBadge: true,
+    });
+  });
+
+  // --- SaaS dropdown labels ---
+  it('site-content-tab videoOptionGroups must use SaaS-friendly labels for SaaS sites', () => {
+    const filePath = path.join(repoRoot, 'central-dashboard', 'src', 'app', 'features', 'sites', 'components', 'site-content-tab', 'site-content-tab.component.ts');
+    const content = fs.readFileSync(filePath, 'utf8');
+    expect({
+      checksSiteType: /isSaas\s*=\s*this\.siteType\s*===\s*'saas'/.test(content),
+      saasOnPiLabel: /isSaas\s*\?\s*'Disponibles'\s*:\s*'Sur le Pi'/.test(content),
+      saasCloudLabel: /isSaas\s*\?\s*'Bibliothèque cloud'\s*:\s*'Cloud \(à déployer\)'/.test(content),
+    }).toEqual({
+      checksSiteType: true,
+      saasOnPiLabel: true,
+      saasCloudLabel: true,
+    });
+  });
+
+  // --- club-loop must propagate siteType so SaaS/club guards work ---
+  it('club-loop must read site_type from API and propagate to site-content-tab', () => {
+    const filePath = path.join(repoRoot, 'central-dashboard', 'src', 'app', 'features', 'club-portal', 'club-loop.component.ts');
+    const content = fs.readFileSync(filePath, 'utf8');
+    expect({
+      hasSiteTypeProp: /siteType\s*=\s*''/.test(content) || /siteType:\s*string/.test(content),
+      readsFromApi: /site\.site_type/.test(content),
+      passesToTab: /\[siteType\]="siteType"/.test(content),
+    }).toEqual({
+      hasSiteTypeProp: true,
+      readsFromApi: true,
+      passesToTab: true,
+    });
+  });
+
+  // --- CLAUDE.md must enforce club portal security rules ---
+  it('CLAUDE.md must have club portal security regression rules', () => {
+    const claudeMd = fs.readFileSync(path.join(repoRoot, 'CLAUDE.md'), 'utf8');
+    expect({
+      hasClubFilterRule: claudeMd.includes('extractConfigVideoFilenames')
+        && claudeMd.includes('uploaded_for_site_id'),
+      hasNeoproLockRule: claudeMd.includes('NEOPRO') && claudeMd.includes('isClubUser'),
+      hasSaasProfileFallbackRule: claudeMd.includes('configProfileRepository.findDefaultForSite')
+        && claudeMd.includes('site_type'),
+    }).toEqual({
+      hasClubFilterRule: true,
+      hasNeoproLockRule: true,
+      hasSaasProfileFallbackRule: true,
+    });
+  });
+
   it('i18n files must have saving and confirmSave keys', () => {
     const frPath = path.join(repoRoot, 'central-dashboard', 'src', 'assets', 'i18n', 'fr.json');
     const enPath = path.join(repoRoot, 'central-dashboard', 'src', 'assets', 'i18n', 'en.json');
