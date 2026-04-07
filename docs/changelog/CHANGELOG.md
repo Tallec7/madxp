@@ -1,3 +1,9 @@
+# [3.132.0](https://github.com/Tallec7/neopro/compare/v3.131.2...v3.132.0) (2026-04-07)
+
+### Features
+
+- **templates:** white number always-on with zoom, name fades in at 2.10s ([2699915](https://github.com/Tallec7/neopro/commit/2699915530eb578fc2c22718a762b2da6fe6e726))
+
 ## [3.131.2](https://github.com/Tallec7/neopro/compare/v3.131.1...v3.131.2) (2026-04-07)
 
 ### Bug Fixes
