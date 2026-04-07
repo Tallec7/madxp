@@ -1,3 +1,9 @@
+# [3.129.0](https://github.com/Tallec7/neopro/compare/v3.128.13...v3.129.0) (2026-04-07)
+
+### Features
+
+- **templates:** redesign tpl_player as full-screen player announcement ([b9cb92e](https://github.com/Tallec7/neopro/commit/b9cb92ea395fcc5fbd467161546eb82132c6ff50))
+
 ## [3.128.13](https://github.com/Tallec7/neopro/compare/v3.128.12...v3.128.13) (2026-04-07)
 
 ### Bug Fixes
