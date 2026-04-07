@@ -73,8 +73,9 @@ function buildPlayerElements(vars: Record<string, string>, duration: number): Te
       fontSize: 520, fontWeight: '900',
       fontFamily: displayFont,
       color: '#111111', align: 'center',
-      fadeIn: [0, 0.3],
-      fadeOut: [REVEAL - 0.15, REVEAL + 0.05],
+      // Zoom + fade s'étalent sur toute la première partie pour suivre la forme
+      fadeIn: [0, REVEAL],
+      fadeOut: [REVEAL, REVEAL + 0.15],
       scaleAnim: [0.15, 1.5],
       shadow: { blur: 30, color: 'rgba(255,255,255,0.9)' },
     });
@@ -88,20 +89,17 @@ function buildPlayerElements(vars: Record<string, string>, duration: number): Te
     fontFamily: surtitleFont,
     letterSpacing: 14,
     color: '#FFFFFF', align: 'center',
-    fadeIn: [REVEAL, REVEAL + 0.4], fadeOut: [fadeOutStart, fadeOutStart + 0.4],
-    slideFromY: 15,
+    fadeIn: [REVEAL, REVEAL + 0.5], fadeOut: [fadeOutStart, fadeOutStart + 0.4],
   });
 
-  // PRÉNOM huge — apparaît après le reveal
+  // PRÉNOM huge — fondu pur au moment exact du reveal
   elements.push({
     text: prenom,
     x: 960, y: 460,
     fontSize: 280, fontWeight: '900',
     fontFamily: displayFont,
     color: '#FFFFFF', align: 'center',
-    fadeIn: [REVEAL + 0.05, REVEAL + 0.5], fadeOut: [fadeOutStart, fadeOutStart + 0.4],
-    slideFromY: 30,
-    scaleAnim: [1.05, 1],
+    fadeIn: [REVEAL, REVEAL + 0.5], fadeOut: [fadeOutStart, fadeOutStart + 0.4],
   });
 
   // NOM huge — glued under PRÉNOM
@@ -111,9 +109,7 @@ function buildPlayerElements(vars: Record<string, string>, duration: number): Te
     fontSize: 280, fontWeight: '900',
     fontFamily: displayFont,
     color: '#FFFFFF', align: 'center',
-    fadeIn: [REVEAL + 0.15, REVEAL + 0.6], fadeOut: [fadeOutStart, fadeOutStart + 0.4],
-    slideFromY: 30,
-    scaleAnim: [1.05, 1],
+    fadeIn: [REVEAL, REVEAL + 0.5], fadeOut: [fadeOutStart, fadeOutStart + 0.4],
   });
 
   // Club name BOTTOM — symmetric mirror of TOP
@@ -124,8 +120,7 @@ function buildPlayerElements(vars: Record<string, string>, duration: number): Te
     fontFamily: surtitleFont,
     letterSpacing: 14,
     color: '#FFFFFF', align: 'center',
-    fadeIn: [REVEAL + 0.25, REVEAL + 0.7], fadeOut: [fadeOutStart, fadeOutStart + 0.4],
-    slideFromY: 15,
+    fadeIn: [REVEAL, REVEAL + 0.5], fadeOut: [fadeOutStart, fadeOutStart + 0.4],
   });
 
   return elements;
