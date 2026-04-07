@@ -41,8 +41,10 @@ interface TextElement {
   fadeOut: [number, number];
   /** Vertical slide offset in pixels (slides up from this offset) */
   slideFromY?: number;
-  /** Scale animation: [startScale, endScale] during fadeIn */
+  /** Scale animation: [startScale, endScale] during fadeIn (or scaleWindow if provided) */
   scaleAnim?: [number, number];
+  /** Optional explicit time window for scaleAnim (overrides fadeIn window) */
+  scaleWindow?: [number, number];
   /** Optional text shadow */
   shadow?: { blur: number; color: string };
 }
@@ -57,7 +59,8 @@ function buildPlayerElements(vars: Record<string, string>, duration: number): Te
   // Reveal moment of the hexagon shape — number zooms in sync until then,
   // then PRÉNOM/NOM take over.
   const REVEAL = 1.22;
-  const fadeOutStart = Math.max(duration - 0.6, REVEAL + 0.6);
+  const NAME_IN = 2.10;
+  const fadeOutStart = Math.max(duration - 0.6, NAME_IN + 0.6);
 
   // Ultra-condensed display font stack
   const displayFont = "'Bebas Neue', 'Anton', 'Oswald', 'Barlow Condensed', 'Impact', sans-serif";
@@ -72,12 +75,12 @@ function buildPlayerElements(vars: Record<string, string>, duration: number): Te
       x: 960, y: 540,
       fontSize: 520, fontWeight: '900',
       fontFamily: displayFont,
-      color: '#111111', align: 'center',
-      // Zoom + fade s'étalent sur toute la première partie pour suivre la forme
-      fadeIn: [0, REVEAL],
+      color: '#FFFFFF', align: 'center',
+      // Visible à 100% dès le début (pas de fondu), zoom seul jusqu'au reveal
+      fadeIn: [0, 0.001],
       fadeOut: [REVEAL, REVEAL + 0.15],
       scaleAnim: [0.15, 1.5],
-      shadow: { blur: 30, color: 'rgba(255,255,255,0.9)' },
+      scaleWindow: [0, REVEAL],
     });
   }
 
@@ -89,7 +92,7 @@ function buildPlayerElements(vars: Record<string, string>, duration: number): Te
     fontFamily: surtitleFont,
     letterSpacing: 14,
     color: '#FFFFFF', align: 'center',
-    fadeIn: [REVEAL, REVEAL + 0.5], fadeOut: [fadeOutStart, fadeOutStart + 0.4],
+    fadeIn: [NAME_IN, NAME_IN + 0.5], fadeOut: [fadeOutStart, fadeOutStart + 0.4],
   });
 
   // PRÉNOM huge — fondu pur au moment exact du reveal
@@ -99,7 +102,7 @@ function buildPlayerElements(vars: Record<string, string>, duration: number): Te
     fontSize: 280, fontWeight: '900',
     fontFamily: displayFont,
     color: '#FFFFFF', align: 'center',
-    fadeIn: [REVEAL, REVEAL + 0.5], fadeOut: [fadeOutStart, fadeOutStart + 0.4],
+    fadeIn: [NAME_IN, NAME_IN + 0.5], fadeOut: [fadeOutStart, fadeOutStart + 0.4],
   });
 
   // NOM huge — glued under PRÉNOM
@@ -109,7 +112,7 @@ function buildPlayerElements(vars: Record<string, string>, duration: number): Te
     fontSize: 280, fontWeight: '900',
     fontFamily: displayFont,
     color: '#FFFFFF', align: 'center',
-    fadeIn: [REVEAL, REVEAL + 0.5], fadeOut: [fadeOutStart, fadeOutStart + 0.4],
+    fadeIn: [NAME_IN, NAME_IN + 0.5], fadeOut: [fadeOutStart, fadeOutStart + 0.4],
   });
 
   // Club name BOTTOM — symmetric mirror of TOP
@@ -120,7 +123,7 @@ function buildPlayerElements(vars: Record<string, string>, duration: number): Te
     fontFamily: surtitleFont,
     letterSpacing: 14,
     color: '#FFFFFF', align: 'center',
-    fadeIn: [REVEAL, REVEAL + 0.5], fadeOut: [fadeOutStart, fadeOutStart + 0.4],
+    fadeIn: [NAME_IN, NAME_IN + 0.5], fadeOut: [fadeOutStart, fadeOutStart + 0.4],
   });
 
   return elements;
@@ -465,10 +468,11 @@ export class BrowserRendererService {
 
   private computeScale(el: TextElement, time: number): number {
     if (!el.scaleAnim) return 1;
-    if (time < el.fadeIn[0]) return el.scaleAnim[0];
-    if (time >= el.fadeIn[1]) return el.scaleAnim[1];
+    const window = el.scaleWindow || el.fadeIn;
+    if (time < window[0]) return el.scaleAnim[0];
+    if (time >= window[1]) return el.scaleAnim[1];
 
-    const t = (time - el.fadeIn[0]) / (el.fadeIn[1] - el.fadeIn[0]);
+    const t = (time - window[0]) / (window[1] - window[0]);
     // ease-out cubic
     const eased = 1 - Math.pow(1 - t, 3);
     return el.scaleAnim[0] + (el.scaleAnim[1] - el.scaleAnim[0]) * eased;
