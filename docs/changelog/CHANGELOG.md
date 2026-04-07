@@ -1,3 +1,9 @@
+## [3.128.12](https://github.com/Tallec7/neopro/compare/v3.128.11...v3.128.12) (2026-04-07)
+
+### Bug Fixes
+
+- **saas:** adapter labels dropdown vidéos pour sites SaaS ([7d49f18](https://github.com/Tallec7/neopro/commit/7d49f187c0b882d43d98b3f4aa4972ba5c29aa74))
+
 ## [3.128.11](https://github.com/Tallec7/neopro/compare/v3.128.10...v3.128.11) (2026-04-06)
 
 ### Bug Fixes
