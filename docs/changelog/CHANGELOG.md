@@ -1,3 +1,9 @@
+# [3.131.0](https://github.com/Tallec7/neopro/compare/v3.130.1...v3.131.0) (2026-04-07)
+
+### Features
+
+- **templates:** add zooming jersey number synced with hexagon reveal at 1.22s ([b3baff2](https://github.com/Tallec7/neopro/commit/b3baff24cfe73bf887a043184ab02ee446159502))
+
 ## [3.130.1](https://github.com/Tallec7/neopro/compare/v3.130.0...v3.130.1) (2026-04-07)
 
 ### Bug Fixes
