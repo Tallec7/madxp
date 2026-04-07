@@ -300,7 +300,14 @@ export class BrowserRendererService {
 
       const drawFrame = (): void => {
         if (video.ended || video.paused) {
-          recorder.stop();
+          // Draw a few extra frames of the last video frame so MediaRecorder
+          // flushes the final chunks (otherwise the WebM is truncated by ~200ms)
+          ctx.drawImage(video, 0, 0, width, height);
+          this.drawOverlay(ctx, elements, duration, width, height);
+          setTimeout(() => {
+            try { recorder.requestData(); } catch { /* noop */ }
+            setTimeout(() => recorder.stop(), 150);
+          }, 200);
           return;
         }
 
