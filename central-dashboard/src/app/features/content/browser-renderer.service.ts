@@ -31,6 +31,8 @@ interface TextElement {
   y: number;
   fontSize: number;
   fontWeight: string;
+  fontFamily?: string;
+  letterSpacing?: number; // px between chars (rendered char-by-char when set)
   color: string;
   align: CanvasTextAlign;
   /** Animation: [startTime, endTime] in seconds for fade-in */
@@ -51,52 +53,60 @@ function buildPlayerElements(vars: Record<string, string>, duration: number): Te
   const nom = (vars['nom'] || 'NOM').toUpperCase();
   const prenom = (vars['prenom'] || 'PRÉNOM').toUpperCase();
   const club = (vars['club'] || 'NOM DU CLUB').toUpperCase();
-  // Add letter-spacing visual effect by inserting thin spaces between chars
-  const clubSpaced = club.split('').join('\u2009\u2009');
   const fadeOutStart = Math.max(duration - 0.6, 1.5);
+
+  // Ultra-condensed display font stack
+  const displayFont = "'Bebas Neue', 'Anton', 'Oswald', 'Barlow Condensed', 'Impact', sans-serif";
+  const surtitleFont = "'Barlow Condensed', 'Oswald', 'Inter', sans-serif";
 
   const elements: TextElement[] = [];
 
-  // Club name TOP
+  // Club name TOP — small, very wide letter-spacing, light weight
   elements.push({
-    text: clubSpaced,
-    x: 960, y: 150,
-    fontSize: 38, fontWeight: '700', color: '#FFFFFF', align: 'center',
+    text: club,
+    x: 960, y: 145,
+    fontSize: 30, fontWeight: '500',
+    fontFamily: surtitleFont,
+    letterSpacing: 14,
+    color: '#FFFFFF', align: 'center',
     fadeIn: [0.1, 0.6], fadeOut: [fadeOutStart, fadeOutStart + 0.4],
-    slideFromY: 20,
-    shadow: { blur: 12, color: 'rgba(0,0,0,0.6)' },
+    slideFromY: 15,
   });
 
-  // PRÉNOM big center-top
+  // PRÉNOM huge — ultra-condensed, ultra-bold, tight to NOM
   elements.push({
     text: prenom,
-    x: 960, y: 470,
-    fontSize: 200, fontWeight: '900', color: '#FFFFFF', align: 'center',
+    x: 960, y: 460,
+    fontSize: 280, fontWeight: '900',
+    fontFamily: displayFont,
+    color: '#FFFFFF', align: 'center',
     fadeIn: [0.3, 0.9], fadeOut: [fadeOutStart, fadeOutStart + 0.4],
-    slideFromY: 40,
-    scaleAnim: [1.1, 1],
-    shadow: { blur: 30, color: 'rgba(0,0,0,0.7)' },
+    slideFromY: 30,
+    scaleAnim: [1.05, 1],
   });
 
-  // NOM big center-bottom
+  // NOM huge — same style, glued under PRÉNOM (line-height ~0.85)
   elements.push({
     text: nom,
-    x: 960, y: 680,
-    fontSize: 200, fontWeight: '900', color: '#FFFFFF', align: 'center',
+    x: 960, y: 700,
+    fontSize: 280, fontWeight: '900',
+    fontFamily: displayFont,
+    color: '#FFFFFF', align: 'center',
     fadeIn: [0.45, 1.05], fadeOut: [fadeOutStart, fadeOutStart + 0.4],
-    slideFromY: 40,
-    scaleAnim: [1.1, 1],
-    shadow: { blur: 30, color: 'rgba(0,0,0,0.7)' },
+    slideFromY: 30,
+    scaleAnim: [1.05, 1],
   });
 
-  // Club name BOTTOM
+  // Club name BOTTOM — symmetric mirror of TOP
   elements.push({
-    text: clubSpaced,
-    x: 960, y: 950,
-    fontSize: 38, fontWeight: '700', color: '#FFFFFF', align: 'center',
+    text: club,
+    x: 960, y: 945,
+    fontSize: 30, fontWeight: '500',
+    fontFamily: surtitleFont,
+    letterSpacing: 14,
+    color: '#FFFFFF', align: 'center',
     fadeIn: [0.6, 1.1], fadeOut: [fadeOutStart, fadeOutStart + 0.4],
-    slideFromY: 20,
-    shadow: { blur: 12, color: 'rgba(0,0,0,0.6)' },
+    slideFromY: 15,
   });
 
   return elements;
@@ -220,6 +230,9 @@ export class BrowserRendererService {
 
     onProgress?.({ phase: 'loading', progress: 0 });
 
+    // 0. Ensure display fonts are loaded (Bebas Neue + Barlow Condensed)
+    await this.ensureFontsLoaded();
+
     // 1. Load video into a hidden <video> element
     const video = document.createElement('video');
     video.muted = true;
@@ -310,6 +323,44 @@ export class BrowserRendererService {
     });
   }
 
+  // ── Font loading ──────────────────────────────────────────────────
+
+  private fontsLoadedPromise: Promise<void> | null = null;
+
+  private ensureFontsLoaded(): Promise<void> {
+    if (this.fontsLoadedPromise) return this.fontsLoadedPromise;
+
+    this.fontsLoadedPromise = new Promise<void>((resolve) => {
+      // Inject Google Fonts stylesheet once
+      const id = 'neopro-template-fonts';
+      if (!document.getElementById(id)) {
+        const link = document.createElement('link');
+        link.id = id;
+        link.rel = 'stylesheet';
+        link.href =
+          'https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@500;700;900&family=Anton&display=swap';
+        document.head.appendChild(link);
+      }
+
+      // Force-load specific font faces so they are ready before canvas rendering
+      const fontsApi = (document as unknown as { fonts?: { load: (s: string) => Promise<unknown>; ready: Promise<unknown> } }).fonts;
+      if (fontsApi) {
+        Promise.all([
+          fontsApi.load("900 280px 'Bebas Neue'"),
+          fontsApi.load("500 30px 'Barlow Condensed'"),
+        ])
+          .then(() => fontsApi.ready)
+          .then(() => resolve())
+          .catch(() => resolve()); // fall back to system fonts
+      } else {
+        // Older browsers: just wait a moment
+        setTimeout(resolve, 500);
+      }
+    });
+
+    return this.fontsLoadedPromise;
+  }
+
   // ── Drawing helpers ───────────────────────────────────────────────
 
   private drawOverlay(
@@ -331,9 +382,9 @@ export class BrowserRendererService {
 
       ctx.save();
       ctx.globalAlpha = opacity;
-      ctx.textAlign = el.align;
       ctx.textBaseline = 'middle';
-      ctx.font = `${el.fontWeight} ${el.fontSize}px 'Inter', 'Arial', sans-serif`;
+      const fontFamily = el.fontFamily || "'Inter', 'Arial', sans-serif";
+      ctx.font = `${el.fontWeight} ${el.fontSize}px ${fontFamily}`;
       ctx.fillStyle = el.color;
 
       // Shadow
@@ -345,12 +396,30 @@ export class BrowserRendererService {
       const x = el.x;
       const y = el.y + yOffset;
 
-      if (scale !== 1) {
+      // Custom letter-spacing: render char-by-char so we can compute exact width
+      if (el.letterSpacing && el.letterSpacing > 0) {
+        const chars = [...el.text];
+        const widths = chars.map((c) => ctx.measureText(c).width);
+        const totalWidth =
+          widths.reduce((a, b) => a + b, 0) + el.letterSpacing * (chars.length - 1);
+        let cursor = el.align === 'center' ? -totalWidth / 2 : el.align === 'right' ? -totalWidth : 0;
+
+        ctx.textAlign = 'left';
         ctx.translate(x, y);
-        ctx.scale(scale, scale);
-        ctx.fillText(el.text, 0, 0);
+        if (scale !== 1) ctx.scale(scale, scale);
+        for (let i = 0; i < chars.length; i++) {
+          ctx.fillText(chars[i], cursor, 0);
+          cursor += widths[i] + el.letterSpacing;
+        }
       } else {
-        ctx.fillText(el.text, x, y);
+        ctx.textAlign = el.align;
+        if (scale !== 1) {
+          ctx.translate(x, y);
+          ctx.scale(scale, scale);
+          ctx.fillText(el.text, 0, 0);
+        } else {
+          ctx.fillText(el.text, x, y);
+        }
       }
 
       ctx.restore();
