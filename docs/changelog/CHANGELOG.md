@@ -1,3 +1,9 @@
+# [3.130.0](https://github.com/Tallec7/neopro/compare/v3.129.0...v3.130.0) (2026-04-07)
+
+### Features
+
+- **templates:** use ultra-condensed Bebas Neue + tight kerning for tpl_player ([524e4ea](https://github.com/Tallec7/neopro/commit/524e4ea6d0d259da5666f4ac678aba35e60b4eae))
+
 # [3.129.0](https://github.com/Tallec7/neopro/compare/v3.128.13...v3.129.0) (2026-04-07)
 
 ### Features
