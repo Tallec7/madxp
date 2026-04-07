@@ -1047,14 +1047,12 @@ export const getAvailableTemplates = async (_req: AuthRequest, res: Response) =>
     const templateSchemas = [
       {
         id: 'tpl_player',
-        name: 'Bandeau Joueur',
-        description: 'Bandeau nom/prénom/numéro en bas de la vidéo',
+        name: 'Annonce Joueur',
+        description: 'Prénom + Nom plein écran avec nom du club en haut et en bas',
         variables: [
+          { key: 'prenom', label: 'Prénom', type: 'text', required: true, placeholder: 'THOMAS' },
           { key: 'nom', label: 'Nom', type: 'text', required: true, placeholder: 'DUPONT' },
-          { key: 'prenom', label: 'Prénom', type: 'text', required: false, placeholder: 'Thomas' },
-          { key: 'numero', label: 'Numéro', type: 'text', required: false, placeholder: '7' },
-          { key: 'accent', label: 'Couleur accent', type: 'color', required: false, placeholder: '#FFD700' },
-          { key: 'position', label: 'Position', type: 'select', required: false, options: ['bottom', 'top', 'center'], placeholder: 'bottom' },
+          { key: 'club', label: 'Nom du club', type: 'text', required: false, placeholder: 'UCKNEF BASKET', prefillFrom: 'club_name' },
         ],
       },
       {

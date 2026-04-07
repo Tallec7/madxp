@@ -48,56 +48,55 @@ interface TextElement {
 // ── Template definitions ──────────────────────────────────────────────────
 
 function buildPlayerElements(vars: Record<string, string>, duration: number): TextElement[] {
-  const nom = vars['nom'] || 'JOUEUR';
-  const prenom = vars['prenom'] || '';
-  const numero = vars['numero'] || '';
-  const accentColor = vars['accent'] || '#FFD700';
+  const nom = (vars['nom'] || 'NOM').toUpperCase();
+  const prenom = (vars['prenom'] || 'PRÉNOM').toUpperCase();
+  const club = (vars['club'] || 'NOM DU CLUB').toUpperCase();
+  // Add letter-spacing visual effect by inserting thin spaces between chars
+  const clubSpaced = club.split('').join('\u2009\u2009');
   const fadeOutStart = Math.max(duration - 0.6, 1.5);
 
   const elements: TextElement[] = [];
-  const baseY = 920; // bottom area
 
-  if (numero) {
-    elements.push({
-      text: `#${numero}`,
-      x: prenom || nom.length > 8 ? 780 : 860,
-      y: baseY,
-      fontSize: 72,
-      fontWeight: '900',
-      color: accentColor,
-      align: 'center',
-      fadeIn: [0.6, 1.0],
-      fadeOut: [fadeOutStart, fadeOutStart + 0.4],
-      slideFromY: 30,
-    });
-  }
-
-  if (prenom) {
-    elements.push({
-      text: prenom.toUpperCase(),
-      x: numero ? 960 : 960,
-      y: baseY - 40,
-      fontSize: 32,
-      fontWeight: '600',
-      color: 'rgba(255,255,255,0.7)',
-      align: numero ? 'left' : 'center',
-      fadeIn: [0.7, 1.1],
-      fadeOut: [fadeOutStart, fadeOutStart + 0.4],
-      slideFromY: 20,
-    });
-  }
-
+  // Club name TOP
   elements.push({
-    text: nom.toUpperCase(),
-    x: numero ? 960 : 960,
-    y: prenom ? baseY + 10 : baseY,
-    fontSize: 56,
-    fontWeight: '900',
-    color: '#FFFFFF',
-    align: numero ? 'left' : 'center',
-    fadeIn: [0.6, 1.0],
-    fadeOut: [fadeOutStart, fadeOutStart + 0.4],
-    slideFromY: 30,
+    text: clubSpaced,
+    x: 960, y: 150,
+    fontSize: 38, fontWeight: '700', color: '#FFFFFF', align: 'center',
+    fadeIn: [0.1, 0.6], fadeOut: [fadeOutStart, fadeOutStart + 0.4],
+    slideFromY: 20,
+    shadow: { blur: 12, color: 'rgba(0,0,0,0.6)' },
+  });
+
+  // PRÉNOM big center-top
+  elements.push({
+    text: prenom,
+    x: 960, y: 470,
+    fontSize: 200, fontWeight: '900', color: '#FFFFFF', align: 'center',
+    fadeIn: [0.3, 0.9], fadeOut: [fadeOutStart, fadeOutStart + 0.4],
+    slideFromY: 40,
+    scaleAnim: [1.1, 1],
+    shadow: { blur: 30, color: 'rgba(0,0,0,0.7)' },
+  });
+
+  // NOM big center-bottom
+  elements.push({
+    text: nom,
+    x: 960, y: 680,
+    fontSize: 200, fontWeight: '900', color: '#FFFFFF', align: 'center',
+    fadeIn: [0.45, 1.05], fadeOut: [fadeOutStart, fadeOutStart + 0.4],
+    slideFromY: 40,
+    scaleAnim: [1.1, 1],
+    shadow: { blur: 30, color: 'rgba(0,0,0,0.7)' },
+  });
+
+  // Club name BOTTOM
+  elements.push({
+    text: clubSpaced,
+    x: 960, y: 950,
+    fontSize: 38, fontWeight: '700', color: '#FFFFFF', align: 'center',
+    fadeIn: [0.6, 1.1], fadeOut: [fadeOutStart, fadeOutStart + 0.4],
+    slideFromY: 20,
+    shadow: { blur: 12, color: 'rgba(0,0,0,0.6)' },
   });
 
   return elements;
@@ -279,7 +278,7 @@ export class BrowserRendererService {
         resolve(blob);
       };
 
-      recorder.onerror = (e) => {
+      recorder.onerror = (_e) => {
         URL.revokeObjectURL(videoUrl);
         reject(new Error('MediaRecorder error'));
       };
