@@ -1,3 +1,9 @@
+## [3.131.1](https://github.com/Tallec7/neopro/compare/v3.131.0...v3.131.1) (2026-04-07)
+
+### Bug Fixes
+
+- **templates:** make jersey number visible on yellow hexagon (dark + white halo) ([ca3dfaa](https://github.com/Tallec7/neopro/commit/ca3dfaa861fe193e717d42b8d8f4c7fca912ee69))
+
 # [3.131.0](https://github.com/Tallec7/neopro/compare/v3.130.1...v3.131.0) (2026-04-07)
 
 ### Features
