@@ -68,16 +68,15 @@ function buildPlayerElements(vars: Record<string, string>, duration: number): Te
   // Numéro — apparaît dès le début et zoome avec la forme jusqu'au reveal
   if (numero) {
     elements.push({
-      text: `#${numero}`,
+      text: numero,
       x: 960, y: 540,
-      fontSize: 420, fontWeight: '900',
+      fontSize: 520, fontWeight: '900',
       fontFamily: displayFont,
-      color: '#FFFFFF', align: 'center',
-      fadeIn: [0, 0.4],
-      // Disparaît juste avant le reveal pour laisser la place au prénom/nom
+      color: '#111111', align: 'center',
+      fadeIn: [0, 0.3],
       fadeOut: [REVEAL - 0.15, REVEAL + 0.05],
-      scaleAnim: [0.2, 1.4],
-      shadow: { blur: 40, color: 'rgba(0,0,0,0.4)' },
+      scaleAnim: [0.15, 1.5],
+      shadow: { blur: 30, color: 'rgba(255,255,255,0.9)' },
     });
   }
 
