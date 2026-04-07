@@ -1,0 +1,551 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Test Lottie - Neopro</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js"></script>
+    <style>
+      * {
+        margin: 0;
+        box-sizing: border-box;
+      }
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        background: #f5f5f5;
+        padding: 24px;
+      }
+      h1 {
+        font-size: 22px;
+        margin-bottom: 8px;
+      }
+      .subtitle {
+        color: #666;
+        font-size: 14px;
+        margin-bottom: 24px;
+      }
+      .tabs {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 20px;
+      }
+      .tabs button {
+        padding: 8px 16px;
+        border-radius: 20px;
+        border: 1px solid #ddd;
+        background: white;
+        cursor: pointer;
+        font-size: 13px;
+      }
+      .tabs button.active {
+        background: #1e3a5f;
+        color: white;
+        border-color: #1e3a5f;
+      }
+      .layout {
+        display: flex;
+        gap: 24px;
+      }
+      .left {
+        flex: 0 0 360px;
+      }
+      .right {
+        flex: 1;
+        max-width: 700px;
+      }
+      .form-field {
+        margin-bottom: 14px;
+      }
+      .form-field label {
+        display: block;
+        font-size: 13px;
+        font-weight: 600;
+        margin-bottom: 4px;
+        color: #333;
+      }
+      .form-field input,
+      .form-field textarea {
+        width: 100%;
+        padding: 10px 12px;
+        border: 1px solid #ccc;
+        border-radius: 8px;
+        font-size: 14px;
+        font-family: inherit;
+      }
+      .form-field input:focus,
+      .form-field textarea:focus {
+        outline: none;
+        border-color: #1e3a5f;
+        box-shadow: 0 0 0 2px rgba(30, 58, 95, 0.15);
+      }
+      .form-field input[type='color'] {
+        height: 44px;
+        padding: 4px;
+        cursor: pointer;
+      }
+      .preview {
+        background: #000;
+        border-radius: 12px;
+        overflow: hidden;
+      }
+      .lottie-box {
+        width: 100%;
+        aspect-ratio: 16/9;
+        position: relative;
+      }
+      .controls {
+        display: flex;
+        gap: 8px;
+        padding: 12px 16px;
+        background: #111;
+        align-items: center;
+      }
+      .controls button {
+        background: #333;
+        color: #fff;
+        border: none;
+        border-radius: 8px;
+        width: 40px;
+        height: 40px;
+        font-size: 18px;
+        cursor: pointer;
+      }
+      .controls button:hover {
+        background: #555;
+      }
+      .controls span {
+        color: #888;
+        font-size: 13px;
+        margin-left: auto;
+      }
+      .status {
+        margin-top: 16px;
+        padding: 12px 16px;
+        border-radius: 8px;
+        font-size: 13px;
+      }
+      .status.ok {
+        background: #dcfce7;
+        color: #166534;
+      }
+      .status.err {
+        background: #fee2e2;
+        color: #991b1b;
+      }
+      .status.info {
+        background: #dbeafe;
+        color: #1e40af;
+      }
+      .section-title {
+        font-size: 15px;
+        font-weight: 600;
+        margin-bottom: 12px;
+        color: #1e3a5f;
+      }
+      .debug {
+        margin-top: 12px;
+        padding: 10px;
+        background: #1e1e1e;
+        color: #d4d4d4;
+        border-radius: 8px;
+        font-family: monospace;
+        font-size: 11px;
+        max-height: 150px;
+        overflow-y: auto;
+        white-space: pre-wrap;
+      }
+      .hidden {
+        display: none;
+      }
+      .info-box {
+        background: #f0f4f8;
+        border: 1px solid #d0d8e4;
+        border-radius: 8px;
+        padding: 14px;
+        margin-bottom: 16px;
+        font-size: 13px;
+        line-height: 1.5;
+        color: #333;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Test Lottie - Neopro</h1>
+    <p class="subtitle">Validation du moteur Lottie pour les animations match-day</p>
+
+    <div class="tabs">
+      <button class="active" onclick="switchTab('demo')">1. Demo Lottie</button>
+      <button onclick="switchTab('custom')">2. JSON personnalise</button>
+    </div>
+
+    <!-- TAB 1: Demo with a real working Lottie -->
+    <div id="tab-demo">
+      <div class="info-box">
+        Ce test charge une animation Lottie depuis LottieFiles pour valider que le moteur fonctionne
+        dans le navigateur. L'etape suivante sera d'injecter les variables (nom, numero, couleur)
+        dans les templates de Gabin.
+      </div>
+      <div class="layout">
+        <div class="left">
+          <div class="section-title">Animation de test</div>
+          <div class="form-field">
+            <label>URL du fichier Lottie JSON</label>
+            <input
+              id="lottieUrl"
+              type="text"
+              value="https://assets2.lottiefiles.com/packages/lf20_touohxv0.json"
+              oninput="loadFromUrl()"
+            />
+          </div>
+          <div class="form-field">
+            <label>Ou coller un JSON Lottie</label>
+            <textarea
+              id="lottieRaw"
+              rows="6"
+              placeholder="Collez un JSON Lottie ici et cliquez Charger..."
+            ></textarea>
+          </div>
+          <button
+            onclick="loadFromRaw()"
+            style="
+              padding: 8px 16px;
+              border-radius: 8px;
+              border: 1px solid #1e3a5f;
+              background: #1e3a5f;
+              color: white;
+              cursor: pointer;
+              font-size: 13px;
+            "
+          >
+            Charger le JSON
+          </button>
+
+          <div id="statusDemo" class="status info">Chargement...</div>
+          <div id="debugDemo" class="debug"></div>
+        </div>
+        <div class="right">
+          <div class="section-title">Preview (16:9)</div>
+          <div class="preview">
+            <div id="lottieDemo" class="lottie-box"></div>
+            <div class="controls">
+              <button onclick="if (animDemo) animDemo.play();" title="Play">&#9654;</button>
+              <button onclick="if (animDemo) animDemo.pause();" title="Pause">&#9208;</button>
+              <button onclick="if (animDemo) animDemo.goToAndPlay(0);" title="Rejouer">
+                &#8634;
+              </button>
+              <span id="frameDemoInfo">-</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 2: Custom JSON with variable injection -->
+    <div id="tab-custom" class="hidden">
+      <div class="info-box">
+        Collez le JSON Lottie de Gabin, puis renseignez les noms des layers a modifier. L'injection
+        remplace le texte des layers dont le nom (<code>nm</code>) correspond.
+      </div>
+      <div class="layout">
+        <div class="left">
+          <div class="section-title">Fichier Lottie de Gabin</div>
+          <div class="form-field">
+            <label>JSON Lottie (coller ou URL)</label>
+            <textarea
+              id="customJson"
+              rows="4"
+              placeholder="Collez le JSON ou une URL..."
+            ></textarea>
+          </div>
+          <button
+            onclick="loadCustom()"
+            style="
+              padding: 8px 16px;
+              border-radius: 8px;
+              border: 1px solid #1e3a5f;
+              background: #1e3a5f;
+              color: white;
+              cursor: pointer;
+              font-size: 13px;
+              margin-bottom: 16px;
+            "
+          >
+            Charger
+          </button>
+
+          <div class="section-title">Injection de variables</div>
+          <div class="form-field">
+            <label>Layer "nom" (nm du layer dans AE)</label>
+            <input id="layerNom" type="text" value="" placeholder="ex: text_layer_nom" />
+          </div>
+          <div class="form-field">
+            <label>Texte a injecter pour "nom"</label>
+            <input id="valNom" type="text" value="DUPONT" oninput="injectAndReload()" />
+          </div>
+          <div class="form-field">
+            <label>Layer "numero" (nm du layer)</label>
+            <input id="layerNum" type="text" value="" placeholder="ex: text_layer_numero" />
+          </div>
+          <div class="form-field">
+            <label>Texte a injecter pour "numero"</label>
+            <input id="valNum" type="text" value="7" oninput="injectAndReload()" />
+          </div>
+
+          <div id="layerList" style="margin-top: 12px; font-size: 12px; color: #666"></div>
+          <div id="statusCustom" class="status info">En attente du JSON...</div>
+          <div id="debugCustom" class="debug"></div>
+        </div>
+        <div class="right">
+          <div class="section-title">Preview (16:9)</div>
+          <div class="preview">
+            <div id="lottieCustom" class="lottie-box"></div>
+            <div class="controls">
+              <button onclick="if (animCustom) animCustom.play();">&#9654;</button>
+              <button onclick="if (animCustom) animCustom.pause();">&#9208;</button>
+              <button onclick="if (animCustom) animCustom.goToAndPlay(0);">&#8634;</button>
+              <span id="frameCustomInfo">-</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      var animDemo = null;
+      var animCustom = null;
+      var customBaseJson = null;
+
+      // Tab switching
+      function switchTab(tab) {
+        document.getElementById('tab-demo').className = tab === 'demo' ? '' : 'hidden';
+        document.getElementById('tab-custom').className = tab === 'custom' ? '' : 'hidden';
+        document.querySelectorAll('.tabs button').forEach(function (b, i) {
+          b.className =
+            (i === 0 && tab === 'demo') || (i === 1 && tab === 'custom') ? 'active' : '';
+        });
+      }
+
+      function logTo(id, msg) {
+        var el = document.getElementById(id);
+        var t = new Date().toLocaleTimeString();
+        el.textContent = '[' + t + '] ' + msg + '\n' + el.textContent;
+      }
+
+      function statusTo(id, msg, type) {
+        var el = document.getElementById(id);
+        el.textContent = msg;
+        el.className = 'status ' + type;
+      }
+
+      // ── TAB 1: Demo ──────────────────────────────────
+
+      function loadFromUrl() {
+        var url = document.getElementById('lottieUrl').value.trim();
+        if (!url) return;
+        statusTo('statusDemo', 'Chargement depuis URL...', 'info');
+        logTo('debugDemo', 'Fetch: ' + url);
+
+        fetch(url)
+          .then(function (r) {
+            if (!r.ok) throw new Error('HTTP ' + r.status);
+            return r.json();
+          })
+          .then(function (data) {
+            logTo(
+              'debugDemo',
+              'JSON recu: ' + (data.layers ? data.layers.length + ' layers' : 'format inconnu'),
+            );
+            playDemo(data);
+          })
+          .catch(function (e) {
+            logTo('debugDemo', 'ERREUR fetch: ' + e.message);
+            statusTo('statusDemo', 'Erreur: ' + e.message, 'err');
+          });
+      }
+
+      function loadFromRaw() {
+        var raw = document.getElementById('lottieRaw').value.trim();
+        if (!raw) return;
+        try {
+          var data = JSON.parse(raw);
+          logTo(
+            'debugDemo',
+            'JSON parse OK: ' + (data.layers ? data.layers.length + ' layers' : '?'),
+          );
+          playDemo(data);
+        } catch (e) {
+          logTo('debugDemo', 'JSON invalide: ' + e.message);
+          statusTo('statusDemo', 'JSON invalide', 'err');
+        }
+      }
+
+      function playDemo(data) {
+        if (animDemo) {
+          animDemo.destroy();
+          animDemo = null;
+        }
+        var container = document.getElementById('lottieDemo');
+        container.innerHTML = '';
+
+        try {
+          animDemo = lottie.loadAnimation({
+            container: container,
+            renderer: 'svg',
+            loop: true,
+            autoplay: true,
+            animationData: data,
+          });
+
+          animDemo.addEventListener('DOMLoaded', function () {
+            var dur = (data.op - data.ip) / data.fr;
+            logTo('debugDemo', 'OK! Duree: ' + dur.toFixed(1) + 's, ' + data.w + 'x' + data.h);
+            statusTo(
+              'statusDemo',
+              'Animation OK — ' + data.layers.length + ' layers, ' + dur.toFixed(1) + 's',
+              'ok',
+            );
+          });
+
+          animDemo.addEventListener('enterFrame', function (e) {
+            document.getElementById('frameDemoInfo').textContent =
+              'Frame ' + Math.round(e.currentTime) + '/' + Math.round(e.totalTime);
+          });
+
+          animDemo.addEventListener('error', function (e) {
+            logTo('debugDemo', 'ERREUR rendu: ' + JSON.stringify(e));
+            statusTo('statusDemo', 'Erreur rendu (voir logs)', 'err');
+          });
+        } catch (e) {
+          logTo('debugDemo', 'EXCEPTION: ' + e.message);
+          statusTo('statusDemo', 'Exception: ' + e.message, 'err');
+        }
+      }
+
+      // ── TAB 2: Custom JSON + injection ───────────────
+
+      function loadCustom() {
+        var raw = document.getElementById('customJson').value.trim();
+        if (!raw) return;
+
+        // URL or JSON?
+        if (raw.startsWith('http')) {
+          statusTo('statusCustom', 'Chargement...', 'info');
+          fetch(raw)
+            .then(function (r) {
+              return r.json();
+            })
+            .then(function (data) {
+              setCustomBase(data);
+            })
+            .catch(function (e) {
+              statusTo('statusCustom', 'Erreur: ' + e.message, 'err');
+            });
+        } else {
+          try {
+            setCustomBase(JSON.parse(raw));
+          } catch (e) {
+            statusTo('statusCustom', 'JSON invalide', 'err');
+          }
+        }
+      }
+
+      function setCustomBase(data) {
+        customBaseJson = data;
+        logTo('debugCustom', 'JSON charge: ' + data.layers.length + ' layers');
+
+        // List all text layers
+        var textLayers = [];
+        function findTextLayers(layers, prefix) {
+          layers.forEach(function (l) {
+            if (l.ty === 5) {
+              var text =
+                l.t && l.t.d && l.t.d.k && l.t.d.k[0] && l.t.d.k[0].s ? l.t.d.k[0].s.t : '?';
+              textLayers.push({ nm: l.nm, text: text });
+            }
+            if (l.layers) findTextLayers(l.layers, (prefix || '') + l.nm + ' > ');
+          });
+        }
+        findTextLayers(data.layers, '');
+
+        var listEl = document.getElementById('layerList');
+        if (textLayers.length > 0) {
+          listEl.innerHTML =
+            '<strong>Layers texte trouves :</strong><br>' +
+            textLayers
+              .map(function (l) {
+                return '<code>' + l.nm + '</code> = "' + l.text + '"';
+              })
+              .join('<br>');
+        } else {
+          listEl.innerHTML = '<em>Aucun layer texte (ty:5) trouve</em>';
+        }
+
+        statusTo('statusCustom', textLayers.length + ' layers texte trouves', 'ok');
+        injectAndReload();
+      }
+
+      var injectTimer = null;
+      function injectAndReload() {
+        clearTimeout(injectTimer);
+        injectTimer = setTimeout(function () {
+          if (!customBaseJson) return;
+
+          var clone = JSON.parse(JSON.stringify(customBaseJson));
+
+          // Inject variables
+          var layerNom = document.getElementById('layerNom').value.trim();
+          var valNom = document.getElementById('valNom').value;
+          var layerNum = document.getElementById('layerNum').value.trim();
+          var valNum = document.getElementById('valNum').value;
+
+          if (layerNom) injectText(clone.layers, layerNom, valNom);
+          if (layerNum) injectText(clone.layers, layerNum, valNum);
+
+          // Play
+          if (animCustom) {
+            animCustom.destroy();
+            animCustom = null;
+          }
+          var container = document.getElementById('lottieCustom');
+          container.innerHTML = '';
+
+          animCustom = lottie.loadAnimation({
+            container: container,
+            renderer: 'svg',
+            loop: true,
+            autoplay: true,
+            animationData: clone,
+          });
+
+          animCustom.addEventListener('enterFrame', function (e) {
+            document.getElementById('frameCustomInfo').textContent =
+              'Frame ' + Math.round(e.currentTime) + '/' + Math.round(e.totalTime);
+          });
+
+          logTo(
+            'debugCustom',
+            'Injection: ' + layerNom + '="' + valNom + '", ' + layerNum + '="' + valNum + '"',
+          );
+        }, 300);
+      }
+
+      function injectText(layers, layerName, value) {
+        layers.forEach(function (l) {
+          if (l.nm === layerName && l.t && l.t.d && l.t.d.k) {
+            l.t.d.k.forEach(function (kf) {
+              if (kf.s) kf.s.t = value;
+            });
+          }
+          if (l.layers) injectText(l.layers, layerName, value);
+        });
+      }
+
+      // Auto-load demo on page load
+      if (typeof lottie !== 'undefined') {
+        logTo('debugDemo', 'lottie-web charge OK');
+        loadFromUrl();
+      } else {
+        statusTo('statusDemo', 'ERREUR: lottie-web non charge', 'err');
+      }
+    </script>
+  </body>
+</html>

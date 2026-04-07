@@ -53,13 +53,33 @@ function buildPlayerElements(vars: Record<string, string>, duration: number): Te
   const nom = (vars['nom'] || 'NOM').toUpperCase();
   const prenom = (vars['prenom'] || 'PRÉNOM').toUpperCase();
   const club = (vars['club'] || 'NOM DU CLUB').toUpperCase();
-  const fadeOutStart = Math.max(duration - 0.6, 1.5);
+  const numero = vars['numero'] || '';
+  // Reveal moment of the hexagon shape — number zooms in sync until then,
+  // then PRÉNOM/NOM take over.
+  const REVEAL = 1.22;
+  const fadeOutStart = Math.max(duration - 0.6, REVEAL + 0.6);
 
   // Ultra-condensed display font stack
   const displayFont = "'Bebas Neue', 'Anton', 'Oswald', 'Barlow Condensed', 'Impact', sans-serif";
   const surtitleFont = "'Barlow Condensed', 'Oswald', 'Inter', sans-serif";
 
   const elements: TextElement[] = [];
+
+  // Numéro — apparaît dès le début et zoome avec la forme jusqu'au reveal
+  if (numero) {
+    elements.push({
+      text: `#${numero}`,
+      x: 960, y: 540,
+      fontSize: 420, fontWeight: '900',
+      fontFamily: displayFont,
+      color: '#FFFFFF', align: 'center',
+      fadeIn: [0, 0.4],
+      // Disparaît juste avant le reveal pour laisser la place au prénom/nom
+      fadeOut: [REVEAL - 0.15, REVEAL + 0.05],
+      scaleAnim: [0.2, 1.4],
+      shadow: { blur: 40, color: 'rgba(0,0,0,0.4)' },
+    });
+  }
 
   // Club name TOP — small, very wide letter-spacing, light weight
   elements.push({
@@ -69,30 +89,30 @@ function buildPlayerElements(vars: Record<string, string>, duration: number): Te
     fontFamily: surtitleFont,
     letterSpacing: 14,
     color: '#FFFFFF', align: 'center',
-    fadeIn: [0.1, 0.6], fadeOut: [fadeOutStart, fadeOutStart + 0.4],
+    fadeIn: [REVEAL, REVEAL + 0.4], fadeOut: [fadeOutStart, fadeOutStart + 0.4],
     slideFromY: 15,
   });
 
-  // PRÉNOM huge — ultra-condensed, ultra-bold, tight to NOM
+  // PRÉNOM huge — apparaît après le reveal
   elements.push({
     text: prenom,
     x: 960, y: 460,
     fontSize: 280, fontWeight: '900',
     fontFamily: displayFont,
     color: '#FFFFFF', align: 'center',
-    fadeIn: [0.3, 0.9], fadeOut: [fadeOutStart, fadeOutStart + 0.4],
+    fadeIn: [REVEAL + 0.05, REVEAL + 0.5], fadeOut: [fadeOutStart, fadeOutStart + 0.4],
     slideFromY: 30,
     scaleAnim: [1.05, 1],
   });
 
-  // NOM huge — same style, glued under PRÉNOM (line-height ~0.85)
+  // NOM huge — glued under PRÉNOM
   elements.push({
     text: nom,
     x: 960, y: 700,
     fontSize: 280, fontWeight: '900',
     fontFamily: displayFont,
     color: '#FFFFFF', align: 'center',
-    fadeIn: [0.45, 1.05], fadeOut: [fadeOutStart, fadeOutStart + 0.4],
+    fadeIn: [REVEAL + 0.15, REVEAL + 0.6], fadeOut: [fadeOutStart, fadeOutStart + 0.4],
     slideFromY: 30,
     scaleAnim: [1.05, 1],
   });
@@ -105,7 +125,7 @@ function buildPlayerElements(vars: Record<string, string>, duration: number): Te
     fontFamily: surtitleFont,
     letterSpacing: 14,
     color: '#FFFFFF', align: 'center',
-    fadeIn: [0.6, 1.1], fadeOut: [fadeOutStart, fadeOutStart + 0.4],
+    fadeIn: [REVEAL + 0.25, REVEAL + 0.7], fadeOut: [fadeOutStart, fadeOutStart + 0.4],
     slideFromY: 15,
   });
 

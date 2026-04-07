@@ -1050,6 +1050,7 @@ export const getAvailableTemplates = async (_req: AuthRequest, res: Response) =>
         name: 'Annonce Joueur',
         description: 'Prénom + Nom plein écran avec nom du club en haut et en bas',
         variables: [
+          { key: 'numero', label: 'Numéro', type: 'text', required: false, placeholder: '7' },
           { key: 'prenom', label: 'Prénom', type: 'text', required: true, placeholder: 'THOMAS' },
           { key: 'nom', label: 'Nom', type: 'text', required: true, placeholder: 'DUPONT' },
           { key: 'club', label: 'Nom du club', type: 'text', required: false, placeholder: 'UCKNEF BASKET', prefillFrom: 'club_name' },
