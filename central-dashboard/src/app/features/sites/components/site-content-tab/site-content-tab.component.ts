@@ -1033,9 +1033,10 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
     const forThisSite = groupedVideoOptions.get('forThisSite') || [];
     const onPi = groupedVideoOptions.get('onPi') || [];
     const cloud = groupedVideoOptions.get('cloud') || [];
+    const isSaas = this.siteType === 'saas';
     if (forThisSite.length > 0) groups.push({ key: 'forThisSite', label: 'Pour ce site', icon: '⭐', videos: forThisSite });
-    if (onPi.length > 0) groups.push({ key: 'onPi', label: 'Sur le Pi', icon: '✅', videos: onPi });
-    if (cloud.length > 0) groups.push({ key: 'cloud', label: 'Cloud (à déployer)', icon: '☁️', videos: cloud });
+    if (onPi.length > 0) groups.push({ key: 'onPi', label: isSaas ? 'Disponibles' : 'Sur le Pi', icon: '✅', videos: onPi });
+    if (cloud.length > 0) groups.push({ key: 'cloud', label: isSaas ? 'Bibliothèque cloud' : 'Cloud (à déployer)', icon: '☁️', videos: cloud });
     this.videoOptionGroups = groups;
 
     this.cloudVideoPaths = new Set(this.unifiedVideoOptions.filter(v => !v.isOnPi).map(v => v.path));
