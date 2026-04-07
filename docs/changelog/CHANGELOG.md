@@ -1,3 +1,9 @@
+## [3.131.2](https://github.com/Tallec7/neopro/compare/v3.131.1...v3.131.2) (2026-04-07)
+
+### Bug Fixes
+
+- **templates:** sync number zoom with shape (0→1.22s) and fade name in at exact reveal ([d302d18](https://github.com/Tallec7/neopro/commit/d302d18d01aa6a9edb7d369891d7603d8a443088))
+
 ## [3.131.1](https://github.com/Tallec7/neopro/compare/v3.131.0...v3.131.1) (2026-04-07)
 
 ### Bug Fixes
