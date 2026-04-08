@@ -95,18 +95,32 @@ export class AnalyticsService {
 
   /**
    * Détermine l'URL de l'API analytics dynamiquement.
-   * Utilise la même logique que socket.service.ts pour fonctionner depuis :
-   * - Le Pi lui-même (localhost ou neopro.local)
-   * - Un téléphone sur le hotspot (neopro.local ou 192.168.4.1)
+   * - SaaS : poste directement au central server sur /api/analytics/video-plays
+   * - Pi : poste au serveur local (sync-agent) sur /api/analytics (port 3000)
    */
   private getApiUrl(): string {
+    if (environment.saasMode && environment.socketUrl) {
+      return environment.socketUrl + '/api/analytics/video-plays';
+    }
     if (environment.socketUrl) {
       return environment.socketUrl + '/api/analytics';
     }
-    // Construire dynamiquement depuis l'origine actuelle
+    // Construire dynamiquement depuis l'origine actuelle (Pi hotspot)
     const hostname = window.location.hostname || 'localhost';
     const protocol = window.location.protocol === 'https:' ? 'https:' : 'http:';
     return `${protocol}//${hostname}:3000/api/analytics`;
+  }
+
+  /**
+   * Construit le payload selon le contexte (SaaS → central format, Pi → local format).
+   * - Central : { site_id, plays: [] }
+   * - Local Pi server : { events: [] }
+   */
+  private buildPayload(events: VideoPlayEvent[]): object {
+    if (environment.saasMode && this.siteId) {
+      return { site_id: this.siteId, plays: events };
+    }
+    return { events };
   }
 
   constructor() {
@@ -439,7 +453,7 @@ export class AnalyticsService {
   private sendSingleEvent(event: VideoPlayEvent, isRetry = false): void {
     this.http.post<{ success: boolean; received: number; total: number }>(
       this.getApiUrl(),
-      { events: [event] }
+      this.buildPayload([event])
     ).subscribe({
       next: () => {
         // Événement persisté sur disque via server.js → analytics_buffer.json
@@ -465,7 +479,7 @@ export class AnalyticsService {
 
     this.http.post<{ success: boolean; received: number; total: number }>(
       this.getApiUrl(),
-      { events: eventsToSend }
+      this.buildPayload(eventsToSend)
     ).subscribe({
       next: (response) => {
         console.log('[Analytics] Sent to server:', response.received, 'events, total buffer:', response.total);

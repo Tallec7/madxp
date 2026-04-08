@@ -3025,6 +3025,13 @@ export class TvComponent implements OnInit, OnDestroy {
     const errorMessage = error?.message || 'Unknown error';
     const currentSrc = player.src || 'no source';
 
+    // Ignorer les erreurs "empty src" sur les players manuels : elles sont déclenchées
+    // par le cleanup (removeAttribute('src') + load()) lors du retour à la boucle.
+    // Code 4 = MEDIA_SRC_NOT_SUPPORTED — inoffensif quand le player est en cours de reset.
+    if (which.startsWith('manual-') && errorCode === 4 && !player.getAttribute('src')) {
+      return;
+    }
+
     console.error(`[TV] ⚠️ Player ${which} error:`, {
       code: errorCode,
       message: errorMessage,
