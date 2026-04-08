@@ -4,12 +4,11 @@ import { TranslateModule } from '@ngx-translate/core';
 import { AuthService } from '../../core/services/auth.service';
 import { ApiService } from '../../core/services/api.service';
 import { SiteContentTabComponent } from '../sites/components/site-content-tab/site-content-tab.component';
-import { ClubHelpModalComponent } from './club-help-modal.component';
 
 @Component({
   selector: 'app-club-loop',
   standalone: true,
-  imports: [CommonModule, TranslateModule, SiteContentTabComponent, ClubHelpModalComponent],
+  imports: [CommonModule, TranslateModule, SiteContentTabComponent],
   template: `
     <div class="club-loop">
       <div class="page-header">
@@ -17,14 +16,7 @@ import { ClubHelpModalComponent } from './club-help-modal.component';
           <h1>{{ 'nav.clubLoop' | translate }}</h1>
           <p class="subtitle">{{ 'clubPortal.loopDescription' | translate }}</p>
         </div>
-        <div class="header-help">
-          <button class="btn-help" type="button" (click)="showHelp = true" title="Aide">
-            ❓ {{ 'clubPortal.help' | translate }}
-          </button>
-        </div>
       </div>
-
-      <app-club-help-modal [(visible)]="showHelp" [isSaas]="siteType === 'saas'"></app-club-help-modal>
 
       <!-- Reuses the full content tab which includes the loop manager -->
       <app-site-content-tab
@@ -53,15 +45,6 @@ import { ClubHelpModalComponent } from './club-help-modal.component';
       h1 { font-size: 1.5rem; margin: 0; }
       .subtitle { color: var(--text-secondary, #64748b); margin: 0.25rem 0 0; font-size: 0.875rem; }
     }
-    .header-help { display: flex; align-items: center; }
-    .btn-help {
-      padding: 0.5rem 0.9rem; border-radius: 8px;
-      background: transparent; color: #64748b;
-      border: 1px solid #e2e8f0;
-      font-size: 0.8125rem; font-weight: 500; cursor: pointer;
-      transition: all 0.15s;
-    }
-    .btn-help:hover { background: #f8fafc; color: #1e293b; }
     .loading { text-align: center; padding: 3rem; }
     .spinner {
       width: 32px; height: 32px; margin: 0 auto;
@@ -79,7 +62,6 @@ export class ClubLoopComponent implements OnInit {
   siteName = '';
   siteType = '';
   isConnected = false;
-  showHelp = false;
 
   ngOnInit(): void {
     const user = this.authService.getCurrentUser();

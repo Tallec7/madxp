@@ -5,6 +5,7 @@ import { Subscription, interval, switchMap } from 'rxjs';
 import { AuthService } from '../../core/services/auth.service';
 import { ApiService } from '../../core/services/api.service';
 import { ClubSaasActionsComponent } from './club-saas-actions.component';
+import { ClubHelpModalComponent } from './club-help-modal.component';
 
 interface SaasMetrics {
   connectedClients: number;
@@ -45,13 +46,20 @@ interface SiteDashboard {
 @Component({
   selector: 'app-club-dashboard',
   standalone: true,
-  imports: [CommonModule, TranslateModule, ClubSaasActionsComponent],
+  imports: [CommonModule, TranslateModule, ClubSaasActionsComponent, ClubHelpModalComponent],
   template: `
     <div class="club-dashboard">
       <div class="page-header">
-        <h1>{{ siteDashboard?.site?.club_name || 'Mon club' }}</h1>
-        <span class="site-name" *ngIf="siteDashboard?.site?.site_name">{{ siteDashboard?.site?.site_name }}</span>
+        <div class="header-text">
+          <h1>{{ siteDashboard?.site?.club_name || 'Mon club' }}</h1>
+          <span class="site-name" *ngIf="siteDashboard?.site?.site_name">{{ siteDashboard?.site?.site_name }}</span>
+        </div>
+        <button class="btn-help" type="button" (click)="showHelp = true" title="Aide">
+          ❓ {{ 'clubPortal.help' | translate }}
+        </button>
       </div>
+
+      <app-club-help-modal [(visible)]="showHelp" [isSaas]="isSaas"></app-club-help-modal>
 
       <!-- SaaS quick actions: TV, remote, QR, preview -->
       <app-club-saas-actions
@@ -181,9 +189,22 @@ interface SiteDashboard {
 
     .page-header {
       margin-bottom: 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 1rem;
+      flex-wrap: wrap;
       h1 { font-size: 1.75rem; margin: 0; color: var(--text-primary); }
       .site-name { color: var(--text-secondary, #64748b); font-size: 0.875rem; }
     }
+    .btn-help {
+      padding: 0.5rem 0.9rem; border-radius: 8px;
+      background: transparent; color: #64748b;
+      border: 1px solid #e2e8f0;
+      font-size: 0.8125rem; font-weight: 500; cursor: pointer;
+      transition: all 0.15s;
+    }
+    .btn-help:hover { background: #f8fafc; color: #1e293b; }
 
     .status-cards {
       display: grid;
@@ -261,6 +282,7 @@ export class ClubDashboardComponent implements OnInit, OnDestroy {
   siteDashboard: SiteDashboard | null = null;
   loading = true;
   error = '';
+  showHelp = false;
 
   get isSaas(): boolean {
     return this.siteDashboard?.site?.site_type === 'saas';
