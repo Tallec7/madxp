@@ -4,6 +4,7 @@ import { TranslateModule } from '@ngx-translate/core';
 import { Subscription, interval, switchMap } from 'rxjs';
 import { AuthService } from '../../core/services/auth.service';
 import { ApiService } from '../../core/services/api.service';
+import { ClubSaasActionsComponent } from './club-saas-actions.component';
 
 interface SaasMetrics {
   connectedClients: number;
@@ -44,13 +45,20 @@ interface SiteDashboard {
 @Component({
   selector: 'app-club-dashboard',
   standalone: true,
-  imports: [CommonModule, TranslateModule],
+  imports: [CommonModule, TranslateModule, ClubSaasActionsComponent],
   template: `
     <div class="club-dashboard">
       <div class="page-header">
         <h1>{{ siteDashboard?.site?.club_name || 'Mon club' }}</h1>
         <span class="site-name" *ngIf="siteDashboard?.site?.site_name">{{ siteDashboard?.site?.site_name }}</span>
       </div>
+
+      <!-- SaaS quick actions: TV, remote, QR, preview -->
+      <app-club-saas-actions
+        *ngIf="siteDashboard?.site?.id && isSaas"
+        [siteId]="siteDashboard!.site.id"
+        [siteType]="siteDashboard!.site.site_type || ''">
+      </app-club-saas-actions>
 
       <!-- Pi site dashboard -->
       <div class="status-cards" *ngIf="siteDashboard && !isSaas">
