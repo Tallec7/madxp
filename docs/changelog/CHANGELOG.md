@@ -1,3 +1,9 @@
+# [3.136.0](https://github.com/Tallec7/neopro/compare/v3.135.0...v3.136.0) (2026-04-08)
+
+### Features
+
+- **billing:** gate premium/pro features across club portal (ADR-039) ([309e1df](https://github.com/Tallec7/neopro/commit/309e1dffb649cf33ef8ad9041b3a4fbabdfdcb9c))
+
 # [3.135.0](https://github.com/Tallec7/neopro/compare/v3.134.4...v3.135.0) (2026-04-08)
 
 ### Features
