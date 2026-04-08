@@ -1,3 +1,9 @@
+## [3.136.3](https://github.com/Tallec7/neopro/compare/v3.136.2...v3.136.3) (2026-04-08)
+
+### Bug Fixes
+
+- **saas:** démarrer la session analytics au boot de la TV SaaS ([6e00e76](https://github.com/Tallec7/neopro/commit/6e00e7694cc95ef4c970f1b3cf6513984ae217a8))
+
 ## [3.136.2](https://github.com/Tallec7/neopro/compare/v3.136.1...v3.136.2) (2026-04-08)
 
 ### Bug Fixes
