@@ -1,3 +1,10 @@
+## [3.134.3](https://github.com/Tallec7/neopro/compare/v3.134.2...v3.134.3) (2026-04-08)
+
+### Bug Fixes
+
+- **club-portal:** move Aide button to main dashboard page ([95861c4](https://github.com/Tallec7/neopro/commit/95861c428d70a7136fe8ebb1bdcf566a8961dd6e))
+- **saas:** load config from config_profiles in getSiteLocalContent ([a83a527](https://github.com/Tallec7/neopro/commit/a83a52709c3eca7e0f891ffa080c261d932da697))
+
 ## [3.134.2](https://github.com/Tallec7/neopro/compare/v3.134.1...v3.134.2) (2026-04-08)
 
 ### Bug Fixes
