@@ -1,3 +1,9 @@
+## [3.133.1](https://github.com/Tallec7/neopro/compare/v3.133.0...v3.133.1) (2026-04-08)
+
+### Bug Fixes
+
+- **sites:** include software_version in findConnectionInfo for SaaS dashboard ([2931fe6](https://github.com/Tallec7/neopro/commit/2931fe643965d7ff1606e4c7b18a715d21d32465))
+
 # [3.133.0](https://github.com/Tallec7/neopro/compare/v3.132.0...v3.133.0) (2026-04-08)
 
 ### Features
