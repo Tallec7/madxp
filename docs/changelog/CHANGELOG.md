@@ -1,3 +1,9 @@
+## [3.133.2](https://github.com/Tallec7/neopro/compare/v3.133.1...v3.133.2) (2026-04-08)
+
+### Bug Fixes
+
+- **raspberry:** use cast for socket.off to satisfy TS types ([7952212](https://github.com/Tallec7/neopro/commit/7952212901c43648a8cd0ac41b16d5f37d6d4078))
+
 ## [3.133.1](https://github.com/Tallec7/neopro/compare/v3.133.0...v3.133.1) (2026-04-08)
 
 ### Bug Fixes
