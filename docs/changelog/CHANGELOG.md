@@ -1,3 +1,9 @@
+## [3.136.4](https://github.com/Tallec7/neopro/compare/v3.136.3...v3.136.4) (2026-04-08)
+
+### Bug Fixes
+
+- **api:** rate limits per-route sur content.routes (fix 429 dashboard) ([6396129](https://github.com/Tallec7/neopro/commit/6396129307405e763f4a50f754e0fdab7cc9fb16))
+
 ## [3.136.3](https://github.com/Tallec7/neopro/compare/v3.136.2...v3.136.3) (2026-04-08)
 
 ### Bug Fixes
