@@ -201,7 +201,7 @@ export class SocketService {
 
     // Listen for config updates pushed from the dashboard and reload the app.
     // Idempotent registration — Socket.IO reuses the same socket across reconnects.
-    this.socket.off('saas-config-updated');
+    (this.socket as unknown as { off: (ev: string) => void }).off('saas-config-updated');
     this.socket.on('saas-config-updated', (payload: { siteId?: string }) => {
       console.log('[Socket] saas-config-updated received', payload);
       if (payload?.siteId && payload.siteId !== siteId) return;
