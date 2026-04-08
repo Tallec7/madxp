@@ -1,3 +1,9 @@
+## [3.136.5](https://github.com/Tallec7/neopro/compare/v3.136.4...v3.136.5) (2026-04-08)
+
+### Bug Fixes
+
+- **saas:** enrichir la config avec les métadonnées analytics sponsors ([a24161c](https://github.com/Tallec7/neopro/commit/a24161c92e1f08a5aebd78c350b0ffa4fbf2607c))
+
 ## [3.136.4](https://github.com/Tallec7/neopro/compare/v3.136.3...v3.136.4) (2026-04-08)
 
 ### Bug Fixes
