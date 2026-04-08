@@ -1,3 +1,9 @@
+## [3.136.2](https://github.com/Tallec7/neopro/compare/v3.136.1...v3.136.2) (2026-04-08)
+
+### Bug Fixes
+
+- **saas:** correct écrans connectés count and enable analytics en boucle ([c88ac79](https://github.com/Tallec7/neopro/commit/c88ac79072cacad4c9a2db1a651cf59b07b69fd8))
+
 ## [3.136.1](https://github.com/Tallec7/neopro/compare/v3.136.0...v3.136.1) (2026-04-08)
 
 ### Bug Fixes
