@@ -124,8 +124,13 @@ export async function getSaasConfig(req: Request, res: Response) {
     // Enrichir avec les métadonnées analytics (video_id, sponsor_id, analytics_category)
     // avant la résolution des URLs pour que resolveVideoUrls préserve ces champs via spread
     try {
-      await enrichConfigWithAnalyticsMetadata(configuration as unknown as SiteConfiguration);
-    } catch { /* non-fatal — la config reste jouable sans métadonnées analytics */ }
+      const { enrichedCount } = await enrichConfigWithAnalyticsMetadata(configuration as unknown as SiteConfiguration);
+      if (enrichedCount === 0 && ((configuration.sponsors as unknown[]) || []).length > 0) {
+        logger.warn('SaaS config: enrichConfigWithAnalyticsMetadata enriched 0 videos — sponsor analytics may be lost', { siteId });
+      }
+    } catch (err) {
+      logger.warn('SaaS config: enrichConfigWithAnalyticsMetadata failed (non-fatal)', { siteId, error: err });
+    }
 
     // Résoudre toutes les URLs vidéo (config vide = site fraîchement créé, retourner les defaults)
     const sponsors = (configuration.sponsors as VideoLike[]) || [];
@@ -229,8 +234,13 @@ export async function getSaasProfileConfig(req: Request, res: Response) {
     const configuration = profile.configuration;
 
     try {
-      await enrichConfigWithAnalyticsMetadata(configuration as unknown as SiteConfiguration);
-    } catch { /* non-fatal */ }
+      const { enrichedCount } = await enrichConfigWithAnalyticsMetadata(configuration as unknown as SiteConfiguration);
+      if (enrichedCount === 0 && ((configuration.sponsors as unknown[]) || []).length > 0) {
+        logger.warn('SaaS profile config: enrichConfigWithAnalyticsMetadata enriched 0 videos — sponsor analytics may be lost', { siteId, profileId });
+      }
+    } catch (err) {
+      logger.warn('SaaS profile config: enrichConfigWithAnalyticsMetadata failed (non-fatal)', { siteId, profileId, error: err });
+    }
 
     const sponsors = (configuration.sponsors as VideoLike[]) || [];
     const categories = (configuration.categories as CategoryLike[]) || [];

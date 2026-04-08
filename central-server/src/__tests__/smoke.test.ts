@@ -2821,6 +2821,72 @@ describe('E-22 video variant API routes guard', () => {
 });
 
 // ----------------------------------------------------------
+// content.routes rate-limit guard (regression for v3.136.4 dashboard 429s).
+// GET routes must use adminRateLimit (400/min). The /api mount must NOT
+// wrap contentRoutes with sensitiveRateLimit (30/min) — that quota was
+// exhausted in 3-6 dashboard navigations.
+// ----------------------------------------------------------
+describe('content.routes rate-limit guard', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+  const routesPath = path.join(repoRoot, 'central-server/src/routes/content.routes.ts');
+  const serverPath = path.join(repoRoot, 'central-server/src/server.ts');
+
+  let routes: string;
+  let server: string;
+  beforeAll(() => {
+    routes = fs.readFileSync(routesPath, 'utf8');
+    server = fs.readFileSync(serverPath, 'utf8');
+  });
+
+  it("content.routes.ts GET /videos must use adminRateLimit", () => {
+    expect(/router\.get\(\s*['"]\/videos['"][^)]*adminRateLimit/.test(routes)).toBe(true);
+  });
+
+  it("content.routes.ts GET /deployments must use adminRateLimit", () => {
+    expect(/router\.get\(\s*['"]\/deployments['"][^)]*adminRateLimit/.test(routes)).toBe(true);
+  });
+
+  it("server.ts must NOT wrap contentRoutes with sensitiveRateLimit", () => {
+    expect(/app\.use\(\s*['"]\/api['"]\s*,\s*sensitiveRateLimit\s*,\s*contentRoutes/.test(server)).toBe(false);
+  });
+});
+
+// ----------------------------------------------------------
+// Club portal SaaS quick actions placement guard.
+// The "Mon club" dashboard must render <app-club-saas-actions> and the
+// help button. The "Ma boucle" page must NOT (moved in v3.134.x).
+// ----------------------------------------------------------
+describe('club portal SaaS actions placement guard', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+  const dashPath = path.join(repoRoot, 'central-dashboard/src/app/features/club-portal/club-dashboard.component.ts');
+  const loopPath = path.join(repoRoot, 'central-dashboard/src/app/features/club-portal/club-loop.component.ts');
+
+  let dash: string;
+  let loop: string;
+  beforeAll(() => {
+    dash = fs.readFileSync(dashPath, 'utf8');
+    loop = fs.readFileSync(loopPath, 'utf8');
+  });
+
+  it('club-dashboard renders <app-club-saas-actions>', () => {
+    expect(dash.includes('<app-club-saas-actions')).toBe(true);
+  });
+
+  it('club-dashboard renders the help modal + button', () => {
+    expect(dash.includes('<app-club-help-modal')).toBe(true);
+    expect(dash.includes("'clubPortal.help'")).toBe(true);
+  });
+
+  it('club-loop must NOT render <app-club-saas-actions>', () => {
+    expect(loop.includes('<app-club-saas-actions')).toBe(false);
+  });
+
+  it('club-loop must NOT render the help modal', () => {
+    expect(loop.includes('<app-club-help-modal')).toBe(false);
+  });
+});
+
+// ----------------------------------------------------------
 // E-22 watchdog secondary display guard: kiosk-watchdog.sh
 // watchdog must NOT use config flags — hardware detection only.
 // ----------------------------------------------------------
@@ -15374,6 +15440,67 @@ describe('SaaS config save flow', () => {
     });
   });
 
+  // ---------------------------------------------------------------------------
+  // SaaS analytics & screen count regressions (session 2026-04-08)
+  // ---------------------------------------------------------------------------
+
+  // Bug: remote tab was counted as a screen (sent clientType 'saas-tv')
+  it('raspberry socket.service.ts must detect /remote route and send saas-remote clientType', () => {
+    const filePath = path.join(repoRoot, 'raspberry', 'src', 'app', 'services', 'socket.service.ts');
+    const content = fs.readFileSync(filePath, 'utf8');
+    expect({
+      detectsRemotePath: content.includes('/remote'),
+      sendsSaasRemote: content.includes("'saas-remote'"),
+      sendsSaasTv: content.includes("'saas-tv'"),
+    }).toEqual({
+      detectsRemotePath: true,
+      sendsSaasRemote: true,
+      sendsSaasTv: true,
+    });
+  });
+
+  // Bug: getSaasClientCount counted all room members including remote tabs
+  it('central socket.service.ts getSaasClientCount must filter by clientType saas-tv', () => {
+    const filePath = path.join(repoRoot, 'central-server', 'src', 'services', 'socket.service.ts');
+    const content = fs.readFileSync(filePath, 'utf8');
+    expect({
+      filtersByclientType: content.includes("clientType") && content.includes("'saas-tv'"),
+      iteratesRoom: content.includes('for (const socketId of room)'),
+    }).toEqual({
+      filtersByclientType: true,
+      iteratesRoom: true,
+    });
+  });
+
+  // Bug: SaaS TV never started recording → trackVideoStart returned early → 0 analytics
+  it('tv.component.ts must auto-start recording and session in SaaS mode at boot', () => {
+    const filePath = path.join(repoRoot, 'raspberry', 'src', 'app', 'components', 'tv', 'tv.component.ts');
+    const content = fs.readFileSync(filePath, 'utf8');
+    expect({
+      startsRecordingInSaas: content.includes('saasMode') && content.includes('startRecording'),
+      startsSessionInSaas: content.includes('saasMode') && content.includes('startSession'),
+    }).toEqual({
+      startsRecordingInSaas: true,
+      startsSessionInSaas: true,
+    });
+  });
+
+  // Bug: getSaasConfig ne appelait pas enrichConfigWithAnalyticsMetadata
+  // → vidéos sans video_id/sponsor_id/analytics_category → sponsor analytics perdues
+  it('saas.controller.ts must call enrichConfigWithAnalyticsMetadata in getSaasConfig and getSaasProfileConfig', () => {
+    const filePath = path.join(repoRoot, 'central-server', 'src', 'controllers', 'saas.controller.ts');
+    const content = fs.readFileSync(filePath, 'utf8');
+    const enrichCallCount = (content.match(/enrichConfigWithAnalyticsMetadata/g) || []).length;
+    expect({
+      importsEnrich: content.includes("import { enrichConfigWithAnalyticsMetadata }"),
+      // Called in getSaasConfig + getSaasProfileConfig = minimum 3 occurrences (import + 2 calls)
+      calledAtLeastTwice: enrichCallCount >= 3,
+    }).toEqual({
+      importsEnrich: true,
+      calledAtLeastTwice: true,
+    });
+  });
+
   it('i18n files must have saving and confirmSave keys', () => {
     const frPath = path.join(repoRoot, 'central-dashboard', 'src', 'assets', 'i18n', 'fr.json');
     const enPath = path.join(repoRoot, 'central-dashboard', 'src', 'assets', 'i18n', 'en.json');
@@ -15395,6 +15522,140 @@ describe('SaaS config save flow', () => {
       enConfirmSave: 'Confirm save',
       esSaving: 'Guardando...',
       esConfirmSave: 'Confirmar guardado',
+    });
+  });
+
+  // --- ADR-039 Phase 2 gating regression guards ---
+  // Lock in the feature gates added in Phase 2 so a future refactor cannot
+  // silently reintroduce free access to premium/pro features.
+
+  it('feature-gate.service must map Phase 2 features to their tiers (ADR-039)', () => {
+    const filePath = path.join(repoRoot, 'central-dashboard', 'src', 'app', 'core', 'services', 'feature-gate.service.ts');
+    const content = fs.readFileSync(filePath, 'utf8');
+    expect({
+      imageToVideoClub: /image_to_video:\s*'club'/.test(content),
+      multiProfilesPro: /multi_profiles:\s*'pro'/.test(content),
+      weightedRotationPro: /weighted_rotation:\s*'pro'/.test(content),
+      analyticsAdvancedPremium: /analytics_advanced:\s*'premium'/.test(content),
+      secondaryDisplayPremium: /secondary_display:\s*'premium'/.test(content),
+      remoteDiagnosticPremium: /remote_diagnostic:\s*'premium'/.test(content),
+    }).toEqual({
+      imageToVideoClub: true,
+      multiProfilesPro: true,
+      weightedRotationPro: true,
+      analyticsAdvancedPremium: true,
+      secondaryDisplayPremium: true,
+      remoteDiagnosticPremium: true,
+    });
+  });
+
+  it('club-analytics must gate 90-day window and CSV/PDF export behind analytics_advanced (Phase 2.9)', () => {
+    const filePath = path.join(repoRoot, 'central-dashboard', 'src', 'app', 'features', 'analytics', 'club-analytics.component.ts');
+    const content = fs.readFileSync(filePath, 'utf8');
+    expect({
+      injectsGate: /FeatureGateService/.test(content),
+      hasGetter: /canUseAnalyticsAdvanced/.test(content)
+        && /canAccess\('analytics_advanced'/.test(content),
+      gates90Days: /value="90"\s*\[disabled\]="!canUseAnalyticsAdvanced"/.test(content),
+      guardsExportData: /if\s*\(!this\.canUseAnalyticsAdvanced\)\s*return/.test(content),
+    }).toEqual({
+      injectsGate: true,
+      hasGetter: true,
+      gates90Days: true,
+      guardsExportData: true,
+    });
+  });
+
+  it('video-library must gate secondary variant button behind secondary_display (Phase 2.10)', () => {
+    const filePath = path.join(repoRoot, 'central-dashboard', 'src', 'app', 'features', 'sites', 'components', 'video-library', 'video-library.component.ts');
+    const content = fs.readFileSync(filePath, 'utf8');
+    expect({
+      importsGate: /FeatureGateService/.test(content),
+      hasSubscriptionPlanInput: /@Input\(\)\s*subscriptionPlan/.test(content),
+      hasVariantEmitter: /@Output\(\)\s*videoVariant\s*=\s*new EventEmitter/.test(content),
+      hasGetter: /canUseSecondaryDisplay/.test(content)
+        && /canAccess\('secondary_display'/.test(content),
+      buttonGuarded: /\*ngIf="canUseSecondaryDisplay/.test(content),
+      methodGuarded: /if\s*\(!this\.canUseSecondaryDisplay\)\s*return/.test(content),
+    }).toEqual({
+      importsGate: true,
+      hasSubscriptionPlanInput: true,
+      hasVariantEmitter: true,
+      hasGetter: true,
+      buttonGuarded: true,
+      methodGuarded: true,
+    });
+  });
+
+  it('video-manager must expose secondary variant modal and propagate subscriptionPlan (Phase 2.10)', () => {
+    const filePath = path.join(repoRoot, 'central-dashboard', 'src', 'app', 'features', 'sites', 'components', 'site-content-tab', 'video-manager', 'video-manager.component.ts');
+    const content = fs.readFileSync(filePath, 'utf8');
+    expect({
+      importsVariantPanel: /VideoVariantPanelComponent/.test(content),
+      hasSubscriptionPlanInput: /@Input\(\)\s*subscriptionPlan/.test(content),
+      passesToLibrary: /\[subscriptionPlan\]="subscriptionPlan"/.test(content),
+      hasVariantTarget: /variantTarget/.test(content),
+      hasVariantEmitter: /secondaryVariantChanged\s*=\s*new EventEmitter/.test(content),
+      handlesEvent: /\(videoVariant\)="onVideoVariant/.test(content),
+    }).toEqual({
+      importsVariantPanel: true,
+      hasSubscriptionPlanInput: true,
+      passesToLibrary: true,
+      hasVariantTarget: true,
+      hasVariantEmitter: true,
+      handlesEvent: true,
+    });
+  });
+
+  it('club-diagnostic component must exist and gate view behind remote_diagnostic (Phase 2.11)', () => {
+    const filePath = path.join(repoRoot, 'central-dashboard', 'src', 'app', 'features', 'club-portal', 'club-diagnostic.component.ts');
+    expect(fs.existsSync(filePath)).toBe(true);
+    const content = fs.readFileSync(filePath, 'utf8');
+    expect({
+      injectsGate: /FeatureGateService/.test(content),
+      injectsAnalytics: /AnalyticsService/.test(content),
+      hasGetter: /canUseDiagnostic/.test(content)
+        && /canAccess\('remote_diagnostic'/.test(content),
+      hasLockCard: /!canUseDiagnostic/.test(content),
+      pollsHealth: /getClubHealth/.test(content)
+        && /interval\(30000\)/.test(content),
+      cleansUp: /ngOnDestroy/.test(content)
+        && /unsubscribe/.test(content),
+    }).toEqual({
+      injectsGate: true,
+      injectsAnalytics: true,
+      hasGetter: true,
+      hasLockCard: true,
+      pollsHealth: true,
+      cleansUp: true,
+    });
+  });
+
+  it('app.routes must register /club/diagnostic with club roleGuard (Phase 2.11)', () => {
+    const filePath = path.join(repoRoot, 'central-dashboard', 'src', 'app', 'app.routes.ts');
+    const content = fs.readFileSync(filePath, 'utf8');
+    const diagBlockMatch = content.match(/path:\s*'club\/diagnostic'[\s\S]*?ClubDiagnosticComponent[\s\S]*?\}/);
+    expect({
+      hasRoute: diagBlockMatch !== null,
+      hasRoleGuard: diagBlockMatch !== null && /canActivate:\s*\[roleGuard\]/.test(diagBlockMatch![0]),
+      hasClubRole: diagBlockMatch !== null && /roles:\s*\['club'\]/.test(diagBlockMatch![0]),
+    }).toEqual({
+      hasRoute: true,
+      hasRoleGuard: true,
+      hasClubRole: true,
+    });
+  });
+
+  it('layout sidebar must expose /club/diagnostic link in the club nav section (Phase 2.11)', () => {
+    const filePath = path.join(repoRoot, 'central-dashboard', 'src', 'app', 'features', 'layout', 'layout.component.ts');
+    const content = fs.readFileSync(filePath, 'utf8');
+    const clubSection = content.split('#defaultNav')[0];
+    expect({
+      hasDiagnosticLink: /routerLink="\/club\/diagnostic"/.test(clubSection),
+      hasDiagnosticLabel: /Diagnostic/.test(clubSection),
+    }).toEqual({
+      hasDiagnosticLink: true,
+      hasDiagnosticLabel: true,
     });
   });
 });
