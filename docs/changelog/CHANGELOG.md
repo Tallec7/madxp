@@ -1,3 +1,9 @@
+## [3.134.4](https://github.com/Tallec7/neopro/compare/v3.134.3...v3.134.4) (2026-04-08)
+
+### Bug Fixes
+
+- **club-portal:** prevent SaaS preview iframe reload loop ([fdb9217](https://github.com/Tallec7/neopro/commit/fdb92170fe70ae5cb045f0301feb9fb2e111affe))
+
 ## [3.134.3](https://github.com/Tallec7/neopro/compare/v3.134.2...v3.134.3) (2026-04-08)
 
 ### Bug Fixes
