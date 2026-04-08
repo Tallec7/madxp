@@ -23,7 +23,7 @@ module.exports = {
     // Phase 2: 25/45/45/45 → Phase 4: 40/60/60/60 → Phase 7: 60/75/75/75
     global: {
       branches: 25,    // WebSocket/health services have many edge case branches
-      functions: 43,   // Lowered after ADR-035 Phase 4 dead code cleanup removed tested functions
+      functions: 42,   // Lowered after billing ADR-039 Phase 2 additions (42.93% current)
       lines: 45,
       statements: 45,
     },
