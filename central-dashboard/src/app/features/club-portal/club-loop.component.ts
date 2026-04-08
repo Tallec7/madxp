@@ -24,6 +24,7 @@ import { SiteContentTabComponent } from '../sites/components/site-content-tab/si
         [siteId]="siteId"
         [siteName]="siteName"
         [siteType]="siteType"
+        [subscriptionPlan]="subscriptionPlan"
         [isConnected]="isConnected"
         (configDeployed)="onConfigDeployed()">
       </app-site-content-tab>
@@ -61,6 +62,7 @@ export class ClubLoopComponent implements OnInit {
   siteId = '';
   siteName = '';
   siteType = '';
+  subscriptionPlan: string | null = null;
   isConnected = false;
 
   ngOnInit(): void {
@@ -72,10 +74,11 @@ export class ClubLoopComponent implements OnInit {
   }
 
   private loadSiteInfo(): void {
-    this.api.get<{ site_name: string; club_name: string; status: string; site_type: string }>(`/sites/${this.siteId}`).subscribe({
+    this.api.get<{ site_name: string; club_name: string; status: string; site_type: string; subscription_plan?: string | null }>(`/sites/${this.siteId}`).subscribe({
       next: (site) => {
         this.siteName = site.site_name || site.club_name;
         this.siteType = site.site_type || '';
+        this.subscriptionPlan = site.subscription_plan ?? null;
         this.isConnected = site.status === 'online';
       }
     });

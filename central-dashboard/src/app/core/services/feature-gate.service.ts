@@ -83,8 +83,8 @@ export class FeatureGateService {
    * Default 'club' si valeur inconnue/null.
    */
   resolveLevel(plan: SubscriptionPlan | string | null | undefined): number {
-    if (!plan) return TIER_LEVEL.club;
-    return TIER_LEVEL[plan] ?? TIER_LEVEL.club;
+    if (!plan) return TIER_LEVEL['club'];
+    return TIER_LEVEL[plan] ?? TIER_LEVEL['club'];
   }
 
   /**
@@ -92,9 +92,9 @@ export class FeatureGateService {
    */
   resolveTier(plan: SubscriptionPlan | string | null | undefined): SiteTier {
     const level = this.resolveLevel(plan);
-    if (level >= TIER_LEVEL.premium) return 'premium';
-    if (level >= TIER_LEVEL.pro) return 'pro';
-    if (level >= TIER_LEVEL.club) return 'club';
+    if (level >= TIER_LEVEL['premium']) return 'premium';
+    if (level >= TIER_LEVEL['pro']) return 'pro';
+    if (level >= TIER_LEVEL['club']) return 'club';
     return 'play';
   }
 

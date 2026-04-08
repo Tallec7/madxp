@@ -251,6 +251,7 @@ import { LoopManagerComponent } from '../../loop-manager/loop-manager.component'
       <app-loop-manager
         [siteType]="siteType"
         [isClubUser]="isClubUser"
+        [subscriptionPlan]="subscriptionPlan"
         [config]="config"
         [videoOptionGroups]="videoOptionGroups"
         [cloudVideoPaths]="cloudVideoPaths"
@@ -876,6 +877,7 @@ import { LoopManagerComponent } from '../../loop-manager/loop-manager.component'
 export class ConfigEditorComponent {
   @Input() siteType: string = '';
   @Input() isClubUser = false;
+  @Input() subscriptionPlan: string | null = null;
   @Input() config!: SiteConfiguration;
   @Input() localVideos: LocalVideo[] = [];
   @Input() cloudVideos: { length: number } = { length: 0 };

@@ -79,6 +79,10 @@ import { ConfirmDialogService } from '../../core/services/confirm-dialog.service
               <span class="icon" aria-hidden="true">📊</span>
               <span>{{ 'nav.clubAnalytics' | translate }}</span>
             </a>
+            <a routerLink="/club/diagnostic" routerLinkActive="active" class="nav-item" (click)="closeSidebar()">
+              <span class="icon" aria-hidden="true">🔧</span>
+              <span>Diagnostic</span>
+            </a>
           </ng-container>
 
           <!-- Default navigation (admin/operator/viewer) -->

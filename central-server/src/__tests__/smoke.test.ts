@@ -15300,7 +15300,7 @@ describe('SaaS config save flow', () => {
     expect({
       hasIsClubGetter: /get\s+isClub\s*\(\)/.test(tabContent),
       passesIsClubUserToEditor: /\[isClubUser\]="isClub"/.test(tabContent),
-      hidesProfileSelectorForClub: /contentProfiles\.length\s*>\s*0\s*&&\s*!isClub/.test(tabContent),
+      hidesProfileSelectorForClub: /contentProfiles\.length\s*>\s*0\s*&&\s*\(!isClub\s*\|\|\s*canUseMultiProfiles\)/.test(tabContent),
       jsonToggleHiddenForClub: /config\s*&&\s*!isClubUser/.test(tabContent),
       analyticsCategoriesHiddenForClub: /\*ngIf="!isClubUser"/.test(tabContent),
     }).toEqual({

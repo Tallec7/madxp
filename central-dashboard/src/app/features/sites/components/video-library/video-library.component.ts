@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TranslateModule } from '@ngx-translate/core';
 import { LocalVideo, CloudVideo, LocalStorage } from '../../../../core/models';
+import { FeatureGateService } from '../../../../core/services/feature-gate.service';
 
 export interface VideoItem {
   id: string | null;
@@ -266,6 +267,14 @@ export type SortDirection = 'asc' | 'desc';
             <span class="deploy-progress" *ngIf="siteType !== 'saas' && isDeploying(video)" [title]="'content.deploymentInProgress' | translate">
               {{ getDeployState(video)?.progress ?? 0 }}%
             </span>
+            <button
+              class="action-btn variant"
+              *ngIf="canUseSecondaryDisplay && video.source === 'cloud' && video.id"
+              (click)="onVariant(video, $event)"
+              [title]="video.hasSecondaryVariant ? 'Gérer la variante écran secondaire' : 'Ajouter une variante écran secondaire'"
+            >
+              📺
+            </button>
             <button
               class="action-btn copy-name"
               (click)="onCopyFilename(video, $event)"
@@ -1319,11 +1328,25 @@ export class VideoLibraryComponent implements OnChanges {
   @Input() configVideoRoles: Map<string, Set<string>> = new Map(); // path → Set<'boucle'|'match'|'action'>
   @Input() pendingDeploymentVideoIds: Set<string> = new Set(); // IDs of videos with pending deployments
   @Input() secondaryVariantVideoIds: Set<string> = new Set(); // IDs of videos with secondary display variants
+  @Input() subscriptionPlan: string | null = null;
 
   @Output() videoSelect = new EventEmitter<VideoItem>();
   @Output() videoPreview = new EventEmitter<VideoItem>();
   @Output() videoDeploy = new EventEmitter<VideoItem>();
   @Output() videoDelete = new EventEmitter<VideoItem>();
+  @Output() videoVariant = new EventEmitter<VideoItem>();
+
+  constructor(private gate: FeatureGateService) {}
+
+  get canUseSecondaryDisplay(): boolean {
+    return this.gate.canAccess('secondary_display', this.subscriptionPlan);
+  }
+
+  onVariant(video: VideoItem, event: Event): void {
+    event.stopPropagation();
+    if (!this.canUseSecondaryDisplay) return;
+    this.videoVariant.emit(video);
+  }
   @Output() bulkDeploy = new EventEmitter<VideoItem[]>();
   @Output() bulkDelete = new EventEmitter<VideoItem[]>();
 

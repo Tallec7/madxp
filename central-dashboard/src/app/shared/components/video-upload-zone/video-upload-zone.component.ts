@@ -48,7 +48,7 @@ interface UploadState {
           type="file"
           #fileInput
           (change)="onFileSelected($event)"
-          accept="video/*"
+          accept="video/*,image/*"
           multiple
           hidden
         />
@@ -63,7 +63,10 @@ interface UploadState {
         <div class="upload-content">
           <span class="upload-icon">{{ isUploading ? '...' : '+' }}</span>
           <span class="upload-text">
-            {{ isUploading ? 'Upload en cours...' : 'Glisser des vidéos ici ou cliquer pour sélectionner' }}
+            {{ isUploading ? 'Upload en cours...' : 'Glisser des vidéos ou images ici ou cliquer pour sélectionner' }}
+          </span>
+          <span class="upload-hint">
+            Les images sont automatiquement converties en vidéo de 10s
           </span>
           <span class="upload-hint" *ngIf="siteName">
             Vidéos uploadées pour {{ siteName }}
@@ -307,26 +310,69 @@ export class VideoUploadZoneComponent {
   }
 
   private uploadFiles(files: File[]): void {
-    // Filtrer les fichiers vidéo uniquement
-    const videoFiles = files.filter(file => file.type.startsWith('video/'));
+    // Accepter vidéos ET images (images → converties en vidéo côté serveur)
+    const mediaFiles = files.filter(file =>
+      file.type.startsWith('video/') || file.type.startsWith('image/')
+    );
 
-    if (videoFiles.length === 0) {
+    if (mediaFiles.length === 0) {
       return;
     }
 
     this.isUploading = true;
     this.completedVideos = [];
 
-    // Créer les états d'upload
-    for (const file of videoFiles) {
+    for (const file of mediaFiles) {
       const uploadState: UploadState = {
         filename: file.name,
         progress: 0,
         status: 'uploading',
       };
       this.uploads.push(uploadState);
-      this.uploadFile(file, uploadState);
+      if (file.type.startsWith('image/')) {
+        this.uploadImage(file, uploadState);
+      } else {
+        this.uploadFile(file, uploadState);
+      }
     }
+  }
+
+  private uploadImage(file: File, state: UploadState): void {
+    const formData = new FormData();
+    formData.append('image', file);
+    formData.append('duration', '10');
+    formData.append('blurBackground', 'true');
+    if (this.siteId) {
+      formData.append('site_id', this.siteId);
+    }
+
+    this.http.post<UploadedVideo>(
+      `${environment.apiUrl}/image-to-video`,
+      formData,
+      {
+        withCredentials: true,
+        reportProgress: true,
+        observe: 'events',
+      }
+    ).subscribe({
+      next: (event: HttpEvent<UploadedVideo>) => {
+        if (event.type === HttpEventType.UploadProgress && event.total) {
+          state.progress = Math.round((event.loaded / event.total) * 100);
+        } else if (event.type === HttpEventType.Response && event.body) {
+          state.status = 'complete';
+          state.progress = 100;
+          state.video = event.body;
+          this.completedVideos.push(event.body);
+          this.uploadComplete.emit(event.body);
+          this.checkAllComplete();
+        }
+      },
+      error: (error) => {
+        state.status = 'error';
+        state.error = error.error?.error || 'Erreur conversion image';
+        this.checkAllComplete();
+      },
+    });
   }
 
   private uploadFile(file: File, state: UploadState): void {

@@ -10,6 +10,7 @@ import { LoggerService } from '../../../../core/services/logger.service';
 import { SocketService } from '../../../../core/services/socket.service';
 import { DraftService, ConfigDraft, OrchestratedDeploymentProgress } from '../../../../core/services/draft.service';
 import { AuthService } from '../../../../core/services/auth.service';
+import { FeatureGateService } from '../../../../core/services/feature-gate.service';
 import { ErrorExtractor } from '../../../../core/utils/error-extractor';
 import {
   SiteConfiguration,
@@ -68,7 +69,7 @@ import { ConfigDraftComponent } from './config-draft/config-draft.component';
       </div>
 
       <!-- Profile Selector (hidden for club users) -->
-      <div class="profile-selector-bar" *ngIf="contentProfiles.length > 0 && !isClub">
+      <div class="profile-selector-bar" *ngIf="contentProfiles.length > 0 && (!isClub || canUseMultiProfiles)">
         <label class="profile-selector-label">Profil :</label>
         <select
           class="profile-selector"
@@ -97,7 +98,9 @@ import { ConfigDraftComponent } from './config-draft/config-draft.component';
         [configVideoRoles]="configVideoRoles"
         [pendingDeploymentVideoIds]="pendingDeploymentVideoIds"
         [secondaryVariantVideoIds]="secondaryVariantVideoIds"
+        [subscriptionPlan]="subscriptionPlan"
         (videoUploaded)="onVideoUploaded($event)"
+        (secondaryVariantChanged)="loadContent()"
         (allVideosUploaded)="onAllVideosUploaded($event)"
         (videoDeploy)="onVideoDeploy($event)"
         (videoDeleted)="loadContent()"
@@ -140,6 +143,7 @@ import { ConfigDraftComponent } from './config-draft/config-draft.component';
       <app-config-editor
         [siteType]="siteType"
         [isClubUser]="isClub"
+        [subscriptionPlan]="subscriptionPlan"
         [config]="config"
         [localVideos]="localVideos"
         [cloudVideos]="{ length: cloudVideos.length }"
@@ -365,6 +369,7 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
   @Input() siteId!: string;
   @Input() siteName = '';
   @Input() siteType = '';
+  @Input() subscriptionPlan: string | null = null;
   @Input() isConnected = false;
   @Output() configDeployed = new EventEmitter<void>();
 
@@ -491,11 +496,16 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
     private socketService: SocketService,
     private draftService: DraftService,
     private authService: AuthService,
+    private gate: FeatureGateService,
     private cdr: ChangeDetectorRef
   ) {}
 
   get isClub(): boolean {
     return this.authService.getCurrentUser()?.role === 'club';
+  }
+
+  get canUseMultiProfiles(): boolean {
+    return this.gate.canAccess('multi_profiles', this.subscriptionPlan);
   }
 
   ngOnInit(): void {

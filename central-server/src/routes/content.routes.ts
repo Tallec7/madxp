@@ -23,7 +23,7 @@ router.post('/videos/:id/variants', authenticate, requireRole('admin', 'operator
 router.delete('/videos/:videoId/variants/:displayType', authenticate, requireRole('admin'), contentController.deleteVideoVariant);
 
 // Image to video conversion
-router.post('/image-to-video', authenticate, requireRole('admin', 'operator'), uploadImage.single('image'), contentController.convertImageToVideo);
+router.post('/image-to-video', authenticate, requireRole('admin', 'operator', 'club'), uploadImage.single('image'), contentController.convertImageToVideo);
 
 // Template rendering (overlay animation on existing MP4)
 router.post('/render-template', authenticate, requireRole('admin', 'operator'), uploadVideo.single('video'), contentController.renderTemplate);

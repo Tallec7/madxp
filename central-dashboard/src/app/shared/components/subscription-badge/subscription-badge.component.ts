@@ -227,7 +227,10 @@ export class SubscriptionBadgeComponent implements OnChanges {
     const plans: Record<SubscriptionPlan, string> = {
       trial: 'Essai',
       standard: 'Standard',
-      premium: 'Premium'
+      premium: 'Premium',
+      play: 'Play',
+      club: 'Club',
+      pro: 'Pro'
     };
     return this.plan ? plans[this.plan] : 'Standard';
   }

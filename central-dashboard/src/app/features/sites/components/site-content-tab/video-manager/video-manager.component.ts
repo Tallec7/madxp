@@ -8,11 +8,12 @@ import { ErrorExtractor } from '../../../../../core/utils/error-extractor';
 import { LocalVideo, CloudVideo, LocalStorage } from '../../../../../core/models';
 import { VideoLibraryComponent, VideoItem, VideoDeployState } from '../../video-library/video-library.component';
 import { VideoUploadZoneComponent, UploadedVideo } from '../../../../../shared/components/video-upload-zone/video-upload-zone.component';
+import { VideoVariantPanelComponent } from '../../../../content/video-variant-panel.component';
 
 @Component({
   selector: 'app-video-manager',
   standalone: true,
-  imports: [CommonModule, VideoLibraryComponent, VideoUploadZoneComponent],
+  imports: [CommonModule, VideoLibraryComponent, VideoUploadZoneComponent, VideoVariantPanelComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <!-- Upload Zone -->
@@ -38,11 +39,30 @@ import { VideoUploadZoneComponent, UploadedVideo } from '../../../../../shared/c
         [configVideoRoles]="configVideoRoles"
         [pendingDeploymentVideoIds]="pendingDeploymentVideoIds"
         [secondaryVariantVideoIds]="secondaryVariantVideoIds"
+        [subscriptionPlan]="subscriptionPlan"
         (videoSelect)="onVideoSelect($event)"
         (videoPreview)="onVideoPreview($event)"
         (videoDeploy)="videoDeploy.emit($event)"
         (videoDelete)="onVideoDelete($event)"
+        (videoVariant)="onVideoVariant($event)"
       ></app-video-library>
+    </div>
+
+    <!-- Secondary Variant Modal (Premium only) -->
+    <div class="modal" *ngIf="variantTarget" (click)="closeVariantModal()">
+      <div class="modal-content" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <h2>Variante écran secondaire</h2>
+          <button class="modal-close" (click)="closeVariantModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+          <p class="delete-filename">"{{ variantTarget.displayName || variantTarget.filename }}"</p>
+          <app-video-variant-panel [videoId]="variantTarget.id!"></app-video-variant-panel>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" (click)="closeVariantModal()">Fermer</button>
+        </div>
+      </div>
     </div>
 
     <!-- Delete Video Modal -->
@@ -163,17 +183,30 @@ export class VideoManagerComponent {
   @Input() configVideoRoles: Map<string, Set<string>> = new Map();
   @Input() pendingDeploymentVideoIds: Set<string> = new Set();
   @Input() secondaryVariantVideoIds: Set<string> = new Set();
+  @Input() subscriptionPlan: string | null = null;
 
   @Output() videoUploaded = new EventEmitter<UploadedVideo>();
   @Output() allVideosUploaded = new EventEmitter<UploadedVideo[]>();
   @Output() videoDeploy = new EventEmitter<VideoItem>();
   @Output() videoDeleted = new EventEmitter<void>();
+  @Output() secondaryVariantChanged = new EventEmitter<void>();
 
   selectedVideoPath = '';
   showDeleteModal = false;
   deleteTarget: VideoItem | null = null;
   deleteCanPi = false;
   deleteCanCloud = false;
+  variantTarget: VideoItem | null = null;
+
+  onVideoVariant(video: VideoItem): void {
+    if (!video.id) return;
+    this.variantTarget = video;
+  }
+
+  closeVariantModal(): void {
+    this.variantTarget = null;
+    this.secondaryVariantChanged.emit();
+  }
 
   constructor(
     private sitesService: SitesService,

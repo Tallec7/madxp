@@ -22,6 +22,7 @@ import { ErrorExtractor } from '../../core/utils/error-extractor';
 import { Site, SiteSponsorBenchmarkResponse } from '../../core/models';
 import { ClubAnalyticsChartService } from './club-analytics-chart.service';
 import { ClubExportService } from './club-export.service';
+import { FeatureGateService } from '../../core/services/feature-gate.service';
 import {
   computePlaysTrend,
   formatDuration,
@@ -47,13 +48,17 @@ import {
           <select [(ngModel)]="selectedPeriod" (change)="onPeriodChange()" class="period-select">
             <option value="7">7 jours</option>
             <option value="30">30 jours</option>
-            <option value="90">90 jours</option>
+            <option value="90" [disabled]="!canUseAnalyticsAdvanced">90 jours {{ canUseAnalyticsAdvanced ? '' : '🔒' }}</option>
           </select>
-          <button class="btn btn-outline" (click)="exportData()" [disabled]="exporting">
-            {{ exporting ? 'Export...' : 'CSV' }}
+          <button class="btn btn-outline" (click)="exportData()"
+                  [disabled]="exporting || !canUseAnalyticsAdvanced"
+                  [title]="canUseAnalyticsAdvanced ? '' : 'Export CSV réservé à l’abonnement Premium'">
+            {{ exporting ? 'Export...' : 'CSV' }}{{ canUseAnalyticsAdvanced ? '' : ' 🔒' }}
           </button>
-          <button class="btn btn-primary" (click)="downloadPdf()" [disabled]="exportingPdf">
-            {{ exportingPdf ? 'Generation...' : 'PDF' }}
+          <button class="btn btn-primary" (click)="downloadPdf()"
+                  [disabled]="exportingPdf || !canUseAnalyticsAdvanced"
+                  [title]="canUseAnalyticsAdvanced ? '' : 'Export PDF réservé à l’abonnement Premium'">
+            {{ exportingPdf ? 'Generation...' : 'PDF' }}{{ canUseAnalyticsAdvanced ? '' : ' 🔒' }}
           </button>
         </div>
       </div>
@@ -449,6 +454,11 @@ export class ClubAnalyticsComponent implements OnInit, OnDestroy {
   }
   private readonly chartService = inject(ClubAnalyticsChartService);
   private readonly exportService = inject(ClubExportService);
+  private readonly gate = inject(FeatureGateService);
+
+  get canUseAnalyticsAdvanced(): boolean {
+    return this.gate.canAccess('analytics_advanced', this.site?.subscription_plan ?? null);
+  }
   private readonly logger = inject(LoggerService);
   private refreshSubscription?: Subscription;
   private dailyChart: Chart | null = null;
@@ -517,6 +527,9 @@ export class ClubAnalyticsComponent implements OnInit, OnDestroy {
   }
 
   onPeriodChange(): void {
+    if (this.selectedPeriod === '90' && !this.canUseAnalyticsAdvanced) {
+      this.selectedPeriod = '30';
+    }
     this.chartService.destroyChart(this.dailyChart);
     this.dailyChart = null;
     this.loadData();
@@ -529,6 +542,7 @@ export class ClubAnalyticsComponent implements OnInit, OnDestroy {
   }
 
   exportData(): void {
+    if (!this.canUseAnalyticsAdvanced) return;
     const days = parseInt(this.selectedPeriod, 10);
     this.exportService.exportCsv(
       this.siteId, this.site?.club_name || this.siteId, days,
@@ -538,6 +552,7 @@ export class ClubAnalyticsComponent implements OnInit, OnDestroy {
   }
 
   downloadPdf(): void {
+    if (!this.canUseAnalyticsAdvanced) return;
     const days = parseInt(this.selectedPeriod, 10);
     this.exportService.exportPdf(
       this.siteId, this.site?.club_name || this.siteId, days,

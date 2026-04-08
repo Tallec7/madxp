@@ -2,6 +2,7 @@ import { Component, Input, Output, EventEmitter, OnInit, OnChanges, SimpleChange
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { SiteConfiguration, LoopVideoConfig, LocalVideo, SiteSponsor } from '../../../../core/models';
+import { FeatureGateService } from '../../../../core/services/feature-gate.service';
 
 interface LoopTab {
   id: string;
@@ -170,11 +171,13 @@ interface SponsorWeightGroup {
                   🔗 {{ sponsor.name }}
                 </span>
               </div>
-              <div class="weight-control-inline" *ngIf="getVideoSponsorId(video) as sid">
-                <button class="weight-btn" (click)="updateSponsorWeight(sid, (video.weight || 1) - 1)" [disabled]="(video.weight || 1) <= 1">−</button>
+              <div class="weight-control-inline" *ngIf="getVideoSponsorId(video) as sid"
+                   [title]="canUseWeightedRotation ? '' : 'Pondération réservée aux abonnements Pro et Premium'">
+                <button class="weight-btn" (click)="updateSponsorWeight(sid, (video.weight || 1) - 1)" [disabled]="!canUseWeightedRotation || (video.weight || 1) <= 1">−</button>
                 <span class="weight-value">×{{ video.weight || 1 }}</span>
-                <button class="weight-btn" (click)="updateSponsorWeight(sid, (video.weight || 1) + 1)" [disabled]="(video.weight || 1) >= 10">+</button>
+                <button class="weight-btn" (click)="updateSponsorWeight(sid, (video.weight || 1) + 1)" [disabled]="!canUseWeightedRotation || (video.weight || 1) >= 10">+</button>
                 <span class="weight-pct-inline">{{ getWeightPercentage(sid) }}%</span>
+                <span class="weight-lock" *ngIf="!canUseWeightedRotation" title="Pondération réservée aux abonnements Pro et Premium">🔒</span>
               </div>
               <button
                 class="btn-pin"
@@ -892,6 +895,13 @@ interface SponsorWeightGroup {
 export class LoopManagerComponent implements OnInit, OnChanges {
   @Input() siteType: string = '';
   @Input() isClubUser = false;
+  @Input() subscriptionPlan: string | null = null;
+
+  constructor(private gate: FeatureGateService) {}
+
+  get canUseWeightedRotation(): boolean {
+    return this.gate.canAccess('weighted_rotation', this.subscriptionPlan);
+  }
   @Input() config!: SiteConfiguration;
   @Input() videoOptionGroups: { key: string; label: string; icon: string; videos: { path: string; displayName: string; isOnPi: boolean }[] }[] = [];
   @Input() cloudVideoPaths: Set<string> = new Set();
@@ -1111,6 +1121,7 @@ export class LoopManagerComponent implements OnInit, OnChanges {
   }
 
   updateSponsorWeight(sponsorId: string, newWeight: number): void {
+    if (!this.canUseWeightedRotation) return;
     const weight = Math.max(1, Math.min(10, Math.round(newWeight)));
     const videos = this.getPhaseVideos();
     for (const video of videos) {
