@@ -401,20 +401,20 @@ export const getSiteLocalContent = async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ error: 'Site non trouvé' });
     }
 
+    // For SaaS sites, config lives in config_profiles, not local_config_mirror
+    let effectiveConfig: Record<string, unknown> | null = site.local_config_mirror as Record<string, unknown> | null;
+    if (!effectiveConfig && site.site_type === 'saas') {
+      const defaultProfile = await configProfileRepository.findDefaultForSite(id);
+      if (defaultProfile) {
+        effectiveConfig = defaultProfile.configuration;
+      }
+    }
+
     // Club users: filter cloud videos to only show their own + NEOPRO + videos in config
     let cloudVideoRows = allCloudVideoRows;
     if (isClub) {
-      // For SaaS sites, config lives in config_profiles, not local_config_mirror
-      let siteConfig: Record<string, unknown> | null = site.local_config_mirror as Record<string, unknown> | null;
-      if (!siteConfig && site.site_type === 'saas') {
-        const defaultProfile = await configProfileRepository.findDefaultForSite(id);
-        if (defaultProfile) {
-          siteConfig = defaultProfile.configuration;
-        }
-      }
-
-      const configFilenames = siteConfig
-        ? extractConfigVideoFilenames(siteConfig)
+      const configFilenames = effectiveConfig
+        ? extractConfigVideoFilenames(effectiveConfig)
         : new Set<string>();
 
       cloudVideoRows = allCloudVideoRows.filter((v) =>
@@ -423,6 +423,8 @@ export const getSiteLocalContent = async (req: AuthRequest, res: Response) => {
         || configFilenames.has(v.filename.toLowerCase())
       );
     }
+
+    const isSaasWithProfileConfig = !site.local_config_mirror && effectiveConfig !== null;
 
     // Formatter les vidéos cloud
     const cloudVideos = cloudVideoRows.map((v) => ({
@@ -455,7 +457,7 @@ export const getSiteLocalContent = async (req: AuthRequest, res: Response) => {
       deployedFilename: r.deployed_filename,
     }));
 
-    if (!site.local_config_mirror) {
+    if (!site.local_config_mirror && !isSaasWithProfileConfig) {
       return res.json({
         siteId: id,
         siteName: site.site_name,
@@ -476,7 +478,8 @@ export const getSiteLocalContent = async (req: AuthRequest, res: Response) => {
     }
 
     // Type the config as any to access dynamic properties
-    const config = site.local_config_mirror as Record<string, unknown>;
+    // For SaaS sites, use the default profile config; otherwise local_config_mirror
+    const config = effectiveConfig as Record<string, unknown>;
 
     // Extraire les vidéos, le stockage et les infos hotspot depuis la config enrichie
     const localVideos = (config._localVideos as Array<unknown>) || [];
@@ -493,8 +496,8 @@ export const getSiteLocalContent = async (req: AuthRequest, res: Response) => {
       siteName: site.site_name,
       clubName: site.club_name,
       hasContent: true,
-      lastSync: site.last_config_sync,
-      configHash: site.local_config_hash,
+      lastSync: isSaasWithProfileConfig ? null : site.last_config_sync,
+      configHash: isSaasWithProfileConfig ? null : site.local_config_hash,
       configuration: cleanConfig,
       localVideos,
       cloudVideos,
