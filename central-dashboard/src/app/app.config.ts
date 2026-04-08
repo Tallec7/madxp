@@ -27,7 +27,8 @@ export const appConfig: ApplicationConfig = {
     provideTranslateService(),
     provideTranslateHttpLoader({
       prefix: '/assets/i18n/',
-      suffix: '.json'
+      // Cache-bust i18n JSON on each build to avoid stale translations on CDN/browser cache.
+      suffix: `.json?v=${Date.now()}`
     }),
     {
       provide: APP_INITIALIZER,
