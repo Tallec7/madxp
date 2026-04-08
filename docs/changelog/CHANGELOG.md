@@ -1,3 +1,9 @@
+## [3.134.2](https://github.com/Tallec7/neopro/compare/v3.134.1...v3.134.2) (2026-04-08)
+
+### Bug Fixes
+
+- **club-portal:** trigger redeploy for SaaS actions move ([bf9815e](https://github.com/Tallec7/neopro/commit/bf9815e9986c931cf9b61c89685f68f7a4b73b51))
+
 ## [3.134.1](https://github.com/Tallec7/neopro/compare/v3.134.0...v3.134.1) (2026-04-08)
 
 ### Bug Fixes
