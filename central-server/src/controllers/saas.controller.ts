@@ -11,6 +11,8 @@
 import { Request, Response } from 'express';
 import { siteRepository, configProfileRepository } from '../repositories';
 import { getVideoUrl } from '../services/storage.service';
+import { enrichConfigWithAnalyticsMetadata } from '../utils/config-analytics-metadata';
+import { SiteConfiguration } from '../types';
 import logger from '../config/logger';
 
 interface VideoLike {
@@ -119,6 +121,12 @@ export async function getSaasConfig(req: Request, res: Response) {
       configuration = site.local_config_mirror as Record<string, unknown>;
     }
 
+    // Enrichir avec les métadonnées analytics (video_id, sponsor_id, analytics_category)
+    // avant la résolution des URLs pour que resolveVideoUrls préserve ces champs via spread
+    try {
+      await enrichConfigWithAnalyticsMetadata(configuration as unknown as SiteConfiguration);
+    } catch { /* non-fatal — la config reste jouable sans métadonnées analytics */ }
+
     // Résoudre toutes les URLs vidéo (config vide = site fraîchement créé, retourner les defaults)
     const sponsors = (configuration.sponsors as VideoLike[]) || [];
     const categories = (configuration.categories as CategoryLike[]) || [];
@@ -219,6 +227,11 @@ export async function getSaasProfileConfig(req: Request, res: Response) {
     }
 
     const configuration = profile.configuration;
+
+    try {
+      await enrichConfigWithAnalyticsMetadata(configuration as unknown as SiteConfiguration);
+    } catch { /* non-fatal */ }
+
     const sponsors = (configuration.sponsors as VideoLike[]) || [];
     const categories = (configuration.categories as CategoryLike[]) || [];
     const timeCategories = (configuration.timeCategories as TimeCategoryLike[]) || [];
