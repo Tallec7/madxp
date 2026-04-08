@@ -1,3 +1,9 @@
+## [3.134.1](https://github.com/Tallec7/neopro/compare/v3.134.0...v3.134.1) (2026-04-08)
+
+### Bug Fixes
+
+- **i18n:** cache-bust translation JSON to avoid stale CDN/browser cache ([adea2fa](https://github.com/Tallec7/neopro/commit/adea2fa9ed7ba141175b76b6961b20ec2a07e7ec))
+
 # [3.134.0](https://github.com/Tallec7/neopro/compare/v3.133.2...v3.134.0) (2026-04-08)
 
 ### Features
