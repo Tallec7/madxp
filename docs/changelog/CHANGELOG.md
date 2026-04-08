@@ -1,3 +1,9 @@
+# [3.134.0](https://github.com/Tallec7/neopro/compare/v3.133.2...v3.134.0) (2026-04-08)
+
+### Features
+
+- **club-portal:** apply rose theme to club layout ([9167b98](https://github.com/Tallec7/neopro/commit/9167b98b45f9eb6d139dec193920f6c9168aecb4)), closes [#3D3036](https://github.com/Tallec7/neopro/issues/3D3036) [#FE6AA6](https://github.com/Tallec7/neopro/issues/FE6AA6)
+
 ## [3.133.2](https://github.com/Tallec7/neopro/compare/v3.133.1...v3.133.2) (2026-04-08)
 
 ### Bug Fixes
