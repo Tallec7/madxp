@@ -1,3 +1,9 @@
+## [3.136.6](https://github.com/Tallec7/neopro/compare/v3.136.5...v3.136.6) (2026-04-08)
+
+### Bug Fixes
+
+- **club-portal:** trigger SaaS dashboard insights redeploy ([e0f3946](https://github.com/Tallec7/neopro/commit/e0f39465229a2b6ace186c07e460785a137b4574)), closes [1-#5](https://github.com/1-/issues/5)
+
 ## [3.136.5](https://github.com/Tallec7/neopro/compare/v3.136.4...v3.136.5) (2026-04-08)
 
 ### Bug Fixes
