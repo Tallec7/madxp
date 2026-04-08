@@ -1,3 +1,9 @@
+# [3.135.0](https://github.com/Tallec7/neopro/compare/v3.134.4...v3.135.0) (2026-04-08)
+
+### Features
+
+- **billing:** add subscription tier gating foundation (ADR-039) ([4e2cbde](https://github.com/Tallec7/neopro/commit/4e2cbde2d1d2a2ddc3688d56152194f132a6612a))
+
 ## [3.134.4](https://github.com/Tallec7/neopro/compare/v3.134.3...v3.134.4) (2026-04-08)
 
 ### Bug Fixes
