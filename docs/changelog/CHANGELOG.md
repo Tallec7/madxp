@@ -1,3 +1,9 @@
+# [3.133.0](https://github.com/Tallec7/neopro/compare/v3.132.0...v3.133.0) (2026-04-08)
+
+### Features
+
+- **club-portal:** SaaS realtime config sync, live preview, analytics & client errors ([6f99da3](https://github.com/Tallec7/neopro/commit/6f99da37ddc9e08322b6e07bf8aed2d39d40c075))
+
 # [3.132.0](https://github.com/Tallec7/neopro/compare/v3.131.2...v3.132.0) (2026-04-07)
 
 ### Features
