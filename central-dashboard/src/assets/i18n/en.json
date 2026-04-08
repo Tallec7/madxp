@@ -138,6 +138,8 @@
     "videoCount": "Videos on device",
     "lastSync": "Last sync",
     "version": "Software version",
+    "activeAlerts": "Active alerts",
+    "activeAlertsHint": "Unresolved incidents on this site",
     "loopDescription": "Upload your videos, organize the broadcast order and deploy to your screen.",
     "sponsorsDescription": "Manage your club's local sponsors and track their performance.",
     "openTv": "Open screen",

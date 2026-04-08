@@ -162,6 +162,17 @@ class AlertRepositoryImpl extends BaseRepository<Alert> {
   }
 
   /**
+   * Count active alerts for a single site (fast, indexed on site_id + status).
+   */
+  async countActiveForSite(siteId: string): Promise<number> {
+    const result = await query<{ count: string }>(
+      `SELECT COUNT(*)::text AS count FROM alerts WHERE site_id = $1 AND status = 'active'`,
+      [siteId]
+    );
+    return parseInt(result.rows[0]?.count || '0', 10);
+  }
+
+  /**
    * Resout toutes les alertes actives d'un site (tous types confondus).
    */
   async resolveAllForSite(siteId: string): Promise<number> {

@@ -12,6 +12,8 @@ import {
   analyticsRepository,
   configProfileRepository,
   siteSponsorRepository,
+  alertRepository,
+  softwareUpdateRepository,
 } from '../repositories';
 
 // Seuils de connexion (en secondes) — identiques à sites.controller.ts
@@ -602,6 +604,12 @@ export const getSiteDashboardData = async (req: AuthRequest, res: Response) => {
       videoCount: number;
       totalImpressions: number;
     }
+    interface LastOtaDeployment {
+      version: string;
+      status: string;
+      completedAt: string | null;
+      createdAt: string;
+    }
     let saasMetrics: {
       connectedClients: number;
       todayVideosPlayed: number;
@@ -624,10 +632,16 @@ export const getSiteDashboardData = async (req: AuthRequest, res: Response) => {
       activeProfile: SaasActiveProfile | null;
       // Sponsors actifs (#5)
       activeSponsors: SaasActiveSponsor[];
+      // Pi-only (option B) — dernière OTA + alertes actives (0/null pour SaaS)
+      lastOtaDeployment: LastOtaDeployment | null;
+      activeAlertsCount: number;
     } | null = null;
 
-    if (site.site_type === 'saas') {
-      const saasClientCount = socketService.getSaasClientCount(id);
+    // Engagement metrics sont calculees pour TOUS les sites (SaaS + Pi).
+    // Les sites demo/test sont exclus pour eviter du bruit.
+    if (site.site_type === 'saas' || site.site_type === 'pi' || !site.site_type) {
+      const saasClientCount =
+        site.site_type === 'saas' ? socketService.getSaasClientCount(id) : 0;
       const nowDate = new Date();
       const todayStart = new Date();
       todayStart.setHours(0, 0, 0, 0);
@@ -652,6 +666,8 @@ export const getSiteDashboardData = async (req: AuthRequest, res: Response) => {
         topVideosRows,
         defaultProfile,
         siteSponsorsList,
+        lastOtaRow,
+        activeAlertsCount,
       ] = await Promise.all([
         analyticsRepository.getDashboardUsage(id, todayStart.toISOString(), nowDate.toISOString()),
         analyticsRepository.getDashboardUsage(id, yesterdayStart.toISOString(), todayStart.toISOString()),
@@ -673,6 +689,8 @@ export const getSiteDashboardData = async (req: AuthRequest, res: Response) => {
         analyticsRepository.getTopVideos(id, weekStart.toISOString(), nowDate.toISOString(), 3),
         configProfileRepository.findDefaultForSite(id),
         siteSponsorRepository.listBySite(id).catch(() => []),
+        softwareUpdateRepository.findLastForSite(id).catch(() => null),
+        alertRepository.countActiveForSite(id).catch(() => 0),
       ]);
 
       // #4 — active profile : extraire le nombre de vidéos de boucle + sponsors depuis la config JSONB
@@ -732,6 +750,17 @@ export const getSiteDashboardData = async (req: AuthRequest, res: Response) => {
         })),
         activeProfile,
         activeSponsors,
+        lastOtaDeployment: lastOtaRow
+          ? {
+              version: lastOtaRow.version,
+              status: lastOtaRow.status,
+              completedAt: lastOtaRow.completed_at
+                ? new Date(lastOtaRow.completed_at).toISOString()
+                : null,
+              createdAt: new Date(lastOtaRow.created_at).toISOString(),
+            }
+          : null,
+        activeAlertsCount,
       };
     }
 

@@ -138,6 +138,8 @@
     "videoCount": "Videos sur le boitier",
     "lastSync": "Derniere synchro",
     "version": "Version logicielle",
+    "activeAlerts": "Alertes actives",
+    "activeAlertsHint": "Incidents non resolus sur ce site",
     "loopDescription": "Uploadez vos videos, organisez l'ordre de diffusion et deployez sur votre ecran.",
     "sponsorsDescription": "Gerez les sponsors locaux de votre club et suivez leurs performances.",
     "openTv": "Ouvrir l'écran",

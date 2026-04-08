@@ -50,6 +50,13 @@ interface SaasMetrics {
   topVideos?: SaasTopVideo[];
   activeProfile?: SaasActiveProfile | null;
   activeSponsors?: SaasActiveSponsor[];
+  lastOtaDeployment?: {
+    version: string;
+    status: string;
+    completedAt: string | null;
+    createdAt: string;
+  } | null;
+  activeAlertsCount?: number;
 }
 
 interface SiteDashboard {
@@ -149,12 +156,80 @@ interface SiteDashboard {
           </div>
         </div>
 
-        <!-- Software Version -->
+        <!-- Software Version + Last OTA -->
         <div class="card">
           <div class="card-icon">⚙️</div>
           <div class="card-content">
             <h3>{{ 'clubPortal.version' | translate }}</h3>
             <p class="stat-number">{{ siteDashboard.site?.software_version || '-' }}</p>
+            <p class="status-detail" *ngIf="siteDashboard.saasMetrics?.lastOtaDeployment as ota">
+              <ng-container [ngSwitch]="ota.status">
+                <span *ngSwitchCase="'completed'" class="ota-badge ota-ok">✓ {{ ota.version }}</span>
+                <span *ngSwitchCase="'failed'" class="ota-badge ota-err">✕ {{ ota.version }}</span>
+                <span *ngSwitchCase="'rolled_back'" class="ota-badge ota-err">↺ {{ ota.version }}</span>
+                <span *ngSwitchDefault class="ota-badge ota-pending">⋯ {{ ota.version }}</span>
+              </ng-container>
+              · {{ (ota.completedAt || ota.createdAt) | date:'dd/MM HH:mm' }}
+            </p>
+          </div>
+        </div>
+
+        <!-- Active alerts (Pi only) -->
+        <div class="card" *ngIf="(siteDashboard.saasMetrics?.activeAlertsCount || 0) > 0">
+          <div class="card-icon">🚨</div>
+          <div class="card-content">
+            <h3>{{ 'clubPortal.activeAlerts' | translate }}</h3>
+            <p class="stat-number alert-count">{{ siteDashboard.saasMetrics?.activeAlertsCount }}</p>
+            <p class="status-detail">{{ 'clubPortal.activeAlertsHint' | translate }}</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Pi engagement row: vidéos jouées + temps écran + complétion -->
+      <div class="status-cards" *ngIf="siteDashboard && !isSaas && siteDashboard.saasMetrics">
+        <div class="card">
+          <div class="card-icon">🎬</div>
+          <div class="card-content">
+            <h3>{{ 'clubPortal.saas.videosPlayedToday' | translate }}</h3>
+            <div class="stat-row">
+              <p class="stat-number">{{ siteDashboard.saasMetrics?.todayVideosPlayed || 0 }}</p>
+              <span class="trend-badge" *ngIf="getVideosTrend() as trend" [ngClass]="trend.cls">
+                {{ trend.icon }} {{ trend.label }}
+              </span>
+            </div>
+            <p class="status-detail">
+              {{ siteDashboard.saasMetrics?.todaySessions || 0 }} {{ 'clubPortal.saas.sessionsLabel' | translate }}
+            </p>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-icon">⏱️</div>
+          <div class="card-content">
+            <h3>{{ 'clubPortal.saas.todayScreenTime' | translate }}</h3>
+            <div class="stat-row">
+              <p class="stat-number">{{ formatDuration(siteDashboard.saasMetrics?.todayScreenTime || 0) }}</p>
+              <span class="trend-badge" *ngIf="getScreenTimeTrend() as trend" [ngClass]="trend.cls">
+                {{ trend.icon }} {{ trend.label }}
+              </span>
+            </div>
+            <p class="status-detail">{{ 'clubPortal.saas.sinceMidnight' | translate }}</p>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-icon">📊</div>
+          <div class="card-content">
+            <h3>{{ 'clubPortal.saas.weekPerformance' | translate }}</h3>
+            <div class="stat-row">
+              <p class="stat-number">{{ (siteDashboard.saasMetrics?.weekCompletionRate || 0) | number:'1.0-0' }}%</p>
+              <span class="trend-badge" *ngIf="getCompletionTrend() as trend" [ngClass]="trend.cls">
+                {{ trend.icon }} {{ trend.label }}
+              </span>
+            </div>
+            <p class="status-detail">
+              {{ 'clubPortal.saas.completionLabel' | translate }} · {{ siteDashboard.saasMetrics?.weekSponsorsDisplayed || 0 }} {{ 'clubPortal.saas.sponsorsShownLabel' | translate }}
+            </p>
           </div>
         </div>
       </div>
@@ -224,7 +299,7 @@ interface SiteDashboard {
       </div>
 
       <!-- Sparkline 7 jours (#2) -->
-      <div class="sparkline-card" *ngIf="siteDashboard && isSaas && hasSparklineData()">
+      <div class="sparkline-card" *ngIf="siteDashboard && hasSparklineData()">
         <div class="sparkline-header">
           <h3>{{ 'clubPortal.saas.last7DaysTitle' | translate }}</h3>
           <span class="sparkline-sub">{{ siteDashboard.saasMetrics?.weekVideosPlayed || 0 }} {{ 'clubPortal.saas.videosTotal' | translate }}</span>
@@ -257,7 +332,7 @@ interface SiteDashboard {
       </div>
 
       <!-- Profil actif (#4) + Top vidéos (#3) -->
-      <div class="insights-grid" *ngIf="siteDashboard && isSaas">
+      <div class="insights-grid" *ngIf="siteDashboard && siteDashboard.saasMetrics">
         <!-- #4 Profil actif -->
         <div class="insight-card" *ngIf="siteDashboard.saasMetrics?.activeProfile as profile">
           <div class="insight-header">
@@ -298,7 +373,7 @@ interface SiteDashboard {
       </div>
 
       <!-- #5 Sponsors actifs -->
-      <div class="sponsors-card" *ngIf="siteDashboard && isSaas && (siteDashboard.saasMetrics?.activeSponsors?.length || 0) > 0">
+      <div class="sponsors-card" *ngIf="siteDashboard && (siteDashboard.saasMetrics?.activeSponsors?.length || 0) > 0">
         <div class="sponsors-header">
           <span class="insight-icon">💼</span>
           <h3>{{ 'clubPortal.saas.activeSponsorsTitle' | translate }}</h3>
@@ -321,13 +396,13 @@ interface SiteDashboard {
       </div>
 
       <!-- Empty state hint when no activity -->
-      <div class="empty-state-hint" *ngIf="siteDashboard && isSaas && showEmptyStateHint()">
+      <div class="empty-state-hint" *ngIf="siteDashboard && showEmptyStateHint()">
         <span class="hint-icon">💡</span>
         <span class="hint-text">{{ 'clubPortal.saas.emptyStateHint' | translate }}</span>
       </div>
 
       <!-- Quick action: manage loop -->
-      <div class="quick-actions" *ngIf="siteDashboard && isSaas">
+      <div class="quick-actions" *ngIf="siteDashboard && siteDashboard.saasMetrics">
         <a routerLink="/club/loop" class="action-link">
           <span class="action-icon">🎞️</span>
           <div class="action-text">
@@ -507,6 +582,22 @@ interface SiteDashboard {
     .trend-up { background: #dcfce7; color: #166534; }
     .trend-down { background: #fee2e2; color: #991b1b; }
     .trend-flat { background: #f1f5f9; color: #64748b; }
+
+    /* OTA badge inline (Pi version card) */
+    .ota-badge {
+      display: inline-block;
+      font-weight: 600;
+      font-size: 0.7rem;
+      padding: 0.125rem 0.4rem;
+      border-radius: 999px;
+      margin-right: 0.25rem;
+    }
+    .ota-ok { background: #dcfce7; color: #166534; }
+    .ota-err { background: #fee2e2; color: #991b1b; }
+    .ota-pending { background: #fef3c7; color: #92400e; }
+
+    /* Alert count highlight */
+    .alert-count { color: #dc2626; }
 
     /* #2 — Sparkline */
     .sparkline-card {
@@ -751,7 +842,12 @@ export class ClubDashboardComponent implements OnInit, OnDestroy {
   showEmptyStateHint(): boolean {
     const m = this.siteDashboard?.saasMetrics;
     if (!m) return false;
-    return (m.connectedClients || 0) === 0 && (m.todayVideosPlayed || 0) === 0;
+    // SaaS : pas de client connecté + pas d'activité
+    // Pi : pas d'activité sur 7 jours (connectedClients non pertinent)
+    if (this.isSaas) {
+      return (m.connectedClients || 0) === 0 && (m.todayVideosPlayed || 0) === 0;
+    }
+    return (m.todayVideosPlayed || 0) === 0 && (m.weekVideosPlayed || 0) === 0;
   }
 
   // ============================================================

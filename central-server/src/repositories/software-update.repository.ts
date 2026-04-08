@@ -287,6 +287,34 @@ class SoftwareUpdateRepositoryImpl extends BaseRepository<SoftwareUpdateRow> {
   }
 
   /**
+   * Retourne le dernier deploiement OTA connu pour un site donne
+   * (target direct `site` ou ciblage indirect via un `group`).
+   */
+  async findLastForSite(
+    siteId: string
+  ): Promise<{ version: string; status: string; completed_at: Date | null; created_at: Date } | null> {
+    const result = await query<{
+      version: string;
+      status: string;
+      completed_at: Date | null;
+      created_at: Date;
+    }>(
+      `SELECT su.version, ud.status, ud.completed_at, ud.created_at
+       FROM update_deployments ud
+       LEFT JOIN software_updates su ON ud.update_id = su.id
+       WHERE (
+         (ud.target_type = 'site' AND ud.target_id = $1)
+         OR (ud.target_type = 'group'
+             AND ud.target_id IN (SELECT group_id FROM site_groups WHERE site_id = $1))
+       )
+       ORDER BY ud.created_at DESC
+       LIMIT 1`,
+      [siteId]
+    );
+    return result.rows[0] || null;
+  }
+
+  /**
    * Cree un deploiement de mise a jour.
    */
   async createDeployment(input: CreateUpdateDeploymentInput): Promise<UpdateDeploymentRow> {

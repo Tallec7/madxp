@@ -130,6 +130,8 @@
     "signingIn": "Iniciando sesión..."
   },
   "clubPortal": {
+    "activeAlerts": "Alertas activas",
+    "activeAlertsHint": "Incidentes sin resolver en este sitio",
     "connectionStatus": "Estado de conexion",
     "faq": {
       "live": "[TRANSLATE] <strong>Are my changes live?</strong> Yes — open screens automatically reload the new config.",
