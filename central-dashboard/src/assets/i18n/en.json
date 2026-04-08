@@ -172,7 +172,18 @@
       "completionLabel": "completion rate",
       "emptyStateHint": "No activity yet — click \"Open screen\" to start a session.",
       "manageLoopTitle": "Manage my video loop",
-      "manageLoopHint": "Add, remove or reorder the videos shown on your screen"
+      "manageLoopHint": "Add, remove or reorder the videos shown on your screen",
+      "last7DaysTitle": "Activity last 7 days",
+      "videosTotal": "videos total",
+      "activeProfileTitle": "Active profile",
+      "profileVideos": "loop videos",
+      "profileSponsors": "sponsors",
+      "editProfile": "Edit profile",
+      "topVideosTitle": "Top videos this week",
+      "playsShort": "plays",
+      "activeSponsorsTitle": "Active sponsors",
+      "sponsorVideos": "videos",
+      "sponsorImpressions": "impressions"
     },
     "faq": {
       "screens": "<strong>How many screens can I open?</strong> No limit — open the URL on as many TVs, tablets or PCs as needed.",

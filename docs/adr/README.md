@@ -56,6 +56,7 @@ Un ADR documente une décision technique importante avec :
 | [ADR-037](ADR-037-saas-mode-architecture.md)                      | Architecture Mode SaaS (TV sans Raspberry Pi)             | Accepté                  | Avr 2026 |
 | [ADR-038](ADR-038-club-portal-saas-realtime-and-observability.md) | Portail club SaaS : temps réel, preview et client errors  | Accepté                  | Avr 2026 |
 | [ADR-039](ADR-039-subscription-tier-additive-strategy.md)         | Extension additive des tiers d'abonnement (play/club/pro) | Accepté                  | Avr 2026 |
+| [ADR-040](ADR-040-club-saas-dashboard-insights.md)                | Portail club SaaS — insights et tendances dashboard       | Accepté                  | Avr 2026 |
 
 ### Supersédés
 
