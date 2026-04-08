@@ -1,3 +1,9 @@
+# [3.137.0](https://github.com/Tallec7/neopro/compare/v3.136.6...v3.137.0) (2026-04-08)
+
+### Features
+
+- **club-portal:** enrich Pi club dashboard with engagement insights ([cb540d3](https://github.com/Tallec7/neopro/commit/cb540d3a175a1b8075e1bf0d6a8291cdcaba69a8))
+
 ## [3.136.6](https://github.com/Tallec7/neopro/compare/v3.136.5...v3.136.6) (2026-04-08)
 
 ### Bug Fixes
