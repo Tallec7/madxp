@@ -9,6 +9,7 @@
 import { Component, Input, Output, EventEmitter, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpClient, HttpEventType, HttpEvent } from '@angular/common/http';
+import { TranslateModule } from '@ngx-translate/core';
 import { environment } from '@env/environment';
 
 export interface UploadedVideo {
@@ -31,7 +32,7 @@ interface UploadState {
 @Component({
   selector: 'app-video-upload-zone',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, TranslateModule],
   template: `
     <div class="upload-zone-container">
       <div
@@ -51,6 +52,14 @@ interface UploadState {
           multiple
           hidden
         />
+        <input
+          type="file"
+          #cameraInput
+          (change)="onFileSelected($event)"
+          accept="video/*"
+          capture="environment"
+          hidden
+        />
         <div class="upload-content">
           <span class="upload-icon">{{ isUploading ? '...' : '+' }}</span>
           <span class="upload-text">
@@ -61,6 +70,16 @@ interface UploadState {
           </span>
         </div>
       </div>
+
+      <!-- Mobile camera capture button (only on touch devices) -->
+      <button
+        type="button"
+        class="camera-btn"
+        *ngIf="isTouchDevice && !isUploading"
+        (click)="$event.stopPropagation(); cameraInput.click()"
+        [title]="'videoUpload.recordFromCamera' | translate">
+        📹 {{ 'videoUpload.recordFromCamera' | translate }}
+      </button>
 
       <!-- Upload progress -->
       <div class="uploads-list" *ngIf="uploads.length > 0">
@@ -115,6 +134,21 @@ interface UploadState {
       opacity: 0.7;
       cursor: not-allowed;
     }
+
+    .camera-btn {
+      display: block;
+      margin: 0.75rem auto 0;
+      padding: 0.625rem 1.25rem;
+      background: var(--neo-hockey-dark, #2022E9);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.875rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: opacity 0.15s;
+    }
+    .camera-btn:hover { opacity: 0.9; }
 
     .upload-content {
       display: flex;
@@ -229,6 +263,9 @@ export class VideoUploadZoneComponent {
   isDragOver = false;
   isUploading = false;
   uploads: UploadState[] = [];
+
+  readonly isTouchDevice = typeof window !== 'undefined'
+    && ('ontouchstart' in window || (navigator.maxTouchPoints ?? 0) > 0);
 
   private completedVideos: UploadedVideo[] = [];
 

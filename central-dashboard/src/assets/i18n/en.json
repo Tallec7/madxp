@@ -1,4 +1,7 @@
 {
+  "videoUpload": {
+    "recordFromCamera": "Record from camera"
+  },
   "common": {
     "loading": "Loading...",
     "save": "Save",
@@ -52,8 +55,7 @@
     "generating": "Generating...",
     "downloadPdf": "Download PDF",
     "deployToPi": "Deploy to Pi",
-    "editPriority": "Edit priority",
-    "saving": "Saving..."
+    "editPriority": "Edit priority"
   },
   "auth": {
     "login": "Login",
@@ -102,7 +104,8 @@
     "toggleMenu": "Toggle menu",
     "clubDashboard": "My club",
     "clubLoop": "My loop",
-    "clubSponsors": "My sponsors"
+    "clubSponsors": "My sponsors",
+    "clubAnalytics": "My analytics"
   },
   "status": {
     "connected": "Connected",
@@ -136,7 +139,37 @@
     "lastSync": "Last sync",
     "version": "Software version",
     "loopDescription": "Upload your videos, organize the broadcast order and deploy to your screen.",
-    "sponsorsDescription": "Manage your club's local sponsors and track their performance."
+    "sponsorsDescription": "Manage your club's local sponsors and track their performance.",
+    "openTv": "Open screen",
+    "openRemote": "Open remote",
+    "qrCodes": "QR codes",
+    "showPreview": "Preview",
+    "hidePreview": "Hide preview",
+    "livePreview": "Live preview",
+    "openInTab": "Open in a new tab",
+    "scanTv": "Scan to open the screen on a TV/tablet",
+    "scanRemote": "Scan to control from your smartphone",
+    "help": "Help",
+    "helpTitle": "User guide",
+    "helpSaasTitle": "User guide — SaaS mode",
+    "saas": {
+      "connectedClients": "Connected screens",
+      "connectedClientsHint": "Real-time",
+      "todaySessions": "Sessions today",
+      "todayScreenTime": "Screen time today",
+      "todayLabel": "Since midnight",
+      "videosPlayed": "videos played",
+      "weekStats": "This week",
+      "sponsorsShown": "sponsor impressions",
+      "completion": "completion",
+      "helpTitle": "Help",
+      "help": "User guide"
+    },
+    "faq": {
+      "screens": "<strong>How many screens can I open?</strong> No limit — open the URL on as many TVs, tablets or PCs as needed.",
+      "live": "<strong>Are my changes live?</strong> Yes — open screens automatically reload the new config.",
+      "offline": "<strong>Can I use the app offline?</strong> No, SaaS mode requires a permanent Internet connection on the screen."
+    }
   },
   "notifications": {
     "commandExecuted": "Command executed successfully",

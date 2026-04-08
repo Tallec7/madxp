@@ -7,6 +7,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="google" content="notranslate" />
     <link rel="icon" type="image/x-icon" href="favicon.ico" />
+    <link rel="apple-touch-icon" href="neopro-logo-white.png" />
     <!-- E-23 US-23.7.3: PWA manifest for standalone mode (bypasses autoplay restriction) -->
     <link rel="manifest" href="manifest.json" />
     <meta name="theme-color" content="#0a0a0a" />
@@ -67,8 +68,10 @@
     <!-- E-23 US-23.7.3: Register service worker + audio unlock on first interaction -->
     <script>
       if ('serviceWorker' in navigator) {
+        // Use relative URL so it works under both "/" (Pi) and "/saas/" (SaaS) baseHref
+        var swUrl = new URL('service-worker.js', document.baseURI).href;
         navigator.serviceWorker
-          .register('/service-worker.js')
+          .register(swUrl)
           .then(function () {
             // Listen for audio-unlocked broadcast from SW
             navigator.serviceWorker.addEventListener('message', function (e) {

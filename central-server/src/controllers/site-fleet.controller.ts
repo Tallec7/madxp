@@ -619,6 +619,9 @@ export const getSiteDashboardData = async (req: AuthRequest, res: Response) => {
         id: site.id,
         site_name: site.site_name,
         club_name: site.club_name,
+        site_type: site.site_type,
+        software_version: site.software_version,
+        last_seen_at: site.last_seen_at,
       },
       connection: {
         isConnected: isConnectedNow || (secondsSinceLastSeen !== null && secondsSinceLastSeen < ONLINE_THRESHOLD_SECONDS),

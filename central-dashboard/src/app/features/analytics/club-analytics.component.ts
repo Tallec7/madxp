@@ -16,6 +16,7 @@ import {
 } from '../../core/services/analytics.service';
 import { SitesService } from '../../core/services/sites.service';
 import { SiteSponsorService } from '../../core/services/site-sponsor.service';
+import { AuthService } from '../../core/services/auth.service';
 import { LoggerService } from '../../core/services/logger.service';
 import { ErrorExtractor } from '../../core/utils/error-extractor';
 import { Site, SiteSponsorBenchmarkResponse } from '../../core/models';
@@ -40,7 +41,7 @@ import {
       <!-- Header -->
       <div class="page-header">
         <div class="header-left">
-          <a class="back-link" [routerLink]="['/sites', siteId]">&larr; {{ site.club_name }}</a>
+          <a class="back-link" [routerLink]="backLink">&larr; {{ site.club_name }}</a>
         </div>
         <div class="header-actions">
           <select [(ngModel)]="selectedPeriod" (change)="onPeriodChange()" class="period-select">
@@ -439,6 +440,13 @@ export class ClubAnalyticsComponent implements OnInit, OnDestroy {
   private readonly analyticsService = inject(AnalyticsService);
   private readonly sitesService = inject(SitesService);
   private readonly sponsorService = inject(SiteSponsorService);
+  private readonly authService = inject(AuthService);
+
+  get backLink(): string[] {
+    return this.authService.getCurrentUser()?.role === 'club'
+      ? ['/club']
+      : ['/sites', this.siteId];
+  }
   private readonly chartService = inject(ClubAnalyticsChartService);
   private readonly exportService = inject(ClubExportService);
   private readonly logger = inject(LoggerService);
@@ -446,7 +454,12 @@ export class ClubAnalyticsComponent implements OnInit, OnDestroy {
   private dailyChart: Chart | null = null;
 
   ngOnInit(): void {
-    this.siteId = this.route.snapshot.paramMap.get('id')!;
+    const paramId = this.route.snapshot.paramMap.get('id');
+    this.siteId = paramId || this.authService.getCurrentUser()?.site_id || '';
+    if (!this.siteId) {
+      this.logger.warn('ClubAnalytics: no siteId available');
+      return;
+    }
     this.loadData();
     this.refreshSubscription = interval(60000).subscribe(() => this.loadData());
   }

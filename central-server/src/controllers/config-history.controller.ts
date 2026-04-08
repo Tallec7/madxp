@@ -427,6 +427,8 @@ export const saveConfigDirect = async (req: AuthRequest, res: Response) => {
       savedBy: req.user?.email,
     });
 
+    socketService.emitSaasConfigUpdated(id, { versionId, updatedBy: req.user?.email });
+
     res.json({ success: true, versionId });
   } catch (error) {
     logger.error('Save SaaS config error:', error);

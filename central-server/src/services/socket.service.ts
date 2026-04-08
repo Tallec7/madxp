@@ -724,6 +724,16 @@ class SocketService {
     return room.size - (piInRoom ? 1 : 0);
   }
 
+  /**
+   * Notify connected SaaS browsers that their config has been updated.
+   * Clients should reload the config via GET /api/saas/:siteId/config.
+   */
+  emitSaasConfigUpdated(siteId: string, meta?: { versionId?: string; updatedBy?: string }): void {
+    if (!this.io) return;
+    this.io.to(siteId).emit('saas-config-updated', { siteId, ...(meta || {}), at: new Date().toISOString() });
+    logger.info('Emitted saas-config-updated', { siteId, ...(meta || {}) });
+  }
+
   getConnectionHealth(siteId: string): {
     inMap: boolean;
     socketConnected: boolean;

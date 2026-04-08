@@ -60,6 +60,7 @@ import sponsorAlertsRoutes from './routes/sponsor-alerts.routes';
 import safeRoutes from './routes/safe.routes';
 import campaignRoutes from './routes/campaign.routes';
 import saasRoutes from './routes/saas.routes';
+import clientErrorsRoutes from './routes/client-errors.routes';
 import { authRateLimit, apiRateLimit, sensitiveRateLimit, adminRateLimit, loggingRateLimit } from './middleware/user-rate-limit';
 import { setRLSContext } from './middleware/rls-context';
 import { correlationMiddleware } from './middleware/correlation';
@@ -417,6 +418,7 @@ app.use('/api/sponsor-alerts', apiRateLimit, sponsorAlertsRoutes); // Proactive 
 app.use('/api/safe', apiRateLimit, safeRoutes); // SAFe dashboard (portfolio, proposals, epics)
 app.use('/api/campaigns', campaignRoutes); // Campaign management (ADR-035 Phase 3) — rate limits per-route
 app.use('/api/saas', saasRoutes); // SaaS mode (ADR-037) — public, rate limits per-route
+app.use('/api/client-errors', clientErrorsRoutes); // Frontend error capture — public, rate-limited
 
 // 404 handler - Must be AFTER all routes, BEFORE error handler
 // Uses standardized error format with correlation ID

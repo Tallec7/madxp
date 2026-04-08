@@ -198,6 +198,16 @@ export class SocketService {
       clientType: 'saas-tv',
     });
     console.log('[Socket] SaaS register emitted', { siteId, version: APP_VERSION });
+
+    // Listen for config updates pushed from the dashboard and reload the app.
+    // Idempotent registration — Socket.IO reuses the same socket across reconnects.
+    this.socket.off('saas-config-updated');
+    this.socket.on('saas-config-updated', (payload: { siteId?: string }) => {
+      console.log('[Socket] saas-config-updated received', payload);
+      if (payload?.siteId && payload.siteId !== siteId) return;
+      // Soft reload — preserves ?site=... in the URL
+      setTimeout(() => window.location.reload(), 500);
+    });
   }
 
   public on<T = Command>(action: string, callback: (data: T) => void) {

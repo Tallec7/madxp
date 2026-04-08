@@ -1,4 +1,7 @@
 {
+  "videoUpload": {
+    "recordFromCamera": "Enregistrer depuis la caméra"
+  },
   "common": {
     "loading": "Chargement...",
     "save": "Enregistrer",
@@ -52,8 +55,7 @@
     "generating": "Génération...",
     "downloadPdf": "Télécharger PDF",
     "deployToPi": "Déployer vers le Pi",
-    "editPriority": "Modifier la priorité",
-    "saving": "Enregistrement..."
+    "editPriority": "Modifier la priorité"
   },
   "auth": {
     "login": "Connexion",
@@ -102,7 +104,8 @@
     "toggleMenu": "Basculer le menu",
     "clubDashboard": "Mon club",
     "clubLoop": "Ma boucle",
-    "clubSponsors": "Mes sponsors"
+    "clubSponsors": "Mes sponsors",
+    "clubAnalytics": "Mes statistiques"
   },
   "status": {
     "connected": "Connecté",
@@ -136,7 +139,37 @@
     "lastSync": "Derniere synchro",
     "version": "Version logicielle",
     "loopDescription": "Uploadez vos videos, organisez l'ordre de diffusion et deployez sur votre ecran.",
-    "sponsorsDescription": "Gerez les sponsors locaux de votre club et suivez leurs performances."
+    "sponsorsDescription": "Gerez les sponsors locaux de votre club et suivez leurs performances.",
+    "openTv": "Ouvrir l'écran",
+    "openRemote": "Ouvrir la télécommande",
+    "qrCodes": "QR codes",
+    "showPreview": "Aperçu",
+    "hidePreview": "Masquer l'aperçu",
+    "livePreview": "Aperçu en direct",
+    "openInTab": "Ouvrir dans un onglet",
+    "scanTv": "Scannez pour ouvrir l'écran sur une TV/tablette",
+    "scanRemote": "Scannez pour piloter depuis votre smartphone",
+    "help": "Aide",
+    "helpTitle": "Guide d'utilisation",
+    "helpSaasTitle": "Guide d'utilisation — Mode SaaS",
+    "saas": {
+      "connectedClients": "Écrans connectés",
+      "connectedClientsHint": "En temps réel",
+      "todaySessions": "Sessions aujourd'hui",
+      "todayScreenTime": "Temps d'écran aujourd'hui",
+      "todayLabel": "Depuis minuit",
+      "videosPlayed": "vidéos jouées",
+      "weekStats": "Cette semaine",
+      "sponsorsShown": "affichages sponsors",
+      "completion": "complétion",
+      "helpTitle": "Aide",
+      "help": "Guide d'utilisation"
+    },
+    "faq": {
+      "screens": "<strong>Combien d'écrans puis-je ouvrir ?</strong> Aucune limite — ouvrez l'URL sur autant de TVs, tablettes ou PC que nécessaire.",
+      "live": "<strong>Mes changements sont-ils live ?</strong> Oui — les écrans ouverts rechargent automatiquement la nouvelle config.",
+      "offline": "<strong>Puis-je utiliser l'app hors-ligne ?</strong> Non, le mode SaaS nécessite une connexion Internet permanente sur l'écran."
+    }
   },
   "notifications": {
     "commandExecuted": "Commande exécutée avec succès",

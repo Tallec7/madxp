@@ -66,6 +66,12 @@ export const routes: Routes = [
         loadComponent: () => import('./features/club-portal/club-sponsors.component').then(m => m.ClubSponsorsComponent)
       },
       {
+        path: 'club/analytics',
+        canActivate: [roleGuard],
+        data: { roles: ['club'] },
+        loadComponent: () => import('./features/analytics/club-analytics.component').then(m => m.ClubAnalyticsComponent)
+      },
+      {
         path: 'analytics',
         canActivate: [roleGuard],
         data: { roles: ['super_admin', 'admin', 'operator'] },
