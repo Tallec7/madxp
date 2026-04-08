@@ -1,3 +1,9 @@
+## [3.136.1](https://github.com/Tallec7/neopro/compare/v3.136.0...v3.136.1) (2026-04-08)
+
+### Bug Fixes
+
+- **saas:** fix analytics 404 and spurious manual player error ([a19d177](https://github.com/Tallec7/neopro/commit/a19d177373f9338e6aaeef04fc481bc740f64083))
+
 # [3.136.0](https://github.com/Tallec7/neopro/compare/v3.135.0...v3.136.0) (2026-04-08)
 
 ### Features
