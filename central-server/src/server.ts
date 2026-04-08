@@ -388,7 +388,7 @@ app.use('/api/sites', sitesRoutes);
 app.use('/api/sites', draftsRoutes);  // Config drafts - sous /api/sites/:siteId/draft
 app.use('/api/sites', configProfilesRoutes);  // Config profiles - sous /api/sites/:siteId/profiles
 app.use('/api/groups', apiRateLimit, groupsRoutes);
-app.use('/api', sensitiveRateLimit, contentRoutes); // Upload de vidéos - plus restrictif
+app.use('/api', contentRoutes); // Vidéos & déploiements - rate limits per-route dans content.routes.ts
 app.use('/api', updatesRoutes); // Mises à jour - rate limits per-route dans updates.routes.ts
 app.use('/api/analytics', apiRateLimit, analyticsRoutes);
 app.use('/api/analytics', advertiserAnalyticsRoutes); // Analytics annonceurs - rate limits per-route (piAnalyticsRateLimit for /impressions, apiRateLimit for the rest)
