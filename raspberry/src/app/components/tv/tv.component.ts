@@ -257,6 +257,11 @@ export class TvComponent implements OnInit, OnDestroy {
     // Configurer l'analytics service avec la configuration (pour le mapping des catégories)
     this.analyticsService.setConfiguration(this.configuration);
 
+    // En mode SaaS, la boucle tourne en continu sans phase match — activer le recording au démarrage
+    if ((environment as { saasMode?: boolean }).saasMode && !this.isSlaveMode && this.displayType !== 'secondary') {
+      this.recordingState.startRecording(false);
+    }
+
     // Récupérer le site_id depuis l'API du serveur local
     this.loadSiteId();
 

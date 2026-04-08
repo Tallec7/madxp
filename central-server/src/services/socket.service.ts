@@ -718,10 +718,15 @@ class SocketService {
     if (!this.io) return 0;
     const room = this.io.sockets.adapter.rooms.get(siteId);
     if (!room) return 0;
-    // Subtract the Pi agent socket if present
-    const piSocket = this.connectedSites.get(siteId);
-    const piInRoom = piSocket ? room.has(piSocket.id) : false;
-    return room.size - (piInRoom ? 1 : 0);
+    // Count only TV screens — exclude remote tabs (saas-remote) and Pi agents
+    let count = 0;
+    for (const socketId of room) {
+      const sock = this.io.sockets.sockets.get(socketId);
+      if (sock && (sock as any).clientType === 'saas-tv') {
+        count++;
+      }
+    }
+    return count;
   }
 
   /**

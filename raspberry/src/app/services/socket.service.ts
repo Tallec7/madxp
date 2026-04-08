@@ -192,10 +192,13 @@ export class SocketService {
     const params = new URLSearchParams(window.location.search);
     const siteId = params.get('site') || localStorage.getItem('neopro_saas_site_id') || '';
     if (!siteId || !this.socket) return;
+    // Detect client type: remote tab should not be counted as a screen
+    const isRemote = window.location.pathname.includes('/remote');
+    const clientType = isRemote ? 'saas-remote' : 'saas-tv';
     this.socket.emit('saas-register', {
       siteId,
       version: APP_VERSION,
-      clientType: 'saas-tv',
+      clientType,
     });
     console.log('[Socket] SaaS register emitted', { siteId, version: APP_VERSION });
 
