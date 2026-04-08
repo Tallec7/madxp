@@ -264,7 +264,8 @@ export const changePlan = async (req: AuthRequest, res: Response) => {
     }
 
     // Valider le plan
-    const validPlans: SubscriptionPlan[] = ['trial', 'standard', 'premium'];
+    // Legacy: trial|standard|premium — Nouveaux: play|club|pro|premium (ADR-039)
+    const validPlans: SubscriptionPlan[] = ['trial', 'standard', 'premium', 'play', 'club', 'pro'];
     if (!validPlans.includes(plan)) {
       return res.status(400).json({ error: 'Plan invalide' });
     }
@@ -367,7 +368,8 @@ export const updateSubscription = async (req: AuthRequest, res: Response) => {
 
     // Valider le plan si fourni
     if (subscription_plan !== undefined && subscription_plan !== null) {
-      const validPlans: SubscriptionPlan[] = ['trial', 'standard', 'premium'];
+      // Legacy: trial|standard|premium — Nouveaux: play|club|pro|premium (ADR-039)
+    const validPlans: SubscriptionPlan[] = ['trial', 'standard', 'premium', 'play', 'club', 'pro'];
       if (!validPlans.includes(subscription_plan)) {
         return res.status(400).json({ error: 'Plan invalide' });
       }

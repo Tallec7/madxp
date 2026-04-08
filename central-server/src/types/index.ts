@@ -650,7 +650,25 @@ export interface AssetDeploymentResult {
  * - standard: Abonnement de base
  * - premium: Abonnement avec fonctionnalités avancées
  */
-export type SubscriptionPlan = 'trial' | 'standard' | 'premium';
+/**
+ * Valeurs legacy (pre-2026-04): trial | standard | premium
+ * Nouveaux tiers commerciaux: play | club | pro | premium
+ *
+ * FeatureGateService traite ces alias comme equivalents:
+ *   - 'trial'    ≡ 'play'  (niveau 0)
+ *   - 'standard' ≡ 'club'  (niveau 1)
+ *   - 'pro'                (niveau 2)
+ *   - 'premium'            (niveau 3)
+ *
+ * Voir ADR-039 pour la strategie additive et le rename ulterieur.
+ */
+export type SubscriptionPlan =
+  | 'trial'
+  | 'standard'
+  | 'premium'
+  | 'play'
+  | 'club'
+  | 'pro';
 
 /**
  * Motifs de suspension d'un site

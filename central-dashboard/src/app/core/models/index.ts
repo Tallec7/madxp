@@ -156,8 +156,8 @@ export interface Site {
   subscription_start?: string | null;
   /** Date de fin d'abonnement */
   subscription_end?: string | null;
-  /** Plan d'abonnement (trial, standard, premium) */
-  subscription_plan?: 'trial' | 'standard' | 'premium';
+  /** Plan d'abonnement — voir SubscriptionPlan (legacy + nouveaux tiers ADR-039) */
+  subscription_plan?: SubscriptionPlan;
   /** Site suspendu manuellement */
   suspended?: boolean;
   /** Motif de suspension */
@@ -525,9 +525,26 @@ export interface AnalyticsCategory {
 // ============================================================================
 
 /**
- * Plans d'abonnement disponibles
+ * Plans d'abonnement / tiers commerciaux.
+ *
+ * Legacy (pre-2026-04): trial | standard | premium
+ * Nouveaux tiers: play | club | pro | premium
+ *
+ * FeatureGateService traite ces alias comme equivalents :
+ *   - 'trial'    ≡ 'play'  (niveau 0)
+ *   - 'standard' ≡ 'club'  (niveau 1)
+ *   - 'pro'                (niveau 2)
+ *   - 'premium'            (niveau 3)
+ *
+ * Voir ADR-039 pour la strategie additive et le rename ulterieur.
  */
-export type SubscriptionPlan = 'trial' | 'standard' | 'premium';
+export type SubscriptionPlan =
+  | 'trial'
+  | 'standard'
+  | 'premium'
+  | 'play'
+  | 'club'
+  | 'pro';
 
 /**
  * Motifs de suspension

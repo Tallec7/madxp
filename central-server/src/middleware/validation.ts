@@ -248,14 +248,16 @@ export const schemas = {
   }),
 
   changePlan: Joi.object({
-    plan: Joi.string().valid('trial', 'standard', 'premium').required(),
+    // Legacy: trial|standard|premium — Nouveaux: play|club|pro|premium (ADR-039)
+    plan: Joi.string().valid('trial', 'standard', 'premium', 'play', 'club', 'pro').required(),
     note: Joi.string().max(500).optional().allow('', null),
   }),
 
   updateSubscription: Joi.object({
     subscription_start: Joi.string().isoDate().optional().allow(null, ''),
     subscription_end: Joi.string().isoDate().optional().allow(null, ''),
-    subscription_plan: Joi.string().valid('trial', 'standard', 'premium').optional().allow(null),
+    // Legacy: trial|standard|premium — Nouveaux: play|club|pro|premium (ADR-039)
+    subscription_plan: Joi.string().valid('trial', 'standard', 'premium', 'play', 'club', 'pro').optional().allow(null),
     note: Joi.string().max(500).optional().allow('', null),
   }),
 
