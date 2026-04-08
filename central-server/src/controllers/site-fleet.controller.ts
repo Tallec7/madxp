@@ -11,6 +11,7 @@ import {
   videoVariantRepository,
   analyticsRepository,
   configProfileRepository,
+  siteSponsorRepository,
 } from '../repositories';
 
 // Seuils de connexion (en secondes) — identiques à sites.controller.ts
@@ -575,7 +576,32 @@ export const getSiteDashboardData = async (req: AuthRequest, res: Response) => {
     // Récupérer l'état de santé détaillé de la connexion WebSocket
     const connectionHealth = socketService.getConnectionHealth(id);
 
-    // SaaS-specific metrics: connected browsers + video activity
+    // SaaS-specific metrics: connected browsers + video activity + trends/insights
+    interface SaasDailyPoint {
+      day: string;
+      videosPlayed: number;
+      screenTimeSeconds: number;
+    }
+    interface SaasTopVideo {
+      filename: string;
+      category: string;
+      plays: number;
+      avgCompletion: number;
+    }
+    interface SaasActiveProfile {
+      id: string;
+      name: string;
+      displayName: string | null;
+      loopVideoCount: number;
+      sponsorCount: number;
+    }
+    interface SaasActiveSponsor {
+      id: string;
+      name: string;
+      logoUrl: string | null;
+      videoCount: number;
+      totalImpressions: number;
+    }
     let saasMetrics: {
       connectedClients: number;
       todayVideosPlayed: number;
@@ -585,24 +611,100 @@ export const getSiteDashboardData = async (req: AuthRequest, res: Response) => {
       weekScreenTime: number;
       weekCompletionRate: number;
       weekSponsorsDisplayed: number;
+      // Trends (#1) — valeurs de la période précédente pour calculer ↑↓
+      yesterdayVideosPlayed: number;
+      yesterdayScreenTime: number;
+      previousWeekCompletionRate: number;
+      previousWeekVideosPlayed: number;
+      // Sparklines (#2) — 7 derniers jours
+      dailySparkline: SaasDailyPoint[];
+      // Top vidéos (#3)
+      topVideos: SaasTopVideo[];
+      // Profil actif (#4)
+      activeProfile: SaasActiveProfile | null;
+      // Sponsors actifs (#5)
+      activeSponsors: SaasActiveSponsor[];
     } | null = null;
 
     if (site.site_type === 'saas') {
       const saasClientCount = socketService.getSaasClientCount(id);
+      const nowDate = new Date();
       const todayStart = new Date();
       todayStart.setHours(0, 0, 0, 0);
+      const yesterdayStart = new Date(todayStart);
+      yesterdayStart.setDate(yesterdayStart.getDate() - 1);
       const weekStart = new Date();
       weekStart.setDate(weekStart.getDate() - 7);
       weekStart.setHours(0, 0, 0, 0);
-      const now = new Date();
+      const previousWeekStart = new Date(weekStart);
+      previousWeekStart.setDate(previousWeekStart.getDate() - 7);
 
-      const [todayUsage, weekUsage, todaySessions, weekSponsors, weekCompletion] = await Promise.all([
-        analyticsRepository.getDashboardUsage(id, todayStart.toISOString(), now.toISOString()),
-        analyticsRepository.getDashboardUsage(id, weekStart.toISOString(), now.toISOString()),
+      const [
+        todayUsage,
+        yesterdayUsage,
+        weekUsage,
+        previousWeekUsage,
+        todaySessions,
+        weekSponsors,
+        weekCompletion,
+        previousWeekCompletion,
+        dailySeries,
+        topVideosRows,
+        defaultProfile,
+        siteSponsorsList,
+      ] = await Promise.all([
+        analyticsRepository.getDashboardUsage(id, todayStart.toISOString(), nowDate.toISOString()),
+        analyticsRepository.getDashboardUsage(id, yesterdayStart.toISOString(), todayStart.toISOString()),
+        analyticsRepository.getDashboardUsage(id, weekStart.toISOString(), nowDate.toISOString()),
+        analyticsRepository.getDashboardUsage(id, previousWeekStart.toISOString(), weekStart.toISOString()),
         analyticsRepository.countSessions(id, todayStart.toISOString()),
         analyticsRepository.countSponsorsDisplayed(id, weekStart.toISOString()),
         analyticsRepository.getCompletionRate(id, weekStart.toISOString()),
+        analyticsRepository.getCompletionRateRange(
+          id,
+          previousWeekStart.toISOString(),
+          weekStart.toISOString()
+        ),
+        analyticsRepository.getDailyUsage(
+          id,
+          weekStart.toISOString().slice(0, 10),
+          nowDate.toISOString().slice(0, 10)
+        ),
+        analyticsRepository.getTopVideos(id, weekStart.toISOString(), nowDate.toISOString(), 3),
+        configProfileRepository.findDefaultForSite(id),
+        siteSponsorRepository.listBySite(id).catch(() => []),
       ]);
+
+      // #4 — active profile : extraire le nombre de vidéos de boucle + sponsors depuis la config JSONB
+      let activeProfile: SaasActiveProfile | null = null;
+      if (defaultProfile) {
+        const cfg = (defaultProfile.configuration || {}) as Record<string, unknown>;
+        const loopVideos = Array.isArray((cfg as { loopVideos?: unknown[] }).loopVideos)
+          ? ((cfg as { loopVideos: unknown[] }).loopVideos as unknown[]).length
+          : 0;
+        const sponsors = Array.isArray((cfg as { sponsors?: unknown[] }).sponsors)
+          ? ((cfg as { sponsors: unknown[] }).sponsors as unknown[]).length
+          : 0;
+        activeProfile = {
+          id: defaultProfile.id,
+          name: defaultProfile.name,
+          displayName: defaultProfile.display_name,
+          loopVideoCount: loopVideos,
+          sponsorCount: sponsors,
+        };
+      }
+
+      // #5 — active sponsors : top 5 par impressions, uniquement actifs (avec vidéos)
+      const activeSponsors: SaasActiveSponsor[] = siteSponsorsList
+        .filter((s) => parseInt(s.video_count) > 0)
+        .slice(0, 5)
+        .map((s) => ({
+          id: s.id,
+          name: s.name,
+          logoUrl: s.logo_url,
+          videoCount: parseInt(s.video_count) || 0,
+          totalImpressions: parseInt(s.total_impressions) || 0,
+        }));
 
       saasMetrics = {
         connectedClients: saasClientCount,
@@ -613,6 +715,23 @@ export const getSiteDashboardData = async (req: AuthRequest, res: Response) => {
         weekScreenTime: parseInt(weekUsage.screen_time_seconds),
         weekCompletionRate: weekCompletion,
         weekSponsorsDisplayed: weekSponsors,
+        yesterdayVideosPlayed: parseInt(yesterdayUsage.videos_played),
+        yesterdayScreenTime: parseInt(yesterdayUsage.screen_time_seconds),
+        previousWeekCompletionRate: previousWeekCompletion,
+        previousWeekVideosPlayed: parseInt(previousWeekUsage.videos_played),
+        dailySparkline: dailySeries.map((d) => ({
+          day: d.day,
+          videosPlayed: d.videos_played,
+          screenTimeSeconds: d.screen_time_seconds,
+        })),
+        topVideos: topVideosRows.map((v) => ({
+          filename: v.video_filename,
+          category: v.category,
+          plays: parseInt(v.plays) || 0,
+          avgCompletion: Math.round(v.avg_completion || 0),
+        })),
+        activeProfile,
+        activeSponsors,
       };
     }
 

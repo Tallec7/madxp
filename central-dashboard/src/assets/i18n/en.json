@@ -163,7 +163,16 @@
       "sponsorsShown": "sponsor impressions",
       "completion": "completion",
       "helpTitle": "Help",
-      "help": "User guide"
+      "help": "User guide",
+      "sinceMidnight": "Since midnight",
+      "videosPlayedToday": "Videos played today",
+      "sessionsLabel": "sessions",
+      "weekPerformance": "7-day performance",
+      "sponsorsShownLabel": "sponsor impressions",
+      "completionLabel": "completion rate",
+      "emptyStateHint": "No activity yet — click \"Open screen\" to start a session.",
+      "manageLoopTitle": "Manage my video loop",
+      "manageLoopHint": "Add, remove or reorder the videos shown on your screen"
     },
     "faq": {
       "screens": "<strong>How many screens can I open?</strong> No limit — open the URL on as many TVs, tablets or PCs as needed.",

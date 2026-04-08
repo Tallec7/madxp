@@ -159,7 +159,16 @@
       "todayScreenTime": "[TRANSLATE] Screen time today",
       "todaySessions": "[TRANSLATE] Sessions today",
       "videosPlayed": "[TRANSLATE] videos played",
-      "weekStats": "[TRANSLATE] This week"
+      "weekStats": "[TRANSLATE] This week",
+      "sinceMidnight": "Desde medianoche",
+      "videosPlayedToday": "Vídeos reproducidos hoy",
+      "sessionsLabel": "sesiones",
+      "weekPerformance": "Rendimiento 7 días",
+      "sponsorsShownLabel": "impresiones de patrocinadores",
+      "completionLabel": "tasa de finalización",
+      "emptyStateHint": "Sin actividad aún — haz clic en \"Abrir pantalla\" para iniciar una sesión.",
+      "manageLoopTitle": "Gestionar mi bucle de vídeo",
+      "manageLoopHint": "Añade, elimina o reordena los vídeos que se muestran en tu pantalla"
     },
     "scanRemote": "[TRANSLATE] Scan to control from your smartphone",
     "scanTv": "[TRANSLATE] Scan to open the screen on a TV/tablet",

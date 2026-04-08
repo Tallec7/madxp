@@ -935,6 +935,38 @@ class AnalyticsRepositoryImpl {
   }
 
   /**
+   * Daily usage series for sparklines (videos + screen time per day).
+   * Retourne un tableau chronologique incluant les jours sans activité (0).
+   */
+  async getDailyUsage(
+    siteId: string,
+    from: string,
+    to: string
+  ): Promise<Array<{ day: string; videos_played: number; screen_time_seconds: number }>> {
+    const result = await query<{ day: string; videos_played: string; screen_time_seconds: string }>(
+      `WITH days AS (
+         SELECT generate_series($2::date, $3::date, '1 day'::interval)::date AS day
+       )
+       SELECT
+         to_char(d.day, 'YYYY-MM-DD') AS day,
+         COALESCE(COUNT(vp.id), 0)::text AS videos_played,
+         COALESCE(SUM(vp.duration_played), 0)::text AS screen_time_seconds
+       FROM days d
+       LEFT JOIN video_plays vp
+         ON vp.site_id = $1
+        AND vp.played_at::date = d.day
+       GROUP BY d.day
+       ORDER BY d.day ASC`,
+      [siteId, from, to]
+    );
+    return result.rows.map((r) => ({
+      day: r.day,
+      videos_played: parseInt(r.videos_played) || 0,
+      screen_time_seconds: parseInt(r.screen_time_seconds) || 0,
+    }));
+  }
+
+  /**
    * Completion rate (percentage) for a site since a given date.
    */
   async getCompletionRate(siteId: string, since: string): Promise<number> {
@@ -946,6 +978,23 @@ class AnalyticsRepositoryImpl {
        FROM video_plays
        WHERE site_id = $1 AND played_at >= $2`,
       [siteId, since]
+    );
+    return parseInt(result.rows[0]?.rate || '0');
+  }
+
+  /**
+   * Completion rate (percentage) for a site over a date range [from, to).
+   * Utilisé pour comparer semaine courante vs semaine précédente.
+   */
+  async getCompletionRateRange(siteId: string, from: string, to: string): Promise<number> {
+    const result = await query<{ rate: string }>(
+      `SELECT
+        CASE WHEN COUNT(*) = 0 THEN 0
+             ELSE ROUND(100.0 * COUNT(*) FILTER (WHERE completed = true) / COUNT(*))
+        END as rate
+       FROM video_plays
+       WHERE site_id = $1 AND played_at >= $2 AND played_at < $3`,
+      [siteId, from, to]
     );
     return parseInt(result.rows[0]?.rate || '0');
   }
