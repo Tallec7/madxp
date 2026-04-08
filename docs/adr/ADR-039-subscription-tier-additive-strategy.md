@@ -61,6 +61,42 @@ Un rename brutal (`standard` → `club`, `trial` → `play`) impliquait ~25 fich
 
 - `docs/adr/README.md` — entrée ADR-039
 
+## Phase 2 — Gating appliqué (Avr 2026)
+
+Après la mise en place du socle (`FeatureGateService`, middleware serveur, `PremiumLockComponent`), les features suivantes ont été gatées dans le dashboard :
+
+| Phase | Feature                                     | Tier requis | Fichiers clés                                                                               |
+| ----- | ------------------------------------------- | ----------- | ------------------------------------------------------------------------------------------- |
+| 2.6   | `image_to_video` (club)                     | Club+       | `video-upload-zone.component.ts`, `content.routes.ts` (+ `createVideo` endpoint)            |
+| 2.7   | `multi_profiles` (profils)                  | Pro+        | `site-content-tab.component.ts` (sélecteur profils), `config-editor.component.ts`           |
+| 2.8   | `weighted_rotation` (poids boucle)          | Pro+        | `loop-manager.component.ts` (champs weight gated)                                           |
+| 2.9   | `analytics_advanced` (90j + export CSV/PDF) | Premium     | `club-analytics.component.ts`                                                               |
+| 2.10  | `secondary_display` (variantes écran 2)     | Premium     | `video-library.component.ts`, `video-manager.component.ts`, `site-content-tab.component.ts` |
+| 2.11  | `remote_diagnostic` (lecture seule)         | Premium     | `club-diagnostic.component.ts` (**nouveau**), `app.routes.ts`, `layout.component.ts`        |
+
+### Invariants vérifiés par smoke tests
+
+Les gates Phase 2 sont verrouillés par 8 nouveaux smoke tests (section _"ADR-039 Phase 2 gating regression guards"_ dans `central-server/src/__tests__/smoke.test.ts`) :
+
+1. `feature-gate.service` — les 6 features sont mappées aux bons tiers.
+2. `club-analytics` — 90j et export CSV/PDF gardés par `analytics_advanced` (template + guards TS).
+3. `video-library` — bouton 📺 variante gardée par `secondary_display`, plus guard méthode.
+4. `video-manager` — propagation `subscriptionPlan` + modal variante + event `secondaryVariantChanged`.
+5. `club-diagnostic` — composant existe, gate `remote_diagnostic`, lock card, polling 30s, cleanup `ngOnDestroy`.
+6. `app.routes` — route `/club/diagnostic` avec `roleGuard` + `roles: ['club']`.
+7. `layout.component` — lien sidebar `/club/diagnostic` dans la section club nav (vérification via split sur `#defaultNav`).
+
+Ces smoke tests échoueront au moindre retour en arrière (ex : suppression du guard TS, retrait du `*ngIf`, raccourci `=== 'premium'` direct), garantissant la non-régression sur l'ensemble de la Phase 2.
+
+### Supervision / monitoring
+
+La fréquence d'accès aux features gatées reste mesurable via les métriques existantes :
+
+- **Serveur** : `metrics.service.ts` expose déjà un gauge `neopro_sites_subscription_plan` (labels par plan) qui sert de dénominateur pour les fonctionnalités Premium.
+- **Dashboard** : `FeatureGateService.canAccess()` est l'unique point de contrôle — si besoin ultérieur de tracking "feature refusée au club X", il suffira d'ajouter un `console.warn` / analytics event centralisé dans cette méthode, sans toucher aux composants.
+
+Aucune alerte Prometheus dédiée n'est ajoutée à ce stade : le gating est **opt-in côté UI** (masquage/désactivation, pas une erreur runtime), donc ne produit pas d'incident opérationnel à remonter.
+
 ## Cleanup ultérieur (hors scope)
 
 Une PR dédiée (post-stabilisation) devra :

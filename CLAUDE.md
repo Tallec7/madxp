@@ -52,6 +52,10 @@ source central-server/.env && psql "$DATABASE_URL" -f central-server/src/scripts
 
 - Modifier les migrations déjà en production
 - Changer le format des `api_key` des sites (casserait tous les Pi)
+- Gater une feature par tier d'abonnement avec un check en dur `site.subscription_plan === 'premium'` (ADR-039) — TOUJOURS passer par `FeatureGateService.canAccess(feature, siteOrPlan)` côté dashboard et `requireSiteTier()` côté serveur, et ajouter la feature au map `FEATURE_TIERS` de `feature-gate.service.ts`. Les gates actuels (`image_to_video`, `multi_profiles`, `weighted_rotation`, `analytics_advanced`, `secondary_display`, `remote_diagnostic`, `white_label`, `watermark`, `hourly_schedule`, `sponsor_portal`) sont verrouillés par smoke test — tout retour arrière casse le build.
+- Supprimer le composant `club-diagnostic`, sa route `/club/diagnostic`, ou le lien sidebar dans `layout.component.ts` (vue read-only Premium ADR-039 Phase 2.11 — smoke test enforced)
+- Retirer `subscriptionPlan` / `canUseSecondaryDisplay` du `video-library` ou la modal variante du `video-manager` (Phase 2.10 ADR-039 — smoke test enforced)
+- Retirer les guards `canUseAnalyticsAdvanced` de `club-analytics.component.ts` sur l'option 90j et les boutons CSV/PDF (Phase 2.9 ADR-039 — smoke test enforced)
 - Utiliser `console.log` dans central-server (utiliser Winston)
 - Revenir à Nixpacks pour Railway (Nixpacks auto-détecte le root package.json et lance `ng build` qui OOM — utiliser le Dockerfile builder `central-server/Dockerfile` avec `COPY central-server/` pour isoler le build)
 - Importer `../config/database` dans les controllers (ESLint bloque tout import, utiliser les repositories)
