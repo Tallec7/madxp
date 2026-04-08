@@ -33,7 +33,7 @@ import { ConfirmDialogService } from '../../core/services/confirm-dialog.service
     <!-- Skip link pour navigation clavier -->
     <a href="#main-content" class="skip-link">{{ 'nav.skipToContent' | translate }}</a>
 
-    <div class="layout">
+    <div class="layout" [class.club-theme]="isClub()">
       <!-- Mobile hamburger toggle -->
       <button class="hamburger-toggle" (click)="toggleSidebar()" [attr.aria-label]="'nav.toggleMenu' | translate" [attr.aria-expanded]="sidebarOpen">
         <span class="hamburger-icon" [class.open]="sidebarOpen">
@@ -217,6 +217,24 @@ import { ConfirmDialogService } from '../../core/services/confirm-dialog.service
       display: flex;
       min-height: 100vh;
       background: var(--bg-color);
+    }
+
+    /* Club portal rose theme — overrides the hockey blue palette.
+       Palette: bg #3D3036, rose dark #FE6AA6 (text), rose light #FF9EC6 (cartouche) */
+    .layout.club-theme {
+      --primary-color: #FE6AA6;
+      --primary-light: #FF9EC6;
+      --neo-hockey-dark: #FE6AA6;
+      --neo-hockey-light: #FF9EC6;
+      --neo-black: #3D3036;
+    }
+    .layout.club-theme .sidebar { background: #3D3036; }
+    .layout.club-theme .nav-item.active {
+      background: #FF9EC6;
+      color: #3D3036;
+    }
+    .layout.club-theme .nav-item:hover:not(.active) {
+      background: rgba(254, 106, 166, 0.15);
     }
 
     .sidebar {
