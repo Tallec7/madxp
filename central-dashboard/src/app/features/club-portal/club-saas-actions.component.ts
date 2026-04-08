@@ -1,4 +1,4 @@
-import { Component, Input, ViewChild, ElementRef, inject } from '@angular/core';
+import { Component, Input, OnChanges, SimpleChanges, ViewChild, ElementRef, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TranslateModule } from '@ngx-translate/core';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
@@ -107,7 +107,7 @@ import { environment } from '../../../environments/environment';
     }
   `]
 })
-export class ClubSaasActionsComponent {
+export class ClubSaasActionsComponent implements OnChanges {
   private readonly sanitizer = inject(DomSanitizer);
 
   @Input() siteId = '';
@@ -119,16 +119,16 @@ export class ClubSaasActionsComponent {
   showQrPanel = false;
   showPreview = false;
 
-  get saasTvUrl(): string {
-    return `${environment.saasBaseUrl}/?site=${encodeURIComponent(this.siteId)}`;
-  }
+  saasTvUrl = '';
+  saasRemoteUrl = '';
+  safePreviewUrl: SafeResourceUrl | null = null;
 
-  get saasRemoteUrl(): string {
-    return `${environment.saasBaseUrl}/remote?site=${encodeURIComponent(this.siteId)}`;
-  }
-
-  get safePreviewUrl(): SafeResourceUrl {
-    return this.sanitizer.bypassSecurityTrustResourceUrl(this.saasTvUrl);
+  ngOnChanges(changes: SimpleChanges): void {
+    if (changes['siteId']) {
+      this.saasTvUrl = `${environment.saasBaseUrl}/tv?site=${encodeURIComponent(this.siteId)}`;
+      this.saasRemoteUrl = `${environment.saasBaseUrl}/remote?site=${encodeURIComponent(this.siteId)}`;
+      this.safePreviewUrl = this.sanitizer.bypassSecurityTrustResourceUrl(this.saasTvUrl);
+    }
   }
 
   toggleQrPanel(): void {
