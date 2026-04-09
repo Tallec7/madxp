@@ -1,3 +1,9 @@
+## [3.138.3](https://github.com/Tallec7/neopro/compare/v3.138.2...v3.138.3) (2026-04-09)
+
+### Bug Fixes
+
+- **sync-agent:** fix display-info tests after metrics extraction (ADR-044) ([0673daf](https://github.com/Tallec7/neopro/commit/0673daf63a68786a6cf93fbcd91789312848333d))
+
 ## [3.138.2](https://github.com/Tallec7/neopro/compare/v3.138.1...v3.138.2) (2026-04-09)
 
 ### Bug Fixes
