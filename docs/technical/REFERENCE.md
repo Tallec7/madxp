@@ -1820,33 +1820,33 @@ Le service Socket.IO délègue le traitement des événements à 9 handlers spé
 
 Tous les accès PostgreSQL passent par des repositories typés héritant de `BaseRepository<T>` :
 
-| Repository          | Table(s) principale(s)                                                                               |
-| ------------------- | ---------------------------------------------------------------------------------------------------- |
-| `site`              | `sites`                                                                                              |
-| `user`              | `users`                                                                                              |
-| `video`             | `videos`                                                                                             |
-| `group`             | `groups`, `group_sites`                                                                              |
-| `deployment`        | `content_deployments`, `deployment_targets`                                                          |
-| `software-update`   | `software_updates`, `update_deployments`                                                             |
-| `alert`             | `alerts`, `alert_thresholds`                                                                         |
-| `analytics`         | `video_plays`, `club_sessions`, `club_daily_stats_live` (VIEW)                                       |
-| `sponsor`           | `video_plays` (category='sponsor'), `advertiser_daily_stats_live` (VIEW)                             |
-| `config-history`    | `config_drafts`, `config_history`                                                                    |
-| `config-profile`    | `config_profiles`                                                                                    |
-| `advertising`       | `advertiser_videos`, `advertiser_sites`                                                              |
-| `advertiser-portal` | `advertisers`, `advertiser_daily_stats_live` (VIEW)                                                  |
-| `agency`            | `agencies`, `agency_sites`, `club_daily_stats_live` (VIEW)                                           |
-| `subscription`      | `subscription_history`                                                                               |
-| `metrics`           | `site_metrics`                                                                                       |
-| `objective`         | `objectives`                                                                                         |
-| `playlist-schedule` | `playlist_schedules`                                                                                 |
-| `remote-command`    | `remote_commands`, `pending_commands`                                                                |
-| `report`            | `reports`, `generated_reports`                                                                       |
-| `timeline`          | `timeline_events`                                                                                    |
-| `email`             | Notifications email (templates)                                                                      |
-| `pitch-deck`        | Vue agrégée multi-tables (`club_daily_stats_live`, `advertiser_daily_stats_live`)                    |
-| `site-sponsor`      | `site_sponsors`, `site_sponsor_videos`, `site_sponsor_daily_stats`, `site_sponsor_daily_video_stats` |
-| `campaign`          | `campaigns`, `campaign_videos`, `campaign_sites`                                                     |
+| Repository          | Table(s) principale(s)                                                                                                 |
+| ------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `site`              | `sites`                                                                                                                |
+| `user`              | `users`                                                                                                                |
+| `video`             | `videos`                                                                                                               |
+| `group`             | `groups`, `group_sites`                                                                                                |
+| `deployment`        | `content_deployments`, `deployment_targets`                                                                            |
+| `software-update`   | `software_updates`, `update_deployments`. Méthodes clés : `findLastForSite()` (dernier OTA via target direct ou group) |
+| `alert`             | `alerts`, `alert_thresholds`. Méthodes clés : `countActiveForSite()` (count alertes actives par site)                  |
+| `analytics`         | `video_plays`, `club_sessions`, `club_daily_stats_live` (VIEW)                                                         |
+| `sponsor`           | `video_plays` (category='sponsor'), `advertiser_daily_stats_live` (VIEW)                                               |
+| `config-history`    | `config_drafts`, `config_history`                                                                                      |
+| `config-profile`    | `config_profiles`                                                                                                      |
+| `advertising`       | `advertiser_videos`, `advertiser_sites`                                                                                |
+| `advertiser-portal` | `advertisers`, `advertiser_daily_stats_live` (VIEW)                                                                    |
+| `agency`            | `agencies`, `agency_sites`, `club_daily_stats_live` (VIEW)                                                             |
+| `subscription`      | `subscription_history`                                                                                                 |
+| `metrics`           | `site_metrics`                                                                                                         |
+| `objective`         | `objectives`                                                                                                           |
+| `playlist-schedule` | `playlist_schedules`                                                                                                   |
+| `remote-command`    | `remote_commands`, `pending_commands`                                                                                  |
+| `report`            | `reports`, `generated_reports`                                                                                         |
+| `timeline`          | `timeline_events`                                                                                                      |
+| `email`             | Notifications email (templates)                                                                                        |
+| `pitch-deck`        | Vue agrégée multi-tables (`club_daily_stats_live`, `advertiser_daily_stats_live`)                                      |
+| `site-sponsor`      | `site_sponsors`, `site_sponsor_videos`, `site_sponsor_daily_stats`, `site_sponsor_daily_video_stats`                   |
+| `campaign`          | `campaigns`, `campaign_videos`, `campaign_sites`                                                                       |
 
 > **ADR-035 Phase 4** : Les colonnes `source` et `advertiser_id` ont été retirées de `site_sponsors`. La table ne contient plus que les sponsors locaux de club. Les annonceurs Neopro utilisent désormais le système de campagnes (`campaigns`, `campaign_videos`, `campaign_sites`).
 >
@@ -1903,12 +1903,16 @@ Le getter `isSaas` (`site?.site_type === 'saas'`) dans `site-detail.component.ts
 | Version (En attente)   | "N/A"                           | "En attente de connexion"                               |
 | Métriques État         | CPU, RAM, GPU, ventilateur      | Clients connectés, vidéos jouées, temps écran, sessions |
 
-**Métriques SaaS** (propriété `saasMetrics` alimentée par `GET /api/sites/:id/dashboard`) :
+**Métriques engagement** (propriété `saasMetrics` alimentée par `GET /api/sites/:id/dashboard` — v3.137+ : calculées pour **tous les types de site**, pas seulement SaaS) :
 
-- **Activité temps réel** : `connectedClients` (via `getSaasClientCount()`), `todayVideosPlayed`, `todayScreenTime`, `todaySessions`
+- **Activité temps réel** : `connectedClients` (SaaS uniquement, via `getSaasClientCount()`), `todayVideosPlayed`, `todayScreenTime`, `todaySessions`
 - **Performance 7 jours** : `weekVideosPlayed`, `weekScreenTime`, `weekCompletionRate`, `weekSponsorsDisplayed`
+- **Sparkline 7 jours** : `dailyVideoPlays[]` (série contiguë via `generate_series`, remplie de 0 pour les jours sans données)
+- **Insights** : `topVideos[]` (top 3 vidéos jouées), trend badges (±3% / ±2pts)
+- **OTA** (Pi uniquement) : `lastOtaDeployment` (`version`, `status`, `completedAt`, `createdAt`) — via `softwareUpdateRepository.findLastForSite()` (cible directe `site` ou indirecte via `group`)
+- **Alertes** : `activeAlertsCount` — via `alertRepository.countActiveForSite()` (compte les alertes `status = 'active'`)
 
-**Backend** : `site-fleet.controller.ts` détecte `site.site_type === 'saas'` et enrichit la réponse avec `saasMetrics` via 3 méthodes du `analytics.repository.ts` : `countSessions()`, `countSponsorsDisplayed()`, `getCompletionRate()` + `getDashboardUsage()` existant. Le `socket.service.ts` expose `getSaasClientCount(siteId)` pour compter les navigateurs SaaS connectés (room Socket.IO minus l'agent Pi).
+**Backend** : `site-fleet.controller.ts` enrichit la réponse avec `saasMetrics` pour tous les `site_type` (SaaS, Pi, demo) via `analytics.repository.ts` (`countSessions()`, `countSponsorsDisplayed()`, `getCompletionRate()`, `getDashboardUsage()`), `softwareUpdateRepository.findLastForSite()`, et `alertRepository.countActiveForSite()`. Le `socket.service.ts` expose `getSaasClientCount(siteId)` pour compter les navigateurs SaaS connectés (room Socket.IO minus l'agent Pi). `connectedClients` est 0 pour les sites Pi.
 
 #### Onglets
 

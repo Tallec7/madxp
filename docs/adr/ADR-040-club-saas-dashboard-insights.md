@@ -43,21 +43,34 @@ Toutes les queries additionnelles sont parallélisées via `Promise.all` pour ga
 - **Matérialisation des tendances en DB** : rejeté — la comparaison hier/semaine dernière est calculée à la volée par `Promise.all`, coût négligeable vs complexité d'une table agrégée supplémentaire (`site_sponsor_daily_stats` existe déjà pour les sponsors).
 - **Persistance DB des top vidéos** : rejeté — `video_plays` a une rétention 15j, largement suffisant pour une fenêtre 7j.
 
+## Extension Pi (v3.137+)
+
+Le bloc `saasMetrics` a été étendu à **tous les types de site** (Pi, SaaS, demo) :
+
+- **Engagement Pi** : mêmes métriques (vidéos jouées, temps écran, tendances, sparkline, top vidéos, sponsors) — identiques au SaaS.
+- **Dernière OTA** : `lastOtaDeployment` (version, statut, date) via `softwareUpdateRepository.findLastForSite()` — résout le target direct `site` OU indirect via `group` dans `site_groups`.
+- **Alertes actives** : `activeAlertsCount` via `alertRepository.countActiveForSite()` — card conditionnelle (masquée si 0).
+- **OTA badges** : inline sous la carte version — `completed` (vert), `failed`/`rolled_back` (rouge), `in_progress` (orange).
+- **Empty state Pi** : condition différenciée (`todayVideosPlayed === 0 && weekVideosPlayed === 0`, pas de `connectedClients`).
+
+`connectedClients` reste SaaS-only (0 pour les sites Pi).
+
 ## Conséquences
 
 **Positives**
 
-- Les clubs SaaS comprennent l'évolution de leur activité sans quitter le dashboard.
+- Les clubs (SaaS et Pi) comprennent l'évolution de leur activité sans quitter le dashboard.
 - L'empty state hint guide les nouveaux clubs vers leur première action (gérer la boucle).
 - Aucun nouveau bundle JS (SVG inline), impact build ≈ +3 kB sur `club-dashboard-component`.
+- Les clubs Pi voient le statut OTA et les alertes actives, réduisant les tickets support.
 
 **Négatives**
 
-- `getSiteDashboardData` passe de ~5 à ~12 queries parallèles pour les sites SaaS — acceptable car toutes indexées sur `site_id` + `played_at`.
+- `getSiteDashboardData` passe de ~5 à ~14 queries parallèles — acceptable car toutes indexées sur `site_id`.
 - Duplication légère de la logique de trend côté client (3 getters) — assumée, factorisée via `computeTrend()` privé.
 
 ## Références
 
 - ADR-037 : SaaS mode architecture
 - ADR-038 : Portail club SaaS — temps réel, preview, observabilité
-- Fichiers : `central-server/src/repositories/analytics.repository.ts`, `central-server/src/controllers/site-fleet.controller.ts`, `central-dashboard/src/app/features/club-portal/club-dashboard.component.ts`, `central-dashboard/src/assets/i18n/{fr,en}.json`
+- Fichiers : `central-server/src/repositories/analytics.repository.ts`, `central-server/src/repositories/alert.repository.ts`, `central-server/src/repositories/software-update.repository.ts`, `central-server/src/controllers/site-fleet.controller.ts`, `central-dashboard/src/app/features/club-portal/club-dashboard.component.ts`, `central-dashboard/src/assets/i18n/{fr,en,es}.json`

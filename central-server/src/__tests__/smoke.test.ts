@@ -14556,6 +14556,68 @@ describe('SaaS site-detail dashboard guards', () => {
     });
   });
 
+  // --- site-fleet.controller.ts must include lastOtaDeployment + activeAlertsCount in saasMetrics ---
+  it('site-fleet.controller.ts must return lastOtaDeployment and activeAlertsCount', () => {
+    const filePath = path.join(repoRoot, 'central-server', 'src', 'controllers', 'site-fleet.controller.ts');
+    const content = fs.readFileSync(filePath, 'utf8');
+    expect({
+      hasLastOtaDeployment: content.includes('lastOtaDeployment'),
+      hasActiveAlertsCount: content.includes('activeAlertsCount'),
+      callsFindLastForSite: content.includes('findLastForSite'),
+      callsCountActiveForSite: content.includes('countActiveForSite'),
+    }).toEqual({
+      hasLastOtaDeployment: true,
+      hasActiveAlertsCount: true,
+      callsFindLastForSite: true,
+      callsCountActiveForSite: true,
+    });
+  });
+
+  // --- alert.repository.ts must have countActiveForSite method ---
+  it('alert.repository.ts must have countActiveForSite', () => {
+    const filePath = path.join(repoRoot, 'central-server', 'src', 'repositories', 'alert.repository.ts');
+    const content = fs.readFileSync(filePath, 'utf8');
+    expect({
+      hasCountActiveForSite: content.includes('countActiveForSite'),
+      queriesActiveStatus: content.includes("status = 'active'"),
+    }).toEqual({
+      hasCountActiveForSite: true,
+      queriesActiveStatus: true,
+    });
+  });
+
+  // --- software-update.repository.ts must have findLastForSite method ---
+  it('software-update.repository.ts must have findLastForSite', () => {
+    const filePath = path.join(repoRoot, 'central-server', 'src', 'repositories', 'software-update.repository.ts');
+    const content = fs.readFileSync(filePath, 'utf8');
+    expect({
+      hasFindLastForSite: content.includes('findLastForSite'),
+      joinsUpdateDeployments: content.includes('update_deployments'),
+      handlesGroupTarget: content.includes('site_groups'),
+    }).toEqual({
+      hasFindLastForSite: true,
+      joinsUpdateDeployments: true,
+      handlesGroupTarget: true,
+    });
+  });
+
+  // --- club-dashboard.component.ts must render OTA badge and active alerts ---
+  it('club-dashboard must render OTA badge and active alerts card', () => {
+    const filePath = path.join(repoRoot, 'central-dashboard', 'src', 'app', 'features', 'club-portal', 'club-dashboard.component.ts');
+    const content = fs.readFileSync(filePath, 'utf8');
+    expect({
+      hasOtaBadge: content.includes('ota-badge'),
+      hasLastOtaDeployment: content.includes('lastOtaDeployment'),
+      hasActiveAlertsCount: content.includes('activeAlertsCount'),
+      hasAlertCount: content.includes('alert-count'),
+    }).toEqual({
+      hasOtaBadge: true,
+      hasLastOtaDeployment: true,
+      hasActiveAlertsCount: true,
+      hasAlertCount: true,
+    });
+  });
+
   // --- analytics.repository.ts must have SaaS metric methods ---
   it('analytics.repository.ts must have countSessions, countSponsorsDisplayed, getCompletionRate', () => {
     const filePath = path.join(repoRoot, 'central-server', 'src', 'repositories', 'analytics.repository.ts');
