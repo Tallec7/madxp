@@ -26,6 +26,8 @@ jest.mock('../logger', () => ({
 
 // Import MetricsCollector après les mocks
 const metricsCollector = require('../metrics');
+// Import display sub-module for spying on internal functions (ADR-044)
+const displayMetrics = require('../metrics/display-metrics');
 
 describe('EDID Parser (_parseEdid)', () => {
   /**
@@ -276,8 +278,8 @@ describe('getDisplayInfo', () => {
     // Réinitialiser le cache entre les tests
     metricsCollector._displayInfoCache = null;
     metricsCollector._displayInfoCacheTime = 0;
-    // Mock _runEdidDecode pour éviter l'appel réel à edid-decode
-    edidDecodeSpy = jest.spyOn(metricsCollector, '_runEdidDecode')
+    // Mock runEdidDecode on the sub-module to avoid real edid-decode calls (ADR-044)
+    edidDecodeSpy = jest.spyOn(displayMetrics, 'runEdidDecode')
       .mockRejectedValue(new Error('edid-decode not installed'));
   });
 

@@ -48,6 +48,10 @@ class MetricsCollector {
   // DISPLAY (delegate to display-metrics.js)
   // =========================================================================
 
+  // Allow tests to reset the display cache via `metricsCollector._displayInfoCache = null`
+  set _displayInfoCache(_v) { display._resetCache(); }
+  set _displayInfoCacheTime(_v) { /* handled by _resetCache */ }
+
   _findEdidPath(portFilter) { return display.findEdidPath(portFilter); }
   _parseEdid(edidBuffer) { return display.parseEdid(edidBuffer); }
   _runEdidDecode(edidPath) { return display.runEdidDecode(edidPath); }

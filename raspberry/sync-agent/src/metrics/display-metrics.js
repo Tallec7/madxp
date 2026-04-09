@@ -399,7 +399,7 @@ async function getDisplayInfo() {
 
       // Enrichir avec edid-decode si disponible
       try {
-        const detailed = await runEdidDecode(edidPath);
+        const detailed = await module.exports.runEdidDecode(edidPath);
         if (detailed) {
           displayInfo.edid_detailed = detailed;
         }
@@ -483,7 +483,7 @@ async function getSecondaryDisplayInfo() {
       }
 
       try {
-        const detailed = await runEdidDecode(edidPath);
+        const detailed = await module.exports.runEdidDecode(edidPath);
         if (detailed) {
           displayInfo.edid_detailed = detailed;
         }
@@ -593,6 +593,12 @@ async function getHdmiCecStatus() {
   return cecStatus;
 }
 
+/** Reset display info cache (for tests). */
+function _resetCache() {
+  _displayInfoCache = null;
+  _displayInfoCacheTime = 0;
+}
+
 module.exports = {
   findEdidPath,
   parseEdid,
@@ -602,4 +608,5 @@ module.exports = {
   getDisplayInfo,
   getSecondaryDisplayInfo,
   getHdmiCecStatus,
+  _resetCache,
 };
