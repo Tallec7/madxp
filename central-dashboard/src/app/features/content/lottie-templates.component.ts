@@ -610,14 +610,8 @@ export class LottieTemplatesComponent implements OnInit, OnDestroy {
 
       const formData = new FormData();
       formData.append('video', file);
-      formData.append('templateId', templateId);
-      formData.append('variables', JSON.stringify(this.variableValues));
       if (this.selectedSiteId) {
         formData.append('site_id', this.selectedSiteId);
-      }
-      // Append image files for server-side rendering
-      for (const [key, imgFile] of Object.entries(this.imageFiles)) {
-        formData.append(`image_${key}`, imgFile);
       }
 
       const sub = this.api.uploadWithProgress<{ success: boolean; video: { id: string; title: string; url: string } }>(
