@@ -1,25 +1,29 @@
 import { Injectable, NgZone } from '@angular/core';
-import { Sponsor } from '../interfaces/sponsor.interface';
 
 /**
- * Callbacks pour le double buffer
+ * Callbacks pour le double buffer — le composant TV fournit ces callbacks
+ * pour être notifié des événements de lecture sans que le service ne connaisse
+ * l'analytique, le socket ou le player state.
  */
 export interface DoubleBufferCallbacks {
-  onVideoStarted: (video: Sponsor, playerName: 'A' | 'B') => void;
-  onVideoEnded: (completed: boolean) => void;
-  onSwitchComplete: (newIndex: number, playerName: 'A' | 'B') => void;
-  onError: (player: HTMLVideoElement, which: string, error: Event) => void;
+  onPlayStarted: (videoIndex: number, player: HTMLVideoElement) => void;
+  onSwitchReady: (nextVideoIndex: number, newPlayer: HTMLVideoElement) => void;
+  onPlayError: (videoIndex: number, error: unknown) => void;
+  getIsManualMode: () => boolean;
 }
 
 /**
- * Service gérant le système de double-buffer vidéo pour des transitions sans flash
- * Extrait de tv.component.ts pour réduire la complexité
+ * Service gérant le système de double-buffer vidéo pour des transitions sans flash.
+ * Extrait de tv.component.ts — gère uniquement les opérations DOM sur les players.
  *
  * Architecture:
  * - 2 players pour la boucle (alternent: un joue, l'autre précharge)
  * - 2 players pour les vidéos manuelles (au-dessus de la boucle)
  * - Canvas freeze-frame pour masquer les transitions
  * - Black overlay pour bloquer physiquement la boucle
+ *
+ * Le service ne connaît PAS la liste de vidéos, l'analytics, le socket, etc.
+ * Il reçoit des ordres (play index X, preload index Y) et notifie via callbacks.
  */
 @Injectable({
   providedIn: 'root'
@@ -28,39 +32,36 @@ export class DoubleBufferVideoService {
   // Players de boucle (z-index 1-2)
   private playerA: HTMLVideoElement | null = null;
   private playerB: HTMLVideoElement | null = null;
-  private activePlayer: 'A' | 'B' = 'A';
+  private _activePlayer: 'A' | 'B' = 'A';
 
   // Players manuels (z-index 10-11)
   private manualPlayerA: HTMLVideoElement | null = null;
   private manualPlayerB: HTMLVideoElement | null = null;
-  private activeManualPlayer: 'A' | 'B' = 'A';
+  private _activeManualPlayer: 'A' | 'B' = 'A';
 
   // Canvas freeze-frame (z-index 20)
   private freezeCanvas: HTMLCanvasElement | null = null;
   private freezeCtx: CanvasRenderingContext2D | null = null;
+  private hasValidLastFrame = false;
+  private lastFrameCaptureInterval: ReturnType<typeof setInterval> | null = null;
 
   // Black overlay (z-index 5)
   private blackOverlay: HTMLDivElement | null = null;
 
-  // État
-  private isLoopMode = false;
-  private isManualMode = false;
-  private currentLoopIndex = 0;
-  private currentLoopVideos: Sponsor[] = [];
-  private isStartingLoop = false;
-  private pendingSwitch = false;
-  private switchTriggered = false;
-  private preloadReady = false;
-  private preloadedIndex: number | null = null;
+  // Preload state
+  private _preloadedIndex: number | null = null;
+  private _preloadReady = false;
+  private _pendingSwitch = false;
 
   // Callbacks
   private callbacks: DoubleBufferCallbacks | null = null;
 
   constructor(private ngZone: NgZone) {}
 
-  /**
-   * Initialise le service avec les références aux éléments DOM
-   */
+  // ==========================================================================
+  // INITIALIZATION
+  // ==========================================================================
+
   init(
     elements: {
       playerA: HTMLVideoElement;
@@ -80,7 +81,7 @@ export class DoubleBufferVideoService {
     this.blackOverlay = elements.blackOverlay;
     this.callbacks = callbacks;
 
-    // Initialiser le canvas
+    // Initialiser le canvas (720p pour économiser la mémoire sur Pi)
     if (this.freezeCanvas) {
       this.freezeCtx = this.freezeCanvas.getContext('2d');
       this.freezeCanvas.width = 1280;
@@ -89,7 +90,6 @@ export class DoubleBufferVideoService {
 
     // Configurer les players de boucle
     [this.playerA, this.playerB].forEach((player, i) => {
-      if (!player) return;
       player.muted = true;
       player.playsInline = true;
       player.preload = 'auto';
@@ -98,7 +98,6 @@ export class DoubleBufferVideoService {
 
     // Configurer les players manuels
     [this.manualPlayerA, this.manualPlayerB].forEach((player, i) => {
-      if (!player) return;
       player.muted = true;
       player.playsInline = true;
       player.preload = 'auto';
@@ -107,174 +106,191 @@ export class DoubleBufferVideoService {
     });
 
     // Player A de boucle est visible au départ
-    this.setPlayerVisible(this.playerA!, true);
-    this.setPlayerVisible(this.playerB!, false);
-    this.activePlayer = 'A';
+    this.setPlayerVisible(this.playerA, true);
+    this.setPlayerVisible(this.playerB, false);
+    this._activePlayer = 'A';
 
-    // Ended listeners pour la boucle
-    this.playerA?.addEventListener('ended', () => this.onVideoEnded('A'));
-    this.playerB?.addEventListener('ended', () => this.onVideoEnded('B'));
-
-    console.log('[DoubleBuffer] Service initialized');
+    console.log('[DoubleBuffer] Service initialized (4 players)');
   }
 
   // ==========================================================================
   // GETTERS
   // ==========================================================================
 
-  get isInLoopMode(): boolean {
-    return this.isLoopMode;
+  get activePlayer(): 'A' | 'B' {
+    return this._activePlayer;
   }
 
-  get isInManualMode(): boolean {
-    return this.isManualMode;
+  get activeManualPlayer(): 'A' | 'B' {
+    return this._activeManualPlayer;
   }
 
-  get currentIndex(): number {
-    return this.currentLoopIndex;
+  get preloadedIndex(): number | null {
+    return this._preloadedIndex;
   }
 
-  get isPendingSwitch(): boolean {
-    return this.pendingSwitch;
+  get preloadReady(): boolean {
+    return this._preloadReady;
   }
 
-  get activeLoopPlayer(): 'A' | 'B' {
-    return this.activePlayer;
+  get pendingSwitch(): boolean {
+    return this._pendingSwitch;
   }
 
-  getActivePlayer(): HTMLVideoElement | null {
-    return this.activePlayer === 'A' ? this.playerA : this.playerB;
+  getActivePlayer(): HTMLVideoElement {
+    return this._activePlayer === 'A' ? this.playerA! : this.playerB!;
   }
 
-  getInactivePlayer(): HTMLVideoElement | null {
-    return this.activePlayer === 'A' ? this.playerB : this.playerA;
+  getInactivePlayer(): HTMLVideoElement {
+    return this._activePlayer === 'A' ? this.playerB! : this.playerA!;
   }
 
-  getActiveManualPlayer(): HTMLVideoElement | null {
-    return this.activeManualPlayer === 'A' ? this.manualPlayerA : this.manualPlayerB;
+  getActiveManualPlayer(): HTMLVideoElement {
+    return this._activeManualPlayer === 'A' ? this.manualPlayerA! : this.manualPlayerB!;
+  }
+
+  getInactiveManualPlayer(): HTMLVideoElement {
+    return this._activeManualPlayer === 'A' ? this.manualPlayerB! : this.manualPlayerA!;
   }
 
   // ==========================================================================
-  // BOUCLE VIDÉO
+  // PLAYER VISIBILITY
+  // ==========================================================================
+
+  setPlayerVisible(player: HTMLVideoElement, visible: boolean, zIndex?: number): void {
+    player.style.opacity = visible ? '1' : '0';
+    player.style.zIndex = String(zIndex ?? (visible ? '2' : '0'));
+  }
+
+  setManualPlayerVisible(player: HTMLVideoElement, visible: boolean): void {
+    player.style.opacity = visible ? '1' : '0';
+    player.style.zIndex = visible ? '11' : '10';
+  }
+
+  // ==========================================================================
+  // LOOP PLAYER OPERATIONS
   // ==========================================================================
 
   /**
-   * Démarre la boucle vidéo avec les vidéos fournies
+   * Joue une vidéo sur le player actif.
+   * Attend canplaythrough avant de jouer (le décodeur hardware a le premier I-frame prêt).
+   * Notifie le callback onPlayStarted une fois la lecture démarrée.
    */
-  startLoop(videos: Sponsor[]): void {
-    if (this.isStartingLoop) {
-      console.log('[DoubleBuffer] startLoop already in progress, skipping');
-      return;
-    }
-    this.isStartingLoop = true;
-
-    // Arrêter les players existants
-    this.playerA?.pause();
-    this.playerB?.pause();
-
-    this.isLoopMode = true;
-    this.currentLoopIndex = 0;
-    this.currentLoopVideos = videos;
-    this.pendingSwitch = false;
-    this.switchTriggered = false;
-
-    if (videos.length === 0) {
-      console.warn('[DoubleBuffer] No videos in loop');
-      this.isLoopMode = false;
-      this.isStartingLoop = false;
-      return;
-    }
-
-    console.log('[DoubleBuffer] Starting loop with', videos.length, 'videos');
-
-    // Jouer la première vidéo sur le player actif
-    this.playOnActivePlayer(0);
-
-    setTimeout(() => {
-      this.isStartingLoop = false;
-    }, 500);
-  }
-
-  /**
-   * Arrête la boucle
-   */
-  stopLoop(): void {
-    this.isLoopMode = false;
-    this.playerA?.pause();
-    this.playerB?.pause();
-    console.log('[DoubleBuffer] Loop stopped');
-  }
-
-  /**
-   * Joue une vidéo sur le player actif
-   */
-  private playOnActivePlayer(index: number): void {
-    const videos = this.currentLoopVideos;
-    if (videos.length === 0) return;
-
-    const videoIndex = index % videos.length;
-    const video = videos[videoIndex];
+  playOnActivePlayer(videoPath: string, videoIndex: number): void {
     const player = this.getActivePlayer();
-    if (!player) return;
 
-    console.log(`[DoubleBuffer] Playing video ${videoIndex} on player ${this.activePlayer}:`, video.path);
+    console.log(`[DoubleBuffer] Playing video ${videoIndex} on player ${this._activePlayer}:`, videoPath);
 
-    player.src = video.path;
+    player.src = videoPath;
     player.load();
 
-    player.play().then(() => {
-      this.ngZone.run(() => {
-        this.currentLoopIndex = videoIndex;
-        this.callbacks?.onVideoStarted(video, this.activePlayer);
+    let playStarted = false;
 
-        // Cacher le freeze-frame après un court délai
-        setTimeout(() => {
-          this.hideFreezeFrame();
+    const doPlay = () => {
+      if (playStarted) return;
+      playStarted = true;
+
+      player.play().then(() => {
+        this.ngZone.run(() => {
+          this.callbacks?.onPlayStarted(videoIndex, player);
+        });
+
+        // Frame detection: wait for actual pixels before hiding freeze-frame
+        this.detectFrameAndReveal(player);
+      }).catch(err => {
+        console.error('[DoubleBuffer] Error playing video:', err);
+        // Hide overlays on error too (otherwise freeze-frame stays forever)
+        this.hideFreezeFrame();
+        if (!this.callbacks?.getIsManualMode()) {
           this.hideBlackOverlay();
-        }, 150);
-      });
-    }).catch(err => {
-      console.error('[DoubleBuffer] Error playing video:', err);
-      this.hideFreezeFrame();
-      this.hideBlackOverlay();
-      // Skip to next
-      setTimeout(() => {
-        const nextIndex = (videoIndex + 1) % this.currentLoopVideos.length;
-        if (nextIndex !== videoIndex) {
-          this.playOnActivePlayer(nextIndex);
         }
-      }, 1000);
-    });
+        this.ngZone.run(() => {
+          this.callbacks?.onPlayError(videoIndex, err);
+        });
+      });
+    };
+
+    // Attendre canplaythrough avant de jouer
+    player.addEventListener('canplaythrough', doPlay, { once: true });
+
+    // Safety timeout — si canplaythrough ne se déclenche pas après 3s, jouer quand même
+    setTimeout(() => {
+      if (!playStarted) {
+        console.warn('[DoubleBuffer] canplaythrough timeout, forcing play');
+        doPlay();
+      }
+    }, 3000);
+  }
+
+  /**
+   * Attend que le player rende des pixels réels, puis cache le freeze-frame et le black overlay.
+   * Polling readyState >= 4 + currentTime > 0 + timeupdate comme signal fiable.
+   */
+  private detectFrameAndReveal(player: HTMLVideoElement): void {
+    let revealed = false;
+
+    const reveal = () => {
+      if (revealed) return;
+      revealed = true;
+      clearTimeout(safetyTimeout);
+      player.removeEventListener('timeupdate', onFirstTimeUpdate);
+      requestAnimationFrame(() => {
+        this.hideFreezeFrame();
+        if (!this.callbacks?.getIsManualMode()) {
+          this.hideBlackOverlay();
+        }
+      });
+    };
+
+    const safetyTimeout = setTimeout(() => {
+      if (!revealed) {
+        console.warn('[DoubleBuffer] Frame detection safety timeout, revealing');
+        reveal();
+      }
+    }, 1500);
+
+    const checkFrame = () => {
+      if (revealed) return;
+      if (player.readyState >= 4 && player.currentTime > 0) {
+        reveal();
+      } else {
+        requestAnimationFrame(checkFrame);
+      }
+    };
+
+    const onFirstTimeUpdate = () => {
+      reveal();
+    };
+    player.addEventListener('timeupdate', onFirstTimeUpdate, { once: true });
+    requestAnimationFrame(checkFrame);
   }
 
   /**
    * Précharge une vidéo sur le player inactif
    */
-  preloadOnInactivePlayer(index: number): void {
-    const videos = this.currentLoopVideos;
-    if (videos.length === 0) return;
-
-    const videoIndex = index % videos.length;
-    const video = videos[videoIndex];
+  preloadOnInactivePlayer(videoPath: string, videoIndex: number): void {
     const player = this.getInactivePlayer();
-    if (!player) return;
 
-    if (this.preloadedIndex === videoIndex && this.preloadReady) {
+    // Si déjà préchargé, ne rien faire
+    if (this._preloadedIndex === videoIndex && this._preloadReady) {
+      console.log(`[DoubleBuffer] Video ${videoIndex} already preloaded`);
       return;
     }
 
-    console.log(`[DoubleBuffer] Preloading video ${videoIndex}:`, video.path);
+    console.log(`[DoubleBuffer] Preloading video ${videoIndex}:`, videoPath);
 
-    this.preloadReady = false;
-    this.preloadedIndex = videoIndex;
+    this._preloadReady = false;
+    this._preloadedIndex = videoIndex;
 
-    player.src = video.path;
+    // Restaurer preload='auto' si le cleanup l'avait mis à 'none'
+    player.preload = 'auto';
+    player.src = videoPath;
     player.load();
 
     const onCanPlay = () => {
-      if (this.preloadedIndex === videoIndex) {
-        this.preloadReady = true;
-        console.log(`[DoubleBuffer] Video ${videoIndex} preloaded`);
+      if (this._preloadedIndex === videoIndex) {
+        this._preloadReady = true;
+        console.log(`[DoubleBuffer] Video ${videoIndex} preloaded and ready`);
       }
       player.removeEventListener('canplaythrough', onCanPlay);
     };
@@ -282,76 +298,100 @@ export class DoubleBufferVideoService {
   }
 
   /**
-   * Appelé quand une vidéo se termine
+   * Switch entre les deux players (transition sans flash).
+   * Le freeze-frame doit être affiché par l'appelant AVANT d'appeler cette méthode.
+   * Notifie onSwitchReady une fois que le nouveau player rend des frames réels.
    */
-  private onVideoEnded(fromPlayer: 'A' | 'B'): void {
-    console.log(`[DoubleBuffer] Video ended on player ${fromPlayer}`);
-
-    if (!this.isLoopMode || fromPlayer !== this.activePlayer) return;
-    if (this.pendingSwitch) return;
-
-    this.triggerSwitch();
-  }
-
-  /**
-   * Déclenche le switch vers la vidéo suivante
-   */
-  triggerSwitch(): void {
-    if (this.pendingSwitch) return;
-    this.pendingSwitch = true;
-
-    this.ngZone.run(() => {
-      this.callbacks?.onVideoEnded(true);
-
-      const nextIndex = (this.currentLoopIndex + 1) % this.currentLoopVideos.length;
-      console.log(`[DoubleBuffer] Switching to video ${nextIndex}`);
-
-      this.switchPlayers(nextIndex);
-    });
-  }
-
-  /**
-   * Switch entre les deux players
-   */
-  private switchPlayers(nextVideoIndex: number): void {
+  switchPlayers(nextVideoIndex: number): void {
     const oldPlayer = this.getActivePlayer();
     const newPlayer = this.getInactivePlayer();
-    if (!oldPlayer || !newPlayer) return;
+
+    console.log(`[DoubleBuffer] Switching from ${this._activePlayer} to ${this._activePlayer === 'A' ? 'B' : 'A'}, preloadReady=${this._preloadReady}`);
 
     const doSwitch = () => {
+      // Rendre le nouveau player visible avec z-index 2 (au-dessus de l'ancien)
+      this.setPlayerVisible(newPlayer, true, 2);
+
       newPlayer.play().then(() => {
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => {
-            this.setPlayerVisible(newPlayer, true);
-            this.setPlayerVisible(oldPlayer, false);
+        // Attendre que le player rende des pixels réels avant de notifier
+        let revealed = false;
+        const safetyTimeout = setTimeout(() => {
+          if (!revealed) {
+            revealed = true;
+            console.warn('[DoubleBuffer] Frame detection safety timeout, revealing anyway');
+            finalize();
+          }
+        }, 1500);
 
-            this.activePlayer = this.activePlayer === 'A' ? 'B' : 'A';
-            this.currentLoopIndex = nextVideoIndex;
-            this.preloadReady = false;
-            this.preloadedIndex = null;
+        const finalize = () => {
+          // Cacher l'ancien player
+          this.setPlayerVisible(oldPlayer, false, 0);
 
-            const video = this.currentLoopVideos[nextVideoIndex];
-            this.callbacks?.onSwitchComplete(nextVideoIndex, this.activePlayer);
-            this.callbacks?.onVideoStarted(video, this.activePlayer);
+          // Cacher le freeze-frame et le black overlay
+          this.hideFreezeFrame();
+          if (!this.callbacks?.getIsManualMode()) {
+            this.hideBlackOverlay();
+          }
 
-            this.pendingSwitch = false;
-            this.switchTriggered = false;
+          // Ramener le nouveau player au z-index standard
+          newPlayer.style.zIndex = '1';
+
+          // Mettre à jour l'état
+          this._activePlayer = this._activePlayer === 'A' ? 'B' : 'A';
+          this._preloadReady = false;
+          this._preloadedIndex = null;
+          this._pendingSwitch = false;
+
+          this.ngZone.run(() => {
+            this.callbacks?.onSwitchReady(nextVideoIndex, newPlayer);
           });
-        });
+        };
+
+        const checkFrame = () => {
+          if (revealed) return;
+          if (newPlayer.readyState >= 4 && newPlayer.currentTime > 0) {
+            revealed = true;
+            clearTimeout(safetyTimeout);
+            newPlayer.removeEventListener('timeupdate', onFirstTimeUpdate);
+            requestAnimationFrame(() => finalize());
+          } else {
+            requestAnimationFrame(checkFrame);
+          }
+        };
+
+        const onFirstTimeUpdate = () => {
+          newPlayer.removeEventListener('timeupdate', onFirstTimeUpdate);
+          if (!revealed) {
+            revealed = true;
+            clearTimeout(safetyTimeout);
+            requestAnimationFrame(() => finalize());
+          }
+        };
+        newPlayer.addEventListener('timeupdate', onFirstTimeUpdate);
+        requestAnimationFrame(checkFrame);
       }).catch(err => {
-        console.error('[DoubleBuffer] Error switching:', err);
-        this.pendingSwitch = false;
-        this.switchTriggered = false;
-        this.preloadReady = false;
-        this.preloadedIndex = null;
-        setTimeout(() => this.playOnActivePlayer(nextVideoIndex), 500);
+        console.error('[DoubleBuffer] Error switching to next video:', err);
+        this.setPlayerVisible(newPlayer, false, 0);
+        this._pendingSwitch = false;
+        this._preloadReady = false;
+        this._preloadedIndex = null;
+        // Don't hide overlays during manual mode — they protect the manual video
+        if (!this.callbacks?.getIsManualMode()) {
+          // Keep freeze-frame visible — playOnActivePlayer will hide it when ready
+        }
+        this.ngZone.run(() => {
+          this.callbacks?.onPlayError(nextVideoIndex, err);
+        });
       });
     };
 
-    // Si pas préchargé, attendre
-    if (!this.preloadReady || this.preloadedIndex !== nextVideoIndex) {
-      if (this.preloadedIndex !== nextVideoIndex) {
-        this.preloadOnInactivePlayer(nextVideoIndex);
+    // Si la vidéo n'est pas encore préchargée, attendre
+    if (!this._preloadReady || this._preloadedIndex !== nextVideoIndex) {
+      console.log('[DoubleBuffer] Waiting for preload to complete...');
+
+      if (this._preloadedIndex !== nextVideoIndex) {
+        // Caller must provide path — this should not happen if used correctly
+        console.warn('[DoubleBuffer] switchPlayers called without preload — caller should preload first');
       }
 
       let switchExecuted = false;
@@ -368,23 +408,23 @@ export class DoubleBufferVideoService {
         }
         if (newPlayer.readyState >= 3) {
           clearInterval(checkInterval);
-          this.preloadReady = true;
+          this._preloadReady = true;
           executeSwitchOnce();
         }
       }, 30);
 
       const onCanPlay = () => {
-        newPlayer.removeEventListener('canplay', onCanPlay);
+        newPlayer.removeEventListener('canplaythrough', onCanPlay);
         clearInterval(checkInterval);
-        this.preloadReady = true;
+        this._preloadReady = true;
         executeSwitchOnce();
       };
-      newPlayer.addEventListener('canplay', onCanPlay);
+      newPlayer.addEventListener('canplaythrough', onCanPlay);
 
-      // Timeout de sécurité (5s pour supporter l'accès distant via réseau WiFi)
+      // Safety timeout (5s — freeze-frame covers the wait, remote WiFi access needs >= 5s)
       setTimeout(() => {
         clearInterval(checkInterval);
-        newPlayer.removeEventListener('canplay', onCanPlay);
+        newPlayer.removeEventListener('canplaythrough', onCanPlay);
         if (!switchExecuted) {
           console.warn('[DoubleBuffer] Preload timeout, forcing switch');
           executeSwitchOnce();
@@ -395,18 +435,48 @@ export class DoubleBufferVideoService {
     }
   }
 
-  // ==========================================================================
-  // VISIBILITÉ DES PLAYERS
-  // ==========================================================================
+  /**
+   * Nettoie le player inactif pour libérer la mémoire GPU (~30-50MB par vidéo).
+   * Ne nettoie pas si un preload est en cours ou si la vidéo active est courte.
+   * Returns true if cleanup was performed, false if skipped.
+   */
+  cleanupInactivePlayer(): boolean {
+    const inactivePlayer = this.getInactivePlayer();
+    if (!inactivePlayer) return false;
 
-  private setPlayerVisible(player: HTMLVideoElement, visible: boolean): void {
-    player.style.opacity = visible ? '1' : '0';
-    player.style.zIndex = visible ? '1' : '0';
+    // Ne pas nettoyer si un preload est en cours
+    if (this._preloadReady || this._preloadedIndex !== null) return false;
+
+    // Ne pas nettoyer si la vidéo active est courte (< 5s)
+    const activePlayer = this.getActivePlayer();
+    if (activePlayer?.duration && activePlayer.duration < 5) {
+      console.log('[DoubleBuffer] Skipping cleanup: active video is short');
+      return false;
+    }
+
+    if (inactivePlayer.src) {
+      inactivePlayer.pause();
+      inactivePlayer.removeAttribute('src');
+      inactivePlayer.load();
+      inactivePlayer.preload = 'none';
+      console.log('[DoubleBuffer] Cleaned inactive player (freed decoder buffers)');
+      return true;
+    }
+    return false;
   }
 
-  private setManualPlayerVisible(player: HTMLVideoElement, visible: boolean): void {
-    player.style.opacity = visible ? '1' : '0';
-    player.style.zIndex = visible ? '11' : '10';
+  // ==========================================================================
+  // PENDING SWITCH STATE
+  // ==========================================================================
+
+  setPendingSwitch(value: boolean): void {
+    this._pendingSwitch = value;
+  }
+
+  resetSwitchState(): void {
+    this._pendingSwitch = false;
+    this._preloadReady = false;
+    this._preloadedIndex = null;
   }
 
   // ==========================================================================
@@ -414,16 +484,79 @@ export class DoubleBufferVideoService {
   // ==========================================================================
 
   /**
-   * Capture le frame actuel et l'affiche sur le canvas
+   * Démarre la capture périodique du dernier frame visible (every 500ms).
+   * Sur Chromium/Pi, le décodeur hardware libère le frame buffer à 'ended',
+   * donc on pré-capture pour avoir toujours un frame valide.
    */
-  captureAndShowFreezeFrame(): boolean {
+  startLastFrameCapture(): void {
+    if (this.lastFrameCaptureInterval) {
+      clearInterval(this.lastFrameCaptureInterval);
+    }
+
+    this.lastFrameCaptureInterval = setInterval(() => {
+      this.captureLastFrame();
+    }, 500);
+
+    console.log('[DoubleBuffer] Last frame pre-capture started (every 500ms)');
+  }
+
+  stopLastFrameCapture(): void {
+    if (this.lastFrameCaptureInterval) {
+      clearInterval(this.lastFrameCaptureInterval);
+      this.lastFrameCaptureInterval = null;
+    }
+  }
+
+  /**
+   * Capture silencieusement le frame actuel dans le canvas (sans l'afficher).
+   * @param isManualMode whether the manual player is active
+   * @param isLoopMode whether the loop is active
+   */
+  captureLastFrame(isManualMode = false, isLoopMode = true): void {
+    if (!this.freezeCanvas || !this.freezeCtx) return;
+
+    let player: HTMLVideoElement | null = null;
+    if (isManualMode) {
+      player = this.getActiveManualPlayer();
+    } else if (isLoopMode) {
+      player = this.getActivePlayer();
+    } else {
+      return;
+    }
+
+    if (!player || player.paused || player.ended) return;
+    if (player.videoWidth === 0 || player.videoHeight === 0) return;
+    if (player.readyState < 2) return;
+
+    try {
+      this.freezeCtx.drawImage(player, 0, 0, this.freezeCanvas.width, this.freezeCanvas.height);
+      this.hasValidLastFrame = true;
+    } catch {
+      // Silencieux - erreur CORS ou vidéo pas encore prête
+    }
+  }
+
+  /**
+   * Affiche le freeze-frame pré-capturé. Si aucun frame valide, tente une capture live.
+   * Returns true si le freeze-frame est affiché.
+   */
+  captureAndShowFreezeFrame(isManualMode = false): boolean {
     if (!this.freezeCanvas || !this.freezeCtx) {
       console.warn('[DoubleBuffer] Freeze canvas not available');
       return false;
     }
 
+    // Si on a un frame pré-capturé, l'afficher directement
+    if (this.hasValidLastFrame) {
+      this.freezeCanvas.style.opacity = '1';
+      this.freezeCanvas.style.zIndex = '20';
+      console.log('[DoubleBuffer] Freeze frame shown (pre-captured)');
+      return true;
+    }
+
+    // Fallback: tenter une capture live
     let sourceVideo: HTMLVideoElement | null = null;
-    if (this.isManualMode) {
+    if (isManualMode) {
       sourceVideo = this.getActiveManualPlayer();
     } else {
       sourceVideo = this.getActivePlayer();
@@ -436,10 +569,9 @@ export class DoubleBufferVideoService {
 
     try {
       this.freezeCtx.drawImage(sourceVideo, 0, 0, this.freezeCanvas.width, this.freezeCanvas.height);
-      this.freezeCanvas.style.display = 'block';
       this.freezeCanvas.style.opacity = '1';
       this.freezeCanvas.style.zIndex = '20';
-      console.log('[DoubleBuffer] Freeze frame captured');
+      console.log('[DoubleBuffer] Freeze frame captured live and displayed');
       return true;
     } catch (err) {
       console.error('[DoubleBuffer] Error capturing freeze frame:', err);
@@ -448,13 +580,13 @@ export class DoubleBufferVideoService {
   }
 
   /**
-   * Cache le freeze frame et libère la mémoire
+   * Cache le canvas freeze-frame.
+   * Note: PAS de display:none — uniquement opacity pour éviter le reflow sur Pi GPU.
+   * NE reset PAS hasValidLastFrame — la capture périodique continue.
    */
   hideFreezeFrame(): void {
-    if (this.freezeCanvas && this.freezeCtx) {
+    if (this.freezeCanvas) {
       this.freezeCanvas.style.opacity = '0';
-      this.freezeCanvas.style.display = 'none';
-      this.freezeCtx.clearRect(0, 0, this.freezeCanvas.width, this.freezeCanvas.height);
       console.log('[DoubleBuffer] Freeze frame hidden');
     }
   }
@@ -466,129 +598,73 @@ export class DoubleBufferVideoService {
   showBlackOverlay(): void {
     if (this.blackOverlay) {
       this.blackOverlay.style.opacity = '1';
+      console.log('[DoubleBuffer] Black overlay shown');
     }
   }
 
   hideBlackOverlay(): void {
     if (this.blackOverlay) {
       this.blackOverlay.style.opacity = '0';
+      console.log('[DoubleBuffer] Black overlay hidden');
     }
   }
 
   // ==========================================================================
-  // VIDÉOS MANUELLES
+  // MEMORY CLEANUP
   // ==========================================================================
 
   /**
-   * Joue une vidéo manuelle (au-dessus de la boucle)
+   * Nettoyage préventif de la mémoire (appelé par le service d'erreur/watchdog).
+   * Nettoie le canvas, le player inactif, et les players manuels.
    */
-  playManualVideo(
-    videoPath: string,
-    onStarted: () => void,
-    onEnded: () => void,
-    onError: () => void
-  ): void {
-    console.log('[DoubleBuffer] Playing manual video:', videoPath);
+  performMemoryCleanup(isManualMode: boolean, isPreloadReady: boolean): void {
+    console.log('[DoubleBuffer] Performing memory cleanup');
 
-    const targetPlayer = this.manualPlayerA!;
+    // Nettoyer le canvas freeze-frame (libère ~4.5MB)
+    if (this.freezeCtx && this.freezeCanvas) {
+      this.freezeCtx.clearRect(0, 0, this.freezeCanvas.width, this.freezeCanvas.height);
+      // Recapturer immédiatement pour ne pas laisser de fenêtre sans frame valide
+      this.captureLastFrame(isManualMode, true);
+    }
 
-    // Capturer le freeze frame
-    this.captureAndShowFreezeFrame();
-    this.showBlackOverlay();
-
-    // Rendre le player manuel visible
-    targetPlayer.style.opacity = '1';
-    targetPlayer.style.zIndex = '10';
-
-    targetPlayer.src = videoPath;
-    targetPlayer.load();
-
-    let switchDone = false;
-
-    const doSwitch = () => {
-      if (switchDone) return;
-      switchDone = true;
-
-      targetPlayer.play().then(() => {
-        setTimeout(() => {
-          this.hideFreezeFrame();
-          this.isManualMode = true;
-          this.activeManualPlayer = 'A';
-          onStarted();
-        }, 200);
-      }).catch(err => {
-        console.error('[DoubleBuffer] Error playing manual video', err);
-        this.hideFreezeFrame();
-        this.hideBlackOverlay();
-        onError();
-      });
-    };
-
-    const onReady = () => {
-      targetPlayer.removeEventListener('canplaythrough', onReady);
-      targetPlayer.removeEventListener('canplay', onReadyFallback);
-      clearTimeout(fallbackTimeout);
-      doSwitch();
-    };
-
-    const onReadyFallback = () => {
-      setTimeout(() => {
-        if (!switchDone) {
-          targetPlayer.removeEventListener('canplaythrough', onReady);
-          doSwitch();
-        }
-      }, 500);
-    };
-
-    targetPlayer.addEventListener('canplaythrough', onReady, { once: true });
-    targetPlayer.addEventListener('canplay', onReadyFallback, { once: true });
-
-    const fallbackTimeout = setTimeout(() => {
-      if (!switchDone) {
-        console.warn('[DoubleBuffer] Manual video timeout, forcing switch');
-        targetPlayer.removeEventListener('canplaythrough', onReady);
-        targetPlayer.removeEventListener('canplay', onReadyFallback);
-        doSwitch();
+    // Nettoyer le player inactif
+    const inactivePlayer = this.getInactivePlayer();
+    if (inactivePlayer && !isPreloadReady) {
+      if (inactivePlayer.src) {
+        inactivePlayer.removeAttribute('src');
+        inactivePlayer.load();
+        console.log('[DoubleBuffer] Cleaned inactive loop player');
       }
-    }, 5000);
-
-    // Listener pour la fin
-    const onManualEnded = () => {
-      targetPlayer.removeEventListener('ended', onManualEnded);
-      targetPlayer.style.opacity = '0';
-      targetPlayer.pause();
-      targetPlayer.src = '';
-      this.hideBlackOverlay();
-      this.isManualMode = false;
-      onEnded();
-    };
-
-    targetPlayer.addEventListener('ended', onManualEnded, { once: true });
-  }
-
-  /**
-   * Termine le mode manuel et retourne à la boucle
-   */
-  endManualMode(): void {
-    const player = this.getActiveManualPlayer();
-    if (player) {
-      player.style.opacity = '0';
-      player.pause();
-      player.src = '';
     }
-    this.hideBlackOverlay();
-    this.isManualMode = false;
+
+    // Nettoyer les players manuels s'ils ne sont pas utilisés
+    if (!isManualMode) {
+      [this.manualPlayerA, this.manualPlayerB].forEach((player, i) => {
+        if (player && player.src) {
+          player.removeAttribute('src');
+          player.load();
+          console.log(`[DoubleBuffer] Cleaned manual player ${i === 0 ? 'A' : 'B'}`);
+        }
+      });
+    }
+
+    // Forcer le garbage collection si disponible
+    if (typeof (window as unknown as { gc?: () => void }).gc === 'function') {
+      (window as unknown as { gc: () => void }).gc();
+      console.log('[DoubleBuffer] Forced garbage collection');
+    }
   }
 
   // ==========================================================================
-  // RESET
+  // FULL RESET
   // ==========================================================================
 
   /**
-   * Reset complet du système
+   * Reset complet du système de double-buffer.
+   * Arrête tous les players, reset les états, nettoie le canvas.
    */
   performFullReset(): void {
-    console.log('[DoubleBuffer] 🔄 Performing full reset');
+    console.log('[DoubleBuffer] Performing full reset');
 
     [this.playerA, this.playerB, this.manualPlayerA, this.manualPlayerB].forEach(player => {
       if (player) {
@@ -598,27 +674,48 @@ export class DoubleBufferVideoService {
       }
     });
 
-    this.isLoopMode = false;
-    this.isManualMode = false;
-    this.pendingSwitch = false;
-    this.switchTriggered = false;
-    this.preloadReady = false;
-    this.preloadedIndex = null;
-    this.currentLoopIndex = 0;
-    this.activePlayer = 'A';
+    this._pendingSwitch = false;
+    this._preloadReady = false;
+    this._preloadedIndex = null;
+    this._activePlayer = 'A';
 
     this.hideFreezeFrame();
-    this.hideBlackOverlay();
+    this.showBlackOverlay();
+
+    if (this.freezeCtx && this.freezeCanvas) {
+      this.freezeCtx.clearRect(0, 0, this.freezeCanvas.width, this.freezeCanvas.height);
+    }
+    this.hasValidLastFrame = false;
 
     if (this.playerA) this.setPlayerVisible(this.playerA, true);
     if (this.playerB) this.setPlayerVisible(this.playerB, false);
   }
 
   /**
-   * Nettoie les ressources
+   * Arrête tous les players (boucle + manuels)
    */
+  stopAllPlayers(): void {
+    this.playerA?.pause();
+    this.playerB?.pause();
+    this.manualPlayerA?.pause();
+    this.manualPlayerB?.pause();
+    console.log('[DoubleBuffer] All players stopped');
+  }
+
+  /**
+   * Pause les players de boucle
+   */
+  pauseLoopPlayers(): void {
+    this.playerA?.pause();
+    this.playerB?.pause();
+  }
+
+  // ==========================================================================
+  // CLEANUP
+  // ==========================================================================
+
   destroy(): void {
-    this.stopLoop();
+    this.stopLastFrameCapture();
     this.playerA = null;
     this.playerB = null;
     this.manualPlayerA = null;

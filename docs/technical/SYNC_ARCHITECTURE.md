@@ -1466,7 +1466,7 @@ Deux compteurs dédiés, pipeline identique à ADR-033 :
 | `preloadRevealCount`  | Révélations preload→reveal réussies | `neopro_video_preload_reveal_total`  |
 | `preloadCleanupCount` | Preloads avortés (retour boucle)    | `neopro_video_preload_cleanup_total` |
 
-Pipeline : `tv.component.ts` (slave) → Socket.IO `transition-metrics` (30s) → `state.service.js` (agrégation) → heartbeat → `heartbeat.handler.ts` → `metricsService` → Prometheus.
+Pipeline : `tv.component.ts` `emitSlaveTransitionMetrics()` (slave, 30s) → Socket.IO `transition-metrics` → `state.service.js` (agrégation) → heartbeat → `heartbeat.handler.ts` → `metricsService` → Prometheus.
 
 Un ratio `preloadCleanupCount/preloadRevealCount` élevé indique des vidéos manuelles très courtes ou des annulations fréquentes — pas un bug mais une information opérationnelle utile.
 

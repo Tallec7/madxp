@@ -105,6 +105,9 @@ Quand l'utilisateur déclenche une vidéo manuelle, le serveur broadcaste `actio
 
 - `raspberry/server/server.js` — tvInstances Map, promoteSlave(), handlers
 - `raspberry/src/app/components/tv/tv.component.ts` — tvRole, isSlaveMode, emitLoopState(), handleMasterLoopState(), \_lastActionReceivedAt
+- `raspberry/src/app/services/video-playback.service.ts` — startSeamlessLoop() slave guard, onVideoEnded() slave freeze (ADR-042)
+- `raspberry/src/app/services/double-buffer-video.service.ts` — players, freeze-frame, overlays (ADR-042)
+- `raspberry/src/app/services/video-error-recovery.service.ts` — watchdog, memory cleanup (ADR-042)
 
 ## ScoreOverlayComponent (ADR-041)
 

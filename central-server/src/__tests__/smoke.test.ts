@@ -3874,32 +3874,34 @@ describe('E-22 TvComponent master-slave sync guards', () => {
   });
 
   // Guard: slave must pause players when role is assigned (stop independent loop)
+  // After ADR-042 extraction, the handler delegates to doubleBufferService.pauseLoopPlayers()
   it('tv-role-assigned handler must pause playerA and playerB when slave', () => {
     // Extract the tv-role-assigned handler
     const roleHandler = content.match(/on.*tv-role-assigned[\s\S]*?}\);[\s]*}\);/);
     expect(roleHandler).not.toBeNull();
     const handler = roleHandler![0];
     expect({
-      pausesPlayerA: /playerA\?\.pause\(\)/.test(handler),
-      pausesPlayerB: /playerB\?\.pause\(\)/.test(handler),
-      checksIsLoopMode: /this\.isLoopMode/.test(handler),
+      pausesPlayers: /pauseLoopPlayers/.test(handler),
+      checksIsLoopMode: /isLoopMode/.test(handler),
       showsFreezeFrame: /captureAndShowFreezeFrame/.test(handler),
     }).toEqual({
-      pausesPlayerA: true,
-      pausesPlayerB: true,
+      pausesPlayers: true,
       checksIsLoopMode: true,
       showsFreezeFrame: true,
     });
   });
 
   // Guard: startSeamlessLoop must NOT play independently when in slave mode
+  // After ADR-042 extraction, startSeamlessLoop lives in video-playback.service.ts
   it('startSeamlessLoop must return early when isSlaveMode', () => {
-    const loopFn = content.match(/private startSeamlessLoop[\s\S]*?setTimeout\(\(\) => \{[\s\S]*?\}, 500\);[\s\S]*?\}/);
+    const playbackPath = path.join(repoRoot, 'raspberry/src/app/services/video-playback.service.ts');
+    const playbackContent = fs.readFileSync(playbackPath, 'utf8');
+    const loopFn = playbackContent.match(/startSeamlessLoop[\s\S]*?setTimeout\(\(\) => \{[\s\S]*?\}, 500\);[\s\S]*?\}/);
     expect(loopFn).not.toBeNull();
     const fn = loopFn![0];
     expect({
-      checksSlaveMode: /this\.isSlaveMode/.test(fn),
-      returnsEarlyForSlave: /if\s*\(this\.isSlaveMode\)[\s\S]*?return;/.test(fn),
+      checksSlaveMode: /getIsSlaveMode|isSlaveMode/.test(fn),
+      returnsEarlyForSlave: /if\s*\(.*(?:isSlaveMode|getIsSlaveMode).*\)[\s\S]*?return;/.test(fn),
     }).toEqual({
       checksSlaveMode: true,
       returnsEarlyForSlave: true,
@@ -3923,14 +3925,21 @@ describe('E-22 TvComponent master-slave sync guards', () => {
   });
 
   // Guard: onVideoEnded must show freeze frame and return when in slave mode
+  // After ADR-042 extraction, onVideoEnded lives in video-playback.service.ts
   it('onVideoEnded must freeze and wait for master when slave', () => {
-    const endedFn = content.match(/private onVideoEnded[\s\S]*?^  \}/m);
-    expect(endedFn).not.toBeNull();
-    const fn = endedFn![0];
+    const playbackPath = path.join(repoRoot, 'raspberry/src/app/services/video-playback.service.ts');
+    const playbackContent = fs.readFileSync(playbackPath, 'utf8');
+    // Extract method body between onVideoEnded and the next top-level method
+    const startIdx = playbackContent.indexOf('onVideoEnded(');
+    const nextMethodIdx = playbackContent.indexOf('\n  /**', startIdx + 1);
+    const fn = nextMethodIdx > 0
+      ? playbackContent.slice(startIdx, nextMethodIdx)
+      : playbackContent.slice(startIdx, startIdx + 1500);
+    expect(fn.length).toBeGreaterThan(50);
     expect({
-      checksSlaveMode: /this\.isSlaveMode/.test(fn),
+      checksSlaveMode: /getIsSlaveMode|isSlaveMode/.test(fn),
       showsFreezeFrame: /captureAndShowFreezeFrame/.test(fn),
-      returnsEarlyForSlave: /if\s*\(this\.isSlaveMode\)[\s\S]*?return;/.test(fn),
+      returnsEarlyForSlave: /(?:isSlaveMode|getIsSlaveMode)[\s\S]*?return;/.test(fn),
     }).toEqual({
       checksSlaveMode: true,
       showsFreezeFrame: true,
@@ -7586,9 +7595,10 @@ describe('ADR-034 preload-reveal metrics pipeline', () => {
   });
 
   it('emitTransitionMetrics slave branch MUST emit preloadRevealCount and preloadCleanupCount', () => {
+    // After ADR-042 extraction, method renamed to emitSlaveTransitionMetrics
     const emitMethod = tvContent.slice(
-      tvContent.indexOf('private emitTransitionMetrics'),
-      tvContent.indexOf('private emitTransitionMetrics') + 800
+      tvContent.indexOf('private emitSlaveTransitionMetrics'),
+      tvContent.indexOf('private emitSlaveTransitionMetrics') + 800
     );
     expect({
       hasRevealInSlave: /preloadRevealCount.*preloadCleanupCount|preloadCleanupCount.*preloadRevealCount/.test(emitMethod),
@@ -10934,10 +10944,11 @@ describe('sponsor_impressions_bridge VIEW completeness guard', () => {
 describe('Weighted sponsor rotation guards', () => {
   const repoRoot = path.resolve(__dirname, '..', '..', '..');
 
+  // After ADR-042 extraction, startSeamlessLoop lives in video-playback.service.ts
   it('TV component must use generateWeightedPlaylist in startSeamlessLoop', () => {
-    const tvPath = path.join(repoRoot, 'raspberry/src/app/components/tv/tv.component.ts');
-    const tvContent = fs.readFileSync(tvPath, 'utf8');
-    const startLoop = tvContent.match(/private startSeamlessLoop[\s\S]*?(?=private \w|\n  \/\*\*)/);
+    const playbackPath = path.join(repoRoot, 'raspberry/src/app/services/video-playback.service.ts');
+    const playbackContent = fs.readFileSync(playbackPath, 'utf8');
+    const startLoop = playbackContent.match(/startSeamlessLoop[\s\S]*?(?=\n  \w|\n  \/\*\*)/);
     expect({
       usesWeightedPlaylist: startLoop ? startLoop[0].includes('generateWeightedPlaylist') : false,
       reason: 'startSeamlessLoop must apply weighted rotation — removing it silently reverts to equal rotation',
@@ -15934,5 +15945,79 @@ describe('ScoreOverlayComponent extraction guard (ADR-041)', () => {
   it('score-overlay has its own template and styles files', () => {
     expect(fs.existsSync(path.join(overlayDir, 'score-overlay.component.html'))).toBe(true);
     expect(fs.existsSync(path.join(overlayDir, 'score-overlay.component.scss'))).toBe(true);
+  });
+});
+
+// =============================================================================
+// ADR-042 service extraction guard — video playback logic MUST live in services
+// =============================================================================
+// tv.component.ts delegates double-buffer, playback orchestration, and error recovery
+// to dedicated services. These guards prevent re-inlining the extracted logic.
+describe('ADR-042 service extraction guard', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+  const servicesDir = path.join(repoRoot, 'raspberry/src/app/services');
+  const tvPath = path.join(repoRoot, 'raspberry/src/app/components/tv/tv.component.ts');
+
+  let tvContent: string;
+  beforeAll(() => {
+    tvContent = fs.readFileSync(tvPath, 'utf8');
+  });
+
+  it('VideoPlaybackService must exist', () => {
+    expect(fs.existsSync(path.join(servicesDir, 'video-playback.service.ts'))).toBe(true);
+  });
+
+  it('tv.component.ts must NOT contain extracted double-buffer methods (delegated to DoubleBufferVideoService)', () => {
+    // These methods were extracted in ADR-042 — they must live in the service, not the component
+    expect(tvContent).not.toMatch(/\bprivate\s+initDoubleBuffer\s*\(/);
+    expect(tvContent).not.toMatch(/\bprivate\s+setPlayerVisible\s*\(/);
+    expect(tvContent).not.toMatch(/\bprivate\s+switchPlayers\s*\(/);
+    expect(tvContent).not.toMatch(/\bprivate\s+captureLastFrame\s*\(/);
+    expect(tvContent).not.toMatch(/\bprivate\s+showBlackOverlay\s*\(/);
+    expect(tvContent).not.toMatch(/\bprivate\s+hideBlackOverlay\s*\(/);
+  });
+
+  it('tv.component.ts must NOT contain extracted playback orchestration methods (delegated to VideoPlaybackService)', () => {
+    expect(tvContent).not.toMatch(/\bprivate\s+startSeamlessLoop\s*\(/);
+    expect(tvContent).not.toMatch(/\bprivate\s+onVideoEnded\s*\(/);
+    expect(tvContent).not.toMatch(/\bprivate\s+onTimeUpdate\s*\(/);
+    expect(tvContent).not.toMatch(/\bprivate\s+triggerSwitch\s*\(/);
+    expect(tvContent).not.toMatch(/\bprivate\s+warmDiskCache\s*\(/);
+  });
+
+  it('tv.component.ts must NOT contain extracted error recovery methods (delegated to VideoErrorRecoveryService)', () => {
+    expect(tvContent).not.toMatch(/\bprivate\s+handleVideoError\s*\(/);
+    expect(tvContent).not.toMatch(/\bprivate\s+startWatchdog\s*\(/);
+    expect(tvContent).not.toMatch(/\bprivate\s+stopWatchdog\s*\(/);
+    expect(tvContent).not.toMatch(/\bprivate\s+checkPlaybackHealth\s*\(/);
+    expect(tvContent).not.toMatch(/\bprivate\s+startMemoryCleanupInterval\s*\(/);
+  });
+
+  it('tv.component.ts must wire services via initServices (not initDoubleBuffer)', () => {
+    expect(tvContent).toMatch(/private\s+initServices\s*\(/);
+    expect(tvContent).toMatch(/doubleBufferService\.init\(/);
+    expect(tvContent).toMatch(/playbackService\.init\(/);
+    expect(tvContent).toMatch(/errorRecoveryService\.init\(/);
+  });
+
+  it('VideoPlaybackService must contain generateWeightedPlaylist and slave guard', () => {
+    const playbackContent = fs.readFileSync(path.join(servicesDir, 'video-playback.service.ts'), 'utf8');
+    expect(playbackContent).toContain('generateWeightedPlaylist');
+    expect(playbackContent).toMatch(/getIsSlaveMode/);
+  });
+
+  it('DoubleBufferVideoService must have preload timeout >= 5000ms', () => {
+    const dbContent = fs.readFileSync(path.join(servicesDir, 'double-buffer-video.service.ts'), 'utf8');
+    const timeoutMatch = dbContent.match(/Preload timeout.*?}\s*,\s*(\d+)\s*\)/s);
+    const timeoutMs = timeoutMatch ? parseInt(timeoutMatch[1], 10) : 0;
+    expect({
+      timeoutMs,
+      isAtLeast5s: timeoutMs >= 5000,
+      reason: 'remote WiFi access needs >= 5s preload timeout',
+    }).toEqual({
+      timeoutMs,
+      isAtLeast5s: true,
+      reason: 'remote WiFi access needs >= 5s preload timeout',
+    });
   });
 });

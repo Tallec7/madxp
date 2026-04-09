@@ -58,6 +58,7 @@ Un ADR documente une décision technique importante avec :
 | [ADR-039](ADR-039-subscription-tier-additive-strategy.md)         | Extension additive des tiers d'abonnement (play/club/pro) | Accepté                  | Avr 2026 |
 | [ADR-040](ADR-040-club-saas-dashboard-insights.md)                | Portail club SaaS — insights et tendances dashboard       | Accepté                  | Avr 2026 |
 | [ADR-041](ADR-041-extract-score-overlay-component.md)             | Extraction ScoreOverlayComponent depuis TvComponent       | Accepté                  | Avr 2026 |
+| [ADR-042](ADR-042-extract-tv-component-services.md)               | Extraction tv.component.ts en 3 services dédiés           | Accepté                  | Avr 2026 |
 
 ### Supersédés
 
