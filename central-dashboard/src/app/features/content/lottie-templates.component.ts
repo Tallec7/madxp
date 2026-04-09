@@ -14,11 +14,12 @@ import { Subscription } from 'rxjs';
 interface TemplateVariable {
   key: string;
   label: string;
-  type: 'text' | 'color' | 'select';
+  type: 'text' | 'color' | 'select' | 'image';
   required: boolean;
   placeholder?: string;
   options?: string[];
   prefillFrom?: string;
+  accept?: string;
 }
 
 interface OverlayTemplate {
@@ -127,6 +128,20 @@ interface OverlayTemplate {
                       class="form-input">
                 <option *ngFor="let opt of v.options" [value]="opt">{{ opt }}</option>
               </select>
+              <div *ngIf="v.type === 'image'" class="image-input">
+                <div class="image-preview" *ngIf="imagePreviews[v.key]">
+                  <img [src]="imagePreviews[v.key]" [alt]="v.label" />
+                  <button class="btn-remove-img" (click)="removeImage(v.key)">✕</button>
+                </div>
+                <label *ngIf="!imagePreviews[v.key]" class="image-upload-btn" [for]="'img_' + v.key">
+                  📷 Choisir une image
+                </label>
+                <input [id]="'img_' + v.key"
+                       type="file"
+                       [accept]="v.accept || 'image/jpeg,image/png,image/webp'"
+                       (change)="onImageSelect($event, v.key)"
+                       hidden />
+              </div>
             </div>
           </div>
         </div>
@@ -141,7 +156,9 @@ interface OverlayTemplate {
             <div class="preview-summary">
               <div *ngFor="let v of selectedTemplate.variables">
                 <span class="var-label">{{ v.label }}:</span>
-                <span class="var-value">{{ variableValues[v.key] || v.placeholder || '—' }}</span>
+                <span *ngIf="v.type !== 'image'" class="var-value">{{ variableValues[v.key] || v.placeholder || '—' }}</span>
+                <img *ngIf="v.type === 'image' && imagePreviews[v.key]" [src]="imagePreviews[v.key]" [alt]="v.label" style="width:32px;height:32px;object-fit:cover;border-radius:4px;vertical-align:middle;" />
+                <span *ngIf="v.type === 'image' && !imagePreviews[v.key]" class="var-value">—</span>
               </div>
             </div>
           </div>
@@ -271,6 +288,28 @@ interface OverlayTemplate {
     .form-input:focus { outline: none; border-color: #1e3a5f; box-shadow: 0 0 0 2px rgba(30,58,95,0.1); }
     .form-color { height: 40px; padding: 4px; cursor: pointer; }
 
+    /* Image input */
+    .image-input { margin-top: 4px; }
+    .image-preview {
+      position: relative; display: inline-block;
+      border: 2px solid #ddd; border-radius: 8px; overflow: hidden;
+    }
+    .image-preview img { width: 80px; height: 80px; object-fit: cover; display: block; }
+    .btn-remove-img {
+      position: absolute; top: 2px; right: 2px;
+      background: rgba(0,0,0,0.5); color: white; border: none;
+      border-radius: 50%; width: 20px; height: 20px;
+      font-size: 12px; cursor: pointer; line-height: 1;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .btn-remove-img:hover { background: #ef4444; }
+    .image-upload-btn {
+      display: inline-block; padding: 8px 16px;
+      background: #f3f4f6; border: 1px dashed #ccc; border-radius: 6px;
+      font-size: 13px; cursor: pointer; color: #666; transition: all 0.15s;
+    }
+    .image-upload-btn:hover { border-color: #1e3a5f; background: #f0f4f8; color: #1e3a5f; }
+
     /* Preview */
     .render-preview {
       background: white; border: 1px solid #eee; border-radius: 10px;
@@ -353,6 +392,10 @@ export class LottieTemplatesComponent implements OnInit, OnDestroy {
   // Source video file
   sourceFile: File | null = null;
 
+  // Image files for template variables (key → File)
+  imageFiles: Record<string, File> = {};
+  imagePreviews: Record<string, string> = {};
+
   // Render state
   rendering = false;
   rendered = false;
@@ -389,6 +432,7 @@ export class LottieTemplatesComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.subscriptions.forEach(s => s.unsubscribe());
+    this.revokeImagePreviews();
   }
 
   // ── Templates ─────────────────────────────────────────────────────
@@ -413,12 +457,17 @@ export class LottieTemplatesComponent implements OnInit, OnDestroy {
     this.rendered = false;
     this.renderedVideo = null;
 
+    // Reset images
+    this.revokeImagePreviews();
+    this.imageFiles = {};
+    this.imagePreviews = {};
+
     // Init variables with placeholders
     this.variableValues = {};
     for (const v of tpl.variables) {
       if (v.prefillFrom === 'club_name' && this.selectedSite) {
         this.variableValues[v.key] = this.selectedSite.club_name;
-      } else {
+      } else if (v.type !== 'image') {
         this.variableValues[v.key] = v.placeholder || '';
       }
     }
@@ -474,9 +523,54 @@ export class LottieTemplatesComponent implements OnInit, OnDestroy {
     this.renderedVideo = null;
   }
 
+  // ── Image handling ──────────────────────────────────────────────
+
+  onImageSelect(event: Event, key: string): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+
+    this.imageFiles[key] = file;
+    this.rendered = false;
+    this.renderedVideo = null;
+
+    // Create preview URL
+    if (this.imagePreviews[key]) {
+      URL.revokeObjectURL(this.imagePreviews[key]);
+    }
+    this.imagePreviews[key] = URL.createObjectURL(file);
+  }
+
+  removeImage(key: string): void {
+    delete this.imageFiles[key];
+    if (this.imagePreviews[key]) {
+      URL.revokeObjectURL(this.imagePreviews[key]);
+      delete this.imagePreviews[key];
+    }
+    // Remove from variables too
+    delete this.variableValues[`_image_${key}`];
+    this.rendered = false;
+    this.renderedVideo = null;
+  }
+
+  private revokeImagePreviews(): void {
+    for (const url of Object.values(this.imagePreviews)) {
+      URL.revokeObjectURL(url);
+    }
+  }
+
+  private async readImageAsDataUri(file: File): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = () => reject(new Error('Failed to read image'));
+      reader.readAsDataURL(file);
+    });
+  }
+
   // ── Render (browser-side) ───────────────────────────────────────
 
-  render(): void {
+  async render(): Promise<void> {
     if (!this.canRender || !this.sourceFile || !this.selectedTemplate) return;
 
     this.rendering = true;
@@ -487,6 +581,15 @@ export class LottieTemplatesComponent implements OnInit, OnDestroy {
 
     const templateId = this.selectedTemplate.id;
     const variables = { ...this.variableValues };
+
+    // Inject image data URIs into variables for browser-side rendering
+    for (const [key, file] of Object.entries(this.imageFiles)) {
+      try {
+        variables[`_image_${key}`] = await this.readImageAsDataUri(file);
+      } catch {
+        // Skip failed image reads
+      }
+    }
 
     // Step 1: Render in the browser (Canvas + MediaRecorder)
     this.browserRenderer.render(
@@ -507,8 +610,14 @@ export class LottieTemplatesComponent implements OnInit, OnDestroy {
 
       const formData = new FormData();
       formData.append('video', file);
+      formData.append('templateId', templateId);
+      formData.append('variables', JSON.stringify(this.variableValues));
       if (this.selectedSiteId) {
         formData.append('site_id', this.selectedSiteId);
+      }
+      // Append image files for server-side rendering
+      for (const [key, imgFile] of Object.entries(this.imageFiles)) {
+        formData.append(`image_${key}`, imgFile);
       }
 
       const sub = this.api.uploadWithProgress<{ success: boolean; video: { id: string; title: string; url: string } }>(

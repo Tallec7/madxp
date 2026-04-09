@@ -99,6 +99,28 @@ export const uploadImage = multer({
   }
 });
 
+// Configuration multer pour le rendu de templates — vidéo (disk) + images overlay (memory)
+const templateFilter = (_req: Express.Request, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
+  const videoMimes = ['video/mp4', 'video/webm', 'video/ogg', 'video/quicktime', 'video/x-msvideo', 'video/x-matroska'];
+  const imageMimes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+
+  if (file.fieldname === 'video' && videoMimes.includes(file.mimetype)) {
+    cb(null, true);
+  } else if (file.fieldname.startsWith('image_') && imageMimes.includes(file.mimetype)) {
+    cb(null, true);
+  } else {
+    cb(new Error(`Type de fichier non autorisé pour le champ "${file.fieldname}": ${file.mimetype}`));
+  }
+};
+
+export const uploadTemplate = multer({
+  storage: diskStorage,
+  fileFilter: templateFilter,
+  limits: {
+    fileSize: 500 * 1024 * 1024, // 500MB max (vidéo dominante)
+  }
+});
+
 // Configuration multer pour les paquets de mise à jour — DISK STORAGE (jusqu'à 1GB)
 export const uploadUpdatePackage = multer({
   storage: diskStorage,

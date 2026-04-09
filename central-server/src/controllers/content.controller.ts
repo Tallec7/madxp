@@ -2,7 +2,7 @@ import { Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import path from 'path';
 import crypto from 'crypto';
-import { createReadStream } from 'fs';
+import fs, { createReadStream } from 'fs';
 import logger from '../config/logger';
 import { AuthRequest } from '../types';
 import { videoRepository, deploymentRepository, siteRepository, videoVariantRepository } from '../repositories';
@@ -1048,33 +1048,37 @@ export const getAvailableTemplates = async (_req: AuthRequest, res: Response) =>
       {
         id: 'tpl_player',
         name: 'Annonce Joueur',
-        description: 'Prénom + Nom plein écran avec nom du club en haut et en bas',
+        description: 'Prénom + Nom plein écran avec photo joueur et logo club',
         variables: [
           { key: 'numero', label: 'Numéro', type: 'text', required: false, placeholder: '7' },
           { key: 'prenom', label: 'Prénom', type: 'text', required: true, placeholder: 'THOMAS' },
           { key: 'nom', label: 'Nom', type: 'text', required: true, placeholder: 'DUPONT' },
           { key: 'club', label: 'Nom du club', type: 'text', required: false, placeholder: 'UCKNEF BASKET', prefillFrom: 'club_name' },
+          { key: 'photo', label: 'Photo joueur', type: 'image', required: false, accept: 'image/jpeg,image/png,image/webp' },
+          { key: 'logo', label: 'Logo club', type: 'image', required: false, accept: 'image/jpeg,image/png,image/webp' },
         ],
       },
       {
         id: 'tpl_score_plus',
         name: 'Score +N',
-        description: 'Overlay score (+1, +2, +3) avec nom joueur et club',
+        description: 'Overlay score (+1, +2, +3) avec nom joueur et logo club',
         variables: [
           { key: 'score', label: 'Score', type: 'text', required: true, placeholder: '+1' },
           { key: 'nom', label: 'Nom joueur', type: 'text', required: false, placeholder: 'DUPONT' },
           { key: 'club', label: 'Nom du club', type: 'text', required: false, placeholder: 'UCKNEF BASKET' },
           { key: 'color', label: 'Couleur score', type: 'color', required: false, placeholder: '#FF3333' },
+          { key: 'logo', label: 'Logo club', type: 'image', required: false, accept: 'image/jpeg,image/png,image/webp' },
         ],
       },
       {
         id: 'tpl_buteur',
         name: 'Annonce Buteur',
-        description: 'Animation BUUUUT ! avec numéro et nom',
+        description: 'Animation BUUUUT ! avec numéro, nom et logo club',
         variables: [
           { key: 'nom', label: 'Nom', type: 'text', required: true, placeholder: 'DUPONT' },
           { key: 'numero', label: 'Numéro', type: 'text', required: false, placeholder: '7' },
           { key: 'club', label: 'Club', type: 'text', required: false, placeholder: 'UCKNEF BASKET' },
+          { key: 'logo', label: 'Logo club', type: 'image', required: false, accept: 'image/jpeg,image/png,image/webp' },
         ],
       },
     ];
@@ -1098,7 +1102,10 @@ export const getAvailableTemplates = async (_req: AuthRequest, res: Response) =>
  */
 export const renderTemplate = async (req: AuthRequest, res: Response) => {
   try {
-    const file = req.file;
+    // With uploadTemplate.fields(), files are in req.files (object keyed by field name)
+    const files = req.files as Record<string, Express.Multer.File[]> | undefined;
+    const videoFiles = files?.['video'];
+    const file = videoFiles?.[0];
     if (!file) {
       return res.status(400).json({ error: 'Aucune vidéo fournie' });
     }
@@ -1120,6 +1127,21 @@ export const renderTemplate = async (req: AuthRequest, res: Response) => {
           : req.body.variables;
       } catch {
         return res.status(400).json({ error: 'variables doit être un JSON valide' });
+      }
+    }
+
+    // Extract image files and inject as base64 data URIs into variables
+    // Image fields are named image_<key> (e.g. image_photo, image_logo)
+    const imageKeys = Object.keys(files || {}).filter(k => k.startsWith('image_'));
+    for (const fieldName of imageKeys) {
+      const imageFile = files![fieldName]?.[0];
+      if (imageFile) {
+        const varKey = fieldName.replace('image_', '');
+        const imageBuffer = imageFile.path
+          ? await fs.promises.readFile(imageFile.path)
+          : imageFile.buffer;
+        const base64 = imageBuffer.toString('base64');
+        variables[`_image_${varKey}`] = `data:${imageFile.mimetype};base64,${base64}`;
       }
     }
 

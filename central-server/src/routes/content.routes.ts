@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import * as contentController from '../controllers/content.controller';
 import { authenticate, requireRole } from '../middleware/auth';
-import { uploadVideo, uploadImage } from '../middleware/upload';
+import { uploadVideo, uploadImage, uploadTemplate } from '../middleware/upload';
 import { paginationMiddleware, createPaginationMiddleware } from '../middleware/pagination';
 import { adminRateLimit, sensitiveRateLimit, uploadRateLimit } from '../middleware/user-rate-limit';
 
@@ -27,7 +27,11 @@ router.delete('/videos/:videoId/variants/:displayType', authenticate, requireRol
 router.post('/image-to-video', authenticate, requireRole('admin', 'operator', 'club'), uploadRateLimit, uploadImage.single('image'), contentController.convertImageToVideo);
 
 // Template rendering (overlay animation on existing MP4)
-router.post('/render-template', authenticate, requireRole('admin', 'operator'), uploadRateLimit, uploadVideo.single('video'), contentController.renderTemplate);
+router.post('/render-template', authenticate, requireRole('admin', 'operator'), uploadRateLimit, uploadTemplate.fields([
+  { name: 'video', maxCount: 1 },
+  { name: 'image_photo', maxCount: 1 },
+  { name: 'image_logo', maxCount: 1 },
+]), contentController.renderTemplate);
 router.get('/templates/available', authenticate, adminRateLimit, contentController.getAvailableTemplates);
 
 // Deployment routes - GET use adminRateLimit, mutations use sensitiveRateLimit

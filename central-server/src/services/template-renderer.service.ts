@@ -65,6 +65,8 @@ function buildPlayerNameHTML(vars: Record<string, string>): string {
   const accentColor = vars['accent'] || '#FFD700';
   const dur = parseFloat(vars['_duration'] || '3.4');
   const fadeOutStart = Math.max(dur - 0.6, 1.5);
+  const photoDataUri = vars['_image_photo'] || '';
+  const logoDataUri = vars['_image_logo'] || '';
 
   const positionCSS = position === 'top'
     ? 'top: 60px; bottom: auto;'
@@ -85,6 +87,15 @@ function buildPlayerNameHTML(vars: Record<string, string>): string {
     opacity: 0;
     animation: bannerIn 0.5s cubic-bezier(0.16,1,0.3,1) 0.6s forwards, bannerOut 0.4s ease-in ${fadeOutStart}s forwards;
   }
+  .player-photo {
+    width: 100px; height: 100px; border-radius: 50%; object-fit: cover;
+    border: 3px solid rgba(255,255,255,0.3);
+  }
+  .club-logo {
+    position: absolute; top: -20px; right: -20px;
+    width: 64px; height: 64px; object-fit: contain;
+    filter: drop-shadow(0 2px 8px rgba(0,0,0,0.4));
+  }
   .numero { font-size: 72px; font-weight: 900; color: ${escapeHtml(accentColor)}; line-height: 1; min-width: 80px; text-align: center; }
   .separator { width: 3px; height: 60px; background: rgba(255,255,255,0.25); border-radius: 2px; }
   .name-block { display: flex; flex-direction: column; gap: 2px; }
@@ -94,11 +105,13 @@ function buildPlayerNameHTML(vars: Record<string, string>): string {
   @keyframes bannerOut { from { opacity: 1; transform: translateX(-50%) translateY(0); } to { opacity: 0; transform: translateX(-50%) translateY(-15px); } }
 </style></head><body>
 <div class="player-banner">
+  ${photoDataUri ? `<img class="player-photo" src="${photoDataUri}" />` : ''}
   ${numero ? `<span class="numero">#${escapeHtml(numero)}</span><span class="separator"></span>` : ''}
   <div class="name-block">
     ${prenom ? `<span class="prenom">${escapeHtml(prenom)}</span>` : ''}
     <span class="nom">${escapeHtml(nom)}</span>
   </div>
+  ${logoDataUri ? `<img class="club-logo" src="${logoDataUri}" />` : ''}
 </div></body></html>`;
 }
 
@@ -109,6 +122,7 @@ function buildScorePlusHTML(vars: Record<string, string>): string {
   const color = vars['color'] || '#FF3333';
   const dur = parseFloat(vars['_duration'] || '4');
   const fadeOutStart = Math.max(dur - 0.8, 1.5);
+  const logoDataUri = vars['_image_logo'] || '';
 
   return `<!DOCTYPE html><html><head>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@700;900&display=swap" rel="stylesheet">
@@ -116,7 +130,9 @@ function buildScorePlusHTML(vars: Record<string, string>): string {
   * { margin: 0; padding: 0; }
   body { width: 1920px; height: 1080px; background: transparent; overflow: hidden; font-family: 'Inter', Arial, sans-serif; }
   .overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-  .club { font-size: 48px; font-weight: 700; color: #FFD700; letter-spacing: 0.1em; margin-bottom: 20px; text-transform: uppercase; opacity: 0; animation: fadeSlideUp 0.5s ease-out 0.15s forwards; }
+  .club-row { display: flex; align-items: center; gap: 16px; margin-bottom: 20px; opacity: 0; animation: fadeSlideUp 0.5s ease-out 0.15s forwards; }
+  .club-logo { width: 56px; height: 56px; object-fit: contain; filter: drop-shadow(0 2px 6px rgba(0,0,0,0.4)); }
+  .club { font-size: 48px; font-weight: 700; color: #FFD700; letter-spacing: 0.1em; text-transform: uppercase; }
   .score { font-size: 320px; font-weight: 900; color: ${escapeHtml(color)}; line-height: 1; opacity: 0; animation: scaleIn 0.4s ease-out 0s forwards; text-shadow: 0 0 80px ${escapeHtml(color)}66; }
   .player { font-size: 80px; font-weight: 700; color: white; margin-top: 10px; letter-spacing: 0.08em; opacity: 0; animation: fadeSlideUp 0.5s ease-out 0.3s forwards; text-transform: uppercase; }
   .overlay { animation: fadeOutAll 0.5s ease-in ${fadeOutStart}s forwards; }
@@ -125,7 +141,7 @@ function buildScorePlusHTML(vars: Record<string, string>): string {
   @keyframes fadeOutAll { from { opacity: 1; } to { opacity: 0; } }
 </style></head><body>
 <div class="overlay">
-  ${club ? `<div class="club">${escapeHtml(club)}</div>` : ''}
+  ${(club || logoDataUri) ? `<div class="club-row">${logoDataUri ? `<img class="club-logo" src="${logoDataUri}" />` : ''}${club ? `<span class="club">${escapeHtml(club)}</span>` : ''}</div>` : ''}
   <div class="score">${escapeHtml(score)}</div>
   ${nom ? `<div class="player">${escapeHtml(nom)}</div>` : ''}
 </div></body></html>`;
@@ -137,6 +153,7 @@ function buildButeurHTML(vars: Record<string, string>): string {
   const club = vars['club'] || '';
   const dur = parseFloat(vars['_duration'] || '5');
   const fadeOutStart = Math.max(dur - 1, 2);
+  const logoDataUri = vars['_image_logo'] || '';
 
   return `<!DOCTYPE html><html><head>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@700;900&display=swap" rel="stylesheet">
@@ -144,7 +161,9 @@ function buildButeurHTML(vars: Record<string, string>): string {
   * { margin: 0; padding: 0; }
   body { width: 1920px; height: 1080px; background: transparent; overflow: hidden; font-family: 'Inter', Arial, sans-serif; }
   .overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-  .club { font-size: 50px; font-weight: 700; color: #FFD700; letter-spacing: 0.12em; margin-bottom: 30px; text-transform: uppercase; opacity: 0; animation: fadeSlideUp 0.5s ease-out 0.1s forwards; }
+  .club-row { display: flex; align-items: center; gap: 16px; margin-bottom: 30px; opacity: 0; animation: fadeSlideUp 0.5s ease-out 0.1s forwards; }
+  .club-logo { width: 64px; height: 64px; object-fit: contain; filter: drop-shadow(0 2px 6px rgba(0,0,0,0.4)); }
+  .club { font-size: 50px; font-weight: 700; color: #FFD700; letter-spacing: 0.12em; text-transform: uppercase; }
   .but { font-size: 140px; font-weight: 900; color: #FF3344; line-height: 1; opacity: 0; animation: punchIn 0.5s ease-out 0s forwards; text-shadow: 0 0 60px rgba(255,50,70,0.5); }
   .numero { font-size: 220px; font-weight: 900; color: white; line-height: 1; opacity: 0; animation: scaleIn 0.5s ease-out 0.4s forwards; }
   .player { font-size: 90px; font-weight: 700; color: white; margin-top: 10px; letter-spacing: 0.08em; opacity: 0; animation: fadeSlideUp 0.5s ease-out 0.7s forwards; text-transform: uppercase; }
@@ -155,7 +174,7 @@ function buildButeurHTML(vars: Record<string, string>): string {
   @keyframes fadeOutAll { from { opacity: 1; } to { opacity: 0; } }
 </style></head><body>
 <div class="overlay">
-  ${club ? `<div class="club">${escapeHtml(club)}</div>` : ''}
+  ${(club || logoDataUri) ? `<div class="club-row">${logoDataUri ? `<img class="club-logo" src="${logoDataUri}" />` : ''}${club ? `<span class="club">${escapeHtml(club)}</span>` : ''}</div>` : ''}
   <div class="but">BUUUUT !</div>
   ${numero ? `<div class="numero">#${escapeHtml(numero)}</div>` : ''}
   ${nom ? `<div class="player">${escapeHtml(nom)}</div>` : ''}
