@@ -1,0 +1,216 @@
+<!-- Overlay Score TV (broadcast-quality, CSS-only themes) — masqué sur écran secondaire -->
+<!-- Requiert: liveScoreEnabled (central) ET scoreEnabled (local) -->
+<div
+  class="score-overlay"
+  *ngIf="
+    displayType !== 'secondary' &&
+    showScoreOverlay &&
+    currentScore &&
+    configuration?.liveScoreEnabled &&
+    localOptions.overlay.scoreEnabled
+  "
+  [class.theme-broadcast]="localOptions.template === 'broadcast'"
+  [class.theme-minimal]="localOptions.template === 'minimal'"
+  [class.pos-top-left]="getOverlayPosition() === 'top-left'"
+  [class.pos-top-center]="getOverlayPosition() === 'top-center'"
+  [class.pos-top-right]="getOverlayPosition() === 'top-right'"
+  [class.pos-bottom-left]="getOverlayPosition() === 'bottom-left'"
+  [class.pos-bottom-center]="getOverlayPosition() === 'bottom-center'"
+  [class.pos-bottom-right]="getOverlayPosition() === 'bottom-right'"
+>
+  <!-- Broadcast Theme : style TV pro (ESPN/BeIN lower-third) -->
+  <ng-container *ngIf="localOptions.template === 'broadcast'">
+    <div class="broadcast-bar">
+      <div class="broadcast-team home">
+        <img
+          *ngIf="currentScore.homeLogo"
+          [src]="currentScore.homeLogo"
+          alt=""
+          class="broadcast-logo"
+        />
+        <span class="broadcast-name">{{ currentScore.homeTeam }}</span>
+      </div>
+      <div class="broadcast-scores">
+        <span class="broadcast-score home">{{ currentScore.homeScore }}</span>
+        <span class="broadcast-divider"></span>
+        <span class="broadcast-score away">{{ currentScore.awayScore }}</span>
+      </div>
+      <div class="broadcast-team away">
+        <span class="broadcast-name">{{ currentScore.awayTeam }}</span>
+        <img
+          *ngIf="currentScore.awayLogo"
+          [src]="currentScore.awayLogo"
+          alt=""
+          class="broadcast-logo"
+        />
+      </div>
+    </div>
+    <div
+      class="broadcast-info"
+      *ngIf="
+        currentScore.period ||
+        currentScore.matchTime ||
+        (localOptions.timer.enabled && timerIsRunning)
+      "
+    >
+      <span class="broadcast-period" *ngIf="currentScore.period">{{ currentScore.period }}</span>
+      <span class="broadcast-timer" *ngIf="localOptions.timer.enabled && timerIsRunning">{{
+        formatTimerDisplay()
+      }}</span>
+      <span
+        class="broadcast-timer"
+        *ngIf="currentScore.matchTime && (!localOptions.timer.enabled || !timerIsRunning)"
+        >{{ currentScore.matchTime }}</span
+      >
+    </div>
+  </ng-container>
+
+  <!-- Minimal Theme : score discret uniquement -->
+  <ng-container *ngIf="localOptions.template === 'minimal'">
+    <span class="minimal-score">{{ currentScore.homeScore }}</span>
+    <span class="minimal-divider">-</span>
+    <span class="minimal-score">{{ currentScore.awayScore }}</span>
+    <span class="minimal-timer" *ngIf="localOptions.timer.enabled && timerIsRunning">{{
+      formatTimerDisplay()
+    }}</span>
+  </ng-container>
+</div>
+
+<!-- Timer Overlay (standalone quand pas de score ou non intégré) — masqué sur écran secondaire -->
+<!-- Requiert: liveScoreEnabled (central) pour afficher le timer lié au match -->
+<div
+  class="timer-overlay"
+  *ngIf="
+    displayType !== 'secondary' &&
+    configuration?.liveScoreEnabled &&
+    localOptions.timer.enabled &&
+    timerIsRunning &&
+    (!showScoreOverlay || !localOptions.timer.integratedWithScore)
+  "
+  [class.pos-top-left]="getOverlayPosition() === 'top-left'"
+  [class.pos-top-center]="getOverlayPosition() === 'top-center'"
+  [class.pos-top-right]="getOverlayPosition() === 'top-right'"
+  [class.pos-bottom-left]="getOverlayPosition() === 'bottom-left'"
+  [class.pos-bottom-center]="getOverlayPosition() === 'bottom-center'"
+  [class.pos-bottom-right]="getOverlayPosition() === 'bottom-right'"
+>
+  <span class="timer-value">{{ formatTimerDisplay() }}</span>
+</div>
+
+<!-- Animation de But/Point TV (3 styles: popup, fullscreen, slide) — masquée sur écran secondaire -->
+<!-- Requiert: liveScoreEnabled (central) ET goalAnimation.enabled (local) -->
+<div
+  class="goal-animation"
+  *ngIf="
+    displayType !== 'secondary' &&
+    showGoalAnimation &&
+    currentScore &&
+    configuration?.liveScoreEnabled &&
+    localOptions.goalAnimation.enabled
+  "
+  [ngClass]="getGoalAnimationStyle()"
+>
+  <div class="goal-content">
+    <!-- Style Fullscreen: titre BUUUUT -->
+    <div class="goal-title" *ngIf="localOptions.goalAnimation.style === 'fullscreen'">
+      {{
+        localOptions.sport === 'football' || localOptions.sport === 'handball'
+          ? 'BUUUUT !'
+          : 'POINT !'
+      }}
+    </div>
+
+    <div class="goal-teams">
+      <div class="goal-team home" [class.scoring]="goalScoringTeam === 'home'">
+        <!-- Logo équipe -->
+        <img
+          *ngIf="currentScore.homeLogo"
+          [src]="currentScore.homeLogo"
+          alt="Logo domicile"
+          class="goal-team-logo"
+        />
+        <span class="goal-team-name">{{ currentScore.homeTeam }}</span>
+        <span class="goal-team-score" [class.scoring]="goalScoringTeam === 'home'">
+          {{ currentScore.homeScore }}
+        </span>
+      </div>
+      <span class="goal-separator">-</span>
+      <div class="goal-team away" [class.scoring]="goalScoringTeam === 'away'">
+        <span class="goal-team-score" [class.scoring]="goalScoringTeam === 'away'">
+          {{ currentScore.awayScore }}
+        </span>
+        <span class="goal-team-name">{{ currentScore.awayTeam }}</span>
+        <!-- Logo équipe -->
+        <img
+          *ngIf="currentScore.awayLogo"
+          [src]="currentScore.awayLogo"
+          alt="Logo extérieur"
+          class="goal-team-logo"
+        />
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Breaking News Banner -->
+<div
+  class="breaking-news-banner mode-scroll"
+  *ngIf="showBreakingNews && currentBreakingNews"
+  [class.position-top]="currentBreakingNews.position === 'top'"
+  [class.position-bottom]="currentBreakingNews.position === 'bottom'"
+>
+  <div class="breaking-news-content">
+    <span class="breaking-news-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+      </svg>
+    </span>
+    <span class="breaking-news-text">{{ currentBreakingNews.message }}</span>
+  </div>
+</div>
+
+<!-- ============================================================== -->
+<!-- SECONDARY DISPLAY OVERLAYS — Score bandeau + Goal flash (affichés uniquement sur /secondary) -->
+<!-- ============================================================== -->
+
+<!-- Secondary Score Bandeau (bandeau horizontal en bas) -->
+<div
+  class="secondary-score-bandeau"
+  *ngIf="
+    displayType === 'secondary' &&
+    showScoreOverlay &&
+    currentScore &&
+    configuration?.liveScoreEnabled &&
+    localOptions.overlay.scoreEnabled
+  "
+>
+  <span class="secondary-team home">{{ currentScore.homeTeam }}</span>
+  <span class="secondary-score home">{{ currentScore.homeScore }}</span>
+  <span class="secondary-divider">-</span>
+  <span class="secondary-score away">{{ currentScore.awayScore }}</span>
+  <span class="secondary-team away">{{ currentScore.awayTeam }}</span>
+  <span class="secondary-timer" *ngIf="localOptions.timer.enabled && timerIsRunning">{{
+    formatTimerDisplay()
+  }}</span>
+</div>
+
+<!-- Secondary Goal Flash (flash couleur plein écran) -->
+<div
+  class="secondary-goal-flash"
+  *ngIf="
+    displayType === 'secondary' &&
+    showGoalAnimation &&
+    currentScore &&
+    configuration?.liveScoreEnabled &&
+    localOptions.goalAnimation.enabled
+  "
+  [class.home]="goalScoringTeam === 'home'"
+  [class.away]="goalScoringTeam === 'away'"
+>
+  <span class="secondary-goal-text">{{
+    localOptions.sport === 'football' || localOptions.sport === 'handball' ? 'BUUUUT !' : 'POINT !'
+  }}</span>
+  <span class="secondary-goal-score"
+    >{{ currentScore.homeScore }} - {{ currentScore.awayScore }}</span
+  >
+</div>

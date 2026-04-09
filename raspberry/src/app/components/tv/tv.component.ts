@@ -5,8 +5,8 @@ import { HttpClient } from '@angular/common/http';
 import { Subscription } from 'rxjs';
 import { SocketService, LoopState } from '../../services/socket.service';
 import { AnalyticsService } from '../../services/analytics.service';
-import { LocalBroadcastService, ScoreUpdateEvent, PhaseChangeEvent, OptionsUpdateEvent, BreakingNewsEvent, TimerUpdateEvent } from '../../services/local-broadcast.service';
-import { LocalOptionsService, LocalOptions, GoalAnimationConfig, TeamConfig } from '../../services/local-options.service';
+import { LocalBroadcastService, PhaseChangeEvent, OptionsUpdateEvent } from '../../services/local-broadcast.service';
+import { LocalOptionsService, LocalOptions } from '../../services/local-options.service';
 import { DoubleBufferVideoService, DoubleBufferCallbacks } from '../../services/double-buffer-video.service';
 import { VideoErrorRecoveryService, ErrorRecoveryCallbacks } from '../../services/video-error-recovery.service';
 import { WatermarkService } from '../../services/watermark.service';
@@ -18,8 +18,9 @@ import { SaasConfigService } from '../../services/saas-config.service';
 import { LicenseBlockComponent } from '../license-block/license-block.component';
 import { WaitingScreenComponent } from '../waiting-screen/waiting-screen.component';
 import { WrongPortScreenComponent } from '../wrong-port-screen/wrong-port-screen.component';
+import { ScoreOverlayComponent } from '../score-overlay/score-overlay.component';
 import { Video } from '../../interfaces/video.interface';
-import { Configuration, OverlayPosition, ScoreOverlayPosition, SportType, WatermarkScheduleRule } from '../../interfaces/configuration.interface';
+import { Configuration } from '../../interfaces/configuration.interface';
 import { Command } from '../../interfaces/command.interface';
 import { Sponsor } from '../../interfaces/sponsor.interface';
 import { generateWeightedPlaylist } from '../../utils/weighted-playlist';
@@ -30,7 +31,7 @@ import { environment } from '../../../environments/environment';
   selector: 'app-tv',
   templateUrl: './tv.component.html',
   styleUrl: './tv.component.scss',
-  imports: [CommonModule, LicenseBlockComponent, WaitingScreenComponent, WrongPortScreenComponent],
+  imports: [CommonModule, LicenseBlockComponent, WaitingScreenComponent, WrongPortScreenComponent, ScoreOverlayComponent],
   encapsulation: ViewEncapsulation.None // Désactiver l'encapsulation pour le double-buffer
 })
 export class TvComponent implements OnInit, OnDestroy {
@@ -74,9 +75,6 @@ export class TvComponent implements OnInit, OnDestroy {
   // Options locales (provenant de Remote)
   public localOptions: LocalOptions = this.localOptionsService.getOptions();
 
-  // Timer local (pour mise à jour fluide)
-  private localTimerInterval: ReturnType<typeof setInterval> | null = null;
-
   @Input() public configuration: Configuration;
 
   private lastTriggerType: 'auto' | 'manual' = 'auto';
@@ -88,40 +86,17 @@ export class TvComponent implements OnInit, OnDestroy {
   public activePhase: 'neutral' | 'before' | 'during' | 'after' = 'neutral';
   private currentLoopVideos: Sponsor[] = [];
 
-  // Live Score - structure enrichie avec logos et période
-  public currentScore: {
-    homeTeam: string;
-    awayTeam: string;
-    homeScore: number;
-    awayScore: number;
-    homeLogo?: string;
-    awayLogo?: string;
-    period?: string;
-    matchTime?: string;
-  } | null = null;
-  public showScoreOverlay = false;
-
-  // Goal Animation (remplace goalPopup)
-  public showGoalAnimation = false;
-  public goalScoringTeam: 'home' | 'away' | null = null;
-  private goalAnimationTimeout: ReturnType<typeof setTimeout> | null = null;
-  private goalAudio: HTMLAudioElement | null = null;
-
-  // Breaking News
-  public showBreakingNews = false;
-  public currentBreakingNews: BreakingNewsEvent | null = null;
-  private breakingNewsTimeout: ReturnType<typeof setTimeout> | null = null;
+  // Score overlay state — delegated to ScoreOverlayComponent
+  // Proxy getters for template backward compatibility and emitPlayerState
+  public get currentScore() { return this.scoreOverlay?.currentScore ?? null; }
+  public get showScoreOverlay() { return this.scoreOverlay?.showScoreOverlay ?? false; }
 
   // Watermark - délégué au WatermarkService
   public get showWatermark(): boolean {
     return this.watermarkService.showWatermark;
   }
 
-  // Timer / Chronomètre
-  public timerCurrentTime = 0;
-  public timerIsRunning = false;
-  public timerCountDown = false;
-  public timerHalfDuration = 45;
+  // Timer state — delegated to ScoreOverlayComponent
 
   // Double-buffer pour la BOUCLE (z-index 1-2)
   @ViewChild('playerA', { static: true }) playerARef: ElementRef<HTMLVideoElement>;
@@ -130,6 +105,9 @@ export class TvComponent implements OnInit, OnDestroy {
   // Double-buffer pour les vidéos MANUELLES (z-index 10-11, au-dessus de la boucle)
   @ViewChild('manualPlayerA', { static: true }) manualPlayerARef: ElementRef<HTMLVideoElement>;
   @ViewChild('manualPlayerB', { static: true }) manualPlayerBRef: ElementRef<HTMLVideoElement>;
+
+  // Score overlay component (score, timer, goal animation, breaking news)
+  @ViewChild(ScoreOverlayComponent) scoreOverlay: ScoreOverlayComponent;
 
   // Canvas freeze-frame pour transitions sans flash (z-index 20)
   @ViewChild('freezeCanvas', { static: true }) freezeCanvasRef: ElementRef<HTMLCanvasElement>;
@@ -302,55 +280,27 @@ export class TvComponent implements OnInit, OnDestroy {
       this.handleTvCommand(command);
     });
 
-    // Live Score - Écouter les mises à jour de score
-    this.socketService.on('score-update', (scoreData: { homeTeam: string; awayTeam: string; homeScore: number; awayScore: number; period?: string; matchTime?: string } | null) => {
-      // Ignorer les score-update null (pas de match actif)
-      if (!scoreData) return;
-      console.log('[TV] Score update received:', scoreData);
-      this.handleScoreUpdate(scoreData);
-    });
+    // Live Score — score-update, score-reset, options-update, breaking-news, timer-update
+    // are now handled by ScoreOverlayComponent directly
 
-    // Live Score - Écouter le reset du score
-    this.socketService.on('score-reset', () => {
-      console.log('[TV] Score reset received');
-      this.currentScore = null;
-      this.showScoreOverlay = false;
-    });
-
-    // Live Score - Écouter les infos de match mises à jour
+    // Match info updates (audience estimate → analytics context)
     this.socketService.on('match-info-updated', (matchInfo: { audienceEstimate?: number }) => {
       console.log('[TV] Match info updated:', matchInfo);
-      // Mettre à jour le contexte analytics si nécessaire
       if (matchInfo.audienceEstimate) {
         this.updateAudienceEstimate(matchInfo.audienceEstimate);
       }
     });
 
-    // Écouter les changements de phase (boucle par temps de match)
+    // Phase changes (match loop switching)
     this.socketService.on('phase-change', (data: { phase: 'neutral' | 'before' | 'during' | 'after' }) => {
       console.log('[TV] Phase change received:', data.phase);
       this.switchToPhase(data.phase);
     });
 
-    // Écouter les mises à jour d'options via Socket.IO (réseau)
+    // Options updates via Socket.IO (for localOptions used by TvComponent)
     this.socketService.on<OptionsUpdateEvent>('options-update', (options) => {
       console.log('[TV] Options update received via socket:', options);
       this.localOptions = options as LocalOptions;
-      if (!options.overlay.scoreEnabled) {
-        this.showScoreOverlay = false;
-      }
-    });
-
-    // Écouter les breaking news via Socket.IO (réseau)
-    this.socketService.on<BreakingNewsEvent>('breaking-news', (news) => {
-      console.log('[TV] Breaking news received via socket:', news);
-      this.displayBreakingNews(news);
-    });
-
-    // Écouter les mises à jour du timer via Socket.IO (réseau)
-    this.socketService.on<TimerUpdateEvent>('timer-update', (timerEvent) => {
-      console.log('[TV] Timer update received via socket:', timerEvent);
-      this.handleTimerUpdate(timerEvent);
     });
 
     // =========================================================================
@@ -394,21 +344,10 @@ export class TvComponent implements OnInit, OnDestroy {
     // sans passer par le serveur cloud
     // =========================================================================
 
-    // Écouter les mises à jour de score via BroadcastChannel (local)
-    this.localBroadcastSubscriptions.push(
-      this.localBroadcast.onScoreUpdate().subscribe((scoreData: ScoreUpdateEvent) => {
-        console.log('[TV] Local score update received:', scoreData);
-        if (scoreData.reset) {
-          // Reset du score
-          this.currentScore = null;
-          this.showScoreOverlay = false;
-        } else {
-          this.handleScoreUpdate(scoreData);
-        }
-      })
-    );
+    // Score, options, breaking news, timer via BroadcastChannel
+    // are now handled by ScoreOverlayComponent directly
 
-    // Écouter les changements de phase via BroadcastChannel (local)
+    // Phase changes via BroadcastChannel (local)
     this.localBroadcastSubscriptions.push(
       this.localBroadcast.onPhaseChange().subscribe((data: PhaseChangeEvent) => {
         console.log('[TV] Local phase change received:', data.phase);
@@ -416,7 +355,7 @@ export class TvComponent implements OnInit, OnDestroy {
       })
     );
 
-    // Écouter les commandes via BroadcastChannel (local)
+    // Commands via BroadcastChannel (local)
     this.localBroadcastSubscriptions.push(
       this.localBroadcast.onCommand().subscribe((command) => {
         console.log('[TV] Local command received:', command);
@@ -424,32 +363,11 @@ export class TvComponent implements OnInit, OnDestroy {
       })
     );
 
-    // Écouter les mises à jour d'options via BroadcastChannel (local)
+    // Options updates via BroadcastChannel (for localOptions used by TvComponent)
     this.localBroadcastSubscriptions.push(
       this.localBroadcast.onOptionsUpdate().subscribe((options: OptionsUpdateEvent) => {
         console.log('[TV] Local options update received:', options);
         this.localOptions = options as LocalOptions;
-
-        // Masquer l'overlay si désactivé
-        if (!options.overlay.scoreEnabled) {
-          this.showScoreOverlay = false;
-        }
-      })
-    );
-
-    // Écouter les breaking news via BroadcastChannel (local)
-    this.localBroadcastSubscriptions.push(
-      this.localBroadcast.onBreakingNews().subscribe((news: BreakingNewsEvent) => {
-        console.log('[TV] Breaking news received:', news);
-        this.displayBreakingNews(news);
-      })
-    );
-
-    // Écouter les mises à jour du timer via BroadcastChannel (local)
-    this.localBroadcastSubscriptions.push(
-      this.localBroadcast.onTimerUpdate().subscribe((timerEvent: TimerUpdateEvent) => {
-        console.log('[TV] Timer update received:', timerEvent);
-        this.handleTimerUpdate(timerEvent);
       })
     );
 
@@ -565,99 +483,8 @@ export class TvComponent implements OnInit, OnDestroy {
   /**
    * Affiche une breaking news sur l'écran
    */
-  private displayBreakingNews(news: BreakingNewsEvent): void {
-    // Annuler un timeout précédent si existant
-    if (this.breakingNewsTimeout) {
-      clearTimeout(this.breakingNewsTimeout);
-    }
-
-    this.currentBreakingNews = news;
-    this.showBreakingNews = true;
-
-    // Masquer après la durée spécifiée
-    this.breakingNewsTimeout = setTimeout(() => {
-      this.showBreakingNews = false;
-      this.currentBreakingNews = null;
-    }, news.duration * 1000);
-  }
-
-  /**
-   * Gère les mises à jour du timer (provenant de Remote)
-   */
-  private handleTimerUpdate(event: TimerUpdateEvent): void {
-    if (event.currentTime !== undefined) {
-      this.timerCurrentTime = event.currentTime;
-    }
-    if (event.halfDuration !== undefined) {
-      this.timerHalfDuration = event.halfDuration;
-    }
-    if (event.countDown !== undefined) {
-      this.timerCountDown = event.countDown;
-    }
-
-    // Gérer les actions du timer
-    if (event.action === 'start' && !this.timerIsRunning) {
-      this.timerIsRunning = true;
-      this.startLocalTimer();
-    } else if (event.action === 'pause' && this.timerIsRunning) {
-      this.timerIsRunning = false;
-      this.stopLocalTimer();
-    } else if (event.action === 'reset') {
-      this.timerIsRunning = false;
-      this.stopLocalTimer();
-    } else if (event.action === 'sync') {
-      // Sync: mettre à jour isRunning si différent
-      if (event.isRunning !== undefined && event.isRunning !== this.timerIsRunning) {
-        this.timerIsRunning = event.isRunning;
-        if (this.timerIsRunning && !this.localTimerInterval) {
-          this.startLocalTimer();
-        } else if (!this.timerIsRunning && this.localTimerInterval) {
-          this.stopLocalTimer();
-        }
-      }
-    }
-  }
-
-  /**
-   * Démarre le timer local pour mise à jour fluide chaque seconde
-   */
-  private startLocalTimer(): void {
-    if (this.localTimerInterval) return;
-
-    this.localTimerInterval = setInterval(() => {
-      if (this.timerCountDown) {
-        // Compte à rebours
-        if (this.timerCurrentTime > 0) {
-          this.timerCurrentTime--;
-        }
-      } else {
-        // Compteur croissant
-        const maxTime = this.timerHalfDuration * 60;
-        if (this.timerCurrentTime < maxTime) {
-          this.timerCurrentTime++;
-        }
-      }
-    }, 1000);
-  }
-
-  /**
-   * Arrête le timer local
-   */
-  private stopLocalTimer(): void {
-    if (this.localTimerInterval) {
-      clearInterval(this.localTimerInterval);
-      this.localTimerInterval = null;
-    }
-  }
-
-  /**
-   * Formate le temps du timer en MM:SS
-   */
-  public formatTimerDisplay(): string {
-    const mins = Math.floor(this.timerCurrentTime / 60);
-    const secs = this.timerCurrentTime % 60;
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-  }
+  // displayBreakingNews, handleTimerUpdate, startLocalTimer, stopLocalTimer, formatTimerDisplay
+  // → delegated to ScoreOverlayComponent
 
   // =========================================================================
   // PLAYER STATE — Émet l'état du player pour le monitoring cloud
@@ -714,8 +541,7 @@ export class TvComponent implements OnInit, OnDestroy {
       this.analyticsService.endSession();
     }
 
-    // Arrêter le timer local
-    this.stopLocalTimer();
+    // Timer local — nettoyé par ScoreOverlayComponent.ngOnDestroy
 
     // Arrêter le watchdog
     this.stopWatchdog();
@@ -1478,123 +1304,9 @@ export class TvComponent implements OnInit, OnDestroy {
    * Gère la mise à jour du score en direct
    * Inclut les logos des équipes depuis les options locales
    */
-  private handleScoreUpdate(scoreData: {
-    homeTeam: string;
-    awayTeam: string;
-    homeScore: number;
-    awayScore: number;
-    homeLogo?: string;
-    awayLogo?: string;
-    period?: string;
-    matchTime?: string;
-  }): void {
-    // Détecter si un but a été marqué (et par quelle équipe)
-    if (this.currentScore && this.localOptions.goalAnimation.enabled) {
-      const homeScored = scoreData.homeScore > this.currentScore.homeScore;
-      const awayScored = scoreData.awayScore > this.currentScore.awayScore;
-
-      if (homeScored || awayScored) {
-        this.triggerGoalAnimation(homeScored ? 'home' : 'away');
-      }
-    }
-
-    // Enrichir avec les logos des options locales si non fournis
-    this.currentScore = {
-      ...scoreData,
-      homeLogo: scoreData.homeLogo || this.localOptions.match.homeTeam.logo,
-      awayLogo: scoreData.awayLogo || this.localOptions.match.awayTeam.logo,
-      period: scoreData.period || this.localOptions.match.period,
-    };
-
-    // Afficher l'overlay selon les options
-    if (this.localOptions.overlay.scoreEnabled) {
-      this.showScoreOverlay = true;
-    }
-
-    // Mettre à jour l'état du player pour le monitoring cloud
-    this.emitPlayerState({ overlayActive: this.showScoreOverlay });
-  }
-
-  /**
-   * Déclenche l'animation de but/point
-   * Supporte 3 styles: popup, fullscreen, slide
-   * Avec son optionnel
-   */
-  private triggerGoalAnimation(team: 'home' | 'away'): void {
-    const config = this.localOptions.goalAnimation;
-    if (!config.enabled) return;
-
-    // Annuler un timeout précédent si existant
-    if (this.goalAnimationTimeout) {
-      clearTimeout(this.goalAnimationTimeout);
-    }
-
-    this.goalScoringTeam = team;
-    this.showGoalAnimation = true;
-
-    const displayInfo = this.displayType === 'secondary' ? 'Secondary flash' : config.style;
-    console.log('[TV] Goal animation triggered for team:', team, 'style:', displayInfo);
-
-    // Jouer le son si activé (pas sur écran secondaire — le son vient de l'écran principal)
-    if (this.displayType !== 'secondary' && config.soundEnabled && config.soundUrl) {
-      this.playGoalSound(config.soundUrl);
-    }
-
-    // Secondary: durée plus courte (flash rapide), TV: durée configurée
-    const duration = this.displayType === 'secondary' ? Math.min(config.duration, 3) : config.duration;
-    this.goalAnimationTimeout = setTimeout(() => {
-      this.showGoalAnimation = false;
-      this.goalScoringTeam = null;
-    }, duration * 1000);
-  }
-
-  /**
-   * Joue le son de but
-   */
-  private playGoalSound(soundUrl: string): void {
-    try {
-      // Réutiliser ou créer l'élément audio
-      if (!this.goalAudio) {
-        this.goalAudio = new Audio();
-      }
-      this.goalAudio.src = soundUrl;
-      this.goalAudio.volume = 0.8;
-      this.goalAudio.play().catch(err => {
-        console.warn('[TV] Could not play goal sound:', err.message);
-      });
-    } catch (err) {
-      console.warn('[TV] Error playing goal sound:', err);
-    }
-  }
-
-  /**
-   * Retourne le style d'animation de but actuel
-   */
-  public getGoalAnimationStyle(): string {
-    return `style-${this.localOptions.goalAnimation.style}`;
-  }
-
-  // Rétrocompatibilité
-  public get showGoalPopup(): boolean {
-    return this.showGoalAnimation;
-  }
-
-  /**
-   * Toggle manuel de l'overlay score (appelé par commande remote)
-   */
-  public toggleScoreOverlay(): void {
-    this.showScoreOverlay = !this.showScoreOverlay;
-  }
-
-  /**
-   * Position de l'overlay score/timer.
-   * Priorité : option locale → config centrale → défaut 'top-right'
-   */
-  public getOverlayPosition(): ScoreOverlayPosition {
-    return this.localOptions.overlay.position
-      || this.configuration?.scoreOverlay?.position as ScoreOverlayPosition
-      || 'top-right';
-  }
+  // handleScoreUpdate, triggerGoalAnimation, playGoalSound, getGoalAnimationStyle,
+  // showGoalPopup, toggleScoreOverlay, getOverlayPosition
+  // → delegated to ScoreOverlayComponent
 
   // ============================================================================
   // WATERMARK - Délégué au WatermarkService (P2 refactoring)
