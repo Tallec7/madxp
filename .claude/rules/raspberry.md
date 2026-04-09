@@ -31,14 +31,25 @@ paths:
 
 ## Modules Sync-Agent
 
-| Module        | Fichier                | Rôle                                           |
-| ------------- | ---------------------- | ---------------------------------------------- |
-| update-config | update-config.js       | Config avec merge intelligent                  |
-| diagnostics   | diagnostics.js         | Diagnostics système                            |
-| hotspot       | hotspot.js             | Gestion hotspot WiFi                           |
-| network-diag  | network-diagnostics.js | Diagnostics réseau                             |
-| debug-bundle  | debug-bundle.js        | Export debug pour support (16 sections, testé) |
-| analytics-buf | analytics-buffer.js    | Buffer analytics                               |
+| Module            | Fichier                       | Rôle                                                    |
+| ----------------- | ----------------------------- | ------------------------------------------------------- |
+| update-config     | update-config.js              | Config avec merge intelligent                           |
+| diagnostics       | diagnostics.js                | Diagnostics système                                     |
+| hotspot           | hotspot.js                    | Gestion hotspot WiFi                                    |
+| network-diag      | network-diagnostics.js        | Diagnostics réseau                                      |
+| debug-bundle      | debug-bundle.js               | Export debug pour support (16 sections, testé)          |
+| analytics-buf     | analytics-buffer.js           | Buffer analytics                                        |
+| heartbeat         | services/heartbeat.js         | Heartbeat périodique + health check connexion (ADR-044) |
+| analytics-sync    | services/analytics-sync.js    | Envoi périodique analytics HTTP (ADR-044)               |
+| command-dispatch  | services/command-dispatch.js  | Dispatch commandes + queue offline (ADR-044)            |
+| hotspot-watchdog  | services/hotspot-watchdog.js  | Health check + recovery hotspot (ADR-044)               |
+| internet-watchdog | services/internet-watchdog.js | Connectivité internet + recovery (ADR-044)              |
+| config-rollback   | services/config-rollback.js   | Rollback point management réseau (ADR-044)              |
+| hw-metrics        | metrics/hardware-metrics.js   | CPU, RAM, temp, disk, GPU, fan, WiFi (ADR-044)          |
+| display-metrics   | metrics/display-metrics.js    | EDID, display info, CEC (ADR-044)                       |
+| service-metrics   | metrics/service-metrics.js    | Systemd, kiosk, health, orphans (ADR-044)               |
+| ota-download      | commands/ota-download.js      | Download + checksum + stall detection (ADR-044)         |
+| ota-install       | commands/ota-install.js       | Extract + install + systemd + sudoers (ADR-044)         |
 
 ## Config Merge Intelligent
 

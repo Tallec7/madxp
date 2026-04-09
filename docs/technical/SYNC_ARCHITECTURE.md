@@ -1184,7 +1184,7 @@ Le sync-agent vérifie le SHA256 du package téléchargé avant extraction. En c
 3. **Retry** : re-download complet + seconde vérification
 4. **Échec final** : log error, abort OTA
 
-Code : `raspberry/sync-agent/src/commands/update-software.js` → `verifyChecksumWithRetry()`
+Code : `raspberry/sync-agent/src/commands/ota-download.js` → `verifyChecksumWithRetry()` (extrait de update-software.js, ADR-044)
 
 ### Download stall detection (v3.116.24+)
 
@@ -1490,31 +1490,32 @@ Un ratio `preloadCleanupCount/preloadRevealCount` élevé indique des vidéos ma
 
 ## Historique des Versions
 
-| Version | Date       | Auteur        | Modifications                                                                                                        |
-| ------- | ---------- | ------------- | -------------------------------------------------------------------------------------------------------------------- |
-| 1.0     | 2024-12-09 | Claude/NEOPRO | Création initiale                                                                                                    |
-| 1.1     | 2025-12-16 | Claude/NEOPRO | Ajout Command Queue pour sites offline                                                                               |
-| 1.2     | 2026-01-06 | Claude/NEOPRO | Ajout VideoWatcher et sync_local_state avec vidéos                                                                   |
-| 1.3     | 2026-01-07 | Claude/NEOPRO | Documentation merge sponsors, modes merge/replace, fix                                                               |
-| 1.4     | 2026-01-08 | Claude/NEOPRO | `deploy_video` utilise `sendOrQueue()` (offline support)                                                             |
-| 1.5     | 2026-01-24 | Claude/NEOPRO | Fix race condition sync_local_state après update_config                                                              |
-| 1.6     | 2026-02-12 | Claude/NEOPRO | Ajout multi-config profiles (sync_profiles, switch_profile, profile-switch)                                          |
-| 1.7     | 2026-02-15 | Claude/NEOPRO | Ajout section OTA : pré-migration, race condition, monitoring                                                        |
-| 1.8     | 2026-02-15 | Claude/NEOPRO | Réécriture pré-migration : rm sans sudo, diagnostic, versions affectées                                              |
-| 1.9     | 2026-02-15 | Claude/NEOPRO | Connexion locale persistante : relay screenshot et heartbeat via local-socket.js                                     |
-| 2.0     | 2026-02-16 | Claude/NEOPRO | Screenshot error response : réponse immédiate en cas d'échec + métriques Prometheus                                  |
-| 2.1     | 2026-02-17 | Claude/NEOPRO | OTA checksum retry : re-download + vérification 1x en cas de mismatch SHA256                                         |
-| 2.2     | 2026-02-17 | Claude/NEOPRO | Screenshot HTTP response : remplacement du relay Socket.IO room par request-response HTTP                            |
-| 2.3     | 2026-02-18 | Claude/NEOPRO | Sync sponsors Dashboard → Pi : `siteSponsors` dans payload déploiement, `mergeSiteSponsors()`, monitoring Prometheus |
-| 2.4     | 2026-02-19 | Claude/NEOPRO | Auth retry transitoire (5 tentatives), auto-optimisation canal hotspot, fix daily stats `screen_time_seconds`        |
-| 2.5     | 2026-02-21 | Claude/NEOPRO | Événement `content_received` dans sync-history, bannière sync contenu admin Pi, métriques sponsor health Prometheus  |
-| 2.6     | 2026-02-21 | Claude/NEOPRO | Pipeline analytics unifié (video_plays), suppression sponsor-impressions.js, tables campaigns + scheduled_reports    |
-| 2.7     | 2026-02-22 | Claude/NEOPRO | Cloud remote relay chain : détection zombie, fix socket.data, handler match-info-updated, monitoring Prometheus      |
-| 2.8     | 2026-02-24 | Claude/NEOPRO | Fix race condition reboot post-OTA : `shutdown -r +0` via spawn, skip restart sync-agent quand reboot prévu          |
-| 2.9     | 2026-02-27 | Claude/NEOPRO | E-23 : événements HDMI & failover, heartbeat enrichi (hdmiStatus, connectedClients), pipeline détection              |
-| 3.0     | 2026-03-01 | Claude/NEOPRO | ADR-033 : fix race condition master-slave (guard anti-stale), monitoring staleLoopStateCount, secondary variant path |
-| 3.1     | 2026-03-01 | Claude/NEOPRO | ADR-034 : révélation synchronisée preload/reveal, monitoring preloadRevealCount/preloadCleanupCount                  |
-| 3.2     | 2026-03-02 | Claude/NEOPRO | Multi-profile : sync_profiles, profile-switch handler avec merge + persistance, monitoring profileSwitchCount        |
+| Version | Date       | Auteur        | Modifications                                                                                                                  |
+| ------- | ---------- | ------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| 1.0     | 2024-12-09 | Claude/NEOPRO | Création initiale                                                                                                              |
+| 1.1     | 2025-12-16 | Claude/NEOPRO | Ajout Command Queue pour sites offline                                                                                         |
+| 1.2     | 2026-01-06 | Claude/NEOPRO | Ajout VideoWatcher et sync_local_state avec vidéos                                                                             |
+| 1.3     | 2026-01-07 | Claude/NEOPRO | Documentation merge sponsors, modes merge/replace, fix                                                                         |
+| 1.4     | 2026-01-08 | Claude/NEOPRO | `deploy_video` utilise `sendOrQueue()` (offline support)                                                                       |
+| 1.5     | 2026-01-24 | Claude/NEOPRO | Fix race condition sync_local_state après update_config                                                                        |
+| 1.6     | 2026-02-12 | Claude/NEOPRO | Ajout multi-config profiles (sync_profiles, switch_profile, profile-switch)                                                    |
+| 1.7     | 2026-02-15 | Claude/NEOPRO | Ajout section OTA : pré-migration, race condition, monitoring                                                                  |
+| 1.8     | 2026-02-15 | Claude/NEOPRO | Réécriture pré-migration : rm sans sudo, diagnostic, versions affectées                                                        |
+| 1.9     | 2026-02-15 | Claude/NEOPRO | Connexion locale persistante : relay screenshot et heartbeat via local-socket.js                                               |
+| 2.0     | 2026-02-16 | Claude/NEOPRO | Screenshot error response : réponse immédiate en cas d'échec + métriques Prometheus                                            |
+| 2.1     | 2026-02-17 | Claude/NEOPRO | OTA checksum retry : re-download + vérification 1x en cas de mismatch SHA256                                                   |
+| 2.2     | 2026-02-17 | Claude/NEOPRO | Screenshot HTTP response : remplacement du relay Socket.IO room par request-response HTTP                                      |
+| 2.3     | 2026-02-18 | Claude/NEOPRO | Sync sponsors Dashboard → Pi : `siteSponsors` dans payload déploiement, `mergeSiteSponsors()`, monitoring Prometheus           |
+| 2.4     | 2026-02-19 | Claude/NEOPRO | Auth retry transitoire (5 tentatives), auto-optimisation canal hotspot, fix daily stats `screen_time_seconds`                  |
+| 2.5     | 2026-02-21 | Claude/NEOPRO | Événement `content_received` dans sync-history, bannière sync contenu admin Pi, métriques sponsor health Prometheus            |
+| 2.6     | 2026-02-21 | Claude/NEOPRO | Pipeline analytics unifié (video_plays), suppression sponsor-impressions.js, tables campaigns + scheduled_reports              |
+| 2.7     | 2026-02-22 | Claude/NEOPRO | Cloud remote relay chain : détection zombie, fix socket.data, handler match-info-updated, monitoring Prometheus                |
+| 2.8     | 2026-02-24 | Claude/NEOPRO | Fix race condition reboot post-OTA : `shutdown -r +0` via spawn, skip restart sync-agent quand reboot prévu                    |
+| 2.9     | 2026-02-27 | Claude/NEOPRO | E-23 : événements HDMI & failover, heartbeat enrichi (hdmiStatus, connectedClients), pipeline détection                        |
+| 3.0     | 2026-03-01 | Claude/NEOPRO | ADR-033 : fix race condition master-slave (guard anti-stale), monitoring staleLoopStateCount, secondary variant path           |
+| 3.1     | 2026-03-01 | Claude/NEOPRO | ADR-034 : révélation synchronisée preload/reveal, monitoring preloadRevealCount/preloadCleanupCount                            |
+| 3.2     | 2026-03-02 | Claude/NEOPRO | Multi-profile : sync_profiles, profile-switch handler avec merge + persistance, monitoring profileSwitchCount                  |
+| 3.3     | 2026-04-09 | Claude/NEOPRO | ADR-044 : extraction 4 modules monolithiques sync-agent (agent, metrics, network-watchdog, update-software) en 12 sous-modules |
 
 ---
 

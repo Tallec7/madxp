@@ -654,8 +654,8 @@ Signaux "Monitor" : `display_type === 'monitor'` OU (`diagonal_inches < 28` ET p
 
 **Intégration :**
 
-- `sync-agent/src/metrics.js` → `getDisplayInfo()` inclus dans `getHealthStatus()` sous la clé `displayInfo` (inclut `edid_detailed` + `display_category`)
-- `sync-agent/src/metrics.js` → `getSecondaryDisplayInfo()` inclus dans `getHealthStatus()` sous la clé `secondaryDisplayInfo` (HDMI-A-2, uniquement si connecté)
+- `sync-agent/src/metrics/display-metrics.js` → `getDisplayInfo()` inclus dans `getHealthStatus()` sous la clé `displayInfo` (inclut `edid_detailed` + `display_category`) (extrait de metrics.js, ADR-044)
+- `sync-agent/src/metrics/display-metrics.js` → `getSecondaryDisplayInfo()` inclus dans `getHealthStatus()` sous la clé `secondaryDisplayInfo` (HDMI-A-2, uniquement si connecté)
 - `_findEdidPath(portFilter)` — paramètre optionnel pour cibler un port HDMI spécifique (ex: `'HDMI-A-2'`)
 - `server/services/hdmi.service.js` → `getFullStatus()` croise CEC + EDID + edid-decode
 - Route `/api/hdmi-status` retourne CEC + display info + catégorie combinés
@@ -1234,9 +1234,9 @@ La détection des connexions zombies se fait à **deux niveaux** :
    - Sync DB/WebSocket toutes les 2 minutes : si site "online" en DB mais absent de `connectedSites` Map, passage en "offline"
    - Métrique Prometheus `neopro_websocket_disconnects_total{reason}` (zombie_timeout, zombie_cleanup)
 
-2. **Côté client** (`sync-agent/src/agent.js`, v2.15+, amélioré v3.43) :
+2. **Côté client** (`sync-agent/src/services/heartbeat.js`, v2.15+, amélioré v3.43, extrait de agent.js ADR-044) :
    - Vérification `socket.connected` avant chaque `sendHeartbeat()`
-   - Si `this.connected = true` mais `socket.connected = false` → zombie détecté → auto-reconnexion
+   - Si `agent.connected = true` mais `socket.connected = false` → zombie détecté → auto-reconnexion
    - Health check périodique (**30s**, réduit de 60s en v3.43), seuil stale **60s** (réduit de 90s)
    - **v3.43** : force **déconnexion + reconnexion propre** quand heartbeats stale (au lieu de juste logger)
    - `randomizationFactor: 0.5` sur la reconnexion — anti-thundering herd pour 50+ Pi

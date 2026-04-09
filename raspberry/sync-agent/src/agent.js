@@ -3,14 +3,22 @@
 /** @typedef {import('./types').SyncAgentConfig} SyncAgentConfig */
 /** @typedef {import('./types').SystemMetrics} SystemMetrics */
 
+/**
+ * NeoproSyncAgent — Orchestrator.
+ *
+ * Delegates to sub-modules (ADR-044):
+ * - services/heartbeat.js       — periodic health reporting, connection health check
+ * - services/analytics-sync.js  — periodic HTTP-based analytics sending
+ * - services/command-dispatch.js — command execution, queue management
+ *
+ * Keeps: lifecycle (start, connect, shutdown), socket handlers, watchers,
+ * syncLocalState, network profile detection, network watchdog, legacy cleanup.
+ */
+
 const io = require('socket.io-client');
 const fs = require('fs-extra');
 const logger = require('./logger');
 const { config, validateConfig } = require('./config');
-const metricsCollector = require('./metrics');
-const { getVersionInfo } = require('./utils/version-info');
-const commands = require('./commands');
-const analyticsCollector = require('./analytics');
 const { calculateConfigHash } = require('./utils/config-merge');
 const { safeReadConfig } = require('./utils/safe-config-io');
 const ConfigWatcher = require('./watchers/config-watcher');
@@ -25,6 +33,12 @@ const { safeNetworkOperations } = require('./services/safe-network-operations');
 const networkWatchdog = require('./services/network-watchdog');
 const licenseCache = require('./license-cache');
 const localSocket = require('./services/local-socket');
+const commands = require('./commands');
+
+// Sub-modules (ADR-044)
+const heartbeat = require('./services/heartbeat');
+const analyticsSync = require('./services/analytics-sync');
+const commandDispatch = require('./services/command-dispatch');
 
 class NeoproSyncAgent {
   constructor() {
@@ -140,7 +154,7 @@ class NeoproSyncAgent {
     this.socket.on('authenticated', (data) => this.handleAuthenticated(data));
     this.socket.on('auth_error', (data) => this.handleAuthError(data));
     this.socket.on('retry_later', (data) => this.handleRetryLater(data));
-    this.socket.on('command', (cmd) => this.handleCommand(cmd));
+    this.socket.on('command', (cmd) => commandDispatch.handleCommand(this, cmd));
     // Health check - Respond to server pings to prove connection is alive
     this.socket.on('ping_check', () => this.handlePingCheck());
 
@@ -337,15 +351,6 @@ class NeoproSyncAgent {
   }
 
   /**
-   * Fetch player state from local Pi server via persistent connection.
-   * Used by heartbeat to include the current TV player state.
-   * @returns {Promise<object|null>}
-   */
-  fetchLocalPlayerState() {
-    return localSocket.request('get-player-state', 2000);
-  }
-
-  /**
    * Relay an event from the central server (cloud remote) to the local Socket.IO server
    * This enables cloud remote control when the user cannot access the local hotspot
    * (e.g., mesh WiFi with client isolation)
@@ -396,12 +401,12 @@ class NeoproSyncAgent {
     // Envoyer l'état local au central (miroir) - après init du videoWatcher
     this.syncLocalState();
 
-    this.startHeartbeat();
+    heartbeat.startHeartbeat(this);
     // Note: startAnalyticsSync() est appelé dans start() car les analytics
     // sont envoyées via HTTP, indépendamment de la connexion WebSocket
 
     // Démarrer le health check périodique de la connexion
-    this.startConnectionHealthCheck();
+    heartbeat.startConnectionHealthCheck(this);
 
     // Démarrer la détection périodique du profil réseau
     this.startNetworkProfileDetection();
@@ -745,182 +750,60 @@ class NeoproSyncAgent {
     }
   }
 
+  // =========================================================================
+  // DELEGATION — handleCommand, queueCommand, getQueueStatus
+  // =========================================================================
+
   async handleCommand(cmd) {
-    const { id, type, data } = cmd;
-
-    logger.info('📥 Command received', { commandId: id, type });
-
-    if (!config.security.allowedCommands.includes(type)) {
-      logger.warn('Command not allowed', { type, allowedCommands: config.security.allowedCommands });
-
-      this.socket.emit('command_result', {
-        commandId: id,
-        status: 'error',
-        error: `Command type '${type}' is not allowed`,
-      });
-
-      return;
-    }
-
-    try {
-      const handler = commands[type];
-
-      if (!handler) {
-        throw new Error(`Unknown command type: ${type}`);
-      }
-
-      let result;
-
-      if (type === 'deploy_video') {
-        result = await handler.execute(data, (progress) => {
-          this.socket.emit('deploy_progress', {
-            deploymentId: data.deploymentId,
-            videoId: data.videoId,
-            progress,
-          });
-        });
-        // Signaler la fin du déploiement avec le chemin réel sur le Pi
-        // Construire le chemin relatif à partir des données réelles (category/subcategory/finalFilename)
-        const deployedSegments = ['videos', data.category];
-        if (data.subcategory) deployedSegments.push(data.subcategory);
-        if (result?.filename) deployedSegments.push(result.filename);
-        this.socket.emit('deploy_progress', {
-          deploymentId: data.deploymentId,
-          videoId: data.videoId,
-          progress: 100,
-          completed: true,
-          deployedPath: result?.filename ? deployedSegments.join('/') : undefined,
-          deployedFilename: result?.filename || undefined,
-        });
-      } else if (type === 'update_software') {
-        // Pause config-watcher during OTA to avoid event spam (11x duplicate syncs)
-        if (this.configWatcher) {
-          this.configWatcher.pause(120000); // 2 min — covers the full OTA duration
-        }
-        result = await handler.execute(data, (progress) => {
-          this.socket.emit('update_progress', {
-            deploymentId: data.deploymentId,
-            version: data.version,
-            progress,
-          });
-        });
-        // Signaler la fin du déploiement (identique à deploy_video)
-        // IMPORTANT: Émis AVANT le command_result et le restart du sync-agent
-        // pour garantir que le serveur central marque le déploiement comme terminé
-        this.socket.emit('update_progress', {
-          deploymentId: data.deploymentId,
-          version: data.version,
-          progress: 100,
-          completed: true,
-          steps: result?.steps || [],
-        });
-        // Laisser le temps à Socket.IO de flush l'event avant le restart
-        await new Promise(resolve => setTimeout(resolve, 2000));
-      } else if (typeof handler === 'function') {
-        result = await handler(data);
-      } else {
-        result = await handler.execute(data);
-      }
-
-      logger.info('✅ Command executed successfully', { commandId: id, type });
-
-      this.socket.emit('command_result', {
-        commandId: id,
-        status: 'success',
-        result,
-      });
-    } catch (error) {
-      logger.error('❌ Command execution failed', {
-        commandId: id,
-        type,
-        error: error.message,
-        stack: error.stack,
-      });
-
-      // Notify server of deployment failure so dashboard shows 'failed' instead of stuck 'in_progress'
-      if (type === 'deploy_video' && data.deploymentId) {
-        this.socket.emit('deploy_progress', {
-          deploymentId: data.deploymentId,
-          videoId: data.videoId,
-          error: error.message,
-        });
-      } else if (type === 'update_software' && data.deploymentId) {
-        this.socket.emit('update_progress', {
-          deploymentId: data.deploymentId,
-          version: data.version,
-          error: error.message,
-          steps: error.steps || [],
-        });
-      }
-
-      this.socket.emit('command_result', {
-        commandId: id,
-        status: 'error',
-        error: error.message,
-      });
-    }
+    return commandDispatch.handleCommand(this, cmd);
   }
 
-  /**
-   * Démarre un health check périodique de la connexion
-   * Détecte les connexions zombies même si handleDisconnect n'est pas appelé
-   */
+  async queueCommand(commandType, commandData, options = {}) {
+    return commandDispatch.queueCommand(this, commandType, commandData, options);
+  }
+
+  async getQueueStatus() {
+    return commandDispatch.getQueueStatus(this);
+  }
+
+  // =========================================================================
+  // DELEGATION — heartbeat, analytics
+  // =========================================================================
+
+  startHeartbeat() {
+    heartbeat.startHeartbeat(this);
+  }
+
   startConnectionHealthCheck() {
-    const HEALTH_CHECK_INTERVAL = 30000; // 30 secondes
-    const STALE_THRESHOLD = 60000; // 60 secondes sans heartbeat réussi = forcer reconnexion
+    heartbeat.startConnectionHealthCheck(this);
+  }
 
-    logger.info('Starting connection health check', { interval: HEALTH_CHECK_INTERVAL });
+  startAnalyticsSync() {
+    analyticsSync.startAnalyticsSync(this);
+  }
 
-    this.connectionHealthCheckInterval = setInterval(() => {
-      // Vérifier la cohérence entre le flag et l'état réel de la socket
-      const socketConnected = this.socket?.connected ?? false;
+  async sendAnalytics() {
+    return analyticsSync.sendAnalytics();
+  }
 
-      if (this.connected && !socketConnected) {
-        logger.warn('Health check: zombie connection detected (flag=true, socket=false)', {
-          connected: this.connected,
-          socketConnected,
-          lastSuccessfulHeartbeat: this.lastSuccessfulHeartbeat,
-        });
-        this.connected = false;
-        connectionStatus.setConnected(false, 'health_check_zombie');
+  fetchLocalRecordingState() {
+    return heartbeat.fetchLocalRecordingState();
+  }
 
-        // Forcer reconnexion
-        if (this.socket) {
-          this.socket.connect();
-        }
-        return;
-      }
+  fetchLocalHdmiState() {
+    return heartbeat.fetchLocalHdmiState();
+  }
 
-      // Vérifier si les heartbeats passent vraiment
-      if (this.connected && this.lastSuccessfulHeartbeat) {
-        const timeSinceLastHeartbeat = Date.now() - this.lastSuccessfulHeartbeat;
-        if (timeSinceLastHeartbeat > STALE_THRESHOLD) {
-          logger.warn('Health check: heartbeats stale, forcing reconnection', {
-            timeSinceLastHeartbeat,
-            threshold: STALE_THRESHOLD,
-            socketConnected,
-          });
-          this.connected = false;
-          connectionStatus.setConnected(false, 'health_check_stale_heartbeat');
+  fetchLocalConnectedClients() {
+    return heartbeat.fetchLocalConnectedClients();
+  }
 
-          // Forcer déconnexion puis reconnexion propre
-          if (this.socket) {
-            this.socket.disconnect();
-            setTimeout(() => {
-              logger.info('Reconnecting after stale heartbeat detection...');
-              this.socket.connect();
-            }, 2000);
-          }
-          return;
-        }
-      }
+  fetchLocalTransitionMetrics() {
+    return heartbeat.fetchLocalTransitionMetrics();
+  }
 
-      logger.debug('Health check: connection OK', {
-        connected: this.connected,
-        socketConnected,
-        lastSuccessfulHeartbeat: this.lastSuccessfulHeartbeat,
-      });
-    }, HEALTH_CHECK_INTERVAL);
+  fetchLocalPlayerState() {
+    return heartbeat.fetchLocalPlayerState();
   }
 
   /**
@@ -1029,226 +912,6 @@ class NeoproSyncAgent {
     logger.info('Starting network watchdog (Phase 4)');
     networkWatchdog.start();
     this.watchdogStarted = true;
-  }
-
-  startHeartbeat() {
-    logger.info('Starting heartbeat', { interval: config.monitoring.heartbeatInterval });
-
-    this.sendHeartbeat();
-
-    this.heartbeatInterval = setInterval(() => {
-      this.sendHeartbeat();
-    }, config.monitoring.heartbeatInterval);
-  }
-
-  /**
-   * Fetch recording state from local Pi server via persistent connection.
-   * Uses cached broadcast value with explicit-fetch fallback.
-   * @returns {Promise<{isRecording: boolean, isManualOverride: boolean} | null>}
-   */
-  fetchLocalRecordingState() {
-    return localSocket.getRecordingState();
-  }
-
-  fetchLocalHdmiState() {
-    return localSocket.request('get-hdmi-state', 2000);
-  }
-
-  fetchLocalConnectedClients() {
-    return localSocket.request('get-connected-clients', 2000);
-  }
-
-  /**
-   * Fetch transition metrics from local Pi server via persistent connection (get + reset).
-   * @returns {Promise<{earlySwitchCount: number, safetyTimeoutCount: number, cleanupSkippedCount: number, videoErrorCount: number, totalTransitions: number} | null>}
-   */
-  fetchLocalTransitionMetrics() {
-    return localSocket.request('get-transition-metrics', 2000);
-  }
-
-  async sendHeartbeat() {
-    // Vérifier à la fois le flag interne ET l'état réel de la socket
-    if (!this.connected) {
-      return;
-    }
-
-    // Détecter les connexions zombies : this.connected=true mais socket morte
-    if (!this.socket?.connected) {
-      logger.warn('Zombie connection detected: connected flag is true but socket is disconnected', {
-        connected: this.connected,
-        socketConnected: this.socket?.connected,
-        socketId: this.socket?.id,
-      });
-      // Corriger l'état et forcer une reconnexion
-      this.connected = false;
-      connectionStatus.setConnected(false, 'zombie_detected');
-      if (this.socket) {
-        logger.info('Forcing socket reconnection...');
-        this.socket.connect();
-      }
-      return;
-    }
-
-    try {
-      const metrics = await metricsCollector.collectAll();
-
-      if (metrics) {
-        let versionInfo = null;
-        let softwareVersion = null;
-        try {
-          versionInfo = await getVersionInfo();
-          if (versionInfo?.version && versionInfo.version !== 'unknown') {
-            softwareVersion = versionInfo.version;
-          }
-        } catch (error) {
-          logger.warn('Failed to load version info for heartbeat:', error.message);
-        }
-
-        // Inclure le statut kiosk (fichier écrit par le watchdog)
-        let kioskStatus = null;
-        try {
-          kioskStatus = await metricsCollector.getKioskStatus();
-        } catch {
-          // Ignore — le fichier peut ne pas encore exister
-        }
-
-        // Fetch recording state from local server
-        const recordingState = await this.fetchLocalRecordingState();
-
-        // Fetch transition metrics from local server (get + reset)
-        const transitionMetrics = await this.fetchLocalTransitionMetrics();
-
-        // Fetch player state from local server (for cloud monitoring)
-        const playerState = await this.fetchLocalPlayerState();
-
-        // Fetch HDMI port status and connected clients (E-23)
-        const hdmiStatus = await this.fetchLocalHdmiState();
-        const connectedClients = await this.fetchLocalConnectedClients();
-
-        // Detect orphan systemd services (crash-looping non-legitimate neopro-* units)
-        let orphanServices = null;
-        try {
-          orphanServices = await metricsCollector.getOrphanServices();
-          if (orphanServices && orphanServices.length === 0) orphanServices = null;
-        } catch {
-          // Ignore — non-critical monitoring data
-        }
-
-        this.socket.emit('heartbeat', {
-          siteId: config.site.id,
-          timestamp: Date.now(),
-          metrics,
-          softwareVersion,
-          versionInfo,
-          kioskStatus,
-          recordingState,
-          transitionMetrics,
-          playerState,
-          wifiStatus: metrics.wifiStatus || null,
-          fanStatus: metrics.fanStatus || null,
-          filesystemHealth: metrics.filesystemHealth || null,
-          hdmiStatus: hdmiStatus || null,
-          connectedClients: connectedClients || null,
-          // E-23 US-23.4.4: dual-display is active when both HDMI ports are connected
-          dualDisplayActive: !!(hdmiStatus && hdmiStatus.hdmi0 && hdmiStatus.hdmi1),
-          orphanServices: orphanServices || null,
-        });
-
-        // Enregistrer le succès du heartbeat
-        this.lastSuccessfulHeartbeat = Date.now();
-
-        logger.debug('Heartbeat sent', {
-          cpu: metrics.cpu,
-          memory: metrics.memory,
-          temperature: metrics.temperature,
-          disk: metrics.disk,
-        });
-      }
-    } catch (error) {
-      logger.error('Failed to send heartbeat', { error: error.message });
-    }
-  }
-
-  startAnalyticsSync() {
-    const interval = config.monitoring?.analyticsInterval || 5 * 60 * 1000; // 5 minutes par défaut
-    logger.info('Starting analytics sync', { interval });
-
-    // Envoyer immédiatement les analytics en attente
-    this.sendAnalytics();
-
-    // Puis envoyer périodiquement
-    this.analyticsInterval = setInterval(() => {
-      this.sendAnalytics();
-    }, interval);
-  }
-
-  async sendAnalytics() {
-    // Les analytics sont envoyées via HTTP, indépendamment de la connexion WebSocket
-    // On vérifie seulement que la configuration est valide
-    if (!config.central?.url || !config.site?.id) {
-      logger.warn('Cannot send analytics: missing central URL or site ID');
-      return;
-    }
-
-    try {
-      const result = await analyticsCollector.sendToServer(
-        config.central.url,
-        config.site.id
-      );
-
-      if (result.sent > 0) {
-        logger.info('Analytics sent', { sent: result.sent, recorded: result.recorded });
-      } else if (result.error) {
-        logger.warn('Analytics send failed', { error: result.error });
-      }
-    } catch (error) {
-      logger.error('Failed to send analytics', { error: error.message });
-    }
-  }
-
-  /**
-   * Met en queue une commande pour exécution ultérieure
-   * Utile quand l'agent est hors ligne ou pour les commandes non critiques
-   * @param {string} commandType Type de commande
-   * @param {object} commandData Données de la commande
-   * @param {object} options Options (priority, etc.)
-   * @returns {Promise<string|null>} ID de la commande en queue
-   */
-  async queueCommand(commandType, commandData, options = {}) {
-    // Si connecté et pas de force_queue, exécuter immédiatement
-    if (this.connected && !options.forceQueue) {
-      try {
-        const handler = commands[commandType];
-        if (handler) {
-          logger.info('Executing command immediately (connected)', { type: commandType });
-          if (typeof handler === 'function') {
-            await handler(commandData);
-          } else {
-            await handler.execute(commandData);
-          }
-          return null; // Pas de queue ID car exécuté immédiatement
-        }
-      } catch (error) {
-        logger.warn('Immediate execution failed, queueing command', {
-          type: commandType,
-          error: error.message,
-        });
-      }
-    }
-
-    // Mettre en queue
-    return offlineQueue.enqueue(commandType, commandData, options);
-  }
-
-  /**
-   * Retourne l'état de la queue offline
-   * @returns {Promise<object>}
-   */
-  async getQueueStatus() {
-    return {
-      connected: this.connected,
-      queueStats: await offlineQueue.getStats(),
-    };
   }
 
   async shutdown() {

@@ -1435,7 +1435,7 @@ describe('ADR README ↔ file consistency', () => {
 // This smoke test prevents the asymmetry from recurring after any refactor.
 describe('Sync-agent command handler symmetry', () => {
   const repoRoot = path.resolve(__dirname, '..', '..', '..');
-  const agentPath = path.join(repoRoot, 'raspberry', 'sync-agent', 'src', 'agent.js');
+  const agentPath = path.join(repoRoot, 'raspberry', 'sync-agent', 'src', 'services', 'command-dispatch.js');
 
   it('agent.js exists and is readable', () => {
     expect(fs.existsSync(agentPath)).toBe(true);
@@ -1883,17 +1883,17 @@ describe('Kiosk xdpyinfo dependency must be provisioned', () => {
   });
 
   it('OTA must auto-install required apt packages including x11-utils and edid-decode', () => {
-    // update-software.js must have a requiredAptPackages list that includes x11-utils and edid-decode.
-    // This ensures existing Pi fleet gets these packages installed during OTA upgrade.
-    const updateSoftware = fs.readFileSync(
-      path.join(repoRoot, 'raspberry/sync-agent/src/commands/update-software.js'),
-      'utf8'
-    );
-    expect({ hasRequiredAptPackages: updateSoftware.includes('requiredAptPackages') })
+    // update-software.js (or its sub-module ota-install.js) must have a requiredAptPackages list
+    // that includes x11-utils and edid-decode.
+    const otaFiles = [
+      'raspberry/sync-agent/src/commands/update-software.js',
+      'raspberry/sync-agent/src/commands/ota-install.js',
+    ].map(f => fs.readFileSync(path.join(repoRoot, f), 'utf8')).join('\n');
+    expect({ hasRequiredAptPackages: otaFiles.includes('requiredAptPackages') })
       .toEqual({ hasRequiredAptPackages: true });
-    expect({ hasX11Utils: updateSoftware.includes("'x11-utils'") })
+    expect({ hasX11Utils: otaFiles.includes("'x11-utils'") })
       .toEqual({ hasX11Utils: true });
-    expect({ hasEdidDecode: updateSoftware.includes("'edid-decode'") })
+    expect({ hasEdidDecode: otaFiles.includes("'edid-decode'") })
       .toEqual({ hasEdidDecode: true });
   });
 
@@ -1901,22 +1901,23 @@ describe('Kiosk xdpyinfo dependency must be provisioned', () => {
     // sysfs files /sys/class/drm/*/edid report stat.size=0 even with 128-256 bytes of data.
     // Using stat.size caused edidPath=null → edid_detailed=null → enriched EDID invisible.
     // Incident: 24/02/2026 — all Pis had stat.size=0 for EDID files, enriched display never shown.
-    const metricsJs = fs.readFileSync(
-      path.join(repoRoot, 'raspberry/sync-agent/src/metrics.js'),
-      'utf8'
-    );
+    // metrics.js delegates EDID to display-metrics.js (ADR-044)
+    const metricsFiles = [
+      'raspberry/sync-agent/src/metrics.js',
+      'raspberry/sync-agent/src/metrics/display-metrics.js',
+    ].map(f => fs.readFileSync(path.join(repoRoot, f), 'utf8')).join('\n');
     const hdmiServiceJs = fs.readFileSync(
       path.join(repoRoot, 'raspberry/server/services/hdmi.service.js'),
       'utf8'
     );
-    // metrics.js must NOT use stat.size for EDID detection
-    expect({ metricsUsesStatSize: /statSync.*edid[\s\S]{0,50}stat\.size/.test(metricsJs) })
+    // metrics must NOT use stat.size for EDID detection
+    expect({ metricsUsesStatSize: /statSync.*edid[\s\S]{0,50}stat\.size/.test(metricsFiles) })
       .toEqual({ metricsUsesStatSize: false });
     // hdmi.service.js must NOT use stat.size for EDID detection
     expect({ hdmiUsesStatSize: /statSync.*edid[\s\S]{0,50}stat\.size/.test(hdmiServiceJs) })
       .toEqual({ hdmiUsesStatSize: false });
     // Both must use readFileSync + buf.length in _findEdidPath
-    expect({ metricsUsesReadFile: metricsJs.includes('readFileSync(edidPath)') })
+    expect({ metricsUsesReadFile: metricsFiles.includes('readFileSync(edidPath)') })
       .toEqual({ metricsUsesReadFile: true });
     expect({ hdmiUsesReadFile: hdmiServiceJs.includes('readFileSync(edidPath)') })
       .toEqual({ hdmiUsesReadFile: true });
@@ -2484,10 +2485,10 @@ describe('Sync-agent debug bundle regression guards', () => {
   // Issue: BSSID connected ≠ BSSID locked for hours with no detection.
   // Fix: checkBssidMismatch() in network-watchdog auto-clears stale locks.
   it('network-watchdog must have BSSID mismatch detection', () => {
-    const watchdog = fs.readFileSync(
-      path.join(repoRoot, 'raspberry/sync-agent/src/services/network-watchdog.js'),
-      'utf8'
-    );
+    const watchdog = [
+      'raspberry/sync-agent/src/services/network-watchdog.js',
+      'raspberry/sync-agent/src/services/internet-watchdog.js',
+    ].map(f => fs.readFileSync(path.join(repoRoot, f), 'utf8')).join('\n');
     expect({ hasBssidCheck: watchdog.includes('checkBssidMismatch') })
       .toEqual({ hasBssidCheck: true });
     expect({ hasThreshold: watchdog.includes('BSSID_MISMATCH_THRESHOLD') })
@@ -2508,22 +2509,22 @@ describe('Sync-agent debug bundle regression guards', () => {
 
   // Issue: OTA must pause config-watcher before extracting.
   it('agent.js must pause config-watcher before OTA update', () => {
-    const agent = fs.readFileSync(
-      path.join(repoRoot, 'raspberry/sync-agent/src/agent.js'),
-      'utf8'
-    );
-    expect({ pausesBeforeOta: agent.includes('configWatcher.pause') })
+    const agentFiles = [
+      'raspberry/sync-agent/src/agent.js',
+      'raspberry/sync-agent/src/services/command-dispatch.js',
+    ].map(f => fs.readFileSync(path.join(repoRoot, f), 'utf8')).join('\n');
+    expect({ pausesBeforeOta: agentFiles.includes('configWatcher.pause') })
       .toEqual({ pausesBeforeOta: true });
   });
 
   // Issue: EACCES on unlink VERSION because fixFileOwnership only checked uid===0.
   // Fix: Check fs.constants.W_OK (actual write access).
   it('fixFileOwnership must check W_OK write access (not just uid)', () => {
-    const updateSoftware = fs.readFileSync(
-      path.join(repoRoot, 'raspberry/sync-agent/src/commands/update-software.js'),
-      'utf8'
-    );
-    expect({ checksWriteAccess: updateSoftware.includes('W_OK') })
+    const otaFiles = [
+      'raspberry/sync-agent/src/commands/update-software.js',
+      'raspberry/sync-agent/src/commands/ota-install.js',
+    ].map(f => fs.readFileSync(path.join(repoRoot, f), 'utf8')).join('\n');
+    expect({ checksWriteAccess: otaFiles.includes('W_OK') })
       .toEqual({ checksWriteAccess: true });
   });
 
@@ -2606,10 +2607,10 @@ describe('Sync-agent debug bundle regression guards', () => {
 
   // Guard: hotspot recovery must try adding IP before restarting hostapd
   it('hotspot recovery must have fast-path IP fix without hostapd restart', () => {
-    const watchdog = fs.readFileSync(
-      path.join(repoRoot, 'raspberry/sync-agent/src/services/network-watchdog.js'),
-      'utf8'
-    );
+    const watchdog = [
+      'raspberry/sync-agent/src/services/network-watchdog.js',
+      'raspberry/sync-agent/src/services/hotspot-watchdog.js',
+    ].map(f => fs.readFileSync(path.join(repoRoot, f), 'utf8')).join('\n');
     expect({ hasFastPath: watchdog.includes('clients préservés') || watchdog.includes('sans restart hostapd') })
       .toEqual({ hasFastPath: true });
   });
@@ -3252,10 +3253,10 @@ describe('E-23 HDMI monitoring and alerts wiring', () => {
   });
 
   it('sync-agent must fetch HDMI state and connected clients for heartbeat', () => {
-    const content = fs.readFileSync(
-      path.join(repoRoot, 'raspberry/sync-agent/src/agent.js'),
-      'utf8'
-    );
+    const content = [
+      'raspberry/sync-agent/src/agent.js',
+      'raspberry/sync-agent/src/services/heartbeat.js',
+    ].map(f => fs.readFileSync(path.join(repoRoot, f), 'utf8')).join('\n');
     expect({
       hasFetchHdmi: content.includes('fetchLocalHdmiState'),
       hasFetchClients: content.includes('fetchLocalConnectedClients'),
@@ -3436,13 +3437,14 @@ describe('E-23 HDMI monitoring and alerts wiring', () => {
   // because metrics.js had hasCeaExtension → 'tv' without manufacturer filter.
   // Modern monitors include CEA extensions for HDMI audio/YCbCr compatibility.
   it('metrics.js getDisplayInfo must filter monitorOnlyMfg BEFORE CEA → tv assignment', () => {
+    // Display logic extracted to display-metrics.js (ADR-044)
     const content = fs.readFileSync(
-      path.join(repoRoot, 'raspberry/sync-agent/src/metrics.js'),
+      path.join(repoRoot, 'raspberry/sync-agent/src/metrics/display-metrics.js'),
       'utf8'
     );
     const getDisplayInfoFn = content.slice(
-      content.indexOf('async getDisplayInfo()'),
-      content.indexOf('async getSecondaryDisplayInfo()')
+      content.indexOf('async function getDisplayInfo()'),
+      content.indexOf('async function getSecondaryDisplayInfo()')
     );
     expect({
       hasMonitorMfgFilter: /monitorOnlyMfg/.test(getDisplayInfoFn),
@@ -3458,13 +3460,14 @@ describe('E-23 HDMI monitoring and alerts wiring', () => {
   });
 
   it('metrics.js getSecondaryDisplayInfo must also filter monitorOnlyMfg BEFORE CEA → tv', () => {
+    // Display logic extracted to display-metrics.js (ADR-044)
     const content = fs.readFileSync(
-      path.join(repoRoot, 'raspberry/sync-agent/src/metrics.js'),
+      path.join(repoRoot, 'raspberry/sync-agent/src/metrics/display-metrics.js'),
       'utf8'
     );
     const getSecondaryFn = content.slice(
-      content.indexOf('async getSecondaryDisplayInfo()'),
-      content.indexOf('async _getKioskStatus()')
+      content.indexOf('async function getSecondaryDisplayInfo()'),
+      content.indexOf('async function getHdmiCecStatus()')
     );
     expect({
       hasMonitorMfgFilter: /monitorOnlyMfg/.test(getSecondaryFn),
@@ -3478,23 +3481,28 @@ describe('E-23 HDMI monitoring and alerts wiring', () => {
   });
 
   it('metrics.js _inferDisplayCategory must accept manufacturer as 4th param and early-return monitor', () => {
+    // Display logic extracted to display-metrics.js (ADR-044)
     const content = fs.readFileSync(
-      path.join(repoRoot, 'raspberry/sync-agent/src/metrics.js'),
+      path.join(repoRoot, 'raspberry/sync-agent/src/metrics/display-metrics.js'),
       'utf8'
     );
     expect({
-      has4thParam: /_inferDisplayCategory\s*\(\s*model\s*,\s*displayType\s*,\s*edidDetailed\s*,\s*manufacturer\s*\)/.test(content),
-      hasMonitorOnlyMfg: /monitorOnlyMfg/.test(content.slice(content.indexOf('_inferDisplayCategory('))),
-      returnsMonitor: content.slice(content.indexOf('_inferDisplayCategory(')).includes("return 'monitor'"),
+      has4thParam: /inferDisplayCategory\s*\(\s*model\s*,\s*displayType\s*,\s*edidDetailed\s*,\s*manufacturer\s*\)/.test(content),
+      hasMonitorOnlyMfg: /monitorOnlyMfg/.test(content.slice(content.indexOf('inferDisplayCategory('))),
+      returnsMonitor: content.slice(content.indexOf('inferDisplayCategory(')).includes("return 'monitor'"),
     }).toEqual({
       has4thParam: true,
       hasMonitorOnlyMfg: true,
       returnsMonitor: true,
     });
-    // Callers must pass manufacturer as 4th arg
+    // Callers must pass manufacturer as 4th arg (callers in metrics.js orchestrator, ADR-044)
+    const orchestrator = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/sync-agent/src/metrics.js'),
+      'utf8'
+    );
     expect({
-      primaryPassesMfg: /displayInfo\.display_category\s*=\s*this\._inferDisplayCategory\(\s*\n?\s*displayInfo\.model,\s*displayInfo\.display_type,\s*displayInfo\.edid_detailed,\s*displayInfo\.manufacturer/.test(content),
-      secondaryPassesMfg: /secondaryDisplayInfo\.display_category\s*=\s*this\._inferDisplayCategory\(\s*\n?\s*secondaryDisplayInfo\.model,\s*secondaryDisplayInfo\.display_type,\s*secondaryDisplayInfo\.edid_detailed,\s*secondaryDisplayInfo\.manufacturer/.test(content),
+      primaryPassesMfg: /displayInfo\.display_category\s*=\s*this\._inferDisplayCategory\(\s*\n?\s*displayInfo\.model,\s*displayInfo\.display_type,\s*displayInfo\.edid_detailed,\s*displayInfo\.manufacturer/.test(orchestrator),
+      secondaryPassesMfg: /secondaryDisplayInfo\.display_category\s*=\s*this\._inferDisplayCategory\(\s*\n?\s*secondaryDisplayInfo\.model,\s*secondaryDisplayInfo\.display_type,\s*secondaryDisplayInfo\.edid_detailed,\s*secondaryDisplayInfo\.manufacturer/.test(orchestrator),
     }).toEqual({
       primaryPassesMfg: true,
       secondaryPassesMfg: true,
@@ -5743,10 +5751,12 @@ describe('WiFi boot race condition regression guards (v3.84.3)', () => {
   let agentContent: string;
 
   beforeAll(() => {
-    watchdogContent = fs.readFileSync(
-      path.join(repoRoot, 'raspberry/sync-agent/src/services/network-watchdog.js'),
-      'utf8'
-    );
+    watchdogContent = [
+      'raspberry/sync-agent/src/services/network-watchdog.js',
+      'raspberry/sync-agent/src/services/hotspot-watchdog.js',
+      'raspberry/sync-agent/src/services/internet-watchdog.js',
+      'raspberry/sync-agent/src/services/config-rollback.js',
+    ].map(f => fs.readFileSync(path.join(repoRoot, f), 'utf8')).join('\n');
     safeOpsContent = fs.readFileSync(
       path.join(repoRoot, 'raspberry/sync-agent/src/services/safe-network-operations.js'),
       'utf8'
@@ -5761,7 +5771,7 @@ describe('WiFi boot race condition regression guards (v3.84.3)', () => {
   it('network-watchdog start() must enable boot grace period for internet checks', () => {
     // The start() function must call enableGracePeriod before the first internetWatchLoop
     const startFn = watchdogContent.match(
-      /function start\(\)\s*\{[\s\S]*?setTimeout\(\(\) => internetWatchLoop\(\)/
+      /function start\(\)\s*\{[\s\S]*?setTimeout\(\(\) =>.*internetWatchLoop/
     );
     expect(startFn).not.toBeNull();
     expect({
@@ -5776,7 +5786,7 @@ describe('WiFi boot race condition regression guards (v3.84.3)', () => {
     // Without hotspot grace period, the watchdog detects "IP 192.168.4.1 non configurée"
     // at boot+5s and restarts hostapd 2-3 times, delaying hotspot stabilization by 30s+.
     const startFn = watchdogContent.match(
-      /function start\(\)\s*\{[\s\S]*?setTimeout\(\(\) => hotspotWatchLoop\(\)/
+      /function start\(\)\s*\{[\s\S]*?setTimeout\(\(\) =>.*hotspotWatchLoop/
     );
     expect(startFn).not.toBeNull();
     expect({
@@ -5789,7 +5799,7 @@ describe('WiFi boot race condition regression guards (v3.84.3)', () => {
   it('network-watchdog boot grace period must be >= 30s', () => {
     // Match the enableGracePeriod call in start() that precedes the setTimeout internetWatchLoop
     const startFn = watchdogContent.match(
-      /function start\(\)\s*\{[\s\S]*?setTimeout\(\(\) => internetWatchLoop\(\)/
+      /function start\(\)\s*\{[\s\S]*?setTimeout\(\(\) =>.*internetWatchLoop/
     );
     expect(startFn).not.toBeNull();
     const graceMatch = startFn![0].match(
@@ -6466,8 +6476,11 @@ describe('Screen resolution heartbeat pipeline (Pi → Central → Dashboard)', 
 // ----------------------------------------------------------
 describe('Secondary display EDID pipeline (health status)', () => {
   const repoRoot = path.resolve(__dirname, '..', '..', '..');
-  const metricsPath = path.join(repoRoot, 'raspberry/sync-agent/src/metrics.js');
-  const metricsContent = fs.readFileSync(metricsPath, 'utf8');
+  // metrics.js delegates display to display-metrics.js (ADR-044)
+  const metricsFiles = [
+    'raspberry/sync-agent/src/metrics.js',
+    'raspberry/sync-agent/src/metrics/display-metrics.js',
+  ].map(f => fs.readFileSync(path.join(repoRoot, f), 'utf8')).join('\n');
   const debugTabDir = path.join(repoRoot, 'central-dashboard/src/app/features/sites/components/site-debug-tab');
   // Read all .ts files in the debug-tab directory tree (sub-components included)
   const readAllTsInDir = (dir: string): string => {
@@ -6482,21 +6495,21 @@ describe('Secondary display EDID pipeline (health status)', () => {
   const debugTab = readAllTsInDir(debugTabDir);
 
   it('metrics.js _findEdidPath must accept optional port filter parameter', () => {
-    // _findEdidPath must accept a portFilter to target HDMI-A-2 specifically
-    expect(metricsContent).toContain('_findEdidPath(portFilter)');
+    // findEdidPath must accept a portFilter to target HDMI-A-2 specifically
+    expect(metricsFiles).toMatch(/findEdidPath\s*\(\s*portFilter\s*\)/);
     // Must filter hdmiEntries when portFilter is provided
-    expect(metricsContent).toContain('portFilter');
+    expect(metricsFiles).toContain('portFilter');
   });
 
   it('metrics.js getHealthStatus must include secondaryDisplayInfo from getSecondaryDisplayInfo()', () => {
-    // getSecondaryDisplayInfo must exist as a method
-    expect(metricsContent).toContain('async getSecondaryDisplayInfo()');
+    // getSecondaryDisplayInfo must exist
+    expect(metricsFiles).toMatch(/function getSecondaryDisplayInfo\(\)/);
     // Must target HDMI-A-2 specifically
-    expect(metricsContent).toContain("_findEdidPath('HDMI-A-2')");
+    expect(metricsFiles).toMatch(/findEdidPath\s*\(\s*'HDMI-A-2'\s*\)/);
     // Must be called in getHealthStatus Promise.all
-    expect(metricsContent).toContain('this.getSecondaryDisplayInfo()');
+    expect(metricsFiles).toContain('getSecondaryDisplayInfo()');
     // Must be included in getHealthStatus return
-    expect(metricsContent).toContain('secondaryDisplayInfo');
+    expect(metricsFiles).toContain('secondaryDisplayInfo');
   });
 
   it('dashboard site-debug-tab must display secondaryDisplayInfo section', () => {
@@ -8359,22 +8372,22 @@ describe('Boot splash screen guards', () => {
   });
 
   it('OTA update-software.js must auto-run fix-fleet-pi.sh after install', () => {
-    const otaContent = fs.readFileSync(
-      path.join(repoRoot, 'raspberry/sync-agent/src/commands/update-software.js'),
-      'utf8'
-    );
-    expect({ runsFixFleet: otaContent.includes('fix-fleet-pi.sh') })
+    const otaFiles = [
+      'raspberry/sync-agent/src/commands/update-software.js',
+      'raspberry/sync-agent/src/commands/ota-install.js',
+    ].map(f => fs.readFileSync(path.join(repoRoot, f), 'utf8')).join('\n');
+    expect({ runsFixFleet: otaFiles.includes('fix-fleet-pi.sh') })
       .toEqual({ runsFixFleet: true });
   });
 
   it('OTA update-software.js must run fix-fleet-pi.sh with sudo (requires root for boot config)', () => {
-    const otaContent = fs.readFileSync(
-      path.join(repoRoot, 'raspberry/sync-agent/src/commands/update-software.js'),
-      'utf8'
-    );
+    const otaFiles = [
+      'raspberry/sync-agent/src/commands/update-software.js',
+      'raspberry/sync-agent/src/commands/ota-install.js',
+    ].map(f => fs.readFileSync(path.join(repoRoot, f), 'utf8')).join('\n');
     // fix-fleet-pi.sh checks id -u == 0 and exits if not root
     // Without sudo, it silently fails and all 13 fleet remediation steps are skipped
-    expect({ usesSudo: otaContent.includes('sudo') && otaContent.includes('fix-fleet-pi.sh') })
+    expect({ usesSudo: otaFiles.includes('sudo') && otaFiles.includes('fix-fleet-pi.sh') })
       .toEqual({ usesSudo: true });
   });
 
@@ -8764,10 +8777,10 @@ describe('deployed_path feedback guards', () => {
   });
 
   it('sync-agent must emit deployedPath in deploy_progress completion event', () => {
-    const content = fs.readFileSync(
-      path.join(repoRoot, 'raspberry/sync-agent/src/agent.js'),
-      'utf8'
-    );
+    const content = [
+      'raspberry/sync-agent/src/agent.js',
+      'raspberry/sync-agent/src/services/command-dispatch.js',
+    ].map(f => fs.readFileSync(path.join(repoRoot, f), 'utf8')).join('\n');
     // Must include deployedPath in the deploy_progress emit
     expect({
       emitsPath: /deploy_progress['"]?\s*,\s*\{[\s\S]*?deployedPath/.test(content),
@@ -8953,14 +8966,15 @@ describe('pc_mode_enabled dead code guard', () => {
 describe('Orphan systemd service monitoring pipeline', () => {
   const repoRoot = path.resolve(__dirname, '..', '..', '..');
 
-  const metricsJs = fs.readFileSync(
-    path.join(repoRoot, 'raspberry/sync-agent/src/metrics.js'),
-    'utf8'
-  );
-  const agentJs = fs.readFileSync(
-    path.join(repoRoot, 'raspberry/sync-agent/src/agent.js'),
-    'utf8'
-  );
+  // metrics.js delegates services to service-metrics.js (ADR-044)
+  const metricsAllFiles = [
+    'raspberry/sync-agent/src/metrics.js',
+    'raspberry/sync-agent/src/metrics/service-metrics.js',
+  ].map(f => fs.readFileSync(path.join(repoRoot, f), 'utf8')).join('\n');
+  const agentJs = [
+    'raspberry/sync-agent/src/agent.js',
+    'raspberry/sync-agent/src/services/heartbeat.js',
+  ].map(f => fs.readFileSync(path.join(repoRoot, f), 'utf8')).join('\n');
   const heartbeatHandler = fs.readFileSync(
     path.join(repoRoot, 'central-server/src/handlers/heartbeat.handler.ts'),
     'utf8'
@@ -8972,15 +8986,15 @@ describe('Orphan systemd service monitoring pipeline', () => {
 
   it('metrics.js must have getOrphanServices() with LEGITIMATE_SERVICES whitelist', () => {
     // Pi-side detection: list all neopro-* units and filter against a known whitelist
-    expect({ hasMethod: metricsJs.includes('getOrphanServices') })
+    expect({ hasMethod: metricsAllFiles.includes('getOrphanServices') })
       .toEqual({ hasMethod: true });
-    expect({ hasWhitelist: metricsJs.includes('LEGITIMATE_SERVICES') })
+    expect({ hasWhitelist: metricsAllFiles.includes('LEGITIMATE_SERVICES') })
       .toEqual({ hasWhitelist: true });
   });
 
   it('metrics.js getOrphanServices must be included in getHealthStatus()', () => {
     // Without integration into health status, orphans are detected but never reported
-    expect({ integratedInHealth: metricsJs.includes('orphanServices') && metricsJs.includes('getHealthStatus') })
+    expect({ integratedInHealth: metricsAllFiles.includes('orphanServices') && metricsAllFiles.includes('getHealthStatus') })
       .toEqual({ integratedInHealth: true });
   });
 
@@ -9024,10 +9038,12 @@ describe('WiFi recovery progressive back-off & mesh guards (v3.99.4)', () => {
   let safeOpsContent: string;
 
   beforeAll(() => {
-    watchdogContent = fs.readFileSync(
-      path.join(repoRoot, 'raspberry/sync-agent/src/services/network-watchdog.js'),
-      'utf8'
-    );
+    watchdogContent = [
+      'raspberry/sync-agent/src/services/network-watchdog.js',
+      'raspberry/sync-agent/src/services/hotspot-watchdog.js',
+      'raspberry/sync-agent/src/services/internet-watchdog.js',
+      'raspberry/sync-agent/src/services/config-rollback.js',
+    ].map(f => fs.readFileSync(path.join(repoRoot, f), 'utf8')).join('\n');
     safeOpsContent = fs.readFileSync(
       path.join(repoRoot, 'raspberry/sync-agent/src/services/safe-network-operations.js'),
       'utf8'
@@ -9078,14 +9094,13 @@ describe('WiFi recovery progressive back-off & mesh guards (v3.99.4)', () => {
 
   // Guard 4: internetWatchLoop must use _getBackoffDelay, not fixed delay
   it('internetWatchLoop must use _getBackoffDelay for progressive retry timing', () => {
+    // Match the full internetWatchLoop function body (greedy enough to include the backoff setTimeout)
     const loopFn = watchdogContent.match(
-      /function internetWatchLoop\(\)\s*\{[\s\S]*?^}/m
-    ) || watchdogContent.match(
-      /async function internetWatchLoop\(\)[\s\S]*?setTimeout\(\(\) => internetWatchLoop\(\)/
+      /async function internetWatchLoop\([\s\S]*?getBackoffDelay[\s\S]*?internetWatchLoop/
     );
     expect(loopFn).not.toBeNull();
     expect({
-      usesBackoff: /_getBackoffDelay\(/.test(loopFn![0]),
+      usesBackoff: /getBackoffDelay\(/.test(loopFn![0]),
     }).toEqual({ usesBackoff: true });
   });
 
@@ -9103,24 +9118,24 @@ describe('WiFi recovery progressive back-off & mesh guards (v3.99.4)', () => {
 
   // Guard 6: Phase 4 (modprobe) must call _getModprobeGuard(), not use hardcoded value
   it('Phase 4 modprobe must use _getModprobeGuard() for mesh-aware threshold', () => {
-    // The attemptInternetRecovery function must call _getModprobeGuard
+    // The attemptInternetRecovery function must call getModprobeGuard
     const recoveryFn = watchdogContent.match(
-      /async function attemptInternetRecovery\(\)[\s\S]*?Phase 5/
+      /async function attemptInternetRecovery\([\s\S]*?Phase 5/
     );
     expect(recoveryFn).not.toBeNull();
     expect({
-      usesGuardFn: /_getModprobeGuard\(\)/.test(recoveryFn![0]),
+      usesGuardFn: /getModprobeGuard\(\)/.test(recoveryFn![0]),
     }).toEqual({ usesGuardFn: true });
   });
 
   // Guard 7: Phase 5 (USB) must call _getUsbCycleGuard(), not use hardcoded value
   it('Phase 5 USB power-cycle must use _getUsbCycleGuard() for mesh-aware threshold', () => {
     const recoveryFn = watchdogContent.match(
-      /async function attemptInternetRecovery\(\)[\s\S]*$/
+      /async function attemptInternetRecovery\([\s\S]*$/
     );
     expect(recoveryFn).not.toBeNull();
     expect({
-      usesGuardFn: /_getUsbCycleGuard\(\)/.test(recoveryFn![0]),
+      usesGuardFn: /getUsbCycleGuard\(\)/.test(recoveryFn![0]),
     }).toEqual({ usesGuardFn: true });
   });
 
@@ -9192,7 +9207,9 @@ describe('WiFi recovery progressive back-off & mesh guards (v3.99.4)', () => {
   // Guard 13: wlan1 reconnect must NOT use iwlist scan (kills RTL8192EU carrier)
   it('wlan1ReconnectLoop must not use iwlist scan', () => {
     const reconnectFn = watchdogContent.match(
-      /async function wlan1ReconnectLoop\(\)\s*\{[\s\S]*?^}/m
+      /async function wlan1ReconnectLoop\(\)\s*\{[\s\S]*?^\}/m
+    ) || watchdogContent.match(
+      /async function wlan1ReconnectLoop\(\)\s*\{[\s\S]*?stopWlan1Reconnect/
     );
     expect(reconnectFn).not.toBeNull();
     expect({
@@ -9384,11 +9401,11 @@ describe('Android captive portal iptables (HTTPS connectivity check fix)', () =>
   // (hostapd restart flushes manually-added IPs on wlan0 — adding IP before
   // restart means the IP is always lost → recovery always fails)
   it('hotspot recovery must restart hostapd BEFORE adding static IP', () => {
-    // Check network-watchdog.js
-    const watchdogJs = fs.readFileSync(
-      path.join(repoRoot, 'raspberry/sync-agent/src/services/network-watchdog.js'),
-      'utf8'
-    );
+    // Check network-watchdog.js + hotspot-watchdog.js (ADR-044 extraction)
+    const watchdogJs = [
+      'raspberry/sync-agent/src/services/network-watchdog.js',
+      'raspberry/sync-agent/src/services/hotspot-watchdog.js',
+    ].map(f => fs.readFileSync(path.join(repoRoot, f), 'utf8')).join('\n');
     const jsHostapdIdx = watchdogJs.indexOf('systemctl restart hostapd');
     const jsIpAddIdx = watchdogJs.indexOf('ip addr add 192.168.4.1', jsHostapdIdx);
     expect({
@@ -11981,8 +11998,8 @@ describe('Post-OTA validation integration', () => {
       path.join(repoRoot, 'raspberry/sync-agent/src/commands/update-software.js'),
       'utf8'
     );
-    // Must require the validation module
-    expect({ importsValidator: otaContent.includes("require('./validate-post-update')") })
+    // Must require the validation module (direct or via require.resolve for cache-busting)
+    expect({ importsValidator: otaContent.includes("validate-post-update") })
       .toEqual({ importsValidator: true });
     // Must call validate() with throwOnCritical: true (so failures trigger rollback)
     // freshValidator: cache-busted require to pick up fixes from newly installed code
@@ -12025,7 +12042,7 @@ describe('Post-OTA validation integration', () => {
     // (with localhost instead of 127.0.0.1) → ECONNREFUSED ::1 → false rollback.
     expect({ clearsCache: otaContent.includes('delete require.cache') })
       .toEqual({ clearsCache: true });
-    expect({ reloadsValidator: otaContent.includes("require('./validate-post-update')") })
+    expect({ reloadsValidator: otaContent.includes("validate-post-update") })
       .toEqual({ reloadsValidator: true });
   });
 
@@ -12117,48 +12134,48 @@ describe('OTA download resilience', () => {
   // On RTL8192EU mesh, WiFi drops silently without triggering stream errors —
   // without stall detection, the download hangs indefinitely at 5%.
   it('downloadPackage must have stall detection timer (no infinite hang on WiFi drop)', () => {
-    const updateSoftware = fs.readFileSync(
-      path.join(repoRoot, 'raspberry/sync-agent/src/commands/update-software.js'),
-      'utf8'
-    );
-    expect({ hasStallTimer: updateSoftware.includes('stallTimer') })
+    const otaFiles = [
+      'raspberry/sync-agent/src/commands/update-software.js',
+      'raspberry/sync-agent/src/commands/ota-download.js',
+    ].map(f => fs.readFileSync(path.join(repoRoot, f), 'utf8')).join('\n');
+    expect({ hasStallTimer: otaFiles.includes('stallTimer') })
       .toEqual({ hasStallTimer: true });
-    expect({ hasStallTimeout: updateSoftware.includes('STALL_TIMEOUT') })
+    expect({ hasStallTimeout: otaFiles.includes('STALL_TIMEOUT') })
       .toEqual({ hasStallTimeout: true });
     // Must destroy the stream on stall (not just log)
-    expect({ destroysStream: updateSoftware.includes('.destroy(') })
+    expect({ destroysStream: otaFiles.includes('.destroy(') })
       .toEqual({ destroysStream: true });
   });
 
   // Guard: OTA download must have retry logic with progressive backoff
   it('OTA download must retry on failure (not fail on first stall)', () => {
-    const updateSoftware = fs.readFileSync(
-      path.join(repoRoot, 'raspberry/sync-agent/src/commands/update-software.js'),
-      'utf8'
-    );
-    expect({ hasDownloadRetry: updateSoftware.includes('MAX_DOWNLOAD_RETRIES') })
+    const otaFiles = [
+      'raspberry/sync-agent/src/commands/update-software.js',
+      'raspberry/sync-agent/src/commands/ota-download.js',
+    ].map(f => fs.readFileSync(path.join(repoRoot, f), 'utf8')).join('\n');
+    expect({ hasDownloadRetry: otaFiles.includes('MAX_DOWNLOAD_RETRIES') })
       .toEqual({ hasDownloadRetry: true });
-    expect({ hasRetryDelay: updateSoftware.includes('retryDelay') })
+    expect({ hasRetryDelay: otaFiles.includes('retryDelay') })
       .toEqual({ hasRetryDelay: true });
   });
 
   // Guard: stall timer must listen to 'data' events on response stream (not just writer)
   it('stall timer must reset on response data events', () => {
-    const updateSoftware = fs.readFileSync(
-      path.join(repoRoot, 'raspberry/sync-agent/src/commands/update-software.js'),
-      'utf8'
-    );
-    expect({ listensToData: updateSoftware.includes("response.data.on('data'") })
+    const otaFiles = [
+      'raspberry/sync-agent/src/commands/update-software.js',
+      'raspberry/sync-agent/src/commands/ota-download.js',
+    ].map(f => fs.readFileSync(path.join(repoRoot, f), 'utf8')).join('\n');
+    expect({ listensToData: otaFiles.includes("response.data.on('data'") })
       .toEqual({ listensToData: true });
   });
 
   // Guard: stall timer must be cleared on finish/error (prevent memory leak)
   it('stall timer must be cleared on stream finish and error', () => {
-    const updateSoftware = fs.readFileSync(
-      path.join(repoRoot, 'raspberry/sync-agent/src/commands/update-software.js'),
-      'utf8'
-    );
-    expect({ clearsOnFinish: updateSoftware.includes('clearTimeout(stallTimer)') })
+    const otaFiles = [
+      'raspberry/sync-agent/src/commands/update-software.js',
+      'raspberry/sync-agent/src/commands/ota-download.js',
+    ].map(f => fs.readFileSync(path.join(repoRoot, f), 'utf8')).join('\n');
+    expect({ clearsOnFinish: otaFiles.includes('clearTimeout(stallTimer)') })
       .toEqual({ clearsOnFinish: true });
   });
 });
@@ -12361,15 +12378,15 @@ describe('OTA deployment observability guards', () => {
     // (e.g. neopro-vlc-kiosk, neopro-ffmpeg-stream) that fix-fleet-pi.sh deletes but the OTA
     // re-installs before fix-fleet runs → orphan services crash-loop + restart hostapd ~22x/hour.
     // Fix: use sourcePath (the extracted archive in /tmp/) to only install services from the package.
-    const updateSoftware = fs.readFileSync(
-      path.join(repoRoot, 'raspberry/sync-agent/src/commands/update-software.js'),
-      'utf8'
-    );
+    const otaFiles = [
+      'raspberry/sync-agent/src/commands/update-software.js',
+      'raspberry/sync-agent/src/commands/ota-install.js',
+    ].map(f => fs.readFileSync(path.join(repoRoot, f), 'utf8')).join('\n');
     // Must use sourcePath for the systemd config directory
-    expect({ usesSourcePath: updateSoftware.includes("path.join(sourcePath, 'config', 'systemd')") })
+    expect({ usesSourcePath: otaFiles.includes("path.join(sourcePath, 'config', 'systemd')") })
       .toEqual({ usesSourcePath: true });
     // Must NOT use rootDir for systemd config (the old broken pattern)
-    expect({ noRootDir: !updateSoftware.includes("path.join(rootDir, 'config', 'systemd')") })
+    expect({ noRootDir: !otaFiles.includes("path.join(rootDir, 'config', 'systemd')") })
       .toEqual({ noRootDir: true });
   });
 
@@ -12390,10 +12407,10 @@ describe('OTA deployment observability guards', () => {
   });
 
   it('agent.js must include steps in update_progress emission', () => {
-    const agent = fs.readFileSync(
-      path.join(repoRoot, 'raspberry/sync-agent/src/agent.js'),
-      'utf8'
-    );
+    const agent = [
+      'raspberry/sync-agent/src/agent.js',
+      'raspberry/sync-agent/src/services/command-dispatch.js',
+    ].map(f => fs.readFileSync(path.join(repoRoot, f), 'utf8')).join('\n');
     // Must include steps in the completion event
     expect({ stepsInCompletion: agent.includes("steps: result?.steps") })
       .toEqual({ stepsInCompletion: true });
@@ -12678,10 +12695,10 @@ describe('Socket reconnection stability guards', () => {
   // then internetWatchLoop restarts it 30s later → infinite start/stop cycle
   // logging every 30s, potential wpa_cli reconfigure on edge cases.
   it('network-watchdog must check wlan1 IP before starting reconnect loop', () => {
-    const content = fs.readFileSync(
-      path.join(repoRoot, 'raspberry/sync-agent/src/services/network-watchdog.js'),
-      'utf8'
-    );
+    const content = [
+      'raspberry/sync-agent/src/services/network-watchdog.js',
+      'raspberry/sync-agent/src/services/internet-watchdog.js',
+    ].map(f => fs.readFileSync(path.join(repoRoot, f), 'utf8')).join('\n');
     // The ethernet block must call getInternetIp() to check wlan1 before startWlan1Reconnect
     const ethernetBlock = content.match(
       /connectionType.*===.*'ethernet'\)\s*\{[\s\S]*?startWlan1Reconnect/
