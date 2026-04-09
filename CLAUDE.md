@@ -58,6 +58,7 @@ source central-server/.env && psql "$DATABASE_URL" -f central-server/src/scripts
 - Retirer les guards `canUseAnalyticsAdvanced` de `club-analytics.component.ts` sur l'option 90j et les boutons CSV/PDF (Phase 2.9 ADR-039 — smoke test enforced)
 - Utiliser `console.log` dans central-server (utiliser Winston)
 - Revenir à Nixpacks pour Railway (Nixpacks auto-détecte le root package.json et lance `ng build` qui OOM — utiliser le Dockerfile builder `central-server/Dockerfile` avec `COPY central-server/` pour isoler le build)
+- Tracker `raspberry/admin/public/app.js` ou `styles.css` dans git (ce sont des build artifacts générés par `build-admin.sh` — les sources sont dans `modules/` et `styles/` — les smoke tests lisent les modules sources directement, pas le fichier concaténé — smoke test enforced)
 - Importer `../config/database` dans les controllers (ESLint bloque tout import, utiliser les repositories)
 - Commit des secrets ou fichiers `.env`
 - Push directement sur `main` sans PR

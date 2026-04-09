@@ -4,7 +4,7 @@
 
 ```
 public/
-├── app.js                  # Fichier concatene (build output - NE PAS EDITER)
+├── app.js                  # Fichier concatene (build output - NE PAS EDITER, gitignored)
 ├── modules/
 │   ├── core/
 │   │   ├── state.js        # Etat global (variables partagees)
@@ -60,6 +60,8 @@ bash build-admin.sh
 
 # Le fichier app.js est regenere automatiquement
 # Le header inclut le git hash (deterministe : pas de diff si le code n'a pas change)
+# IMPORTANT: app.js et styles.css sont gitignored (build artifacts)
+# Le build OTA (build-raspberry.sh) et le release (sync-raspberry-versions.sh) les regenerent
 ```
 
 ## Convention

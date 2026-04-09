@@ -890,8 +890,9 @@ npm run deploy:raspberry 192.168.4.1
 │   │                    #   Rate limiting : 5 tentatives → verrouillage 15 min/IP
 │   ├── __tests__/       #   194 tests Jest (services + routes + auth, 60%+ couverture)
 │   └── public/          #   Frontend statique
-│       ├── modules/     #     JS modulaire (dont core/realtime.js → Socket.IO :3000)
-│       └── styles/      #     CSS modulaire (10 fichiers → build-admin.sh → styles.css)
+│       ├── modules/     #     JS modulaire (source, dont core/realtime.js → Socket.IO :3000)
+│       ├── app.js       #     Build output (gitignored, généré par build-admin.sh)
+│       └── styles/      #     CSS modulaire (10 fichiers → build-admin.sh → styles.css, gitignored)
 │
 ├── sync-agent/          # Agent de sync central
 │   ├── agent.js

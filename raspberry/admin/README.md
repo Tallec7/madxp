@@ -347,8 +347,8 @@ admin/
 └── public/                  # Frontend (HTML/CSS/JS statique)
     ├── index.html
     ├── styles.css            # Fichier concaténé (build output depuis styles/)
-    ├── app.js                # Fichier concaténé (build output depuis modules/)
-    ├── styles/               # Sources CSS modulaires (10 fichiers → build-admin.sh → styles.css)
+    ├── app.js                # Fichier concaténé (build output depuis modules/, gitignored)
+    ├── styles/               # Sources CSS modulaires (10 fichiers → build-admin.sh → styles.css, gitignored)
     └── modules/              # Sources JS modulaires (voir MODULES.md)
         └── core/
             └── realtime.js   #   Connexion Socket.IO au serveur Pi (:3000), auto-refresh

@@ -539,14 +539,14 @@ TROUBLESHOOTING.md (53K) → MODOP-S04-05 (diagnostic distance)
 
 #### Anti-patterns detectes
 
-| Anti-pattern           | Localisation                                               | Impact                                  | Severite |
-| ---------------------- | ---------------------------------------------------------- | --------------------------------------- | -------- |
-| **God Component**      | admin/public/app.js (3600 lignes vanilla JS)               | Tres difficile a maintenir              | Haute    |
-| **Sync manuelle**      | Remote Pi ↔ Cloud Remote (copie manuelle HTML/SCSS/TS)     | Risque de divergence, bug non reproduit | Haute    |
-| **Monolithisme**       | CLAUDE.md (239 KB, fichier unique)                         | Impossible a naviguer efficacement      | Moyenne  |
-| **Legacy coexistence** | sponsors/_ ↔ advertisers/_ (2 systemes de nommage)         | Confusion pour nouveaux devs            | Moyenne  |
-| **CSS inline massif**  | Composants Angular (styles inline, certains > 2000 lignes) | Pas de design system reutilisable       | Moyenne  |
-| **Analytics fantome**  | features/analytics/ existe mais "supprime en v3.0"         | Code mort source de confusion           | Faible   |
+| Anti-pattern           | Localisation                                                                                          | Impact                                    | Severite  |
+| ---------------------- | ----------------------------------------------------------------------------------------------------- | ----------------------------------------- | --------- |
+| ~~**God Component**~~  | ~~admin/public/app.js~~ → Refactoré en 21 modules dans `modules/`, app.js gitignored (build artifact) | ~~Tres difficile a maintenir~~ **Résolu** | ~~Haute~~ |
+| **Sync manuelle**      | Remote Pi ↔ Cloud Remote (copie manuelle HTML/SCSS/TS)                                                | Risque de divergence, bug non reproduit   | Haute     |
+| **Monolithisme**       | CLAUDE.md (239 KB, fichier unique)                                                                    | Impossible a naviguer efficacement        | Moyenne   |
+| **Legacy coexistence** | sponsors/_ ↔ advertisers/_ (2 systemes de nommage)                                                    | Confusion pour nouveaux devs              | Moyenne   |
+| **CSS inline massif**  | Composants Angular (styles inline, certains > 2000 lignes)                                            | Pas de design system reutilisable         | Moyenne   |
+| **Analytics fantome**  | features/analytics/ existe mais "supprime en v3.0"                                                    | Code mort source de confusion             | Faible    |
 
 ---
 
@@ -812,19 +812,19 @@ users (7 roles)
 
 ### Moyen terme (1-3 mois)
 
-| #   | Recommandation                                                             | Effort | Impact | Justification                                                                                |
-| --- | -------------------------------------------------------------------------- | ------ | ------ | -------------------------------------------------------------------------------------------- |
-| 9   | **Consolider CLAUDE.md ↔ docs/** : reduire la duplication a < 10%          | M      | Haut   | ~25% de duplication actuellement (glossaire, breaking changes, schema DB)                    |
-| 10  | **Creer ADR-006 a ADR-010** pour les decisions recentes                    | M      | Moyen  | Decisions post-Jan 2026 non tracees (subscriptions, network resilience, double-buffer, etc.) |
-| 11  | **Augmenter la couverture de tests** (objectif : 60% lignes)               | L      | Haut   | 23 spec.ts pour un dashboard critique                                                        |
-| 12  | **Extraire un design system Angular** (shared styles, tokens)              | L      | Moyen  | 6 shared components pour 18 features                                                         |
-| 13  | **Creer une couche repository** dans le central-server                     | L      | Moyen  | Decouplage SQL/logique metier                                                                |
-| 14  | **Refactorer admin/public/app.js** (3600 lignes vanilla JS)                | L      | Moyen  | Maintenabilite critique                                                                      |
-| 15  | **Unifier le Remote Pi et Cloud Remote** (composant partage ou generation) | L      | Haut   | Risque de divergence lors de chaque modification                                             |
-| 16  | **Documenter les procedures de backup/restore DB**                         | S      | Haut   | Risque de perte de donnees                                                                   |
-| 17  | **Ajouter des tests de charge** pour valider le scaling a 100+ Pi          | M      | Haut   | Limites de scaling inconnues                                                                 |
-| 18  | **Creer un runbook d'urgence** (incident DB, breach, DDoS)                 | M      | Haut   | MODOPs couvrent l'operationnel, pas les crises                                               |
-| 19  | **Nettoyer les routes sponsor-\*.ts legacy** ou documenter la coexistence  | M      | Moyen  | Confusion naming sponsors/advertisers                                                        |
+| #   | Recommandation                                                                                 | Effort | Impact    | Justification                                                                                |
+| --- | ---------------------------------------------------------------------------------------------- | ------ | --------- | -------------------------------------------------------------------------------------------- |
+| 9   | **Consolider CLAUDE.md ↔ docs/** : reduire la duplication a < 10%                              | M      | Haut      | ~25% de duplication actuellement (glossaire, breaking changes, schema DB)                    |
+| 10  | **Creer ADR-006 a ADR-010** pour les decisions recentes                                        | M      | Moyen     | Decisions post-Jan 2026 non tracees (subscriptions, network resilience, double-buffer, etc.) |
+| 11  | **Augmenter la couverture de tests** (objectif : 60% lignes)                                   | L      | Haut      | 23 spec.ts pour un dashboard critique                                                        |
+| 12  | **Extraire un design system Angular** (shared styles, tokens)                                  | L      | Moyen     | 6 shared components pour 18 features                                                         |
+| 13  | **Creer une couche repository** dans le central-server                                         | L      | Moyen     | Decouplage SQL/logique metier                                                                |
+| 14  | ~~**Refactorer admin/public/app.js**~~ ✅ Fait — 21 modules dans `modules/`, app.js gitignored | ~~L~~  | ~~Moyen~~ | ~~Maintenabilite critique~~ **Résolu**                                                       |
+| 15  | **Unifier le Remote Pi et Cloud Remote** (composant partage ou generation)                     | L      | Haut      | Risque de divergence lors de chaque modification                                             |
+| 16  | **Documenter les procedures de backup/restore DB**                                             | S      | Haut      | Risque de perte de donnees                                                                   |
+| 17  | **Ajouter des tests de charge** pour valider le scaling a 100+ Pi                              | M      | Haut      | Limites de scaling inconnues                                                                 |
+| 18  | **Creer un runbook d'urgence** (incident DB, breach, DDoS)                                     | M      | Haut      | MODOPs couvrent l'operationnel, pas les crises                                               |
+| 19  | **Nettoyer les routes sponsor-\*.ts legacy** ou documenter la coexistence                      | M      | Moyen     | Confusion naming sponsors/advertisers                                                        |
 
 ### Long terme (3-6 mois)
 

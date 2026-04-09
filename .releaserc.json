@@ -31,8 +31,7 @@
           "docs/changelog/CHANGELOG.md",
           "raspberry/admin/package.json",
           "raspberry/server/package.json",
-          "raspberry/sync-agent/package.json",
-          "raspberry/admin/public/app.js"
+          "raspberry/sync-agent/package.json"
         ],
         "message": "chore(release): ${nextRelease.version}\n\n${nextRelease.notes}"
       }
