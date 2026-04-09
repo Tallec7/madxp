@@ -1,3 +1,9 @@
+# [3.138.0](https://github.com/Tallec7/neopro/compare/v3.137.0...v3.138.0) (2026-04-09)
+
+### Features
+
+- **templates:** add image overlay support (photo joueur + logo club) ([774ad47](https://github.com/Tallec7/neopro/commit/774ad479c0c4e8e472ce7d0a00ab6f09d3da99aa))
+
 # [3.137.0](https://github.com/Tallec7/neopro/compare/v3.136.6...v3.137.0) (2026-04-08)
 
 ### Features
