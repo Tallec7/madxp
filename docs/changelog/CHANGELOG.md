@@ -1,3 +1,10 @@
+## [3.138.2](https://github.com/Tallec7/neopro/compare/v3.138.1...v3.138.2) (2026-04-09)
+
+### Bug Fixes
+
+- **safe:** use idString param schema for SAFe routes accepting PROP-/E-/R- IDs ([c8cf865](https://github.com/Tallec7/neopro/commit/c8cf865ee13095dda6113fff79bf4a49b47d972c))
+- **tests:** update smoke test E-41 to read paths.js after helpers.js split ([09cb8f0](https://github.com/Tallec7/neopro/commit/09cb8f0e065234547e1b27a3b9977f146f60f549))
+
 ## [3.138.1](https://github.com/Tallec7/neopro/compare/v3.138.0...v3.138.1) (2026-04-09)
 
 ### Bug Fixes
