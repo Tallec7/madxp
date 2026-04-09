@@ -7209,11 +7209,11 @@ describe('E-41 secondary videos serving guard', () => {
   });
 
   describe('helpers must export SECONDARY_VIDEOS_DIR', () => {
-    const helpersPath = path.join(repoRoot, 'raspberry/admin/helpers.js');
+    const pathsFile = path.join(repoRoot, 'raspberry/admin/paths.js');
     let content: string;
-    beforeAll(() => { content = fs.readFileSync(helpersPath, 'utf8'); });
+    beforeAll(() => { content = fs.readFileSync(pathsFile, 'utf8'); });
 
-    it('helpers must define SECONDARY_VIDEOS_DIR pointing to videos-secondary', () => {
+    it('paths.js must define SECONDARY_VIDEOS_DIR pointing to videos-secondary', () => {
       expect({
         definesSec: /SECONDARY_VIDEOS_DIR\s*=\s*.*videos-secondary/.test(content),
         exportsSec: /SECONDARY_VIDEOS_DIR/.test(content.split('module.exports')[1] || ''),
