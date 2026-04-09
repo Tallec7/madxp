@@ -1,3 +1,9 @@
+## [3.138.1](https://github.com/Tallec7/neopro/compare/v3.138.0...v3.138.1) (2026-04-09)
+
+### Bug Fixes
+
+- **templates:** remove extra FormData fields causing 500 on POST /api/videos ([d8fb01d](https://github.com/Tallec7/neopro/commit/d8fb01d773adc668b0c0f61bb4c080bd1479f853))
+
 # [3.138.0](https://github.com/Tallec7/neopro/compare/v3.137.0...v3.138.0) (2026-04-09)
 
 ### Features
