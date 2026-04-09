@@ -4,14 +4,11 @@ import {
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TranslateModule } from '@ngx-translate/core';
-import { Chart, ChartConfiguration, registerables } from 'chart.js';
-import { SitesService } from '../../../../core/services/sites.service';
-import { SiteSponsorService } from '../../../../core/services/site-sponsor.service';
 import { NotificationService } from '../../../../core/services/notification.service';
 import { ConfirmDialogService } from '../../../../core/services/confirm-dialog.service';
-import { Site, SiteSponsor, SiteSponsorVideo, SiteSponsorStatsResponse, SiteSponsorDailyTrend, GeneratedReport, SiteSponsorBenchmarkResponse, CloudVideo, SiteConfiguration } from '../../../../core/models';
-
-Chart.register(...registerables);
+import { Site, SiteSponsor, SiteSponsorStatsResponse, GeneratedReport, SiteSponsorBenchmarkResponse, CloudVideo, SiteConfiguration } from '../../../../core/models';
+import { SiteSponsorsTabDataService } from './site-sponsors-tab.data.service';
+import { SiteSponsorsChartService } from './site-sponsors-tab.chart.service';
 
 @Component({
   selector: 'app-site-sponsors-tab',
@@ -1319,8 +1316,8 @@ export class SiteSponsorsTabComponent implements OnInit, OnDestroy {
 
   @ViewChild('trendsChart') trendsChartRef!: ElementRef<HTMLCanvasElement>;
 
-  private readonly sitesService = inject(SitesService);
-  private readonly sponsorService = inject(SiteSponsorService);
+  private readonly dataService = inject(SiteSponsorsTabDataService);
+  private readonly chartService = inject(SiteSponsorsChartService);
   private readonly notification = inject(NotificationService);
   private readonly confirmDialog = inject(ConfirmDialogService);
   private readonly cdr = inject(ChangeDetectorRef);
@@ -1336,7 +1333,6 @@ export class SiteSponsorsTabComponent implements OnInit, OnDestroy {
   detailStats: SiteSponsorStatsResponse | null = null;
   reports: GeneratedReport[] = [];
   reportsLoading = false;
-  private trendsChart: Chart | null = null;
 
   // Modal
   showModal = false;
@@ -1394,20 +1390,20 @@ export class SiteSponsorsTabComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
-    this.destroyChart();
+    this.chartService.destroyChart();
   }
 
   loadSponsors(): void {
     this.loading = true;
     this.error = '';
-    this.sponsorService.listSiteSponsors(this.siteId, true).subscribe({
+    this.dataService.listSponsors(this.siteId, true).subscribe({
       next: (res) => {
         // ADR-035 Phase 1: filtrer les sponsors neopro (visibles uniquement côté admin annonceurs)
         this.sponsors = (res?.sponsors ?? []).filter(s => s.source !== 'neopro');
         this.loading = false;
         this.cdr.markForCheck();
       },
-      error: (err) => {
+      error: () => {
         this.error = 'Impossible de charger les sponsors';
         this.loading = false;
         this.cdr.markForCheck();
@@ -1431,7 +1427,7 @@ export class SiteSponsorsTabComponent implements OnInit, OnDestroy {
       this.accessLinkCopied = false;
       this.availableVideos = [];
       this.selectedVideoFilename = '';
-      this.destroyChart();
+      this.chartService.destroyChart();
       this.cdr.markForCheck();
       return;
     }
@@ -1449,7 +1445,7 @@ export class SiteSponsorsTabComponent implements OnInit, OnDestroy {
     this.cdr.markForCheck();
 
     // Load stats + reports + benchmark in parallel
-    this.sponsorService.getSiteSponsorStats(this.siteId, sponsor.id).subscribe({
+    this.dataService.getSponsorStats(this.siteId, sponsor.id).subscribe({
       next: (stats) => {
         this.detailStats = stats;
         this.detailLoading = false;
@@ -1466,7 +1462,7 @@ export class SiteSponsorsTabComponent implements OnInit, OnDestroy {
     });
 
     this.reportsLoading = true;
-    this.sponsorService.getSponsorReports(sponsor.id).subscribe({
+    this.dataService.getSponsorReports(sponsor.id).subscribe({
       next: (reports) => {
         this.reports = reports;
         this.reportsLoading = false;
@@ -1479,7 +1475,7 @@ export class SiteSponsorsTabComponent implements OnInit, OnDestroy {
     });
 
     this.benchmarkLoading = true;
-    this.sponsorService.getSiteSponsorBenchmark(this.siteId).subscribe({
+    this.dataService.getBenchmark(this.siteId).subscribe({
       next: (benchmark) => {
         this.benchmarkData = benchmark;
         this.benchmarkHasCpi = benchmark?.sponsors?.some(s => s.cpi !== null) ?? false;
@@ -1499,57 +1495,11 @@ export class SiteSponsorsTabComponent implements OnInit, OnDestroy {
 
   private renderTrendsChart(): void {
     if (!this.trendsChartRef || !this.detailStats?.daily_trends?.length) return;
-    this.destroyChart();
-
-    const trends = this.detailStats.daily_trends;
-    const labels = trends.map(t => {
-      const d = new Date(t.date);
-      return `${d.getDate()}/${d.getMonth() + 1}`;
-    });
-    const data = trends.map(t => Number(t.impressions));
-
-    const ctx = this.trendsChartRef.nativeElement.getContext('2d');
-    if (!ctx) return;
-
-    const config: ChartConfiguration = {
-      type: 'line',
-      data: {
-        labels,
-        datasets: [{
-          label: 'Passages',
-          data,
-          borderColor: '#3b82f6',
-          backgroundColor: 'rgba(59, 130, 246, 0.08)',
-          fill: true,
-          tension: 0.3,
-          pointRadius: 2,
-          pointHoverRadius: 5,
-        }],
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: { display: false },
-        },
-        scales: {
-          y: {
-            beginAtZero: true,
-            ticks: { precision: 0 },
-          },
-        },
-      },
-    };
-
-    this.trendsChart = new Chart(ctx, config);
+    this.chartService.renderTrendsChart(
+      this.trendsChartRef.nativeElement,
+      this.detailStats.daily_trends,
+    );
     this.cdr.markForCheck();
-  }
-
-  private destroyChart(): void {
-    if (this.trendsChart) {
-      this.trendsChart.destroy();
-      this.trendsChart = null;
-    }
   }
 
   // =========================================================================
@@ -1603,8 +1553,8 @@ export class SiteSponsorsTabComponent implements OnInit, OnDestroy {
     };
 
     const obs = this.isEditing
-      ? this.sponsorService.updateSiteSponsor(this.siteId, this.editingSponsorId, payload)
-      : this.sponsorService.createSiteSponsor(this.siteId, payload);
+      ? this.dataService.updateSponsor(this.siteId, this.editingSponsorId, payload)
+      : this.dataService.createSponsor(this.siteId, payload);
 
     obs.subscribe({
       next: () => {
@@ -1649,7 +1599,7 @@ export class SiteSponsorsTabComponent implements OnInit, OnDestroy {
 
   loadWizardVideos(): void {
     // Use cached config (deployed videos only) instead of all cloud videos
-    this.wizardVideos = this.extractDeployedVideos(this.cachedConfiguration);
+    this.wizardVideos = this.dataService.extractDeployedVideos(this.cachedConfiguration);
     this.filterWizardVideos();
     this.cdr.markForCheck();
   }
@@ -1676,11 +1626,11 @@ export class SiteSponsorsTabComponent implements OnInit, OnDestroy {
       status: 'active' as SiteSponsor['status'],
     };
 
-    this.sponsorService.createSiteSponsor(this.siteId, payload).subscribe({
+    this.dataService.createSponsor(this.siteId, payload).subscribe({
       next: (created) => {
         // If video selected, associate it
         if (this.wizardSelectedVideo && created?.id) {
-          this.sponsorService.addVideoToSiteSponsor(this.siteId, created.id, this.wizardSelectedVideo).subscribe({
+          this.dataService.addVideo(this.siteId, created.id, this.wizardSelectedVideo).subscribe({
             next: () => {
               this.saving = false;
               this.wizardStep = 4; // success screen
@@ -1718,12 +1668,12 @@ export class SiteSponsorsTabComponent implements OnInit, OnDestroy {
     );
     if (!ok) return;
 
-    this.sponsorService.deleteSiteSponsor(this.siteId, sponsor.id).subscribe({
+    this.dataService.deleteSponsor(this.siteId, sponsor.id).subscribe({
       next: () => {
         this.notification.success('Sponsor supprimé');
         if (this.expandedSponsorId === sponsor.id) {
           this.expandedSponsorId = null;
-          this.destroyChart();
+          this.chartService.destroyChart();
         }
         this.loadSponsors();
       },
@@ -1746,7 +1696,7 @@ export class SiteSponsorsTabComponent implements OnInit, OnDestroy {
     const periodEnd = new Date(now.getFullYear(), now.getMonth(), 1); // 1st of current month
     const periodStart = new Date(periodEnd.getFullYear(), periodEnd.getMonth() - 1, 1); // 1st of prev month
 
-    this.sponsorService.generateSponsorReport(
+    this.dataService.generateReport(
       this.siteId,
       sponsor.id,
       periodStart.toISOString().split('T')[0],
@@ -1772,7 +1722,7 @@ export class SiteSponsorsTabComponent implements OnInit, OnDestroy {
 
   private loadReports(sponsorId: string): void {
     this.reportsLoading = true;
-    this.sponsorService.getSponsorReports(sponsorId).subscribe({
+    this.dataService.getSponsorReports(sponsorId).subscribe({
       next: (reports) => {
         this.reports = reports;
         this.reportsLoading = false;
@@ -1795,7 +1745,7 @@ export class SiteSponsorsTabComponent implements OnInit, OnDestroy {
     this.accessLinkCopied = false;
     this.cdr.markForCheck();
 
-    this.sponsorService.createSponsorAccessLink(this.siteId, sponsor.id).subscribe({
+    this.dataService.createAccessLink(this.siteId, sponsor.id).subscribe({
       next: (result: { accessUrl: string; expiresAt: string; emailSent: boolean; sentTo: string | null }) => {
         this.creatingAccessLink = false;
         this.accessLinkUrl = result.accessUrl;
@@ -1835,7 +1785,7 @@ export class SiteSponsorsTabComponent implements OnInit, OnDestroy {
     const associatedFilenames = new Set(
       (this.detailStats?.videos ?? []).map(v => v.video_filename)
     );
-    this.availableVideos = this.extractDeployedVideos(this.cachedConfiguration)
+    this.availableVideos = this.dataService.extractDeployedVideos(this.cachedConfiguration)
       .filter(v => !associatedFilenames.has(v.filename));
     this.availableVideosLoading = false;
     this.cdr.markForCheck();
@@ -1847,7 +1797,7 @@ export class SiteSponsorsTabComponent implements OnInit, OnDestroy {
     this.addingVideo = true;
     this.cdr.markForCheck();
 
-    this.sponsorService.addVideoToSiteSponsor(
+    this.dataService.addVideo(
       this.siteId, this.expandedSponsorId, this.selectedVideoFilename
     ).subscribe({
       next: () => {
@@ -1874,7 +1824,7 @@ export class SiteSponsorsTabComponent implements OnInit, OnDestroy {
     this.removingVideoFilename = filename;
     this.cdr.markForCheck();
 
-    this.sponsorService.removeVideoFromSiteSponsor(
+    this.dataService.removeVideo(
       this.siteId, this.expandedSponsorId, filename
     ).subscribe({
       next: () => {
@@ -1896,7 +1846,7 @@ export class SiteSponsorsTabComponent implements OnInit, OnDestroy {
     if (!this.expandedSponsorId) return;
     const sponsorId = this.expandedSponsorId;
 
-    this.sponsorService.getSiteSponsorStats(this.siteId, sponsorId).subscribe({
+    this.dataService.getSponsorStats(this.siteId, sponsorId).subscribe({
       next: (stats) => {
         this.detailStats = stats;
         this.cdr.markForCheck();
@@ -1917,10 +1867,10 @@ export class SiteSponsorsTabComponent implements OnInit, OnDestroy {
    * loadWizardVideos(), loadAvailableVideos(), and loop detection.
    */
   private loadSiteContentOnce(): void {
-    this.sitesService.getLocalContent(this.siteId).subscribe({
+    this.dataService.loadSiteContent(this.siteId).subscribe({
       next: (content) => {
         this.cachedConfiguration = content.configuration ?? null;
-        this.buildVideosInLoopsSet(this.cachedConfiguration);
+        this.videosInLoops = this.dataService.buildVideosInLoopsSet(this.cachedConfiguration);
         this.configLoaded = true;
         this.cdr.markForCheck();
       },
@@ -1931,125 +1881,8 @@ export class SiteSponsorsTabComponent implements OnInit, OnDestroy {
     });
   }
 
-  /**
-   * Extracts all unique video filenames deployed in the site config
-   * and returns them as CloudVideo-compatible objects for the dropdown.
-   */
-  private extractDeployedVideos(config: SiteConfiguration | null): CloudVideo[] {
-    if (!config) return [];
-    // Map: bare filename → display name (from config "name" field)
-    const seen = new Map<string, string>();
-
-    const addVideo = (path: string, displayName?: string): void => {
-      if (!path) return;
-      const parts = path.split('/');
-      const filename = parts[parts.length - 1];
-      if (filename && !seen.has(filename)) {
-        seen.set(filename, displayName || '');
-      }
-    };
-
-    // Global loop
-    for (const v of config.sponsors ?? []) {
-      addVideo(v.path, v.name);
-    }
-    // Phase loops
-    for (const tc of config.timeCategories ?? []) {
-      for (const v of tc.loopVideos ?? []) {
-        addVideo(v.path, v.name);
-      }
-    }
-    // Categories + subcategories
-    for (const cat of config.categories ?? []) {
-      for (const v of cat.videos ?? []) {
-        addVideo(v.path, v.name);
-      }
-      for (const sub of cat.subCategories ?? []) {
-        for (const v of sub.videos ?? []) {
-          addVideo(v.path, v.name);
-        }
-      }
-    }
-
-    // One entry per video: filename as key, display name as readable title
-    return Array.from(seen.entries()).map(([filename, displayName]) => ({
-      id: '',
-      filename,
-      originalName: filename,
-      title: displayName || filename.replace(/\.[^/.]+$/, '').replace(/_/g, ' '),
-      category: null,
-      subcategory: null,
-      size: 0,
-      duration: null,
-      checksum: null,
-      url: '',
-      uploadedForSiteId: null,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    }));
-  }
-
-  /**
-   * Extracts all video filenames present in the site configuration loops and categories.
-   * Covers: config.sponsors[], config.timeCategories[].loopVideos[],
-   * config.categories[].videos[], config.categories[].subCategories[].videos[]
-   */
-  private buildVideosInLoopsSet(config: SiteConfiguration | null): void {
-    this.videosInLoops = new Set();
-    if (!config) return;
-
-    // Helper to extract bare filename from a path like "videos/BOUCLE/video.mp4"
-    const extractFilename = (path: string): string => {
-      const parts = path.split('/');
-      return parts[parts.length - 1];
-    };
-
-    // Helper to add both the full path and bare filename to the set
-    const addToSet = (path?: string, name?: string): void => {
-      if (path) {
-        this.videosInLoops.add(path); // full path for exact match
-        this.videosInLoops.add(extractFilename(path)); // bare filename
-      }
-      if (name) {
-        this.videosInLoops.add(name);
-      }
-    };
-
-    // 1. Global loop (config.sponsors[] — legacy name for loop videos)
-    for (const loopVideo of config.sponsors ?? []) {
-      addToSet(loopVideo.path, loopVideo.name);
-    }
-
-    // 2. Time categories loop videos
-    for (const tc of config.timeCategories ?? []) {
-      for (const loopVideo of tc.loopVideos ?? []) {
-        addToSet(loopVideo.path, loopVideo.name);
-      }
-    }
-
-    // 3. Category videos and subcategory videos
-    for (const cat of config.categories ?? []) {
-      for (const video of cat.videos ?? []) {
-        addToSet(video.path, video.name);
-      }
-      for (const subCat of cat.subCategories ?? []) {
-        for (const video of subCat.videos ?? []) {
-          addToSet(video.path, video.name);
-        }
-      }
-    }
-  }
-
-  /**
-   * Checks if a filename (possibly a full path) matches any entry in videosInLoops.
-   * Handles both bare filenames ("06 datalian.mp4") and full paths
-   * ("videos/default/06 datalian.mp4") since site_sponsor_videos may store full paths
-   * while the loop config stores bare filenames.
-   */
   private isFilenameInLoop(filename: string): boolean {
-    if (this.videosInLoops.has(filename)) return true;
-    const bare = filename.split('/').pop() || filename;
-    return bare !== filename && this.videosInLoops.has(bare);
+    return this.dataService.isFilenameInLoop(filename, this.videosInLoops);
   }
 
   /**

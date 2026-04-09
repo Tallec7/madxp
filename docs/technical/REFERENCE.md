@@ -1963,6 +1963,23 @@ Le service monolithique `SitesService` a été décomposé en 4 services focalis
 | `SiteCommandService` | `site-command.service.ts` | Commandes distantes, logs, queue, hotspot              |
 | `SiteSponsorService` | `site-sponsor.service.ts` | Sponsors par site, stats, rapports, magic links        |
 
+**DataServices composants (refactoré v3.137+) :**
+
+Les composants complexes ont été décomposés en DataServices collocalisés (même dossier que le composant). Template et styles sont extraits en fichiers séparés (`.html`, `.scss`). Le composant orchestre, le DataService encapsule les appels API, le ChartService gère Chart.js.
+
+| Composant                  | DataService(s)                                                                   | Responsabilité                                                |
+| -------------------------- | -------------------------------------------------------------------------------- | ------------------------------------------------------------- |
+| `agencies-management`      | `AgenciesManagementDataService`                                                  | CRUD agencies, sites, associations                            |
+| `subscriptions-management` | `SubscriptionsManagementDataService`                                             | Stats, mutations, filtering/sorting, helpers métier           |
+| `updates-management`       | `UpdatesManagementDataService`                                                   | CRUD updates, déploiements, socket progress, formatting       |
+| `site-sponsors-tab`        | `SiteSponsorsTabDataService`, `SiteSponsorsChartService`                         | CRUD sponsors, stats, videos, config parsing; Chart.js trends |
+| `advertiser-detail`        | `AdvertiserDetailDataService`                                                    | forkJoin chargement, CRUD sponsor                             |
+| `content-management`       | `ContentManagementDataService`, `VideoUploadService`, `ContentDeploymentService` | Vidéos, upload, deploy wizard                                 |
+| `config-editor`            | `ConfigEditorDataService`                                                        | Polling config, validation, déploiement                       |
+| `site-settings-tab`        | `SiteSettingsDataService`                                                        | APIs settings, save/deploy                                    |
+| `users-management`         | `UsersManagementDataService`, `UserFiltersService`, `UserValidationService`      | CRUD users, filtres, validation                               |
+| `club-analytics`           | `ClubAnalyticsChartService`, `ClubExportService`                                 | Chart.js rendering, export CSV/PDF                            |
+
 **Méthodes SitesService (profils) :**
 
 | Méthode                                                        | Endpoint API                                           |

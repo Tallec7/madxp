@@ -2,9 +2,9 @@ import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TranslateModule } from '@ngx-translate/core';
-import { AgencyPortalService, Agency } from '../../../core/services/agency-portal.service';
-import { SitesService } from '../../../core/services/sites.service';
+import { Agency } from '../../../core/services/agency-portal.service';
 import { Site } from '../../../core/models';
+import { AgenciesManagementDataService, AgencySite, AgencyFormData } from './agencies-management.data.service';
 
 interface AgencyForm {
   name: string;
@@ -14,809 +14,15 @@ interface AgencyForm {
   contact_phone: string;
 }
 
-interface AgencySite {
-  id: string;
-  site_name: string;
-  club_name: string;
-  status: string;
-}
-
 @Component({
   selector: 'app-agencies-management',
   standalone: true,
   imports: [CommonModule, FormsModule, TranslateModule],
-  template: `
-    <div class="container">
-      <div class="header">
-        <h1>{{ 'agencies.title' | translate }}</h1>
-        <button class="btn btn-primary" (click)="showCreateModal = true">
-          + {{ 'agencies.newAgency' | translate }}
-        </button>
-      </div>
-
-      <!-- Loading state -->
-      @if (loading()) {
-        <div class="loading">
-          <div class="spinner"></div>
-        </div>
-      }
-
-      <!-- Error state -->
-      @if (error()) {
-        <div class="error-message">
-          {{ error() }}
-        </div>
-      }
-
-      <!-- Agencies list -->
-      @if (!loading() && agencies().length > 0) {
-        <div class="card">
-          <table class="agencies-table">
-            <thead>
-              <tr>
-                <th>{{ 'agencies.agency' | translate }}</th>
-                <th>{{ 'agencies.contact' | translate }}</th>
-                <th>{{ 'agencies.sites' | translate }}</th>
-                <th>{{ 'agencies.status' | translate }}</th>
-                <th>{{ 'agencies.actions' | translate }}</th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (agency of agencies(); track agency.id) {
-                <tr>
-                  <td>
-                    <div class="agency-cell">
-                      @if (agency.logo_url) {
-                        <img [src]="agency.logo_url" class="agency-logo" alt="" />
-                      } @else {
-                        <div class="avatar">{{ agency.name.charAt(0) }}</div>
-                      }
-                      <div class="agency-info">
-                        <span class="agency-name">{{ agency.name }}</span>
-                        @if (agency.description) {
-                          <span class="agency-desc">{{ agency.description }}</span>
-                        }
-                      </div>
-                    </div>
-                  </td>
-                  <td>
-                    <div class="contact-cell">
-                      <span class="contact-name">{{ agency.contact_name || '-' }}</span>
-                      <span class="contact-email">{{ agency.contact_email || '-' }}</span>
-                    </div>
-                  </td>
-                  <td>
-                    <span class="badge badge-info"> {{ agency.site_count || 0 }} sites </span>
-                  </td>
-                  <td>
-                    <span class="badge" [class]="'badge-status-' + agency.status">
-                      {{ agency.status === 'active' ? ('agencies.active' | translate) : ('agencies.inactive' | translate) }}
-                    </span>
-                  </td>
-                  <td class="actions-cell">
-                    <button class="btn-link btn-edit" (click)="editAgency(agency)">{{ 'agencies.edit' | translate }}</button>
-                    <button class="btn-link btn-success" (click)="manageSites(agency)">{{ 'agencies.manageSites' | translate }}</button>
-                    <button class="btn-link btn-danger" (click)="confirmDelete(agency)">
-                      {{ 'agencies.delete' | translate }}
-                    </button>
-                  </td>
-                </tr>
-              }
-            </tbody>
-          </table>
-        </div>
-      }
-
-      <!-- Empty state -->
-      @if (!loading() && agencies().length === 0 && !error()) {
-        <div class="empty-state">
-          <div class="empty-icon">🏢</div>
-          <h3>{{ 'agencies.noAgencies' | translate }}</h3>
-          <p>{{ 'agencies.noAgenciesDesc' | translate }}</p>
-          <button class="btn btn-primary" (click)="showCreateModal = true">
-            + {{ 'agencies.newAgency' | translate }}
-          </button>
-        </div>
-      }
-
-      <!-- Create/Edit Modal -->
-      @if (showCreateModal || editingAgency) {
-        <div class="modal-overlay" (click)="cancelEdit()">
-          <div class="modal" (click)="$event.stopPropagation()">
-            <div class="modal-header">
-              <h3>{{ editingAgency ? ('agencies.editAgency' | translate) : ('agencies.newAgency' | translate) }}</h3>
-            </div>
-            <form (ngSubmit)="saveAgency()" class="modal-body">
-              <div class="form-group">
-                <label>{{ 'agencies.name' | translate }} *</label>
-                <input type="text" [(ngModel)]="agencyForm.name" name="name" required />
-              </div>
-              <div class="form-group">
-                <label>{{ 'agencies.description' | translate }}</label>
-                <textarea
-                  [(ngModel)]="agencyForm.description"
-                  name="description"
-                  rows="2"
-                ></textarea>
-              </div>
-              <div class="form-group">
-                <label>{{ 'agencies.contactName' | translate }}</label>
-                <input type="text" [(ngModel)]="agencyForm.contact_name" name="contact_name" />
-              </div>
-              <div class="form-group">
-                <label>{{ 'agencies.email' | translate }}</label>
-                <input type="email" [(ngModel)]="agencyForm.contact_email" name="contact_email" />
-              </div>
-              <div class="form-group">
-                <label>{{ 'agencies.phone' | translate }}</label>
-                <input type="tel" [(ngModel)]="agencyForm.contact_phone" name="contact_phone" />
-              </div>
-              <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" (click)="cancelEdit()">
-                  {{ 'common.cancel' | translate }}
-                </button>
-                <button type="submit" class="btn btn-primary" [disabled]="saving()">
-                  {{ saving() ? ('agencies.saving' | translate) : ('common.save' | translate) }}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      }
-
-      <!-- Delete Confirmation Modal -->
-      @if (deletingAgency) {
-        <div class="modal-overlay" (click)="deletingAgency = null">
-          <div class="modal modal-small" (click)="$event.stopPropagation()">
-            <div class="modal-header">
-              <h3>{{ 'agencies.confirmDelete' | translate }}</h3>
-            </div>
-            <div class="modal-body">
-              <p>
-                {{ 'agencies.confirmDeleteDesc' | translate: {name: deletingAgency.name} }}
-              </p>
-            </div>
-            <div class="modal-footer">
-              <button type="button" class="btn btn-secondary" (click)="deletingAgency = null">
-                {{ 'common.cancel' | translate }}
-              </button>
-              <button
-                type="button"
-                class="btn btn-danger"
-                (click)="deleteAgency()"
-                [disabled]="saving()"
-              >
-                {{ saving() ? ('agencies.deleting' | translate) : ('common.delete' | translate) }}
-              </button>
-            </div>
-          </div>
-        </div>
-      }
-
-      <!-- Sites Management Modal -->
-      @if (managingSitesAgency) {
-        <div class="modal-overlay" (click)="closeSitesModal()">
-          <div class="modal modal-large" (click)="$event.stopPropagation()">
-            <div class="modal-header">
-              <h3>{{ 'agencies.manageSitesTitle' | translate }} - {{ managingSitesAgency.name }}</h3>
-              <button class="btn-close" (click)="closeSitesModal()">&times;</button>
-            </div>
-            <div class="modal-body">
-              <!-- Loading state -->
-              @if (loadingSites()) {
-                <div class="loading">
-                  <div class="spinner"></div>
-                </div>
-              }
-
-              @if (!loadingSites()) {
-                <!-- Current sites section -->
-                <div class="sites-section">
-                  <h4>{{ 'agencies.associatedSites' | translate }} ({{ agencySites().length }})</h4>
-                  @if (agencySites().length === 0) {
-                    <p class="empty-text">{{ 'agencies.noAssociatedSites' | translate }}</p>
-                  } @else {
-                    <div class="sites-list">
-                      @for (site of agencySites(); track site.id) {
-                        <div class="site-item">
-                          <div class="site-info">
-                            <span class="site-name">{{ site.club_name }}</span>
-                            <span class="site-subname">{{ site.site_name }}</span>
-                          </div>
-                          <span class="badge" [class]="'badge-status-' + site.status">
-                            {{ site.status }}
-                          </span>
-                          <button
-                            class="btn-link btn-danger"
-                            (click)="removeSiteFromAgency(site)"
-                            [disabled]="saving()"
-                          >
-                            {{ 'agencies.remove' | translate }}
-                          </button>
-                        </div>
-                      }
-                    </div>
-                  }
-                </div>
-
-                <!-- Add sites section -->
-                <div class="sites-section">
-                  <h4>{{ 'agencies.addSites' | translate }}</h4>
-                  <input
-                    type="text"
-                    [(ngModel)]="siteSearchQuery"
-                    [placeholder]="'agencies.searchSite' | translate"
-                    class="search-input"
-                    (input)="filterAvailableSites()"
-                  />
-                  @if (filteredAvailableSites().length === 0) {
-                    <p class="empty-text">
-                      @if (siteSearchQuery) {
-                        {{ 'agencies.noSitesFound' | translate: {query: siteSearchQuery} }}
-                      } @else {
-                        {{ 'agencies.allSitesAssigned' | translate }}
-                      }
-                    </p>
-                  } @else {
-                    <div class="sites-list sites-list-add">
-                      @for (site of filteredAvailableSites(); track site.id) {
-                        <div class="site-item">
-                          <label class="site-checkbox">
-                            <input
-                              type="checkbox"
-                              [checked]="selectedSitesToAdd().has(site.id)"
-                              (change)="toggleSiteSelection(site.id)"
-                            />
-                            <div class="site-info">
-                              <span class="site-name">{{ site.club_name }}</span>
-                              <span class="site-subname">{{ site.site_name }}</span>
-                            </div>
-                          </label>
-                          <span class="badge" [class]="'badge-status-' + site.status">
-                            {{ site.status }}
-                          </span>
-                        </div>
-                      }
-                    </div>
-                  }
-                </div>
-              }
-            </div>
-            <div class="modal-footer">
-              <button type="button" class="btn btn-secondary" (click)="closeSitesModal()">
-                {{ 'common.close' | translate }}
-              </button>
-              @if (selectedSitesToAdd().size > 0) {
-                <button
-                  type="button"
-                  class="btn btn-primary"
-                  (click)="addSelectedSites()"
-                  [disabled]="saving()"
-                >
-                  {{ saving() ? ('agencies.adding' | translate) : ('agencies.addSitesCount' | translate: {count: selectedSitesToAdd().size}) }}
-                </button>
-              }
-            </div>
-          </div>
-        </div>
-      }
-    </div>
-  `,
-  styles: [
-    `
-      .container {
-        padding: 2rem;
-        max-width: 1400px;
-        margin: 0 auto;
-      }
-
-      .header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 1.5rem;
-      }
-
-      .header h1 {
-        font-size: 1.75rem;
-        font-weight: 700;
-        color: #0f172a;
-        margin: 0;
-      }
-
-      .card {
-        background: white;
-        border-radius: 12px;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-        overflow: hidden;
-      }
-
-      .agencies-table {
-        width: 100%;
-        border-collapse: collapse;
-      }
-
-      .agencies-table th {
-        text-align: left;
-        padding: 1rem;
-        font-size: 0.75rem;
-        font-weight: 600;
-        color: #64748b;
-        text-transform: uppercase;
-        background: #f8fafc;
-        border-bottom: 1px solid #e2e8f0;
-      }
-
-      .agencies-table td {
-        padding: 1rem;
-        border-bottom: 1px solid #f1f5f9;
-        font-size: 0.875rem;
-        color: #334155;
-      }
-
-      .agencies-table tr:hover {
-        background: #f8fafc;
-      }
-
-      .agency-cell {
-        display: flex;
-        align-items: center;
-        gap: 0.75rem;
-      }
-
-      .agency-logo {
-        width: 40px;
-        height: 40px;
-        border-radius: 50%;
-        object-fit: cover;
-      }
-
-      .avatar {
-        width: 40px;
-        height: 40px;
-        border-radius: 50%;
-        background: #f3e8ff;
-        color: #7c3aed;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-weight: 600;
-        font-size: 1rem;
-      }
-
-      .agency-info {
-        display: flex;
-        flex-direction: column;
-        gap: 0.25rem;
-      }
-
-      .agency-name {
-        font-weight: 500;
-        color: #0f172a;
-      }
-
-      .agency-desc {
-        font-size: 0.8125rem;
-        color: #64748b;
-        max-width: 200px;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-      }
-
-      .contact-cell {
-        display: flex;
-        flex-direction: column;
-        gap: 0.25rem;
-      }
-
-      .contact-name {
-        color: #0f172a;
-      }
-
-      .contact-email {
-        font-size: 0.8125rem;
-        color: #64748b;
-      }
-
-      .badge {
-        display: inline-block;
-        padding: 0.25rem 0.75rem;
-        border-radius: 9999px;
-        font-size: 0.75rem;
-        font-weight: 500;
-      }
-
-      .badge-info {
-        background: #dbeafe;
-        color: #1e40af;
-      }
-
-      .badge-status-active {
-        background: #dcfce7;
-        color: #166534;
-      }
-
-      .badge-status-inactive {
-        background: #f1f5f9;
-        color: #475569;
-      }
-
-      .actions-cell {
-        display: flex;
-        gap: 0.5rem;
-        flex-wrap: wrap;
-      }
-
-      .btn-link {
-        background: none;
-        border: none;
-        padding: 0.25rem 0.5rem;
-        font-size: 0.8125rem;
-        cursor: pointer;
-        border-radius: 4px;
-        transition: background 0.2s;
-      }
-
-      .btn-edit {
-        color: #2563eb;
-      }
-      .btn-edit:hover {
-        background: #dbeafe;
-      }
-
-      .btn-success {
-        color: #059669;
-      }
-      .btn-success:hover {
-        background: #dcfce7;
-      }
-
-      .btn-danger {
-        color: #dc2626;
-      }
-      .btn-danger:hover {
-        background: #fee2e2;
-      }
-
-      .btn {
-        padding: 0.625rem 1.25rem;
-        border-radius: 8px;
-        font-size: 0.875rem;
-        font-weight: 500;
-        cursor: pointer;
-        border: none;
-        transition: all 0.2s;
-      }
-
-      .btn-primary {
-        background: #2563eb;
-        color: white;
-      }
-      .btn-primary:hover {
-        background: #1d4ed8;
-      }
-      .btn-primary:disabled {
-        background: #93c5fd;
-        cursor: not-allowed;
-      }
-
-      .btn-secondary {
-        background: #f1f5f9;
-        color: #475569;
-        border: 1px solid #e2e8f0;
-      }
-      .btn-secondary:hover {
-        background: #e2e8f0;
-      }
-
-      .btn.btn-danger {
-        background: #dc2626;
-        color: white;
-        padding: 0.625rem 1.25rem;
-      }
-      .btn.btn-danger:hover {
-        background: #b91c1c;
-      }
-
-      .loading {
-        display: flex;
-        justify-content: center;
-        padding: 3rem;
-      }
-
-      .spinner {
-        width: 32px;
-        height: 32px;
-        border: 3px solid #e2e8f0;
-        border-top-color: #2563eb;
-        border-radius: 50%;
-        animation: spin 0.8s linear infinite;
-      }
-
-      @keyframes spin {
-        to {
-          transform: rotate(360deg);
-        }
-      }
-
-      .error-message {
-        background: #fef2f2;
-        border: 1px solid #fecaca;
-        color: #991b1b;
-        padding: 1rem;
-        border-radius: 8px;
-        margin-bottom: 1.5rem;
-      }
-
-      .empty-state {
-        text-align: center;
-        padding: 4rem 2rem;
-        background: white;
-        border-radius: 12px;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-      }
-
-      .empty-icon {
-        font-size: 3rem;
-        margin-bottom: 1rem;
-      }
-
-      .empty-state h3 {
-        font-size: 1.125rem;
-        font-weight: 600;
-        color: #0f172a;
-        margin: 0 0 0.5rem 0;
-      }
-
-      .empty-state p {
-        color: #64748b;
-        margin: 0 0 1.5rem 0;
-      }
-
-      .modal-overlay {
-        position: fixed;
-        inset: 0;
-        background: rgba(15, 23, 42, 0.5);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        z-index: 1000;
-        padding: 1rem;
-      }
-
-      .modal {
-        background: white;
-        border-radius: 12px;
-        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-        width: 100%;
-        max-width: 480px;
-        max-height: 90vh;
-        overflow-y: auto;
-      }
-
-      .modal-small {
-        max-width: 400px;
-      }
-
-      .modal-large {
-        max-width: 700px;
-      }
-
-      .btn-close {
-        background: none;
-        border: none;
-        font-size: 1.5rem;
-        color: #64748b;
-        cursor: pointer;
-        padding: 0;
-        line-height: 1;
-      }
-
-      .btn-close:hover {
-        color: #0f172a;
-      }
-
-      .modal-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-      }
-
-      .sites-section {
-        margin-bottom: 1.5rem;
-      }
-
-      .sites-section h4 {
-        font-size: 0.875rem;
-        font-weight: 600;
-        color: #374151;
-        margin: 0 0 0.75rem 0;
-        text-transform: uppercase;
-        letter-spacing: 0.025em;
-      }
-
-      .sites-list {
-        max-height: 200px;
-        overflow-y: auto;
-        border: 1px solid #e2e8f0;
-        border-radius: 8px;
-      }
-
-      .sites-list-add {
-        max-height: 250px;
-      }
-
-      .site-item {
-        display: flex;
-        align-items: center;
-        gap: 0.75rem;
-        padding: 0.75rem 1rem;
-        border-bottom: 1px solid #f1f5f9;
-      }
-
-      .site-item:last-child {
-        border-bottom: none;
-      }
-
-      .site-item:hover {
-        background: #f8fafc;
-      }
-
-      .site-checkbox {
-        display: flex;
-        align-items: center;
-        gap: 0.75rem;
-        cursor: pointer;
-        flex: 1;
-      }
-
-      .site-checkbox input[type="checkbox"] {
-        width: 18px;
-        height: 18px;
-        cursor: pointer;
-      }
-
-      .site-info {
-        flex: 1;
-        min-width: 0;
-      }
-
-      .site-name {
-        display: block;
-        font-weight: 500;
-        color: #0f172a;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-      }
-
-      .site-subname {
-        display: block;
-        font-size: 0.8125rem;
-        color: #64748b;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-      }
-
-      .search-input {
-        width: 100%;
-        padding: 0.625rem 0.875rem;
-        border: 1px solid #e2e8f0;
-        border-radius: 8px;
-        font-size: 0.875rem;
-        margin-bottom: 0.75rem;
-        box-sizing: border-box;
-      }
-
-      .search-input:focus {
-        outline: none;
-        border-color: #2563eb;
-        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
-      }
-
-      .empty-text {
-        color: #64748b;
-        font-size: 0.875rem;
-        padding: 1rem;
-        text-align: center;
-        margin: 0;
-      }
-
-      .modal-header {
-        padding: 1.25rem 1.5rem;
-        border-bottom: 1px solid #e2e8f0;
-      }
-
-      .modal-header h3 {
-        margin: 0;
-        font-size: 1.125rem;
-        font-weight: 600;
-        color: #0f172a;
-      }
-
-      .modal-body {
-        padding: 1.5rem;
-      }
-
-      .modal-body p {
-        color: #64748b;
-        line-height: 1.5;
-        margin: 0;
-      }
-
-      .modal-footer {
-        display: flex;
-        justify-content: flex-end;
-        gap: 0.75rem;
-        padding-top: 1.5rem;
-      }
-
-      .form-group {
-        margin-bottom: 1.25rem;
-      }
-
-      .form-group label {
-        display: block;
-        font-size: 0.875rem;
-        font-weight: 500;
-        color: #374151;
-        margin-bottom: 0.5rem;
-      }
-
-      .form-group input,
-      .form-group select,
-      .form-group textarea {
-        width: 100%;
-        padding: 0.625rem 0.875rem;
-        border: 1px solid #e2e8f0;
-        border-radius: 8px;
-        font-size: 0.875rem;
-        background: white;
-        box-sizing: border-box;
-        font-family: inherit;
-      }
-
-      .form-group input:focus,
-      .form-group select:focus,
-      .form-group textarea:focus {
-        outline: none;
-        border-color: #2563eb;
-        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
-      }
-
-      .form-group textarea {
-        resize: vertical;
-        min-height: 60px;
-      }
-
-      @media (max-width: 768px) {
-        .container {
-          padding: 1rem;
-        }
-
-        .header {
-          flex-direction: column;
-          align-items: flex-start;
-          gap: 1rem;
-        }
-
-        .agencies-table {
-          display: block;
-          overflow-x: auto;
-        }
-
-        .actions-cell {
-          flex-direction: column;
-        }
-      }
-    `,
-  ],
+  templateUrl: './agencies-management.component.html',
+  styleUrls: ['./agencies-management.component.scss'],
 })
 export class AgenciesManagementComponent implements OnInit {
-  private readonly agencyService = inject(AgencyPortalService);
-  private readonly sitesService = inject(SitesService);
+  private readonly dataService = inject(AgenciesManagementDataService);
 
   agencies = signal<Agency[]>([]);
   loading = signal(false);
@@ -852,7 +58,7 @@ export class AgenciesManagementComponent implements OnInit {
     this.loading.set(true);
     this.error.set(null);
 
-    this.agencyService.listAgencies().subscribe({
+    this.dataService.listAgencies().subscribe({
       next: (response) => {
         if (response.success) {
           this.agencies.set(response.data.agencies);
@@ -900,7 +106,7 @@ export class AgenciesManagementComponent implements OnInit {
 
     this.saving.set(true);
 
-    const data = {
+    const data: AgencyFormData = {
       name: this.agencyForm.name.trim(),
       description: this.agencyForm.description.trim() || undefined,
       contact_name: this.agencyForm.contact_name.trim() || undefined,
@@ -909,8 +115,8 @@ export class AgenciesManagementComponent implements OnInit {
     };
 
     const request = this.editingAgency
-      ? this.agencyService.updateAgency(this.editingAgency.id, data)
-      : this.agencyService.createAgency(data);
+      ? this.dataService.updateAgency(this.editingAgency.id, data)
+      : this.dataService.createAgency(data);
 
     request.subscribe({
       next: (response) => {
@@ -938,7 +144,7 @@ export class AgenciesManagementComponent implements OnInit {
 
     this.saving.set(true);
 
-    this.agencyService.deleteAgency(this.deletingAgency.id).subscribe({
+    this.dataService.deleteAgency(this.deletingAgency.id).subscribe({
       next: (response) => {
         if (response.success) {
           this.loadAgencies();
@@ -961,11 +167,10 @@ export class AgenciesManagementComponent implements OnInit {
     this.selectedSitesToAdd.set(new Set());
     this.siteSearchQuery = '';
 
-    // Load agency sites and all sites in parallel
-    this.agencyService.getAgencySites(agency.id).subscribe({
+    this.dataService.getAgencySites(agency.id).subscribe({
       next: (response) => {
         if (response.success) {
-          this.agencySites.set(response.data.sites as AgencySite[]);
+          this.agencySites.set(response.data.sites);
         }
         this.loadAllSites();
       },
@@ -977,7 +182,7 @@ export class AgenciesManagementComponent implements OnInit {
   }
 
   private loadAllSites(): void {
-    this.sitesService.loadSites().subscribe({
+    this.dataService.loadAllSites().subscribe({
       next: (response) => {
         this.allSites.set(response.sites);
         this.filterAvailableSites();
@@ -995,10 +200,8 @@ export class AgenciesManagementComponent implements OnInit {
     const query = this.siteSearchQuery.toLowerCase();
 
     const available = this.allSites().filter(site => {
-      // Exclude already associated sites
       if (agencySiteIds.has(site.id)) return false;
 
-      // Filter by search query
       if (query) {
         return (
           site.club_name?.toLowerCase().includes(query) ||
@@ -1028,13 +231,12 @@ export class AgenciesManagementComponent implements OnInit {
     this.saving.set(true);
     const siteIds = Array.from(this.selectedSitesToAdd());
 
-    this.agencyService.addSitesToAgency(this.managingSitesAgency.id, siteIds).subscribe({
+    this.dataService.addSitesToAgency(this.managingSitesAgency.id, siteIds).subscribe({
       next: (response) => {
         if (response.success) {
-          // Refresh agency sites
           this.refreshAgencySites();
           this.selectedSitesToAdd.set(new Set());
-          this.loadAgencies(); // Refresh site count
+          this.loadAgencies();
         } else {
           this.error.set("Erreur lors de l'ajout des sites");
         }
@@ -1054,11 +256,11 @@ export class AgenciesManagementComponent implements OnInit {
 
     this.saving.set(true);
 
-    this.agencyService.removeSiteFromAgency(this.managingSitesAgency.id, site.id).subscribe({
+    this.dataService.removeSiteFromAgency(this.managingSitesAgency.id, site.id).subscribe({
       next: (response) => {
         if (response.success) {
           this.refreshAgencySites();
-          this.loadAgencies(); // Refresh site count
+          this.loadAgencies();
         } else {
           this.error.set('Erreur lors du retrait du site');
         }
@@ -1074,10 +276,10 @@ export class AgenciesManagementComponent implements OnInit {
   private refreshAgencySites(): void {
     if (!this.managingSitesAgency) return;
 
-    this.agencyService.getAgencySites(this.managingSitesAgency.id).subscribe({
+    this.dataService.getAgencySites(this.managingSitesAgency.id).subscribe({
       next: (response) => {
         if (response.success) {
-          this.agencySites.set(response.data.sites as AgencySite[]);
+          this.agencySites.set(response.data.sites);
           this.filterAvailableSites();
         }
       },

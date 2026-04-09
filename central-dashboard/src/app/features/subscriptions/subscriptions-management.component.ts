@@ -8,22 +8,21 @@ import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
-import { Subject, forkJoin, interval } from 'rxjs';
+import { Subject, interval } from 'rxjs';
 import { takeUntil, startWith, switchMap } from 'rxjs/operators';
 import { TranslateModule } from '@ngx-translate/core';
 
-import { SubscriptionService } from '../../core/services/subscription.service';
-import { SitesService } from '../../core/services/sites.service';
 import { NotificationService } from '../../core/services/notification.service';
 import { SubscriptionBadgeComponent } from '../../shared/components/subscription-badge/subscription-badge.component';
 import {
   SubscriptionStats,
   SiteAtRisk,
   SuspensionReasonInfo,
+  SuspensionReason,
   Site,
   SubscriptionDisplayStatus,
-  LicenseStatus
 } from '../../core/models';
+import { SubscriptionsManagementDataService } from './subscriptions-management.data.service';
 
 @Component({
   selector: 'app-subscriptions-management',
@@ -1374,8 +1373,7 @@ import {
   `]
 })
 export class SubscriptionsManagementComponent implements OnInit, OnDestroy {
-  private readonly subscriptionService = inject(SubscriptionService);
-  private readonly sitesService = inject(SitesService);
+  private readonly dataService = inject(SubscriptionsManagementDataService);
   private readonly notificationService = inject(NotificationService);
   private destroy$ = new Subject<void>();
 
@@ -1441,18 +1439,14 @@ export class SubscriptionsManagementComponent implements OnInit, OnDestroy {
   private loadInitialData(): void {
     this.loading = true;
 
-    forkJoin({
-      stats: this.subscriptionService.getSubscriptionStats(),
-      sitesAtRisk: this.subscriptionService.getSitesAtRisk(),
-      reasons: this.subscriptionService.getSuspensionReasons()
-    }).subscribe({
+    this.dataService.loadInitialData().subscribe({
       next: (data) => {
         this.stats = data.stats;
         this.sitesAtRisk = data.sitesAtRisk.data || [];
         this.suspensionReasons = data.reasons;
         this.loading = false;
       },
-      error: (error) => {
+      error: () => {
         this.notificationService.error('Erreur lors du chargement des données');
         this.loading = false;
       }
@@ -1460,11 +1454,11 @@ export class SubscriptionsManagementComponent implements OnInit, OnDestroy {
   }
 
   private startAutoRefresh(): void {
-    interval(60000) // Refresh toutes les minutes
+    interval(60000)
       .pipe(
         takeUntil(this.destroy$),
         startWith(0),
-        switchMap(() => this.subscriptionService.getSubscriptionStats())
+        switchMap(() => this.dataService.loadStats())
       )
       .subscribe({
         next: (stats) => {
@@ -1484,12 +1478,12 @@ export class SubscriptionsManagementComponent implements OnInit, OnDestroy {
 
   loadAllSites(): void {
     if (this.allSites.length > 0) {
-      return; // Déjà chargé
+      return;
     }
 
     this.loadingAllSites = true;
-    this.sitesService.loadSites({ limit: 1000 }).subscribe({
-      next: (response: { sites: Site[]; total: number }) => {
+    this.dataService.loadAllSites().subscribe({
+      next: (response) => {
         this.allSites = response.sites || [];
         this.applyFilters();
         this.loadingAllSites = false;
@@ -1503,8 +1497,8 @@ export class SubscriptionsManagementComponent implements OnInit, OnDestroy {
 
   loadSuspendedSites(): void {
     this.loadingSuspended = true;
-    this.sitesService.loadSites({ subscription: 'suspended', limit: 1000 }).subscribe({
-      next: (response: { sites: Site[]; total: number }) => {
+    this.dataService.loadSuspendedSites().subscribe({
+      next: (response) => {
         this.suspendedSites = response.sites || [];
         this.loadingSuspended = false;
       },
@@ -1516,46 +1510,11 @@ export class SubscriptionsManagementComponent implements OnInit, OnDestroy {
   }
 
   applyFilters(): void {
-    let sites = [...this.allSites];
-
-    // Filtre par statut
-    if (this.filterStatus) {
-      sites = sites.filter(site => {
-        const status = this.getSubscriptionDisplayStatus(site);
-        return status === this.filterStatus;
-      });
-    }
-
-    // Filtre par plan
-    if (this.filterPlan) {
-      sites = sites.filter(site => site.subscription_plan === this.filterPlan);
-    }
-
-    // Recherche
-    if (this.searchQuery) {
-      const query = this.searchQuery.toLowerCase();
-      sites = sites.filter(site =>
-        (site.club_name || '').toLowerCase().includes(query) ||
-        (site.site_name || '').toLowerCase().includes(query)
-      );
-    }
-
-    // Tri
-    sites.sort((a, b) => {
-      let aVal: any = a[this.sortColumn as keyof Site];
-      let bVal: any = b[this.sortColumn as keyof Site];
-
-      if (this.sortColumn === 'subscription_end') {
-        aVal = aVal ? new Date(aVal).getTime() : 0;
-        bVal = bVal ? new Date(bVal).getTime() : 0;
-      }
-
-      if (aVal < bVal) return this.sortDirection === 'asc' ? -1 : 1;
-      if (aVal > bVal) return this.sortDirection === 'asc' ? 1 : -1;
-      return 0;
-    });
-
-    this.filteredSites = sites;
+    this.filteredSites = this.dataService.filterAndSortSites(
+      this.allSites,
+      { status: this.filterStatus, plan: this.filterPlan, query: this.searchQuery },
+      { column: this.sortColumn, direction: this.sortDirection },
+    );
   }
 
   sortBy(column: string): void {
@@ -1569,62 +1528,23 @@ export class SubscriptionsManagementComponent implements OnInit, OnDestroy {
   }
 
   getSubscriptionDisplayStatus(site: Site): SubscriptionDisplayStatus {
-    if (site.suspended) {
-      return 'suspended';
-    }
-
-    if (!site.subscription_end) {
-      return site.subscription_plan === 'trial' ? 'trial' : 'unknown';
-    }
-
-    const endDate = new Date(site.subscription_end);
-    const now = new Date();
-    const daysLeft = Math.ceil((endDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-
-    if (daysLeft < -7) return 'blocked';
-    if (daysLeft < 0) return 'grace_period';
-    if (daysLeft <= 30) return 'expiring_soon';
-    return 'active';
+    return this.dataService.getSubscriptionDisplayStatus(site);
   }
 
-  // Labels
   getPlanLabel(plan: string | undefined): string {
-    const labels: Record<string, string> = {
-      'trial': 'Essai',
-      'standard': 'Standard',
-      'premium': 'Premium'
-    };
-    return labels[plan || 'standard'] || 'Standard';
+    return this.dataService.getPlanLabel(plan);
   }
 
   getRiskLabel(level: string): string {
-    const labels: Record<string, string> = {
-      'high': 'Critique',
-      'medium': 'Attention',
-      'low': 'Info'
-    };
-    return labels[level] || level;
+    return this.dataService.getRiskLabel(level);
   }
 
   getReasonLabel(reason: string | null | undefined): string {
-    if (!reason) return '-';
-    const found = this.suspensionReasons.find(r => r.code === reason);
-    return found?.label || reason;
+    return this.dataService.getReasonLabel(reason, this.suspensionReasons);
   }
 
   getRelativeTime(dateStr: string): string {
-    const date = new Date(dateStr);
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffMins = Math.floor(diffMs / 60000);
-    const diffHours = Math.floor(diffMs / 3600000);
-    const diffDays = Math.floor(diffMs / 86400000);
-
-    if (diffMins < 1) return 'À l\'instant';
-    if (diffMins < 60) return `Il y a ${diffMins} min`;
-    if (diffHours < 24) return `Il y a ${diffHours}h`;
-    if (diffDays === 1) return 'Hier';
-    return `Il y a ${diffDays} jours`;
+    return this.dataService.getRelativeTime(dateStr);
   }
 
   // Modals
@@ -1685,7 +1605,7 @@ export class SubscriptionsManagementComponent implements OnInit, OnDestroy {
     if (!this.selectedSite) return;
 
     this.submitting = true;
-    this.subscriptionService.updateSubscription(this.selectedSite.id, {
+    this.dataService.updateSubscription(this.selectedSite.id, {
       subscription_start: this.configForm.startDate || null,
       subscription_end: this.configForm.endDate || null,
       subscription_plan: this.configForm.plan,
@@ -1709,8 +1629,8 @@ export class SubscriptionsManagementComponent implements OnInit, OnDestroy {
     if (!this.selectedSite || !this.suspendForm.reason) return;
 
     this.submitting = true;
-    this.subscriptionService.suspendSite(this.selectedSite.id, {
-      reason: this.suspendForm.reason as any,
+    this.dataService.suspendSite(this.selectedSite.id, {
+      reason: this.suspendForm.reason as SuspensionReason,
       note: this.suspendForm.note || undefined
     }).subscribe({
       next: () => {
@@ -1731,7 +1651,7 @@ export class SubscriptionsManagementComponent implements OnInit, OnDestroy {
     if (this.reactivateForm.extendSubscription && !this.reactivateForm.newEndDate) return;
 
     this.submitting = true;
-    this.subscriptionService.reactivateSite(this.selectedSite.id, {
+    this.dataService.reactivateSite(this.selectedSite.id, {
       new_end_date: this.reactivateForm.extendSubscription ? this.reactivateForm.newEndDate : undefined,
       note: this.reactivateForm.note || undefined
     }).subscribe({

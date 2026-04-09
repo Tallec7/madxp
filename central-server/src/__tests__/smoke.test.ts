@@ -10706,10 +10706,16 @@ describe('Sponsor video_filename path normalization guard', () => {
       path.join(repoRoot, 'central-server/src/repositories/site-sponsor.repository.ts'),
       'utf8'
     );
-    dashboardContent = fs.readFileSync(
+    // Methods may be in the component or in the extracted data service
+    const componentContent = fs.readFileSync(
       path.join(repoRoot, 'central-dashboard/src/app/features/sites/components/site-sponsors-tab/site-sponsors-tab.component.ts'),
       'utf8'
     );
+    const dataServicePath = path.join(repoRoot, 'central-dashboard/src/app/features/sites/components/site-sponsors-tab/site-sponsors-tab.data.service.ts');
+    const dataServiceContent = fs.existsSync(dataServicePath)
+      ? fs.readFileSync(dataServicePath, 'utf8')
+      : '';
+    dashboardContent = componentContent + '\n' + dataServiceContent;
   });
 
   it('resolveSiteSponsorIdByFilename must use LIKE fallback for full-path matching', () => {
@@ -12263,9 +12269,14 @@ describe('OTA deployment observability guards', () => {
       path.join(repoRoot, 'central-dashboard/src/app/features/updates/updates-management.component.ts'),
       'utf8'
     );
-    // The real-time event type cast must include error field
-    expect({ hasErrorInType: component.includes("error?: string") || component.includes("error: string") })
-      .toEqual({ hasErrorInType: true });
+    const dataService = fs.readFileSync(
+      path.join(repoRoot, 'central-dashboard/src/app/features/updates/updates-management.data.service.ts'),
+      'utf8'
+    );
+    // The real-time event type cast must include error field (may be in component or data service)
+    const hasErrorInType = component.includes("error?: string") || component.includes("error: string")
+      || dataService.includes("error?: string") || dataService.includes("error: string");
+    expect({ hasErrorInType }).toEqual({ hasErrorInType: true });
     // Must assign error to deployment.error_message
     expect({ propagatesError: component.includes("deployment.error_message = data.error") })
       .toEqual({ propagatesError: true });
@@ -13007,6 +13018,119 @@ describe('UsersManagement service extraction guard', () => {
     const content = fs.readFileSync(path.join(usersDir, 'users-management.component.ts'), 'utf-8');
     expect(content).not.toMatch(/this\.api\./);
     expect(content).not.toMatch(/this\.agencyService\./);
+  });
+});
+
+// ============================================================
+// AgenciesManagement DataService extraction guard
+// ============================================================
+
+describe('AgenciesManagement DataService extraction guard', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+  const agencyDir = path.join(repoRoot, 'central-dashboard/src/app/features/admin/agencies');
+
+  it('AgenciesManagementDataService exists', () => {
+    const content = fs.readFileSync(path.join(agencyDir, 'agencies-management.data.service.ts'), 'utf-8');
+    expect(content).toContain('class AgenciesManagementDataService');
+    expect(content).toContain('listAgencies');
+    expect(content).toContain('createAgency');
+  });
+
+  it('agencies-management component uses DataService (not raw AgencyPortalService/SitesService)', () => {
+    const content = fs.readFileSync(path.join(agencyDir, 'agencies-management.component.ts'), 'utf-8');
+    expect(content).toContain('AgenciesManagementDataService');
+    expect(content).not.toMatch(/inject\(AgencyPortalService\)/);
+    expect(content).not.toMatch(/inject\(SitesService\)/);
+  });
+
+  it('agencies-management uses external template and styles (not inline)', () => {
+    const content = fs.readFileSync(path.join(agencyDir, 'agencies-management.component.ts'), 'utf-8');
+    expect(content).toContain('templateUrl');
+    expect(content).toContain('styleUrls');
+    expect(content).not.toMatch(/template:\s*`/);
+  });
+});
+
+// ============================================================
+// SubscriptionsManagement DataService extraction guard
+// ============================================================
+
+describe('SubscriptionsManagement DataService extraction guard', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+  const subDir = path.join(repoRoot, 'central-dashboard/src/app/features/subscriptions');
+
+  it('SubscriptionsManagementDataService exists', () => {
+    const content = fs.readFileSync(path.join(subDir, 'subscriptions-management.data.service.ts'), 'utf-8');
+    expect(content).toContain('class SubscriptionsManagementDataService');
+    expect(content).toContain('loadInitialData');
+    expect(content).toContain('updateSubscription');
+    expect(content).toContain('filterAndSortSites');
+  });
+
+  it('subscriptions-management component uses DataService (not raw SubscriptionService/SitesService)', () => {
+    const content = fs.readFileSync(path.join(subDir, 'subscriptions-management.component.ts'), 'utf-8');
+    expect(content).toContain('SubscriptionsManagementDataService');
+    expect(content).not.toMatch(/inject\(SubscriptionService\)/);
+    expect(content).not.toMatch(/inject\(SitesService\)/);
+  });
+});
+
+// ============================================================
+// UpdatesManagement DataService extraction guard
+// ============================================================
+
+describe('UpdatesManagement DataService extraction guard', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+  const updDir = path.join(repoRoot, 'central-dashboard/src/app/features/updates');
+
+  it('UpdatesManagementDataService exists', () => {
+    const content = fs.readFileSync(path.join(updDir, 'updates-management.data.service.ts'), 'utf-8');
+    expect(content).toContain('class UpdatesManagementDataService');
+    expect(content).toContain('loadUpdates');
+    expect(content).toContain('loadDeployments');
+    expect(content).toContain('subscribeToDeploymentProgress');
+    expect(content).toContain('getDeploymentDuration');
+    expect(content).toContain('getDeploymentElapsed');
+  });
+
+  it('updates-management component uses DataService (not raw ApiService/SitesService/GroupsService)', () => {
+    const content = fs.readFileSync(path.join(updDir, 'updates-management.component.ts'), 'utf-8');
+    expect(content).toContain('UpdatesManagementDataService');
+    expect(content).not.toMatch(/inject\(ApiService\)/);
+    expect(content).not.toMatch(/inject\(SitesService\)/);
+    expect(content).not.toMatch(/inject\(GroupsService\)/);
+  });
+});
+
+// ============================================================
+// SiteSponsorsTab DataService + ChartService extraction guard
+// ============================================================
+
+describe('SiteSponsorsTab DataService and ChartService extraction guard', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+  const sponsorDir = path.join(repoRoot, 'central-dashboard/src/app/features/sites/components/site-sponsors-tab');
+
+  it('SiteSponsorsTabDataService exists with CRUD + config parsing', () => {
+    const content = fs.readFileSync(path.join(sponsorDir, 'site-sponsors-tab.data.service.ts'), 'utf-8');
+    expect(content).toContain('class SiteSponsorsTabDataService');
+    expect(content).toContain('listSponsors');
+    expect(content).toContain('createSponsor');
+    expect(content).toContain('extractDeployedVideos');
+    expect(content).toContain('buildVideosInLoopsSet');
+  });
+
+  it('SiteSponsorsChartService exists with render/destroy', () => {
+    const content = fs.readFileSync(path.join(sponsorDir, 'site-sponsors-tab.chart.service.ts'), 'utf-8');
+    expect(content).toContain('class SiteSponsorsChartService');
+    expect(content).toContain('renderTrendsChart');
+    expect(content).toContain('destroyChart');
+  });
+
+  it('site-sponsors-tab component uses extracted services (not raw SiteSponsorService)', () => {
+    const content = fs.readFileSync(path.join(sponsorDir, 'site-sponsors-tab.component.ts'), 'utf-8');
+    expect(content).toContain('SiteSponsorsTabDataService');
+    expect(content).not.toMatch(/inject\(SiteSponsorService\)/);
+    expect(content).not.toMatch(/inject\(SitesService\)/);
   });
 });
 

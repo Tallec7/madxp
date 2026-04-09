@@ -2,49 +2,15 @@ import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TranslateModule } from '@ngx-translate/core';
-import { ApiService, UploadProgress } from '../../core/services/api.service';
-import { SitesService } from '../../core/services/sites.service';
-import { GroupsService } from '../../core/services/groups.service';
-import { SocketService } from '../../core/services/socket.service';
+import { UploadProgress } from '../../core/services/api.service';
 import { NotificationService } from '../../core/services/notification.service';
 import { Site, Group } from '../../core/models';
 import { Subscription } from 'rxjs';
-
-interface SoftwareUpdate {
-  id: string;
-  version: string;
-  description: string;
-  release_notes: string;
-  file_size: number;
-  created_at: Date;
-  is_critical: boolean;
-}
-
-interface OtaStep {
-  name: string;
-  label: string;
-  status: 'ok' | 'warn' | 'fail' | 'skip';
-  durationMs: number;
-  detail?: string;
-}
-
-interface UpdateDeployment {
-  id: string;
-  update_id: string;
-  update_version?: string;
-  target_type: 'site' | 'group';
-  target_id: string;
-  target_name?: string;
-  status: 'pending' | 'in_progress' | 'completed' | 'failed';
-  progress: number;
-  deployed_count?: number;
-  total_count?: number;
-  error_message?: string | null;
-  started_at?: Date;
-  created_at: Date;
-  completed_at?: Date;
-  deployment_details?: OtaStep[] | null;
-}
+import {
+  UpdatesManagementDataService,
+  SoftwareUpdate,
+  UpdateDeployment,
+} from './updates-management.data.service';
 
 @Component({
   selector: 'app-updates-management',
@@ -1376,10 +1342,7 @@ export class UpdatesManagementComponent implements OnInit, OnDestroy {
     scheduleReboot: false
   };
 
-  private readonly apiService = inject(ApiService);
-  private readonly sitesService = inject(SitesService);
-  private readonly groupsService = inject(GroupsService);
-  private readonly socketService = inject(SocketService);
+  private readonly dataService = inject(UpdatesManagementDataService);
   private readonly notificationService = inject(NotificationService);
   private subscriptions = new Subscription();
 
@@ -1396,76 +1359,51 @@ export class UpdatesManagementComponent implements OnInit, OnDestroy {
   }
 
   loadUpdates(): void {
-    this.apiService.get<SoftwareUpdate[]>('/updates').subscribe({
-      next: (updates) => {
-        this.updates = updates;
-      },
-      error: () => { /* Silencieux - erreur gérée par l'intercepteur */ }
+    this.dataService.loadUpdates().subscribe({
+      next: (updates) => { this.updates = updates; },
+      error: () => {},
     });
   }
 
   loadDeployments(): void {
-    this.apiService.get<UpdateDeployment[]>('/update-deployments').subscribe({
-      next: (deployments) => {
-        this.deployments = deployments;
-      },
-      error: () => { /* Silencieux - erreur gérée par l'intercepteur */ }
+    this.dataService.loadDeployments().subscribe({
+      next: (deployments) => { this.deployments = deployments; },
+      error: () => {},
     });
   }
 
   loadSites(): void {
-    this.sitesService.loadSites().subscribe({
-      next: (response) => {
-        this.sites = response.sites;
-      }
+    this.dataService.loadSites().subscribe({
+      next: (response) => { this.sites = response.sites; },
     });
   }
 
   loadGroups(): void {
-    this.groupsService.loadGroups().subscribe({
-      next: (response) => {
-        this.groups = response.groups;
-      }
+    this.dataService.loadGroups().subscribe({
+      next: (response) => { this.groups = response.groups; },
     });
   }
 
   subscribeToDeploymentProgress(): void {
-    const sub = this.socketService.on('update_progress').subscribe(event => {
-      const data = event as {
-        deploymentId: string;
-        progress: number;
-        deployedCount: number;
-        status: UpdateDeployment['status'];
-        error?: string;
-        steps?: OtaStep[];
-      };
+    const sub = this.dataService.subscribeToDeploymentProgress((data) => {
       const deployment = this.deployments.find(d => d.id === data.deploymentId);
       if (deployment) {
         deployment.progress = data.progress;
         deployment.deployed_count = data.deployedCount;
         deployment.status = data.status;
-        if (data.error) {
-          deployment.error_message = data.error;
-        }
-        if (data.steps?.length) {
-          deployment.deployment_details = data.steps;
-        }
+        if (data.error) deployment.error_message = data.error;
+        if (data.steps?.length) deployment.deployment_details = data.steps;
       }
     });
     this.subscriptions.add(sub);
   }
 
   formatFileSize(bytes: number): string {
-    if (bytes < 1024) return bytes + ' B';
-    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
-    if (bytes < 1024 * 1024 * 1024) return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
-    return (bytes / (1024 * 1024 * 1024)).toFixed(1) + ' GB';
+    return this.dataService.formatFileSize(bytes);
   }
 
   formatDate(date: Date | null): string {
-    if (!date) return '';
-    const d = new Date(date);
-    return d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+    return this.dataService.formatDate(date);
   }
 
   toggleDeploymentDetails(deploymentId: string): void {
@@ -1473,18 +1411,11 @@ export class UpdatesManagementComponent implements OnInit, OnDestroy {
   }
 
   getStepIcon(status: string): string {
-    switch (status) {
-      case 'ok': return '\u2705';
-      case 'warn': return '\u26A0\uFE0F';
-      case 'fail': return '\u274C';
-      case 'skip': return '\u23ED\uFE0F';
-      default: return '\u2753';
-    }
+    return this.dataService.getStepIcon(status);
   }
 
   formatStepDuration(ms: number): string {
-    if (ms < 1000) return `${ms}ms`;
-    return `${(ms / 1000).toFixed(1)}s`;
+    return this.dataService.formatStepDuration(ms);
   }
 
   toggleNotes(updateId: string): void {
@@ -1523,10 +1454,7 @@ export class UpdatesManagementComponent implements OnInit, OnDestroy {
     this.isUploading = true;
     this.uploadProgress = { status: 'uploading', progress: 0 };
 
-    this.apiService.uploadWithProgress<SoftwareUpdate>('/updates', formData, {
-      maxRetries: 3,
-      retryDelayMs: 3000
-    }).subscribe({
+    this.dataService.createUpdate(formData).subscribe({
       next: (progress) => {
         this.uploadProgress = progress;
         if (progress.status === 'complete' && progress.response) {
@@ -1561,7 +1489,7 @@ export class UpdatesManagementComponent implements OnInit, OnDestroy {
 
   deleteUpdate(update: SoftwareUpdate): void {
     if (confirm(`Supprimer la version ${update.version} ?`)) {
-      this.apiService.delete(`/updates/${update.id}`).subscribe({
+      this.dataService.deleteUpdate(update.id).subscribe({
         next: () => {
           this.updates = this.updates.filter(u => u.id !== update.id);
         },
@@ -1596,7 +1524,7 @@ export class UpdatesManagementComponent implements OnInit, OnDestroy {
       schedule_reboot: this.deployForm.scheduleReboot
     };
 
-    this.apiService.post<UpdateDeployment>('/update-deployments', data).subscribe({
+    this.dataService.startDeployment(data).subscribe({
       next: (deployment) => {
         this.deployments.unshift(deployment);
         this.activeTab = 'history';
@@ -1616,7 +1544,7 @@ export class UpdatesManagementComponent implements OnInit, OnDestroy {
   }
 
   retryDeployment(deployment: UpdateDeployment): void {
-    this.apiService.post(`/update-deployments/${deployment.id}/retry`, {}).subscribe({
+    this.dataService.retryDeployment(deployment.id).subscribe({
       next: () => {
         deployment.status = 'pending';
         deployment.progress = 0;
@@ -1631,7 +1559,7 @@ export class UpdatesManagementComponent implements OnInit, OnDestroy {
 
   cancelDeployment(deployment: UpdateDeployment): void {
     if (!confirm('Annuler ce déploiement ?')) return;
-    this.apiService.put(`/update-deployments/${deployment.id}`, { status: 'failed', error_message: 'Annulé' }).subscribe({
+    this.dataService.cancelDeployment(deployment.id).subscribe({
       next: () => {
         deployment.status = 'failed';
         deployment.error_message = 'Annulé';
@@ -1644,67 +1572,22 @@ export class UpdatesManagementComponent implements OnInit, OnDestroy {
   }
 
   getDeploymentStatusBadge(status: string): string {
-    const badges: Record<string, string> = {
-      pending: 'secondary',
-      in_progress: 'primary',
-      completed: 'success',
-      failed: 'danger'
-    };
-    return badges[status] || 'secondary';
+    return this.dataService.getDeploymentStatusBadge(status);
   }
 
   getDeploymentStatusLabel(status: string): string {
-    const labels: Record<string, string> = {
-      pending: 'En attente',
-      in_progress: 'En cours',
-      completed: 'Terminé',
-      failed: 'Échoué'
-    };
-    return labels[status] || status;
+    return this.dataService.getDeploymentStatusLabel(status);
   }
 
   getDeploymentDuration(deployment: UpdateDeployment): string {
-    if (!deployment.started_at || !deployment.completed_at) return '';
-    const start = new Date(deployment.started_at).getTime();
-    const end = new Date(deployment.completed_at).getTime();
-    const diffMs = end - start;
-    if (diffMs < 0) return '';
-    return this.formatDurationMs(diffMs);
+    return this.dataService.getDeploymentDuration(deployment);
   }
 
   getDeploymentElapsed(deployment: UpdateDeployment): string {
-    const start = deployment.started_at || deployment.created_at;
-    if (!start) return '';
-    const diffMs = Date.now() - new Date(start).getTime();
-    if (diffMs < 0) return '';
-    return this.formatDurationMs(diffMs);
-  }
-
-  private formatDurationMs(ms: number): string {
-    const seconds = Math.floor(ms / 1000);
-    if (seconds < 60) return `${seconds}s`;
-    const minutes = Math.floor(seconds / 60);
-    const remainingSeconds = seconds % 60;
-    if (minutes < 60) return remainingSeconds > 0 ? `${minutes}min ${remainingSeconds}s` : `${minutes}min`;
-    const hours = Math.floor(minutes / 60);
-    const remainingMinutes = minutes % 60;
-    return remainingMinutes > 0 ? `${hours}h ${remainingMinutes}min` : `${hours}h`;
+    return this.dataService.getDeploymentElapsed(deployment);
   }
 
   getVersionDistribution(): { version: string; count: number; percentage: number }[] {
-    const versionMap = new Map<string, number>();
-    this.sites.forEach(site => {
-      const version = site.software_version || 'unknown';
-      versionMap.set(version, (versionMap.get(version) || 0) + 1);
-    });
-
-    const total = this.sites.length;
-    return Array.from(versionMap.entries())
-      .map(([version, count]) => ({
-        version,
-        count,
-        percentage: total > 0 ? (count / total) * 100 : 0
-      }))
-      .sort((a, b) => b.count - a.count);
+    return this.dataService.getVersionDistribution(this.sites);
   }
 }

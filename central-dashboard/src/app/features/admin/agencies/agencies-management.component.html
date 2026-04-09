@@ -1,0 +1,289 @@
+<div class="container">
+  <div class="header">
+    <h1>{{ 'agencies.title' | translate }}</h1>
+    <button class="btn btn-primary" (click)="showCreateModal = true">
+      + {{ 'agencies.newAgency' | translate }}
+    </button>
+  </div>
+
+  <!-- Loading state -->
+  @if (loading()) {
+    <div class="loading">
+      <div class="spinner"></div>
+    </div>
+  }
+
+  <!-- Error state -->
+  @if (error()) {
+    <div class="error-message">
+      {{ error() }}
+    </div>
+  }
+
+  <!-- Agencies list -->
+  @if (!loading() && agencies().length > 0) {
+    <div class="card">
+      <table class="agencies-table">
+        <thead>
+          <tr>
+            <th>{{ 'agencies.agency' | translate }}</th>
+            <th>{{ 'agencies.contact' | translate }}</th>
+            <th>{{ 'agencies.sites' | translate }}</th>
+            <th>{{ 'agencies.status' | translate }}</th>
+            <th>{{ 'agencies.actions' | translate }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (agency of agencies(); track agency.id) {
+            <tr>
+              <td>
+                <div class="agency-cell">
+                  @if (agency.logo_url) {
+                    <img [src]="agency.logo_url" class="agency-logo" alt="" />
+                  } @else {
+                    <div class="avatar">{{ agency.name.charAt(0) }}</div>
+                  }
+                  <div class="agency-info">
+                    <span class="agency-name">{{ agency.name }}</span>
+                    @if (agency.description) {
+                      <span class="agency-desc">{{ agency.description }}</span>
+                    }
+                  </div>
+                </div>
+              </td>
+              <td>
+                <div class="contact-cell">
+                  <span class="contact-name">{{ agency.contact_name || '-' }}</span>
+                  <span class="contact-email">{{ agency.contact_email || '-' }}</span>
+                </div>
+              </td>
+              <td>
+                <span class="badge badge-info"> {{ agency.site_count || 0 }} sites </span>
+              </td>
+              <td>
+                <span class="badge" [class]="'badge-status-' + agency.status">
+                  {{
+                    agency.status === 'active'
+                      ? ('agencies.active' | translate)
+                      : ('agencies.inactive' | translate)
+                  }}
+                </span>
+              </td>
+              <td class="actions-cell">
+                <button class="btn-link btn-edit" (click)="editAgency(agency)">
+                  {{ 'agencies.edit' | translate }}
+                </button>
+                <button class="btn-link btn-success" (click)="manageSites(agency)">
+                  {{ 'agencies.manageSites' | translate }}
+                </button>
+                <button class="btn-link btn-danger" (click)="confirmDelete(agency)">
+                  {{ 'agencies.delete' | translate }}
+                </button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+
+  <!-- Empty state -->
+  @if (!loading() && agencies().length === 0 && !error()) {
+    <div class="empty-state">
+      <div class="empty-icon">🏢</div>
+      <h3>{{ 'agencies.noAgencies' | translate }}</h3>
+      <p>{{ 'agencies.noAgenciesDesc' | translate }}</p>
+      <button class="btn btn-primary" (click)="showCreateModal = true">
+        + {{ 'agencies.newAgency' | translate }}
+      </button>
+    </div>
+  }
+
+  <!-- Create/Edit Modal -->
+  @if (showCreateModal || editingAgency) {
+    <div class="modal-overlay" (click)="cancelEdit()">
+      <div class="modal" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <h3>
+            {{
+              editingAgency
+                ? ('agencies.editAgency' | translate)
+                : ('agencies.newAgency' | translate)
+            }}
+          </h3>
+        </div>
+        <form (ngSubmit)="saveAgency()" class="modal-body">
+          <div class="form-group">
+            <label>{{ 'agencies.name' | translate }} *</label>
+            <input type="text" [(ngModel)]="agencyForm.name" name="name" required />
+          </div>
+          <div class="form-group">
+            <label>{{ 'agencies.description' | translate }}</label>
+            <textarea [(ngModel)]="agencyForm.description" name="description" rows="2"></textarea>
+          </div>
+          <div class="form-group">
+            <label>{{ 'agencies.contactName' | translate }}</label>
+            <input type="text" [(ngModel)]="agencyForm.contact_name" name="contact_name" />
+          </div>
+          <div class="form-group">
+            <label>{{ 'agencies.email' | translate }}</label>
+            <input type="email" [(ngModel)]="agencyForm.contact_email" name="contact_email" />
+          </div>
+          <div class="form-group">
+            <label>{{ 'agencies.phone' | translate }}</label>
+            <input type="tel" [(ngModel)]="agencyForm.contact_phone" name="contact_phone" />
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" (click)="cancelEdit()">
+              {{ 'common.cancel' | translate }}
+            </button>
+            <button type="submit" class="btn btn-primary" [disabled]="saving()">
+              {{ saving() ? ('agencies.saving' | translate) : ('common.save' | translate) }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  }
+
+  <!-- Delete Confirmation Modal -->
+  @if (deletingAgency) {
+    <div class="modal-overlay" (click)="deletingAgency = null">
+      <div class="modal modal-small" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <h3>{{ 'agencies.confirmDelete' | translate }}</h3>
+        </div>
+        <div class="modal-body">
+          <p>
+            {{ 'agencies.confirmDeleteDesc' | translate: { name: deletingAgency.name } }}
+          </p>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" (click)="deletingAgency = null">
+            {{ 'common.cancel' | translate }}
+          </button>
+          <button
+            type="button"
+            class="btn btn-danger"
+            (click)="deleteAgency()"
+            [disabled]="saving()"
+          >
+            {{ saving() ? ('agencies.deleting' | translate) : ('common.delete' | translate) }}
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- Sites Management Modal -->
+  @if (managingSitesAgency) {
+    <div class="modal-overlay" (click)="closeSitesModal()">
+      <div class="modal modal-large" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <h3>{{ 'agencies.manageSitesTitle' | translate }} - {{ managingSitesAgency.name }}</h3>
+          <button class="btn-close" (click)="closeSitesModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+          <!-- Loading state -->
+          @if (loadingSites()) {
+            <div class="loading">
+              <div class="spinner"></div>
+            </div>
+          }
+
+          @if (!loadingSites()) {
+            <!-- Current sites section -->
+            <div class="sites-section">
+              <h4>{{ 'agencies.associatedSites' | translate }} ({{ agencySites().length }})</h4>
+              @if (agencySites().length === 0) {
+                <p class="empty-text">{{ 'agencies.noAssociatedSites' | translate }}</p>
+              } @else {
+                <div class="sites-list">
+                  @for (site of agencySites(); track site.id) {
+                    <div class="site-item">
+                      <div class="site-info">
+                        <span class="site-name">{{ site.club_name }}</span>
+                        <span class="site-subname">{{ site.site_name }}</span>
+                      </div>
+                      <span class="badge" [class]="'badge-status-' + site.status">
+                        {{ site.status }}
+                      </span>
+                      <button
+                        class="btn-link btn-danger"
+                        (click)="removeSiteFromAgency(site)"
+                        [disabled]="saving()"
+                      >
+                        {{ 'agencies.remove' | translate }}
+                      </button>
+                    </div>
+                  }
+                </div>
+              }
+            </div>
+
+            <!-- Add sites section -->
+            <div class="sites-section">
+              <h4>{{ 'agencies.addSites' | translate }}</h4>
+              <input
+                type="text"
+                [(ngModel)]="siteSearchQuery"
+                [placeholder]="'agencies.searchSite' | translate"
+                class="search-input"
+                (input)="filterAvailableSites()"
+              />
+              @if (filteredAvailableSites().length === 0) {
+                <p class="empty-text">
+                  @if (siteSearchQuery) {
+                    {{ 'agencies.noSitesFound' | translate: { query: siteSearchQuery } }}
+                  } @else {
+                    {{ 'agencies.allSitesAssigned' | translate }}
+                  }
+                </p>
+              } @else {
+                <div class="sites-list sites-list-add">
+                  @for (site of filteredAvailableSites(); track site.id) {
+                    <div class="site-item">
+                      <label class="site-checkbox">
+                        <input
+                          type="checkbox"
+                          [checked]="selectedSitesToAdd().has(site.id)"
+                          (change)="toggleSiteSelection(site.id)"
+                        />
+                        <div class="site-info">
+                          <span class="site-name">{{ site.club_name }}</span>
+                          <span class="site-subname">{{ site.site_name }}</span>
+                        </div>
+                      </label>
+                      <span class="badge" [class]="'badge-status-' + site.status">
+                        {{ site.status }}
+                      </span>
+                    </div>
+                  }
+                </div>
+              }
+            </div>
+          }
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" (click)="closeSitesModal()">
+            {{ 'common.close' | translate }}
+          </button>
+          @if (selectedSitesToAdd().size > 0) {
+            <button
+              type="button"
+              class="btn btn-primary"
+              (click)="addSelectedSites()"
+              [disabled]="saving()"
+            >
+              {{
+                saving()
+                  ? ('agencies.adding' | translate)
+                  : ('agencies.addSitesCount' | translate: { count: selectedSitesToAdd().size })
+              }}
+            </button>
+          }
+        </div>
+      </div>
+    </div>
+  }
+</div>
