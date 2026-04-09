@@ -1,0 +1,311 @@
+<div class="loop-manager">
+  <!-- Header -->
+  <div class="loop-manager-header">
+    <h4>
+      <span class="section-icon">🔄</span>
+      Boucles Vidéo
+    </h4>
+  </div>
+
+  <!-- Tabs -->
+  <div class="loop-tabs">
+    <button
+      *ngFor="let tab of tabs"
+      class="loop-tab"
+      [class.active]="activeTab === tab.id"
+      [class.fallback]="tab.isFallback"
+      (click)="activeTab = tab.id"
+    >
+      <span class="tab-icon">{{ tab.icon }}</span>
+      <span class="tab-name">{{ tab.name }}</span>
+      <span class="tab-count">{{ getVideoCount(tab.id) }} vidéo(s)</span>
+      <span class="tab-tracking ok" *ngIf="!tab.isFallback && getVideoCount(tab.id) > 0">✅</span>
+      <span class="tab-tracking warn" *ngIf="tab.isFallback && getVideoCount(tab.id) > 0">⚠️</span>
+    </button>
+  </div>
+
+  <!-- Warning: boucle par défaut sans boucles par phase = pas d'analytics -->
+  <div class="default-loop-warning" *ngIf="activeTab === 'default' && showDefaultLoopWarning()">
+    <span class="default-loop-warning-icon">⚠️</span>
+    <div class="default-loop-warning-content">
+      <strong>Analytics désactivés</strong> — Les {{ config.sponsors.length }} vidéos de cette
+      boucle ne génèrent pas de données de tracking. Déplacez-les dans les boucles par phase
+      (avant-match / match / après-match) pour activer les analytics sponsors.
+      <div class="default-loop-warning-actions">
+        <button class="btn btn-sm btn-primary" (click)="distributeToAllPhases()">
+          Répartir dans les 3 phases
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Contenu du tab actif : tab Défaut -->
+  <div class="loop-content" *ngIf="activeTab === 'default'">
+    <p class="loop-desc">
+      Vidéos diffusées quand aucune boucle par phase n'est définie.
+      <strong>Pas de tracking analytics.</strong>
+    </p>
+    <div class="loop-videos" *ngIf="config.sponsors && config.sponsors.length > 0">
+      <div
+        class="loop-video-row"
+        *ngFor="let video of config.sponsors; let i = index"
+        [class.neopro]="video.owner === 'neopro'"
+        [class.has-error]="!video.path"
+        [class.orphaned]="isOrphanedVideo(video.path)"
+      >
+        <span class="video-order">{{ i + 1 }}</span>
+        <div class="video-fields">
+          <input
+            type="text"
+            [(ngModel)]="video.name"
+            (ngModelChange)="onChanged()"
+            placeholder="Nom"
+            class="video-name-input"
+            [disabled]="isClubUser && video.owner === 'neopro'"
+          />
+          <select
+            [(ngModel)]="video.path"
+            (ngModelChange)="onChanged()"
+            class="video-select"
+            [class.input-error]="!video.path"
+            [class.has-cloud-video]="isCloudVideo(video.path)"
+            [disabled]="isClubUser && video.owner === 'neopro'"
+          >
+            <option value="">-- Sélectionner --</option>
+            <optgroup
+              *ngFor="let group of videoOptionGroups"
+              [label]="group.icon + ' ' + group.label"
+            >
+              <option *ngFor="let v of group.videos" [value]="v.path">
+                {{ v.displayName }}{{ siteType !== 'saas' && !v.isOnPi ? ' ⏳' : '' }}
+              </option>
+            </optgroup>
+          </select>
+          <span class="cloud-hint" *ngIf="siteType !== 'saas' && isCloudVideo(video.path)"
+            >⏳ Sera déployée</span
+          >
+          <span class="error-hint" *ngIf="!video.path">Vidéo requise</span>
+          <span
+            class="sponsor-badge-readonly"
+            *ngIf="getAutoDetectedSponsor(video.path) as sponsor"
+            [title]="'Associé au sponsor ' + sponsor.name + ' (onglet Sponsors)'"
+          >
+            🔗 {{ sponsor.name }}
+          </span>
+        </div>
+        <span class="video-duration" *ngIf="getVideoDuration(video.path) as dur">{{
+          formatDuration(dur)
+        }}</span>
+        <div class="video-owner" *ngIf="!isClubUser">
+          <label class="owner-radio">
+            <input
+              type="radio"
+              [name]="'owner-default-' + i"
+              [(ngModel)]="video.owner"
+              value="club"
+              (ngModelChange)="onChanged()"
+            />
+            <span class="owner-label club">Club</span>
+          </label>
+          <label class="owner-radio">
+            <input
+              type="radio"
+              [name]="'owner-default-' + i"
+              [(ngModel)]="video.owner"
+              value="neopro"
+              (ngModelChange)="onChanged()"
+            />
+            <span class="owner-label neopro">NEOPRO</span>
+          </label>
+        </div>
+        <span
+          class="owner-label neopro"
+          *ngIf="isClubUser && video.owner === 'neopro'"
+          title="Vidéo gérée par Neopro"
+          >🔒 NEOPRO</span
+        >
+        <button
+          class="btn-remove"
+          (click)="removeDefaultVideo(i)"
+          *ngIf="!(isClubUser && video.owner === 'neopro')"
+        >
+          ×
+        </button>
+      </div>
+    </div>
+    <div class="loop-empty" *ngIf="!config.sponsors || config.sponsors.length === 0">
+      <p>Aucune vidéo dans la boucle par défaut</p>
+    </div>
+    <div class="loop-add">
+      <button class="btn btn-sm btn-secondary" (click)="addDefaultVideo()">+ Ajouter</button>
+    </div>
+  </div>
+
+  <!-- Contenu du tab actif : tabs Phase -->
+  <div class="loop-content" *ngIf="activeTab !== 'default'">
+    <ng-container *ngIf="getPhaseVideos().length > 0">
+      <div class="loop-videos">
+        <div
+          class="loop-video-row"
+          *ngFor="let video of getPhaseVideos(); let i = index"
+          [class.orphaned]="isOrphanedVideo(video.path)"
+          [class.pinned-row]="video.pinned"
+        >
+          <span class="video-order">{{ i + 1 }}</span>
+          <div class="video-fields">
+            <input
+              type="text"
+              [value]="video.name"
+              (input)="updatePhaseVideo(i, 'name', $any($event.target).value)"
+              placeholder="Nom"
+              class="video-name-input"
+            />
+            <select
+              class="video-select"
+              [ngModel]="video.path"
+              (ngModelChange)="updatePhaseVideo(i, 'path', $event)"
+              [class.has-cloud-video]="isCloudVideo(video.path)"
+            >
+              <option value="">-- Sélectionner --</option>
+              <optgroup
+                *ngFor="let group of videoOptionGroups"
+                [label]="group.icon + ' ' + group.label"
+              >
+                <option *ngFor="let v of group.videos" [value]="v.path">
+                  {{ v.displayName }}{{ siteType !== 'saas' && !v.isOnPi ? ' ⏳' : '' }}
+                </option>
+              </optgroup>
+            </select>
+            <span
+              class="cloud-badge"
+              *ngIf="siteType !== 'saas' && isCloudVideo(video.path)"
+              title="Sera déployée automatiquement"
+              >⏳</span
+            >
+            <span
+              class="sponsor-badge-readonly"
+              *ngIf="getAutoDetectedSponsor(video.path) as sponsor"
+              [title]="'Associé au sponsor ' + sponsor.name + ' (onglet Sponsors)'"
+            >
+              🔗 {{ sponsor.name }}
+            </span>
+          </div>
+          <div
+            class="weight-control-inline"
+            *ngIf="getVideoSponsorId(video) as sid"
+            [title]="
+              canUseWeightedRotation ? '' : 'Pondération réservée aux abonnements Pro et Premium'
+            "
+          >
+            <button
+              class="weight-btn"
+              (click)="updateSponsorWeight(sid, (video.weight || 1) - 1)"
+              [disabled]="!canUseWeightedRotation || (video.weight || 1) <= 1"
+            >
+              −
+            </button>
+            <span class="weight-value">×{{ video.weight || 1 }}</span>
+            <button
+              class="weight-btn"
+              (click)="updateSponsorWeight(sid, (video.weight || 1) + 1)"
+              [disabled]="!canUseWeightedRotation || (video.weight || 1) >= 10"
+            >
+              +
+            </button>
+            <span class="weight-pct-inline">{{ getWeightPercentage(sid) }}%</span>
+            <span
+              class="weight-lock"
+              *ngIf="!canUseWeightedRotation"
+              title="Pondération réservée aux abonnements Pro et Premium"
+              >🔒</span
+            >
+          </div>
+          <button
+            class="btn-pin"
+            [class.pinned]="video.pinned"
+            (click)="togglePinVideo(i)"
+            [title]="
+              video.pinned
+                ? 'Désépingler (participe au scheduling)'
+                : 'Épingler à la position ' + (i + 1)
+            "
+          >
+            {{ video.pinned ? '📌' : '📍' }}
+          </button>
+          <span class="video-duration" *ngIf="getVideoDuration(video.path) as dur">{{
+            formatDuration(dur)
+          }}</span>
+          <button class="btn-remove-sm" (click)="removePhaseVideo(i)">×</button>
+        </div>
+      </div>
+    </ng-container>
+
+    <!-- Empty state pour la phase -->
+    <div class="phase-empty" *ngIf="getPhaseVideos().length === 0">
+      <span class="loop-hint"
+        >→ Utilise la boucle par défaut ({{ config.sponsors.length }} vidéos)</span
+      >
+      <div class="phase-empty-actions" *ngIf="config.sponsors.length > 0">
+        <button class="btn btn-sm btn-secondary" (click)="copyDefaultToCurrentPhase()">
+          Copier la boucle par défaut
+        </button>
+      </div>
+    </div>
+
+    <div class="loop-add">
+      <button class="btn btn-sm btn-secondary" (click)="addPhaseVideo()">+ Ajouter</button>
+      <button
+        class="btn btn-sm btn-outline"
+        *ngIf="getPhaseVideos().length > 0"
+        (click)="clearCurrentPhase()"
+      >
+        Effacer (utiliser boucle par défaut)
+      </button>
+    </div>
+
+    <!-- Prévisualisation playlist pondérée -->
+    <div class="playlist-preview" *ngIf="getPlaylistPreview().length > 1">
+      <div class="playlist-preview-header">
+        <span class="preview-icon">📺</span>
+        <span class="preview-title"
+          >Ordre de diffusion ({{ getPlaylistPreview().length }} passages)</span
+        >
+      </div>
+      <div class="playlist-preview-track">
+        <div
+          *ngFor="let item of getPlaylistPreview(); let i = index"
+          class="preview-chip"
+          [class.preview-chip-pinned]="item.pinned"
+          [style.background-color]="item.color"
+          [title]="
+            i +
+            1 +
+            '. ' +
+            item.name +
+            (item.sponsorName ? ' (' + item.sponsorName + ')' : '') +
+            (item.pinned ? ' 📌' : '')
+          "
+        >
+          <span class="preview-chip-index">{{ item.pinned ? '📌' : i + 1 }}</span>
+        </div>
+      </div>
+      <div class="playlist-preview-legend">
+        <div *ngFor="let entry of getPlaylistLegend()" class="preview-legend-item">
+          <span class="preview-legend-dot" [style.background-color]="entry.color"></span>
+          <span class="preview-legend-name">{{ entry.name }}</span>
+          <span class="preview-legend-pct">{{ entry.percentage }}%</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer durée totale -->
+  <div class="loop-footer" *ngIf="getActiveTabTotalDuration() > 0">
+    <span class="loop-total">
+      Durée totale : {{ formatDuration(getActiveTabTotalDuration()) }} · ~{{
+        getRotationsPerHour()
+      }}
+      rotations/heure
+    </span>
+  </div>
+</div>

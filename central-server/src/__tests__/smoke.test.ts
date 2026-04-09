@@ -4529,6 +4529,7 @@ describe('Multi-profile enrichment regression guards', () => {
         const fullPath = path.join(dir, entry.name);
         if (entry.isDirectory()) result += readAllTs(fullPath);
         else if (entry.name.endsWith('.ts') && !entry.name.endsWith('.spec.ts')) result += fs.readFileSync(fullPath, 'utf8') + '\n';
+        else if (entry.name.endsWith('.html')) result += fs.readFileSync(fullPath, 'utf8') + '\n';
       }
       return result;
     };
@@ -5474,6 +5475,7 @@ describe('Secondary variant badge wiring guards', () => {
       const fullPath = path.join(dir, entry.name);
       if (entry.isDirectory()) result += readAllTsInDir(fullPath);
       else if (entry.name.endsWith('.ts') && !entry.name.endsWith('.spec.ts')) result += fs.readFileSync(fullPath, 'utf8') + '\n';
+      else if (entry.name.endsWith('.html')) result += fs.readFileSync(fullPath, 'utf8') + '\n';
     }
     return result;
   };
@@ -9675,6 +9677,7 @@ describe('Video Library UX regression guards', () => {
       const fullPath = path.join(dir, entry.name);
       if (entry.isDirectory()) result += readAllTsFiles(fullPath);
       else if (entry.name.endsWith('.ts') && !entry.name.endsWith('.spec.ts')) result += fs.readFileSync(fullPath, 'utf8') + '\n';
+      else if (entry.name.endsWith('.html')) result += fs.readFileSync(fullPath, 'utf8') + '\n';
     }
     return result;
   };
@@ -9686,7 +9689,9 @@ describe('Video Library UX regression guards', () => {
   let timelineRepoContent: string;
 
   beforeAll(() => {
-    videoLibContent = fs.readFileSync(videoLibraryPath, 'utf8');
+    const videoLibHtmlPath = videoLibraryPath.replace('.component.ts', '.component.html');
+    videoLibContent = fs.readFileSync(videoLibraryPath, 'utf8')
+      + '\n' + (fs.existsSync(videoLibHtmlPath) ? fs.readFileSync(videoLibHtmlPath, 'utf8') : '');
     siteContentTabContent = readAllTsFiles(siteContentTabDir);
     modelsContent = fs.readFileSync(modelsPath, 'utf8');
     // Read main controller + sub-controllers (split from monolithic sites.controller.ts)
@@ -11028,7 +11033,8 @@ describe('Weighted sponsor rotation guards', () => {
 
   it('loop-manager must have playlist preview for visual weight feedback', () => {
     const loopMgrPath = path.join(repoRoot, 'central-dashboard/src/app/features/sites/components/loop-manager/loop-manager.component.ts');
-    const content = fs.readFileSync(loopMgrPath, 'utf8');
+    const loopMgrHtmlPath = loopMgrPath.replace('.component.ts', '.component.html');
+    const content = fs.readFileSync(loopMgrPath, 'utf8') + '\n' + (fs.existsSync(loopMgrHtmlPath) ? fs.readFileSync(loopMgrHtmlPath, 'utf8') : '');
     expect({
       hasPreviewMethod: content.includes('getPlaylistPreview'),
       hasLegendMethod: content.includes('getPlaylistLegend'),
@@ -11110,7 +11116,8 @@ describe('Weighted sponsor rotation guards', () => {
 
   it('loop-manager must have pin toggle for videos', () => {
     const loopMgrPath = path.join(repoRoot, 'central-dashboard/src/app/features/sites/components/loop-manager/loop-manager.component.ts');
-    const content = fs.readFileSync(loopMgrPath, 'utf8');
+    const loopMgrHtmlPath = loopMgrPath.replace('.component.ts', '.component.html');
+    const content = fs.readFileSync(loopMgrPath, 'utf8') + '\n' + (fs.existsSync(loopMgrHtmlPath) ? fs.readFileSync(loopMgrHtmlPath, 'utf8') : '');
     expect({
       hasTogglePin: content.includes('togglePinVideo'),
       hasPinButton: content.includes('btn-pin'),
@@ -15085,7 +15092,8 @@ describe('SaaS child component guards (Pi-specific UI hidden for SaaS)', () => {
   // --- video-library must have siteType @Input and hide Pi elements ---
   it('video-library must have siteType @Input and hide Pi-specific UI', () => {
     const filePath = path.join(dashboardRoot, 'components', 'video-library', 'video-library.component.ts');
-    const content = fs.readFileSync(filePath, 'utf8');
+    const htmlPath = filePath.replace('.component.ts', '.component.html');
+    const content = fs.readFileSync(filePath, 'utf8') + '\n' + (fs.existsSync(htmlPath) ? fs.readFileSync(htmlPath, 'utf8') : '');
     expect({
       hasSiteTypeInput: content.includes("@Input() siteType"),
       hidesStorageBar: content.includes("siteType !== 'saas'") && content.includes('storage'),
@@ -15145,7 +15153,8 @@ describe('SaaS child component guards (Pi-specific UI hidden for SaaS)', () => {
   // --- loop-manager must not show ⏳ suffix or cloud badges for SaaS ---
   it('loop-manager must have siteType @Input and hide deploy status suffix and cloud badges for SaaS', () => {
     const filePath = path.join(dashboardRoot, 'components', 'loop-manager', 'loop-manager.component.ts');
-    const content = fs.readFileSync(filePath, 'utf8');
+    const htmlPath = filePath.replace('.component.ts', '.component.html');
+    const content = fs.readFileSync(filePath, 'utf8') + '\n' + (fs.existsSync(htmlPath) ? fs.readFileSync(htmlPath, 'utf8') : '');
     expect({
       hasSiteTypeInput: content.includes("@Input() siteType"),
       guardsSuffix: content.includes("siteType !== 'saas'") && content.includes('isOnPi'),
@@ -15179,7 +15188,8 @@ describe('SaaS child component guards (Pi-specific UI hidden for SaaS)', () => {
   // --- site-content-tab must hide "Rafraîchir depuis le Pi" for SaaS ---
   it('site-content-tab must hide Pi-specific refresh button for SaaS', () => {
     const filePath = path.join(dashboardRoot, 'components', 'site-content-tab', 'site-content-tab.component.ts');
-    const content = fs.readFileSync(filePath, 'utf8');
+    const htmlPath = filePath.replace('.component.ts', '.component.html');
+    const content = fs.readFileSync(filePath, 'utf8') + '\n' + (fs.existsSync(htmlPath) ? fs.readFileSync(htmlPath, 'utf8') : '');
     expect({
       guardsRefreshButton: /siteType !== 'saas'[\s\S]{0,500}Rafra/.test(content),
       passesSiteTypeToVideoManager: content.includes('[siteType]="siteType"'),
@@ -15604,7 +15614,8 @@ describe('SaaS config save flow', () => {
 
   it('loop-manager must lock NEOPRO videos and hide owner radios for club users', () => {
     const filePath = path.join(repoRoot, 'central-dashboard', 'src', 'app', 'features', 'sites', 'components', 'loop-manager', 'loop-manager.component.ts');
-    const content = fs.readFileSync(filePath, 'utf8');
+    const htmlPath = filePath.replace('.component.ts', '.component.html');
+    const content = fs.readFileSync(filePath, 'utf8') + '\n' + (fs.existsSync(htmlPath) ? fs.readFileSync(htmlPath, 'utf8') : '');
     expect({
       hasInput: /@Input\(\)\s+isClubUser/.test(content),
       disablesNameInput: /\[disabled\]="isClubUser\s*&&\s*video\.owner\s*===\s*'neopro'"/.test(content),
@@ -15792,7 +15803,8 @@ describe('SaaS config save flow', () => {
 
   it('video-library must gate secondary variant button behind secondary_display (Phase 2.10)', () => {
     const filePath = path.join(repoRoot, 'central-dashboard', 'src', 'app', 'features', 'sites', 'components', 'video-library', 'video-library.component.ts');
-    const content = fs.readFileSync(filePath, 'utf8');
+    const htmlPath = filePath.replace('.component.ts', '.component.html');
+    const content = fs.readFileSync(filePath, 'utf8') + '\n' + (fs.existsSync(htmlPath) ? fs.readFileSync(htmlPath, 'utf8') : '');
     expect({
       importsGate: /FeatureGateService/.test(content),
       hasSubscriptionPlanInput: /@Input\(\)\s*subscriptionPlan/.test(content),
@@ -16019,5 +16031,93 @@ describe('ADR-042 service extraction guard', () => {
       isAtLeast5s: true,
       reason: 'remote WiFi access needs >= 5s preload timeout',
     });
+  });
+});
+
+// =============================================================================
+// ADR-043 dashboard component extraction guard
+// =============================================================================
+// cloud-remote delegates score/timer/options to dedicated services.
+// video-library, site-content-tab, loop-manager use external templates.
+describe('ADR-043 dashboard component extraction guard', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+  const remoteDir = path.join(repoRoot, 'central-dashboard/src/app/features/remote');
+  const sitesDir = path.join(repoRoot, 'central-dashboard/src/app/features/sites/components');
+
+  it('RemoteScoreService must exist and own score state', () => {
+    const svc = path.join(remoteDir, 'services/remote-score.service.ts');
+    expect(fs.existsSync(svc)).toBe(true);
+    const content = fs.readFileSync(svc, 'utf8');
+    expect(content).toContain('incrementHomeScore');
+    expect(content).toContain('scoreUpdate$');
+    expect(content).toContain('currentScore');
+  });
+
+  it('RemoteTimerService must exist and own timer state', () => {
+    const svc = path.join(remoteDir, 'services/remote-timer.service.ts');
+    expect(fs.existsSync(svc)).toBe(true);
+    const content = fs.readFileSync(svc, 'utf8');
+    expect(content).toContain('currentTime');
+    expect(content).toContain('isRunning');
+    expect(content).toContain('onPeriodEnd');
+  });
+
+  it('RemoteOptionsService must exist and own localStorage persistence', () => {
+    const svc = path.join(remoteDir, 'services/remote-options.service.ts');
+    expect(fs.existsSync(svc)).toBe(true);
+    const content = fs.readFileSync(svc, 'utf8');
+    expect(content).toContain('deepMerge');
+    expect(content).toContain('localStorage');
+    expect(content).toContain('SPORT_PERIODS');
+  });
+
+  it('cloud-remote.component.ts must NOT contain extracted localStorage logic (delegated to RemoteOptionsService)', () => {
+    const content = fs.readFileSync(path.join(remoteDir, 'cloud-remote.component.ts'), 'utf8');
+    expect(content).not.toMatch(/\bprivate\s+loadLocalOptions\s*\(/);
+    expect(content).not.toMatch(/\bprivate\s+saveLocalOptions\s*\(/);
+    expect(content).not.toMatch(/\bprivate\s+deepMerge\s*[<(]/);
+    expect(content).not.toMatch(/\bprivate\s+broadcastOptions\s*\(/);
+  });
+
+  it('cloud-remote.component.ts must NOT contain extracted timer interval logic (delegated to RemoteTimerService)', () => {
+    const content = fs.readFileSync(path.join(remoteDir, 'cloud-remote.component.ts'), 'utf8');
+    expect(content).not.toMatch(/\bprivate\s+syncTimer\s*\(/);
+    expect(content).not.toMatch(/\bprivate\s+initializeTimer\s*\(/);
+    expect(content).not.toMatch(/\btimerInterval\b.*setInterval/);
+  });
+
+  it('cloud-remote.component.ts must NOT contain extracted score HTTP logic (delegated to RemoteScoreService)', () => {
+    const content = fs.readFileSync(path.join(remoteDir, 'cloud-remote.component.ts'), 'utf8');
+    expect(content).not.toMatch(/\bprivate\s+sendScoreUpdate\s*\(/);
+  });
+
+  it('video-library must have external template and styles', () => {
+    const dir = path.join(sitesDir, 'video-library');
+    expect(fs.existsSync(path.join(dir, 'video-library.component.html'))).toBe(true);
+    expect(fs.existsSync(path.join(dir, 'video-library.component.scss'))).toBe(true);
+    const ts = fs.readFileSync(path.join(dir, 'video-library.component.ts'), 'utf8');
+    expect(ts).toContain('templateUrl');
+    expect(ts).toContain('styleUrls');
+    expect(ts).not.toMatch(/\btemplate\s*:\s*`/);
+  });
+
+  it('loop-manager must have external template and styles', () => {
+    const dir = path.join(sitesDir, 'loop-manager');
+    expect(fs.existsSync(path.join(dir, 'loop-manager.component.html'))).toBe(true);
+    expect(fs.existsSync(path.join(dir, 'loop-manager.component.scss'))).toBe(true);
+    const ts = fs.readFileSync(path.join(dir, 'loop-manager.component.ts'), 'utf8');
+    expect(ts).toContain('templateUrl');
+    expect(ts).toContain('styleUrls');
+    expect(ts).not.toMatch(/\btemplate\s*:\s*`/);
+  });
+
+  it('site-content-tab must have external template and styles', () => {
+    const dir = path.join(sitesDir, 'site-content-tab');
+    expect(fs.existsSync(path.join(dir, 'site-content-tab.component.html'))).toBe(true);
+    expect(fs.existsSync(path.join(dir, 'site-content-tab.component.scss'))).toBe(true);
+    const ts = fs.readFileSync(path.join(dir, 'site-content-tab.component.ts'), 'utf8');
+    expect(ts).toContain('templateUrl');
+    expect(ts).toContain('styleUrls');
+    expect(ts).not.toMatch(/\btemplate\s*:\s*`/);
   });
 });

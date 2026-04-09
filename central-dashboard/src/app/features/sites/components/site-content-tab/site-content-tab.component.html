@@ -1,0 +1,145 @@
+<div class="content-tab">
+  <!-- Header -->
+  <div class="content-header">
+    <div class="header-info">
+      <span class="sync-status" *ngIf="lastSyncTime">
+        Dernière sync: {{ lastSyncTime | date: 'short' }}
+      </span>
+    </div>
+    <div class="header-actions">
+      <button
+        class="btn btn-sm btn-outline"
+        *ngIf="siteType !== 'saas'"
+        (click)="refreshFromPi()"
+        [disabled]="!isConnected || refreshingFromPi"
+        [title]="
+          isConnected ? 'Récupérer la configuration actuelle du Pi' : 'Le Pi doit être connecté'
+        "
+      >
+        <span *ngIf="refreshingFromPi">⏳</span>
+        <span *ngIf="!refreshingFromPi">🔄</span>
+        {{ refreshingFromPi ? 'Synchronisation...' : 'Rafraîchir depuis le Pi' }}
+      </button>
+    </div>
+  </div>
+
+  <!-- Profile Selector (hidden for club users) -->
+  <div
+    class="profile-selector-bar"
+    *ngIf="contentProfiles.length > 0 && (!isClub || canUseMultiProfiles)"
+  >
+    <label class="profile-selector-label">Profil :</label>
+    <select
+      class="profile-selector"
+      [ngModel]="selectedProfileId"
+      (ngModelChange)="onProfileSelected($event)"
+      [disabled]="loading"
+    >
+      <option *ngFor="let p of contentProfiles" [value]="p.id">
+        {{ p.name }}{{ p.is_default ? ' (defaut)' : '' }}
+      </option>
+    </select>
+    <span class="profile-hint" *ngIf="selectedProfileId">
+      Les modifications s'appliquent au profil selectionne
+    </span>
+  </div>
+
+  <!-- Video Manager (upload + library + delete modal) -->
+  <app-video-manager
+    [siteId]="siteId"
+    [siteName]="siteName"
+    [siteType]="siteType"
+    [localVideos]="localVideos"
+    [cloudVideos]="cloudVideos"
+    [localStorage]="localStorage"
+    [videoDeployStates]="videoDeployStates"
+    [configVideoRoles]="configVideoRoles"
+    [pendingDeploymentVideoIds]="pendingDeploymentVideoIds"
+    [secondaryVariantVideoIds]="secondaryVariantVideoIds"
+    [subscriptionPlan]="subscriptionPlan"
+    (videoUploaded)="onVideoUploaded($event)"
+    (secondaryVariantChanged)="loadContent()"
+    (allVideosUploaded)="onAllVideosUploaded($event)"
+    (videoDeploy)="onVideoDeploy($event)"
+    (videoDeleted)="loadContent()"
+  ></app-video-manager>
+
+  <!-- Draft Indicator + History (Pi only) -->
+  <app-config-draft
+    *ngIf="siteType !== 'saas'"
+    [siteId]="siteId"
+    [config]="config"
+    [isDirty]="isDirty"
+    [draft]="draft"
+    (draftSaved)="onDraftSaved($event)"
+    (draftDeleted)="onDraftDeleted()"
+    (versionRestored)="onVersionRestored($event)"
+  ></app-config-draft>
+
+  <!-- Deployment Status (orchestrated, pending, banner, actions, diff modal) -->
+  <app-deployment-status
+    [siteId]="siteId"
+    [siteType]="siteType"
+    [isConnected]="isConnected"
+    [config]="config"
+    [isDirty]="isDirty"
+    [validationErrors]="validationErrors"
+    [validationWarnings]="validationWarnings"
+    [contentProfiles]="contentProfiles"
+    [selectedProfileId]="selectedProfileId"
+    [pendingDeployments]="pendingDeployments"
+    [loadingPendingDeployments]="loadingPendingDeployments"
+    [orchestratedDeployment]="orchestratedDeployment"
+    (deployed)="onDeployed()"
+    (deployStarted)="onDeployStarted()"
+    (resetRequested)="resetConfig()"
+    (pendingDeploymentsRefresh)="refreshPendingDeployments()"
+    (pendingDeploymentCancel)="onPendingDeploymentCancelled($event)"
+    (configSynced)="onProfileConfigSynced($event)"
+  ></app-deployment-status>
+
+  <!-- Config Editor (health bar, impact counters, orphans, categories, loops, remote, analytics) -->
+  <app-config-editor
+    [siteType]="siteType"
+    [isClubUser]="isClub"
+    [subscriptionPlan]="subscriptionPlan"
+    [config]="config"
+    [localVideos]="localVideos"
+    [cloudVideos]="{ length: cloudVideos.length }"
+    [videoOptionGroups]="videoOptionGroups"
+    [cloudVideoPaths]="cloudVideoPaths"
+    [allKnownVideoPaths]="allKnownVideoPaths"
+    [videoDurations]="videoDurations"
+    [siteSponsors]="siteSponsors"
+    [secondaryDisplayEnabled]="secondaryDisplayEnabled"
+    [unifiedVideoOptions]="unifiedVideoOptions"
+    [cachedTimeCategories]="cachedTimeCategories"
+    [orphanedVideoCount]="orphanedVideoCount"
+    [repairableOrphanCount]="repairableOrphanCount"
+    [orphanedVideoDetails]="orphanedVideoDetails"
+    (configChanged)="markDirty()"
+    (repairOrphans)="repairAllOrphanedPaths()"
+  ></app-config-editor>
+
+  <!-- FAB Preview -->
+  <button
+    class="fab-preview"
+    *ngIf="config"
+    (click)="showRemotePreview = !showRemotePreview"
+    [class.active]="showRemotePreview"
+    title="Aperçu télécommande"
+  >
+    📱
+  </button>
+
+  <!-- Preview Panel -->
+  <div class="preview-panel" *ngIf="showRemotePreview" (click)="showRemotePreview = false">
+    <div class="preview-panel-content" (click)="$event.stopPropagation()">
+      <div class="preview-panel-header">
+        <h4>Aperçu Télécommande</h4>
+        <button class="preview-close" (click)="showRemotePreview = false">×</button>
+      </div>
+      <app-remote-preview [config]="config" [localVideos]="localVideos"></app-remote-preview>
+    </div>
+  </div>
+</div>

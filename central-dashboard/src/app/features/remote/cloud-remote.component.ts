@@ -23,13 +23,12 @@ import { LicenseBannerComponent } from './components/license-banner.component';
 import { LicenseBlockRemoteComponent } from './components/license-block-remote.component';
 import { PlayerStatusComponent, PlayerState } from './components/player-status/player-status.component';
 import { ScreenshotViewerComponent } from './components/screenshot-viewer/screenshot-viewer.component';
-
-// Types locaux (identiques au Pi)
-type SportType = 'football' | 'basketball' | 'handball' | 'volleyball' | 'rugby' | 'hockey';
-type OverlayTheme = 'broadcast' | 'minimal';
-type ScoreOverlayPosition =
-  | 'top-left' | 'top-center' | 'top-right'
-  | 'bottom-left' | 'bottom-center' | 'bottom-right';
+import { RemoteScoreService } from './services/remote-score.service';
+import { RemoteTimerService, TimerConfig } from './services/remote-timer.service';
+import {
+  RemoteOptionsService, LocalOptions, SportType, OverlayTheme, ScoreOverlayPosition,
+  SPORT_LABELS, SPORT_PERIODS, SPORT_PERIOD_DURATIONS, DEFAULT_GOAL_SOUNDS,
+} from './services/remote-options.service';
 
 interface Category {
   id: string;
@@ -64,125 +63,7 @@ interface Configuration {
   liveScoreEnabled?: boolean;
 }
 
-interface TeamConfig {
-  name: string;
-  shortName?: string;
-  logo?: string;
-}
-
-interface GoalAnimationConfig {
-  enabled: boolean;
-  style: 'popup' | 'fullscreen' | 'slide';
-  duration: number;
-  soundEnabled: boolean;
-  soundUrl?: string;
-}
-
-interface LocalOptions {
-  sport: SportType;
-  match: {
-    homeTeam: TeamConfig;
-    awayTeam: TeamConfig;
-    period: string;
-    periodIndex: number;
-  };
-  overlay: {
-    scoreEnabled: boolean;
-    position?: ScoreOverlayPosition;
-  };
-  goalAnimation: GoalAnimationConfig;
-  timer: {
-    enabled: boolean;
-    periodDuration: number;
-    countDown: boolean;
-    integratedWithScore: boolean;
-  };
-  breakingNews: {
-    enabled: boolean;
-    position: 'top' | 'bottom';
-    defaultDuration: number;
-    displayMode: 'scroll';
-    quickMessages: string[];
-  };
-  template: OverlayTheme;
-}
-
-// Constantes (identiques au Pi)
-const SPORT_PERIOD_DURATIONS: Record<SportType, number> = {
-  football: 45,
-  basketball: 10,
-  handball: 30,
-  volleyball: 25,
-  rugby: 40,
-  hockey: 20,
-};
-
-const SPORT_PERIODS: Record<SportType, string[]> = {
-  football: ['1ère mi-temps', '2ème mi-temps', 'Prolongations', 'Tirs au but'],
-  basketball: ['1er quart', '2ème quart', '3ème quart', '4ème quart', 'Prolongation'],
-  handball: ['1ère mi-temps', '2ème mi-temps', 'Prolongations'],
-  volleyball: ['Set 1', 'Set 2', 'Set 3', 'Set 4', 'Set 5'],
-  rugby: ['1ère mi-temps', '2ème mi-temps', 'Prolongations'],
-  hockey: ['1ère période', '2ème période', '3ème période', 'Prolongation', 'Tirs au but'],
-};
-
-const SPORT_LABELS: Record<SportType, string> = {
-  football: 'Football',
-  basketball: 'Basketball',
-  handball: 'Handball',
-  volleyball: 'Volleyball',
-  rugby: 'Rugby',
-  hockey: 'Hockey',
-};
-
-const DEFAULT_GOAL_SOUNDS: Record<SportType, string> = {
-  football: '/assets/sounds/goal-football.mp3',
-  basketball: '/assets/sounds/buzzer-basketball.mp3',
-  handball: '/assets/sounds/goal-handball.mp3',
-  volleyball: '/assets/sounds/point-volleyball.mp3',
-  rugby: '/assets/sounds/try-rugby.mp3',
-  hockey: '/assets/sounds/goal-hockey.mp3',
-};
-
-const DEFAULT_OPTIONS: LocalOptions = {
-  sport: 'football',
-  match: {
-    homeTeam: { name: 'DOMICILE', shortName: 'DOM', logo: undefined },
-    awayTeam: { name: 'EXTÉRIEUR', shortName: 'EXT', logo: undefined },
-    period: '1ère mi-temps',
-    periodIndex: 0,
-  },
-  overlay: {
-    scoreEnabled: false,
-    position: undefined,
-  },
-  goalAnimation: {
-    enabled: true,
-    style: 'popup',
-    duration: 4,
-    soundEnabled: true,
-    soundUrl: DEFAULT_GOAL_SOUNDS.football,
-  },
-  timer: {
-    enabled: false,
-    periodDuration: 45,
-    countDown: true,
-    integratedWithScore: true,
-  },
-  breakingNews: {
-    enabled: false,
-    position: 'bottom',
-    defaultDuration: 10,
-    displayMode: 'scroll',
-    quickMessages: [
-      'Mi-temps ! Rendez-vous à la buvette',
-      'Changement de joueur',
-      'Temps mort',
-      'Applaudissez vos joueurs !',
-    ],
-  },
-  template: 'broadcast',
-};
+// LocalOptions, constants, and types imported from RemoteOptionsService
 
 type ViewType = 'home' | 'time-categories' | 'subcategories' | 'videos' | 'all-videos' | 'options';
 
@@ -190,6 +71,7 @@ type ViewType = 'home' | 'time-categories' | 'subcategories' | 'videos' | 'all-v
   selector: 'app-cloud-remote',
   standalone: true,
   imports: [CommonModule, FormsModule, LicenseBannerComponent, LicenseBlockRemoteComponent, PlayerStatusComponent, ScreenshotViewerComponent],
+  providers: [RemoteScoreService, RemoteTimerService, RemoteOptionsService],
   templateUrl: './cloud-remote.component.html',
   styleUrls: ['./cloud-remote.component.scss']
 })
@@ -197,8 +79,10 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly remoteService = inject(RemoteService);
+  readonly scoreService = inject(RemoteScoreService);
+  readonly timerService = inject(RemoteTimerService);
+  readonly optionsService = inject(RemoteOptionsService);
   private readonly destroy$ = new Subject<void>();
-  private readonly scoreUpdate$ = new Subject<void>();
 
   public siteId: string = '';
   public siteName: string = '';
@@ -211,8 +95,8 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
   public configuration!: Configuration;
   private secondaryVariantPaths: Set<string> = new Set();
 
-  // Options locales (stockées dans localStorage du navigateur)
-  public localOptions: LocalOptions = this.loadLocalOptions();
+  // Options locales delegated to RemoteOptionsService
+  public get localOptions(): LocalOptions { return this.optionsService.options; }
   public currentView: ViewType = 'home';
   public breadcrumb: string[] = ['Télécommande'];
   public isReloading = false;
@@ -239,12 +123,7 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
   // Score en live + Options avancées
   public liveScoreEnabled = false;
   public isScorePanelExpanded = false;
-  public currentScore = {
-    homeTeam: 'DOMICILE',
-    awayTeam: 'EXTÉRIEUR',
-    homeScore: 0,
-    awayScore: 0
-  };
+  public get currentScore() { return this.scoreService.currentScore; }
 
   // Phase active de la boucle vidéo
   public activePhase: 'neutral' | 'before' | 'during' | 'after' = 'neutral';
@@ -357,10 +236,9 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
   public showBreakingNewsPanel = false;
   public breakingNewsMessage = '';
 
-  // Timer / Chronomètre
-  public timerCurrentTime = 0;
-  public timerIsRunning = false;
-  private timerInterval: ReturnType<typeof setInterval> | null = null;
+  // Timer / Chronomètre delegated to RemoteTimerService
+  public get timerCurrentTime() { return this.timerService.currentTime; }
+  public get timerIsRunning() { return this.timerService.isRunning; }
 
   // Durées disponibles
   public readonly halfDurations = [15, 20, 25, 30, 35, 40, 45];
@@ -375,16 +253,17 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
     this.loadRecentVideos();
 
     // Initialiser le timer
-    this.initializeTimer();
+    this.timerService.initialize(this.localOptions.timer);
+    this.timerService.onPeriodEnd = () => this.displayToast('Mi-temps terminée !', 'info');
 
     // Récupérer le siteId depuis la route
     this.siteId = this.route.snapshot.paramMap.get('siteId') || '';
 
     // Debounce score updates (500ms) pour éviter les rafales de requêtes HTTP
-    this.scoreUpdate$.pipe(
+    this.scoreService.scoreUpdate$.pipe(
       debounceTime(500),
       takeUntil(this.destroy$)
-    ).subscribe(() => this.sendScoreUpdate());
+    ).subscribe(() => this.scoreService.sendScoreUpdate(this.siteId, this.localOptions.match.period));
 
     if (this.siteId) {
       this.loadSiteState();
@@ -401,9 +280,6 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
-    if (this.timerInterval) {
-      clearInterval(this.timerInterval);
-    }
   }
 
   // ============================================================================
@@ -984,76 +860,21 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
   // SCORE EN LIVE
   // ============================================================================
 
-  public incrementHomeScore(): void {
-    this.currentScore.homeScore++;
-    this.broadcastScore();
-  }
-
-  public decrementHomeScore(): void {
-    if (this.currentScore.homeScore > 0) {
-      this.currentScore.homeScore--;
-      this.broadcastScore();
-    }
-  }
-
-  public incrementAwayScore(): void {
-    this.currentScore.awayScore++;
-    this.broadcastScore();
-  }
-
-  public decrementAwayScore(): void {
-    if (this.currentScore.awayScore > 0) {
-      this.currentScore.awayScore--;
-      this.broadcastScore();
-    }
-  }
+  public incrementHomeScore(): void { this.scoreService.incrementHomeScore(); }
+  public decrementHomeScore(): void { this.scoreService.decrementHomeScore(); }
+  public incrementAwayScore(): void { this.scoreService.incrementAwayScore(); }
+  public decrementAwayScore(): void { this.scoreService.decrementAwayScore(); }
 
   public updateTeamNamesFromMatch(): void {
-    if (this.matchInfo.matchName && this.matchInfo.matchName.toLowerCase().includes('vs')) {
-      const teams = this.matchInfo.matchName.split(/vs/i).map(t => t.trim());
-      this.currentScore.homeTeam = teams[0] || 'DOMICILE';
-      this.currentScore.awayTeam = teams[1] || 'EXTÉRIEUR';
-      this.broadcastScore();
-    }
+    this.scoreService.updateTeamNamesFromMatch(this.matchInfo.matchName);
   }
 
-  public broadcastScore(): void {
-    // Debounced : déclenche l'envoi HTTP après 500ms d'inactivité
-    // Permet de cliquer rapidement +1 +1 +1 sans faire 3 requêtes
-    this.scoreUpdate$.next();
-  }
-
-  private sendScoreUpdate(): void {
-    const scoreData = {
-      homeTeam: this.currentScore.homeTeam,
-      awayTeam: this.currentScore.awayTeam,
-      homeScore: this.currentScore.homeScore,
-      awayScore: this.currentScore.awayScore,
-      period: this.localOptions.match.period
-    };
-
-    this.remoteService.updateScore(this.siteId, scoreData).subscribe({
-      next: () => {
-        // Score envoyé silencieusement
-      },
-      error: () => {
-        // Silencieux - le score sera renvoyé au prochain update
-      }
-    });
-  }
+  public broadcastScore(): void { this.scoreService.scoreUpdate$.next(); }
 
   public resetScore(): void {
-    this.currentScore.homeScore = 0;
-    this.currentScore.awayScore = 0;
-
-    this.remoteService.resetScore(this.siteId).subscribe({
-      next: () => {
-        this.displayToast('Score réinitialisé', 'success');
-      },
-      error: () => {
-        this.displayToast('Erreur lors de la réinitialisation', 'info');
-      }
-    });
+    const { success, error } = this.scoreService.resetScore(this.siteId);
+    success.subscribe(() => this.displayToast('Score réinitialisé', 'success'));
+    error.subscribe(() => this.displayToast('Erreur lors de la réinitialisation', 'info'));
   }
 
   public toggleScorePanel(): void {
@@ -1239,64 +1060,27 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
   }
 
   public updateOverlayOption(key: keyof LocalOptions['overlay'], value: boolean): void {
-    this.localOptions.overlay[key] = value as never;
-    this.saveLocalOptions();
-    this.broadcastOptions();
+    this.optionsService.updateOverlayOption(key, value);
   }
 
-  public updateTimerOption<K extends keyof LocalOptions['timer']>(
-    key: K,
-    value: LocalOptions['timer'][K]
-  ): void {
-    this.localOptions.timer[key] = value;
-    this.saveLocalOptions();
-    this.broadcastOptions();
-
+  public updateTimerOption<K extends keyof LocalOptions['timer']>(key: K, value: LocalOptions['timer'][K]): void {
+    this.optionsService.updateTimerOption(key, value);
     if (key === 'countDown' || key === 'periodDuration' || key === 'integratedWithScore') {
-      this.initializeTimer();
+      this.timerService.initialize(this.localOptions.timer);
     }
   }
 
-  public updateBreakingNewsOption<K extends keyof LocalOptions['breakingNews']>(
-    key: K,
-    value: LocalOptions['breakingNews'][K]
-  ): void {
-    this.localOptions.breakingNews[key] = value;
-    this.saveLocalOptions();
-    this.broadcastOptions();
+  public updateBreakingNewsOption<K extends keyof LocalOptions['breakingNews']>(key: K, value: LocalOptions['breakingNews'][K]): void {
+    this.optionsService.updateBreakingNewsOption(key, value);
   }
 
-  public setTemplate(template: LocalOptions['template']): void {
-    this.localOptions.template = template;
-    this.saveLocalOptions();
-    this.broadcastOptions();
-  }
-
-  public addQuickMessage(message: string): void {
-    if (!this.localOptions.breakingNews.quickMessages) {
-      this.localOptions.breakingNews.quickMessages = [];
-    }
-    if (message.trim() && !this.localOptions.breakingNews.quickMessages.includes(message.trim())) {
-      this.localOptions.breakingNews.quickMessages.push(message.trim());
-      this.saveLocalOptions();
-    }
-  }
-
-  public removeQuickMessage(index: number): void {
-    this.localOptions.breakingNews.quickMessages?.splice(index, 1);
-    this.saveLocalOptions();
-  }
+  public setTemplate(template: LocalOptions['template']): void { this.optionsService.setTemplate(template); }
+  public addQuickMessage(message: string): void { this.optionsService.addQuickMessage(message); }
+  public removeQuickMessage(index: number): void { this.optionsService.removeQuickMessage(index); }
 
   public resetOptions(): void {
-    this.localOptions = JSON.parse(JSON.stringify(DEFAULT_OPTIONS));
-    this.saveLocalOptions();
-    this.broadcastOptions();
+    this.optionsService.resetOptions();
     this.displayToast('Options réinitialisées', 'success');
-  }
-
-  private broadcastOptions(): void {
-    // Les options sont stockées localement uniquement
-    // En cloud, on pourrait les envoyer au serveur pour persistance
   }
 
   // ============================================================================
@@ -1304,115 +1088,57 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
   // ============================================================================
 
   public setSport(sport: SportType): void {
-    const periods = SPORT_PERIODS[sport];
-    const periodDuration = SPORT_PERIOD_DURATIONS[sport];
-
-    this.localOptions.sport = sport;
-    this.localOptions.match.period = periods[0];
-    this.localOptions.match.periodIndex = 0;
-    this.localOptions.timer.periodDuration = periodDuration;
-    this.localOptions.goalAnimation.soundUrl = DEFAULT_GOAL_SOUNDS[sport];
-
-    this.saveLocalOptions();
-    this.broadcastOptions();
+    this.optionsService.setSport(sport);
     this.displayToast(`Sport: ${SPORT_LABELS[sport]}`, 'success');
   }
 
   public setPeriod(periodIndex: number): void {
-    const periods = this.getAvailablePeriods();
-    if (periodIndex >= 0 && periodIndex < periods.length) {
-      this.localOptions.match.period = periods[periodIndex];
-      this.localOptions.match.periodIndex = periodIndex;
-      this.saveLocalOptions();
-      this.broadcastScore();
-      this.displayToast(`Période: ${this.localOptions.match.period}`, 'success');
-    }
+    this.optionsService.setPeriod(periodIndex);
+    this.broadcastScore();
+    this.displayToast(`Période: ${this.localOptions.match.period}`, 'success');
   }
 
-  public nextPeriod(): void {
-    const periods = this.getAvailablePeriods();
-    const nextIndex = (this.localOptions.match.periodIndex + 1) % periods.length;
-    this.setPeriod(nextIndex);
-  }
-
-  public getAvailablePeriods(): string[] {
-    return SPORT_PERIODS[this.localOptions.sport] || SPORT_PERIODS.football;
-  }
+  public nextPeriod(): void { this.optionsService.nextPeriod(); this.broadcastScore(); }
+  public getAvailablePeriods(): string[] { return this.optionsService.getAvailablePeriods(); }
 
   // ============================================================================
   // ÉQUIPES & LOGOS
   // ============================================================================
 
   public updateHomeTeamName(name: string): void {
-    this.localOptions.match.homeTeam.name = name;
+    this.optionsService.updateHomeTeamName(name);
     this.currentScore.homeTeam = name;
-    this.saveLocalOptions();
     this.broadcastScore();
   }
 
   public updateAwayTeamName(name: string): void {
-    this.localOptions.match.awayTeam.name = name;
+    this.optionsService.updateAwayTeamName(name);
     this.currentScore.awayTeam = name;
-    this.saveLocalOptions();
     this.broadcastScore();
   }
 
   public onLogoUpload(event: Event, team: 'home' | 'away'): void {
     const input = event.target as HTMLInputElement;
     if (!input.files || input.files.length === 0) return;
-
-    const file = input.files[0];
-    if (!file.type.startsWith('image/')) {
-      this.displayToast('Veuillez sélectionner une image', 'info');
-      return;
-    }
-
-    if (file.size > 500 * 1024) {
-      this.displayToast('Image trop volumineuse (max 500KB)', 'info');
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const base64 = e.target?.result as string;
-      if (team === 'home') {
-        this.localOptions.match.homeTeam.logo = base64;
-      } else {
-        this.localOptions.match.awayTeam.logo = base64;
-      }
-      this.saveLocalOptions();
-      this.broadcastScore();
-      this.displayToast('Logo mis à jour', 'success');
-    };
-    reader.readAsDataURL(file);
+    this.optionsService.onLogoUpload(input.files[0], team).then(
+      () => { this.broadcastScore(); this.displayToast('Logo mis à jour', 'success'); },
+      (err: Error) => this.displayToast(err.message, 'info')
+    );
   }
 
   public clearTeamLogo(team: 'home' | 'away'): void {
-    if (team === 'home') {
-      this.localOptions.match.homeTeam.logo = undefined;
-    } else {
-      this.localOptions.match.awayTeam.logo = undefined;
-    }
-    this.saveLocalOptions();
+    this.optionsService.clearTeamLogo(team);
     this.broadcastScore();
     this.displayToast('Logo supprimé', 'success');
   }
 
   public startNewMatch(): void {
-    this.localOptions.match = {
-      homeTeam: { name: 'DOMICILE', shortName: 'DOM', logo: undefined },
-      awayTeam: { name: 'EXTÉRIEUR', shortName: 'EXT', logo: undefined },
-      period: SPORT_PERIODS[this.localOptions.sport][0],
-      periodIndex: 0,
-    };
-    this.currentScore = {
-      homeTeam: this.localOptions.match.homeTeam.name,
-      awayTeam: this.localOptions.match.awayTeam.name,
-      homeScore: 0,
-      awayScore: 0
-    };
+    this.optionsService.resetForNewMatch();
+    this.scoreService.resetForNewMatch(
+      this.localOptions.match.homeTeam.name,
+      this.localOptions.match.awayTeam.name
+    );
     this.resetTimer();
-    this.saveLocalOptions();
     this.broadcastScore();
     this.displayToast('Nouveau match préparé', 'success');
   }
@@ -1421,23 +1147,12 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
   // ANIMATION DE BUT
   // ============================================================================
 
-  public updateGoalAnimationOption<K extends keyof LocalOptions['goalAnimation']>(
-    key: K,
-    value: LocalOptions['goalAnimation'][K]
-  ): void {
-    this.localOptions.goalAnimation[key] = value;
-    this.saveLocalOptions();
-    this.broadcastOptions();
+  public updateGoalAnimationOption<K extends keyof LocalOptions['goalAnimation']>(key: K, value: LocalOptions['goalAnimation'][K]): void {
+    this.optionsService.updateGoalAnimationOption(key, value);
   }
 
-  // ============================================================================
-  // POSITION OVERLAY
-  // ============================================================================
-
   public setOverlayPosition(position: ScoreOverlayPosition | undefined): void {
-    this.localOptions.overlay.position = position;
-    this.saveLocalOptions();
-    this.broadcastOptions();
+    this.optionsService.setOverlayPosition(position);
   }
 
   // ============================================================================
@@ -1482,161 +1197,11 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
   // TIMER CONTROLS
   // ============================================================================
 
-  public toggleTimer(): void {
-    if (this.timerIsRunning) {
-      this.pauseTimer();
-    } else {
-      this.startTimer();
-    }
-  }
+  public toggleTimer(): void { this.timerService.toggle(this.siteId, this.localOptions.timer); this.displayToast(this.timerIsRunning ? 'Chronomètre démarré' : 'Chronomètre en pause', this.timerIsRunning ? 'success' : 'info'); }
+  public startTimer(): void { this.timerService.start(this.siteId, this.localOptions.timer); this.displayToast('Chronomètre démarré', 'success'); }
+  public pauseTimer(): void { this.timerService.pause(this.siteId); this.displayToast('Chronomètre en pause', 'info'); }
+  public resetTimer(): void { this.timerService.reset(this.siteId, this.localOptions.timer); this.displayToast('Chronomètre réinitialisé', 'success'); }
+  public formatTime(seconds: number): string { return this.timerService.formatTime(seconds); }
+  public getDisplayTime(): string { return this.timerService.getDisplayTime(); }
 
-  public startTimer(): void {
-    if (this.timerIsRunning) return;
-
-    this.timerIsRunning = true;
-
-    this.remoteService.updateTimer(this.siteId, {
-      action: 'start',
-      time: this.timerCurrentTime
-    }).subscribe({ error: () => { /* Silencieux — retry au prochain sync */ } });
-
-    this.timerInterval = setInterval(() => {
-      if (this.localOptions.timer.countDown) {
-        if (this.timerCurrentTime > 0) {
-          this.timerCurrentTime--;
-        } else {
-          this.pauseTimer();
-          this.displayToast('Mi-temps terminée !', 'info');
-        }
-      } else {
-        const maxTime = this.localOptions.timer.periodDuration * 60;
-        if (this.timerCurrentTime < maxTime) {
-          this.timerCurrentTime++;
-        } else {
-          this.pauseTimer();
-          this.displayToast('Mi-temps terminée !', 'info');
-        }
-      }
-
-      // Sync timer toutes les 30s au lieu de 5s pour réduire les requêtes HTTP
-      if (this.timerCurrentTime % 30 === 0) {
-        this.syncTimer();
-      }
-    }, 1000);
-
-    this.displayToast('Chronomètre démarré', 'success');
-  }
-
-  public pauseTimer(): void {
-    if (!this.timerIsRunning) return;
-
-    this.timerIsRunning = false;
-
-    if (this.timerInterval) {
-      clearInterval(this.timerInterval);
-      this.timerInterval = null;
-    }
-
-    this.remoteService.updateTimer(this.siteId, {
-      action: 'pause',
-      time: this.timerCurrentTime
-    }).subscribe({ error: () => { /* Silencieux — retry au prochain sync */ } });
-
-    this.displayToast('Chronomètre en pause', 'info');
-  }
-
-  public resetTimer(): void {
-    this.pauseTimer();
-
-    if (this.localOptions.timer.countDown) {
-      this.timerCurrentTime = this.localOptions.timer.periodDuration * 60;
-    } else {
-      this.timerCurrentTime = 0;
-    }
-
-    this.remoteService.updateTimer(this.siteId, {
-      action: 'reset',
-      time: this.timerCurrentTime
-    }).subscribe({ error: () => { /* Silencieux — retry au prochain sync */ } });
-
-    this.displayToast('Chronomètre réinitialisé', 'success');
-  }
-
-  private syncTimer(): void {
-    this.remoteService.updateTimer(this.siteId, {
-      action: 'sync',
-      time: this.timerCurrentTime
-    }).subscribe({ error: () => { /* Silencieux — retry au prochain sync */ } });
-  }
-
-  public formatTime(seconds: number): string {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-  }
-
-  public getDisplayTime(): string {
-    return this.formatTime(this.timerCurrentTime);
-  }
-
-  private initializeTimer(): void {
-    if (this.localOptions.timer.countDown) {
-      this.timerCurrentTime = this.localOptions.timer.periodDuration * 60;
-    } else {
-      this.timerCurrentTime = 0;
-    }
-  }
-
-  // ============================================================================
-  // LOCAL OPTIONS STORAGE
-  // ============================================================================
-
-  private loadLocalOptions(): LocalOptions {
-    try {
-      const stored = localStorage.getItem('cloudRemoteOptions');
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        return this.deepMerge(DEFAULT_OPTIONS, parsed);
-      }
-    } catch {
-      // Options par défaut si le localStorage est corrompu
-    }
-    return JSON.parse(JSON.stringify(DEFAULT_OPTIONS));
-  }
-
-  private saveLocalOptions(): void {
-    try {
-      localStorage.setItem('cloudRemoteOptions', JSON.stringify(this.localOptions));
-    } catch {
-      // Silencieux - localStorage peut être désactivé
-    }
-  }
-
-  private deepMerge<T extends object>(target: T, source: Partial<T>): T {
-    const result = { ...target };
-    for (const key in source) {
-      if (Object.prototype.hasOwnProperty.call(source, key)) {
-        const sourceValue = source[key];
-        const targetValue = target[key];
-        if (
-          sourceValue !== null &&
-          typeof sourceValue === 'object' &&
-          !Array.isArray(sourceValue) &&
-          targetValue !== null &&
-          typeof targetValue === 'object' &&
-          !Array.isArray(targetValue)
-        ) {
-          (result as Record<string, unknown>)[key] = this.deepMerge(
-            targetValue as object,
-            sourceValue as object
-          );
-        } else if (sourceValue !== undefined) {
-          (result as Record<string, unknown>)[key] = Array.isArray(sourceValue)
-            ? [...sourceValue]
-            : sourceValue;
-        }
-      }
-    }
-    return result;
-  }
 }
