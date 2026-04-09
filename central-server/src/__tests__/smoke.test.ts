@@ -15872,3 +15872,67 @@ describe('SaaS config save flow', () => {
     });
   });
 });
+
+// =============================================================================
+// ScoreOverlayComponent extraction guard (ADR-041)
+// =============================================================================
+// Score overlay (score, timer, goal animation, breaking news, secondary display)
+// MUST live in its own standalone component, NOT inline in tv.component.ts.
+// TvComponent accesses score via @ViewChild proxy getters only.
+
+describe('ScoreOverlayComponent extraction guard (ADR-041)', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+  const overlayDir = path.join(repoRoot, 'raspberry/src/app/components/score-overlay');
+  const tvDir = path.join(repoRoot, 'raspberry/src/app/components/tv');
+
+  it('ScoreOverlayComponent exists as standalone component', () => {
+    const content = fs.readFileSync(path.join(overlayDir, 'score-overlay.component.ts'), 'utf-8');
+    expect(content).toContain('class ScoreOverlayComponent');
+    // Angular 20+ defaults to standalone, so standalone: true may be implicit
+    expect(content).toContain('ViewEncapsulation.None');
+  });
+
+  it('ScoreOverlayComponent has required @Input properties', () => {
+    const content = fs.readFileSync(path.join(overlayDir, 'score-overlay.component.ts'), 'utf-8');
+    expect(content).toMatch(/@Input\(\)\s+configuration/);
+    expect(content).toMatch(/@Input\(\)\s+displayType/);
+  });
+
+  it('ScoreOverlayComponent owns score/timer/goal/breaking-news handlers', () => {
+    const content = fs.readFileSync(path.join(overlayDir, 'score-overlay.component.ts'), 'utf-8');
+    expect(content).toContain('handleScoreUpdate');
+    expect(content).toContain('handleTimerUpdate');
+    expect(content).toContain('triggerGoalAnimation');
+    expect(content).toContain('displayBreakingNews');
+    expect(content).toContain('formatTimerDisplay');
+  });
+
+  it('tv.component.ts imports ScoreOverlayComponent (not inline overlay logic)', () => {
+    const content = fs.readFileSync(path.join(tvDir, 'tv.component.ts'), 'utf-8');
+    expect(content).toContain('ScoreOverlayComponent');
+    expect(content).toContain('@ViewChild(ScoreOverlayComponent)');
+  });
+
+  it('tv.component.ts must NOT contain overlay methods (delegated to ScoreOverlayComponent)', () => {
+    const content = fs.readFileSync(path.join(tvDir, 'tv.component.ts'), 'utf-8');
+    // These methods must live in ScoreOverlayComponent, not TvComponent
+    expect(content).not.toMatch(/\bhandleScoreUpdate\s*\(/);
+    expect(content).not.toMatch(/\bdisplayBreakingNews\s*\(/);
+    expect(content).not.toMatch(/\btriggerGoalAnimation\s*\(/);
+    expect(content).not.toMatch(/\bformatTimerDisplay\s*\(/);
+    expect(content).not.toMatch(/\bstartLocalTimer\s*\(/);
+    expect(content).not.toMatch(/\bstopLocalTimer\s*\(/);
+  });
+
+  it('tv.component.html uses <app-score-overlay> tag', () => {
+    const content = fs.readFileSync(path.join(tvDir, 'tv.component.html'), 'utf-8');
+    expect(content).toContain('<app-score-overlay');
+    expect(content).toContain('[configuration]="configuration"');
+    expect(content).toContain('[displayType]="displayType"');
+  });
+
+  it('score-overlay has its own template and styles files', () => {
+    expect(fs.existsSync(path.join(overlayDir, 'score-overlay.component.html'))).toBe(true);
+    expect(fs.existsSync(path.join(overlayDir, 'score-overlay.component.scss'))).toBe(true);
+  });
+});

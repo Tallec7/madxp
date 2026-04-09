@@ -1,6 +1,7 @@
 ---
 paths:
   - 'raspberry/src/app/components/tv/**'
+  - 'raspberry/src/app/components/score-overlay/**'
   - 'raspberry/src/app/services/double-buffer*'
   - 'raspberry/src/app/services/video-error*'
   - 'raspberry/src/app/services/recording-state*'
@@ -104,6 +105,29 @@ Quand l'utilisateur déclenche une vidéo manuelle, le serveur broadcaste `actio
 
 - `raspberry/server/server.js` — tvInstances Map, promoteSlave(), handlers
 - `raspberry/src/app/components/tv/tv.component.ts` — tvRole, isSlaveMode, emitLoopState(), handleMasterLoopState(), \_lastActionReceivedAt
+
+## ScoreOverlayComponent (ADR-041)
+
+Composant standalone extrait de `TvComponent` — gère tout l'affichage overlay match :
+
+- **Score overlay** : thèmes broadcast (ESPN/BeIN) et minimal, 6 positions CSS
+- **Timer** : standalone ou intégré au score, compteur local synchronisé chaque seconde
+- **Goal animation** : 3 styles (popup, fullscreen, slide) + son optionnel
+- **Breaking news** : bandeau défilant avec timeout
+- **Secondary display** : bandeau score horizontal + goal flash plein écran
+
+**Architecture** :
+
+- Écoute directement Socket.IO (`score-update`, `score-reset`, `options-update`, `breaking-news`, `timer-update`) et BroadcastChannel (mêmes événements locaux)
+- `TvComponent` accède au score via `@ViewChild(ScoreOverlayComponent)` + getters proxy `currentScore` / `showScoreOverlay`
+- Reçoit `[configuration]` et `[displayType]` en `@Input()` depuis `TvComponent`
+- `ViewEncapsulation.None` (styles globaux nécessaires pour les overlays `position: fixed`)
+
+**Fichiers** :
+
+- `raspberry/src/app/components/score-overlay/score-overlay.component.ts` — logique (326 lignes)
+- `raspberry/src/app/components/score-overlay/score-overlay.component.html` — template (216 lignes)
+- `raspberry/src/app/components/score-overlay/score-overlay.component.scss` — styles (723 lignes)
 
 ## RecordingStateService (v3.8.0+)
 

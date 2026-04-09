@@ -94,7 +94,8 @@ En plus de l'architecture Edge (Pi), Neopro propose un mode **100% SaaS** : le c
 ```
 
 - **`site_type`** colonne DB : `'pi'` (matériel), `'saas'` (navigateur), `'demo'` (vitrine)
-- Composants Angular réutilisés tel quel : `TvComponent`, `RemoteComponent`, `LocalBroadcastService`
+- Composants Angular réutilisés tel quel : `TvComponent`, `ScoreOverlayComponent`, `RemoteComponent`, `LocalBroadcastService`
+- **`ScoreOverlayComponent`** (ADR-041) : composant standalone extrait de `TvComponent` — gère le score overlay (broadcast/minimal), le timer, les animations de but (popup/fullscreen/slide), les breaking news, et les overlays secondaires. Écoute directement Socket.IO et BroadcastChannel pour `score-update`, `score-reset`, `options-update`, `breaking-news`, `timer-update`. Utilisé via `<app-score-overlay [configuration] [displayType]>` dans le template TV.
 - Config servie par `saas.controller.ts` avec résolution des chemins vidéo en URLs FTP publiques
 - **Build assets SaaS** : la config `saas` dans `angular.json` override les `assets` par défaut — elle DOIT inclure le glob `raspberry/public` (contient `neopro-logo-white.png`, `favicon.ico`, `manifest.json`, `service-worker.js`). Sans ce glob, le splash screen logo request hit le SPA catch-all et retourne `index.html` (422 + MIME `text/html`). Smoke test enforced.
 - **Deploy pipeline** : `deploy-dashboard` s'exécute en premier (clean-slate Hostinger `/`), puis `deploy-saas` déploie dans `/saas/` — le job CI `deploy-saas` doit déclarer `needs: [deploy-dashboard]` pour éviter que le clean-slate efface le build SaaS
