@@ -61,6 +61,7 @@ Un ADR documente une décision technique importante avec :
 | [ADR-042](ADR-042-extract-tv-component-services.md)               | Extraction tv.component.ts en 3 services dédiés           | Accepté                  | Avr 2026 |
 | [ADR-043](ADR-043-extract-dashboard-component-services.md)        | Extraction 4 composants dashboard (services + templates)  | Accepté                  | Avr 2026 |
 | [ADR-044](ADR-044-extract-sync-agent-modules.md)                  | Extraction 4 modules monolithiques sync-agent             | Accepté                  | Avr 2026 |
+| [ADR-045](ADR-045-extract-chart-display-and-commands-modules.md)  | Extraction chart-display services + split commands.cjs    | Accepté                  | Avr 2026 |
 
 ### Supersédés
 

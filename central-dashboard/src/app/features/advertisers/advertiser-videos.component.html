@@ -1,0 +1,198 @@
+<div class="sponsor-videos-container">
+  <!-- Header -->
+  <div class="header">
+    <button class="back-btn" (click)="goBack()">← Retour au sponsor</button>
+
+    <div class="header-content">
+      <h1>🎬 Gestion des vidéos - {{ sponsorName }}</h1>
+      <button class="btn btn-primary" (click)="openAddModal()">➕ Ajouter des vidéos</button>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="loading" class="loading">
+    <div class="spinner"></div>
+    <p>Chargement...</p>
+  </div>
+
+  <!-- Error State -->
+  <div *ngIf="error" class="error-message">
+    <p>❌ {{ error }}</p>
+    <button class="btn btn-primary" (click)="loadData()">Réessayer</button>
+  </div>
+
+  <!-- Content -->
+  <div *ngIf="!loading && !error" class="content">
+    <!-- Associated Videos List -->
+    <div class="section">
+      <div class="section-header">
+        <h2>Vidéos associées ({{ sponsorVideos.length }})</h2>
+        <p class="section-subtitle">Gérez les vidéos sponsors et leur ordre de diffusion</p>
+      </div>
+
+      <div *ngIf="sponsorVideos.length === 0" class="empty-state">
+        <div class="empty-icon">📹</div>
+        <h3>Aucune vidéo associée</h3>
+        <p>Commencez par ajouter des vidéos à ce sponsor</p>
+        <button class="btn btn-primary" (click)="openAddModal()">Ajouter des vidéos</button>
+      </div>
+
+      <div *ngIf="sponsorVideos.length > 0" class="videos-list">
+        <div
+          *ngFor="let video of sponsorVideos; let i = index"
+          class="video-card"
+          draggable="true"
+          (dragstart)="onDragStart($event, i)"
+          (dragover)="onDragOver($event)"
+          (drop)="onDrop($event, i)"
+          [class.dragging]="draggingIndex === i"
+        >
+          <div class="drag-handle">⋮⋮</div>
+
+          <div class="video-info">
+            <div class="video-header">
+              <h3>{{ video.video_title }}</h3>
+              <span class="priority-badge">Priorité: {{ video.priority }}</span>
+            </div>
+            <div class="video-meta">
+              <span>⏱️ {{ formatDuration(video.video_duration) }}</span>
+              <span>📅 Associée le {{ formatDate(video.associated_at) }}</span>
+            </div>
+          </div>
+
+          <div class="video-actions">
+            <button
+              class="btn-icon"
+              (click)="editPriority(video)"
+              [title]="'sponsors.editPriority' | translate"
+            >
+              ✏️
+            </button>
+            <button
+              class="btn-icon btn-danger"
+              (click)="removeVideo(video.video_id)"
+              [disabled]="removingId === video.video_id"
+              title="Retirer"
+            >
+              {{ removingId === video.video_id ? '...' : '🗑️' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Instructions -->
+    <div class="section info-section">
+      <h3>💡 Comment ça fonctionne ?</h3>
+      <ul class="instructions-list">
+        <li>
+          <strong>Glisser-déposer</strong> : Réorganisez les vidéos en les faisant glisser pour
+          changer leur priorité
+        </li>
+        <li>
+          <strong>Priorité</strong> : Les vidéos avec la priorité la plus haute (1, 2, 3...) seront
+          diffusées en premier
+        </li>
+        <li>
+          <strong>Association</strong> : Seules les vidéos associées au sponsor seront
+          comptabilisées dans les analytics
+        </li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Add Videos Modal -->
+  <div class="modal-overlay" *ngIf="showAddModal" (click)="closeAddModal()">
+    <div class="modal" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h2>➕ Ajouter des vidéos</h2>
+        <button class="close-btn" (click)="closeAddModal()">✕</button>
+      </div>
+
+      <div class="modal-body">
+        <!-- Search -->
+        <div class="search-box">
+          <input
+            type="text"
+            [(ngModel)]="searchTerm"
+            (input)="filterAvailableVideos()"
+            [placeholder]="'content.searchVideo' | translate"
+          />
+        </div>
+
+        <!-- Available Videos List -->
+        <div class="available-videos-list">
+          <div
+            *ngFor="let video of filteredAvailableVideos"
+            class="available-video-item"
+            [class.selected]="isSelected(video.id)"
+            (click)="toggleSelection(video.id)"
+          >
+            <div class="checkbox">
+              <input
+                type="checkbox"
+                [checked]="isSelected(video.id)"
+                (change)="toggleSelection(video.id)"
+                (click)="$event.stopPropagation()"
+              />
+            </div>
+            <div class="video-details">
+              <h4>{{ video.title }}</h4>
+              <div class="video-meta-small">
+                <span>{{ video.filename }}</span>
+                <span>⏱️ {{ formatDuration(video.duration) }}</span>
+                <span *ngIf="video.file_size">📦 {{ formatFileSize(video.file_size) }}</span>
+              </div>
+            </div>
+          </div>
+
+          <div *ngIf="filteredAvailableVideos.length === 0" class="empty-state-small">
+            <p *ngIf="searchTerm">Aucune vidéo trouvée pour "{{ searchTerm }}"</p>
+            <p *ngIf="!searchTerm">Aucune vidéo disponible</p>
+          </div>
+        </div>
+
+        <!-- Selected Count -->
+        <div class="selection-info" *ngIf="selectedVideoIds.length > 0">
+          {{ selectedVideoIds.length }} vidéo(s) sélectionnée(s)
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn btn-secondary" (click)="closeAddModal()">Annuler</button>
+        <button
+          class="btn btn-primary"
+          (click)="addSelectedVideos()"
+          [disabled]="selectedVideoIds.length === 0 || adding"
+        >
+          {{ adding ? 'Ajout...' : 'Ajouter (' + selectedVideoIds.length + ')' }}
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Edit Priority Modal -->
+  <div class="modal-overlay" *ngIf="showPriorityModal" (click)="closePriorityModal()">
+    <div class="modal modal-sm" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h2>✏️ Modifier la priorité</h2>
+        <button class="close-btn" (click)="closePriorityModal()">✕</button>
+      </div>
+
+      <div class="modal-body">
+        <p>{{ editingVideo?.video_title }}</p>
+        <div class="form-group">
+          <label>Priorité (1 = la plus haute)</label>
+          <input type="number" [(ngModel)]="newPriority" min="1" max="999" class="priority-input" />
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn btn-secondary" (click)="closePriorityModal()">Annuler</button>
+        <button class="btn btn-primary" (click)="savePriority()" [disabled]="updatingPriority">
+          {{ updatingPriority ? 'Sauvegarde...' : 'Enregistrer' }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

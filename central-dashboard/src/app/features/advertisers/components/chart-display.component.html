@@ -1,0 +1,242 @@
+<!-- KPIs Cards -->
+<div class="kpis-grid">
+  <div class="kpi-card">
+    <div class="kpi-icon">👁️</div>
+    <div class="kpi-content">
+      <span class="kpi-value">{{ summary.total_impressions.toLocaleString() || 0 }}</span>
+      <span class="kpi-label">Impressions totales</span>
+    </div>
+  </div>
+
+  <div class="kpi-card">
+    <div class="kpi-icon">⏱️</div>
+    <div class="kpi-content">
+      <span class="kpi-value">{{ kpiService.formatDuration(summary.total_screen_time || 0) }}</span>
+      <span class="kpi-label">Temps écran total</span>
+    </div>
+  </div>
+
+  <div class="kpi-card">
+    <div class="kpi-icon">✅</div>
+    <div class="kpi-content">
+      <span class="kpi-value">{{ summary.completion_rate.toFixed(1) || 0 }}%</span>
+      <span class="kpi-label">Taux de complétion</span>
+    </div>
+  </div>
+
+  <div class="kpi-card">
+    <div class="kpi-icon">🎬</div>
+    <div class="kpi-content">
+      <span class="kpi-value">{{ summary.unique_videos || 0 }}</span>
+      <span class="kpi-label">Vidéos diffusées</span>
+    </div>
+  </div>
+
+  <div class="kpi-card">
+    <div class="kpi-icon">📍</div>
+    <div class="kpi-content">
+      <span class="kpi-value">{{ summary.unique_sites || 0 }}</span>
+      <span class="kpi-label">Sites actifs</span>
+    </div>
+  </div>
+
+  <div class="kpi-card">
+    <div class="kpi-icon">⏰</div>
+    <div class="kpi-content">
+      <span class="kpi-value">{{
+        kpiService.formatDuration(summary.avg_watch_duration || 0)
+      }}</span>
+      <span class="kpi-label">Durée moy. visionnage</span>
+    </div>
+  </div>
+</div>
+
+<!-- KPIs Avancés -->
+<div *ngIf="kpisData" class="kpis-advanced">
+  <h2 class="section-title">KPIs Sponsors Avancés</h2>
+  <div class="kpis-grid">
+    <div class="kpi-card kpi-verified">
+      <div class="kpi-icon">✓</div>
+      <div class="kpi-content">
+        <span class="kpi-value">{{ kpisData.kpis.verified_impressions.toLocaleString() }}</span>
+        <span class="kpi-label">Impressions vérifiées (TV on)</span>
+        <span class="kpi-badge badge-blue"
+          >{{ kpisData.kpis.tv_on_rate.toFixed(1) }}% TV allumée</span
+        >
+      </div>
+    </div>
+
+    <div class="kpi-card">
+      <div class="kpi-icon">🏟️</div>
+      <div class="kpi-content">
+        <span class="kpi-value">{{ kpisData.kpis.match_day_impressions.toLocaleString() }}</span>
+        <span class="kpi-label">Impressions match day</span>
+      </div>
+    </div>
+
+    <div class="kpi-card">
+      <div class="kpi-icon">⚖️</div>
+      <div class="kpi-content">
+        <span class="kpi-value">{{ (kpisData.kpis.rotation_fairness * 100).toFixed(0) }}%</span>
+        <span class="kpi-label">Equité de rotation</span>
+      </div>
+    </div>
+
+    <div class="kpi-card" [ngClass]="kpiService.getRenewalScoreClass(kpisData.kpis.renewal_score)">
+      <div class="kpi-icon">{{ kpiService.getRenewalScoreIcon(kpisData.kpis.renewal_score) }}</div>
+      <div class="kpi-content">
+        <span class="kpi-value">{{ (kpisData.kpis.renewal_score * 100).toFixed(0) }}/100</span>
+        <span class="kpi-label">Score renouvellement</span>
+        <span
+          class="kpi-badge"
+          [ngClass]="kpiService.getRenewalBadgeClass(kpisData.kpis.renewal_score)"
+        >
+          {{ kpiService.getRenewalScoreLabel(kpisData.kpis.renewal_score) }}
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Peak Hours Chart -->
+  <div class="charts-row" style="margin-top: 1.25rem">
+    <div class="chart-card full-width">
+      <h3>📊 Heures de forte visibilité (24h)</h3>
+      <canvas #peakHoursChart role="img" aria-label="Heatmap des heures de diffusion"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- Charts Row 1: Trends + Period Distribution -->
+<div class="charts-row">
+  <div class="chart-card chart-large">
+    <h3>📈 Tendances quotidiennes</h3>
+    <p class="sr-only">{{ 'sponsors.trendsChartSummary' | translate }}</p>
+    <canvas
+      #trendsChart
+      role="img"
+      [attr.aria-label]="'sponsors.trendsChartLabel' | translate"
+    ></canvas>
+  </div>
+
+  <div class="chart-card">
+    <h3>🕐 Répartition par période</h3>
+    <p class="sr-only">{{ 'sponsors.periodChartSummary' | translate }}</p>
+    <canvas
+      #periodChart
+      role="img"
+      [attr.aria-label]="'sponsors.periodChartLabel' | translate"
+    ></canvas>
+  </div>
+</div>
+
+<!-- Charts Row 2: Event Type + Top Videos Table -->
+<div class="charts-row">
+  <div class="chart-card">
+    <h3>🏆 Type d'événement</h3>
+    <p class="sr-only">{{ 'sponsors.eventChartSummary' | translate }}</p>
+    <canvas
+      #eventChart
+      role="img"
+      [attr.aria-label]="'sponsors.eventChartLabel' | translate"
+    ></canvas>
+  </div>
+
+  <div class="chart-card chart-large">
+    <h3>🎥 Top 10 Vidéos</h3>
+    <div class="table-container">
+      <table class="analytics-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Vidéo</th>
+            <th>Impressions</th>
+            <th>Temps écran</th>
+            <th>Complétion</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let video of topVideos; let i = index">
+            <td>{{ i + 1 }}</td>
+            <td class="video-name">{{ video.video_title }}</td>
+            <td>{{ video.impressions.toLocaleString() }}</td>
+            <td>{{ kpiService.formatDuration(video.total_screen_time) }}</td>
+            <td>
+              <span class="completion-badge" [class.high]="video.completion_rate >= 80">
+                {{ video.completion_rate.toFixed(0) }}%
+              </span>
+            </td>
+          </tr>
+          <tr *ngIf="topVideos.length === 0">
+            <td colspan="5" class="empty-cell">Aucune donnée disponible</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Charts Row 3: Top Sites Table -->
+<div class="charts-row">
+  <div class="chart-card full-width">
+    <h3>📍 Performance par site/club</h3>
+    <div class="table-container">
+      <table class="analytics-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Site / Club</th>
+            <th>Impressions</th>
+            <th>Temps écran</th>
+            <th>Vidéos uniques</th>
+            <th>Part du total</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let site of topSites; let i = index">
+            <td>{{ i + 1 }}</td>
+            <td class="site-name">{{ site.site_name }}</td>
+            <td>{{ site.impressions.toLocaleString() }}</td>
+            <td>{{ kpiService.formatDuration(site.total_screen_time) }}</td>
+            <td>{{ site.unique_videos }}</td>
+            <td>
+              <div
+                class="progress-bar"
+                role="progressbar"
+                [attr.aria-valuenow]="
+                  kpiService.calculatePercentage(site.impressions, summary.total_impressions)
+                "
+                aria-valuemin="0"
+                aria-valuemax="100"
+                [attr.aria-label]="
+                  ('analytics.shareOfTotal' | translate) +
+                  ': ' +
+                  kpiService
+                    .calculatePercentage(site.impressions, summary.total_impressions)
+                    .toFixed(1) +
+                  '%'
+                "
+              >
+                <div
+                  class="progress-fill"
+                  [style.width.%]="
+                    kpiService.calculatePercentage(site.impressions, summary.total_impressions)
+                  "
+                ></div>
+                <span class="progress-label">
+                  {{
+                    kpiService
+                      .calculatePercentage(site.impressions, summary.total_impressions)
+                      .toFixed(1)
+                  }}%
+                </span>
+              </div>
+            </td>
+          </tr>
+          <tr *ngIf="topSites.length === 0">
+            <td colspan="6" class="empty-cell">Aucune donnée disponible</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>

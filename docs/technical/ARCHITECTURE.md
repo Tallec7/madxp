@@ -212,9 +212,18 @@ neopro/ (monorepo)
 │   │   │   │   ├── sponsor-videos-tab.component.ts       # Onglet vidéos sponsor
 │   │   │   │   ├── sponsor-sites-tab.component.ts        # Onglet sites assignés
 │   │   │   │   ├── sponsor-campaigns-tab.component.ts    # Onglet campagnes
-│   │   │   │   ├── advertiser-videos.component.ts        # Gestion vidéos sponsor (drag-and-drop, priorités)
+│   │   │   │   ├── advertiser-videos.component.ts        # Gestion vidéos sponsor (orchestrateur)
+│   │   │   │   ├── advertiser-videos.component.html      # Template : liste, modals ajout/priorité
+│   │   │   │   ├── advertiser-videos.component.scss      # Styles : cards, drag-and-drop, modals
 │   │   │   │   ├── sponsor-video-data.service.ts         # Data : CRUD vidéos sponsor (ApiService, Observable)
-│   │   │   │   └── drag-drop.service.ts                  # Générique : réordonnancement drag-and-drop
+│   │   │   │   ├── drag-drop.service.ts                  # Générique : réordonnancement drag-and-drop
+│   │   │   │   ├── components/
+│   │   │   │   │   ├── chart-display.component.ts        # Analytics sponsor : orchestrateur layout
+│   │   │   │   │   ├── chart-display.component.html      # Template : KPIs, charts, tables
+│   │   │   │   │   ├── chart-display.component.scss      # Styles : grilles KPI, cartes charts
+│   │   │   │   │   ├── chart-display-kpi.service.ts      # KPI : formatDuration, renewal score helpers
+│   │   │   │   │   ├── chart-display-chart.service.ts    # Chart.js : 4 renderers (trends, period, event, peak hours)
+│   │   │   │   │   └── analytics-filters.component.ts    # Filtres analytics (période, site)
 │   │   │   ├── content/                         # Gestion contenu cloud
 │   │   │   │   ├── content-management.component.ts       # UI : onglets, modals, drag-over (orchestrateur)
 │   │   │   │   ├── content-management-data.service.ts    # Data : CRUD vidéos, déploiements, image-to-video

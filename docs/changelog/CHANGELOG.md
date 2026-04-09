@@ -4,6 +4,12 @@
 
 - **sync-agent:** fix display-info tests after metrics extraction (ADR-044) ([0673daf](https://github.com/Tallec7/neopro/commit/0673daf63a68786a6cf93fbcd91789312848333d))
 
+### Refactoring
+
+- **dashboard:** extract chart-display into ChartDisplayKpiService + ChartDisplayChartService + external template/styles (795→~105 lines) (ADR-045)
+- **dashboard:** extract advertiser-videos inline template (220 lines) and styles (490 lines) to external .html/.scss files (ADR-045)
+- **tooling:** split commands.cjs (710 lines, 13 functions) into 8 focused modules with barrel re-export (ADR-045)
+
 ## [3.138.2](https://github.com/Tallec7/neopro/compare/v3.138.1...v3.138.2) (2026-04-09)
 
 ### Bug Fixes
