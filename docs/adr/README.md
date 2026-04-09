@@ -57,6 +57,7 @@ Un ADR documente une décision technique importante avec :
 | [ADR-038](ADR-038-club-portal-saas-realtime-and-observability.md) | Portail club SaaS : temps réel, preview et client errors  | Accepté                  | Avr 2026 |
 | [ADR-039](ADR-039-subscription-tier-additive-strategy.md)         | Extension additive des tiers d'abonnement (play/club/pro) | Accepté                  | Avr 2026 |
 | [ADR-040](ADR-040-club-saas-dashboard-insights.md)                | Portail club SaaS — insights et tendances dashboard       | Accepté                  | Avr 2026 |
+| [ADR-041](ADR-041-extract-score-overlay-component.md)             | Extraction ScoreOverlayComponent depuis TvComponent       | Accepté                  | Avr 2026 |
 
 ### Supersédés
 
@@ -93,7 +94,7 @@ Un ADR documente une décision technique importante avec :
 
 1. Décider du format avec la [grille de décision](BEST_PRACTICES.md#quand-créer-un-adr-)
 2. Copier le template approprié (complet ou léger)
-3. Numéroter séquentiellement (prochain : **ADR-040**)
+3. Numéroter séquentiellement (prochain : **ADR-042**)
 4. Remplir les sections
 5. Commiter avec le code dans la même PR
 6. Mettre à jour ce README après merge
