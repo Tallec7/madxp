@@ -969,3 +969,45 @@
     flex-wrap: wrap;
   }
 }
+
+// Feature Overrides
+.feature-overrides-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+
+  .toggle-container {
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--border-color, #e5e7eb);
+
+    &:last-child {
+      border-bottom: none;
+    }
+  }
+}
+
+.tier-badge {
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 10px;
+  margin-left: auto;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+
+  &.tier-club {
+    background: #dbeafe;
+    color: #1e40af;
+  }
+
+  &.tier-pro {
+    background: #fef3c7;
+    color: #92400e;
+  }
+
+  &.tier-premium {
+    background: #ede9fe;
+    color: #5b21b6;
+  }
+}

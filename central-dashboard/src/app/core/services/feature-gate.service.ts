@@ -106,8 +106,14 @@ export class FeatureGateService {
    */
   canAccess(
     feature: FeatureKey,
-    siteOrPlan: { subscription_plan?: SubscriptionPlan | string | null } | SubscriptionPlan | string | null | undefined
+    siteOrPlan: { subscription_plan?: SubscriptionPlan | string | null; feature_overrides?: Record<string, boolean> | null } | SubscriptionPlan | string | null | undefined
   ): boolean {
+    // Check per-site override first (set by super_admin)
+    if (typeof siteOrPlan === 'object' && siteOrPlan !== null && !Array.isArray(siteOrPlan)) {
+      const overrides = (siteOrPlan as { feature_overrides?: Record<string, boolean> | null }).feature_overrides;
+      if (overrides && overrides[feature] === true) return true;
+    }
+
     const plan =
       typeof siteOrPlan === 'string'
         ? siteOrPlan

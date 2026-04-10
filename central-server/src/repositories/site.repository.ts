@@ -90,6 +90,7 @@ export interface UpdateSiteInput {
   logo_url?: string | null;
   color_primary?: string | null;
   color_secondary?: string | null;
+  feature_overrides?: string;
 }
 
 export interface SiteConnectionRow extends QueryResultRow {

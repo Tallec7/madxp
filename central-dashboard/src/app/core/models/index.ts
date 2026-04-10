@@ -158,6 +158,8 @@ export interface Site {
   subscription_end?: string | null;
   /** Plan d'abonnement — voir SubscriptionPlan (legacy + nouveaux tiers ADR-039) */
   subscription_plan?: SubscriptionPlan;
+  /** Per-site feature overrides set by super_admin */
+  feature_overrides?: Record<string, boolean>;
   /** Site suspendu manuellement */
   suspended?: boolean;
   /** Motif de suspension */

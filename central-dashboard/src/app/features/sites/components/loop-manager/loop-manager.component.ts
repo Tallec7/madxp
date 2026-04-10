@@ -31,11 +31,15 @@ export class LoopManagerComponent implements OnInit, OnChanges {
   @Input() siteType: string = '';
   @Input() isClubUser = false;
   @Input() subscriptionPlan: string | null = null;
+  @Input() featureOverrides: Record<string, boolean> | null = null;
 
   constructor(private gate: FeatureGateService) {}
 
   get canUseWeightedRotation(): boolean {
-    return this.gate.canAccess('weighted_rotation', this.subscriptionPlan);
+    return this.gate.canAccess('weighted_rotation', {
+      subscription_plan: this.subscriptionPlan,
+      feature_overrides: this.featureOverrides,
+    });
   }
   @Input() config!: SiteConfiguration;
   @Input() videoOptionGroups: { key: string; label: string; icon: string; videos: { path: string; displayName: string; isOnPi: boolean }[] }[] = [];

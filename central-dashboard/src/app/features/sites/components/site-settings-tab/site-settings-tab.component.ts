@@ -8,6 +8,8 @@ import { WatermarkConfig, WatermarkFileInfo, OverlayPosition as WmOverlayPositio
 import { GeneratedReport } from '../../../../core/services/reports.service';
 import { ErrorExtractor } from '../../../../core/utils/error-extractor';
 import { Site, OverlayTheme, ScoreOverlayPosition } from '../../../../core/models';
+import { AuthService } from '../../../../core/services/auth.service';
+import { FeatureKey } from '../../../../core/services/feature-gate.service';
 import { QrCodeGeneratorComponent } from '../../../../shared/components/qr-code-generator/qr-code-generator.component';
 import { SiteSettingsDataService } from './site-settings-data.service';
 
@@ -117,11 +119,32 @@ export class SiteSettingsTabComponent implements OnInit, OnChanges {
   loadingReports: boolean = false;
   generatingReport: boolean = false;
 
+  // Feature overrides (super_admin only)
+  featureOverrides: Record<string, boolean> = {};
+  savingOverrides = false;
+  readonly availableFeatures: { key: FeatureKey; label: string; tier: string }[] = [
+    { key: 'weighted_rotation', label: 'Rotation pondérée', tier: 'Pro' },
+    { key: 'multi_profiles', label: 'Multi-profils', tier: 'Pro' },
+    { key: 'hourly_schedule', label: 'Programmation horaire', tier: 'Pro' },
+    { key: 'sponsor_portal', label: 'Portail sponsor', tier: 'Pro' },
+    { key: 'watermark', label: 'Watermark', tier: 'Pro' },
+    { key: 'image_to_video', label: 'Image → Vidéo', tier: 'Club' },
+    { key: 'secondary_display', label: 'Double écran', tier: 'Premium' },
+    { key: 'analytics_advanced', label: 'Analytics avancées', tier: 'Premium' },
+    { key: 'remote_diagnostic', label: 'Diagnostic distant', tier: 'Premium' },
+    { key: 'white_label', label: 'Marque blanche', tier: 'Premium' },
+  ];
+
   constructor(
     private dataService: SiteSettingsDataService,
     private notificationService: NotificationService,
-    private logger: LoggerService
+    private logger: LoggerService,
+    private authService: AuthService
   ) {}
+
+  get isSuperAdmin(): boolean {
+    return this.authService.getCurrentUser()?.role === 'super_admin';
+  }
 
   ngOnInit(): void {
     // Initialiser les options pour les selects
@@ -132,6 +155,7 @@ export class SiteSettingsTabComponent implements OnInit, OnChanges {
     if (this.site) {
       this.clubName = this.site.club_name || '';
       this.avgSpectators = this.site.avg_spectators ?? null;
+      this.featureOverrides = { ...(this.site.feature_overrides || {}) };
       // P5: Branding
       this.logoUrl = this.site.logo_url || '';
       this.colorPrimary = this.site.color_primary || '';
@@ -314,6 +338,30 @@ export class SiteSettingsTabComponent implements OnInit, OnChanges {
 
   onLogoError(): void {
     this.logoError = true;
+  }
+
+  toggleFeatureOverride(key: string): void {
+    if (this.featureOverrides[key]) {
+      delete this.featureOverrides[key];
+    } else {
+      this.featureOverrides[key] = true;
+    }
+  }
+
+  saveFeatureOverrides(): void {
+    this.savingOverrides = true;
+    this.dataService.saveFeatureOverrides(this.siteId, this.featureOverrides).subscribe({
+      next: (updatedSite) => {
+        this.savingOverrides = false;
+        this.notificationService.success('Overrides de features mis à jour');
+        this.siteUpdated.emit(updatedSite);
+      },
+      error: (error) => {
+        this.savingOverrides = false;
+        const message = ErrorExtractor.getMessage(error);
+        this.notificationService.error(`Erreur: ${message}`);
+      }
+    });
   }
 
   saveRemotePin(): void {

@@ -23,6 +23,7 @@ import { SiteProfilesTabComponent } from './components/site-profiles-tab/site-pr
 import { SiteBenchmarkComponent } from './components/site-benchmark/site-benchmark.component';
 import { SiteSponsorsTabComponent } from './components/site-sponsors-tab/site-sponsors-tab.component';
 import { ClubAccessTabComponent } from './components/club-access-tab/club-access-tab.component';
+import { CopyConfigModalComponent } from './components/copy-config-modal/copy-config-modal.component';
 
 type TabId = 'status' | 'content' | 'settings' | 'profiles' | 'sponsors' | 'subscription' | 'debug' | 'club-access';
 
@@ -42,7 +43,8 @@ type TabId = 'status' | 'content' | 'settings' | 'profiles' | 'sponsors' | 'subs
     SiteProfilesTabComponent,
     SiteBenchmarkComponent,
     SiteSponsorsTabComponent,
-    ClubAccessTabComponent
+    ClubAccessTabComponent,
+    CopyConfigModalComponent
   ],
   templateUrl: './site-detail.component.html',
   styleUrls: ['./site-detail.component.scss']

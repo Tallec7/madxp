@@ -52,6 +52,7 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
   @Input() siteName = '';
   @Input() siteType = '';
   @Input() subscriptionPlan: string | null = null;
+  @Input() featureOverrides: Record<string, boolean> | null = null;
   @Input() isConnected = false;
   @Output() configDeployed = new EventEmitter<void>();
 
@@ -187,7 +188,10 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
   }
 
   get canUseMultiProfiles(): boolean {
-    return this.gate.canAccess('multi_profiles', this.subscriptionPlan);
+    return this.gate.canAccess('multi_profiles', {
+      subscription_plan: this.subscriptionPlan,
+      feature_overrides: this.featureOverrides,
+    });
   }
 
   ngOnInit(): void {

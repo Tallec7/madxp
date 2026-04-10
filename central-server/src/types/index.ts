@@ -87,6 +87,7 @@ export interface Site {
   remote_pin_hash: string | null;
   hostname_slug: string | null;
   site_type: 'pi' | 'saas' | 'demo';
+  feature_overrides?: Record<string, boolean>;
 }
 
 // Group types

@@ -12,6 +12,7 @@
     "search": "Search",
     "searchPlaceholder": "Search...",
     "searchClub": "Search a club...",
+    "searchByClubName": "Search by club name",
     "loadingClubs": "Loading clubs...",
     "filter": "Filter",
     "actions": "Actions",
@@ -895,7 +896,11 @@
     "confirmDefault": "Confirm"
   },
   "siteSettings": {
-    "saveBranding": "Save branding"
+    "saveBranding": "Save branding",
+    "featureOverrides": "Feature overrides",
+    "featureOverridesDesc": "Enable individual features for this site, regardless of its subscription plan.",
+    "saveOverrides": "Save overrides",
+    "savingOverrides": "Saving..."
   },
   "siteSponsors": {
     "statusActive": "Active",

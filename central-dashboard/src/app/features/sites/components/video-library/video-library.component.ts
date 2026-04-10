@@ -60,6 +60,7 @@ export class VideoLibraryComponent implements OnChanges {
   @Input() pendingDeploymentVideoIds: Set<string> = new Set(); // IDs of videos with pending deployments
   @Input() secondaryVariantVideoIds: Set<string> = new Set(); // IDs of videos with secondary display variants
   @Input() subscriptionPlan: string | null = null;
+  @Input() featureOverrides: Record<string, boolean> | null = null;
 
   @Output() videoSelect = new EventEmitter<VideoItem>();
   @Output() videoPreview = new EventEmitter<VideoItem>();
@@ -70,7 +71,10 @@ export class VideoLibraryComponent implements OnChanges {
   constructor(private gate: FeatureGateService) {}
 
   get canUseSecondaryDisplay(): boolean {
-    return this.gate.canAccess('secondary_display', this.subscriptionPlan);
+    return this.gate.canAccess('secondary_display', {
+      subscription_plan: this.subscriptionPlan,
+      feature_overrides: this.featureOverrides,
+    });
   }
 
   onVariant(video: VideoItem, event: Event): void {

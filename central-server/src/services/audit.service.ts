@@ -42,8 +42,9 @@ export type AuditAction =
   | 'SITE_REACTIVATED'
   | 'SUBSCRIPTION_PLAN_CHANGED'
   | 'SUBSCRIPTION_AUTO_UNBLOCKED'
-  // Config copy
-  | 'CONFIG_COPIED';
+  // Config copy & duplication
+  | 'CONFIG_COPIED'
+  | 'SITE_DUPLICATED';
 
 interface AuditLogEntry {
   action: AuditAction;

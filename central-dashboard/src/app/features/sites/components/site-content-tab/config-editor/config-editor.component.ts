@@ -252,6 +252,7 @@ import { LoopManagerComponent } from '../../loop-manager/loop-manager.component'
         [siteType]="siteType"
         [isClubUser]="isClubUser"
         [subscriptionPlan]="subscriptionPlan"
+        [featureOverrides]="featureOverrides"
         [config]="config"
         [videoOptionGroups]="videoOptionGroups"
         [cloudVideoPaths]="cloudVideoPaths"
@@ -878,6 +879,7 @@ export class ConfigEditorComponent {
   @Input() siteType: string = '';
   @Input() isClubUser = false;
   @Input() subscriptionPlan: string | null = null;
+  @Input() featureOverrides: Record<string, boolean> | null = null;
   @Input() config!: SiteConfiguration;
   @Input() localVideos: LocalVideo[] = [];
   @Input() cloudVideos: { length: number } = { length: 0 };

@@ -166,6 +166,13 @@ export class SiteSettingsDataService {
     return this.sitesService.updateSite(siteId, data);
   }
 
+  saveFeatureOverrides(
+    siteId: string,
+    featureOverrides: Record<string, boolean>
+  ): Observable<Site> {
+    return this.sitesService.updateSite(siteId, { feature_overrides: featureOverrides });
+  }
+
   // ========================================================================
   // 4. Remote PIN
   // ========================================================================

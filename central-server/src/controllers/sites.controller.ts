@@ -199,7 +199,7 @@ export const createSite = async (req: AuthRequest, res: Response) => {
 export const updateSite = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
-    const { site_name, club_name, location, sports, status, live_score_enabled, avg_spectators, secondary_display_enabled, secondary_display_resolution } = req.body;
+    const { site_name, club_name, location, sports, status, live_score_enabled, avg_spectators, secondary_display_enabled, secondary_display_resolution, feature_overrides } = req.body;
 
     const updateData: Record<string, unknown> = {};
     if (site_name !== undefined) updateData.site_name = site_name;
@@ -211,6 +211,9 @@ export const updateSite = async (req: AuthRequest, res: Response) => {
     if (avg_spectators !== undefined) updateData.avg_spectators = avg_spectators;
     if (secondary_display_enabled !== undefined) updateData.secondary_display_enabled = secondary_display_enabled;
     if (secondary_display_resolution !== undefined) updateData.secondary_display_resolution = secondary_display_resolution;
+    if (feature_overrides !== undefined && req.user?.role === 'super_admin') {
+      updateData.feature_overrides = JSON.stringify(feature_overrides);
+    }
     if (Object.keys(updateData).length === 0) {
       return res.status(400).json({ error: 'Aucune donnée à mettre à jour' });
     }
@@ -314,6 +317,208 @@ export const regenerateApiKey = async (req: AuthRequest, res: Response) => {
 };
 
 // ============================================================================
+// Config Copy & Site Duplication
+// ============================================================================
+
+/**
+ * POST /api/sites/:id/copy-config
+ * Copie tous les profils de configuration du site source vers un site cible.
+ * Remplace tous les profils existants sur le site cible.
+ */
+export const copyConfig = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id: sourceSiteId } = req.params;
+    const { target_site_id: targetSiteId } = req.body;
+
+    const [sourceSite, targetSite] = await Promise.all([
+      siteRepository.findById(sourceSiteId),
+      siteRepository.findById(targetSiteId),
+    ]);
+
+    if (!sourceSite) {
+      return res.status(404).json({ error: 'Site source non trouvé' });
+    }
+    if (!targetSite) {
+      return res.status(404).json({ error: 'Site cible non trouvé' });
+    }
+    if (sourceSiteId === targetSiteId) {
+      return res.status(400).json({ error: 'Le site source et le site cible doivent être différents' });
+    }
+
+    const sourceProfiles = await configProfileRepository.findBySite(sourceSiteId);
+    if (sourceProfiles.length === 0) {
+      return res.status(400).json({ error: 'Le site source n\'a aucun profil de configuration' });
+    }
+
+    // Supprimer les profils existants du site cible puis copier les profils source
+    const existingProfiles = await configProfileRepository.findBySite(targetSiteId);
+    for (const profile of existingProfiles) {
+      await configProfileRepository.deleteById(profile.id);
+    }
+
+    const copiedProfiles = [];
+    for (const profile of sourceProfiles) {
+      const copied = await configProfileRepository.create({
+        siteId: targetSiteId,
+        name: profile.name,
+        displayName: profile.display_name || undefined,
+        city: profile.city || undefined,
+        sport: profile.sport || undefined,
+        sortOrder: profile.sort_order,
+        isDefault: profile.is_default,
+        configuration: profile.configuration,
+        createdBy: req.user?.id,
+      });
+      copiedProfiles.push(copied);
+    }
+
+    logger.info('Config profiles copied', {
+      sourceSiteId,
+      targetSiteId,
+      profilesCopied: copiedProfiles.length,
+      copiedBy: req.user?.email,
+    });
+
+    await auditService.log({
+      action: 'CONFIG_COPIED',
+      targetType: 'site',
+      targetId: targetSiteId,
+      userId: req.user?.id,
+      details: { sourceSiteId, targetSiteId, profilesCopied: copiedProfiles.length },
+    }, req);
+
+    res.json({
+      success: true,
+      message: `${copiedProfiles.length} profil(s) copié(s) vers ${targetSite.site_name}`,
+      profiles: copiedProfiles,
+    });
+  } catch (error) {
+    logger.error('Copy config error:', error);
+    res.status(500).json({ error: 'Erreur lors de la copie de la configuration' });
+  }
+};
+
+/**
+ * POST /api/sites/:id/duplicate
+ * Duplique un site complet (métadonnées + profils de configuration).
+ */
+export const duplicateSite = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id: sourceSiteId } = req.params;
+    const { site_name: requestedName } = req.body;
+
+    const sourceSite = await siteRepository.findById(sourceSiteId);
+    if (!sourceSite) {
+      return res.status(404).json({ error: 'Site source non trouvé' });
+    }
+
+    const baseName = requestedName || `${sourceSite.site_name} (copie)`;
+    let uniqueName = baseName;
+    const existingRows = await siteRepository.findNameDuplicates(baseName);
+    if (existingRows.length > 0) {
+      let maxSuffix = 0;
+      for (const row of existingRows) {
+        if (row.site_name === baseName) {
+          maxSuffix = Math.max(maxSuffix, 1);
+        } else {
+          const match = row.site_name.match(/-(\d+)$/);
+          if (match) {
+            maxSuffix = Math.max(maxSuffix, parseInt(match[1], 10) + 1);
+          }
+        }
+      }
+      if (maxSuffix > 0) {
+        uniqueName = `${baseName}-${maxSuffix}`;
+      }
+    }
+
+    const newId = uuidv4();
+    const newApiKey = generateApiKey();
+    const newApiKeyHash = hashApiKey(newApiKey);
+
+    const newSite = await siteRepository.create({
+      id: newId,
+      siteName: uniqueName,
+      clubName: sourceSite.club_name || uniqueName,
+      location: sourceSite.location ? JSON.stringify(sourceSite.location) : null,
+      sports: sourceSite.sports ? JSON.stringify(sourceSite.sports) : null,
+      hardwareModel: sourceSite.hardware_model || 'Unknown',
+      apiKeyHash: newApiKeyHash,
+      siteType: sourceSite.site_type || 'pi',
+    });
+
+    // Derive hostname
+    try {
+      const baseHostname = deriveHostnameSlug(sourceSite.club_name || uniqueName);
+      const existingHostnames = await siteRepository.findExistingHostnames();
+      const hostname = deriveHostnameWithSuffix(baseHostname, existingHostnames);
+      await siteRepository.updateHostnameSlug(newId, hostname);
+    } catch (hostnameError) {
+      logger.warn('Failed to assign hostname slug for duplicated site', {
+        siteId: newId,
+        error: hostnameError instanceof Error ? hostnameError.message : String(hostnameError),
+      });
+    }
+
+    // Copier les profils de configuration
+    const sourceProfiles = await configProfileRepository.findBySite(sourceSiteId);
+    let profilesCopied = 0;
+    for (const profile of sourceProfiles) {
+      await configProfileRepository.create({
+        siteId: newId,
+        name: profile.name,
+        displayName: profile.display_name || undefined,
+        city: profile.city || undefined,
+        sport: profile.sport || undefined,
+        sortOrder: profile.sort_order,
+        isDefault: profile.is_default,
+        configuration: profile.configuration,
+        createdBy: req.user?.id,
+      });
+      profilesCopied++;
+    }
+
+    if (profilesCopied === 0) {
+      await configProfileRepository.create({
+        siteId: newId,
+        name: 'Par defaut',
+        displayName: sourceSite.club_name || uniqueName,
+        isDefault: true,
+        configuration: {},
+        createdBy: req.user?.id,
+      });
+      profilesCopied = 1;
+    }
+
+    logger.info('Site duplicated', {
+      sourceSiteId,
+      newSiteId: newId,
+      newSiteName: uniqueName,
+      profilesCopied,
+      duplicatedBy: req.user?.email,
+    });
+
+    await auditService.log({
+      action: 'SITE_DUPLICATED',
+      targetType: 'site',
+      targetId: newId,
+      userId: req.user?.id,
+      details: { sourceSiteId, newSiteName: uniqueName, profilesCopied },
+    }, req);
+
+    res.status(201).json({
+      ...newSite,
+      api_key: newApiKey,
+      api_key_warning: 'Sauvegardez cette clé API. Elle ne sera plus jamais affichée.',
+      profilesCopied,
+    });
+  } catch (error) {
+    logger.error('Duplicate site error:', error);
+    res.status(500).json({ error: 'Erreur lors de la duplication du site' });
+  }
+};
+
+// ============================================================================
 // Remote PIN Management
 // ============================================================================
 
@@ -408,101 +613,6 @@ export async function clearRemotePin(req: AuthRequest, res: Response) {
     res.status(500).json({ error: 'Erreur serveur' });
   }
 }
-
-// ============================================================================
-// Copy Configuration
-// ============================================================================
-
-/**
- * POST /api/sites/:id/copy-config
- * Copie les profils de configuration d'un site source vers un site cible.
- * Fonctionne pour toutes les combinaisons Pi/SaaS.
- */
-export const copyConfig = async (req: AuthRequest, res: Response) => {
-  try {
-    const { id: sourceSiteId } = req.params;
-    const { target_site_id } = req.body;
-
-    // Vérifier que le site source existe
-    const sourceSite = await siteRepository.findById(sourceSiteId);
-    if (!sourceSite) {
-      return res.status(404).json({ error: 'Site source non trouvé' });
-    }
-
-    // Vérifier que le site cible existe et est différent
-    if (sourceSiteId === target_site_id) {
-      return res.status(400).json({ error: 'Le site source et le site cible doivent être différents' });
-    }
-
-    const targetSite = await siteRepository.findById(target_site_id);
-    if (!targetSite) {
-      return res.status(404).json({ error: 'Site cible non trouvé' });
-    }
-
-    // Lire les profils du site source
-    const sourceProfiles = await configProfileRepository.findBySite(sourceSiteId);
-    if (sourceProfiles.length === 0) {
-      return res.status(400).json({ error: 'Le site source n\'a aucun profil de configuration' });
-    }
-
-    // Supprimer les profils existants du site cible
-    const existingTargetProfiles = await configProfileRepository.findBySite(target_site_id);
-    for (const profile of existingTargetProfiles) {
-      await configProfileRepository.deleteById(profile.id);
-    }
-
-    // Copier chaque profil vers le site cible
-    const copiedProfiles = [];
-    for (const profile of sourceProfiles) {
-      const copiedProfile = await configProfileRepository.create({
-        siteId: target_site_id,
-        name: profile.name,
-        displayName: profile.display_name || targetSite.club_name,
-        city: profile.city || undefined,
-        sport: profile.sport || undefined,
-        sortOrder: profile.sort_order,
-        isDefault: profile.is_default,
-        configuration: profile.configuration || {},
-        createdBy: req.user?.id,
-      });
-      copiedProfiles.push(copiedProfile);
-    }
-
-    logger.info('Config profiles copied between sites', {
-      sourceSiteId,
-      sourceSiteName: sourceSite.site_name,
-      targetSiteId: target_site_id,
-      targetSiteName: targetSite.site_name,
-      profilesCopied: copiedProfiles.length,
-      copiedBy: req.user?.email,
-    });
-
-    auditService.log({
-      action: 'CONFIG_COPIED',
-      targetType: 'site',
-      targetId: target_site_id,
-      details: {
-        source_site_id: sourceSiteId,
-        source_site_name: sourceSite.site_name,
-        target_site_name: targetSite.site_name,
-        profiles_copied: copiedProfiles.length,
-      },
-    }, req);
-
-    res.json({
-      success: true,
-      profiles_copied: copiedProfiles.length,
-      source_site: { id: sourceSiteId, name: sourceSite.site_name },
-      target_site: { id: target_site_id, name: targetSite.site_name },
-      message: targetSite.site_type === 'pi'
-        ? 'Configuration copiée. Déployez la configuration vers le Pi pour appliquer les changements.'
-        : 'Configuration copiée et active.',
-    });
-  } catch (error) {
-    logger.error('Copy config error:', error);
-    res.status(500).json({ error: 'Erreur lors de la copie de la configuration' });
-  }
-};
 
 // ============================================================================
 // Re-exports from sub-controllers for backward compatibility

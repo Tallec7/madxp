@@ -209,6 +209,17 @@ router.post(
   sitesController.copyConfig
 );
 
+// Duplicate a site (metadata + config profiles)
+router.post(
+  '/:id/duplicate',
+  authenticate,
+  requireRole('admin'),
+  sensitiveRateLimit,
+  validateParams(paramSchemas.id),
+  validate(schemas.duplicateSite),
+  sitesController.duplicateSite
+);
+
 router.post(
   '/:id/command',
   authenticate,

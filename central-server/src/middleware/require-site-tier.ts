@@ -64,7 +64,20 @@ export function resolveCanonicalTier(
  * (dans cet ordre). Retourne 403 si le tier est insuffisant, 404 si le site
  * n'existe pas, 500 en cas d'erreur DB.
  */
-export const requireSiteTier = (minTier: SiteTier) => {
+/**
+ * Verifie si un site a un override actif pour une feature donnee.
+ * Les overrides sont stockes dans `sites.feature_overrides` (JSONB).
+ */
+export function hasFeatureOverride(
+  site: { feature_overrides?: Record<string, boolean> | null },
+  featureKey: string
+): boolean {
+  const overrides = site.feature_overrides;
+  if (!overrides || typeof overrides !== 'object') return false;
+  return overrides[featureKey] === true;
+}
+
+export const requireSiteTier = (minTier: SiteTier, featureKey?: string) => {
   const requiredLevel = TIER_LEVEL[minTier];
 
   return async (req: AuthRequest, res: Response, next: NextFunction) => {
@@ -83,6 +96,11 @@ export const requireSiteTier = (minTier: SiteTier) => {
         return res.status(404).json({ error: 'Site non trouve' });
       }
 
+      // Check per-site feature override before tier
+      if (featureKey && hasFeatureOverride(site as { feature_overrides?: Record<string, boolean> | null }, featureKey)) {
+        return next();
+      }
+
       const sitePlan = (site as { subscription_plan?: string | null }).subscription_plan;
       const siteLevel = resolveTierLevel(sitePlan);
 
@@ -91,6 +109,7 @@ export const requireSiteTier = (minTier: SiteTier) => {
           siteId,
           siteTier: resolveCanonicalTier(sitePlan),
           requiredTier: minTier,
+          featureKey,
         });
         return res.status(403).json({
           error: 'Fonctionnalite reservee aux abonnements superieurs',

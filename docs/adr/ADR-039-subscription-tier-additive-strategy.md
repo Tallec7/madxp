@@ -97,6 +97,43 @@ La fréquence d'accès aux features gatées reste mesurable via les métriques e
 
 Aucune alerte Prometheus dédiée n'est ajoutée à ce stade : le gating est **opt-in côté UI** (masquage/désactivation, pas une erreur runtime), donc ne produit pas d'incident opérationnel à remonter.
 
+## Phase 3 — Feature Overrides par site (Avr 2026)
+
+Le gating par tier est complété par un mécanisme d'**override par site**, permettant au super_admin d'activer une feature individuellement sans changer le plan d'abonnement.
+
+### Hiérarchie de décision
+
+```
+1. feature_overrides[feature] === true  →  accès autorisé (super_admin override)
+2. subscription_plan >= tier requis      →  accès autorisé (plan d'abonnement)
+3. sinon                                 →  accès refusé
+```
+
+Le super_admin est **au-dessus** du système de tiers : il peut débloquer n'importe quelle feature pour n'importe quel site, quel que soit son plan.
+
+### Implémentation
+
+| Couche            | Fichier                                                               | Changement                                                                                   |
+| ----------------- | --------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| DB                | `migrations/add-feature-overrides.sql`                                | Colonne `feature_overrides JSONB DEFAULT '{}'` sur `sites`                                   |
+| Server types      | `types/index.ts`                                                      | `feature_overrides?: Record<string, boolean>` sur `Site`                                     |
+| Server controller | `sites.controller.ts`                                                 | `updateSite` accepte `feature_overrides` **uniquement si `req.user.role === 'super_admin'`** |
+| Server middleware | `require-site-tier.ts`                                                | `hasFeatureOverride()` + paramètre optionnel `featureKey` sur `requireSiteTier()`            |
+| Dashboard model   | `models/index.ts`                                                     | `feature_overrides?: Record<string, boolean>` sur `Site`                                     |
+| Dashboard gate    | `feature-gate.service.ts`                                             | `canAccess()` vérifie `feature_overrides` **avant** le tier                                  |
+| Dashboard UI      | `site-settings-tab.component`                                         | Section "Overrides de features" avec toggles, `*ngIf="isSuperAdmin"`                         |
+| Propagation       | `site-detail` → `site-content-tab` → `config-editor` → `loop-manager` | Nouvel `@Input() featureOverrides` à chaque niveau                                           |
+
+### Invariants vérifiés par smoke tests
+
+5 nouveaux smoke tests (section feature overrides dans `smoke.test.ts`) :
+
+1. `FeatureGateService.canAccess` — vérifie overrides avant tier, retourne `true` si override actif.
+2. `requireSiteTier` — exporte `hasFeatureOverride`, accepte `featureKey` optionnel.
+3. `updateSite controller` — extrait `feature_overrides`, gardé par `super_admin`.
+4. `loop-manager` — `@Input() featureOverrides` + passage à `canAccess`.
+5. `site-settings-tab` — UI gardée par `isSuperAdmin`, `saveFeatureOverrides`, `AuthService`.
+
 ## Cleanup ultérieur (hors scope)
 
 Une PR dédiée (post-stabilisation) devra :

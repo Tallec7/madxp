@@ -708,6 +708,10 @@ export const schemas = {
     current_password: Joi.string().required(),
     new_password: Joi.string().min(8).required(),
   }),
+
+  duplicateSite: Joi.object({
+    site_name: Joi.string().max(255).optional(),
+  }),
 };
 
 // ============================================================================

@@ -40,6 +40,7 @@ import { VideoVariantPanelComponent } from '../../../../content/video-variant-pa
         [pendingDeploymentVideoIds]="pendingDeploymentVideoIds"
         [secondaryVariantVideoIds]="secondaryVariantVideoIds"
         [subscriptionPlan]="subscriptionPlan"
+        [featureOverrides]="featureOverrides"
         (videoSelect)="onVideoSelect($event)"
         (videoPreview)="onVideoPreview($event)"
         (videoDeploy)="videoDeploy.emit($event)"
@@ -184,6 +185,7 @@ export class VideoManagerComponent {
   @Input() pendingDeploymentVideoIds: Set<string> = new Set();
   @Input() secondaryVariantVideoIds: Set<string> = new Set();
   @Input() subscriptionPlan: string | null = null;
+  @Input() featureOverrides: Record<string, boolean> | null = null;
 
   @Output() videoUploaded = new EventEmitter<UploadedVideo>();
   @Output() allVideosUploaded = new EventEmitter<UploadedVideo[]>();

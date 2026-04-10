@@ -233,6 +233,7 @@
     "saving": "Guardando...",
     "search": "Buscar",
     "searchClub": "Buscar un club...",
+    "searchByClubName": "Buscar por nombre de club",
     "searchPlaceholder": "Buscar...",
     "selectVideo": "Seleccionar un vídeo",
     "success": "Éxito",
@@ -897,7 +898,11 @@
     }
   },
   "siteSettings": {
-    "saveBranding": "Guardar branding"
+    "saveBranding": "Guardar branding",
+    "featureOverrides": "Overrides de funcionalidades",
+    "featureOverridesDesc": "Habilite funcionalidades individuales para este sitio, independientemente de su plan de suscripción.",
+    "saveOverrides": "Guardar overrides",
+    "savingOverrides": "Guardando..."
   },
   "siteSponsors": {
     "statusActive": "Activo",
