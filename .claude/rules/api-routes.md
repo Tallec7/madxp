@@ -26,6 +26,7 @@ GET    /api/sites/:id/local-content → vidéos locales + stockage
 POST   /api/sites             → créer site (génère api_key)
 PUT    /api/sites/:id         → modifier
 DELETE /api/sites/:id         → supprimer
+POST   /api/sites/:id/copy-config → copier profils config vers un autre site { target_site_id }
 POST   /api/sites/:id/command → envoyer commande au Pi
 ```
 

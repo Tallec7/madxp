@@ -312,6 +312,21 @@ scp raspberry/config/templates/MONCLUB-configuration.json \
 ssh pi@neopro.local 'sudo systemctl restart neopro-app'
 ```
 
+### Option D : Copier la configuration depuis un autre site (v3.139+)
+
+Depuis le dashboard central :
+
+1. Aller sur la fiche du site **source** (celui qui a la bonne config)
+2. Cliquer sur **"📋 Copier config"** dans le header
+3. Rechercher et sélectionner le site **cible**
+4. Confirmer — tous les profils de configuration sont copiés
+
+Fonctionne pour toutes les combinaisons de types : Pi→Pi, Pi→SaaS, SaaS→Pi, SaaS→SaaS.
+
+> **Note** : Pour les sites Pi, la config copiée devra ensuite être déployée vers le boîtier (onglet Profils → Synchroniser).
+
+**API** : `POST /api/sites/:sourceSiteId/copy-config` avec `{ target_site_id: "uuid" }`
+
 ---
 
 ## 6. Fichiers de démo

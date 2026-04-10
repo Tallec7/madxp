@@ -1417,6 +1417,7 @@ POST   /sites                   - Créer site (génère api_key)
 PUT    /sites/:id               - Modifier
 DELETE /sites/:id               - Supprimer (admin)
 POST   /sites/:id/api-key/regenerate - Régénérer la clé API
+POST   /sites/:id/copy-config     - Copier les profils de config vers un autre site
 POST   /sites/:id/command       - Envoyer commande au Pi
 GET    /sites/:id/remote-pin    - Statut PIN télécommande cloud
 POST   /sites/:id/remote-pin    - Définir PIN télécommande cloud
@@ -1595,6 +1596,18 @@ PUT    /sites/:siteId/profiles/:profileId/configuration - Modifier la config d'u
 DELETE /sites/:siteId/profiles/:profileId   - Supprimer (interdit si dernier)
 POST   /sites/:siteId/profiles/:profileId/deploy - Déployer un profil vers le Pi
 POST   /sites/:siteId/profiles/sync         - Sync tous les profils vers le Pi
+```
+
+**Endpoint Copie de Configuration (v3.139+) :**
+
+```
+POST   /sites/:id/copy-config               - Copier profils config vers un site cible
+  Body: { target_site_id: "uuid" }
+  - Copie tous les profils (nom, display_name, city, sport, sort_order, is_default, configuration)
+  - Supprime les profils existants sur le site cible avant copie
+  - Fonctionne pour toutes combinaisons Pi/SaaS
+  - Pour les sites Pi cibles : nécessite un déploiement séparé (sync profiles)
+  - Audit trail : action CONFIG_COPIED
 ```
 
 **Endpoints Alertes :**
@@ -1993,6 +2006,7 @@ Les composants complexes ont été décomposés en DataServices collocalisés (m
 | `deleteProfile(siteId, profileId)`                             | `DELETE /sites/:siteId/profiles/:profileId`            |
 | `deployProfile(siteId, profileId)`                             | `POST /sites/:siteId/profiles/:profileId/deploy`       |
 | `syncProfiles(siteId)`                                         | `POST /sites/:siteId/profiles/sync`                    |
+| `copyConfig(sourceSiteId, targetSiteId)`                       | `POST /sites/:id/copy-config`                          |
 | `saveConfigDirect(siteId, configuration)`                      | `PUT /sites/:siteId/config` (SaaS uniquement)          |
 
 #### Flux de sauvegarde config SaaS (v3.128.5+)

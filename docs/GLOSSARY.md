@@ -8,7 +8,12 @@
 
 ### Site
 
-Un **club sportif** équipé d'un Raspberry Pi connecté à une télévision. Chaque site possède un `api_key` unique pour l'authentification avec le serveur central.
+Un **club sportif** géré par Neopro. Deux types existent :
+
+- **Pi** (`site_type = 'pi'`) : équipé d'un Raspberry Pi connecté à une TV, provisionné depuis le terminal du Pi via `setup-new-club.sh` / `register-site.js`
+- **SaaS** (`site_type = 'saas'`) : fonctionne dans un navigateur web, créé depuis le dashboard central
+
+Chaque site possède un `api_key` unique (SHA256) pour l'authentification avec le serveur central. Les profils de configuration peuvent être copiés entre sites (tous types confondus) via `POST /api/sites/:id/copy-config`.
 
 **Synonymes** : Club, Installation
 
