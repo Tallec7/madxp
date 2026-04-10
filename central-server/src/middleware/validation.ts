@@ -92,6 +92,10 @@ export const schemas = {
     code: Joi.string().min(6).max(10).required(), // TOTP (6 digits) or backup code (XXXX-XXXX)
   }),
 
+  copyConfig: Joi.object({
+    target_site_id: Joi.string().uuid().required(),
+  }),
+
   createSite: Joi.object({
     site_name: Joi.string().required(),
     club_name: Joi.string().required(),

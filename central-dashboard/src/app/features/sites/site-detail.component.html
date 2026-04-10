@@ -6,6 +6,13 @@
     <button class="btn btn-primary btn-analytics" [routerLink]="['/sites', siteId, 'analytics']">
       📊 Analytics
     </button>
+    <button
+      class="btn btn-secondary"
+      (click)="openCopyConfigModal()"
+      [title]="'copyConfig.title' | translate"
+    >
+      📋 {{ 'copyConfig.button' | translate }}
+    </button>
     <div class="header-badges">
       @if (!isSaas) {
         <!-- Badge profil réseau (Pi only) -->
@@ -846,6 +853,70 @@
       <div class="modal-footer">
         <button class="btn btn-secondary" (click)="showSystemInfoModal = false">Fermer</button>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Copy Config -->
+<div class="modal" *ngIf="showCopyConfigModal" (click)="showCopyConfigModal = false">
+  <div class="modal-content" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2>{{ 'copyConfig.title' | translate }}</h2>
+      <button class="modal-close" (click)="showCopyConfigModal = false">&times;</button>
+    </div>
+    <div class="modal-body">
+      <p class="copy-config-info">
+        {{ 'copyConfig.info' | translate }} <strong>{{ site?.club_name }}</strong>
+        <span class="badge-type">{{ site?.site_type === 'saas' ? 'SaaS' : 'Pi' }}</span>
+        {{ 'copyConfig.toAnotherSite' | translate }}
+      </p>
+
+      <div class="form-group">
+        <label>{{ 'copyConfig.targetSite' | translate }}</label>
+        <input
+          type="text"
+          [(ngModel)]="copyConfigSearch"
+          (ngModelChange)="filterCopyConfigSites()"
+          [placeholder]="'copyConfig.searchPlaceholder' | translate"
+          class="search-input"
+        />
+      </div>
+
+      <div class="copy-config-site-list" *ngIf="filteredCopyConfigSites.length > 0">
+        <div
+          class="copy-config-site-item"
+          *ngFor="let targetSite of filteredCopyConfigSites"
+          [class.selected]="copyConfigTargetId === targetSite.id"
+          (click)="copyConfigTargetId = targetSite.id"
+        >
+          <div class="site-info">
+            <strong>{{ targetSite.club_name }}</strong>
+            <span class="site-name-sub">{{ targetSite.site_name }}</span>
+          </div>
+          <span class="badge-type">{{ targetSite.site_type === 'saas' ? 'SaaS' : 'Pi' }}</span>
+        </div>
+      </div>
+      <div class="no-results" *ngIf="copyConfigSearch && filteredCopyConfigSites.length === 0">
+        {{ 'copyConfig.noResults' | translate }}
+      </div>
+
+      <div class="copy-config-warning" *ngIf="copyConfigTargetId">
+        {{ 'copyConfig.warning' | translate }}
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" (click)="showCopyConfigModal = false">
+        {{ 'common.cancel' | translate }}
+      </button>
+      <button
+        class="btn btn-primary"
+        (click)="executeCopyConfig()"
+        [disabled]="!copyConfigTargetId || copyingConfig"
+      >
+        {{
+          copyingConfig ? ('copyConfig.copying' | translate) : ('copyConfig.confirm' | translate)
+        }}
+      </button>
     </div>
   </div>
 </div>

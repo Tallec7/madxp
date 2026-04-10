@@ -143,6 +143,13 @@ import { SitesMapComponent } from './components/sites-map/sites-map.component';
                 ✏️
               </button>
               <button
+                class="btn-icon"
+                (click)="duplicateSite(site)"
+                title="Dupliquer le site"
+              >
+                📋
+              </button>
+              <button
                 class="btn-icon btn-danger"
                 (click)="deleteSite(site)"
                 title="Supprimer"
@@ -923,6 +930,55 @@ export class SitesListComponent implements OnInit, OnDestroy {
         const message = ErrorExtractor.getMessage(error);
         this.logger.error('Site update failed', { error: message, siteId: this.editingSite?.id });
         this.notificationService.error(`Erreur lors de la modification du site: ${message}`, {
+          correlationId: ErrorExtractor.getCorrelationId(error)
+        });
+      }
+    });
+  }
+
+  duplicateSite(site: Site): void {
+    // Les sites Pi sont créés depuis le terminal du Pi (register-site.js), pas depuis le dashboard.
+    // La duplication crée toujours un site SaaS, même si la source est un Pi.
+    const targetType: 'pi' | 'saas' = 'saas';
+
+    const sourceLabel = site.site_type === 'saas' ? 'SaaS' : 'Pi';
+    const confirmMessage = site.site_type !== 'saas'
+      ? `Dupliquer le site "${site.club_name}" (${sourceLabel}) en site SaaS ?\n\nLa configuration sera copiée. Pour un site Pi, provisionnez un boîtier via setup-new-club.sh puis copiez la config depuis la fiche site.`
+      : `Dupliquer le site "${site.club_name}" ?\n\nUn nouveau site SaaS sera créé avec la même configuration.`;
+
+    if (!confirm(confirmMessage)) {
+      return;
+    }
+
+    const newSiteData: Partial<Site> = {
+      site_name: `${site.site_name} (copie)`,
+      club_name: `${site.club_name} (copie)`,
+      location: site.location || { city: '', region: '', country: 'France' },
+      sports: site.sports || [],
+      site_type: targetType,
+    };
+
+    this.sitesService.createSite(newSiteData).subscribe({
+      next: (newSite: Site) => {
+        // Copier la configuration du site source vers le nouveau site
+        this.sitesService.copyConfig(site.id, newSite.id).subscribe({
+          next: () => {
+            this.notificationService.success(`Site SaaS "${newSiteData.club_name}" créé avec la configuration copiée`);
+            this.loadSites();
+          },
+          error: (error) => {
+            // Le site est créé mais la config n'a pas été copiée
+            const message = ErrorExtractor.getMessage(error);
+            this.logger.warn('Site created but config copy failed', { error: message, sourceSiteId: site.id, newSiteId: newSite.id });
+            this.notificationService.warning(`Site créé mais la copie de configuration a échoué : ${message}`);
+            this.loadSites();
+          }
+        });
+      },
+      error: (error) => {
+        const message = ErrorExtractor.getMessage(error);
+        this.logger.error('Site duplication failed', { error: message, siteId: site.id });
+        this.notificationService.error(`Erreur lors de la duplication : ${message}`, {
           correlationId: ErrorExtractor.getCorrelationId(error)
         });
       }

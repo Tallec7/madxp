@@ -1002,6 +1002,89 @@
   font-weight: 500;
 }
 
+// Copy Config Modal
+.copy-config-info {
+  margin-bottom: 1rem;
+  color: #475569;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.badge-type {
+  display: inline-block;
+  padding: 0.15rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  background: #e0f2fe;
+  color: #0369a1;
+  margin-left: 0.25rem;
+}
+
+.copy-config-site-list {
+  max-height: 300px;
+  overflow-y: auto;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  margin-top: 0.5rem;
+}
+
+.copy-config-site-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  cursor: pointer;
+  transition: background 0.15s;
+  border-bottom: 1px solid #f1f5f9;
+
+  &:last-child {
+    border-bottom: none;
+  }
+
+  &:hover {
+    background: #f8fafc;
+  }
+
+  &.selected {
+    background: #eff6ff;
+    border-left: 3px solid #2563eb;
+  }
+
+  .site-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+
+    strong {
+      font-size: 0.9rem;
+      color: #1e293b;
+    }
+  }
+
+  .site-name-sub {
+    font-size: 0.8rem;
+    color: #94a3b8;
+  }
+}
+
+.copy-config-warning {
+  margin-top: 1rem;
+  padding: 0.75rem 1rem;
+  background: #fef3c7;
+  border: 1px solid #f59e0b;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  color: #92400e;
+}
+
+.no-results {
+  padding: 1.5rem;
+  text-align: center;
+  color: #94a3b8;
+  font-size: 0.9rem;
+}
+
 @media (max-width: 768px) {
   .saas-metrics-grid {
     grid-template-columns: 1fr 1fr;

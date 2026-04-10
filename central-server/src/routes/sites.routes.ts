@@ -198,6 +198,17 @@ router.post(
   sitesController.regenerateApiKey
 );
 
+// Copy configuration profiles from source site to target site
+router.post(
+  '/:id/copy-config',
+  authenticate,
+  requireRole('admin', 'operator'),
+  sensitiveRateLimit,
+  validateParams(paramSchemas.id),
+  validate(schemas.copyConfig),
+  sitesController.copyConfig
+);
+
 router.post(
   '/:id/command',
   authenticate,

@@ -51,6 +51,10 @@ export class SitesService {
     return this.api.post<Site>(`/sites/${id}/regenerate-key`, {});
   }
 
+  copyConfig(sourceSiteId: string, targetSiteId: string): Observable<{ success: boolean; profiles_copied: number; message: string }> {
+    return this.api.post(`/sites/${sourceSiteId}/copy-config`, { target_site_id: targetSiteId });
+  }
+
   updateSiteStatus(id: string, status: string): void {
     const sites = [...this.sitesSubject.value];
     const index = sites.findIndex(s => s.id === id);

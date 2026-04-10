@@ -1,3 +1,20 @@
+## [3.139.0](https://github.com/Tallec7/neopro/compare/v3.138.4...v3.139.0) (2026-04-10)
+
+### Features
+
+- **sites:** add site config copy and site duplication ([d548517](https://github.com/Tallec7/neopro/commit/d548517))
+  - `POST /api/sites/:id/copy-config` — copy all config profiles from source to target site
+  - "Copier config" button in site-detail header with target site selector modal
+  - "Dupliquer" button on each site card in sites-list (creates SaaS site + copies config)
+  - Works for all combinations: Pi→Pi, Pi→SaaS, SaaS→Pi, SaaS→SaaS
+  - Full i18n support (en/fr/es)
+
+### Bug Fixes
+
+- **sites:** duplicate always creates SaaS site, not Pi ([89165af](https://github.com/Tallec7/neopro/commit/89165af))
+  - Pi sites are provisioned from the terminal via register-site.js, not from the dashboard
+  - When duplicating a Pi source, the confirm dialog explains to use setup-new-club.sh for Pi provisioning
+
 ## [3.138.4](https://github.com/Tallec7/neopro/compare/v3.138.3...v3.138.4) (2026-04-10)
 
 ### Bug Fixes
