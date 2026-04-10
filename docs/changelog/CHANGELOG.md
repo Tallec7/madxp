@@ -1,3 +1,9 @@
+# [3.140.0](https://github.com/Tallec7/neopro/compare/v3.139.0...v3.140.0) (2026-04-10)
+
+### Features
+
+- **dashboard:** add per-site feature overrides for super_admin (ADR-039 Phase 3) ([df295d0](https://github.com/Tallec7/neopro/commit/df295d0990e793e8d235a4e702aec89a908fff11))
+
 # [3.139.0](https://github.com/Tallec7/neopro/compare/v3.138.4...v3.139.0) (2026-04-10)
 
 ### Features
