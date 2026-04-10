@@ -1,3 +1,9 @@
+## [3.138.4](https://github.com/Tallec7/neopro/compare/v3.138.3...v3.138.4) (2026-04-10)
+
+### Bug Fixes
+
+- **server:** exclude pdf-report/ subdirectory from coverage collection ([4927873](https://github.com/Tallec7/neopro/commit/49278733ea3fc0a2c65baf57f03e8538153bc0eb))
+
 ## [3.138.3](https://github.com/Tallec7/neopro/compare/v3.138.2...v3.138.3) (2026-04-09)
 
 ### Bug Fixes
