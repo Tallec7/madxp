@@ -11529,36 +11529,44 @@ describe('ADR-035 Phase 3c: Campaign dashboard components', () => {
     expect(content).toContain('closeCampaignModal');
   });
 
-  it('sponsor-campaigns-tab.component.ts calls /campaigns API endpoints', () => {
+  it('campaign-data.service.ts calls /campaigns API endpoints', () => {
     const content = fs.readFileSync(
-      path.join(repoRoot, 'central-dashboard/src/app/features/advertisers/sponsor-campaigns-tab.component.ts'), 'utf-8'
+      path.join(repoRoot, 'central-dashboard/src/app/features/advertisers/services/campaign-data.service.ts'), 'utf-8'
     );
     expect(content).toContain("'/campaigns'");
     expect(content).toContain('/campaigns/${campaignId}/deploy');
     expect(content).toContain('/campaigns/${campaignId}/undeploy');
+    // API calls for videos
+    expect(content).toContain('/campaigns/${campaignId}/videos');
+    // API calls for sites
+    expect(content).toContain('/campaigns/${campaignId}/sites');
+    expect(content).toContain('/campaigns/resolve-sites');
   });
 
-  it('sponsor-campaigns-tab.component.ts has campaign modal with videos and targeting tabs', () => {
+  it('sponsor-campaigns-tab.component.ts delegates to CampaignDataService and has modal with videos and targeting tabs', () => {
     const content = fs.readFileSync(
       path.join(repoRoot, 'central-dashboard/src/app/features/advertisers/sponsor-campaigns-tab.component.ts'), 'utf-8'
     );
+    // Uses CampaignDataService
+    expect(content).toContain('CampaignDataService');
     // Modal tabs
     expect(content).toContain("campaignModalTab");
-    expect(content).toContain("switchCampaignTab('videos')");
-    expect(content).toContain("switchCampaignTab('targeting')");
     // Video management methods
     expect(content).toContain('loadCampaignVideos');
     expect(content).toContain('addCampaignVideo');
     expect(content).toContain('removeCampaignVideo');
-    // API calls for videos
-    expect(content).toContain('/campaigns/${this.campaignForm.id}/videos');
     // Site targeting methods
     expect(content).toContain('previewTargetSites');
     expect(content).toContain('applyCriteriaToSites');
     expect(content).toContain('loadCampaignSites');
-    // API calls for sites
-    expect(content).toContain('/campaigns/${this.campaignForm.id}/sites');
-    expect(content).toContain('/campaigns/resolve-sites');
+  });
+
+  it('sponsor-campaigns-tab.component.html has campaign modal with videos and targeting tabs', () => {
+    const content = fs.readFileSync(
+      path.join(repoRoot, 'central-dashboard/src/app/features/advertisers/sponsor-campaigns-tab.component.html'), 'utf-8'
+    );
+    expect(content).toContain("switchCampaignTab('videos')");
+    expect(content).toContain("switchCampaignTab('targeting')");
   });
 
   it('shared campaign interfaces are in advertiser-detail.models.ts', () => {
