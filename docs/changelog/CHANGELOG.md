@@ -1,3 +1,9 @@
+## [3.140.2](https://github.com/Tallec7/neopro/compare/v3.140.1...v3.140.2) (2026-04-10)
+
+### Bug Fixes
+
+- **dashboard:** add missing TranslateModule import in CopyConfigModalComponent ([6a20c92](https://github.com/Tallec7/neopro/commit/6a20c92aa005fbbb0a512410257667b1ff9341e5))
+
 ## [3.140.1](https://github.com/Tallec7/neopro/compare/v3.140.0...v3.140.1) (2026-04-10)
 
 ### Bug Fixes
