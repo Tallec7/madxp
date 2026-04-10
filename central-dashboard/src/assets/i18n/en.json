@@ -1027,5 +1027,24 @@
       "done": "Done",
       "removed": "Removed"
     }
+  },
+  "copyConfig": {
+    "title": "Copy configuration",
+    "button": "Copy config",
+    "searchPlaceholder": "Search by club name...",
+    "info": "Copy configuration profiles from",
+    "toAnotherSite": "to another site.",
+    "targetSite": "Target site",
+    "warning": "Warning: this action will replace all existing configuration profiles on the target site.",
+    "confirm": "Copy configuration",
+    "copying": "Copying...",
+    "noResults": "No site found",
+    "duplicate": "Duplicate site",
+    "duplicateConfirm": "Duplicate site \"{{name}}\"?\n\nA new site will be created with the same configuration.",
+    "duplicateSuccess": "Site \"{{name}}\" created with copied configuration",
+    "duplicateConfigFailed": "Site created but configuration copy failed: {{error}}",
+    "duplicateFailed": "Error during duplication: {{error}}",
+    "copyConfirm": "Copy configuration from \"{{source}}\" to \"{{target}}\"?\n\nThis action will replace existing configuration profiles on the target site.",
+    "copyError": "Error during copy: {{error}}"
   }
 }

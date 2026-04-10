@@ -1027,5 +1027,24 @@
   },
   "videoUpload": {
     "recordFromCamera": "[TRANSLATE] Record from camera"
+  },
+  "copyConfig": {
+    "title": "Copiar configuración",
+    "button": "Copiar config",
+    "searchPlaceholder": "Buscar por nombre de club...",
+    "info": "Copiar perfiles de configuración de",
+    "toAnotherSite": "a otro sitio.",
+    "targetSite": "Sitio destino",
+    "warning": "Atención: esta acción reemplazará todos los perfiles de configuración existentes en el sitio destino.",
+    "confirm": "Copiar configuración",
+    "copying": "Copiando...",
+    "noResults": "Ningún sitio encontrado",
+    "duplicate": "Duplicar sitio",
+    "duplicateConfirm": "¿Duplicar el sitio \"{{name}}\"?\n\nSe creará un nuevo sitio con la misma configuración.",
+    "duplicateSuccess": "Sitio \"{{name}}\" creado con la configuración copiada",
+    "duplicateConfigFailed": "Sitio creado pero la copia de configuración falló: {{error}}",
+    "duplicateFailed": "Error durante la duplicación: {{error}}",
+    "copyConfirm": "¿Copiar la configuración de \"{{source}}\" a \"{{target}}\"?\n\nEsta acción reemplazará los perfiles de configuración existentes en el sitio destino.",
+    "copyError": "Error durante la copia: {{error}}"
   }
 }

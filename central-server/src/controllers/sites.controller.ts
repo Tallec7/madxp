@@ -410,6 +410,101 @@ export async function clearRemotePin(req: AuthRequest, res: Response) {
 }
 
 // ============================================================================
+// Copy Configuration
+// ============================================================================
+
+/**
+ * POST /api/sites/:id/copy-config
+ * Copie les profils de configuration d'un site source vers un site cible.
+ * Fonctionne pour toutes les combinaisons Pi/SaaS.
+ */
+export const copyConfig = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id: sourceSiteId } = req.params;
+    const { target_site_id } = req.body;
+
+    // Vérifier que le site source existe
+    const sourceSite = await siteRepository.findById(sourceSiteId);
+    if (!sourceSite) {
+      return res.status(404).json({ error: 'Site source non trouvé' });
+    }
+
+    // Vérifier que le site cible existe et est différent
+    if (sourceSiteId === target_site_id) {
+      return res.status(400).json({ error: 'Le site source et le site cible doivent être différents' });
+    }
+
+    const targetSite = await siteRepository.findById(target_site_id);
+    if (!targetSite) {
+      return res.status(404).json({ error: 'Site cible non trouvé' });
+    }
+
+    // Lire les profils du site source
+    const sourceProfiles = await configProfileRepository.findBySite(sourceSiteId);
+    if (sourceProfiles.length === 0) {
+      return res.status(400).json({ error: 'Le site source n\'a aucun profil de configuration' });
+    }
+
+    // Supprimer les profils existants du site cible
+    const existingTargetProfiles = await configProfileRepository.findBySite(target_site_id);
+    for (const profile of existingTargetProfiles) {
+      await configProfileRepository.deleteById(profile.id);
+    }
+
+    // Copier chaque profil vers le site cible
+    const copiedProfiles = [];
+    for (const profile of sourceProfiles) {
+      const copiedProfile = await configProfileRepository.create({
+        siteId: target_site_id,
+        name: profile.name,
+        displayName: profile.display_name || targetSite.club_name,
+        city: profile.city || undefined,
+        sport: profile.sport || undefined,
+        sortOrder: profile.sort_order,
+        isDefault: profile.is_default,
+        configuration: profile.configuration || {},
+        createdBy: req.user?.id,
+      });
+      copiedProfiles.push(copiedProfile);
+    }
+
+    logger.info('Config profiles copied between sites', {
+      sourceSiteId,
+      sourceSiteName: sourceSite.site_name,
+      targetSiteId: target_site_id,
+      targetSiteName: targetSite.site_name,
+      profilesCopied: copiedProfiles.length,
+      copiedBy: req.user?.email,
+    });
+
+    auditService.log({
+      action: 'CONFIG_COPIED',
+      targetType: 'site',
+      targetId: target_site_id,
+      details: {
+        source_site_id: sourceSiteId,
+        source_site_name: sourceSite.site_name,
+        target_site_name: targetSite.site_name,
+        profiles_copied: copiedProfiles.length,
+      },
+    }, req);
+
+    res.json({
+      success: true,
+      profiles_copied: copiedProfiles.length,
+      source_site: { id: sourceSiteId, name: sourceSite.site_name },
+      target_site: { id: target_site_id, name: targetSite.site_name },
+      message: targetSite.site_type === 'pi'
+        ? 'Configuration copiée. Déployez la configuration vers le Pi pour appliquer les changements.'
+        : 'Configuration copiée et active.',
+    });
+  } catch (error) {
+    logger.error('Copy config error:', error);
+    res.status(500).json({ error: 'Erreur lors de la copie de la configuration' });
+  }
+};
+
+// ============================================================================
 // Re-exports from sub-controllers for backward compatibility
 // ============================================================================
 

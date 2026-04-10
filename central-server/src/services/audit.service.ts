@@ -41,7 +41,9 @@ export type AuditAction =
   | 'SITE_SUSPENDED'
   | 'SITE_REACTIVATED'
   | 'SUBSCRIPTION_PLAN_CHANGED'
-  | 'SUBSCRIPTION_AUTO_UNBLOCKED';
+  | 'SUBSCRIPTION_AUTO_UNBLOCKED'
+  // Config copy
+  | 'CONFIG_COPIED';
 
 interface AuditLogEntry {
   action: AuditAction;

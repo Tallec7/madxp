@@ -143,6 +143,13 @@ import { SitesMapComponent } from './components/sites-map/sites-map.component';
                 ✏️
               </button>
               <button
+                class="btn-icon"
+                (click)="duplicateSite(site)"
+                title="Dupliquer le site"
+              >
+                📋
+              </button>
+              <button
                 class="btn-icon btn-danger"
                 (click)="deleteSite(site)"
                 title="Supprimer"
@@ -923,6 +930,46 @@ export class SitesListComponent implements OnInit, OnDestroy {
         const message = ErrorExtractor.getMessage(error);
         this.logger.error('Site update failed', { error: message, siteId: this.editingSite?.id });
         this.notificationService.error(`Erreur lors de la modification du site: ${message}`, {
+          correlationId: ErrorExtractor.getCorrelationId(error)
+        });
+      }
+    });
+  }
+
+  duplicateSite(site: Site): void {
+    if (!confirm(`Dupliquer le site "${site.club_name}" ?\n\nUn nouveau site sera créé avec la même configuration.`)) {
+      return;
+    }
+
+    const newSiteData: Partial<Site> = {
+      site_name: `${site.site_name} (copie)`,
+      club_name: `${site.club_name} (copie)`,
+      location: site.location || { city: '', region: '', country: 'France' },
+      sports: site.sports || [],
+      site_type: site.site_type || 'pi',
+    };
+
+    this.sitesService.createSite(newSiteData).subscribe({
+      next: (newSite: Site) => {
+        // Copier la configuration du site source vers le nouveau site
+        this.sitesService.copyConfig(site.id, newSite.id).subscribe({
+          next: () => {
+            this.notificationService.success(`Site "${newSiteData.club_name}" créé avec la configuration copiée`);
+            this.loadSites();
+          },
+          error: (error) => {
+            // Le site est créé mais la config n'a pas été copiée
+            const message = ErrorExtractor.getMessage(error);
+            this.logger.warn('Site created but config copy failed', { error: message, sourceSiteId: site.id, newSiteId: newSite.id });
+            this.notificationService.warning(`Site créé mais la copie de configuration a échoué : ${message}`);
+            this.loadSites();
+          }
+        });
+      },
+      error: (error) => {
+        const message = ErrorExtractor.getMessage(error);
+        this.logger.error('Site duplication failed', { error: message, siteId: site.id });
+        this.notificationService.error(`Erreur lors de la duplication : ${message}`, {
           correlationId: ErrorExtractor.getCorrelationId(error)
         });
       }

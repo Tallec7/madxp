@@ -1027,5 +1027,24 @@
       "done": "Terminé",
       "removed": "Retiré"
     }
+  },
+  "copyConfig": {
+    "title": "Copier la configuration",
+    "button": "Copier config",
+    "searchPlaceholder": "Rechercher par nom de club...",
+    "info": "Copie les profils de configuration de",
+    "toAnotherSite": "vers un autre site.",
+    "targetSite": "Site cible",
+    "warning": "Attention : cette action remplacera tous les profils de configuration existants sur le site cible.",
+    "confirm": "Copier la configuration",
+    "copying": "Copie en cours...",
+    "noResults": "Aucun site trouvé",
+    "duplicate": "Dupliquer le site",
+    "duplicateConfirm": "Dupliquer le site \"{{name}}\" ?\n\nUn nouveau site sera créé avec la même configuration.",
+    "duplicateSuccess": "Site \"{{name}}\" créé avec la configuration copiée",
+    "duplicateConfigFailed": "Site créé mais la copie de configuration a échoué : {{error}}",
+    "duplicateFailed": "Erreur lors de la duplication : {{error}}",
+    "copyConfirm": "Copier la configuration de \"{{source}}\" vers \"{{target}}\" ?\n\nCette action remplacera les profils de configuration existants sur le site cible.",
+    "copyError": "Erreur lors de la copie : {{error}}"
   }
 }

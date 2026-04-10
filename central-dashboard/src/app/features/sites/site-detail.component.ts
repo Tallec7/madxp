@@ -108,6 +108,14 @@ export class SiteDetailComponent implements OnInit, OnDestroy, AfterViewChecked 
   // Modals
   showLogsModal = false;
   showSystemInfoModal = false;
+  showCopyConfigModal = false;
+
+  // Copy config
+  copyConfigSearch = '';
+  copyConfigTargetId: string | null = null;
+  copyingConfig = false;
+  allSitesForCopy: Site[] = [];
+  filteredCopyConfigSites: Site[] = [];
 
   // Logs
   logs: string[] = [];
@@ -888,5 +896,71 @@ export class SiteDetailComponent implements OnInit, OnDestroy, AfterViewChecked 
       return `${this.fanStatus.speedPercent}%`;
     }
     return `${this.fanStatus.curState ?? '?'}/${this.fanStatus.maxState ?? '?'}`;
+  }
+
+  // ============================================================
+  // Copy Config
+  // ============================================================
+
+  openCopyConfigModal(): void {
+    this.copyConfigSearch = '';
+    this.copyConfigTargetId = null;
+    this.copyingConfig = false;
+    this.filteredCopyConfigSites = [];
+    this.showCopyConfigModal = true;
+
+    // Charger la liste des sites
+    this.sitesService.loadSites({ limit: 100 }).subscribe({
+      next: (response) => {
+        this.allSitesForCopy = response.sites.filter(s => s.id !== this.siteId);
+        this.filteredCopyConfigSites = this.allSitesForCopy;
+      },
+      error: (error) => {
+        this.logger.error('Failed to load sites for copy config', { error: ErrorExtractor.getMessage(error) });
+      }
+    });
+  }
+
+  filterCopyConfigSites(): void {
+    const search = this.copyConfigSearch.toLowerCase().trim();
+    if (!search) {
+      this.filteredCopyConfigSites = this.allSitesForCopy;
+      return;
+    }
+    this.filteredCopyConfigSites = this.allSitesForCopy.filter(s =>
+      s.club_name.toLowerCase().includes(search) ||
+      s.site_name.toLowerCase().includes(search)
+    );
+    // Deselect if the selected site is no longer visible
+    if (this.copyConfigTargetId && !this.filteredCopyConfigSites.some(s => s.id === this.copyConfigTargetId)) {
+      this.copyConfigTargetId = null;
+    }
+  }
+
+  executeCopyConfig(): void {
+    if (!this.copyConfigTargetId || this.copyingConfig) return;
+
+    const targetSite = this.allSitesForCopy.find(s => s.id === this.copyConfigTargetId);
+    if (!targetSite) return;
+
+    if (!confirm(`Copier la configuration de "${this.site?.club_name}" vers "${targetSite.club_name}" ?\n\nCette action remplacera les profils de configuration existants sur le site cible.`)) {
+      return;
+    }
+
+    this.copyingConfig = true;
+    this.sitesService.copyConfig(this.siteId, this.copyConfigTargetId).subscribe({
+      next: (result) => {
+        this.copyingConfig = false;
+        this.showCopyConfigModal = false;
+        this.notificationService.success(result.message);
+      },
+      error: (error) => {
+        this.copyingConfig = false;
+        const message = ErrorExtractor.getMessage(error);
+        this.notificationService.error(`Erreur lors de la copie : ${message}`, {
+          correlationId: ErrorExtractor.getCorrelationId(error)
+        });
+      }
+    });
   }
 }
