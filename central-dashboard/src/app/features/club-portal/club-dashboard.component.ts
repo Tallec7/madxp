@@ -2,87 +2,12 @@ import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { TranslateModule } from '@ngx-translate/core';
-import { Subscription, interval, switchMap } from 'rxjs';
-import { AuthService } from '../../core/services/auth.service';
-import { ApiService } from '../../core/services/api.service';
+import { Subscription } from 'rxjs';
 import { ClubSaasActionsComponent } from './club-saas-actions.component';
 import { ClubHelpModalComponent } from './club-help-modal.component';
-
-interface SaasDailyPoint {
-  day: string;
-  videosPlayed: number;
-  screenTimeSeconds: number;
-}
-interface SaasTopVideo {
-  filename: string;
-  category: string;
-  plays: number;
-  avgCompletion: number;
-}
-interface SaasActiveProfile {
-  id: string;
-  name: string;
-  displayName: string | null;
-  loopVideoCount: number;
-  sponsorCount: number;
-}
-interface SaasActiveSponsor {
-  id: string;
-  name: string;
-  logoUrl: string | null;
-  videoCount: number;
-  totalImpressions: number;
-}
-interface SaasMetrics {
-  connectedClients: number;
-  todayVideosPlayed: number;
-  todayScreenTime: number;
-  todaySessions: number;
-  weekVideosPlayed: number;
-  weekScreenTime: number;
-  weekCompletionRate: number;
-  weekSponsorsDisplayed: number;
-  yesterdayVideosPlayed?: number;
-  yesterdayScreenTime?: number;
-  previousWeekCompletionRate?: number;
-  previousWeekVideosPlayed?: number;
-  dailySparkline?: SaasDailyPoint[];
-  topVideos?: SaasTopVideo[];
-  activeProfile?: SaasActiveProfile | null;
-  activeSponsors?: SaasActiveSponsor[];
-  lastOtaDeployment?: {
-    version: string;
-    status: string;
-    completedAt: string | null;
-    createdAt: string;
-  } | null;
-  activeAlertsCount?: number;
-}
-
-interface SiteDashboard {
-  site: {
-    id: string;
-    site_name: string;
-    club_name: string;
-    site_type?: string;
-    status?: string;
-    last_seen_at?: string | null;
-    software_version?: string | null;
-  };
-  connection: {
-    isConnected: boolean;
-    lastSeen?: string | null;
-    lastSeenAt?: string | null;
-  };
-  metrics: {
-    storage_used: number;
-    storage_total: number;
-    storage_percent: number;
-    video_count: number;
-    last_video_sync: string | null;
-  } | null;
-  saasMetrics?: SaasMetrics | null;
-}
+import { ClubDashboardDataService, SiteDashboard } from './club-dashboard-data.service';
+import { ClubMetricsService } from './club-metrics.service';
+import { ClubRealtimeService } from './club-realtime.service';
 
 @Component({
   selector: 'app-club-dashboard',
@@ -823,8 +748,9 @@ interface SiteDashboard {
   `]
 })
 export class ClubDashboardComponent implements OnInit, OnDestroy {
-  private readonly authService = inject(AuthService);
-  private readonly api = inject(ApiService);
+  private readonly dataService = inject(ClubDashboardDataService);
+  private readonly metrics = inject(ClubMetricsService);
+  private readonly realtime = inject(ClubRealtimeService);
 
   siteDashboard: SiteDashboard | null = null;
   loading = true;
@@ -835,147 +761,14 @@ export class ClubDashboardComponent implements OnInit, OnDestroy {
     return this.siteDashboard?.site?.site_type === 'saas';
   }
 
-  // Sparkline SVG dimensions (viewBox coordinates — responsive via CSS)
   readonly sparklineWidth = 600;
   readonly sparklineHeight = 100;
-
-  showEmptyStateHint(): boolean {
-    const m = this.siteDashboard?.saasMetrics;
-    if (!m) return false;
-    // SaaS : pas de client connecté + pas d'activité
-    // Pi : pas d'activité sur 7 jours (connectedClients non pertinent)
-    if (this.isSaas) {
-      return (m.connectedClients || 0) === 0 && (m.todayVideosPlayed || 0) === 0;
-    }
-    return (m.todayVideosPlayed || 0) === 0 && (m.weekVideosPlayed || 0) === 0;
-  }
-
-  // ============================================================
-  // #1 Trends (↑↓)
-  // ============================================================
-  private computeTrend(current: number, previous: number): { icon: string; label: string; cls: string } | null {
-    if (!current && !previous) return null;
-    if (previous === 0) {
-      return current > 0 ? { icon: '↑', label: 'Nouveau', cls: 'trend-up' } : null;
-    }
-    const delta = ((current - previous) / previous) * 100;
-    const rounded = Math.round(delta);
-    if (Math.abs(rounded) < 3) return { icon: '→', label: 'stable', cls: 'trend-flat' };
-    if (rounded > 0) return { icon: '↑', label: `+${rounded}%`, cls: 'trend-up' };
-    return { icon: '↓', label: `${rounded}%`, cls: 'trend-down' };
-  }
-
-  getVideosTrend() {
-    const m = this.siteDashboard?.saasMetrics;
-    if (!m || m.yesterdayVideosPlayed === undefined) return null;
-    return this.computeTrend(m.todayVideosPlayed, m.yesterdayVideosPlayed);
-  }
-
-  getScreenTimeTrend() {
-    const m = this.siteDashboard?.saasMetrics;
-    if (!m || m.yesterdayScreenTime === undefined) return null;
-    return this.computeTrend(m.todayScreenTime, m.yesterdayScreenTime);
-  }
-
-  getCompletionTrend() {
-    const m = this.siteDashboard?.saasMetrics;
-    if (!m || m.previousWeekCompletionRate === undefined) return null;
-    // pour la complétion on compare en points de pourcentage, pas en %
-    const delta = m.weekCompletionRate - m.previousWeekCompletionRate;
-    if (Math.abs(delta) < 2) return { icon: '→', label: 'stable', cls: 'trend-flat' };
-    if (delta > 0) return { icon: '↑', label: `+${delta}pts`, cls: 'trend-up' };
-    return { icon: '↓', label: `${delta}pts`, cls: 'trend-down' };
-  }
-
-  // ============================================================
-  // #2 Sparkline
-  // ============================================================
-  hasSparklineData(): boolean {
-    const s = this.siteDashboard?.saasMetrics?.dailySparkline;
-    return !!s && s.length > 1;
-  }
-
-  private getSparklineMax(): number {
-    const s = this.siteDashboard?.saasMetrics?.dailySparkline || [];
-    return Math.max(1, ...s.map((d) => d.videosPlayed));
-  }
-
-  getSparklinePoints(): string {
-    const series = this.siteDashboard?.saasMetrics?.dailySparkline || [];
-    if (series.length === 0) return '';
-    const max = this.getSparklineMax();
-    const pad = 4;
-    const usableW = this.sparklineWidth - pad * 2;
-    const usableH = this.sparklineHeight - pad * 2;
-    const step = series.length > 1 ? usableW / (series.length - 1) : 0;
-    return series
-      .map((d, i) => {
-        const x = pad + i * step;
-        const y = pad + usableH - (d.videosPlayed / max) * usableH;
-        return `${x.toFixed(1)},${y.toFixed(1)}`;
-      })
-      .join(' ');
-  }
-
-  getSparklineArea(): string {
-    const pts = this.getSparklinePoints();
-    if (!pts) return '';
-    const series = this.siteDashboard?.saasMetrics?.dailySparkline || [];
-    const pad = 4;
-    const lastX = pad + (series.length - 1) * ((this.sparklineWidth - pad * 2) / Math.max(1, series.length - 1));
-    const bottomY = this.sparklineHeight - pad;
-    return `${pad},${bottomY} ${pts} ${lastX.toFixed(1)},${bottomY}`;
-  }
-
-  formatSparklineDay(isoDate: string): string {
-    const d = new Date(isoDate);
-    return d.toLocaleDateString('fr-FR', { weekday: 'short' }).replace('.', '');
-  }
-
-  // ============================================================
-  // #3 Top videos
-  // ============================================================
-  formatVideoName(filename: string): string {
-    if (!filename) return '';
-    // Retire le chemin, l'extension et les préfixes numériques style "07_"
-    const base = filename.split('/').pop() || filename;
-    return base
-      .replace(/\.[^.]+$/, '')
-      .replace(/^\d+_/, '')
-      .replace(/_/g, ' ');
-  }
-
-  getLastSeen(): string | null | undefined {
-    return this.siteDashboard?.connection?.lastSeen ?? this.siteDashboard?.connection?.lastSeenAt;
-  }
-
-  formatDuration(seconds: number): string {
-    if (!seconds || seconds < 60) return `${seconds || 0}s`;
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    if (hours > 0) return `${hours}h${minutes.toString().padStart(2, '0')}`;
-    return `${minutes}min`;
-  }
 
   private pollingSubscription?: Subscription;
 
   ngOnInit(): void {
-    this.loadDashboard();
-    // Poll every 30 seconds
-    this.pollingSubscription = interval(30000).pipe(
-      switchMap(() => this.fetchDashboard())
-    ).subscribe({
-      next: (data) => { this.siteDashboard = data; },
-    });
-  }
-
-  ngOnDestroy(): void {
-    this.pollingSubscription?.unsubscribe();
-  }
-
-  private loadDashboard(): void {
     this.loading = true;
-    this.fetchDashboard().subscribe({
+    this.dataService.fetchDashboard().subscribe({
       next: (data) => {
         this.siteDashboard = data;
         this.loading = false;
@@ -985,17 +778,60 @@ export class ClubDashboardComponent implements OnInit, OnDestroy {
         this.loading = false;
       }
     });
+    this.pollingSubscription = this.realtime.startPolling().subscribe({
+      next: (data) => { this.siteDashboard = data; },
+    });
   }
 
-  private fetchDashboard() {
-    const siteId = this.authService.getCurrentUser()?.site_id;
-    return this.api.get<SiteDashboard>(`/sites/${siteId}/dashboard`);
+  ngOnDestroy(): void {
+    this.pollingSubscription?.unsubscribe();
+  }
+
+  getLastSeen(): string | null | undefined {
+    return this.siteDashboard?.connection?.lastSeen ?? this.siteDashboard?.connection?.lastSeenAt;
+  }
+
+  showEmptyStateHint(): boolean {
+    return this.metrics.showEmptyStateHint(this.siteDashboard, this.isSaas);
+  }
+
+  getVideosTrend() {
+    return this.metrics.getVideosTrend(this.siteDashboard?.saasMetrics);
+  }
+
+  getScreenTimeTrend() {
+    return this.metrics.getScreenTimeTrend(this.siteDashboard?.saasMetrics);
+  }
+
+  getCompletionTrend() {
+    return this.metrics.getCompletionTrend(this.siteDashboard?.saasMetrics);
+  }
+
+  hasSparklineData(): boolean {
+    return this.metrics.hasSparklineData(this.siteDashboard?.saasMetrics);
+  }
+
+  getSparklinePoints(): string {
+    return this.metrics.getSparklinePoints(this.siteDashboard?.saasMetrics, this.sparklineWidth, this.sparklineHeight);
+  }
+
+  getSparklineArea(): string {
+    return this.metrics.getSparklineArea(this.siteDashboard?.saasMetrics, this.sparklineWidth, this.sparklineHeight);
+  }
+
+  formatSparklineDay(isoDate: string): string {
+    return this.metrics.formatSparklineDay(isoDate);
+  }
+
+  formatVideoName(filename: string): string {
+    return this.metrics.formatVideoName(filename);
+  }
+
+  formatDuration(seconds: number): string {
+    return this.metrics.formatDuration(seconds);
   }
 
   formatBytes(bytes: number): string {
-    if (!bytes) return '0 B';
-    const units = ['B', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(1024));
-    return `${(bytes / Math.pow(1024, i)).toFixed(1)} ${units[i]}`;
+    return this.metrics.formatBytes(bytes);
   }
 }
