@@ -13,6 +13,7 @@ module.exports = {
     '!src/server.ts',
     // Excluded: PDF generation uses PDFKit streams that are difficult to mock
     '!src/services/pdf-report.service.ts',
+    '!src/services/pdf-report/**',
     // Excluded: Legacy alert service, replaced by alerting.service.ts
     '!src/services/alert.service.ts',
   ],
