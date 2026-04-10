@@ -1,0 +1,585 @@
+<div class="subscriptions-page">
+  <!-- Header -->
+  <div class="page-header">
+    <div class="header-content">
+      <h1>Gestion des Abonnements</h1>
+      <p class="subtitle">Vue d'ensemble et gestion centralisée des licences Neopro</p>
+    </div>
+    <div class="header-actions">
+      <button class="btn btn-secondary" (click)="refreshData()">
+        <span class="icon">🔄</span> Actualiser
+      </button>
+    </div>
+  </div>
+
+  <!-- Stats Cards avec barres gradient -->
+  <div class="stats-grid" *ngIf="stats">
+    <div class="stat-card stat-total">
+      <div class="stat-inner">
+        <div class="stat-icon">📊</div>
+        <div class="stat-content">
+          <span class="stat-value">{{ stats.total_sites }}</span>
+          <span class="stat-label">Sites total</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="stat-card stat-active">
+      <div class="stat-inner">
+        <div class="stat-icon">✅</div>
+        <div class="stat-content">
+          <span class="stat-value">{{ stats.active_sites }}</span>
+          <span class="stat-label">Actifs</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="stat-card stat-warning">
+      <div class="stat-inner">
+        <div class="stat-icon">⚠️</div>
+        <div class="stat-content">
+          <span class="stat-value">{{ stats.expiring_soon }}</span>
+          <span class="stat-label">Expire bientôt (30j)</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="stat-card stat-grace">
+      <div class="stat-inner">
+        <div class="stat-icon">⏳</div>
+        <div class="stat-content">
+          <span class="stat-value">{{ stats.grace_period }}</span>
+          <span class="stat-label">Période de grâce</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="stat-card stat-suspended">
+      <div class="stat-inner">
+        <div class="stat-icon">🚫</div>
+        <div class="stat-content">
+          <span class="stat-value">{{ stats.suspended_sites }}</span>
+          <span class="stat-label">Suspendus</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="stat-card stat-trial">
+      <div class="stat-inner">
+        <div class="stat-icon">🎁</div>
+        <div class="stat-content">
+          <span class="stat-value">{{ stats.trial_sites }}</span>
+          <span class="stat-label">En essai</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading stats -->
+  <div class="stats-grid loading-grid" *ngIf="!stats && loading">
+    <div class="stat-card skeleton" *ngFor="let i of [1, 2, 3, 4, 5, 6]">
+      <div class="skeleton-content"></div>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs-container">
+    <div class="tabs">
+      <button class="tab" [class.active]="activeTab === 'at-risk'" (click)="activeTab = 'at-risk'">
+        <span class="tab-icon">⚠️</span>
+        Sites à risque
+        <span class="tab-badge" *ngIf="sitesAtRisk.length > 0">{{ sitesAtRisk.length }}</span>
+      </button>
+      <button
+        class="tab"
+        [class.active]="activeTab === 'all'"
+        (click)="activeTab = 'all'; loadAllSites()"
+      >
+        <span class="tab-icon">📋</span>
+        Tous les sites
+      </button>
+      <button
+        class="tab"
+        [class.active]="activeTab === 'suspended'"
+        (click)="activeTab = 'suspended'; loadSuspendedSites()"
+      >
+        <span class="tab-icon">🚫</span>
+        Suspendus
+      </button>
+    </div>
+  </div>
+
+  <!-- Tab Content: Sites à risque -->
+  <div class="tab-content" *ngIf="activeTab === 'at-risk'">
+    <div class="section-header">
+      <h2>Sites nécessitant une attention</h2>
+      <p class="section-description">
+        Sites dont l'abonnement expire bientôt, en période de grâce, ou ayant des problèmes de
+        connexion
+      </p>
+    </div>
+
+    <div class="sites-table" *ngIf="sitesAtRisk.length > 0; else noAtRisk">
+      <table>
+        <thead>
+          <tr>
+            <th>Site</th>
+            <th>Statut</th>
+            <th>Expiration</th>
+            <th>Risque</th>
+            <th>Dernière connexion</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let site of sitesAtRisk" [class]="'risk-' + site.risk_level">
+            <td class="site-cell">
+              <a [routerLink]="['/sites', site.id]" class="site-link">
+                <strong>{{ site.club_name || site.site_name }}</strong>
+              </a>
+              <span class="site-location" *ngIf="site.location?.city">
+                {{ site.location?.city }}
+              </span>
+            </td>
+            <td>
+              <app-subscription-badge
+                [subscriptionEnd]="site.subscription_end"
+                [plan]="site.subscription_plan"
+                [suspended]="site.suspended"
+                [suspensionReason]="site.suspension_reason"
+                [showText]="true"
+              ></app-subscription-badge>
+            </td>
+            <td>
+              <span *ngIf="site.subscription_end">
+                {{ site.subscription_end | date: 'dd/MM/yyyy' }}
+              </span>
+              <span class="text-muted" *ngIf="!site.subscription_end">Non définie</span>
+            </td>
+            <td>
+              <span class="risk-badge" [class]="'risk-' + site.risk_level">
+                {{ getRiskLabel(site.risk_level) }}
+              </span>
+              <span class="risk-reason">{{ site.risk_reason || '' }}</span>
+            </td>
+            <td>
+              <span *ngIf="site.last_seen_at">
+                {{ getRelativeTime(site.last_seen_at) }}
+              </span>
+              <span class="text-muted" *ngIf="!site.last_seen_at">Jamais</span>
+            </td>
+            <td class="actions-cell">
+              <button
+                class="btn btn-sm btn-primary"
+                (click)="openConfigModal(site)"
+                title="Configurer"
+              >
+                ⚙️
+              </button>
+              <button
+                class="btn btn-sm btn-warning"
+                *ngIf="!site.suspended"
+                (click)="openSuspendModal(site)"
+                title="Suspendre"
+              >
+                🚫
+              </button>
+              <button
+                class="btn btn-sm btn-success"
+                *ngIf="site.suspended"
+                (click)="openReactivateModal(site)"
+                title="Réactiver"
+              >
+                ✅
+              </button>
+              <a
+                [routerLink]="['/sites', site.id]"
+                class="btn btn-sm btn-secondary"
+                title="Voir détails"
+              >
+                👁️
+              </a>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <ng-template #noAtRisk>
+      <div class="empty-state">
+        <div class="empty-icon">🎉</div>
+        <h3>Aucun site à risque</h3>
+        <p>Tous les abonnements sont en règle</p>
+      </div>
+    </ng-template>
+  </div>
+
+  <!-- Tab Content: Tous les sites -->
+  <div class="tab-content" *ngIf="activeTab === 'all'">
+    <div class="section-header">
+      <h2>Tous les sites</h2>
+      <div class="filters">
+        <select [(ngModel)]="filterStatus" (change)="applyFilters()">
+          <option value="">Tous les statuts</option>
+          <option value="active">Actifs</option>
+          <option value="expiring_soon">Expire bientôt</option>
+          <option value="grace_period">Période de grâce</option>
+          <option value="suspended">Suspendus</option>
+          <option value="blocked">Bloqués</option>
+          <option value="trial">En essai</option>
+        </select>
+        <select [(ngModel)]="filterPlan" (change)="applyFilters()">
+          <option value="">Tous les plans</option>
+          <option value="trial">Trial</option>
+          <option value="standard">Standard</option>
+          <option value="premium">Premium</option>
+        </select>
+        <input
+          type="text"
+          [(ngModel)]="searchQuery"
+          (input)="applyFilters()"
+          placeholder="{{ 'common.searchPlaceholder' | translate }}"
+          class="search-input"
+        />
+      </div>
+    </div>
+
+    <div class="sites-table" *ngIf="filteredSites.length > 0; else noSites">
+      <table>
+        <thead>
+          <tr>
+            <th (click)="sortBy('club_name')" class="sortable">
+              Site
+              <span class="sort-icon" *ngIf="sortColumn === 'club_name'">
+                {{ sortDirection === 'asc' ? '↑' : '↓' }}
+              </span>
+            </th>
+            <th (click)="sortBy('subscription_plan')" class="sortable">
+              Plan
+              <span class="sort-icon" *ngIf="sortColumn === 'subscription_plan'">
+                {{ sortDirection === 'asc' ? '↑' : '↓' }}
+              </span>
+            </th>
+            <th>Statut</th>
+            <th (click)="sortBy('subscription_end')" class="sortable">
+              Expiration
+              <span class="sort-icon" *ngIf="sortColumn === 'subscription_end'">
+                {{ sortDirection === 'asc' ? '↑' : '↓' }}
+              </span>
+            </th>
+            <th>Connexion</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let site of filteredSites">
+            <td class="site-cell">
+              <a [routerLink]="['/sites', site.id]" class="site-link">
+                <strong>{{ site.club_name || site.site_name }}</strong>
+              </a>
+            </td>
+            <td>
+              <span class="plan-badge" [class]="'plan-' + (site.subscription_plan || 'standard')">
+                {{ getPlanLabel(site.subscription_plan) }}
+              </span>
+            </td>
+            <td>
+              <app-subscription-badge
+                [subscriptionEnd]="site.subscription_end ?? null"
+                [plan]="site.subscription_plan ?? 'standard'"
+                [suspended]="site.suspended ?? false"
+                [suspensionReason]="site.suspension_reason ?? null"
+                [showText]="true"
+              ></app-subscription-badge>
+            </td>
+            <td>
+              <span *ngIf="site.subscription_end">
+                {{ site.subscription_end | date: 'dd/MM/yyyy' }}
+              </span>
+              <span class="text-muted" *ngIf="!site.subscription_end">Non définie</span>
+            </td>
+            <td>
+              <span class="connection-status" [class.online]="site.status === 'online'">
+                {{ site.status === 'online' ? '🟢' : '🔴' }}
+                {{ site.status === 'online' ? 'En ligne' : 'Hors ligne' }}
+              </span>
+            </td>
+            <td class="actions-cell">
+              <button
+                class="btn btn-sm btn-primary"
+                (click)="openConfigModal(site)"
+                title="Configurer"
+              >
+                ⚙️
+              </button>
+              <button
+                class="btn btn-sm btn-warning"
+                *ngIf="!site.suspended"
+                (click)="openSuspendModal(site)"
+                title="Suspendre"
+              >
+                🚫
+              </button>
+              <button
+                class="btn btn-sm btn-success"
+                *ngIf="site.suspended"
+                (click)="openReactivateModal(site)"
+                title="Réactiver"
+              >
+                ✅
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <ng-template #noSites>
+      <div class="empty-state" *ngIf="!loadingAllSites">
+        <div class="empty-icon">🔍</div>
+        <h3>Aucun site trouvé</h3>
+        <p>Modifiez vos filtres pour voir plus de résultats</p>
+      </div>
+      <div class="loading-state" *ngIf="loadingAllSites">
+        <div class="spinner"></div>
+        <p>Chargement des sites...</p>
+      </div>
+    </ng-template>
+  </div>
+
+  <!-- Tab Content: Suspendus -->
+  <div class="tab-content" *ngIf="activeTab === 'suspended'">
+    <div class="section-header">
+      <h2>Sites suspendus</h2>
+      <p class="section-description">Sites actuellement suspendus et bloqués</p>
+    </div>
+
+    <div class="sites-table" *ngIf="suspendedSites.length > 0; else noSuspended">
+      <table>
+        <thead>
+          <tr>
+            <th>Site</th>
+            <th>Motif</th>
+            <th>Date suspension</th>
+            <th>Note</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let site of suspendedSites">
+            <td class="site-cell">
+              <a [routerLink]="['/sites', site.id]" class="site-link">
+                <strong>{{ site.club_name || site.site_name }}</strong>
+              </a>
+            </td>
+            <td>
+              <span class="reason-badge">
+                {{ getReasonLabel(site.suspension_reason) }}
+              </span>
+            </td>
+            <td>
+              <span *ngIf="site.suspension_date">
+                {{ site.suspension_date | date: 'dd/MM/yyyy HH:mm' }}
+              </span>
+            </td>
+            <td class="note-cell">
+              <span class="note-text" *ngIf="site.suspension_note">
+                {{ site.suspension_note }}
+              </span>
+              <span class="text-muted" *ngIf="!site.suspension_note">-</span>
+            </td>
+            <td class="actions-cell">
+              <button
+                class="btn btn-sm btn-success"
+                (click)="openReactivateModal(site)"
+                title="Réactiver"
+              >
+                ✅ Réactiver
+              </button>
+              <a
+                [routerLink]="['/sites', site.id]"
+                class="btn btn-sm btn-secondary"
+                title="Voir détails"
+              >
+                👁️
+              </a>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <ng-template #noSuspended>
+      <div class="empty-state" *ngIf="!loadingSuspended">
+        <div class="empty-icon">✅</div>
+        <h3>Aucun site suspendu</h3>
+        <p>Tous les sites sont actifs</p>
+      </div>
+      <div class="loading-state" *ngIf="loadingSuspended">
+        <div class="spinner"></div>
+        <p>Chargement...</p>
+      </div>
+    </ng-template>
+  </div>
+
+  <!-- Modal: Configurer l'abonnement -->
+  <div class="modal-overlay" *ngIf="showConfigModal" (click)="closeModals()">
+    <div class="modal" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3>Configurer l'abonnement</h3>
+        <button class="modal-close" (click)="closeModals()">×</button>
+      </div>
+      <div class="modal-body">
+        <p class="modal-site-name">{{ selectedSite?.club_name || selectedSite?.site_name }}</p>
+
+        <div class="form-group">
+          <label>Plan</label>
+          <select [(ngModel)]="configForm.plan" class="form-control">
+            <option value="trial">Essai</option>
+            <option value="standard">Standard</option>
+            <option value="premium">Premium</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Date de début</label>
+          <input type="date" [(ngModel)]="configForm.startDate" class="form-control" />
+        </div>
+
+        <div class="form-group">
+          <label>Date de fin</label>
+          <input type="date" [(ngModel)]="configForm.endDate" class="form-control" />
+          <div class="date-shortcuts">
+            <button class="btn btn-outline btn-sm" (click)="setConfigEndDate(1)">+1 mois</button>
+            <button class="btn btn-outline btn-sm" (click)="setConfigEndDate(3)">+3 mois</button>
+            <button class="btn btn-outline btn-sm" (click)="setConfigEndDate(6)">+6 mois</button>
+            <button class="btn btn-outline btn-sm" (click)="setConfigEndDate(12)">+1 an</button>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Note (optionnel)</label>
+          <textarea
+            [(ngModel)]="configForm.note"
+            class="form-control"
+            placeholder="Raison de la modification..."
+            rows="3"
+          ></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" (click)="closeModals()">Annuler</button>
+        <button class="btn btn-primary" (click)="submitConfig()" [disabled]="submitting">
+          {{ submitting ? 'Enregistrement...' : 'Enregistrer' }}
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Suspendre -->
+  <div class="modal-overlay" *ngIf="showSuspendModal" (click)="closeModals()">
+    <div class="modal" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3>Suspendre le site</h3>
+        <button class="modal-close" (click)="closeModals()">×</button>
+      </div>
+      <div class="modal-body">
+        <p class="modal-site-name">{{ selectedSite?.club_name || selectedSite?.site_name }}</p>
+
+        <div class="warning-box">
+          <span class="warning-icon">⚠️</span>
+          <p>La suspension bloquera immédiatement l'accès à /tv et /remote sur ce site.</p>
+        </div>
+
+        <div class="form-group">
+          <label>Motif de suspension *</label>
+          <select [(ngModel)]="suspendForm.reason" class="form-control" required>
+            <option value="">Sélectionner un motif...</option>
+            <option *ngFor="let reason of suspensionReasons" [value]="reason.code">
+              {{ reason.label }}
+            </option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Note (optionnel)</label>
+          <textarea
+            [(ngModel)]="suspendForm.note"
+            class="form-control"
+            placeholder="Détails supplémentaires..."
+            rows="3"
+          ></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" (click)="closeModals()">Annuler</button>
+        <button
+          class="btn btn-danger"
+          (click)="submitSuspend()"
+          [disabled]="!suspendForm.reason || submitting"
+        >
+          {{ submitting ? 'Suspension...' : 'Suspendre' }}
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Réactiver -->
+  <div class="modal-overlay" *ngIf="showReactivateModal" (click)="closeModals()">
+    <div class="modal" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3>Réactiver le site</h3>
+        <button class="modal-close" (click)="closeModals()">×</button>
+      </div>
+      <div class="modal-body">
+        <p class="modal-site-name">{{ selectedSite?.club_name || selectedSite?.site_name }}</p>
+
+        <div class="info-box">
+          <p>
+            <strong>Motif de suspension :</strong>
+            {{ getReasonLabel(selectedSite?.suspension_reason) }}
+          </p>
+          <p *ngIf="selectedSite?.suspension_note">
+            <strong>Note :</strong> {{ selectedSite?.suspension_note }}
+          </p>
+        </div>
+
+        <div class="form-group">
+          <label>
+            <input type="checkbox" [(ngModel)]="reactivateForm.extendSubscription" />
+            Prolonger l'abonnement lors de la réactivation
+          </label>
+        </div>
+
+        <div class="form-group" *ngIf="reactivateForm.extendSubscription">
+          <label>Nouvelle date d'expiration</label>
+          <input type="date" [(ngModel)]="reactivateForm.newEndDate" class="form-control" />
+          <div class="date-shortcuts">
+            <button class="btn btn-outline btn-sm" (click)="setReactivateDate(1)">+1 mois</button>
+            <button class="btn btn-outline btn-sm" (click)="setReactivateDate(3)">+3 mois</button>
+            <button class="btn btn-outline btn-sm" (click)="setReactivateDate(12)">+1 an</button>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Note (optionnel)</label>
+          <textarea
+            [(ngModel)]="reactivateForm.note"
+            class="form-control"
+            placeholder="Raison de la réactivation..."
+            rows="3"
+          ></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" (click)="closeModals()">Annuler</button>
+        <button
+          class="btn btn-success"
+          (click)="submitReactivate()"
+          [disabled]="
+            submitting || (reactivateForm.extendSubscription && !reactivateForm.newEndDate)
+          "
+        >
+          {{ submitting ? 'Réactivation...' : 'Réactiver' }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
