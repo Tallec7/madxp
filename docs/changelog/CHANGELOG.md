@@ -1,3 +1,9 @@
+# [3.139.0](https://github.com/Tallec7/neopro/compare/v3.138.4...v3.139.0) (2026-04-10)
+
+### Features
+
+- **sites:** add config copy and site duplication ([#437](https://github.com/Tallec7/neopro/issues/437)) ([fb540a7](https://github.com/Tallec7/neopro/commit/fb540a7757859684f52aab62d3cd9ec3d656a661))
+
 ## [3.139.0](https://github.com/Tallec7/neopro/compare/v3.138.4...v3.139.0) (2026-04-10)
 
 ### Features
