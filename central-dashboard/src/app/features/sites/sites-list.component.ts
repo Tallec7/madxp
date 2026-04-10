@@ -937,7 +937,16 @@ export class SitesListComponent implements OnInit, OnDestroy {
   }
 
   duplicateSite(site: Site): void {
-    if (!confirm(`Dupliquer le site "${site.club_name}" ?\n\nUn nouveau site sera créé avec la même configuration.`)) {
+    // Les sites Pi sont créés depuis le terminal du Pi (register-site.js), pas depuis le dashboard.
+    // La duplication crée toujours un site SaaS, même si la source est un Pi.
+    const targetType: 'pi' | 'saas' = 'saas';
+
+    const sourceLabel = site.site_type === 'saas' ? 'SaaS' : 'Pi';
+    const confirmMessage = site.site_type !== 'saas'
+      ? `Dupliquer le site "${site.club_name}" (${sourceLabel}) en site SaaS ?\n\nLa configuration sera copiée. Pour un site Pi, provisionnez un boîtier via setup-new-club.sh puis copiez la config depuis la fiche site.`
+      : `Dupliquer le site "${site.club_name}" ?\n\nUn nouveau site SaaS sera créé avec la même configuration.`;
+
+    if (!confirm(confirmMessage)) {
       return;
     }
 
@@ -946,7 +955,7 @@ export class SitesListComponent implements OnInit, OnDestroy {
       club_name: `${site.club_name} (copie)`,
       location: site.location || { city: '', region: '', country: 'France' },
       sports: site.sports || [],
-      site_type: site.site_type || 'pi',
+      site_type: targetType,
     };
 
     this.sitesService.createSite(newSiteData).subscribe({
@@ -954,7 +963,7 @@ export class SitesListComponent implements OnInit, OnDestroy {
         // Copier la configuration du site source vers le nouveau site
         this.sitesService.copyConfig(site.id, newSite.id).subscribe({
           next: () => {
-            this.notificationService.success(`Site "${newSiteData.club_name}" créé avec la configuration copiée`);
+            this.notificationService.success(`Site SaaS "${newSiteData.club_name}" créé avec la configuration copiée`);
             this.loadSites();
           },
           error: (error) => {
