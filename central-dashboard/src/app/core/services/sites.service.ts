@@ -278,10 +278,6 @@ export class SitesService {
   // Config Copy & Site Duplication
   // ============================================================================
 
-  copyConfig(sourceSiteId: string, targetSiteId: string): Observable<{ success: boolean; message: string; profiles: unknown[] }> {
-    return this.api.post(`/sites/${sourceSiteId}/copy-config`, { target_site_id: targetSiteId });
-  }
-
   duplicateSite(sourceSiteId: string, siteName?: string): Observable<Site & { api_key: string; profilesCopied: number }> {
     return this.api.post(`/sites/${sourceSiteId}/duplicate`, { site_name: siteName });
   }
