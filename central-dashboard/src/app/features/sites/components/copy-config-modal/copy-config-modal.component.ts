@@ -1,6 +1,7 @@
 import { Component, EventEmitter, Input, Output, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { TranslateModule } from '@ngx-translate/core';
 import { SitesService } from '../../../../core/services/sites.service';
 import { NotificationService } from '../../../../core/services/notification.service';
 import { Site } from '../../../../core/models';
@@ -8,7 +9,7 @@ import { Site } from '../../../../core/models';
 @Component({
   selector: 'app-copy-config-modal',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, TranslateModule],
   templateUrl: './copy-config-modal.component.html',
   styleUrls: ['./copy-config-modal.component.scss'],
 })
