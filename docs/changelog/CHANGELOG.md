@@ -1,3 +1,9 @@
+## [3.140.1](https://github.com/Tallec7/neopro/compare/v3.140.0...v3.140.1) (2026-04-10)
+
+### Bug Fixes
+
+- **dashboard:** remove duplicate copyConfig method in SitesService ([ba0d458](https://github.com/Tallec7/neopro/commit/ba0d45870d9405ad64ac017390be475c021c4e8c))
+
 # [3.140.0](https://github.com/Tallec7/neopro/compare/v3.139.0...v3.140.0) (2026-04-10)
 
 ### Features
