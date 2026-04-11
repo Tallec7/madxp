@@ -1,3 +1,9 @@
+## [3.145.6](https://github.com/Tallec7/neopro/compare/v3.145.5...v3.145.6) (2026-04-11)
+
+### Bug Fixes
+
+- **tests:** add missing query mocks for siteRepository.findById in config tests ([460096c](https://github.com/Tallec7/neopro/commit/460096c819bc450dfc07512b3bfb0729f8e375c4))
+
 ## [3.145.5](https://github.com/Tallec7/neopro/compare/v3.145.4...v3.145.5) (2026-04-11)
 
 ### Bug Fixes
