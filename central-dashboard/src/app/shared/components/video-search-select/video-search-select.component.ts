@@ -87,6 +87,10 @@ export interface VideoOptionItem {
   `,
   styles: [
     `
+      :host {
+        display: block;
+      }
+
       .vss {
         position: relative;
         width: 100%;
