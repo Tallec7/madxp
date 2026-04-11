@@ -199,6 +199,7 @@
                 [selectedPath]="sponsor.path"
                 (pathChange)="sponsor.path = $event; onConfigChange()"
                 [placeholder]="'common.selectVideo' | translate"
+                [compact]="true"
               ></app-video-selector>
               <input
                 *ngIf="localVideos.length === 0"
@@ -354,6 +355,7 @@
                       [selectedPath]="video.path"
                       (pathChange)="updateVideo(catIndex, null, vidIndex, 'path', $event)"
                       [placeholder]="'common.selectVideo' | translate"
+                      [compact]="true"
                       class="video-path-selector"
                     ></app-video-selector>
                     <input
@@ -476,6 +478,7 @@
                           [selectedPath]="video.path"
                           (pathChange)="updateVideo(catIndex, subIndex, vidIndex, 'path', $event)"
                           [placeholder]="'common.selectVideo' | translate"
+                          [compact]="true"
                           class="video-path-selector"
                         ></app-video-selector>
                         <input
@@ -615,6 +618,7 @@
                     [selectedPath]="video.path"
                     (pathChange)="updateLoopVideo(tcIndex, vidIndex, 'path', $event)"
                     [placeholder]="'common.selectVideo' | translate"
+                    [compact]="true"
                     class="loop-video-path-selector"
                   ></app-video-selector>
                   <input

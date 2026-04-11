@@ -27,6 +27,7 @@ export interface VideoOption {
         [placeholder]="placeholder"
         [disabled]="disabled"
         [invalid]="required && !selectedPath"
+        [compact]="compact"
         [searchPlaceholder]="'common.searchVideoPlaceholder' | translate"
         [emptyLabel]="'common.noVideoFound' | translate"
       ></app-video-search-select>
@@ -64,6 +65,7 @@ export class VideoSelectorComponent implements OnChanges {
   @Input() disabled: boolean = false;
   @Input() required: boolean = false;
   @Input() showValidation: boolean = true;
+  @Input() compact: boolean = false;
 
   @Output() pathChange = new EventEmitter<string>();
   @Output() videoSelected = new EventEmitter<VideoOption | null>();
