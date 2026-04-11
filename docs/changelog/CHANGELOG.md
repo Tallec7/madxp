@@ -1,3 +1,9 @@
+## [3.142.3](https://github.com/Tallec7/neopro/compare/v3.142.2...v3.142.3) (2026-04-11)
+
+### Bug Fixes
+
+- **templates:** fix image validation, add preview/delete for generated videos ([860a3f1](https://github.com/Tallec7/neopro/commit/860a3f1c26c8d822d996f476c64b83e3ceb5b30f))
+
 ## [3.142.2](https://github.com/Tallec7/neopro/compare/v3.142.1...v3.142.2) (2026-04-11)
 
 ### Bug Fixes
