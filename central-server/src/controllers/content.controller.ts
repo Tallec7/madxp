@@ -8,7 +8,7 @@ import { AuthRequest } from '../types';
 import { videoRepository, deploymentRepository, siteRepository, videoVariantRepository, siteVideoRepository } from '../repositories';
 import type { DisplayType } from '../repositories';
 import deploymentService from '../services/deployment.service';
-import { uploadVideo, uploadVideoFromDisk, deleteVideo as deleteStorageVideo, getVideoUrl, uploadThumbnail, buildThumbnailPath, getThumbnailUrl, buildShardedVideoPath } from '../services/storage.service';
+import { uploadVideo, uploadVideoFromDisk, deleteVideo as deleteStorageVideo, getVideoUrl, uploadThumbnail, buildThumbnailPath, getThumbnailUrl } from '../services/storage.service';
 import thumbnailService from '../services/thumbnail.service';
 import { formatPaginatedResponse } from '../middleware/pagination';
 import { uploadVerificationService, UploadStatus } from '../services/upload-verification.service';

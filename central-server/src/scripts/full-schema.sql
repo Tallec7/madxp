@@ -758,9 +758,20 @@ COMMENT ON COLUMN sites.last_config_sync IS 'Date de dernière synchronisation d
 -- TABLES ADDITIONNELLES (ajoutées post-v2.20)
 -- =============================================================================
 
--- Colonne uploaded_for_site_id pour upload contextuel
+-- Colonne uploaded_for_site_id pour upload contextuel (DEPRECATED ADR-048 — utiliser site_videos)
 ALTER TABLE videos ADD COLUMN IF NOT EXISTS uploaded_for_site_id UUID REFERENCES sites(id) ON DELETE SET NULL;
 CREATE INDEX IF NOT EXISTS idx_videos_uploaded_for_site ON videos(uploaded_for_site_id) WHERE uploaded_for_site_id IS NOT NULL;
+
+-- Table pivot site_videos (ADR-048) — relation N:N sites ↔ vidéos
+CREATE TABLE IF NOT EXISTS site_videos (
+  site_id UUID NOT NULL REFERENCES sites(id) ON DELETE CASCADE,
+  video_id UUID NOT NULL REFERENCES videos(id) ON DELETE CASCADE,
+  added_at TIMESTAMP NOT NULL DEFAULT NOW(),
+  added_by UUID REFERENCES users(id) ON DELETE SET NULL,
+  PRIMARY KEY (site_id, video_id)
+);
+CREATE INDEX IF NOT EXISTS idx_site_videos_video_id ON site_videos(video_id);
+CREATE INDEX IF NOT EXISTS idx_site_videos_site_added ON site_videos(site_id, added_at DESC);
 
 -- Colonne orchestrated_deployment_id pour content_deployments
 ALTER TABLE content_deployments ADD COLUMN IF NOT EXISTS orchestrated_deployment_id UUID;
