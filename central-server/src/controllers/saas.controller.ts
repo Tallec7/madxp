@@ -131,9 +131,9 @@ function collectVideoFilenames(
 function applyThumbnails(videos: VideoLike[], thumbnailMap: Map<string, string>): VideoLike[] {
   return videos.map(v => {
     if (v.thumbnailUrl) return v; // Already has a thumbnail
-    const url = v.path as string;
-    // Extract original filename from resolved FTP URL
-    const filename = url?.split('/').pop()?.split('?')[0];
+    // Extract filename from path (before or after URL resolution)
+    const pathStr = v.path as string;
+    const filename = pathStr?.split('/').pop()?.split('?')[0];
     if (filename && thumbnailMap.has(filename)) {
       return { ...v, thumbnailUrl: thumbnailMap.get(filename) };
     }
@@ -219,17 +219,23 @@ export async function getSaasConfig(req: Request, res: Response) {
       }
     }
 
-    const resolvedSponsors = resolveVideoUrls(sponsors, storagePathMap);
-    const resolvedCategories = resolveCategories(categories, storagePathMap);
-    const resolvedTimeCategories = resolveTimeCategories(timeCategories, storagePathMap);
+    // Apply thumbnails BEFORE URL resolution (paths still have original filenames)
+    const sponsorsWithThumbs = applyThumbnails(sponsors, thumbnailMap);
+    const categoriesWithThumbs = applyCategoryThumbnails(categories, thumbnailMap);
+    const timeCategoriesWithThumbs = applyTimeCategoryThumbnails(timeCategories, thumbnailMap);
+
+    // Then resolve video URLs (filename → storage_path)
+    const resolvedSponsors = resolveVideoUrls(sponsorsWithThumbs, storagePathMap);
+    const resolvedCategories = resolveCategories(categoriesWithThumbs, storagePathMap);
+    const resolvedTimeCategories = resolveTimeCategories(timeCategoriesWithThumbs, storagePathMap);
 
     const resolvedConfig = {
       remote: configuration.remote || { title: `Télécommande ${site.club_name || site.site_name}` },
       auth: configuration.auth || { password: '', sessionDuration: 28800000 },
       version: configuration.version || '1.0',
-      sponsors: applyThumbnails(resolvedSponsors, thumbnailMap),
-      categories: applyCategoryThumbnails(resolvedCategories, thumbnailMap),
-      timeCategories: applyTimeCategoryThumbnails(resolvedTimeCategories, thumbnailMap),
+      sponsors: resolvedSponsors,
+      categories: resolvedCategories,
+      timeCategories: resolvedTimeCategories,
       liveScoreEnabled: (configuration.liveScoreEnabled as boolean) ?? false,
       scoreOverlay: configuration.scoreOverlay || null,
       watermark: configuration.watermark || null,
@@ -349,17 +355,23 @@ export async function getSaasProfileConfig(req: Request, res: Response) {
       }
     }
 
-    const resolvedSponsors = resolveVideoUrls(sponsors, storagePathMap);
-    const resolvedCategories = resolveCategories(categories, storagePathMap);
-    const resolvedTimeCategories = resolveTimeCategories(timeCategories, storagePathMap);
+    // Apply thumbnails BEFORE URL resolution (paths still have original filenames)
+    const sponsorsWithThumbs = applyThumbnails(sponsors, thumbnailMap);
+    const categoriesWithThumbs = applyCategoryThumbnails(categories, thumbnailMap);
+    const timeCategoriesWithThumbs = applyTimeCategoryThumbnails(timeCategories, thumbnailMap);
+
+    // Then resolve video URLs (filename → storage_path)
+    const resolvedSponsors = resolveVideoUrls(sponsorsWithThumbs, storagePathMap);
+    const resolvedCategories = resolveCategories(categoriesWithThumbs, storagePathMap);
+    const resolvedTimeCategories = resolveTimeCategories(timeCategoriesWithThumbs, storagePathMap);
 
     const resolvedConfig = {
       remote: configuration.remote || { title: `Télécommande ${profile.display_name || profile.name}` },
       auth: configuration.auth || { password: '', sessionDuration: 28800000 },
       version: configuration.version || '1.0',
-      sponsors: applyThumbnails(resolvedSponsors, thumbnailMap),
-      categories: applyCategoryThumbnails(resolvedCategories, thumbnailMap),
-      timeCategories: applyTimeCategoryThumbnails(resolvedTimeCategories, thumbnailMap),
+      sponsors: resolvedSponsors,
+      categories: resolvedCategories,
+      timeCategories: resolvedTimeCategories,
       liveScoreEnabled: (configuration.liveScoreEnabled as boolean) ?? false,
       scoreOverlay: configuration.scoreOverlay || null,
       watermark: configuration.watermark || null,
