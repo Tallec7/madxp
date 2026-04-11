@@ -12,6 +12,7 @@ import { Request, Response } from 'express';
 import { siteRepository, configProfileRepository, videoRepository } from '../repositories';
 import { getVideoUrl } from '../services/storage.service';
 import { enrichConfigWithAnalyticsMetadata } from '../utils/config-analytics-metadata';
+import { enrichConfigWithDisplayVariants } from '../utils/config-secondary-variants';
 import { SiteConfiguration } from '../types';
 import logger from '../config/logger';
 
@@ -186,6 +187,13 @@ export async function getSaasConfig(req: Request, res: Response) {
       configuration = site.local_config_mirror as Record<string, unknown>;
     }
 
+    // Enrichir avec les variantes display (secondary, etc.) pour le dual-display
+    try {
+      await enrichConfigWithDisplayVariants(configuration as unknown as SiteConfiguration);
+    } catch (err) {
+      logger.warn('SaaS config: enrichConfigWithDisplayVariants failed (non-fatal)', { siteId, error: err });
+    }
+
     // Enrichir avec les métadonnées analytics (video_id, sponsor_id, analytics_category)
     // avant la résolution des URLs pour que resolveVideoUrls préserve ces champs via spread
     try {
@@ -324,6 +332,12 @@ export async function getSaasProfileConfig(req: Request, res: Response) {
     }
 
     const configuration = profile.configuration;
+
+    try {
+      await enrichConfigWithDisplayVariants(configuration as unknown as SiteConfiguration);
+    } catch (err) {
+      logger.warn('SaaS profile config: enrichConfigWithDisplayVariants failed (non-fatal)', { siteId, profileId, error: err });
+    }
 
     try {
       const { enrichedCount } = await enrichConfigWithAnalyticsMetadata(configuration as unknown as SiteConfiguration);
