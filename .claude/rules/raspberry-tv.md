@@ -172,6 +172,7 @@ Contrôle hybride (auto + manuel) de l'enregistrement analytics.
 ### Commands dedupliqués
 
 - Dupliquer le traitement des commandes `action`/`onCommand` inline dans les handlers Socket.IO et BroadcastChannel (utiliser `handleTvCommand()` centralisé avec guard `isDuplicateCommand()`)
+- Revenir à `Subject` pour `command$` dans `local-broadcast.service.ts` (les displays SaaS N > 0 mettent ~5s à charger la config via le resolver HTTP — les commandes émises pendant ce délai sont perdues car le TvComponent n'a pas encore souscrit — le `ReplaySubject(1, 10_000)` buffer la dernière commande et la rejoue aux nouveaux subscribers dans une fenêtre de 10s — smoke test enforced)
 - Supprimer le guard `isDuplicateCommand()` de `handleTvCommand()` (double `play()` → race condition → vidéo gelée)
 
 ### Display & CSS

@@ -19,7 +19,7 @@ ADR-037 a introduit le mode SaaS (navigateur uniquement, sans Pi), mais le porta
 
 Mettre en place quatre quick wins cross-composant (central-server + central-dashboard + raspberry) :
 
-1. **Socket `saas-config-updated`** : après un `saveConfigDirect` sur un site SaaS, `socketService.emitSaasConfigUpdated()` broadcast vers la room `siteId`. Les clients SaaS enregistrés via `saas-register` écoutent cet événement et déclenchent un `window.location.reload()` (préservant `?site=UUID`).
+1. **Socket `saas-config-updated`** : après un `saveConfigDirect` ou un `updateProfileConfiguration` sur un site SaaS, `socketService.emitSaasConfigUpdated()` broadcast vers la room `siteId`. Les clients SaaS enregistrés via `saas-register` écoutent cet événement et déclenchent un `window.location.reload()` (préservant `?site=UUID`).
 2. **Iframe live preview** : ajout d'un panneau toggleable dans `club-loop` affichant l'écran TV SaaS en 16:9 via `DomSanitizer.bypassSecurityTrustResourceUrl`. Même URL que le bouton "Ouvrir l'écran", pas de duplication de logique.
 3. **Endpoint `POST /api/client-errors`** : route publique rate-limitée (`remoteRateLimit`), payload validé par Joi, log structuré Winston. Pas de persistance DB — Winston suffit pour la phase d'observation initiale.
 4. **Route `/club/analytics`** : expose `ClubAnalyticsComponent` au rôle `club` en lisant `siteId` depuis `authService.getCurrentUser()?.site_id` quand le paramètre de route est absent. Back-link devient role-aware (`/club` pour club, `/sites/:id` pour admin/operator).
@@ -45,6 +45,7 @@ Mettre en place quatre quick wins cross-composant (central-server + central-dash
 
 - `src/services/socket.service.ts` — ajout `emitSaasConfigUpdated(siteId, meta)`
 - `src/controllers/config-history.controller.ts` — appel `emitSaasConfigUpdated()` après `saveConfigDirect`
+- `src/controllers/config-profiles.controller.ts` — appel `emitSaasConfigUpdated()` après `updateProfileConfiguration` (SaaS only)
 - `src/routes/client-errors.routes.ts` — nouveau fichier (Joi + Winston + rate limit)
 - `src/server.ts` — mount `/api/client-errors`
 

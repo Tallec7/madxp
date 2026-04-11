@@ -41,5 +41,5 @@ Avec 50+ sites et une croissance vers 5000+ vidéos, le stockage FTP à plat (`/
 - `central-server/src/repositories/video.repository.ts` — queries avec `site_videos` join
 - `central-server/src/scripts/migrations/add-site-videos-pivot.sql` — nouvelle table + migration données
 - `central-server/src/scripts/migrations/migrate-ftp-storage-batch.sql` — script batch (non exécuté auto)
-- `central-server/src/controllers/saas.controller.ts` — adapter résolution URL pour nouveau path
+- `central-server/src/controllers/saas.controller.ts` — résolution URL via batch lookup `filename → storage_path` (storagePathMap) + thumbnails appliquées AVANT résolution pour préserver le matching par filename
 - `raspberry/admin/public/modules/videos/loader.js` — charger thumbnail depuis URL FTP (plus de chemin local)

@@ -47,7 +47,7 @@ Les vidéos uploadées dans le dashboard central doivent être :
 │  storage.service.ts                                              │
 │    → uploadVideo() / uploadVideoFromDisk()                      │
 │    → Upload vers FTP Hostinger                                  │
-│    → storage_path = "filename.mp4"                              │
+│    → storage_path = "filename.mp4" ou "videos/{prefix}/{uuid}.mp4" │
 │    → URL = FTP_PUBLIC_URL + filename                            │
 │                                                                  │
 └──────────────────────────┬──────────────────────────────────────┘
@@ -307,10 +307,11 @@ export const getVideoUrl = (storagePath: string): string => {
 
 ### Exemples
 
-| storage_path          | URL générée                                 |
-| --------------------- | ------------------------------------------- |
-| `video.mp4`           | `https://cdn.neopro.tv/video.mp4`           |
-| `watermarks/logo.png` | `https://cdn.neopro.tv/watermarks/logo.png` |
+| storage_path                                    | URL générée                                                          |
+| ----------------------------------------------- | -------------------------------------------------------------------- |
+| `video.mp4` (ancien, plat)                      | `https://kalonpartners.bzh/neopro-video/video.mp4`                   |
+| `videos/ab/ab3f7c2e-xxxx.mp4` (nouveau, shardé) | `https://kalonpartners.bzh/neopro-video/videos/ab/ab3f7c2e-xxxx.mp4` |
+| `watermarks/logo.png`                           | `https://kalonpartners.bzh/neopro-video/watermarks/logo.png`         |
 
 ---
 
@@ -746,11 +747,15 @@ npx ts-node src/scripts/migrations/migrate-ftp-storage-batch.ts --thumbnails-onl
 
 ### Enrichissement SaaS
 
-Le `saas.controller.ts` enrichit la config avec les `thumbnailUrl` avant de la servir au navigateur SaaS :
+Le `saas.controller.ts` enrichit la config avant de la servir au navigateur SaaS. L'ordre des opérations est critique :
 
 1. Collecte tous les filenames de la config (sponsors, categories, timeCategories)
-2. Batch-lookup `thumbnail_url` via `videoRepository.findThumbnailsByFilenames()`
-3. Injecte `thumbnailUrl` dans chaque entrée vidéo de la réponse
+2. **Batch-lookup `storage_path`** via `videoRepository.findStoragePathsByFilenames()` → `storagePathMap`
+3. **Batch-lookup `thumbnail_url`** via `videoRepository.findThumbnailsByFilenames()` → `thumbnailMap`
+4. **Applique les thumbnails** (`applyThumbnails`) — **AVANT** la résolution des URLs, car les paths contiennent encore les filenames originaux qui matchent la `thumbnailMap`
+5. **Résout les URLs vidéo** (`resolveVideoUrls`) — utilise `storagePathMap` pour transformer `filename → storage_path`, puis `getVideoUrl(storagePath)` pour construire l'URL FTP publique. Fallback sur le filename pour les anciens uploads à plat.
+
+⚠️ **Ordre critique** : inverser les étapes 4 et 5 casse les thumbnails (les storage_paths UUID ne matchent plus les filenames dans `thumbnailMap`).
 
 Le composant Angular `remote.component.ts` supporte déjà `video.thumbnailUrl` (priorité sur le chemin local Pi).
 
