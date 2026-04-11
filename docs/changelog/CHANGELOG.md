@@ -1,3 +1,9 @@
+## [3.147.3](https://github.com/Tallec7/neopro/compare/v3.147.2...v3.147.3) (2026-04-11)
+
+### Bug Fixes
+
+- **server:** add feature_overrides to updateSite Joi schema ([1243c1b](https://github.com/Tallec7/neopro/commit/1243c1b2cf2cb3b5204ef05b6b841c658aa12d3c))
+
 ## [3.147.2](https://github.com/Tallec7/neopro/compare/v3.147.1...v3.147.2) (2026-04-11)
 
 ### Bug Fixes
