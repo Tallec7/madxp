@@ -1,3 +1,9 @@
+## [3.145.5](https://github.com/Tallec7/neopro/compare/v3.145.4...v3.145.5) (2026-04-11)
+
+### Bug Fixes
+
+- **saas:** notify SaaS clients on profile config save and fix diff baseline ([1457815](https://github.com/Tallec7/neopro/commit/1457815257260bc5d2de6a50f08056ed3399f9c8))
+
 ## [3.145.4](https://github.com/Tallec7/neopro/compare/v3.145.3...v3.145.4) (2026-04-11)
 
 ### Bug Fixes
