@@ -27,6 +27,8 @@ export interface VideoOption {
         [placeholder]="placeholder"
         [disabled]="disabled"
         [invalid]="required && !selectedPath"
+        [searchPlaceholder]="'common.searchVideoPlaceholder' | translate"
+        [emptyLabel]="'common.noVideoFound' | translate"
       ></app-video-search-select>
 
       <div class="validation-message" *ngIf="showValidation && selectedPath && !isPathValid()">
