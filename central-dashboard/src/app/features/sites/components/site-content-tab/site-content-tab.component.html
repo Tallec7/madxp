@@ -121,7 +121,29 @@
     [orphanedVideoDetails]="orphanedVideoDetails"
     (configChanged)="markDirty()"
     (repairOrphans)="repairAllOrphanedPaths()"
+    (openVariant)="onOpenVariantFromConfig($event)"
   ></app-config-editor>
+
+  <!-- Secondary Variant Modal (opened from config-editor) -->
+  <div
+    class="variant-modal-overlay"
+    *ngIf="configVariantTarget"
+    (click)="closeConfigVariantModal()"
+  >
+    <div class="variant-modal-content" (click)="$event.stopPropagation()">
+      <div class="variant-modal-header">
+        <h2>Variante ecran secondaire</h2>
+        <button class="variant-modal-close" (click)="closeConfigVariantModal()">&times;</button>
+      </div>
+      <div class="variant-modal-body">
+        <p class="variant-modal-filename">"{{ configVariantTarget.displayName }}"</p>
+        <app-video-variant-panel [videoId]="configVariantTarget.cloudId"></app-video-variant-panel>
+      </div>
+      <div class="variant-modal-footer">
+        <button class="btn btn-secondary" (click)="closeConfigVariantModal()">Fermer</button>
+      </div>
+    </div>
+  </div>
 
   <!-- FAB Preview -->
   <button

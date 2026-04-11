@@ -28,6 +28,7 @@ import { TranslateModule } from '@ngx-translate/core';
 
 import { UnifiedVideoOption, VideoOptionGroupEntry, OrphanedVideoDetail } from './content-tab.models';
 import { VideoManagerComponent } from './video-manager/video-manager.component';
+import { VideoVariantPanelComponent } from '../../../content/video-variant-panel.component';
 import { ConfigEditorComponent } from './config-editor/config-editor.component';
 import { DeploymentStatusComponent } from './deployment-status/deployment-status.component';
 import { ConfigDraftComponent } from './config-draft/config-draft.component';
@@ -41,7 +42,8 @@ import { ConfigDraftComponent } from './config-draft/config-draft.component';
     VideoManagerComponent,
     ConfigEditorComponent,
     DeploymentStatusComponent,
-    ConfigDraftComponent
+    ConfigDraftComponent,
+    VideoVariantPanelComponent
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './site-content-tab.component.html',
@@ -87,6 +89,7 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
   // Secondary display
   secondaryVariantVideoIds: Set<string> = new Set();
   secondaryDisplayEnabled = false;
+  configVariantTarget: { cloudId: string; displayName: string } | null = null;
 
   // Orphaned videos
   orphanedVideoCount = 0;
@@ -903,6 +906,21 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
       this.markDirty();
       this.detectOrphanedVideoPaths();
     }
+  }
+
+  // ============================================================================
+  // Secondary Variant (from config-editor)
+  // ============================================================================
+
+  onOpenVariantFromConfig(event: { cloudId: string; displayName: string }): void {
+    this.configVariantTarget = event;
+    this.cdr.markForCheck();
+  }
+
+  closeConfigVariantModal(): void {
+    this.configVariantTarget = null;
+    this.loadContent();
+    this.cdr.markForCheck();
   }
 
   // ============================================================================

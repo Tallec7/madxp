@@ -178,8 +178,9 @@ import { VideoSearchSelectComponent } from '../../../../../shared/components/vid
                     placeholder="Nom affiché"
                     class="video-name-compact"
                   />
-                  <span class="cloud-badge" *ngIf="isCloudVideoPath(video.path)" title="Sera déployée automatiquement">⏳</span>
-                  <span class="secondary-variant-badge" *ngIf="hasSecondaryVariantForPath(video.path)" title="Variante secondaire disponible">📺 2nd</span>
+                  <span class="cloud-badge" *ngIf="siteType !== 'saas' && isCloudVideoPath(video.path)" title="Sera déployée automatiquement">⏳</span>
+                  <button class="btn-variant-tiny" *ngIf="hasSecondaryVariantForPath(video.path)" (click)="onOpenVariant(video.path); $event.stopPropagation()" title="Gérer la variante secondaire">📺 2nd</button>
+                  <button class="btn-variant-add-tiny" *ngIf="!hasSecondaryVariantForPath(video.path) && canAddVariantForPath(video.path)" (click)="onOpenVariant(video.path); $event.stopPropagation()" title="Ajouter variante secondaire">📺+</button>
                   <span class="sponsor-badge-auto" *ngIf="getCategorySponsor(video.path) as sponsor" [title]="'Associé au sponsor ' + sponsor.name">🔗 {{ sponsor.name }}</span>
                   <button class="btn-remove-tiny" (click)="removeVideoFromCategory(catIndex, vidIndex)">×</button>
                 </div>
@@ -226,8 +227,9 @@ import { VideoSearchSelectComponent } from '../../../../../shared/components/vid
                         placeholder="Nom affiché"
                         class="video-name-compact"
                       />
-                      <span class="cloud-badge" *ngIf="isCloudVideoPath(video.path)" title="Sera déployée automatiquement">⏳</span>
-                      <span class="secondary-variant-badge" *ngIf="hasSecondaryVariantForPath(video.path)" title="Variante secondaire disponible">📺 2nd</span>
+                      <span class="cloud-badge" *ngIf="siteType !== 'saas' && isCloudVideoPath(video.path)" title="Sera déployée automatiquement">⏳</span>
+                      <button class="btn-variant-tiny" *ngIf="hasSecondaryVariantForPath(video.path)" (click)="onOpenVariant(video.path); $event.stopPropagation()" title="Gérer la variante secondaire">📺 2nd</button>
+                      <button class="btn-variant-add-tiny" *ngIf="!hasSecondaryVariantForPath(video.path) && canAddVariantForPath(video.path)" (click)="onOpenVariant(video.path); $event.stopPropagation()" title="Ajouter variante secondaire">📺+</button>
                       <span class="sponsor-badge-auto" *ngIf="getCategorySponsor(video.path) as sponsor" [title]="'Associé au sponsor ' + sponsor.name">🔗 {{ sponsor.name }}</span>
                       <button class="btn-remove-tiny" (click)="removeVideoFromSubcategory(catIndex, subIndex, vidIndex)">×</button>
                     </div>
@@ -650,7 +652,7 @@ import { VideoSearchSelectComponent } from '../../../../../shared/components/vid
 
     .cloud-badge { font-size: 0.75rem; color: #92400e; }
 
-    .secondary-variant-badge {
+    .btn-variant-tiny {
       display: inline-block;
       font-size: 0.7rem;
       color: #1e40af;
@@ -659,7 +661,22 @@ import { VideoSearchSelectComponent } from '../../../../../shared/components/vid
       border-radius: 4px;
       padding: 0.1rem 0.35rem;
       font-weight: 600;
+      cursor: pointer;
     }
+    .btn-variant-tiny:hover { background: #dbeafe; }
+
+    .btn-variant-add-tiny {
+      display: inline-block;
+      font-size: 0.7rem;
+      color: #6b7280;
+      background: #f9fafb;
+      border: 1px dashed #d1d5db;
+      border-radius: 4px;
+      padding: 0.1rem 0.35rem;
+      font-weight: 500;
+      cursor: pointer;
+    }
+    .btn-variant-add-tiny:hover { background: #eff6ff; color: #1e40af; border-color: #93c5fd; }
 
     /* Secondary Display Preview (Phase 3 — PROP-002) */
     .secondary-preview-list {
@@ -955,6 +972,7 @@ export class ConfigEditorComponent {
 
   @Output() configChanged = new EventEmitter<void>();
   @Output() repairOrphans = new EventEmitter<void>();
+  @Output() openVariant = new EventEmitter<{ cloudId: string; displayName: string }>();
 
   expandedCategories: boolean[] = [];
   showJson = false;
@@ -1101,6 +1119,18 @@ export class ConfigEditorComponent {
     if (!this.secondaryDisplayEnabled) return false;
     const video = this.unifiedVideoOptions.find(v => v.path === path);
     return video?.hasSecondaryVariant ?? false;
+  }
+
+  canAddVariantForPath(path: string): boolean {
+    if (!this.secondaryDisplayEnabled) return false;
+    const video = this.unifiedVideoOptions.find(v => v.path === path);
+    return !!video?.cloudId;
+  }
+
+  onOpenVariant(path: string): void {
+    const video = this.unifiedVideoOptions.find(v => v.path === path);
+    if (!video?.cloudId) return;
+    this.openVariant.emit({ cloudId: video.cloudId, displayName: video.displayName });
   }
 
   getSecondaryPlaylistVideos(): { path: string; displayName: string; hasVariant: boolean }[] {
