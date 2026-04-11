@@ -1,0 +1,18 @@
+{
+  "name": "neopro-poc-stramatel",
+  "version": "0.1.0",
+  "private": true,
+  "description": "POC standalone pour valider la lecture d'une console Stramatel via RS-485 ou Serial-to-Ethernet. Voir PROP-003.",
+  "main": "test-stramatel-listener.js",
+  "scripts": {
+    "start": "node test-stramatel-listener.js",
+    "start:tcp": "node test-stramatel-listener.js --tcp 192.168.1.50:4001",
+    "start:raw": "node test-stramatel-listener.js --raw"
+  },
+  "dependencies": {
+    "serialport": "^12.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
