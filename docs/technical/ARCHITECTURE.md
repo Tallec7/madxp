@@ -261,7 +261,8 @@ neopro/ (monorepo)
 │   │   └── shared/components/                   # Composants réutilisables cross-features
 │   │       ├── video-upload-zone/               # Upload drag-and-drop vidéo (générique)
 │   │       ├── remote-preview/                  # Mockup télécommande (OnPush, cachés)
-│   │       ├── video-selector/                  # Sélecteur vidéo
+│   │       ├── video-search-select/              # Dropdown searchable (autocomplete, compact, drop-up)
+│   │       ├── video-selector/                  # Wrapper video-search-select avec groupes auto
 │   │       ├── confirm-dialog/                  # Dialog de confirmation
 │   │       ├── language-selector/               # Sélecteur de langue
 │   │       ├── subscription-badge/              # Badge abonnement

@@ -16380,4 +16380,88 @@ describe('PROP-002 Phase 5: N-display model guards', () => {
     expect(content).not.toMatch(/private resolveSecondaryVariant/);
     expect(content).toMatch(/private resolveDisplayVariant/);
   });
+
+  // --- video-search-select must use fixed positioning and display:block ---
+  it('video-search-select must use position:fixed dropdown and :host display:block', () => {
+    const content = fs.readFileSync(
+      path.join(repoRoot, 'central-dashboard/src/app/shared/components/video-search-select/video-search-select.component.ts'),
+      'utf8'
+    );
+    expect({
+      hasHostDisplayBlock: /:\s*host\s*\{[^}]*display\s*:\s*block/.test(content),
+      hasFixedDropdown: /\.vss__dropdown\s*\{[^}]*position\s*:\s*fixed/.test(content),
+      hasDropUpSupport: content.includes('vss--dropup'),
+      hasCompactInput: /@Input\(\)\s*compact/.test(content),
+    }).toEqual({
+      hasHostDisplayBlock: true,
+      hasFixedDropdown: true,
+      hasDropUpSupport: true,
+      hasCompactInput: true,
+    });
+  });
+
+  // --- config-editors must NOT use native <select> for video selection ---
+  it('embedded config-editor must use video-search-select (not native select) for videos', () => {
+    const content = fs.readFileSync(
+      path.join(repoRoot, 'central-dashboard/src/app/features/sites/components/site-content-tab/config-editor/config-editor.component.ts'),
+      'utf8'
+    );
+    expect({
+      importsVideoSearchSelect: content.includes('VideoSearchSelectComponent'),
+      usesAppVideoSearchSelect: content.includes('app-video-search-select'),
+      noNativeSelectForVideos: !/<select[\s\S]*?class="video-select/.test(content),
+      usesCompact: content.includes('[compact]="true"'),
+    }).toEqual({
+      importsVideoSearchSelect: true,
+      usesAppVideoSearchSelect: true,
+      noNativeSelectForVideos: true,
+      usesCompact: true,
+    });
+  });
+
+  it('standalone config-editor must use video-selector with compact mode for all video selectors', () => {
+    const content = fs.readFileSync(
+      path.join(repoRoot, 'central-dashboard/src/app/features/sites/config-editor/config-editor.component.html'),
+      'utf8'
+    );
+    const selectorCount = (content.match(/app-video-selector/g) || []).length;
+    const compactCount = (content.match(/\[compact\]="true"/g) || []).length;
+    expect({
+      hasVideoSelectors: selectorCount > 0,
+      allSelectorsCompact: compactCount >= selectorCount / 2,  // each selector has open+close tag
+    }).toEqual({
+      hasVideoSelectors: true,
+      allSelectorsCompact: true,
+    });
+  });
+
+  it('loop-manager must use video-search-select with compact mode', () => {
+    const content = fs.readFileSync(
+      path.join(repoRoot, 'central-dashboard/src/app/features/sites/components/loop-manager/loop-manager.component.html'),
+      'utf8'
+    );
+    expect({
+      usesSearchSelect: content.includes('app-video-search-select'),
+      usesCompact: content.includes('[compact]="true"'),
+      noNativeSelect: !/<select[\s\S]*?video/.test(content),
+    }).toEqual({
+      usesSearchSelect: true,
+      usesCompact: true,
+      noNativeSelect: true,
+    });
+  });
+
+  it('video-selector wrapper must propagate compact input', () => {
+    const content = fs.readFileSync(
+      path.join(repoRoot, 'central-dashboard/src/app/shared/components/video-selector/video-selector.component.ts'),
+      'utf8'
+    );
+    expect({
+      hasCompactInput: /@Input\(\)\s*compact/.test(content),
+      propagatesCompact: content.includes('[compact]="compact"'),
+    }).toEqual({
+      hasCompactInput: true,
+      propagatesCompact: true,
+    });
+  });
 });

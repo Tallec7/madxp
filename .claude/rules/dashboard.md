@@ -53,6 +53,9 @@ paths:
 - NE PAS calculer les stats de la barre `library-stats` sur `allVideos` dans `processVideos()` (toujours calculer sur `filteredVideos` dans `applyFilters()`)
 - NE PAS calculer `isDuplicate` (badge DOUBLON) dans `processVideos()` sur `allVideos` (toujours calculer dans `applyFilters()` sur le set filtré visible)
 - NE PAS revenir à `syncJsonFromConfig()` avec un subset de 4 champs dans `config-editor.component.ts` (le JSON editor doit montrer la config complète)
+- NE PAS utiliser de `<select>` natif pour les sélecteurs vidéo dans les config-editors ou loop-manager (utiliser `<app-video-search-select>` avec `[compact]="true"` — les selects natifs ne supportent pas l'autocomplete et sont inutilisables avec 50+ vidéos — smoke test enforced)
+- NE PAS retirer `:host { display: block }` de `video-search-select.component.ts` (sans display:block, le host inline ne participe pas au flex layout → zone cliquable trop petite — smoke test enforced)
+- NE PAS retirer le positionnement `position: fixed` du `.vss__dropdown` dans `video-search-select` (le dropdown doit échapper aux containers `overflow:hidden` des catégories/sous-catégories — smoke test enforced)
 
 ## OTA Dashboard
 
