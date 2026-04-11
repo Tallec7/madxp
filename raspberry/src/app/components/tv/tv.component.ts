@@ -690,7 +690,7 @@ export class TvComponent implements OnInit, OnDestroy {
       if (this.isDuplicateCommand(`video:${video.path}`)) return;
       this.lastTriggerType = 'manual';
       this._lastActionReceivedAt = Date.now();
-      const resolvedVideo = this.resolveSecondaryVariant(video);
+      const resolvedVideo = this.resolveDisplayVariant(video);
       if (this.isSlaveMode) {
         this.preloadManualVideo(resolvedVideo);
       } else {
@@ -1131,10 +1131,6 @@ export class TvComponent implements OnInit, OnDestroy {
     return video;
   }
 
-  /** @deprecated Use resolveDisplayVariant — kept for backward compat with sync-agent restoreSecondaryVariants */
-  private resolveSecondaryVariant<T extends { path: string; variants?: Record<string, { path: string }> }>(video: T): T {
-    return this.resolveDisplayVariant(video);
-  }
 
   private findVideoInConfig(path: string): Video | Sponsor | null {
     const sponsor = this.configuration.sponsors?.find(s => s.path === path);
@@ -1347,7 +1343,7 @@ export class TvComponent implements OnInit, OnDestroy {
 
     // CAS 1: Le master joue une vidéo manuelle
     if (state.isManualMode && state.manualVideoPath) {
-      const resolvedVideo = this.resolveSecondaryVariant({
+      const resolvedVideo = this.resolveDisplayVariant({
         name: state.manualVideoPath.split('/').pop() || 'manual',
         path: state.manualVideoPath,
         type: 'video/mp4'

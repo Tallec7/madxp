@@ -3961,12 +3961,12 @@ describe('E-22 TvComponent master-slave sync guards', () => {
     const commandHandler = content.match(/private handleTvCommand[\s\S]*?^  \}/m)
       || content.match(/on\('action'[\s\S]*?}\);/);
     expect(commandHandler).not.toBeNull();
-    expect(commandHandler![0]).toMatch(/resolveSecondaryVariant/);
+    expect(commandHandler![0]).toMatch(/resolveSecondaryVariant|resolveDisplayVariant/);
 
     // handleMasterLoopState CAS 1 must resolve secondary variant
     const masterHandler = content.match(/private handleMasterLoopState[\s\S]*?^  \}/m);
     expect(masterHandler).not.toBeNull();
-    expect(masterHandler![0]).toMatch(/resolveSecondaryVariant/);
+    expect(masterHandler![0]).toMatch(/resolveSecondaryVariant|resolveDisplayVariant/);
   });
 
   // Guard: resolveSecondaryVariant must exist and look up config when variants missing
@@ -4455,13 +4455,13 @@ describe('Multi-profile enrichment regression guards', () => {
     });
   });
 
-  it('syncProfiles must call enrichConfigWithSecondaryVariants', () => {
+  it('syncProfiles must call enrichConfigWithDisplayVariants', () => {
     const syncFn = controllerContent.match(
       /export const syncProfiles[\s\S]*?(?=export const \w|$)/
     );
     expect(syncFn).not.toBeNull();
     expect({
-      callsVariants: syncFn![0].includes('enrichConfigWithSecondaryVariants'),
+      callsVariants: syncFn![0].includes('enrichConfigWithDisplayVariants'),
     }).toEqual({
       callsVariants: true,
     });
@@ -4492,13 +4492,13 @@ describe('Multi-profile enrichment regression guards', () => {
     });
   });
 
-  it('deployProfile must call enrichConfigWithSecondaryVariants', () => {
+  it('deployProfile must call enrichConfigWithDisplayVariants', () => {
     const deployFn = controllerContent.match(
       /export const deployProfile[\s\S]*?(?=export const \w|$)/
     );
     expect(deployFn).not.toBeNull();
     expect({
-      callsVariants: deployFn![0].includes('enrichConfigWithSecondaryVariants'),
+      callsVariants: deployFn![0].includes('enrichConfigWithDisplayVariants'),
     }).toEqual({
       callsVariants: true,
     });
@@ -6764,7 +6764,7 @@ describe('E-41 update-config replace mode restoreSecondaryVariants guard', () =>
 // ----------------------------------------------------------
 // E-41 Central-side secondary variant enrichment guard:
 // orchestrated-deployment.service.ts and config-sync.handler.ts
-// must call enrichConfigWithSecondaryVariants() before sending
+// must call enrichConfigWithDisplayVariants() before sending
 // config to Pi. Without this, the central never includes
 // variants.secondary in the config payload.
 // ----------------------------------------------------------
@@ -6780,20 +6780,20 @@ describe('E-41 central secondary variant enrichment guard', () => {
     syncContent = fs.readFileSync(syncPath, 'utf8');
   });
 
-  it('orchestrated-deployment must import and call enrichConfigWithSecondaryVariants', () => {
+  it('orchestrated-deployment must import and call enrichConfigWithDisplayVariants', () => {
     expect({
-      imports: /import\s*\{[^}]*enrichConfigWithSecondaryVariants[^}]*\}/.test(orchContent),
-      calls: /enrichConfigWithSecondaryVariants\(/.test(orchContent),
+      imports: /import\s*\{[^}]*enrichConfigWithDisplayVariants[^}]*\}/.test(orchContent),
+      calls: /enrichConfigWithDisplayVariants\(/.test(orchContent),
     }).toEqual({
       imports: true,
       calls: true,
     });
   });
 
-  it('config-sync handler must import and call enrichConfigWithSecondaryVariants', () => {
+  it('config-sync handler must import and call enrichConfigWithDisplayVariants', () => {
     expect({
-      imports: /import\s*\{[^}]*enrichConfigWithSecondaryVariants[^}]*\}/.test(syncContent),
-      calls: /enrichConfigWithSecondaryVariants\(/.test(syncContent),
+      imports: /import\s*\{[^}]*enrichConfigWithDisplayVariants[^}]*\}/.test(syncContent),
+      calls: /enrichConfigWithDisplayVariants\(/.test(syncContent),
     }).toEqual({
       imports: true,
       calls: true,
@@ -14275,22 +14275,88 @@ describe('SaaS mode guards (ADR-037)', () => {
     });
   });
 
-  // --- resolveVideoUrl must strip Pi-local path prefix before calling getVideoUrl ---
-  // Config profiles store Pi-local paths like "videos/default/file.mp4" but FTP stores
-  // files flat at the root. Without stripping, the URL resolves to a 404 (HTML page served
-  // as video → MEDIA_ELEMENT_ERROR crash loop on SaaS sites).
-  it('resolveVideoUrl must strip Pi-local directory prefix (videos/default/, videos/sponsors/) before getVideoUrl', () => {
+  // --- resolveVideoUrl must use storagePathMap for DB lookup ---
+  // After FTP sharding (ADR-048), filename ≠ storage_path. resolveVideoUrl must
+  // lookup the real storage_path via storagePathMap before building the FTP URL.
+  it('resolveVideoUrl must accept storagePathMap and use it for URL resolution', () => {
     const filePath = path.join(repoRoot, 'central-server', 'src', 'controllers', 'saas.controller.ts');
     const content = fs.readFileSync(filePath, 'utf8');
     const resolveFunction = content.match(/function resolveVideoUrl\([\s\S]*?\n\}/);
     expect(resolveFunction).not.toBeNull();
     expect({
+      acceptsStoragePathMap: /storagePathMap/.test(resolveFunction![0]),
+      usesMapGet: /storagePathMap\.get/.test(resolveFunction![0]),
       stripsPathPrefix: /\.split\(['"]\/['"]\)\.pop\(\)/.test(resolveFunction![0]),
-      doesNotPassRawPath: !resolveFunction![0].includes('return getVideoUrl(path)'),
     }).toEqual({
+      acceptsStoragePathMap: true,
+      usesMapGet: true,
       stripsPathPrefix: true,
-      doesNotPassRawPath: true,
     });
+  });
+
+  // --- Thumbnails must be applied BEFORE URL resolution in getSaasConfig ---
+  // After storage_path resolution, paths contain UUID-based storage paths that
+  // don't match filenames in thumbnailMap → thumbnails are lost.
+  it('getSaasConfig must apply thumbnails before resolveVideoUrls', () => {
+    const filePath = path.join(repoRoot, 'central-server', 'src', 'controllers', 'saas.controller.ts');
+    const content = fs.readFileSync(filePath, 'utf8');
+    const thumbsBeforeResolve = content.indexOf('applyThumbnails(sponsors') < content.indexOf('resolveVideoUrls(sponsors');
+    const thumbsBeforeResolveProfile = content.indexOf('applyThumbnails(sponsors', content.indexOf('getSaasProfileConfig')) < content.indexOf('resolveVideoUrls(sponsors', content.indexOf('getSaasProfileConfig'));
+    expect({
+      thumbsBeforeResolveInGetConfig: thumbsBeforeResolve,
+      thumbsBeforeResolveInProfileConfig: thumbsBeforeResolveProfile,
+    }).toEqual({
+      thumbsBeforeResolveInGetConfig: true,
+      thumbsBeforeResolveInProfileConfig: true,
+    });
+  });
+
+  // --- config-profiles.controller must emit saas-config-updated ---
+  it('config-profiles.controller must emit saas-config-updated after updateProfileConfiguration', () => {
+    const filePath = path.join(repoRoot, 'central-server', 'src', 'controllers', 'config-profiles.controller.ts');
+    const content = fs.readFileSync(filePath, 'utf8');
+    expect({
+      emitsSaasConfigUpdated: content.includes('emitSaasConfigUpdated'),
+      checksSiteType: /site_type\s*===\s*'saas'/.test(content),
+    }).toEqual({
+      emitsSaasConfigUpdated: true,
+      checksSiteType: true,
+    });
+  });
+
+  // --- previewConfigDiff must fallback to config_profiles for SaaS ---
+  it('previewConfigDiff must read baseline from config_profiles for SaaS sites', () => {
+    const filePath = path.join(repoRoot, 'central-server', 'src', 'controllers', 'config-history.controller.ts');
+    const content = fs.readFileSync(filePath, 'utf8');
+    expect({
+      importsConfigProfileRepo: content.includes('configProfileRepository'),
+      checksForSaas: /site_type\s*===\s*'saas'/.test(content),
+      findDefaultForSite: content.includes('findDefaultForSite'),
+    }).toEqual({
+      importsConfigProfileRepo: true,
+      checksForSaas: true,
+      findDefaultForSite: true,
+    });
+  });
+
+  // --- local-broadcast.service must use ReplaySubject for commands ---
+  it('local-broadcast.service must use ReplaySubject for command$ to buffer during SaaS display init', () => {
+    const filePath = path.join(repoRoot, 'raspberry', 'src', 'app', 'services', 'local-broadcast.service.ts');
+    const content = fs.readFileSync(filePath, 'utf8');
+    expect({
+      importsReplaySubject: content.includes('ReplaySubject'),
+      commandUsesReplay: /command\$\s*=\s*new ReplaySubject/.test(content),
+    }).toEqual({
+      importsReplaySubject: true,
+      commandUsesReplay: true,
+    });
+  });
+
+  // --- videoRepository must have findStoragePathsByFilenames ---
+  it('videoRepository must expose findStoragePathsByFilenames for SaaS URL resolution', () => {
+    const filePath = path.join(repoRoot, 'central-server', 'src', 'repositories', 'video.repository.ts');
+    const content = fs.readFileSync(filePath, 'utf8');
+    expect(content.includes('findStoragePathsByFilenames')).toBe(true);
   });
 
   // --- environment.saas.ts must exist ---

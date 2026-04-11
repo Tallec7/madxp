@@ -44,7 +44,7 @@ jest.mock('../services/sponsor-auto-resolution.service', () => ({
 }));
 
 jest.mock('../utils/config-secondary-variants', () => ({
-  enrichConfigWithSecondaryVariants: jest.fn().mockResolvedValue({ enrichedCount: 0 }),
+  enrichConfigWithDisplayVariants: jest.fn().mockResolvedValue({ enrichedCount: 0 }),
 }));
 
 jest.mock('../utils/config-analytics-metadata', () => ({

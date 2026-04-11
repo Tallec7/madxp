@@ -14,7 +14,7 @@ import socketService from '../services/socket.service';
 import { configProfileRepository } from '../repositories/config-profile.repository';
 import { configHistoryRepository } from '../repositories/config-history.repository';
 import { siteRepository } from '../repositories/site.repository';
-import { enrichConfigWithSecondaryVariants } from '../utils/config-secondary-variants';
+import { enrichConfigWithDisplayVariants } from '../utils/config-secondary-variants';
 import { enrichConfigWithAnalyticsMetadata } from '../utils/config-analytics-metadata';
 import { autoResolveSponsorIds } from '../services/sponsor-auto-resolution.service';
 
@@ -304,7 +304,7 @@ export const deployProfile = async (req: AuthRequest, res: Response) => {
     } catch { /* non-fatal */ }
 
     try {
-      await enrichConfigWithSecondaryVariants(enrichedConfig);
+      await enrichConfigWithDisplayVariants(enrichedConfig);
     } catch { /* non-fatal */ }
 
     try {
@@ -346,7 +346,7 @@ export const deployProfile = async (req: AuthRequest, res: Response) => {
         } catch { /* non-fatal */ }
 
         try {
-          await enrichConfigWithSecondaryVariants(enrichedConfig);
+          await enrichConfigWithDisplayVariants(enrichedConfig);
         } catch { /* non-fatal */ }
 
         try {
@@ -433,7 +433,7 @@ export const syncProfiles = async (req: AuthRequest, res: Response) => {
 
       // Enrichir avec les variants secondaires
       try {
-        const { enrichedCount } = await enrichConfigWithSecondaryVariants(enrichedConfig);
+        const { enrichedCount } = await enrichConfigWithDisplayVariants(enrichedConfig);
         if (enrichedCount > 0) {
           logger.info('Secondary variants enriched in profile sync', {
             siteId, profileId: p.id, enrichedCount,

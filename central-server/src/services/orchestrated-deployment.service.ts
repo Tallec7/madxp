@@ -13,7 +13,7 @@ import { draftService } from './draft.service';
 import { siteSponsorRepository } from '../repositories/site-sponsor.repository';
 import metricsService from './metrics.service';
 import { autoResolveSponsorIds } from './sponsor-auto-resolution.service';
-import { enrichConfigWithSecondaryVariants } from '../utils/config-secondary-variants';
+import { enrichConfigWithDisplayVariants } from '../utils/config-secondary-variants';
 import {
   OrchestratedDeployment,
   OrchestratedDeploymentStatus,
@@ -265,7 +265,7 @@ class OrchestratedDeploymentService {
 
     // Enrichir avec les variants secondaires depuis la base de données
     try {
-      const { enrichedCount } = await enrichConfigWithSecondaryVariants(enrichedConfig);
+      const { enrichedCount } = await enrichConfigWithDisplayVariants(enrichedConfig);
       if (enrichedCount > 0) {
         logger.info('Secondary variants enriched in deployment config', {
           siteId, orchestratedId, enrichedCount,

@@ -16,7 +16,7 @@ import { SocketContext } from './socket-context';
 import { siteSponsorRepository } from '../repositories/site-sponsor.repository';
 import { deploymentRepository } from '../repositories/deployment.repository';
 import { autoResolveSponsorIds } from '../services/sponsor-auto-resolution.service';
-import { enrichConfigWithSecondaryVariants } from '../utils/config-secondary-variants';
+import { enrichConfigWithDisplayVariants } from '../utils/config-secondary-variants';
 import { enrichConfigWithAnalyticsMetadata } from '../utils/config-analytics-metadata';
 import { enrichConfigWithCampaignVideos } from '../utils/config-campaign-videos';
 import type { SiteConfiguration } from '../types';
@@ -446,7 +446,7 @@ async function sendPendingConfigCommand(
 
   // Enrichir avec les variants secondaires depuis la base de données
   try {
-    const { enrichedCount } = await enrichConfigWithSecondaryVariants(
+    const { enrichedCount } = await enrichConfigWithDisplayVariants(
       enrichedConfiguration as SiteConfiguration
     );
     if (enrichedCount > 0) {
