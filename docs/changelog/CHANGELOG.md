@@ -1,3 +1,9 @@
+## [3.145.2](https://github.com/Tallec7/neopro/compare/v3.145.1...v3.145.2) (2026-04-11)
+
+### Bug Fixes
+
+- **dashboard:** use fixed positioning for video-search-select dropdown ([f377371](https://github.com/Tallec7/neopro/commit/f377371297dbd5af6e9ca7b4f75e81eca2adf40b))
+
 ## [3.145.1](https://github.com/Tallec7/neopro/compare/v3.145.0...v3.145.1) (2026-04-11)
 
 ### Bug Fixes
