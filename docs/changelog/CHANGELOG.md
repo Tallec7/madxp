@@ -1,3 +1,9 @@
+## [3.146.1](https://github.com/Tallec7/neopro/compare/v3.146.0...v3.146.1) (2026-04-11)
+
+### Bug Fixes
+
+- **dashboard:** add compact mode to video-search-select for config-editor rows ([51ffd73](https://github.com/Tallec7/neopro/commit/51ffd73dbc204a727692dda509e7ed9cde25a0ea))
+
 # [3.146.0](https://github.com/Tallec7/neopro/compare/v3.145.9...v3.146.0) (2026-04-11)
 
 ### Bug Fixes
