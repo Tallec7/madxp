@@ -260,30 +260,54 @@ export const createVideo = async (req: AuthRequest, res: Response) => {
       ? await calculateChecksumFromFile(tempFilePath)
       : calculateChecksum(file.buffer);
 
-    // Upload vers le stockage en streaming depuis le disque
-    logger.info('Uploading video to storage with verification:', { filename, size: file.size, mimetype: file.mimetype, siteId: site_id });
-
-    const uploadResult = tempFilePath
-      ? await uploadVideoFromDisk(tempFilePath, file.size, filename, file.mimetype)
-      : await uploadVideo(file.buffer, filename, file.mimetype);
-
-    if (!uploadResult) {
-      logger.error('Failed to upload video to storage - uploadResult is null');
-      return res.status(500).json({
-        error: 'Erreur lors de l\'upload vers le stockage. Vérifiez la configuration FTP.'
-      });
-    }
-
-    // Déterminer le statut d'upload basé sur la vérification
-    const uploadStatus: UploadStatus = uploadResult.verified ? 'ready' : 'failed';
-
     // Utiliser le titre fourni ou le nom original du fichier
     const videoTitle = title || correctedOriginalname;
     const original_name = correctedOriginalname;
     const file_size = file.size;
     const mime_type = file.mimetype;
 
-    logger.info('Inserting video metadata into database:', { filename, title: videoTitle, siteId: site_id, uploadStatus, verified: uploadResult.verified });
+    // Deduplication: check if an identical file already exists (ADR-048)
+    const existingVideo = await videoRepository.findByChecksum(checksum);
+    let storagePath: string;
+    let uploadStatus: UploadStatus;
+    let thumbnailUrl: string | null = null;
+    let uploadUrl: string;
+    let isDuplicate = false;
+
+    if (existingVideo) {
+      // Reuse existing file on FTP — no upload needed
+      storagePath = existingVideo.storage_path;
+      thumbnailUrl = existingVideo.thumbnail_url;
+      uploadStatus = 'ready';
+      uploadUrl = getVideoUrl(storagePath);
+      isDuplicate = true;
+      logger.info('Duplicate video detected, reusing storage', {
+        checksum,
+        existingVideoId: existingVideo.id,
+        storagePath,
+        newFilename: filename,
+      });
+    } else {
+      // Upload vers le stockage en streaming depuis le disque
+      logger.info('Uploading video to storage with verification:', { filename, size: file.size, mimetype: file.mimetype, siteId: site_id });
+
+      const uploadResult = tempFilePath
+        ? await uploadVideoFromDisk(tempFilePath, file.size, filename, file.mimetype)
+        : await uploadVideo(file.buffer, filename, file.mimetype);
+
+      if (!uploadResult) {
+        logger.error('Failed to upload video to storage - uploadResult is null');
+        return res.status(500).json({
+          error: 'Erreur lors de l\'upload vers le stockage. Vérifiez la configuration FTP.'
+        });
+      }
+
+      storagePath = uploadResult.path;
+      uploadStatus = uploadResult.verified ? 'ready' : 'failed';
+      uploadUrl = uploadResult.url;
+    }
+
+    logger.info('Inserting video metadata into database:', { filename, title: videoTitle, siteId: site_id, uploadStatus, isDuplicate });
     const video = await videoRepository.create({
       filename,
       original_name,
@@ -291,14 +315,14 @@ export const createVideo = async (req: AuthRequest, res: Response) => {
       subcategory: subcategory || null,
       file_size,
       mime_type,
-      storage_path: uploadResult.path,
+      storage_path: storagePath,
       checksum,
-      metadata: { title: videoTitle },
+      metadata: { title: videoTitle, ...(isDuplicate ? { deduplicatedFrom: existingVideo!.id } : {}) },
       uploaded_by: req.user?.id || null,
       uploaded_for_site_id: site_id || null,
       upload_status: uploadStatus,
-      upload_verified_at: uploadResult.verified ? new Date() : null,
-      upload_verified_size: uploadResult.actualSize ?? null,
+      upload_verified_at: uploadStatus === 'ready' ? new Date() : null,
+      upload_verified_size: null,
     });
 
     // Link video to site via pivot table (ADR-048)
@@ -307,8 +331,8 @@ export const createVideo = async (req: AuthRequest, res: Response) => {
     }
 
     // Generate thumbnail from temp file before cleanup (ADR-048)
-    let thumbnailUrl: string | null = null;
-    if (tempFilePath && uploadStatus === 'ready') {
+    // Skip if we already have a thumbnail from dedup
+    if (!thumbnailUrl && tempFilePath && uploadStatus === 'ready') {
       try {
         const thumbBuffer = await thumbnailService.generateThumbnailBuffer(tempFilePath);
         if (thumbBuffer) {
@@ -316,8 +340,6 @@ export const createVideo = async (req: AuthRequest, res: Response) => {
           const thumbResult = await uploadThumbnail(thumbBuffer, thumbStoragePath);
           if (thumbResult) {
             thumbnailUrl = getThumbnailUrl(thumbStoragePath);
-            await videoRepository.update(video.id, { thumbnail_url: thumbnailUrl });
-            logger.info('Thumbnail generated and uploaded', { videoId: video.id, thumbnailUrl });
           }
         }
       } catch (thumbError) {
@@ -328,29 +350,24 @@ export const createVideo = async (req: AuthRequest, res: Response) => {
       }
     }
 
-    // Ajouter le titre et l'URL à la réponse pour l'affichage client
-    const videoResponse = { ...video, title: videoTitle, url: uploadResult.url, thumbnail_url: thumbnailUrl };
-
-    // Logger avec info de vérification
-    if (!uploadResult.verified) {
-      logger.warn('Video uploaded but verification failed:', {
-        id: videoResponse.id,
-        filename,
-        expectedSize: file_size,
-        actualSize: uploadResult.actualSize,
-      });
+    // For deduped videos, reuse existing thumbnail URL
+    if (thumbnailUrl) {
+      await videoRepository.update(video.id, { thumbnail_url: thumbnailUrl });
     }
+
+    // Ajouter le titre et l'URL à la réponse pour l'affichage client
+    const videoResponse = { ...video, title: videoTitle, url: uploadUrl, thumbnail_url: thumbnailUrl, deduplicated: isDuplicate };
 
     metricsService.recordVideoUpload(uploadStatus === 'ready' ? 'success' : 'failed', file.size);
     logger.info('Video created successfully:', {
       id: videoResponse.id,
       filename,
       title: videoTitle,
-      storagePath: uploadResult.path,
+      storagePath,
       checksum,
       siteId: site_id,
       uploadStatus,
-      verified: uploadResult.verified,
+      isDuplicate,
       thumbnailUrl,
     });
     res.status(201).json(videoResponse);
@@ -410,20 +427,10 @@ export const createVideos = async (req: AuthRequest, res: Response) => {
         // Générer un nom de fichier unique basé sur le nom original
         const filename = await generateUniqueFilename(correctedOriginalname);
 
-        // Upload vers le stockage en streaming depuis le disque
-        logger.info('Uploading video to storage (bulk):', { filename, size: file.size });
-
-        const uploadResult = tempFilePath
-          ? await uploadVideoFromDisk(tempFilePath, file.size, filename, file.mimetype)
-          : await uploadVideo(file.buffer, filename, file.mimetype);
-
-        if (!uploadResult) {
-          errors.push({
-            name: correctedOriginalname,
-            error: 'Erreur lors de l\'upload vers le stockage. Vérifiez la configuration FTP.'
-          });
-          continue;
-        }
+        // Calculer le checksum SHA256 en streaming depuis le disque
+        const checksum = tempFilePath
+          ? await calculateChecksumFromFile(tempFilePath)
+          : calculateChecksum(file.buffer);
 
         // Utiliser le nom original comme titre
         const videoTitle = correctedOriginalname;
@@ -431,10 +438,33 @@ export const createVideos = async (req: AuthRequest, res: Response) => {
         const file_size = file.size;
         const mime_type = file.mimetype;
 
-        // Calculer le checksum SHA256 en streaming depuis le disque
-        const checksum = tempFilePath
-          ? await calculateChecksumFromFile(tempFilePath)
-          : calculateChecksum(file.buffer);
+        // Deduplication check (ADR-048)
+        const existingVideo = await videoRepository.findByChecksum(checksum);
+        let storagePath: string;
+        let thumbnailUrl: string | null = null;
+
+        if (existingVideo) {
+          storagePath = existingVideo.storage_path;
+          thumbnailUrl = existingVideo.thumbnail_url;
+          logger.info('Duplicate video detected (bulk), reusing storage', {
+            checksum, existingVideoId: existingVideo.id, newFilename: filename,
+          });
+        } else {
+          logger.info('Uploading video to storage (bulk):', { filename, size: file.size });
+
+          const uploadResult = tempFilePath
+            ? await uploadVideoFromDisk(tempFilePath, file.size, filename, file.mimetype)
+            : await uploadVideo(file.buffer, filename, file.mimetype);
+
+          if (!uploadResult) {
+            errors.push({
+              name: correctedOriginalname,
+              error: 'Erreur lors de l\'upload vers le stockage. Vérifiez la configuration FTP.'
+            });
+            continue;
+          }
+          storagePath = uploadResult.path;
+        }
 
         const video = await videoRepository.createBulk({
           filename,
@@ -443,9 +473,9 @@ export const createVideos = async (req: AuthRequest, res: Response) => {
           subcategory: subcategory || null,
           file_size,
           mime_type,
-          storage_path: uploadResult.path,
+          storage_path: storagePath,
           checksum,
-          metadata: { title: videoTitle },
+          metadata: { title: videoTitle, ...(existingVideo ? { deduplicatedFrom: existingVideo.id } : {}) },
           uploaded_by: req.user?.id || null,
           uploaded_for_site_id: site_id || null,
         });
@@ -455,16 +485,15 @@ export const createVideos = async (req: AuthRequest, res: Response) => {
           await siteVideoRepository.link(site_id, video.id, req.user?.id);
         }
 
-        // Generate thumbnail (ADR-048)
-        if (tempFilePath) {
+        // Generate thumbnail — skip if reused from dedup (ADR-048)
+        if (!thumbnailUrl && tempFilePath) {
           try {
             const thumbBuffer = await thumbnailService.generateThumbnailBuffer(tempFilePath);
             if (thumbBuffer) {
               const thumbStoragePath = buildThumbnailPath(video.id);
               const thumbResult = await uploadThumbnail(thumbBuffer, thumbStoragePath);
               if (thumbResult) {
-                const thumbnailUrl = getThumbnailUrl(thumbStoragePath);
-                await videoRepository.update(video.id, { thumbnail_url: thumbnailUrl });
+                thumbnailUrl = getThumbnailUrl(thumbStoragePath);
               }
             }
           } catch (thumbError) {
@@ -473,6 +502,9 @@ export const createVideos = async (req: AuthRequest, res: Response) => {
               error: thumbError instanceof Error ? thumbError.message : String(thumbError),
             });
           }
+        }
+        if (thumbnailUrl) {
+          await videoRepository.update(video.id, { thumbnail_url: thumbnailUrl });
         }
 
         results.push({

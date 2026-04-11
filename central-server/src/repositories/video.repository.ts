@@ -262,6 +262,21 @@ class VideoRepositoryImpl extends BaseRepository<VideoRow> {
   }
 
   /**
+   * Find an existing video with the same checksum (deduplication).
+   * Returns the first match with a valid storage_path, or null.
+   * ADR-048: Used at upload to avoid storing duplicate files on FTP.
+   */
+  async findByChecksum(checksum: string): Promise<{ id: string; storage_path: string; thumbnail_url: string | null; filename: string } | null> {
+    const result = await query<{ id: string; storage_path: string; thumbnail_url: string | null; filename: string }>(
+      `SELECT id, storage_path, thumbnail_url, filename FROM videos
+       WHERE checksum = $1 AND storage_path IS NOT NULL
+       ORDER BY created_at ASC LIMIT 1`,
+      [checksum]
+    );
+    return result.rows[0] || null;
+  }
+
+  /**
    * Batch-lookup thumbnail URLs by filenames.
    * Returns a map of filename → thumbnail_url for videos that have thumbnails.
    * ADR-048: Used to enrich SaaS config responses with cloud thumbnail URLs.
