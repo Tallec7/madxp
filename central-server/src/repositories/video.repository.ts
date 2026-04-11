@@ -262,6 +262,29 @@ class VideoRepositoryImpl extends BaseRepository<VideoRow> {
   }
 
   /**
+   * Batch-lookup thumbnail URLs by filenames.
+   * Returns a map of filename → thumbnail_url for videos that have thumbnails.
+   * ADR-048: Used to enrich SaaS config responses with cloud thumbnail URLs.
+   */
+  async findThumbnailsByFilenames(filenames: string[]): Promise<Map<string, string>> {
+    if (filenames.length === 0) return new Map();
+
+    const placeholders = filenames.map((_, i) => `$${i + 1}`).join(', ');
+    const result = await query<{ filename: string; thumbnail_url: string }>(
+      `SELECT filename, thumbnail_url FROM videos
+       WHERE filename = ANY(ARRAY[${placeholders}])
+       AND thumbnail_url IS NOT NULL`,
+      filenames
+    );
+
+    const map = new Map<string, string>();
+    for (const row of result.rows) {
+      map.set(row.filename, row.thumbnail_url);
+    }
+    return map;
+  }
+
+  /**
    * Supprime une video et retourne true si supprimee.
    */
   async deleteAndReturn(id: string): Promise<boolean> {

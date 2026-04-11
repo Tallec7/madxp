@@ -63,24 +63,14 @@
             class="video-name-input"
             [disabled]="isClubUser && video.owner === 'neopro'"
           />
-          <select
-            [(ngModel)]="video.path"
-            (ngModelChange)="onChanged()"
-            class="video-select"
-            [class.input-error]="!video.path"
-            [class.has-cloud-video]="isCloudVideo(video.path)"
+          <app-video-search-select
+            [groups]="videoOptionGroups"
+            [selectedPath]="video.path"
+            (pathChange)="video.path = $event; onChanged()"
+            [invalid]="!video.path"
             [disabled]="isClubUser && video.owner === 'neopro'"
-          >
-            <option value="">-- Sélectionner --</option>
-            <optgroup
-              *ngFor="let group of videoOptionGroups"
-              [label]="group.icon + ' ' + group.label"
-            >
-              <option *ngFor="let v of group.videos" [value]="v.path">
-                {{ v.displayName }}{{ siteType !== 'saas' && !v.isOnPi ? ' ⏳' : '' }}
-              </option>
-            </optgroup>
-          </select>
+            [showPiStatus]="siteType !== 'saas'"
+          ></app-video-search-select>
           <span class="cloud-hint" *ngIf="siteType !== 'saas' && isCloudVideo(video.path)"
             >⏳ Sera déployée</span
           >
@@ -160,22 +150,12 @@
               placeholder="Nom"
               class="video-name-input"
             />
-            <select
-              class="video-select"
-              [ngModel]="video.path"
-              (ngModelChange)="updatePhaseVideo(i, 'path', $event)"
-              [class.has-cloud-video]="isCloudVideo(video.path)"
-            >
-              <option value="">-- Sélectionner --</option>
-              <optgroup
-                *ngFor="let group of videoOptionGroups"
-                [label]="group.icon + ' ' + group.label"
-              >
-                <option *ngFor="let v of group.videos" [value]="v.path">
-                  {{ v.displayName }}{{ siteType !== 'saas' && !v.isOnPi ? ' ⏳' : '' }}
-                </option>
-              </optgroup>
-            </select>
+            <app-video-search-select
+              [groups]="videoOptionGroups"
+              [selectedPath]="video.path"
+              (pathChange)="updatePhaseVideo(i, 'path', $event)"
+              [showPiStatus]="siteType !== 'saas'"
+            ></app-video-search-select>
             <span
               class="cloud-badge"
               *ngIf="siteType !== 'saas' && isCloudVideo(video.path)"

@@ -86,6 +86,49 @@ class ThumbnailService {
   }
 
   /**
+   * Generate a thumbnail and return it as a Buffer (for FTP upload).
+   * Uses a temp file internally, cleaned up after reading.
+   * ADR-048: Used during video upload to generate and store thumbnails on FTP.
+   */
+  async generateThumbnailBuffer(
+    videoPath: string,
+    timePercent: number = 10
+  ): Promise<Buffer | null> {
+    if (!fs.existsSync(videoPath)) {
+      logger.error('Video file not found for thumbnail generation', { videoPath });
+      return null;
+    }
+
+    const tempPath = path.join(this.thumbnailDir, `tmp_${Date.now()}.jpg`);
+
+    try {
+      const metadata = await this.extractMetadata(videoPath);
+      const seekTime = metadata.duration > 0
+        ? (metadata.duration * timePercent) / 100
+        : 1; // Fallback to 1s if duration unknown
+
+      await this.runFfmpeg([
+        '-ss', seekTime.toString(),
+        '-i', videoPath,
+        '-vframes', '1',
+        '-vf', 'scale=320:-1',
+        '-q:v', '2',
+        '-y',
+        tempPath,
+      ]);
+
+      const buffer = fs.readFileSync(tempPath);
+      fs.unlinkSync(tempPath);
+      logger.info('Thumbnail buffer generated', { videoPath, size: buffer.length });
+      return buffer;
+    } catch (error) {
+      logger.error('Failed to generate thumbnail buffer:', error);
+      try { fs.unlinkSync(tempPath); } catch { /* ignore */ }
+      return null;
+    }
+  }
+
+  /**
    * Extrait les métadonnées d'une vidéo
    * @param videoPath Chemin de la vidéo
    */

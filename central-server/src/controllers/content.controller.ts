@@ -5,10 +5,11 @@ import crypto from 'crypto';
 import fs, { createReadStream } from 'fs';
 import logger from '../config/logger';
 import { AuthRequest } from '../types';
-import { videoRepository, deploymentRepository, siteRepository, videoVariantRepository } from '../repositories';
+import { videoRepository, deploymentRepository, siteRepository, videoVariantRepository, siteVideoRepository } from '../repositories';
 import type { DisplayType } from '../repositories';
 import deploymentService from '../services/deployment.service';
-import { uploadVideo, uploadVideoFromDisk, deleteVideo as deleteStorageVideo, getVideoUrl } from '../services/storage.service';
+import { uploadVideo, uploadVideoFromDisk, deleteVideo as deleteStorageVideo, getVideoUrl, uploadThumbnail, buildThumbnailPath, getThumbnailUrl, buildShardedVideoPath } from '../services/storage.service';
+import thumbnailService from '../services/thumbnail.service';
 import { formatPaginatedResponse } from '../middleware/pagination';
 import { uploadVerificationService, UploadStatus } from '../services/upload-verification.service';
 import { imageToVideoService } from '../services/image-to-video.service';
@@ -300,8 +301,35 @@ export const createVideo = async (req: AuthRequest, res: Response) => {
       upload_verified_size: uploadResult.actualSize ?? null,
     });
 
+    // Link video to site via pivot table (ADR-048)
+    if (site_id) {
+      await siteVideoRepository.link(site_id, video.id, req.user?.id);
+    }
+
+    // Generate thumbnail from temp file before cleanup (ADR-048)
+    let thumbnailUrl: string | null = null;
+    if (tempFilePath && uploadStatus === 'ready') {
+      try {
+        const thumbBuffer = await thumbnailService.generateThumbnailBuffer(tempFilePath);
+        if (thumbBuffer) {
+          const thumbStoragePath = buildThumbnailPath(video.id);
+          const thumbResult = await uploadThumbnail(thumbBuffer, thumbStoragePath);
+          if (thumbResult) {
+            thumbnailUrl = getThumbnailUrl(thumbStoragePath);
+            await videoRepository.update(video.id, { thumbnail_url: thumbnailUrl });
+            logger.info('Thumbnail generated and uploaded', { videoId: video.id, thumbnailUrl });
+          }
+        }
+      } catch (thumbError) {
+        logger.warn('Thumbnail generation failed (non-blocking)', {
+          videoId: video.id,
+          error: thumbError instanceof Error ? thumbError.message : String(thumbError),
+        });
+      }
+    }
+
     // Ajouter le titre et l'URL à la réponse pour l'affichage client
-    const videoResponse = { ...video, title: videoTitle, url: uploadResult.url };
+    const videoResponse = { ...video, title: videoTitle, url: uploadResult.url, thumbnail_url: thumbnailUrl };
 
     // Logger avec info de vérification
     if (!uploadResult.verified) {
@@ -323,6 +351,7 @@ export const createVideo = async (req: AuthRequest, res: Response) => {
       siteId: site_id,
       uploadStatus,
       verified: uploadResult.verified,
+      thumbnailUrl,
     });
     res.status(201).json(videoResponse);
   } catch (error) {
@@ -420,6 +449,31 @@ export const createVideos = async (req: AuthRequest, res: Response) => {
           uploaded_by: req.user?.id || null,
           uploaded_for_site_id: site_id || null,
         });
+
+        // Link video to site via pivot table (ADR-048)
+        if (site_id) {
+          await siteVideoRepository.link(site_id, video.id, req.user?.id);
+        }
+
+        // Generate thumbnail (ADR-048)
+        if (tempFilePath) {
+          try {
+            const thumbBuffer = await thumbnailService.generateThumbnailBuffer(tempFilePath);
+            if (thumbBuffer) {
+              const thumbStoragePath = buildThumbnailPath(video.id);
+              const thumbResult = await uploadThumbnail(thumbBuffer, thumbStoragePath);
+              if (thumbResult) {
+                const thumbnailUrl = getThumbnailUrl(thumbStoragePath);
+                await videoRepository.update(video.id, { thumbnail_url: thumbnailUrl });
+              }
+            }
+          } catch (thumbError) {
+            logger.warn('Thumbnail generation failed (bulk, non-blocking)', {
+              videoId: video.id,
+              error: thumbError instanceof Error ? thumbError.message : String(thumbError),
+            });
+          }
+        }
 
         results.push({
           id: video.id,
@@ -824,7 +878,36 @@ export const convertImageToVideo = async (req: AuthRequest, res: Response) => {
       duration,
     });
 
-    const videoResponse = { ...video, title: videoTitle, url: uploadResult.url };
+    // Link video to site via pivot table (ADR-048)
+    if (site_id) {
+      await siteVideoRepository.link(site_id, video.id, req.user?.id);
+    }
+
+    // Generate thumbnail from converted video buffer (ADR-048)
+    let thumbnailUrl: string | null = null;
+    if (uploadStatus === 'ready') {
+      try {
+        const tmpVideoPath = path.join(require('os').tmpdir(), `neopro_thumb_${video.id}.mp4`);
+        fs.writeFileSync(tmpVideoPath, result.buffer);
+        const thumbBuffer = await thumbnailService.generateThumbnailBuffer(tmpVideoPath);
+        fs.unlinkSync(tmpVideoPath);
+        if (thumbBuffer) {
+          const thumbStoragePath = buildThumbnailPath(video.id);
+          const thumbResult = await uploadThumbnail(thumbBuffer, thumbStoragePath);
+          if (thumbResult) {
+            thumbnailUrl = getThumbnailUrl(thumbStoragePath);
+            await videoRepository.update(video.id, { thumbnail_url: thumbnailUrl });
+          }
+        }
+      } catch (thumbError) {
+        logger.warn('Thumbnail generation failed for image-to-video (non-blocking)', {
+          videoId: video.id,
+          error: thumbError instanceof Error ? thumbError.message : String(thumbError),
+        });
+      }
+    }
+
+    const videoResponse = { ...video, title: videoTitle, url: uploadResult.url, thumbnail_url: thumbnailUrl };
 
     logger.info('Image converted to video successfully', {
       id: videoResponse.id,
@@ -1223,7 +1306,36 @@ export const renderTemplate = async (req: AuthRequest, res: Response) => {
       duration: result.durationSeconds,
     });
 
-    const videoResponse = { ...video, title: videoTitle, url: uploadResult.url };
+    // Link video to site via pivot table (ADR-048)
+    if (site_id) {
+      await siteVideoRepository.link(site_id, video.id, req.user?.id);
+    }
+
+    // Generate thumbnail from rendered video buffer (ADR-048)
+    let thumbnailUrl: string | null = null;
+    if (uploadStatus === 'ready') {
+      try {
+        const tmpVideoPath = path.join(require('os').tmpdir(), `neopro_thumb_${video.id}.mp4`);
+        fs.writeFileSync(tmpVideoPath, result.buffer);
+        const thumbBuffer = await thumbnailService.generateThumbnailBuffer(tmpVideoPath);
+        fs.unlinkSync(tmpVideoPath);
+        if (thumbBuffer) {
+          const thumbStoragePath = buildThumbnailPath(video.id);
+          const thumbResult = await uploadThumbnail(thumbBuffer, thumbStoragePath);
+          if (thumbResult) {
+            thumbnailUrl = getThumbnailUrl(thumbStoragePath);
+            await videoRepository.update(video.id, { thumbnail_url: thumbnailUrl });
+          }
+        }
+      } catch (thumbError) {
+        logger.warn('Thumbnail generation failed for template render (non-blocking)', {
+          videoId: video.id,
+          error: thumbError instanceof Error ? thumbError.message : String(thumbError),
+        });
+      }
+    }
+
+    const videoResponse = { ...video, title: videoTitle, url: uploadResult.url, thumbnail_url: thumbnailUrl };
 
     logger.info('Template rendered and uploaded successfully', {
       id: videoResponse.id,

@@ -1,7 +1,7 @@
 import { Component, Input, Output, EventEmitter, OnChanges, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
 import { LocalVideo } from '../../../core/models';
+import { VideoSearchSelectComponent, VideoOptionGroup } from '../video-search-select/video-search-select.component';
 
 export interface VideoOption {
   path: string;
@@ -16,25 +16,17 @@ export interface VideoOption {
 @Component({
   selector: 'app-video-selector',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, VideoSearchSelectComponent],
   template: `
-    <div class="video-selector" [class.invalid]="required && !selectedPath">
-      <select
-        [ngModel]="selectedPath"
-        (ngModelChange)="onSelectionChange($event)"
+    <div class="video-selector">
+      <app-video-search-select
+        [groups]="videoGroups"
+        [selectedPath]="selectedPath"
+        (pathChange)="onSelectionChange($event)"
+        [placeholder]="placeholder"
         [disabled]="disabled"
-        class="video-select"
-        [class.placeholder]="!selectedPath"
-      >
-        <option value="">{{ placeholder }}</option>
-        <optgroup *ngFor="let category of groupedVideos | keyvalue" [label]="category.key || 'Sans catégorie'">
-          <option *ngFor="let video of category.value" [value]="video.path">
-            {{ video.filename }} ({{ formatBytes(video.size) }})
-            {{ video.isOnPi ? '✅' : '⏳' }}
-            {{ video.isNeopro ? '🔒' : '' }}
-          </option>
-        </optgroup>
-      </select>
+        [invalid]="required && !selectedPath"
+      ></app-video-search-select>
 
       <div class="validation-message" *ngIf="showValidation && selectedPath && !isPathValid()">
         <span class="warning-icon">⚠️</span>
@@ -49,41 +41,6 @@ export interface VideoOption {
       gap: 0.25rem;
     }
 
-    .video-select {
-      width: 100%;
-      padding: 0.5rem 0.75rem;
-      border: 1px solid #e2e8f0;
-      border-radius: 6px;
-      font-size: 0.875rem;
-      background: white;
-      cursor: pointer;
-      transition: border-color 0.2s, box-shadow 0.2s;
-    }
-
-    .video-select:hover:not(:disabled) {
-      border-color: #cbd5e1;
-    }
-
-    .video-select:focus {
-      outline: none;
-      border-color: #2563eb;
-      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
-    }
-
-    .video-select:disabled {
-      background: #f1f5f9;
-      cursor: not-allowed;
-      opacity: 0.7;
-    }
-
-    .video-select.placeholder {
-      color: #94a3b8;
-    }
-
-    .video-selector.invalid .video-select {
-      border-color: #ef4444;
-    }
-
     .validation-message {
       display: flex;
       align-items: center;
@@ -94,16 +51,6 @@ export interface VideoOption {
 
     .warning-icon {
       font-size: 0.875rem;
-    }
-
-    optgroup {
-      font-weight: 600;
-      color: #334155;
-    }
-
-    option {
-      font-weight: 400;
-      padding: 0.25rem;
     }
   `]
 })
@@ -118,16 +65,18 @@ export class VideoSelectorComponent implements OnChanges {
   @Output() pathChange = new EventEmitter<string>();
   @Output() videoSelected = new EventEmitter<VideoOption | null>();
 
-  groupedVideos: Map<string, VideoOption[]> = new Map();
+  videoGroups: VideoOptionGroup[] = [];
+
+  private videoOptionsMap: Map<string, VideoOption[]> = new Map();
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['videos']) {
-      this.groupVideosByCategory();
+      this.buildGroups();
     }
   }
 
-  private groupVideosByCategory(): void {
-    this.groupedVideos = new Map();
+  private buildGroups(): void {
+    this.videoOptionsMap = new Map();
 
     const videoOptions: VideoOption[] = this.videos.map(v => ({
       path: v.path,
@@ -139,7 +88,6 @@ export class VideoSelectorComponent implements OnChanges {
       isNeopro: this.isNeoProPath(v.path)
     }));
 
-    // Sort by category then filename
     videoOptions.sort((a, b) => {
       const catA = a.category || '';
       const catB = b.category || '';
@@ -147,14 +95,26 @@ export class VideoSelectorComponent implements OnChanges {
       return a.filename.localeCompare(b.filename);
     });
 
-    // Group by category
     for (const video of videoOptions) {
       const category = video.category || 'Autres';
-      if (!this.groupedVideos.has(category)) {
-        this.groupedVideos.set(category, []);
+      if (!this.videoOptionsMap.has(category)) {
+        this.videoOptionsMap.set(category, []);
       }
-      this.groupedVideos.get(category)!.push(video);
+      this.videoOptionsMap.get(category)!.push(video);
     }
+
+    this.videoGroups = Array.from(this.videoOptionsMap.entries()).map(([category, videos]) => ({
+      key: category,
+      label: category,
+      icon: '',
+      videos: videos.map(v => ({
+        path: v.path,
+        displayName: `${v.filename} (${this.formatBytes(v.size)})`,
+        isOnPi: v.isOnPi,
+        size: v.size,
+        isNeopro: v.isNeopro,
+      })),
+    }));
   }
 
   private isNeoProPath(path: string): boolean {
@@ -175,7 +135,7 @@ export class VideoSelectorComponent implements OnChanges {
   }
 
   private findVideoByPath(path: string): VideoOption | undefined {
-    for (const videos of this.groupedVideos.values()) {
+    for (const videos of this.videoOptionsMap.values()) {
       const found = videos.find(v => v.path === path);
       if (found) return found;
     }
@@ -187,7 +147,7 @@ export class VideoSelectorComponent implements OnChanges {
     return this.findVideoByPath(this.selectedPath) !== undefined;
   }
 
-  formatBytes(bytes: number): string {
+  private formatBytes(bytes: number): string {
     if (bytes === 0) return '0 B';
     const k = 1024;
     const sizes = ['B', 'KB', 'MB', 'GB'];

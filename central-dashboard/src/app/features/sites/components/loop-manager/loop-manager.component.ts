@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { SiteConfiguration, LoopVideoConfig, LocalVideo, SiteSponsor } from '../../../../core/models';
 import { FeatureGateService } from '../../../../core/services/feature-gate.service';
+import { VideoSearchSelectComponent, VideoOptionGroup } from '../../../../shared/components/video-search-select/video-search-select.component';
 
 interface LoopTab {
   id: string;
@@ -22,7 +23,7 @@ interface SponsorWeightGroup {
 @Component({
   selector: 'app-loop-manager',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, VideoSearchSelectComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './loop-manager.component.html',
   styleUrls: ['./loop-manager.component.scss']
