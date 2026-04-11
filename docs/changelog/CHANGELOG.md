@@ -1,3 +1,9 @@
+## [3.147.1](https://github.com/Tallec7/neopro/compare/v3.147.0...v3.147.1) (2026-04-11)
+
+### Bug Fixes
+
+- **dashboard:** reduce loop-manager video row padding and gap for compact layout ([e1fb066](https://github.com/Tallec7/neopro/commit/e1fb066379d5184a0fb3de8254b4e88843c561fc))
+
 # [3.147.0](https://github.com/Tallec7/neopro/compare/v3.146.5...v3.147.0) (2026-04-11)
 
 ### Features
