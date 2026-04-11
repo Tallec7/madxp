@@ -151,7 +151,7 @@ Contrôle hybride (auto + manuel) de l'enregistrement analytics.
 
 - Synchroniser le slave dual-display par `videoPath` dans `handleMasterLoopState` (toujours sync par `videoIndex`)
 - Laisser le slave jouer sa boucle indépendamment du master (le slave doit pauser sa boucle dès `tv-role-assigned` et attendre `tv-loop-state`)
-- Jouer une vidéo manuelle sur le secondary display sans résoudre la variante secondaire (toujours passer par `resolveSecondaryVariant()`)
+- Jouer une vidéo manuelle sur un display non-primary sans résoudre la variante (toujours passer par `resolveDisplayVariant()` — résout `video.variants?.[displayType]`)
 - Émettre `tv-loop-update` avec `isManualMode: true` SEULEMENT après le délai 2×rAF + 200ms dans `play()` (émettre aussi immédiatement)
 - Appeler `stopManualVideoAndReturnToLoop()` dans `handleMasterLoopState` CAS 2 sans vérifier `_lastActionReceivedAt` (guard 2s obligatoire)
 - Appeler `play()` directement dans le handler `action` côté slave (le slave doit appeler `preloadManualVideo()` et attendre le reveal du master — ADR-034)

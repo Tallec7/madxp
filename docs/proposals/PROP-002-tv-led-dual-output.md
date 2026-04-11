@@ -155,7 +155,7 @@ Déploiement vers site :
   → Playlist secondary = vidéos avec variant 'secondary' (filtré par display_type)
 ```
 
-**Résolution des variantes (TvComponent)** : `resolveSecondaryVariant()` sélectionne la variante adaptée au `displayType`. Fallback : `object-fit: cover` sur la version TV si pas de variante secondaire.
+**Résolution des variantes (TvComponent)** : `resolveDisplayVariant()` sélectionne la variante adaptée au `displayType` via `video.variants?.[displayType]?.path`. Fallback : `object-fit: cover` sur la version TV si pas de variante pour ce type d'écran.
 
 ### Routes Angular (implémentées + évolution N-display)
 
@@ -378,7 +378,7 @@ Utilise les 2 HDMI natifs. Contenus indépendants par écran. Extensible vers N 
 
 - Watchdog `kiosk-watchdog.sh` : dual Chromium avec `start_chromium_secondary()`
 - Route `/secondary` dans `app.routes.ts` avec `data: { displayType: 'secondary' }`
-- `TvComponent` : `displayType: 'tv' | 'secondary'`, `resolveSecondaryVariant()`
+- `TvComponent` : `displayType` (string), `displayIndex` (from route `:n`), `resolveDisplayVariant()`
 - Socket.IO comme canal unique (BroadcastChannel non fiable entre user-data-dir)
 - Détection hardware HDMI via DRM sysfs + udev hotplug + EDID
 
@@ -513,8 +513,8 @@ Le modèle `displayType` (format) + `displayId` (ciblage) couvre les deux PROP a
 ### Code implémenté
 
 - `raspberry/scripts/kiosk-watchdog.sh` — Dual kiosk : `start_chromium_secondary()`, `setup_secondary_xrandr()`, `DUAL_DISPLAY_ACTIVE`
-- `raspberry/src/app/app.routes.ts` — Routes `/tv`, `/secondary` avec `displayType` data
-- `raspberry/src/app/components/tv/tv.component.ts` — `displayType`, `resolveSecondaryVariant()`
+- `raspberry/src/app/app.routes.ts` — Route `/display/:n`, redirects `/tv` → `/display/0`, `/secondary` → `/display/1`
+- `raspberry/src/app/components/tv/tv.component.ts` — `displayType`, `displayIndex`, `resolveDisplayVariant()`
 - `raspberry/deploy/server/services/hdmi.service.js` — HDMI detection, EDID parsing, dual-port
 - `raspberry/src/app/services/hdmi-status.service.ts` — Angular HDMI monitoring
 - `raspberry/config/udev/99-neopro-hdmi-hotplug.rules` — HDMI hotplug events

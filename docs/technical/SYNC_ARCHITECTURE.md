@@ -622,9 +622,9 @@ En configuration dual-display, chaque vidéo peut posséder une **variante secon
 │                                                                        │
 │  Niveau 1 — Central DB (avant envoi)                                   │
 │  ┌───────────────────────────────────────────────────────────────────┐ │
-│  │  enrichConfigWithSecondaryVariants()                              │ │
-│  │  → Interroge la table secondary_variants en DB                    │ │
-│  │  → Injecte variants.secondary dans chaque vidéo de la config     │ │
+│  │  enrichConfigWithDisplayVariants()                                │ │
+│  │  → Interroge la table video_variants en DB (N display types)      │ │
+│  │  → Injecte variants[displayType] dans chaque vidéo de la config  │ │
 │  │  → La config envoyée au Pi contient déjà les variantes           │ │
 │  └───────────────────────────────────────────────────────────────────┘ │
 │                              │                                         │
@@ -651,11 +651,11 @@ En configuration dual-display, chaque vidéo peut posséder une **variante secon
 
 **Pourquoi 3 niveaux ?**
 
-| Niveau | Composant                             | Quand il intervient                | Ce qu'il protège                                      |
-| ------ | ------------------------------------- | ---------------------------------- | ----------------------------------------------------- |
-| 1      | `enrichConfigWithSecondaryVariants()` | Avant l'envoi de la config au Pi   | Cas nominal : la config part complète du central      |
-| 2      | `deploy-video` → `videos-secondary/`  | Lors du téléchargement des vidéos  | Fichiers physiques présents même si config incomplète |
-| 3      | `restoreSecondaryVariants()`          | Après le merge de `timeCategories` | Rattrapage si le central n'a pas inclus les variantes |
+| Niveau | Composant                            | Quand il intervient                | Ce qu'il protège                                      |
+| ------ | ------------------------------------ | ---------------------------------- | ----------------------------------------------------- |
+| 1      | `enrichConfigWithDisplayVariants()`  | Avant l'envoi de la config au Pi   | Cas nominal : la config part complète du central      |
+| 2      | `deploy-video` → `videos-secondary/` | Lors du téléchargement des vidéos  | Fichiers physiques présents même si config incomplète |
+| 3      | `restoreSecondaryVariants()`         | Après le merge de `timeCategories` | Rattrapage si le central n'a pas inclus les variantes |
 
 Le niveau 3 est le **filet de sécurité final** : lors d'un remplacement complet de `timeCategories` par le central, les vidéos de la boucle temporelle perdent leurs `variants.secondary`. La fonction `restoreSecondaryVariants()` dans `config-merge.js` parcourt les `loopVideos` de chaque time category et restaure les variantes depuis la config locale précédente en se basant sur le `path` de la vidéo comme clé de correspondance.
 
@@ -669,7 +669,7 @@ En plus des variants secondaires, `sendPendingConfigCommand()` enrichit la confi
 
 ```
 1. autoResolveSponsorIds()                  → injecte site_sponsor_id
-2. enrichConfigWithSecondaryVariants()       → injecte variants.secondary
+2. enrichConfigWithDisplayVariants()          → injecte variants[displayType]
 3. enrichConfigWithAnalyticsMetadata()       → injecte video_id, advertiser_id, analytics_category
 ```
 
@@ -1559,7 +1559,7 @@ Sync-Agent (Pi)
 **Enrichissement obligatoire** avant envoi au Pi :
 
 1. `autoResolveSponsorIds()` — résout les placeholders sponsor
-2. `enrichConfigWithSecondaryVariants()` — ajoute les chemins de variants secondaires (dual display)
+2. `enrichConfigWithDisplayVariants()` — ajoute les variants par type d'écran (N-display, PROP-002 Phase 5)
 3. `enrichConfigWithAnalyticsMetadata()` — ajoute `video_id`, `advertiser_id`, `analytics_category`
 
 ### 9.4 Flux de sélection de profil (Remote → Pi)

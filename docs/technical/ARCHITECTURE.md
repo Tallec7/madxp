@@ -413,7 +413,7 @@ sponsor-auto-resolution.service.ts → autoResolveSponsorIds(siteId, config)
 
 Metrics: neopro_sponsor_auto_resolution_total{outcome="resolved|skipped|unresolved"}
 
-⚠️ **Préservation weight/pinned** : toute la chaîne d'enrichissement (`autoResolveSponsorIds` → `enrichConfigWithSecondaryVariants` → `enrichConfigWithAnalyticsMetadata`) **mute les champs** des objets sponsor existants au lieu de reconstruire les objets. Reconstruire = perdre `weight`, `pinned` et tout champ futur. Smoke test enforced.
+⚠️ **Préservation weight/pinned** : toute la chaîne d'enrichissement (`autoResolveSponsorIds` → `enrichConfigWithDisplayVariants` → `enrichConfigWithAnalyticsMetadata`) **mute les champs** des objets sponsor existants au lieu de reconstruire les objets. Reconstruire = perdre `weight`, `pinned` et tout champ futur. Smoke test enforced.
 ```
 
 ### 2c. Sponsor health monitoring (F-AUD-07)

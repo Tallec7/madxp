@@ -4615,11 +4615,11 @@ Le serveur Socket.IO broadcast le `command` (`io.emit('action', data)`) à **tou
 
 ### Correction (v3.82.11)
 
-Ajout de `resolveSecondaryVariant()` qui :
+Ajout de `resolveDisplayVariant()` (anciennement `resolveSecondaryVariant()`, renommée Phase 5 PROP-002) qui :
 
-1. Vérifie `video.variants.secondary.path` (quand l'objet Video inclut les variants)
+1. Vérifie `video.variants?.[displayType]?.path` (quand l'objet Video inclut les variants pour ce type d'écran)
 2. Sinon, cherche dans la configuration complète via `findVideoInConfig(path)` : sponsors → timeCategories.loopVideos → categories.videos (récursif)
-3. Retourne le path de la variante secondaire si trouvé, ou le path original sinon
+3. Retourne le path de la variante si trouvé, ou le path original sinon
 
 Appliqué aux 3 points d'entrée avant chaque appel à `play()`.
 
@@ -4645,8 +4645,8 @@ cat /home/pi/neopro/webapp/configuration.json | python3 -m json.tool | grep -A5 
 
 2 smoke tests supplémentaires (dans `smoke.test.ts`, 291 total) :
 
-1. Les handlers `action` et `handleMasterLoopState` doivent appeler `resolveSecondaryVariant` avant `play()`
-2. `resolveSecondaryVariant` doit exister, vérifier `displayType`, et avoir `findVideoInConfig` pour le fallback
+1. Les handlers `action` et `handleMasterLoopState` doivent appeler `resolveDisplayVariant` avant `play()`
+2. `resolveDisplayVariant` doit exister, vérifier `displayType`, et avoir `findVideoInConfig` pour le fallback
 
 ---
 

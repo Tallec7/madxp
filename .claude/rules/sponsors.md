@@ -17,7 +17,7 @@ paths:
 
 - NE PAS supprimer `generateWeightedPlaylist()` de `startSeamlessLoop()` dans tv.component.ts (sans weighted playlist, la rotation pondérée est silencieusement désactivée)
 - NE PAS supprimer le champ `weight` de `LoopVideo`, `LoopVideoConfig` ou `SponsorVideo` (le weight est le seul mécanisme de pondération de la rotation sponsor Or/Argent/Bronze)
-- NE PAS reconstruire les objets sponsor dans `enrichConfigWithAnalyticsMetadata()` ou `enrichConfigWithSecondaryVariants()` au lieu de muter les champs (reconstruire l'objet = perdre `weight` et tout autre champ futur — toujours SET des champs spécifiques sur l'objet existant)
+- NE PAS reconstruire les objets sponsor dans `enrichConfigWithAnalyticsMetadata()` ou `enrichConfigWithDisplayVariants()` au lieu de muter les champs (reconstruire l'objet = perdre `weight` et tout autre champ futur — toujours SET des champs spécifiques sur l'objet existant)
 - NE PAS revenir à l'algorithme greedy (pick highest remaining) dans `generateWeightedPlaylist()` (le greedy front-load le sponsor dominant → ×4 et ×10 produisent tous les deux "1 sur 2". L'algo Bresenham distribue uniformément)
 - NE PAS supprimer la prévisualisation playlist (`getPlaylistPreview`, `playlist-preview-track`) du loop-manager
 - NE PAS supprimer `fixWrapAround()` de `generateWeightedPlaylist()` (sans wrap-around fix, double passage à la jonction de boucle)

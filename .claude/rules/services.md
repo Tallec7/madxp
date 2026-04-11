@@ -104,9 +104,10 @@ Le smoke test #30 vérifie automatiquement cette complétude.
 ## NE JAMAIS FAIRE — Config Enrichment (smoke test enforced)
 
 - Oublier `timeCategories[].loopVideos[]` dans `deploySecondaryVariant()` (les phases de match utilisent des `SponsorVideo` avec secondary variants — même structure que `sponsors[]`)
-- Envoyer `update_config` depuis le central sans appeler `enrichConfigWithSecondaryVariants()` (l'enrichissement DB est obligatoire avant tout envoi au Pi)
+- Envoyer `update_config` depuis le central sans appeler `enrichConfigWithDisplayVariants()` (l'enrichissement DB est obligatoire avant tout envoi au Pi — Phase 5 PROP-002 : accepte N display types)
 - Envoyer `update_config` depuis le central sans appeler `enrichConfigWithAnalyticsMetadata()` (sans enrichissement, vidéos sponsor classifiées en `'other'` → analytics perdues)
-- Envoyer `sync_profiles` ou `deploy` depuis le central sans passer par la chaîne d'enrichissement complète (`autoResolveSponsorIds()` → `enrichConfigWithSecondaryVariants()` → `enrichConfigWithAnalyticsMetadata()`)
+- Envoyer `sync_profiles` ou `deploy` depuis le central sans passer par la chaîne d'enrichissement complète (`autoResolveSponsorIds()` → `enrichConfigWithDisplayVariants()` → `enrichConfigWithAnalyticsMetadata()`)
+- Supprimer `registerSaasRelay()` de `socket.service.ts` (sans ce relay, les displays SaaS ne reçoivent aucune commande de la Remote — le central server joue le rôle du serveur Socket.IO local du Pi pour les sites SaaS — PROP-002 Phase 5)
 - Construire `secondaryRelativePath` avec `relativePath.replace()` dans `deploySecondaryVariant()` (utilise le filename du fichier primaire au lieu de `finalFilename`)
 - Utiliser `active_profile_id` ou `updateSiteActiveProfile()` dans le code central (concept retiré — le Pi gère la sélection du profil localement)
 

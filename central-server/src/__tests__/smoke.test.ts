@@ -16348,4 +16348,36 @@ describe('PROP-002 Phase 5: N-display model guards', () => {
     expect(content).toMatch(/getSaasConnectedDisplays/);
     expect(content).toMatch(/displayIndex/);
   });
+
+  it('central socket.service must have SaaS event relay (registerSaasRelay)', () => {
+    const content = fs.readFileSync(path.join(repoRoot, 'central-server/src/services/socket.service.ts'), 'utf8');
+    expect(content).toMatch(/registerSaasRelay/);
+    // Relay must handle all Pi-equivalent events
+    expect(content).toMatch(/socket\.on\('command'/);
+    expect(content).toMatch(/socket\.to\(siteId\)\.emit\('action'/);
+    expect(content).toMatch(/socket\.on\('score-update'/);
+    expect(content).toMatch(/socket\.on\('phase-change'/);
+    expect(content).toMatch(/socket\.on\('timer-update'/);
+    expect(content).toMatch(/socket\.on\('breaking-news'/);
+    expect(content).toMatch(/socket\.on\('request-state'/);
+  });
+
+  it('no caller must import enrichConfigWithSecondaryVariants (migrated to Display)', () => {
+    const files = [
+      'central-server/src/controllers/config-profiles.controller.ts',
+      'central-server/src/services/orchestrated-deployment.service.ts',
+      'central-server/src/handlers/config-sync.handler.ts',
+    ];
+    for (const file of files) {
+      const content = fs.readFileSync(path.join(repoRoot, file), 'utf8');
+      expect(content).not.toMatch(/import.*enrichConfigWithSecondaryVariants/);
+      expect(content).toMatch(/import.*enrichConfigWithDisplayVariants/);
+    }
+  });
+
+  it('TvComponent must not have resolveSecondaryVariant (migrated to resolveDisplayVariant)', () => {
+    const content = fs.readFileSync(path.join(repoRoot, 'raspberry/src/app/components/tv/tv.component.ts'), 'utf8');
+    expect(content).not.toMatch(/private resolveSecondaryVariant/);
+    expect(content).toMatch(/private resolveDisplayVariant/);
+  });
 });

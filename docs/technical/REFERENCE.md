@@ -1522,16 +1522,16 @@ Les déploiements antérieurs à v3.102 ont `deployed_path = NULL`. Le backfill 
 
 Lors du déploiement ou de la synchronisation d'une configuration vers un Pi, le champ `variants.secondary` doit être injecté sur chaque entrée vidéo qui possède une variante secondaire en base. Deux fonctions complémentaires assurent ce pipeline :
 
-| Fonction                              | Fichier                                                 | Rôle                                                  |
-| ------------------------------------- | ------------------------------------------------------- | ----------------------------------------------------- |
-| `enrichConfigWithSecondaryVariants()` | `central-server/src/utils/config-secondary-variants.ts` | Enrichit la config **côté central** avant envoi au Pi |
-| `restoreSecondaryVariants()`          | `raspberry/sync-agent/src/utils/config-merge.js`        | Restaure les variants **côté Pi** après un merge      |
+| Fonction                            | Fichier                                                 | Rôle                                                                        |
+| ----------------------------------- | ------------------------------------------------------- | --------------------------------------------------------------------------- |
+| `enrichConfigWithDisplayVariants()` | `central-server/src/utils/config-secondary-variants.ts` | Enrichit la config **côté central** pour N display types (Phase 5 PROP-002) |
+| `restoreSecondaryVariants()`        | `raspberry/sync-agent/src/utils/config-merge.js`        | Restaure les variants **côté Pi** après un merge                            |
 
-_`enrichConfigWithSecondaryVariants(config)` — Central Server :_
+_`enrichConfigWithDisplayVariants(config, displayTypes?)` — Central Server :_
 
 1. Parcourt `sponsors[]`, `categories[].videos[]` (+ `subCategories[].videos[]`) et `timeCategories[].loopVideos[]`
 2. Extrait les filenames via `extractFilenameFromPath()` et construit une map `filename → setter`
-3. Interroge la base via `videoVariantRepository.findSecondaryVariantsByFilenames(filenames)` en un seul appel batch
+3. Interroge la base via `videoVariantRepository.findVariantsByFilenamesAndTypes(filenames, displayTypes)` en un seul appel batch
 4. Injecte `variants: { secondary: { path, filename, width, height, duration } }` sur chaque entrée correspondante
 5. Retourne `{ config, enrichedCount }` — la config est modifiée en place
 
@@ -1964,7 +1964,7 @@ L'onglet Contenu/Boucles dispose d'un **sélecteur de profil** (dropdown) quand 
 
 1. `enrichConfigWithCampaignVideos()` — injection des vidéos des campagnes actives
 2. `autoResolveSponsorIds()` — résolution des IDs sponsors
-3. `enrichConfigWithSecondaryVariants()` — injection des variants secondaires
+3. `enrichConfigWithDisplayVariants()` — injection des variants par type d'écran (N-display)
 4. `enrichConfigWithAnalyticsMetadata()` — injection des métadonnées analytics (`video_id`, `advertiser_id`, `analytics_category`)
 
 **Architecture Services Dashboard (refactoré v3.123) :**
@@ -2254,7 +2254,7 @@ Le service `neopro-kiosk` lance `kiosk-watchdog.sh` — un superviseur qui gère
 >
 > ⚠️ **Ne jamais utiliser `findIndex(v => v.path === state.videoPath)` pour la sync slave** — le secondary display utilise des variants de vidéos avec des chemins différents du master. Toujours synchroniser par `videoIndex`. Smoke test enforced.
 >
-> ⚠️ **Ne jamais jouer une vidéo manuelle sur le secondary sans `resolveSecondaryVariant()`** — le command `action` et le `tv-loop-state` envoient le path de la vidéo principale. Le secondary doit résoudre la variante via `resolveSecondaryVariant()` qui cherche dans `video.variants`, puis fallback dans `findVideoInConfig()` (sponsors, timeCategories, categories). Smoke test enforced.
+> ⚠️ **Ne jamais jouer une vidéo manuelle sur un display non-primary sans `resolveDisplayVariant()`** — le command `action` et le `tv-loop-state` envoient le path de la vidéo principale. Chaque display résout la variante via `resolveDisplayVariant()` qui cherche dans `video.variants?.[displayType]`, puis fallback dans `findVideoInConfig()` (sponsors, timeCategories, categories). Smoke test enforced.
 >
 > ⚠️ **Ne jamais utiliser `xdotool windowsize` pour le retour dual→single display** — Chromium ne re-render pas son viewport CSS interne après un resize X11 (la fenêtre change de taille mais le contenu reste rendu à l'ancienne résolution = zoom). Toujours relancer Chromium avec `--window-size` correct via `stop_chromium_primary` + `start_chromium`. Smoke test enforced.
 >
@@ -2286,7 +2286,7 @@ Les deux instances Chromium se synchronisent via Socket.IO master-slave :
 
 **Sync par index** : le slave utilise `videoIndex` (pas `videoPath`) car les variants secondaires ont des chemins différents. Les deux boucles ont le même ordre, donc l'index est toujours fiable. Avec la rotation pondérée, les index réfèrent à la playlist étendue (pas au tableau original) — les deux côtés génèrent la même playlist car l'algo est déterministe.
 
-**Résolution variante secondaire** : `resolveSecondaryVariant()` vérifie d'abord `video.variants.secondary.path`, puis cherche dans la config complète via `findVideoInConfig(path)` (sponsors → timeCategories.loopVideos → categories.videos récursif). Appliqué aux 3 points d'entrée : `action` handler, BroadcastChannel, `handleMasterLoopState` CAS 1.
+**Résolution variante display** : `resolveDisplayVariant()` vérifie d'abord `video.variants?.[displayType]?.path`, puis cherche dans la config complète via `findVideoInConfig(path)` (sponsors → timeCategories.loopVideos → categories.videos récursif). Appliqué aux 3 points d'entrée : `action` handler, BroadcastChannel, `handleMasterLoopState` CAS 1. Supporte N display types (Phase 5 PROP-002).
 
 **Révélation synchronisée (ADR-034 v3.89.2+)** :
 
