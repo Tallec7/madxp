@@ -29,6 +29,17 @@ export class GlobalErrorHandler implements ErrorHandler {
   private errorBoundary = inject(ErrorBoundaryService);
 
   handleError(error: Error | HttpErrorResponse | unknown): void {
+    // Handle stale chunk errors after redeployment — auto-reload once
+    if (error instanceof Error && this.isChunkLoadError(error)) {
+      const reloadKey = 'neopro_chunk_reload';
+      if (!sessionStorage.getItem(reloadKey)) {
+        sessionStorage.setItem(reloadKey, '1');
+        window.location.reload();
+        return;
+      }
+      sessionStorage.removeItem(reloadKey);
+    }
+
     // Extract error details
     const message = ErrorExtractor.getMessage(error);
     const correlationId = ErrorExtractor.getCorrelationId(error);
@@ -68,5 +79,14 @@ export class GlobalErrorHandler implements ErrorHandler {
     if (isDevMode()) {
       console.error('GlobalErrorHandler caught:', error);
     }
+  }
+
+  private isChunkLoadError(error: Error): boolean {
+    const msg = error.message || '';
+    return (
+      msg.includes('ChunkLoadError') ||
+      msg.includes('Loading chunk') ||
+      msg.includes('Failed to fetch dynamically imported module')
+    );
   }
 }
