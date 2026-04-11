@@ -198,8 +198,20 @@ interface OverlayTemplate {
           <!-- Result -->
           <div class="result-card" *ngIf="renderedVideo">
             <h4>Video generee</h4>
+            <video *ngIf="renderedBlobUrl"
+                   [src]="renderedBlobUrl"
+                   controls
+                   class="result-video"></video>
+            <div class="result-actions">
+              <button class="btn btn-danger" (click)="deleteRenderedVideo()">
+                ✕ Supprimer
+              </button>
+              <button class="btn btn-success" (click)="validateRenderedVideo()">
+                ✓ Valider et garder
+              </button>
+            </div>
             <div class="result-info">
-              <span>{{ renderedVideo.title }}</span>
+              <span class="result-filename">{{ renderedVideo.title }}</span>
               <a [href]="renderedVideo.url" target="_blank" class="btn btn-secondary btn-sm">Telecharger</a>
             </div>
           </div>
@@ -353,8 +365,21 @@ interface OverlayTemplate {
       background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px;
       padding: 16px; margin-top: 16px;
     }
-    .result-card h4 { margin: 0 0 8px; font-size: 14px; color: #166534; }
+    .result-card h4 { margin: 0 0 12px; font-size: 14px; color: #166534; }
+    .result-video {
+      width: 100%; border-radius: 8px; display: block;
+      margin-bottom: 12px; background: #000;
+    }
+    .result-actions {
+      display: flex; gap: 8px; margin-bottom: 10px;
+    }
+    .result-actions .btn { flex: 1; padding: 10px; font-size: 13px; font-weight: 600; border-radius: 6px; }
+    .btn-danger { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
+    .btn-danger:hover { background: #fee2e2; }
+    .btn-success { background: #166534; color: white; border: none; }
+    .btn-success:hover { background: #15803d; }
     .result-info { display: flex; justify-content: space-between; align-items: center; font-size: 13px; }
+    .result-filename { color: #666; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 60%; }
 
     /* Shared btn */
     .btn { border: none; border-radius: 6px; cursor: pointer; transition: all 0.15s; }
@@ -402,6 +427,7 @@ export class LottieTemplatesComponent implements OnInit, OnDestroy {
   renderPhase: 'idle' | 'rendering' | 'uploading' | 'done' = 'idle';
   renderPercent = 0;
   renderedVideo: { id: string; title: string; url: string } | null = null;
+  renderedBlobUrl: string | null = null;
 
   private subscriptions: Subscription[] = [];
 
@@ -433,6 +459,7 @@ export class LottieTemplatesComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.subscriptions.forEach(s => s.unsubscribe());
     this.revokeImagePreviews();
+    this.revokeBlobUrl();
   }
 
   // ── Templates ─────────────────────────────────────────────────────
@@ -456,6 +483,7 @@ export class LottieTemplatesComponent implements OnInit, OnDestroy {
     this.selectedTemplate = tpl;
     this.rendered = false;
     this.renderedVideo = null;
+    this.revokeBlobUrl();
 
     // Reset images
     this.revokeImagePreviews();
@@ -521,6 +549,7 @@ export class LottieTemplatesComponent implements OnInit, OnDestroy {
     this.sourceFile = null;
     this.rendered = false;
     this.renderedVideo = null;
+    this.revokeBlobUrl();
   }
 
   // ── Image handling ──────────────────────────────────────────────
@@ -559,13 +588,32 @@ export class LottieTemplatesComponent implements OnInit, OnDestroy {
     }
   }
 
-  private async readImageAsDataUri(file: File): Promise<string> {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result as string);
-      reader.onerror = () => reject(new Error('Failed to read image'));
-      reader.readAsDataURL(file);
-    });
+  private async readImageAsDataUri(file: File, maxSize = 800): Promise<string> {
+    const bitmap = await createImageBitmap(file);
+    const { width, height } = bitmap;
+
+    if (width <= maxSize && height <= maxSize) {
+      bitmap.close();
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = () => reject(new Error('Failed to read image'));
+        reader.readAsDataURL(file);
+      });
+    }
+
+    const scale = maxSize / Math.max(width, height);
+    const dw = Math.round(width * scale);
+    const dh = Math.round(height * scale);
+
+    const canvas = document.createElement('canvas');
+    canvas.width = dw;
+    canvas.height = dh;
+    const ctx = canvas.getContext('2d')!;
+    ctx.drawImage(bitmap, 0, 0, dw, dh);
+    bitmap.close();
+
+    return canvas.toDataURL('image/png');
   }
 
   // ── Render (browser-side) ───────────────────────────────────────
@@ -600,6 +648,10 @@ export class LottieTemplatesComponent implements OnInit, OnDestroy {
         this.renderPercent = p.progress;
       }
     ).then((blob) => {
+      // Store blob URL for in-page preview
+      this.revokeBlobUrl();
+      this.renderedBlobUrl = URL.createObjectURL(blob);
+
       // Step 2: Upload the rendered video as a regular video file
       this.renderPhase = 'uploading';
       this.renderPercent = 0;
@@ -652,9 +704,44 @@ export class LottieTemplatesComponent implements OnInit, OnDestroy {
     return this.selectedTemplate.variables
       .filter(v => v.required)
       .every(v => {
+        if (v.type === 'image') return !!this.imageFiles[v.key];
         const val = this.variableValues[v.key];
         return val !== undefined && val !== null && String(val).trim() !== '';
       });
+  }
+
+  deleteRenderedVideo(): void {
+    if (!this.renderedVideo) return;
+    const sub = this.api.delete(`/videos/${this.renderedVideo.id}`).subscribe({
+      next: () => {
+        this.revokeBlobUrl();
+        this.renderedVideo = null;
+        this.rendered = false;
+        this.notifications.success('Video supprimee');
+      },
+      error: () => this.notifications.error('Erreur lors de la suppression')
+    });
+    this.subscriptions.push(sub);
+  }
+
+  validateRenderedVideo(): void {
+    this.revokeBlobUrl();
+    this.renderedVideo = null;
+    this.rendered = false;
+    this.sourceFile = null;
+    this.selectedTemplate = null;
+    this.variableValues = {};
+    this.imageFiles = {};
+    this.revokeImagePreviews();
+    this.imagePreviews = {};
+    this.notifications.success('Video conservee dans la bibliotheque !');
+  }
+
+  private revokeBlobUrl(): void {
+    if (this.renderedBlobUrl) {
+      URL.revokeObjectURL(this.renderedBlobUrl);
+      this.renderedBlobUrl = null;
+    }
   }
 
   getRenderLabel(): string {
