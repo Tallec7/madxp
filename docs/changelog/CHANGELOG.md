@@ -1,3 +1,9 @@
+## [3.142.6](https://github.com/Tallec7/neopro/compare/v3.142.5...v3.142.6) (2026-04-11)
+
+### Bug Fixes
+
+- **dashboard:** fix column misalignment and missing video names ([a8bbeaa](https://github.com/Tallec7/neopro/commit/a8bbeaa01bc0cfe1bf7e2e1368102e6bf138cd16))
+
 ## [3.142.5](https://github.com/Tallec7/neopro/compare/v3.142.4...v3.142.5) (2026-04-11)
 
 ### Bug Fixes
