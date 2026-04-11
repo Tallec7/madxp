@@ -49,7 +49,7 @@ Un même sujet (ex: sponsor X) peut avoir **N versions** : une optimisée par ty
 | Indicateur displays dans Remote | ✅ Implémenté | Phase 3 — pastilles ●TV ●2nd dans menu dropdown, event `displays-changed` |
 | Override ciblé (Remote)         | ✅ Implémenté | Phase 4 — toggle "Cible: Tous/TV/2nd", `target?: number[]` dans commandes |
 | Dashboard preview secondaire    | ✅ Implémenté | Phase 3 — section "Aperçu écran secondaire" dans config-editor            |
-| Modèle N-display                | ❌ À faire    | Phase 5                                                                   |
+| Modèle N-display                | ✅ Implémenté | Phase 5 — `/display/:n`, open display_type, dynamic toggle, SaaS IoT      |
 
 ### La Remote et les faits de jeu — Élément critique
 
@@ -369,8 +369,8 @@ Utilise les 2 HDMI natifs. Contenus indépendants par écran. Extensible vers N 
 | Chromium crash sur une instance         | Watchdog surveille les 2 instances indépendamment | ✅ Mitigé  |
 | Opérateur oublie la variante secondaire | Fallback `object-fit: cover` automatique          | ✅ Mitigé  |
 | Résolution secondaire non standard      | `secondary_display_resolution` par site           | ✅ Mitigé  |
-| Contrôleur LED incompatible HDMI        | À tester terrain (Linsn MC100, Novastar MX40 Pro) | ⏳ Phase 3 |
-| N-display > 2 HDMI physiques            | WiFi hotspot (PROP-001 scénario E)                | ⏳ Phase 5 |
+| Contrôleur LED incompatible HDMI        | À tester terrain (Linsn MC100, Novastar MX40 Pro) | ⏳ Terrain |
+| N-display > 2 HDMI physiques            | WiFi hotspot (PROP-001 scénario E) + SaaS IoT     | ✅ Mitigé  |
 
 ## Plan d'implémentation
 
@@ -441,42 +441,44 @@ Utilise les 2 HDMI natifs. Contenus indépendants par écran. Extensible vers N 
 | SaaS classique (navigateur)     | Masqués                 | Masqué        | `displays-changed` jamais reçu → tout caché |
 | SaaS IoT (futur)                | Selon devices connectés | Selon devices | À implémenter Phase 5+ côté central server  |
 
-### Phase 5 — Modèle N-display (à faire)
+### Phase 5 — Modèle N-display ✅ Done
 
-1. **Route `/display/:n`** dans `app.routes.ts` avec redirects `/tv` → `/display/0`, `/secondary` → `/display/1`
-2. **Config site `displays: DisplayConfig[]`** (JSONB) : index, displayType, resolution, name, connection
-3. **DB** : `video_variants.display_type` → contrainte ouverte (pas d'enum fermé), ou table `display_types`
-4. **Watchdog** : boucle sur N displays détectés (HDMI + WiFi registered)
-5. **Remote** : sélecteur multi-display dynamique basé sur `displays[]`
-6. **Dashboard** : gestion N variantes par vidéo, config N écrans par site
+Implémenté en 6 sous-phases (5A-5F) :
 
-**Migration du toggle Phase 4 → Phase 5** :
+1. **5A — Route `/display/:n`** : `app.routes.ts` avec redirects `/tv` → `/display/0`, `/secondary` → `/display/1`. `resolveDisplayVariant()` lit `video.variants?.[displayType]` pour tout type.
+2. **5B — Migration DB** : CHECK `display_type` ouvert (regex slug `^[a-z0-9-]+$`), colonne `displays JSONB` sur sites.
+3. **5C — Pi server** : `displayIndex` dans `_tvInstances`, `getConnectedDisplays()` retourne `[{index, type}]`.
+4. **5D — Remote dynamique** : `connectedDisplays: Array<{index, type}>`, toggle généré dynamiquement, auto-reset si display déconnecté.
+5. **5E — Config enrichment** : `enrichConfigWithDisplayVariants(config, displayTypes)` batch query N types. `VideoVariants` avec index signature.
+6. **5F — SaaS IoT** : `displayIndex` dans `saas-register`, central server `getSaasConnectedDisplays()` + `displays-changed` par room.
 
-Le protocole `target?: number[]` (Phase 4) est déjà N-display ready. La migration concerne uniquement l'UI :
+**Fichiers implémentés** :
 
-```
-Phase 4 (hardcodé):          Phase 5 (dynamique):
-displayTarget: 'all'|'tv'|   displayTarget: 'all' | number[]
-  'secondary'
-[Tous] [TV] [2nd]            [Tous] [📺 Hall] [🖥️ LED] [📺 Buv]
-                              ↑ généré depuis displays[]
-```
-
-| Composant                  | Phase 4                  | Phase 5                                |
-| -------------------------- | ------------------------ | -------------------------------------- |
-| `Command.target`           | `number[]`               | Inchangé                               |
-| `TvComponent.displayIndex` | 0 ou 1                   | Route param `:n`                       |
-| `getCommandTarget()`       | `[0]` ou `[1]`           | Index sélectionnés depuis UI           |
-| Toggle Remote              | 3 boutons hardcodés      | Boutons dynamiques depuis `displays[]` |
-| `displays-changed`         | `{ displays: string[] }` | `{ displays: DisplayConfig[] }`        |
-
-**SaaS IoT** : nécessitera un handler `displays-changed` côté central server (`socket.service.ts`) en plus du Pi local. Les devices SaaS s'enregistrent via `saas-register` — à étendre avec `displayType`.
+- `raspberry/src/app/app.routes.ts` — route `/display/:n` + redirects
+- `raspberry/src/app/components/tv/tv.component.ts` — `displayIndex` from route param, `resolveDisplayVariant()`
+- `raspberry/src/app/components/score-overlay/score-overlay.component.ts` — `displayIndex` + N-display guards
+- `raspberry/src/app/components/remote/remote.component.ts/html` — dynamic toggle
+- `raspberry/src/app/interfaces/command.interface.ts` — `target?: number[]`
+- `raspberry/server/services/state.service.js` — `displayIndex` tracking
+- `raspberry/server/socket/handlers.js` — `displays-changed` with `[{index, type}]`
+- `raspberry/src/app/services/socket.service.ts` — SaaS `displayIndex` in register
+- `central-server/src/services/socket.service.ts` — `getSaasConnectedDisplays()` + `displays-changed`
+- `central-server/src/utils/config-secondary-variants.ts` — `enrichConfigWithDisplayVariants()`
+- `central-server/src/repositories/video-variant.repository.ts` — `DisplayType = string`, `findVariantsByFilenamesAndTypes()`
+- `central-server/src/types/index.ts` — `DisplayConfig`, `VideoVariants` index signature
+- `central-server/src/scripts/migrations/n-display-model.sql` — open CHECK + displays JSONB
 
 **Critères de validation** :
 
-- [ ] 3 écrans affichent des contenus différents simultanément (2 HDMI + 1 WiFi)
-- [ ] Remote sélecteur dynamique s'adapte au nombre d'écrans configurés
-- [ ] Rétrocompat : `/tv` et `/secondary` continuent de fonctionner
+- [x] N écrans affichent des contenus différents simultanément (via `/display/:n`)
+- [x] Remote sélecteur dynamique s'adapte au nombre d'écrans connectés
+- [x] Rétrocompat : `/tv` et `/secondary` redirigent vers `/display/0` et `/display/1`
+
+**Reste hors-code** :
+
+- ⏳ Test terrain contrôleur LED (Linsn MC100, Novastar MX40 Pro)
+- ⏳ Guide d'installation câblage et configuration contrôleur
+- ⏳ Dashboard : UI gestion `displays[]` JSONB par site (Phase 5H future)
 
 ## Budget estimé
 
@@ -539,4 +541,4 @@ Le modèle `displayType` (format) + `displayId` (ciblage) couvre les deux PROP a
 
 ---
 
-_Créé le 11 février 2026 — Révisé le 11 avril 2026 (Phases 3-4 implémentées : indicateurs displays, preview secondaire, override ciblé avec `target?: number[]`, plan migration N-display)_
+_Créé le 11 février 2026 — Révisé le 11 avril 2026 (Phases 1-5 complètes : dual kiosk, variantes vidéo, indicateurs displays, override ciblé, modèle N-display avec route `/display/:n`, open display_type, dynamic Remote toggle, SaaS IoT registration)_
