@@ -377,17 +377,17 @@
 
 > F-15.1 (API fédérations) mis en veille : aucune API publique disponible côté fédérations amateurs (cf. [PROP-003](../proposals/PROP-003-score-live-multi-vendor.md)). L'objectif métier est désormais porté par **F-15.2** (lecture directe table de marque multi-constructeurs, [ADR-049](../adr/ADR-049-score-live-multi-vendor-architecture.md)).
 
-| US        | Feature | Description                                                                                | SP  | Sprint  | Priorité     | Statut     |
-| --------- | ------- | ------------------------------------------------------------------------------------------ | --- | ------- | ------------ | ---------- |
-| US-15.1.1 | F-15.1  | Service polling multi-fédérations (FFHB, FFVB, FFBB) avec fallback manuel                  | 8   | PI-2 S2 | Won't (hold) | ⏸ En veille |
-| US-15.1.2 | F-15.1  | UI de configuration : association match fédération ↔ site                                  | 3   | PI-2 S3 | Won't (hold) | ⏸ En veille |
-| US-15.2.1 | F-15.2  | Interface `ScoreboardConnector` + `ScoreboardManager` + migration table `scoreboard_events` | 5   | PI-2 S1 | Must         | ⏳ Backlog |
-| US-15.2.2 | F-15.2  | `StramatelConnector` (parser binaire 54 octets + fixtures de test unitaires)               | 5   | PI-2 S1 | Must         | ⏳ Backlog |
-| US-15.2.3 | F-15.2  | `BodetConnector` (parser Scorepad TCP + variant BT6000 RS-485)                             | 5   | PI-2 S2 | Must         | ⏳ Backlog |
-| US-15.2.4 | F-15.2  | Firmware Scorebox Pi Zero 2 W (mini-AP WiFi + bridge WebSocket RS-485)                     | 8   | PI-2 S2 | Should       | ⏳ Backlog |
-| US-15.2.5 | F-15.2  | Dashboard : config connecteur par site + monitoring scorebox                               | 3   | PI-2 S2 | Should       | ⏳ Backlog |
-| US-15.2.6 | F-15.2  | Remote enrichie : données scoreboard + boutons faits de jeu différenciés TV+LED            | 3   | PI-2 S3 | Should       | ⏳ Backlog |
-| US-15.2.7 | F-15.2  | `OcrConnector` fallback universel (OpenCV + Tesseract)                                     | 8   | PI-2 S3 | Could        | ⏳ Backlog |
+| US        | Feature | Description                                                                                 | SP  | Sprint  | Priorité     | Statut      |
+| --------- | ------- | ------------------------------------------------------------------------------------------- | --- | ------- | ------------ | ----------- |
+| US-15.1.1 | F-15.1  | Service polling multi-fédérations (FFHB, FFVB, FFBB) avec fallback manuel                   | 8   | PI-2 S2 | Won't (hold) | ⏸ En veille |
+| US-15.1.2 | F-15.1  | UI de configuration : association match fédération ↔ site                                   | 3   | PI-2 S3 | Won't (hold) | ⏸ En veille |
+| US-15.2.1 | F-15.2  | Interface `ScoreboardConnector` + `ScoreboardManager` + migration table `scoreboard_events` | 5   | PI-2 S1 | Must         | ⏳ Backlog  |
+| US-15.2.2 | F-15.2  | `StramatelConnector` (parser binaire 54 octets + fixtures de test unitaires)                | 5   | PI-2 S1 | Must         | ⏳ Backlog  |
+| US-15.2.3 | F-15.2  | `BodetConnector` (parser Scorepad TCP + variant BT6000 RS-485)                              | 5   | PI-2 S2 | Must         | ⏳ Backlog  |
+| US-15.2.4 | F-15.2  | Firmware Scorebox Pi Zero 2 W (mini-AP WiFi + bridge WebSocket RS-485)                      | 8   | PI-2 S2 | Should       | ⏳ Backlog  |
+| US-15.2.5 | F-15.2  | Dashboard : config connecteur par site + monitoring scorebox                                | 3   | PI-2 S2 | Should       | ⏳ Backlog  |
+| US-15.2.6 | F-15.2  | Remote enrichie : données scoreboard + boutons faits de jeu différenciés TV+LED             | 3   | PI-2 S3 | Should       | ⏳ Backlog  |
+| US-15.2.7 | F-15.2  | `OcrConnector` fallback universel (OpenCV + Tesseract)                                      | 8   | PI-2 S3 | Could        | ⏳ Backlog  |
 
 #### E-16 — Rapports Email Auto (2 US, 8 SP)
 
@@ -462,7 +462,7 @@
 | US-23.4.1 | F-23.4  | Quand 2e écran branché : lancer Chromium secondary `--app=` + `xprop` sans couper le kiosk primaire  | 5   | PI-2 S4 | Must     | ⏳ Backlog |
 | US-23.4.2 | F-23.4  | Synchronisation Socket.IO master/slave : pause boucle slave + attente directives `tv-loop-state`     | 5   | PI-2 S4 | Must     | ⏳ Backlog |
 | US-23.4.3 | F-23.4  | Guard `displayType` sur les événements analytics du secondary (empêcher double-comptage impressions) | 3   | PI-2 S5 | Should   | ⏳ Backlog |
-| US-23.4.4 | F-23.4  | Résolution variante secondaire `resolveSecondaryVariant()` avant `play()` sur vidéo manuelle         | 3   | PI-2 S5 | Should   | ⏳ Backlog |
+| US-23.4.4 | F-23.4  | Résolution variante display `resolveDisplayVariant()` avant `play()` sur vidéo manuelle (N-display)  | 3   | PI-2 S5 | Should   | ✅ Done    |
 | US-23.4.5 | F-23.4  | Tests E2E : transition mono→dual sans coupure vidéo ni flash blanc sur écran principal               | 8   | PI-2 S5 | Should   | ⏳ Backlog |
 
 ##### F-23.5 — Résilience mauvaise prise HDMI (6 US, 29 SP)
@@ -542,9 +542,9 @@
 
 > F-21.2 ajoutée en Avr 2026 : API publique Neopro Live Scores, prérequis = F-15.2 livrée. Transforme Neopro en hub de données temps réel du sport amateur français. Vision détaillée dans [ADR-049](../adr/ADR-049-score-live-multi-vendor-architecture.md).
 
-| US        | Feature | Description                                                                                | SP  | Sprint  | Priorité      | Statut     |
-| --------- | ------- | ------------------------------------------------------------------------------------------ | --- | ------- | ------------- | ---------- |
-| US-21.1.1 | F-21.1  | OAuth 2.0 server + scopes + rate limiting + portail développeurs                            | 13  | PI-3 S3 | Won't (PI-3)  | ⏳ Backlog |
+| US        | Feature | Description                                                                                  | SP  | Sprint  | Priorité      | Statut     |
+| --------- | ------- | -------------------------------------------------------------------------------------------- | --- | ------- | ------------- | ---------- |
+| US-21.1.1 | F-21.1  | OAuth 2.0 server + scopes + rate limiting + portail développeurs                             | 13  | PI-3 S3 | Won't (PI-3)  | ⏳ Backlog |
 | US-21.2.1 | F-21.2  | API REST v1 `/scores`, `/matches`, `/events` + auth api_key + OpenAPI doc + plans tarifaires | 5   | PI-3 S2 | Should (PI-3) | ⏳ Backlog |
 | US-21.2.2 | F-21.2  | WebSocket `/stream` temps réel + webhooks sortants configurables                             | 8   | PI-3 S2 | Should (PI-3) | ⏳ Backlog |
 | US-21.2.3 | F-21.2  | Rate limiting par plan (Free/Starter/Pro/Enterprise) + quotas + billing métrique             | 3   | PI-3 S3 | Should (PI-3) | ⏳ Backlog |

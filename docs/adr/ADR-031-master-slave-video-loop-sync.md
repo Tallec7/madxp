@@ -18,11 +18,11 @@ Quatre problèmes de désynchronisation identifiés :
 1. **Race condition** : `startSeamlessLoop()` s'exécute dans `ngOnInit()` **avant** `tv-register` (Socket.IO round-trip). Le slave joue sa boucle indépendamment pendant ~200ms.
 2. **Path mismatch** : les variantes secondaires ont des chemins différents (`variants.secondary.path`). La synchronisation par `videoPath` échoue systématiquement (`findIndex` retourne -1).
 3. **Relance parasite** : `switchToPhase()` et `sponsors()` rappellent `startSeamlessLoop()` sans vérifier `isSlaveMode`.
-4. **Vidéos manuelles sans résolution de variante** (v3.82.11) : le broadcast Socket.IO `action` envoie le path de la vidéo principale à tous les clients. Le secondary display jouait cette vidéo directement sans résoudre la variante secondaire (`resolveSecondaryVariant` n'était appliqué qu'aux vidéos de boucle).
+4. **Vidéos manuelles sans résolution de variante** (v3.82.11) : le broadcast Socket.IO `action` envoie le path de la vidéo principale à tous les clients. Les displays non-primary jouaient cette vidéo directement sans résoudre la variante (`resolveDisplayVariant` n'était appliqué qu'aux vidéos de boucle).
 
 ## Décision
 
-**Synchronisation par `videoIndex`** (position ordinale dans la boucle) au lieu de `videoPath` (chemin fichier). Le slave est passif : il pause sa boucle dès `tv-role-assigned` et attend les directives du master via `tv-loop-state`. Pour les vidéos manuelles, `resolveSecondaryVariant()` résout la variante secondaire avant chaque `play()`.
+**Synchronisation par `videoIndex`** (position ordinale dans la boucle) au lieu de `videoPath` (chemin fichier). Le slave est passif : il pause sa boucle dès `tv-role-assigned` et attend les directives du master via `tv-loop-state`. Pour les vidéos manuelles, `resolveDisplayVariant()` résout la variante adaptée au `displayType` avant chaque `play()`.
 
 Protocole :
 
@@ -50,7 +50,7 @@ Protocole :
 
 ## Fichiers impactés
 
-- `raspberry/src/app/components/tv/tv.component.ts` — pause slave, early return `startSeamlessLoop`, sync par `videoIndex`, `resolveSecondaryVariant()` + `findVideoInConfig()` pour vidéos manuelles
+- `raspberry/src/app/components/tv/tv.component.ts` — pause slave, early return `startSeamlessLoop`, sync par `videoIndex`, `resolveDisplayVariant()` + `findVideoInConfig()` pour vidéos manuelles
 - `raspberry/server/socket/handlers.js` — `tv-register` (rôle) + `tv-loop-update` (broadcast) [lu, non modifié]
 - `raspberry/server/services/state.service.js` — `_loopState` avec `videoIndex` + `videoStartedAt` [lu, non modifié]
 - `central-server/src/__tests__/smoke.test.ts` — 8 guards anti-régression (6 sync + 2 variant resolution)

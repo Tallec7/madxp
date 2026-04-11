@@ -4607,7 +4607,7 @@ La boucle vidéo affiche bien les variantes secondaires (format banner, LED, etc
 
 ### Cause racine
 
-Le serveur Socket.IO broadcast le `command` (`io.emit('action', data)`) à **tous** les clients. Le command contient le chemin de la vidéo principale. La résolution de la variante secondaire (`resolveSecondaryVariant`) n'était appliquée que dans `getLoopVideosForPhase()` pour la boucle, mais **pas** pour les vidéos manuelles. Trois points d'entrée étaient affectés :
+Le serveur Socket.IO broadcast le `command` (`io.emit('action', data)`) à **tous** les clients. Le command contient le chemin de la vidéo principale. La résolution de la variante display (`resolveDisplayVariant`, anciennement `resolveSecondaryVariant`) n'était appliquée que dans `getLoopVideosForPhase()` pour la boucle, mais **pas** pour les vidéos manuelles. Trois points d'entrée étaient affectés :
 
 1. **Handler `action` Socket.IO** : `this.play(command.data)` jouait le path principal
 2. **Handler `onCommand` BroadcastChannel** : idem

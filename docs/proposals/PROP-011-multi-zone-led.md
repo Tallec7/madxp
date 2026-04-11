@@ -381,7 +381,7 @@ Les zones sans variante spécifique héritent de la variante `secondary`, puis `
 1. Étendre le CHECK constraint de `video_variants` pour accepter `zone-N`
 2. Dashboard : mode multi-zone dans les settings du site (nb zones, résolution par zone, noms)
 3. Dashboard : upload de variantes par zone dans l'onglet contenu
-4. API : `enrichConfigWithSecondaryVariants()` étendu pour injecter les variantes par zone
+4. API : `enrichConfigWithDisplayVariants()` étendu pour injecter les variantes par zone (N-display ready)
 5. Sync-agent : `deploySecondaryVariant()` étendu pour déployer les variantes zone-N
 
 **Critères de validation** :

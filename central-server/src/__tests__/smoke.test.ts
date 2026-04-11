@@ -3955,21 +3955,21 @@ describe('E-22 TvComponent master-slave sync guards', () => {
     });
   });
 
-  // Guard: manual videos must resolve secondary variant before play
-  it('manual video commands must use resolveSecondaryVariant before play', () => {
-    // handleTvCommand (or inline action handler) must resolve secondary variant
+  // Guard: manual videos must resolve display variant before play
+  it('manual video commands must use resolveDisplayVariant before play', () => {
+    // handleTvCommand must resolve display variant
     const commandHandler = content.match(/private handleTvCommand[\s\S]*?^  \}/m)
       || content.match(/on\('action'[\s\S]*?}\);/);
     expect(commandHandler).not.toBeNull();
-    expect(commandHandler![0]).toMatch(/resolveSecondaryVariant|resolveDisplayVariant/);
+    expect(commandHandler![0]).toMatch(/resolveDisplayVariant/);
 
-    // handleMasterLoopState CAS 1 must resolve secondary variant
+    // handleMasterLoopState CAS 1 must resolve display variant
     const masterHandler = content.match(/private handleMasterLoopState[\s\S]*?^  \}/m);
     expect(masterHandler).not.toBeNull();
-    expect(masterHandler![0]).toMatch(/resolveSecondaryVariant|resolveDisplayVariant/);
+    expect(masterHandler![0]).toMatch(/resolveDisplayVariant/);
   });
 
-  // Guard: resolveSecondaryVariant must exist and look up config when variants missing
+  // Guard: resolveDisplayVariant must exist and look up config when variants missing
   it('resolveDisplayVariant must exist and search config for variants', () => {
     expect({
       hasMethod: /private resolveDisplayVariant/.test(content),
