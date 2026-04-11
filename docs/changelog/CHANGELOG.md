@@ -1,3 +1,9 @@
+## [3.145.8](https://github.com/Tallec7/neopro/compare/v3.145.7...v3.145.8) (2026-04-11)
+
+### Bug Fixes
+
+- **saas:** resolve video URLs via storage_path DB lookup instead of filename ([a1bfa19](https://github.com/Tallec7/neopro/commit/a1bfa19b1c17e087be47a9e24291e357fcb44b83))
+
 ## [3.145.7](https://github.com/Tallec7/neopro/compare/v3.145.6...v3.145.7) (2026-04-11)
 
 ### Bug Fixes
