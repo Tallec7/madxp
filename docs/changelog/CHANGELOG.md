@@ -1,3 +1,9 @@
+## [3.144.3](https://github.com/Tallec7/neopro/compare/v3.144.2...v3.144.3) (2026-04-11)
+
+### Bug Fixes
+
+- **dashboard:** fix overflow hidden clipping video search dropdowns in config-editor ([e0ae4ef](https://github.com/Tallec7/neopro/commit/e0ae4efd4628c18bd8560080b537e0190a2d11de))
+
 ## [3.144.2](https://github.com/Tallec7/neopro/compare/v3.144.1...v3.144.2) (2026-04-11)
 
 ### Bug Fixes
