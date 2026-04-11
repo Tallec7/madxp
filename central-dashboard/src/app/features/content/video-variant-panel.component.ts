@@ -1,4 +1,4 @@
-import { Component, Input, inject } from '@angular/core';
+import { Component, Input, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpClient, HttpEventType, HttpEvent } from '@angular/common/http';
 import { NotificationService } from '../../core/services/notification.service';
@@ -250,8 +250,9 @@ interface VideoVariant {
     }
   `]
 })
-export class VideoVariantPanelComponent {
+export class VideoVariantPanelComponent implements OnInit {
   @Input() videoId!: string;
+  @Input() autoOpen = false;
 
   private http = inject(HttpClient);
   private notificationService = inject(NotificationService);
@@ -262,6 +263,13 @@ export class VideoVariantPanelComponent {
   uploadProgress = 0;
   deleting = false;
   secondaryVariant: VideoVariant | null = null;
+
+  ngOnInit(): void {
+    if (this.autoOpen) {
+      this.isOpen = true;
+      this.loadVariants();
+    }
+  }
 
   toggleOpen(): void {
     this.isOpen = !this.isOpen;

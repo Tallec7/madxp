@@ -137,7 +137,10 @@
       </div>
       <div class="variant-modal-body">
         <p class="variant-modal-filename">"{{ configVariantTarget.displayName }}"</p>
-        <app-video-variant-panel [videoId]="configVariantTarget.cloudId"></app-video-variant-panel>
+        <app-video-variant-panel
+          [videoId]="configVariantTarget.cloudId"
+          [autoOpen]="true"
+        ></app-video-variant-panel>
       </div>
       <div class="variant-modal-footer">
         <button class="btn btn-secondary" (click)="closeConfigVariantModal()">Fermer</button>
