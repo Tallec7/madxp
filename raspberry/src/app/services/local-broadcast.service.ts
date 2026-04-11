@@ -1,5 +1,5 @@
 import { Injectable, OnDestroy } from '@angular/core';
-import { Subject, Observable } from 'rxjs';
+import { Subject, ReplaySubject, Observable } from 'rxjs';
 
 /**
  * Service de communication locale entre onglets/fenêtres du même navigateur.
@@ -16,7 +16,7 @@ export class LocalBroadcastService implements OnDestroy {
   // Subjects pour les différents types d'événements
   private scoreUpdate$ = new Subject<ScoreUpdateEvent>();
   private phaseChange$ = new Subject<PhaseChangeEvent>();
-  private command$ = new Subject<CommandEvent>();
+  private command$ = new ReplaySubject<CommandEvent>(1, 10_000);
   private optionsUpdate$ = new Subject<OptionsUpdateEvent>();
   private breakingNews$ = new Subject<BreakingNewsEvent>();
   private timerUpdate$ = new Subject<TimerUpdateEvent>();
