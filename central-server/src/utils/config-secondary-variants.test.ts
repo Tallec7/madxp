@@ -3,10 +3,13 @@ import { SiteConfiguration } from '../types';
 
 // Mock repository
 const mockFindSecondaryVariantsByFilenames = jest.fn();
+const mockFindVariantsByFilenamesAndTypes = jest.fn();
 jest.mock('../repositories/video-variant.repository', () => ({
   videoVariantRepository: {
     findSecondaryVariantsByFilenames: (...args: unknown[]) =>
       mockFindSecondaryVariantsByFilenames(...args),
+    findVariantsByFilenamesAndTypes: (...args: unknown[]) =>
+      mockFindVariantsByFilenamesAndTypes(...args),
   },
 }));
 
@@ -23,6 +26,13 @@ const cfg = (partial: Record<string, unknown>): SiteConfiguration =>
 
 beforeEach(() => {
   mockFindSecondaryVariantsByFilenames.mockReset();
+  mockFindVariantsByFilenamesAndTypes.mockReset();
+  // Wire: when enrichConfigWithSecondaryVariants calls findVariantsByFilenamesAndTypes,
+  // delegate to the old mock format with display_type added
+  mockFindVariantsByFilenamesAndTypes.mockImplementation(async (filenames: string[]) => {
+    const rows = await mockFindSecondaryVariantsByFilenames(filenames);
+    return (rows || []).map((r: Record<string, unknown>) => ({ ...r, display_type: 'secondary' }));
+  });
 });
 
 describe('enrichConfigWithSecondaryVariants', () => {

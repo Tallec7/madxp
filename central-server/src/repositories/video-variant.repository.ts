@@ -53,6 +53,17 @@ export interface SecondaryVariantByFilenameRow extends QueryResultRow {
   source_filename: string;
 }
 
+/** Phase 5 — PROP-002: variant row with display_type for N-display queries */
+export interface VariantByFilenameRow extends QueryResultRow {
+  filename: string;
+  display_type: string;
+  storage_path: string;
+  width: number | null;
+  height: number | null;
+  duration: number | null;
+  source_filename: string;
+}
+
 // --------------------------------------------------------------------------
 // Repository
 // --------------------------------------------------------------------------
@@ -162,6 +173,25 @@ class VideoVariantRepositoryImpl extends BaseRepository<VideoVariantRow> {
        JOIN videos v ON v.id = vv.video_id
        WHERE v.filename IN (${placeholders}) AND vv.display_type = 'secondary'`,
       filenames
+    );
+    return result.rows;
+  }
+
+  /** Phase 5 — PROP-002: query variants for multiple display types at once */
+  async findVariantsByFilenamesAndTypes(
+    filenames: string[],
+    displayTypes: string[]
+  ): Promise<VariantByFilenameRow[]> {
+    if (filenames.length === 0 || displayTypes.length === 0) return [];
+    const fnPlaceholders = filenames.map((_, i) => `$${i + 1}`).join(', ');
+    const dtPlaceholders = displayTypes.map((_, i) => `$${filenames.length + i + 1}`).join(', ');
+    const result = await query<VariantByFilenameRow>(
+      `SELECT vv.filename, vv.display_type, vv.storage_path, vv.width, vv.height, vv.duration,
+              v.filename AS source_filename
+       FROM video_variants vv
+       JOIN videos v ON v.id = vv.video_id
+       WHERE v.filename IN (${fnPlaceholders}) AND vv.display_type IN (${dtPlaceholders})`,
+      [...filenames, ...displayTypes]
     );
     return result.rows;
   }

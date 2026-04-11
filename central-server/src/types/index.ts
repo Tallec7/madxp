@@ -472,6 +472,7 @@ export interface VideoVariantInfo {
 
 export interface VideoVariants {
   secondary?: VideoVariantInfo;
+  [displayType: string]: VideoVariantInfo | undefined;
 }
 
 export interface SponsorVideo {
