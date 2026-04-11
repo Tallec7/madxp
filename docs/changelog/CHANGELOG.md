@@ -1,3 +1,9 @@
+## [3.145.7](https://github.com/Tallec7/neopro/compare/v3.145.6...v3.145.7) (2026-04-11)
+
+### Bug Fixes
+
+- **safe:** proposal status update silently failing on non-standard markdown formats ([19729f2](https://github.com/Tallec7/neopro/commit/19729f2847b06ce422e5641a1f7b3dcb6e5ec185))
+
 ## [3.145.6](https://github.com/Tallec7/neopro/compare/v3.145.5...v3.145.6) (2026-04-11)
 
 ### Bug Fixes
