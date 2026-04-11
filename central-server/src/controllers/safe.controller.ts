@@ -234,7 +234,7 @@ export const createProposal = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    const proposal = safeParserService.createProposal({
+    const proposal = await safeParserService.createProposal({
       title: title.trim(),
       type: type || 'prop',
       relatedEpic: relatedEpic || null,
@@ -264,7 +264,7 @@ export const createProposal = async (req: AuthRequest, res: Response) => {
 export const deleteProposal = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
-    const deleted = safeParserService.deleteProposal(id);
+    const deleted = await safeParserService.deleteProposal(id);
 
     if (!deleted) {
       return res.status(404).json({ error: `Proposal ${id} not found` });
@@ -339,7 +339,7 @@ export const updateProposalContent = async (req: AuthRequest, res: Response) => 
       return res.status(400).json({ error: 'Title must be a non-empty string' });
     }
 
-    const updated = safeParserService.updateProposalContent(id, {
+    const updated = await safeParserService.updateProposalContent(id, {
       title: title?.trim(),
       content,
     });

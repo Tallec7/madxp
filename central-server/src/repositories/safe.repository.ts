@@ -29,6 +29,13 @@ export interface StoryStatusOverrideRow extends QueryResultRow {
   updated_at: Date;
 }
 
+export interface ProposalStatusOverrideRow extends QueryResultRow {
+  id: number;
+  proposal_id: string;
+  status: string;
+  updated_at: Date;
+}
+
 // --- Repository ---
 
 class SafeRepository {
@@ -101,6 +108,42 @@ class SafeRepository {
       );
     } catch (error) {
       logger.warn('SAFe: Failed to upsert story status override', { storyId, error });
+    }
+  }
+
+  /**
+   * Get all proposal status overrides.
+   * Returns a map: proposalId → status.
+   */
+  async getProposalOverrides(): Promise<Map<string, string>> {
+    try {
+      const result = await query<ProposalStatusOverrideRow>(
+        'SELECT proposal_id, status FROM safe_proposal_status_override'
+      );
+      const map = new Map<string, string>();
+      for (const row of result.rows) {
+        map.set(row.proposal_id, row.status);
+      }
+      return map;
+    } catch (error) {
+      logger.warn('SAFe: safe_proposal_status_override table not available (migration pending?)', { error });
+      return new Map();
+    }
+  }
+
+  /**
+   * Upsert status override for a proposal.
+   */
+  async upsertProposalStatus(proposalId: string, status: string): Promise<void> {
+    try {
+      await query(
+        `INSERT INTO safe_proposal_status_override (proposal_id, status, updated_at)
+         VALUES ($1, $2, NOW())
+         ON CONFLICT (proposal_id) DO UPDATE SET status = $2, updated_at = NOW()`,
+        [proposalId, status]
+      );
+    } catch (error) {
+      logger.warn('SAFe: Failed to upsert proposal status override', { proposalId, error });
     }
   }
 }

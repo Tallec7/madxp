@@ -65,18 +65,32 @@ class SafeParserService {
     return portfolio;
   }
 
-  getProposals(): SafeProposalSummary[] {
+  async getProposals(): Promise<SafeProposalSummary[]> {
     if (this.proposalsCache && Date.now() - this.proposalsCache.timestamp < CACHE_TTL_MS) {
       return this.proposalsCache.data;
     }
 
     const proposals = this.parseProposals();
+
+    // Apply DB overrides (hybrid layer — survives container restarts)
+    try {
+      const overrides = await safeRepository.getProposalOverrides();
+      for (const proposal of proposals) {
+        const override = overrides.get(proposal.id);
+        if (override) {
+          proposal.status = override as ProposalStatus;
+        }
+      }
+    } catch (error) {
+      logger.warn('SAFe: Failed to apply proposal status overrides', { error });
+    }
+
     this.proposalsCache = { data: proposals, timestamp: Date.now() };
     return proposals;
   }
 
-  getProposal(id: string): SafeProposal | null {
-    const proposals = this.getProposals();
+  async getProposal(id: string): Promise<SafeProposal | null> {
+    const proposals = await this.getProposals();
     const summary = proposals.find(p => p.id === id);
     if (!summary) return null;
 
@@ -171,8 +185,8 @@ class SafeParserService {
     return true;
   }
 
-  updateProposalStatus(id: string, newStatus: ProposalStatus): boolean {
-    const proposals = this.getProposals();
+  async updateProposalStatus(id: string, newStatus: ProposalStatus): Promise<boolean> {
+    const proposals = await this.getProposals();
     const proposal = proposals.find(p => p.id === id);
     if (!proposal) return false;
 
@@ -218,18 +232,22 @@ class SafeParserService {
     }
 
     fs.writeFileSync(fullPath, content, 'utf-8');
+
+    // Persist to DB (hybrid layer — survives container restarts)
+    await safeRepository.upsertProposalStatus(id, newStatus);
+
     this.invalidateCache();
     logger.info('SAFe: Updated proposal status', { id, newStatus });
     return true;
   }
 
-  createProposal(data: { title: string; type: ProposalType; relatedEpic: string | null; content: string }): SafeProposalSummary {
+  async createProposal(data: { title: string; type: ProposalType; relatedEpic: string | null; content: string }): Promise<SafeProposalSummary> {
     if (!fs.existsSync(PROPOSALS_DIR)) {
       fs.mkdirSync(PROPOSALS_DIR, { recursive: true });
     }
 
     // Determine next ID
-    const existing = this.getProposals();
+    const existing = await this.getProposals();
     const prefix = data.type === 'spike' ? 'SPIKE' : data.type === 'spec' ? 'SPEC' : 'PROP';
     const existingIds = existing
       .filter(p => p.id.startsWith(prefix))
@@ -269,8 +287,8 @@ ${data.content}
     };
   }
 
-  deleteProposal(id: string): boolean {
-    const proposals = this.getProposals();
+  async deleteProposal(id: string): Promise<boolean> {
+    const proposals = await this.getProposals();
     const proposal = proposals.find(p => p.id === id);
     if (!proposal) return false;
 
@@ -347,8 +365,8 @@ ${data.content}
     return true;
   }
 
-  updateProposalContent(id: string, data: { title?: string; content?: string }): boolean {
-    const proposals = this.getProposals();
+  async updateProposalContent(id: string, data: { title?: string; content?: string }): Promise<boolean> {
+    const proposals = await this.getProposals();
     const proposal = proposals.find(p => p.id === id);
     if (!proposal) return false;
 
