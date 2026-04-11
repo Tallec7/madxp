@@ -65,6 +65,7 @@ Un ADR documente une décision technique importante avec :
 | [ADR-046](ADR-046-site-config-copy.md)                            | Copie de configuration inter-sites                        | Accepté                  | Avr 2026 |
 | [ADR-047](ADR-047-claude-md-rules-migration.md)                   | Migration règles CLAUDE.md vers .claude/rules/            | Accepté                  | Avr 2026 |
 | [ADR-048](ADR-048-ftp-video-storage-restructure.md)               | Restructuration FTP + thumbnails + pivot site_videos      | Accepté                  | Avr 2026 |
+| [ADR-049](ADR-049-score-live-multi-vendor-architecture.md)        | Score live multi-constructeurs (table de marque)          | Proposé                  | Avr 2026 |
 
 ### Supersédés
 
@@ -81,7 +82,7 @@ Un ADR documente une décision technique importante avec :
 | ---------------------------------------------------------------- | ------------------------------------------------------------- | ----------------------- |
 | [PROP-001](../proposals/PROP-001-multi-tv-single-pi.md)          | Multi-TV depuis un seul Pi                                    | Hardware / Architecture |
 | [PROP-002](../proposals/PROP-002-tv-led-dual-output.md)          | TV + LED dual output → [ADR-029](ADR-029-dual-hdmi-tv-led.md) | Hardware / Architecture |
-| [PROP-003](../proposals/PROP-003-stramatel-live-score.md)        | Score live multi-constructeurs                                | Intégration hardware    |
+| [PROP-003](../proposals/PROP-003-score-live-multi-vendor.md)     | Score live multi-constructeurs                                | Intégration hardware    |
 | [PROP-004](../proposals/PROP-004-video-template-engine.md)       | Moteur de templates vidéo                                     | Feature produit         |
 | [PROP-005](../proposals/PROP-005-scheduling-local-vs-server.md)  | Planification horaire local vs serveur                        | Architecture            |
 | [PROP-006](../proposals/PROP-006-sponsor-self-service-portal.md) | Portail sponsor self-service                                  | Feature produit         |
