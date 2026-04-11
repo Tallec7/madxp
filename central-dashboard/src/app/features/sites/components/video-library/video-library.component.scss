@@ -239,51 +239,77 @@
   min-width: 120px;
 }
 
-/* Grid columns - shared between header and items */
+/* Column definitions - shared between header and items */
 .col-checkbox {
+  width: 28px;
   text-align: center;
+  flex-shrink: 0;
 }
 .col-lock {
+  width: 24px;
   text-align: center;
+  flex-shrink: 0;
 }
 .col-name {
+  flex: 1;
+  min-width: 120px;
   text-align: left;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 .col-category {
+  width: 90px;
   text-align: left;
+  flex-shrink: 0;
 }
 .col-duration {
+  width: 55px;
   text-align: right;
+  flex-shrink: 0;
 }
 .col-size {
+  width: 65px;
   text-align: right;
+  flex-shrink: 0;
 }
 .col-date {
+  width: 70px;
   text-align: right;
+  flex-shrink: 0;
 }
 .col-advertiser {
+  width: 80px;
   text-align: left;
+  flex-shrink: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 .col-variant {
+  width: 36px;
   text-align: center;
+  flex-shrink: 0;
 }
 .col-config {
+  width: 52px;
   text-align: center;
+  flex-shrink: 0;
 }
 .col-owner {
+  width: 55px;
   text-align: center;
+  flex-shrink: 0;
 }
 .col-status {
+  width: 35px;
   text-align: center;
+  flex-shrink: 0;
 }
 .col-actions {
+  width: 85px;
   text-align: right;
+  flex-shrink: 0;
 }
 
 /* Scrollable table wrapper */
@@ -292,42 +318,11 @@
   -webkit-overflow-scrolling: touch;
 }
 
-/* Grid template for table rows */
-.sort-header,
-.video-item {
-  display: grid;
-  grid-template-columns:
-    auto /* checkbox (collapses when hidden) */
-    24px /* lock */
-    minmax(120px, 1fr) /* name */
-    80px /* category */
-    50px /* duration */
-    60px /* size */
-    65px /* date */
-    70px /* advertiser */
-    32px /* variant */
-    48px /* config */
-    50px /* owner */
-    32px /* status */
-    80px; /* actions */
-  align-items: center;
-  gap: 0.375rem;
-}
-
-.col-checkbox {
-  width: 28px;
-}
-
-.col-checkbox.hidden {
-  width: 0;
-  overflow: hidden;
-  padding: 0;
-  margin: 0;
-  visibility: hidden;
-}
-
 /* Sort header */
 .sort-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
   padding: 0.5rem 0.75rem;
   background: #f1f5f9;
   border: 1px solid #e2e8f0;
@@ -367,6 +362,9 @@
 }
 
 .video-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
   padding: 0.5rem 0.75rem;
   border-bottom: 1px solid #f1f5f9;
   transition: background 0.15s;
@@ -930,47 +928,40 @@
     font-size: 0.75rem;
   }
 
-  /* Redefine grid for mobile — hide less critical columns */
-  .sort-header,
-  .video-item {
-    grid-template-columns:
-      auto /* checkbox */
-      0 /* lock — hidden */
-      minmax(100px, 1fr) /* name */
-      60px /* category */
-      0 /* duration — hidden */
-      50px /* size */
-      0 /* date — hidden */
-      0 /* advertiser — hidden */
-      0 /* variant — hidden */
-      0 /* config — hidden */
-      42px /* owner */
-      32px /* status */
-      50px; /* actions */
-    gap: 0.25rem;
-    padding: 0.375rem 0.5rem;
-  }
-
-  .col-lock,
+  /* Hide less critical columns on mobile */
   .col-advertiser,
   .col-variant,
   .col-config,
   .col-duration,
   .col-date {
-    overflow: hidden;
-    visibility: hidden;
-    padding: 0;
+    display: none;
+  }
+
+  .col-name {
+    min-width: 100px;
+  }
+
+  .col-category {
+    width: 70px;
   }
 
   .col-size {
+    width: 50px;
     font-size: 0.65rem;
   }
 
   .col-owner {
+    width: 42px;
     font-size: 0.55rem;
   }
 
+  .col-actions {
+    width: 50px;
+  }
+
   .sort-header {
+    gap: 0.25rem;
+    padding: 0.375rem 0.5rem;
     font-size: 0.65rem;
   }
 
@@ -1003,29 +994,17 @@
 }
 
 @media (max-width: 480px) {
-  .sort-header,
-  .video-item {
-    grid-template-columns:
-      auto /* checkbox */
-      0 /* lock */
-      minmax(80px, 1fr) /* name */
-      0 /* category — hidden */
-      0 /* duration */
-      50px /* size */
-      0 /* date */
-      0 /* advertiser */
-      0 /* variant */
-      0 /* config */
-      38px /* owner */
-      0 /* status — hidden */
-      50px; /* actions */
-  }
-
   .col-category,
   .col-status {
-    overflow: hidden;
-    visibility: hidden;
-    padding: 0;
+    display: none;
+  }
+
+  .col-name {
+    min-width: 80px;
+  }
+
+  .col-owner {
+    width: 38px;
   }
 
   .video-name {

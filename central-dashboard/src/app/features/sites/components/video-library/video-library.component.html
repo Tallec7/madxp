@@ -120,7 +120,7 @@
   <div class="table-scroll-wrapper">
     <!-- En-tête de tri -->
     <div class="sort-header">
-      <span class="col-checkbox" [class.hidden]="!selectionMode">
+      <span class="col-checkbox" *ngIf="selectionMode">
         <input
           type="checkbox"
           [checked]="isAllSelected()"
