@@ -2732,13 +2732,13 @@ describe('E-22 Angular /secondary route guard', () => {
     content = fs.readFileSync(routesPath, 'utf8');
   });
 
-  it('app.routes.ts must have /secondary route with displayType secondary', () => {
+  it('app.routes.ts must have /secondary redirect and /display/:n route', () => {
     expect({
-      hasSecondaryRoute: /path:\s*['"]secondary['"]/.test(content),
-      hasDisplayTypeSecondary: /displayType:\s*['"]secondary['"]/.test(content),
+      hasSecondaryRedirect: /path:\s*['"]secondary['"]/.test(content),
+      hasDisplayRoute: /path:\s*['"]display\/:n['"]/.test(content),
     }).toEqual({
-      hasSecondaryRoute: true,
-      hasDisplayTypeSecondary: true,
+      hasSecondaryRedirect: true,
+      hasDisplayRoute: true,
     });
   });
 
@@ -3970,10 +3970,10 @@ describe('E-22 TvComponent master-slave sync guards', () => {
   });
 
   // Guard: resolveSecondaryVariant must exist and look up config when variants missing
-  it('resolveSecondaryVariant must exist and search config for variants', () => {
+  it('resolveDisplayVariant must exist and search config for variants', () => {
     expect({
-      hasMethod: /private resolveSecondaryVariant/.test(content),
-      checksDisplayType: /this\.displayType\s*!==\s*'secondary'/.test(content),
+      hasMethod: /private resolveDisplayVariant/.test(content),
+      checksDisplayType: /this\.displayType\s*===\s*'tv'/.test(content),
       hasFindInConfig: /private findVideoInConfig/.test(content),
       searchesSponsors: /this\.configuration\.sponsors/.test(content),
       searchesCategories: /this\.configuration\.categories/.test(content),
@@ -3997,7 +3997,7 @@ describe('E-23 US-23.7.5: analytics displayType guard', () => {
   const tvPath = path.join(repoRoot, 'raspberry/src/app/components/tv/tv.component.ts');
   const tvContent = fs.readFileSync(tvPath, 'utf-8');
 
-  it('all trackVideoStart calls must be guarded by displayType !== secondary', () => {
+  it('all trackVideoStart calls must be guarded by displayType === tv', () => {
     // Find all lines that call trackVideoStart
     const lines = tvContent.split('\n');
     const trackStartLines = lines
@@ -4006,14 +4006,14 @@ describe('E-23 US-23.7.5: analytics displayType guard', () => {
 
     expect(trackStartLines.length).toBeGreaterThanOrEqual(3);
 
-    // Each trackVideoStart must be preceded (within 12 lines) by a displayType !== 'secondary' guard
+    // Each trackVideoStart must be preceded (within 12 lines) by a displayType === 'tv' guard
     for (const { num } of trackStartLines) {
       const context = lines.slice(Math.max(0, num - 13), num).join(' ');
-      expect(context).toMatch(/displayType\s*!==\s*'secondary'/);
+      expect(context).toMatch(/displayType\s*===\s*'tv'/);
     }
   });
 
-  it('all trackVideoEnd calls must be guarded by displayType !== secondary', () => {
+  it('all trackVideoEnd calls must be guarded by displayType === tv', () => {
     const lines = tvContent.split('\n');
     const trackEndLines = lines
       .map((line, i) => ({ line: line.trim(), num: i + 1 }))
@@ -4023,7 +4023,7 @@ describe('E-23 US-23.7.5: analytics displayType guard', () => {
 
     for (const { num } of trackEndLines) {
       const context = lines.slice(Math.max(0, num - 6), num).join(' ');
-      expect(context).toMatch(/displayType\s*!==\s*'secondary'/);
+      expect(context).toMatch(/displayType\s*===\s*'tv'/);
     }
   });
 });
@@ -4181,11 +4181,11 @@ describe('E-22 TvComponent variant selection guard', () => {
     content = fs.readFileSync(tvPath, 'utf8');
   });
 
-  it('TvComponent must check variants.secondary.path for video selection', () => {
+  it('TvComponent must check display variants for video selection', () => {
     expect({
-      checksVariantsSecondary: /variants\?\.secondary\?\.path/.test(content),
+      checksVariants: /variants\?\.\[this\.displayType\]/.test(content),
     }).toEqual({
-      checksVariantsSecondary: true,
+      checksVariants: true,
     });
   });
 });

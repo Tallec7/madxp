@@ -29,7 +29,7 @@ export interface ScoreData {
 })
 export class ScoreOverlayComponent implements OnInit, OnDestroy {
   @Input() configuration: Configuration;
-  @Input() displayType: 'tv' | 'secondary' = 'tv';
+  @Input() displayType = 'tv';
   @Input() displayIndex = 0;
 
   // Score state
@@ -301,13 +301,13 @@ export class ScoreOverlayComponent implements OnInit, OnDestroy {
     this.goalScoringTeam = team;
     this.showGoalAnimation = true;
 
-    // Play sound (not on secondary — sound comes from primary)
-    if (this.displayType !== 'secondary' && config.soundEnabled && config.soundUrl) {
+    // Play sound only on primary TV (other displays get sound from primary)
+    if (this.displayType === 'tv' && config.soundEnabled && config.soundUrl) {
       this.playGoalSound(config.soundUrl);
     }
 
     // Secondary: shorter duration (quick flash)
-    const duration = this.displayType === 'secondary' ? Math.min(config.duration, 3) : config.duration;
+    const duration = this.displayType !== 'tv' ? Math.min(config.duration, 3) : config.duration;
     this.goalAnimationTimeout = setTimeout(() => {
       this.showGoalAnimation = false;
       this.goalScoringTeam = null;

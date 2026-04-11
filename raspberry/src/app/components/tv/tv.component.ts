@@ -56,9 +56,9 @@ export class TvComponent implements OnInit, OnDestroy {
 
   private localBroadcastSubscriptions: Subscription[] = [];
 
-  // Display type: 'tv' (HDMI 0 principal) ou 'secondary' (HDMI 1 écran secondaire)
-  public displayType: 'tv' | 'secondary' = 'tv';
-  // Display index for targeted commands (Phase 4 — PROP-002): tv=0, secondary=1
+  // Display type: 'tv' (index 0), 'secondary' (index 1), 'display-N' (index N)
+  public displayType = 'tv';
+  // Display index for targeted commands and variant resolution
   public displayIndex = 0;
 
   // HDMI status — E-23 US-23.2.1: splash screen when no display connected
@@ -152,9 +152,15 @@ export class TvComponent implements OnInit, OnDestroy {
   // =========================================================================
 
   public ngOnInit() {
-    // Lire le displayType depuis la route data (/secondary → 'secondary', /tv → 'tv')
-    this.displayType = (this.route.snapshot.data['displayType'] as 'tv' | 'secondary') || 'tv';
-    this.displayIndex = this.displayType === 'secondary' ? 1 : 0;
+    // Phase 5 — PROP-002: read displayIndex from route param /display/:n
+    const routeN = this.route.snapshot.params['n'];
+    if (routeN !== undefined) {
+      this.displayIndex = parseInt(routeN, 10) || 0;
+    } else {
+      // Fallback: route data (rétrocompat accès direct sans param)
+      this.displayIndex = this.route.snapshot.data['displayType'] === 'secondary' ? 1 : 0;
+    }
+    this.displayType = this.displayIndex === 0 ? 'tv' : this.displayIndex === 1 ? 'secondary' : `display-${this.displayIndex}`;
     console.log(`[TV] Display type: ${this.displayType}, index: ${this.displayIndex}`);
 
     // S'abonner aux mises à jour du statut de licence
@@ -189,7 +195,7 @@ export class TvComponent implements OnInit, OnDestroy {
     this.analyticsService.setConfiguration(this.configuration);
 
     // En mode SaaS, la boucle tourne en continu sans phase match — activer le recording et la session au démarrage
-    if ((environment as { saasMode?: boolean }).saasMode && !this.isSlaveMode && this.displayType !== 'secondary') {
+    if ((environment as { saasMode?: boolean }).saasMode && !this.isSlaveMode && this.displayType === 'tv') {
       this.recordingState.startRecording(false);
       this.analyticsService.startSession();
     }
@@ -461,7 +467,7 @@ export class TvComponent implements OnInit, OnDestroy {
       onLoopVideoStarted: (video, videoIndex, player) => this.onLoopVideoStarted(video, videoIndex, player),
       onLoopVideoSwitched: (video, videoIndex, newPlayer) => this.onLoopVideoSwitched(video, videoIndex, newPlayer),
       onLoopVideoEnded: (completed) => {
-        if (!this.isSlaveMode && this.displayType !== 'secondary') {
+        if (!this.isSlaveMode && this.displayType === 'tv') {
           this.analyticsService.trackVideoEnd(completed);
         }
       },
@@ -548,7 +554,7 @@ export class TvComponent implements OnInit, OnDestroy {
     this.errorRecoveryService.resetConsecutiveErrors();
 
     // Track analytics (disabled for slaves and secondary — E-23 US-23.7.5)
-    if (!this.isSlaveMode && this.displayType !== 'secondary') {
+    if (!this.isSlaveMode && this.displayType === 'tv') {
       this.analyticsService.trackVideoStart(video, 'auto');
     }
 
@@ -595,7 +601,7 @@ export class TvComponent implements OnInit, OnDestroy {
     this.errorRecoveryService.incrementVideoPlayCount();
     this.errorRecoveryService.resetConsecutiveErrors();
 
-    if (!this.isSlaveMode && this.displayType !== 'secondary') {
+    if (!this.isSlaveMode && this.displayType === 'tv') {
       this.analyticsService.trackVideoStart(video, 'auto');
     }
 
@@ -766,7 +772,7 @@ export class TvComponent implements OnInit, OnDestroy {
                   this.recordingState.startRecording(false);
                   this._manualRecordingStarted = true;
                 }
-                if (this.displayType !== 'secondary') {
+                if (this.displayType === 'tv') {
                   this.analyticsService.trackVideoStart(video, 'manual');
                 }
               }
@@ -844,7 +850,7 @@ export class TvComponent implements OnInit, OnDestroy {
       console.log('tv player : manual video ended', video.path);
       targetPlayer.removeEventListener('ended', onManualEnded);
 
-      if (!this.isSlaveMode && this.displayType !== 'secondary') {
+      if (!this.isSlaveMode && this.displayType === 'tv') {
         this.analyticsService.trackVideoEnd(true);
         if (this._manualRecordingStarted) {
           console.log('[TV] Auto-stop recording after manual video ended');
@@ -1097,29 +1103,37 @@ export class TvComponent implements OnInit, OnDestroy {
       }
     }
 
-    if (this.displayType === 'secondary') {
-      return videos.map(video => this.resolveSecondaryVariant(video));
+    if (this.displayType !== 'tv') {
+      return videos.map(video => this.resolveDisplayVariant(video));
     }
 
     return videos;
   }
 
-  private resolveSecondaryVariant<T extends { path: string; variants?: { secondary?: { path: string } } }>(video: T): T {
-    if (this.displayType !== 'secondary') return video;
+  // Phase 5 — PROP-002: generalized N-display variant resolution
+  private resolveDisplayVariant<T extends { path: string; variants?: Record<string, { path: string }> }>(video: T): T {
+    if (this.displayType === 'tv') return video;
 
-    if (video.variants?.secondary?.path) {
-      console.log('[TV] Secondary: resolved variant from video object:', video.variants.secondary.path);
-      return { ...video, path: video.variants.secondary.path };
+    const variant = video.variants?.[this.displayType];
+    if (variant?.path) {
+      console.log(`[TV] Display ${this.displayType}: resolved variant from video object:`, variant.path);
+      return { ...video, path: variant.path };
     }
 
     const found = this.findVideoInConfig(video.path);
-    if (found?.variants?.secondary?.path) {
-      console.log('[TV] Secondary: resolved variant from config lookup:', found.variants.secondary.path);
-      return { ...video, path: found.variants.secondary.path };
+    const foundVariant = (found as { variants?: Record<string, { path: string }> })?.variants?.[this.displayType];
+    if (foundVariant?.path) {
+      console.log(`[TV] Display ${this.displayType}: resolved variant from config lookup:`, foundVariant.path);
+      return { ...video, path: foundVariant.path };
     }
 
-    console.warn('[TV] Secondary: no variant found for video, using primary path:', video.path);
+    console.warn(`[TV] Display ${this.displayType}: no variant found for video, using primary path:`, video.path);
     return video;
+  }
+
+  /** @deprecated Use resolveDisplayVariant — kept for backward compat with sync-agent restoreSecondaryVariants */
+  private resolveSecondaryVariant<T extends { path: string; variants?: Record<string, { path: string }> }>(video: T): T {
+    return this.resolveDisplayVariant(video);
   }
 
   private findVideoInConfig(path: string): Video | Sponsor | null {
@@ -1343,7 +1357,7 @@ export class TvComponent implements OnInit, OnDestroy {
       if (state.manualVideoVisible !== true) {
         if (!this._preloadedManualVideo) {
           console.log('[TV] Slave: preloading manual video from master state:', state.manualVideoPath,
-            this.displayType === 'secondary' ? `(resolved: ${resolvedVideo.path})` : '');
+            this.displayType !== 'tv' ? `(resolved: ${resolvedVideo.path})` : '');
           this.preloadManualVideo(resolvedVideo);
         }
         return;
@@ -1362,7 +1376,7 @@ export class TvComponent implements OnInit, OnDestroy {
 
       if (!this.isManualMode || !currentManualSrc.includes(resolvedVideo.path)) {
         console.log('[TV] Slave: master revealed but no preload ready, direct play:', state.manualVideoPath,
-          this.displayType === 'secondary' ? `(resolved: ${resolvedVideo.path})` : '');
+          this.displayType !== 'tv' ? `(resolved: ${resolvedVideo.path})` : '');
         this.play(resolvedVideo);
 
         if (state.manualVideoStartedAt) {
@@ -1446,7 +1460,7 @@ export class TvComponent implements OnInit, OnDestroy {
       this.manualPlayerBRef.nativeElement
     );
 
-    if (!this.isSlaveMode && this.displayType !== 'secondary') {
+    if (!this.isSlaveMode && this.displayType === 'tv') {
       this.analyticsService.trackVideoEnd(false);
     }
 
