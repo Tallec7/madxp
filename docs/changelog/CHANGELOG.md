@@ -1,3 +1,9 @@
+## [3.142.2](https://github.com/Tallec7/neopro/compare/v3.142.1...v3.142.2) (2026-04-11)
+
+### Bug Fixes
+
+- **dashboard:** rewrite video-library table with CSS grid layout ([a40ac73](https://github.com/Tallec7/neopro/commit/a40ac73b4a4de34b25ea8e60fc3fef2f80649d06))
+
 ## [3.142.1](https://github.com/Tallec7/neopro/compare/v3.142.0...v3.142.1) (2026-04-11)
 
 ### Bug Fixes
