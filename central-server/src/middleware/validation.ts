@@ -132,6 +132,7 @@ export const schemas = {
     secondary_display_enabled: Joi.boolean().optional(),
     secondary_display_resolution: Joi.string().pattern(/^\d{1,5}x\d{1,5}$/).max(20).optional().allow(null),
     site_type: Joi.string().valid('pi', 'saas', 'demo').optional(),
+    feature_overrides: Joi.object().pattern(Joi.string(), Joi.boolean()).optional(),
   }),
 
   createGroup: Joi.object({
