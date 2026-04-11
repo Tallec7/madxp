@@ -1,3 +1,9 @@
+## [3.140.4](https://github.com/Tallec7/neopro/compare/v3.140.3...v3.140.4) (2026-04-11)
+
+### Bug Fixes
+
+- **test:** smoke tests read .claude/rules/ in addition to CLAUDE.md ([beeb279](https://github.com/Tallec7/neopro/commit/beeb2794642351d1bf47a3633a6bc5a2d702b29c))
+
 ## [3.140.3](https://github.com/Tallec7/neopro/compare/v3.140.2...v3.140.3) (2026-04-11)
 
 ### Bug Fixes
