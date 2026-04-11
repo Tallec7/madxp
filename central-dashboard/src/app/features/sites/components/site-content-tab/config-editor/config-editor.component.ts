@@ -168,6 +168,7 @@ import { VideoSearchSelectComponent } from '../../../../../shared/components/vid
                     [searchPlaceholder]="'common.searchVideoPlaceholder' | translate"
                     [emptyLabel]="'common.noVideoFound' | translate"
                     [invalid]="isOrphanedVideoPath(video.path)"
+                    [compact]="true"
                     class="video-search-wrapper"
                   ></app-video-search-select>
                   <input

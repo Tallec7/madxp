@@ -34,7 +34,7 @@ export interface VideoOptionItem {
   imports: [CommonModule, FormsModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <div class="vss" [class.vss--open]="isOpen" [class.vss--dropup]="dropUp" [class.vss--invalid]="invalid" [class.vss--disabled]="disabled">
+    <div class="vss" [class.vss--open]="isOpen" [class.vss--dropup]="dropUp" [class.vss--invalid]="invalid" [class.vss--disabled]="disabled" [class.vss--compact]="compact">
       <!-- Selected value display / search input -->
       <div class="vss__control" (click)="toggle()" [class.vss__control--placeholder]="!selectedPath">
         <input
@@ -123,6 +123,16 @@ export interface VideoOptionItem {
 
       .vss--open.vss--dropup .vss__control {
         border-radius: 0 0 6px 6px;
+      }
+
+      .vss--compact .vss__control {
+        padding: 0.25rem 0.5rem;
+        min-height: 28px;
+        font-size: 0.75rem;
+      }
+
+      .vss--compact .vss__search {
+        font-size: 0.75rem;
       }
 
       .vss--invalid .vss__control {
@@ -252,6 +262,7 @@ export class VideoSearchSelectComponent implements OnChanges {
   @Input() disabled: boolean = false;
   @Input() invalid: boolean = false;
   @Input() showPiStatus: boolean = true;
+  @Input() compact: boolean = false;
   @Input() searchPlaceholder: string = '';
   @Input() emptyLabel: string = '';
 
