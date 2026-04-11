@@ -1,3 +1,12 @@
+# [3.143.0](https://github.com/Tallec7/neopro/compare/v3.142.8...v3.143.0) (2026-04-11)
+
+### Features
+
+- **dual-output:** add /display/:n route with N-display variant resolution (PROP-002 Phase 5A) ([06cbe3d](https://github.com/Tallec7/neopro/commit/06cbe3d9f3f10710b72f53cb4b885855a4b574c8))
+- **dual-output:** add display status indicator in Remote + secondary preview in Dashboard (PROP-002 Phase 3) ([1024da3](https://github.com/Tallec7/neopro/commit/1024da3678c133350c59ef7a7eb10a1ee3ebced1))
+- **dual-output:** add targeted commands with display selector in Remote (PROP-002 Phase 4) ([76670c9](https://github.com/Tallec7/neopro/commit/76670c9369687b9d881c745d9f1f3b35988f555e))
+- **upload:** add checksum-based video deduplication at upload ([139d392](https://github.com/Tallec7/neopro/commit/139d39278abfe8c36343b2897a59c21662def812))
+
 ## [3.142.8](https://github.com/Tallec7/neopro/compare/v3.142.7...v3.142.8) (2026-04-11)
 
 ### Bug Fixes
