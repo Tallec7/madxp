@@ -1,3 +1,9 @@
+# [3.148.0](https://github.com/Tallec7/neopro/compare/v3.147.5...v3.148.0) (2026-04-11)
+
+### Features
+
+- **dual-output:** add master-slave TV sync in SaaS relay (PROP-002) ([596bf93](https://github.com/Tallec7/neopro/commit/596bf932f425b015d98c2ec28cc2a08fbdc85a34))
+
 ## [3.147.5](https://github.com/Tallec7/neopro/compare/v3.147.4...v3.147.5) (2026-04-11)
 
 ### Bug Fixes
