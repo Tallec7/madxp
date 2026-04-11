@@ -229,8 +229,8 @@ export class VideoManagerComponent {
     this.selectedVideoPath = video.path;
   }
 
-  onVideoPreview(video: VideoItem): void {
-    if (video.path) window.open(video.path, '_blank');
+  onVideoPreview(_video: VideoItem): void {
+    // Preview handled by video-library inline popup
   }
 
   onVideoDelete(video: VideoItem): void {
