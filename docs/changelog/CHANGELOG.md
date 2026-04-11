@@ -1,3 +1,9 @@
+## [3.146.4](https://github.com/Tallec7/neopro/compare/v3.146.3...v3.146.4) (2026-04-11)
+
+### Bug Fixes
+
+- **dashboard:** apply compact mode to all video selectors across both config-editors ([6c03218](https://github.com/Tallec7/neopro/commit/6c03218d4e81adbd63fbaa228d45b06cdf6acf57))
+
 ## [3.146.3](https://github.com/Tallec7/neopro/compare/v3.146.2...v3.146.3) (2026-04-11)
 
 ### Bug Fixes
