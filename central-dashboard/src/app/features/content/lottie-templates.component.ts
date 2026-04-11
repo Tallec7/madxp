@@ -2,6 +2,7 @@ import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
+import { DomSanitizer, SafeUrl } from '@angular/platform-browser';
 import { SitesService } from '../../core/services/sites.service';
 import { NotificationService } from '../../core/services/notification.service';
 import { ApiService, UploadProgress } from '../../core/services/api.service';
@@ -403,6 +404,7 @@ export class LottieTemplatesComponent implements OnInit, OnDestroy {
   private readonly api = inject(ApiService);
   private readonly route = inject(ActivatedRoute);
   private readonly browserRenderer = inject(BrowserRendererService);
+  private readonly sanitizer = inject(DomSanitizer);
 
   sites: Site[] = [];
   selectedSiteId = '';
@@ -427,7 +429,8 @@ export class LottieTemplatesComponent implements OnInit, OnDestroy {
   renderPhase: 'idle' | 'rendering' | 'uploading' | 'done' = 'idle';
   renderPercent = 0;
   renderedVideo: { id: string; title: string; url: string } | null = null;
-  renderedBlobUrl: string | null = null;
+  renderedBlobUrl: SafeUrl | null = null;
+  private rawBlobUrl: string | null = null;
 
   private subscriptions: Subscription[] = [];
 
@@ -650,7 +653,8 @@ export class LottieTemplatesComponent implements OnInit, OnDestroy {
     ).then((blob) => {
       // Store blob URL for in-page preview
       this.revokeBlobUrl();
-      this.renderedBlobUrl = URL.createObjectURL(blob);
+      this.rawBlobUrl = URL.createObjectURL(blob);
+      this.renderedBlobUrl = this.sanitizer.bypassSecurityTrustUrl(this.rawBlobUrl);
 
       // Step 2: Upload the rendered video as a regular video file
       this.renderPhase = 'uploading';
@@ -738,8 +742,9 @@ export class LottieTemplatesComponent implements OnInit, OnDestroy {
   }
 
   private revokeBlobUrl(): void {
-    if (this.renderedBlobUrl) {
-      URL.revokeObjectURL(this.renderedBlobUrl);
+    if (this.rawBlobUrl) {
+      URL.revokeObjectURL(this.rawBlobUrl);
+      this.rawBlobUrl = null;
       this.renderedBlobUrl = null;
     }
   }
