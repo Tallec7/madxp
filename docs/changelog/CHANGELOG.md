@@ -1,3 +1,9 @@
+## [3.146.5](https://github.com/Tallec7/neopro/compare/v3.146.4...v3.146.5) (2026-04-11)
+
+### Bug Fixes
+
+- **dashboard:** reduce loop video item padding and gap in standalone config-editor ([ee15aaa](https://github.com/Tallec7/neopro/commit/ee15aaa052e16d9150ec1352d3105b6ffdc31928))
+
 ## [3.146.4](https://github.com/Tallec7/neopro/compare/v3.146.3...v3.146.4) (2026-04-11)
 
 ### Bug Fixes
