@@ -236,6 +236,8 @@
     "searchByClubName": "Buscar por nombre de club",
     "searchPlaceholder": "Buscar...",
     "selectVideo": "Seleccionar un vídeo",
+    "searchVideoPlaceholder": "Buscar un vídeo...",
+    "noVideoFound": "Ningún vídeo encontrado",
     "success": "Éxito",
     "uncategorized": "Sin categorizar",
     "update": "Actualizar",

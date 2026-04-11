@@ -1,5 +1,6 @@
 import { Component, Input, Output, EventEmitter, OnChanges, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { TranslateModule } from '@ngx-translate/core';
 import { LocalVideo } from '../../../core/models';
 import { VideoSearchSelectComponent, VideoOptionGroup } from '../video-search-select/video-search-select.component';
 
@@ -16,7 +17,7 @@ export interface VideoOption {
 @Component({
   selector: 'app-video-selector',
   standalone: true,
-  imports: [CommonModule, VideoSearchSelectComponent],
+  imports: [CommonModule, TranslateModule, VideoSearchSelectComponent],
   template: `
     <div class="video-selector">
       <app-video-search-select

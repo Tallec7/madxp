@@ -1,6 +1,7 @@
 import { Component, Input, Output, EventEmitter, OnInit, OnChanges, SimpleChanges, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { TranslateModule } from '@ngx-translate/core';
 import { SiteConfiguration, LoopVideoConfig, LocalVideo, SiteSponsor } from '../../../../core/models';
 import { FeatureGateService } from '../../../../core/services/feature-gate.service';
 import { VideoSearchSelectComponent, VideoOptionGroup } from '../../../../shared/components/video-search-select/video-search-select.component';
@@ -23,7 +24,7 @@ interface SponsorWeightGroup {
 @Component({
   selector: 'app-loop-manager',
   standalone: true,
-  imports: [CommonModule, FormsModule, VideoSearchSelectComponent],
+  imports: [CommonModule, FormsModule, TranslateModule, VideoSearchSelectComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './loop-manager.component.html',
   styleUrls: ['./loop-manager.component.scss']

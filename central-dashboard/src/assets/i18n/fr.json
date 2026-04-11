@@ -50,6 +50,8 @@
     "updating": "Mise à jour...",
     "updateQueued": "Mettre à jour (file d'attente)",
     "selectVideo": "Sélectionner une vidéo",
+    "searchVideoPlaceholder": "Rechercher une vidéo...",
+    "noVideoFound": "Aucune vidéo trouvée",
     "uncategorized": "Non catégorisé",
     "deletePermanently": "Supprimer définitivement",
     "deleting": "Suppression...",

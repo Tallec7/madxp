@@ -50,6 +50,8 @@
     "updating": "Updating...",
     "updateQueued": "Update (queued)",
     "selectVideo": "Select a video",
+    "searchVideoPlaceholder": "Search a video...",
+    "noVideoFound": "No video found",
     "uncategorized": "Uncategorized",
     "deletePermanently": "Delete permanently",
     "deleting": "Deleting...",
