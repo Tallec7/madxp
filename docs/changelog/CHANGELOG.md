@@ -1,3 +1,9 @@
+## [3.147.4](https://github.com/Tallec7/neopro/compare/v3.147.3...v3.147.4) (2026-04-11)
+
+### Bug Fixes
+
+- **dashboard:** auto-open variant panel in config-editor modal ([d20ddc4](https://github.com/Tallec7/neopro/commit/d20ddc4481711db0deeae9b80838879067f0e6f2))
+
 ## [3.147.3](https://github.com/Tallec7/neopro/compare/v3.147.2...v3.147.3) (2026-04-11)
 
 ### Bug Fixes
