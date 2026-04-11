@@ -1,7 +1,7 @@
 # Stockage Vidéo - Architecture et Déploiement
 
 > **Document de référence technique**
-> Version 3.0 - 17 Février 2026
+> Version 4.0 - 11 Avril 2026
 
 ---
 
@@ -16,6 +16,8 @@
 7. [Intégrité des fichiers](#7-intégrité-des-fichiers)
 8. [Dépannage](#8-dépannage)
 9. [Flux de déploiement watermark (v3.50+)](#9-flux-de-déploiement-watermark-v350)
+10. [Thumbnails et structure shardée (ADR-048)](#10-thumbnails-et-structure-shardée-adr-048)
+11. [Table pivot site_videos (ADR-048)](#11-table-pivot-site_videos-adr-048)
 
 ---
 
@@ -76,17 +78,22 @@ Toutes les opérations de stockage passent par `central-server/src/services/stor
 
 **Fonctions principales** :
 
-| Fonction                | Description                                               |
-| ----------------------- | --------------------------------------------------------- |
-| `uploadVideo()`         | Upload vidéo depuis un buffer mémoire                     |
-| `uploadVideoFromDisk()` | Upload vidéo depuis un fichier disque (streaming)         |
-| `deleteVideo()`         | Supprime un fichier vidéo du stockage                     |
-| `getVideoUrl()`         | Retourne l'URL publique d'une vidéo                       |
-| `uploadUpdate()`        | Upload un package de mise à jour                          |
-| `uploadAsset()`         | Upload un asset (watermark, logo, rapport)                |
-| `getAssetUrl()`         | Retourne l'URL publique d'un asset                        |
-| `listAssets(directory)` | Liste les fichiers d'un répertoire FTP (ex: `watermarks`) |
-| `verifyFileExists()`    | Vérifie l'existence d'un fichier sur FTP                  |
+| Fonction                  | Description                                                      |
+| ------------------------- | ---------------------------------------------------------------- |
+| `uploadVideo()`           | Upload vidéo depuis un buffer mémoire                            |
+| `uploadVideoFromDisk()`   | Upload vidéo depuis un fichier disque (streaming)                |
+| `deleteVideo()`           | Supprime un fichier vidéo du stockage                            |
+| `getVideoUrl()`           | Retourne l'URL publique d'une vidéo                              |
+| `uploadUpdate()`          | Upload un package de mise à jour                                 |
+| `uploadAsset()`           | Upload un asset (watermark, logo, rapport)                       |
+| `getAssetUrl()`           | Retourne l'URL publique d'un asset                               |
+| `listAssets(directory)`   | Liste les fichiers d'un répertoire FTP (ex: `watermarks`)        |
+| `verifyFileExists()`      | Vérifie l'existence d'un fichier sur FTP                         |
+| `buildShardedVideoPath()` | Génère un chemin shardé : `videos/{prefix}/{uuid}.ext` (ADR-048) |
+| `buildThumbnailPath()`    | Génère le chemin thumbnail : `videos/{prefix}/{uuid}.thumb.jpg`  |
+| `uploadThumbnail()`       | Upload un thumbnail JPEG vers FTP                                |
+| `deleteThumbnail()`       | Supprime un thumbnail du FTP                                     |
+| `getThumbnailUrl()`       | Retourne l'URL publique d'un thumbnail                           |
 
 **Comportement** :
 
@@ -556,18 +563,19 @@ Checksum mismatch: expected abc123, got def456
 
 ## Historique des versions
 
-| Version | Date       | Modifications                                                      |
-| ------- | ---------- | ------------------------------------------------------------------ |
-| 1.0     | 2026-01-09 | Création initiale                                                  |
-| 2.0     | 2026-02-10 | Suppression Supabase fallback, migration vers storage.service.ts   |
-| 2.1     | 2026-02-15 | Ajout section suppression manuelle depuis le Dashboard             |
-| 2.2     | 2026-02-15 | Fix null category, piCategory, modal UX                            |
-| 2.3     | 2026-02-16 | Auto-création sous-dossiers FTP (ensureDir) + troubleshooting 550  |
-| 2.4     | 2026-02-17 | Flux déploiement watermark, fix race condition deploy_asset        |
-| 2.5     | 2026-02-17 | Re-deploy image on save, Pi-side retry with backoff                |
-| 2.6     | 2026-02-17 | Cache-buster systématique pour bypass nginx immutable (30j)        |
-| 3.0     | 2026-02-17 | Fix encodage multer latin1→UTF-8, sanitization NFD, métriques      |
-| 3.1     | 2026-02-17 | Liste déroulante watermark, GET /api/assets/watermarks, listAssets |
+| Version | Date       | Modifications                                                         |
+| ------- | ---------- | --------------------------------------------------------------------- |
+| 1.0     | 2026-01-09 | Création initiale                                                     |
+| 2.0     | 2026-02-10 | Suppression Supabase fallback, migration vers storage.service.ts      |
+| 2.1     | 2026-02-15 | Ajout section suppression manuelle depuis le Dashboard                |
+| 2.2     | 2026-02-15 | Fix null category, piCategory, modal UX                               |
+| 2.3     | 2026-02-16 | Auto-création sous-dossiers FTP (ensureDir) + troubleshooting 550     |
+| 2.4     | 2026-02-17 | Flux déploiement watermark, fix race condition deploy_asset           |
+| 2.5     | 2026-02-17 | Re-deploy image on save, Pi-side retry with backoff                   |
+| 2.6     | 2026-02-17 | Cache-buster systématique pour bypass nginx immutable (30j)           |
+| 3.0     | 2026-02-17 | Fix encodage multer latin1→UTF-8, sanitization NFD, métriques         |
+| 3.1     | 2026-02-17 | Liste déroulante watermark, GET /api/assets/watermarks, listAssets    |
+| 4.0     | 2026-04-11 | ADR-048: Thumbnails cloud, structure shardée, table pivot site_videos |
 
 ---
 
@@ -685,6 +693,94 @@ Le Dashboard propose une **liste déroulante** des watermarks disponibles sur le
 6. L'upload d'un nouveau watermark reste possible (zone upload compacte), rafraîchit la liste après succès
 
 **Monitoring** : L'opération FTP `list` est instrumentée via `recordFtpOperation('list', status, 'video', duration)` — visible dans les métriques Prometheus `ftp_operations_total{operation="list"}` et `ftp_operation_duration_seconds{operation="list"}`.
+
+---
+
+## 10. Thumbnails et structure shardée (ADR-048)
+
+> Référence : [ADR-048](../adr/ADR-048-ftp-video-storage-restructure.md)
+
+### Génération de thumbnails à l'upload
+
+Depuis ADR-048, chaque vidéo uploadée génère automatiquement un thumbnail JPEG via ffmpeg côté central-server (Railway). Le thumbnail est uploadé sur FTP à côté de la vidéo et l'URL est stockée dans `videos.thumbnail_url`.
+
+```
+Upload vidéo → storage.service.ts → FTP
+            ↓
+    thumbnail.service.ts (ffmpeg)
+            ↓
+    generateThumbnailBuffer() → 320px wide, 10% de la durée
+            ↓
+    uploadThumbnail() → FTP (même shard directory)
+            ↓
+    UPDATE videos SET thumbnail_url = URL
+```
+
+**Endpoints concernés** : `createVideo`, `createVideos`, `convertImageToVideo`, `renderTemplate` — tous génèrent un thumbnail de manière non-bloquante (échec = warning log, pas d'erreur).
+
+### Structure FTP shardée (nouveaux uploads)
+
+Les nouveaux fichiers sont stockés dans une structure shardée par les 2 premiers caractères de l'UUID :
+
+```
+/neopro-video/
+├── videos/
+│   ├── ab/
+│   │   ├── ab3f7c2e-xxxx.mp4          ← vidéo
+│   │   └── ab3f7c2e-xxxx.thumb.jpg    ← thumbnail
+│   └── cd/
+│       └── cd91a4b0-xxxx.mp4
+├── variants/{videoId}/{type}/          ← inchangé
+├── watermarks/                         ← inchangé
+└── Decathlon_FOCUS.mp4                 ← anciens fichiers (dual-path)
+```
+
+**Dual-path** : les fichiers existants (format plat) restent en place. `getVideoUrl(storagePath)` fonctionne dans les deux cas car `storage_path` en DB reflète toujours le chemin réel.
+
+**Migration batch** : `migrate-ftp-storage-batch.ts` permet de migrer les anciens fichiers et générer les thumbnails manquants. Exécution manuelle uniquement :
+
+```bash
+cd central-server
+npx ts-node src/scripts/migrations/migrate-ftp-storage-batch.ts --thumbnails-only --no-dry-run
+```
+
+### Enrichissement SaaS
+
+Le `saas.controller.ts` enrichit la config avec les `thumbnailUrl` avant de la servir au navigateur SaaS :
+
+1. Collecte tous les filenames de la config (sponsors, categories, timeCategories)
+2. Batch-lookup `thumbnail_url` via `videoRepository.findThumbnailsByFilenames()`
+3. Injecte `thumbnailUrl` dans chaque entrée vidéo de la réponse
+
+Le composant Angular `remote.component.ts` supporte déjà `video.thumbnailUrl` (priorité sur le chemin local Pi).
+
+---
+
+## 11. Table pivot site_videos (ADR-048)
+
+### Relation N:N sites ↔ vidéos
+
+La table `site_videos` remplace la relation 1:1 `uploaded_for_site_id` par une relation N:N :
+
+```sql
+CREATE TABLE site_videos (
+  site_id  UUID NOT NULL REFERENCES sites(id) ON DELETE CASCADE,
+  video_id UUID NOT NULL REFERENCES videos(id) ON DELETE CASCADE,
+  added_at TIMESTAMP NOT NULL DEFAULT NOW(),
+  added_by UUID REFERENCES users(id) ON DELETE SET NULL,
+  PRIMARY KEY (site_id, video_id)
+);
+```
+
+**Avantages** :
+
+- Une vidéo physique peut être partagée entre N sites sans duplication FTP
+- Un seul thumbnail par vidéo, quel que soit le nombre de sites
+- `uploaded_for_site_id` reste en place (rétrocompat) mais est deprecated
+
+**Repository** : `siteVideoRepository` (link, unlink, linkToSites, findSitesByVideo, findVideosBySite, countSites)
+
+**Migration** : `add-site-videos-pivot.sql` backfill les données depuis `uploaded_for_site_id`.
 
 ---
 
