@@ -1,3 +1,9 @@
+# [3.145.0](https://github.com/Tallec7/neopro/compare/v3.144.3...v3.145.0) (2026-04-11)
+
+### Features
+
+- **dashboard:** replace native selects with searchable video-search-select in config-editor ([c448eac](https://github.com/Tallec7/neopro/commit/c448eace283db88012a5fa1288a90d268113b8dd))
+
 ## [3.144.3](https://github.com/Tallec7/neopro/compare/v3.144.2...v3.144.3) (2026-04-11)
 
 ### Bug Fixes
