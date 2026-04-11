@@ -1,3 +1,13 @@
+# [3.144.0](https://github.com/Tallec7/neopro/compare/v3.143.0...v3.144.0) (2026-04-11)
+
+### Features
+
+- **dual-output:** dynamic N-display toggle in Remote from connected displays (PROP-002 Phase 5D) ([8028cc9](https://github.com/Tallec7/neopro/commit/8028cc9435bc7eeb8452dcc4e53e622a60b7ca39))
+- **dual-output:** generalize config enrichment for N display types (PROP-002 Phase 5E) ([314c45f](https://github.com/Tallec7/neopro/commit/314c45f3482cf2a9e69c0fa5eb7b1f917b1e9dd2))
+- **dual-output:** open display_type constraint and add displays JSONB column (PROP-002 Phase 5B) ([01e81e5](https://github.com/Tallec7/neopro/commit/01e81e54f5f0bd700f679aacc405edb9f633b6f5))
+- **dual-output:** SaaS display registration with displayIndex (PROP-002 Phase 5F) ([06650c9](https://github.com/Tallec7/neopro/commit/06650c9359d16dbb97fd0c959b5151d0f9c88a23))
+- **dual-output:** track displayIndex in Pi server and emit in tv-register (PROP-002 Phase 5C) ([e48b86b](https://github.com/Tallec7/neopro/commit/e48b86b76f0ef40a167da2f1c69696b425a2c7c2))
+
 # [3.143.0](https://github.com/Tallec7/neopro/compare/v3.142.8...v3.143.0) (2026-04-11)
 
 ### Features
