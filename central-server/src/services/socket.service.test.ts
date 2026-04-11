@@ -1040,4 +1040,266 @@ describe('SocketService', () => {
       triggerSpy.mockRestore();
     });
   });
+
+  // =========================================================================
+  // SaaS Relay — Master-Slave TV Sync
+  // =========================================================================
+  describe('registerSaasRelay', () => {
+    let socket1: ReturnType<typeof createMockSocket>;
+    let socket2: ReturnType<typeof createMockSocket>;
+    const siteId = 'saas-site-001';
+
+    beforeEach(() => {
+      socket1 = createMockSocket({ id: 'sock-1' as any });
+      socket2 = createMockSocket({ id: 'sock-2' as any });
+      // Reset saas state (reset io to null first to avoid cleanup errors)
+      (socketService as any).io = null;
+      (socketService as any).saasRelayRegistered = new Set();
+      (socketService as any).saasStates = undefined;
+    });
+
+    const createMockIo = () => ({
+      emit: jest.fn(),
+      to: jest.fn().mockReturnValue({ emit: jest.fn() }),
+      sockets: { adapter: { rooms: new Map() }, sockets: new Map() },
+    });
+
+    const callRegister = (socket: any, sid = siteId) => {
+      (socketService as any).registerSaasRelay(socket, sid);
+    };
+
+    it('should initialize saasStates and register event handlers', () => {
+      callRegister(socket1);
+      expect(socket1.on).toHaveBeenCalledWith('command', expect.any(Function));
+      expect(socket1.on).toHaveBeenCalledWith('tv-register', expect.any(Function));
+      expect(socket1.on).toHaveBeenCalledWith('tv-loop-update', expect.any(Function));
+      expect(socket1.on).toHaveBeenCalledWith('request-state', expect.any(Function));
+      expect(socket1.on).toHaveBeenCalledWith('disconnect', expect.any(Function));
+      expect((socketService as any).saasStates.has(siteId)).toBe(true);
+    });
+
+    it('should skip duplicate registration for same socket', () => {
+      callRegister(socket1);
+      const callCount = (socket1.on as jest.Mock).mock.calls.length;
+      callRegister(socket1);
+      // No new handlers registered
+      expect((socket1.on as jest.Mock).mock.calls.length).toBe(callCount);
+    });
+
+    it('should relay command as action to room', () => {
+      const toMock = jest.fn().mockReturnValue({ emit: jest.fn() });
+      socket1.to = toMock as any;
+      callRegister(socket1);
+      (socket1 as any).triggerEvent('command', { type: 'play' });
+      expect(toMock).toHaveBeenCalledWith(siteId);
+    });
+
+    it('should relay score-update and persist state', () => {
+      const emitToRoom = jest.fn();
+      socket1.to = jest.fn().mockReturnValue({ emit: emitToRoom }) as any;
+      callRegister(socket1);
+      (socket1 as any).triggerEvent('score-update', { home: 1, away: 0 });
+      const state = (socketService as any).saasStates.get(siteId);
+      expect(state.score).toEqual({ home: 1, away: 0 });
+      expect(emitToRoom).toHaveBeenCalledWith('score-update', { home: 1, away: 0 });
+    });
+
+    it('should relay score-reset and clear state', () => {
+      const emitToRoom = jest.fn();
+      socket1.to = jest.fn().mockReturnValue({ emit: emitToRoom }) as any;
+      callRegister(socket1);
+      // Set score first
+      (socketService as any).saasStates.get(siteId).score = { home: 1 };
+      (socket1 as any).triggerEvent('score-reset');
+      expect((socketService as any).saasStates.get(siteId).score).toBeNull();
+      expect(emitToRoom).toHaveBeenCalledWith('score-reset');
+    });
+
+    it('should relay phase-change and persist phase', () => {
+      const emitToRoom = jest.fn();
+      socket1.to = jest.fn().mockReturnValue({ emit: emitToRoom }) as any;
+      callRegister(socket1);
+      (socket1 as any).triggerEvent('phase-change', { phase: 'match' });
+      expect((socketService as any).saasStates.get(siteId).phase).toBe('match');
+    });
+
+    it('should relay timer-update and persist timer state', () => {
+      const emitToRoom = jest.fn();
+      socket1.to = jest.fn().mockReturnValue({ emit: emitToRoom }) as any;
+      callRegister(socket1);
+      (socket1 as any).triggerEvent('timer-update', { currentTime: 45, isRunning: true });
+      const state = (socketService as any).saasStates.get(siteId);
+      expect(state.timer.currentTime).toBe(45);
+      expect(state.timer.isRunning).toBe(true);
+    });
+
+    it('should relay breaking-news without persisting', () => {
+      const emitToRoom = jest.fn();
+      socket1.to = jest.fn().mockReturnValue({ emit: emitToRoom }) as any;
+      callRegister(socket1);
+      (socket1 as any).triggerEvent('breaking-news', { text: 'Goal!' });
+      expect(emitToRoom).toHaveBeenCalledWith('breaking-news', { text: 'Goal!' });
+    });
+
+    it('should relay options-update and persist state', () => {
+      const emitToRoom = jest.fn();
+      socket1.to = jest.fn().mockReturnValue({ emit: emitToRoom }) as any;
+      callRegister(socket1);
+      (socket1 as any).triggerEvent('options-update', { overlay: true });
+      expect((socketService as any).saasStates.get(siteId).options).toEqual({ overlay: true });
+    });
+
+    it('should relay recording-state and persist', () => {
+      const emitToRoom = jest.fn();
+      socket1.to = jest.fn().mockReturnValue({ emit: emitToRoom }) as any;
+      callRegister(socket1);
+      (socket1 as any).triggerEvent('recording-state', { isRecording: true, isManualOverride: false });
+      expect((socketService as any).saasStates.get(siteId).recording.isRecording).toBe(true);
+    });
+
+    it('should relay match-info-updated to room', () => {
+      const emitToRoom = jest.fn();
+      socket1.to = jest.fn().mockReturnValue({ emit: emitToRoom }) as any;
+      callRegister(socket1);
+      (socket1 as any).triggerEvent('match-info-updated', { matchId: 42 });
+      expect(emitToRoom).toHaveBeenCalledWith('match-info-updated', { matchId: 42 });
+    });
+
+    describe('tv-register (master-slave assignment)', () => {
+      it('should assign first TV as master', () => {
+        const emitToRoom = jest.fn();
+        socket1.to = jest.fn().mockReturnValue({ emit: emitToRoom }) as any;
+        // Mock io for getSaasConnectedDisplays
+        (socketService as any).io = createMockIo();
+        callRegister(socket1);
+        (socket1 as any).triggerEvent('tv-register', { displayType: 'browser', displayIndex: 0 });
+        expect(socket1.emit).toHaveBeenCalledWith('tv-role-assigned', { role: 'master' });
+      });
+
+      it('should assign second TV as slave and send loopState', () => {
+        const emitToRoom = jest.fn();
+        socket1.to = jest.fn().mockReturnValue({ emit: emitToRoom }) as any;
+        socket2.to = jest.fn().mockReturnValue({ emit: emitToRoom }) as any;
+        (socketService as any).io = createMockIo();
+
+        callRegister(socket1);
+        callRegister(socket2);
+
+        (socket1 as any).triggerEvent('tv-register', { displayType: 'browser', displayIndex: 0 });
+        // Set loopState
+        const state = (socketService as any).saasStates.get(siteId);
+        state.loopState = { videoIndex: 2 };
+
+        (socket2 as any).triggerEvent('tv-register', { displayType: 'browser', displayIndex: 1 });
+        expect(socket2.emit).toHaveBeenCalledWith('tv-role-assigned', { role: 'slave' });
+        expect(socket2.emit).toHaveBeenCalledWith('tv-loop-state', { videoIndex: 2 });
+      });
+
+      it('should demote browser master when tv (kiosk) registers', () => {
+        const emitToRoom = jest.fn();
+        socket1.to = jest.fn().mockReturnValue({ emit: emitToRoom }) as any;
+        socket2.to = jest.fn().mockReturnValue({ emit: emitToRoom }) as any;
+        const mockIo = createMockIo();
+        (socketService as any).io = mockIo;
+
+        callRegister(socket1);
+        callRegister(socket2);
+
+        // Browser registers first as master
+        (socket1 as any).triggerEvent('tv-register', { displayType: 'browser', displayIndex: 0 });
+        // Kiosk (tv) registers — should take master
+        (socket2 as any).triggerEvent('tv-register', { displayType: 'tv', displayIndex: 0 });
+
+        expect(socket2.emit).toHaveBeenCalledWith('tv-role-assigned', { role: 'master' });
+        // Demoted socket should get slave role via io.to
+        expect(mockIo.to).toHaveBeenCalledWith('sock-1');
+      });
+    });
+
+    describe('tv-loop-update', () => {
+      it('should relay loop state only from master', () => {
+        const emitToRoom = jest.fn();
+        socket1.to = jest.fn().mockReturnValue({ emit: emitToRoom }) as any;
+        (socketService as any).io = createMockIo();
+
+        callRegister(socket1);
+        (socket1 as any).triggerEvent('tv-register', { displayType: 'browser', displayIndex: 0 });
+        (socket1 as any).triggerEvent('tv-loop-update', { videoIndex: 3, currentTime: 10 });
+
+        expect(emitToRoom).toHaveBeenCalledWith('tv-loop-state', { videoIndex: 3, currentTime: 10 });
+      });
+
+      it('should ignore loop update from slave', () => {
+        const emitToRoom1 = jest.fn();
+        const emitToRoom2 = jest.fn();
+        socket1.to = jest.fn().mockReturnValue({ emit: emitToRoom1 }) as any;
+        socket2.to = jest.fn().mockReturnValue({ emit: emitToRoom2 }) as any;
+        (socketService as any).io = createMockIo();
+
+        callRegister(socket1);
+        callRegister(socket2);
+        (socket1 as any).triggerEvent('tv-register', { displayType: 'browser', displayIndex: 0 });
+        (socket2 as any).triggerEvent('tv-register', { displayType: 'browser', displayIndex: 1 });
+
+        // Slave tries to update loop
+        (socket2 as any).triggerEvent('tv-loop-update', { videoIndex: 5 });
+        // Should not relay
+        expect(emitToRoom2).not.toHaveBeenCalledWith('tv-loop-state', expect.anything());
+      });
+    });
+
+    describe('request-state', () => {
+      it('should send full state to requesting socket', () => {
+        const emitToRoom = jest.fn();
+        socket1.to = jest.fn().mockReturnValue({ emit: emitToRoom }) as any;
+        (socketService as any).io = createMockIo();
+
+        callRegister(socket1);
+        const state = (socketService as any).saasStates.get(siteId);
+        state.score = { home: 2, away: 1 };
+        state.options = { overlay: true };
+        state.timer = { currentTime: 30, isRunning: true };
+
+        (socket1 as any).triggerEvent('request-state');
+
+        expect(socket1.emit).toHaveBeenCalledWith('score-update', { home: 2, away: 1 });
+        expect(socket1.emit).toHaveBeenCalledWith('phase-change', { phase: 'neutral' });
+        expect(socket1.emit).toHaveBeenCalledWith('options-update', { overlay: true });
+        expect(socket1.emit).toHaveBeenCalledWith('timer-update', { action: 'sync', currentTime: 30, isRunning: true });
+      });
+    });
+
+    describe('disconnect (slave promotion)', () => {
+      it('should promote oldest slave when master disconnects', () => {
+        const emitToRoom = jest.fn();
+        socket1.to = jest.fn().mockReturnValue({ emit: emitToRoom }) as any;
+        socket2.to = jest.fn().mockReturnValue({ emit: emitToRoom }) as any;
+        const mockIo = createMockIo();
+        const mockIoEmit = jest.fn();
+        mockIo.to = jest.fn().mockReturnValue({ emit: mockIoEmit });
+        (socketService as any).io = mockIo;
+
+        callRegister(socket1);
+        callRegister(socket2);
+
+        (socket1 as any).triggerEvent('tv-register', { displayType: 'browser', displayIndex: 0 });
+        (socket2 as any).triggerEvent('tv-register', { displayType: 'browser', displayIndex: 1 });
+
+        // Master disconnects
+        (socket1 as any).triggerEvent('disconnect');
+
+        // sock-2 should be promoted
+        expect(mockIo.to).toHaveBeenCalledWith('sock-2');
+        expect(mockIoEmit).toHaveBeenCalledWith('tv-role-assigned', { role: 'master' });
+      });
+
+      it('should clean up saasRelayRegistered on disconnect', () => {
+        socket1.to = jest.fn().mockReturnValue({ emit: jest.fn() }) as any;
+        callRegister(socket1);
+        expect((socketService as any).saasRelayRegistered.has('sock-1')).toBe(true);
+        (socket1 as any).triggerEvent('disconnect');
+        expect((socketService as any).saasRelayRegistered.has('sock-1')).toBe(false);
+      });
+    });
+  });
 });
