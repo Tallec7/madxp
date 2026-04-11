@@ -88,9 +88,12 @@ export async function enrichConfigWithDisplayVariants(
   // 3. Build filename → { [displayType]: variantInfo } map
   const variantMap = new Map<string, VideoVariants>();
   for (const v of variants) {
-    const variantPath = v.display_type === 'secondary'
-      ? `videos-secondary/${v.filename}`
-      : `videos-${v.display_type}/${v.filename}`;
+    // Use storage_path if available (FTP sharded path), fallback to legacy flat path
+    const variantPath = v.storage_path
+      ? v.storage_path
+      : v.display_type === 'secondary'
+        ? `videos-secondary/${v.filename}`
+        : `videos-${v.display_type}/${v.filename}`;
     if (!variantMap.has(v.source_filename)) {
       variantMap.set(v.source_filename, {});
     }

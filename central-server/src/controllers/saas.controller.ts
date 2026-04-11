@@ -62,13 +62,21 @@ function resolveVideoUrl(path: string | undefined, storagePathMap: Map<string, s
  * Résout toutes les URLs vidéo dans un tableau de vidéos.
  */
 function resolveVideoUrls(videos: VideoLike[], storagePathMap: Map<string, string>): VideoLike[] {
-  return videos.map(v => ({
-    ...v,
-    path: resolveVideoUrl(v.path, storagePathMap),
-    variants: v.variants?.secondary ? {
-      secondary: { path: resolveVideoUrl(v.variants.secondary.path, storagePathMap) },
-    } : v.variants,
-  }));
+  return videos.map(v => {
+    const resolved: VideoLike = {
+      ...v,
+      path: resolveVideoUrl(v.path, storagePathMap),
+    };
+    // Resolve variant paths: storage_path is already set by enrichConfigWithDisplayVariants,
+    // so pass it directly to getVideoUrl instead of looking up in storagePathMap
+    if (v.variants?.secondary?.path) {
+      resolved.variants = {
+        ...v.variants,
+        secondary: { ...v.variants.secondary, path: getVideoUrl(v.variants.secondary.path) },
+      };
+    }
+    return resolved;
+  });
 }
 
 /**
