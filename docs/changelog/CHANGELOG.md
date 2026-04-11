@@ -1,3 +1,9 @@
+## [3.142.7](https://github.com/Tallec7/neopro/compare/v3.142.6...v3.142.7) (2026-04-11)
+
+### Bug Fixes
+
+- **dashboard:** rewrite video-library as HTML table for reliable column alignment ([319df33](https://github.com/Tallec7/neopro/commit/319df3355b247cdc5d509a90a9796a1bd3302da0))
+
 ## [3.142.6](https://github.com/Tallec7/neopro/compare/v3.142.5...v3.142.6) (2026-04-11)
 
 ### Bug Fixes
