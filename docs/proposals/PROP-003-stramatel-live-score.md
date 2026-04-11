@@ -1,11 +1,27 @@
 # PROP-003: Score Live depuis Tables de Marque — Architecture Multi-Constructeurs
 
-> _Anciennement ADR-013_
+> _Anciennement ADR-013. Patch profond le 2026-04-11 suite à la session d'architecture (cf. ADR-049 Score Live Multi-Vendor Architecture). Cette proposition reste un document long-form ; les décisions courtes et figées sont consignées dans ADR-049._
 
-**Date** : 2026-02-11
-**Statut** : Proposé
+**Date** : 2026-02-11 (créé) · 2026-04-11 (patch profond après ADR-049)
+**Statut** : Proposé → en cours d'exécution via [F-15.2](../safe/FEATURES.md)
 **Décideurs** : Équipe Neopro
+**Rattachement SAFe** : [E-15 Score Live Hardware](../safe/EPICS.md), [F-15.2 Score Live multi-vendor MVP](../safe/FEATURES.md), [F-21.2 Public Score API](../safe/FEATURES.md) (PI-3, vision)
+**ADR de référence** : [ADR-049 Score Live Multi-Vendor Architecture](../adr/ADR-049-score-live-multi-vendor-architecture.md)
 **Lié à** : [PROP-001](./PROP-001-multi-tv-single-pi.md) (Multi-TV), [PROP-002](./PROP-002-tv-led-dual-output.md) (TV + LED)
+
+---
+
+## Architecture figée — Synthèse ADR-049
+
+Trois décisions ont été figées en session le 2026-04-11. Elles s'appliquent à tous les connecteurs et toutes les topologies décrites ci-dessous.
+
+| # | Décision | Conséquence |
+|---|----------|-------------|
+| **D1** | **Pattern plugin connecteur** avec interface `ScoreboardConnector` unique | Tous les protocoles (Stramatel, Bodet, Mobatime, Favero, OCR) émettent le même `ScoreboardData`. Le pipeline aval est inchangé. |
+| **D2** | **Contrat de données ScoreboardData v1** avec **taxonomie d'enrichissement Level 1 → Level 5** | Chaque connecteur déclare son `enrichmentLevel`. Le dashboard, la Remote et l'API publique adaptent l'UI selon le niveau disponible. |
+| **D3** | **Topologies multiples** : A1 (Pi unique club LAN), A3 (Pi unique club WiFi cellulaire), B (Scorebox dédié + Pi affichage) — toutes derrière la même interface | Aucun couplage entre topologie installation et logique applicative. La topologie est choisie à la commande, jamais au runtime. |
+
+> **Détail des décisions, contexte de session et options écartées** : voir ADR-049.
 
 ---
 
@@ -68,7 +84,14 @@ Le système est **protocol-agnostic** — il accepte des scores depuis n'importe
 
 ## Décision
 
-Développer un **système de connecteurs enfichables (plugin architecture)** avec une interface commune `ScoreboardConnector`, un premier connecteur Stramatel (RS-485), un deuxième Bodet (TCP/IP), et un fallback OCR universel. La Remote reste la couche de pilotage des faits de jeu.
+Développer un **système de connecteurs enfichables (plugin architecture)** avec :
+
+1. **Une interface commune `ScoreboardConnector`** (D1 ADR-049) que tous les connecteurs implémentent.
+2. **Un contrat de données `ScoreboardData v1`** (D2 ADR-049) avec une **taxonomie d'enrichissement à 5 niveaux** : chaque connecteur déclare ce qu'il sait fournir (score seul → score+chrono → +période → +fautes/timeouts → +shot clock/possession), et l'UI s'adapte automatiquement.
+3. **Trois topologies d'installation** (D3 ADR-049) : A1 (Pi unique LAN), A3 (Pi unique WiFi cellulaire), B (Scorebox dédié + Pi affichage), toutes derrière la même interface.
+4. **Un premier connecteur Stramatel (RS-485)**, deuxième Bodet (TCP/IP + RS-485 série), troisième OCR fallback universel.
+5. **La Remote reste la couche de pilotage des faits de jeu** (animations, breaking news, override manuel).
+6. **Une persistance optionnelle** des événements scoreboard côté Central Server (table `scoreboard_events`) pour audit, replay et alimentation d'une **API publique** (vision F-21.2).
 
 ### Architecture — Pattern Adapter multi-constructeurs
 
@@ -120,31 +143,65 @@ Développer un **système de connecteurs enfichables (plugin architecture)** ave
 └─────────────────────────────────────────────────────────────┘
 ```
 
-### Interface commune — `ScoreboardConnector`
+### Interface commune — `ScoreboardConnector` & taxonomie d'enrichissement
+
+Tous les champs `ScoreboardData` au-delà du score brut sont **optionnels**. Chaque connecteur déclare son **`enrichmentLevel`** (1 à 5) lors de sa connexion. L'UI (overlay TV, Remote, Dashboard, API publique) lit ce niveau pour activer/désactiver des sections — pas de "champ vide" à l'écran, pas d'erreur.
+
+#### Taxonomie Level 1 → Level 5
+
+| Level | Données fournies | Connecteurs typiques | Usage UI |
+|-------|------------------|----------------------|----------|
+| **L1 — Score nu** | `homeScore`, `awayScore`, `source` | OCR basique, saisie manuelle minimale, certains tableaux mécaniques | Bandeau LED simple, overlay TV minimal |
+| **L2 — Score + Chrono** | L1 + `gameMinutes`, `gameSeconds`, `gameRunning` | OCR calibré, Mobatime simple, Daktronics RTD partiel | Overlay sportif standard |
+| **L3 — Score + Chrono + Période** | L2 + `period`, `periodLabel?` | Bodet Scorepad de base, Stramatel `0x33` | Overlay multi-périodes (mi-temps, quart-temps) |
+| **L4 — + Fautes & Temps morts** | L3 + `homeFouls`, `awayFouls`, `homeTimeouts`, `awayTimeouts`, `homePenalties?`, `awayPenalties?` | Stramatel `0x37`, Bodet Scorepad complet | Remote enrichie, overlay basket/handball pro |
+| **L5 — + Shot Clock & Possession** | L4 + `shotClock`, `possession?`, `timeoutActive`, `timeoutDuration` | Stramatel `0x38` (basket FIBA), Bodet Scorepad basket complet | Overlay FIBA, déclenchement auto contenu timeout, animations possession |
+
+> **Règle UI** : un overlay configuré pour Level 4 mais alimenté par un connecteur Level 2 dégrade gracieusement (les champs fautes/timeouts sont masqués, pas affichés à zéro). Cette règle est appliquée par le composant `tv.component.ts` côté Pi et par le dashboard côté central.
+
+#### Contrat TypeScript v1
 
 ```typescript
 // raspberry/server/services/scoreboard/connector.interface.ts
 
+type EnrichmentLevel = 1 | 2 | 3 | 4 | 5;
+
 interface ScoreboardData {
+  // Level 1 — toujours présent
   homeScore: number;
   awayScore: number;
-  gameMinutes: string;
-  gameSeconds: string;
-  period: number;
-  homeFouls: number;
-  awayFouls: number;
-  homeTimeouts: number;
-  awayTimeouts: number;
-  gameRunning: boolean;
-  shotClock: string | null; // 24s basket (null si non applicable)
-  timeoutActive: boolean;
-  timeoutDuration: string | null;
-  source: string; // 'stramatel' | 'bodet' | 'favero' | 'ocr' | 'manual'
+  source: 'stramatel' | 'bodet' | 'mobatime' | 'favero' | 'daktronics' | 'ocr' | 'manual';
+  enrichmentLevel: EnrichmentLevel;
+  capturedAt: number; // epoch ms côté Pi/Scorebox
+
+  // Level 2 — optionnel
+  gameMinutes?: string;
+  gameSeconds?: string;
+  gameRunning?: boolean;
+
+  // Level 3 — optionnel
+  period?: number;
+  periodLabel?: string; // ex: 'Q3', '2T', 'Set 4'
+
+  // Level 4 — optionnel
+  homeFouls?: number;
+  awayFouls?: number;
+  homeTimeouts?: number;
+  awayTimeouts?: number;
+  homePenalties?: number; // hockey, water-polo
+  awayPenalties?: number;
+
+  // Level 5 — optionnel
+  shotClock?: string | null;     // 24s basket
+  possession?: 'home' | 'away' | null;
+  timeoutActive?: boolean;
+  timeoutDuration?: string | null;
 }
 
 interface ScoreboardConnector {
-  readonly name: string; // 'Stramatel 452', 'Bodet Scorepad', etc.
-  readonly type: 'serial' | 'network' | 'ocr';
+  readonly name: string;             // 'Stramatel 452', 'Bodet Scorepad', etc.
+  readonly type: 'serial' | 'network' | 'ocr' | 'cloud-push';
+  readonly enrichmentLevel: EnrichmentLevel; // déclaré statiquement par le connecteur
 
   connect(config: ConnectorConfig): Promise<void>;
   disconnect(): Promise<void>;
@@ -157,10 +214,13 @@ interface ScoreboardConnector {
 }
 
 type ConnectorConfig =
-  | { type: 'serial'; port: string; baudRate: number } // RS-485/RS-232
-  | { type: 'network'; host: string; port: number } // TCP/IP
-  | { type: 'ocr'; cameraDevice: string; region: OcrRegion }; // Caméra
+  | { type: 'serial'; port: string; baudRate: number }                   // RS-485/RS-232
+  | { type: 'network'; host: string; port: number }                      // TCP/IP
+  | { type: 'ocr'; cameraDevice: string; region: OcrRegion }             // Caméra
+  | { type: 'cloud-push'; siteApiKey: string; webhookSecret: string };   // Variante SaaS (cf. plus bas)
 ```
+
+> **Versionnage** : le contrat est versionné `v1`. Toute évolution non rétro-compatible créera un `ScoreboardDataV2` et un nouveau topic Socket.IO `score-update-v2`. Les connecteurs continuent de pousser en `v1` jusqu'à migration explicite.
 
 ### ScoreboardManager — Orchestrateur
 
@@ -227,6 +287,106 @@ class ScoreboardManager {
   }
 }
 ```
+
+### Topologies d'installation (D3 ADR-049)
+
+L'interface unique cache trois topologies physiques d'installation. Le choix se fait **à la commande** (selon contraintes du club et type de console), jamais au runtime.
+
+#### Topologie A1 — Pi unique, club avec LAN
+
+```
+┌─────────────┐                ┌──────────────┐                ┌─────────────┐
+│ Console     │  RS-485 ou     │ Raspberry Pi │  HDMI / LAN /  │ TV / LED    │
+│ Stramatel/  │ ── Ethernet ──→│ (connecteur  │   Ethernet  ──→│ Affichage   │
+│ Bodet       │   du club      │  + affichage)│                │             │
+└─────────────┘                └──────┬───────┘                └─────────────┘
+                                      │
+                                      └──── Internet club (LAN) ──→ Central Server
+```
+
+- **Cas d'usage** : club équipé d'un réseau local, console et zone TV proches (< 30 m).
+- **Coût matériel additionnel** : 0–45 € (HAT RS-485 si Stramatel/Bodet série).
+- **Avantage** : 1 seul boîtier sur site, configuration la plus simple.
+- **Limite** : exige du LAN partout (pas toujours dispo dans les vieux gymnases).
+
+#### Topologie A3 — Pi unique, WiFi cellulaire (clé 4G/5G)
+
+```
+┌─────────────┐    RS-485     ┌──────────────┐  HDMI    ┌─────────────┐
+│ Console     │ ───────────── │ Raspberry Pi │ ────────→│ TV / LED    │
+│             │  câble local  │ + clé 4G/5G  │          │             │
+└─────────────┘               └──────┬───────┘          └─────────────┘
+                                     │
+                                     └─── 4G/5G ──→ Central Server
+```
+
+- **Cas d'usage** : club sans LAN fiable. Le Pi embarque une clé cellulaire (cf. `docs/guides/WIFI_USB_GUIDE.md`).
+- **Coût matériel additionnel** : 0–45 € + clé 4G + abonnement data (~10 €/mois inclus dans l'offre).
+- **Avantage** : 100 % autonome côté connectivité, fonctionne dans n'importe quel gymnase.
+- **Limite** : latence Central Server légèrement plus élevée (négligeable pour le score local — Socket.IO local).
+
+#### Topologie B — Scorebox dédié + Pi affichage
+
+```
+┌─────────────┐  RS-485   ┌──────────────────┐  WiFi/LAN  ┌──────────────┐  HDMI  ┌────────┐
+│ Console     │ ─────────→│ Neopro Scorebox  │ ──────────→│ Raspberry Pi │ ──────→│ TV/LED │
+│             │           │ (Pi Zero 2 W)    │  Socket.IO │ d'affichage  │        │        │
+└─────────────┘           └────────┬─────────┘            └──────────────┘        └────────┘
+                                   │
+                                   └── 4G/LAN ──→ Central Server (push direct)
+```
+
+- **Cas d'usage** : la console est **loin** de la zone d'affichage (> 30 m), ou le club veut la donnée score **sans déployer de TV** (pure intégration data → application club / API publique).
+- **Hardware Scorebox** : Pi Zero 2 W + boîtier + HAT RS-485 + clé 4G optionnelle ≈ **80 €**.
+- **Avantage** :
+  - Découple la **collecte** de l'**affichage** — le Scorebox peut survivre à un changement de TV ou à une coupure d'affichage.
+  - Permet de vendre la donnée **sans matériel d'affichage** (mode SaaS-pur, cf. plus bas).
+  - Peut alimenter plusieurs Pi d'affichage simultanément (multi-TV — cf. PROP-001).
+- **Limite** : 2 boîtiers à maintenir au lieu d'1.
+
+#### Tableau de décision topologie
+
+| Critère club                              | A1 (Pi LAN) | A3 (Pi 4G) | B (Scorebox) |
+|-------------------------------------------|:-----------:|:----------:|:------------:|
+| LAN fiable disponible                     | ✅          | ✅         | ✅           |
+| Pas de LAN, gymnase isolé                 | ❌          | ✅         | ✅           |
+| Console < 30 m de la TV                   | ✅          | ✅         | ✅ (overkill)|
+| Console > 30 m ou cloisons               | ⚠️ câble    | ⚠️ câble  | ✅           |
+| Pas de TV — on veut juste la donnée score| ❌          | ❌         | ✅           |
+| Multi-TV depuis une seule console         | ⚠️ splitter | ⚠️ splitter| ✅           |
+| Budget minimal                            | ✅          | ✅         | ❌ (+80 €)   |
+
+### Neopro Scorebox unifié (3 modes logiciels)
+
+Le **Neopro Scorebox** est un Pi Zero 2 W flashé avec **une seule image** qui supporte trois modes logiciels, sélectionnés au provisioning depuis le dashboard central :
+
+| Mode | Rôle | Pousse vers | Topologie |
+|------|------|-------------|-----------|
+| **Scorebox-Local** | Lit la console + sert le score en LAN local (Socket.IO) à un ou plusieurs Pi d'affichage | LAN local | B (avec affichage Pi) |
+| **Scorebox-Cloud** | Lit la console + pousse direct vers Central Server (HTTPS + WebSocket sécurisé) | Central Server | B (avec ou sans affichage) |
+| **Scorebox-Hybrid** | Les deux à la fois : LAN local pour latence + Central pour persistance | LAN + Central | B (recommandé) |
+
+Le mode est défini par une variable `SCOREBOX_MODE=local|cloud|hybrid` dans `/etc/neopro-scorebox.env`, modifiable à distance via le dashboard (re-provisioning OTA). **Aucun rebuild d'image n'est nécessaire** pour changer de mode.
+
+```
+┌────────────────────────────────────────────────────────────┐
+│         Neopro Scorebox — image unique, 3 modes            │
+│                                                            │
+│  ┌──────────────┐    ┌────────────────┐   ┌─────────────┐  │
+│  │ Connector    │ →  │ ScoreboardData │ → │ Mode router │  │
+│  │ (Stramatel/  │    │      v1        │   │             │  │
+│  │  Bodet/OCR)  │    └────────────────┘   └──────┬──────┘  │
+│  └──────────────┘                                 │         │
+│                                ┌──────────────────┼──────┐  │
+│                                ↓                  ↓      ↓  │
+│                          ┌──────────┐      ┌──────────┐  ┌──────────┐
+│                          │ Local    │      │ Cloud    │  │ Hybrid   │
+│                          │ (LAN)    │      │ (HTTPS)  │  │ (les 2)  │
+│                          └──────────┘      └──────────┘  └──────────┘
+└────────────────────────────────────────────────────────────┘
+```
+
+> **Pourquoi un boîtier dédié plutôt que le Pi d'affichage** ? Découplage matériel : la collecte de score doit survivre à une panne TV, à un reboot OS d'affichage, à un changement de média player. C'est aussi la base technique de la **vente data-only** (mode SaaS-pur, cf. plus bas).
 
 ### Connecteur 1 — Stramatel (RS-485)
 
@@ -380,6 +540,69 @@ case 'bodet':
 
 **Coût hardware** : Caméra USB (~20-30€)
 
+### Variante SaaS — Option SaaS-1 (cloud-push direct)
+
+Le mode SaaS de Neopro (ADR-037 — sites `site_type='saas'`, navigateur uniquement, pas de Pi d'affichage) crée un cas particulier : **comment recevoir le score d'une console physique sur un site qui n'a pas de matériel Neopro côté affichage** ?
+
+#### Option SaaS-1 retenue : Scorebox + push direct Central Server
+
+```
+┌─────────────┐  RS-485   ┌────────────────┐   HTTPS/WSS    ┌──────────────────┐
+│ Console     │ ─────────→│ Neopro Scorebox│ ──────────────→│  Central Server  │
+│ (club)      │           │ mode "cloud"   │  (mTLS + JWT)  │  /scoreboard/    │
+└─────────────┘           └────────────────┘                │   ingest/v1      │
+                                                            └────────┬─────────┘
+                                                                     │
+                                                                     ↓
+                                                            ┌──────────────────┐
+                                                            │ scoreboard_events│
+                                                            │     (PG)         │
+                                                            └────────┬─────────┘
+                                                                     │
+                                              ┌──────────────────────┼─────────────────┐
+                                              ↓                      ↓                 ↓
+                                       Dashboard SaaS         Browser overlay     API publique
+                                       (operator view)       (site_type='saas')   (vision F-21.2)
+```
+
+- **Le Scorebox pousse** les `ScoreboardData v1` directement vers Central Server via une API d'ingestion authentifiée.
+- **Le navigateur du site SaaS** s'abonne à un canal Socket.IO côté Central et reçoit les mises à jour en quasi-temps réel.
+- **Aucun Pi d'affichage** n'est nécessaire — le site SaaS affiche le score dans son propre browser overlay.
+- **Compatible Topologie B uniquement** (le Scorebox est obligatoire ; pas de variante "PC du club lit la console" pour des raisons de support).
+
+#### Pourquoi ce choix vs alternatives écartées
+
+| Option | Description | Verdict |
+|--------|-------------|---------|
+| **SaaS-1 (retenue)** | Scorebox dédié pousse vers Central | ✅ Découplé, supportable, identique au mode Pi |
+| SaaS-2 | App Windows installée sur le PC du club | ❌ Cauchemar de support multi-OS, antivirus, droits admin |
+| SaaS-3 | Plugin navigateur Web Serial API | ❌ Pas de RS-485 dans Web Serial, dépend du navigateur, pas de service en background |
+| SaaS-4 | OCR depuis webcam navigateur | ❌ Dégrade trop la donnée (Level 1-2 max), pas fiable pendant un match |
+
+> **Détail des options écartées** : voir ADR-049 § "Variante SaaS".
+
+#### API d'ingestion (esquisse)
+
+```
+POST /api/v1/scoreboard/ingest
+Authorization: Bearer <site_api_key>
+X-Webhook-Signature: <hmac-sha256(body, webhook_secret)>
+Content-Type: application/json
+
+{
+  "siteId": "uuid",
+  "data": { /* ScoreboardData v1 */ },
+  "scoreboxId": "uuid",
+  "scoreboxFirmware": "1.2.3"
+}
+
+→ 202 Accepted (pas de body, ack rapide)
+```
+
+- **Auth** : `api_key` du site (déjà existant) + signature HMAC du body avec un `webhook_secret` provisionné lors de l'enrôlement du Scorebox.
+- **Idempotence** : `(siteId, capturedAt)` comme clé d'idempotence (le Scorebox peut rejouer en cas de coupure réseau sans dupliquer l'événement).
+- **Rate limit** : 50 req/s par site (plafond généreux ; un connecteur typique pousse 5-10 msg/s).
+
 ### Rôle de la Remote — Faits de jeu et enrichissement
 
 Avec un connecteur externe, le **score arrive automatiquement**. Mais la Remote reste **indispensable** pour les faits de jeu et l'enrichissement :
@@ -462,6 +685,90 @@ L'opérateur peut à tout moment **corriger le score manuellement** depuis la Re
 └──────────────────────────────────────────────────────────┘
 ```
 
+## Persistance et audit trail — `scoreboard_events`
+
+Pour permettre le replay d'un match, l'audit, le debug à distance et **l'alimentation de l'API publique** (vision F-21.2), Central Server persiste les événements scoreboard dans une table dédiée :
+
+```sql
+-- central-server/src/db/migrations/2026XX_scoreboard_events.sql (à créer dans F-15.2)
+CREATE TABLE scoreboard_events (
+  id              BIGSERIAL PRIMARY KEY,
+  site_id         UUID NOT NULL REFERENCES sites(id) ON DELETE CASCADE,
+  source          TEXT NOT NULL,                       -- 'stramatel' | 'bodet' | ...
+  enrichment_level SMALLINT NOT NULL CHECK (enrichment_level BETWEEN 1 AND 5),
+  captured_at     TIMESTAMPTZ NOT NULL,                -- horodatage Pi/Scorebox
+  received_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),  -- horodatage Central
+  payload         JSONB NOT NULL,                      -- ScoreboardData v1 brut
+  scorebox_id     UUID NULL REFERENCES scoreboxes(id),
+  match_id        UUID NULL REFERENCES matches(id),    -- F-15.2 — rattachement match
+  CONSTRAINT scoreboard_events_idempotency UNIQUE (site_id, captured_at)
+);
+
+CREATE INDEX scoreboard_events_site_captured ON scoreboard_events (site_id, captured_at DESC);
+CREATE INDEX scoreboard_events_match ON scoreboard_events (match_id) WHERE match_id IS NOT NULL;
+```
+
+**Stratégie de rétention** :
+
+- **30 jours** complet en hot storage (PG)
+- **90 jours** : downsample à 1 événement / 5 secondes (sufficient pour replay)
+- **> 90 jours** : agrégat final du match uniquement (`final_score`, `match_duration`, `events_count`) dans une table `match_summaries`
+
+**Raison de la persistance** : sans cette table, on ne peut pas (a) reconstruire un match a posteriori, (b) déboguer un connecteur défaillant en production, (c) servir une API publique aux clients tiers (média, fédérations, app club). Les trois cas d'usage sont demandés par F-15.2 et F-21.2.
+
+> **Décision rétention** : la durée exacte (30/90 jours) sera figée lors du plan de F-15.2 selon le coût Supabase et la volumétrie observée.
+
+## Vision — API Score Publique (F-21.2, PI-3)
+
+L'investissement matériel + logiciel de PROP-003 ouvre la voie à un produit additionnel positionné en **PI-3** : une **API publique de score live** que Neopro peut commercialiser auprès de :
+
+- **Fédérations sportives** régionales (compétitions amateurs non couvertes par les diffuseurs)
+- **Médias locaux** (Ouest France, presse régionale) qui veulent un widget score live sur leur site
+- **Apps de clubs** qui veulent embarquer leur propre score sans payer un développement custom
+- **Bookmakers et apps de stats** (sports amateurs, niches)
+
+### Contrat API esquissé
+
+```
+GET  /api/public/v1/sites/{siteId}/score/live           → SSE / WebSocket — flux temps réel
+GET  /api/public/v1/sites/{siteId}/matches/{matchId}    → snapshot final + métadonnées
+GET  /api/public/v1/sites/{siteId}/matches?from=&to=    → liste paginée des matchs récents
+```
+
+- **Auth** : `Bearer <api_key>` par client tiers, avec quotas par tier (free / pro / enterprise).
+- **Format** : ScoreboardData v1 + métadonnées match (équipes, horaires, sport).
+- **Latence cible** : < 2 secondes côté client externe (capture Pi → ingestion Central → push SSE).
+- **Modèle commercial** : freemium (1 match/jour gratuit, > 100 €/mois pour pro). Détail dans F-21.2.
+
+> **Statut** : F-21.2 reste **en vision** tant que F-15.2 n'a pas livré la collecte fiable. Aucun engagement de date avant fin PI-2.
+
+## Offre commerciale & pricing
+
+### Vente Score Live à un club
+
+| Composant | Mode | Coût Neopro | Prix client (HT) |
+|-----------|------|-------------|------------------|
+| **Identification console** (pré-vente) | Visite ou photo | 30 min commercial | Inclus dans le devis |
+| **Connecteur Stramatel/Bodet série** | HAT RS-485 + câble | ~45 € | **149 € one-shot** |
+| **Connecteur Bodet réseau** | 0 € (LAN club) | 0 € | **49 € one-shot** (config) |
+| **OCR fallback** | Caméra USB | ~25 € | **99 € one-shot** |
+| **Neopro Scorebox** (Topologie B) | Pi Zero 2 W + boîtier | ~80 € | **249 € one-shot** |
+| **Abonnement Score Live** | API + persistance + monitoring | 0 € (déjà couvert par infra) | **+15 €/mois** sur l'abonnement de base |
+| **Installation sur site** (1ère) | 1 déplacement technicien | 1 j-h | **350 € one-shot** (ou inclus dans pack premium) |
+
+**Justification du pricing** :
+
+- Le **one-shot hardware** couvre le matériel + l'effort d'intégration (configurer le connecteur, tester avec la console, calibrer si OCR).
+- Le **+15 €/mois** finance la maintenance des connecteurs, les évolutions de protocoles, l'API publique partagée, et l'astreinte (panne en plein match = appel critique).
+- Le **Scorebox dédié à 249 €** est positionné comme un **upgrade premium** pour clubs avec contraintes physiques. Marge brute > 60 %.
+
+### Vente Score Live SaaS-pur (sans matériel d'affichage Neopro)
+
+Pour les clubs qui veulent **uniquement** la donnée score (intégration dans leur propre app, leur site web, leur affichage non-Neopro) :
+
+- **Pack SaaS Score** : Scorebox installé chez le club + API publique (F-21.2) → **149 €/mois** (engagement 12 mois) + **349 €** d'installation.
+- C'est aussi l'offre de pénétration pour entrer dans des clubs déjà équipés d'un autre fournisseur d'affichage (sans cannibaliser leur stack actuel).
+
 ## Alternatives Considérées
 
 ### 1. Connecteur unique Stramatel (version initiale de cet ADR)
@@ -536,22 +843,27 @@ L'opérateur peut à tout moment **corriger le score manuellement** depuis la Re
 
 ## Plan d'implémentation
 
-### Phase 0 — POC terrain (2-3 jours)
+> **Aligné sur F-15.2** (PI-2). La phase 0 est en cours d'exécution (POC terrain). Les phases 1-3 forment le MVP F-15.2. Les phases 4-5 sont des extensions PI-3 (F-15.3+).
 
-**Objectif** : valider la lecture depuis la console du prospect (Stramatel) ET une console Bodet si accessible.
+### Phase 0 — POC terrain Stramatel (en cours)
 
-1. **Identifier les modèles exacts** chez le prospect et dans le parc client
-2. **Commander le hardware** : HAT RS-485 + câble PTT (pour Stramatel)
-3. **Déployer Panel2Net** sur un Pi de test pour capturer les trames brutes
-4. **Valider** Stramatel : score, chrono, période lisibles
-5. **Tester** Bodet Scorepad (TCP port 4001) si un club partenaire en dispose
+**Objectif** : valider la lecture binaire 54 octets depuis la console Stramatel du prospect avant tout investissement de développement.
+
+1. **Identifier les modèles exacts** chez le prospect et dans le parc client (Multisport 452, série exacte)
+2. **Commander le hardware** : HAT RS-485 SN65HVD72 + câble PTT (~45 €)
+3. **Utiliser le script POC** `central-server/src/scripts/test-stramatel-listener.js` (créé en avr. 2026) pour capturer et décoder les trames brutes en mode standalone, sans toucher au code Pi de production
+4. **Valider** Stramatel : score, chrono, période, fautes lisibles sur 30 minutes consécutives
+5. **Tester** Bodet Scorepad (TCP port 4001) si un club partenaire en dispose — sinon repoussé en phase 2
 
 **Critères de validation POC** :
 
-- [ ] Stramatel : trames 54 octets reçues et décodées
-- [ ] Stramatel : score, chrono, période corrects
-- [ ] Bodet (si testable) : connexion TCP établie, messages ASCII reçus
-- [ ] Latence mesurée < 200ms (série) / < 500ms (réseau)
+- [ ] Stramatel : trames 54 octets reçues, octet de début `0xF8` détecté de manière fiable (taux de re-sync < 1%)
+- [ ] Stramatel : score, chrono, période corrects pendant un match complet
+- [ ] Stramatel : aucune perte de trame > 1s pendant 30 min de capture continue
+- [ ] Latence mesurée < 200ms (réception trame → log)
+- [ ] Compatibilité confirmée HAT RS-485 ↔ Pi 5 (GPIO UART activé via `raspi-config`)
+
+> **Output du POC** : un dump JSON des trames + un rapport court (`docs/poc/POC-stramatel-2026-04.md` à créer) qui débloquera la planification F-15.2.
 
 ### Phase 1 — Interface commune + connecteur Stramatel (3-4 jours)
 
@@ -628,49 +940,152 @@ Par ordre de priorité :
 
 Chaque connecteur suit le même pattern : implémenter `ScoreboardConnector`, parser le protocole, émettre `ScoreboardData`.
 
+### Phase 6 — Persistance & Scorebox dédié (3-5 jours, F-15.2)
+
+1. **Migration `scoreboard_events`** côté Central (+ repository + tests Jest)
+2. **Endpoint d'ingestion** `POST /api/v1/scoreboard/ingest` avec auth `api_key` + signature HMAC + idempotence
+3. **Pipeline Pi → Central** : forward des `ScoreboardData v1` du Pi vers Central (en plus du broadcast Socket.IO local), avec buffer disque en cas de coupure réseau
+4. **Image Neopro Scorebox** : Pi Zero 2 W flashé avec l'image Pi standard + flag `SCOREBOX_MODE=local|cloud|hybrid` + script de provisioning OTA
+5. **Dashboard** : nouvelle entité "scorebox" rattachée à un site, monitoring statut + dernière mise à jour reçue
+6. **Tests E2E** Playwright : ingest → persistance → restitution overlay sur navigateur SaaS
+
+**Critères de validation** :
+
+- [ ] Score d'une console arrive dans `scoreboard_events` < 2s après capture
+- [ ] Site SaaS (browser overlay) reçoit le score via Central en < 2s
+- [ ] Coupure réseau 5 min → buffer Scorebox → flush au retour, 0 perte
+- [ ] Idempotence : rejouer un événement = même clé `(site_id, captured_at)` = pas de doublon
+
+### Phase 7 — API Score Publique (vision F-21.2, PI-3)
+
+> **Conditionnée** au succès de F-15.2 et à la validation commerciale (au moins 3 prospects API signés ou en LOI). Pas de développement avant fin PI-2.
+
+1. **Spec OpenAPI** publique `/api/public/v1/sites/{siteId}/score/*`
+2. **Auth API key + quotas** par tier (free / pro / enterprise)
+3. **SSE / WebSocket public** pour le flux temps réel
+4. **Portail développeur** (doc, sandbox, dashboard d'usage)
+5. **Facturation** : intégration avec le module abonnement existant
+
 ## Budget estimé
 
 ### Par club (hardware)
 
-| Configuration                  | Hardware                     | Coût     |
-| ------------------------------ | ---------------------------- | -------- |
-| Bodet Scorepad (TCP/IP réseau) | Aucun (réseau existant)      | **0€**   |
-| Bodet BT6000 (RS-485 série)    | HAT RS-485 + câble RJ-45     | **~40€** |
-| Stramatel (RS-485)             | HAT RS-485 + câble PTT       | **~45€** |
-| Mobatime/Favero (RS-232/422)   | Adaptateur USB-série + câble | **~25€** |
-| OCR fallback                   | Caméra USB                   | **~25€** |
-| Manuel (statu quo)             | Aucun                        | **0€**   |
+| Configuration                       | Hardware                     | Coût Neopro | Topologie |
+| ----------------------------------- | ---------------------------- | -----------:| --------- |
+| Bodet Scorepad (TCP/IP réseau)      | Aucun (réseau existant)      | **0 €**     | A1        |
+| Bodet BT6000 (RS-485 série)         | HAT RS-485 + câble RJ-45     | **~40 €**   | A1/A3     |
+| Stramatel (RS-485)                  | HAT RS-485 + câble PTT       | **~45 €**   | A1/A3     |
+| Mobatime/Favero (RS-232/422)        | Adaptateur USB-série + câble | **~25 €**   | A1/A3     |
+| OCR fallback                        | Caméra USB                   | **~25 €**   | A1/A3     |
+| **Neopro Scorebox dédié**           | Pi Zero 2 W + boîtier + HAT  | **~80 €**   | B         |
+| Clé 4G/5G (sites sans LAN)          | Dongle USB cellulaire        | **~30 €**   | A3 ou B   |
+| Manuel (statu quo)                  | Aucun                        | **0 €**     | n/a       |
 
 ### Développement
 
-| Phase                                    | Effort    | Cumulé             |
-| ---------------------------------------- | --------- | ------------------ |
-| Phase 0 — POC                            | 2-3 jours | 2-3j               |
-| Phase 1 — Interface + Stramatel          | 3-4 jours | 5-7j               |
-| Phase 2 — Bodet TCP                      | 2-3 jours | 7-10j              |
-| Phase 3 — Remote enrichie + faits de jeu | 2-3 jours | 9-13j              |
-| Phase 4 — OCR (optionnel)                | 3-5 jours | 12-18j             |
-| Phase 5 — Chaque connecteur additionnel  | 2-3 jours | +2-3j/constructeur |
+| Phase                                          | Effort     | Cumulé             | Rattachement |
+| ---------------------------------------------- | ---------- | ------------------ | ------------ |
+| Phase 0 — POC Stramatel                        | 2-3 jours  | 2-3 j              | F-15.2 (en cours) |
+| Phase 1 — Interface + Stramatel                | 3-4 jours  | 5-7 j              | F-15.2       |
+| Phase 2 — Bodet TCP                            | 2-3 jours  | 7-10 j             | F-15.2       |
+| Phase 3 — Remote enrichie + faits de jeu      | 2-3 jours  | 9-13 j             | F-15.2       |
+| Phase 4 — OCR (optionnel)                      | 3-5 jours  | 12-18 j            | F-15.3 ou backlog |
+| Phase 5 — Chaque connecteur additionnel        | 2-3 jours  | +2-3j/constructeur | backlog       |
+| **Phase 6 — Persistance + Scorebox dédié**     | 3-5 jours  | 15-23 j            | F-15.2 (extension) |
+| **Phase 7 — API Score Publique (vision)**      | 8-12 jours | 23-35 j            | F-21.2 (PI-3) |
 
-**MVP (Phases 0-3)** : **~9-13 jours** — Stramatel + Bodet + Remote enrichie
-**Complet (Phases 0-4)** : **~12-18 jours** — + OCR fallback universel
+**MVP F-15.2 (Phases 0-3 + 6)** : **~12-18 jours** — Stramatel + Bodet + Remote enrichie + Scorebox/persistance
+**Étendu (Phases 0-6)** : **~15-23 jours** — + OCR fallback universel
+**Vision PI-3 (Phase 7)** : **+8-12 jours** — API publique commercialisée
+
+> **Hypothèse charge** : ces estimations supposent qu'un seul développeur senior travaille en focus. Avec la charge actuelle multi-projets, prévoir un facteur 1.5-2 calendaire.
+
+## Annexe — Checklist pré-installation Score Live
+
+À utiliser lors de la qualification commerciale d'un club, **avant** d'envoyer un devis Score Live. Sans ces réponses, le devis n'est pas fiable.
+
+### Identification de la console
+
+- [ ] **Marque exacte** (Bodet / Stramatel / Mobatime / Favero / Daktronics / autre / inconnu)
+- [ ] **Modèle exact** (ex: Bodet Scorepad, Stramatel Multisport 452, BT6000…) — photo de l'étiquette si possible
+- [ ] **Année d'achat approximative** (pour repérer les générations sans sortie data)
+- [ ] **Sport(s) gérés** par la console (impact niveau d'enrichissement requis : basket Level 5, foot Level 3 suffit)
+- [ ] La console est-elle **partagée** avec d'autres systèmes (panneau LED de score existant) ? Risque d'arbitrer un bus série déjà utilisé.
+
+### Connectique disponible
+
+- [ ] **Sortie data documentée** ? (RS-485 / RS-232 / RJ-45 Ethernet / aucune)
+- [ ] **Connecteur physique** disponible côté console (PTT / DB9 / RJ-45 / borne à vis)
+- [ ] **Documentation constructeur** du protocole (PDF Bodet, manuel Stramatel) : Neopro a-t-il déjà la doc ou faut-il la demander au club ?
+- [ ] Si Bodet Scorepad : le **port 4001 TCP** est-il déjà utilisé par un afficheur tiers ? (le Scorepad limite parfois à 1 client)
+
+### Topologie physique du gymnase
+
+- [ ] **Distance** entre la console et la zone d'affichage TV (< 30 m → A1/A3 OK, > 30 m → B recommandé)
+- [ ] **Cheminement de câble** possible entre console et Pi (gaines existantes, plafond suspendu, plinthe)
+- [ ] **Alimentation 230 V** disponible à proximité du futur emplacement Pi/Scorebox
+- [ ] **Présence d'un local technique** sécurisé pour le boîtier (vs zone publique exposée au vandalisme)
+
+### Connectivité Internet
+
+- [ ] **LAN Ethernet** disponible côté console **et/ou** côté affichage ?
+- [ ] **WiFi** : SSID couvre-t-il la zone d'installation ? Force du signal mesurée ?
+- [ ] **Pas de WiFi** : prévoir clé 4G/5G (Topologie A3 ou Scorebox cloud)
+- [ ] **Restrictions firewall** côté club (ports sortants 443 obligatoires pour Central Server) ?
+
+### Cas d'usage métier
+
+- [ ] **Quel niveau d'enrichissement** veut le club : score seul (L1) / score+chrono (L2) / complet basket (L5) ?
+- [ ] **Mode hybride remote** souhaité ? (override manuel + connecteur)
+- [ ] **Affichage TV uniquement**, ou **TV + LED** (cf. PROP-002), ou **multi-TV** (cf. PROP-001) ?
+- [ ] **Mode SaaS-pur** demandé (pas d'affichage Neopro, juste la donnée API) ?
+- [ ] **Persistance / replay** demandée pour audit fédéral ou rejeu vidéo ?
+
+### Validation finale
+
+- [ ] **Identification du modèle** confirmée par photo ou visite technique
+- [ ] **Topologie A1 / A3 / B** choisie et justifiée
+- [ ] **Estimation matérielle** validée (one-shot HT)
+- [ ] **Devis abonnement** mensuel validé
+- [ ] **Date d'installation** proposée + dépendances (présence club, accès gymnase, etc.)
+
+> **Si une seule case "identification" ou "connectique" reste vide → ne pas envoyer de devis ferme**, planifier une visite technique d'1 h.
 
 ## Références
 
-- **Panel2Net** : https://github.com/tomkohler/Panel2Net — Multi-constructeurs (Stramatel, Bodet, Mobatime, Swiss Timing)
-- **BaSta-LedControl** : https://github.com/christianduerselen/BaSta-LedControl — Stramatel Arduino
-- **Favero_Repeater** : https://github.com/vehemont/Favero_Repeater — Favero Arduino
-- **ScoreSight** : https://github.com/royshil/scoresight — OCR universel (Qt6+OpenCV)
-- **Bodet Scorepad protocole réseau** : https://static.bodet-sport.com/images/stories/EN/support/Pdfs/manuals/Scorepad/608264-Network%20output%20and%20protocols-Scorepad.pdf
+### Décisions & gouvernance interne
+
+- [ADR-049 — Score Live Multi-Vendor Architecture](../adr/ADR-049-score-live-multi-vendor-architecture.md) — décisions courtes figées en session
+- [F-15.2 — Score Live multi-vendor MVP](../safe/FEATURES.md) — Feature SAFe portant l'exécution
+- [F-21.2 — Public Score API (vision PI-3)](../safe/FEATURES.md) — Vision API publique
+- [E-15 — Score Live Hardware](../safe/EPICS.md) — Epic parent
+- [PROP-001 — Multi-TV single Pi](./PROP-001-multi-tv-single-pi.md)
+- [PROP-002 — TV + LED dual output](./PROP-002-tv-led-dual-output.md)
+- [ADR-037 — Site type SaaS (browser-only)](../adr/ADR-037-site-type-saas.md)
+
+### Code & docs Neopro
+
+- `central-server/src/scripts/test-stramatel-listener.js` — Script POC Phase 0 (lecture standalone trames Stramatel)
 - `raspberry/src/app/components/tv/tv.component.ts` — Overlay score + goal animation
-- `raspberry/src/app/components/remote/remote.component.ts` — Remote controller + broadcastScore()
+- `raspberry/src/app/components/remote/remote.component.ts` — Remote controller + `broadcastScore()`
 - `raspberry/src/app/services/local-broadcast.service.ts` — BroadcastChannel dual-channel
 - `raspberry/server/socket/handlers.js` — Score relay + state management
 - `docs/technical/IMPLEMENTATION_GUIDE_AUDIENCE_SCORE.md` — Guide score existant
 - `docs/changelog/2025-12-28_overlay-local-system.md` — Recherche API externes (résultats négatifs)
-- [PROP-001](./PROP-001-multi-tv-single-pi.md) — Multi-TV (combinaison avec splitter)
-- [PROP-002](./PROP-002-tv-led-dual-output.md) — TV + LED (faits de jeu différenciés par support)
+- `docs/guides/WIFI_USB_GUIDE.md` — Configuration clé 4G/5G (Topologie A3)
+
+### Projets open-source de référence
+
+- **Panel2Net** : https://github.com/tomkohler/Panel2Net — Multi-constructeurs (Stramatel, Bodet, Mobatime, Swiss Timing)
+- **BaSta-LedControl** : https://github.com/christianduerselen/BaSta-LedControl — Stramatel Arduino
+- **Favero_Repeater** : https://github.com/vehemont/Favero_Repeater — Favero Arduino
+- **coloradoScoreboard** : https://github.com/fabriziobertocci/coloradoScoreboard — Colorado Timing Node.js
+- **ScoreSight** : https://github.com/royshil/scoresight — OCR universel (Qt6+OpenCV)
+
+### Documentation constructeurs
+
+- **Bodet Scorepad protocole réseau** : https://static.bodet-sport.com/images/stories/EN/support/Pdfs/manuals/Scorepad/608264-Network%20output%20and%20protocols-Scorepad.pdf
 
 ---
 
-_Créé le 11 février 2026_
+_Créé le 11 février 2026 — Patch profond le 11 avril 2026 (post ADR-049)_
