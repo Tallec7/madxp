@@ -336,18 +336,28 @@ class SocketService {
     // SaaS client registration — lightweight, no auth required (siteId is UUID)
     socket.on('saas-register', async (data: { siteId?: string; version?: string; clientType?: string; displayIndex?: number }) => {
       if (!data?.siteId) return;
+
+      // CRITICAL: join room + register relay SYNCHRONOUSLY before any async DB query.
+      // The TvComponent emits tv-register immediately after connect — if the relay
+      // handlers aren't set up yet, the tv-register is lost and no role is assigned,
+      // causing displays to play independently without master-slave sync.
+      (socket as any).siteId = data.siteId;
+      (socket as any).clientType = data.clientType || 'saas-tv';
+      (socket as any).displayIndex = data.displayIndex ?? 0;
+      socket.join(data.siteId);
+      this.registerSaasRelay(socket, data.siteId);
+
       try {
-        // Verify the site exists and is SaaS type
+        // Verify the site exists and is SaaS type (async, non-blocking for relay)
         const result = await query(
           'SELECT id, site_name, site_type FROM sites WHERE id = $1',
           [data.siteId]
         );
-        if (result.rows.length === 0 || result.rows[0].site_type !== 'saas') return;
-
-        (socket as any).siteId = data.siteId;
-        (socket as any).clientType = data.clientType || 'saas-tv';
-        (socket as any).displayIndex = data.displayIndex ?? 0;
-        socket.join(data.siteId);
+        if (result.rows.length === 0 || result.rows[0].site_type !== 'saas') {
+          // Invalid site — leave room and disconnect relay
+          socket.leave(data.siteId);
+          return;
+        }
 
         // Update version and last_seen_at
         if (data.version) {
@@ -370,11 +380,6 @@ class SocketService {
           const displays = this.getSaasConnectedDisplays(data.siteId);
           this.io.to(data.siteId).emit('displays-changed', { displays });
         }
-
-        // Phase 5 — PROP-002: SaaS event relay
-        // The Pi has a local Socket.IO server that relays events between Remote and TVs.
-        // In SaaS mode, all clients connect to the central server — we need the same relay.
-        this.registerSaasRelay(socket, data.siteId);
       } catch (error) {
         logger.error('SaaS register error', { error, siteId: data.siteId });
       }
