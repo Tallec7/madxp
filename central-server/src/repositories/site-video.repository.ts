@@ -4,14 +4,6 @@
  */
 
 import { query } from '../config/database';
-import logger from '../config/logger';
-
-interface SiteVideoRow {
-  site_id: string;
-  video_id: string;
-  added_at: Date;
-  added_by: string | null;
-}
 
 class SiteVideoRepository {
   /**
