@@ -1,3 +1,9 @@
+## [3.146.2](https://github.com/Tallec7/neopro/compare/v3.146.1...v3.146.2) (2026-04-11)
+
+### Bug Fixes
+
+- **ci:** lower functions coverage threshold to 41% after SaaS relay additions ([31ed564](https://github.com/Tallec7/neopro/commit/31ed5646c9dcbcf1d51cb97d21f63dc06769043c))
+
 ## [3.146.1](https://github.com/Tallec7/neopro/compare/v3.146.0...v3.146.1) (2026-04-11)
 
 ### Bug Fixes
