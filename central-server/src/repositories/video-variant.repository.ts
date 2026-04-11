@@ -6,7 +6,8 @@ import { BaseRepository } from './base.repository';
 // Types
 // --------------------------------------------------------------------------
 
-export type DisplayType = 'tv' | 'secondary';
+/** Display type slug — 'tv', 'secondary', or any custom type (e.g. 'led-banner', 'totem') */
+export type DisplayType = string;
 
 export interface VideoVariantRow extends QueryResultRow {
   id: string;

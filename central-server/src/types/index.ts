@@ -88,6 +88,15 @@ export interface Site {
   hostname_slug: string | null;
   site_type: 'pi' | 'saas' | 'demo';
   feature_overrides?: Record<string, boolean>;
+  displays?: DisplayConfig[] | null;
+}
+
+/** N-display configuration entry (PROP-002 Phase 5) */
+export interface DisplayConfig {
+  index: number;
+  name: string;
+  type: string;       // 'tv', 'secondary', 'led-banner', 'totem', etc.
+  resolution?: string; // e.g. '1920x1080', '1920x384'
 }
 
 // Group types

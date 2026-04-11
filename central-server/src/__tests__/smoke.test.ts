@@ -5277,12 +5277,12 @@ describe('Video variant display_type alignment guard', () => {
     controllerContent = fs.readFileSync(controllerPath, 'utf8');
   });
 
-  it('DisplayType must include "secondary" (not "led")', () => {
+  it('DisplayType must be open string type (N-display Phase 5)', () => {
     expect({
-      hasSecondary: /DisplayType\s*=.*'secondary'/.test(repoContent),
+      isStringType: /DisplayType\s*=\s*string/.test(repoContent),
       noLed: !/DisplayType\s*=.*'led'/.test(repoContent),
     }).toEqual({
-      hasSecondary: true,
+      isStringType: true,
       noLed: true,
     });
   });

@@ -68,6 +68,7 @@ CREATE TABLE IF NOT EXISTS sites (
   -- Colonnes conservées pour rétrocompat API (anciens dashboards). Ne plus utiliser.
   secondary_display_enabled BOOLEAN DEFAULT false,
   secondary_display_resolution VARCHAR(20) DEFAULT NULL,
+  displays JSONB DEFAULT NULL, -- N-display config: [{index, name, type, resolution}]. NULL = legacy dual.
   CONSTRAINT check_status CHECK (status IN ('online', 'offline', 'maintenance', 'error'))
 );
 
@@ -120,7 +121,7 @@ CREATE TABLE IF NOT EXISTS videos (
 CREATE TABLE IF NOT EXISTS video_variants (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   video_id UUID NOT NULL REFERENCES videos(id) ON DELETE CASCADE,
-  display_type VARCHAR(20) NOT NULL CHECK (display_type IN ('tv', 'secondary')),
+  display_type VARCHAR(20) NOT NULL CHECK (display_type ~ '^[a-z0-9-]+$' AND length(display_type) BETWEEN 1 AND 20),
   filename VARCHAR(500) NOT NULL,
   original_name VARCHAR(500),
   storage_path VARCHAR(1000) NOT NULL,
