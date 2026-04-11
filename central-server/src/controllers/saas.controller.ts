@@ -9,7 +9,7 @@
  */
 
 import { Request, Response } from 'express';
-import { siteRepository, configProfileRepository } from '../repositories';
+import { siteRepository, configProfileRepository, videoRepository } from '../repositories';
 import { getVideoUrl } from '../services/storage.service';
 import { enrichConfigWithAnalyticsMetadata } from '../utils/config-analytics-metadata';
 import { SiteConfiguration } from '../types';
@@ -92,6 +92,71 @@ function resolveTimeCategories(timeCategories: TimeCategoryLike[]): TimeCategory
 }
 
 /**
+ * Extract all video filenames from a config to batch-lookup thumbnails.
+ * ADR-048: Collects filenames from sponsors, categories, and timeCategories.
+ */
+function collectVideoFilenames(
+  sponsors: VideoLike[],
+  categories: CategoryLike[],
+  timeCategories: TimeCategoryLike[]
+): string[] {
+  const filenames = new Set<string>();
+
+  const extractFromVideo = (v: VideoLike) => {
+    if (v.path) {
+      const filename = v.path.split('/').pop();
+      if (filename) filenames.add(filename);
+    }
+  };
+
+  sponsors.forEach(extractFromVideo);
+
+  const extractFromCategories = (cats: CategoryLike[]) => {
+    for (const cat of cats) {
+      cat.videos?.forEach(extractFromVideo);
+      if (cat.subCategories) extractFromCategories(cat.subCategories);
+    }
+  };
+  extractFromCategories(categories);
+
+  timeCategories.forEach(tc => tc.loopVideos?.forEach(extractFromVideo));
+
+  return Array.from(filenames);
+}
+
+/**
+ * Enrich resolved videos with thumbnailUrl from DB.
+ * ADR-048: Adds cloud thumbnail URLs to SaaS config responses.
+ */
+function applyThumbnails(videos: VideoLike[], thumbnailMap: Map<string, string>): VideoLike[] {
+  return videos.map(v => {
+    if (v.thumbnailUrl) return v; // Already has a thumbnail
+    const url = v.path as string;
+    // Extract original filename from resolved FTP URL
+    const filename = url?.split('/').pop()?.split('?')[0];
+    if (filename && thumbnailMap.has(filename)) {
+      return { ...v, thumbnailUrl: thumbnailMap.get(filename) };
+    }
+    return v;
+  });
+}
+
+function applyCategoryThumbnails(categories: CategoryLike[], thumbnailMap: Map<string, string>): CategoryLike[] {
+  return categories.map(cat => ({
+    ...cat,
+    videos: cat.videos ? applyThumbnails(cat.videos, thumbnailMap) : [],
+    subCategories: cat.subCategories ? applyCategoryThumbnails(cat.subCategories, thumbnailMap) : [],
+  }));
+}
+
+function applyTimeCategoryThumbnails(timeCategories: TimeCategoryLike[], thumbnailMap: Map<string, string>): TimeCategoryLike[] {
+  return timeCategories.map(tc => ({
+    ...tc,
+    loopVideos: tc.loopVideos ? applyThumbnails(tc.loopVideos, thumbnailMap) : [],
+  }));
+}
+
+/**
  * GET /api/saas/:siteId/config
  *
  * Retourne la configuration complète d'un site SaaS avec toutes les URLs
@@ -137,13 +202,28 @@ export async function getSaasConfig(req: Request, res: Response) {
     const categories = (configuration.categories as CategoryLike[]) || [];
     const timeCategories = (configuration.timeCategories as TimeCategoryLike[]) || [];
 
+    // Batch-lookup thumbnail URLs from DB (ADR-048)
+    const allFilenames = collectVideoFilenames(sponsors, categories, timeCategories);
+    let thumbnailMap = new Map<string, string>();
+    if (allFilenames.length > 0) {
+      try {
+        thumbnailMap = await videoRepository.findThumbnailsByFilenames(allFilenames);
+      } catch (err) {
+        logger.warn('SaaS config: thumbnail lookup failed (non-fatal)', { siteId, error: err });
+      }
+    }
+
+    const resolvedSponsors = resolveVideoUrls(sponsors);
+    const resolvedCategories = resolveCategories(categories);
+    const resolvedTimeCategories = resolveTimeCategories(timeCategories);
+
     const resolvedConfig = {
       remote: configuration.remote || { title: `Télécommande ${site.club_name || site.site_name}` },
       auth: configuration.auth || { password: '', sessionDuration: 28800000 },
       version: configuration.version || '1.0',
-      sponsors: resolveVideoUrls(sponsors),
-      categories: resolveCategories(categories),
-      timeCategories: resolveTimeCategories(timeCategories),
+      sponsors: applyThumbnails(resolvedSponsors, thumbnailMap),
+      categories: applyCategoryThumbnails(resolvedCategories, thumbnailMap),
+      timeCategories: applyTimeCategoryThumbnails(resolvedTimeCategories, thumbnailMap),
       liveScoreEnabled: (configuration.liveScoreEnabled as boolean) ?? false,
       scoreOverlay: configuration.scoreOverlay || null,
       watermark: configuration.watermark || null,
@@ -246,13 +326,28 @@ export async function getSaasProfileConfig(req: Request, res: Response) {
     const categories = (configuration.categories as CategoryLike[]) || [];
     const timeCategories = (configuration.timeCategories as TimeCategoryLike[]) || [];
 
+    // Batch-lookup thumbnail URLs from DB (ADR-048)
+    const allFilenames = collectVideoFilenames(sponsors, categories, timeCategories);
+    let thumbnailMap = new Map<string, string>();
+    if (allFilenames.length > 0) {
+      try {
+        thumbnailMap = await videoRepository.findThumbnailsByFilenames(allFilenames);
+      } catch (err) {
+        logger.warn('SaaS profile config: thumbnail lookup failed (non-fatal)', { siteId, profileId, error: err });
+      }
+    }
+
+    const resolvedSponsors = resolveVideoUrls(sponsors);
+    const resolvedCategories = resolveCategories(categories);
+    const resolvedTimeCategories = resolveTimeCategories(timeCategories);
+
     const resolvedConfig = {
       remote: configuration.remote || { title: `Télécommande ${profile.display_name || profile.name}` },
       auth: configuration.auth || { password: '', sessionDuration: 28800000 },
       version: configuration.version || '1.0',
-      sponsors: resolveVideoUrls(sponsors),
-      categories: resolveCategories(categories),
-      timeCategories: resolveTimeCategories(timeCategories),
+      sponsors: applyThumbnails(resolvedSponsors, thumbnailMap),
+      categories: applyCategoryThumbnails(resolvedCategories, thumbnailMap),
+      timeCategories: applyTimeCategoryThumbnails(resolvedTimeCategories, thumbnailMap),
       liveScoreEnabled: (configuration.liveScoreEnabled as boolean) ?? false,
       scoreOverlay: configuration.scoreOverlay || null,
       watermark: configuration.watermark || null,

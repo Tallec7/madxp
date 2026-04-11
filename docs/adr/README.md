@@ -64,6 +64,7 @@ Un ADR documente une décision technique importante avec :
 | [ADR-045](ADR-045-extract-chart-display-and-commands-modules.md)  | Extraction chart-display services + split commands.cjs    | Accepté                  | Avr 2026 |
 | [ADR-046](ADR-046-site-config-copy.md)                            | Copie de configuration inter-sites                        | Accepté                  | Avr 2026 |
 | [ADR-047](ADR-047-claude-md-rules-migration.md)                   | Migration règles CLAUDE.md vers .claude/rules/            | Accepté                  | Avr 2026 |
+| [ADR-048](ADR-048-ftp-video-storage-restructure.md)               | Restructuration FTP + thumbnails + pivot site_videos      | Accepté                  | Avr 2026 |
 
 ### Supersédés
 
@@ -100,7 +101,7 @@ Un ADR documente une décision technique importante avec :
 
 1. Décider du format avec la [grille de décision](BEST_PRACTICES.md#quand-créer-un-adr-)
 2. Copier le template approprié (complet ou léger)
-3. Numéroter séquentiellement (prochain : **ADR-044**)
+3. Numéroter séquentiellement (prochain : **ADR-049**)
 4. Remplir les sections
 5. Commiter avec le code dans la même PR
 6. Mettre à jour ce README après merge
@@ -123,4 +124,4 @@ Voir **[BEST_PRACTICES.md](BEST_PRACTICES.md)** pour :
 
 ---
 
-_Dernière mise à jour : 9 avril 2026_
+_Dernière mise à jour : 11 avril 2026_

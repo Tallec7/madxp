@@ -287,4 +287,5 @@ export {
   type SprintVelocityRow,
   type StoryStatusOverrideRow,
 } from './safe.repository';
+export { siteVideoRepository } from './site-video.repository';
 export { BaseRepository } from './base.repository';

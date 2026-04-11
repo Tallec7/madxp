@@ -630,7 +630,7 @@ export const schemas = {
   }),
 
   updateProposalStatus: Joi.object({
-    status: Joi.string().valid('draft', 'review', 'approved', 'rejected', 'implemented').required(),
+    status: Joi.string().valid('draft', 'in-review', 'approved', 'implementing', 'done').required(),
   }),
 
   updateProposalContent: Joi.object({

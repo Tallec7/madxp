@@ -67,6 +67,40 @@ const ensureUpdateStorageConfigured = (): void => {
 };
 
 // =============================================================================
+// SHARDED PATH HELPERS (ADR-048)
+// =============================================================================
+
+/**
+ * Build a sharded FTP path for a video file.
+ * Uses the first 2 chars of the UUID as shard prefix to limit files per directory.
+ * Example: buildShardedVideoPath('ab3f7c2e-1234-...', '.mp4') → 'videos/ab/ab3f7c2e-1234-....mp4'
+ */
+export const buildShardedVideoPath = (videoUuid: string, ext: string): string => {
+  const prefix = videoUuid.substring(0, 2);
+  const normalizedExt = ext.startsWith('.') ? ext : `.${ext}`;
+  return `videos/${prefix}/${videoUuid}${normalizedExt}`;
+};
+
+/**
+ * Build the FTP path for a video's thumbnail.
+ * Stored alongside the video in the same shard directory.
+ * Example: buildThumbnailPath('ab3f7c2e-1234-...') → 'videos/ab/ab3f7c2e-1234-....thumb.jpg'
+ */
+export const buildThumbnailPath = (videoUuid: string): string => {
+  const prefix = videoUuid.substring(0, 2);
+  return `videos/${prefix}/${videoUuid}.thumb.jpg`;
+};
+
+/**
+ * Get the public URL for a thumbnail.
+ * Returns null if the video has no thumbnail_url in DB.
+ */
+export const getThumbnailUrl = (thumbnailStoragePath: string): string => {
+  ensureVideoStorageConfigured();
+  return getFtpPublicUrl(thumbnailStoragePath);
+};
+
+// =============================================================================
 // VIDEO STORAGE
 // =============================================================================
 
@@ -113,6 +147,30 @@ export const deleteVideo = async (storagePath: string): Promise<boolean> => {
 export const getVideoUrl = (storagePath: string): string => {
   ensureVideoStorageConfigured();
   return getFtpPublicUrl(storagePath);
+};
+
+// =============================================================================
+// THUMBNAIL STORAGE (ADR-048)
+// =============================================================================
+
+/**
+ * Upload a thumbnail image to FTP storage.
+ * Uses simple upload (no verification) since thumbnails are small files.
+ */
+export const uploadThumbnail = async (
+  fileBuffer: Buffer,
+  storagePath: string
+): Promise<SimpleUploadResult | null> => {
+  ensureVideoStorageConfigured();
+  return uploadFileToFtp(fileBuffer, storagePath, 'image/jpeg');
+};
+
+/**
+ * Delete a thumbnail from FTP storage.
+ */
+export const deleteThumbnail = async (storagePath: string): Promise<boolean> => {
+  ensureVideoStorageConfigured();
+  return deleteFileFromFtp(storagePath);
 };
 
 // =============================================================================
