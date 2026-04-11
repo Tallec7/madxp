@@ -1,9 +1,10 @@
-# PROP-002: TV + LED — Contenus Différenciés par Type d'Écran depuis un Seul Pi
+# PROP-002: Multi-Display — Contenus Différenciés par Écran depuis un Seul Pi
 
-> _Anciennement ADR-012_
+> _Anciennement ADR-012. Mise à jour majeure le 11 avril 2026 (audit implémentation + modèle N-display)._
 
 **Date** : 2026-02-11
-**Statut** : Proposé
+**Dernière révision** : 2026-04-11
+**Statut** : Partiellement implémenté (Phase 1 + 2 done, Phase 3+ à venir)
 **Décideurs** : Équipe Neopro
 **Epic SAFe** : [E-22 — Contenus Différenciés TV + LED](../safe/FEATURES.md#e-22--contenus-différenciés-tv--led) (PI-2)
 **ADR** : [ADR-029](../adr/ADR-029-dual-hdmi-tv-led.md) (décision architecturale)
@@ -13,162 +14,120 @@
 
 ## Contexte
 
-Un prospect (club sportif) dispose de **TV classiques** et d'un **écran LED** (panneau LED type bandeau, mur LED, ou totem). Il souhaite diffuser des **contenus différents adaptés au format de chaque support** depuis un seul Raspberry Pi :
+Un club sportif dispose de **TV classiques** et d'**écrans additionnels** (panneau LED bandeau, mur LED, totem, TV tribunes, écran géant). Il souhaite diffuser des **contenus différents adaptés au format de chaque support** depuis un seul Raspberry Pi :
 
-- **TV** : format 16:9, vidéos sponsors/ambiance, overlay score
-- **LED** : format spécifique (bandeau horizontal, portrait, résolution custom), contenu adapté (score permanent, pub animée, infos match)
+- **Écran principal (HDMI 0)** : format 16:9, vidéos sponsors/ambiance, overlay score
+- **Écran secondaire (HDMI 1)** : format spécifique (bandeau horizontal, portrait, résolution custom), contenu adapté
+- **Écrans futurs (WiFi/USB-HDMI)** : N écrans additionnels avec contenus ciblés
 
-Un même sujet (ex: sponsor X) peut avoir **2 versions** : une optimisée TV (1920×1080, 16:9) et une optimisée LED (ex: 1920×384 bandeau, 1080×1920 portrait).
+Un même sujet (ex: sponsor X) peut avoir **N versions** : une optimisée par type d'écran.
+
+> **Terminologie** : le terme initial "LED" a été abandonné au profit de "secondary display" car le HDMI secondaire peut alimenter n'importe quel type d'écran (LED, TV, totem, écran géant). Le modèle évolue vers **N displays**.
 
 ### Contraintes
 
-- **1 seul Pi** pour piloter les deux types d'écrans
-- **Contenus différents** sur TV et LED simultanément
-- **Formats vidéo différents** : résolution, ratio, orientation
-- **Score live** ([PROP-003](./PROP-003-stramatel-live-score.md)) visible sur les deux supports, mais formaté différemment
-- **Multi-TV possible** ([PROP-001](./PROP-001-multi-tv-single-pi.md)) : le signal TV peut être splitté vers N TV en plus
+- **1 seul Pi** pour piloter les écrans (2 HDMI natifs, extensible via WiFi hotspot PROP-001)
+- **Contenus différents** sur chaque écran simultanément
+- **Formats vidéo différents** : résolution, ratio, orientation par écran
+- **Score live** ([PROP-003](./PROP-003-stramatel-live-score.md)) visible sur tous les supports, formaté différemment
+- **Multi-TV possible** ([PROP-001](./PROP-001-multi-tv-single-pi.md)) : un signal peut être splitté vers N écrans identiques
 - **GPU limité** : 2 flux vidéo simultanés sur Pi = contrainte forte (cf. [ADR-008](../adr/ADR-008-double-buffer-video-pi.md))
 
-### État actuel
+### État implémenté (avril 2026)
 
-- **2 ports micro-HDMI** natifs sur Pi 4/5 (HDMI 0 et HDMI 1)
-- Seul HDMI 0 est utilisé actuellement
-- Pas de concept de "type d'écran" dans le modèle de données
-- Pas de variantes vidéo (1 fichier = 1 format)
-- L'app Angular est servie sur un seul endpoint `/tv`
+| Élément                         | Statut        | Détail                                                             |
+| ------------------------------- | ------------- | ------------------------------------------------------------------ |
+| 2 ports HDMI natifs (Pi 4/5)    | ✅ Utilisés   | HDMI 0 = primary, HDMI 1 = secondary                               |
+| Dual kiosk Chromium             | ✅ Implémenté | `kiosk-watchdog.sh` avec `start_chromium_secondary()`              |
+| Route `/secondary`              | ✅ Implémenté | `app.routes.ts` avec `data: { displayType: 'secondary' }`          |
+| `displayType` dans TvComponent  | ✅ Implémenté | `'tv' \| 'secondary'` via route data                               |
+| Table `video_variants`          | ✅ Implémenté | `display_type IN ('tv', 'secondary')`                              |
+| Colonnes sites                  | ✅ Implémenté | `secondary_display_enabled`, `secondary_display_resolution`        |
+| Dashboard upload variantes      | ✅ Implémenté | Badge `📺 2nd`, feature gate Premium                               |
+| Détection hardware HDMI         | ✅ Implémenté | DRM sysfs + udev hotplug + EDID parsing                            |
+| GPU fallback                    | ✅ Implémenté | `GPU_DECODE_FALLBACK_FILE` (auto hardware→software après 2 crashs) |
+| Indicateur displays dans Remote | ❌ À faire    | Phase 3                                                            |
+| Override ciblé (Remote)         | ❌ À faire    | Phase 4                                                            |
+| Modèle N-display                | ❌ À faire    | Phase 5                                                            |
+| Dashboard preview secondaire    | ❌ À faire    | Phase 3                                                            |
 
 ### La Remote et les faits de jeu — Élément critique
 
-La Remote (télécommande sur smartphone/tablette) permet au staff du club de déclencher des **faits de jeu** pendant un match. Avec le dual TV+LED, un même fait de jeu doit produire des **réactions visuelles différentes** sur chaque support **simultanément** :
+La Remote (télécommande sur smartphone/tablette) permet au staff du club de déclencher des **faits de jeu** pendant un match. Avec le multi-display, un même fait de jeu doit produire des **réactions visuelles différentes** sur chaque écran **simultanément** :
 
-| Fait de jeu (Remote)                             | Réaction TV                                                                | Réaction LED                                                          |
-| ------------------------------------------------ | -------------------------------------------------------------------------- | --------------------------------------------------------------------- |
-| **BUT / Point marqué**                           | Animation fullscreen/popup + jingle vidéo + son + overlay score mis à jour | Flash bandeau "⚽ BUUUUT !" + score clignotant + couleur équipe       |
-| **Lancer vidéo sponsor**                         | Vidéo sponsor 16:9 par-dessus la boucle                                    | Variante LED du même sponsor (bandeau/portrait)                       |
-| **Breaking news**                                | Bandeau texte défilant en haut/bas de l'écran                              | Texte pleine largeur intégré au bandeau LED                           |
-| **Changement de phase** (mi-temps, fin de match) | Switch vers boucle vidéo de la phase + animation transition                | Switch vers contenu LED de la phase (stats, prochain match, sponsors) |
-| **Timeout / Temps mort**                         | Vidéo sponsor timeout 16:9 + chrono timeout                                | Bandeau LED "⏸ TEMPS MORT" + chrono décompte                          |
-| **Score Stramatel** (auto, cf. ADR-013)          | Overlay score mis à jour + animation de but si score change                | Score LED mis à jour + flash bandeau                                  |
+| Fait de jeu (Remote)       | Réaction écran principal                                       | Réaction écran secondaire                         |
+| -------------------------- | -------------------------------------------------------------- | ------------------------------------------------- |
+| **BUT / Point marqué**     | Animation fullscreen/popup + jingle + overlay score mis à jour | Flash bandeau + score clignotant + couleur équipe |
+| **Lancer vidéo sponsor**   | Variante TV du sponsor (16:9)                                  | Variante secondaire du sponsor (format adapté)    |
+| **Breaking news**          | Bandeau texte défilant en overlay                              | Texte pleine largeur dans le bandeau              |
+| **Changement de phase**    | Switch vers boucle vidéo de la phase                           | Switch vers contenu secondaire de la phase        |
+| **Timeout / Temps mort**   | Vidéo sponsor timeout + chrono                                 | Bandeau "TEMPS MORT" + chrono décompte            |
+| **Score Stramatel** (auto) | Overlay score mis à jour + animation                           | Score mis à jour + flash                          |
 
-**Communication actuelle** : La Remote émet chaque action sur **BroadcastChannel** (local) + **Socket.IO** (réseau). Dans le scénario dual kiosk, les 2 instances Chromium (TV + LED) tournent **sur le même Pi** → **BroadcastChannel atteint les deux** car il fonctionne entre tous les onglets/fenêtres du même navigateur (même profil). Cependant, les 2 instances utilisent des `--user-data-dir` différents → BroadcastChannel ne traversera pas. **Socket.IO reste le canal de communication fiable** entre la Remote et les 2 instances kiosk.
+**Communication** : Socket.IO est le **seul canal fiable** entre la Remote et les instances kiosk. Les 2 instances Chromium utilisent des `--user-data-dir` différents → BroadcastChannel ne traverse pas.
 
-**Point clé** : Chaque instance Chromium (TV et LED) écoute les mêmes événements Socket.IO (`score-update`, `command`, `breaking-news`, `phase-change`) mais les **interprète différemment** selon son `displayType`.
+**Point clé** : Chaque instance Chromium écoute les mêmes événements Socket.IO (`score-update`, `command`, `breaking-news`, `phase-change`) mais les **interprète différemment** selon son `displayType`. Avec l'override ciblé (Phase 4), un champ `target` optionnel permettra de cibler un écran spécifique.
 
 ## Décision
 
-Utiliser les **2 sorties HDMI natives du Pi** avec **2 instances Chromium kiosk indépendantes**, chacune chargeant une route Angular différente (`/tv` et `/led`), et introduire un **système de variantes vidéo** dans le modèle de données.
+Utiliser les **2 sorties HDMI natives du Pi** avec **N instances Chromium kiosk**, chacune chargeant une route Angular différente, et un **système de variantes vidéo N-display** dans le modèle de données.
 
-### Architecture matérielle
+### Architecture matérielle (implémentée)
 
 ```
-┌────────────────────────────────────────────────────┐
-│                  Raspberry Pi 5                     │
-│                                                      │
-│  Chromium 1              Chromium 2                  │
-│  /tv (display :0.0)      /led (display :0.1)        │
-│  Playlist TV 16:9        Playlist LED custom         │
-│  + overlay score         + score format LED          │
-│  + double-buffer         + double-buffer             │
-│                                                      │
-│  ┌─────────┐             ┌─────────┐                │
-│  │ HDMI 0  │             │ HDMI 1  │                │
-│  └────┬────┘             └────┬────┘                │
-└───────┼────────────────────────┼─────────────────────┘
-        │                        │
-        ↓                        ↓
-  ┌───────────┐         ┌────────────────┐
-  │ Splitter  │         │ Contrôleur LED │
-  │ 1→4 HDMI │         │ (Linsn/Novastar│
-  └┬──┬──┬──┬┘         │  ou Colorlight)│
-   │  │  │  │          └───────┬────────┘
-   ↓  ↓  ↓  ↓                 │
-  TV TV TV TV            Panneaux LED
-  (même contenu)       (bandeau, mur, totem)
+┌──────────────────────────────────────────────────────┐
+│                   Raspberry Pi 5                      │
+│                                                        │
+│  Chromium 1                Chromium 2                  │
+│  /display/0                /display/1                  │
+│  Playlist primary 16:9     Playlist secondary custom   │
+│  + overlay score           + score format adapté       │
+│  + double-buffer           + double-buffer             │
+│                                                        │
+│  ┌─────────┐               ┌─────────┐                │
+│  │ HDMI 0  │               │ HDMI 1  │                │
+│  └────┬────┘               └────┬────┘                │
+└───────┼──────────────────────────┼─────────────────────┘
+        │                          │
+        ↓                          ↓
+  ┌───────────┐           ┌────────────────┐
+  │ Splitter  │           │  TV, LED, ou   │
+  │ 1→N HDMI  │           │  tout écran    │
+  └┬──┬──┬──┬┘           │  HDMI          │
+   │  │  │  │            └────────────────┘
+   ↓  ↓  ↓  ↓
+  TV TV TV TV
+  (même contenu)
 ```
 
-### Scénario A — Dual kiosk natif (recommandé) ✅
+### Scénario principal — Dual kiosk natif (implémenté) ✅
 
 **Principe** : Le Pi est configuré en bureau étendu (extended desktop). Deux instances Chromium kiosk tournent en parallèle, chacune positionnée sur son écran.
 
-**Configuration `/boot/firmware/config.txt`** (Pi 5) :
+**Détection hardware-driven** (pas de flag config) : le watchdog détecte automatiquement la présence d'un écran sur HDMI 1 via DRM sysfs (`/sys/class/drm/card1-HDMI-A-2/status`). Si un écran est détecté, le mode dual-display est activé automatiquement. La résolution est configurée par `secondary_display_resolution` dans la table `sites`.
 
-```ini
-# Activer double framebuffer
-max_framebuffers=2
+**Points d'implémentation clés** :
 
-# HDMI 0 (TV) : toujours forcé actif
-hdmi_force_hotplug:0=1
+- `setup_secondary_xrandr()` gère la configuration du bureau étendu
+- `start_chromium_secondary()` / `stop_chromium_secondary()` gèrent le cycle de vie
+- `DUAL_DISPLAY_ACTIVE` est positionné **uniquement** par le résultat de `setup_secondary_xrandr`
+- Le Chromium secondaire utilise `--app=URL` (pas `--kiosk`) + `xprop _MOTIF_WM_HINTS`
+- Fallback GPU automatique : `GPU_DECODE_FALLBACK_FILE` bascule hardware→software après 2 crashs
 
-# HDMI 1 (LED) : NE PAS forcer — auto-détection via DRM/KMS
-# hdmi_force_hotplug:1=1  ← DÉSACTIVÉ par défaut (activable par site via dashboard si détection échoue)
+### Scénario B — Écran via WiFi hotspot (PROP-001 scénario E)
 
-# GPU memory pour double décodage vidéo
-gpu_mem=256
+Pour les écrans au-delà des 2 HDMI natifs, les devices WiFi (Fire Stick, Smart TV, mini PC) connectés au hotspot du Pi chargent l'app Angular avec une route `/display/:id`. Voir PROP-001 pour les détails.
 
-# Résolutions par port
-[hdmi:0]
-hdmi_group=2
-hdmi_mode=82    # 1080p@60Hz (TV)
+### Système de variantes vidéo (implémenté)
 
-[hdmi:1]
-hdmi_group=2
-hdmi_mode=87    # Custom (résolution LED)
-hdmi_cvt=1920 384 60  # Exemple bandeau LED
-```
-
-**Watchdog dual kiosk** (`kiosk-watchdog.sh` modifié) :
-
-```bash
-# Détection HDMI 1 via DRM/KMS (Pi 5)
-HDMI1_STATUS=$(cat /sys/class/drm/card1-HDMI-A-2/status 2>/dev/null || echo "disconnected")
-
-# Instance TV (HDMI 0) — toujours lancée
-chromium-browser \
-  --user-data-dir=/tmp/kiosk-tv \
-  --window-position=0,0 \
-  --window-size=1920,1080 \
-  --kiosk \
-  --autoplay-policy=no-user-gesture-required \
-  http://neopro.local/tv &
-
-# Instance LED (HDMI 1) — lancée uniquement si led_enabled ET HDMI 1 connecté
-if [ "$LED_ENABLED" = "true" ] && [ "$HDMI1_STATUS" = "connected" ]; then
-  chromium-browser \
-    --user-data-dir=/tmp/kiosk-led \
-    --window-position=1920,0 \
-    --window-size=1920,384 \
-    --kiosk \
-    --autoplay-policy=no-user-gesture-required \
-    http://neopro.local/led &
-fi
-
-# Re-check périodique (toutes les 30s) dans la boucle watchdog
-# Si HDMI 1 passe de disconnected → connected, lancer le kiosk LED
-# Si déjà lancé, ne rien faire (watchdog classique)
-```
-
-### Scénario B — LED via sortie composite/GPIO (panneaux HUB75 directs)
-
-Pour les petits panneaux LED matriciels (type HUB75, résolution faible), une alternative est de piloter directement les panneaux via GPIO avec la librairie `rpi-rgb-led-matrix`, tout en gardant HDMI 0 pour les TV et HDMI 1 libre.
-
-**Non recommandé** : limité en résolution, conflits GPIO avec d'autres HAT (RS-485 Stramatel), qualité vidéo insuffisante.
-
-### Scénario C — LED comme écran HDMI standard (contrôleur externe)
-
-La plupart des écrans LED professionnels de salle de sport utilisent un **contrôleur LED** (Linsn MC100, Novastar, Colorlight) qui prend un **signal HDMI en entrée** et le redistribue aux panneaux LED. Pour le Pi, c'est un écran HDMI comme un autre.
-
-**C'est le scénario le plus courant et le plus simple** — le Pi ne sait même pas que c'est un LED. Il envoie juste un signal HDMI avec la bonne résolution.
-
-### Système de variantes vidéo
-
-**Nouveau modèle de données** — Extension de la table `videos` :
+**Modèle de données actuel** :
 
 ```sql
--- Nouvelle table : variantes d'une même vidéo pour différents supports
+-- Table video_variants (implémentée)
 CREATE TABLE video_variants (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   video_id UUID NOT NULL REFERENCES videos(id) ON DELETE CASCADE,
-  display_type VARCHAR(20) NOT NULL CHECK (display_type IN ('tv', 'led')),
+  display_type VARCHAR(20) NOT NULL CHECK (display_type IN ('tv', 'secondary')),
   filename VARCHAR(500) NOT NULL,
   storage_path VARCHAR(1000) NOT NULL,
   file_size BIGINT NOT NULL DEFAULT 0,
@@ -179,9 +138,9 @@ CREATE TABLE video_variants (
   UNIQUE(video_id, display_type)
 );
 
--- Extension de la table sites pour le support multi-écrans
-ALTER TABLE sites ADD COLUMN led_enabled BOOLEAN DEFAULT false;
-ALTER TABLE sites ADD COLUMN led_resolution VARCHAR(20);  -- ex: '1920x384'
+-- Colonnes sites (implémentées, renommées depuis led_*)
+-- sites.secondary_display_enabled BOOLEAN DEFAULT false
+-- sites.secondary_display_resolution VARCHAR(20) -- ex: '1920x384'
 ```
 
 **Logique de déploiement** :
@@ -189,27 +148,116 @@ ALTER TABLE sites ADD COLUMN led_resolution VARCHAR(20);  -- ex: '1920x384'
 ```
 Upload vidéo sponsor "Decathlon"
   ├── Version TV (1920×1080, 16:9) → video_variants (display_type='tv')
-  └── Version LED (1920×384, bandeau) → video_variants (display_type='led')
+  └── Version secondaire (1920×384) → video_variants (display_type='secondary')
 
 Déploiement vers site :
-  → Playlist TV = vidéos avec variant 'tv' (ou vidéo principale si pas de variant)
-  → Playlist LED = vidéos avec variant 'led' (filtré par display_type)
+  → Playlist primary = vidéos avec variant 'tv' (ou vidéo principale si pas de variant)
+  → Playlist secondary = vidéos avec variant 'secondary' (filtré par display_type)
 ```
 
-### Routes Angular
+**Résolution des variantes (TvComponent)** : `resolveSecondaryVariant()` sélectionne la variante adaptée au `displayType`. Fallback : `object-fit: cover` sur la version TV si pas de variante secondaire.
 
-**Deux routes distinctes** servies par le même serveur local :
+### Routes Angular (implémentées + évolution N-display)
 
-| Route  | Display      | Contenu                                      |
-| ------ | ------------ | -------------------------------------------- |
-| `/tv`  | HDMI 0 → TV  | Playlist TV (16:9) + overlay score sportif   |
-| `/led` | HDMI 1 → LED | Playlist LED (format adapté) + score compact |
+**État actuel** :
 
-Chaque route instancie le même `TvComponent` mais avec un paramètre `displayType` qui filtre la playlist et adapte le template de score overlay.
+| Route        | Display                   | Contenu                             |
+| ------------ | ------------------------- | ----------------------------------- |
+| `/tv`        | HDMI 0 → écran principal  | Playlist TV (16:9) + overlay score  |
+| `/secondary` | HDMI 1 → écran secondaire | Playlist secondaire + score compact |
+| `/remote`    | Smartphone opérateur      | Télécommande                        |
+
+**Évolution prévue — Modèle N-display** :
+
+| Route         | Display                   | Contenu                 |
+| ------------- | ------------------------- | ----------------------- |
+| `/display/0`  | HDMI 0 → écran principal  | Playlist display 0      |
+| `/display/1`  | HDMI 1 → écran secondaire | Playlist display 1      |
+| `/display/:n` | WiFi/USB → écran N        | Playlist display N      |
+| `/tv`         | Redirect → `/display/0`   | Rétrocompatibilité      |
+| `/secondary`  | Redirect → `/display/1`   | Rétrocompatibilité      |
+| `/remote`     | Smartphone opérateur      | Télécommande (inchangé) |
+
+Le `displayIndex` est injecté via route param `:n`. Le TvComponent résout le `displayType` (format de contenu) et le `displayId` (identifiant d'instance) depuis la configuration site :
+
+```typescript
+// Modèle cible N-display
+interface DisplayConfig {
+  index: number;        // 0, 1, 2... — correspond au :n de la route
+  displayType: string;  // 'tv', 'led-banner', 'led-wall', 'totem', 'scoreboard'...
+  resolution: string;   // '1920x1080', '1920x384', '1080x1920'...
+  name: string;         // 'TV Hall', 'Bandeau LED', 'TV Buvette'...
+  connection: 'hdmi' | 'wifi'; // comment l'écran est connecté
+}
+
+// Configuration site (table sites, JSONB)
+displays: DisplayConfig[]
+```
+
+### Alignement avec PROP-001 : displayType + displayId
+
+Le modèle unifié (défini dans PROP-001) utilise deux dimensions :
+
+| Dimension     | Rôle                                       | Exemples                                 | Source      |
+| ------------- | ------------------------------------------ | ---------------------------------------- | ----------- |
+| `displayType` | **Format** du contenu (résolution, layout) | `'tv'`, `'led-banner'`, `'totem'`        | Config site |
+| `displayId`   | **Instance** spécifique (ciblage)          | `0` (hall), `1` (bandeau), `2` (buvette) | Route param |
+
+Le `displayIndex` de la route `/display/:n` **est** le `displayId`. Le `displayType` est résolu depuis la configuration site.
+
+### Override ciblé — Commandes manuelles ciblées par écran
+
+**Principe** : par défaut, toutes les commandes sont broadcast à tous les écrans (chacun interprète selon son `displayType`). L'opérateur peut optionnellement cibler un ou plusieurs écrans spécifiques pour les commandes manuelles.
+
+**UX Remote** — Toggle 3 états (dual-display) ou sélecteur (N-display) :
+
+```
+┌─────────────────────────────────────────────┐
+│  Cible : [Tous] [📺 TV] [🖥️ 2nd]           │ ← dual (actuel)
+│─────────────────────────────────────────────│
+│  Cible : [Tous] [📺 Hall] [🖥️ LED] [📺 Buv] │ ← N-display (futur)
+│─────────────────────────────────────────────│
+│  ▶ Vidéo Decathlon                          │
+│  ▶ Vidéo Nike                               │
+└─────────────────────────────────────────────┘
+```
+
+**Protocole Socket.IO** — champ `target` optionnel dans les commandes :
+
+```typescript
+// Commande broadcast (défaut, pas de target)
+socket.emit('command', { type: 'video', data: { id: 'sponsor-decathlon' } });
+
+// Commande ciblée vers display 1 uniquement
+socket.emit('command', { type: 'video', data: { id: 'sponsor-decathlon' }, target: [1] });
+
+// Commande ciblée vers displays 0 et 2
+socket.emit('command', { type: 'video', data: { id: 'sponsor-decathlon' }, target: [0, 2] });
+```
+
+**Comportement côté récepteur** :
+
+| Champ `target`                 | Comportement display N                              |
+| ------------------------------ | --------------------------------------------------- |
+| Absent ou `undefined`          | Traite la commande (broadcast, comportement actuel) |
+| `[1, 2]` et N est dedans       | Traite la commande                                  |
+| `[1, 2]` et N n'est pas dedans | **Ignore** la commande, continue sa boucle en cours |
+
+**Scope de l'override** : uniquement les commandes manuelles (vidéo, breaking news, sponsors). Le score broadcast **toujours** à tous les écrans — la cohérence du score en temps réel est non-négociable.
+
+**Comportement variantes avec ciblage** :
+
+| Cible    | Vidéo a variant TV | Vidéo a variant 2nd | Résultat TV        | Résultat 2nd                                |
+| -------- | ------------------ | ------------------- | ------------------ | ------------------------------------------- |
+| Tous     | ✅                 | ✅                  | Joue variant TV    | Joue variant 2nd                            |
+| Tous     | ✅                 | ❌                  | Joue variant TV    | Fallback `object-fit: cover` sur variant TV |
+| TV seul  | ✅                 | ✅/❌               | Joue variant TV    | **Continue sa boucle**                      |
+| 2nd seul | ✅/❌              | ✅                  | Continue sa boucle | Joue variant 2nd                            |
+| 2nd seul | ✅                 | ❌                  | Continue sa boucle | Fallback `object-fit: cover` sur variant TV |
 
 ### Overlay de score adapté par support
 
-**TV** (overlay classique, existant) :
+**Écran principal** (overlay classique, existant) :
 
 ```
 ┌──────────────────────────────────────────┐
@@ -224,7 +272,7 @@ Chaque route instancie le même `TvComponent` mais avec un paramètre `displayTy
 └──────────────────────────────────────────┘
 ```
 
-**LED bandeau** (score permanent, texte défilant) :
+**Écran secondaire bandeau** (score permanent, texte défilant) :
 
 ```
 ┌──────────────────────────────────────────────────────────────┐
@@ -232,278 +280,218 @@ Chaque route instancie le même `TvComponent` mais avec un paramètre `displayTy
 └──────────────────────────────────────────────────────────────┘
 ```
 
-### Faits de jeu — Réactions différenciées TV vs LED
+> **Note** : les templates de score/animation spécifiques par `displayType` sont en stand-by. Les visuels sont créés en externe et intégrés comme vidéos. Le score overlay par type sera implémenté quand le besoin se confirme, en s'appuyant sur l'override ciblé pour choisir quel écran affiche quoi.
 
-Quand l'opérateur déclenche un fait de jeu depuis la Remote, **un seul événement Socket.IO** est émis. Chaque instance (TV et LED) l'interprète selon son `displayType` :
+### Événements et comportement par display
 
-**Exemple : l'opérateur appuie sur "+" → But marqué**
+| Événement Socket.IO  | Ciblable ?                   | Écran principal                      | Écran secondaire           |
+| -------------------- | ---------------------------- | ------------------------------------ | -------------------------- |
+| `score-update`       | **Non** (toujours broadcast) | Overlay score + goal animation + son | Score adapté au format     |
+| `command` (video)    | **Oui**                      | Joue variante TV (16:9)              | Joue variante secondaire   |
+| `command` (sponsors) | **Oui**                      | Boucle sponsors TV                   | Boucle sponsors secondaire |
+| `breaking-news`      | **Oui**                      | Bandeau texte en overlay             | Texte adapté au format     |
+| `phase-change`       | **Non** (toujours broadcast) | Switch boucle de phase               | Switch contenu de phase    |
+| `timer-update`       | **Non** (toujours broadcast) | Chrono dans overlay                  | Chrono adapté au format    |
+| `score-reset`        | **Non** (toujours broadcast) | Reset overlay                        | Reset score                |
 
-```
-Remote (smartphone)
-   │
-   └─► Socket.IO: score-update { homeScore: 3, awayScore: 1 }
-          │
-          ├──────────────────────────────────────────────────┐
-          ↓                                                  ↓
-   Instance TV (/tv)                               Instance LED (/led)
-   displayType = 'tv'                              displayType = 'led'
-          │                                                  │
-          ↓                                                  ↓
-   handleScoreUpdate()                             handleScoreUpdate()
-   • Détecte homeScore a changé                    • Détecte homeScore a changé
-   • triggerGoalAnimation('home')                  • triggerLedGoalAnimation('home')
-     ├─ Style: popup/fullscreen/slide                ├─ Flash couleur équipe
-     ├─ Son: goal-football.mp3                       ├─ Texte: "⚽ BUUUUT ! PSG"
-     ├─ Durée: 4s                                    ├─ Score clignotant 3s
-     └─ Score highlight pulse                        └─ Retour bandeau score
-   • Met à jour overlay score                      • Met à jour bandeau score
-```
+### Impact Remote
 
-**Exemple : l'opérateur lance une vidéo sponsor**
+La Remote reste l'interface unique. Ajouts prévus :
+
+1. **Indicateur displays** (Phase 3) : dans le menu header (dropdown `☰`), une ligne d'état compacte :
 
 ```
-Remote (smartphone)
-   │
-   └─► Socket.IO: command { type: 'video', data: { id: 'sponsor-decathlon' } }
-          │
-          ├──────────────────────────────────────────────────┐
-          ↓                                                  ↓
-   Instance TV (/tv)                               Instance LED (/led)
-          │                                                  │
-          ↓                                                  ↓
-   Cherche video_variants                          Cherche video_variants
-   WHERE display_type='tv'                         WHERE display_type='led'
-          │                                                  │
-          ↓                                                  ↓
-   Joue Decathlon-16x9.mp4                         Joue Decathlon-bandeau.mp4
-   (1920×1080, 30s)                                (1920×384, 15s)
+┌──────────────────────────────────┐
+│  ☰  Club PSG                    │
+│──────────────────────────────────│
+│  📺 TV: ●          🖥️ 2nd: ●    │  ← dans le dropdown menu uniquement
+│──────────────────────────────────│
+│  🌙 Mode sombre                 │
+│  🔄 Recharger                   │
+│  ...                             │
+└──────────────────────────────────┘
 ```
 
-**Logique dans le TvComponent** :
+Pastille verte = connecté, grise = pas d'écran. Pas de bruit sur l'interface principale.
 
-```typescript
-// tv.component.ts — handleCommand() modifié
-private handleCommand(command: CommandEvent): void {
-  if (command.type === 'video') {
-    const video = command.data;
-    // Sélectionner la variante adaptée au type d'écran
-    const variant = this.getVideoVariant(video.id, this.displayType);
-    if (variant) {
-      this.playManualVideo(variant);
-    } else if (this.displayType === 'led') {
-      // Fallback LED : redimensionner la version TV
-      this.playManualVideo(video, { objectFit: 'cover' });
-    } else {
-      this.playManualVideo(video);
-    }
-  }
-}
+2. **Override ciblé** (Phase 4) : toggle dans la section vidéos/sponsors — voir section "Override ciblé" ci-dessus.
 
-// Nouvelles animations spécifiques LED
-private triggerLedGoalAnimation(team: 'home' | 'away'): void {
-  // Animation bandeau : flash couleur + texte "BUUUUT !" + score clignotant
-  this.ledGoalFlash = true;
-  this.ledGoalTeam = team;
-  setTimeout(() => { this.ledGoalFlash = false; }, 3000);
-}
-```
+### Dashboard — Gestion des écrans secondaires (implémenté)
 
-**Événements et leur comportement par display** :
+Le dashboard central gère déjà :
 
-| Événement Socket.IO  | TV (`displayType='tv'`)                                       | LED (`displayType='led'`)                 |
-| -------------------- | ------------------------------------------------------------- | ----------------------------------------- |
-| `score-update`       | Overlay score + goal animation (popup/fullscreen/slide) + son | Bandeau score + flash LED + texte "BUT !" |
-| `command` (video)    | Joue variante TV (16:9)                                       | Joue variante LED (bandeau/portrait)      |
-| `command` (sponsors) | Boucle sponsors TV                                            | Boucle sponsors LED                       |
-| `breaking-news`      | Bandeau texte en overlay (haut/bas)                           | Texte pleine largeur dans le bandeau LED  |
-| `phase-change`       | Switch boucle vidéo de phase                                  | Switch contenu LED de phase               |
-| `timer-update`       | Chrono dans overlay score ou standalone                       | Chrono intégré au bandeau score           |
-| `score-reset`        | Reset overlay + animation                                     | Reset bandeau score                       |
-| `stramatel-extended` | Fautes/temps morts dans overlay (optionnel)                   | Fautes/TM dans bandeau (compact)          |
+- **Video Library** : badge `📺 2nd` sur les vidéos ayant une variante secondaire, gated `secondary_display` (Premium)
+- **Video Manager** : upload/association de variantes secondaires, événement `secondaryVariantChanged`
+- **Config Editor** : indicateur `📺` dans les dropdowns vidéo, badge `📺 2nd` sur les vidéos assignées, input `secondaryDisplayEnabled`
+- **Deployment Status** : badge `📺 2nd` sur les déploiements incluant une variante secondaire
+- **Site Settings** : feature toggle "Double écran" (tier Premium)
+- **Debug Tab / Health Monitor** : section `secondaryDisplayInfo` avec résolution, type d'écran, EDID détaillé, catégorie display
 
-### Impact Remote — Dual TV+LED
-
-**Bonne nouvelle** : la Remote **ne change quasiment pas** pour le dual TV+LED. L'opérateur n'a pas besoin de "choisir" entre TV et LED — chaque action s'applique aux deux simultanément.
-
-La Remote reste l'interface unique :
-
-- **Score** → broadcast aux deux (chacun réagit selon son type)
-- **Vidéo manuelle** → broadcast aux deux (chacun joue sa variante)
-- **Breaking news** → broadcast aux deux (format adapté)
-- **Phase** → broadcast aux deux (boucle adaptée)
-- **Options overlay** → broadcast aux deux (template adapté)
-
-**Seul ajout Remote** : un indicateur montrant que le LED est actif et connecté :
-
-```
-┌──────────────────────────────────────────────┐
-│ 📺 TV: connecté    💡 LED: connecté          │
-│──────────────────────────────────────────────│
-│                                              │
-│ [Vidéos]  [Score]  [Phase]  [Options]        │
-│                                              │
-│ ... (interface inchangée)                    │
-└──────────────────────────────────────────────┘
-```
-
-**Différence clé avec PROP-001 (scénario C multi-TV)** : dans le multi-TV, on veut pouvoir cibler UNE TV spécifique (sélecteur de display). Ici, TV+LED, on broadcast TOUJOURS aux deux — pas de sélecteur nécessaire. L'intelligence est dans le **récepteur** (chaque instance interprète l'événement), pas dans l'**émetteur** (la Remote).
+**À ajouter** (Phase 3) : preview du contenu secondaire dans le dashboard (ce que l'écran affiche en ce moment), alimenté par les données de configuration et déploiement existantes.
 
 ## Alternatives Considérées
 
-### 1. Un seul HDMI splitté + conversion format pour LED
+### 1. Un seul HDMI splitté + conversion format
 
-**Principe** : Sortir un seul signal HDMI (contenu TV), le splitter, et utiliser un convertisseur/scaler pour adapter le signal au format LED.
-**Avantages** : 1 seule instance Chromium, plus simple côté logiciel
-**Inconvénients** : Contenu identique sur TV et LED — pas de différenciation. Le scaler dégrade la qualité (crop/stretch). Impossible d'avoir un contenu adapté au format LED.
-**Verdict** : Rejeté — ne répond pas au besoin de contenus différenciés.
+**Rejeté** — ne répond pas au besoin de contenus différenciés. Le scaler dégrade la qualité.
 
 ### 2. Pi Compute Module avec 3+ sorties display
 
-**Principe** : Utiliser un CM4/CM5 avec IO board offrant HDMI + DSI + DPI.
-**Avantages** : Plus de sorties display
-**Inconvénients** : IO board custom coûteuse. Pas de boîtier standard. DSI/DPI ne sont pas du HDMI (incompatible contrôleurs LED classiques). Maintenance complexe.
-**Verdict** : Rejeté — surcoût et complexité disproportionnés.
+**Rejeté** — IO board custom coûteuse, pas de boîtier standard, DSI/DPI incompatibles contrôleurs LED.
 
-### 3. Dual Chromium kiosk natif + variantes vidéo (choisi) ✅
+### 3. Dual Chromium kiosk natif + variantes vidéo (choisi et implémenté) ✅
 
-**Avantages** : Utilise les 2 HDMI natifs du Pi (pas de hardware supplémentaire côté Pi). Contenus totalement indépendants par type d'écran. Score overlay adapté à chaque format. Compatible avec le splitter HDMI du scénario multi-TV (PROP-001). Architecture extensible (nouveau display_type facile à ajouter).
-**Inconvénients** : 2 instances Chromium = plus de RAM (~150MB de plus). 2 décodages vidéo simultanés = contrainte GPU. Système de variantes vidéo à développer (upload, stockage, déploiement).
-**Verdict** : Accepté — seule solution répondant au besoin de contenus différenciés.
+Utilise les 2 HDMI natifs. Contenus indépendants par écran. Extensible vers N displays via WiFi (PROP-001) et route `/display/:n`.
 
 ## Conséquences
 
 ### Positives
 
-1. **Contenus vraiment adaptés** à chaque support (format, résolution, ratio)
-2. **Score visible partout** mais formaté pour chaque type d'écran
-3. **Combinable avec PROP-001** : HDMI 0 → splitter → N TV, HDMI 1 → contrôleur LED
-4. **Un seul Pi** gère tout : TV + LED + Stramatel
-5. **Modèle de variantes** réutilisable pour d'autres supports futurs (totem vertical, écran tactile, etc.)
+1. **Contenus adaptés** à chaque support (format, résolution, ratio)
+2. **Score visible partout** mais formaté par type d'écran
+3. **Combinable avec PROP-001** : HDMI 0 → splitter → N TV, HDMI 1 → tout écran
+4. **Un seul Pi** gère tout : TV + secondaire + Stramatel
+5. **Modèle N-display** : route `/display/:n` permet un nombre illimité d'écrans avec contenus ciblés
+6. **Override ciblé** : l'opérateur peut envoyer du contenu à un écran spécifique sans perturber les autres
+7. **Détection hardware-driven** : pas de config manuelle, le Pi s'adapte au matériel branché
 
 ### Négatives
 
-1. **Performance GPU** : 2 décodages vidéo simultanés sur Pi — nécessite Pi 5 recommandé et vidéos 1080p max
-2. **Complexité upload** : l'opérateur doit fournir 2 versions de chaque vidéo (ou on génère la version LED automatiquement)
-3. **Stockage doublé** : 2 fichiers par vidéo (mitigé : les vidéos LED sont souvent plus petites)
-4. **Développement** : ~3-5 jours pour le dual kiosk + routes + variantes vidéo
+1. **Performance GPU** : 2 décodages vidéo simultanés — Pi 5 recommandé (mitigé par le GPU fallback automatique)
+2. **Complexité upload** : l'opérateur doit fournir N versions (mitigé : fallback `object-fit: cover`)
+3. **Stockage multiplié** : N fichiers par vidéo (mitigé : les variantes non-TV sont souvent plus petites)
 
 ### Risques
 
-| Risque                           | Mitigation                                                            |
-| -------------------------------- | --------------------------------------------------------------------- |
-| GPU surchargé avec 2 flux vidéo  | Pi 5 obligatoire. Vidéos max 1080p@30fps. Monitoring GPU via watchdog |
-| Chromium crash sur une instance  | Watchdog étendu surveille les 2 instances indépendamment              |
-| Opérateur oublie la version LED  | Fallback : utiliser la version TV redimensionnée automatiquement      |
-| Résolution LED non standard      | Configuration par site dans le dashboard (`led_resolution`)           |
-| Contrôleur LED incompatible HDMI | Tester avec les modèles courants (Linsn MC100, Novastar MX40 Pro)     |
+| Risque                                  | Mitigation                                        | Statut     |
+| --------------------------------------- | ------------------------------------------------- | ---------- |
+| GPU surchargé avec 2 flux vidéo         | Pi 5 recommandé + `GPU_DECODE_FALLBACK_FILE` auto | ✅ Mitigé  |
+| Chromium crash sur une instance         | Watchdog surveille les 2 instances indépendamment | ✅ Mitigé  |
+| Opérateur oublie la variante secondaire | Fallback `object-fit: cover` automatique          | ✅ Mitigé  |
+| Résolution secondaire non standard      | `secondary_display_resolution` par site           | ✅ Mitigé  |
+| Contrôleur LED incompatible HDMI        | À tester terrain (Linsn MC100, Novastar MX40 Pro) | ⏳ Phase 3 |
+| N-display > 2 HDMI physiques            | WiFi hotspot (PROP-001 scénario E)                | ⏳ Phase 5 |
 
 ## Plan d'implémentation
 
-### Phase 1 — Dual kiosk + routing (2-3 jours)
+### Phase 1 — Dual kiosk + routing ✅ Done
 
-1. **Modifier `kiosk-watchdog.sh`** : lancer 2 instances Chromium si `led_enabled=true`
-2. **Ajouter `/boot/firmware/config.txt`** : `max_framebuffers=2`, résolutions par port
-3. **Créer route `/led`** dans le routing Angular du Pi
-4. **Paramétrer `TvComponent`** : accepter `displayType` query param, filtrer la playlist
-5. **S'assurer que Socket.IO est le canal primaire** : les 2 kiosks ont des `--user-data-dir` séparés → BroadcastChannel ne traverse pas → Socket.IO gère toute la communication
+- Watchdog `kiosk-watchdog.sh` : dual Chromium avec `start_chromium_secondary()`
+- Route `/secondary` dans `app.routes.ts` avec `data: { displayType: 'secondary' }`
+- `TvComponent` : `displayType: 'tv' | 'secondary'`, `resolveSecondaryVariant()`
+- Socket.IO comme canal unique (BroadcastChannel non fiable entre user-data-dir)
+- Détection hardware HDMI via DRM sysfs + udev hotplug + EDID
 
-**Critères de validation** :
+### Phase 2 — Variantes vidéo ✅ Done
 
-- [ ] 2 écrans affichent des contenus différents simultanément
-- [ ] Commande depuis la Remote → les 2 instances réagissent
-- [ ] Stabilité sur 5h avec double flux vidéo
-- [ ] Mémoire RAM < 2GB total (headroom pour Pi 4GB)
+- Table `video_variants` avec `display_type IN ('tv', 'secondary')`
+- Colonnes `secondary_display_enabled`, `secondary_display_resolution` sur `sites`
+- Migration `rename-led-to-secondary-display.sql` (généralisation LED → secondary)
+- Dashboard : upload variantes, badges `📺 2nd`, feature gate Premium
+- Déploiement : `deployment.service.ts` + `config-secondary-variants.ts`
+- Repository : `video-variant.repository.ts`
+- Debug : `secondaryDisplayInfo` dans Health Monitor
 
-### Phase 1b — Faits de jeu différenciés TV vs LED (2-3 jours)
+### Phase 3 — Remote + Dashboard awareness (à faire)
 
-1. **Score overlay LED** : template bandeau compact (score + chrono + période)
-2. **Animation de but LED** : flash couleur équipe + texte "BUT !" + score clignotant (CSS, pas de vidéo)
-3. **Breaking news LED** : texte pleine largeur dans le bandeau (pas d'overlay flottant)
-4. **Sélection de variante vidéo** : `handleCommand()` cherche la variante adaptée au `displayType`
-5. **Indicateur LED dans la Remote** : pastille "💡 LED: connecté" dans le header
-6. **Fallback LED** : si pas de variante LED pour une vidéo, `object-fit: cover` sur la version TV
-
-**Critères de validation** :
-
-- [ ] But marqué → TV affiche animation popup/fullscreen, LED affiche flash bandeau simultanément
-- [ ] Vidéo sponsor lancée → TV joue version 16:9, LED joue version bandeau
-- [ ] Breaking news → TV bandeau overlay, LED texte pleine largeur
-- [ ] Phase change → TV et LED switchent chacun vers leur boucle de phase
-- [ ] Fallback : vidéo sans variante LED → version TV redimensionnée sur le LED
-
-### Phase 2 — Variantes vidéo (3-5 jours)
-
-1. **Migration DB** : créer table `video_variants`, ajouter `led_enabled` et `led_resolution` aux sites
-2. **API upload** : endpoint pour uploader une variante LED d'une vidéo existante
-3. **Dashboard** : UI pour associer une variante LED à une vidéo TV
-4. **Déploiement** : adapter `content-deployment` pour envoyer les bonnes variantes selon le type d'écran
-5. **Fallback** : si pas de variante LED, redimensionner la vidéo TV (CSS `object-fit`)
+1. **Indicateur displays dans la Remote** : pastille d'état dans le menu header (dropdown `☰`)
+2. **Dashboard preview secondaire** : visualisation du contenu prévu sur l'écran secondaire
+3. **Validation terrain** : tester avec contrôleurs LED (Linsn MC100, Novastar MX40 Pro)
+4. **Guide d'installation** : documentation câblage et configuration contrôleur
 
 **Critères de validation** :
 
-- [ ] Upload d'une variante LED depuis le dashboard
-- [ ] Playlist LED ne contient que les variantes LED
-- [ ] Fallback fonctionnel si pas de variante LED
+- [ ] Remote affiche l'état de connexion de chaque écran dans le menu
+- [ ] Dashboard montre le contenu prévu pour l'écran secondaire
+- [ ] Test terrain réussi avec au moins 1 modèle de contrôleur LED
 
-### Phase 3 — Contrôleurs LED (validation terrain)
+### Phase 4 — Override ciblé (à faire)
 
-1. **Tester** avec Linsn MC100 (le plus courant en salle de sport)
-2. **Documenter** le câblage et la configuration du contrôleur
-3. **Créer guide d'installation** pour les techniciens
+1. **Champ `target` dans les commandes Socket.IO** : `target?: number[]` (liste de displayId)
+2. **Filtrage côté récepteur** : chaque instance ignore les commandes non ciblées
+3. **Toggle Remote** : sélecteur "Tous / TV / 2nd" dans la section vidéos
+4. **Score toujours broadcast** : le `target` ne s'applique pas aux événements score/timer/phase
+
+**Critères de validation** :
+
+- [ ] Vidéo lancée avec target=[0] → seul display 0 réagit, display 1 continue sa boucle
+- [ ] Vidéo lancée sans target → les deux displays réagissent (rétrocompat)
+- [ ] Score update → toujours broadcast aux deux, indépendamment du toggle
+
+### Phase 5 — Modèle N-display (à faire)
+
+1. **Route `/display/:n`** dans `app.routes.ts` avec redirects `/tv` → `/display/0`, `/secondary` → `/display/1`
+2. **Config site `displays: DisplayConfig[]`** (JSONB) : index, displayType, resolution, name, connection
+3. **DB** : `video_variants.display_type` → contrainte ouverte (pas d'enum fermé), ou table `display_types`
+4. **Watchdog** : boucle sur N displays détectés (HDMI + WiFi registered)
+5. **Remote** : sélecteur multi-display dynamique basé sur `displays[]`
+6. **Dashboard** : gestion N variantes par vidéo, config N écrans par site
+
+**Critères de validation** :
+
+- [ ] 3 écrans affichent des contenus différents simultanément (2 HDMI + 1 WiFi)
+- [ ] Remote sélecteur dynamique s'adapte au nombre d'écrans configurés
+- [ ] Rétrocompat : `/tv` et `/secondary` continuent de fonctionner
 
 ## Budget estimé
 
-| Composant                              | Prix estimé     |
-| -------------------------------------- | --------------- |
-| Contrôleur LED (Linsn MC100 ou equiv.) | 150-300€        |
-| Câble HDMI (Pi → contrôleur)           | 5-10€           |
-| Pi 5 8GB (si upgrade depuis Pi 4)      | 80-100€         |
-| **Total hardware additionnel**         | **235-410€**    |
-| **Développement**                      | **~8-12 jours** |
+| Composant                                   | Prix estimé  |
+| ------------------------------------------- | ------------ |
+| Contrôleur LED (Linsn MC100 ou equiv.)      | 150-300€     |
+| Câble HDMI (Pi → contrôleur)                | 5-10€        |
+| Pi 5 8GB (si upgrade depuis Pi 4)           | 80-100€      |
+| Adaptateur USB-HDMI (3ème écran, optionnel) | 30-50€       |
+| **Total hardware additionnel**              | **235-460€** |
 
-(Hors panneaux LED eux-mêmes — matériel du club)
+(Hors écrans/panneaux LED eux-mêmes — matériel du club)
+
+## Convergence avec PROP-001 (Multi-TV Pi hub WiFi)
+
+PROP-002 et [PROP-001](./PROP-001-multi-tv-single-pi.md) convergent vers un **modèle unifié multi-écran**. Le Pi 5 devient un hub multi-sortie :
+
+```
+┌──────────────────────────────────────────────────────────┐
+│                    Raspberry Pi 5                         │
+│                                                            │
+│  HDMI 0 → Splitter → N TV identiques  [displayId=0]      │
+│  HDMI 1 → LED / TV / Totem            [displayId=1]      │
+│  WiFi   → N devices navigateur         [displayId=2,3...] │
+└──────────────────────────────────────────────────────────┘
+```
+
+Le modèle `displayType` (format) + `displayId` (ciblage) couvre les deux PROP avec un seul dev. Voir [PROP-001 § Convergence](./PROP-001-multi-tv-single-pi.md#convergence-avec-prop-002-tv--led-dual-output).
 
 ## Références
 
-- `raspberry/scripts/kiosk-watchdog.sh` — Watchdog à modifier pour dual kiosk
-- `raspberry/src/app/components/tv/tv.component.ts` — Component TV (goal animation lignes 1001-1064, handleCommand)
-- `raspberry/src/app/components/tv/tv.component.html` — Templates overlay score + goal animation (lignes 123-175)
-- `raspberry/src/app/components/remote/remote.component.ts` — Remote controller (broadcastScore ligne 719, launchVideo lignes 362-383, breakingNews lignes 1369-1420)
-- `raspberry/src/app/services/local-broadcast.service.ts` — BroadcastChannel (8 types d'événements)
-- `raspberry/src/app/services/local-options.service.ts` — GoalAnimationConfig, sport sounds, period labels
-- `raspberry/server/socket/handlers.js` — Relay événements (score-update, command, breaking-news, phase-change)
-- `central-server/src/scripts/full-schema.sql` — Schéma DB (table videos)
+### Code implémenté
+
+- `raspberry/scripts/kiosk-watchdog.sh` — Dual kiosk : `start_chromium_secondary()`, `setup_secondary_xrandr()`, `DUAL_DISPLAY_ACTIVE`
+- `raspberry/src/app/app.routes.ts` — Routes `/tv`, `/secondary` avec `displayType` data
+- `raspberry/src/app/components/tv/tv.component.ts` — `displayType`, `resolveSecondaryVariant()`
+- `raspberry/deploy/server/services/hdmi.service.js` — HDMI detection, EDID parsing, dual-port
+- `raspberry/src/app/services/hdmi-status.service.ts` — Angular HDMI monitoring
+- `raspberry/config/udev/99-neopro-hdmi-hotplug.rules` — HDMI hotplug events
+- `raspberry/scripts/neopro-led-status.sh` — LED status feedback
+- `central-server/src/repositories/video-variant.repository.ts` — CRUD variantes
+- `central-server/src/utils/config-secondary-variants.ts` — Résolution variantes config
+- `central-server/src/services/deployment.service.ts` — Déploiement avec variantes
+- `central-dashboard/src/app/features/sites/components/video-library/video-library.component.ts` — Badge `📺 2nd`
+- `central-dashboard/src/app/features/sites/components/site-content-tab/config-editor/config-editor.component.ts` — Indicateur secondaire
+- `central-dashboard/src/app/features/sites/components/site-debug-tab/health-monitor/health-monitor.component.ts` — `secondaryDisplayInfo`
+
+### Migrations DB
+
+- `central-server/src/scripts/migrations/add-led-support-and-video-variants.sql` — Création initiale
+- `central-server/src/scripts/migrations/rename-led-to-secondary-display.sql` — Renommage LED → secondary
+- `central-server/src/scripts/migrations/add-has-secondary-variant-to-deployments.sql` — Flag déploiement
+
+### Documents liés
+
 - [ADR-008](../adr/ADR-008-double-buffer-video-pi.md) — Double-Buffer Vidéo (contraintes GPU)
-- [PROP-001](./PROP-001-multi-tv-single-pi.md) — Multi-TV (combinaison splitter + dual output)
+- [ADR-029](../adr/ADR-029-dual-hdmi-tv-led.md) — Décision architecturale dual HDMI
+- [PROP-001](./PROP-001-multi-tv-single-pi.md) — Multi-TV + Pi hub WiFi (modèle unifié displayType + displayId)
 - [PROP-003](./PROP-003-stramatel-live-score.md) — Score Stramatel (source automatique des score-update)
 
 ---
 
-## Convergence avec PROP-001 (Multi-TV Pi hub WiFi)
-
-> _Section ajoutée le 11 avril 2026_
-
-PROP-002 et [PROP-001](./PROP-001-multi-tv-single-pi.md) convergent vers un **modèle unifié de gestion multi-écran**. Le Pi 5 devient un hub multi-sortie capable de piloter simultanément :
-
-- **HDMI 0** → N TV (via splitter) — `displayType='tv'`
-- **HDMI 1** → LED (via contrôleur) — `displayType='led'`
-- **WiFi hotspot** → N devices navigateur (Fire Stick, Smart TV) — `displayType` variable, `displayId` individuel
-
-### Impact sur PROP-002
-
-Le scénario E de PROP-001 (Pi hub WiFi) ouvre une **alternative au dual kiosk HDMI** pour les écrans LED :
-
-| Approche LED                            | Mécanisme                                                                                     | Avantages                                 | Inconvénients                                       |
-| --------------------------------------- | --------------------------------------------------------------------------------------------- | ----------------------------------------- | --------------------------------------------------- |
-| **HDMI 1 dual kiosk** (PROP-002 actuel) | 2ème instance Chromium sur HDMI 1                                                             | Sync parfaite, latence 0                  | Charge GPU (2 décodages), config /boot, Pi 5 requis |
-| **LED via WiFi** (scénario E hybride)   | Fire Stick/mini PC derrière le contrôleur LED, connecté au hotspot, charge `neopro.local/led` | Pas de charge GPU Pi, fonctionne sur Pi 4 | Dépend du WiFi, léger drift                         |
-
-Pour un bandeau LED avec score permanent (peu de vidéo lourde), l'approche WiFi peut suffire. Pour des murs LED avec vidéo plein écran, le dual kiosk HDMI reste supérieur.
-
-### Modèle unifié displayType + displayId
-
-Voir [PROP-001 § Convergence](./PROP-001-multi-tv-single-pi.md#convergence-avec-prop-002-tv--led-dual-output) pour le modèle complet. Les deux dimensions `displayType` (format) et `displayId` (ciblage) couvrent les besoins des deux PROP avec un seul dev.
-
----
-
-_Créé le 11 février 2026 — Mis à jour le 11 avril 2026 (convergence PROP-001)_
+_Créé le 11 février 2026 — Révisé le 11 avril 2026 (audit implémentation, modèle N-display, override ciblé, convergence PROP-001)_
