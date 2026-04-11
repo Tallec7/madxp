@@ -60,10 +60,11 @@ Neopro est une plateforme distribuée Edge + Cloud pour la diffusion de contenu 
 │                   │     Angular Frontend      │                 │
 │                   │      (Port: 4200)         │                 │
 │                   │                           │                 │
-│                   │  /login      - Auth       │                 │
-│                   │  /tv         - Player TV  │                 │
-│                   │  /secondary  - Player 2nd │                 │
-│                   │  /remote     - Control    │                 │
+│                   │  /login        - Auth       │               │
+│                   │  /display/:n   - Player N   │               │
+│                   │  /tv → /display/0 (redirect)│               │
+│                   │  /secondary → /display/1    │               │
+│                   │  /remote       - Control    │               │
 │                   └───────────────────────────┘                 │
 │                                                               │
 └─────────────────────────────────────────────────────────────┘
@@ -82,8 +83,8 @@ En plus de l'architecture Edge (Pi), Neopro propose un mode **100% SaaS** : le c
 │       ?site={siteId}                                     │
 │                                                          │
 │  ┌───────────────┐  ┌───────────────┐  ┌──────────────┐ │
-│  │ Télécommande  │  │  Écran TV     │  │  Secondaire  │ │
-│  │  /remote      │  │  /tv          │  │  /secondary  │ │
+│  │ Télécommande  │  │  Display 0    │  │  Display N   │ │
+│  │  /remote      │  │  /display/0   │  │  /display/N  │ │
 │  └───────────────┘  └───────────────┘  └──────────────┘ │
 │                                                          │
 │  Config:  HTTP GET /api/saas/{siteId}/config             │
@@ -461,7 +462,7 @@ Central Server API (sauvegarde config profil)
          ▼
 Enrichment chain:
   autoResolveSponsorIds()
-  enrichConfigWithSecondaryVariants()
+  enrichConfigWithDisplayVariants()
   enrichConfigWithAnalyticsMetadata()
          │
          ▼
@@ -735,16 +736,16 @@ Le Raspberry Pi peut fonctionner dans différents modes réseau :
 │                                                                   │
 │  wlan0: Hotspot "NEOPRO_xxx"     wlan1: Non utilisé              │
 │                                                                   │
-│  ┌───────────┐  ┌───────────┐  ┌──────────────┐ ┌────────────────┐ │
-│  │  Nginx    │  │ Socket.IO │  │  Chromium    │ │   Chromium     │ │
-│  │  Port 80  │  │ Port 3000 │  │ /tv (HDMI 0) │ │/secondary (H1)*│ │
-│  └─────┬─────┘  └─────┬─────┘  └──────┬───────┘ └──────┬─────────┘ │
-│        │               │               │                │           │
-│        └───────────────┼───────────────┴────────────────┘           │
-│                        │ Communication locale                       │
-│        * Secondary kiosk (--app=URL + xprop/xdotool windowsize) :    │
-│          lancé si HDMI-0 ET HDMI-1 connectés (hardware-driven)      │
-│          Détection: xrandr offset (Pi 5 n'a pas "primary")         │
+│  ┌───────────┐  ┌───────────┐  ┌────────────────┐ ┌────────────────┐ │
+│  │  Nginx    │  │ Socket.IO │  │   Chromium     │ │   Chromium     │ │
+│  │  Port 80  │  │ Port 3000 │  │ /display/0 (H0)│ │ /display/1 (H1)*│ │
+│  └─────┬─────┘  └─────┬─────┘  └──────┬─────────┘ └──────┬─────────┘ │
+│        │               │               │                  │           │
+│        └───────────────┼───────────────┴──────────────────┘           │
+│                        │ Communication locale                         │
+│        * Display 1 kiosk (--app=URL + xprop/xdotool windowsize) :    │
+│          lancé si HDMI-0 ET HDMI-1 connectés (hardware-driven)       │
+│          Route /display/:n — N-display model (PROP-002 Phase 5)      │
 └────────────────────────────┼─────────────────────────────────────┘
                              │
                    WiFi (192.168.4.x)
@@ -807,32 +808,37 @@ Remote (téléphone)                    TV (Chromium kiosk)
 - options-update : overlay config
 - breaking-news : flash info
 - timer-update : chronomètre
-- tv-register/tv-role-assigned : master-slave sync (dual-display)
+- tv-register/tv-role-assigned : master-slave sync (N-display)
 - tv-loop-update/tv-loop-state : synchronisation boucle vidéo
+- displays-changed : connected displays list (N-display, Phase 5)
 ```
 
-### Synchronisation Master-Slave (dual-display)
+### Synchronisation Master-Slave (N-display)
 
-Quand deux écrans sont connectés (HDMI-A-1 + HDMI-A-2), deux instances Chromium tournent :
-le primaire (`/tv`) et le secondaire (`/secondary`). Elles se synchronisent via Socket.IO :
+Quand N écrans sont connectés, N instances Chromium tournent via la route `/display/:n`.
+`/tv` et `/secondary` sont des redirects vers `/display/0` et `/display/1`.
+Chaque instance envoie `displayType` et `displayIndex` dans `tv-register`.
 
 ```
-Chromium /tv (HDMI-A-1)              Chromium /secondary (HDMI-A-2)
-   │                                        │
-   │ tv-register {displayType:'tv'}         │ tv-register {displayType:'secondary'}
-   ▼                                        ▼
-┌─────────────────────────────────────────────────┐
-│            Socket.IO Server (:3000)              │
-│                                                  │
-│  1er connecté → MASTER (émet l'état de boucle)  │
-│  2ème connecté → SLAVE (reçoit et suit)          │
-│                                                  │
-│  tv-loop-update (master→server→broadcast)        │
-│  tv-loop-state  (server→slaves)                  │
-└─────────────────────────────────────────────────┘
+Chromium /display/0 (HDMI-0)         Chromium /display/1 (HDMI-1)         Chromium /display/N (WiFi)
+   │                                        │                                    │
+   │ tv-register {displayType:'tv',         │ tv-register {displayType:          │ tv-register {displayType:
+   │   displayIndex:0}                      │   'secondary', displayIndex:1}     │   'display-N', displayIndex:N}
+   ▼                                        ▼                                    ▼
+┌──────────────────────────────────────────────────────────────────────────────────────┐
+│                          Socket.IO Server (:3000)                                     │
+│                                                                                       │
+│  1er connecté → MASTER (émet l'état de boucle)                                       │
+│  suivants → SLAVE (reçoivent et suivent)                                              │
+│                                                                                       │
+│  tv-loop-update (master→server→broadcast)                                             │
+│  tv-loop-state  (server→slaves)                                                       │
+│  displays-changed (→ Remote, [{index, type}])                                         │
+│  command target?: number[] — ciblage par displayIndex (Phase 4)                       │
+└──────────────────────────────────────────────────────────────────────────────────────┘
 
 Sync par index : le slave utilise videoIndex (pas videoPath)
-car le secondary display peut avoir des variants de vidéos
+car chaque display peut avoir des variants de vidéos (resolveDisplayVariant)
 avec des chemins différents.
 ```
 

@@ -47,10 +47,11 @@ Raspberry Pi (neopro-<club>.local / 192.168.4.1)
 │
 ├── Port 80 (nginx)
 │   └── Application Angular (dist/neopro/browser/)
-│       ├── /login       - Page de connexion
-│       ├── /tv          - Mode TV principal (protégé)
-│       ├── /secondary   - Mode écran secondaire (protégé)
-│       └── /remote      - Télécommande (protégé)
+│       ├── /login        - Page de connexion
+│       ├── /display/:n   - Mode display N (N-display, PROP-002 Phase 5)
+│       ├── /tv           - Redirect → /display/0
+│       ├── /secondary    - Redirect → /display/1
+│       └── /remote       - Télécommande (protégé)
 │
 ├── Port 3000 (Node.js)
 │   └── Serveur Socket.IO
@@ -1448,8 +1449,8 @@ DELETE /content/deployments/:id         - Supprimer un déploiement
 
 ```
 GET    /videos/:id/variants            - Liste des variantes d'une vidéo
-POST   /videos/:id/variants            - Upload variante (multipart, display_type: 'tv'|'secondary')
-DELETE /videos/:id/variants/secondary  - Supprimer la variante écran secondaire
+POST   /videos/:id/variants            - Upload variante (multipart, display_type: slug ^[a-z0-9-]+$)
+DELETE /videos/:id/variants/:type      - Supprimer la variante par type d'écran
 ```
 
 ### Variantes Vidéo et Écran Secondaire
@@ -1458,12 +1459,12 @@ Le HDMI secondaire du Raspberry Pi peut alimenter un panneau LED bord de terrain
 
 **Tables impliquées :**
 
-| Table                 | Colonne(s) clé                                              | Description                                                      |
-| --------------------- | ----------------------------------------------------------- | ---------------------------------------------------------------- |
-| `video_variants`      | `display_type` (`'tv'`\|`'secondary'`)                      | Fichier vidéo alternatif par type d'écran                        |
-| `sites`               | `secondary_display_enabled`, `secondary_display_resolution` | DEPRECATED — le Pi détecte par hardware                          |
-| `content_deployments` | `has_secondary_variant`                                     | Flag booléen persisté au moment du déploiement                   |
-| `content_deployments` | `deployed_path`, `deployed_filename`                        | Chemin réel rapporté par le Pi après déploiement (feedback loop) |
+| Table                 | Colonne(s) clé                                                            | Description                                                      |
+| --------------------- | ------------------------------------------------------------------------- | ---------------------------------------------------------------- |
+| `video_variants`      | `display_type` (slug `^[a-z0-9-]+$`, ex: `tv`, `secondary`, `led-banner`) | Fichier vidéo alternatif par type d'écran (N-display Phase 5)    |
+| `sites`               | `secondary_display_enabled`, `secondary_display_resolution`               | DEPRECATED — le Pi détecte par hardware                          |
+| `content_deployments` | `has_secondary_variant`                                                   | Flag booléen persisté au moment du déploiement                   |
+| `content_deployments` | `deployed_path`, `deployed_filename`                                      | Chemin réel rapporté par le Pi après déploiement (feedback loop) |
 
 **Stockage FTP :** `variants/{videoId}/{displayType}/{filename}` (ex: `variants/837ad.../secondary/Pres.mp4`)
 

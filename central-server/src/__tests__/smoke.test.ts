@@ -16218,3 +16218,68 @@ describe('ADR-043 dashboard component extraction guard', () => {
     expect(ts).not.toMatch(/\btemplate\s*:\s*`/);
   });
 });
+
+// ----------------------------------------------------------
+// PROP-002 Phase 5: N-display regression guards
+// ----------------------------------------------------------
+describe('PROP-002 Phase 5: N-display model guards', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+
+  it('TvComponent must read displayIndex from route param :n', () => {
+    const content = fs.readFileSync(path.join(repoRoot, 'raspberry/src/app/components/tv/tv.component.ts'), 'utf8');
+    expect(content).toMatch(/route\.snapshot\.params\[['"]n['"]\]/);
+  });
+
+  it('TvComponent must send displayIndex in tv-register', () => {
+    const content = fs.readFileSync(path.join(repoRoot, 'raspberry/src/app/components/tv/tv.component.ts'), 'utf8');
+    expect(content).toMatch(/displayIndex:\s*this\.displayIndex/);
+  });
+
+  it('Command interface must have target field for N-display targeting', () => {
+    const content = fs.readFileSync(path.join(repoRoot, 'raspberry/src/app/interfaces/command.interface.ts'), 'utf8');
+    expect(content).toMatch(/target\?:\s*number\[\]/);
+  });
+
+  it('Pi server state.service must track displayIndex in tvInstances', () => {
+    const content = fs.readFileSync(path.join(repoRoot, 'raspberry/server/services/state.service.js'), 'utf8');
+    expect(content).toMatch(/getConnectedDisplays/);
+    expect(content).toMatch(/displayIndex/);
+  });
+
+  it('Pi server handlers must emit displays-changed with displays array', () => {
+    const content = fs.readFileSync(path.join(repoRoot, 'raspberry/server/socket/handlers.js'), 'utf8');
+    expect(content).toMatch(/displays-changed/);
+    expect(content).toMatch(/getConnectedDisplays\(\)/);
+  });
+
+  it('Remote must use dynamic connectedDisplays (not hardcoded types)', () => {
+    const content = fs.readFileSync(path.join(repoRoot, 'raspberry/src/app/components/remote/remote.component.ts'), 'utf8');
+    expect(content).toMatch(/connectedDisplays:\s*Array/);
+    expect(content).not.toMatch(/connectedDisplayTypes:\s*string\[\]/);
+  });
+
+  it('enrichConfigWithDisplayVariants must exist and accept displayTypes param', () => {
+    const content = fs.readFileSync(path.join(repoRoot, 'central-server/src/utils/config-secondary-variants.ts'), 'utf8');
+    expect(content).toMatch(/export async function enrichConfigWithDisplayVariants/);
+    expect(content).toMatch(/displayTypes:\s*string\[\]/);
+  });
+
+  it('VideoVariants must have index signature for arbitrary display types', () => {
+    const content = fs.readFileSync(path.join(repoRoot, 'central-server/src/types/index.ts'), 'utf8');
+    expect(content).toMatch(/\[displayType:\s*string\]:\s*VideoVariantInfo\s*\|\s*undefined/);
+  });
+
+  it('DB migration must open display_type CHECK constraint', () => {
+    const migrationPath = path.join(repoRoot, 'central-server/src/scripts/migrations/n-display-model.sql');
+    expect(fs.existsSync(migrationPath)).toBe(true);
+    const content = fs.readFileSync(migrationPath, 'utf8');
+    expect(content).toMatch(/a-z0-9/);
+    expect(content).toMatch(/displays\s+JSONB/);
+  });
+
+  it('central socket.service must track SaaS displayIndex', () => {
+    const content = fs.readFileSync(path.join(repoRoot, 'central-server/src/services/socket.service.ts'), 'utf8');
+    expect(content).toMatch(/getSaasConnectedDisplays/);
+    expect(content).toMatch(/displayIndex/);
+  });
+});
