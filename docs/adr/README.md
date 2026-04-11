@@ -65,6 +65,7 @@ Un ADR documente une décision technique importante avec :
 | [ADR-046](ADR-046-site-config-copy.md)                            | Copie de configuration inter-sites                        | Accepté                  | Avr 2026 |
 | [ADR-047](ADR-047-claude-md-rules-migration.md)                   | Migration règles CLAUDE.md vers .claude/rules/            | Accepté                  | Avr 2026 |
 | [ADR-048](ADR-048-ftp-video-storage-restructure.md)               | Restructuration FTP + thumbnails + pivot site_videos      | Accepté                  | Avr 2026 |
+| [ADR-049](ADR-049-score-live-multi-vendor-architecture.md)        | Score live multi-constructeurs (table de marque)          | Proposé                  | Avr 2026 |
 
 ### Supersédés
 
