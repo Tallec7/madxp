@@ -1,3 +1,9 @@
+## [3.141.1](https://github.com/Tallec7/neopro/compare/v3.141.0...v3.141.1) (2026-04-11)
+
+### Bug Fixes
+
+- **dashboard:** fix table overflow in loop-manager and video-library ([4a5ec76](https://github.com/Tallec7/neopro/commit/4a5ec76106e06512f6bf118a895d93c78d3e41f5))
+
 # [3.141.0](https://github.com/Tallec7/neopro/compare/v3.140.4...v3.141.0) (2026-04-11)
 
 ### Features
