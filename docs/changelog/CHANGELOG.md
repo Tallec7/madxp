@@ -1,3 +1,9 @@
+## [3.145.1](https://github.com/Tallec7/neopro/compare/v3.145.0...v3.145.1) (2026-04-11)
+
+### Bug Fixes
+
+- **dashboard:** add drop-up support to video-search-select when near bottom of viewport ([82f15ea](https://github.com/Tallec7/neopro/commit/82f15ea573a9c35474a740b8eeab617a63c13b43))
+
 # [3.145.0](https://github.com/Tallec7/neopro/compare/v3.144.3...v3.145.0) (2026-04-11)
 
 ### Features
