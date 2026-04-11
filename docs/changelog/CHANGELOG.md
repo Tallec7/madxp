@@ -1,3 +1,9 @@
+## [3.147.5](https://github.com/Tallec7/neopro/compare/v3.147.4...v3.147.5) (2026-04-11)
+
+### Bug Fixes
+
+- **saas:** add display variant enrichment to SaaS config endpoints ([efb65c2](https://github.com/Tallec7/neopro/commit/efb65c291b72e050c8c990fb186989a64668f524))
+
 ## [3.147.4](https://github.com/Tallec7/neopro/compare/v3.147.3...v3.147.4) (2026-04-11)
 
 ### Bug Fixes
