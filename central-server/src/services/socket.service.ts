@@ -370,6 +370,11 @@ class SocketService {
           const displays = this.getSaasConnectedDisplays(data.siteId);
           this.io.to(data.siteId).emit('displays-changed', { displays });
         }
+
+        // Phase 5 — PROP-002: SaaS event relay
+        // The Pi has a local Socket.IO server that relays events between Remote and TVs.
+        // In SaaS mode, all clients connect to the central server — we need the same relay.
+        this.registerSaasRelay(socket, data.siteId);
       } catch (error) {
         logger.error('SaaS register error', { error, siteId: data.siteId });
       }
@@ -763,6 +768,101 @@ class SocketService {
     }
     return displays.sort((a, b) => a.index - b.index);
   }
+
+  /**
+   * Phase 5 — PROP-002: SaaS event relay.
+   * Replicates the Pi local Socket.IO server relay for SaaS clients.
+   * Relays commands and state events between SaaS Remote and SaaS TV displays
+   * within the same site room on the central server.
+   */
+  private saasRelayRegistered = new Set<string>();
+
+  private registerSaasRelay(socket: Socket, siteId: string): void {
+    // Avoid duplicate registration on reconnect
+    if (this.saasRelayRegistered.has(socket.id)) return;
+    this.saasRelayRegistered.add(socket.id);
+
+    // State storage per site (lightweight, in-memory)
+    if (!this.saasStates) {
+      this.saasStates = new Map();
+    }
+    if (!this.saasStates.has(siteId)) {
+      this.saasStates.set(siteId, { score: null, phase: 'neutral', options: null, timer: { currentTime: 0, isRunning: false }, recording: { isRecording: false, isManualOverride: false } });
+    }
+    const state = this.saasStates.get(siteId)!;
+
+    // command → action relay (same as Pi server)
+    socket.on('command', (data: Record<string, unknown>) => {
+      socket.to(siteId).emit('action', data);
+    });
+
+    // Score relay + state persistence
+    socket.on('score-update', (data: Record<string, unknown>) => {
+      state.score = data;
+      socket.to(siteId).emit('score-update', data);
+    });
+
+    socket.on('score-reset', () => {
+      state.score = null;
+      socket.to(siteId).emit('score-reset');
+    });
+
+    // Phase relay
+    socket.on('phase-change', (data: Record<string, unknown>) => {
+      state.phase = (data as { phase: string }).phase || 'neutral';
+      socket.to(siteId).emit('phase-change', data);
+    });
+
+    // Timer relay
+    socket.on('timer-update', (data: Record<string, unknown>) => {
+      Object.assign(state.timer, data);
+      socket.to(siteId).emit('timer-update', data);
+    });
+
+    // Breaking news relay
+    socket.on('breaking-news', (data: Record<string, unknown>) => {
+      socket.to(siteId).emit('breaking-news', data);
+    });
+
+    // Options relay
+    socket.on('options-update', (data: Record<string, unknown>) => {
+      state.options = data;
+      socket.to(siteId).emit('options-update', data);
+    });
+
+    // Recording state relay
+    socket.on('recording-state', (data: Record<string, unknown>) => {
+      state.recording = data as { isRecording: boolean; isManualOverride: boolean };
+      socket.to(siteId).emit('recording-state', data);
+    });
+
+    // Request state (SaaS equivalent of Pi's request-state)
+    socket.on('request-state', () => {
+      if (state.score) socket.emit('score-update', state.score);
+      socket.emit('phase-change', { phase: state.phase });
+      socket.emit('recording-state', state.recording);
+      if (state.options) socket.emit('options-update', state.options);
+      if (state.timer.isRunning || state.timer.currentTime > 0) {
+        socket.emit('timer-update', { action: 'sync', ...state.timer });
+      }
+      const displays = this.getSaasConnectedDisplays(siteId);
+      socket.emit('displays-changed', { displays });
+    });
+
+    // Cleanup on disconnect
+    socket.on('disconnect', () => {
+      this.saasRelayRegistered.delete(socket.id);
+    });
+  }
+
+  // SaaS state storage (per site)
+  private saasStates: Map<string, {
+    score: Record<string, unknown> | null;
+    phase: string;
+    options: Record<string, unknown> | null;
+    timer: { currentTime: number; isRunning: boolean; [key: string]: unknown };
+    recording: { isRecording: boolean; isManualOverride: boolean };
+  }> | undefined;
 
   /**
    * Notify connected SaaS browsers that their config has been updated.
