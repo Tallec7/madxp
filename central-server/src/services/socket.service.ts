@@ -787,7 +787,7 @@ class SocketService {
       this.saasStates = new Map();
     }
     if (!this.saasStates.has(siteId)) {
-      this.saasStates.set(siteId, { score: null, phase: 'neutral', options: null, timer: { currentTime: 0, isRunning: false }, recording: { isRecording: false, isManualOverride: false } });
+      this.saasStates.set(siteId, { score: null, phase: 'neutral', options: null, timer: { currentTime: 0, isRunning: false }, recording: { isRecording: false, isManualOverride: false }, tvInstances: new Map(), loopState: null });
     }
     const state = this.saasStates.get(siteId)!;
 
@@ -836,6 +836,63 @@ class SocketService {
       socket.to(siteId).emit('recording-state', data);
     });
 
+    // Match info relay
+    socket.on('match-info-updated', (data: Record<string, unknown>) => {
+      socket.to(siteId).emit('match-info-updated', data);
+    });
+
+    // --- Master-Slave TV sync (same as Pi local server) ---
+
+    // TV registration with role assignment
+    socket.on('tv-register', (data: Record<string, unknown>) => {
+      const displayType = (data?.displayType as string) || 'tv';
+      const displayIndex = (data?.displayIndex as number) ?? 0;
+      const instances = state.tvInstances;
+
+      // Find current master
+      const masterEntry = [...instances.entries()].find(([, info]) => info.role === 'master');
+
+      let role: 'master' | 'slave';
+      let demotedId: string | null = null;
+
+      if (!masterEntry) {
+        role = 'master';
+      } else if (displayType === 'tv' && masterEntry[1].displayType !== 'tv') {
+        // Pi kiosk priority
+        masterEntry[1].role = 'slave';
+        demotedId = masterEntry[0];
+        role = 'master';
+      } else {
+        role = 'slave';
+      }
+
+      instances.set(socket.id, { role, displayType, displayIndex, connectedAt: Date.now() });
+      socket.emit('tv-role-assigned', { role });
+      logger.info('SaaS TV registered', { siteId, socketId: socket.id, role, displayType, displayIndex });
+
+      if (demotedId && this.io) {
+        this.io.to(demotedId).emit('tv-role-assigned', { role: 'slave' });
+        this.io.to(demotedId).emit('tv-loop-state', state.loopState);
+      }
+
+      if (role === 'slave' && state.loopState) {
+        socket.emit('tv-loop-state', state.loopState);
+      }
+
+      // Notify displays changed
+      const displays = this.getSaasConnectedDisplays(siteId);
+      socket.to(siteId).emit('displays-changed', { displays });
+      socket.emit('displays-changed', { displays });
+    });
+
+    // TV loop update (master → slaves)
+    socket.on('tv-loop-update', (data: Record<string, unknown>) => {
+      const instance = state.tvInstances.get(socket.id);
+      if (!instance || instance.role !== 'master') return;
+      state.loopState = data;
+      socket.to(siteId).emit('tv-loop-state', data);
+    });
+
     // Request state (SaaS equivalent of Pi's request-state)
     socket.on('request-state', () => {
       if (state.score) socket.emit('score-update', state.score);
@@ -849,9 +906,29 @@ class SocketService {
       socket.emit('displays-changed', { displays });
     });
 
-    // Cleanup on disconnect
+    // Cleanup on disconnect — unregister TV + promote slave if master disconnects
     socket.on('disconnect', () => {
       this.saasRelayRegistered.delete(socket.id);
+      const instance = state.tvInstances.get(socket.id);
+      if (instance) {
+        const wasMaster = instance.role === 'master';
+        state.tvInstances.delete(socket.id);
+
+        if (wasMaster) {
+          // Promote oldest slave
+          let oldest: { id: string; connectedAt: number } | null = null;
+          for (const [id, info] of state.tvInstances) {
+            if (!oldest || info.connectedAt < oldest.connectedAt) {
+              oldest = { id, connectedAt: info.connectedAt };
+            }
+          }
+          if (oldest && this.io) {
+            state.tvInstances.get(oldest.id)!.role = 'master';
+            this.io.to(oldest.id).emit('tv-role-assigned', { role: 'master' });
+            logger.info('SaaS TV promoted to master', { siteId, promoted: oldest.id });
+          }
+        }
+      }
     });
   }
 
@@ -862,6 +939,8 @@ class SocketService {
     options: Record<string, unknown> | null;
     timer: { currentTime: number; isRunning: boolean; [key: string]: unknown };
     recording: { isRecording: boolean; isManualOverride: boolean };
+    tvInstances: Map<string, { role: 'master' | 'slave'; displayType: string; displayIndex: number; connectedAt: number }>;
+    loopState: Record<string, unknown> | null;
   }> | undefined;
 
   /**

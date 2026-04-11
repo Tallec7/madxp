@@ -16360,6 +16360,14 @@ describe('PROP-002 Phase 5: N-display model guards', () => {
     expect(content).toMatch(/socket\.on\('timer-update'/);
     expect(content).toMatch(/socket\.on\('breaking-news'/);
     expect(content).toMatch(/socket\.on\('request-state'/);
+    // Master-slave sync (same as Pi)
+    expect(content).toMatch(/socket\.on\('tv-register'/);
+    expect(content).toMatch(/socket\.on\('tv-loop-update'/);
+    expect(content).toMatch(/tv-loop-state/);
+    expect(content).toMatch(/tv-role-assigned/);
+    // State must track tvInstances and loopState
+    expect(content).toMatch(/tvInstances/);
+    expect(content).toMatch(/loopState/);
   });
 
   it('no caller must import enrichConfigWithSecondaryVariants (migrated to Display)', () => {
