@@ -1,3 +1,9 @@
+# [3.142.0](https://github.com/Tallec7/neopro/compare/v3.141.1...v3.142.0) (2026-04-11)
+
+### Features
+
+- **dashboard:** VideoSearchSelectComponent + fix lint CI ([#439](https://github.com/Tallec7/neopro/issues/439)) ([7f7b57b](https://github.com/Tallec7/neopro/commit/7f7b57bf2b1e679c54c8b947b77dd77ddc81572c))
+
 ## [3.141.1](https://github.com/Tallec7/neopro/compare/v3.141.0...v3.141.1) (2026-04-11)
 
 ### Bug Fixes
