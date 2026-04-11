@@ -984,6 +984,20 @@
 }
 
 /* === Responsive === */
+@media (max-width: 1024px) {
+  .kpi-grid-4 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .kpi-grid-5 {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .sponsor-row {
+    flex-wrap: wrap;
+  }
+}
+
 @media (max-width: 768px) {
   .tab-header {
     flex-direction: column;

@@ -934,6 +934,20 @@
 }
 
 /* === Responsive === */
+@media (max-width: 1024px) {
+  .settings-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .overlay-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .settings-header {
+    flex-wrap: wrap;
+  }
+}
+
 @media (max-width: 768px) {
   .settings-tab {
     padding: 0.75rem;

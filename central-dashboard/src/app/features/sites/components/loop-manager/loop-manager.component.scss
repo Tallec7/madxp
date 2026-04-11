@@ -571,6 +571,36 @@
 }
 
 /* === Responsive === */
+@media (max-width: 1024px) {
+  .loop-video-row {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .video-fields {
+    flex-basis: calc(100% - 40px);
+    min-width: 0;
+  }
+
+  .video-name-input {
+    width: 120px;
+    min-width: 80px;
+  }
+
+  .video-select {
+    min-width: 0;
+  }
+
+  .loop-tabs {
+    flex-wrap: wrap;
+    gap: 0.25rem;
+  }
+
+  .loop-tab.fallback {
+    margin-left: 0;
+  }
+}
+
 @media (max-width: 768px) {
   .loop-tabs {
     flex-wrap: wrap;

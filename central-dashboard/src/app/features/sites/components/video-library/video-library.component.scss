@@ -891,6 +891,31 @@
 }
 
 /* === Responsive === */
+@media (max-width: 1024px) {
+  .sort-header {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .video-list {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .sort-header,
+  .video-item {
+    min-width: 700px;
+  }
+
+  .col-advertiser {
+    width: 65px;
+  }
+
+  .col-actions {
+    width: 70px;
+  }
+}
+
 @media (max-width: 768px) {
   .video-library {
     padding: 0.5rem;
