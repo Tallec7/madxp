@@ -190,16 +190,31 @@ class SafeParserService {
     };
     const displayStatus = statusMap[newStatus];
 
-    // Replace status in the markdown
+    // Replace status in the markdown — try multiple formats
+    const originalContent = content;
+
+    // Format 1: **Statut** : value (standard)
     const statusRegex = /(\*\*Statut\*\*\s*:\s*).+/i;
+    // Format 2: > **Statut** : value (blockquote)
+    const bqRegex = /(>\s*\*\*Statut\*\*\s*:\s*).+/i;
+    // Format 3: **Statut :** value (colon inside bold)
+    const altRegex = /(\*\*Statut\s*:\*\*\s*).+/i;
+    // Format 4: > **Statut :** value (blockquote + colon inside bold)
+    const bqAltRegex = /(>\s*\*\*Statut\s*:\*\*\s*).+/i;
+
     if (statusRegex.test(content)) {
       content = content.replace(statusRegex, `$1${displayStatus}`);
-    } else {
-      // Try blockquote format: > **Statut** : ...
-      const bqRegex = /(>\s*\*\*Statut\*\*\s*:\s*).+/i;
-      if (bqRegex.test(content)) {
-        content = content.replace(bqRegex, `$1${displayStatus}`);
-      }
+    } else if (bqRegex.test(content)) {
+      content = content.replace(bqRegex, `$1${displayStatus}`);
+    } else if (altRegex.test(content)) {
+      content = content.replace(altRegex, `$1${displayStatus}`);
+    } else if (bqAltRegex.test(content)) {
+      content = content.replace(bqAltRegex, `$1${displayStatus}`);
+    }
+
+    if (content === originalContent) {
+      logger.warn('SAFe: Status line not found in proposal file', { id, fullPath });
+      return false;
     }
 
     fs.writeFileSync(fullPath, content, 'utf-8');
@@ -808,8 +823,9 @@ ${data.content}
       title = specMatch ? specMatch[2].trim() : headingText;
     }
 
-    // Extract status
-    const statusMatch = content.match(/\*\*Statut\*\*\s*:\s*(.+)/i);
+    // Extract status — handle both **Statut** : value and **Statut :** value formats
+    const statusMatch = content.match(/\*\*Statut\*\*\s*:\s*(.+)/i)
+      || content.match(/\*\*Statut\s*:\*\*\s*(.+)/i);
     const rawStatus = statusMatch ? statusMatch[1].trim() : 'Proposé';
     const status = this.mapProposalStatus(rawStatus);
 
