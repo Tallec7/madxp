@@ -34,7 +34,7 @@ export interface VideoOptionItem {
   imports: [CommonModule, FormsModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <div class="vss" [class.vss--open]="isOpen" [class.vss--invalid]="invalid" [class.vss--disabled]="disabled">
+    <div class="vss" [class.vss--open]="isOpen" [class.vss--dropup]="dropUp" [class.vss--invalid]="invalid" [class.vss--disabled]="disabled">
       <!-- Selected value display / search input -->
       <div class="vss__control" (click)="toggle()" [class.vss__control--placeholder]="!selectedPath">
         <input
@@ -117,6 +117,10 @@ export interface VideoOptionItem {
         border-bottom-right-radius: 0;
       }
 
+      .vss--open.vss--dropup .vss__control {
+        border-radius: 0 0 6px 6px;
+      }
+
       .vss--invalid .vss__control {
         border-color: #ef4444;
       }
@@ -167,6 +171,15 @@ export interface VideoOptionItem {
         z-index: 1000;
         max-height: 280px;
         overflow-y: auto;
+      }
+
+      .vss--dropup .vss__dropdown {
+        top: auto;
+        bottom: 100%;
+        border-top: 1px solid #2563eb;
+        border-bottom: none;
+        border-radius: 6px 6px 0 0;
+        box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.1);
       }
 
       .vss__group-label {
@@ -246,6 +259,7 @@ export class VideoSearchSelectComponent implements OnChanges {
   @Output() pathChange = new EventEmitter<string>();
 
   isOpen = false;
+  dropUp = false;
   searchTerm = '';
   filteredGroups: VideoOptionGroup[] = [];
   selectedLabel = '';
@@ -284,6 +298,9 @@ export class VideoSearchSelectComponent implements OnChanges {
     this.isOpen = true;
     this.searchTerm = '';
     this.filterVideos();
+    const rect = this.elementRef.nativeElement.getBoundingClientRect();
+    const spaceBelow = window.innerHeight - rect.bottom;
+    this.dropUp = spaceBelow < 300;
     this.cdr.markForCheck();
     setTimeout(() => {
       const input = this.elementRef.nativeElement.querySelector('.vss__search');
