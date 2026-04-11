@@ -107,7 +107,7 @@ module.exports = function registerSocketHandlers({ io, stateService, configPath,
       }
       // Send connected displays state (Phase 3 — PROP-002)
       socket.emit('displays-changed', {
-        displays: stateService.getConnectedDisplayTypes(),
+        displays: stateService.getConnectedDisplays(),
         clients: stateService.getConnectedClients(),
       });
     });
@@ -189,9 +189,10 @@ module.exports = function registerSocketHandlers({ io, stateService, configPath,
      */
     socket.on('tv-register', (data) => {
       const displayType = data?.displayType || 'tv';
+      const displayIndex = data?.displayIndex;
       const userAgent = socket.handshake?.headers?.['user-agent'] || null;
       const ip = socket.handshake?.address || null;
-      const { role, demoted } = stateService.registerTv(socket.id, displayType, { userAgent, ip });
+      const { role, demoted } = stateService.registerTv(socket.id, displayType, { userAgent, ip, displayIndex });
       socket.emit('tv-role-assigned', { role });
       console.log(`[TV-Sync] Registered as ${role} (${displayType}):`, socket.id);
 
@@ -212,7 +213,7 @@ module.exports = function registerSocketHandlers({ io, stateService, configPath,
 
       // Notify all clients (Remote) that connected displays changed
       io.emit('displays-changed', {
-        displays: stateService.getConnectedDisplayTypes(),
+        displays: stateService.getConnectedDisplays(),
         clients: stateService.getConnectedClients(),
       });
     });

@@ -253,11 +253,13 @@ class StateService {
   // Pi kiosk (displayType==='tv') always gets master priority.
   // If a kiosk registers and a non-kiosk master exists, the kiosk takes over.
   registerTv(socketId, displayType = 'tv', meta = {}) {
-    const { userAgent = null, ip = null } = meta;
+    const { userAgent = null, ip = null, displayIndex } = meta;
+    // Phase 5 — PROP-002: infer displayIndex from displayType if not provided
+    const resolvedIndex = displayIndex !== undefined ? displayIndex : (displayType === 'secondary' ? 1 : 0);
     const masterId = this._getMasterId();
     if (!masterId) {
       // No master → become master
-      this._tvInstances.set(socketId, { role: 'master', displayType, connectedAt: Date.now(), userAgent, ip });
+      this._tvInstances.set(socketId, { role: 'master', displayType, displayIndex: resolvedIndex, connectedAt: Date.now(), userAgent, ip });
       return { role: 'master', demoted: null };
     }
 
@@ -269,12 +271,12 @@ class StateService {
     if (isKiosk && !currentMasterIsKiosk) {
       // Pi kiosk takes priority over PC/secondary master
       currentMaster.role = 'slave';
-      this._tvInstances.set(socketId, { role: 'master', displayType, connectedAt: Date.now(), userAgent, ip });
+      this._tvInstances.set(socketId, { role: 'master', displayType, displayIndex: resolvedIndex, connectedAt: Date.now(), userAgent, ip });
       console.log(`[TV-Sync] Pi kiosk ${socketId} takes master from PC/secondary ${masterId}`);
       return { role: 'master', demoted: masterId };
     }
 
-    this._tvInstances.set(socketId, { role: 'slave', displayType, connectedAt: Date.now(), userAgent, ip });
+    this._tvInstances.set(socketId, { role: 'slave', displayType, displayIndex: resolvedIndex, connectedAt: Date.now(), userAgent, ip });
     return { role: 'slave', demoted: null };
   }
 
@@ -286,6 +288,20 @@ class StateService {
     return Array.from(types);
   }
 
+  // Phase 5 — PROP-002: returns connected displays with index and type
+  getConnectedDisplays() {
+    const displays = [];
+    const seen = new Set();
+    for (const [, info] of this._tvInstances) {
+      const index = info.displayIndex ?? 0;
+      if (!seen.has(index)) {
+        seen.add(index);
+        displays.push({ index, type: info.displayType || 'tv' });
+      }
+    }
+    return displays.sort((a, b) => a.index - b.index);
+  }
+
   getConnectedClients() {
     const clients = [];
     for (const [socketId, info] of this._tvInstances) {
@@ -293,6 +309,7 @@ class StateService {
         socketId,
         role: info.role,
         displayType: info.displayType || 'tv',
+        displayIndex: info.displayIndex ?? 0,
         userAgent: info.userAgent || null,
         ip: info.ip || null,
         connectedAt: info.connectedAt,

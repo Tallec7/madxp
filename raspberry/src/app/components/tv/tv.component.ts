@@ -323,12 +323,12 @@ export class TvComponent implements OnInit, OnDestroy {
     // MASTER-SLAVE TV SYNCHRONISATION
 
     // S'enregistrer en tant qu'instance TV (avec le type d'écran)
-    this.socketService.emit('tv-register', { displayType: this.displayType } as unknown as Command);
+    this.socketService.emit('tv-register', { displayType: this.displayType, displayIndex: this.displayIndex } as unknown as Command);
 
     // Re-register on reconnection (socket drop → zombie state → no tv-loop-state)
     this.socketService.onReconnect(() => {
       console.log('[TV] Socket reconnected — re-registering as', this.displayType);
-      this.socketService.emit('tv-register', { displayType: this.displayType } as unknown as Command);
+      this.socketService.emit('tv-register', { displayType: this.displayType, displayIndex: this.displayIndex } as unknown as Command);
     });
 
     // Recevoir le rôle assigné par le serveur
