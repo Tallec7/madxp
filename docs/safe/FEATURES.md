@@ -414,7 +414,7 @@ Tous les controllers utilisent le repository pattern. ESLint bloquant actif. Aud
 
 ### F-15.1 : Intégration API fédérations sportives ⏸ En veille
 
-> ⚠️ **Mise en veille (Avr 2026)** : la recherche menée en déc 2025 et confirmée dans [PROP-003](../proposals/PROP-003-stramatel-live-score.md) a établi qu'**aucune fédération amateur française (FFHB, FFBB, FFVB) n'expose d'API publique de scores live**. F-15.1 reste en veille — si une API fédérale émerge, on la ressort. En attendant, **F-15.2 reprend l'objectif métier** via lecture directe de la table de marque physique.
+> ⚠️ **Mise en veille (Avr 2026)** : la recherche menée en déc 2025 et confirmée dans [PROP-003](../proposals/PROP-003-score-live-multi-vendor.md) a établi qu'**aucune fédération amateur française (FFHB, FFBB, FFVB) n'expose d'API publique de scores live**. F-15.1 reste en veille — si une API fédérale émerge, on la ressort. En attendant, **F-15.2 reprend l'objectif métier** via lecture directe de la table de marque physique.
 
 > _En tant que club, le score du match se met à jour automatiquement depuis les API des fédérations._
 
@@ -434,7 +434,7 @@ Tous les controllers utilisent le repository pattern. ESLint bloquant actif. Aud
 
 > _En tant que club, le score, le chrono, la période, les fautes et les temps morts se mettent à jour automatiquement sur l'écran TV et LED en temps réel depuis la table de marque officielle (Stramatel, Bodet, …), sans double saisie humaine._
 
-**Contexte** : deal-breaker pour plusieurs prospects. Les clubs équipés Stramatel (série 452) et Bodet (Scorepad TCP, BT6000 série) sont la majorité du marché amateur français. Le parser doit être multi-constructeurs (pattern plugin `ScoreboardConnector`) avec un fallback OCR universel pour les tableaux sans sortie données. Architecture détaillée dans [PROP-003](../proposals/PROP-003-stramatel-live-score.md) et figée dans [ADR-049](../adr/ADR-049-score-live-multi-vendor-architecture.md).
+**Contexte** : deal-breaker pour plusieurs prospects. Les clubs équipés Stramatel (série 452) et Bodet (Scorepad TCP, BT6000 série) sont la majorité du marché amateur français. Le parser doit être multi-constructeurs (pattern plugin `ScoreboardConnector`) avec un fallback OCR universel pour les tableaux sans sortie données. Architecture détaillée dans [PROP-003](../proposals/PROP-003-score-live-multi-vendor.md) et figée dans [ADR-049](../adr/ADR-049-score-live-multi-vendor-architecture.md).
 
 **Critères d'acceptation**
 
@@ -980,7 +980,7 @@ Tous les controllers utilisent le repository pattern. ESLint bloquant actif. Aud
 
 > _En tant qu'éditeur tiers (app club, média local, agrégateur, fédération, bornes interactives), je récupère en temps réel les scores officiels des matchs amateurs français via une API documentée, sans passer par une saisie humaine._
 
-**Contexte & vision produit** : aujourd'hui, les clubs amateurs n'ont pas de source officielle de scores live — il faut demander par message si quelqu'un est sur place. Avec F-15.2 en prod, Neopro devient **la seule source capable de lire directement les tables de marque officielles** de centaines de clubs. Exposer cette donnée en API transforme Neopro en **hub de données temps réel du sport amateur français**, avec un effet réseau naturel : plus de clubs équipés → plus de matchs couverts → plus de clients API → plus d'attractivité pour les clubs. Vision détaillée dans [PROP-003 §Vision API publique](../proposals/PROP-003-stramatel-live-score.md) et figée dans [ADR-049](../adr/ADR-049-score-live-multi-vendor-architecture.md).
+**Contexte & vision produit** : aujourd'hui, les clubs amateurs n'ont pas de source officielle de scores live — il faut demander par message si quelqu'un est sur place. Avec F-15.2 en prod, Neopro devient **la seule source capable de lire directement les tables de marque officielles** de centaines de clubs. Exposer cette donnée en API transforme Neopro en **hub de données temps réel du sport amateur français**, avec un effet réseau naturel : plus de clubs équipés → plus de matchs couverts → plus de clients API → plus d'attractivité pour les clubs. Vision détaillée dans [PROP-003 §Vision API publique](../proposals/PROP-003-score-live-multi-vendor.md) et figée dans [ADR-049](../adr/ADR-049-score-live-multi-vendor-architecture.md).
 
 **Positionnement commercial**
 

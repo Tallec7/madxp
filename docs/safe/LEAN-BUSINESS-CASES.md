@@ -532,7 +532,7 @@
 
 **Problème** : Le score en live (Phase 1) nécessite une saisie manuelle depuis la télécommande. Charge cognitive pour l'opérateur de table de marque, risque d'erreur, double saisie avec la console officielle du club. **Deal-breaker confirmé pour plusieurs prospects** : sans lecture automatique, pas de signature. Par ailleurs, la douleur côté clubs amateurs est bien documentée : aujourd'hui, les membres des clubs doivent s'envoyer des messages pour savoir où en est un match — aucune source officielle live n'existe.
 
-**Pivot Avr 2026** : F-15.1 (API fédérations) mis en veille — la recherche confirmée dans [PROP-003](../proposals/PROP-003-stramatel-live-score.md) a établi qu'aucune fédération amateur française n'expose d'API publique de scores. L'objectif bascule sur **F-15.2 — Lecture directe table de marque multi-constructeurs**, avec pattern `ScoreboardConnector` plugin et support Stramatel (RS-485 binaire), Bodet (Scorepad TCP + BT6000 série) et OCR fallback universel. Décision architecturale figée dans [ADR-049](../adr/ADR-049-score-live-multi-vendor-architecture.md).
+**Pivot Avr 2026** : F-15.1 (API fédérations) mis en veille — la recherche confirmée dans [PROP-003](../proposals/PROP-003-score-live-multi-vendor.md) a établi qu'aucune fédération amateur française n'expose d'API publique de scores. L'objectif bascule sur **F-15.2 — Lecture directe table de marque multi-constructeurs**, avec pattern `ScoreboardConnector` plugin et support Stramatel (RS-485 binaire), Bodet (Scorepad TCP + BT6000 série) et OCR fallback universel. Décision architecturale figée dans [ADR-049](../adr/ADR-049-score-live-multi-vendor-architecture.md).
 
 **Solution F-15.2**
 

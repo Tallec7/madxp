@@ -29,7 +29,7 @@ Un même sujet (ex: sponsor X) peut avoir **N versions** : une optimisée par ty
 - **1 seul Pi** pour piloter les écrans (2 HDMI natifs, extensible via WiFi hotspot PROP-001)
 - **Contenus différents** sur chaque écran simultanément
 - **Formats vidéo différents** : résolution, ratio, orientation par écran
-- **Score live** ([PROP-003](./PROP-003-stramatel-live-score.md)) visible sur tous les supports, formaté différemment
+- **Score live** ([PROP-003](./PROP-003-score-live-multi-vendor.md)) visible sur tous les supports, formaté différemment
 - **Multi-TV possible** ([PROP-001](./PROP-001-multi-tv-single-pi.md)) : un signal peut être splitté vers N écrans identiques
 - **GPU limité** : 2 flux vidéo simultanés sur Pi = contrainte forte (cf. [ADR-008](../adr/ADR-008-double-buffer-video-pi.md))
 
@@ -490,7 +490,7 @@ Le modèle `displayType` (format) + `displayId` (ciblage) couvre les deux PROP a
 - [ADR-008](../adr/ADR-008-double-buffer-video-pi.md) — Double-Buffer Vidéo (contraintes GPU)
 - [ADR-029](../adr/ADR-029-dual-hdmi-tv-led.md) — Décision architecturale dual HDMI
 - [PROP-001](./PROP-001-multi-tv-single-pi.md) — Multi-TV + Pi hub WiFi (modèle unifié displayType + displayId)
-- [PROP-003](./PROP-003-stramatel-live-score.md) — Score Stramatel (source automatique des score-update)
+- [PROP-003](./PROP-003-score-live-multi-vendor.md) — Score Live multi-constructeurs (source automatique des score-update)
 
 ---
 

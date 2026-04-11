@@ -375,7 +375,7 @@
 
 #### E-15 — Score Live Phase 2 (9 US, 48 SP)
 
-> F-15.1 (API fédérations) mis en veille : aucune API publique disponible côté fédérations amateurs (cf. [PROP-003](../proposals/PROP-003-stramatel-live-score.md)). L'objectif métier est désormais porté par **F-15.2** (lecture directe table de marque multi-constructeurs, [ADR-049](../adr/ADR-049-score-live-multi-vendor-architecture.md)).
+> F-15.1 (API fédérations) mis en veille : aucune API publique disponible côté fédérations amateurs (cf. [PROP-003](../proposals/PROP-003-score-live-multi-vendor.md)). L'objectif métier est désormais porté par **F-15.2** (lecture directe table de marque multi-constructeurs, [ADR-049](../adr/ADR-049-score-live-multi-vendor-architecture.md)).
 
 | US        | Feature | Description                                                                                | SP  | Sprint  | Priorité     | Statut     |
 | --------- | ------- | ------------------------------------------------------------------------------------------ | --- | ------- | ------------ | ---------- |

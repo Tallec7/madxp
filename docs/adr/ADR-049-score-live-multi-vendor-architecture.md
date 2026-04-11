@@ -4,7 +4,7 @@
 **Statut** : Proposé
 **Format** : Léger
 **Décideurs** : Équipe Neopro
-**Lié à** : [PROP-003](../proposals/PROP-003-stramatel-live-score.md), [ADR-024](ADR-024-network-resilience-layers.md) (résilience réseau), [ADR-037](ADR-037-saas-mode-architecture.md) (mode SaaS), [F-15.2](../safe/FEATURES.md), [F-21.2](../safe/FEATURES.md)
+**Lié à** : [PROP-003](../proposals/PROP-003-score-live-multi-vendor.md), [ADR-024](ADR-024-network-resilience-layers.md) (résilience réseau), [ADR-037](ADR-037-saas-mode-architecture.md) (mode SaaS), [F-15.2](../safe/FEATURES.md), [F-21.2](../safe/FEATURES.md)
 
 ---
 
@@ -80,7 +80,7 @@ Le live score automatique est positionné commercialement comme un **upsell abon
 - `docs/adr/ADR-049-score-live-multi-vendor-architecture.md` — ce document
 
 ### Modifiés en session
-- `docs/proposals/PROP-003-stramatel-live-score.md` — patch profond (topologies A1/A3/B, Scorebox unifié, SaaS Option 1, vision API publique, taxonomie données Level 1-5, pricing)
+- `docs/proposals/PROP-003-score-live-multi-vendor.md` — patch profond (topologies A1/A3/B, Scorebox unifié, SaaS Option 1, vision API publique, taxonomie données Level 1-5, pricing) — renommé depuis `PROP-003-stramatel-live-score.md` pour refléter le scope multi-vendor
 - `docs/safe/FEATURES.md` — F-15.1 en veille, F-15.2 créée (7 US, 37 SP), F-21.2 créée (4 US, 21 SP), compteurs PI-2/PI-3/global
 - `docs/safe/USER-STORIES.md` — sections E-15 et E-21 enrichies, compteurs
 - `docs/safe/LEAN-BUSINESS-CASES.md` — E-15 réécrit (pivot API fédérale → table de marque), E-21 étendu (F-21.2), WSJF réordonné

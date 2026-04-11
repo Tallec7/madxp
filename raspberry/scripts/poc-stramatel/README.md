@@ -1,6 +1,6 @@
 # POC Stramatel Listener
 
-> Script standalone pour valider la lecture d'une console Stramatel. Rattaché à [PROP-003](../../../docs/proposals/PROP-003-stramatel-live-score.md).
+> Script standalone pour valider la lecture d'une console Stramatel. Rattaché à [PROP-003](../../../docs/proposals/PROP-003-score-live-multi-vendor.md).
 
 ## Objectif
 
