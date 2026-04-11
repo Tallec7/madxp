@@ -1,3 +1,9 @@
+## [3.145.3](https://github.com/Tallec7/neopro/compare/v3.145.2...v3.145.3) (2026-04-11)
+
+### Bug Fixes
+
+- **saas:** buffer BroadcastChannel commands during display init with ReplaySubject ([ded4c25](https://github.com/Tallec7/neopro/commit/ded4c252e054824c372577656d6d6c86f86661d5))
+
 ## [3.145.2](https://github.com/Tallec7/neopro/compare/v3.145.1...v3.145.2) (2026-04-11)
 
 ### Bug Fixes
