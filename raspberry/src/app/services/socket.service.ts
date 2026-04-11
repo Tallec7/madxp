@@ -195,12 +195,17 @@ export class SocketService {
     // Detect client type: remote tab should not be counted as a screen
     const isRemote = window.location.pathname.includes('/remote');
     const clientType = isRemote ? 'saas-remote' : 'saas-tv';
+    // Phase 5 — PROP-002: extract displayIndex from route /display/:n or query param ?display=N
+    const displayMatch = window.location.pathname.match(/\/display\/(\d+)/);
+    const displayParam = params.get('display');
+    const displayIndex = displayMatch ? parseInt(displayMatch[1], 10) : (displayParam ? parseInt(displayParam, 10) : 0);
     this.socket.emit('saas-register', {
       siteId,
       version: APP_VERSION,
       clientType,
+      displayIndex: isRemote ? undefined : displayIndex,
     });
-    console.log('[Socket] SaaS register emitted', { siteId, version: APP_VERSION });
+    console.log('[Socket] SaaS register emitted', { siteId, version: APP_VERSION, displayIndex });
 
     // Listen for config updates pushed from the dashboard and reload the app.
     // Idempotent registration — Socket.IO reuses the same socket across reconnects.

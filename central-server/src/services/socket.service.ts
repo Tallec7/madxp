@@ -334,7 +334,7 @@ class SocketService {
     });
 
     // SaaS client registration — lightweight, no auth required (siteId is UUID)
-    socket.on('saas-register', async (data: { siteId?: string; version?: string; clientType?: string }) => {
+    socket.on('saas-register', async (data: { siteId?: string; version?: string; clientType?: string; displayIndex?: number }) => {
       if (!data?.siteId) return;
       try {
         // Verify the site exists and is SaaS type
@@ -346,6 +346,7 @@ class SocketService {
 
         (socket as any).siteId = data.siteId;
         (socket as any).clientType = data.clientType || 'saas-tv';
+        (socket as any).displayIndex = data.displayIndex ?? 0;
         socket.join(data.siteId);
 
         // Update version and last_seen_at
@@ -361,7 +362,14 @@ class SocketService {
           siteName: result.rows[0].site_name,
           version: data.version,
           clientType: data.clientType,
+          displayIndex: data.displayIndex,
         });
+
+        // Phase 5 — PROP-002: emit displays-changed to the site room
+        if (data.clientType !== 'saas-remote' && this.io) {
+          const displays = this.getSaasConnectedDisplays(data.siteId);
+          this.io.to(data.siteId).emit('displays-changed', { displays });
+        }
       } catch (error) {
         logger.error('SaaS register error', { error, siteId: data.siteId });
       }
@@ -636,6 +644,13 @@ class SocketService {
       }
     }
 
+    // Phase 5 — PROP-002: emit displays-changed when a SaaS TV client disconnects
+    const saasClientType = (socket as any).clientType as string | undefined;
+    if (siteId && saasClientType === 'saas-tv' && this.io) {
+      const displays = this.getSaasConnectedDisplays(siteId);
+      this.io.to(siteId).emit('displays-changed', { displays });
+    }
+
     logger.info('Socket disconnected', { socketId: socket.id, reason });
   }
 
@@ -727,6 +742,26 @@ class SocketService {
       }
     }
     return count;
+  }
+
+  /** Phase 5 — PROP-002: get connected SaaS displays for a site */
+  getSaasConnectedDisplays(siteId: string): Array<{ index: number; type: string }> {
+    if (!this.io) return [];
+    const room = this.io.sockets.adapter.rooms.get(siteId);
+    if (!room) return [];
+    const seen = new Set<number>();
+    const displays: Array<{ index: number; type: string }> = [];
+    for (const socketId of room) {
+      const sock = this.io.sockets.sockets.get(socketId);
+      if (sock && (sock as any).clientType === 'saas-tv') {
+        const index = (sock as any).displayIndex ?? 0;
+        if (!seen.has(index)) {
+          seen.add(index);
+          displays.push({ index, type: `display-${index}` });
+        }
+      }
+    }
+    return displays.sort((a, b) => a.index - b.index);
   }
 
   /**
