@@ -70,6 +70,7 @@
             [invalid]="!video.path"
             [disabled]="isClubUser && video.owner === 'neopro'"
             [showPiStatus]="siteType !== 'saas'"
+            [compact]="true"
             [searchPlaceholder]="'common.searchVideoPlaceholder' | translate"
             [emptyLabel]="'common.noVideoFound' | translate"
           ></app-video-search-select>
@@ -157,6 +158,7 @@
               [selectedPath]="video.path"
               (pathChange)="updatePhaseVideo(i, 'path', $event)"
               [showPiStatus]="siteType !== 'saas'"
+              [compact]="true"
               [searchPlaceholder]="'common.searchVideoPlaceholder' | translate"
               [emptyLabel]="'common.noVideoFound' | translate"
             ></app-video-search-select>
