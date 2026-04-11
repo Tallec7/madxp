@@ -135,13 +135,11 @@ export class RemoteComponent implements OnInit, OnDestroy {
   // Menu header (pour simplifier le header)
   public isHeaderMenuOpen = false;
 
-  // Display status (Phase 3 — PROP-002)
-  public connectedDisplayTypes: string[] = [];
-  public isTvDisplayConnected = false;
-  public isSecondaryDisplayConnected = false;
+  // Display status (Phase 3+5 — PROP-002)
+  public connectedDisplays: Array<{ index: number; type: string }> = [];
 
-  // Display target (Phase 4 — PROP-002): 'all' | 'tv' | 'secondary'
-  public displayTarget: 'all' | 'tv' | 'secondary' = 'all';
+  // Display target (Phase 4+5 — PROP-002): 'all' or a specific display index
+  public displayTarget: 'all' | number = 'all';
 
   // Sports et Périodes
   public readonly sportTypes: SportType[] = ['football', 'basketball', 'handball', 'volleyball', 'rugby', 'hockey'];
@@ -323,14 +321,16 @@ export class RemoteComponent implements OnInit, OnDestroy {
       });
     });
 
-    // Écouter les changements de displays connectés (Phase 3 — PROP-002)
+    // Écouter les changements de displays connectés (Phase 5 — PROP-002)
     this.socketService.on(
       'displays-changed',
-      (data: { displays: string[]; clients: Array<{ displayType: string }> }) => {
+      (data: { displays: Array<{ index: number; type: string }> }) => {
         this.ngZone.run(() => {
-          this.connectedDisplayTypes = data.displays || [];
-          this.isTvDisplayConnected = this.connectedDisplayTypes.includes('tv');
-          this.isSecondaryDisplayConnected = this.connectedDisplayTypes.includes('secondary');
+          this.connectedDisplays = data.displays || [];
+          // If targeted display disconnected, reset to broadcast
+          if (typeof this.displayTarget === 'number' && !this.connectedDisplays.some(d => d.index === this.displayTarget)) {
+            this.displayTarget = 'all';
+          }
         });
       },
     );
@@ -461,14 +461,13 @@ export class RemoteComponent implements OnInit, OnDestroy {
     this.currentView = 'videos';
   }
 
-  // Phase 4 — PROP-002: returns target array for targeted commands, or undefined for broadcast
+  // Phase 5 — PROP-002: returns target array for targeted commands, or undefined for broadcast
   private getCommandTarget(): number[] | undefined {
-    if (this.displayTarget === 'tv') return [0];
-    if (this.displayTarget === 'secondary') return [1];
+    if (typeof this.displayTarget === 'number') return [this.displayTarget];
     return undefined;
   }
 
-  public setDisplayTarget(target: 'all' | 'tv' | 'secondary'): void {
+  public setDisplayTarget(target: 'all' | number): void {
     this.displayTarget = target;
   }
 

@@ -290,23 +290,26 @@
               @if (isHeaderMenuOpen) {
                 <div class="header-menu-dropdown">
                   <!-- Display status (Phase 3 — PROP-002) -->
-                  @if (connectedDisplayTypes.length > 0) {
+                  <!-- Display status indicators (Phase 5 — PROP-002) -->
+                  @if (connectedDisplays.length > 0) {
                     <div class="header-menu-displays">
-                      <span class="display-indicator">
-                        <span class="display-dot" [class.connected]="isTvDisplayConnected"></span>
-                        TV
-                      </span>
-                      <span class="display-indicator">
-                        <span
-                          class="display-dot"
-                          [class.connected]="isSecondaryDisplayConnected"
-                        ></span>
-                        2nd
-                      </span>
+                      @for (display of connectedDisplays; track display.index) {
+                        <span class="display-indicator">
+                          <span class="display-dot connected"></span>
+                          {{
+                            display.type === 'tv'
+                              ? 'TV'
+                              : display.type === 'secondary'
+                                ? '2nd'
+                                : display.type
+                          }}
+                          #{{ display.index }}
+                        </span>
+                      }
                     </div>
                   }
-                  <!-- Display target toggle (Phase 4 — PROP-002) -->
-                  @if (isSecondaryDisplayConnected) {
+                  <!-- Display target toggle (Phase 5 — PROP-002) -->
+                  @if (connectedDisplays.length > 1) {
                     <div class="header-menu-target">
                       <span class="target-label">Cible :</span>
                       <button
@@ -316,20 +319,15 @@
                       >
                         Tous
                       </button>
-                      <button
-                        class="target-btn"
-                        [class.active]="displayTarget === 'tv'"
-                        (click)="setDisplayTarget('tv')"
-                      >
-                        TV
-                      </button>
-                      <button
-                        class="target-btn"
-                        [class.active]="displayTarget === 'secondary'"
-                        (click)="setDisplayTarget('secondary')"
-                      >
-                        2nd
-                      </button>
+                      @for (display of connectedDisplays; track display.index) {
+                        <button
+                          class="target-btn"
+                          [class.active]="displayTarget === display.index"
+                          (click)="setDisplayTarget(display.index)"
+                        >
+                          {{ display.type === 'tv' ? '📺' : '🖥️' }} #{{ display.index }}
+                        </button>
+                      }
                     </div>
                   }
                   <!-- Dark mode -->
