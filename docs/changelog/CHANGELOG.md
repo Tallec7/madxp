@@ -1,3 +1,13 @@
+# [3.146.0](https://github.com/Tallec7/neopro/compare/v3.145.9...v3.146.0) (2026-04-11)
+
+### Bug Fixes
+
+- **dashboard:** remove conflicting video-select-compact styles from search-select host ([f82c916](https://github.com/Tallec7/neopro/commit/f82c9163781dd594bb374b7b9395702b345c7837))
+
+### Features
+
+- **dual-output:** add SaaS event relay for N-display synchronization (PROP-002) ([14493df](https://github.com/Tallec7/neopro/commit/14493df22ed61c9dc159714ef890a5f08bc934ab))
+
 ## [3.145.9](https://github.com/Tallec7/neopro/compare/v3.145.8...v3.145.9) (2026-04-11)
 
 ### Bug Fixes
