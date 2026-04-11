@@ -1,3 +1,10 @@
+## [3.142.5](https://github.com/Tallec7/neopro/compare/v3.142.4...v3.142.5) (2026-04-11)
+
+### Bug Fixes
+
+- **dashboard:** auto-reload on stale chunk load errors after redeployment ([0afa960](https://github.com/Tallec7/neopro/commit/0afa960d45919327bd4851d4fdae379d6e0e1140))
+- **templates:** sanitize blob URL for video preview playback ([6ddb287](https://github.com/Tallec7/neopro/commit/6ddb287e16d6e3f62d91fced2bcd702f4e45e4ac))
+
 ## [3.142.4](https://github.com/Tallec7/neopro/compare/v3.142.3...v3.142.4) (2026-04-11)
 
 ### Bug Fixes
