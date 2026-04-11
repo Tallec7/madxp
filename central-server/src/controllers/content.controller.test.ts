@@ -6,6 +6,7 @@ jest.mock('../repositories', () => ({
     filenameExists: jest.fn(),
     findAllPaginated: jest.fn(),
     findVideoById: jest.fn(),
+    findByChecksum: jest.fn(),
     create: jest.fn(),
     createBulk: jest.fn(),
     update: jest.fn(),
@@ -210,6 +211,9 @@ describe('Content Controller', () => {
           verified: true,
           actualSize: 1024,
         });
+
+        // Mock checksum dedup check (no duplicate)
+        mockVideoRepo.findByChecksum.mockResolvedValueOnce(null);
 
         // Mock filename check + create
         mockVideoRepo.filenameExists.mockResolvedValueOnce(false);
