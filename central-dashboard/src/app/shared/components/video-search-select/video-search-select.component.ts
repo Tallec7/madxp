@@ -56,7 +56,7 @@ export interface VideoOptionItem {
       </div>
 
       <!-- Dropdown -->
-      <div class="vss__dropdown" *ngIf="isOpen">
+      <div class="vss__dropdown" *ngIf="isOpen" [style.top.px]="dropdownTop" [style.left.px]="dropdownLeft" [style.width.px]="dropdownWidth">
         <div class="vss__options" *ngIf="filteredGroups.length > 0">
           <ng-container *ngFor="let group of filteredGroups">
             <div class="vss__group-label" *ngIf="filteredGroups.length > 1 || group.label">
@@ -158,24 +158,19 @@ export interface VideoOptionItem {
       }
 
       .vss__dropdown {
-        position: absolute;
-        top: 100%;
-        left: 0;
-        right: 0;
+        position: fixed;
         background: white;
         border: 1px solid #2563eb;
         border-top: none;
         border-bottom-left-radius: 6px;
         border-bottom-right-radius: 6px;
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-        z-index: 1000;
+        z-index: 10000;
         max-height: 280px;
         overflow-y: auto;
       }
 
       .vss--dropup .vss__dropdown {
-        top: auto;
-        bottom: 100%;
         border-top: 1px solid #2563eb;
         border-bottom: none;
         border-radius: 6px 6px 0 0;
@@ -260,6 +255,9 @@ export class VideoSearchSelectComponent implements OnChanges {
 
   isOpen = false;
   dropUp = false;
+  dropdownTop = 0;
+  dropdownLeft = 0;
+  dropdownWidth = 0;
   searchTerm = '';
   filteredGroups: VideoOptionGroup[] = [];
   selectedLabel = '';
@@ -298,9 +296,13 @@ export class VideoSearchSelectComponent implements OnChanges {
     this.isOpen = true;
     this.searchTerm = '';
     this.filterVideos();
-    const rect = this.elementRef.nativeElement.getBoundingClientRect();
+    const control = this.elementRef.nativeElement.querySelector('.vss__control');
+    const rect = control ? control.getBoundingClientRect() : this.elementRef.nativeElement.getBoundingClientRect();
     const spaceBelow = window.innerHeight - rect.bottom;
     this.dropUp = spaceBelow < 300;
+    this.dropdownLeft = rect.left;
+    this.dropdownWidth = rect.width;
+    this.dropdownTop = this.dropUp ? rect.top - 280 : rect.bottom;
     this.cdr.markForCheck();
     setTimeout(() => {
       const input = this.elementRef.nativeElement.querySelector('.vss__search');
