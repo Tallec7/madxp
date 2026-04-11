@@ -851,7 +851,7 @@ Pour les clubs qui veulent **uniquement** la donnée score (intégration dans le
 
 1. **Identifier les modèles exacts** chez le prospect et dans le parc client (Multisport 452, série exacte)
 2. **Commander le hardware** : HAT RS-485 SN65HVD72 + câble PTT (~45 €)
-3. **Utiliser le script POC** `central-server/src/scripts/test-stramatel-listener.js` (créé en avr. 2026) pour capturer et décoder les trames brutes en mode standalone, sans toucher au code Pi de production
+3. **Utiliser le script POC** `raspberry/scripts/poc-stramatel/test-stramatel-listener.js` (créé en avr. 2026, standalone, dépendance unique `serialport@^12`) pour capturer et décoder les trames brutes en mode série direct ou Serial-to-Ethernet, sans toucher au code Pi de production. Voir `raspberry/scripts/poc-stramatel/README.md` pour le câblage, la configuration UART et les critères d'acceptation.
 4. **Valider** Stramatel : score, chrono, période, fautes lisibles sur 30 minutes consécutives
 5. **Tester** Bodet Scorepad (TCP port 4001) si un club partenaire en dispose — sinon repoussé en phase 2
 
@@ -1065,7 +1065,9 @@ Chaque connecteur suit le même pattern : implémenter `ScoreboardConnector`, pa
 
 ### Code & docs Neopro
 
-- `central-server/src/scripts/test-stramatel-listener.js` — Script POC Phase 0 (lecture standalone trames Stramatel)
+- `raspberry/scripts/poc-stramatel/test-stramatel-listener.js` — Script POC Phase 0 (lecture standalone trames Stramatel, série direct ou Serial-to-Ethernet)
+- `raspberry/scripts/poc-stramatel/README.md` — Câblage RS-485, prérequis UART, critères d'acceptation POC
+- `raspberry/scripts/poc-stramatel/package.json` — Dépendance `serialport@^12`
 - `raspberry/src/app/components/tv/tv.component.ts` — Overlay score + goal animation
 - `raspberry/src/app/components/remote/remote.component.ts` — Remote controller + `broadcastScore()`
 - `raspberry/src/app/services/local-broadcast.service.ts` — BroadcastChannel dual-channel
