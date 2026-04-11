@@ -469,7 +469,9 @@
     "deleteWarning": "Cette action est irréversible.",
     "selectedCount": "{{count}} sélectionné(s)",
     "deselect": "Désélectionner",
-    "confirmDeletion": "Confirmer la suppression"
+    "confirmDeletion": "Confirmer la suppression",
+    "manageSecondaryVariant": "Gérer la variante écran secondaire",
+    "addSecondaryVariant": "Ajouter une variante écran secondaire"
   },
   "remotePin": {
     "title": "PIN Télécommande Cloud",

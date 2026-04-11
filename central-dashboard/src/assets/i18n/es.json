@@ -1030,7 +1030,9 @@
     "deploySelectedVideos": "Desplegar vídeos seleccionados",
     "deployToPi": "Desplegar al Pi",
     "deselect": "Deseleccionar",
-    "selectedCount": "{{count}} seleccionado(s)"
+    "selectedCount": "{{count}} seleccionado(s)",
+    "manageSecondaryVariant": "Gestionar variante de pantalla secundaria",
+    "addSecondaryVariant": "Añadir variante de pantalla secundaria"
   },
   "videoUpload": {
     "recordFromCamera": "[TRANSLATE] Record from camera"

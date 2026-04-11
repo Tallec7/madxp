@@ -469,7 +469,9 @@
     "deleteWarning": "This action is irreversible.",
     "selectedCount": "{{count}} selected",
     "deselect": "Deselect",
-    "confirmDeletion": "Confirm deletion"
+    "confirmDeletion": "Confirm deletion",
+    "manageSecondaryVariant": "Manage secondary screen variant",
+    "addSecondaryVariant": "Add secondary screen variant"
   },
   "remotePin": {
     "title": "Cloud Remote PIN",

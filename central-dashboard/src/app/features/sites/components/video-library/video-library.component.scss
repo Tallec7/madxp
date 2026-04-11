@@ -309,6 +309,12 @@
   flex-shrink: 0;
 }
 
+/* Scrollable table wrapper */
+.table-scroll-wrapper {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
 /* Sort header */
 .sort-header {
   display: flex;
@@ -322,7 +328,6 @@
   font-size: 0.75rem;
   color: #64748b;
   min-width: 700px;
-  overflow-x: auto;
 }
 
 .sort-btn {
@@ -349,7 +354,6 @@
 .video-list {
   max-height: 400px;
   overflow-y: auto;
-  overflow-x: auto;
   border: 1px solid #e2e8f0;
   border-radius: 0 0 6px 6px;
   background: white;
