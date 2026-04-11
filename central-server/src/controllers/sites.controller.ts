@@ -345,9 +345,23 @@ export const copyConfig = async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ error: 'Le site source et le site cible doivent être différents' });
     }
 
-    const sourceProfiles = await configProfileRepository.findBySite(sourceSiteId);
+    let sourceProfiles = await configProfileRepository.findBySite(sourceSiteId);
     if (sourceProfiles.length === 0) {
-      return res.status(400).json({ error: 'Le site source n\'a aucun profil de configuration' });
+      // Fallback: créer un profil par défaut à partir de local_config_mirror
+      if (sourceSite.local_config_mirror && Object.keys(sourceSite.local_config_mirror).length > 0) {
+        const fallbackProfile = await configProfileRepository.create({
+          siteId: sourceSiteId,
+          name: sourceSite.club_name || sourceSite.site_name || 'Default',
+          isDefault: true,
+          sortOrder: 0,
+          configuration: sourceSite.local_config_mirror as Record<string, unknown>,
+          createdBy: req.user?.id,
+        });
+        sourceProfiles = [fallbackProfile];
+        logger.info('Created fallback profile from local_config_mirror for copy', { sourceSiteId });
+      } else {
+        return res.status(400).json({ error: 'Le site source n\'a aucun profil de configuration' });
+      }
     }
 
     // Supprimer les profils existants du site cible puis copier les profils source
