@@ -46,26 +46,26 @@ interface TimeCategoryLike {
 
 /**
  * Résout un chemin vidéo en URL FTP publique.
- * Si le path est déjà une URL complète, le retourner tel quel.
+ * Utilise le storagePathMap (filename → storage_path) pour résoudre le vrai chemin FTP.
+ * Fallback sur le filename direct si pas trouvé dans la map (anciens uploads à plat).
  */
-function resolveVideoUrl(path: string | undefined): string {
+function resolveVideoUrl(path: string | undefined, storagePathMap: Map<string, string>): string {
   if (!path) return '';
   if (path.startsWith('http://') || path.startsWith('https://')) return path;
-  // Config profiles store Pi-local paths like "videos/default/file.mp4"
-  // but FTP stores files flat at the root — strip the Pi-local prefix
   const filename = path.split('/').pop() || path;
-  return getVideoUrl(filename);
+  const storagePath = storagePathMap.get(filename);
+  return getVideoUrl(storagePath || filename);
 }
 
 /**
  * Résout toutes les URLs vidéo dans un tableau de vidéos.
  */
-function resolveVideoUrls(videos: VideoLike[]): VideoLike[] {
+function resolveVideoUrls(videos: VideoLike[], storagePathMap: Map<string, string>): VideoLike[] {
   return videos.map(v => ({
     ...v,
-    path: resolveVideoUrl(v.path),
+    path: resolveVideoUrl(v.path, storagePathMap),
     variants: v.variants?.secondary ? {
-      secondary: { path: resolveVideoUrl(v.variants.secondary.path) },
+      secondary: { path: resolveVideoUrl(v.variants.secondary.path, storagePathMap) },
     } : v.variants,
   }));
 }
@@ -73,21 +73,21 @@ function resolveVideoUrls(videos: VideoLike[]): VideoLike[] {
 /**
  * Résout les URLs vidéo dans les catégories (récursif pour les sous-catégories).
  */
-function resolveCategories(categories: CategoryLike[]): CategoryLike[] {
+function resolveCategories(categories: CategoryLike[], storagePathMap: Map<string, string>): CategoryLike[] {
   return categories.map(cat => ({
     ...cat,
-    videos: cat.videos ? resolveVideoUrls(cat.videos) : [],
-    subCategories: cat.subCategories ? resolveCategories(cat.subCategories) : [],
+    videos: cat.videos ? resolveVideoUrls(cat.videos, storagePathMap) : [],
+    subCategories: cat.subCategories ? resolveCategories(cat.subCategories, storagePathMap) : [],
   }));
 }
 
 /**
  * Résout les URLs vidéo dans les timeCategories.
  */
-function resolveTimeCategories(timeCategories: TimeCategoryLike[]): TimeCategoryLike[] {
+function resolveTimeCategories(timeCategories: TimeCategoryLike[], storagePathMap: Map<string, string>): TimeCategoryLike[] {
   return timeCategories.map(tc => ({
     ...tc,
-    loopVideos: tc.loopVideos ? resolveVideoUrls(tc.loopVideos) : [],
+    loopVideos: tc.loopVideos ? resolveVideoUrls(tc.loopVideos, storagePathMap) : [],
   }));
 }
 
@@ -202,10 +202,16 @@ export async function getSaasConfig(req: Request, res: Response) {
     const categories = (configuration.categories as CategoryLike[]) || [];
     const timeCategories = (configuration.timeCategories as TimeCategoryLike[]) || [];
 
-    // Batch-lookup thumbnail URLs from DB (ADR-048)
+    // Batch-lookup storage paths and thumbnail URLs from DB
     const allFilenames = collectVideoFilenames(sponsors, categories, timeCategories);
+    let storagePathMap = new Map<string, string>();
     let thumbnailMap = new Map<string, string>();
     if (allFilenames.length > 0) {
+      try {
+        storagePathMap = await videoRepository.findStoragePathsByFilenames(allFilenames);
+      } catch (err) {
+        logger.warn('SaaS config: storage path lookup failed (non-fatal)', { siteId, error: err });
+      }
       try {
         thumbnailMap = await videoRepository.findThumbnailsByFilenames(allFilenames);
       } catch (err) {
@@ -213,9 +219,9 @@ export async function getSaasConfig(req: Request, res: Response) {
       }
     }
 
-    const resolvedSponsors = resolveVideoUrls(sponsors);
-    const resolvedCategories = resolveCategories(categories);
-    const resolvedTimeCategories = resolveTimeCategories(timeCategories);
+    const resolvedSponsors = resolveVideoUrls(sponsors, storagePathMap);
+    const resolvedCategories = resolveCategories(categories, storagePathMap);
+    const resolvedTimeCategories = resolveTimeCategories(timeCategories, storagePathMap);
 
     const resolvedConfig = {
       remote: configuration.remote || { title: `Télécommande ${site.club_name || site.site_name}` },
@@ -326,10 +332,16 @@ export async function getSaasProfileConfig(req: Request, res: Response) {
     const categories = (configuration.categories as CategoryLike[]) || [];
     const timeCategories = (configuration.timeCategories as TimeCategoryLike[]) || [];
 
-    // Batch-lookup thumbnail URLs from DB (ADR-048)
+    // Batch-lookup storage paths and thumbnail URLs from DB
     const allFilenames = collectVideoFilenames(sponsors, categories, timeCategories);
+    let storagePathMap = new Map<string, string>();
     let thumbnailMap = new Map<string, string>();
     if (allFilenames.length > 0) {
+      try {
+        storagePathMap = await videoRepository.findStoragePathsByFilenames(allFilenames);
+      } catch (err) {
+        logger.warn('SaaS profile config: storage path lookup failed (non-fatal)', { siteId, profileId, error: err });
+      }
       try {
         thumbnailMap = await videoRepository.findThumbnailsByFilenames(allFilenames);
       } catch (err) {
@@ -337,9 +349,9 @@ export async function getSaasProfileConfig(req: Request, res: Response) {
       }
     }
 
-    const resolvedSponsors = resolveVideoUrls(sponsors);
-    const resolvedCategories = resolveCategories(categories);
-    const resolvedTimeCategories = resolveTimeCategories(timeCategories);
+    const resolvedSponsors = resolveVideoUrls(sponsors, storagePathMap);
+    const resolvedCategories = resolveCategories(categories, storagePathMap);
+    const resolvedTimeCategories = resolveTimeCategories(timeCategories, storagePathMap);
 
     const resolvedConfig = {
       remote: configuration.remote || { title: `Télécommande ${profile.display_name || profile.name}` },

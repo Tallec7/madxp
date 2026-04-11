@@ -281,6 +281,24 @@ class VideoRepositoryImpl extends BaseRepository<VideoRow> {
    * Returns a map of filename → thumbnail_url for videos that have thumbnails.
    * ADR-048: Used to enrich SaaS config responses with cloud thumbnail URLs.
    */
+  async findStoragePathsByFilenames(filenames: string[]): Promise<Map<string, string>> {
+    if (filenames.length === 0) return new Map();
+
+    const placeholders = filenames.map((_, i) => `$${i + 1}`).join(', ');
+    const result = await query<{ filename: string; storage_path: string }>(
+      `SELECT filename, storage_path FROM videos
+       WHERE filename = ANY(ARRAY[${placeholders}])
+       AND storage_path IS NOT NULL`,
+      filenames
+    );
+
+    const map = new Map<string, string>();
+    for (const row of result.rows) {
+      map.set(row.filename, row.storage_path);
+    }
+    return map;
+  }
+
   async findThumbnailsByFilenames(filenames: string[]): Promise<Map<string, string>> {
     if (filenames.length === 0) return new Map();
 
