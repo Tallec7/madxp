@@ -1,3 +1,9 @@
+## [3.144.1](https://github.com/Tallec7/neopro/compare/v3.144.0...v3.144.1) (2026-04-11)
+
+### Bug Fixes
+
+- **test:** add findByChecksum mock to createVideo test (checksum dedup regression) ([a22f923](https://github.com/Tallec7/neopro/commit/a22f9230110c2df3875c4ca3ca6fd5327f3a78d7))
+
 # [3.144.0](https://github.com/Tallec7/neopro/compare/v3.143.0...v3.144.0) (2026-04-11)
 
 ### Features
