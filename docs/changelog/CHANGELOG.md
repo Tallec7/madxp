@@ -1,3 +1,10 @@
+## [3.148.1](https://github.com/Tallec7/neopro/compare/v3.148.0...v3.148.1) (2026-04-11)
+
+### Bug Fixes
+
+- **dual-output:** fix SaaS display sync race condition — register relay before async DB check ([a5f2f83](https://github.com/Tallec7/neopro/commit/a5f2f83b9f5307d133af3c2c544e1e10b9606b82))
+- **saas:** resolve variant storage_path for correct FTP URLs ([350fb19](https://github.com/Tallec7/neopro/commit/350fb1980ab2809b000d43a6f655231c3681a4a1))
+
 # [3.148.0](https://github.com/Tallec7/neopro/compare/v3.147.5...v3.148.0) (2026-04-11)
 
 ### Features
