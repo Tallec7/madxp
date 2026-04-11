@@ -1,6 +1,6 @@
 # Features & User Stories — NEOPRO SAFe
 
-> **Dernière mise à jour** : 11 Avril 2026 <!-- Audit CTO : F-07.3 Done, F-10.1 critères cochés, E-01 Partiel, ajout Epics non trackés -->
+> **Dernière mise à jour** : 11 Avril 2026 <!-- Audit CTO : F-07.3 Done, F-10.1 critères cochés, E-01 Partiel, ajout Epics non trackés + F-15.2 scoreboard multi-vendor + F-21.2 public scores API (PROP-003) -->
 > **PI actuel** : PI-1 (Février - Mars 2026)
 > Ce document contient les Features/US futures (PI-1 à PI-3) ET les Epics terminés avant PI-1. Les 212 features implémentées (hors SAFe) sont documentées dans [IMPLEMENTED-BACKLOG.md](IMPLEMENTED-BACKLOG.md).
 
@@ -410,9 +410,11 @@ Tous les controllers utilisent le repository pattern. ESLint bloquant actif. Aud
 
 ## PI-2 — Epics transférés du Legacy Backlog
 
-### E-15 — Score en Live Phase 2 (API Fédérations)
+### E-15 — Score en Live Phase 2 (Table de Marque + API Fédérations)
 
-### F-15.1 : Intégration API fédérations sportives
+### F-15.1 : Intégration API fédérations sportives ⏸ En veille
+
+> ⚠️ **Mise en veille (Avr 2026)** : la recherche menée en déc 2025 et confirmée dans [PROP-003](../proposals/PROP-003-stramatel-live-score.md) a établi qu'**aucune fédération amateur française (FFHB, FFBB, FFVB) n'expose d'API publique de scores live**. F-15.1 reste en veille — si une API fédérale émerge, on la ressort. En attendant, **F-15.2 reprend l'objectif métier** via lecture directe de la table de marque physique.
 
 > _En tant que club, le score du match se met à jour automatiquement depuis les API des fédérations._
 
@@ -423,10 +425,40 @@ Tous les controllers utilisent le repository pattern. ESLint bloquant actif. Aud
 - [ ] Fallback sur saisie manuelle si API indisponible
 - [ ] Configuration : ID match dans la fédération lié au site
 
-| US        | Description                                                               | SP  | Sprint  | Priorité |
-| --------- | ------------------------------------------------------------------------- | --- | ------- | -------- |
-| US-15.1.1 | Service polling multi-fédérations (FFHB, FFVB, FFBB) avec fallback manuel | 8   | PI-2 S2 | Should   |
-| US-15.1.2 | UI de configuration : association match fédération ↔ site                 | 3   | PI-2 S3 | Should   |
+| US        | Description                                                               | SP  | Sprint  | Priorité     |
+| --------- | ------------------------------------------------------------------------- | --- | ------- | ------------ |
+| US-15.1.1 | Service polling multi-fédérations (FFHB, FFVB, FFBB) avec fallback manuel | 8   | PI-2 S2 | Won't (hold) |
+| US-15.1.2 | UI de configuration : association match fédération ↔ site                 | 3   | PI-2 S3 | Won't (hold) |
+
+### F-15.2 : Lecture directe table de marque multi-constructeurs
+
+> _En tant que club, le score, le chrono, la période, les fautes et les temps morts se mettent à jour automatiquement sur l'écran TV et LED en temps réel depuis la table de marque officielle (Stramatel, Bodet, …), sans double saisie humaine._
+
+**Contexte** : deal-breaker pour plusieurs prospects. Les clubs équipés Stramatel (série 452) et Bodet (Scorepad TCP, BT6000 série) sont la majorité du marché amateur français. Le parser doit être multi-constructeurs (pattern plugin `ScoreboardConnector`) avec un fallback OCR universel pour les tableaux sans sortie données. Architecture détaillée dans [PROP-003](../proposals/PROP-003-stramatel-live-score.md) et figée dans [ADR-049](../adr/ADR-049-score-live-multi-vendor-architecture.md).
+
+**Critères d'acceptation**
+
+- [ ] Interface commune `ScoreboardConnector` + orchestrateur `ScoreboardManager` + table `scoreboard_events` avec audit trail (source, confidence, timestamps)
+- [ ] Parser Stramatel RS-485 (binaire 54 octets, 19200 bps) avec fixtures de test
+- [ ] Parser Bodet Scorepad TCP (ASCII port 4001) + variant Bodet BT6000 RS-485
+- [ ] Firmware Scorebox Pi Zero 2 W en mini-AP WiFi (Topologie B offline)
+- [ ] Config connecteur par site dans le dashboard (sélection constructeur, port/host, mode)
+- [ ] Monitoring connecteur temps réel (statut, latence, erreurs) dans l'onglet site
+- [ ] Remote enrichie : affichage fautes/timeouts/24s + boutons faits de jeu différenciés TV+LED
+- [ ] Fallback automatique vers saisie manuelle si connecteur déconnecté, avec override 30s
+- [ ] Connecteur OCR Tesseract en dernier recours (optionnel, priorité Could)
+- [ ] Latence end-to-end < 1s depuis saisie console jusqu'à overlay TV
+- [ ] Compatible 3 topologies d'installation : A1 (Pi + eth0 + S2E), A3 (Pi + clé USB WiFi club + S2E), B (Scorebox déporté en local-AP)
+
+| US        | Description                                                                                | SP  | Sprint  | Priorité |
+| --------- | ------------------------------------------------------------------------------------------ | --- | ------- | -------- |
+| US-15.2.1 | Interface `ScoreboardConnector` + `ScoreboardManager` + migration table `scoreboard_events` | 5   | PI-2 S1 | Must     |
+| US-15.2.2 | `StramatelConnector` (parser binaire 54 octets + fixtures de test unitaires)               | 5   | PI-2 S1 | Must     |
+| US-15.2.3 | `BodetConnector` (parser Scorepad TCP + variant BT6000 RS-485)                             | 5   | PI-2 S2 | Must     |
+| US-15.2.4 | Firmware Scorebox Pi Zero 2 W (mini-AP WiFi + bridge WebSocket RS-485)                     | 8   | PI-2 S2 | Should   |
+| US-15.2.5 | Dashboard : config connecteur par site + monitoring scorebox                               | 3   | PI-2 S2 | Should   |
+| US-15.2.6 | Remote enrichie : données scoreboard + boutons faits de jeu différenciés TV+LED             | 3   | PI-2 S3 | Should   |
+| US-15.2.7 | `OcrConnector` fallback universel (OpenCV + Tesseract)                                     | 8   | PI-2 S3 | Could    |
 
 ---
 
@@ -944,6 +976,41 @@ Tous les controllers utilisent le repository pattern. ESLint bloquant actif. Aud
 | --------- | ---------------------------------------------------------------- | --- | ------- | ------------ |
 | US-21.1.1 | OAuth 2.0 server + scopes + rate limiting + portail développeurs | 13  | PI-3 S3 | Won't (PI-3) |
 
+### F-21.2 : API publique Neopro Live Scores
+
+> _En tant qu'éditeur tiers (app club, média local, agrégateur, fédération, bornes interactives), je récupère en temps réel les scores officiels des matchs amateurs français via une API documentée, sans passer par une saisie humaine._
+
+**Contexte & vision produit** : aujourd'hui, les clubs amateurs n'ont pas de source officielle de scores live — il faut demander par message si quelqu'un est sur place. Avec F-15.2 en prod, Neopro devient **la seule source capable de lire directement les tables de marque officielles** de centaines de clubs. Exposer cette donnée en API transforme Neopro en **hub de données temps réel du sport amateur français**, avec un effet réseau naturel : plus de clubs équipés → plus de matchs couverts → plus de clients API → plus d'attractivité pour les clubs. Vision détaillée dans [PROP-003 §Vision API publique](../proposals/PROP-003-stramatel-live-score.md) et figée dans [ADR-049](../adr/ADR-049-score-live-multi-vendor-architecture.md).
+
+**Positionnement commercial**
+
+> « Plus jamais un membre du club à devoir appeler pour savoir où en est le match. »
+
+Cible clients API : apps clubs, médias locaux (Ouest-France, presse régionale), agrégateurs sportifs (Matchendirect, Livescore), fédérations (remontée auto des scores officiels), bornes interactives, analytics clubs.
+
+**Prérequis métier**
+
+- **F-15.2 livrée** (fondation data : `scoreboard_events`, `ScoreboardData v1` comme contrat public, source/confidence/audit trail)
+- **Clause CGU data licence** validée avec un juriste (le club accorde à Neopro une licence non-exclusive d'exploitation commerciale des scores générés sur son site)
+- **Stratégie RGPD** : l'API n'expose **pas** les noms de joueurs en v1 (seulement score, équipe, temps, faits agrégés)
+
+**Critères d'acceptation**
+
+- [ ] API REST v1 publique documentée (OpenAPI 3.1) : `GET /api/v1/scores/live`, `GET /api/v1/matches/{id}`, `GET /api/v1/matches/{id}/events`
+- [ ] WebSocket temps réel `/api/v1/stream` pour les clients qui veulent du push sub-seconde
+- [ ] Webhooks sortants configurables par client API (POST sur URL client à chaque event)
+- [ ] Plans tarifaires : Free (Level 1 — score/période/temps, 100 calls/jour), Starter (+ Level 2 fautes/TO/24s, 10k/mois), Pro (+ Level 3 contexte + Level 4 timeline, 100k/mois), Enterprise (SLA + sur-mesure)
+- [ ] API keys séparées du système d'auth clubs (table `api_consumers`, rate limiting par clé)
+- [ ] Portail développeur public : documentation interactive, sandbox, inscription, gestion des clés, dashboard d'usage
+- [ ] Filtrage RGPD : pas d'exposition des noms de joueurs en v1
+
+| US        | Description                                                                                        | SP  | Sprint  | Priorité     |
+| --------- | -------------------------------------------------------------------------------------------------- | --- | ------- | ------------ |
+| US-21.2.1 | API REST v1 `/scores`, `/matches`, `/events` + auth api_key + OpenAPI doc + plans tarifaires DB     | 5   | PI-3 S2 | Should (PI-3) |
+| US-21.2.2 | WebSocket `/stream` temps réel + webhooks sortants configurables                                    | 8   | PI-3 S2 | Should (PI-3) |
+| US-21.2.3 | Rate limiting par plan (Free/Starter/Pro/Enterprise) + quotas + billing métrique                    | 3   | PI-3 S3 | Should (PI-3) |
+| US-21.2.4 | Portail développeur public (doc interactive, sandbox, inscription, gestion clés)                    | 5   | PI-3 S3 | Could (PI-3) |
+
 ---
 
 ## Récapitulatif Global
@@ -977,12 +1044,12 @@ Tous les controllers utilisent le repository pattern. ESLint bloquant actif. Aud
 | ----------------------------- | -------- | ------------ | ---------- |
 | E-05 Motion Design            | 2        | 3            | 16         |
 | E-11 Régie Publicitaire       | 2        | 3            | 21         |
-| E-15 Score Live Phase 2       | 1        | 2            | 11         |
+| E-15 Score Live Phase 2       | 2        | 9            | 48         |
 | E-16 Rapports Email Auto      | 1        | 2            | 8          |
 | E-17 A/B Testing              | 1        | 2            | 13         |
 | E-22 TV + Secondary Dual      | 7        | 12           | 48         |
 | E-23 Résilience HDMI & Nav PC | 7        | 33           | 146        |
-| **Total PI-2**                | **21**   | **57**       | **263**    |
+| **Total PI-2**                | **22**   | **64**       | **300**    |
 
 ### PI-3 Backlog
 
@@ -994,8 +1061,8 @@ Tous les controllers utilisent le repository pattern. ESLint bloquant actif. Aud
 | E-18 Billetterie       | 1        | 1            | 8          |
 | E-19 Capteurs Présence | 1        | 1            | 13         |
 | E-20 Analytics ML      | 1        | 1            | 13         |
-| E-21 API OAuth         | 1        | 1            | 13         |
-| **Total PI-3**         | **7**    | **9**        | **73**     |
+| E-21 API OAuth         | 2        | 5            | 34         |
+| **Total PI-3**         | **7**    | **13**       | **94**     |
 
 ### Vue d'ensemble
 
@@ -1003,9 +1070,9 @@ Tous les controllers utilisent le repository pattern. ESLint bloquant actif. Aud
 | ----------------- | ------------------- | --------------- | ------ | ------- |
 | Done (avant PI-1) | 6 (dont 3 partiels) | 11 (+ 3 → PI-1) | -      | ~59     |
 | PI-1 Actif        | 3 + 3 reliquats     | 9               | 14     | 56      |
-| PI-2              | 7                   | 21              | 57     | 263     |
-| PI-3              | 7                   | 7               | 9      | 73      |
-| **Total SAFe**    | **23**              | **48 uniques**  | **80** | **451** |
+| PI-2              | 7                   | 22              | 64     | 300     |
+| PI-3              | 7                   | 8               | 13     | 94      |
+| **Total SAFe**    | **23**              | **50 uniques**  | **91** | **509** |
 
 > **Note PI-1** : Backlog réduit à 56 SP après suppression F-03.3 heatmap (non pertinente à <10 clubs). E-03 entièrement Done (18 SP livrés).
 > **Note E-22** : 3 features ajoutées le 24/02 (F-22.4 GO, F-22.5 et F-22.6 à détailler). Fallback PiP : NO GO.

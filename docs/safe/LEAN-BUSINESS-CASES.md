@@ -1,6 +1,6 @@
 # Lean Business Cases — Epics NEOPRO
 
-> **Dernière mise à jour** : 9 Mars 2026 (requalification E-03 ⚠️ Partiel)
+> **Dernière mise à jour** : 11 Avril 2026 (E-15 pivot API fédérale → table de marque, E-21 extension F-21.2 public scores API — PROP-003)
 > **PI actuel** : PI-1 (Février - Mars 2026)
 > Chaque Epic dispose d'un Lean Business Case conforme SAFe : problème, solution, hypothèses, coût, bénéfice, KPIs, et critère Go/No-Go.
 
@@ -522,37 +522,51 @@
 
 ---
 
-### E-15 — Score en Live Phase 2 (API Fédérations)
+### E-15 — Score en Live Phase 2 (Table de Marque + API Fédérations)
 
 | Champ                 | Détail                 |
 | --------------------- | ---------------------- |
 | **Value Stream**      | VS1 — Club to Screen   |
 | **Thème Stratégique** | TS2 — Expérience Match |
-| **WSJF**              | 9                      |
+| **WSJF**              | 12 (↑ depuis 9 — deal-breaker prospect) |
 
-**Problème** : Le score en live (Phase 1) nécessite une saisie manuelle depuis la télécommande. Charge cognitive pour l'opérateur de table de marque, risque d'erreur, et pas de mise à jour automatique.
+**Problème** : Le score en live (Phase 1) nécessite une saisie manuelle depuis la télécommande. Charge cognitive pour l'opérateur de table de marque, risque d'erreur, double saisie avec la console officielle du club. **Deal-breaker confirmé pour plusieurs prospects** : sans lecture automatique, pas de signature. Par ailleurs, la douleur côté clubs amateurs est bien documentée : aujourd'hui, les membres des clubs doivent s'envoyer des messages pour savoir où en est un match — aucune source officielle live n'existe.
 
-**Solution** : Intégration des API fédérations sportives (FFHB, FFVB, FFBB) pour récupérer le score en temps réel par polling toutes les 30 secondes. Fallback automatique sur la saisie manuelle si l'API est indisponible.
+**Pivot Avr 2026** : F-15.1 (API fédérations) mis en veille — la recherche confirmée dans [PROP-003](../proposals/PROP-003-stramatel-live-score.md) a établi qu'aucune fédération amateur française n'expose d'API publique de scores. L'objectif bascule sur **F-15.2 — Lecture directe table de marque multi-constructeurs**, avec pattern `ScoreboardConnector` plugin et support Stramatel (RS-485 binaire), Bodet (Scorepad TCP + BT6000 série) et OCR fallback universel. Décision architecturale figée dans [ADR-049](../adr/ADR-049-score-live-multi-vendor-architecture.md).
+
+**Solution F-15.2**
+
+- Architecture plugin connecteur unifiée (Stramatel, Bodet, OCR, extensible à Favero/Mobatime/Daktronics)
+- Produit physique **Neopro Scorebox** (Pi Zero 2 W + HAT RS-485) en 3 modes configurables selon la topologie du club :
+  - **Mode cloud-push** : Scorebox → central-server (SaaS ou Pi en ligne)
+  - **Mode local-AP** : Scorebox émet son propre mini-AP WiFi, le Pi s'y connecte via clé USB WiFi (gymnase offline)
+  - **Mode lan-bridge** : S2E sur LAN club pour les gymnases connectés
+- Fallback automatique sur saisie manuelle si connecteur déconnecté (override 30s)
+- Persistance de tous les événements scoreboard avec audit trail (source, confidence, timestamps) — fondation pour l'API publique [F-21.2](#e-21--api-partenaires-oauth)
 
 **Hypothèses**
 
-- Les API fédérations sont accessibles publiquement (au moins pour les matchs officiels)
-- Le polling toutes les 30s est suffisant pour une mise à jour perçue comme "temps réel"
-- 60% des matchs sont des matchs officiels couverts par les fédérations
+- 50% du parc actuel est équipé Stramatel ou Bodet (deux leaders France)
+- Le POC phase 0 (cf. [script standalone](../../raspberry/scripts/poc-stramatel/)) valide la lecture en < 3 jours
+- La majorité des gymnases n'ont pas de WiFi/Ethernet (80% offline selon retour terrain) → le mode Scorebox local-AP est essentiel
+- Les clubs SaaS ont internet par définition → mode cloud-push les couvre
 
-**Coût estimé** : 11 SP (≈ 1.5 semaines dev)
+**Coût estimé** : 48 SP (≈ 6-7 semaines dev) — 2 Features, 9 US (dont 2 en veille)
 
 **Bénéfice attendu**
 
+- **Déblocage commercial direct** : deal-breaker prospect levé, signature
 - Suppression de la charge opérateur pour le score (-100% saisie manuelle)
-- Score plus fiable (source fédération officielle)
-- Feature différenciante unique sur le marché amateur
+- Données plus riches que la saisie Remote : chrono, fautes, temps morts, 24s
+- **Upsell abonnement** : +15€/mois/site "Option Premium Score Live" (~30 sites pour amortir le dev, puis marge)
+- **Fondation pour F-21.2** (API publique, PI-3) : sans F-15.2, pas de data fiable à exposer
+- **Différentiateur commercial massif** : aucun concurrent ne propose cette intégration multi-constructeurs pour clubs amateurs
 
-**Indicateurs avancés** : Taux de matchs avec score automatique, latence de mise à jour
-**Indicateurs retardés** : NPS club (facilité d'utilisation), taux d'erreur score
+**Indicateurs avancés** : Taux de matchs avec score auto, latence de mise à jour, taux de connecteurs healthy dans la flotte
+**Indicateurs retardés** : Signature prospect deal-breaker, NPS club, ARR upsell live score, taux d'adoption F-21.2 downstream
 
-**MVP** : Intégration FFHB (handball, sport le plus représenté) + fallback manuel
-**Go/No-Go** : Go si API FFHB accessible et ≥ 5 clubs handball actifs
+**MVP** : Phases 0-2 de PROP-003 = POC terrain + Stramatel connecteur + Bodet connecteur + config dashboard + scorebox firmware
+**Go/No-Go** : Go confirmé — deal-breaker commercial, POC standalone disponible dans `raspberry/scripts/poc-stramatel/`
 
 ---
 
@@ -734,31 +748,43 @@
 | --------------------- | ------------------ |
 | **Value Stream**      | Transverse         |
 | **Thème Stratégique** | TS1 — Monétisation |
-| **WSJF**              | 5                  |
+| **WSJF**              | 8 (↑ depuis 5 — extension F-21.2 scores publics) |
 
-**Problème** : Les partenaires externes (agences, sponsors multi-clubs) n'ont pas d'accès programmatique aux données NEOPRO. Tout passe par le dashboard ou des exports manuels.
+**Problème** : Deux problématiques liées :
 
-**Solution** : API RESTful sécurisée par OAuth 2.0 avec scopes granulaires, rate limiting, et portail développeurs.
+1. **F-21.1** — Les partenaires externes (agences, sponsors multi-clubs) n'ont pas d'accès programmatique aux données NEOPRO. Tout passe par le dashboard ou des exports manuels.
+2. **F-21.2** — Les clubs amateurs français n'ont **aucune source officielle de scores live**. Aujourd'hui les membres s'envoient des messages pour savoir où en est un match. Les médias locaux, apps clubs, agrégateurs et fédérations n'ont pas de source fiable à intégrer. Avec F-15.2 livrée en PI-2, Neopro devient la seule entité capable de lire directement les tables de marque officielles de centaines de clubs — transformer cette donnée en API publique crée un **hub temps réel du sport amateur français**.
+
+**Solution**
+
+- **F-21.1** : API RESTful sécurisée par OAuth 2.0 avec scopes granulaires, rate limiting, et portail développeurs pour les agences/sponsors multi-clubs
+- **F-21.2** : API publique dédiée aux scores live, REST v1 + WebSocket + webhooks, plans tarifaires segmentés par richesse de données (Free = Level 1 score/période/temps, Starter = + Level 2 fautes/TO/24s, Pro = + Level 3 contexte + Level 4 timeline, Enterprise = SLA sur-mesure). API keys séparées du système d'auth clubs. Portail développeur public avec doc interactive et sandbox.
 
 **Hypothèses**
 
-- 3-5 agences/partenaires utiliseraient l'API dès le lancement
-- L'API génère un revenu récurrent (49€/mois Pro, sur-mesure Enterprise)
-- L'API accélère les intégrations tierces (billetterie, CRM, etc.)
+- F-21.1 : 3-5 agences/partenaires utiliseraient l'API dès le lancement
+- **F-21.2** : 10-20 premiers clients API la première année (apps clubs, médias locaux, agrégateurs), avec effet réseau exponentiel une fois 100+ clubs équipés
+- Le positionnement « plus jamais un membre du club à devoir appeler pour savoir où en est le match » résonne commercialement
+- Les fédérations (FFHB, FFBB, FFVB) accepteraient un partenariat data même sans API publique de leur côté (elles reçoivent plus qu'elles ne donnent)
 
-**Coût estimé** : 13 SP (≈ 2 semaines dev)
+**Prérequis bloquant F-21.2** : F-15.2 livrée en PI-2 (sans elle, pas de data à exposer). Aussi : clause CGU « data licence » validée par un juriste sport/data avant premier contrat tier, stratégie RGPD (pas de noms de joueurs en v1).
+
+**Coût estimé** : 34 SP total (13 SP F-21.1 + 21 SP F-21.2) ≈ 4-5 semaines dev
 
 **Bénéfice attendu**
 
-- Nouveau flux de revenus (API payante)
-- Écosystème partenaires → lock-in positif
-- Accélération des intégrations futures
+- Nouveau flux de revenus SaaS API (plans mensuels 0€ Free → 490€+ Enterprise)
+- **Effet réseau** : plus de clubs équipés → plus de matchs couverts → plus de clients API → plus d'attractivité pour équiper de nouveaux clubs
+- **Positionnement marché unique** : seule source officielle de scores amateurs live en France, concurrence nulle sur ce segment
+- **Différenciateur commercial pour F-15.2** : « en installant Neopro, ton match est automatiquement visible sur toutes les apps partenaires »
+- Lock-in positif des clubs (plus ils l'utilisent, plus leur data rayonne, plus ils ont intérêt à rester)
+- Base pour partenariats stratégiques fédérations (remontée automatique des scores officiels)
 
-**Indicateurs avancés** : Nombre de clients API, requêtes/jour
-**Indicateurs retardés** : ARR API, nombre d'intégrations tierces
+**Indicateurs avancés** : Nombre de clients API, requêtes/jour, nombre de matchs couverts live
+**Indicateurs retardés** : ARR API, nombre d'intégrations tierces, couverture territoriale (clubs équipés), NPS dev portal
 
-**MVP** : OAuth 2.0 + 3 scopes (read:analytics, read:sponsor, admin:goals) + portail doc
-**Go/No-Go** : Go si ≥ 3 partenaires demandent un accès API
+**MVP F-21.2** : REST v1 `/scores/live` + `/matches/{id}` + plan Free (Level 1, 100 calls/j) + portail doc statique + 3 clients beta recrutés avant PI-3 S3
+**Go/No-Go F-21.2** : Go en PI-3 si F-15.2 livrée + ≥ 3 intentions d'intégration d'apps tierces recueillies pendant PI-2 (teasing commercial à déclencher en fin PI-2)
 
 ---
 
@@ -846,23 +872,23 @@
 | 3    | E-11 Régie Publicitaire Régionale | 18   | PI-2 | Backlog                   |
 | 4    | E-23 Résilience HDMI & Accès Nav. | 14   | PI-2 | Backlog (nouveau)         |
 | 5    | E-01 Portail Sponsor Self-Service | 13   | PI-1 | Backlog                   |
-| 6    | E-07 Résilience WiFi V2           | 12   | PI-1 | ⚠️ Partiel (F-07.3 reste) |
-| 6    | E-22 Contenus Différenciés TV+LED | 12   | PI-2 | Backlog                   |
-| 8    | E-02 Rotation Sponsors            | 10   | PI-1 | Backlog                   |
-| 8    | E-08 Alertes Prédictives          | 10   | PI-1 | ✅ Done                   |
-| 8    | E-16 Rapports Email Auto          | 10   | PI-2 | Backlog                   |
-| 11   | E-15 Score Live Phase 2           | 9    | PI-2 | Backlog                   |
+| 5    | E-15 Score Live Phase 2 (pivot)   | 12   | PI-2 | Backlog (F-15.2 nouveau)  |
+| 5    | E-07 Résilience WiFi V2           | 12   | PI-1 | ⚠️ Partiel (F-07.3 reste) |
+| 5    | E-22 Contenus Différenciés TV+LED | 12   | PI-2 | Backlog                   |
+| 9    | E-02 Rotation Sponsors            | 10   | PI-1 | Backlog                   |
+| 9    | E-08 Alertes Prédictives          | 10   | PI-1 | ✅ Done                   |
+| 9    | E-16 Rapports Email Auto          | 10   | PI-2 | Backlog                   |
+| 12   | E-21 API OAuth (+ F-21.2 scores)  | 8    | PI-3 | Backlog (nouveau)         |
 | 12   | E-04 Profils Config Match         | 8    | PI-1 | ✅ Done                   |
 | 12   | E-10 Monitoring Fleet             | 8    | PI-1 | ⚠️ Partiel (F-10.1 reste) |
 | 12   | E-12 Multi-Écrans Synchronisés    | 8    | PI-3 | Backlog                   |
-| 15   | E-05 Motion Design Personnalisé   | 7    | PI-2 | Backlog                   |
-| 15   | E-17 A/B Testing                  | 7    | PI-2 | Backlog                   |
-| 17   | E-09 Architecture Audit           | 6    | PI-1 | ✅ Done                   |
-| 17   | E-13 Marque Blanche Club          | 6    | PI-3 | Backlog                   |
-| 17   | E-18 Billetterie                  | 6    | PI-3 | Backlog                   |
-| 20   | E-14 Fonds de Solidarité          | 5    | PI-3 | Backlog                   |
-| 20   | E-20 Analytics ML                 | 5    | PI-3 | Backlog                   |
-| 20   | E-21 API OAuth                    | 5    | PI-3 | Backlog                   |
+| 16   | E-05 Motion Design Personnalisé   | 7    | PI-2 | Backlog                   |
+| 16   | E-17 A/B Testing                  | 7    | PI-2 | Backlog                   |
+| 18   | E-09 Architecture Audit           | 6    | PI-1 | ✅ Done                   |
+| 18   | E-13 Marque Blanche Club          | 6    | PI-3 | Backlog                   |
+| 18   | E-18 Billetterie                  | 6    | PI-3 | Backlog                   |
+| 21   | E-14 Fonds de Solidarité          | 5    | PI-3 | Backlog                   |
+| 21   | E-20 Analytics ML                 | 5    | PI-3 | Backlog                   |
 | 23   | E-19 Capteurs Présence            | 4    | PI-3 | Backlog                   |
 
 ---

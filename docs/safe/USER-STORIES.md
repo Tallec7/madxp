@@ -1,6 +1,6 @@
 # User Stories — NEOPRO SAFe
 
-> **Dernière mise à jour** : 9 Mars 2026 _(E-03 requalifié Partiel — 4 US Done, 1 US reste)_
+> **Dernière mise à jour** : 11 Avril 2026 _(F-15.2 scoreboard multi-vendor + F-21.2 public scores API — PROP-003)_
 > **PI actuel** : PI-1 (Février - Mars 2026)
 > Ce document recense **toutes** les User Stories du produit NEOPRO :
 >
@@ -373,12 +373,21 @@
 | US-11.1.2 | F-11.1  | Intégration Stripe (paiement récurrent mensuel)                      | 5   | PI-2 S2 | Must     | ⏳ Backlog |
 | US-11.2.1 | F-11.2  | Rapport consolidé multi-gymnases + revenue split + envoi automatique | 8   | PI-2 S2 | Must     | ⏳ Backlog |
 
-#### E-15 — Score Live Phase 2 (2 US, 11 SP)
+#### E-15 — Score Live Phase 2 (9 US, 48 SP)
 
-| US        | Feature | Description                                                               | SP  | Sprint  | Priorité | Statut     |
-| --------- | ------- | ------------------------------------------------------------------------- | --- | ------- | -------- | ---------- |
-| US-15.1.1 | F-15.1  | Service polling multi-fédérations (FFHB, FFVB, FFBB) avec fallback manuel | 8   | PI-2 S2 | Should   | ⏳ Backlog |
-| US-15.1.2 | F-15.1  | UI de configuration : association match fédération ↔ site                 | 3   | PI-2 S3 | Should   | ⏳ Backlog |
+> F-15.1 (API fédérations) mis en veille : aucune API publique disponible côté fédérations amateurs (cf. [PROP-003](../proposals/PROP-003-stramatel-live-score.md)). L'objectif métier est désormais porté par **F-15.2** (lecture directe table de marque multi-constructeurs, [ADR-049](../adr/ADR-049-score-live-multi-vendor-architecture.md)).
+
+| US        | Feature | Description                                                                                | SP  | Sprint  | Priorité     | Statut     |
+| --------- | ------- | ------------------------------------------------------------------------------------------ | --- | ------- | ------------ | ---------- |
+| US-15.1.1 | F-15.1  | Service polling multi-fédérations (FFHB, FFVB, FFBB) avec fallback manuel                  | 8   | PI-2 S2 | Won't (hold) | ⏸ En veille |
+| US-15.1.2 | F-15.1  | UI de configuration : association match fédération ↔ site                                  | 3   | PI-2 S3 | Won't (hold) | ⏸ En veille |
+| US-15.2.1 | F-15.2  | Interface `ScoreboardConnector` + `ScoreboardManager` + migration table `scoreboard_events` | 5   | PI-2 S1 | Must         | ⏳ Backlog |
+| US-15.2.2 | F-15.2  | `StramatelConnector` (parser binaire 54 octets + fixtures de test unitaires)               | 5   | PI-2 S1 | Must         | ⏳ Backlog |
+| US-15.2.3 | F-15.2  | `BodetConnector` (parser Scorepad TCP + variant BT6000 RS-485)                             | 5   | PI-2 S2 | Must         | ⏳ Backlog |
+| US-15.2.4 | F-15.2  | Firmware Scorebox Pi Zero 2 W (mini-AP WiFi + bridge WebSocket RS-485)                     | 8   | PI-2 S2 | Should       | ⏳ Backlog |
+| US-15.2.5 | F-15.2  | Dashboard : config connecteur par site + monitoring scorebox                               | 3   | PI-2 S2 | Should       | ⏳ Backlog |
+| US-15.2.6 | F-15.2  | Remote enrichie : données scoreboard + boutons faits de jeu différenciés TV+LED            | 3   | PI-2 S3 | Should       | ⏳ Backlog |
+| US-15.2.7 | F-15.2  | `OcrConnector` fallback universel (OpenCV + Tesseract)                                     | 8   | PI-2 S3 | Could        | ⏳ Backlog |
 
 #### E-16 — Rapports Email Auto (2 US, 8 SP)
 
@@ -529,11 +538,17 @@
 | --------- | ------- | ------------------------------------------------------------------- | --- | ------- | ------------ | ---------- |
 | US-20.1.1 | F-20.1  | Modèle ML (scikit-learn) forecasting engagement + anomaly detection | 13  | PI-3 S3 | Won't (PI-3) | ⏳ Backlog |
 
-#### E-21 — API Partenaires OAuth (1 US, 13 SP)
+#### E-21 — API Partenaires OAuth (5 US, 34 SP)
 
-| US        | Feature | Description                                                      | SP  | Sprint  | Priorité     | Statut     |
-| --------- | ------- | ---------------------------------------------------------------- | --- | ------- | ------------ | ---------- |
-| US-21.1.1 | F-21.1  | OAuth 2.0 server + scopes + rate limiting + portail développeurs | 13  | PI-3 S3 | Won't (PI-3) | ⏳ Backlog |
+> F-21.2 ajoutée en Avr 2026 : API publique Neopro Live Scores, prérequis = F-15.2 livrée. Transforme Neopro en hub de données temps réel du sport amateur français. Vision détaillée dans [ADR-049](../adr/ADR-049-score-live-multi-vendor-architecture.md).
+
+| US        | Feature | Description                                                                                | SP  | Sprint  | Priorité      | Statut     |
+| --------- | ------- | ------------------------------------------------------------------------------------------ | --- | ------- | ------------- | ---------- |
+| US-21.1.1 | F-21.1  | OAuth 2.0 server + scopes + rate limiting + portail développeurs                            | 13  | PI-3 S3 | Won't (PI-3)  | ⏳ Backlog |
+| US-21.2.1 | F-21.2  | API REST v1 `/scores`, `/matches`, `/events` + auth api_key + OpenAPI doc + plans tarifaires | 5   | PI-3 S2 | Should (PI-3) | ⏳ Backlog |
+| US-21.2.2 | F-21.2  | WebSocket `/stream` temps réel + webhooks sortants configurables                             | 8   | PI-3 S2 | Should (PI-3) | ⏳ Backlog |
+| US-21.2.3 | F-21.2  | Rate limiting par plan (Free/Starter/Pro/Enterprise) + quotas + billing métrique             | 3   | PI-3 S3 | Should (PI-3) | ⏳ Backlog |
+| US-21.2.4 | F-21.2  | Portail développeur public (doc interactive, sandbox, inscription, gestion clés)             | 5   | PI-3 S3 | Could (PI-3)  | ⏳ Backlog |
 
 ---
 
@@ -545,9 +560,9 @@
 | -------------------- | ------- | ---------- |
 | ✅ Done (production) | 178     | ~600+      |
 | ⏳ Backlog PI-1      | 19      | 79         |
-| ⏳ Backlog PI-2      | 48      | 224        |
-| ⏳ Backlog PI-3      | 9       | 73         |
-| **Total**            | **254** | **~976+**  |
+| ⏳ Backlog PI-2      | 55      | 261        |
+| ⏳ Backlog PI-3      | 13      | 94         |
+| **Total**            | **265** | **~1034+** |
 
 ### Par domaine (Done)
 
@@ -573,8 +588,8 @@
 | PI                    | Epics                                        | US     | SP      |
 | --------------------- | -------------------------------------------- | ------ | ------- |
 | PI-1 (Fév-Mars 2026)  | E-01, E-02, E-03, E-06 + reliquats E-07/E-10 | 19     | 79      |
-| PI-2 (Avr-Mai 2026)   | E-05, E-11, E-15, E-16, E-17, E-22, E-23     | 48     | 224     |
-| PI-3 (Juin-Juil 2026) | E-12, E-13, E-14, E-18, E-19, E-20, E-21     | 9      | 73      |
+| PI-2 (Avr-Mai 2026)   | E-05, E-11, E-15, E-16, E-17, E-22, E-23     | 55     | 261     |
+| PI-3 (Juin-Juil 2026) | E-12, E-13, E-14, E-18, E-19, E-20, E-21     | 13     | 94      |
 | **Total Futur**       | **17 Epics**                                 | **76** | **376** |
 
 ---

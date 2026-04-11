@@ -1,6 +1,6 @@
 # SAFe Neopro — Pilotage Produit
 
-> **Dernière mise à jour** : 9 Mars 2026 (requalification E-03 Analytics ⚠️ Partiel)
+> **Dernière mise à jour** : 11 Avril 2026 (E-15 pivot API fédérale → table de marque multi-vendor, E-21 extension F-21.2 API publique scores — PROP-003)
 > **Framework** : SAFe Essential (simplifié)
 > **Cadence PI** : 6 semaines (3 sprints de 2 semaines)
 > **PI actuel** : PI-1 (Février - Mars 2026)
