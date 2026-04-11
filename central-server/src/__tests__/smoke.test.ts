@@ -15565,7 +15565,8 @@ describe('SaaS config save flow', () => {
   });
 
   it('CLAUDE.md must have regression rule against writing SaaS config to local_config_mirror', () => {
-    const claudeMd = fs.readFileSync(path.join(repoRoot, 'CLAUDE.md'), 'utf8');
+    const claudeMd = fs.readFileSync(path.join(repoRoot, 'CLAUDE.md'), 'utf8')
+      + fs.readdirSync(path.join(repoRoot, '.claude', 'rules')).map(f => fs.readFileSync(path.join(repoRoot, '.claude', 'rules', f), 'utf8')).join('\n');
     expect({
       hasLocalConfigMirrorRule: claudeMd.includes('local_config_mirror') && claudeMd.includes('config_profiles') && claudeMd.includes('mergeDefaultProfileConfig'),
       hasAdr037Ref: claudeMd.includes('ADR-037'),
@@ -15686,7 +15687,8 @@ describe('SaaS config save flow', () => {
 
   // --- CLAUDE.md must enforce club portal security rules ---
   it('CLAUDE.md must have club portal security regression rules', () => {
-    const claudeMd = fs.readFileSync(path.join(repoRoot, 'CLAUDE.md'), 'utf8');
+    const claudeMd = fs.readFileSync(path.join(repoRoot, 'CLAUDE.md'), 'utf8')
+      + fs.readdirSync(path.join(repoRoot, '.claude', 'rules')).map(f => fs.readFileSync(path.join(repoRoot, '.claude', 'rules', f), 'utf8')).join('\n');
     expect({
       hasClubFilterRule: claudeMd.includes('extractConfigVideoFilenames')
         && claudeMd.includes('uploaded_for_site_id'),
