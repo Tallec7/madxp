@@ -380,7 +380,7 @@ cp -r dist/raspberry/browser/* ${DEPLOY_DIR}/webapp/
 
 # Copier le serveur Node.js (source de vérité: raspberry/server/)
 # Exclure les fichiers .md (documentation) du déploiement
-rsync -a --exclude='*.md' --exclude='node_modules' --exclude='__tests__' raspberry/server/ ${DEPLOY_DIR}/server/
+rsync -a --delete --exclude='*.md' --exclude='node_modules' --exclude='__tests__' raspberry/server/ ${DEPLOY_DIR}/server/
 
 # Installer les dépendances du serveur pour les inclure dans l'archive
 if [ -f "${DEPLOY_DIR}/server/package.json" ]; then
