@@ -1,3 +1,9 @@
+# [3.141.0](https://github.com/Tallec7/neopro/compare/v3.140.4...v3.141.0) (2026-04-11)
+
+### Features
+
+- **dashboard:** searchable video selector + site-video pivot + ADR-048 ([#438](https://github.com/Tallec7/neopro/issues/438)) ([650b729](https://github.com/Tallec7/neopro/commit/650b729c140019df0a78d868f288f961665b1bcd))
+
 ## [3.140.4](https://github.com/Tallec7/neopro/compare/v3.140.3...v3.140.4) (2026-04-11)
 
 ### Bug Fixes
