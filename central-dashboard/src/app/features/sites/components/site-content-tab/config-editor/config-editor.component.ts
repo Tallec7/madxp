@@ -3,12 +3,14 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { SiteConfiguration, CategoryConfig, LocalVideo, SiteSponsor } from '../../../../../core/models';
 import { UnifiedVideoOption, VideoOptionGroupEntry, OrphanedVideoDetail } from '../content-tab.models';
+import { TranslateModule } from '@ngx-translate/core';
 import { LoopManagerComponent } from '../../loop-manager/loop-manager.component';
+import { VideoSearchSelectComponent } from '../../../../../shared/components/video-search-select/video-search-select.component';
 
 @Component({
   selector: 'app-config-editor',
   standalone: true,
-  imports: [CommonModule, FormsModule, LoopManagerComponent],
+  imports: [CommonModule, FormsModule, TranslateModule, LoopManagerComponent, VideoSearchSelectComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <!-- Config Health Bar -->
@@ -158,18 +160,16 @@ import { LoopManagerComponent } from '../../loop-manager/loop-manager.component'
               </div>
               <div class="video-list-compact" *ngIf="cat.videos && cat.videos.length > 0">
                 <div class="video-row" *ngFor="let video of cat.videos; let vidIndex = index" [class.orphaned]="isOrphanedVideoPath(video.path)">
-                  <select
-                    [(ngModel)]="video.path"
-                    (ngModelChange)="emitConfigChanged()"
+                  <app-video-search-select
+                    [groups]="videoOptionGroups"
+                    [selectedPath]="video.path"
+                    (pathChange)="video.path = $event; emitConfigChanged()"
+                    [placeholder]="'common.selectVideo' | translate"
+                    [searchPlaceholder]="'common.searchVideoPlaceholder' | translate"
+                    [emptyLabel]="'common.noVideoFound' | translate"
+                    [invalid]="isOrphanedVideoPath(video.path)"
                     class="video-select-compact"
-                    [class.has-cloud-video]="isCloudVideoPath(video.path)"
-                    [class.orphaned]="isOrphanedVideoPath(video.path)"
-                  >
-                    <option value="">-- Sélectionner --</option>
-                    <optgroup *ngFor="let group of videoOptionGroups; trackBy: trackByGroupKey" [label]="group.icon + ' ' + group.label">
-                      <option *ngFor="let v of group.videos; trackBy: trackByVideoPath" [value]="v.path">{{ v.displayName }}{{ v.isOnPi ? '' : ' ⏳' }}{{ (secondaryDisplayEnabled && v.hasSecondaryVariant) ? ' 📺' : '' }}</option>
-                    </optgroup>
-                  </select>
+                  ></app-video-search-select>
                   <input
                     type="text"
                     [(ngModel)]="video.name"
@@ -208,18 +208,16 @@ import { LoopManagerComponent } from '../../loop-manager/loop-manager.component'
                   </div>
                   <div class="subcat-videos" *ngIf="subcat.videos && subcat.videos.length > 0">
                     <div class="video-row" *ngFor="let video of subcat.videos; let vidIndex = index" [class.orphaned]="isOrphanedVideoPath(video.path)">
-                      <select
-                        [(ngModel)]="video.path"
-                        (ngModelChange)="emitConfigChanged()"
+                      <app-video-search-select
+                        [groups]="videoOptionGroups"
+                        [selectedPath]="video.path"
+                        (pathChange)="video.path = $event; emitConfigChanged()"
+                        [placeholder]="'common.selectVideo' | translate"
+                        [searchPlaceholder]="'common.searchVideoPlaceholder' | translate"
+                        [emptyLabel]="'common.noVideoFound' | translate"
+                        [invalid]="isOrphanedVideoPath(video.path)"
                         class="video-select-compact"
-                        [class.has-cloud-video]="isCloudVideoPath(video.path)"
-                        [class.orphaned]="isOrphanedVideoPath(video.path)"
-                      >
-                        <option value="">-- Sélectionner --</option>
-                        <optgroup *ngFor="let group of videoOptionGroups; trackBy: trackByGroupKey" [label]="group.icon + ' ' + group.label">
-                          <option *ngFor="let v of group.videos; trackBy: trackByVideoPath" [value]="v.path">{{ v.displayName }}{{ v.isOnPi ? '' : ' ⏳' }}{{ (secondaryDisplayEnabled && v.hasSecondaryVariant) ? ' 📺' : '' }}</option>
-                        </optgroup>
-                      </select>
+                      ></app-video-search-select>
                       <input
                         type="text"
                         [(ngModel)]="video.name"
