@@ -3,6 +3,7 @@
   border: 1px solid #e2e8f0;
   border-radius: 12px;
   overflow: hidden;
+  min-width: 0;
 }
 
 .loop-manager-header {
@@ -146,6 +147,7 @@
   background: #f8fafc;
   border-radius: 8px;
   border: 1px solid #e2e8f0;
+  flex-wrap: wrap;
 }
 
 .loop-video-row.neopro {
@@ -177,6 +179,8 @@
   display: flex;
   gap: 0.5rem;
   align-items: center;
+  min-width: 0;
+  flex-wrap: wrap;
 }
 
 .video-name-input {
@@ -189,6 +193,7 @@
 
 .video-select {
   flex: 1;
+  min-width: 0;
   padding: 0.375rem 0.5rem;
   border: 1px solid #e2e8f0;
   border-radius: 4px;
@@ -572,23 +577,9 @@
 
 /* === Responsive === */
 @media (max-width: 1024px) {
-  .loop-video-row {
-    flex-wrap: wrap;
-    gap: 0.5rem;
-  }
-
-  .video-fields {
-    flex-basis: calc(100% - 40px);
-    min-width: 0;
-  }
-
   .video-name-input {
     width: 120px;
     min-width: 80px;
-  }
-
-  .video-select {
-    min-width: 0;
   }
 
   .loop-tabs {

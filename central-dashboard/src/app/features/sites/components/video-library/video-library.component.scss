@@ -321,6 +321,8 @@
   border-radius: 6px 6px 0 0;
   font-size: 0.75rem;
   color: #64748b;
+  min-width: 700px;
+  overflow-x: auto;
 }
 
 .sort-btn {
@@ -347,6 +349,7 @@
 .video-list {
   max-height: 400px;
   overflow-y: auto;
+  overflow-x: auto;
   border: 1px solid #e2e8f0;
   border-radius: 0 0 6px 6px;
   background: white;
@@ -360,6 +363,7 @@
   border-bottom: 1px solid #f1f5f9;
   transition: background 0.15s;
   cursor: pointer;
+  min-width: 700px;
 }
 
 .video-item:last-child {
@@ -892,21 +896,6 @@
 
 /* === Responsive === */
 @media (max-width: 1024px) {
-  .sort-header {
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-  }
-
-  .video-list {
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-  }
-
-  .sort-header,
-  .video-item {
-    min-width: 700px;
-  }
-
   .col-advertiser {
     width: 65px;
   }
