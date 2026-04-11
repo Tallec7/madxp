@@ -1,3 +1,9 @@
+## [3.142.8](https://github.com/Tallec7/neopro/compare/v3.142.7...v3.142.8) (2026-04-11)
+
+### Bug Fixes
+
+- **migration:** implement full FTP path migration with download+reupload ([1a2025a](https://github.com/Tallec7/neopro/commit/1a2025a3177498a4760528a4d5771eb4c8375248))
+
 ## [3.142.7](https://github.com/Tallec7/neopro/compare/v3.142.6...v3.142.7) (2026-04-11)
 
 ### Bug Fixes
