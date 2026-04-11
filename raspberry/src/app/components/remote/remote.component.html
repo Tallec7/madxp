@@ -305,6 +305,33 @@
                       </span>
                     </div>
                   }
+                  <!-- Display target toggle (Phase 4 — PROP-002) -->
+                  @if (isSecondaryDisplayConnected) {
+                    <div class="header-menu-target">
+                      <span class="target-label">Cible :</span>
+                      <button
+                        class="target-btn"
+                        [class.active]="displayTarget === 'all'"
+                        (click)="setDisplayTarget('all')"
+                      >
+                        Tous
+                      </button>
+                      <button
+                        class="target-btn"
+                        [class.active]="displayTarget === 'tv'"
+                        (click)="setDisplayTarget('tv')"
+                      >
+                        TV
+                      </button>
+                      <button
+                        class="target-btn"
+                        [class.active]="displayTarget === 'secondary'"
+                        (click)="setDisplayTarget('secondary')"
+                      >
+                        2nd
+                      </button>
+                    </div>
+                  }
                   <!-- Dark mode -->
                   <button class="header-menu-item" (click)="toggleDarkMode(); closeHeaderMenu()">
                     @if (isDarkMode) {

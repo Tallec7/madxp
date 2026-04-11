@@ -140,6 +140,9 @@ export class RemoteComponent implements OnInit, OnDestroy {
   public isTvDisplayConnected = false;
   public isSecondaryDisplayConnected = false;
 
+  // Display target (Phase 4 — PROP-002): 'all' | 'tv' | 'secondary'
+  public displayTarget: 'all' | 'tv' | 'secondary' = 'all';
+
   // Sports et Périodes
   public readonly sportTypes: SportType[] = ['football', 'basketball', 'handball', 'volleyball', 'rugby', 'hockey'];
   public readonly sportLabels = SPORT_LABELS;
@@ -458,14 +461,26 @@ export class RemoteComponent implements OnInit, OnDestroy {
     this.currentView = 'videos';
   }
 
+  // Phase 4 — PROP-002: returns target array for targeted commands, or undefined for broadcast
+  private getCommandTarget(): number[] | undefined {
+    if (this.displayTarget === 'tv') return [0];
+    if (this.displayTarget === 'secondary') return [1];
+    return undefined;
+  }
+
+  public setDisplayTarget(target: 'all' | 'tv' | 'secondary'): void {
+    this.displayTarget = target;
+  }
+
   // Actions
   public launchSponsors(): void {
     console.log('emit sponsors loop');
     this.notifyUserActivity();
+    const target = this.getCommandTarget();
     // Communication locale (Remote ↔ TV sur le même Raspberry) - PRIORITAIRE
-    this.localBroadcast.emitCommand({ type: 'sponsors' });
+    this.localBroadcast.emitCommand({ type: 'sponsors', ...(target ? { target } : {}) });
     // Communication cloud (pour monitoring/dashboard - optionnel)
-    this.socketService.emit('command', { type: 'sponsors' });
+    this.socketService.emit('command', { type: 'sponsors', ...(target ? { target } : {}) });
   }
 
   public launchVideo(video: Video): void {
@@ -473,11 +488,12 @@ export class RemoteComponent implements OnInit, OnDestroy {
     this.notifyUserActivity();
     // Tracker le déclenchement manuel
     this.analyticsService.trackManualTrigger(video);
+    const target = this.getCommandTarget();
 
     // Communication locale (Remote ↔ TV sur le même Raspberry) - PRIORITAIRE
-    this.localBroadcast.emitCommand({ type: 'video', data: video });
+    this.localBroadcast.emitCommand({ type: 'video', data: video, ...(target ? { target } : {}) });
     // Communication cloud (pour monitoring/dashboard - optionnel)
-    this.socketService.emit('command', { type: 'video', data: video });
+    this.socketService.emit('command', { type: 'video', data: video, ...(target ? { target } : {}) });
 
     // Ajouter aux vidéos récentes
     this.addToRecentVideos(video);
@@ -1492,11 +1508,13 @@ export class RemoteComponent implements OnInit, OnDestroy {
     const text = message || this.breakingNewsMessage.trim();
     if (!text) return;
 
+    const target = this.getCommandTarget();
     const news = {
       message: text,
       duration: this.localOptions.breakingNews.defaultDuration,
       position: this.localOptions.breakingNews.position,
-      displayMode: this.localOptions.breakingNews.displayMode
+      displayMode: this.localOptions.breakingNews.displayMode,
+      ...(target ? { target } : {}),
     };
 
     // Local (même navigateur)

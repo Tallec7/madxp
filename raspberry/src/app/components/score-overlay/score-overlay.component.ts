@@ -30,6 +30,7 @@ export interface ScoreData {
 export class ScoreOverlayComponent implements OnInit, OnDestroy {
   @Input() configuration: Configuration;
   @Input() displayType: 'tv' | 'secondary' = 'tv';
+  @Input() displayIndex = 0;
 
   // Score state
   public currentScore: ScoreData | null = null;
@@ -100,7 +101,11 @@ export class ScoreOverlayComponent implements OnInit, OnDestroy {
       }
     });
 
-    this.socketService.on<BreakingNewsEvent>('breaking-news', (news) => {
+    this.socketService.on<BreakingNewsEvent & { target?: number[] }>('breaking-news', (news) => {
+      // Phase 4 — PROP-002: targeted breaking news
+      if (news.target && Array.isArray(news.target) && !news.target.includes(this.displayIndex)) {
+        return;
+      }
       this.displayBreakingNews(news);
     });
 

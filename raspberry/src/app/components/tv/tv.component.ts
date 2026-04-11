@@ -58,6 +58,8 @@ export class TvComponent implements OnInit, OnDestroy {
 
   // Display type: 'tv' (HDMI 0 principal) ou 'secondary' (HDMI 1 écran secondaire)
   public displayType: 'tv' | 'secondary' = 'tv';
+  // Display index for targeted commands (Phase 4 — PROP-002): tv=0, secondary=1
+  public displayIndex = 0;
 
   // HDMI status — E-23 US-23.2.1: splash screen when no display connected
   public hdmiConnected = true; // Assume connected until told otherwise (PC browsers always true)
@@ -152,7 +154,8 @@ export class TvComponent implements OnInit, OnDestroy {
   public ngOnInit() {
     // Lire le displayType depuis la route data (/secondary → 'secondary', /tv → 'tv')
     this.displayType = (this.route.snapshot.data['displayType'] as 'tv' | 'secondary') || 'tv';
-    console.log(`[TV] Display type: ${this.displayType}`);
+    this.displayIndex = this.displayType === 'secondary' ? 1 : 0;
+    console.log(`[TV] Display type: ${this.displayType}, index: ${this.displayIndex}`);
 
     // S'abonner aux mises à jour du statut de licence
     this.localBroadcastSubscriptions.push(
@@ -299,7 +302,7 @@ export class TvComponent implements OnInit, OnDestroy {
     this.localBroadcastSubscriptions.push(
       this.localBroadcast.onCommand().subscribe((command) => {
         console.log('[TV] Local command received:', command);
-        this.handleTvCommand(command);
+        this.handleTvCommand(command as Command);
       })
     );
 
@@ -667,7 +670,15 @@ export class TvComponent implements OnInit, OnDestroy {
     return false;
   }
 
-  private handleTvCommand(command: Command | { type: string; data?: unknown }): void {
+  private handleTvCommand(command: Command): void {
+    // Phase 4 — PROP-002: targeted commands. If target is specified, ignore if this display is not in the list.
+    // Only applies to video/sponsors commands. reload-config is always broadcast.
+    if (command.target && Array.isArray(command.target) && command.type !== 'reload-config') {
+      if (!command.target.includes(this.displayIndex)) {
+        console.log(`[TV] Ignoring targeted command (target=${command.target}, my index=${this.displayIndex})`);
+        return;
+      }
+    }
     if (command.type === 'video' && command.data) {
       const video = command.data as Video;
       if (this.isDuplicateCommand(`video:${video.path}`)) return;

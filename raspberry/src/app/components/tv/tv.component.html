@@ -83,7 +83,11 @@
 ></video>
 
 <!-- Score Overlay Component (score, timer, goal animation, breaking news, secondary overlays) -->
-<app-score-overlay [configuration]="configuration" [displayType]="displayType"></app-score-overlay>
+<app-score-overlay
+  [configuration]="configuration"
+  [displayType]="displayType"
+  [displayIndex]="displayIndex"
+></app-score-overlay>
 
 <!-- Watermark Overlay (z-index 1100, au-dessus du score mais sous les animations) -->
 <div
