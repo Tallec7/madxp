@@ -72,3 +72,26 @@ Voir `docs/clients/NLF.md` — **Ne JAMAIS lock BSSID, tester avant déploiement
 | `raspberry/sync-agent/src/services/safe-network-operations.js` | Opérations sécurisées      |
 | `raspberry/sync-agent/src/services/network-watchdog.js`        | Surveillance auto-recovery |
 | `central-server/src/services/network-alerts.service.ts`        | Alertes proactives serveur |
+
+## NE JAMAIS FAIRE (smoke test enforced)
+
+- Supprimer le boot grace period du NetworkWatchdog `start()` (wlan1 RTL8192EU met 15-30s pour WPA auth + DHCP — sans grace period, fausse recovery cascade dès le boot)
+- Faire un `require('./network-watchdog')` au niveau module dans `safe-network-operations.js` (dépendance circulaire CommonJS → objet vide → utiliser lazy require)
+- Supprimer `startWlan1Reconnect()` / `wlan1ReconnectLoop()` du NetworkWatchdog (débrancher l'Ethernet = perte totale de connectivité sans reconnexion wlan1 en arrière-plan)
+- Utiliser `iwlist wlan1 scan` dans `wlan1ReconnectLoop()` (tuerait le carrier RTL8192EU — utiliser `wpa_cli reconfigure` + `dhclient`)
+- Lancer `autoOptimize` / `iwlist scan` avant 60s après le boot (déstabilise le RTL8192EU pendant le handshake WPA)
+- Faire plusieurs `iwlist scan` sur wlan1 dans hotspot-optimizer.sh (RTL8192EU single-radio : chaque scan coupe le carrier ~6s → utiliser scan unique + `CACHED_SCAN`)
+- Lancer `iwlist wlan1 scan` dans `networkDetector.scanWifiNetworks()` sans vérifier le cache `/tmp/neopro-wlan1-scan-cache` (2 scans wlan1 en <120s tue le carrier RTL8192EU)
+- Utiliser `$WIFI_INTERFACE` dans `hotspot-optimizer.sh` (variable indéfinie — utiliser `$AP_INTERFACE` = `wlan0`)
+- Ajouter `ip addr add 192.168.4.1` AVANT `systemctl restart hostapd` dans la recovery hotspot (hostapd restart flush les IPs — l'IP doit être ajoutée APRÈS)
+- Supprimer le boot grace period hotspot du NetworkWatchdog `start()` (sans grace period, le watchdog redémarre hostapd 2-3 fois au boot)
+- Revenir à un `FAST_RETRY_DELAY` fixe dans `internetWatchLoop` (les environnements mesh NLF ont besoin de back-off progressif `PHASE_BACKOFF_DELAYS` [10s→120s])
+- Hardcoder le seuil modprobe/USB à 5 min sans vérifier `_isMeshEnvironment()` (mesh = 10 min minimum via `_getModprobeGuard()`)
+- Hardcoder le seuil bgscan `simple:30:-70:300` dans `autoOptimize()` (utiliser `_computeOptimalBgscan()` avec hysteresis — sans hysteresis, 15+ déconnexions/heure)
+- Appeler `wpa_cli reconfigure` dans `configureBgscan()` quand la config est déjà identique (chaque `reconfigure` = deauth complet → perte WiFi 5-15s)
+- Appeler `startNetworkProfileDetection()` sans guard `_networkProfileStarted` dans agent.js (chaque reconnexion crée N autoOptimize parallèles)
+- Appeler `startWlan1Reconnect()` dans `internetWatchLoop` sans vérifier `getInternetIp()` d'abord (cycle infini start/stop toutes les 30s)
+- Configurer l'IP hotspot 192.168.4.1 uniquement via `/etc/dhcpcd.conf` (Debian 13 Trixie : dhcpcd absent → fallback systemd-networkd)
+- Inclure le check captive portal iptables/nftables dans les issues critiques de `check_hotspot_health()` (WARNING non-critique — ne doit JAMAIS déclencher la recovery complète)
+- Utiliser `iptables` sans vérifier `command -v iptables` (Debian 13 Trixie : iptables absent — fallback `nft`)
+- Faire un `iwlist wlan1 scan` dans `wifi-bssid.js` sans vérifier le cache `/tmp/neopro-wlan1-scan-cache` (incident 2026-03-23)

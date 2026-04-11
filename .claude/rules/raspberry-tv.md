@@ -144,3 +144,57 @@ Contrôle hybride (auto + manuel) de l'enregistrement analytics.
 - **Propagation** : BroadcastChannel (onglets locaux) + Socket.IO (serveur local + cloud)
 
 **Fichier** : `raspberry/src/app/services/recording-state.service.ts`
+
+## NE JAMAIS FAIRE (smoke test enforced)
+
+### Master-Slave Sync
+
+- Synchroniser le slave dual-display par `videoPath` dans `handleMasterLoopState` (toujours sync par `videoIndex`)
+- Laisser le slave jouer sa boucle indépendamment du master (le slave doit pauser sa boucle dès `tv-role-assigned` et attendre `tv-loop-state`)
+- Jouer une vidéo manuelle sur le secondary display sans résoudre la variante secondaire (toujours passer par `resolveSecondaryVariant()`)
+- Émettre `tv-loop-update` avec `isManualMode: true` SEULEMENT après le délai 2×rAF + 200ms dans `play()` (émettre aussi immédiatement)
+- Appeler `stopManualVideoAndReturnToLoop()` dans `handleMasterLoopState` CAS 2 sans vérifier `_lastActionReceivedAt` (guard 2s obligatoire)
+- Appeler `play()` directement dans le handler `action` côté slave (le slave doit appeler `preloadManualVideo()` et attendre le reveal du master — ADR-034)
+- Émettre `manualVideoVisible: true` dans l'émission immédiate de `play()` (seule l'émission delayed doit émettre — ADR-034)
+- Oublier `manualVideoVisible: false` dans `emitLoopState()` des transitions de boucle (toujours émettre explicitement `false` — ADR-034)
+- Utiliser `manualVideoVisible === false` (strict equality) dans `handleMasterLoopState` CAS 1 (utiliser `!== true` qui couvre false, undefined ET absent)
+
+### Preload & Reveal (ADR-034)
+
+- Afficher freeze-frame ou overlay noir dans `preloadManualVideo()` pour la première vidéo manuelle depuis la boucle (preload silencieux — opacity 0 + muted)
+- Ajouter un délai 2×rAF + 200ms dans `revealPreloadedVideo()` (la révélation du slave doit être instantanée)
+- Oublier `player.muted = true` dans `preloadManualVideo()` ou `player.muted = false` dans `revealPreloadedVideo()`/`cleanupPreloadState()`
+- Oublier `captureAndShowFreezeFrame()` dans la transition manual→manual de `preloadManualVideo()`
+- Appeler `play()` directement dans le handler LocalBroadcast `onCommand()` sans vérifier `isSlaveMode` (même pattern que Socket.IO `action`)
+- Supprimer `_preloadReady` / `_pendingReveal` du mécanisme preload+reveal (deferred reveal nécessaire sur navigateur web)
+- Utiliser `player.muted = false` dans `revealPreloadedVideo()` sans vérifier `player.paused` après (Chrome pause une vidéo unmutée sans interaction utilisateur)
+
+### Commands dedupliqués
+
+- Dupliquer le traitement des commandes `action`/`onCommand` inline dans les handlers Socket.IO et BroadcastChannel (utiliser `handleTvCommand()` centralisé avec guard `isDuplicateCommand()`)
+- Supprimer le guard `isDuplicateCommand()` de `handleTvCommand()` (double `play()` → race condition → vidéo gelée)
+
+### Display & CSS
+
+- Utiliser `100vw` dans les SCSS des composants TV (`tv.component`, `waiting-screen`, `wrong-port-screen`) — utiliser `100%` à la place
+- Utiliser `object-fit: cover` sur les players vidéo TV (`.freeze-canvas`, `.double-buffer-player`, `.manual-player`) — utiliser `object-fit: contain`
+- Utiliser `this.hdmiConnected = data.hdmi0` seul dans tv.component.ts (utiliser `data.hdmi0 || data.hdmi1` car le watchdog gère le swap automatique)
+- Conditionner `hdmiDetectedAt` à `wasDisconnected` dans tv.component.ts (capturer dès le premier statut HDMI reçu)
+- Retourner `'disconnected'` dans `getTvStatusForAnalytics()` quand `tv_power` est `null` (retourner `'unknown'`)
+
+### Socket.IO local
+
+- Initialiser Socket.IO client sans options de reconnexion (`reconnection: true`, `reconnectionDelay`, `reconnectionAttempts: Infinity`)
+- Initialiser Socket.IO serveur sans `pingInterval`/`pingTimeout`/`transports`
+- Supprimer les handlers lifecycle `disconnect`/`reconnect`/`connect_error` de `socket.service.ts`
+- Supprimer `onReconnect()` de `socket.service.ts` ou le re-register `tv-register` dans `tv.component.ts`
+- Réduire le timeout preload du double-buffer sous 5000ms
+
+### Remote
+
+- Utiliser `[ngClass]="timeCategory.color"` dans le template remote (utiliser `getTimeCategoryGradientClass()` qui fallback par `id`)
+- Supprimer le menu item "Changer de profil" dans la remote
+
+### Tests
+
+- Supprimer les tests hardware-matrix E2E dans `e2e/tests/hardware-matrix.spec.ts`

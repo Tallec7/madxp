@@ -1,7 +1,7 @@
 ---
 paths:
-  - "central-server/src/**"
-  - "central-dashboard/src/**"
+  - 'central-server/src/**'
+  - 'central-dashboard/src/**'
 ---
 
 # Patterns de Code
@@ -56,12 +56,12 @@ res.json({ data: rows, pagination: { page, limit, total } });
 
 ## Conventions de nommage
 
-| Type | Convention | Exemple |
-|------|-----------|---------|
-| Fichiers | kebab-case + suffixe | `sites.controller.ts` |
-| Classes | PascalCase | `DeploymentService` |
-| Fonctions | camelCase + verbe | `getSites`, `deployVideo` |
-| Interfaces | PascalCase, pas de I | `interface User` |
+| Type       | Convention           | Exemple                   |
+| ---------- | -------------------- | ------------------------- |
+| Fichiers   | kebab-case + suffixe | `sites.controller.ts`     |
+| Classes    | PascalCase           | `DeploymentService`       |
+| Fonctions  | camelCase + verbe    | `getSites`, `deployVideo` |
+| Interfaces | PascalCase, pas de I | `interface User`          |
 
 ## Règles strictes
 
@@ -77,3 +77,7 @@ res.json({ data: rows, pagination: { page, limit, total } });
 - `central-server/src/config/database.ts` — Connexion DB
 - `central-server/src/services/socket.service.ts` — Protocole Pi ↔ Cloud
 - `raspberry/scripts/setup-new-club.sh` — Setup production
+
+## NE JAMAIS FAIRE (smoke test enforced)
+
+- Retourner `'0 B'` dans `formatBytes()` pour `null`/`undefined` (masque les vidéos à taille inconnue — retourner `'-'` pour null/undefined, réserver `'0 B'` pour un vrai 0)

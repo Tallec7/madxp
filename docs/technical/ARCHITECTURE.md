@@ -114,7 +114,7 @@ En plus de l'architecture Edge (Pi), Neopro propose un mode **100% SaaS** : le c
   - `video-library` : barre stockage Pi, badge "Sur le Pi", bouton deploy 🚀, filtres "Sur le Pi"/"À déployer" masqués
   - `video-manager` : boutons "Supprimer du Pi" masqués
   - `site-profiles-tab` : warning "Pi hors-ligne", bannière sync Pi masqués
-  - Régression prévenue par smoke tests (`SaaS child component guards` + `SaaS config save flow` dans `smoke.test.ts`) et règles CLAUDE.md
+  - Régression prévenue par smoke tests (`SaaS child component guards` + `SaaS config save flow` dans `smoke.test.ts`) et règles `.claude/rules/saas.md`
 
 ---
 

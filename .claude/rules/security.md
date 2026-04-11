@@ -67,3 +67,13 @@ Routes `/api/remote/*` sont **PUBLIQUES** :
 - UUID du site (128 bits d'entropie)
 - Rate limiting : 60 req/min par IP
 - Le site doit être online
+
+## NE JAMAIS FAIRE (smoke test enforced)
+
+- Permettre à un utilisateur non `super_admin` de modifier `feature_overrides` — le controller `updateSite` garde par `req.user.role === 'super_admin'` et la section UI est gardée par `*ngIf="isSuperAdmin"`
+- Ajouter `launchkit.check()`, `getGateUrl()` ou `session.valid` dans le dashboard (l'access gate bworlds redirige les utilisateurs vers une page tierce — le dashboard a sa propre auth JWT+MFA — seul `init()` heartbeat/error-capture est autorisé dans `main.ts`)
+- Permettre aux utilisateurs `club` de supprimer ou modifier des vidéos catégorie `NEOPRO` (contenu corporate géré par les admins — guard `category?.toUpperCase() === 'NEOPRO'`)
+- Oublier `uploaded_for_site_id` dans les endpoints upload club (`createVideo`, `createVideos`, `convertImageToVideo`, `renderTemplate`) — sans auto-tagging serveur, les vidéos club sont invisibles dans le filtre
+- Retirer le filtre vidéos cloud pour les utilisateurs club dans `getSiteLocalContent` (un user `club` ne doit voir QUE : ses uploads + vidéos NEOPRO + vidéos de la config du site via `extractConfigVideoFilenames()`)
+- Retirer `@Input() isClubUser` de `loop-manager.component.ts` ou ses guards (les vidéos NEOPRO doivent être verrouillées en lecture seule pour les users club)
+- Retirer le getter `isClub` de `site-content-tab.component.ts` ou ses guards (les users club ne doivent JAMAIS voir l'éditeur JSON brut, les catégories analytics, ni pouvoir switcher de profil)

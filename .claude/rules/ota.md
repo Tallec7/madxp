@@ -68,3 +68,19 @@ Le reboot post-OTA utilise `spawn('sudo', ['shutdown', '-r', '+0'])` (pas `setTi
 ## TODO Cleanup
 
 Supprimer `applyPreUpdateMigration()` une fois que tous les Pi v3.10→v3.17 auront été mis à jour (actuellement seul NLF Handball v3.17.1). Le code v3.20+ a le try/catch non-bloquant et n'a plus besoin de la pré-migration.
+
+## NE JAMAIS FAIRE (smoke test enforced)
+
+- Supprimer `validate-post-update.js` ou son appel dans `update-software.js` (la validation post-OTA est le seul mécanisme qui vérifie que les services fonctionnent AVANT de reporter le succès)
+- Utiliser `postUpdateValidator.validate()` directement dans `update-software.js` au lieu du cache-bust `delete require.cache` + re-require (après `extractAndInstall`, le module en mémoire est l'ancienne version — sans cache-bust, faux rollback sur Pi pré-3.116.29)
+- Supprimer `canary-monitor.service.ts` ou son intégration dans `deploy-progress.handler.ts` et `alerting.service.ts` (filet de sécurité post-deploy qui détecte les régressions après rollback manqué)
+- Supprimer `isCompletedByProgress` dans `deploy-progress.handler.ts` (le signal Socket.IO `completed:true` est fire-and-forget — sur WiFi instable RTL8192EU, le signal peut se perdre)
+- Supprimer la détection de rollback OTA silencieux dans `heartbeat.handler.ts` (seul filet de sécurité contre les faux "Terminé" dans le dashboard)
+- Supprimer l'auto-completion des déploiements bloqués à 100% dans `checkStuckDeployments()` de `alerting.service.ts` (auto-complete après 5min à progress >= 100)
+- Supprimer le stall detection timer (`stallTimer`/`STALL_TIMEOUT`) de `downloadPackage()` dans update-software.js (sur WiFi mesh RTL8192EU, les drops silencieux ne déclenchent pas d'erreur stream)
+- Supprimer le retry download (`MAX_DOWNLOAD_RETRIES`) de update-software.js (un seul stall tue l'OTA entière sans retry)
+- Supprimer `applyPreUpdateMigration()` de `update-deployment.service.ts` (nettoie les fichiers root:root AVANT l'OTA — sans ça, `fs.copy()` → EACCES → OTA stuck à 0%)
+- Supprimer l'auto-fail des déploiements OTA bloqués >2h dans `checkStuckDeployments()` de alerting.service.ts
+- Utiliser `http://localhost` au lieu de `http://127.0.0.1` dans les connexions HTTP locales du sync-agent (sur Debian 12+ Bookworm, `localhost` résout en `::1` IPv6 mais Express écoute sur `0.0.0.0` IPv4 only → ECONNREFUSED)
+- Appeler `fix-fleet-pi.sh` sans `sudo` dans `deploy-remote.sh` ou `update-software.js` (le script vérifie `id -u == 0` et exit 1 si non-root)
+- Lire les `.service` systemd depuis `rootDir` dans `update-software.js` (toujours utiliser `sourcePath` qui pointe vers l'archive extraite dans `/tmp/`)

@@ -147,3 +147,12 @@ Pi Analytics: 500 req/min (par IP)
 ```
 
 **Anti-pattern** : ne PAS appliquer `apiRateLimit` globalement ET par route (double comptage).
+
+## NE JAMAIS FAIRE (smoke test enforced)
+
+- Ajouter une route avec paramètre (`:id`, `:siteId`) sans `validateParams(paramSchemas.X)` dans le fichier routes (la validation se fait au niveau routes, pas controllers)
+- Ajouter une route POST/PUT/PATCH avec body sans `validate(schemas.X)` dans le fichier routes
+- Supprimer `authenticateSiteApiKeyOptional` des routes `POST /video-plays` et `POST /sessions` dans `analytics.routes.ts` (sans ce middleware, n'importe quel client peut POST des analytics avec un `site_id` arbitraire)
+- Supprimer `piAnalyticsRateLimit` des routes `POST /video-plays` et `POST /sessions` dans `analytics.routes.ts` (sans rate limiter per-route, les deux routes héritent de `apiRateLimit` 100/min — trop bas pour les Pi en backlog)
+- Accepter un upload vidéo de 0 octets dans `createVideo` / `createVideos` de `content.controller.ts` (guard `file.size === 0` → 400 obligatoire)
+- Wrapper `contentRoutes` avec `sensitiveRateLimit` (30/min) sur le mount `/api` dans `server.ts` (3-6 vues dashboard exhaustent le quota → cascade de 429 — incident v3.136.4 — utiliser rate limits per-route dans `content.routes.ts`)

@@ -86,3 +86,63 @@ Fichier : `raspberry/scripts/sync-agent-guardian.sh`
 - Le script détecte automatiquement le modèle de Pi
 
 Fichier : `raspberry/scripts/kiosk-watchdog.sh`
+
+## NE JAMAIS FAIRE (smoke test enforced)
+
+### Systemd & Services
+
+- Ajouter `NoNewPrivileges=true` dans les fichiers `.service` systemd (bloque sudo, deadlock OTA)
+- Ajouter `ExecStop=pkill -9` dans `neopro-kiosk.service` (bypasse le trap handler du watchdog, corrompt l'état GPU V3D sur Pi 5)
+- Utiliser `systemctl is-enabled` seul pour détecter les services systemd à nettoyer (toujours ajouter `|| systemctl is-active` comme fallback)
+
+### Kiosk Watchdog & Chromium
+
+- Dupliquer `--disable-features` dans kiosk-watchdog.sh (Chromium n'accepte qu'un seul flag, le dernier écrase)
+- Dupliquer `--enable-features` dans kiosk-watchdog.sh (même règle — combiner dans `$enable_features`)
+- Utiliser `--kiosk` pour le Chromium secondaire (utiliser `--app=URL` + xprop/xdotool)
+- Utiliser `xdotool key F11` pour le plein écran en dual-display (utiliser `xprop _MOTIF_WM_HINTS` + `xdotool windowsize`)
+- Utiliser `xdotool windowsize` pour le retour dual→single display (Chromium ne re-render pas — relancer Chromium)
+- Faire `xdotool windowsize` sans `xprop _MOTIF_WM_HINTS` + `xdotool windowactivate` (WM restack lxpanel au-dessus)
+- Lancer `xrandr --output $X --off` sur un port HDMI physiquement déconnecté (race DRM kernel)
+- Hardcoder `1920` ou `1080` dans kiosk-watchdog.sh (utiliser `$DEFAULT_SCREEN_WIDTH` / `$DEFAULT_SCREEN_HEIGHT`)
+- Dériver `SECONDARY_X_OFFSET` d'une valeur hardcodée (doit être `$PRIMARY_SCREEN_WIDTH` réel)
+- Utiliser `neopro.local` dans `CHROMIUM_URL` / `CHROMIUM_SECONDARY_URL` (mDNS résout vers un Pi aléatoire sur LAN — utiliser `localhost`)
+- Mettre `--disable-gpu-memory-buffer-video-frames` dans le bloc hardware decode Pi 5 (force le chemin software complet)
+- Supprimer le mécanisme `GPU_DECODE_FALLBACK_FILE` (auto-fallback hardware→software après 2 crashs)
+- Mettre `DUAL_DISPLAY_ACTIVE=true` AVANT que `setup_secondary_xrandr` réussisse (faux failover sur Pi mono-HDMI)
+- Utiliser `setup_secondary_xrandr || true` pour avaler l'erreur (le code de retour est la source de vérité pour `DUAL_DISPLAY_ACTIVE`)
+- Supprimer `boot_fast_checks` du main loop (les 6 premières itérations à 5s rattrapent les restacks LXDE/openbox)
+- Supprimer le boot swap xrandr immédiat quand seul HDMI-1 est connecté
+- Conditionner le mode dual-display sur un flag config (le Pi détecte par hardware via DRM sysfs + xrandr — `DUAL_DISPLAY_ACTIVE` positionné par le watchdog)
+- Utiliser un `sleep` unique sans retry dans le subshell fullscreen de `start_chromium()` (Chromium peut mettre >4s à créer sa fenêtre)
+- Réduire `check_window_stacking()` à un simple `windowactivate` sans `windowmove`/`windowsize`
+- Supprimer la boucle re-raise post-fullscreen du subshell `start_chromium()` (LXDE/openbox restack lxpanel 1-5s après le premier fullscreen)
+- Ajouter `@lxpanel` dans l'autostart LXDE de `install.sh` (utiliser `@xsetroot -solid black`)
+
+### HDMI & Display
+
+- Appeler `setup_secondary_xrandr()` dans `deactivate_hdmi_failover()` sans forcer HDMI-0 comme primaire au préalable
+- Faire confiance à `cec.tv_connected` seul (toujours croiser avec `display.connected` EDID/DRM et `devices_found`)
+- Classifier `display_type = 'tv'` sur la seule présence d'un bloc CEA dans l'EDID (filtrer par manufacturer EDID)
+
+### Bash scripting
+
+- Utiliser `\d` dans `grep -E` (syntaxe Perl uniquement — utiliser `[0-9]`)
+- Initialiser des variables bash à `0` quand elles utilisent `${VAR:-default}` (le fallback ne se déclenche que si vide/unset)
+- Utiliser `grep -c "pattern" || echo "0"` (sort `0` ET echo `0` → variable = `"0\n0"` — utiliser `$(grep -c ... || true)`)
+- Créer `club-config.json` sans `chmod 600` (contient le mot de passe WiFi en clair)
+- Lancer `nginx -t` sans `sudo` dans les scripts de diagnostic
+
+### Sync-Agent
+
+- Remplacer `timeCategories`/`sponsors`/`categories` dans `update-config.js` sans appeler `restoreSecondaryVariants()` après (ADR-032)
+- Broadcaster la config profil brute dans le handler `profile-switch` de `handlers.js` sans merger les LOCAL_ONLY_SETTINGS et sans persister dans `configuration.json`
+- Créer de nouveaux ConfigWatcher/VideoWatcher dans `handleAuthenticated()` sans appeler `stopWatchers()` avant (fuite N watchers par reconnexion)
+- Ajouter `socket.on('pong', ...)` dans `handleAuthenticated()` sans `removeAllListeners('pong')` avant (accumulation handlers)
+- Définir `cleanupLegacyFiles()` dans agent.js sans l'appeler dans `start()` (méthode morte)
+- Utiliser `rsync -a` sans `--delete` pour sync-agent dans build-raspberry.sh (fichiers supprimés survivent sur les Pi après OTA)
+- Supprimer `version.ts` ou l'injection de `APP_VERSION` dans `build-raspberry.sh` / `release.yml`
+
+### Hardware
+
+- Omettre `dtparam=cooling_fan` dans `/boot/firmware/config.txt` sur Pi 5 avec Active Cooler (ventilateur non contrôlé, surchauffe silencieuse)

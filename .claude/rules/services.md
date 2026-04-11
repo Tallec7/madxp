@@ -101,6 +101,22 @@ Dashboard Cloud Remote → HTTP API → Central Server
 
 Le smoke test #30 vérifie automatiquement cette complétude.
 
+## NE JAMAIS FAIRE — Config Enrichment (smoke test enforced)
+
+- Oublier `timeCategories[].loopVideos[]` dans `deploySecondaryVariant()` (les phases de match utilisent des `SponsorVideo` avec secondary variants — même structure que `sponsors[]`)
+- Envoyer `update_config` depuis le central sans appeler `enrichConfigWithSecondaryVariants()` (l'enrichissement DB est obligatoire avant tout envoi au Pi)
+- Envoyer `update_config` depuis le central sans appeler `enrichConfigWithAnalyticsMetadata()` (sans enrichissement, vidéos sponsor classifiées en `'other'` → analytics perdues)
+- Envoyer `sync_profiles` ou `deploy` depuis le central sans passer par la chaîne d'enrichissement complète (`autoResolveSponsorIds()` → `enrichConfigWithSecondaryVariants()` → `enrichConfigWithAnalyticsMetadata()`)
+- Construire `secondaryRelativePath` avec `relativePath.replace()` dans `deploySecondaryVariant()` (utilise le filename du fichier primaire au lieu de `finalFilename`)
+- Utiliser `active_profile_id` ou `updateSiteActiveProfile()` dans le code central (concept retiré — le Pi gère la sélection du profil localement)
+
+## NE JAMAIS FAIRE — Autres services (smoke test enforced)
+
+- Supprimer le guard `socket.id` dans `handleDisconnection()` de socket.service.ts (lors d'une reconnexion rapide, l'ancien socket déconnecte APRÈS que le nouveau s'est authentifié → fausses alertes Slack)
+- Supprimer l'appel `backfillDeployedPaths()` dans `config-sync.handler.ts` (auto-healing des `deployed_path` NULL pour les déploiements pré-v3.102)
+- Envoyer l'alerte "Site Offline" immédiatement dans `alertService.siteOffline()` (utiliser le délai de grâce `OFFLINE_GRACE_PERIOD_MS` de 60s — les flip-flops Railway de 3-16s ne doivent pas générer de bruit Slack)
+- Envoyer `deploy_video` via `sendCommand` sans inclure `checksum` dans le payload (le sync-agent Pi EXIGE le checksum pour l'intégrité)
+
 ## ⛔ Anti-Patterns Socket.IO (NE JAMAIS FAIRE)
 
 ### 1. Ne JAMAIS utiliser `socket.data`

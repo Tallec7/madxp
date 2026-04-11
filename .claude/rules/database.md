@@ -51,3 +51,10 @@ Tables préservées indéfiniment : `club_daily_stats`, `site_sponsor_daily_stat
 - **JAMAIS** changer le format des api_key des sites
 - Toujours utiliser `npm run db:migrate` pour les changements
 - Requêtes SQL paramétrées uniquement : `query('...WHERE id = $1', [id])`
+
+## NE JAMAIS FAIRE (smoke test enforced)
+
+- Utiliser `GROUP BY vp.column` quand le SELECT utilise `COALESCE(NULLIF(TRIM(vp.column), ''), 'default')` (le GROUP BY brut ne coalese pas les variantes vide/null/whitespace → lignes dupliquées — toujours aligner le GROUP BY sur l'expression COALESCE du SELECT)
+- Retirer `uploaded_for_site_id` du SELECT de `findVideoById()` dans `video.repository.ts` (le guard ownership club compare ce champ — sans lui, guard rejette TOUTES les suppressions club avec 403)
+- Supprimer `setTypeParser(20, ...)` de `database.ts` (PostgreSQL BIGINT OID 20 est retourné comme string par `pg` — sans ce parser, `file_size` et `duration` arrivent comme string au frontend)
+- Retirer `site_type` du SELECT de `findWithLocalContent()` dans `site.repository.ts` (le filtre club SaaS en a besoin pour décider de fallback sur `config_profiles`)
