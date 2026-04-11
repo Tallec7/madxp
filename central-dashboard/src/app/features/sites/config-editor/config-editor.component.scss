@@ -261,7 +261,7 @@
   background: white;
   border: 1px solid #e2e8f0;
   border-radius: 8px;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .category-card.expanded {
@@ -539,7 +539,7 @@
 .time-category-card {
   border: 1px solid #e2e8f0;
   border-radius: 8px;
-  overflow: hidden;
+  overflow: visible;
   background: white;
 }
 
@@ -656,7 +656,7 @@
 .phase-loop-card {
   border: 1px solid #e2e8f0;
   border-radius: 8px;
-  overflow: hidden;
+  overflow: visible;
   background: white;
 }
 
