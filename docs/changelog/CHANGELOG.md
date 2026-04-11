@@ -1,3 +1,9 @@
+## [3.146.3](https://github.com/Tallec7/neopro/compare/v3.146.2...v3.146.3) (2026-04-11)
+
+### Bug Fixes
+
+- **dashboard:** apply compact mode to video-search-select in loop-manager ([b66c7a7](https://github.com/Tallec7/neopro/commit/b66c7a7ff4fa827c90a2dd1f186b4126537b3b1b))
+
 ## [3.146.2](https://github.com/Tallec7/neopro/compare/v3.146.1...v3.146.2) (2026-04-11)
 
 ### Bug Fixes
