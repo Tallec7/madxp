@@ -1,3 +1,9 @@
+## [3.145.4](https://github.com/Tallec7/neopro/compare/v3.145.3...v3.145.4) (2026-04-11)
+
+### Bug Fixes
+
+- **dashboard:** add display:block to video-search-select host element ([0553eed](https://github.com/Tallec7/neopro/commit/0553eedd1219ba90aea892d09b0893c6af5df682))
+
 ## [3.145.3](https://github.com/Tallec7/neopro/compare/v3.145.2...v3.145.3) (2026-04-11)
 
 ### Bug Fixes
