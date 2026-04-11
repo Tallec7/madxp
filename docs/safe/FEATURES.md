@@ -1,6 +1,6 @@
 # Features & User Stories — NEOPRO SAFe
 
-> **Dernière mise à jour** : 9 Mars 2026 <!-- E-03 Done (F-03.1/F-03.2 Done, F-03.3 Heatmap supprimée) -->
+> **Dernière mise à jour** : 11 Avril 2026 <!-- Audit CTO : F-07.3 Done, F-10.1 critères cochés, E-01 Partiel, ajout Epics non trackés -->
 > **PI actuel** : PI-1 (Février - Mars 2026)
 > Ce document contient les Features/US futures (PI-1 à PI-3) ET les Epics terminés avant PI-1. Les 212 features implémentées (hors SAFe) sont documentées dans [IMPLEMENTED-BACKLOG.md](IMPLEMENTED-BACKLOG.md).
 
@@ -69,21 +69,21 @@ Tous les controllers utilisent le repository pattern. ESLint bloquant actif. Aud
 
 ---
 
-### E-07 — Résilience WiFi V2 ⚠️ PARTIELLEMENT DONE
+### E-07 — Résilience WiFi V2 ✅ DONE
 
-**Statut** : 2 Features sur 3 terminées
+**Statut** : 3 Features sur 3 terminées
 
-| Feature                             | Statut     | Fichiers                                   |
-| ----------------------------------- | ---------- | ------------------------------------------ |
-| F-07.1 Cache local étendu (48h)     | ✅ Done    | `offline-queue.js`, sync-agent             |
-| F-07.2 Monitoring signal WiFi       | ✅ Done    | `network-alerts.service.ts`, RSSI collecté |
-| F-07.3 Support clé USB WiFi externe | ⏳ Backlog | Non visible dans le code                   |
+| Feature                             | Statut  | Fichiers                                                                                                              |
+| ----------------------------------- | ------- | --------------------------------------------------------------------------------------------------------------------- |
+| F-07.1 Cache local étendu (48h)     | ✅ Done | `offline-queue.js`, sync-agent                                                                                        |
+| F-07.2 Monitoring signal WiFi       | ✅ Done | `network-alerts.service.ts`, RSSI collecté                                                                            |
+| F-07.3 Support clé USB WiFi externe | ✅ Done | `usb-wifi-init.sh`, `99-neopro-usb-wifi.rules`, `neopro-usb-wifi.service`, `network-detector.js`, `WIFI_USB_GUIDE.md` |
 
-**Reste à faire** : Uniquement F-07.3 (3 SP)
+**Reste à faire** : Aucun — E-07 entièrement terminé
 
 ---
 
-### E-10 — Monitoring Fleet ⚠️ PARTIELLEMENT DONE
+### E-10 — Monitoring Fleet ✅ DONE
 
 **Statut** : ✅ Terminé (carte Leaflet + métriques agrégées)
 
@@ -96,20 +96,23 @@ Tous les controllers utilisent le repository pattern. ESLint bloquant actif. Aud
 
 ## PI-1 Epics (Février - Mars 2026) — Backlog Actif
 
-> Les Epics suivants sont **réellement futurs** : le code n'existe pas encore.
+> Certains Epics sont partiellement implémentés — voir le statut par Feature ci-dessous.
 
-### E-01 — Portail Sponsor Self-Service
+### E-01 — Portail Sponsor Self-Service ⚠️ PARTIEL
 
-### F-01.1 : Inscription et profil sponsor
+> **Statut** : ⚠️ Portail sponsor opérationnel via lien magique (IMP-MON-03/04/05). Upload vidéo + sélection gymnases + approval workflow fonctionnels. Manque : self-signup email+password (accès uniquement via magic link créé par admin).
+> **Fichiers** : `sponsor-portal.controller.ts`, `sponsor-access.service.ts`, `sponsor-portal.routes.ts`, `site-sponsor-portal.component.ts`, `sponsor-dashboard.component.ts`
+
+### F-01.1 : Inscription et profil sponsor ⚠️ PARTIEL
 
 > _En tant que sponsor, je peux créer un compte sur le portail self-service pour gérer mes campagnes de manière autonome._
 
 **Critères d'acceptation**
 
-- [ ] Le sponsor peut s'inscrire avec email + mot de passe
-- [ ] Validation email obligatoire avant accès
-- [ ] Profil : nom entreprise, logo, secteur d'activité, contact
-- [ ] Le rôle `advertiser` est assigné automatiquement
+- [ ] Le sponsor peut s'inscrire avec email + mot de passe _(non implémenté — accès via magic link admin uniquement)_
+- [ ] Validation email obligatoire avant accès _(non applicable — magic link)_
+- [x] Profil : nom entreprise, logo, secteur d'activité, contact — `sponsor-dashboard.component.ts`
+- [x] Le rôle `advertiser` est assigné automatiquement — `sponsor-access.service.ts`
 - [ ] L'admin NEOPRO reçoit une notification de nouvelle inscription
 
 | US        | Description                                                                      | SP  | Sprint | Priorité |
@@ -119,17 +122,17 @@ Tous les controllers utilisent le repository pattern. ESLint bloquant actif. Aud
 
 ---
 
-### F-01.2 : Upload vidéo sponsor
+### F-01.2 : Upload vidéo sponsor ✅ DONE
 
 > _En tant que sponsor inscrit, je peux uploader mon spot vidéo (15-30s) et sélectionner les gymnases où le diffuser._
 
 **Critères d'acceptation**
 
-- [ ] Upload vidéo MP4 (max 100MB, 15-30s)
-- [ ] Validation format automatique (résolution, durée, codec)
-- [ ] Sélection d'un ou plusieurs gymnases cibles
-- [ ] Preview du spot avant soumission
-- [ ] Statut : "En attente de validation" visible par le sponsor
+- [x] Upload vidéo MP4 (max 100MB, 15-30s) — `sponsor-portal.controller.ts`
+- [x] Validation format automatique (résolution, durée, codec)
+- [x] Sélection d'un ou plusieurs gymnases cibles — `site-sponsor-portal.component.ts`
+- [x] Preview du spot avant soumission
+- [x] Statut : "En attente de validation" visible par le sponsor — pending approval logic in portal
 
 | US        | Description                                                            | SP  | Sprint | Priorité |
 | --------- | ---------------------------------------------------------------------- | --- | ------ | -------- |
@@ -138,17 +141,17 @@ Tous les controllers utilisent le repository pattern. ESLint bloquant actif. Aud
 
 ---
 
-### F-01.3 : Validation admin des spots
+### F-01.3 : Validation admin des spots ⚠️ PARTIEL
 
 > _En tant qu'admin NEOPRO, je peux valider ou refuser les spots soumis par les sponsors avec un motif._
 
 **Critères d'acceptation**
 
-- [ ] Liste des spots en attente dans le dashboard admin
-- [ ] Preview vidéo dans le dashboard
-- [ ] Actions : Approuver / Refuser (avec motif obligatoire)
-- [ ] Notification email au sponsor du résultat
-- [ ] Le spot approuvé entre automatiquement en rotation
+- [x] Liste des spots en attente dans le dashboard admin — `sponsor-portal.controller.ts`
+- [x] Preview vidéo dans le dashboard
+- [x] Actions : Approuver / Refuser (avec motif obligatoire) — approval validation middleware
+- [ ] Notification email au sponsor du résultat _(non implémenté)_
+- [x] Le spot approuvé entre automatiquement en rotation
 
 | US        | Description                                                                    | SP  | Sprint | Priorité |
 | --------- | ------------------------------------------------------------------------------ | --- | ------ | -------- |
@@ -290,39 +293,39 @@ Tous les controllers utilisent le repository pattern. ESLint bloquant actif. Aud
 
 ---
 
-## Reliquats PI-1 (Features restantes d'Epics partiellement Done)
+## Reliquats PI-1 (anciennement Features restantes — tous terminés)
 
-### E-07 — Résilience WiFi V2 (reliquat)
+### E-07 — Résilience WiFi V2 (reliquat) ✅ DONE
 
-### F-07.3 : Support clé USB WiFi externe
+### F-07.3 : Support clé USB WiFi externe ✅ DONE
 
 > _En tant qu'admin, je peux brancher une clé USB WiFi sur un Pi pour améliorer la réception dans les gymnases à signal faible._
 
 **Critères d'acceptation**
 
-- [ ] Détection automatique de la clé USB WiFi (chipset RTL8192EU supporté)
-- [ ] Basculement automatique vers la clé USB si signal meilleur que le WiFi intégré
-- [ ] Dashboard : indicateur "WiFi USB actif" sur la fiche du Pi
-- [ ] Guide d'installation documenté (référence : `docs/guides/WIFI_USB_GUIDE.md`)
+- [x] Détection automatique de la clé USB WiFi (chipset RTL8192EU supporté) — `99-neopro-usb-wifi.rules`, `neopro-usb-wifi.service`
+- [x] Basculement automatique vers la clé USB si signal meilleur que le WiFi intégré — `network-detector.js`, `hotspot-optimizer.sh`
+- [x] Dashboard : indicateur "WiFi USB actif" sur la fiche du Pi — `site-detail.component.ts` (wlan status)
+- [x] Guide d'installation documenté (référence : `docs/guides/WIFI_USB_GUIDE.md`)
 
-| US        | Description                                                             | SP  | Sprint | Priorité |
-| --------- | ----------------------------------------------------------------------- | --- | ------ | -------- |
-| US-07.3.1 | Détection auto clé USB WiFi + basculement signal + indicateur dashboard | 3   | S3     | Could    |
+| US        | Description                                                             | SP  | Sprint | Priorité | Statut  |
+| --------- | ----------------------------------------------------------------------- | --- | ------ | -------- | ------- |
+| US-07.3.1 | Détection auto clé USB WiFi + basculement signal + indicateur dashboard | 3   | S3     | Could    | ✅ Done |
 
 ---
 
-### E-10 — Monitoring Fleet (reliquat)
+### E-10 — Monitoring Fleet (reliquat) ✅ DONE
 
-### F-10.1 : Carte de la flotte
+### F-10.1 : Carte de la flotte ✅ DONE
 
 > _En tant qu'admin, je peux voir tous les Pi sur une carte avec leur statut en temps réel._
 
 **Critères d'acceptation**
 
-- [ ] Carte Leaflet avec un marqueur par Pi
-- [ ] Couleur du marqueur : vert (online), orange (dégradé), rouge (offline)
-- [ ] Tooltip : nom du club, dernière activité, uptime 30j
-- [ ] Auto-refresh toutes les 30s
+- [x] Carte Leaflet avec un marqueur par Pi — `sites-map.component.ts`
+- [x] Couleur du marqueur : vert (online), orange (dégradé), rouge (offline)
+- [x] Tooltip : nom du club, dernière activité, uptime 30j
+- [x] Auto-refresh toutes les 30s
 
 | US        | Description                                                                     | SP  | Sprint | Priorité |
 | --------- | ------------------------------------------------------------------------------- | --- | ------ | -------- |
@@ -1008,6 +1011,23 @@ Tous les controllers utilisent le repository pattern. ESLint bloquant actif. Aud
 > **Note E-22** : 3 features ajoutées le 24/02 (F-22.4 GO, F-22.5 et F-22.6 à détailler). Fallback PiP : NO GO.
 > **Note E-23** : 7 features, 33 US, 146 SP. Epic Résilience HDMI & Accès Navigateur ajouté le 26/02.
 > **Note E-03** : Requalifié Partiel le 09/03. F-03.1 (dashboard impressions) et F-03.2 (export PDF/CSV) livrés par sprint audit sponsors/analytics Fév 2026 (IMP-AUD-01→32). L'envoi email auto (F-03.2 critère 4) reporté vers E-16 (PI-2).
+> **Note Audit 11/04** : F-07.3 → Done (USB WiFi complet), F-10.1 critères cochés, E-01 → Partiel (portail magic link opérationnel). 6 Epics livrés hors SAFe identifiés (SaaS, Club Portal, Billing, Campaigns, Proof of Play, Config Copy) — voir PI-OBJECTIVES.md.
+
+---
+
+## Travail livré hors cadre SAFe (à intégrer)
+
+> Ces travaux ont été implémentés sans planification SAFe formelle. Ils doivent être rattachés à des Epics existants ou créés comme nouveaux Epics pour assurer la traçabilité.
+
+| Travail                         | ADR     | Statut      | SP estimés | Rattachement suggéré                  |
+| ------------------------------- | ------- | ----------- | ---------- | ------------------------------------- |
+| Mode SaaS (site sans Pi)        | ADR-037 | ✅ Done     | ~20        | Nouvel Epic E-24                      |
+| Club Portal (dashboard club)    | ADR-036 | ✅ Done     | ~15        | Nouvel Epic E-25                      |
+| Billing / Tiers (feature gates) | ADR-039 | ✅ Done     | ~10        | Nouvel Epic E-26                      |
+| Campaigns Sponsor               | ADR-035 | ✅ Done     | ~12        | Sous E-01 ou E-02                     |
+| Proof of Play                   | -       | ✅ Done     | ~5         | Extension E-03                        |
+| Config Copy & Duplication       | ADR-046 | ✅ Done     | ~3         | Sous E-10 (Fleet Management)          |
+| Templates Motion (partiel)      | -       | 🔶 En cours | ~8         | Déjà sous E-05 (PI-2) — à replanifier |
 
 ---
 

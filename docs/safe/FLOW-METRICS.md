@@ -1,6 +1,6 @@
 # Flow Metrics — Value Stream Level
 
-> **Dernière mise à jour** : 18 Février 2026
+> **Dernière mise à jour** : 11 Avril 2026
 > **Framework** : SAFe 6.0 — Flow Framework (Mik Kersten)
 > Les Flow Metrics mesurent la santé des Value Streams au-delà de la vélocité dev.
 

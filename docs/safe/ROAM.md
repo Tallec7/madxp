@@ -1,6 +1,6 @@
 # Registre de Risques ROAM — PI-1
 
-> **Dernière mise à jour** : 20 Février 2026
+> **Dernière mise à jour** : 11 Avril 2026
 > **PI** : PI-1 (Février - Mars 2026)
 > Framework SAFe ROAM : **R**esolved, **O**wned, **A**ccepted, **M**itigated
 
@@ -54,9 +54,9 @@
 - [x] Environnement de test local avec routeur dédié
 - [x] Mode offline fonctionnel (Socket.IO local, E-07)
 - [ ] Tests de charge WiFi simulés (throttling réseau)
-- [ ] Clé USB WiFi externe en backup (E-07)
+- [x] Clé USB WiFi externe en backup (E-07) — RTL8192EU, udev, systemd, guide complet
 
-**Critère de résolution** : E-07 (Résilience WiFi V2) livré et validé en conditions réelles.
+**Critère de résolution** : E-07 (Résilience WiFi V2) livré ✅. Validation en conditions réelles en cours.
 
 ---
 
@@ -208,17 +208,17 @@
 
 ## Suivi des actions
 
-| Action                                 | Risque | Owner    | Deadline   | Statut     |
-| -------------------------------------- | ------ | -------- | ---------- | ---------- |
-| Mesurer vélocité Sprint 1              | R-01   | Gwenvael | Fin S1     | En attente |
-| Tests de charge WiFi simulés           | R-02   | Gwenvael | S2         | En attente |
-| Identifier 3 sponsors beta             | R-03   | Gabin    | Fin S1     | En attente |
-| Interview sponsors existants           | R-03   | Gwenvael | S1         | En attente |
-| Benchmark charge 50 connexions         | R-04   | Gwenvael | Avant PI-2 | En attente |
-| Chiffrement config locale Pi           | R-05   | Gwenvael | S3         | En attente |
-| Script semi-auto onboarding (fallback) | R-06   | Gwenvael | S2         | En attente |
-| Stratégie backup vidéos                | R-07   | Gwenvael | Avant PI-2 | En attente |
-| Test E2E parcours sponsor              | R-08   | Gwenvael | S3         | En attente |
+| Action                                 | Risque | Owner    | Deadline   | Statut                                |
+| -------------------------------------- | ------ | -------- | ---------- | ------------------------------------- |
+| Mesurer vélocité Sprint 1              | R-01   | Gwenvael | Fin S1     | ⚠️ Non fait — vélocité jamais mesurée |
+| Tests de charge WiFi simulés           | R-02   | Gwenvael | S2         | En attente                            |
+| Identifier 3 sponsors beta             | R-03   | Gabin    | Fin S1     | En attente                            |
+| Interview sponsors existants           | R-03   | Gwenvael | S1         | En attente                            |
+| Benchmark charge 50 connexions         | R-04   | Gwenvael | Avant PI-2 | En attente                            |
+| Chiffrement config locale Pi           | R-05   | Gwenvael | S3         | En attente                            |
+| Script semi-auto onboarding (fallback) | R-06   | Gwenvael | S2         | En attente                            |
+| Stratégie backup vidéos                | R-07   | Gwenvael | Avant PI-2 | En attente                            |
+| Test E2E parcours sponsor              | R-08   | Gwenvael | S3         | En attente                            |
 
 ---
 

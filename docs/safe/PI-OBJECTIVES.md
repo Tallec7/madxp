@@ -1,6 +1,6 @@
 # PI Objectives — Scoring Business Value
 
-> **Dernière mise à jour** : 20 Février 2026
+> **Dernière mise à jour** : 11 Avril 2026
 > **Framework** : SAFe Essential — PI Objectives avec Business Value (BV) scoring
 > Le scoring BV (1-10) est défini par les Business Owners en PI Planning.
 
@@ -25,14 +25,14 @@ Le ratio **Actual / Planned** mesure la **Program Predictability** (cible : > 80
 
 > Les Epics suivants étaient prévus en PI-1 mais se sont avérés déjà implémentés. Leur BV est **acquise d'office**.
 
-| Epic                            | BV acquise | Statut     | Preuve                                    |
-| ------------------------------- | ---------- | ---------- | ----------------------------------------- |
-| E-04 Profils Config Match       | 7          | ✅ Done    | `config-profiles.controller.ts`           |
-| E-08 Alertes Prédictives        | 6          | ✅ Done    | `predictive-alerts.service.ts`            |
-| E-09 Architecture Audit         | 5          | ✅ Done    | 24 repositories, ESLint                   |
-| E-07 Résilience WiFi (partiel)  | 5          | ⚠️ Partiel | Cache 48h + monitoring OK, USB WiFi reste |
-| E-10 Monitoring Fleet (partiel) | 3          | ⚠️ Partiel | Métriques OK, carte Leaflet reste         |
-| **Total BV acquise**            | **26**     |            |                                           |
+| Epic                      | BV acquise | Statut  | Preuve                                 |
+| ------------------------- | ---------- | ------- | -------------------------------------- |
+| E-04 Profils Config Match | 7          | ✅ Done | `config-profiles.controller.ts`        |
+| E-08 Alertes Prédictives  | 6          | ✅ Done | `predictive-alerts.service.ts`         |
+| E-09 Architecture Audit   | 5          | ✅ Done | 24 repositories, ESLint                |
+| E-07 Résilience WiFi      | 5          | ✅ Done | Cache 48h + monitoring + USB WiFi done |
+| E-10 Monitoring Fleet     | 3          | ✅ Done | Métriques + carte Leaflet done         |
+| **Total BV acquise**      | **26**     |         |                                        |
 
 ---
 
@@ -79,17 +79,34 @@ Prédictibilité Programme = Σ (BV Réel des objectifs atteints) / Σ (BV Plani
 Cible : > 80% → BV Réel ≥ 30
 ```
 
-| Objectif                     | BV Planifié | BV Réel            | Atteint ? |
-| ---------------------------- | ----------- | ------------------ | --------- |
-| 1. Portail sponsor           | 9           | _à remplir en I&A_ |           |
-| 2. Analytics sponsors        | 10          | _à remplir en I&A_ |           |
-| 3. Rotation sponsors         | 8           | _à remplir en I&A_ |           |
-| 4. Wizard onboarding         | 10          | _à remplir en I&A_ |           |
-| **Total Engagés**            | **37**      |                    |           |
-| 5. Carte flotte (étendu)     | 4           | _à remplir en I&A_ |           |
-| 6. USB WiFi (étendu)         | 3           | _à remplir en I&A_ |           |
-| **Total Étendus**            | **7**       |                    |           |
-| **Prédictibilité Programme** |             | **\_%**            |           |
+| Objectif                     | BV Planifié | BV Réel | Atteint ?                                                          |
+| ---------------------------- | ----------- | ------- | ------------------------------------------------------------------ |
+| 1. Portail sponsor           | 9           | 6       | ⚠️ Partiel — Portail magic link OK, self-signup manquant           |
+| 2. Analytics sponsors        | 10          | 10      | ✅ Oui — F-03.1 + F-03.2 Done                                      |
+| 3. Rotation sponsors         | 8           | 5       | ⚠️ Partiel — Bresenham OK, min 20 passages + compteur DB manquants |
+| 4. Wizard onboarding         | 10          | 0       | ❌ Non — QR code généré, wizard 4 étapes non implémenté            |
+| **Total Engagés**            | **37**      | **21**  |                                                                    |
+| 5. Carte flotte (étendu)     | 4           | 4       | ✅ Oui — Leaflet map done                                          |
+| 6. USB WiFi (étendu)         | 3           | 3       | ✅ Oui — RTL8192EU, udev, systemd, guide                           |
+| **Total Étendus**            | **7**       | **7**   |                                                                    |
+| **Prédictibilité Programme** |             | **57%** | 21/37 — sous la cible de 80%                                       |
+
+---
+
+## Travail livré hors PI Planning (non tracké)
+
+> Les Epics suivants ont été implémentés pendant ou après PI-1 sans avoir été planifiés dans le cadre SAFe. Ils représentent un volume significatif (~60+ SP estimés).
+
+| Epic (rétroactif)                                              | ADR     | Statut  | SP estimés | Fichiers clés                                                        |
+| -------------------------------------------------------------- | ------- | ------- | ---------- | -------------------------------------------------------------------- |
+| **Mode SaaS** (site navigateur sans Pi)                        | ADR-037 | ✅ Done | ~20 SP     | `saas-config.service.ts`, 30+ commits SaaS (v3.125-v3.136)           |
+| **Club Portal** (dashboard club self-service)                  | ADR-036 | ✅ Done | ~15 SP     | 9 composants `club-portal/`, `club-realtime.service.ts`              |
+| **Billing / Subscription Tiers** (essential/autonomie/premium) | ADR-039 | ✅ Done | ~10 SP     | `feature-gate.service.ts`, 3 phases (foundation + gates + overrides) |
+| **Campaigns Sponsor** (CRUD, targeting, auto-deploy)           | ADR-035 | ✅ Done | ~12 SP     | `campaign.controller.ts`, `sponsor-campaigns-tab.component.ts`       |
+| **Proof of Play** (stats sponsors + reporting PDF)             | -       | ✅ Done | ~5 SP      | `site-sponsor-daily-stats`, `pdf-report/`, analytics breakdowns      |
+| **Config Copy & Site Duplication**                             | ADR-046 | ✅ Done | ~3 SP      | `copy-config-modal.component.ts`, v3.139                             |
+
+> **Action requise** : Ces Epics doivent être intégrés formellement dans le portfolio (Epics E-24 à E-29 ou rattachés à des Epics existants).
 
 ---
 
