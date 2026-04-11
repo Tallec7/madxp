@@ -168,7 +168,7 @@ import { VideoSearchSelectComponent } from '../../../../../shared/components/vid
                     [searchPlaceholder]="'common.searchVideoPlaceholder' | translate"
                     [emptyLabel]="'common.noVideoFound' | translate"
                     [invalid]="isOrphanedVideoPath(video.path)"
-                    class="video-select-compact"
+                    class="video-search-wrapper"
                   ></app-video-search-select>
                   <input
                     type="text"
@@ -634,16 +634,10 @@ import { VideoSearchSelectComponent } from '../../../../../shared/components/vid
       border-radius: 4px;
     }
 
-    .video-select-compact {
+    .video-search-wrapper {
       flex: 2;
-      padding: 0.25rem 0.375rem;
-      border: 1px solid #e2e8f0;
-      border-radius: 4px;
-      font-size: 0.75rem;
+      min-width: 0;
     }
-
-    .video-select-compact.has-cloud-video { border-color: #f59e0b; background: #fffbeb; }
-    .video-select-compact.orphaned { border-color: #fca5a5; background: #fef2f2; color: #991b1b; }
 
     .video-name-compact {
       flex: 1;
