@@ -264,6 +264,29 @@ import { LoopManagerComponent } from '../../loop-manager/loop-manager.component'
       ></app-loop-manager>
     </div>
 
+    <!-- Secondary Display Preview (Phase 3 — PROP-002) -->
+    <div class="section card" id="section-secondary-preview" *ngIf="secondaryDisplayEnabled">
+      <div class="section-header">
+        <h4>
+          <span class="section-icon">🖥️</span>
+          Aperçu écran secondaire
+        </h4>
+      </div>
+      <p class="section-desc">
+        Contenu prévu sur l'écran secondaire. Les vidéos avec le badge 📺 ont une variante dédiée, les autres utiliseront un recadrage automatique.
+      </p>
+      <div class="secondary-preview-list">
+        <div *ngFor="let video of getSecondaryPlaylistVideos()" class="secondary-preview-item" [class.has-variant]="video.hasVariant" [class.no-variant]="!video.hasVariant">
+          <span class="secondary-preview-name">{{ video.displayName }}</span>
+          <span class="secondary-preview-badge" *ngIf="video.hasVariant" title="Variante secondaire dédiée">📺 2nd</span>
+          <span class="secondary-preview-fallback" *ngIf="!video.hasVariant" title="Recadrage automatique (object-fit: cover)">recadrage auto</span>
+        </div>
+        <div *ngIf="getSecondaryPlaylistVideos().length === 0" class="secondary-preview-empty">
+          Aucune vidéo dans la configuration actuelle.
+        </div>
+      </div>
+    </div>
+
     <!-- Remote Organization -->
     <div class="section card" id="section-remote">
       <div class="section-header">
@@ -643,6 +666,48 @@ import { LoopManagerComponent } from '../../loop-manager/loop-manager.component'
       border-radius: 4px;
       padding: 0.1rem 0.35rem;
       font-weight: 600;
+    }
+
+    /* Secondary Display Preview (Phase 3 — PROP-002) */
+    .secondary-preview-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.375rem;
+    }
+    .secondary-preview-item {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 0.75rem;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      border: 1px solid #e2e8f0;
+      background: #f8fafc;
+    }
+    .secondary-preview-item.has-variant {
+      border-color: #93c5fd;
+      background: #eff6ff;
+    }
+    .secondary-preview-item.no-variant {
+      border-color: #fed7aa;
+      background: #fff7ed;
+    }
+    .secondary-preview-name { flex: 1; }
+    .secondary-preview-badge {
+      font-size: 0.7rem;
+      color: #1e40af;
+      font-weight: 600;
+    }
+    .secondary-preview-fallback {
+      font-size: 0.7rem;
+      color: #9a3412;
+      font-style: italic;
+    }
+    .secondary-preview-empty {
+      padding: 1rem;
+      text-align: center;
+      color: #94a3b8;
+      font-size: 0.8rem;
     }
 
     .sponsor-badge-auto {
@@ -1043,6 +1108,28 @@ export class ConfigEditorComponent {
     if (!this.secondaryDisplayEnabled) return false;
     const video = this.unifiedVideoOptions.find(v => v.path === path);
     return video?.hasSecondaryVariant ?? false;
+  }
+
+  getSecondaryPlaylistVideos(): { path: string; displayName: string; hasVariant: boolean }[] {
+    if (!this.config || !this.secondaryDisplayEnabled) return [];
+    const allPaths = new Set<string>();
+    // Collect all video paths from sponsors and category loops
+    for (const s of this.config.sponsors || []) {
+      if (s.path) allPaths.add(s.path);
+    }
+    for (const tc of this.config.timeCategories || []) {
+      for (const lv of tc.loopVideos || []) {
+        if (lv.path) allPaths.add(lv.path);
+      }
+    }
+    return Array.from(allPaths).map(p => {
+      const video = this.unifiedVideoOptions.find(v => v.path === p);
+      return {
+        path: p,
+        displayName: video?.displayName || p.split('/').pop() || p,
+        hasVariant: video?.hasSecondaryVariant ?? false,
+      };
+    });
   }
 
   getCategorySponsor(videoPath: string): SiteSponsor | null {

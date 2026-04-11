@@ -289,6 +289,22 @@
               </button>
               @if (isHeaderMenuOpen) {
                 <div class="header-menu-dropdown">
+                  <!-- Display status (Phase 3 — PROP-002) -->
+                  @if (connectedDisplayTypes.length > 0) {
+                    <div class="header-menu-displays">
+                      <span class="display-indicator">
+                        <span class="display-dot" [class.connected]="isTvDisplayConnected"></span>
+                        TV
+                      </span>
+                      <span class="display-indicator">
+                        <span
+                          class="display-dot"
+                          [class.connected]="isSecondaryDisplayConnected"
+                        ></span>
+                        2nd
+                      </span>
+                    </div>
+                  }
                   <!-- Dark mode -->
                   <button class="header-menu-item" (click)="toggleDarkMode(); closeHeaderMenu()">
                     @if (isDarkMode) {

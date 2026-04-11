@@ -135,6 +135,11 @@ export class RemoteComponent implements OnInit, OnDestroy {
   // Menu header (pour simplifier le header)
   public isHeaderMenuOpen = false;
 
+  // Display status (Phase 3 — PROP-002)
+  public connectedDisplayTypes: string[] = [];
+  public isTvDisplayConnected = false;
+  public isSecondaryDisplayConnected = false;
+
   // Sports et Périodes
   public readonly sportTypes: SportType[] = ['football', 'basketball', 'handball', 'volleyball', 'rugby', 'hockey'];
   public readonly sportLabels = SPORT_LABELS;
@@ -314,6 +319,18 @@ export class RemoteComponent implements OnInit, OnDestroy {
         this.activePhase = data.phase;
       });
     });
+
+    // Écouter les changements de displays connectés (Phase 3 — PROP-002)
+    this.socketService.on(
+      'displays-changed',
+      (data: { displays: string[]; clients: Array<{ displayType: string }> }) => {
+        this.ngZone.run(() => {
+          this.connectedDisplayTypes = data.displays || [];
+          this.isTvDisplayConnected = this.connectedDisplayTypes.includes('tv');
+          this.isSecondaryDisplayConnected = this.connectedDisplayTypes.includes('secondary');
+        });
+      },
+    );
 
     // Demander l'état actuel au serveur (le message initial peut avoir été manqué pendant le routing)
     this.socketService.emit('request-state', {});

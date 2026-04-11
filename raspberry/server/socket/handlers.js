@@ -105,6 +105,11 @@ module.exports = function registerSocketHandlers({ io, stateService, configPath,
       if (s.timer.isRunning || s.timer.currentTime > 0) {
         socket.emit('timer-update', { action: 'sync', ...s.timer });
       }
+      // Send connected displays state (Phase 3 — PROP-002)
+      socket.emit('displays-changed', {
+        displays: stateService.getConnectedDisplayTypes(),
+        clients: stateService.getConnectedClients(),
+      });
     });
 
     /**
@@ -204,6 +209,12 @@ module.exports = function registerSocketHandlers({ io, stateService, configPath,
       if (role === 'slave') {
         socket.emit('tv-loop-state', stateService.getLoopState());
       }
+
+      // Notify all clients (Remote) that connected displays changed
+      io.emit('displays-changed', {
+        displays: stateService.getConnectedDisplayTypes(),
+        clients: stateService.getConnectedClients(),
+      });
     });
 
     /**
@@ -472,12 +483,20 @@ module.exports = function registerSocketHandlers({ io, stateService, configPath,
      * @event disconnect
      */
     socket.on('disconnect', () => {
-      console.log('Client d\u00e9connect\u00e9:', socket.id);
+      console.log('Client déconnecté:', socket.id);
+      const clientsBefore = stateService.getConnectedClients().length;
       const { wasMaster, promoted } = stateService.unregisterTv(socket.id);
       if (wasMaster && !promoted) {
         console.log('[TV-Sync] Master disconnected, no slave to promote');
       } else if (wasMaster && promoted) {
         io.to(promoted).emit('tv-role-assigned', { role: 'master' });
+      }
+      // Notify all clients (Remote) that connected displays changed
+      if (stateService.getConnectedClients().length !== clientsBefore) {
+        io.emit('displays-changed', {
+          displays: stateService.getConnectedDisplayTypes(),
+          clients: stateService.getConnectedClients(),
+        });
       }
     });
   });

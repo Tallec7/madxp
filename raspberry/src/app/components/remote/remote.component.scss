@@ -1652,6 +1652,29 @@ input:focus-visible {
   overflow: hidden;
   animation: dropdownFadeIn 0.15s ease-out;
 }
+.header-menu-displays {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  padding: 0.625rem 1rem;
+  border-bottom: 1px solid $gray-100;
+  font-size: 0.8rem;
+  color: $gray-500;
+}
+.display-indicator {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+.display-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: $gray-300;
+  &.connected {
+    background: #22c55e;
+  }
+}
 .header-menu-item {
   display: flex;
   align-items: center;
@@ -2804,6 +2827,16 @@ body.dark-mode .timer-panel {
   .header-menu-dropdown {
     background: $dark-bg;
     border-color: $dark-bg-alt;
+  }
+  .header-menu-displays {
+    border-color: $dark-bg-alt;
+    color: $gray-400;
+  }
+  .display-dot {
+    background: $gray-600;
+    &.connected {
+      background: #22c55e;
+    }
   }
   .header-menu-item {
     color: $gray-200;
