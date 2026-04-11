@@ -1,3 +1,9 @@
+# [3.147.0](https://github.com/Tallec7/neopro/compare/v3.146.5...v3.147.0) (2026-04-11)
+
+### Features
+
+- **dashboard:** add secondary variant management from config-editor ([167e585](https://github.com/Tallec7/neopro/commit/167e5856485c427b1f508d4a0122b20300bc78ef))
+
 ## [3.146.5](https://github.com/Tallec7/neopro/compare/v3.146.4...v3.146.5) (2026-04-11)
 
 ### Bug Fixes
