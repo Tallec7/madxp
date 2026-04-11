@@ -1,66 +1,73 @@
-# PROP-001: Multi-TV — Diffusion sur Plusieurs Écrans depuis un Seul Raspberry Pi
+# PROP-001: Multi-TV — Diffusion sur Plusieurs Écrans (Pi & SaaS)
 
-> _Anciennement ADR-011_
+> _Anciennement ADR-011 — Révisé le 2026-04-11 avec l'offre SaaS (ADR-037) et le mode hybride Pi+SaaS_
 
-**Date** : 2026-02-11
+**Date** : 2026-02-11 (créé) — 2026-04-11 (révisé)
 **Statut** : Proposé
 **Décideurs** : Équipe Neopro
-**Lié à** : [ADR-008](../adr/ADR-008-double-buffer-video-pi.md) (Double-Buffer Vidéo), [ADR-001](../adr/ADR-001-edge-cloud-architecture.md) (Edge-Cloud Architecture)
+**Lié à** : [ADR-008](../adr/ADR-008-double-buffer-video-pi.md) (Double-Buffer Vidéo), [ADR-001](../adr/ADR-001-edge-cloud-architecture.md) (Edge-Cloud Architecture), [ADR-037](../adr/ADR-037-saas-site-type.md) (SaaS Site Type)
 
 ---
 
 ## Contexte
 
-Un prospect (club sportif) souhaite diffuser du contenu Neopro sur **4 écrans TV simultanément** depuis un seul boîtier Raspberry Pi. Les TV sont réparties dans différentes zones du club (hall d'accueil, buvette, tribunes, vestiaires) et peuvent être **espacées de 5 mètres ou plus** les unes des autres.
+Un prospect (club sportif) souhaite diffuser du contenu Neopro sur **4 écrans TV simultanément**. Les TV sont réparties dans différentes zones du club (hall d'accueil, buvette, tribunes, vestiaires) et peuvent être **espacées de 5 mètres ou plus** les unes des autres.
+
+### Évolution majeure depuis la v1 de cette proposition
+
+Deux évolutions changent fondamentalement la donne :
+
+1. **L'offre SaaS** (ADR-037) : n'importe quel navigateur moderne peut devenir un écran Neopro en chargeant une URL → **scénario D** (cloud pur).
+
+2. **Le mode hybride Pi+SaaS** (scénario E) : le Pi existant sert déjà le frontend Angular + les vidéos + Socket.IO via son hotspot WiFi. N'importe quel device (Fire Stick, Smart TV, tablette) connecté au hotspot `NEOPRO_xxx` peut charger `http://neopro.local/tv` et devenir un écran supplémentaire. **Ça fonctionne déjà aujourd'hui, zéro dev.** C'est le meilleur des deux mondes : la résilience offline du Pi + la flexibilité multi-écran du SaaS.
 
 ### Contraintes
 
-- **1 seul Pi** par club (coût, simplicité de gestion flotte)
-- **Même contenu** sur toutes les TV (playlist identique + overlay de score)
+- **Même contenu** sur toutes les TV (playlist identique + overlay de score) — cas standard
+- **Contenus différenciés** par TV — cas avancé (nécessite ciblage)
 - **Distance** entre TV : 5-20m typiquement
-- **Raspberry Pi 4/5** : seulement 2 ports micro-HDMI natifs
 - **Qualité vidéo** : 1080p minimum sur chaque TV
-- **Score live** : l'overlay de score (ADR-013) doit être visible sur toutes les TV
+- **Score live** : l'overlay de score doit être visible sur toutes les TV
 - **Fiabilité** : le système tourne en autonomie pendant les matchs (5h+)
+- **Coût** : minimiser le hardware additionnel
 
 ### État actuel
 
-- Architecture 1 site = 1 Pi = 1 écran (mapping 1:1)
-- 1 seule instance Chromium kiosk (watchdog `kiosk-watchdog.sh`)
-- 1 sortie HDMI utilisée, la seconde ignorée
-- Le signal HDMI est un flux vidéo standard duplicable par matériel
+- Architecture 1 site = 1 Pi ou 1 URL SaaS = 1 écran (mapping 1:1)
+- Mode Pi : 1 instance Chromium kiosk, 1 sortie HDMI
+- Mode SaaS : 1 navigateur charge `https://neopro-admin.kalonpartners.bzh/saas/?site={siteId}`
+- Vidéos servies via URLs FTP publiques (SaaS) ou fichiers locaux (Pi)
 
 ### La Remote (télécommande) — Élément critique
 
-La Remote est une page web servie par le Pi (`http://neopro.local/remote`), accessible depuis n'importe quel smartphone connecté au **hotspot WiFi** du Pi (`NEOPRO_xxx`). Elle permet au staff du club de :
-
-- Lancer des vidéos manuellement (sponsors, jingles, ambiance)
-- Gérer le score en live (saisie manuelle ou Stramatel, cf. ADR-013)
-- Changer les phases de match (avant/pendant/après)
-- Envoyer des breaking news en overlay
-- Piloter le chronomètre
-- Configurer l'overlay (position, couleurs, template)
+La Remote est une page web accessible depuis n'importe quel smartphone. Elle permet au staff du club de piloter les écrans (vidéos, score, phases de match, breaking news, chronomètre).
 
 **Communication dual-channel** :
 
-1. **BroadcastChannel** (`neopro-local`) : communication directe navigateur-à-navigateur, **uniquement sur le même Pi** (Remote ↔ TV kiosk). Zéro latence, fonctionne offline.
-2. **Socket.IO** (port 3000) : communication réseau pour les appareils connectés au hotspot WiFi (tablettes, smartphones) **et** pour le monitoring cloud.
-
-Chaque action de la Remote émet sur **les deux canaux** simultanément :
-
-```typescript
-// Exemple : lancer une vidéo sponsors
-this.localBroadcast.emitCommand({ type: 'sponsors' }); // BroadcastChannel (local)
-this.socketService.emit('command', { type: 'sponsors' }); // Socket.IO (réseau)
-```
+1. **BroadcastChannel** (`neopro-local`) : navigateur-à-navigateur sur le même appareil. Zéro latence, offline.
+2. **Socket.IO** : communication réseau pour tous les appareils connectés, y compris le monitoring cloud.
 
 **Limitation actuelle** : La Remote broadcast à **tous les écrans** sans distinction. Aucun mécanisme de ciblage par display n'existe.
 
-## Décision
+## Matrice de décision
 
-Adopter une **distribution HDMI matérielle** via splitter, avec 3 scénarios selon la distance et le nombre de TV.
+| Critère                  | A — Splitter HDMI | B — HDBaseT       | C — Pi Zero esclaves | D — SaaS cloud        | **E — Pi + devices WiFi**                    |
+| ------------------------ | ----------------- | ----------------- | -------------------- | --------------------- | -------------------------------------------- |
+| Même contenu             | ✅ Natif          | ✅ Natif          | ✅ + différencié     | ✅ + différencié      | **✅ + différencié**                         |
+| Contenus différents      | ❌                | ❌                | ✅                   | ✅                    | **✅**                                       |
+| Distance max             | 10-15m            | 70-100m           | WiFi (~30m)          | WiFi/Ethernet club    | **Hotspot Pi (~30m)**                        |
+| Dev logiciel             | 0                 | 0                 | ~10 jours            | ~5 jours              | **0** (même contenu) / **~5j** (différencié) |
+| Coût hardware/TV         | 15-20€            | 60-100€           | ~45€                 | 0-50€                 | **0-50€** (stick HDMI)                       |
+| Offline total            | ✅                | ✅                | ✅                   | ❌ Dépend internet    | **✅ Tout local**                            |
+| Maintenance flotte       | 1 device          | 1 device          | N+1 devices          | 1 site SaaS           | **1 Pi (inchangé)**                          |
+| Scalabilité (ajouter TV) | Nouveau splitter  | Nouveau récepteur | Nouveau Pi Zero      | Ouvrir une URL        | **Connecter au hotspot**                     |
+| Score Stramatel live     | ✅ série directe  | ✅ série directe  | ✅ Socket.IO relay   | ⚠️ Cloud relay ~200ms | **✅ Socket.IO local 0ms**                   |
+| Remote (télécommande)    | ✅ Inchangée      | ✅ Inchangée      | ⚠️ Adaptation        | ✅ Socket.IO cloud    | **✅ Inchangée**                             |
+| Réseau requis            | Aucun             | Aucun             | Hotspot Pi           | WiFi club + internet  | **Hotspot Pi seul**                          |
 
-### Scénario A — Splitter HDMI 1→4 direct (distance < 10m) ✅
+---
+
+## Scénario A — Splitter HDMI 1→4 direct (distance < 10m) ✅
 
 ```
 ┌─────────────┐    HDMI     ┌──────────────┐
@@ -73,61 +80,34 @@ Adopter une **distribution HDMI matérielle** via splitter, avec 3 scénarios se
                             TV1 TV2 TV3 TV4
 ```
 
-**Principe** : Le Pi sort 1 signal HDMI. Un splitter actif 1→4 duplique le signal identiquement vers 4 sorties HDMI. Chaque TV reçoit une copie exacte du flux (vidéo + audio + overlay).
+**Principe** : Splitter actif 1→4 duplique le signal HDMI. Chaque TV reçoit une copie exacte (vidéo + audio + overlay).
 
-**Hardware requis** :
-| Composant | Référence type | Prix estimé |
-|-----------|---------------|-------------|
-| Splitter HDMI 1→4 actif (4K@30Hz / 1080p@60Hz) | OREI HD-104 ou equiv. | 30-50€ |
-| Câbles HDMI (selon distance) | HDMI 2.0 High Speed | 5-15€/câble |
+**Hardware** : Splitter HDMI 1→4 actif (30-50€) + câbles HDMI (5-15€/câble).
 
-**Impact Remote** : **Aucun.** Le splitter duplique le signal HDMI — la Remote contrôle 1 TV et les 4 affichent la même chose. Aucune modification de la Remote nécessaire. BroadcastChannel et Socket.IO fonctionnent comme avant.
+**Impact Remote** : **Aucun.** Le splitter est transparent — la Remote contrôle 1 flux, les 4 TV affichent la même chose.
 
-**Limites** :
+**Limites** : Distance max ~10-15m. Même contenu uniquement.
 
-- Distance max ~10-15m par câble HDMI
-- Au-delà : dégradation du signal, artefacts possibles
-
-### Scénario B — Splitter HDMI over Cat6/HDBaseT (distance > 10m) ✅
+### Scénario B — HDBaseT Cat6 (distance > 10m) ✅
 
 ```
 ┌─────────────┐    HDMI     ┌─────────────────┐
 │ Raspberry Pi │───────────→│ Émetteur HDBaseT│
-│  (HDMI 1)   │            │  1 entrée HDMI  │
-└─────────────┘            └──┬──┬──┬──┬──────┘
-                              │  │  │  │
-                    Cat6      │  │  │  │  (jusqu'à 70-100m chacun)
+│  (HDMI 1)   │            └──┬──┬──┬──┬──────┘
+                              │  │  │  │  Cat6 (70-100m)
                               ↓  ↓  ↓  ↓
-                           ┌────┐┌────┐┌────┐┌────┐
-                           │ Rx ││ Rx ││ Rx ││ Rx │  (récepteurs HDBaseT)
-                           └──┬─┘└──┬─┘└──┬─┘└──┬─┘
-                              │     │     │     │
-                           HDMI  HDMI  HDMI  HDMI
-                              ↓     ↓     ↓     ↓
-                            TV1   TV2   TV3   TV4
+                           [Rx][Rx][Rx][Rx] → HDMI → TV1-4
 ```
 
-**Principe** : Le signal HDMI est converti en signal numérique transporté sur câble Ethernet Cat6. Chaque TV a un petit récepteur (boîtier ~taille carte de crédit) qui reconvertit en HDMI. Standard HDBaseT utilisé en intégration AV professionnelle.
+**Principe** : Signal HDMI transporté sur Cat6/Ethernet. Standard AV professionnel (HDBaseT).
 
-**Hardware requis** :
-| Composant | Référence type | Prix estimé |
-|-----------|---------------|-------------|
-| Matrice/Splitter HDBaseT 1→4 | Monoprice Blackbird ou equiv. | 150-250€ |
-| 4× Récepteurs HDBaseT | Inclus ou séparés | 30-50€/pièce |
-| Câbles Cat6 (longueur selon site) | Cat6 blindé (STP) | 1-2€/m |
+**Hardware** : Matrice HDBaseT 1→4 (150-250€) + récepteurs (30-50€/pièce) + Cat6.
 
-**Impact Remote** : **Aucun.** Identique au scénario A — c'est le même signal HDMI transporté sur Cat6 au lieu de câble HDMI. La Remote ne change pas.
+**Impact Remote** : **Aucun.** Identique au scénario A.
 
-**Avantages** :
+**Avantages** : 70-100m de portée, câblage Ethernet souvent déjà tiré, PoE possible.
 
-- Jusqu'à **70-100m** par liaison
-- Câblage Ethernet standard (souvent déjà tiré dans les clubs)
-- Signal numérique = zéro perte de qualité
-- Certains modèles passent le PoE (alimentation du récepteur via le câble)
-
-### Scénario C — Architecture évolutive (contenus différenciés par TV)
-
-Si le prospect évolue vers des **contenus différents par TV**, le splitter ne suffit plus. On passe sur une architecture réseau :
+### Scénario C — Pi Zero esclaves (contenus différenciés)
 
 ```
                           WiFi Hotspot du Pi maître
@@ -137,241 +117,496 @@ Si le prospect évolue vers des **contenus différents par TV**, le splitter ne 
       Pi maître     Pi Zero 2W  Pi Zero 2W  Pi Zero 2W
       HDMI → TV1    HDMI → TV2  HDMI → TV3  HDMI → TV4
       /tv?d=1       /tv?d=2     /tv?d=3     /tv?d=4
-
-      Serveur         Clients kiosk légers
-      + stockage      Chromium → http://neopro.local/tv?d=N
-      + Stramatel     Score reçu via Socket.IO
-      + API           Vidéos servies par le Pi maître
 ```
 
-**Principe** : Le Pi principal reste le maître (serveur, stockage, Stramatel). Des Pi Zero 2W (~20€ pièce) sont placés derrière chaque TV supplémentaire. Ils se connectent au hotspot WiFi du maître et affichent chacun une URL avec un paramètre `display` qui détermine la playlist.
+**Principe** : Pi principal = maître (serveur, stockage, Stramatel). Pi Zero 2W (~20€) derrière chaque TV secondaire, connectés au hotspot WiFi du maître.
 
-**Hardware requis** :
-| Composant | Référence type | Prix estimé |
-|-----------|---------------|-------------|
-| 3× Raspberry Pi Zero 2W | Pi Zero 2W | 20€/pièce |
-| 3× Alimentation USB-C | Officielle Pi | 10€/pièce |
-| 3× Câble mini-HDMI → HDMI | Standard | 5€/pièce |
-| 3× Carte microSD (16GB min) | Classe A1 | 8€/pièce |
+**Impact Remote** :
 
-**Le master/slave existe déjà partiellement** dans `tv.component.ts` :
+- BroadcastChannel ne traverse pas le réseau → **Socket.IO canal primaire** pour les esclaves
+- Nécessite ajout du champ `targetDisplay` + sélecteur de display dans la Remote
+- Score/phase/breaking news → broadcast global ; vidéos → ciblable par display
+
+**Dev** : ~7-10 jours (infra réseau + adaptation Remote + dashboard).
+
+**Limites** : N+1 devices à maintenir, bande passante WiFi (3× 1080p ≈ 15 Mbps, OK pour WiFi Pi 5).
+
+---
+
+## Scénario D — SaaS Multi-URL (NOUVEAU) ✅ Recommandé
+
+> **Le game-changer.** Chaque TV du club exécute un navigateur qui charge l'URL SaaS du site. Zéro matériel Neopro.
+
+```
+                        Internet / WiFi du club
+                                  │
+                    ┌─────────────┼─────────────┐
+                    ↓             ↓             ↓
+              Smart TV 1    Fire Stick 2   Chromecast 3    ...N
+              Chrome/Tizen  Silk Browser   Chrome Cast
+              saas/?site=X  saas/?site=X   saas/?site=X
+              &display=1    &display=2     &display=3
+                    │             │             │
+                    └──── Socket.IO room ───────┘
+                              siteId=X
+                                  │
+                         Central Server (cloud)
+                                  │
+                            Remote (smartphone)
+                            saas/?site=X&remote=1
+```
+
+### Comment ça marche
+
+1. **Chaque TV** charge `https://neopro-admin.kalonpartners.bzh/saas/?site={siteId}&display={N}`
+2. **Le Central Server** sert la configuration (profil par défaut enrichi, URLs FTP résolues)
+3. **Socket.IO** coordonne toutes les TV dans la même room `siteId` — la Remote broadcast les commandes
+4. **BroadcastChannel** reste actif pour le cas même-navigateur (ex: Remote et TV dans 2 onglets sur le même device)
+
+### Sous-scénario D1 — Même contenu (zéro dev)
+
+Toutes les TV chargent la même URL sans paramètre `display`. La Remote broadcast à tous via Socket.IO. **Aucun développement nécessaire — ça marche déjà aujourd'hui.**
+
+Le score, les phases de match, les breaking news sont synchronisés via Socket.IO room. Les vidéos jouent la même playlist.
+
+**Limitation** : léger décalage (drift) entre TV car chaque navigateur gère son propre playback. Pour les sponsors et ambiance, c'est invisible. Pour un contenu synchronisé à la frame, le splitter HDMI reste supérieur.
+
+### Sous-scénario D2 — Contenus différenciés par TV
+
+Nécessite le développement du **ciblage par display** (commun avec le scénario C) :
 
 ```typescript
-private tvRole: 'master' | 'slave' | null = null;
-private isSlaveMode = false;
-// Socket event: 'tv-role-assigned'
-```
+// URL avec identifiant display
+// saas/?site=abc123&display=2
 
-#### Impact Remote — Scénario C (critique)
+// La TV s'enregistre dans la room avec son displayId
+socket.emit('register-display', { siteId, displayId: 2, name: 'Buvette' });
 
-Dans ce scénario, les Pi Zero sont des **appareils séparés** connectés au hotspot WiFi du Pi maître. Cela a des conséquences majeures sur la communication :
-
-**Problème 1 — BroadcastChannel ne traverse pas le réseau :**
-Le BroadcastChannel (`neopro-local`) est une API navigateur qui fonctionne **uniquement entre onglets/fenêtres du même navigateur sur le même appareil**. Les Pi Zero esclaves, étant des appareils physiquement séparés, ne reçoivent pas les messages BroadcastChannel. Seul Socket.IO les atteint.
-
-```
-Remote (smartphone)
-   ├── BroadcastChannel → TV maître (même Pi) ✅
-   ├── BroadcastChannel → Pi Zero 1 ❌ (appareil séparé)
-   └── Socket.IO → tous les appareils sur le hotspot ✅ (y compris Zeros)
-```
-
-**Solution** : Pour les Pi Zero esclaves, **Socket.IO devient le canal primaire**. Le serveur Socket.IO du Pi maître relaie les commandes à tous les clients connectés. Les Pi Zero kiosk se connectent en Socket.IO au Pi maître et reçoivent les événements normalement. Pas de changement nécessaire sur le protocole Socket.IO existant — il broadcast déjà à tous les clients.
-
-**Problème 2 — Pas de ciblage par display :**
-Aujourd'hui la Remote broadcast toutes les commandes à **tous les écrans** sans distinction. Si les 4 TV ont des playlists différentes, il faut pouvoir :
-
-- Lancer une vidéo sur **une TV spécifique** (ex: sponsors uniquement sur TV buvette)
-- Envoyer le score sur **toutes les TV** (broadcast global)
-- Changer la phase de match sur **toutes les TV** (broadcast global)
-
-**Solution** : Ajouter un champ `targetDisplay` aux événements Socket.IO et un **sélecteur de display** dans la Remote :
-
-```typescript
-// Commande ciblée (nouvelle)
-this.socketService.emit('command', {
+// La Remote cible un display spécifique
+socket.emit('command', {
   type: 'play-video',
   videoId: '...',
-  targetDisplay: 2, // TV spécifique (null = toutes)
+  targetDisplay: 2, // null = broadcast à tous
 });
 
-// Commande broadcast (inchangée, score visible partout)
-this.socketService.emit('score-update', {
-  homeScore: 23,
-  awayScore: 21,
-  targetDisplay: null, // null = broadcast à tous
+// Côté TV : filtrage
+socket.on('command', (cmd) => {
+  if (cmd.targetDisplay && cmd.targetDisplay !== myDisplayId) return;
+  // Exécuter la commande
 });
 ```
 
-**UI Remote — Sélecteur de display :**
+### Hardware pour scénario D
+
+| Device TV                                                  | Prix         | Performance                    |
+| ---------------------------------------------------------- | ------------ | ------------------------------ |
+| Smart TV avec navigateur intégré (Samsung Tizen, LG webOS) | 0€ (déjà là) | ⚠️ Variable selon modèle/année |
+| Amazon Fire TV Stick 4K                                    | ~40€         | ✅ Silk Browser stable         |
+| Google Chromecast avec Google TV                           | ~40€         | ✅ Chrome stable               |
+| Mini PC (Intel NUC / Beelink)                              | ~100-150€    | ✅✅ Meilleur navigateur       |
+| Raspberry Pi 5 en mode SaaS                                | ~80€         | ✅ Chromium kiosk éprouvé      |
+
+**Recommandation CTO** : Fire TV Stick 4K — meilleur rapport qualité/prix/fiabilité. Se branche directement en HDMI sur la TV, WiFi intégré, navigateur Silk fonctionnel. Le staff du club le configure en 5 minutes (WiFi + URL + plein écran).
+
+### Avantages clés du scénario D
+
+1. **Coût marginal quasi-nul** pour ajouter un écran (un stick HDMI de 40€ ou rien si Smart TV)
+2. **Zéro gestion de flotte IoT** — pas de Pi à provisionner, pas d'image OS à maintenir, pas de sync agent
+3. **Scalabilité illimitée** — 4, 10, 20 TV ? Ouvrir des URLs
+4. **Maintenance simplifiée** — mise à jour = déployer le frontend SaaS, toutes les TV se rafraîchissent
+5. **Profils de configuration** — le système de profils (ADR-037) permet naturellement d'assigner un profil par display
+6. **Installation par le club lui-même** — pas besoin de technicien. URL + WiFi = opérationnel
+
+### Limitations et mitigations
+
+| Limitation               | Impact                                     | Mitigation                                                                                                           |
+| ------------------------ | ------------------------------------------ | -------------------------------------------------------------------------------------------------------------------- |
+| **Dépendance Internet**  | Coupure = écrans noirs                     | Service Worker pour cache offline des vidéos et config (PWA). Fallback : afficher le dernier contenu caché           |
+| **Drift entre TV**       | Vidéos pas synchronisées à la frame        | Acceptable pour sponsors/ambiance. Pour sync parfaite → scénario A/B                                                 |
+| **Score Stramatel**      | Pas de liaison série directe               | Cloud relay via Central Server (déjà fonctionnel pour dashboard). Latence ~200-500ms acceptable pour affichage score |
+| **Navigateurs Smart TV** | Qualité variable                           | Recommander Fire Stick/Chromecast plutôt que navigateur intégré TV                                                   |
+| **WiFi du club**         | Qualité variable, congestion jour de match | Recommander réseau dédié ou VLAN pour les devices TV. Vidéos pré-cachées via Service Worker                          |
+| **Kiosk mode**           | Pas de watchdog natif                      | Script de redémarrage auto sur Fire Stick (ADB). Sur Smart TV : app dédiée type "Fully Kiosk Browser"                |
+
+### Score Stramatel en mode SaaS — Architecture détaillée
+
+En mode Pi, le score Stramatel est capté localement via liaison série (RS-232/USB). En mode SaaS pur, il n'y a pas de Pi local. Deux approches :
+
+**Option 1 — Pi dédié Stramatel (hybride)** :
+Un seul Pi reste dans le club, connecté au panneau Stramatel. Il capte le score et le pousse au Central Server via Socket.IO. Les TV SaaS reçoivent le score depuis le cloud. Coût : ~80€ (le Pi). Latence : ~200ms.
+
+**Option 2 — Saisie manuelle (déjà existante)** :
+Le staff utilise la Remote pour saisir le score manuellement. Fonctionnel dès aujourd'hui, aucun développement. C'est le mode par défaut pour les clubs sans panneau Stramatel.
+
+**Option 3 — API scoring tiers** :
+Intégration future avec des APIs de fédérations sportives (FFR, FFF, FFHB) pour le score automatique. Non prioritaire mais architecturalement simple (webhook → Central Server → Socket.IO broadcast).
+
+---
+
+---
+
+## Scénario E — Pi comme hub SaaS local (NOUVEAU) ✅✅ Recommandé
+
+> **Le meilleur des deux mondes.** Le Pi reste le cerveau du club (vidéos locales, Stramatel, offline). Les TV supplémentaires sont de simples navigateurs connectés au hotspot WiFi du Pi. **Ça fonctionne déjà aujourd'hui.**
 
 ```
-┌──────────────────────────────────────────────┐
-│ 📺 Écran cible :                             │
-│                                              │
-│  [🔵 Tous]  [TV1 Hall]  [TV2 Buvette]       │
-│             [TV3 Tribune]  [TV4 Vestiaire]   │
-│                                              │
-│ Vidéos disponibles :                         │
-│  ▶ Sponsor Decathlon                         │
-│  ▶ Jingle mi-temps                           │
-│  ▶ Ambiance pré-match                        │
-│                                              │
-│ ⚡ Score : s'affiche sur TOUS les écrans     │
-│ 📢 Breaking news : s'affiche sur TOUS       │
-└──────────────────────────────────────────────┘
+                     Hotspot WiFi NEOPRO_xxx (hostapd)
+                     max_num_sta=10, 802.11n 2.4GHz
+                                  │
+            ┌─────────────────────┼─────────────────────┐
+            │                     │                     │
+     ┌──────┴──────┐     ┌───────┴───────┐    ┌────────┴────────┐
+     │ Pi 5 (maître)│     │  Fire Stick    │    │  Smart TV       │
+     │ HDMI → TV1   │     │  Silk Browser  │    │  Navigateur     │
+     │ Chromium     │     │  neopro.local  │    │  neopro.local   │
+     │ kiosk local  │     │  /tv           │    │  /tv            │
+     └──────┬──────┘     └───────┬───────┘    └────────┬────────┘
+            │                     │                     │
+            │        Socket.IO localhost:3000            │
+            │          (via nginx proxy)                 │
+            └─────────────────────┼─────────────────────┘
+                                  │
+                        ┌─────────┴─────────┐
+                        │   Pi local server  │
+                        │  nginx (port 80)   │
+                        │  Socket.IO (:3000) │
+                        │  Videos locales    │
+                        │  Stramatel série   │
+                        │  Sync-agent cloud  │
+                        └───────────────────┘
+                                  │
+                           Smartphone staff
+                           neopro.local/remote
+                           (hotspot WiFi)
 ```
 
-**Problème 3 — Vidéos servies par le Pi maître :**
-Les Pi Zero n'ont pas de stockage local des vidéos (carte microSD 16GB = OS + Chromium uniquement). Les vidéos sont chargées depuis le Pi maître via HTTP sur le hotspot WiFi. Cela implique :
+### Pourquoi ça marche déjà
 
-- **Bande passante WiFi** : 3 flux vidéo 1080p@30fps simultanés (~15 Mbps total) — dans les capacités du WiFi 802.11n du Pi 5 (~100 Mbps réels)
-- **Latence** : les vidéos sont bufferisées par Chromium, pas de streaming live — acceptable
-- **Serveur HTTP** : nginx sur le Pi maître sert déjà les fichiers statiques — aucune modification
+L'architecture Pi existante est **déjà un serveur web local complet** :
 
-**Problème 4 — Authentification Remote et Pi Zero :**
-Les Pi Zero kiosk n'utilisent pas l'`authGuard` (ils chargent directement `/tv?d=N`). Mais la Remote doit rester protégée par mot de passe. Pas de changement nécessaire : l'auth ne concerne que la route `/remote`.
+| Composant                          | Statut     | Détail                                                                            |
+| ---------------------------------- | ---------- | --------------------------------------------------------------------------------- |
+| **nginx** sert le frontend Angular | ✅ Actif   | `root /home/pi/neopro/webapp`, SPA fallback `try_files $uri /index.html`          |
+| **nginx** sert les vidéos          | ✅ Actif   | `location /videos/` proxy vers admin-server (normalisation Unicode)               |
+| **Socket.IO** coordonne TV/Remote  | ✅ Actif   | Port 3000, proxié par nginx sur `/socket.io/`                                     |
+| **socketUrl** résolu dynamiquement | ✅ Actif   | `environment.raspberry.ts` : `socketUrl: ''` → utilise `window.location.hostname` |
+| **Captive portal**                 | ✅ Actif   | Endpoints Android/iOS/Windows dans `nginx-captive-portal.conf`                    |
+| **mDNS** (`neopro.local`)          | ✅ Actif   | avahi-daemon installé par `install.sh`                                            |
+| **Hotspot WiFi**                   | ✅ Actif   | hostapd, `max_num_sta=10`, WPA2, canal 6                                          |
+| **Pas d'auth sur `/tv`**           | ✅ Vérifié | Aucun `canActivate` guard sur la route TV                                         |
 
-**Développements nécessaires (Scénario C uniquement)** :
+Un Fire Stick connecté au hotspot `NEOPRO_xxx` qui ouvre `http://neopro.local/tv` dans Silk Browser affiche **exactement** le même contenu que le kiosk Chromium du Pi — mêmes vidéos locales, même overlay de score, même Socket.IO.
 
-| Tâche                                                    | Fichiers impactés                               | Effort |
-| -------------------------------------------------------- | ----------------------------------------------- | ------ |
-| Image OS minimale pour Pi Zero (kiosk-only)              | `raspberry/scripts/install-zero.sh` (nouveau)   | Faible |
-| Route `/tv?display=N` avec playlist par écran            | `tv.component.ts`, routing module               | Faible |
-| Auto-discovery des Zeros sur hotspot (mDNS)              | `raspberry/server/`                             | Faible |
-| Dashboard : assigner contenu par display                 | `central-dashboard/src/app/features/sites/`     | Modéré |
-| Étendre master/slave pour N esclaves                     | `raspberry/server/socket/handlers.js`           | Faible |
-| **Sélecteur de display dans la Remote**                  | `remote.component.ts`, `remote.component.html`  | Modéré |
-| **Champ `targetDisplay` dans les événements Socket.IO**  | `raspberry/server/socket/handlers.js`           | Faible |
-| **Filtrage côté TV : ignorer les commandes non ciblées** | `tv.component.ts`                               | Faible |
-| **Registry des displays connectés sur le Pi maître**     | `raspberry/server/services/display-registry.ts` | Modéré |
-| **Indicateur de statut des displays dans la Remote**     | `remote.component.ts`, `remote.component.html`  | Faible |
+### Sous-scénario E1 — Même contenu (zéro dev, disponible maintenant)
+
+Toutes les TV chargent `http://neopro.local/tv`. Le Pi broadcast les commandes Remote à tous les clients Socket.IO. Le score Stramatel est relayé en temps réel via Socket.IO local (latence < 1ms).
+
+**Ce qui change par rapport au splitter HDMI (scénarios A/B)** :
+
+- (+) Pas de câblage HDMI/Cat6 entre les TV
+- (+) Les TV peuvent être n'importe où dans la portée WiFi (~30m du Pi)
+- (+) Chaque TV est indépendante — une panne d'un stick n'affecte pas les autres
+- (-) Léger drift entre les TV (chaque navigateur gère son propre playback)
+- (-) Dépend de la stabilité WiFi du hotspot Pi
+
+### Sous-scénario E2 — Contenus différenciés par TV
+
+Même développement que D2 (ciblage `targetDisplay`). Les TV chargent `http://neopro.local/tv?display=N`. Le dev est **identique** et mutualisé entre les scénarios C, D2 et E2.
+
+### Capacité du hotspot Pi
+
+Configuration actuelle (`hostapd.conf`) :
+
+| Paramètre     | Valeur     | Implication                                               |
+| ------------- | ---------- | --------------------------------------------------------- |
+| `max_num_sta` | 10         | 10 clients WiFi max (4 TV + 3 smartphones Remote + marge) |
+| `hw_mode`     | g (2.4GHz) | ~100 Mbps théorique, ~40-60 Mbps réel                     |
+| `ieee80211n`  | 1          | WiFi N activé (HT20/HT40)                                 |
+| `channel`     | 6          | Canal fixe — pas d'interférence auto-channel              |
+| `wmm_enabled` | 1          | QoS multimedia activé — priorise les flux vidéo           |
+
+**Bande passante pour N TV** :
+
+| Config                          | Débit requis | Marge sur WiFi N | Verdict        |
+| ------------------------------- | ------------ | ---------------- | -------------- |
+| 1 TV locale (kiosk) + 1 TV WiFi | ~10 Mbps     | 4-6×             | ✅ Confortable |
+| 1 TV locale + 3 TV WiFi         | ~25 Mbps     | 1.5-2.5×         | ✅ OK          |
+| 1 TV locale + 5 TV WiFi         | ~35 Mbps     | 1-1.5×           | ⚠️ Limite      |
+| 1 TV locale + 8 TV WiFi         | ~50 Mbps     | Saturé           | ❌ Trop        |
+
+**Estimation** : 1 flux vidéo 1080p@30fps H.264 ≈ 5-8 Mbps. Chaque TV WiFi charge les vidéos depuis nginx local. Avec le WiFi N du Pi 5, **3-4 TV WiFi supplémentaires** sont confortables. Au-delà de 5, envisager :
+
+- Réduire à 720p pour les TV WiFi éloignées
+- Utiliser le port Ethernet du Pi + un switch pour les TV qui ont un port Ethernet (certains Fire Stick ont un adaptateur USB-Ethernet)
+- Passer au WiFi AC (5GHz) via dongle USB si le Pi n'est pas un Pi 5 (le Pi 5 a du WiFi AC natif)
+
+**Note Pi 5** : Le Pi 5 supporte nativement le WiFi AC (802.11ac, 5GHz, ~300 Mbps réel). Avec `hw_mode=a` et `ieee80211ac=1`, la capacité passe à **8-10 TV WiFi** confortablement. Recommandation : **migrer la config hostapd vers 5GHz pour les clubs multi-TV**.
+
+### Avantages clés du scénario E
+
+1. **Zéro dev, zéro coût logiciel** — tout est déjà en place
+2. **Offline total** — aucune dépendance internet, le Pi est autonome
+3. **Score Stramatel en temps réel** — liaison série locale, relayé par Socket.IO, latence < 1ms
+4. **Réseau maîtrisé** — le hotspot Pi est dédié, pas de congestion avec le WiFi du club
+5. **Installation triviale** — le staff du club branche un Fire Stick et se connecte au hotspot
+6. **Maintenance flotte inchangée** — le Central Server voit 1 Pi, pas N devices. Les sticks sont des "clients muets"
+7. **Captive portal déjà configuré** — les smartphones/tablettes se connectent sans friction au hotspot
+8. **Profils multi-config** — le Pi supporte déjà les profils. Chaque TV pourrait charger un profil différent
+9. **Dual-display Pi compatible** — le Pi 5 peut piloter 2 TV en HDMI direct + N TV en WiFi. Hybride total.
+
+### Limitations et mitigations
+
+| Limitation                                    | Impact                                        | Mitigation                                                                         |
+| --------------------------------------------- | --------------------------------------------- | ---------------------------------------------------------------------------------- |
+| **Portée WiFi hotspot** (~30m intérieur)      | TV éloignées hors portée                      | Répéteur WiFi ou point d'accès relais sur le même SSID                             |
+| **Bande passante WiFi N**                     | Limite à ~4 TV WiFi en 1080p                  | Passer en WiFi AC (5GHz) sur Pi 5 ou réduire à 720p                                |
+| **Drift entre TV**                            | Vidéos pas synchronisées à la frame           | Acceptable pour sponsors/ambiance. Splitter HDMI pour sync parfaite                |
+| **Navigateur Smart TV variable**              | Certains navigateurs intégrés sont médiocres  | Recommander Fire Stick 4K (40€, navigateur fiable)                                 |
+| **Pas de watchdog sur les sticks**            | Un crash navigateur = TV figée                | App "Fully Kiosk Browser" (gratuit) avec auto-reload sur crash                     |
+| **Canal 2.4GHz congestionné** (jour de match) | Interférences avec les téléphones spectateurs | Les spectateurs sont sur le WiFi club, pas sur le hotspot Pi. Canal dédié          |
+| **Central Server ne voit pas les TV WiFi**    | Monitoring partiel                            | Phase 2 : le Pi reporte le nombre de clients Socket.IO connectés dans le heartbeat |
+
+### Hardware recommandé pour scénario E
+
+| Device                               | Prix | Avantages                                                | Inconvénients                  |
+| ------------------------------------ | ---- | -------------------------------------------------------- | ------------------------------ |
+| **Amazon Fire TV Stick 4K**          | ~40€ | WiFi AC, Silk Browser, HDMI direct, télécommande incluse | Nécessite un compte Amazon     |
+| **Xiaomi Mi TV Stick**               | ~30€ | Moins cher, Android TV                                   | Navigateur moins stable        |
+| **Google Chromecast avec Google TV** | ~40€ | Chrome stable, Google Cast                               | Nécessite un compte Google     |
+| **Smart TV (navigateur intégré)**    | 0€   | Déjà là                                                  | Navigateur souvent lent/ancien |
+| **Ancien smartphone/tablette**       | 0€   | Recyclage                                                | Petit écran, batterie          |
+
+**Recommandation** : Fire TV Stick 4K. Se branche en HDMI, WiFi intégré, télécommande IR pour naviguer. Le staff configure en 5 minutes : WiFi `NEOPRO_xxx` → Silk Browser → `neopro.local/tv` → plein écran.
+
+---
+
+## Scénario E vs D — Quand choisir lequel ?
+
+| Situation                           | Scénario recommandé     | Raison                                                         |
+| ----------------------------------- | ----------------------- | -------------------------------------------------------------- |
+| Club avec Pi déjà installé          | **E**                   | Le Pi est là, autant l'utiliser comme hub                      |
+| Club sans Pi, WiFi club fiable      | **D** (SaaS cloud)      | Pas de hardware Neopro du tout                                 |
+| Club sans Pi, WiFi club instable    | **E** (installer un Pi) | Le hotspot Pi est un réseau dédié et fiable                    |
+| Club avec Stramatel                 | **E**                   | Le Pi capte le score en série — pas d'alternative cloud fiable |
+| Club rural, internet intermittent   | **E**                   | Offline total, aucune dépendance internet                      |
+| Chaîne de clubs, déploiement rapide | **D**                   | Zéro hardware à expédier                                       |
+| Événement temporaire / démo         | **D**                   | Setup en 2 minutes, pas de Pi à transporter                    |
+
+---
+
+## Recommandation stratégique (vision CTO)
+
+### Court terme — Clubs Pi existants, multi-TV même contenu
+
+→ **Scénario E1 (Pi hub + devices WiFi)** : **Fonctionne aujourd'hui, zéro dev, zéro coût si Smart TV.** Le club branche des Fire Stick (40€/TV) au hotspot `NEOPRO_xxx` et charge `neopro.local/tv`. Score Stramatel, offline, Remote — tout marche.
+
+Alternative : **Scénario A/B** (splitter HDMI) si le club veut la synchronisation frame-perfect ou si le WiFi du Pi est saturé.
+
+### Court terme — Nouveaux clubs sans Pi
+
+→ **Scénario D1 (SaaS cloud)** : Fonctionne aujourd'hui sans développement. Chaque TV charge l'URL SaaS cloud. Pas de hardware Neopro.
+
+Si le club a besoin de Stramatel ou d'offline → installer un Pi et passer en **scénario E**.
+
+### Moyen terme — Contenus différenciés (Q3 2026)
+
+→ **Ciblage `targetDisplay`** : Un seul développement (~5 jours) qui bénéficie aux **3 scénarios** D2, E2 et C. Paramètre `?display=N` dans l'URL, sélecteur de display dans la Remote, filtrage Socket.IO côté TV.
+
+### Moyen terme — Optimisation WiFi Pi 5 pour multi-TV
+
+→ **Passer hostapd en WiFi AC (5GHz)** : Le Pi 5 supporte nativement le 802.11ac. Avec `hw_mode=a` + `ieee80211ac=1`, la bande passante passe de ~50 Mbps à ~300 Mbps, supportant **8-10 TV WiFi** en 1080p. Quick win, 10 lignes de config.
+
+### Long terme — Offline-first SaaS (2027+)
+
+→ **PWA avec Service Worker** pour le scénario D uniquement. Le scénario E n'en a pas besoin — il est déjà offline-first par design.
+
+### Abandon progressif du scénario C
+
+Le scénario C (Pi Zero esclaves) n'a plus de justification face aux scénarios D et E :
+
+- Pi Zero 2W (20€) + alim (10€) + SD (8€) + câble (5€) = **43€/TV** + gestion de flotte IoT + image OS à maintenir
+- Fire TV Stick 4K = **40€/TV**, zéro gestion, installation par le club
+- Le scénario E offre **les mêmes avantages** que C (offline, Stramatel, réseau dédié) sans la complexité N+1 devices
+
+Le scénario C reste pertinent **uniquement** pour un besoin de synchronisation frame-perfect entre le Pi maître et les écrans esclaves (cas marginal).
+
+### Résumé exécutif
+
+```
+                    Clubs Pi existants          Nouveaux clubs
+                    ─────────────────           ──────────────
+Même contenu        E1 (hub WiFi)  ★★★         D1 (SaaS cloud) ★★★
+                    A/B (splitter) ★★           E1 (installer Pi) ★★
+
+Différencié         E2 (hub + display)          D2 (SaaS + display)
+                    → dev mutualisé ~5j         → même dev
+
+Stramatel           E (obligatoire)             E (installer Pi)
+Offline             E (natif)                   E (installer Pi)
+```
+
+---
+
+## Plan d'implémentation révisé
+
+### Phase 0 — E1 Pi hub WiFi même contenu (0 jour dev, disponible maintenant)
+
+**Action immédiate pour tout club Pi existant.** Documentation d'installation :
+
+1. Acheter un Fire TV Stick 4K (~40€) ou utiliser la Smart TV existante
+2. Brancher le Stick en HDMI sur la TV
+3. Connecter au WiFi `NEOPRO_xxx` (mot de passe dans la fiche club)
+4. Ouvrir Silk Browser → `http://neopro.local/tv`
+5. Passer en plein écran (F11 ou bouton navigateur)
+6. Répéter pour chaque TV supplémentaire
+
+**Critères de validation** :
+
+- [ ] N TV affichent le même contenu simultanément via hotspot Pi
+- [ ] Remote contrôle toutes les TV (play, pause, score, breaking news)
+- [ ] Score Stramatel visible sur toutes les TV en temps réel
+- [ ] Pas de drift visible entre TV sur playlist sponsors (< 2s acceptable)
+- [ ] Stabilité sur 5h de fonctionnement continu (jour de match)
+- [ ] Reconnexion automatique après déconnexion WiFi temporaire
+- [ ] Le hotspot Pi supporte N devices sans dégradation (mesurer avec 4 TV + 2 smartphones)
+
+### Phase 1 — D1 SaaS cloud même contenu (0 jour dev)
+
+Pour les clubs sans Pi. Documentation d'installation :
+
+1. Acheter un Fire TV Stick 4K (ou utiliser Smart TV)
+2. Connecter au WiFi du club (internet requis)
+3. Ouvrir Silk Browser / Chrome
+4. Charger `https://neopro-admin.kalonpartners.bzh/saas/?site={siteId}`
+5. Passer en plein écran
+
+**Critères de validation** :
+
+- [ ] N TV affichent le même contenu simultanément via URL SaaS cloud
+- [ ] Remote contrôle toutes les TV via Socket.IO cloud
+- [ ] Stabilité sur 5h de fonctionnement continu
+
+### Phase 1.5 — Optimisation WiFi AC pour clubs multi-TV (0.5 jour)
+
+Pour les clubs E1 avec 4+ TV, passer le hotspot Pi 5 en WiFi AC :
+
+| Tâche                                                                | Effort |
+| -------------------------------------------------------------------- | ------ |
+| Modifier `hostapd.conf` : `hw_mode=a`, `channel=36`, `ieee80211ac=1` | 15min  |
+| Tester compatibilité Fire Stick / Smart TV en 5GHz                   | 1h     |
+| Script de détection Pi 4 vs Pi 5 pour auto-config WiFi N/AC          | 2h     |
+| Documenter le fallback 2.4GHz pour les devices non-5GHz              | 30min  |
+
+### Phase 2 — Ciblage par display (5 jours dev)
+
+Commun aux scénarios C, D2 et E2. Backlog unifié :
+
+| Tâche                                           | Fichiers impactés                                 | Effort |
+| ----------------------------------------------- | ------------------------------------------------- | ------ |
+| Paramètre `display` dans URL SaaS + Pi          | `tv.component.ts`, routing                        | 0.5j   |
+| Registry des displays connectés (cloud)         | `central-server/src/services/display-registry.ts` | 1j     |
+| Champ `targetDisplay` dans événements Socket.IO | `socket/handlers.js`, `remote.controller.ts`      | 0.5j   |
+| Filtrage côté TV des commandes non ciblées      | `tv.component.ts`                                 | 0.5j   |
+| Sélecteur de display dans la Remote             | `remote.component.ts/html`                        | 1j     |
+| Dashboard : nommage + monitoring displays       | `central-dashboard/src/app/features/sites/`       | 1j     |
+| Profil par display (assign playlist)            | `config-profiles.controller.ts`                   | 0.5j   |
+
+### Phase 3 — Résilience offline SaaS (future)
+
+| Tâche                                   | Effort |
+| --------------------------------------- | ------ |
+| Service Worker pour cache config        | 2j     |
+| Cache offline des vidéos (IndexedDB)    | 3j     |
+| Détection online/offline + UI indicator | 1j     |
+| Sync delta au retour de la connexion    | 2j     |
+
+---
+
+## Budget estimé révisé
+
+| Scénario                          | Matériel/TV | Dev logiciel | Maintenance | Offline | Stramatel | Recommandation         |
+| --------------------------------- | ----------- | ------------ | ----------- | ------- | --------- | ---------------------- |
+| A — Splitter HDMI (< 10m)         | 15-20€      | 0            | Aucune      | ✅      | ✅        | Sync frame-perfect     |
+| B — HDBaseT Cat6 (> 10m)          | 60-100€     | 0            | Aucune      | ✅      | ✅        | Grandes distances      |
+| C — Pi Zero esclaves              | ~45€        | ~10 jours    | Flotte IoT  | ✅      | ✅        | ⚠️ Obsolète            |
+| D1 — SaaS cloud même contenu      | 0-40€       | 0            | Aucune      | ❌      | ❌        | Nouveaux clubs sans Pi |
+| D2 — SaaS cloud différencié       | 0-40€       | ~5 jours     | Aucune      | ❌      | ❌        | Moyen terme            |
+| **E1 — Pi hub WiFi même contenu** | **0-40€**   | **0**        | **Aucune**  | **✅**  | **✅**    | **✅✅ Clubs Pi**      |
+| **E2 — Pi hub WiFi différencié**  | **0-40€**   | **~5 jours** | **Aucune**  | **✅**  | **✅**    | **✅✅ Moyen terme**   |
+
+---
 
 ## Alternatives Considérées
 
 ### 1. Adaptateurs USB→HDMI (DisplayLink)
 
-**Principe** : Ajouter 2 adaptateurs USB3→HDMI pour obtenir 4 sorties depuis le Pi.
-**Avantages** : 4 sorties indépendantes, contenus différents possibles
-**Inconvénients** : Pas d'accélération GPU sur les sorties USB — vidéo saccadée. Drivers DisplayLink instables sur ARM/Linux. Consommation USB importante.
-**Verdict** : Rejeté — qualité vidéo insuffisante pour un affichage professionnel.
+**Verdict** : Rejeté — qualité vidéo insuffisante, drivers DisplayLink instables sur ARM/Linux.
 
 ### 2. Pi Compute Module 5 + IO Board custom
 
-**Principe** : Le CM5 expose plus d'interfaces display (HDMI + DSI + DPI).
-**Avantages** : Jusqu'à 3 sorties display natives
-**Inconvénients** : Toujours limité à 3 (pas 4). IO board custom = coût et complexité. Pas de boîtier standard. Maintenance complexe pour les clubs.
-**Verdict** : Rejeté — surcoût et complexité disproportionnés.
+**Verdict** : Rejeté — limité à 3 sorties, surcoût et complexité disproportionnés.
 
-### 3. Distribution HDMI matérielle (choisie) ✅
+### 3. Distribution HDMI matérielle (Scénarios A/B) ✅
 
-**Avantages** : Zéro développement logiciel (scénarios A/B). Signal identique garanti. Fiabilité matérielle éprouvée (standard AV). Compatible avec l'overlay de score. Évolutif vers contenus différenciés (scénario C).
-**Inconvénients** : Coût matériel additionnel (30-250€ selon scénario). Même contenu sur toutes les TV (scénarios A/B).
-**Verdict** : Accepté — rapport coût/fiabilité/simplicité optimal.
+**Verdict** : Accepté pour les clubs Pi existants. Rapport coût/fiabilité optimal.
+
+### 4. SaaS Multi-URL cloud (Scénario D) ✅
+
+**Verdict** : Accepté pour les nouveaux clubs sans Pi. Coût marginal quasi-nul, mais dépendant d'internet.
+
+### 5. Pi comme hub SaaS local (Scénario E) ✅✅ NOUVEAU — RECOMMANDÉ
+
+**Verdict** : Accepté comme approche par défaut pour tous les clubs avec Pi. Combine la résilience offline et Stramatel du Pi avec la flexibilité multi-écran du SaaS. Fonctionne déjà, zéro développement.
+
+---
 
 ## Conséquences
 
 ### Positives
 
-1. **Zéro changement logiciel** pour le scénario standard (A/B) — le Pi ne sait même pas qu'il y a 4 TV
-2. **Overlay de score visible partout** — c'est le même signal HDMI dupliqué
-3. **Fiabilité maximale** — un splitter actif n'a aucune pièce mobile, pas de logiciel, pas de crash
-4. **Installation simple** — un technicien AV standard peut câbler
-5. **Évolutif** — passage au scénario C possible sans remplacer le Pi maître
+1. **Les scénarios E1 et D1 sont gratuits et immédiats** — zéro dev, zéro coût logiciel
+2. **Le scénario E cumule tous les avantages** — offline + Stramatel + multi-TV + réseau dédié
+3. **Scalabilité linéaire** — ajouter une TV = connecter un stick au hotspot
+4. **Unification Pi/SaaS** — le dev du ciblage display bénéficie aux trois modes (C, D, E)
+5. **Time-to-value client** — un club Pi existant peut être multi-TV en 5 minutes
+6. **Pas de changement de modèle flotte** — le Central Server continue de gérer 1 Pi par club, pas N devices
 
 ### Négatives
 
-1. **Coût hardware** : 30-250€ selon la distance (scénarios A/B)
-2. **Même contenu** sur toutes les TV (scénarios A/B) — limitation acceptée par le prospect
-3. **Câblage** : nécessite de tirer des câbles HDMI ou Cat6 jusqu'à chaque TV
+1. **Dépendance internet** (scénario D uniquement) — mitigé par Service Worker futur
+2. **Pas de sync frame-perfect** (scénarios D et E) — acceptable pour 95% des cas d'usage
+3. **Bande passante WiFi Pi** (scénario E) — limite à ~4 TV en WiFi N, ~10 en WiFi AC
+4. **Stramatel** nécessite un Pi (scénario D) ou saisie manuelle
 
-### Risques
+### Risques révisés
 
-| Risque                                             | Mitigation                                                                                                                                         |
-| -------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Signal HDMI dégradé sur longue distance            | Utiliser HDBaseT (scénario B) au-delà de 10m                                                                                                       |
-| Splitter incompatible avec certaines TV            | Acheter un splitter actif avec gestion EDID                                                                                                        |
-| Panne du splitter = toutes les TV éteintes         | Garder un splitter de rechange (~30€)                                                                                                              |
-| HDCP bloque la duplication                         | Désactivé côté Pi (pas de contenu protégé) — non applicable                                                                                        |
-| Évolution vers contenus différents                 | Scénario C prévu, migration transparente                                                                                                           |
-| **(C)** BroadcastChannel inopérant vers Pi Zero    | Socket.IO devient le canal primaire pour les esclaves. Le BroadcastChannel reste actif pour le TV maître (même Pi). Aucune perte de fonctionnalité |
-| **(C)** Remote sans ciblage par display            | Sélecteur de display ajouté à la Remote. Score et breaking news restent en broadcast global. Seules les commandes vidéo sont ciblables             |
-| **(C)** Bande passante WiFi insuffisante           | 3 flux 1080p = ~15 Mbps. WiFi Pi 5 = ~100 Mbps. Marge confortable. Réduire à 720p si Pi 4                                                          |
-| **(C)** Pi Zero perd la connexion WiFi             | Reconnexion Socket.IO automatique (déjà implémenté). TV affiche la dernière frame en attendant. Indicateur de statut dans la Remote                |
-| **(C)** Conflit de commandes Remote (2 opérateurs) | Last-write-wins (comportement actuel). Pas de verrouillage — acceptable pour un club                                                               |
-
-## Plan d'implémentation
-
-### Scénarios A/B (même contenu) — Immédiat
-
-1. **Identifier les distances** entre le Pi et chaque TV au club
-2. **Choisir** scénario A (< 10m) ou B (> 10m)
-3. **Commander le matériel** (splitter + câbles)
-4. **Installer** : Pi → splitter → câbles → TV
-5. **Tester** : vérifier la qualité d'image et l'overlay de score sur chaque TV
-
-**Critères de validation** :
-
-- [ ] 4 TV affichent le même contenu simultanément
-- [ ] Overlay de score visible et lisible sur chaque TV
-- [ ] Aucune latence perceptible entre les TV
-- [ ] Stabilité sur 5h de fonctionnement continu
-
-### Scénario C (contenus différents) — Si besoin futur
-
-**Phase C1 — Infrastructure réseau (2-3 jours)**
-
-1. Créer image OS minimale Pi Zero (kiosk-only Chromium, auto-connect hotspot)
-2. Ajouter route `/tv?display=N` dans l'app Angular
-3. Étendre le système master/slave Socket.IO pour N esclaves
-4. Créer `display-registry.ts` sur le Pi maître (enregistrement/heartbeat des Zeros)
-5. Auto-discovery des Zeros sur hotspot (mDNS `zero-N.local`)
-
-**Phase C2 — Adaptation Remote (3-4 jours)**
-
-1. Ajouter un **sélecteur de display** dans la Remote (UI + logique)
-2. Ajouter le champ `targetDisplay` dans les événements Socket.IO du serveur
-3. Côté TV : filtrer les commandes non ciblées (`targetDisplay !== myDisplayId`)
-4. Indicateur de statut des displays dans la Remote (connecté/déconnecté, ping)
-5. Logique de ciblage : score/phase/breaking news → broadcast global ; vidéos → ciblable par display
-
-**Phase C3 — Dashboard et gestion de contenu (2-3 jours)**
-
-1. Dashboard : assigner un contenu/playlist par display dans la fiche site
-2. Dashboard : monitoring des displays connectés en temps réel
-3. Dashboard : nommage des displays (ex: "TV1 Hall", "TV2 Buvette")
-
-**Critères de validation** :
-
-- [ ] Chaque TV affiche sa playlist dédiée
-- [ ] Score Stramatel visible sur **toutes** les TV simultanément
-- [ ] Remote : sélecteur de display permet de lancer une vidéo sur une TV spécifique
-- [ ] Remote : score/phase/breaking news s'affichent sur tous les écrans (broadcast)
-- [ ] Remote : indicateur vert/rouge par display (connecté/déconnecté)
-- [ ] Pi Zero se reconnecte automatiquement après coupure WiFi (< 10s)
-- [ ] Bande passante WiFi suffisante pour 3 flux vidéo 1080p simultanés
-- [ ] Pas de régression sur le fonctionnement de la Remote en mode 1 seul écran
-
-## Budget estimé
-
-| Scénario                              | Matériel | Dev logiciel                             | Total          |
-| ------------------------------------- | -------- | ---------------------------------------- | -------------- |
-| A — Splitter HDMI direct (< 10m)      | 50-80€   | 0                                        | 50-80€         |
-| B — HDBaseT Cat6 (> 10m)              | 250-400€ | 0                                        | 250-400€       |
-| C — Pi Zero esclaves (contenus diff.) | 130-180€ | ~7-10 jours (infra + Remote + dashboard) | 130-180€ + dev |
-
-## Références
-
-- `raspberry/scripts/kiosk-watchdog.sh` — Watchdog kiosk actuel
-- `raspberry/src/app/components/tv/tv.component.ts` — Système master/slave (lignes 179-181)
-- `raspberry/src/app/components/remote/remote.component.ts` — Remote controller (1595 lignes)
-- `raspberry/src/app/components/remote/remote.component.html` — Remote UI (1807 lignes)
-- `raspberry/src/app/services/local-broadcast.service.ts` — BroadcastChannel dual-channel (274 lignes)
-- `raspberry/server/socket/handlers.js` — Gestion rôles TV + relay événements (234 lignes)
-- `raspberry/src/app/guards/auth.guard.ts` — Protection route `/remote`
-- [ADR-008](../adr/ADR-008-double-buffer-video-pi.md) — Double-Buffer Vidéo (contraintes GPU Pi)
-- [ADR-001](../adr/ADR-001-edge-cloud-architecture.md) — Architecture Edge-Cloud
+| Risque                                     | Probabilité | Impact                    | Mitigation                                        |
+| ------------------------------------------ | ----------- | ------------------------- | ------------------------------------------------- |
+| WiFi du club instable jour de match        | Élevée      | TV freezent               | Réseau dédié/VLAN + Service Worker offline        |
+| Smart TV avec navigateur obsolète          | Moyenne     | Contenu mal rendu         | Recommander Fire Stick (navigateur à jour)        |
+| Drift > 5s entre TV                        | Faible      | Visible si TV côte à côte | Sync heartbeat Socket.IO (re-sync périodique)     |
+| Fire Stick reboot/mise à jour intempestive | Faible      | TV éteinte temporairement | Mode kiosk "Fully Kiosk" + désactiver auto-update |
+| Splitter HDMI en panne (A/B)               | Très faible | Toutes TV éteintes        | Splitter de rechange (~30€)                       |
+| Bande passante FTP insuffisante            | Faible      | Buffering                 | CDN ou cache local (Service Worker)               |
 
 ---
 
-_Créé le 11 février 2026_
+## Références
+
+- `raspberry/src/app/components/tv/tv.component.ts` — Système master/slave + display param
+- `raspberry/src/app/components/remote/remote.component.ts` — Remote controller
+- `raspberry/src/app/services/local-broadcast.service.ts` — BroadcastChannel dual-channel
+- `raspberry/server/socket/handlers.js` — Gestion rôles TV + relay événements
+- `central-server/src/controllers/saas.controller.ts` — Config SaaS avec URL resolution
+- `central-server/src/controllers/config-profiles.controller.ts` — Profils de configuration
+- `central-server/src/repositories/config-profile.repository.ts` — Repository profils
+- [ADR-001](../adr/ADR-001-edge-cloud-architecture.md) — Architecture Edge-Cloud
+- [ADR-008](../adr/ADR-008-double-buffer-video-pi.md) — Double-Buffer Vidéo
+- [ADR-037](../adr/ADR-037-saas-site-type.md) — SaaS Site Type
+- `raspberry/config/systemd/hostapd.conf` — Config hotspot WiFi (max_num_sta, hw_mode, channel)
+- `raspberry/config/nginx-captive-portal.conf` — Nginx Pi (SPA + vidéos + Socket.IO proxy + captive portal)
+- `raspberry/src/environments/environment.raspberry.ts` — socketUrl dynamique (résolu via window.location)
+
+---
+
+_Créé le 11 février 2026 — Révisé le 11 avril 2026 (ajout scénarios D SaaS cloud et E Pi hub WiFi, matrice de décision, recommandation stratégique)_
