@@ -1,3 +1,9 @@
+## [3.147.2](https://github.com/Tallec7/neopro/compare/v3.147.1...v3.147.2) (2026-04-11)
+
+### Bug Fixes
+
+- **safe:** persist proposal status in DB to survive container restarts ([c488868](https://github.com/Tallec7/neopro/commit/c488868b21144ae0b681a370b5f3d328f3342f54))
+
 ## [3.147.1](https://github.com/Tallec7/neopro/compare/v3.147.0...v3.147.1) (2026-04-11)
 
 ### Bug Fixes
