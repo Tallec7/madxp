@@ -609,4 +609,105 @@ Commun aux scénarios C, D2 et E2. Backlog unifié :
 
 ---
 
-_Créé le 11 février 2026 — Révisé le 11 avril 2026 (ajout scénarios D SaaS cloud et E Pi hub WiFi, matrice de décision, recommandation stratégique)_
+## Convergence avec PROP-002 (TV + LED dual output)
+
+PROP-001 et [PROP-002](./PROP-002-tv-led-dual-output.md) sont **complémentaires** et partagent des concepts unifiables. Ensemble, ils permettent au Pi de gérer **3 axes de sortie simultanés** :
+
+```
+Pi 5 (1 seul device)
+│
+├── HDMI 0 → [Splitter] → TV1, TV2, TV3      PROP-001 scénario A/B (même contenu)
+│                                              displayType = 'tv'
+│
+├── HDMI 1 → Contrôleur LED → Bandeau LED     PROP-002 (contenu LED adapté)
+│                                              displayType = 'led'
+│
+└── Hotspot WiFi → Fire Stick → TV Buvette    PROP-001 scénario E (SaaS local)
+                   Fire Stick → TV Vestiaire   displayType = 'tv', displayId = 4, 5
+                   Tablette  → Totem accueil   displayType = 'totem' (futur)
+```
+
+### Modèle unifié : displayType + displayId
+
+Les deux PROP introduisent la notion de "quel contenu pour quel écran" sous des angles différents. On unifie avec deux dimensions :
+
+| Dimension     | Rôle                                                       | Exemples                                 | Source   |
+| ------------- | ---------------------------------------------------------- | ---------------------------------------- | -------- |
+| `displayType` | **Type** d'écran — détermine le **format** du contenu      | `'tv'`, `'led'`, `'totem'`               | PROP-002 |
+| `displayId`   | **Instance** spécifique — permet le **ciblage** individuel | `1` (hall), `2` (buvette), `3` (tribune) | PROP-001 |
+
+**Règles de dispatch** :
+
+```typescript
+// Chaque écran s'enregistre avec type + id
+socket.emit('register-display', {
+  siteId,
+  displayType: 'tv', // format du contenu
+  displayId: 2, // instance spécifique
+  name: 'TV Buvette', // label humain
+  source: 'wifi', // 'hdmi' | 'wifi' (informatif)
+});
+
+// La Remote cible par type, par id, ou broadcast
+socket.emit('command', {
+  type: 'play-video',
+  videoId: '...',
+  targetDisplay: null, // null = TOUS les écrans
+  targetType: null, // null = tous les types
+});
+
+// Score → broadcast global (tous types, tous ids)
+// Vidéo sponsor → chaque type joue sa variante (PROP-002)
+// Vidéo manuelle → ciblable par displayId (PROP-001 Phase 2)
+```
+
+**Dispatch côté récepteur** :
+
+| Événement            | Filtrage type | Filtrage id | Comportement                                           |
+| -------------------- | ------------- | ----------- | ------------------------------------------------------ |
+| `score-update`       | Non (tous)    | Non (tous)  | Chaque type affiche son template de score              |
+| `phase-change`       | Non (tous)    | Non (tous)  | Chaque type switch sa boucle de phase                  |
+| `breaking-news`      | Non (tous)    | Non (tous)  | Format adapté au type (overlay TV, pleine largeur LED) |
+| `command` (video)    | **Oui**       | **Oui**     | Joue la variante du bon type, sur le bon id            |
+| `command` (sponsors) | **Oui**       | Non (tous)  | Chaque type joue sa variante sponsor                   |
+
+### Dev mutualisé
+
+Le ciblage display (Phase 2 PROP-001, ~5j) et le dual kiosk + variantes (PROP-002, ~8-12j) partagent :
+
+| Composant partagé              | PROP-001             | PROP-002              | Mutualisé |
+| ------------------------------ | -------------------- | --------------------- | --------- |
+| `register-display` Socket.IO   | displayId            | displayType           | 1×        |
+| Filtrage commandes côté TV     | targetDisplay        | displayType           | 1×        |
+| Registry displays (serveur Pi) | Instances connectées | Types connectés       | 1×        |
+| Sélecteur display dans Remote  | Par id               | Par type (indicateur) | 1×        |
+| Dashboard monitoring displays  | Nombre de TV WiFi    | TV + LED status       | 1×        |
+
+**Recommandation** : implémenter les deux en une seule phase unifiée. Le modèle `displayType` + `displayId` couvre les deux besoins.
+
+### Vision complète : le Pi comme hub multi-sortie
+
+```
+┌──────────────────────────────────────────────────────────┐
+│                     Pi 5 — Hub unifié                     │
+│                                                          │
+│  nginx (frontend Angular + vidéos locales)               │
+│  Socket.IO (coordination tous écrans + Remote)            │
+│  Sync-agent (config + vidéos depuis le cloud)            │
+│  Stramatel (score série RS-232 → Socket.IO broadcast)    │
+│                                                          │
+│  Sorties :                                               │
+│  ├── HDMI 0 → TV(s) via splitter    [displayType=tv]     │
+│  ├── HDMI 1 → LED via contrôleur    [displayType=led]    │
+│  └── WiFi  → N devices navigateur   [displayType=*]      │
+│                                                          │
+│  Entrées :                                               │
+│  ├── Remote (smartphone via hotspot)                     │
+│  ├── Stramatel (série RS-232/USB)                        │
+│  └── Cloud (sync-agent, commandes dashboard)             │
+└──────────────────────────────────────────────────────────┘
+```
+
+---
+
+_Créé le 11 février 2026 — Révisé le 11 avril 2026 (ajout scénarios D/E, convergence PROP-002, matrice de décision, recommandation stratégique)_

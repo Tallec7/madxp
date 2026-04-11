@@ -479,4 +479,31 @@ La Remote reste l'interface unique :
 
 ---
 
-_Créé le 11 février 2026_
+## Convergence avec PROP-001 (Multi-TV Pi hub WiFi)
+
+> _Section ajoutée le 11 avril 2026_
+
+PROP-002 et [PROP-001](./PROP-001-multi-tv-single-pi.md) convergent vers un **modèle unifié de gestion multi-écran**. Le Pi 5 devient un hub multi-sortie capable de piloter simultanément :
+
+- **HDMI 0** → N TV (via splitter) — `displayType='tv'`
+- **HDMI 1** → LED (via contrôleur) — `displayType='led'`
+- **WiFi hotspot** → N devices navigateur (Fire Stick, Smart TV) — `displayType` variable, `displayId` individuel
+
+### Impact sur PROP-002
+
+Le scénario E de PROP-001 (Pi hub WiFi) ouvre une **alternative au dual kiosk HDMI** pour les écrans LED :
+
+| Approche LED                            | Mécanisme                                                                                     | Avantages                                 | Inconvénients                                       |
+| --------------------------------------- | --------------------------------------------------------------------------------------------- | ----------------------------------------- | --------------------------------------------------- |
+| **HDMI 1 dual kiosk** (PROP-002 actuel) | 2ème instance Chromium sur HDMI 1                                                             | Sync parfaite, latence 0                  | Charge GPU (2 décodages), config /boot, Pi 5 requis |
+| **LED via WiFi** (scénario E hybride)   | Fire Stick/mini PC derrière le contrôleur LED, connecté au hotspot, charge `neopro.local/led` | Pas de charge GPU Pi, fonctionne sur Pi 4 | Dépend du WiFi, léger drift                         |
+
+Pour un bandeau LED avec score permanent (peu de vidéo lourde), l'approche WiFi peut suffire. Pour des murs LED avec vidéo plein écran, le dual kiosk HDMI reste supérieur.
+
+### Modèle unifié displayType + displayId
+
+Voir [PROP-001 § Convergence](./PROP-001-multi-tv-single-pi.md#convergence-avec-prop-002-tv--led-dual-output) pour le modèle complet. Les deux dimensions `displayType` (format) et `displayId` (ciblage) couvrent les besoins des deux PROP avec un seul dev.
+
+---
+
+_Créé le 11 février 2026 — Mis à jour le 11 avril 2026 (convergence PROP-001)_
