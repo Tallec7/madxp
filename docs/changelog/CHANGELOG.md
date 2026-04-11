@@ -1,3 +1,10 @@
+## [3.142.4](https://github.com/Tallec7/neopro/compare/v3.142.3...v3.142.4) (2026-04-11)
+
+### Bug Fixes
+
+- **dashboard:** revert to flex layout with min-width on video name column ([235b871](https://github.com/Tallec7/neopro/commit/235b8716742329a3d3ec49e4a62fd2ffd273c886))
+- **raspberry:** add --delete to server rsync in build-raspberry.sh ([771feb0](https://github.com/Tallec7/neopro/commit/771feb0c1bf37e6baf62577188fbc073309007bf))
+
 ## [3.142.3](https://github.com/Tallec7/neopro/compare/v3.142.2...v3.142.3) (2026-04-11)
 
 ### Bug Fixes
