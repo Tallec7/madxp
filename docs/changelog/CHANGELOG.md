@@ -1,3 +1,9 @@
+## [3.142.1](https://github.com/Tallec7/neopro/compare/v3.142.0...v3.142.1) (2026-04-11)
+
+### Bug Fixes
+
+- **dashboard:** wrap video-library table in scrollable container ([8e05ae5](https://github.com/Tallec7/neopro/commit/8e05ae53900ecfd4fab204361fa20bb8749b841e))
+
 # [3.142.0](https://github.com/Tallec7/neopro/compare/v3.141.1...v3.142.0) (2026-04-11)
 
 ### Features
