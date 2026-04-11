@@ -5,6 +5,7 @@ import logger from '../config/logger';
 import socketService from '../services/socket.service';
 import { configHistoryRepository } from '../repositories/config-history.repository';
 import { siteRepository } from '../repositories/site.repository';
+import { configProfileRepository } from '../repositories/config-profile.repository';
 
 /**
  * Calcule les différences entre deux configurations
@@ -334,8 +335,15 @@ export const previewConfigDiff = async (req: AuthRequest, res: Response) => {
 
     const localConfigMirror = siteRow.local_config_mirror;
 
-    // Si pas de config locale, fallback sur config_history
+    // Si pas de config locale, fallback sur config_profiles (SaaS) puis config_history
     let currentConfig: Record<string, unknown> | null = localConfigMirror;
+    if (!currentConfig) {
+      const site = await siteRepository.findById(id);
+      if (site?.site_type === 'saas') {
+        const defaultProfile = await configProfileRepository.findDefaultForSite(id);
+        currentConfig = (defaultProfile?.configuration as Record<string, unknown>) || null;
+      }
+    }
     if (!currentConfig) {
       const lastVersionRow = await configHistoryRepository.findLastConfigurationOnly(id);
       currentConfig = lastVersionRow?.configuration || null;

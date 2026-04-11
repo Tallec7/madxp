@@ -13,6 +13,7 @@ import logger from '../config/logger';
 import socketService from '../services/socket.service';
 import { configProfileRepository } from '../repositories/config-profile.repository';
 import { configHistoryRepository } from '../repositories/config-history.repository';
+import { siteRepository } from '../repositories/site.repository';
 import { enrichConfigWithSecondaryVariants } from '../utils/config-secondary-variants';
 import { enrichConfigWithAnalyticsMetadata } from '../utils/config-analytics-metadata';
 import { autoResolveSponsorIds } from '../services/sponsor-auto-resolution.service';
@@ -223,6 +224,12 @@ export const updateProfileConfiguration = async (req: AuthRequest, res: Response
       profileName: existing.name,
       updatedBy: req.user?.email,
     });
+
+    // Notify SaaS clients to reload config (non-blocking)
+    const site = await siteRepository.findById(siteId);
+    if (site?.site_type === 'saas') {
+      socketService.emitSaasConfigUpdated(siteId, { updatedBy: req.user?.email });
+    }
 
     res.json(updated);
   } catch (error) {
