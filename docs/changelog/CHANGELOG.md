@@ -1,3 +1,9 @@
+## [3.144.2](https://github.com/Tallec7/neopro/compare/v3.144.1...v3.144.2) (2026-04-11)
+
+### Bug Fixes
+
+- **dashboard:** remove window.open on video preview (security + UX) ([f83ecfe](https://github.com/Tallec7/neopro/commit/f83ecfefa6fa440fba44d1f54eb6cd7bb3df1a47))
+
 ## [3.144.1](https://github.com/Tallec7/neopro/compare/v3.144.0...v3.144.1) (2026-04-11)
 
 ### Bug Fixes
