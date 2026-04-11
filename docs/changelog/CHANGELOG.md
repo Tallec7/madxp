@@ -1,3 +1,9 @@
+## [3.145.9](https://github.com/Tallec7/neopro/compare/v3.145.8...v3.145.9) (2026-04-11)
+
+### Bug Fixes
+
+- **saas:** apply thumbnails before URL resolution to preserve filename matching ([e018415](https://github.com/Tallec7/neopro/commit/e018415ed89c5bb4f2fae79688720501052e1303))
+
 ## [3.145.8](https://github.com/Tallec7/neopro/compare/v3.145.7...v3.145.8) (2026-04-11)
 
 ### Bug Fixes
