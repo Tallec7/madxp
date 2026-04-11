@@ -367,7 +367,9 @@ describe('Config Profiles Controller', () => {
         // update
         .mockResolvedValueOnce({
           rows: [{ id: 'p1', site_id: 'site-1', name: 'Default', configuration: newConfig }],
-        });
+        })
+        // siteRepository.findById (for SaaS notification check)
+        .mockResolvedValueOnce({ rows: [{ id: 'site-1', site_type: 'pi' }] });
 
       await updateProfileConfiguration(req, res);
 

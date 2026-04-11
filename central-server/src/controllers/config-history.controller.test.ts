@@ -478,6 +478,7 @@ describe('Config History Controller', () => {
       // Mock site lookup returning no local_config_mirror
       (query as jest.Mock)
         .mockResolvedValueOnce({ rows: [{ local_config_mirror: null }] }) // site exists but no local config
+        .mockResolvedValueOnce({ rows: [{ id: 'site-123', site_type: 'pi' }] }) // siteRepository.findById (SaaS fallback check)
         .mockResolvedValueOnce({ rows: [] }); // no config_history either
 
       await previewConfigDiff(req, res);
