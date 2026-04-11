@@ -1,3 +1,9 @@
+## [3.140.3](https://github.com/Tallec7/neopro/compare/v3.140.2...v3.140.3) (2026-04-11)
+
+### Bug Fixes
+
+- **sites:** fallback to local_config_mirror when copying config from site without profiles ([be998d2](https://github.com/Tallec7/neopro/commit/be998d20664733ea15592c62ebdb067027476d2f))
+
 ## [3.140.2](https://github.com/Tallec7/neopro/compare/v3.140.1...v3.140.2) (2026-04-10)
 
 ### Bug Fixes
