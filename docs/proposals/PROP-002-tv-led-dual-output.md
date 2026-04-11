@@ -1,10 +1,10 @@
 # PROP-002: Multi-Display — Contenus Différenciés par Écran depuis un Seul Pi
 
-> _Anciennement ADR-012. Mise à jour majeure le 11 avril 2026 (audit implémentation + modèle N-display)._
+> _Anciennement ADR-012. Mise à jour majeure le 11 avril 2026 (audit implémentation + modèle N-display + Phases 3-4 implémentées)._
 
 **Date** : 2026-02-11
 **Dernière révision** : 2026-04-11
-**Statut** : Partiellement implémenté (Phase 1 + 2 done, Phase 3+ à venir)
+**Statut** : Phases 1-4 done, Phase 5 (N-display) à venir
 **Décideurs** : Équipe Neopro
 **Epic SAFe** : [E-22 — Contenus Différenciés TV + LED](../safe/FEATURES.md#e-22--contenus-différenciés-tv--led) (PI-2)
 **ADR** : [ADR-029](../adr/ADR-029-dual-hdmi-tv-led.md) (décision architecturale)
@@ -35,21 +35,21 @@ Un même sujet (ex: sponsor X) peut avoir **N versions** : une optimisée par ty
 
 ### État implémenté (avril 2026)
 
-| Élément                         | Statut        | Détail                                                             |
-| ------------------------------- | ------------- | ------------------------------------------------------------------ |
-| 2 ports HDMI natifs (Pi 4/5)    | ✅ Utilisés   | HDMI 0 = primary, HDMI 1 = secondary                               |
-| Dual kiosk Chromium             | ✅ Implémenté | `kiosk-watchdog.sh` avec `start_chromium_secondary()`              |
-| Route `/secondary`              | ✅ Implémenté | `app.routes.ts` avec `data: { displayType: 'secondary' }`          |
-| `displayType` dans TvComponent  | ✅ Implémenté | `'tv' \| 'secondary'` via route data                               |
-| Table `video_variants`          | ✅ Implémenté | `display_type IN ('tv', 'secondary')`                              |
-| Colonnes sites                  | ✅ Implémenté | `secondary_display_enabled`, `secondary_display_resolution`        |
-| Dashboard upload variantes      | ✅ Implémenté | Badge `📺 2nd`, feature gate Premium                               |
-| Détection hardware HDMI         | ✅ Implémenté | DRM sysfs + udev hotplug + EDID parsing                            |
-| GPU fallback                    | ✅ Implémenté | `GPU_DECODE_FALLBACK_FILE` (auto hardware→software après 2 crashs) |
-| Indicateur displays dans Remote | ❌ À faire    | Phase 3                                                            |
-| Override ciblé (Remote)         | ❌ À faire    | Phase 4                                                            |
-| Modèle N-display                | ❌ À faire    | Phase 5                                                            |
-| Dashboard preview secondaire    | ❌ À faire    | Phase 3                                                            |
+| Élément                         | Statut        | Détail                                                                    |
+| ------------------------------- | ------------- | ------------------------------------------------------------------------- |
+| 2 ports HDMI natifs (Pi 4/5)    | ✅ Utilisés   | HDMI 0 = primary, HDMI 1 = secondary                                      |
+| Dual kiosk Chromium             | ✅ Implémenté | `kiosk-watchdog.sh` avec `start_chromium_secondary()`                     |
+| Route `/secondary`              | ✅ Implémenté | `app.routes.ts` avec `data: { displayType: 'secondary' }`                 |
+| `displayType` dans TvComponent  | ✅ Implémenté | `'tv' \| 'secondary'` via route data                                      |
+| Table `video_variants`          | ✅ Implémenté | `display_type IN ('tv', 'secondary')`                                     |
+| Colonnes sites                  | ✅ Implémenté | `secondary_display_enabled`, `secondary_display_resolution`               |
+| Dashboard upload variantes      | ✅ Implémenté | Badge `📺 2nd`, feature gate Premium                                      |
+| Détection hardware HDMI         | ✅ Implémenté | DRM sysfs + udev hotplug + EDID parsing                                   |
+| GPU fallback                    | ✅ Implémenté | `GPU_DECODE_FALLBACK_FILE` (auto hardware→software après 2 crashs)        |
+| Indicateur displays dans Remote | ✅ Implémenté | Phase 3 — pastilles ●TV ●2nd dans menu dropdown, event `displays-changed` |
+| Override ciblé (Remote)         | ✅ Implémenté | Phase 4 — toggle "Cible: Tous/TV/2nd", `target?: number[]` dans commandes |
+| Dashboard preview secondaire    | ✅ Implémenté | Phase 3 — section "Aperçu écran secondaire" dans config-editor            |
+| Modèle N-display                | ❌ À faire    | Phase 5                                                                   |
 
 ### La Remote et les faits de jeu — Élément critique
 
@@ -392,31 +392,54 @@ Utilise les 2 HDMI natifs. Contenus indépendants par écran. Extensible vers N 
 - Repository : `video-variant.repository.ts`
 - Debug : `secondaryDisplayInfo` dans Health Monitor
 
-### Phase 3 — Remote + Dashboard awareness (à faire)
+### Phase 3 — Remote + Dashboard awareness ✅ Done
 
-1. **Indicateur displays dans la Remote** : pastille d'état dans le menu header (dropdown `☰`)
-2. **Dashboard preview secondaire** : visualisation du contenu prévu sur l'écran secondaire
-3. **Validation terrain** : tester avec contrôleurs LED (Linsn MC100, Novastar MX40 Pro)
-4. **Guide d'installation** : documentation câblage et configuration contrôleur
+1. **Indicateur displays dans la Remote** : pastilles ●TV ●2nd dans le menu header dropdown, mises à jour en temps réel via événement `displays-changed`
+2. **Dashboard preview secondaire** : section "🖥️ Aperçu écran secondaire" dans le config-editor, montre les vidéos avec/sans variante dédiée
+3. **Serveur Pi** : broadcast `displays-changed` sur `tv-register`, `disconnect`, et `request-state` (état initial)
+4. **Validation terrain** : ⏳ tester avec contrôleurs LED (Linsn MC100, Novastar MX40 Pro)
+5. **Guide d'installation** : ⏳ documentation câblage et configuration contrôleur
 
 **Critères de validation** :
 
-- [ ] Remote affiche l'état de connexion de chaque écran dans le menu
-- [ ] Dashboard montre le contenu prévu pour l'écran secondaire
+- [x] Remote affiche l'état de connexion de chaque écran dans le menu
+- [x] Dashboard montre le contenu prévu pour l'écran secondaire
 - [ ] Test terrain réussi avec au moins 1 modèle de contrôleur LED
 
-### Phase 4 — Override ciblé (à faire)
+**Fichiers implémentés** :
 
-1. **Champ `target` dans les commandes Socket.IO** : `target?: number[]` (liste de displayId)
-2. **Filtrage côté récepteur** : chaque instance ignore les commandes non ciblées
-3. **Toggle Remote** : sélecteur "Tous / TV / 2nd" dans la section vidéos
-4. **Score toujours broadcast** : le `target` ne s'applique pas aux événements score/timer/phase
+- `raspberry/server/socket/handlers.js` — événement `displays-changed` (3 points d'émission)
+- `raspberry/src/app/components/remote/remote.component.ts/html/scss` — indicateurs displays
+- `central-dashboard/.../config-editor/config-editor.component.ts` — section preview secondaire
+
+### Phase 4 — Override ciblé ✅ Done
+
+1. **Champ `target` dans l'interface `Command`** : `target?: number[]` (liste de displayId) — forward-compatible N-display
+2. **Filtrage côté récepteur** : `TvComponent.handleTvCommand()` ignore les commandes ciblées vers d'autres displays ; `ScoreOverlayComponent` filtre les breaking-news ciblées
+3. **Toggle Remote** : sélecteur "Cible : Tous / TV / 2nd" dans le menu dropdown, visible uniquement quand le secondaire est connecté
+4. **Score toujours broadcast** : le `target` ne s'applique pas aux événements `score-update`, `timer-update`, `phase-change`
 
 **Critères de validation** :
 
-- [ ] Vidéo lancée avec target=[0] → seul display 0 réagit, display 1 continue sa boucle
-- [ ] Vidéo lancée sans target → les deux displays réagissent (rétrocompat)
-- [ ] Score update → toujours broadcast aux deux, indépendamment du toggle
+- [x] Vidéo lancée avec target=[0] → seul display 0 réagit, display 1 continue sa boucle
+- [x] Vidéo lancée sans target → les deux displays réagissent (rétrocompat)
+- [x] Score update → toujours broadcast aux deux, indépendamment du toggle
+
+**Fichiers implémentés** :
+
+- `raspberry/src/app/interfaces/command.interface.ts` — `target?: number[]`
+- `raspberry/src/app/components/tv/tv.component.ts` — `displayIndex` + filtrage `handleTvCommand()`
+- `raspberry/src/app/components/score-overlay/score-overlay.component.ts` — `@Input() displayIndex` + filtrage breaking-news
+- `raspberry/src/app/components/remote/remote.component.ts/html/scss` — toggle cible + `getCommandTarget()`
+
+**Comportement par scénario** :
+
+| Scénario                        | Indicateurs             | Toggle cible  | Comportement                                |
+| ------------------------------- | ----------------------- | ------------- | ------------------------------------------- |
+| Pi mono-écran (HDMI-0 seul)     | ●TV visible, ●2nd gris  | Masqué        | Normal, aucun bruit                         |
+| Pi dual-écran (HDMI-0 + HDMI-1) | ●TV vert, ●2nd vert     | Visible       | Fonctionnel                                 |
+| SaaS classique (navigateur)     | Masqués                 | Masqué        | `displays-changed` jamais reçu → tout caché |
+| SaaS IoT (futur)                | Selon devices connectés | Selon devices | À implémenter Phase 5+ côté central server  |
 
 ### Phase 5 — Modèle N-display (à faire)
 
@@ -426,6 +449,28 @@ Utilise les 2 HDMI natifs. Contenus indépendants par écran. Extensible vers N 
 4. **Watchdog** : boucle sur N displays détectés (HDMI + WiFi registered)
 5. **Remote** : sélecteur multi-display dynamique basé sur `displays[]`
 6. **Dashboard** : gestion N variantes par vidéo, config N écrans par site
+
+**Migration du toggle Phase 4 → Phase 5** :
+
+Le protocole `target?: number[]` (Phase 4) est déjà N-display ready. La migration concerne uniquement l'UI :
+
+```
+Phase 4 (hardcodé):          Phase 5 (dynamique):
+displayTarget: 'all'|'tv'|   displayTarget: 'all' | number[]
+  'secondary'
+[Tous] [TV] [2nd]            [Tous] [📺 Hall] [🖥️ LED] [📺 Buv]
+                              ↑ généré depuis displays[]
+```
+
+| Composant                  | Phase 4                  | Phase 5                                |
+| -------------------------- | ------------------------ | -------------------------------------- |
+| `Command.target`           | `number[]`               | Inchangé                               |
+| `TvComponent.displayIndex` | 0 ou 1                   | Route param `:n`                       |
+| `getCommandTarget()`       | `[0]` ou `[1]`           | Index sélectionnés depuis UI           |
+| Toggle Remote              | 3 boutons hardcodés      | Boutons dynamiques depuis `displays[]` |
+| `displays-changed`         | `{ displays: string[] }` | `{ displays: DisplayConfig[] }`        |
+
+**SaaS IoT** : nécessitera un handler `displays-changed` côté central server (`socket.service.ts`) en plus du Pi local. Les devices SaaS s'enregistrent via `saas-register` — à étendre avec `displayType`.
 
 **Critères de validation** :
 
@@ -494,4 +539,4 @@ Le modèle `displayType` (format) + `displayId` (ciblage) couvre les deux PROP a
 
 ---
 
-_Créé le 11 février 2026 — Révisé le 11 avril 2026 (audit implémentation, modèle N-display, override ciblé, convergence PROP-001)_
+_Créé le 11 février 2026 — Révisé le 11 avril 2026 (Phases 3-4 implémentées : indicateurs displays, preview secondaire, override ciblé avec `target?: number[]`, plan migration N-display)_
