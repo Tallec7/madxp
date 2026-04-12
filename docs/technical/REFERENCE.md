@@ -383,15 +383,21 @@ Le rapport est envoyé via `update_progress` (Socket.IO) à la complétion ou l'
 
 **Vérification d'intégrité node_modules (v3.160+) :**
 
-`verifyNodeModules()` dans `ota-install.js` vérifie la présence physique des modules critiques après extraction et `npm install`. Si des modules manquent (corruption EXT4, `npm install` partiel), un `npm install --production` de réparation est lancé automatiquement.
+`verifyNodeModules()` dans `ota-install.js` vérifie la présence physique de **toutes** les dépendances listées dans le `package.json` de chaque composant après extraction et `npm install`. Si des modules manquent (corruption EXT4, `npm install` partiel), un `npm install --production` de réparation est lancé automatiquement.
 
-| Composant    | Modules vérifiés                |
-| ------------ | ------------------------------- |
-| `server`     | `express`, `socket.io`, `axios` |
-| `sync-agent` | `socket.io-client`, `fs-extra`  |
-| `admin`      | `express`                       |
+Les composants vérifiés sont : `server`, `sync-agent`, `admin`. La vérification porte sur **l'ensemble des dépendances** du `package.json` (pas une liste hardcodée), ce qui couvre aussi les sous-dépendances explicites comme `follow-redirects`.
 
-Si la réparation échoue, l'OTA déclenche un rollback. Ce mécanisme a été ajouté après un incident `neopro-app` en crash-loop sur NLF Handball (v3.157.3) où `follow-redirects` (sous-dépendance d'axios) manquait après OTA.
+Si la réparation échoue, l'OTA déclenche un rollback. Ce mécanisme a été renforcé (v3.160+) après un incident `neopro-app` en crash-loop (v3.157.3) où `follow-redirects` (sous-dépendance d'axios, mais aussi dépendance directe du `package.json` server) manquait après OTA.
+
+**Monitoring continu des dépendances (v3.160+) :**
+
+En plus de la vérification OTA ponctuelle, les dépendances sont maintenant surveillées en continu via 3 mécanismes :
+
+| Mécanisme                 | Fichier                                                | Fréquence               | Impact                                           |
+| ------------------------- | ------------------------------------------------------ | ----------------------- | ------------------------------------------------ |
+| Health status (heartbeat) | `metrics.js` → `getDependenciesStatus()`               | Chaque heartbeat (~30s) | -20 health score par module avec deps manquantes |
+| Diagnostics manuels       | `diagnostics.js` → check #10 "Dependencies"            | À la demande            | Catégorie "Dependencies" dans les résultats      |
+| healthcheck.sh            | `tools/healthcheck.sh` → section "DÉPENDANCES NODE.JS" | Debug local             | Vérifie chaque dep de chaque module              |
 
 **IMPORTANT :** Le code OTA lit les `.service` depuis l'archive extraite (`sourcePath`), PAS depuis `rootDir` (`/home/pi/neopro/config/systemd/`). Ce dernier peut contenir des fichiers orphelins d'anciennes versions. Smoke test enforced.
 
@@ -721,6 +727,14 @@ Pi: getFanStatus() → collectAll() → heartbeat { fanStatus }
 | Condition                          | Type                 | Sévérité                                   | Slack |
 | ---------------------------------- | -------------------- | ------------------------------------------ | ----- |
 | Service légitime failed/activating | `service_crash_loop` | `warning` (≤10 restarts), `critical` (>10) | Oui   |
+
+#### Détection dépendances Node.js manquantes (v3.160+)
+
+`getDependenciesStatus()` dans `service-metrics.js` vérifie que toutes les dépendances du `package.json` de chaque module (`server`, `admin`, `sync-agent`) sont physiquement présentes dans `node_modules/`. Intégré dans le health score via `getHealthStatus()`.
+
+| Condition                   | Impact health score | Sévérité   | Fix automatique                                           |
+| --------------------------- | ------------------- | ---------- | --------------------------------------------------------- |
+| Module avec deps manquantes | -20 par module      | `critical` | `cd /home/pi/neopro/<module> && npm install --production` |
 
 **Pipeline :**
 

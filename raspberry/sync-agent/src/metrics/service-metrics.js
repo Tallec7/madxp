@@ -209,9 +209,55 @@ async function getKioskStatus() {
   }
 }
 
+// =============================================================================
+// NODE.JS DEPENDENCIES CHECK
+// =============================================================================
+
+const path = require('path');
+
+/**
+ * Vérifie que toutes les dépendances Node.js sont installées pour chaque module.
+ * Détecte les node_modules corrompus ou incomplets (ex: OTA interrompu).
+ */
+async function getDependenciesStatus() {
+  const modules = [
+    { dir: '/home/pi/neopro/server', name: 'server' },
+    { dir: '/home/pi/neopro/admin', name: 'admin' },
+    { dir: '/home/pi/neopro/sync-agent', name: 'sync-agent' },
+  ];
+
+  const results = [];
+  for (const mod of modules) {
+    try {
+      const pkgPath = path.join(mod.dir, 'package.json');
+      if (!fs.existsSync(pkgPath)) continue;
+
+      const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
+      const deps = Object.keys(pkg.dependencies || {});
+      const missing = deps.filter(dep => !fs.existsSync(path.join(mod.dir, 'node_modules', dep)));
+
+      results.push({
+        module: mod.name,
+        totalDeps: deps.length,
+        missing,
+        status: missing.length === 0 ? 'ok' : 'error',
+      });
+
+      if (missing.length > 0) {
+        logger.warn(`Missing dependencies in ${mod.name}:`, { missing });
+      }
+    } catch (err) {
+      logger.error(`Error checking deps for ${mod.name}:`, { error: err.message });
+      results.push({ module: mod.name, totalDeps: 0, missing: [], status: 'unknown' });
+    }
+  }
+  return results;
+}
+
 module.exports = {
   getServicesStatus,
   getOrphanServices,
   getFailedServices,
   getKioskStatus,
+  getDependenciesStatus,
 };

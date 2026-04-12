@@ -211,8 +211,10 @@ Collecte 16 sections de diagnostic en une seule commande (timeout 60s) :
 | 12  | `transitionMetrics`   | Socket.IO local (read-only) | Métriques de transition vidéo (sans reset des compteurs)                                                   |
 | 13  | `dmesg`               | `dmesg` (kernel)            | 200 dernières lignes kernel — erreurs USB, filesystem, OOM                                                 |
 | 14  | `usbDevices`          | `lsusb`                     | Inventaire périphériques USB (clés WiFi, etc.)                                                             |
-| 15  | `wifiClient`          | `wifi-bssid.js`             | SSID, BSSID, signal dBm, IP, BSSID lock, détection mesh (nb APs)                                          |
+| 15  | `wifiClient`          | `wifi-bssid.js`             | SSID, BSSID, signal dBm, IP, BSSID lock, détection mesh (nb APs)                                           |
 | 16  | `videoFiles`          | Filesystem                  | Liste des fichiers vidéo déployés (max 50)                                                                 |
+
+**Diagnostics manuels** (`runManualDiagnostics()`) : 11 checks inline (fallback si `diagnose-pi.sh` absent) — services, ports, fichiers, GPU, température, throttling, disque, mémoire, dépendances Node.js (v3.160+), Internet, DNS.
 
 Sécurité : chaque section a son propre try/catch (un échec n'empêche pas les autres). Les données sensibles sont systématiquement masquées.
 

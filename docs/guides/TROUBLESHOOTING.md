@@ -855,7 +855,11 @@ npm install --production
 sudo systemctl restart neopro-app
 ```
 
-> **Note v3.160+** : `verifyNodeModules()` dans `ota-install.js` vérifie maintenant `axios` en plus de `express` et `socket.io`. Si `axios` ou ses sous-dépendances manquent après OTA, un `npm install` de réparation est automatiquement lancé.
+> **Note v3.160+** : `verifyNodeModules()` dans `ota-install.js` vérifie maintenant **toutes** les dépendances du `package.json` (pas juste un subset hardcodé). Si une dépendance manque après OTA, un `npm install --production` de réparation est automatiquement lancé.
+>
+> **Monitoring continu (v3.160+)** : `getDependenciesStatus()` dans `service-metrics.js` vérifie en continu les dépendances via le heartbeat. Un module avec des deps manquantes fait baisser le health score de 20 points et génère une alerte `critical`. Visible dans le dashboard fleet (health status) et les diagnostics à distance.
+>
+> **Diagnostic rapide** : `healthcheck.sh` affiche maintenant une section "DÉPENDANCES NODE.JS" qui vérifie chaque module (server, admin, sync-agent) contre son `package.json`.
 
 ### Service neopro-admin (port 8080)
 

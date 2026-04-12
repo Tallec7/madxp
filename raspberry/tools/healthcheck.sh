@@ -178,6 +178,29 @@ else
     print_error "Admin panel manquant"
 fi
 
+# Vérification détaillée des dépendances Node.js
+echo ""
+echo -e "${BLUE}DÉPENDANCES NODE.JS${NC}"
+echo "────────────────────"
+for MODULE_DIR in server admin sync-agent; do
+    PKG_FILE="$INSTALL_DIR/$MODULE_DIR/package.json"
+    if [ -f "$PKG_FILE" ]; then
+        MISSING_DEPS=""
+        DEPS=$(node -e "const p=require('$PKG_FILE'); console.log(Object.keys(p.dependencies||{}).join(' '))" 2>/dev/null)
+        for DEP in $DEPS; do
+            if [ ! -d "$INSTALL_DIR/$MODULE_DIR/node_modules/$DEP" ]; then
+                MISSING_DEPS="$MISSING_DEPS $DEP"
+            fi
+        done
+        if [ -z "$MISSING_DEPS" ]; then
+            DEP_COUNT=$(echo "$DEPS" | wc -w | tr -d ' ')
+            print_ok "$MODULE_DIR: $DEP_COUNT dépendances OK"
+        else
+            print_error "$MODULE_DIR: manquant:$MISSING_DEPS"
+        fi
+    fi
+done
+
 # Vidéos
 VIDEO_COUNT=$(find "$INSTALL_DIR/videos" -type f \( -name "*.mp4" -o -name "*.mkv" -o -name "*.mov" \) 2>/dev/null | wc -l)
 if [ "$VIDEO_COUNT" -gt 0 ]; then

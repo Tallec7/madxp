@@ -240,7 +240,43 @@ async function runManualDiagnostics() {
     });
   }
 
-  // 10. Résolution DNS
+  // 10. Node.js dependencies check
+  const modules = [
+    { dir: '/home/pi/neopro/server', name: 'server' },
+    { dir: '/home/pi/neopro/admin', name: 'admin' },
+    { dir: '/home/pi/neopro/sync-agent', name: 'sync-agent' },
+  ];
+  for (const mod of modules) {
+    try {
+      const pkgPath = `${mod.dir}/package.json`;
+      if (await fs.pathExists(pkgPath)) {
+        const pkg = await fs.readJson(pkgPath);
+        const deps = Object.keys(pkg.dependencies || {});
+        const missing = [];
+        for (const dep of deps) {
+          const depPath = `${mod.dir}/node_modules/${dep}`;
+          if (!(await fs.pathExists(depPath))) {
+            missing.push(dep);
+          }
+        }
+        results.checks.push({
+          category: 'Dependencies',
+          name: `${mod.name} (${deps.length} deps)`,
+          status: missing.length === 0 ? 'ok' : 'fail',
+          value: missing.length === 0 ? 'all installed' : `missing: ${missing.join(', ')}`,
+        });
+      }
+    } catch {
+      results.checks.push({
+        category: 'Dependencies',
+        name: mod.name,
+        status: 'unknown',
+        value: 'check failed',
+      });
+    }
+  }
+
+  // 11. Résolution DNS
   try {
     await execAsync('getent hosts google.com');
     results.checks.push({

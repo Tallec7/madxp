@@ -71,6 +71,7 @@ class MetricsCollector {
   getOrphanServices() { return services.getOrphanServices(); }
   getFailedServices() { return services.getFailedServices(); }
   getKioskStatus() { return services.getKioskStatus(); }
+  getDependenciesStatus() { return services.getDependenciesStatus(); }
 
   // =========================================================================
   // HEALTH STATUS (orchestrates all sub-modules)
@@ -216,6 +217,24 @@ class MetricsCollector {
             fix: 'Redémarrer le boîtier pour re-tenter le hardware decode. Si récurrent, vérifier version Chromium (128+ requis) et V4L2: v4l2-ctl --list-devices',
           });
         }
+      }
+
+      // Dépendances Node.js
+      try {
+        const depsStatus = await this.getDependenciesStatus();
+        for (const dep of depsStatus) {
+          if (dep.status === 'error' && dep.missing.length > 0) {
+            healthScore -= 20;
+            issues.push({
+              severity: 'critical',
+              component: 'Dependencies',
+              message: `${dep.module}: dépendances manquantes: ${dep.missing.join(', ')}`,
+              fix: `cd /home/pi/neopro/${dep.module} && npm install --production`,
+            });
+          }
+        }
+      } catch {
+        // Non-bloquant
       }
 
       // Mémoire système

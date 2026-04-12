@@ -84,18 +84,19 @@ async function writeVersionMetadata(version) {
  * de réparation. Si la réparation échoue, throw pour déclencher le rollback.
  */
 async function verifyNodeModules(rootDir) {
-  const checks = [
-    { component: 'server', modules: ['express', 'socket.io', 'axios'] },
-    { component: 'sync-agent', modules: ['socket.io-client', 'fs-extra'] },
-    { component: 'admin', modules: ['express'] },
-  ];
+  const components = ['server', 'sync-agent', 'admin'];
 
-  for (const { component, modules } of checks) {
+  for (const component of components) {
     const componentDir = path.join(rootDir, component);
-    if (!await fs.pathExists(path.join(componentDir, 'package.json'))) continue;
+    const pkgPath = path.join(componentDir, 'package.json');
+    if (!await fs.pathExists(pkgPath)) continue;
+
+    // Check ALL dependencies from package.json (not just a hardcoded subset)
+    const pkg = await fs.readJson(pkgPath);
+    const allDeps = Object.keys(pkg.dependencies || {});
 
     const missing = [];
-    for (const mod of modules) {
+    for (const mod of allDeps) {
       const modPath = path.join(componentDir, 'node_modules', mod);
       if (!await fs.pathExists(modPath)) {
         missing.push(mod);
