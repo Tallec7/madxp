@@ -1,3 +1,9 @@
+## [3.157.3](https://github.com/Tallec7/neopro/compare/v3.157.2...v3.157.3) (2026-04-12)
+
+### Bug Fixes
+
+- **profiles:** copy sponsors and remap IDs when copying profiles between sites ([9ed1f22](https://github.com/Tallec7/neopro/commit/9ed1f221a54a965727606842bb4a96e7683193ac))
+
 ## [3.157.2](https://github.com/Tallec7/neopro/compare/v3.157.1...v3.157.2) (2026-04-12)
 
 ### Bug Fixes
