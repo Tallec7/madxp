@@ -14,7 +14,7 @@ Le codebase contient 31 fichiers source > 1000 lignes et ~45 entre 500-1000. Les
 
 Refactoring progressif en 4 phases, chaque fichier résultant ciblant < 400 lignes :
 
-1. **Phase 1 — Fondations** : ~~`smoke.test.ts`~~ ✅ (splitté en 12 fichiers, 1221 tests, 2026-04-12), `metrics.service.ts` (par domaine m��trique), `alerting.service.ts` (notifiers + threshold + buffer)
+1. **Phase 1 — Fondations** : ~~`smoke.test.ts`~~ ✅ (splitté en 12 fichiers, 1221 tests, 2026-04-12), ~~`alerting.service.ts`~~ ✅ (splitté en 4 modules : types/notifier/checks/core, 1683→678 lignes, 2026-04-12), `metrics.service.ts` — **skippé** (1051 lignes mais structure plate, 600 lignes de déclarations Prometheus + 350 lignes de méthodes 2-5 lignes — gain minime à splitter)
 2. **Phase 2 — Controllers** : `content.controller.ts`, `site-fleet.controller.ts`, `analytics.controller.ts`, `advertiser-analytics.controller.ts` (extraction de services utilitaires)
 3. **Phase 3 — Services** : `socket.service.ts` (handlers par event), `safe-parser.service.ts` (parser + repo + cache)
 4. **Phase 4 — Angular** : `remote.component`, `cloud-remote.component`, `tv.component`, `updates-management.component` (sous-composants + templates externalisés)
@@ -36,8 +36,8 @@ Le split de `smoke.test.ts` est prioritaire car il permet de lancer les tests pa
 ## Fichiers impactés
 
 - `central-server/src/__tests__/smoke/` — ✅ splitté en 12 fichiers par domaine (Phase 1, done)
-- `central-server/src/services/metrics.service.ts` — split par domaine métrique (Phase 1)
-- `central-server/src/services/alerting.service.ts` — extraction notifiers/threshold/buffer (Phase 1)
+- `central-server/src/services/metrics.service.ts` — skippé (structure déjà claire, pas de logique complexe)
+- `central-server/src/services/alerting.service.ts` — ✅ splitté en 4 modules (Phase 1, done) : `alerting.types.ts` (297 lignes), `alerting-notifier.service.ts` (342), `alerting-checks.service.ts` (438), `alerting.service.ts` (678)
 - `central-server/src/controllers/content.controller.ts` — extraction FileUtilities, VariantService (Phase 2)
 - `central-server/src/controllers/site-fleet.controller.ts` — extraction StatusAnalyzer, ConfigAggregator (Phase 2)
 - `central-server/src/controllers/analytics.controller.ts` — extraction batch processors (Phase 2)
