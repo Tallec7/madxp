@@ -301,11 +301,16 @@ export class VideoSearchSelectComponent implements OnChanges {
     }
   }
 
-  onControlClick(event: Event): void {
+  @HostListener('click', ['$event'])
+  onHostClick(event: Event): void {
     const target = event.target as HTMLElement;
     // Don't toggle when clicking inside the dropdown or the search input
     if (target.closest('.vss__dropdown') || target.closest('.vss__search')) return;
     this.toggle();
+  }
+
+  onControlClick(event: Event): void {
+    // Kept for template compatibility, actual handling is in onHostClick
   }
 
   toggle(): void {

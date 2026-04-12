@@ -226,7 +226,7 @@
                     !hasSecondaryVariantForPath(video.path) && canAddVariantForPath(video.path)
                   "
                   (click)="onOpenVariant(video.path); $event.stopPropagation()"
-                  title="Ajouter variante secondaire"
+                  [title]="'configEditor.addSecondaryVariant' | translate"
                 >
                   📺+
                 </button>
@@ -288,7 +288,8 @@
                       [searchPlaceholder]="'common.searchVideoPlaceholder' | translate"
                       [emptyLabel]="'common.noVideoFound' | translate"
                       [invalid]="isOrphanedVideoPath(video.path)"
-                      class="video-select-compact"
+                      [compact]="true"
+                      class="video-search-wrapper"
                     ></app-video-search-select>
                     <input
                       type="text"
@@ -317,7 +318,7 @@
                         !hasSecondaryVariantForPath(video.path) && canAddVariantForPath(video.path)
                       "
                       (click)="onOpenVariant(video.path); $event.stopPropagation()"
-                      title="Ajouter variante secondaire"
+                      [title]="'configEditor.addSecondaryVariant' | translate"
                     >
                       📺+
                     </button>
