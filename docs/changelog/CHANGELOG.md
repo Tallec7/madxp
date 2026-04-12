@@ -1,3 +1,9 @@
+## [3.153.5](https://github.com/Tallec7/neopro/compare/v3.153.4...v3.153.5) (2026-04-12)
+
+### Bug Fixes
+
+- **dashboard:** fix missing thumbnails + add pagination to video library ([fda5cb4](https://github.com/Tallec7/neopro/commit/fda5cb452ad326c40cc1b8d112d7f5062256ec5c))
+
 ## [3.153.4](https://github.com/Tallec7/neopro/compare/v3.153.3...v3.153.4) (2026-04-12)
 
 ### Bug Fixes
