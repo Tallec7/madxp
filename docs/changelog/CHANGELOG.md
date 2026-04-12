@@ -1,3 +1,9 @@
+## [3.153.6](https://github.com/Tallec7/neopro/compare/v3.153.5...v3.153.6) (2026-04-12)
+
+### Bug Fixes
+
+- **dashboard:** remove debug logs and max-width constraint from video-search-select ([165bf4f](https://github.com/Tallec7/neopro/commit/165bf4f0fed93f3c951427e135626086e873dcfe))
+
 ## [3.153.5](https://github.com/Tallec7/neopro/compare/v3.153.4...v3.153.5) (2026-04-12)
 
 ### Bug Fixes
