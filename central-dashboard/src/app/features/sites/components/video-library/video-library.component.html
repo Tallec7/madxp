@@ -243,6 +243,16 @@
     </div>
   </div>
 
+  <ng-template #noVideos>
+    <div class="no-videos">
+      <span class="no-videos-icon">📂</span>
+      <p *ngIf="allVideos.length === 0">Aucune vidéo disponible</p>
+      <p *ngIf="allVideos.length > 0 && filteredVideos.length === 0">
+        Aucune vidéo ne correspond aux filtres
+      </p>
+    </div>
+  </ng-template>
+
   <div *ngIf="filteredVideos.length === 0">
     <ng-container *ngTemplateOutlet="noVideos"></ng-container>
   </div>
@@ -518,16 +528,6 @@
         </tr>
       </tbody>
     </table>
-
-    <ng-template #noVideos>
-      <div class="no-videos">
-        <span class="no-videos-icon">📂</span>
-        <p *ngIf="allVideos.length === 0">Aucune vidéo disponible</p>
-        <p *ngIf="allVideos.length > 0 && filteredVideos.length === 0">
-          Aucune vidéo ne correspond aux filtres
-        </p>
-      </div>
-    </ng-template>
   </div>
   <!-- /table-scroll-wrapper -->
 
