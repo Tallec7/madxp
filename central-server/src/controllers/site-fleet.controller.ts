@@ -437,6 +437,7 @@ export const getSiteLocalContent = async (req: AuthRequest, res: Response) => {
       duration: v.duration,
       checksum: v.checksum,
       url: v.storage_path ? getVideoUrl(v.storage_path) : null,
+      thumbnail_url: v.thumbnail_url ?? null,
       uploadedForSiteId: v.uploaded_for_site_id,
       createdAt: v.created_at,
       updatedAt: v.updated_at,

@@ -137,6 +137,19 @@ export class VideoLibraryComponent implements OnChanges {
   // View mode
   viewMode: 'grid' | 'list' = 'grid';
 
+  // Pagination
+  pageSize: number = 24;
+  currentPage: number = 0;
+  get totalPages(): number { return Math.ceil(this.filteredVideos.length / this.pageSize); }
+  get pagedVideos(): VideoItem[] {
+    const start = this.currentPage * this.pageSize;
+    return this.filteredVideos.slice(start, start + this.pageSize);
+  }
+
+  goToPage(page: number): void {
+    this.currentPage = Math.max(0, Math.min(page, this.totalPages - 1));
+  }
+
   // Selection mode
   selectionMode: boolean = false;
   selectedVideos: Set<string> = new Set(); // Set of video paths
@@ -410,6 +423,7 @@ export class VideoLibraryComponent implements OnChanges {
     });
 
     this.filteredVideos = filtered;
+    this.currentPage = 0;
 
     // Detect duplicates by checksum within the visible set only
     const checksumCounts = new Map<string, number>();

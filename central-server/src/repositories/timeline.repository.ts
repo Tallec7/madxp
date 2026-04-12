@@ -69,6 +69,7 @@ export interface CloudVideoRow extends QueryResultRow {
   updated_at: Date;
   metadata: Record<string, unknown> | null;
   advertiser_name: string | null;
+  thumbnail_url: string | null;
 }
 
 // --------------------------------------------------------------------------
@@ -176,6 +177,7 @@ class TimelineRepositoryImpl {
          v.duration,
          v.checksum,
          v.storage_path,
+         v.thumbnail_url,
          v.uploaded_for_site_id,
          v.created_at,
          v.updated_at,

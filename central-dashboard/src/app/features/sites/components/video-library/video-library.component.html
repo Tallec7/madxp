@@ -146,7 +146,7 @@
   <div class="video-grid" *ngIf="viewMode === 'grid' && filteredVideos.length > 0">
     <div
       class="video-card"
-      *ngFor="let video of filteredVideos"
+      *ngFor="let video of pagedVideos"
       [class.selected]="selectedPath === video.path"
       [class.to-deploy]="!video.isOnPi && siteType !== 'saas'"
       (click)="selectVideo(video)"
@@ -326,7 +326,7 @@
       <tbody>
         <tr
           class="video-item"
-          *ngFor="let video of filteredVideos"
+          *ngFor="let video of pagedVideos"
           [class.selected]="selectedPath === video.path || isSelected(video)"
           [class.to-deploy]="!video.isOnPi"
           [class.deploy-failed]="isDeployFailed(video)"
@@ -530,6 +530,33 @@
     </table>
   </div>
   <!-- /table-scroll-wrapper -->
+
+  <!-- Pagination -->
+  <div class="pagination" *ngIf="totalPages > 1">
+    <button class="pagination-btn" [disabled]="currentPage === 0" (click)="goToPage(0)">«</button>
+    <button
+      class="pagination-btn"
+      [disabled]="currentPage === 0"
+      (click)="goToPage(currentPage - 1)"
+    >
+      ‹
+    </button>
+    <span class="pagination-info"> Page {{ currentPage + 1 }} / {{ totalPages }} </span>
+    <button
+      class="pagination-btn"
+      [disabled]="currentPage >= totalPages - 1"
+      (click)="goToPage(currentPage + 1)"
+    >
+      ›
+    </button>
+    <button
+      class="pagination-btn"
+      [disabled]="currentPage >= totalPages - 1"
+      (click)="goToPage(totalPages - 1)"
+    >
+      »
+    </button>
+  </div>
 
   <!-- Légende -->
   <div class="library-legend">
