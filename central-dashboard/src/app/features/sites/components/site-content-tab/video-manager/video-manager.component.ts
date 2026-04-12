@@ -84,10 +84,16 @@ import { VideoVariantPanelComponent } from '../../../../content/video-variant-pa
         </div>
         <div class="modal-body">
           <p class="delete-filename">"{{ deleteTarget?.displayName || deleteTarget?.filename }}"</p>
+          <div *ngIf="siteType === 'saas' && deleteCanCloud && !isSuperAdmin">
+            <p class="delete-description">Cette vidéo sera supprimée du <strong>site</strong> et du <strong>cloud</strong>.</p>
+          </div>
+          <div *ngIf="siteType === 'saas' && deleteCanCloud && isSuperAdmin">
+            <p class="delete-description">Que souhaitez-vous faire avec cette vidéo ?</p>
+          </div>
           <div *ngIf="siteType !== 'saas' && deleteCanPi && !deleteCanCloud">
             <p class="delete-description">Cette vidéo est uniquement sur le <strong>Pi</strong>.</p>
           </div>
-          <div *ngIf="!deleteCanPi && deleteCanCloud">
+          <div *ngIf="siteType !== 'saas' && !deleteCanPi && deleteCanCloud">
             <p class="delete-description">Cette vidéo est uniquement dans le <strong>cloud</strong>.</p>
           </div>
           <div *ngIf="siteType !== 'saas' && deleteCanPi && deleteCanCloud" class="delete-choices">
@@ -96,10 +102,19 @@ import { VideoVariantPanelComponent } from '../../../../content/video-variant-pa
         </div>
         <div class="modal-footer delete-actions">
           <button class="btn btn-secondary" (click)="showDeleteModal = false">Annuler</button>
+          <button *ngIf="siteType === 'saas' && deleteCanCloud && isSuperAdmin" class="btn btn-delete-pi" (click)="executeDelete('unlink')">
+            Retirer du site
+          </button>
+          <button *ngIf="siteType === 'saas' && deleteCanCloud && isSuperAdmin" class="btn btn-delete-cloud" (click)="executeDelete('cloud')">
+            Supprimer du cloud
+          </button>
+          <button *ngIf="siteType === 'saas' && deleteCanCloud && !isSuperAdmin" class="btn btn-delete-both" (click)="executeDelete('cloud')">
+            Supprimer
+          </button>
           <button *ngIf="siteType !== 'saas' && deleteCanPi" class="btn btn-delete-pi" (click)="executeDelete('pi')">
             Supprimer du Pi
           </button>
-          <button *ngIf="deleteCanCloud" class="btn btn-delete-cloud" (click)="executeDelete('cloud')">
+          <button *ngIf="siteType !== 'saas' && deleteCanCloud" class="btn btn-delete-cloud" (click)="executeDelete('cloud')">
             Supprimer du cloud
           </button>
           <button *ngIf="siteType !== 'saas' && deleteCanPi && deleteCanCloud" class="btn btn-delete-both" (click)="executeDelete('both')">
@@ -199,6 +214,7 @@ export class VideoManagerComponent {
   @Input() siteSponsors: SiteSponsor[] = []; // ADR-050
   @Input() configTargets: AddToTarget[] = []; // ADR-050 Phase 2: available config targets
   @Input() siteDisplays: DisplayConfig[] = [];
+  @Input() isSuperAdmin = false;
 
   @Output() videoUploaded = new EventEmitter<UploadedVideo>();
   @Output() allVideosUploaded = new EventEmitter<UploadedVideo[]>();
@@ -259,7 +275,7 @@ export class VideoManagerComponent {
     this.showDeleteModal = true;
   }
 
-  executeDelete(choice: 'pi' | 'cloud' | 'both'): void {
+  executeDelete(choice: 'pi' | 'cloud' | 'both' | 'unlink'): void {
     const video = this.deleteTarget;
     if (!video) return;
     this.showDeleteModal = false;
@@ -272,6 +288,7 @@ export class VideoManagerComponent {
       subcategory: piSubcat || undefined
     });
     const deleteCloud$ = this.sitesService.deleteCloudVideo(video.id!);
+    const unlink$ = this.sitesService.unlinkVideoFromSite(video.id!, this.siteId);
 
     const onSuccess = (msg: string) => {
       this.notificationService.success(msg);
@@ -282,7 +299,12 @@ export class VideoManagerComponent {
       this.notificationService.error(`Erreur: ${message}`);
     };
 
-    if (choice === 'both') {
+    if (choice === 'unlink') {
+      unlink$.subscribe({
+        next: () => onSuccess(`"${video.filename}" retiré du site`),
+        error: onError
+      });
+    } else if (choice === 'both') {
       forkJoin([deletePi$, deleteCloud$]).subscribe({
         next: () => onSuccess(`"${video.filename}" supprimé du Pi et du cloud`),
         error: onError

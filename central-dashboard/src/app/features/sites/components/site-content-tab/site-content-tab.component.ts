@@ -193,6 +193,10 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
     return this.authService.getCurrentUser()?.role === 'club';
   }
 
+  get isSuperAdmin(): boolean {
+    return this.authService.getCurrentUser()?.role === 'super_admin';
+  }
+
   get canUseMultiProfiles(): boolean {
     return this.gate.canAccess('multi_profiles', {
       subscription_plan: this.subscriptionPlan,

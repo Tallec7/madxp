@@ -526,6 +526,23 @@ export const deleteVideo = async (req: AuthRequest, res: Response) => {
   }
 };
 
+export const unlinkVideoFromSite = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id, siteId } = req.params;
+
+    const removed = await siteVideoRepository.unlink(siteId, id);
+    if (!removed) {
+      return res.status(404).json({ error: 'Lien vidéo-site non trouvé' });
+    }
+
+    logger.info('Video unlinked from site:', { videoId: id, siteId });
+    res.json({ message: 'Vidéo retirée du site' });
+  } catch (error) {
+    logger.error('Error unlinking video from site:', error);
+    res.status(500).json({ error: 'Erreur lors du retrait de la vidéo' });
+  }
+};
+
 // Re-export all handlers for backward compatibility (routes import * as contentController)
 export { getDeployments, getDeployment, createDeployment, updateDeployment, deleteDeployment, getVideosForSite, convertImageToVideo } from './content-deployment.controller';
 export { getVideoVariants, createVideoVariant, createVideoVariantFromVideo, deleteVideoVariant, getVariantCounts } from './content-variant.controller';
