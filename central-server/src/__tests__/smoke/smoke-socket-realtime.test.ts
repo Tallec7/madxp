@@ -198,7 +198,7 @@ describe('Hourly metric alerting wiring', () => {
     });
   });
 
-  it('alerting types has orphaned_video_references threshold defined', () => {
+  it('alerting service has orphaned_video_references threshold defined', () => {
     const typesPath = path.join(repoRoot, 'central-server', 'src', 'services', 'alerting.types.ts');
     const content = fs.readFileSync(typesPath, 'utf8');
 
