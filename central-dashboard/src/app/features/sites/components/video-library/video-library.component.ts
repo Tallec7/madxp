@@ -257,7 +257,7 @@ export class VideoLibraryComponent implements OnChanges {
         hasSecondaryVariant: this.secondaryVariantVideoIds.has(cloud.id),
         checksum: cloud.checksum ?? null,
         configRoles,
-        thumbnailUrl: null,
+        thumbnailUrl: cloud.thumbnail_url ?? null,
       };
       item.contentStatus = this.computeContentStatus(item, this.siteType === 'saas');
       cloudMapped.push(item);
