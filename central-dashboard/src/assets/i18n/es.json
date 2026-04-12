@@ -897,6 +897,13 @@
       "in-progress": "En curso",
       "removed": "Eliminado",
       "todo": "Por hacer"
+    },
+    "product": {
+      "phase": {
+        "done": "Entregado",
+        "in-progress": "En curso",
+        "planned": "Previsto"
+      }
     }
   },
   "siteSettings": {

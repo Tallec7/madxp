@@ -1038,6 +1038,13 @@
       "in-progress": "En cours",
       "done": "Terminé",
       "removed": "Retiré"
+    },
+    "product": {
+      "phase": {
+        "done": "Livré",
+        "in-progress": "En cours",
+        "planned": "Prévu"
+      }
     }
   },
   "copyConfig": {

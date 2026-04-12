@@ -1038,6 +1038,13 @@
       "in-progress": "In Progress",
       "done": "Done",
       "removed": "Removed"
+    },
+    "product": {
+      "phase": {
+        "done": "Shipped",
+        "in-progress": "In Progress",
+        "planned": "Planned"
+      }
     }
   },
   "copyConfig": {
