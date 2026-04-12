@@ -1,3 +1,9 @@
+## [3.152.1](https://github.com/Tallec7/neopro/compare/v3.152.0...v3.152.1) (2026-04-12)
+
+### Bug Fixes
+
+- **dashboard:** improve video-search-select click zone and dropdown width ([#442](https://github.com/Tallec7/neopro/issues/442)) ([9ca98e8](https://github.com/Tallec7/neopro/commit/9ca98e8e8749a173ff15f3d34347bff5b74db6fc))
+
 # [3.152.0](https://github.com/Tallec7/neopro/compare/v3.151.3...v3.152.0) (2026-04-12)
 
 ### Features
