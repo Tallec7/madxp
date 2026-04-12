@@ -1,3 +1,9 @@
+## [3.159.4](https://github.com/Tallec7/neopro/compare/v3.159.3...v3.159.4) (2026-04-12)
+
+### Bug Fixes
+
+- **resilience:** add axios to OTA integrity check and monitor service crash-loops ([2f2aa99](https://github.com/Tallec7/neopro/commit/2f2aa99718d993220f4d3db9c19a89be19f6d13e))
+
 ## [3.159.3](https://github.com/Tallec7/neopro/compare/v3.159.2...v3.159.3) (2026-04-12)
 
 ### Bug Fixes
