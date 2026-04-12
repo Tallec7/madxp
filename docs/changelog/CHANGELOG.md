@@ -1,3 +1,9 @@
+## [3.153.2](https://github.com/Tallec7/neopro/compare/v3.153.1...v3.153.2) (2026-04-12)
+
+### Bug Fixes
+
+- **dashboard:** move #noVideos template outside table-scroll-wrapper ([928164d](https://github.com/Tallec7/neopro/commit/928164d75754eeafd5dcd2a1a79143d7d2624141)), closes [#noVideos](https://github.com/Tallec7/neopro/issues/noVideos) [#noVideos](https://github.com/Tallec7/neopro/issues/noVideos)
+
 ## [3.153.1](https://github.com/Tallec7/neopro/compare/v3.153.0...v3.153.1) (2026-04-12)
 
 ### Bug Fixes
