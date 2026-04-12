@@ -198,27 +198,6 @@ export class ConfigEditorComponent {
     this.openVariant.emit({ cloudId: video.cloudId, displayName: video.displayName });
   }
 
-  getSecondaryPlaylistVideos(): { path: string; displayName: string; hasVariant: boolean }[] {
-    if (!this.config || !this.secondaryDisplayEnabled) return [];
-    const allPaths = new Set<string>();
-    for (const s of this.config.sponsors || []) {
-      if (s.path) allPaths.add(s.path);
-    }
-    for (const tc of this.config.timeCategories || []) {
-      for (const lv of tc.loopVideos || []) {
-        if (lv.path) allPaths.add(lv.path);
-      }
-    }
-    return Array.from(allPaths).map(p => {
-      const video = this.unifiedVideoOptions.find(v => v.path === p);
-      return {
-        path: p,
-        displayName: video?.displayName || p.split('/').pop() || p,
-        hasVariant: video?.hasSecondaryVariant ?? false,
-      };
-    });
-  }
-
   getCategorySponsor(videoPath: string): SiteSponsor | null {
     if (!videoPath || this.siteSponsors.length === 0) return null;
     const parts = videoPath.split('/');

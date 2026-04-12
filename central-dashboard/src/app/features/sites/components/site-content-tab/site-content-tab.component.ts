@@ -872,9 +872,26 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
 
   private rebuildConfigVideoRoles(): void {
     const roles = new Map<string, Set<string>>();
+
+    // Build filename → cloud URL map so we can cross-reference local config paths with cloud URLs
+    // This fixes the mismatch where configs contain local paths but the library uses cloud URLs
+    const filenameToCloudUrl = new Map<string, string>();
+    for (const cloud of this.cloudVideos) {
+      filenameToCloudUrl.set(cloud.filename.toLowerCase(), cloud.url);
+    }
+
     const addRole = (path: string, role: string): void => {
       if (!roles.has(path)) roles.set(path, new Set());
       roles.get(path)!.add(role);
+      // Also register under the cloud URL if the config path is a local path
+      const filename = path.split('/').pop()?.toLowerCase();
+      if (filename) {
+        const cloudUrl = filenameToCloudUrl.get(filename);
+        if (cloudUrl && cloudUrl !== path) {
+          if (!roles.has(cloudUrl)) roles.set(cloudUrl, new Set());
+          roles.get(cloudUrl)!.add(role);
+        }
+      }
     };
 
     if (this.config.sponsors) {

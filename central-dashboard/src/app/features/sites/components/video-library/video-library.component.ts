@@ -141,9 +141,6 @@ export class VideoLibraryComponent implements OnChanges {
   selectionMode: boolean = false;
   selectedVideos: Set<string> = new Set(); // Set of video paths
 
-  // Delete confirmation
-  deleteConfirmVideo: VideoItem | null = null;
-
   previewVideo: VideoItem | null = null;
 
   // Detail panel
@@ -515,18 +512,7 @@ export class VideoLibraryComponent implements OnChanges {
 
   onDelete(video: VideoItem, event: Event): void {
     event.stopPropagation();
-    this.deleteConfirmVideo = video;
-  }
-
-  confirmDelete(): void {
-    if (this.deleteConfirmVideo) {
-      this.videoDelete.emit(this.deleteConfirmVideo);
-      this.deleteConfirmVideo = null;
-    }
-  }
-
-  cancelDelete(): void {
-    this.deleteConfirmVideo = null;
+    this.videoDelete.emit(video);
   }
 
   // Selection methods

@@ -757,30 +757,4 @@
       </div>
     </div>
   </div>
-
-  <!-- Delete Confirmation Modal -->
-  <div class="confirm-overlay" *ngIf="deleteConfirmVideo" (click)="cancelDelete()">
-    <div class="confirm-modal" (click)="$event.stopPropagation()">
-      <div class="confirm-header">
-        <span class="confirm-icon">⚠️</span>
-        <h4>{{ 'videoLibrary.confirmDeletion' | translate }}</h4>
-      </div>
-      <div class="confirm-content">
-        <p>{{ 'videoLibrary.confirmDeleteVideo' | translate }}</p>
-        <div class="confirm-video-info">
-          <span class="video-name">{{ deleteConfirmVideo.displayName }}</span>
-          <span class="video-meta">{{ formatBytes(deleteConfirmVideo.size) }}</span>
-        </div>
-        <p class="confirm-warning">{{ 'videoLibrary.deleteWarning' | translate }}</p>
-      </div>
-      <div class="confirm-actions">
-        <button class="btn btn-outline" (click)="cancelDelete()">
-          {{ 'common.cancel' | translate }}
-        </button>
-        <button class="btn btn-danger" (click)="confirmDelete()">
-          🗑️ {{ 'common.delete' | translate }}
-        </button>
-      </div>
-    </div>
-  </div>
 </div>

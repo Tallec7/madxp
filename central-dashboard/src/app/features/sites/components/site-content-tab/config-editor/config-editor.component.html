@@ -396,45 +396,6 @@
     </span>
   </summary>
 
-  <!-- Secondary Display Preview -->
-  <div class="section card" id="section-secondary-preview" *ngIf="secondaryDisplayEnabled">
-    <div class="section-header">
-      <h4>
-        <span class="section-icon">🖥️</span>
-        Aperçu écran secondaire
-      </h4>
-    </div>
-    <p class="section-desc">
-      Contenu prévu sur l'écran secondaire. Les vidéos avec le badge 📺 ont une variante dédiée, les
-      autres utiliseront un recadrage automatique.
-    </p>
-    <div class="secondary-preview-list">
-      <div
-        *ngFor="let video of getSecondaryPlaylistVideos()"
-        class="secondary-preview-item"
-        [class.has-variant]="video.hasVariant"
-        [class.no-variant]="!video.hasVariant"
-      >
-        <span class="secondary-preview-name">{{ video.displayName }}</span>
-        <span
-          class="secondary-preview-badge"
-          *ngIf="video.hasVariant"
-          title="Variante secondaire dédiée"
-          >📺 2nd</span
-        >
-        <span
-          class="secondary-preview-fallback"
-          *ngIf="!video.hasVariant"
-          title="Recadrage automatique (object-fit: cover)"
-          >recadrage auto</span
-        >
-      </div>
-      <div *ngIf="getSecondaryPlaylistVideos().length === 0" class="secondary-preview-empty">
-        Aucune vidéo dans la configuration actuelle.
-      </div>
-    </div>
-  </div>
-
   <!-- Analytics Categories (hidden for club users) -->
   <div class="section card" id="section-analytics" *ngIf="!isClubUser">
     <div class="section-header">
