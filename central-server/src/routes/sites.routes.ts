@@ -331,6 +331,26 @@ router.delete(
   sitesController.clearPendingCommands
 );
 
+// N-Display management (Phase 5H)
+router.get(
+  '/:id/displays',
+  authenticate,
+  requireRole('admin', 'operator'),
+  adminRateLimit,
+  validateParams(paramSchemas.id),
+  sitesController.getSiteDisplays
+);
+
+router.patch(
+  '/:id/displays',
+  authenticate,
+  requireRole('admin'),
+  sensitiveRateLimit,
+  validateParams(paramSchemas.id),
+  validate(schemas.updateDisplays),
+  sitesController.updateSiteDisplays
+);
+
 // Remote PIN management
 router.get(
   '/:id/remote-pin',

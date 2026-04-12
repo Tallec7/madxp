@@ -1,7 +1,7 @@
 import { QueryResultRow } from 'pg';
 import { query } from '../config/database';
 
-import { Site, UserRole } from '../types';
+import { Site, UserRole, DisplayConfig } from '../types';
 import { BaseRepository } from './base.repository';
 
 // --------------------------------------------------------------------------
@@ -161,6 +161,10 @@ export interface MatchStatsRow extends QueryResultRow {
 // --------------------------------------------------------------------------
 // Repository
 // --------------------------------------------------------------------------
+
+const DEFAULT_DISPLAYS: DisplayConfig[] = [
+  { index: 0, name: 'TV', type: 'tv', resolution: '1920x1080' },
+];
 
 class SiteRepositoryImpl extends BaseRepository<Site> {
   constructor() {
@@ -688,6 +692,32 @@ class SiteRepositoryImpl extends BaseRepository<Site> {
       [siteId]
     );
     return result.rows[0];
+  }
+
+  // --------------------------------------------------------------------------
+  // N-Display management (Phase 5H)
+  // --------------------------------------------------------------------------
+
+  /**
+   * Returns the displays[] JSONB for a site, with a sensible default.
+   */
+  async getDisplays(id: string): Promise<DisplayConfig[]> {
+    const result = await query<{ displays: DisplayConfig[] | null }>(
+      'SELECT displays FROM sites WHERE id = $1',
+      [id]
+    );
+    if (!result.rows[0]) return [];
+    return result.rows[0].displays ?? DEFAULT_DISPLAYS;
+  }
+
+  /**
+   * Updates the displays[] JSONB for a site.
+   */
+  async updateDisplays(id: string, displays: DisplayConfig[]): Promise<void> {
+    await query(
+      'UPDATE sites SET displays = $1::jsonb, updated_at = NOW() WHERE id = $2',
+      [JSON.stringify(displays), id]
+    );
   }
 
   // --------------------------------------------------------------------------

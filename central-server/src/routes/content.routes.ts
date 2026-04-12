@@ -18,8 +18,9 @@ router.post('/videos/bulk', authenticate, requireRole('admin', 'operator'), uplo
 router.put('/videos/:id', authenticate, requireRole('admin', 'operator', 'club'), sensitiveRateLimit, contentController.updateVideo);
 router.delete('/videos/:id', authenticate, requireRole('admin', 'club'), sensitiveRateLimit, contentController.deleteVideo);
 
-// Video variant routes (E-22: LED variants)
+// Video variant routes (E-22: LED variants, Phase 5H: multi-display)
 router.get('/videos/:id/variants', authenticate, adminRateLimit, contentController.getVideoVariants);
+router.post('/videos/variant-counts', authenticate, adminRateLimit, contentController.getVariantCounts);
 router.post('/videos/:id/variants', authenticate, requireRole('admin', 'operator'), uploadRateLimit, uploadVideo.single('video'), contentController.createVideoVariant);
 router.delete('/videos/:videoId/variants/:displayType', authenticate, requireRole('admin'), sensitiveRateLimit, contentController.deleteVideoVariant);
 

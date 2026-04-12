@@ -56,8 +56,8 @@ export const createVideoVariant = async (req: AuthRequest, res: Response) => {
     const { id } = req.params;
     const displayType = req.body.display_type as DisplayType;
 
-    if (!displayType || !['tv', 'secondary'].includes(displayType)) {
-      return res.status(400).json({ error: 'display_type requis (tv ou secondary)' });
+    if (!displayType || !/^[a-z0-9-]+$/.test(displayType)) {
+      return res.status(400).json({ error: 'display_type requis (slug alphanumérique avec tirets, ex: tv, secondary, led-banner)' });
     }
 
     // Vérifier que la vidéo parente existe
@@ -139,6 +139,38 @@ export const createVideoVariant = async (req: AuthRequest, res: Response) => {
 };
 
 /**
+ * POST /content/videos/variant-counts
+ * Batch query: retourne le nombre de variantes et les types pour chaque vidéo
+ * Body: { videoIds: string[] }
+ */
+export const getVariantCounts = async (req: AuthRequest, res: Response) => {
+  try {
+    const { videoIds } = req.body as { videoIds: string[] };
+
+    if (!Array.isArray(videoIds) || videoIds.length === 0) {
+      return res.status(400).json({ error: 'videoIds requis (tableau non vide)' });
+    }
+
+    if (videoIds.length > 500) {
+      return res.status(400).json({ error: 'Maximum 500 videoIds par requête' });
+    }
+
+    const counts = await videoVariantRepository.findVariantCountsByVideoIds(videoIds);
+
+    // Convert Map to plain object for JSON serialization
+    const result: Record<string, { count: number; types: string[] }> = {};
+    counts.forEach((value, key) => {
+      result[key] = value;
+    });
+
+    res.json(result);
+  } catch (error) {
+    logger.error('Error getting variant counts:', error);
+    res.status(500).json({ error: 'Erreur lors de la récupération des compteurs de variantes' });
+  }
+};
+
+/**
  * DELETE /content/videos/:videoId/variants/:displayType
  * Supprime une variante vidéo
  */
@@ -146,8 +178,8 @@ export const deleteVideoVariant = async (req: AuthRequest, res: Response) => {
   try {
     const { videoId, displayType } = req.params;
 
-    if (!['tv', 'secondary'].includes(displayType)) {
-      return res.status(400).json({ error: 'display_type invalide (tv ou secondary)' });
+    if (!displayType || !/^[a-z0-9-]+$/.test(displayType)) {
+      return res.status(400).json({ error: 'display_type invalide (slug alphanumérique avec tirets attendu)' });
     }
 
     // Récupérer le storage_path avant suppression

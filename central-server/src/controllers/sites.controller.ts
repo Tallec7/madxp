@@ -430,6 +430,59 @@ export {
   getQueueSummary,
 } from './site-commands.controller';
 
+// ============================================================================
+// N-Display management (Phase 5H)
+// ============================================================================
+
+export const updateSiteDisplays = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { displays } = req.body;
+
+    const site = await siteRepository.findBasicInfo(id);
+    if (!site) {
+      return res.status(404).json({ error: 'Site non trouvé' });
+    }
+
+    await siteRepository.updateDisplays(id, displays);
+
+    logger.info('Site displays updated', {
+      siteId: id,
+      displayCount: displays.length,
+      updatedBy: req.user?.email,
+    });
+
+    const updatedDisplays = await siteRepository.getDisplays(id);
+    res.json({ displays: updatedDisplays });
+  } catch (error) {
+    logger.error('Update site displays error', {
+      error: error instanceof Error ? error.message : String(error),
+      siteId: req.params.id,
+    });
+    res.status(500).json({ error: 'Erreur serveur interne' });
+  }
+};
+
+export const getSiteDisplays = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    const site = await siteRepository.findBasicInfo(id);
+    if (!site) {
+      return res.status(404).json({ error: 'Site non trouvé' });
+    }
+
+    const displays = await siteRepository.getDisplays(id);
+    res.json({ displays });
+  } catch (error) {
+    logger.error('Get site displays error', {
+      error: error instanceof Error ? error.message : String(error),
+      siteId: req.params.id,
+    });
+    res.status(500).json({ error: 'Erreur serveur interne' });
+  }
+};
+
 export {
   getSiteLogs,
   getSystemInfo,
