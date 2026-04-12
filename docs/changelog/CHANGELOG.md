@@ -1,3 +1,9 @@
+# [3.149.0](https://github.com/Tallec7/neopro/compare/v3.148.2...v3.149.0) (2026-04-12)
+
+### Features
+
+- **content:** add video content status and owner badges in library (ADR-050 Phase 1) ([cd19c02](https://github.com/Tallec7/neopro/commit/cd19c02c0fbc11f9b5b73b844685d8a7d98a3519))
+
 ## [3.148.2](https://github.com/Tallec7/neopro/compare/v3.148.1...v3.148.2) (2026-04-12)
 
 ### Bug Fixes
