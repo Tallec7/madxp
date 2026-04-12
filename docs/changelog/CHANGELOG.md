@@ -1,3 +1,9 @@
+# [3.150.0](https://github.com/Tallec7/neopro/compare/v3.149.0...v3.150.0) (2026-04-12)
+
+### Features
+
+- **content:** invert hierarchy and add collapsible Advanced section (ADR-050 Phase 2) ([7d58573](https://github.com/Tallec7/neopro/commit/7d58573e1864bdeb918b421950e9be9e67e7daa0))
+
 # [3.149.0](https://github.com/Tallec7/neopro/compare/v3.148.2...v3.149.0) (2026-04-12)
 
 ### Features
