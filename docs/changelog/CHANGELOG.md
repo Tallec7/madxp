@@ -1,3 +1,10 @@
+## [3.157.1](https://github.com/Tallec7/neopro/compare/v3.157.0...v3.157.1) (2026-04-12)
+
+### Bug Fixes
+
+- **profiles:** auto-sync profiles on Pi reconnect + SaaS remote support ([2264bfe](https://github.com/Tallec7/neopro/commit/2264bfeac91e5d69ff94a22c52af6a2f572bcc8c))
+- **saas:** fix video delete modal for SaaS sites + add unlink option ([ed3f95a](https://github.com/Tallec7/neopro/commit/ed3f95aa65b0ee3ec2de62d5eadb4cd59aa19899))
+
 # [3.157.0](https://github.com/Tallec7/neopro/compare/v3.156.0...v3.157.0) (2026-04-12)
 
 ### Features
