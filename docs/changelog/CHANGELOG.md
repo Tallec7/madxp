@@ -1,3 +1,9 @@
+# [3.154.0](https://github.com/Tallec7/neopro/compare/v3.153.8...v3.154.0) (2026-04-12)
+
+### Features
+
+- **profiles:** redesign copy-config to add-mode with per-profile selection ([9c1266c](https://github.com/Tallec7/neopro/commit/9c1266c07112f9b26c4f70c226945a68ff315295))
+
 ## [3.153.8](https://github.com/Tallec7/neopro/compare/v3.153.7...v3.153.8) (2026-04-12)
 
 ### Bug Fixes
