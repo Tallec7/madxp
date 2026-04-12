@@ -1,3 +1,9 @@
+## [3.152.3](https://github.com/Tallec7/neopro/compare/v3.152.2...v3.152.3) (2026-04-12)
+
+### Bug Fixes
+
+- **dashboard:** fix video-search-select click zone and subcategory height ([4acaaf7](https://github.com/Tallec7/neopro/commit/4acaaf7a47107269bc11c7950fddeb9b477ad8e9))
+
 ## [3.152.2](https://github.com/Tallec7/neopro/compare/v3.152.1...v3.152.2) (2026-04-12)
 
 ### Bug Fixes
