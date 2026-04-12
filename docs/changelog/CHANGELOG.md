@@ -1,3 +1,9 @@
+# [3.155.0](https://github.com/Tallec7/neopro/compare/v3.154.3...v3.155.0) (2026-04-12)
+
+### Features
+
+- **dashboard:** N-display variant management — Phase 5H PROP-002 ([2d804e2](https://github.com/Tallec7/neopro/commit/2d804e21712f3a6de2681cd1a4a8214ddebbee9e))
+
 ## [3.154.3](https://github.com/Tallec7/neopro/compare/v3.154.2...v3.154.3) (2026-04-12)
 
 ### Bug Fixes
