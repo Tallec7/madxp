@@ -21,7 +21,7 @@ import {
   ConfigProfile,
   ContentOwner
 } from '../../../../core/models';
-import { VideoDeployState, VideoItem } from '../video-library/video-library.component';
+import { VideoDeployState, VideoItem, AddToTarget } from '../video-library/video-library.component';
 import { UploadedVideo } from '../../../../shared/components/video-upload-zone/video-upload-zone.component';
 import { RemotePreviewComponent } from '../../../../shared/components/remote-preview/remote-preview.component';
 import { TranslateModule } from '@ngx-translate/core';
@@ -119,6 +119,9 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
 
   // Time categories cache
   cachedTimeCategories: { id: string; name: string; icon: string; description: string }[] = [];
+
+  // Config targets for "Add to" dropdown in video library
+  configTargets: AddToTarget[] = [];
 
   // Remote preview
   showRemotePreview = false;
@@ -254,6 +257,7 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
           this.originalConfig = JSON.stringify(this.config);
           this.isDirty = false;
           this.rebuildTimeCategoriesCache();
+          this.buildConfigTargets();
         }
 
         this.rebuildVideoCache();
@@ -336,6 +340,7 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
               this.lastSyncTime = new Date();
               this.rebuildVideoCache();
               this.rebuildTimeCategoriesCache();
+              this.buildConfigTargets();
               this.notificationService.success('Configuration synchronisée depuis le Pi');
             } else {
               this.notificationService.info('Aucune configuration sur le Pi.');
@@ -422,6 +427,7 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
     this.isDirty = false;
     this.rebuildVideoCache();
     this.rebuildTimeCategoriesCache();
+    this.buildConfigTargets();
     this.cdr.markForCheck();
   }
 
@@ -483,29 +489,99 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
   // Video Deploy Tracking
   // ============================================================================
 
-  /** ADR-050: Add a video to the default loop (sponsors[]) from the library */
-  onAddVideoToLoop(video: VideoItem): void {
+  /** ADR-050 Phase 2: Add a video to any config target from the library dropdown */
+  onAddVideoToTarget(event: { video: VideoItem; target: AddToTarget }): void {
     if (!this.config) return;
-    if (!this.config.sponsors) {
-      this.config.sponsors = [];
+    const { video, target } = event;
+
+    if (target.type === 'loop') {
+      // Default loop = sponsors[]
+      if (!this.config.sponsors) this.config.sponsors = [];
+      const alreadyInLoop = this.config.sponsors.some(
+        (s: { path?: string }) => s.path === video.path
+      );
+      if (alreadyInLoop) {
+        this.notificationService.info('Cette vidéo est déjà dans la boucle');
+        return;
+      }
+      this.config.sponsors.push({
+        path: video.path,
+        name: video.displayName,
+        weight: 1,
+      } as never);
+    } else if (target.type === 'match') {
+      // Match phase = timeCategories[].loopVideos[]
+      const phase = (this.config.timeCategories || []).find(tc => tc.id === target.id);
+      if (!phase) return;
+      if (!phase.loopVideos) phase.loopVideos = [];
+      const alreadyInPhase = phase.loopVideos.some(
+        (v: { path?: string }) => v.path === video.path
+      );
+      if (alreadyInPhase) {
+        this.notificationService.info(`Cette vidéo est déjà dans "${target.label}"`);
+        return;
+      }
+      phase.loopVideos.push({
+        path: video.path,
+        name: video.displayName,
+        weight: 1,
+      } as never);
+    } else if (target.type === 'category') {
+      // Action category = categories[].videos[]
+      const cat = (this.config.categories || []).find(c => c.id === target.id);
+      if (!cat) return;
+      if (!cat.videos) cat.videos = [];
+      const alreadyInCat = cat.videos.some(
+        (v: { path?: string }) => v.path === video.path
+      );
+      if (alreadyInCat) {
+        this.notificationService.info(`Cette vidéo est déjà dans "${target.label}"`);
+        return;
+      }
+      cat.videos.push({
+        path: video.path,
+        name: video.displayName,
+      } as never);
     }
-    // Avoid duplicates
-    const alreadyInLoop = this.config.sponsors.some(
-      (s: { path?: string }) => s.path === video.path
-    );
-    if (alreadyInLoop) {
-      this.notificationService.info('Cette vidéo est déjà dans la boucle');
+
+    this.markDirty();
+    this.notificationService.success(`"${video.displayName}" ajoutée à "${target.label}"`);
+    this.rebuildConfigVideoRoles();
+  }
+
+  /** Build the list of available targets for the "Add to" dropdown */
+  private buildConfigTargets(): void {
+    if (!this.config) {
+      this.configTargets = [];
       return;
     }
-    this.config.sponsors.push({
-      path: video.path,
-      name: video.displayName,
-      weight: 1,
-    } as never);
-    this.markDirty();
-    this.notificationService.success(`"${video.displayName}" ajoutée à la boucle`);
-    // Refresh config roles so the library updates the status badge
-    this.rebuildConfigVideoRoles();
+    const targets: AddToTarget[] = [];
+
+    // Default loop (sponsors[])
+    targets.push({ type: 'loop', id: 'default', label: 'Boucle par défaut', icon: '🔄' });
+
+    // Match phases (timeCategories[])
+    for (const tc of this.config.timeCategories || []) {
+      const icons: Record<string, string> = { 'before': '🏁', 'during': '▶️', 'after': '🏆' };
+      targets.push({
+        type: 'match',
+        id: tc.id,
+        label: tc.name || tc.id,
+        icon: tc.icon || icons[tc.id] || '📁',
+      });
+    }
+
+    // Action categories
+    for (const cat of this.config.categories || []) {
+      targets.push({
+        type: 'category',
+        id: cat.id,
+        label: cat.name || cat.id,
+        icon: '🎬',
+      });
+    }
+
+    this.configTargets = targets;
   }
 
   onVideoDeploy(video: VideoItem): void {

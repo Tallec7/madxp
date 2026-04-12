@@ -95,6 +95,24 @@
     <button class="btn-export" (click)="exportCsv()" title="Exporter la liste filtrée en CSV">
       📥 CSV
     </button>
+    <div class="view-toggle">
+      <button
+        class="view-btn"
+        [class.active]="viewMode === 'grid'"
+        (click)="viewMode = 'grid'"
+        title="Vue grille"
+      >
+        ▦
+      </button>
+      <button
+        class="view-btn"
+        [class.active]="viewMode === 'list'"
+        (click)="viewMode = 'list'"
+        title="Vue liste"
+      >
+        ☰
+      </button>
+    </div>
   </div>
 
   <!-- Barre d'actions groupées -->
@@ -124,8 +142,113 @@
     </button>
   </div>
 
-  <!-- Tableau vidéo -->
-  <div class="table-scroll-wrapper">
+  <!-- Grid View -->
+  <div class="video-grid" *ngIf="viewMode === 'grid' && filteredVideos.length > 0">
+    <div
+      class="video-card"
+      *ngFor="let video of filteredVideos"
+      [class.selected]="selectedPath === video.path"
+      [class.to-deploy]="!video.isOnPi && siteType !== 'saas'"
+      (click)="selectVideo(video)"
+    >
+      <div class="card-thumbnail">
+        <img
+          *ngIf="video.thumbnailUrl"
+          [src]="video.thumbnailUrl"
+          [alt]="video.displayName"
+          loading="lazy"
+        />
+        <div *ngIf="!video.thumbnailUrl" class="card-thumb-placeholder">
+          <span>🎞️</span>
+        </div>
+        <span class="card-duration" *ngIf="video.duration">{{
+          formatDuration(video.duration)
+        }}</span>
+        <span class="card-size">{{ formatBytes(video.size) }}</span>
+      </div>
+      <div class="card-body">
+        <div class="card-title" [title]="video.filename">{{ video.displayName }}</div>
+        <div class="card-meta">
+          <span
+            class="content-status-badge"
+            [ngClass]="getContentStatusClass(video.contentStatus)"
+            >{{ getContentStatusLabel(video.contentStatus) }}</span
+          >
+          <span class="badge-2nd" *ngIf="video.hasSecondaryVariant">2nd</span>
+          <span class="duplicate-badge" *ngIf="video.isDuplicate">DOUBLON</span>
+          <span class="for-this-site-badge" *ngIf="isUploadedForThisSite(video)">⭐</span>
+        </div>
+        <div class="card-actions">
+          <button
+            class="action-btn preview"
+            (click)="onPreview(video, $event)"
+            title="Prévisualiser"
+            *ngIf="video.source === 'cloud'"
+          >
+            👁️
+          </button>
+          <div
+            class="add-to-wrapper"
+            *ngIf="video.contentStatus === 'available' && configTargets.length > 0"
+          >
+            <button
+              class="action-btn add-to-trigger"
+              (click)="toggleAddToDropdown(video, $event)"
+              [title]="'videoLibrary.addTo' | translate"
+            >
+              +
+            </button>
+            <div class="add-to-dropdown" *ngIf="addToDropdownVideo === video">
+              <button
+                class="add-to-option"
+                *ngFor="let target of configTargets"
+                (click)="onAddToTargetSelect(video, target, $event)"
+                [title]="target.label"
+              >
+                <span class="add-to-icon">{{ target.icon || '📁' }}</span>
+                <span class="add-to-label">{{ target.label }}</span>
+              </button>
+            </div>
+          </div>
+          <button
+            class="action-btn variant"
+            *ngIf="canUseSecondaryDisplay && video.source === 'cloud' && video.id"
+            (click)="onVariant(video, $event)"
+            title="Variante 2nd écran"
+          >
+            📺
+          </button>
+          <button
+            class="action-btn deploy"
+            (click)="onDeploy(video, $event)"
+            *ngIf="
+              siteType !== 'saas' &&
+              !video.isOnPi &&
+              video.source === 'cloud' &&
+              !isDeploying(video) &&
+              !isDeployFailed(video)
+            "
+          >
+            🚀
+          </button>
+          <button
+            class="action-btn delete"
+            (click)="onDelete(video, $event)"
+            [title]="'common.delete' | translate"
+          >
+            🗑️
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div *ngIf="filteredVideos.length === 0">
+    <ng-container *ngTemplateOutlet="noVideos"></ng-container>
+  </div>
+
+  <!-- List View (Table) -->
+  <div class="table-scroll-wrapper" *ngIf="viewMode === 'list'">
     <table class="video-table" *ngIf="filteredVideos.length > 0; else noVideos">
       <thead>
         <tr>
@@ -311,14 +434,29 @@
               >
                 👁️
               </button>
-              <button
-                class="action-btn add-to-loop"
-                (click)="onAddToLoop(video, $event)"
-                [title]="'videoLibrary.addToLoop' | translate"
-                *ngIf="video.contentStatus === 'available'"
+              <div
+                class="add-to-wrapper"
+                *ngIf="video.contentStatus === 'available' && configTargets.length > 0"
               >
-                + {{ 'videoLibrary.addToLoop' | translate }}
-              </button>
+                <button
+                  class="action-btn add-to-trigger"
+                  (click)="toggleAddToDropdown(video, $event)"
+                  [title]="'videoLibrary.addTo' | translate"
+                >
+                  + {{ 'videoLibrary.addTo' | translate }}
+                </button>
+                <div class="add-to-dropdown" *ngIf="addToDropdownVideo === video">
+                  <button
+                    class="add-to-option"
+                    *ngFor="let target of configTargets"
+                    (click)="onAddToTargetSelect(video, target, $event)"
+                    [title]="target.label"
+                  >
+                    <span class="add-to-icon">{{ target.icon || '📁' }}</span>
+                    <span class="add-to-label">{{ target.label }}</span>
+                  </button>
+                </div>
+              </div>
               <button
                 class="action-btn deploy"
                 (click)="onDeploy(video, $event)"
@@ -401,6 +539,175 @@
     </ng-container>
     <span class="legend-item"><span class="legend-icon">📺</span> Variante 2nd écran</span>
     <span class="legend-item"><span class="legend-icon">⚙️</span> Dans la config</span>
+  </div>
+
+  <!-- Detail Side Panel -->
+  <div class="detail-backdrop" *ngIf="detailVideo" (click)="closeDetail()"></div>
+  <div class="detail-panel" *ngIf="detailVideo" [class.open]="detailVideo">
+    <div class="detail-header">
+      <h4>{{ detailVideo.displayName }}</h4>
+      <button class="detail-close" (click)="closeDetail()">✕</button>
+    </div>
+
+    <div class="detail-body">
+      <!-- Video preview -->
+      <div class="detail-preview">
+        <video
+          *ngIf="detailVideo.source === 'cloud' && detailVideo.path"
+          [src]="detailVideo.path"
+          controls
+          class="detail-video"
+        ></video>
+        <div
+          *ngIf="detailVideo.source !== 'cloud' || !detailVideo.path"
+          class="detail-thumb-placeholder"
+        >
+          <img
+            *ngIf="detailVideo.thumbnailUrl"
+            [src]="detailVideo.thumbnailUrl"
+            [alt]="detailVideo.displayName"
+          />
+          <span *ngIf="!detailVideo.thumbnailUrl">🎞️</span>
+        </div>
+      </div>
+
+      <!-- Status & badges -->
+      <div class="detail-section">
+        <div class="detail-badges">
+          <span
+            class="content-status-badge"
+            [ngClass]="getContentStatusClass(detailVideo.contentStatus)"
+          >
+            {{ getContentStatusLabel(detailVideo.contentStatus) }}
+          </span>
+          <span class="owner-type-badge" [ngClass]="'owner-' + detailVideo.ownerType">
+            {{ getOwnerTypeLabel(detailVideo.ownerType) }}
+          </span>
+          <span class="badge-2nd" *ngIf="detailVideo.hasSecondaryVariant">2nd écran</span>
+          <span class="duplicate-badge" *ngIf="detailVideo.isDuplicate">DOUBLON</span>
+        </div>
+      </div>
+
+      <!-- Config roles -->
+      <div class="detail-section" *ngIf="detailVideo.configRoles?.size">
+        <div class="detail-label">Utilisée dans</div>
+        <div class="detail-roles">
+          <span class="badge-cfg badge-boucle" *ngIf="detailVideo.configRoles?.has('boucle')"
+            >Boucle par défaut</span
+          >
+          <span class="badge-cfg badge-match" *ngIf="detailVideo.configRoles?.has('match')"
+            >Phase de match</span
+          >
+          <span class="badge-cfg badge-action" *ngIf="detailVideo.configRoles?.has('action')"
+            >Catégorie action</span
+          >
+        </div>
+      </div>
+
+      <!-- Info grid -->
+      <div class="detail-section">
+        <div class="detail-label">Informations</div>
+        <div class="detail-info-grid">
+          <div class="info-row">
+            <span class="info-key">Fichier</span>
+            <span class="info-value" [title]="detailVideo.filename">{{
+              detailVideo.filename
+            }}</span>
+          </div>
+          <div class="info-row" *ngIf="detailVideo.duration">
+            <span class="info-key">Durée</span>
+            <span class="info-value">{{ formatDuration(detailVideo.duration) }}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-key">Taille</span>
+            <span class="info-value">{{ formatBytes(detailVideo.size) }}</span>
+          </div>
+          <div class="info-row" *ngIf="detailVideo.category">
+            <span class="info-key">Catégorie</span>
+            <span class="info-value"
+              >{{ detailVideo.category
+              }}{{ detailVideo.subcategory ? ' / ' + detailVideo.subcategory : '' }}</span
+            >
+          </div>
+          <div class="info-row" *ngIf="detailVideo.advertiserName">
+            <span class="info-key">Annonceur</span>
+            <span class="info-value">{{ detailVideo.advertiserName }}</span>
+          </div>
+          <div class="info-row" *ngIf="detailVideo.lastModified">
+            <span class="info-key">Date</span>
+            <span class="info-value">{{ formatDate(detailVideo.lastModified) }}</span>
+          </div>
+          <div class="info-row" *ngIf="detailVideo.checksum">
+            <span class="info-key">Checksum</span>
+            <span class="info-value info-checksum">{{ detailVideo.checksum }}</span>
+          </div>
+          <div class="info-row" *ngIf="siteType !== 'saas'">
+            <span class="info-key">Pi</span>
+            <span class="info-value">{{
+              detailVideo.isOnPi ? '✅ Présente' : '⏳ À déployer'
+            }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Actions -->
+      <div class="detail-section detail-actions-section">
+        <div
+          class="add-to-wrapper"
+          *ngIf="detailVideo.contentStatus === 'available' && configTargets.length > 0"
+        >
+          <button
+            class="btn btn-primary btn-sm detail-action-btn"
+            (click)="toggleAddToDropdown(detailVideo, $event)"
+          >
+            + {{ 'videoLibrary.addTo' | translate }}
+          </button>
+          <div
+            class="add-to-dropdown add-to-dropdown-up"
+            *ngIf="addToDropdownVideo === detailVideo"
+          >
+            <button
+              class="add-to-option"
+              *ngFor="let target of configTargets"
+              (click)="onAddToTargetSelect(detailVideo, target, $event)"
+            >
+              <span class="add-to-icon">{{ target.icon || '📁' }}</span>
+              <span class="add-to-label">{{ target.label }}</span>
+            </button>
+          </div>
+        </div>
+        <button
+          class="btn btn-sm detail-action-btn"
+          *ngIf="canUseSecondaryDisplay && detailVideo.source === 'cloud' && detailVideo.id"
+          (click)="onVariant(detailVideo, $event)"
+        >
+          📺
+          {{
+            detailVideo.hasSecondaryVariant
+              ? ('videoLibrary.manageSecondaryVariant' | translate)
+              : ('videoLibrary.addSecondaryVariant' | translate)
+          }}
+        </button>
+        <button
+          class="btn btn-sm btn-primary detail-action-btn"
+          *ngIf="
+            siteType !== 'saas' &&
+            !detailVideo.isOnPi &&
+            detailVideo.source === 'cloud' &&
+            !isDeploying(detailVideo)
+          "
+          (click)="onDeploy(detailVideo, $event)"
+        >
+          🚀 Déployer sur le Pi
+        </button>
+        <button
+          class="btn btn-sm btn-danger detail-action-btn"
+          (click)="onDelete(detailVideo, $event)"
+        >
+          🗑️ Supprimer
+        </button>
+      </div>
+    </div>
   </div>
 
   <!-- Video Preview Popup -->

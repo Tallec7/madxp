@@ -1033,7 +1033,8 @@
     "selectedCount": "{{count}} seleccionado(s)",
     "manageSecondaryVariant": "Gestionar variante de pantalla secundaria",
     "addSecondaryVariant": "Añadir variante de pantalla secundaria",
-    "addToLoop": "Añadir al bucle"
+    "addToLoop": "Añadir al bucle",
+    "addTo": "Añadir a…"
   },
   "videoUpload": {
     "recordFromCamera": "[TRANSLATE] Record from camera"

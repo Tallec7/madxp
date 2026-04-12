@@ -110,12 +110,13 @@
     [subscriptionPlan]="subscriptionPlan"
     [featureOverrides]="featureOverrides"
     [siteSponsors]="siteSponsors"
+    [configTargets]="configTargets"
     (videoUploaded)="onVideoUploaded($event)"
     (secondaryVariantChanged)="loadContent()"
     (allVideosUploaded)="onAllVideosUploaded($event)"
     (videoDeploy)="onVideoDeploy($event)"
     (videoDeleted)="loadContent()"
-    (addToLoop)="onAddVideoToLoop($event)"
+    (addToTarget)="onAddVideoToTarget($event)"
   ></app-video-manager>
 
   <!-- Draft Indicator + History (Pi only) -->

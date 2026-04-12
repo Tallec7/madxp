@@ -6,7 +6,7 @@ import { SiteCommandService } from '../../../../../core/services/site-command.se
 import { NotificationService } from '../../../../../core/services/notification.service';
 import { ErrorExtractor } from '../../../../../core/utils/error-extractor';
 import { LocalVideo, CloudVideo, LocalStorage, SiteSponsor } from '../../../../../core/models';
-import { VideoLibraryComponent, VideoItem, VideoDeployState } from '../../video-library/video-library.component';
+import { VideoLibraryComponent, VideoItem, VideoDeployState, AddToTarget } from '../../video-library/video-library.component';
 import { VideoUploadZoneComponent, UploadedVideo } from '../../../../../shared/components/video-upload-zone/video-upload-zone.component';
 import { VideoVariantPanelComponent } from '../../../../content/video-variant-panel.component';
 
@@ -42,12 +42,13 @@ import { VideoVariantPanelComponent } from '../../../../content/video-variant-pa
         [subscriptionPlan]="subscriptionPlan"
         [featureOverrides]="featureOverrides"
         [siteSponsors]="siteSponsors"
+        [configTargets]="configTargets"
         (videoSelect)="onVideoSelect($event)"
         (videoPreview)="onVideoPreview($event)"
         (videoDeploy)="videoDeploy.emit($event)"
         (videoDelete)="onVideoDelete($event)"
         (videoVariant)="onVideoVariant($event)"
-        (addToLoop)="addToLoop.emit($event)"
+        (addToTarget)="addToTarget.emit($event)"
       ></app-video-library>
     </div>
 
@@ -189,13 +190,14 @@ export class VideoManagerComponent {
   @Input() subscriptionPlan: string | null = null;
   @Input() featureOverrides: Record<string, boolean> | null = null;
   @Input() siteSponsors: SiteSponsor[] = []; // ADR-050
+  @Input() configTargets: AddToTarget[] = []; // ADR-050 Phase 2: available config targets
 
   @Output() videoUploaded = new EventEmitter<UploadedVideo>();
   @Output() allVideosUploaded = new EventEmitter<UploadedVideo[]>();
   @Output() videoDeploy = new EventEmitter<VideoItem>();
   @Output() videoDeleted = new EventEmitter<void>();
   @Output() secondaryVariantChanged = new EventEmitter<void>();
-  @Output() addToLoop = new EventEmitter<VideoItem>(); // ADR-050
+  @Output() addToTarget = new EventEmitter<{ video: VideoItem; target: AddToTarget }>(); // ADR-050 Phase 2
 
   selectedVideoPath = '';
   showDeleteModal = false;

@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter, OnChanges, SimpleChanges, ChangeDetectionStrategy } from '@angular/core';
+import { Component, Input, Output, EventEmitter, OnChanges, SimpleChanges, ChangeDetectionStrategy, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TranslateModule } from '@ngx-translate/core';
@@ -34,6 +34,15 @@ export interface VideoItem {
   checksum?: string | null;         // File integrity checksum
   configRoles?: Set<string>;         // Roles in config: 'boucle', 'match', 'action' (empty = not in config)
   isDuplicate?: boolean;            // Whether another video shares the same checksum (duplicate file)
+  thumbnailUrl?: string | null;     // Thumbnail image URL (generated at upload via ffmpeg)
+}
+
+/** Target for "Add to" action — identifies where to insert a video in the config */
+export interface AddToTarget {
+  type: 'loop' | 'match' | 'category';
+  id: string;       // 'default' for sponsors[], phase id for timeCategories, category id for categories
+  label: string;     // Display name for the target
+  icon?: string;
 }
 
 export type VideoDeployStatus = 'idle' | 'deploying' | 'success' | 'error' | 'timeout';
@@ -77,9 +86,16 @@ export class VideoLibraryComponent implements OnChanges {
   @Output() videoDeploy = new EventEmitter<VideoItem>();
   @Output() videoDelete = new EventEmitter<VideoItem>();
   @Output() videoVariant = new EventEmitter<VideoItem>();
-  @Output() addToLoop = new EventEmitter<VideoItem>(); // ADR-050: add video to default loop
+  @Output() addToTarget = new EventEmitter<{ video: VideoItem; target: AddToTarget }>(); // ADR-050 Phase 2: add video to any config target
+
+  @Input() configTargets: AddToTarget[] = []; // Available targets from config (built by site-content-tab)
 
   constructor(private gate: FeatureGateService) {}
+
+  @HostListener('document:click')
+  onDocumentClick(): void {
+    this.addToDropdownVideo = null;
+  }
 
   get canUseSecondaryDisplay(): boolean {
     return this.gate.canAccess('secondary_display', {
@@ -118,6 +134,9 @@ export class VideoLibraryComponent implements OnChanges {
   sortField: SortField = 'filename';
   sortDirection: SortDirection = 'asc';
 
+  // View mode
+  viewMode: 'grid' | 'list' = 'grid';
+
   // Selection mode
   selectionMode: boolean = false;
   selectedVideos: Set<string> = new Set(); // Set of video paths
@@ -126,6 +145,9 @@ export class VideoLibraryComponent implements OnChanges {
   deleteConfirmVideo: VideoItem | null = null;
 
   previewVideo: VideoItem | null = null;
+
+  // Detail panel
+  detailVideo: VideoItem | null = null;
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['videos'] || changes['cloudVideos'] || changes['secondaryVariantVideoIds'] || changes['configVideoRoles']) {
@@ -211,6 +233,7 @@ export class VideoLibraryComponent implements OnChanges {
         hasSecondaryVariant: this.secondaryVariantVideoIds.has(cloud.id),
         checksum: cloud.checksum ?? null,
         configRoles,
+        thumbnailUrl: cloud.thumbnail_url ?? null,
       };
       item.contentStatus = this.computeContentStatus(item, this.siteType === 'saas');
       cloudMapped.push(item);
@@ -443,14 +466,36 @@ export class VideoLibraryComponent implements OnChanges {
     }
   }
 
-  onAddToLoop(video: VideoItem, event: Event): void {
+  // "Add to" dropdown state
+  addToDropdownVideo: VideoItem | null = null;
+
+  toggleAddToDropdown(video: VideoItem, event: Event): void {
     event.stopPropagation();
-    this.addToLoop.emit(video);
+    this.addToDropdownVideo = this.addToDropdownVideo === video ? null : video;
+  }
+
+  closeAddToDropdown(): void {
+    this.addToDropdownVideo = null;
+  }
+
+  onAddToTargetSelect(video: VideoItem, target: AddToTarget, event: Event): void {
+    event.stopPropagation();
+    this.addToTarget.emit({ video, target });
+    this.addToDropdownVideo = null;
   }
 
   selectVideo(video: VideoItem): void {
     this.selectedPath = video.path;
+    this.detailVideo = video;
     this.videoSelect.emit(video);
+  }
+
+  closeDetail(): void {
+    this.detailVideo = null;
+  }
+
+  getConfigRolesArray(video: VideoItem): string[] {
+    return video.configRoles ? Array.from(video.configRoles) : [];
   }
 
   onPreview(video: VideoItem, event: Event): void {
