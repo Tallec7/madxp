@@ -82,6 +82,12 @@
 
 - **dashboard:** add thumbnail_url to CloudVideo model + pagination with page size selector ([0d7f0fa](https://github.com/Tallec7/neopro/commit/0d7f0fa6e5011007d56b5b7e5ef5d6e1565f9966))
 
+## [3.153.7](https://github.com/Tallec7/neopro/compare/v3.153.6...v3.153.7) (2026-04-12)
+
+### Bug Fixes
+
+- **dashboard:** add thumbnail_url to CloudVideo model + pagination with page size selector ([0d7f0fa](https://github.com/Tallec7/neopro/commit/0d7f0fa6e5011007d56b5b7e5ef5d6e1565f9966))
+
 ## [3.153.6](https://github.com/Tallec7/neopro/compare/v3.153.5...v3.153.6) (2026-04-12)
 
 ### Bug Fixes
