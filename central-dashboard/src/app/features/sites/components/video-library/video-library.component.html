@@ -142,420 +142,443 @@
     </button>
   </div>
 
-  <!-- Grid View -->
-  <div class="video-grid" *ngIf="viewMode === 'grid' && filteredVideos.length > 0">
-    <div
-      class="video-card"
-      *ngFor="let video of pagedVideos"
-      [class.selected]="selectedPath === video.path"
-      [class.to-deploy]="!video.isOnPi && siteType !== 'saas'"
-      (click)="selectVideo(video)"
-    >
-      <div class="card-thumbnail">
-        <img
-          *ngIf="video.thumbnailUrl"
-          [src]="video.thumbnailUrl"
-          [alt]="video.displayName"
-          loading="lazy"
-        />
-        <div *ngIf="!video.thumbnailUrl" class="card-thumb-placeholder">
-          <span>🎞️</span>
-        </div>
-        <span class="card-duration" *ngIf="video.duration">{{
-          formatDuration(video.duration)
-        }}</span>
-        <span class="card-size">{{ formatBytes(video.size) }}</span>
-      </div>
-      <div class="card-body">
-        <div class="card-title" [title]="video.filename">{{ video.displayName }}</div>
-        <div class="card-meta">
-          <span
-            class="content-status-badge"
-            [ngClass]="getContentStatusClass(video.contentStatus)"
-            >{{ getContentStatusLabel(video.contentStatus) }}</span
-          >
-          <span class="badge-2nd" *ngIf="video.hasSecondaryVariant">2nd</span>
-          <span class="duplicate-badge" *ngIf="video.isDuplicate">DOUBLON</span>
-          <span class="for-this-site-badge" *ngIf="isUploadedForThisSite(video)">⭐</span>
-        </div>
-        <div class="card-actions">
-          <button
-            class="action-btn preview"
-            (click)="onPreview(video, $event)"
-            title="Prévisualiser"
-            *ngIf="video.source === 'cloud'"
-          >
-            👁️
-          </button>
-          <div
-            class="add-to-wrapper"
-            *ngIf="video.contentStatus === 'available' && configTargets.length > 0"
-          >
-            <button
-              class="action-btn add-to-trigger"
-              (click)="toggleAddToDropdown(video, $event)"
-              [title]="'videoLibrary.addTo' | translate"
-            >
-              +
-            </button>
-            <div class="add-to-dropdown" *ngIf="addToDropdownVideo === video">
-              <button
-                class="add-to-option"
-                *ngFor="let target of configTargets"
-                (click)="onAddToTargetSelect(video, target, $event)"
-                [title]="target.label"
-              >
-                <span class="add-to-icon">{{ target.icon || '📁' }}</span>
-                <span class="add-to-label">{{ target.label }}</span>
-              </button>
-            </div>
+  <!-- Scrollable content area -->
+  <div class="library-scroll-area">
+    <!-- Grid View -->
+    <div class="video-grid" *ngIf="viewMode === 'grid' && filteredVideos.length > 0">
+      <div
+        class="video-card"
+        *ngFor="let video of pagedVideos"
+        [class.selected]="selectedPath === video.path"
+        [class.to-deploy]="!video.isOnPi && siteType !== 'saas'"
+        (click)="selectVideo(video)"
+      >
+        <div class="card-thumbnail">
+          <img
+            *ngIf="video.thumbnailUrl"
+            [src]="video.thumbnailUrl"
+            [alt]="video.displayName"
+            loading="lazy"
+          />
+          <div *ngIf="!video.thumbnailUrl" class="card-thumb-placeholder">
+            <span>🎞️</span>
           </div>
-          <button
-            class="action-btn variant"
-            *ngIf="canUseSecondaryDisplay && video.source === 'cloud' && video.id"
-            (click)="onVariant(video, $event)"
-            title="Variante 2nd écran"
-          >
-            📺
-          </button>
-          <button
-            class="action-btn deploy"
-            (click)="onDeploy(video, $event)"
-            *ngIf="
-              siteType !== 'saas' &&
-              !video.isOnPi &&
-              video.source === 'cloud' &&
-              !isDeploying(video) &&
-              !isDeployFailed(video)
-            "
-          >
-            🚀
-          </button>
-          <button
-            class="action-btn delete"
-            (click)="onDelete(video, $event)"
-            [title]="'common.delete' | translate"
-          >
-            🗑️
-          </button>
+          <span class="card-duration" *ngIf="video.duration">{{
+            formatDuration(video.duration)
+          }}</span>
+          <span class="card-size">{{ formatBytes(video.size) }}</span>
         </div>
-      </div>
-    </div>
-  </div>
-
-  <ng-template #noVideos>
-    <div class="no-videos">
-      <span class="no-videos-icon">📂</span>
-      <p *ngIf="allVideos.length === 0">Aucune vidéo disponible</p>
-      <p *ngIf="allVideos.length > 0 && filteredVideos.length === 0">
-        Aucune vidéo ne correspond aux filtres
-      </p>
-    </div>
-  </ng-template>
-
-  <div *ngIf="filteredVideos.length === 0">
-    <ng-container *ngTemplateOutlet="noVideos"></ng-container>
-  </div>
-
-  <!-- List View (Table) -->
-  <div class="table-scroll-wrapper" *ngIf="viewMode === 'list'">
-    <table class="video-table" *ngIf="filteredVideos.length > 0; else noVideos">
-      <thead>
-        <tr>
-          <th class="col-checkbox" *ngIf="selectionMode">
-            <input
-              type="checkbox"
-              [checked]="isAllSelected()"
-              (change)="toggleSelectAll($event)"
-              title="Tout sélectionner"
-            />
-          </th>
-          <th class="col-name">
-            <button
-              class="sort-btn"
-              [class.active]="sortField === 'filename'"
-              (click)="toggleSort('filename')"
-            >
-              Nom {{ getSortIcon('filename') }}
-            </button>
-          </th>
-          <th class="col-category">
-            <button
-              class="sort-btn"
-              [class.active]="sortField === 'category'"
-              (click)="toggleSort('category')"
-            >
-              Catégorie {{ getSortIcon('category') }}
-            </button>
-          </th>
-          <th class="col-duration">
-            <button
-              class="sort-btn"
-              [class.active]="sortField === 'duration'"
-              (click)="toggleSort('duration')"
-            >
-              Durée {{ getSortIcon('duration') }}
-            </button>
-          </th>
-          <th class="col-size">
-            <button
-              class="sort-btn"
-              [class.active]="sortField === 'size'"
-              (click)="toggleSort('size')"
-            >
-              Taille {{ getSortIcon('size') }}
-            </button>
-          </th>
-          <th class="col-date">
-            <button
-              class="sort-btn"
-              [class.active]="sortField === 'lastModified'"
-              (click)="toggleSort('lastModified')"
-            >
-              Date {{ getSortIcon('lastModified') }}
-            </button>
-          </th>
-          <th class="col-advertiser" title="Annonceur">Annonceur</th>
-          <th class="col-variant" title="Variante secondaire (dual-display)">2nd</th>
-          <th class="col-content-status" title="Statut dans la config active">Statut</th>
-          <th class="col-owner-type">Propriétaire</th>
-          <th class="col-status" *ngIf="siteType !== 'saas'">Statut</th>
-          <th class="col-actions">Actions</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr
-          class="video-item"
-          *ngFor="let video of pagedVideos"
-          [class.selected]="selectedPath === video.path || isSelected(video)"
-          [class.to-deploy]="!video.isOnPi"
-          [class.deploy-failed]="isDeployFailed(video)"
-          [class.for-this-site]="isUploadedForThisSite(video)"
-          (click)="selectVideo(video)"
-        >
-          <td class="col-checkbox" *ngIf="selectionMode" (click)="$event.stopPropagation()">
-            <input
-              type="checkbox"
-              [checked]="isSelected(video)"
-              (change)="toggleSelection(video, $event)"
-            />
-          </td>
-          <td
-            class="col-name"
-            [title]="
-              video.checksum ? video.filename + ' — checksum: ' + video.checksum : video.filename
-            "
-          >
-            <span class="video-name">{{ video.displayName }}</span>
-            <span class="video-subcat" *ngIf="video.subcategory">{{ video.subcategory }}</span>
-            <span
-              class="for-this-site-badge"
-              *ngIf="isUploadedForThisSite(video)"
-              title="Uploadée pour ce site"
-              >⭐</span
-            >
-            <span
-              class="duplicate-badge"
-              *ngIf="video.isDuplicate"
-              title="Doublon détecté — même fichier qu'une autre vidéo (checksum identique)"
-              >DOUBLON</span
-            >
-          </td>
-          <td class="col-category" [title]="video.category || ''">{{ video.category || '-' }}</td>
-          <td class="col-duration">{{ video.duration ? formatDuration(video.duration) : '-' }}</td>
-          <td class="col-size">{{ formatBytes(video.size) }}</td>
-          <td class="col-date">{{ video.lastModified ? formatDate(video.lastModified) : '-' }}</td>
-          <td class="col-advertiser" [title]="video.advertiserName || ''">
-            {{ video.advertiserName || '-' }}
-          </td>
-          <td class="col-variant">
-            <span
-              class="badge-2nd"
-              *ngIf="video.hasSecondaryVariant"
-              title="Variante secondaire disponible pour le dual-display (2e écran)"
-              >2nd</span
-            >
-          </td>
-          <td class="col-content-status">
+        <div class="card-body">
+          <div class="card-title" [title]="video.filename">{{ video.displayName }}</div>
+          <div class="card-meta">
             <span
               class="content-status-badge"
               [ngClass]="getContentStatusClass(video.contentStatus)"
-              [title]="getContentStatusLabel(video.contentStatus)"
+              >{{ getContentStatusLabel(video.contentStatus) }}</span
             >
-              {{ getContentStatusLabel(video.contentStatus) }}
-            </span>
-            <span
-              class="badge-cfg badge-boucle"
-              *ngIf="video.configRoles?.has('boucle')"
-              title="Dans la boucle de diffusion par défaut"
-              >BOUCLE</span
+            <span class="badge-2nd" *ngIf="video.hasSecondaryVariant">2nd</span>
+            <span class="duplicate-badge" *ngIf="video.isDuplicate">DOUBLON</span>
+            <span class="for-this-site-badge" *ngIf="isUploadedForThisSite(video)">⭐</span>
+          </div>
+          <div class="card-actions">
+            <button
+              class="action-btn preview"
+              (click)="onPreview(video, $event)"
+              title="Prévisualiser"
+              *ngIf="video.source === 'cloud'"
             >
-            <span
-              class="badge-cfg badge-match"
-              *ngIf="video.configRoles?.has('match')"
-              title="Dans une phase de match"
-              >MATCH</span
+              👁️
+            </button>
+            <div
+              class="add-to-wrapper"
+              *ngIf="video.contentStatus === 'available' && configTargets.length > 0"
             >
-            <span
-              class="badge-cfg badge-action"
-              *ngIf="video.configRoles?.has('action')"
-              title="Vidéo d'action (télécommande)"
-              >ACTION</span
+              <button
+                class="action-btn add-to-trigger"
+                (click)="toggleAddToDropdown(video, $event)"
+                [title]="'videoLibrary.addTo' | translate"
+              >
+                +
+              </button>
+              <div class="add-to-dropdown" *ngIf="addToDropdownVideo === video">
+                <button
+                  class="add-to-option"
+                  *ngFor="let target of configTargets"
+                  (click)="onAddToTargetSelect(video, target, $event)"
+                  [title]="target.label"
+                >
+                  <span class="add-to-icon">{{ target.icon || '📁' }}</span>
+                  <span class="add-to-label">{{ target.label }}</span>
+                </button>
+              </div>
+            </div>
+            <button
+              class="action-btn variant"
+              *ngIf="canUseSecondaryDisplay && video.source === 'cloud' && video.id"
+              (click)="onVariant(video, $event)"
+              title="Variante 2nd écran"
             >
-          </td>
-          <td class="col-owner-type">
-            <span class="owner-type-badge" [ngClass]="'owner-' + video.ownerType">
-              {{ getOwnerTypeLabel(video.ownerType) }}
-            </span>
-          </td>
-          <td
-            class="col-status"
-            *ngIf="siteType !== 'saas'"
-            [class.deploying]="getDeployState(video)?.status === 'deploying'"
-            [class.deploy-success]="getDeployState(video)?.status === 'success'"
-            [class.deploy-error]="
-              getDeployState(video)?.status === 'error' ||
-              getDeployState(video)?.status === 'timeout'
-            "
-            [title]="getDeployState(video)?.error || ''"
-          >
-            <ng-container *ngIf="!getDeployState(video)">{{
-              video.isOnPi ? '✅' : '⏳'
-            }}</ng-container>
-            <ng-container *ngIf="getDeployState(video)?.status === 'deploying'"
-              ><span class="deploy-spinner">⏳</span></ng-container
-            >
-            <ng-container *ngIf="getDeployState(video)?.status === 'success'">✅</ng-container>
-            <ng-container
+              📺
+            </button>
+            <button
+              class="action-btn deploy"
+              (click)="onDeploy(video, $event)"
               *ngIf="
+                siteType !== 'saas' &&
+                !video.isOnPi &&
+                video.source === 'cloud' &&
+                !isDeploying(video) &&
+                !isDeployFailed(video)
+              "
+            >
+              🚀
+            </button>
+            <button
+              class="action-btn delete"
+              (click)="onDelete(video, $event)"
+              [title]="'common.delete' | translate"
+            >
+              🗑️
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <ng-template #noVideos>
+      <div class="no-videos">
+        <span class="no-videos-icon">📂</span>
+        <p *ngIf="allVideos.length === 0">Aucune vidéo disponible</p>
+        <p *ngIf="allVideos.length > 0 && filteredVideos.length === 0">
+          Aucune vidéo ne correspond aux filtres
+        </p>
+      </div>
+    </ng-template>
+
+    <div *ngIf="filteredVideos.length === 0">
+      <ng-container *ngTemplateOutlet="noVideos"></ng-container>
+    </div>
+
+    <!-- List View (Table) -->
+    <div class="table-scroll-wrapper" *ngIf="viewMode === 'list'">
+      <table class="video-table" *ngIf="filteredVideos.length > 0; else noVideos">
+        <thead>
+          <tr>
+            <th class="col-checkbox" *ngIf="selectionMode">
+              <input
+                type="checkbox"
+                [checked]="isAllSelected()"
+                (change)="toggleSelectAll($event)"
+                title="Tout sélectionner"
+              />
+            </th>
+            <th class="col-name">
+              <button
+                class="sort-btn"
+                [class.active]="sortField === 'filename'"
+                (click)="toggleSort('filename')"
+              >
+                Nom {{ getSortIcon('filename') }}
+              </button>
+            </th>
+            <th class="col-category">
+              <button
+                class="sort-btn"
+                [class.active]="sortField === 'category'"
+                (click)="toggleSort('category')"
+              >
+                Catégorie {{ getSortIcon('category') }}
+              </button>
+            </th>
+            <th class="col-duration">
+              <button
+                class="sort-btn"
+                [class.active]="sortField === 'duration'"
+                (click)="toggleSort('duration')"
+              >
+                Durée {{ getSortIcon('duration') }}
+              </button>
+            </th>
+            <th class="col-size">
+              <button
+                class="sort-btn"
+                [class.active]="sortField === 'size'"
+                (click)="toggleSort('size')"
+              >
+                Taille {{ getSortIcon('size') }}
+              </button>
+            </th>
+            <th class="col-date">
+              <button
+                class="sort-btn"
+                [class.active]="sortField === 'lastModified'"
+                (click)="toggleSort('lastModified')"
+              >
+                Date {{ getSortIcon('lastModified') }}
+              </button>
+            </th>
+            <th class="col-advertiser" title="Annonceur">Annonceur</th>
+            <th class="col-variant" title="Variante secondaire (dual-display)">2nd</th>
+            <th class="col-content-status" title="Statut dans la config active">Statut</th>
+            <th class="col-owner-type">Propriétaire</th>
+            <th class="col-status" *ngIf="siteType !== 'saas'">Statut</th>
+            <th class="col-actions">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr
+            class="video-item"
+            *ngFor="let video of pagedVideos"
+            [class.selected]="selectedPath === video.path || isSelected(video)"
+            [class.to-deploy]="!video.isOnPi"
+            [class.deploy-failed]="isDeployFailed(video)"
+            [class.for-this-site]="isUploadedForThisSite(video)"
+            (click)="selectVideo(video)"
+          >
+            <td class="col-checkbox" *ngIf="selectionMode" (click)="$event.stopPropagation()">
+              <input
+                type="checkbox"
+                [checked]="isSelected(video)"
+                (change)="toggleSelection(video, $event)"
+              />
+            </td>
+            <td
+              class="col-name"
+              [title]="
+                video.checksum ? video.filename + ' — checksum: ' + video.checksum : video.filename
+              "
+            >
+              <span class="video-name">{{ video.displayName }}</span>
+              <span class="video-subcat" *ngIf="video.subcategory">{{ video.subcategory }}</span>
+              <span
+                class="for-this-site-badge"
+                *ngIf="isUploadedForThisSite(video)"
+                title="Uploadée pour ce site"
+                >⭐</span
+              >
+              <span
+                class="duplicate-badge"
+                *ngIf="video.isDuplicate"
+                title="Doublon détecté — même fichier qu'une autre vidéo (checksum identique)"
+                >DOUBLON</span
+              >
+            </td>
+            <td class="col-category" [title]="video.category || ''">{{ video.category || '-' }}</td>
+            <td class="col-duration">
+              {{ video.duration ? formatDuration(video.duration) : '-' }}
+            </td>
+            <td class="col-size">{{ formatBytes(video.size) }}</td>
+            <td class="col-date">
+              {{ video.lastModified ? formatDate(video.lastModified) : '-' }}
+            </td>
+            <td class="col-advertiser" [title]="video.advertiserName || ''">
+              {{ video.advertiserName || '-' }}
+            </td>
+            <td class="col-variant">
+              <span
+                class="badge-2nd"
+                *ngIf="video.hasSecondaryVariant"
+                title="Variante secondaire disponible pour le dual-display (2e écran)"
+                >2nd</span
+              >
+            </td>
+            <td class="col-content-status">
+              <span
+                class="content-status-badge"
+                [ngClass]="getContentStatusClass(video.contentStatus)"
+                [title]="getContentStatusLabel(video.contentStatus)"
+              >
+                {{ getContentStatusLabel(video.contentStatus) }}
+              </span>
+              <span
+                class="badge-cfg badge-boucle"
+                *ngIf="video.configRoles?.has('boucle')"
+                title="Dans la boucle de diffusion par défaut"
+                >BOUCLE</span
+              >
+              <span
+                class="badge-cfg badge-match"
+                *ngIf="video.configRoles?.has('match')"
+                title="Dans une phase de match"
+                >MATCH</span
+              >
+              <span
+                class="badge-cfg badge-action"
+                *ngIf="video.configRoles?.has('action')"
+                title="Vidéo d'action (télécommande)"
+                >ACTION</span
+              >
+            </td>
+            <td class="col-owner-type">
+              <span class="owner-type-badge" [ngClass]="'owner-' + video.ownerType">
+                {{ getOwnerTypeLabel(video.ownerType) }}
+              </span>
+            </td>
+            <td
+              class="col-status"
+              *ngIf="siteType !== 'saas'"
+              [class.deploying]="getDeployState(video)?.status === 'deploying'"
+              [class.deploy-success]="getDeployState(video)?.status === 'success'"
+              [class.deploy-error]="
                 getDeployState(video)?.status === 'error' ||
                 getDeployState(video)?.status === 'timeout'
               "
-              >❌</ng-container
+              [title]="getDeployState(video)?.error || ''"
             >
-          </td>
-          <td class="col-actions">
-            <div class="video-actions">
-              <button
-                class="action-btn preview"
-                (click)="onPreview(video, $event)"
-                title="Prévisualiser"
-                *ngIf="video.source === 'cloud'"
+              <ng-container *ngIf="!getDeployState(video)">{{
+                video.isOnPi ? '✅' : '⏳'
+              }}</ng-container>
+              <ng-container *ngIf="getDeployState(video)?.status === 'deploying'"
+                ><span class="deploy-spinner">⏳</span></ng-container
               >
-                👁️
-              </button>
-              <div
-                class="add-to-wrapper"
-                *ngIf="video.contentStatus === 'available' && configTargets.length > 0"
-              >
-                <button
-                  class="action-btn add-to-trigger"
-                  (click)="toggleAddToDropdown(video, $event)"
-                  [title]="'videoLibrary.addTo' | translate"
-                >
-                  + {{ 'videoLibrary.addTo' | translate }}
-                </button>
-                <div class="add-to-dropdown" *ngIf="addToDropdownVideo === video">
-                  <button
-                    class="add-to-option"
-                    *ngFor="let target of configTargets"
-                    (click)="onAddToTargetSelect(video, target, $event)"
-                    [title]="target.label"
-                  >
-                    <span class="add-to-icon">{{ target.icon || '📁' }}</span>
-                    <span class="add-to-label">{{ target.label }}</span>
-                  </button>
-                </div>
-              </div>
-              <button
-                class="action-btn deploy"
-                (click)="onDeploy(video, $event)"
-                [title]="'videoLibrary.deployToPi' | translate"
+              <ng-container *ngIf="getDeployState(video)?.status === 'success'">✅</ng-container>
+              <ng-container
                 *ngIf="
-                  siteType !== 'saas' &&
-                  !video.isOnPi &&
-                  video.source === 'cloud' &&
-                  !isDeploying(video) &&
-                  !isDeployFailed(video)
+                  getDeployState(video)?.status === 'error' ||
+                  getDeployState(video)?.status === 'timeout'
                 "
-                [disabled]="isDeploying(video)"
+                >❌</ng-container
               >
-                🚀
-              </button>
-              <button
-                class="action-btn retry"
-                (click)="onDeploy(video, $event)"
-                title="Relancer le déploiement"
-                *ngIf="siteType !== 'saas' && isDeployFailed(video)"
-              >
-                🔄
-              </button>
-              <span
-                class="deploy-progress"
-                *ngIf="siteType !== 'saas' && isDeploying(video)"
-                [title]="'content.deploymentInProgress' | translate"
-              >
-                {{ getDeployState(video)?.progress ?? 0 }}%
-              </span>
-              <button
-                class="action-btn variant"
-                *ngIf="canUseSecondaryDisplay && video.source === 'cloud' && video.id"
-                (click)="onVariant(video, $event)"
-                [title]="
-                  video.hasSecondaryVariant
-                    ? ('videoLibrary.manageSecondaryVariant' | translate)
-                    : ('videoLibrary.addSecondaryVariant' | translate)
-                "
-              >
-                📺
-              </button>
-              <button
-                class="action-btn copy-name"
-                (click)="onCopyFilename(video, $event)"
-                title="Copier le nom de fichier"
-              >
-                📋
-              </button>
-              <button
-                class="action-btn delete"
-                (click)="onDelete(video, $event)"
-                [title]="'common.delete' | translate"
-              >
-                🗑️
-              </button>
-            </div>
-          </td>
-        </tr>
-      </tbody>
-    </table>
+            </td>
+            <td class="col-actions">
+              <div class="video-actions">
+                <button
+                  class="action-btn preview"
+                  (click)="onPreview(video, $event)"
+                  title="Prévisualiser"
+                  *ngIf="video.source === 'cloud'"
+                >
+                  👁️
+                </button>
+                <div
+                  class="add-to-wrapper"
+                  *ngIf="video.contentStatus === 'available' && configTargets.length > 0"
+                >
+                  <button
+                    class="action-btn add-to-trigger"
+                    (click)="toggleAddToDropdown(video, $event)"
+                    [title]="'videoLibrary.addTo' | translate"
+                  >
+                    + {{ 'videoLibrary.addTo' | translate }}
+                  </button>
+                  <div class="add-to-dropdown" *ngIf="addToDropdownVideo === video">
+                    <button
+                      class="add-to-option"
+                      *ngFor="let target of configTargets"
+                      (click)="onAddToTargetSelect(video, target, $event)"
+                      [title]="target.label"
+                    >
+                      <span class="add-to-icon">{{ target.icon || '📁' }}</span>
+                      <span class="add-to-label">{{ target.label }}</span>
+                    </button>
+                  </div>
+                </div>
+                <button
+                  class="action-btn deploy"
+                  (click)="onDeploy(video, $event)"
+                  [title]="'videoLibrary.deployToPi' | translate"
+                  *ngIf="
+                    siteType !== 'saas' &&
+                    !video.isOnPi &&
+                    video.source === 'cloud' &&
+                    !isDeploying(video) &&
+                    !isDeployFailed(video)
+                  "
+                  [disabled]="isDeploying(video)"
+                >
+                  🚀
+                </button>
+                <button
+                  class="action-btn retry"
+                  (click)="onDeploy(video, $event)"
+                  title="Relancer le déploiement"
+                  *ngIf="siteType !== 'saas' && isDeployFailed(video)"
+                >
+                  🔄
+                </button>
+                <span
+                  class="deploy-progress"
+                  *ngIf="siteType !== 'saas' && isDeploying(video)"
+                  [title]="'content.deploymentInProgress' | translate"
+                >
+                  {{ getDeployState(video)?.progress ?? 0 }}%
+                </span>
+                <button
+                  class="action-btn variant"
+                  *ngIf="canUseSecondaryDisplay && video.source === 'cloud' && video.id"
+                  (click)="onVariant(video, $event)"
+                  [title]="
+                    video.hasSecondaryVariant
+                      ? ('videoLibrary.manageSecondaryVariant' | translate)
+                      : ('videoLibrary.addSecondaryVariant' | translate)
+                  "
+                >
+                  📺
+                </button>
+                <button
+                  class="action-btn copy-name"
+                  (click)="onCopyFilename(video, $event)"
+                  title="Copier le nom de fichier"
+                >
+                  📋
+                </button>
+                <button
+                  class="action-btn delete"
+                  (click)="onDelete(video, $event)"
+                  [title]="'common.delete' | translate"
+                >
+                  🗑️
+                </button>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <!-- /table-scroll-wrapper -->
   </div>
-  <!-- /table-scroll-wrapper -->
+  <!-- /library-scroll-area -->
 
   <!-- Pagination -->
-  <div class="pagination" *ngIf="totalPages > 1">
-    <button class="pagination-btn" [disabled]="currentPage === 0" (click)="goToPage(0)">«</button>
-    <button
-      class="pagination-btn"
-      [disabled]="currentPage === 0"
-      (click)="goToPage(currentPage - 1)"
-    >
-      ‹
-    </button>
-    <span class="pagination-info"> Page {{ currentPage + 1 }} / {{ totalPages }} </span>
-    <button
-      class="pagination-btn"
-      [disabled]="currentPage >= totalPages - 1"
-      (click)="goToPage(currentPage + 1)"
-    >
-      ›
-    </button>
-    <button
-      class="pagination-btn"
-      [disabled]="currentPage >= totalPages - 1"
-      (click)="goToPage(totalPages - 1)"
-    >
-      »
-    </button>
+  <div class="pagination-bar">
+    <div class="pagination-size">
+      <label>Afficher</label>
+      <select [ngModel]="pageSize" (ngModelChange)="onPageSizeChange($event)">
+        <option *ngFor="let opt of pageSizeOptions" [value]="opt">
+          {{ opt === 'all' ? 'Tous' : opt }}
+        </option>
+      </select>
+    </div>
+    <span class="pagination-info">
+      {{ filteredVideos.length }} vidéo(s)
+      <ng-container *ngIf="pageSize !== 'all'">
+        — page {{ currentPage + 1 }}/{{ totalPages }}
+      </ng-container>
+    </span>
+    <div class="pagination-nav" *ngIf="totalPages > 1">
+      <button class="pagination-btn" [disabled]="currentPage === 0" (click)="goToPage(0)">«</button>
+      <button
+        class="pagination-btn"
+        [disabled]="currentPage === 0"
+        (click)="goToPage(currentPage - 1)"
+      >
+        ‹
+      </button>
+      <button
+        class="pagination-btn"
+        [disabled]="currentPage >= totalPages - 1"
+        (click)="goToPage(currentPage + 1)"
+      >
+        ›
+      </button>
+      <button
+        class="pagination-btn"
+        [disabled]="currentPage >= totalPages - 1"
+        (click)="goToPage(totalPages - 1)"
+      >
+        »
+      </button>
+    </div>
   </div>
 
   <!-- Légende -->

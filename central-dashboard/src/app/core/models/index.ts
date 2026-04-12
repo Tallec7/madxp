@@ -262,6 +262,7 @@ export interface CloudVideo {
   createdAt: Date;
   updatedAt: Date;
   advertiserName?: string | null;
+  thumbnail_url?: string | null;
 }
 
 /**

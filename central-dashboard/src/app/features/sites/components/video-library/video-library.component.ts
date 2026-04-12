@@ -138,16 +138,30 @@ export class VideoLibraryComponent implements OnChanges {
   viewMode: 'grid' | 'list' = 'grid';
 
   // Pagination
-  pageSize: number = 24;
+  pageSizeOptions: (number | 'all')[] = [10, 25, 50, 'all'];
+  pageSize: number | 'all' = 25;
   currentPage: number = 0;
-  get totalPages(): number { return Math.ceil(this.filteredVideos.length / this.pageSize); }
+
+  get effectivePageSize(): number {
+    return this.pageSize === 'all' ? this.filteredVideos.length : this.pageSize;
+  }
+  get totalPages(): number {
+    if (this.pageSize === 'all') return 1;
+    return Math.max(1, Math.ceil(this.filteredVideos.length / this.pageSize));
+  }
   get pagedVideos(): VideoItem[] {
+    if (this.pageSize === 'all') return this.filteredVideos;
     const start = this.currentPage * this.pageSize;
     return this.filteredVideos.slice(start, start + this.pageSize);
   }
 
   goToPage(page: number): void {
     this.currentPage = Math.max(0, Math.min(page, this.totalPages - 1));
+  }
+
+  onPageSizeChange(value: string): void {
+    this.pageSize = value === 'all' ? 'all' : parseInt(value, 10);
+    this.currentPage = 0;
   }
 
   // Selection mode
