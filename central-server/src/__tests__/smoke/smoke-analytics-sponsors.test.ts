@@ -375,6 +375,9 @@ describe('Video Library UX regression guards', () => {
     const controllerDir = path.dirname(sitesControllerPath);
     controllerContent = fs.readFileSync(sitesControllerPath, 'utf8')
       + '\n' + fs.readFileSync(path.join(controllerDir, 'site-fleet.controller.ts'), 'utf8')
+      + '\n' + fs.readFileSync(path.join(controllerDir, 'site-fleet-dashboard.controller.ts'), 'utf8')
+      + '\n' + fs.readFileSync(path.join(controllerDir, 'site-fleet-timeline.controller.ts'), 'utf8')
+      + '\n' + fs.readFileSync(path.join(controllerDir, 'site-fleet-health.controller.ts'), 'utf8')
       + '\n' + fs.readFileSync(path.join(controllerDir, 'site-commands.controller.ts'), 'utf8')
       + '\n' + fs.readFileSync(path.join(controllerDir, 'site-debug.controller.ts'), 'utf8');
     timelineRepoContent = fs.readFileSync(timelineRepoPath, 'utf8');
@@ -770,7 +773,7 @@ describe('Sponsor Portal stats completeness guard', () => {
 describe('video_plays interruption_reason guard', () => {
   const repoRoot = path.resolve(__dirname, '..', '..', '..', '..');
   const analyticsRepoPath = path.join(repoRoot, 'central-server/src/repositories/analytics.repository.ts');
-  const analyticsControllerPath = path.join(repoRoot, 'central-server/src/controllers/analytics.controller.ts');
+  const analyticsIngestionPath = path.join(repoRoot, 'central-server/src/controllers/analytics-ingestion.controller.ts');
   const fullSchemaPath = path.join(repoRoot, 'central-server/src/scripts/full-schema.sql');
 
   let repoContent: string;
@@ -778,7 +781,7 @@ describe('video_plays interruption_reason guard', () => {
   let schemaContent: string;
   beforeAll(() => {
     repoContent = fs.readFileSync(analyticsRepoPath, 'utf8');
-    controllerContent = fs.readFileSync(analyticsControllerPath, 'utf8');
+    controllerContent = fs.readFileSync(analyticsIngestionPath, 'utf8');
     schemaContent = fs.readFileSync(fullSchemaPath, 'utf8');
   });
 

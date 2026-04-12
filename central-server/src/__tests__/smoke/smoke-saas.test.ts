@@ -881,9 +881,9 @@ describe('SaaS site-detail dashboard guards', () => {
     });
   });
 
-  // --- site-fleet.controller.ts must return saasMetrics for SaaS sites ---
-  it('site-fleet.controller.ts must return saasMetrics in dashboard data', () => {
-    const filePath = path.join(repoRoot, 'central-server', 'src', 'controllers', 'site-fleet.controller.ts');
+  // --- site-fleet-dashboard.controller.ts must return saasMetrics for SaaS sites ---
+  it('site-fleet-dashboard.controller.ts must return saasMetrics in dashboard data', () => {
+    const filePath = path.join(repoRoot, 'central-server', 'src', 'controllers', 'site-fleet-dashboard.controller.ts');
     const content = fs.readFileSync(filePath, 'utf8');
     expect({
       hasSaasMetrics: content.includes('saasMetrics'),
@@ -894,9 +894,9 @@ describe('SaaS site-detail dashboard guards', () => {
     });
   });
 
-  // --- site-fleet.controller.ts must include lastOtaDeployment + activeAlertsCount in saasMetrics ---
-  it('site-fleet.controller.ts must return lastOtaDeployment and activeAlertsCount', () => {
-    const filePath = path.join(repoRoot, 'central-server', 'src', 'controllers', 'site-fleet.controller.ts');
+  // --- site-fleet-dashboard.controller.ts must include lastOtaDeployment + activeAlertsCount in saasMetrics ---
+  it('site-fleet-dashboard.controller.ts must return lastOtaDeployment and activeAlertsCount', () => {
+    const filePath = path.join(repoRoot, 'central-server', 'src', 'controllers', 'site-fleet-dashboard.controller.ts');
     const content = fs.readFileSync(filePath, 'utf8');
     expect({
       hasLastOtaDeployment: content.includes('lastOtaDeployment'),

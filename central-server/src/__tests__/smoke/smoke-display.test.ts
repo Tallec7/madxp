@@ -1520,7 +1520,7 @@ describe('E-22 TvComponent variant selection guard', () => {
 describe('Video variant display_type alignment guard', () => {
   const repoRoot = path.resolve(__dirname, '..', '..', '..', '..');
   const repoPath = path.join(repoRoot, 'central-server/src/repositories/video-variant.repository.ts');
-  const controllerPath = path.join(repoRoot, 'central-server/src/controllers/content.controller.ts');
+  const controllerPath = path.join(repoRoot, 'central-server/src/controllers/content-variant.controller.ts');
 
   let repoContent: string;
   let controllerContent: string;
@@ -1695,6 +1695,9 @@ describe('Secondary variant badge wiring guards', () => {
     const controllerDir = path.dirname(sitesControllerPath);
     controllerContent = fs.readFileSync(sitesControllerPath, 'utf8')
       + '\n' + fs.readFileSync(path.join(controllerDir, 'site-fleet.controller.ts'), 'utf8')
+      + '\n' + fs.readFileSync(path.join(controllerDir, 'site-fleet-dashboard.controller.ts'), 'utf8')
+      + '\n' + fs.readFileSync(path.join(controllerDir, 'site-fleet-timeline.controller.ts'), 'utf8')
+      + '\n' + fs.readFileSync(path.join(controllerDir, 'site-fleet-health.controller.ts'), 'utf8')
       + '\n' + fs.readFileSync(path.join(controllerDir, 'site-commands.controller.ts'), 'utf8')
       + '\n' + fs.readFileSync(path.join(controllerDir, 'site-debug.controller.ts'), 'utf8');
     siteContentTabContent = readAllTsInDir(contentTabDir);

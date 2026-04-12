@@ -1461,10 +1461,13 @@ describe('sites.controller split guard (prevents re-monolithification)', () => {
     expect(main).not.toMatch(/export const getHealthStatus\s*=/);
   });
 
-  it('getFleetHealthData must live in site-fleet.controller.ts (not sites.controller.ts)', () => {
+  it('getFleetHealthData must live in site-fleet controller family (not sites.controller.ts)', () => {
     const main = fs.readFileSync(path.join(controllerDir, 'sites.controller.ts'), 'utf-8');
     const fleet = fs.readFileSync(path.join(controllerDir, 'site-fleet.controller.ts'), 'utf-8');
-    expect(fleet).toContain('export const getFleetHealthData');
+    const fleetHealth = fs.readFileSync(path.join(controllerDir, 'site-fleet-health.controller.ts'), 'utf-8');
+    // Must be defined in site-fleet-health and re-exported from site-fleet
+    expect(fleetHealth).toContain('export const getFleetHealthData');
+    expect(fleet).toContain('getFleetHealthData');
     expect(main).not.toMatch(/export const getFleetHealthData\s*=/);
   });
 });
