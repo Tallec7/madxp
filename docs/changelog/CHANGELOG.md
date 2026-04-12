@@ -1,3 +1,9 @@
+# [3.160.0](https://github.com/Tallec7/neopro/compare/v3.159.4...v3.160.0) (2026-04-12)
+
+### Features
+
+- **monitoring:** add continuous Node.js dependency health checks across Pi fleet ([44e64ec](https://github.com/Tallec7/neopro/commit/44e64ec919fac88887fe083cd739df909e620637)), closes [#10](https://github.com/Tallec7/neopro/issues/10)
+
 ## [3.159.4](https://github.com/Tallec7/neopro/compare/v3.159.3...v3.159.4) (2026-04-12)
 
 ### Bug Fixes
