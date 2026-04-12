@@ -2,6 +2,14 @@
 
 ### Bug Fixes
 
+- **ci:** stop release workflow infinite loop ([fc86546](https://github.com/Tallec7/neopro/commit/fc8654670e33b730c61a5acc9b274ddc6f3f659f))
+- **dashboard:** add thumbnail_url to CloudVideo model + pagination with page size selector ([0d7f0fa](https://github.com/Tallec7/neopro/commit/0d7f0fa6e5011007d56b5b7e5ef5d6e1565f9966))
+- **dashboard:** i18n error fallback in updates-management + relax smoke test pattern ([22ac796](https://github.com/Tallec7/neopro/commit/22ac796fece72631ff4e01a0d964fd6263ee2cb4))
+
+## [3.153.7](https://github.com/Tallec7/neopro/compare/v3.153.6...v3.153.7) (2026-04-12)
+
+### Bug Fixes
+
 - **dashboard:** add thumbnail_url to CloudVideo model + pagination with page size selector ([0d7f0fa](https://github.com/Tallec7/neopro/commit/0d7f0fa6e5011007d56b5b7e5ef5d6e1565f9966))
 
 ## [3.153.7](https://github.com/Tallec7/neopro/compare/v3.153.6...v3.153.7) (2026-04-12)
