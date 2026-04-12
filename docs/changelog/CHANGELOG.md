@@ -1,3 +1,9 @@
+## [3.158.2](https://github.com/Tallec7/neopro/compare/v3.158.1...v3.158.2) (2026-04-12)
+
+### Bug Fixes
+
+- **ci:** re-trigger dashboard deploy to Hostinger ([0dd43be](https://github.com/Tallec7/neopro/commit/0dd43beb82e60e3c51f2d8600e07ea9eafa0b7f2))
+
 ## [3.158.1](https://github.com/Tallec7/neopro/compare/v3.158.0...v3.158.1) (2026-04-12)
 
 ### Bug Fixes
