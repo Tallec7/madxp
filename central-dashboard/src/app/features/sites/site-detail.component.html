@@ -896,7 +896,9 @@
               />
               <strong>{{ profile.display_name || profile.name }}</strong>
               <span class="profile-meta" *ngIf="profile.city || profile.sport">{{
-                [profile.city, profile.sport].filter(Boolean).join(' · ')
+                profile.city && profile.sport
+                  ? profile.city + ' · ' + profile.sport
+                  : profile.city || profile.sport
               }}</span>
               <span class="badge-default" *ngIf="profile.is_default">{{
                 'copyConfig.default' | translate
