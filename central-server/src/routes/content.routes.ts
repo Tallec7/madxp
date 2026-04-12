@@ -22,6 +22,7 @@ router.delete('/videos/:id', authenticate, requireRole('admin', 'club'), sensiti
 router.get('/videos/:id/variants', authenticate, adminRateLimit, contentController.getVideoVariants);
 router.post('/videos/variant-counts', authenticate, adminRateLimit, contentController.getVariantCounts);
 router.post('/videos/:id/variants', authenticate, requireRole('admin', 'operator'), uploadRateLimit, uploadVideo.single('video'), contentController.createVideoVariant);
+router.post('/videos/:id/variants/from-video', authenticate, requireRole('admin', 'operator'), adminRateLimit, contentController.createVideoVariantFromVideo);
 router.delete('/videos/:videoId/variants/:displayType', authenticate, requireRole('admin'), sensitiveRateLimit, contentController.deleteVideoVariant);
 
 // Image to video conversion

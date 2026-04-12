@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { HttpClient, HttpEventType, HttpEvent } from '@angular/common/http';
 import { NotificationService } from '../../core/services/notification.service';
 import { ErrorExtractor } from '../../core/utils/error-extractor';
-import { DisplayConfig } from '../../core/models';
+import { DisplayConfig, CloudVideo } from '../../core/models';
 import { environment } from '../../../environments/environment';
 
 interface VideoVariant {
@@ -98,16 +98,23 @@ const DISPLAY_ICONS: Record<string, string> = {
               <span class="accordion-chevron">{{ openPanels[display.type] ? '▲' : '▼' }}</span>
             </div>
             <div class="accordion-body" *ngIf="openPanels[display.type]">
-              <label class="upload-zone-compact" [class.uploading]="uploadingType === display.type">
-                <input
-                  type="file"
-                  accept="video/*"
-                  (change)="onFileSelected($event, display.type)"
-                  hidden
-                  [disabled]="uploadingType === display.type"
-                />
-                {{ uploadingType === display.type ? 'Upload ' + uploadProgress + '%' : 'Uploader variante ' + (display.name || display.type) }}
-              </label>
+              <div class="variant-source-choice">
+                <select class="source-select" (change)="onSourceVideoSelected($event, display.type)" [disabled]="linkingType === display.type">
+                  <option value="">-- Choisir une video existante --</option>
+                  <option *ngFor="let v of availableVideos" [value]="v.id">{{ v.originalName || v.filename }} ({{ formatFileSize(v.size) }})</option>
+                </select>
+                <span class="source-or">ou</span>
+                <label class="upload-zone-compact" [class.uploading]="uploadingType === display.type">
+                  <input
+                    type="file"
+                    accept="video/*"
+                    (change)="onFileSelected($event, display.type)"
+                    hidden
+                    [disabled]="uploadingType === display.type"
+                  />
+                  {{ uploadingType === display.type ? 'Upload ' + uploadProgress + '%' : 'Uploader' }}
+                </label>
+              </div>
               <span class="upload-hint" *ngIf="display.resolution">Format recommande : {{ display.resolution }}</span>
             </div>
           </div>
@@ -122,16 +129,23 @@ const DISPLAY_ICONS: Record<string, string> = {
               [(ngModel)]="newDisplayType"
               placeholder="Type (ex: led-banner)"
             />
-            <label class="upload-zone-compact small" *ngIf="newDisplayType">
-              <input
-                type="file"
-                accept="video/*"
-                (change)="onFileSelected($event, sanitizeType(newDisplayType))"
-                hidden
-                [disabled]="!!uploadingType"
-              />
-              {{ uploadingType === sanitizeType(newDisplayType) ? uploadProgress + '%' : 'Uploader' }}
-            </label>
+            <ng-container *ngIf="newDisplayType">
+              <select class="source-select source-select-sm" (change)="onSourceVideoSelected($event, sanitizeType(newDisplayType))" [disabled]="linkingType === sanitizeType(newDisplayType)">
+                <option value="">-- Video existante --</option>
+                <option *ngFor="let v of availableVideos" [value]="v.id">{{ v.originalName || v.filename }}</option>
+              </select>
+              <span class="source-or">ou</span>
+              <label class="upload-zone-compact small">
+                <input
+                  type="file"
+                  accept="video/*"
+                  (change)="onFileSelected($event, sanitizeType(newDisplayType))"
+                  hidden
+                  [disabled]="!!uploadingType"
+                />
+                {{ uploadingType === sanitizeType(newDisplayType) ? uploadProgress + '%' : 'Uploader' }}
+              </label>
+            </ng-container>
             <button class="btn btn-sm btn-secondary" (click)="showAddForm = false">Annuler</button>
           </div>
           <button
@@ -346,6 +360,37 @@ const DISPLAY_ICONS: Record<string, string> = {
       width: 140px;
     }
 
+    /* Source choice: select or upload */
+    .variant-source-choice {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    .source-select {
+      flex: 1;
+      min-width: 180px;
+      padding: 0.375rem 0.5rem;
+      border: 1px solid #cbd5e1;
+      border-radius: 6px;
+      font-size: 0.8125rem;
+      color: #334155;
+      background: white;
+    }
+
+    .source-select-sm {
+      font-size: 0.75rem;
+      padding: 0.25rem 0.375rem;
+      min-width: 140px;
+    }
+
+    .source-or {
+      font-size: 0.75rem;
+      color: #94a3b8;
+      font-style: italic;
+    }
+
     @media (max-width: 768px) {
       .variant-item { flex-wrap: wrap; gap: 0.375rem; }
       .variant-actions { width: 100%; justify-content: flex-end; }
@@ -357,6 +402,7 @@ export class VideoVariantPanelComponent implements OnInit {
   @Input() videoId!: string;
   @Input() autoOpen = false;
   @Input() siteDisplays: DisplayConfig[] = [];
+  @Input() availableVideos: CloudVideo[] = [];
   @Output() variantChanged = new EventEmitter<{ videoId: string; count: number; types: string[] }>();
 
   private http = inject(HttpClient);
@@ -370,6 +416,7 @@ export class VideoVariantPanelComponent implements OnInit {
   uploadingType: string | null = null;
   uploadProgress = 0;
   deletingType: string | null = null;
+  linkingType: string | null = null;
   showAddForm = false;
   newDisplayType = '';
 
@@ -438,6 +485,41 @@ export class VideoVariantPanelComponent implements OnInit {
       error: () => {
         this.loading = false;
         this.loaded = true;
+      }
+    });
+  }
+
+  onSourceVideoSelected(event: Event, displayType: string): void {
+    const select = event.target as HTMLSelectElement;
+    const sourceVideoId = select.value;
+    if (!sourceVideoId) return;
+
+    this.linkingType = displayType;
+
+    this.http.post<VideoVariant>(
+      `${environment.apiUrl}/videos/${this.videoId}/variants/from-video`,
+      { display_type: displayType, source_video_id: sourceVideoId },
+      { withCredentials: true }
+    ).subscribe({
+      next: (variant) => {
+        this.linkingType = null;
+        const idx = this.variants.findIndex(v => v.display_type === displayType);
+        if (idx >= 0) {
+          this.variants[idx] = variant;
+        } else {
+          this.variants = [...this.variants, variant];
+        }
+        this.showAddForm = false;
+        this.newDisplayType = '';
+        this.emitChange();
+        this.notificationService.success(`Variante ${this.getDisplayLabel(displayType)} associee`);
+        select.value = '';
+      },
+      error: (error) => {
+        this.linkingType = null;
+        const message = ErrorExtractor.getMessage(error);
+        this.notificationService.error(`Erreur: ${message}`);
+        select.value = '';
       }
     });
   }

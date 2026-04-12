@@ -64,6 +64,7 @@ import { VideoVariantPanelComponent } from '../../../../content/video-variant-pa
           <app-video-variant-panel
             [videoId]="variantTarget.id!"
             [siteDisplays]="siteDisplays"
+            [availableVideos]="cloudVideos"
             [autoOpen]="true"
             (variantChanged)="onVariantChanged($event)"
           ></app-video-variant-panel>
