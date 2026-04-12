@@ -412,6 +412,7 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
   markDirty(): void {
     this.isDirty = JSON.stringify(this.config) !== this.originalConfig;
     this.rebuildConfigVideoRoles();
+    this.detectOrphanedVideoPaths();
   }
 
   resetConfig(): void {
@@ -851,6 +852,13 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
 
     this.allKnownVideoPaths = new Set(this.unifiedVideoOptions.map(v => v.path));
     for (const local of this.localVideos) this.allKnownVideoPaths.add(local.path);
+    // Also index with space↔underscore normalization so Pi-sanitized paths match cloud filenames
+    for (const path of [...this.allKnownVideoPaths]) {
+      const normalized = path.replace(/ /g, '_');
+      if (normalized !== path) this.allKnownVideoPaths.add(normalized);
+      const denormalized = path.replace(/_/g, ' ');
+      if (denormalized !== path) this.allKnownVideoPaths.add(denormalized);
+    }
 
     this.filenameToPathsMap = new Map();
     for (const local of this.localVideos) {
@@ -858,6 +866,26 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
       const existing = this.filenameToPathsMap.get(key) || [];
       if (!existing.includes(local.path)) existing.push(local.path);
       this.filenameToPathsMap.set(key, existing);
+      // Also index with space↔underscore normalization
+      const normalizedKey = key.replace(/ /g, '_');
+      if (normalizedKey !== key) {
+        const norm = this.filenameToPathsMap.get(normalizedKey) || [];
+        if (!norm.includes(local.path)) norm.push(local.path);
+        this.filenameToPathsMap.set(normalizedKey, norm);
+      }
+    }
+    // Also index cloud videos in filenameToPathsMap (critical for SaaS sites with no local videos)
+    for (const opt of this.unifiedVideoOptions) {
+      const key = opt.filename.toLowerCase();
+      const existing = this.filenameToPathsMap.get(key) || [];
+      if (!existing.includes(opt.path)) existing.push(opt.path);
+      this.filenameToPathsMap.set(key, existing);
+      const normalizedKey = key.replace(/ /g, '_');
+      if (normalizedKey !== key) {
+        const norm = this.filenameToPathsMap.get(normalizedKey) || [];
+        if (!norm.includes(opt.path)) norm.push(opt.path);
+        this.filenameToPathsMap.set(normalizedKey, norm);
+      }
     }
 
     this.videoDurations = new Map<string, number>();
@@ -881,7 +909,11 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
     // This fixes the mismatch where configs contain local paths but the library uses cloud URLs
     const filenameToCloudUrl = new Map<string, string>();
     for (const cloud of this.cloudVideos) {
-      filenameToCloudUrl.set(cloud.filename.toLowerCase(), cloud.url);
+      const fnLower = cloud.filename.toLowerCase();
+      filenameToCloudUrl.set(fnLower, cloud.url);
+      // Also index with space↔underscore normalization (Pi sanitizes spaces to underscores)
+      filenameToCloudUrl.set(fnLower.replace(/ /g, '_'), cloud.url);
+      filenameToCloudUrl.set(fnLower.replace(/_/g, ' '), cloud.url);
     }
 
     const addRole = (path: string, role: string): void => {
