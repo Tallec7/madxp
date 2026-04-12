@@ -34,9 +34,9 @@ export interface VideoOptionItem {
   imports: [CommonModule, FormsModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <div class="vss" [class.vss--open]="isOpen" [class.vss--dropup]="dropUp" [class.vss--invalid]="invalid" [class.vss--disabled]="disabled" [class.vss--compact]="compact">
+    <div class="vss" [class.vss--open]="isOpen" [class.vss--dropup]="dropUp" [class.vss--invalid]="invalid" [class.vss--disabled]="disabled" [class.vss--compact]="compact" (click)="onControlClick($event)">
       <!-- Selected value display / search input -->
-      <div class="vss__control" (click)="toggle()" [class.vss__control--placeholder]="!selectedPath">
+      <div class="vss__control" [class.vss__control--placeholder]="!selectedPath">
         <input
           *ngIf="isOpen"
           #searchInput
@@ -89,12 +89,14 @@ export interface VideoOptionItem {
     `
       :host {
         display: block;
+        cursor: pointer;
       }
 
       .vss {
         position: relative;
         width: 100%;
         font-size: 0.875rem;
+        cursor: pointer;
       }
 
       .vss__control {
@@ -181,6 +183,7 @@ export interface VideoOptionItem {
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
         z-index: 10000;
         max-height: 280px;
+        max-width: 400px;
         overflow-y: auto;
       }
 
@@ -298,6 +301,13 @@ export class VideoSearchSelectComponent implements OnChanges {
     }
   }
 
+  onControlClick(event: Event): void {
+    const target = event.target as HTMLElement;
+    // Don't toggle when clicking inside the dropdown or the search input
+    if (target.closest('.vss__dropdown') || target.closest('.vss__search')) return;
+    this.toggle();
+  }
+
   toggle(): void {
     if (this.disabled) return;
     if (this.isOpen) {
@@ -316,7 +326,7 @@ export class VideoSearchSelectComponent implements OnChanges {
     const spaceBelow = window.innerHeight - rect.bottom;
     this.dropUp = spaceBelow < 300;
     this.dropdownLeft = rect.left;
-    this.dropdownWidth = rect.width;
+    this.dropdownWidth = Math.min(rect.width, 400);
     this.dropdownTop = this.dropUp ? rect.top - 280 : rect.bottom;
     this.cdr.markForCheck();
     setTimeout(() => {
