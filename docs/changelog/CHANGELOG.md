@@ -1,3 +1,9 @@
+## [3.153.3](https://github.com/Tallec7/neopro/compare/v3.153.2...v3.153.3) (2026-04-12)
+
+### Bug Fixes
+
+- **dashboard:** fix double-toggle bug in video-search-select click handler ([40879aa](https://github.com/Tallec7/neopro/commit/40879aa5016eb22f5664897d624950517396fd4a))
+
 ## [3.153.2](https://github.com/Tallec7/neopro/compare/v3.153.1...v3.153.2) (2026-04-12)
 
 ### Bug Fixes
