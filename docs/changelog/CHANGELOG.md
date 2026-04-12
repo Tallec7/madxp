@@ -1,3 +1,9 @@
+## [3.151.1](https://github.com/Tallec7/neopro/compare/v3.151.0...v3.151.1) (2026-04-12)
+
+### Bug Fixes
+
+- **content:** use SiteSponsor type in video-library and video-manager inputs ([34f9706](https://github.com/Tallec7/neopro/commit/34f970696c785aee652e9770c81124a0b46ac024))
+
 # [3.151.0](https://github.com/Tallec7/neopro/compare/v3.150.0...v3.151.0) (2026-04-12)
 
 ### Features
