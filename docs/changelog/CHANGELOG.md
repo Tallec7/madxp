@@ -1,3 +1,10 @@
+## [3.154.3](https://github.com/Tallec7/neopro/compare/v3.154.2...v3.154.3) (2026-04-12)
+
+### Bug Fixes
+
+- **dashboard:** allow opening video-search-select by clicking anywhere in control zone ([cf4dae2](https://github.com/Tallec7/neopro/commit/cf4dae218dda421c1e3b4133e6f0c133559ca33e))
+- **profiles:** add missing fields to validation schemas for config profiles ([e729d8c](https://github.com/Tallec7/neopro/commit/e729d8c3bc7c622bb67467db0df59e15721da596))
+
 ## [3.154.2](https://github.com/Tallec7/neopro/compare/v3.154.1...v3.154.2) (2026-04-12)
 
 ### Bug Fixes
