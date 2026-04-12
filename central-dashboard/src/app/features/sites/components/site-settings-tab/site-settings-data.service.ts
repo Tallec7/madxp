@@ -21,7 +21,7 @@ import {
 } from '../../../../core/services/asset.service';
 import { ReportsService, GeneratedReport } from '../../../../core/services/reports.service';
 import { LoggerService } from '../../../../core/services/logger.service';
-import { Site, OverlayTheme, ScoreOverlayPosition } from '../../../../core/models';
+import { Site, OverlayTheme, ScoreOverlayPosition, DisplayConfig } from '../../../../core/models';
 
 // ============================================================================
 // Interfaces
@@ -171,6 +171,16 @@ export class SiteSettingsDataService {
     featureOverrides: Record<string, boolean>
   ): Observable<Site> {
     return this.sitesService.updateSite(siteId, { feature_overrides: featureOverrides });
+  }
+
+  // ========================================================================
+  // 3b. Displays N-display (PROP-002 Phase 5H)
+  // ========================================================================
+
+  saveDisplays(siteId: string, displays: DisplayConfig[]): Observable<DisplayConfig[]> {
+    return this.sitesService.updateDisplays(siteId, displays).pipe(
+      map(response => response.displays)
+    );
   }
 
   // ========================================================================

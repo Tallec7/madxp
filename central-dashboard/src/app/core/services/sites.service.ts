@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { Observable, BehaviorSubject, tap, map } from 'rxjs';
 import { ApiService } from './api.service';
 import { CacheService } from './cache.service';
-import { Site, SiteStats, Metrics, ConfigHistory, SiteConfiguration, ConfigDiff, SiteConnectionStatus, AllSitesConnectionStatus, LocalVideo, LocalStorage, CloudVideo, FleetHealthData, MatchHistoryData, ConfigProfile, CreateProfilePayload, UpdateProfilePayload, ProfilesListResponse, DeployProfileResponse, SyncProfilesResponse } from '../models';
+import { Site, SiteStats, Metrics, ConfigHistory, SiteConfiguration, ConfigDiff, SiteConnectionStatus, AllSitesConnectionStatus, LocalVideo, LocalStorage, CloudVideo, FleetHealthData, MatchHistoryData, ConfigProfile, CreateProfilePayload, UpdateProfilePayload, ProfilesListResponse, DeployProfileResponse, SyncProfilesResponse, DisplayConfig } from '../models';
 
 @Injectable({
   providedIn: 'root'
@@ -66,6 +66,15 @@ export class SitesService {
       sites[index] = { ...sites[index], status: status as Site['status'], last_seen_at: new Date() };
       this.sitesSubject.next(sites);
     }
+  }
+
+  // N-display configuration (PROP-002 Phase 5H)
+  getDisplays(siteId: string): Observable<{ displays: DisplayConfig[] }> {
+    return this.api.get(`/sites/${siteId}/displays`);
+  }
+
+  updateDisplays(siteId: string, displays: DisplayConfig[]): Observable<{ displays: DisplayConfig[] }> {
+    return this.api.patch(`/sites/${siteId}/displays`, { displays });
   }
 
   // Historique des configurations

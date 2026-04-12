@@ -7,16 +7,17 @@ import { LoggerService } from '../../../../core/services/logger.service';
 import { WatermarkConfig, WatermarkFileInfo, OverlayPosition as WmOverlayPosition, WatermarkAnimation, WatermarkScheduleRule } from '../../../../core/services/asset.service';
 import { GeneratedReport } from '../../../../core/services/reports.service';
 import { ErrorExtractor } from '../../../../core/utils/error-extractor';
-import { Site, OverlayTheme, ScoreOverlayPosition } from '../../../../core/models';
+import { Site, OverlayTheme, ScoreOverlayPosition, DisplayConfig } from '../../../../core/models';
 import { AuthService } from '../../../../core/services/auth.service';
 import { FeatureKey } from '../../../../core/services/feature-gate.service';
 import { QrCodeGeneratorComponent } from '../../../../shared/components/qr-code-generator/qr-code-generator.component';
+import { DisplaysEditorComponent } from './displays-editor/displays-editor.component';
 import { SiteSettingsDataService } from './site-settings-data.service';
 
 @Component({
   selector: 'app-site-settings-tab',
   standalone: true,
-  imports: [CommonModule, FormsModule, TranslateModule, QrCodeGeneratorComponent],
+  imports: [CommonModule, FormsModule, TranslateModule, QrCodeGeneratorComponent, DisplaysEditorComponent],
   templateUrl: './site-settings-tab.component.html',
   styleUrls: ['./site-settings-tab.component.scss']
 })
@@ -119,6 +120,10 @@ export class SiteSettingsTabComponent implements OnInit, OnChanges {
   loadingReports: boolean = false;
   generatingReport: boolean = false;
 
+  // Displays N-display (PROP-002 Phase 5H)
+  siteDisplays: DisplayConfig[] = [{ index: 0, name: 'TV', type: 'tv', resolution: '1920x1080' }];
+  savingDisplays = false;
+
   // Feature overrides (super_admin only)
   featureOverrides: Record<string, boolean> = {};
   savingOverrides = false;
@@ -184,6 +189,11 @@ export class SiteSettingsTabComponent implements OnInit, OnChanges {
 
       // Charger le statut du PIN télécommande cloud
       this.loadRemotePinStatus();
+
+      // Charger la config displays N-display
+      this.siteDisplays = this.site.displays?.length
+        ? [...this.site.displays]
+        : [{ index: 0, name: 'TV', type: 'tv', resolution: '1920x1080' }];
     }
   }
 
@@ -346,6 +356,27 @@ export class SiteSettingsTabComponent implements OnInit, OnChanges {
     } else {
       this.featureOverrides[key] = true;
     }
+  }
+
+  saveDisplays(displays: DisplayConfig[]): void {
+    this.siteDisplays = displays;
+    this.savingDisplays = true;
+    this.dataService.saveDisplays(this.siteId, displays).subscribe({
+      next: (updatedDisplays) => {
+        this.savingDisplays = false;
+        this.siteDisplays = updatedDisplays;
+        this.notificationService.success('Configuration ecrans mise a jour');
+        if (this.site) {
+          this.site = { ...this.site, displays: updatedDisplays };
+          this.siteUpdated.emit(this.site);
+        }
+      },
+      error: (error) => {
+        this.savingDisplays = false;
+        const message = ErrorExtractor.getMessage(error);
+        this.notificationService.error(`Erreur: ${message}`);
+      }
+    });
   }
 
   saveFeatureOverrides(): void {

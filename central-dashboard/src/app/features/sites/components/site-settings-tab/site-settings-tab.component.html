@@ -523,6 +523,23 @@
     </div>
   </div>
 
+  <!-- Ecrans / Displays N-display (PROP-002 Phase 5H) -->
+  <div class="settings-card" *ngIf="isSuperAdmin">
+    <div class="settings-header">
+      <span class="settings-icon">🖥️</span>
+      <h4>Ecrans</h4>
+    </div>
+    <p class="settings-desc">
+      Configurez les ecrans connectes a ce site. Chaque ecran peut recevoir des variantes video
+      adaptees a son format.
+    </p>
+    <app-displays-editor
+      [displays]="siteDisplays"
+      (displaysChange)="saveDisplays($event)"
+    ></app-displays-editor>
+    <span class="saving-indicator" *ngIf="savingDisplays">Enregistrement...</span>
+  </div>
+
   <!-- Feature Overrides (super_admin only) -->
   <div class="settings-card" *ngIf="isSuperAdmin">
     <div class="settings-header">

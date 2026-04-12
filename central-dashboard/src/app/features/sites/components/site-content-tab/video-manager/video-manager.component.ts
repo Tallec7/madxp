@@ -5,7 +5,7 @@ import { SitesService } from '../../../../../core/services/sites.service';
 import { SiteCommandService } from '../../../../../core/services/site-command.service';
 import { NotificationService } from '../../../../../core/services/notification.service';
 import { ErrorExtractor } from '../../../../../core/utils/error-extractor';
-import { LocalVideo, CloudVideo, LocalStorage, SiteSponsor } from '../../../../../core/models';
+import { LocalVideo, CloudVideo, LocalStorage, SiteSponsor, DisplayConfig } from '../../../../../core/models';
 import { VideoLibraryComponent, VideoItem, VideoDeployState, AddToTarget } from '../../video-library/video-library.component';
 import { VideoUploadZoneComponent, UploadedVideo } from '../../../../../shared/components/video-upload-zone/video-upload-zone.component';
 import { VideoVariantPanelComponent } from '../../../../content/video-variant-panel.component';
@@ -52,16 +52,21 @@ import { VideoVariantPanelComponent } from '../../../../content/video-variant-pa
       ></app-video-library>
     </div>
 
-    <!-- Secondary Variant Modal (Premium only) -->
+    <!-- Multi-display Variant Modal (Premium only) -->
     <div class="modal" *ngIf="variantTarget" (click)="closeVariantModal()">
       <div class="modal-content" (click)="$event.stopPropagation()">
         <div class="modal-header">
-          <h2>Variante écran secondaire</h2>
+          <h2>Variantes multi-ecran</h2>
           <button class="modal-close" (click)="closeVariantModal()">&times;</button>
         </div>
         <div class="modal-body">
           <p class="delete-filename">"{{ variantTarget.displayName || variantTarget.filename }}"</p>
-          <app-video-variant-panel [videoId]="variantTarget.id!"></app-video-variant-panel>
+          <app-video-variant-panel
+            [videoId]="variantTarget.id!"
+            [siteDisplays]="siteDisplays"
+            [autoOpen]="true"
+            (variantChanged)="onVariantChanged($event)"
+          ></app-video-variant-panel>
         </div>
         <div class="modal-footer">
           <button class="btn btn-secondary" (click)="closeVariantModal()">Fermer</button>
@@ -187,16 +192,19 @@ export class VideoManagerComponent {
   @Input() configVideoRoles: Map<string, Set<string>> = new Map();
   @Input() pendingDeploymentVideoIds: Set<string> = new Set();
   @Input() secondaryVariantVideoIds: Set<string> = new Set();
+  @Input() videoVariantInfo: Map<string, { count: number; types: string[] }> = new Map();
   @Input() subscriptionPlan: string | null = null;
   @Input() featureOverrides: Record<string, boolean> | null = null;
   @Input() siteSponsors: SiteSponsor[] = []; // ADR-050
   @Input() configTargets: AddToTarget[] = []; // ADR-050 Phase 2: available config targets
+  @Input() siteDisplays: DisplayConfig[] = [];
 
   @Output() videoUploaded = new EventEmitter<UploadedVideo>();
   @Output() allVideosUploaded = new EventEmitter<UploadedVideo[]>();
   @Output() videoDeploy = new EventEmitter<VideoItem>();
   @Output() videoDeleted = new EventEmitter<void>();
   @Output() secondaryVariantChanged = new EventEmitter<void>();
+  @Output() variantChanged = new EventEmitter<{ videoId: string; count: number; types: string[] }>();
   @Output() addToTarget = new EventEmitter<{ video: VideoItem; target: AddToTarget }>(); // ADR-050 Phase 2
 
   selectedVideoPath = '';
@@ -214,6 +222,10 @@ export class VideoManagerComponent {
   closeVariantModal(): void {
     this.variantTarget = null;
     this.secondaryVariantChanged.emit();
+  }
+
+  onVariantChanged(event: { videoId: string; count: number; types: string[] }): void {
+    this.variantChanged.emit(event);
   }
 
   constructor(

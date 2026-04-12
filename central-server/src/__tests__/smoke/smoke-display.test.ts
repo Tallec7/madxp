@@ -1545,13 +1545,13 @@ describe('Video variant display_type alignment guard', () => {
     });
   });
 
-  it('createVideoVariant controller must validate "secondary" (not "led")', () => {
-    // The controller validates display_type with an includes check
+  it('createVideoVariant controller must validate display_type as slug (not hardcoded list)', () => {
+    // Phase 5H: N-display — controller validates display_type with open regex slug, not a closed list
     expect({
-      validatesSecondary: /\['tv',\s*'secondary'\]/.test(controllerContent),
+      validatesSlug: /\^?\[a-z0-9-\]\+\$/.test(controllerContent),
       noLedValidation: !/\['tv',\s*'led'\]/.test(controllerContent),
     }).toEqual({
-      validatesSecondary: true,
+      validatesSlug: true,
       noLedValidation: true,
     });
   });

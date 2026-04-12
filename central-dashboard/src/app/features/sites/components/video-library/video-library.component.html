@@ -24,7 +24,7 @@
         title="Sur le Pi"
         >📡 {{ filteredStatsOnPi }}</span
       >
-      <span class="stat" *ngIf="filteredStatsWithVariant > 0" title="Avec variante secondaire"
+      <span class="stat" *ngIf="filteredStatsWithVariant > 0" title="Avec variantes multi-ecran"
         >📺 {{ filteredStatsWithVariant }}</span
       >
       <span class="stat" *ngIf="filteredTotalSize > 0">{{ formatBytes(filteredTotalSize) }}</span>
@@ -73,7 +73,7 @@
       <option value="available_only">⬜ Disponibles</option>
       <option value="in_config">⚙️ Dans la config</option>
       <option value="deploy_error" *ngIf="siteType !== 'saas'">❌ Erreur deploy</option>
-      <option value="with_variant">📺 Avec variante 2nd</option>
+      <option value="with_variant">📺 Avec variantes</option>
     </select>
     <select [(ngModel)]="ownerFilter" (ngModelChange)="applyFilters()" class="filter-select">
       <option value="all">Tous</option>
@@ -176,7 +176,9 @@
               [ngClass]="getContentStatusClass(video.contentStatus)"
               >{{ getContentStatusLabel(video.contentStatus) }}</span
             >
-            <span class="badge-2nd" *ngIf="video.hasSecondaryVariant">2nd</span>
+            <span class="badge-2nd" *ngIf="video.variantCount"
+              >{{ video.variantCount }}/{{ totalDisplays > 1 ? totalDisplays - 1 : 1 }}</span
+            >
             <span class="duplicate-badge" *ngIf="video.isDuplicate">DOUBLON</span>
             <span class="for-this-site-badge" *ngIf="isUploadedForThisSite(video)">⭐</span>
           </div>
@@ -377,9 +379,9 @@
             <td class="col-variant">
               <span
                 class="badge-2nd"
-                *ngIf="video.hasSecondaryVariant"
-                title="Variante secondaire disponible pour le dual-display (2e écran)"
-                >2nd</span
+                *ngIf="video.variantCount"
+                [title]="'Variantes: ' + (video.variantTypes?.join(', ') || '')"
+                >{{ video.variantCount }}/{{ totalDisplays > 1 ? totalDisplays - 1 : 1 }}</span
               >
             </td>
             <td class="col-content-status">
@@ -587,7 +589,7 @@
       <span class="legend-item"><span class="legend-icon">✅</span> Sur le Pi</span>
       <span class="legend-item"><span class="legend-icon">⏳</span> À déployer</span>
     </ng-container>
-    <span class="legend-item"><span class="legend-icon">📺</span> Variante 2nd écran</span>
+    <span class="legend-item"><span class="legend-icon">📺</span> Variantes multi-ecran</span>
     <span class="legend-item"><span class="legend-icon">⚙️</span> Dans la config</span>
   </div>
 
@@ -633,7 +635,12 @@
           <span class="owner-type-badge" [ngClass]="'owner-' + detailVideo.ownerType">
             {{ getOwnerTypeLabel(detailVideo.ownerType) }}
           </span>
-          <span class="badge-2nd" *ngIf="detailVideo.hasSecondaryVariant">2nd écran</span>
+          <span class="badge-2nd" *ngIf="detailVideo.variantCount"
+            >📺 {{ detailVideo.variantCount }}/{{
+              totalDisplays > 1 ? totalDisplays - 1 : 1
+            }}
+            ecrans</span
+          >
           <span class="duplicate-badge" *ngIf="detailVideo.isDuplicate">DOUBLON</span>
         </div>
       </div>

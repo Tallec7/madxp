@@ -160,6 +160,8 @@ export interface Site {
   subscription_plan?: SubscriptionPlan;
   /** Per-site feature overrides set by super_admin */
   feature_overrides?: Record<string, boolean>;
+  /** N-display configuration (PROP-002 Phase 5H) */
+  displays?: DisplayConfig[] | null;
   /** Site suspendu manuellement */
   suspended?: boolean;
   /** Motif de suspension */
@@ -168,6 +170,14 @@ export interface Site {
   suspension_date?: string | null;
   /** Note de suspension */
   suspension_note?: string | null;
+}
+
+/** N-display configuration entry (PROP-002 Phase 5H) */
+export interface DisplayConfig {
+  index: number;
+  name: string;
+  type: string;       // 'tv', 'secondary', 'led-banner', 'totem', etc.
+  resolution?: string; // e.g. '1920x1080', '1920x384'
 }
 
 /**

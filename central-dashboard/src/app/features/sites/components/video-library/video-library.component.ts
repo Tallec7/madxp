@@ -31,6 +31,8 @@ export interface VideoItem {
   piSubcategory?: string | null;    // Subcategory from Pi filesystem
   advertiserName?: string | null;   // Advertiser company name (from advertiser_videos junction)
   hasSecondaryVariant?: boolean;    // Whether this video has a secondary display variant
+  variantCount?: number;            // Number of display variants (Phase 5H N-display)
+  variantTypes?: string[];          // Display types with variants (Phase 5H N-display)
   checksum?: string | null;         // File integrity checksum
   configRoles?: Set<string>;         // Roles in config: 'boucle', 'match', 'action' (empty = not in config)
   isDuplicate?: boolean;            // Whether another video shares the same checksum (duplicate file)
@@ -76,6 +78,8 @@ export class VideoLibraryComponent implements OnChanges {
   @Input() configVideoRoles: Map<string, Set<string>> = new Map(); // path → Set<'boucle'|'match'|'action'>
   @Input() pendingDeploymentVideoIds: Set<string> = new Set(); // IDs of videos with pending deployments
   @Input() secondaryVariantVideoIds: Set<string> = new Set(); // IDs of videos with secondary display variants
+  @Input() videoVariantInfo: Map<string, { count: number; types: string[] }> = new Map(); // Phase 5H: variant counts per video
+  @Input() totalDisplays: number = 1; // Phase 5H: total configured displays for X/N badge
   @Input() subscriptionPlan: string | null = null;
   @Input() featureOverrides: Record<string, boolean> | null = null;
 
@@ -255,6 +259,8 @@ export class VideoLibraryComponent implements OnChanges {
         piSubcategory: localMatch?.subcategory ?? null,
         advertiserName: cloud.advertiserName ?? null,
         hasSecondaryVariant: this.secondaryVariantVideoIds.has(cloud.id),
+        variantCount: this.videoVariantInfo.get(cloud.id)?.count ?? (this.secondaryVariantVideoIds.has(cloud.id) ? 1 : 0),
+        variantTypes: this.videoVariantInfo.get(cloud.id)?.types ?? (this.secondaryVariantVideoIds.has(cloud.id) ? ['secondary'] : []),
         checksum: cloud.checksum ?? null,
         configRoles,
         thumbnailUrl: cloud.thumbnail_url ?? null,
@@ -395,7 +401,7 @@ export class VideoLibraryComponent implements OnChanges {
     } else if (this.statusFilter === 'deploy_error') {
       filtered = filtered.filter(v => this.isDeployFailed(v));
     } else if (this.statusFilter === 'with_variant') {
-      filtered = filtered.filter(v => v.hasSecondaryVariant);
+      filtered = filtered.filter(v => (v.variantCount ?? 0) > 0);
     } else if (this.statusFilter === 'programmed') {
       filtered = filtered.filter(v => v.contentStatus !== 'available' && v.contentStatus !== 'to_deploy');
     } else if (this.statusFilter === 'available_only') {
@@ -455,7 +461,7 @@ export class VideoLibraryComponent implements OnChanges {
     this.filteredTotalDuration = filtered.reduce((sum, v) => sum + (v.duration || 0), 0);
     this.filteredStatsOnPi = filtered.filter(v => v.isOnPi).length;
     this.filteredStatsInConfig = filtered.filter(v => v.configRoles?.size).length;
-    this.filteredStatsWithVariant = filtered.filter(v => v.hasSecondaryVariant).length;
+    this.filteredStatsWithVariant = filtered.filter(v => (v.variantCount ?? 0) > 0).length;
     // ADR-050: content status stats
     this.filteredStatsProgrammed = filtered.filter(v => v.contentStatus !== 'available' && v.contentStatus !== 'to_deploy').length;
     this.filteredStatsAvailable = filtered.filter(v => v.contentStatus === 'available').length;
@@ -624,7 +630,7 @@ export class VideoLibraryComponent implements OnChanges {
       v.owner,
       v.isOnPi ? 'Oui' : 'Non',
       v.advertiserName || '',
-      v.hasSecondaryVariant ? 'Oui' : 'Non',
+      v.variantCount ? `${v.variantCount} (${v.variantTypes?.join(',') || ''})` : 'Non',
       v.configRoles?.size ? Array.from(v.configRoles).join('+') : 'Non',
       v.checksum || '',
     ]);
