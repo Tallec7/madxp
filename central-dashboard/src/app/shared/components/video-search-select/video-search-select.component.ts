@@ -183,7 +183,6 @@ export interface VideoOptionItem {
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
         z-index: 10000;
         max-height: 280px;
-        max-width: 400px;
         overflow-y: auto;
       }
 
@@ -327,7 +326,7 @@ export class VideoSearchSelectComponent implements OnChanges {
     const spaceBelow = window.innerHeight - rect.bottom;
     this.dropUp = spaceBelow < 300;
     this.dropdownLeft = rect.left;
-    this.dropdownWidth = Math.min(rect.width, 400);
+    this.dropdownWidth = rect.width;
     this.dropdownTop = this.dropUp ? rect.top - 280 : rect.bottom;
     this.cdr.markForCheck();
     setTimeout(() => {
