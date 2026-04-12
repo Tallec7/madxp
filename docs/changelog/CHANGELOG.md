@@ -1,3 +1,9 @@
+# [3.159.0](https://github.com/Tallec7/neopro/compare/v3.158.2...v3.159.0) (2026-04-12)
+
+### Features
+
+- **sponsors:** add profile filter tabs to site sponsors tab ([bcc45f9](https://github.com/Tallec7/neopro/commit/bcc45f9be0843d302e9363ceab5adaa976e271c3))
+
 ## [3.158.2](https://github.com/Tallec7/neopro/compare/v3.158.1...v3.158.2) (2026-04-12)
 
 ### Bug Fixes
