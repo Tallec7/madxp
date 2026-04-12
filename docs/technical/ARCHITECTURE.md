@@ -115,7 +115,7 @@ En plus de l'architecture Edge (Pi), Neopro propose un mode **100% SaaS** : le c
   - `video-library` : barre stockage Pi, badge "Sur le Pi", bouton deploy 🚀, filtres "Sur le Pi"/"À déployer" masqués
   - `video-manager` : boutons "Supprimer du Pi" masqués
   - `site-profiles-tab` : warning "Pi hors-ligne", bannière sync Pi masqués
-  - Régression prévenue par smoke tests (`SaaS child component guards` + `SaaS config save flow` dans `smoke.test.ts`) et règles `.claude/rules/saas.md`
+  - Régression prévenue par smoke tests (`SaaS child component guards` + `SaaS config save flow` dans `__tests__/smoke/smoke-saas.test.ts`) et règles `.claude/rules/saas.md`
 
 ---
 
@@ -1039,7 +1039,7 @@ Machine à états pour la perte de l'écran principal en mode dual-display :
 
 ### Smoke tests de régression (29 guards)
 
-Tous les invariants E-23 sont protégés par des smoke tests dans `central-server/src/__tests__/smoke.test.ts` — toute régression casse le CI.
+Tous les invariants E-23 sont protégés par des smoke tests dans `central-server/src/__tests__/smoke/` (12 fichiers par domaine) — toute régression casse le CI.
 
 ---
 

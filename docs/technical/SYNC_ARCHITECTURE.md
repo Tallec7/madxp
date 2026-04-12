@@ -1293,7 +1293,7 @@ Deux processus scannent wlan1 au boot : `hotspot-optimizer.sh` (shell, boot +12s
 **Code :** `network-detector.js` → `_readScanCache()` / `_writeScanCache()` / `scanWifiNetworks()`
 **Shell :** `hotspot-optimizer.sh` → `perform_single_scan()` écrit le cache si `SCAN_INTERFACE=wlan1`
 
-**Gardes de régression :** 4 smoke tests dans `smoke.test.ts` vérifient la présence du cache et la coordination inter-processus.
+**Gardes de régression :** 4 smoke tests dans `__tests__/smoke/smoke-network-wifi.test.ts` vérifient la présence du cache et la coordination inter-processus.
 
 ---
 

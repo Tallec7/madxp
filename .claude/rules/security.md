@@ -42,7 +42,7 @@ Toute route avec paramètre (`:id`, `:siteId`, etc.) DOIT avoir `validateParams(
 Tout POST/PUT/PATCH avec body DOIT avoir `validate()`.
 Tout GET avec query params DOIT avoir `validateQuery()`.
 
-Smoke tests dans `smoke.test.ts` vérifient automatiquement que chaque route paramétrée a `validateParams()`.
+Smoke tests dans `__tests__/smoke/smoke-dashboard-guards.test.ts` vérifient automatiquement que chaque route paramétrée a `validateParams()`.
 
 ## Audit
 
@@ -58,7 +58,7 @@ Rôle `club` = accès scoped à un seul site via `user.site_id` :
 - **Ownership guard vidéo** : `findVideoById()` → `uploaded_for_site_id !== user.site_id` → 403
 - **Guard NEOPRO** : les vidéos `category = 'NEOPRO'` ne peuvent être ni supprimées ni modifiées par les clubs
 - **Auto-tagging upload** : `uploaded_for_site_id` est injecté côté serveur (jamais confié au client)
-- Smoke tests : 7 tests dans `smoke.test.ts` (section "Club Portal video ownership guards")
+- Smoke tests : 7 tests dans `__tests__/smoke/smoke-saas.test.ts` (section "Club Portal video ownership guards")
 
 ## Remote Cloud (sans JWT)
 

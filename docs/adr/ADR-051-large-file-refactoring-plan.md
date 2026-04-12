@@ -14,7 +14,7 @@ Le codebase contient 31 fichiers source > 1000 lignes et ~45 entre 500-1000. Les
 
 Refactoring progressif en 4 phases, chaque fichier résultant ciblant < 400 lignes :
 
-1. **Phase 1 — Fondations** : `smoke.test.ts` (split par domaine → ~10 fichiers), `metrics.service.ts` (par domaine métrique), `alerting.service.ts` (notifiers + threshold + buffer)
+1. **Phase 1 — Fondations** : ~~`smoke.test.ts`~~ ✅ (splitté en 12 fichiers, 1221 tests, 2026-04-12), `metrics.service.ts` (par domaine m��trique), `alerting.service.ts` (notifiers + threshold + buffer)
 2. **Phase 2 — Controllers** : `content.controller.ts`, `site-fleet.controller.ts`, `analytics.controller.ts`, `advertiser-analytics.controller.ts` (extraction de services utilitaires)
 3. **Phase 3 — Services** : `socket.service.ts` (handlers par event), `safe-parser.service.ts` (parser + repo + cache)
 4. **Phase 4 — Angular** : `remote.component`, `cloud-remote.component`, `tv.component`, `updates-management.component` (sous-composants + templates externalisés)
@@ -35,7 +35,7 @@ Le split de `smoke.test.ts` est prioritaire car il permet de lancer les tests pa
 
 ## Fichiers impactés
 
-- `central-server/src/__tests__/smoke.test.ts` — split en ~10 fichiers par domaine (Phase 1)
+- `central-server/src/__tests__/smoke/` — ✅ splitté en 12 fichiers par domaine (Phase 1, done)
 - `central-server/src/services/metrics.service.ts` — split par domaine métrique (Phase 1)
 - `central-server/src/services/alerting.service.ts` — extraction notifiers/threshold/buffer (Phase 1)
 - `central-server/src/controllers/content.controller.ts` — extraction FileUtilities, VariantService (Phase 2)
