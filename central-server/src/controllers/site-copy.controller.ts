@@ -11,6 +11,8 @@ import {
 
 // Re-use helpers from sites.controller
 import { generateApiKey, hashApiKey } from './sites.controller';
+import { autoResolveSponsorIds } from '../services/sponsor-auto-resolution.service';
+import type { SiteConfiguration } from '../types';
 
 // ============================================================================
 // Config Copy & Site Duplication
@@ -95,6 +97,19 @@ export const copyConfig = async (req: AuthRequest, res: Response) => {
       }
       existingNames.add(name.toLowerCase());
 
+      // Ré-résoudre les site_sponsor_id vers les sponsors du site cible
+      let resolvedConfig = profile.configuration as SiteConfiguration;
+      try {
+        const { configuration: resolved, resolved: resolvedCount } =
+          await autoResolveSponsorIds(targetSiteId, resolvedConfig);
+        if (resolvedCount > 0) {
+          resolvedConfig = resolved;
+          logger.info('Sponsor auto-resolution in copied profile', {
+            sourceSiteId, targetSiteId, profileName: name, resolved: resolvedCount,
+          });
+        }
+      } catch { /* non-fatal */ }
+
       const copied = await configProfileRepository.create({
         siteId: targetSiteId,
         name,
@@ -103,7 +118,7 @@ export const copyConfig = async (req: AuthRequest, res: Response) => {
         sport: profile.sport || undefined,
         sortOrder: maxSortOrder + 1 + i,
         isDefault: false, // Ne jamais écraser le profil par défaut de la cible
-        configuration: profile.configuration,
+        configuration: resolvedConfig as Record<string, unknown>,
         createdBy: req.user?.id,
       });
       copiedProfiles.push(copied);
