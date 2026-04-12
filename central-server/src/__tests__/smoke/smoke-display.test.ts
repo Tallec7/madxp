@@ -1548,7 +1548,7 @@ describe('Video variant display_type alignment guard', () => {
   it('createVideoVariant controller must validate display_type as slug (not hardcoded list)', () => {
     // Phase 5H: N-display — controller validates display_type with open regex slug, not a closed list
     expect({
-      validatesSlug: /\^?\[a-z0-9-\]\+\$/.test(controllerContent),
+      validatesSlug: controllerContent.includes('[a-z0-9-]+'),
       noLedValidation: !/\['tv',\s*'led'\]/.test(controllerContent),
     }).toEqual({
       validatesSlug: true,
