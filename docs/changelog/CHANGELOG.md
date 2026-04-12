@@ -1,3 +1,9 @@
+## [3.159.3](https://github.com/Tallec7/neopro/compare/v3.159.2...v3.159.3) (2026-04-12)
+
+### Bug Fixes
+
+- **sponsors:** check loop presence against selected profile instead of default ([33d5911](https://github.com/Tallec7/neopro/commit/33d591119cfe160275c399420c566478c686dd8b))
+
 ## [3.159.2](https://github.com/Tallec7/neopro/compare/v3.159.1...v3.159.2) (2026-04-12)
 
 ### Bug Fixes
