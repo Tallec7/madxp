@@ -1,3 +1,9 @@
+# [3.157.0](https://github.com/Tallec7/neopro/compare/v3.156.0...v3.157.0) (2026-04-12)
+
+### Features
+
+- **variants:** allow selecting existing video as variant (not only upload) ([d47723e](https://github.com/Tallec7/neopro/commit/d47723eb022b6ec6aee87867923b14bc9be06817))
+
 # [3.156.0](https://github.com/Tallec7/neopro/compare/v3.155.1...v3.156.0) (2026-04-12)
 
 ### Features
