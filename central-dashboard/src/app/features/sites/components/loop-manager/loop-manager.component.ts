@@ -546,6 +546,38 @@ export class LoopManagerComponent implements OnInit, OnChanges {
     this.configChanged.emit();
   }
 
+  // === ADR-050: Card coloring by sponsor/weight ===
+
+  /** Returns a subtle background color for the card based on its sponsor color and weight */
+  getCardBackground(video: LoopVideoConfig): string | null {
+    const sid = this.getVideoSponsorId(video);
+    if (!sid) return null;
+    const videos = this.activeTab === 'default' ? this.config.sponsors : this.getPhaseVideos();
+    const colorMap = this.buildSponsorColorMap(videos);
+    const color = colorMap.get(sid);
+    if (!color) return null;
+    // Convert hex to rgba with low opacity scaled by weight (0.04 base + 0.02 per weight)
+    const weight = video.weight || 1;
+    const opacity = Math.min(0.04 + (weight - 1) * 0.02, 0.15);
+    return this.hexToRgba(color, opacity);
+  }
+
+  /** Returns the sponsor accent color for the left border */
+  getCardBorderColor(video: LoopVideoConfig): string | null {
+    const sid = this.getVideoSponsorId(video);
+    if (!sid) return null;
+    const videos = this.activeTab === 'default' ? this.config.sponsors : this.getPhaseVideos();
+    const colorMap = this.buildSponsorColorMap(videos);
+    return colorMap.get(sid) || null;
+  }
+
+  private hexToRgba(hex: string, alpha: number): string {
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+  }
+
   // === ADR-050 Phase 3: Drag & drop reorder ===
 
   dragIndex: number | null = null;

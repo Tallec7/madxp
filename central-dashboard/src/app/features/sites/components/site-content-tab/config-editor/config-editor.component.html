@@ -20,48 +20,79 @@
 
 <!-- Config Health Bar (pipeline summary) -->
 <div class="config-health-bar" *ngIf="config">
-  <a class="health-step" (click)="scrollToSection('library')" [class.ok]="totalVideoCount > 0"
-     title="Nombre total de vidéos disponibles (Pi + Cloud)">
+  <a
+    class="health-step"
+    (click)="scrollToSection('library')"
+    [class.ok]="totalVideoCount > 0"
+    title="Nombre total de vidéos disponibles (Pi + Cloud)"
+  >
     <span class="health-icon">📚</span>
     <span class="health-label">Vidéos</span>
     <span class="health-value">{{ totalVideoCount }}</span>
   </a>
   <span class="health-arrow">→</span>
-  <a class="health-step" (click)="scrollToSection('loops')" [class.ok]="hasPhaseLoops()" [class.warn]="!hasPhaseLoops() && config.sponsors.length > 0"
-     title="Les boucles par phase (avant-match/match/après-match) activent le tracking analytics. La boucle par défaut ne génère pas de données.">
+  <a
+    class="health-step"
+    (click)="scrollToSection('loops')"
+    [class.ok]="hasPhaseLoops()"
+    [class.warn]="!hasPhaseLoops() && config.sponsors.length > 0"
+    title="Les boucles par phase (avant-match/match/après-match) activent le tracking analytics. La boucle par défaut ne génère pas de données."
+  >
     <span class="health-icon">🔄</span>
     <span class="health-label">Boucles</span>
     <span class="health-value" *ngIf="hasPhaseLoops()">3 phases ✅</span>
     <span class="health-value warn" *ngIf="!hasPhaseLoops()">⚠️ défaut</span>
   </a>
   <span class="health-arrow">→</span>
-  <a class="health-step" (click)="scrollToSection('remote')" [class.ok]="getAssignedCategoryCount() > 0"
-     title="Catégories assignées aux phases de la télécommande">
+  <a
+    class="health-step"
+    (click)="scrollToSection('remote')"
+    [class.ok]="getAssignedCategoryCount() > 0"
+    title="Catégories assignées aux phases de la télécommande"
+  >
     <span class="health-icon">🎮</span>
     <span class="health-label">Télécommande</span>
     <span class="health-value">{{ getAssignedCategoryCount() }} catég.</span>
   </a>
   <ng-container *ngIf="!isClubUser">
     <span class="health-arrow">→</span>
-    <a class="health-step" (click)="scrollToSection('analytics')" [class.ok]="getUnmappedAnalyticsCount() === 0" [class.warn]="getUnmappedAnalyticsCount() > 0"
-       title="Chaque catégorie doit être mappée à un type analytics (sponsor, jingle, ambiance) pour apparaître dans les rapports">
+    <a
+      class="health-step"
+      (click)="scrollToSection('analytics')"
+      [class.ok]="getUnmappedAnalyticsCount() === 0"
+      [class.warn]="getUnmappedAnalyticsCount() > 0"
+      title="Chaque catégorie doit être mappée à un type analytics (sponsor, jingle, ambiance) pour apparaître dans les rapports"
+    >
       <span class="health-icon">📊</span>
       <span class="health-label">Analytics</span>
       <span class="health-value" *ngIf="getUnmappedAnalyticsCount() === 0">✅</span>
-      <span class="health-value warn" *ngIf="getUnmappedAnalyticsCount() > 0">⚠️ {{ getUnmappedAnalyticsCount() }} non mappés</span>
+      <span class="health-value warn" *ngIf="getUnmappedAnalyticsCount() > 0"
+        >⚠️ {{ getUnmappedAnalyticsCount() }} non mappés</span
+      >
     </a>
   </ng-container>
 </div>
 
 <!-- Impact Counters -->
-<div class="impact-counters" *ngIf="config && (getTrackedVideoCount() > 0 || getFallbackVideoCount() > 0)">
-  <span class="impact-tracked" *ngIf="getTrackedVideoCount() > 0"
-        title="Vidéos dans les boucles par phase — génèrent des impressions analytics">
+<div
+  class="impact-counters"
+  *ngIf="config && (getTrackedVideoCount() > 0 || getFallbackVideoCount() > 0)"
+>
+  <span
+    class="impact-tracked"
+    *ngIf="getTrackedVideoCount() > 0"
+    title="Vidéos dans les boucles par phase — génèrent des impressions analytics"
+  >
     ✅ {{ getTrackedVideoCount() }} vidéo(s) trackée(s)
   </span>
-  <span class="impact-separator" *ngIf="getTrackedVideoCount() > 0 && getFallbackVideoCount() > 0">·</span>
-  <span class="impact-fallback" *ngIf="getFallbackVideoCount() > 0"
-        title="Vidéos dans la boucle par défaut uniquement — aucune donnée analytics générée">
+  <span class="impact-separator" *ngIf="getTrackedVideoCount() > 0 && getFallbackVideoCount() > 0"
+    >·</span
+  >
+  <span
+    class="impact-fallback"
+    *ngIf="getFallbackVideoCount() > 0"
+    title="Vidéos dans la boucle par défaut uniquement — aucune donnée analytics générée"
+  >
     ⚠️ {{ getFallbackVideoCount() }} en fallback non tracké
   </span>
 </div>
@@ -70,9 +101,9 @@
 <div class="orphaned-warning-banner" *ngIf="orphanedVideoCount > 0">
   <span class="orphaned-warning-icon">&#9888;</span>
   <div class="orphaned-warning-content">
-    <strong>{{ orphanedVideoCount }} vidéo(s) introuvable(s)</strong> —
-    Des boutons pointent vers des vidéos dont le chemin ne correspond plus aux fichiers disponibles.
-    Ces boutons ne feront rien quand on appuie dessus.
+    <strong>{{ orphanedVideoCount }} vidéo(s) introuvable(s)</strong> — Des boutons pointent vers
+    des vidéos dont le chemin ne correspond plus aux fichiers disponibles. Ces boutons ne feront
+    rien quand on appuie dessus.
     <div class="orphaned-warning-actions" *ngIf="repairableOrphanCount > 0">
       <button class="btn btn-sm btn-primary" (click)="repairOrphans.emit()">
         Réparer automatiquement ({{ repairableOrphanCount }})
@@ -82,7 +113,8 @@
       <summary>Voir les détails</summary>
       <ul>
         <li *ngFor="let detail of orphanedVideoDetails">
-          <strong>{{ detail.location }}</strong>:
+          <strong>{{ detail.location }}</strong
+          >:
           <code>{{ detail.path }}</code>
           <span class="repair-hint" *ngIf="detail.repairable"> → {{ detail.suggestedPath }}</span>
           <span class="no-repair-hint" *ngIf="!detail.repairable"> (aucune correspondance)</span>
@@ -95,124 +127,213 @@
 <!-- ③ CATÉGORIES & TÉLÉCOMMANDE -->
 
 <ng-container *ngIf="!showJson">
+  <!-- Categories -->
+  <div class="section card">
+    <div class="section-header">
+      <h4>
+        <span class="section-icon">📁</span>
+        Catégories
+      </h4>
+      <button class="btn btn-sm btn-secondary" (click)="addCategory()">+ Catégorie</button>
+    </div>
+    <p class="section-desc">
+      Organisez vos vidéos en catégories accessibles depuis la télécommande.
+    </p>
 
-<!-- Categories -->
-<div class="section card">
-  <div class="section-header">
-    <h4>
-      <span class="section-icon">📁</span>
-      Catégories
-    </h4>
-    <button class="btn btn-sm btn-secondary" (click)="addCategory()">+ Catégorie</button>
-  </div>
-  <p class="section-desc">
-    Organisez vos vidéos en catégories accessibles depuis la télécommande.
-  </p>
-
-  <div class="categories-list" *ngIf="config.categories && config.categories.length > 0">
-    <div class="category-item" *ngFor="let cat of config.categories; let catIndex = index" [class.expanded]="expandedCategories[catIndex]" [class.neopro]="cat.owner === 'neopro'">
-      <div class="category-header" (click)="toggleCategory(catIndex)">
-        <span class="expand-icon">{{ expandedCategories[catIndex] ? '▼' : '▶' }}</span>
-        <span class="category-icon">📂</span>
-        <input
-          type="text"
-          [(ngModel)]="cat.name"
-          (ngModelChange)="emitConfigChanged()"
-          (click)="$event.stopPropagation()"
-          placeholder="Nom de la catégorie"
-          class="category-name-input"
-        />
-        <span class="category-stats">
-          {{ getCategoryVideoCount(cat) }} vidéo(s)
-        </span>
-        <div class="category-owner">
-          <span class="owner-badge" [class.neopro]="cat.owner === 'neopro'" [class.club]="cat.owner !== 'neopro'">
-            {{ cat.owner === 'neopro' ? '🔒 NEOPRO' : 'CLUB' }}
-          </span>
-        </div>
-        <button class="btn-remove-small" (click)="removeCategory(catIndex); $event.stopPropagation()">×</button>
-      </div>
-
-      <div class="category-content" *ngIf="expandedCategories[catIndex]">
-        <div class="category-videos">
-          <div class="videos-header">
-            <span>Vidéos</span>
-            <button class="btn-add-tiny" (click)="addVideoToCategory(catIndex)">+ Vidéo</button>
+    <div class="categories-list" *ngIf="config.categories && config.categories.length > 0">
+      <div
+        class="category-item"
+        *ngFor="let cat of config.categories; let catIndex = index"
+        [class.expanded]="expandedCategories[catIndex]"
+        [class.neopro]="cat.owner === 'neopro'"
+      >
+        <div class="category-header" (click)="toggleCategory(catIndex)">
+          <span class="expand-icon">{{ expandedCategories[catIndex] ? '▼' : '▶' }}</span>
+          <span class="category-icon">📂</span>
+          <input
+            type="text"
+            [(ngModel)]="cat.name"
+            (ngModelChange)="emitConfigChanged()"
+            (click)="$event.stopPropagation()"
+            placeholder="Nom de la catégorie"
+            class="category-name-input"
+          />
+          <span class="category-stats"> {{ getCategoryVideoCount(cat) }} vidéo(s) </span>
+          <div class="category-owner">
+            <span
+              class="owner-badge"
+              [class.neopro]="cat.owner === 'neopro'"
+              [class.club]="cat.owner !== 'neopro'"
+            >
+              {{ cat.owner === 'neopro' ? '🔒 NEOPRO' : 'CLUB' }}
+            </span>
           </div>
-          <div class="video-list-compact" *ngIf="cat.videos && cat.videos.length > 0">
-            <div class="video-row" *ngFor="let video of cat.videos; let vidIndex = index" [class.orphaned]="isOrphanedVideoPath(video.path)">
-              <app-video-search-select
-                [groups]="videoOptionGroups"
-                [selectedPath]="video.path"
-                (pathChange)="video.path = $event; emitConfigChanged()"
-                [placeholder]="'common.selectVideo' | translate"
-                [searchPlaceholder]="'common.searchVideoPlaceholder' | translate"
-                [emptyLabel]="'common.noVideoFound' | translate"
-                [invalid]="isOrphanedVideoPath(video.path)"
-                [compact]="true"
-                class="video-search-wrapper"
-              ></app-video-search-select>
-              <input
-                type="text"
-                [(ngModel)]="video.name"
-                (ngModelChange)="emitConfigChanged()"
-                placeholder="Nom affiché"
-                class="video-name-compact"
-              />
-              <span class="cloud-badge" *ngIf="siteType !== 'saas' && isCloudVideoPath(video.path)" title="Sera déployée automatiquement">⏳</span>
-              <button class="btn-variant-tiny" *ngIf="hasSecondaryVariantForPath(video.path)" (click)="onOpenVariant(video.path); $event.stopPropagation()" title="Gérer la variante secondaire">📺 2nd</button>
-              <button class="btn-variant-add-tiny" *ngIf="!hasSecondaryVariantForPath(video.path) && canAddVariantForPath(video.path)" (click)="onOpenVariant(video.path); $event.stopPropagation()" title="Ajouter variante secondaire">📺+</button>
-              <span class="sponsor-badge-auto" *ngIf="getCategorySponsor(video.path) as sponsor" [title]="'Associé au sponsor ' + sponsor.name">🔗 {{ sponsor.name }}</span>
-              <button class="btn-remove-tiny" (click)="removeVideoFromCategory(catIndex, vidIndex)">×</button>
+          <button
+            class="btn-remove-small"
+            (click)="removeCategory(catIndex); $event.stopPropagation()"
+          >
+            ×
+          </button>
+        </div>
+
+        <div class="category-content" *ngIf="expandedCategories[catIndex]">
+          <div class="category-videos">
+            <div class="videos-header">
+              <span>Vidéos</span>
+              <button class="btn-add-tiny" (click)="addVideoToCategory(catIndex)">+ Vidéo</button>
             </div>
-          </div>
-          <p class="empty-hint" *ngIf="!cat.videos || cat.videos.length === 0">Aucune vidéo</p>
-        </div>
-
-        <div class="subcategories">
-          <div class="subcats-header">
-            <span>Sous-catégories</span>
-            <button class="btn-add-tiny" (click)="addSubcategory(catIndex)">+ Sous-cat</button>
-          </div>
-          <div class="subcat-list" *ngIf="cat.subCategories && cat.subCategories.length > 0">
-            <div class="subcat-item" *ngFor="let subcat of cat.subCategories; let subIndex = index">
-              <div class="subcat-header">
-                <span class="subcat-icon">📁</span>
+            <div class="video-list-compact" *ngIf="cat.videos && cat.videos.length > 0">
+              <div
+                class="video-row"
+                *ngFor="let video of cat.videos; let vidIndex = index"
+                [class.orphaned]="isOrphanedVideoPath(video.path)"
+              >
+                <app-video-search-select
+                  [groups]="videoOptionGroups"
+                  [selectedPath]="video.path"
+                  (pathChange)="video.path = $event; emitConfigChanged()"
+                  [placeholder]="'common.selectVideo' | translate"
+                  [searchPlaceholder]="'common.searchVideoPlaceholder' | translate"
+                  [emptyLabel]="'common.noVideoFound' | translate"
+                  [invalid]="isOrphanedVideoPath(video.path)"
+                  [compact]="true"
+                  class="video-search-wrapper"
+                ></app-video-search-select>
                 <input
                   type="text"
-                  [(ngModel)]="subcat.name"
+                  [(ngModel)]="video.name"
                   (ngModelChange)="emitConfigChanged()"
-                  placeholder="Nom sous-catégorie"
-                  class="subcat-name-input"
+                  placeholder="Nom affiché"
+                  class="video-name-compact"
                 />
-                <span class="subcat-stats">{{ subcat.videos.length || 0 }} vidéo(s)</span>
-                <button class="btn-add-tiny" (click)="addVideoToSubcategory(catIndex, subIndex)">+ Vidéo</button>
-                <button class="btn-remove-tiny" (click)="removeSubcategory(catIndex, subIndex)">×</button>
+                <span
+                  class="cloud-badge"
+                  *ngIf="siteType !== 'saas' && isCloudVideoPath(video.path)"
+                  title="Sera déployée automatiquement"
+                  >⏳</span
+                >
+                <button
+                  class="btn-variant-tiny"
+                  *ngIf="hasSecondaryVariantForPath(video.path)"
+                  (click)="onOpenVariant(video.path); $event.stopPropagation()"
+                  title="Gérer la variante secondaire"
+                >
+                  📺 2nd
+                </button>
+                <button
+                  class="btn-variant-add-tiny"
+                  *ngIf="
+                    !hasSecondaryVariantForPath(video.path) && canAddVariantForPath(video.path)
+                  "
+                  (click)="onOpenVariant(video.path); $event.stopPropagation()"
+                  title="Ajouter variante secondaire"
+                >
+                  📺+
+                </button>
+                <span
+                  class="sponsor-badge-auto"
+                  *ngIf="getCategorySponsor(video.path) as sponsor"
+                  [title]="'Associé au sponsor ' + sponsor.name"
+                  >🔗 {{ sponsor.name }}</span
+                >
+                <button
+                  class="btn-remove-tiny"
+                  (click)="removeVideoFromCategory(catIndex, vidIndex)"
+                >
+                  ×
+                </button>
               </div>
-              <div class="subcat-videos" *ngIf="subcat.videos && subcat.videos.length > 0">
-                <div class="video-row" *ngFor="let video of subcat.videos; let vidIndex = index" [class.orphaned]="isOrphanedVideoPath(video.path)">
-                  <app-video-search-select
-                    [groups]="videoOptionGroups"
-                    [selectedPath]="video.path"
-                    (pathChange)="video.path = $event; emitConfigChanged()"
-                    [placeholder]="'common.selectVideo' | translate"
-                    [searchPlaceholder]="'common.searchVideoPlaceholder' | translate"
-                    [emptyLabel]="'common.noVideoFound' | translate"
-                    [invalid]="isOrphanedVideoPath(video.path)"
-                    class="video-select-compact"
-                  ></app-video-search-select>
+            </div>
+            <p class="empty-hint" *ngIf="!cat.videos || cat.videos.length === 0">Aucune vidéo</p>
+          </div>
+
+          <div class="subcategories">
+            <div class="subcats-header">
+              <span>Sous-catégories</span>
+              <button class="btn-add-tiny" (click)="addSubcategory(catIndex)">+ Sous-cat</button>
+            </div>
+            <div class="subcat-list" *ngIf="cat.subCategories && cat.subCategories.length > 0">
+              <div
+                class="subcat-item"
+                *ngFor="let subcat of cat.subCategories; let subIndex = index"
+              >
+                <div class="subcat-header">
+                  <span class="subcat-icon">📁</span>
                   <input
                     type="text"
-                    [(ngModel)]="video.name"
+                    [(ngModel)]="subcat.name"
                     (ngModelChange)="emitConfigChanged()"
-                    placeholder="Nom affiché"
-                    class="video-name-compact"
+                    placeholder="Nom sous-catégorie"
+                    class="subcat-name-input"
                   />
-                  <span class="cloud-badge" *ngIf="siteType !== 'saas' && isCloudVideoPath(video.path)" title="Sera déployée automatiquement">⏳</span>
-                  <button class="btn-variant-tiny" *ngIf="hasSecondaryVariantForPath(video.path)" (click)="onOpenVariant(video.path); $event.stopPropagation()" title="Gérer la variante secondaire">📺 2nd</button>
-                  <button class="btn-variant-add-tiny" *ngIf="!hasSecondaryVariantForPath(video.path) && canAddVariantForPath(video.path)" (click)="onOpenVariant(video.path); $event.stopPropagation()" title="Ajouter variante secondaire">📺+</button>
-                  <span class="sponsor-badge-auto" *ngIf="getCategorySponsor(video.path) as sponsor" [title]="'Associé au sponsor ' + sponsor.name">🔗 {{ sponsor.name }}</span>
-                  <button class="btn-remove-tiny" (click)="removeVideoFromSubcategory(catIndex, subIndex, vidIndex)">×</button>
+                  <span class="subcat-stats">{{ subcat.videos.length || 0 }} vidéo(s)</span>
+                  <button class="btn-add-tiny" (click)="addVideoToSubcategory(catIndex, subIndex)">
+                    + Vidéo
+                  </button>
+                  <button class="btn-remove-tiny" (click)="removeSubcategory(catIndex, subIndex)">
+                    ×
+                  </button>
+                </div>
+                <div class="subcat-videos" *ngIf="subcat.videos && subcat.videos.length > 0">
+                  <div
+                    class="video-row"
+                    *ngFor="let video of subcat.videos; let vidIndex = index"
+                    [class.orphaned]="isOrphanedVideoPath(video.path)"
+                  >
+                    <app-video-search-select
+                      [groups]="videoOptionGroups"
+                      [selectedPath]="video.path"
+                      (pathChange)="video.path = $event; emitConfigChanged()"
+                      [placeholder]="'common.selectVideo' | translate"
+                      [searchPlaceholder]="'common.searchVideoPlaceholder' | translate"
+                      [emptyLabel]="'common.noVideoFound' | translate"
+                      [invalid]="isOrphanedVideoPath(video.path)"
+                      class="video-select-compact"
+                    ></app-video-search-select>
+                    <input
+                      type="text"
+                      [(ngModel)]="video.name"
+                      (ngModelChange)="emitConfigChanged()"
+                      placeholder="Nom affiché"
+                      class="video-name-compact"
+                    />
+                    <span
+                      class="cloud-badge"
+                      *ngIf="siteType !== 'saas' && isCloudVideoPath(video.path)"
+                      title="Sera déployée automatiquement"
+                      >⏳</span
+                    >
+                    <button
+                      class="btn-variant-tiny"
+                      *ngIf="hasSecondaryVariantForPath(video.path)"
+                      (click)="onOpenVariant(video.path); $event.stopPropagation()"
+                      title="Gérer la variante secondaire"
+                    >
+                      📺 2nd
+                    </button>
+                    <button
+                      class="btn-variant-add-tiny"
+                      *ngIf="
+                        !hasSecondaryVariantForPath(video.path) && canAddVariantForPath(video.path)
+                      "
+                      (click)="onOpenVariant(video.path); $event.stopPropagation()"
+                      title="Ajouter variante secondaire"
+                    >
+                      📺+
+                    </button>
+                    <span
+                      class="sponsor-badge-auto"
+                      *ngIf="getCategorySponsor(video.path) as sponsor"
+                      [title]="'Associé au sponsor ' + sponsor.name"
+                      >🔗 {{ sponsor.name }}</span
+                    >
+                    <button
+                      class="btn-remove-tiny"
+                      (click)="removeVideoFromSubcategory(catIndex, subIndex, vidIndex)"
+                    >
+                      ×
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -220,56 +341,52 @@
         </div>
       </div>
     </div>
-  </div>
 
-  <div class="empty-state" *ngIf="!config.categories || config.categories.length === 0">
-    <p>Aucune catégorie définie</p>
-    <button class="btn btn-primary btn-sm" (click)="addCategory()">Créer une catégorie</button>
-  </div>
-</div>
-
-<!-- Remote Organization -->
-<div class="section card" id="section-remote">
-  <div class="section-header">
-    <h4>
-      <span class="section-icon">📱</span>
-      Organisation Télécommande
-    </h4>
-  </div>
-  <p class="section-desc">
-    Assigner les catégories aux blocs Avant-match / Match / Après-match
-  </p>
-
-  <div class="time-org-grid" *ngIf="config.categories && config.categories.length > 0">
-    <div class="time-org-column" *ngFor="let tc of cachedTimeCategories">
-      <div class="time-org-header">
-        <span class="time-org-icon">{{ tc.icon }}</span>
-        <div class="time-org-info">
-          <span class="time-org-name">{{ tc.name }}</span>
-          <span class="time-org-desc">{{ tc.description }}</span>
-        </div>
-      </div>
-      <div class="time-org-categories">
-        <label class="category-checkbox" *ngFor="let cat of config.categories">
-          <input
-            type="checkbox"
-            [checked]="isCategoryInTimeCategory(cat.id, tc.id)"
-            (change)="toggleCategoryInTimeCategory(cat.id, tc.id, $event)"
-          />
-          <span class="checkbox-label">{{ cat.name || 'Sans nom' }}</span>
-        </label>
-      </div>
+    <div class="empty-state" *ngIf="!config.categories || config.categories.length === 0">
+      <p>Aucune catégorie définie</p>
+      <button class="btn btn-primary btn-sm" (click)="addCategory()">Créer une catégorie</button>
     </div>
   </div>
-  <div class="empty-state small" *ngIf="!config.categories || config.categories.length === 0">
-    <p>Créez d'abord des catégories pour les assigner aux phases</p>
-  </div>
-</div>
 
+  <!-- Remote Organization -->
+  <div class="section card" id="section-remote">
+    <div class="section-header">
+      <h4>
+        <span class="section-icon">📱</span>
+        Organisation Télécommande
+      </h4>
+    </div>
+    <p class="section-desc">Assigner les catégories aux blocs Avant-match / Match / Après-match</p>
+
+    <div class="time-org-grid" *ngIf="config.categories && config.categories.length > 0">
+      <div class="time-org-column" *ngFor="let tc of cachedTimeCategories">
+        <div class="time-org-header">
+          <span class="time-org-icon">{{ tc.icon }}</span>
+          <div class="time-org-info">
+            <span class="time-org-name">{{ tc.name }}</span>
+            <span class="time-org-desc">{{ tc.description }}</span>
+          </div>
+        </div>
+        <div class="time-org-categories">
+          <label class="category-checkbox" *ngFor="let cat of config.categories">
+            <input
+              type="checkbox"
+              [checked]="isCategoryInTimeCategory(cat.id, tc.id)"
+              (change)="toggleCategoryInTimeCategory(cat.id, tc.id, $event)"
+            />
+            <span class="checkbox-label">{{ cat.name || 'Sans nom' }}</span>
+          </label>
+        </div>
+      </div>
+    </div>
+    <div class="empty-state small" *ngIf="!config.categories || config.categories.length === 0">
+      <p>Créez d'abord des catégories pour les assigner aux phases</p>
+    </div>
+  </div>
 </ng-container>
 
 <!-- ④ CONFIGURATION AVANCÉE (ADR-050 Phase 2) -->
-<details class="advanced-section" id="section-advanced">
+<details class="advanced-section" id="section-advanced" [open]="!isClubUser">
   <summary class="advanced-toggle">
     <span class="advanced-icon">⚙️</span>
     Configuration avancée
@@ -287,13 +404,29 @@
       </h4>
     </div>
     <p class="section-desc">
-      Contenu prévu sur l'écran secondaire. Les vidéos avec le badge 📺 ont une variante dédiée, les autres utiliseront un recadrage automatique.
+      Contenu prévu sur l'écran secondaire. Les vidéos avec le badge 📺 ont une variante dédiée, les
+      autres utiliseront un recadrage automatique.
     </p>
     <div class="secondary-preview-list">
-      <div *ngFor="let video of getSecondaryPlaylistVideos()" class="secondary-preview-item" [class.has-variant]="video.hasVariant" [class.no-variant]="!video.hasVariant">
+      <div
+        *ngFor="let video of getSecondaryPlaylistVideos()"
+        class="secondary-preview-item"
+        [class.has-variant]="video.hasVariant"
+        [class.no-variant]="!video.hasVariant"
+      >
         <span class="secondary-preview-name">{{ video.displayName }}</span>
-        <span class="secondary-preview-badge" *ngIf="video.hasVariant" title="Variante secondaire dédiée">📺 2nd</span>
-        <span class="secondary-preview-fallback" *ngIf="!video.hasVariant" title="Recadrage automatique (object-fit: cover)">recadrage auto</span>
+        <span
+          class="secondary-preview-badge"
+          *ngIf="video.hasVariant"
+          title="Variante secondaire dédiée"
+          >📺 2nd</span
+        >
+        <span
+          class="secondary-preview-fallback"
+          *ngIf="!video.hasVariant"
+          title="Recadrage automatique (object-fit: cover)"
+          >recadrage auto</span
+        >
       </div>
       <div *ngIf="getSecondaryPlaylistVideos().length === 0" class="secondary-preview-empty">
         Aucune vidéo dans la configuration actuelle.
@@ -310,8 +443,8 @@
       </h4>
     </div>
     <p class="section-desc">
-      Mapper les catégories vers les catégories analytics pour le reporting.
-      Si une catégorie a des sous-catégories, le mapping se fait au niveau des sous-catégories.
+      Mapper les catégories vers les catégories analytics pour le reporting. Si une catégorie a des
+      sous-catégories, le mapping se fait au niveau des sous-catégories.
     </p>
 
     <div class="analytics-mappings" *ngIf="config.categories && config.categories.length > 0">
