@@ -599,6 +599,14 @@ export class SiteSponsorsTabComponent implements OnInit, OnDestroy {
   }
 
   private isFilenameInLoop(filename: string): boolean {
+    // When a profile is selected, check against that profile's filenames
+    if (this.selectedProfileId) {
+      const profileFilenames = this.profileFilenamesCache.get(this.selectedProfileId);
+      if (profileFilenames) {
+        const bare = filename.split('/').pop() || filename;
+        return profileFilenames.has(filename) || profileFilenames.has(bare);
+      }
+    }
     return this.dataService.isFilenameInLoop(filename, this.videosInLoops);
   }
 
