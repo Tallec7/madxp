@@ -15297,7 +15297,8 @@ describe('SaaS child component guards (Pi-specific UI hidden for SaaS)', () => {
   // --- config-editor must propagate siteType to loop-manager ---
   it('config-editor must have siteType @Input and pass it to loop-manager', () => {
     const filePath = path.join(dashboardRoot, 'components', 'site-content-tab', 'config-editor', 'config-editor.component.ts');
-    const content = fs.readFileSync(filePath, 'utf8');
+    const htmlPath = filePath.replace('.component.ts', '.component.html');
+    const content = fs.readFileSync(filePath, 'utf8') + '\n' + (fs.existsSync(htmlPath) ? fs.readFileSync(htmlPath, 'utf8') : '');
     expect({
       hasSiteTypeInput: content.includes("@Input() siteType"),
       passesSiteTypeToLoopManager: /app-loop-manager[\s\S]{0,200}\[siteType\]/.test(content),
@@ -15538,7 +15539,8 @@ describe('SaaS config save flow', () => {
 
   it('config-editor must have JSON toggle view showing full config', () => {
     const filePath = path.join(dashboardRoot, 'components', 'site-content-tab', 'config-editor', 'config-editor.component.ts');
-    const content = fs.readFileSync(filePath, 'utf8');
+    const htmlPath = filePath.replace('.component.ts', '.component.html');
+    const content = fs.readFileSync(filePath, 'utf8') + '\n' + (fs.existsSync(htmlPath) ? fs.readFileSync(htmlPath, 'utf8') : '');
     // syncJsonFromConfig must serialize this.config (full), not a subset
     const showsFullConfig = /JSON\.stringify\(this\.config,/.test(content);
     const showsSubset = /configSubset\s*=\s*\{/.test(content);
@@ -16410,10 +16412,9 @@ describe('PROP-002 Phase 5: N-display model guards', () => {
 
   // --- config-editors must NOT use native <select> for video selection ---
   it('embedded config-editor must use video-search-select (not native select) for videos', () => {
-    const content = fs.readFileSync(
-      path.join(repoRoot, 'central-dashboard/src/app/features/sites/components/site-content-tab/config-editor/config-editor.component.ts'),
-      'utf8'
-    );
+    const tsPath = path.join(repoRoot, 'central-dashboard/src/app/features/sites/components/site-content-tab/config-editor/config-editor.component.ts');
+    const htmlPath = tsPath.replace('.component.ts', '.component.html');
+    const content = fs.readFileSync(tsPath, 'utf8') + '\n' + (fs.existsSync(htmlPath) ? fs.readFileSync(htmlPath, 'utf8') : '');
     expect({
       importsVideoSearchSelect: content.includes('VideoSearchSelectComponent'),
       usesAppVideoSearchSelect: content.includes('app-video-search-select'),

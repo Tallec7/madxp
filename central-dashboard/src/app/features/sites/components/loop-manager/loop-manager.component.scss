@@ -132,79 +132,6 @@
   margin: 0 0 0.75rem;
 }
 
-.loop-videos {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-  margin-bottom: 0.75rem;
-}
-
-.loop-video-row {
-  display: flex;
-  align-items: center;
-  gap: 0.375rem;
-  padding: 0.25rem 0.5rem;
-  background: #f8fafc;
-  border-radius: 8px;
-  border: 1px solid #e2e8f0;
-  flex-wrap: wrap;
-}
-
-.loop-video-row.neopro {
-  background: #fefce8;
-  border-color: #fde047;
-}
-
-.loop-video-row.orphaned {
-  background: #fef2f2;
-  border-color: #fca5a5;
-  border-left: 3px solid #dc2626;
-}
-
-.video-order {
-  width: 24px;
-  height: 24px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #e2e8f0;
-  border-radius: 50%;
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: #475569;
-}
-
-.video-fields {
-  flex: 1;
-  display: flex;
-  gap: 0.5rem;
-  align-items: center;
-  min-width: 0;
-  flex-wrap: wrap;
-}
-
-.video-name-input {
-  width: 150px;
-  padding: 0.375rem 0.5rem;
-  border: 1px solid #e2e8f0;
-  border-radius: 4px;
-  font-size: 0.8125rem;
-}
-
-.video-select {
-  flex: 1;
-  min-width: 0;
-  padding: 0.375rem 0.5rem;
-  border: 1px solid #e2e8f0;
-  border-radius: 4px;
-  font-size: 0.8125rem;
-}
-
-.video-select.has-cloud-video {
-  border-color: #f59e0b;
-  background: #fffbeb;
-}
-
 .cloud-hint {
   font-size: 0.6875rem;
   color: #92400e;
@@ -232,27 +159,6 @@
   cursor: help;
 }
 
-.error-hint {
-  font-size: 0.6875rem;
-  color: #dc2626;
-}
-
-.video-owner {
-  display: flex;
-  gap: 0.5rem;
-}
-
-.owner-radio {
-  display: flex;
-  align-items: center;
-  gap: 0.25rem;
-  cursor: pointer;
-}
-
-.owner-radio input {
-  margin: 0;
-}
-
 .owner-label {
   font-size: 0.625rem;
   font-weight: 600;
@@ -268,12 +174,6 @@
 .owner-label.neopro {
   background: #fef3c7;
   color: #92400e;
-}
-
-.loop-video-row.pinned-row {
-  background: #fefce8;
-  border-color: #fde047;
-  border-left: 3px solid #f59e0b;
 }
 
 .btn-pin {
@@ -302,33 +202,6 @@
   border-color: #f59e0b;
 }
 
-.btn-remove,
-.btn-remove-sm {
-  border: none;
-  border-radius: 4px;
-  background: #fee2e2;
-  color: #dc2626;
-  cursor: pointer;
-  transition: all 0.15s;
-}
-
-.btn-remove {
-  width: 28px;
-  height: 28px;
-  font-size: 1.25rem;
-}
-
-.btn-remove-sm {
-  width: 24px;
-  height: 24px;
-  font-size: 1rem;
-}
-
-.btn-remove:hover,
-.btn-remove-sm:hover {
-  background: #fecaca;
-}
-
 /* Empty state */
 .loop-empty,
 .phase-empty {
@@ -354,15 +227,7 @@
   margin-top: 0.5rem;
 }
 
-/* Duration */
-.video-duration {
-  font-size: 0.75rem;
-  color: #64748b;
-  min-width: 40px;
-  text-align: right;
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}
+
 
 .loop-footer {
   padding: 0.5rem 1.25rem 0.75rem;
@@ -621,11 +486,7 @@
     padding: 0.75rem 0.75rem 0;
   }
 
-  .loop-video-row {
-    flex-wrap: wrap;
-    gap: 0.5rem;
-    padding: 0.625rem;
-  }
+
 
   .video-fields {
     flex-basis: calc(100% - 36px);

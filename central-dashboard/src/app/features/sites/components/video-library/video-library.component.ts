@@ -2,7 +2,7 @@ import { Component, Input, Output, EventEmitter, OnChanges, SimpleChanges, Chang
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TranslateModule } from '@ngx-translate/core';
-import { LocalVideo, CloudVideo, LocalStorage } from '../../../../core/models';
+import { LocalVideo, CloudVideo, LocalStorage, SiteSponsor } from '../../../../core/models';
 import { FeatureGateService } from '../../../../core/services/feature-gate.service';
 
 /** Content status — calculated from the active config (ADR-050 Phase 1) */
@@ -70,7 +70,7 @@ export class VideoLibraryComponent implements OnChanges {
   @Input() subscriptionPlan: string | null = null;
   @Input() featureOverrides: Record<string, boolean> | null = null;
 
-  @Input() siteSponsors: { video_filename?: string }[] = []; // ADR-050: sponsors for status calc
+  @Input() siteSponsors: SiteSponsor[] = []; // ADR-050: sponsors for status calc
 
   @Output() videoSelect = new EventEmitter<VideoItem>();
   @Output() videoPreview = new EventEmitter<VideoItem>();
@@ -306,7 +306,7 @@ export class VideoLibraryComponent implements OnChanges {
 
   /** Check if a video's advertiser is linked as a site sponsor */
   private isVideoSponsorLinked(advertiserName: string): boolean {
-    return this.siteSponsors.some(s => s.video_filename);
+    return this.siteSponsors.some(s => s.video_filenames?.length);
   }
 
   toggleSort(field: SortField): void {

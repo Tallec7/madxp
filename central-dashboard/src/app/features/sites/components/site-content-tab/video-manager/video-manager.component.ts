@@ -5,7 +5,7 @@ import { SitesService } from '../../../../../core/services/sites.service';
 import { SiteCommandService } from '../../../../../core/services/site-command.service';
 import { NotificationService } from '../../../../../core/services/notification.service';
 import { ErrorExtractor } from '../../../../../core/utils/error-extractor';
-import { LocalVideo, CloudVideo, LocalStorage } from '../../../../../core/models';
+import { LocalVideo, CloudVideo, LocalStorage, SiteSponsor } from '../../../../../core/models';
 import { VideoLibraryComponent, VideoItem, VideoDeployState } from '../../video-library/video-library.component';
 import { VideoUploadZoneComponent, UploadedVideo } from '../../../../../shared/components/video-upload-zone/video-upload-zone.component';
 import { VideoVariantPanelComponent } from '../../../../content/video-variant-panel.component';
@@ -188,7 +188,7 @@ export class VideoManagerComponent {
   @Input() secondaryVariantVideoIds: Set<string> = new Set();
   @Input() subscriptionPlan: string | null = null;
   @Input() featureOverrides: Record<string, boolean> | null = null;
-  @Input() siteSponsors: { video_filename?: string }[] = []; // ADR-050
+  @Input() siteSponsors: SiteSponsor[] = []; // ADR-050
 
   @Output() videoUploaded = new EventEmitter<UploadedVideo>();
   @Output() allVideosUploaded = new EventEmitter<UploadedVideo[]>();
