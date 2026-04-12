@@ -136,6 +136,17 @@ export const schemas = {
     feature_overrides: Joi.object().pattern(Joi.string(), Joi.boolean()).optional(),
   }),
 
+  updateDisplays: Joi.object({
+    displays: Joi.array().items(
+      Joi.object({
+        index: Joi.number().integer().min(0).required(),
+        name: Joi.string().max(100).required(),
+        type: Joi.string().pattern(/^[a-z0-9-]+$/).max(50).required(),
+        resolution: Joi.string().pattern(/^\d{1,5}x\d{1,5}$/).max(20).optional(),
+      })
+    ).min(1).max(20).required(),
+  }),
+
   createGroup: Joi.object({
     name: Joi.string().required(),
     description: Joi.string().optional().allow(''),
@@ -650,13 +661,21 @@ export const schemas = {
 
   createProfile: Joi.object({
     name: Joi.string().min(1).max(255).required(),
-    description: Joi.string().max(1000).optional().allow(null, ''),
+    display_name: Joi.string().max(255).optional().allow(null, ''),
+    city: Joi.string().max(255).optional().allow(null, ''),
+    sport: Joi.string().max(100).optional().allow(null, ''),
+    sort_order: Joi.number().integer().min(0).default(0),
+    is_default: Joi.boolean().default(false),
     configuration: Joi.object().optional(),
   }),
 
   updateProfile: Joi.object({
     name: Joi.string().min(1).max(255).optional(),
-    description: Joi.string().max(1000).optional().allow(null, ''),
+    display_name: Joi.string().max(255).optional().allow(null, ''),
+    city: Joi.string().max(255).optional().allow(null, ''),
+    sport: Joi.string().max(100).optional().allow(null, ''),
+    sort_order: Joi.number().integer().min(0).optional(),
+    is_default: Joi.boolean().optional(),
   }),
 
   updateProfileConfiguration: Joi.object({
