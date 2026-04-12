@@ -825,7 +825,8 @@ describe('Pi Socket.IO resilience guards', () => {
     serverContent = fs.readFileSync(serverPath, 'utf8');
     socketServiceContent = fs.readFileSync(socketServicePath, 'utf8');
     doubleBufferContent = fs.readFileSync(doubleBufferPath, 'utf8');
-    tvComponentContent = fs.readFileSync(tvComponentPath, 'utf8');
+    tvComponentContent = fs.readFileSync(tvComponentPath, 'utf8') +
+      fs.readFileSync(path.join(repoRoot, 'raspberry/src/app/services/tv-sync.service.ts'), 'utf8');
   });
 
   it('server.js must configure pingInterval and pingTimeout for Socket.IO', () => {

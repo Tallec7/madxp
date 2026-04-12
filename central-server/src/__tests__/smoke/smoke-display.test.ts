@@ -1228,10 +1228,12 @@ describe('E-23 check_secondary_chromium transition guards', () => {
 describe('E-22 TvComponent master-slave sync guards', () => {
   const repoRoot = path.resolve(__dirname, '..', '..', '..', '..');
   const tvPath = path.join(repoRoot, 'raspberry/src/app/components/tv/tv.component.ts');
+  const tvSyncPath = path.join(repoRoot, 'raspberry/src/app/services/tv-sync.service.ts');
 
   let content: string;
   beforeAll(() => {
-    content = fs.readFileSync(tvPath, 'utf8');
+    // After ADR-042/043 extraction, master-slave sync logic is split between tv.component.ts and tv-sync.service.ts
+    content = fs.readFileSync(tvPath, 'utf8') + '\n' + fs.readFileSync(tvSyncPath, 'utf8');
   });
 
   // Guard: slave must pause players when role is assigned (stop independent loop)
@@ -1343,7 +1345,9 @@ describe('E-22 TvComponent master-slave sync guards', () => {
 describe('E-23 US-23.7.5: analytics displayType guard', () => {
   const repoRoot = path.resolve(__dirname, '..', '..', '..', '..');
   const tvPath = path.join(repoRoot, 'raspberry/src/app/components/tv/tv.component.ts');
-  const tvContent = fs.readFileSync(tvPath, 'utf-8');
+  const manualVideoPath = path.join(repoRoot, 'raspberry/src/app/services/manual-video.service.ts');
+  // After ADR-042/043 extraction, analytics tracking is split between tv.component.ts and manual-video.service.ts
+  const tvContent = fs.readFileSync(tvPath, 'utf-8') + '\n' + fs.readFileSync(manualVideoPath, 'utf-8');
 
   it('all trackVideoStart calls must be guarded by displayType === tv', () => {
     // Find all lines that call trackVideoStart
@@ -1355,9 +1359,10 @@ describe('E-23 US-23.7.5: analytics displayType guard', () => {
     expect(trackStartLines.length).toBeGreaterThanOrEqual(3);
 
     // Each trackVideoStart must be preceded (within 12 lines) by a displayType === 'tv' guard
+    // After ADR-042/043 extraction, the guard may use getDisplayType() === 'tv' in services
     for (const { num } of trackStartLines) {
       const context = lines.slice(Math.max(0, num - 13), num).join(' ');
-      expect(context).toMatch(/displayType\s*===\s*'tv'/);
+      expect(context).toMatch(/(?:displayType|getDisplayType\(\))\s*===\s*'tv'/);
     }
   });
 
@@ -1369,9 +1374,10 @@ describe('E-23 US-23.7.5: analytics displayType guard', () => {
 
     expect(trackEndLines.length).toBeGreaterThanOrEqual(3);
 
+    // After ADR-042/043 extraction, the guard may use getDisplayType() === 'tv' in services
     for (const { num } of trackEndLines) {
       const context = lines.slice(Math.max(0, num - 6), num).join(' ');
-      expect(context).toMatch(/displayType\s*===\s*'tv'/);
+      expect(context).toMatch(/(?:displayType|getDisplayType\(\))\s*===\s*'tv'/);
     }
   });
 });
@@ -1805,7 +1811,8 @@ describe('Secondary video deployment UI guards', () => {
 
   beforeAll(() => {
     cloudRemoteHtml = fs.readFileSync(cloudRemoteHtmlPath, 'utf8');
-    cloudRemoteTs = fs.readFileSync(cloudRemoteTsPath, 'utf8');
+    cloudRemoteTs = fs.readFileSync(cloudRemoteTsPath, 'utf8') +
+      readAllTsInDir2(path.join(repoRoot, 'central-dashboard/src/app/features/remote/services'));
     cloudRemoteScss = fs.readFileSync(cloudRemoteScssPath, 'utf8');
     siteDetailContent = fs.readFileSync(siteDetailPath, 'utf8') +
       fs.readFileSync(siteDetailPath.replace('.component.ts', '.component.html'), 'utf8');
@@ -2611,32 +2618,36 @@ describe('E-41 secondary videos serving guard', () => {
 describe('ADR-033 slave race condition guard (tv.component.ts)', () => {
   const repoRoot = path.resolve(__dirname, '..', '..', '..', '..');
   const tvComponentPath = path.join(repoRoot, 'raspberry/src/app/components/tv/tv.component.ts');
-  let content: string;
-  beforeAll(() => { content = fs.readFileSync(tvComponentPath, 'utf8'); });
+  const manualVideoPath = path.join(repoRoot, 'raspberry/src/app/services/manual-video.service.ts');
+  const tvSyncPath = path.join(repoRoot, 'raspberry/src/app/services/tv-sync.service.ts');
+  let tvContent: string;
+  let manualContent: string;
+  let syncContent: string;
+  beforeAll(() => {
+    tvContent = fs.readFileSync(tvComponentPath, 'utf8');
+    manualContent = fs.readFileSync(manualVideoPath, 'utf8');
+    syncContent = fs.readFileSync(tvSyncPath, 'utf8');
+  });
 
   it('action handler must set _lastActionReceivedAt timestamp', () => {
-    // The action/command handler must record a timestamp to enable the stale state guard.
-    // Pattern: _lastActionReceivedAt = Date.now() must appear in handleTvCommand or inline action handler.
-    const handleTvBlock = content.match(/private handleTvCommand[\s\S]*?^  \}/m);
-    const actionBlock = handleTvBlock
-      ? handleTvBlock[0]
-      : content.slice(
-          content.indexOf("socketService.on('action'"),
-          content.indexOf("socketService.on('action'") + 600
-        );
+    // After ADR-042/043 extraction, handleTvCommand calls tvSyncService.markActionReceived()
+    // which sets _lastActionReceivedAt = Date.now() in tv-sync.service.ts
+    const handleTvBlock = tvContent.match(/private handleTvCommand[\s\S]*?^  \}/m);
+    const actionBlock = handleTvBlock ? handleTvBlock[0] : '';
+    const markActionMethod = syncContent.match(/markActionReceived[\s\S]*?^  \}/m);
     expect({
-      setsTimestamp: /_lastActionReceivedAt\s*=\s*Date\.now\(\)/.test(actionBlock),
+      setsTimestamp: /markActionReceived/.test(actionBlock)
+        && /_lastActionReceivedAt\s*=\s*Date\.now\(\)/.test(markActionMethod?.[0] || ''),
     }).toEqual({
       setsTimestamp: true,
     });
   });
 
   it('handleMasterLoopState CAS 2 must check _lastActionReceivedAt guard before stopping manual', () => {
-    // CAS 2 must NOT blindly call stopManualVideoAndReturnToLoop when isManualMode is true.
-    // It must first check if a recent action was received (guard window).
-    const cas2Block = content.slice(
-      content.indexOf('CAS 2'),
-      content.indexOf('CAS 2') + 800
+    // After extraction, handleMasterLoopState is in tv-sync.service.ts
+    const cas2Block = syncContent.slice(
+      syncContent.indexOf('CAS 2'),
+      syncContent.indexOf('CAS 2') + 800
     );
     expect({
       hasGuard: /_lastActionReceivedAt/.test(cas2Block),
@@ -2646,16 +2657,13 @@ describe('ADR-033 slave race condition guard (tv.component.ts)', () => {
   });
 
   it('play() must emit immediate tv-loop-update with isManualMode:true for master', () => {
-    // The master must emit tv-loop-update with isManualMode: true IMMEDIATELY in play(),
-    // not just after the 2×rAF + 200ms delay. This reduces the window where stale
-    // tv-loop-state (isManualMode: false) can reach slaves.
-    // Look for the emission between isManualMode = true and 'ÉTAPE 1'
-    const playMethod = content.slice(
-      content.indexOf('isManualMode = true;'),
-      content.indexOf('ÉTAPE 1')
+    // After extraction, play() is in manual-video.service.ts
+    const playMethod = manualContent.slice(
+      manualContent.indexOf('isManualMode = true;'),
+      manualContent.indexOf('ETAPE 1') > 0 ? manualContent.indexOf('ETAPE 1') : manualContent.indexOf('isManualMode = true;') + 500
     );
     expect({
-      hasImmediateEmit: /emit\('tv-loop-update'/.test(playMethod) && /isManualMode:\s*true/.test(playMethod),
+      hasImmediateEmit: /emitLoopUpdate/.test(playMethod) && /isManualMode:\s*true/.test(playMethod),
     }).toEqual({
       hasImmediateEmit: true,
     });
@@ -2665,6 +2673,8 @@ describe('ADR-033 slave race condition guard (tv.component.ts)', () => {
 describe('ADR-034 synchronized manual video reveal', () => {
   const repoRoot = path.resolve(__dirname, '..', '..', '..', '..');
   const tvComponentPath = path.join(repoRoot, 'raspberry/src/app/components/tv/tv.component.ts');
+  const manualVideoServicePath = path.join(repoRoot, 'raspberry/src/app/services/manual-video.service.ts');
+  const tvSyncServicePath = path.join(repoRoot, 'raspberry/src/app/services/tv-sync.service.ts');
   const socketServicePath = path.join(repoRoot, 'raspberry/src/app/services/socket.service.ts');
   const stateServicePath = path.join(repoRoot, 'raspberry/server/services/state.service.js');
   let tvContent: string;
@@ -2672,7 +2682,10 @@ describe('ADR-034 synchronized manual video reveal', () => {
   let stateContent: string;
 
   beforeAll(() => {
-    tvContent = fs.readFileSync(tvComponentPath, 'utf8');
+    // After ADR-042/043 extraction, manual video and sync logic are in separate services
+    tvContent = fs.readFileSync(tvComponentPath, 'utf8')
+      + '\n' + fs.readFileSync(manualVideoServicePath, 'utf8')
+      + '\n' + fs.readFileSync(tvSyncServicePath, 'utf8');
     socketContent = fs.readFileSync(socketServicePath, 'utf8');
     stateContent = fs.readFileSync(stateServicePath, 'utf8');
   });
@@ -2703,9 +2716,10 @@ describe('ADR-034 synchronized manual video reveal', () => {
 
   it('Master play() immediate emission MUST include manualVideoVisible: false', () => {
     // The FIRST emission in play() (before freeze-frame) must signal slaves to preload, not reveal
+    // After extraction, play() is in manual-video.service.ts; accents simplified to ASCII
     const playMethod = tvContent.slice(
       tvContent.indexOf('isManualMode = true;'),
-      tvContent.indexOf('ÉTAPE 1')
+      tvContent.indexOf('ETAPE 1') > 0 ? tvContent.indexOf('ETAPE 1') : tvContent.indexOf('isManualMode = true;') + 500
     );
     expect({
       hasVisibleFalse: /manualVideoVisible:\s*false/.test(playMethod),
@@ -2716,11 +2730,9 @@ describe('ADR-034 synchronized manual video reveal', () => {
 
   it('Master play() delayed emission MUST include manualVideoVisible: true', () => {
     // The SECOND emission (after 2×rAF + 200ms) must signal slaves to reveal.
-    // play() spans ~7000 chars due to freeze-frame, double-buffer, and error recovery logic.
-    const fullPlayMethod = tvContent.slice(
-      tvContent.indexOf('private play(video: Video)'),
-      tvContent.indexOf('private play(video: Video)') + 7500
-    );
+    // After extraction, play() is in manual-video.service.ts (public, not private)
+    const playStart = tvContent.indexOf('play(video: Video)');
+    const fullPlayMethod = tvContent.slice(playStart, playStart + 7500);
     // Count occurrences of manualVideoVisible in play()
     const visibleFalseCount = (fullPlayMethod.match(/manualVideoVisible:\s*false/g) || []).length;
     const visibleTrueCount = (fullPlayMethod.match(/manualVideoVisible:\s*true/g) || []).length;
@@ -2735,7 +2747,7 @@ describe('ADR-034 synchronized manual video reveal', () => {
 
   it('Slave action handler MUST call preloadManualVideo instead of play', () => {
     // When isSlaveMode is true, the command handler must call preloadManualVideo, not play.
-    // The logic can be in handleTvCommand (centralized) or inline in the action handler.
+    // After extraction, handleTvCommand delegates to manualVideoService.preloadManualVideo / .play
     const handleTvBlock = tvContent.match(/private handleTvCommand[\s\S]*?^  \}/m);
     const actionBlock = handleTvBlock
       ? handleTvBlock[0]
@@ -2745,7 +2757,7 @@ describe('ADR-034 synchronized manual video reveal', () => {
         );
     expect({
       hasSlavePreload: /isSlaveMode[\s\S]*preloadManualVideo/.test(actionBlock),
-      masterStillCallsPlay: /else\s*\{[\s\S]*?this\.play\(/.test(actionBlock),
+      masterStillCallsPlay: /else\s*\{[\s\S]*?\.play\(/.test(actionBlock),
     }).toEqual({
       hasSlavePreload: true,
       masterStillCallsPlay: true,
@@ -2767,8 +2779,8 @@ describe('ADR-034 synchronized manual video reveal', () => {
     expect({
       hasSlaveCheck: /isSlaveMode/.test(localBroadcastBlock),
       hasPreload: /preloadManualVideo/.test(localBroadcastBlock),
-      hasLastActionTimestamp: /_lastActionReceivedAt/.test(localBroadcastBlock),
-      masterStillCallsPlay: /else\s*\{[\s\S]*?this\.play\(/.test(localBroadcastBlock),
+      hasLastActionTimestamp: /markActionReceived|_lastActionReceivedAt/.test(localBroadcastBlock),
+      masterStillCallsPlay: /else\s*\{[\s\S]*?\.play\(/.test(localBroadcastBlock),
     }).toEqual({
       hasSlaveCheck: true,
       hasPreload: true,
@@ -2824,7 +2836,7 @@ describe('ADR-034 synchronized manual video reveal', () => {
       tvContent.indexOf('CAS 2')
     );
     expect({
-      hasDirectPlay: /this\.play\(resolvedVideo\)/.test(cas1Block),
+      hasDirectPlay: /\.play\(resolvedVideo\)/.test(cas1Block),
       hasBackwardCompatComment: /backward compat/i.test(cas1Block),
     }).toEqual({
       hasDirectPlay: true,
@@ -2845,10 +2857,9 @@ describe('ADR-034 synchronized manual video reveal', () => {
   });
 
   it('emitLoopState MUST include manualVideoVisible: false', () => {
-    const emitMethod = tvContent.slice(
-      tvContent.indexOf('private emitLoopState'),
-      tvContent.indexOf('private emitLoopState') + 500
-    );
+    // After extraction, emitLoopState is public in tv-sync.service.ts
+    const emitIdx = tvContent.indexOf('emitLoopState(videoIndex: number');
+    const emitMethod = tvContent.slice(emitIdx, emitIdx + 500);
     expect({
       hasVisibleFalse: /manualVideoVisible:\s*false/.test(emitMethod),
     }).toEqual({
@@ -2860,17 +2871,23 @@ describe('ADR-034 synchronized manual video reveal', () => {
 describe('ADR-034 preload-reveal metrics pipeline', () => {
   const repoRoot = path.resolve(__dirname, '..', '..', '..', '..');
   let tvContent: string;
+  let manualContent: string;
+  let syncContent: string;
   let stateContent: string;
 
   beforeAll(() => {
     tvContent = fs.readFileSync(path.join(repoRoot, 'raspberry/src/app/components/tv/tv.component.ts'), 'utf8');
+    manualContent = fs.readFileSync(path.join(repoRoot, 'raspberry/src/app/services/manual-video.service.ts'), 'utf8');
+    syncContent = fs.readFileSync(path.join(repoRoot, 'raspberry/src/app/services/tv-sync.service.ts'), 'utf8');
     stateContent = fs.readFileSync(path.join(repoRoot, 'raspberry/server/services/state.service.js'), 'utf8');
   });
 
   it('tv.component transitionMetrics MUST include preloadRevealCount and preloadCleanupCount', () => {
+    // After extraction, preloadRevealCount/preloadCleanupCount are in manual-video.service.ts and tv-sync.service.ts
+    const combined = tvContent + manualContent + syncContent;
     expect({
-      hasReveal: tvContent.includes('preloadRevealCount'),
-      hasCleanup: tvContent.includes('preloadCleanupCount'),
+      hasReveal: combined.includes('preloadRevealCount'),
+      hasCleanup: combined.includes('preloadCleanupCount'),
     }).toEqual({
       hasReveal: true,
       hasCleanup: true,
@@ -2878,27 +2895,23 @@ describe('ADR-034 preload-reveal metrics pipeline', () => {
   });
 
   it('revealPreloadedVideo MUST increment preloadRevealCount', () => {
-    const revealMethod = tvContent.slice(
-      tvContent.indexOf('private revealPreloadedVideo'),
-      tvContent.indexOf('private revealPreloadedVideo') + 2500
-    );
+    // After extraction, revealPreloadedVideo is in manual-video.service.ts
+    const revealStart = manualContent.indexOf('revealPreloadedVideo(): void');
+    const revealMethod = manualContent.slice(revealStart, revealStart + 2500);
     expect(revealMethod).toMatch(/preloadRevealCount\+\+/);
   });
 
   it('cleanupPreloadState MUST increment preloadCleanupCount', () => {
-    const cleanupMethod = tvContent.slice(
-      tvContent.indexOf('private cleanupPreloadState'),
-      tvContent.indexOf('private cleanupPreloadState') + 500
-    );
+    // After extraction, cleanupPreloadState is in manual-video.service.ts
+    const cleanupStart = manualContent.indexOf('cleanupPreloadState(): void');
+    const cleanupMethod = manualContent.slice(cleanupStart, cleanupStart + 500);
     expect(cleanupMethod).toMatch(/preloadCleanupCount\+\+/);
   });
 
   it('emitTransitionMetrics slave branch MUST emit preloadRevealCount and preloadCleanupCount', () => {
-    // After ADR-042 extraction, method renamed to emitSlaveTransitionMetrics
-    const emitMethod = tvContent.slice(
-      tvContent.indexOf('private emitSlaveTransitionMetrics'),
-      tvContent.indexOf('private emitSlaveTransitionMetrics') + 800
-    );
+    // After extraction, emitSlaveTransitionMetrics is in tv-sync.service.ts
+    const emitStart = syncContent.indexOf('private emitSlaveTransitionMetrics');
+    const emitMethod = syncContent.slice(emitStart, emitStart + 800);
     expect({
       hasRevealInSlave: /preloadRevealCount.*preloadCleanupCount|preloadCleanupCount.*preloadRevealCount/.test(emitMethod),
     }).toEqual({
@@ -2956,18 +2969,17 @@ describe('ADR-034 preload-reveal metrics pipeline', () => {
 
 describe('ADR-034 v3.89.3 silent preload + instant reveal', () => {
   const repoRoot = path.resolve(__dirname, '..', '..', '..', '..');
-  let tvContent: string;
+  // After ADR-042/043 extraction, preload/reveal/cleanup logic is in manual-video.service.ts
+  let manualContent: string;
 
   beforeAll(() => {
-    tvContent = fs.readFileSync(path.join(repoRoot, 'raspberry/src/app/components/tv/tv.component.ts'), 'utf8');
+    manualContent = fs.readFileSync(path.join(repoRoot, 'raspberry/src/app/services/manual-video.service.ts'), 'utf8');
   });
 
   it('preloadManualVideo MUST NOT call captureAndShowFreezeFrame unconditionally (silent preload)', () => {
-    // preloadManualVideo should only call captureAndShowFreezeFrame for manual→manual transitions,
-    // not unconditionally. The method must check if a manual video is already visible.
-    const preloadMethod = tvContent.slice(
-      tvContent.indexOf('private preloadManualVideo'),
-      tvContent.indexOf('private preloadManualVideo') + 2500
+    const preloadMethod = manualContent.slice(
+      manualContent.indexOf('preloadManualVideo'),
+      manualContent.indexOf('preloadManualVideo') + 2500
     );
     expect({
       hasConditionalFreeze: /isReplacingManual|manual.*manual|opacity.*===.*'1'/.test(preloadMethod),
@@ -2981,9 +2993,9 @@ describe('ADR-034 v3.89.3 silent preload + instant reveal', () => {
   });
 
   it('preloadManualVideo MUST mute player during preload', () => {
-    const preloadMethod = tvContent.slice(
-      tvContent.indexOf('private preloadManualVideo'),
-      tvContent.indexOf('private preloadManualVideo') + 2500
+    const preloadMethod = manualContent.slice(
+      manualContent.indexOf('preloadManualVideo'),
+      manualContent.indexOf('preloadManualVideo') + 2500
     );
     expect({
       hasMuteTrue: /\.muted\s*=\s*true/.test(preloadMethod),
@@ -2993,9 +3005,9 @@ describe('ADR-034 v3.89.3 silent preload + instant reveal', () => {
   });
 
   it('revealPreloadedVideo MUST unmute player and NOT have 2xrAF+200ms delay', () => {
-    const revealMethod = tvContent.slice(
-      tvContent.indexOf('private revealPreloadedVideo'),
-      tvContent.indexOf('private revealPreloadedVideo') + 2000
+    const revealMethod = manualContent.slice(
+      manualContent.indexOf('revealPreloadedVideo(): void'),
+      manualContent.indexOf('revealPreloadedVideo(): void') + 2000
     );
     expect({
       hasUnmute: /\.muted\s*=\s*false/.test(revealMethod),
@@ -3007,12 +3019,9 @@ describe('ADR-034 v3.89.3 silent preload + instant reveal', () => {
   });
 
   it('revealPreloadedVideo MUST have safe unmute guard for autoplay policy (browser /secondary freeze)', () => {
-    // Chrome pauses a playing video when programmatically unmuted on a tab without user interaction.
-    // /secondary tab has no user gesture → muted=false triggers pause → video frozen.
-    // Fix: detect pause after unmute, fallback to muted playback.
-    const revealMethod = tvContent.slice(
-      tvContent.indexOf('private revealPreloadedVideo'),
-      tvContent.indexOf('private revealPreloadedVideo') + 2000
+    const revealMethod = manualContent.slice(
+      manualContent.indexOf('revealPreloadedVideo(): void'),
+      manualContent.indexOf('revealPreloadedVideo(): void') + 2000
     );
     expect({
       hasPauseCheck: /player\.paused/.test(revealMethod),
@@ -3026,11 +3035,9 @@ describe('ADR-034 v3.89.3 silent preload + instant reveal', () => {
   });
 
   it('preloadManualVideo MUST support deferred reveal (_preloadReady + _pendingReveal)', () => {
-    // When master signals reveal before slave's preload finishes (frequent on browser where
-    // HTTP loading is slower than Pi's local files), the reveal must be deferred until play() resolves.
-    const preloadMethod = tvContent.slice(
-      tvContent.indexOf('private preloadManualVideo'),
-      tvContent.indexOf('private preloadManualVideo') + 2500
+    const preloadMethod = manualContent.slice(
+      manualContent.indexOf('preloadManualVideo'),
+      manualContent.indexOf('preloadManualVideo') + 2500
     );
     expect({
       setsPreloadReady: /_preloadReady\s*=\s*true/.test(preloadMethod),
@@ -3044,9 +3051,9 @@ describe('ADR-034 v3.89.3 silent preload + instant reveal', () => {
   });
 
   it('revealPreloadedVideo MUST defer reveal when _preloadReady is false', () => {
-    const revealMethod = tvContent.slice(
-      tvContent.indexOf('private revealPreloadedVideo'),
-      tvContent.indexOf('private revealPreloadedVideo') + 2000
+    const revealMethod = manualContent.slice(
+      manualContent.indexOf('revealPreloadedVideo(): void'),
+      manualContent.indexOf('revealPreloadedVideo(): void') + 2000
     );
     expect({
       checksPreloadReady: /_preloadReady/.test(revealMethod),
@@ -3058,9 +3065,9 @@ describe('ADR-034 v3.89.3 silent preload + instant reveal', () => {
   });
 
   it('cleanupPreloadState MUST reset muted to false', () => {
-    const cleanupMethod = tvContent.slice(
-      tvContent.indexOf('private cleanupPreloadState'),
-      tvContent.indexOf('private cleanupPreloadState') + 500
+    const cleanupMethod = manualContent.slice(
+      manualContent.indexOf('cleanupPreloadState(): void'),
+      manualContent.indexOf('cleanupPreloadState(): void') + 500
     );
     expect({
       hasUnmute: /\.muted\s*=\s*false/.test(cleanupMethod),

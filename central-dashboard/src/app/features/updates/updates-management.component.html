@@ -1,0 +1,486 @@
+<div class="page-container">
+  <h1>{{ 'updates.title' | translate }}</h1>
+
+  <div class="tabs">
+    <button class="tab" [class.active]="activeTab === 'updates'" (click)="activeTab = 'updates'">
+      🔄 Mises à jour ({{ updates.length }})
+    </button>
+    <button class="tab" [class.active]="activeTab === 'deploy'" (click)="activeTab = 'deploy'">
+      🚀 Déployer
+    </button>
+    <button class="tab" [class.active]="activeTab === 'history'" (click)="activeTab = 'history'">
+      📊 Historique ({{ deployments.length }})
+    </button>
+    <button class="tab" [class.active]="activeTab === 'versions'" (click)="activeTab = 'versions'">
+      📋 Versions installées
+    </button>
+  </div>
+
+  <!-- Updates Tab -->
+  <div class="tab-content" *ngIf="activeTab === 'updates'">
+    <div class="content-header">
+      <h2>Versions disponibles</h2>
+      <button class="btn btn-primary" (click)="showCreateModal = true">+ Nouvelle version</button>
+    </div>
+
+    <div class="updates-list" *ngIf="updates.length > 0; else noUpdates">
+      <div class="update-card card" *ngFor="let update of updates">
+        <div class="update-header">
+          <div class="update-title">
+            <h3>Version {{ update.version }}</h3>
+            <span class="badge badge-primary" *ngIf="update.is_critical">🔴 Critique</span>
+          </div>
+          <div class="update-meta">
+            {{ formatFileSize(update.file_size) }} • {{ formatDate(update.created_at) }}
+          </div>
+        </div>
+
+        <p class="update-description">{{ update.description }}</p>
+
+        <div class="update-notes" *ngIf="update.release_notes">
+          <div class="notes-header" (click)="toggleNotes(update.id)">
+            <strong>Notes de version</strong>
+            <span class="toggle-icon">{{ isNotesExpanded(update.id) ? '▼' : '▶' }}</span>
+          </div>
+          <div class="notes-content" *ngIf="isNotesExpanded(update.id)">
+            {{ update.release_notes }}
+          </div>
+        </div>
+
+        <div class="update-actions">
+          <button class="btn btn-sm btn-primary" (click)="deployUpdate(update)">🚀 Déployer</button>
+          <button class="btn-icon btn-danger" (click)="deleteUpdate(update)" title="Supprimer">
+            🗑️
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <ng-template #noUpdates>
+      <div class="empty-state card">
+        <div class="empty-icon">🔄</div>
+        <h3>Aucune mise à jour</h3>
+        <p>Commencez par créer une nouvelle version pour déployer des mises à jour.</p>
+        <button class="btn btn-primary" (click)="showCreateModal = true">+ Nouvelle version</button>
+      </div>
+    </ng-template>
+  </div>
+
+  <!-- Deploy Tab -->
+  <div class="tab-content" *ngIf="activeTab === 'deploy'">
+    <div class="deploy-wizard card">
+      <h2>Déployer une mise à jour</h2>
+
+      <div class="wizard-step">
+        <div class="step-header">
+          <span class="step-number">1</span>
+          <h3>Sélectionner une version</h3>
+        </div>
+        <select [(ngModel)]="deployForm.updateId" class="form-select">
+          <option value="">-- Choisir une version --</option>
+          <option *ngFor="let update of updates" [value]="update.id">
+            v{{ update.version }} - {{ update.description }}
+            <span *ngIf="update.is_critical">(Critique)</span>
+          </option>
+        </select>
+        <div class="warning-message" *ngIf="selectedUpdate()?.is_critical">
+          ⚠️ Cette mise à jour est marquée comme critique et devrait être déployée rapidement.
+        </div>
+      </div>
+
+      <div class="wizard-step">
+        <div class="step-header">
+          <span class="step-number">2</span>
+          <h3>Choisir la cible</h3>
+        </div>
+        <div class="target-type-selector">
+          <label class="radio-card">
+            <input
+              type="radio"
+              name="targetType"
+              value="site"
+              [(ngModel)]="deployForm.targetType"
+            />
+            <div class="radio-content">
+              <span class="radio-icon">🖥️</span>
+              <div>
+                <div class="radio-title">Site individuel</div>
+                <div class="radio-desc">Mettre à jour un site spécifique</div>
+              </div>
+            </div>
+          </label>
+          <label class="radio-card">
+            <input
+              type="radio"
+              name="targetType"
+              value="group"
+              [(ngModel)]="deployForm.targetType"
+            />
+            <div class="radio-content">
+              <span class="radio-icon">👥</span>
+              <div>
+                <div class="radio-title">Groupe de sites</div>
+                <div class="radio-desc">Mettre à jour plusieurs sites</div>
+              </div>
+            </div>
+          </label>
+        </div>
+
+        <select
+          *ngIf="deployForm.targetType === 'site'"
+          [(ngModel)]="deployForm.targetId"
+          class="form-select"
+        >
+          <option value="">-- Choisir un site --</option>
+          <option *ngFor="let site of deployableSites" [value]="site.id">
+            {{ site.club_name }} - {{ site.site_name }} (v{{ site.software_version }})
+          </option>
+        </select>
+
+        <select
+          *ngIf="deployForm.targetType === 'group'"
+          [(ngModel)]="deployForm.targetId"
+          class="form-select"
+        >
+          <option value="">-- Choisir un groupe --</option>
+          <option *ngFor="let group of groups" [value]="group.id">
+            {{ group.name }} ({{ group.site_count }} sites)
+          </option>
+        </select>
+      </div>
+
+      <div class="wizard-step">
+        <div class="step-header">
+          <span class="step-number">3</span>
+          <h3>Options de déploiement</h3>
+        </div>
+        <label class="checkbox-option">
+          <input type="checkbox" [(ngModel)]="deployForm.autoRollback" />
+          <div class="option-content">
+            <div class="option-title">Rollback automatique</div>
+            <div class="option-desc">Restaurer la version précédente en cas d'échec</div>
+          </div>
+        </label>
+        <label class="checkbox-option">
+          <input type="checkbox" [(ngModel)]="deployForm.scheduleReboot" />
+          <div class="option-content">
+            <div class="option-title">Redémarrage après installation</div>
+            <div class="option-desc">
+              Redémarrer automatiquement les systèmes après la mise à jour
+            </div>
+          </div>
+        </label>
+      </div>
+
+      <div class="wizard-actions">
+        <button
+          class="btn btn-primary btn-lg"
+          (click)="startDeployment()"
+          [disabled]="!canDeploy()"
+        >
+          🚀 Lancer le déploiement
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- History Tab -->
+  <div class="tab-content" *ngIf="activeTab === 'history'">
+    <div class="deployments-list" *ngIf="deployments.length > 0; else noDeployments">
+      <div
+        class="deployment-card card"
+        *ngFor="let deployment of deployments"
+        [class.deployment-pending]="deployment.status === 'pending'"
+        [class.deployment-failed]="deployment.status === 'failed'"
+      >
+        <div class="deployment-header">
+          <div class="deployment-title">
+            <h3>Version {{ deployment.update_version || 'inconnue' }}</h3>
+            <span class="badge" [class]="'badge-' + getDeploymentStatusBadge(deployment.status)">
+              {{ getDeploymentStatusLabel(deployment.status) }}
+            </span>
+          </div>
+          <div class="deployment-meta">
+            <span class="deployment-target-icon">{{
+              deployment.target_type === 'site' ? '🖥️' : '👥'
+            }}</span>
+            {{ deployment.target_name || 'Cible inconnue' }}
+          </div>
+        </div>
+
+        <div class="deployment-progress">
+          <div class="progress-bar">
+            <div
+              class="progress-fill"
+              [class]="'progress-' + deployment.status"
+              [style.width.%]="deployment.progress"
+            ></div>
+          </div>
+          <div class="progress-label">
+            <span
+              >{{ deployment.deployed_count || 0 }} /
+              {{ deployment.total_count || '?' }} sites</span
+            >
+            <span>{{ deployment.progress | number: '1.0-1' }}%</span>
+          </div>
+        </div>
+
+        <div class="deployment-summary" *ngIf="deployment.status === 'completed'">
+          <div class="summary-content summary-success">
+            <span class="summary-icon">✅</span>
+            <span class="summary-text">
+              Déployé avec succès{{
+                getDeploymentDuration(deployment) ? ' en ' + getDeploymentDuration(deployment) : ''
+              }}
+            </span>
+          </div>
+        </div>
+
+        <div class="deployment-summary" *ngIf="deployment.status === 'in_progress'">
+          <div class="summary-content summary-progress">
+            <span class="summary-icon">🔄</span>
+            <span class="summary-text">
+              En cours{{
+                getDeploymentElapsed(deployment)
+                  ? ' depuis ' + getDeploymentElapsed(deployment)
+                  : ''
+              }}{{ deployment.error_message ? ' — ' + deployment.error_message : '' }}
+            </span>
+          </div>
+        </div>
+
+        <div
+          class="deployment-info"
+          *ngIf="deployment.status === 'pending' && deployment.error_message"
+        >
+          <div class="info-content">
+            <span class="info-icon">⏳</span>
+            <span class="info-text">{{ deployment.error_message }}</span>
+          </div>
+        </div>
+
+        <div class="deployment-error" *ngIf="deployment.status === 'failed'">
+          <div class="error-content">
+            <span class="error-icon">⚠️</span>
+            <span class="error-text">{{
+              deployment.error_message ||
+                'Aucune réponse du Pi — le site était probablement hors ligne ou la commande a expiré'
+            }}</span>
+          </div>
+        </div>
+
+        <div class="deployment-footer">
+          <div class="deployment-dates">
+            <span class="deployment-date">Démarré: {{ formatDate(deployment.created_at) }}</span>
+            <span *ngIf="deployment.completed_at" class="deployment-completed">
+              Terminé: {{ formatDate(deployment.completed_at) }}
+            </span>
+          </div>
+          <div class="deployment-actions">
+            <button
+              *ngIf="deployment.deployment_details?.length"
+              class="btn btn-sm btn-secondary"
+              (click)="toggleDeploymentDetails(deployment.id)"
+            >
+              {{ expandedDeploymentId === deployment.id ? 'Masquer détail' : 'Voir détail' }}
+            </button>
+            <button
+              *ngIf="deployment.status === 'failed'"
+              class="btn btn-sm btn-primary"
+              (click)="retryDeployment(deployment)"
+            >
+              Relancer
+            </button>
+            <button
+              *ngIf="deployment.status === 'pending' || deployment.status === 'in_progress'"
+              class="btn btn-sm btn-danger"
+              (click)="cancelDeployment(deployment)"
+            >
+              Annuler
+            </button>
+          </div>
+        </div>
+
+        <div
+          class="deployment-steps"
+          *ngIf="expandedDeploymentId === deployment.id && deployment.deployment_details?.length"
+        >
+          <div
+            class="step-row"
+            *ngFor="let step of deployment.deployment_details"
+            [class.step-ok]="step.status === 'ok'"
+            [class.step-warn]="step.status === 'warn'"
+            [class.step-fail]="step.status === 'fail'"
+            [class.step-skip]="step.status === 'skip'"
+          >
+            <span class="step-icon">{{ getStepIcon(step.status) }}</span>
+            <span class="step-label">{{ step.label }}</span>
+            <span class="step-duration">{{ formatStepDuration(step.durationMs) }}</span>
+            <span class="step-detail" *ngIf="step.detail && !step.detail.includes(' | ')">{{
+              step.detail
+            }}</span>
+            <div class="step-detail-expanded" *ngIf="step.detail?.includes(' | ')">
+              <div *ngFor="let item of step.detail!.split(' | ')">• {{ item }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <ng-template #noDeployments>
+      <div class="empty-state card">
+        <div class="empty-icon">📊</div>
+        <h3>Aucun déploiement</h3>
+        <p>L'historique de vos déploiements de mises à jour apparaîtra ici.</p>
+      </div>
+    </ng-template>
+  </div>
+
+  <!-- Versions Tab -->
+  <div class="tab-content" *ngIf="activeTab === 'versions'">
+    <div class="versions-summary card">
+      <h2>Distribution des versions</h2>
+      <div class="versions-chart">
+        <div class="version-bar" *ngFor="let version of getVersionDistribution()">
+          <div class="version-info">
+            <span class="version-label">v{{ version.version }}</span>
+            <span class="version-count">{{ version.count }} sites</span>
+          </div>
+          <div class="bar-container">
+            <div class="bar-fill" [style.width.%]="version.percentage"></div>
+          </div>
+        </div>
+        <div *ngIf="getVersionDistribution().length === 0" class="empty-versions">
+          Aucun site enregistré
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Create Update Modal -->
+  <div class="modal" *ngIf="showCreateModal" (click)="!isUploading && (showCreateModal = false)">
+    <div class="modal-content" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h2>{{ 'updates.newVersion' | translate }}</h2>
+        <button
+          class="modal-close"
+          (click)="!isUploading && resetCreateForm()"
+          [disabled]="isUploading"
+        >
+          ×
+        </button>
+      </div>
+      <div class="modal-body">
+        <!-- Upload Progress -->
+        <div class="upload-progress-container" *ngIf="isUploading && uploadProgress">
+          <div class="upload-progress-header">
+            <span
+              class="upload-status-icon"
+              [ngClass]="{
+                uploading: uploadProgress.status === 'uploading',
+                processing: uploadProgress.status === 'processing',
+                complete: uploadProgress.status === 'complete',
+                error: uploadProgress.status === 'error',
+              }"
+            >
+              <span *ngIf="uploadProgress.status === 'uploading'">⬆️</span>
+              <span *ngIf="uploadProgress.status === 'processing'">⏳</span>
+              <span *ngIf="uploadProgress.status === 'complete'">✅</span>
+              <span *ngIf="uploadProgress.status === 'error'">⚠️</span>
+            </span>
+            <span class="upload-status-text">
+              <span *ngIf="uploadProgress.status === 'uploading'">{{
+                'updates.uploading' | translate
+              }}</span>
+              <span *ngIf="uploadProgress.status === 'processing'">{{
+                'updates.processing' | translate
+              }}</span>
+              <span *ngIf="uploadProgress.status === 'complete'">{{
+                'updates.complete' | translate
+              }}</span>
+              <span *ngIf="uploadProgress.status === 'error'">{{ uploadProgress.error }}</span>
+            </span>
+          </div>
+          <div class="upload-progress-bar-container">
+            <div
+              class="upload-progress-bar"
+              [style.width.%]="uploadProgress.progress"
+              [ngClass]="{
+                error: uploadProgress.status === 'error',
+              }"
+            ></div>
+          </div>
+          <div class="upload-progress-details">
+            <span *ngIf="uploadProgress.loaded && uploadProgress.total">
+              {{ formatFileSize(uploadProgress.loaded) }} /
+              {{ formatFileSize(uploadProgress.total) }}
+            </span>
+            <span>{{ uploadProgress.progress }}%</span>
+          </div>
+        </div>
+
+        <!-- Form (hidden during upload) -->
+        <ng-container *ngIf="!isUploading">
+          <div class="form-group">
+            <label>{{ 'updates.versionNumber' | translate }} *</label>
+            <input
+              type="text"
+              [(ngModel)]="createForm.version"
+              [placeholder]="'updates.versionPlaceholder' | translate"
+            />
+          </div>
+          <div class="form-group">
+            <label>{{ 'updates.shortDescription' | translate }} *</label>
+            <input
+              type="text"
+              [(ngModel)]="createForm.description"
+              [placeholder]="'updates.descriptionPlaceholder' | translate"
+            />
+          </div>
+          <div class="form-group">
+            <label>{{ 'updates.releaseNotes' | translate }}</label>
+            <textarea
+              [(ngModel)]="createForm.release_notes"
+              rows="5"
+              [placeholder]="'updates.notesPlaceholder' | translate"
+            ></textarea>
+          </div>
+          <div class="form-group">
+            <label>{{ 'updates.updatePackage' | translate }} *</label>
+            <input
+              type="file"
+              accept=".tar.gz,.tgz,.gz,.tar,application/gzip,application/x-gzip,application/x-tar,application/x-compressed-tar,.zip,application/zip"
+              (change)="onUpdateFileSelected($event)"
+            />
+            <div class="file-info" *ngIf="createForm.file">
+              {{ createForm.file.name }} ({{ formatFileSize(createForm.file.size) }})
+            </div>
+          </div>
+          <label class="checkbox-option">
+            <input type="checkbox" [(ngModel)]="createForm.is_critical" />
+            <div class="option-content">
+              <div class="option-title">{{ 'updates.criticalUpdate' | translate }}</div>
+              <div class="option-desc">{{ 'updates.criticalUpdateDesc' | translate }}</div>
+            </div>
+          </label>
+        </ng-container>
+      </div>
+      <div class="modal-footer">
+        <button
+          class="btn btn-secondary"
+          (click)="isUploading ? cancelUpload() : resetCreateForm()"
+        >
+          {{ (isUploading ? 'updates.cancelUpload' : 'common.cancel') | translate }}
+        </button>
+        <button
+          class="btn btn-primary"
+          (click)="createUpdate()"
+          [disabled]="!canCreate()"
+          *ngIf="!isUploading"
+        >
+          {{ 'updates.createVersion' | translate }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

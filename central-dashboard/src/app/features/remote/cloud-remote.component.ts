@@ -24,54 +24,19 @@ import { LicenseBlockRemoteComponent } from './components/license-block-remote.c
 import { PlayerStatusComponent, PlayerState } from './components/player-status/player-status.component';
 import { ScreenshotViewerComponent } from './components/screenshot-viewer/screenshot-viewer.component';
 import { RemoteScoreService } from './services/remote-score.service';
-import { RemoteTimerService, TimerConfig } from './services/remote-timer.service';
+import { RemoteTimerService } from './services/remote-timer.service';
 import {
-  RemoteOptionsService, LocalOptions, SportType, OverlayTheme, ScoreOverlayPosition,
-  SPORT_LABELS, SPORT_PERIODS, SPORT_PERIOD_DURATIONS, DEFAULT_GOAL_SOUNDS,
+  RemoteOptionsService, LocalOptions, SportType, ScoreOverlayPosition,
+  SPORT_LABELS, SPORT_PERIODS, SPORT_PERIOD_DURATIONS,
 } from './services/remote-options.service';
-
-interface Category {
-  id: string;
-  name: string;
-  videos?: Video[];
-  subCategories?: Category[];
-}
-
-interface Video {
-  name: string;
-  path: string;
-  type?: string;
-  categoryId?: string;
-  hasSecondaryVariant?: boolean;
-}
-
-interface TimeCategory {
-  id: string;
-  name: string;
-  icon?: string;
-  color?: string;
-  description?: string;
-  categoryIds?: string[];
-  loopVideos?: Video[];
-}
-
-interface Configuration {
-  remote?: { title?: string };
-  categories: Category[];
-  sponsors: Video[];
-  timeCategories?: TimeCategory[];
-  liveScoreEnabled?: boolean;
-}
-
-// LocalOptions, constants, and types imported from RemoteOptionsService
-
-type ViewType = 'home' | 'time-categories' | 'subcategories' | 'videos' | 'all-videos' | 'options';
+import { CloudRemoteNavigationService, Video, Category, TimeCategory } from './services/cloud-remote-navigation.service';
+import { CloudRemoteConfigService, Configuration } from './services/cloud-remote-config.service';
 
 @Component({
   selector: 'app-cloud-remote',
   standalone: true,
   imports: [CommonModule, FormsModule, LicenseBannerComponent, LicenseBlockRemoteComponent, PlayerStatusComponent, ScreenshotViewerComponent],
-  providers: [RemoteScoreService, RemoteTimerService, RemoteOptionsService],
+  providers: [RemoteScoreService, RemoteTimerService, RemoteOptionsService, CloudRemoteNavigationService, CloudRemoteConfigService],
   templateUrl: './cloud-remote.component.html',
   styleUrls: ['./cloud-remote.component.scss']
 })
@@ -82,6 +47,8 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
   readonly scoreService = inject(RemoteScoreService);
   readonly timerService = inject(RemoteTimerService);
   readonly optionsService = inject(RemoteOptionsService);
+  readonly nav = inject(CloudRemoteNavigationService);
+  readonly config = inject(CloudRemoteConfigService);
   private readonly destroy$ = new Subject<void>();
 
   public siteId: string = '';
@@ -92,26 +59,27 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
   public pendingConfigVersionId: string | null = null;
   public pendingCommandsCount = 0;
 
-  public configuration!: Configuration;
-  private secondaryVariantPaths: Set<string> = new Set();
-
-  // Options locales delegated to RemoteOptionsService
+  // Backward-compat getters delegating to services
+  public get configuration(): Configuration { return this.config.configuration; }
   public get localOptions(): LocalOptions { return this.optionsService.options; }
-  public currentView: ViewType = 'home';
-  public breadcrumb: string[] = ['Télécommande'];
+  public get currentView() { return this.nav.currentView; }
+  public set currentView(v) { this.nav.currentView = v; }
+  public get breadcrumb() { return this.nav.breadcrumb; }
+  public get selectedTimeCategory() { return this.nav.selectedTimeCategory; }
+  public get selectedCategory() { return this.nav.selectedCategory; }
+  public get selectedSubCategory() { return this.nav.selectedSubCategory; }
+  public get searchQuery() { return this.config.searchQuery; }
+  public set searchQuery(v) { this.config.searchQuery = v; }
+  public get searchPlaceholder() { return this.config.searchPlaceholder; }
+  public get searchResults() { return this.config.searchResults; }
+  public get isSearching() { return this.config.isSearching; }
+  public get recentVideos() { return this.config.recentVideos; }
+  public get timeCategories() { return this.config.timeCategories; }
+  public get liveScoreEnabled() { return this.config.liveScoreEnabled; }
+
   public isReloading = false;
 
-  public selectedTimeCategory: TimeCategory | null = null;
-  public selectedCategory: Category | null = null;
-  public selectedSubCategory: Category | null = null;
-
-  // Recherche
-  public searchQuery = '';
-  public readonly searchPlaceholder = 'Rechercher une vid\u00e9o...';
-  public searchResults: Video[] = [];
-  public isSearching = false;
-
-  // Affluence et match info
+  // Match info
   public showMatchModal = false;
   public matchInfo = {
     date: new Date().toISOString().split('T')[0],
@@ -120,12 +88,11 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
   };
   public currentSessionId: string | null = null;
 
-  // Score en live + Options avancées
-  public liveScoreEnabled = false;
+  // Score en live
   public isScorePanelExpanded = false;
   public get currentScore() { return this.scoreService.currentScore; }
 
-  // Phase active de la boucle vidéo
+  // Phase active
   public activePhase: 'neutral' | 'before' | 'during' | 'after' = 'neutral';
   public readonly matchPhases: ('before' | 'during' | 'after')[] = ['before', 'during', 'after'];
   public isPhaseDropdownOpen = false;
@@ -138,10 +105,6 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
 
   // Video en cours de lecture
   public playingVideoPath: string | null = null;
-
-  // Vidéos récemment lancées
-  public recentVideos: Video[] = [];
-  private readonly MAX_RECENT_VIDEOS = 5;
 
   // Loading state
   public isLoading = true;
@@ -165,19 +128,18 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
   // Recording
   public isRecording = false;
 
-  // Player state (from heartbeat)
+  // Player state
   public initialPlayerState: PlayerState | null = null;
 
   // Menu header
   public isHeaderMenuOpen = false;
 
-  // Sports et Périodes
+  // Sports et Périodes (exposed for template)
   public readonly sportTypes: SportType[] = ['football', 'basketball', 'handball', 'volleyball', 'rugby', 'hockey'];
   public readonly sportLabels = SPORT_LABELS;
   public readonly sportPeriods = SPORT_PERIODS;
   public readonly sportPeriodDurations = SPORT_PERIOD_DURATIONS;
 
-  // Positions overlay (6 positions)
   public readonly overlayPositions: { value: ScoreOverlayPosition; label: string }[] = [
     { value: 'top-left', label: 'Haut gauche' },
     { value: 'top-center', label: 'Haut centre' },
@@ -187,56 +149,20 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
     { value: 'bottom-right', label: 'Bas droite' },
   ];
 
-  // Styles d'animation de but
   public readonly goalAnimationStyles: { value: 'popup' | 'fullscreen' | 'slide'; label: string }[] = [
     { value: 'popup', label: 'Popup central' },
     { value: 'fullscreen', label: 'Plein écran' },
     { value: 'slide', label: 'Bandeau glissant' },
   ];
 
-  // Swipe gesture tracking
-  private touchStartX = 0;
-  private touchStartY = 0;
-  private readonly SWIPE_THRESHOLD = 50;
-
   // Exposer Math pour le template
   public Math = Math;
-
-  // Organisation par temps de match
-  private readonly defaultTimeCategories: TimeCategory[] = [
-    {
-      id: 'before',
-      name: 'Avant-match',
-      icon: '🏁',
-      color: 'from-blue-500 to-blue-600',
-      description: 'Échauffement & présentation',
-      categoryIds: []
-    },
-    {
-      id: 'during',
-      name: 'Match',
-      icon: '▶️',
-      color: 'from-green-500 to-green-600',
-      description: 'Live & animations',
-      categoryIds: []
-    },
-    {
-      id: 'after',
-      name: 'Après-match',
-      icon: '🏆',
-      color: 'from-purple-500 to-purple-600',
-      description: 'Résultats & remerciements',
-      categoryIds: []
-    }
-  ];
-
-  public timeCategories: TimeCategory[] = [];
 
   // Breaking News
   public showBreakingNewsPanel = false;
   public breakingNewsMessage = '';
 
-  // Timer / Chronomètre delegated to RemoteTimerService
+  // Timer delegated
   public get timerCurrentTime() { return this.timerService.currentTime; }
   public get timerIsRunning() { return this.timerService.isRunning; }
 
@@ -245,21 +171,14 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
   public readonly newsDurations = [5, 10, 15, 20, 30];
 
   ngOnInit(): void {
-    // Charger le dark mode depuis localStorage
     this.isDarkMode = localStorage.getItem('darkMode') === 'true';
     this.applyDarkMode();
-
-    // Charger les vidéos récentes depuis localStorage
-    this.loadRecentVideos();
-
-    // Initialiser le timer
+    this.config.loadRecentVideos();
     this.timerService.initialize(this.localOptions.timer);
     this.timerService.onPeriodEnd = () => this.displayToast('Mi-temps terminée !', 'info');
 
-    // Récupérer le siteId depuis la route
     this.siteId = this.route.snapshot.paramMap.get('siteId') || '';
 
-    // Debounce score updates (500ms) pour éviter les rafales de requêtes HTTP
     this.scoreService.scoreUpdate$.pipe(
       debounceTime(500),
       takeUntil(this.destroy$)
@@ -267,7 +186,6 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
 
     if (this.siteId) {
       this.loadSiteState();
-      // Polling pour garder l'état synchronisé (toutes les 60 secondes)
       interval(60000)
         .pipe(takeUntil(this.destroy$))
         .subscribe(() => this.refreshState());
@@ -282,9 +200,7 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
-  // ============================================================================
-  // CHARGEMENT ET CONNEXION
-  // ============================================================================
+  // ==== CHARGEMENT ET CONNEXION ====
 
   private loadSiteState(): void {
     this.isLoading = true;
@@ -298,30 +214,18 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
         this.pendingConfigVersionId = state.pendingConfigVersionId || null;
         this.pendingCommandsCount = state.pendingCommandsCount || 0;
 
-        if (!this.isConnected) {
-          this.isLoading = false;
-          return;
-        }
+        if (!this.isConnected) { this.isLoading = false; return; }
 
-        // Vérifier si un PIN est requis
         if (state.pinRequired && !state.config) {
           this.pinRequired = true;
           this.isLoading = false;
           return;
         }
 
-        // PIN ok ou pas de PIN → charger normalement
         this.pinRequired = false;
-        this.secondaryVariantPaths = new Set(state.secondaryVariantPaths || []);
-        this.configuration = {
-          remote: { title: state.siteName },
-          categories: state.config?.categories || [],
-          sponsors: state.config?.sponsors || [],
-          timeCategories: state.config?.timeCategories || [],
-          liveScoreEnabled: state.config?.liveScoreEnabled || false,
-        };
-
-        this.initializeWithConfiguration(this.markSecondaryVariants(this.configuration));
+        this.config.setSecondaryVariantPaths(state.secondaryVariantPaths || []);
+        const rawConfig = this.config.buildConfiguration(state.siteName, state.config);
+        this.config.initializeWithConfiguration(this.config.markSecondaryVariants(rawConfig));
         this.updateLicenseState(state);
         this.updateRecordingState(state);
         this.initialPlayerState = state.playerState || null;
@@ -334,25 +238,18 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
     });
   }
 
-  public retryConnection(): void {
-    this.loadSiteState();
-  }
+  public retryConnection(): void { this.loadSiteState(); }
 
-  /**
-   * Vérifie le PIN saisi par l'utilisateur
-   */
   public submitPin(): void {
     if (!this.pinInput || this.pinInput.length < 4) {
       this.pinError = 'Le PIN doit contenir au moins 4 chiffres';
       return;
     }
-
     this.pinVerifying = true;
     this.pinError = '';
 
     this.remoteService.verifyPin(this.siteId, this.pinInput).subscribe({
       next: () => {
-        // PIN vérifié avec succès → recharger l'état complet
         this.pinRequired = false;
         this.pinInput = '';
         this.pinError = '';
@@ -373,25 +270,11 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
     });
   }
 
-  /**
-   * Gestion de la saisie du PIN (numpad)
-   */
   public onPinDigit(digit: string): void {
-    if (this.pinInput.length < 6) {
-      this.pinInput += digit;
-      this.pinError = '';
-    }
+    if (this.pinInput.length < 6) { this.pinInput += digit; this.pinError = ''; }
   }
-
-  public onPinBackspace(): void {
-    this.pinInput = this.pinInput.slice(0, -1);
-    this.pinError = '';
-  }
-
-  public onPinClear(): void {
-    this.pinInput = '';
-    this.pinError = '';
-  }
+  public onPinBackspace(): void { this.pinInput = this.pinInput.slice(0, -1); this.pinError = ''; }
+  public onPinClear(): void { this.pinInput = ''; this.pinError = ''; }
 
   private refreshState(): void {
     if (!this.siteId) return;
@@ -402,7 +285,6 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
         this.pendingConfigVersionId = state.pendingConfigVersionId || null;
         this.pendingCommandsCount = state.pendingCommandsCount || 0;
 
-        // Si PIN requis à nouveau (token expiré)
         if (state.pinRequired && !state.config) {
           this.remoteService.clearToken(this.siteId);
           this.pinRequired = true;
@@ -417,39 +299,19 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
         }
 
         if (state.config) {
-          this.configuration = {
-            remote: { title: state.siteName },
-            categories: state.config.categories || [],
-            sponsors: state.config.sponsors || [],
-            timeCategories: state.config.timeCategories || [],
-            liveScoreEnabled: state.config.liveScoreEnabled || false,
-          };
+          const rawConfig = this.config.buildConfiguration(state.siteName, state.config);
+          this.config.initializeWithConfiguration(rawConfig);
         }
 
         this.updateLicenseState(state);
         this.updateRecordingState(state);
-
-        if (state.playerState) {
-          this.initialPlayerState = state.playerState;
-        }
+        if (state.playerState) { this.initialPlayerState = state.playerState; }
       },
-      error: () => {
-        // Silencieux pour le polling
-      }
+      error: () => { /* Silencieux pour le polling */ }
     });
   }
 
-  private initializeWithConfiguration(config: Configuration): void {
-    this.configuration = config;
-    this.timeCategories = config.timeCategories?.length
-      ? config.timeCategories
-      : this.defaultTimeCategories;
-    this.liveScoreEnabled = config.liveScoreEnabled ?? false;
-  }
-
-  // ============================================================================
-  // LICENSE & RECORDING
-  // ============================================================================
+  // ==== LICENSE & RECORDING ====
 
   private updateLicenseState(state: RemoteState): void {
     if (state.licenseStatus) {
@@ -475,9 +337,7 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
   }
 
   private updateRecordingState(state: RemoteState): void {
-    if (state.recordingState) {
-      this.isRecording = state.recordingState.isRecording;
-    }
+    if (state.recordingState) { this.isRecording = state.recordingState.isRecording; }
   }
 
   public toggleRecording(): void {
@@ -485,222 +345,86 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
     this.remoteService.toggleRecording(this.siteId).subscribe({
       next: () => {
         this.isRecording = !this.isRecording;
-        this.displayToast(
-          this.isRecording ? 'Enregistrement démarré' : 'Enregistrement arrêté',
-          'success'
-        );
+        this.displayToast(this.isRecording ? 'Enregistrement démarré' : 'Enregistrement arrêté', 'success');
       },
-      error: () => {
-        this.displayToast('Erreur lors du toggle enregistrement', 'info');
-      },
+      error: () => { this.displayToast('Erreur lors du toggle enregistrement', 'info'); },
     });
   }
 
-  public dismissLicenseBanner(): void {
-    this.licenseBannerDismissed = true;
-  }
+  public dismissLicenseBanner(): void { this.licenseBannerDismissed = true; }
 
-  // ============================================================================
-  // NAVIGATION
-  // ============================================================================
+  // ==== NAVIGATION (delegated) ====
 
-  public handleBack(): void {
-    if (this.isSearching) {
-      this.clearSearch();
-      return;
-    }
+  public handleBack(): void { this.nav.handleBack(this.config.isSearching, () => this.config.clearSearch()); }
+  public selectTimeCategory(tc: TimeCategory): void { this.nav.selectTimeCategory(tc); }
+  public selectCategory(cat: Category): void { this.nav.selectCategory(cat); }
+  public selectSubCategory(sub: Category): void { this.nav.selectSubCategory(sub); }
+  public showAllVideos(): void { this.nav.showAllVideos(); }
 
-    if (this.currentView === 'all-videos' || this.currentView === 'options') {
-      this.currentView = 'home';
-      this.breadcrumb = ['Télécommande'];
-      return;
-    }
-
-    this.breadcrumb.pop();
-
-    if (this.breadcrumb.length === 1) {
-      this.currentView = 'home';
-      this.selectedTimeCategory = null;
-      this.selectedCategory = null;
-      this.selectedSubCategory = null;
-    } else if (this.breadcrumb.length === 2) {
-      this.currentView = 'time-categories';
-      this.selectedCategory = null;
-      this.selectedSubCategory = null;
-    } else if (this.breadcrumb.length === 3) {
-      this.currentView = 'subcategories';
-      this.selectedSubCategory = null;
+  public openOptions(): void {
+    if (!this.nav.openOptions(this.config.liveScoreEnabled, () => this.closeHeaderMenu())) {
+      this.displayToast('Options non disponibles', 'info');
     }
   }
 
-  public selectTimeCategory(timeCategory: TimeCategory): void {
-    this.selectedTimeCategory = timeCategory;
-    this.breadcrumb.push(timeCategory.name);
-    this.currentView = 'time-categories';
-  }
-
-  public selectCategory(category: Category): void {
-    this.selectedCategory = category;
-    this.breadcrumb.push(category.name);
-
-    if (category.subCategories && category.subCategories.length > 0) {
-      this.currentView = 'subcategories';
-    } else {
-      this.currentView = 'videos';
-    }
-  }
-
-  public selectSubCategory(subCategory: Category): void {
-    this.selectedSubCategory = subCategory;
-    this.breadcrumb.push(subCategory.name);
-    this.currentView = 'videos';
-  }
-
-  // ============================================================================
-  // ACTIONS VIDÉO (via HTTP API)
-  // ============================================================================
+  // ==== ACTIONS VIDEO ====
 
   public launchSponsors(): void {
     this.remoteService.playSponsors(this.siteId).subscribe({
-      next: () => {
-        this.displayToast('Boucle sponsors lancée', 'success');
-      },
-      error: (err) => {
-        this.displayToast('Erreur: ' + (err.error?.error || 'Échec de la commande'), 'info');
-      }
+      next: () => this.displayToast('Boucle sponsors lancée', 'success'),
+      error: (err) => this.displayToast('Erreur: ' + (err.error?.error || 'Échec de la commande'), 'info'),
     });
   }
 
   public launchVideo(video: Video): void {
-    this.remoteService.playVideo(this.siteId, {
-      name: video.name,
-      path: video.path,
-      categoryId: video.categoryId
-    }).subscribe({
+    this.remoteService.playVideo(this.siteId, { name: video.name, path: video.path, categoryId: video.categoryId }).subscribe({
       next: () => {
-        this.addToRecentVideos(video);
+        this.config.addToRecentVideos(video);
         this.playingVideoPath = video.path;
         this.displayToast(`${video.name} lancée sur l'écran`, 'success');
-
-        setTimeout(() => {
-          this.playingVideoPath = null;
-        }, 3000);
+        setTimeout(() => { this.playingVideoPath = null; }, 3000);
       },
-      error: (err) => {
-        this.displayToast('Erreur: ' + (err.error?.error || 'Échec de la commande'), 'info');
-      }
+      error: (err) => this.displayToast('Erreur: ' + (err.error?.error || 'Échec de la commande'), 'info'),
     });
   }
 
-  // ============================================================================
-  // TOAST
-  // ============================================================================
+  // ==== TOAST ====
 
   private displayToast(message: string, type: 'success' | 'info' = 'success'): void {
-    if (this.toastTimeout) {
-      clearTimeout(this.toastTimeout);
-    }
-
+    if (this.toastTimeout) { clearTimeout(this.toastTimeout); }
     this.toastMessage = message;
     this.toastType = type;
     this.showToast = true;
-
-    this.toastTimeout = setTimeout(() => {
-      this.showToast = false;
-    }, 3000);
+    this.toastTimeout = setTimeout(() => { this.showToast = false; }, 3000);
   }
 
-  // ============================================================================
-  // HELPERS
-  // ============================================================================
+  // ==== HELPERS (delegated to config service) ====
 
-  public getVideoCategoryName(video: Video): string {
-    if (!video.categoryId) return '';
-
-    const findCategory = (categories: Category[]): string => {
-      for (const cat of categories) {
-        if (cat.id === video.categoryId) return cat.name;
-        if (cat.subCategories) {
-          const found = findCategory(cat.subCategories);
-          if (found) return found;
-        }
-      }
-      return '';
-    };
-
-    return findCategory(this.configuration?.categories || []);
-  }
-
-  public getCategoriesForTimeCategory(timeCategory: TimeCategory): Category[] {
-    const filteredCategories = (this.configuration?.categories ?? []).filter(cat =>
-      timeCategory.categoryIds?.includes(cat.id)
-    );
-    return this.sortByName(filteredCategories);
-  }
-
-  public getVideosCount(category: Category): number {
-    let count = category.videos?.length || 0;
-    if (category.subCategories) {
-      count += category.subCategories.reduce((sum, sub) => {
-        return sum + this.getVideosCount(sub);
-      }, 0);
-    }
-    return count;
-  }
-
-  public getSubCategoriesCount(category: Category): number {
-    return category.subCategories?.length || 0;
-  }
-
-  public getSubCategoriesForDisplay(category: Category): Category[] {
-    return this.sortByName(category.subCategories ?? []);
-  }
-
-  public getCurrentVideos(): Video[] {
-    const videos = this.selectedSubCategory?.videos ?? this.selectedCategory?.videos ?? [];
-    return this.sortByName(videos);
-  }
-
-  public getTotalVideosForTimeCategory(timeCategory: TimeCategory): number {
-    const categories = this.getCategoriesForTimeCategory(timeCategory);
-    return categories.reduce((sum, cat) => sum + this.getVideosCount(cat), 0);
-  }
-
-  public getTotalCategoriesForTimeCategory(timeCategory: TimeCategory): number {
-    return this.getCategoriesForTimeCategory(timeCategory).length;
-  }
-
-  private sortByName<T extends { name: string }>(items: T[] = []): T[] {
-    return [...items].sort((a, b) =>
-      a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' })
-    );
-  }
+  public getVideoCategoryName(video: Video): string { return this.config.getVideoCategoryName(video); }
+  public getCategoriesForTimeCategory(tc: TimeCategory): Category[] { return this.config.getCategoriesForTimeCategory(tc); }
+  public getVideosCount(cat: Category): number { return this.config.getVideosCount(cat); }
+  public getSubCategoriesCount(cat: Category): number { return this.config.getSubCategoriesCount(cat); }
+  public getSubCategoriesForDisplay(cat: Category): Category[] { return this.nav.getSubCategoriesForDisplay(cat); }
+  public getCurrentVideos(): Video[] { return this.nav.getCurrentVideos(); }
+  public getTotalVideosForTimeCategory(tc: TimeCategory): number { return this.config.getTotalVideosForTimeCategory(tc); }
+  public getTotalCategoriesForTimeCategory(tc: TimeCategory): number { return this.config.getTotalCategoriesForTimeCategory(tc); }
+  public getAllVideos(): Video[] { return this.config.getAllVideos(); }
+  public getTotalVideosCount(): number { return this.config.getTotalVideosCount(); }
+  public getVideoThumbnailUrl(video: Video): string | null { return this.config.getVideoThumbnailUrl(video); }
+  public onThumbnailError(event: Event): void { this.config.onThumbnailError(event); }
 
   public reloadConfiguration(): void {
     if (this.isReloading) return;
-
     this.isReloading = true;
     this.isLoading = true;
 
     this.remoteService.getState(this.siteId).subscribe({
       next: (state: RemoteState) => {
-        this.secondaryVariantPaths = new Set(state.secondaryVariantPaths || []);
-        this.configuration = {
-          remote: { title: state.siteName },
-          categories: state.config?.categories || [],
-          sponsors: state.config?.sponsors || [],
-          timeCategories: state.config?.timeCategories || [],
-          liveScoreEnabled: state.config?.liveScoreEnabled || false,
-        };
-
-        const enrichedConfig = this.enrichVideosWithCategoryId(this.markSecondaryVariants(this.configuration));
-        this.initializeWithConfiguration(enrichedConfig);
-
-        this.currentView = 'home';
-        this.breadcrumb = ['Télécommande'];
-        this.selectedTimeCategory = null;
-        this.selectedCategory = null;
-        this.selectedSubCategory = null;
+        this.config.setSecondaryVariantPaths(state.secondaryVariantPaths || []);
+        const rawConfig = this.config.buildConfiguration(state.siteName, state.config);
+        const enrichedConfig = this.config.enrichVideosWithCategoryId(this.config.markSecondaryVariants(rawConfig));
+        this.config.initializeWithConfiguration(enrichedConfig);
+        this.nav.resetToHome();
         this.isReloading = false;
         this.isLoading = false;
         this.displayToast('Configuration mise à jour', 'success');
@@ -713,114 +437,18 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
     });
   }
 
-  /**
-   * Marque les vidéos ayant une variante secondaire (📺) pour affichage dans la télécommande.
-   */
-  private markSecondaryVariants(config: Configuration): Configuration {
-    if (this.secondaryVariantPaths.size === 0) return config;
+  // ==== SEARCH (delegated) ====
 
-    const markVideo = (video: Video): Video =>
-      this.secondaryVariantPaths.has(video.path)
-        ? { ...video, hasSecondaryVariant: true }
-        : video;
+  public onSearch(): void { this.config.onSearch(); }
+  public clearSearch(): void { this.config.clearSearch(); }
 
-    const markCategory = (cat: Category): Category => ({
-      ...cat,
-      videos: cat.videos?.map(markVideo),
-      subCategories: cat.subCategories?.map(markCategory),
-    });
+  // ==== MATCH INFO ====
 
-    return {
-      ...config,
-      sponsors: config.sponsors?.map(markVideo) || [],
-      categories: config.categories?.map(markCategory) || [],
-      timeCategories: config.timeCategories?.map(tc => ({
-        ...tc,
-        loopVideos: tc.loopVideos?.map(markVideo),
-      })) || [],
-    };
-  }
-
-  private enrichVideosWithCategoryId(config: Configuration): Configuration {
-    const enrichCategory = (category: Category): Category => ({
-      ...category,
-      videos: category.videos?.map(video => ({
-        ...video,
-        categoryId: category.id
-      })),
-      subCategories: category.subCategories?.map(sub => enrichCategory(sub))
-    });
-
-    return {
-      ...config,
-      categories: config.categories?.map(cat => enrichCategory(cat)) || []
-    };
-  }
-
-  // ============================================================================
-  // RECHERCHE
-  // ============================================================================
-
-  public onSearch(): void {
-    if (!this.searchQuery.trim()) {
-      this.clearSearch();
-      return;
-    }
-
-    this.isSearching = true;
-    const query = this.searchQuery.toLowerCase().trim();
-    const filtered = this.getAllVideos().filter(video =>
-      video.name.toLowerCase().includes(query)
-    );
-    this.searchResults = this.sortByName(filtered);
-  }
-
-  public clearSearch(): void {
-    this.searchQuery = '';
-    this.searchResults = [];
-    this.isSearching = false;
-  }
-
-  public getAllVideos(): Video[] {
-    const videos: Video[] = [];
-
-    const extractVideos = (category: Category) => {
-      if (category.videos) {
-        videos.push(...category.videos);
-      }
-      if (category.subCategories) {
-        category.subCategories.forEach(sub => extractVideos(sub));
-      }
-    };
-
-    this.configuration?.categories?.forEach(cat => extractVideos(cat));
-    return this.sortByName(videos);
-  }
-
-  public showAllVideos(): void {
-    this.currentView = 'all-videos';
-    this.breadcrumb = ['Télécommande', 'Toutes les vidéos'];
-  }
-
-  public getTotalVideosCount(): number {
-    return this.getAllVideos().length;
-  }
-
-  // ============================================================================
-  // AFFLUENCE / MATCH INFO
-  // ============================================================================
-
-  public openMatchModal(): void {
-    this.showMatchModal = true;
-  }
-
-  public closeMatchModal(): void {
-    this.showMatchModal = false;
-  }
+  public openMatchModal(): void { this.showMatchModal = true; }
+  public closeMatchModal(): void { this.showMatchModal = false; }
 
   public saveMatchInfo(): void {
-    this.currentSessionId = this.generateUUID();
-
+    this.currentSessionId = crypto.randomUUID();
     this.remoteService.configureMatch(this.siteId, {
       sessionId: this.currentSessionId,
       matchDate: this.matchInfo.date,
@@ -832,43 +460,20 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
         this.showMatchModal = false;
         this.displayToast('Configuration du match enregistrée', 'success');
       },
-      error: () => {
-        this.displayToast('Erreur lors de l\'enregistrement', 'info');
-      }
+      error: () => this.displayToast('Erreur lors de l\'enregistrement', 'info'),
     });
   }
 
-  public incrementAudience(): void {
-    this.matchInfo.audienceEstimate += 10;
-  }
+  public incrementAudience(): void { this.matchInfo.audienceEstimate += 10; }
+  public decrementAudience(): void { if (this.matchInfo.audienceEstimate >= 10) this.matchInfo.audienceEstimate -= 10; }
 
-  public decrementAudience(): void {
-    if (this.matchInfo.audienceEstimate >= 10) {
-      this.matchInfo.audienceEstimate -= 10;
-    }
-  }
-
-  private generateUUID(): string {
-    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-      const r = Math.random() * 16 | 0;
-      const v = c === 'x' ? r : (r & 0x3 | 0x8);
-      return v.toString(16);
-    });
-  }
-
-  // ============================================================================
-  // SCORE EN LIVE
-  // ============================================================================
+  // ==== SCORE EN LIVE ====
 
   public incrementHomeScore(): void { this.scoreService.incrementHomeScore(); }
   public decrementHomeScore(): void { this.scoreService.decrementHomeScore(); }
   public incrementAwayScore(): void { this.scoreService.incrementAwayScore(); }
   public decrementAwayScore(): void { this.scoreService.decrementAwayScore(); }
-
-  public updateTeamNamesFromMatch(): void {
-    this.scoreService.updateTeamNamesFromMatch(this.matchInfo.matchName);
-  }
-
+  public updateTeamNamesFromMatch(): void { this.scoreService.updateTeamNamesFromMatch(this.matchInfo.matchName); }
   public broadcastScore(): void { this.scoreService.scoreUpdate$.next(); }
 
   public resetScore(): void {
@@ -877,78 +482,26 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
     error.subscribe(() => this.displayToast('Erreur lors de la réinitialisation', 'info'));
   }
 
-  public toggleScorePanel(): void {
-    this.isScorePanelExpanded = !this.isScorePanelExpanded;
-  }
+  public toggleScorePanel(): void { this.isScorePanelExpanded = !this.isScorePanelExpanded; }
 
-  // ============================================================================
-  // PHASE DE BOUCLE VIDÉO
-  // ============================================================================
+  // ==== PHASE DE BOUCLE VIDEO ====
 
   public switchPhase(phase: 'neutral' | 'before' | 'during' | 'after'): void {
     this.activePhase = phase;
-
     this.remoteService.changePhase(this.siteId, phase).subscribe({
-      next: () => {
-        this.displayToast(`Phase: ${this.getPhaseLabel(phase)}`, 'success');
-      },
-      error: () => {
-        this.displayToast('Erreur lors du changement de phase', 'info');
-      }
+      next: () => this.displayToast(`Phase: ${this.config.getPhaseLabel(phase)}`, 'success'),
+      error: () => this.displayToast('Erreur lors du changement de phase', 'info'),
     });
   }
 
-  public togglePhaseDropdown(): void {
-    this.isPhaseDropdownOpen = !this.isPhaseDropdownOpen;
-  }
+  public togglePhaseDropdown(): void { this.isPhaseDropdownOpen = !this.isPhaseDropdownOpen; }
+  public selectPhase(phase: 'neutral' | 'before' | 'during' | 'after'): void { this.switchPhase(phase); this.isPhaseDropdownOpen = false; }
+  public getPhaseLabel(phase: 'neutral' | 'before' | 'during' | 'after'): string { return this.config.getPhaseLabel(phase); }
+  public getPhaseIcon(phase: 'neutral' | 'before' | 'during' | 'after'): string { return this.config.getPhaseIcon(phase); }
+  public hasLoopForPhase(phase: 'neutral' | 'before' | 'during' | 'after'): boolean { return this.config.hasLoopForPhase(phase); }
+  public getLoopVideoCount(phase: 'neutral' | 'before' | 'during' | 'after'): number { return this.config.getLoopVideoCount(phase); }
 
-  public selectPhase(phase: 'neutral' | 'before' | 'during' | 'after'): void {
-    this.switchPhase(phase);
-    this.isPhaseDropdownOpen = false;
-  }
-
-  public getPhaseLabel(phase: 'neutral' | 'before' | 'during' | 'after'): string {
-    const labels: Record<string, string> = {
-      'neutral': 'Boucle par défaut',
-      'before': 'Avant-match',
-      'during': 'Match',
-      'after': 'Après-match'
-    };
-    return labels[phase] || phase;
-  }
-
-  public getPhaseIcon(phase: 'neutral' | 'before' | 'during' | 'after'): string {
-    const icons: Record<string, string> = {
-      'neutral': '🔄',
-      'before': '🏁',
-      'during': '▶️',
-      'after': '🏆'
-    };
-    return icons[phase] || '🔄';
-  }
-
-  public hasLoopForPhase(phase: 'neutral' | 'before' | 'during' | 'after'): boolean {
-    if (phase === 'neutral') {
-      return (this.configuration?.sponsors?.length || 0) > 0;
-    }
-    const timeCategory = this.timeCategories.find(tc => tc.id === phase);
-    return (timeCategory?.loopVideos?.length || 0) > 0;
-  }
-
-  public getLoopVideoCount(phase: 'neutral' | 'before' | 'during' | 'after'): number {
-    if (phase === 'neutral') {
-      return this.configuration?.sponsors?.length || 0;
-    }
-    const timeCategory = this.timeCategories.find(tc => tc.id === phase);
-    if (timeCategory?.loopVideos?.length) {
-      return timeCategory.loopVideos.length;
-    }
-    return this.configuration?.sponsors?.length || 0;
-  }
-
-  // ============================================================================
-  // DARK MODE
-  // ============================================================================
+  // ==== DARK MODE ====
 
   public toggleDarkMode(): void {
     this.isDarkMode = !this.isDarkMode;
@@ -957,107 +510,14 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
   }
 
   private applyDarkMode(): void {
-    if (this.isDarkMode) {
-      document.body.classList.add('dark-mode');
-    } else {
-      document.body.classList.remove('dark-mode');
-    }
+    if (this.isDarkMode) { document.body.classList.add('dark-mode'); }
+    else { document.body.classList.remove('dark-mode'); }
   }
 
-  public toggleHeaderMenu(): void {
-    this.isHeaderMenuOpen = !this.isHeaderMenuOpen;
-  }
+  public toggleHeaderMenu(): void { this.isHeaderMenuOpen = !this.isHeaderMenuOpen; }
+  public closeHeaderMenu(): void { this.isHeaderMenuOpen = false; }
 
-  public closeHeaderMenu(): void {
-    this.isHeaderMenuOpen = false;
-  }
-
-  // ============================================================================
-  // VIDÉOS RÉCENTES
-  // ============================================================================
-
-  private loadRecentVideos(): void {
-    try {
-      const stored = localStorage.getItem('cloudRemoteRecentVideos');
-      if (stored) {
-        this.recentVideos = JSON.parse(stored);
-      }
-    } catch {
-      this.recentVideos = [];
-    }
-  }
-
-  private addToRecentVideos(video: Video): void {
-    this.recentVideos = this.recentVideos.filter(v => v.path !== video.path);
-    this.recentVideos.unshift(video);
-    this.recentVideos = this.recentVideos.slice(0, this.MAX_RECENT_VIDEOS);
-    localStorage.setItem('cloudRemoteRecentVideos', JSON.stringify(this.recentVideos));
-  }
-
-  // ============================================================================
-  // SWIPE GESTURES
-  // ============================================================================
-
-  public onTouchStart(event: TouchEvent): void {
-    this.touchStartX = event.touches[0].clientX;
-    this.touchStartY = event.touches[0].clientY;
-  }
-
-  public onTouchEnd(event: TouchEvent): void {
-    const touchEndX = event.changedTouches[0].clientX;
-    const touchEndY = event.changedTouches[0].clientY;
-
-    const deltaX = touchEndX - this.touchStartX;
-    const deltaY = touchEndY - this.touchStartY;
-
-    if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > this.SWIPE_THRESHOLD) {
-      if (deltaX > 0) {
-        this.onSwipeRight();
-      }
-    }
-  }
-
-  private onSwipeRight(): void {
-    if (this.currentView === 'home' && !this.isSearching) {
-      return;
-    }
-    this.handleBack();
-  }
-
-  // ============================================================================
-  // THUMBNAILS (pas disponibles en cloud - fallback)
-  // ============================================================================
-
-  public getVideoThumbnailUrl(_video: Video): string | null {
-    // En mode cloud, pas de thumbnails disponibles
-    return null;
-  }
-
-  public onThumbnailError(event: Event): void {
-    const img = event.target as HTMLImageElement;
-    if (img) {
-      img.style.display = 'none';
-      const parent = img.parentElement;
-      if (parent) {
-        parent.classList.add('thumbnail-error');
-      }
-    }
-  }
-
-  // ============================================================================
-  // OPTIONS LOCALES
-  // ============================================================================
-
-  public openOptions(): void {
-    if (!this.liveScoreEnabled) {
-      this.displayToast('Options non disponibles', 'info');
-      this.closeHeaderMenu();
-      return;
-    }
-    this.currentView = 'options';
-    this.breadcrumb = ['Télécommande', 'Options'];
-    this.closeHeaderMenu();
-  }
+  // ==== OPTIONS (delegated) ====
 
   public updateOverlayOption(key: keyof LocalOptions['overlay'], value: boolean): void {
     this.optionsService.updateOverlayOption(key, value);
@@ -1083,9 +543,7 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
     this.displayToast('Options réinitialisées', 'success');
   }
 
-  // ============================================================================
-  // SPORT & PÉRIODES
-  // ============================================================================
+  // ==== SPORT & PÉRIODES ====
 
   public setSport(sport: SportType): void {
     this.optionsService.setSport(sport);
@@ -1101,9 +559,7 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
   public nextPeriod(): void { this.optionsService.nextPeriod(); this.broadcastScore(); }
   public getAvailablePeriods(): string[] { return this.optionsService.getAvailablePeriods(); }
 
-  // ============================================================================
-  // ÉQUIPES & LOGOS
-  // ============================================================================
+  // ==== ÉQUIPES & LOGOS ====
 
   public updateHomeTeamName(name: string): void {
     this.optionsService.updateHomeTeamName(name);
@@ -1134,18 +590,13 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
 
   public startNewMatch(): void {
     this.optionsService.resetForNewMatch();
-    this.scoreService.resetForNewMatch(
-      this.localOptions.match.homeTeam.name,
-      this.localOptions.match.awayTeam.name
-    );
+    this.scoreService.resetForNewMatch(this.localOptions.match.homeTeam.name, this.localOptions.match.awayTeam.name);
     this.resetTimer();
     this.broadcastScore();
     this.displayToast('Nouveau match préparé', 'success');
   }
 
-  // ============================================================================
-  // ANIMATION DE BUT
-  // ============================================================================
+  // ==== ANIMATION DE BUT ====
 
   public updateGoalAnimationOption<K extends keyof LocalOptions['goalAnimation']>(key: K, value: LocalOptions['goalAnimation'][K]): void {
     this.optionsService.updateGoalAnimationOption(key, value);
@@ -1155,9 +606,7 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
     this.optionsService.setOverlayPosition(position);
   }
 
-  // ============================================================================
-  // BREAKING NEWS
-  // ============================================================================
+  // ==== BREAKING NEWS ====
 
   public toggleBreakingNewsPanel(): void {
     if (!this.localOptions.breakingNews.enabled) {
@@ -1171,31 +620,23 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
     const text = message || this.breakingNewsMessage.trim();
     if (!text) return;
 
-    const news = {
+    this.remoteService.showBreakingNews(this.siteId, {
       message: text,
       duration: this.localOptions.breakingNews.defaultDuration,
       position: this.localOptions.breakingNews.position
-    };
-
-    this.remoteService.showBreakingNews(this.siteId, news).subscribe({
+    }).subscribe({
       next: () => {
         this.breakingNewsMessage = '';
         this.showBreakingNewsPanel = false;
         this.displayToast('Annonce envoyée', 'success');
       },
-      error: () => {
-        this.displayToast('Erreur lors de l\'envoi', 'info');
-      }
+      error: () => this.displayToast('Erreur lors de l\'envoi', 'info'),
     });
   }
 
-  public sendQuickNews(message: string): void {
-    this.sendBreakingNews(message);
-  }
+  public sendQuickNews(message: string): void { this.sendBreakingNews(message); }
 
-  // ============================================================================
-  // TIMER CONTROLS
-  // ============================================================================
+  // ==== TIMER CONTROLS ====
 
   public toggleTimer(): void { this.timerService.toggle(this.siteId, this.localOptions.timer); this.displayToast(this.timerIsRunning ? 'Chronomètre démarré' : 'Chronomètre en pause', this.timerIsRunning ? 'success' : 'info'); }
   public startTimer(): void { this.timerService.start(this.siteId, this.localOptions.timer); this.displayToast('Chronomètre démarré', 'success'); }
@@ -1204,4 +645,8 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
   public formatTime(seconds: number): string { return this.timerService.formatTime(seconds); }
   public getDisplayTime(): string { return this.timerService.getDisplayTime(); }
 
+  // ==== SWIPE GESTURES (delegated) ====
+
+  public onTouchStart(event: TouchEvent): void { this.nav.onTouchStart(event); }
+  public onTouchEnd(event: TouchEvent): void { this.nav.onTouchEnd(event, this.config.isSearching, () => this.config.clearSearch()); }
 }

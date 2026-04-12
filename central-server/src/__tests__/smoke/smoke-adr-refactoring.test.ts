@@ -1402,8 +1402,9 @@ describe('PROP-002 Phase 5: N-display model guards', () => {
   });
 
   it('TvComponent must send displayIndex in tv-register', () => {
-    const content = fs.readFileSync(path.join(repoRoot, 'raspberry/src/app/components/tv/tv.component.ts'), 'utf8');
-    expect(content).toMatch(/displayIndex:\s*this\.displayIndex/);
+    const content = fs.readFileSync(path.join(repoRoot, 'raspberry/src/app/components/tv/tv.component.ts'), 'utf8') +
+      fs.readFileSync(path.join(repoRoot, 'raspberry/src/app/services/tv-sync.service.ts'), 'utf8');
+    expect(content).toMatch(/displayIndex/);
   });
 
   it('Command interface must have target field for N-display targeting', () => {

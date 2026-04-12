@@ -745,6 +745,9 @@ describe('OTA deployment observability guards', () => {
     const component = fs.readFileSync(
       path.join(repoRoot, 'central-dashboard/src/app/features/updates/updates-management.component.ts'),
       'utf8'
+    ) + fs.readFileSync(
+      path.join(repoRoot, 'central-dashboard/src/app/features/updates/updates-management.component.html'),
+      'utf8'
     );
     // The error block must NOT require error_message to be truthy
     // (it used to have *ngIf="deployment.status === 'failed' && deployment.error_message")
@@ -758,6 +761,9 @@ describe('OTA deployment observability guards', () => {
   it('dashboard must show deployment duration/elapsed for completed and in_progress deployments', () => {
     const component = fs.readFileSync(
       path.join(repoRoot, 'central-dashboard/src/app/features/updates/updates-management.component.ts'),
+      'utf8'
+    ) + fs.readFileSync(
+      path.join(repoRoot, 'central-dashboard/src/app/features/updates/updates-management.component.html'),
       'utf8'
     );
     // Must have duration calculation methods
@@ -828,6 +834,9 @@ describe('OTA deployment observability guards', () => {
   it('dashboard must have Voir detail button and step checklist for OTA deployments', () => {
     const component = fs.readFileSync(
       path.join(repoRoot, 'central-dashboard/src/app/features/updates/updates-management.component.ts'),
+      'utf8'
+    ) + fs.readFileSync(
+      path.join(repoRoot, 'central-dashboard/src/app/features/updates/updates-management.component.html'),
       'utf8'
     );
     expect({ hasVoirDetail: component.includes('Voir détail') })
