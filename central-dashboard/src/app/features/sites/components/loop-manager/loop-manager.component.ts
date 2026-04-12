@@ -545,4 +545,78 @@ export class LoopManagerComponent implements OnInit, OnChanges {
   onChanged(): void {
     this.configChanged.emit();
   }
+
+  // === ADR-050 Phase 3: Drag & drop reorder ===
+
+  dragIndex: number | null = null;
+  dragOverIndex: number | null = null;
+  dragContext: 'default' | 'phase' | null = null;
+
+  getFilename(path: string): string {
+    if (!path) return '';
+    return path.split('/').pop() || path;
+  }
+
+  onDragStart(event: DragEvent, index: number, context: 'default' | 'phase'): void {
+    this.dragIndex = index;
+    this.dragContext = context;
+    if (event.dataTransfer) {
+      event.dataTransfer.effectAllowed = 'move';
+      event.dataTransfer.setData('text/plain', String(index));
+    }
+  }
+
+  onDragOver(event: DragEvent): void {
+    event.preventDefault();
+    if (event.dataTransfer) {
+      event.dataTransfer.dropEffect = 'move';
+    }
+  }
+
+  onDragEnter(index: number, context: 'default' | 'phase'): void {
+    if (this.dragContext === context) {
+      this.dragOverIndex = index;
+    }
+  }
+
+  onDragEnd(): void {
+    this.dragIndex = null;
+    this.dragOverIndex = null;
+    this.dragContext = null;
+  }
+
+  onDropDefault(event: DragEvent): void {
+    event.preventDefault();
+    if (this.dragIndex === null || this.dragOverIndex === null || this.dragContext !== 'default') {
+      this.onDragEnd();
+      return;
+    }
+    const arr = this.config.sponsors;
+    if (!arr || this.dragIndex === this.dragOverIndex) {
+      this.onDragEnd();
+      return;
+    }
+    const [moved] = arr.splice(this.dragIndex, 1);
+    arr.splice(this.dragOverIndex, 0, moved);
+    this.onDragEnd();
+    this.onChanged();
+  }
+
+  onDropPhase(event: DragEvent): void {
+    event.preventDefault();
+    if (this.dragIndex === null || this.dragOverIndex === null || this.dragContext !== 'phase') {
+      this.onDragEnd();
+      return;
+    }
+    const tc = this.config.timeCategories?.find(t => t.id === this.activeTab);
+    const arr = tc?.loopVideos;
+    if (!arr || this.dragIndex === this.dragOverIndex) {
+      this.onDragEnd();
+      return;
+    }
+    const [moved] = arr.splice(this.dragIndex, 1);
+    arr.splice(this.dragOverIndex, 0, moved);
+    this.onDragEnd();
+    this.onChanged();
+  }
 }

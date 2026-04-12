@@ -39,30 +39,47 @@
     </div>
   </div>
 
-  <!-- Contenu du tab actif : tab Défaut -->
+  <!-- ===================== TAB DÉFAUT ===================== -->
   <div class="loop-content" *ngIf="activeTab === 'default'">
     <p class="loop-desc">
       Vidéos diffusées quand aucune boucle par phase n'est définie.
       <strong>Pas de tracking analytics.</strong>
     </p>
-    <div class="loop-videos" *ngIf="config.sponsors && config.sponsors.length > 0">
+
+    <!-- Cards grid (ADR-050 Phase 3) -->
+    <div
+      class="loop-cards"
+      *ngIf="config.sponsors && config.sponsors.length > 0"
+      (dragover)="onDragOver($event)"
+      (drop)="onDropDefault($event)"
+    >
       <div
-        class="loop-video-row"
+        class="loop-card"
         *ngFor="let video of config.sponsors; let i = index"
         [class.neopro]="video.owner === 'neopro'"
         [class.has-error]="!video.path"
         [class.orphaned]="isOrphanedVideo(video.path)"
+        [class.drag-over]="dragOverIndex === i && dragContext === 'default'"
+        [draggable]="!(isClubUser && video.owner === 'neopro')"
+        (dragstart)="onDragStart($event, i, 'default')"
+        (dragenter)="onDragEnter(i, 'default')"
+        (dragend)="onDragEnd()"
       >
-        <span class="video-order">{{ i + 1 }}</span>
-        <div class="video-fields">
-          <input
-            type="text"
-            [(ngModel)]="video.name"
-            (ngModelChange)="onChanged()"
-            placeholder="Nom"
-            class="video-name-input"
-            [disabled]="isClubUser && video.owner === 'neopro'"
-          />
+        <div class="card-header">
+          <span class="card-order">{{ i + 1 }}</span>
+          <span class="card-name" [title]="video.name || video.path">{{
+            video.name || getFilename(video.path) || '—'
+          }}</span>
+          <button
+            class="card-remove"
+            (click)="removeDefaultVideo(i)"
+            *ngIf="!(isClubUser && video.owner === 'neopro')"
+          >
+            ×
+          </button>
+        </div>
+
+        <div class="card-body">
           <app-video-search-select
             [groups]="videoOptionGroups"
             [selectedPath]="video.path"
@@ -74,58 +91,37 @@
             [searchPlaceholder]="'common.searchVideoPlaceholder' | translate"
             [emptyLabel]="'common.noVideoFound' | translate"
           ></app-video-search-select>
+        </div>
+
+        <div class="card-footer">
+          <span class="card-duration" *ngIf="getVideoDuration(video.path) as dur">{{
+            formatDuration(dur)
+          }}</span>
           <span class="cloud-hint" *ngIf="siteType !== 'saas' && isCloudVideo(video.path)"
             >⏳ Sera déployée</span
           >
-          <span class="error-hint" *ngIf="!video.path">Vidéo requise</span>
           <span
             class="sponsor-badge-readonly"
             *ngIf="getAutoDetectedSponsor(video.path) as sponsor"
-            [title]="'Associé au sponsor ' + sponsor.name + ' (onglet Sponsors)'"
+            [title]="'Associé au sponsor ' + sponsor.name"
+            >🔗 {{ sponsor.name }}</span
           >
-            🔗 {{ sponsor.name }}
+          <span class="card-owner" *ngIf="!isClubUser">
+            <span
+              class="owner-label"
+              [class.neopro]="video.owner === 'neopro'"
+              [class.club]="video.owner !== 'neopro'"
+            >
+              {{ video.owner === 'neopro' ? 'NEOPRO' : 'Club' }}
+            </span>
           </span>
+          <span class="owner-label neopro" *ngIf="isClubUser && video.owner === 'neopro'">🔒</span>
         </div>
-        <span class="video-duration" *ngIf="getVideoDuration(video.path) as dur">{{
-          formatDuration(dur)
-        }}</span>
-        <div class="video-owner" *ngIf="!isClubUser">
-          <label class="owner-radio">
-            <input
-              type="radio"
-              [name]="'owner-default-' + i"
-              [(ngModel)]="video.owner"
-              value="club"
-              (ngModelChange)="onChanged()"
-            />
-            <span class="owner-label club">Club</span>
-          </label>
-          <label class="owner-radio">
-            <input
-              type="radio"
-              [name]="'owner-default-' + i"
-              [(ngModel)]="video.owner"
-              value="neopro"
-              (ngModelChange)="onChanged()"
-            />
-            <span class="owner-label neopro">NEOPRO</span>
-          </label>
-        </div>
-        <span
-          class="owner-label neopro"
-          *ngIf="isClubUser && video.owner === 'neopro'"
-          title="Vidéo gérée par Neopro"
-          >🔒 NEOPRO</span
-        >
-        <button
-          class="btn-remove"
-          (click)="removeDefaultVideo(i)"
-          *ngIf="!(isClubUser && video.owner === 'neopro')"
-        >
-          ×
-        </button>
+
+        <div class="card-drag-handle" title="Glisser pour réordonner">⠿</div>
       </div>
     </div>
+
     <div class="loop-empty" *ngIf="!config.sponsors || config.sponsors.length === 0">
       <p>Aucune vidéo dans la boucle par défaut</p>
     </div>
@@ -134,25 +130,31 @@
     </div>
   </div>
 
-  <!-- Contenu du tab actif : tabs Phase -->
+  <!-- ===================== TABS PHASE ===================== -->
   <div class="loop-content" *ngIf="activeTab !== 'default'">
     <ng-container *ngIf="getPhaseVideos().length > 0">
-      <div class="loop-videos">
+      <!-- Cards grid (ADR-050 Phase 3) -->
+      <div class="loop-cards" (dragover)="onDragOver($event)" (drop)="onDropPhase($event)">
         <div
-          class="loop-video-row"
+          class="loop-card phase-card"
           *ngFor="let video of getPhaseVideos(); let i = index"
           [class.orphaned]="isOrphanedVideo(video.path)"
-          [class.pinned-row]="video.pinned"
+          [class.pinned]="video.pinned"
+          [class.drag-over]="dragOverIndex === i && dragContext === 'phase'"
+          draggable="true"
+          (dragstart)="onDragStart($event, i, 'phase')"
+          (dragenter)="onDragEnter(i, 'phase')"
+          (dragend)="onDragEnd()"
         >
-          <span class="video-order">{{ i + 1 }}</span>
-          <div class="video-fields">
-            <input
-              type="text"
-              [value]="video.name"
-              (input)="updatePhaseVideo(i, 'name', $any($event.target).value)"
-              placeholder="Nom"
-              class="video-name-input"
-            />
+          <div class="card-header">
+            <span class="card-order">{{ video.pinned ? '📌' : i + 1 }}</span>
+            <span class="card-name" [title]="video.name || video.path">{{
+              video.name || getFilename(video.path) || '—'
+            }}</span>
+            <button class="card-remove" (click)="removePhaseVideo(i)">×</button>
+          </div>
+
+          <div class="card-body">
             <app-video-search-select
               [groups]="videoOptionGroups"
               [selectedPath]="video.path"
@@ -162,66 +164,57 @@
               [searchPlaceholder]="'common.searchVideoPlaceholder' | translate"
               [emptyLabel]="'common.noVideoFound' | translate"
             ></app-video-search-select>
-            <span
-              class="cloud-badge"
-              *ngIf="siteType !== 'saas' && isCloudVideo(video.path)"
-              title="Sera déployée automatiquement"
+          </div>
+
+          <div class="card-footer">
+            <span class="card-duration" *ngIf="getVideoDuration(video.path) as dur">{{
+              formatDuration(dur)
+            }}</span>
+            <span class="cloud-badge" *ngIf="siteType !== 'saas' && isCloudVideo(video.path)"
               >⏳</span
             >
             <span
               class="sponsor-badge-readonly"
               *ngIf="getAutoDetectedSponsor(video.path) as sponsor"
-              [title]="'Associé au sponsor ' + sponsor.name + ' (onglet Sponsors)'"
+              [title]="'Associé au sponsor ' + sponsor.name"
+              >🔗 {{ sponsor.name }}</span
             >
-              🔗 {{ sponsor.name }}
-            </span>
-          </div>
-          <div
-            class="weight-control-inline"
-            *ngIf="getVideoSponsorId(video) as sid"
-            [title]="
-              canUseWeightedRotation ? '' : 'Pondération réservée aux abonnements Pro et Premium'
-            "
-          >
+            <div
+              class="weight-control-inline"
+              *ngIf="getVideoSponsorId(video) as sid"
+              [title]="
+                canUseWeightedRotation ? '' : 'Pondération réservée aux abonnements Pro et Premium'
+              "
+            >
+              <button
+                class="weight-btn"
+                (click)="updateSponsorWeight(sid, (video.weight || 1) - 1)"
+                [disabled]="!canUseWeightedRotation || (video.weight || 1) <= 1"
+              >
+                −
+              </button>
+              <span class="weight-value">×{{ video.weight || 1 }}</span>
+              <button
+                class="weight-btn"
+                (click)="updateSponsorWeight(sid, (video.weight || 1) + 1)"
+                [disabled]="!canUseWeightedRotation || (video.weight || 1) >= 10"
+              >
+                +
+              </button>
+              <span class="weight-pct-inline">{{ getWeightPercentage(sid) }}%</span>
+              <span class="weight-lock" *ngIf="!canUseWeightedRotation">🔒</span>
+            </div>
             <button
-              class="weight-btn"
-              (click)="updateSponsorWeight(sid, (video.weight || 1) - 1)"
-              [disabled]="!canUseWeightedRotation || (video.weight || 1) <= 1"
+              class="btn-pin"
+              [class.pinned]="video.pinned"
+              (click)="togglePinVideo(i)"
+              [title]="video.pinned ? 'Désépingler' : 'Épingler à la position ' + (i + 1)"
             >
-              −
+              {{ video.pinned ? '📌' : '📍' }}
             </button>
-            <span class="weight-value">×{{ video.weight || 1 }}</span>
-            <button
-              class="weight-btn"
-              (click)="updateSponsorWeight(sid, (video.weight || 1) + 1)"
-              [disabled]="!canUseWeightedRotation || (video.weight || 1) >= 10"
-            >
-              +
-            </button>
-            <span class="weight-pct-inline">{{ getWeightPercentage(sid) }}%</span>
-            <span
-              class="weight-lock"
-              *ngIf="!canUseWeightedRotation"
-              title="Pondération réservée aux abonnements Pro et Premium"
-              >🔒</span
-            >
           </div>
-          <button
-            class="btn-pin"
-            [class.pinned]="video.pinned"
-            (click)="togglePinVideo(i)"
-            [title]="
-              video.pinned
-                ? 'Désépingler (participe au scheduling)'
-                : 'Épingler à la position ' + (i + 1)
-            "
-          >
-            {{ video.pinned ? '📌' : '📍' }}
-          </button>
-          <span class="video-duration" *ngIf="getVideoDuration(video.path) as dur">{{
-            formatDuration(dur)
-          }}</span>
-          <button class="btn-remove-sm" (click)="removePhaseVideo(i)">×</button>
+
+          <div class="card-drag-handle" title="Glisser pour réordonner">⠿</div>
         </div>
       </div>
     </ng-container>
