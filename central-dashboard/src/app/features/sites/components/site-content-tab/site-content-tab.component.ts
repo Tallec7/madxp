@@ -234,7 +234,11 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
         this.cloudVideos = response.cloudVideos || [];
         this.localStorage = response.localStorage || null;
         this.secondaryVariantVideoIds = new Set(response.secondaryVariantVideoIds || []);
-        this.secondaryDisplayEnabled = response.secondaryDisplayEnabled ?? false;
+        // Use feature gate instead of deprecated DB column (sites.secondary_display_enabled)
+        this.secondaryDisplayEnabled = this.gate.canAccess('secondary_display', {
+          subscription_plan: this.subscriptionPlan,
+          feature_overrides: this.featureOverrides,
+        });
 
         this.deployedPathsMap = new Map();
         for (const dp of response.deployedPaths || []) {
