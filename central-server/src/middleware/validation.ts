@@ -94,6 +94,7 @@ export const schemas = {
 
   copyConfig: Joi.object({
     target_site_id: Joi.string().uuid().required(),
+    profile_ids: Joi.array().items(Joi.string().uuid()).optional(),
   }),
 
   createSite: Joi.object({

@@ -26,7 +26,7 @@ GET    /api/sites/:id/local-content → vidéos locales + stockage
 POST   /api/sites             → créer site (génère api_key)
 PUT    /api/sites/:id         → modifier
 DELETE /api/sites/:id         → supprimer
-POST   /api/sites/:id/copy-config → copier profils config vers un autre site { target_site_id }
+POST   /api/sites/:id/copy-config → copier profils config vers un autre site { target_site_id, profile_ids? } (mode ajout)
 POST   /api/sites/:id/command → envoyer commande au Pi
 ```
 
@@ -156,3 +156,5 @@ Pi Analytics: 500 req/min (par IP)
 - Supprimer `piAnalyticsRateLimit` des routes `POST /video-plays` et `POST /sessions` dans `analytics.routes.ts` (sans rate limiter per-route, les deux routes héritent de `apiRateLimit` 100/min — trop bas pour les Pi en backlog)
 - Accepter un upload vidéo de 0 octets dans `createVideo` / `createVideos` de `content.controller.ts` (guard `file.size === 0` → 400 obligatoire)
 - Wrapper `contentRoutes` avec `sensitiveRateLimit` (30/min) sur le mount `/api` dans `server.ts` (3-6 vues dashboard exhaustent le quota → cascade de 429 — incident v3.136.4 — utiliser rate limits per-route dans `content.routes.ts`)
+- Revenir au mode "delete-all + replace" dans `copyConfig` de `site-copy.controller.ts` (le mode actuel est ajout sans suppression — `deleteById` des profils existants casse les configs des clubs en production — les conflits de nom sont résolus par suffixe `(copie)` — smoke test enforced)
+- Remettre `isDefault: true` sur les profils copiés dans `copyConfig` (les profils copiés ne doivent JAMAIS écraser le profil par défaut de la cible — toujours `isDefault: false` — smoke test enforced)

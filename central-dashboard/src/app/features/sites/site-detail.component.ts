@@ -10,7 +10,7 @@ import { NotificationService } from '../../core/services/notification.service';
 import { LoggerService } from '../../core/services/logger.service';
 import { SocketService } from '../../core/services/socket.service';
 import { ErrorExtractor } from '../../core/utils/error-extractor';
-import { Site, Metrics, FanStatus, SiteConnectionStatus, ConnectionHealth, MatchHistoryData, Match } from '../../core/models';
+import { Site, Metrics, FanStatus, SiteConnectionStatus, ConnectionHealth, MatchHistoryData, Match, ConfigProfile } from '../../core/models';
 import { formatVersion } from './utils/version';
 import { Subscription, interval } from 'rxjs';
 import * as QRCode from 'qrcode';
@@ -111,11 +111,14 @@ export class SiteDetailComponent implements OnInit, OnDestroy, AfterViewChecked 
   showCopyConfigModal = false;
 
   // Copy config
+  copyConfigStep: 'profiles' | 'target' = 'profiles';
   copyConfigSearch = '';
   copyConfigTargetId: string | null = null;
   copyingConfig = false;
   allSitesForCopy: Site[] = [];
   filteredCopyConfigSites: Site[] = [];
+  sourceProfiles: ConfigProfile[] = [];
+  selectedProfileIds: Set<string> = new Set();
 
   // Logs
   logs: string[] = [];
@@ -903,52 +906,67 @@ export class SiteDetailComponent implements OnInit, OnDestroy, AfterViewChecked 
   // ============================================================
 
   openCopyConfigModal(): void {
+    this.copyConfigStep = 'profiles';
     this.copyConfigSearch = '';
     this.copyConfigTargetId = null;
     this.copyingConfig = false;
     this.filteredCopyConfigSites = [];
+    this.sourceProfiles = [];
+    this.selectedProfileIds = new Set();
     this.showCopyConfigModal = true;
-
-    // Charger la liste des sites
-    this.sitesService.loadSites({ limit: 100 }).subscribe({
+    this.sitesService.getProfiles(this.siteId).subscribe({
       next: (response) => {
-        this.allSitesForCopy = response.sites.filter(s => s.id !== this.siteId);
-        this.filteredCopyConfigSites = this.allSitesForCopy;
+        this.sourceProfiles = response.profiles;
+        this.selectedProfileIds = new Set(response.profiles.map(p => p.id));
       },
       error: (error) => {
-        this.logger.error('Failed to load sites for copy config', { error: ErrorExtractor.getMessage(error) });
+        this.logger.error('Failed to load profiles for copy config', { error: ErrorExtractor.getMessage(error) });
       }
     });
   }
 
+  toggleProfileSelection(profileId: string): void {
+    if (this.selectedProfileIds.has(profileId)) { this.selectedProfileIds.delete(profileId); } else { this.selectedProfileIds.add(profileId); }
+  }
+
+  toggleAllProfiles(): void {
+    this.selectedProfileIds = this.selectedProfileIds.size === this.sourceProfiles.length
+      ? new Set() : new Set(this.sourceProfiles.map(p => p.id));
+  }
+
+  goToTargetStep(): void {
+    this.copyConfigStep = 'target';
+    if (this.allSitesForCopy.length === 0) {
+      this.sitesService.loadSites({ limit: 100 }).subscribe({
+        next: (response) => {
+          this.allSitesForCopy = response.sites.filter(s => s.id !== this.siteId);
+          this.filteredCopyConfigSites = this.allSitesForCopy;
+        },
+        error: (error) => {
+          this.logger.error('Failed to load sites for copy config', { error: ErrorExtractor.getMessage(error) });
+        }
+      });
+    } else {
+      this.filteredCopyConfigSites = this.allSitesForCopy;
+    }
+  }
+
   filterCopyConfigSites(): void {
     const search = this.copyConfigSearch.toLowerCase().trim();
-    if (!search) {
-      this.filteredCopyConfigSites = this.allSitesForCopy;
-      return;
-    }
+    if (!search) { this.filteredCopyConfigSites = this.allSitesForCopy; return; }
     this.filteredCopyConfigSites = this.allSitesForCopy.filter(s =>
-      s.club_name.toLowerCase().includes(search) ||
-      s.site_name.toLowerCase().includes(search)
+      s.club_name.toLowerCase().includes(search) || s.site_name.toLowerCase().includes(search)
     );
-    // Deselect if the selected site is no longer visible
     if (this.copyConfigTargetId && !this.filteredCopyConfigSites.some(s => s.id === this.copyConfigTargetId)) {
       this.copyConfigTargetId = null;
     }
   }
 
   executeCopyConfig(): void {
-    if (!this.copyConfigTargetId || this.copyingConfig) return;
-
-    const targetSite = this.allSitesForCopy.find(s => s.id === this.copyConfigTargetId);
-    if (!targetSite) return;
-
-    if (!confirm(`Copier la configuration de "${this.site?.club_name}" vers "${targetSite.club_name}" ?\n\nCette action remplacera les profils de configuration existants sur le site cible.`)) {
-      return;
-    }
-
+    if (!this.copyConfigTargetId || this.copyingConfig || this.selectedProfileIds.size === 0) return;
+    if (!this.allSitesForCopy.find(s => s.id === this.copyConfigTargetId)) return;
     this.copyingConfig = true;
-    this.sitesService.copyConfig(this.siteId, this.copyConfigTargetId).subscribe({
+    this.sitesService.copyConfig(this.siteId, this.copyConfigTargetId, [...this.selectedProfileIds]).subscribe({
       next: (result) => {
         this.copyingConfig = false;
         this.showCopyConfigModal = false;

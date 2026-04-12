@@ -1427,6 +1427,7 @@ describe('sites.controller split guard (prevents re-monolithification)', () => {
       'site-commands.controller.ts',
       'site-debug.controller.ts',
       'site-fleet.controller.ts',
+      'site-copy.controller.ts',
     ];
     for (const file of expected) {
       expect(fs.existsSync(path.join(controllerDir, file))).toBe(true);
@@ -1444,6 +1445,7 @@ describe('sites.controller split guard (prevents re-monolithification)', () => {
     expect(content).toContain("from './site-commands.controller'");
     expect(content).toContain("from './site-debug.controller'");
     expect(content).toContain("from './site-fleet.controller'");
+    expect(content).toContain("from './site-copy.controller'");
   });
 
   it('sendCommand must live in site-commands.controller.ts (not sites.controller.ts)', () => {
@@ -1469,6 +1471,34 @@ describe('sites.controller split guard (prevents re-monolithification)', () => {
     expect(fleetHealth).toContain('export const getFleetHealthData');
     expect(fleet).toContain('getFleetHealthData');
     expect(main).not.toMatch(/export const getFleetHealthData\s*=/);
+  });
+
+  it('copyConfig must live in site-copy.controller.ts (not sites.controller.ts)', () => {
+    const main = fs.readFileSync(path.join(controllerDir, 'sites.controller.ts'), 'utf-8');
+    const copy = fs.readFileSync(path.join(controllerDir, 'site-copy.controller.ts'), 'utf-8');
+    expect(copy).toContain('export const copyConfig');
+    expect(copy).toContain('export const duplicateSite');
+    expect(main).not.toMatch(/export const copyConfig\s*=/);
+    expect(main).not.toMatch(/export const duplicateSite\s*=/);
+  });
+
+  it('copyConfig must use add mode (not delete existing profiles)', () => {
+    const copy = fs.readFileSync(path.join(controllerDir, 'site-copy.controller.ts'), 'utf-8');
+    // Must NOT delete existing profiles on target site
+    expect(copy).not.toContain('deleteById(profile.id)');
+    // Must resolve name conflicts with suffix
+    expect(copy).toContain('(copie)');
+    // Must never set isDefault: true on copied profiles (preserve target defaults)
+    expect(copy).toMatch(/isDefault:\s*false/);
+    // Must accept optional profile_ids filter
+    expect(copy).toContain('profile_ids');
+  });
+
+  it('copyConfig Joi schema must accept optional profile_ids', () => {
+    const validation = fs.readFileSync(
+      path.join(repoRoot, 'central-server/src/middleware/validation.ts'), 'utf-8'
+    );
+    expect(validation).toContain('profile_ids');
   });
 });
 

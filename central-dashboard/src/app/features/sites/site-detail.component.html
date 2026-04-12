@@ -866,56 +866,117 @@
       <button class="modal-close" (click)="showCopyConfigModal = false">&times;</button>
     </div>
     <div class="modal-body">
-      <p class="copy-config-info">
-        {{ 'copyConfig.info' | translate }} <strong>{{ site?.club_name }}</strong>
-        <span class="badge-type">{{ site?.site_type === 'saas' ? 'SaaS' : 'Pi' }}</span>
-        {{ 'copyConfig.toAnotherSite' | translate }}
-      </p>
-
-      <div class="form-group">
-        <label>{{ 'copyConfig.targetSite' | translate }}</label>
-        <input
-          type="text"
-          [(ngModel)]="copyConfigSearch"
-          (ngModelChange)="filterCopyConfigSites()"
-          [placeholder]="'copyConfig.searchPlaceholder' | translate"
-          class="search-input"
-        />
-      </div>
-
-      <div class="copy-config-site-list" *ngIf="filteredCopyConfigSites.length > 0">
-        <div
-          class="copy-config-site-item"
-          *ngFor="let targetSite of filteredCopyConfigSites"
-          [class.selected]="copyConfigTargetId === targetSite.id"
-          (click)="copyConfigTargetId = targetSite.id"
-        >
-          <div class="site-info">
-            <strong>{{ targetSite.club_name }}</strong>
-            <span class="site-name-sub">{{ targetSite.site_name }}</span>
+      <!-- Step 1: Select profiles -->
+      <ng-container *ngIf="copyConfigStep === 'profiles'">
+        <p class="copy-config-info">
+          {{ 'copyConfig.selectProfiles' | translate }} <strong>{{ site?.club_name }}</strong>
+        </p>
+        <div class="copy-config-profile-list" *ngIf="sourceProfiles.length > 0">
+          <div class="copy-config-select-all">
+            <label class="checkbox-label">
+              <input
+                type="checkbox"
+                [checked]="selectedProfileIds.size === sourceProfiles.length"
+                (change)="toggleAllProfiles()"
+              />
+              {{ 'copyConfig.selectAll' | translate }}
+            </label>
           </div>
-          <span class="badge-type">{{ targetSite.site_type === 'saas' ? 'SaaS' : 'Pi' }}</span>
+          <div
+            class="copy-config-profile-item"
+            *ngFor="let profile of sourceProfiles"
+            (click)="toggleProfileSelection(profile.id)"
+          >
+            <label class="checkbox-label">
+              <input
+                type="checkbox"
+                [checked]="selectedProfileIds.has(profile.id)"
+                (click)="$event.stopPropagation()"
+                (change)="toggleProfileSelection(profile.id)"
+              />
+              <strong>{{ profile.display_name || profile.name }}</strong>
+              <span class="profile-meta" *ngIf="profile.city || profile.sport">{{
+                [profile.city, profile.sport].filter(Boolean).join(' · ')
+              }}</span>
+              <span class="badge-default" *ngIf="profile.is_default">{{
+                'copyConfig.default' | translate
+              }}</span>
+            </label>
+          </div>
         </div>
-      </div>
-      <div class="no-results" *ngIf="copyConfigSearch && filteredCopyConfigSites.length === 0">
-        {{ 'copyConfig.noResults' | translate }}
-      </div>
-
-      <div class="copy-config-warning" *ngIf="copyConfigTargetId">
-        {{ 'copyConfig.warning' | translate }}
-      </div>
+        <div class="no-results" *ngIf="sourceProfiles.length === 0">
+          {{ 'copyConfig.noProfiles' | translate }}
+        </div>
+      </ng-container>
+      <!-- Step 2: Select target site -->
+      <ng-container *ngIf="copyConfigStep === 'target'">
+        <p class="copy-config-info">
+          {{ 'copyConfig.copyCount' | translate: { count: selectedProfileIds.size } }}
+          {{ 'copyConfig.toAnotherSite' | translate }}
+        </p>
+        <div class="form-group">
+          <label>{{ 'copyConfig.targetSite' | translate }}</label>
+          <input
+            type="text"
+            [(ngModel)]="copyConfigSearch"
+            (ngModelChange)="filterCopyConfigSites()"
+            [placeholder]="'copyConfig.searchPlaceholder' | translate"
+            class="search-input"
+          />
+        </div>
+        <div class="copy-config-site-list" *ngIf="filteredCopyConfigSites.length > 0">
+          <div
+            class="copy-config-site-item"
+            *ngFor="let targetSite of filteredCopyConfigSites"
+            [class.selected]="copyConfigTargetId === targetSite.id"
+            (click)="copyConfigTargetId = targetSite.id"
+          >
+            <div class="site-info">
+              <strong>{{ targetSite.club_name }}</strong>
+              <span class="site-name-sub">{{ targetSite.site_name }}</span>
+            </div>
+            <span class="badge-type">{{ targetSite.site_type === 'saas' ? 'SaaS' : 'Pi' }}</span>
+          </div>
+        </div>
+        <div class="no-results" *ngIf="copyConfigSearch && filteredCopyConfigSites.length === 0">
+          {{ 'copyConfig.noResults' | translate }}
+        </div>
+        <div class="copy-config-info-add" *ngIf="copyConfigTargetId">
+          {{ 'copyConfig.addInfo' | translate }}
+        </div>
+      </ng-container>
     </div>
     <div class="modal-footer">
-      <button class="btn btn-secondary" (click)="showCopyConfigModal = false">
-        {{ 'common.cancel' | translate }}
+      <button
+        class="btn btn-secondary"
+        (click)="
+          copyConfigStep === 'target'
+            ? (copyConfigStep = 'profiles')
+            : (showCopyConfigModal = false)
+        "
+      >
+        {{
+          copyConfigStep === 'target' ? ('common.back' | translate) : ('common.cancel' | translate)
+        }}
       </button>
       <button
+        *ngIf="copyConfigStep === 'profiles'"
+        class="btn btn-primary"
+        (click)="goToTargetStep()"
+        [disabled]="selectedProfileIds.size === 0"
+      >
+        {{ 'common.next' | translate }}
+      </button>
+      <button
+        *ngIf="copyConfigStep === 'target'"
         class="btn btn-primary"
         (click)="executeCopyConfig()"
         [disabled]="!copyConfigTargetId || copyingConfig"
       >
         {{
-          copyingConfig ? ('copyConfig.copying' | translate) : ('copyConfig.confirm' | translate)
+          copyingConfig
+            ? ('copyConfig.copying' | translate)
+            : ('copyConfig.confirmCount' | translate: { count: selectedProfileIds.size })
         }}
       </button>
     </div>

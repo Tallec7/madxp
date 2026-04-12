@@ -51,8 +51,12 @@ export class SitesService {
     return this.api.post<Site>(`/sites/${id}/regenerate-key`, {});
   }
 
-  copyConfig(sourceSiteId: string, targetSiteId: string): Observable<{ success: boolean; profiles_copied: number; message: string }> {
-    return this.api.post(`/sites/${sourceSiteId}/copy-config`, { target_site_id: targetSiteId });
+  copyConfig(sourceSiteId: string, targetSiteId: string, profileIds?: string[]): Observable<{ success: boolean; profiles_copied: number; message: string }> {
+    const body: Record<string, unknown> = { target_site_id: targetSiteId };
+    if (profileIds && profileIds.length > 0) {
+      body['profile_ids'] = profileIds;
+    }
+    return this.api.post(`/sites/${sourceSiteId}/copy-config`, body);
   }
 
   updateSiteStatus(id: string, status: string): void {

@@ -1068,14 +1068,67 @@
   }
 }
 
-.copy-config-warning {
+.copy-config-profile-list {
+  max-height: 300px;
+  overflow-y: auto;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+}
+
+.copy-config-select-all {
+  padding: 0.6rem 1rem;
+  border-bottom: 1px solid #e2e8f0;
+  background: #f8fafc;
+}
+
+.copy-config-profile-item {
+  padding: 0.6rem 1rem;
+  cursor: pointer;
+  border-bottom: 1px solid #f1f5f9;
+  transition: background 0.15s;
+  &:hover {
+    background: #f1f5f9;
+  }
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  input[type='checkbox'] {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+  }
+}
+
+.profile-meta {
+  font-size: 0.8rem;
+  color: #94a3b8;
+}
+
+.badge-default {
+  font-size: 0.7rem;
+  padding: 0.15rem 0.4rem;
+  background: #dbeafe;
+  color: #1e40af;
+  border-radius: 4px;
+  margin-left: auto;
+}
+
+.copy-config-info-add {
   margin-top: 1rem;
   padding: 0.75rem 1rem;
-  background: #fef3c7;
-  border: 1px solid #f59e0b;
+  background: #ecfdf5;
+  border: 1px solid #10b981;
   border-radius: 8px;
   font-size: 0.85rem;
-  color: #92400e;
+  color: #065f46;
 }
 
 .no-results {

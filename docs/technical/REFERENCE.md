@@ -1418,7 +1418,7 @@ POST   /sites                   - Créer site (génère api_key)
 PUT    /sites/:id               - Modifier
 DELETE /sites/:id               - Supprimer (admin)
 POST   /sites/:id/api-key/regenerate - Régénérer la clé API
-POST   /sites/:id/copy-config     - Copier les profils de config vers un autre site
+POST   /sites/:id/copy-config     - Copier des profils de config vers un autre site (mode ajout, profile_ids[] optionnel)
 POST   /sites/:id/command       - Envoyer commande au Pi
 GET    /sites/:id/remote-pin    - Statut PIN télécommande cloud
 POST   /sites/:id/remote-pin    - Définir PIN télécommande cloud
