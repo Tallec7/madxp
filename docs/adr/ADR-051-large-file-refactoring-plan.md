@@ -44,7 +44,7 @@ Le split de `smoke.test.ts` est prioritaire car il permet de lancer les tests pa
 - `central-server/src/controllers/advertiser-analytics.controller.ts` — extraction ImpressionResolver (Phase 2)
 - `central-server/src/services/socket.service.ts` — extraction handlers par event (Phase 3)
 - `central-server/src/services/safe-parser.service.ts` — extraction parser/repo/cache (Phase 3)
-- `raspberry/src/app/components/remote/remote.component.ts` — sous-composants (Phase 4)
+- `raspberry/src/app/components/remote/remote.component.ts` — ✅ Phase 4 partielle (2026-04-12) : extraction `RemoteScoreService` + `RemoteTimerService` (pattern ADR-043), 1710→942 lignes. Reste : options/équipes/logos/thumbnails → sous-composants
 - `central-dashboard/src/app/features/remote/cloud-remote.component.ts` — sous-composants (Phase 4)
 - `raspberry/src/app/components/tv/tv.component.ts` — extraction controllers (Phase 4)
 - `central-dashboard/src/app/features/updates/updates-management.component.ts` — template externe + sous-composants (Phase 4)

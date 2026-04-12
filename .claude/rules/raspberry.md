@@ -22,12 +22,27 @@ paths:
 
 ## Services Angular Raspberry Pi
 
-| Service       | Fichier                         | Rôle                                                                             |
-| ------------- | ------------------------------- | -------------------------------------------------------------------------------- |
-| DoubleBuffer  | double-buffer-video.service.ts  | 4 players HTML5, freeze-frame canvas, overlay noir, transitions (ADR-042)        |
-| VideoPlayback | video-playback.service.ts       | Orchestration boucle, playlist pondérée Bresenham, prefetch, métriques (ADR-042) |
-| ErrorRecovery | video-error-recovery.service.ts | Watchdog 10s, error handling, memory cleanup GPU (ADR-042)                       |
-| Watermark     | watermark.service.ts            | Affichage et scheduling watermark                                                |
+| Service       | Fichier                                   | Rôle                                                                                                               |
+| ------------- | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| DoubleBuffer  | double-buffer-video.service.ts            | 4 players HTML5, freeze-frame canvas, overlay noir, transitions (ADR-042)                                          |
+| VideoPlayback | video-playback.service.ts                 | Orchestration boucle, playlist pondérée Bresenham, prefetch, métriques (ADR-042)                                   |
+| ErrorRecovery | video-error-recovery.service.ts           | Watchdog 10s, error handling, memory cleanup GPU (ADR-042)                                                         |
+| Watermark     | watermark.service.ts                      | Affichage et scheduling watermark                                                                                  |
+| RemoteScore   | components/remote/remote-score.service.ts | Score state + broadcast (localBroadcast + socketService) — extrait de RemoteComponent (ADR-051 Phase 4)            |
+| RemoteTimer   | components/remote/remote-timer.service.ts | Timer state + interval + broadcast (localBroadcast + socketService) — extrait de RemoteComponent (ADR-051 Phase 4) |
+
+## RemoteComponent — Architecture (ADR-051 Phase 4 partielle)
+
+`RemoteComponent` est un orchestrateur : il ne contient plus la logique score/timer.
+
+| Responsabilité     | Fichier                   | Notes                                                              |
+| ------------------ | ------------------------- | ------------------------------------------------------------------ |
+| Score state        | `remote-score.service.ts` | `providers: [RemoteScoreService]` dans le composant — scoped       |
+| Timer state        | `remote-timer.service.ts` | `providers: [RemoteTimerService]` dans le composant — scoped       |
+| Options locales    | `LocalOptionsService`     | Service global existant                                            |
+| Orchestration/vues | `remote.component.ts`     | 942 lignes — nouvelle extraction prévue (options/logos/thumbnails) |
+
+**NE PAS** remettre la logique score ou timer dans `RemoteComponent` — passer par `scoreService` et `timerService`.
 
 ## Modules Sync-Agent
 
