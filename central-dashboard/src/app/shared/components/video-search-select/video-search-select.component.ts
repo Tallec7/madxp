@@ -34,7 +34,7 @@ export interface VideoOptionItem {
   imports: [CommonModule, FormsModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <div class="vss" [class.vss--open]="isOpen" [class.vss--dropup]="dropUp" [class.vss--invalid]="invalid" [class.vss--disabled]="disabled" [class.vss--compact]="compact" (click)="onControlClick($event)">
+    <div class="vss" [class.vss--open]="isOpen" [class.vss--dropup]="dropUp" [class.vss--invalid]="invalid" [class.vss--disabled]="disabled" [class.vss--compact]="compact">
       <!-- Selected value display / search input -->
       <div class="vss__control" [class.vss__control--placeholder]="!selectedPath">
         <input
@@ -307,10 +307,6 @@ export class VideoSearchSelectComponent implements OnChanges {
     // Don't toggle when clicking inside the dropdown or the search input
     if (target.closest('.vss__dropdown') || target.closest('.vss__search')) return;
     this.toggle();
-  }
-
-  onControlClick(event: Event): void {
-    // Kept for template compatibility, actual handling is in onHostClick
   }
 
   toggle(): void {
