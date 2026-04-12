@@ -13,6 +13,8 @@ jobs:
   release:
     name: Semantic Release
     runs-on: ubuntu-latest
+    # Skip chore(release) commits to avoid "local branch is behind remote" loop
+    if: "!startsWith(github.event.head_commit.message, 'chore(release)')"
     permissions:
       contents: write
       issues: write
@@ -28,8 +30,10 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.RELEASE_TOKEN }}
 
-      - name: Fetch all tags
-        run: git fetch --tags --force
+      - name: Fetch all tags and sync with remote
+        run: |
+          git fetch --tags --force
+          git pull --ff-only origin main || true
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -56,6 +60,41 @@ jobs:
           else
             echo "new_release_published=false" >> $GITHUB_OUTPUT
             echo "No new release published"
+
+            # Detect if release is stuck: eligible commits exist but nothing was published
+            SR_STUCK=$(echo "$SR_OUTPUT" | grep -c "local branch.*behind the remote" || true)
+            if [ "$SR_STUCK" -gt 0 ]; then
+              echo "release_stuck=true" >> $GITHUB_OUTPUT
+            fi
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+
+      - name: Alert if release is stuck
+        if: steps.semantic.outputs.release_stuck == 'true'
+        run: |
+          # Check if an alert issue already exists to avoid duplicates
+          EXISTING=$(gh issue list --label "release-stuck" --state open --limit 1 --json number -q '.[0].number' || true)
+          if [ -z "$EXISTING" ]; then
+            gh issue create \
+              --title "🚨 Release pipeline stuck — semantic-release cannot publish" \
+              --body "$(cat <<'BODY'
+          ## Symptôme
+          Le workflow release.yml a détecté que semantic-release refuse de publier car la branche locale est en retard sur le remote.
+
+          ## Diagnostic
+          ```bash
+          gh run list --workflow=release.yml --limit=5
+          gh run view <RUN_ID> --log | grep -i "behind the remote"
+          ```
+
+          ## Résolution
+          Voir [Troubleshooting § Release bloquée](docs/guides/TROUBLESHOOTING.md#release-bloquée)
+
+          _Issue créée automatiquement par le workflow release.yml_
+          BODY
+          )" \
+              --label "release-stuck,bug"
           fi
         env:
           GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}

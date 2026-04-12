@@ -11,7 +11,7 @@
 7. [Problèmes de watermark (v3.50+)](#problèmes-de-watermark-v350)
 8. [Diagnostic réseau à distance](#diagnostic-réseau-à-distance)
 9. [Diagnostic complet](#diagnostic-complet)
-10. [CI/CD et Release](#cicd-et-release)
+10. [CI/CD et Release](#cicd-et-release) (EGITNOPERMISSION, **release bloquée "behind remote"**, smoke CI)
 11. [NetworkWatchdog — Auto-recovery réseau (v3.36+)](#networkwatchdog--auto-recovery-réseau-v336)
 12. [Hotspot Watchdog (v2.34+)](#hotspot-watchdog-v234)
 13. [Blocage BSSID Lock en Mesh (v2.34+)](#blocage-bssid-lock-en-mesh-v234)
@@ -3675,6 +3675,44 @@ gh api repos/Tallec7/neopro/rulesets
 4. Relancer le workflow : `gh run rerun <run_id> --repo Tallec7/neopro`
 
 > **Note** : Le `GITHUB_TOKEN` par défaut ne suffit pas pour semantic-release car il ne peut pas pusher de commits/tags sur `main`.
+
+### Release bloquée — "local branch is behind the remote" {#release-bloquée}
+
+#### Erreur
+
+```
+[semantic-release] › ℹ  The local branch main is behind the remote one, therefore a new version won't be published.
+```
+
+Le workflow tourne (status `success`) mais aucune release n'est publiée. Les commits `fix()` et `feat()` s'accumulent sans version.
+
+#### Cause
+
+Boucle `chore(release)` : semantic-release pousse un commit `chore(release): x.y.z` qui modifie `raspberry/*/package.json` (non couvert par `paths-ignore`). Ce commit déclenche un nouveau run du workflow, qui checkout un état en retard par rapport au remote → semantic-release refuse de publier. Les vrais commits `fix()` suivants héritent du même problème.
+
+#### Diagnostic
+
+```bash
+# Vérifier les derniers runs
+gh run list --workflow=release.yml --limit=5
+
+# Chercher le message dans les logs du dernier run
+gh run view <RUN_ID> --log | grep -i "behind the remote"
+```
+
+#### Solution (implémentée v3.153.8+)
+
+1. **Guard `if`** sur le job `release` : skip les commits `chore(release)` au niveau du job (le `[skip ci]` dans le commit message ne suffit pas avec `paths-ignore`)
+2. **`git pull --ff-only`** après checkout : synchronise la branche locale avec le remote avant de lancer semantic-release
+
+#### Si le problème revient
+
+```bash
+# Relancer manuellement le dernier commit éligible
+gh workflow run release.yml --ref main
+```
+
+---
 
 ### Smoke tests échouent sur le CI mais passent en local
 
