@@ -1,3 +1,9 @@
+# [3.156.0](https://github.com/Tallec7/neopro/compare/v3.155.1...v3.156.0) (2026-04-12)
+
+### Features
+
+- **server:** N-display backend API — Phase 5H PROP-002 ([8f6a12c](https://github.com/Tallec7/neopro/commit/8f6a12cc56a6e8cd1db2bd8ea77c87331fcb6d11))
+
 ## [3.155.1](https://github.com/Tallec7/neopro/compare/v3.155.0...v3.155.1) (2026-04-12)
 
 ### Bug Fixes
