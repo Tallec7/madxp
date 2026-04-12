@@ -259,6 +259,7 @@ export class VideoVariantPanelComponent implements OnInit {
 
   isOpen = false;
   loading = false;
+  loaded = false;
   uploading = false;
   uploadProgress = 0;
   deleting = false;
@@ -267,13 +268,14 @@ export class VideoVariantPanelComponent implements OnInit {
   ngOnInit(): void {
     if (this.autoOpen) {
       this.isOpen = true;
-      this.loadVariants();
     }
+    // Précharger immédiatement — évite le "Chargement..." visible à l'ouverture
+    this.loadVariants();
   }
 
   toggleOpen(): void {
     this.isOpen = !this.isOpen;
-    if (this.isOpen && !this.secondaryVariant && !this.loading) {
+    if (this.isOpen && !this.loaded && !this.loading) {
       this.loadVariants();
     }
   }
@@ -286,10 +288,12 @@ export class VideoVariantPanelComponent implements OnInit {
     ).subscribe({
       next: (response) => {
         this.loading = false;
+        this.loaded = true;
         this.secondaryVariant = response.variants.find(v => v.display_type === 'secondary') || null;
       },
       error: () => {
         this.loading = false;
+        this.loaded = true;
       }
     });
   }
