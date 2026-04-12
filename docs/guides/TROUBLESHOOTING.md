@@ -838,6 +838,7 @@ sudo journalctl -u neopro-app -n 50
 # Erreurs courantes :
 # "EADDRINUSE" → Port 3000 déjà utilisé
 # "MODULE_NOT_FOUND" → npm install manquant
+# "Cannot find module 'follow-redirects'" → dépendance transitive d'axios manquante (v3.157+)
 ```
 
 **Solutions :**
@@ -846,13 +847,15 @@ sudo journalctl -u neopro-app -n 50
 # Tuer le processus sur port 3000
 sudo lsof -ti:3000 | xargs kill -9
 
-# Réinstaller les dépendances
+# Réinstaller les dépendances (inclut les dépendances transitives comme follow-redirects)
 cd /home/pi/neopro/server
-npm install
+npm install --production
 
 # Redémarrer
 sudo systemctl restart neopro-app
 ```
+
+> **Note v3.160+** : `verifyNodeModules()` dans `ota-install.js` vérifie maintenant `axios` en plus de `express` et `socket.io`. Si `axios` ou ses sous-dépendances manquent après OTA, un `npm install` de réparation est automatiquement lancé.
 
 ### Service neopro-admin (port 8080)
 

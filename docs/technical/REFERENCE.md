@@ -381,6 +381,18 @@ Chaque OTA génère un rapport step-by-step via `OtaStepTracker` dans `update-so
 
 Le rapport est envoyé via `update_progress` (Socket.IO) à la complétion ou l'échec, stocké en `update_deployments.deployment_details` (JSONB), et affiché via le bouton "Voir détail" dans le dashboard.
 
+**Vérification d'intégrité node_modules (v3.160+) :**
+
+`verifyNodeModules()` dans `ota-install.js` vérifie la présence physique des modules critiques après extraction et `npm install`. Si des modules manquent (corruption EXT4, `npm install` partiel), un `npm install --production` de réparation est lancé automatiquement.
+
+| Composant    | Modules vérifiés                |
+| ------------ | ------------------------------- |
+| `server`     | `express`, `socket.io`, `axios` |
+| `sync-agent` | `socket.io-client`, `fs-extra`  |
+| `admin`      | `express`                       |
+
+Si la réparation échoue, l'OTA déclenche un rollback. Ce mécanisme a été ajouté après un incident `neopro-app` en crash-loop sur NLF Handball (v3.157.3) où `follow-redirects` (sous-dépendance d'axios) manquait après OTA.
+
 **IMPORTANT :** Le code OTA lit les `.service` depuis l'archive extraite (`sourcePath`), PAS depuis `rootDir` (`/home/pi/neopro/config/systemd/`). Ce dernier peut contenir des fichiers orphelins d'anciennes versions. Smoke test enforced.
 
 **Monitoring OTA :** La métrique `neopro_ota_errors_total{error_type}` catégorise les erreurs :
@@ -701,6 +713,24 @@ Pi: getFanStatus() → collectAll() → heartbeat { fanStatus }
 ```
 
 **Impact santé :** Le health score perd 15 points si le ventilateur est installé mais arrêté à >70°C.
+
+#### Détection services légitimes en crash-loop (v3.160+)
+
+`getFailedServices()` dans `service-metrics.js` monitore les services légitimes (`neopro-app`, `neopro-admin`, `neopro-kiosk`, `neopro-sync-agent`) en état `failed` ou `activating` avec >3 restarts. Le champ `failedServices` est envoyé via le heartbeat toutes les 30s.
+
+| Condition                          | Type                 | Sévérité                                   | Slack |
+| ---------------------------------- | -------------------- | ------------------------------------------ | ----- |
+| Service légitime failed/activating | `service_crash_loop` | `warning` (≤10 restarts), `critical` (>10) | Oui   |
+
+**Pipeline :**
+
+```
+Pi: getFailedServices() → heartbeat { failedServices }
+  → Central: checkAlerts() → service_crash_loop → Slack (serviceCrashLoop)
+  → Dashboard: Alerts table (dédupliqué 1/heure)
+```
+
+Complémente `orphanServices` qui ne détecte que les services **non-légitimes** (noms hors de la whitelist).
 
 ### Pénalité HDMI Failover (v3.99.2)
 

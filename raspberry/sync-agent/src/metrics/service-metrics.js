@@ -141,6 +141,57 @@ async function getOrphanServices() {
 }
 
 // =============================================================================
+// FAILED LEGITIMATE SERVICES
+// =============================================================================
+
+/**
+ * Détecte les services légitimes neopro-* qui sont en état failed ou activating
+ * (crash-loop). Complémente getOrphanServices() qui ne regarde que les services
+ * NON-légitimes. Retourne un tableau d'objets { name, status, restarts }.
+ */
+async function getFailedServices() {
+  const MONITORED_SERVICES = [
+    'neopro-app',
+    'neopro-admin',
+    'neopro-kiosk',
+    'neopro-sync-agent',
+  ];
+
+  const failed = [];
+
+  for (const service of MONITORED_SERVICES) {
+    try {
+      const { stdout: status } = await execAsync(
+        `systemctl is-active ${service} 2>/dev/null || echo "inactive"`,
+        { timeout: 5000 }
+      );
+      const state = status.trim();
+      if (state === 'active') continue;
+
+      let restarts = 0;
+      try {
+        const { stdout: nRestarts } = await execAsync(
+          `systemctl show ${service} -p NRestarts --value 2>/dev/null || echo "0"`,
+          { timeout: 5000 }
+        );
+        restarts = parseInt(nRestarts.trim(), 10) || 0;
+      } catch {
+        // ignore
+      }
+
+      // Only report if actually failed/activating with restarts, not just stopped
+      if (state === 'failed' || state === 'activating' || restarts > 3) {
+        failed.push({ name: service, status: state, restarts });
+      }
+    } catch {
+      // ignore — service might not exist on this Pi
+    }
+  }
+
+  return failed;
+}
+
+// =============================================================================
 // KIOSK STATUS
 // =============================================================================
 
@@ -161,5 +212,6 @@ async function getKioskStatus() {
 module.exports = {
   getServicesStatus,
   getOrphanServices,
+  getFailedServices,
   getKioskStatus,
 };

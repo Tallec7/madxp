@@ -85,7 +85,7 @@ async function writeVersionMetadata(version) {
  */
 async function verifyNodeModules(rootDir) {
   const checks = [
-    { component: 'server', modules: ['express', 'socket.io'] },
+    { component: 'server', modules: ['express', 'socket.io', 'axios'] },
     { component: 'sync-agent', modules: ['socket.io-client', 'fs-extra'] },
     { component: 'admin', modules: ['express'] },
   ];

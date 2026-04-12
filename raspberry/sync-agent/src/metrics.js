@@ -69,6 +69,7 @@ class MetricsCollector {
 
   getServicesStatus() { return services.getServicesStatus(); }
   getOrphanServices() { return services.getOrphanServices(); }
+  getFailedServices() { return services.getFailedServices(); }
   getKioskStatus() { return services.getKioskStatus(); }
 
   // =========================================================================
