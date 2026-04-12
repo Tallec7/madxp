@@ -1,3 +1,9 @@
+## [3.153.1](https://github.com/Tallec7/neopro/compare/v3.153.0...v3.153.1) (2026-04-12)
+
+### Bug Fixes
+
+- **dashboard:** remove thumbnail_url access on CloudVideo type ([0bf3690](https://github.com/Tallec7/neopro/commit/0bf369045744778cb40bd18f3e2fc83dbf099226))
+
 # [3.153.0](https://github.com/Tallec7/neopro/compare/v3.152.3...v3.153.0) (2026-04-12)
 
 ### Features
