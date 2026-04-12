@@ -42,29 +42,20 @@ jobs:
       - name: Run semantic-release
         id: semantic
         run: |
-          # Disable workflow commands to prevent commit messages from being interpreted
-          echo "::stop-commands::semantic-release-token"
-          npx semantic-release
-          echo "::semantic-release-token::"
+          # Capture semantic-release output to detect if a release was published
+          SR_OUTPUT=$(npx semantic-release 2>&1)
+          echo "$SR_OUTPUT"
 
-          # Check if a new release was created by looking at the latest tag
-          LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
-          if [ -n "$LATEST_TAG" ]; then
-            # Check if this tag was just created (within last 5 minutes)
-            TAG_DATE=$(git log -1 --format=%ct "$LATEST_TAG" 2>/dev/null || echo "0")
-            NOW=$(date +%s)
-            DIFF=$((NOW - TAG_DATE))
-            if [ "$DIFF" -lt 300 ]; then
-              echo "new_release_published=true" >> $GITHUB_OUTPUT
-              echo "new_release_version=${LATEST_TAG#v}" >> $GITHUB_OUTPUT
-              echo "New release detected: $LATEST_TAG"
-            else
-              echo "new_release_published=false" >> $GITHUB_OUTPUT
-              echo "No new release (tag $LATEST_TAG is older than 5 minutes)"
-            fi
+          # Parse the published version from semantic-release output
+          PUBLISHED_VERSION=$(echo "$SR_OUTPUT" | grep -oP 'Published release \K[0-9]+\.[0-9]+\.[0-9]+' | tail -1)
+
+          if [ -n "$PUBLISHED_VERSION" ]; then
+            echo "new_release_published=true" >> $GITHUB_OUTPUT
+            echo "new_release_version=${PUBLISHED_VERSION}" >> $GITHUB_OUTPUT
+            echo "New release published: v${PUBLISHED_VERSION}"
           else
             echo "new_release_published=false" >> $GITHUB_OUTPUT
-            echo "No tags found"
+            echo "No new release published"
           fi
         env:
           GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
