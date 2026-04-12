@@ -1,3 +1,9 @@
+## [3.154.1](https://github.com/Tallec7/neopro/compare/v3.154.0...v3.154.1) (2026-04-12)
+
+### Bug Fixes
+
+- **dashboard:** replace Boolean in template with inline expression ([d215b04](https://github.com/Tallec7/neopro/commit/d215b043b88daf3220e930bff550cae8a9ef0da5))
+
 # [3.154.0](https://github.com/Tallec7/neopro/compare/v3.153.8...v3.154.0) (2026-04-12)
 
 ### Features
