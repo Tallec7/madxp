@@ -1,3 +1,10 @@
+## [3.153.8](https://github.com/Tallec7/neopro/compare/v3.153.7...v3.153.8) (2026-04-12)
+
+### Bug Fixes
+
+- **ci:** prevent release pipeline stuck loop and add monitoring ([fffec5f](https://github.com/Tallec7/neopro/commit/fffec5fb61aff617398e0587d3c7530519de8f28))
+- **ci:** retrigger release after tag realignment ([f635069](https://github.com/Tallec7/neopro/commit/f63506924ece6e46c220b8182f4e481e65955a0e))
+
 ## [3.153.7](https://github.com/Tallec7/neopro/compare/v3.153.6...v3.153.7) (2026-04-12)
 
 ### Bug Fixes
