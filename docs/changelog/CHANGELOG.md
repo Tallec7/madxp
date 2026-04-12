@@ -1,3 +1,10 @@
+## [3.154.2](https://github.com/Tallec7/neopro/compare/v3.154.1...v3.154.2) (2026-04-12)
+
+### Bug Fixes
+
+- **dashboard:** map cloud.thumbnail_url to VideoItem (was hardcoded null) ([7879380](https://github.com/Tallec7/neopro/commit/78793805b3066a58ac2a5673f1da747316337a67))
+- resolve merge conflict in smoke test ([e42f8df](https://github.com/Tallec7/neopro/commit/e42f8df3bbc22e038823e7259c4d6e6b7dde70e7))
+
 ## [3.154.1](https://github.com/Tallec7/neopro/compare/v3.154.0...v3.154.1) (2026-04-12)
 
 ### Bug Fixes
