@@ -135,18 +135,49 @@ export class AnalyticsService {
   }
 
   /**
-   * Démarrer une nouvelle session
+   * Démarrer une nouvelle session.
+   * - SaaS : POST /api/analytics/sessions pour créer une club_session en base
+   *   et récupérer l'UUID (FK video_plays.session_id → club_sessions.id).
+   * - Pi : génère un ID local (le sync-agent gère les sessions côté serveur).
    */
   public startSession(): void {
-    this.currentSession = this.generateSessionId();
-    console.log('[Analytics] Session started:', this.currentSession);
+    if (environment.saasMode && this.siteId) {
+      this.http.post<{ success: boolean; session_id: string }>(
+        environment.socketUrl + '/api/analytics/sessions',
+        { site_id: this.siteId, action: 'start' }
+      ).subscribe({
+        next: (response) => {
+          this.currentSession = response.session_id;
+          console.log('[Analytics] SaaS session started:', this.currentSession);
+        },
+        error: (err) => {
+          // Fallback : ID local (ne sera pas compté par countSessions mais
+          // les video_plays seront quand même enregistrés avec session_id = null)
+          this.currentSession = this.generateSessionId();
+          console.warn('[Analytics] Failed to start SaaS session, using local ID:', err.message || err);
+        }
+      });
+    } else {
+      this.currentSession = this.generateSessionId();
+      console.log('[Analytics] Session started:', this.currentSession);
+    }
   }
 
   /**
-   * Terminer la session courante
+   * Terminer la session courante.
+   * En mode SaaS, notifie le central server pour enregistrer la durée.
    */
   public endSession(): void {
     if (this.currentSession) {
+      if (environment.saasMode && this.siteId) {
+        this.http.post(
+          environment.socketUrl + '/api/analytics/sessions',
+          { site_id: this.siteId, action: 'end', session_id: this.currentSession }
+        ).subscribe({
+          next: () => console.log('[Analytics] SaaS session ended:', this.currentSession),
+          error: (err) => console.warn('[Analytics] Failed to end SaaS session:', err.message || err)
+        });
+      }
       console.log('[Analytics] Session ended:', this.currentSession);
       this.currentSession = null;
     }
