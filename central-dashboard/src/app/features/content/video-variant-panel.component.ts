@@ -268,9 +268,8 @@ export class VideoVariantPanelComponent implements OnInit {
   ngOnInit(): void {
     if (this.autoOpen) {
       this.isOpen = true;
+      this.loadVariants();
     }
-    // Précharger immédiatement — évite le "Chargement..." visible à l'ouverture
-    this.loadVariants();
   }
 
   toggleOpen(): void {
