@@ -177,15 +177,17 @@ describe('Hourly metric alerting wiring', () => {
 
   it('alerting service has checkHourlyMetrics wired into periodic check', () => {
     const alertingPath = path.join(repoRoot, 'central-server', 'src', 'services', 'alerting.service.ts');
+    const checksPath = path.join(repoRoot, 'central-server', 'src', 'services', 'alerting-checks.service.ts');
     const content = fs.readFileSync(alertingPath, 'utf8');
+    const checksContent = fs.readFileSync(checksPath, 'utf8');
 
     expect({
       hasCheckHourlyMetrics: content.includes('async checkHourlyMetrics'),
-      calledInPeriodicLoop: content.includes('this.checkHourlyMetrics()'),
-      queriesKioskCrashes: content.includes("alert_type = 'kiosk_crash'"),
-      evaluatesWsDisconnects: content.includes("'websocket_disconnects_1h'"),
-      evaluatesVideoTimeouts: content.includes("'video_safety_timeouts_1h'"),
-      evaluatesKioskCrashes: content.includes("'kiosk_crashes_1h'"),
+      calledInPeriodicLoop: content.includes('checkHourlyMetrics()'),
+      queriesKioskCrashes: checksContent.includes("alert_type = 'kiosk_crash'"),
+      evaluatesWsDisconnects: checksContent.includes("'websocket_disconnects_1h'"),
+      evaluatesVideoTimeouts: checksContent.includes("'video_safety_timeouts_1h'"),
+      evaluatesKioskCrashes: checksContent.includes("'kiosk_crashes_1h'"),
     }).toEqual({
       hasCheckHourlyMetrics: true,
       calledInPeriodicLoop: true,
@@ -196,9 +198,9 @@ describe('Hourly metric alerting wiring', () => {
     });
   });
 
-  it('alerting service has orphaned_video_references threshold defined', () => {
-    const alertingPath = path.join(repoRoot, 'central-server', 'src', 'services', 'alerting.service.ts');
-    const content = fs.readFileSync(alertingPath, 'utf8');
+  it('alerting types has orphaned_video_references threshold defined', () => {
+    const typesPath = path.join(repoRoot, 'central-server', 'src', 'services', 'alerting.types.ts');
+    const content = fs.readFileSync(typesPath, 'utf8');
 
     expect({
       hasOrphanedThreshold: content.includes("metric: 'orphaned_video_references'"),

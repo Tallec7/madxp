@@ -237,7 +237,7 @@ describe('Deploy progress auto-completion guards', () => {
 
   it('checkStuckDeployments must auto-complete deployments stuck at 100%', () => {
     const content = fs.readFileSync(
-      path.join(repoRoot, 'central-server/src/services/alerting.service.ts'),
+      path.join(repoRoot, 'central-server/src/services/alerting-checks.service.ts'),
       'utf8'
     );
     // Must UPDATE stuck deployments at progress >= 100 to 'completed'
@@ -855,17 +855,27 @@ describe('OTA deployment observability guards', () => {
       path.join(repoRoot, 'central-server/src/services/alerting.service.ts'),
       'utf8'
     );
+    const _checks = fs.readFileSync(
+      path.join(repoRoot, 'central-server/src/services/alerting-checks.service.ts'),
+      'utf8'
+    );
+    const alertingCombined = alerting + _checks;
+    const checks = fs.readFileSync(
+      path.join(repoRoot, 'central-server/src/services/alerting-checks.service.ts'),
+      'utf8'
+    );
+    const combined = alerting + checks;
     // Must have the method
-    expect({ hasMethod: alerting.includes('checkPhantomSponsors') })
+    expect({ hasMethod: combined.includes('checkPhantomSponsors') })
       .toEqual({ hasMethod: true });
     // Must check for single-char names
-    expect({ checksLength: /LENGTH.*TRIM.*name.*<=\s*1/.test(alerting) })
+    expect({ checksLength: /LENGTH.*TRIM.*name.*<=\s*1/.test(combined) })
       .toEqual({ checksLength: true });
     // Must deactivate (not delete) for audit trail
-    expect({ deactivates: alerting.includes("status = 'inactive'") && alerting.includes('phantom_single_char_name') })
+    expect({ deactivates: combined.includes("status = 'inactive'") && combined.includes('phantom_single_char_name') })
       .toEqual({ deactivates: true });
     // Must be called in the periodic loop
-    expect({ calledPeriodically: /checkPhantomSponsors\(\)/.test(alerting) })
+    expect({ calledPeriodically: /checkPhantomSponsors\(\)/.test(combined) })
       .toEqual({ calledPeriodically: true });
   });
 
@@ -874,22 +884,27 @@ describe('OTA deployment observability guards', () => {
       path.join(repoRoot, 'central-server/src/services/alerting.service.ts'),
       'utf8'
     );
+    const _checks = fs.readFileSync(
+      path.join(repoRoot, 'central-server/src/services/alerting-checks.service.ts'),
+      'utf8'
+    );
+    const alertingCombined = alerting + _checks;
     // Must have the method
-    expect({ hasMethod: alerting.includes('checkAggregationStaleness') })
+    expect({ hasMethod: alertingCombined.includes('checkAggregationStaleness') })
       .toEqual({ hasMethod: true });
     // Must check both tables
-    expect({ checksClubStats: alerting.includes('club_daily_stats') })
+    expect({ checksClubStats: alertingCombined.includes('club_daily_stats') })
       .toEqual({ checksClubStats: true });
-    expect({ checksSponsorStats: alerting.includes('site_sponsor_daily_stats') })
+    expect({ checksSponsorStats: alertingCombined.includes('site_sponsor_daily_stats') })
       .toEqual({ checksSponsorStats: true });
     // Must use 36h threshold
-    expect({ has36hThreshold: /hours_ago\s*>\s*36/.test(alerting) })
+    expect({ has36hThreshold: /hours_ago\s*>\s*36/.test(alertingCombined) })
       .toEqual({ has36hThreshold: true });
     // Must create critical alert
-    expect({ createsCriticalAlert: alerting.includes("type: 'aggregation_stale'") && alerting.includes("severity: 'critical'") })
+    expect({ createsCriticalAlert: alertingCombined.includes("type: 'aggregation_stale'") && alertingCombined.includes("severity: 'critical'") })
       .toEqual({ createsCriticalAlert: true });
     // Must be called in the periodic loop
-    expect({ calledPeriodically: /checkAggregationStaleness\(\)/.test(alerting) })
+    expect({ calledPeriodically: /checkAggregationStaleness\(\)/.test(alertingCombined) })
       .toEqual({ calledPeriodically: true });
   });
 
@@ -898,23 +913,28 @@ describe('OTA deployment observability guards', () => {
       path.join(repoRoot, 'central-server/src/services/alerting.service.ts'),
       'utf8'
     );
+    const _checks = fs.readFileSync(
+      path.join(repoRoot, 'central-server/src/services/alerting-checks.service.ts'),
+      'utf8'
+    );
+    const alertingCombined = alerting + _checks;
     // Must have the method
-    expect({ hasMethod: alerting.includes('checkEmptySaasProfiles') })
+    expect({ hasMethod: alertingCombined.includes('checkEmptySaasProfiles') })
       .toEqual({ hasMethod: true });
     // Must filter by site_type = 'saas'
-    expect({ filtersSaas: alerting.includes("site_type = 'saas'") })
+    expect({ filtersSaas: alertingCombined.includes("site_type = 'saas'") })
       .toEqual({ filtersSaas: true });
     // Must check for empty configuration (null, {}, or missing key fields)
-    expect({ checksEmpty: alerting.includes("= '{}'::jsonb") })
+    expect({ checksEmpty: alertingCombined.includes("= '{}'::jsonb") })
       .toEqual({ checksEmpty: true });
     // Must check for missing sponsors/categories/timeCategories
-    expect({ checksMissingKeys: alerting.includes('sponsors') && alerting.includes('categories') && alerting.includes('timeCategories') })
+    expect({ checksMissingKeys: alertingCombined.includes('sponsors') && alertingCombined.includes('categories') && alertingCombined.includes('timeCategories') })
       .toEqual({ checksMissingKeys: true });
     // Must create warning alert with type saas_empty_profile
-    expect({ createsAlert: alerting.includes("type: 'saas_empty_profile'") && alerting.includes("severity: 'warning'") })
+    expect({ createsAlert: alertingCombined.includes("type: 'saas_empty_profile'") && alertingCombined.includes("severity: 'warning'") })
       .toEqual({ createsAlert: true });
     // Must be called in the periodic loop
-    expect({ calledPeriodically: /checkEmptySaasProfiles\(\)/.test(alerting) })
+    expect({ calledPeriodically: /checkEmptySaasProfiles\(\)/.test(alertingCombined) })
       .toEqual({ calledPeriodically: true });
   });
 
@@ -923,11 +943,16 @@ describe('OTA deployment observability guards', () => {
       path.join(repoRoot, 'central-server/src/services/alerting.service.ts'),
       'utf8'
     );
+    const _checks = fs.readFileSync(
+      path.join(repoRoot, 'central-server/src/services/alerting-checks.service.ts'),
+      'utf8'
+    );
+    const alertingCombined = alerting + _checks;
     // Must mark stuck update deployments as failed (not just create alert)
-    expect({ autoFailsStuck: alerting.includes("SET status = 'failed'") && alerting.includes('minutesStuck >= 120') })
+    expect({ autoFailsStuck: alertingCombined.includes("SET status = 'failed'") && alertingCombined.includes('minutesStuck >= 120') })
       .toEqual({ autoFailsStuck: true });
     // Must include descriptive error_message with timeout info
-    expect({ hasTimeoutMessage: alerting.includes('Timeout') && alerting.includes('aucune réponse') })
+    expect({ hasTimeoutMessage: alertingCombined.includes('Timeout') && alertingCombined.includes('aucune réponse') })
       .toEqual({ hasTimeoutMessage: true });
   });
 });

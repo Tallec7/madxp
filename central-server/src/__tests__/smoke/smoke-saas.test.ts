@@ -802,9 +802,9 @@ describe('SaaS deployment pipeline guards', () => {
   });
 
   // --- alerting.service.ts must exclude SaaS sites from stuck deployment detection ---
-  it('alerting.service.ts checkStuckDeployments must join sites table to exclude SaaS', () => {
-    const filePath = path.join(repoRoot, 'central-server', 'src', 'services', 'alerting.service.ts');
-    const content = fs.readFileSync(filePath, 'utf8');
+  it('alerting checkStuckDeployments must join sites table to exclude SaaS', () => {
+    const checksPath = path.join(repoRoot, 'central-server', 'src', 'services', 'alerting-checks.service.ts');
+    const content = fs.readFileSync(checksPath, 'utf8');
     // The stuck deployment query must filter out SaaS sites
     expect({
       joinsOrFiltersSiteType: content.includes("site_type != 'saas'") || content.includes("site_type <> 'saas'"),
@@ -813,10 +813,10 @@ describe('SaaS deployment pipeline guards', () => {
     });
   });
 
-  // --- alerting.service.ts must auto-complete SaaS deployments as defense-in-depth ---
-  it('alerting.service.ts must auto-complete SaaS deployments stuck in_progress/pending', () => {
-    const filePath = path.join(repoRoot, 'central-server', 'src', 'services', 'alerting.service.ts');
-    const content = fs.readFileSync(filePath, 'utf8');
+  // --- alerting must auto-complete SaaS deployments as defense-in-depth ---
+  it('alerting must auto-complete SaaS deployments stuck in_progress/pending', () => {
+    const checksPath = path.join(repoRoot, 'central-server', 'src', 'services', 'alerting-checks.service.ts');
+    const content = fs.readFileSync(checksPath, 'utf8');
     expect({
       hasSaasAutoComplete: content.includes("site_type = 'saas'") && content.includes('saasAutoCompleted'),
     }).toEqual({

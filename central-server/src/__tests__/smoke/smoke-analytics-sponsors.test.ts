@@ -948,9 +948,9 @@ describe('Sponsor stats migration to site_sponsor_daily_stats guard', () => {
   });
 
   it('alerting must monitor site_sponsor_daily_stats staleness', () => {
-    const alertPath = path.join(repoRoot, 'central-server/src/services/alerting.service.ts');
-    const alerting = fs.readFileSync(alertPath, 'utf8');
-    expect(alerting).toContain('site_sponsor_daily_stats');
+    const checksPath = path.join(repoRoot, 'central-server/src/services/alerting-checks.service.ts');
+    const checks = fs.readFileSync(checksPath, 'utf8');
+    expect(checks).toContain('site_sponsor_daily_stats');
   });
 });
 
