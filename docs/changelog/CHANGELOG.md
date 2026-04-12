@@ -1,3 +1,9 @@
+# [3.151.0](https://github.com/Tallec7/neopro/compare/v3.150.0...v3.151.0) (2026-04-12)
+
+### Features
+
+- **content:** visual cards with drag & drop reorder in loop-manager (ADR-050 Phase 3) ([04155a3](https://github.com/Tallec7/neopro/commit/04155a31be77f465da4aa8dc91e6e3c40af71a67))
+
 # [3.150.0](https://github.com/Tallec7/neopro/compare/v3.149.0...v3.150.0) (2026-04-12)
 
 ### Features
