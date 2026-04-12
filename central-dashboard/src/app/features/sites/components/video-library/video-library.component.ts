@@ -188,6 +188,13 @@ export class VideoLibraryComponent implements OnChanges {
   }
 
   private processVideos(): void {
+    // Build filename index from configVideoRoles for fallback matching
+    this.configVideoFilenames = new Set();
+    for (const path of this.configVideoRoles.keys()) {
+      const fn = path.split('/').pop()?.toLowerCase();
+      if (fn) this.configVideoFilenames.add(fn);
+    }
+
     // Build maps for comparison - using multiple keys for robust matching
     // Index filename → ALL local videos with that name (not just one)
     const localByFilename = new Map<string, typeof this.videos>();
@@ -238,10 +245,11 @@ export class VideoLibraryComponent implements OnChanges {
       }
 
       const legacyOwner = this.detectOwner(cloud.filename);
-      const configRoles = this.configVideoRoles.get(cloud.url);
+      const effectivePath = cloud.url || cloud.filename;
+      const configRoles = this.configVideoRoles.get(effectivePath) || this.getConfigRolesByFilename(cloud.filename);
       const item: VideoItem = {
         id: cloud.id,
-        path: cloud.url,
+        path: effectivePath,
         filename: cloud.filename,
         displayName: cloud.title || cloud.originalName || cloud.filename,
         category: cloud.category,
@@ -322,8 +330,9 @@ export class VideoLibraryComponent implements OnChanges {
     // Already on the Pi
     if (video.isOnPi) return true;
 
-    // Used in current configuration
+    // Used in current configuration (by path or filename fallback)
     if (video.path && this.configVideoRoles.has(video.path)) return true;
+    if (video.filename && this.configVideoFilenames.has(video.filename.toLowerCase())) return true;
 
     // Specifically uploaded for this site
     if (this.siteId && video.uploadedForSiteId === this.siteId) return true;
@@ -332,6 +341,19 @@ export class VideoLibraryComponent implements OnChanges {
     if (video.id && this.pendingDeploymentVideoIds.has(video.id)) return true;
 
     return false;
+  }
+
+  /** Filename-based index of configVideoRoles for fallback matching */
+  private configVideoFilenames: Set<string> = new Set();
+
+  /** Look up config roles by filename when path-based lookup fails */
+  private getConfigRolesByFilename(filename: string): Set<string> | undefined {
+    const fnLower = filename.toLowerCase();
+    for (const [path, roles] of this.configVideoRoles) {
+      const pathFilename = path.split('/').pop()?.toLowerCase();
+      if (pathFilename === fnLower) return roles;
+    }
+    return undefined;
   }
 
   private detectOwner(pathOrFilename: string): 'club' | 'neopro' {
