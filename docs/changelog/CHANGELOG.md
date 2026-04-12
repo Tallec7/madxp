@@ -1,3 +1,9 @@
+# [3.158.0](https://github.com/Tallec7/neopro/compare/v3.157.5...v3.158.0) (2026-04-12)
+
+### Features
+
+- **safe:** add product overview page with features list and roadmap ([c6febe2](https://github.com/Tallec7/neopro/commit/c6febe2c67bab008c958719a12bee9f8f7531134))
+
 ## [3.157.5](https://github.com/Tallec7/neopro/compare/v3.157.4...v3.157.5) (2026-04-12)
 
 ### Bug Fixes
