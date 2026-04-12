@@ -1,3 +1,9 @@
+## [3.157.2](https://github.com/Tallec7/neopro/compare/v3.157.1...v3.157.2) (2026-04-12)
+
+### Bug Fixes
+
+- **profiles:** resolve sponsor IDs when copying profiles between sites ([f52fea5](https://github.com/Tallec7/neopro/commit/f52fea562994eaa3461618629de0b89037ca3785))
+
 ## [3.157.1](https://github.com/Tallec7/neopro/compare/v3.157.0...v3.157.1) (2026-04-12)
 
 ### Bug Fixes
