@@ -1,3 +1,9 @@
+# [3.153.0](https://github.com/Tallec7/neopro/compare/v3.152.3...v3.153.0) (2026-04-12)
+
+### Features
+
+- **dashboard:** redesign video library — grid view, "Add to" menu, detail panel ([21c5942](https://github.com/Tallec7/neopro/commit/21c5942ffdd710e6e18aafd0405dc6cac563e148))
+
 ## [3.152.3](https://github.com/Tallec7/neopro/compare/v3.152.2...v3.152.3) (2026-04-12)
 
 ### Bug Fixes
