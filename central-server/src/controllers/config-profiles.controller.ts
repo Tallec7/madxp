@@ -493,3 +493,4 @@ export const syncProfiles = async (req: AuthRequest, res: Response) => {
     res.status(500).json({ error: 'Erreur lors de la synchronisation des profils' });
   }
 };
+

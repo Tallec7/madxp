@@ -12,6 +12,7 @@ import { AnalyticsService } from '../../services/analytics.service';
 import { RecordingStateService } from '../../services/recording-state.service';
 import { DemoConfigService } from '../../services/demo-config.service';
 import { ProfileConfigService } from '../../services/profile-config.service';
+import { SaasConfigService } from '../../services/saas-config.service';
 import { LocalBroadcastService } from '../../services/local-broadcast.service';
 import {
   LocalOptionsService,
@@ -49,6 +50,7 @@ export class RemoteComponent implements OnInit, OnDestroy {
   private readonly localBroadcast = inject(LocalBroadcastService);
   private readonly localOptionsService = inject(LocalOptionsService);
   private readonly licenseService = inject(LicenseService);
+  private readonly saasConfigService = inject(SaasConfigService);
   private readonly ngZone = inject(NgZone);
   public readonly scoreService = inject(RemoteScoreService);
   public readonly timerService = inject(RemoteTimerService);
@@ -236,6 +238,25 @@ export class RemoteComponent implements OnInit, OnDestroy {
         error: () => { this.selectorError = 'Impossible de charger la liste des clubs'; this.selectorLoading = false; }
       });
       this.currentView = 'club-selector';
+    } else if (this.saasConfigService.isSaasMode()) {
+      this.saasConfigService.getAvailableProfiles().subscribe(profiles => {
+        if (profiles.length > 1) {
+          this.isMultiProfile = true;
+          this.selectorTitle = 'Sélection du profil';
+          this.selectorSubtitle = 'Choisissez un profil de configuration';
+          this.selectorClubs = profiles.map(p => ({
+            id: p.id,
+            name: p.displayName || p.name,
+            city: p.city || '',
+            sport: p.sport || '',
+          }));
+          this.selectorLoading = false;
+          this.currentView = 'club-selector';
+        } else {
+          const data = this.route.snapshot.data['configuration'] as Configuration;
+          this.initializeWithConfiguration(data);
+        }
+      });
     } else {
       this.profileConfigService.getAvailableProfiles().subscribe(profiles => {
         if (profiles.length > 1) {
@@ -297,6 +318,16 @@ export class RemoteComponent implements OnInit, OnDestroy {
           this.socketService.emit('command', { type: 'reload-config', data: config });
         },
         error: (err) => { console.error('Erreur chargement config club demo:', err); }
+      });
+    } else if (this.saasConfigService.isSaasMode()) {
+      const siteId = this.saasConfigService.getSiteId();
+      this.saasConfigService.loadProfileConfiguration(siteId, club.id).subscribe({
+        next: (config) => {
+          this.currentProfileName = club.name;
+          this.initializeWithConfiguration(config);
+          this.currentView = 'home';
+        },
+        error: (err) => { console.error('Erreur chargement config profil SaaS:', err); }
       });
     } else {
       this.profileConfigService.loadProfileConfiguration(club.id).subscribe({
