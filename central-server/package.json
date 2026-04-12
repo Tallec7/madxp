@@ -12,6 +12,7 @@
     "create-admin": "ts-node src/scripts/create-admin.ts",
     "test": "jest",
     "test:smoke": "jest --testPathPattern='__tests__/smoke/' --verbose --no-coverage --forceExit",
+    "test:smoke:smart": "bash src/scripts/smart-smoke.sh",
     "lint": "eslint --no-warn-ignored src/**/*.ts",
     "format": "prettier --write \"src/**/*.ts\""
   },
