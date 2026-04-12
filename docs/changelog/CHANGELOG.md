@@ -1,3 +1,9 @@
+# [3.152.0](https://github.com/Tallec7/neopro/compare/v3.151.3...v3.152.0) (2026-04-12)
+
+### Features
+
+- **tests:** add smart smoke runner — auto-detect relevant suites from git diff ([6716b2e](https://github.com/Tallec7/neopro/commit/6716b2ea69a58fd7aca5a9f91e662dc5a4f64319))
+
 ## [3.151.3](https://github.com/Tallec7/neopro/compare/v3.151.2...v3.151.3) (2026-04-12)
 
 ### Bug Fixes
