@@ -1,3 +1,9 @@
+## [3.151.2](https://github.com/Tallec7/neopro/compare/v3.151.1...v3.151.2) (2026-04-12)
+
+### Bug Fixes
+
+- **content:** open Advanced section for admins, add sponsor color to cards ([0a4f527](https://github.com/Tallec7/neopro/commit/0a4f5274c3946526ce9315c031eed16d1ad9a7ad))
+
 ## [3.151.1](https://github.com/Tallec7/neopro/compare/v3.151.0...v3.151.1) (2026-04-12)
 
 ### Bug Fixes
