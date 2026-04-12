@@ -1,3 +1,9 @@
+## [3.151.3](https://github.com/Tallec7/neopro/compare/v3.151.2...v3.151.3) (2026-04-12)
+
+### Bug Fixes
+
+- **content:** use feature gate for secondary display instead of deprecated DB column ([dc39a26](https://github.com/Tallec7/neopro/commit/dc39a264050b1c6e153c09ec380cd526243c87c6))
+
 ## [3.151.2](https://github.com/Tallec7/neopro/compare/v3.151.1...v3.151.2) (2026-04-12)
 
 ### Bug Fixes
