@@ -1,3 +1,9 @@
+## [3.158.1](https://github.com/Tallec7/neopro/compare/v3.158.0...v3.158.1) (2026-04-12)
+
+### Bug Fixes
+
+- **saas:** include category videos in club filter + normalize space/underscore ([3366b1e](https://github.com/Tallec7/neopro/commit/3366b1e576832ea38256c41664aec1d245bacb44))
+
 # [3.158.0](https://github.com/Tallec7/neopro/compare/v3.157.5...v3.158.0) (2026-04-12)
 
 ### Features
