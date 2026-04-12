@@ -1032,7 +1032,8 @@
     "deselect": "Deseleccionar",
     "selectedCount": "{{count}} seleccionado(s)",
     "manageSecondaryVariant": "Gestionar variante de pantalla secundaria",
-    "addSecondaryVariant": "Añadir variante de pantalla secundaria"
+    "addSecondaryVariant": "Añadir variante de pantalla secundaria",
+    "addToLoop": "Añadir al bucle"
   },
   "videoUpload": {
     "recordFromCamera": "[TRANSLATE] Record from camera"

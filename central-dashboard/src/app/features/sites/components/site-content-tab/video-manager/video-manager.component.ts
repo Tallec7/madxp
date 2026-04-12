@@ -41,11 +41,13 @@ import { VideoVariantPanelComponent } from '../../../../content/video-variant-pa
         [secondaryVariantVideoIds]="secondaryVariantVideoIds"
         [subscriptionPlan]="subscriptionPlan"
         [featureOverrides]="featureOverrides"
+        [siteSponsors]="siteSponsors"
         (videoSelect)="onVideoSelect($event)"
         (videoPreview)="onVideoPreview($event)"
         (videoDeploy)="videoDeploy.emit($event)"
         (videoDelete)="onVideoDelete($event)"
         (videoVariant)="onVideoVariant($event)"
+        (addToLoop)="addToLoop.emit($event)"
       ></app-video-library>
     </div>
 
@@ -186,12 +188,14 @@ export class VideoManagerComponent {
   @Input() secondaryVariantVideoIds: Set<string> = new Set();
   @Input() subscriptionPlan: string | null = null;
   @Input() featureOverrides: Record<string, boolean> | null = null;
+  @Input() siteSponsors: { video_filename?: string }[] = []; // ADR-050
 
   @Output() videoUploaded = new EventEmitter<UploadedVideo>();
   @Output() allVideosUploaded = new EventEmitter<UploadedVideo[]>();
   @Output() videoDeploy = new EventEmitter<VideoItem>();
   @Output() videoDeleted = new EventEmitter<void>();
   @Output() secondaryVariantChanged = new EventEmitter<void>();
+  @Output() addToLoop = new EventEmitter<VideoItem>(); // ADR-050
 
   selectedVideoPath = '';
   showDeleteModal = false;

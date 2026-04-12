@@ -7,21 +7,27 @@
     <div class="library-stats">
       <span class="stat">{{ filteredVideos.length }} vidéo(s)</span>
       <span
+        class="stat programmed"
+        *ngIf="filteredStatsProgrammed > 0"
+        title="Vidéos programmées (boucle, catégorie ou sponsor)"
+        >✅ {{ filteredStatsProgrammed }} programmée(s)</span
+      >
+      <span
+        class="stat available-stat"
+        *ngIf="filteredStatsAvailable > 0"
+        title="Uploadées mais pas dans la config"
+        >⬜ {{ filteredStatsAvailable }} disponible(s)</span
+      >
+      <span
         class="stat on-pi"
         *ngIf="siteType !== 'saas' && filteredStatsOnPi > 0"
         title="Sur le Pi"
-        >✅ {{ filteredStatsOnPi }}</span
-      >
-      <span class="stat" *ngIf="filteredStatsInConfig > 0" title="Utilisées dans la config active"
-        >⚙️ {{ filteredStatsInConfig }}</span
+        >📡 {{ filteredStatsOnPi }}</span
       >
       <span class="stat" *ngIf="filteredStatsWithVariant > 0" title="Avec variante secondaire"
         >📺 {{ filteredStatsWithVariant }}</span
       >
       <span class="stat" *ngIf="filteredTotalSize > 0">{{ formatBytes(filteredTotalSize) }}</span>
-      <span class="stat" *ngIf="filteredTotalDuration > 0"
-        >🕐 {{ formatDuration(filteredTotalDuration) }}</span
-      >
     </div>
   </div>
 
@@ -63,6 +69,8 @@
       <option value="all">Tous les statuts</option>
       <option value="on_pi" *ngIf="siteType !== 'saas'">✅ Sur le Pi</option>
       <option value="to_deploy" *ngIf="siteType !== 'saas'">⏳ À déployer</option>
+      <option value="programmed">✅ Programmées</option>
+      <option value="available_only">⬜ Disponibles</option>
       <option value="in_config">⚙️ Dans la config</option>
       <option value="deploy_error" *ngIf="siteType !== 'saas'">❌ Erreur deploy</option>
       <option value="with_variant">📺 Avec variante 2nd</option>
@@ -176,8 +184,8 @@
           </th>
           <th class="col-advertiser" title="Annonceur">Annonceur</th>
           <th class="col-variant" title="Variante secondaire (dual-display)">2nd</th>
-          <th class="col-config" title="Utilisé dans la config active">Cfg</th>
-          <th class="col-owner">Source</th>
+          <th class="col-content-status" title="Statut dans la config active">Statut</th>
+          <th class="col-owner-type">Propriétaire</th>
           <th class="col-status" *ngIf="siteType !== 'saas'">Statut</th>
           <th class="col-actions">Actions</th>
         </tr>
@@ -235,33 +243,36 @@
               >2nd</span
             >
           </td>
-          <td class="col-config">
+          <td class="col-content-status">
+            <span
+              class="content-status-badge"
+              [ngClass]="getContentStatusClass(video.contentStatus)"
+              [title]="getContentStatusLabel(video.contentStatus)"
+            >
+              {{ getContentStatusLabel(video.contentStatus) }}
+            </span>
             <span
               class="badge-cfg badge-boucle"
               *ngIf="video.configRoles?.has('boucle')"
-              title="Dans la boucle de diffusion par défaut (sponsors)"
+              title="Dans la boucle de diffusion par défaut"
               >BOUCLE</span
             >
             <span
               class="badge-cfg badge-match"
               *ngIf="video.configRoles?.has('match')"
-              title="Dans une phase de match (avant-match, mi-temps...)"
+              title="Dans une phase de match"
               >MATCH</span
             >
             <span
               class="badge-cfg badge-action"
               *ngIf="video.configRoles?.has('action')"
-              title="Vidéo d'action (télécommande : but, essai...)"
+              title="Vidéo d'action (télécommande)"
               >ACTION</span
             >
           </td>
-          <td class="col-owner">
-            <span
-              class="video-owner"
-              [class.owner-neopro]="video.owner === 'neopro'"
-              [class.owner-club]="video.owner === 'club'"
-            >
-              {{ video.owner === 'neopro' ? 'NEOPRO' : 'CLUB' }}
+          <td class="col-owner-type">
+            <span class="owner-type-badge" [ngClass]="'owner-' + video.ownerType">
+              {{ getOwnerTypeLabel(video.ownerType) }}
             </span>
           </td>
           <td
@@ -299,6 +310,14 @@
                 *ngIf="video.source === 'cloud'"
               >
                 👁️
+              </button>
+              <button
+                class="action-btn add-to-loop"
+                (click)="onAddToLoop(video, $event)"
+                [title]="'videoLibrary.addToLoop' | translate"
+                *ngIf="video.contentStatus === 'available'"
+              >
+                + {{ 'videoLibrary.addToLoop' | translate }}
               </button>
               <button
                 class="action-btn deploy"

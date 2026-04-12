@@ -471,7 +471,8 @@
     "deselect": "Désélectionner",
     "confirmDeletion": "Confirmer la suppression",
     "manageSecondaryVariant": "Gérer la variante écran secondaire",
-    "addSecondaryVariant": "Ajouter une variante écran secondaire"
+    "addSecondaryVariant": "Ajouter une variante écran secondaire",
+    "addToLoop": "Ajouter à la boucle"
   },
   "remotePin": {
     "title": "PIN Télécommande Cloud",

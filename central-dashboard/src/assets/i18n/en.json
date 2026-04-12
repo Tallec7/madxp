@@ -471,7 +471,8 @@
     "deselect": "Deselect",
     "confirmDeletion": "Confirm deletion",
     "manageSecondaryVariant": "Manage secondary screen variant",
-    "addSecondaryVariant": "Add secondary screen variant"
+    "addSecondaryVariant": "Add secondary screen variant",
+    "addToLoop": "Add to loop"
   },
   "remotePin": {
     "title": "Cloud Remote PIN",

@@ -58,11 +58,13 @@
     [secondaryVariantVideoIds]="secondaryVariantVideoIds"
     [subscriptionPlan]="subscriptionPlan"
     [featureOverrides]="featureOverrides"
+    [siteSponsors]="siteSponsors"
     (videoUploaded)="onVideoUploaded($event)"
     (secondaryVariantChanged)="loadContent()"
     (allVideosUploaded)="onAllVideosUploaded($event)"
     (videoDeploy)="onVideoDeploy($event)"
     (videoDeleted)="loadContent()"
+    (addToLoop)="onAddVideoToLoop($event)"
   ></app-video-manager>
 
   <!-- Draft Indicator + History (Pi only) -->

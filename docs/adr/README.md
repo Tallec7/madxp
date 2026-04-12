@@ -26,46 +26,47 @@ Un ADR documente une décision technique importante avec :
 
 ### Décisions terrain (2025-2026)
 
-| ID                                                                | Titre                                                     | Statut                   | Date     |
-| ----------------------------------------------------------------- | --------------------------------------------------------- | ------------------------ | -------- |
-| [ADR-006](ADR-006-subscription-license-system.md)                 | Système d'abonnement et licence offline                   | Accepté                  | Jan 2026 |
-| [ADR-007](ADR-007-public-remote-api.md)                           | API Remote publique (sans auth JWT)                       | Accepté                  | Jan 2026 |
-| [ADR-008](ADR-008-double-buffer-video-pi.md)                      | Double-buffer vidéo avec freeze-frame                     | Accepté                  | Jan 2026 |
-| [ADR-009](ADR-009-analytics-removal.md)                           | Suppression des pages Analytics dashboard                 | ⚠️ Supersédé par ADR-027 | Fév 2026 |
-| [ADR-010](ADR-010-hdmi-cec-analytics.md)                          | Détection HDMI-CEC pour analytics fiables                 | Accepté                  | Fév 2026 |
-| [ADR-011](ADR-011-bssid-lock-mesh-prohibition.md)                 | Interdiction BSSID lock en mesh                           | Accepté                  | Jan 2026 |
-| [ADR-012](ADR-012-sync-agent-vanilla-js.md)                       | Sync-agent en JS vanilla (pas TypeScript)                 | Accepté                  | Oct 2024 |
-| [ADR-013](ADR-013-config-merge-strategy.md)                       | Merge intelligent de configuration                        | Accepté                  | Déc 2025 |
-| [ADR-014](ADR-014-guardian-bash-independent.md)                   | Guardian bash indépendant                                 | Accepté                  | Jan 2026 |
-| [ADR-015](ADR-015-railway-hobby-constraints.md)                   | Contraintes Railway Hobby plan                            | Accepté                  | Jan 2026 |
-| [ADR-021](ADR-021-recording-inactivity-timer.md)                  | Timer d'inactivité recording                              | Accepté                  | Fév 2026 |
-| [ADR-022](ADR-022-content-tab-ux-restructuration.md)              | Restructuration UX onglet Contenu                         | Accepté                  | Fév 2026 |
-| [ADR-024](ADR-024-network-resilience-layers.md)                   | Résilience réseau multi-couches                           | Accepté                  | Jan 2026 |
-| [ADR-025](ADR-025-dual-storage-ftp-supabase.md)                   | Double backend stockage FTP + Supabase                    | Accepté                  | Déc 2024 |
-| [ADR-026](ADR-026-predictive-alerts.md)                           | Alertes prédictives multi-métriques                       | Accepté                  | Fév 2026 |
-| [ADR-027](ADR-027-analytics-ui-removal.md)                        | Suppression de l'UI Analytics dashboard                   | Accepté                  | Fév 2026 |
-| [ADR-028](ADR-028-atomic-config-write.md)                         | Écriture atomique de configuration.json                   | Accepté                  | Fév 2026 |
-| [ADR-029](ADR-029-dual-hdmi-tv-led.md)                            | Dual HDMI TV + LED depuis un seul Pi                      | Proposé                  | Fév 2026 |
-| [ADR-030](ADR-030-multi-profile-sync-deploy.md)                   | Deploy profile auto-sync + cache Nginx                    | Accepté                  | Fév 2026 |
-| [ADR-031](ADR-031-master-slave-video-loop-sync.md)                | Sync master-slave boucles vidéo dual-display              | Accepté                  | Fév 2026 |
-| [ADR-032](ADR-032-restore-secondary-variants-replace-mode.md)     | restoreSecondaryVariants en mode replace                  | Accepté                  | Mar 2026 |
-| [ADR-033](ADR-033-videos-secondary-serving.md)                    | Secondary variant serving, path & race condition fixes    | Accepté                  | Mar 2026 |
-| [ADR-034](ADR-034-synchronized-manual-video-reveal.md)            | Synchronized manual video reveal (dual-display sync)      | Accepté                  | Mar 2026 |
-| [ADR-035](ADR-035-advertiser-sponsor-separation.md)               | Séparation Annonceurs Neopro / Sponsors Club              | Proposé                  | Mar 2026 |
-| [ADR-036](ADR-036-club-portal-scoped-access.md)                   | Club Portal — Accès scopé par site                        | Accepté                  | Avr 2026 |
-| [ADR-037](ADR-037-saas-mode-architecture.md)                      | Architecture Mode SaaS (TV sans Raspberry Pi)             | Accepté                  | Avr 2026 |
-| [ADR-038](ADR-038-club-portal-saas-realtime-and-observability.md) | Portail club SaaS : temps réel, preview et client errors  | Accepté                  | Avr 2026 |
-| [ADR-039](ADR-039-subscription-tier-additive-strategy.md)         | Extension additive des tiers d'abonnement (play/club/pro) | Accepté                  | Avr 2026 |
-| [ADR-040](ADR-040-club-saas-dashboard-insights.md)                | Portail club SaaS — insights et tendances dashboard       | Accepté                  | Avr 2026 |
-| [ADR-041](ADR-041-extract-score-overlay-component.md)             | Extraction ScoreOverlayComponent depuis TvComponent       | Accepté                  | Avr 2026 |
-| [ADR-042](ADR-042-extract-tv-component-services.md)               | Extraction tv.component.ts en 3 services dédiés           | Accepté                  | Avr 2026 |
-| [ADR-043](ADR-043-extract-dashboard-component-services.md)        | Extraction 4 composants dashboard (services + templates)  | Accepté                  | Avr 2026 |
-| [ADR-044](ADR-044-extract-sync-agent-modules.md)                  | Extraction 4 modules monolithiques sync-agent             | Accepté                  | Avr 2026 |
-| [ADR-045](ADR-045-extract-chart-display-and-commands-modules.md)  | Extraction chart-display services + split commands.cjs    | Accepté                  | Avr 2026 |
-| [ADR-046](ADR-046-site-config-copy.md)                            | Copie de configuration inter-sites                        | Accepté                  | Avr 2026 |
-| [ADR-047](ADR-047-claude-md-rules-migration.md)                   | Migration règles CLAUDE.md vers .claude/rules/            | Accepté                  | Avr 2026 |
-| [ADR-048](ADR-048-ftp-video-storage-restructure.md)               | Restructuration FTP + thumbnails + pivot site_videos      | Accepté                  | Avr 2026 |
-| [ADR-049](ADR-049-score-live-multi-vendor-architecture.md)        | Score live multi-constructeurs (table de marque)          | Proposé                  | Avr 2026 |
+| ID                                                                | Titre                                                      | Statut                   | Date     |
+| ----------------------------------------------------------------- | ---------------------------------------------------------- | ------------------------ | -------- |
+| [ADR-006](ADR-006-subscription-license-system.md)                 | Système d'abonnement et licence offline                    | Accepté                  | Jan 2026 |
+| [ADR-007](ADR-007-public-remote-api.md)                           | API Remote publique (sans auth JWT)                        | Accepté                  | Jan 2026 |
+| [ADR-008](ADR-008-double-buffer-video-pi.md)                      | Double-buffer vidéo avec freeze-frame                      | Accepté                  | Jan 2026 |
+| [ADR-009](ADR-009-analytics-removal.md)                           | Suppression des pages Analytics dashboard                  | ⚠️ Supersédé par ADR-027 | Fév 2026 |
+| [ADR-010](ADR-010-hdmi-cec-analytics.md)                          | Détection HDMI-CEC pour analytics fiables                  | Accepté                  | Fév 2026 |
+| [ADR-011](ADR-011-bssid-lock-mesh-prohibition.md)                 | Interdiction BSSID lock en mesh                            | Accepté                  | Jan 2026 |
+| [ADR-012](ADR-012-sync-agent-vanilla-js.md)                       | Sync-agent en JS vanilla (pas TypeScript)                  | Accepté                  | Oct 2024 |
+| [ADR-013](ADR-013-config-merge-strategy.md)                       | Merge intelligent de configuration                         | Accepté                  | Déc 2025 |
+| [ADR-014](ADR-014-guardian-bash-independent.md)                   | Guardian bash indépendant                                  | Accepté                  | Jan 2026 |
+| [ADR-015](ADR-015-railway-hobby-constraints.md)                   | Contraintes Railway Hobby plan                             | Accepté                  | Jan 2026 |
+| [ADR-021](ADR-021-recording-inactivity-timer.md)                  | Timer d'inactivité recording                               | Accepté                  | Fév 2026 |
+| [ADR-022](ADR-022-content-tab-ux-restructuration.md)              | Restructuration UX onglet Contenu                          | Accepté                  | Fév 2026 |
+| [ADR-024](ADR-024-network-resilience-layers.md)                   | Résilience réseau multi-couches                            | Accepté                  | Jan 2026 |
+| [ADR-025](ADR-025-dual-storage-ftp-supabase.md)                   | Double backend stockage FTP + Supabase                     | Accepté                  | Déc 2024 |
+| [ADR-026](ADR-026-predictive-alerts.md)                           | Alertes prédictives multi-métriques                        | Accepté                  | Fév 2026 |
+| [ADR-027](ADR-027-analytics-ui-removal.md)                        | Suppression de l'UI Analytics dashboard                    | Accepté                  | Fév 2026 |
+| [ADR-028](ADR-028-atomic-config-write.md)                         | Écriture atomique de configuration.json                    | Accepté                  | Fév 2026 |
+| [ADR-029](ADR-029-dual-hdmi-tv-led.md)                            | Dual HDMI TV + LED depuis un seul Pi                       | Proposé                  | Fév 2026 |
+| [ADR-030](ADR-030-multi-profile-sync-deploy.md)                   | Deploy profile auto-sync + cache Nginx                     | Accepté                  | Fév 2026 |
+| [ADR-031](ADR-031-master-slave-video-loop-sync.md)                | Sync master-slave boucles vidéo dual-display               | Accepté                  | Fév 2026 |
+| [ADR-032](ADR-032-restore-secondary-variants-replace-mode.md)     | restoreSecondaryVariants en mode replace                   | Accepté                  | Mar 2026 |
+| [ADR-033](ADR-033-videos-secondary-serving.md)                    | Secondary variant serving, path & race condition fixes     | Accepté                  | Mar 2026 |
+| [ADR-034](ADR-034-synchronized-manual-video-reveal.md)            | Synchronized manual video reveal (dual-display sync)       | Accepté                  | Mar 2026 |
+| [ADR-035](ADR-035-advertiser-sponsor-separation.md)               | Séparation Annonceurs Neopro / Sponsors Club               | Proposé                  | Mar 2026 |
+| [ADR-036](ADR-036-club-portal-scoped-access.md)                   | Club Portal — Accès scopé par site                         | Accepté                  | Avr 2026 |
+| [ADR-037](ADR-037-saas-mode-architecture.md)                      | Architecture Mode SaaS (TV sans Raspberry Pi)              | Accepté                  | Avr 2026 |
+| [ADR-038](ADR-038-club-portal-saas-realtime-and-observability.md) | Portail club SaaS : temps réel, preview et client errors   | Accepté                  | Avr 2026 |
+| [ADR-039](ADR-039-subscription-tier-additive-strategy.md)         | Extension additive des tiers d'abonnement (play/club/pro)  | Accepté                  | Avr 2026 |
+| [ADR-040](ADR-040-club-saas-dashboard-insights.md)                | Portail club SaaS — insights et tendances dashboard        | Accepté                  | Avr 2026 |
+| [ADR-041](ADR-041-extract-score-overlay-component.md)             | Extraction ScoreOverlayComponent depuis TvComponent        | Accepté                  | Avr 2026 |
+| [ADR-042](ADR-042-extract-tv-component-services.md)               | Extraction tv.component.ts en 3 services dédiés            | Accepté                  | Avr 2026 |
+| [ADR-043](ADR-043-extract-dashboard-component-services.md)        | Extraction 4 composants dashboard (services + templates)   | Accepté                  | Avr 2026 |
+| [ADR-044](ADR-044-extract-sync-agent-modules.md)                  | Extraction 4 modules monolithiques sync-agent              | Accepté                  | Avr 2026 |
+| [ADR-045](ADR-045-extract-chart-display-and-commands-modules.md)  | Extraction chart-display services + split commands.cjs     | Accepté                  | Avr 2026 |
+| [ADR-046](ADR-046-site-config-copy.md)                            | Copie de configuration inter-sites                         | Accepté                  | Avr 2026 |
+| [ADR-047](ADR-047-claude-md-rules-migration.md)                   | Migration règles CLAUDE.md vers .claude/rules/             | Accepté                  | Avr 2026 |
+| [ADR-048](ADR-048-ftp-video-storage-restructure.md)               | Restructuration FTP + thumbnails + pivot site_videos       | Accepté                  | Avr 2026 |
+| [ADR-049](ADR-049-score-live-multi-vendor-architecture.md)        | Score live multi-constructeurs (table de marque)           | Proposé                  | Avr 2026 |
+| [ADR-050](ADR-050-content-tab-unified-saas-pi.md)                 | Onglet Contenu unifié Pi/SaaS — statuts vidéo & hiérarchie | Accepté                  | Avr 2026 |
 
 ### Supersédés
 

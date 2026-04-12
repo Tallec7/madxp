@@ -479,6 +479,31 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
   // Video Deploy Tracking
   // ============================================================================
 
+  /** ADR-050: Add a video to the default loop (sponsors[]) from the library */
+  onAddVideoToLoop(video: VideoItem): void {
+    if (!this.config) return;
+    if (!this.config.sponsors) {
+      this.config.sponsors = [];
+    }
+    // Avoid duplicates
+    const alreadyInLoop = this.config.sponsors.some(
+      (s: { path?: string }) => s.path === video.path
+    );
+    if (alreadyInLoop) {
+      this.notificationService.info('Cette vidéo est déjà dans la boucle');
+      return;
+    }
+    this.config.sponsors.push({
+      path: video.path,
+      name: video.displayName,
+      weight: 1,
+    } as never);
+    this.markDirty();
+    this.notificationService.success(`"${video.displayName}" ajoutée à la boucle`);
+    // Refresh config roles so the library updates the status badge
+    this.rebuildConfigVideoRoles();
+  }
+
   onVideoDeploy(video: VideoItem): void {
     if (this.siteType === 'saas') {
       this.notificationService.warning('Les sites SaaS n\'utilisent pas de déploiement vidéo');
