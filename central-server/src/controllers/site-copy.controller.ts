@@ -8,10 +8,10 @@ import {
   siteRepository,
   configProfileRepository,
 } from '../repositories';
+import { siteSponsorRepository } from '../repositories/site-sponsor.repository';
 
 // Re-use helpers from sites.controller
 import { generateApiKey, hashApiKey } from './sites.controller';
-import { autoResolveSponsorIds } from '../services/sponsor-auto-resolution.service';
 import type { SiteConfiguration } from '../types';
 
 // ============================================================================
@@ -80,6 +80,60 @@ export const copyConfig = async (req: AuthRequest, res: Response) => {
     // Déterminer le sort_order de départ (après les profils existants)
     const maxSortOrder = existingProfiles.reduce((max, p) => Math.max(max, p.sort_order), -1);
 
+    // ── Copier les sponsors du site source vers le site cible ──
+    // Map: sourceSponsortId → targetSponsorId (pour re-mapper les configs)
+    const sponsorIdMap = new Map<string, string>();
+    let sponsorsCopied = 0;
+    try {
+      const sourceSponsors = await siteSponsorRepository.listBySite(sourceSiteId, true);
+      const existingTargetSponsors = await siteSponsorRepository.listBySite(targetSiteId, true);
+
+      for (const sponsor of sourceSponsors) {
+        // Déduplique par nom (case-insensitive) — ne pas recréer un sponsor existant
+        const existing = existingTargetSponsors.find(
+          ts => ts.name.toLowerCase().trim() === sponsor.name.toLowerCase().trim()
+        );
+        if (existing) {
+          sponsorIdMap.set(sponsor.id, existing.id);
+          continue;
+        }
+
+        const newSponsor = await siteSponsorRepository.create({
+          siteId: targetSiteId,
+          name: sponsor.name,
+          contactName: sponsor.contact_name,
+          contactEmail: sponsor.contact_email,
+          logoUrl: sponsor.logo_url,
+          contractAmount: sponsor.contract_amount,
+          contractStart: sponsor.contract_start,
+          contractEnd: sponsor.contract_end,
+        });
+        sponsorIdMap.set(sponsor.id, newSponsor.id);
+        sponsorsCopied++;
+
+        // Copier les associations vidéo du sponsor
+        if (Array.isArray(sponsor.video_filenames)) {
+          for (const filename of sponsor.video_filenames) {
+            if (filename) {
+              await siteSponsorRepository.addVideo(newSponsor.id, null, filename);
+            }
+          }
+        }
+      }
+
+      if (sponsorsCopied > 0) {
+        logger.info('Sponsors copied to target site', {
+          sourceSiteId, targetSiteId, sponsorsCopied, reused: sourceSponsors.length - sponsorsCopied,
+        });
+      }
+    } catch (sponsorError) {
+      logger.warn('Non-fatal: failed to copy sponsors', {
+        sourceSiteId, targetSiteId,
+        error: sponsorError instanceof Error ? sponsorError.message : String(sponsorError),
+      });
+    }
+
+    // ── Copier les profils avec re-mapping des sponsor IDs ──
     const copiedProfiles = [];
     for (let i = 0; i < sourceProfiles.length; i++) {
       const profile = sourceProfiles[i];
@@ -97,18 +151,11 @@ export const copyConfig = async (req: AuthRequest, res: Response) => {
       }
       existingNames.add(name.toLowerCase());
 
-      // Ré-résoudre les site_sponsor_id vers les sponsors du site cible
-      let resolvedConfig = profile.configuration as SiteConfiguration;
-      try {
-        const { configuration: resolved, resolved: resolvedCount } =
-          await autoResolveSponsorIds(targetSiteId, resolvedConfig);
-        if (resolvedCount > 0) {
-          resolvedConfig = resolved;
-          logger.info('Sponsor auto-resolution in copied profile', {
-            sourceSiteId, targetSiteId, profileName: name, resolved: resolvedCount,
-          });
-        }
-      } catch { /* non-fatal */ }
+      // Re-mapper les site_sponsor_id dans la config vers les sponsors du site cible
+      const remappedConfig = remapSponsorIds(
+        profile.configuration as SiteConfiguration,
+        sponsorIdMap,
+      );
 
       const copied = await configProfileRepository.create({
         siteId: targetSiteId,
@@ -118,7 +165,7 @@ export const copyConfig = async (req: AuthRequest, res: Response) => {
         sport: profile.sport || undefined,
         sortOrder: maxSortOrder + 1 + i,
         isDefault: false, // Ne jamais écraser le profil par défaut de la cible
-        configuration: resolvedConfig as Record<string, unknown>,
+        configuration: remappedConfig as Record<string, unknown>,
         createdBy: req.user?.id,
       });
       copiedProfiles.push(copied);
@@ -128,6 +175,7 @@ export const copyConfig = async (req: AuthRequest, res: Response) => {
       sourceSiteId,
       targetSiteId,
       profilesCopied: copiedProfiles.length,
+      sponsorsCopied,
       copiedBy: req.user?.email,
     });
 
@@ -136,7 +184,7 @@ export const copyConfig = async (req: AuthRequest, res: Response) => {
       targetType: 'site',
       targetId: targetSiteId,
       userId: req.user?.id,
-      details: { sourceSiteId, targetSiteId, profilesCopied: copiedProfiles.length },
+      details: { sourceSiteId, targetSiteId, profilesCopied: copiedProfiles.length, sponsorsCopied },
     }, req);
 
     res.json({
@@ -269,3 +317,63 @@ export const duplicateSite = async (req: AuthRequest, res: Response) => {
     res.status(500).json({ error: 'Erreur lors de la duplication du site' });
   }
 };
+
+// ============================================================================
+// Helpers
+// ============================================================================
+
+/**
+ * Re-mappe les site_sponsor_id dans une config copiée :
+ * ancien ID (site source) → nouvel ID (site cible).
+ * Les IDs non trouvés dans le map sont supprimés (sponsor non copié).
+ */
+function remapSponsorIds(
+  config: SiteConfiguration,
+  idMap: Map<string, string>,
+): SiteConfiguration {
+  if (idMap.size === 0) return config;
+
+  const cloned: SiteConfiguration = JSON.parse(JSON.stringify(config));
+
+  const remap = (video: { site_sponsor_id?: string }): void => {
+    if (!video.site_sponsor_id) return;
+    const newId = idMap.get(video.site_sponsor_id);
+    if (newId) {
+      video.site_sponsor_id = newId;
+    } else {
+      delete video.site_sponsor_id;
+    }
+  };
+
+  // Boucle par défaut
+  if (Array.isArray(cloned.sponsors)) {
+    cloned.sponsors.forEach(remap);
+  }
+
+  // Boucles par phase
+  if (Array.isArray(cloned.timeCategories)) {
+    for (const tc of cloned.timeCategories) {
+      if (Array.isArray(tc.loopVideos)) {
+        tc.loopVideos.forEach(remap);
+      }
+    }
+  }
+
+  // Catégories + sous-catégories
+  if (Array.isArray(cloned.categories)) {
+    for (const cat of cloned.categories) {
+      if (Array.isArray(cat.videos)) {
+        cat.videos.forEach(remap);
+      }
+      if (Array.isArray(cat.subCategories)) {
+        for (const sub of cat.subCategories) {
+          if (Array.isArray(sub.videos)) {
+            sub.videos.forEach(remap);
+          }
+        }
+      }
+    }
+  }
+
+  return cloned;
+}
