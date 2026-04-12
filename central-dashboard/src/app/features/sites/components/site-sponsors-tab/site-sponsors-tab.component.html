@@ -74,6 +74,28 @@
     </div>
   </div>
 
+  <!-- Profile filter tabs (only when multiple profiles exist) -->
+  <div class="profile-filter" *ngIf="profiles.length > 1">
+    <button
+      class="profile-tab"
+      [class.active]="selectedProfileId === null"
+      (click)="selectProfile(null)"
+    >
+      Tous
+      <span class="profile-tab-count">{{ sponsors.length }}</span>
+    </button>
+    <button
+      class="profile-tab"
+      *ngFor="let profile of profiles"
+      [class.active]="selectedProfileId === profile.id"
+      (click)="selectProfile(profile.id)"
+    >
+      {{ profile.display_name || profile.name }}
+      <span class="profile-tab-count">{{ getProfileSponsorCount(profile.id) }}</span>
+      <span class="profile-tab-default" *ngIf="profile.is_default">par défaut</span>
+    </button>
+  </div>
+
   <!-- Empty state -->
   <div class="empty-state" *ngIf="!sponsors.length && !loading">
     <div class="empty-icon">💼</div>
@@ -84,8 +106,17 @@
     <button class="btn btn-primary" (click)="openCreateModal()">Créer un sponsor</button>
   </div>
 
+  <!-- Empty state for profile filter (sponsors exist but none match selected profile) -->
+  <div class="empty-state" *ngIf="sponsors.length && !filteredSponsors.length && selectedProfileId">
+    <p>Aucun sponsor sur ce profil</p>
+    <p class="empty-hint">
+      Les sponsors affichés ici sont ceux dont au moins une vidéo est présente dans la configuration
+      du profil.
+    </p>
+  </div>
+
   <!-- Sponsors table -->
-  <table class="data-table" *ngIf="sponsors.length">
+  <table class="data-table" *ngIf="filteredSponsors.length">
     <thead>
       <tr>
         <th>Sponsor</th>
@@ -97,7 +128,7 @@
       </tr>
     </thead>
     <tbody>
-      <ng-container *ngFor="let sponsor of sponsors">
+      <ng-container *ngFor="let sponsor of filteredSponsors">
         <tr [class.expanded]="expandedSponsorId === sponsor.id">
           <td class="sponsor-name-cell">
             <strong>{{ sponsor.name }}</strong>

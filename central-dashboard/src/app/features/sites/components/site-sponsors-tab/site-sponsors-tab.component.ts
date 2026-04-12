@@ -7,6 +7,7 @@ import { TranslateModule } from '@ngx-translate/core';
 import { NotificationService } from '../../../../core/services/notification.service';
 import { ConfirmDialogService } from '../../../../core/services/confirm-dialog.service';
 import { Site, SiteSponsor, SiteSponsorStatsResponse, GeneratedReport, SiteSponsorBenchmarkResponse, CloudVideo, SiteConfiguration } from '../../../../core/models';
+import { ConfigProfile } from '../../../../core/models/config-profile.model';
 import { SiteSponsorsTabDataService } from './site-sponsors-tab.data.service';
 import { SiteSponsorsChartService } from './site-sponsors-tab.chart.service';
 
@@ -32,8 +33,14 @@ export class SiteSponsorsTabComponent implements OnInit, OnDestroy {
 
   // List
   sponsors: SiteSponsor[] = [];
+  filteredSponsors: SiteSponsor[] = [];
   loading = true;
   error = '';
+
+  // Profile filter
+  profiles: ConfigProfile[] = [];
+  selectedProfileId: string | null = null; // null = "Tous"
+  private profileFilenamesCache = new Map<string, Set<string>>();
 
   // Detail expand
   expandedSponsorId: string | null = null;
@@ -95,6 +102,7 @@ export class SiteSponsorsTabComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.loadSponsors();
     this.loadSiteContentOnce();
+    this.loadProfiles();
   }
 
   ngOnDestroy(): void {
@@ -108,6 +116,7 @@ export class SiteSponsorsTabComponent implements OnInit, OnDestroy {
       next: (res) => {
         // ADR-035 Phase 1: filtrer les sponsors neopro (visibles uniquement côté admin annonceurs)
         this.sponsors = (res?.sponsors ?? []).filter(s => s.source !== 'neopro');
+        this.applyProfileFilter();
         this.loading = false;
         this.cdr.markForCheck();
       },
@@ -618,6 +627,68 @@ export class SiteSponsorsTabComponent implements OnInit, OnDestroy {
     if (!this.configLoaded) return 0;
     const filenames = sponsor.video_filenames ?? [];
     return filenames.filter(f => !this.isFilenameInLoop(f)).length;
+  }
+
+  // =========================================================================
+  // Profile filter
+  // =========================================================================
+
+  private loadProfiles(): void {
+    this.dataService.loadProfiles(this.siteId).subscribe({
+      next: (res) => {
+        this.profiles = res.profiles ?? [];
+        // Pre-cache filenames for each profile
+        for (const p of this.profiles) {
+          this.profileFilenamesCache.set(
+            p.id,
+            this.dataService.extractVideoFilenamesFromConfig(p.configuration),
+          );
+        }
+        this.applyProfileFilter();
+        this.cdr.markForCheck();
+      },
+      error: () => {
+        this.profiles = [];
+      },
+    });
+  }
+
+  selectProfile(profileId: string | null): void {
+    this.selectedProfileId = profileId;
+    this.applyProfileFilter();
+    // Collapse expanded sponsor if filtered out
+    if (this.expandedSponsorId) {
+      const stillVisible = this.filteredSponsors.some(s => s.id === this.expandedSponsorId);
+      if (!stillVisible) {
+        this.expandedSponsorId = null;
+        this.expandedSponsor = null;
+        this.chartService.destroyChart();
+      }
+    }
+    this.cdr.markForCheck();
+  }
+
+  private applyProfileFilter(): void {
+    if (!this.selectedProfileId) {
+      this.filteredSponsors = this.sponsors;
+      return;
+    }
+    const profileFilenames = this.profileFilenamesCache.get(this.selectedProfileId);
+    if (!profileFilenames) {
+      this.filteredSponsors = this.sponsors;
+      return;
+    }
+    this.filteredSponsors = this.sponsors.filter(
+      s => this.dataService.isSponsorInProfile(s, profileFilenames),
+    );
+  }
+
+  getProfileSponsorCount(profileId: string): number {
+    const profileFilenames = this.profileFilenamesCache.get(profileId);
+    if (!profileFilenames) return 0;
+    return this.sponsors.filter(
+      s => this.dataService.isSponsorInProfile(s, profileFilenames),
+    ).length;
   }
 
   // =========================================================================
