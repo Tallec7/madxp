@@ -1,3 +1,9 @@
+## [3.152.2](https://github.com/Tallec7/neopro/compare/v3.152.1...v3.152.2) (2026-04-12)
+
+### Bug Fixes
+
+- **alerting:** remove unused imports after ADR-051 refactor ([e725665](https://github.com/Tallec7/neopro/commit/e7256650ba59d2060118d9a4e5f325b428cdaac7))
+
 ## [3.152.1](https://github.com/Tallec7/neopro/compare/v3.152.0...v3.152.1) (2026-04-12)
 
 ### Bug Fixes
