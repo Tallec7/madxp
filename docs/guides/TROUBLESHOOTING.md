@@ -43,6 +43,7 @@
 39. [Post-OTA validation failed: ECONNREFUSED ::1 (v3.116.28+)](#post-ota-validation-failed-econnrefused-1-v311628)
 40. [Fausses alertes offline/online Slack — flapping Socket.IO (v3.118.2+)](#fausses-alertes-offlineonline-slack--flapping-socketio-v31182)
 41. [Taille vidéo affichée "-" au lieu de la vraie taille (v3.127.7+)](#taille-vidéo-affichée---au-lieu-de-la-vraie-taille-v31277)
+42. [Dashboard 403 après deploy FTP réussi (v3.158.2+)](#dashboard-403-ftp)
 
 > **WiFi USB** : Pour un guide complet sur la clé WiFi USB (installation, diagnostic, pannes, recovery), voir [WIFI_USB_GUIDE.md](WIFI_USB_GUIDE.md).
 >
@@ -3711,6 +3712,48 @@ gh run view <RUN_ID> --log | grep -i "behind the remote"
 # Relancer manuellement le dernier commit éligible
 gh workflow run release.yml --ref main
 ```
+
+---
+
+### Dashboard 403 après deploy FTP réussi (v3.158.2+) {#dashboard-403-ftp}
+
+#### Symptôme
+
+Le site `neopro-admin.kalonpartners.bzh` retourne **403 Forbidden** ou affiche un ancien `index.html` alors que le workflow `deploy-dashboard` affiche "success". Les assets (JS, CSS, JSON) sont accessibles en 200, mais `/` et `/index.html` ne fonctionnent pas.
+
+#### Cause
+
+Le FTP deploy avec `dangerous-clean-slate: true` supprime tous les fichiers avant de re-uploader. Si l'upload de `index.html` échoue silencieusement (timeout FTP, rate-limit Hostinger), le fichier est manquant et Apache retourne 403 (pas de DirectoryIndex).
+
+#### Diagnostic
+
+```bash
+# Vérifier le statut HTTP
+curl -sI https://neopro-admin.kalonpartners.bzh/ | head -5
+
+# Vérifier que le contenu est bien Angular (pas un vieux site)
+curl -s https://neopro-admin.kalonpartners.bzh/ | grep "app-root"
+
+# Vérifier les assets
+curl -sI https://neopro-admin.kalonpartners.bzh/assets/i18n/fr.json | head -3
+
+# Vérifier le log FTP du dernier deploy
+gh run view $(gh run list --workflow=release.yml --limit=1 --json databaseId -q '.[0].databaseId') --log | grep "Deploy Central Dashboard" | grep -i "upload.*index\|clean.slate\|error"
+```
+
+#### Solution
+
+1. **Re-run le deploy** :
+   ```bash
+   gh run rerun $(gh run list --workflow=release.yml --limit=1 --json databaseId -q '.[0].databaseId')
+   ```
+2. Si le re-run échoue aussi, **upload manuel** via le gestionnaire de fichiers Hostinger : copier `index.html` dans `public_html/neopro-admin/`
+
+#### Prévention (v3.158.3+)
+
+Le workflow inclut désormais une étape **"Verify dashboard deployment"** qui fait un `curl` post-deploy et échoue le job si `index.html` n'est pas servi correctement. Cela empêche un deploy silencieusement cassé de passer inaperçu.
+
+> **Note** : Les fichiers du dashboard sont dans `public_html/neopro-admin/` sur Hostinger (pas `public_html/`). Le `server-dir: /` dans le workflow FTP correspond à cette racine FTP.
 
 ---
 

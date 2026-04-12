@@ -217,6 +217,30 @@ jobs:
             saas/**
           timeout: 120000
 
+      - name: Verify dashboard deployment
+        run: |
+          echo "Waiting 10s for CDN propagation..."
+          sleep 10
+
+          HTTP_STATUS=$(curl -sI -o /dev/null -w "%{http_code}" https://neopro-admin.kalonpartners.bzh/ 2>/dev/null)
+          echo "Dashboard root status: $HTTP_STATUS"
+
+          if [ "$HTTP_STATUS" = "403" ] || [ "$HTTP_STATUS" = "404" ]; then
+            echo "::error::Dashboard deploy verification FAILED — GET / returned $HTTP_STATUS (expected 200)"
+            echo "This likely means index.html was not uploaded correctly by FTP."
+            echo "Check Hostinger File Manager: public_html/neopro-admin/index.html should exist."
+            exit 1
+          fi
+
+          INDEX_CHECK=$(curl -s https://neopro-admin.kalonpartners.bzh/ 2>/dev/null | grep -c "app-root" || true)
+          if [ "$INDEX_CHECK" -eq 0 ]; then
+            echo "::error::Dashboard deploy verification FAILED — index.html does not contain <app-root>"
+            echo "The served page is not the Angular dashboard. Document root may have changed."
+            exit 1
+          fi
+
+          echo "✅ Dashboard deployment verified — Angular app served correctly"
+
   deploy-saas:
     name: Deploy SaaS App to Hostinger
     needs: [release, deploy-dashboard]
@@ -265,3 +289,18 @@ jobs:
           server-dir: /saas/
           dangerous-clean-slate: true
           timeout: 60000
+
+      - name: Verify SaaS deployment
+        run: |
+          echo "Waiting 10s for CDN propagation..."
+          sleep 10
+
+          HTTP_STATUS=$(curl -sI -o /dev/null -w "%{http_code}" https://neopro-admin.kalonpartners.bzh/saas/ 2>/dev/null)
+          echo "SaaS /saas/ status: $HTTP_STATUS"
+
+          if [ "$HTTP_STATUS" = "403" ] || [ "$HTTP_STATUS" = "404" ]; then
+            echo "::error::SaaS deploy verification FAILED — GET /saas/ returned $HTTP_STATUS"
+            exit 1
+          fi
+
+          echo "✅ SaaS deployment verified"
