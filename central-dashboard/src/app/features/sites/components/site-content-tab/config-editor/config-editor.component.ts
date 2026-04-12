@@ -13,7 +13,27 @@ import { VideoSearchSelectComponent } from '../../../../../shared/components/vid
   imports: [CommonModule, FormsModule, TranslateModule, LoopManagerComponent, VideoSearchSelectComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <!-- Config Health Bar -->
+    <!-- ① PROGRAMMATION — Loop Manager first (ADR-050 Phase 2) -->
+
+    <!-- Loop Manager -->
+    <div class="section" id="section-loops">
+      <app-loop-manager
+        [siteType]="siteType"
+        [isClubUser]="isClubUser"
+        [subscriptionPlan]="subscriptionPlan"
+        [featureOverrides]="featureOverrides"
+        [config]="config"
+        [videoOptionGroups]="videoOptionGroups"
+        [cloudVideoPaths]="cloudVideoPaths"
+        [allKnownVideoPaths]="allKnownVideoPaths"
+        [localVideos]="localVideos"
+        [videoDurations]="videoDurations"
+        [siteSponsors]="siteSponsors"
+        (configChanged)="emitConfigChanged()"
+      ></app-loop-manager>
+    </div>
+
+    <!-- Config Health Bar (pipeline summary) -->
     <div class="config-health-bar" *ngIf="config">
       <a class="health-step" (click)="scrollToSection('library')" [class.ok]="totalVideoCount > 0"
          title="Nombre total de vidéos disponibles (Pi + Cloud)">
@@ -87,31 +107,7 @@ import { VideoSearchSelectComponent } from '../../../../../shared/components/vid
       </div>
     </div>
 
-    <!-- JSON Toggle (hidden for club users) -->
-    <div class="json-toggle-bar" *ngIf="config && !isClubUser">
-      <button class="btn btn-sm btn-outline" (click)="toggleJsonView()">
-        <span>{{ showJson ? '📝 Formulaire' : 'JSON' }}</span>
-      </button>
-    </div>
-
-    <div class="json-editor-section" *ngIf="showJson && config">
-      <div class="section card">
-        <div class="section-header">
-          <h4><span class="section-icon">📋</span> Configuration JSON</h4>
-          <div class="json-actions">
-            <button class="btn btn-sm btn-outline" (click)="formatJson()">Formater</button>
-            <button class="btn btn-sm btn-outline" (click)="copyJson()">Copier</button>
-          </div>
-        </div>
-        <textarea
-          class="json-textarea"
-          [value]="configJsonString"
-          (input)="onJsonInput($event)"
-          spellcheck="false"
-        ></textarea>
-        <div class="json-error" *ngIf="jsonError">{{ jsonError }}</div>
-      </div>
-    </div>
+    <!-- ③ CATÉGORIES & TÉLÉCOMMANDE -->
 
     <ng-container *ngIf="!showJson">
 
@@ -247,47 +243,6 @@ import { VideoSearchSelectComponent } from '../../../../../shared/components/vid
       </div>
     </div>
 
-    <!-- Loop Manager -->
-    <div class="section" id="section-loops">
-      <app-loop-manager
-        [siteType]="siteType"
-        [isClubUser]="isClubUser"
-        [subscriptionPlan]="subscriptionPlan"
-        [featureOverrides]="featureOverrides"
-        [config]="config"
-        [videoOptionGroups]="videoOptionGroups"
-        [cloudVideoPaths]="cloudVideoPaths"
-        [allKnownVideoPaths]="allKnownVideoPaths"
-        [localVideos]="localVideos"
-        [videoDurations]="videoDurations"
-        [siteSponsors]="siteSponsors"
-        (configChanged)="emitConfigChanged()"
-      ></app-loop-manager>
-    </div>
-
-    <!-- Secondary Display Preview (Phase 3 — PROP-002) -->
-    <div class="section card" id="section-secondary-preview" *ngIf="secondaryDisplayEnabled">
-      <div class="section-header">
-        <h4>
-          <span class="section-icon">🖥️</span>
-          Aperçu écran secondaire
-        </h4>
-      </div>
-      <p class="section-desc">
-        Contenu prévu sur l'écran secondaire. Les vidéos avec le badge 📺 ont une variante dédiée, les autres utiliseront un recadrage automatique.
-      </p>
-      <div class="secondary-preview-list">
-        <div *ngFor="let video of getSecondaryPlaylistVideos()" class="secondary-preview-item" [class.has-variant]="video.hasVariant" [class.no-variant]="!video.hasVariant">
-          <span class="secondary-preview-name">{{ video.displayName }}</span>
-          <span class="secondary-preview-badge" *ngIf="video.hasVariant" title="Variante secondaire dédiée">📺 2nd</span>
-          <span class="secondary-preview-fallback" *ngIf="!video.hasVariant" title="Recadrage automatique (object-fit: cover)">recadrage auto</span>
-        </div>
-        <div *ngIf="getSecondaryPlaylistVideos().length === 0" class="secondary-preview-empty">
-          Aucune vidéo dans la configuration actuelle.
-        </div>
-      </div>
-    </div>
-
     <!-- Remote Organization -->
     <div class="section card" id="section-remote">
       <div class="section-header">
@@ -326,58 +281,66 @@ import { VideoSearchSelectComponent } from '../../../../../shared/components/vid
       </div>
     </div>
 
-    <!-- Analytics Categories (hidden for club users) -->
-    <div class="section card" id="section-analytics" *ngIf="!isClubUser">
-      <div class="section-header">
-        <h4>
-          <span class="section-icon">📊</span>
-          Catégories Analytics
-        </h4>
-      </div>
-      <p class="section-desc">
-        Mapper les catégories vers les catégories analytics pour le reporting.
-        Si une catégorie a des sous-catégories, le mapping se fait au niveau des sous-catégories.
-      </p>
+    </ng-container>
 
-      <div class="analytics-mappings" *ngIf="config.categories && config.categories.length > 0">
-        <div class="analytics-row header">
-          <span class="col-category">Catégorie</span>
-          <span class="col-analytics">Type Analytics</span>
+    <!-- ④ CONFIGURATION AVANCÉE (ADR-050 Phase 2) -->
+    <details class="advanced-section" id="section-advanced">
+      <summary class="advanced-toggle">
+        <span class="advanced-icon">⚙️</span>
+        Configuration avancée
+        <span class="advanced-hint" *ngIf="!isClubUser && getUnmappedAnalyticsCount() > 0">
+          — ⚠️ {{ getUnmappedAnalyticsCount() }} catégories non mappées
+        </span>
+      </summary>
+
+      <!-- Secondary Display Preview -->
+      <div class="section card" id="section-secondary-preview" *ngIf="secondaryDisplayEnabled">
+        <div class="section-header">
+          <h4>
+            <span class="section-icon">🖥️</span>
+            Aperçu écran secondaire
+          </h4>
         </div>
-        <ng-container *ngFor="let cat of config.categories; let i = index">
-          <div class="analytics-row" *ngIf="!cat.subCategories?.length">
-            <span class="col-category">{{ cat.name || 'Sans nom' }}</span>
-            <select
-              class="col-analytics analytics-select"
-              [ngModel]="getCategoryAnalyticsType(cat.id)"
-              (ngModelChange)="setCategoryAnalyticsType(cat.id, $event)"
-            >
-              <option value="">Non mappé</option>
-              <option value="sponsor">Sponsor</option>
-              <option value="jingle">Jingle</option>
-              <option value="ambiance">Ambiance</option>
-              <option value="other">Autre</option>
-            </select>
-            <button
-              class="btn-suggestion"
-              *ngIf="!getCategoryAnalyticsType(cat.id) && suggestAnalyticsType(cat.name)"
-              (click)="setCategoryAnalyticsType(cat.id, suggestAnalyticsType(cat.name))"
-              title="Suggestion basée sur le nom"
-            >
-              💡 {{ suggestAnalyticsType(cat.name) }}
-            </button>
+        <p class="section-desc">
+          Contenu prévu sur l'écran secondaire. Les vidéos avec le badge 📺 ont une variante dédiée, les autres utiliseront un recadrage automatique.
+        </p>
+        <div class="secondary-preview-list">
+          <div *ngFor="let video of getSecondaryPlaylistVideos()" class="secondary-preview-item" [class.has-variant]="video.hasVariant" [class.no-variant]="!video.hasVariant">
+            <span class="secondary-preview-name">{{ video.displayName }}</span>
+            <span class="secondary-preview-badge" *ngIf="video.hasVariant" title="Variante secondaire dédiée">📺 2nd</span>
+            <span class="secondary-preview-fallback" *ngIf="!video.hasVariant" title="Recadrage automatique (object-fit: cover)">recadrage auto</span>
           </div>
-          <ng-container *ngIf="cat.subCategories?.length">
-            <div class="analytics-row category-parent">
+          <div *ngIf="getSecondaryPlaylistVideos().length === 0" class="secondary-preview-empty">
+            Aucune vidéo dans la configuration actuelle.
+          </div>
+        </div>
+      </div>
+
+      <!-- Analytics Categories (hidden for club users) -->
+      <div class="section card" id="section-analytics" *ngIf="!isClubUser">
+        <div class="section-header">
+          <h4>
+            <span class="section-icon">📊</span>
+            Catégories Analytics
+          </h4>
+        </div>
+        <p class="section-desc">
+          Mapper les catégories vers les catégories analytics pour le reporting.
+          Si une catégorie a des sous-catégories, le mapping se fait au niveau des sous-catégories.
+        </p>
+
+        <div class="analytics-mappings" *ngIf="config.categories && config.categories.length > 0">
+          <div class="analytics-row header">
+            <span class="col-category">Catégorie</span>
+            <span class="col-analytics">Type Analytics</span>
+          </div>
+          <ng-container *ngFor="let cat of config.categories; let i = index">
+            <div class="analytics-row" *ngIf="!cat.subCategories?.length">
               <span class="col-category">{{ cat.name || 'Sans nom' }}</span>
-              <span class="col-analytics analytics-hint">(voir sous-catégories)</span>
-            </div>
-            <div class="analytics-row subcategory" *ngFor="let subcat of cat.subCategories">
-              <span class="col-category subcategory-name">↳ {{ subcat.name || 'Sans nom' }}</span>
               <select
                 class="col-analytics analytics-select"
-                [ngModel]="getCategoryAnalyticsType(subcat.id)"
-                (ngModelChange)="setCategoryAnalyticsType(subcat.id, $event)"
+                [ngModel]="getCategoryAnalyticsType(cat.id)"
+                (ngModelChange)="setCategoryAnalyticsType(cat.id, $event)"
               >
                 <option value="">Non mappé</option>
                 <option value="sponsor">Sponsor</option>
@@ -387,22 +350,74 @@ import { VideoSearchSelectComponent } from '../../../../../shared/components/vid
               </select>
               <button
                 class="btn-suggestion"
-                *ngIf="!getCategoryAnalyticsType(subcat.id) && suggestAnalyticsType(subcat.name)"
-                (click)="setCategoryAnalyticsType(subcat.id, suggestAnalyticsType(subcat.name))"
+                *ngIf="!getCategoryAnalyticsType(cat.id) && suggestAnalyticsType(cat.name)"
+                (click)="setCategoryAnalyticsType(cat.id, suggestAnalyticsType(cat.name))"
                 title="Suggestion basée sur le nom"
               >
-                💡 {{ suggestAnalyticsType(subcat.name) }}
+                💡 {{ suggestAnalyticsType(cat.name) }}
               </button>
             </div>
+            <ng-container *ngIf="cat.subCategories?.length">
+              <div class="analytics-row category-parent">
+                <span class="col-category">{{ cat.name || 'Sans nom' }}</span>
+                <span class="col-analytics analytics-hint">(voir sous-catégories)</span>
+              </div>
+              <div class="analytics-row subcategory" *ngFor="let subcat of cat.subCategories">
+                <span class="col-category subcategory-name">↳ {{ subcat.name || 'Sans nom' }}</span>
+                <select
+                  class="col-analytics analytics-select"
+                  [ngModel]="getCategoryAnalyticsType(subcat.id)"
+                  (ngModelChange)="setCategoryAnalyticsType(subcat.id, $event)"
+                >
+                  <option value="">Non mappé</option>
+                  <option value="sponsor">Sponsor</option>
+                  <option value="jingle">Jingle</option>
+                  <option value="ambiance">Ambiance</option>
+                  <option value="other">Autre</option>
+                </select>
+                <button
+                  class="btn-suggestion"
+                  *ngIf="!getCategoryAnalyticsType(subcat.id) && suggestAnalyticsType(subcat.name)"
+                  (click)="setCategoryAnalyticsType(subcat.id, suggestAnalyticsType(subcat.name))"
+                  title="Suggestion basée sur le nom"
+                >
+                  💡 {{ suggestAnalyticsType(subcat.name) }}
+                </button>
+              </div>
+            </ng-container>
           </ng-container>
-        </ng-container>
+        </div>
+        <div class="empty-state small" *ngIf="!config.categories || config.categories.length === 0">
+          <p>Créez d'abord des catégories pour configurer les analytics</p>
+        </div>
       </div>
-      <div class="empty-state small" *ngIf="!config.categories || config.categories.length === 0">
-        <p>Créez d'abord des catégories pour configurer les analytics</p>
-      </div>
-    </div>
 
-    </ng-container>
+      <!-- JSON Toggle (hidden for club users) -->
+      <div class="json-toggle-bar" *ngIf="config && !isClubUser">
+        <button class="btn btn-sm btn-outline" (click)="toggleJsonView()">
+          <span>{{ showJson ? '📝 Formulaire' : '📋 JSON brut' }}</span>
+        </button>
+      </div>
+
+      <div class="json-editor-section" *ngIf="showJson && config">
+        <div class="section card">
+          <div class="section-header">
+            <h4><span class="section-icon">📋</span> Configuration JSON</h4>
+            <div class="json-actions">
+              <button class="btn btn-sm btn-outline" (click)="formatJson()">Formater</button>
+              <button class="btn btn-sm btn-outline" (click)="copyJson()">Copier</button>
+            </div>
+          </div>
+          <textarea
+            class="json-textarea"
+            [value]="configJsonString"
+            (input)="onJsonInput($event)"
+            spellcheck="false"
+          ></textarea>
+          <div class="json-error" *ngIf="jsonError">{{ jsonError }}</div>
+        </div>
+      </div>
+    </details>
   `,
   styles: [`
     .config-health-bar {
@@ -942,6 +957,59 @@ import { VideoSearchSelectComponent } from '../../../../../shared/components/vid
     .json-textarea:focus { outline: none; border-color: #2563eb; box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15); }
     .json-error { color: #dc2626; font-size: 0.8125rem; margin-top: 0.5rem; padding: 0.5rem; background: #fef2f2; border-radius: 4px; }
     .json-actions { display: flex; gap: 0.5rem; }
+
+    /* ADR-050 Phase 2: Advanced section */
+    .advanced-section {
+      margin-top: 1.5rem;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      background: #f8fafc;
+    }
+
+    .advanced-toggle {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.75rem 1rem;
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: #475569;
+      cursor: pointer;
+      user-select: none;
+      list-style: none;
+    }
+
+    .advanced-toggle::-webkit-details-marker { display: none; }
+    .advanced-toggle::before {
+      content: '▸';
+      font-size: 0.75rem;
+      transition: transform 0.15s;
+    }
+    details[open] > .advanced-toggle::before { transform: rotate(90deg); }
+
+    .advanced-icon { font-size: 1rem; }
+    .advanced-hint {
+      font-weight: 400;
+      font-size: 0.8125rem;
+      color: #92400e;
+    }
+
+    details[open] > .advanced-toggle {
+      border-bottom: 1px solid #e2e8f0;
+      margin-bottom: 0.5rem;
+    }
+
+    .advanced-section .section {
+      margin: 0.5rem 1rem;
+    }
+
+    .advanced-section .json-toggle-bar {
+      margin: 0.5rem 1rem;
+    }
+
+    .advanced-section .json-editor-section {
+      margin: 0 1rem 1rem;
+    }
 
     @media (max-width: 768px) {
       .time-org-grid { grid-template-columns: 1fr; }

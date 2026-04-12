@@ -44,40 +44,7 @@
     </span>
   </div>
 
-  <!-- Video Manager (upload + library + delete modal) -->
-  <app-video-manager
-    [siteId]="siteId"
-    [siteName]="siteName"
-    [siteType]="siteType"
-    [localVideos]="localVideos"
-    [cloudVideos]="cloudVideos"
-    [localStorage]="localStorage"
-    [videoDeployStates]="videoDeployStates"
-    [configVideoRoles]="configVideoRoles"
-    [pendingDeploymentVideoIds]="pendingDeploymentVideoIds"
-    [secondaryVariantVideoIds]="secondaryVariantVideoIds"
-    [subscriptionPlan]="subscriptionPlan"
-    [featureOverrides]="featureOverrides"
-    [siteSponsors]="siteSponsors"
-    (videoUploaded)="onVideoUploaded($event)"
-    (secondaryVariantChanged)="loadContent()"
-    (allVideosUploaded)="onAllVideosUploaded($event)"
-    (videoDeploy)="onVideoDeploy($event)"
-    (videoDeleted)="loadContent()"
-    (addToLoop)="onAddVideoToLoop($event)"
-  ></app-video-manager>
-
-  <!-- Draft Indicator + History (Pi only) -->
-  <app-config-draft
-    *ngIf="siteType !== 'saas'"
-    [siteId]="siteId"
-    [config]="config"
-    [isDirty]="isDirty"
-    [draft]="draft"
-    (draftSaved)="onDraftSaved($event)"
-    (draftDeleted)="onDraftDeleted()"
-    (versionRestored)="onVersionRestored($event)"
-  ></app-config-draft>
+  <!-- ① PROGRAMMATION — Deployment Status + Config Editor (loops first) -->
 
   <!-- Deployment Status (orchestrated, pending, banner, actions, diff modal) -->
   <app-deployment-status
@@ -125,6 +92,43 @@
     (repairOrphans)="repairAllOrphanedPaths()"
     (openVariant)="onOpenVariantFromConfig($event)"
   ></app-config-editor>
+
+  <!-- ② STOCK VIDÉO — Video Manager (upload + library) -->
+
+  <!-- Video Manager (upload + library + delete modal) -->
+  <app-video-manager
+    [siteId]="siteId"
+    [siteName]="siteName"
+    [siteType]="siteType"
+    [localVideos]="localVideos"
+    [cloudVideos]="cloudVideos"
+    [localStorage]="localStorage"
+    [videoDeployStates]="videoDeployStates"
+    [configVideoRoles]="configVideoRoles"
+    [pendingDeploymentVideoIds]="pendingDeploymentVideoIds"
+    [secondaryVariantVideoIds]="secondaryVariantVideoIds"
+    [subscriptionPlan]="subscriptionPlan"
+    [featureOverrides]="featureOverrides"
+    [siteSponsors]="siteSponsors"
+    (videoUploaded)="onVideoUploaded($event)"
+    (secondaryVariantChanged)="loadContent()"
+    (allVideosUploaded)="onAllVideosUploaded($event)"
+    (videoDeploy)="onVideoDeploy($event)"
+    (videoDeleted)="loadContent()"
+    (addToLoop)="onAddVideoToLoop($event)"
+  ></app-video-manager>
+
+  <!-- Draft Indicator + History (Pi only) -->
+  <app-config-draft
+    *ngIf="siteType !== 'saas'"
+    [siteId]="siteId"
+    [config]="config"
+    [isDirty]="isDirty"
+    [draft]="draft"
+    (draftSaved)="onDraftSaved($event)"
+    (draftDeleted)="onDraftDeleted()"
+    (versionRestored)="onVersionRestored($event)"
+  ></app-config-draft>
 
   <!-- Secondary Variant Modal (opened from config-editor) -->
   <div
