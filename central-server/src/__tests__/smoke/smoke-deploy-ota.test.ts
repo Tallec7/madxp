@@ -753,9 +753,11 @@ describe('OTA deployment observability guards', () => {
     // (it used to have *ngIf="deployment.status === 'failed' && deployment.error_message")
     expect({ noErrorMessageGate: !component.includes("status === 'failed' && deployment.error_message") })
       .toEqual({ noErrorMessageGate: true });
-    // Must have a fallback text for null error_message
-    expect({ hasFallback: component.includes("deployment.error_message || '") })
-      .toEqual({ hasFallback: true });
+    // Must have a fallback text for null error_message (hardcoded string or i18n key)
+    const hasFallback =
+      component.includes("deployment.error_message || '") ||
+      component.includes('deployment.error_message ||');
+    expect({ hasFallback }).toEqual({ hasFallback: true });
   });
 
   it('dashboard must show deployment duration/elapsed for completed and in_progress deployments', () => {

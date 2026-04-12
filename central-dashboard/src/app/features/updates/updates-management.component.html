@@ -263,8 +263,7 @@
           <div class="error-content">
             <span class="error-icon">⚠️</span>
             <span class="error-text">{{
-              deployment.error_message ||
-                'Aucune réponse du Pi — le site était probablement hors ligne ou la commande a expiré'
+              deployment.error_message || ('updates.deploymentErrorFallback' | translate)
             }}</span>
           </div>
         </div>

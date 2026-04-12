@@ -316,7 +316,8 @@
     "criticalUpdateDesc": "Marquer cette version comme prioritaire",
     "versionPlaceholder": "Ex: 2.1.0",
     "descriptionPlaceholder": "Ex: Correction de bugs et améliorations",
-    "notesPlaceholder": "Détails des changements..."
+    "notesPlaceholder": "Détails des changements...",
+    "deploymentErrorFallback": "Aucune réponse du Pi — le site était probablement hors ligne ou la commande a expiré"
   },
   "analytics": {
     "title": "Analytics",

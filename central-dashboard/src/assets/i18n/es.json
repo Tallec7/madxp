@@ -997,7 +997,8 @@
     "uploading": "Subiendo...",
     "version": "Versión",
     "versionNumber": "Número de versión",
-    "versionPlaceholder": "Ej: 2.1.0"
+    "versionPlaceholder": "Ej: 2.1.0",
+    "deploymentErrorFallback": "Sin respuesta del Pi — el sitio probablemente estaba desconectado o el comando expiró"
   },
   "users": {
     "active": "Activo",

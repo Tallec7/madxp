@@ -316,7 +316,8 @@
     "criticalUpdateDesc": "Mark this version as priority",
     "versionPlaceholder": "Ex: 2.1.0",
     "descriptionPlaceholder": "Ex: Bug fixes and improvements",
-    "notesPlaceholder": "Details of changes..."
+    "notesPlaceholder": "Details of changes...",
+    "deploymentErrorFallback": "No response from Pi — the site was probably offline or the command timed out"
   },
   "analytics": {
     "title": "Analytics",
