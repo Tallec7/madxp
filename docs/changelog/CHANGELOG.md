@@ -2,6 +2,17 @@
 
 ### Bug Fixes
 
+- **ci:** detect release via semantic-release output instead of tag timing ([0b7cdd8](https://github.com/Tallec7/neopro/commit/0b7cdd8196d5459bd4f5a7345ffd80bbacf78441))
+- **ci:** stop release workflow infinite loop ([fc86546](https://github.com/Tallec7/neopro/commit/fc8654670e33b730c61a5acc9b274ddc6f3f659f))
+- **ci:** trigger release after loop fix ([797a7a9](https://github.com/Tallec7/neopro/commit/797a7a9a0cc38c705ea28a824051fe2c71aa1179))
+- **dashboard:** add thumbnail_url to CloudVideo model + pagination with page size selector ([0d7f0fa](https://github.com/Tallec7/neopro/commit/0d7f0fa6e5011007d56b5b7e5ef5d6e1565f9966))
+- **dashboard:** eager load variant panel to eliminate loading spinner on open ([#443](https://github.com/Tallec7/neopro/issues/443)) ([ef81604](https://github.com/Tallec7/neopro/commit/ef816043f6faf46f72db543e827bf51df1abca8a))
+- **dashboard:** i18n error fallback in updates-management + relax smoke test pattern ([22ac796](https://github.com/Tallec7/neopro/commit/22ac796fece72631ff4e01a0d964fd6263ee2cb4))
+
+## [3.153.7](https://github.com/Tallec7/neopro/compare/v3.153.6...v3.153.7) (2026-04-12)
+
+### Bug Fixes
+
 - **ci:** stop release workflow infinite loop ([fc86546](https://github.com/Tallec7/neopro/commit/fc8654670e33b730c61a5acc9b274ddc6f3f659f))
 - **ci:** trigger release after loop fix ([797a7a9](https://github.com/Tallec7/neopro/commit/797a7a9a0cc38c705ea28a824051fe2c71aa1179))
 - **dashboard:** add thumbnail_url to CloudVideo model + pagination with page size selector ([0d7f0fa](https://github.com/Tallec7/neopro/commit/0d7f0fa6e5011007d56b5b7e5ef5d6e1565f9966))
