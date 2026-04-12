@@ -1,3 +1,9 @@
+## [3.153.4](https://github.com/Tallec7/neopro/compare/v3.153.3...v3.153.4) (2026-04-12)
+
+### Bug Fixes
+
+- **dashboard:** cleanup video library — remove dead UI, fix configVideoRoles, deduplicate delete ([de21c46](https://github.com/Tallec7/neopro/commit/de21c4660541c3e06bf0f835b705d7acd2eb9eb4))
+
 ## [3.153.3](https://github.com/Tallec7/neopro/compare/v3.153.2...v3.153.3) (2026-04-12)
 
 ### Bug Fixes
