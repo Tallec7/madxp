@@ -1,3 +1,9 @@
+## [3.159.1](https://github.com/Tallec7/neopro/compare/v3.159.0...v3.159.1) (2026-04-12)
+
+### Bug Fixes
+
+- **ci:** add post-deploy HTTP verification for dashboard and SaaS ([4ce6fd4](https://github.com/Tallec7/neopro/commit/4ce6fd4b8889aab3d6cefbb13147c10d97edaf41)), closes [#42](https://github.com/Tallec7/neopro/issues/42)
+
 # [3.159.0](https://github.com/Tallec7/neopro/compare/v3.158.2...v3.159.0) (2026-04-12)
 
 ### Features
