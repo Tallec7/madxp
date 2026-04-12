@@ -1,3 +1,9 @@
+## [3.155.1](https://github.com/Tallec7/neopro/compare/v3.155.0...v3.155.1) (2026-04-12)
+
+### Bug Fixes
+
+- **tests:** fix smoke-display regex matching for slug validation ([e4faff5](https://github.com/Tallec7/neopro/commit/e4faff5c9a3529fcfd5e9d91d4e1c2a6049ad006))
+
 # [3.155.0](https://github.com/Tallec7/neopro/compare/v3.154.3...v3.155.0) (2026-04-12)
 
 ### Features
