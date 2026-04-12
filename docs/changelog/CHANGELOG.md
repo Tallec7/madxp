@@ -1,3 +1,9 @@
+## [3.157.4](https://github.com/Tallec7/neopro/compare/v3.157.3...v3.157.4) (2026-04-12)
+
+### Bug Fixes
+
+- **saas:** videos in categories now always appear in library with "Pertinentes" filter ([0192245](https://github.com/Tallec7/neopro/commit/0192245af10366fef4ca62088a047f90e236fa3d))
+
 ## [3.157.3](https://github.com/Tallec7/neopro/compare/v3.157.2...v3.157.3) (2026-04-12)
 
 ### Bug Fixes
