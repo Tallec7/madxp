@@ -1,3 +1,9 @@
+## [3.159.2](https://github.com/Tallec7/neopro/compare/v3.159.1...v3.159.2) (2026-04-12)
+
+### Bug Fixes
+
+- **sponsors:** add missing getProfiles mock to site-sponsors-tab spec ([75c292a](https://github.com/Tallec7/neopro/commit/75c292a5d74919114636da562a4ce6ea8d5d3f34))
+
 ## [3.159.1](https://github.com/Tallec7/neopro/compare/v3.159.0...v3.159.1) (2026-04-12)
 
 ### Bug Fixes
