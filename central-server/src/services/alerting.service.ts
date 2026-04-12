@@ -10,7 +10,6 @@
 import { query } from '../config/database';
 import logger from '../config/logger';
 import metricsService from './metrics.service';
-import emailService from './email.service';
 import { dbCircuitBreaker } from './db-circuit-breaker.service';
 import { canaryMonitorService } from './canary-monitor.service';
 import { alertNotifier } from './alerting-notifier.service';
@@ -23,13 +22,9 @@ import {
   DEFAULT_THRESHOLDS,
   MAX_METRIC_HISTORY_KEYS,
   MAX_METRIC_HISTORY_PER_KEY,
-  MAX_LAST_ALERT_TIME_ENTRIES,
   MAX_EVENT_ENTRIES_PER_SITE,
   MAX_EVENT_SITES,
 } from './alerting.types';
-
-const SLACK_WEBHOOK_URL = process.env.SLACK_WEBHOOK_URL;
-const DASHBOARD_URL = process.env.DASHBOARD_URL;
 
 class AlertingService {
   private tableName = 'alerts';
