@@ -1,3 +1,9 @@
+## [3.148.2](https://github.com/Tallec7/neopro/compare/v3.148.1...v3.148.2) (2026-04-12)
+
+### Bug Fixes
+
+- **saas:** create real club_sessions for SaaS analytics sessions ([7d01af4](https://github.com/Tallec7/neopro/commit/7d01af46e3cf3401364a6d3525b96218b6bbbf9c))
+
 ## [3.148.1](https://github.com/Tallec7/neopro/compare/v3.148.0...v3.148.1) (2026-04-11)
 
 ### Bug Fixes
