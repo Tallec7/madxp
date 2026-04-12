@@ -125,6 +125,7 @@ describe('SiteSponsorsTabComponent', () => {
   beforeEach(async () => {
     const sitesServiceMock = jasmine.createSpyObj('SitesService', [
       'getLocalContent',
+      'getProfiles',
     ]);
 
     const sponsorServiceMock = jasmine.createSpyObj('SiteSponsorService', [
@@ -148,6 +149,7 @@ describe('SiteSponsorsTabComponent', () => {
     sponsorServiceMock.updateSiteSponsor.and.returnValue(of(mockSponsors[0]));
     sponsorServiceMock.deleteSiteSponsor.and.returnValue(of(undefined));
     sponsorServiceMock.generateSponsorReport.and.returnValue(of({ reportId: 'r2', url: 'https://example.com/report2.pdf' }));
+    sitesServiceMock.getProfiles.and.returnValue(of([]));
     sitesServiceMock.getLocalContent.and.returnValue(of({
       siteId: 's1', siteName: 'Site Test', clubName: 'Club Test',
       hasContent: true, lastSync: null, configHash: null,
