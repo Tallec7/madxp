@@ -1,3 +1,9 @@
+## [3.161.2](https://github.com/Tallec7/neopro/compare/v3.161.1...v3.161.2) (2026-04-13)
+
+### Bug Fixes
+
+- **dashboard:** use fixed positioning for add-to dropdown in video library ([7660a05](https://github.com/Tallec7/neopro/commit/7660a0527934d4464591c0dc114a43db57a7bbcf))
+
 ## [3.161.1](https://github.com/Tallec7/neopro/compare/v3.161.0...v3.161.1) (2026-04-13)
 
 ### Bug Fixes
