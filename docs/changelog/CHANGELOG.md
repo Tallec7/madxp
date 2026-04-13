@@ -1,3 +1,9 @@
+## [3.165.2](https://github.com/Tallec7/neopro/compare/v3.165.1...v3.165.2) (2026-04-13)
+
+### Bug Fixes
+
+- **templates:** hide default logo in iframe, show only when uploaded ([dd4e355](https://github.com/Tallec7/neopro/commit/dd4e355b952474992011971ec0bdaa3ded913e11))
+
 ## [3.165.1](https://github.com/Tallec7/neopro/compare/v3.165.0...v3.165.1) (2026-04-13)
 
 ### Bug Fixes
