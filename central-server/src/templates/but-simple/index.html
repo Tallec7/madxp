@@ -476,6 +476,11 @@
             document.getElementById('club-bottom').textContent = v.club.toUpperCase();
             document.getElementById('input-club').value = v.club;
           }
+          // Update logo if provided (data URI or blob URL)
+          if (data.logoSrc) {
+            const logoEl = document.querySelector('.club-logo');
+            if (logoEl) logoEl.src = data.logoSrc;
+          }
         }
 
         if (data.action === 'record') {

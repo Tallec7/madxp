@@ -120,6 +120,7 @@ interface OverlayTemplate {
                      [id]="v.key"
                      type="text"
                      [(ngModel)]="variableValues[v.key]"
+                     (ngModelChange)="onVariableChange()"
                      [placeholder]="v.placeholder || ''"
                      class="form-input" />
               <input *ngIf="v.type === 'color'"
@@ -627,6 +628,15 @@ export class LottieTemplatesComponent implements OnInit, OnDestroy {
       URL.revokeObjectURL(this.imagePreviews[key]);
     }
     this.imagePreviews[key] = URL.createObjectURL(file);
+
+    // Send logo to iframe preview for standalone templates
+    if (key === 'logo' && this.isStandaloneTemplate) {
+      const reader = new FileReader();
+      reader.onload = () => {
+        this.postToIframe({ action: 'update', variables: this.variableValues, logoSrc: reader.result });
+      };
+      reader.readAsDataURL(file);
+    }
   }
 
   removeImage(key: string): void {
@@ -784,6 +794,12 @@ export class LottieTemplatesComponent implements OnInit, OnDestroy {
 
   resetStandalone(): void {
     this.postToIframe({ action: 'reset' });
+  }
+
+  onVariableChange(): void {
+    if (this.isStandaloneTemplate) {
+      this.postToIframe({ action: 'update', variables: this.variableValues });
+    }
   }
 
   private postToIframe(msg: Record<string, unknown>): void {
