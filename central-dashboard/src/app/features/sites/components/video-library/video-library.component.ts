@@ -81,6 +81,7 @@ export class VideoLibraryComponent implements OnChanges {
   @Input() secondaryVariantVideoIds: Set<string> = new Set(); // IDs of videos with secondary display variants
   @Input() videoVariantInfo: Map<string, { count: number; types: string[] }> = new Map(); // Phase 5H: variant counts per video
   @Input() totalDisplays: number = 1; // Phase 5H: total configured displays for X/N badge
+  @Input() isClubUser = false;
   @Input() subscriptionPlan: string | null = null;
   @Input() featureOverrides: Record<string, boolean> | null = null;
 
@@ -749,5 +750,14 @@ export class VideoLibraryComponent implements OnChanges {
    */
   isUploadedForThisSite(video: VideoItem): boolean {
     return !!(this.siteId && video.uploadedForSiteId && video.uploadedForSiteId === this.siteId);
+  }
+
+  /**
+   * Club users cannot modify videos that are not explicitly their own uploads.
+   * A video is "club-locked" if category is NEOPRO or it wasn't uploaded for their site.
+   */
+  isClubLocked(video: VideoItem): boolean {
+    if (!this.isClubUser) return false;
+    return video.owner === 'neopro' || video.category?.toUpperCase() === 'NEOPRO' || !this.isUploadedForThisSite(video);
   }
 }
