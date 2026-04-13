@@ -1,3 +1,9 @@
+## [3.162.6](https://github.com/Tallec7/neopro/compare/v3.162.5...v3.162.6) (2026-04-13)
+
+### Bug Fixes
+
+- **tv:** eliminate black flash during video transitions on Pi 5 software decode ([23d4f30](https://github.com/Tallec7/neopro/commit/23d4f307ddb95eca9f096c2b6e3a9d68a7eab4d4))
+
 ## [3.162.5](https://github.com/Tallec7/neopro/compare/v3.162.4...v3.162.5) (2026-04-13)
 
 ### Bug Fixes
