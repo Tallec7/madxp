@@ -6,6 +6,7 @@ import { VideoEncoderService } from './video-encoder.service';
 export type { OverlayConfig, RenderProgress, OverlayElement, TextElement, ImageElement } from './template-renderer.service';
 
 import type { OverlayConfig, RenderProgress } from './template-renderer.service';
+import { environment } from '../../../environments/environment';
 
 /**
  * Browser-side video renderer.
@@ -143,9 +144,9 @@ export class BrowserRendererService {
       });
     };
 
-    const apiBase = assets['layerA'].startsWith('http')
-      ? ''
-      : window.location.origin;
+    // Assets URLs are relative (e.g. /api/template-assets/...), prefix with API origin
+    const apiOrigin = environment.apiUrl.replace(/\/api$/, '');
+    const apiBase = assets['layerA'].startsWith('http') ? '' : apiOrigin;
 
     const [videoA, videoB, videoC] = await Promise.all([
       loadVideo(apiBase + assets['layerA']),
