@@ -763,7 +763,7 @@ export class LottieTemplatesComponent implements OnInit, OnDestroy {
     this._selectTemplateBase(tpl);
     if (this.templateRendererSvc.isStandalone(tpl.id)) {
       // Build iframe URL pointing to the served HTML template
-      const iframeUrl = `${environment.apiUrl}/content/template-assets/but-simple/index.html`;
+      const iframeUrl = `${environment.apiUrl}/template-assets/but-simple/index.html`;
       this.standaloneIframeSrc = this.sanitizer.bypassSecurityTrustResourceUrl(iframeUrl);
     } else {
       this.standaloneIframeSrc = null;

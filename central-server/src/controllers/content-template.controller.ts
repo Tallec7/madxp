@@ -69,9 +69,9 @@ export const getAvailableTemplates = async (_req: AuthRequest, res: Response) =>
           { key: 'logo', label: 'Logo club', type: 'image', required: false, accept: 'image/jpeg,image/png,image/webp' },
         ],
         assets: {
-          layerA: '/api/content/template-assets/but-simple/BUT_simple_A.webm',
-          layerB: '/api/content/template-assets/but-simple/BUT_simple_B.webm',
-          layerC: '/api/content/template-assets/but-simple/BUT_simple_C.webm',
+          layerA: '/api/template-assets/but-simple/BUT_simple_A.webm',
+          layerB: '/api/template-assets/but-simple/BUT_simple_B.webm',
+          layerC: '/api/template-assets/but-simple/BUT_simple_C.webm',
         },
       },
     ];
@@ -84,7 +84,7 @@ export const getAvailableTemplates = async (_req: AuthRequest, res: Response) =>
 };
 
 /**
- * GET /api/content/template-assets/:template/:file
+ * GET /api/template-assets/:template/:file
  * Serves static WebM assets for standalone templates (e.g. BUT Simple).
  */
 export const getTemplateAsset = async (req: AuthRequest, res: Response) => {
