@@ -1,3 +1,9 @@
+## [3.162.7](https://github.com/Tallec7/neopro/compare/v3.162.6...v3.162.7) (2026-04-13)
+
+### Bug Fixes
+
+- **templates:** correct template-assets URL path (remove /content prefix) ([18b76cb](https://github.com/Tallec7/neopro/commit/18b76cb6d7edc44bfcbddfa89e0b7529632539cb))
+
 ## [3.162.6](https://github.com/Tallec7/neopro/compare/v3.162.5...v3.162.6) (2026-04-13)
 
 ### Bug Fixes
