@@ -793,112 +793,82 @@ export class LottieTemplatesComponent implements OnInit, OnDestroy {
     }
   }
 
-  private renderStandalone(): void {
+  private async renderStandalone(): Promise<void> {
+    if (!this.selectedTemplate?.assets) return;
+
     this.rendering = true;
     this.rendered = false;
     this.renderedVideo = null;
     this.renderPhase = 'rendering';
     this.renderPercent = 0;
 
-    // Listen for messages from iframe
-    const handler = (event: MessageEvent) => {
-      const data = event.data;
-      if (!data?.type) return;
+    const variables = { ...this.variableValues };
 
-      if (data.type === 'recordProgress') {
-        this.renderPercent = data.progress;
-      }
-
-      if (data.type === 'recordError') {
-        window.removeEventListener('message', handler);
-        this.rendering = false;
-        this.renderPhase = 'idle';
-        this.notifications.error(`Erreur rendu: ${data.error}`);
-        return;
-      }
-
-      if (data.type === 'recordBlob') {
-        window.removeEventListener('message', handler);
-
-        const blob = new Blob([data.buffer], { type: data.mimeType || 'video/webm' });
-
-        // Store blob URL for preview
-        this.revokeBlobUrl();
-        this.rawBlobUrl = URL.createObjectURL(blob);
-        this.renderedBlobUrl = this.sanitizer.bypassSecurityTrustUrl(this.rawBlobUrl);
-
-        // Upload
-        this.renderPhase = 'uploading';
-        this.renderPercent = 0;
-
-        const prenom = this.variableValues['prenom'] || 'PRENOM';
-        const nom = this.variableValues['nom'] || 'NOM';
-        const filename = `BUT_${prenom}_${nom}.webm`;
-        const file = new File([blob], filename, { type: blob.type });
-
-        const formData = new FormData();
-        formData.append('video', file);
-        if (this.selectedSiteId) {
-          formData.append('site_id', this.selectedSiteId);
-        }
-
-        const sub = this.api.uploadWithProgress<{ success: boolean; video: { id: string; title: string; url: string } }>(
-          '/videos',
-          formData,
-        ).subscribe({
-          next: (progress) => {
-            this.renderPercent = progress.progress;
-            if (progress.status === 'complete' && progress.response) {
-              const resp = progress.response as { success: boolean; video: { id: string; title: string; url: string } };
-              this.rendering = false;
-              this.rendered = true;
-              this.renderPhase = 'done';
-              this.renderedVideo = resp.video;
-              this.notifications.success('Video generee et uploadee !');
-            }
-          },
-          error: (err) => {
-            this.rendering = false;
-            this.renderPhase = 'idle';
-            const msg = err?.error?.details || err?.error?.error || 'Erreur lors de l\'upload';
-            this.notifications.error(msg);
-          },
-        });
-        this.subscriptions.push(sub);
-      }
-    };
-
-    window.addEventListener('message', handler);
-
-    // Open template in popup window (same domain as API = no cross-origin restrictions)
-    // captureStream/MediaRecorder are blocked in cross-origin iframes
-    const templateUrl = `${environment.apiUrl}/template-assets/but-simple/index.html`;
-    const popup = window.open(templateUrl, 'but_simple_render', 'width=400,height=300,left=9999,top=9999');
-    if (!popup) {
-      window.removeEventListener('message', handler);
-      this.rendering = false;
-      this.renderPhase = 'idle';
-      this.notifications.error('Popup bloquee par le navigateur. Autorisez les popups pour ce site.');
-      return;
+    // Inject logo image data URI
+    if (this.imageFiles['logo']) {
+      try {
+        variables['_image_logo'] = await this.readImageAsDataUri(this.imageFiles['logo']);
+      } catch { /* skip */ }
     }
 
-    // Wait for popup to load then send record command
-    popup.addEventListener('load', () => {
-      setTimeout(() => {
-        popup.postMessage({ action: 'record', variables: this.variableValues }, '*');
-      }, 1000);
-    });
+    try {
+      const blob = await this.browserRenderer.renderStandalone(
+        { templateId: this.selectedTemplate.id, variables },
+        this.selectedTemplate.assets,
+        (p) => {
+          this.renderPhase = p.phase === 'done' ? 'uploading' : 'rendering';
+          this.renderPercent = p.progress;
+        },
+      );
 
-    // Close popup when recording is done or on error
-    const origHandler = handler;
-    const wrappedHandler = (event: MessageEvent) => {
-      origHandler(event);
-      if (event.data?.type === 'recordBlob' || event.data?.type === 'recordError') {
-        try { popup.close(); } catch { /* popup may already be closed */ }
+      // Store blob URL for preview
+      this.revokeBlobUrl();
+      this.rawBlobUrl = URL.createObjectURL(blob);
+      this.renderedBlobUrl = this.sanitizer.bypassSecurityTrustUrl(this.rawBlobUrl);
+
+      // Upload
+      this.renderPhase = 'uploading';
+      this.renderPercent = 0;
+
+      const prenom = this.variableValues['prenom'] || 'PRENOM';
+      const nom = this.variableValues['nom'] || 'NOM';
+      const filename = `BUT_${prenom}_${nom}.webm`;
+      const file = new File([blob], filename, { type: blob.type });
+
+      const formData = new FormData();
+      formData.append('video', file);
+      if (this.selectedSiteId) {
+        formData.append('site_id', this.selectedSiteId);
       }
-    };
-    window.removeEventListener('message', handler);
-    window.addEventListener('message', wrappedHandler);
+
+      const sub = this.api.uploadWithProgress<{ success: boolean; video: { id: string; title: string; url: string } }>(
+        '/videos',
+        formData,
+      ).subscribe({
+        next: (progress) => {
+          this.renderPercent = progress.progress;
+          if (progress.status === 'complete' && progress.response) {
+            const resp = progress.response as { success: boolean; video: { id: string; title: string; url: string } };
+            this.rendering = false;
+            this.rendered = true;
+            this.renderPhase = 'done';
+            this.renderedVideo = resp.video;
+            this.notifications.success('Video generee et uploadee !');
+          }
+        },
+        error: (err) => {
+          this.rendering = false;
+          this.renderPhase = 'idle';
+          const msg = err?.error?.details || err?.error?.error || 'Erreur lors de l\'upload';
+          this.notifications.error(msg);
+        },
+      });
+      this.subscriptions.push(sub);
+    } catch (err) {
+      this.rendering = false;
+      this.renderPhase = 'idle';
+      this.notifications.error(`Erreur rendu: ${(err as Error).message || 'Erreur inconnue'}`);
+    }
   }
 
   // ── Helpers ───────────────────────────────────────────────────────
