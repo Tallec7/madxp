@@ -33,6 +33,10 @@ export class ManualVideoService {
   private _currentManualEndedHandler: (() => void) | null = null;
   private _savedLoopIndex = 0;
 
+  // Debounce: prevent rapid successive play() calls causing black frames on Pi 5
+  private _lastPlayTimestamp = 0;
+  private static readonly PLAY_DEBOUNCE_MS = 500;
+
   // ADR-034: Preloaded manual video state for synchronized reveal
   private _preloadedManualVideo: Video | null = null;
   private _preloadedManualPlayer: HTMLVideoElement | null = null;
@@ -69,9 +73,17 @@ export class ManualVideoService {
    * Joue une vidéo manuelle (master path).
    */
   play(video: Video): void {
+    const now = Date.now();
+    if (now - this._lastPlayTimestamp < ManualVideoService.PLAY_DEBOUNCE_MS) {
+      console.log('tv player : play manual video debounced (too rapid)', video.path);
+      return;
+    }
+    this._lastPlayTimestamp = now;
+
     console.log('tv player : play manual video', video.path);
 
-    const targetPlayer = this.doubleBufferService.getActiveManualPlayer();
+    // Use inactive manual player for double-buffering (manual→manual transitions)
+    const targetPlayer = this.doubleBufferService.getInactiveManualPlayer();
 
     // Nettoyer l'ancien listener ended pour éviter qu'il se déclenche
     // quand on change le src (causerait hideFreezeFrame prématuré → flash boucle)
@@ -135,6 +147,7 @@ export class ManualVideoService {
           requestAnimationFrame(() => {
             setTimeout(() => {
               targetPlayer.style.opacity = '1';
+              this.doubleBufferService.swapActiveManualPlayer();
               this.doubleBufferService.hideFreezeFrame();
               this.doubleBufferService.hideBlackOverlay();
 
