@@ -1,3 +1,9 @@
+## [3.163.1](https://github.com/Tallec7/neopro/compare/v3.163.0...v3.163.1) (2026-04-13)
+
+### Bug Fixes
+
+- **templates:** use inline [@font-face](https://github.com/font-face) instead of Google Fonts import ([c768de8](https://github.com/Tallec7/neopro/commit/c768de8442d9e9dfb72a0afd0531211624a17eca))
+
 # [3.163.0](https://github.com/Tallec7/neopro/compare/v3.162.10...v3.163.0) (2026-04-13)
 
 ### Features
