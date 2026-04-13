@@ -1,3 +1,9 @@
+# [3.165.0](https://github.com/Tallec7/neopro/compare/v3.164.3...v3.165.0) (2026-04-13)
+
+### Features
+
+- **templates:** live sync logo and text variables to iframe preview ([13471af](https://github.com/Tallec7/neopro/commit/13471afa50288205f5bf5d32fb4e621545402378))
+
 ## [3.164.3](https://github.com/Tallec7/neopro/compare/v3.164.2...v3.164.3) (2026-04-13)
 
 ### Bug Fixes
