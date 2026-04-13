@@ -1,3 +1,9 @@
+# [3.161.0](https://github.com/Tallec7/neopro/compare/v3.160.1...v3.161.0) (2026-04-13)
+
+### Features
+
+- **dashboard:** add named config labels to video library filter and detail panel ([814d22a](https://github.com/Tallec7/neopro/commit/814d22aaee2ae1dc44dfe17b4c70e48084f42458))
+
 ## [3.160.1](https://github.com/Tallec7/neopro/compare/v3.160.0...v3.160.1) (2026-04-13)
 
 ### Bug Fixes
