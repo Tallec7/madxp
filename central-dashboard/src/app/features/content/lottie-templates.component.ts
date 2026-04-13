@@ -834,7 +834,7 @@ export class LottieTemplatesComponent implements OnInit, OnDestroy {
   }
 
   getRenderLabel(): string {
-    if (!this.sourceFile) return 'Choisissez une video';
+    if (!this.isStandaloneTemplate && !this.sourceFile) return 'Choisissez une video';
     if (!this.selectedTemplate) return 'Choisissez un template';
     if (!this.isFormValid()) return 'Remplissez les champs requis';
     return 'Generer la video';
