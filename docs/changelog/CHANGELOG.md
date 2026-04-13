@@ -1,3 +1,9 @@
+## [3.162.1](https://github.com/Tallec7/neopro/compare/v3.162.0...v3.162.1) (2026-04-13)
+
+### Bug Fixes
+
+- **templates:** use iframe-based preview for BUT Simple standalone template ([ab3a9ae](https://github.com/Tallec7/neopro/commit/ab3a9ae7e7aad11d13093873bb04f99761a79681))
+
 # [3.162.0](https://github.com/Tallec7/neopro/compare/v3.161.3...v3.162.0) (2026-04-13)
 
 ### Features
