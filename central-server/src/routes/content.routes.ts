@@ -36,7 +36,20 @@ router.post('/render-template', authenticate, requireRole('admin', 'operator'), 
   { name: 'image_logo', maxCount: 1 },
 ]), contentController.renderTemplate);
 router.get('/templates/available', authenticate, adminRateLimit, contentController.getAvailableTemplates);
-router.get('/template-assets/:template/:file', adminRateLimit, contentController.getTemplateAsset);
+// Template assets: no auth (static files), relaxed CSP for iframe embedding
+router.get(
+  '/template-assets/:template/:file',
+  adminRateLimit,
+  (_req, res, next) => {
+    res.removeHeader('X-Frame-Options');
+    res.setHeader(
+      'Content-Security-Policy',
+      "default-src 'self' 'unsafe-inline'; media-src 'self'; img-src 'self' data:; font-src 'self' https: data:;"
+    );
+    next();
+  },
+  contentController.getTemplateAsset,
+);
 
 // Deployment routes - GET use adminRateLimit, mutations use sensitiveRateLimit
 router.get('/deployments', authenticate, adminRateLimit, contentController.getDeployments);
