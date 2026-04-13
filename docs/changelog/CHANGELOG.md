@@ -1,3 +1,9 @@
+## [3.160.1](https://github.com/Tallec7/neopro/compare/v3.160.0...v3.160.1) (2026-04-13)
+
+### Bug Fixes
+
+- **tv:** use dynamic base URL for site-info API on Raspberry Pi ([b160557](https://github.com/Tallec7/neopro/commit/b1605577cb2036796fb13e4022304c70962a0c05))
+
 # [3.160.0](https://github.com/Tallec7/neopro/compare/v3.159.4...v3.160.0) (2026-04-12)
 
 ### Features
