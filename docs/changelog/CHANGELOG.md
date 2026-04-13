@@ -1,3 +1,9 @@
+## [3.162.5](https://github.com/Tallec7/neopro/compare/v3.162.4...v3.162.5) (2026-04-13)
+
+### Bug Fixes
+
+- **templates:** copy templates to dist during build ([7875267](https://github.com/Tallec7/neopro/commit/787526764f8198a1d50e44eb94739fe02e94d9b7))
+
 ## [3.162.4](https://github.com/Tallec7/neopro/compare/v3.162.3...v3.162.4) (2026-04-13)
 
 ### Bug Fixes
