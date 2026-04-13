@@ -3188,3 +3188,70 @@ describe('Admin UX batch 2 — button labels guard', () => {
       .toEqual({ deleteIsDanger: true });
   });
 });
+
+describe('Manual video transition flash prevention guards', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..', '..');
+  let manualVideoContent: string;
+  let videoPlaybackContent: string;
+  let doubleBufferContent: string;
+
+  beforeAll(() => {
+    manualVideoContent = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/src/app/services/manual-video.service.ts'),
+      'utf8'
+    );
+    videoPlaybackContent = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/src/app/services/video-playback.service.ts'),
+      'utf8'
+    );
+    doubleBufferContent = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/src/app/services/double-buffer-video.service.ts'),
+      'utf8'
+    );
+  });
+
+  it('manual-video.service must use getInactiveManualPlayer for double-buffering', () => {
+    // Manual→manual transitions must load the new video on the inactive manual player
+    // to avoid a black flash when reusing the same player.
+    expect({ hasInactiveManualPlayer: manualVideoContent.includes('getInactiveManualPlayer') })
+      .toEqual({ hasInactiveManualPlayer: true });
+  });
+
+  it('manual-video.service must call swapActiveManualPlayer after transition', () => {
+    // After a manual→manual transition, the active/inactive manual players must be swapped
+    // so the next transition uses the correct player.
+    expect({ hasSwap: manualVideoContent.includes('swapActiveManualPlayer') })
+      .toEqual({ hasSwap: true });
+  });
+
+  it('manual-video.service must have debounce logic with _lastPlayTimestamp', () => {
+    // 500ms debounce in play() prevents the software decoder from being spammed
+    // with rapid successive commands, which causes black frames on Pi 5.
+    expect({ hasDebounce: manualVideoContent.includes('_lastPlayTimestamp') })
+      .toEqual({ hasDebounce: true });
+  });
+
+  it('video-playback.service must call captureAndShowFreezeFrame in triggerSwitch', () => {
+    // The early switch path in triggerSwitch() had no freeze-frame coverage,
+    // causing a black flash during loop transitions. captureAndShowFreezeFrame must be present.
+    const triggerSwitchStart = videoPlaybackContent.indexOf('triggerSwitch');
+    const triggerSwitchBlock = videoPlaybackContent.slice(triggerSwitchStart, triggerSwitchStart + 2000);
+    expect({ hasFreezeInTriggerSwitch: triggerSwitchBlock.includes('captureAndShowFreezeFrame') })
+      .toEqual({ hasFreezeInTriggerSwitch: true });
+  });
+
+  it('double-buffer-video.service must expose swapActiveManualPlayer method', () => {
+    // The double-buffer service must provide swapActiveManualPlayer for manual→manual
+    // double-buffering to work correctly.
+    expect({ hasSwapMethod: doubleBufferContent.includes('swapActiveManualPlayer') })
+      .toEqual({ hasSwapMethod: true });
+  });
+
+  it('captureAndShowFreezeFrame must skip pre-captured frame when isManualMode is true', () => {
+    // When transitioning manual→manual, the pre-captured last frame comes from the loop player,
+    // not the manual player. Using it would show a wrong frame. The guard must check
+    // hasValidLastFrame && !isManualMode before using the pre-captured frame.
+    expect({ skipsPreCapturedInManualMode: doubleBufferContent.includes('hasValidLastFrame && !isManualMode') })
+      .toEqual({ skipsPreCapturedInManualMode: true });
+  });
+});

@@ -159,6 +159,14 @@ Contrôle hybride (auto + manuel) de l'enregistrement analytics.
 - Oublier `manualVideoVisible: false` dans `emitLoopState()` des transitions de boucle (toujours émettre explicitement `false` — ADR-034)
 - Utiliser `manualVideoVisible === false` (strict equality) dans `handleMasterLoopState` CAS 1 (utiliser `!== true` qui couvre false, undefined ET absent)
 
+### Manual Video Transitions
+
+- Ne pas utiliser `getActiveManualPlayer()` pour les DEUX vidéos dans une transition manuel→manuel (utiliser `getInactiveManualPlayer()` pour la nouvelle et garder l'ancien visible)
+- Ne pas appeler `showBlackOverlay()` systématiquement dans `play()` (uniquement en fallback si `captureAndShowFreezeFrame()` échoue)
+- Ne pas supprimer le debounce 500ms dans `play()` de `manual-video.service.ts` (protège le décodeur software contre le spam de commandes)
+- Ne pas utiliser le frame pré-capturé (boucle) dans `captureAndShowFreezeFrame(isManualMode=true)` (forcer capture live depuis le player manuel)
+- Ne pas oublier `captureAndShowFreezeFrame()` dans `triggerSwitch()` de `video-playback.service.ts` (le early switch path n'a pas de freeze-frame sinon)
+
 ### Preload & Reveal (ADR-034)
 
 - Afficher freeze-frame ou overlay noir dans `preloadManualVideo()` pour la première vidéo manuelle depuis la boucle (preload silencieux — opacity 0 + muted)
@@ -199,3 +207,15 @@ Contrôle hybride (auto + manuel) de l'enregistrement analytics.
 ### Tests
 
 - Supprimer les tests hardware-matrix E2E dans `e2e/tests/hardware-matrix.spec.ts`
+
+## Transition Manuel→Manuel (double-buffering)
+
+Quand une vidéo manuelle est déjà visible et qu'une nouvelle est déclenchée :
+
+1. La nouvelle charge sur `getInactiveManualPlayer()` (z-index 11, invisible)
+2. L'ancien player reste visible (z-index 10) — pas de freeze-frame nécessaire
+3. `canplay` (pas `canplaythrough`) + 1×rAF → reveal immédiat
+4. Ancien player nettoyé + `swapActiveManualPlayer()`
+5. Debounce 500ms protège contre le spam
+
+Transition boucle→manuel : freeze-frame + `canplaythrough` + 2×rAF + 200ms (inchangé)

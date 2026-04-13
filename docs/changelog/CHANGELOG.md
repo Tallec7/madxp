@@ -14,6 +14,7 @@
 
 ### Bug Fixes
 
+- **raspberry:** fix black flash during video transitions on Pi 5 software decode — double-buffering for manual-to-manual transitions, conditional black overlay as fallback only, freeze-frame in early switch path, 500ms debounce against decoder spam
 - **templates:** fix CSP frame-ancestors and copy templates to Docker image ([b9ed634](https://github.com/Tallec7/neopro/commit/b9ed6340a979f4d9146c9c45150fb6a4850967cc))
 
 ## [3.162.2](https://github.com/Tallec7/neopro/compare/v3.162.1...v3.162.2) (2026-04-13)
