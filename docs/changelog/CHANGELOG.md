@@ -1,3 +1,9 @@
+## [3.164.3](https://github.com/Tallec7/neopro/compare/v3.164.2...v3.164.3) (2026-04-13)
+
+### Bug Fixes
+
+- **templates:** remove text fade-in animation on packshot ([fc1d94b](https://github.com/Tallec7/neopro/commit/fc1d94bdd802e4a52f0e10323f900b28aaebaad8))
+
 ## [3.164.2](https://github.com/Tallec7/neopro/compare/v3.164.1...v3.164.2) (2026-04-13)
 
 ### Bug Fixes

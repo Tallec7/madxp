@@ -1,6 +1,6 @@
 {
   "name": "neopro-admin",
-  "version": "v3.164.2",
+  "version": "v3.164.3",
   "description": "Web Admin Panel for Neopro Raspberry Pi",
   "main": "admin-server.js",
   "scripts": {
