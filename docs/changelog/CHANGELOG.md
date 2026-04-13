@@ -1,3 +1,9 @@
+## [3.162.10](https://github.com/Tallec7/neopro/compare/v3.162.9...v3.162.10) (2026-04-13)
+
+### Bug Fixes
+
+- **raspberry:** add double-buffering and debounce to manual video transitions ([0063656](https://github.com/Tallec7/neopro/commit/00636567898397836df5bbc9830fac758f1cbb92))
+
 ## [3.162.9](https://github.com/Tallec7/neopro/compare/v3.162.8...v3.162.9) (2026-04-13)
 
 ### Bug Fixes
