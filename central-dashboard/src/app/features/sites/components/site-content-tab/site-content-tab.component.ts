@@ -500,19 +500,24 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
     if (!this.config) return;
     const { video, target } = event;
 
+    // Resolve cloud URL to local Pi path using unifiedVideoOptions
+    // The config expects local paths (e.g. "videos/BOUCLE/file.mp4"), not cloud URLs
+    const configPath = this.resolveConfigPath(video);
+
     if (target.type === 'loop') {
       // Default loop = sponsors[]
       if (!this.config.sponsors) this.config.sponsors = [];
       const alreadyInLoop = this.config.sponsors.some(
-        (s: { path?: string }) => s.path === video.path
+        (s: { path?: string }) => s.path === configPath
       );
       if (alreadyInLoop) {
         this.notificationService.info('Cette vidéo est déjà dans la boucle');
         return;
       }
       this.config.sponsors.push({
-        path: video.path,
+        path: configPath,
         name: video.displayName,
+        type: 'video/mp4',
         weight: 1,
       } as never);
     } else if (target.type === 'match') {
@@ -521,15 +526,16 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
       if (!phase) return;
       if (!phase.loopVideos) phase.loopVideos = [];
       const alreadyInPhase = phase.loopVideos.some(
-        (v: { path?: string }) => v.path === video.path
+        (v: { path?: string }) => v.path === configPath
       );
       if (alreadyInPhase) {
         this.notificationService.info(`Cette vidéo est déjà dans "${target.label}"`);
         return;
       }
       phase.loopVideos.push({
-        path: video.path,
+        path: configPath,
         name: video.displayName,
+        type: 'video/mp4',
         weight: 1,
       } as never);
     } else if (target.type === 'category') {
@@ -538,21 +544,46 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
       if (!cat) return;
       if (!cat.videos) cat.videos = [];
       const alreadyInCat = cat.videos.some(
-        (v: { path?: string }) => v.path === video.path
+        (v: { path?: string }) => v.path === configPath
       );
       if (alreadyInCat) {
         this.notificationService.info(`Cette vidéo est déjà dans "${target.label}"`);
         return;
       }
       cat.videos.push({
-        path: video.path,
+        path: configPath,
         name: video.displayName,
+        type: 'video/mp4',
       } as never);
     }
 
     this.markDirty();
     this.notificationService.success(`"${video.displayName}" ajoutée à "${target.label}"`);
     this.rebuildConfigVideoRoles();
+  }
+
+  /**
+   * Resolve a VideoItem path (which may be a cloud URL) to the local Pi path
+   * expected by the config (e.g. "videos/PARTENAIRES/file.mp4").
+   * Uses unifiedVideoOptions which already resolved cloud → local paths.
+   */
+  private resolveConfigPath(video: VideoItem): string {
+    // Try to find the resolved local path from unifiedVideoOptions
+    const fnLower = video.filename.toLowerCase();
+    const match = this.unifiedVideoOptions.find(
+      opt => opt.filename.toLowerCase() === fnLower
+    );
+    if (match) return match.path;
+
+    // Fallback: use deployedPathsMap if video has an ID
+    if (video.id) {
+      const deployed = this.deployedPathsMap.get(video.id);
+      if (deployed) return deployed.deployedPath;
+    }
+
+    // Last resort: construct from category + filename
+    const category = video.category || 'default';
+    return `videos/${category}/${video.filename}`;
   }
 
   /** Build the list of available targets for the "Add to" dropdown */
