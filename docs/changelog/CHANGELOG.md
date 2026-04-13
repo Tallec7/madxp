@@ -1,3 +1,9 @@
+## [3.162.4](https://github.com/Tallec7/neopro/compare/v3.162.3...v3.162.4) (2026-04-13)
+
+### Bug Fixes
+
+- **tests:** update smoke test for CSP frame-ancestors instead of X-Frame-Options ([be83843](https://github.com/Tallec7/neopro/commit/be83843351de00c03376c130d1e975474094dd18))
+
 ## [3.162.3](https://github.com/Tallec7/neopro/compare/v3.162.2...v3.162.3) (2026-04-13)
 
 ### Bug Fixes
