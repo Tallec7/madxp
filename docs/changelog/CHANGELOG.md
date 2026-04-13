@@ -1,3 +1,9 @@
+## [3.161.3](https://github.com/Tallec7/neopro/compare/v3.161.2...v3.161.3) (2026-04-13)
+
+### Bug Fixes
+
+- **dashboard:** prevent club users from modifying neopro videos in loop manager ([8a22e77](https://github.com/Tallec7/neopro/commit/8a22e77ae9ac24366a0f254353b878e8ccde071d))
+
 ## [3.161.2](https://github.com/Tallec7/neopro/compare/v3.161.1...v3.161.2) (2026-04-13)
 
 ### Bug Fixes
