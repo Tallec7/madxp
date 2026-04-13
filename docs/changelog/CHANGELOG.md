@@ -1,3 +1,9 @@
+# [3.164.0](https://github.com/Tallec7/neopro/compare/v3.163.4...v3.164.0) (2026-04-13)
+
+### Features
+
+- **templates:** render BUT Simple directly in browser like other templates ([26a0ab4](https://github.com/Tallec7/neopro/commit/26a0ab46c1dc67e1724d5be6769a2de7aef78e31))
+
 ## [3.163.4](https://github.com/Tallec7/neopro/compare/v3.163.3...v3.163.4) (2026-04-13)
 
 ### Bug Fixes
