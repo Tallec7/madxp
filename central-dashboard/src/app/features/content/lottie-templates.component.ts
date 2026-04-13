@@ -8,6 +8,7 @@ import { NotificationService } from '../../core/services/notification.service';
 import { ApiService, UploadProgress } from '../../core/services/api.service';
 import { BrowserRendererService, RenderProgress } from './browser-renderer.service';
 import { TemplateRendererService } from './template-renderer.service';
+import { environment } from '../../../environments/environment';
 import { Site } from '../../core/models';
 import { Subscription } from 'rxjs';
 
@@ -152,33 +153,22 @@ interface OverlayTemplate {
 
         <!-- Right column: preview + render -->
         <div class="right-column">
-          <!-- Standalone live preview (BUT Simple etc.) -->
+          <!-- Standalone live preview (iframe-based, uses tested HTML template) -->
           <div class="standalone-preview" *ngIf="isStandaloneTemplate && selectedTemplate">
             <div class="preview-header">
               <span class="preview-label">Apercu live</span>
               <span class="preview-template">{{ selectedTemplate.name }}</span>
             </div>
-            <div class="standalone-canvas-wrap">
-              <div class="standalone-layers" #standaloneContainer>
-                <video #layerA class="standalone-layer" muted preload="auto" crossorigin="anonymous"></video>
-                <video #layerC class="standalone-layer" muted preload="auto" crossorigin="anonymous"></video>
-                <video #layerB class="standalone-layer" muted preload="auto" crossorigin="anonymous"></video>
-                <div class="standalone-logo" *ngIf="!standaloneTextVisible">
-                  <img *ngIf="imagePreviews['logo']" [src]="imagePreviews['logo']" alt="Logo" class="standalone-logo-img" />
-                </div>
-                <div class="standalone-text" [class.visible]="standaloneTextVisible">
-                  <span class="st-club-top">{{ (variableValues['club'] || 'NOM DU CLUB').toUpperCase() }}</span>
-                  <div class="st-name">
-                    <span class="st-prenom">{{ (variableValues['prenom'] || 'PRENOM').toUpperCase() }}</span>
-                    <span class="st-nom">{{ (variableValues['nom'] || 'NOM').toUpperCase() }}</span>
-                  </div>
-                  <span class="st-club-bottom">{{ (variableValues['club'] || 'NOM DU CLUB').toUpperCase() }}</span>
-                </div>
-              </div>
-              <div class="standalone-controls">
-                <button class="btn btn-primary" (click)="playStandalone()">Jouer</button>
-                <button class="btn btn-secondary" (click)="resetStandalone()">Reset</button>
-              </div>
+            <div class="standalone-iframe-wrap">
+              <iframe #standaloneIframe
+                      [src]="standaloneIframeSrc"
+                      class="standalone-iframe"
+                      frameborder="0"
+                      allow="autoplay"></iframe>
+            </div>
+            <div class="standalone-controls">
+              <button class="btn btn-primary" (click)="playStandalone()">Jouer</button>
+              <button class="btn btn-secondary" (click)="resetStandalone()">Reset</button>
             </div>
           </div>
 
@@ -424,48 +414,18 @@ interface OverlayTemplate {
     .btn-secondary:hover { background: #e5e7eb; }
     .btn-sm { padding: 6px 14px; font-size: 12px; }
 
-    /* Standalone preview */
+    /* Standalone preview (iframe-based) */
     .standalone-preview {
       background: white; border: 1px solid #eee; border-radius: 10px;
       padding: 20px; margin-bottom: 16px;
     }
-    .standalone-canvas-wrap { margin-top: 12px; }
-    .standalone-layers {
-      position: relative; width: 100%; aspect-ratio: 16/9;
-      background: #000; border-radius: 8px; overflow: hidden;
+    .standalone-iframe-wrap {
+      margin-top: 12px; position: relative;
+      width: 100%; aspect-ratio: 16/9;
+      border-radius: 8px; overflow: hidden; background: #000;
     }
-    .standalone-layer {
-      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-      object-fit: cover;
-    }
-    .standalone-layer:nth-child(1) { z-index: 1; } /* A */
-    .standalone-layer:nth-child(2) { z-index: 2; } /* C */
-    .standalone-layer:nth-child(3) { z-index: 3; } /* B */
-    .standalone-logo {
-      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-      z-index: 2; display: flex; align-items: center; justify-content: center;
-      transition: opacity 0.4s; pointer-events: none;
-    }
-    .standalone-logo-img { width: 26%; height: auto; }
-    .standalone-text {
-      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-      z-index: 5; display: flex; flex-direction: column;
-      align-items: center; justify-content: center;
-      opacity: 0; transition: opacity 0.3s; pointer-events: none;
-      font-family: 'Oswald', sans-serif;
-    }
-    .standalone-text.visible { opacity: 1; }
-    .st-club-top, .st-club-bottom {
-      font-size: 1.4vw; font-weight: 500; letter-spacing: 0.4em;
-      color: rgba(255,255,255,0.7); text-align: center;
-    }
-    .st-club-top { position: absolute; top: 20%; }
-    .st-club-bottom { position: absolute; bottom: 18%; }
-    .st-name { text-align: center; }
-    .st-prenom, .st-nom {
-      display: block; font-size: 6.5vw; font-weight: 700;
-      line-height: 0.95; color: white; font-style: italic;
-      text-shadow: 2px 4px 8px rgba(0,0,0,0.3);
+    .standalone-iframe {
+      width: 100%; height: 100%; border: none;
     }
     .standalone-controls {
       display: flex; gap: 8px; margin-top: 10px;
@@ -488,9 +448,8 @@ export class LottieTemplatesComponent implements OnInit, OnDestroy {
   private readonly templateRendererSvc = inject(TemplateRendererService);
   private readonly sanitizer = inject(DomSanitizer);
 
-  @ViewChild('layerA') layerARef?: ElementRef<HTMLVideoElement>;
-  @ViewChild('layerB') layerBRef?: ElementRef<HTMLVideoElement>;
-  @ViewChild('layerC') layerCRef?: ElementRef<HTMLVideoElement>;
+  @ViewChild('standaloneIframe') standaloneIframeRef?: ElementRef<HTMLIFrameElement>;
+  standaloneIframeSrc: SafeUrl | null = null;
 
   sites: Site[] = [];
   selectedSiteId = '';
@@ -803,53 +762,27 @@ export class LottieTemplatesComponent implements OnInit, OnDestroy {
   selectTemplate(tpl: OverlayTemplate): void {
     this._selectTemplateBase(tpl);
     if (this.templateRendererSvc.isStandalone(tpl.id)) {
-      setTimeout(() => this.loadStandaloneAssets(tpl), 100);
+      // Build iframe URL pointing to the served HTML template
+      const iframeUrl = `${environment.apiUrl}/content/template-assets/but-simple/index.html`;
+      this.standaloneIframeSrc = this.sanitizer.bypassSecurityTrustResourceUrl(iframeUrl);
+    } else {
+      this.standaloneIframeSrc = null;
     }
   }
 
-  private loadStandaloneAssets(tpl: OverlayTemplate): void {
-    const assets = (tpl as OverlayTemplate & { assets?: Record<string, string> }).assets;
-    if (!assets || !this.layerARef || !this.layerBRef || !this.layerCRef) return;
-
-    this.layerARef.nativeElement.src = assets['layerA'];
-    this.layerBRef.nativeElement.src = assets['layerB'];
-    this.layerCRef.nativeElement.src = assets['layerC'];
-  }
-
   playStandalone(): void {
-    const a = this.layerARef?.nativeElement;
-    const b = this.layerBRef?.nativeElement;
-    const c = this.layerCRef?.nativeElement;
-    if (!a || !b || !c) return;
-
-    // Reset
-    this.standaloneTextVisible = false;
-    this.standaloneTimers.forEach(t => clearTimeout(t));
-    this.standaloneTimers = [];
-    a.currentTime = 0;
-    b.currentTime = 0;
-    c.currentTime = 0;
-
-    // Play all
-    Promise.all([a.play(), b.play(), c.play()]).catch(() => {});
-
-    // Show text after transition (2.4s)
-    this.standaloneTimers.push(setTimeout(() => {
-      this.standaloneTextVisible = true;
-    }, 2400));
+    this.postToIframe({ action: 'play', variables: this.variableValues });
   }
 
   resetStandalone(): void {
-    const a = this.layerARef?.nativeElement;
-    const b = this.layerBRef?.nativeElement;
-    const c = this.layerCRef?.nativeElement;
-    if (!a || !b || !c) return;
+    this.postToIframe({ action: 'reset' });
+  }
 
-    a.pause(); b.pause(); c.pause();
-    a.currentTime = 0; b.currentTime = 0; c.currentTime = 0;
-    this.standaloneTextVisible = false;
-    this.standaloneTimers.forEach(t => clearTimeout(t));
-    this.standaloneTimers = [];
+  private postToIframe(msg: Record<string, unknown>): void {
+    const iframe = this.standaloneIframeRef?.nativeElement;
+    if (iframe?.contentWindow) {
+      iframe.contentWindow.postMessage(msg, '*');
+    }
   }
 
   // ── Helpers ───────────────────────────────────────────────────────

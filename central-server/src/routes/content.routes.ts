@@ -36,7 +36,7 @@ router.post('/render-template', authenticate, requireRole('admin', 'operator'), 
   { name: 'image_logo', maxCount: 1 },
 ]), contentController.renderTemplate);
 router.get('/templates/available', authenticate, adminRateLimit, contentController.getAvailableTemplates);
-router.get('/template-assets/:template/:file', authenticate, adminRateLimit, contentController.getTemplateAsset);
+router.get('/template-assets/:template/:file', adminRateLimit, contentController.getTemplateAsset);
 
 // Deployment routes - GET use adminRateLimit, mutations use sensitiveRateLimit
 router.get('/deployments', authenticate, adminRateLimit, contentController.getDeployments);

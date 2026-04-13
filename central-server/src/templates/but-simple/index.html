@@ -410,6 +410,57 @@
         if (e.code === 'KeyR') resetAll();
         if (e.code === 'KeyE') toggleEditor();
       });
+
+      // PostMessage API for iframe embedding (dashboard integration)
+      window.addEventListener('message', (e) => {
+        const data = e.data;
+        if (!data || !data.action) return;
+
+        if (data.action === 'play') {
+          // Update variables if provided
+          if (data.variables) {
+            const v = data.variables;
+            if (v.prenom) document.getElementById('prenom').textContent = v.prenom.toUpperCase();
+            if (v.nom) document.getElementById('nom').textContent = v.nom.toUpperCase();
+            if (v.club) {
+              document.getElementById('club-top').textContent = v.club.toUpperCase();
+              document.getElementById('club-bottom').textContent = v.club.toUpperCase();
+            }
+            // Update input fields too
+            if (v.prenom) document.getElementById('input-prenom').value = v.prenom;
+            if (v.nom) document.getElementById('input-nom').value = v.nom;
+            if (v.club) document.getElementById('input-club').value = v.club;
+          }
+          playAll();
+        }
+
+        if (data.action === 'reset') {
+          resetAll();
+        }
+
+        if (data.action === 'update') {
+          // Live update variables without playing
+          const v = data.variables || {};
+          if (v.prenom) {
+            document.getElementById('prenom').textContent = v.prenom.toUpperCase();
+            document.getElementById('input-prenom').value = v.prenom;
+          }
+          if (v.nom) {
+            document.getElementById('nom').textContent = v.nom.toUpperCase();
+            document.getElementById('input-nom').value = v.nom;
+          }
+          if (v.club) {
+            document.getElementById('club-top').textContent = v.club.toUpperCase();
+            document.getElementById('club-bottom').textContent = v.club.toUpperCase();
+            document.getElementById('input-club').value = v.club;
+          }
+        }
+      });
+
+      // If embedded in iframe, hide editor panel
+      if (window.parent !== window) {
+        document.body.classList.remove('edit-mode');
+      }
     </script>
   </body>
 </html>

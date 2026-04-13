@@ -93,7 +93,7 @@ export const getTemplateAsset = async (req: AuthRequest, res: Response) => {
 
     // Whitelist allowed template directories and filenames
     const allowedTemplates = ['but-simple'];
-    const allowedExtensions = ['.webm', '.png', '.jpg'];
+    const allowedExtensions = ['.webm', '.png', '.jpg', '.html'];
 
     if (!allowedTemplates.includes(template)) {
       return res.status(404).json({ error: 'Template non trouvé' });
@@ -116,6 +116,7 @@ export const getTemplateAsset = async (req: AuthRequest, res: Response) => {
       '.webm': 'video/webm',
       '.png': 'image/png',
       '.jpg': 'image/jpeg',
+      '.html': 'text/html',
     };
 
     res.setHeader('Content-Type', mimeTypes[ext] || 'application/octet-stream');
