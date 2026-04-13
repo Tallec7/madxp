@@ -57,11 +57,72 @@ export const getAvailableTemplates = async (_req: AuthRequest, res: Response) =>
           { key: 'logo', label: 'Logo club', type: 'image', required: false, accept: 'image/jpeg,image/png,image/webp' },
         ],
       },
+      {
+        id: 'tpl_but_simple',
+        name: 'BUT Simple',
+        description: 'Animation BUT avec transition hexagonale, nom joueur et logo club',
+        type: 'standalone',
+        variables: [
+          { key: 'prenom', label: 'Prénom', type: 'text', required: true, placeholder: 'PRÉNOM' },
+          { key: 'nom', label: 'Nom', type: 'text', required: true, placeholder: 'NOM' },
+          { key: 'club', label: 'Nom du club', type: 'text', required: false, placeholder: 'NOM DU CLUB', prefillFrom: 'club_name' },
+          { key: 'logo', label: 'Logo club', type: 'image', required: false, accept: 'image/jpeg,image/png,image/webp' },
+        ],
+        assets: {
+          layerA: '/api/content/template-assets/but-simple/BUT_simple_A.webm',
+          layerB: '/api/content/template-assets/but-simple/BUT_simple_B.webm',
+          layerC: '/api/content/template-assets/but-simple/BUT_simple_C.webm',
+        },
+      },
     ];
 
     res.json({ templates: templateSchemas });
   } catch (error) {
     logger.error('Error getting available templates:', error);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+};
+
+/**
+ * GET /api/content/template-assets/:template/:file
+ * Serves static WebM assets for standalone templates (e.g. BUT Simple).
+ */
+export const getTemplateAsset = async (req: AuthRequest, res: Response) => {
+  try {
+    const { template, file } = req.params;
+
+    // Whitelist allowed template directories and filenames
+    const allowedTemplates = ['but-simple'];
+    const allowedExtensions = ['.webm', '.png', '.jpg'];
+
+    if (!allowedTemplates.includes(template)) {
+      return res.status(404).json({ error: 'Template non trouvé' });
+    }
+
+    const ext = path.extname(file).toLowerCase();
+    if (!allowedExtensions.includes(ext)) {
+      return res.status(400).json({ error: 'Type de fichier non autorisé' });
+    }
+
+    // Prevent path traversal
+    const safeName = path.basename(file);
+    const filePath = path.join(__dirname, '..', 'templates', template, safeName);
+
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({ error: 'Fichier non trouvé' });
+    }
+
+    const mimeTypes: Record<string, string> = {
+      '.webm': 'video/webm',
+      '.png': 'image/png',
+      '.jpg': 'image/jpeg',
+    };
+
+    res.setHeader('Content-Type', mimeTypes[ext] || 'application/octet-stream');
+    res.setHeader('Cache-Control', 'public, max-age=86400');
+    fs.createReadStream(filePath).pipe(res);
+  } catch (error) {
+    logger.error('Error serving template asset:', error);
     res.status(500).json({ error: 'Erreur serveur' });
   }
 };

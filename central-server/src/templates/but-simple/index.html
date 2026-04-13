@@ -1,0 +1,415 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <title>BUT Simple - Template</title>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&display=swap');
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        width: 100vw;
+        height: 100vh;
+        overflow: hidden;
+        background: #000;
+        font-family: 'Oswald', sans-serif;
+      }
+
+      .container {
+        position: relative;
+        width: 1920px;
+        height: 1080px;
+        transform-origin: top left;
+      }
+
+      /* Video layers - stacked with absolute positioning */
+      .layer {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 1920px;
+        height: 1080px;
+      }
+
+      video.layer {
+        object-fit: cover;
+      }
+
+      /* Layer A - bottom (hexagon background, always opaque) */
+      #layer-a {
+        z-index: 1;
+      }
+
+      /* Layer C - golden background (fades in over A) */
+      #layer-c {
+        z-index: 3;
+      }
+
+      /* Layer B - transition wipe effect (temporary) */
+      #layer-b {
+        z-index: 4;
+      }
+
+      /* Text overlay - above all layers, hidden until transition reveals */
+      .text-overlay {
+        z-index: 5;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 0.3s ease-in;
+      }
+
+      .text-overlay.visible {
+        opacity: 1;
+      }
+
+      /* Club name top */
+      .club-name-top {
+        position: absolute;
+        top: 215px;
+        left: 50%;
+        transform: translateX(-50%);
+        font-size: 28px;
+        font-weight: 500;
+        letter-spacing: 8px;
+        text-transform: uppercase;
+        color: rgba(255, 255, 255, 0.7);
+        text-align: center;
+        white-space: nowrap;
+      }
+
+      /* Player name - 2 lines */
+      .player-name {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        text-align: center;
+      }
+
+      .player-name .prenom,
+      .player-name .nom {
+        display: block;
+        font-size: 130px;
+        font-weight: 700;
+        line-height: 0.95;
+        color: #ffffff;
+        text-transform: uppercase;
+        font-style: italic;
+        text-shadow: 2px 4px 8px rgba(0, 0, 0, 0.3);
+      }
+
+      /* Club name bottom */
+      .club-name-bottom {
+        position: absolute;
+        bottom: 195px;
+        left: 50%;
+        transform: translateX(-50%);
+        font-size: 28px;
+        font-weight: 500;
+        letter-spacing: 8px;
+        text-transform: uppercase;
+        color: rgba(255, 255, 255, 0.7);
+        text-align: center;
+        white-space: nowrap;
+      }
+
+      /* Logo overlay - above A (1), below C (3) and B (4) */
+      .logo-overlay {
+        z-index: 2;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        pointer-events: none;
+        opacity: 0;
+      }
+
+      .logo-overlay.animate {
+        animation: logoIn 0.6s ease-out forwards;
+      }
+
+      .logo-overlay.hidden {
+        animation: logoOut 0.4s ease-in forwards;
+      }
+
+      @keyframes logoIn {
+        0% {
+          opacity: 0;
+          transform: scale(0.3);
+        }
+        100% {
+          opacity: 1;
+          transform: scale(1);
+        }
+      }
+
+      @keyframes logoOut {
+        0% {
+          opacity: 1;
+          transform: scale(1);
+        }
+        100% {
+          opacity: 0;
+          transform: scale(0.8);
+        }
+      }
+
+      .club-logo {
+        width: 500px;
+        height: auto;
+      }
+
+      /* ── Editor panel (only visible in edit mode) ── */
+      .editor-panel {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 100;
+        background: rgba(0, 0, 0, 0.85);
+        color: #fff;
+        padding: 20px;
+        border-radius: 12px;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        font-size: 14px;
+        width: 320px;
+        backdrop-filter: blur(10px);
+        display: none;
+      }
+
+      body.edit-mode .editor-panel {
+        display: block;
+      }
+
+      .editor-panel h3 {
+        margin-bottom: 16px;
+        font-size: 16px;
+        font-weight: 600;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        padding-bottom: 8px;
+      }
+
+      .editor-panel label {
+        display: block;
+        margin-bottom: 4px;
+        font-size: 12px;
+        color: rgba(255, 255, 255, 0.6);
+        text-transform: uppercase;
+        letter-spacing: 1px;
+      }
+
+      .editor-panel input[type='text'] {
+        width: 100%;
+        padding: 8px 12px;
+        margin-bottom: 12px;
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 6px;
+        color: #fff;
+        font-size: 14px;
+        font-family: inherit;
+      }
+
+      .editor-panel input[type='text']:focus {
+        outline: none;
+        border-color: #ffd700;
+      }
+
+      .editor-panel .btn {
+        display: inline-block;
+        padding: 10px 20px;
+        background: #ffd700;
+        color: #000;
+        border: none;
+        border-radius: 6px;
+        font-weight: 600;
+        cursor: pointer;
+        font-size: 14px;
+        margin-top: 8px;
+        width: 100%;
+        text-align: center;
+      }
+
+      .editor-panel .btn:hover {
+        background: #ffc000;
+      }
+
+      .editor-panel .btn-secondary {
+        background: rgba(255, 255, 255, 0.15);
+        color: #fff;
+        margin-top: 6px;
+      }
+
+      .editor-panel .btn-secondary:hover {
+        background: rgba(255, 255, 255, 0.25);
+      }
+    </style>
+  </head>
+  <body class="edit-mode">
+    <div class="container">
+      <!-- Layer C - golden background (bottom) -->
+      <video id="layer-c" class="layer" muted preload="auto">
+        <source src="BUT_simple_C.webm" type="video/webm" />
+      </video>
+
+      <!-- Logo overlay - visible during A phase, fades out with transition -->
+      <div class="layer logo-overlay" id="logo-overlay">
+        <img src="logo_club.png" alt="Logo club" class="club-logo" />
+      </div>
+
+      <!-- Text overlay - editable content (between C and B) -->
+      <div class="text-overlay layer" id="text-overlay">
+        <span class="club-name-top" id="club-top">NOM DU CLUB</span>
+        <div class="player-name">
+          <span class="prenom" id="prenom">PRENOM</span>
+          <span class="nom" id="nom">NOM</span>
+        </div>
+        <span class="club-name-bottom" id="club-bottom">NOM DU CLUB</span>
+      </div>
+
+      <!-- Layer B - transition wipe (middle, masks text) -->
+      <video id="layer-b" class="layer" muted preload="auto">
+        <source src="BUT_simple_B.webm" type="video/webm" />
+      </video>
+
+      <!-- Layer A - hexagon pattern + logo (top) -->
+      <video id="layer-a" class="layer" muted preload="auto">
+        <source src="BUT_simple_A.webm" type="video/webm" />
+      </video>
+    </div>
+
+    <!-- Editor panel -->
+    <div class="editor-panel">
+      <h3>BUT Simple - Editeur</h3>
+
+      <label for="input-prenom">Prenom</label>
+      <input type="text" id="input-prenom" value="PRENOM" placeholder="PRENOM" />
+
+      <label for="input-nom">Nom</label>
+      <input type="text" id="input-nom" value="NOM" placeholder="NOM" />
+
+      <label for="input-club">Nom du club</label>
+      <input type="text" id="input-club" value="NOM DU CLUB" placeholder="NOM DU CLUB" />
+
+      <button class="btn" onclick="playAll()">Jouer</button>
+      <button class="btn btn-secondary" onclick="resetAll()">Reset</button>
+      <button class="btn btn-secondary" onclick="toggleEditor()">Masquer editeur</button>
+    </div>
+
+    <script>
+      // Auto-scale container to fit window
+      function scaleToFit() {
+        const container = document.querySelector('.container');
+        const scaleX = window.innerWidth / 1920;
+        const scaleY = window.innerHeight / 1080;
+        const scale = Math.min(scaleX, scaleY);
+        container.style.transform = `scale(${scale})`;
+        // Center if needed
+        const offsetX = (window.innerWidth - 1920 * scale) / 2;
+        const offsetY = (window.innerHeight - 1080 * scale) / 2;
+        container.style.marginLeft = offsetX + 'px';
+        container.style.marginTop = offsetY + 'px';
+      }
+      scaleToFit();
+      window.addEventListener('resize', scaleToFit);
+
+      const videoA = document.getElementById('layer-a');
+      const videoB = document.getElementById('layer-b');
+      const videoC = document.getElementById('layer-c');
+      const textOverlay = document.getElementById('text-overlay');
+      const logoOverlay = document.getElementById('logo-overlay');
+
+      // Inputs → live update text
+      document.getElementById('input-prenom').addEventListener('input', (e) => {
+        document.getElementById('prenom').textContent = e.target.value.toUpperCase();
+      });
+
+      document.getElementById('input-nom').addEventListener('input', (e) => {
+        document.getElementById('nom').textContent = e.target.value.toUpperCase();
+      });
+
+      document.getElementById('input-club').addEventListener('input', (e) => {
+        const val = e.target.value.toUpperCase();
+        document.getElementById('club-top').textContent = val;
+        document.getElementById('club-bottom').textContent = val;
+      });
+
+      // Force all videos to t=0 on load
+      [videoA, videoB, videoC].forEach((v) => {
+        v.currentTime = 0;
+      });
+
+      // Transition starts ~1.6s, completes ~2.6s
+      const LOGO_HIDE_MS = 1600;
+      const TEXT_DELAY_MS = 2400;
+      let textTimer = null;
+      let logoTimer = null;
+
+      function playAll() {
+        // Reset
+        textOverlay.classList.remove('visible');
+        logoOverlay.classList.remove('hidden', 'animate');
+        if (textTimer) clearTimeout(textTimer);
+        if (logoTimer) clearTimeout(logoTimer);
+        videoA.currentTime = 0;
+        videoB.currentTime = 0;
+        videoC.currentTime = 0;
+
+        // Animate logo in
+        logoOverlay.classList.add('animate');
+
+        // Sync and play all 3 videos together
+        Promise.all([videoA.play(), videoB.play(), videoC.play()]).catch((err) =>
+          console.warn('Play error:', err),
+        );
+
+        // Hide logo when transition starts
+        logoTimer = setTimeout(() => {
+          logoOverlay.classList.add('hidden');
+        }, LOGO_HIDE_MS);
+
+        // Reveal text after transition
+        textTimer = setTimeout(() => {
+          textOverlay.classList.add('visible');
+        }, TEXT_DELAY_MS);
+      }
+
+      function resetAll() {
+        videoA.pause();
+        videoB.pause();
+        videoC.pause();
+        videoA.currentTime = 0;
+        videoB.currentTime = 0;
+        videoC.currentTime = 0;
+        textOverlay.classList.remove('visible');
+        logoOverlay.classList.remove('hidden', 'animate');
+        logoOverlay.style.opacity = '0';
+        if (textTimer) clearTimeout(textTimer);
+        if (logoTimer) clearTimeout(logoTimer);
+      }
+
+      function toggleEditor() {
+        document.body.classList.toggle('edit-mode');
+      }
+
+      // Keyboard shortcut: Space = play, R = reset, E = toggle editor
+      document.addEventListener('keydown', (e) => {
+        if (e.target.tagName === 'INPUT') return;
+        if (e.code === 'Space') {
+          e.preventDefault();
+          playAll();
+        }
+        if (e.code === 'KeyR') resetAll();
+        if (e.code === 'KeyE') toggleEditor();
+      });
+    </script>
+  </body>
+</html>
