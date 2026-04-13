@@ -206,7 +206,11 @@
               >
                 +
               </button>
-              <div class="add-to-dropdown" *ngIf="addToDropdownVideo === video">
+              <div
+                class="add-to-dropdown"
+                *ngIf="addToDropdownVideo === video"
+                [ngStyle]="addToDropdownStyle"
+              >
                 <button
                   class="add-to-option"
                   *ngFor="let target of configTargets"
@@ -464,7 +468,11 @@
                   >
                     + {{ 'videoLibrary.addTo' | translate }}
                   </button>
-                  <div class="add-to-dropdown" *ngIf="addToDropdownVideo === video">
+                  <div
+                    class="add-to-dropdown"
+                    *ngIf="addToDropdownVideo === video"
+                    [ngStyle]="addToDropdownStyle"
+                  >
                     <button
                       class="add-to-option"
                       *ngFor="let target of configTargets"
@@ -734,6 +742,7 @@
           <div
             class="add-to-dropdown add-to-dropdown-up"
             *ngIf="addToDropdownVideo === detailVideo"
+            [ngStyle]="addToDropdownStyle"
           >
             <button
               class="add-to-option"

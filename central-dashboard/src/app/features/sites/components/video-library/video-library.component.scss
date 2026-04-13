@@ -1044,16 +1044,14 @@ td.col-name {
 }
 
 .add-to-dropdown {
-  position: absolute;
-  right: 0;
-  top: 100%;
-  margin-top: 2px;
+  position: fixed;
+  transform: translateX(-100%);
   background: white;
   border: 1px solid #e2e8f0;
   border-radius: 6px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  min-width: 180px;
-  z-index: 50;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  min-width: 200px;
+  z-index: 1000;
   padding: 0.25rem 0;
   max-height: 240px;
   overflow-y: auto;

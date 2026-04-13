@@ -538,10 +538,22 @@ export class VideoLibraryComponent implements OnChanges {
 
   // "Add to" dropdown state
   addToDropdownVideo: VideoItem | null = null;
+  addToDropdownStyle: Record<string, string> = {};
 
   toggleAddToDropdown(video: VideoItem, event: Event): void {
     event.stopPropagation();
-    this.addToDropdownVideo = this.addToDropdownVideo === video ? null : video;
+    if (this.addToDropdownVideo === video) {
+      this.addToDropdownVideo = null;
+      return;
+    }
+    // Position the fixed dropdown relative to the trigger button
+    const trigger = event.target as HTMLElement;
+    const rect = trigger.getBoundingClientRect();
+    this.addToDropdownStyle = {
+      top: `${rect.bottom + 2}px`,
+      left: `${rect.right}px`,
+    };
+    this.addToDropdownVideo = video;
   }
 
   closeAddToDropdown(): void {
