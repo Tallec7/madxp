@@ -823,7 +823,8 @@ export class TvComponent implements OnInit, OnDestroy {
       return;
     }
 
-    const siteInfoUrl = `${environment.socketUrl}/api/site-info`;
+    const baseUrl = environment.socketUrl || `${window.location.protocol}//${window.location.hostname}:3000`;
+    const siteInfoUrl = `${baseUrl}/api/site-info`;
     this.http.get<{ siteId: string | null; siteName: string | null; configured: boolean }>(siteInfoUrl)
       .subscribe({
         next: (response) => {
