@@ -44,7 +44,7 @@ router.get(
     res.removeHeader('X-Frame-Options');
     res.setHeader(
       'Content-Security-Policy',
-      "default-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; media-src 'self'; img-src 'self' data:; font-src 'self' https://fonts.gstatic.com https: data:;"
+      "default-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://fonts.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; style-src-elem 'self' 'unsafe-inline' https://fonts.googleapis.com; media-src 'self'; img-src 'self' data:; font-src 'self' https://fonts.gstatic.com https: data:;"
     );
     next();
   },

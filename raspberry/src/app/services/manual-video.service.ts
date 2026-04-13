@@ -30,9 +30,8 @@ export class ManualVideoService {
   // État des players manuels
   private _isManualMode = false;
   private _manualRecordingStarted = false;
-  private _savedLoopIndex = 0;
   private _currentManualEndedHandler: (() => void) | null = null;
-  private _lastPlayTimestamp = 0;
+  private _savedLoopIndex = 0;
 
   // ADR-034: Preloaded manual video state for synchronized reveal
   private _preloadedManualVideo: Video | null = null;
@@ -70,36 +69,18 @@ export class ManualVideoService {
    * Joue une vidéo manuelle (master path).
    */
   play(video: Video): void {
-    // Debounce : ignorer les clics rapides (< 500ms) pour éviter de surcharger
-    // le décodeur software avec des load/play en cascade
-    const now = Date.now();
-    if (now - this._lastPlayTimestamp < 500) {
-      console.log('tv player : debounced manual video (too fast)', video.path);
-      return;
-    }
-    this._lastPlayTimestamp = now;
-
     console.log('tv player : play manual video', video.path);
 
-    const currentPlayer = this.doubleBufferService.getActiveManualPlayer();
-    const wasManualPlaying = this._isManualMode && currentPlayer.style.opacity === '1' && !currentPlayer.paused;
+    const targetPlayer = this.doubleBufferService.getActiveManualPlayer();
 
-    // Transition manuel→manuel : charger sur l'AUTRE player, garder l'ancien visible.
-    // Transition boucle→manuel : utiliser le player actif normalement.
-    let targetPlayer: HTMLVideoElement;
-    let oldManualPlayer: HTMLVideoElement | null = null;
-    if (wasManualPlaying) {
-      targetPlayer = this.doubleBufferService.getInactiveManualPlayer();
-      oldManualPlayer = currentPlayer;
-      // Retirer l'ancien listener ended pour éviter un retour à la boucle
-      if (this._currentManualEndedHandler) {
-        currentPlayer.removeEventListener('ended', this._currentManualEndedHandler);
-        this._currentManualEndedHandler = null;
-      }
-      console.log('tv player : manual→manual transition, using inactive player');
-    } else {
-      targetPlayer = currentPlayer;
+    // Nettoyer l'ancien listener ended pour éviter qu'il se déclenche
+    // quand on change le src (causerait hideFreezeFrame prématuré → flash boucle)
+    if (this._currentManualEndedHandler) {
+      targetPlayer.removeEventListener('ended', this._currentManualEndedHandler);
+      this._currentManualEndedHandler = null;
     }
+    // Stopper proprement le player avant de changer de source
+    targetPlayer.pause();
 
     // ETAPE 0: Mettre isManualMode IMMEDIATEMENT pour bloquer les transitions de boucle
     this._savedLoopIndex = this.playbackService.currentLoopIndex;
@@ -119,18 +100,24 @@ export class ManualVideoService {
       });
     }
 
-    // ETAPE 1-2: Transition boucle→manuel : freeze-frame pour couvrir la boucle.
-    // Transition manuel→manuel : l'ancien player reste visible, pas besoin de freeze.
-    if (!wasManualPlaying) {
-      const freezeOk = this.doubleBufferService.captureAndShowFreezeFrame();
-      if (!freezeOk) {
-        this.doubleBufferService.showBlackOverlay();
-      }
+    // ETAPE 1: Capturer et afficher le freeze-frame IMMEDIATEMENT
+    // Si une vidéo manuelle est déjà visible, capturer depuis le player manuel
+    // (sinon on capture le player de boucle qui est derrière/pausé → flash boucle)
+    const wasManualVisible = targetPlayer.style.opacity === '1' && !targetPlayer.paused;
+    const freezeOk = this.doubleBufferService.captureAndShowFreezeFrame(wasManualVisible);
+
+    // ETAPE 2: Afficher le black overlay UNIQUEMENT si le freeze-frame a échoué.
+    // En software decode (Pi 5 fallback), le chargement vidéo est plus lent et le
+    // black overlay (z-5) devenait visible entre le hideFreezeFrame et l'apparition
+    // du player manuel, causant un flash noir. Le freeze-frame (z-20) suffit à
+    // masquer la boucle pendant le chargement.
+    if (!freezeOk) {
+      this.doubleBufferService.showBlackOverlay();
     }
 
-    // ETAPE 3: Garder le nouveau player manuel INVISIBLE pendant le chargement
+    // ETAPE 3: Garder le player manuel INVISIBLE pendant le chargement
     targetPlayer.style.opacity = '0';
-    targetPlayer.style.zIndex = wasManualPlaying ? '11' : '10';
+    targetPlayer.style.zIndex = '10';
 
     // ETAPE 4: Configurer la source
     targetPlayer.src = video.path;
@@ -144,72 +131,54 @@ export class ManualVideoService {
       switchDone = true;
 
       targetPlayer.play().then(() => {
-        const reveal = () => {
-          targetPlayer.style.opacity = '1';
-
-          // Nettoyer l'ancien player manuel si transition manuel→manuel
-          if (oldManualPlayer) {
-            oldManualPlayer.pause();
-            oldManualPlayer.style.opacity = '0';
-            oldManualPlayer.removeAttribute('src');
-            oldManualPlayer.load();
-            this.doubleBufferService.swapActiveManualPlayer();
-          }
-
-          this.doubleBufferService.hideFreezeFrame();
-          this.doubleBufferService.hideBlackOverlay();
-
-          // Tracker (desactive pour les slaves)
-          if (!this.callbacks?.getIsSlaveMode()) {
-            if (!this.recordingState.isRecording) {
-              console.log('[TV] Auto-start recording for manual video');
-              this.recordingState.startRecording(false);
-              this._manualRecordingStarted = true;
-            }
-            if (this.callbacks?.getDisplayType() === 'tv') {
-              this.analyticsService.trackVideoStart(video, 'manual');
-            }
-          }
-
-          this.callbacks?.emitPlayerState({
-            currentVideo: PlayerStateService.filenameFromPath(video.path),
-            currentCategory: null,
-            duration: targetPlayer.duration || 0,
-            currentTime: 0,
-            isManualMode: true,
-            isPlaying: true,
-            lastError: null,
-            lastTransitionAt: new Date().toISOString(),
-          });
-
-          // Emettre l'etat si master (video manuelle — visible maintenant)
-          if (this.callbacks?.getTvRole() === 'master') {
-            this.callbacks.emitLoopUpdate({
-              videoIndex: this.playbackService.currentLoopIndex,
-              videoPath: this.playbackService.currentLoopVideos[this.playbackService.currentLoopIndex]?.path || '',
-              videoStartedAt: null,
-              isManualMode: true,
-              manualVideoPath: video.path,
-              manualVideoStartedAt: Date.now(),
-              manualVideoVisible: true, // ADR-034: signal slaves to reveal
-              updatedAt: Date.now()
-            });
-          }
-
-          console.log('tv player : manual video playing, freeze frame hidden');
-        };
-
-        // Transition manuel→manuel : révéler dès le premier rAF (l'ancien player couvre)
-        // Transition boucle→manuel : 2×rAF + 200ms pour le décodeur software
-        if (oldManualPlayer) {
-          requestAnimationFrame(() => reveal());
-        } else {
+        requestAnimationFrame(() => {
           requestAnimationFrame(() => {
-            requestAnimationFrame(() => {
-              setTimeout(() => reveal(), 200);
-            });
+            setTimeout(() => {
+              targetPlayer.style.opacity = '1';
+              this.doubleBufferService.hideFreezeFrame();
+              this.doubleBufferService.hideBlackOverlay();
+
+              // Tracker (desactive pour les slaves)
+              if (!this.callbacks?.getIsSlaveMode()) {
+                if (!this.recordingState.isRecording) {
+                  console.log('[TV] Auto-start recording for manual video');
+                  this.recordingState.startRecording(false);
+                  this._manualRecordingStarted = true;
+                }
+                if (this.callbacks?.getDisplayType() === 'tv') {
+                  this.analyticsService.trackVideoStart(video, 'manual');
+                }
+              }
+
+              this.callbacks?.emitPlayerState({
+                currentVideo: PlayerStateService.filenameFromPath(video.path),
+                currentCategory: null,
+                duration: targetPlayer.duration || 0,
+                currentTime: 0,
+                isManualMode: true,
+                isPlaying: true,
+                lastError: null,
+                lastTransitionAt: new Date().toISOString(),
+              });
+
+              // Emettre l'etat si master (video manuelle — visible maintenant)
+              if (this.callbacks?.getTvRole() === 'master') {
+                this.callbacks.emitLoopUpdate({
+                  videoIndex: this.playbackService.currentLoopIndex,
+                  videoPath: this.playbackService.currentLoopVideos[this.playbackService.currentLoopIndex]?.path || '',
+                  videoStartedAt: null,
+                  isManualMode: true,
+                  manualVideoPath: video.path,
+                  manualVideoStartedAt: Date.now(),
+                  manualVideoVisible: true, // ADR-034: signal slaves to reveal
+                  updatedAt: Date.now()
+                });
+              }
+
+              console.log('tv player : manual video playing, freeze frame hidden');
+            }, 200);
           });
-        }
+        });
       }).catch(err => {
         console.error('tv player : error playing manual video', err);
         this.doubleBufferService.hideFreezeFrame();
@@ -218,16 +187,12 @@ export class ManualVideoService {
       });
     };
 
-    // Transition manuel→manuel : canplay suffit (l'ancien player couvre pendant le buffering)
-    // Transition boucle→manuel : canplaythrough pour un démarrage sans saccade
-    const readyEvent = wasManualPlaying ? 'canplay' : 'canplaythrough';
-    const fallbackEvent = wasManualPlaying ? null : 'canplay';
-
+    // Attendre canplaythrough
     const onReady = () => {
-      targetPlayer.removeEventListener(readyEvent, onReady);
-      if (fallbackEvent) targetPlayer.removeEventListener(fallbackEvent, onReadyFallback);
+      targetPlayer.removeEventListener('canplaythrough', onReady);
+      targetPlayer.removeEventListener('canplay', onReadyFallback);
       clearTimeout(fallbackTimeout);
-      console.log(`tv player : ${readyEvent} received`);
+      console.log('tv player : canplaythrough received');
       doSwitch();
     };
 
@@ -235,22 +200,20 @@ export class ManualVideoService {
       setTimeout(() => {
         if (!switchDone) {
           console.log('tv player : using canplay fallback');
-          targetPlayer.removeEventListener(readyEvent, onReady);
+          targetPlayer.removeEventListener('canplaythrough', onReady);
           doSwitch();
         }
       }, 500);
     };
 
-    targetPlayer.addEventListener(readyEvent, onReady, { once: true });
-    if (fallbackEvent) {
-      targetPlayer.addEventListener(fallbackEvent, onReadyFallback, { once: true });
-    }
+    targetPlayer.addEventListener('canplaythrough', onReady, { once: true });
+    targetPlayer.addEventListener('canplay', onReadyFallback, { once: true });
 
     const fallbackTimeout = setTimeout(() => {
       if (!switchDone) {
         console.warn('tv player : manual video timeout, forcing switch');
-        targetPlayer.removeEventListener(readyEvent, onReady);
-        if (fallbackEvent) targetPlayer.removeEventListener(fallbackEvent, onReadyFallback);
+        targetPlayer.removeEventListener('canplaythrough', onReady);
+        targetPlayer.removeEventListener('canplay', onReadyFallback);
         doSwitch();
       }
     }, 5000);
@@ -259,7 +222,6 @@ export class ManualVideoService {
     const onManualEnded = () => {
       console.log('tv player : manual video ended', video.path);
       targetPlayer.removeEventListener('ended', onManualEnded);
-      this._currentManualEndedHandler = null;
 
       if (!this.callbacks?.getIsSlaveMode() && this.callbacks?.getDisplayType() === 'tv') {
         this.analyticsService.trackVideoEnd(true);
@@ -290,6 +252,7 @@ export class ManualVideoService {
       }
 
       console.log('tv player : returning to loop');
+      this._currentManualEndedHandler = null;
     };
 
     this._currentManualEndedHandler = onManualEnded;

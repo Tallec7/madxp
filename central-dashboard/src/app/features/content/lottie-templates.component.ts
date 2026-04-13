@@ -678,7 +678,16 @@ export class LottieTemplatesComponent implements OnInit, OnDestroy {
   // ── Render (browser-side) ───────────────────────────────────────
 
   async render(): Promise<void> {
-    if (!this.canRender || !this.sourceFile || !this.selectedTemplate) return;
+    if (!this.canRender || !this.selectedTemplate) return;
+
+    // Standalone templates: play the preview and notify user
+    if (this.isStandaloneTemplate) {
+      this.playStandalone();
+      this.notifications.success('Animation jouee ! L\'export video sera disponible prochainement.');
+      return;
+    }
+
+    if (!this.sourceFile) return;
 
     this.rendering = true;
     this.rendered = false;
