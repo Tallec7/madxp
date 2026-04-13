@@ -1,3 +1,9 @@
+## [3.164.1](https://github.com/Tallec7/neopro/compare/v3.164.0...v3.164.1) (2026-04-13)
+
+### Bug Fixes
+
+- **templates:** use Railway API origin for loading WebM assets ([804f51a](https://github.com/Tallec7/neopro/commit/804f51a0f82082a55b585b5a8b3887fb6516c648))
+
 # [3.164.0](https://github.com/Tallec7/neopro/compare/v3.163.4...v3.164.0) (2026-04-13)
 
 ### Features
