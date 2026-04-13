@@ -680,10 +680,9 @@ export class LottieTemplatesComponent implements OnInit, OnDestroy {
   async render(): Promise<void> {
     if (!this.canRender || !this.selectedTemplate) return;
 
-    // Standalone templates: play the preview and notify user
+    // Standalone templates: record via iframe canvas capture
     if (this.isStandaloneTemplate) {
-      this.playStandalone();
-      this.notifications.success('Animation jouee ! L\'export video sera disponible prochainement.');
+      this.renderStandalone();
       return;
     }
 
@@ -792,6 +791,79 @@ export class LottieTemplatesComponent implements OnInit, OnDestroy {
     if (iframe?.contentWindow) {
       iframe.contentWindow.postMessage(msg, '*');
     }
+  }
+
+  private renderStandalone(): void {
+    this.rendering = true;
+    this.rendered = false;
+    this.renderedVideo = null;
+    this.renderPhase = 'rendering';
+    this.renderPercent = 0;
+
+    // Listen for messages from iframe
+    const handler = (event: MessageEvent) => {
+      const data = event.data;
+      if (!data?.type) return;
+
+      if (data.type === 'recordProgress') {
+        this.renderPercent = data.progress;
+      }
+
+      if (data.type === 'recordBlob') {
+        window.removeEventListener('message', handler);
+
+        const blob = new Blob([data.buffer], { type: data.mimeType || 'video/webm' });
+
+        // Store blob URL for preview
+        this.revokeBlobUrl();
+        this.rawBlobUrl = URL.createObjectURL(blob);
+        this.renderedBlobUrl = this.sanitizer.bypassSecurityTrustUrl(this.rawBlobUrl);
+
+        // Upload
+        this.renderPhase = 'uploading';
+        this.renderPercent = 0;
+
+        const prenom = this.variableValues['prenom'] || 'PRENOM';
+        const nom = this.variableValues['nom'] || 'NOM';
+        const filename = `BUT_${prenom}_${nom}.webm`;
+        const file = new File([blob], filename, { type: blob.type });
+
+        const formData = new FormData();
+        formData.append('video', file);
+        if (this.selectedSiteId) {
+          formData.append('site_id', this.selectedSiteId);
+        }
+
+        const sub = this.api.uploadWithProgress<{ success: boolean; video: { id: string; title: string; url: string } }>(
+          '/videos',
+          formData,
+        ).subscribe({
+          next: (progress) => {
+            this.renderPercent = progress.progress;
+            if (progress.status === 'complete' && progress.response) {
+              const resp = progress.response as { success: boolean; video: { id: string; title: string; url: string } };
+              this.rendering = false;
+              this.rendered = true;
+              this.renderPhase = 'done';
+              this.renderedVideo = resp.video;
+              this.notifications.success('Video generee et uploadee !');
+            }
+          },
+          error: (err) => {
+            this.rendering = false;
+            this.renderPhase = 'idle';
+            const msg = err?.error?.details || err?.error?.error || 'Erreur lors de l\'upload';
+            this.notifications.error(msg);
+          },
+        });
+        this.subscriptions.push(sub);
+      }
+    };
+
+    window.addEventListener('message', handler);
+
+    // Tell iframe to start recording
+    this.postToIframe({ action: 'record', variables: this.variableValues });
   }
 
   // ── Helpers ───────────────────────────────────────────────────────

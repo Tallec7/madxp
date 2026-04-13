@@ -457,6 +457,166 @@
         }
       });
 
+        if (data.action === 'record') {
+          // Update variables
+          if (data.variables) {
+            const v = data.variables;
+            if (v.prenom) document.getElementById('prenom').textContent = v.prenom.toUpperCase();
+            if (v.nom) document.getElementById('nom').textContent = v.nom.toUpperCase();
+            if (v.club) {
+              document.getElementById('club-top').textContent = v.club.toUpperCase();
+              document.getElementById('club-bottom').textContent = v.club.toUpperCase();
+            }
+          }
+          recordAnimation();
+        }
+      });
+
+      // ── Canvas Recording ─────────────────────────────────────────
+      async function recordAnimation() {
+        const W = 1920, H = 1080, FPS = 25;
+        const canvas = document.createElement('canvas');
+        canvas.width = W; canvas.height = H;
+        const ctx = canvas.getContext('2d');
+
+        // Load logo image
+        const logoImg = document.querySelector('.club-logo');
+        const logoLoaded = logoImg && logoImg.complete && logoImg.naturalWidth > 0;
+
+        // Prepare text values
+        const prenom = document.getElementById('prenom').textContent || 'PRENOM';
+        const nom = document.getElementById('nom').textContent || 'NOM';
+        const clubTop = document.getElementById('club-top').textContent || 'NOM DU CLUB';
+        const clubBottom = document.getElementById('club-bottom').textContent || 'NOM DU CLUB';
+
+        // Load font for canvas
+        try { await document.fonts.load('700 130px Oswald'); } catch {}
+        try { await document.fonts.load('500 28px Oswald'); } catch {}
+
+        // Reset videos
+        videoA.currentTime = 0; videoB.currentTime = 0; videoC.currentTime = 0;
+
+        // Start MediaRecorder on canvas stream
+        const stream = canvas.captureStream(FPS);
+        const chunks = [];
+        const recorder = new MediaRecorder(stream, {
+          mimeType: 'video/webm;codecs=vp9',
+          videoBitsPerSecond: 8000000,
+        });
+        recorder.ondataavailable = (e) => { if (e.data.size) chunks.push(e.data); };
+
+        const recordingDone = new Promise((resolve) => {
+          recorder.onstop = () => {
+            const blob = new Blob(chunks, { type: 'video/webm' });
+            resolve(blob);
+          };
+        });
+
+        recorder.start();
+
+        // Notify parent of progress
+        function notifyProgress(pct) {
+          if (window.parent !== window) {
+            window.parent.postMessage({ type: 'recordProgress', progress: pct }, '*');
+          }
+        }
+
+        // Play all videos
+        await Promise.all([videoA.play(), videoB.play(), videoC.play()]);
+
+        const DURATION = 6;
+        const LOGO_HIDE_S = 1.6;
+        const TEXT_SHOW_S = 2.4;
+        const totalFrames = DURATION * FPS;
+
+        // Draw frames using requestAnimationFrame synced to video time
+        let frameCount = 0;
+        function drawFrame() {
+          const t = videoA.currentTime;
+
+          // Draw layer A (bottom - hexagons)
+          ctx.globalAlpha = 1;
+          ctx.drawImage(videoA, 0, 0, W, H);
+
+          // Draw layer C (golden bg, alpha composited)
+          ctx.drawImage(videoC, 0, 0, W, H);
+
+          // Draw layer B (transition wipe)
+          ctx.drawImage(videoB, 0, 0, W, H);
+
+          // Draw logo (visible before transition)
+          if (t < LOGO_HIDE_S && logoLoaded) {
+            const logoW = 500, logoH = logoImg.naturalHeight * (500 / logoImg.naturalWidth);
+            const logoX = (W - logoW) / 2, logoY = (H - logoH) / 2;
+            const logoAlpha = t < 0.6 ? Math.min(t / 0.6, 1) : (t > LOGO_HIDE_S - 0.4 ? Math.max(0, (LOGO_HIDE_S - t) / 0.4) : 1);
+            ctx.globalAlpha = logoAlpha;
+            ctx.drawImage(logoImg, logoX, logoY, logoW, logoH);
+            ctx.globalAlpha = 1;
+          }
+
+          // Draw text (visible after transition)
+          if (t >= TEXT_SHOW_S) {
+            const textAlpha = Math.min((t - TEXT_SHOW_S) / 0.3, 1);
+            ctx.globalAlpha = textAlpha;
+
+            // Club name top
+            ctx.font = '500 28px Oswald';
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+            ctx.textAlign = 'center';
+            ctx.letterSpacing = '8px';
+            ctx.fillText(clubTop, W / 2, 245);
+
+            // Prenom
+            ctx.font = 'italic 700 130px Oswald';
+            ctx.fillStyle = '#FFFFFF';
+            ctx.shadowColor = 'rgba(0,0,0,0.3)';
+            ctx.shadowBlur = 8;
+            ctx.shadowOffsetX = 2;
+            ctx.shadowOffsetY = 4;
+            ctx.fillText(prenom, W / 2, 490);
+
+            // Nom
+            ctx.fillText(nom, W / 2, 620);
+
+            // Reset shadow
+            ctx.shadowColor = 'transparent';
+            ctx.shadowBlur = 0;
+            ctx.shadowOffsetX = 0;
+            ctx.shadowOffsetY = 0;
+
+            // Club name bottom
+            ctx.font = '500 28px Oswald';
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+            ctx.fillText(clubBottom, W / 2, 890);
+
+            ctx.globalAlpha = 1;
+          }
+
+          frameCount++;
+          notifyProgress(Math.round((frameCount / totalFrames) * 100));
+
+          if (!videoA.ended && !videoA.paused) {
+            requestAnimationFrame(drawFrame);
+          } else {
+            recorder.stop();
+          }
+        }
+
+        requestAnimationFrame(drawFrame);
+
+        const blob = await recordingDone;
+        notifyProgress(100);
+
+        // Send blob back to parent
+        if (window.parent !== window) {
+          window.parent.postMessage({ type: 'recordComplete', blob }, '*', []);
+          // Can't transfer Blob via postMessage structured clone in all browsers
+          // So convert to ArrayBuffer
+          const arrayBuf = await blob.arrayBuffer();
+          window.parent.postMessage({ type: 'recordBlob', buffer: arrayBuf, mimeType: blob.type }, '*', [arrayBuf]);
+        }
+      }
+
       // If embedded in iframe, hide editor panel
       if (window.parent !== window) {
         document.body.classList.remove('edit-mode');
