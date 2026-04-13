@@ -1,3 +1,9 @@
+## [3.162.8](https://github.com/Tallec7/neopro/compare/v3.162.7...v3.162.8) (2026-04-13)
+
+### Bug Fixes
+
+- **templates:** allow Google Fonts in template CSP and fix render button label ([942d7b7](https://github.com/Tallec7/neopro/commit/942d7b72f412d36de95c2bb0fa3bd7402904e8b9))
+
 ## [3.162.7](https://github.com/Tallec7/neopro/compare/v3.162.6...v3.162.7) (2026-04-13)
 
 ### Bug Fixes
