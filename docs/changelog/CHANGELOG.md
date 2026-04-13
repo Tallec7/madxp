@@ -1,3 +1,9 @@
+## [3.163.4](https://github.com/Tallec7/neopro/compare/v3.163.3...v3.163.4) (2026-04-13)
+
+### Bug Fixes
+
+- **templates:** use popup window instead of iframe for video recording ([3cb5887](https://github.com/Tallec7/neopro/commit/3cb58873ffb475c24bdb1adca8c6ca52bc47e5bf))
+
 ## [3.163.3](https://github.com/Tallec7/neopro/compare/v3.163.2...v3.163.3) (2026-04-13)
 
 ### Bug Fixes
