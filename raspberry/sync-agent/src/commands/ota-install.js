@@ -212,6 +212,7 @@ async function extractAndInstall(packagePath, version, stepTracker) {
     if (await fs.pathExists(path.join(sourcePath, 'webapp'))) {
       await execAsync(`rm -rf ${rootDir}/webapp/*`);
       await execAsync(`cp -r ${path.join(sourcePath, 'webapp')}/* ${rootDir}/webapp/`);
+      await execAsync(`sudo chown -R pi:pi ${rootDir}/webapp`);
       logger.info('Webapp updated');
     }
 
