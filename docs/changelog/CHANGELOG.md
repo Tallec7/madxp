@@ -1,3 +1,10 @@
+## [3.162.2](https://github.com/Tallec7/neopro/compare/v3.162.1...v3.162.2) (2026-04-13)
+
+### Bug Fixes
+
+- **dashboard:** extend club video permissions to library and loop weights ([#445](https://github.com/Tallec7/neopro/issues/445)) ([2a9b128](https://github.com/Tallec7/neopro/commit/2a9b1281b458e9707bf1f43e48070e95fc7e2554))
+- **templates:** allow iframe embedding for template preview ([0a15956](https://github.com/Tallec7/neopro/commit/0a159566bd583d311a6cd8f25c825202085e7a9b))
+
 ## [3.162.1](https://github.com/Tallec7/neopro/compare/v3.162.0...v3.162.1) (2026-04-13)
 
 ### Bug Fixes
