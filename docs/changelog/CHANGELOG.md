@@ -1,3 +1,9 @@
+## [3.165.1](https://github.com/Tallec7/neopro/compare/v3.165.0...v3.165.1) (2026-04-13)
+
+### Bug Fixes
+
+- **deploy:** show error message in deployment history tab ([d2fc90d](https://github.com/Tallec7/neopro/commit/d2fc90d2e6c49ccd06509b6050aac110c085f336))
+
 # [3.165.0](https://github.com/Tallec7/neopro/compare/v3.164.3...v3.165.0) (2026-04-13)
 
 ### Features
