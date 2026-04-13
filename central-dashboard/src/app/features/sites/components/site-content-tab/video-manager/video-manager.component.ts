@@ -36,6 +36,7 @@ import { VideoVariantPanelComponent } from '../../../../content/video-variant-pa
         [deployStates]="videoDeployStates"
         [siteId]="siteId"
         [siteType]="siteType"
+        [isClubUser]="isClubUser"
         [configVideoRoles]="configVideoRoles"
         [configVideoLabels]="configVideoLabels"
         [pendingDeploymentVideoIds]="pendingDeploymentVideoIds"
@@ -217,6 +218,7 @@ export class VideoManagerComponent {
   @Input() configTargets: AddToTarget[] = []; // ADR-050 Phase 2: available config targets
   @Input() siteDisplays: DisplayConfig[] = [];
   @Input() isSuperAdmin = false;
+  @Input() isClubUser = false;
 
   @Output() videoUploaded = new EventEmitter<UploadedVideo>();
   @Output() allVideosUploaded = new EventEmitter<UploadedVideo[]>();

@@ -91,10 +91,16 @@ export class ManualVideoService {
     }
 
     // ETAPE 1: Capturer et afficher le freeze-frame IMMEDIATEMENT
-    this.doubleBufferService.captureAndShowFreezeFrame();
+    const freezeOk = this.doubleBufferService.captureAndShowFreezeFrame();
 
-    // ETAPE 2: Afficher le black overlay pour bloquer la boucle
-    this.doubleBufferService.showBlackOverlay();
+    // ETAPE 2: Afficher le black overlay UNIQUEMENT si le freeze-frame a échoué.
+    // En software decode (Pi 5 fallback), le chargement vidéo est plus lent et le
+    // black overlay (z-5) devenait visible entre le hideFreezeFrame et l'apparition
+    // du player manuel, causant un flash noir. Le freeze-frame (z-20) suffit à
+    // masquer la boucle pendant le chargement.
+    if (!freezeOk) {
+      this.doubleBufferService.showBlackOverlay();
+    }
 
     // ETAPE 3: Garder le player manuel INVISIBLE pendant le chargement
     targetPlayer.style.opacity = '0';
@@ -117,6 +123,7 @@ export class ManualVideoService {
             setTimeout(() => {
               targetPlayer.style.opacity = '1';
               this.doubleBufferService.hideFreezeFrame();
+              this.doubleBufferService.hideBlackOverlay();
 
               // Tracker (desactive pour les slaves)
               if (!this.callbacks?.getIsSlaveMode()) {

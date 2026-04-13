@@ -114,13 +114,17 @@
             >🔗 {{ sponsor.name }}</span
           >
           <span class="card-owner" *ngIf="!isClubUser">
-            <span
-              class="owner-label"
+            <button
+              class="owner-label owner-toggle"
               [class.neopro]="isNeoproVideo(video)"
               [class.club]="!isNeoproVideo(video)"
+              (click)="toggleOwner(video)"
+              title="Cliquer pour changer : {{
+                isNeoproVideo(video) ? 'NEOPRO → Club' : 'Club → NEOPRO'
+              }}"
             >
               {{ isNeoproVideo(video) ? 'NEOPRO' : 'Club' }}
-            </span>
+            </button>
           </span>
           <span class="owner-label neopro" *ngIf="isClubUser && isNeoproVideo(video)">🔒</span>
         </div>
@@ -207,7 +211,11 @@
               <button
                 class="weight-btn"
                 (click)="updateSponsorWeight(sid, (video.weight || 1) - 1)"
-                [disabled]="!canUseWeightedRotation || (video.weight || 1) <= 1"
+                [disabled]="
+                  !canUseWeightedRotation ||
+                  (video.weight || 1) <= 1 ||
+                  (isClubUser && isNeoproVideo(video))
+                "
               >
                 −
               </button>
@@ -215,7 +223,11 @@
               <button
                 class="weight-btn"
                 (click)="updateSponsorWeight(sid, (video.weight || 1) + 1)"
-                [disabled]="!canUseWeightedRotation || (video.weight || 1) >= 10"
+                [disabled]="
+                  !canUseWeightedRotation ||
+                  (video.weight || 1) >= 10 ||
+                  (isClubUser && isNeoproVideo(video))
+                "
               >
                 +
               </button>

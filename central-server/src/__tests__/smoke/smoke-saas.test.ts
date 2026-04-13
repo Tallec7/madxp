@@ -2035,7 +2035,7 @@ describe('SaaS config save flow', () => {
       hasVariantEmitter: /@Output\(\)\s*videoVariant\s*=\s*new EventEmitter/.test(content),
       hasGetter: /canUseSecondaryDisplay/.test(content)
         && /canAccess\('secondary_display'/.test(content),
-      buttonGuarded: /\*ngIf="canUseSecondaryDisplay/.test(content),
+      buttonGuarded: /\*ngIf="[\s\S]*?canUseSecondaryDisplay/.test(content),
       methodGuarded: /if\s*\(!this\.canUseSecondaryDisplay\)\s*return/.test(content),
     }).toEqual({
       importsGate: true,

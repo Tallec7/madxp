@@ -309,6 +309,12 @@ export class LoopManagerComponent implements OnInit, OnChanges {
     return null;
   }
 
+  toggleOwner(video: { owner?: string }): void {
+    if (this.isClubUser) return;
+    video.owner = this.isNeoproVideo(video) ? 'club' : 'neopro';
+    this.onChanged();
+  }
+
   /**
    * Une vidéo est considérée Neopro si owner === 'neopro' OU si owner est absent/undefined
    * (les vidéos ajoutées par un admin sans owner explicite sont Neopro par défaut).
