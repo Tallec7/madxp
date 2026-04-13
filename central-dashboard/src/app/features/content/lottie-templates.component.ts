@@ -870,8 +870,35 @@ export class LottieTemplatesComponent implements OnInit, OnDestroy {
 
     window.addEventListener('message', handler);
 
-    // Tell iframe to start recording
-    this.postToIframe({ action: 'record', variables: this.variableValues });
+    // Open template in popup window (same domain as API = no cross-origin restrictions)
+    // captureStream/MediaRecorder are blocked in cross-origin iframes
+    const templateUrl = `${environment.apiUrl}/template-assets/but-simple/index.html`;
+    const popup = window.open(templateUrl, 'but_simple_render', 'width=400,height=300,left=9999,top=9999');
+    if (!popup) {
+      window.removeEventListener('message', handler);
+      this.rendering = false;
+      this.renderPhase = 'idle';
+      this.notifications.error('Popup bloquee par le navigateur. Autorisez les popups pour ce site.');
+      return;
+    }
+
+    // Wait for popup to load then send record command
+    popup.addEventListener('load', () => {
+      setTimeout(() => {
+        popup.postMessage({ action: 'record', variables: this.variableValues }, '*');
+      }, 1000);
+    });
+
+    // Close popup when recording is done or on error
+    const origHandler = handler;
+    const wrappedHandler = (event: MessageEvent) => {
+      origHandler(event);
+      if (event.data?.type === 'recordBlob' || event.data?.type === 'recordError') {
+        try { popup.close(); } catch { /* popup may already be closed */ }
+      }
+    };
+    window.removeEventListener('message', handler);
+    window.addEventListener('message', wrappedHandler);
   }
 
   // ── Helpers ───────────────────────────────────────────────────────
