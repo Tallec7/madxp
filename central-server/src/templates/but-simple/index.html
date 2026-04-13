@@ -479,7 +479,10 @@
           // Update logo if provided (data URI or blob URL)
           if (data.logoSrc) {
             const logoEl = document.querySelector('.club-logo');
-            if (logoEl) logoEl.src = data.logoSrc;
+            if (logoEl) {
+              logoEl.src = data.logoSrc;
+              logoEl.style.display = '';
+            }
           }
         }
 
@@ -651,9 +654,12 @@
         }
       }
 
-      // If embedded in iframe, hide editor panel
+      // If embedded in iframe, hide editor panel and default logo
       if (window.parent !== window) {
         document.body.classList.remove('edit-mode');
+        // Hide default logo — will be shown when user uploads one via postMessage
+        const defaultLogo = document.querySelector('.club-logo');
+        if (defaultLogo) defaultLogo.style.display = 'none';
       }
     </script>
   </body>
