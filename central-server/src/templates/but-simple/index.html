@@ -478,7 +478,6 @@
             document.getElementById('input-club').value = v.club;
           }
         }
-      });
 
         if (data.action === 'record') {
           // Update variables
@@ -497,9 +496,12 @@
 
       // ── Canvas Recording ─────────────────────────────────────────
       async function recordAnimation() {
-        const W = 1920, H = 1080, FPS = 25;
+        const W = 1920,
+          H = 1080,
+          FPS = 25;
         const canvas = document.createElement('canvas');
-        canvas.width = W; canvas.height = H;
+        canvas.width = W;
+        canvas.height = H;
         const ctx = canvas.getContext('2d');
 
         // Load logo image
@@ -513,11 +515,17 @@
         const clubBottom = document.getElementById('club-bottom').textContent || 'NOM DU CLUB';
 
         // Load font for canvas
-        try { await document.fonts.load('700 130px Oswald'); } catch {}
-        try { await document.fonts.load('500 28px Oswald'); } catch {}
+        try {
+          await document.fonts.load('700 130px Oswald');
+        } catch {}
+        try {
+          await document.fonts.load('500 28px Oswald');
+        } catch {}
 
         // Reset videos
-        videoA.currentTime = 0; videoB.currentTime = 0; videoC.currentTime = 0;
+        videoA.currentTime = 0;
+        videoB.currentTime = 0;
+        videoC.currentTime = 0;
 
         // Start MediaRecorder on canvas stream
         const stream = canvas.captureStream(FPS);
@@ -526,7 +534,9 @@
           mimeType: 'video/webm;codecs=vp9',
           videoBitsPerSecond: 8000000,
         });
-        recorder.ondataavailable = (e) => { if (e.data.size) chunks.push(e.data); };
+        recorder.ondataavailable = (e) => {
+          if (e.data.size) chunks.push(e.data);
+        };
 
         const recordingDone = new Promise((resolve) => {
           recorder.onstop = () => {
@@ -569,9 +579,16 @@
 
           // Draw logo (visible before transition)
           if (t < LOGO_HIDE_S && logoLoaded) {
-            const logoW = 500, logoH = logoImg.naturalHeight * (500 / logoImg.naturalWidth);
-            const logoX = (W - logoW) / 2, logoY = (H - logoH) / 2;
-            const logoAlpha = t < 0.6 ? Math.min(t / 0.6, 1) : (t > LOGO_HIDE_S - 0.4 ? Math.max(0, (LOGO_HIDE_S - t) / 0.4) : 1);
+            const logoW = 500,
+              logoH = logoImg.naturalHeight * (500 / logoImg.naturalWidth);
+            const logoX = (W - logoW) / 2,
+              logoY = (H - logoH) / 2;
+            const logoAlpha =
+              t < 0.6
+                ? Math.min(t / 0.6, 1)
+                : t > LOGO_HIDE_S - 0.4
+                  ? Math.max(0, (LOGO_HIDE_S - t) / 0.4)
+                  : 1;
             ctx.globalAlpha = logoAlpha;
             ctx.drawImage(logoImg, logoX, logoY, logoW, logoH);
             ctx.globalAlpha = 1;
@@ -636,7 +653,11 @@
           // Can't transfer Blob via postMessage structured clone in all browsers
           // So convert to ArrayBuffer
           const arrayBuf = await blob.arrayBuffer();
-          window.parent.postMessage({ type: 'recordBlob', buffer: arrayBuf, mimeType: blob.type }, '*', [arrayBuf]);
+          window.parent.postMessage(
+            { type: 'recordBlob', buffer: arrayBuf, mimeType: blob.type },
+            '*',
+            [arrayBuf],
+          );
         }
       }
 
