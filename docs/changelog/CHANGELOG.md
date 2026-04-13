@@ -1,3 +1,9 @@
+## [3.162.9](https://github.com/Tallec7/neopro/compare/v3.162.8...v3.162.9) (2026-04-13)
+
+### Bug Fixes
+
+- **templates:** fix Google Fonts CSP and standalone render button ([5d95a93](https://github.com/Tallec7/neopro/commit/5d95a931ccea8034a6a5442bc9929b410bc7362d))
+
 ## [3.162.8](https://github.com/Tallec7/neopro/compare/v3.162.7...v3.162.8) (2026-04-13)
 
 ### Bug Fixes
