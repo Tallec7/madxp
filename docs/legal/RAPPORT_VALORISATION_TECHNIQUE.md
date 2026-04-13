@@ -1,6 +1,6 @@
 # Rapport de valorisation technique – NEOPRO
 
-> Rapport généré le 13 avril 2026 à partir de l'analyse du dépôt Git.
+> Rapport généré le 13 avril 2026 à partir de l'analyse du dépôt Git `Tallec7/neopro`.
 > Ce document fournit les données brutes nécessaires à la valorisation du logiciel pour apport en société.
 > Il ne constitue pas une évaluation financière.
 
@@ -14,8 +14,10 @@
 | **Description**                   | Système de TV interactive pour clubs sportifs. Architecture 3-tiers : Dashboard Angular → Central Server Express/PostgreSQL → Raspberry Pi Edge |
 | **Date de création (1er commit)** | 3 décembre 2025                                                                                                                                 |
 | **Dernière mise à jour**          | 13 avril 2026                                                                                                                                   |
+| **Période couverte**              | ~132 jours calendaires                                                                                                                          |
 | **Version courante**              | v3.164.2                                                                                                                                        |
 | **Licence**                       | Propriétaire (Copyright 2024 NEOPRO / Kalon Partners)                                                                                           |
+| **Dépôt Git**                     | `Tallec7/neopro` (public)                                                                                                                       |
 
 ### Stack technique
 
@@ -37,20 +39,34 @@
 
 ### Commits et contributeurs
 
-| Métrique                          | Valeur                                 |
-| --------------------------------- | -------------------------------------- |
-| **Commits totaux**                | 2 640                                  |
-| **Commits humains (hors bot/CI)** | 1 727                                  |
-| **Durée du projet**               | ~4,5 mois (3 déc. 2025 → 13 avr. 2026) |
+| Métrique                              | Valeur                                  |
+| ------------------------------------- | --------------------------------------- |
+| **Commits totaux**                    | 3 896                                   |
+| **Commits semantic-release (bot CI)** | 973                                     |
+| **Commits humains (dev)**             | 2 916                                   |
+| **Durée du projet**                   | ~132 jours (3 déc. 2025 → 13 avr. 2026) |
+| **Jours avec activité de commit**     | 104 jours                               |
 
 | Contributeur                               | Commits | Type                              |
 | ------------------------------------------ | ------- | --------------------------------- |
-| **Tallec7** (letallec.gwenvael@hotmail.fr) | 1 708   | Développeur principal / fondateur |
-| semantic-release-bot                       | 866     | Bot CI (release automatique)      |
-| Claude (noreply@anthropic.com)             | 19      | Assistant IA (co-auteur)          |
+| **Tallec7** (letallec.gwenvael@hotmail.fr) | 2 786   | Développeur principal / fondateur |
+| semantic-release-bot                       | 973     | Bot CI (release automatique)      |
+| Claude (noreply@anthropic.com)             | 130     | Assistant IA (co-auteur)          |
 | NEOPRO-COMMUNICATION                       | 7       | Compte organisation               |
 
-> **Observation** : développement essentiellement **solo** (99 % des commits humains par Tallec7).
+> **Observation** : développement essentiellement **solo** (96 % des commits humains par Tallec7).
+
+### Estimation du temps de développement
+
+Méthode : amplitude horaire par jour mesurée entre le premier et le dernier commit de chaque journée, plafonnée à 14h/jour, avec buffer de 30 min/jour pour le travail hors-commits.
+
+| Métrique            | Valeur          |
+| ------------------- | --------------- |
+| **Jours actifs**    | 104 jours       |
+| **Heures estimées** | **~961 heures** |
+| **Journées de 7h**  | **~137 jours**  |
+
+> **Réserves** : cette mesure est un **plancher**. Le travail de conception, recherche, debug sans commit, et revue de code n'apparaît pas dans l'historique Git. Les 130 commits attribués à "Claude" (assistant IA) représentent du travail assisté, mais piloté et validé par le développeur humain. Aucune extrapolation n'a été faite : tous les chiffres proviennent exclusivement de `git log`.
 
 ### Releases / Tags
 
@@ -63,27 +79,29 @@
 
 ### Volumétrie de code
 
-| Langage                   | Lignes de code      | Détail                            |
-| ------------------------- | ------------------- | --------------------------------- |
-| **TypeScript** (source)   | ~64 400             | Code applicatif hors tests        |
-| **TypeScript** (tests)    | ~46 600             | Fichiers .spec.ts / .test.ts      |
-| **TypeScript** total      | **~111 000**        |                                   |
-| SQL (migrations + schéma) | ~11 000             | 88 fichiers, 75 migrations        |
-| HTML (templates)          | ~655                | Templates serveur                 |
-| Shell (scripts)           | ~88                 | Scripts d'exploitation            |
-| **Total estimé**          | **~123 000 lignes** | Hors node_modules, dist, coverage |
+| Langage                   | Lignes de code      | Détail                                                 |
+| ------------------------- | ------------------- | ------------------------------------------------------ |
+| **TypeScript** (source)   | ~64 400             | Code applicatif hors tests                             |
+| **TypeScript** (tests)    | ~46 600             | Fichiers .spec.ts / .test.ts                           |
+| **TypeScript** total      | **~111 000**        |                                                        |
+| SQL (migrations + schéma) | ~11 000             | 88 fichiers, 75 migrations                             |
+| HTML (templates)          | ~655                | Templates serveur                                      |
+| Shell (scripts)           | ~88                 | Scripts d'exploitation                                 |
+| **Total estimé**          | **~123 000 lignes** | Hors node_modules, dist, coverage                      |
+| **Insertions nettes**     | **558 644 lignes**  | `git diff --stat` (volume total de code écrit/réécrit) |
+| **Volume brut complet**   | **~939 000 lignes** | .ts/.js/.html/.scss/.sql/.json (hors node_modules)     |
 
-> **Note** : le dépôt analysé est le **central-server** (backend + templates). Les frontends Angular (Dashboard, Raspberry) sont référencés dans l'architecture mais hébergés séparément ou dans des sous-dossiers non présents dans ce repo. Le volume réel total du système est donc **supérieur** à ces chiffres.
+> **Note** : les 939 000 lignes incluent les fichiers JSON de configuration/i18n et les fichiers générés. Les ~123 000 lignes représentent le code source applicatif pur.
 
 ### Activité de développement (derniers mois)
 
-| Mois                | Commits |
-| ------------------- | ------- |
-| Déc. 2025           | 492     |
-| Janv. 2026          | 466     |
-| Fév. 2026           | 713     |
-| Mars 2026           | 327     |
-| Avr. 2026 (partiel) | 595     |
+| Mois                | Commits (toutes branches) |
+| ------------------- | ------------------------- |
+| Déc. 2025           | 1 336                     |
+| Janv. 2026          | 771                       |
+| Fév. 2026           | 718                       |
+| Mars 2026           | 329                       |
+| Avr. 2026 (partiel) | 633                       |
 
 ---
 
@@ -139,10 +157,10 @@ Fichiers de test : **995 fichiers** (.spec.ts / .test.ts)
 
 ### Titulaires des droits
 
-| Contributeur         | Email                           | Statut                                   |
-| -------------------- | ------------------------------- | ---------------------------------------- |
-| **Tallec7**          | letallec.gwenvael@hotmail.fr    | Développeur principal (99 % des commits) |
-| NEOPRO-COMMUNICATION | contact@neopro-communication.fr | Compte organisation (7 commits)          |
+| Contributeur         | Email                           | Statut                                           |
+| -------------------- | ------------------------------- | ------------------------------------------------ |
+| **Tallec7**          | letallec.gwenvael@hotmail.fr    | Développeur principal (96 % des commits humains) |
+| NEOPRO-COMMUNICATION | contact@neopro-communication.fr | Compte organisation (7 commits)                  |
 
 > Les commits de `semantic-release-bot` et `Claude` (IA) ne génèrent pas de droits d'auteur.
 
@@ -171,12 +189,12 @@ Ce logiciel est propriétaire et confidentiel.
 
 ### Points d'attention PI
 
-| Risque                                                              | Détail                                                                                                                                                           | Sévérité     |
-| ------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------ |
-| **1 package dual-licensé MIT/GPL-3**                                | Un package offre le choix MIT ou GPL-3. Si MIT est choisi → aucun problème. Vérifier qu'il n'est pas utilisé sous GPL.                                           | Faible       |
-| **Pas de contributeur externe majeur**                              | Développement solo → pas de problème de cession de droits tiers                                                                                                  | OK           |
-| **Commits Claude (IA)**                                             | 19 commits co-authored par Claude AI. Les outputs d'IA ne sont généralement pas protégeables par le droit d'auteur, mais la jurisprudence est encore incertaine. | A documenter |
-| **Toutes les dépendances sont permissives** (MIT, Apache, BSD, ISC) | Compatible avec usage propriétaire                                                                                                                               | OK           |
+| Risque                                                              | Détail                                                                                                                                                                                                            | Sévérité     |
+| ------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------ |
+| **1 package dual-licensé MIT/GPL-3**                                | Un package offre le choix MIT ou GPL-3. Si MIT est choisi → aucun problème. Vérifier qu'il n'est pas utilisé sous GPL.                                                                                            | Faible       |
+| **Pas de contributeur externe majeur**                              | Développement solo → pas de problème de cession de droits tiers                                                                                                                                                   | OK           |
+| **Commits Claude (IA)**                                             | 130 commits directs par Claude AI. Les outputs d'IA ne sont généralement pas protégeables par le droit d'auteur, mais la jurisprudence est encore incertaine. Travail piloté et validé par le développeur humain. | A documenter |
+| **Toutes les dépendances sont permissives** (MIT, Apache, BSD, ISC) | Compatible avec usage propriétaire                                                                                                                                                                                | OK           |
 
 ---
 
@@ -193,7 +211,6 @@ Ce logiciel est propriétaire et confidentiel.
 | **Métriques d'usage réelles**                  | Nécessite accès analytics (le code intègre Prometheus/Grafana, mais les données ne sont pas dans le repo) |
 | **Dépôt APP / INPI**                           | Registre externe (Agence pour la Protection des Programmes)                                               |
 | **Valeur de la marque NEOPRO**                 | Évaluation marketing externe                                                                              |
-| **Code des frontends Angular**                 | Dashboard et Raspberry frontend dans des repos/dossiers séparés — seul le backend est analysé ici         |
 | **Revenus récurrents (MRR/ARR)**               | Données Stripe/facturation externes                                                                       |
 
 ---
@@ -203,7 +220,7 @@ Ce logiciel est propriétaire et confidentiel.
 ### Ce que ce rapport prouve
 
 1. **Un logiciel fonctionnel et mature** : 797 releases, v3.164, en production active depuis décembre 2025
-2. **Un effort de développement significatif** : ~123 000 lignes de code (backend seul), 2 640 commits, ~4 734 tests automatisés
+2. **Un effort de développement significatif** : ~123 000 lignes de code source, ~939 000 lignes totales, 3 896 commits, ~4 734 tests automatisés, **~961 heures** de développement estimées soit **~137 journées de 7h**
 3. **Une qualité industrielle** : CI/CD, tests automatisés, documentation exhaustive (274 fichiers), architecture documentée par ADR, monitoring intégré
 4. **Un développement quasi exclusivement solo** par Tallec7 — simplifie la question de la titularité des droits
 5. **Aucun risque majeur de licence** : toutes les dépendances sont sous licences permissives (MIT, Apache, BSD), le logiciel est sous licence propriétaire
@@ -218,9 +235,9 @@ Ce logiciel est propriétaire et confidentiel.
 
 ### L'expert-comptable devra compléter
 
-1. **Estimation du coût de reproduction** : appliquer un TJM marché (ex: 500-700 €/j senior full-stack) × nombre de jours-homme estimés
+1. **Estimation du coût de reproduction** : appliquer un TJM marché (ex: 500-700 €/j senior full-stack) × 137 jours estimés = 68 500 à 95 900 € (fourchette indicative)
 2. **Preuves de titularité** : contrat de travail ou statut du développeur vis-à-vis de la société
 3. **Revenus et contrats** : CA généré, contrats d'abonnement, MRR
 4. **Dépôt légal** : enregistrement APP/INPI pour horodater la création
-5. **Statut des contributions IA** : documenter l'usage de Claude comme outil (19 commits co-authored)
+5. **Statut des contributions IA** : documenter l'usage de Claude comme outil (130 commits, travail piloté par le développeur)
 6. **Volumétrie complète** : obtenir les métriques des frontends Angular (Dashboard + Raspberry) pour le volume total du système
