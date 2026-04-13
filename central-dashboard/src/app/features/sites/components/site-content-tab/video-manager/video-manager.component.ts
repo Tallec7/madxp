@@ -37,6 +37,7 @@ import { VideoVariantPanelComponent } from '../../../../content/video-variant-pa
         [siteId]="siteId"
         [siteType]="siteType"
         [configVideoRoles]="configVideoRoles"
+        [configVideoLabels]="configVideoLabels"
         [pendingDeploymentVideoIds]="pendingDeploymentVideoIds"
         [secondaryVariantVideoIds]="secondaryVariantVideoIds"
         [subscriptionPlan]="subscriptionPlan"
@@ -206,6 +207,7 @@ export class VideoManagerComponent {
   @Input() localStorage: LocalStorage | null = null;
   @Input() videoDeployStates: Map<string, VideoDeployState> = new Map();
   @Input() configVideoRoles: Map<string, Set<string>> = new Map();
+  @Input() configVideoLabels: Map<string, string[]> = new Map();
   @Input() pendingDeploymentVideoIds: Set<string> = new Set();
   @Input() secondaryVariantVideoIds: Set<string> = new Set();
   @Input() videoVariantInfo: Map<string, { count: number; types: string[] }> = new Map();

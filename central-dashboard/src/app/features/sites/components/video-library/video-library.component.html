@@ -82,7 +82,14 @@
     </select>
     <select [(ngModel)]="categoryFilter" (ngModelChange)="applyFilters()" class="filter-select">
       <option value="all">Toutes catégories</option>
-      <option *ngFor="let cat of categories" [value]="cat">{{ cat }}</option>
+      <optgroup label="Utilisée dans la config" *ngIf="configLabelOptions.length > 0">
+        <option *ngFor="let label of configLabelOptions" [value]="'config:' + label">
+          {{ label }}
+        </option>
+      </optgroup>
+      <optgroup label="Catégorie d'upload" *ngIf="categories.length > 0">
+        <option *ngFor="let cat of categories" [value]="cat">{{ cat }}</option>
+      </optgroup>
     </select>
     <button
       class="btn-selection"
@@ -191,10 +198,7 @@
             >
               👁️
             </button>
-            <div
-              class="add-to-wrapper"
-              *ngIf="video.contentStatus === 'available' && configTargets.length > 0"
-            >
+            <div class="add-to-wrapper" *ngIf="configTargets.length > 0">
               <button
                 class="action-btn add-to-trigger"
                 (click)="toggleAddToDropdown(video, $event)"
@@ -452,10 +456,7 @@
                 >
                   👁️
                 </button>
-                <div
-                  class="add-to-wrapper"
-                  *ngIf="video.contentStatus === 'available' && configTargets.length > 0"
-                >
+                <div class="add-to-wrapper" *ngIf="configTargets.length > 0">
                   <button
                     class="action-btn add-to-trigger"
                     (click)="toggleAddToDropdown(video, $event)"
@@ -649,15 +650,29 @@
       <div class="detail-section" *ngIf="detailVideo.configRoles?.size">
         <div class="detail-label">Utilisée dans</div>
         <div class="detail-roles">
-          <span class="badge-cfg badge-boucle" *ngIf="detailVideo.configRoles?.has('boucle')"
-            >Boucle par défaut</span
+          <ng-container
+            *ngIf="configVideoLabels.get(detailVideo.path) as labels; else genericRoles"
           >
-          <span class="badge-cfg badge-match" *ngIf="detailVideo.configRoles?.has('match')"
-            >Phase de match</span
-          >
-          <span class="badge-cfg badge-action" *ngIf="detailVideo.configRoles?.has('action')"
-            >Catégorie action</span
-          >
+            <span
+              *ngFor="let label of labels"
+              class="badge-cfg"
+              [class.badge-boucle]="label.startsWith('Boucle')"
+              [class.badge-match]="label.startsWith('Phase')"
+              [class.badge-action]="label.startsWith('Catégorie')"
+              >{{ label }}</span
+            >
+          </ng-container>
+          <ng-template #genericRoles>
+            <span class="badge-cfg badge-boucle" *ngIf="detailVideo.configRoles?.has('boucle')"
+              >Boucle par défaut</span
+            >
+            <span class="badge-cfg badge-match" *ngIf="detailVideo.configRoles?.has('match')"
+              >Phase de match</span
+            >
+            <span class="badge-cfg badge-action" *ngIf="detailVideo.configRoles?.has('action')"
+              >Catégorie action</span
+            >
+          </ng-template>
         </div>
       </div>
 
@@ -709,10 +724,7 @@
 
       <!-- Actions -->
       <div class="detail-section detail-actions-section">
-        <div
-          class="add-to-wrapper"
-          *ngIf="detailVideo.contentStatus === 'available' && configTargets.length > 0"
-        >
+        <div class="add-to-wrapper" *ngIf="configTargets.length > 0">
           <button
             class="btn btn-primary btn-sm detail-action-btn"
             (click)="toggleAddToDropdown(detailVideo, $event)"

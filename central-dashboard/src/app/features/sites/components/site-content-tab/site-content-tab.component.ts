@@ -85,6 +85,7 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
   allKnownVideoPaths: Set<string> = new Set();
   videoDurations: Map<string, number> = new Map();
   configVideoRoles: Map<string, Set<string>> = new Map();
+  configVideoLabels: Map<string, string[]> = new Map();
 
   // Secondary display
   secondaryVariantVideoIds: Set<string> = new Set();
@@ -904,6 +905,7 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
 
   private rebuildConfigVideoRoles(): void {
     const roles = new Map<string, Set<string>>();
+    const labels = new Map<string, string[]>();
 
     // Build filename → cloud URL map so we can cross-reference local config paths with cloud URLs
     // This fixes the mismatch where configs contain local paths but the library uses cloud URLs
@@ -916,9 +918,11 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
       filenameToCloudUrl.set(fnLower.replace(/_/g, ' '), cloud.url);
     }
 
-    const addRole = (path: string, role: string): void => {
+    const addRole = (path: string, role: string, label: string): void => {
       if (!roles.has(path)) roles.set(path, new Set());
       roles.get(path)!.add(role);
+      if (!labels.has(path)) labels.set(path, []);
+      if (!labels.get(path)!.includes(label)) labels.get(path)!.push(label);
       // Also register under the cloud URL if the config path is a local path
       const filename = path.split('/').pop()?.toLowerCase();
       if (filename) {
@@ -926,29 +930,40 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
         if (cloudUrl && cloudUrl !== path) {
           if (!roles.has(cloudUrl)) roles.set(cloudUrl, new Set());
           roles.get(cloudUrl)!.add(role);
+          if (!labels.has(cloudUrl)) labels.set(cloudUrl, []);
+          if (!labels.get(cloudUrl)!.includes(label)) labels.get(cloudUrl)!.push(label);
         }
       }
     };
 
     if (this.config.sponsors) {
-      for (const sponsor of this.config.sponsors) { if (sponsor.path) addRole(sponsor.path, 'boucle'); }
+      for (const sponsor of this.config.sponsors) {
+        if (sponsor.path) addRole(sponsor.path, 'boucle', `Boucle : ${sponsor.name || sponsor.path.split('/').pop() || sponsor.path}`);
+      }
     }
     if (this.config.categories) {
       for (const cat of this.config.categories) {
-        if (cat.videos) for (const video of cat.videos) { if (video.path) addRole(video.path, 'action'); }
+        if (cat.videos) for (const video of cat.videos) {
+          if (video.path) addRole(video.path, 'action', `Catégorie : ${cat.name}`);
+        }
         if (cat.subCategories) {
           for (const subcat of cat.subCategories) {
-            if (subcat.videos) for (const video of subcat.videos) { if (video.path) addRole(video.path, 'action'); }
+            if (subcat.videos) for (const video of subcat.videos) {
+              if (video.path) addRole(video.path, 'action', `Catégorie : ${cat.name} › ${subcat.name}`);
+            }
           }
         }
       }
     }
     if (this.config.timeCategories) {
       for (const tc of this.config.timeCategories) {
-        if (tc.loopVideos) for (const video of tc.loopVideos) { if (video.path) addRole(video.path, 'match'); }
+        if (tc.loopVideos) for (const video of tc.loopVideos) {
+          if (video.path) addRole(video.path, 'match', `Phase : ${tc.name}`);
+        }
       }
     }
     this.configVideoRoles = roles;
+    this.configVideoLabels = labels;
   }
 
   private detectOrphanedVideoPaths(): void {

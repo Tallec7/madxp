@@ -76,6 +76,7 @@ export class VideoLibraryComponent implements OnChanges {
   @Input() deployStates: Map<string, VideoDeployState> = new Map();
   @Input() siteId: string | null = null; // Current site ID for showing "for this site" badge
   @Input() configVideoRoles: Map<string, Set<string>> = new Map(); // path → Set<'boucle'|'match'|'action'>
+  @Input() configVideoLabels: Map<string, string[]> = new Map(); // path → named labels (e.g. 'Boucle : Accueil')
   @Input() pendingDeploymentVideoIds: Set<string> = new Set(); // IDs of videos with pending deployments
   @Input() secondaryVariantVideoIds: Set<string> = new Set(); // IDs of videos with secondary display variants
   @Input() videoVariantInfo: Map<string, { count: number; types: string[] }> = new Map(); // Phase 5H: variant counts per video
@@ -119,6 +120,7 @@ export class VideoLibraryComponent implements OnChanges {
   filteredVideos: VideoItem[] = [];
   allVideos: VideoItem[] = [];
   categories: string[] = [];
+  configLabelOptions: string[] = []; // Distinct config labels for filter dropdown
   // Stats computed on filteredVideos (scoped to what's displayed)
   filteredTotalSize: number = 0;
   filteredTotalDuration: number = 0;
@@ -178,7 +180,7 @@ export class VideoLibraryComponent implements OnChanges {
   detailVideo: VideoItem | null = null;
 
   ngOnChanges(changes: SimpleChanges): void {
-    if (changes['videos'] || changes['cloudVideos'] || changes['secondaryVariantVideoIds'] || changes['configVideoRoles']) {
+    if (changes['videos'] || changes['cloudVideos'] || changes['secondaryVariantVideoIds'] || changes['configVideoRoles'] || changes['configVideoLabels']) {
       this.processVideos();
       this.applyFilters();
     }
@@ -316,6 +318,13 @@ export class VideoLibraryComponent implements OnChanges {
     });
     this.categories = Array.from(cats).sort();
 
+    // Build config label filter options from configVideoLabels
+    const labelSet = new Set<string>();
+    for (const labels of this.configVideoLabels.values()) {
+      for (const label of labels) labelSet.add(label);
+    }
+    this.configLabelOptions = Array.from(labelSet).sort();
+
     // Stats are computed in applyFilters() on the filtered set
   }
 
@@ -435,7 +444,15 @@ export class VideoLibraryComponent implements OnChanges {
     }
 
     if (this.categoryFilter !== 'all') {
-      filtered = filtered.filter(v => v.category === this.categoryFilter);
+      if (this.categoryFilter.startsWith('config:')) {
+        const targetLabel = this.categoryFilter.substring(7);
+        filtered = filtered.filter(v => {
+          const labels = this.configVideoLabels.get(v.path);
+          return labels?.includes(targetLabel);
+        });
+      } else {
+        filtered = filtered.filter(v => v.category === this.categoryFilter);
+      }
     }
 
     // Apply sorting
