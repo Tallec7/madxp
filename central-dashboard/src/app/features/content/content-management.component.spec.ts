@@ -50,8 +50,6 @@ describe('ContentManagementComponent', () => {
       target_name: 'Site 1',
       status: 'completed' as const,
       progress: 100,
-      deployed_count: 1,
-      total_count: 1,
       created_at: new Date(),
     },
   ];

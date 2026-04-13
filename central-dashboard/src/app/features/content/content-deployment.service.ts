@@ -46,7 +46,6 @@ export class ContentDeploymentService {
       const deployment = deployments.find(d => d.id === data.deploymentId);
       if (deployment) {
         deployment.progress = data.progress;
-        deployment.deployed_count = data.deployedCount;
         deployment.status = data.status;
       }
     });

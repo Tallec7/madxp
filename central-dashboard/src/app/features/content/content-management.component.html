@@ -277,15 +277,22 @@
             ></div>
           </div>
           <div class="progress-label">
-            <span>{{ deployment.deployed_count }} / {{ deployment.total_count }} sites</span>
+            <span>{{ deployment.target_name || 'Site inconnu' }}</span>
             <span>{{ deployment.progress }}%</span>
           </div>
         </div>
 
+        <div class="deployment-error" *ngIf="deployment.error && deployment.status === 'failed'">
+          ⚠️ {{ deployment.error }}
+        </div>
+
         <div class="deployment-footer">
           <span class="deployment-date">{{ formatDate(deployment.created_at) }}</span>
-          <span *ngIf="deployment.completed_at" class="deployment-completed">
-            Terminé: {{ formatDate(deployment.completed_at) }}
+          <span *ngIf="deployment.deployed_by_name" class="deployment-by"
+            >par {{ deployment.deployed_by_name }}</span
+          >
+          <span *ngIf="deployment.deployed_at" class="deployment-completed">
+            Terminé: {{ formatDate(deployment.deployed_at) }}
           </span>
         </div>
       </div>
