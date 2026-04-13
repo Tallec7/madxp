@@ -5,7 +5,7 @@
   "main": "dist/server.js",
   "scripts": {
     "dev": "nodemon --exec ts-node src/server.ts",
-    "build": "tsc && cp -r src/docs dist/",
+    "build": "tsc && cp -r src/docs dist/ && cp -r src/templates dist/",
     "start": "node --max-old-space-size=256 --expose-gc dist/server.js",
     "db:migrate": "ts-node src/scripts/migrate.ts",
     "db:seed": "ts-node src/scripts/seed.ts",
