@@ -1,3 +1,9 @@
+## [3.165.3](https://github.com/Tallec7/neopro/compare/v3.165.2...v3.165.3) (2026-04-13)
+
+### Bug Fixes
+
+- **ota:** chown webapp after cp during OTA to prevent EACCES ([845a157](https://github.com/Tallec7/neopro/commit/845a157ae2c19662c91ef8be47a8c475761906e8))
+
 ## [3.165.2](https://github.com/Tallec7/neopro/compare/v3.165.1...v3.165.2) (2026-04-13)
 
 ### Bug Fixes
