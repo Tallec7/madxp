@@ -1,3 +1,10 @@
+## [3.164.2](https://github.com/Tallec7/neopro/compare/v3.164.1...v3.164.2) (2026-04-13)
+
+### Bug Fixes
+
+- **legal:** replace MIT license with PROPRIETARY for société apport ([8444e69](https://github.com/Tallec7/neopro/commit/8444e690dc8ddf2895a6c7cd207168f46e36174e))
+- **templates:** add Railway to dashboard media-src CSP for WebM loading ([a2bbfe9](https://github.com/Tallec7/neopro/commit/a2bbfe9de9132b02834879b74fd842a6fc6daff2))
+
 ## [3.164.1](https://github.com/Tallec7/neopro/compare/v3.164.0...v3.164.1) (2026-04-13)
 
 ### Bug Fixes
