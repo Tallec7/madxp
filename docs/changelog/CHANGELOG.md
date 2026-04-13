@@ -1,3 +1,9 @@
+# [3.162.0](https://github.com/Tallec7/neopro/compare/v3.161.3...v3.162.0) (2026-04-13)
+
+### Features
+
+- **templates:** add BUT Simple standalone video template ([0437ce1](https://github.com/Tallec7/neopro/commit/0437ce1cdd9162e7189bd69cfa2be4df67ab94b3))
+
 ## [3.161.3](https://github.com/Tallec7/neopro/compare/v3.161.2...v3.161.3) (2026-04-13)
 
 ### Bug Fixes
