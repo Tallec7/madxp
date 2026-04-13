@@ -1,3 +1,9 @@
+## [3.161.1](https://github.com/Tallec7/neopro/compare/v3.161.0...v3.161.1) (2026-04-13)
+
+### Bug Fixes
+
+- **dashboard:** resolve cloud URL to local Pi path when adding video to config ([e67caa9](https://github.com/Tallec7/neopro/commit/e67caa9d781a268dc3dcb833908f1c6341339848))
+
 # [3.161.0](https://github.com/Tallec7/neopro/compare/v3.160.1...v3.161.0) (2026-04-13)
 
 ### Features
