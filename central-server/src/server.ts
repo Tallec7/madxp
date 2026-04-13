@@ -127,12 +127,14 @@ app.use(helmet({
       objectSrc: ["'none'"],
       mediaSrc: ["'self'"],
       frameSrc: ["'none'"],
+      frameAncestors: ["'self'", 'https://neopro-admin.kalonpartners.bzh'],
     },
   },
   // X-XSS-Protection header (legacy but still useful for older browsers)
   xssFilter: true,
-  // Prevent clickjacking
-  frameguard: { action: 'deny' },
+  // Clickjacking prevention via CSP frame-ancestors (not X-Frame-Options)
+  // Disabled frameguard to allow iframe embedding for template preview from dashboard
+  frameguard: false,
   // Prevent MIME type sniffing
   noSniff: true,
   // HSTS - force HTTPS (only in production)

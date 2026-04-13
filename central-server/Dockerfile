@@ -91,6 +91,9 @@ COPY --from=prod-deps /app/node_modules ./node_modules
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/package.json ./
 
+# Copy template assets (WebM, HTML, images for standalone templates)
+COPY --from=builder /app/src/templates ./dist/templates
+
 # Copy SAFe docs (source of truth for SAFe dashboard parser)
 COPY --from=builder /app/docs-safe/ ./docs/safe/
 COPY --from=builder /app/docs-proposals/ ./docs/proposals/
