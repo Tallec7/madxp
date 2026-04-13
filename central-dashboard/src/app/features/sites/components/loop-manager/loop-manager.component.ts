@@ -117,6 +117,8 @@ export class LoopManagerComponent implements OnInit, OnChanges {
   }
 
   removeDefaultVideo(index: number): void {
+    const video = this.config.sponsors[index];
+    if (this.isClubUser && video && this.isNeoproVideo(video)) return;
     this.config.sponsors.splice(index, 1);
     this.onChanged();
   }
@@ -173,6 +175,8 @@ export class LoopManagerComponent implements OnInit, OnChanges {
   removePhaseVideo(index: number): void {
     const tc = this.config.timeCategories?.find(t => t.id === this.activeTab);
     if (!tc?.loopVideos) return;
+    const video = tc.loopVideos[index];
+    if (this.isClubUser && video && this.isNeoproVideo(video)) return;
     tc.loopVideos.splice(index, 1);
     this.onChanged();
   }
@@ -303,6 +307,15 @@ export class LoopManagerComponent implements OnInit, OnChanges {
       ) ?? null;
     }
     return null;
+  }
+
+  /**
+   * Une vidéo est considérée Neopro si owner === 'neopro' OU si owner est absent/undefined
+   * (les vidéos ajoutées par un admin sans owner explicite sont Neopro par défaut).
+   * Seules les vidéos explicitement owner === 'club' sont modifiables par les clubs.
+   */
+  isNeoproVideo(video: { owner?: string }): boolean {
+    return video.owner !== 'club';
   }
 
   // === Helpers ===

@@ -1768,12 +1768,15 @@ describe('SaaS config save flow', () => {
     const content = fs.readFileSync(filePath, 'utf8') + '\n' + (fs.existsSync(htmlPath) ? fs.readFileSync(htmlPath, 'utf8') : '');
     expect({
       hasInput: /@Input\(\)\s+isClubUser/.test(content),
-      disablesNameInput: /\[disabled\]="isClubUser\s*&&\s*video\.owner\s*===\s*'neopro'"/.test(content),
-      hidesRemoveForNeopro: /\*ngIf="!\(isClubUser\s*&&\s*video\.owner\s*===\s*'neopro'\)"/.test(content),
-      showsLockBadge: /isClubUser\s*&&\s*video\.owner\s*===\s*'neopro'[\s\S]*?NEOPRO/.test(content),
+      // isNeoproVideo() treats undefined/absent owner as neopro (owner !== 'club')
+      hasIsNeoproHelper: /isNeoproVideo\(/.test(content) && /owner\s*!==\s*'club'/.test(content),
+      disablesVideoSelect: /\[disabled\]="isClubUser\s*&&\s*isNeoproVideo\(video\)"/.test(content),
+      hidesRemoveForNeopro: /\*ngIf="!\(isClubUser\s*&&\s*isNeoproVideo\(video\)\)"/.test(content),
+      showsLockBadge: /isClubUser\s*&&\s*isNeoproVideo\(video\)/.test(content),
     }).toEqual({
       hasInput: true,
-      disablesNameInput: true,
+      hasIsNeoproHelper: true,
+      disablesVideoSelect: true,
       hidesRemoveForNeopro: true,
       showsLockBadge: true,
     });

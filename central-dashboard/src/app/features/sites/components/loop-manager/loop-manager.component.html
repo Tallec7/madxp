@@ -32,7 +32,11 @@
       boucle ne génèrent pas de données de tracking. Déplacez-les dans les boucles par phase
       (avant-match / match / après-match) pour activer les analytics sponsors.
       <div class="default-loop-warning-actions">
-        <button class="btn btn-sm btn-primary" (click)="distributeToAllPhases()">
+        <button
+          class="btn btn-sm btn-primary"
+          (click)="distributeToAllPhases()"
+          *ngIf="!isClubUser"
+        >
           Répartir dans les 3 phases
         </button>
       </div>
@@ -56,14 +60,14 @@
       <div
         class="loop-card"
         *ngFor="let video of config.sponsors; let i = index"
-        [class.neopro]="video.owner === 'neopro'"
+        [class.neopro]="isNeoproVideo(video)"
         [class.has-error]="!video.path"
         [class.orphaned]="isOrphanedVideo(video.path)"
         [class.drag-over]="dragOverIndex === i && dragContext === 'default'"
         [style.background-color]="getCardBackground(video)"
         [style.border-left-color]="getCardBorderColor(video)"
         [style.border-left-width]="getCardBorderColor(video) ? '3px' : null"
-        [draggable]="!(isClubUser && video.owner === 'neopro')"
+        [draggable]="!(isClubUser && isNeoproVideo(video))"
         (dragstart)="onDragStart($event, i, 'default')"
         (dragenter)="onDragEnter(i, 'default')"
         (dragend)="onDragEnd()"
@@ -76,7 +80,7 @@
           <button
             class="card-remove"
             (click)="removeDefaultVideo(i)"
-            *ngIf="!(isClubUser && video.owner === 'neopro')"
+            *ngIf="!(isClubUser && isNeoproVideo(video))"
           >
             ×
           </button>
@@ -88,7 +92,7 @@
             [selectedPath]="video.path"
             (pathChange)="video.path = $event; onChanged()"
             [invalid]="!video.path"
-            [disabled]="isClubUser && video.owner === 'neopro'"
+            [disabled]="isClubUser && isNeoproVideo(video)"
             [showPiStatus]="siteType !== 'saas'"
             [compact]="true"
             [searchPlaceholder]="'common.searchVideoPlaceholder' | translate"
@@ -112,13 +116,13 @@
           <span class="card-owner" *ngIf="!isClubUser">
             <span
               class="owner-label"
-              [class.neopro]="video.owner === 'neopro'"
-              [class.club]="video.owner !== 'neopro'"
+              [class.neopro]="isNeoproVideo(video)"
+              [class.club]="!isNeoproVideo(video)"
             >
-              {{ video.owner === 'neopro' ? 'NEOPRO' : 'Club' }}
+              {{ isNeoproVideo(video) ? 'NEOPRO' : 'Club' }}
             </span>
           </span>
-          <span class="owner-label neopro" *ngIf="isClubUser && video.owner === 'neopro'">🔒</span>
+          <span class="owner-label neopro" *ngIf="isClubUser && isNeoproVideo(video)">🔒</span>
         </div>
 
         <div class="card-drag-handle" title="Glisser pour réordonner">⠿</div>
@@ -141,13 +145,14 @@
         <div
           class="loop-card phase-card"
           *ngFor="let video of getPhaseVideos(); let i = index"
+          [class.neopro]="isNeoproVideo(video)"
           [class.orphaned]="isOrphanedVideo(video.path)"
           [class.pinned]="video.pinned"
           [class.drag-over]="dragOverIndex === i && dragContext === 'phase'"
           [style.background-color]="getCardBackground(video)"
           [style.border-left-color]="getCardBorderColor(video)"
           [style.border-left-width]="getCardBorderColor(video) ? '3px' : null"
-          draggable="true"
+          [draggable]="!(isClubUser && isNeoproVideo(video))"
           (dragstart)="onDragStart($event, i, 'phase')"
           (dragenter)="onDragEnter(i, 'phase')"
           (dragend)="onDragEnd()"
@@ -157,7 +162,13 @@
             <span class="card-name" [title]="video.name || video.path">{{
               video.name || getFilename(video.path) || '—'
             }}</span>
-            <button class="card-remove" (click)="removePhaseVideo(i)">×</button>
+            <button
+              class="card-remove"
+              (click)="removePhaseVideo(i)"
+              *ngIf="!(isClubUser && isNeoproVideo(video))"
+            >
+              ×
+            </button>
           </div>
 
           <div class="card-body">
@@ -165,6 +176,7 @@
               [groups]="videoOptionGroups"
               [selectedPath]="video.path"
               (pathChange)="updatePhaseVideo(i, 'path', $event)"
+              [disabled]="isClubUser && isNeoproVideo(video)"
               [showPiStatus]="siteType !== 'saas'"
               [compact]="true"
               [searchPlaceholder]="'common.searchVideoPlaceholder' | translate"
@@ -215,9 +227,11 @@
               [class.pinned]="video.pinned"
               (click)="togglePinVideo(i)"
               [title]="video.pinned ? 'Désépingler' : 'Épingler à la position ' + (i + 1)"
+              *ngIf="!(isClubUser && isNeoproVideo(video))"
             >
               {{ video.pinned ? '📌' : '📍' }}
             </button>
+            <span class="owner-label neopro" *ngIf="isClubUser && isNeoproVideo(video)">🔒</span>
           </div>
 
           <div class="card-drag-handle" title="Glisser pour réordonner">⠿</div>
@@ -231,7 +245,11 @@
         >→ Utilise la boucle par défaut ({{ config.sponsors.length }} vidéos)</span
       >
       <div class="phase-empty-actions" *ngIf="config.sponsors.length > 0">
-        <button class="btn btn-sm btn-secondary" (click)="copyDefaultToCurrentPhase()">
+        <button
+          class="btn btn-sm btn-secondary"
+          (click)="copyDefaultToCurrentPhase()"
+          *ngIf="!isClubUser"
+        >
           Copier la boucle par défaut
         </button>
       </div>
@@ -241,7 +259,7 @@
       <button class="btn btn-sm btn-secondary" (click)="addPhaseVideo()">+ Ajouter</button>
       <button
         class="btn btn-sm btn-outline"
-        *ngIf="getPhaseVideos().length > 0"
+        *ngIf="getPhaseVideos().length > 0 && !isClubUser"
         (click)="clearCurrentPhase()"
       >
         Effacer (utiliser boucle par défaut)

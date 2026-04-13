@@ -197,6 +197,31 @@ export const updateProfile = async (req: AuthRequest, res: Response) => {
 // PUT /api/sites/:siteId/profiles/:profileId/configuration
 // --------------------------------------------------------------------------
 
+/**
+ * Extracts neopro video paths from a config's sponsors (defaultVideos) and timeCategories (phase loops).
+ * A video is considered neopro if owner !== 'club' (undefined/absent = neopro by default).
+ */
+function extractNeoproVideoPaths(config: Record<string, unknown>): Set<string> {
+  const paths = new Set<string>();
+  const sponsors = config.sponsors as Array<{ path?: string; owner?: string }> | undefined;
+  if (Array.isArray(sponsors)) {
+    for (const v of sponsors) {
+      if (v.path && v.owner !== 'club') paths.add(v.path);
+    }
+  }
+  const timeCategories = config.timeCategories as Array<{ loopVideos?: Array<{ path?: string; owner?: string }> }> | undefined;
+  if (Array.isArray(timeCategories)) {
+    for (const tc of timeCategories) {
+      if (Array.isArray(tc.loopVideos)) {
+        for (const v of tc.loopVideos) {
+          if (v.path && v.owner !== 'club') paths.add(v.path);
+        }
+      }
+    }
+  }
+  return paths;
+}
+
 export const updateProfileConfiguration = async (req: AuthRequest, res: Response) => {
   try {
     const { siteId, profileId } = req.params;
@@ -209,6 +234,21 @@ export const updateProfileConfiguration = async (req: AuthRequest, res: Response
     const existing = await configProfileRepository.findById(profileId);
     if (!existing || existing.site_id !== siteId) {
       return res.status(404).json({ error: 'Profil non trouve' });
+    }
+
+    // Defense-in-depth: club users cannot remove or modify neopro videos from loops
+    if (req.user?.role === 'club') {
+      const oldConfig = (existing.configuration || {}) as Record<string, unknown>;
+      const newConfig = (value.configuration || {}) as Record<string, unknown>;
+      const oldNeopro = extractNeoproVideoPaths(oldConfig);
+      const newNeopro = extractNeoproVideoPaths(newConfig);
+      for (const path of oldNeopro) {
+        if (!newNeopro.has(path)) {
+          return res.status(403).json({
+            error: 'Les vidéos NEOPRO ne peuvent pas être supprimées ou modifiées par un compte club',
+          });
+        }
+      }
     }
 
     const updated = value.mode === 'merge'
