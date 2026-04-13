@@ -252,8 +252,7 @@ export class BrowserRendererService {
   ): void {
     if (t < TEXT_SHOW_S) return;
 
-    const alpha = Math.min((t - TEXT_SHOW_S) / 0.3, 1);
-    ctx.globalAlpha = alpha;
+    ctx.globalAlpha = 1;
     ctx.textAlign = 'center';
 
     // Club top
