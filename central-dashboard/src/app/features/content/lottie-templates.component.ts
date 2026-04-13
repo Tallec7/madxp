@@ -809,6 +809,14 @@ export class LottieTemplatesComponent implements OnInit, OnDestroy {
         this.renderPercent = data.progress;
       }
 
+      if (data.type === 'recordError') {
+        window.removeEventListener('message', handler);
+        this.rendering = false;
+        this.renderPhase = 'idle';
+        this.notifications.error(`Erreur rendu: ${data.error}`);
+        return;
+      }
+
       if (data.type === 'recordBlob') {
         window.removeEventListener('message', handler);
 
