@@ -1,3 +1,9 @@
+## [3.163.2](https://github.com/Tallec7/neopro/compare/v3.163.1...v3.163.2) (2026-04-13)
+
+### Bug Fixes
+
+- **templates:** fix record action outside postMessage listener scope ([713055e](https://github.com/Tallec7/neopro/commit/713055e0094cf4f2234008d551217e725a55c2ad))
+
 ## [3.163.1](https://github.com/Tallec7/neopro/compare/v3.163.0...v3.163.1) (2026-04-13)
 
 ### Bug Fixes
