@@ -1,3 +1,9 @@
+## [3.163.3](https://github.com/Tallec7/neopro/compare/v3.163.2...v3.163.3) (2026-04-13)
+
+### Bug Fixes
+
+- **templates:** robust canvas recording with error handling and codec fallback ([f2c3875](https://github.com/Tallec7/neopro/commit/f2c38758b84e0f12558247fa40558b6b7c7d380c))
+
 ## [3.163.2](https://github.com/Tallec7/neopro/compare/v3.163.1...v3.163.2) (2026-04-13)
 
 ### Bug Fixes
