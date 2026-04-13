@@ -1,3 +1,9 @@
+# [3.163.0](https://github.com/Tallec7/neopro/compare/v3.162.10...v3.163.0) (2026-04-13)
+
+### Features
+
+- **templates:** implement video export for BUT Simple standalone template ([cd06baa](https://github.com/Tallec7/neopro/commit/cd06baa0f9095ad5537e3cb0305a8a926e9b04dc))
+
 ## [3.162.10](https://github.com/Tallec7/neopro/compare/v3.162.9...v3.162.10) (2026-04-13)
 
 ### Bug Fixes
