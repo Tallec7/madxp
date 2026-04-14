@@ -1,6 +1,5 @@
 import { Router } from 'express';
 import { authenticate, requireRole } from '../middleware/auth';
-import { requireSiteTier } from '../middleware/require-site-tier';
 import { adminRateLimit, sensitiveRateLimit } from '../middleware/user-rate-limit';
 import { validateParams, paramSchemas } from '../middleware/validation';
 import * as ctrl from '../controllers/remotion-templates.controller';
