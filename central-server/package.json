@@ -26,6 +26,8 @@
   "dependencies": {
     "@logtail/node": "^0.5.2",
     "@logtail/winston": "^0.5.2",
+    "@remotion/bundler": "^4.0.448",
+    "@remotion/renderer": "^4.0.448",
     "@socket.io/redis-adapter": "^8.3.0",
     "@types/pdfkit": "^0.17.4",
     "basic-ftp": "^5.1.0",

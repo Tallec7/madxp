@@ -1,5 +1,4 @@
 import { Response } from 'express';
-import { spawn } from 'child_process';
 import * as path from 'path';
 import * as fs from 'fs';
 import * as os from 'os';
@@ -17,6 +16,9 @@ import {
 // Sur Railway : REMOTION_DIR env var doit pointer vers le dossier déployé
 const REMOTION_DIR = process.env.REMOTION_DIR
   || path.resolve(__dirname, '../../../../templates-remotion');
+
+// Point d'entrée Remotion (index.ts / index.js selon l'environnement)
+const REMOTION_ENTRY = path.join(REMOTION_DIR, 'src', 'index.ts');
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -145,9 +147,8 @@ export const renderTemplate = async (req: AuthRequest, res: Response) => {
       remotionDir: REMOTION_DIR,
     });
 
-    // Lancer le render Remotion
-    const propsJson = JSON.stringify(props);
-    await runRemotion(template.composition_id, outputPath, propsJson);
+    // Lancer le render Remotion via Node.js API (in-process, pas de subprocess)
+    await runRemotion(template.composition_id, outputPath, props);
 
     // Vérifier que le fichier existe et a du contenu
     const stat = fs.statSync(outputPath);
@@ -206,45 +207,56 @@ export const renderTemplate = async (req: AuthRequest, res: Response) => {
   }
 };
 
-// ── Remotion runner ───────────────────────────────────────────────────────────
+// ── Remotion runner (Node.js API — in-process, no subprocess) ────────────────
 
-function runRemotion(compositionId: string, outputPath: string, propsJson: string): Promise<void> {
-  return new Promise((resolve, reject) => {
-    const args = [
-      'remotion', 'render',
-      compositionId,
-      outputPath,
-      `--props=${propsJson}`,
-      '--log=verbose',
-      // Required for headless Chromium in Docker/Railway containers
-      '--chromium-flags=--no-sandbox --disable-dev-shm-usage',
-    ];
+async function runRemotion(
+  compositionId: string,
+  outputPath: string,
+  inputProps: Record<string, unknown>,
+): Promise<void> {
+  // Dynamic imports to avoid loading heavy Remotion modules at startup
+  const { bundle } = await import('@remotion/bundler') as typeof import('@remotion/bundler');
+  const { renderMedia, selectComposition } = await import('@remotion/renderer') as typeof import('@remotion/renderer');
 
-    logger.info('Spawning Remotion', { args: args.join(' '), cwd: REMOTION_DIR });
+  logger.info('Bundling Remotion entry', { entry: REMOTION_ENTRY });
 
-    const proc = spawn('npx', args, {
-      cwd: REMOTION_DIR,
-      env: { ...process.env, NODE_ENV: 'production' },
-      stdio: ['ignore', 'pipe', 'pipe'],
-    });
-
-    let stderr = '';
-    proc.stderr.on('data', (d: Buffer) => { stderr += d.toString(); });
-    proc.stdout.on('data', (d: Buffer) => {
-      logger.debug('remotion stdout', { line: d.toString().trim() });
-    });
-
-    proc.on('close', (code) => {
-      if (code === 0) {
-        resolve();
-      } else {
-        logger.error('Remotion process failed', { code, stderr: stderr.slice(-1000) });
-        reject(new Error(`Remotion exited with code ${code}: ${stderr.slice(-300)}`));
-      }
-    });
-
-    proc.on('error', (err) => {
-      reject(new Error(`Failed to spawn Remotion: ${err.message}`));
-    });
+  const bundled = await bundle({
+    entryPoint: REMOTION_ENTRY,
+    // Silence webpack progress output
+    onProgress: (p) => {
+      if (p % 25 === 0) logger.debug('Remotion bundle progress', { percent: p });
+    },
   });
+
+  logger.info('Selecting composition', { compositionId });
+
+  const chromiumOptions = {
+    // Remotion v4 already adds --no-sandbox on Linux automatically.
+    // Disable GPU compositing to reduce memory usage in headless containers.
+    gl: 'angle' as const,
+    headless: true,
+  };
+
+  const composition = await selectComposition({
+    serveUrl: bundled,
+    id: compositionId,
+    inputProps,
+    chromiumOptions,
+  });
+
+  logger.info('Rendering composition', { compositionId, durationInFrames: composition.durationInFrames });
+
+  await renderMedia({
+    composition,
+    serveUrl: bundled,
+    codec: 'h264',
+    outputLocation: outputPath,
+    inputProps,
+    chromiumOptions,
+    onProgress: ({ renderedFrames, progress }) => {
+      logger.debug('Remotion render progress', { renderedFrames, progress: Math.round(progress * 100) });
+    },
+  });
+
+  logger.info('Remotion render complete', { outputPath });
 }
