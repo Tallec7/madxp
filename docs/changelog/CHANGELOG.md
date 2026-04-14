@@ -1,3 +1,9 @@
+## [3.166.1](https://github.com/Tallec7/neopro/compare/v3.166.0...v3.166.1) (2026-04-14)
+
+### Bug Fixes
+
+- **templates:** fix CI errors in Remotion feature ([d5ae4cf](https://github.com/Tallec7/neopro/commit/d5ae4cf3892705edfe04cea55fad052c938b6dfb))
+
 # [3.166.0](https://github.com/Tallec7/neopro/compare/v3.165.3...v3.166.0) (2026-04-14)
 
 ### Features
