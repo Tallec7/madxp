@@ -216,6 +216,8 @@ function runRemotion(compositionId: string, outputPath: string, propsJson: strin
       outputPath,
       `--props=${propsJson}`,
       '--log=verbose',
+      // Required for headless Chromium in Docker/Railway containers
+      '--chromium-flags=--no-sandbox --disable-dev-shm-usage',
     ];
 
     logger.info('Spawning Remotion', { args: args.join(' '), cwd: REMOTION_DIR });
