@@ -1,3 +1,9 @@
+## [3.167.2](https://github.com/Tallec7/neopro/compare/v3.167.1...v3.167.2) (2026-04-14)
+
+### Bug Fixes
+
+- **templates:** remove ButImgJoueur from Root.tsx (not yet committed) ([c557ff7](https://github.com/Tallec7/neopro/commit/c557ff7e0fc7cec727b93a263fe04b0a7499b1aa))
+
 ## [3.167.1](https://github.com/Tallec7/neopro/compare/v3.167.0...v3.167.1) (2026-04-14)
 
 ### Bug Fixes
