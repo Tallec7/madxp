@@ -1,3 +1,9 @@
+## [3.166.2](https://github.com/Tallec7/neopro/compare/v3.166.1...v3.166.2) (2026-04-14)
+
+### Bug Fixes
+
+- **templates:** remove unused requireSiteTier import (lint error) ([1d4aa0a](https://github.com/Tallec7/neopro/commit/1d4aa0a10bb8bdd5363c29eff9f1203ce7d28698))
+
 ## [3.166.1](https://github.com/Tallec7/neopro/compare/v3.166.0...v3.166.1) (2026-04-14)
 
 ### Bug Fixes
