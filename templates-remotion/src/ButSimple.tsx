@@ -84,7 +84,8 @@ export const butSimpleSchema = z.object({
   prenom: z.string(),
   nom: z.string(),
   club: z.string(),
-  logoSrc: z.string().default(staticFile("logo_club.png")),
+  logoSrc: z.string().default("logo_club.png"),
+  logoSize: z.number().default(500), // largeur du logo en px — ajustable dans Studio ou à l'API
 });
 
 type Props = z.infer<typeof butSimpleSchema>;
@@ -103,7 +104,7 @@ type Props = z.infer<typeof butSimpleSchema>;
 //   cVideoRef → pointe sur le <video> de C → lu par useCAlphaMaskRAF
 //   textRef   → pointe sur le div texte   → webkitMaskImage mis à jour en direct
 // ─────────────────────────────────────────────────────────────────────────────
-export const ButSimple: React.FC<Props> = ({ prenom, nom, club, logoSrc }) => {
+export const ButSimple: React.FC<Props> = ({ prenom, nom, club, logoSrc, logoSize }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
 
@@ -158,10 +159,10 @@ export const ButSimple: React.FC<Props> = ({ prenom, nom, club, logoSrc }) => {
       */}
       <AbsoluteFill style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
         <img
-          src={logoSrc}
+          src={logoSrc.startsWith("remotion-file:") || logoSrc.startsWith("http") ? logoSrc : staticFile(logoSrc)}
           alt="Logo"
           style={{
-            width: 500,
+            width: logoSize,
             height: "auto",
             opacity: logoOpacity,
             transform: `scale(${logoScale})`,
