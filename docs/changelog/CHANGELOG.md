@@ -1,3 +1,9 @@
+## [3.167.3](https://github.com/Tallec7/neopro/compare/v3.167.2...v3.167.3) (2026-04-14)
+
+### Bug Fixes
+
+- **templates:** add --no-sandbox Chromium flags for Railway Docker render ([ca38a70](https://github.com/Tallec7/neopro/commit/ca38a70992542983a1c5f902daededd304187ec9))
+
 ## [3.167.2](https://github.com/Tallec7/neopro/compare/v3.167.1...v3.167.2) (2026-04-14)
 
 ### Bug Fixes
