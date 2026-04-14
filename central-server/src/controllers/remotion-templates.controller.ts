@@ -235,8 +235,10 @@ async function runRemotion(
 
   const chromiumOptions = {
     // Remotion v4 already adds --no-sandbox on Linux automatically.
-    // Disable GPU compositing to reduce memory usage in headless containers.
-    gl: 'angle' as const,
+    // swangle = software WebGL renderer — required for WebM video decoding in
+    // headless containers without GPU (Railway node:20-slim).
+    // 'angle' relies on EGL/GPU which may silently block video readyState.
+    gl: 'swangle' as const,
     headless: true,
   };
 
@@ -245,6 +247,7 @@ async function runRemotion(
     id: compositionId,
     inputProps,
     chromiumOptions,
+    timeoutInMilliseconds: 90000,
   });
 
   logger.info('Rendering composition', { compositionId, durationInFrames: composition.durationInFrames });
@@ -256,6 +259,8 @@ async function runRemotion(
     outputLocation: outputPath,
     inputProps,
     chromiumOptions,
+    // 90s timeout — headless containers can be slow to decode WebM via swangle
+    timeoutInMilliseconds: 90000,
     onProgress: ({ renderedFrames, progress }) => {
       logger.debug('Remotion render progress', { renderedFrames, progress: Math.round(progress * 100) });
     },
