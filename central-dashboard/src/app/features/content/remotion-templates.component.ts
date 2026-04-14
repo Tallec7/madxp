@@ -282,7 +282,7 @@ export class RemotionTemplatesComponent implements OnInit {
 
   private loadTemplates() {
     this.loading = true;
-    this.api.get<RemotionTemplate[]>('/api/remotion-templates').subscribe({
+    this.api.get<RemotionTemplate[]>('/remotion-templates').subscribe({
       next: (templates) => { this.templates = templates; this.loading = false; },
       error: () => { this.notifications.error('Impossible de charger les templates'); this.loading = false; },
     });
@@ -327,7 +327,7 @@ export class RemotionTemplatesComponent implements OnInit {
   }
 
   togglePublish(tpl: RemotionTemplate) {
-    this.api.patch<RemotionTemplate>(`/api/remotion-templates/${tpl.id}/publish`, { published: !tpl.published }).subscribe({
+    this.api.patch<RemotionTemplate>(`/remotion-templates/${tpl.id}/publish`, { published: !tpl.published }).subscribe({
       next: (updated) => {
         const idx = this.templates.findIndex(t => t.id === tpl.id);
         if (idx !== -1) this.templates[idx] = updated;
@@ -353,7 +353,7 @@ export class RemotionTemplatesComponent implements OnInit {
     this.renderProgress = 15;
     this.renderStatusMessage = 'Render Remotion en cours (~2 min)...';
 
-    this.api.post<RenderResult>(`/api/remotion-templates/${this.selectedTemplate.id}/render`, {
+    this.api.post<RenderResult>(`/remotion-templates/${this.selectedTemplate.id}/render`, {
       props,
       site_id: this.selectedSiteId || null,
       title: this.videoTitle || this.selectedTemplate.name,
