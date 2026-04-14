@@ -1,3 +1,9 @@
+# [3.166.0](https://github.com/Tallec7/neopro/compare/v3.165.3...v3.166.0) (2026-04-14)
+
+### Features
+
+- **templates:** add Remotion video templates engine (ADR-052) ([2e803ea](https://github.com/Tallec7/neopro/commit/2e803eaccc90b4077b23eeaf39c7085d5421121a))
+
 ## [3.165.3](https://github.com/Tallec7/neopro/compare/v3.165.2...v3.165.3) (2026-04-13)
 
 ### Bug Fixes
