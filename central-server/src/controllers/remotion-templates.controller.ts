@@ -222,6 +222,9 @@ async function runRemotion(
 
   const bundled = await bundle({
     entryPoint: REMOTION_ENTRY,
+    // Serve static assets (webm, fonts, images) from templates-remotion/public/
+    // Required for staticFile() references to resolve correctly in headless Chromium
+    publicDir: path.join(REMOTION_DIR, 'public'),
     // Silence webpack progress output
     onProgress: (p) => {
       if (p % 25 === 0) logger.debug('Remotion bundle progress', { percent: p });
