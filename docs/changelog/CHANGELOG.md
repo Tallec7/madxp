@@ -1,3 +1,9 @@
+## [3.168.2](https://github.com/Tallec7/neopro/compare/v3.168.1...v3.168.2) (2026-04-14)
+
+### Bug Fixes
+
+- **motion:** add publicDir to Remotion bundle() to serve static WebM assets ([ed6c94f](https://github.com/Tallec7/neopro/commit/ed6c94f0998544a21204fb2776ae2db25e2c47f8))
+
 ## [3.168.1](https://github.com/Tallec7/neopro/compare/v3.168.0...v3.168.1) (2026-04-14)
 
 ### Bug Fixes
