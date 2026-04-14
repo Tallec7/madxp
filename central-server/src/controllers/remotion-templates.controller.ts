@@ -5,10 +5,13 @@ import * as fs from 'fs';
 import * as os from 'os';
 import { AuthRequest } from '../types';
 import logger from '../config/logger';
-import { query } from '../config/database';
 import { uploadVideoFromDisk } from '../services/storage.service';
-import { videoRepository, siteRepository, siteVideoRepository } from '../repositories';
-import { buildShardedVideoPath } from '../services/storage.service';
+import {
+  videoRepository,
+  siteRepository,
+  siteVideoRepository,
+  remotionTemplatesRepository,
+} from '../repositories';
 
 // Chemin vers templates-remotion (sibling du central-server dans le repo)
 // Sur Railway : REMOTION_DIR env var doit pointer vers le dossier déployé
@@ -34,15 +37,8 @@ const cleanupFile = (filePath: string) => {
 export const listTemplates = async (req: AuthRequest, res: Response) => {
   try {
     const isAdmin = req.user?.role === 'admin' || req.user?.role === 'super_admin';
-    const whereClause = isAdmin ? '' : 'WHERE published = true';
-    const result = await query(
-      `SELECT id, name, composition_id, description, props_schema, default_props,
-              thumbnail_url, published, created_at
-       FROM neopro_templates
-       ${whereClause}
-       ORDER BY created_at DESC`
-    );
-    res.json(result.rows);
+    const templates = await remotionTemplatesRepository.findAll(!isAdmin);
+    res.json(templates);
   } catch (error) {
     logger.error('listTemplates error', { error });
     res.status(500).json({ error: 'Erreur serveur' });
@@ -55,12 +51,9 @@ export const listTemplates = async (req: AuthRequest, res: Response) => {
 export const getTemplate = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
-    const result = await query(
-      'SELECT * FROM neopro_templates WHERE id = $1',
-      [id]
-    );
-    if (!result.rows.length) return res.status(404).json({ error: 'Template non trouvé' });
-    res.json(result.rows[0]);
+    const template = await remotionTemplatesRepository.findById(id);
+    if (!template) return res.status(404).json({ error: 'Template non trouvé' });
+    res.json(template);
   } catch (error) {
     logger.error('getTemplate error', { error, id: req.params.id });
     res.status(500).json({ error: 'Erreur serveur' });
@@ -74,16 +67,15 @@ export const getTemplate = async (req: AuthRequest, res: Response) => {
 export const createTemplate = async (req: AuthRequest, res: Response) => {
   try {
     const { name, composition_id, description, props_schema, default_props } = req.body;
-    const result = await query(
-      `INSERT INTO neopro_templates (name, composition_id, description, props_schema, default_props, created_by)
-       VALUES ($1, $2, $3, $4, $5, $6)
-       RETURNING *`,
-      [name, composition_id, description || null,
-       JSON.stringify(props_schema || []),
-       JSON.stringify(default_props || {}),
-       req.user?.id || null]
-    );
-    res.status(201).json(result.rows[0]);
+    const template = await remotionTemplatesRepository.create({
+      name,
+      composition_id,
+      description: description ?? null,
+      props_schema: props_schema ?? [],
+      default_props: default_props ?? {},
+      created_by: req.user?.id ?? null,
+    });
+    res.status(201).json(template);
   } catch (error) {
     logger.error('createTemplate error', { error });
     res.status(500).json({ error: 'Erreur serveur' });
@@ -98,13 +90,9 @@ export const publishTemplate = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
     const { published } = req.body;
-    const result = await query(
-      `UPDATE neopro_templates SET published = $1, updated_at = NOW()
-       WHERE id = $2 RETURNING *`,
-      [Boolean(published), id]
-    );
-    if (!result.rows.length) return res.status(404).json({ error: 'Template non trouvé' });
-    res.json(result.rows[0]);
+    const template = await remotionTemplatesRepository.setPublished(id, Boolean(published));
+    if (!template) return res.status(404).json({ error: 'Template non trouvé' });
+    res.json(template);
   } catch (error) {
     logger.error('publishTemplate error', { error, id: req.params.id });
     res.status(500).json({ error: 'Erreur serveur' });
@@ -130,14 +118,10 @@ export const renderTemplate = async (req: AuthRequest, res: Response) => {
     const { props = {}, site_id, title } = req.body;
 
     // Récupérer le template
-    const tplResult = await query(
-      'SELECT * FROM neopro_templates WHERE id = $1 AND published = true',
-      [id]
-    );
-    if (!tplResult.rows.length) {
+    const template = await remotionTemplatesRepository.findPublishedById(id);
+    if (!template) {
       return res.status(404).json({ error: 'Template non trouvé ou non publié' });
     }
-    const template = tplResult.rows[0] as { composition_id: string; name: string; };
 
     // Valider le site_id
     if (site_id) {
@@ -173,10 +157,6 @@ export const renderTemplate = async (req: AuthRequest, res: Response) => {
 
     // Générer un nom de fichier unique
     const safeTitle = (title || template.name).replace(/[^a-zA-Z0-9_-]/g, '_');
-    const filename = buildShardedVideoPath(
-      require('crypto').randomUUID(),
-      '.mp4'
-    ).replace('videos/', `videos/templates/${safeTitle}_${Date.now()}.mp4`).split('/').pop()!;
     const storagePath = `videos/templates/${safeTitle}_${Date.now()}.mp4`;
 
     // Upload vers FTP
@@ -196,8 +176,8 @@ export const renderTemplate = async (req: AuthRequest, res: Response) => {
       storage_path: uploadResult.path,
       checksum: '',
       metadata: { title: title || template.name, remotion_template_id: id, props },
-      uploaded_by: req.user?.id || null,
-      uploaded_for_site_id: site_id || null,
+      uploaded_by: req.user?.id ?? null,
+      uploaded_for_site_id: site_id ?? null,
       upload_status: uploadResult.verified ? 'ready' : 'failed',
       upload_verified_at: uploadResult.verified ? new Date() : null,
       upload_verified_size: null,

@@ -289,3 +289,4 @@ export {
 } from './safe.repository';
 export { siteVideoRepository } from './site-video.repository';
 export { BaseRepository } from './base.repository';
+export { remotionTemplatesRepository, type NeoProTemplate, type CreateTemplateInput } from './remotion-templates.repository';

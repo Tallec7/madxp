@@ -271,7 +271,7 @@ export class RemotionTemplatesComponent implements OnInit {
   lastResult: RenderResult | null = null;
 
   get isAdmin(): boolean {
-    const role = this.authService.currentUser?.role;
+    const role = this.authService.getCurrentUser()?.role;
     return role === 'admin' || role === 'super_admin';
   }
 
@@ -289,8 +289,8 @@ export class RemotionTemplatesComponent implements OnInit {
   }
 
   private loadSites() {
-    this.sitesService.getSites().subscribe({
-      next: (sites) => { this.sites = sites; },
+    this.sitesService.loadSites().subscribe({
+      next: (result) => { this.sites = result.sites; },
       error: () => {},
     });
   }
