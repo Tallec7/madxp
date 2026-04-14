@@ -1,3 +1,9 @@
+## [3.168.3](https://github.com/Tallec7/neopro/compare/v3.168.2...v3.168.3) (2026-04-14)
+
+### Bug Fixes
+
+- **motion:** use swangle GL and 90s timeout to fix WebM delayRender in Railway ([629b40e](https://github.com/Tallec7/neopro/commit/629b40e7ccfeab9568ee194a62b5329b809adcab))
+
 ## [3.168.2](https://github.com/Tallec7/neopro/compare/v3.168.1...v3.168.2) (2026-04-14)
 
 ### Bug Fixes
