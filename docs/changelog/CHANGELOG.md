@@ -1,3 +1,9 @@
+## [3.168.1](https://github.com/Tallec7/neopro/compare/v3.168.0...v3.168.1) (2026-04-14)
+
+### Bug Fixes
+
+- **remotion:** remove ButImgJoueur import from Root.tsx ([5b9bd21](https://github.com/Tallec7/neopro/commit/5b9bd217bcd82e0c5df5212b4b78d5ad85d362c8))
+
 # [3.168.0](https://github.com/Tallec7/neopro/compare/v3.167.3...v3.168.0) (2026-04-14)
 
 ### Features
