@@ -1,3 +1,9 @@
+# [3.167.0](https://github.com/Tallec7/neopro/compare/v3.166.2...v3.167.0) (2026-04-14)
+
+### Features
+
+- **templates:** update ButSimple — logoSize prop + dynamic src resolution ([d98e589](https://github.com/Tallec7/neopro/commit/d98e589a6fbda704e7672496fa9200bb69878b65))
+
 ## [3.166.2](https://github.com/Tallec7/neopro/compare/v3.166.1...v3.166.2) (2026-04-14)
 
 ### Bug Fixes
