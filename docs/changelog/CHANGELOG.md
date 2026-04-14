@@ -1,3 +1,9 @@
+## [3.167.1](https://github.com/Tallec7/neopro/compare/v3.167.0...v3.167.1) (2026-04-14)
+
+### Bug Fixes
+
+- **templates:** remove double /api prefix in remotion API calls ([fe7ceab](https://github.com/Tallec7/neopro/commit/fe7ceabcda47f6a3f491479511f073a39aa54266))
+
 # [3.167.0](https://github.com/Tallec7/neopro/compare/v3.166.2...v3.167.0) (2026-04-14)
 
 ### Features
