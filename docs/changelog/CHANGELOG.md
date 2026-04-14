@@ -1,3 +1,9 @@
+# [3.168.0](https://github.com/Tallec7/neopro/compare/v3.167.3...v3.168.0) (2026-04-14)
+
+### Features
+
+- **templates:** switch Remotion render to Node.js API to fix Railway OOM ([3edddf5](https://github.com/Tallec7/neopro/commit/3edddf541baff9c48c621ec6167098666635f6e7))
+
 ## [3.167.3](https://github.com/Tallec7/neopro/compare/v3.167.2...v3.167.3) (2026-04-14)
 
 ### Bug Fixes
