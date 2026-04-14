@@ -68,6 +68,7 @@ Un ADR documente une décision technique importante avec :
 | [ADR-049](ADR-049-score-live-multi-vendor-architecture.md)        | Score live multi-constructeurs (table de marque)           | Proposé                  | Avr 2026 |
 | [ADR-050](ADR-050-content-tab-unified-saas-pi.md)                 | Onglet Contenu unifié Pi/SaaS — statuts vidéo & hiérarchie | Accepté                  | Avr 2026 |
 | [ADR-051](ADR-051-large-file-refactoring-plan.md)                 | Plan de refactoring des fichiers > 1000 lignes             | Accepté                  | Avr 2026 |
+| [ADR-052](ADR-052-remotion-video-templates.md)                    | Adoption Remotion pour les templates vidéo dynamiques      | Accepté                  | Avr 2026 |
 
 ### Supersédés
 

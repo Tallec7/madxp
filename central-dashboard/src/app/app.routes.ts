@@ -142,6 +142,13 @@ export const routes: Routes = [
         loadComponent: () => import('./features/content/lottie-templates.component').then(m => m.LottieTemplatesComponent)
       },
       {
+        // Atelier Remotion (admin) + accès club avec feature video_templates
+        path: 'content/templates-remotion',
+        canActivate: [roleGuard],
+        data: { roles: ['super_admin', 'admin', 'club'] },
+        loadComponent: () => import('./features/content/remotion-templates.component').then(m => m.RemotionTemplatesComponent)
+      },
+      {
         path: 'updates',
         canActivate: [roleGuard],
         data: { roles: ['super_admin', 'admin', 'operator'] },

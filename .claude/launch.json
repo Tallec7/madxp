@@ -58,6 +58,13 @@
       "runtimeExecutable": "/opt/homebrew/bin/node",
       "runtimeArgs": ["raspberry/server/server.js"],
       "port": 3000
+    },
+    {
+      "name": "remotion-studio",
+      "runtimeExecutable": "/Users/gletallec/.nvm/versions/node/v18.20.7/bin/npx",
+      "runtimeArgs": ["remotion", "studio", "--port", "3002"],
+      "cwd": "templates-remotion",
+      "port": 3002
     }
   ]
 }

@@ -22,6 +22,20 @@ ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
 RUN npm ci
 
 # ============================================
+# Stage 1b: Remotion dependencies
+# ============================================
+FROM node:20-slim AS remotion-deps
+
+WORKDIR /app/templates-remotion
+
+COPY templates-remotion/package*.json ./
+
+# Skip Chromium download (we use system Chromium in the runtime stage)
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+
+RUN npm ci --omit=dev && npm cache clean --force
+
+# ============================================
 # Stage 2: Builder
 # ============================================
 FROM node:20-slim AS builder
@@ -76,13 +90,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libxshmfence1 libxss1 libasound2 \
     && rm -rf /var/lib/apt/lists/*
 
-# Tell Puppeteer to use system Chromium instead of downloading its own
+# Tell Puppeteer/Remotion to use system Chromium instead of downloading their own
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
-    PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
+    PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium \
+    BROWSER_EXECUTABLE_PATH=/usr/bin/chromium
 
 # Set environment
 ENV NODE_ENV=production \
-    PORT=3001
+    PORT=3001 \
+    REMOTION_DIR=/app/templates-remotion
 
 # Copy production dependencies
 COPY --from=prod-deps /app/node_modules ./node_modules
@@ -97,6 +113,10 @@ COPY --from=builder /app/src/templates ./dist/templates
 # Copy SAFe docs (source of truth for SAFe dashboard parser)
 COPY --from=builder /app/docs-safe/ ./docs/safe/
 COPY --from=builder /app/docs-proposals/ ./docs/proposals/
+
+# Copy Remotion templates + pre-installed node_modules (ADR-052)
+COPY templates-remotion/ ./templates-remotion/
+COPY --from=remotion-deps /app/templates-remotion/node_modules ./templates-remotion/node_modules
 
 # Expose port
 EXPOSE 3001

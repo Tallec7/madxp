@@ -49,7 +49,9 @@ export type FeatureKey =
   | 'remote_diagnostic'       // Premium : diagnostic a distance (lecture seule)
   // Marque & Personnalisation
   | 'white_label'             // Premium : marque blanche complete
-  | 'watermark';              // Pro/Premium : watermark / logo permanent
+  | 'watermark'               // Pro/Premium : watermark / logo permanent
+  // Templates vidéo
+  | 'video_templates';        // Pro+ : accès aux templates vidéo Remotion (ADR-052)
 
 const FEATURE_TIERS: Record<FeatureKey, SiteTier> = {
   multi_profiles: 'pro',
@@ -62,6 +64,7 @@ const FEATURE_TIERS: Record<FeatureKey, SiteTier> = {
   remote_diagnostic: 'premium',
   white_label: 'premium',
   watermark: 'pro',
+  video_templates: 'pro',
 };
 
 /**
