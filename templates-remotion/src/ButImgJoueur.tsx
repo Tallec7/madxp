@@ -107,8 +107,9 @@ export const butImgJoueurSchema = z.object({
   logoSrc: z.string().default("logo_club.png"),
   logoSize: z.number().default(400),
   playerImgSrc: z.string().default(""),
-  playerImgSize: z.number().default(1080),  // hauteur en px (1080 = plein écran, >1080 = déborde en haut)
-  playerImgLeft: z.number().default(560),   // position gauche en px
+  playerImgSize: z.number().default(1080),   // hauteur en px (1080 = plein écran, >1080 = déborde en haut)
+  playerImgLeft: z.number().default(560),    // position gauche en px
+  playerImgBottom: z.number().default(0),    // offset bas en px (négatif = descend hors cadre)
   scoreLabel: z.string().default("+1"),
   // Assets vidéo — URL FTP si fourni, sinon fallback sur staticFile() local
   videoSrcA: z.string().optional(),
@@ -146,6 +147,7 @@ export const ButImgJoueur: React.FC<Props> = ({
   playerImgSrc,
   playerImgSize,
   playerImgLeft,
+  playerImgBottom,
   scoreLabel,
   videoSrcA,
   videoSrcB,
@@ -258,7 +260,7 @@ export const ButImgJoueur: React.FC<Props> = ({
             alt="Joueur"
             style={{
               position: "absolute",
-              bottom: 0,
+              bottom: playerImgBottom,
               left: playerImgLeft,
               height: playerImgSize,
               width: "auto",

@@ -38,6 +38,7 @@ export const Root: React.FC = () => {
           playerImgSrc: 'player_photo.png',
           playerImgSize: 1080,
           playerImgLeft: 560,
+          playerImgBottom: 0,
           scoreLabel: '+1',
         }}
       />
