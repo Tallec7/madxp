@@ -1,3 +1,9 @@
+## [3.173.2](https://github.com/Tallec7/neopro/compare/v3.173.1...v3.173.2) (2026-04-15)
+
+### Bug Fixes
+
+- **templates:** override CSP for /remotion-preview to allow media-src from all kalonpartners.bzh subdomains ([c682fb3](https://github.com/Tallec7/neopro/commit/c682fb351b1574032fe282ae2ecb6a3e3e656627))
+
 ## [3.173.1](https://github.com/Tallec7/neopro/compare/v3.173.0...v3.173.1) (2026-04-15)
 
 ### Bug Fixes
