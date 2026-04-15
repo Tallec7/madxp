@@ -220,7 +220,7 @@ export const ButImgJoueur: React.FC<Props> = ({
       />
 
       {/* ── COUCHE 4 : Score label — masqué frame-par-frame par l'alpha de C ── */}
-      {/* Aligné à droite pour correspondre à la zone révélée par le webm C */}
+      {/* Centré pour correspondre à la zone révélée par le webm C */}
       <div
         ref={scoreRef}
         style={{
@@ -229,8 +229,7 @@ export const ButImgJoueur: React.FC<Props> = ({
           height: 1080,
           display: "flex",
           alignItems: "center",
-          justifyContent: "flex-end",
-          paddingRight: 80,
+          justifyContent: "center",
         }}
       >
         <span style={scoreLabelStyle}>{scoreLabel}</span>
@@ -300,7 +299,7 @@ const layerStyle: React.CSSProperties = {
   objectFit: "cover",
 };
 
-// Score : aligné à droite, taille XXL — visible dans la zone révélée par C
+// Score : centré, taille XXL — visible dans la zone révélée par C
 const scoreLabelStyle: React.CSSProperties = {
   fontFamily: "'Bulevar', sans-serif",
   fontSize: 400,
