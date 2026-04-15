@@ -2,6 +2,7 @@ import { Component, OnInit, OnDestroy, ViewChild, ElementRef, inject } from '@an
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
+import { environment } from '@env/environment';
 import { ApiService } from '../../core/services/api.service';
 import { NotificationService } from '../../core/services/notification.service';
 import { AuthService } from '../../core/services/auth.service';
@@ -421,16 +422,18 @@ export class RemotionTemplatesComponent implements OnInit, OnDestroy {
     }, 150);
   }
 
-  /** Construit l'URL initiale de l'iframe avec composition + props encodées.
-   *  bypassSecurityTrustResourceUrl est sûr ici : l'URL est construite en interne
-   *  et pointe toujours vers /remotion-preview/ sur la même origine. */
+  /** Construit l'URL absolue de l'iframe — le dashboard est sur Hostinger,
+   *  le preview est servi par le central-server (Railway). Une URL relative
+   *  pointerait vers Hostinger → 404. On dérive l'URL depuis environment.apiUrl. */
   private buildPreviewUrl(compositionId: string, props: Record<string, unknown>): SafeResourceUrl {
-    const base = '/remotion-preview/';
+    // environment.apiUrl = 'https://...railway.app/api' → on remplace '/api' par '/remotion-preview'
+    const serverBase = environment.apiUrl.replace(/\/api$/, '');
     const params = new URLSearchParams({
       composition: compositionId,
       props: encodeURIComponent(JSON.stringify(props)),
     });
-    return this.sanitizer.bypassSecurityTrustResourceUrl(`${base}?${params.toString()}`);
+    const url = `${serverBase}/remotion-preview/?${params.toString()}`;
+    return this.sanitizer.bypassSecurityTrustResourceUrl(url);
   }
 
   canRender(): boolean {
