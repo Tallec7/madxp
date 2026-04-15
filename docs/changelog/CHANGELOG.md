@@ -1,3 +1,9 @@
+## [3.170.1](https://github.com/Tallec7/neopro/compare/v3.170.0...v3.170.1) (2026-04-15)
+
+### Bug Fixes
+
+- **motion:** fix NG0904 and iframe sandbox warning in preview ([f3e157d](https://github.com/Tallec7/neopro/commit/f3e157d962aafb04d828a3345c3a7a38125b4585))
+
 # [3.170.0](https://github.com/Tallec7/neopro/compare/v3.169.2...v3.170.0) (2026-04-15)
 
 ### Features
