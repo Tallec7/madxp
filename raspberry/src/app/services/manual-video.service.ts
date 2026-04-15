@@ -94,6 +94,15 @@ export class ManualVideoService {
     // Stopper proprement le player avant de changer de source
     targetPlayer.pause();
 
+    // Nettoyer l'ancien listener ended pour éviter qu'il se déclenche
+    // quand on change le src (causerait hideFreezeFrame prématuré → flash boucle)
+    if (this._currentManualEndedHandler) {
+      targetPlayer.removeEventListener('ended', this._currentManualEndedHandler);
+      this._currentManualEndedHandler = null;
+    }
+    // Stopper proprement le player avant de changer de source
+    targetPlayer.pause();
+
     // ETAPE 0: Mettre isManualMode IMMEDIATEMENT pour bloquer les transitions de boucle
     this._savedLoopIndex = this.playbackService.currentLoopIndex;
     this._isManualMode = true;
