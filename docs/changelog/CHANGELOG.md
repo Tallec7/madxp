@@ -1,3 +1,9 @@
+# [3.176.0](https://github.com/Tallec7/neopro/compare/v3.175.0...v3.176.0) (2026-04-15)
+
+### Features
+
+- **templates:** add playerImgBottom slider and increase playerImgSize max to 5000 ([0f3b5c0](https://github.com/Tallec7/neopro/commit/0f3b5c021c2c15aac6868c93bc2b01cd02b30c09))
+
 # [3.175.0](https://github.com/Tallec7/neopro/compare/v3.174.0...v3.175.0) (2026-04-15)
 
 ### Features
