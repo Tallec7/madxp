@@ -1,3 +1,9 @@
+## [3.176.3](https://github.com/Tallec7/neopro/compare/v3.176.2...v3.176.3) (2026-04-15)
+
+### Performance Improvements
+
+- **templates:** add imageFormat jpeg + concurrency 2 to renderMedia API call ([f9ad9ec](https://github.com/Tallec7/neopro/commit/f9ad9ec66ff7702c3d38190b62f6bec538ce1c73))
+
 ## [3.176.2](https://github.com/Tallec7/neopro/compare/v3.176.1...v3.176.2) (2026-04-15)
 
 ### Performance Improvements
