@@ -1,3 +1,9 @@
+# [3.171.0](https://github.com/Tallec7/neopro/compare/v3.170.5...v3.171.0) (2026-04-15)
+
+### Features
+
+- **motion:** add logoSize number prop to ButSimple template schema ([8165980](https://github.com/Tallec7/neopro/commit/81659806373ce719cceeafadf3f4f658bf2c8cb2))
+
 ## [3.170.5](https://github.com/Tallec7/neopro/compare/v3.170.4...v3.170.5) (2026-04-15)
 
 ### Bug Fixes
