@@ -1,3 +1,9 @@
+## [3.176.1](https://github.com/Tallec7/neopro/compare/v3.176.0...v3.176.1) (2026-04-15)
+
+### Bug Fixes
+
+- **templates:** center score label in ButImgJoueur ([19b5fa4](https://github.com/Tallec7/neopro/commit/19b5fa433508c04efd3315b4764b6f517bf26abd))
+
 # [3.176.0](https://github.com/Tallec7/neopro/compare/v3.175.0...v3.176.0) (2026-04-15)
 
 ### Features
