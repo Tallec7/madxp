@@ -1,3 +1,9 @@
+## [3.170.5](https://github.com/Tallec7/neopro/compare/v3.170.4...v3.170.5) (2026-04-15)
+
+### Bug Fixes
+
+- **motion:** serve Remotion assets at root path to match staticFile() output ([8276b55](https://github.com/Tallec7/neopro/commit/8276b559e91e928b7e34b2ffafffec4564c6d0b1))
+
 ## [3.170.4](https://github.com/Tallec7/neopro/compare/v3.170.3...v3.170.4) (2026-04-15)
 
 ### Bug Fixes
