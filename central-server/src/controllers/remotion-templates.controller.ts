@@ -412,11 +412,15 @@ async function runRemotion(
     // yuv420p: required for Pi hardware H.264 decode — other formats (yuv422p, yuv444p)
     // fall back to software decode on Pi and cause choppy playback.
     pixelFormat: 'yuv420p',
-    // concurrency: 1 forces sequential frame rendering.
-    // Default (= CPU cores) spawns N Chromium instances each decoding 3-5 WebM files
-    // via swangle simultaneously → CPU/memory thrashing → uneven frame durations →
-    // VFR-like output that stutters on playback.
-    concurrency: 1,
+    // JPEG 95 : le masque alpha de C.webm est appliqué via webkitMaskImage dans le browser
+    // AVANT le screenshot — la scène capturée est déjà composée (opaque) → PNG inutile.
+    // JPEG ~10x plus rapide à encoder que PNG pour chaque frame.
+    imageFormat: 'jpeg',
+    jpegQuality: 95,
+    // concurrency: 2 — compromis entre parallélisme et mémoire Railway.
+    // 1 = trop lent (séquentiel pur), default (= CPU cores) = thrashing swangle.
+    // 2 workers = ~2x plus rapide sans exploser la RAM du container.
+    concurrency: 2,
     // crf 18 = high quality, consistent bitrate. Without crf, Remotion uses a default
     // that can produce large bitrate spikes causing buffering during playback.
     crf: 18,
