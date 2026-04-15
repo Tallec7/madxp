@@ -34,7 +34,7 @@ export const Root: React.FC = () => {
           nom: 'NOM',
           club: 'NOM DU CLUB',
           logoSrc: 'logo_club copie.png',
-          logoSize: 400,
+          logoSize: 800,
           playerImgSrc: 'player_photo.png',
           scoreLabel: '+1',
         }}
