@@ -1,3 +1,9 @@
+# [3.175.0](https://github.com/Tallec7/neopro/compare/v3.174.0...v3.175.0) (2026-04-15)
+
+### Features
+
+- **templates:** add playerImgBottom prop to ButImgJoueur ([dce2713](https://github.com/Tallec7/neopro/commit/dce2713a4def2e49ec870de731b36cfe8273d57f))
+
 # [3.174.0](https://github.com/Tallec7/neopro/compare/v3.173.2...v3.174.0) (2026-04-15)
 
 ### Features
