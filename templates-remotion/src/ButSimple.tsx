@@ -40,6 +40,10 @@ const useCAlphaMaskRAF = (
     canvas.height = 270;  // 25% de 1080
     const ctx = canvas.getContext("2d")!;
     let rafId: number;
+    // Once the mask has been applied at least once, never hide the text again.
+    // In Remotion headless rendering (puppeteer, frame-by-frame), readyState can
+    // briefly drop between frames — toggling visibility:hidden causes flicker.
+    let maskEverApplied = false;
 
     const applyMask = () => {
       const video = cVideoRef.current;
@@ -53,6 +57,7 @@ const useCAlphaMaskRAF = (
             const url = canvas.toDataURL("image/png");
 
             // Application directe sur le DOM — pas de setState, pas de re-render
+            maskEverApplied = true;
             text.style.visibility = "visible";
             text.style.webkitMaskImage = `url("${url}")`;
             text.style.webkitMaskMode = "alpha";
@@ -60,11 +65,13 @@ const useCAlphaMaskRAF = (
             text.style.webkitMaskSize = "100% 100%";
           } catch {
             // Canvas tainted (CORS) → pas de masque, texte visible partout
+            maskEverApplied = true;
             text.style.visibility = "visible";
           }
-        } else {
-          // Vidéo pas encore prête → cacher le texte pour éviter qu'il apparaisse
-          // sur les zones transparentes de C avant le chargement
+        } else if (!maskEverApplied) {
+          // Vidéo pas encore prête ET masque jamais appliqué → cacher le texte
+          // pour éviter qu'il apparaisse sur les zones transparentes de C.
+          // Une fois le masque appliqué, on ne cache plus jamais (évite le flicker).
           text.style.visibility = "hidden";
         }
       }
