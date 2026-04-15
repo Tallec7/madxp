@@ -1,3 +1,9 @@
+## [3.172.3](https://github.com/Tallec7/neopro/compare/v3.172.2...v3.172.3) (2026-04-15)
+
+### Bug Fixes
+
+- **infra:** fix 429 on OTA uploads, truncate frontend log breadcrumbs, increase heap to 512MB ([f63f127](https://github.com/Tallec7/neopro/commit/f63f127882ed63a8fd0c002ad9756d00f1822a99))
+
 ## [3.172.2](https://github.com/Tallec7/neopro/compare/v3.172.1...v3.172.2) (2026-04-15)
 
 ### Bug Fixes
