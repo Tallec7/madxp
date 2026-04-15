@@ -1,3 +1,9 @@
+## [3.169.2](https://github.com/Tallec7/neopro/compare/v3.169.1...v3.169.2) (2026-04-15)
+
+### Bug Fixes
+
+- **motion:** fix stuttering in Remotion-generated videos ([0e8cbff](https://github.com/Tallec7/neopro/commit/0e8cbff55a49d928fbe7a486f4715fd5750bf2d9))
+
 ## [3.169.1](https://github.com/Tallec7/neopro/compare/v3.169.0...v3.169.1) (2026-04-15)
 
 ### Bug Fixes
