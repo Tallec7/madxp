@@ -1,3 +1,9 @@
+# [3.173.0](https://github.com/Tallec7/neopro/compare/v3.172.3...v3.173.0) (2026-04-15)
+
+### Features
+
+- **templates:** implement ButImgJoueur Remotion template with dual alpha masks ([26b9dac](https://github.com/Tallec7/neopro/commit/26b9dac0de3103976f01e29400dc32ade2dbac8b))
+
 ## [3.172.3](https://github.com/Tallec7/neopro/compare/v3.172.2...v3.172.3) (2026-04-15)
 
 ### Bug Fixes
