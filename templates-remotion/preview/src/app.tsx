@@ -75,9 +75,12 @@ function App() {
         autoPlay
         acknowledgeRemotionLicense
         style={{ width: '100%', maxHeight: '100vh', aspectRatio: '16/9' }}
-        // publicPath : chemin vers les assets statiques (webm, fonts, images)
-        // servis par central-server à /remotion-preview/public/
-        publicPath={`${import.meta.env.BASE_URL}public/`}
+        // publicPath : chemin absolu vers les assets statiques (webm, fonts, images).
+        // staticFile("foo.webm") retourne publicPath + "foo.webm".
+        // On utilise window.location pour calculer l'URL absolue dynamiquement,
+        // quelle que soit l'origine (local ou Railway production).
+        // new URL('./public/', href) ignore le query string — toujours correct.
+        publicPath={new URL('./public/', window.location.href).href}
       />
     </div>
   );
