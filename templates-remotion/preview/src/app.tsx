@@ -73,6 +73,7 @@ function App() {
         controls
         loop
         autoPlay
+        acknowledgeRemotionLicense
         style={{ width: '100%', maxHeight: '100vh', aspectRatio: '16/9' }}
         // publicPath : chemin vers les assets statiques (webm, fonts, images)
         // servis par central-server à /remotion-preview/public/

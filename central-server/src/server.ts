@@ -126,7 +126,7 @@ app.use(helmet({
       connectSrc: ["'self'", 'wss:', 'ws:'],    // Allow WebSocket connections
       fontSrc: ["'self'", 'https:', 'data:'],
       objectSrc: ["'none'"],
-      mediaSrc: ["'self'"],
+      mediaSrc: ["'self'", 'blob:'],   // blob: required for @remotion/player video prefetch
       frameSrc: ["'none'"],
       frameAncestors: ["'self'", 'https://neopro-admin.kalonpartners.bzh'],
     },

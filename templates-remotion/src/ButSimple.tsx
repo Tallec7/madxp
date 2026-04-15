@@ -119,7 +119,7 @@ type Props = z.infer<typeof butSimpleSchema>;
 //   cVideoRef → pointe sur le <video> de C → lu par useCAlphaMaskRAF
 //   textRef   → pointe sur le div texte   → webkitMaskImage mis à jour en direct
 // ─────────────────────────────────────────────────────────────────────────────
-export const ButSimple: React.FC<Props> = ({ prenom, nom, club, logoSrc, logoSize }) => {
+export const ButSimple: React.FC<Props> = ({ prenom = '', nom = '', club = '', logoSrc = 'logo_club.png', logoSize = 500 }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
 
