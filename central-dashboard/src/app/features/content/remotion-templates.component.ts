@@ -1,6 +1,7 @@
 import { Component, OnInit, OnDestroy, ViewChild, ElementRef, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { ApiService } from '../../core/services/api.service';
 import { NotificationService } from '../../core/services/notification.service';
 import { AuthService } from '../../core/services/auth.service';
@@ -220,8 +221,7 @@ interface RenderResult {
                       [src]="previewUrl"
                       class="preview-frame"
                       frameborder="0"
-                      allow="autoplay"
-                      sandbox="allow-scripts allow-same-origin">
+                      allow="autoplay">
               </iframe>
             </div>
             <p class="preview-hint">
@@ -315,6 +315,7 @@ export class RemotionTemplatesComponent implements OnInit, OnDestroy {
   private notifications = inject(NotificationService);
   private authService = inject(AuthService);
   private sitesService = inject(SitesService);
+  private sanitizer = inject(DomSanitizer);
 
   templates: RemotionTemplate[] = [];
   selectedTemplate: RemotionTemplate | null = null;
@@ -332,8 +333,8 @@ export class RemotionTemplatesComponent implements OnInit, OnDestroy {
   renderStatusMessage = 'Démarrage du render...';
   lastResult: RenderResult | null = null;
 
-  // URL de l'iframe preview — construite à la sélection du template
-  previewUrl = '';
+  // URL de l'iframe preview — SafeResourceUrl pour éviter NG0904
+  previewUrl: SafeResourceUrl = '';
 
   // Debounce postMessage pour ne pas spammer l'iframe à chaque frappe
   private postMessageTimer: ReturnType<typeof setTimeout> | null = null;
@@ -420,14 +421,16 @@ export class RemotionTemplatesComponent implements OnInit, OnDestroy {
     }, 150);
   }
 
-  /** Construit l'URL initiale de l'iframe avec composition + props encodées */
-  private buildPreviewUrl(compositionId: string, props: Record<string, unknown>): string {
+  /** Construit l'URL initiale de l'iframe avec composition + props encodées.
+   *  bypassSecurityTrustResourceUrl est sûr ici : l'URL est construite en interne
+   *  et pointe toujours vers /remotion-preview/ sur la même origine. */
+  private buildPreviewUrl(compositionId: string, props: Record<string, unknown>): SafeResourceUrl {
     const base = '/remotion-preview/';
     const params = new URLSearchParams({
       composition: compositionId,
       props: encodeURIComponent(JSON.stringify(props)),
     });
-    return `${base}?${params.toString()}`;
+    return this.sanitizer.bypassSecurityTrustResourceUrl(`${base}?${params.toString()}`);
   }
 
   canRender(): boolean {
