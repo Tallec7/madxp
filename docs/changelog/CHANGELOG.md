@@ -1,3 +1,9 @@
+# [3.172.0](https://github.com/Tallec7/neopro/compare/v3.171.0...v3.172.0) (2026-04-15)
+
+### Features
+
+- **motion:** allow swapping template background videos from dashboard ([30d9a6c](https://github.com/Tallec7/neopro/commit/30d9a6cf8a05e02795fa737241cdd485bb3f41dd))
+
 # [3.171.0](https://github.com/Tallec7/neopro/compare/v3.170.5...v3.171.0) (2026-04-15)
 
 ### Features
