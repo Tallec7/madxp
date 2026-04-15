@@ -7,6 +7,10 @@ import * as ctrl from '../controllers/remotion-templates.controller';
 
 const router = Router();
 
+// Proxy same-origin pour les assets FTP (CORS bypass pour @remotion/player)
+// Route sans auth — assets déjà publics sur kalonpartners.bzh
+router.get('/asset-proxy', adminRateLimit, ctrl.proxyTemplateAsset);
+
 // Lecture — admin voit tout, club voit uniquement les publiés (feature-gated)
 router.get(
   '/',

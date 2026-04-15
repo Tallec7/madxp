@@ -1,7 +1,9 @@
-import { Response } from 'express';
+import { Request, Response } from 'express';
 import * as path from 'path';
 import * as fs from 'fs';
 import * as os from 'os';
+import https from 'https';
+import http from 'http';
 import { AuthRequest } from '../types';
 import logger from '../config/logger';
 import { uploadVideoFromDisk, uploadAsset, getAssetUrl } from '../services/storage.service';
@@ -82,6 +84,56 @@ export const createTemplate = async (req: AuthRequest, res: Response) => {
     logger.error('createTemplate error', { error });
     res.status(500).json({ error: 'Erreur serveur' });
   }
+};
+
+/**
+ * GET /api/remotion-templates/asset-proxy?url=<encoded_ftp_url>
+ * Proxy same-origin pour les assets FTP (kalonpartners.bzh).
+ * Permet au @remotion/player de charger des WebM FTP sans CORS ni CSP cross-origin.
+ * Sécurité : seul le domaine kalonpartners.bzh est autorisé.
+ */
+const ALLOWED_PROXY_HOST = 'kalonpartners.bzh';
+
+export const proxyTemplateAsset = (req: Request, res: Response): void => {
+  const rawUrl = req.query['url'] as string | undefined;
+  if (!rawUrl) {
+    res.status(400).json({ error: 'url requis' });
+    return;
+  }
+
+  let parsed: URL;
+  try {
+    parsed = new URL(decodeURIComponent(rawUrl));
+  } catch {
+    res.status(400).json({ error: 'url invalide' });
+    return;
+  }
+
+  // Restriction de sécurité : uniquement kalonpartners.bzh
+  if (parsed.hostname !== ALLOWED_PROXY_HOST) {
+    res.status(403).json({ error: 'Domaine non autorisé' });
+    return;
+  }
+
+  const transport = parsed.protocol === 'https:' ? https : http;
+  const upstreamReq = transport.get(parsed.toString(), (upstreamRes) => {
+    // Propager Content-Type et Content-Length
+    if (upstreamRes.headers['content-type']) {
+      res.setHeader('Content-Type', upstreamRes.headers['content-type']);
+    }
+    if (upstreamRes.headers['content-length']) {
+      res.setHeader('Content-Length', upstreamRes.headers['content-length']);
+    }
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Cache-Control', 'public, max-age=86400'); // 24h cache
+    res.status(upstreamRes.statusCode ?? 200);
+    upstreamRes.pipe(res);
+  });
+
+  upstreamReq.on('error', (err) => {
+    logger.error('proxyTemplateAsset error', { url: rawUrl, error: err.message });
+    if (!res.headersSent) res.status(502).json({ error: 'Erreur proxy' });
+  });
 };
 
 /**

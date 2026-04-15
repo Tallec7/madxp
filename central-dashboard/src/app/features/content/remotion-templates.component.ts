@@ -474,10 +474,11 @@ export class RemotionTemplatesComponent implements OnInit, OnDestroy {
     this.postMessageTimer = setTimeout(() => {
       const iframe = this.previewFrameRef?.nativeElement;
       if (!iframe?.contentWindow || !this.selectedTemplate) return;
+      const serverBase = environment.apiUrl.replace(/\/api$/, '');
       iframe.contentWindow.postMessage({
         type: 'remotion-props-update',
         compositionId: this.selectedTemplate.composition_id,
-        props: this.propValues,
+        props: this.proxyFtpUrls(this.propValues, serverBase),
       }, '*');
     }, 150);
   }
@@ -490,10 +491,24 @@ export class RemotionTemplatesComponent implements OnInit, OnDestroy {
     const serverBase = environment.apiUrl.replace(/\/api$/, '');
     const params = new URLSearchParams({
       composition: compositionId,
-      props: encodeURIComponent(JSON.stringify(props)),
+      props: encodeURIComponent(JSON.stringify(this.proxyFtpUrls(props, serverBase))),
     });
     const url = `${serverBase}/remotion-preview/?${params.toString()}`;
     return this.sanitizer.bypassSecurityTrustResourceUrl(url);
+  }
+
+  /** Remplace les URLs FTP kalonpartners.bzh par des URLs proxy same-origin
+   *  pour que @remotion/player puisse charger les WebM sans CORS ni CSP. */
+  private proxyFtpUrls(props: Record<string, unknown>, serverBase: string): Record<string, unknown> {
+    const result: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(props)) {
+      if (typeof v === 'string' && v.includes('kalonpartners.bzh')) {
+        result[k] = `${serverBase}/api/remotion-templates/asset-proxy?url=${encodeURIComponent(v)}`;
+      } else {
+        result[k] = v;
+      }
+    }
+    return result;
   }
 
   canRender(): boolean {
