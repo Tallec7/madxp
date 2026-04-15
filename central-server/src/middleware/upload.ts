@@ -121,6 +121,22 @@ export const uploadTemplate = multer({
   }
 });
 
+// Configuration multer pour les assets templates (WebM/MP4) — DISK STORAGE
+const templateAssetFilter = (_req: Express.Request, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
+  const allowed = ['video/webm', 'video/mp4'];
+  if (allowed.includes(file.mimetype)) {
+    cb(null, true);
+  } else {
+    cb(new Error(`Type non autorisé: ${file.mimetype}. Formats acceptés: WebM, MP4`));
+  }
+};
+
+export const uploadTemplateAsset = multer({
+  storage: diskStorage,
+  fileFilter: templateAssetFilter,
+  limits: { fileSize: 200 * 1024 * 1024 }, // 200MB max
+});
+
 // Configuration multer pour les paquets de mise à jour — DISK STORAGE (jusqu'à 1GB)
 export const uploadUpdatePackage = multer({
   storage: diskStorage,

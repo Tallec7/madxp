@@ -101,6 +101,10 @@ export const butSimpleSchema = z.object({
   club: z.string(),
   logoSrc: z.string().default("logo_club.png"),
   logoSize: z.number().default(500), // largeur du logo en px — ajustable dans Studio ou à l'API
+  // Assets vidéo — URL FTP si fourni, sinon fallback sur staticFile() local
+  videoSrcA: z.string().optional(),
+  videoSrcB: z.string().optional(),
+  videoSrcC: z.string().optional(),
 });
 
 type Props = z.infer<typeof butSimpleSchema>;
@@ -119,7 +123,11 @@ type Props = z.infer<typeof butSimpleSchema>;
 //   cVideoRef → pointe sur le <video> de C → lu par useCAlphaMaskRAF
 //   textRef   → pointe sur le div texte   → webkitMaskImage mis à jour en direct
 // ─────────────────────────────────────────────────────────────────────────────
-export const ButSimple: React.FC<Props> = ({ prenom = '', nom = '', club = '', logoSrc = 'logo_club.png', logoSize = 500 }) => {
+// Résout une URL vidéo : URL FTP directe si fournie, sinon staticFile() local
+const resolveVideo = (url: string | undefined, fallback: string) =>
+  url && (url.startsWith('http') || url.startsWith('blob:')) ? url : staticFile(fallback);
+
+export const ButSimple: React.FC<Props> = ({ prenom = '', nom = '', club = '', logoSrc = 'logo_club.png', logoSize = 500, videoSrcA, videoSrcB, videoSrcC }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
 
@@ -165,7 +173,7 @@ export const ButSimple: React.FC<Props> = ({ prenom = '', nom = '', club = '', l
       `}</style>
 
       {/* ── COUCHE 1 : Fond animé ──────────────────────────────────────────── */}
-      <Video src={staticFile("BUT_simple_A.webm")} style={layerStyle} />
+      <Video src={resolveVideo(videoSrcA, "BUT_simple_A.webm")} style={layerStyle} />
 
       {/* ── COUCHE 2 : Logo club ──────────────────────────────────────────── */}
       {/*
@@ -192,7 +200,7 @@ export const ButSimple: React.FC<Props> = ({ prenom = '', nom = '', club = '', l
       */}
       <Video
         ref={cVideoRef}
-        src={staticFile("BUT_simple_C.webm")}
+        src={resolveVideo(videoSrcC, "BUT_simple_C.webm")}
         style={layerStyle}
       />
 
@@ -221,7 +229,7 @@ export const ButSimple: React.FC<Props> = ({ prenom = '', nom = '', club = '', l
       </div>
 
       {/* ── COUCHE 5 : Wipe B ─────────────────────────────────────────────── */}
-      <Video src={staticFile("BUT_simple_B.webm")} style={layerStyle} />
+      <Video src={resolveVideo(videoSrcB, "BUT_simple_B.webm")} style={layerStyle} />
 
     </AbsoluteFill>
   );

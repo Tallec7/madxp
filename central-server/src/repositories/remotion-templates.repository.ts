@@ -70,6 +70,15 @@ class RemotionTemplatesRepository {
     return result.rows[0];
   }
 
+  async updateDefaultProps(id: string, defaultProps: Record<string, unknown>): Promise<NeoProTemplate | null> {
+    const result = await query<NeoProTemplate>(
+      `UPDATE neopro_templates SET default_props = $1, updated_at = NOW()
+       WHERE id = $2 RETURNING *`,
+      [JSON.stringify(defaultProps), id]
+    );
+    return result.rows[0] || null;
+  }
+
   async setPublished(id: string, published: boolean): Promise<NeoProTemplate | null> {
     const result = await query<NeoProTemplate>(
       `UPDATE neopro_templates SET published = $1, updated_at = NOW()

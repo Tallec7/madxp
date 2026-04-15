@@ -14,12 +14,13 @@ import { Site } from '../../core/models';
 interface TemplatePropDef {
   key: string;
   label: string;
-  type: 'text' | 'image' | 'number';
+  type: 'text' | 'image' | 'number' | 'asset';
   required: boolean;
   placeholder?: string;
   min?: number;
   max?: number;
   step?: number;
+  admin_only?: boolean;
 }
 
 interface RemotionTemplate {
@@ -118,7 +119,8 @@ interface RenderResult {
           <div class="props-form">
             <h3 class="section-title">Personnalisation</h3>
 
-            <div *ngFor="let prop of selectedTemplate.props_schema" class="form-field">
+            <ng-container *ngFor="let prop of selectedTemplate.props_schema">
+            <div class="form-field" *ngIf="!prop.admin_only || isAdmin">
               <label [for]="prop.key">
                 {{ prop.label }}
                 <span class="required" *ngIf="prop.required">*</span>
@@ -151,6 +153,23 @@ interface RenderResult {
                        class="form-input number-input" />
               </div>
 
+              <!-- Champ asset (WebM admin) -->
+              <div *ngIf="prop.type === 'asset'" class="asset-field">
+                <div class="asset-current" *ngIf="propValues[prop.key]">
+                  <span class="asset-ok">✓ Asset uploadé</span>
+                  <button class="btn-remove-asset" (click)="removeAsset(prop.key)">Retirer</button>
+                </div>
+                <label *ngIf="!assetUploading[prop.key]" class="asset-upload-btn" [for]="'asset_' + prop.key">
+                  {{ propValues[prop.key] ? '↺ Remplacer la vidéo' : '⬆ Uploader une vidéo (WebM/MP4)' }}
+                </label>
+                <span *ngIf="assetUploading[prop.key]" class="asset-uploading">Upload en cours...</span>
+                <input [id]="'asset_' + prop.key"
+                       type="file"
+                       accept="video/webm,video/mp4"
+                       (change)="onAssetSelect($event, prop.key)"
+                       hidden />
+              </div>
+
               <!-- Champ image -->
               <div *ngIf="prop.type === 'image'" class="image-field">
                 <div class="image-preview" *ngIf="imageUrls[prop.key]">
@@ -167,6 +186,7 @@ interface RenderResult {
                        hidden />
               </div>
             </div>
+            </ng-container>
 
             <!-- Titre + Site -->
             <div class="form-field">
@@ -279,6 +299,14 @@ interface RenderResult {
     .range-input { flex: 1; cursor: pointer; accent-color: #8b5cf6; }
     .number-input { width: 80px; flex: none; }
 
+    .asset-field { display: flex; flex-direction: column; gap: 6px; }
+    .asset-current { display: flex; align-items: center; gap: 10px; padding: 6px 10px; background: #f0fdf4; border-radius: 6px; }
+    .asset-ok { font-size: 12px; color: #16a34a; font-weight: 500; flex: 1; }
+    .btn-remove-asset { font-size: 11px; color: #6b7280; background: none; border: 1px solid #d1d5db; border-radius: 4px; padding: 2px 8px; cursor: pointer; }
+    .asset-upload-btn { display: inline-block; padding: 8px 14px; border: 1px dashed #a78bfa; border-radius: 8px; cursor: pointer; font-size: 12px; color: #7c3aed; background: #f5f3ff; }
+    .asset-upload-btn:hover { background: #ede9fe; }
+    .asset-uploading { font-size: 12px; color: #8b5cf6; }
+
     .image-field { }
     .image-preview { position: relative; display: inline-block; }
     .image-preview img { height: 80px; border-radius: 8px; border: 1px solid #e5e7eb; }
@@ -327,6 +355,7 @@ export class RemotionTemplatesComponent implements OnInit, OnDestroy {
   propValues: Record<string, unknown> = {};
   imageUrls: Record<string, string> = {};
   imageFiles: Record<string, File> = {};
+  assetUploading: Record<string, boolean> = {};
   videoTitle = '';
 
   rendering = false;
@@ -375,6 +404,7 @@ export class RemotionTemplatesComponent implements OnInit, OnDestroy {
     this.propValues = { ...tpl.default_props };
     this.imageUrls = {};
     this.imageFiles = {};
+    this.assetUploading = {};
     this.videoTitle = tpl.name;
 
     // Construire l'URL de l'iframe avec la composition et les props initiales
@@ -399,6 +429,36 @@ export class RemotionTemplatesComponent implements OnInit, OnDestroy {
       this.onPropChange(key, dataUrl);
     };
     reader.readAsDataURL(file);
+  }
+
+  onAssetSelect(event: Event, key: string) {
+    const file = (event.target as HTMLInputElement).files?.[0];
+    if (!file || !this.selectedTemplate) return;
+
+    this.assetUploading[key] = true;
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('prop_key', key);
+
+    this.api.upload<{ url: string; prop_key: string }>(
+      `/remotion-templates/${this.selectedTemplate.id}/assets`,
+      formData
+    ).subscribe({
+      next: ({ url }) => {
+        this.assetUploading[key] = false;
+        this.onPropChange(key, url);
+        this.notifications.success(`Asset "${key}" uploadé`);
+      },
+      error: () => {
+        this.assetUploading[key] = false;
+        this.notifications.error('Échec upload asset');
+      },
+    });
+  }
+
+  removeAsset(key: string) {
+    const defaultVal = this.selectedTemplate?.default_props[key] ?? undefined;
+    this.onPropChange(key, defaultVal);
   }
 
   removeImage(key: string) {

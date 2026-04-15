@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { authenticate, requireRole } from '../middleware/auth';
 import { adminRateLimit, sensitiveRateLimit } from '../middleware/user-rate-limit';
 import { validateParams, paramSchemas } from '../middleware/validation';
+import { uploadTemplateAsset } from '../middleware/upload';
 import * as ctrl from '../controllers/remotion-templates.controller';
 
 const router = Router();
@@ -41,6 +42,17 @@ router.patch(
   validateParams(paramSchemas.id),
   sensitiveRateLimit,
   ctrl.publishTemplate,
+);
+
+// Upload asset vidéo (WebM) — admin uniquement
+router.post(
+  '/:id/assets',
+  authenticate,
+  requireRole('admin', 'super_admin'),
+  validateParams(paramSchemas.id),
+  sensitiveRateLimit,
+  uploadTemplateAsset.single('file'),
+  ctrl.uploadTemplateAssetController,
 );
 
 // Render — admin/operator libre, club doit avoir la feature video_templates

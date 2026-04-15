@@ -4,7 +4,7 @@ import * as fs from 'fs';
 import * as os from 'os';
 import { AuthRequest } from '../types';
 import logger from '../config/logger';
-import { uploadVideoFromDisk } from '../services/storage.service';
+import { uploadVideoFromDisk, uploadAsset, getAssetUrl } from '../services/storage.service';
 import {
   videoRepository,
   siteRepository,
@@ -97,6 +97,59 @@ export const publishTemplate = async (req: AuthRequest, res: Response) => {
     res.json(template);
   } catch (error) {
     logger.error('publishTemplate error', { error, id: req.params.id });
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+};
+
+/**
+ * POST /api/remotion-templates/:id/assets
+ * Upload un asset vidéo (WebM/MP4) vers le FTP et retourne son URL publique.
+ * L'URL est ensuite sauvegardée dans default_props du template (ex: videoSrcA).
+ * Admin uniquement.
+ */
+export const uploadTemplateAssetController = async (req: AuthRequest, res: Response) => {
+  const file = req.file as Express.Multer.File | undefined;
+  const filePath = file?.path;
+
+  try {
+    const { id } = req.params;
+    const { prop_key } = req.body as { prop_key?: string };
+
+    if (!file || !filePath) {
+      return res.status(400).json({ error: 'Fichier requis' });
+    }
+    if (!prop_key) {
+      return res.status(400).json({ error: 'prop_key requis (ex: videoSrcA)' });
+    }
+
+    const template = await remotionTemplatesRepository.findById(id);
+    if (!template) {
+      cleanupFile(filePath);
+      return res.status(404).json({ error: 'Template non trouvé' });
+    }
+
+    // Upload vers FTP — dossier remotion-assets/
+    const storagePath = `remotion-assets/${Date.now()}-${file.originalname}`;
+    const buffer = fs.readFileSync(filePath);
+    const result = await uploadAsset(buffer, storagePath, file.mimetype);
+
+    cleanupFile(filePath);
+
+    if (!result) {
+      return res.status(500).json({ error: 'Échec upload FTP' });
+    }
+
+    const publicUrl = getAssetUrl(storagePath);
+
+    // Mettre à jour default_props du template avec la nouvelle URL
+    const updatedDefaultProps = { ...(template.default_props as Record<string, unknown>), [prop_key]: publicUrl };
+    await remotionTemplatesRepository.updateDefaultProps(id, updatedDefaultProps);
+
+    logger.info('Template asset uploaded', { templateId: id, prop_key, url: publicUrl });
+    res.json({ url: publicUrl, prop_key });
+  } catch (error) {
+    if (filePath) cleanupFile(filePath);
+    logger.error('uploadTemplateAsset error', { error, id: req.params.id });
     res.status(500).json({ error: 'Erreur serveur' });
   }
 };
