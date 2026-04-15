@@ -22,7 +22,7 @@ ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
 RUN npm ci
 
 # ============================================
-# Stage 1b: Remotion dependencies
+# Stage 1b: Remotion dependencies (production — no dev tools)
 # ============================================
 FROM node:20-slim AS remotion-deps
 
@@ -34,6 +34,22 @@ COPY templates-remotion/package*.json ./
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
 
 RUN npm ci --omit=dev && npm cache clean --force
+
+# ============================================
+# Stage 1c: Preview app builder (Vite + @remotion/player)
+# ============================================
+FROM node:20-slim AS preview-builder
+
+WORKDIR /app/templates-remotion
+
+# Install all deps (including vite, @vitejs/plugin-react)
+COPY templates-remotion/package*.json ./
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+RUN npm ci
+
+# Copy sources and build
+COPY templates-remotion/ .
+RUN npm run build:preview
 
 # ============================================
 # Stage 2: Builder
@@ -117,6 +133,8 @@ COPY --from=builder /app/docs-proposals/ ./docs/proposals/
 # Copy Remotion templates + pre-installed node_modules (ADR-052)
 COPY templates-remotion/ ./templates-remotion/
 COPY --from=remotion-deps /app/templates-remotion/node_modules ./templates-remotion/node_modules
+# Copy preview app built by Vite (served at /remotion-preview/ by central-server)
+COPY --from=preview-builder /app/templates-remotion/preview/dist ./templates-remotion/preview/dist
 
 # Expose port
 EXPOSE 3001

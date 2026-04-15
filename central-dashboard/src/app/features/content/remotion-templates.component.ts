@@ -1,11 +1,10 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild, ElementRef, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../core/services/api.service';
 import { NotificationService } from '../../core/services/notification.service';
 import { AuthService } from '../../core/services/auth.service';
 import { SitesService } from '../../core/services/sites.service';
-import { FeatureGateService } from '../../core/services/feature-gate.service';
 import { Site } from '../../core/models';
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -13,9 +12,12 @@ import { Site } from '../../core/models';
 interface TemplatePropDef {
   key: string;
   label: string;
-  type: 'text' | 'image';
+  type: 'text' | 'image' | 'number';
   required: boolean;
   placeholder?: string;
+  min?: number;
+  max?: number;
+  step?: number;
 }
 
 interface RemotionTemplate {
@@ -24,7 +26,7 @@ interface RemotionTemplate {
   composition_id: string;
   description: string;
   props_schema: TemplatePropDef[];
-  default_props: Record<string, string>;
+  default_props: Record<string, unknown>;
   thumbnail_url: string | null;
   published: boolean;
   created_at: string;
@@ -101,7 +103,7 @@ interface RenderResult {
         Aucun template disponible
       </div>
 
-      <!-- Panneau de personnalisation + render -->
+      <!-- Panneau personnalisation + preview + render -->
       <div class="render-panel" *ngIf="selectedTemplate">
         <div class="render-panel-header">
           <h2>{{ selectedTemplate.name }}</h2>
@@ -109,21 +111,45 @@ interface RenderResult {
         </div>
 
         <div class="render-panel-body">
-          <!-- Formulaire props -->
+
+          <!-- Colonne 1 : Formulaire props -->
           <div class="props-form">
+            <h3 class="section-title">Personnalisation</h3>
+
             <div *ngFor="let prop of selectedTemplate.props_schema" class="form-field">
               <label [for]="prop.key">
                 {{ prop.label }}
                 <span class="required" *ngIf="prop.required">*</span>
               </label>
 
+              <!-- Champ texte -->
               <input *ngIf="prop.type === 'text'"
                      [id]="prop.key"
                      type="text"
-                     [(ngModel)]="propValues[prop.key]"
+                     [ngModel]="propValues[prop.key]"
+                     (ngModelChange)="onPropChange(prop.key, $event)"
                      [placeholder]="prop.placeholder || ''"
                      class="form-input" />
 
+              <!-- Champ nombre + slider -->
+              <div *ngIf="prop.type === 'number'" class="number-field">
+                <input type="range"
+                       [id]="prop.key"
+                       [min]="prop.min ?? 100"
+                       [max]="prop.max ?? 1000"
+                       [step]="prop.step ?? 10"
+                       [ngModel]="propValues[prop.key]"
+                       (ngModelChange)="onPropChange(prop.key, +$event)"
+                       class="range-input" />
+                <input type="number"
+                       [min]="prop.min ?? 100"
+                       [max]="prop.max ?? 1000"
+                       [ngModel]="propValues[prop.key]"
+                       (ngModelChange)="onPropChange(prop.key, +$event)"
+                       class="form-input number-input" />
+              </div>
+
+              <!-- Champ image -->
               <div *ngIf="prop.type === 'image'" class="image-field">
                 <div class="image-preview" *ngIf="imageUrls[prop.key]">
                   <img [src]="imageUrls[prop.key]" [alt]="prop.label" />
@@ -139,17 +165,15 @@ interface RenderResult {
                        hidden />
               </div>
             </div>
-          </div>
 
-          <!-- Render -->
-          <div class="render-section">
-            <div class="render-title-field">
+            <!-- Titre + Site -->
+            <div class="form-field">
               <label for="videoTitle">Titre de la vidéo</label>
               <input id="videoTitle" type="text" [(ngModel)]="videoTitle"
                      [placeholder]="selectedTemplate.name" class="form-input" />
             </div>
 
-            <div class="site-selector-inline" *ngIf="isAdmin">
+            <div class="form-field" *ngIf="isAdmin">
               <label>Site cible (optionnel)</label>
               <select [(ngModel)]="selectedSiteId" class="form-input">
                 <option value="">-- Aucun site --</option>
@@ -159,6 +183,7 @@ interface RenderResult {
               </select>
             </div>
 
+            <!-- Render -->
             <div class="render-progress" *ngIf="rendering">
               <div class="progress-bar">
                 <div class="progress-fill" [style.width.%]="renderProgress"></div>
@@ -183,12 +208,33 @@ interface RenderResult {
               Le rendu est effectué côté serveur (~2 min). La vidéo sera ajoutée à la bibliothèque du site.
             </p>
           </div>
+
+          <!-- Colonne 2 : Preview live iframe -->
+          <div class="preview-panel">
+            <h3 class="section-title">
+              Aperçu en direct
+              <span class="preview-badge">Live</span>
+            </h3>
+            <div class="preview-frame-wrapper">
+              <iframe #previewFrame
+                      [src]="previewUrl"
+                      class="preview-frame"
+                      frameborder="0"
+                      allow="autoplay"
+                      sandbox="allow-scripts allow-same-origin">
+              </iframe>
+            </div>
+            <p class="preview-hint">
+              L'aperçu se met à jour instantanément. Ajustez les valeurs à gauche.
+            </p>
+          </div>
+
         </div>
       </div>
     </div>
   `,
   styles: [`
-    .page-container { padding: 24px; max-width: 1200px; }
+    .page-container { padding: 24px; max-width: 1400px; }
     .page-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 32px; }
     .page-header h1 { font-size: 24px; font-weight: 700; margin: 0 0 6px; }
     .badge-new { background: #8b5cf6; color: #fff; font-size: 11px; padding: 2px 8px; border-radius: 12px; vertical-align: middle; margin-left: 8px; }
@@ -216,21 +262,29 @@ interface RenderResult {
     .render-panel-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
     .render-panel-header h2 { font-size: 18px; font-weight: 600; margin: 0; }
     .btn-close { background: none; border: none; font-size: 20px; cursor: pointer; color: #666; }
-    .render-panel-body { display: grid; grid-template-columns: 1fr 320px; gap: 32px; }
 
-    .props-form { display: flex; flex-direction: column; gap: 16px; }
+    /* Layout 2 colonnes : formulaire | preview */
+    .render-panel-body { display: grid; grid-template-columns: 320px 1fr; gap: 32px; align-items: start; }
+
+    .section-title { font-size: 13px; font-weight: 600; color: #6b7280; text-transform: uppercase; letter-spacing: .05em; margin: 0 0 16px; }
+
+    .props-form { display: flex; flex-direction: column; gap: 14px; }
     .form-field label { display: block; font-size: 13px; font-weight: 500; margin-bottom: 6px; color: #374151; }
     .required { color: #ef4444; margin-left: 2px; }
-    .form-input { width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; }
+    .form-input { width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; box-sizing: border-box; }
+
+    /* Slider + nombre */
+    .number-field { display: flex; align-items: center; gap: 10px; }
+    .range-input { flex: 1; cursor: pointer; accent-color: #8b5cf6; }
+    .number-input { width: 80px; flex: none; }
+
     .image-field { }
     .image-preview { position: relative; display: inline-block; }
     .image-preview img { height: 80px; border-radius: 8px; border: 1px solid #e5e7eb; }
     .btn-remove { position: absolute; top: -6px; right: -6px; background: #ef4444; color: #fff; border: none; border-radius: 50%; width: 20px; height: 20px; font-size: 11px; cursor: pointer; }
     .image-upload-btn { display: inline-block; padding: 8px 16px; border: 1px dashed #d1d5db; border-radius: 8px; cursor: pointer; font-size: 13px; color: #6b7280; }
 
-    .render-section { display: flex; flex-direction: column; gap: 16px; }
-    .render-title-field label, .site-selector-inline label { display: block; font-size: 13px; font-weight: 500; margin-bottom: 6px; color: #374151; }
-    .btn-render { padding: 12px 24px; font-size: 15px; font-weight: 600; width: 100%; }
+    .btn-render { padding: 12px 24px; font-size: 15px; font-weight: 600; width: 100%; margin-top: 4px; }
     .btn.btn-primary { background: #8b5cf6; color: #fff; border: none; border-radius: 8px; cursor: pointer; }
     .btn.btn-primary:hover:not(:disabled) { background: #7c3aed; }
     .btn:disabled { opacity: .5; cursor: not-allowed; }
@@ -242,17 +296,25 @@ interface RenderResult {
     .btn-download { font-size: 12px; color: #065f46; text-decoration: underline; }
     .result-size { font-size: 12px; color: #6b7280; margin-left: auto; }
 
+    /* Preview iframe */
+    .preview-panel { display: flex; flex-direction: column; gap: 8px; }
+    .preview-badge { background: #fee2e2; color: #b91c1c; font-size: 10px; padding: 1px 6px; border-radius: 8px; vertical-align: middle; margin-left: 6px; font-weight: 600; text-transform: uppercase; }
+    .preview-frame-wrapper { position: relative; width: 100%; padding-top: 56.25%; /* 16:9 */ background: #111; border-radius: 10px; overflow: hidden; }
+    .preview-frame { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none; }
+    .preview-hint { font-size: 12px; color: #9ca3af; margin: 0; }
+
     .loading-state, .empty-state { color: #6b7280; padding: 48px 0; text-align: center; }
 
-    @media (max-width: 768px) { .render-panel-body { grid-template-columns: 1fr; } }
+    @media (max-width: 900px) { .render-panel-body { grid-template-columns: 1fr; } }
   `],
 })
-export class RemotionTemplatesComponent implements OnInit {
+export class RemotionTemplatesComponent implements OnInit, OnDestroy {
+  @ViewChild('previewFrame') previewFrameRef!: ElementRef<HTMLIFrameElement>;
+
   private api = inject(ApiService);
   private notifications = inject(NotificationService);
   private authService = inject(AuthService);
   private sitesService = inject(SitesService);
-  private featureGate = inject(FeatureGateService);
 
   templates: RemotionTemplate[] = [];
   selectedTemplate: RemotionTemplate | null = null;
@@ -260,7 +322,7 @@ export class RemotionTemplatesComponent implements OnInit {
   selectedSiteId = '';
   loading = true;
 
-  propValues: Record<string, string> = {};
+  propValues: Record<string, unknown> = {};
   imageUrls: Record<string, string> = {};
   imageFiles: Record<string, File> = {};
   videoTitle = '';
@@ -270,6 +332,12 @@ export class RemotionTemplatesComponent implements OnInit {
   renderStatusMessage = 'Démarrage du render...';
   lastResult: RenderResult | null = null;
 
+  // URL de l'iframe preview — construite à la sélection du template
+  previewUrl = '';
+
+  // Debounce postMessage pour ne pas spammer l'iframe à chaque frappe
+  private postMessageTimer: ReturnType<typeof setTimeout> | null = null;
+
   get isAdmin(): boolean {
     const role = this.authService.getCurrentUser()?.role;
     return role === 'admin' || role === 'super_admin';
@@ -278,6 +346,10 @@ export class RemotionTemplatesComponent implements OnInit {
   ngOnInit() {
     this.loadTemplates();
     this.loadSites();
+  }
+
+  ngOnDestroy() {
+    if (this.postMessageTimer) clearTimeout(this.postMessageTimer);
   }
 
   private loadTemplates() {
@@ -302,6 +374,15 @@ export class RemotionTemplatesComponent implements OnInit {
     this.imageUrls = {};
     this.imageFiles = {};
     this.videoTitle = tpl.name;
+
+    // Construire l'URL de l'iframe avec la composition et les props initiales
+    this.previewUrl = this.buildPreviewUrl(tpl.composition_id, this.propValues);
+  }
+
+  /** Appelé à chaque changement de prop — met à jour le preview via postMessage */
+  onPropChange(key: string, value: unknown) {
+    this.propValues = { ...this.propValues, [key]: value };
+    this.sendPropsToPreview();
   }
 
   onImageSelect(event: Event, key: string) {
@@ -309,21 +390,51 @@ export class RemotionTemplatesComponent implements OnInit {
     if (!file) return;
     this.imageFiles[key] = file;
     const reader = new FileReader();
-    reader.onload = (e) => { this.imageUrls[key] = e.target?.result as string; };
+    reader.onload = (e) => {
+      const dataUrl = e.target?.result as string;
+      this.imageUrls[key] = dataUrl;
+      // Envoyer le dataUrl directement comme prop — ButSimple accepte data: URLs
+      this.onPropChange(key, dataUrl);
+    };
     reader.readAsDataURL(file);
   }
 
   removeImage(key: string) {
     delete this.imageUrls[key];
     delete this.imageFiles[key];
-    delete this.propValues[key];
+    const defaultVal = this.selectedTemplate?.default_props[key] ?? '';
+    this.onPropChange(key, defaultVal);
+  }
+
+  /** Envoie les props courantes à l'iframe via postMessage (debounced 150ms) */
+  private sendPropsToPreview() {
+    if (this.postMessageTimer) clearTimeout(this.postMessageTimer);
+    this.postMessageTimer = setTimeout(() => {
+      const iframe = this.previewFrameRef?.nativeElement;
+      if (!iframe?.contentWindow || !this.selectedTemplate) return;
+      iframe.contentWindow.postMessage({
+        type: 'remotion-props-update',
+        compositionId: this.selectedTemplate.composition_id,
+        props: this.propValues,
+      }, '*');
+    }, 150);
+  }
+
+  /** Construit l'URL initiale de l'iframe avec composition + props encodées */
+  private buildPreviewUrl(compositionId: string, props: Record<string, unknown>): string {
+    const base = '/remotion-preview/';
+    const params = new URLSearchParams({
+      composition: compositionId,
+      props: encodeURIComponent(JSON.stringify(props)),
+    });
+    return `${base}?${params.toString()}`;
   }
 
   canRender(): boolean {
     if (!this.selectedTemplate) return false;
     return this.selectedTemplate.props_schema
       .filter(p => p.required && p.type === 'text')
-      .every(p => !!this.propValues[p.key]?.trim());
+      .every(p => !!(this.propValues[p.key] as string)?.trim());
   }
 
   togglePublish(tpl: RemotionTemplate) {
@@ -344,8 +455,8 @@ export class RemotionTemplatesComponent implements OnInit {
     this.renderStatusMessage = 'Envoi au serveur...';
     this.lastResult = null;
 
-    // Construire les props finaux avec les images en base64
-    const props: Record<string, string> = { ...this.propValues };
+    // Remplacer les images par leur dataUrl pour les props finales
+    const props: Record<string, unknown> = { ...this.propValues };
     for (const [key, file] of Object.entries(this.imageFiles)) {
       props[key] = await this.fileToDataUrl(file);
     }

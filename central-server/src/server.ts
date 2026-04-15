@@ -376,6 +376,19 @@ app.get('/ready', async (_req: Request, res: Response) => {
   res.status(httpStatus).json(readiness);
 });
 
+// ── Remotion Preview — assets statiques (ADR-052) ────────────────────────────
+// /remotion-preview/public/ → webm, fonts, images (assets Remotion)
+// /remotion-preview/       → app Vite buildée (@remotion/player)
+// Ordre important : public/ AVANT le fallback index.html
+const REMOTION_DIR = process.env.REMOTION_DIR
+  || path.resolve(__dirname, '../../../templates-remotion');
+app.use('/remotion-preview/public', express.static(path.join(REMOTION_DIR, 'public')));
+app.use('/remotion-preview', express.static(path.join(REMOTION_DIR, 'preview', 'dist')));
+// SPA fallback : toute route /remotion-preview/* non trouvée → index.html
+app.get('/remotion-preview/*', (_req, res) => {
+  res.sendFile(path.join(REMOTION_DIR, 'preview', 'dist', 'index.html'));
+});
+
 // Apply Row-Level Security context to all API routes
 // This middleware sets PostgreSQL session variables for multi-tenant isolation
 // It must run after authentication (which is handled in individual routes)

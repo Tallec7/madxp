@@ -174,7 +174,7 @@ export const ButSimple: React.FC<Props> = ({ prenom, nom, club, logoSrc, logoSiz
       */}
       <AbsoluteFill style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
         <img
-          src={logoSrc.startsWith("remotion-file:") || logoSrc.startsWith("http") ? logoSrc : staticFile(logoSrc)}
+          src={logoSrc.startsWith("remotion-file:") || logoSrc.startsWith("http") || logoSrc.startsWith("data:") ? logoSrc : staticFile(logoSrc)}
           alt="Logo"
           style={{
             width: logoSize,

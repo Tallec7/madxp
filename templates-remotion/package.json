@@ -6,10 +6,12 @@
   "scripts": {
     "studio": "remotion studio",
     "render": "remotion render ButSimple out/but-simple.mp4",
-    "render:preview": "remotion render ButSimple out/but-simple.mp4 --props='{ \"prenom\": \"KEVIN\", \"nom\": \"DUPONT\", \"club\": \"FC NANTES\" }'"
+    "render:preview": "remotion render ButSimple out/but-simple.mp4 --props='{ \"prenom\": \"KEVIN\", \"nom\": \"DUPONT\", \"club\": \"FC NANTES\" }'",
+    "build:preview": "vite build --config preview/vite.config.ts"
   },
   "dependencies": {
     "@remotion/cli": "^4.0.0",
+    "@remotion/player": "^4.0.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "remotion": "^4.0.0",
@@ -17,6 +19,8 @@
   },
   "devDependencies": {
     "@types/react": "^18.3.0",
-    "typescript": "^5.4.0"
+    "@vitejs/plugin-react": "^4.3.0",
+    "typescript": "^5.4.0",
+    "vite": "^5.4.0"
   }
 }
