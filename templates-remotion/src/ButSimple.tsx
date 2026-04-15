@@ -123,9 +123,13 @@ type Props = z.infer<typeof butSimpleSchema>;
 //   cVideoRef → pointe sur le <video> de C → lu par useCAlphaMaskRAF
 //   textRef   → pointe sur le div texte   → webkitMaskImage mis à jour en direct
 // ─────────────────────────────────────────────────────────────────────────────
-// Résout une URL vidéo : URL FTP directe si fournie, sinon staticFile() local
-const resolveVideo = (url: string | undefined, fallback: string) =>
-  url && (url.startsWith('http') || url.startsWith('blob:')) ? url : staticFile(fallback);
+// Résout une URL vidéo : URL FTP/blob/remotion-file/data directe si fournie, sinon staticFile() local.
+// Défensif : si fallback est vide/undefined, retourne "" pour éviter staticFile(undefined) crash.
+const resolveVideo = (url: string | undefined, fallback: string | undefined): string => {
+  if (url && (url.startsWith('http') || url.startsWith('blob:') || url.startsWith('remotion-file:') || url.startsWith('data:'))) return url;
+  if (!fallback) return '';
+  return staticFile(fallback);
+};
 
 export const ButSimple: React.FC<Props> = ({ prenom = '', nom = '', club = '', logoSrc = 'logo_club.png', logoSize = 500, videoSrcA, videoSrcB, videoSrcC }) => {
   const frame = useCurrentFrame();

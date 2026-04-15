@@ -12,15 +12,23 @@ import {
 import { useEffect, useRef } from "react";
 import { z } from "zod";
 
-// Résout une URL : URL FTP/blob/remotion-file directe si fournie, sinon staticFile() local
-const resolveAsset = (url: string | undefined, fallback: string) =>
-  url &&
-  (url.startsWith("http") ||
-    url.startsWith("blob:") ||
-    url.startsWith("remotion-file:") ||
-    url.startsWith("data:"))
-    ? url
-    : staticFile(fallback);
+// Résout une URL : URL FTP/blob/remotion-file directe si fournie, sinon staticFile() local.
+// Défensif : si fallback est vide/undefined (props non renseignée), retourne "" pour éviter
+// le crash staticFile(undefined) dans le player bundlé (les defaults zod ne s'appliquent pas
+// quand les props arrivent via postMessage depuis le dashboard).
+const resolveAsset = (url: string | undefined, fallback: string | undefined): string => {
+  if (
+    url &&
+    (url.startsWith("http") ||
+      url.startsWith("blob:") ||
+      url.startsWith("remotion-file:") ||
+      url.startsWith("data:"))
+  ) {
+    return url;
+  }
+  if (!fallback) return "";
+  return staticFile(fallback);
+};
 
 // ─────────────────────────────────────────────────────────────────────────────
 // HOOK GÉNÉRIQUE : MASQUE ALPHA — SYNCHRONISÉ FRAME PAR FRAME (Remotion-idiomatic)
