@@ -1,3 +1,9 @@
+## [3.170.2](https://github.com/Tallec7/neopro/compare/v3.170.1...v3.170.2) (2026-04-15)
+
+### Bug Fixes
+
+- **motion:** use absolute URL for preview iframe (dashboard ≠ API host) ([e1e4ca1](https://github.com/Tallec7/neopro/commit/e1e4ca11c03b993c359a5601a8a4e1e0e77a4231))
+
 ## [3.170.1](https://github.com/Tallec7/neopro/compare/v3.170.0...v3.170.1) (2026-04-15)
 
 ### Bug Fixes
