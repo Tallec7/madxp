@@ -1,3 +1,9 @@
+## [3.170.4](https://github.com/Tallec7/neopro/compare/v3.170.3...v3.170.4) (2026-04-15)
+
+### Bug Fixes
+
+- **motion:** fix staticFile() public path resolution in preview player ([6b1eb58](https://github.com/Tallec7/neopro/commit/6b1eb58936802761a01fb4c06066e740bd992cdb))
+
 ## [3.170.3](https://github.com/Tallec7/neopro/compare/v3.170.2...v3.170.3) (2026-04-15)
 
 ### Bug Fixes
