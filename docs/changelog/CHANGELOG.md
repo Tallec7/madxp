@@ -1,3 +1,9 @@
+## [3.173.1](https://github.com/Tallec7/neopro/compare/v3.173.0...v3.173.1) (2026-04-15)
+
+### Bug Fixes
+
+- **templates:** guard staticFile() against undefined fallback in resolveAsset ([1e939b1](https://github.com/Tallec7/neopro/commit/1e939b13ddf8e25c9e4a0c4419d6c6493c6b7a94))
+
 # [3.173.0](https://github.com/Tallec7/neopro/compare/v3.172.3...v3.173.0) (2026-04-15)
 
 ### Features
