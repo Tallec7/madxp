@@ -1,3 +1,9 @@
+## [3.170.3](https://github.com/Tallec7/neopro/compare/v3.170.2...v3.170.3) (2026-04-15)
+
+### Bug Fixes
+
+- **motion:** fix preview runtime errors and CSP media blocking ([8750436](https://github.com/Tallec7/neopro/commit/8750436b62577112c7542732915809fc1c1e7887))
+
 ## [3.170.2](https://github.com/Tallec7/neopro/compare/v3.170.1...v3.170.2) (2026-04-15)
 
 ### Bug Fixes
