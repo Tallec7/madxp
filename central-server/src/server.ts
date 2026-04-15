@@ -383,6 +383,27 @@ app.get('/ready', async (_req: Request, res: Response) => {
 // On garde aussi /remotion-preview/public/ pour compatibilité future.
 const REMOTION_DIR = process.env.REMOTION_DIR
   || path.resolve(__dirname, '../../../templates-remotion');
+
+// CSP sur-mesure pour la page preview Remotion — DOIT être posé avant les
+// middlewares express.static car helmet a déjà verrouillé les autres routes.
+// Le @remotion/player charge des vidéos via staticFile() (same-origin) ET via
+// des URLs FTP (kalonpartners.bzh/**) — on élargit media-src en conséquence.
+app.use('/remotion-preview', (_req, res, next) => {
+  res.setHeader(
+    'Content-Security-Policy',
+    [
+      "default-src 'self' 'unsafe-inline' 'unsafe-eval' blob: data:",
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval' blob:",
+      "media-src 'self' blob: data: https://kalonpartners.bzh https://*.kalonpartners.bzh",
+      "img-src 'self' blob: data: https:",
+      "font-src 'self' data: https:",
+      "connect-src 'self' ws: wss: blob: https://kalonpartners.bzh https://*.kalonpartners.bzh",
+      "frame-ancestors 'self' https://neopro-admin.kalonpartners.bzh",
+    ].join('; ')
+  );
+  next();
+});
+
 app.use(express.static(path.join(REMOTION_DIR, 'public'), { index: false }));
 app.use('/remotion-preview/public', express.static(path.join(REMOTION_DIR, 'public')));
 app.use('/remotion-preview', express.static(path.join(REMOTION_DIR, 'preview', 'dist')));
