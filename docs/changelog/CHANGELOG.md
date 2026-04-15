@@ -1,3 +1,9 @@
+## [3.172.1](https://github.com/Tallec7/neopro/compare/v3.172.0...v3.172.1) (2026-04-15)
+
+### Bug Fixes
+
+- **motion:** fix CORS/CSP blocking FTP assets in Remotion preview ([a943ffc](https://github.com/Tallec7/neopro/commit/a943ffc957d4e3c86ffc359b6210f5aaf8b052bc))
+
 # [3.172.0](https://github.com/Tallec7/neopro/compare/v3.171.0...v3.172.0) (2026-04-15)
 
 ### Features
