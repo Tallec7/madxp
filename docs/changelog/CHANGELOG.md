@@ -1,3 +1,9 @@
+## [3.169.1](https://github.com/Tallec7/neopro/compare/v3.169.0...v3.169.1) (2026-04-15)
+
+### Bug Fixes
+
+- **motion:** sync alpha mask with Remotion frame via delayRender/continueRender ([46a6f98](https://github.com/Tallec7/neopro/commit/46a6f98de4204f4c2052f8284c8de9cc7532dfb7))
+
 # [3.169.0](https://github.com/Tallec7/neopro/compare/v3.168.4...v3.169.0) (2026-04-15)
 
 ### Features
