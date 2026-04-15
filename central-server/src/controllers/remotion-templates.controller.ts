@@ -90,6 +90,12 @@ export const createTemplate = async (req: AuthRequest, res: Response) => {
  * GET /api/remotion-templates/asset-proxy?url=<encoded_ftp_url>
  * Proxy same-origin pour les assets FTP (kalonpartners.bzh).
  * Permet au @remotion/player de charger des WebM FTP sans CORS ni CSP cross-origin.
+ *
+ * CRITIQUE : Remotion player requiert des vidéos "seekable" — il envoie des
+ * Range requests (ex: Range: bytes=0-) pour accéder à des positions précises.
+ * Ce proxy transmet le header Range à l'upstream et relaie le 206 Partial Content,
+ * ce qui rend la vidéo seekable côté browser.
+ *
  * Sécurité : seul le domaine kalonpartners.bzh est autorisé.
  */
 const ALLOWED_PROXY_HOST = 'kalonpartners.bzh';
@@ -115,25 +121,34 @@ export const proxyTemplateAsset = (req: Request, res: Response): void => {
     return;
   }
 
+  // Transmettre les Range headers pour le support seek (Remotion player en a besoin)
+  const upstreamHeaders: Record<string, string> = {};
+  if (req.headers['range']) {
+    upstreamHeaders['Range'] = req.headers['range'] as string;
+  }
+
   const transport = parsed.protocol === 'https:' ? https : http;
-  const upstreamReq = transport.get(parsed.toString(), (upstreamRes) => {
-    // Propager Content-Type et Content-Length
-    if (upstreamRes.headers['content-type']) {
-      res.setHeader('Content-Type', upstreamRes.headers['content-type']);
+  const upstreamReq = transport.request(
+    { hostname: parsed.hostname, path: parsed.pathname + parsed.search, method: 'GET', headers: upstreamHeaders },
+    (upstreamRes) => {
+      // Relayer les headers nécessaires pour le seek et le streaming vidéo
+      const relay = ['content-type', 'content-length', 'content-range', 'accept-ranges'];
+      for (const h of relay) {
+        if (upstreamRes.headers[h]) res.setHeader(h, upstreamRes.headers[h] as string);
+      }
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      res.setHeader('Cache-Control', 'public, max-age=86400');
+      res.status(upstreamRes.statusCode ?? 200);
+      upstreamRes.pipe(res);
     }
-    if (upstreamRes.headers['content-length']) {
-      res.setHeader('Content-Length', upstreamRes.headers['content-length']);
-    }
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Cache-Control', 'public, max-age=86400'); // 24h cache
-    res.status(upstreamRes.statusCode ?? 200);
-    upstreamRes.pipe(res);
-  });
+  );
 
   upstreamReq.on('error', (err) => {
     logger.error('proxyTemplateAsset error', { url: rawUrl, error: err.message });
     if (!res.headersSent) res.status(502).json({ error: 'Erreur proxy' });
   });
+
+  upstreamReq.end();
 };
 
 /**
