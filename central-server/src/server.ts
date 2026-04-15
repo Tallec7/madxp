@@ -377,11 +377,13 @@ app.get('/ready', async (_req: Request, res: Response) => {
 });
 
 // ── Remotion Preview — assets statiques (ADR-052) ────────────────────────────
-// /remotion-preview/public/ → webm, fonts, images (assets Remotion)
-// /remotion-preview/       → app Vite buildée (@remotion/player)
-// Ordre important : public/ AVANT le fallback index.html
+// staticFile("foo.webm") dans Remotion retourne toujours "/foo.webm" (racine),
+// quel que soit le publicPath passé au Player. On sert donc les assets Remotion
+// à la RACINE "/" (index:false pour ne pas casser les autres routes).
+// On garde aussi /remotion-preview/public/ pour compatibilité future.
 const REMOTION_DIR = process.env.REMOTION_DIR
   || path.resolve(__dirname, '../../../templates-remotion');
+app.use(express.static(path.join(REMOTION_DIR, 'public'), { index: false }));
 app.use('/remotion-preview/public', express.static(path.join(REMOTION_DIR, 'public')));
 app.use('/remotion-preview', express.static(path.join(REMOTION_DIR, 'preview', 'dist')));
 // SPA fallback : toute route /remotion-preview/* non trouvée → index.html
