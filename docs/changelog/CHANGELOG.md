@@ -1,3 +1,9 @@
+## [3.168.4](https://github.com/Tallec7/neopro/compare/v3.168.3...v3.168.4) (2026-04-15)
+
+### Bug Fixes
+
+- **motion:** prevent text flicker in headless Remotion render ([2b11100](https://github.com/Tallec7/neopro/commit/2b11100ce4af5ab613086ef9200305a7ffe7ed78))
+
 ## [3.168.3](https://github.com/Tallec7/neopro/compare/v3.168.2...v3.168.3) (2026-04-14)
 
 ### Bug Fixes
