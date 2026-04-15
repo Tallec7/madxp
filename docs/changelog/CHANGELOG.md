@@ -1,3 +1,9 @@
+# [3.174.0](https://github.com/Tallec7/neopro/compare/v3.173.2...v3.174.0) (2026-04-15)
+
+### Features
+
+- **templates:** add playerImgSize and playerImgLeft props to ButImgJoueur ([c2377c0](https://github.com/Tallec7/neopro/commit/c2377c0862ddd60dc827fa02d8dfc8c7f9e7219d))
+
 ## [3.173.2](https://github.com/Tallec7/neopro/compare/v3.173.1...v3.173.2) (2026-04-15)
 
 ### Bug Fixes
