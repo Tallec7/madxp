@@ -261,6 +261,17 @@ async function runRemotion(
     chromiumOptions,
     // 90s timeout — headless containers can be slow to decode WebM via swangle
     timeoutInMilliseconds: 90000,
+    // yuv420p: required for Pi hardware H.264 decode — other formats (yuv422p, yuv444p)
+    // fall back to software decode on Pi and cause choppy playback.
+    pixelFormat: 'yuv420p',
+    // concurrency: 1 forces sequential frame rendering.
+    // Default (= CPU cores) spawns N Chromium instances each decoding 3-5 WebM files
+    // via swangle simultaneously → CPU/memory thrashing → uneven frame durations →
+    // VFR-like output that stutters on playback.
+    concurrency: 1,
+    // crf 18 = high quality, consistent bitrate. Without crf, Remotion uses a default
+    // that can produce large bitrate spikes causing buffering during playback.
+    crf: 18,
     onProgress: ({ renderedFrames, progress }) => {
       logger.debug('Remotion render progress', { renderedFrames, progress: Math.round(progress * 100) });
     },
