@@ -1,3 +1,9 @@
+# [3.170.0](https://github.com/Tallec7/neopro/compare/v3.169.2...v3.170.0) (2026-04-15)
+
+### Features
+
+- **motion:** live preview iframe for Remotion templates before render ([121bbb5](https://github.com/Tallec7/neopro/commit/121bbb5d3f95f5ff9a4302c99de8ac685ace94bf))
+
 ## [3.169.2](https://github.com/Tallec7/neopro/compare/v3.169.1...v3.169.2) (2026-04-15)
 
 ### Bug Fixes
