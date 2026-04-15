@@ -1,3 +1,9 @@
+# [3.169.0](https://github.com/Tallec7/neopro/compare/v3.168.4...v3.169.0) (2026-04-15)
+
+### Features
+
+- **motion:** add ButImgJoueur Remotion template with player photo ([ba5ec17](https://github.com/Tallec7/neopro/commit/ba5ec17bccf3e8f434238f58db98e52f9e90f927))
+
 ## [3.168.4](https://github.com/Tallec7/neopro/compare/v3.168.3...v3.168.4) (2026-04-15)
 
 ### Bug Fixes
