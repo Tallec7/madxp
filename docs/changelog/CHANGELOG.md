@@ -1,3 +1,9 @@
+## [3.172.2](https://github.com/Tallec7/neopro/compare/v3.172.1...v3.172.2) (2026-04-15)
+
+### Bug Fixes
+
+- **motion:** forward Range headers in asset proxy for Remotion seek support ([fd6168f](https://github.com/Tallec7/neopro/commit/fd6168fc5210fd787cf10aa840e3d02a128e2343))
+
 ## [3.172.1](https://github.com/Tallec7/neopro/compare/v3.172.0...v3.172.1) (2026-04-15)
 
 ### Bug Fixes
