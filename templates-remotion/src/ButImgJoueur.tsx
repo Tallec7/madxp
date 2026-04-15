@@ -107,6 +107,8 @@ export const butImgJoueurSchema = z.object({
   logoSrc: z.string().default("logo_club.png"),
   logoSize: z.number().default(400),
   playerImgSrc: z.string().default(""),
+  playerImgSize: z.number().default(1080),  // hauteur en px (1080 = plein écran, >1080 = déborde en haut)
+  playerImgLeft: z.number().default(560),   // position gauche en px
   scoreLabel: z.string().default("+1"),
   // Assets vidéo — URL FTP si fourni, sinon fallback sur staticFile() local
   videoSrcA: z.string().optional(),
@@ -142,6 +144,8 @@ export const ButImgJoueur: React.FC<Props> = ({
   logoSrc,
   logoSize,
   playerImgSrc,
+  playerImgSize,
+  playerImgLeft,
   scoreLabel,
   videoSrcA,
   videoSrcB,
@@ -214,7 +218,7 @@ export const ButImgJoueur: React.FC<Props> = ({
       />
 
       {/* ── COUCHE 4 : Score label — masqué frame-par-frame par l'alpha de C ── */}
-      {/* Visible uniquement dans les zones opaques de C (ex : zone "+2") */}
+      {/* Aligné à droite pour correspondre à la zone révélée par le webm C */}
       <div
         ref={scoreRef}
         style={{
@@ -223,7 +227,8 @@ export const ButImgJoueur: React.FC<Props> = ({
           height: 1080,
           display: "flex",
           alignItems: "center",
-          justifyContent: "center",
+          justifyContent: "flex-end",
+          paddingRight: 80,
         }}
       >
         <span style={scoreLabelStyle}>{scoreLabel}</span>
@@ -237,7 +242,7 @@ export const ButImgJoueur: React.FC<Props> = ({
       />
 
       {/* ── COUCHE 6 : Packshot joueur — masqué frame-par-frame par l'alpha de E */}
-      {/* Visible uniquement dans les zones opaques de E (photo + nom + club) */}
+      {/* Layout : nom à gauche | photo centre-droite | club en 3 coins */}
       <div
         ref={playerRef}
         style={{
@@ -246,19 +251,30 @@ export const ButImgJoueur: React.FC<Props> = ({
           height: 1080,
         }}
       >
+        {/* Photo : taille et position contrôlées par les props playerImgSize / playerImgLeft */}
         {playerImgResolved && (
           <img
             src={playerImgResolved}
             alt="Joueur"
-            style={playerImgStyle}
+            style={{
+              position: "absolute",
+              bottom: 0,
+              left: playerImgLeft,
+              height: playerImgSize,
+              width: "auto",
+              objectFit: "contain",
+            }}
           />
         )}
-        <span style={clubNameStyle(120)}>{club.toUpperCase()}</span>
+        {/* Nom joueur : côté gauche, centré verticalement */}
         <div style={playerBlockStyle}>
           <div style={playerNameStyle}>{prenom.toUpperCase()}</div>
           <div style={playerNameStyle}>{nom.toUpperCase()}</div>
         </div>
-        <span style={clubNameStyle(930)}>{club.toUpperCase()}</span>
+        {/* Club : 3 coins */}
+        <span style={clubNameCornerStyle({ top: 55, left: 80 })}>{club.toUpperCase()}</span>
+        <span style={clubNameCornerStyle({ bottom: 65, left: 80 })}>{club.toUpperCase()}</span>
+        <span style={clubNameCornerStyle({ bottom: 65, right: 80 })}>{club.toUpperCase()}</span>
       </div>
 
       {/* ── COUCHES 7 & 8 : Wipes B et D (transitions opaques) ──────────────── */}
@@ -282,7 +298,7 @@ const layerStyle: React.CSSProperties = {
   objectFit: "cover",
 };
 
-// Score label centré — taille XXL, visible dans la zone révélée par C
+// Score : aligné à droite, taille XXL — visible dans la zone révélée par C
 const scoreLabelStyle: React.CSSProperties = {
   fontFamily: "'Bulevar', sans-serif",
   fontSize: 400,
@@ -292,45 +308,36 @@ const scoreLabelStyle: React.CSSProperties = {
   textShadow: "2px 4px 8px rgba(0,0,0,0.3)",
 };
 
-// Photo joueur : collée en bas à droite, hauteur 900px
-const playerImgStyle: React.CSSProperties = {
-  position: "absolute",
-  bottom: 0,
-  right: 200,
-  height: 900,
-  width: "auto",
-  objectFit: "contain",
-};
-
+// Nom joueur : côté gauche, centré verticalement
 const playerBlockStyle: React.CSSProperties = {
   position: "absolute",
   top: "50%",
-  left: "50%",
-  transform: "translate(-50%, -50%)",
-  textAlign: "center",
+  left: 80,
+  transform: "translateY(-50%)",
+  textAlign: "left",
 };
 
 const playerNameStyle: React.CSSProperties = {
-  fontSize: 280,
+  fontSize: 350,
   fontFamily: "'Bulevar', sans-serif",
   fontWeight: 400,
-  lineHeight: 0.85,
+  lineHeight: 0.88,
   color: "#ffffff",
   textTransform: "uppercase",
   textShadow: "2px 4px 8px rgba(0,0,0,0.3)",
 };
 
-const clubNameStyle = (top: number): React.CSSProperties => ({
+// Club name : positionné dans un coin (top/bottom + left/right)
+const clubNameCornerStyle = (pos: {
+  top?: number; bottom?: number; left?: number; right?: number;
+}): React.CSSProperties => ({
   position: "absolute",
-  top,
-  left: "50%",
-  transform: "translateX(-50%)",
+  ...pos,
   fontFamily: "'GeneralSans', sans-serif",
   fontSize: 28,
   fontWeight: 600,
   letterSpacing: 10,
   textTransform: "uppercase",
   color: "rgba(255,255,255,0.7)",
-  textAlign: "center",
   whiteSpace: "nowrap",
 });
