@@ -26,6 +26,11 @@ interface FrontendLogEntry {
  */
 const VALID_LOG_LEVELS = ['debug', 'info', 'warn', 'error'] as const;
 
+/** Max breadcrumbs kept per log entry (prevents Railway log line explosion) */
+const MAX_BREADCRUMBS = 10;
+/** Max chars for a single breadcrumb data value */
+const MAX_BREADCRUMB_DATA_LEN = 200;
+
 /**
  * Ingest frontend log entry
  *
@@ -80,9 +85,25 @@ export const ingestFrontendLog = async (
       ...logEntry.context,
     };
 
-    // Include breadcrumbs for error logs
+    // Include breadcrumbs for error logs — truncated to avoid Railway log line explosion
     if (logEntry.level === 'error' && logEntry.breadcrumbs?.length) {
-      (enrichedContext as Record<string, unknown>).breadcrumbs = logEntry.breadcrumbs;
+      const raw = logEntry.breadcrumbs.slice(-MAX_BREADCRUMBS); // keep last N (most recent)
+      const truncated = raw.map((b) => ({
+        ...b,
+        data: b.data
+          ? Object.fromEntries(
+              Object.entries(b.data).map(([k, v]) => {
+                const str = typeof v === 'string' ? v : JSON.stringify(v);
+                return [k, str.length > MAX_BREADCRUMB_DATA_LEN ? str.slice(0, MAX_BREADCRUMB_DATA_LEN) + '…' : str];
+              })
+            )
+          : undefined,
+      }));
+      (enrichedContext as Record<string, unknown>).breadcrumbs = truncated;
+      if (logEntry.breadcrumbs.length > MAX_BREADCRUMBS) {
+        (enrichedContext as Record<string, unknown>).breadcrumbsDropped =
+          logEntry.breadcrumbs.length - MAX_BREADCRUMBS;
+      }
     }
 
     // Log with appropriate level

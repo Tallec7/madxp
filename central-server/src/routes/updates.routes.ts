@@ -3,7 +3,7 @@ import * as updatesController from '../controllers/updates.controller';
 import { authenticate, requireRole } from '../middleware/auth';
 import { validate, validateParams, paramSchemas, schemas } from '../middleware/validation';
 import { uploadUpdatePackage } from '../middleware/upload';
-import { adminRateLimit, sensitiveRateLimit, uploadRateLimit } from '../middleware/user-rate-limit';
+import { adminRateLimit, sensitiveRateLimit, otaUploadRateLimit } from '../middleware/user-rate-limit';
 
 const router = Router();
 
@@ -18,7 +18,7 @@ router.post(
   '/updates',
   authenticate,
   requireRole('admin'),
-  uploadRateLimit,
+  otaUploadRateLimit,
   uploadUpdatePackage.single('package'),
   validate(schemas.createUpdate),
   updatesController.createUpdate
