@@ -1,3 +1,9 @@
+## [3.176.2](https://github.com/Tallec7/neopro/compare/v3.176.1...v3.176.2) (2026-04-15)
+
+### Performance Improvements
+
+- **templates:** optimize render pipeline — bundle cache, half-res frames, JPEG output ([b46b481](https://github.com/Tallec7/neopro/commit/b46b481899aae305b91863782b0bcdc79c25642b))
+
 ## [3.176.1](https://github.com/Tallec7/neopro/compare/v3.176.0...v3.176.1) (2026-04-15)
 
 ### Bug Fixes
