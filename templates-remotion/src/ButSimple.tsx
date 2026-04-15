@@ -1,7 +1,8 @@
 import {
   AbsoluteFill,
-  Sequence,
   Video,
+  continueRender,
+  delayRender,
   interpolate,
   spring,
   staticFile,
@@ -12,76 +13,81 @@ import { useEffect, useRef } from "react";
 import { z } from "zod";
 
 // ─────────────────────────────────────────────────────────────────────────────
-// HOOK : MASQUE ALPHA DE C VIA RAF + CANVAS DIRECT DOM
+// HOOK : MASQUE ALPHA DE C — SYNCHRONISÉ FRAME PAR FRAME (Remotion-idiomatic)
 //
-// Principe :
-//   - cVideoRef  → ref sur le <video> HTML de la couche C (synchronisé Remotion)
-//   - textRef    → ref sur le div texte à masquer
-//   - Un requestAnimationFrame lit chaque frame de la vidéo C dans un petit
-//     canvas (480×270 = 25% de la résolution), puis applique le dataURL
-//     directement sur le style CSS du div texte — sans React state,
-//     sans re-render, sans lag.
+// Problème du RAF continu en headless :
+//   En rendu headless (Railway/Puppeteer), Remotion avance frame par frame.
+//   Un RAF libre n'est pas synchronisé avec la capture screenshot — le masque
+//   appliqué au moment du screenshot peut appartenir à une frame différente,
+//   causant des sauts visibles dans la vidéo finale.
 //
-// Pourquoi pas useState ?
-//   → setState → re-render React → lag visible à la lecture
-//   → direct DOM via ref = synchrone, 0 overhead React
+// Solution : delayRender / continueRender
+//   - delayRender() dit à Remotion "ne prends PAS le screenshot de cette frame"
+//   - On attend que video.readyState >= 2 (frame vidéo décodée par swangle)
+//   - On lit le canvas, applique le masque, puis continueRender() → screenshot
+//   - Effect dépend de `frame` → re-run à chaque frame Remotion → masque parfait
 //
-// Pourquoi canvas petit (480×270) ?
+// Pourquoi canvas 480×270 ?
 //   → toDataURL sur 1920×1080 = ~5Mo de string, trop lent
 //   → 480×270 = ~300Ko, rapide, les bords alpha restent propres visuellement
 // ─────────────────────────────────────────────────────────────────────────────
-const useCAlphaMaskRAF = (
+const useCAlphaMask = (
   cVideoRef: React.RefObject<HTMLVideoElement>,
   textRef: React.RefObject<HTMLDivElement>
 ) => {
+  const frame = useCurrentFrame();
+
   useEffect(() => {
-    const canvas = document.createElement("canvas");
-    canvas.width = 480;   // 25% de 1920
-    canvas.height = 270;  // 25% de 1080
-    const ctx = canvas.getContext("2d")!;
+    const video = cVideoRef.current;
+    const text = textRef.current;
+    if (!video || !text) return;
+
+    // Bloquer le screenshot Remotion jusqu'à ce que le masque soit appliqué
+    const handle = delayRender(`alpha-mask-f${frame}`);
     let rafId: number;
-    // Once the mask has been applied at least once, never hide the text again.
-    // In Remotion headless rendering (puppeteer, frame-by-frame), readyState can
-    // briefly drop between frames — toggling visibility:hidden causes flicker.
-    let maskEverApplied = false;
+    let resolved = false;
 
-    const applyMask = () => {
-      const video = cVideoRef.current;
-      const text = textRef.current;
+    const canvas = document.createElement("canvas");
+    canvas.width = 480;
+    canvas.height = 270;
+    const ctx = canvas.getContext("2d")!;
 
-      if (video && text) {
-        if (video.readyState >= 2) {
-          try {
-            ctx.clearRect(0, 0, 480, 270);
-            ctx.drawImage(video, 0, 0, 480, 270);
-            const url = canvas.toDataURL("image/png");
-
-            // Application directe sur le DOM — pas de setState, pas de re-render
-            maskEverApplied = true;
-            text.style.visibility = "visible";
-            text.style.webkitMaskImage = `url("${url}")`;
-            text.style.webkitMaskMode = "alpha";
-            text.style.webkitMaskRepeat = "no-repeat";
-            text.style.webkitMaskSize = "100% 100%";
-          } catch {
-            // Canvas tainted (CORS) → pas de masque, texte visible partout
-            maskEverApplied = true;
-            text.style.visibility = "visible";
-          }
-        } else if (!maskEverApplied) {
-          // Vidéo pas encore prête ET masque jamais appliqué → cacher le texte
-          // pour éviter qu'il apparaisse sur les zones transparentes de C.
-          // Une fois le masque appliqué, on ne cache plus jamais (évite le flicker).
-          text.style.visibility = "hidden";
+    const tryApply = () => {
+      if (resolved) return;
+      if (video.readyState >= 2) {
+        resolved = true;
+        try {
+          ctx.clearRect(0, 0, 480, 270);
+          ctx.drawImage(video, 0, 0, 480, 270);
+          const url = canvas.toDataURL("image/png");
+          text.style.visibility = "visible";
+          text.style.webkitMaskImage = `url("${url}")`;
+          text.style.webkitMaskMode = "alpha";
+          text.style.webkitMaskRepeat = "no-repeat";
+          text.style.webkitMaskSize = "100% 100%";
+        } catch {
+          // Canvas tainted (CORS) → pas de masque, texte visible partout
+          text.style.visibility = "visible";
         }
+        continueRender(handle);
+      } else {
+        // Vidéo pas encore prête → retry au prochain tick navigateur
+        rafId = requestAnimationFrame(tryApply);
       }
-
-      rafId = requestAnimationFrame(applyMask);
     };
 
-    rafId = requestAnimationFrame(applyMask);
-    return () => cancelAnimationFrame(rafId);
-  }, [cVideoRef, textRef]);
+    rafId = requestAnimationFrame(tryApply);
+
+    return () => {
+      // Cleanup : si la frame suivante démarre avant résolution, libérer quand même
+      if (!resolved) {
+        resolved = true;
+        cancelAnimationFrame(rafId);
+        continueRender(handle);
+      }
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [frame]);
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -119,8 +125,8 @@ export const ButSimple: React.FC<Props> = ({ prenom, nom, club, logoSrc, logoSiz
   const cVideoRef = useRef<HTMLVideoElement>(null);
   const textRef = useRef<HTMLDivElement>(null);
 
-  // Active le masque : le texte suit l'alpha de C, frame par frame
-  useCAlphaMaskRAF(cVideoRef, textRef);
+  // Active le masque : le texte suit l'alpha de C, frame par frame (delayRender-synchronisé)
+  useCAlphaMask(cVideoRef, textRef);
 
   // Zoom in : part de 0, overshoot léger (damping bas = rebond), s'installe à 1
   // → damping: 8 = rebond prononcé / stiffness: 120 = arrivée rapide
@@ -200,7 +206,8 @@ export const ButSimple: React.FC<Props> = ({ prenom, nom, club, logoSrc, logoSiz
           position: "absolute",
           width: 1920,
           height: 1080,
-          visibility: "hidden", // caché jusqu'à la 1ère frame de masque — évite le flash sur zones transparentes
+          // delayRender garantit que le masque est appliqué avant le screenshot —
+          // pas besoin de visibility:hidden initial (évite le flash en preview browser)
         }}
       >
         <span style={clubNameStyle(120)}>{club.toUpperCase()}</span>
