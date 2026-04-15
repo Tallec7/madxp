@@ -327,6 +327,47 @@ export const renderTemplate = async (req: AuthRequest, res: Response) => {
   }
 };
 
+// ── Bundle cache (in-process, par déploiement Railway) ───────────────────────
+// Le bundle webpack est identique pour tous les renders du même déploiement.
+// Le recalculer à chaque appel coûte ~30-60s. On le met en cache dès le 1er render.
+// Invalidé uniquement au redémarrage du process (nouveau déploiement Railway = reset).
+let cachedBundleUrl: string | null = null;
+let bundleInProgress: Promise<string> | null = null;
+
+async function getOrCreateBundle(): Promise<string> {
+  if (cachedBundleUrl) {
+    logger.debug('Remotion bundle cache hit');
+    return cachedBundleUrl;
+  }
+  // Évite les bundles parallèles si deux renders arrivent simultanément
+  if (bundleInProgress) {
+    logger.debug('Remotion bundle already in progress, waiting');
+    return bundleInProgress;
+  }
+
+  const { bundle } = await import('@remotion/bundler') as typeof import('@remotion/bundler');
+
+  logger.info('Bundling Remotion entry (first render — will be cached)', { entry: REMOTION_ENTRY });
+
+  bundleInProgress = bundle({
+    entryPoint: REMOTION_ENTRY,
+    publicDir: path.join(REMOTION_DIR, 'public'),
+    onProgress: (p) => {
+      if (p % 25 === 0) logger.debug('Remotion bundle progress', { percent: p });
+    },
+  }).then((url) => {
+    cachedBundleUrl = url;
+    bundleInProgress = null;
+    logger.info('Remotion bundle cached', { url });
+    return url;
+  }).catch((err) => {
+    bundleInProgress = null;
+    throw err;
+  });
+
+  return bundleInProgress;
+}
+
 // ── Remotion runner (Node.js API — in-process, no subprocess) ────────────────
 
 async function runRemotion(
@@ -334,22 +375,9 @@ async function runRemotion(
   outputPath: string,
   inputProps: Record<string, unknown>,
 ): Promise<void> {
-  // Dynamic imports to avoid loading heavy Remotion modules at startup
-  const { bundle } = await import('@remotion/bundler') as typeof import('@remotion/bundler');
   const { renderMedia, selectComposition } = await import('@remotion/renderer') as typeof import('@remotion/renderer');
 
-  logger.info('Bundling Remotion entry', { entry: REMOTION_ENTRY });
-
-  const bundled = await bundle({
-    entryPoint: REMOTION_ENTRY,
-    // Serve static assets (webm, fonts, images) from templates-remotion/public/
-    // Required for staticFile() references to resolve correctly in headless Chromium
-    publicDir: path.join(REMOTION_DIR, 'public'),
-    // Silence webpack progress output
-    onProgress: (p) => {
-      if (p % 25 === 0) logger.debug('Remotion bundle progress', { percent: p });
-    },
-  });
+  const bundled = await getOrCreateBundle();
 
   logger.info('Selecting composition', { compositionId });
 
