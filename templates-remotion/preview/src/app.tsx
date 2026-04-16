@@ -11,12 +11,40 @@ interface CompositionDef {
   component: React.FC<any>;
   durationInFrames: number;
   fps: number;
+  // Dossiers de masques PNG per-frame à précharger pour éviter les stutters
+  // (1 HTTP request par frame sinon → 30 req/s au premier passage).
+  maskDirs?: string[];
 }
 
 const COMPOSITIONS: Record<string, CompositionDef> = {
-  ButSimple: { component: ButSimple, durationInFrames: 180, fps: 30 },
-  ButImgJoueur: { component: ButImgJoueur, durationInFrames: 210, fps: 30 },
+  ButSimple: {
+    component: ButSimple,
+    durationInFrames: 180,
+    fps: 30,
+    maskDirs: ['masks/but-simple-C'],
+  },
+  ButImgJoueur: {
+    component: ButImgJoueur,
+    durationInFrames: 210,
+    fps: 30,
+    maskDirs: ['masks/but-img-joueur-C', 'masks/but-img-joueur-E'],
+  },
 };
+
+// Précharge les PNGs de masque dans le cache HTTP du navigateur.
+// Idempotent : un dossier déjà préchargé est ignoré.
+const preloadedDirs = new Set<string>();
+function preloadMasks(dirs: string[], frames: number): void {
+  const base = new URL('./public/', window.location.href).href;
+  for (const dir of dirs) {
+    if (preloadedDirs.has(dir)) continue;
+    preloadedDirs.add(dir);
+    for (let i = 1; i <= frames; i++) {
+      const img = new Image();
+      img.src = `${base}${dir}/${String(i).padStart(4, '0')}.png`;
+    }
+  }
+}
 
 // ── App ───────────────────────────────────────────────────────────────────────
 
@@ -29,6 +57,11 @@ function App() {
     const params = new URLSearchParams(window.location.search);
     const comp = params.get('composition');
     if (comp && COMPOSITIONS[comp]) setCompositionId(comp);
+
+    // Préchauffe le cache des masques PNG de la composition initiale.
+    const initialId = comp && COMPOSITIONS[comp] ? comp : 'ButSimple';
+    const initialComp = COMPOSITIONS[initialId];
+    if (initialComp?.maskDirs) preloadMasks(initialComp.maskDirs, initialComp.durationInFrames);
 
     const propsParam = params.get('props');
     if (propsParam) {
@@ -43,7 +76,10 @@ function App() {
     const handler = (e: MessageEvent) => {
       if (e.data?.type !== 'remotion-props-update') return;
       if (e.data.compositionId && COMPOSITIONS[e.data.compositionId]) {
-        setCompositionId(e.data.compositionId);
+        const nextId = e.data.compositionId as string;
+        const nextComp = COMPOSITIONS[nextId];
+        if (nextComp?.maskDirs) preloadMasks(nextComp.maskDirs, nextComp.durationInFrames);
+        setCompositionId(nextId);
       }
       if (e.data.props) setProps(e.data.props);
     };
