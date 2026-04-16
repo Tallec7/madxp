@@ -34,16 +34,22 @@ if ! command -v ffmpeg &> /dev/null; then
     exit 1
 fi
 
-# Obtenir la durée de la vidéo
+# Obtenir la durée de la vidéo (essai 1 : format.duration)
 DURATION=$(ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "$VIDEO_FILE" 2>/dev/null)
 
+# Fallback (essai 2 : stream.duration) — utile pour certains containers
 if [ -z "$DURATION" ] || [ "$DURATION" = "N/A" ]; then
-    echo "Erreur: Impossible de déterminer la durée de la vidéo"
-    exit 1
+    DURATION=$(ffprobe -v error -select_streams v:0 -show_entries stream=duration -of default=noprint_wrappers=1:nokey=1 "$VIDEO_FILE" 2>/dev/null)
 fi
 
-# Calculer le timestamp au milieu de la vidéo
-TIMESTAMP=$(awk "BEGIN {printf \"%.2f\", $DURATION / 2}")
+# Fallback final — webm Remotion sans duration dans le container EBML
+if [ -z "$DURATION" ] || [ "$DURATION" = "N/A" ]; then
+    # Prendre la frame à 1s — ffmpeg retombera sur la dernière frame si vidéo < 1s
+    TIMESTAMP="1"
+else
+    # Calculer le timestamp au milieu de la vidéo
+    TIMESTAMP=$(awk "BEGIN {printf \"%.2f\", $DURATION / 2}")
+fi
 
 echo "Génération de la miniature au timestamp ${TIMESTAMP}s..."
 
