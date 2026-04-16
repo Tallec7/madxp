@@ -1,3 +1,9 @@
+# [3.178.0](https://github.com/Tallec7/neopro/compare/v3.177.0...v3.178.0) (2026-04-16)
+
+### Features
+
+- **content:** restore image duration + blur options in shared upload zone ([#449](https://github.com/Tallec7/neopro/issues/449)) ([23aabb8](https://github.com/Tallec7/neopro/commit/23aabb8952aa480c1e6beb969f7ac3de1a3429c6))
+
 # [3.177.0](https://github.com/Tallec7/neopro/compare/v3.176.9...v3.177.0) (2026-04-16)
 
 ### Features
