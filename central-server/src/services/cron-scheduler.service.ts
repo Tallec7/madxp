@@ -561,14 +561,37 @@ class CronSchedulerService {
         message: `Aggregation completed: ${results.join(', ')}`,
       };
     } catch (error) {
-      if (error instanceof Error && (
+      // Ne PAS silent-swallow les "function does not exist" — un missing
+      // PG function = critical data loss risk (15j de rétention sur video_plays).
+      // `checkAggregationStaleness()` alerte à >36h, mais si on retourne
+      // success: true ici, l'execution est loggée OK et la staleness est
+      // masquée jusqu'au prochain alert cycle (incident 137h).
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      const isMissingFunction = error instanceof Error && error.message.includes('does not exist') && (
         error.message.includes('calculate_all_daily_stats') ||
         error.message.includes('calculate_all_advertiser_daily_stats') ||
         error.message.includes('calculate_site_sponsor_daily_stats')
-      )) {
-        return { success: true, message: 'Aggregation function not found, skipping' };
+      );
+
+      if (isMissingFunction) {
+        logger.error('[CronScheduler] Aggregation function missing in DB — critical data loss risk', {
+          error: errorMessage,
+          aggregationType,
+        });
+        return {
+          success: false,
+          message: `Aggregation function missing: ${errorMessage}`,
+        };
       }
-      throw error;
+
+      logger.error('[CronScheduler] Aggregation failed', {
+        error: errorMessage,
+        aggregationType,
+      });
+      return {
+        success: false,
+        message: `Aggregation failed: ${errorMessage}`,
+      };
     }
   }
 

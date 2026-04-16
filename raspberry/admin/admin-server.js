@@ -31,7 +31,16 @@ const express = require('express');
 const cookieParser = require('cookie-parser');
 const fsCore = require('fs');
 const fs = fsCore.promises;
+const http = require('http');
 const path = require('path');
+
+// Reverse proxy Socket.IO (admin-server :8080 → socket-server :3000 local).
+// Évite toute violation CSP cross-origin côté client quel que soit le hostname.
+const {
+  createSocketHttpProxy,
+  attachSocketWsProxy,
+  pingSocketServer,
+} = require('./socket-proxy');
 
 const {
   NEOPRO_DIR,
@@ -162,6 +171,16 @@ app.use((req, res, next) => {
 });
 
 // =============================================================================
+// SOCKET.IO REVERSE PROXY (AVANT body parsers — ne pas consommer le body des POST polling)
+// =============================================================================
+//
+// CRITIQUE : ce middleware DOIT rester avant express.json()/urlencoded().
+// Les body parsers consomment la requête avant que le proxy ne la pipe vers
+// :3000, ce qui casse le transport Socket.IO polling (POST /socket.io/?...).
+
+app.use(createSocketHttpProxy());
+
+// =============================================================================
 // BODY PARSERS & COOKIES
 // =============================================================================
 
@@ -243,8 +262,11 @@ app.post('/api/system/apply-services', (req, res, next) => {
 
 const adminPkg = require('./package.json');
 
-app.get('/api/admin/health', (req, res) => {
+app.get('/api/admin/health', async (req, res) => {
   const mem = process.memoryUsage();
+  // Ping du socket-server upstream — surface un downtime avant que les clients
+  // ne tentent une connexion (utile pour Prometheus / monitoring externe).
+  const socketProxy = await pingSocketServer(1000);
   res.json({
     status: 'ok',
     uptime: Math.round(process.uptime()),
@@ -256,6 +278,7 @@ app.get('/api/admin/health', (req, res) => {
       heapUsed: mem.heapUsed,
       heapTotal: mem.heapTotal,
     },
+    socketProxy,
   });
 });
 
@@ -294,7 +317,13 @@ app.use(sponsorsRouter);
 // Listen on '::' (dual-stack: IPv4 + IPv6) so both 127.0.0.1 and ::1 work.
 // Required because Debian 12+ resolves 'localhost' to ::1 (IPv6) first,
 // and old sync-agent versions use localhost for post-OTA health checks.
-app.listen(PORT, '::', async () => {
+//
+// http.createServer(app) permet d'attacher le handler 'upgrade' pour
+// forwarder le handshake WebSocket Socket.IO vers :3000 (cf. socket-proxy.js).
+const server = http.createServer(app);
+attachSocketWsProxy(server);
+
+server.listen(PORT, '::', async () => {
   console.log('✓ Serveur Web Admin Neopro lancé sur le port ' + PORT);
   console.log('  Accessible sur:');
   console.log('  - http://neopro.local:' + PORT);

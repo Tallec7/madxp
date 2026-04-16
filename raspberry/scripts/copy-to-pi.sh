@@ -124,6 +124,13 @@ else
     print_success "Fichiers copiés avec tar + scp"
 fi
 
+# Normaliser l'ownership : rsync -a et tar préservent les UIDs du Mac (ex: 501:staff)
+# qui n'existent pas sur le Pi → casse les OTA (fs.copy EACCES sur fichiers mode 600).
+# Voir raspberry/scripts/deploy-remote.sh qui applique le même chown post-copie.
+print_step "Normalisation de l'ownership (pi:pi)..."
+ssh "$PI_USER@$PI_ADDRESS" "sudo chown -R pi:pi ~/raspberry"
+print_success "Ownership normalisé"
+
 # Afficher ce qui a été copié
 print_step "Vérification des fichiers copiés..."
 ssh "$PI_USER@$PI_ADDRESS" "

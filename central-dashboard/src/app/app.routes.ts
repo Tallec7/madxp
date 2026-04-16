@@ -146,7 +146,7 @@ export const routes: Routes = [
         path: 'content/templates-remotion',
         canActivate: [roleGuard],
         data: { roles: ['super_admin', 'admin', 'club'] },
-        loadComponent: () => import('./features/content/remotion-templates.component').then(m => m.RemotionTemplatesComponent)
+        loadComponent: () => import('./features/content/remotion-templates/remotion-templates.component').then(m => m.RemotionTemplatesComponent)
       },
       {
         path: 'updates',

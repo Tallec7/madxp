@@ -23,11 +23,11 @@
     <link rel="preconnect" href="//neopro.local" />
 
     <!-- Preload Critical Resources -->
-    <link rel="preload" href="/styles.css?v=3.172.0" as="style" />
-    <link rel="preload" href="/app.js?v=3.172.0" as="script" />
+    <link rel="preload" href="/styles.css?v=3.176.7" as="style" />
+    <link rel="preload" href="/app.js?v=3.176.7" as="script" />
 
     <!-- Styles -->
-    <link rel="stylesheet" href="styles.css?v=3.172.0" />
+    <link rel="stylesheet" href="styles.css?v=3.176.7" />
   </head>
   <body>
     <div class="container" role="application" aria-label="Interface d'administration Neopro">
@@ -1178,25 +1178,10 @@
       </div>
     </div>
 
-    <!-- Socket.IO client for realtime updates from Pi server (:3000) -->
-    <script>
-      (function () {
-        var script = document.createElement('script');
-        script.src =
-          window.location.protocol +
-          '//' +
-          window.location.hostname +
-          ':3000/socket.io/socket.io.js';
-        script.onerror = function () {
-          console.warn('[realtime] Socket.IO client not available on :3000');
-        };
-        script.onload = function () {
-          console.log('[realtime] Socket.IO client loaded');
-        };
-        document.head.appendChild(script);
-      })();
-    </script>
+    <!-- Socket.IO client via same-origin reverse proxy (admin-server :8080 -> socket-server).
+         Chemin relatif obligatoire : la CSP script-src est verrouillee a 'self'. -->
+    <script src="/socket.io/socket.io.js"></script>
 
-    <script src="app.js?v=3.172.0"></script>
+    <script src="app.js?v=3.176.7"></script>
   </body>
 </html>

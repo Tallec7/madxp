@@ -3,6 +3,7 @@
  * Monitors memory usage and triggers cleanup when pressure is high
  */
 
+import v8 from 'v8';
 import logger from '../config/logger';
 
 // Lazy import to avoid circular dependency with metrics.service
@@ -90,11 +91,15 @@ class MemoryManagerService {
     const memUsage = process.memoryUsage();
     const heapUsedMB = memUsage.heapUsed / 1024 / 1024;
     const heapTotalMB = memUsage.heapTotal / 1024 / 1024;
+    // Utiliser heap_size_limit (max V8, fixé par --max-old-space-size) et non
+    // heapTotal (allocation courante qui grandit dynamiquement près de heapUsed
+    // → ratio toujours ~90% même à faible usage réel, faux positifs emergency)
+    const heapLimitMB = v8.getHeapStatistics().heap_size_limit / 1024 / 1024;
 
     return {
       heapUsedMB: Math.round(heapUsedMB * 100) / 100,
       heapTotalMB: Math.round(heapTotalMB * 100) / 100,
-      heapUsagePercent: Math.round((heapUsedMB / heapTotalMB) * 100 * 100) / 100,
+      heapUsagePercent: Math.round((heapUsedMB / heapLimitMB) * 100 * 100) / 100,
       rssMB: Math.round(memUsage.rss / 1024 / 1024 * 100) / 100,
       externalMB: Math.round(memUsage.external / 1024 / 1024 * 100) / 100,
     };

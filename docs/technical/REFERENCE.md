@@ -2026,18 +2026,51 @@ Le service monolithique `SitesService` a été décomposé en 4 services focalis
 
 Les composants complexes ont été décomposés en DataServices collocalisés (même dossier que le composant). Template et styles sont extraits en fichiers séparés (`.html`, `.scss`). Le composant orchestre, le DataService encapsule les appels API, le ChartService gère Chart.js.
 
-| Composant                  | DataService(s)                                                                   | Responsabilité                                                |
-| -------------------------- | -------------------------------------------------------------------------------- | ------------------------------------------------------------- |
-| `agencies-management`      | `AgenciesManagementDataService`                                                  | CRUD agencies, sites, associations                            |
-| `subscriptions-management` | `SubscriptionsManagementDataService`                                             | Stats, mutations, filtering/sorting, helpers métier           |
-| `updates-management`       | `UpdatesManagementDataService`                                                   | CRUD updates, déploiements, socket progress, formatting       |
-| `site-sponsors-tab`        | `SiteSponsorsTabDataService`, `SiteSponsorsChartService`                         | CRUD sponsors, stats, videos, config parsing; Chart.js trends |
-| `advertiser-detail`        | `AdvertiserDetailDataService`                                                    | forkJoin chargement, CRUD sponsor                             |
-| `content-management`       | `ContentManagementDataService`, `VideoUploadService`, `ContentDeploymentService` | Vidéos, upload, deploy wizard                                 |
-| `config-editor`            | `ConfigEditorDataService`                                                        | Polling config, validation, déploiement                       |
-| `site-settings-tab`        | `SiteSettingsDataService`                                                        | APIs settings, save/deploy                                    |
-| `users-management`         | `UsersManagementDataService`, `UserFiltersService`, `UserValidationService`      | CRUD users, filtres, validation                               |
-| `club-analytics`           | `ClubAnalyticsChartService`, `ClubExportService`                                 | Chart.js rendering, export CSV/PDF                            |
+| Composant                  | DataService(s)                                                                   | Responsabilité                                                  |
+| -------------------------- | -------------------------------------------------------------------------------- | --------------------------------------------------------------- |
+| `agencies-management`      | `AgenciesManagementDataService`                                                  | CRUD agencies, sites, associations                              |
+| `subscriptions-management` | `SubscriptionsManagementDataService`                                             | Stats, mutations, filtering/sorting, helpers métier             |
+| `updates-management`       | `UpdatesManagementDataService`                                                   | CRUD updates, déploiements, socket progress, formatting         |
+| `site-sponsors-tab`        | `SiteSponsorsTabDataService`, `SiteSponsorsChartService`                         | CRUD sponsors, stats, videos, config parsing; Chart.js trends   |
+| `advertiser-detail`        | `AdvertiserDetailDataService`                                                    | forkJoin chargement, CRUD sponsor                               |
+| `content-management`       | `ContentManagementDataService`, `VideoUploadService`, `ContentDeploymentService` | Vidéos, upload, deploy wizard                                   |
+| `config-editor`            | `ConfigEditorDataService`                                                        | Polling config, validation, déploiement                         |
+| `site-settings-tab`        | `SiteSettingsDataService`                                                        | APIs settings, save/deploy                                      |
+| `users-management`         | `UsersManagementDataService`, `UserFiltersService`, `UserValidationService`      | CRUD users, filtres, validation                                 |
+| `club-analytics`           | `ClubAnalyticsChartService`, `ClubExportService`                                 | Chart.js rendering, export CSV/PDF                              |
+| `remotion-templates`       | `RemotionTemplatesDataService`                                                   | Templates CRUD, render polling, schema editor, versions history |
+
+**Remotion templates — décomposition UI (v3.139+, ADR-055) :**
+
+Le composant `remotion-templates.component.ts` orchestre 6 sous-composants dédiés :
+
+| Sous-composant           | Fichier                               | Rôle                                                  |
+| ------------------------ | ------------------------------------- | ----------------------------------------------------- |
+| `template-grid`          | `template-grid.component.ts`          | Grille de cards + sélection + toggle publish (admin)  |
+| `template-card`          | `template-card.component.ts`          | Card individuelle avec miniature                      |
+| `template-props-form`    | `template-props-form.component.ts`    | Formulaire props dynamique basé sur `props_schema`    |
+| `template-preview`       | `template-preview.component.ts`       | Player Remotion pour preview live                     |
+| `template-schema-editor` | `template-schema-editor.component.ts` | Modal admin JSON brut (props_schema + default_props)  |
+| `template-versions`      | `template-versions.component.ts`      | Dropdown historique des snapshots avec bouton restore |
+
+**Render async (ADR-054) — chaîne complète :**
+
+```
+Dashboard → POST /api/remotion-templates/:id/render
+  → controller enqueue → remotion_render_jobs (status='pending')
+  → 202 { job_id }                            ← client reçoit aussitôt
+
+Worker (in-process, polling 5s) :
+  → claimNextPending() [FOR UPDATE SKIP LOCKED]
+  → status='running', phase='bundling' / 'selecting' / 'rendering' / 'uploading'
+  → updateProgress() throttled (min 2-point jump)
+  → markCompleted() ou markFailed()
+
+Dashboard → GET /api/remotion-templates/render-jobs/:jobId (poll 2s)
+  → affiche progress + phase + video_url quand status='completed'
+```
+
+Supervision via `alerting.checkStuckRenderJobs()` (toutes les 60s) : warning 15 min, critical 30 min + auto-fail, taux échec 1h (warning 30%, critical 60%).
 
 **Méthodes SitesService (profils) :**
 

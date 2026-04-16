@@ -23,6 +23,7 @@ paths:
 | Benchmark        | benchmark.service.ts               | Benchmarks anonymisés entre clubs                |
 | Cron             | cron-scheduler.service.ts          | Stats quotidiennes, cleanup                      |
 | Audit            | audit.service.ts                   | Log toutes les actions admin                     |
+| RemotionRender   | remotion-render-worker.service.ts  | Worker async rendu vidéo Remotion (ADR-054)      |
 
 ## Socket Handlers (`src/handlers/`)
 
@@ -117,6 +118,8 @@ Le smoke test #30 vérifie automatiquement cette complétude.
 - Supprimer l'appel `backfillDeployedPaths()` dans `config-sync.handler.ts` (auto-healing des `deployed_path` NULL pour les déploiements pré-v3.102)
 - Envoyer l'alerte "Site Offline" immédiatement dans `alertService.siteOffline()` (utiliser le délai de grâce `OFFLINE_GRACE_PERIOD_MS` de 60s — les flip-flops Railway de 3-16s ne doivent pas générer de bruit Slack)
 - Envoyer `deploy_video` via `sendCommand` sans inclure `checksum` dans le payload (le sync-agent Pi EXIGE le checksum pour l'intégrité)
+- Démarrer le `startRenderWorker()` sans appeler `failStaleRunningJobs(10)` au boot (un job `running` claimed par un process mort reste bloqué ad vitam — le user ne peut jamais retry — ADR-054 smoke test enforced)
+- Importer `@remotion/renderer` depuis `remotion-templates.controller.ts` (le renderer vit UNIQUEMENT dans `remotion-render-worker.service.ts` — le controller doit rester HTTP-only et retourner 202 en enqueue — sans cette séparation on retombe dans les 502 Railway timeout ADR-054)
 
 ## ⛔ Anti-Patterns Socket.IO (NE JAMAIS FAIRE)
 

@@ -404,9 +404,19 @@ app.use('/remotion-preview', (_req, res, next) => {
   next();
 });
 
-app.use(express.static(path.join(REMOTION_DIR, 'public'), { index: false }));
-app.use('/remotion-preview/public', express.static(path.join(REMOTION_DIR, 'public')));
-app.use('/remotion-preview', express.static(path.join(REMOTION_DIR, 'preview', 'dist')));
+// Cache-Control long + immutable pour les assets Remotion (WebM, MOV, PNG, fonts).
+// Sans ça, Fastly (edge Railway) retape l'origin à chaque requête et retourne 502
+// pendant les cold starts du conteneur. Les assets ont des noms stables et sont
+// invalidés par rebuild Docker → cache agressif sans risque de staleness.
+const remotionAssetCache = (res: Response, filePath: string) => {
+  if (/\.(webm|mov|mp4|png|jpg|jpeg|otf|woff2?|ttf)$/i.test(filePath)) {
+    res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+  }
+};
+
+app.use(express.static(path.join(REMOTION_DIR, 'public'), { index: false, setHeaders: remotionAssetCache }));
+app.use('/remotion-preview/public', express.static(path.join(REMOTION_DIR, 'public'), { setHeaders: remotionAssetCache }));
+app.use('/remotion-preview', express.static(path.join(REMOTION_DIR, 'preview', 'dist'), { setHeaders: remotionAssetCache }));
 // SPA fallback : toute route /remotion-preview/* non trouvée → index.html
 app.get('/remotion-preview/*', (_req, res) => {
   res.sendFile(path.join(REMOTION_DIR, 'preview', 'dist', 'index.html'));
@@ -536,8 +546,13 @@ const startServer = async () => {
 
     // Pre-warm Remotion bundle en arrière-plan (fire-and-forget).
     // Économise ~30-60s sur le premier render après un déploiement Railway.
-    const { prewarmRemotionBundle } = await import('./controllers/remotion-templates.controller');
+    const {
+      prewarmRemotionBundle,
+      startRenderWorker,
+    } = await import('./services/remotion-render-worker.service');
     prewarmRemotionBundle();
+    // Démarre le worker async (ADR-054) qui poll remotion_render_jobs toutes les 5s.
+    startRenderWorker();
   } catch (error) {
     logger.error('Failed to initialize dependencies:', error);
     // Ne pas quitter - le serveur reste en mode dégradé et le health check rapportera l'état
@@ -556,6 +571,16 @@ process.on('SIGTERM', async () => {
   memoryManagerService.stop();
   alertingService.cleanup();
   adminOpsService.stopCleanup();
+
+  // Stop Remotion worker — running renders will be marked stale on next boot
+  try {
+    const { stopRenderWorker } = await import('./services/remotion-render-worker.service');
+    stopRenderWorker();
+  } catch (err) {
+    logger.warn('Failed to stop Remotion render worker', {
+      error: err instanceof Error ? err.message : String(err),
+    });
+  }
 
   // Cleanup sockets BEFORE closing HTTP server — Socket.IO needs the HTTP
   // server alive to send the shutdown notification to connected Pi devices.

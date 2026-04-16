@@ -1,26 +1,16 @@
 import { Request, Response } from 'express';
-import * as path from 'path';
 import * as fs from 'fs';
-import * as os from 'os';
 import https from 'https';
 import http from 'http';
 import { AuthRequest } from '../types';
 import logger from '../config/logger';
-import { uploadVideoFromDisk, uploadAsset, getAssetUrl } from '../services/storage.service';
+import { uploadAsset, getAssetUrl } from '../services/storage.service';
 import {
-  videoRepository,
-  siteRepository,
-  siteVideoRepository,
   remotionTemplatesRepository,
+  remotionTemplateVersionsRepository,
+  remotionRenderJobRepository,
 } from '../repositories';
-
-// Chemin vers templates-remotion (sibling du central-server dans le repo)
-// Sur Railway : REMOTION_DIR env var doit pointer vers le dossier déployé
-const REMOTION_DIR = process.env.REMOTION_DIR
-  || path.resolve(__dirname, '../../../../templates-remotion');
-
-// Point d'entrée Remotion (index.ts / index.js selon l'environnement)
-const REMOTION_ENTRY = path.join(REMOTION_DIR, 'src', 'index.ts');
+export { prewarmRemotionBundle } from '../services/remotion-render-worker.service';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -223,253 +213,216 @@ export const uploadTemplateAssetController = async (req: AuthRequest, res: Respo
 
 /**
  * POST /api/remotion-templates/:id/render
- * Lance le render Remotion côté serveur et injecte le MP4 dans la bibliothèque du site.
+ * Enqueue an async render job (ADR-054). Returns 202 { job_id } immediately.
+ * The in-process worker picks it up, and the frontend polls GET /render-jobs/:jobId.
  *
- * Body: { props: object, site_id: string, title?: string }
+ * Body: { props: object, title?: string }
  *
- * Deployment note (ADR-052):
- *   - En local : REMOTION_DIR pointe vers ../../templates-remotion
- *   - Sur Railway : ajouter REMOTION_DIR=/app/templates-remotion dans les env vars
- *     ET copier le dossier dans le Dockerfile (COPY templates-remotion/ /app/templates-remotion/)
+ * Deployment (ADR-052):
+ *   - REMOTION_DIR must point to the templates-remotion directory
+ *   - Docker builder copies the folder: COPY templates-remotion/ /app/templates-remotion/
  */
 export const renderTemplate = async (req: AuthRequest, res: Response) => {
-  const outputPath = path.join(os.tmpdir(), `remotion-render-${Date.now()}.mp4`);
-
   try {
     const { id } = req.params;
-    const { props = {}, site_id, title } = req.body;
+    const { props = {}, title } = req.body;
 
-    // Récupérer le template
     const template = await remotionTemplatesRepository.findPublishedById(id);
     if (!template) {
       return res.status(404).json({ error: 'Template non trouvé ou non publié' });
     }
 
-    // Valider le site_id
-    if (site_id) {
-      const siteExists = await siteRepository.exists(site_id);
-      if (!siteExists) return res.status(400).json({ error: 'Site non trouvé' });
-    }
-
-    // Vérifier que REMOTION_DIR existe
-    if (!fs.existsSync(REMOTION_DIR)) {
-      logger.error('REMOTION_DIR not found', { REMOTION_DIR });
-      return res.status(500).json({
-        error: 'Moteur Remotion non disponible sur ce serveur',
-        hint: 'Vérifiez REMOTION_DIR env var et le déploiement Dockerfile (ADR-052)',
-      });
-    }
-
-    logger.info('Starting Remotion render', {
-      templateId: id,
-      compositionId: template.composition_id,
-      siteId: site_id,
-      remotionDir: REMOTION_DIR,
-    });
-
-    // Lancer le render Remotion via Node.js API (in-process, pas de subprocess)
-    await runRemotion(template.composition_id, outputPath, props);
-
-    // Vérifier que le fichier existe et a du contenu
-    const stat = fs.statSync(outputPath);
-    if (stat.size === 0) throw new Error('Remotion render produced empty file');
-
-    logger.info('Remotion render complete', { outputPath, size: stat.size });
-
-    // Générer un nom de fichier unique
-    const safeTitle = (title || template.name).replace(/[^a-zA-Z0-9_-]/g, '_');
-    const storagePath = `videos/templates/${safeTitle}_${Date.now()}.mp4`;
-
-    // Upload vers FTP
-    const uploadResult = await uploadVideoFromDisk(outputPath, stat.size, storagePath, 'video/mp4');
-    if (!uploadResult) {
-      throw new Error('FTP upload failed');
-    }
-
-    // Créer l'entrée vidéo en base
-    const video = await videoRepository.create({
-      filename: storagePath.split('/').pop()!,
-      original_name: `${title || template.name}.mp4`,
-      category: 'templates',
-      subcategory: template.name,
-      file_size: stat.size,
-      mime_type: 'video/mp4',
-      storage_path: uploadResult.path,
-      checksum: '',
-      metadata: { title: title || template.name, remotion_template_id: id, props },
-      uploaded_by: req.user?.id ?? null,
-      uploaded_for_site_id: site_id ?? null,
-      upload_status: uploadResult.verified ? 'ready' : 'failed',
-      upload_verified_at: uploadResult.verified ? new Date() : null,
-      upload_verified_size: null,
-    });
-
-    // Lier au site
-    if (site_id) {
-      await siteVideoRepository.link(site_id, video.id, req.user?.id);
-    }
-
-    res.json({
-      video_id: video.id,
-      url: uploadResult.url,
+    const job = await remotionRenderJobRepository.create({
+      template_id: id,
+      props: props ?? {},
       title: title || template.name,
-      file_size: stat.size,
+      requested_by: req.user?.id ?? null,
+      // Auto-tag for club users (scope to their site); admin/super_admin → null (global lib).
+      requested_for_site_id: req.user?.role === 'club' ? req.user.site_id ?? null : null,
     });
 
+    logger.info('Render job enqueued', {
+      jobId: job.id,
+      templateId: id,
+      requestedBy: job.requested_by,
+    });
+
+    res.status(202).json({
+      job_id: job.id,
+      status: job.status,
+      progress: job.progress,
+    });
   } catch (error) {
-    logger.error('renderTemplate error', { error: error instanceof Error ? error.message : error });
+    logger.error('renderTemplate enqueue error', {
+      error: error instanceof Error ? error.message : error,
+    });
     res.status(500).json({
-      error: 'Erreur lors du render',
+      error: 'Erreur lors de la mise en file du render',
       detail: error instanceof Error ? error.message : String(error),
     });
-  } finally {
-    cleanupFile(outputPath);
   }
 };
 
-// ── Bundle cache (in-process, par déploiement Railway) ───────────────────────
-// Le bundle webpack est identique pour tous les renders du même déploiement.
-// Le recalculer à chaque appel coûte ~30-60s. On le met en cache dès le 1er render.
-// Invalidé uniquement au redémarrage du process (nouveau déploiement Railway = reset).
-let cachedBundleUrl: string | null = null;
-let bundleInProgress: Promise<string> | null = null;
+/**
+ * PATCH /api/remotion-templates/:id
+ * Update template fields (name, description, props_schema, default_props).
+ * Admin only. Changes to props_schema/default_props automatically snapshot the
+ * previous state via `trg_neopro_templates_snapshot` (ADR-055).
+ */
+export const updateTemplate = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { name, description, props_schema, default_props } = req.body as {
+      name?: string;
+      description?: string | null;
+      props_schema?: Record<string, unknown>[];
+      default_props?: Record<string, unknown>;
+    };
 
-async function getOrCreateBundle(): Promise<string> {
-  if (cachedBundleUrl) {
-    logger.debug('Remotion bundle cache hit');
-    return cachedBundleUrl;
+    const existing = await remotionTemplatesRepository.findById(id);
+    if (!existing) return res.status(404).json({ error: 'Template non trouvé' });
+
+    const updated = await remotionTemplatesRepository.update(id, {
+      name,
+      description,
+      props_schema,
+      default_props,
+    });
+
+    logger.info('Template updated', {
+      templateId: id,
+      fields: { name: name !== undefined, description: description !== undefined, props_schema: props_schema !== undefined, default_props: default_props !== undefined },
+      userId: req.user?.id,
+    });
+
+    res.json(updated);
+  } catch (error) {
+    logger.error('updateTemplate error', { error, id: req.params.id });
+    res.status(500).json({ error: 'Erreur serveur' });
   }
-  // Évite les bundles parallèles si deux renders arrivent simultanément
-  if (bundleInProgress) {
-    logger.debug('Remotion bundle already in progress, waiting');
-    return bundleInProgress;
-  }
-
-  const { bundle } = await import('@remotion/bundler') as typeof import('@remotion/bundler');
-
-  logger.info('Bundling Remotion entry (first render — will be cached)', { entry: REMOTION_ENTRY });
-
-  bundleInProgress = bundle({
-    entryPoint: REMOTION_ENTRY,
-    publicDir: path.join(REMOTION_DIR, 'public'),
-    onProgress: (p) => {
-      if (p % 25 === 0) logger.debug('Remotion bundle progress', { percent: p });
-    },
-  }).then((url) => {
-    cachedBundleUrl = url;
-    bundleInProgress = null;
-    logger.info('Remotion bundle cached', { url });
-    return url;
-  }).catch((err) => {
-    bundleInProgress = null;
-    throw err;
-  });
-
-  return bundleInProgress;
-}
+};
 
 /**
- * Pre-warm the Remotion webpack bundle at server startup.
- * Runs in background — does not block server boot.
- * First render will be fast (cache hit) instead of waiting ~30-60s for webpack.
+ * POST /api/remotion-templates/:id/duplicate
+ * Duplicate a template (admin only). Copies composition_id, description,
+ * props_schema, default_props. The new row starts unpublished.
+ * Body: { name?: string }
  */
-export function prewarmRemotionBundle(): void {
-  if (!fs.existsSync(REMOTION_DIR)) {
-    logger.debug('Remotion prewarm skipped — REMOTION_DIR not found', { REMOTION_DIR });
-    return;
+export const duplicateTemplate = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { name } = req.body as { name?: string };
+
+    const copy = await remotionTemplatesRepository.duplicate(id, {
+      name,
+      createdBy: req.user?.id ?? null,
+    });
+
+    if (!copy) return res.status(404).json({ error: 'Template non trouvé' });
+
+    logger.info('Template duplicated', { sourceId: id, newId: copy.id, userId: req.user?.id });
+    res.status(201).json(copy);
+  } catch (error) {
+    logger.error('duplicateTemplate error', { error, id: req.params.id });
+    res.status(500).json({ error: 'Erreur serveur' });
   }
-  // Fire-and-forget — errors are logged but don't crash the server
-  getOrCreateBundle().catch((err) => {
-    logger.warn('Remotion prewarm failed (non-fatal)', { error: err instanceof Error ? err.message : String(err) });
-  });
-}
+};
 
-// ── Remotion runner (Node.js API — in-process, no subprocess) ────────────────
+/**
+ * GET /api/remotion-templates/:id/versions
+ * List snapshotted versions (props_schema + default_props history) for a
+ * template. Admin only. Most recent first.
+ */
+export const listTemplateVersions = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const template = await remotionTemplatesRepository.findById(id);
+    if (!template) return res.status(404).json({ error: 'Template non trouvé' });
 
-async function runRemotion(
-  compositionId: string,
-  outputPath: string,
-  inputProps: Record<string, unknown>,
-): Promise<void> {
-  const t0 = Date.now();
-  const { renderMedia, selectComposition } = await import('@remotion/renderer') as typeof import('@remotion/renderer');
+    const versions = await remotionTemplateVersionsRepository.listByTemplate(id);
+    res.json(versions);
+  } catch (error) {
+    logger.error('listTemplateVersions error', { error, id: req.params.id });
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+};
 
-  // Force Remotion to use system Chromium instead of downloading its own Chrome Headless Shell
-  // (86.6 MB) at runtime. PUPPETEER_EXECUTABLE_PATH is ignored by Remotion v4 — it only
-  // respects the browserExecutable option passed to selectComposition/renderMedia.
-  // Fallback: if BROWSER_EXECUTABLE_PATH is unset (local dev), let Remotion auto-download.
-  const browserExecutable = process.env.BROWSER_EXECUTABLE_PATH || undefined;
+/**
+ * POST /api/remotion-templates/:id/versions/:versionId/restore
+ * Restore a previous version's props_schema + default_props onto the live
+ * template. The restore itself is an UPDATE → triggers a new 'pre-update'
+ * snapshot, so the pre-restore state is never lost (ADR-055).
+ * Admin only.
+ */
+export const restoreTemplateVersion = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id, versionId } = req.params;
 
-  const bundled = await getOrCreateBundle();
-  const tBundle = Date.now();
+    const template = await remotionTemplatesRepository.findById(id);
+    if (!template) return res.status(404).json({ error: 'Template non trouvé' });
 
-  logger.info('Selecting composition', {
-    compositionId,
-    bundleMs: tBundle - t0,
-    browserExecutable: browserExecutable ?? 'remotion-default',
-  });
+    const version = await remotionTemplateVersionsRepository.findById(versionId);
+    if (!version || version.template_id !== id) {
+      return res.status(404).json({ error: 'Version non trouvée' });
+    }
 
-  const chromiumOptions = {
-    // Remotion v4 already adds --no-sandbox on Linux automatically.
-    // swangle = software WebGL renderer — required for WebM video decoding in
-    // headless containers without GPU (Railway node:20-slim).
-    // 'angle' relies on EGL/GPU which may silently block video readyState.
-    gl: 'swangle' as const,
-    headless: true,
-  };
+    const updated = await remotionTemplatesRepository.update(id, {
+      props_schema: version.props_schema,
+      default_props: version.default_props,
+    });
 
-  const composition = await selectComposition({
-    serveUrl: bundled,
-    id: compositionId,
-    inputProps,
-    chromiumOptions,
-    browserExecutable,
-    timeoutInMilliseconds: 90000,
-  });
-  const tSelect = Date.now();
+    logger.info('Template version restored', {
+      templateId: id,
+      versionId,
+      userId: req.user?.id,
+    });
 
-  logger.info('Rendering composition', {
-    compositionId,
-    durationInFrames: composition.durationInFrames,
-    selectMs: tSelect - tBundle,
-  });
+    res.json(updated);
+  } catch (error) {
+    logger.error('restoreTemplateVersion error', {
+      error,
+      id: req.params.id,
+      versionId: req.params['versionId'],
+    });
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+};
 
-  await renderMedia({
-    composition,
-    serveUrl: bundled,
-    codec: 'h264',
-    outputLocation: outputPath,
-    inputProps,
-    chromiumOptions,
-    browserExecutable,
-    // 90s timeout — headless containers can be slow to decode WebM via swangle
-    timeoutInMilliseconds: 90000,
-    // yuv420p: required for Pi hardware H.264 decode — other formats (yuv422p, yuv444p)
-    // fall back to software decode on Pi and cause choppy playback.
-    pixelFormat: 'yuv420p',
-    // JPEG : la scène capturée est déjà composée (opaque, masques CSS appliqués) → PNG inutile.
-    // JPEG ~10x plus rapide à encoder que PNG pour chaque frame.
-    // Quality 85 : imperceptible after H.264 CRF 18 re-encode, ~30% smaller than 95.
-    imageFormat: 'jpeg',
-    jpegQuality: 85,
-    // concurrency: 2 — compromis entre parallélisme et mémoire Railway.
-    // 1 = trop lent (séquentiel pur), default (= CPU cores) = thrashing swangle.
-    // 2 workers = ~2x plus rapide sans exploser la RAM du container.
-    concurrency: 2,
-    // crf 18 = high quality, consistent bitrate. Without crf, Remotion uses a default
-    // that can produce large bitrate spikes causing buffering during playback.
-    crf: 18,
-    onProgress: ({ renderedFrames, progress }) => {
-      logger.debug('Remotion render progress', { renderedFrames, progress: Math.round(progress * 100) });
-    },
-  });
+/**
+ * GET /api/remotion-templates/render-jobs/:jobId
+ * Poll render job status. Ownership guard: club users only see their own jobs;
+ * admin/super_admin/operator see any job.
+ */
+export const getRenderJob = async (req: AuthRequest, res: Response) => {
+  try {
+    const { jobId } = req.params;
+    const job = await remotionRenderJobRepository.findById(jobId);
+    if (!job) return res.status(404).json({ error: 'Job non trouvé' });
 
-  const tRender = Date.now();
-  logger.info('Remotion render complete', {
-    outputPath,
-    totalMs: tRender - t0,
-    bundleMs: tBundle - t0,
-    selectMs: tSelect - tBundle,
-    renderMs: tRender - tSelect,
-  });
-}
+    const role = req.user?.role;
+    const isPrivileged = role === 'admin' || role === 'super_admin' || role === 'operator';
+    if (!isPrivileged && job.requested_by !== req.user?.id) {
+      return res.status(403).json({ error: 'Accès refusé' });
+    }
+
+    res.json({
+      job_id: job.id,
+      status: job.status,
+      progress: job.progress,
+      phase: job.phase,
+      video_id: job.video_id,
+      video_url: job.video_url,
+      file_size: job.file_size,
+      error_message: job.error_message,
+      created_at: job.created_at,
+      started_at: job.started_at,
+      completed_at: job.completed_at,
+    });
+  } catch (error) {
+    logger.error('getRenderJob error', {
+      error: error instanceof Error ? error.message : error,
+      jobId: req.params['jobId'],
+    });
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+};

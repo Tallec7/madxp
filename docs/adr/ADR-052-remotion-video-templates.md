@@ -1,7 +1,7 @@
 # ADR-052: Remotion comme moteur de templates vidéo
 
 **Date** : 2026-04-14  
-**Mis à jour** : 2026-04-16  
+**Mis à jour** : 2026-04-16 (Cache-Control long + immutable pour assets ; `initiallyMuted` sur `<Player>` anti-AbortError ; templates agnostiques du site — suppression de `site_id` à l'API render et dans l'UI)  
 **Statut** : Accepté  
 **Format** : Complet
 
@@ -67,6 +67,18 @@ app.use(express.static(path.join(REMOTION_DIR, 'public'), { index: false }));
 
 Cela signifie que `GET /BUT_simple_A.webm` est servi correctement. En render headless, `staticFile()` résout les chemins via `REMOTION_DIR` (env var Railway).
 
+#### 1.a. Cache-Control long + immutable (anti-502 Railway)
+
+Les assets Remotion (WebM 20-40 MB, MOV, PNG, fonts) sont servis avec `Cache-Control: public, max-age=31536000, immutable` via le helper `remotionAssetCache` passé à `setHeaders` dans les 3 middlewares `express.static`.
+
+**Motivation** : sans ce header, Fastly (edge CDN Railway) retape l'origin Express pour chaque requête. Pendant un redéploiement (cold start du conteneur), la fenêtre où l'origin ne répond pas encore provoque des `502 Bad Gateway` sur les WebM, que le browser remonte ensuite sous forme de `NotSupportedError: Failed to load because no supported source was found` côté Remotion `<OffthreadVideo>`.
+
+Avec le cache immutable, l'edge Fastly sert les WebMs depuis son cache sans taper l'origin → plus de fenêtre 502 au déploiement.
+
+**Invalidation** : les noms de fichiers sont stables (`BUT_img_joueur_C.webm`). Si un asset est réencodé sous le même nom, il faut soit le renommer (versionner), soit purger le cache Fastly côté Railway.
+
+Garde smoke : `smoke-consistency.test.ts` → `Remotion asset Cache-Control guard (ADR-052)` (4 assertions).
+
 ### 2. Assets FTP et proxy Range
 
 Les assets vidéo (WebM) peuvent être uploadés depuis le dashboard vers FTP Hostinger (`remotion-assets/`). Quand ils sont utilisés en preview, ils passent par un **proxy same-origin** à `/api/remotion-templates/asset-proxy?url=<encoded_url>` car :
@@ -120,6 +132,36 @@ Les WebM C et E contiennent un canal alpha VP9 (`alpha_mode: 1` dans le containe
 # Régénérer les masques après modification d'un WebM alpha
 cd templates-remotion && bash scripts/extract-masks.sh
 ```
+
+### 5. `<Player>` démarre muté (`initiallyMuted`)
+
+Le `@remotion/player` dans `templates-remotion/preview/src/app.tsx` **doit** être monté avec `initiallyMuted`. Sans cette prop :
+
+- `autoPlay` déclenche `video.play()` avec audio par défaut
+- WebKit (Safari/iOS) et Chrome (politique d'économie d'énergie) bloquent l'autoplay sur les « video-only background media » : onglet masqué, iframe non visible, pas d'interaction user préalable
+- Remotion catch l'`AbortError`, mute, retente → spam dans la console à chaque frame/loop
+- Symptôme typique : `AbortError: The play() request was interrupted because video-only background media was paused to save power`
+
+`initiallyMuted` élimine la tentative audio initiale. Les `controls` permettent à l'utilisateur de démuter s'il le souhaite. Un commentaire `NE PAS RETIRER` est posé en amont de `<Player>` pour prévenir la régression.
+
+### 6. Templates agnostiques du site
+
+Les templates Remotion sont **indépendants du site** : la notion de « site cible » n'a pas de sens au moment de la construction d'un template, puisqu'un template est un schéma de rendu paramétrable, pas une vidéo déployée.
+
+**Conséquences API** :
+
+- `POST /api/remotion-templates/:id/render` n'accepte plus `site_id` dans le body (seulement `{ props, title? }`)
+- La vidéo générée atterrit dans la **bibliothèque globale** (`uploaded_for_site_id: null`)
+- Pour les users `club` (scope site unique), `uploaded_for_site_id` est **auto-tagué côté serveur** avec `req.user.site_id` (respect de la règle club portal security — CLAUDE.md)
+- Plus de `siteVideoRepository.link()` automatique — le déploiement vers un site se fait dans un second temps via la bibliothèque vidéo
+
+**Conséquences UI (dashboard `RemotionTemplatesComponent`)** :
+
+- Suppression du sélecteur de site en entête (page templates)
+- Suppression du champ « Site cible » dans le formulaire de render admin
+- Suppression de `selectedSiteId`, `sites`, `loadSites()`, et des imports `SitesService`/`Site`
+
+**Motivation** : la confusion entre « template » et « vidéo déployée » générait des frictions UX (choix de site non pertinent, vidéo tagguée sur un site alors que le template est générique). Le flow clair : **1)** construire une vidéo depuis un template → bibliothèque → **2)** déployer cette vidéo vers un site via le module Content.
 
 ## Props schema (neopro_templates)
 
