@@ -15,7 +15,7 @@
  * so offline caching adds no value — the server IS the content source).
  */
 
-const SW_VERSION = '1.1.0';
+const SW_VERSION = '1.2.0';
 
 // Install: activate immediately (no precaching needed)
 self.addEventListener('install', () => {
@@ -27,9 +27,13 @@ self.addEventListener('activate', (event) => {
   event.waitUntil(self.clients.claim());
 });
 
-// Fetch: pass through to network (no caching — local server is always available)
-self.addEventListener('fetch', (event) => {
-  event.respondWith(fetch(event.request));
+// Fetch: a listener must exist for PWA installability, but we deliberately
+// do NOT call event.respondWith() — the browser handles every fetch natively.
+// Calling respondWith(fetch(req)) looks like a no-op but is harmful: if the
+// network fetch rejects, the SW turns a transient hiccup into a hard
+// "network error response" that kills the page load.
+self.addEventListener('fetch', () => {
+  // pass-through — browser handles it
 });
 
 // Audio unlock: relay first-interaction signal from any client to all clients.
