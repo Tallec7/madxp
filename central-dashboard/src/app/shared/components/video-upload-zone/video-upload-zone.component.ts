@@ -8,6 +8,7 @@
 
 import { Component, Input, Output, EventEmitter, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { HttpClient, HttpEventType, HttpEvent } from '@angular/common/http';
 import { TranslateModule } from '@ngx-translate/core';
 import { environment } from '@env/environment';
@@ -32,7 +33,7 @@ interface UploadState {
 @Component({
   selector: 'app-video-upload-zone',
   standalone: true,
-  imports: [CommonModule, TranslateModule],
+  imports: [CommonModule, FormsModule, TranslateModule],
   template: `
     <div class="upload-zone-container">
       <div
@@ -66,12 +67,27 @@ interface UploadState {
             {{ isUploading ? 'Upload en cours...' : 'Glisser des vidéos ou images ici ou cliquer pour sélectionner' }}
           </span>
           <span class="upload-hint">
-            Les images sont automatiquement converties en vidéo de 10s
+            Les images sont converties en vidéo avec la durée et le fond choisis ci-dessous
           </span>
           <span class="upload-hint" *ngIf="siteName">
             Vidéos uploadées pour {{ siteName }}
           </span>
         </div>
+      </div>
+
+      <!-- Image conversion options (apply to dropped/selected images) -->
+      <div class="image-options" (click)="$event.stopPropagation()">
+        <span class="image-options-label">🖼️ Options images :</span>
+        <label class="image-options-field">
+          <span>Durée</span>
+          <select [(ngModel)]="imageDuration" [disabled]="isUploading">
+            <option *ngFor="let opt of durationOptions" [ngValue]="opt.value">{{ opt.label }}</option>
+          </select>
+        </label>
+        <label class="image-options-field checkbox">
+          <input type="checkbox" [(ngModel)]="imageBlurBackground" [disabled]="isUploading" />
+          <span>Fond flou</span>
+        </label>
       </div>
 
       <!-- Mobile camera capture button (only on touch devices) -->
@@ -175,6 +191,48 @@ interface UploadState {
       color: var(--text-muted, #666);
     }
 
+    .image-options {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.75rem;
+      margin-top: 0.5rem;
+      padding: 0.5rem 0.75rem;
+      background: var(--bg-secondary, #f9f9f9);
+      border: 1px solid var(--border-color, #e0e0e0);
+      border-radius: 6px;
+      font-size: 0.85rem;
+    }
+
+    .image-options-label {
+      color: var(--text-muted, #666);
+      font-weight: 500;
+    }
+
+    .image-options-field {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.375rem;
+      color: var(--text-primary, #333);
+    }
+
+    .image-options-field select {
+      padding: 0.25rem 0.5rem;
+      border: 1px solid var(--border-color, #ccc);
+      border-radius: 4px;
+      background: var(--bg-primary, #fff);
+      color: var(--text-primary, #333);
+      font-size: 0.85rem;
+    }
+
+    .image-options-field.checkbox {
+      cursor: pointer;
+    }
+
+    .image-options-field input[type="checkbox"] {
+      cursor: pointer;
+    }
+
     .uploads-list {
       margin-top: 1rem;
       display: flex;
@@ -267,6 +325,16 @@ export class VideoUploadZoneComponent {
   isUploading = false;
   uploads: UploadState[] = [];
 
+  imageDuration = 10;
+  imageBlurBackground = true;
+  readonly durationOptions = [
+    { value: 5, label: '5 s' },
+    { value: 10, label: '10 s' },
+    { value: 15, label: '15 s' },
+    { value: 30, label: '30 s' },
+    { value: 60, label: '60 s' },
+  ];
+
   readonly isTouchDevice = typeof window !== 'undefined'
     && ('ontouchstart' in window || (navigator.maxTouchPoints ?? 0) > 0);
 
@@ -340,8 +408,8 @@ export class VideoUploadZoneComponent {
   private uploadImage(file: File, state: UploadState): void {
     const formData = new FormData();
     formData.append('image', file);
-    formData.append('duration', '10');
-    formData.append('blurBackground', 'true');
+    formData.append('duration', String(this.imageDuration));
+    formData.append('blurBackground', String(this.imageBlurBackground));
     if (this.siteId) {
       formData.append('site_id', this.siteId);
     }
