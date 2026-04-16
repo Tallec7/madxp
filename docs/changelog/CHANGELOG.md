@@ -1,3 +1,9 @@
+## [3.178.1](https://github.com/Tallec7/neopro/compare/v3.178.0...v3.178.1) (2026-04-16)
+
+### Bug Fixes
+
+- **remotion:** éliminer le stutter du preview live (preload masques + debounce props) ([#452](https://github.com/Tallec7/neopro/issues/452)) ([41acc5f](https://github.com/Tallec7/neopro/commit/41acc5ffce488c4dfc2332086f15bbacfd397a5e))
+
 # [3.178.0](https://github.com/Tallec7/neopro/compare/v3.177.0...v3.178.0) (2026-04-16)
 
 ### Features
