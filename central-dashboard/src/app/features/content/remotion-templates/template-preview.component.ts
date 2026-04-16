@@ -78,6 +78,7 @@ export class TemplatePreviewComponent implements OnChanges, OnDestroy {
   private previewService = inject(RemotionPreviewService);
   private postMessageTimer: ReturnType<typeof setTimeout> | null = null;
   private lastCompositionId: string | null = null;
+  private lastSentPropsJson: string | null = null;
 
   ngOnChanges(changes: SimpleChanges): void {
     // Reconstruction de l'URL uniquement quand la composition change.
@@ -99,13 +100,21 @@ export class TemplatePreviewComponent implements OnChanges, OnDestroy {
   }
 
   private schedulePropsUpdate(): void {
+    // Guard deep-equal : si les props sont identiques, pas de postMessage
+    // (évite de re-render le Player Remotion → reset playback vidéo).
+    const nextJson = JSON.stringify(this.props);
+    if (nextJson === this.lastSentPropsJson) return;
+
+    // Debounce 400ms : au-dessus du seuil de perception utilisateur mais
+    // assez pour absorber une frappe continue sans re-render Player par keystroke.
     if (this.postMessageTimer) clearTimeout(this.postMessageTimer);
     this.postMessageTimer = setTimeout(() => {
+      this.lastSentPropsJson = JSON.stringify(this.props);
       this.previewService.sendPropsUpdate(
         this.previewFrameRef?.nativeElement,
         this.compositionId,
         this.props,
       );
-    }, 150);
+    }, 400);
   }
 }
