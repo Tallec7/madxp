@@ -1,3 +1,9 @@
+## [3.176.5](https://github.com/Tallec7/neopro/compare/v3.176.4...v3.176.5) (2026-04-16)
+
+### Bug Fixes
+
+- **saas:** stop service worker from killing page loads on network hiccups ([0548cf9](https://github.com/Tallec7/neopro/commit/0548cf9cf39ebd7dde47e34714df721e534f4bc0))
+
 ## [3.176.4](https://github.com/Tallec7/neopro/compare/v3.176.3...v3.176.4) (2026-04-16)
 
 ### Performance Improvements
