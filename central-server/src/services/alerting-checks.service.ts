@@ -281,6 +281,98 @@ export class AlertingChecks {
   }
 
   /**
+   * Détecte les render jobs Remotion bloqués (`running` depuis >15 min) et
+   * le taux d'échec sur la dernière heure. Les jobs stuck sont aussi
+   * auto-échoués à 30 min pour libérer le worker (safety net en plus du
+   * `failStaleRunningJobs(10)` au boot). ADR-054.
+   */
+  async checkStuckRenderJobs(): Promise<void> {
+    try {
+      // 1. Jobs bloqués en 'running' depuis trop longtemps
+      const stuck = await query<{
+        id: string;
+        title: string;
+        minutes_stuck: number;
+        requested_for_site_id: string | null;
+      }>(`
+        SELECT id, title, requested_for_site_id,
+          EXTRACT(EPOCH FROM (NOW() - COALESCE(started_at, created_at))) / 60 AS minutes_stuck
+        FROM remotion_render_jobs
+        WHERE status = 'running'
+          AND COALESCE(started_at, created_at) < NOW() - INTERVAL '15 minutes'
+      `);
+
+      for (const job of stuck.rows) {
+        const minutesStuck = Math.round(job.minutes_stuck);
+        const cooldownKey = `render_job_stuck:${job.id}`;
+        const lastAlert = this.lastAlertTime.get(cooldownKey);
+        if (lastAlert) {
+          const cooldownEnd = new Date(lastAlert.getTime() + 30 * 60 * 1000);
+          if (new Date() < cooldownEnd) continue;
+        }
+
+        const severity: AlertSeverity = minutesStuck >= 30 ? 'critical' : 'warning';
+
+        await this.alertCreator.createAlert({
+          siteId: job.requested_for_site_id ?? undefined,
+          type: 'Render Remotion bloqué',
+          severity,
+          message: `Render Remotion "${job.title}" bloqué en running depuis ${minutesStuck} min (ID: ${job.id})`,
+          metadata: {
+            metric: 'render_job_stuck_minutes',
+            value: minutesStuck,
+            jobId: job.id,
+          },
+        });
+
+        this.lastAlertTime.set(cooldownKey, new Date());
+
+        logger.warn('Alert created for stuck render job', {
+          jobId: job.id,
+          minutesStuck,
+          severity,
+        });
+
+        // Auto-fail les jobs stuck >30min (safety net — le worker peut être mort)
+        if (minutesStuck >= 30) {
+          await query(
+            `UPDATE remotion_render_jobs
+             SET status = 'failed',
+                 error_message = 'Timeout : render bloqué depuis ' || $2 || ' min (auto-fail par alerting)',
+                 completed_at = NOW()
+             WHERE id = $1 AND status = 'running'`,
+            [job.id, minutesStuck]
+          );
+          logger.warn('Auto-failed stuck render job', { jobId: job.id, minutesStuck });
+        }
+      }
+
+      // 2. Taux d'échec global sur la dernière heure (signal de problème systémique :
+      //    bundle cassé, FTP down, Chromium crash...)
+      const rate = await query<{ total: string; failed: string }>(`
+        SELECT
+          COUNT(*) AS total,
+          COUNT(*) FILTER (WHERE status = 'failed') AS failed
+        FROM remotion_render_jobs
+        WHERE created_at > NOW() - INTERVAL '1 hour'
+      `);
+      const total = parseInt(rate.rows[0]?.total ?? '0', 10);
+      const failed = parseInt(rate.rows[0]?.failed ?? '0', 10);
+      // Ignore les très petits échantillons pour éviter le bruit (1 échec sur 1 job = 100%)
+      if (total >= 3) {
+        const failureRate = Math.round((failed / total) * 100);
+        await this.alertCreator.evaluateMetric('__global__', 'render_job_failure_rate_1h', failureRate);
+      }
+    } catch (error) {
+      // Non-bloquant si remotion_render_jobs n'existe pas encore (migration pas appliquée)
+      if (error instanceof Error && error.message.includes('does not exist')) {
+        return;
+      }
+      logger.error('Error checking stuck render jobs:', error);
+    }
+  }
+
+  /**
    * Détecte et auto-nettoie les sponsors fantômes (noms d'1 caractère).
    */
   async checkPhantomSponsors(): Promise<void> {

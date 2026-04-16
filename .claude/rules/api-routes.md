@@ -124,6 +124,25 @@ POST /api/remote/:siteId/command  → Envoyer commande
 GET  /api/remote/:siteId/videos   → Vidéos par catégorie
 ```
 
+## Remotion Templates (ADR-054 async + ADR-055 versions)
+
+```
+GET    /api/remotion-templates                   → liste (admin voit tout, autres voient `is_published=true`)
+GET    /api/remotion-templates/:id               → détail
+POST   /api/remotion-templates/:id/render        → 202 { job_id } (rendu async — voir /render-jobs/:jobId)
+GET    /api/remotion-templates/render-jobs/:jobId → statut job (status, progress 0-100, phase, video_url, file_size)
+
+# Admin-only (requireRole('admin'|'super_admin')) :
+PATCH  /api/remotion-templates/:id                  → édite name/description/props_schema/default_props
+POST   /api/remotion-templates/:id/duplicate        → clone (unpublished)
+GET    /api/remotion-templates/:id/versions         → historique (DESC, trigger auto-snapshot)
+POST   /api/remotion-templates/:id/versions/:versionId/restore → applique un ancien schéma
+```
+
+**Async render contract (ADR-054)** : `POST /render` ne rend plus la vidéo dans la requête HTTP. Le controller enqueue dans `remotion_render_jobs` et retourne `202 { job_id }`. Le worker in-process (`remotion-render-worker.service.ts`, polling 5s, `FOR UPDATE SKIP LOCKED`) traite les jobs et met à jour `progress` + `phase` (bundling → selecting → rendering → uploading). Le dashboard poll `GET /render-jobs/:jobId`. Supervision : `alerting.checkStuckRenderJobs()` alerte à 15/30 min (warning/critical) et auto-fail à 30 min, + taux échec 1h.
+
+**Versions trigger (ADR-055)** : `trg_neopro_templates_snapshot` capture OLD automatiquement à chaque UPDATE de `props_schema`/`default_props` — la route restore est donc une simple UPDATE qui déclenche elle-même un snapshot (zéro perte possible).
+
 ## SaaS (PUBLIQUE — UUID site, ADR-037)
 
 ```
@@ -158,3 +177,8 @@ Pi Analytics: 500 req/min (par IP)
 - Wrapper `contentRoutes` avec `sensitiveRateLimit` (30/min) sur le mount `/api` dans `server.ts` (3-6 vues dashboard exhaustent le quota → cascade de 429 — incident v3.136.4 — utiliser rate limits per-route dans `content.routes.ts`)
 - Revenir au mode "delete-all + replace" dans `copyConfig` de `site-copy.controller.ts` (le mode actuel est ajout sans suppression — `deleteById` des profils existants casse les configs des clubs en production — les conflits de nom sont résolus par suffixe `(copie)` — smoke test enforced)
 - Remettre `isDefault: true` sur les profils copiés dans `copyConfig` (les profils copiés ne doivent JAMAIS écraser le profil par défaut de la cible — toujours `isDefault: false` — smoke test enforced)
+- Rendre `POST /api/remotion-templates/:id/render` synchrone (attendre le bundle+render dans la requête HTTP). Le rendu prend 60-120s et faisait cascader les 502 Railway (proxy timeout 120s). Toujours enqueue dans `remotion_render_jobs` et retourner `202 { job_id }` — le worker polling (ADR-054) gère le rendu hors du cycle HTTP. Smoke test enforced.
+- Remettre `import ... from '@remotion/renderer'` dans `remotion-templates.controller.ts` (le renderer vit uniquement dans `remotion-render-worker.service.ts` depuis ADR-054 — sinon le controller redevient synchrone). Smoke test enforced.
+- Supprimer `failStaleRunningJobs(10)` du boot du worker (sans ça, un job claimed par un process mort reste `running` ad vitam → le user ne peut pas retry). Smoke test enforced.
+- Ajouter `PATCH/POST /:id/duplicate/versions/restore` sans `requireRole('admin'|'super_admin')` (l'édition du schéma template impacte tous les clubs — jamais accessible aux rôles club/viewer). Smoke test enforced.
+- Supprimer le trigger `trg_neopro_templates_snapshot` ou remplacer l'audit trail par un INSERT manuel côté repository (un futur endpoint qui oublie le snapshot perd silencieusement l'historique — le trigger DB garantit la capture quelle que soit la route — ADR-055). Smoke test enforced.
