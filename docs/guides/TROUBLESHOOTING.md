@@ -44,6 +44,7 @@
 40. [Fausses alertes offline/online Slack — flapping Socket.IO (v3.118.2+)](#fausses-alertes-offlineonline-slack--flapping-socketio-v31182)
 41. [Taille vidéo affichée "-" au lieu de la vraie taille (v3.127.7+)](#taille-vidéo-affichée---au-lieu-de-la-vraie-taille-v31277)
 42. [Dashboard 403 après deploy FTP réussi (v3.158.2+)](#dashboard-403-ftp)
+43. [Admin UI — CSP bloque Socket.IO cross-origin (v3.176.8+)](#admin-ui--csp-bloque-socketio-cross-origin-v317680)
 
 > **WiFi USB** : Pour un guide complet sur la clé WiFi USB (installation, diagnostic, pannes, recovery), voir [WIFI_USB_GUIDE.md](WIFI_USB_GUIDE.md).
 >
@@ -6478,4 +6479,67 @@ SELECT id, filename, file_size, pg_typeof(file_size) FROM videos ORDER BY create
 
 ---
 
-**Dernière mise à jour :** 6 avril 2026 (fix BIGINT type parser — tailles vidéo affichées correctement — v3.127.7)
+**Dernière mise à jour :** 16 avril 2026 (reverse proxy Socket.IO dans admin-server — suppression du cross-origin CSP — v3.176.8)
+
+---
+
+## Admin UI — CSP bloque Socket.IO cross-origin (v3.176.8+)
+
+### Symptômes
+
+Dans la console du navigateur (`http://neopro.local:8080`, `http://<ip-lan>:8080`, ou `http://localhost:8080`) :
+
+```
+Refused to load the script 'http://neopro.local:3000/socket.io/socket.io.js'
+because it violates the following Content Security Policy directive: "script-src 'self' 'unsafe-inline'".
+```
+
+L'indicateur "Temps réel" en haut à droite reste vide (point blanc), les mises à jour live (config, sponsors, licence) ne fonctionnent pas.
+
+### Cause
+
+- L'admin-server tourne sur `:8080`, le socket-server sur `:3000` → deux origines distinctes.
+- L'ancien `index.html` construisait l'URL du script `socket.io.js` à partir de `window.location.hostname + ':3000'` → cross-origin.
+- La CSP admin est verrouillée à `script-src 'self'` (défense-en-profondeur XSS) → le navigateur bloque le chargement.
+- Le même problème se reproduisait pour la connexion Socket.IO elle-même (`io(socketUrl, ...)` avec URL absolue).
+
+### Fix (v3.176.8)
+
+Un **reverse proxy interne** dans admin-server redirige `/socket.io/*` vers `127.0.0.1:3000`, côté serveur. Le client voit tout en same-origin — la CSP n'a plus besoin d'être ouverte.
+
+| Fichier                                           | Rôle                                                                                                  |
+| ------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `raspberry/admin/socket-proxy.js`                 | Reverse proxy HTTP + WebSocket (zéro dépendance, `http` natif) + `pingSocketServer()` pour monitoring |
+| `raspberry/admin/admin-server.js`                 | Montage du proxy AVANT `express.json()` + `http.createServer(app)` pour capter l'`upgrade` WS         |
+| `raspberry/admin/public/index.html`               | `<script src="/socket.io/socket.io.js">` (chemin relatif)                                             |
+| `raspberry/admin/public/modules/core/realtime.js` | `io({...})` sans URL (same-origin automatique)                                                        |
+| `raspberry/admin/__tests__/socket-proxy.test.js`  | 16 tests de régression statiques (ordre middleware, CSP, paths)                                       |
+
+### Diagnostic
+
+```bash
+# Vérifier que l'admin-server joint bien le socket-server en local
+curl -s http://localhost:8080/api/admin/health | jq .socketProxy
+# → { "reachable": true, "status": 200, "latencyMs": 3 }
+
+# Vérifier que le chargement same-origin fonctionne
+curl -I http://localhost:8080/socket.io/socket.io.js
+# → HTTP/1.1 200 OK, Content-Type: application/javascript
+
+# Tester le handshake polling à travers le proxy
+curl -s "http://localhost:8080/socket.io/?EIO=4&transport=polling" | head -c 100
+# → "0{\"sid\":\"...\",\"upgrades\":[\"websocket\"], ...}"
+```
+
+### Régression-prevention
+
+Les 16 tests de `raspberry/admin/__tests__/socket-proxy.test.js` garantissent que :
+
+- Le proxy est monté AVANT `express.json()` / `express.urlencoded()`
+- `admin-server.js` utilise `http.createServer(app)` + `attachSocketWsProxy`
+- La CSP n'autorise PAS d'origine `:3000` (reste `'self'`)
+- `index.html` charge `socket.io.js` en chemin relatif (pas de `window.location`)
+- `realtime.js` appelle `io()` sans URL absolue
+- `pingSocketServer` retourne `reachable: false` (et ne throw pas) quand l'upstream est down
+
+**Voir aussi :** `.claude/rules/raspberry.md` section "Admin Server (:8080) & Socket.IO proxy", [ARCHITECTURE.md](../technical/ARCHITECTURE.md#admin-ui--socketio-reverse-proxy-same-origin)

@@ -309,6 +309,7 @@ admin/
 ├── helpers.js               # Utilitaires partagés (exec, sanitize, paths)
 ├── cache-manager.js         # Cache en mémoire avec TTL & namespaces
 ├── email-notifier.js        # Notifications email (nodemailer)
+├── socket-proxy.js          # Reverse proxy /socket.io/* (:8080 → :3000, HTTP + WS)
 ├── package.json             # Dépendances
 │
 ├── services/                # Logique métier (pur, testable)
@@ -351,7 +352,7 @@ admin/
     ├── styles/               # Sources CSS modulaires (10 fichiers → build-admin.sh → styles.css, gitignored)
     └── modules/              # Sources JS modulaires (voir MODULES.md)
         └── core/
-            └── realtime.js   #   Connexion Socket.IO au serveur Pi (:3000), auto-refresh
+            └── realtime.js   #   Connexion Socket.IO same-origin (via socket-proxy), auto-refresh
 ```
 
 ### Architecture

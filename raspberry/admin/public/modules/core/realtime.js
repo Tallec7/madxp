@@ -18,8 +18,10 @@ function initRealtime() {
     }
 
     try {
-        var socketUrl = window.location.protocol + '//' + window.location.hostname + ':3000';
-        _realtimeSocket = io(socketUrl, {
+        // Connexion same-origin via reverse proxy admin-server (:8080 → :3000).
+        // PAS d'URL absolue — le client détermine l'origine automatiquement, ce qui
+        // évite toute violation CSP quel que soit le hostname (neopro.local / IP / localhost).
+        _realtimeSocket = io({
             transports: ['websocket', 'polling'],
             reconnection: true,
             reconnectionDelay: 2000,
