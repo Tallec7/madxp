@@ -71,6 +71,7 @@ Un ADR documente une décision technique importante avec :
 | [ADR-052](ADR-052-remotion-video-templates.md)                    | Adoption Remotion pour les templates vidéo dynamiques      | Accepté                  | Avr 2026 |
 | [ADR-053](ADR-053-pi-ownership-normalization-post-copy.md)        | Normalisation ownership `pi:pi` post-copie vers le Pi      | Accepté                  | Avr 2026 |
 | [ADR-054](ADR-054-async-remotion-render-jobs.md)                  | Render Remotion asynchrone (job queue DB + worker polling) | Accepté                  | Avr 2026 |
+| [ADR-055](ADR-055-remotion-template-versions.md)                  | Snapshot auto & restore des templates Remotion (audit)     | Accepté                  | Avr 2026 |
 
 ### Supersédés
 

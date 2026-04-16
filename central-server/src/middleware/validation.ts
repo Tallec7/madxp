@@ -759,6 +759,22 @@ export const schemas = {
   duplicateSite: Joi.object({
     site_name: Joi.string().max(255).optional(),
   }),
+
+  // ── Remotion templates (admin) ─────────────────────────────────────────────
+  templateUpdateSchema: Joi.object({
+    props_schema: Joi.array().items(Joi.object()).optional(),
+    default_props: Joi.object().optional(),
+    name: Joi.string().max(255).optional(),
+    description: Joi.string().allow(null, '').max(2000).optional(),
+  }).min(1),
+
+  templateDuplicate: Joi.object({
+    name: Joi.string().max(255).optional(),
+  }),
+
+  templateRestoreVersion: Joi.object({
+    // Pas de body requis, l'ID de la version est dans l'URL.
+  }),
 };
 
 // ============================================================================

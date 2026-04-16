@@ -8,12 +8,15 @@ import { RemotionTemplatesDataService } from './remotion-templates-data.service'
 import { TemplateGridComponent } from './template-grid.component';
 import { TemplatePropsFormComponent } from './template-props-form.component';
 import { TemplatePreviewComponent } from './template-preview.component';
+import { TemplateSchemaEditorComponent } from './template-schema-editor.component';
+import { TemplateVersionsComponent } from './template-versions.component';
 import type {
   RemotionTemplate,
   RenderJobPhase,
   RenderJobSnapshot,
   RenderResult,
   TemplatePropDef,
+  TemplateVersion,
 } from './remotion-templates.types';
 
 /**
@@ -31,6 +34,8 @@ import type {
     TemplateGridComponent,
     TemplatePropsFormComponent,
     TemplatePreviewComponent,
+    TemplateSchemaEditorComponent,
+    TemplateVersionsComponent,
   ],
   templateUrl: './remotion-templates.component.html',
   styleUrls: ['./remotion-templates.component.scss'],
@@ -58,6 +63,14 @@ export class RemotionTemplatesComponent implements OnInit, OnDestroy {
   private currentJobId: string | null = null;
   private pollTimer: ReturnType<typeof setTimeout> | null = null;
   private readonly POLL_INTERVAL_MS = 2000;
+
+  // Admin UX (ADR-055)
+  schemaEditorOpen = false;
+  schemaEditorSaving = false;
+  versions: TemplateVersion[] = [];
+  versionsLoading = false;
+  restoringVersionId: string | null = null;
+  duplicating = false;
 
   ngOnDestroy(): void {
     this.stopPolling();
@@ -284,6 +297,104 @@ export class RemotionTemplatesComponent implements OnInit, OnDestroy {
     return bytes > 1_000_000
       ? `${(bytes / 1_000_000).toFixed(1)} MB`
       : `${Math.round(bytes / 1000)} KB`;
+  }
+
+  // ── Admin: duplicate / schema editor / versions (ADR-055) ─────────────────
+
+  openSchemaEditor(): void {
+    if (!this.isAdmin || !this.selectedTemplate) return;
+    this.schemaEditorOpen = true;
+  }
+
+  closeSchemaEditor(): void {
+    this.schemaEditorOpen = false;
+  }
+
+  saveSchema(payload: { props_schema: TemplatePropDef[]; default_props: Record<string, unknown> }): void {
+    if (!this.selectedTemplate) return;
+    this.schemaEditorSaving = true;
+    this.dataService
+      .updateTemplate(this.selectedTemplate.id, {
+        props_schema: payload.props_schema,
+        default_props: payload.default_props,
+      })
+      .subscribe({
+        next: (updated) => {
+          this.schemaEditorSaving = false;
+          this.schemaEditorOpen = false;
+          this.applyUpdatedTemplate(updated);
+          this.notifications.success('Schéma enregistré — version précédente sauvegardée');
+          this.refreshVersions();
+        },
+        error: () => {
+          this.schemaEditorSaving = false;
+          this.notifications.error('Échec de la sauvegarde du schéma');
+        },
+      });
+  }
+
+  duplicateTemplate(): void {
+    if (!this.isAdmin || !this.selectedTemplate || this.duplicating) return;
+    this.duplicating = true;
+    this.dataService.duplicateTemplate(this.selectedTemplate.id).subscribe({
+      next: (copy) => {
+        this.duplicating = false;
+        this.templates = [copy, ...this.templates];
+        this.notifications.success(`Template dupliqué : "${copy.name}"`);
+        this.selectTemplate(copy);
+      },
+      error: () => {
+        this.duplicating = false;
+        this.notifications.error('Échec de la duplication');
+      },
+    });
+  }
+
+  onVersionsToggle(opened: boolean): void {
+    if (opened) this.refreshVersions();
+  }
+
+  private refreshVersions(): void {
+    if (!this.selectedTemplate || !this.isAdmin) return;
+    this.versionsLoading = true;
+    this.dataService.listVersions(this.selectedTemplate.id).subscribe({
+      next: (versions) => {
+        this.versions = versions;
+        this.versionsLoading = false;
+      },
+      error: () => {
+        this.versionsLoading = false;
+        this.notifications.error("Impossible de charger l'historique");
+      },
+    });
+  }
+
+  restoreVersion(version: TemplateVersion): void {
+    if (!this.selectedTemplate || !this.isAdmin) return;
+    this.restoringVersionId = version.id;
+    this.dataService.restoreVersion(this.selectedTemplate.id, version.id).subscribe({
+      next: (updated) => {
+        this.restoringVersionId = null;
+        this.applyUpdatedTemplate(updated);
+        this.notifications.success('Version restaurée');
+        this.refreshVersions();
+      },
+      error: () => {
+        this.restoringVersionId = null;
+        this.notifications.error('Échec de la restauration');
+      },
+    });
+  }
+
+  private applyUpdatedTemplate(updated: RemotionTemplate): void {
+    const idx = this.templates.findIndex((t) => t.id === updated.id);
+    if (idx !== -1) {
+      this.templates = [...this.templates.slice(0, idx), updated, ...this.templates.slice(idx + 1)];
+    }
+    this.selectedTemplate = updated;
+    this.propValues = { ...updated.default_props };
+    this.imageUrls = {};
+    this.imageFiles = {};
   }
 
   private fileToDataUrl(file: File): Promise<string> {

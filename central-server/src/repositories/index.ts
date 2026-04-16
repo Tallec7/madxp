@@ -289,7 +289,14 @@ export {
 } from './safe.repository';
 export { siteVideoRepository } from './site-video.repository';
 export { BaseRepository } from './base.repository';
-export { remotionTemplatesRepository, type NeoProTemplate, type CreateTemplateInput } from './remotion-templates.repository';
+export {
+  remotionTemplatesRepository,
+  remotionTemplateVersionsRepository,
+  type NeoProTemplate,
+  type NeoProTemplateVersion,
+  type CreateTemplateInput,
+  type UpdateTemplateInput,
+} from './remotion-templates.repository';
 export {
   remotionRenderJobRepository,
   type RemotionRenderJob,

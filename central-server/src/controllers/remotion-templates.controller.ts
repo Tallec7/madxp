@@ -7,6 +7,7 @@ import logger from '../config/logger';
 import { uploadAsset, getAssetUrl } from '../services/storage.service';
 import {
   remotionTemplatesRepository,
+  remotionTemplateVersionsRepository,
   remotionRenderJobRepository,
 } from '../repositories';
 export { prewarmRemotionBundle } from '../services/remotion-render-worker.service';
@@ -259,6 +260,131 @@ export const renderTemplate = async (req: AuthRequest, res: Response) => {
       error: 'Erreur lors de la mise en file du render',
       detail: error instanceof Error ? error.message : String(error),
     });
+  }
+};
+
+/**
+ * PATCH /api/remotion-templates/:id
+ * Update template fields (name, description, props_schema, default_props).
+ * Admin only. Changes to props_schema/default_props automatically snapshot the
+ * previous state via `trg_neopro_templates_snapshot` (ADR-055).
+ */
+export const updateTemplate = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { name, description, props_schema, default_props } = req.body as {
+      name?: string;
+      description?: string | null;
+      props_schema?: Record<string, unknown>[];
+      default_props?: Record<string, unknown>;
+    };
+
+    const existing = await remotionTemplatesRepository.findById(id);
+    if (!existing) return res.status(404).json({ error: 'Template non trouvé' });
+
+    const updated = await remotionTemplatesRepository.update(id, {
+      name,
+      description,
+      props_schema,
+      default_props,
+    });
+
+    logger.info('Template updated', {
+      templateId: id,
+      fields: { name: name !== undefined, description: description !== undefined, props_schema: props_schema !== undefined, default_props: default_props !== undefined },
+      userId: req.user?.id,
+    });
+
+    res.json(updated);
+  } catch (error) {
+    logger.error('updateTemplate error', { error, id: req.params.id });
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+};
+
+/**
+ * POST /api/remotion-templates/:id/duplicate
+ * Duplicate a template (admin only). Copies composition_id, description,
+ * props_schema, default_props. The new row starts unpublished.
+ * Body: { name?: string }
+ */
+export const duplicateTemplate = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { name } = req.body as { name?: string };
+
+    const copy = await remotionTemplatesRepository.duplicate(id, {
+      name,
+      createdBy: req.user?.id ?? null,
+    });
+
+    if (!copy) return res.status(404).json({ error: 'Template non trouvé' });
+
+    logger.info('Template duplicated', { sourceId: id, newId: copy.id, userId: req.user?.id });
+    res.status(201).json(copy);
+  } catch (error) {
+    logger.error('duplicateTemplate error', { error, id: req.params.id });
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+};
+
+/**
+ * GET /api/remotion-templates/:id/versions
+ * List snapshotted versions (props_schema + default_props history) for a
+ * template. Admin only. Most recent first.
+ */
+export const listTemplateVersions = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const template = await remotionTemplatesRepository.findById(id);
+    if (!template) return res.status(404).json({ error: 'Template non trouvé' });
+
+    const versions = await remotionTemplateVersionsRepository.listByTemplate(id);
+    res.json(versions);
+  } catch (error) {
+    logger.error('listTemplateVersions error', { error, id: req.params.id });
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+};
+
+/**
+ * POST /api/remotion-templates/:id/versions/:versionId/restore
+ * Restore a previous version's props_schema + default_props onto the live
+ * template. The restore itself is an UPDATE → triggers a new 'pre-update'
+ * snapshot, so the pre-restore state is never lost (ADR-055).
+ * Admin only.
+ */
+export const restoreTemplateVersion = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id, versionId } = req.params;
+
+    const template = await remotionTemplatesRepository.findById(id);
+    if (!template) return res.status(404).json({ error: 'Template non trouvé' });
+
+    const version = await remotionTemplateVersionsRepository.findById(versionId);
+    if (!version || version.template_id !== id) {
+      return res.status(404).json({ error: 'Version non trouvée' });
+    }
+
+    const updated = await remotionTemplatesRepository.update(id, {
+      props_schema: version.props_schema,
+      default_props: version.default_props,
+    });
+
+    logger.info('Template version restored', {
+      templateId: id,
+      versionId,
+      userId: req.user?.id,
+    });
+
+    res.json(updated);
+  } catch (error) {
+    logger.error('restoreTemplateVersion error', {
+      error,
+      id: req.params.id,
+      versionId: req.params['versionId'],
+    });
+    res.status(500).json({ error: 'Erreur serveur' });
   }
 };
 

@@ -6,6 +6,8 @@ import type {
   RemotionTemplate,
   RenderJobEnqueued,
   RenderJobSnapshot,
+  TemplatePropDef,
+  TemplateVersion,
 } from './remotion-templates.types';
 
 /**
@@ -48,5 +50,34 @@ export class RemotionTemplatesDataService {
 
   pollRenderJob(jobId: string): Observable<RenderJobSnapshot> {
     return this.api.get<RenderJobSnapshot>(`/remotion-templates/render-jobs/${jobId}`);
+  }
+
+  // ── Admin: schema editor + duplicate + versions (ADR-055) ──────────────────
+
+  updateTemplate(
+    id: string,
+    patch: Partial<{
+      name: string;
+      description: string | null;
+      props_schema: TemplatePropDef[];
+      default_props: Record<string, unknown>;
+    }>,
+  ): Observable<RemotionTemplate> {
+    return this.api.patch<RemotionTemplate>(`/remotion-templates/${id}`, patch);
+  }
+
+  duplicateTemplate(id: string, name?: string): Observable<RemotionTemplate> {
+    return this.api.post<RemotionTemplate>(`/remotion-templates/${id}/duplicate`, name ? { name } : {});
+  }
+
+  listVersions(id: string): Observable<TemplateVersion[]> {
+    return this.api.get<TemplateVersion[]>(`/remotion-templates/${id}/versions`);
+  }
+
+  restoreVersion(templateId: string, versionId: string): Observable<RemotionTemplate> {
+    return this.api.post<RemotionTemplate>(
+      `/remotion-templates/${templateId}/versions/${versionId}/restore`,
+      {},
+    );
   }
 }

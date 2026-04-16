@@ -24,14 +24,37 @@
   <div class="render-panel" *ngIf="selectedTemplate">
     <div class="render-panel-header">
       <h2>{{ selectedTemplate.name }}</h2>
-      <button
-        type="button"
-        class="btn-close"
-        [attr.aria-label]="'common.close' | translate"
-        (click)="closePanel()"
-      >
-        ✕
-      </button>
+      <div class="render-panel-header-actions">
+        <ng-container *ngIf="isAdmin">
+          <button
+            type="button"
+            class="btn btn-ghost"
+            [disabled]="duplicating"
+            (click)="duplicateTemplate()"
+          >
+            {{ duplicating ? 'Duplication...' : '⎘ Dupliquer' }}
+          </button>
+          <button type="button" class="btn btn-ghost" (click)="openSchemaEditor()">
+            ✎ Éditer le schéma
+          </button>
+          <app-template-versions
+            [versions]="versions"
+            [loading]="versionsLoading"
+            [restoringId]="restoringVersionId"
+            (toggleOpen)="onVersionsToggle($event)"
+            (restore)="restoreVersion($event)"
+          ></app-template-versions>
+        </ng-container>
+
+        <button
+          type="button"
+          class="btn-close"
+          [attr.aria-label]="'common.close' | translate"
+          (click)="closePanel()"
+        >
+          ✕
+        </button>
+      </div>
     </div>
 
     <div class="render-panel-body">
@@ -88,4 +111,13 @@
       ></app-template-preview>
     </div>
   </div>
+
+  <app-template-schema-editor
+    *ngIf="isAdmin"
+    [open]="schemaEditorOpen"
+    [template]="selectedTemplate"
+    [saving]="schemaEditorSaving"
+    (saveSchema)="saveSchema($event)"
+    (cancelEdit)="closeSchemaEditor()"
+  ></app-template-schema-editor>
 </div>

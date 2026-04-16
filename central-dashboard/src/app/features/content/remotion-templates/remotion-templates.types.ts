@@ -42,6 +42,19 @@ export interface AssetUploadResult {
 }
 
 /**
+ * Snapshot of a template version (audit/restore, ADR-055).
+ */
+export interface TemplateVersion {
+  id: string;
+  template_id: string;
+  props_schema: TemplatePropDef[];
+  default_props: Record<string, unknown>;
+  snapshot_reason: string | null;
+  created_by: string | null;
+  created_at: string;
+}
+
+/**
  * Payload returned by POST /remotion-templates/:id/render (202 Accepted).
  */
 export interface RenderJobEnqueued {
