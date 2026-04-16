@@ -1,97 +1,27 @@
 import {
   AbsoluteFill,
   OffthreadVideo,
-  Video,
-  continueRender,
-  delayRender,
   interpolate,
   spring,
   staticFile,
   useCurrentFrame,
   useVideoConfig,
 } from "remotion";
-import { useEffect, useRef } from "react";
 import { z } from "zod";
 
-// ─────────────────────────────────────────────────────────────────────────────
-// HOOK : MASQUE ALPHA DE C — SYNCHRONISÉ FRAME PAR FRAME (Remotion-idiomatic)
-//
-// Problème du RAF continu en headless :
-//   En rendu headless (Railway/Puppeteer), Remotion avance frame par frame.
-//   Un RAF libre n'est pas synchronisé avec la capture screenshot — le masque
-//   appliqué au moment du screenshot peut appartenir à une frame différente,
-//   causant des sauts visibles dans la vidéo finale.
-//
-// Solution : delayRender / continueRender
-//   - delayRender() dit à Remotion "ne prends PAS le screenshot de cette frame"
-//   - On attend que video.readyState >= 2 (frame vidéo décodée par swangle)
-//   - On lit le canvas, applique le masque, puis continueRender() → screenshot
-//   - Effect dépend de `frame` → re-run à chaque frame Remotion → masque parfait
-//
-// Pourquoi canvas 480×270 + WebP ?
-//   → toDataURL PNG sur 1920×1080 = ~5Mo de string, trop lent
-//   → 480×270 + WebP(0.85) = ~30Ko, ~3x plus rapide que PNG, alpha préservé
-//   → PNG encodait en ~10-15ms/frame → contribuait aux frames inégales → VFR → stuttering
-// ─────────────────────────────────────────────────────────────────────────────
-const useCAlphaMask = (
-  cVideoRef: React.RefObject<HTMLVideoElement>,
-  textRef: React.RefObject<HTMLDivElement>
-) => {
-  const frame = useCurrentFrame();
-
-  useEffect(() => {
-    const video = cVideoRef.current;
-    const text = textRef.current;
-    if (!video || !text) return;
-
-    // Bloquer le screenshot Remotion jusqu'à ce que le masque soit appliqué
-    const handle = delayRender(`alpha-mask-f${frame}`);
-    let rafId: number;
-    let resolved = false;
-
-    const canvas = document.createElement("canvas");
-    canvas.width = 480;
-    canvas.height = 270;
-    const ctx = canvas.getContext("2d")!;
-
-    const tryApply = () => {
-      if (resolved) return;
-      if (video.readyState >= 2) {
-        resolved = true;
-        try {
-          ctx.clearRect(0, 0, 480, 270);
-          ctx.drawImage(video, 0, 0, 480, 270);
-          // WebP with alpha is ~3x faster to encode than PNG and sufficient for a CSS mask.
-          const url = canvas.toDataURL("image/webp", 0.85);
-          text.style.visibility = "visible";
-          text.style.webkitMaskImage = `url("${url}")`;
-          text.style.webkitMaskMode = "alpha";
-          text.style.webkitMaskRepeat = "no-repeat";
-          text.style.webkitMaskSize = "100% 100%";
-        } catch {
-          // Canvas tainted (CORS) → pas de masque, texte visible partout
-          text.style.visibility = "visible";
-        }
-        continueRender(handle);
-      } else {
-        // Vidéo pas encore prête → retry au prochain tick navigateur
-        rafId = requestAnimationFrame(tryApply);
-      }
-    };
-
-    rafId = requestAnimationFrame(tryApply);
-
-    return () => {
-      // Cleanup : si la frame suivante démarre avant résolution, libérer quand même
-      if (!resolved) {
-        resolved = true;
-        cancelAnimationFrame(rafId);
-        continueRender(handle);
-      }
-    };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [frame]);
-};
+// ── Helper : luminance mask style from pre-extracted PNG sequence ────────────
+// Cast needed because React.CSSProperties doesn't include WebkitMaskMode.
+const luminanceMask = (url: string): React.CSSProperties =>
+  ({
+    WebkitMaskImage: `url("${url}")`,
+    WebkitMaskMode: "luminance",
+    WebkitMaskRepeat: "no-repeat",
+    WebkitMaskSize: "100% 100%",
+    maskImage: `url("${url}")`,
+    maskMode: "luminance",
+    maskRepeat: "no-repeat",
+    maskSize: "100% 100%",
+  }) as React.CSSProperties;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // SCHÉMA DES PROPS
@@ -114,15 +44,15 @@ type Props = z.infer<typeof butSimpleSchema>;
 // COMPOSITION PRINCIPALE
 //
 // ORDRE DES COUCHES (de bas en haut) :
-//   1. BUT_simple_A.webm  — fond animé (hexagones dorés)
-//   2. Logo club          — scale-in puis fade out
-//   3. BUT_simple_C.webm  — packshot fond doré (ref exposé pour le masque)
-//   4. Texte              — masqué frame-par-frame par le canal alpha de C
-//   5. BUT_simple_B.webm  — wipe/transition par-dessus tout
+//   1. BUT_simple_A.webm  — fond animé (hexagones dorés)      [OffthreadVideo]
+//   2. Logo club          — scale-in (spring)
+//   3. BUT_simple_C.webm  — packshot fond doré                 [OffthreadVideo]
+//   4. Texte              — masqué par PNG grayscale pré-extrait de C (luminance)
+//   5. BUT_simple_B.webm  — wipe/transition par-dessus tout    [OffthreadVideo]
 //
-// Le masque :
-//   cVideoRef → pointe sur le <video> de C → lu par useCAlphaMaskRAF
-//   textRef   → pointe sur le div texte   → webkitMaskImage mis à jour en direct
+// Le masque alpha est pré-calculé : scripts/extract-masks.sh extrait les frames
+// alpha de C.webm en PNG 480×270. Chaque frame de la composition charge le PNG
+// correspondant via staticFile() — plus besoin de delayRender/canvas/toDataURL.
 // ─────────────────────────────────────────────────────────────────────────────
 // Résout une URL vidéo : URL FTP/blob/remotion-file/data directe si fournie, sinon staticFile() local.
 // Défensif : si fallback est vide/undefined, retourne "" pour éviter staticFile(undefined) crash.
@@ -136,32 +66,21 @@ export const ButSimple: React.FC<Props> = ({ prenom = '', nom = '', club = '', l
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
 
-  // Refs pour le masque alpha
-  const cVideoRef = useRef<HTMLVideoElement>(null);
-  const textRef = useRef<HTMLDivElement>(null);
-
-  // Active le masque : le texte suit l'alpha de C, frame par frame (delayRender-synchronisé)
-  useCAlphaMask(cVideoRef, textRef);
-
-  // Zoom in : part de 0, overshoot léger (damping bas = rebond), s'installe à 1
-  // → damping: 8 = rebond prononcé / stiffness: 120 = arrivée rapide
-  // Pour un zoom plus doux : damping: 15, stiffness: 80
-  // Pour un zoom sans rebond : damping: 20, stiffness: 100
   const logoScale = spring({ frame, fps, config: { damping: 20, stiffness: 100 } });
-
-  // Fade in rapide au démarrage — C cache le logo naturellement quand elle devient opaque
   const logoOpacity = interpolate(frame, [0, 8], [0, 1], { extrapolateRight: "clamp" });
+
+  // ── Masque alpha pré-calculé ────────────────────────────────────────────
+  // Les frames alpha de C.webm ont été extraites en PNG grayscale 480×270 au build time
+  // (scripts/extract-masks.sh). On charge directement l'image correspondant à la frame
+  // courante → élimine delayRender + canvas.toDataURL + Video ref + swangle decode.
+  // mask-mode: luminance → blanc = visible, noir = masqué.
+  const maskFrame = String(frame + 1).padStart(4, '0');
+  const maskUrl = staticFile(`masks/but-simple-C/${maskFrame}.png`);
 
   return (
     <AbsoluteFill style={{ backgroundColor: "#000" }}>
 
-      {/* ── FONTS : @font-face injectées directement dans le DOM ────────── */}
-      {/*
-        Remotion n'a pas d'API loadFont — on utilise une balise <style> avec
-        @font-face. staticFile() résout le chemin vers public/.
-        Bulevar    → prénom / nom
-        GeneralSans → club
-      */}
+      {/* ── FONTS ───────────────────────────────────────────────────────────── */}
       <style>{`
         @font-face {
           font-family: 'Bulevar';
@@ -178,15 +97,9 @@ export const ButSimple: React.FC<Props> = ({ prenom = '', nom = '', club = '', l
       `}</style>
 
       {/* ── COUCHE 1 : Fond animé ──────────────────────────────────────────── */}
-      {/* OffthreadVideo : décode via FFmpeg natif au lieu du browser swangle.
-          ~10x plus rapide en headless (Railway) car pas de décodage WebM JS. */}
       <OffthreadVideo src={resolveVideo(videoSrcA, "BUT_simple_A.webm")} style={layerStyle} />
 
       {/* ── COUCHE 2 : Logo club ──────────────────────────────────────────── */}
-      {/*
-        Le logo reste en permanence entre A et C.
-        C le cache naturellement dans ses zones opaques — pas besoin de fade out manuel.
-      */}
       <AbsoluteFill style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
         <img
           src={logoSrc.startsWith("remotion-file:") || logoSrc.startsWith("http") || logoSrc.startsWith("data:") ? logoSrc : staticFile(logoSrc)}
@@ -200,31 +113,22 @@ export const ButSimple: React.FC<Props> = ({ prenom = '', nom = '', club = '', l
         />
       </AbsoluteFill>
 
-      {/* ── COUCHE 3 : Packshot C ─────────────────────────────────────────── */}
-      {/*
-        cVideoRef expose le <video> HTML sous-jacent.
-        useCAlphaMaskRAF lit ses frames via RAF → masque appliqué sur textRef.
-      */}
-      <Video
-        ref={cVideoRef}
+      {/* ── COUCHE 3 : Packshot C (now OffthreadVideo — FFmpeg native decode) */}
+      <OffthreadVideo
         src={resolveVideo(videoSrcC, "BUT_simple_C.webm")}
         style={layerStyle}
       />
 
-      {/* ── COUCHE 4 : Texte masqué par l'alpha de C ──────────────────────── */}
-      {/*
-        webkitMaskImage est mis à jour directement sur ce div par useCAlphaMaskRAF.
-        Le texte est visible UNIQUEMENT dans les zones opaques de C.
-        Pour changer le style : voir playerNameStyle / clubNameStyle en bas.
-      */}
+      {/* ── COUCHE 4 : Texte masqué par l'alpha pré-calculé de C ──────────── */}
+      {/* Le masque est une image PNG grayscale chargée par frame index.
+          mask-mode: luminance → blanc = visible, noir = masqué.
+          Plus besoin de delayRender/continueRender ni de canvas.toDataURL. */}
       <div
-        ref={textRef}
         style={{
           position: "absolute",
           width: 1920,
           height: 1080,
-          // delayRender garantit que le masque est appliqué avant le screenshot —
-          // pas besoin de visibility:hidden initial (évite le flash en preview browser)
+          ...luminanceMask(maskUrl),
         }}
       >
         <span style={clubNameStyle(120)}>{club.toUpperCase()}</span>

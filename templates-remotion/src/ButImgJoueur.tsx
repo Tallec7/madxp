@@ -1,16 +1,12 @@
 import {
   AbsoluteFill,
   OffthreadVideo,
-  Video,
-  continueRender,
-  delayRender,
   interpolate,
   spring,
   staticFile,
   useCurrentFrame,
   useVideoConfig,
 } from "remotion";
-import { useEffect, useRef } from "react";
 import { z } from "zod";
 
 // Résout une URL : URL FTP/blob/remotion-file directe si fournie, sinon staticFile() local.
@@ -31,72 +27,19 @@ const resolveAsset = (url: string | undefined, fallback: string | undefined): st
   return staticFile(fallback);
 };
 
-// ─────────────────────────────────────────────────────────────────────────────
-// HOOK GÉNÉRIQUE : MASQUE ALPHA — SYNCHRONISÉ FRAME PAR FRAME (Remotion-idiomatic)
-//
-// Même logique que ButSimple (useCAlphaMask) mais paramétrable.
-// Le `label` sert à distinguer les deux handles delayRender (C et E).
-//
-// delayRender / continueRender garantit que Remotion attend le masque avant
-// de prendre le screenshot de chaque frame → rendu headless parfaitement synchronisé.
-// ─────────────────────────────────────────────────────────────────────────────
-const useAlphaMask = (
-  videoRef: React.RefObject<HTMLVideoElement>,
-  contentRef: React.RefObject<HTMLDivElement>,
-  label: string
-) => {
-  const frame = useCurrentFrame();
-
-  useEffect(() => {
-    const video = videoRef.current;
-    const content = contentRef.current;
-    if (!video || !content) return;
-
-    const handle = delayRender(`alpha-mask-${label}-f${frame}`);
-    let rafId: number;
-    let resolved = false;
-
-    const canvas = document.createElement("canvas");
-    canvas.width = 480;   // 25% de 1920 — suffisant pour le masque CSS
-    canvas.height = 270;  // 25% de 1080
-    const ctx = canvas.getContext("2d")!;
-
-    const tryApply = () => {
-      if (resolved) return;
-      if (video.readyState >= 2) {
-        resolved = true;
-        try {
-          ctx.clearRect(0, 0, 480, 270);
-          ctx.drawImage(video, 0, 0, 480, 270);
-          // WebP(0.85) : ~3x plus rapide que PNG, alpha préservé
-          const url = canvas.toDataURL("image/webp", 0.85);
-          content.style.visibility = "visible";
-          content.style.webkitMaskImage = `url("${url}")`;
-          content.style.webkitMaskMode = "alpha";
-          content.style.webkitMaskRepeat = "no-repeat";
-          content.style.webkitMaskSize = "100% 100%";
-        } catch {
-          // Canvas tainted (CORS) → pas de masque, contenu visible partout
-          content.style.visibility = "visible";
-        }
-        continueRender(handle);
-      } else {
-        rafId = requestAnimationFrame(tryApply);
-      }
-    };
-
-    rafId = requestAnimationFrame(tryApply);
-
-    return () => {
-      if (!resolved) {
-        resolved = true;
-        cancelAnimationFrame(rafId);
-        continueRender(handle);
-      }
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [frame]);
-};
+// ── Helper : luminance mask style from pre-extracted PNG sequence ────────────
+// Cast needed because React.CSSProperties doesn't include WebkitMaskMode.
+const luminanceMask = (url: string): React.CSSProperties =>
+  ({
+    WebkitMaskImage: `url("${url}")`,
+    WebkitMaskMode: "luminance",
+    WebkitMaskRepeat: "no-repeat",
+    WebkitMaskSize: "100% 100%",
+    maskImage: `url("${url}")`,
+    maskMode: "luminance",
+    maskRepeat: "no-repeat",
+    maskSize: "100% 100%",
+  }) as React.CSSProperties;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // SCHÉMA DES PROPS
@@ -159,22 +102,19 @@ export const ButImgJoueur: React.FC<Props> = ({
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
 
-  // Refs pour les masques alpha
-  const cVideoRef = useRef<HTMLVideoElement>(null);
-  const eVideoRef = useRef<HTMLVideoElement>(null);
-  const scoreRef = useRef<HTMLDivElement>(null);
-  const playerRef = useRef<HTMLDivElement>(null);
-
-  // Masque C → score label (delayRender-synchronisé)
-  useAlphaMask(cVideoRef, scoreRef, "c");
-  // Masque E → packshot joueur (delayRender-synchronisé)
-  useAlphaMask(eVideoRef, playerRef, "e");
-
-  // Logo : spring zoom-in (même config que ButSimple)
   const logoScale = spring({ frame, fps, config: { damping: 20, stiffness: 100 } });
   const logoOpacity = interpolate(frame, [0, 8], [0, 1], { extrapolateRight: "clamp" });
 
   const playerImgResolved = playerImgSrc ? resolveAsset(playerImgSrc, playerImgSrc) : "";
+
+  // ── Masques alpha pré-calculés ──────────────────────────────────────────
+  // Les frames alpha de C.webm et E.webm ont été extraites en PNG grayscale 480×270
+  // au build time (scripts/extract-masks.sh). On charge l'image correspondant à la
+  // frame courante → élimine delayRender + canvas.toDataURL + Video ref + swangle decode.
+  // mask-mode: luminance → blanc = visible, noir = masqué.
+  const maskFrame = String(frame + 1).padStart(4, '0');
+  const maskUrlC = staticFile(`masks/but-img-joueur-C/${maskFrame}.png`);
+  const maskUrlE = staticFile(`masks/but-img-joueur-E/${maskFrame}.png`);
 
   return (
     <AbsoluteFill style={{ backgroundColor: "#000" }}>
@@ -195,12 +135,10 @@ export const ButImgJoueur: React.FC<Props> = ({
         }
       `}</style>
 
-      {/* ── COUCHE 1 : Fond animé A ──────────────────────────────────────────── */}
-      {/* OffthreadVideo : décode via FFmpeg natif au lieu du browser swangle */}
+      {/* ── COUCHE 1 : Fond animé A (FFmpeg native decode) ────────────────── */}
       <OffthreadVideo src={resolveAsset(videoSrcA, "BUT_img_joueur_A.webm")} style={layerStyle} />
 
       {/* ── COUCHE 2 : Logo club ─────────────────────────────────────────────── */}
-      {/* Reste visible entre A et C — C le cache naturellement dans ses zones opaques */}
       <AbsoluteFill style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
         <img
           src={resolveAsset(logoSrc, logoSrc)}
@@ -214,17 +152,14 @@ export const ButImgJoueur: React.FC<Props> = ({
         />
       </AbsoluteFill>
 
-      {/* ── COUCHE 3 : Vidéo C — source du masque score ──────────────────────── */}
-      <Video
-        ref={cVideoRef}
+      {/* ── COUCHE 3 : Vidéo C (now OffthreadVideo — FFmpeg native decode) ── */}
+      <OffthreadVideo
         src={resolveAsset(videoSrcC, "BUT_img_joueur_C.webm")}
         style={layerStyle}
       />
 
-      {/* ── COUCHE 4 : Score label — masqué frame-par-frame par l'alpha de C ── */}
-      {/* Centré pour correspondre à la zone révélée par le webm C */}
+      {/* ── COUCHE 4 : Score label — masqué par l'alpha pré-calculé de C ──── */}
       <div
-        ref={scoreRef}
         style={{
           position: "absolute",
           width: 1920,
@@ -232,29 +167,28 @@ export const ButImgJoueur: React.FC<Props> = ({
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
+          ...luminanceMask(maskUrlC),
         }}
       >
         <span style={scoreLabelStyle}>{scoreLabel}</span>
       </div>
 
-      {/* ── COUCHE 5 : Vidéo E — source du masque joueur ─────────────────────── */}
-      <Video
-        ref={eVideoRef}
+      {/* ── COUCHE 5 : Vidéo E (now OffthreadVideo — FFmpeg native decode) ── */}
+      <OffthreadVideo
         src={resolveAsset(videoSrcE, "BUT_img_joueur_E.webm")}
         style={layerStyle}
       />
 
-      {/* ── COUCHE 6 : Packshot joueur — masqué frame-par-frame par l'alpha de E */}
-      {/* Layout : nom à gauche | photo centre-droite | club en 3 coins */}
+      {/* ── COUCHE 6 : Packshot joueur — masqué par l'alpha pré-calculé de E */}
       <div
-        ref={playerRef}
         style={{
           position: "absolute",
           width: 1920,
           height: 1080,
+          ...luminanceMask(maskUrlE),
         }}
       >
-        {/* Photo : taille et position contrôlées par les props playerImgSize / playerImgLeft */}
+        {/* Photo joueur */}
         {playerImgResolved && (
           <img
             src={playerImgResolved}
@@ -280,7 +214,7 @@ export const ButImgJoueur: React.FC<Props> = ({
         <span style={clubNameCornerStyle({ bottom: 65, right: 80 })}>{club.toUpperCase()}</span>
       </div>
 
-      {/* ── COUCHES 7 & 8 : Wipes B et D (transitions opaques) ──────────────── */}
+      {/* ── COUCHES 7 & 8 : Wipes B et D (FFmpeg native decode) ─────────────── */}
       <OffthreadVideo src={resolveAsset(videoSrcB, "BUT_img_joueur_B.webm")} style={layerStyle} />
       <OffthreadVideo src={resolveAsset(videoSrcD, "BUT_img_joueur_D.webm")} style={layerStyle} />
 

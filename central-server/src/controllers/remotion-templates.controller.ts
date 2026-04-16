@@ -447,11 +447,11 @@ async function runRemotion(
     // yuv420p: required for Pi hardware H.264 decode — other formats (yuv422p, yuv444p)
     // fall back to software decode on Pi and cause choppy playback.
     pixelFormat: 'yuv420p',
-    // JPEG 95 : le masque alpha de C.webm est appliqué via webkitMaskImage dans le browser
-    // AVANT le screenshot — la scène capturée est déjà composée (opaque) → PNG inutile.
+    // JPEG : la scène capturée est déjà composée (opaque, masques CSS appliqués) → PNG inutile.
     // JPEG ~10x plus rapide à encoder que PNG pour chaque frame.
+    // Quality 85 : imperceptible after H.264 CRF 18 re-encode, ~30% smaller than 95.
     imageFormat: 'jpeg',
-    jpegQuality: 95,
+    jpegQuality: 85,
     // concurrency: 2 — compromis entre parallélisme et mémoire Railway.
     // 1 = trop lent (séquentiel pur), default (= CPU cores) = thrashing swangle.
     // 2 workers = ~2x plus rapide sans exploser la RAM du container.
