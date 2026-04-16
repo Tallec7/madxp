@@ -1,0 +1,91 @@
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h1>Templates Vidéo <span class="badge-new">Remotion</span></h1>
+      <p class="subtitle">
+        {{
+          isAdmin
+            ? 'Atelier de création — gérez et publiez les templates'
+            : 'Générez des vidéos personnalisées depuis les templates'
+        }}
+      </p>
+    </div>
+  </div>
+
+  <app-template-grid
+    [templates]="templates"
+    [selectedId]="selectedTemplate?.id ?? null"
+    [isAdmin]="isAdmin"
+    [loading]="loading"
+    (cardSelect)="selectTemplate($event)"
+    (publishToggle)="togglePublish($event)"
+  ></app-template-grid>
+
+  <div class="render-panel" *ngIf="selectedTemplate">
+    <div class="render-panel-header">
+      <h2>{{ selectedTemplate.name }}</h2>
+      <button
+        type="button"
+        class="btn-close"
+        [attr.aria-label]="'common.close' | translate"
+        (click)="closePanel()"
+      >
+        ✕
+      </button>
+    </div>
+
+    <div class="render-panel-body">
+      <div class="props-column">
+        <app-template-props-form
+          [template]="selectedTemplate"
+          [propValues]="propValues"
+          [imageUrls]="imageUrls"
+          [assetUploading]="assetUploading"
+          [videoTitle]="videoTitle"
+          [isAdmin]="isAdmin"
+          (propChange)="onPropChange($event.key, $event.value)"
+          (videoTitleChange)="videoTitle = $event"
+          (imageSelect)="onImageSelect($event.key, $event.file)"
+          (imageRemove)="removeImage($event)"
+          (assetSelect)="onAssetSelect($event.key, $event.file)"
+          (assetRemove)="removeAsset($event)"
+        ></app-template-props-form>
+
+        <div class="render-progress" *ngIf="rendering">
+          <div class="progress-bar">
+            <div class="progress-fill" [style.width.%]="renderProgress"></div>
+          </div>
+          <span>{{ renderStatusMessage }}</span>
+        </div>
+
+        <div class="render-result" *ngIf="lastResult">
+          <span class="result-ok">✓ Vidéo générée</span>
+          <a [href]="lastResult.url" target="_blank" rel="noopener" class="btn-download"
+            >Télécharger MP4</a
+          >
+          <span class="result-size">{{ formatSize(lastResult.file_size) }}</span>
+        </div>
+
+        <button
+          type="button"
+          class="btn btn-primary btn-render"
+          [disabled]="rendering || !canRender()"
+          (click)="render()"
+        >
+          <span *ngIf="!rendering">🎬 Générer la vidéo</span>
+          <span *ngIf="rendering">Rendu en cours...</span>
+        </button>
+
+        <p class="render-hint" *ngIf="!rendering">
+          Le rendu est effectué côté serveur (~2 min). La vidéo sera ajoutée à la bibliothèque.
+        </p>
+      </div>
+
+      <app-template-preview
+        class="preview-column"
+        [compositionId]="selectedTemplate.composition_id"
+        [props]="propValues"
+      ></app-template-preview>
+    </div>
+  </div>
+</div>
