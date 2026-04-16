@@ -1,5 +1,6 @@
 import {
   AbsoluteFill,
+  OffthreadVideo,
   Video,
   continueRender,
   delayRender,
@@ -195,7 +196,8 @@ export const ButImgJoueur: React.FC<Props> = ({
       `}</style>
 
       {/* ── COUCHE 1 : Fond animé A ──────────────────────────────────────────── */}
-      <Video src={resolveAsset(videoSrcA, "BUT_img_joueur_A.webm")} style={layerStyle} />
+      {/* OffthreadVideo : décode via FFmpeg natif au lieu du browser swangle */}
+      <OffthreadVideo src={resolveAsset(videoSrcA, "BUT_img_joueur_A.webm")} style={layerStyle} />
 
       {/* ── COUCHE 2 : Logo club ─────────────────────────────────────────────── */}
       {/* Reste visible entre A et C — C le cache naturellement dans ses zones opaques */}
@@ -279,8 +281,8 @@ export const ButImgJoueur: React.FC<Props> = ({
       </div>
 
       {/* ── COUCHES 7 & 8 : Wipes B et D (transitions opaques) ──────────────── */}
-      <Video src={resolveAsset(videoSrcB, "BUT_img_joueur_B.webm")} style={layerStyle} />
-      <Video src={resolveAsset(videoSrcD, "BUT_img_joueur_D.webm")} style={layerStyle} />
+      <OffthreadVideo src={resolveAsset(videoSrcB, "BUT_img_joueur_B.webm")} style={layerStyle} />
+      <OffthreadVideo src={resolveAsset(videoSrcD, "BUT_img_joueur_D.webm")} style={layerStyle} />
 
     </AbsoluteFill>
   );

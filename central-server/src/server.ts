@@ -533,6 +533,11 @@ const startServer = async () => {
     // Nettoyage périodique des fichiers temporaires d'upload abandonnés (toutes les 30 min)
     const tempCleanupInterval = setInterval(cleanupStaleTempFiles, 30 * 60 * 1000);
     tempCleanupInterval.unref(); // Ne pas empêcher le shutdown
+
+    // Pre-warm Remotion bundle en arrière-plan (fire-and-forget).
+    // Économise ~30-60s sur le premier render après un déploiement Railway.
+    const { prewarmRemotionBundle } = await import('./controllers/remotion-templates.controller');
+    prewarmRemotionBundle();
   } catch (error) {
     logger.error('Failed to initialize dependencies:', error);
     // Ne pas quitter - le serveur reste en mode dégradé et le health check rapportera l'état

@@ -1,5 +1,6 @@
 import {
   AbsoluteFill,
+  OffthreadVideo,
   Video,
   continueRender,
   delayRender,
@@ -177,7 +178,9 @@ export const ButSimple: React.FC<Props> = ({ prenom = '', nom = '', club = '', l
       `}</style>
 
       {/* ── COUCHE 1 : Fond animé ──────────────────────────────────────────── */}
-      <Video src={resolveVideo(videoSrcA, "BUT_simple_A.webm")} style={layerStyle} />
+      {/* OffthreadVideo : décode via FFmpeg natif au lieu du browser swangle.
+          ~10x plus rapide en headless (Railway) car pas de décodage WebM JS. */}
+      <OffthreadVideo src={resolveVideo(videoSrcA, "BUT_simple_A.webm")} style={layerStyle} />
 
       {/* ── COUCHE 2 : Logo club ──────────────────────────────────────────── */}
       {/*
@@ -233,7 +236,7 @@ export const ButSimple: React.FC<Props> = ({ prenom = '', nom = '', club = '', l
       </div>
 
       {/* ── COUCHE 5 : Wipe B ─────────────────────────────────────────────── */}
-      <Video src={resolveVideo(videoSrcB, "BUT_simple_B.webm")} style={layerStyle} />
+      <OffthreadVideo src={resolveVideo(videoSrcB, "BUT_simple_B.webm")} style={layerStyle} />
 
     </AbsoluteFill>
   );

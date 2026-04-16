@@ -368,6 +368,22 @@ async function getOrCreateBundle(): Promise<string> {
   return bundleInProgress;
 }
 
+/**
+ * Pre-warm the Remotion webpack bundle at server startup.
+ * Runs in background — does not block server boot.
+ * First render will be fast (cache hit) instead of waiting ~30-60s for webpack.
+ */
+export function prewarmRemotionBundle(): void {
+  if (!fs.existsSync(REMOTION_DIR)) {
+    logger.debug('Remotion prewarm skipped — REMOTION_DIR not found', { REMOTION_DIR });
+    return;
+  }
+  // Fire-and-forget — errors are logged but don't crash the server
+  getOrCreateBundle().catch((err) => {
+    logger.warn('Remotion prewarm failed (non-fatal)', { error: err instanceof Error ? err.message : String(err) });
+  });
+}
+
 // ── Remotion runner (Node.js API — in-process, no subprocess) ────────────────
 
 async function runRemotion(
@@ -375,11 +391,13 @@ async function runRemotion(
   outputPath: string,
   inputProps: Record<string, unknown>,
 ): Promise<void> {
+  const t0 = Date.now();
   const { renderMedia, selectComposition } = await import('@remotion/renderer') as typeof import('@remotion/renderer');
 
   const bundled = await getOrCreateBundle();
+  const tBundle = Date.now();
 
-  logger.info('Selecting composition', { compositionId });
+  logger.info('Selecting composition', { compositionId, bundleMs: tBundle - t0 });
 
   const chromiumOptions = {
     // Remotion v4 already adds --no-sandbox on Linux automatically.
@@ -397,8 +415,13 @@ async function runRemotion(
     chromiumOptions,
     timeoutInMilliseconds: 90000,
   });
+  const tSelect = Date.now();
 
-  logger.info('Rendering composition', { compositionId, durationInFrames: composition.durationInFrames });
+  logger.info('Rendering composition', {
+    compositionId,
+    durationInFrames: composition.durationInFrames,
+    selectMs: tSelect - tBundle,
+  });
 
   await renderMedia({
     composition,
@@ -429,5 +452,12 @@ async function runRemotion(
     },
   });
 
-  logger.info('Remotion render complete', { outputPath });
+  const tRender = Date.now();
+  logger.info('Remotion render complete', {
+    outputPath,
+    totalMs: tRender - t0,
+    bundleMs: tBundle - t0,
+    selectMs: tSelect - tBundle,
+    renderMs: tRender - tSelect,
+  });
 }
