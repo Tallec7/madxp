@@ -15,9 +15,13 @@ import type {
   VideoDeployState,
   SortField,
   SortDirection,
+  VideoStatusFilter,
+  VideoOwnerFilter,
+  VideoViewMode,
 } from './video-library.types';
 import { VideoDetailPanelComponent } from './video-detail-panel/video-detail-panel.component';
 import { VideoPreviewModalComponent } from './video-preview-modal/video-preview-modal.component';
+import { VideoLibraryFiltersComponent } from './video-library-filters/video-library-filters.component';
 
 export type {
   VideoContentStatus,
@@ -28,6 +32,9 @@ export type {
   VideoDeployState,
   SortField,
   SortDirection,
+  VideoStatusFilter,
+  VideoOwnerFilter,
+  VideoViewMode,
 };
 
 @Component({
@@ -39,6 +46,7 @@ export type {
     TranslateModule,
     VideoDetailPanelComponent,
     VideoPreviewModalComponent,
+    VideoLibraryFiltersComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './video-library.component.html',
@@ -111,15 +119,15 @@ export class VideoLibraryComponent implements OnChanges {
   storagePercent: number = 0;
 
   searchQuery: string = '';
-  statusFilter: 'relevant' | 'all' | 'on_pi' | 'to_deploy' | 'in_config' | 'deploy_error' | 'with_variant' | 'programmed' | 'available_only' = 'relevant';
-  ownerFilter: 'all' | 'club' | 'neopro' = 'all';
+  statusFilter: VideoStatusFilter = 'relevant';
+  ownerFilter: VideoOwnerFilter = 'all';
   categoryFilter: string = 'all';
 
   sortField: SortField = 'filename';
   sortDirection: SortDirection = 'asc';
 
   // View mode
-  viewMode: 'grid' | 'list' = 'grid';
+  viewMode: VideoViewMode = 'grid';
 
   // Pagination
   pageSizeOptions: (number | 'all')[] = [10, 25, 50, 'all'];

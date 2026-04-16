@@ -1,0 +1,79 @@
+<!-- Library Filters Toolbar — extracted from video-library.component.html (Phase C) -->
+<div class="library-filters">
+  <input
+    type="text"
+    [ngModel]="searchQuery"
+    (ngModelChange)="onSearchQueryChange($event)"
+    placeholder="Rechercher..."
+    class="search-input"
+  />
+  <select
+    [ngModel]="statusFilter"
+    (ngModelChange)="onStatusFilterChange($event)"
+    class="filter-select"
+    title="Pertinentes = vidéos utilisées dans la config ou uploadées pour ce site. Sur le Pi = déjà présentes sur le boîtier. À déployer = dans le cloud, en attente de transfert."
+  >
+    <option value="relevant">🎯 Pertinentes</option>
+    <option value="all">Tous les statuts</option>
+    <option value="on_pi" *ngIf="siteType !== 'saas'">✅ Sur le Pi</option>
+    <option value="to_deploy" *ngIf="siteType !== 'saas'">⏳ À déployer</option>
+    <option value="programmed">✅ Programmées</option>
+    <option value="available_only">⬜ Disponibles</option>
+    <option value="in_config">⚙️ Dans la config</option>
+    <option value="deploy_error" *ngIf="siteType !== 'saas'">❌ Erreur deploy</option>
+    <option value="with_variant">📺 Avec variantes</option>
+  </select>
+  <select
+    [ngModel]="ownerFilter"
+    (ngModelChange)="onOwnerFilterChange($event)"
+    class="filter-select"
+  >
+    <option value="all">Tous</option>
+    <option value="club">Club</option>
+    <option value="neopro">NEOPRO</option>
+  </select>
+  <select
+    [ngModel]="categoryFilter"
+    (ngModelChange)="onCategoryFilterChange($event)"
+    class="filter-select"
+  >
+    <option value="all">Toutes catégories</option>
+    <optgroup label="Utilisée dans la config" *ngIf="configLabelOptions.length > 0">
+      <option *ngFor="let label of configLabelOptions" [value]="'config:' + label">
+        {{ label }}
+      </option>
+    </optgroup>
+    <optgroup label="Catégorie d'upload" *ngIf="categories.length > 0">
+      <option *ngFor="let cat of categories" [value]="cat">{{ cat }}</option>
+    </optgroup>
+  </select>
+  <button
+    class="btn-selection"
+    [class.active]="selectionMode"
+    (click)="onToggleSelection()"
+    title="Mode sélection multiple"
+  >
+    ☑️
+  </button>
+  <button class="btn-export" (click)="onExportCsv()" title="Exporter la liste filtrée en CSV">
+    📥 CSV
+  </button>
+  <div class="view-toggle">
+    <button
+      class="view-btn"
+      [class.active]="viewMode === 'grid'"
+      (click)="onViewModeChange('grid')"
+      title="Vue grille"
+    >
+      ▦
+    </button>
+    <button
+      class="view-btn"
+      [class.active]="viewMode === 'list'"
+      (click)="onViewModeChange('list')"
+      title="Vue liste"
+    >
+      ☰
+    </button>
+  </div>
+</div>
