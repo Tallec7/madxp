@@ -1,3 +1,9 @@
+## [3.176.7](https://github.com/Tallec7/neopro/compare/v3.176.6...v3.176.7) (2026-04-16)
+
+### Performance Improvements
+
+- **templates:** pre-extract alpha masks as PNG sequences, eliminate delayRender pipeline ([1a8bd42](https://github.com/Tallec7/neopro/commit/1a8bd42e28205ab7b4ce63216460bdb5fb3fc220))
+
 ## [3.176.6](https://github.com/Tallec7/neopro/compare/v3.176.5...v3.176.6) (2026-04-16)
 
 ### Performance Improvements
