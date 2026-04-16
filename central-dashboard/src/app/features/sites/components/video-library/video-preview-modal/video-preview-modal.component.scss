@@ -1,0 +1,144 @@
+:host {
+  display: contents;
+}
+
+/* Preview Popup */
+.preview-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 2rem;
+}
+
+.preview-modal {
+  background: white;
+  border-radius: 12px;
+  max-width: 900px;
+  width: 100%;
+  max-height: 90vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+}
+
+.preview-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid #e2e8f0;
+  background: #f8fafc;
+}
+
+.preview-title {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.preview-filename {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.preview-meta {
+  font-size: 0.75rem;
+  color: #64748b;
+}
+
+.preview-close {
+  background: none;
+  border: none;
+  font-size: 1.25rem;
+  color: #64748b;
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  transition: all 0.15s;
+}
+
+.preview-close:hover {
+  background: #e2e8f0;
+  color: #1e293b;
+}
+
+.preview-content {
+  flex: 1;
+  background: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 300px;
+}
+
+.preview-video {
+  max-width: 100%;
+  max-height: 60vh;
+}
+
+.preview-footer {
+  display: flex;
+  gap: 1rem;
+  padding: 0.75rem 1.5rem;
+  border-top: 1px solid #e2e8f0;
+  background: #f8fafc;
+  align-items: center;
+}
+
+.preview-info {
+  font-size: 0.75rem;
+  color: #64748b;
+}
+
+.preview-status {
+  margin-left: auto;
+  font-size: 0.75rem;
+  padding: 0.25rem 0.75rem;
+  border-radius: 999px;
+}
+
+.preview-status.on-pi {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.preview-status.pending {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.preview-unavailable {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem;
+  color: #64748b;
+}
+
+.unavailable-icon {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+}
+
+.preview-unavailable p {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 500;
+  color: #475569;
+}
+
+.unavailable-hint {
+  font-size: 0.75rem;
+  margin-top: 0.5rem;
+  color: #94a3b8;
+}

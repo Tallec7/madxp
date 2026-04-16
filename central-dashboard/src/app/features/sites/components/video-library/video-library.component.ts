@@ -16,6 +16,8 @@ import type {
   SortField,
   SortDirection,
 } from './video-library.types';
+import { VideoDetailPanelComponent } from './video-detail-panel/video-detail-panel.component';
+import { VideoPreviewModalComponent } from './video-preview-modal/video-preview-modal.component';
 
 export type {
   VideoContentStatus,
@@ -31,7 +33,13 @@ export type {
 @Component({
   selector: 'app-video-library',
   standalone: true,
-  imports: [CommonModule, FormsModule, TranslateModule],
+  imports: [
+    CommonModule,
+    FormsModule,
+    TranslateModule,
+    VideoDetailPanelComponent,
+    VideoPreviewModalComponent,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './video-library.component.html',
   styleUrls: ['./video-library.component.scss']

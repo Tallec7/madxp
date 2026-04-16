@@ -1,0 +1,36 @@
+<!-- Video Preview Popup — extracted from video-library.component.html -->
+<div class="preview-overlay" *ngIf="video" (click)="onClose()">
+  <div class="preview-modal" (click)="onStopPropagation($event)">
+    <div class="preview-header">
+      <div class="preview-title">
+        <span class="preview-filename" [title]="video.filename">{{ video.displayName }}</span>
+        <span class="preview-meta" *ngIf="video.category">
+          {{ video.category }}{{ video.subcategory ? ' / ' + video.subcategory : '' }}
+        </span>
+      </div>
+      <button class="preview-close" (click)="onClose()" title="Fermer">✕</button>
+    </div>
+    <div class="preview-content">
+      <video *ngIf="video.path" [src]="video.path" controls autoplay class="preview-video">
+        Votre navigateur ne supporte pas la lecture vidéo.
+      </video>
+      <div *ngIf="!video.path" class="preview-unavailable">
+        <span class="unavailable-icon">🚫</span>
+        <p>Prévisualisation non disponible</p>
+        <span class="unavailable-hint">L'URL de la vidéo n'est pas configurée</span>
+      </div>
+    </div>
+    <div class="preview-footer">
+      <span class="preview-info">{{ formatBytes(video.size) }}</span>
+      <span class="preview-info" *ngIf="video.duration">{{ formatDuration(video.duration) }}</span>
+      <span
+        class="preview-status"
+        *ngIf="siteType !== 'saas'"
+        [class.on-pi]="video.isOnPi"
+        [class.pending]="!video.isOnPi"
+      >
+        {{ video.isOnPi ? '✅ Sur le Pi' : '⏳ À déployer' }}
+      </span>
+    </div>
+  </div>
+</div>
