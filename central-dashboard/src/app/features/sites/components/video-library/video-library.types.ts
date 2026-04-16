@@ -59,3 +59,21 @@ export interface VideoDeployState {
 
 export type SortField = 'filename' | 'size' | 'duration' | 'lastModified' | 'category';
 export type SortDirection = 'asc' | 'desc';
+
+/** Status filter applied to the library list — drives `.library-filters` dropdown */
+export type VideoStatusFilter =
+  | 'relevant'
+  | 'all'
+  | 'on_pi'
+  | 'to_deploy'
+  | 'in_config'
+  | 'deploy_error'
+  | 'with_variant'
+  | 'programmed'
+  | 'available_only';
+
+/** Owner filter applied to the library list */
+export type VideoOwnerFilter = 'all' | 'club' | 'neopro';
+
+/** View mode — grid (cards) or list (table) */
+export type VideoViewMode = 'grid' | 'list';
