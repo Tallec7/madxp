@@ -1,7 +1,7 @@
 # ADR-052: Remotion comme moteur de templates vidéo
 
 **Date** : 2026-04-14  
-**Mis à jour** : 2026-04-15  
+**Mis à jour** : 2026-04-16  
 **Statut** : Accepté  
 **Format** : Complet
 
@@ -46,6 +46,8 @@ Dashboard Angular (Hostinger)
 | `templates-remotion/preview/src/app.tsx`                                     | App React preview (`@remotion/player`)                           |
 | `templates-remotion/preview/vite.config.ts`                                  | Build Vite, `base: '/remotion-preview/'`                         |
 | `templates-remotion/public/`                                                 | Assets statiques (WebM, fonts, images par défaut)                |
+| `templates-remotion/public/masks/`                                           | Séquences PNG alpha pré-extraites (luminance masks)              |
+| `templates-remotion/scripts/extract-masks.sh`                                | Script FFmpeg d'extraction des masques alpha                     |
 | `central-server/src/controllers/remotion-templates.controller.ts`            | API render + upload asset + proxy FTP                            |
 | `central-server/src/routes/remotion-templates.routes.ts`                     | Routes `/api/remotion-templates/*`                               |
 | `central-server/src/repositories/remotion-templates.repository.ts`           | Accès DB `neopro_templates`                                      |
@@ -75,27 +77,49 @@ Les assets vidéo (WebM) peuvent être uploadés depuis le dashboard vers FTP Ho
 
 En render headless (Railway), les URLs FTP sont utilisées directement — pas de proxy nécessaire.
 
-### 3. Paramètres render (VFR / stuttering)
+### 3. Paramètres render (optimisés pour Railway headless)
 
 ```typescript
 await renderMedia({
-  concurrency: 1, // Critique : évite la compétition CPU entre instances Chromium
-  pixelFormat: 'yuv420p', // Requis pour décodage H.264 sur Pi
-  crf: 18, // Qualité élevée
+  concurrency: 2, // 2 workers — compromis parallélisme / mémoire Railway
+  pixelFormat: 'yuv420p', // Requis pour décodage H.264 hardware sur Pi
+  crf: 18, // Qualité élevée, bitrate stable
   codec: 'h264',
+  imageFormat: 'jpeg', // ~10x plus rapide que PNG (scène déjà composée, opaque)
+  jpegQuality: 85, // Imperceptible après re-encode H.264 CRF 18
+  chromiumOptions: { gl: 'swangle' }, // Software WebGL pour containers sans GPU
+  browserExecutable: process.env.BROWSER_EXECUTABLE_PATH, // System Chromium (évite 86MB download)
   timeoutInMilliseconds: 90000,
 });
 ```
 
-`concurrency: 1` est critique sur Railway (pas de GPU, CPU partagé). Plusieurs instances Chromium en parallèle causent du VFR (Variable Frame Rate) qui produit des sauts visibles sur Pi.
+**Bundle caching** : le bundle webpack est créé une fois au démarrage (`prewarmRemotionBundle()`) et réutilisé pour tous les renders du même déploiement (~235ms cache hit vs 30-60s).
 
-### 4. Masque alpha (useCAlphaMask)
+### 4. Masque alpha — séquences PNG pré-extraites (luminance)
 
-`ButSimple` utilise un masque alpha frame-par-frame : le canal alpha de `BUT_simple_C.webm` est appliqué via `webkitMaskImage` sur le div texte. Implémentation :
+Les WebM C et E contiennent un canal alpha VP9 (`alpha_mode: 1` dans le container WebM) qui sert de masque pour le texte/score/joueur. Deux approches ont été évaluées :
 
-- `delayRender()` bloque le screenshot Remotion jusqu'à ce que la frame vidéo soit décodée (`readyState >= 2`)
-- Le canvas encode en **WebP 0.85** (pas PNG) — ~3x plus rapide, préserve l'alpha
-- `continueRender()` libère le screenshot → masque parfait frame par frame
+**v1 (abandonnée) — runtime `delayRender` + canvas** :
+
+- `delayRender()` bloquait chaque screenshot Remotion
+- `<Video ref>` décodait le WebM via swangle (browser, lent en headless)
+- `canvas.toDataURL('webp')` encodait le masque à chaque frame (~10-15ms/frame)
+- `continueRender()` débloquait le screenshot
+- **Problème** : 420 cycles delayRender pour ButImgJoueur (210 frames × 2 masques), overhead majeur
+
+**v2 (actuelle) — PNG grayscale pré-extraits** :
+
+- `scripts/extract-masks.sh` extrait les frames alpha en PNG grayscale 480×270 via FFmpeg
+- 600 images total (2.4 MB), committées dans `public/masks/`
+- Les composants chargent le PNG correspondant au frame index via `staticFile()`
+- CSS `mask-mode: luminance` (blanc = visible, noir = masqué)
+- C et E sont maintenant des `<OffthreadVideo>` (FFmpeg natif, pas de browser decode)
+- **Résultat** : zéro `delayRender`, toutes les couches en FFmpeg natif, ~2-4x plus rapide
+
+```bash
+# Régénérer les masques après modification d'un WebM alpha
+cd templates-remotion && bash scripts/extract-masks.sh
+```
 
 ## Props schema (neopro_templates)
 
@@ -126,3 +150,5 @@ Voir `docs/guides/REMOTION_ADD_TEMPLATE.md` pour le guide pas à pas.
 - Render bloquant (1 à la fois) — acceptable pour un usage rare de clubs
 - Nouvel îlot React isolé dans un projet Angular — aucune dépendance croisée
 - Assets WebM uploadables sans redeploy via le dashboard admin
+- Modifier un WebM alpha (C/E) nécessite de re-run `scripts/extract-masks.sh` et commiter les PNG générés
+- Toutes les couches vidéo utilisent `OffthreadVideo` (FFmpeg natif) — pas de décodage browser/swangle pour les vidéos
