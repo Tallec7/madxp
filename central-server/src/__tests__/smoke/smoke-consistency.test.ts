@@ -497,3 +497,55 @@ describe('Sync-agent command handler symmetry', () => {
       .toEqual({ branch: 'update_software', emitsProgress100: true });
   });
 });
+
+describe('Remotion asset Cache-Control guard (ADR-052)', () => {
+  // Rationale: Railway Fastly edge returned 502 for large WebM files during
+  // container cold starts because Cache-Control: max-age=0 forced origin hits
+  // on every request. Long-lived immutable caching lets the CDN serve WebMs
+  // from the edge, eliminating the 502 window at deploy time.
+  const repoRoot = path.resolve(__dirname, '..', '..', '..', '..');
+  const serverTs = fs.readFileSync(
+    path.join(repoRoot, 'central-server/src/server.ts'),
+    'utf8'
+  );
+
+  it('server.ts must declare a setHeaders helper for Remotion assets', () => {
+    expect(serverTs).toMatch(/remotionAssetCache\s*=\s*\([^)]*\)\s*=>/);
+  });
+
+  it('setHeaders helper must cover webm/mov/mp4/png/jpg/fonts extensions', () => {
+    const helper = serverTs.match(/remotionAssetCache[\s\S]*?^\s*\};/m);
+    expect(helper).not.toBeNull();
+    const body = helper![0];
+    expect({
+      webm: /webm/.test(body),
+      mov: /mov/.test(body),
+      mp4: /mp4/.test(body),
+      png: /png/.test(body),
+      jpg: /jpe?g/.test(body),
+      otf: /otf/.test(body),
+      woff: /woff/.test(body),
+    }).toEqual({
+      webm: true, mov: true, mp4: true, png: true, jpg: true, otf: true, woff: true,
+    });
+  });
+
+  it('setHeaders helper must apply long-lived immutable Cache-Control', () => {
+    const helper = serverTs.match(/remotionAssetCache[\s\S]*?^\s*\};/m);
+    expect(helper).not.toBeNull();
+    expect(helper![0]).toMatch(/Cache-Control/);
+    expect(helper![0]).toMatch(/max-age=31536000/);
+    expect(helper![0]).toMatch(/immutable/);
+  });
+
+  it('all 3 express.static middlewares for Remotion assets must use the helper', () => {
+    // Root (staticFile at /), /remotion-preview/public, and /remotion-preview (dist)
+    const staticCalls = serverTs.match(
+      /express\.static\([^)]*REMOTION_DIR[\s\S]*?\)\)/g
+    ) || [];
+    expect(staticCalls.length).toBeGreaterThanOrEqual(3);
+    staticCalls.forEach((call) => {
+      expect(call).toMatch(/setHeaders:\s*remotionAssetCache/);
+    });
+  });
+});

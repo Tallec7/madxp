@@ -1,7 +1,7 @@
 # ADR-052: Remotion comme moteur de templates vidéo
 
 **Date** : 2026-04-14  
-**Mis à jour** : 2026-04-16  
+**Mis à jour** : 2026-04-16 (Cache-Control long + immutable pour assets)  
 **Statut** : Accepté  
 **Format** : Complet
 
@@ -66,6 +66,18 @@ app.use(express.static(path.join(REMOTION_DIR, 'public'), { index: false }));
 ```
 
 Cela signifie que `GET /BUT_simple_A.webm` est servi correctement. En render headless, `staticFile()` résout les chemins via `REMOTION_DIR` (env var Railway).
+
+#### 1.a. Cache-Control long + immutable (anti-502 Railway)
+
+Les assets Remotion (WebM 20-40 MB, MOV, PNG, fonts) sont servis avec `Cache-Control: public, max-age=31536000, immutable` via le helper `remotionAssetCache` passé à `setHeaders` dans les 3 middlewares `express.static`.
+
+**Motivation** : sans ce header, Fastly (edge CDN Railway) retape l'origin Express pour chaque requête. Pendant un redéploiement (cold start du conteneur), la fenêtre où l'origin ne répond pas encore provoque des `502 Bad Gateway` sur les WebM, que le browser remonte ensuite sous forme de `NotSupportedError: Failed to load because no supported source was found` côté Remotion `<OffthreadVideo>`.
+
+Avec le cache immutable, l'edge Fastly sert les WebMs depuis son cache sans taper l'origin → plus de fenêtre 502 au déploiement.
+
+**Invalidation** : les noms de fichiers sont stables (`BUT_img_joueur_C.webm`). Si un asset est réencodé sous le même nom, il faut soit le renommer (versionner), soit purger le cache Fastly côté Railway.
+
+Garde smoke : `smoke-consistency.test.ts` → `Remotion asset Cache-Control guard (ADR-052)` (4 assertions).
 
 ### 2. Assets FTP et proxy Range
 

@@ -404,9 +404,19 @@ app.use('/remotion-preview', (_req, res, next) => {
   next();
 });
 
-app.use(express.static(path.join(REMOTION_DIR, 'public'), { index: false }));
-app.use('/remotion-preview/public', express.static(path.join(REMOTION_DIR, 'public')));
-app.use('/remotion-preview', express.static(path.join(REMOTION_DIR, 'preview', 'dist')));
+// Cache-Control long + immutable pour les assets Remotion (WebM, MOV, PNG, fonts).
+// Sans ça, Fastly (edge Railway) retape l'origin à chaque requête et retourne 502
+// pendant les cold starts du conteneur. Les assets ont des noms stables et sont
+// invalidés par rebuild Docker → cache agressif sans risque de staleness.
+const remotionAssetCache = (res: Response, filePath: string) => {
+  if (/\.(webm|mov|mp4|png|jpg|jpeg|otf|woff2?|ttf)$/i.test(filePath)) {
+    res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+  }
+};
+
+app.use(express.static(path.join(REMOTION_DIR, 'public'), { index: false, setHeaders: remotionAssetCache }));
+app.use('/remotion-preview/public', express.static(path.join(REMOTION_DIR, 'public'), { setHeaders: remotionAssetCache }));
+app.use('/remotion-preview', express.static(path.join(REMOTION_DIR, 'preview', 'dist'), { setHeaders: remotionAssetCache }));
 // SPA fallback : toute route /remotion-preview/* non trouvée → index.html
 app.get('/remotion-preview/*', (_req, res) => {
   res.sendFile(path.join(REMOTION_DIR, 'preview', 'dist', 'index.html'));
