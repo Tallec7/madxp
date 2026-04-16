@@ -926,6 +926,18 @@ EOF
 
     chown -R pi:pi /home/pi/.config
 
+    # Supprimer les pop-ups autostart Raspberry Pi OS qui volent le focus du kiosk :
+    #   - pprompt.desktop : warning "SSH enabled + default password" (apparait
+    #     tant que le mot de passe 'pi' n'est pas changé)
+    #   - piwiz.desktop   : assistant premier démarrage
+    # Ces pop-ups cassent le séquençage xprop/xdotool du kiosk-watchdog et
+    # affichent un message sur la TV des clubs.
+    for popup in /etc/xdg/autostart/pprompt.desktop /etc/xdg/autostart/piwiz.desktop; do
+        if [ -f "$popup" ]; then
+            rm -f "$popup" && print_success "Pop-up autostart supprimé : $popup"
+        fi
+    done
+
     print_success "Interface graphique configurée"
 }
 

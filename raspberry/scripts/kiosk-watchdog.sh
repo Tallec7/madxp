@@ -1453,17 +1453,24 @@ check_chromium_alive() {
 
 # Attendre que le serveur X soit disponible (max 60s)
 wait_for_x_server() {
-    local max_attempts=30
+    # Note: neopro-kiosk.service.ExecStartPre bloque déjà jusqu'à 60s en attendant
+    # xdpyinfo. Quand le watchdog démarre, X est garanti disponible — ce check est
+    # une vérification rapide (3×1s) pour logger un warning si X a disparu entre
+    # ExecStartPre et le watchdog (cas rare, ex: crash Xorg immédiat).
+    # Avant : jusqu'à 60s de doublon avec ExecStartPre → +60s sur chaque boot.
+    local max_attempts=3
     local attempt=0
     while (( attempt < max_attempts )); do
         if DISPLAY=:0 xdpyinfo > /dev/null 2>&1; then
-            log "✓ Serveur X disponible (après ${attempt}×2s)"
+            if (( attempt > 0 )); then
+                log "✓ Serveur X disponible (après ${attempt}×1s)"
+            fi
             return 0
         fi
         (( attempt++ ))
-        sleep 2
+        sleep 1
     done
-    log "❌ Serveur X non disponible après 60s"
+    log "❌ Serveur X non disponible après 3s — ExecStartPre aurait dû le garantir (crash Xorg ?)"
     return 1
 }
 

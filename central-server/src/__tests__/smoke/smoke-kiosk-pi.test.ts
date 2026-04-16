@@ -3255,3 +3255,87 @@ describe('Manual video transition flash prevention guards', () => {
       .toEqual({ skipsPreCapturedInManualMode: true });
   });
 });
+
+describe('Raspberry Pi OS autostart popups must be removed (kiosk focus)', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..', '..');
+
+  it('fix-fleet-pi.sh must remove pprompt.desktop (SSH default password popup)', () => {
+    // Raspberry Pi OS ships /etc/xdg/autostart/pprompt.desktop which pops up
+    // "SSH enabled + default password for pi" on every X session. On kiosk Pi,
+    // this steals focus from Chromium fullscreen, breaks the xprop/xdotool
+    // sequencing in kiosk-watchdog.sh and displays a security warning on the
+    // club's TV. fix-fleet-pi.sh runs at every OTA and must delete the file
+    // so the fleet stays clean without manual intervention.
+    const fixFleet = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/scripts/fix-fleet-pi.sh'),
+      'utf8'
+    );
+    expect({ removesPprompt: fixFleet.includes('/etc/xdg/autostart/pprompt.desktop') })
+      .toEqual({ removesPprompt: true });
+  });
+
+  it('fix-fleet-pi.sh must remove piwiz.desktop (first-boot wizard popup)', () => {
+    // piwiz.desktop is the first-boot setup wizard on fresh Raspberry Pi OS images.
+    // It has the same focus-stealing issue as pprompt.desktop.
+    const fixFleet = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/scripts/fix-fleet-pi.sh'),
+      'utf8'
+    );
+    expect({ removesPiwiz: fixFleet.includes('/etc/xdg/autostart/piwiz.desktop') })
+      .toEqual({ removesPiwiz: true });
+  });
+
+  it('install.sh must remove pprompt.desktop and piwiz.desktop for fresh installs', () => {
+    // New Pi deployments go through install.sh, not fix-fleet-pi.sh. The fresh
+    // install path must also strip these popups or the first boot will display
+    // the warning and break the kiosk fullscreen.
+    const installSh = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/install.sh'),
+      'utf8'
+    );
+    expect({ removesPprompt: installSh.includes('/etc/xdg/autostart/pprompt.desktop') })
+      .toEqual({ removesPprompt: true });
+    expect({ removesPiwiz: installSh.includes('/etc/xdg/autostart/piwiz.desktop') })
+      .toEqual({ removesPiwiz: true });
+  });
+});
+
+describe('Kiosk watchdog must not duplicate X server wait from systemd', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..', '..');
+
+  it('neopro-kiosk.service ExecStartPre must wait for X server (single source of truth)', () => {
+    // The systemd service is the single source of truth for "wait until X is ready
+    // before starting the kiosk". ExecStartPre=... xdpyinfo ... blocks unit start
+    // until X is up (or times out). If this guarantee is removed, the watchdog's
+    // quick-check (3s) would not be enough and Chromium would launch on a dead
+    // display.
+    const kioskService = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/config/systemd/neopro-kiosk.service'),
+      'utf8'
+    );
+    expect({ hasExecStartPreXdpyinfo: /ExecStartPre=.*xdpyinfo/.test(kioskService) })
+      .toEqual({ hasExecStartPreXdpyinfo: true });
+  });
+
+  it('kiosk-watchdog.sh wait_for_x_server must be a quick check, not a 60s blocking retry', () => {
+    // ExecStartPre in neopro-kiosk.service already waits up to 60s for X.
+    // Duplicating a 30×2s=60s loop in the watchdog adds up to +60s to every boot
+    // when the SD card / PMIC is slow. The watchdog's wait_for_x_server() must
+    // stay short (quick sanity check only) — the service is the blocking waiter.
+    const watchdog = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/scripts/kiosk-watchdog.sh'),
+      'utf8'
+    );
+    // Extract the wait_for_x_server() body
+    const waitFnStart = watchdog.indexOf('wait_for_x_server()');
+    expect({ waitFnFound: waitFnStart > 0 })
+      .toEqual({ waitFnFound: true });
+    const waitFnBlock = watchdog.slice(waitFnStart, waitFnStart + 1200);
+    // Must NOT contain the legacy 30-attempt × 2s = 60s blocking loop
+    expect({ hasLegacy30x2Loop: /max_attempts=30[\s\S]{0,500}sleep 2/.test(waitFnBlock) })
+      .toEqual({ hasLegacy30x2Loop: false });
+    // Must reference ExecStartPre so the reader knows the service is the real waiter
+    expect({ mentionsExecStartPre: waitFnBlock.includes('ExecStartPre') })
+      .toEqual({ mentionsExecStartPre: true });
+  });
+});
