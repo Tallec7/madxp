@@ -1,3 +1,9 @@
+## [3.176.9](https://github.com/Tallec7/neopro/compare/v3.176.8...v3.176.9) (2026-04-16)
+
+### Bug Fixes
+
+- **thumbnails:** generate miniatures for Remotion webm without duration metadata ([#446](https://github.com/Tallec7/neopro/issues/446)) ([287cf58](https://github.com/Tallec7/neopro/commit/287cf580bbf7c1b42e25dc71d9948327ea2a28de))
+
 ## [3.176.8](https://github.com/Tallec7/neopro/compare/v3.176.7...v3.176.8) (2026-04-16)
 
 ### Bug Fixes
