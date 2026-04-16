@@ -1,7 +1,7 @@
 # ADR-052: Remotion comme moteur de templates vidéo
 
 **Date** : 2026-04-14  
-**Mis à jour** : 2026-04-16 (Cache-Control long + immutable pour assets)  
+**Mis à jour** : 2026-04-16 (Cache-Control long + immutable pour assets ; `initiallyMuted` sur `<Player>` anti-AbortError)  
 **Statut** : Accepté  
 **Format** : Complet
 
@@ -132,6 +132,17 @@ Les WebM C et E contiennent un canal alpha VP9 (`alpha_mode: 1` dans le containe
 # Régénérer les masques après modification d'un WebM alpha
 cd templates-remotion && bash scripts/extract-masks.sh
 ```
+
+### 5. `<Player>` démarre muté (`initiallyMuted`)
+
+Le `@remotion/player` dans `templates-remotion/preview/src/app.tsx` **doit** être monté avec `initiallyMuted`. Sans cette prop :
+
+- `autoPlay` déclenche `video.play()` avec audio par défaut
+- WebKit (Safari/iOS) et Chrome (politique d'économie d'énergie) bloquent l'autoplay sur les « video-only background media » : onglet masqué, iframe non visible, pas d'interaction user préalable
+- Remotion catch l'`AbortError`, mute, retente → spam dans la console à chaque frame/loop
+- Symptôme typique : `AbortError: The play() request was interrupted because video-only background media was paused to save power`
+
+`initiallyMuted` élimine la tentative audio initiale. Les `controls` permettent à l'utilisateur de démuter s'il le souhaite. Un commentaire `NE PAS RETIRER` est posé en amont de `<Player>` pour prévenir la régression.
 
 ## Props schema (neopro_templates)
 

@@ -61,6 +61,11 @@ function App() {
     );
   }
 
+  // NE PAS RETIRER `initiallyMuted` sur <Player> : sans cette prop, le Player
+  // tente play() avec audio, WebKit/Chrome bloquent l'autoplay sur
+  // « video-only background media » (onglet masqué, iframe non visible, pas
+  // d'interaction user) → spam d'AbortError dans la console. Démarrer muté
+  // élimine la tentative audio ; `controls` permet à l'utilisateur de démuter.
   return (
     <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#111' }}>
       <Player
@@ -73,6 +78,7 @@ function App() {
         controls
         loop
         autoPlay
+        initiallyMuted
         acknowledgeRemotionLicense
         style={{ width: '100%', maxHeight: '100vh', aspectRatio: '16/9' }}
         // publicPath : chemin absolu vers les assets statiques (webm, fonts, images).
