@@ -1,3 +1,9 @@
+## [3.176.8](https://github.com/Tallec7/neopro/compare/v3.176.7...v3.176.8) (2026-04-16)
+
+### Bug Fixes
+
+- **raspberry:** remove Pi OS security popup and halve kiosk boot time ([124d0cc](https://github.com/Tallec7/neopro/commit/124d0cc3beb4da57afa4d418358d5dea07cbe785))
+
 ## [3.176.7](https://github.com/Tallec7/neopro/compare/v3.176.6...v3.176.7) (2026-04-16)
 
 ### Performance Improvements

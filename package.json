@@ -1,6 +1,6 @@
 {
   "name": "neopro",
-  "version": "3.176.7",
+  "version": "3.176.8",
   "license": "PROPRIETARY",
   "engines": {
     "node": ">=20.19.0"
