@@ -1,3 +1,9 @@
+## [3.176.6](https://github.com/Tallec7/neopro/compare/v3.176.5...v3.176.6) (2026-04-16)
+
+### Performance Improvements
+
+- **templates:** use system Chromium for Remotion renders, eliminate 86MB runtime download ([f654088](https://github.com/Tallec7/neopro/commit/f65408813733bf19fe3effa3cdc5780959f1933b))
+
 ## [3.176.5](https://github.com/Tallec7/neopro/compare/v3.176.4...v3.176.5) (2026-04-16)
 
 ### Bug Fixes
