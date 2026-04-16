@@ -1,3 +1,9 @@
+## [3.176.4](https://github.com/Tallec7/neopro/compare/v3.176.3...v3.176.4) (2026-04-16)
+
+### Performance Improvements
+
+- **templates:** OffthreadVideo + prewarm bundle + timing logs ([14753b7](https://github.com/Tallec7/neopro/commit/14753b7ebf05ecc11e585be36068abcc3ec669aa))
+
 ## [3.176.3](https://github.com/Tallec7/neopro/compare/v3.176.2...v3.176.3) (2026-04-15)
 
 ### Performance Improvements
