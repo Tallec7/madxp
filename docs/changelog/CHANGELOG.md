@@ -1,3 +1,9 @@
+# [3.177.0](https://github.com/Tallec7/neopro/compare/v3.176.9...v3.177.0) (2026-04-16)
+
+### Features
+
+- **templates:** Remotion async render + template versions (ADR-054/055) ([#448](https://github.com/Tallec7/neopro/issues/448)) ([c4bb484](https://github.com/Tallec7/neopro/commit/c4bb4842cdac03a269392b607f35edb0f0e50899)), closes [#43](https://github.com/Tallec7/neopro/issues/43)
+
 ## [3.176.9](https://github.com/Tallec7/neopro/compare/v3.176.8...v3.176.9) (2026-04-16)
 
 ### Bug Fixes
