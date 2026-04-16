@@ -984,4 +984,160 @@ describe('AlertingService', () => {
       );
     });
   });
+
+  // =========================================================
+  // checkStuckRenderJobs() — ADR-054 supervision
+  // =========================================================
+  describe('checkStuckRenderJobs', () => {
+    beforeEach(() => {
+      jest.clearAllMocks();
+      (alertingService as any).lastAlertTime.clear();
+    });
+
+    it('does not alert when no render jobs are stuck and failure rate is low', async () => {
+      mockQuery
+        .mockResolvedValueOnce({ rows: [] }) // stuck jobs query
+        .mockResolvedValueOnce({ rows: [{ total: '0', failed: '0' }] }); // failure-rate query
+
+      await alertingService.checkStuckRenderJobs();
+
+      // No warn log about stuck render jobs
+      expect(mockLogger.warn).not.toHaveBeenCalledWith(
+        'Alert created for stuck render job',
+        expect.anything(),
+      );
+    });
+
+    it('creates a warning alert for a render job stuck between 15 and 30 minutes', async () => {
+      // Default fallback for internal queries; override only the stuck-jobs query
+      mockQuery.mockResolvedValue({ rows: [{ id: 'alert-r-1' }], rowCount: 1 });
+      mockQuery.mockResolvedValueOnce({
+        rows: [{
+          id: 'job-1',
+          title: 'Demo render',
+          requested_for_site_id: 'site-1',
+          minutes_stuck: 20,
+        }],
+      });
+
+      await alertingService.checkStuckRenderJobs();
+
+      // An INSERT INTO alerts (or similar) must be called with severity=warning
+      const insertCall = mockQuery.mock.calls.find(
+        c => typeof c[0] === 'string' && c[0].includes('INSERT INTO')
+          && Array.isArray(c[1]) && c[1].includes('warning'),
+      );
+      expect(insertCall).toBeDefined();
+      expect(insertCall?.[1]).toEqual(expect.arrayContaining(['site-1']));
+    });
+
+    it('creates a critical alert AND auto-fails the job when stuck >= 30 minutes', async () => {
+      // Default fallback must return an id so createAlert can resolve (it does
+      // INSERT … RETURNING id internally — a hollow {rows: []} would crash).
+      mockQuery.mockResolvedValue({ rows: [{ id: 'alert-r-2' }], rowCount: 1 });
+      mockQuery
+        .mockResolvedValueOnce({
+          rows: [{
+            id: 'job-2',
+            title: 'Long render',
+            requested_for_site_id: null,
+            minutes_stuck: 45,
+          }],
+        });
+
+      await alertingService.checkStuckRenderJobs();
+
+      // Critical severity must appear in at least one call (createAlert payload)
+      const criticalCall = mockQuery.mock.calls.find(
+        c => Array.isArray(c[1]) && c[1].includes('critical'),
+      );
+      expect(criticalCall).toBeDefined();
+
+      // Auto-fail UPDATE must have run with jobId + minutesStuck
+      const autoFailCall = mockQuery.mock.calls.find(
+        c => typeof c[0] === 'string' && /UPDATE remotion_render_jobs/.test(c[0]) && /status = 'failed'/.test(c[0]),
+      );
+      expect(autoFailCall).toBeDefined();
+      expect(autoFailCall?.[1]).toEqual(['job-2', 45]);
+
+      expect(mockLogger.warn).toHaveBeenCalledWith(
+        'Auto-failed stuck render job',
+        expect.objectContaining({ jobId: 'job-2' }),
+      );
+    });
+
+    it('evaluates 1h failure rate when at least 3 samples exist', async () => {
+      const evalSpy = jest
+        .spyOn(alertingService, 'evaluateMetric')
+        .mockResolvedValue();
+
+      mockQuery
+        .mockResolvedValueOnce({ rows: [] }) // no stuck jobs
+        .mockResolvedValueOnce({ rows: [{ total: '10', failed: '4' }] }); // 40% failure
+
+      await alertingService.checkStuckRenderJobs();
+
+      expect(evalSpy).toHaveBeenCalledWith('__global__', 'render_job_failure_rate_1h', 40);
+      evalSpy.mockRestore();
+    });
+
+    it('ignores small samples (<3) to avoid noise on 1 failure out of 1 job', async () => {
+      const evalSpy = jest
+        .spyOn(alertingService, 'evaluateMetric')
+        .mockResolvedValue();
+
+      mockQuery
+        .mockResolvedValueOnce({ rows: [] })
+        .mockResolvedValueOnce({ rows: [{ total: '2', failed: '2' }] });
+
+      await alertingService.checkStuckRenderJobs();
+
+      expect(evalSpy).not.toHaveBeenCalledWith(
+        expect.anything(),
+        'render_job_failure_rate_1h',
+        expect.anything(),
+      );
+      evalSpy.mockRestore();
+    });
+
+    it('silently skips when remotion_render_jobs table does not exist yet', async () => {
+      mockQuery.mockRejectedValueOnce(
+        new Error('relation "remotion_render_jobs" does not exist'),
+      );
+
+      await alertingService.checkStuckRenderJobs();
+
+      expect(mockLogger.error).not.toHaveBeenCalled();
+    });
+
+    it('logs unexpected errors', async () => {
+      mockQuery.mockRejectedValueOnce(new Error('Connection refused'));
+
+      await alertingService.checkStuckRenderJobs();
+
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        expect.stringContaining('stuck render jobs'),
+        expect.anything(),
+      );
+    });
+
+    it('enforces cooldown via lastAlertTime when a recent alert exists', async () => {
+      // Seed an alert cooldown directly: job-3 alerted 5 min ago (< 30 min window)
+      const fiveMinAgo = new Date(Date.now() - 5 * 60 * 1000);
+      (alertingService as any).lastAlertTime.set('render_job_stuck:job-3', fiveMinAgo);
+
+      mockQuery.mockResolvedValue({ rows: [], rowCount: 0 });
+      mockQuery.mockResolvedValueOnce({
+        rows: [{ id: 'job-3', title: 't', requested_for_site_id: null, minutes_stuck: 22 }],
+      });
+
+      await alertingService.checkStuckRenderJobs();
+
+      // No alert creation log should have fired for this job
+      const warnCalls = mockLogger.warn.mock.calls.filter(
+        (c: unknown[]) => c[0] === 'Alert created for stuck render job',
+      );
+      expect(warnCalls).toHaveLength(0);
+    });
+  });
 });
