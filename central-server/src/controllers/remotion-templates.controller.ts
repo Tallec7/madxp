@@ -394,10 +394,20 @@ async function runRemotion(
   const t0 = Date.now();
   const { renderMedia, selectComposition } = await import('@remotion/renderer') as typeof import('@remotion/renderer');
 
+  // Force Remotion to use system Chromium instead of downloading its own Chrome Headless Shell
+  // (86.6 MB) at runtime. PUPPETEER_EXECUTABLE_PATH is ignored by Remotion v4 — it only
+  // respects the browserExecutable option passed to selectComposition/renderMedia.
+  // Fallback: if BROWSER_EXECUTABLE_PATH is unset (local dev), let Remotion auto-download.
+  const browserExecutable = process.env.BROWSER_EXECUTABLE_PATH || undefined;
+
   const bundled = await getOrCreateBundle();
   const tBundle = Date.now();
 
-  logger.info('Selecting composition', { compositionId, bundleMs: tBundle - t0 });
+  logger.info('Selecting composition', {
+    compositionId,
+    bundleMs: tBundle - t0,
+    browserExecutable: browserExecutable ?? 'remotion-default',
+  });
 
   const chromiumOptions = {
     // Remotion v4 already adds --no-sandbox on Linux automatically.
@@ -413,6 +423,7 @@ async function runRemotion(
     id: compositionId,
     inputProps,
     chromiumOptions,
+    browserExecutable,
     timeoutInMilliseconds: 90000,
   });
   const tSelect = Date.now();
@@ -430,6 +441,7 @@ async function runRemotion(
     outputLocation: outputPath,
     inputProps,
     chromiumOptions,
+    browserExecutable,
     // 90s timeout — headless containers can be slow to decode WebM via swangle
     timeoutInMilliseconds: 90000,
     // yuv420p: required for Pi hardware H.264 decode — other formats (yuv422p, yuv444p)

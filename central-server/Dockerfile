@@ -136,6 +136,12 @@ COPY --from=remotion-deps /app/templates-remotion/node_modules ./templates-remot
 # Copy preview app built by Vite (served at /remotion-preview/ by central-server)
 COPY --from=preview-builder /app/templates-remotion/preview/dist ./templates-remotion/preview/dist
 
+# Pre-install Remotion's Chrome Headless Shell during build (safety net).
+# Primary path: renderMedia() uses BROWSER_EXECUTABLE_PATH=/usr/bin/chromium via browserExecutable.
+# Fallback: if system Chromium fails, Remotion falls back to its own Chrome Headless Shell
+# which is now already cached instead of being downloaded at runtime (86.6 MB).
+RUN cd templates-remotion && npx remotion browser ensure 2>/dev/null || true
+
 # Expose port
 EXPOSE 3001
 
