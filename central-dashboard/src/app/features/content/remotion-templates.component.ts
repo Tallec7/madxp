@@ -6,8 +6,6 @@ import { environment } from '@env/environment';
 import { ApiService } from '../../core/services/api.service';
 import { NotificationService } from '../../core/services/notification.service';
 import { AuthService } from '../../core/services/auth.service';
-import { SitesService } from '../../core/services/sites.service';
-import { Site } from '../../core/models';
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -56,14 +54,6 @@ interface RenderResult {
           <p class="subtitle">
             {{ isAdmin ? 'Atelier de création — gérez et publiez les templates' : 'Générez des vidéos personnalisées depuis les templates' }}
           </p>
-        </div>
-        <div class="site-selector" *ngIf="!isAdmin">
-          <select [(ngModel)]="selectedSiteId">
-            <option value="">-- Choisir un site --</option>
-            <option *ngFor="let site of sites" [value]="site.id">
-              {{ site.club_name }} ({{ site.site_name }})
-            </option>
-          </select>
         </div>
       </div>
 
@@ -188,21 +178,11 @@ interface RenderResult {
             </div>
             </ng-container>
 
-            <!-- Titre + Site -->
+            <!-- Titre -->
             <div class="form-field">
               <label for="videoTitle">Titre de la vidéo</label>
               <input id="videoTitle" type="text" [(ngModel)]="videoTitle"
                      [placeholder]="selectedTemplate.name" class="form-input" />
-            </div>
-
-            <div class="form-field" *ngIf="isAdmin">
-              <label>Site cible (optionnel)</label>
-              <select [(ngModel)]="selectedSiteId" class="form-input">
-                <option value="">-- Aucun site --</option>
-                <option *ngFor="let site of sites" [value]="site.id">
-                  {{ site.club_name }}
-                </option>
-              </select>
             </div>
 
             <!-- Render -->
@@ -227,7 +207,7 @@ interface RenderResult {
             </button>
 
             <p class="render-hint" *ngIf="!rendering">
-              Le rendu est effectué côté serveur (~2 min). La vidéo sera ajoutée à la bibliothèque du site.
+              Le rendu est effectué côté serveur (~2 min). La vidéo sera ajoutée à la bibliothèque.
             </p>
           </div>
 
@@ -343,13 +323,10 @@ export class RemotionTemplatesComponent implements OnInit, OnDestroy {
   private api = inject(ApiService);
   private notifications = inject(NotificationService);
   private authService = inject(AuthService);
-  private sitesService = inject(SitesService);
   private sanitizer = inject(DomSanitizer);
 
   templates: RemotionTemplate[] = [];
   selectedTemplate: RemotionTemplate | null = null;
-  sites: Site[] = [];
-  selectedSiteId = '';
   loading = true;
 
   propValues: Record<string, unknown> = {};
@@ -376,7 +353,6 @@ export class RemotionTemplatesComponent implements OnInit, OnDestroy {
 
   ngOnInit() {
     this.loadTemplates();
-    this.loadSites();
   }
 
   ngOnDestroy() {
@@ -388,13 +364,6 @@ export class RemotionTemplatesComponent implements OnInit, OnDestroy {
     this.api.get<RemotionTemplate[]>('/remotion-templates').subscribe({
       next: (templates) => { this.templates = templates; this.loading = false; },
       error: () => { this.notifications.error('Impossible de charger les templates'); this.loading = false; },
-    });
-  }
-
-  private loadSites() {
-    this.sitesService.loadSites().subscribe({
-      next: (result) => { this.sites = result.sites; },
-      error: () => {},
     });
   }
 
@@ -547,7 +516,6 @@ export class RemotionTemplatesComponent implements OnInit, OnDestroy {
 
     this.api.post<RenderResult>(`/remotion-templates/${this.selectedTemplate.id}/render`, {
       props,
-      site_id: this.selectedSiteId || null,
       title: this.videoTitle || this.selectedTemplate.name,
     }).subscribe({
       next: (result) => {

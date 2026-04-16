@@ -1,7 +1,7 @@
 # ADR-052: Remotion comme moteur de templates vidéo
 
 **Date** : 2026-04-14  
-**Mis à jour** : 2026-04-16 (Cache-Control long + immutable pour assets ; `initiallyMuted` sur `<Player>` anti-AbortError)  
+**Mis à jour** : 2026-04-16 (Cache-Control long + immutable pour assets ; `initiallyMuted` sur `<Player>` anti-AbortError ; templates agnostiques du site — suppression de `site_id` à l'API render et dans l'UI)  
 **Statut** : Accepté  
 **Format** : Complet
 
@@ -143,6 +143,25 @@ Le `@remotion/player` dans `templates-remotion/preview/src/app.tsx` **doit** êt
 - Symptôme typique : `AbortError: The play() request was interrupted because video-only background media was paused to save power`
 
 `initiallyMuted` élimine la tentative audio initiale. Les `controls` permettent à l'utilisateur de démuter s'il le souhaite. Un commentaire `NE PAS RETIRER` est posé en amont de `<Player>` pour prévenir la régression.
+
+### 6. Templates agnostiques du site
+
+Les templates Remotion sont **indépendants du site** : la notion de « site cible » n'a pas de sens au moment de la construction d'un template, puisqu'un template est un schéma de rendu paramétrable, pas une vidéo déployée.
+
+**Conséquences API** :
+
+- `POST /api/remotion-templates/:id/render` n'accepte plus `site_id` dans le body (seulement `{ props, title? }`)
+- La vidéo générée atterrit dans la **bibliothèque globale** (`uploaded_for_site_id: null`)
+- Pour les users `club` (scope site unique), `uploaded_for_site_id` est **auto-tagué côté serveur** avec `req.user.site_id` (respect de la règle club portal security — CLAUDE.md)
+- Plus de `siteVideoRepository.link()` automatique — le déploiement vers un site se fait dans un second temps via la bibliothèque vidéo
+
+**Conséquences UI (dashboard `RemotionTemplatesComponent`)** :
+
+- Suppression du sélecteur de site en entête (page templates)
+- Suppression du champ « Site cible » dans le formulaire de render admin
+- Suppression de `selectedSiteId`, `sites`, `loadSites()`, et des imports `SitesService`/`Site`
+
+**Motivation** : la confusion entre « template » et « vidéo déployée » générait des frictions UX (choix de site non pertinent, vidéo tagguée sur un site alors que le template est générique). Le flow clair : **1)** construire une vidéo depuis un template → bibliothèque → **2)** déployer cette vidéo vers un site via le module Content.
 
 ## Props schema (neopro_templates)
 
