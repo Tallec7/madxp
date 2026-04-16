@@ -40,3 +40,32 @@ export interface AssetUploadResult {
   url: string;
   prop_key: string;
 }
+
+/**
+ * Payload returned by POST /remotion-templates/:id/render (202 Accepted).
+ */
+export interface RenderJobEnqueued {
+  job_id: string;
+  status: 'pending';
+  progress: 0;
+}
+
+export type RenderJobStatus = 'pending' | 'running' | 'completed' | 'failed';
+export type RenderJobPhase = 'bundling' | 'selecting' | 'rendering' | 'uploading' | null;
+
+/**
+ * Payload returned by GET /remotion-templates/render-jobs/:jobId.
+ */
+export interface RenderJobSnapshot {
+  job_id: string;
+  status: RenderJobStatus;
+  progress: number;
+  phase: RenderJobPhase;
+  video_id: string | null;
+  video_url: string | null;
+  file_size: number | null;
+  error_message: string | null;
+  created_at: string;
+  started_at: string | null;
+  completed_at: string | null;
+}

@@ -546,8 +546,13 @@ const startServer = async () => {
 
     // Pre-warm Remotion bundle en arrière-plan (fire-and-forget).
     // Économise ~30-60s sur le premier render après un déploiement Railway.
-    const { prewarmRemotionBundle } = await import('./controllers/remotion-templates.controller');
+    const {
+      prewarmRemotionBundle,
+      startRenderWorker,
+    } = await import('./services/remotion-render-worker.service');
     prewarmRemotionBundle();
+    // Démarre le worker async (ADR-054) qui poll remotion_render_jobs toutes les 5s.
+    startRenderWorker();
   } catch (error) {
     logger.error('Failed to initialize dependencies:', error);
     // Ne pas quitter - le serveur reste en mode dégradé et le health check rapportera l'état
@@ -566,6 +571,16 @@ process.on('SIGTERM', async () => {
   memoryManagerService.stop();
   alertingService.cleanup();
   adminOpsService.stopCleanup();
+
+  // Stop Remotion worker — running renders will be marked stale on next boot
+  try {
+    const { stopRenderWorker } = await import('./services/remotion-render-worker.service');
+    stopRenderWorker();
+  } catch (err) {
+    logger.warn('Failed to stop Remotion render worker', {
+      error: err instanceof Error ? err.message : String(err),
+    });
+  }
 
   // Cleanup sockets BEFORE closing HTTP server — Socket.IO needs the HTTP
   // server alive to send the shutdown notification to connected Pi devices.

@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TranslateModule } from '@ngx-translate/core';
@@ -8,7 +8,13 @@ import { RemotionTemplatesDataService } from './remotion-templates-data.service'
 import { TemplateGridComponent } from './template-grid.component';
 import { TemplatePropsFormComponent } from './template-props-form.component';
 import { TemplatePreviewComponent } from './template-preview.component';
-import type { RemotionTemplate, RenderResult, TemplatePropDef } from './remotion-templates.types';
+import type {
+  RemotionTemplate,
+  RenderJobPhase,
+  RenderJobSnapshot,
+  RenderResult,
+  TemplatePropDef,
+} from './remotion-templates.types';
 
 /**
  * Orchestrateur de la page Templates Remotion.
@@ -29,7 +35,7 @@ import type { RemotionTemplate, RenderResult, TemplatePropDef } from './remotion
   templateUrl: './remotion-templates.component.html',
   styleUrls: ['./remotion-templates.component.scss'],
 })
-export class RemotionTemplatesComponent implements OnInit {
+export class RemotionTemplatesComponent implements OnInit, OnDestroy {
   private dataService = inject(RemotionTemplatesDataService);
   private notifications = inject(NotificationService);
   private authService = inject(AuthService);
@@ -48,6 +54,14 @@ export class RemotionTemplatesComponent implements OnInit {
   renderProgress = 0;
   renderStatusMessage = 'Démarrage du render...';
   lastResult: RenderResult | null = null;
+
+  private currentJobId: string | null = null;
+  private pollTimer: ReturnType<typeof setTimeout> | null = null;
+  private readonly POLL_INTERVAL_MS = 2000;
+
+  ngOnDestroy(): void {
+    this.stopPolling();
+  }
 
   get isAdmin(): boolean {
     const role = this.authService.getCurrentUser()?.role;
@@ -167,8 +181,9 @@ export class RemotionTemplatesComponent implements OnInit {
 
   async render(): Promise<void> {
     if (!this.selectedTemplate || !this.canRender()) return;
+    this.stopPolling();
     this.rendering = true;
-    this.renderProgress = 5;
+    this.renderProgress = 2;
     this.renderStatusMessage = 'Envoi au serveur...';
     this.lastResult = null;
 
@@ -178,22 +193,90 @@ export class RemotionTemplatesComponent implements OnInit {
       props[key] = await this.fileToDataUrl(file);
     }
 
-    this.renderProgress = 15;
-    this.renderStatusMessage = 'Render Remotion en cours (~2 min)...';
-
     const title = this.videoTitle || this.selectedTemplate.name;
-    this.dataService.render(this.selectedTemplate.id, props, title).subscribe({
-      next: (result) => {
-        this.lastResult = result;
-        this.rendering = false;
-        this.renderProgress = 100;
-        this.notifications.success('Vidéo générée et ajoutée à la bibliothèque !');
+    this.dataService.enqueueRender(this.selectedTemplate.id, props, title).subscribe({
+      next: (job) => {
+        this.currentJobId = job.job_id;
+        this.renderProgress = Math.max(5, job.progress);
+        this.renderStatusMessage = 'Render en file d\'attente...';
+        this.pollJob();
       },
       error: (err) => {
         this.rendering = false;
         this.notifications.error(err?.error?.detail || 'Erreur lors du render');
       },
     });
+  }
+
+  private pollJob(): void {
+    if (!this.currentJobId) return;
+    this.pollTimer = setTimeout(() => {
+      if (!this.currentJobId) return;
+      this.dataService.pollRenderJob(this.currentJobId).subscribe({
+        next: (snapshot) => this.applyJobSnapshot(snapshot),
+        error: (err) => {
+          // Transient network blip: keep polling. Hard 404/403 stops.
+          const status = err?.status;
+          if (status === 404 || status === 403) {
+            this.rendering = false;
+            this.stopPolling();
+            this.notifications.error('Render job introuvable');
+          } else {
+            this.pollJob();
+          }
+        },
+      });
+    }, this.POLL_INTERVAL_MS);
+  }
+
+  private applyJobSnapshot(snapshot: RenderJobSnapshot): void {
+    this.renderProgress = Math.max(this.renderProgress, snapshot.progress);
+    this.renderStatusMessage = this.statusMessageFor(snapshot.status, snapshot.phase);
+
+    if (snapshot.status === 'completed') {
+      this.stopPolling();
+      this.rendering = false;
+      this.renderProgress = 100;
+      if (snapshot.video_id && snapshot.video_url) {
+        this.lastResult = {
+          video_id: snapshot.video_id,
+          url: snapshot.video_url,
+          title: this.videoTitle || this.selectedTemplate?.name || '',
+          file_size: snapshot.file_size ?? 0,
+        };
+      }
+      this.notifications.success('Vidéo générée et ajoutée à la bibliothèque !');
+      return;
+    }
+
+    if (snapshot.status === 'failed') {
+      this.stopPolling();
+      this.rendering = false;
+      this.notifications.error(snapshot.error_message || 'Erreur lors du render');
+      return;
+    }
+
+    // Still pending or running → continue polling
+    this.pollJob();
+  }
+
+  private statusMessageFor(status: string, phase: RenderJobPhase): string {
+    if (status === 'pending') return 'En file d\'attente...';
+    switch (phase) {
+      case 'bundling': return 'Préparation du moteur Remotion...';
+      case 'selecting': return 'Analyse de la composition...';
+      case 'rendering': return 'Rendu des frames en cours...';
+      case 'uploading': return 'Téléversement de la vidéo...';
+      default: return 'Render en cours...';
+    }
+  }
+
+  private stopPolling(): void {
+    if (this.pollTimer) {
+      clearTimeout(this.pollTimer);
+      this.pollTimer = null;
+    }
+    this.currentJobId = null;
   }
 
   formatSize(bytes: number): string {

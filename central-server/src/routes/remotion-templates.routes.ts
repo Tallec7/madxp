@@ -60,6 +60,7 @@ router.post(
 );
 
 // Render — admin/operator libre, club doit avoir la feature video_templates
+// Async (ADR-054): returns 202 { job_id } immediately, worker processes in background.
 router.post(
   '/:id/render',
   authenticate,
@@ -67,6 +68,16 @@ router.post(
   validateParams(paramSchemas.id),
   sensitiveRateLimit,
   ctrl.renderTemplate,
+);
+
+// Poll async render job status (ADR-054)
+router.get(
+  '/render-jobs/:jobId',
+  authenticate,
+  requireRole('admin', 'super_admin', 'operator', 'club'),
+  validateParams(paramSchemas.jobId),
+  adminRateLimit,
+  ctrl.getRenderJob,
 );
 
 export default router;

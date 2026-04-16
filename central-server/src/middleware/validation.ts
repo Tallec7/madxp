@@ -811,6 +811,7 @@ export const paramSchemas = {
     siteId: Joi.string().uuid().required(),
     profileId: Joi.string().uuid().required(),
   }),
+  jobId: Joi.object({ jobId: Joi.string().uuid().required() }),
 };
 
 // ============================================================================

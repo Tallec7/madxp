@@ -1,7 +1,12 @@
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { ApiService } from '../../../core/services/api.service';
-import type { AssetUploadResult, RemotionTemplate, RenderResult } from './remotion-templates.types';
+import type {
+  AssetUploadResult,
+  RemotionTemplate,
+  RenderJobEnqueued,
+  RenderJobSnapshot,
+} from './remotion-templates.types';
 
 /**
  * Wrap des appels API `/api/remotion-templates/*`.
@@ -26,7 +31,22 @@ export class RemotionTemplatesDataService {
     return this.api.upload<AssetUploadResult>(`/remotion-templates/${templateId}/assets`, formData);
   }
 
-  render(templateId: string, props: Record<string, unknown>, title: string): Observable<RenderResult> {
-    return this.api.post<RenderResult>(`/remotion-templates/${templateId}/render`, { props, title });
+  /**
+   * Enqueue an async render job (ADR-054). Returns 202 with job_id; use
+   * `pollRenderJob` to follow progress.
+   */
+  enqueueRender(
+    templateId: string,
+    props: Record<string, unknown>,
+    title: string,
+  ): Observable<RenderJobEnqueued> {
+    return this.api.post<RenderJobEnqueued>(`/remotion-templates/${templateId}/render`, {
+      props,
+      title,
+    });
+  }
+
+  pollRenderJob(jobId: string): Observable<RenderJobSnapshot> {
+    return this.api.get<RenderJobSnapshot>(`/remotion-templates/render-jobs/${jobId}`);
   }
 }
