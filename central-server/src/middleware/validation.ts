@@ -415,8 +415,12 @@ export const schemas = {
   // Analytics schemas
   // ============================================================================
 
+  // site_id optionnel : dérivé de l'auth (authenticateSiteApiKeyOptional → req.siteId)
+  // quand disponible, sinon lu depuis le body. Le controller refuse si aucun des deux.
+  // plays / events : accepte les deux clés (alias — le client SaaS envoie parfois
+  // `{ events }` avant que setSiteId() soit appelé, race documentée).
   recordVideoPlays: Joi.object({
-    site_id: Joi.string().uuid().required(),
+    site_id: Joi.string().uuid().optional(),
     plays: Joi.array().items(Joi.object({
       video_path: Joi.string().max(500).optional().allow(null, ''),
       video_filename: Joi.string().max(500).optional().allow(null, ''),
@@ -436,11 +440,33 @@ export const schemas = {
       audience_estimate: Joi.number().integer().min(0).optional().allow(null),
       display_type: Joi.string().max(50).optional().allow(null, ''),
       source: Joi.string().max(50).optional().allow(null, ''),
-    }).unknown(true)).min(1).required(),
-  }),
+    }).unknown(true)).min(1).optional(),
+    events: Joi.array().items(Joi.object({
+      video_path: Joi.string().max(500).optional().allow(null, ''),
+      video_filename: Joi.string().max(500).optional().allow(null, ''),
+      video_id: Joi.string().uuid().optional().allow(null),
+      advertiser_id: Joi.string().uuid().optional().allow(null),
+      site_sponsor_id: Joi.string().uuid().optional().allow(null),
+      analytics_category: Joi.string().max(100).optional().allow(null, ''),
+      category: Joi.string().max(100).optional().allow(null, ''),
+      duration_played: Joi.number().min(0).required(),
+      video_duration: Joi.number().min(0).optional().allow(null),
+      completed: Joi.boolean().optional(),
+      played_at: Joi.string().isoDate().optional(),
+      interrupted_at: Joi.string().isoDate().optional().allow(null),
+      interruption_reason: Joi.string().max(100).optional().allow(null, ''),
+      trigger_type: Joi.string().valid('auto', 'manual', 'scheduled').optional(),
+      position_in_loop: Joi.number().integer().min(0).optional().allow(null),
+      audience_estimate: Joi.number().integer().min(0).optional().allow(null),
+      display_type: Joi.string().max(50).optional().allow(null, ''),
+      source: Joi.string().max(50).optional().allow(null, ''),
+    }).unknown(true)).min(1).optional(),
+  }).or('plays', 'events'),
 
+  // site_id optionnel : dérivé de l'auth quand disponible, fallback body.
+  // Le controller refuse si aucun des deux n'est fourni.
   manageSession: Joi.object({
-    site_id: Joi.string().uuid().required(),
+    site_id: Joi.string().uuid().optional(),
     action: Joi.string().valid('start', 'end').required(),
     session_id: Joi.string().uuid().optional().allow(null),
   }),

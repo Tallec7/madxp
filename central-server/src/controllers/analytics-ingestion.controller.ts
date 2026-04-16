@@ -1,7 +1,7 @@
 import { Response } from 'express';
-import { AuthRequest } from '../types';
 import logger from '../config/logger';
 import { validate as validateUuid } from 'uuid';
+import { SiteAuthRequest } from '../middleware/auth';
 import {
   analyticsRepository,
   siteRepository,
@@ -13,14 +13,29 @@ import { metricsService } from '../services/metrics.service';
 
 /**
  * POST /api/analytics/video-plays
- * Enregistrer des lectures vidéo (batch depuis sync-agent)
+ * Enregistrer des lectures vidéo (batch depuis sync-agent ou SaaS).
+ *
+ * Détermination du site_id (priorité) :
+ *   1. req.siteId → dérivé de l'auth API key (authenticateSiteApiKeyOptional)
+ *   2. req.body.site_id → fallback pour clients non authentifiés
+ *
+ * Accepte `plays[]` ou `events[]` (alias — le client SaaS peut envoyer
+ * `{ events }` avant que setSiteId() soit appelé, race documentée).
  */
-export const recordVideoPlays = async (req: AuthRequest, res: Response) => {
+export const recordVideoPlays = async (req: SiteAuthRequest, res: Response) => {
   try {
-    const { site_id, plays } = req.body;
+    const bodySiteId: string | undefined = req.body.site_id;
+    // Priorité à l'auth : si une API key valide a été fournie, on force le
+    // site_id de l'auth (empêche un client d'uploader pour un autre site)
+    const site_id = req.siteId ?? bodySiteId;
+    const plays = req.body.plays ?? req.body.events;
 
-    if (!site_id || !Array.isArray(plays) || plays.length === 0) {
-      return res.status(400).json({ error: 'site_id et plays[] requis' });
+    if (!site_id) {
+      return res.status(400).json({ error: 'site_id requis (via auth Bearer ou body)' });
+    }
+
+    if (!Array.isArray(plays) || plays.length === 0) {
+      return res.status(400).json({ error: 'plays[] ou events[] requis' });
     }
 
     // Vérifier que le site existe
@@ -197,9 +212,11 @@ export const recordVideoPlays = async (req: AuthRequest, res: Response) => {
  * POST /api/analytics/sessions
  * Créer ou mettre à jour une session
  */
-export const manageSession = async (req: AuthRequest, res: Response) => {
+export const manageSession = async (req: SiteAuthRequest, res: Response) => {
   try {
-    const { site_id, action, session_id } = req.body;
+    const { action, session_id } = req.body;
+    const bodySiteId: string | undefined = req.body.site_id;
+    const site_id = req.siteId ?? bodySiteId;
 
     if (!site_id || !action) {
       return res.status(400).json({ error: 'site_id et action requis' });
