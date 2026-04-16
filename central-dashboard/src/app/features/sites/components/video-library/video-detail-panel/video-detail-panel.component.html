@@ -1,0 +1,161 @@
+<!-- Detail Side Panel — extracted from video-library.component.html (decomposition chantier) -->
+<div class="detail-backdrop" *ngIf="video" (click)="onClose()"></div>
+<div class="detail-panel" *ngIf="video" [class.open]="video">
+  <div class="detail-header">
+    <h4>{{ video.displayName }}</h4>
+    <button class="detail-close" (click)="onClose()">✕</button>
+  </div>
+
+  <div class="detail-body">
+    <!-- Video preview -->
+    <div class="detail-preview">
+      <video
+        *ngIf="video.source === 'cloud' && video.path"
+        [src]="video.path"
+        controls
+        class="detail-video"
+      ></video>
+      <div *ngIf="video.source !== 'cloud' || !video.path" class="detail-thumb-placeholder">
+        <img *ngIf="video.thumbnailUrl" [src]="video.thumbnailUrl" [alt]="video.displayName" />
+        <span *ngIf="!video.thumbnailUrl">🎞️</span>
+      </div>
+    </div>
+
+    <!-- Status & badges -->
+    <div class="detail-section">
+      <div class="detail-badges">
+        <span class="content-status-badge" [ngClass]="getContentStatusClass(video.contentStatus)">
+          {{ getContentStatusLabel(video.contentStatus) }}
+        </span>
+        <span class="owner-type-badge" [ngClass]="'owner-' + video.ownerType">
+          {{ getOwnerTypeLabel(video.ownerType) }}
+        </span>
+        <span class="badge-2nd" *ngIf="video.variantCount"
+          >📺 {{ video.variantCount }}/{{ totalDisplays > 1 ? totalDisplays - 1 : 1 }} ecrans</span
+        >
+        <span class="duplicate-badge" *ngIf="video.isDuplicate">DOUBLON</span>
+      </div>
+    </div>
+
+    <!-- Config roles -->
+    <div class="detail-section" *ngIf="video.configRoles?.size">
+      <div class="detail-label">Utilisée dans</div>
+      <div class="detail-roles">
+        <ng-container *ngIf="configVideoLabels.get(video.path) as labels; else genericRoles">
+          <span
+            *ngFor="let label of labels"
+            class="badge-cfg"
+            [class.badge-boucle]="label.startsWith('Boucle')"
+            [class.badge-match]="label.startsWith('Phase')"
+            [class.badge-action]="label.startsWith('Catégorie')"
+            >{{ label }}</span
+          >
+        </ng-container>
+        <ng-template #genericRoles>
+          <span class="badge-cfg badge-boucle" *ngIf="video.configRoles?.has('boucle')"
+            >Boucle par défaut</span
+          >
+          <span class="badge-cfg badge-match" *ngIf="video.configRoles?.has('match')"
+            >Phase de match</span
+          >
+          <span class="badge-cfg badge-action" *ngIf="video.configRoles?.has('action')"
+            >Catégorie action</span
+          >
+        </ng-template>
+      </div>
+    </div>
+
+    <!-- Info grid -->
+    <div class="detail-section">
+      <div class="detail-label">Informations</div>
+      <div class="detail-info-grid">
+        <div class="info-row">
+          <span class="info-key">Fichier</span>
+          <span class="info-value" [title]="video.filename">{{ video.filename }}</span>
+        </div>
+        <div class="info-row" *ngIf="video.duration">
+          <span class="info-key">Durée</span>
+          <span class="info-value">{{ formatDuration(video.duration) }}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-key">Taille</span>
+          <span class="info-value">{{ formatBytes(video.size) }}</span>
+        </div>
+        <div class="info-row" *ngIf="video.category">
+          <span class="info-key">Catégorie</span>
+          <span class="info-value"
+            >{{ video.category }}{{ video.subcategory ? ' / ' + video.subcategory : '' }}</span
+          >
+        </div>
+        <div class="info-row" *ngIf="video.advertiserName">
+          <span class="info-key">Annonceur</span>
+          <span class="info-value">{{ video.advertiserName }}</span>
+        </div>
+        <div class="info-row" *ngIf="video.lastModified">
+          <span class="info-key">Date</span>
+          <span class="info-value">{{ formatDate(video.lastModified) }}</span>
+        </div>
+        <div class="info-row" *ngIf="video.checksum">
+          <span class="info-key">Checksum</span>
+          <span class="info-value info-checksum">{{ video.checksum }}</span>
+        </div>
+        <div class="info-row" *ngIf="siteType !== 'saas'">
+          <span class="info-key">Pi</span>
+          <span class="info-value">{{ video.isOnPi ? '✅ Présente' : '⏳ À déployer' }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="detail-section detail-actions-section">
+      <div class="add-to-wrapper" *ngIf="configTargets.length > 0 && !isClubLocked">
+        <button
+          class="btn btn-primary btn-sm detail-action-btn"
+          (click)="onToggleAddTo(video, $event)"
+        >
+          + {{ 'videoLibrary.addTo' | translate }}
+        </button>
+        <div
+          class="add-to-dropdown add-to-dropdown-up"
+          *ngIf="addToDropdownOpen"
+          [ngStyle]="addToDropdownStyle"
+        >
+          <button
+            class="add-to-option"
+            *ngFor="let target of configTargets"
+            (click)="onAddToTargetSelect(video, target, $event)"
+          >
+            <span class="add-to-icon">{{ target.icon || '📁' }}</span>
+            <span class="add-to-label">{{ target.label }}</span>
+          </button>
+        </div>
+      </div>
+      <button
+        class="btn btn-sm detail-action-btn"
+        *ngIf="canUseSecondaryDisplay && video.source === 'cloud' && video.id && !isClubLocked"
+        (click)="onVariant(video, $event)"
+      >
+        📺
+        {{
+          video.hasSecondaryVariant
+            ? ('videoLibrary.manageSecondaryVariant' | translate)
+            : ('videoLibrary.addSecondaryVariant' | translate)
+        }}
+      </button>
+      <button
+        class="btn btn-sm btn-primary detail-action-btn"
+        *ngIf="siteType !== 'saas' && !video.isOnPi && video.source === 'cloud' && !isDeploying"
+        (click)="onDeploy(video, $event)"
+      >
+        🚀 Déployer sur le Pi
+      </button>
+      <button
+        class="btn btn-sm btn-danger detail-action-btn"
+        *ngIf="!isClubLocked"
+        (click)="onDelete(video, $event)"
+      >
+        🗑️ Supprimer
+      </button>
+    </div>
+  </div>
+</div>

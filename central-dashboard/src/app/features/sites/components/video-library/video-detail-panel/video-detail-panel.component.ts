@@ -1,0 +1,85 @@
+import { Component, Input, Output, EventEmitter, ChangeDetectionStrategy } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { TranslateModule } from '@ngx-translate/core';
+import { VideoItem, AddToTarget } from '../video-library.types';
+import {
+  formatBytes,
+  formatDate,
+  formatDuration,
+  getContentStatusLabel,
+  getContentStatusClass,
+  getOwnerTypeLabel,
+} from '../video-library.utils';
+
+/**
+ * Side panel that shows full details for the currently selected video.
+ * Extracted from `VideoLibraryComponent` as part of the decomposition
+ * chantier (Phase B). Pure presentation: all state (selected video,
+ * dropdown position, locks) is owned by the parent and passed in.
+ */
+@Component({
+  selector: 'app-video-detail-panel',
+  standalone: true,
+  imports: [CommonModule, TranslateModule],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  templateUrl: './video-detail-panel.component.html',
+  styleUrls: ['./video-detail-panel.component.scss'],
+})
+export class VideoDetailPanelComponent {
+  @Input() video: VideoItem | null = null;
+  @Input() siteType: string = '';
+  @Input() configTargets: AddToTarget[] = [];
+  @Input() configVideoLabels: Map<string, string[]> = new Map();
+  @Input() canUseSecondaryDisplay = false;
+  @Input() totalDisplays = 1;
+  /** Parent-resolved boolean (depends on isClubUser + upload ownership) */
+  @Input() isClubLocked = false;
+  /** Parent-resolved boolean (deploy state is keyed by video.id) */
+  @Input() isDeploying = false;
+  /** Parent-managed dropdown visibility — true when the "Add to" dropdown is open for this video */
+  @Input() addToDropdownOpen = false;
+  @Input() addToDropdownStyle: Record<string, string> = {};
+
+  @Output() closePanel = new EventEmitter<void>();
+  @Output() toggleAddTo = new EventEmitter<{ video: VideoItem; event: Event }>();
+  @Output() addToTargetSelect = new EventEmitter<{
+    video: VideoItem;
+    target: AddToTarget;
+    event: Event;
+  }>();
+  @Output() variant = new EventEmitter<{ video: VideoItem; event: Event }>();
+  @Output() deploy = new EventEmitter<{ video: VideoItem; event: Event }>();
+  @Output() deleteVideo = new EventEmitter<{ video: VideoItem; event: Event }>();
+
+  // Expose pure formatters as instance fields so templates can call them directly.
+  readonly formatBytes = formatBytes;
+  readonly formatDate = formatDate;
+  readonly formatDuration = formatDuration;
+  readonly getContentStatusLabel = getContentStatusLabel;
+  readonly getContentStatusClass = getContentStatusClass;
+  readonly getOwnerTypeLabel = getOwnerTypeLabel;
+
+  onClose(): void {
+    this.closePanel.emit();
+  }
+
+  onToggleAddTo(video: VideoItem, event: Event): void {
+    this.toggleAddTo.emit({ video, event });
+  }
+
+  onAddToTargetSelect(video: VideoItem, target: AddToTarget, event: Event): void {
+    this.addToTargetSelect.emit({ video, target, event });
+  }
+
+  onVariant(video: VideoItem, event: Event): void {
+    this.variant.emit({ video, event });
+  }
+
+  onDeploy(video: VideoItem, event: Event): void {
+    this.deploy.emit({ video, event });
+  }
+
+  onDelete(video: VideoItem, event: Event): void {
+    this.deleteVideo.emit({ video, event });
+  }
+}
