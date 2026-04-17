@@ -1238,9 +1238,20 @@ describe('SaaS child component guards (Pi-specific UI hidden for SaaS)', () => {
 
   // --- video-library must have siteType @Input and hide Pi elements ---
   it('video-library must have siteType @Input and hide Pi-specific UI', () => {
-    const filePath = path.join(dashboardRoot, 'components', 'video-library', 'video-library.component.ts');
-    const htmlPath = filePath.replace('.component.ts', '.component.html');
-    const content = fs.readFileSync(filePath, 'utf8') + '\n' + (fs.existsSync(htmlPath) ? fs.readFileSync(htmlPath, 'utf8') : '');
+    // Read all .ts and .html files in the video-library/ directory so sub-component
+    // extractions (list, detail panel, preview modal, filters) don't invalidate guards.
+    const videoLibraryDir = path.join(dashboardRoot, 'components', 'video-library');
+    const readAllFiles = (dir: string): string => {
+      let result = '';
+      for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+        const fullPath = path.join(dir, entry.name);
+        if (entry.isDirectory()) result += readAllFiles(fullPath);
+        else if (entry.name.endsWith('.ts') && !entry.name.endsWith('.spec.ts')) result += fs.readFileSync(fullPath, 'utf8') + '\n';
+        else if (entry.name.endsWith('.html')) result += fs.readFileSync(fullPath, 'utf8') + '\n';
+      }
+      return result;
+    };
+    const content = readAllFiles(videoLibraryDir);
     expect({
       hasSiteTypeInput: content.includes("@Input() siteType"),
       hidesStorageBar: content.includes("siteType !== 'saas'") && content.includes('storage'),
