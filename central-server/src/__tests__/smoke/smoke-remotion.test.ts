@@ -156,6 +156,33 @@ describe('Remotion — template versions (ADR-055)', () => {
   });
 });
 
+describe('Remotion — preview stutter/console-spam guards (ADR-052 §5)', () => {
+  const previewApp = fs.readFileSync(
+    path.join(repoRoot, 'templates-remotion', 'preview', 'src', 'app.tsx'),
+    'utf8'
+  );
+
+  it('mask preloader forces decode() + retains Image refs (anti-stutter)', () => {
+    // img.decode() : force le décodage bitmap en amont.
+    // maskImageCache : rétention empêche le GC de libérer les bitmaps décodés
+    // → sans ça, CSS mask-image redécode async à chaque frame = micro-saccades.
+    expect(previewApp).toMatch(/\.decode\s*\(\s*\)/);
+    expect(previewApp).toMatch(/maskImageCache\s*\.\s*push\s*\(/);
+  });
+
+  it('console.error filter swallows AbortError spam from video-only power-save', () => {
+    // Chrome met en pause power-save les <video> sans piste audio, même avec
+    // initiallyMuted + allow="autoplay" — chaque OffthreadVideo empilé spam.
+    // Filtre cosmétique, la lecture n'est pas affectée.
+    expect(previewApp).toMatch(/console\.error\s*=/);
+    expect(previewApp).toMatch(/Could not play video/);
+  });
+
+  it('Player stays mounted with initiallyMuted (regression guard)', () => {
+    expect(previewApp).toMatch(/initiallyMuted/);
+  });
+});
+
 describe('Remotion — ADR docs exist', () => {
   it('ADR-054 (async render) and ADR-055 (versions) are checked in', () => {
     const adrDir = path.join(repoRoot, 'docs', 'adr');

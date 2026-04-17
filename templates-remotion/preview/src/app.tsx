@@ -4,6 +4,17 @@ import { Player } from '@remotion/player';
 import { ButSimple } from '../../src/ButSimple';
 import { ButImgJoueur } from '../../src/ButImgJoueur';
 
+// Filtre le spam d'AbortError émis par Chrome quand il met en pause power-save
+// les <video> sans piste audio (video-only background media). Le `initiallyMuted`
+// + `allow="autoplay"` iframe ne suffisent pas : chaque OffthreadVideo empilé
+// déclenche le warning indépendamment. Lecture non affectée — bruit cosmétique.
+const origConsoleError = console.error;
+console.error = (...args: unknown[]) => {
+  const msg = args[0];
+  if (typeof msg === 'string' && msg.includes('Could not play video')) return;
+  origConsoleError(...args);
+};
+
 // ── Registry des compositions ─────────────────────────────────────────────────
 
 interface CompositionDef {
@@ -31,9 +42,14 @@ const COMPOSITIONS: Record<string, CompositionDef> = {
   },
 };
 
-// Précharge les PNGs de masque dans le cache HTTP du navigateur.
-// Idempotent : un dossier déjà préchargé est ignoré.
+// Précharge les PNGs de masque ET force leur décodage bitmap.
+// Sans decode() + sans rétention des Image, le GC peut libérer les bitmaps
+// et CSS mask-image redécode async à chaque frame → flash/saccade pendant
+// la décompression. On garde les Image en mémoire pour verrouiller le cache
+// décodé du navigateur.
 const preloadedDirs = new Set<string>();
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const maskImageCache: HTMLImageElement[] = [];
 function preloadMasks(dirs: string[], frames: number): void {
   const base = new URL('./public/', window.location.href).href;
   for (const dir of dirs) {
@@ -41,7 +57,11 @@ function preloadMasks(dirs: string[], frames: number): void {
     preloadedDirs.add(dir);
     for (let i = 1; i <= frames; i++) {
       const img = new Image();
+      img.decoding = 'sync';
       img.src = `${base}${dir}/${String(i).padStart(4, '0')}.png`;
+      // decode() force la décompression off-main-thread avant usage.
+      img.decode().catch(() => { /* ignore — HTTP cache gère le fallback */ });
+      maskImageCache.push(img);
     }
   }
 }

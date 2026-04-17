@@ -1,7 +1,7 @@
 # ADR-052: Remotion comme moteur de templates vidéo
 
 **Date** : 2026-04-14  
-**Mis à jour** : 2026-04-16 (Cache-Control long + immutable pour assets ; `initiallyMuted` sur `<Player>` anti-AbortError ; templates agnostiques du site — suppression de `site_id` à l'API render et dans l'UI)  
+**Mis à jour** : 2026-04-17 (preview : preload masques avec `img.decode()` + rétention `maskImageCache` contre les micro-saccades ; filtre `console.error` pour le spam `AbortError` power-save que `initiallyMuted` ne couvre pas — smoke tests associés)  
 **Statut** : Accepté  
 **Format** : Complet
 
@@ -143,6 +143,32 @@ Le `@remotion/player` dans `templates-remotion/preview/src/app.tsx` **doit** êt
 - Symptôme typique : `AbortError: The play() request was interrupted because video-only background media was paused to save power`
 
 `initiallyMuted` élimine la tentative audio initiale. Les `controls` permettent à l'utilisateur de démuter s'il le souhaite. Un commentaire `NE PAS RETIRER` est posé en amont de `<Player>` pour prévenir la régression.
+
+**Limite découverte (2026-04-17)** : `initiallyMuted` + `allow="autoplay"` sur l'iframe ne suffisent pas. Chrome applique une politique power-save distincte sur les `<video>` sans **piste audio** (`BUT_*.webm` sont video-only). Chaque `OffthreadVideo` empilé (3 à 5 couches par composition) déclenche son propre cycle pause/resume → spam de `Could not play video ... AbortError` dans la console. La lecture n'est pas affectée (cosmétique), mais le bruit rend le debug impossible.
+
+**Contournement** : filtre `console.error` appliqué au démarrage de l'app preview qui avale les messages commençant par `Could not play video`. Les autres erreurs console restent visibles. Alternative plus lourde (non retenue) : ajouter une piste audio silencieuse aux 10+ WebM via `ffmpeg -i in.webm -f lavfi -i anullsrc -c:v copy -c:a libopus -shortest out.webm`.
+
+### 5b. Preview — preload des masques avec `decode()` + rétention
+
+Les PNG de masque (180–210 frames par composition) sont préchargés dès le montage du Player pour éviter 30 req/s au premier passage. Deux pièges découverts :
+
+- Sans `img.decode()`, le navigateur charge le PNG mais diffère le décodage bitmap. CSS `mask-image` redécode alors de façon asynchrone à chaque frame où le masque change → micro-saccades pendant la décompression.
+- Sans rétention des `HTMLImageElement` dans un tableau global, le GC libère les bitmaps décodés dès que l'`Image` sort de scope → même symptôme au second passage.
+
+**Implémentation** dans `templates-remotion/preview/src/app.tsx` :
+
+```ts
+const maskImageCache: HTMLImageElement[] = [];
+const img = new Image();
+img.decoding = 'sync';
+img.src = `${base}${dir}/${frame}.png`;
+img.decode().catch(() => {
+  /* HTTP cache fallback */
+});
+maskImageCache.push(img); // verrouille le bitmap décodé en mémoire
+```
+
+**Garde-fou** : `smoke-remotion.test.ts` vérifie que `decode()`, `maskImageCache.push(`, le filtre `console.error` et `initiallyMuted` restent présents. Une régression casse le smoke avant déploiement.
 
 ### 6. Templates agnostiques du site
 
