@@ -189,27 +189,6 @@
   }
 }
 
-.library-legend {
-  display: flex;
-  gap: 1rem;
-  margin-top: 0.75rem;
-  padding-top: 0.75rem;
-  border-top: 1px solid #e2e8f0;
-  flex-wrap: wrap;
-}
-
-.legend-item {
-  font-size: 0.75rem;
-  color: #64748b;
-  display: flex;
-  align-items: center;
-  gap: 0.25rem;
-}
-
-.legend-icon {
-  font-size: 0.875rem;
-}
-
 /* === Responsive === */
 @media (max-width: 768px) {
   .video-library {
