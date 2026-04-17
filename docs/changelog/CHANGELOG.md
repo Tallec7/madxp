@@ -1,3 +1,9 @@
+## [3.178.3](https://github.com/Tallec7/neopro/compare/v3.178.2...v3.178.3) (2026-04-17)
+
+### Bug Fixes
+
+- **remote:** reduce manual video launch latency on Pi (ADR-057) ([ee53748](https://github.com/Tallec7/neopro/commit/ee53748e643cc2f55f2f3175cc8348ab6097822b))
+
 ## [3.178.2](https://github.com/Tallec7/neopro/compare/v3.178.1...v3.178.2) (2026-04-17)
 
 ### Bug Fixes
