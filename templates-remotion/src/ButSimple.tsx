@@ -114,46 +114,49 @@ export const ButSimple: React.FC<Props> = ({ prenom = '', nom = '', club = '', l
         <MaskedCanvas
           maskFrames={maskFrames}
           draw={(ctx) => {
-            // Club name — haut
+            // Club name — haut (CSS: top: 120)
             drawText(ctx, {
               x: 960,
-              y: 120 + 28 * 0.82,
+              y: 120,
               text: club.toUpperCase(),
               font: "600 28px 'GeneralSans', sans-serif",
               color: "rgba(255,255,255,0.7)",
               textAlign: "center",
-              textBaseline: "alphabetic",
+              textBaseline: "top",
               letterSpacing: 10,
             });
-            // Prénom + nom — centré, 2 lignes
+            // Prénom + nom — bloc centré vertical y=540 ; CSS lineHeight 0.85
             const nameFont = "400 330px 'Bulevar', sans-serif";
             const lineHeight = 330 * 0.85;
             drawText(ctx, {
               x: 960,
-              y: 540 - lineHeight / 2 + 330 * 0.82,
+              y: 540 - lineHeight / 2,
               text: prenom.toUpperCase(),
               font: nameFont,
               color: "#ffffff",
               textAlign: "center",
+              textBaseline: "middle",
               shadow: { color: "rgba(0,0,0,0.3)", blur: 8, offsetX: 2, offsetY: 4 },
             });
             drawText(ctx, {
               x: 960,
-              y: 540 + lineHeight / 2 + 330 * 0.82,
+              y: 540 + lineHeight / 2,
               text: nom.toUpperCase(),
               font: nameFont,
               color: "#ffffff",
               textAlign: "center",
+              textBaseline: "middle",
               shadow: { color: "rgba(0,0,0,0.3)", blur: 8, offsetX: 2, offsetY: 4 },
             });
-            // Club name — bas
+            // Club name — bas (CSS: top: 930)
             drawText(ctx, {
               x: 960,
-              y: 930 + 28 * 0.82,
+              y: 930,
               text: club.toUpperCase(),
               font: "600 28px 'GeneralSans', sans-serif",
               color: "rgba(255,255,255,0.7)",
               textAlign: "center",
+              textBaseline: "top",
               letterSpacing: 10,
             });
           }}

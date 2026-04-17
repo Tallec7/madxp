@@ -23,35 +23,72 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { continueRender, delayRender, staticFile, useCurrentFrame } from 'remotion';
 
-// ── Hook : précharge une séquence de PNGs de masque ─────────────────────────
-export function useMaskFrames(dir: string, frames: number): HTMLImageElement[] {
-  const [images, setImages] = useState<HTMLImageElement[]>([]);
+// ── Convertit un PNG grayscale opaque en bitmap dont l'alpha = luminance ─────
+// Nécessaire parce que Canvas `globalCompositeOperation='destination-in'`
+// utilise le canal ALPHA de la source, pas sa luminance. Les PNG extraits par
+// scripts/extract-masks.sh sont grayscale mais 100% opaques (alpha=255) — sans
+// cette conversion, destination-in ne masque rien et le texte est visible
+// partout. Le CSS `mask-mode: luminance` faisait la conversion implicitement.
+function luminanceToAlphaBitmap(img: HTMLImageElement): Promise<ImageBitmap | HTMLCanvasElement> {
+  const canvas = document.createElement('canvas');
+  canvas.width = img.naturalWidth;
+  canvas.height = img.naturalHeight;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return Promise.resolve(canvas);
+  ctx.drawImage(img, 0, 0);
+  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  const px = imageData.data;
+  for (let i = 0; i < px.length; i += 4) {
+    // Luminance Rec.709 ≈ 0.299R + 0.587G + 0.114B ; PNG grayscale → R=G=B
+    const l = (px[i] * 299 + px[i + 1] * 587 + px[i + 2] * 114) / 1000;
+    px[i] = 255;
+    px[i + 1] = 255;
+    px[i + 2] = 255;
+    px[i + 3] = l;
+  }
+  ctx.putImageData(imageData, 0, 0);
+  // createImageBitmap donne un transfert GPU-friendly si dispo, sinon canvas brut
+  if (typeof createImageBitmap === 'function') {
+    return createImageBitmap(canvas).catch(() => canvas);
+  }
+  return Promise.resolve(canvas);
+}
+
+type MaskFrame = ImageBitmap | HTMLCanvasElement;
+
+// ── Hook : précharge une séquence de PNGs + convertit en masques alpha ──────
+export function useMaskFrames(dir: string, frames: number): MaskFrame[] {
+  const [masks, setMasks] = useState<MaskFrame[]>([]);
 
   useEffect(() => {
     const handle = delayRender(`masks:${dir}`);
-    const imgs: HTMLImageElement[] = new Array(frames);
-    let loaded = 0;
-    let settled = false;
-    const done = () => {
-      if (settled) return;
-      settled = true;
-      setImages(imgs);
+    const out: MaskFrame[] = new Array(frames);
+    let settled = 0;
+    let done = false;
+    const finish = () => {
+      if (done) return;
+      done = true;
+      setMasks(out);
       continueRender(handle);
     };
     for (let i = 0; i < frames; i++) {
       const img = new Image();
       img.src = staticFile(`${dir}/${String(i + 1).padStart(4, '0')}.png`);
-      img.onload = () => {
-        imgs[i] = img;
-        if (++loaded === frames) done();
+      img.onload = async () => {
+        try {
+          out[i] = await luminanceToAlphaBitmap(img);
+        } catch {
+          /* ignore, slot reste vide */
+        }
+        if (++settled === frames) finish();
       };
       img.onerror = () => {
-        if (++loaded === frames) done();
+        if (++settled === frames) finish();
       };
     }
   }, [dir, frames]);
 
-  return images;
+  return masks;
 }
 
 // ── Hook : précharge une image arbitraire (logo, photo joueur) ──────────────
@@ -109,7 +146,7 @@ export function useFontsReady(): boolean {
 
 // ── Composant : <canvas> masqué par la séquence PNG courante ────────────────
 interface MaskedCanvasProps {
-  maskFrames: HTMLImageElement[];
+  maskFrames: MaskFrame[];
   draw: (ctx: CanvasRenderingContext2D) => void;
 }
 
@@ -125,13 +162,14 @@ export const MaskedCanvas: React.FC<MaskedCanvasProps> = ({ maskFrames, draw }) 
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    draw(ctx);
+    // Sans masque prêt pour cette frame → on laisse le canvas vide. Ne jamais
+    // dessiner le contenu sans masque, sinon texte/image visible partout.
     const mask = maskFrames[frame];
-    if (mask && mask.complete && mask.naturalWidth > 0) {
-      ctx.globalCompositeOperation = 'destination-in';
-      ctx.drawImage(mask, 0, 0, canvas.width, canvas.height);
-      ctx.globalCompositeOperation = 'source-over';
-    }
+    if (!mask) return;
+    draw(ctx);
+    ctx.globalCompositeOperation = 'destination-in';
+    ctx.drawImage(mask, 0, 0, canvas.width, canvas.height);
+    ctx.globalCompositeOperation = 'source-over';
   });
 
   return (

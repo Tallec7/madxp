@@ -151,11 +151,12 @@ export const ButImgJoueur: React.FC<Props> = ({
           draw={(ctx) => {
             drawText(ctx, {
               x: 960,
-              y: 540 + 400 * 0.35,
+              y: 540,
               text: scoreLabel,
               font: "400 400px 'Bulevar', sans-serif",
               color: "#ffffff",
               textAlign: "center",
+              textBaseline: "middle",
               shadow: { color: "rgba(0,0,0,0.3)", blur: 8, offsetX: 2, offsetY: 4 },
             });
           }}
@@ -182,45 +183,44 @@ export const ButImgJoueur: React.FC<Props> = ({
               const drawY = 1080 - playerImgBottom - drawH;
               ctx.drawImage(playerImg, drawX, drawY, drawW, drawH);
             }
-            // Nom joueur — gauche, centré vertical
+            // Nom joueur — gauche, bloc centré vertical y=540, CSS lineHeight 0.88
             const nameFont = "400 350px 'Bulevar', sans-serif";
             const lineHeight = 350 * 0.88;
             drawText(ctx, {
               x: 80,
-              y: 540 - lineHeight / 2 + 350 * 0.82,
+              y: 540 - lineHeight / 2,
               text: prenom.toUpperCase(),
               font: nameFont,
               color: "#ffffff",
               textAlign: "left",
+              textBaseline: "middle",
               shadow: { color: "rgba(0,0,0,0.3)", blur: 8, offsetX: 2, offsetY: 4 },
             });
             drawText(ctx, {
               x: 80,
-              y: 540 + lineHeight / 2 + 350 * 0.82,
+              y: 540 + lineHeight / 2,
               text: nom.toUpperCase(),
               font: nameFont,
               color: "#ffffff",
               textAlign: "left",
+              textBaseline: "middle",
               shadow: { color: "rgba(0,0,0,0.3)", blur: 8, offsetX: 2, offsetY: 4 },
             });
-            // Club : 3 coins
+            // Club : 3 coins (CSS top/bottom = bords du span, approchés via textBaseline)
             const clubFont = "600 28px 'GeneralSans', sans-serif";
             const clubColor = "rgba(255,255,255,0.7)";
             const clubText = club.toUpperCase();
-            // Top-left
             drawText(ctx, {
-              x: 80, y: 55 + 28 * 0.82, text: clubText, font: clubFont, color: clubColor,
-              textAlign: "left", letterSpacing: 10,
+              x: 80, y: 55, text: clubText, font: clubFont, color: clubColor,
+              textAlign: "left", textBaseline: "top", letterSpacing: 10,
             });
-            // Bottom-left
             drawText(ctx, {
-              x: 80, y: 1080 - 65 + 28 * 0.82 - 28, text: clubText, font: clubFont, color: clubColor,
-              textAlign: "left", letterSpacing: 10,
+              x: 80, y: 1080 - 65, text: clubText, font: clubFont, color: clubColor,
+              textAlign: "left", textBaseline: "bottom", letterSpacing: 10,
             });
-            // Bottom-right
             drawText(ctx, {
-              x: 1920 - 80, y: 1080 - 65 + 28 * 0.82 - 28, text: clubText, font: clubFont, color: clubColor,
-              textAlign: "right", letterSpacing: 10,
+              x: 1920 - 80, y: 1080 - 65, text: clubText, font: clubFont, color: clubColor,
+              textAlign: "right", textBaseline: "bottom", letterSpacing: 10,
             });
           }}
         />
