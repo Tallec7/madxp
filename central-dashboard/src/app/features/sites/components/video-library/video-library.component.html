@@ -14,7 +14,7 @@
       >
       <span
         class="stat available-stat"
-        *ngIf="filteredStatsAvailable > 0"
+        *ngIf="filteredStatsAvailable > 0 && statusFilter !== 'relevant'"
         title="Uploadées mais pas dans la config"
         >⬜ {{ filteredStatsAvailable }} disponible(s)</span
       >
@@ -22,12 +22,14 @@
         class="stat on-pi"
         *ngIf="siteType !== 'saas' && filteredStatsOnPi > 0"
         title="Sur le Pi"
-        >📡 {{ filteredStatsOnPi }}</span
+        >📦 {{ filteredStatsOnPi }}</span
       >
       <span class="stat" *ngIf="filteredStatsWithVariant > 0" title="Avec variantes multi-ecran"
         >📺 {{ filteredStatsWithVariant }}</span
       >
-      <span class="stat" *ngIf="filteredTotalSize > 0">{{ formatBytes(filteredTotalSize) }}</span>
+      <span class="stat" *ngIf="filteredTotalSize > 0" title="Taille totale">{{
+        formatBytes(filteredTotalSize)
+      }}</span>
     </div>
   </div>
 
@@ -155,16 +157,6 @@
         »
       </button>
     </div>
-  </div>
-
-  <!-- Légende -->
-  <div class="library-legend">
-    <ng-container *ngIf="siteType !== 'saas'">
-      <span class="legend-item"><span class="legend-icon">✅</span> Sur le Pi</span>
-      <span class="legend-item"><span class="legend-icon">⏳</span> À déployer</span>
-    </ng-container>
-    <span class="legend-item"><span class="legend-icon">📺</span> Variantes multi-ecran</span>
-    <span class="legend-item"><span class="legend-icon">⚙️</span> Dans la config</span>
   </div>
 
   <!-- Detail Side Panel (extracted to sub-component) -->
