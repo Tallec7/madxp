@@ -329,36 +329,6 @@ export class VideoLibraryComponent implements OnChanges {
     this.filteredStatsAvailable = filtered.filter(v => v.contentStatus === 'available').length;
   }
 
-  /** ADR-050: content status display helpers */
-  getContentStatusLabel(status: VideoContentStatus): string {
-    switch (status) {
-      case 'loop': return 'Boucle';
-      case 'category': return 'Catégorie';
-      case 'sponsor': return 'Sponsor';
-      case 'to_deploy': return 'À déployer';
-      default: return 'Disponible';
-    }
-  }
-
-  getContentStatusClass(status: VideoContentStatus): string {
-    switch (status) {
-      case 'loop': return 'status-loop';
-      case 'category': return 'status-category';
-      case 'sponsor': return 'status-sponsor';
-      case 'to_deploy': return 'status-to-deploy';
-      default: return 'status-available';
-    }
-  }
-
-  getOwnerTypeLabel(ownerType: VideoOwnerType): string {
-    switch (ownerType) {
-      case 'neopro': return 'NEOPRO';
-      case 'sponsor': return 'Sponsor';
-      case 'club': return 'Club';
-      default: return 'Admin';
-    }
-  }
-
   // "Add to" dropdown state
   addToDropdownVideo: VideoItem | null = null;
   addToDropdownStyle: Record<string, string> = {};
@@ -522,26 +492,6 @@ export class VideoLibraryComponent implements OnChanges {
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     const safeIndex = Math.min(Math.max(i, 0), sizes.length - 1);
     return parseFloat((bytes / Math.pow(k, safeIndex)).toFixed(1)) + ' ' + sizes[safeIndex];
-  }
-
-  formatDate(dateStr: string): string {
-    try {
-      const date = new Date(dateStr);
-      return date.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: '2-digit' });
-    } catch {
-      return '';
-    }
-  }
-
-  formatDuration(seconds: number): string {
-    if (!seconds || seconds <= 0 || !Number.isFinite(seconds)) return '-';
-    const hours = Math.floor(seconds / 3600);
-    const mins = Math.floor((seconds % 3600) / 60);
-    const secs = Math.floor(seconds % 60);
-    if (hours > 0) {
-      return `${hours}h${mins.toString().padStart(2, '0')}`;
-    }
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
   }
 
   getDeployState(video: VideoItem): VideoDeployState | null {
