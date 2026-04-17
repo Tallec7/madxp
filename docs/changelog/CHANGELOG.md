@@ -1,3 +1,9 @@
+## [3.178.2](https://github.com/Tallec7/neopro/compare/v3.178.1...v3.178.2) (2026-04-17)
+
+### Bug Fixes
+
+- **watermark:** persist watermark across OTA and runtime failures (ADR-056) ([329c428](https://github.com/Tallec7/neopro/commit/329c428873e9ff8059b623def5f06de25c34a793))
+
 ## [3.178.1](https://github.com/Tallec7/neopro/compare/v3.178.0...v3.178.1) (2026-04-16)
 
 ### Bug Fixes
