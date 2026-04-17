@@ -1,0 +1,25 @@
+<div class="bulk-actions" *ngIf="selectedCount > 0">
+  <span class="bulk-count">{{
+    'videoLibrary.selectedCount' | translate: { count: selectedCount }
+  }}</span>
+  <button
+    class="btn btn-sm btn-primary"
+    (click)="bulkDeploy.emit()"
+    [disabled]="deployableCount === 0"
+    [title]="'videoLibrary.deploySelectedVideos' | translate"
+    *ngIf="siteType !== 'saas'"
+  >
+    🚀 {{ 'common.deploy' | translate }} ({{ deployableCount }})
+  </button>
+  <button
+    class="btn btn-sm btn-danger"
+    (click)="bulkDelete.emit()"
+    [disabled]="deletableCount === 0"
+    [title]="'videoLibrary.deleteSelectedVideos' | translate"
+  >
+    🗑️ {{ 'common.delete' | translate }} ({{ deletableCount }})
+  </button>
+  <button class="btn btn-sm btn-outline" (click)="deselectAll.emit()">
+    {{ 'videoLibrary.deselect' | translate }}
+  </button>
+</div>

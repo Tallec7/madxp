@@ -25,6 +25,7 @@ import { VideoDetailPanelComponent } from './video-detail-panel/video-detail-pan
 import { VideoPreviewModalComponent } from './video-preview-modal/video-preview-modal.component';
 import { VideoLibraryFiltersComponent } from './video-library-filters/video-library-filters.component';
 import { VideoLibraryListComponent } from './video-library-list/video-library-list.component';
+import { VideoBulkActionsBarComponent } from './video-bulk-actions-bar/video-bulk-actions-bar.component';
 
 export type {
   VideoContentStatus,
@@ -51,6 +52,7 @@ export type {
     VideoPreviewModalComponent,
     VideoLibraryFiltersComponent,
     VideoLibraryListComponent,
+    VideoBulkActionsBarComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './video-library.component.html',
