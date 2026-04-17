@@ -37,14 +37,14 @@ import { ClubRealtimeService } from './club-realtime.service';
       <!-- Pi site dashboard -->
       <div class="status-cards" *ngIf="siteDashboard && !isSaas">
         <!-- Connection Status -->
-        <div class="card status-card" [class.online]="siteDashboard.connection?.isConnected" [class.offline]="!siteDashboard.connection?.isConnected">
+        <div class="card status-card" [class.online]="siteDashboard.connection.isConnected" [class.offline]="!siteDashboard.connection.isConnected">
           <div class="card-icon">
-            <span class="status-dot" [class.online]="siteDashboard.connection?.isConnected"></span>
+            <span class="status-dot" [class.online]="siteDashboard.connection.isConnected"></span>
           </div>
           <div class="card-content">
             <h3>{{ 'clubPortal.connectionStatus' | translate }}</h3>
             <p class="status-text">
-              {{ siteDashboard.connection?.isConnected ? ('status.online' | translate) : ('status.offline' | translate) }}
+              {{ siteDashboard.connection.isConnected ? ('status.online' | translate) : ('status.offline' | translate) }}
             </p>
             <p class="status-detail" *ngIf="getLastSeen()">
               {{ 'clubPortal.lastSeen' | translate }}: {{ getLastSeen() | date:'dd/MM/yyyy HH:mm' }}
@@ -86,7 +86,7 @@ import { ClubRealtimeService } from './club-realtime.service';
           <div class="card-icon">⚙️</div>
           <div class="card-content">
             <h3>{{ 'clubPortal.version' | translate }}</h3>
-            <p class="stat-number">{{ siteDashboard.site?.software_version || '-' }}</p>
+            <p class="stat-number">{{ siteDashboard.site.software_version || '-' }}</p>
             <p class="status-detail" *ngIf="siteDashboard.saasMetrics?.lastOtaDeployment as ota">
               <ng-container [ngSwitch]="ota.status">
                 <span *ngSwitchCase="'completed'" class="ota-badge ota-ok">✓ {{ ota.version }}</span>
@@ -117,13 +117,13 @@ import { ClubRealtimeService } from './club-realtime.service';
           <div class="card-content">
             <h3>{{ 'clubPortal.saas.videosPlayedToday' | translate }}</h3>
             <div class="stat-row">
-              <p class="stat-number">{{ siteDashboard.saasMetrics?.todayVideosPlayed || 0 }}</p>
+              <p class="stat-number">{{ siteDashboard.saasMetrics.todayVideosPlayed || 0 }}</p>
               <span class="trend-badge" *ngIf="getVideosTrend() as trend" [ngClass]="trend.cls">
                 {{ trend.icon }} {{ trend.label }}
               </span>
             </div>
             <p class="status-detail">
-              {{ siteDashboard.saasMetrics?.todaySessions || 0 }} {{ 'clubPortal.saas.sessionsLabel' | translate }}
+              {{ siteDashboard.saasMetrics.todaySessions || 0 }} {{ 'clubPortal.saas.sessionsLabel' | translate }}
             </p>
           </div>
         </div>
@@ -133,7 +133,7 @@ import { ClubRealtimeService } from './club-realtime.service';
           <div class="card-content">
             <h3>{{ 'clubPortal.saas.todayScreenTime' | translate }}</h3>
             <div class="stat-row">
-              <p class="stat-number">{{ formatDuration(siteDashboard.saasMetrics?.todayScreenTime || 0) }}</p>
+              <p class="stat-number">{{ formatDuration(siteDashboard.saasMetrics.todayScreenTime || 0) }}</p>
               <span class="trend-badge" *ngIf="getScreenTimeTrend() as trend" [ngClass]="trend.cls">
                 {{ trend.icon }} {{ trend.label }}
               </span>
@@ -147,13 +147,13 @@ import { ClubRealtimeService } from './club-realtime.service';
           <div class="card-content">
             <h3>{{ 'clubPortal.saas.weekPerformance' | translate }}</h3>
             <div class="stat-row">
-              <p class="stat-number">{{ (siteDashboard.saasMetrics?.weekCompletionRate || 0) | number:'1.0-0' }}%</p>
+              <p class="stat-number">{{ (siteDashboard.saasMetrics.weekCompletionRate || 0) | number:'1.0-0' }}%</p>
               <span class="trend-badge" *ngIf="getCompletionTrend() as trend" [ngClass]="trend.cls">
                 {{ trend.icon }} {{ trend.label }}
               </span>
             </div>
             <p class="status-detail">
-              {{ 'clubPortal.saas.completionLabel' | translate }} · {{ siteDashboard.saasMetrics?.weekSponsorsDisplayed || 0 }} {{ 'clubPortal.saas.sponsorsShownLabel' | translate }}
+              {{ 'clubPortal.saas.completionLabel' | translate }} · {{ siteDashboard.saasMetrics.weekSponsorsDisplayed || 0 }} {{ 'clubPortal.saas.sponsorsShownLabel' | translate }}
             </p>
           </div>
         </div>

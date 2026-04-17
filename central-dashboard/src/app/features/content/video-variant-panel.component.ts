@@ -478,7 +478,6 @@ export class VideoVariantPanelComponent implements OnInit {
       next: (response) => {
         this.loading = false;
         this.loaded = true;
-        // Filter out 'tv' type — the primary video IS the tv variant
         this.variants = response.variants.filter(v => v.display_type !== 'tv');
         this.emitChange();
       },
