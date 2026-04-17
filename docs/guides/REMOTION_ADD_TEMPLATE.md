@@ -60,7 +60,34 @@ const layer: React.CSSProperties = {
 
 - Toujours inclure `resolveVideo()` pour que les assets uploadés via FTP soient utilisables
 - Ajouter `videoSrcX: z.string().optional()` pour chaque couche WebM configurable
-- Utiliser `delayRender`/`continueRender` si le template nécessite un masque alpha (voir `ButSimple.tsx`)
+- **Masquage alpha (texte/image révélés par une séquence PNG)** : utiliser `MaskedCanvas` de `src/mask-canvas.tsx`, **ne jamais** utiliser CSS `mask-image` avec une URL qui change par frame (ADR-052 §5b — flash garanti sur le preview dashboard). Exemple dans [ButSimple.tsx](../../templates-remotion/src/ButSimple.tsx) :
+
+  ```tsx
+  import { MaskedCanvas, drawText, useFontsReady, useMaskFrames } from './mask-canvas';
+
+  const maskFrames = useMaskFrames('masks/mon-template-C', durationInFrames);
+  const fontsReady = useFontsReady();
+
+  {
+    fontsReady && (
+      <MaskedCanvas
+        maskFrames={maskFrames}
+        draw={(ctx) =>
+          drawText(ctx, {
+            x: 960,
+            y: 540,
+            text: prenom,
+            font: "400 330px 'Bulevar'",
+            color: '#fff',
+            textAlign: 'center',
+          })
+        }
+      />
+    );
+  }
+  ```
+
+  `useMaskFrames` / `useFontsReady` bloquent `delayRender` → le rendu MP4 headless attend que les masques et polices soient prêts avant capture.
 
 ---
 
