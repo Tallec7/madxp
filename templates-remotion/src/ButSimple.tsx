@@ -8,20 +8,7 @@ import {
   useVideoConfig,
 } from "remotion";
 import { z } from "zod";
-
-// ── Helper : luminance mask style from pre-extracted PNG sequence ────────────
-// Cast needed because React.CSSProperties doesn't include WebkitMaskMode.
-const luminanceMask = (url: string): React.CSSProperties =>
-  ({
-    WebkitMaskImage: `url("${url}")`,
-    WebkitMaskMode: "luminance",
-    WebkitMaskRepeat: "no-repeat",
-    WebkitMaskSize: "100% 100%",
-    maskImage: `url("${url}")`,
-    maskMode: "luminance",
-    maskRepeat: "no-repeat",
-    maskSize: "100% 100%",
-  }) as React.CSSProperties;
+import { MaskedCanvas, drawText, useFontsReady, useMaskFrames } from "./mask-canvas";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // SCHÉMA DES PROPS
@@ -64,18 +51,18 @@ const resolveVideo = (url: string | undefined, fallback: string | undefined): st
 
 export const ButSimple: React.FC<Props> = ({ prenom = '', nom = '', club = '', logoSrc = 'logo_club.png', logoSize = 500, videoSrcA, videoSrcB, videoSrcC }) => {
   const frame = useCurrentFrame();
-  const { fps } = useVideoConfig();
+  const { fps, durationInFrames } = useVideoConfig();
 
   const logoScale = spring({ frame, fps, config: { damping: 20, stiffness: 100 } });
   const logoOpacity = interpolate(frame, [0, 8], [0, 1], { extrapolateRight: "clamp" });
 
-  // ── Masque alpha pré-calculé ────────────────────────────────────────────
-  // Les frames alpha de C.webm ont été extraites en PNG grayscale 480×270 au build time
-  // (scripts/extract-masks.sh). On charge directement l'image correspondant à la frame
-  // courante → élimine delayRender + canvas.toDataURL + Video ref + swangle decode.
-  // mask-mode: luminance → blanc = visible, noir = masqué.
-  const maskFrame = String(frame + 1).padStart(4, '0');
-  const maskUrl = staticFile(`masks/but-simple-C/${maskFrame}.png`);
+  // ── Masque alpha pré-calculé + rendu canvas ────────────────────────────
+  // Les PNGs de masque (extraits de C.webm via scripts/extract-masks.sh) sont
+  // tous préchargés en HTMLImageElement au mount, puis MaskedCanvas dessine
+  // texte + masque en un seul raster par frame. Voir src/mask-canvas.tsx pour
+  // le pourquoi (flash CSS mask-image sur les URL qui changent).
+  const maskFrames = useMaskFrames('masks/but-simple-C', durationInFrames);
+  const fontsReady = useFontsReady();
 
   return (
     <AbsoluteFill style={{ backgroundColor: "#000" }}>
@@ -119,25 +106,59 @@ export const ButSimple: React.FC<Props> = ({ prenom = '', nom = '', club = '', l
         style={layerStyle}
       />
 
-      {/* ── COUCHE 4 : Texte masqué par l'alpha pré-calculé de C ──────────── */}
-      {/* Le masque est une image PNG grayscale chargée par frame index.
-          mask-mode: luminance → blanc = visible, noir = masqué.
-          Plus besoin de delayRender/continueRender ni de canvas.toDataURL. */}
-      <div
-        style={{
-          position: "absolute",
-          width: 1920,
-          height: 1080,
-          ...luminanceMask(maskUrl),
-        }}
-      >
-        <span style={clubNameStyle(120)}>{club.toUpperCase()}</span>
-        <div style={playerBlockStyle}>
-          <div style={playerNameStyle}>{prenom.toUpperCase()}</div>
-          <div style={playerNameStyle}>{nom.toUpperCase()}</div>
-        </div>
-        <span style={clubNameStyle(930)}>{club.toUpperCase()}</span>
-      </div>
+      {/* ── COUCHE 4 : Texte dessiné en canvas + masqué par l'alpha de C ─── */}
+      {/* Canvas 1920×1080 : dessine nom/prénom/club puis applique le masque
+          en un seul raster par frame (destination-in). Remplace CSS mask-image
+          dont le swap d'URL par frame flashait sur le preview. */}
+      {fontsReady && (
+        <MaskedCanvas
+          maskFrames={maskFrames}
+          draw={(ctx) => {
+            // Club name — haut
+            drawText(ctx, {
+              x: 960,
+              y: 120 + 28 * 0.82,
+              text: club.toUpperCase(),
+              font: "600 28px 'GeneralSans', sans-serif",
+              color: "rgba(255,255,255,0.7)",
+              textAlign: "center",
+              textBaseline: "alphabetic",
+              letterSpacing: 10,
+            });
+            // Prénom + nom — centré, 2 lignes
+            const nameFont = "400 330px 'Bulevar', sans-serif";
+            const lineHeight = 330 * 0.85;
+            drawText(ctx, {
+              x: 960,
+              y: 540 - lineHeight / 2 + 330 * 0.82,
+              text: prenom.toUpperCase(),
+              font: nameFont,
+              color: "#ffffff",
+              textAlign: "center",
+              shadow: { color: "rgba(0,0,0,0.3)", blur: 8, offsetX: 2, offsetY: 4 },
+            });
+            drawText(ctx, {
+              x: 960,
+              y: 540 + lineHeight / 2 + 330 * 0.82,
+              text: nom.toUpperCase(),
+              font: nameFont,
+              color: "#ffffff",
+              textAlign: "center",
+              shadow: { color: "rgba(0,0,0,0.3)", blur: 8, offsetX: 2, offsetY: 4 },
+            });
+            // Club name — bas
+            drawText(ctx, {
+              x: 960,
+              y: 930 + 28 * 0.82,
+              text: club.toUpperCase(),
+              font: "600 28px 'GeneralSans', sans-serif",
+              color: "rgba(255,255,255,0.7)",
+              textAlign: "center",
+              letterSpacing: 10,
+            });
+          }}
+        />
+      )}
 
       {/* ── COUCHE 5 : Wipe B ─────────────────────────────────────────────── */}
       <OffthreadVideo src={resolveVideo(videoSrcB, "BUT_simple_B.webm")} style={layerStyle} />
@@ -159,39 +180,3 @@ const layerStyle: React.CSSProperties = {
   objectFit: "cover",
 };
 
-const playerBlockStyle: React.CSSProperties = {
-  position: "absolute",
-  top: "50%",
-  left: "50%",
-  transform: "translate(-50%, -50%)",
-  textAlign: "center",
-};
-
-// Pour changer la taille : modifier fontSize (px)
-// Police : Bulevar (chargée via loadFont ci-dessus)
-const playerNameStyle: React.CSSProperties = {
-  fontSize: 330,
-  fontFamily: "'Bulevar', sans-serif",
-  fontWeight: 400,
-  lineHeight: 0.85,
-  color: "#ffffff",
-  textTransform: "uppercase",
-  textShadow: "2px 4px 8px rgba(0,0,0,0.3)",
-};
-
-// top: 215 = haut de l'écran, top: 860 = bas de l'écran
-// Police : GeneralSans (chargée via loadFont ci-dessus)
-const clubNameStyle = (top: number): React.CSSProperties => ({
-  position: "absolute",
-  top,
-  left: "50%",
-  transform: "translateX(-50%)",
-  fontFamily: "'GeneralSans', sans-serif",
-  fontSize: 28,
-  fontWeight: 600,
-  letterSpacing: 10,
-  textTransform: "uppercase",
-  color: "rgba(255,255,255,0.7)",
-  textAlign: "center",
-  whiteSpace: "nowrap",
-});

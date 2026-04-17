@@ -16,15 +16,14 @@ console.error = (...args: unknown[]) => {
 };
 
 // ── Registry des compositions ─────────────────────────────────────────────────
+// Les masques PNG sont préchargés directement par les composants via
+// useMaskFrames (src/mask-canvas.tsx) — plus besoin d'un préchargeur ici.
 
 interface CompositionDef {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   component: React.FC<any>;
   durationInFrames: number;
   fps: number;
-  // Dossiers de masques PNG per-frame à précharger pour éviter les stutters
-  // (1 HTTP request par frame sinon → 30 req/s au premier passage).
-  maskDirs?: string[];
 }
 
 const COMPOSITIONS: Record<string, CompositionDef> = {
@@ -32,39 +31,13 @@ const COMPOSITIONS: Record<string, CompositionDef> = {
     component: ButSimple,
     durationInFrames: 180,
     fps: 30,
-    maskDirs: ['masks/but-simple-C'],
   },
   ButImgJoueur: {
     component: ButImgJoueur,
     durationInFrames: 210,
     fps: 30,
-    maskDirs: ['masks/but-img-joueur-C', 'masks/but-img-joueur-E'],
   },
 };
-
-// Précharge les PNGs de masque ET force leur décodage bitmap.
-// Sans decode() + sans rétention des Image, le GC peut libérer les bitmaps
-// et CSS mask-image redécode async à chaque frame → flash/saccade pendant
-// la décompression. On garde les Image en mémoire pour verrouiller le cache
-// décodé du navigateur.
-const preloadedDirs = new Set<string>();
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const maskImageCache: HTMLImageElement[] = [];
-function preloadMasks(dirs: string[], frames: number): void {
-  const base = new URL('./public/', window.location.href).href;
-  for (const dir of dirs) {
-    if (preloadedDirs.has(dir)) continue;
-    preloadedDirs.add(dir);
-    for (let i = 1; i <= frames; i++) {
-      const img = new Image();
-      img.decoding = 'sync';
-      img.src = `${base}${dir}/${String(i).padStart(4, '0')}.png`;
-      // decode() force la décompression off-main-thread avant usage.
-      img.decode().catch(() => { /* ignore — HTTP cache gère le fallback */ });
-      maskImageCache.push(img);
-    }
-  }
-}
 
 // ── App ───────────────────────────────────────────────────────────────────────
 
@@ -77,11 +50,6 @@ function App() {
     const params = new URLSearchParams(window.location.search);
     const comp = params.get('composition');
     if (comp && COMPOSITIONS[comp]) setCompositionId(comp);
-
-    // Préchauffe le cache des masques PNG de la composition initiale.
-    const initialId = comp && COMPOSITIONS[comp] ? comp : 'ButSimple';
-    const initialComp = COMPOSITIONS[initialId];
-    if (initialComp?.maskDirs) preloadMasks(initialComp.maskDirs, initialComp.durationInFrames);
 
     const propsParam = params.get('props');
     if (propsParam) {
@@ -96,10 +64,7 @@ function App() {
     const handler = (e: MessageEvent) => {
       if (e.data?.type !== 'remotion-props-update') return;
       if (e.data.compositionId && COMPOSITIONS[e.data.compositionId]) {
-        const nextId = e.data.compositionId as string;
-        const nextComp = COMPOSITIONS[nextId];
-        if (nextComp?.maskDirs) preloadMasks(nextComp.maskDirs, nextComp.durationInFrames);
-        setCompositionId(nextId);
+        setCompositionId(e.data.compositionId as string);
       }
       if (e.data.props) setProps(e.data.props);
     };

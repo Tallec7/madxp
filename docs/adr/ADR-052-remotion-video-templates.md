@@ -1,7 +1,7 @@
 # ADR-052: Remotion comme moteur de templates vidéo
 
 **Date** : 2026-04-14  
-**Mis à jour** : 2026-04-17 (preview : preload masques avec `img.decode()` + rétention `maskImageCache` contre les micro-saccades ; filtre `console.error` pour le spam `AbortError` power-save que `initiallyMuted` ne couvre pas — smoke tests associés)  
+**Mis à jour** : 2026-04-17 (preview : compositing canvas `MaskedCanvas` remplace CSS `mask-image` par frame pour les couches texte/image — le swap d'URL 30×/s invalidait le cache raster = flash visible ; préchargement mask/fonts via `delayRender` pour parité MP4 ; filtre `console.error` conservé pour le spam `AbortError` power-save ; motivation ADR-037 club self-service)  
 **Statut** : Accepté  
 **Format** : Complet
 
@@ -148,27 +148,21 @@ Le `@remotion/player` dans `templates-remotion/preview/src/app.tsx` **doit** êt
 
 **Contournement** : filtre `console.error` appliqué au démarrage de l'app preview qui avale les messages commençant par `Could not play video`. Les autres erreurs console restent visibles. Alternative plus lourde (non retenue) : ajouter une piste audio silencieuse aux 10+ WebM via `ffmpeg -i in.webm -f lavfi -i anullsrc -c:v copy -c:a libopus -shortest out.webm`.
 
-### 5b. Preview — preload des masques avec `decode()` + rétention
+### 5b. Preview — compositing canvas pour texte et images masqués
 
-Les PNG de masque (180–210 frames par composition) sont préchargés dès le montage du Player pour éviter 30 req/s au premier passage. Deux pièges découverts :
+**Problème identifié (2026-04-17)** : CSS `mask-image: url(frameXXXX.png)` avec une URL qui change **30 fois/seconde** invalide le cache raster du compositeur navigateur. À chaque swap, Chrome/Safari re-rastérisent la couche masquée → flash visible sur le contenu texte/image. Un premier contournement (précharger `Image` + `decode()` + rétention globale pour verrouiller le bitmap décodé) n'a **pas résolu** le problème : le pipeline CSS paint ignore le cache JS, l'invalidation raster persistait. Pire, la rétention ajoutait ~300 Mo de RAM sans bénéfice.
 
-- Sans `img.decode()`, le navigateur charge le PNG mais diffère le décodage bitmap. CSS `mask-image` redécode alors de façon asynchrone à chaque frame où le masque change → micro-saccades pendant la décompression.
-- Sans rétention des `HTMLImageElement` dans un tableau global, le GC libère les bitmaps décodés dès que l'`Image` sort de scope → même symptôme au second passage.
+**Impact produit** : le preview dashboard deviendra l'UI principale des clubs pour générer leurs propres visuels (ex. adversaires, joueurs du mois — ADR-037 site SaaS). Un flash systématique sur le texte = confusion utilisateur + tickets support. Le MP4 final n'est pas affecté (headless Chromium + FFmpeg passe sans flash), donc la divergence preview ↔ rendu aurait été acceptable si seul NEOPRO admin voyait le preview — ce n'est plus le cas.
 
-**Implémentation** dans `templates-remotion/preview/src/app.tsx` :
+**Solution adoptée** : remplacer `<div style={luminanceMask(url)}>` par un `<canvas>` 1920×1080 (`templates-remotion/src/mask-canvas.tsx`).
 
-```ts
-const maskImageCache: HTMLImageElement[] = [];
-const img = new Image();
-img.decoding = 'sync';
-img.src = `${base}${dir}/${frame}.png`;
-img.decode().catch(() => {
-  /* HTTP cache fallback */
-});
-maskImageCache.push(img); // verrouille le bitmap décodé en mémoire
-```
+- `useMaskFrames(dir, frames)` précharge toutes les PNG de masque en `HTMLImageElement` **au mount**, sous un `delayRender` → le render MP4 attend que les images soient décodées avant capture.
+- `useFontsReady()` gate sur `document.fonts.ready` + `delayRender` → évite le flash de fallback de police lors du premier draw.
+- `<MaskedCanvas maskFrames draw>` redessine le canvas en `useLayoutEffect` à chaque frame : `ctx.clearRect` → `draw(ctx)` (texte, image) → `globalCompositeOperation='destination-in'` → `drawImage(maskFrames[frame])`. Un seul raster par frame, pas de swap de ressource CSS.
 
-**Garde-fou** : `smoke-remotion.test.ts` vérifie que `decode()`, `maskImageCache.push(`, le filtre `console.error` et `initiallyMuted` restent présents. Une régression casse le smoke avant déploiement.
+**Fidélité** : `drawText()` utilitaire reproduit `text-shadow` (via `ctx.shadowBlur/offset`) et `letter-spacing` (prop native Canvas 2D Chrome 99+, fallback char-par-char). Parité MP4 : le render Remotion utilise la même logique canvas côté puppeteer.
+
+**Garde-fou** : `smoke-remotion.test.ts` vérifie la présence de `MaskedCanvas`, `globalCompositeOperation: 'destination-in'`, `delayRender`, `useFontsReady`, et bloque tout retour à l'ancien `luminanceMask()` dans les templates.
 
 ### 6. Templates agnostiques du site
 

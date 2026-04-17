@@ -161,13 +161,41 @@ describe('Remotion — preview stutter/console-spam guards (ADR-052 §5)', () =>
     path.join(repoRoot, 'templates-remotion', 'preview', 'src', 'app.tsx'),
     'utf8'
   );
+  const maskCanvas = fs.readFileSync(
+    path.join(repoRoot, 'templates-remotion', 'src', 'mask-canvas.tsx'),
+    'utf8'
+  );
+  const butSimple = fs.readFileSync(
+    path.join(repoRoot, 'templates-remotion', 'src', 'ButSimple.tsx'),
+    'utf8'
+  );
+  const butImgJoueur = fs.readFileSync(
+    path.join(repoRoot, 'templates-remotion', 'src', 'ButImgJoueur.tsx'),
+    'utf8'
+  );
 
-  it('mask preloader forces decode() + retains Image refs (anti-stutter)', () => {
-    // img.decode() : force le décodage bitmap en amont.
-    // maskImageCache : rétention empêche le GC de libérer les bitmaps décodés
-    // → sans ça, CSS mask-image redécode async à chaque frame = micro-saccades.
-    expect(previewApp).toMatch(/\.decode\s*\(\s*\)/);
-    expect(previewApp).toMatch(/maskImageCache\s*\.\s*push\s*\(/);
+  it('canvas-based masking replaces CSS mask-image on text/image layers', () => {
+    // CSS `mask-image: url(frameXXXX.png)` qui change 30 fois/sec invalide
+    // le cache raster du compositeur → flash visible sur le preview (club
+    // self-service, ADR-037). MaskedCanvas composite tout en un raster par frame.
+    expect(maskCanvas).toMatch(/export const MaskedCanvas/);
+    expect(maskCanvas).toMatch(/globalCompositeOperation\s*=\s*['"]destination-in['"]/);
+    expect(butSimple).toMatch(/<MaskedCanvas\b/);
+    expect(butImgJoueur).toMatch(/<MaskedCanvas\b/);
+    // Les anciens <div style={luminanceMask(...)}> ne doivent pas revenir
+    expect(butSimple).not.toMatch(/luminanceMask\s*\(/);
+    expect(butImgJoueur).not.toMatch(/luminanceMask\s*\(/);
+  });
+
+  it('mask frames + fonts are preloaded via delayRender gates (SSR parity)', () => {
+    // useMaskFrames + useFontsReady bloquent delayRender → le render MP4 headless
+    // Chromium attend que tous les PNGs et @font-face soient prêts avant capture.
+    expect(maskCanvas).toMatch(/useMaskFrames/);
+    expect(maskCanvas).toMatch(/useFontsReady/);
+    expect(maskCanvas).toMatch(/delayRender\s*\(/);
+    expect(maskCanvas).toMatch(/continueRender\s*\(/);
+    expect(butSimple).toMatch(/fontsReady\s*&&/);
+    expect(butImgJoueur).toMatch(/fontsReady\s*&&/);
   });
 
   it('console.error filter swallows AbortError spam from video-only power-save', () => {
