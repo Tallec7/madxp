@@ -24,6 +24,7 @@ import type {
 import { VideoDetailPanelComponent } from './video-detail-panel/video-detail-panel.component';
 import { VideoPreviewModalComponent } from './video-preview-modal/video-preview-modal.component';
 import { VideoLibraryFiltersComponent } from './video-library-filters/video-library-filters.component';
+import { VideoLibraryListComponent } from './video-library-list/video-library-list.component';
 
 export type {
   VideoContentStatus,
@@ -49,6 +50,7 @@ export type {
     VideoDetailPanelComponent,
     VideoPreviewModalComponent,
     VideoLibraryFiltersComponent,
+    VideoLibraryListComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './video-library.component.html',
@@ -227,11 +229,6 @@ export class VideoLibraryComponent implements OnChanges {
     this.applyFilters();
   }
 
-  getSortIcon(field: SortField): string {
-    if (this.sortField !== field) return '';
-    return this.sortDirection === 'asc' ? '↑' : '↓';
-  }
-
   applyFilters(): void {
     let filtered = [...this.allVideos];
 
@@ -400,10 +397,6 @@ export class VideoLibraryComponent implements OnChanges {
     this.detailVideo = null;
   }
 
-  getConfigRolesArray(video: VideoItem): string[] {
-    return video.configRoles ? Array.from(video.configRoles) : [];
-  }
-
   onPreview(video: VideoItem, event: Event): void {
     event.stopPropagation();
     this.previewVideo = video;
@@ -430,10 +423,6 @@ export class VideoLibraryComponent implements OnChanges {
     if (!this.selectionMode) {
       this.selectedVideos.clear();
     }
-  }
-
-  isSelected(video: VideoItem): boolean {
-    return this.selectedVideos.has(video.path);
   }
 
   toggleSelection(video: VideoItem, event: Event): void {
