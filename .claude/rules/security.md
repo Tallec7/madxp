@@ -57,6 +57,8 @@ Rôle `club` = accès scoped à un seul site via `user.site_id` :
 - `requireRole('admin', 'club')` avec bypass automatique dans `auth.ts` quand `:id`/`:siteId` === `user.site_id`
 - **Ownership guard vidéo** : `findVideoById()` → `uploaded_for_site_id !== user.site_id` → 403
 - **Guard NEOPRO** : les vidéos `category = 'NEOPRO'` ne peuvent être ni supprimées ni modifiées par les clubs
+- **Guard config Neopro** : `updateProfileConfiguration` vérifie que les vidéos `owner !== 'club'` de l'ancienne config sont toujours présentes dans la nouvelle (defense-in-depth)
+- **isNeoproVideo()** dans `loop-manager` : une vidéo est Neopro si `owner !== 'club'` (owner absent/undefined = Neopro par défaut) — protège contre les vidéos sans owner explicite
 - **Auto-tagging upload** : `uploaded_for_site_id` est injecté côté serveur (jamais confié au client)
 - Smoke tests : 7 tests dans `__tests__/smoke/smoke-saas.test.ts` (section "Club Portal video ownership guards")
 
@@ -76,4 +78,6 @@ Routes `/api/remote/*` sont **PUBLIQUES** :
 - Oublier `uploaded_for_site_id` dans les endpoints upload club (`createVideo`, `createVideos`, `convertImageToVideo`, `renderTemplate`) — sans auto-tagging serveur, les vidéos club sont invisibles dans le filtre
 - Retirer le filtre vidéos cloud pour les utilisateurs club dans `getSiteLocalContent` (un user `club` ne doit voir QUE : ses uploads + vidéos NEOPRO + vidéos de la config du site via `extractConfigVideoFilenames()`)
 - Retirer `@Input() isClubUser` de `loop-manager.component.ts` ou ses guards (les vidéos NEOPRO doivent être verrouillées en lecture seule pour les users club)
+- Remplacer `isNeoproVideo(video)` par `video.owner === 'neopro'` dans `loop-manager` (les vidéos sans `owner` explicite doivent être traitées comme Neopro — `isNeoproVideo()` retourne `owner !== 'club'` — seules les vidéos explicitement `owner: 'club'` sont modifiables par les clubs)
+- Retirer le guard defense-in-depth `extractNeoproVideoPaths` de `config-profiles.controller.ts` (empêche les clubs de supprimer des vidéos Neopro via l'API même si le frontend est contourné)
 - Retirer le getter `isClub` de `site-content-tab.component.ts` ou ses guards (les users club ne doivent JAMAIS voir l'éditeur JSON brut, les catégories analytics, ni pouvoir switcher de profil)

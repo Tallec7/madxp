@@ -279,6 +279,9 @@ const TEMPLATE_BUILDERS: Record<string, (vars: Record<string, string>, duration:
   tpl_buteur: buildButeurElements,
 };
 
+/** Standalone templates that don't need a source video */
+const STANDALONE_TEMPLATES = new Set(['tpl_but_simple']);
+
 @Injectable({ providedIn: 'root' })
 export class TemplateRendererService {
 
@@ -291,6 +294,10 @@ export class TemplateRendererService {
   }
 
   hasTemplate(templateId: string): boolean {
-    return templateId in TEMPLATE_BUILDERS;
+    return templateId in TEMPLATE_BUILDERS || STANDALONE_TEMPLATES.has(templateId);
+  }
+
+  isStandalone(templateId: string): boolean {
+    return STANDALONE_TEMPLATES.has(templateId);
   }
 }

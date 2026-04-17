@@ -454,7 +454,7 @@ mkdir -p ${DEPLOY_DIR}/scripts
 for script_path in "${RUNTIME_SCRIPTS[@]}"; do
     if [ -f "${script_path}" ]; then
         cp "${script_path}" ${DEPLOY_DIR}/scripts/
-        chmod +x ${DEPLOY_DIR}/scripts/$(basename "${script_path}")
+        chmod 755 ${DEPLOY_DIR}/scripts/$(basename "${script_path}")
     else
         print_warning "Script manquant pour le déploiement: ${script_path}"
     fi

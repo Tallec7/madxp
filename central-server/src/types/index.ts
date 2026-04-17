@@ -367,6 +367,12 @@ export interface HeartbeatMessage {
     status: string;
     restarts: number;
   }> | null;
+  /** Legitimate services in failed/crash-loop state (neopro-app, admin, kiosk) */
+  failedServices?: Array<{
+    name: string;
+    status: string;
+    restarts: number;
+  }> | null;
 }
 
 // ============================================================================

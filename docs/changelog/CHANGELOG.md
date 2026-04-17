@@ -1,3 +1,607 @@
+## [3.178.1](https://github.com/Tallec7/neopro/compare/v3.178.0...v3.178.1) (2026-04-16)
+
+### Bug Fixes
+
+- **remotion:** éliminer le stutter du preview live (preload masques + debounce props) ([#452](https://github.com/Tallec7/neopro/issues/452)) ([41acc5f](https://github.com/Tallec7/neopro/commit/41acc5ffce488c4dfc2332086f15bbacfd397a5e))
+
+# [3.178.0](https://github.com/Tallec7/neopro/compare/v3.177.0...v3.178.0) (2026-04-16)
+
+### Features
+
+- **content:** restore image duration + blur options in shared upload zone ([#449](https://github.com/Tallec7/neopro/issues/449)) ([23aabb8](https://github.com/Tallec7/neopro/commit/23aabb8952aa480c1e6beb969f7ac3de1a3429c6))
+
+# [3.177.0](https://github.com/Tallec7/neopro/compare/v3.176.9...v3.177.0) (2026-04-16)
+
+### Features
+
+- **templates:** Remotion async render + template versions (ADR-054/055) ([#448](https://github.com/Tallec7/neopro/issues/448)) ([c4bb484](https://github.com/Tallec7/neopro/commit/c4bb4842cdac03a269392b607f35edb0f0e50899)), closes [#43](https://github.com/Tallec7/neopro/issues/43)
+
+## [3.176.9](https://github.com/Tallec7/neopro/compare/v3.176.8...v3.176.9) (2026-04-16)
+
+### Bug Fixes
+
+- **thumbnails:** generate miniatures for Remotion webm without duration metadata ([#446](https://github.com/Tallec7/neopro/issues/446)) ([287cf58](https://github.com/Tallec7/neopro/commit/287cf580bbf7c1b42e25dc71d9948327ea2a28de))
+
+## [3.176.8](https://github.com/Tallec7/neopro/compare/v3.176.7...v3.176.8) (2026-04-16)
+
+### Bug Fixes
+
+- **raspberry:** remove Pi OS security popup and halve kiosk boot time ([124d0cc](https://github.com/Tallec7/neopro/commit/124d0cc3beb4da57afa4d418358d5dea07cbe785))
+
+## [3.176.7](https://github.com/Tallec7/neopro/compare/v3.176.6...v3.176.7) (2026-04-16)
+
+### Performance Improvements
+
+- **templates:** pre-extract alpha masks as PNG sequences, eliminate delayRender pipeline ([1a8bd42](https://github.com/Tallec7/neopro/commit/1a8bd42e28205ab7b4ce63216460bdb5fb3fc220))
+
+## [3.176.6](https://github.com/Tallec7/neopro/compare/v3.176.5...v3.176.6) (2026-04-16)
+
+### Performance Improvements
+
+- **templates:** use system Chromium for Remotion renders, eliminate 86MB runtime download ([f654088](https://github.com/Tallec7/neopro/commit/f65408813733bf19fe3effa3cdc5780959f1933b))
+
+## [3.176.5](https://github.com/Tallec7/neopro/compare/v3.176.4...v3.176.5) (2026-04-16)
+
+### Bug Fixes
+
+- **saas:** stop service worker from killing page loads on network hiccups ([0548cf9](https://github.com/Tallec7/neopro/commit/0548cf9cf39ebd7dde47e34714df721e534f4bc0))
+
+## [3.176.4](https://github.com/Tallec7/neopro/compare/v3.176.3...v3.176.4) (2026-04-16)
+
+### Performance Improvements
+
+- **templates:** OffthreadVideo + prewarm bundle + timing logs ([14753b7](https://github.com/Tallec7/neopro/commit/14753b7ebf05ecc11e585be36068abcc3ec669aa))
+
+## [3.176.3](https://github.com/Tallec7/neopro/compare/v3.176.2...v3.176.3) (2026-04-15)
+
+### Performance Improvements
+
+- **templates:** add imageFormat jpeg + concurrency 2 to renderMedia API call ([f9ad9ec](https://github.com/Tallec7/neopro/commit/f9ad9ec66ff7702c3d38190b62f6bec538ce1c73))
+
+## [3.176.2](https://github.com/Tallec7/neopro/compare/v3.176.1...v3.176.2) (2026-04-15)
+
+### Performance Improvements
+
+- **templates:** optimize render pipeline — bundle cache, half-res frames, JPEG output ([b46b481](https://github.com/Tallec7/neopro/commit/b46b481899aae305b91863782b0bcdc79c25642b))
+
+## [3.176.1](https://github.com/Tallec7/neopro/compare/v3.176.0...v3.176.1) (2026-04-15)
+
+### Bug Fixes
+
+- **templates:** center score label in ButImgJoueur ([19b5fa4](https://github.com/Tallec7/neopro/commit/19b5fa433508c04efd3315b4764b6f517bf26abd))
+
+# [3.176.0](https://github.com/Tallec7/neopro/compare/v3.175.0...v3.176.0) (2026-04-15)
+
+### Features
+
+- **templates:** add playerImgBottom slider and increase playerImgSize max to 5000 ([0f3b5c0](https://github.com/Tallec7/neopro/commit/0f3b5c021c2c15aac6868c93bc2b01cd02b30c09))
+
+# [3.175.0](https://github.com/Tallec7/neopro/compare/v3.174.0...v3.175.0) (2026-04-15)
+
+### Features
+
+- **templates:** add playerImgBottom prop to ButImgJoueur ([dce2713](https://github.com/Tallec7/neopro/commit/dce2713a4def2e49ec870de731b36cfe8273d57f))
+
+# [3.174.0](https://github.com/Tallec7/neopro/compare/v3.173.2...v3.174.0) (2026-04-15)
+
+### Features
+
+- **templates:** add playerImgSize and playerImgLeft props to ButImgJoueur ([c2377c0](https://github.com/Tallec7/neopro/commit/c2377c0862ddd60dc827fa02d8dfc8c7f9e7219d))
+
+## [3.173.2](https://github.com/Tallec7/neopro/compare/v3.173.1...v3.173.2) (2026-04-15)
+
+### Bug Fixes
+
+- **templates:** override CSP for /remotion-preview to allow media-src from all kalonpartners.bzh subdomains ([c682fb3](https://github.com/Tallec7/neopro/commit/c682fb351b1574032fe282ae2ecb6a3e3e656627))
+
+## [3.173.1](https://github.com/Tallec7/neopro/compare/v3.173.0...v3.173.1) (2026-04-15)
+
+### Bug Fixes
+
+- **templates:** guard staticFile() against undefined fallback in resolveAsset ([1e939b1](https://github.com/Tallec7/neopro/commit/1e939b13ddf8e25c9e4a0c4419d6c6493c6b7a94))
+
+# [3.173.0](https://github.com/Tallec7/neopro/compare/v3.172.3...v3.173.0) (2026-04-15)
+
+### Features
+
+- **templates:** implement ButImgJoueur Remotion template with dual alpha masks ([26b9dac](https://github.com/Tallec7/neopro/commit/26b9dac0de3103976f01e29400dc32ade2dbac8b))
+
+## [3.172.3](https://github.com/Tallec7/neopro/compare/v3.172.2...v3.172.3) (2026-04-15)
+
+### Bug Fixes
+
+- **infra:** fix 429 on OTA uploads, truncate frontend log breadcrumbs, increase heap to 512MB ([f63f127](https://github.com/Tallec7/neopro/commit/f63f127882ed63a8fd0c002ad9756d00f1822a99))
+
+## [3.172.2](https://github.com/Tallec7/neopro/compare/v3.172.1...v3.172.2) (2026-04-15)
+
+### Bug Fixes
+
+- **motion:** forward Range headers in asset proxy for Remotion seek support ([fd6168f](https://github.com/Tallec7/neopro/commit/fd6168fc5210fd787cf10aa840e3d02a128e2343))
+
+## [3.172.1](https://github.com/Tallec7/neopro/compare/v3.172.0...v3.172.1) (2026-04-15)
+
+### Bug Fixes
+
+- **motion:** fix CORS/CSP blocking FTP assets in Remotion preview ([a943ffc](https://github.com/Tallec7/neopro/commit/a943ffc957d4e3c86ffc359b6210f5aaf8b052bc))
+
+# [3.172.0](https://github.com/Tallec7/neopro/compare/v3.171.0...v3.172.0) (2026-04-15)
+
+### Features
+
+- **motion:** allow swapping template background videos from dashboard ([30d9a6c](https://github.com/Tallec7/neopro/commit/30d9a6cf8a05e02795fa737241cdd485bb3f41dd))
+
+# [3.171.0](https://github.com/Tallec7/neopro/compare/v3.170.5...v3.171.0) (2026-04-15)
+
+### Features
+
+- **motion:** add logoSize number prop to ButSimple template schema ([8165980](https://github.com/Tallec7/neopro/commit/81659806373ce719cceeafadf3f4f658bf2c8cb2))
+
+## [3.170.5](https://github.com/Tallec7/neopro/compare/v3.170.4...v3.170.5) (2026-04-15)
+
+### Bug Fixes
+
+- **motion:** serve Remotion assets at root path to match staticFile() output ([8276b55](https://github.com/Tallec7/neopro/commit/8276b559e91e928b7e34b2ffafffec4564c6d0b1))
+
+## [3.170.4](https://github.com/Tallec7/neopro/compare/v3.170.3...v3.170.4) (2026-04-15)
+
+### Bug Fixes
+
+- **motion:** fix staticFile() public path resolution in preview player ([6b1eb58](https://github.com/Tallec7/neopro/commit/6b1eb58936802761a01fb4c06066e740bd992cdb))
+
+## [3.170.3](https://github.com/Tallec7/neopro/compare/v3.170.2...v3.170.3) (2026-04-15)
+
+### Bug Fixes
+
+- **motion:** fix preview runtime errors and CSP media blocking ([8750436](https://github.com/Tallec7/neopro/commit/8750436b62577112c7542732915809fc1c1e7887))
+
+## [3.170.2](https://github.com/Tallec7/neopro/compare/v3.170.1...v3.170.2) (2026-04-15)
+
+### Bug Fixes
+
+- **motion:** use absolute URL for preview iframe (dashboard ≠ API host) ([e1e4ca1](https://github.com/Tallec7/neopro/commit/e1e4ca11c03b993c359a5601a8a4e1e0e77a4231))
+
+## [3.170.1](https://github.com/Tallec7/neopro/compare/v3.170.0...v3.170.1) (2026-04-15)
+
+### Bug Fixes
+
+- **motion:** fix NG0904 and iframe sandbox warning in preview ([f3e157d](https://github.com/Tallec7/neopro/commit/f3e157d962aafb04d828a3345c3a7a38125b4585))
+
+# [3.170.0](https://github.com/Tallec7/neopro/compare/v3.169.2...v3.170.0) (2026-04-15)
+
+### Features
+
+- **motion:** live preview iframe for Remotion templates before render ([121bbb5](https://github.com/Tallec7/neopro/commit/121bbb5d3f95f5ff9a4302c99de8ac685ace94bf))
+
+## [3.169.2](https://github.com/Tallec7/neopro/compare/v3.169.1...v3.169.2) (2026-04-15)
+
+### Bug Fixes
+
+- **motion:** fix stuttering in Remotion-generated videos ([0e8cbff](https://github.com/Tallec7/neopro/commit/0e8cbff55a49d928fbe7a486f4715fd5750bf2d9))
+
+## [3.169.1](https://github.com/Tallec7/neopro/compare/v3.169.0...v3.169.1) (2026-04-15)
+
+### Bug Fixes
+
+- **motion:** sync alpha mask with Remotion frame via delayRender/continueRender ([46a6f98](https://github.com/Tallec7/neopro/commit/46a6f98de4204f4c2052f8284c8de9cc7532dfb7))
+
+# [3.169.0](https://github.com/Tallec7/neopro/compare/v3.168.4...v3.169.0) (2026-04-15)
+
+### Features
+
+- **motion:** add ButImgJoueur Remotion template with player photo ([ba5ec17](https://github.com/Tallec7/neopro/commit/ba5ec17bccf3e8f434238f58db98e52f9e90f927))
+
+## [3.168.4](https://github.com/Tallec7/neopro/compare/v3.168.3...v3.168.4) (2026-04-15)
+
+### Bug Fixes
+
+- **motion:** prevent text flicker in headless Remotion render ([2b11100](https://github.com/Tallec7/neopro/commit/2b11100ce4af5ab613086ef9200305a7ffe7ed78))
+
+## [3.168.3](https://github.com/Tallec7/neopro/compare/v3.168.2...v3.168.3) (2026-04-14)
+
+### Bug Fixes
+
+- **motion:** use swangle GL and 90s timeout to fix WebM delayRender in Railway ([629b40e](https://github.com/Tallec7/neopro/commit/629b40e7ccfeab9568ee194a62b5329b809adcab))
+
+## [3.168.2](https://github.com/Tallec7/neopro/compare/v3.168.1...v3.168.2) (2026-04-14)
+
+### Bug Fixes
+
+- **motion:** add publicDir to Remotion bundle() to serve static WebM assets ([ed6c94f](https://github.com/Tallec7/neopro/commit/ed6c94f0998544a21204fb2776ae2db25e2c47f8))
+
+## [3.168.1](https://github.com/Tallec7/neopro/compare/v3.168.0...v3.168.1) (2026-04-14)
+
+### Bug Fixes
+
+- **remotion:** remove ButImgJoueur import from Root.tsx ([5b9bd21](https://github.com/Tallec7/neopro/commit/5b9bd217bcd82e0c5df5212b4b78d5ad85d362c8))
+
+# [3.168.0](https://github.com/Tallec7/neopro/compare/v3.167.3...v3.168.0) (2026-04-14)
+
+### Features
+
+- **templates:** switch Remotion render to Node.js API to fix Railway OOM ([3edddf5](https://github.com/Tallec7/neopro/commit/3edddf541baff9c48c621ec6167098666635f6e7))
+
+## [3.167.3](https://github.com/Tallec7/neopro/compare/v3.167.2...v3.167.3) (2026-04-14)
+
+### Bug Fixes
+
+- **templates:** add --no-sandbox Chromium flags for Railway Docker render ([ca38a70](https://github.com/Tallec7/neopro/commit/ca38a70992542983a1c5f902daededd304187ec9))
+
+## [3.167.2](https://github.com/Tallec7/neopro/compare/v3.167.1...v3.167.2) (2026-04-14)
+
+### Bug Fixes
+
+- **templates:** remove ButImgJoueur from Root.tsx (not yet committed) ([c557ff7](https://github.com/Tallec7/neopro/commit/c557ff7e0fc7cec727b93a263fe04b0a7499b1aa))
+
+## [3.167.1](https://github.com/Tallec7/neopro/compare/v3.167.0...v3.167.1) (2026-04-14)
+
+### Bug Fixes
+
+- **templates:** remove double /api prefix in remotion API calls ([fe7ceab](https://github.com/Tallec7/neopro/commit/fe7ceabcda47f6a3f491479511f073a39aa54266))
+
+# [3.167.0](https://github.com/Tallec7/neopro/compare/v3.166.2...v3.167.0) (2026-04-14)
+
+### Features
+
+- **templates:** update ButSimple — logoSize prop + dynamic src resolution ([d98e589](https://github.com/Tallec7/neopro/commit/d98e589a6fbda704e7672496fa9200bb69878b65))
+
+## [3.166.2](https://github.com/Tallec7/neopro/compare/v3.166.1...v3.166.2) (2026-04-14)
+
+### Bug Fixes
+
+- **templates:** remove unused requireSiteTier import (lint error) ([1d4aa0a](https://github.com/Tallec7/neopro/commit/1d4aa0a10bb8bdd5363c29eff9f1203ce7d28698))
+
+## [3.166.1](https://github.com/Tallec7/neopro/compare/v3.166.0...v3.166.1) (2026-04-14)
+
+### Bug Fixes
+
+- **templates:** fix CI errors in Remotion feature ([d5ae4cf](https://github.com/Tallec7/neopro/commit/d5ae4cf3892705edfe04cea55fad052c938b6dfb))
+
+# [3.166.0](https://github.com/Tallec7/neopro/compare/v3.165.3...v3.166.0) (2026-04-14)
+
+### Features
+
+- **templates:** add Remotion video templates engine (ADR-052) ([2e803ea](https://github.com/Tallec7/neopro/commit/2e803eaccc90b4077b23eeaf39c7085d5421121a))
+
+## [3.165.3](https://github.com/Tallec7/neopro/compare/v3.165.2...v3.165.3) (2026-04-13)
+
+### Bug Fixes
+
+- **ota:** chown webapp after cp during OTA to prevent EACCES ([845a157](https://github.com/Tallec7/neopro/commit/845a157ae2c19662c91ef8be47a8c475761906e8))
+
+## [3.165.2](https://github.com/Tallec7/neopro/compare/v3.165.1...v3.165.2) (2026-04-13)
+
+### Bug Fixes
+
+- **templates:** hide default logo in iframe, show only when uploaded ([dd4e355](https://github.com/Tallec7/neopro/commit/dd4e355b952474992011971ec0bdaa3ded913e11))
+
+## [3.165.1](https://github.com/Tallec7/neopro/compare/v3.165.0...v3.165.1) (2026-04-13)
+
+### Bug Fixes
+
+- **deploy:** show error message in deployment history tab ([d2fc90d](https://github.com/Tallec7/neopro/commit/d2fc90d2e6c49ccd06509b6050aac110c085f336))
+
+# [3.165.0](https://github.com/Tallec7/neopro/compare/v3.164.3...v3.165.0) (2026-04-13)
+
+### Features
+
+- **templates:** live sync logo and text variables to iframe preview ([13471af](https://github.com/Tallec7/neopro/commit/13471afa50288205f5bf5d32fb4e621545402378))
+
+## [3.164.3](https://github.com/Tallec7/neopro/compare/v3.164.2...v3.164.3) (2026-04-13)
+
+### Bug Fixes
+
+- **templates:** remove text fade-in animation on packshot ([fc1d94b](https://github.com/Tallec7/neopro/commit/fc1d94bdd802e4a52f0e10323f900b28aaebaad8))
+
+## [3.164.2](https://github.com/Tallec7/neopro/compare/v3.164.1...v3.164.2) (2026-04-13)
+
+### Bug Fixes
+
+- **legal:** replace MIT license with PROPRIETARY for société apport ([8444e69](https://github.com/Tallec7/neopro/commit/8444e690dc8ddf2895a6c7cd207168f46e36174e))
+- **templates:** add Railway to dashboard media-src CSP for WebM loading ([a2bbfe9](https://github.com/Tallec7/neopro/commit/a2bbfe9de9132b02834879b74fd842a6fc6daff2))
+
+## [3.164.1](https://github.com/Tallec7/neopro/compare/v3.164.0...v3.164.1) (2026-04-13)
+
+### Bug Fixes
+
+- **templates:** use Railway API origin for loading WebM assets ([804f51a](https://github.com/Tallec7/neopro/commit/804f51a0f82082a55b585b5a8b3887fb6516c648))
+
+# [3.164.0](https://github.com/Tallec7/neopro/compare/v3.163.4...v3.164.0) (2026-04-13)
+
+### Features
+
+- **templates:** render BUT Simple directly in browser like other templates ([26a0ab4](https://github.com/Tallec7/neopro/commit/26a0ab46c1dc67e1724d5be6769a2de7aef78e31))
+
+## [3.163.4](https://github.com/Tallec7/neopro/compare/v3.163.3...v3.163.4) (2026-04-13)
+
+### Bug Fixes
+
+- **templates:** use popup window instead of iframe for video recording ([3cb5887](https://github.com/Tallec7/neopro/commit/3cb58873ffb475c24bdb1adca8c6ca52bc47e5bf))
+
+## [3.163.3](https://github.com/Tallec7/neopro/compare/v3.163.2...v3.163.3) (2026-04-13)
+
+### Bug Fixes
+
+- **templates:** robust canvas recording with error handling and codec fallback ([f2c3875](https://github.com/Tallec7/neopro/commit/f2c38758b84e0f12558247fa40558b6b7c7d380c))
+
+## [3.163.2](https://github.com/Tallec7/neopro/compare/v3.163.1...v3.163.2) (2026-04-13)
+
+### Bug Fixes
+
+- **templates:** fix record action outside postMessage listener scope ([713055e](https://github.com/Tallec7/neopro/commit/713055e0094cf4f2234008d551217e725a55c2ad))
+
+## [3.163.1](https://github.com/Tallec7/neopro/compare/v3.163.0...v3.163.1) (2026-04-13)
+
+### Bug Fixes
+
+- **templates:** use inline [@font-face](https://github.com/font-face) instead of Google Fonts import ([c768de8](https://github.com/Tallec7/neopro/commit/c768de8442d9e9dfb72a0afd0531211624a17eca))
+
+# [3.163.0](https://github.com/Tallec7/neopro/compare/v3.162.10...v3.163.0) (2026-04-13)
+
+### Features
+
+- **templates:** implement video export for BUT Simple standalone template ([cd06baa](https://github.com/Tallec7/neopro/commit/cd06baa0f9095ad5537e3cb0305a8a926e9b04dc))
+
+## [3.162.10](https://github.com/Tallec7/neopro/compare/v3.162.9...v3.162.10) (2026-04-13)
+
+### Bug Fixes
+
+- **raspberry:** add double-buffering and debounce to manual video transitions ([0063656](https://github.com/Tallec7/neopro/commit/00636567898397836df5bbc9830fac758f1cbb92))
+
+## [3.162.9](https://github.com/Tallec7/neopro/compare/v3.162.8...v3.162.9) (2026-04-13)
+
+### Bug Fixes
+
+- **templates:** fix Google Fonts CSP and standalone render button ([5d95a93](https://github.com/Tallec7/neopro/commit/5d95a931ccea8034a6a5442bc9929b410bc7362d))
+
+## [3.162.8](https://github.com/Tallec7/neopro/compare/v3.162.7...v3.162.8) (2026-04-13)
+
+### Bug Fixes
+
+- **templates:** allow Google Fonts in template CSP and fix render button label ([942d7b7](https://github.com/Tallec7/neopro/commit/942d7b72f412d36de95c2bb0fa3bd7402904e8b9))
+
+## [3.162.7](https://github.com/Tallec7/neopro/compare/v3.162.6...v3.162.7) (2026-04-13)
+
+### Bug Fixes
+
+- **templates:** correct template-assets URL path (remove /content prefix) ([18b76cb](https://github.com/Tallec7/neopro/commit/18b76cb6d7edc44bfcbddfa89e0b7529632539cb))
+
+## [3.162.6](https://github.com/Tallec7/neopro/compare/v3.162.5...v3.162.6) (2026-04-13)
+
+### Bug Fixes
+
+- **tv:** eliminate black flash during video transitions on Pi 5 software decode ([23d4f30](https://github.com/Tallec7/neopro/commit/23d4f307ddb95eca9f096c2b6e3a9d68a7eab4d4))
+
+## [3.162.5](https://github.com/Tallec7/neopro/compare/v3.162.4...v3.162.5) (2026-04-13)
+
+### Bug Fixes
+
+- **templates:** copy templates to dist during build ([7875267](https://github.com/Tallec7/neopro/commit/787526764f8198a1d50e44eb94739fe02e94d9b7))
+
+## [3.162.4](https://github.com/Tallec7/neopro/compare/v3.162.3...v3.162.4) (2026-04-13)
+
+### Bug Fixes
+
+- **tests:** update smoke test for CSP frame-ancestors instead of X-Frame-Options ([be83843](https://github.com/Tallec7/neopro/commit/be83843351de00c03376c130d1e975474094dd18))
+
+## [3.162.3](https://github.com/Tallec7/neopro/compare/v3.162.2...v3.162.3) (2026-04-13)
+
+### Bug Fixes
+
+- **raspberry:** fix black flash during video transitions on Pi 5 software decode — double-buffering for manual-to-manual transitions, conditional black overlay as fallback only, freeze-frame in early switch path, 500ms debounce against decoder spam
+- **templates:** fix CSP frame-ancestors and copy templates to Docker image ([b9ed634](https://github.com/Tallec7/neopro/commit/b9ed6340a979f4d9146c9c45150fb6a4850967cc))
+
+## [3.162.2](https://github.com/Tallec7/neopro/compare/v3.162.1...v3.162.2) (2026-04-13)
+
+### Bug Fixes
+
+- **dashboard:** extend club video permissions to library and loop weights ([#445](https://github.com/Tallec7/neopro/issues/445)) ([2a9b128](https://github.com/Tallec7/neopro/commit/2a9b1281b458e9707bf1f43e48070e95fc7e2554))
+- **templates:** allow iframe embedding for template preview ([0a15956](https://github.com/Tallec7/neopro/commit/0a159566bd583d311a6cd8f25c825202085e7a9b))
+
+## [3.162.1](https://github.com/Tallec7/neopro/compare/v3.162.0...v3.162.1) (2026-04-13)
+
+### Bug Fixes
+
+- **templates:** use iframe-based preview for BUT Simple standalone template ([ab3a9ae](https://github.com/Tallec7/neopro/commit/ab3a9ae7e7aad11d13093873bb04f99761a79681))
+
+# [3.162.0](https://github.com/Tallec7/neopro/compare/v3.161.3...v3.162.0) (2026-04-13)
+
+### Features
+
+- **templates:** add BUT Simple standalone video template ([0437ce1](https://github.com/Tallec7/neopro/commit/0437ce1cdd9162e7189bd69cfa2be4df67ab94b3))
+
+## [3.161.3](https://github.com/Tallec7/neopro/compare/v3.161.2...v3.161.3) (2026-04-13)
+
+### Bug Fixes
+
+- **dashboard:** prevent club users from modifying neopro videos in loop manager ([8a22e77](https://github.com/Tallec7/neopro/commit/8a22e77ae9ac24366a0f254353b878e8ccde071d))
+
+## [3.161.2](https://github.com/Tallec7/neopro/compare/v3.161.1...v3.161.2) (2026-04-13)
+
+### Bug Fixes
+
+- **dashboard:** use fixed positioning for add-to dropdown in video library ([7660a05](https://github.com/Tallec7/neopro/commit/7660a0527934d4464591c0dc114a43db57a7bbcf))
+
+## [3.161.1](https://github.com/Tallec7/neopro/compare/v3.161.0...v3.161.1) (2026-04-13)
+
+### Bug Fixes
+
+- **dashboard:** resolve cloud URL to local Pi path when adding video to config ([e67caa9](https://github.com/Tallec7/neopro/commit/e67caa9d781a268dc3dcb833908f1c6341339848))
+
+# [3.161.0](https://github.com/Tallec7/neopro/compare/v3.160.1...v3.161.0) (2026-04-13)
+
+### Features
+
+- **dashboard:** add named config labels to video library filter and detail panel ([814d22a](https://github.com/Tallec7/neopro/commit/814d22aaee2ae1dc44dfe17b4c70e48084f42458))
+
+## [3.160.1](https://github.com/Tallec7/neopro/compare/v3.160.0...v3.160.1) (2026-04-13)
+
+### Bug Fixes
+
+- **tv:** use dynamic base URL for site-info API on Raspberry Pi ([b160557](https://github.com/Tallec7/neopro/commit/b1605577cb2036796fb13e4022304c70962a0c05))
+
+# [3.160.0](https://github.com/Tallec7/neopro/compare/v3.159.4...v3.160.0) (2026-04-12)
+
+### Features
+
+- **monitoring:** add continuous Node.js dependency health checks across Pi fleet ([44e64ec](https://github.com/Tallec7/neopro/commit/44e64ec919fac88887fe083cd739df909e620637)), closes [#10](https://github.com/Tallec7/neopro/issues/10)
+
+## [3.159.4](https://github.com/Tallec7/neopro/compare/v3.159.3...v3.159.4) (2026-04-12)
+
+### Bug Fixes
+
+- **resilience:** add axios to OTA integrity check and monitor service crash-loops ([2f2aa99](https://github.com/Tallec7/neopro/commit/2f2aa99718d993220f4d3db9c19a89be19f6d13e))
+
+## [3.159.3](https://github.com/Tallec7/neopro/compare/v3.159.2...v3.159.3) (2026-04-12)
+
+### Bug Fixes
+
+- **sponsors:** check loop presence against selected profile instead of default ([33d5911](https://github.com/Tallec7/neopro/commit/33d591119cfe160275c399420c566478c686dd8b))
+
+## [3.159.2](https://github.com/Tallec7/neopro/compare/v3.159.1...v3.159.2) (2026-04-12)
+
+### Bug Fixes
+
+- **sponsors:** add missing getProfiles mock to site-sponsors-tab spec ([75c292a](https://github.com/Tallec7/neopro/commit/75c292a5d74919114636da562a4ce6ea8d5d3f34))
+
+## [3.159.1](https://github.com/Tallec7/neopro/compare/v3.159.0...v3.159.1) (2026-04-12)
+
+### Bug Fixes
+
+- **ci:** add post-deploy HTTP verification for dashboard and SaaS ([4ce6fd4](https://github.com/Tallec7/neopro/commit/4ce6fd4b8889aab3d6cefbb13147c10d97edaf41)), closes [#42](https://github.com/Tallec7/neopro/issues/42)
+
+# [3.159.0](https://github.com/Tallec7/neopro/compare/v3.158.2...v3.159.0) (2026-04-12)
+
+### Features
+
+- **sponsors:** add profile filter tabs to site sponsors tab ([bcc45f9](https://github.com/Tallec7/neopro/commit/bcc45f9be0843d302e9363ceab5adaa976e271c3))
+
+## [3.158.2](https://github.com/Tallec7/neopro/compare/v3.158.1...v3.158.2) (2026-04-12)
+
+### Bug Fixes
+
+- **ci:** re-trigger dashboard deploy to Hostinger ([0dd43be](https://github.com/Tallec7/neopro/commit/0dd43beb82e60e3c51f2d8600e07ea9eafa0b7f2))
+
+## [3.158.1](https://github.com/Tallec7/neopro/compare/v3.158.0...v3.158.1) (2026-04-12)
+
+### Bug Fixes
+
+- **saas:** include category videos in club filter + normalize space/underscore ([3366b1e](https://github.com/Tallec7/neopro/commit/3366b1e576832ea38256c41664aec1d245bacb44))
+
+# [3.158.0](https://github.com/Tallec7/neopro/compare/v3.157.5...v3.158.0) (2026-04-12)
+
+### Features
+
+- **safe:** add product overview page with features list and roadmap ([c6febe2](https://github.com/Tallec7/neopro/commit/c6febe2c67bab008c958719a12bee9f8f7531134))
+
+## [3.157.5](https://github.com/Tallec7/neopro/compare/v3.157.4...v3.157.5) (2026-04-12)
+
+### Bug Fixes
+
+- **saas:** normalize space↔underscore in video path matching for orphan detection ([0edee08](https://github.com/Tallec7/neopro/commit/0edee081530906abf97c6d5052c8ea3e0bbf6be6))
+
+## [3.157.4](https://github.com/Tallec7/neopro/compare/v3.157.3...v3.157.4) (2026-04-12)
+
+### Bug Fixes
+
+- **saas:** videos in categories now always appear in library with "Pertinentes" filter ([0192245](https://github.com/Tallec7/neopro/commit/0192245af10366fef4ca62088a047f90e236fa3d))
+
+## [3.157.3](https://github.com/Tallec7/neopro/compare/v3.157.2...v3.157.3) (2026-04-12)
+
+### Bug Fixes
+
+- **profiles:** copy sponsors and remap IDs when copying profiles between sites ([9ed1f22](https://github.com/Tallec7/neopro/commit/9ed1f221a54a965727606842bb4a96e7683193ac))
+
+## [3.157.2](https://github.com/Tallec7/neopro/compare/v3.157.1...v3.157.2) (2026-04-12)
+
+### Bug Fixes
+
+- **profiles:** resolve sponsor IDs when copying profiles between sites ([f52fea5](https://github.com/Tallec7/neopro/commit/f52fea562994eaa3461618629de0b89037ca3785))
+
+## [3.157.1](https://github.com/Tallec7/neopro/compare/v3.157.0...v3.157.1) (2026-04-12)
+
+### Bug Fixes
+
+- **profiles:** auto-sync profiles on Pi reconnect + SaaS remote support ([2264bfe](https://github.com/Tallec7/neopro/commit/2264bfeac91e5d69ff94a22c52af6a2f572bcc8c))
+- **saas:** fix video delete modal for SaaS sites + add unlink option ([ed3f95a](https://github.com/Tallec7/neopro/commit/ed3f95aa65b0ee3ec2de62d5eadb4cd59aa19899))
+
+# [3.157.0](https://github.com/Tallec7/neopro/compare/v3.156.0...v3.157.0) (2026-04-12)
+
+### Features
+
+- **variants:** allow selecting existing video as variant (not only upload) ([d47723e](https://github.com/Tallec7/neopro/commit/d47723eb022b6ec6aee87867923b14bc9be06817))
+
+# [3.156.0](https://github.com/Tallec7/neopro/compare/v3.155.1...v3.156.0) (2026-04-12)
+
+### Features
+
+- **server:** N-display backend API — Phase 5H PROP-002 ([8f6a12c](https://github.com/Tallec7/neopro/commit/8f6a12cc56a6e8cd1db2bd8ea77c87331fcb6d11))
+
+## [3.155.1](https://github.com/Tallec7/neopro/compare/v3.155.0...v3.155.1) (2026-04-12)
+
+### Bug Fixes
+
+- **tests:** fix smoke-display regex matching for slug validation ([e4faff5](https://github.com/Tallec7/neopro/commit/e4faff5c9a3529fcfd5e9d91d4e1c2a6049ad006))
+
+# [3.155.0](https://github.com/Tallec7/neopro/compare/v3.154.3...v3.155.0) (2026-04-12)
+
+### Features
+
+- **dashboard:** N-display variant management — Phase 5H PROP-002 ([2d804e2](https://github.com/Tallec7/neopro/commit/2d804e21712f3a6de2681cd1a4a8214ddebbee9e))
+
+## [3.154.3](https://github.com/Tallec7/neopro/compare/v3.154.2...v3.154.3) (2026-04-12)
+
+### Bug Fixes
+
+- **dashboard:** allow opening video-search-select by clicking anywhere in control zone ([cf4dae2](https://github.com/Tallec7/neopro/commit/cf4dae218dda421c1e3b4133e6f0c133559ca33e))
+- **profiles:** add missing fields to validation schemas for config profiles ([e729d8c](https://github.com/Tallec7/neopro/commit/e729d8c3bc7c622bb67467db0df59e15721da596))
+
+## [3.154.2](https://github.com/Tallec7/neopro/compare/v3.154.1...v3.154.2) (2026-04-12)
+
+### Bug Fixes
+
+- **dashboard:** map cloud.thumbnail_url to VideoItem (was hardcoded null) ([7879380](https://github.com/Tallec7/neopro/commit/78793805b3066a58ac2a5673f1da747316337a67))
+- resolve merge conflict in smoke test ([e42f8df](https://github.com/Tallec7/neopro/commit/e42f8df3bbc22e038823e7259c4d6e6b7dde70e7))
+
+## [3.154.1](https://github.com/Tallec7/neopro/compare/v3.154.0...v3.154.1) (2026-04-12)
+
+### Bug Fixes
+
+- **dashboard:** replace Boolean in template with inline expression ([d215b04](https://github.com/Tallec7/neopro/commit/d215b043b88daf3220e930bff550cae8a9ef0da5))
+
+# [3.154.0](https://github.com/Tallec7/neopro/compare/v3.153.8...v3.154.0) (2026-04-12)
+
+### Features
+
+- **profiles:** redesign copy-config to add-mode with per-profile selection ([9c1266c](https://github.com/Tallec7/neopro/commit/9c1266c07112f9b26c4f70c226945a68ff315295))
+
+## [3.153.8](https://github.com/Tallec7/neopro/compare/v3.153.7...v3.153.8) (2026-04-12)
+
+### Bug Fixes
+
+- **ci:** prevent release pipeline stuck loop and add monitoring ([fffec5f](https://github.com/Tallec7/neopro/commit/fffec5fb61aff617398e0587d3c7530519de8f28))
+- **ci:** retrigger release after tag realignment ([f635069](https://github.com/Tallec7/neopro/commit/f63506924ece6e46c220b8182f4e481e65955a0e))
+
+## [3.153.7](https://github.com/Tallec7/neopro/compare/v3.153.6...v3.153.7) (2026-04-12)
+
+### Bug Fixes
+
+- **ci:** detect release via semantic-release output instead of tag timing ([0b7cdd8](https://github.com/Tallec7/neopro/commit/0b7cdd8196d5459bd4f5a7345ffd80bbacf78441))
+- **ci:** stop release workflow infinite loop ([fc86546](https://github.com/Tallec7/neopro/commit/fc8654670e33b730c61a5acc9b274ddc6f3f659f))
+- **ci:** trigger release after loop fix ([797a7a9](https://github.com/Tallec7/neopro/commit/797a7a9a0cc38c705ea28a824051fe2c71aa1179))
+- **dashboard:** add thumbnail_url to CloudVideo model + pagination with page size selector ([0d7f0fa](https://github.com/Tallec7/neopro/commit/0d7f0fa6e5011007d56b5b7e5ef5d6e1565f9966))
+- **dashboard:** eager load variant panel to eliminate loading spinner on open ([#443](https://github.com/Tallec7/neopro/issues/443)) ([ef81604](https://github.com/Tallec7/neopro/commit/ef816043f6faf46f72db543e827bf51df1abca8a))
+- **dashboard:** i18n error fallback in updates-management + relax smoke test pattern ([22ac796](https://github.com/Tallec7/neopro/commit/22ac796fece72631ff4e01a0d964fd6263ee2cb4))
+
+## [3.153.7](https://github.com/Tallec7/neopro/compare/v3.153.6...v3.153.7) (2026-04-12)
+
+### Bug Fixes
+
+- **ci:** stop release workflow infinite loop ([fc86546](https://github.com/Tallec7/neopro/commit/fc8654670e33b730c61a5acc9b274ddc6f3f659f))
+- **ci:** trigger release after loop fix ([797a7a9](https://github.com/Tallec7/neopro/commit/797a7a9a0cc38c705ea28a824051fe2c71aa1179))
+- **dashboard:** add thumbnail_url to CloudVideo model + pagination with page size selector ([0d7f0fa](https://github.com/Tallec7/neopro/commit/0d7f0fa6e5011007d56b5b7e5ef5d6e1565f9966))
+- **dashboard:** eager load variant panel to eliminate loading spinner on open ([#443](https://github.com/Tallec7/neopro/issues/443)) ([ef81604](https://github.com/Tallec7/neopro/commit/ef816043f6faf46f72db543e827bf51df1abca8a))
+- **dashboard:** i18n error fallback in updates-management + relax smoke test pattern ([22ac796](https://github.com/Tallec7/neopro/commit/22ac796fece72631ff4e01a0d964fd6263ee2cb4))
+
 ## [3.153.7](https://github.com/Tallec7/neopro/compare/v3.153.6...v3.153.7) (2026-04-12)
 
 ### Bug Fixes

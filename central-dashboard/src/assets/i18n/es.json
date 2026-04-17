@@ -897,6 +897,13 @@
       "in-progress": "En curso",
       "removed": "Eliminado",
       "todo": "Por hacer"
+    },
+    "product": {
+      "phase": {
+        "done": "Entregado",
+        "in-progress": "En curso",
+        "planned": "Previsto"
+      }
     }
   },
   "siteSettings": {
@@ -1041,14 +1048,20 @@
     "recordFromCamera": "[TRANSLATE] Record from camera"
   },
   "copyConfig": {
-    "title": "Copiar configuración",
-    "button": "Copiar config",
+    "title": "Copiar perfiles",
+    "button": "Copiar perfiles",
     "searchPlaceholder": "Buscar por nombre de club...",
+    "selectProfiles": "Selecciona los perfiles a copiar desde",
+    "selectAll": "Seleccionar todo",
+    "noProfiles": "No hay perfiles disponibles en este sitio.",
+    "default": "Por defecto",
+    "copyCount": "{{count}} perfil(es) seleccionado(s)",
     "info": "Copiar perfiles de configuración de",
     "toAnotherSite": "a otro sitio.",
     "targetSite": "Sitio destino",
-    "warning": "Atención: esta acción reemplazará todos los perfiles de configuración existentes en el sitio destino.",
+    "addInfo": "Los perfiles se agregarán al sitio destino sin modificar los perfiles existentes.",
     "confirm": "Copiar configuración",
+    "confirmCount": "Copiar {{count}} perfil(es)",
     "copying": "Copiando...",
     "noResults": "Ningún sitio encontrado",
     "duplicate": "Duplicar sitio",

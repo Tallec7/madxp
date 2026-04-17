@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, inject } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject, ViewChild, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
@@ -7,6 +7,8 @@ import { SitesService } from '../../core/services/sites.service';
 import { NotificationService } from '../../core/services/notification.service';
 import { ApiService, UploadProgress } from '../../core/services/api.service';
 import { BrowserRendererService, RenderProgress } from './browser-renderer.service';
+import { TemplateRendererService } from './template-renderer.service';
+import { environment } from '../../../environments/environment';
 import { Site } from '../../core/models';
 import { Subscription } from 'rxjs';
 
@@ -27,7 +29,9 @@ interface OverlayTemplate {
   id: string;
   name: string;
   description: string;
+  type?: 'standalone';
   variables: TemplateVariable[];
+  assets?: Record<string, string>;
 }
 
 // ── Component ──────────────────────────────────────────────────────────────
@@ -62,8 +66,8 @@ interface OverlayTemplate {
         <!-- Left column: upload + template + variables -->
         <div class="left-column">
 
-          <!-- Step 1: Upload video -->
-          <div class="step-card">
+          <!-- Step 1: Upload video (hidden for standalone templates) -->
+          <div class="step-card" *ngIf="!isStandaloneTemplate">
             <h3><span class="step-num">1</span> Video source</h3>
             <div class="upload-zone"
                  [class.has-file]="!!sourceFile"
@@ -116,6 +120,7 @@ interface OverlayTemplate {
                      [id]="v.key"
                      type="text"
                      [(ngModel)]="variableValues[v.key]"
+                     (ngModelChange)="onVariableChange()"
                      [placeholder]="v.placeholder || ''"
                      class="form-input" />
               <input *ngIf="v.type === 'color'"
@@ -149,7 +154,26 @@ interface OverlayTemplate {
 
         <!-- Right column: preview + render -->
         <div class="right-column">
-          <div class="render-preview" *ngIf="sourceFile && selectedTemplate; else emptyPreview">
+          <!-- Standalone live preview (iframe-based, uses tested HTML template) -->
+          <div class="standalone-preview" *ngIf="isStandaloneTemplate && selectedTemplate">
+            <div class="preview-header">
+              <span class="preview-label">Apercu live</span>
+              <span class="preview-template">{{ selectedTemplate.name }}</span>
+            </div>
+            <div class="standalone-iframe-wrap">
+              <iframe #standaloneIframe
+                      [src]="standaloneIframeSrc"
+                      class="standalone-iframe"
+                      frameborder="0"
+                      allow="autoplay"></iframe>
+            </div>
+            <div class="standalone-controls">
+              <button class="btn btn-primary" (click)="playStandalone()">Jouer</button>
+              <button class="btn btn-secondary" (click)="resetStandalone()">Reset</button>
+            </div>
+          </div>
+
+          <div class="render-preview" *ngIf="!isStandaloneTemplate && sourceFile && selectedTemplate; else emptyPreview">
             <div class="preview-header">
               <span class="preview-label">Apercu</span>
               <span class="preview-template">{{ selectedTemplate.name }}</span>
@@ -164,14 +188,14 @@ interface OverlayTemplate {
             </div>
           </div>
           <ng-template #emptyPreview>
-            <div class="preview-placeholder">
+            <div class="preview-placeholder" *ngIf="!isStandaloneTemplate">
               <div class="placeholder-icon">🎬</div>
               <p>Uploadez une video et choisissez un template</p>
             </div>
           </ng-template>
 
           <!-- Render button -->
-          <div class="render-section" *ngIf="sourceFile && selectedTemplate">
+          <div class="render-section" *ngIf="(sourceFile || isStandaloneTemplate) && selectedTemplate">
             <div class="site-info-box" *ngIf="selectedSite">
               <span class="status-dot" [class.online]="selectedSite.status === 'online'"
                     [class.offline]="selectedSite.status !== 'online'"></span>
@@ -391,6 +415,24 @@ interface OverlayTemplate {
     .btn-secondary:hover { background: #e5e7eb; }
     .btn-sm { padding: 6px 14px; font-size: 12px; }
 
+    /* Standalone preview (iframe-based) */
+    .standalone-preview {
+      background: white; border: 1px solid #eee; border-radius: 10px;
+      padding: 20px; margin-bottom: 16px;
+    }
+    .standalone-iframe-wrap {
+      margin-top: 12px; position: relative;
+      width: 100%; aspect-ratio: 16/9;
+      border-radius: 8px; overflow: hidden; background: #000;
+    }
+    .standalone-iframe {
+      width: 100%; height: 100%; border: none;
+    }
+    .standalone-controls {
+      display: flex; gap: 8px; margin-top: 10px;
+    }
+    .standalone-controls .btn { flex: 1; padding: 10px; font-size: 13px; }
+
     @media (max-width: 900px) {
       .content-layout { flex-direction: column; }
       .left-column { flex: 1; }
@@ -404,7 +446,11 @@ export class LottieTemplatesComponent implements OnInit, OnDestroy {
   private readonly api = inject(ApiService);
   private readonly route = inject(ActivatedRoute);
   private readonly browserRenderer = inject(BrowserRendererService);
+  private readonly templateRendererSvc = inject(TemplateRendererService);
   private readonly sanitizer = inject(DomSanitizer);
+
+  @ViewChild('standaloneIframe') standaloneIframeRef?: ElementRef<HTMLIFrameElement>;
+  standaloneIframeSrc: SafeUrl | null = null;
 
   sites: Site[] = [];
   selectedSiteId = '';
@@ -432,9 +478,20 @@ export class LottieTemplatesComponent implements OnInit, OnDestroy {
   renderedBlobUrl: SafeUrl | null = null;
   private rawBlobUrl: string | null = null;
 
+  // Standalone template state
+  standaloneTextVisible = false;
+  private standaloneTimers: ReturnType<typeof setTimeout>[] = [];
+
   private subscriptions: Subscription[] = [];
 
+  get isStandaloneTemplate(): boolean {
+    return !!this.selectedTemplate && this.templateRendererSvc.isStandalone(this.selectedTemplate.id);
+  }
+
   get canRender(): boolean {
+    if (this.isStandaloneTemplate) {
+      return !!this.selectedTemplate && !this.rendering && this.isFormValid();
+    }
     return !!this.sourceFile && !!this.selectedTemplate && !this.rendering && this.isFormValid();
   }
 
@@ -482,7 +539,7 @@ export class LottieTemplatesComponent implements OnInit, OnDestroy {
     this.subscriptions.push(sub);
   }
 
-  selectTemplate(tpl: OverlayTemplate): void {
+  private _selectTemplateBase(tpl: OverlayTemplate): void {
     this.selectedTemplate = tpl;
     this.rendered = false;
     this.renderedVideo = null;
@@ -571,6 +628,15 @@ export class LottieTemplatesComponent implements OnInit, OnDestroy {
       URL.revokeObjectURL(this.imagePreviews[key]);
     }
     this.imagePreviews[key] = URL.createObjectURL(file);
+
+    // Send logo to iframe preview for standalone templates
+    if (key === 'logo' && this.isStandaloneTemplate) {
+      const reader = new FileReader();
+      reader.onload = () => {
+        this.postToIframe({ action: 'update', variables: this.variableValues, logoSrc: reader.result });
+      };
+      reader.readAsDataURL(file);
+    }
   }
 
   removeImage(key: string): void {
@@ -622,7 +688,15 @@ export class LottieTemplatesComponent implements OnInit, OnDestroy {
   // ── Render (browser-side) ───────────────────────────────────────
 
   async render(): Promise<void> {
-    if (!this.canRender || !this.sourceFile || !this.selectedTemplate) return;
+    if (!this.canRender || !this.selectedTemplate) return;
+
+    // Standalone templates: record via iframe canvas capture
+    if (this.isStandaloneTemplate) {
+      this.renderStandalone();
+      return;
+    }
+
+    if (!this.sourceFile) return;
 
     this.rendering = true;
     this.rendered = false;
@@ -701,6 +775,118 @@ export class LottieTemplatesComponent implements OnInit, OnDestroy {
     });
   }
 
+  // ── Standalone preview ──────────────────────────────────────────
+
+  selectTemplate(tpl: OverlayTemplate): void {
+    this._selectTemplateBase(tpl);
+    if (this.templateRendererSvc.isStandalone(tpl.id)) {
+      // Build iframe URL pointing to the served HTML template
+      const iframeUrl = `${environment.apiUrl}/template-assets/but-simple/index.html`;
+      this.standaloneIframeSrc = this.sanitizer.bypassSecurityTrustResourceUrl(iframeUrl);
+    } else {
+      this.standaloneIframeSrc = null;
+    }
+  }
+
+  playStandalone(): void {
+    this.postToIframe({ action: 'play', variables: this.variableValues });
+  }
+
+  resetStandalone(): void {
+    this.postToIframe({ action: 'reset' });
+  }
+
+  onVariableChange(): void {
+    if (this.isStandaloneTemplate) {
+      this.postToIframe({ action: 'update', variables: this.variableValues });
+    }
+  }
+
+  private postToIframe(msg: Record<string, unknown>): void {
+    const iframe = this.standaloneIframeRef?.nativeElement;
+    if (iframe?.contentWindow) {
+      iframe.contentWindow.postMessage(msg, '*');
+    }
+  }
+
+  private async renderStandalone(): Promise<void> {
+    if (!this.selectedTemplate?.assets) return;
+
+    this.rendering = true;
+    this.rendered = false;
+    this.renderedVideo = null;
+    this.renderPhase = 'rendering';
+    this.renderPercent = 0;
+
+    const variables = { ...this.variableValues };
+
+    // Inject logo image data URI
+    if (this.imageFiles['logo']) {
+      try {
+        variables['_image_logo'] = await this.readImageAsDataUri(this.imageFiles['logo']);
+      } catch { /* skip */ }
+    }
+
+    try {
+      const blob = await this.browserRenderer.renderStandalone(
+        { templateId: this.selectedTemplate.id, variables },
+        this.selectedTemplate.assets,
+        (p) => {
+          this.renderPhase = p.phase === 'done' ? 'uploading' : 'rendering';
+          this.renderPercent = p.progress;
+        },
+      );
+
+      // Store blob URL for preview
+      this.revokeBlobUrl();
+      this.rawBlobUrl = URL.createObjectURL(blob);
+      this.renderedBlobUrl = this.sanitizer.bypassSecurityTrustUrl(this.rawBlobUrl);
+
+      // Upload
+      this.renderPhase = 'uploading';
+      this.renderPercent = 0;
+
+      const prenom = this.variableValues['prenom'] || 'PRENOM';
+      const nom = this.variableValues['nom'] || 'NOM';
+      const filename = `BUT_${prenom}_${nom}.webm`;
+      const file = new File([blob], filename, { type: blob.type });
+
+      const formData = new FormData();
+      formData.append('video', file);
+      if (this.selectedSiteId) {
+        formData.append('site_id', this.selectedSiteId);
+      }
+
+      const sub = this.api.uploadWithProgress<{ success: boolean; video: { id: string; title: string; url: string } }>(
+        '/videos',
+        formData,
+      ).subscribe({
+        next: (progress) => {
+          this.renderPercent = progress.progress;
+          if (progress.status === 'complete' && progress.response) {
+            const resp = progress.response as { success: boolean; video: { id: string; title: string; url: string } };
+            this.rendering = false;
+            this.rendered = true;
+            this.renderPhase = 'done';
+            this.renderedVideo = resp.video;
+            this.notifications.success('Video generee et uploadee !');
+          }
+        },
+        error: (err) => {
+          this.rendering = false;
+          this.renderPhase = 'idle';
+          const msg = err?.error?.details || err?.error?.error || 'Erreur lors de l\'upload';
+          this.notifications.error(msg);
+        },
+      });
+      this.subscriptions.push(sub);
+    } catch (err) {
+      this.rendering = false;
+      this.renderPhase = 'idle';
+      this.notifications.error(`Erreur rendu: ${(err as Error).message || 'Erreur inconnue'}`);
+    }
+  }
+
   // ── Helpers ───────────────────────────────────────────────────────
 
   isFormValid(): boolean {
@@ -750,7 +936,7 @@ export class LottieTemplatesComponent implements OnInit, OnDestroy {
   }
 
   getRenderLabel(): string {
-    if (!this.sourceFile) return 'Choisissez une video';
+    if (!this.isStandaloneTemplate && !this.sourceFile) return 'Choisissez une video';
     if (!this.selectedTemplate) return 'Choisissez un template';
     if (!this.isFormValid()) return 'Remplissez les champs requis';
     return 'Generer la video';

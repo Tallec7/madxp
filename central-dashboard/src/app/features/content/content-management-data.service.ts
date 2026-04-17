@@ -41,11 +41,9 @@ export interface Deployment {
   deployed_by_name?: string;
   status: 'pending' | 'in_progress' | 'completed' | 'failed';
   progress: number;
-  deployed_count: number;
-  total_count: number;
   created_at: Date;
   started_at?: Date;
-  completed_at?: Date;
+  deployed_at?: Date;
   error?: string;
   has_secondary_variant?: boolean;
 }

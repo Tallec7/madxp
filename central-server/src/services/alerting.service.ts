@@ -489,6 +489,7 @@ class AlertingService {
       tickCount++;
       await this.checkEscalations();
       await this._checks.checkStuckDeployments();
+      await this._checks.checkStuckRenderJobs();
       await canaryMonitorService.runChecks();
       // Run hourly metrics check every 5 minutes (every 5th tick)
       if (tickCount % 5 === 0) {
@@ -506,6 +507,13 @@ class AlertingService {
    */
   async checkStuckDeployments(): Promise<void> {
     return this._checks.checkStuckDeployments();
+  }
+
+  /**
+   * Détecte les render jobs Remotion bloqués. Delegated to AlertingChecks.
+   */
+  async checkStuckRenderJobs(): Promise<void> {
+    return this._checks.checkStuckRenderJobs();
   }
 
   private async checkEscalations(): Promise<void> {

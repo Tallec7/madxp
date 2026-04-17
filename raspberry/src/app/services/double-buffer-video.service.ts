@@ -153,6 +153,10 @@ export class DoubleBufferVideoService {
     return this._activeManualPlayer === 'A' ? this.manualPlayerB! : this.manualPlayerA!;
   }
 
+  swapActiveManualPlayer(): void {
+    this._activeManualPlayer = this._activeManualPlayer === 'A' ? 'B' : 'A';
+  }
+
   // ==========================================================================
   // PLAYER VISIBILITY
   // ==========================================================================
@@ -546,8 +550,10 @@ export class DoubleBufferVideoService {
       return false;
     }
 
-    // Si on a un frame pré-capturé, l'afficher directement
-    if (this.hasValidLastFrame) {
+    // Si on a un frame pré-capturé ET qu'on n'est pas en mode manuel, l'afficher directement.
+    // En mode manuel, la pré-capture vient du player de boucle — il faut capturer live
+    // depuis le player manuel pour éviter un flash retour à la boucle.
+    if (this.hasValidLastFrame && !isManualMode) {
       this.freezeCanvas.style.opacity = '1';
       this.freezeCanvas.style.zIndex = '20';
       console.log('[DoubleBuffer] Freeze frame shown (pre-captured)');

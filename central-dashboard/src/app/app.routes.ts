@@ -142,6 +142,13 @@ export const routes: Routes = [
         loadComponent: () => import('./features/content/lottie-templates.component').then(m => m.LottieTemplatesComponent)
       },
       {
+        // Atelier Remotion (admin) + accès club avec feature video_templates
+        path: 'content/templates-remotion',
+        canActivate: [roleGuard],
+        data: { roles: ['super_admin', 'admin', 'club'] },
+        loadComponent: () => import('./features/content/remotion-templates/remotion-templates.component').then(m => m.RemotionTemplatesComponent)
+      },
+      {
         path: 'updates',
         canActivate: [roleGuard],
         data: { roles: ['super_admin', 'admin', 'operator'] },
@@ -268,6 +275,12 @@ export const routes: Routes = [
         canActivate: [roleGuard],
         data: { roles: ['admin', 'super_admin'] },
         loadComponent: () => import('./features/safe/safe-sprint-tracker.component').then(m => m.SafeSprintTrackerComponent)
+      },
+      {
+        path: 'safe/product',
+        canActivate: [roleGuard],
+        data: { roles: ['admin', 'super_admin'] },
+        loadComponent: () => import('./features/safe/safe-product.component').then(m => m.SafeProductComponent)
       }
     ]
   },

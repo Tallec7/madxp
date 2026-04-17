@@ -433,6 +433,17 @@ class AlertService {
     });
   }
 
+  async serviceCrashLoop(siteId: string, siteName: string, serviceName: string, status: string, restarts: number): Promise<boolean> {
+    return this.sendAlert({
+      title: `Service ${serviceName} en crash-loop`,
+      message: `Le service *${serviceName}* du site *${siteName}* est en état *${status}* avec ${restarts} restarts. Probable dépendance npm manquante ou erreur de configuration.`,
+      severity: restarts > 10 ? 'critical' : 'warning',
+      siteId,
+      siteName,
+      metadata: { serviceName, status, restarts: String(restarts) }
+    });
+  }
+
   async displayFallback(siteId: string, siteName: string, reason: string): Promise<boolean> {
     return this.sendAlert({
       title: 'Résolution écran dégradée',

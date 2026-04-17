@@ -139,6 +139,7 @@ neopro/ (monorepo)
 │   ├── admin/                      # Admin interface (Express modulaire)
 │   │   ├── admin-server.js         #   Orchestrateur (~260 lignes)
 │   │   ├── helpers.js              #   Utilitaires partagés (exec, paths)
+│   │   ├── socket-proxy.js         #   Reverse proxy /socket.io/* (:8080 → :3000, HTTP + WS)
 │   │   ├── services/               #   8 services métier
 │   │   ├── routes/                 #   11 contrôleurs HTTP (dont sync-status, sponsors)
 │   │   ├── __tests__/              #   Tests Jest (60%+ couverture)
@@ -813,6 +814,34 @@ Remote (téléphone)                    TV (Chromium kiosk)
 - tv-loop-update/tv-loop-state : synchronisation boucle vidéo
 - displays-changed : connected displays list (N-display, Phase 5)
 ```
+
+### Admin UI → Socket.IO (reverse proxy same-origin)
+
+L'admin panel (:8080) et le socket-server (:3000) tournent sur le même Pi mais
+sur des ports distincts. Pour éviter toute violation CSP côté client quel que
+soit le hostname utilisé (`neopro.local`, IP LAN, `localhost`, `192.168.4.1`…),
+`admin-server.js` expose un reverse proxy same-origin :
+
+```
+Browser (admin UI)                    Admin Server (:8080)           Socket Server (:3000)
+      │                                       │                              │
+      │  GET /socket.io/socket.io.js          │                              │
+      ├──────────────────────────────────────▶│                              │
+      │                                       │  proxy HTTP ─────────────────▶│
+      │                                       │◀──────────────────── response │
+      │◀──────────────────────────────────────│                              │
+      │                                       │                              │
+      │  WS /socket.io/?EIO=4&transport=ws    │                              │
+      ├──────────────────────────────────────▶│                              │
+      │                                       │  upgrade + pipe ─────────────▶│
+      │◀═════════════════════════════════════════════ bidirectional stream ══│
+```
+
+- Module : `raspberry/admin/socket-proxy.js` (zéro dépendance, `http` natif)
+- HTTP : `app.use(createSocketHttpProxy())` — monté AVANT `express.json()` (les body parsers consommeraient les POST polling)
+- WebSocket : `attachSocketWsProxy(http.createServer(app))` — nécessite `http.createServer` explicite pour accrocher l'event `upgrade`
+- Monitoring : `GET /api/admin/health` expose `socketProxy.reachable` + `latencyMs` (TCP ping 1 s vers 127.0.0.1:3000)
+- CSP : reste verrouillée à `script-src 'self'` / `connect-src 'self'`
 
 ### Synchronisation Master-Slave (N-display)
 

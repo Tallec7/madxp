@@ -347,23 +347,31 @@ class TemplateRendererService {
 
     try {
       const page = await browser.newPage();
-      await page.setViewport({ width: 1920, height: 1080, deviceScaleFactor: 1 });
+      // Capture à 960×540 (half-res) — ffmpeg upscale à 1920×1080 dans composite().
+      // PNG 960×540 ≈ 4x plus petit que 1920×1080, encoding ~3x plus rapide.
+      await page.setViewport({ width: 960, height: 540, deviceScaleFactor: 1 });
       await page.setContent(html, { waitUntil: 'networkidle0' });
 
       // Pause CSS animations for frame-by-frame control
       await page.addStyleTag({ content: '*, *::before, *::after { animation-play-state: paused !important; }' });
 
+      // Pré-collecter les éléments animés une seule fois (évite querySelectorAll('*') par frame)
+      await page.evaluate(`
+        window.__animatedEls = Array.from(document.querySelectorAll('*')).filter(el => el.getAnimations().length > 0);
+      `);
+
       for (let frame = 0; frame < totalFrames; frame++) {
         const timeS = frame / fps;
 
-        // Jump CSS animations to this point in time (code runs in Chromium, not Node)
+        // Jump CSS animations — cible uniquement les éléments pré-collectés
         await page.evaluate(`
-          document.querySelectorAll('*').forEach(el => {
+          window.__animatedEls.forEach(el => {
             el.getAnimations().forEach(anim => { anim.currentTime = ${timeS * 1000}; });
           });
         `);
 
-        await new Promise((r) => setTimeout(r, 15));
+        // Pas de setTimeout : les animations sont en pause, currentTime est synchrone.
+        // Le screenshot capture l'état exact après le evaluate.
 
         const frameNum = String(frame).padStart(5, '0');
         await page.screenshot({
@@ -386,7 +394,8 @@ class TemplateRendererService {
         '-i', inputVideo,
         '-framerate', String(fps),
         '-i', path.join(framesDir, 'frame_%05d.png'),
-        '-filter_complex', '[0:v][1:v]overlay=0:0:shortest=1:format=auto',
+        // Scale overlay 960×540 → match source video, puis composite par-dessus
+        '-filter_complex', '[1:v]scale=1920:1080:flags=bilinear[ovr];[0:v][ovr]overlay=0:0:shortest=1:format=auto',
         '-c:v', 'libx264',
         '-preset', 'medium',
         '-crf', '18',

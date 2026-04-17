@@ -3,6 +3,7 @@
  * Vérifie l'état de toutes les dépendances du système
  */
 
+import v8 from 'v8';
 import pool from '../config/database';
 import socketService from './socket.service';
 import { dbCircuitBreaker } from './db-circuit-breaker.service';
@@ -253,7 +254,10 @@ class HealthService {
     const heapUsedMB = memUsage.heapUsed / 1024 / 1024;
     const heapTotalMB = memUsage.heapTotal / 1024 / 1024;
     const rssMB = memUsage.rss / 1024 / 1024;
-    const heapUsagePercent = (heapUsedMB / heapTotalMB) * 100;
+    // Utiliser heap_size_limit (max V8) et non heapTotal (allocation courante
+    // qui grandit dynamiquement → ratio toujours ~90% même à faible usage réel)
+    const heapLimitMB = v8.getHeapStatistics().heap_size_limit / 1024 / 1024;
+    const heapUsagePercent = (heapUsedMB / heapLimitMB) * 100;
 
     let status: HealthStatus = 'healthy';
     let message: string | undefined;
@@ -280,6 +284,7 @@ class HealthService {
       details: {
         heapUsedMB: Math.round(heapUsedMB * 100) / 100,
         heapTotalMB: Math.round(heapTotalMB * 100) / 100,
+        heapLimitMB: Math.round(heapLimitMB * 100) / 100,
         heapUsagePercent: Math.round(heapUsagePercent * 100) / 100,
         rssMB: Math.round(rssMB * 100) / 100,
         externalMB: Math.round(memUsage.external / 1024 / 1024 * 100) / 100,

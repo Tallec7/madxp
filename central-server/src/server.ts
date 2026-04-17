@@ -61,6 +61,7 @@ import safeRoutes from './routes/safe.routes';
 import campaignRoutes from './routes/campaign.routes';
 import saasRoutes from './routes/saas.routes';
 import clientErrorsRoutes from './routes/client-errors.routes';
+import remotionTemplatesRoutes from './routes/remotion-templates.routes';
 import { authRateLimit, apiRateLimit, sensitiveRateLimit, adminRateLimit, loggingRateLimit } from './middleware/user-rate-limit';
 import { setRLSContext } from './middleware/rls-context';
 import { correlationMiddleware } from './middleware/correlation';
@@ -125,14 +126,16 @@ app.use(helmet({
       connectSrc: ["'self'", 'wss:', 'ws:'],    // Allow WebSocket connections
       fontSrc: ["'self'", 'https:', 'data:'],
       objectSrc: ["'none'"],
-      mediaSrc: ["'self'"],
+      mediaSrc: ["'self'", 'blob:', 'https://kalonpartners.bzh'],  // blob: for @remotion/player prefetch, kalonpartners.bzh for FTP assets
       frameSrc: ["'none'"],
+      frameAncestors: ["'self'", 'https://neopro-admin.kalonpartners.bzh'],
     },
   },
   // X-XSS-Protection header (legacy but still useful for older browsers)
   xssFilter: true,
-  // Prevent clickjacking
-  frameguard: { action: 'deny' },
+  // Clickjacking prevention via CSP frame-ancestors (not X-Frame-Options)
+  // Disabled frameguard to allow iframe embedding for template preview from dashboard
+  frameguard: false,
   // Prevent MIME type sniffing
   noSniff: true,
   // HSTS - force HTTPS (only in production)
@@ -373,6 +376,52 @@ app.get('/ready', async (_req: Request, res: Response) => {
   res.status(httpStatus).json(readiness);
 });
 
+// ── Remotion Preview — assets statiques (ADR-052) ────────────────────────────
+// staticFile("foo.webm") dans Remotion retourne toujours "/foo.webm" (racine),
+// quel que soit le publicPath passé au Player. On sert donc les assets Remotion
+// à la RACINE "/" (index:false pour ne pas casser les autres routes).
+// On garde aussi /remotion-preview/public/ pour compatibilité future.
+const REMOTION_DIR = process.env.REMOTION_DIR
+  || path.resolve(__dirname, '../../../templates-remotion');
+
+// CSP sur-mesure pour la page preview Remotion — DOIT être posé avant les
+// middlewares express.static car helmet a déjà verrouillé les autres routes.
+// Le @remotion/player charge des vidéos via staticFile() (same-origin) ET via
+// des URLs FTP (kalonpartners.bzh/**) — on élargit media-src en conséquence.
+app.use('/remotion-preview', (_req, res, next) => {
+  res.setHeader(
+    'Content-Security-Policy',
+    [
+      "default-src 'self' 'unsafe-inline' 'unsafe-eval' blob: data:",
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval' blob:",
+      "media-src 'self' blob: data: https://kalonpartners.bzh https://*.kalonpartners.bzh",
+      "img-src 'self' blob: data: https:",
+      "font-src 'self' data: https:",
+      "connect-src 'self' ws: wss: blob: https://kalonpartners.bzh https://*.kalonpartners.bzh",
+      "frame-ancestors 'self' https://neopro-admin.kalonpartners.bzh",
+    ].join('; ')
+  );
+  next();
+});
+
+// Cache-Control long + immutable pour les assets Remotion (WebM, MOV, PNG, fonts).
+// Sans ça, Fastly (edge Railway) retape l'origin à chaque requête et retourne 502
+// pendant les cold starts du conteneur. Les assets ont des noms stables et sont
+// invalidés par rebuild Docker → cache agressif sans risque de staleness.
+const remotionAssetCache = (res: Response, filePath: string) => {
+  if (/\.(webm|mov|mp4|png|jpg|jpeg|otf|woff2?|ttf)$/i.test(filePath)) {
+    res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+  }
+};
+
+app.use(express.static(path.join(REMOTION_DIR, 'public'), { index: false, setHeaders: remotionAssetCache }));
+app.use('/remotion-preview/public', express.static(path.join(REMOTION_DIR, 'public'), { setHeaders: remotionAssetCache }));
+app.use('/remotion-preview', express.static(path.join(REMOTION_DIR, 'preview', 'dist'), { setHeaders: remotionAssetCache }));
+// SPA fallback : toute route /remotion-preview/* non trouvée → index.html
+app.get('/remotion-preview/*', (_req, res) => {
+  res.sendFile(path.join(REMOTION_DIR, 'preview', 'dist', 'index.html'));
+});
+
 // Apply Row-Level Security context to all API routes
 // This middleware sets PostgreSQL session variables for multi-tenant isolation
 // It must run after authentication (which is handled in individual routes)
@@ -419,6 +468,7 @@ app.use('/api/safe', apiRateLimit, safeRoutes); // SAFe dashboard (portfolio, pr
 app.use('/api/campaigns', campaignRoutes); // Campaign management (ADR-035 Phase 3) — rate limits per-route
 app.use('/api/saas', saasRoutes); // SaaS mode (ADR-037) — public, rate limits per-route
 app.use('/api/client-errors', clientErrorsRoutes); // Frontend error capture — public, rate-limited
+app.use('/api/remotion-templates', sensitiveRateLimit, remotionTemplatesRoutes); // Templates vidéo Remotion (ADR-052)
 
 // 404 handler - Must be AFTER all routes, BEFORE error handler
 // Uses standardized error format with correlation ID
@@ -493,6 +543,16 @@ const startServer = async () => {
     // Nettoyage périodique des fichiers temporaires d'upload abandonnés (toutes les 30 min)
     const tempCleanupInterval = setInterval(cleanupStaleTempFiles, 30 * 60 * 1000);
     tempCleanupInterval.unref(); // Ne pas empêcher le shutdown
+
+    // Pre-warm Remotion bundle en arrière-plan (fire-and-forget).
+    // Économise ~30-60s sur le premier render après un déploiement Railway.
+    const {
+      prewarmRemotionBundle,
+      startRenderWorker,
+    } = await import('./services/remotion-render-worker.service');
+    prewarmRemotionBundle();
+    // Démarre le worker async (ADR-054) qui poll remotion_render_jobs toutes les 5s.
+    startRenderWorker();
   } catch (error) {
     logger.error('Failed to initialize dependencies:', error);
     // Ne pas quitter - le serveur reste en mode dégradé et le health check rapportera l'état
@@ -511,6 +571,16 @@ process.on('SIGTERM', async () => {
   memoryManagerService.stop();
   alertingService.cleanup();
   adminOpsService.stopCleanup();
+
+  // Stop Remotion worker — running renders will be marked stale on next boot
+  try {
+    const { stopRenderWorker } = await import('./services/remotion-render-worker.service');
+    stopRenderWorker();
+  } catch (err) {
+    logger.warn('Failed to stop Remotion render worker', {
+      error: err instanceof Error ? err.message : String(err),
+    });
+  }
 
   // Cleanup sockets BEFORE closing HTTP server — Socket.IO needs the HTTP
   // server alive to send the shutdown notification to connected Pi devices.

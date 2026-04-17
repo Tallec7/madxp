@@ -116,6 +116,15 @@ async function sendHeartbeat(agent) {
         // Ignore — non-critical monitoring data
       }
 
+      // Detect legitimate services in failed/crash-loop state (neopro-app, admin, kiosk)
+      let failedServices = null;
+      try {
+        failedServices = await metricsCollector.getFailedServices();
+        if (failedServices && failedServices.length === 0) failedServices = null;
+      } catch {
+        // Ignore — non-critical monitoring data
+      }
+
       agent.socket.emit('heartbeat', {
         siteId: config.site.id,
         timestamp: Date.now(),
@@ -134,6 +143,7 @@ async function sendHeartbeat(agent) {
         // E-23 US-23.4.4: dual-display is active when both HDMI ports are connected
         dualDisplayActive: !!(hdmiStatus && hdmiStatus.hdmi0 && hdmiStatus.hdmi1),
         orphanServices: orphanServices || null,
+        failedServices: failedServices || null,
       });
 
       // Enregistrer le succès du heartbeat

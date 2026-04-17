@@ -409,6 +409,11 @@ export class VideoPlaybackService {
     if (this.doubleBuffer.pendingSwitch) return;
     this.doubleBuffer.setPendingSwitch(true);
 
+    // Capturer le freeze-frame pour couvrir la transition.
+    // En software decode (Pi 5 fallback), le switch peut prendre plus longtemps
+    // et sans freeze-frame le player inactif (pas encore de frame rendu) cause un flash noir.
+    this.doubleBuffer.captureAndShowFreezeFrame();
+
     this.ngZone.run(() => {
       this.callbacks?.onLoopVideoEnded(true);
       const nextIndex = (this._currentLoopIndex + 1) % this._currentLoopVideos.length;

@@ -4,63 +4,56 @@ import { FormsModule } from '@angular/forms';
 import { TranslateModule } from '@ngx-translate/core';
 import { LocalVideo, CloudVideo, LocalStorage, SiteSponsor } from '../../../../core/models';
 import { FeatureGateService } from '../../../../core/services/feature-gate.service';
+import { VideoReconciliationService } from './video-reconciliation.service';
+import { VideoRelevanceFilterService } from './video-relevance-filter.service';
+// Types are extracted for reuse across the library's sub-components and data service.
+// Re-exported below so external importers (video-manager, site-content-tab, tests) keep working.
+import type {
+  VideoContentStatus,
+  VideoOwnerType,
+  VideoItem,
+  AddToTarget,
+  VideoDeployStatus,
+  VideoDeployState,
+  SortField,
+  SortDirection,
+  VideoStatusFilter,
+  VideoOwnerFilter,
+  VideoViewMode,
+} from './video-library.types';
+import { VideoDetailPanelComponent } from './video-detail-panel/video-detail-panel.component';
+import { VideoPreviewModalComponent } from './video-preview-modal/video-preview-modal.component';
+import { VideoLibraryFiltersComponent } from './video-library-filters/video-library-filters.component';
+import { VideoLibraryListComponent } from './video-library-list/video-library-list.component';
+import { VideoBulkActionsBarComponent } from './video-bulk-actions-bar/video-bulk-actions-bar.component';
 
-/** Content status — calculated from the active config (ADR-050 Phase 1) */
-export type VideoContentStatus = 'loop' | 'category' | 'sponsor' | 'available' | 'to_deploy';
-
-/** Owner type — determined from upload metadata (ADR-050 Phase 1) */
-export type VideoOwnerType = 'club' | 'neopro' | 'sponsor' | 'admin';
-
-export interface VideoItem {
-  id: string | null;
-  path: string;
-  filename: string;
-  displayName: string; // Title or original filename for display (filename may be UUID)
-  category: string | null;
-  subcategory: string | null;
-  size: number;
-  duration: number | null;
-  isOnPi: boolean;
-  owner: 'club' | 'neopro';
-  ownerType: VideoOwnerType;         // ADR-050: enriched owner (club/neopro/sponsor/admin)
-  contentStatus: VideoContentStatus; // ADR-050: status in the active config
-  source: 'cloud' | 'local';
-  lastModified?: string;
-  uploadedForSiteId?: string | null; // Site for which this video was uploaded
-  piCategory?: string | null;       // Category from Pi filesystem (for delete_video command)
-  piSubcategory?: string | null;    // Subcategory from Pi filesystem
-  advertiserName?: string | null;   // Advertiser company name (from advertiser_videos junction)
-  hasSecondaryVariant?: boolean;    // Whether this video has a secondary display variant
-  checksum?: string | null;         // File integrity checksum
-  configRoles?: Set<string>;         // Roles in config: 'boucle', 'match', 'action' (empty = not in config)
-  isDuplicate?: boolean;            // Whether another video shares the same checksum (duplicate file)
-  thumbnailUrl?: string | null;     // Thumbnail image URL (generated at upload via ffmpeg)
-}
-
-/** Target for "Add to" action — identifies where to insert a video in the config */
-export interface AddToTarget {
-  type: 'loop' | 'match' | 'category';
-  id: string;       // 'default' for sponsors[], phase id for timeCategories, category id for categories
-  label: string;     // Display name for the target
-  icon?: string;
-}
-
-export type VideoDeployStatus = 'idle' | 'deploying' | 'success' | 'error' | 'timeout';
-
-export interface VideoDeployState {
-  status: VideoDeployStatus;
-  progress?: number;
-  error?: string;
-  commandId?: string;
-}
-
-export type SortField = 'filename' | 'size' | 'duration' | 'lastModified' | 'category';
-export type SortDirection = 'asc' | 'desc';
+export type {
+  VideoContentStatus,
+  VideoOwnerType,
+  VideoItem,
+  AddToTarget,
+  VideoDeployStatus,
+  VideoDeployState,
+  SortField,
+  SortDirection,
+  VideoStatusFilter,
+  VideoOwnerFilter,
+  VideoViewMode,
+};
 
 @Component({
   selector: 'app-video-library',
   standalone: true,
-  imports: [CommonModule, FormsModule, TranslateModule],
+  imports: [
+    CommonModule,
+    FormsModule,
+    TranslateModule,
+    VideoDetailPanelComponent,
+    VideoPreviewModalComponent,
+    VideoLibraryFiltersComponent,
+    VideoLibraryListComponent,
+    VideoBulkActionsBarComponent,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './video-library.component.html',
   styleUrls: ['./video-library.component.scss']
@@ -74,8 +67,12 @@ export class VideoLibraryComponent implements OnChanges {
   @Input() deployStates: Map<string, VideoDeployState> = new Map();
   @Input() siteId: string | null = null; // Current site ID for showing "for this site" badge
   @Input() configVideoRoles: Map<string, Set<string>> = new Map(); // path → Set<'boucle'|'match'|'action'>
+  @Input() configVideoLabels: Map<string, string[]> = new Map(); // path → named labels (e.g. 'Boucle : Accueil')
   @Input() pendingDeploymentVideoIds: Set<string> = new Set(); // IDs of videos with pending deployments
   @Input() secondaryVariantVideoIds: Set<string> = new Set(); // IDs of videos with secondary display variants
+  @Input() videoVariantInfo: Map<string, { count: number; types: string[] }> = new Map(); // Phase 5H: variant counts per video
+  @Input() totalDisplays: number = 1; // Phase 5H: total configured displays for X/N badge
+  @Input() isClubUser = false;
   @Input() subscriptionPlan: string | null = null;
   @Input() featureOverrides: Record<string, boolean> | null = null;
 
@@ -90,7 +87,11 @@ export class VideoLibraryComponent implements OnChanges {
 
   @Input() configTargets: AddToTarget[] = []; // Available targets from config (built by site-content-tab)
 
-  constructor(private gate: FeatureGateService) {}
+  constructor(
+    private gate: FeatureGateService,
+    private reconciliation: VideoReconciliationService,
+    private relevanceFilter: VideoRelevanceFilterService,
+  ) {}
 
   @HostListener('document:click')
   onDocumentClick(): void {
@@ -115,6 +116,7 @@ export class VideoLibraryComponent implements OnChanges {
   filteredVideos: VideoItem[] = [];
   allVideos: VideoItem[] = [];
   categories: string[] = [];
+  configLabelOptions: string[] = []; // Distinct config labels for filter dropdown
   // Stats computed on filteredVideos (scoped to what's displayed)
   filteredTotalSize: number = 0;
   filteredTotalDuration: number = 0;
@@ -127,15 +129,15 @@ export class VideoLibraryComponent implements OnChanges {
   storagePercent: number = 0;
 
   searchQuery: string = '';
-  statusFilter: 'relevant' | 'all' | 'on_pi' | 'to_deploy' | 'in_config' | 'deploy_error' | 'with_variant' | 'programmed' | 'available_only' = 'relevant';
-  ownerFilter: 'all' | 'club' | 'neopro' = 'all';
+  statusFilter: VideoStatusFilter = 'relevant';
+  ownerFilter: VideoOwnerFilter = 'all';
   categoryFilter: string = 'all';
 
   sortField: SortField = 'filename';
   sortDirection: SortDirection = 'asc';
 
   // View mode
-  viewMode: 'grid' | 'list' = 'grid';
+  viewMode: VideoViewMode = 'grid';
 
   // Pagination
   pageSizeOptions: (number | 'all')[] = [10, 25, 50, 'all'];
@@ -174,7 +176,7 @@ export class VideoLibraryComponent implements OnChanges {
   detailVideo: VideoItem | null = null;
 
   ngOnChanges(changes: SimpleChanges): void {
-    if (changes['videos'] || changes['cloudVideos'] || changes['secondaryVariantVideoIds'] || changes['configVideoRoles']) {
+    if (changes['videos'] || changes['cloudVideos'] || changes['secondaryVariantVideoIds'] || changes['configVideoRoles'] || changes['configVideoLabels']) {
       this.processVideos();
       this.applyFilters();
     }
@@ -184,125 +186,20 @@ export class VideoLibraryComponent implements OnChanges {
   }
 
   private processVideos(): void {
-    // Build maps for comparison - using multiple keys for robust matching
-    // Index filename → ALL local videos with that name (not just one)
-    const localByFilename = new Map<string, typeof this.videos>();
-    for (const v of this.videos) {
-      const fnKey = v.filename.toLowerCase();
-      if (!localByFilename.has(fnKey)) {
-        localByFilename.set(fnKey, []);
-      }
-      localByFilename.get(fnKey)!.push(v);
-    }
-    const localByChecksum = new Map(
-      this.videos.filter(v => v.checksum).map(v => [v.checksum!, v])
-    );
-
-    // Track which cloud videos we've already added to avoid duplicates
-    const seenCloudIds = new Set<string>();
-    // Track matched local video paths to avoid losing locals with duplicate filenames
-    const matchedLocalPaths = new Set<string>();
-
-    const cloudMapped: VideoItem[] = [];
-
-    for (const cloud of this.cloudVideos) {
-      // Skip if we've already processed a video with this ID
-      if (seenCloudIds.has(cloud.id)) {
-        continue;
-      }
-
-      seenCloudIds.add(cloud.id);
-
-      // Try to find matching local video by checksum first, then by filename
-      const filenameLower = cloud.filename.toLowerCase();
-      let isOnPi = false;
-      let localMatch = cloud.checksum ? localByChecksum.get(cloud.checksum) : undefined;
-      if (localMatch) {
-        isOnPi = true;
-      } else {
-        // Pick the first unmatched local video with same filename
-        const locals = localByFilename.get(filenameLower) || [];
-        localMatch = locals.find(l => !matchedLocalPaths.has(l.path));
-        if (localMatch) {
-          isOnPi = true;
-        }
-      }
-
-      // Track matched local video by its unique path (not filename)
-      if (localMatch) {
-        matchedLocalPaths.add(localMatch.path);
-      }
-
-      const legacyOwner = this.detectOwner(cloud.filename);
-      const configRoles = this.configVideoRoles.get(cloud.url);
-      const item: VideoItem = {
-        id: cloud.id,
-        path: cloud.url,
-        filename: cloud.filename,
-        displayName: cloud.title || cloud.originalName || cloud.filename,
-        category: cloud.category,
-        subcategory: cloud.subcategory,
-        size: cloud.size,
-        duration: cloud.duration,
-        isOnPi,
-        owner: legacyOwner,
-        ownerType: this.detectOwnerType(cloud, legacyOwner),
-        contentStatus: 'available', // computed after push
-        source: 'cloud' as const,
-        lastModified: cloud.updatedAt?.toString(),
-        uploadedForSiteId: cloud.uploadedForSiteId,
-        piCategory: localMatch?.category ?? null,
-        piSubcategory: localMatch?.subcategory ?? null,
-        advertiserName: cloud.advertiserName ?? null,
-        hasSecondaryVariant: this.secondaryVariantVideoIds.has(cloud.id),
-        checksum: cloud.checksum ?? null,
-        configRoles,
-        thumbnailUrl: cloud.thumbnail_url ?? null,
-      };
-      item.contentStatus = this.computeContentStatus(item, this.siteType === 'saas');
-      cloudMapped.push(item);
-    }
-
-    // Local videos not already represented by a cloud entry
-    // Use path-based matching to avoid losing locals with duplicate filenames
-    const localOnlyMapped: VideoItem[] = this.videos
-      .filter(local => !matchedLocalPaths.has(local.path))
-      .map(local => {
-        const legacyOwner = this.detectOwner(local.path);
-        const configRoles = this.configVideoRoles.get(local.path);
-        const item: VideoItem = {
-          id: null,
-          path: local.path,
-          filename: local.filename,
-          displayName: local.filename,
-          category: local.category,
-          subcategory: local.subcategory,
-          size: local.size,
-          duration: local.duration || null,
-          isOnPi: true,
-          owner: legacyOwner,
-          ownerType: this.detectOwnerType(null, legacyOwner),
-          contentStatus: 'available',
-          source: 'local' as const,
-          lastModified: local.lastModified,
-          checksum: local.checksum ?? null,
-          configRoles,
-        };
-        item.contentStatus = this.computeContentStatus(item, this.siteType === 'saas');
-        return item;
-      });
-
-    this.allVideos = [...cloudMapped, ...localOnlyMapped];
-
-    // Duplicate detection is deferred to applyFilters() so it runs on the visible set only
-
-    const cats = new Set<string>();
-    this.allVideos.forEach(v => {
-      if (v.category) cats.add(v.category);
+    const result = this.reconciliation.reconcile({
+      videos: this.videos,
+      cloudVideos: this.cloudVideos,
+      configVideoRoles: this.configVideoRoles,
+      configVideoLabels: this.configVideoLabels,
+      secondaryVariantVideoIds: this.secondaryVariantVideoIds,
+      videoVariantInfo: this.videoVariantInfo,
+      siteType: this.siteType,
+      siteSponsors: this.siteSponsors,
     });
-    this.categories = Array.from(cats).sort();
-
-    // Stats are computed in applyFilters() on the filtered set
+    this.allVideos = result.allVideos;
+    this.configVideoFilenames = result.configVideoFilenames;
+    this.categories = result.categories;
+    this.configLabelOptions = result.configLabelOptions;
   }
 
   /**
@@ -313,48 +210,16 @@ export class VideoLibraryComponent implements OnChanges {
    * - Has a pending deployment to this site
    */
   isVideoRelevant(video: VideoItem): boolean {
-    // Already on the Pi
-    if (video.isOnPi) return true;
-
-    // Used in current configuration
-    if (video.path && this.configVideoRoles.has(video.path)) return true;
-
-    // Specifically uploaded for this site
-    if (this.siteId && video.uploadedForSiteId === this.siteId) return true;
-
-    // Has pending deployment to this site
-    if (video.id && this.pendingDeploymentVideoIds.has(video.id)) return true;
-
-    return false;
+    return this.relevanceFilter.isRelevant(video, {
+      configVideoRoles: this.configVideoRoles,
+      configVideoFilenames: this.configVideoFilenames,
+      siteId: this.siteId,
+      pendingDeploymentVideoIds: this.pendingDeploymentVideoIds,
+    });
   }
 
-  private detectOwner(pathOrFilename: string): 'club' | 'neopro' {
-    const neoproPaths = ['SPONSORS', 'NEOPRO', 'PUBLICITES', 'ANIMATIONS', 'PUB_'];
-    return neoproPaths.some(p => pathOrFilename.toUpperCase().includes(p)) ? 'neopro' : 'club';
-  }
-
-  /** ADR-050: Determine enriched owner type from upload metadata */
-  private detectOwnerType(cloud: CloudVideo | null, legacyOwner: 'club' | 'neopro'): VideoOwnerType {
-    if (legacyOwner === 'neopro') return 'neopro';
-    if (cloud?.advertiserName) return 'sponsor';
-    if (cloud?.uploadedForSiteId) return 'club';
-    if (cloud) return 'admin';
-    return 'club'; // local-only (Pi) = club
-  }
-
-  /** ADR-050: Compute content status from config roles and deploy state */
-  private computeContentStatus(video: { configRoles?: Set<string>; isOnPi: boolean; advertiserName?: string | null }, isSaas: boolean): VideoContentStatus {
-    if (video.configRoles?.has('boucle') || video.configRoles?.has('match')) return 'loop';
-    if (video.configRoles?.has('action')) return 'category';
-    if (video.advertiserName && this.isVideoSponsorLinked(video.advertiserName)) return 'sponsor';
-    if (!isSaas && !video.isOnPi) return 'to_deploy';
-    return 'available';
-  }
-
-  /** Check if a video's advertiser is linked as a site sponsor */
-  private isVideoSponsorLinked(advertiserName: string): boolean {
-    return this.siteSponsors.some(s => s.video_filenames?.length);
-  }
+  /** Filename-based index of configVideoRoles for fallback matching, populated by reconciliation. */
+  private configVideoFilenames: Set<string> = new Set();
 
   toggleSort(field: SortField): void {
     if (this.sortField === field) {
@@ -364,11 +229,6 @@ export class VideoLibraryComponent implements OnChanges {
       this.sortDirection = 'asc';
     }
     this.applyFilters();
-  }
-
-  getSortIcon(field: SortField): string {
-    if (this.sortField !== field) return '';
-    return this.sortDirection === 'asc' ? '↑' : '↓';
   }
 
   applyFilters(): void {
@@ -395,7 +255,7 @@ export class VideoLibraryComponent implements OnChanges {
     } else if (this.statusFilter === 'deploy_error') {
       filtered = filtered.filter(v => this.isDeployFailed(v));
     } else if (this.statusFilter === 'with_variant') {
-      filtered = filtered.filter(v => v.hasSecondaryVariant);
+      filtered = filtered.filter(v => (v.variantCount ?? 0) > 0);
     } else if (this.statusFilter === 'programmed') {
       filtered = filtered.filter(v => v.contentStatus !== 'available' && v.contentStatus !== 'to_deploy');
     } else if (this.statusFilter === 'available_only') {
@@ -407,7 +267,15 @@ export class VideoLibraryComponent implements OnChanges {
     }
 
     if (this.categoryFilter !== 'all') {
-      filtered = filtered.filter(v => v.category === this.categoryFilter);
+      if (this.categoryFilter.startsWith('config:')) {
+        const targetLabel = this.categoryFilter.substring(7);
+        filtered = filtered.filter(v => {
+          const labels = this.configVideoLabels.get(v.path);
+          return labels?.includes(targetLabel);
+        });
+      } else {
+        filtered = filtered.filter(v => v.category === this.categoryFilter);
+      }
     }
 
     // Apply sorting
@@ -455,7 +323,7 @@ export class VideoLibraryComponent implements OnChanges {
     this.filteredTotalDuration = filtered.reduce((sum, v) => sum + (v.duration || 0), 0);
     this.filteredStatsOnPi = filtered.filter(v => v.isOnPi).length;
     this.filteredStatsInConfig = filtered.filter(v => v.configRoles?.size).length;
-    this.filteredStatsWithVariant = filtered.filter(v => v.hasSecondaryVariant).length;
+    this.filteredStatsWithVariant = filtered.filter(v => (v.variantCount ?? 0) > 0).length;
     // ADR-050: content status stats
     this.filteredStatsProgrammed = filtered.filter(v => v.contentStatus !== 'available' && v.contentStatus !== 'to_deploy').length;
     this.filteredStatsAvailable = filtered.filter(v => v.contentStatus === 'available').length;
@@ -493,10 +361,22 @@ export class VideoLibraryComponent implements OnChanges {
 
   // "Add to" dropdown state
   addToDropdownVideo: VideoItem | null = null;
+  addToDropdownStyle: Record<string, string> = {};
 
   toggleAddToDropdown(video: VideoItem, event: Event): void {
     event.stopPropagation();
-    this.addToDropdownVideo = this.addToDropdownVideo === video ? null : video;
+    if (this.addToDropdownVideo === video) {
+      this.addToDropdownVideo = null;
+      return;
+    }
+    // Position the fixed dropdown relative to the trigger button
+    const trigger = event.target as HTMLElement;
+    const rect = trigger.getBoundingClientRect();
+    this.addToDropdownStyle = {
+      top: `${rect.bottom + 2}px`,
+      left: `${rect.right}px`,
+    };
+    this.addToDropdownVideo = video;
   }
 
   closeAddToDropdown(): void {
@@ -517,10 +397,6 @@ export class VideoLibraryComponent implements OnChanges {
 
   closeDetail(): void {
     this.detailVideo = null;
-  }
-
-  getConfigRolesArray(video: VideoItem): string[] {
-    return video.configRoles ? Array.from(video.configRoles) : [];
   }
 
   onPreview(video: VideoItem, event: Event): void {
@@ -549,10 +425,6 @@ export class VideoLibraryComponent implements OnChanges {
     if (!this.selectionMode) {
       this.selectedVideos.clear();
     }
-  }
-
-  isSelected(video: VideoItem): boolean {
-    return this.selectedVideos.has(video.path);
   }
 
   toggleSelection(video: VideoItem, event: Event): void {
@@ -624,7 +496,7 @@ export class VideoLibraryComponent implements OnChanges {
       v.owner,
       v.isOnPi ? 'Oui' : 'Non',
       v.advertiserName || '',
-      v.hasSecondaryVariant ? 'Oui' : 'Non',
+      v.variantCount ? `${v.variantCount} (${v.variantTypes?.join(',') || ''})` : 'Non',
       v.configRoles?.size ? Array.from(v.configRoles).join('+') : 'Non',
       v.checksum || '',
     ]);
@@ -692,5 +564,14 @@ export class VideoLibraryComponent implements OnChanges {
    */
   isUploadedForThisSite(video: VideoItem): boolean {
     return !!(this.siteId && video.uploadedForSiteId && video.uploadedForSiteId === this.siteId);
+  }
+
+  /**
+   * Club users cannot modify videos that are not explicitly their own uploads.
+   * A video is "club-locked" if category is NEOPRO or it wasn't uploaded for their site.
+   */
+  isClubLocked(video: VideoItem): boolean {
+    if (!this.isClubUser) return false;
+    return video.owner === 'neopro' || video.category?.toUpperCase() === 'NEOPRO' || !this.isUploadedForThisSite(video);
   }
 }

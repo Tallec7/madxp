@@ -11,7 +11,7 @@
 7. [Problèmes de watermark (v3.50+)](#problèmes-de-watermark-v350)
 8. [Diagnostic réseau à distance](#diagnostic-réseau-à-distance)
 9. [Diagnostic complet](#diagnostic-complet)
-10. [CI/CD et Release](#cicd-et-release)
+10. [CI/CD et Release](#cicd-et-release) (EGITNOPERMISSION, **release bloquée "behind remote"**, smoke CI)
 11. [NetworkWatchdog — Auto-recovery réseau (v3.36+)](#networkwatchdog--auto-recovery-réseau-v336)
 12. [Hotspot Watchdog (v2.34+)](#hotspot-watchdog-v234)
 13. [Blocage BSSID Lock en Mesh (v2.34+)](#blocage-bssid-lock-en-mesh-v234)
@@ -43,6 +43,8 @@
 39. [Post-OTA validation failed: ECONNREFUSED ::1 (v3.116.28+)](#post-ota-validation-failed-econnrefused-1-v311628)
 40. [Fausses alertes offline/online Slack — flapping Socket.IO (v3.118.2+)](#fausses-alertes-offlineonline-slack--flapping-socketio-v31182)
 41. [Taille vidéo affichée "-" au lieu de la vraie taille (v3.127.7+)](#taille-vidéo-affichée---au-lieu-de-la-vraie-taille-v31277)
+42. [Dashboard 403 après deploy FTP réussi (v3.158.2+)](#dashboard-403-ftp)
+43. [Admin UI — CSP bloque Socket.IO cross-origin (v3.176.8+)](#admin-ui--csp-bloque-socketio-cross-origin-v317680)
 
 > **WiFi USB** : Pour un guide complet sur la clé WiFi USB (installation, diagnostic, pannes, recovery), voir [WIFI_USB_GUIDE.md](WIFI_USB_GUIDE.md).
 >
@@ -837,6 +839,7 @@ sudo journalctl -u neopro-app -n 50
 # Erreurs courantes :
 # "EADDRINUSE" → Port 3000 déjà utilisé
 # "MODULE_NOT_FOUND" → npm install manquant
+# "Cannot find module 'follow-redirects'" → dépendance transitive d'axios manquante (v3.157+)
 ```
 
 **Solutions :**
@@ -845,13 +848,19 @@ sudo journalctl -u neopro-app -n 50
 # Tuer le processus sur port 3000
 sudo lsof -ti:3000 | xargs kill -9
 
-# Réinstaller les dépendances
+# Réinstaller les dépendances (inclut les dépendances transitives comme follow-redirects)
 cd /home/pi/neopro/server
-npm install
+npm install --production
 
 # Redémarrer
 sudo systemctl restart neopro-app
 ```
+
+> **Note v3.160+** : `verifyNodeModules()` dans `ota-install.js` vérifie maintenant **toutes** les dépendances du `package.json` (pas juste un subset hardcodé). Si une dépendance manque après OTA, un `npm install --production` de réparation est automatiquement lancé.
+>
+> **Monitoring continu (v3.160+)** : `getDependenciesStatus()` dans `service-metrics.js` vérifie en continu les dépendances via le heartbeat. Un module avec des deps manquantes fait baisser le health score de 20 points et génère une alerte `critical`. Visible dans le dashboard fleet (health status) et les diagnostics à distance.
+>
+> **Diagnostic rapide** : `healthcheck.sh` affiche maintenant une section "DÉPENDANCES NODE.JS" qui vérifie chaque module (server, admin, sync-agent) contre son `package.json`.
 
 ### Service neopro-admin (port 8080)
 
@@ -3676,6 +3685,86 @@ gh api repos/Tallec7/neopro/rulesets
 
 > **Note** : Le `GITHUB_TOKEN` par défaut ne suffit pas pour semantic-release car il ne peut pas pusher de commits/tags sur `main`.
 
+### Release bloquée — "local branch is behind the remote" {#release-bloquée}
+
+#### Erreur
+
+```
+[semantic-release] › ℹ  The local branch main is behind the remote one, therefore a new version won't be published.
+```
+
+Le workflow tourne (status `success`) mais aucune release n'est publiée. Les commits `fix()` et `feat()` s'accumulent sans version.
+
+#### Cause
+
+Boucle `chore(release)` : semantic-release pousse un commit `chore(release): x.y.z` qui modifie `raspberry/*/package.json` (non couvert par `paths-ignore`). Ce commit déclenche un nouveau run du workflow, qui checkout un état en retard par rapport au remote → semantic-release refuse de publier. Les vrais commits `fix()` suivants héritent du même problème.
+
+#### Diagnostic
+
+```bash
+# Vérifier les derniers runs
+gh run list --workflow=release.yml --limit=5
+
+# Chercher le message dans les logs du dernier run
+gh run view <RUN_ID> --log | grep -i "behind the remote"
+```
+
+#### Solution (implémentée v3.153.8+)
+
+1. **Guard `if`** sur le job `release` : skip les commits `chore(release)` au niveau du job (le `[skip ci]` dans le commit message ne suffit pas avec `paths-ignore`)
+2. **`git pull --ff-only`** après checkout : synchronise la branche locale avec le remote avant de lancer semantic-release
+
+#### Si le problème revient
+
+```bash
+# Relancer manuellement le dernier commit éligible
+gh workflow run release.yml --ref main
+```
+
+---
+
+### Dashboard 403 après deploy FTP réussi (v3.158.2+) {#dashboard-403-ftp}
+
+#### Symptôme
+
+Le site `neopro-admin.kalonpartners.bzh` retourne **403 Forbidden** ou affiche un ancien `index.html` alors que le workflow `deploy-dashboard` affiche "success". Les assets (JS, CSS, JSON) sont accessibles en 200, mais `/` et `/index.html` ne fonctionnent pas.
+
+#### Cause
+
+Le FTP deploy avec `dangerous-clean-slate: true` supprime tous les fichiers avant de re-uploader. Si l'upload de `index.html` échoue silencieusement (timeout FTP, rate-limit Hostinger), le fichier est manquant et Apache retourne 403 (pas de DirectoryIndex).
+
+#### Diagnostic
+
+```bash
+# Vérifier le statut HTTP
+curl -sI https://neopro-admin.kalonpartners.bzh/ | head -5
+
+# Vérifier que le contenu est bien Angular (pas un vieux site)
+curl -s https://neopro-admin.kalonpartners.bzh/ | grep "app-root"
+
+# Vérifier les assets
+curl -sI https://neopro-admin.kalonpartners.bzh/assets/i18n/fr.json | head -3
+
+# Vérifier le log FTP du dernier deploy
+gh run view $(gh run list --workflow=release.yml --limit=1 --json databaseId -q '.[0].databaseId') --log | grep "Deploy Central Dashboard" | grep -i "upload.*index\|clean.slate\|error"
+```
+
+#### Solution
+
+1. **Re-run le deploy** :
+   ```bash
+   gh run rerun $(gh run list --workflow=release.yml --limit=1 --json databaseId -q '.[0].databaseId')
+   ```
+2. Si le re-run échoue aussi, **upload manuel** via le gestionnaire de fichiers Hostinger : copier `index.html` dans `public_html/neopro-admin/`
+
+#### Prévention (v3.158.3+)
+
+Le workflow inclut désormais une étape **"Verify dashboard deployment"** qui fait un `curl` post-deploy et échoue le job si `index.html` n'est pas servi correctement. Cela empêche un deploy silencieusement cassé de passer inaperçu.
+
+> **Note** : Les fichiers du dashboard sont dans `public_html/neopro-admin/` sur Hostinger (pas `public_html/`). Le `server-dir: /` dans le workflow FTP correspond à cette racine FTP.
+
+---
+
 ### Smoke tests échouent sur le CI mais passent en local
 
 #### Erreur
@@ -6390,4 +6479,67 @@ SELECT id, filename, file_size, pg_typeof(file_size) FROM videos ORDER BY create
 
 ---
 
-**Dernière mise à jour :** 6 avril 2026 (fix BIGINT type parser — tailles vidéo affichées correctement — v3.127.7)
+**Dernière mise à jour :** 16 avril 2026 (reverse proxy Socket.IO dans admin-server — suppression du cross-origin CSP — v3.176.8)
+
+---
+
+## Admin UI — CSP bloque Socket.IO cross-origin (v3.176.8+)
+
+### Symptômes
+
+Dans la console du navigateur (`http://neopro.local:8080`, `http://<ip-lan>:8080`, ou `http://localhost:8080`) :
+
+```
+Refused to load the script 'http://neopro.local:3000/socket.io/socket.io.js'
+because it violates the following Content Security Policy directive: "script-src 'self' 'unsafe-inline'".
+```
+
+L'indicateur "Temps réel" en haut à droite reste vide (point blanc), les mises à jour live (config, sponsors, licence) ne fonctionnent pas.
+
+### Cause
+
+- L'admin-server tourne sur `:8080`, le socket-server sur `:3000` → deux origines distinctes.
+- L'ancien `index.html` construisait l'URL du script `socket.io.js` à partir de `window.location.hostname + ':3000'` → cross-origin.
+- La CSP admin est verrouillée à `script-src 'self'` (défense-en-profondeur XSS) → le navigateur bloque le chargement.
+- Le même problème se reproduisait pour la connexion Socket.IO elle-même (`io(socketUrl, ...)` avec URL absolue).
+
+### Fix (v3.176.8)
+
+Un **reverse proxy interne** dans admin-server redirige `/socket.io/*` vers `127.0.0.1:3000`, côté serveur. Le client voit tout en same-origin — la CSP n'a plus besoin d'être ouverte.
+
+| Fichier                                           | Rôle                                                                                                  |
+| ------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `raspberry/admin/socket-proxy.js`                 | Reverse proxy HTTP + WebSocket (zéro dépendance, `http` natif) + `pingSocketServer()` pour monitoring |
+| `raspberry/admin/admin-server.js`                 | Montage du proxy AVANT `express.json()` + `http.createServer(app)` pour capter l'`upgrade` WS         |
+| `raspberry/admin/public/index.html`               | `<script src="/socket.io/socket.io.js">` (chemin relatif)                                             |
+| `raspberry/admin/public/modules/core/realtime.js` | `io({...})` sans URL (same-origin automatique)                                                        |
+| `raspberry/admin/__tests__/socket-proxy.test.js`  | 16 tests de régression statiques (ordre middleware, CSP, paths)                                       |
+
+### Diagnostic
+
+```bash
+# Vérifier que l'admin-server joint bien le socket-server en local
+curl -s http://localhost:8080/api/admin/health | jq .socketProxy
+# → { "reachable": true, "status": 200, "latencyMs": 3 }
+
+# Vérifier que le chargement same-origin fonctionne
+curl -I http://localhost:8080/socket.io/socket.io.js
+# → HTTP/1.1 200 OK, Content-Type: application/javascript
+
+# Tester le handshake polling à travers le proxy
+curl -s "http://localhost:8080/socket.io/?EIO=4&transport=polling" | head -c 100
+# → "0{\"sid\":\"...\",\"upgrades\":[\"websocket\"], ...}"
+```
+
+### Régression-prevention
+
+Les 16 tests de `raspberry/admin/__tests__/socket-proxy.test.js` garantissent que :
+
+- Le proxy est monté AVANT `express.json()` / `express.urlencoded()`
+- `admin-server.js` utilise `http.createServer(app)` + `attachSocketWsProxy`
+- La CSP n'autorise PAS d'origine `:3000` (reste `'self'`)
+- `index.html` charge `socket.io.js` en chemin relatif (pas de `window.location`)
+- `realtime.js` appelle `io()` sans URL absolue
+- `pingSocketServer` retourne `reachable: false` (et ne throw pas) quand l'upstream est down
+
+**Voir aussi :** `.claude/rules/raspberry.md` section "Admin Server (:8080) & Socket.IO proxy", [ARCHITECTURE.md](../technical/ARCHITECTURE.md#admin-ui--socketio-reverse-proxy-same-origin)

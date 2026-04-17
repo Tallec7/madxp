@@ -617,9 +617,11 @@ describe('Security headers (Helmet)', () => {
     expect(res.headers['x-content-type-options']).toBe('nosniff');
   });
 
-  it('sets X-Frame-Options: DENY', async () => {
+  it('uses CSP frame-ancestors instead of X-Frame-Options (template iframe support)', async () => {
     const res = await request(app).get('/');
-    expect(res.headers['x-frame-options']).toBe('DENY');
+    // X-Frame-Options disabled in favor of CSP frame-ancestors (allows dashboard iframe embedding)
+    expect(res.headers['x-frame-options']).toBeUndefined();
+    expect(res.headers['content-security-policy']).toContain('frame-ancestors');
   });
 
   it('removes X-Powered-By header', async () => {

@@ -7,10 +7,10 @@ Après avoir modifié du code dans `central-server/`, `raspberry/`, ou `central-
 **Préférer `npm run test:smoke:smart`** à `npm run test:smoke` :
 
 - `test:smoke:smart` détecte automatiquement les fichiers modifiés (git diff) et ne lance que les suites pertinentes
-- Beaucoup plus rapide (~2-5s pour 1 suite vs ~26s pour les 12)
+- Beaucoup plus rapide (~2-5s pour 1 suite vs ~28s pour les 13)
 - Utiliser `test:smoke` (tout) uniquement avant un commit final ou en cas de doute
 
-Les 12 suites smoke et leurs domaines :
+Les 13 suites smoke et leurs domaines :
 
 | Suite                      | Domaine                                                     |
 | -------------------------- | ----------------------------------------------------------- |
@@ -26,6 +26,7 @@ Les 12 suites smoke et leurs domaines :
 | `smoke-dashboard-guards`   | Dashboard DataService extraction, validation, SQL injection |
 | `smoke-saas`               | Club portal, SaaS/ADR-037                                   |
 | `smoke-adr-refactoring`    | Multi-profile, SAFe, ADR-035/041/042/043                    |
+| `smoke-remotion`           | Remotion async render + template versions (ADR-054/055)     |
 
 Pour lancer une suite spécifique manuellement :
 

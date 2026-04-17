@@ -381,6 +381,24 @@ Chaque OTA génère un rapport step-by-step via `OtaStepTracker` dans `update-so
 
 Le rapport est envoyé via `update_progress` (Socket.IO) à la complétion ou l'échec, stocké en `update_deployments.deployment_details` (JSONB), et affiché via le bouton "Voir détail" dans le dashboard.
 
+**Vérification d'intégrité node_modules (v3.160+) :**
+
+`verifyNodeModules()` dans `ota-install.js` vérifie la présence physique de **toutes** les dépendances listées dans le `package.json` de chaque composant après extraction et `npm install`. Si des modules manquent (corruption EXT4, `npm install` partiel), un `npm install --production` de réparation est lancé automatiquement.
+
+Les composants vérifiés sont : `server`, `sync-agent`, `admin`. La vérification porte sur **l'ensemble des dépendances** du `package.json` (pas une liste hardcodée), ce qui couvre aussi les sous-dépendances explicites comme `follow-redirects`.
+
+Si la réparation échoue, l'OTA déclenche un rollback. Ce mécanisme a été renforcé (v3.160+) après un incident `neopro-app` en crash-loop (v3.157.3) où `follow-redirects` (sous-dépendance d'axios, mais aussi dépendance directe du `package.json` server) manquait après OTA.
+
+**Monitoring continu des dépendances (v3.160+) :**
+
+En plus de la vérification OTA ponctuelle, les dépendances sont maintenant surveillées en continu via 3 mécanismes :
+
+| Mécanisme                 | Fichier                                                | Fréquence               | Impact                                           |
+| ------------------------- | ------------------------------------------------------ | ----------------------- | ------------------------------------------------ |
+| Health status (heartbeat) | `metrics.js` → `getDependenciesStatus()`               | Chaque heartbeat (~30s) | -20 health score par module avec deps manquantes |
+| Diagnostics manuels       | `diagnostics.js` → check #10 "Dependencies"            | À la demande            | Catégorie "Dependencies" dans les résultats      |
+| healthcheck.sh            | `tools/healthcheck.sh` → section "DÉPENDANCES NODE.JS" | Debug local             | Vérifie chaque dep de chaque module              |
+
 **IMPORTANT :** Le code OTA lit les `.service` depuis l'archive extraite (`sourcePath`), PAS depuis `rootDir` (`/home/pi/neopro/config/systemd/`). Ce dernier peut contenir des fichiers orphelins d'anciennes versions. Smoke test enforced.
 
 **Monitoring OTA :** La métrique `neopro_ota_errors_total{error_type}` catégorise les erreurs :
@@ -701,6 +719,32 @@ Pi: getFanStatus() → collectAll() → heartbeat { fanStatus }
 ```
 
 **Impact santé :** Le health score perd 15 points si le ventilateur est installé mais arrêté à >70°C.
+
+#### Détection services légitimes en crash-loop (v3.160+)
+
+`getFailedServices()` dans `service-metrics.js` monitore les services légitimes (`neopro-app`, `neopro-admin`, `neopro-kiosk`, `neopro-sync-agent`) en état `failed` ou `activating` avec >3 restarts. Le champ `failedServices` est envoyé via le heartbeat toutes les 30s.
+
+| Condition                          | Type                 | Sévérité                                   | Slack |
+| ---------------------------------- | -------------------- | ------------------------------------------ | ----- |
+| Service légitime failed/activating | `service_crash_loop` | `warning` (≤10 restarts), `critical` (>10) | Oui   |
+
+#### Détection dépendances Node.js manquantes (v3.160+)
+
+`getDependenciesStatus()` dans `service-metrics.js` vérifie que toutes les dépendances du `package.json` de chaque module (`server`, `admin`, `sync-agent`) sont physiquement présentes dans `node_modules/`. Intégré dans le health score via `getHealthStatus()`.
+
+| Condition                   | Impact health score | Sévérité   | Fix automatique                                           |
+| --------------------------- | ------------------- | ---------- | --------------------------------------------------------- |
+| Module avec deps manquantes | -20 par module      | `critical` | `cd /home/pi/neopro/<module> && npm install --production` |
+
+**Pipeline :**
+
+```
+Pi: getFailedServices() → heartbeat { failedServices }
+  → Central: checkAlerts() → service_crash_loop → Slack (serviceCrashLoop)
+  → Dashboard: Alerts table (dédupliqué 1/heure)
+```
+
+Complémente `orphanServices` qui ne détecte que les services **non-légitimes** (noms hors de la whitelist).
 
 ### Pénalité HDMI Failover (v3.99.2)
 
@@ -1418,7 +1462,7 @@ POST   /sites                   - Créer site (génère api_key)
 PUT    /sites/:id               - Modifier
 DELETE /sites/:id               - Supprimer (admin)
 POST   /sites/:id/api-key/regenerate - Régénérer la clé API
-POST   /sites/:id/copy-config     - Copier les profils de config vers un autre site
+POST   /sites/:id/copy-config     - Copier des profils de config vers un autre site (mode ajout, profile_ids[] optionnel)
 POST   /sites/:id/command       - Envoyer commande au Pi
 GET    /sites/:id/remote-pin    - Statut PIN télécommande cloud
 POST   /sites/:id/remote-pin    - Définir PIN télécommande cloud
@@ -1982,18 +2026,51 @@ Le service monolithique `SitesService` a été décomposé en 4 services focalis
 
 Les composants complexes ont été décomposés en DataServices collocalisés (même dossier que le composant). Template et styles sont extraits en fichiers séparés (`.html`, `.scss`). Le composant orchestre, le DataService encapsule les appels API, le ChartService gère Chart.js.
 
-| Composant                  | DataService(s)                                                                   | Responsabilité                                                |
-| -------------------------- | -------------------------------------------------------------------------------- | ------------------------------------------------------------- |
-| `agencies-management`      | `AgenciesManagementDataService`                                                  | CRUD agencies, sites, associations                            |
-| `subscriptions-management` | `SubscriptionsManagementDataService`                                             | Stats, mutations, filtering/sorting, helpers métier           |
-| `updates-management`       | `UpdatesManagementDataService`                                                   | CRUD updates, déploiements, socket progress, formatting       |
-| `site-sponsors-tab`        | `SiteSponsorsTabDataService`, `SiteSponsorsChartService`                         | CRUD sponsors, stats, videos, config parsing; Chart.js trends |
-| `advertiser-detail`        | `AdvertiserDetailDataService`                                                    | forkJoin chargement, CRUD sponsor                             |
-| `content-management`       | `ContentManagementDataService`, `VideoUploadService`, `ContentDeploymentService` | Vidéos, upload, deploy wizard                                 |
-| `config-editor`            | `ConfigEditorDataService`                                                        | Polling config, validation, déploiement                       |
-| `site-settings-tab`        | `SiteSettingsDataService`                                                        | APIs settings, save/deploy                                    |
-| `users-management`         | `UsersManagementDataService`, `UserFiltersService`, `UserValidationService`      | CRUD users, filtres, validation                               |
-| `club-analytics`           | `ClubAnalyticsChartService`, `ClubExportService`                                 | Chart.js rendering, export CSV/PDF                            |
+| Composant                  | DataService(s)                                                                   | Responsabilité                                                  |
+| -------------------------- | -------------------------------------------------------------------------------- | --------------------------------------------------------------- |
+| `agencies-management`      | `AgenciesManagementDataService`                                                  | CRUD agencies, sites, associations                              |
+| `subscriptions-management` | `SubscriptionsManagementDataService`                                             | Stats, mutations, filtering/sorting, helpers métier             |
+| `updates-management`       | `UpdatesManagementDataService`                                                   | CRUD updates, déploiements, socket progress, formatting         |
+| `site-sponsors-tab`        | `SiteSponsorsTabDataService`, `SiteSponsorsChartService`                         | CRUD sponsors, stats, videos, config parsing; Chart.js trends   |
+| `advertiser-detail`        | `AdvertiserDetailDataService`                                                    | forkJoin chargement, CRUD sponsor                               |
+| `content-management`       | `ContentManagementDataService`, `VideoUploadService`, `ContentDeploymentService` | Vidéos, upload, deploy wizard                                   |
+| `config-editor`            | `ConfigEditorDataService`                                                        | Polling config, validation, déploiement                         |
+| `site-settings-tab`        | `SiteSettingsDataService`                                                        | APIs settings, save/deploy                                      |
+| `users-management`         | `UsersManagementDataService`, `UserFiltersService`, `UserValidationService`      | CRUD users, filtres, validation                                 |
+| `club-analytics`           | `ClubAnalyticsChartService`, `ClubExportService`                                 | Chart.js rendering, export CSV/PDF                              |
+| `remotion-templates`       | `RemotionTemplatesDataService`                                                   | Templates CRUD, render polling, schema editor, versions history |
+
+**Remotion templates — décomposition UI (v3.139+, ADR-055) :**
+
+Le composant `remotion-templates.component.ts` orchestre 6 sous-composants dédiés :
+
+| Sous-composant           | Fichier                               | Rôle                                                  |
+| ------------------------ | ------------------------------------- | ----------------------------------------------------- |
+| `template-grid`          | `template-grid.component.ts`          | Grille de cards + sélection + toggle publish (admin)  |
+| `template-card`          | `template-card.component.ts`          | Card individuelle avec miniature                      |
+| `template-props-form`    | `template-props-form.component.ts`    | Formulaire props dynamique basé sur `props_schema`    |
+| `template-preview`       | `template-preview.component.ts`       | Player Remotion pour preview live                     |
+| `template-schema-editor` | `template-schema-editor.component.ts` | Modal admin JSON brut (props_schema + default_props)  |
+| `template-versions`      | `template-versions.component.ts`      | Dropdown historique des snapshots avec bouton restore |
+
+**Render async (ADR-054) — chaîne complète :**
+
+```
+Dashboard → POST /api/remotion-templates/:id/render
+  → controller enqueue → remotion_render_jobs (status='pending')
+  → 202 { job_id }                            ← client reçoit aussitôt
+
+Worker (in-process, polling 5s) :
+  → claimNextPending() [FOR UPDATE SKIP LOCKED]
+  → status='running', phase='bundling' / 'selecting' / 'rendering' / 'uploading'
+  → updateProgress() throttled (min 2-point jump)
+  → markCompleted() ou markFailed()
+
+Dashboard → GET /api/remotion-templates/render-jobs/:jobId (poll 2s)
+  → affiche progress + phase + video_url quand status='completed'
+```
+
+Supervision via `alerting.checkStuckRenderJobs()` (toutes les 60s) : warning 15 min, critical 30 min + auto-fail, taux échec 1h (warning 30%, critical 60%).
 
 **Méthodes SitesService (profils) :**
 

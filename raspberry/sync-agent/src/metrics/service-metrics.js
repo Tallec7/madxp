@@ -141,6 +141,57 @@ async function getOrphanServices() {
 }
 
 // =============================================================================
+// FAILED LEGITIMATE SERVICES
+// =============================================================================
+
+/**
+ * Détecte les services légitimes neopro-* qui sont en état failed ou activating
+ * (crash-loop). Complémente getOrphanServices() qui ne regarde que les services
+ * NON-légitimes. Retourne un tableau d'objets { name, status, restarts }.
+ */
+async function getFailedServices() {
+  const MONITORED_SERVICES = [
+    'neopro-app',
+    'neopro-admin',
+    'neopro-kiosk',
+    'neopro-sync-agent',
+  ];
+
+  const failed = [];
+
+  for (const service of MONITORED_SERVICES) {
+    try {
+      const { stdout: status } = await execAsync(
+        `systemctl is-active ${service} 2>/dev/null || echo "inactive"`,
+        { timeout: 5000 }
+      );
+      const state = status.trim();
+      if (state === 'active') continue;
+
+      let restarts = 0;
+      try {
+        const { stdout: nRestarts } = await execAsync(
+          `systemctl show ${service} -p NRestarts --value 2>/dev/null || echo "0"`,
+          { timeout: 5000 }
+        );
+        restarts = parseInt(nRestarts.trim(), 10) || 0;
+      } catch {
+        // ignore
+      }
+
+      // Only report if actually failed/activating with restarts, not just stopped
+      if (state === 'failed' || state === 'activating' || restarts > 3) {
+        failed.push({ name: service, status: state, restarts });
+      }
+    } catch {
+      // ignore — service might not exist on this Pi
+    }
+  }
+
+  return failed;
+}
+
+// =============================================================================
 // KIOSK STATUS
 // =============================================================================
 
@@ -158,8 +209,55 @@ async function getKioskStatus() {
   }
 }
 
+// =============================================================================
+// NODE.JS DEPENDENCIES CHECK
+// =============================================================================
+
+const path = require('path');
+
+/**
+ * Vérifie que toutes les dépendances Node.js sont installées pour chaque module.
+ * Détecte les node_modules corrompus ou incomplets (ex: OTA interrompu).
+ */
+async function getDependenciesStatus() {
+  const modules = [
+    { dir: '/home/pi/neopro/server', name: 'server' },
+    { dir: '/home/pi/neopro/admin', name: 'admin' },
+    { dir: '/home/pi/neopro/sync-agent', name: 'sync-agent' },
+  ];
+
+  const results = [];
+  for (const mod of modules) {
+    try {
+      const pkgPath = path.join(mod.dir, 'package.json');
+      if (!fs.existsSync(pkgPath)) continue;
+
+      const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
+      const deps = Object.keys(pkg.dependencies || {});
+      const missing = deps.filter(dep => !fs.existsSync(path.join(mod.dir, 'node_modules', dep)));
+
+      results.push({
+        module: mod.name,
+        totalDeps: deps.length,
+        missing,
+        status: missing.length === 0 ? 'ok' : 'error',
+      });
+
+      if (missing.length > 0) {
+        logger.warn(`Missing dependencies in ${mod.name}:`, { missing });
+      }
+    } catch (err) {
+      logger.error(`Error checking deps for ${mod.name}:`, { error: err.message });
+      results.push({ module: mod.name, totalDeps: 0, missing: [], status: 'unknown' });
+    }
+  }
+  return results;
+}
+
 module.exports = {
   getServicesStatus,
   getOrphanServices,
+  getFailedServices,
   getKioskStatus,
+  getDependenciesStatus,
 };

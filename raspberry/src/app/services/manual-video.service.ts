@@ -30,7 +30,12 @@ export class ManualVideoService {
   // État des players manuels
   private _isManualMode = false;
   private _manualRecordingStarted = false;
+  private _currentManualEndedHandler: (() => void) | null = null;
   private _savedLoopIndex = 0;
+
+  // Debounce: prevent rapid successive play() calls causing black frames on Pi 5
+  private _lastPlayTimestamp = 0;
+  private static readonly PLAY_DEBOUNCE_MS = 500;
 
   // ADR-034: Preloaded manual video state for synchronized reveal
   private _preloadedManualVideo: Video | null = null;
@@ -68,9 +73,35 @@ export class ManualVideoService {
    * Joue une vidéo manuelle (master path).
    */
   play(video: Video): void {
+    const now = Date.now();
+    if (now - this._lastPlayTimestamp < ManualVideoService.PLAY_DEBOUNCE_MS) {
+      console.log('tv player : play manual video debounced (too rapid)', video.path);
+      return;
+    }
+    this._lastPlayTimestamp = now;
+
     console.log('tv player : play manual video', video.path);
 
-    const targetPlayer = this.doubleBufferService.getActiveManualPlayer();
+    // Use inactive manual player for double-buffering (manual→manual transitions)
+    const targetPlayer = this.doubleBufferService.getInactiveManualPlayer();
+
+    // Nettoyer l'ancien listener ended pour éviter qu'il se déclenche
+    // quand on change le src (causerait hideFreezeFrame prématuré → flash boucle)
+    if (this._currentManualEndedHandler) {
+      targetPlayer.removeEventListener('ended', this._currentManualEndedHandler);
+      this._currentManualEndedHandler = null;
+    }
+    // Stopper proprement le player avant de changer de source
+    targetPlayer.pause();
+
+    // Nettoyer l'ancien listener ended pour éviter qu'il se déclenche
+    // quand on change le src (causerait hideFreezeFrame prématuré → flash boucle)
+    if (this._currentManualEndedHandler) {
+      targetPlayer.removeEventListener('ended', this._currentManualEndedHandler);
+      this._currentManualEndedHandler = null;
+    }
+    // Stopper proprement le player avant de changer de source
+    targetPlayer.pause();
 
     // ETAPE 0: Mettre isManualMode IMMEDIATEMENT pour bloquer les transitions de boucle
     this._savedLoopIndex = this.playbackService.currentLoopIndex;
@@ -91,10 +122,19 @@ export class ManualVideoService {
     }
 
     // ETAPE 1: Capturer et afficher le freeze-frame IMMEDIATEMENT
-    this.doubleBufferService.captureAndShowFreezeFrame();
+    // Si une vidéo manuelle est déjà visible, capturer depuis le player manuel
+    // (sinon on capture le player de boucle qui est derrière/pausé → flash boucle)
+    const wasManualVisible = targetPlayer.style.opacity === '1' && !targetPlayer.paused;
+    const freezeOk = this.doubleBufferService.captureAndShowFreezeFrame(wasManualVisible);
 
-    // ETAPE 2: Afficher le black overlay pour bloquer la boucle
-    this.doubleBufferService.showBlackOverlay();
+    // ETAPE 2: Afficher le black overlay UNIQUEMENT si le freeze-frame a échoué.
+    // En software decode (Pi 5 fallback), le chargement vidéo est plus lent et le
+    // black overlay (z-5) devenait visible entre le hideFreezeFrame et l'apparition
+    // du player manuel, causant un flash noir. Le freeze-frame (z-20) suffit à
+    // masquer la boucle pendant le chargement.
+    if (!freezeOk) {
+      this.doubleBufferService.showBlackOverlay();
+    }
 
     // ETAPE 3: Garder le player manuel INVISIBLE pendant le chargement
     targetPlayer.style.opacity = '0';
@@ -116,7 +156,9 @@ export class ManualVideoService {
           requestAnimationFrame(() => {
             setTimeout(() => {
               targetPlayer.style.opacity = '1';
+              this.doubleBufferService.swapActiveManualPlayer();
               this.doubleBufferService.hideFreezeFrame();
+              this.doubleBufferService.hideBlackOverlay();
 
               // Tracker (desactive pour les slaves)
               if (!this.callbacks?.getIsSlaveMode()) {
@@ -232,8 +274,10 @@ export class ManualVideoService {
       }
 
       console.log('tv player : returning to loop');
+      this._currentManualEndedHandler = null;
     };
 
+    this._currentManualEndedHandler = onManualEnded;
     targetPlayer.addEventListener('ended', onManualEnded, { once: true });
   }
 

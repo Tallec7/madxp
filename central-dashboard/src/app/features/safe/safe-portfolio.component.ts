@@ -58,6 +58,9 @@ interface KanbanColumn {
           <a routerLink="/safe/proposals" class="btn btn-secondary">
             {{ 'safe.proposals.title' | translate }}
           </a>
+          <a routerLink="/safe/product" class="btn btn-secondary">
+            Produit
+          </a>
         </div>
       </div>
 

@@ -10,6 +10,7 @@ import {
   CloudVideo,
   SiteConfiguration,
 } from '../../../../core/models';
+import { ConfigProfile, ProfilesListResponse } from '../../../../core/models/config-profile.model';
 
 @Injectable({ providedIn: 'root' })
 export class SiteSponsorsTabDataService {
@@ -190,5 +191,55 @@ export class SiteSponsorsTabDataService {
     if (videosInLoops.has(filename)) return true;
     const bare = filename.split('/').pop() || filename;
     return bare !== filename && videosInLoops.has(bare);
+  }
+
+  // ── Profiles ─────────────────────────────────────────────────────────────
+
+  loadProfiles(siteId: string): Observable<ProfilesListResponse> {
+    return this.sitesService.getProfiles(siteId);
+  }
+
+  /**
+   * Extracts a Set of bare video filenames from a profile's configuration.
+   * Covers sponsors[], timeCategories[].loopVideos[], categories[].videos[]
+   * and subCategories[].videos[].
+   */
+  extractVideoFilenamesFromConfig(config: SiteConfiguration | null): Set<string> {
+    const filenames = new Set<string>();
+    if (!config) return filenames;
+
+    const add = (path?: string, name?: string): void => {
+      if (path) {
+        filenames.add(path.split('/').pop() || path);
+      }
+      if (name) {
+        filenames.add(name.split('/').pop() || name);
+      }
+    };
+
+    for (const v of config.sponsors ?? []) add(v.path, v.name);
+    for (const tc of config.timeCategories ?? []) {
+      for (const v of tc.loopVideos ?? []) add(v.path, v.name);
+    }
+    for (const cat of config.categories ?? []) {
+      for (const v of cat.videos ?? []) add(v.path, v.name);
+      for (const sub of cat.subCategories ?? []) {
+        for (const v of sub.videos ?? []) add(v.path, v.name);
+      }
+    }
+
+    return filenames;
+  }
+
+  /**
+   * Checks if a sponsor has at least one video present in the given filename set.
+   */
+  isSponsorInProfile(sponsor: SiteSponsor, profileFilenames: Set<string>): boolean {
+    const filenames = sponsor.video_filenames ?? [];
+    if (filenames.length === 0) return false;
+    return filenames.some(f => {
+      const bare = f.split('/').pop() || f;
+      return profileFilenames.has(f) || profileFilenames.has(bare);
+    });
   }
 }

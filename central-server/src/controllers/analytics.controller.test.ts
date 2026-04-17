@@ -468,14 +468,28 @@ describe('Analytics Controller', () => {
       );
     });
 
-    it('should return 400 if site_id or plays missing', async () => {
+    it('should return 400 if site_id missing (no auth, no body)', async () => {
       const req = createAuthRequest({ body: {} });
       const res = createMockResponse();
 
       await recordVideoPlays(req, res);
 
       expect(res.status).toHaveBeenCalledWith(400);
-      expect(res.json).toHaveBeenCalledWith({ error: 'site_id et plays[] requis' });
+      expect(res.json).toHaveBeenCalledWith({
+        error: 'site_id requis (via auth Bearer ou body)',
+      });
+    });
+
+    it('should return 400 if plays and events both missing', async () => {
+      const req = createAuthRequest({ body: { site_id: 'site-123' } });
+      const res = createMockResponse();
+
+      await recordVideoPlays(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith({
+        error: 'plays[] ou events[] requis',
+      });
     });
 
     it('should return 404 if site not found', async () => {

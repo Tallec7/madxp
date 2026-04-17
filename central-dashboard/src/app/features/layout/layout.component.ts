@@ -133,6 +133,10 @@ import { ConfirmDialogService } from '../../core/services/confirm-dialog.service
               <span class="icon" aria-hidden="true">🎬</span>
               <span>Templates</span>
             </a>
+            <a routerLink="/content/templates-remotion" routerLinkActive="active" class="nav-item" (click)="closeSidebar()" *ngIf="isAdmin()" aria-label="Templates Remotion">
+              <span class="icon" aria-hidden="true">✨</span>
+              <span>Templates Remotion</span>
+            </a>
             <a routerLink="/updates" routerLinkActive="active" class="nav-item" (click)="closeSidebar()" *ngIf="canManageContent()" [attr.aria-label]="'nav.updates' | translate">
               <span class="icon" aria-hidden="true">🔄</span>
               <span>{{ 'nav.updates' | translate }}</span>

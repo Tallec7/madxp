@@ -138,14 +138,24 @@ export const sensitiveRateLimit = createUserRateLimit(
   'sensitive'
 );
 
-// Upload de vidéos - très restrictif (10 uploads / heure)
+// Upload de vidéos (50 uploads / heure)
 export const uploadRateLimit = createUserRateLimit(
   60 * 60 * 1000, // 1 heure
-  10,
+  50,
   {
     message: { error: 'Limite d\'uploads atteinte. Réessayez dans 1 heure.' },
   },
   'upload'
+);
+
+// Upload de packages OTA - quota distinct des vidéos (20 uploads / heure)
+export const otaUploadRateLimit = createUserRateLimit(
+  60 * 60 * 1000, // 1 heure
+  20,
+  {
+    message: { error: 'Limite d\'uploads OTA atteinte. Réessayez dans 1 heure.' },
+  },
+  'ota-upload'
 );
 
 // Webhooks et endpoints publics - par IP uniquement (60 requêtes / minute)
@@ -257,6 +267,7 @@ export default {
   sensitiveRateLimit,
   remoteRateLimit,
   uploadRateLimit,
+  otaUploadRateLimit,
   publicRateLimit,
   adminRateLimit,
   monitoringRateLimit,

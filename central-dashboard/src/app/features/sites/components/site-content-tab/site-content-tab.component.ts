@@ -85,6 +85,7 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
   allKnownVideoPaths: Set<string> = new Set();
   videoDurations: Map<string, number> = new Map();
   configVideoRoles: Map<string, Set<string>> = new Map();
+  configVideoLabels: Map<string, string[]> = new Map();
 
   // Secondary display
   secondaryVariantVideoIds: Set<string> = new Set();
@@ -191,6 +192,10 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
 
   get isClub(): boolean {
     return this.authService.getCurrentUser()?.role === 'club';
+  }
+
+  get isSuperAdmin(): boolean {
+    return this.authService.getCurrentUser()?.role === 'super_admin';
   }
 
   get canUseMultiProfiles(): boolean {
@@ -408,6 +413,7 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
   markDirty(): void {
     this.isDirty = JSON.stringify(this.config) !== this.originalConfig;
     this.rebuildConfigVideoRoles();
+    this.detectOrphanedVideoPaths();
   }
 
   resetConfig(): void {
@@ -494,19 +500,24 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
     if (!this.config) return;
     const { video, target } = event;
 
+    // Resolve cloud URL to local Pi path using unifiedVideoOptions
+    // The config expects local paths (e.g. "videos/BOUCLE/file.mp4"), not cloud URLs
+    const configPath = this.resolveConfigPath(video);
+
     if (target.type === 'loop') {
       // Default loop = sponsors[]
       if (!this.config.sponsors) this.config.sponsors = [];
       const alreadyInLoop = this.config.sponsors.some(
-        (s: { path?: string }) => s.path === video.path
+        (s: { path?: string }) => s.path === configPath
       );
       if (alreadyInLoop) {
         this.notificationService.info('Cette vidéo est déjà dans la boucle');
         return;
       }
       this.config.sponsors.push({
-        path: video.path,
+        path: configPath,
         name: video.displayName,
+        type: 'video/mp4',
         weight: 1,
       } as never);
     } else if (target.type === 'match') {
@@ -515,15 +526,16 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
       if (!phase) return;
       if (!phase.loopVideos) phase.loopVideos = [];
       const alreadyInPhase = phase.loopVideos.some(
-        (v: { path?: string }) => v.path === video.path
+        (v: { path?: string }) => v.path === configPath
       );
       if (alreadyInPhase) {
         this.notificationService.info(`Cette vidéo est déjà dans "${target.label}"`);
         return;
       }
       phase.loopVideos.push({
-        path: video.path,
+        path: configPath,
         name: video.displayName,
+        type: 'video/mp4',
         weight: 1,
       } as never);
     } else if (target.type === 'category') {
@@ -532,21 +544,46 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
       if (!cat) return;
       if (!cat.videos) cat.videos = [];
       const alreadyInCat = cat.videos.some(
-        (v: { path?: string }) => v.path === video.path
+        (v: { path?: string }) => v.path === configPath
       );
       if (alreadyInCat) {
         this.notificationService.info(`Cette vidéo est déjà dans "${target.label}"`);
         return;
       }
       cat.videos.push({
-        path: video.path,
+        path: configPath,
         name: video.displayName,
+        type: 'video/mp4',
       } as never);
     }
 
     this.markDirty();
     this.notificationService.success(`"${video.displayName}" ajoutée à "${target.label}"`);
     this.rebuildConfigVideoRoles();
+  }
+
+  /**
+   * Resolve a VideoItem path (which may be a cloud URL) to the local Pi path
+   * expected by the config (e.g. "videos/PARTENAIRES/file.mp4").
+   * Uses unifiedVideoOptions which already resolved cloud → local paths.
+   */
+  private resolveConfigPath(video: VideoItem): string {
+    // Try to find the resolved local path from unifiedVideoOptions
+    const fnLower = video.filename.toLowerCase();
+    const match = this.unifiedVideoOptions.find(
+      opt => opt.filename.toLowerCase() === fnLower
+    );
+    if (match) return match.path;
+
+    // Fallback: use deployedPathsMap if video has an ID
+    if (video.id) {
+      const deployed = this.deployedPathsMap.get(video.id);
+      if (deployed) return deployed.deployedPath;
+    }
+
+    // Last resort: construct from category + filename
+    const category = video.category || 'default';
+    return `videos/${category}/${video.filename}`;
   }
 
   /** Build the list of available targets for the "Add to" dropdown */
@@ -847,6 +884,13 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
 
     this.allKnownVideoPaths = new Set(this.unifiedVideoOptions.map(v => v.path));
     for (const local of this.localVideos) this.allKnownVideoPaths.add(local.path);
+    // Also index with space↔underscore normalization so Pi-sanitized paths match cloud filenames
+    for (const path of [...this.allKnownVideoPaths]) {
+      const normalized = path.replace(/ /g, '_');
+      if (normalized !== path) this.allKnownVideoPaths.add(normalized);
+      const denormalized = path.replace(/_/g, ' ');
+      if (denormalized !== path) this.allKnownVideoPaths.add(denormalized);
+    }
 
     this.filenameToPathsMap = new Map();
     for (const local of this.localVideos) {
@@ -854,6 +898,26 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
       const existing = this.filenameToPathsMap.get(key) || [];
       if (!existing.includes(local.path)) existing.push(local.path);
       this.filenameToPathsMap.set(key, existing);
+      // Also index with space↔underscore normalization
+      const normalizedKey = key.replace(/ /g, '_');
+      if (normalizedKey !== key) {
+        const norm = this.filenameToPathsMap.get(normalizedKey) || [];
+        if (!norm.includes(local.path)) norm.push(local.path);
+        this.filenameToPathsMap.set(normalizedKey, norm);
+      }
+    }
+    // Also index cloud videos in filenameToPathsMap (critical for SaaS sites with no local videos)
+    for (const opt of this.unifiedVideoOptions) {
+      const key = opt.filename.toLowerCase();
+      const existing = this.filenameToPathsMap.get(key) || [];
+      if (!existing.includes(opt.path)) existing.push(opt.path);
+      this.filenameToPathsMap.set(key, existing);
+      const normalizedKey = key.replace(/ /g, '_');
+      if (normalizedKey !== key) {
+        const norm = this.filenameToPathsMap.get(normalizedKey) || [];
+        if (!norm.includes(opt.path)) norm.push(opt.path);
+        this.filenameToPathsMap.set(normalizedKey, norm);
+      }
     }
 
     this.videoDurations = new Map<string, number>();
@@ -872,17 +936,24 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
 
   private rebuildConfigVideoRoles(): void {
     const roles = new Map<string, Set<string>>();
+    const labels = new Map<string, string[]>();
 
     // Build filename → cloud URL map so we can cross-reference local config paths with cloud URLs
     // This fixes the mismatch where configs contain local paths but the library uses cloud URLs
     const filenameToCloudUrl = new Map<string, string>();
     for (const cloud of this.cloudVideos) {
-      filenameToCloudUrl.set(cloud.filename.toLowerCase(), cloud.url);
+      const fnLower = cloud.filename.toLowerCase();
+      filenameToCloudUrl.set(fnLower, cloud.url);
+      // Also index with space↔underscore normalization (Pi sanitizes spaces to underscores)
+      filenameToCloudUrl.set(fnLower.replace(/ /g, '_'), cloud.url);
+      filenameToCloudUrl.set(fnLower.replace(/_/g, ' '), cloud.url);
     }
 
-    const addRole = (path: string, role: string): void => {
+    const addRole = (path: string, role: string, label: string): void => {
       if (!roles.has(path)) roles.set(path, new Set());
       roles.get(path)!.add(role);
+      if (!labels.has(path)) labels.set(path, []);
+      if (!labels.get(path)!.includes(label)) labels.get(path)!.push(label);
       // Also register under the cloud URL if the config path is a local path
       const filename = path.split('/').pop()?.toLowerCase();
       if (filename) {
@@ -890,29 +961,40 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
         if (cloudUrl && cloudUrl !== path) {
           if (!roles.has(cloudUrl)) roles.set(cloudUrl, new Set());
           roles.get(cloudUrl)!.add(role);
+          if (!labels.has(cloudUrl)) labels.set(cloudUrl, []);
+          if (!labels.get(cloudUrl)!.includes(label)) labels.get(cloudUrl)!.push(label);
         }
       }
     };
 
     if (this.config.sponsors) {
-      for (const sponsor of this.config.sponsors) { if (sponsor.path) addRole(sponsor.path, 'boucle'); }
+      for (const sponsor of this.config.sponsors) {
+        if (sponsor.path) addRole(sponsor.path, 'boucle', `Boucle : ${sponsor.name || sponsor.path.split('/').pop() || sponsor.path}`);
+      }
     }
     if (this.config.categories) {
       for (const cat of this.config.categories) {
-        if (cat.videos) for (const video of cat.videos) { if (video.path) addRole(video.path, 'action'); }
+        if (cat.videos) for (const video of cat.videos) {
+          if (video.path) addRole(video.path, 'action', `Catégorie : ${cat.name}`);
+        }
         if (cat.subCategories) {
           for (const subcat of cat.subCategories) {
-            if (subcat.videos) for (const video of subcat.videos) { if (video.path) addRole(video.path, 'action'); }
+            if (subcat.videos) for (const video of subcat.videos) {
+              if (video.path) addRole(video.path, 'action', `Catégorie : ${cat.name} › ${subcat.name}`);
+            }
           }
         }
       }
     }
     if (this.config.timeCategories) {
       for (const tc of this.config.timeCategories) {
-        if (tc.loopVideos) for (const video of tc.loopVideos) { if (video.path) addRole(video.path, 'match'); }
+        if (tc.loopVideos) for (const video of tc.loopVideos) {
+          if (video.path) addRole(video.path, 'match', `Phase : ${tc.name}`);
+        }
       }
     }
     this.configVideoRoles = roles;
+    this.configVideoLabels = labels;
   }
 
   private detectOrphanedVideoPaths(): void {

@@ -1014,6 +1014,42 @@ NETEOF
     fi
 fi
 
+log_step "15/15 — Suppression pop-up SSH/pi par défaut (vol de focus kiosk)"
+
+# Raspberry Pi OS affiche un pop-up "SSH enabled + default password" à chaque
+# session X via /etc/xdg/autostart/pprompt.desktop. Ce pop-up :
+#   1. Vole le focus de Chromium fullscreen
+#   2. Casse le séquençage xprop/xdotool du watchdog kiosk (re-raise loop)
+#   3. Affiche un message de sécurité sur la TV des clubs
+#
+# Sur les Pi de la flotte, le mot de passe 'pi' n'est jamais changé par
+# install.sh — le pop-up réapparaît donc à chaque boot. On désactive
+# simplement l'autostart (l'accès SSH reste fonctionnel pour l'admin).
+#
+# Également : piwiz.desktop (assistant premier démarrage) qui peut s'afficher
+# sur les images fraîches Raspberry Pi OS.
+
+PPROMPT_AUTOSTART="/etc/xdg/autostart/pprompt.desktop"
+PIWIZ_AUTOSTART="/etc/xdg/autostart/piwiz.desktop"
+POPUP_REMOVED=0
+
+for popup in "$PPROMPT_AUTOSTART" "$PIWIZ_AUTOSTART"; do
+    if [ -f "$popup" ]; then
+        rm -f "$popup" 2>/dev/null || true
+        if [ ! -f "$popup" ]; then
+            log_ok "Pop-up supprimé : $popup"
+            POPUP_REMOVED=$((POPUP_REMOVED + 1))
+            CHANGES=$((CHANGES + 1))
+        else
+            log_err "Impossible de supprimer $popup"
+        fi
+    fi
+done
+
+if [ "$POPUP_REMOVED" = 0 ]; then
+    log_ok "Aucun pop-up autostart Raspberry Pi à supprimer (déjà fait)"
+fi
+
 # =============================================================================
 # Résumé
 # =============================================================================

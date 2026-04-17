@@ -19,15 +19,19 @@ Commit → Pre-commit Hooks → PR → CI Workflow → Merge main → Semantic R
 
 ### 2. Release (`release.yml`)
 
-- **Trigger** : Push sur `main`
+- **Trigger** : Push sur `main` (hors `chore(release)` commits)
+- **Guard** : Le job `release` a un `if` qui skip les commits `chore(release)` pour éviter la boucle infinie (voir [Troubleshooting § Release bloquée](#release-bloquée))
+- **Sync** : Après checkout, `git pull --ff-only` synchronise avec le remote avant de lancer semantic-release (évite l'erreur "local branch is behind the remote")
 - **Fonctionnement** :
   1. `semantic-release` analyse les commits (Conventional Commits)
   2. Détermine la version (feat → MINOR, fix → PATCH, breaking → MAJOR)
-  3. Crée un tag git `v{version}`
+  3. Crée un tag git `v{version}` + commit `chore(release)` avec `[skip ci]`
   4. Build les archives Raspberry Pi
   5. Upload sur GitHub Releases :
      - `neopro-raspberry-deploy.tar.gz` — Package complet
      - `neopro-webapp.tar.gz` — Webapp seule (mise à jour rapide)
+  6. Déploie le Dashboard sur Hostinger (FTP) + vérification HTTP post-deploy
+  7. Déploie l'app SaaS sur Hostinger `/saas/` + vérification HTTP post-deploy
 
 ### 3. Install Scripts (`publish-install-scripts.yml`)
 
@@ -99,12 +103,15 @@ Commit → Pre-commit Hooks → PR → CI Workflow → Merge main → Semantic R
 
 ## Secrets CI/CD (GitHub)
 
-| Secret               | Usage                                              |
-| -------------------- | -------------------------------------------------- |
-| `RELEASE_TOKEN`      | PAT pour semantic-release (push tags/commits main) |
-| `RAILWAY_TOKEN`      | Authentification Railway CLI                       |
-| `RAILWAY_PROJECT_ID` | ID du projet Railway                               |
-| `GITHUB_TOKEN`       | Automatique (GitHub Actions, lecture seule)        |
+| Secret                   | Usage                                              |
+| ------------------------ | -------------------------------------------------- |
+| `RELEASE_TOKEN`          | PAT pour semantic-release (push tags/commits main) |
+| `RAILWAY_TOKEN`          | Authentification Railway CLI                       |
+| `RAILWAY_PROJECT_ID`     | ID du projet Railway                               |
+| `HOSTINGER_FTP_SERVER`   | Serveur FTP Hostinger (deploy dashboard + SaaS)    |
+| `HOSTINGER_FTP_USERNAME` | Utilisateur FTP Hostinger                          |
+| `HOSTINGER_FTP_PASSWORD` | Mot de passe FTP Hostinger                         |
+| `GITHUB_TOKEN`           | Automatique (GitHub Actions, lecture seule)        |
 
 ### RELEASE_TOKEN
 

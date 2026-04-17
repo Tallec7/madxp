@@ -211,7 +211,7 @@ export async function handleHeartbeat(
       }
     }
 
-    await checkAlerts(siteId, message.metrics, message.kioskStatus, message.wifiStatus, message.fanStatus, message.filesystemHealth, message.hdmiStatus, message.orphanServices);
+    await checkAlerts(siteId, message.metrics, message.kioskStatus, message.wifiStatus, message.fanStatus, message.filesystemHealth, message.hdmiStatus, message.orphanServices, message.failedServices);
   } catch (error) {
     logger.error('Error handling heartbeat:', error);
   }
@@ -229,7 +229,8 @@ async function checkAlerts(
   fanStatus?: HeartbeatMessage['fanStatus'],
   filesystemHealth?: HeartbeatMessage['filesystemHealth'],
   hdmiStatus?: HeartbeatMessage['hdmiStatus'],
-  orphanServices?: HeartbeatMessage['orphanServices']
+  orphanServices?: HeartbeatMessage['orphanServices'],
+  failedServices?: Array<{ name: string; status: string; restarts: number }> | null
 ): Promise<void> {
   const alerts: Array<{ type: string; severity: string; message: string }> = [];
 
@@ -473,6 +474,23 @@ async function checkAlerts(
     }
   }
 
+  // Failed legitimate services (neopro-app, admin, kiosk in crash-loop)
+  if (failedServices && failedServices.length > 0) {
+    for (const svc of failedServices) {
+      logger.warn('Legitimate service failed/crash-looping on Pi', {
+        siteId,
+        service: svc.name,
+        status: svc.status,
+        restarts: svc.restarts,
+      });
+      alerts.push({
+        type: 'service_crash_loop',
+        severity: svc.restarts > 10 ? 'critical' : 'warning',
+        message: `Service ${svc.name} en ${svc.status} (${svc.restarts} restarts)`,
+      });
+    }
+  }
+
   for (const alert of alerts) {
     const existing = await query(
       `SELECT id FROM alerts
@@ -508,6 +526,11 @@ async function checkAlerts(
         alertService.fanFailure(siteId, siteName, metrics.temperature, fanStatus?.curState ?? 0, fanStatus?.maxState ?? 0).catch((_e) => {/* ignore */});
       } else if (alert.type === 'display_fallback') {
         alertService.displayFallback(siteId, siteName, kioskStatus?.displayFallback || '').catch((_e) => {/* ignore */});
+      } else if (alert.type === 'service_crash_loop' && failedServices) {
+        const svc = failedServices.find(s => alert.message.includes(s.name));
+        if (svc) {
+          alertService.serviceCrashLoop(siteId, siteName, svc.name, svc.status, svc.restarts).catch((_e) => {/* ignore */});
+        }
       }
 
       logger.warn('Alert created', { siteId, ...alert });

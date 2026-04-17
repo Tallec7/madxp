@@ -17,10 +17,13 @@ router.post('/videos', authenticate, requireRole('admin', 'operator', 'club'), u
 router.post('/videos/bulk', authenticate, requireRole('admin', 'operator'), uploadRateLimit, uploadVideo.array('videos', 20), contentController.createVideos);
 router.put('/videos/:id', authenticate, requireRole('admin', 'operator', 'club'), sensitiveRateLimit, contentController.updateVideo);
 router.delete('/videos/:id', authenticate, requireRole('admin', 'club'), sensitiveRateLimit, contentController.deleteVideo);
+router.delete('/videos/:id/sites/:siteId', authenticate, requireRole('admin'), sensitiveRateLimit, contentController.unlinkVideoFromSite);
 
-// Video variant routes (E-22: LED variants)
+// Video variant routes (E-22: LED variants, Phase 5H: multi-display)
 router.get('/videos/:id/variants', authenticate, adminRateLimit, contentController.getVideoVariants);
+router.post('/videos/variant-counts', authenticate, adminRateLimit, contentController.getVariantCounts);
 router.post('/videos/:id/variants', authenticate, requireRole('admin', 'operator'), uploadRateLimit, uploadVideo.single('video'), contentController.createVideoVariant);
+router.post('/videos/:id/variants/from-video', authenticate, requireRole('admin', 'operator'), adminRateLimit, contentController.createVideoVariantFromVideo);
 router.delete('/videos/:videoId/variants/:displayType', authenticate, requireRole('admin'), sensitiveRateLimit, contentController.deleteVideoVariant);
 
 // Image to video conversion
@@ -33,6 +36,20 @@ router.post('/render-template', authenticate, requireRole('admin', 'operator'), 
   { name: 'image_logo', maxCount: 1 },
 ]), contentController.renderTemplate);
 router.get('/templates/available', authenticate, adminRateLimit, contentController.getAvailableTemplates);
+// Template assets: no auth (static files), relaxed CSP for iframe embedding
+router.get(
+  '/template-assets/:template/:file',
+  adminRateLimit,
+  (_req, res, next) => {
+    res.removeHeader('X-Frame-Options');
+    res.setHeader(
+      'Content-Security-Policy',
+      "default-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://fonts.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; style-src-elem 'self' 'unsafe-inline' https://fonts.googleapis.com; media-src 'self'; img-src 'self' data:; font-src 'self' https://fonts.gstatic.com https: data:;"
+    );
+    next();
+  },
+  contentController.getTemplateAsset,
+);
 
 // Deployment routes - GET use adminRateLimit, mutations use sensitiveRateLimit
 router.get('/deployments', authenticate, adminRateLimit, contentController.getDeployments);

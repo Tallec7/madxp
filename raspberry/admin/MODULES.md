@@ -10,9 +10,11 @@ public/
 │   │   ├── state.js        # Etat global (variables partagees)
 │   │   ├── mode-switcher.js# Toggle mode club/technicien (localStorage)
 │   │   ├── connection.js   # Monitoring connexion + fetch wrapper
-│   │   ├── realtime.js     # Connexion Socket.IO au serveur Pi (:3000), auto-refresh
-│   │   │                   #   dashboard/videos/sponsors sur events (config_updated, license_update)
-│   │   │                   #   Indicateur de connexion dans le header
+│   │   ├── realtime.js     # Connexion Socket.IO same-origin via reverse proxy admin-server
+│   │   │                   #   (admin-server :8080 → socket-server :3000) — evite toute
+│   │   │                   #   violation CSP cross-origin quel que soit le hostname.
+│   │   │                   #   Auto-refresh dashboard/videos/sponsors sur events
+│   │   │                   #   (config_updated, license_update). Indicateur dans le header.
 │   │   └── notifications.js# Toasts, modals, utilitaires UI
 │   ├── dashboard/
 │   │   ├── sync-status.js  # Widget sync cloud (connexion, queue, erreurs)

@@ -392,8 +392,29 @@ module.exports = function createVideosRouter({ videoService, videoProcessingServ
         output: stdout,
       });
     } catch (error) {
+      // Si le script a tourné mais sorti exit 1 (FAILED > 0), on a quand même stdout avec les stats
+      const stdout = error.stdout || '';
+      const totalMatch = stdout.match(/Total vidéos\s*:\s*(\d+)/);
+      if (totalMatch) {
+        const generatedMatch = stdout.match(/Générées\s*:\s*.*?(\d+)/);
+        const skippedMatch = stdout.match(/Ignorées\s*:\s*.*?(\d+)/);
+        const failedMatch = stdout.match(/Échecs\s*:\s*.*?(\d+)/);
+        const failed = failedMatch ? parseInt(failedMatch[1]) : 0;
+        return res.json({
+          success: true,
+          partial: true,
+          message: `Régénération partielle : ${failed} échec(s) sur ${totalMatch[1]} vidéos`,
+          stats: {
+            total: parseInt(totalMatch[1]),
+            generated: generatedMatch ? parseInt(generatedMatch[1]) : 0,
+            skipped: skippedMatch ? parseInt(skippedMatch[1]) : 0,
+            failed,
+          },
+          output: stdout,
+        });
+      }
       console.error('[admin] Error during thumbnail regeneration:', error);
-      res.status(500).json({ error: error.message });
+      res.status(500).json({ error: error.message, stderr: error.stderr });
     }
   });
 

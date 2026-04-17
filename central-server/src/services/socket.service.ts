@@ -42,6 +42,7 @@ import { handleDeployProgress, handleUpdateProgress } from '../handlers/deploy-p
 import { sendLicenseStatus } from '../handlers/license.handler';
 import { handleNetworkAlert, handleNetworkRecovered, handleNetworkRollback } from '../handlers/network-resilience.handler';
 import { handleRecordingState, RecordingStateMessage } from '../handlers/recording-state.handler';
+import { sendSyncProfilesToSite } from './profile-sync.service';
 import {
   checkConnectionHealth,
   syncDbWithWebSocketState,
@@ -562,6 +563,15 @@ class SocketService {
       await this.triggerPendingConfigSync(siteId);
     } catch (error) {
       logger.error('Error triggering pending config sync on connect:', { siteId, error });
+    }
+
+    try {
+      const profileCount = await sendSyncProfilesToSite(siteId);
+      if (profileCount > 0) {
+        logger.info('Multi-profile sync on reconnect', { siteId, profileCount });
+      }
+    } catch (error) {
+      logger.error('Error syncing profiles on connect:', { siteId, error });
     }
   }
 

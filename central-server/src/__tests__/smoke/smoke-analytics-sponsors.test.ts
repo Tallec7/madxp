@@ -366,9 +366,11 @@ describe('Video Library UX regression guards', () => {
   let timelineRepoContent: string;
 
   beforeAll(() => {
-    const videoLibHtmlPath = videoLibraryPath.replace('.component.ts', '.component.html');
-    videoLibContent = fs.readFileSync(videoLibraryPath, 'utf8')
-      + '\n' + (fs.existsSync(videoLibHtmlPath) ? fs.readFileSync(videoLibHtmlPath, 'utf8') : '');
+    // Read all .ts and .html files in the video-library/ directory so sub-component
+    // extractions (detail panel, preview modal, filters) don't invalidate guards
+    // that are really checking for feature presence inside the library as a whole.
+    const videoLibraryDir = path.dirname(videoLibraryPath);
+    videoLibContent = readAllTsFiles(videoLibraryDir);
     siteContentTabContent = readAllTsFiles(siteContentTabDir);
     modelsContent = fs.readFileSync(modelsPath, 'utf8');
     // Read main controller + sub-controllers (split from monolithic sites.controller.ts)
@@ -440,12 +442,12 @@ describe('Video Library UX regression guards', () => {
     // Must NOT have old method name
     expect({ hasOldMethod: /rebuildConfigVideoPaths/.test(siteContentTabContent) })
       .toEqual({ hasOldMethod: false });
-    // Must tag each source correctly
-    expect({ tagsBoucle: /addRole\([^,]+,\s*'boucle'\)/.test(siteContentTabContent) })
+    // Must tag each source correctly (3rd arg = named label is optional)
+    expect({ tagsBoucle: /addRole\([^,]+,\s*'boucle'/.test(siteContentTabContent) })
       .toEqual({ tagsBoucle: true });
-    expect({ tagsAction: /addRole\([^,]+,\s*'action'\)/.test(siteContentTabContent) })
+    expect({ tagsAction: /addRole\([^,]+,\s*'action'/.test(siteContentTabContent) })
       .toEqual({ tagsAction: true });
-    expect({ tagsMatch: /addRole\([^,]+,\s*'match'\)/.test(siteContentTabContent) })
+    expect({ tagsMatch: /addRole\([^,]+,\s*'match'/.test(siteContentTabContent) })
       .toEqual({ tagsMatch: true });
   });
 

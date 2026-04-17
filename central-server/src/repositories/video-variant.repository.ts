@@ -177,6 +177,32 @@ class VideoVariantRepositoryImpl extends BaseRepository<VideoVariantRow> {
     return result.rows;
   }
 
+  /** Phase 5H — batch variant counts for dashboard badges (X/N) */
+  async findVariantCountsByVideoIds(
+    videoIds: string[]
+  ): Promise<Map<string, { count: number; types: string[] }>> {
+    const result = new Map<string, { count: number; types: string[] }>();
+    if (videoIds.length === 0) return result;
+
+    const placeholders = videoIds.map((_, i) => `$${i + 1}`).join(', ');
+    const rows = await query<{ video_id: string; count: string; types: string[] }>(
+      `SELECT video_id, COUNT(*)::text AS count, ARRAY_AGG(display_type ORDER BY display_type) AS types
+       FROM video_variants
+       WHERE video_id IN (${placeholders})
+       GROUP BY video_id`,
+      videoIds
+    );
+
+    for (const row of rows.rows) {
+      result.set(row.video_id, {
+        count: parseInt(row.count, 10),
+        types: row.types,
+      });
+    }
+
+    return result;
+  }
+
   /** Phase 5 — PROP-002: query variants for multiple display types at once */
   async findVariantsByFilenamesAndTypes(
     filenames: string[],

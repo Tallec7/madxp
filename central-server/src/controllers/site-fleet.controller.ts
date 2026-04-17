@@ -357,7 +357,13 @@ function extractConfigVideoFilenames(config: Record<string, unknown>): Set<strin
     if (!path) return;
     // Le path peut être "videos/default/01_NEOPRO.mp4" → extraire le filename
     const filename = path.split('/').pop();
-    if (filename) filenames.add(filename.toLowerCase());
+    if (filename) {
+      const lower = filename.toLowerCase();
+      filenames.add(lower);
+      // Pi sanitizes spaces→underscores, so also index the reverse
+      filenames.add(lower.replace(/_/g, ' '));
+      filenames.add(lower.replace(/ /g, '_'));
+    }
   };
 
   // Boucle par défaut
@@ -375,6 +381,27 @@ function extractConfigVideoFilenames(config: Record<string, unknown>): Set<strin
       if (Array.isArray(tc.loopVideos)) {
         for (const lv of tc.loopVideos) {
           if (lv.path) extractFromPath(lv.path);
+        }
+      }
+    }
+  }
+
+  // Catégories télécommande (categories[].videos[] + subCategories[].videos[])
+  const categories = config.categories as Array<{ videos?: Array<{ path?: string }>; subCategories?: Array<{ videos?: Array<{ path?: string }> }> }> | undefined;
+  if (Array.isArray(categories)) {
+    for (const cat of categories) {
+      if (Array.isArray(cat.videos)) {
+        for (const v of cat.videos) {
+          if (v.path) extractFromPath(v.path);
+        }
+      }
+      if (Array.isArray(cat.subCategories)) {
+        for (const subcat of cat.subCategories) {
+          if (Array.isArray(subcat.videos)) {
+            for (const v of subcat.videos) {
+              if (v.path) extractFromPath(v.path);
+            }
+          }
         }
       }
     }

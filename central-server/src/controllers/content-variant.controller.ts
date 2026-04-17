@@ -56,8 +56,8 @@ export const createVideoVariant = async (req: AuthRequest, res: Response) => {
     const { id } = req.params;
     const displayType = req.body.display_type as DisplayType;
 
-    if (!displayType || !['tv', 'secondary'].includes(displayType)) {
-      return res.status(400).json({ error: 'display_type requis (tv ou secondary)' });
+    if (!displayType || !/^[a-z0-9-]+$/.test(displayType)) {
+      return res.status(400).json({ error: 'display_type requis (slug alphanumérique avec tirets, ex: tv, secondary, led-banner)' });
     }
 
     // Vérifier que la vidéo parente existe
@@ -139,6 +139,109 @@ export const createVideoVariant = async (req: AuthRequest, res: Response) => {
 };
 
 /**
+ * POST /content/videos/:id/variants/from-video
+ * Create a variant by referencing an existing video (no upload needed)
+ * Body: { display_type, source_video_id }
+ */
+export const createVideoVariantFromVideo = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { display_type: displayType, source_video_id: sourceVideoId } = req.body as {
+      display_type: string;
+      source_video_id: string;
+    };
+
+    if (!displayType || !/^[a-z0-9-]+$/.test(displayType)) {
+      return res.status(400).json({ error: 'display_type requis (slug alphanumérique avec tirets)' });
+    }
+
+    if (!sourceVideoId) {
+      return res.status(400).json({ error: 'source_video_id requis' });
+    }
+
+    // Verify parent video exists
+    const parentVideo = await videoRepository.findVideoById(id);
+    if (!parentVideo) {
+      return res.status(404).json({ error: 'Vidéo parente non trouvée' });
+    }
+
+    // Verify source video exists
+    const sourceVideo = await videoRepository.findVideoById(sourceVideoId);
+    if (!sourceVideo) {
+      return res.status(404).json({ error: 'Vidéo source non trouvée' });
+    }
+
+    // Create variant pointing to the source video's storage
+    const variant = await videoVariantRepository.create({
+      video_id: id,
+      display_type: displayType,
+      filename: sourceVideo.filename,
+      original_name: sourceVideo.original_name,
+      storage_path: sourceVideo.url || sourceVideo.filename, // url = storage_path aliased in findVideoById
+      file_size: sourceVideo.file_size,
+      checksum: sourceVideo.checksum || '',
+      mime_type: 'video/mp4',
+      width: null,
+      height: null,
+      duration: sourceVideo.duration,
+      metadata: { source_video_id: sourceVideoId },
+      uploaded_by: req.user?.id || null,
+    });
+
+    logger.info('Video variant created from existing video', {
+      variantId: variant.id,
+      videoId: id,
+      displayType,
+      sourceVideoId,
+    });
+
+    res.status(201).json({
+      ...variant,
+      url: getVideoUrl(variant.storage_path),
+    });
+  } catch (error) {
+    logger.error('Error creating video variant from video:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue';
+    res.status(500).json({
+      error: 'Erreur lors de la création de la variante',
+      details: errorMessage,
+    });
+  }
+};
+
+/**
+ * POST /content/videos/variant-counts
+ * Batch query: retourne le nombre de variantes et les types pour chaque vidéo
+ * Body: { videoIds: string[] }
+ */
+export const getVariantCounts = async (req: AuthRequest, res: Response) => {
+  try {
+    const { videoIds } = req.body as { videoIds: string[] };
+
+    if (!Array.isArray(videoIds) || videoIds.length === 0) {
+      return res.status(400).json({ error: 'videoIds requis (tableau non vide)' });
+    }
+
+    if (videoIds.length > 500) {
+      return res.status(400).json({ error: 'Maximum 500 videoIds par requête' });
+    }
+
+    const counts = await videoVariantRepository.findVariantCountsByVideoIds(videoIds);
+
+    // Convert Map to plain object for JSON serialization
+    const result: Record<string, { count: number; types: string[] }> = {};
+    counts.forEach((value, key) => {
+      result[key] = value;
+    });
+
+    res.json(result);
+  } catch (error) {
+    logger.error('Error getting variant counts:', error);
+    res.status(500).json({ error: 'Erreur lors de la récupération des compteurs de variantes' });
+  }
+};
+
+/**
  * DELETE /content/videos/:videoId/variants/:displayType
  * Supprime une variante vidéo
  */
@@ -146,8 +249,8 @@ export const deleteVideoVariant = async (req: AuthRequest, res: Response) => {
   try {
     const { videoId, displayType } = req.params;
 
-    if (!['tv', 'secondary'].includes(displayType)) {
-      return res.status(400).json({ error: 'display_type invalide (tv ou secondary)' });
+    if (!displayType || !/^[a-z0-9-]+$/.test(displayType)) {
+      return res.status(400).json({ error: 'display_type invalide (slug alphanumérique avec tirets attendu)' });
     }
 
     // Récupérer le storage_path avant suppression

@@ -54,6 +54,8 @@ export interface DeploymentDetailRow {
   original_name: string;
   metadata: Record<string, unknown>;
   target_name: string;
+  club_name: string | null;
+  deployed_by_name: string;
   video_name?: string;
   video_title?: string;
   has_secondary_variant: boolean;
@@ -236,10 +238,13 @@ class DeploymentRepositoryImpl extends BaseRepository<ContentDeployment> {
               CASE
                 WHEN cd.target_type = 'site' THEN s.site_name
                 ELSE 'Groupe'
-              END as target_name
+              END as target_name,
+              s.club_name,
+              COALESCE(u.full_name, 'Système') as deployed_by_name
        FROM content_deployments cd
        LEFT JOIN videos v ON cd.video_id = v.id
        LEFT JOIN sites s ON cd.target_type = 'site' AND cd.target_id = s.id
+       LEFT JOIN users u ON cd.deployed_by = u.id
        ORDER BY cd.created_at DESC
        LIMIT $1`,
       [limit]

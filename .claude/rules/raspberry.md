@@ -104,6 +104,14 @@ Fichier : `raspberry/scripts/kiosk-watchdog.sh`
 
 ## NE JAMAIS FAIRE (smoke test enforced)
 
+### Admin Server (:8080) & Socket.IO proxy
+
+- Charger `socket.io.js` via une URL cross-origin (`window.location.hostname + ':3000'`) — violation CSP garantie sur `neopro.local` / IP LAN. Utiliser le chemin relatif `/socket.io/socket.io.js` (proxyfié par admin-server).
+- Connecter le client Socket.IO avec une URL absolue (`io(protocol + host + ':3000', ...)`) — même raison. Utiliser `io({...})` sans argument URL (same-origin automatique).
+- Monter `createSocketHttpProxy()` APRÈS `express.json()` / `express.urlencoded()` (les body parsers consomment la requête avant le proxy → POST polling Socket.IO cassés).
+- Remplacer `http.createServer(app)` par `app.listen(...)` dans `admin-server.js` (perd l'accès au handler `upgrade` → WebSocket Socket.IO ne marche plus).
+- Élargir la CSP à `script-src 'self' http://*:3000` — le proxy supprime le besoin de cross-origin, garder CSP verrouillée à `'self'`.
+
 ### Systemd & Services
 
 - Ajouter `NoNewPrivileges=true` dans les fichiers `.service` systemd (bloque sudo, deadlock OTA)

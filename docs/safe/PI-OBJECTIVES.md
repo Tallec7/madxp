@@ -104,7 +104,7 @@ Cible : > 80% → BV Réel ≥ 30
 | **Billing / Subscription Tiers** (essential/autonomie/premium) | ADR-039 | ✅ Done | ~10 SP     | `feature-gate.service.ts`, 3 phases (foundation + gates + overrides) |
 | **Campaigns Sponsor** (CRUD, targeting, auto-deploy)           | ADR-035 | ✅ Done | ~12 SP     | `campaign.controller.ts`, `sponsor-campaigns-tab.component.ts`       |
 | **Proof of Play** (stats sponsors + reporting PDF)             | -       | ✅ Done | ~5 SP      | `site-sponsor-daily-stats`, `pdf-report/`, analytics breakdowns      |
-| **Config Copy & Site Duplication**                             | ADR-046 | ✅ Done | ~3 SP      | `copy-config-modal.component.ts`, v3.139                             |
+| **Config Copy & Site Duplication**                             | ADR-046 | ✅ Done | ~3 SP      | `site-copy.controller.ts`, sélection profils par profil, mode ajout  |
 
 > **Action requise** : Ces Epics doivent être intégrés formellement dans le portfolio (Epics E-24 à E-29 ou rattachés à des Epics existants).
 

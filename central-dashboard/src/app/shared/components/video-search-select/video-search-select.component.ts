@@ -36,7 +36,7 @@ export interface VideoOptionItem {
   template: `
     <div class="vss" [class.vss--open]="isOpen" [class.vss--dropup]="dropUp" [class.vss--invalid]="invalid" [class.vss--disabled]="disabled" [class.vss--compact]="compact">
       <!-- Selected value display / search input -->
-      <div class="vss__control" [class.vss__control--placeholder]="!selectedPath">
+      <div class="vss__control" [class.vss__control--placeholder]="!selectedPath" (click)="onControlClick($event)">
         <input
           *ngIf="isOpen"
           #searchInput
@@ -303,8 +303,13 @@ export class VideoSearchSelectComponent implements OnChanges {
   @HostListener('click', ['$event'])
   onHostClick(event: Event): void {
     const target = event.target as HTMLElement;
-    // Don't toggle when clicking inside the dropdown or the search input
-    if (target.closest('.vss__dropdown') || target.closest('.vss__search')) return;
+    // Don't toggle when clicking inside the dropdown, the search input, or the control (handled separately)
+    if (target.closest('.vss__dropdown') || target.closest('.vss__search') || target.closest('.vss__control')) return;
+    this.toggle();
+  }
+
+  onControlClick(event: Event): void {
+    event.stopPropagation();
     this.toggle();
   }
 
