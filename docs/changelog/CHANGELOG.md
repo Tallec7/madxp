@@ -1,3 +1,9 @@
+## [3.178.5](https://github.com/Tallec7/neopro/compare/v3.178.4...v3.178.5) (2026-04-17)
+
+### Bug Fixes
+
+- **templates:** canvas compositing for preview text/image masking (ADR-052 §5b) ([10263a9](https://github.com/Tallec7/neopro/commit/10263a90c0e0459bde366d27bf49858d331e4d57))
+
 ## [3.178.4](https://github.com/Tallec7/neopro/compare/v3.178.3...v3.178.4) (2026-04-17)
 
 ### Bug Fixes
