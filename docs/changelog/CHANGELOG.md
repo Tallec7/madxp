@@ -1,3 +1,9 @@
+## [3.178.6](https://github.com/Tallec7/neopro/compare/v3.178.5...v3.178.6) (2026-04-17)
+
+### Bug Fixes
+
+- **templates:** canvas masking — luminance→alpha conversion + text position fidelity ([fa8635b](https://github.com/Tallec7/neopro/commit/fa8635be96a4e3059878020a2fc4731abbe59bf9))
+
 ## [3.178.5](https://github.com/Tallec7/neopro/compare/v3.178.4...v3.178.5) (2026-04-17)
 
 ### Bug Fixes
