@@ -1,3 +1,9 @@
+## [3.178.4](https://github.com/Tallec7/neopro/compare/v3.178.3...v3.178.4) (2026-04-17)
+
+### Bug Fixes
+
+- **remotion:** eliminate preview stutter + AbortError console spam (ADR-052) ([eca2f8f](https://github.com/Tallec7/neopro/commit/eca2f8f5734c499db4c9cf72ab3804fe9d76147c))
+
 ## [3.178.3](https://github.com/Tallec7/neopro/compare/v3.178.2...v3.178.3) (2026-04-17)
 
 ### Bug Fixes
