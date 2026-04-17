@@ -73,6 +73,7 @@ Un ADR documente une décision technique importante avec :
 | [ADR-054](ADR-054-async-remotion-render-jobs.md)                   | Render Remotion asynchrone (job queue DB + worker polling) | Accepté                  | Avr 2026 |
 | [ADR-055](ADR-055-remotion-template-versions.md)                   | Snapshot auto & restore des templates Remotion (audit)     | Accepté                  | Avr 2026 |
 | [ADR-056](ADR-056-watermark-persistence-across-ota-and-runtime.md) | Persistance du watermark (OTA backup + retry infini)       | Accepté                  | Avr 2026 |
+| [ADR-057](ADR-057-manual-video-launch-latency.md)                  | Réduction latence vidéo manuelle Pi (loadeddata + rAF)     | Accepté                  | Avr 2026 |
 
 ### Supersédés
 

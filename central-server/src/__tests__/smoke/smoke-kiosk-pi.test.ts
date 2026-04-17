@@ -3339,3 +3339,66 @@ describe('Kiosk watchdog must not duplicate X server wait from systemd', () => {
       .toEqual({ mentionsExecStartPre: true });
   });
 });
+
+describe('Manual video launch latency invariants (ADR-057)', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..', '..');
+  const manualSvcPath = path.join(
+    repoRoot,
+    'raspberry/src/app/services/manual-video.service.ts'
+  );
+  const manualSvc = fs.readFileSync(manualSvcPath, 'utf8');
+
+  // Extract the play() method body only — preload/reveal paths have their
+  // own semantics (ADR-034) and must not contaminate these checks.
+  const playStart = manualSvc.indexOf('play(video: Video): void {');
+  const playEnd = manualSvc.indexOf('preloadManualVideo(');
+  const playBody = playStart > 0 && playEnd > playStart
+    ? manualSvc.slice(playStart, playEnd)
+    : '';
+
+  it('play() must trigger on loadeddata, not canplaythrough (ADR-057 fix A)', () => {
+    // Waiting for canplaythrough (full buffering) before playing added 200-500ms
+    // of latency on slow SD cards. The double-buffer masks the loop during
+    // buffering anyway, so loadeddata (first frame decoded) is the correct trigger.
+    expect({ usesLoadeddata: /addEventListener\('loadeddata'/.test(playBody) })
+      .toEqual({ usesLoadeddata: true });
+    expect({ waitsOnCanplaythrough: /addEventListener\('canplaythrough'/.test(playBody) })
+      .toEqual({ waitsOnCanplaythrough: false });
+  });
+
+  it('play() must not re-introduce setTimeout(200) after play() (ADR-057 fix B)', () => {
+    // Historical code had `play().then(() => rAF(rAF(setTimeout(() => reveal, 200))))`
+    // which added ~230ms of fixed penalty. A single rAF after play().then() is enough
+    // to avoid opacity flash, confirmed on Pi 4 (HW H.264) and Pi 5 (V3D decode).
+    expect({ hasSetTimeout200: /setTimeout\([^)]*,\s*200\s*\)/.test(playBody) })
+      .toEqual({ hasSetTimeout200: false });
+  });
+
+  it('PLAY_DEBOUNCE_MS must be <= 200ms (ADR-057 fix D)', () => {
+    // 500ms debounce silently dropped rapid clicks and made the remote feel
+    // unresponsive. 150ms prevents black-frame races without user-visible drops.
+    const match = manualSvc.match(/PLAY_DEBOUNCE_MS\s*=\s*(\d+)/);
+    expect({ matchFound: !!match }).toEqual({ matchFound: true });
+    const value = Number(match?.[1] ?? 0);
+    expect({ debounceMs: value, withinBudget: value > 0 && value <= 200 })
+      .toEqual({ debounceMs: value, withinBudget: true });
+  });
+
+  it('play() must not have duplicated removeEventListener(ended)+pause() block (ADR-057 fix E)', () => {
+    // A merge artifact introduced the cleanup block twice. Source duplicate is
+    // a bug smell and a future footgun even if minifier removed it from the bundle.
+    const matches = playBody.match(/removeEventListener\('ended',\s*this\._currentManualEndedHandler\)/g);
+    const occurrences = matches?.length ?? 0;
+    expect({ cleanupOccurrencesInPlay: occurrences, expected: 1 })
+      .toEqual({ cleanupOccurrencesInPlay: 1, expected: 1 });
+  });
+
+  it('play() must log latency deltas for monitoring (ADR-057 monitoring)', () => {
+    // Post-deployment monitoring relies on journalctl greps of `+<ms>ms` markers
+    // in kiosk logs. Removing these breaks observability of the fix.
+    expect({ hasLoadedDelta: /loadeddata received \(\+\$\{loadedMs\}ms\)/.test(playBody) })
+      .toEqual({ hasLoadedDelta: true });
+    expect({ hasVisibleDelta: /manual video playing.*\(\+\$\{visibleMs\}ms\)/.test(playBody) })
+      .toEqual({ hasVisibleDelta: true });
+  });
+});
