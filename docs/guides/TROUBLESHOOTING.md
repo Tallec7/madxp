@@ -2390,7 +2390,7 @@ sudo systemctl restart chromium
 **Fix (v3.54.3) :**
 
 1. **Dashboard** : `saveWatermarkConfig()` envoie désormais `update_config` + `deploy_asset` (re-téléchargement de l'image depuis `cloudUrl`).
-2. **Pi** : `WatermarkService.onImageError()` retente le chargement 5 fois avec backoff progressif (5s, 10s, 30s, 60s, 120s) et cache-buster pour éviter les 404 en cache.
+2. **Pi** : `WatermarkService.onImageError()` retente le chargement **indéfiniment** (depuis ADR-056 / v3.179+) avec backoff progressif plafonné à 2 min (5s, 10s, 30s, 60s, puis 120s en boucle) et cache-buster pour éviter les 404 en cache. Avant ADR-056, le retry était borné à 5 tentatives et pouvait abandonner définitivement sous pression GPU.
 
 **Solution immédiate :** Cliquer sur "Deployer le watermark" dans le dashboard (v3.54.3+). L'image sera re-déployée automatiquement.
 
@@ -2401,6 +2401,40 @@ sudo systemctl restart chromium
 mkdir -p /home/pi/neopro/webapp/assets/watermarks/
 wget -O /home/pi/neopro/webapp/assets/watermarks/IMAGE_NAME.png "CLOUD_URL"
 ```
+
+### Watermark disparu après une mise à jour OTA (ADR-056 / v3.179+)
+
+**Symptôme :** juste après une mise à jour OTA, le watermark n'apparaît plus. La config du site montre pourtant `watermark.enabled: true` avec un `imagePath` valide, mais `/home/pi/neopro/webapp/assets/watermarks/` est vide.
+
+**Cause racine (< ADR-056) :** `ota-install.js` faisait `rm -rf webapp/*` et ne préservait que `configuration.json`. Le dossier `webapp/assets/watermarks/` (déployé à la demande par `deploy_asset`, absent de l'archive OTA car spécifique au site) était effacé à chaque OTA.
+
+**Fix (ADR-056) :** `ota-install.js` sauvegarde `webapp/assets/` dans `/tmp/webapp-assets.backup` avant extraction, puis restaure avec `overwrite: false` (préserve les fichiers utilisateur sans écraser les nouveaux livrés par l'archive). Couvert par un smoke test dans `smoke-deploy-ota.test.ts`.
+
+**Diagnostic rapide via remote-shell :**
+
+```bash
+ls -la /home/pi/neopro/webapp/assets/watermarks/
+cat /home/pi/neopro/sync-agent/package.json | grep version
+```
+
+Si le dossier est vide sur un Pi en version < ADR-056, cliquer "Déployer le watermark" depuis le dashboard pour re-déclencher `deploy_asset`.
+
+### Watermark disparaît pendant une vidéo manuelle et ne revient pas (ADR-056 / v3.179+)
+
+**Symptôme :** le watermark est visible en boucle, mais disparaît au lancement d'une vidéo manuelle et ne réapparaît plus — y compris après la fin de la vidéo manuelle.
+
+**Cause racine (< ADR-056) :** `WatermarkService.onImageError()` abandonnait après 5 échecs consécutifs (~4 min total). Pendant le switch boucle→manuelle, Chromium subit une forte pression GPU (erreurs `SharedImageBackingFactory` pour les frames vidéo NV12) qui peut provoquer plusieurs `error` events rapprochés sur le `<img>` watermark. 5 erreurs en rafale → retry épuisé → watermark masqué jusqu'au prochain `setConfiguration()` ou reboot.
+
+**Fix (ADR-056) :** retry infini avec backoff plafonné à 2 min. Après 3 échecs consécutifs, un log structuré `[HEALTH] watermark_unavailable` est émis en `console.error` (greppable en flotte via journalctl).
+
+**Diagnostic fleet monitoring :**
+
+```bash
+# Sur le Pi — détecter un watermark en échec répété
+journalctl -u neopro-kiosk --since "1 hour ago" | grep "\[HEALTH\] watermark_unavailable"
+```
+
+Si des lignes remontent, l'image est probablement absente côté FS ou nginx. Vérifier `/home/pi/neopro/webapp/assets/watermarks/` + `curl -sI http://localhost/assets/watermarks/FILE.png`.
 
 ---
 

@@ -17,10 +17,12 @@ export class WatermarkService {
   /** Cache-buster: updated on every config change to bypass nginx immutable cache */
   private configVersion = Date.now();
 
-  /** Retry state for image load failures */
+  /** Retry state for image load failures — infinite retry with capped backoff */
   private imageRetryCount = 0;
-  private readonly MAX_IMAGE_RETRIES = 5;
   private readonly RETRY_DELAYS_MS = [5000, 10000, 30000, 60000, 120000];
+  private readonly MAX_RETRY_DELAY_MS = 120000;
+  /** After this many consecutive failures, escalate to error-level log for fleet monitoring */
+  private readonly HEALTH_ALERT_THRESHOLD = 3;
   private retryTimeout: ReturnType<typeof setTimeout> | null = null;
 
   /**
@@ -233,26 +235,29 @@ export class WatermarkService {
 
   /**
    * Gère les erreurs de chargement de l'image watermark.
-   * Au lieu de désactiver définitivement le watermark, programme un retry
-   * avec backoff exponentiel. Cela couvre le cas où deploy_asset arrive
-   * après update_config (race condition).
+   * Retry infini avec backoff exponentiel plafonné à 2 min. Ne jamais
+   * abandonner : le fichier peut être redéployé à tout moment (OTA, deploy_asset,
+   * hiccup nginx pendant lecture manuelle), le service doit récupérer seul
+   * sans attendre un changement de config.
    */
   onImageError(): void {
     this._showWatermark = false;
 
-    if (this.imageRetryCount < this.MAX_IMAGE_RETRIES) {
-      const delay = this.RETRY_DELAYS_MS[this.imageRetryCount] ?? this.RETRY_DELAYS_MS[this.RETRY_DELAYS_MS.length - 1];
-      this.imageRetryCount++;
-      console.warn(`[WatermarkService] Watermark image failed to load, retry ${this.imageRetryCount}/${this.MAX_IMAGE_RETRIES} in ${delay / 1000}s`);
-
-      this.clearRetryTimeout();
-      this.retryTimeout = setTimeout(() => {
-        console.info(`[WatermarkService] Retrying watermark image (attempt ${this.imageRetryCount}/${this.MAX_IMAGE_RETRIES})`);
-        this.checkVisibility();
-      }, delay);
+    const delay = this.RETRY_DELAYS_MS[this.imageRetryCount] ?? this.MAX_RETRY_DELAY_MS;
+    this.imageRetryCount++;
+    const imagePath = this.configuration?.watermark?.imagePath ?? 'unknown';
+    if (this.imageRetryCount >= this.HEALTH_ALERT_THRESHOLD) {
+      // Escalated signal for fleet monitoring — greppable via journalctl -u neopro-kiosk
+      console.error(`[HEALTH] watermark_unavailable retry=${this.imageRetryCount} path=${imagePath} next=${delay / 1000}s`);
     } else {
-      console.error(`[WatermarkService] Watermark image failed to load after ${this.MAX_IMAGE_RETRIES} retries, giving up`);
+      console.warn(`[WatermarkService] Watermark image failed to load, retry #${this.imageRetryCount} in ${delay / 1000}s`);
     }
+
+    this.clearRetryTimeout();
+    this.retryTimeout = setTimeout(() => {
+      console.info(`[WatermarkService] Retrying watermark image (attempt #${this.imageRetryCount})`);
+      this.checkVisibility();
+    }, delay);
   }
 
   /**

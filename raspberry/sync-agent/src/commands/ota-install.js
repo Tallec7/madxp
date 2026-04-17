@@ -208,6 +208,16 @@ async function extractAndInstall(packagePath, version, stepTracker) {
       logger.info('Configuration saved');
     }
 
+    // Sauvegarder webapp/assets/ (watermarks, logos déployés via deploy_asset)
+    // Ces fichiers sont user-specific et n'existent pas dans l'archive OTA.
+    const assetsBackupPath = '/tmp/webapp-assets.backup';
+    const webappAssetsPath = path.join(rootDir, 'webapp', 'assets');
+    await fs.remove(assetsBackupPath).catch(() => {});
+    if (await fs.pathExists(webappAssetsPath)) {
+      await fs.copy(webappAssetsPath, assetsBackupPath);
+      logger.info('Webapp assets saved (watermarks, logos)');
+    }
+
     // Copier webapp
     if (await fs.pathExists(path.join(sourcePath, 'webapp'))) {
       await execAsync(`rm -rf ${rootDir}/webapp/*`);
@@ -221,6 +231,14 @@ async function extractAndInstall(packagePath, version, stepTracker) {
       await fs.copy(configBackupPath, webappConfigPath);
       await fs.remove(configBackupPath);
       logger.info('Configuration restored');
+    }
+
+    // Restaurer webapp/assets/ user-deployed (merge avec les assets de l'archive)
+    if (await fs.pathExists(assetsBackupPath)) {
+      await fs.copy(assetsBackupPath, webappAssetsPath, { overwrite: false });
+      await fs.remove(assetsBackupPath);
+      await execAsync(`sudo chown -R pi:pi ${webappAssetsPath}`).catch(() => {});
+      logger.info('Webapp assets restored');
     }
 
     // Copier server

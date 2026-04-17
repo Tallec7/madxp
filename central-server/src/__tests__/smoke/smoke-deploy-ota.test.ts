@@ -454,6 +454,63 @@ describe('Post-OTA validation integration', () => {
       .toEqual({ reloadsValidator: true });
   });
 
+  it('ota-install.js must preserve webapp/assets/ across OTA (user-deployed watermarks)', () => {
+    const otaInstallContent = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/sync-agent/src/commands/ota-install.js'),
+      'utf8'
+    );
+    // webapp/assets/ contains user-deployed files (watermarks, logos via deploy_asset)
+    // that are NOT in the OTA archive. Without backup/restore, `rm -rf webapp/*` wipes them
+    // and the watermark breaks silently until manual redeploy from dashboard.
+    expect({
+      backsUpAssets: /webapp-assets\.backup|webapp\/assets.*backup/i.test(otaInstallContent),
+      restoresAssets: otaInstallContent.includes('webapp/assets') || otaInstallContent.includes("'webapp', 'assets'"),
+      preservesUserFiles: otaInstallContent.includes('overwrite: false'),
+    }).toEqual({
+      backsUpAssets: true,
+      restoresAssets: true,
+      preservesUserFiles: true,
+    });
+  });
+
+  it('watermark.service.ts must retry image load infinitely with capped backoff (no give-up)', () => {
+    const watermarkContent = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/src/app/services/watermark.service.ts'),
+      'utf8'
+    );
+    // If onImageError gives up after N retries, a burst of img errors during manual
+    // video switching (GPU repaint pressure) permanently hides the watermark until
+    // the next setConfiguration(). Must retry forever with backoff capped at 2 min.
+    expect({
+      noHardLimit: !/MAX_IMAGE_RETRIES/.test(watermarkContent),
+      hasCap: watermarkContent.includes('MAX_RETRY_DELAY_MS'),
+      schedulesRetry: /retryTimeout\s*=\s*setTimeout/.test(watermarkContent),
+    }).toEqual({
+      noHardLimit: true,
+      hasCap: true,
+      schedulesRetry: true,
+    });
+  });
+
+  it('watermark.service.ts must emit [HEALTH] signal for fleet monitoring after repeated failures', () => {
+    const watermarkContent = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/src/app/services/watermark.service.ts'),
+      'utf8'
+    );
+    // ADR-056: after HEALTH_ALERT_THRESHOLD consecutive image load failures, escalate
+    // to console.error with a structured [HEALTH] prefix so central log aggregation
+    // and ops can detect watermark outages fleet-wide via journalctl grep.
+    expect({
+      hasThreshold: watermarkContent.includes('HEALTH_ALERT_THRESHOLD'),
+      emitsHealthSignal: watermarkContent.includes('[HEALTH] watermark_unavailable'),
+      usesErrorLevel: /console\.error\([^)]*\[HEALTH\]/.test(watermarkContent),
+    }).toEqual({
+      hasThreshold: true,
+      emitsHealthSignal: true,
+      usesErrorLevel: true,
+    });
+  });
+
   it('validate-post-update.js must check configuration.json integrity', () => {
     const validatorContent = fs.readFileSync(
       path.join(repoRoot, 'raspberry/sync-agent/src/commands/validate-post-update.js'),
