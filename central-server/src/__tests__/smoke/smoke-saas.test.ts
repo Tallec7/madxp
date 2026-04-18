@@ -292,40 +292,8 @@ describe('Club Portal video ownership guards', () => {
     });
   });
 
-  // --- deployment.service.ts must short-circuit SaaS targets as success (no Pi) ---
-  // Lock Phase 1 behavior: Page Contenu "déployer vers SaaS" marks the deployment completed
-  // immediately so `content_deployments.status='completed'` makes the video available in the
-  // SaaS pool (getSiteLocalContent filter). Removing the `continue` would either fail SaaS
-  // deployments or try to reach a Pi that doesn't exist.
-  it('deployment.service.ts must short-circuit SaaS targets with successCount++ and continue', () => {
-    const servicePath = path.join(
-      repoRoot,
-      'central-server/src/services/deployment.service.ts'
-    );
-    const service = fs.readFileSync(servicePath, 'utf8');
-
-    const saasBranch = service.match(
-      /target\.siteType\s*===\s*['"]saas['"][\s\S]*?continue\s*;/
-    );
-    expect(saasBranch).not.toBeNull();
-    const branchBody = saasBranch![0];
-
-    expect({
-      hasSaasCheck: /target\.siteType\s*===\s*['"]saas['"]/.test(branchBody),
-      incrementsSuccess: /successCount\+\+/.test(branchBody),
-      pushesCommandSent: /commandSentSites\.push/.test(branchBody),
-      shortCircuits: /continue\s*;/.test(branchBody),
-    }).toEqual({
-      hasSaasCheck: true,
-      incrementsSuccess: true,
-      pushesCommandSent: true,
-      shortCircuits: true,
-    });
-  });
-
   // --- ADR-069: SaasDirectStrategy must short-circuit SaaS sites with outcome='completed' ---
-  // Replaces the legacy `target.siteType === 'saas' ... continue` pattern once the flag
-  // DELIVERY_STRATEGY_ENABLED is turned on and the legacy path is removed (ADR-069 step 7).
+  // Replaces the legacy `target.siteType === 'saas' ... continue` pattern (removed in step 7).
   it('SaasDirectStrategy must canHandle saas + return outcome="completed"', () => {
     const strategyPath = path.join(
       repoRoot,
@@ -365,8 +333,8 @@ describe('Club Portal video ownership guards', () => {
     });
   });
 
-  // --- ADR-069: registry must read feature flag from env ---
-  it('strategy-registry must gate delegation behind DELIVERY_STRATEGY_ENABLED env flag', () => {
+  // --- ADR-069: registry must expose resolve() + register both default strategies ---
+  it('strategy-registry must resolve by canHandle and register Saas + Pi strategies', () => {
     const registryPath = path.join(
       repoRoot,
       'central-server/src/services/delivery/strategy-registry.ts'
@@ -374,20 +342,18 @@ describe('Club Portal video ownership guards', () => {
     const source = fs.readFileSync(registryPath, 'utf8');
 
     expect({
-      readsEnvFlag: /process\.env\.DELIVERY_STRATEGY_ENABLED/.test(source),
       hasResolveMethod: /resolve\s*\(\s*site/.test(source),
       registersSaasStrategy: /saasDirectStrategy/.test(source),
       registersPiStrategy: /piSocketStrategy/.test(source),
     }).toEqual({
-      readsEnvFlag: true,
       hasResolveMethod: true,
       registersSaasStrategy: true,
       registersPiStrategy: true,
     });
   });
 
-  // --- ADR-069: deployment.service.ts must branch to registry when flag ON ---
-  it('deployment.service.ts must call dispatchViaRegistry when DELIVERY_STRATEGY_ENABLED', () => {
+  // --- ADR-069: startDeployment must delegate to the registry (no legacy branching) ---
+  it('deployment.service.ts must call dispatchViaRegistry and never check siteType for short-circuit', () => {
     const servicePath = path.join(
       repoRoot,
       'central-server/src/services/deployment.service.ts'
@@ -396,12 +362,12 @@ describe('Club Portal video ownership guards', () => {
 
     expect({
       importsRegistry: /deliveryStrategyRegistry/.test(source),
-      checksEnabledFlag: /deliveryStrategyRegistry\.isEnabled\(\)/.test(source),
       dispatchesViaRegistry: /dispatchViaRegistry\s*\(/.test(source),
+      noLegacySaasShortCircuit: !/target\.siteType\s*===\s*['"]saas['"][\s\S]{0,200}?continue\s*;/.test(source),
     }).toEqual({
       importsRegistry: true,
-      checksEnabledFlag: true,
       dispatchesViaRegistry: true,
+      noLegacySaasShortCircuit: true,
     });
   });
 });

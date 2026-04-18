@@ -1,5 +1,4 @@
 import { query } from '../config/database';
-import socketService from './socket.service';
 import { commandQueueService } from './command-queue.service';
 import logger from '../config/logger';
 import metricsService from './metrics.service';
@@ -94,131 +93,10 @@ class DeploymentService {
       // Construire l'URL de la vidéo depuis le stockage
       const videoUrl = getVideoUrl(deployment.storage_path);
 
-      // ADR-069 — Délégation au registry quand feature flag ON (rollout progressif)
-      if (deliveryStrategyRegistry.isEnabled()) {
-        await this.dispatchViaRegistry(deploymentId, deployment, targets, videoUrl);
-        return;
-      }
-
-      // Tenter d'envoyer aux sites (ou mettre en queue si offline)
-      let successCount = 0;
-      const commandSentSites: string[] = [];
-      const commandQueuedSites: string[] = [];
-      const commandFailedSites: string[] = [];
-
-      for (const target of targets) {
-        // Les sites SaaS n'ont pas de Pi — la vidéo est servie directement via URL FTP
-        // Le déploiement est considéré comme immédiatement réussi
-        if (target.siteType === 'saas') {
-          logger.info('SaaS site: video deployment completed immediately (no Pi)', {
-            deploymentId,
-            siteId: target.siteId,
-            siteName: target.siteName,
-          });
-          successCount++;
-          commandSentSites.push(target.siteName);
-          continue;
-        }
-
-        const isConnected = socketService.isConnected(target.siteId);
-        logger.info('Processing site for video deployment', {
-          deploymentId,
-          siteId: target.siteId,
-          siteName: target.siteName,
-          isConnected,
-        });
-
-        // deployToSite utilise maintenant sendOrQueue, donc fonctionne même si offline
-        const success = await this.deployToSite(
-          deploymentId,
-          target.siteId,
-          deployment.video_id,
-          videoUrl,
-          deployment
-        );
-
-        if (success) {
-          successCount++;
-          if (isConnected) {
-            commandSentSites.push(target.siteName);
-          } else {
-            commandQueuedSites.push(target.siteName);
-          }
-        } else {
-          commandFailedSites.push(target.siteName);
-        }
-      }
-
-      // Si TOUS les sites cibles sont SaaS, le déploiement est immédiatement terminé
-      // (pas de Pi à attendre, les vidéos sont servies via URL FTP)
-      const allSaas = targets.every(t => t.siteType === 'saas');
-
-      // Mettre à jour le statut avec des informations détaillées
-      if (successCount > 0) {
-        if (allSaas) {
-          await query(
-            `UPDATE content_deployments
-             SET status = 'completed', started_at = NOW(), completed_at = NOW(), progress = 100
-             WHERE id = $1`,
-            [deploymentId]
-          );
-
-          metricsService.recordDeployment('completed', 'site');
-          logger.info('SaaS video deployment completed immediately', {
-            deploymentId,
-            sites: commandSentSites,
-          });
-        } else {
-          // Au moins une commande envoyée ou mise en queue vers un Pi
-          const statusMessage = [];
-          if (commandSentSites.length > 0) {
-            statusMessage.push(`Envoyé: ${commandSentSites.join(', ')}`);
-          }
-          if (commandQueuedSites.length > 0) {
-            statusMessage.push(`En attente de reconnexion: ${commandQueuedSites.join(', ')}`);
-          }
-
-          await query(
-            `UPDATE content_deployments
-             SET status = 'in_progress', started_at = NOW(), error_message = $1
-             WHERE id = $2`,
-            [statusMessage.join(' | ') || null, deploymentId]
-          );
-
-          metricsService.recordDeployment('in_progress', 'site');
-          logger.info('Video deployment in progress', {
-            deploymentId,
-            commandSentSites,
-            commandQueuedSites,
-            commandFailedSites,
-          });
-        }
-      } else {
-        // Aucune commande n'a pu être envoyée ou mise en queue
-        await query(
-          `UPDATE content_deployments
-           SET error_message = $1
-           WHERE id = $2 AND status = 'pending'`,
-          ['Échec de l\'envoi à tous les sites cibles', deploymentId]
-        );
-
-        metricsService.recordDeployment('failed', 'site');
-        logger.error('Video deployment failed for all sites', {
-          deploymentId,
-          commandFailedSites,
-        });
-      }
-
-      logger.info('Deployment initiated', {
-        deploymentId,
-        videoFilename: deployment.filename,
-        totalSites: targets.length,
-        successCount,
-        commandSentSites,
-        commandQueuedSites,
-        commandFailedSites,
-      });
-
+      // ADR-069 — Dispatch via le registry de stratégies (Pi/SaaS/futurs canaux).
+      // Le chemin legacy `if (target.siteType === 'saas') continue` a été supprimé
+      // après rollout progressif validé.
+      await this.dispatchViaRegistry(deploymentId, deployment, targets, videoUrl);
     } catch (error) {
       logger.error('Error starting deployment:', error);
       await this.failDeployment(deploymentId, error instanceof Error ? error.message : 'Erreur inconnue');
@@ -227,7 +105,7 @@ class DeploymentService {
 
   /**
    * ADR-069 — Dispatch via le registry de stratégies (Pi/SaaS/futurs canaux).
-   * Utilisé quand `DELIVERY_STRATEGY_ENABLED=true`.
+   * Seul chemin de livraison depuis la suppression du code legacy (étape 7).
    */
   private async dispatchViaRegistry(
     deploymentId: string,
@@ -303,7 +181,7 @@ class DeploymentService {
           [deploymentId]
         );
         metricsService.recordDeployment('completed', 'site');
-        logger.info('SaaS video deployment completed immediately (registry)', {
+        logger.info('SaaS video deployment completed immediately', {
           deploymentId,
           sites: commandSentSites,
         });
@@ -322,7 +200,7 @@ class DeploymentService {
           [statusMessage.join(' | ') || null, deploymentId]
         );
         metricsService.recordDeployment('in_progress', 'site');
-        logger.info('Video deployment in progress (registry)', {
+        logger.info('Video deployment in progress', {
           deploymentId,
           commandSentSites,
           commandQueuedSites,
@@ -337,13 +215,13 @@ class DeploymentService {
         ["Échec de l'envoi à tous les sites cibles", deploymentId]
       );
       metricsService.recordDeployment('failed', 'site');
-      logger.error('Video deployment failed for all sites (registry)', {
+      logger.error('Video deployment failed for all sites', {
         deploymentId,
         commandFailedSites,
       });
     }
 
-    logger.info('Deployment initiated (registry)', {
+    logger.info('Deployment initiated', {
       deploymentId,
       videoFilename: deployment.filename,
       totalSites: targets.length,

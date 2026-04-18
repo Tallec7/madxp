@@ -9,11 +9,9 @@ import { saasDirectStrategy } from './saas-direct.strategy';
 /**
  * ADR-069 — Registry des stratégies de livraison.
  *
- * Feature flag `DELIVERY_STRATEGY_ENABLED` :
- *  - `false` (défaut) : `deployment.service.ts` conserve son chemin historique
- *    (smoke test SaaS short-circuit inchangé).
- *  - `true` : `startDeployment` délègue au registry. Rollout staging → 1 site
- *    prod → tous, puis suppression du chemin legacy (étape 7 de l'ADR).
+ * `deployment.service.ts` délègue toujours au registry depuis la suppression
+ * du chemin legacy (étape 7 de l'ADR). Le flag `DELIVERY_STRATEGY_ENABLED`
+ * n'existe plus.
  */
 
 const DEFAULT_STRATEGIES: DeliveryStrategy[] = [
@@ -23,10 +21,6 @@ const DEFAULT_STRATEGIES: DeliveryStrategy[] = [
 
 class DeliveryStrategyRegistry {
   private strategies: DeliveryStrategy[] = [...DEFAULT_STRATEGIES];
-
-  isEnabled(): boolean {
-    return process.env.DELIVERY_STRATEGY_ENABLED === 'true';
-  }
 
   register(strategy: DeliveryStrategy): void {
     this.strategies.push(strategy);
