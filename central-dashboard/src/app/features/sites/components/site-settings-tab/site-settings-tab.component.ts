@@ -13,12 +13,13 @@ import { FeatureKey } from '../../../../core/services/feature-gate.service';
 import { QrCodeGeneratorComponent } from '../../../../shared/components/qr-code-generator/qr-code-generator.component';
 import { DisplaysEditorComponent } from './displays-editor/displays-editor.component';
 import { RemoteAuthSectionComponent } from './remote-auth-section/remote-auth-section.component';
+import { RemoteFeaturesSectionComponent, RemoteFeatureFlags } from './remote-features-section/remote-features-section.component';
 import { SiteSettingsDataService } from './site-settings-data.service';
 
 @Component({
   selector: 'app-site-settings-tab',
   standalone: true,
-  imports: [CommonModule, FormsModule, TranslateModule, QrCodeGeneratorComponent, DisplaysEditorComponent, RemoteAuthSectionComponent],
+  imports: [CommonModule, FormsModule, TranslateModule, QrCodeGeneratorComponent, DisplaysEditorComponent, RemoteAuthSectionComponent, RemoteFeaturesSectionComponent],
   templateUrl: './site-settings-tab.component.html',
   styleUrls: ['./site-settings-tab.component.scss']
 })
@@ -150,6 +151,24 @@ export class SiteSettingsTabComponent implements OnInit, OnChanges {
 
   get isSuperAdmin(): boolean {
     return this.authService.getCurrentUser()?.role === 'super_admin';
+  }
+
+  get isAdminOrAbove(): boolean {
+    const role = this.authService.getCurrentUser()?.role;
+    return role === 'super_admin' || role === 'admin';
+  }
+
+  // ADR-062 — Famille Features (admin). Flags lus depuis site.feature_overrides.remote_features.
+  get remoteFeatures(): RemoteFeatureFlags {
+    const overrides = (this.site?.feature_overrides as Record<string, unknown> | undefined) ?? {};
+    const stored = (overrides['remote_features'] as Partial<RemoteFeatureFlags> | undefined) ?? {};
+    return {
+      profilesEnabled: stored.profilesEnabled ?? true,
+      matchModeEnabled: stored.matchModeEnabled ?? true,
+      timerEnabled: stored.timerEnabled ?? true,
+      breakingNewsEnabled: stored.breakingNewsEnabled ?? false,
+      screenshotEnabled: stored.screenshotEnabled ?? false,
+    };
   }
 
   ngOnInit(): void {

@@ -34,12 +34,14 @@ import { CloudRemoteNavigationService, RemoteVideoEntry, Category, TimeCategory 
 import { CloudRemoteConfigService, Configuration } from './services/cloud-remote-config.service';
 import { TransportResilienceService, TransportMode } from './services/transport-resilience.service';
 import { OfflineQueueService } from './services/offline-queue.service';
+import { PreferencesMenuComponent } from './preferences-menu.component';
+import { RemotePreferencesService } from './services/remote-preferences.service';
 
 @Component({
   selector: 'app-cloud-remote',
   standalone: true,
-  imports: [CommonModule, FormsModule, LicenseBannerComponent, LicenseBlockRemoteComponent, PlayerStatusComponent, ScreenshotViewerComponent],
-  providers: [RemoteScoreService, RemoteTimerService, RemoteOptionsService, CloudRemoteNavigationService, CloudRemoteConfigService, TransportResilienceService, OfflineQueueService],
+  imports: [CommonModule, FormsModule, LicenseBannerComponent, LicenseBlockRemoteComponent, PlayerStatusComponent, ScreenshotViewerComponent, PreferencesMenuComponent],
+  providers: [RemoteScoreService, RemoteTimerService, RemoteOptionsService, CloudRemoteNavigationService, CloudRemoteConfigService, TransportResilienceService, OfflineQueueService, RemotePreferencesService],
   templateUrl: './cloud-remote.component.html',
   styleUrls: ['./cloud-remote.component.scss']
 })
@@ -608,6 +610,11 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
 
   public toggleHeaderMenu(): void { this.isHeaderMenuOpen = !this.isHeaderMenuOpen; }
   public closeHeaderMenu(): void { this.isHeaderMenuOpen = false; }
+
+  // ADR-062 famille UX — overlay Préférences (per-device, zéro réseau)
+  public showPreferencesMenu = false;
+  public openPreferences(): void { this.showPreferencesMenu = true; }
+  public closePreferences(): void { this.showPreferencesMenu = false; }
 
   // ==== OPTIONS (delegated) ====
 
