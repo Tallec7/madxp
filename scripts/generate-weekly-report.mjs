@@ -168,10 +168,10 @@ function renderPR(pr) {
   const testStatus = !testPlan ? '' : hasChecked ? ' ✅' : ' ⬜';
 
   let out = `**#${pr.number} — ${pr.title}**${testStatus}\n`;
-  if (impact && !impact.match(/obligatoire|Ce que voit/i)) {
-    out += `> ${impact.split('\n')[0]}\n`;
-  } else if (summary) {
-    out += `> ${summary.split('\n')[0].slice(0, 120)}\n`;
+  const desc = (impact && !impact.match(/obligatoire|Ce que voit/i)) ? impact : summary;
+  if (desc) {
+    // Prefix each line with > for blockquote
+    out += desc.trim().split('\n').map(l => `> ${l}`).join('\n') + '\n';
   }
   if (adr && adr !== 'Aucun' && adr.trim()) out += `> ADR : ${adr.trim()}\n`;
   return out;

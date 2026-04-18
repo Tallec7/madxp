@@ -9,60 +9,94 @@ import { readFileSync } from 'fs';
 import { execSync } from 'child_process';
 
 function mdToHtml(md) {
-  const TD  = 'style="padding:6px 10px;border:1px solid #ddd;vertical-align:top"';
-  const TDH = 'style="padding:6px 10px;border:1px solid #ddd;background:#f5f5f5;font-weight:600"';
+  const S_TD  = 'padding:6px 10px;border:1px solid #ddd;vertical-align:top';
+  const S_TDH = 'padding:6px 10px;border:1px solid #ddd;background:#f5f5f5;font-weight:600';
+  const S_TBL = 'border-collapse:collapse;width:100%;font-size:14px;margin:12px 0';
 
-  return md
-    // Unfold <details> blocks — email clients don't support the tag, render content inline
-    .replace(/<details>\s*<summary>(.*?)<\/summary>([\s\S]*?)<\/details>/g, (_, summary, content) =>
-      `<p><strong>${summary}</strong></p>${content}`
-    )
-    // Strip table separator lines (|---|---|)
-    .replace(/^\|[\s|:-]+\|$/gm, '')
-    // Headings
+  // Process line by line to correctly group table blocks
+  function processLines(text) {
+    const lines = text.split('\n');
+    const out = [];
+    let i = 0;
+    while (i < lines.length) {
+      const line = lines[i];
+
+      // Table block: collect all consecutive | lines
+      if (/^\|.+\|$/.test(line.trim())) {
+        const tableLines = [];
+        while (i < lines.length && /^\|.+\|$/.test(lines[i].trim())) {
+          tableLines.push(lines[i]);
+          i++;
+        }
+        // Filter separator rows (|---|---|)
+        const dataRows = tableLines.filter(l => !/^\|[\s|:-]+\|$/.test(l.trim()));
+        if (dataRows.length > 0) {
+          const rows = dataRows.map(l =>
+            l.split('|').slice(1, -1).map(c => c.trim())
+          );
+          const header = `<tr>${rows[0].map(c => `<td style="${S_TDH}">${c}</td>`).join('')}</tr>`;
+          const body   = rows.slice(1).map(r =>
+            `<tr>${r.map(c => `<td style="${S_TD}">${c}</td>`).join('')}</tr>`
+          ).join('\n');
+          out.push(`<table style="${S_TBL}">\n${header}\n${body}\n</table>`);
+        }
+        continue;
+      }
+
+      // Unordered list block
+      if (/^[-*] /.test(line)) {
+        const items = [];
+        while (i < lines.length && /^[-*] /.test(lines[i])) {
+          items.push(`<li>${lines[i].replace(/^[-*] /, '')}</li>`);
+          i++;
+        }
+        out.push(`<ul style="padding-left:20px;margin:8px 0">${items.join('')}</ul>`);
+        continue;
+      }
+
+      // Ordered list block
+      if (/^\d+\. /.test(line)) {
+        const items = [];
+        while (i < lines.length && /^\d+\. /.test(lines[i])) {
+          items.push(`<li>${lines[i].replace(/^\d+\. /, '')}</li>`);
+          i++;
+        }
+        out.push(`<ol style="padding-left:20px;margin:8px 0">${items.join('')}</ol>`);
+        continue;
+      }
+
+      out.push(line);
+      i++;
+    }
+    return out.join('\n');
+  }
+
+  // Unfold <details> — email clients don't support it
+  md = md.replace(/<details>\s*<summary>(.*?)<\/summary>([\s\S]*?)<\/details>/g,
+    (_, summary, content) => `\n**${summary}**\n${content}\n`
+  );
+
+  // Process tables/lists line by line
+  md = processLines(md);
+
+  // Inline transformations (order matters)
+  md = md
     .replace(/^# (.*)/gm,  '<h1 style="color:#0b1020;margin-bottom:4px">$1</h1>')
     .replace(/^## (.*)/gm, '<h2 style="color:#0b1020;border-bottom:2px solid #e00;padding-bottom:4px;margin-top:32px">$1</h2>')
     .replace(/^### (.*)/gm,'<h3 style="color:#333;margin-top:20px">$1</h3>')
-    // Inline formatting
     .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-    .replace(/\*(.*?)\*/g, '<em>$1</em>')
-    .replace(/`([^`]+)`/g, '<code style="background:#f4f4f4;padding:1px 5px;border-radius:3px;font-size:13px">$1</code>')
-    // Blockquotes
-    .replace(/^> (.*)/gm, '<blockquote style="border-left:3px solid #e00;margin:8px 0;padding:4px 12px;color:#555;background:#fafafa">$1</blockquote>')
-    // Horizontal rules
-    .replace(/^---$/gm, '<hr style="border:none;border-top:1px solid #eee;margin:24px 0">')
-    // Tables — header row (first <tr> in each table block gets TDH cells)
-    .replace(/^\| (.+) \|$/gm, (row) => {
-      const cells = row.split('|').slice(1, -1).map(c => c.trim());
-      return `<tr-md>${cells.map(c => `<td ${TD}>${c}</td>`).join('')}</tr-md>`;
-    })
-    .replace(/(<tr-md>[\s\S]*?<\/tr-md>\n?)+/g, block => {
-      const rows = block.trim().split('\n').filter(Boolean);
-      const thead = rows[0].replace(/<tr-md>/, `<tr>`).replace(/<\/tr-md>/, '</tr>')
-        .replace(/<td [^>]+>/g, `<td ${TDH}>`);
-      const tbody = rows.slice(1).map(r =>
-        r.replace(/<tr-md>/, '<tr>').replace(/<\/tr-md>/, '</tr>')
-      ).join('\n');
-      return `<table style="border-collapse:collapse;width:100%;font-size:14px;margin:12px 0">\n${thead}\n${tbody}\n</table>`;
-    })
-    // Ordered lists
-    .replace(/^\d+\. (.*)/gm, '<li>$1</li>')
-    .replace(/(<li>[\s\S]*?<\/li>\n?)+/g, s => {
-      // Detect if preceded by a number (ordered) — wrap in <ol>
-      return `<ol style="padding-left:20px;margin:8px 0">${s}</ol>`;
-    })
-    // Unordered lists
-    .replace(/^[-*] (.*)/gm, '<li-ul>$1</li-ul>')
-    .replace(/(<li-ul>[\s\S]*?<\/li-ul>\n?)+/g, s =>
-      `<ul style="padding-left:20px;margin:8px 0">${s.replace(/<li-ul>/g,'<li>').replace(/<\/li-ul>/g,'</li>')}</ul>`
-    )
-    // Paragraphs — blank lines become <p> breaks, but skip already-tagged lines
-    .replace(/\n{2,}/g, '\n\n')
-    .split('\n\n')
+    .replace(/\*(.*?)\*/g,   '<em>$1</em>')
+    .replace(/`([^`]+)`/g,  '<code style="background:#f4f4f4;padding:1px 5px;border-radius:3px;font-size:13px">$1</code>')
+    .replace(/^> (.*)/gm,   '<blockquote style="border-left:3px solid #e00;margin:8px 0;padding:4px 12px;color:#555;background:#fafafa">$1</blockquote>')
+    .replace(/^---$/gm,     '<hr style="border:none;border-top:1px solid #eee;margin:24px 0">');
+
+  // Paragraphs: split on blank lines, skip already-HTML blocks
+  return md
+    .split(/\n{2,}/)
     .map(block => {
       block = block.trim();
       if (!block) return '';
-      if (/^<(h[1-6]|ul|ol|table|blockquote|hr|li)/.test(block)) return block;
+      if (/^<(h[1-6]|ul|ol|table|blockquote|hr|code)/.test(block)) return block;
       return `<p style="margin:8px 0;line-height:1.6">${block.replace(/\n/g, '<br>')}</p>`;
     })
     .join('\n');
