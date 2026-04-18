@@ -129,8 +129,8 @@ class ConfigProfileRepositoryImpl extends BaseRepository<ConfigProfileRow> {
     await query(
       `UPDATE config_profiles
        SET remote_pin_required = $1,
-           remote_pin_hash = $2,
-           remote_pin_updated_at = CASE WHEN $2 IS NULL THEN NULL ELSE NOW() END
+           remote_pin_hash = $2::varchar,
+           remote_pin_updated_at = CASE WHEN $2::varchar IS NULL THEN NULL ELSE NOW() END
        WHERE id = $3`,
       [input.required, input.hash, profileId]
     );
