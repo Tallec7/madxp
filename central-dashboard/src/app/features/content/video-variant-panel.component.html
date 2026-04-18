@@ -1,0 +1,134 @@
+<div class="variant-panel">
+  <!-- Main header -->
+  <div class="variant-header" (click)="toggleOpen()">
+    <span class="variant-icon">🖥️</span>
+    <span class="variant-title">Variantes multi-ecran</span>
+    <span class="variant-badge" *ngIf="variants.length">{{ variants.length }}</span>
+    <span class="variant-chevron">{{ isOpen ? '▲' : '▼' }}</span>
+  </div>
+
+  <div class="variant-body" *ngIf="isOpen">
+    <div class="variant-loading" *ngIf="loading">Chargement...</div>
+
+    <!-- Accordion: one panel per existing variant -->
+    <div class="accordion" *ngIf="!loading">
+      <div class="accordion-item" *ngFor="let variant of variants; trackBy: trackByDisplayType">
+        <div class="accordion-header" (click)="toggleAccordion(variant.display_type)">
+          <span class="display-icon">{{ getIcon(variant.display_type) }}</span>
+          <span class="display-label">{{ getDisplayLabel(variant.display_type) }}</span>
+          <span class="variant-status variant-ok">&#10003;</span>
+          <span class="accordion-chevron">{{ openPanels[variant.display_type] ? '▲' : '▼' }}</span>
+        </div>
+        <div class="accordion-body" *ngIf="openPanels[variant.display_type]">
+          <div class="variant-item">
+            <div class="variant-info">
+              <span class="variant-name">{{ variant.original_name || variant.filename }}</span>
+              <span class="variant-meta">
+                {{ formatFileSize(variant.file_size) }}
+                <ng-container *ngIf="variant.width && variant.height">
+                  · {{ variant.width }}x{{ variant.height }}
+                </ng-container>
+              </span>
+            </div>
+            <div class="variant-actions">
+              <label class="upload-zone-compact small">
+                <input
+                  type="file"
+                  accept="video/*"
+                  (change)="onFileSelected($event, variant.display_type)"
+                  hidden
+                  [disabled]="uploadingType === variant.display_type"
+                />
+                {{ uploadingType === variant.display_type ? uploadProgress + '%' : 'Remplacer' }}
+              </label>
+              <button
+                class="btn btn-sm btn-danger"
+                (click)="deleteVariant(variant.display_type)"
+                [disabled]="deletingType === variant.display_type"
+              >
+                {{ deletingType === variant.display_type ? '...' : 'Supprimer' }}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Panels for configured displays without variant -->
+      <div class="accordion-item accordion-missing" *ngFor="let display of missingDisplays">
+        <div class="accordion-header" (click)="toggleAccordion(display.type)">
+          <span class="display-icon">{{ getIcon(display.type) }}</span>
+          <span class="display-label">{{ display.name || display.type }}</span>
+          <span class="variant-status variant-missing">&#10007;</span>
+          <span class="accordion-chevron">{{ openPanels[display.type] ? '▲' : '▼' }}</span>
+        </div>
+        <div class="accordion-body" *ngIf="openPanels[display.type]">
+          <div class="variant-source-choice">
+            <select
+              class="source-select"
+              (change)="onSourceVideoSelected($event, display.type)"
+              [disabled]="linkingType === display.type"
+            >
+              <option value="">-- Choisir une video existante --</option>
+              <option *ngFor="let v of availableVideos" [value]="v.id">
+                {{ v.originalName || v.filename }} ({{ formatFileSize(v.size) }})
+              </option>
+            </select>
+            <span class="source-or">ou</span>
+            <label class="upload-zone-compact" [class.uploading]="uploadingType === display.type">
+              <input
+                type="file"
+                accept="video/*"
+                (change)="onFileSelected($event, display.type)"
+                hidden
+                [disabled]="uploadingType === display.type"
+              />
+              {{ uploadingType === display.type ? 'Upload ' + uploadProgress + '%' : 'Uploader' }}
+            </label>
+          </div>
+          <span class="upload-hint" *ngIf="display.resolution"
+            >Format recommande : {{ display.resolution }}</span
+          >
+        </div>
+      </div>
+    </div>
+
+    <!-- Add variant for custom type -->
+    <div class="add-variant" *ngIf="!loading">
+      <div class="add-variant-row" *ngIf="showAddForm">
+        <input
+          class="form-input-sm"
+          type="text"
+          [(ngModel)]="newDisplayType"
+          placeholder="Type (ex: led-banner)"
+        />
+        <ng-container *ngIf="newDisplayType">
+          <select
+            class="source-select source-select-sm"
+            (change)="onSourceVideoSelected($event, sanitizeType(newDisplayType))"
+            [disabled]="linkingType === sanitizeType(newDisplayType)"
+          >
+            <option value="">-- Video existante --</option>
+            <option *ngFor="let v of availableVideos" [value]="v.id">
+              {{ v.originalName || v.filename }}
+            </option>
+          </select>
+          <span class="source-or">ou</span>
+          <label class="upload-zone-compact small">
+            <input
+              type="file"
+              accept="video/*"
+              (change)="onFileSelected($event, sanitizeType(newDisplayType))"
+              hidden
+              [disabled]="!!uploadingType"
+            />
+            {{ uploadingType === sanitizeType(newDisplayType) ? uploadProgress + '%' : 'Uploader' }}
+          </label>
+        </ng-container>
+        <button class="btn btn-sm btn-secondary" (click)="showAddForm = false">Annuler</button>
+      </div>
+      <button class="add-variant-trigger" *ngIf="!showAddForm" (click)="showAddForm = true">
+        + Ajouter variante pour un autre ecran
+      </button>
+    </div>
+  </div>
+</div>
