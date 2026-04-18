@@ -7,20 +7,7 @@ import { getVideoUrl, deleteVideo } from './storage.service';
 import { uploadVerificationService } from './upload-verification.service';
 import { siteSponsorRepository } from '../repositories/site-sponsor.repository';
 import { videoVariantRepository } from '../repositories/video-variant.repository';
-
-// Configuration du retry
-const RETRY_CONFIG = {
-  maxRetries: 3,                    // Nombre max de tentatives
-  retryDelayMs: 5 * 60 * 1000,      // Délai minimum entre retries (5 minutes)
-  retryableErrors: [                 // Erreurs qui peuvent être retryées
-    'timeout',
-    'connection',
-    'network',
-    'ECONNREFUSED',
-    'ETIMEDOUT',
-    'Command timeout',
-  ],
-};
+import { RETRY_CONFIG, isRetryableError, getRetryCount } from './deployment-retry.util';
 
 interface DeploymentTarget {
   siteId: string;
@@ -593,25 +580,6 @@ class DeploymentService {
   }
 
   /**
-   * Vérifie si une erreur peut être retryée
-   */
-  private isRetryableError(errorMessage: string | null): boolean {
-    if (!errorMessage) return false;
-    const lowerError = errorMessage.toLowerCase();
-    return RETRY_CONFIG.retryableErrors.some(e => lowerError.includes(e.toLowerCase()));
-  }
-
-  /**
-   * Extrait le compteur de retry depuis le message d'erreur
-   * Format: "[retry X/Y] message d'erreur"
-   */
-  private getRetryCount(errorMessage: string | null): number {
-    if (!errorMessage) return 0;
-    const match = errorMessage.match(/\[retry (\d+)\/\d+\]/);
-    return match ? parseInt(match[1], 10) : 0;
-  }
-
-  /**
    * Marque un déploiement comme échoué avec possibilité de retry
    * @param deploymentId ID du déploiement
    * @param errorMessage Message d'erreur
@@ -628,8 +596,8 @@ class DeploymentService {
       if (result.rows.length === 0) return;
 
       const currentError = result.rows[0].error_message as string | null;
-      const retryCount = this.getRetryCount(currentError);
-      const canRetry = allowRetry && this.isRetryableError(errorMessage) && retryCount < RETRY_CONFIG.maxRetries;
+      const retryCount = getRetryCount(currentError);
+      const canRetry = allowRetry && isRetryableError(errorMessage) && retryCount < RETRY_CONFIG.maxRetries;
 
       if (canRetry) {
         // Incrémenter le compteur et garder en pending pour retry
@@ -699,7 +667,7 @@ class DeploymentService {
 
       for (const row of result.rows) {
         const deployment = row as unknown as DeploymentRow & { error_message: string };
-        const retryCount = this.getRetryCount(deployment.error_message);
+        const retryCount = getRetryCount(deployment.error_message);
 
         if (retryCount >= RETRY_CONFIG.maxRetries) {
           skipped++;

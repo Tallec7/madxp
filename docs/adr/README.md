@@ -84,7 +84,8 @@ Un ADR documente une décision technique importante avec :
 | [ADR-065](ADR-065-drop-unused-video-row-view-mapper.md)            | Suppression du mapper `mapVideoRowToView` (dead code)       | Accepté                  | Avr 2026 |
 | [ADR-066](ADR-066-rename-pi-video-interface.md)                    | Rename `Video` → `PiConfigVideoEntry` (Raspberry)           | Accepté                  | Avr 2026 |
 | [ADR-067](ADR-067-video-manager-two-consumers.md)                  | Garder 2 consumers vidéo (Page Contenu vs VideoLibrary)     | Accepté                  | Avr 2026 |
-| [ADR-068](ADR-068-signed-urls-saas-video-proxy.md)                 | Signed URLs vidéo SaaS via proxy streaming Node             | Proposé                  | Avr 2026 |
+| [ADR-068](ADR-068-signed-urls-saas-video-proxy.md)                 | Signed URLs vidéo SaaS via proxy streaming Node             | Accepté                  | Avr 2026 |
+| [ADR-069](ADR-069-delivery-strategy-pattern.md)                    | Delivery Strategy pattern pour deployment.service.ts        | Proposé                  | Avr 2026 |
 
 ### Supersédés
 
@@ -121,7 +122,7 @@ Un ADR documente une décision technique importante avec :
 
 1. Décider du format avec la [grille de décision](BEST_PRACTICES.md#quand-créer-un-adr-)
 2. Copier le template approprié (complet ou léger)
-3. Numéroter séquentiellement (prochain : **ADR-068**)
+3. Numéroter séquentiellement (prochain : **ADR-070**)
 4. Remplir les sections
 5. Commiter avec le code dans la même PR
 6. Mettre à jour ce README après merge
