@@ -1,3 +1,9 @@
+## [3.178.7](https://github.com/Tallec7/neopro/compare/v3.178.6...v3.178.7) (2026-04-18)
+
+### Bug Fixes
+
+- **saas:** show admin-deployed videos in club SaaS cloud pool ([#463](https://github.com/Tallec7/neopro/issues/463)) ([0fedb84](https://github.com/Tallec7/neopro/commit/0fedb847185a3d5fc3b1124b101dde22ae959458))
+
 ## [3.178.6](https://github.com/Tallec7/neopro/compare/v3.178.5...v3.178.6) (2026-04-17)
 
 ### Bug Fixes
