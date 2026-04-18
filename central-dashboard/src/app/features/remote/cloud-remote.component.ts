@@ -36,12 +36,13 @@ import { TransportResilienceService, TransportMode } from './services/transport-
 import { OfflineQueueService } from './services/offline-queue.service';
 import { PreferencesMenuComponent } from './preferences-menu.component';
 import { RemotePreferencesService } from './services/remote-preferences.service';
+import { RemoteVersionToggleService } from './services/remote-version-toggle.service';
 
 @Component({
   selector: 'app-cloud-remote',
   standalone: true,
   imports: [CommonModule, FormsModule, LicenseBannerComponent, LicenseBlockRemoteComponent, PlayerStatusComponent, ScreenshotViewerComponent, PreferencesMenuComponent],
-  providers: [RemoteScoreService, RemoteTimerService, RemoteOptionsService, CloudRemoteNavigationService, CloudRemoteConfigService, TransportResilienceService, OfflineQueueService, RemotePreferencesService],
+  providers: [RemoteScoreService, RemoteTimerService, RemoteOptionsService, CloudRemoteNavigationService, CloudRemoteConfigService, TransportResilienceService, OfflineQueueService, RemotePreferencesService, RemoteVersionToggleService],
   templateUrl: './cloud-remote.component.html',
   styleUrls: ['./cloud-remote.component.scss']
 })
@@ -57,6 +58,7 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
   readonly config = inject(CloudRemoteConfigService);
   readonly transport = inject(TransportResilienceService);
   readonly offlineQueue = inject(OfflineQueueService);
+  readonly versionToggle = inject(RemoteVersionToggleService);
   private readonly destroy$ = new Subject<void>();
 
   public transportMode: TransportMode = 'cloud';
@@ -193,6 +195,9 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
     this.timerService.onPeriodEnd = () => this.displayToast('Mi-temps terminée !', 'info');
 
     this.siteId = this.route.snapshot.paramMap.get('siteId') || '';
+
+    // ADR-061 — charger la version remote pour ce site (v1 legacy / v2 new, forcé v2 après sunset)
+    if (this.siteId) this.versionToggle.loadForSite(this.siteId);
 
     this.scoreService.scoreUpdate$.pipe(
       debounceTime(500),
@@ -615,6 +620,17 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
   public showPreferencesMenu = false;
   public openPreferences(): void { this.showPreferencesMenu = true; }
   public closePreferences(): void { this.showPreferencesMenu = false; }
+
+  // ADR-061 — toggle ancienne/nouvelle télécommande (bascule + reload). Masqué si sunset atteint.
+  public get legacyToggleAvailable(): boolean { return this.versionToggle.legacyAvailable; }
+  public get currentRemoteVersion(): 'v1' | 'v2' { return this.versionToggle.currentVersion; }
+  public toggleRemoteVersion(): void {
+    if (!this.siteId) return;
+    this.versionToggle.toggleVersion(this.siteId);
+    const v = this.versionToggle.currentVersion;
+    this.displayToast(v === 'v1' ? 'Ancienne télécommande activée' : 'Nouvelle télécommande activée', 'info');
+    setTimeout(() => window.location.reload(), 600);
+  }
 
   // ==== OPTIONS (delegated) ====
 

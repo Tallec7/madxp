@@ -32,11 +32,12 @@ import {
   getCategoryColor,
   getSeverityIcon,
 } from './club-analytics.utils';
+import { PremiumLockComponent } from '../../shared/components/premium-lock/premium-lock.component';
 
 @Component({
   selector: 'app-club-analytics',
   standalone: true,
-  imports: [CommonModule, RouterModule, FormsModule, TranslateModule],
+  imports: [CommonModule, RouterModule, FormsModule, TranslateModule, PremiumLockComponent],
   template: `
     <div class="page-container" *ngIf="site; else loadingTpl">
       <!-- Header -->
@@ -62,6 +63,14 @@ import {
           </button>
         </div>
       </div>
+
+      <!-- Upsell lock (Free tier) — affiché quand les features avancées sont verrouillées -->
+      <app-premium-lock
+        *ngIf="!canUseAnalyticsAdvanced"
+        feature="analytics_advanced"
+        [showUpgradeCta]="true"
+        message="Accédez à 90 jours d'historique et aux exports CSV/PDF des analytics.">
+      </app-premium-lock>
 
       <!-- Business KPIs -->
       <div class="kpi-grid">
