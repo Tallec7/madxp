@@ -149,12 +149,16 @@ afterAll((done) => {
 describe('club portal SaaS actions placement guard', () => {
   const repoRoot = path.resolve(__dirname, '..', '..', '..', '..');
   const dashPath = path.join(repoRoot, 'central-dashboard/src/app/features/club-portal/club-dashboard.component.ts');
+  const dashHtmlPath = path.join(repoRoot, 'central-dashboard/src/app/features/club-portal/club-dashboard.component.html');
   const loopPath = path.join(repoRoot, 'central-dashboard/src/app/features/club-portal/club-loop.component.ts');
 
   let dash: string;
   let loop: string;
   beforeAll(() => {
-    dash = fs.readFileSync(dashPath, 'utf8');
+    // Template was extracted to .html — concat so guards work against templateUrl refactor
+    const dashTs = fs.readFileSync(dashPath, 'utf8');
+    const dashHtml = fs.existsSync(dashHtmlPath) ? fs.readFileSync(dashHtmlPath, 'utf8') : '';
+    dash = dashTs + '\n' + dashHtml;
     loop = fs.readFileSync(loopPath, 'utf8');
   });
 
@@ -1044,8 +1048,11 @@ describe('SaaS site-detail dashboard guards', () => {
 
   // --- club-dashboard.component.ts must render OTA badge and active alerts ---
   it('club-dashboard must render OTA badge and active alerts card', () => {
-    const filePath = path.join(repoRoot, 'central-dashboard', 'src', 'app', 'features', 'club-portal', 'club-dashboard.component.ts');
-    const content = fs.readFileSync(filePath, 'utf8');
+    const tsPath = path.join(repoRoot, 'central-dashboard', 'src', 'app', 'features', 'club-portal', 'club-dashboard.component.ts');
+    const htmlPath = path.join(repoRoot, 'central-dashboard', 'src', 'app', 'features', 'club-portal', 'club-dashboard.component.html');
+    const tsContent = fs.readFileSync(tsPath, 'utf8');
+    const htmlContent = fs.existsSync(htmlPath) ? fs.readFileSync(htmlPath, 'utf8') : '';
+    const content = tsContent + '\n' + htmlContent;
     expect({
       hasOtaBadge: content.includes('ota-badge'),
       hasLastOtaDeployment: content.includes('lastOtaDeployment'),

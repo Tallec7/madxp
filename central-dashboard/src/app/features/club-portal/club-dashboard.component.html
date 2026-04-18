@@ -1,0 +1,390 @@
+<div class="club-dashboard">
+  <div class="page-header">
+    <div class="header-text">
+      <h1>{{ siteDashboard?.site?.club_name || 'Mon club' }}</h1>
+      <span class="site-name" *ngIf="siteDashboard?.site?.site_name">{{
+        siteDashboard?.site?.site_name
+      }}</span>
+    </div>
+    <button class="btn-help" type="button" (click)="showHelp = true" title="Aide">
+      ❓ {{ 'clubPortal.help' | translate }}
+    </button>
+  </div>
+
+  <app-club-help-modal [(visible)]="showHelp" [isSaas]="isSaas"></app-club-help-modal>
+
+  <!-- SaaS quick actions: TV, remote, QR, preview -->
+  <app-club-saas-actions
+    *ngIf="siteDashboard?.site?.id && isSaas"
+    [siteId]="siteDashboard!.site.id"
+    [siteType]="siteDashboard!.site.site_type || ''"
+  >
+  </app-club-saas-actions>
+
+  <!-- Pi site dashboard -->
+  <div class="status-cards" *ngIf="siteDashboard && !isSaas">
+    <!-- Connection Status -->
+    <div
+      class="card status-card"
+      [class.online]="siteDashboard.connection.isConnected"
+      [class.offline]="!siteDashboard.connection.isConnected"
+    >
+      <div class="card-icon">
+        <span class="status-dot" [class.online]="siteDashboard.connection.isConnected"></span>
+      </div>
+      <div class="card-content">
+        <h3>{{ 'clubPortal.connectionStatus' | translate }}</h3>
+        <p class="status-text">
+          {{
+            siteDashboard.connection.isConnected
+              ? ('status.online' | translate)
+              : ('status.offline' | translate)
+          }}
+        </p>
+        <p class="status-detail" *ngIf="getLastSeen()">
+          {{ 'clubPortal.lastSeen' | translate }}: {{ getLastSeen() | date: 'dd/MM/yyyy HH:mm' }}
+        </p>
+      </div>
+    </div>
+
+    <!-- Storage -->
+    <div class="card" *ngIf="siteDashboard.metrics">
+      <div class="card-icon">📦</div>
+      <div class="card-content">
+        <h3>{{ 'clubPortal.storage' | translate }}</h3>
+        <div class="progress-bar">
+          <div
+            class="progress-fill"
+            [style.width.%]="siteDashboard.metrics.storage_percent"
+            [class.warning]="siteDashboard.metrics.storage_percent > 80"
+            [class.danger]="siteDashboard.metrics.storage_percent > 95"
+          ></div>
+        </div>
+        <p class="status-detail">
+          {{ formatBytes(siteDashboard.metrics.storage_used) }} /
+          {{ formatBytes(siteDashboard.metrics.storage_total) }}
+        </p>
+      </div>
+    </div>
+
+    <!-- Video Count -->
+    <div class="card" *ngIf="siteDashboard.metrics">
+      <div class="card-icon">🎬</div>
+      <div class="card-content">
+        <h3>{{ 'clubPortal.videoCount' | translate }}</h3>
+        <p class="stat-number">{{ siteDashboard.metrics.video_count }}</p>
+        <p class="status-detail" *ngIf="siteDashboard.metrics.last_video_sync">
+          {{ 'clubPortal.lastSync' | translate }}:
+          {{ siteDashboard.metrics.last_video_sync | date: 'dd/MM/yyyy HH:mm' }}
+        </p>
+      </div>
+    </div>
+
+    <!-- Software Version + Last OTA -->
+    <div class="card">
+      <div class="card-icon">⚙️</div>
+      <div class="card-content">
+        <h3>{{ 'clubPortal.version' | translate }}</h3>
+        <p class="stat-number">{{ siteDashboard.site.software_version || '-' }}</p>
+        <p class="status-detail" *ngIf="siteDashboard.saasMetrics?.lastOtaDeployment as ota">
+          <ng-container [ngSwitch]="ota.status">
+            <span *ngSwitchCase="'completed'" class="ota-badge ota-ok">✓ {{ ota.version }}</span>
+            <span *ngSwitchCase="'failed'" class="ota-badge ota-err">✕ {{ ota.version }}</span>
+            <span *ngSwitchCase="'rolled_back'" class="ota-badge ota-err">↺ {{ ota.version }}</span>
+            <span *ngSwitchDefault class="ota-badge ota-pending">⋯ {{ ota.version }}</span>
+          </ng-container>
+          · {{ ota.completedAt || ota.createdAt | date: 'dd/MM HH:mm' }}
+        </p>
+      </div>
+    </div>
+
+    <!-- Active alerts (Pi only) -->
+    <div class="card" *ngIf="(siteDashboard.saasMetrics?.activeAlertsCount || 0) > 0">
+      <div class="card-icon">🚨</div>
+      <div class="card-content">
+        <h3>{{ 'clubPortal.activeAlerts' | translate }}</h3>
+        <p class="stat-number alert-count">{{ siteDashboard.saasMetrics?.activeAlertsCount }}</p>
+        <p class="status-detail">{{ 'clubPortal.activeAlertsHint' | translate }}</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pi engagement row: vidéos jouées + temps écran + complétion -->
+  <div class="status-cards" *ngIf="siteDashboard && !isSaas && siteDashboard.saasMetrics">
+    <div class="card">
+      <div class="card-icon">🎬</div>
+      <div class="card-content">
+        <h3>{{ 'clubPortal.saas.videosPlayedToday' | translate }}</h3>
+        <div class="stat-row">
+          <p class="stat-number">{{ siteDashboard.saasMetrics.todayVideosPlayed || 0 }}</p>
+          <span class="trend-badge" *ngIf="getVideosTrend() as trend" [ngClass]="trend.cls">
+            {{ trend.icon }} {{ trend.label }}
+          </span>
+        </div>
+        <p class="status-detail">
+          {{ siteDashboard.saasMetrics.todaySessions || 0 }}
+          {{ 'clubPortal.saas.sessionsLabel' | translate }}
+        </p>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-icon">⏱️</div>
+      <div class="card-content">
+        <h3>{{ 'clubPortal.saas.todayScreenTime' | translate }}</h3>
+        <div class="stat-row">
+          <p class="stat-number">
+            {{ formatDuration(siteDashboard.saasMetrics.todayScreenTime || 0) }}
+          </p>
+          <span class="trend-badge" *ngIf="getScreenTimeTrend() as trend" [ngClass]="trend.cls">
+            {{ trend.icon }} {{ trend.label }}
+          </span>
+        </div>
+        <p class="status-detail">{{ 'clubPortal.saas.sinceMidnight' | translate }}</p>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-icon">📊</div>
+      <div class="card-content">
+        <h3>{{ 'clubPortal.saas.weekPerformance' | translate }}</h3>
+        <div class="stat-row">
+          <p class="stat-number">
+            {{ siteDashboard.saasMetrics.weekCompletionRate || 0 | number: '1.0-0' }}%
+          </p>
+          <span class="trend-badge" *ngIf="getCompletionTrend() as trend" [ngClass]="trend.cls">
+            {{ trend.icon }} {{ trend.label }}
+          </span>
+        </div>
+        <p class="status-detail">
+          {{ 'clubPortal.saas.completionLabel' | translate }} ·
+          {{ siteDashboard.saasMetrics.weekSponsorsDisplayed || 0 }}
+          {{ 'clubPortal.saas.sponsorsShownLabel' | translate }}
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- SaaS site dashboard -->
+  <div class="status-cards" *ngIf="siteDashboard && isSaas">
+    <!-- Connected clients (live) -->
+    <div
+      class="card status-card"
+      [class.online]="(siteDashboard.saasMetrics?.connectedClients || 0) > 0"
+    >
+      <div class="card-icon">
+        <span
+          class="status-dot"
+          [class.online]="(siteDashboard.saasMetrics?.connectedClients || 0) > 0"
+        ></span>
+      </div>
+      <div class="card-content">
+        <h3>{{ 'clubPortal.saas.connectedClients' | translate }}</h3>
+        <p class="status-text">{{ siteDashboard.saasMetrics?.connectedClients || 0 }}</p>
+        <p class="status-detail">{{ 'clubPortal.saas.connectedClientsHint' | translate }}</p>
+      </div>
+    </div>
+
+    <!-- Today videos played (primary) + sessions (secondary) -->
+    <div class="card">
+      <div class="card-icon">🎬</div>
+      <div class="card-content">
+        <h3>{{ 'clubPortal.saas.videosPlayedToday' | translate }}</h3>
+        <div class="stat-row">
+          <p class="stat-number">{{ siteDashboard.saasMetrics?.todayVideosPlayed || 0 }}</p>
+          <span class="trend-badge" *ngIf="getVideosTrend() as trend" [ngClass]="trend.cls">
+            {{ trend.icon }} {{ trend.label }}
+          </span>
+        </div>
+        <p class="status-detail">
+          {{ siteDashboard.saasMetrics?.todaySessions || 0 }}
+          {{ 'clubPortal.saas.sessionsLabel' | translate }}
+        </p>
+      </div>
+    </div>
+
+    <!-- Today screen time -->
+    <div class="card">
+      <div class="card-icon">⏱️</div>
+      <div class="card-content">
+        <h3>{{ 'clubPortal.saas.todayScreenTime' | translate }}</h3>
+        <div class="stat-row">
+          <p class="stat-number">
+            {{ formatDuration(siteDashboard.saasMetrics?.todayScreenTime || 0) }}
+          </p>
+          <span class="trend-badge" *ngIf="getScreenTimeTrend() as trend" [ngClass]="trend.cls">
+            {{ trend.icon }} {{ trend.label }}
+          </span>
+        </div>
+        <p class="status-detail">{{ 'clubPortal.saas.sinceMidnight' | translate }}</p>
+      </div>
+    </div>
+
+    <!-- Week completion rate (primary) + sponsors (secondary) -->
+    <div class="card">
+      <div class="card-icon">📊</div>
+      <div class="card-content">
+        <h3>{{ 'clubPortal.saas.weekPerformance' | translate }}</h3>
+        <div class="stat-row">
+          <p class="stat-number">
+            {{ siteDashboard.saasMetrics?.weekCompletionRate || 0 | number: '1.0-0' }}%
+          </p>
+          <span class="trend-badge" *ngIf="getCompletionTrend() as trend" [ngClass]="trend.cls">
+            {{ trend.icon }} {{ trend.label }}
+          </span>
+        </div>
+        <p class="status-detail">
+          {{ 'clubPortal.saas.completionLabel' | translate }} ·
+          {{ siteDashboard.saasMetrics?.weekSponsorsDisplayed || 0 }}
+          {{ 'clubPortal.saas.sponsorsShownLabel' | translate }}
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sparkline 7 jours (#2) -->
+  <div class="sparkline-card" *ngIf="siteDashboard && hasSparklineData()">
+    <div class="sparkline-header">
+      <h3>{{ 'clubPortal.saas.last7DaysTitle' | translate }}</h3>
+      <span class="sparkline-sub"
+        >{{ siteDashboard.saasMetrics?.weekVideosPlayed || 0 }}
+        {{ 'clubPortal.saas.videosTotal' | translate }}</span
+      >
+    </div>
+    <svg
+      class="sparkline-svg"
+      [attr.viewBox]="'0 0 ' + sparklineWidth + ' ' + sparklineHeight"
+      preserveAspectRatio="none"
+    >
+      <polyline
+        [attr.points]="getSparklinePoints()"
+        fill="none"
+        stroke="var(--neo-hockey-dark, #2022E9)"
+        stroke-width="2.5"
+        stroke-linejoin="round"
+        stroke-linecap="round"
+      />
+      <polyline
+        [attr.points]="getSparklineArea()"
+        fill="url(#sparkline-gradient)"
+        stroke="none"
+        opacity="0.2"
+      />
+      <defs>
+        <linearGradient id="sparkline-gradient" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="var(--neo-hockey-dark, #2022E9)" stop-opacity="0.5" />
+          <stop offset="100%" stop-color="var(--neo-hockey-dark, #2022E9)" stop-opacity="0" />
+        </linearGradient>
+      </defs>
+    </svg>
+    <div class="sparkline-labels">
+      <span *ngFor="let pt of siteDashboard.saasMetrics?.dailySparkline">
+        {{ formatSparklineDay(pt.day) }}
+      </span>
+    </div>
+  </div>
+
+  <!-- Profil actif (#4) + Top vidéos (#3) -->
+  <div class="insights-grid" *ngIf="siteDashboard && siteDashboard.saasMetrics">
+    <!-- #4 Profil actif -->
+    <div class="insight-card" *ngIf="siteDashboard.saasMetrics?.activeProfile as profile">
+      <div class="insight-header">
+        <span class="insight-icon">🎞️</span>
+        <h3>{{ 'clubPortal.saas.activeProfileTitle' | translate }}</h3>
+      </div>
+      <div class="profile-body">
+        <div class="profile-name">{{ profile.displayName || profile.name }}</div>
+        <div class="profile-meta">
+          <span
+            >{{ profile.loopVideoCount }} {{ 'clubPortal.saas.profileVideos' | translate }}</span
+          >
+          <span class="dot">·</span>
+          <span
+            >{{ profile.sponsorCount }} {{ 'clubPortal.saas.profileSponsors' | translate }}</span
+          >
+        </div>
+        <a routerLink="/club/loop" class="profile-link">
+          {{ 'clubPortal.saas.editProfile' | translate }} →
+        </a>
+      </div>
+    </div>
+
+    <!-- #3 Top vidéos de la semaine -->
+    <div class="insight-card" *ngIf="(siteDashboard.saasMetrics?.topVideos?.length || 0) > 0">
+      <div class="insight-header">
+        <span class="insight-icon">🏆</span>
+        <h3>{{ 'clubPortal.saas.topVideosTitle' | translate }}</h3>
+      </div>
+      <ol class="top-videos-list">
+        <li *ngFor="let v of siteDashboard.saasMetrics?.topVideos; let i = index">
+          <span class="rank">{{ i + 1 }}</span>
+          <div class="video-info">
+            <span class="video-name" [title]="v.filename">{{ formatVideoName(v.filename) }}</span>
+            <span class="video-stats">
+              {{ v.plays }} {{ 'clubPortal.saas.playsShort' | translate }} · {{ v.avgCompletion }}%
+            </span>
+          </div>
+        </li>
+      </ol>
+    </div>
+  </div>
+
+  <!-- #5 Sponsors actifs -->
+  <div
+    class="sponsors-card"
+    *ngIf="siteDashboard && (siteDashboard.saasMetrics?.activeSponsors?.length || 0) > 0"
+  >
+    <div class="sponsors-header">
+      <span class="insight-icon">💼</span>
+      <h3>{{ 'clubPortal.saas.activeSponsorsTitle' | translate }}</h3>
+    </div>
+    <div class="sponsors-list">
+      <div class="sponsor-item" *ngFor="let s of siteDashboard.saasMetrics?.activeSponsors">
+        <div class="sponsor-logo">
+          <img *ngIf="s.logoUrl" [src]="s.logoUrl" [alt]="s.name" />
+          <span *ngIf="!s.logoUrl" class="sponsor-logo-placeholder">{{ s.name.charAt(0) }}</span>
+        </div>
+        <div class="sponsor-info">
+          <span class="sponsor-name">{{ s.name }}</span>
+          <span class="sponsor-stats">
+            {{ s.videoCount }} {{ 'clubPortal.saas.sponsorVideos' | translate }} ·
+            {{ s.totalImpressions | number }} {{ 'clubPortal.saas.sponsorImpressions' | translate }}
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Empty state hint when no activity -->
+  <div class="empty-state-hint" *ngIf="siteDashboard && showEmptyStateHint()">
+    <span class="hint-icon">💡</span>
+    <span class="hint-text">{{ 'clubPortal.saas.emptyStateHint' | translate }}</span>
+  </div>
+
+  <!-- Quick action: manage loop -->
+  <div class="quick-actions" *ngIf="siteDashboard && siteDashboard.saasMetrics">
+    <a routerLink="/club/loop" class="action-link">
+      <span class="action-icon">🎞️</span>
+      <div class="action-text">
+        <strong>{{ 'clubPortal.saas.manageLoopTitle' | translate }}</strong>
+        <span>{{ 'clubPortal.saas.manageLoopHint' | translate }}</span>
+      </div>
+      <span class="action-arrow">→</span>
+    </a>
+  </div>
+
+  <!-- ADR-058 Phase 2B: PIN télécommande par profil (club peut gérer le sien) -->
+  <app-remote-auth-section *ngIf="siteDashboard?.site?.id" [siteId]="siteDashboard!.site.id">
+  </app-remote-auth-section>
+
+  <!-- Loading state -->
+  <div class="loading" *ngIf="loading">
+    <div class="spinner"></div>
+    <p>{{ 'common.loading' | translate }}</p>
+  </div>
+
+  <!-- Error state -->
+  <div class="error-banner" *ngIf="error">
+    <p>{{ error }}</p>
+  </div>
+</div>

@@ -2110,13 +2110,11 @@ describe('ADR-058 Phase 1: Pi offline PIN validation wiring', () => {
   });
 
   it('club-dashboard renders <app-remote-auth-section> for its own site (ADR-058 Phase 2B)', () => {
-    const content = fs.readFileSync(
-      path.resolve(
-        repoRoot,
-        'central-dashboard/src/app/features/club-portal/club-dashboard.component.ts'
-      ),
-      'utf8'
-    );
+    const tsPath = path.resolve(repoRoot, 'central-dashboard/src/app/features/club-portal/club-dashboard.component.ts');
+    const htmlPath = path.resolve(repoRoot, 'central-dashboard/src/app/features/club-portal/club-dashboard.component.html');
+    const tsContent = fs.readFileSync(tsPath, 'utf8');
+    const htmlContent = fs.existsSync(htmlPath) ? fs.readFileSync(htmlPath, 'utf8') : '';
+    const content = tsContent + '\n' + htmlContent;
     expect({
       imports: /RemoteAuthSectionComponent/.test(content),
       usedInTemplate: /<app-remote-auth-section/.test(content),
