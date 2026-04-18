@@ -1,3 +1,9 @@
+# [3.185.0](https://github.com/Tallec7/neopro/compare/v3.184.0...v3.185.0) (2026-04-18)
+
+### Features
+
+- **saas:** ADR-068 Prometheus supervision + route-order regression guard ([e9d9ccc](https://github.com/Tallec7/neopro/commit/e9d9cccdb1a9af4d2520238072563dff5cd1a701))
+
 # [3.184.0](https://github.com/Tallec7/neopro/compare/v3.183.1...v3.184.0) (2026-04-18)
 
 ### Bug Fixes
