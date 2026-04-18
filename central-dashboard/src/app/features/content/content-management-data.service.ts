@@ -11,7 +11,14 @@ import { Site, Group } from '../../core/models';
 
 // ── Data models ──
 
-export interface Video {
+/**
+ * Row vidéo retournée par `/api/videos` (page Contenu admin).
+ *
+ * DTO API enrichi (avec `title` calculé et `url` présigné) — distinct de
+ * la row DB canonique `Video` (`core/models/video.model.ts`). Le nom évite
+ * la collision avec `Video` canonique et reflète la nature du payload.
+ */
+export interface ContentVideoRow {
   id: string;
   title: string;
   filename: string;
@@ -76,7 +83,7 @@ export interface BulkUploadResponse {
 export interface ImageToVideoResponse {
   success: boolean;
   message: string;
-  video?: Video;
+  video?: ContentVideoRow;
 }
 
 export interface DeployProgressEvent {
@@ -98,7 +105,7 @@ export class ContentManagementDataService {
 
   // ── Video CRUD ──
 
-  loadVideos(page: number, limit: number, search: string): Observable<{ data: Video[]; pagination: PaginationInfo }> {
+  loadVideos(page: number, limit: number, search: string): Observable<{ data: ContentVideoRow[]; pagination: PaginationInfo }> {
     const params: Record<string, string> = {
       page: page.toString(),
       limit: limit.toString(),
@@ -107,7 +114,7 @@ export class ContentManagementDataService {
       params['search'] = search;
     }
     const query = new URLSearchParams(params).toString();
-    return this.api.get<{ data: Video[]; pagination: PaginationInfo }>(`/videos?${query}`);
+    return this.api.get<{ data: ContentVideoRow[]; pagination: PaginationInfo }>(`/videos?${query}`);
   }
 
   loadAllVideoNames(): Observable<VideoName[]> {
@@ -118,8 +125,8 @@ export class ContentManagementDataService {
     return this.api.delete<void>(`/videos/${videoId}`);
   }
 
-  uploadVideo(formData: FormData): Observable<Video> {
-    return this.api.upload<Video>('/videos', formData);
+  uploadVideo(formData: FormData): Observable<ContentVideoRow> {
+    return this.api.upload<ContentVideoRow>('/videos', formData);
   }
 
   uploadVideoBulk(formData: FormData): Observable<BulkUploadResponse> {

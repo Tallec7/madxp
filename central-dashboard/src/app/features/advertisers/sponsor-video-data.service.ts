@@ -3,7 +3,15 @@ import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { ApiService } from '../../core/services/api.service';
 
-export interface Video {
+/**
+ * Row vidéo retournée par `/api/videos` (sélecteur sponsor).
+ *
+ * DTO API distinct de la `Video` canonique (`core/models/video.model.ts`) — le
+ * payload sponsor expose `title` et `created_at: string` (ISO sérialisé) au
+ * lieu de `original_name` / `Date`. Renommé pour éviter la collision et
+ * documenter la nature DTO.
+ */
+export interface SponsorVideoRow {
   id: string;
   title: string;
   filename: string;
@@ -31,7 +39,7 @@ interface SponsorVideosResponse {
 }
 
 interface VideosResponse {
-  data: Video[];
+  data: SponsorVideoRow[];
   pagination: { page: number; limit: number; total: number };
 }
 
@@ -58,7 +66,7 @@ export class SponsorVideoDataService {
     );
   }
 
-  loadAvailableVideos(): Observable<Video[]> {
+  loadAvailableVideos(): Observable<SponsorVideoRow[]> {
     return this.api.get<VideosResponse>(
       '/videos', { limit: 500 }
     ).pipe(map(r => r.data || []));

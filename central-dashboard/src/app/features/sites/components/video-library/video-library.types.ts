@@ -4,7 +4,14 @@
  * Extracted from `video-library.component.ts` to allow reuse across the
  * component's data service and sub-components (detail panel, filters, cards).
  * See `project_video_library_redesign.md` — decomposition chantier.
+ *
+ * `VideoItem` étend `VideoView` (core/models/video.model) — Phase 2 du
+ * chantier video-deploy-unification : un seul shape UI canonique pour les
+ * champs vidéo communs (id, filename, displayName, category, size, duration,
+ * thumbnailUrl). Les champs Pi/owner/config sont propres à la library.
  */
+
+import type { VideoView } from '../../../../core/models/video.model';
 
 /** Content status — calculated from the active config (ADR-050 Phase 1) */
 export type VideoContentStatus = 'loop' | 'category' | 'sponsor' | 'available' | 'to_deploy';
@@ -12,15 +19,10 @@ export type VideoContentStatus = 'loop' | 'category' | 'sponsor' | 'available' |
 /** Owner type — determined from upload metadata (ADR-050 Phase 1) */
 export type VideoOwnerType = 'club' | 'neopro' | 'sponsor' | 'admin';
 
-export interface VideoItem {
-  id: string | null;
+export interface VideoItem extends VideoView {
+  // displayName, id, filename, category, subcategory, size, duration, thumbnailUrl
+  // sont hérités de VideoView.
   path: string;
-  filename: string;
-  displayName: string; // Title or original filename for display (filename may be UUID)
-  category: string | null;
-  subcategory: string | null;
-  size: number;
-  duration: number | null;
   isOnPi: boolean;
   owner: 'club' | 'neopro';
   ownerType: VideoOwnerType;         // ADR-050: enriched owner (club/neopro/sponsor/admin)
@@ -37,7 +39,6 @@ export interface VideoItem {
   checksum?: string | null;         // File integrity checksum
   configRoles?: Set<string>;         // Roles in config: 'boucle', 'match', 'action' (empty = not in config)
   isDuplicate?: boolean;            // Whether another video shares the same checksum (duplicate file)
-  thumbnailUrl?: string | null;     // Thumbnail image URL (generated at upload via ffmpeg)
 }
 
 /** Target for "Add to" action — identifies where to insert a video in the config */

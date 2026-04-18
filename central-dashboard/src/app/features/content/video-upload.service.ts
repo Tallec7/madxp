@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { NotificationService } from '../../core/services/notification.service';
 import {
   ContentManagementDataService,
-  Video,
+  ContentVideoRow,
   VideoName,
   ImageToVideoResponse,
 } from './content-management-data.service';
