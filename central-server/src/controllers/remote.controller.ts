@@ -24,6 +24,7 @@ import { commandQueueService } from '../services/command-queue.service';
 import logger from '../config/logger';
 import metricsService from '../services/metrics.service';
 import { generateRemotePinToken } from '../middleware/remote-pin.middleware';
+import { migrateLegacyPinToDefaultProfile } from '../services/pin-migration.service';
 import { LicenseStatusResponse, SiteSubscriptionInfo, SubscriptionPlan, SuspensionReason } from '../types';
 
 // Lazy import to avoid circular dependency
@@ -332,6 +333,11 @@ export async function verifyPin(req: Request, res: Response) {
       siteId,
       ip: req.ip,
     });
+
+    // ADR-058 Phase 2A : migration opportuniste legacy → default profile PIN.
+    // Fire-and-forget : non-bloquant, toute erreur est loguée mais n'affecte pas
+    // la réponse HTTP (le client a déjà son token legacy valide 24h).
+    void migrateLegacyPinToDefaultProfile(siteId, pin);
 
     res.json({
       success: true,

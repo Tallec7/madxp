@@ -170,10 +170,18 @@ Les invariants suivants sont verrouillés par `smoke-adr-refactoring.test.ts` (d
 - Variables ajoutées à `central-server/.env.example` (`ALERT_EMAIL_TO`, `ALERT_EMAIL_FROM`).
 - 2 nouveaux smoke guards (`rules.yml` + `alertmanager.yml`).
 
-## Phase 2 (reste — hors scope ADR-058)
+## Phase 2A — Migration opportuniste legacy → default profile (implémenté)
 
-- **2A** : Remplacement progressif du PIN site-scope legacy par migration opportuniste (tous les PINs site → PIN profil par défaut).
+- `central-server/src/services/pin-migration.service.ts` : helper `migrateLegacyPinToDefaultProfile(siteId, plainPin)` :
+  1. cherche le profil `is_default = true` du site
+  2. si le profil a déjà un PIN → skip (`skipped_already_set`)
+  3. sinon : `bcrypt.hash(plainPin, 12)` → `configProfileRepository.setPin()` → `siteRepository.clearRemotePin()`
+  4. log Winston + métrique Prometheus
+- Appelé depuis `remote.controller.verifyPin` en **fire-and-forget** (`void migrateLegacyPinToDefaultProfile(...)`) après un succès SHA-256 legacy — non-bloquant, 0 impact sur la réponse HTTP.
+- Nouveau counter `neopro_legacy_pin_migrations_total{status}` (4 statuts : `success`, `skipped_no_default`, `skipped_already_set`, `failed`).
+- Tests : 4 unit tests dans `pin-migration.service.test.ts` (success / no-default / already-set / failure non-fatal) + 3 smoke guards.
+- Résultat : après la première connexion télécommande réussie avec PIN legacy, le site passe automatiquement sur le nouveau schéma profil (plus besoin de manip manuelle super_admin).
 
 ---
 
-_Dernière mise à jour : 18 avril 2026 (Phase 2C — alertes email sur burst de failures PIN)_
+_Dernière mise à jour : 18 avril 2026 (Phase 2A — migration opportuniste legacy → default profile PIN)_

@@ -2011,6 +2011,60 @@ describe('ADR-058 Phase 1: Pi offline PIN validation wiring', () => {
     }
   });
 
+  // --- Phase 2A : Opportunistic legacy → default profile PIN migration ---
+
+  it('pin-migration.service migrates legacy site PIN to default profile (ADR-058 Phase 2A)', () => {
+    const content = fs.readFileSync(
+      path.resolve(repoRoot, 'central-server/src/services/pin-migration.service.ts'),
+      'utf8'
+    );
+    expect({
+      exportsMigrator: /export async function migrateLegacyPinToDefaultProfile/.test(content),
+      usesBcrypt: /bcrypt\.hash\(plainPin,\s*BCRYPT_ROUNDS\)/.test(content),
+      setsProfilePin: /configProfileRepository\.setPin\(/.test(content),
+      clearsLegacySiteHash: /siteRepository\.clearRemotePin\(/.test(content),
+      recordsMetric: /recordLegacyPinMigration\(/.test(content),
+      nonFatal: /catch \(err\)/.test(content),
+    }).toEqual({
+      exportsMigrator: true,
+      usesBcrypt: true,
+      setsProfilePin: true,
+      clearsLegacySiteHash: true,
+      recordsMetric: true,
+      nonFatal: true,
+    });
+  });
+
+  it('remote.controller.verifyPin fire-and-forgets migration after legacy success (ADR-058 Phase 2A)', () => {
+    const content = fs.readFileSync(
+      path.resolve(repoRoot, 'central-server/src/controllers/remote.controller.ts'),
+      'utf8'
+    );
+    expect({
+      imports: /migrateLegacyPinToDefaultProfile/.test(content),
+      fireAndForget: /void\s+migrateLegacyPinToDefaultProfile\(siteId,\s*pin\)/.test(content),
+    }).toEqual({
+      imports: true,
+      fireAndForget: true,
+    });
+  });
+
+  it('metrics.service exposes neopro_legacy_pin_migrations_total counter (ADR-058 Phase 2A)', () => {
+    const content = fs.readFileSync(
+      path.resolve(repoRoot, 'central-server/src/services/metrics.service.ts'),
+      'utf8'
+    );
+    expect({
+      counter: /neopro_legacy_pin_migrations_total/.test(content),
+      recordMethod: /recordLegacyPinMigration\(/.test(content),
+      allStatuses: /success[\s\S]{0,120}skipped_no_default[\s\S]{0,120}skipped_already_set[\s\S]{0,120}failed/.test(content),
+    }).toEqual({
+      counter: true,
+      recordMethod: true,
+      allStatuses: true,
+    });
+  });
+
   // --- Phase 2C : Email alerts on PIN burst failures ---
 
   it('prometheus rules.yml declares PIN brute-force alerts (ADR-058 Phase 2C)', () => {

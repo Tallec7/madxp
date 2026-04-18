@@ -212,6 +212,13 @@ const profileDeviceTokensActiveGauge = new Gauge({
   registers: [register],
 });
 
+const legacyPinMigrationsTotal = new Counter({
+  name: 'neopro_legacy_pin_migrations_total',
+  help: 'Opportunistic migrations from site-scope legacy PIN to default profile PIN (ADR-058 Phase 2A)',
+  labelNames: ['status'], // success | skipped_no_default | skipped_already_set | failed
+  registers: [register],
+});
+
 // ============= Métriques Canary Deployment =============
 
 const canaryDeploymentsGauge = new Gauge({
@@ -816,6 +823,13 @@ class MetricsService {
   /** ADR-058: gauge du nombre de device tokens actifs (appelé par cleanup cron) */
   recordProfileDeviceTokensActive(count: number): void {
     profileDeviceTokensActiveGauge.set(count);
+  }
+
+  /** ADR-058 Phase 2A: migration opportuniste legacy site-PIN → default profile PIN */
+  recordLegacyPinMigration(
+    status: 'success' | 'skipped_no_default' | 'skipped_already_set' | 'failed'
+  ): void {
+    legacyPinMigrationsTotal.inc({ status });
   }
 
   recordCanaryDeployment(phase: string, count: number): void {
