@@ -67,7 +67,7 @@ jobs:
         run: cat docs/reports/${{ steps.dates.outputs.filename }}
 
       - name: Envoyer par email
-        if: ${{ !github.event.inputs.dry_run }}
+        if: ${{ github.event.inputs.dry_run != 'true' }}
         env:
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
           REPORT_EMAIL_TO: ${{ secrets.REPORT_EMAIL_TO }}
