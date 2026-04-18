@@ -1,3 +1,9 @@
+## [3.186.1](https://github.com/Tallec7/neopro/compare/v3.186.0...v3.186.1) (2026-04-18)
+
+### Bug Fixes
+
+- **remote-auth:** cast $2::varchar in setPin SQL to fix Postgres 42P08 ([389fd6b](https://github.com/Tallec7/neopro/commit/389fd6b2d54298d658de4d5317940c32e42b2972))
+
 # [3.186.0](https://github.com/Tallec7/neopro/compare/v3.185.0...v3.186.0) (2026-04-18)
 
 ### Features
