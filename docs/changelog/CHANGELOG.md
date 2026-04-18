@@ -1,3 +1,9 @@
+## [3.192.5](https://github.com/Tallec7/neopro/compare/v3.192.4...v3.192.5) (2026-04-18)
+
+### Bug Fixes
+
+- **perf:** cache dashboard endpoint + limit metrics rows to stop egress bleed ([#474](https://github.com/Tallec7/neopro/issues/474)) ([532357f](https://github.com/Tallec7/neopro/commit/532357f2f3ca3de60905b47d3e6e5f84e684f0e9))
+
 ## [3.192.4](https://github.com/Tallec7/neopro/compare/v3.192.3...v3.192.4) (2026-04-18)
 
 ### Bug Fixes
