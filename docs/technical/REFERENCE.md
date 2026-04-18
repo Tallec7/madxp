@@ -3,15 +3,19 @@
 ## Table des matières
 
 1. [Architecture globale](#architecture-globale)
-2. [Configuration nouveau club](#configuration-nouveau-club)
-3. [Mise à jour boîtier](#mise-à-jour-boîtier)
-4. [Authentification](#authentification)
-5. [Serveur central](#serveur-central)
-6. [Scripts disponibles](#scripts-disponibles)
-7. [Structure des fichiers](#structure-des-fichiers)
-8. [Configuration réseau](#configuration-réseau)
-9. [Services systemd](#services-systemd)
-10. [API et WebSocket](#api-et-websocket)
+2. [Rate Limiting](#rate-limiting)
+3. [Authentication flows](#authentication-flows)
+4. [API Versioning](#api-versioning)
+5. [Configuration nouveau club](#configuration-nouveau-club)
+6. [Mise à jour boîtier](#mise-à-jour-boîtier)
+7. [Authentification](#authentification)
+8. [Serveur central](#serveur-central)
+9. [Scripts disponibles](#scripts-disponibles)
+10. [Structure des fichiers](#structure-des-fichiers)
+11. [Configuration réseau](#configuration-réseau)
+12. [Services systemd](#services-systemd)
+13. [API et WebSocket](#api-et-websocket)
+14. [Deprecated Endpoints](#deprecated-endpoints)
 
 ---
 
