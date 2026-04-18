@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import { Observable, of, tap, map } from 'rxjs';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
+import { Observable, of, tap, map, catchError, throwError } from 'rxjs';
 import { Configuration } from '../interfaces/configuration.interface';
 import { environment } from '../../environments/environment';
 
@@ -12,6 +12,17 @@ export interface SaasProfile {
   sport: string | null;
   isDefault: boolean;
   sortOrder: number;
+  pinRequired?: boolean;
+}
+
+/**
+ * ADR-058 — Erreur typée remontée par loadConfiguration/loadProfileConfiguration
+ * quand le serveur renvoie 401 + { pinRequired: true }.
+ */
+export interface SaasPinRequiredError {
+  pinRequired: true;
+  profileId?: string;
+  siteId?: string;
 }
 
 interface SaasConfigResponse {
@@ -85,6 +96,11 @@ export class SaasConfigService {
       map(response => response.configuration),
       tap(config => {
         this.selectedConfiguration = config;
+      }),
+      catchError((err: HttpErrorResponse) => {
+        const pinErr = this.toPinRequiredError(err, siteId);
+        if (pinErr) return throwError(() => pinErr);
+        return throwError(() => err);
       })
     );
   }
@@ -102,8 +118,37 @@ export class SaasConfigService {
       tap(config => {
         this.selectedConfiguration = config;
         localStorage.setItem(SELECTED_PROFILE_KEY, profileId);
+      }),
+      catchError((err: HttpErrorResponse) => {
+        const pinErr = this.toPinRequiredError(err, siteId, profileId);
+        if (pinErr) return throwError(() => pinErr);
+        return throwError(() => err);
       })
     );
+  }
+
+  /**
+   * Retourne une erreur typée `SaasPinRequiredError` si le serveur demande un PIN,
+   * sinon `null` pour laisser l'erreur HTTP d'origine se propager.
+   */
+  private toPinRequiredError(
+    err: HttpErrorResponse,
+    siteId: string,
+    profileId?: string
+  ): SaasPinRequiredError | null {
+    if (err?.status !== 401) return null;
+    const body = err.error as { pinRequired?: boolean } | null | undefined;
+    if (!body || body.pinRequired !== true) return null;
+    return { pinRequired: true, siteId, profileId };
+  }
+
+  /**
+   * Liste des profils incluant le flag `pinRequired` (ADR-058).
+   * Alias explicite de `getAvailableProfiles()` — le backend expose `pinRequired`
+   * depuis la Phase 2 SaaS.
+   */
+  public getProfilesWithPin(): Observable<SaasProfile[]> {
+    return this.getAvailableProfiles();
   }
 
   /**

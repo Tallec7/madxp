@@ -12,7 +12,8 @@ import { AnalyticsService } from '../../services/analytics.service';
 import { RecordingStateService } from '../../services/recording-state.service';
 import { DemoConfigService } from '../../services/demo-config.service';
 import { ProfileConfigService } from '../../services/profile-config.service';
-import { SaasConfigService } from '../../services/saas-config.service';
+import { SaasConfigService, SaasPinRequiredError } from '../../services/saas-config.service';
+import { RemotePinService } from '../../services/remote-pin.service';
 import { LocalBroadcastService } from '../../services/local-broadcast.service';
 import {
   LocalOptionsService,
@@ -53,6 +54,7 @@ export class RemoteComponent implements OnInit, OnDestroy {
   private readonly localOptionsService = inject(LocalOptionsService);
   private readonly licenseService = inject(LicenseService);
   private readonly saasConfigService = inject(SaasConfigService);
+  private readonly remotePinService = inject(RemotePinService);
   private readonly ngZone = inject(NgZone);
   public readonly scoreService = inject(RemoteScoreService);
   public readonly timerService = inject(RemoteTimerService);
@@ -130,6 +132,13 @@ export class RemoteComponent implements OnInit, OnDestroy {
   public isRecording = false;
   public showRecordingWarning = false;
   public warningSecondsRemaining = 0;
+
+  // ADR-058 — PIN remote SaaS
+  public pinRequired = false;
+  public pinProfileId: string | null = null;
+  public pinError: string | null = null;
+  public pinInput = '';
+  public pinSubmitting = false;
 
   public isLoading = false;
   public isDarkMode = false;
@@ -254,9 +263,17 @@ export class RemoteComponent implements OnInit, OnDestroy {
           }));
           this.selectorLoading = false;
           this.currentView = 'club-selector';
+        } else if (profiles.length === 1 && profiles[0].pinRequired) {
+          // Profil unique protégé par PIN — aller directement à l'écran PIN
+          this.pinProfileId = profiles[0].id;
+          this.pinRequired = true;
         } else {
-          const data = this.route.snapshot.data['configuration'] as Configuration;
-          this.initializeWithConfiguration(data);
+          // Tenter le chargement config — bascule vers PIN si 401 pinRequired
+          const siteId = this.saasConfigService.getSiteId();
+          this.saasConfigService.loadConfiguration(siteId).subscribe({
+            next: (config) => { this.initializeWithConfiguration(config); },
+            error: (err) => this.handleSaasLoadError(err, profiles[0]?.id ?? null),
+          });
         }
       });
     } else {
@@ -329,7 +346,7 @@ export class RemoteComponent implements OnInit, OnDestroy {
           this.initializeWithConfiguration(config);
           this.currentView = 'home';
         },
-        error: (err) => { console.error('Erreur chargement config profil SaaS:', err); }
+        error: (err) => this.handleSaasLoadError(err, club.id, club.name)
       });
     } else {
       this.profileConfigService.loadProfileConfiguration(club.id).subscribe({
@@ -350,6 +367,80 @@ export class RemoteComponent implements OnInit, OnDestroy {
       ? this.configuration.timeCategories
       : this.defaultTimeCategories;
     this.liveScoreEnabled = config.liveScoreEnabled ?? false;
+  }
+
+  // ============================================================================
+  // ADR-058 — PIN REMOTE SaaS
+  // ============================================================================
+
+  private handleSaasLoadError(err: unknown, profileId: string | null, profileName?: string): void {
+    const pinErr = err as Partial<SaasPinRequiredError> | null;
+    if (pinErr && pinErr.pinRequired === true) {
+      this.ngZone.run(() => {
+        this.pinRequired = true;
+        this.pinProfileId = pinErr.profileId || profileId;
+        this.pinError = null;
+        this.pinInput = '';
+        if (profileName) this.currentProfileName = profileName;
+      });
+      return;
+    }
+    console.error('Erreur chargement config SaaS:', err);
+  }
+
+  public submitPin(): void {
+    if (this.pinSubmitting) return;
+    const siteId = this.saasConfigService.getSiteId();
+    const profileId = this.pinProfileId;
+    if (!siteId || !profileId || !this.pinInput) {
+      this.pinError = 'PIN invalide';
+      return;
+    }
+
+    this.pinSubmitting = true;
+    this.pinError = null;
+
+    this.remotePinService.verifyProfilePin(siteId, profileId, this.pinInput).subscribe({
+      next: () => {
+        // Token stocké par RemotePinService — relancer le chargement config.
+        this.saasConfigService.loadProfileConfiguration(siteId, profileId).subscribe({
+          next: (config) => {
+            this.ngZone.run(() => {
+              this.pinRequired = false;
+              this.pinInput = '';
+              this.pinError = null;
+              this.pinSubmitting = false;
+              this.initializeWithConfiguration(config);
+              this.currentView = 'home';
+            });
+          },
+          error: (err) => {
+            this.ngZone.run(() => {
+              this.pinSubmitting = false;
+              this.pinError = 'Impossible de charger la configuration.';
+              console.error('Config load after PIN failed:', err);
+            });
+          },
+        });
+      },
+      error: (err: unknown) => {
+        this.ngZone.run(() => {
+          this.pinSubmitting = false;
+          const httpErr = err as { status?: number; error?: { error?: string; attemptsRemaining?: number; message?: string } };
+          if (httpErr?.status === 429) {
+            this.pinError = httpErr.error?.message || 'Trop de tentatives. Réessayez plus tard.';
+          } else if (httpErr?.status === 401) {
+            const remaining = httpErr.error?.attemptsRemaining;
+            this.pinError = typeof remaining === 'number'
+              ? `PIN incorrect (${remaining} tentative(s) restante(s)).`
+              : 'PIN incorrect.';
+          } else {
+            this.pinError = 'Erreur de vérification du PIN.';
+          }
+          this.pinInput = '';
+        });
+      },
+    });
   }
 
   public getTimeCategoryGradientClass(timeCategory: TimeCategory): string {
