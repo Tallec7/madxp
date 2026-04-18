@@ -178,83 +178,69 @@ Les 4 interfaces `Video` parallèles de l'audit initial ont été renommées en 
 
 ---
 
-## Phase 3 — Extraction primitives vidéo partagées (scope révisé ADR-067)
+## Phase 3 — Extraction primitives vidéo partagées (ADR-067)
 
-**Statut** : 📝 Scope révisé 2026-04-18 — voir [ADR-067](../../docs/adr/ADR-067-video-manager-two-consumers.md)
-**Durée** : 1 sprint (estimation ~400-600L récupérables, pas 3000L)
+**Statut** : 🟡 En cours — voir [ADR-067](../../docs/adr/ADR-067-video-manager-two-consumers.md)
+**Durée** : 1 sprint
 **Owner** : Lead frontend
 **Objectif** : extraire les primitives présentationnelles dupliquées entre Page Contenu et VideoLibrary — **SANS** unifier en composant monolithique
 
-### 🟡 Révision 2026-04-18 — Refus d'unification monolithique
+### Décision ADR-067 (rappel)
 
-Audit a révélé :
+- 2 consumers conservés : Page Contenu (fleet) + VideoLibrary (per-site). Club-portal délègue à `site-content-tab`.
+- Shapes et UX fondamentalement différentes ; un flag `scope` ajouterait ~20 branches pour zéro gain.
+- ~80 règles smoke-enforced verrouillent les comportements par siteType.
+- Stratégie : extraire les primitives présentationnelles, garder les 2 shells distincts.
 
-- Les 3 consumers initialement identifiés se réduisent à **2** (club-portal délègue à `site-content-tab` via propagation `[siteType]` smoke-enforced)
-- Page Contenu (fleet-wide, pagination server-side, panier multi-sites) et `VideoLibraryComponent` (per-site, 14+ inputs contextuels, action directe) ont des UX et data shapes fondamentalement différentes
-- Forcer un flag `scope: 'fleet' | 'site'` dans VideoLibrary ajouterait ~20 branches conditionnelles pour zéro gain net
-- ~80 règles smoke-enforced (`.claude/rules/saas.md` + `dashboard.md`) verrouillent des comportements par siteType qu'un composant unifié ne peut pas gérer proprement
-
-**Décision ADR-067** : garder les 2 consumers, extraire uniquement les primitives.
-
-### Architecture cible révisée
+### Architecture cible
 
 ```
 shared/components/
-  video-card/          ← à créer — tuile vidéo (thumbnail + actions menu)
+  video-card/          ✅ extrait (slot-based: card-badges, card-actions, card-extras)
   video-upload-zone/   ✅ déjà extrait
 features/
-  content/             ← garde sa structure (ContentManagementDataService + Upload + Deploy)
-  sites/components/video-library/  ← garde sa structure (déjà décomposé en sub-components)
+  content/             ← shell fleet-wide, consomme video-card
+  sites/components/video-library/  ← shell per-site, template custom inline (reverted 2026-04-18)
 ```
 
 ### Tâches
 
-**3.1 Extraction composants partagés**
+**3.1 `VideoCardComponent`** — ✅ Done 2026-04-18 (commit 2eb609a1)
 
-- [ ] Identifier les blocs identiques entre `content-management.component` et `video-manager.component`
-- [ ] Extraire dans `shared/components/` :
-  - `VideoGrid` (liste vidéos)
-  - `VideoCard` (carte unitaire)
-  - `DeploymentPanel` (panneau de déploiement)
-  - `DeploymentHistoryTable`
+- [x] Créer `shared/components/video-card/` (57L TS + 124L SCSS)
+- [x] Content projection : `[card-badges]`, `[card-actions]`, `[card-extras]`
+- [x] Migration Page Contenu (`content-management.component.html`)
+- [~] Migration VideoLibrary grid view — tentée puis revertée (commit bb5dc487 revert) : le template custom a trop de branches contextuelles (club-locked, isUploadedForThisSite, deploy states, variant badges) qui ne passent pas naturellement par slots sans alourdir l'API du card
 
-**3.2 Service unifié**
+**3.2 Audit des primitives restantes** — ⏳ To do
 
-- [ ] Fusionner `features/content/video-upload.service.ts` (220L) et `shared/components/video-upload-zone/` logic dans un seul `core/services/video-upload.service.ts`
-- [ ] Fusionner `features/content/content-deployment.service.ts` (95L) et le flow custom de l'onglet site dans `core/services/deployment.service.ts`
-- [ ] Supprimer `SiteCommandService.sendCommand('deploy_video', ...)` (plus utilisé)
+Blocs candidats à l'extraction, à valider par audit visuel :
 
-**3.3 Composant `VideoManager`**
+| Candidat            | Page Contenu         | VideoLibrary                  | Décision attendue                                        |
+| ------------------- | -------------------- | ----------------------------- | -------------------------------------------------------- |
+| `VideoFilterBar`    | filtres haut de page | filtres haut de bibliothèque  | extraire si >70% commun                                  |
+| `VideoStatsBar`     | compteurs fleet      | `library-stats` (filtered)    | garder séparés (règle smoke enforced sur stats filtrées) |
+| `VideoSortHeader`   | table sort headers   | table sort headers            | extraire si identique                                    |
+| `VideoDeployBadge`  | status pill          | status pill + deploy progress | extraire la version simple                               |
+| `VideoPreviewModal` | modal preview        | modal preview                 | déjà partagé via service ?                               |
 
-- [ ] Créer `shared/components/video-manager/video-manager.component.ts`
-- [ ] Input `scope` + `permissions`
-- [ ] Template qui compose `VideoUploadZone` + `VideoGrid` + `DeploymentPanel`
+**3.3 Tests & non-régression** — ⏳ To do
 
-**3.4 Migration des 3 usages**
-
-- [ ] Page Contenu utilise `<video-manager scope="{type: 'fleet'}">` → supprimer `features/content/content-management.component`
-- [ ] Onglet site utilise `<video-manager scope="{type: 'site', siteId}">` → simplifier `site-content-tab`
-- [ ] Portail club utilise `<video-manager scope="{type: 'club', clubSiteId}">`
-
-**3.5 Nettoyage**
-
-- [ ] Supprimer `features/content/content-management.component.*` (~1472L)
-- [ ] Supprimer `features/sites/components/site-content-tab/video-manager/` (~328L) si fusionné
-- [ ] Supprimer `features/content/video-upload.service.ts` (220L)
-- [ ] Supprimer `features/content/content-deployment.service.ts` (95L)
+- [ ] `npm run test:central` — 520 Karma tests doivent passer
+- [ ] `npm run test:smoke:smart` — 0 régression
+- [ ] Screenshots avant/après sur Page Contenu + site-detail content tab
 
 ### Critères d'acceptation
 
-- ✅ ~3000L supprimées (mesure : `cloc` avant/après)
-- ✅ Les 3 pages rendent visuellement identique à avant (screenshots diff)
-- ✅ Tests Karma passent
-- ✅ E2E Playwright : upload + déploiement depuis chaque page OK
-- ✅ Aucun fichier >400 lignes dans le nouveau scope
+- ✅ `VideoCardComponent` extrait et utilisé par au moins 1 consumer
+- ⏳ ≥1 primitive supplémentaire extraite OU décision documentée que les autres blocs divergent trop
+- ⏳ Aucun nouveau fichier >400L (règle feedback utilisateur)
+- ⏳ Karma + smoke pass
 
 ### Risques
 
-- Régressions UI visuelles : prévoir une batterie de screenshots Playwright avant/après
-- Les permissions diffèrent subtilement entre admin et club — bien tester chaque combinaison
+- Sur-extraction : ajouter des slots pour couvrir tous les edge cases de VideoLibrary complique l'API de VideoCard sans bénéfice
+- Règles smoke-enforced (`.claude/rules/dashboard.md` Vidéo Library) verrouillent des comportements précis (stats sur filtered, pas allVideos) — toute primitive partagée doit les respecter
 
 ---
 
