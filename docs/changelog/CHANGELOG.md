@@ -1,3 +1,9 @@
+## [3.192.3](https://github.com/Tallec7/neopro/compare/v3.192.2...v3.192.3) (2026-04-18)
+
+### Bug Fixes
+
+- **reporting:** remove text truncation + fix table/list HTML rendering ([312cd32](https://github.com/Tallec7/neopro/commit/312cd32ded6f2a1f896082fff0f8a4f03ffd6512))
+
 ## [3.192.2](https://github.com/Tallec7/neopro/compare/v3.192.1...v3.192.2) (2026-04-18)
 
 ### Bug Fixes
