@@ -177,6 +177,28 @@ class NeoproSyncAgent {
     // Recording toggle from cloud remote
     this.socket.on('recording-toggle', (data) => this.relayToLocalServer('recording-toggle', data));
 
+    // ADR-059 — commandes granulaires cloud → Pi local (Pi autoritaire)
+    const matchCommands = [
+      'command/increment_home', 'command/decrement_home',
+      'command/increment_away', 'command/decrement_away',
+      'command/set_phase',
+      'command/timer_start', 'command/timer_pause', 'command/timer_reset',
+      'command/score_reset',
+    ];
+    matchCommands.forEach((cmd) => {
+      this.socket.on(cmd, (data) => this.relayToLocalServer(cmd, data));
+    });
+
+    // ADR-059 — relay state-sync du Pi local vers le central (Pi → Cloud)
+    const rawSocket = localSocket.getSocket();
+    if (rawSocket) {
+      rawSocket.on('state-sync', (data) => {
+        if (this.socket && this.socket.connected) {
+          this.socket.emit('state-sync', data);
+        }
+      });
+    }
+
     // =========================================================================
     // CLOUD MONITORING — Screenshot request-response
     // Unlike one-way relay events, screenshots need a response (image data)

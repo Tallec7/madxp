@@ -1,9 +1,10 @@
 /**
  * RemoteTimerService — Timer/chronometer state and interval management for cloud remote.
  * Extracted from CloudRemoteComponent (ADR-043).
+ * ADR-059: commandes granulaires + reconciliation via state-sync.
  */
 import { Injectable, OnDestroy } from '@angular/core';
-import { RemoteService } from '../../../core/services/remote.service';
+import { MatchStateSync, RemoteService } from '../../../core/services/remote.service';
 
 export interface TimerConfig {
   enabled: boolean;
@@ -31,14 +32,24 @@ export class RemoteTimerService implements OnDestroy {
     this.currentTime = config.countDown ? config.periodDuration * 60 : 0;
   }
 
+  /** Réconcilie le timer local avec l'état autoritaire du Pi (state-sync). */
+  syncFromState(state: MatchStateSync): void {
+    const wasRunning = this.isRunning;
+    this.currentTime = state.timer.currentTime;
+    if (state.timer.isRunning && !wasRunning) {
+      this.isRunning = true;
+    } else if (!state.timer.isRunning && wasRunning) {
+      this.isRunning = false;
+      this.clearInterval();
+    }
+  }
+
   start(siteId: string, config: TimerConfig): void {
     if (this.isRunning) return;
     this.isRunning = true;
 
-    this.remoteService.updateTimer(siteId, {
-      action: 'start',
-      time: this.currentTime,
-    }).subscribe({ error: () => { /* Silencieux */ } });
+    this.remoteService.sendMatchCommand(siteId, 'command/timer_start', { time: this.currentTime })
+      .subscribe({ error: () => { this.isRunning = false; } });
 
     this.interval = setInterval(() => {
       if (config.countDown) {
@@ -70,20 +81,16 @@ export class RemoteTimerService implements OnDestroy {
     this.isRunning = false;
     this.clearInterval();
 
-    this.remoteService.updateTimer(siteId, {
-      action: 'pause',
-      time: this.currentTime,
-    }).subscribe({ error: () => { /* Silencieux */ } });
+    this.remoteService.sendMatchCommand(siteId, 'command/timer_pause')
+      .subscribe({ error: () => { /* Silencieux */ } });
   }
 
   reset(siteId: string, config: TimerConfig): void {
     this.pause(siteId);
     this.currentTime = config.countDown ? config.periodDuration * 60 : 0;
 
-    this.remoteService.updateTimer(siteId, {
-      action: 'reset',
-      time: this.currentTime,
-    }).subscribe({ error: () => { /* Silencieux */ } });
+    this.remoteService.sendMatchCommand(siteId, 'command/timer_reset', { time: this.currentTime })
+      .subscribe({ error: () => { /* Silencieux */ } });
   }
 
   toggle(siteId: string, config: TimerConfig): void {
@@ -108,7 +115,7 @@ export class RemoteTimerService implements OnDestroy {
     this.remoteService.updateTimer(siteId, {
       action: 'sync',
       time: this.currentTime,
-    }).subscribe({ error: () => { /* Silencieux */ } });
+    }).subscribe({ error: () => { /* Silencieux */ } }); // legacy compat (ADR-061)
   }
 
   private clearInterval(): void {

@@ -1,10 +1,11 @@
 /**
  * RemoteScoreService — Score state management and broadcasting for cloud remote.
  * Extracted from CloudRemoteComponent (ADR-043).
+ * ADR-059: optimistic UI + reconciliation via state-sync.
  */
 import { Injectable } from '@angular/core';
 import { Subject } from 'rxjs';
-import { RemoteService } from '../../../core/services/remote.service';
+import { MatchStateSync, RemoteService } from '../../../core/services/remote.service';
 
 export interface ScoreState {
   homeTeam: string;
@@ -15,7 +16,7 @@ export interface ScoreState {
 
 @Injectable()
 export class RemoteScoreService {
-  /** Debounce subject — emit to trigger score broadcast after 500ms inactivity */
+  /** Debounce subject — emit to trigger legacy score broadcast after 500ms (coexistence ADR-061) */
   readonly scoreUpdate$ = new Subject<void>();
 
   currentScore: ScoreState = {
@@ -27,27 +28,41 @@ export class RemoteScoreService {
 
   constructor(private remoteService: RemoteService) {}
 
-  incrementHomeScore(): void {
+  // --- ADR-059: commandes granulaires (optimistic UI) ---
+
+  incrementHomeScore(siteId: string): void {
     this.currentScore.homeScore++;
-    this.scoreUpdate$.next();
+    this.remoteService.sendMatchCommand(siteId, 'command/increment_home')
+      .subscribe({ error: () => { this.currentScore.homeScore--; } });
   }
 
-  decrementHomeScore(): void {
-    if (this.currentScore.homeScore > 0) {
-      this.currentScore.homeScore--;
-      this.scoreUpdate$.next();
-    }
+  decrementHomeScore(siteId: string): void {
+    if (this.currentScore.homeScore <= 0) return;
+    this.currentScore.homeScore--;
+    this.remoteService.sendMatchCommand(siteId, 'command/decrement_home')
+      .subscribe({ error: () => { this.currentScore.homeScore++; } });
   }
 
-  incrementAwayScore(): void {
+  incrementAwayScore(siteId: string): void {
     this.currentScore.awayScore++;
-    this.scoreUpdate$.next();
+    this.remoteService.sendMatchCommand(siteId, 'command/increment_away')
+      .subscribe({ error: () => { this.currentScore.awayScore--; } });
   }
 
-  decrementAwayScore(): void {
-    if (this.currentScore.awayScore > 0) {
-      this.currentScore.awayScore--;
-      this.scoreUpdate$.next();
+  decrementAwayScore(siteId: string): void {
+    if (this.currentScore.awayScore <= 0) return;
+    this.currentScore.awayScore--;
+    this.remoteService.sendMatchCommand(siteId, 'command/decrement_away')
+      .subscribe({ error: () => { this.currentScore.awayScore++; } });
+  }
+
+  /** Réconcilie le score local avec l'état autoritaire du Pi (state-sync). */
+  syncFromState(state: MatchStateSync): void {
+    if (state.score) {
+      this.currentScore.homeScore = state.score.homeScore;
+      this.currentScore.awayScore = state.score.awayScore;
+      this.currentScore.homeTeam = state.score.homeTeam;
+      this.currentScore.awayTeam = state.score.awayTeam;
     }
   }
 
@@ -60,7 +75,7 @@ export class RemoteScoreService {
     }
   }
 
-  /** Called by debounced subscription — sends score to Pi via HTTP */
+  /** Legacy — envoi état absolu (coexistence ADR-061, conservé pour rétro-compat). */
   sendScoreUpdate(siteId: string, period: string): void {
     this.remoteService.updateScore(siteId, {
       homeTeam: this.currentScore.homeTeam,
@@ -80,9 +95,9 @@ export class RemoteScoreService {
     this.currentScore.homeScore = 0;
     this.currentScore.awayScore = 0;
 
-    this.remoteService.resetScore(siteId).subscribe({
+    this.remoteService.sendMatchCommand(siteId, 'command/score_reset').subscribe({
       next: () => success.next(),
-      error: () => error.next(),
+      error: () => { error.next(); },
     });
 
     return { success, error };

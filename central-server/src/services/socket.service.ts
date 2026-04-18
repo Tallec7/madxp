@@ -493,6 +493,15 @@ class SocketService {
     socket.on('network_recovered', withMetrics('network_recovered', handlers.network_recovered));
     socket.on('recording-state', withMetrics('recording-state', handlers['recording-state']));
 
+    // ADR-059 — relay state-sync du Pi vers les clients dashboard dans la room siteId
+    socket.on('state-sync', (data: unknown) => {
+      metricsService.recordWebsocketMessage('inbound', 'state-sync');
+      metricsService.recordStateSyncRelay();
+      if (this.io) {
+        this.io.to(siteId).emit('state-sync', data);
+      }
+    });
+
     // Cloud monitoring: relay screenshot data from Pi to dashboard (legacy Socket.IO path).
     // Since v3.58, the primary screenshot path is HTTP request-response in remote.controller.ts.
     // This relay is kept for backward compatibility and as a fallback.
@@ -809,6 +818,11 @@ class SocketService {
     // command → action relay (same as Pi server)
     socket.on('command', (data: Record<string, unknown>) => {
       socket.to(siteId).emit('action', data);
+    });
+
+    // ADR-059 SaaS — relay state-sync (émis après chaque commande granulaire)
+    socket.on('state-sync', (data: Record<string, unknown>) => {
+      socket.to(siteId).emit('state-sync', data);
     });
 
     // Score relay + state persistence

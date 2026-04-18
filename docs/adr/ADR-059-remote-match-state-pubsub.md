@@ -1,7 +1,7 @@
 # ADR-059: Pub/sub état match — Pi autoritaire, broadcast continu
 
 **Date** : 2026-04-18
-**Statut** : Proposé
+**Statut** : Accepté
 **Format** : Léger
 **Phase** : 2 du plan refonte télécommande (cf. ADR-058 Phase 1)
 
@@ -27,13 +27,20 @@ Faire du **Pi la source de vérité**. Les remotes n'envoient plus des états, m
 - Le Pi devient un **bus de messages** en plus de son rôle actuel — charge CPU négligeable mais nouveau point de défaillance : si le Pi crash, tous les remotes perdent l'état (mitigé par ADR-060 fallback).
 - Protocole breaking change : coexistence legacy/new via ADR-061.
 
-## Fichiers impactés
+## Fichiers implémentés
 
-- `raspberry/server/socket/handlers.js` — nouveaux handlers `command/*`.
-- `raspberry/server/socket/state-broadcaster.js` (nouveau) — émet `state-sync` à chaque mutation.
-- `central-dashboard/src/app/core/services/remote.service.ts` — envoi commandes + réception state-sync.
-- `central-dashboard/src/app/features/remote/services/*` — refactor score/timer/phase en optimistic UI.
-- `central-server/src/services/socket.service.ts` — relais `state-sync` pour remotes cloud.
+- `raspberry/server/socket/state-broadcaster.js` (nouveau) — émet `state-sync` après chaque mutation.
+- `raspberry/server/services/state.service.js` — `incrementScore()` / `decrementScore()` ajoutés.
+- `raspberry/server/socket/handlers.js` — 9 handlers `command/*` + appel `broadcaster.broadcast()`.
+- `raspberry/sync-agent/src/agent.js` — relay `command/*` DOWN + `state-sync` UP via `localSocket.getSocket()`.
+- `central-server/src/controllers/remote.controller.ts` — 9 nouveaux types + émission room.
+- `central-server/src/services/socket.service.ts` — relay `state-sync` Pi → room + SaaS relay.
+- `central-server/src/services/metrics.service.ts` — `recordMatchCommand()` + `recordStateSyncRelay()`.
+- `central-dashboard/src/app/core/services/remote.service.ts` — `MatchCommandType`, `MatchStateSync`, `sendMatchCommand()`.
+- `central-dashboard/src/app/core/services/socket.service.ts` — listener `state-sync`.
+- `central-dashboard/src/app/features/remote/services/remote-score.service.ts` — optimistic UI + `syncFromState()`.
+- `central-dashboard/src/app/features/remote/services/remote-timer.service.ts` — commandes granulaires + `syncFromState()`.
+- `central-dashboard/src/app/features/remote/cloud-remote.component.ts` — abonnement `state-sync` → réconciliation score/timer/phase.
 
 ## Garde-fous anti-régression
 

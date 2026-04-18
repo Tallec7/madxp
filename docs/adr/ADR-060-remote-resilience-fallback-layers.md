@@ -1,7 +1,7 @@
 # ADR-060: Fallback télécommande — 3 couches (cloud → LAN auto → QR hotspot + PWA queue)
 
 **Date** : 2026-04-18
-**Statut** : Proposé
+**Statut** : Accepté (partiel — couches 1+3 dashboard implémentées ; hotspot Pi + service worker PWA = phase suivante)
 **Format** : Léger
 **Phase** : 3 du plan refonte télécommande (dépend de ADR-059)
 
@@ -34,15 +34,19 @@ Un bandeau statut évolutif informe l'utilisateur (`cloud` / `LAN` / `hotspot` /
 - Sécurité hotspot : WPA2 avec PSK rotatif journalier (logs admin).
 - PWA nécessite HTTPS stable côté dashboard — déjà le cas (Hostinger SSL).
 
-## Fichiers impactés
+## Fichiers implémentés (Phase 1 — couches 1+3 dashboard)
 
-- `central-dashboard/src/app/features/remote/services/transport-resilience.service.ts` (nouveau).
-- `central-dashboard/src/app/features/remote/services/offline-queue.service.ts` (nouveau).
-- `central-dashboard/public/service-worker.js` + `manifest.json`.
-- `raspberry/src/app/tv/hotspot-qr.component.ts` (nouveau, affichage QR sur TV).
-- `raspberry/server/services/hotspot.service.js` — exposition PSK + rotation.
+- `central-dashboard/src/app/features/remote/services/transport-resilience.service.ts` (nouveau) — probe mDNS `neopro.local`, mode `cloud`/`lan`/`offline`, `getApiBaseUrl()`.
+- `central-dashboard/src/app/features/remote/services/offline-queue.service.ts` (nouveau) — buffer localStorage FIFO, `drain()` sur reconnexion.
+- `central-dashboard/src/app/features/remote/cloud-remote.component.ts` — abonnement `transport.mode$`, drain automatique, exposition `transportMode` + `offlinePendingCount`.
+
+## Fichiers restants (Phase 2 — à implémenter)
+
+- `central-dashboard/public/service-worker.js` + `manifest.json` — PWA.
+- `raspberry/src/app/tv/hotspot-qr.component.ts` — affichage QR sur TV.
+- `raspberry/server/services/hotspot.service.js` — PSK rotatif journalier.
 
 ## Garde-fous anti-régression
 
-- Smoke test : présence du Service Worker enregistré + manifest PWA valide.
+- Smoke test : `TransportResilienceService` + `OfflineQueueService` présents et câblés dans le composant.
 - Test terrain : couper internet box → vérifier bascule LAN <3s + reconnexion cloud auto au retour.

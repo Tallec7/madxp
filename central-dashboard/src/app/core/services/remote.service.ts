@@ -163,6 +163,27 @@ export type RemoteCommandType =
   | 'recording-toggle'
   | 'screenshot';
 
+// ADR-059 — commandes granulaires Pi autoritaire
+export type MatchCommandType =
+  | 'command/increment_home'
+  | 'command/decrement_home'
+  | 'command/increment_away'
+  | 'command/decrement_away'
+  | 'command/set_phase'
+  | 'command/timer_start'
+  | 'command/timer_pause'
+  | 'command/timer_reset'
+  | 'command/score_reset';
+
+export interface MatchStateSync {
+  seq: number;
+  score: { homeTeam: string; awayTeam: string; homeScore: number; awayScore: number } | null;
+  phase: string;
+  timer: { currentTime: number; isRunning: boolean; halfDuration: number; countDown: boolean };
+  options: Record<string, unknown> | null;
+  serverTs: number;
+}
+
 export interface ScoreData {
   homeTeam: string;
   awayTeam: string;
@@ -479,5 +500,22 @@ export class RemoteService {
       { type: 'screenshot', data: { quality: 0.5 } },
       options
     );
+  }
+
+  // =========================================================================
+  // ADR-059 — Commandes granulaires (Pi autoritaire)
+  // =========================================================================
+
+  /**
+   * Envoie une commande granulaire match (ADR-059).
+   * Le Pi applique la mutation et répond via `state-sync`.
+   */
+  sendMatchCommand(
+    siteId: string,
+    command: MatchCommandType,
+    data?: Record<string, unknown>,
+    profileId?: string | null
+  ): Observable<CommandResult> {
+    return this.sendCommand(siteId, command as RemoteCommandType, data, profileId);
   }
 }

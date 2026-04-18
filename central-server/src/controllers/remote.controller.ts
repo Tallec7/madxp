@@ -372,6 +372,16 @@ export async function sendRemoteCommand(req: Request, res: Response) {
       'match-config',
       'recording-toggle',
       'screenshot',
+      // ADR-059 — commandes granulaires (Pi autoritaire)
+      'command/increment_home',
+      'command/decrement_home',
+      'command/increment_away',
+      'command/decrement_away',
+      'command/set_phase',
+      'command/timer_start',
+      'command/timer_pause',
+      'command/timer_reset',
+      'command/score_reset',
     ];
 
     if (!validCommands.includes(type)) {
@@ -489,6 +499,28 @@ export async function sendRemoteCommand(req: Request, res: Response) {
         payload = { timestamp };
         break;
 
+      // ADR-059 — commandes granulaires (Pi autoritaire, coexistence legacy)
+      case 'command/increment_home':
+      case 'command/decrement_home':
+      case 'command/increment_away':
+      case 'command/decrement_away':
+      case 'command/score_reset':
+        eventName = type;
+        payload = { seq: data?.seq ?? null, timestamp };
+        break;
+
+      case 'command/set_phase':
+        eventName = type;
+        payload = { phase: data?.phase || 'neutral', seq: data?.seq ?? null, timestamp };
+        break;
+
+      case 'command/timer_start':
+      case 'command/timer_pause':
+      case 'command/timer_reset':
+        eventName = type;
+        payload = { time: data?.time ?? undefined, seq: data?.seq ?? null, timestamp };
+        break;
+
       case 'screenshot': {
         // Screenshot uses request-response HTTP pattern (v3.58+):
         // The controller waits for the Pi's screenshot-data response via Socket.IO,
@@ -555,6 +587,9 @@ export async function sendRemoteCommand(req: Request, res: Response) {
 
     io.to(siteId).emit(eventName, payload);
     metricsService.recordCommand(type, 'sent');
+    if (type.startsWith('command/')) {
+      metricsService.recordMatchCommand(type.replace('command/', ''));
+    }
 
     logger.info('Cloud remote command sent', {
       siteId,

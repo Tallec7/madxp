@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const createStateBroadcaster = require('./state-broadcaster');
 
 /**
  * Register all Socket.IO event handlers.
@@ -26,6 +27,8 @@ const path = require('path');
  * @fires io#license_blocked — `{ status: string, reason?: string }`
  */
 module.exports = function registerSocketHandlers({ io, stateService, configPath, hdmiService }) {
+  const broadcaster = createStateBroadcaster(io, stateService);
+
   io.on('connection', (socket) => {
     console.log('Client connect\u00e9:', socket.id);
 
@@ -476,6 +479,102 @@ module.exports = function registerSocketHandlers({ io, stateService, configPath,
       if (typeof callback === 'function') {
         callback(stateService.getConnectedClients());
       }
+    });
+
+    // =========================================================================
+    // ADR-059 — Commandes granulaires (Pi autoritaire)
+    // Les remotes envoient des commandes, le Pi mute l'état et diffuse state-sync.
+    // Coexistence avec les handlers legacy (score-update, phase-change, timer-update).
+    // =========================================================================
+
+    /**
+     * Incrément score domicile.
+     * @event command/increment_home
+     * @param {{ seq?: number }} data
+     */
+    socket.on('command/increment_home', (data) => {
+      stateService.incrementScore('home');
+      broadcaster.broadcast();
+    });
+
+    /**
+     * Décrément score domicile.
+     * @event command/decrement_home
+     */
+    socket.on('command/decrement_home', (data) => {
+      stateService.decrementScore('home');
+      broadcaster.broadcast();
+    });
+
+    /**
+     * Incrément score extérieur.
+     * @event command/increment_away
+     */
+    socket.on('command/increment_away', (data) => {
+      stateService.incrementScore('away');
+      broadcaster.broadcast();
+    });
+
+    /**
+     * Décrément score extérieur.
+     * @event command/decrement_away
+     */
+    socket.on('command/decrement_away', (data) => {
+      stateService.decrementScore('away');
+      broadcaster.broadcast();
+    });
+
+    /**
+     * Changement de phase.
+     * @event command/set_phase
+     * @param {{ phase: string, seq?: number }} data
+     */
+    socket.on('command/set_phase', (data) => {
+      if (data?.phase) {
+        stateService.setPhase(data.phase);
+        io.emit('phase-change', { phase: data.phase }); // legacy compat
+        broadcaster.broadcast();
+      }
+    });
+
+    /**
+     * Démarrage du timer.
+     * @event command/timer_start
+     * @param {{ time?: number, seq?: number }} data
+     */
+    socket.on('command/timer_start', (data) => {
+      stateService.updateTimer({ action: 'start', currentTime: data?.time ?? stateService.getFullState().timer.currentTime, isRunning: true });
+      broadcaster.broadcast();
+    });
+
+    /**
+     * Pause du timer.
+     * @event command/timer_pause
+     */
+    socket.on('command/timer_pause', (data) => {
+      const timer = stateService.getFullState().timer;
+      stateService.updateTimer({ action: 'stop', currentTime: timer.currentTime, isRunning: false });
+      broadcaster.broadcast();
+    });
+
+    /**
+     * Reset du timer.
+     * @event command/timer_reset
+     * @param {{ time?: number, seq?: number }} data
+     */
+    socket.on('command/timer_reset', (data) => {
+      stateService.updateTimer({ action: 'reset', currentTime: data?.time ?? 0, isRunning: false });
+      broadcaster.broadcast();
+    });
+
+    /**
+     * Reset du score.
+     * @event command/score_reset
+     */
+    socket.on('command/score_reset', (data) => {
+      stateService.resetScore();
+      io.emit('score-reset'); // legacy compat
+      broadcaster.broadcast();
     });
 
     /**

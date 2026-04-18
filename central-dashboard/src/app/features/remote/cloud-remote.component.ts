@@ -17,7 +17,8 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Subject, interval, takeUntil, debounceTime } from 'rxjs';
-import { RemoteService, RemoteState } from '../../core/services/remote.service';
+import { RemoteService, RemoteState, MatchStateSync } from '../../core/services/remote.service';
+import { SocketService } from '../../core/services/socket.service';
 import { LicenseState, LicenseStatus } from '../../core/models/license.model';
 import { LicenseBannerComponent } from './components/license-banner.component';
 import { LicenseBlockRemoteComponent } from './components/license-block-remote.component';
@@ -31,12 +32,14 @@ import {
 } from './services/remote-options.service';
 import { CloudRemoteNavigationService, RemoteVideoEntry, Category, TimeCategory } from './services/cloud-remote-navigation.service';
 import { CloudRemoteConfigService, Configuration } from './services/cloud-remote-config.service';
+import { TransportResilienceService, TransportMode } from './services/transport-resilience.service';
+import { OfflineQueueService } from './services/offline-queue.service';
 
 @Component({
   selector: 'app-cloud-remote',
   standalone: true,
   imports: [CommonModule, FormsModule, LicenseBannerComponent, LicenseBlockRemoteComponent, PlayerStatusComponent, ScreenshotViewerComponent],
-  providers: [RemoteScoreService, RemoteTimerService, RemoteOptionsService, CloudRemoteNavigationService, CloudRemoteConfigService],
+  providers: [RemoteScoreService, RemoteTimerService, RemoteOptionsService, CloudRemoteNavigationService, CloudRemoteConfigService, TransportResilienceService, OfflineQueueService],
   templateUrl: './cloud-remote.component.html',
   styleUrls: ['./cloud-remote.component.scss']
 })
@@ -44,12 +47,18 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly remoteService = inject(RemoteService);
+  private readonly socketService = inject(SocketService);
   readonly scoreService = inject(RemoteScoreService);
   readonly timerService = inject(RemoteTimerService);
   readonly optionsService = inject(RemoteOptionsService);
   readonly nav = inject(CloudRemoteNavigationService);
   readonly config = inject(CloudRemoteConfigService);
+  readonly transport = inject(TransportResilienceService);
+  readonly offlineQueue = inject(OfflineQueueService);
   private readonly destroy$ = new Subject<void>();
+
+  public transportMode: TransportMode = 'cloud';
+  public get offlinePendingCount(): number { return this.offlineQueue.getPendingCount(this.siteId); }
 
   public siteId: string = '';
   public siteName: string = '';
@@ -193,6 +202,19 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
       interval(60000)
         .pipe(takeUntil(this.destroy$))
         .subscribe(() => this.refreshState());
+      this.socketService.on<MatchStateSync>('state-sync')
+        .pipe(takeUntil(this.destroy$))
+        .subscribe((state) => this.onStateSync(state));
+
+      this.transport.mode$
+        .pipe(takeUntil(this.destroy$))
+        .subscribe((mode) => {
+          const wasOffline = this.transportMode !== 'cloud';
+          this.transportMode = mode;
+          if (mode === 'cloud' && wasOffline) {
+            this.offlineQueue.drain(this.siteId);
+          }
+        });
     } else {
       this.connectionError = 'Site ID manquant dans l\'URL';
       this.isLoading = false;
@@ -527,12 +549,22 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
   public incrementAudience(): void { this.matchInfo.audienceEstimate += 10; }
   public decrementAudience(): void { if (this.matchInfo.audienceEstimate >= 10) this.matchInfo.audienceEstimate -= 10; }
 
+  // ==== ADR-059: state-sync reconciliation ====
+
+  private onStateSync(state: MatchStateSync): void {
+    this.scoreService.syncFromState(state);
+    this.timerService.syncFromState(state);
+    if (state.phase && state.phase !== this.activePhase) {
+      this.activePhase = state.phase as typeof this.activePhase;
+    }
+  }
+
   // ==== SCORE EN LIVE ====
 
-  public incrementHomeScore(): void { this.scoreService.incrementHomeScore(); }
-  public decrementHomeScore(): void { this.scoreService.decrementHomeScore(); }
-  public incrementAwayScore(): void { this.scoreService.incrementAwayScore(); }
-  public decrementAwayScore(): void { this.scoreService.decrementAwayScore(); }
+  public incrementHomeScore(): void { this.scoreService.incrementHomeScore(this.siteId); }
+  public decrementHomeScore(): void { this.scoreService.decrementHomeScore(this.siteId); }
+  public incrementAwayScore(): void { this.scoreService.incrementAwayScore(this.siteId); }
+  public decrementAwayScore(): void { this.scoreService.decrementAwayScore(this.siteId); }
   public updateTeamNamesFromMatch(): void { this.scoreService.updateTeamNamesFromMatch(this.matchInfo.matchName); }
   public broadcastScore(): void { this.scoreService.scoreUpdate$.next(); }
 

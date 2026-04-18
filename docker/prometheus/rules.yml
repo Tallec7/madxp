@@ -537,3 +537,30 @@ groups:
         annotations:
           summary: "Remote PIN lockouts firing > 1/sec"
           description: "Multiple (ip, profileId) pairs hitting the 5-attempt / 10-min lockout threshold. Review recent Profile PIN verification failed warnings."
+
+  # Remote Migration Sunset (ADR-061)
+  - name: remote_migration_sunset
+    rules:
+      # Adoption v2 < 70% — escalade support à J+5 mois (objectif sunset 1er nov 2026)
+      - alert: RemoteLegacyAdoptionLow
+        expr: |
+          sum(rate(neopro_remote_client_version_total{version="v2"}[7d]))
+            / sum(rate(neopro_remote_client_version_total[7d])) < 0.70
+        for: 24h
+        labels:
+          severity: warning
+          category: migration
+        annotations:
+          summary: "Remote v2 adoption below 70% — sunset at risk"
+          description: "Only {{ $value | humanizePercentage }} of remote accesses use v2 over the last 7 days. Target: 70% by 2026-10-01 for a safe 2026-11-01 sunset. Escalate to support to accelerate club migration."
+
+      # Sanity check — alerte si les commandes granulaires ne sont plus comptées
+      - alert: MatchCommandsMetricSilent
+        expr: absent(neopro_match_commands_total)
+        for: 2h
+        labels:
+          severity: warning
+          category: observability
+        annotations:
+          summary: "neopro_match_commands_total metric absent"
+          description: "No match command metrics in 2h. Either no remote activity (expected off-season) or ADR-059 instrumentation broke. Check remote.controller.ts."

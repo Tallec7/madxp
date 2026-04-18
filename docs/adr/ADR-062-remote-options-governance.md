@@ -1,7 +1,7 @@
 # ADR-062: Gouvernance des options remote — 3 familles distinctes
 
 **Date** : 2026-04-18
-**Statut** : Proposé
+**Statut** : Accepté
 **Format** : Léger
 **Phase** : 5 du plan refonte télécommande (transverse)
 
@@ -36,14 +36,14 @@ Règle : **aucune option sécurité n'est éditable depuis le remote**. Aucune o
 - Migration : les options existantes doivent être classées → script one-shot qui déplace les clés `localStorage` historiques vers leur famille.
 - Docs dédiées : `REMOTE_AUTH.md` (super_admin), `REMOTE_FEATURES.md` (admin), `REMOTE_USER_GUIDE.md` (staff).
 
-## Fichiers impactés
+## Fichiers implémentés
 
-- `central-dashboard/src/app/features/sites/components/site-settings-tab/remote-auth-section/` — existe déjà (ADR-058).
-- `central-dashboard/src/app/features/sites/components/site-settings-tab/remote-features-section/` (nouveau).
-- `central-dashboard/src/app/features/remote/preferences-menu.component.ts` (nouveau) — menu ⚙️.
-- `docs/technical/REMOTE_AUTH.md` + `REMOTE_FEATURES.md` + `REMOTE_USER_GUIDE.md` (nouveaux).
+- `central-dashboard/src/app/features/remote/services/remote-preferences.service.ts` (nouveau) — famille UX, localStorage pur, `haptics`/`highContrast`/`lockRotation`/`fontSize`, sans HttpClient.
+- `central-dashboard/src/app/features/remote/preferences-menu.component.ts` (nouveau) — menu ⚙️, zéro option sécurité, zéro appel serveur.
+- `central-dashboard/src/app/features/sites/components/site-settings-tab/remote-features-section/remote-features-section.component.ts` (nouveau) — famille Features, gated admin, `RemoteFeatureFlags`, zéro localStorage.
+- `central-dashboard/src/app/features/sites/components/site-settings-tab/remote-auth-section/` — famille Sécurité, existe depuis ADR-058, gated `super_admin`.
 
 ## Garde-fous anti-régression
 
-- Smoke test dashboard : sections "Remote & sécurité" gated `super_admin`, "Features" gated `admin`.
-- Lint rule custom : interdire `localStorage.setItem` sur clés `remote_pin_*` ou `device_token_*`.
+- Smoke test (4 tests) : séparation des familles vérifiée structurellement (no localStorage dans Features, no HttpClient dans Prefs, no PIN dans Prefs).
+- Règle implicite : `RemotePreferencesService` n'importe jamais `HttpClient` — testé par smoke `noHttpClient`.

@@ -272,11 +272,37 @@ CREATE TABLE IF NOT EXISTS config_profiles (
   updated_by UUID REFERENCES users(id),
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
+  -- ADR-058: PIN optionnel par profil pour la télécommande cloud
+  remote_pin_required BOOLEAN NOT NULL DEFAULT false,
+  remote_pin_hash VARCHAR(255) DEFAULT NULL,
+  remote_pin_updated_at TIMESTAMPTZ DEFAULT NULL,
   UNIQUE(site_id, name)
 );
 
 CREATE INDEX IF NOT EXISTS idx_config_profiles_site ON config_profiles(site_id);
 CREATE INDEX IF NOT EXISTS idx_config_profiles_default ON config_profiles(site_id, is_default) WHERE is_default = true;
+
+-- TABLE DEVICE TOKENS PAR PROFIL (ADR-058)
+-- =============================================================================
+
+CREATE TABLE IF NOT EXISTS profile_device_tokens (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  profile_id UUID NOT NULL REFERENCES config_profiles(id) ON DELETE CASCADE,
+  site_id UUID NOT NULL REFERENCES sites(id) ON DELETE CASCADE,
+  device_id VARCHAR(255) NOT NULL,
+  label VARCHAR(255) DEFAULT NULL,
+  token_hash VARCHAR(255) NOT NULL UNIQUE,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  last_used_at TIMESTAMPTZ DEFAULT NULL,
+  expires_at TIMESTAMPTZ NOT NULL,
+  revoked_at TIMESTAMPTZ DEFAULT NULL,
+  revoked_reason VARCHAR(255) DEFAULT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_pdt_profile ON profile_device_tokens(profile_id);
+CREATE INDEX IF NOT EXISTS idx_pdt_site ON profile_device_tokens(site_id);
+CREATE INDEX IF NOT EXISTS idx_pdt_token_hash ON profile_device_tokens(token_hash);
+CREATE INDEX IF NOT EXISTS idx_pdt_expires ON profile_device_tokens(expires_at) WHERE revoked_at IS NULL;
 
 -- FK config_history.profile_id -> config_profiles
 DO $$

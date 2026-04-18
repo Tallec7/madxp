@@ -2127,4 +2127,301 @@ describe('ADR-058 Phase 1: Pi offline PIN validation wiring', () => {
       boundToSiteId: true,
     });
   });
+
+  // =========================================================================
+  // ADR-059 — Pub/sub état match, Pi autoritaire
+  // =========================================================================
+
+  describe('ADR-059 — Pi autoritaire state-sync', () => {
+    it('state-broadcaster.js exists and emits state-sync', () => {
+      const content = fs.readFileSync(
+        path.resolve(repoRoot, 'raspberry/server/socket/state-broadcaster.js'),
+        'utf8'
+      );
+      expect({
+        exports: /module\.exports\s*=\s*function createStateBroadcaster/.test(content),
+        emitsStateSync: /io\.emit\(['"]state-sync['"]/.test(content),
+        hasSeq: /seq/.test(content),
+        hasServerTs: /serverTs/.test(content),
+      }).toEqual({ exports: true, emitsStateSync: true, hasSeq: true, hasServerTs: true });
+    });
+
+    it('handlers.js registers command/* handlers and calls broadcaster.broadcast()', () => {
+      const content = fs.readFileSync(
+        path.resolve(repoRoot, 'raspberry/server/socket/handlers.js'),
+        'utf8'
+      );
+      expect({
+        requiresBroadcaster: /require.*state-broadcaster/.test(content),
+        incrementHome: /command\/increment_home/.test(content),
+        decrementAway: /command\/decrement_away/.test(content),
+        setPhase: /command\/set_phase/.test(content),
+        timerStart: /command\/timer_start/.test(content),
+        scoreReset: /command\/score_reset/.test(content),
+        callsBroadcast: /broadcaster\.broadcast\(\)/.test(content),
+      }).toEqual({
+        requiresBroadcaster: true,
+        incrementHome: true,
+        decrementAway: true,
+        setPhase: true,
+        timerStart: true,
+        scoreReset: true,
+        callsBroadcast: true,
+      });
+    });
+
+    it('state.service.js exposes incrementScore and decrementScore', () => {
+      const content = fs.readFileSync(
+        path.resolve(repoRoot, 'raspberry/server/services/state.service.js'),
+        'utf8'
+      );
+      expect({
+        increment: /incrementScore\s*\(side\)/.test(content),
+        decrement: /decrementScore\s*\(side\)/.test(content),
+      }).toEqual({ increment: true, decrement: true });
+    });
+
+    it('sync-agent relays command/* DOWN and state-sync UP', () => {
+      const content = fs.readFileSync(
+        path.resolve(repoRoot, 'raspberry/sync-agent/src/agent.js'),
+        'utf8'
+      );
+      expect({
+        relaysIncrementHome: /command\/increment_home/.test(content),
+        relaysSetPhase: /command\/set_phase/.test(content),
+        relaysStateSyncUp: /this\.socket\.emit\(['"]state-sync['"]/.test(content),
+      }).toEqual({ relaysIncrementHome: true, relaysSetPhase: true, relaysStateSyncUp: true });
+    });
+
+    it('remote.controller.ts accepts command/* types', () => {
+      const content = fs.readFileSync(
+        path.resolve(repoRoot, 'central-server/src/controllers/remote.controller.ts'),
+        'utf8'
+      );
+      expect({
+        incrementHome: /command\/increment_home/.test(content),
+        setPhase: /command\/set_phase/.test(content),
+        timerReset: /command\/timer_reset/.test(content),
+      }).toEqual({ incrementHome: true, setPhase: true, timerReset: true });
+    });
+
+    it('central socket.service.ts relays state-sync from Pi to room', () => {
+      const content = fs.readFileSync(
+        path.resolve(repoRoot, 'central-server/src/services/socket.service.ts'),
+        'utf8'
+      );
+      expect({
+        listensPiStateSync: /socket\.on\(['"]state-sync['"]/.test(content),
+        relaysToRoom: /this\.io\.to\(siteId\)\.emit\(['"]state-sync['"]/.test(content),
+      }).toEqual({ listensPiStateSync: true, relaysToRoom: true });
+    });
+
+    it('dashboard remote.service.ts exposes MatchCommandType + MatchStateSync + sendMatchCommand', () => {
+      const content = fs.readFileSync(
+        path.resolve(repoRoot, 'central-dashboard/src/app/core/services/remote.service.ts'),
+        'utf8'
+      );
+      expect({
+        matchCommandType: /MatchCommandType/.test(content),
+        matchStateSync: /MatchStateSync/.test(content),
+        sendMatchCommand: /sendMatchCommand/.test(content),
+      }).toEqual({ matchCommandType: true, matchStateSync: true, sendMatchCommand: true });
+    });
+
+    it('dashboard socket.service.ts listens for state-sync', () => {
+      const content = fs.readFileSync(
+        path.resolve(repoRoot, 'central-dashboard/src/app/core/services/socket.service.ts'),
+        'utf8'
+      );
+      expect(/state-sync/.test(content)).toBe(true);
+    });
+
+    it('remote-score.service.ts uses sendMatchCommand + syncFromState + optimistic rollback', () => {
+      const content = fs.readFileSync(
+        path.resolve(repoRoot, 'central-dashboard/src/app/features/remote/services/remote-score.service.ts'),
+        'utf8'
+      );
+      expect({
+        sendMatchCommand: /sendMatchCommand/.test(content),
+        syncFromState: /syncFromState\s*\(state/.test(content),
+        optimisticRollback: /homeScore--/.test(content),
+      }).toEqual({ sendMatchCommand: true, syncFromState: true, optimisticRollback: true });
+    });
+
+    it('remote-timer.service.ts uses sendMatchCommand + syncFromState', () => {
+      const content = fs.readFileSync(
+        path.resolve(repoRoot, 'central-dashboard/src/app/features/remote/services/remote-timer.service.ts'),
+        'utf8'
+      );
+      expect({
+        sendMatchCommand: /sendMatchCommand/.test(content),
+        syncFromState: /syncFromState\s*\(state/.test(content),
+      }).toEqual({ sendMatchCommand: true, syncFromState: true });
+    });
+  });
+
+  // =========================================================================
+  // ADR-060 — Fallback 3 couches (cloud → LAN → offline)
+  // =========================================================================
+
+  describe('ADR-060 — Transport resilience + offline queue', () => {
+    it('transport-resilience.service.ts exists with TransportMode + probeLan + getApiBaseUrl', () => {
+      const content = fs.readFileSync(
+        path.resolve(repoRoot, 'central-dashboard/src/app/features/remote/services/transport-resilience.service.ts'),
+        'utf8'
+      );
+      expect({
+        transportMode: /TransportMode/.test(content),
+        probeLan: /probeLan\(\)/.test(content),
+        getApiBaseUrl: /getApiBaseUrl\(\)/.test(content),
+        lanBaseUrl: /neopro\.local/.test(content),
+        modeSubject: /BehaviorSubject/.test(content),
+      }).toEqual({ transportMode: true, probeLan: true, getApiBaseUrl: true, lanBaseUrl: true, modeSubject: true });
+    });
+
+    it('offline-queue.service.ts exists with enqueue + drain + getPendingCount', () => {
+      const content = fs.readFileSync(
+        path.resolve(repoRoot, 'central-dashboard/src/app/features/remote/services/offline-queue.service.ts'),
+        'utf8'
+      );
+      expect({
+        enqueue: /enqueue\(/.test(content),
+        drain: /drain\(/.test(content),
+        getPendingCount: /getPendingCount\(/.test(content),
+        localStorage: /localStorage/.test(content),
+        drained$: /drained\$/.test(content),
+      }).toEqual({ enqueue: true, drain: true, getPendingCount: true, localStorage: true, drained$: true });
+    });
+
+    it('cloud-remote.component.ts wires TransportResilienceService + OfflineQueueService', () => {
+      const content = fs.readFileSync(
+        path.resolve(repoRoot, 'central-dashboard/src/app/features/remote/cloud-remote.component.ts'),
+        'utf8'
+      );
+      expect({
+        importTransport: /TransportResilienceService/.test(content),
+        importOffline: /OfflineQueueService/.test(content),
+        modeSubscription: /transport\.mode\$/.test(content),
+        drainOnRestore: /offlineQueue\.drain/.test(content),
+      }).toEqual({ importTransport: true, importOffline: true, modeSubscription: true, drainOnRestore: true });
+    });
+  });
+
+  // =========================================================================
+  // ADR-061 — Coexistence legacy/new + sunset 6 mois
+  // =========================================================================
+
+  describe('ADR-061 — Version toggle + remote auth events', () => {
+    it('remote-version-toggle.service.ts exists with toggle + sunset date + v1/v2 persistence', () => {
+      const content = fs.readFileSync(
+        path.resolve(repoRoot, 'central-dashboard/src/app/features/remote/services/remote-version-toggle.service.ts'),
+        'utf8'
+      );
+      expect({
+        sunsetDate: /LEGACY_SUNSET_DATE/.test(content),
+        toggleVersion: /toggleVersion\(/.test(content),
+        loadForSite: /loadForSite\(/.test(content),
+        localStorage: /localStorage/.test(content),
+        version$: /version\$/.test(content),
+        legacyAvailable: /legacyAvailable/.test(content),
+      }).toEqual({ sunsetDate: true, toggleVersion: true, loadForSite: true, localStorage: true, version$: true, legacyAvailable: true });
+    });
+
+    it('remote-auth-events.repository.ts exists with record + getMigrationStats + client_version', () => {
+      const content = fs.readFileSync(
+        path.resolve(repoRoot, 'central-server/src/repositories/remote-auth-events.repository.ts'),
+        'utf8'
+      );
+      expect({
+        record: /async record\(/.test(content),
+        migrationStats: /getMigrationStats/.test(content),
+        clientVersion: /client_version/.test(content),
+        purgeOld: /purgeOld/.test(content),
+        v2Ratio: /v2Ratio/.test(content),
+      }).toEqual({ record: true, migrationStats: true, clientVersion: true, purgeOld: true, v2Ratio: true });
+    });
+
+    it('remote-auth-events migration SQL exists with correct schema', () => {
+      const content = fs.readFileSync(
+        path.resolve(repoRoot, 'central-server/src/scripts/migrations/add-remote-auth-events.sql'),
+        'utf8'
+      );
+      expect({
+        tableCreate: /CREATE TABLE IF NOT EXISTS remote_auth_events/.test(content),
+        clientVersionCol: /client_version/.test(content),
+        eventTypeCheck: /pin_verify.*token_use.*state_load/.test(content),
+        indexSiteId: /idx_remote_auth_events_site_id/.test(content),
+      }).toEqual({ tableCreate: true, clientVersionCol: true, eventTypeCheck: true, indexSiteId: true });
+    });
+
+    it('repositories/index.ts exports remoteAuthEventsRepository', () => {
+      const content = fs.readFileSync(
+        path.resolve(repoRoot, 'central-server/src/repositories/index.ts'),
+        'utf8'
+      );
+      expect(/remoteAuthEventsRepository/.test(content)).toBe(true);
+    });
+  });
+
+  // =========================================================================
+  // ADR-062 — Gouvernance options remote — 3 familles distinctes
+  // =========================================================================
+
+  describe('ADR-062 — Options governance (Security / Features / UX)', () => {
+    it('remote-preferences.service.ts exists — UX family, localStorage only, no server calls', () => {
+      const content = fs.readFileSync(
+        path.resolve(repoRoot, 'central-dashboard/src/app/features/remote/services/remote-preferences.service.ts'),
+        'utf8'
+      );
+      expect({
+        haptics: /haptics/.test(content),
+        highContrast: /highContrast/.test(content),
+        localStorage: /localStorage/.test(content),
+        noHttpClient: !/HttpClient/.test(content),
+        prefs$: /prefs\$/.test(content),
+        update: /update[\s<(]/.test(content),
+      }).toEqual({ haptics: true, highContrast: true, localStorage: true, noHttpClient: true, prefs$: true, update: true });
+    });
+
+    it('preferences-menu.component.ts exists — UX prefs panel, no security options', () => {
+      const content = fs.readFileSync(
+        path.resolve(repoRoot, 'central-dashboard/src/app/features/remote/preferences-menu.component.ts'),
+        'utf8'
+      );
+      expect({
+        selector: /app-preferences-menu/.test(content),
+        usesPrefsService: /RemotePreferencesService/.test(content),
+        noPin: !/pin/i.test(content),
+        noToken: !/token/i.test(content),
+        dismissedOutput: /dismissed\s*=\s*new EventEmitter/.test(content),
+      }).toEqual({ selector: true, usesPrefsService: true, noPin: true, noToken: true, dismissedOutput: true });
+    });
+
+    it('remote-features-section component exists — Features family, gated admin, no security', () => {
+      const content = fs.readFileSync(
+        path.resolve(repoRoot, 'central-dashboard/src/app/features/sites/components/site-settings-tab/remote-features-section/remote-features-section.component.ts'),
+        'utf8'
+      );
+      expect({
+        selector: /app-remote-features-section/.test(content),
+        featureFlags: /RemoteFeatureFlags/.test(content),
+        profilesEnabled: /profilesEnabled/.test(content),
+        matchMode: /matchModeEnabled/.test(content),
+        noLocalStorage: !/localStorage/.test(content),
+      }).toEqual({ selector: true, featureFlags: true, profilesEnabled: true, matchMode: true, noLocalStorage: true });
+    });
+
+    it('remote-auth-section exists — Security family, super_admin gated (ADR-058)', () => {
+      const exists = fs.existsSync(
+        path.resolve(repoRoot, 'central-dashboard/src/app/features/sites/components/site-settings-tab/remote-auth-section/remote-auth-section.component.ts')
+      );
+      expect(exists).toBe(true);
+
+      const template = fs.readFileSync(
+        path.resolve(repoRoot, 'central-dashboard/src/app/features/sites/components/site-settings-tab/site-settings-tab.component.html'),
+        'utf8'
+      );
+      expect(/app-remote-auth-section.*isSuperAdmin|isSuperAdmin.*app-remote-auth-section/s.test(template)).toBe(true);
+    });
+  });
 });

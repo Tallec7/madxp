@@ -440,18 +440,53 @@ Health Matrix (healthy/warning/critical per pair)
 
 ### 3. Remote control
 
+#### Remote local (Pi LAN)
+
 ```
-Remote UI (mobile)
-         │
+Remote UI (mobile, /remote)
+         │ Socket.IO localhost:3000
          ▼
-Local Server (Socket.IO :3000)
-         │
+Local Server (socket/handlers.js)
+         │ state mutation
          ▼
-TV Frontend (player commands)
-         │
+state.service.js  ←──── source de vérité match (ADR-059)
+         │ state-broadcaster.broadcast()
          ▼
-Native HTML5 <video> (double-buffer A/B)
+TV Frontend (score overlay, timer, phase)
 ```
+
+#### Remote cloud (ADR-059 — Pi autoritaire)
+
+```
+Dashboard Cloud Remote
+         │ HTTP POST /api/remote/:siteId/command  (commande granulaire)
+         ▼
+Central Server (remote.controller.ts)
+         │ Socket.IO room → command/increment_home | command/set_phase | ...
+         ▼
+Sync Agent (agent.js — relay DOWN)
+         │ relayToLocalServer()
+         ▼
+Pi Local Server (handlers.js — applique mutation)
+         │ state-broadcaster.broadcast() → state-sync
+         ▼
+Sync Agent (agent.js — relay UP)
+         │ socket.emit('state-sync', data)
+         ▼
+Central Server (socket.service.ts — relay vers room)
+         │ io.to(siteId).emit('state-sync', ...)
+         ▼
+Dashboard Cloud Remote (cloud-remote.component.ts)
+         │ scoreService.syncFromState() + timerService.syncFromState()
+         ▼
+UI réconciliée (optimistic → autoritaire)
+```
+
+**Commandes granulaires** : `command/increment_home`, `command/decrement_home`, `command/increment_away`, `command/decrement_away`, `command/set_phase`, `command/timer_start`, `command/timer_pause`, `command/timer_reset`, `command/score_reset`.
+
+**Résilience** (ADR-060) : si cloud KO → probe `neopro.local` (LAN auto) → sinon offline queue localStorage. Drain automatique à la reconnexion.
+
+**Coexistence** (ADR-061) : toggle `v1`/`v2` per-siteId localStorage, sunset automatique `2026-11-01`. Métriques `neopro_remote_client_version_total` pour pilotage adoption.
 
 ### 4. Multi-config profiles
 

@@ -160,6 +160,11 @@ export class SocketService {
     this.socket.on('hdmi_status_updated', (data: unknown) => {
       this.eventsSubject.next({ type: 'hdmi_status_updated', data });
     });
+
+    // ADR-059 — état match autoritaire (Pi → cloud → dashboard)
+    this.socket.on('state-sync', (data: unknown) => {
+      this.eventsSubject.next({ type: 'state-sync', data });
+    });
   }
 
   disconnect(): void {

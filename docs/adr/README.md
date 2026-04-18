@@ -75,10 +75,10 @@ Un ADR documente une décision technique importante avec :
 | [ADR-056](ADR-056-watermark-persistence-across-ota-and-runtime.md) | Persistance du watermark (OTA backup + retry infini)        | Accepté                  | Avr 2026 |
 | [ADR-057](ADR-057-manual-video-launch-latency.md)                  | Réduction latence vidéo manuelle Pi (loadeddata + rAF)      | Accepté                  | Avr 2026 |
 | [ADR-058](ADR-058-remote-auth-per-profile.md)                      | PIN distant par profil + device tokens révocables (Phase 1) | Accepté                  | Avr 2026 |
-| [ADR-059](ADR-059-remote-match-state-pubsub.md)                    | Pub/sub état match — Pi autoritaire (Phase 2)               | Proposé                  | Avr 2026 |
-| [ADR-060](ADR-060-remote-resilience-fallback-layers.md)            | Fallback remote 3 couches (LAN/QR hotspot/PWA) (Phase 3)    | Proposé                  | Avr 2026 |
-| [ADR-061](ADR-061-remote-legacy-coexistence-sunset.md)             | Coexistence legacy/new + sunset 6 mois (Phase 4)            | Proposé                  | Avr 2026 |
-| [ADR-062](ADR-062-remote-options-governance.md)                    | Gouvernance options remote — 3 familles (Phase 5)           | Proposé                  | Avr 2026 |
+| [ADR-059](ADR-059-remote-match-state-pubsub.md)                    | Pub/sub état match — Pi autoritaire (Phase 2)               | Accepté                  | Avr 2026 |
+| [ADR-060](ADR-060-remote-resilience-fallback-layers.md)            | Fallback remote 3 couches (LAN/QR hotspot/PWA) (Phase 3)    | Accepté (partiel)        | Avr 2026 |
+| [ADR-061](ADR-061-remote-legacy-coexistence-sunset.md)             | Coexistence legacy/new + sunset 6 mois (Phase 4)            | Accepté                  | Avr 2026 |
+| [ADR-062](ADR-062-remote-options-governance.md)                    | Gouvernance options remote — 3 familles (Phase 5)           | Accepté                  | Avr 2026 |
 | [ADR-063](ADR-063-dashboard-socket-transient-disconnect-filter.md) | Filtrage déconnexions WS transitoires côté dashboard        | Accepté                  | Avr 2026 |
 | [ADR-064](ADR-064-canonical-video-view-composition.md)             | Hiérarchie canonique Video / VideoView (composition)        | Accepté                  | Avr 2026 |
 | [ADR-065](ADR-065-drop-unused-video-row-view-mapper.md)            | Suppression du mapper `mapVideoRowToView` (dead code)       | Accepté                  | Avr 2026 |
