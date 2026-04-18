@@ -221,10 +221,9 @@ export interface Group {
   sites?: Site[];
 }
 
-// Video canonique (row DB snake_case) + VideoView (vue UI camelCase) + mapper.
-// Phase 2 du chantier video-deploy-unification — ne pas redéfinir Video ailleurs.
+// Video canonique (row DB snake_case, type-level) + VideoView (vue UI camelCase).
+// Phase 2 + 3a (ADR-065) — ne pas redéfinir Video ailleurs ; pas de mapper universel.
 export type { Video, VideoView } from './video.model';
-export { mapVideoRowToView } from './video.model';
 
 /**
  * Vidéo locale présente sur un Raspberry Pi

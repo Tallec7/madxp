@@ -1630,11 +1630,14 @@ describe('Canonical Video / VideoView hierarchy guard (ADR-064)', () => {
     'features/sites/components/video-library/video-library.types.ts'
   );
 
-  it('video.model.ts exists and exports Video, VideoView, mapVideoRowToView', () => {
+  it('video.model.ts exists and exports Video, VideoView (ADR-064 + ADR-065)', () => {
     const content = fs.readFileSync(videoModelPath, 'utf-8');
     expect(content).toMatch(/export\s+interface\s+Video\b/);
     expect(content).toMatch(/export\s+interface\s+VideoView\b/);
-    expect(content).toMatch(/export\s+function\s+mapVideoRowToView\s*\(/);
+    // ADR-065 : mapVideoRowToView supprimé (dead code — aucun endpoint API
+    // ne renvoie la row snake_case brute). Si un futur endpoint le fait,
+    // écrire un mapper dédié au point de consommation.
+    expect(content).not.toMatch(/export\s+function\s+mapVideoRowToView\b/);
   });
 
   it('Video (canonical) keeps snake_case DB shape', () => {
@@ -1661,14 +1664,15 @@ describe('Canonical Video / VideoView hierarchy guard (ADR-064)', () => {
     expect(viewNoComments).not.toMatch(/^\s*thumbnail_url\s*[:?]/m);
   });
 
-  it('core/models/index.ts re-exporte Video, VideoView, mapVideoRowToView', () => {
+  it('core/models/index.ts re-exporte Video et VideoView (ADR-064 + ADR-065)', () => {
     const content = fs.readFileSync(modelsIndexPath, 'utf-8');
     expect(content).toMatch(/from\s+['"]\.\/video\.model['"]/);
     expect(content).toMatch(/\bVideo\b/);
     expect(content).toMatch(/\bVideoView\b/);
-    expect(content).toMatch(/\bmapVideoRowToView\b/);
     // Pas de redéclaration locale de l'interface Video
     expect(content).not.toMatch(/export\s+interface\s+Video\s*\{/);
+    // ADR-065 : plus de re-export du mapper (supprimé)
+    expect(content).not.toMatch(/\bmapVideoRowToView\b/);
   });
 
   it('VideoItem extends VideoView (composition, pas duplication)', () => {

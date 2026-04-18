@@ -1,25 +1,31 @@
 /**
  * Video — modèles canoniques côté frontend dashboard.
  *
- * Phase 2 du chantier `video-deploy-unification` (frontend-only).
+ * Phase 2 du chantier `video-deploy-unification` + Phase 3a (ADR-065).
  *
  * Hiérarchie :
- *  - `Video`             → miroir exact d'une row de la table `videos` (snake_case DB).
- *  - `VideoView`         → vue UI camelCase commune à tous les composants dashboard.
- *  - `mapVideoRowToView` → unique transformation snake_case → camelCase autorisée.
+ *  - `Video`     → miroir type-level de la row DB `videos` (snake_case).
+ *                  Sert de verrou de namespace (smoke guard empêche toute
+ *                  redéclaration ailleurs) et d'alignement avec le type
+ *                  `Video` du backend (`central-server/src/types/index.ts`).
+ *                  Aucun consommateur runtime — les endpoints API retournent
+ *                  toujours des DTOs camelCase (`CloudVideo`, `VideoItem`…).
+ *  - `VideoView` → vue UI camelCase commune à tous les composants dashboard.
  *
- * Les view-models feature-spécifiques (`VideoItem`, `SponsorVideoRow`, etc.) doivent
- * `extends VideoView` et ajouter uniquement les champs propres à leur contexte.
+ * Les view-models feature-spécifiques (`VideoItem`, `SponsorVideoRow`, etc.)
+ * doivent `extends VideoView` et ajouter uniquement les champs propres à leur
+ * contexte. Ne PAS dupliquer ces interfaces ailleurs.
  *
- * Ne PAS dupliquer ces interfaces ailleurs. Si un endpoint expose des champs
- * supplémentaires, créer un alias local qui `extends VideoView`.
+ * Convention API : le backend expose des DTOs camelCase. Si un nouvel endpoint
+ * renvoie une row brute snake_case, écrire un mapper dédié au point de
+ * consommation (pas de mapper "universel" — cf. ADR-065 décision).
  */
 
 /**
  * Video — row canonique de la table `videos` (snake_case, miroir DB).
  *
- * Source de vérité pour les payloads API qui exposent la row brute.
- * Pour l'affichage UI, mapper vers `VideoView` via `mapVideoRowToView()`.
+ * Contrat de type aligné avec `central-server/src/types/index.ts Video`.
+ * Non instancié côté dashboard — conservé comme verrou de nommage.
  */
 export interface Video {
   id: string;
@@ -57,21 +63,3 @@ export interface VideoView {
   thumbnailUrl?: string | null;
 }
 
-/**
- * Transforme une row DB `Video` en `VideoView` UI.
- *
- * Unique point de mapping snake_case → camelCase autorisé.
- * Si tu trouves la même logique dupliquée ailleurs, c'est un bug.
- */
-export function mapVideoRowToView(row: Video): VideoView {
-  return {
-    id: row.id,
-    filename: row.filename,
-    displayName: row.original_name || row.filename,
-    category: row.category,
-    subcategory: row.subcategory,
-    size: row.file_size,
-    duration: row.duration,
-    thumbnailUrl: row.thumbnail_url,
-  };
-}
