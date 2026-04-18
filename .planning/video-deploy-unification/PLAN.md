@@ -202,6 +202,28 @@ Le modèle canonique DB n'est utilisé par personne. `VideoItem` est la définit
 
 ---
 
+## Phase 3 — Composant `VideoManager` unifié
+
+**Durée** : 2 sprints (4 semaines)
+**Owner** : Lead frontend
+**Objectif** : un seul composant Angular pour les 3 contextes
+
+### Architecture cible
+
+```
+<video-manager [scope]="scope" [permissions]="perms" />
+
+scope:
+  | { type: 'fleet' }                      // Page Contenu — admin
+  | { type: 'site', siteId: string }       // Onglet site
+  | { type: 'club', clubSiteId: string }   // Portail club
+```
+
+Le composant connaît :
+
+- La liste des vidéos à afficher (filtrée selon scope)
+- Les actions disponibles (selon permissions)
+- Le mode de déploiement (toujours via `createDeployment` désormais)
 ## Phase 3 — Extraction primitives vidéo partagées (scope révisé ADR-067)
 
 **Statut** : 📝 Scope révisé 2026-04-18 — voir [ADR-067](../../docs/adr/ADR-067-video-manager-two-consumers.md)
