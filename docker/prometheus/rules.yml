@@ -496,3 +496,44 @@ groups:
         annotations:
           summary: "No sponsor video plays for 2h while club plays are flowing"
           description: "Unified pipeline receives club plays but zero sponsor plays. Check AnalyticsService category tagging and sync-agent analytics.js buffer."
+
+  # =============================================
+  # Remote Auth Security (ADR-058 Phase 2C)
+  # =============================================
+  # category=security triggers the email receiver in addition to Slack.
+  - name: remote_auth_security
+    rules:
+      # Burst of failed PIN verifications on the fleet (>20/h) — possible targeted attack.
+      - alert: ProfilePinBurstFailures
+        expr: increase(neopro_profile_pin_verifications_total{status="failure"}[1h]) > 20
+        for: 5m
+        labels:
+          severity: critical
+          category: security
+        annotations:
+          summary: "Burst of remote PIN failures ({{ $value | humanize }} in 1h)"
+          description: "More than 20 failed remote PIN verifications in the last hour. Check central-server logs (warn 'Profile PIN verification failed') for the offending IPs/profiles and consider revoking tokens via the dashboard."
+
+      # Sustained brute-force ratio — more than 50% of verifications failing over 15 min.
+      - alert: ProfilePinBruteForce
+        expr: |
+          sum(rate(neopro_profile_pin_verifications_total{status="failure"}[15m]))
+            / sum(rate(neopro_profile_pin_verifications_total[15m])) > 0.5
+        for: 10m
+        labels:
+          severity: warning
+          category: security
+        annotations:
+          summary: "Remote PIN failure ratio above 50%"
+          description: "{{ $value | humanizePercentage }} of remote PIN verifications are failing. Possible brute-force attempt against profile PINs."
+
+      # High lockout rate — several IPs hitting the 5/10min lockout window simultaneously.
+      - alert: ProfilePinHighLockoutRate
+        expr: rate(neopro_profile_pin_verifications_total{status="lockout"}[5m]) > 1
+        for: 5m
+        labels:
+          severity: warning
+          category: security
+        annotations:
+          summary: "Remote PIN lockouts firing > 1/sec"
+          description: "Multiple (ip, profileId) pairs hitting the 5-attempt / 10-min lockout threshold. Review recent Profile PIN verification failed warnings."

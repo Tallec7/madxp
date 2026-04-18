@@ -159,11 +159,21 @@ Les invariants suivants sont verrouillés par `smoke-adr-refactoring.test.ts` (d
 - Dashboard `club-dashboard.component.ts` : monte `<app-remote-auth-section [siteId]="...">` — même composant que super_admin, pas de duplication.
 - Tests : 2 nouveaux unit tests controller (`setProfilePin` + `listProfileDevices` club-on-own-site), 3 nouveaux smoke guards dans `smoke-adr-refactoring.test.ts`.
 
+## Phase 2C — Alertes email burst failures (implémenté)
+
+- 3 règles Prometheus dans `docker/prometheus/rules.yml` (groupe `remote_auth_security`), toutes taguées `category: security` :
+  - `ProfilePinBurstFailures` : `increase(neopro_profile_pin_verifications_total{status="failure"}[1h]) > 20` (critical) — ciblage attaque probable.
+  - `ProfilePinBruteForce` : ratio failures > 50% sur 15 min (warning).
+  - `ProfilePinHighLockoutRate` : `rate(lockout) > 1/s` sur 5 min (warning).
+- Nouveau receiver Alertmanager `security-email-slack` (SMTP via env : `SMTP_HOST`, `SMTP_USER`, `SMTP_PASSWORD`, `ALERT_EMAIL_TO`, `ALERT_EMAIL_FROM`) — email HTML au super_admin + duplicata Slack `#neopro-alerts` avec préfixe `:lock:`.
+- Route Alertmanager : `match: { category: security }` → `security-email-slack`, `group_wait: 20s`, `repeat_interval: 1h`.
+- Variables ajoutées à `central-server/.env.example` (`ALERT_EMAIL_TO`, `ALERT_EMAIL_FROM`).
+- 2 nouveaux smoke guards (`rules.yml` + `alertmanager.yml`).
+
 ## Phase 2 (reste — hors scope ADR-058)
 
-- **2C** : Notifications email au super_admin lors d'un burst de failures (>20/h sur un profil) — Alertmanager webhook.
 - **2A** : Remplacement progressif du PIN site-scope legacy par migration opportuniste (tous les PINs site → PIN profil par défaut).
 
 ---
 
-_Dernière mise à jour : 18 avril 2026 (Phase 2B — club peut gérer le PIN de son propre site)_
+_Dernière mise à jour : 18 avril 2026 (Phase 2C — alertes email sur burst de failures PIN)_

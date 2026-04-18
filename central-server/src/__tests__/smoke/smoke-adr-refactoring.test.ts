@@ -2011,6 +2011,50 @@ describe('ADR-058 Phase 1: Pi offline PIN validation wiring', () => {
     }
   });
 
+  // --- Phase 2C : Email alerts on PIN burst failures ---
+
+  it('prometheus rules.yml declares PIN brute-force alerts (ADR-058 Phase 2C)', () => {
+    const content = fs.readFileSync(
+      path.resolve(repoRoot, 'docker/prometheus/rules.yml'),
+      'utf8'
+    );
+    expect({
+      group: /name:\s*remote_auth_security/.test(content),
+      burstAlert: /alert:\s*ProfilePinBurstFailures/.test(content),
+      bruteForceAlert: /alert:\s*ProfilePinBruteForce/.test(content),
+      lockoutAlert: /alert:\s*ProfilePinHighLockoutRate/.test(content),
+      usesMetric: /neopro_profile_pin_verifications_total/.test(content),
+      taggedSecurity: /category:\s*security/.test(content),
+    }).toEqual({
+      group: true,
+      burstAlert: true,
+      bruteForceAlert: true,
+      lockoutAlert: true,
+      usesMetric: true,
+      taggedSecurity: true,
+    });
+  });
+
+  it('alertmanager.yml routes category=security to email + slack (ADR-058 Phase 2C)', () => {
+    const content = fs.readFileSync(
+      path.resolve(repoRoot, 'docker/alertmanager/alertmanager.yml'),
+      'utf8'
+    );
+    expect({
+      smtpConfigured: /smtp_smarthost:/.test(content),
+      securityRoute: /category:\s*security/.test(content),
+      securityReceiver: /name:\s*security-email-slack/.test(content),
+      emailConfig: /email_configs:/.test(content),
+      envEmailTo: /ALERT_EMAIL_TO/.test(content),
+    }).toEqual({
+      smtpConfigured: true,
+      securityRoute: true,
+      securityReceiver: true,
+      emailConfig: true,
+      envEmailTo: true,
+    });
+  });
+
   it('club-dashboard renders <app-remote-auth-section> for its own site (ADR-058 Phase 2B)', () => {
     const content = fs.readFileSync(
       path.resolve(
