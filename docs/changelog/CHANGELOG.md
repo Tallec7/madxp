@@ -1,3 +1,9 @@
+# [3.179.0](https://github.com/Tallec7/neopro/compare/v3.178.8...v3.179.0) (2026-04-18)
+
+### Features
+
+- ADR-058 PIN profil + ADR-063 socket filter + ADR-064 Video types ([#465](https://github.com/Tallec7/neopro/issues/465)) ([bc521ff](https://github.com/Tallec7/neopro/commit/bc521ff99906c2a5ed216b980bcfa95630c83a19))
+
 ## [3.178.8](https://github.com/Tallec7/neopro/compare/v3.178.7...v3.178.8) (2026-04-18)
 
 ### Bug Fixes
