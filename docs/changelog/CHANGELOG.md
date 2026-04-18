@@ -1,3 +1,9 @@
+# [3.189.0](https://github.com/Tallec7/neopro/compare/v3.188.0...v3.189.0) (2026-04-18)
+
+### Features
+
+- **remote:** ADR-062 wire UX preferences menu + admin features section ([#469](https://github.com/Tallec7/neopro/issues/469)) ([c12162d](https://github.com/Tallec7/neopro/commit/c12162de91c9ad2a6bc4ebd072f59099747d8f32))
+
 # [3.188.0](https://github.com/Tallec7/neopro/compare/v3.187.0...v3.188.0) (2026-04-18)
 
 ### Features
