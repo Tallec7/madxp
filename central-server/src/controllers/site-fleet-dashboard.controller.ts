@@ -1,6 +1,7 @@
 import { Response } from 'express';
 import { AuthRequest } from '../types';
 import logger from '../config/logger';
+import { memoryCache } from '../services/memory-cache.service';
 import {
   siteRepository,
   metricsRepository,
@@ -15,6 +16,10 @@ import {
 const ONLINE_THRESHOLD_SECONDS = 90;
 const WARNING_THRESHOLD_SECONDS = 180;
 
+// Cache TTL pour la réponse dashboard — compromis entre fraîcheur et egress DB.
+// 14 requêtes analytics parallèles par appel, poll front 30-60s → cache 30s = ~1 vrai hit/cycle.
+const DASHBOARD_CACHE_TTL_MS = 30_000;
+
 /**
  * Endpoint agrégé qui combine connection status + metrics en une seule requête
  * Optimise le nombre d'appels API pour le dashboard temps réel
@@ -23,6 +28,12 @@ export const getSiteDashboardData = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
     const { hours = 24 } = req.query;
+
+    const cacheKey = `site-dashboard:${id}:${hours}`;
+    const cached = memoryCache.get<Record<string, unknown>>(cacheKey);
+    if (cached) {
+      return res.json(cached);
+    }
 
     // Récupérer les infos du site
     const site = await siteRepository.findConnectionInfo(id);
@@ -263,7 +274,7 @@ export const getSiteDashboardData = async (req: AuthRequest, res: Response) => {
     }
 
     // Réponse combinée
-    res.json({
+    const response = {
       site: {
         id: site.id,
         site_name: site.site_name,
@@ -299,7 +310,10 @@ export const getSiteDashboardData = async (req: AuthRequest, res: Response) => {
       },
       // SaaS-specific metrics (null for Pi sites)
       saasMetrics,
-    });
+    };
+
+    memoryCache.set(cacheKey, response, DASHBOARD_CACHE_TTL_MS);
+    res.json(response);
   } catch (error) {
     logger.error('Get site dashboard data error:', error);
     res.status(500).json({ error: 'Erreur lors de la récupération des données du dashboard' });

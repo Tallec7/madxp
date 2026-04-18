@@ -42,13 +42,16 @@ class MetricsRepositoryImpl {
   /**
    * Recupere les metriques d'un site pour une periode donnee en heures.
    */
-  async findBySiteId(siteId: string, hours: number): Promise<MetricRow[]> {
+  async findBySiteId(siteId: string, hours: number, limit = 500): Promise<MetricRow[]> {
+    // Cap la volumétrie retournée (heartbeat ~30s → 2880 rows/24h). Les dashboards
+    // affichent des chart downsamplés, pas besoin du stream complet.
     const result = await query<MetricRow>(
       `SELECT * FROM metrics
        WHERE site_id = $1
        AND recorded_at > NOW() - INTERVAL '1 hour' * $2
-       ORDER BY recorded_at DESC`,
-      [siteId, hours]
+       ORDER BY recorded_at DESC
+       LIMIT $3`,
+      [siteId, hours, limit]
     );
     return result.rows;
   }

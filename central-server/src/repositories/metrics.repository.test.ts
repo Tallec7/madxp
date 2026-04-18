@@ -42,10 +42,11 @@ describe('MetricsRepository', () => {
       expect(result).toHaveLength(2);
       expect(mockQuery).toHaveBeenCalledWith(
         expect.stringContaining('WHERE site_id = $1'),
-        ['site-1', 24]
+        ['site-1', 24, 500]
       );
       const sql = mockQuery.mock.calls[0][0] as string;
       expect(sql).toContain('ORDER BY recorded_at DESC');
+      expect(sql).toContain('LIMIT $3');
     });
 
     it('should return empty array when no metrics exist', async () => {

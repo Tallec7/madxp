@@ -1770,3 +1770,56 @@ describe('Raspberry PiConfigVideoEntry naming guard (ADR-066)', () => {
     expect(offenders).toEqual([]);
   });
 });
+
+// Egress-regression guard (Supabase quota incident 2026-04-18).
+// getSiteDashboardData lance 14 requêtes analytics parallèles et findBySiteId
+// renvoyait le flux metrics complet 24h (2880 rows possibles). Combiné aux polls
+// dashboard 30-60s × N sites ça avait explosé le quota egress Supabase en 2 jours.
+describe('Egress guard: dashboard cache + metrics LIMIT', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..', '..');
+
+  it('getSiteDashboardData must cache its response via memoryCache', () => {
+    const filePath = path.join(
+      repoRoot,
+      'central-server',
+      'src',
+      'controllers',
+      'site-fleet-dashboard.controller.ts'
+    );
+    const content = fs.readFileSync(filePath, 'utf-8');
+    expect({
+      importsCache: content.includes("from '../services/memory-cache.service'"),
+      readsCache: /memoryCache\.get</.test(content),
+      writesCache: /memoryCache\.set\(/.test(content),
+      cacheKeyScopedToSite: /site-dashboard:\$\{id\}/.test(content),
+    }).toEqual({
+      importsCache: true,
+      readsCache: true,
+      writesCache: true,
+      cacheKeyScopedToSite: true,
+    });
+  });
+
+  it('metricsRepository.findBySiteId must apply a LIMIT to prevent unbounded row dumps', () => {
+    const filePath = path.join(
+      repoRoot,
+      'central-server',
+      'src',
+      'repositories',
+      'metrics.repository.ts'
+    );
+    const content = fs.readFileSync(filePath, 'utf-8');
+    const findBySiteIdBlock = content.match(
+      /async findBySiteId\([^)]*\)[^{]*\{[\s\S]*?\n\s{2}\}/
+    );
+    expect(findBySiteIdBlock).not.toBeNull();
+    const block = findBySiteIdBlock?.[0] ?? '';
+    expect({
+      hasLimitClause: /LIMIT \$\d+/.test(block),
+      acceptsLimitParam: /limit\s*=\s*\d+/.test(block),
+    }).toEqual({
+      hasLimitClause: true,
+      acceptsLimitParam: true,
+    });
+  });
+});
