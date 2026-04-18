@@ -8,6 +8,8 @@ import { uploadVerificationService } from './upload-verification.service';
 import { siteSponsorRepository } from '../repositories/site-sponsor.repository';
 import { videoVariantRepository } from '../repositories/video-variant.repository';
 import { RETRY_CONFIG, isRetryableError, getRetryCount } from './deployment-retry.util';
+import { deliveryStrategyRegistry } from './delivery/strategy-registry';
+import { DeliveryContext, DeliveryDeployment } from './delivery/delivery-strategy.interface';
 
 interface DeploymentTarget {
   siteId: string;
@@ -91,6 +93,12 @@ class DeploymentService {
 
       // Construire l'URL de la vidéo depuis le stockage
       const videoUrl = getVideoUrl(deployment.storage_path);
+
+      // ADR-069 — Délégation au registry quand feature flag ON (rollout progressif)
+      if (deliveryStrategyRegistry.isEnabled()) {
+        await this.dispatchViaRegistry(deploymentId, deployment, targets, videoUrl);
+        return;
+      }
 
       // Tenter d'envoyer aux sites (ou mettre en queue si offline)
       let successCount = 0;
@@ -215,6 +223,135 @@ class DeploymentService {
       logger.error('Error starting deployment:', error);
       await this.failDeployment(deploymentId, error instanceof Error ? error.message : 'Erreur inconnue');
     }
+  }
+
+  /**
+   * ADR-069 — Dispatch via le registry de stratégies (Pi/SaaS/futurs canaux).
+   * Utilisé quand `DELIVERY_STRATEGY_ENABLED=true`.
+   */
+  private async dispatchViaRegistry(
+    deploymentId: string,
+    deployment: DeploymentRow,
+    targets: DeploymentTarget[],
+    videoUrl: string
+  ): Promise<void> {
+    let successCount = 0;
+    const commandSentSites: string[] = [];
+    const commandQueuedSites: string[] = [];
+    const commandFailedSites: string[] = [];
+
+    const deliveryDeployment: DeliveryDeployment = {
+      id: deployment.id,
+      video_id: deployment.video_id,
+      filename: deployment.filename,
+      original_name: deployment.original_name,
+      category: deployment.category,
+      subcategory: deployment.subcategory,
+      duration: deployment.duration,
+      storage_path: deployment.storage_path,
+      checksum: deployment.checksum,
+      metadata: deployment.metadata,
+      advertiser_id: deployment.advertiser_id,
+      analytics_category: deployment.analytics_category,
+    };
+
+    for (const target of targets) {
+      const strategy = deliveryStrategyRegistry.resolve({
+        siteId: target.siteId,
+        siteName: target.siteName,
+        siteType: target.siteType,
+      });
+
+      const ctx: DeliveryContext = {
+        deploymentId,
+        site: { siteId: target.siteId, siteName: target.siteName, siteType: target.siteType },
+        deployment: deliveryDeployment,
+        videoUrl,
+      };
+
+      try {
+        const result = await strategy.deliver(ctx);
+        if (result.success) {
+          successCount++;
+          if (result.outcome === 'queued') {
+            commandQueuedSites.push(target.siteName);
+          } else {
+            commandSentSites.push(target.siteName);
+          }
+        } else {
+          commandFailedSites.push(target.siteName);
+        }
+      } catch (err) {
+        logger.error('Delivery strategy threw', {
+          deploymentId,
+          siteId: target.siteId,
+          strategy: strategy.name,
+          error: err instanceof Error ? err.message : String(err),
+        });
+        commandFailedSites.push(target.siteName);
+      }
+    }
+
+    const allSaas = targets.every(t => t.siteType === 'saas');
+
+    if (successCount > 0) {
+      if (allSaas) {
+        await query(
+          `UPDATE content_deployments
+           SET status = 'completed', started_at = NOW(), completed_at = NOW(), progress = 100
+           WHERE id = $1`,
+          [deploymentId]
+        );
+        metricsService.recordDeployment('completed', 'site');
+        logger.info('SaaS video deployment completed immediately (registry)', {
+          deploymentId,
+          sites: commandSentSites,
+        });
+      } else {
+        const statusMessage: string[] = [];
+        if (commandSentSites.length > 0) {
+          statusMessage.push(`Envoyé: ${commandSentSites.join(', ')}`);
+        }
+        if (commandQueuedSites.length > 0) {
+          statusMessage.push(`En attente de reconnexion: ${commandQueuedSites.join(', ')}`);
+        }
+        await query(
+          `UPDATE content_deployments
+           SET status = 'in_progress', started_at = NOW(), error_message = $1
+           WHERE id = $2`,
+          [statusMessage.join(' | ') || null, deploymentId]
+        );
+        metricsService.recordDeployment('in_progress', 'site');
+        logger.info('Video deployment in progress (registry)', {
+          deploymentId,
+          commandSentSites,
+          commandQueuedSites,
+          commandFailedSites,
+        });
+      }
+    } else {
+      await query(
+        `UPDATE content_deployments
+         SET error_message = $1
+         WHERE id = $2 AND status = 'pending'`,
+        ["Échec de l'envoi à tous les sites cibles", deploymentId]
+      );
+      metricsService.recordDeployment('failed', 'site');
+      logger.error('Video deployment failed for all sites (registry)', {
+        deploymentId,
+        commandFailedSites,
+      });
+    }
+
+    logger.info('Deployment initiated (registry)', {
+      deploymentId,
+      videoFilename: deployment.filename,
+      totalSites: targets.length,
+      successCount,
+      commandSentSites,
+      commandQueuedSites,
+      commandFailedSites,
+    });
   }
 
   /**
