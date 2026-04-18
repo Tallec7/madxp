@@ -10,17 +10,20 @@ import { Request, Response } from 'express';
 import { Readable } from 'stream';
 import { verifyVideoStreamToken } from '../services/video-token.service';
 import { getVideoUrl } from '../services/storage.service';
+import { metricsService } from '../services/metrics.service';
 import logger from '../config/logger';
 
 export const streamVideo = async (req: Request, res: Response): Promise<void> => {
   const token = typeof req.query.token === 'string' ? req.query.token : '';
   if (!token) {
+    metricsService.recordVideoStreamRequest('missing_token');
     res.status(400).json({ error: 'Missing token' });
     return;
   }
 
   const verdict = verifyVideoStreamToken(token);
   if (!verdict.ok) {
+    metricsService.recordVideoStreamRequest(verdict.reason === 'expired' ? 'expired' : 'invalid');
     res.status(401).json({ error: verdict.reason === 'expired' ? 'Token expired' : 'Invalid token' });
     return;
   }
@@ -38,9 +41,12 @@ export const streamVideo = async (req: Request, res: Response): Promise<void> =>
         path: verdict.path,
         siteId: verdict.siteId,
       });
+      metricsService.recordVideoStreamRequest('upstream_error');
       res.status(upstream.status === 404 ? 404 : 502).json({ error: 'Upstream unavailable' });
       return;
     }
+
+    metricsService.recordVideoStreamRequest('success');
 
     res.status(upstream.status);
     const forwardHeaders = ['content-type', 'content-length', 'content-range', 'accept-ranges', 'last-modified', 'etag'];
@@ -57,6 +63,7 @@ export const streamVideo = async (req: Request, res: Response): Promise<void> =>
     Readable.fromWeb(upstream.body as unknown as import('stream/web').ReadableStream).pipe(res);
   } catch (err) {
     logger.error('Video stream proxy error', { err: (err as Error).message, path: verdict.path });
+    metricsService.recordVideoStreamRequest('proxy_error');
     if (!res.headersSent) res.status(502).json({ error: 'Proxy error' });
   }
 };

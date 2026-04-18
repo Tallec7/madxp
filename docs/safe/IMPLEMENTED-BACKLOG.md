@@ -37,25 +37,26 @@
 
 ## 2. Gestion de Contenu & Vidéo
 
-| ID         | Feature                                                                               | Statut     | Fichiers clés                                                               | Version/Date     |
-| ---------- | ------------------------------------------------------------------------------------- | ---------- | --------------------------------------------------------------------------- | ---------------- |
-| IMP-VID-01 | Upload vidéo avec vérification checksum (SHA-256)                                     | Production | `content.controller.ts`, `upload-verification.service.ts`                   | 2025             |
-| IMP-VID-02 | Compression vidéo automatique                                                         | Production | `video-compression.service.ts`                                              | 2025             |
-| IMP-VID-03 | Conversion image vers vidéo (ffmpeg, JPG/PNG/WEBP → MP4)                              | Production | `image-to-video.service.ts`                                                 | v2.44.0 Jan 2026 |
-| IMP-VID-04 | Conversion image vers vidéo : option fond flouté                                      | Production | `image-to-video.service.ts`                                                 | Jan 2026         |
-| IMP-VID-05 | Miniatures automatiques                                                               | Production | `thumbnail.service.ts`                                                      | 2025             |
-| IMP-VID-06 | Stockage unifié FTP (Hostinger)                                                       | Production | `storage.service.ts`                                                        | 2025             |
-| IMP-VID-07 | Versioning brouillon de config (sauvegarder avant déployer)                           | Production | `draft.service.ts`, `drafts.controller.ts`                                  | Déc 2025         |
-| IMP-VID-08 | Gestion des assets (logos, images)                                                    | Production | `assets.controller.ts`, `asset.service.ts`                                  | 2025             |
-| IMP-VID-09 | Pagination côté serveur pour listing vidéos                                           | Production | `content.controller.ts`                                                     | v3.56.0          |
-| IMP-VID-10 | Prévisualisation vidéo dans page gestion contenu                                      | Production | `content-management.component.ts`                                           | 2025             |
-| IMP-VID-11 | Historique config avec détail dépliable et restauration                               | Production | `config-history.component.ts`                                               | v3.57.0          |
-| IMP-VID-12 | Restructuration UX onglet Contenu (ADR-022, P0→P3)                                    | Production | `content-tab.component.ts`                                                  | 2026             |
-| IMP-VID-13 | Historique des modifications dans onglet Contenu (P3-3)                               | Production | -                                                                           | 2026             |
-| IMP-VID-14 | Variantes vidéo par type d'écran (table `video_variants`, API CRUD, upload secondary) | Production | `video-variant.repository.ts`, `content.controller.ts`, `content.routes.ts` | Fév 2026         |
-| IMP-VID-15 | Dashboard gestion variantes vidéo écran secondaire (panel upload/delete par vidéo)    | Production | `video-variant-panel.component.ts`, `content-management.component.ts`       | Fév 2026         |
-| IMP-VID-16 | Déploiement conditionnel variantes écran secondaire (pipeline + sync-agent)           | Production | `deployment.service.ts`, `deploy-video.js`                                  | Fév 2026         |
-| IMP-VID-17 | Enrichissement variants secondaires dans pipeline de déploiement                      | Production | `deployment.service.ts`, `deploy-video.js`                                  | v3.88.0 Mar 2026 |
+| ID         | Feature                                                                                | Statut     | Fichiers clés                                                                | Version/Date      |
+| ---------- | -------------------------------------------------------------------------------------- | ---------- | ---------------------------------------------------------------------------- | ----------------- |
+| IMP-VID-01 | Upload vidéo avec vérification checksum (SHA-256)                                      | Production | `content.controller.ts`, `upload-verification.service.ts`                    | 2025              |
+| IMP-VID-02 | Compression vidéo automatique                                                          | Production | `video-compression.service.ts`                                               | 2025              |
+| IMP-VID-03 | Conversion image vers vidéo (ffmpeg, JPG/PNG/WEBP → MP4)                               | Production | `image-to-video.service.ts`                                                  | v2.44.0 Jan 2026  |
+| IMP-VID-04 | Conversion image vers vidéo : option fond flouté                                       | Production | `image-to-video.service.ts`                                                  | Jan 2026          |
+| IMP-VID-05 | Miniatures automatiques                                                                | Production | `thumbnail.service.ts`                                                       | 2025              |
+| IMP-VID-06 | Stockage unifié FTP (Hostinger)                                                        | Production | `storage.service.ts`                                                         | 2025              |
+| IMP-VID-07 | Versioning brouillon de config (sauvegarder avant déployer)                            | Production | `draft.service.ts`, `drafts.controller.ts`                                   | Déc 2025          |
+| IMP-VID-08 | Gestion des assets (logos, images)                                                     | Production | `assets.controller.ts`, `asset.service.ts`                                   | 2025              |
+| IMP-VID-09 | Pagination côté serveur pour listing vidéos                                            | Production | `content.controller.ts`                                                      | v3.56.0           |
+| IMP-VID-10 | Prévisualisation vidéo dans page gestion contenu                                       | Production | `content-management.component.ts`                                            | 2025              |
+| IMP-VID-11 | Historique config avec détail dépliable et restauration                                | Production | `config-history.component.ts`                                                | v3.57.0           |
+| IMP-VID-12 | Restructuration UX onglet Contenu (ADR-022, P0→P3)                                     | Production | `content-tab.component.ts`                                                   | 2026              |
+| IMP-VID-13 | Historique des modifications dans onglet Contenu (P3-3)                                | Production | -                                                                            | 2026              |
+| IMP-VID-14 | Variantes vidéo par type d'écran (table `video_variants`, API CRUD, upload secondary)  | Production | `video-variant.repository.ts`, `content.controller.ts`, `content.routes.ts`  | Fév 2026          |
+| IMP-VID-15 | Dashboard gestion variantes vidéo écran secondaire (panel upload/delete par vidéo)     | Production | `video-variant-panel.component.ts`, `content-management.component.ts`        | Fév 2026          |
+| IMP-VID-16 | Déploiement conditionnel variantes écran secondaire (pipeline + sync-agent)            | Production | `deployment.service.ts`, `deploy-video.js`                                   | Fév 2026          |
+| IMP-VID-17 | Enrichissement variants secondaires dans pipeline de déploiement                       | Production | `deployment.service.ts`, `deploy-video.js`                                   | v3.88.0 Mar 2026  |
+| IMP-VID-18 | Proxy streaming vidéo signé JWT pour SaaS (ADR-068, feature-flag, métrique Prometheus) | Production | `video-stream.controller.ts`, `video-token.service.ts`, `saas.controller.ts` | v3.184.0 Avr 2026 |
 
 ---
 
@@ -358,18 +359,18 @@
 
 ## Statistiques Produit
 
-| Métrique                  | Valeur                                                                                                                                                                                               |
-| ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Features implémentées** | **231** (+26 audit, +9 E-22 TV+Secondary dual, +6 sponsor UX, +2 résilience Pi/OTA, +3 hotspot WiFi, +3 debug page, +1 EDID enrichment, +1 dashboard EDID display, +1 OTA edid-decode, +1 sysfs fix) |
-| Domaines fonctionnels     | 14                                                                                                                                                                                                   |
-| Controllers API           | 29 (+sponsor-alerts)                                                                                                                                                                                 |
-| Services métier           | 40 (+sponsor-alert, sponsor-stats, sponsor-auto-resolution)                                                                                                                                          |
-| Repositories              | 25 (+video-variant)                                                                                                                                                                                  |
-| Migrations DB             | 55 (+add-led-support-and-video-variants, +rename-led-to-secondary-display)                                                                                                                           |
-| Modules dashboard         | 21 (+advertiser-health, analytics-categories)                                                                                                                                                        |
-| Services Raspberry        | 19 (+sponsor-stats)                                                                                                                                                                                  |
-| Versions publiées         | 265+ (v2.1 → v3.62)                                                                                                                                                                                  |
-| Tests (total)             | 2 987 (1872 API + 506 Angular + 148 Admin + 71 Socket + 390 Smoke)                                                                                                                                   |
+| Métrique                  | Valeur                                                                                                                                                                                                                                 |
+| ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Features implémentées** | **232** (+26 audit, +9 E-22 TV+Secondary dual, +6 sponsor UX, +2 résilience Pi/OTA, +3 hotspot WiFi, +3 debug page, +1 EDID enrichment, +1 dashboard EDID display, +1 OTA edid-decode, +1 sysfs fix, +1 ADR-068 signed URL proxy SaaS) |
+| Domaines fonctionnels     | 14                                                                                                                                                                                                                                     |
+| Controllers API           | 29 (+sponsor-alerts)                                                                                                                                                                                                                   |
+| Services métier           | 40 (+sponsor-alert, sponsor-stats, sponsor-auto-resolution)                                                                                                                                                                            |
+| Repositories              | 25 (+video-variant)                                                                                                                                                                                                                    |
+| Migrations DB             | 55 (+add-led-support-and-video-variants, +rename-led-to-secondary-display)                                                                                                                                                             |
+| Modules dashboard         | 21 (+advertiser-health, analytics-categories)                                                                                                                                                                                          |
+| Services Raspberry        | 19 (+sponsor-stats)                                                                                                                                                                                                                    |
+| Versions publiées         | 265+ (v2.1 → v3.62)                                                                                                                                                                                                                    |
+| Tests (total)             | 2 987 (1872 API + 506 Angular + 148 Admin + 71 Socket + 390 Smoke)                                                                                                                                                                     |
 
 ---
 

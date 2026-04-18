@@ -219,6 +219,30 @@ const legacyPinMigrationsTotal = new Counter({
   registers: [register],
 });
 
+// ============= Métriques Remote Match Commands (ADR-059) =============
+
+const matchCommandsTotal = new Counter({
+  name: 'neopro_match_commands_total',
+  help: 'Total granular match commands relayed to Pi (ADR-059 pub/sub)',
+  labelNames: ['command'], // increment_home | decrement_home | set_phase | timer_start | ...
+  registers: [register],
+});
+
+const stateSyncRelaysTotal = new Counter({
+  name: 'neopro_state_sync_relays_total',
+  help: 'Total state-sync events relayed from Pi to dashboard rooms (ADR-059)',
+  registers: [register],
+});
+
+// ============= Métriques Coexistence Legacy/New Remote (ADR-061) =============
+
+const remoteClientVersionTotal = new Counter({
+  name: 'neopro_remote_client_version_total',
+  help: 'Remote access events by client version — tracks v1/v2 adoption for sunset (ADR-061)',
+  labelNames: ['version', 'event_type'], // version: v1|v2  event_type: pin_verify|token_use|state_load
+  registers: [register],
+});
+
 // ============= Métriques Canary Deployment =============
 
 const canaryDeploymentsGauge = new Gauge({
@@ -433,6 +457,15 @@ const videoPreloadRevealTotal = new Counter({
 const videoPreloadCleanupTotal = new Counter({
   name: 'neopro_video_preload_cleanup_total',
   help: 'Total preload aborts before reveal (ADR-034 master returned to loop)',
+  registers: [register],
+});
+
+// ============= Métriques Video Stream Proxy (ADR-068) =============
+
+const videoStreamRequestsTotal = new Counter({
+  name: 'neopro_video_stream_requests_total',
+  help: 'Total signed video-stream proxy requests (ADR-068) by outcome',
+  labelNames: ['status'], // success | missing_token | expired | invalid | upstream_error | proxy_error
   registers: [register],
 });
 
@@ -825,6 +858,21 @@ class MetricsService {
     profileDeviceTokensActiveGauge.set(count);
   }
 
+  /** ADR-059: commande granulaire match relayée vers le Pi */
+  recordMatchCommand(command: string): void {
+    matchCommandsTotal.inc({ command });
+  }
+
+  /** ADR-059: state-sync reçu du Pi et relayé vers la room dashboard */
+  recordStateSyncRelay(): void {
+    stateSyncRelaysTotal.inc();
+  }
+
+  /** ADR-061: accès télécommande tracé avec client_version pour pilotage sunset */
+  recordRemoteClientVersion(version: 'v1' | 'v2', eventType: 'pin_verify' | 'token_use' | 'state_load'): void {
+    remoteClientVersionTotal.inc({ version, event_type: eventType });
+  }
+
   /** ADR-058 Phase 2A: migration opportuniste legacy site-PIN → default profile PIN */
   recordLegacyPinMigration(
     status: 'success' | 'skipped_no_default' | 'skipped_already_set' | 'failed'
@@ -992,6 +1040,14 @@ class MetricsService {
 
   recordFanFailure(): void {
     fanFailuresTotal.inc();
+  }
+
+  // ============= Méthodes Video Stream Proxy (ADR-068) =============
+
+  recordVideoStreamRequest(
+    status: 'success' | 'missing_token' | 'expired' | 'invalid' | 'upstream_error' | 'proxy_error'
+  ): void {
+    videoStreamRequestsTotal.inc({ status });
   }
 
   // ============= Méthodes License Push =============

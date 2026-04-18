@@ -2237,6 +2237,45 @@ describe('ADR-068 — signed URL video stream proxy', () => {
     });
   });
 
+  // ADR-068 regression guard — the /api/videos mount MUST precede the /api (contentRoutes) mount,
+  // otherwise contentRoutes.get('/videos/:id', authenticate) captures `/videos/stream` as id=stream
+  // and enforces auth on a public-token route. Incident fixed by commit c29dda5d.
+  it('video-stream mount is declared BEFORE contentRoutes /api mount (route-order regression)', () => {
+    const serverPath = path.join(repoRoot, 'central-server', 'src', 'server.ts');
+    const server = fs.readFileSync(serverPath, 'utf8');
+    const videoStreamIdx = server.indexOf("app.use('/api/videos', videoStreamRoutes");
+    const contentRoutesIdx = server.search(/app\.use\(['"]\/api['"]\s*,\s*contentRoutes\)/);
+    expect({
+      videoStreamFound: videoStreamIdx > -1,
+      contentRoutesFound: contentRoutesIdx > -1,
+      videoStreamBeforeContentRoutes: videoStreamIdx > -1 && contentRoutesIdx > -1 && videoStreamIdx < contentRoutesIdx,
+    }).toEqual({
+      videoStreamFound: true,
+      contentRoutesFound: true,
+      videoStreamBeforeContentRoutes: true,
+    });
+  });
+
+  it('video-stream.controller instruments Prometheus counter neopro_video_stream_requests_total', () => {
+    const controllerPath = path.join(repoRoot, 'central-server', 'src', 'controllers', 'video-stream.controller.ts');
+    const controller = fs.readFileSync(controllerPath, 'utf8');
+    const metricsPath = path.join(repoRoot, 'central-server', 'src', 'services', 'metrics.service.ts');
+    const metrics = fs.readFileSync(metricsPath, 'utf8');
+    expect({
+      counterRegistered: /neopro_video_stream_requests_total/.test(metrics),
+      recorderExposed: /recordVideoStreamRequest/.test(metrics),
+      recordsSuccess: /recordVideoStreamRequest\(['"]success['"]\)/.test(controller),
+      recordsMissingToken: /recordVideoStreamRequest\(['"]missing_token['"]\)/.test(controller),
+      recordsUpstreamError: /recordVideoStreamRequest\(['"]upstream_error['"]\)/.test(controller),
+    }).toEqual({
+      counterRegistered: true,
+      recorderExposed: true,
+      recordsSuccess: true,
+      recordsMissingToken: true,
+      recordsUpstreamError: true,
+    });
+  });
+
   it('saas.controller buildPublicVideoUrl is feature-flag gated (default OFF = direct FTP)', () => {
     const filePath = path.join(repoRoot, 'central-server', 'src', 'controllers', 'saas.controller.ts');
     const content = fs.readFileSync(filePath, 'utf8');
