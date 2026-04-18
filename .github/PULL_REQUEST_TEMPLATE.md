@@ -1,27 +1,21 @@
-## Description
+## Summary
 
-<!-- Résumé des changements -->
+<!-- Ce qui change techniquement — 2-5 lignes max -->
 
-## Type de changement
+## Impact client
 
-- [ ] Bug fix
-- [ ] Nouvelle fonctionnalité
-- [ ] Refactoring
-- [ ] Documentation
-- [ ] Configuration / Infrastructure
+<!-- CE QUE VOIT / RESSENT L'UTILISATEUR FINAL — obligatoire.
+     Exemples : "Le staff peut piloter la TV sans internet via le hotspot Pi."
+                "Les clubs SaaS voient maintenant les vidéos déployées par l'admin."
+                "Aucun changement visible — refacto interne uniquement."
+     Cette section est extraite automatiquement pour le rapport hebdo BO. -->
 
-## ADR
+## ADR lié
 
-<!-- Cocher ce qui s'applique -->
+<!-- Numéro ADR si décision architecturale, sinon "Aucun" -->
 
-- [ ] Cette PR ne contient aucune décision architecturale
-- [ ] Décision documentée dans un commit enrichi (Decision / Why / Alternatives)
-- [ ] ADR léger ajouté : `docs/adr/ADR-XXX-....md`
-- [ ] ADR complet ajouté : `docs/adr/ADR-XXX-....md`
+## Test plan
 
-> **Rappel** : si cette PR fait un choix entre alternatives viables ou un changement cross-composant, un ADR est recommandé. Voir [BEST_PRACTICES.md](docs/adr/BEST_PRACTICES.md).
-
-## Tests
-
-- [ ] Tests existants passent
-- [ ] Nouveaux tests ajoutés (si applicable)
+- [ ] Tests existants passent (`npm run test:smoke:smart`)
+- [ ] Nouveaux tests ajoutés si feature ou fix non trivial
+- [ ] Testé manuellement sur les cas décrits ci-dessus

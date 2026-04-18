@@ -1,6 +1,6 @@
 # Implemented Backlog — Features Livrées
 
-> **Dernière mise à jour** : 18 Avril 2026
+> **Dernière mise à jour** : 18 Avril 2026 (sprint nocturne 17/04 20h → 18/04 16h : ADR-058 phases 2A-2C, ADR-060 Remote V2 hotspot+PWA, ADR-062 UX, ADR-063 socket filter, ADR-068 SaaS signed URLs, ADR-069 Delivery Strategy)
 > Ce document recense **toutes** les features implémentées dans le codebase NEOPRO, organisées par domaine fonctionnel. Il complète le backlog SAFe (futur) avec une vue exhaustive du produit livré.
 > **Source** : Croisement systématique de 34 changelogs, 200+ commits git (v3.47→v3.64), audit codebase, et sprint audit sponsors/analytics (26 features P0+P1+P2+P3).
 
@@ -16,22 +16,25 @@
 
 ## 1. Authentification & Sécurité
 
-| ID         | Feature                                                                         | Statut     | Fichiers clés                                                                             | Version/Date |
-| ---------- | ------------------------------------------------------------------------------- | ---------- | ----------------------------------------------------------------------------------------- | ------------ |
-| IMP-SEC-01 | Authentification JWT (HttpOnly cookies + Bearer)                                | Production | `auth.controller.ts`, `middleware/auth.ts`                                                | Déc 2025     |
-| IMP-SEC-02 | MFA / 2FA (TOTP avec QR code)                                                   | Production | `mfa.service.ts`, `mfa.routes.ts`                                                         | Déc 2025     |
-| IMP-SEC-03 | Réinitialisation mot de passe (token 24h + email)                               | Production | `password-reset.service.ts`                                                               | Déc 2025     |
-| IMP-SEC-04 | Journalisation d'audit GDPR                                                     | Production | `audit.service.ts`, `audit.routes.ts`                                                     | Déc 2025     |
-| IMP-SEC-05 | Sécurité niveau ligne (isolation multi-tenant PostgreSQL)                       | Production | `00-create-rls-functions.sql`, `enable-row-level-security.sql`                            | Déc 2025     |
-| IMP-SEC-06 | CORS fermé par défaut en production                                             | Production | `server.ts`                                                                               | Déc 2025     |
-| IMP-SEC-07 | Auth admin Raspberry (cookies session + mot de passe initial)                   | Production | `admin-server.js`, `auth-config.json`                                                     | Déc 2025     |
-| IMP-SEC-08 | Suppression mot de passe en dur                                                 | Production | -                                                                                         | Déc 2025     |
-| IMP-SEC-09 | GDPR self-service (Art. 17 droit à l'effacement, Art. 20 portabilité)           | Production | `users.controller.ts` (deleteOwnAccount, exportMyData)                                    | Déc 2025     |
-| IMP-SEC-10 | Sauvegardes chiffrées PostgreSQL (pg_dump via Supabase)                         | Production | Supabase PITR (Point-in-Time Recovery)                                                    | Déc 2025     |
-| IMP-SEC-11 | Helmet renforcé (CSP, X-Frame-Options deny, HSTS 1 an)                          | Production | `server.ts`                                                                               | Déc 2025     |
-| IMP-SEC-12 | Socket.IO CORS fermé par défaut (production)                                    | Production | `socket.service.ts`                                                                       | Déc 2025     |
-| IMP-SEC-13 | Pages légales intégrées (CGU, CGV, Politique de confidentialité, Registre GDPR) | Production | `/legal/privacy`, `/legal/terms`                                                          | Déc 2025     |
-| IMP-SEC-14 | PIN distant par profil + device tokens révocables (ADR-058 Phase 1, offline Pi) | Production | `remote-auth.controller.ts`, `profile-pin.service.js`, `remote-auth-section.component.ts` | Avr 2026     |
+| ID         | Feature                                                                           | Statut     | Fichiers clés                                                                             | Version/Date |
+| ---------- | --------------------------------------------------------------------------------- | ---------- | ----------------------------------------------------------------------------------------- | ------------ |
+| IMP-SEC-01 | Authentification JWT (HttpOnly cookies + Bearer)                                  | Production | `auth.controller.ts`, `middleware/auth.ts`                                                | Déc 2025     |
+| IMP-SEC-02 | MFA / 2FA (TOTP avec QR code)                                                     | Production | `mfa.service.ts`, `mfa.routes.ts`                                                         | Déc 2025     |
+| IMP-SEC-03 | Réinitialisation mot de passe (token 24h + email)                                 | Production | `password-reset.service.ts`                                                               | Déc 2025     |
+| IMP-SEC-04 | Journalisation d'audit GDPR                                                       | Production | `audit.service.ts`, `audit.routes.ts`                                                     | Déc 2025     |
+| IMP-SEC-05 | Sécurité niveau ligne (isolation multi-tenant PostgreSQL)                         | Production | `00-create-rls-functions.sql`, `enable-row-level-security.sql`                            | Déc 2025     |
+| IMP-SEC-06 | CORS fermé par défaut en production                                               | Production | `server.ts`                                                                               | Déc 2025     |
+| IMP-SEC-07 | Auth admin Raspberry (cookies session + mot de passe initial)                     | Production | `admin-server.js`, `auth-config.json`                                                     | Déc 2025     |
+| IMP-SEC-08 | Suppression mot de passe en dur                                                   | Production | -                                                                                         | Déc 2025     |
+| IMP-SEC-09 | GDPR self-service (Art. 17 droit à l'effacement, Art. 20 portabilité)             | Production | `users.controller.ts` (deleteOwnAccount, exportMyData)                                    | Déc 2025     |
+| IMP-SEC-10 | Sauvegardes chiffrées PostgreSQL (pg_dump via Supabase)                           | Production | Supabase PITR (Point-in-Time Recovery)                                                    | Déc 2025     |
+| IMP-SEC-11 | Helmet renforcé (CSP, X-Frame-Options deny, HSTS 1 an)                            | Production | `server.ts`                                                                               | Déc 2025     |
+| IMP-SEC-12 | Socket.IO CORS fermé par défaut (production)                                      | Production | `socket.service.ts`                                                                       | Déc 2025     |
+| IMP-SEC-13 | Pages légales intégrées (CGU, CGV, Politique de confidentialité, Registre GDPR)   | Production | `/legal/privacy`, `/legal/terms`                                                          | Déc 2025     |
+| IMP-SEC-14 | PIN distant par profil + device tokens révocables (ADR-058 Phase 1, offline Pi)   | Production | `remote-auth.controller.ts`, `profile-pin.service.js`, `remote-auth-section.component.ts` | Avr 2026     |
+| IMP-SEC-15 | ADR-058 Phase 2A : migration opportuniste des PIN legacy vers le format profil    | Production | `remote-auth.controller.ts`, migration script                                             | Avr 2026     |
+| IMP-SEC-16 | ADR-058 Phase 2B : self-service club — gérer le PIN de son site depuis le portail | Production | `club-portal.controller.ts`, `remote-pin-management.component.ts`                         | Avr 2026     |
+| IMP-SEC-17 | ADR-058 Phase 2C : alertes email sur burst failures PIN (brute force detection)   | Production | `alerting.service.ts`, `remote-auth.controller.ts`                                        | Avr 2026     |
 
 ---
 
@@ -190,6 +193,9 @@
 | IMP-PI-35 | Fix orphan `sponsor-impressions.js` + stale buffer HTTP 400 — `cleanupLegacyFiles()` appelé au `start()`, rsync `--delete`, defense-in-depth | Production | `agent.js`, `build-raspberry.sh`, `fix-fleet-pi.sh`, `analytics-buffer.js`                          | Mars 2026    |
 | IMP-PI-36 | Fix parasitic sponsor creation — `_reconcileOrphanedLoopVideos()` filtre sur marqueurs sponsor + fallback préfixe numérique badges           | Production | `sponsor.service.js`, `loop-manager.component.ts`, `site-content-tab.component.ts`                  | Mars 2026    |
 | IMP-PI-37 | Fix phantom sponsors "B","J","P" — retrait `owner=club` comme marqueur sponsor, validation longueur min, monitoring auto-cleanup             | Production | `sponsor.service.js`, `config-sync.handler.ts`, `site-sponsor.controller.ts`, `alerting.service.ts` | Mars 2026    |
+| IMP-PI-38 | ADR-060 Remote V2 — couche 2 hotspot Pi (télécommande accessible hors WAN) + couche 3 PWA installable + runbook tests T1-T15                 | Production | `remote.component.ts`, `hotspot-remote.service.ts`, `manifest.json`, `runbook-T1-T15.md`            | Avr 2026     |
+| IMP-PI-39 | ADR-062 Remote V2 — menu Préférences UX + section admin features (gouvernance options)                                                       | Production | `preferences-menu.component.ts`, `remote-preferences.service.ts`, `admin-features.section.ts`       | Avr 2026     |
+| IMP-PI-40 | ADR-061 Remote legacy coexistence + sunset — bascule progressive + suppression code legacy (étape 7 ADR-069)                                 | Production | `remote.controller.ts`, `legacy-remote.deprecated.ts`                                               | Avr 2026     |
 
 ---
 
@@ -221,30 +227,32 @@
 
 ## 9. Monitoring & Alertes
 
-| ID         | Feature                                                                  | Statut     | Fichiers clés                                 | Version/Date |
-| ---------- | ------------------------------------------------------------------------ | ---------- | --------------------------------------------- | ------------ |
-| IMP-ALR-01 | Alertes réactives (CRUD, règles, escalade)                               | Production | `alerts.controller.ts`, `alerting.service.ts` | 2025         |
-| IMP-ALR-02 | Alertes prédictives (disque, CPU, WiFi, inactivité)                      | Production | `predictive-alerts.service.ts`                | 2025         |
-| IMP-ALR-03 | Alertes réseau (qualité WiFi, déconnexions)                              | Production | `network-alerts.service.ts`                   | 2025         |
-| IMP-ALR-04 | Vérifications santé système                                              | Production | `health.service.ts`                           | 2025         |
-| IMP-ALR-05 | Objectifs & alertes clubs (7 métriques, 3 périodes)                      | Production | `objectives.controller.ts`                    | Déc 2025     |
-| IMP-ALR-06 | Monitoring ventilateur de bout en bout (alertes + Prometheus + Grafana)  | Production | `alerting.service.ts`, `add-fan-status.sql`   | v3.52.0      |
-| IMP-ALR-07 | Notification Slack "Site en ligne" sur reconnexion Pi                    | Production | `alerting.service.ts` (Slack webhook)         | v3.49.0      |
-| IMP-ALR-08 | Notification Slack réseau rétabli                                        | Production | `alerting.service.ts`                         | 2026         |
-| IMP-ALR-09 | Notifications webhook pour alertes                                       | Production | `alerting.service.ts` (webhook dispatch)      | Déc 2025     |
-| IMP-ALR-10 | Escalade superviseur pour alertes critiques                              | Production | `alerting.service.ts`                         | Déc 2025     |
-| IMP-ALR-11 | Anti-flapping cooldown Slack + arrêt propre                              | Production | `alerting.service.ts`                         | 2026         |
-| IMP-ALR-12 | Détection crash kiosque de bout en bout + lien télécommande cloud        | Production | `kiosk-watchdog.sh`                           | 2026         |
-| IMP-ALR-13 | Pipeline métriques qualité transitions vidéo                             | Production | `metrics.service.ts`                          | 2026         |
-| IMP-ALR-14 | Métrique Prometheus déconnexion Socket + panels Grafana                  | Production | `metrics.service.ts`                          | 2026         |
-| IMP-ALR-15 | Métriques pool connexions DB (actif/inactif)                             | Production | `metrics.service.ts`                          | 2026         |
-| IMP-ALR-16 | Dashboards Grafana Cloud avec auth Bearer sur /metrics                   | Production | `metrics.middleware.ts`                       | 2026         |
-| IMP-ALR-17 | 3 dashboards Grafana restructurés + mémoire/prédictif/facturation        | Production | `grafana/`                                    | 2026         |
-| IMP-ALR-18 | Lacunes supervision complétées (4 métriques, 3 alertes, kiosque Grafana) | Production | `monitoring/`                                 | 2026         |
-| IMP-ALR-19 | Métriques FTP, sync, rate-limit + logs corrélés                          | Production | `metrics.service.ts`                          | 2026         |
-| IMP-ALR-20 | Journalisation centralisée Logtail/Better Stack                          | Production | `config/logger.ts` (@logtail/winston)         | Déc 2025     |
-| IMP-ALR-21 | 3 seuils d'alerte horaires avec flux de données                          | Production | `alerting.service.ts`                         | 2026         |
-| IMP-ALR-22 | Smoke tests pour monitoring + métriques réseau Pi                        | Production | `smoke/`                                      | 2026         |
+| ID         | Feature                                                                  | Statut     | Fichiers clés                                  | Version/Date |
+| ---------- | ------------------------------------------------------------------------ | ---------- | ---------------------------------------------- | ------------ |
+| IMP-ALR-01 | Alertes réactives (CRUD, règles, escalade)                               | Production | `alerts.controller.ts`, `alerting.service.ts`  | 2025         |
+| IMP-ALR-02 | Alertes prédictives (disque, CPU, WiFi, inactivité)                      | Production | `predictive-alerts.service.ts`                 | 2025         |
+| IMP-ALR-03 | Alertes réseau (qualité WiFi, déconnexions)                              | Production | `network-alerts.service.ts`                    | 2025         |
+| IMP-ALR-04 | Vérifications santé système                                              | Production | `health.service.ts`                            | 2025         |
+| IMP-ALR-05 | Objectifs & alertes clubs (7 métriques, 3 périodes)                      | Production | `objectives.controller.ts`                     | Déc 2025     |
+| IMP-ALR-06 | Monitoring ventilateur de bout en bout (alertes + Prometheus + Grafana)  | Production | `alerting.service.ts`, `add-fan-status.sql`    | v3.52.0      |
+| IMP-ALR-07 | Notification Slack "Site en ligne" sur reconnexion Pi                    | Production | `alerting.service.ts` (Slack webhook)          | v3.49.0      |
+| IMP-ALR-08 | Notification Slack réseau rétabli                                        | Production | `alerting.service.ts`                          | 2026         |
+| IMP-ALR-09 | Notifications webhook pour alertes                                       | Production | `alerting.service.ts` (webhook dispatch)       | Déc 2025     |
+| IMP-ALR-10 | Escalade superviseur pour alertes critiques                              | Production | `alerting.service.ts`                          | Déc 2025     |
+| IMP-ALR-11 | Anti-flapping cooldown Slack + arrêt propre                              | Production | `alerting.service.ts`                          | 2026         |
+| IMP-ALR-12 | Détection crash kiosque de bout en bout + lien télécommande cloud        | Production | `kiosk-watchdog.sh`                            | 2026         |
+| IMP-ALR-13 | Pipeline métriques qualité transitions vidéo                             | Production | `metrics.service.ts`                           | 2026         |
+| IMP-ALR-14 | Métrique Prometheus déconnexion Socket + panels Grafana                  | Production | `metrics.service.ts`                           | 2026         |
+| IMP-ALR-15 | Métriques pool connexions DB (actif/inactif)                             | Production | `metrics.service.ts`                           | 2026         |
+| IMP-ALR-16 | Dashboards Grafana Cloud avec auth Bearer sur /metrics                   | Production | `metrics.middleware.ts`                        | 2026         |
+| IMP-ALR-17 | 3 dashboards Grafana restructurés + mémoire/prédictif/facturation        | Production | `grafana/`                                     | 2026         |
+| IMP-ALR-18 | Lacunes supervision complétées (4 métriques, 3 alertes, kiosque Grafana) | Production | `monitoring/`                                  | 2026         |
+| IMP-ALR-19 | Métriques FTP, sync, rate-limit + logs corrélés                          | Production | `metrics.service.ts`                           | 2026         |
+| IMP-ALR-20 | Journalisation centralisée Logtail/Better Stack                          | Production | `config/logger.ts` (@logtail/winston)          | Déc 2025     |
+| IMP-ALR-21 | 3 seuils d'alerte horaires avec flux de données                          | Production | `alerting.service.ts`                          | 2026         |
+| IMP-ALR-22 | Smoke tests pour monitoring + métriques réseau Pi                        | Production | `smoke/`                                       | 2026         |
+| IMP-ALR-23 | Filtre warnings transients Socket.IO `transport close` (ADR-063)         | Production | `socket.service.ts`, `dashboard-logger.ts`     | Avr 2026     |
+| IMP-ALR-24 | Supervision Prometheus + route-order regression guard SaaS (ADR-068)     | Production | `metrics.service.ts`, `rules.yml`, smoke tests | Avr 2026     |
 
 ---
 
@@ -360,18 +368,18 @@
 
 ## Statistiques Produit
 
-| Métrique                  | Valeur                                                                                                                                                                                                                                                                       |
-| ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Features implémentées** | **233** (+26 audit, +9 E-22 TV+Secondary dual, +6 sponsor UX, +2 résilience Pi/OTA, +3 hotspot WiFi, +3 debug page, +1 EDID enrichment, +1 dashboard EDID display, +1 OTA edid-decode, +1 sysfs fix, +1 ADR-068 signed URL proxy SaaS, +1 ADR-069 Delivery Strategy pattern) |
-| Domaines fonctionnels     | 14                                                                                                                                                                                                                                                                           |
-| Controllers API           | 29 (+sponsor-alerts)                                                                                                                                                                                                                                                         |
-| Services métier           | 40 (+sponsor-alert, sponsor-stats, sponsor-auto-resolution)                                                                                                                                                                                                                  |
-| Repositories              | 25 (+video-variant)                                                                                                                                                                                                                                                          |
-| Migrations DB             | 55 (+add-led-support-and-video-variants, +rename-led-to-secondary-display)                                                                                                                                                                                                   |
-| Modules dashboard         | 21 (+advertiser-health, analytics-categories)                                                                                                                                                                                                                                |
-| Services Raspberry        | 19 (+sponsor-stats)                                                                                                                                                                                                                                                          |
-| Versions publiées         | 265+ (v2.1 → v3.62)                                                                                                                                                                                                                                                          |
-| Tests (total)             | 2 987 (1872 API + 506 Angular + 148 Admin + 71 Socket + 390 Smoke)                                                                                                                                                                                                           |
+| Métrique                  | Valeur                                                                                                                                                                                                                                                                                                                                                                                                          |
+| ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Features implémentées** | **241** (+26 audit, +9 E-22 TV+Secondary dual, +6 sponsor UX, +2 résilience Pi/OTA, +3 hotspot WiFi, +3 debug page, +1 EDID enrichment, +1 dashboard EDID display, +1 OTA edid-decode, +1 sysfs fix, +1 ADR-068 signed URL proxy SaaS, +1 ADR-069 Delivery Strategy pattern, **+8 sprint 17-18/04 : 3 ADR-058 phases 2A-2C + 3 Remote V2 (ADR-060/061/062) + 1 ADR-063 socket filter + 1 ADR-068 supervision**) |
+| Domaines fonctionnels     | 14                                                                                                                                                                                                                                                                                                                                                                                                              |
+| Controllers API           | 29 (+sponsor-alerts)                                                                                                                                                                                                                                                                                                                                                                                            |
+| Services métier           | 40 (+sponsor-alert, sponsor-stats, sponsor-auto-resolution)                                                                                                                                                                                                                                                                                                                                                     |
+| Repositories              | 25 (+video-variant)                                                                                                                                                                                                                                                                                                                                                                                             |
+| Migrations DB             | 55 (+add-led-support-and-video-variants, +rename-led-to-secondary-display)                                                                                                                                                                                                                                                                                                                                      |
+| Modules dashboard         | 21 (+advertiser-health, analytics-categories)                                                                                                                                                                                                                                                                                                                                                                   |
+| Services Raspberry        | 19 (+sponsor-stats)                                                                                                                                                                                                                                                                                                                                                                                             |
+| Versions publiées         | 265+ (v2.1 → v3.62)                                                                                                                                                                                                                                                                                                                                                                                             |
+| Tests (total)             | 2 987 (1872 API + 506 Angular + 148 Admin + 71 Socket + 390 Smoke)                                                                                                                                                                                                                                                                                                                                              |
 
 ---
 

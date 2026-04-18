@@ -1,0 +1,84 @@
+name: Weekly Report
+
+on:
+  # Vendredi à 17h00 Paris (16h UTC en été, 15h en hiver)
+  schedule:
+    - cron: '0 16 * * 5'
+  # Déclenchement manuel pour test
+  workflow_dispatch:
+    inputs:
+      from:
+        description: 'Date début (YYYY-MM-DD)'
+        required: false
+      to:
+        description: 'Date fin (YYYY-MM-DD)'
+        required: false
+      dry_run:
+        description: 'Dry run — génère sans envoyer'
+        type: boolean
+        default: false
+
+jobs:
+  generate-and-send:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Historique complet pour git log
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Calculer les dates
+        id: dates
+        run: |
+          if [ -n "${{ github.event.inputs.from }}" ]; then
+            FROM="${{ github.event.inputs.from }}"
+            TO="${{ github.event.inputs.to || github.event.inputs.from }}"
+          else
+            # Lundi de la semaine courante
+            FROM=$(date -d "last monday" +%Y-%m-%d 2>/dev/null || date -v-mon +%Y-%m-%d)
+            TO=$(date +%Y-%m-%d)
+          fi
+          WEEK=$(date +%V)
+          YEAR=$(date +%Y)
+          echo "from=$FROM" >> $GITHUB_OUTPUT
+          echo "to=$TO" >> $GITHUB_OUTPUT
+          echo "week=$WEEK" >> $GITHUB_OUTPUT
+          echo "filename=WEEKLY-W${WEEK}-${TO}.md" >> $GITHUB_OUTPUT
+          echo "📅 Période : $FROM → $TO (W$WEEK)"
+
+      - name: Générer le rapport
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          node scripts/generate-weekly-report.mjs \
+            --from ${{ steps.dates.outputs.from }} \
+            --to   ${{ steps.dates.outputs.to }} \
+            --out  docs/reports/${{ steps.dates.outputs.filename }}
+          echo "✅ Rapport généré : docs/reports/${{ steps.dates.outputs.filename }}"
+
+      - name: Afficher le rapport (debug)
+        run: cat docs/reports/${{ steps.dates.outputs.filename }}
+
+      - name: Envoyer par email
+        if: ${{ !github.event.inputs.dry_run }}
+        env:
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          REPORT_EMAIL_TO: ${{ secrets.REPORT_EMAIL_TO }}
+          REPORT_EMAIL_FROM: ${{ secrets.REPORT_EMAIL_FROM }}
+        run: |
+          node scripts/send-weekly-report.mjs \
+            --file docs/reports/${{ steps.dates.outputs.filename }}
+
+      - name: Uploader le rapport comme artefact
+        uses: actions/upload-artifact@v4
+        with:
+          name: weekly-report-W${{ steps.dates.outputs.week }}
+          path: docs/reports/${{ steps.dates.outputs.filename }}
+          retention-days: 90

@@ -18,7 +18,7 @@
 14. [Écran / HDMI (v3.44+)](#écran--hdmi-v344)
 15. [Recording Analytics (v3.38+)](#recording-analytics--état-denregistrement-v338)
 16. [Saturation pool DB (MaxClientsInSessionMode)](#saturation-pool-db-maxclientsinsessionmode)
-17. [Cloud Remote ne fonctionne pas (v3.69.3+)](#cloud-remote-ne-fonctionne-pas-v3692)
+17. [Cloud Remote ne fonctionne pas (v3.69.3+)](#cloud-remote-ne-fonctionne-pas-v3692) — voir aussi [Remote V2 runbook T1-T15](../adr/ADR-060-remote-resilience-fallback-layers.md) (hotspot Pi + PWA, Avr 2026)
 18. [500/429 cascade sur GET /api/deployments (v3.82.1+)](#500429-cascade-sur-get-apideployments-v3821)
 19. [Second écran ne s'affiche pas (v3.82.7+)](#second-écran-ne-saffiche-pas-v3827)
 20. [Deux écrans désynchronisés (v3.82.10+)](#deux-écrans-désynchronisés-v38210)
