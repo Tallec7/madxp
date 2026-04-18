@@ -57,6 +57,29 @@ export async function sendSyncProfilesToSite(siteId: string): Promise<number> {
       });
     }
 
+    // ADR-058 — propager l'etat PIN profil au Pi pour validation offline (bcrypt hash).
+    let pinMeta: {
+      remote_pin_required: boolean;
+      remote_pin_hash: string | null;
+      remote_pin_updated_at: string | null;
+    } = { remote_pin_required: false, remote_pin_hash: null, remote_pin_updated_at: null };
+    try {
+      const pin = await configProfileRepository.findPin(p.id);
+      if (pin) {
+        pinMeta = {
+          remote_pin_required: !!pin.remote_pin_required,
+          remote_pin_hash: pin.remote_pin_hash,
+          remote_pin_updated_at: pin.remote_pin_updated_at
+            ? pin.remote_pin_updated_at.toISOString()
+            : null,
+        };
+      }
+    } catch (err) {
+      logger.warn('PIN metadata fetch failed in sync profiles (non-fatal)', {
+        siteId, profileId: p.id, error: (err as Error).message,
+      });
+    }
+
     syncPayload.push({
       id: p.id,
       name: p.name,
@@ -65,6 +88,7 @@ export async function sendSyncProfilesToSite(siteId: string): Promise<number> {
       sport: p.sport,
       is_default: p.is_default,
       configuration: enrichedConfig,
+      ...pinMeta,
     });
   }
 

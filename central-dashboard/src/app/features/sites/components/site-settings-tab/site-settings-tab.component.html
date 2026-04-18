@@ -244,6 +244,9 @@
     </ng-template>
   </div>
 
+  <!-- ADR-058 — Remote auth per profile (super_admin only) -->
+  <app-remote-auth-section *ngIf="isSuperAdmin" [siteId]="siteId"></app-remote-auth-section>
+
   <!-- QR Code Telecommande -->
   <div class="settings-card">
     <div class="settings-header">

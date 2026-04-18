@@ -12,12 +12,13 @@ import { AuthService } from '../../../../core/services/auth.service';
 import { FeatureKey } from '../../../../core/services/feature-gate.service';
 import { QrCodeGeneratorComponent } from '../../../../shared/components/qr-code-generator/qr-code-generator.component';
 import { DisplaysEditorComponent } from './displays-editor/displays-editor.component';
+import { RemoteAuthSectionComponent } from './remote-auth-section/remote-auth-section.component';
 import { SiteSettingsDataService } from './site-settings-data.service';
 
 @Component({
   selector: 'app-site-settings-tab',
   standalone: true,
-  imports: [CommonModule, FormsModule, TranslateModule, QrCodeGeneratorComponent, DisplaysEditorComponent],
+  imports: [CommonModule, FormsModule, TranslateModule, QrCodeGeneratorComponent, DisplaysEditorComponent, RemoteAuthSectionComponent],
   templateUrl: './site-settings-tab.component.html',
   styleUrls: ['./site-settings-tab.component.scss']
 })

@@ -245,6 +245,29 @@ export const schemas = {
     }),
   }),
 
+  // ADR-058 — Set / clear PIN per profile (super_admin endpoint).
+  // `pin: null` removes the PIN. `pin: string` (4-6 digits) sets it.
+  setProfileRemotePin: Joi.object({
+    pin: Joi.string().pattern(/^\d{4,6}$/).allow(null).required().messages({
+      'string.pattern.base': 'Le PIN doit contenir entre 4 et 6 chiffres',
+    }),
+  }),
+
+  // ADR-058 — verify PIN + issue device token (public endpoint, scoped to profile)
+  verifyProfilePin: Joi.object({
+    pin: Joi.string().pattern(/^\d{4,6}$/).required().messages({
+      'string.pattern.base': 'Le PIN doit contenir entre 4 et 6 chiffres',
+      'any.required': 'Le PIN est requis',
+    }),
+    deviceId: Joi.string().min(8).max(128).required(),
+    label: Joi.string().max(128).allow('', null).optional(),
+  }),
+
+  // ADR-058 — revoke all devices (super_admin endpoint, no body required)
+  revokeAllDevices: Joi.object({
+    reason: Joi.string().max(64).allow('', null).optional(),
+  }),
+
   // Subscription schemas
   extendSubscription: Joi.object({
     new_end_date: Joi.string().isoDate().required(),
@@ -828,6 +851,12 @@ export const paramSchemas = {
     profileId: Joi.string().uuid().required(),
   }),
   jobId: Joi.object({ jobId: Joi.string().uuid().required() }),
+  // ADR-058
+  siteIdProfileIdTokenId: Joi.object({
+    siteId: Joi.string().uuid().required(),
+    profileId: Joi.string().uuid().required(),
+    tokenId: Joi.string().uuid().required(),
+  }),
 };
 
 // ============================================================================

@@ -1,6 +1,6 @@
 # Implemented Backlog — Features Livrées
 
-> **Dernière mise à jour** : 9 Mars 2026
+> **Dernière mise à jour** : 18 Avril 2026
 > Ce document recense **toutes** les features implémentées dans le codebase NEOPRO, organisées par domaine fonctionnel. Il complète le backlog SAFe (futur) avec une vue exhaustive du produit livré.
 > **Source** : Croisement systématique de 34 changelogs, 200+ commits git (v3.47→v3.64), audit codebase, et sprint audit sponsors/analytics (26 features P0+P1+P2+P3).
 
@@ -16,21 +16,22 @@
 
 ## 1. Authentification & Sécurité
 
-| ID         | Feature                                                                         | Statut     | Fichiers clés                                                  | Version/Date |
-| ---------- | ------------------------------------------------------------------------------- | ---------- | -------------------------------------------------------------- | ------------ |
-| IMP-SEC-01 | Authentification JWT (HttpOnly cookies + Bearer)                                | Production | `auth.controller.ts`, `middleware/auth.ts`                     | Déc 2025     |
-| IMP-SEC-02 | MFA / 2FA (TOTP avec QR code)                                                   | Production | `mfa.service.ts`, `mfa.routes.ts`                              | Déc 2025     |
-| IMP-SEC-03 | Réinitialisation mot de passe (token 24h + email)                               | Production | `password-reset.service.ts`                                    | Déc 2025     |
-| IMP-SEC-04 | Journalisation d'audit GDPR                                                     | Production | `audit.service.ts`, `audit.routes.ts`                          | Déc 2025     |
-| IMP-SEC-05 | Sécurité niveau ligne (isolation multi-tenant PostgreSQL)                       | Production | `00-create-rls-functions.sql`, `enable-row-level-security.sql` | Déc 2025     |
-| IMP-SEC-06 | CORS fermé par défaut en production                                             | Production | `server.ts`                                                    | Déc 2025     |
-| IMP-SEC-07 | Auth admin Raspberry (cookies session + mot de passe initial)                   | Production | `admin-server.js`, `auth-config.json`                          | Déc 2025     |
-| IMP-SEC-08 | Suppression mot de passe en dur                                                 | Production | -                                                              | Déc 2025     |
-| IMP-SEC-09 | GDPR self-service (Art. 17 droit à l'effacement, Art. 20 portabilité)           | Production | `users.controller.ts` (deleteOwnAccount, exportMyData)         | Déc 2025     |
-| IMP-SEC-10 | Sauvegardes chiffrées PostgreSQL (pg_dump via Supabase)                         | Production | Supabase PITR (Point-in-Time Recovery)                         | Déc 2025     |
-| IMP-SEC-11 | Helmet renforcé (CSP, X-Frame-Options deny, HSTS 1 an)                          | Production | `server.ts`                                                    | Déc 2025     |
-| IMP-SEC-12 | Socket.IO CORS fermé par défaut (production)                                    | Production | `socket.service.ts`                                            | Déc 2025     |
-| IMP-SEC-13 | Pages légales intégrées (CGU, CGV, Politique de confidentialité, Registre GDPR) | Production | `/legal/privacy`, `/legal/terms`                               | Déc 2025     |
+| ID         | Feature                                                                         | Statut     | Fichiers clés                                                                             | Version/Date |
+| ---------- | ------------------------------------------------------------------------------- | ---------- | ----------------------------------------------------------------------------------------- | ------------ |
+| IMP-SEC-01 | Authentification JWT (HttpOnly cookies + Bearer)                                | Production | `auth.controller.ts`, `middleware/auth.ts`                                                | Déc 2025     |
+| IMP-SEC-02 | MFA / 2FA (TOTP avec QR code)                                                   | Production | `mfa.service.ts`, `mfa.routes.ts`                                                         | Déc 2025     |
+| IMP-SEC-03 | Réinitialisation mot de passe (token 24h + email)                               | Production | `password-reset.service.ts`                                                               | Déc 2025     |
+| IMP-SEC-04 | Journalisation d'audit GDPR                                                     | Production | `audit.service.ts`, `audit.routes.ts`                                                     | Déc 2025     |
+| IMP-SEC-05 | Sécurité niveau ligne (isolation multi-tenant PostgreSQL)                       | Production | `00-create-rls-functions.sql`, `enable-row-level-security.sql`                            | Déc 2025     |
+| IMP-SEC-06 | CORS fermé par défaut en production                                             | Production | `server.ts`                                                                               | Déc 2025     |
+| IMP-SEC-07 | Auth admin Raspberry (cookies session + mot de passe initial)                   | Production | `admin-server.js`, `auth-config.json`                                                     | Déc 2025     |
+| IMP-SEC-08 | Suppression mot de passe en dur                                                 | Production | -                                                                                         | Déc 2025     |
+| IMP-SEC-09 | GDPR self-service (Art. 17 droit à l'effacement, Art. 20 portabilité)           | Production | `users.controller.ts` (deleteOwnAccount, exportMyData)                                    | Déc 2025     |
+| IMP-SEC-10 | Sauvegardes chiffrées PostgreSQL (pg_dump via Supabase)                         | Production | Supabase PITR (Point-in-Time Recovery)                                                    | Déc 2025     |
+| IMP-SEC-11 | Helmet renforcé (CSP, X-Frame-Options deny, HSTS 1 an)                          | Production | `server.ts`                                                                               | Déc 2025     |
+| IMP-SEC-12 | Socket.IO CORS fermé par défaut (production)                                    | Production | `socket.service.ts`                                                                       | Déc 2025     |
+| IMP-SEC-13 | Pages légales intégrées (CGU, CGV, Politique de confidentialité, Registre GDPR) | Production | `/legal/privacy`, `/legal/terms`                                                          | Déc 2025     |
+| IMP-SEC-14 | PIN distant par profil + device tokens révocables (ADR-058 Phase 1, offline Pi) | Production | `remote-auth.controller.ts`, `profile-pin.service.js`, `remote-auth-section.component.ts` | Avr 2026     |
 
 ---
 

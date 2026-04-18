@@ -189,6 +189,10 @@ export interface PinVerifyResult {
   expiresIn: number;
 }
 
+export interface ProfilePinVerifyResult extends PinVerifyResult {
+  tokenId: string;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -198,6 +202,10 @@ export class RemoteService {
 
   // Token PIN stocké par siteId (en mémoire + localStorage pour persister)
   private readonly TOKEN_STORAGE_PREFIX = 'neopro_remote_pin_';
+  // ADR-058 — token PIN profil stocké par profileId (30j)
+  private readonly PROFILE_TOKEN_STORAGE_PREFIX = 'neopro_remote_profile_pin_';
+  // ADR-058 — device ID persistant (UUID v4) par navigateur
+  private readonly DEVICE_ID_STORAGE_KEY = 'neopro_remote_device_id';
 
   /**
    * Récupère le token PIN stocké pour un site
@@ -228,9 +236,55 @@ export class RemoteService {
   }
 
   /**
-   * Retourne les headers HTTP avec le token PIN si disponible
+   * ADR-058 — récupère (ou crée) un deviceId persistant pour ce navigateur.
+   * Utilisé pour scoper les device tokens profil et permettre la révocation
+   * par device depuis le dashboard super_admin.
    */
-  private getHeaders(siteId: string): { headers?: Record<string, string> } {
+  getOrCreateDeviceId(): string {
+    let id = localStorage.getItem(this.DEVICE_ID_STORAGE_KEY);
+    if (!id) {
+      // Random UUID v4 (browser crypto API)
+      const cryptoApi = (window as unknown as { crypto?: Crypto }).crypto;
+      if (cryptoApi && typeof cryptoApi.randomUUID === 'function') {
+        id = cryptoApi.randomUUID();
+      } else {
+        // Fallback : 16 bytes random hex
+        id = 'dev-' + Math.random().toString(36).slice(2) + Date.now().toString(36);
+      }
+      localStorage.setItem(this.DEVICE_ID_STORAGE_KEY, id);
+    }
+    return id;
+  }
+
+  private profileTokenKey(siteId: string, profileId: string): string {
+    return `${this.PROFILE_TOKEN_STORAGE_PREFIX}${siteId}_${profileId}`;
+  }
+
+  private getProfileToken(siteId: string, profileId: string): string | null {
+    return localStorage.getItem(this.profileTokenKey(siteId, profileId));
+  }
+
+  private setProfileToken(siteId: string, profileId: string, token: string): void {
+    localStorage.setItem(this.profileTokenKey(siteId, profileId), token);
+  }
+
+  clearProfileToken(siteId: string, profileId: string): void {
+    localStorage.removeItem(this.profileTokenKey(siteId, profileId));
+  }
+
+  hasProfileToken(siteId: string, profileId: string): boolean {
+    return !!this.getProfileToken(siteId, profileId);
+  }
+
+  /**
+   * Retourne les headers HTTP avec le token PIN si disponible.
+   * Priorité au token profil (ADR-058) si profileId fourni, sinon token site legacy.
+   */
+  private getHeaders(siteId: string, profileId?: string | null): { headers?: Record<string, string> } {
+    if (profileId) {
+      const pToken = this.getProfileToken(siteId, profileId);
+      if (pToken) return { headers: { 'X-Remote-Token': pToken } };
+    }
     const token = this.getToken(siteId);
     if (token) {
       return { headers: { 'X-Remote-Token': token } };
@@ -255,31 +309,59 @@ export class RemoteService {
   }
 
   /**
+   * ADR-058 — vérifie un PIN profil et stocke le device token (30j).
+   */
+  verifyProfilePin(
+    siteId: string,
+    profileId: string,
+    pin: string,
+    label?: string | null
+  ): Observable<ProfilePinVerifyResult> {
+    const deviceId = this.getOrCreateDeviceId();
+    return this.http.post<ProfilePinVerifyResult>(
+      `${this.apiUrl}/remote/${siteId}/profiles/${profileId}/verify-pin`,
+      { pin, deviceId, label: label || null }
+    ).pipe(
+      tap((result) => {
+        if (result.success && result.token) {
+          this.setProfileToken(siteId, profileId, result.token);
+        }
+      })
+    );
+  }
+
+  /**
    * Récupère l'état actuel du site (connexion, config, vidéos)
    * Inclut le header X-Remote-Token si disponible
    */
-  getState(siteId: string): Observable<RemoteState> {
+  getState(siteId: string, profileId?: string | null): Observable<RemoteState> {
     return this.http.get<RemoteState>(
       `${this.apiUrl}/remote/${siteId}/state`,
-      this.getHeaders(siteId)
+      this.getHeaders(siteId, profileId)
     );
   }
 
   /**
    * Liste les vidéos disponibles sur le site
    */
-  getVideos(siteId: string): Observable<RemoteVideos> {
+  getVideos(siteId: string, profileId?: string | null): Observable<RemoteVideos> {
     return this.http.get<RemoteVideos>(
       `${this.apiUrl}/remote/${siteId}/videos`,
-      this.getHeaders(siteId)
+      this.getHeaders(siteId, profileId)
     );
   }
 
   /**
-   * Envoie une commande générique au site
+   * Envoie une commande générique au site.
+   * Si `profileId` est fourni, le token PIN profil (ADR-058) est préféré au token legacy.
    */
-  sendCommand(siteId: string, type: RemoteCommandType, data?: unknown): Observable<CommandResult> {
-    const options = this.getHeaders(siteId);
+  sendCommand(
+    siteId: string,
+    type: RemoteCommandType,
+    data?: unknown,
+    profileId?: string | null
+  ): Observable<CommandResult> {
+    const options = this.getHeaders(siteId, profileId);
     return this.http.post<CommandResult>(
       `${this.apiUrl}/remote/${siteId}/command`,
       { type, data },

@@ -553,6 +553,34 @@ const startServer = async () => {
     prewarmRemotionBundle();
     // Démarre le worker async (ADR-054) qui poll remotion_render_jobs toutes les 5s.
     startRenderWorker();
+
+    // ADR-058: purge quotidienne des profile_device_tokens expirés/révoqués > 30j
+    // + refresh gauge Prometheus. Tolère l'absence de table (pré-migration).
+    const { profileDeviceTokenRepository } = await import(
+      './repositories/config-profile.repository'
+    );
+    const { default: metricsService } = await import('./services/metrics.service');
+    const refreshProfileTokensMonitoring = async () => {
+      try {
+        const deleted = await profileDeviceTokenRepository.cleanupExpired(30);
+        const active = await profileDeviceTokenRepository.countActive();
+        metricsService.recordProfileDeviceTokensActive(active);
+        if (deleted > 0) {
+          logger.info('profile_device_tokens purged', { deleted, active });
+        }
+      } catch (err) {
+        logger.warn('profile_device_tokens monitoring failed (pre-migration?)', {
+          error: (err as Error).message,
+        });
+      }
+    };
+    // Premier tick au boot (délai 30s pour laisser la DB s'initialiser) puis 24h.
+    setTimeout(refreshProfileTokensMonitoring, 30 * 1000).unref();
+    const profileTokensInterval = setInterval(
+      refreshProfileTokensMonitoring,
+      24 * 60 * 60 * 1000
+    );
+    profileTokensInterval.unref();
   } catch (error) {
     logger.error('Failed to initialize dependencies:', error);
     // Ne pas quitter - le serveur reste en mode dégradé et le health check rapportera l'état
