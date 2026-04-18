@@ -438,6 +438,7 @@ app.use('/api/sites', sitesRoutes);
 app.use('/api/sites', draftsRoutes);  // Config drafts - sous /api/sites/:siteId/draft
 app.use('/api/sites', configProfilesRoutes);  // Config profiles - sous /api/sites/:siteId/profiles
 app.use('/api/groups', apiRateLimit, groupsRoutes);
+app.use('/api/videos', videoStreamRoutes); // Signed URL video streaming proxy (ADR-068) — MUST be before contentRoutes (/stream would match GET /videos/:id)
 app.use('/api', contentRoutes); // Vidéos & déploiements - rate limits per-route dans content.routes.ts
 app.use('/api', updatesRoutes); // Mises à jour - rate limits per-route dans updates.routes.ts
 app.use('/api/analytics', apiRateLimit, analyticsRoutes);
@@ -468,7 +469,6 @@ app.use('/api/sponsor-alerts', apiRateLimit, sponsorAlertsRoutes); // Proactive 
 app.use('/api/safe', apiRateLimit, safeRoutes); // SAFe dashboard (portfolio, proposals, epics)
 app.use('/api/campaigns', campaignRoutes); // Campaign management (ADR-035 Phase 3) — rate limits per-route
 app.use('/api/saas', saasRoutes); // SaaS mode (ADR-037) — public, rate limits per-route
-app.use('/api/videos', videoStreamRoutes); // Signed URL video streaming proxy (ADR-068) — public, token-gated
 app.use('/api/client-errors', clientErrorsRoutes); // Frontend error capture — public, rate-limited
 app.use('/api/remotion-templates', sensitiveRateLimit, remotionTemplatesRoutes); // Templates vidéo Remotion (ADR-052)
 
