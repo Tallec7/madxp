@@ -1,3 +1,9 @@
+# [3.191.0](https://github.com/Tallec7/neopro/compare/v3.190.0...v3.191.0) (2026-04-18)
+
+### Features
+
+- **remote:** enforce PIN on SaaS remote + apply to /saas config endpoints ([#473](https://github.com/Tallec7/neopro/issues/473)) ([6921040](https://github.com/Tallec7/neopro/commit/6921040a9bdbcdc93a49f30995b7957426180761))
+
 # [3.190.0](https://github.com/Tallec7/neopro/compare/v3.189.0...v3.190.0) (2026-04-18)
 
 ### Features
