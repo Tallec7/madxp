@@ -9,11 +9,19 @@ export type ViewType = 'home' | 'time-categories' | 'subcategories' | 'videos' |
 export interface Category {
   id: string;
   name: string;
-  videos?: Video[];
+  videos?: RemoteVideoEntry[];
   subCategories?: Category[];
 }
 
-export interface Video {
+/**
+ * Entrée vidéo dans la navigation télécommande (vue catégories/sous-catégories).
+ *
+ * Pas une `Video` au sens métier — c'est un node de navigation léger avec
+ * juste ce qu'il faut pour afficher et déclencher la lecture sur la TV
+ * (`name`, `path`, `categoryId`). Distinct de la `Video` canonique
+ * (`core/models/video.model.ts`), qui décrit la row DB.
+ */
+export interface RemoteVideoEntry {
   name: string;
   path: string;
   type?: string;
@@ -28,7 +36,7 @@ export interface TimeCategory {
   color?: string;
   description?: string;
   categoryIds?: string[];
-  loopVideos?: Video[];
+  loopVideos?: RemoteVideoEntry[];
 }
 
 @Injectable()
@@ -144,7 +152,7 @@ export class CloudRemoteNavigationService {
     }
   }
 
-  public getCurrentVideos(): Video[] {
+  public getCurrentVideos(): RemoteVideoEntry[] {
     const videos = this.selectedSubCategory?.videos ?? this.selectedCategory?.videos ?? [];
     return this.sortByName(videos);
   }

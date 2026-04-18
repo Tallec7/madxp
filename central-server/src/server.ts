@@ -60,6 +60,7 @@ import sponsorAlertsRoutes from './routes/sponsor-alerts.routes';
 import safeRoutes from './routes/safe.routes';
 import campaignRoutes from './routes/campaign.routes';
 import saasRoutes from './routes/saas.routes';
+import videoStreamRoutes from './routes/video-stream.routes';
 import clientErrorsRoutes from './routes/client-errors.routes';
 import remotionTemplatesRoutes from './routes/remotion-templates.routes';
 import { authRateLimit, apiRateLimit, sensitiveRateLimit, adminRateLimit, loggingRateLimit } from './middleware/user-rate-limit';
@@ -437,6 +438,7 @@ app.use('/api/sites', sitesRoutes);
 app.use('/api/sites', draftsRoutes);  // Config drafts - sous /api/sites/:siteId/draft
 app.use('/api/sites', configProfilesRoutes);  // Config profiles - sous /api/sites/:siteId/profiles
 app.use('/api/groups', apiRateLimit, groupsRoutes);
+app.use('/api/videos', videoStreamRoutes); // Signed URL video streaming proxy (ADR-068) — MUST be before contentRoutes (/stream would match GET /videos/:id)
 app.use('/api', contentRoutes); // Vidéos & déploiements - rate limits per-route dans content.routes.ts
 app.use('/api', updatesRoutes); // Mises à jour - rate limits per-route dans updates.routes.ts
 app.use('/api/analytics', apiRateLimit, analyticsRoutes);
@@ -553,6 +555,34 @@ const startServer = async () => {
     prewarmRemotionBundle();
     // Démarre le worker async (ADR-054) qui poll remotion_render_jobs toutes les 5s.
     startRenderWorker();
+
+    // ADR-058: purge quotidienne des profile_device_tokens expirés/révoqués > 30j
+    // + refresh gauge Prometheus. Tolère l'absence de table (pré-migration).
+    const { profileDeviceTokenRepository } = await import(
+      './repositories/config-profile.repository'
+    );
+    const { default: metricsService } = await import('./services/metrics.service');
+    const refreshProfileTokensMonitoring = async () => {
+      try {
+        const deleted = await profileDeviceTokenRepository.cleanupExpired(30);
+        const active = await profileDeviceTokenRepository.countActive();
+        metricsService.recordProfileDeviceTokensActive(active);
+        if (deleted > 0) {
+          logger.info('profile_device_tokens purged', { deleted, active });
+        }
+      } catch (err) {
+        logger.warn('profile_device_tokens monitoring failed (pre-migration?)', {
+          error: (err as Error).message,
+        });
+      }
+    };
+    // Premier tick au boot (délai 30s pour laisser la DB s'initialiser) puis 24h.
+    setTimeout(refreshProfileTokensMonitoring, 30 * 1000).unref();
+    const profileTokensInterval = setInterval(
+      refreshProfileTokensMonitoring,
+      24 * 60 * 60 * 1000
+    );
+    profileTokensInterval.unref();
   } catch (error) {
     logger.error('Failed to initialize dependencies:', error);
     // Ne pas quitter - le serveur reste en mode dégradé et le health check rapportera l'état

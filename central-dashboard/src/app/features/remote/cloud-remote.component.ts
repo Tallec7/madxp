@@ -17,7 +17,8 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Subject, interval, takeUntil, debounceTime } from 'rxjs';
-import { RemoteService, RemoteState } from '../../core/services/remote.service';
+import { RemoteService, RemoteState, MatchStateSync } from '../../core/services/remote.service';
+import { SocketService } from '../../core/services/socket.service';
 import { LicenseState, LicenseStatus } from '../../core/models/license.model';
 import { LicenseBannerComponent } from './components/license-banner.component';
 import { LicenseBlockRemoteComponent } from './components/license-block-remote.component';
@@ -29,14 +30,19 @@ import {
   RemoteOptionsService, LocalOptions, SportType, ScoreOverlayPosition,
   SPORT_LABELS, SPORT_PERIODS, SPORT_PERIOD_DURATIONS,
 } from './services/remote-options.service';
-import { CloudRemoteNavigationService, Video, Category, TimeCategory } from './services/cloud-remote-navigation.service';
+import { CloudRemoteNavigationService, RemoteVideoEntry, Category, TimeCategory } from './services/cloud-remote-navigation.service';
 import { CloudRemoteConfigService, Configuration } from './services/cloud-remote-config.service';
+import { TransportResilienceService, TransportMode } from './services/transport-resilience.service';
+import { OfflineQueueService } from './services/offline-queue.service';
+import { PreferencesMenuComponent } from './preferences-menu.component';
+import { RemotePreferencesService } from './services/remote-preferences.service';
+import { RemoteVersionToggleService } from './services/remote-version-toggle.service';
 
 @Component({
   selector: 'app-cloud-remote',
   standalone: true,
-  imports: [CommonModule, FormsModule, LicenseBannerComponent, LicenseBlockRemoteComponent, PlayerStatusComponent, ScreenshotViewerComponent],
-  providers: [RemoteScoreService, RemoteTimerService, RemoteOptionsService, CloudRemoteNavigationService, CloudRemoteConfigService],
+  imports: [CommonModule, FormsModule, LicenseBannerComponent, LicenseBlockRemoteComponent, PlayerStatusComponent, ScreenshotViewerComponent, PreferencesMenuComponent],
+  providers: [RemoteScoreService, RemoteTimerService, RemoteOptionsService, CloudRemoteNavigationService, CloudRemoteConfigService, TransportResilienceService, OfflineQueueService, RemotePreferencesService, RemoteVersionToggleService],
   templateUrl: './cloud-remote.component.html',
   styleUrls: ['./cloud-remote.component.scss']
 })
@@ -44,12 +50,19 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly remoteService = inject(RemoteService);
+  private readonly socketService = inject(SocketService);
   readonly scoreService = inject(RemoteScoreService);
   readonly timerService = inject(RemoteTimerService);
   readonly optionsService = inject(RemoteOptionsService);
   readonly nav = inject(CloudRemoteNavigationService);
   readonly config = inject(CloudRemoteConfigService);
+  readonly transport = inject(TransportResilienceService);
+  readonly offlineQueue = inject(OfflineQueueService);
+  readonly versionToggle = inject(RemoteVersionToggleService);
   private readonly destroy$ = new Subject<void>();
+
+  public transportMode: TransportMode = 'cloud';
+  public get offlinePendingCount(): number { return this.offlineQueue.getPendingCount(this.siteId); }
 
   public siteId: string = '';
   public siteName: string = '';
@@ -103,7 +116,7 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
   public toastType: 'success' | 'info' = 'success';
   private toastTimeout: ReturnType<typeof setTimeout> | null = null;
 
-  // Video en cours de lecture
+  // RemoteVideoEntry en cours de lecture
   public playingVideoPath: string | null = null;
 
   // Loading state
@@ -115,6 +128,10 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
   public pinError = '';
   public pinVerifying = false;
   public pinAttemptsRemaining: number | null = null;
+
+  // ADR-058 — profils exposés par /remote/:siteId/state
+  public availableProfiles: NonNullable<RemoteState['profiles']> = [];
+  public selectedProfileId: string | null = null;
 
   // Dark mode
   public isDarkMode = false;
@@ -179,6 +196,9 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
 
     this.siteId = this.route.snapshot.paramMap.get('siteId') || '';
 
+    // ADR-061 — charger la version remote pour ce site (v1 legacy / v2 new, forcé v2 après sunset)
+    if (this.siteId) this.versionToggle.loadForSite(this.siteId);
+
     this.scoreService.scoreUpdate$.pipe(
       debounceTime(500),
       takeUntil(this.destroy$)
@@ -189,6 +209,19 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
       interval(60000)
         .pipe(takeUntil(this.destroy$))
         .subscribe(() => this.refreshState());
+      this.socketService.on<MatchStateSync>('state-sync')
+        .pipe(takeUntil(this.destroy$))
+        .subscribe((state) => this.onStateSync(state));
+
+      this.transport.mode$
+        .pipe(takeUntil(this.destroy$))
+        .subscribe((mode) => {
+          const wasOffline = this.transportMode !== 'cloud';
+          this.transportMode = mode;
+          if (mode === 'cloud' && wasOffline) {
+            this.offlineQueue.drain(this.siteId);
+          }
+        });
     } else {
       this.connectionError = 'Site ID manquant dans l\'URL';
       this.isLoading = false;
@@ -206,13 +239,14 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
     this.isLoading = true;
     this.connectionError = null;
 
-    this.remoteService.getState(this.siteId).subscribe({
+    this.remoteService.getState(this.siteId, this.selectedProfileId).subscribe({
       next: (state: RemoteState) => {
         this.siteName = state.siteName;
         this.clubName = state.clubName;
         this.isConnected = state.isConnected && state.connectionHealth?.isHealthy;
         this.pendingConfigVersionId = state.pendingConfigVersionId || null;
         this.pendingCommandsCount = state.pendingCommandsCount || 0;
+        this.syncProfilesFromState(state);
 
         if (!this.isConnected) { this.isLoading = false; return; }
 
@@ -223,6 +257,9 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
         }
 
         this.pinRequired = false;
+        if (state.authenticatedProfileId) {
+          this.remoteService.setCurrentProfileContext(this.siteId, state.authenticatedProfileId);
+        }
         this.config.setSecondaryVariantPaths(state.secondaryVariantPaths || []);
         const rawConfig = this.config.buildConfiguration(state.siteName, state.config);
         this.config.initializeWithConfiguration(this.config.markSecondaryVariants(rawConfig));
@@ -248,26 +285,72 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
     this.pinVerifying = true;
     this.pinError = '';
 
-    this.remoteService.verifyPin(this.siteId, this.pinInput).subscribe({
-      next: () => {
-        this.pinRequired = false;
-        this.pinInput = '';
-        this.pinError = '';
-        this.pinVerifying = false;
-        this.pinAttemptsRemaining = null;
-        this.loadSiteState();
-      },
-      error: (err: { status: number; error?: { message?: string; attemptsRemaining?: number } }) => {
-        this.pinVerifying = false;
-        this.pinInput = '';
-        if (err.status === 429) {
-          this.pinError = err.error?.message || 'Trop de tentatives. Réessayez plus tard.';
-        } else {
-          this.pinError = err.error?.message || 'PIN incorrect';
-          this.pinAttemptsRemaining = err.error?.attemptsRemaining ?? null;
-        }
+    const profile = this.selectedProfileId
+      ? this.availableProfiles.find((p) => p.id === this.selectedProfileId)
+      : null;
+    const useProfilePin = !!(profile && profile.pinRequired);
+
+    const errorHandler = (err: { status: number; error?: { message?: string; attemptsRemaining?: number } }) => {
+      this.pinVerifying = false;
+      this.pinInput = '';
+      if (err.status === 429) {
+        this.pinError = err.error?.message || 'Trop de tentatives. Réessayez plus tard.';
+      } else {
+        this.pinError = err.error?.message || 'PIN incorrect';
+        this.pinAttemptsRemaining = err.error?.attemptsRemaining ?? null;
       }
-    });
+    };
+
+    const onSuccess = () => {
+      if (useProfilePin && this.selectedProfileId) {
+        this.remoteService.setCurrentProfileContext(this.siteId, this.selectedProfileId);
+      }
+      this.pinRequired = false;
+      this.pinInput = '';
+      this.pinError = '';
+      this.pinVerifying = false;
+      this.pinAttemptsRemaining = null;
+      this.loadSiteState();
+    };
+
+    if (useProfilePin && this.selectedProfileId) {
+      const label = profile?.displayName || profile?.name || null;
+      this.remoteService
+        .verifyProfilePin(this.siteId, this.selectedProfileId, this.pinInput, label)
+        .subscribe({ next: onSuccess, error: errorHandler });
+    } else {
+      this.remoteService.verifyPin(this.siteId, this.pinInput).subscribe({ next: onSuccess, error: errorHandler });
+    }
+  }
+
+  /**
+   * ADR-058 — synchronise la liste de profils + sélection courante depuis l'état.
+   * Priorise le profil authentifié (token actif), sinon le profil actif du Pi,
+   * sinon le premier profil qui requiert un PIN, sinon le premier profil tout court.
+   */
+  private syncProfilesFromState(state: RemoteState): void {
+    this.availableProfiles = state.profiles || [];
+    if (!this.availableProfiles.length) {
+      this.selectedProfileId = null;
+      return;
+    }
+    if (this.selectedProfileId && this.availableProfiles.some((p) => p.id === this.selectedProfileId)) {
+      return;
+    }
+    const fallback =
+      state.authenticatedProfileId ||
+      state.activeProfileId ||
+      this.availableProfiles.find((p) => p.pinRequired)?.id ||
+      this.availableProfiles[0]?.id ||
+      null;
+    this.selectedProfileId = fallback;
+  }
+
+  public onProfileSelect(profileId: string): void {
+    this.selectedProfileId = profileId;
+    this.pinInput = '';
+    this.pinError = '';
+    this.pinAttemptsRemaining = null;
   }
 
   public onPinDigit(digit: string): void {
@@ -279,14 +362,19 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
   private refreshState(): void {
     if (!this.siteId) return;
 
-    this.remoteService.getState(this.siteId).subscribe({
+    this.remoteService.getState(this.siteId, this.selectedProfileId).subscribe({
       next: (state: RemoteState) => {
         this.isConnected = state.isConnected && state.connectionHealth?.isHealthy;
         this.pendingConfigVersionId = state.pendingConfigVersionId || null;
         this.pendingCommandsCount = state.pendingCommandsCount || 0;
+        this.syncProfilesFromState(state);
 
         if (state.pinRequired && !state.config) {
           this.remoteService.clearToken(this.siteId);
+          if (this.selectedProfileId) {
+            this.remoteService.clearProfileToken(this.siteId, this.selectedProfileId);
+          }
+          this.remoteService.clearCurrentProfileContext(this.siteId);
           this.pinRequired = true;
           return;
         }
@@ -376,7 +464,7 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
     });
   }
 
-  public launchVideo(video: Video): void {
+  public launchVideo(video: RemoteVideoEntry): void {
     this.remoteService.playVideo(this.siteId, { name: video.name, path: video.path, categoryId: video.categoryId }).subscribe({
       next: () => {
         this.config.addToRecentVideos(video);
@@ -400,17 +488,17 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
 
   // ==== HELPERS (delegated to config service) ====
 
-  public getVideoCategoryName(video: Video): string { return this.config.getVideoCategoryName(video); }
+  public getVideoCategoryName(video: RemoteVideoEntry): string { return this.config.getVideoCategoryName(video); }
   public getCategoriesForTimeCategory(tc: TimeCategory): Category[] { return this.config.getCategoriesForTimeCategory(tc); }
   public getVideosCount(cat: Category): number { return this.config.getVideosCount(cat); }
   public getSubCategoriesCount(cat: Category): number { return this.config.getSubCategoriesCount(cat); }
   public getSubCategoriesForDisplay(cat: Category): Category[] { return this.nav.getSubCategoriesForDisplay(cat); }
-  public getCurrentVideos(): Video[] { return this.nav.getCurrentVideos(); }
+  public getCurrentVideos(): RemoteVideoEntry[] { return this.nav.getCurrentVideos(); }
   public getTotalVideosForTimeCategory(tc: TimeCategory): number { return this.config.getTotalVideosForTimeCategory(tc); }
   public getTotalCategoriesForTimeCategory(tc: TimeCategory): number { return this.config.getTotalCategoriesForTimeCategory(tc); }
-  public getAllVideos(): Video[] { return this.config.getAllVideos(); }
+  public getAllVideos(): RemoteVideoEntry[] { return this.config.getAllVideos(); }
   public getTotalVideosCount(): number { return this.config.getTotalVideosCount(); }
-  public getVideoThumbnailUrl(video: Video): string | null { return this.config.getVideoThumbnailUrl(video); }
+  public getVideoThumbnailUrl(video: RemoteVideoEntry): string | null { return this.config.getVideoThumbnailUrl(video); }
   public onThumbnailError(event: Event): void { this.config.onThumbnailError(event); }
 
   public reloadConfiguration(): void {
@@ -418,8 +506,9 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
     this.isReloading = true;
     this.isLoading = true;
 
-    this.remoteService.getState(this.siteId).subscribe({
+    this.remoteService.getState(this.siteId, this.selectedProfileId).subscribe({
       next: (state: RemoteState) => {
+        this.syncProfilesFromState(state);
         this.config.setSecondaryVariantPaths(state.secondaryVariantPaths || []);
         const rawConfig = this.config.buildConfiguration(state.siteName, state.config);
         const enrichedConfig = this.config.enrichVideosWithCategoryId(this.config.markSecondaryVariants(rawConfig));
@@ -467,12 +556,22 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
   public incrementAudience(): void { this.matchInfo.audienceEstimate += 10; }
   public decrementAudience(): void { if (this.matchInfo.audienceEstimate >= 10) this.matchInfo.audienceEstimate -= 10; }
 
+  // ==== ADR-059: state-sync reconciliation ====
+
+  private onStateSync(state: MatchStateSync): void {
+    this.scoreService.syncFromState(state);
+    this.timerService.syncFromState(state);
+    if (state.phase && state.phase !== this.activePhase) {
+      this.activePhase = state.phase as typeof this.activePhase;
+    }
+  }
+
   // ==== SCORE EN LIVE ====
 
-  public incrementHomeScore(): void { this.scoreService.incrementHomeScore(); }
-  public decrementHomeScore(): void { this.scoreService.decrementHomeScore(); }
-  public incrementAwayScore(): void { this.scoreService.incrementAwayScore(); }
-  public decrementAwayScore(): void { this.scoreService.decrementAwayScore(); }
+  public incrementHomeScore(): void { this.scoreService.incrementHomeScore(this.siteId); }
+  public decrementHomeScore(): void { this.scoreService.decrementHomeScore(this.siteId); }
+  public incrementAwayScore(): void { this.scoreService.incrementAwayScore(this.siteId); }
+  public decrementAwayScore(): void { this.scoreService.decrementAwayScore(this.siteId); }
   public updateTeamNamesFromMatch(): void { this.scoreService.updateTeamNamesFromMatch(this.matchInfo.matchName); }
   public broadcastScore(): void { this.scoreService.scoreUpdate$.next(); }
 
@@ -516,6 +615,22 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
 
   public toggleHeaderMenu(): void { this.isHeaderMenuOpen = !this.isHeaderMenuOpen; }
   public closeHeaderMenu(): void { this.isHeaderMenuOpen = false; }
+
+  // ADR-062 famille UX — overlay Préférences (per-device, zéro réseau)
+  public showPreferencesMenu = false;
+  public openPreferences(): void { this.showPreferencesMenu = true; }
+  public closePreferences(): void { this.showPreferencesMenu = false; }
+
+  // ADR-061 — toggle ancienne/nouvelle télécommande (bascule + reload). Masqué si sunset atteint.
+  public get legacyToggleAvailable(): boolean { return this.versionToggle.legacyAvailable; }
+  public get currentRemoteVersion(): 'v1' | 'v2' { return this.versionToggle.currentVersion; }
+  public toggleRemoteVersion(): void {
+    if (!this.siteId) return;
+    this.versionToggle.toggleVersion(this.siteId);
+    const v = this.versionToggle.currentVersion;
+    this.displayToast(v === 'v1' ? 'Ancienne télécommande activée' : 'Nouvelle télécommande activée', 'info');
+    setTimeout(() => window.location.reload(), 600);
+  }
 
   // ==== OPTIONS (delegated) ====
 

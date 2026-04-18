@@ -22,7 +22,8 @@ import { LicenseBlockComponent } from '../license-block/license-block.component'
 import { WaitingScreenComponent } from '../waiting-screen/waiting-screen.component';
 import { WrongPortScreenComponent } from '../wrong-port-screen/wrong-port-screen.component';
 import { ScoreOverlayComponent } from '../score-overlay/score-overlay.component';
-import { Video } from '../../interfaces/video.interface';
+import { HotspotQrComponent } from '../hotspot-qr/hotspot-qr.component';
+import { PiConfigVideoEntry } from '../../interfaces/video.interface';
 import { Configuration } from '../../interfaces/configuration.interface';
 import { Command } from '../../interfaces/command.interface';
 import { Sponsor } from '../../interfaces/sponsor.interface';
@@ -33,7 +34,7 @@ import { environment } from '../../../environments/environment';
   selector: 'app-tv',
   templateUrl: './tv.component.html',
   styleUrl: './tv.component.scss',
-  imports: [CommonModule, LicenseBlockComponent, WaitingScreenComponent, WrongPortScreenComponent, ScoreOverlayComponent],
+  imports: [CommonModule, LicenseBlockComponent, WaitingScreenComponent, WrongPortScreenComponent, ScoreOverlayComponent, HotspotQrComponent],
   encapsulation: ViewEncapsulation.None // Désactiver l'encapsulation pour le double-buffer
 })
 export class TvComponent implements OnInit, OnDestroy {
@@ -70,6 +71,11 @@ export class TvComponent implements OnInit, OnDestroy {
 
   // E-23 US-23.5.3: Wrong HDMI port detected (TV on HDMI-1 instead of HDMI-0)
   public wrongPort = false;
+
+  // ADR-060 Phase 3 couche 2 — QR hotspot pour rejoindre le Pi hors LAN club.
+  // Déclenchable via `?fallback=hotspot` (URL) ou via un futur event
+  // internet-watchdog → local-broadcast (à câbler quand sync-agent expose).
+  public showHotspotQr = false;
 
   // E-23 US-23.3.2: Demotion notification for PC browsers (Pi took over as master)
   public demotionNotice = false;
@@ -147,6 +153,12 @@ export class TvComponent implements OnInit, OnDestroy {
     }
     this.displayType = this.displayIndex === 0 ? 'tv' : this.displayIndex === 1 ? 'secondary' : `display-${this.displayIndex}`;
     console.log(`[TV] Display type: ${this.displayType}, index: ${this.displayIndex}`);
+
+    // ADR-060 Phase 3 couche 2 — activation QR hotspot via query param (?fallback=hotspot)
+    const fallback = this.route.snapshot.queryParamMap.get('fallback');
+    if (fallback === 'hotspot') {
+      this.showHotspotQr = true;
+    }
 
     // S'abonner aux mises à jour du statut de licence
     this.localBroadcastSubscriptions.push(
@@ -590,7 +602,7 @@ export class TvComponent implements OnInit, OnDestroy {
       }
     }
     if (command.type === 'video' && command.data) {
-      const video = command.data as Video;
+      const video = command.data as PiConfigVideoEntry;
       if (this.isDuplicateCommand(`video:${video.path}`)) return;
       this.lastTriggerType = 'manual';
       this.tvSyncService.markActionReceived();
@@ -662,7 +674,7 @@ export class TvComponent implements OnInit, OnDestroy {
     return video;
   }
 
-  private findVideoInConfig(path: string): Video | Sponsor | null {
+  private findVideoInConfig(path: string): PiConfigVideoEntry | Sponsor | null {
     const sponsor = this.configuration.sponsors?.find(s => s.path === path);
     if (sponsor) return sponsor;
 
@@ -673,7 +685,7 @@ export class TvComponent implements OnInit, OnDestroy {
       }
     }
 
-    const searchCategories = (cats: Category[]): Video | null => {
+    const searchCategories = (cats: Category[]): PiConfigVideoEntry | null => {
       for (const cat of cats) {
         const video = cat.videos?.find(v => v.path === path);
         if (video) return video;

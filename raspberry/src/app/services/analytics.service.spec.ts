@@ -4,7 +4,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { AnalyticsService, VideoPlayEvent } from './analytics.service';
 import { HdmiStatusService } from './hdmi-status.service';
 import { RecordingStateService } from './recording-state.service';
-import { Video } from '../interfaces/video.interface';
+import { PiConfigVideoEntry } from '../interfaces/video.interface';
 
 describe('AnalyticsService', () => {
   let service: AnalyticsService;
@@ -47,7 +47,7 @@ describe('AnalyticsService', () => {
     httpMock.match(() => true); // flush pending
   });
 
-  const testVideo: Video = { name: 'test.mp4', type: 'video/mp4', path: '/videos/test.mp4' };
+  const testVideo: PiConfigVideoEntry = { name: 'test.mp4', type: 'video/mp4', path: '/videos/test.mp4' };
 
   it('should be created', () => {
     expect(service).toBeTruthy();
@@ -94,7 +94,7 @@ describe('AnalyticsService', () => {
   });
 
   it('should include video_id and sponsor_id if available', () => {
-    const video: Video = { ...testVideo, video_id: 'vid-123', sponsor_id: 'sp-456' };
+    const video: PiConfigVideoEntry = { ...testVideo, video_id: 'vid-123', sponsor_id: 'sp-456' };
     service.trackVideoStart(video);
     service.trackVideoEnd(true);
 
@@ -143,7 +143,7 @@ describe('AnalyticsService', () => {
   it('should end previous video as incomplete when starting new one', () => {
     service.trackVideoStart(testVideo);
     // Start another without ending
-    const video2: Video = { name: 'other.mp4', type: 'video/mp4', path: '/videos/other.mp4' };
+    const video2: PiConfigVideoEntry = { name: 'other.mp4', type: 'video/mp4', path: '/videos/other.mp4' };
     service.trackVideoStart(video2);
 
     // Premier devrait être dans le buffer comme incomplet
@@ -158,7 +158,7 @@ describe('AnalyticsService', () => {
   // ---------------------------------------------------------------------------
 
   it('should use analytics_category when available', () => {
-    const video: Video = { ...testVideo, analytics_category: 'jingle' };
+    const video: PiConfigVideoEntry = { ...testVideo, analytics_category: 'jingle' };
     service.trackVideoStart(video);
     service.trackVideoEnd(true);
 
@@ -174,7 +174,7 @@ describe('AnalyticsService', () => {
       categoryMappings: { 'cat1': 'sponsor' },
     });
 
-    const video: Video = { ...testVideo, categoryId: 'cat1' };
+    const video: PiConfigVideoEntry = { ...testVideo, categoryId: 'cat1' };
     service.trackVideoStart(video);
     service.trackVideoEnd(true);
 
@@ -182,13 +182,13 @@ describe('AnalyticsService', () => {
   });
 
   it('should detect category by path fallback', () => {
-    const sponsorVideo: Video = { name: 'ad.mp4', type: 'video/mp4', path: '/sponsor/ad.mp4' };
+    const sponsorVideo: PiConfigVideoEntry = { name: 'ad.mp4', type: 'video/mp4', path: '/sponsor/ad.mp4' };
     service.trackVideoStart(sponsorVideo);
     service.trackVideoEnd(true);
     expect(service.getBuffer()[0].category).toBe('sponsor');
 
     // Jingle
-    const jingleVideo: Video = { name: 'goal.mp4', type: 'video/mp4', path: '/jingle/goal.mp4' };
+    const jingleVideo: PiConfigVideoEntry = { name: 'goal.mp4', type: 'video/mp4', path: '/jingle/goal.mp4' };
     service.trackVideoStart(jingleVideo);
     service.trackVideoEnd(true);
     expect(service.getBuffer()[1].category).toBe('jingle');

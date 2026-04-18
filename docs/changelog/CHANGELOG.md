@@ -1,3 +1,103 @@
+# [3.189.0](https://github.com/Tallec7/neopro/compare/v3.188.0...v3.189.0) (2026-04-18)
+
+### Features
+
+- **remote:** ADR-062 wire UX preferences menu + admin features section ([#469](https://github.com/Tallec7/neopro/issues/469)) ([c12162d](https://github.com/Tallec7/neopro/commit/c12162de91c9ad2a6bc4ebd072f59099747d8f32))
+
+# [3.188.0](https://github.com/Tallec7/neopro/compare/v3.187.0...v3.188.0) (2026-04-18)
+
+### Features
+
+- **remote:** ADR-060 couche 2 hotspot Pi + couche 3 PWA + runbook tests T1-T15 ([#467](https://github.com/Tallec7/neopro/issues/467)) ([73f281e](https://github.com/Tallec7/neopro/commit/73f281e3ea68752aab69a0d244ad03469c657146))
+
+# [3.187.0](https://github.com/Tallec7/neopro/compare/v3.186.1...v3.187.0) (2026-04-18)
+
+### Features
+
+- **delivery:** ADR-069 étapes 1-4 — Delivery Strategy pattern ([e6b0020](https://github.com/Tallec7/neopro/commit/e6b00201fb20881c26d71240af2e35197934e6f5))
+
+## [3.186.1](https://github.com/Tallec7/neopro/compare/v3.186.0...v3.186.1) (2026-04-18)
+
+### Bug Fixes
+
+- **remote-auth:** cast $2::varchar in setPin SQL to fix Postgres 42P08 ([389fd6b](https://github.com/Tallec7/neopro/commit/389fd6b2d54298d658de4d5317940c32e42b2972))
+
+# [3.186.0](https://github.com/Tallec7/neopro/compare/v3.185.0...v3.186.0) (2026-04-18)
+
+### Features
+
+- **remote:** ADR-059→062 — refonte complète télécommande cloud (pub/sub + résilience + coexistence + gouvernance) ([882ef66](https://github.com/Tallec7/neopro/commit/882ef66b4dda9c9669d6d3a42c14196a92a2fb9d))
+
+# [3.185.0](https://github.com/Tallec7/neopro/compare/v3.184.0...v3.185.0) (2026-04-18)
+
+### Features
+
+- **saas:** ADR-068 Prometheus supervision + route-order regression guard ([e9d9ccc](https://github.com/Tallec7/neopro/commit/e9d9cccdb1a9af4d2520238072563dff5cd1a701))
+
+# [3.184.0](https://github.com/Tallec7/neopro/compare/v3.183.1...v3.184.0) (2026-04-18)
+
+### Bug Fixes
+
+- **saas:** mount video-stream route before contentRoutes (ADR-068) ([c29dda5](https://github.com/Tallec7/neopro/commit/c29dda5d12e310ae2d6adf9157b54f279d1fca7a))
+
+### Features
+
+- **saas:** ADR-068 signed URL proxy for SaaS video streaming ([34ad725](https://github.com/Tallec7/neopro/commit/34ad725983bf9a1a6b6dcdc3df93e97aab777b4c))
+
+## [3.183.1](https://github.com/Tallec7/neopro/compare/v3.183.0...v3.183.1) (2026-04-18)
+
+### Bug Fixes
+
+- **smoke:** update play() signature lookup after ADR-066 Video→PiConfigVideoEntry rename ([1fe0dd3](https://github.com/Tallec7/neopro/commit/1fe0dd3450b98ac8d2fa43aac732612a86747512))
+
+# [3.183.0](https://github.com/Tallec7/neopro/compare/v3.182.0...v3.183.0) (2026-04-18)
+
+### Features
+
+- **remote-auth:** ADR-058 Phase 2A — migration opportuniste legacy PIN ([5e8fa04](https://github.com/Tallec7/neopro/commit/5e8fa042c9cdd4a1fcbee1713b72c004e61f45f1))
+
+# [3.182.0](https://github.com/Tallec7/neopro/compare/v3.181.0...v3.182.0) (2026-04-18)
+
+### Features
+
+- **remote-auth:** ADR-058 Phase 2C — email alerts sur burst failures PIN ([e7514c8](https://github.com/Tallec7/neopro/commit/e7514c86fbbe044e3b6abc9203cd7cb782b56b89))
+
+# [3.181.0](https://github.com/Tallec7/neopro/compare/v3.180.0...v3.181.0) (2026-04-18)
+
+### Features
+
+- **remote-auth:** ADR-058 Phase 2B — club peut gérer le PIN de son site ([c5d4508](https://github.com/Tallec7/neopro/commit/c5d4508b0c823bc1feeb020da307e2f6ae4bfc05))
+
+# [3.180.0](https://github.com/Tallec7/neopro/compare/v3.179.0...v3.180.0) (2026-04-18)
+
+### Features
+
+- **remote:** ADR-058 Phase 1.1 - Cloud Remote UI + unit tests ([fdb7f46](https://github.com/Tallec7/neopro/commit/fdb7f463e9e1ae6eeb69f2b970d96476ef021e80))
+
+# [3.179.0](https://github.com/Tallec7/neopro/compare/v3.178.8...v3.179.0) (2026-04-18)
+
+### Features
+
+- ADR-058 PIN profil + ADR-063 socket filter + ADR-064 Video types ([#465](https://github.com/Tallec7/neopro/issues/465)) ([bc521ff](https://github.com/Tallec7/neopro/commit/bc521ff99906c2a5ed216b980bcfa95630c83a19))
+
+## [3.178.8](https://github.com/Tallec7/neopro/compare/v3.178.7...v3.178.8) (2026-04-18)
+
+### Bug Fixes
+
+- **dashboard:** filter transient socket 'transport close' warnings (ADR-063) ([#464](https://github.com/Tallec7/neopro/issues/464)) ([c87e76d](https://github.com/Tallec7/neopro/commit/c87e76d504bd55590056f9637665dd9a88a12122))
+
+## [3.178.7](https://github.com/Tallec7/neopro/compare/v3.178.6...v3.178.7) (2026-04-18)
+
+### Bug Fixes
+
+- **saas:** show admin-deployed videos in club SaaS cloud pool ([#463](https://github.com/Tallec7/neopro/issues/463)) ([0fedb84](https://github.com/Tallec7/neopro/commit/0fedb847185a3d5fc3b1124b101dde22ae959458))
+
+## [3.178.6](https://github.com/Tallec7/neopro/compare/v3.178.5...v3.178.6) (2026-04-17)
+
+### Bug Fixes
+
+- **templates:** canvas masking — luminance→alpha conversion + text position fidelity ([fa8635b](https://github.com/Tallec7/neopro/commit/fa8635be96a4e3059878020a2fc4731abbe59bf9))
+
 ## [3.178.5](https://github.com/Tallec7/neopro/compare/v3.178.4...v3.178.5) (2026-04-17)
 
 ### Bug Fixes

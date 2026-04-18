@@ -393,6 +393,8 @@ export const deployProfile = async (req: AuthRequest, res: Response) => {
           await enrichConfigWithAnalyticsMetadata(enrichedConfig);
         } catch { /* non-fatal */ }
 
+        // ADR-058 — propager l'etat PIN profil au Pi pour validation offline.
+        const pin = await configProfileRepository.findPin(p.id).catch(() => null);
         enrichedProfiles.push({
           id: p.id,
           name: p.name,
@@ -401,6 +403,11 @@ export const deployProfile = async (req: AuthRequest, res: Response) => {
           sport: p.sport,
           is_default: p.is_default,
           configuration: enrichedConfig,
+          remote_pin_required: !!pin?.remote_pin_required,
+          remote_pin_hash: pin?.remote_pin_hash ?? null,
+          remote_pin_updated_at: pin?.remote_pin_updated_at
+            ? pin.remote_pin_updated_at.toISOString()
+            : null,
         });
       }
       socketService.sendCommand(siteId, {
@@ -499,6 +506,8 @@ export const syncProfiles = async (req: AuthRequest, res: Response) => {
         });
       }
 
+      // ADR-058 — propager l'etat PIN profil au Pi pour validation offline.
+      const pin = await configProfileRepository.findPin(p.id).catch(() => null);
       syncPayload.push({
         id: p.id,
         name: p.name,
@@ -507,6 +516,11 @@ export const syncProfiles = async (req: AuthRequest, res: Response) => {
         sport: p.sport,
         is_default: p.is_default,
         configuration: enrichedConfig,
+        remote_pin_required: !!pin?.remote_pin_required,
+        remote_pin_hash: pin?.remote_pin_hash ?? null,
+        remote_pin_updated_at: pin?.remote_pin_updated_at
+          ? pin.remote_pin_updated_at.toISOString()
+          : null,
       });
     }
 

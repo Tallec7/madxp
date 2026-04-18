@@ -304,3 +304,9 @@ export {
   type RenderJobPhase,
   type CreateRenderJobInput,
 } from './remotion-render-job.repository';
+export {
+  remoteAuthEventsRepository,
+  type RemoteAuthEvent,
+  type CreateRemoteAuthEventInput,
+  type MigrationStats,
+} from './remote-auth-events.repository';

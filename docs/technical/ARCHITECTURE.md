@@ -102,7 +102,7 @@ En plus de l'architecture Edge (Pi), Neopro propose un mode **100% SaaS** : le c
 - **Deploy pipeline** : `deploy-dashboard` s'exécute en premier (clean-slate Hostinger `/`), puis `deploy-saas` déploie dans `/saas/` — le job CI `deploy-saas` doit déclarer `needs: [deploy-dashboard]` pour éviter que le clean-slate efface le build SaaS
 - **Routage** : le `.htaccess` dashboard exclut `/saas/` (`RewriteRule ^saas(/.*)?$ - [L]`) ; le `.htaccess` SaaS redirige vers `/saas/index.html`
 - **Navigation** : utiliser `routerLink` (pas `href` absolu) dans `raspberry/src/` — le `baseHref` est `/saas/` en mode SaaS vs `/` en mode Pi
-- **Déploiement vidéo SaaS** : les sites SaaS n'ont pas de Pi — `deployment.service.ts` détecte `siteType === 'saas'` et marque le déploiement `completed` immédiatement (pas de `sendOrQueue` qui attendrait un Pi inexistant). Les vidéos sont servies directement via URL FTP, aucun transfert physique nécessaire. Le monitoring `checkStuckDeployments()` exclut les sites SaaS des alertes "Déploiement bloqué" (v3.127.5+)
+- **Déploiement vidéo SaaS** : les sites SaaS n'ont pas de Pi — depuis ADR-069, `deployment.service.ts` délègue à `SaasDirectStrategy` (via `deliveryStrategyRegistry` dans `services/delivery/`) qui marque le déploiement `completed` immédiatement (pas de `sendOrQueue` qui attendrait un Pi inexistant). Les vidéos sont servies directement via URL FTP, aucun transfert physique nécessaire. Le monitoring `checkStuckDeployments()` exclut les sites SaaS des alertes "Déploiement bloqué" (v3.127.5+). Les métriques Prometheus `neopro_deployment_delivery_total{strategy,outcome}` exposent le nombre de livraisons par stratégie et issue (sent/queued/completed/failed).
 - **OTA SaaS** : les sites SaaS sont exclus des déploiements OTA — `update-deployment.service.ts` filtre `site_type != 'saas'` dans `getTargetSites()`, et le dashboard filtre via `deployableSites`
 - **Config save SaaS** : les sites SaaS utilisent `PUT /api/sites/:id/config` pour sauvegarder la configuration directement en DB (`local_config_mirror` + `config_history`). Le endpoint refuse les sites Pi (`site_type !== 'saas'` → 400). Pour les profils SaaS, `updateProfileConfiguration()` sauvegarde en DB et `syncProfiles()` est skippé (pas de Pi). Le bouton affiche "Enregistrer" au lieu de "Déployer", la modal diff masque le sélecteur merge/replace, et les messages de succès disent "enregistrée" au lieu de "déployée".
 - **JSON editor** : le config-editor offre un toggle JSON/Formulaire qui affiche la configuration complète en JSON brut, avec formatage et copie. Les modifications JSON sont appliquées via `Object.assign()` au config object.
@@ -440,18 +440,53 @@ Health Matrix (healthy/warning/critical per pair)
 
 ### 3. Remote control
 
+#### Remote local (Pi LAN)
+
 ```
-Remote UI (mobile)
-         │
+Remote UI (mobile, /remote)
+         │ Socket.IO localhost:3000
          ▼
-Local Server (Socket.IO :3000)
-         │
+Local Server (socket/handlers.js)
+         │ state mutation
          ▼
-TV Frontend (player commands)
-         │
+state.service.js  ←──── source de vérité match (ADR-059)
+         │ state-broadcaster.broadcast()
          ▼
-Native HTML5 <video> (double-buffer A/B)
+TV Frontend (score overlay, timer, phase)
 ```
+
+#### Remote cloud (ADR-059 — Pi autoritaire)
+
+```
+Dashboard Cloud Remote
+         │ HTTP POST /api/remote/:siteId/command  (commande granulaire)
+         ▼
+Central Server (remote.controller.ts)
+         │ Socket.IO room → command/increment_home | command/set_phase | ...
+         ▼
+Sync Agent (agent.js — relay DOWN)
+         │ relayToLocalServer()
+         ▼
+Pi Local Server (handlers.js — applique mutation)
+         │ state-broadcaster.broadcast() → state-sync
+         ▼
+Sync Agent (agent.js — relay UP)
+         │ socket.emit('state-sync', data)
+         ▼
+Central Server (socket.service.ts — relay vers room)
+         │ io.to(siteId).emit('state-sync', ...)
+         ▼
+Dashboard Cloud Remote (cloud-remote.component.ts)
+         │ scoreService.syncFromState() + timerService.syncFromState()
+         ▼
+UI réconciliée (optimistic → autoritaire)
+```
+
+**Commandes granulaires** : `command/increment_home`, `command/decrement_home`, `command/increment_away`, `command/decrement_away`, `command/set_phase`, `command/timer_start`, `command/timer_pause`, `command/timer_reset`, `command/score_reset`.
+
+**Résilience** (ADR-060) : si cloud KO → probe `neopro.local` (LAN auto) → sinon offline queue localStorage. Drain automatique à la reconnexion.
+
+**Coexistence** (ADR-061) : toggle `v1`/`v2` per-siteId localStorage, sunset automatique `2026-11-01`. Métriques `neopro_remote_client_version_total` pour pilotage adoption.
 
 ### 4. Multi-config profiles
 

@@ -120,6 +120,8 @@ Le smoke test #30 vérifie automatiquement cette complétude.
 - Envoyer `deploy_video` via `sendCommand` sans inclure `checksum` dans le payload (le sync-agent Pi EXIGE le checksum pour l'intégrité)
 - Démarrer le `startRenderWorker()` sans appeler `failStaleRunningJobs(10)` au boot (un job `running` claimed par un process mort reste bloqué ad vitam — le user ne peut jamais retry — ADR-054 smoke test enforced)
 - Importer `@remotion/renderer` depuis `remotion-templates.controller.ts` (le renderer vit UNIQUEMENT dans `remotion-render-worker.service.ts` — le controller doit rester HTTP-only et retourner 202 en enqueue — sans cette séparation on retombe dans les 502 Railway timeout ADR-054)
+- Réintroduire le pattern `if (target.siteType === 'saas') ... continue` dans `deployment.service.ts` (ADR-069 a supprimé cette branche ; la sélection Pi vs SaaS passe par `deliveryStrategyRegistry.resolve(site)` qui choisit `SaasDirectStrategy` ou `PiSocketStrategy`. Le smoke test `noLegacySaasShortCircuit` bloque toute réintroduction)
+- Ajouter un nouveau canal de livraison (Chromecast, Android TV, ...) en modifiant `deployment.service.ts` (ADR-069 : créer `central-server/src/services/delivery/{name}.strategy.ts` implémentant `DeliveryStrategy`, puis l'ajouter à `DEFAULT_STRATEGIES` dans `strategy-registry.ts`. Le service principal ne doit JAMAIS savoir qu'un nouveau canal existe)
 
 ## ⛔ Anti-Patterns Socket.IO (NE JAMAIS FAIRE)
 

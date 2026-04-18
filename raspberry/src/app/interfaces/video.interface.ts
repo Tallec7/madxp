@@ -1,4 +1,18 @@
-export interface Video {
+/**
+ * PiConfigVideoEntry — entrée vidéo dans le fichier `configuration.json` local du Pi.
+ *
+ * ADR-066 : renommé depuis `Video` pour éviter la collision sémantique avec
+ * le `Video` canonique du dashboard (`central-dashboard/src/app/core/models/video.model.ts`)
+ * et le `Video` du backend (`central-server/src/types/index.ts`) qui représentent
+ * tous deux la row DB `videos`.
+ *
+ * Cette interface modélise un concept différent : une entrée locale Pi avec un
+ * chemin filesystem (`path`), enrichie dynamiquement au runtime avec des IDs
+ * cloud (`video_id`, `sponsor_id`, `categoryId`) pour le tracking analytics.
+ *
+ * Ne PAS fusionner avec le `Video` canonique — ce sont deux contrats distincts.
+ */
+export interface PiConfigVideoEntry {
     id?: string;
     name: string;
     type: string;

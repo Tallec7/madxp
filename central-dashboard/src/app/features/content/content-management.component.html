@@ -36,22 +36,13 @@
     </div>
 
     <div class="videos-grid" *ngIf="videos.length > 0; else noVideos">
-      <div class="video-card card" *ngFor="let video of videos">
-        <div class="video-thumbnail">
-          <span class="video-icon">🎬</span>
-        </div>
-        <div class="video-info">
-          <h3>{{ video.title }}</h3>
-          <div class="video-meta">
-            <span>{{ formatFileSize(video.file_size) }}</span>
-            <span class="separator">•</span>
-            <span *ngIf="video.duration">{{ formatDuration(video.duration) }}</span>
-            <span class="separator" *ngIf="video.duration">•</span>
-            <span>{{ formatDate(video.created_at) }}</span>
-          </div>
-          <div class="video-filename">{{ video.filename }}</div>
-        </div>
-        <div class="video-actions">
+      <app-video-card
+        *ngFor="let video of videos"
+        [title]="video.title"
+        [subtitle]="video.filename"
+        [metaParts]="getVideoMetaParts(video)"
+      >
+        <ng-container card-actions>
           <button
             class="btn btn-sm btn-secondary"
             (click)="previewVideo(video)"
@@ -71,9 +62,9 @@
           <button class="btn-icon btn-danger" (click)="deleteVideo(video)" title="Supprimer">
             🗑️
           </button>
-        </div>
-        <app-video-variant-panel [videoId]="video.id"></app-video-variant-panel>
-      </div>
+        </ng-container>
+        <app-video-variant-panel card-extras [videoId]="video.id"></app-video-variant-panel>
+      </app-video-card>
     </div>
 
     <!-- Pagination -->

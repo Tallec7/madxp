@@ -149,12 +149,16 @@ afterAll((done) => {
 describe('club portal SaaS actions placement guard', () => {
   const repoRoot = path.resolve(__dirname, '..', '..', '..', '..');
   const dashPath = path.join(repoRoot, 'central-dashboard/src/app/features/club-portal/club-dashboard.component.ts');
+  const dashHtmlPath = path.join(repoRoot, 'central-dashboard/src/app/features/club-portal/club-dashboard.component.html');
   const loopPath = path.join(repoRoot, 'central-dashboard/src/app/features/club-portal/club-loop.component.ts');
 
   let dash: string;
   let loop: string;
   beforeAll(() => {
-    dash = fs.readFileSync(dashPath, 'utf8');
+    // Template was extracted to .html — concat so guards work against templateUrl refactor
+    const dashTs = fs.readFileSync(dashPath, 'utf8');
+    const dashHtml = fs.existsSync(dashHtmlPath) ? fs.readFileSync(dashHtmlPath, 'utf8') : '';
+    dash = dashTs + '\n' + dashHtml;
     loop = fs.readFileSync(loopPath, 'utf8');
   });
 
@@ -289,6 +293,85 @@ describe('Club Portal video ownership guards', () => {
       repoHasMethod: true,
       controllerCallsMethod: true,
       filterIncludesDeployedIds: true,
+    });
+  });
+
+  // --- ADR-069: SaasDirectStrategy must short-circuit SaaS sites with outcome='completed' ---
+  // Replaces the legacy `target.siteType === 'saas' ... continue` pattern (removed in step 7).
+  it('SaasDirectStrategy must canHandle saas + return outcome="completed"', () => {
+    const strategyPath = path.join(
+      repoRoot,
+      'central-server/src/services/delivery/saas-direct.strategy.ts'
+    );
+    const source = fs.readFileSync(strategyPath, 'utf8');
+
+    expect({
+      canHandleSaas: /canHandle[\s\S]*?siteType\s*===\s*['"]saas['"]/.test(source),
+      returnsCompleted: /outcome:\s*['"]completed['"]/.test(source),
+      returnsSuccess: /success:\s*true/.test(source),
+    }).toEqual({
+      canHandleSaas: true,
+      returnsCompleted: true,
+      returnsSuccess: true,
+    });
+  });
+
+  // --- ADR-069: PiSocketStrategy must handle non-saas + use sendOrQueue ---
+  it('PiSocketStrategy must canHandle non-saas + delegate to commandQueue.sendOrQueue', () => {
+    const strategyPath = path.join(
+      repoRoot,
+      'central-server/src/services/delivery/pi-socket.strategy.ts'
+    );
+    const source = fs.readFileSync(strategyPath, 'utf8');
+
+    expect({
+      canHandleNonSaas: /canHandle[\s\S]*?siteType\s*!==\s*['"]saas['"]/.test(source),
+      usesSendOrQueue: /commandQueueService\.sendOrQueue/.test(source),
+      emitsDeployVideo: /'deploy_video'/.test(source),
+      requiresChecksum: /Cannot deploy video without checksum/.test(source),
+    }).toEqual({
+      canHandleNonSaas: true,
+      usesSendOrQueue: true,
+      emitsDeployVideo: true,
+      requiresChecksum: true,
+    });
+  });
+
+  // --- ADR-069: registry must expose resolve() + register both default strategies ---
+  it('strategy-registry must resolve by canHandle and register Saas + Pi strategies', () => {
+    const registryPath = path.join(
+      repoRoot,
+      'central-server/src/services/delivery/strategy-registry.ts'
+    );
+    const source = fs.readFileSync(registryPath, 'utf8');
+
+    expect({
+      hasResolveMethod: /resolve\s*\(\s*site/.test(source),
+      registersSaasStrategy: /saasDirectStrategy/.test(source),
+      registersPiStrategy: /piSocketStrategy/.test(source),
+    }).toEqual({
+      hasResolveMethod: true,
+      registersSaasStrategy: true,
+      registersPiStrategy: true,
+    });
+  });
+
+  // --- ADR-069: startDeployment must delegate to the registry (no legacy branching) ---
+  it('deployment.service.ts must call dispatchViaRegistry and never check siteType for short-circuit', () => {
+    const servicePath = path.join(
+      repoRoot,
+      'central-server/src/services/deployment.service.ts'
+    );
+    const source = fs.readFileSync(servicePath, 'utf8');
+
+    expect({
+      importsRegistry: /deliveryStrategyRegistry/.test(source),
+      dispatchesViaRegistry: /dispatchViaRegistry\s*\(/.test(source),
+      noLegacySaasShortCircuit: !/target\.siteType\s*===\s*['"]saas['"][\s\S]{0,200}?continue\s*;/.test(source),
+    }).toEqual({
+      importsRegistry: true,
+      dispatchesViaRegistry: true,
+      noLegacySaasShortCircuit: true,
     });
   });
 });
@@ -965,8 +1048,11 @@ describe('SaaS site-detail dashboard guards', () => {
 
   // --- club-dashboard.component.ts must render OTA badge and active alerts ---
   it('club-dashboard must render OTA badge and active alerts card', () => {
-    const filePath = path.join(repoRoot, 'central-dashboard', 'src', 'app', 'features', 'club-portal', 'club-dashboard.component.ts');
-    const content = fs.readFileSync(filePath, 'utf8');
+    const tsPath = path.join(repoRoot, 'central-dashboard', 'src', 'app', 'features', 'club-portal', 'club-dashboard.component.ts');
+    const htmlPath = path.join(repoRoot, 'central-dashboard', 'src', 'app', 'features', 'club-portal', 'club-dashboard.component.html');
+    const tsContent = fs.readFileSync(tsPath, 'utf8');
+    const htmlContent = fs.existsSync(htmlPath) ? fs.readFileSync(htmlPath, 'utf8') : '';
+    const content = tsContent + '\n' + htmlContent;
     expect({
       hasOtaBadge: content.includes('ota-badge'),
       hasLastOtaDeployment: content.includes('lastOtaDeployment'),
@@ -2151,6 +2237,113 @@ describe('SaaS config save flow', () => {
     }).toEqual({
       hasDiagnosticLink: true,
       hasDiagnosticLabel: true,
+    });
+  });
+});
+
+describe('ADR-068 — signed URL video stream proxy', () => {
+  const repoRoot = path.resolve(__dirname, '../../../..');
+
+  it('video-token.service exposes sign + verify with type namespacing', () => {
+    const filePath = path.join(repoRoot, 'central-server', 'src', 'services', 'video-token.service.ts');
+    const content = fs.readFileSync(filePath, 'utf8');
+    expect({
+      hasSign: /export const signVideoStreamToken/.test(content),
+      hasVerify: /export const verifyVideoStreamToken/.test(content),
+      hasTypeNamespace: /TOKEN_TYPE\s*=\s*'video-stream'/.test(content),
+      checksType: /decoded\.type\s*!==\s*TOKEN_TYPE/.test(content),
+    }).toEqual({
+      hasSign: true,
+      hasVerify: true,
+      hasTypeNamespace: true,
+      checksType: true,
+    });
+  });
+
+  it('video-stream.controller enforces token + forwards Range + pipes upstream body', () => {
+    const filePath = path.join(repoRoot, 'central-server', 'src', 'controllers', 'video-stream.controller.ts');
+    const content = fs.readFileSync(filePath, 'utf8');
+    expect({
+      rejects400OnMissing: /res\.status\(400\)[\s\S]*?Missing token/.test(content),
+      rejects401OnInvalid: /res\.status\(401\)/.test(content),
+      forwardsRange: /upstreamHeaders\[['"]Range['"]\]\s*=/.test(content),
+      pipesUpstream: /Readable\.fromWeb\(/.test(content) && /\.pipe\(res\)/.test(content),
+    }).toEqual({
+      rejects400OnMissing: true,
+      rejects401OnInvalid: true,
+      forwardsRange: true,
+      pipesUpstream: true,
+    });
+  });
+
+  it('video-stream routes mount on /api/videos with remoteRateLimit', () => {
+    const routesPath = path.join(repoRoot, 'central-server', 'src', 'routes', 'video-stream.routes.ts');
+    const routes = fs.readFileSync(routesPath, 'utf8');
+    const serverPath = path.join(repoRoot, 'central-server', 'src', 'server.ts');
+    const server = fs.readFileSync(serverPath, 'utf8');
+    expect({
+      hasRateLimit: /remoteRateLimit/.test(routes),
+      hasStreamRoute: /router\.get\(['"]\/stream['"]/.test(routes),
+      mountedOnServer: /app\.use\(['"]\/api\/videos['"]\s*,\s*videoStreamRoutes\)/.test(server),
+    }).toEqual({
+      hasRateLimit: true,
+      hasStreamRoute: true,
+      mountedOnServer: true,
+    });
+  });
+
+  // ADR-068 regression guard — the /api/videos mount MUST precede the /api (contentRoutes) mount,
+  // otherwise contentRoutes.get('/videos/:id', authenticate) captures `/videos/stream` as id=stream
+  // and enforces auth on a public-token route. Incident fixed by commit c29dda5d.
+  it('video-stream mount is declared BEFORE contentRoutes /api mount (route-order regression)', () => {
+    const serverPath = path.join(repoRoot, 'central-server', 'src', 'server.ts');
+    const server = fs.readFileSync(serverPath, 'utf8');
+    const videoStreamIdx = server.indexOf("app.use('/api/videos', videoStreamRoutes");
+    const contentRoutesIdx = server.search(/app\.use\(['"]\/api['"]\s*,\s*contentRoutes\)/);
+    expect({
+      videoStreamFound: videoStreamIdx > -1,
+      contentRoutesFound: contentRoutesIdx > -1,
+      videoStreamBeforeContentRoutes: videoStreamIdx > -1 && contentRoutesIdx > -1 && videoStreamIdx < contentRoutesIdx,
+    }).toEqual({
+      videoStreamFound: true,
+      contentRoutesFound: true,
+      videoStreamBeforeContentRoutes: true,
+    });
+  });
+
+  it('video-stream.controller instruments Prometheus counter neopro_video_stream_requests_total', () => {
+    const controllerPath = path.join(repoRoot, 'central-server', 'src', 'controllers', 'video-stream.controller.ts');
+    const controller = fs.readFileSync(controllerPath, 'utf8');
+    const metricsPath = path.join(repoRoot, 'central-server', 'src', 'services', 'metrics.service.ts');
+    const metrics = fs.readFileSync(metricsPath, 'utf8');
+    expect({
+      counterRegistered: /neopro_video_stream_requests_total/.test(metrics),
+      recorderExposed: /recordVideoStreamRequest/.test(metrics),
+      recordsSuccess: /recordVideoStreamRequest\(['"]success['"]\)/.test(controller),
+      recordsMissingToken: /recordVideoStreamRequest\(['"]missing_token['"]\)/.test(controller),
+      recordsUpstreamError: /recordVideoStreamRequest\(['"]upstream_error['"]\)/.test(controller),
+    }).toEqual({
+      counterRegistered: true,
+      recorderExposed: true,
+      recordsSuccess: true,
+      recordsMissingToken: true,
+      recordsUpstreamError: true,
+    });
+  });
+
+  it('saas.controller buildPublicVideoUrl is feature-flag gated (default OFF = direct FTP)', () => {
+    const filePath = path.join(repoRoot, 'central-server', 'src', 'controllers', 'saas.controller.ts');
+    const content = fs.readFileSync(filePath, 'utf8');
+    expect({
+      hasHelper: /function buildPublicVideoUrl/.test(content),
+      isGated: /VIDEO_STREAM_PROXY_ENABLED\s*!==\s*'true'/.test(content),
+      fallbacksToGetVideoUrl: /return getVideoUrl\(storagePath\)/.test(content),
+      signsWithSiteId: /signVideoStreamToken\(storagePath,\s*siteId\)/.test(content),
+    }).toEqual({
+      hasHelper: true,
+      isGated: true,
+      fallbacksToGetVideoUrl: true,
+      signsWithSiteId: true,
     });
   });
 });

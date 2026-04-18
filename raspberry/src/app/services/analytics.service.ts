@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Video } from '../interfaces/video.interface';
+import { PiConfigVideoEntry } from '../interfaces/video.interface';
 import { Configuration } from '../interfaces/configuration.interface';
 import { environment } from '../../environments/environment';
 import { HdmiStatusService } from './hdmi-status.service';
@@ -71,7 +71,7 @@ export class AnalyticsService {
   private buffer: VideoPlayEvent[] = [];
   private currentSession: string | null = null;
   private currentVideoStart: Date | null = null;
-  private currentVideo: Video | null = null;
+  private currentVideo: PiConfigVideoEntry | null = null;
   private currentTriggerType: 'auto' | 'manual' = 'auto';
   private currentTvStatus: 'on' | 'standby' | 'disconnected' | 'unknown' = 'unknown';
   private currentVideoDuration: number | null = null;
@@ -237,7 +237,7 @@ export class AnalyticsService {
    * Tracker le début d'une lecture vidéo
    * Capture également l'état de la TV via HDMI-CEC
    */
-  public trackVideoStart(video: Video, triggerType: 'auto' | 'manual' = 'auto'): void {
+  public trackVideoStart(video: PiConfigVideoEntry, triggerType: 'auto' | 'manual' = 'auto'): void {
     // Ne pas tracker si l'enregistrement est désactivé
     if (!this.recordingState.isRecording) {
       return;
@@ -255,7 +255,7 @@ export class AnalyticsService {
     // Capturer l'état de la TV au moment du démarrage
     this.currentTvStatus = this.hdmiStatus.getTvStatusForAnalytics();
 
-    console.log('[Analytics] Video started:', {
+    console.log('[Analytics] PiConfigVideoEntry started:', {
       filename: this.getFilename(video.path),
       triggerType,
       tvStatus: this.currentTvStatus,
@@ -333,7 +333,7 @@ export class AnalyticsService {
     // Envoi immédiat au serveur local (persiste sur disque dans analytics_buffer.json)
     this.sendSingleEvent(event);
 
-    console.log('[Analytics] Video ended:', {
+    console.log('[Analytics] PiConfigVideoEntry ended:', {
       filename: event.video_filename,
       category: event.category,
       video_id: event.video_id,
@@ -359,8 +359,8 @@ export class AnalyticsService {
   /**
    * Tracker une erreur de lecture
    */
-  public trackVideoError(video: Video, error: unknown): void {
-    console.error('[Analytics] Video error:', {
+  public trackVideoError(video: PiConfigVideoEntry, error: unknown): void {
+    console.error('[Analytics] PiConfigVideoEntry error:', {
       filename: this.getFilename(video.path),
       error,
     });
@@ -374,7 +374,7 @@ export class AnalyticsService {
   /**
    * Tracker un déclenchement manuel depuis la télécommande
    */
-  public trackManualTrigger(video: Video): void {
+  public trackManualTrigger(video: PiConfigVideoEntry): void {
     // Le tracking réel se fait via trackVideoStart avec triggerType='manual'
     // Cette méthode est appelée depuis la télécommande pour marquer le type
     console.log('[Analytics] Manual trigger:', this.getFilename(video.path));
@@ -431,7 +431,7 @@ export class AnalyticsService {
     return parts[parts.length - 1];
   }
 
-  private detectCategory(video: Video): string {
+  private detectCategory(video: PiConfigVideoEntry): string {
     // 1. Priorité : analytics_category définie lors du déploiement
     if (video.analytics_category) {
       console.log('[Analytics] Using deployed analytics_category:', video.analytics_category);

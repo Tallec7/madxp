@@ -7,6 +7,7 @@ const {
   SITE_ID,
   IS_CLOUD_ENV,
   CONFIG_PATH,
+  PROFILES_DIR,
   LICENSE_CACHE_PATH,
   ANALYTICS_FILE_PATH,
   PORT,
@@ -20,6 +21,8 @@ const LicenseService = require('./services/license.service');
 const BufferService = require('./services/buffer.service');
 const HdmiService = require('./services/hdmi.service');
 const AuthService = require('./services/auth.service');
+const ProfilePinService = require('./services/profile-pin.service');
+const HotspotService = require('./services/hotspot.service');
 
 const stateService = new StateService();
 const licenseService = new LicenseService({ licenseCachePath: LICENSE_CACHE_PATH });
@@ -35,6 +38,8 @@ const analyticsBuffer = new BufferService({
 });
 
 const hdmiService = new HdmiService();
+const profilePinService = new ProfilePinService({ profilesDir: PROFILES_DIR });
+const hotspotService = new HotspotService({ configPath: CONFIG_PATH });
 
 // ---------------------------------------------------------------------------
 // Express + HTTP + Socket.IO
@@ -83,12 +88,16 @@ const createLicenseRouter = require('./routes/license');
 const createAnalyticsRouter = require('./routes/analytics');
 const createHdmiRouter = require('./routes/hdmi');
 const createAuthRouter = require('./routes/auth');
+const createProfilePinRouter = require('./routes/profile-pin');
+const createHotspotRouter = require('./routes/hotspot');
 
 app.use(createHealthRouter({ io }));
 app.use(createLicenseRouter({ licenseService }));
 app.use(createAnalyticsRouter({ analyticsBuffer }));
 app.use(createHdmiRouter({ hdmiService }));
 app.use(createAuthRouter({ authService }));
+app.use(createProfilePinRouter({ profilePinService }));
+app.use(createHotspotRouter({ hotspotService }));
 
 // ---------------------------------------------------------------------------
 // Socket.IO handlers

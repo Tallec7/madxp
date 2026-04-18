@@ -13,6 +13,9 @@
 <!-- E-23 US-23.5.3: Wrong HDMI port detected — help screen with countdown (z-index 50) -->
 <app-wrong-port-screen *ngIf="wrongPort && !isLicenseBlocked"></app-wrong-port-screen>
 
+<!-- ADR-060 Phase 3 couche 2 — QR hotspot WiFi de secours (z-index 9999) -->
+<app-hotspot-qr [visible]="showHotspotQr" *ngIf="!isLicenseBlocked"></app-hotspot-qr>
+
 <!-- E-23 US-23.2.1: Splash screen quand aucun écran connecté (z-index 50) -->
 <app-waiting-screen
   *ngIf="!hdmiConnected && !wrongPort && !isLicenseBlocked"

@@ -1578,3 +1578,848 @@ describe('PROP-002 Phase 5: N-display model guards', () => {
     });
   });
 });
+
+describe('ADR-058 Phase 1: Pi offline PIN validation wiring', () => {
+  const fs = require('fs');
+  const path = require('path');
+  const repoRoot = path.resolve(__dirname, '../../../..');
+
+  it('sync-agent writes profiles/{id}.pin.json with chmod 600 and cleans stale entries', () => {
+    const content = fs.readFileSync(
+      path.resolve(repoRoot, 'raspberry/sync-agent/src/commands/sync-profiles.js'),
+      'utf8'
+    );
+    expect({
+      writesPinMeta: /\.pin\.json/.test(content),
+      chmod600: /mode:\s*0o600/.test(content),
+      cleansStale: /pin\\?\.\)\?json/.test(content),
+    }).toEqual({ writesPinMeta: true, chmod600: true, cleansStale: true });
+  });
+
+  it('Pi server exposes ProfilePinService + profile-pin route', () => {
+    const svc = path.resolve(repoRoot, 'raspberry/server/services/profile-pin.service.js');
+    const route = path.resolve(repoRoot, 'raspberry/server/routes/profile-pin.js');
+    expect(fs.existsSync(svc)).toBe(true);
+    expect(fs.existsSync(route)).toBe(true);
+    const serverJs = fs.readFileSync(
+      path.resolve(repoRoot, 'raspberry/server/server.js'),
+      'utf8'
+    );
+    expect(/createProfilePinRouter/.test(serverJs)).toBe(true);
+    expect(/ProfilePinService/.test(serverJs)).toBe(true);
+  });
+
+  it('Pi env-config exports PROFILES_DIR', () => {
+    const content = fs.readFileSync(
+      path.resolve(repoRoot, 'raspberry/server/env-config.js'),
+      'utf8'
+    );
+    expect(/PROFILES_DIR/.test(content)).toBe(true);
+  });
+
+  it('Pi profile-pin service uses bcrypt.compare and in-memory lockout', () => {
+    const content = fs.readFileSync(
+      path.resolve(repoRoot, 'raspberry/server/services/profile-pin.service.js'),
+      'utf8'
+    );
+    expect({
+      usesBcrypt: /bcrypt\.compare\(/.test(content),
+      hasLockout: /MAX_ATTEMPTS/.test(content) && /LOCKOUT_MS/.test(content),
+    }).toEqual({ usesBcrypt: true, hasLockout: true });
+  });
+
+  it('Pi server depends on bcryptjs', () => {
+    const pkg = JSON.parse(
+      fs.readFileSync(path.resolve(repoRoot, 'raspberry/server/package.json'), 'utf8')
+    );
+    expect(pkg.dependencies?.bcryptjs).toBeDefined();
+  });
+
+  it('migration SQL adds PIN columns + profile_device_tokens table', () => {
+    const content = fs.readFileSync(
+      path.resolve(repoRoot, 'central-server/src/scripts/add-profile-remote-auth.sql'),
+      'utf8'
+    );
+    expect({
+      pinColumns: /remote_pin_required/.test(content) && /remote_pin_hash/.test(content),
+      deviceTokens: /CREATE TABLE IF NOT EXISTS profile_device_tokens/.test(content),
+      cascadeOnProfile: /REFERENCES config_profiles\(id\) ON DELETE CASCADE/.test(content),
+    }).toEqual({ pinColumns: true, deviceTokens: true, cascadeOnProfile: true });
+  });
+
+  it('config-profile repository exposes findPin, setPin, and profileDeviceTokenRepository', () => {
+    const content = fs.readFileSync(
+      path.resolve(repoRoot, 'central-server/src/repositories/config-profile.repository.ts'),
+      'utf8'
+    );
+    expect({
+      findPin: /async findPin\(/.test(content),
+      setPin: /async setPin\(/.test(content),
+      deviceRepo: /export const profileDeviceTokenRepository/.test(content),
+      revoke: /async revoke\(/.test(content),
+      findByHash: /async findByHash\(/.test(content),
+    }).toEqual({ findPin: true, setPin: true, deviceRepo: true, revoke: true, findByHash: true });
+  });
+
+  it('profile-sync.service propagates PIN metadata in sync_profiles payload', () => {
+    const content = fs.readFileSync(
+      path.resolve(repoRoot, 'central-server/src/services/profile-sync.service.ts'),
+      'utf8'
+    );
+    expect({
+      fetchesPin: /configProfileRepository\.findPin\(/.test(content),
+      emitsPinRequired: /remote_pin_required/.test(content),
+      emitsPinHash: /remote_pin_hash/.test(content),
+    }).toEqual({ fetchesPin: true, emitsPinRequired: true, emitsPinHash: true });
+  });
+
+  it('config-profiles.controller includes PIN metadata at both emitter sites', () => {
+    const content = fs.readFileSync(
+      path.resolve(repoRoot, 'central-server/src/controllers/config-profiles.controller.ts'),
+      'utf8'
+    );
+    const matches = content.match(/remote_pin_required/g) || [];
+    // deploy + sync emitters = at least 2 occurrences
+    expect(matches.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('remote-auth.controller exposes super_admin PIN management endpoints', () => {
+    const content = fs.readFileSync(
+      path.resolve(repoRoot, 'central-server/src/controllers/remote-auth.controller.ts'),
+      'utf8'
+    );
+    expect({
+      setProfilePin: /export async function setProfilePin/.test(content),
+      listDevices: /export async function listProfileDevices/.test(content),
+      revokeDevice: /export async function revokeProfileDevice/.test(content),
+      revokeAll: /export async function revokeAllProfileDevices/.test(content),
+      verifyPin: /export async function verifyProfilePin/.test(content),
+      usesBcrypt: /bcrypt\.(hash|compare)/.test(content),
+      hasLockout: /MAX_PIN_ATTEMPTS/.test(content),
+      requireAuthz: /requireSuperAdminOrOwnClub/.test(content),
+    }).toEqual({
+      setProfilePin: true,
+      listDevices: true,
+      revokeDevice: true,
+      revokeAll: true,
+      verifyPin: true,
+      usesBcrypt: true,
+      hasLockout: true,
+      requireAuthz: true,
+    });
+  });
+
+  it('remote-pin middleware supports profile-scoped + legacy site tokens', () => {
+    const content = fs.readFileSync(
+      path.resolve(repoRoot, 'central-server/src/middleware/remote-pin.middleware.ts'),
+      'utf8'
+    );
+    expect({
+      profileToken: /remote-profile-pin/.test(content),
+      legacyCompat: /remote-pin/.test(content),
+      checksRevocation: /profileDeviceTokenRepository/.test(content),
+      generatesProfileToken: /generateRemoteProfilePinToken/.test(content),
+    }).toEqual({
+      profileToken: true,
+      legacyCompat: true,
+      checksRevocation: true,
+      generatesProfileToken: true,
+    });
+  });
+
+  it('config-profiles routes wire remote-auth endpoints (super_admin + club in Phase 2B)', () => {
+    const content = fs.readFileSync(
+      path.resolve(repoRoot, 'central-server/src/routes/config-profiles.routes.ts'),
+      'utf8'
+    );
+    expect({
+      setPin: /\/remote-pin/.test(content) && /setProfilePin/.test(content),
+      listDevices: /\/remote-devices/.test(content) && /listProfileDevices/.test(content),
+      revokeOne: /\/remote-devices\/:tokenId\/revoke/.test(content),
+      revokeAll: /\/remote-devices\/revoke-all/.test(content),
+      roleGuard: /requireRole\('super_admin',\s*'club'\)/.test(content),
+    }).toEqual({
+      setPin: true,
+      listDevices: true,
+      revokeOne: true,
+      revokeAll: true,
+      roleGuard: true,
+    });
+  });
+
+  it('remote routes wire profile-scoped verify-pin', () => {
+    const content = fs.readFileSync(
+      path.resolve(repoRoot, 'central-server/src/routes/remote.routes.ts'),
+      'utf8'
+    );
+    expect({
+      profileVerifyPin: /\/:siteId\/profiles\/:profileId\/verify-pin/.test(content),
+      controller: /verifyProfilePin/.test(content),
+      validation: /schemas\.verifyProfilePin/.test(content),
+    }).toEqual({ profileVerifyPin: true, controller: true, validation: true });
+  });
+
+  it('dashboard exposes RemoteAuthService with setPin / listDevices / revoke endpoints', () => {
+    const content = fs.readFileSync(
+      path.resolve(repoRoot, 'central-dashboard/src/app/core/services/remote-auth.service.ts'),
+      'utf8'
+    );
+    expect({
+      setPin: /setPin\(/.test(content),
+      listDevices: /listDevices\(/.test(content),
+      revokeDevice: /revokeDevice\(/.test(content),
+      revokeAllDevices: /revokeAllDevices\(/.test(content),
+      hitsCorrectRoute: /\/remote-pin/.test(content) && /\/remote-devices/.test(content),
+    }).toEqual({
+      setPin: true,
+      listDevices: true,
+      revokeDevice: true,
+      revokeAllDevices: true,
+      hitsCorrectRoute: true,
+    });
+  });
+
+  it('dashboard RemoteService supports profile-scoped verifyProfilePin and deviceId persistence', () => {
+    const content = fs.readFileSync(
+      path.resolve(repoRoot, 'central-dashboard/src/app/core/services/remote.service.ts'),
+      'utf8'
+    );
+    expect({
+      verifyProfilePin: /verifyProfilePin\(/.test(content),
+      deviceId: /getOrCreateDeviceId\(/.test(content),
+      profileTokenStorage: /PROFILE_TOKEN_STORAGE_PREFIX/.test(content),
+      commandAcceptsProfileId: /sendCommand\([\s\S]{0,200}profileId/.test(content),
+    }).toEqual({
+      verifyProfilePin: true,
+      deviceId: true,
+      profileTokenStorage: true,
+      commandAcceptsProfileId: true,
+    });
+  });
+
+  it('dashboard RemoteAuthSectionComponent exists and is wired into site-settings-tab (super_admin gated)', () => {
+    const comp = path.resolve(
+      repoRoot,
+      'central-dashboard/src/app/features/sites/components/site-settings-tab/remote-auth-section/remote-auth-section.component.ts'
+    );
+    const html = path.resolve(
+      repoRoot,
+      'central-dashboard/src/app/features/sites/components/site-settings-tab/site-settings-tab.component.html'
+    );
+    const ts = path.resolve(
+      repoRoot,
+      'central-dashboard/src/app/features/sites/components/site-settings-tab/site-settings-tab.component.ts'
+    );
+    expect(fs.existsSync(comp)).toBe(true);
+    const htmlContent = fs.readFileSync(html, 'utf8');
+    const tsContent = fs.readFileSync(ts, 'utf8');
+    expect(/<app-remote-auth-section[^>]*\*ngIf="isSuperAdmin"/.test(htmlContent)).toBe(true);
+    expect(/RemoteAuthSectionComponent/.test(tsContent)).toBe(true);
+  });
+
+  it('metrics.service exposes profile PIN + device tokens metrics (supervision)', () => {
+    const content = fs.readFileSync(
+      path.resolve(repoRoot, 'central-server/src/services/metrics.service.ts'),
+      'utf8'
+    );
+    expect({
+      pinCounter: /neopro_profile_pin_verifications_total/.test(content),
+      tokensGauge: /neopro_profile_device_tokens_active/.test(content),
+      recordPinMethod: /recordProfilePinVerification\(/.test(content),
+      recordTokensMethod: /recordProfileDeviceTokensActive\(/.test(content),
+    }).toEqual({
+      pinCounter: true,
+      tokensGauge: true,
+      recordPinMethod: true,
+      recordTokensMethod: true,
+    });
+  });
+
+  it('remote-auth controller records all PIN verification outcomes to metrics', () => {
+    const content = fs.readFileSync(
+      path.resolve(repoRoot, 'central-server/src/controllers/remote-auth.controller.ts'),
+      'utf8'
+    );
+    expect({
+      success: /recordProfilePinVerification\('success'\)/.test(content),
+      failure: /recordProfilePinVerification\('failure'\)/.test(content),
+      lockout: /recordProfilePinVerification\('lockout'\)/.test(content),
+      misconfigured: /recordProfilePinVerification\('misconfigured'\)/.test(content),
+    }).toEqual({ success: true, failure: true, lockout: true, misconfigured: true });
+  });
+
+  it('profile device token repository exposes cleanupExpired + countActive for daily purge', () => {
+    const content = fs.readFileSync(
+      path.resolve(repoRoot, 'central-server/src/repositories/config-profile.repository.ts'),
+      'utf8'
+    );
+    expect({
+      cleanupExpired: /async cleanupExpired\(days: number\)/.test(content),
+      countActive: /async countActive\(\)/.test(content),
+      deleteClause: /DELETE FROM profile_device_tokens/.test(content),
+    }).toEqual({ cleanupExpired: true, countActive: true, deleteClause: true });
+  });
+
+  it('server.ts wires daily cleanup + gauge refresh for profile_device_tokens', () => {
+    const content = fs.readFileSync(
+      path.resolve(repoRoot, 'central-server/src/server.ts'),
+      'utf8'
+    );
+    expect({
+      importsRepo: /profileDeviceTokenRepository/.test(content),
+      callsCleanup: /cleanupExpired\(30\)/.test(content),
+      refreshesGauge: /recordProfileDeviceTokensActive\(/.test(content),
+      unrefInterval: /profileTokensInterval\.unref\(\)/.test(content),
+    }).toEqual({
+      importsRepo: true,
+      callsCleanup: true,
+      refreshesGauge: true,
+      unrefInterval: true,
+    });
+  });
+
+  // --- Phase 1.1 : Cloud Remote UI — profile selector + getRemoteState exposure ---
+
+  it('getRemoteState exposes profiles[] + activeProfileId + authenticatedProfileId (ADR-058 Phase 1.1)', () => {
+    const content = fs.readFileSync(
+      path.resolve(repoRoot, 'central-server/src/controllers/remote.controller.ts'),
+      'utf8'
+    );
+    expect({
+      exposesProfiles: /profiles:\s*profilesMeta/.test(content),
+      exposesActiveProfileId: /activeProfileId/.test(content),
+      exposesAuthenticatedProfileId: /authenticatedProfileId/.test(content),
+      decodesProfileToken: /remote-profile-pin/.test(content),
+      pinRequiredAggregate: /anyProfilePinRequired|p\.pinRequired/.test(content),
+    }).toEqual({
+      exposesProfiles: true,
+      exposesActiveProfileId: true,
+      exposesAuthenticatedProfileId: true,
+      decodesProfileToken: true,
+      pinRequiredAggregate: true,
+    });
+  });
+
+  it('findProfilesMetadata includes remote_pin_required flag for remote UI', () => {
+    const content = fs.readFileSync(
+      path.resolve(repoRoot, 'central-server/src/repositories/config-profile.repository.ts'),
+      'utf8'
+    );
+    expect(/remote_pin_required/.test(content)).toBe(true);
+    expect(/COALESCE\(remote_pin_required,\s*false\)/.test(content)).toBe(true);
+  });
+
+  it('cloud-remote.component dispatches to verifyProfilePin when profile.pinRequired', () => {
+    const ts = fs.readFileSync(
+      path.resolve(
+        repoRoot,
+        'central-dashboard/src/app/features/remote/cloud-remote.component.ts'
+      ),
+      'utf8'
+    );
+    expect({
+      declaresAvailableProfiles: /availableProfiles/.test(ts),
+      declaresSelectedProfileId: /selectedProfileId/.test(ts),
+      syncsFromState: /syncProfilesFromState\(/.test(ts),
+      dispatchesToProfileVerify: /verifyProfilePin\(/.test(ts),
+      setsCurrentProfileContext: /setCurrentProfileContext\(/.test(ts),
+    }).toEqual({
+      declaresAvailableProfiles: true,
+      declaresSelectedProfileId: true,
+      syncsFromState: true,
+      dispatchesToProfileVerify: true,
+      setsCurrentProfileContext: true,
+    });
+  });
+
+  it('cloud-remote.component.html renders profile selector when >1 profile available', () => {
+    const html = fs.readFileSync(
+      path.resolve(
+        repoRoot,
+        'central-dashboard/src/app/features/remote/cloud-remote.component.html'
+      ),
+      'utf8'
+    );
+    expect({
+      selectorPresent: /pin-profile-selector/.test(html),
+      guardedByLength: /availableProfiles\.length\s*>\s*1/.test(html),
+      callsOnProfileSelect: /onProfileSelect\(/.test(html),
+    }).toEqual({
+      selectorPresent: true,
+      guardedByLength: true,
+      callsOnProfileSelect: true,
+    });
+  });
+
+  it('RemoteService exposes currentProfileBySite fallback so commands carry profile token', () => {
+    const content = fs.readFileSync(
+      path.resolve(repoRoot, 'central-dashboard/src/app/core/services/remote.service.ts'),
+      'utf8'
+    );
+    expect({
+      contextMap: /currentProfileBySite/.test(content),
+      setContext: /setCurrentProfileContext\(/.test(content),
+      clearContext: /clearCurrentProfileContext\(/.test(content),
+      getContext: /getCurrentProfileContext\(/.test(content),
+      stateExtended: /authenticatedProfileId/.test(content),
+    }).toEqual({
+      contextMap: true,
+      setContext: true,
+      clearContext: true,
+      getContext: true,
+      stateExtended: true,
+    });
+  });
+
+  // --- Phase 2B : Club user can manage PIN on its own site ---
+
+  it('remote-auth.controller uses requireSuperAdminOrOwnClub (ADR-058 Phase 2B)', () => {
+    const content = fs.readFileSync(
+      path.resolve(repoRoot, 'central-server/src/controllers/remote-auth.controller.ts'),
+      'utf8'
+    );
+    expect({
+      helperDefined: /function requireSuperAdminOrOwnClub\(/.test(content),
+      checksClubRole: /req\.user\?\.role === 'club'/.test(content),
+      checksOwnSite: /req\.params\.siteId === req\.user\.site_id/.test(content),
+      usedInSetPin: /setProfilePin[\s\S]{0,400}requireSuperAdminOrOwnClub/.test(content),
+      usedInListDevices: /listProfileDevices[\s\S]{0,400}requireSuperAdminOrOwnClub/.test(content),
+      usedInRevoke: /revokeProfileDevice[\s\S]{0,400}requireSuperAdminOrOwnClub/.test(content),
+      usedInRevokeAll: /revokeAllProfileDevices[\s\S]{0,400}requireSuperAdminOrOwnClub/.test(content),
+      noStaleSuperAdminGate: !/function requireSuperAdmin\(/.test(content),
+    }).toEqual({
+      helperDefined: true,
+      checksClubRole: true,
+      checksOwnSite: true,
+      usedInSetPin: true,
+      usedInListDevices: true,
+      usedInRevoke: true,
+      usedInRevokeAll: true,
+      noStaleSuperAdminGate: true,
+    });
+  });
+
+  it('config-profiles routes accept role club on remote-pin/remote-devices (ADR-058 Phase 2B)', () => {
+    const content = fs.readFileSync(
+      path.resolve(repoRoot, 'central-server/src/routes/config-profiles.routes.ts'),
+      'utf8'
+    );
+    const routeMatches = content.match(/remote-(pin|devices)[\s\S]*?requireRole\([^)]+\)/g) || [];
+    expect(routeMatches.length).toBeGreaterThanOrEqual(4);
+    for (const block of routeMatches) {
+      expect(block).toMatch(/'super_admin'\s*,\s*'club'/);
+    }
+  });
+
+  // --- Phase 2A : Opportunistic legacy → default profile PIN migration ---
+
+  it('pin-migration.service migrates legacy site PIN to default profile (ADR-058 Phase 2A)', () => {
+    const content = fs.readFileSync(
+      path.resolve(repoRoot, 'central-server/src/services/pin-migration.service.ts'),
+      'utf8'
+    );
+    expect({
+      exportsMigrator: /export async function migrateLegacyPinToDefaultProfile/.test(content),
+      usesBcrypt: /bcrypt\.hash\(plainPin,\s*BCRYPT_ROUNDS\)/.test(content),
+      setsProfilePin: /configProfileRepository\.setPin\(/.test(content),
+      clearsLegacySiteHash: /siteRepository\.clearRemotePin\(/.test(content),
+      recordsMetric: /recordLegacyPinMigration\(/.test(content),
+      nonFatal: /catch \(err\)/.test(content),
+    }).toEqual({
+      exportsMigrator: true,
+      usesBcrypt: true,
+      setsProfilePin: true,
+      clearsLegacySiteHash: true,
+      recordsMetric: true,
+      nonFatal: true,
+    });
+  });
+
+  it('remote.controller.verifyPin fire-and-forgets migration after legacy success (ADR-058 Phase 2A)', () => {
+    const content = fs.readFileSync(
+      path.resolve(repoRoot, 'central-server/src/controllers/remote.controller.ts'),
+      'utf8'
+    );
+    expect({
+      imports: /migrateLegacyPinToDefaultProfile/.test(content),
+      fireAndForget: /void\s+migrateLegacyPinToDefaultProfile\(siteId,\s*pin\)/.test(content),
+    }).toEqual({
+      imports: true,
+      fireAndForget: true,
+    });
+  });
+
+  it('metrics.service exposes neopro_legacy_pin_migrations_total counter (ADR-058 Phase 2A)', () => {
+    const content = fs.readFileSync(
+      path.resolve(repoRoot, 'central-server/src/services/metrics.service.ts'),
+      'utf8'
+    );
+    expect({
+      counter: /neopro_legacy_pin_migrations_total/.test(content),
+      recordMethod: /recordLegacyPinMigration\(/.test(content),
+      allStatuses: /success[\s\S]{0,120}skipped_no_default[\s\S]{0,120}skipped_already_set[\s\S]{0,120}failed/.test(content),
+    }).toEqual({
+      counter: true,
+      recordMethod: true,
+      allStatuses: true,
+    });
+  });
+
+  // --- Phase 2C : Email alerts on PIN burst failures ---
+
+  it('prometheus rules.yml declares PIN brute-force alerts (ADR-058 Phase 2C)', () => {
+    const content = fs.readFileSync(
+      path.resolve(repoRoot, 'docker/prometheus/rules.yml'),
+      'utf8'
+    );
+    expect({
+      group: /name:\s*remote_auth_security/.test(content),
+      burstAlert: /alert:\s*ProfilePinBurstFailures/.test(content),
+      bruteForceAlert: /alert:\s*ProfilePinBruteForce/.test(content),
+      lockoutAlert: /alert:\s*ProfilePinHighLockoutRate/.test(content),
+      usesMetric: /neopro_profile_pin_verifications_total/.test(content),
+      taggedSecurity: /category:\s*security/.test(content),
+    }).toEqual({
+      group: true,
+      burstAlert: true,
+      bruteForceAlert: true,
+      lockoutAlert: true,
+      usesMetric: true,
+      taggedSecurity: true,
+    });
+  });
+
+  it('alertmanager.yml routes category=security to email + slack (ADR-058 Phase 2C)', () => {
+    const content = fs.readFileSync(
+      path.resolve(repoRoot, 'docker/alertmanager/alertmanager.yml'),
+      'utf8'
+    );
+    expect({
+      smtpConfigured: /smtp_smarthost:/.test(content),
+      securityRoute: /category:\s*security/.test(content),
+      securityReceiver: /name:\s*security-email-slack/.test(content),
+      emailConfig: /email_configs:/.test(content),
+      envEmailTo: /ALERT_EMAIL_TO/.test(content),
+    }).toEqual({
+      smtpConfigured: true,
+      securityRoute: true,
+      securityReceiver: true,
+      emailConfig: true,
+      envEmailTo: true,
+    });
+  });
+
+  it('club-dashboard renders <app-remote-auth-section> for its own site (ADR-058 Phase 2B)', () => {
+    const tsPath = path.resolve(repoRoot, 'central-dashboard/src/app/features/club-portal/club-dashboard.component.ts');
+    const htmlPath = path.resolve(repoRoot, 'central-dashboard/src/app/features/club-portal/club-dashboard.component.html');
+    const tsContent = fs.readFileSync(tsPath, 'utf8');
+    const htmlContent = fs.existsSync(htmlPath) ? fs.readFileSync(htmlPath, 'utf8') : '';
+    const content = tsContent + '\n' + htmlContent;
+    expect({
+      imports: /RemoteAuthSectionComponent/.test(content),
+      usedInTemplate: /<app-remote-auth-section/.test(content),
+      boundToSiteId: /\[siteId\]="siteDashboard!?\.?\??\.site\.id"/.test(content),
+    }).toEqual({
+      imports: true,
+      usedInTemplate: true,
+      boundToSiteId: true,
+    });
+  });
+
+  // =========================================================================
+  // ADR-059 — Pub/sub état match, Pi autoritaire
+  // =========================================================================
+
+  describe('ADR-059 — Pi autoritaire state-sync', () => {
+    it('state-broadcaster.js exists and emits state-sync', () => {
+      const content = fs.readFileSync(
+        path.resolve(repoRoot, 'raspberry/server/socket/state-broadcaster.js'),
+        'utf8'
+      );
+      expect({
+        exports: /module\.exports\s*=\s*function createStateBroadcaster/.test(content),
+        emitsStateSync: /io\.emit\(['"]state-sync['"]/.test(content),
+        hasSeq: /seq/.test(content),
+        hasServerTs: /serverTs/.test(content),
+      }).toEqual({ exports: true, emitsStateSync: true, hasSeq: true, hasServerTs: true });
+    });
+
+    it('handlers.js registers command/* handlers and calls broadcaster.broadcast()', () => {
+      const content = fs.readFileSync(
+        path.resolve(repoRoot, 'raspberry/server/socket/handlers.js'),
+        'utf8'
+      );
+      expect({
+        requiresBroadcaster: /require.*state-broadcaster/.test(content),
+        incrementHome: /command\/increment_home/.test(content),
+        decrementAway: /command\/decrement_away/.test(content),
+        setPhase: /command\/set_phase/.test(content),
+        timerStart: /command\/timer_start/.test(content),
+        scoreReset: /command\/score_reset/.test(content),
+        callsBroadcast: /broadcaster\.broadcast\(\)/.test(content),
+      }).toEqual({
+        requiresBroadcaster: true,
+        incrementHome: true,
+        decrementAway: true,
+        setPhase: true,
+        timerStart: true,
+        scoreReset: true,
+        callsBroadcast: true,
+      });
+    });
+
+    it('state.service.js exposes incrementScore and decrementScore', () => {
+      const content = fs.readFileSync(
+        path.resolve(repoRoot, 'raspberry/server/services/state.service.js'),
+        'utf8'
+      );
+      expect({
+        increment: /incrementScore\s*\(side\)/.test(content),
+        decrement: /decrementScore\s*\(side\)/.test(content),
+      }).toEqual({ increment: true, decrement: true });
+    });
+
+    it('sync-agent relays command/* DOWN and state-sync UP', () => {
+      const content = fs.readFileSync(
+        path.resolve(repoRoot, 'raspberry/sync-agent/src/agent.js'),
+        'utf8'
+      );
+      expect({
+        relaysIncrementHome: /command\/increment_home/.test(content),
+        relaysSetPhase: /command\/set_phase/.test(content),
+        relaysStateSyncUp: /this\.socket\.emit\(['"]state-sync['"]/.test(content),
+      }).toEqual({ relaysIncrementHome: true, relaysSetPhase: true, relaysStateSyncUp: true });
+    });
+
+    it('remote.controller.ts accepts command/* types', () => {
+      const content = fs.readFileSync(
+        path.resolve(repoRoot, 'central-server/src/controllers/remote.controller.ts'),
+        'utf8'
+      );
+      expect({
+        incrementHome: /command\/increment_home/.test(content),
+        setPhase: /command\/set_phase/.test(content),
+        timerReset: /command\/timer_reset/.test(content),
+      }).toEqual({ incrementHome: true, setPhase: true, timerReset: true });
+    });
+
+    it('central socket.service.ts relays state-sync from Pi to room', () => {
+      const content = fs.readFileSync(
+        path.resolve(repoRoot, 'central-server/src/services/socket.service.ts'),
+        'utf8'
+      );
+      expect({
+        listensPiStateSync: /socket\.on\(['"]state-sync['"]/.test(content),
+        relaysToRoom: /this\.io\.to\(siteId\)\.emit\(['"]state-sync['"]/.test(content),
+      }).toEqual({ listensPiStateSync: true, relaysToRoom: true });
+    });
+
+    it('dashboard remote.service.ts exposes MatchCommandType + MatchStateSync + sendMatchCommand', () => {
+      const content = fs.readFileSync(
+        path.resolve(repoRoot, 'central-dashboard/src/app/core/services/remote.service.ts'),
+        'utf8'
+      );
+      expect({
+        matchCommandType: /MatchCommandType/.test(content),
+        matchStateSync: /MatchStateSync/.test(content),
+        sendMatchCommand: /sendMatchCommand/.test(content),
+      }).toEqual({ matchCommandType: true, matchStateSync: true, sendMatchCommand: true });
+    });
+
+    it('dashboard socket.service.ts listens for state-sync', () => {
+      const content = fs.readFileSync(
+        path.resolve(repoRoot, 'central-dashboard/src/app/core/services/socket.service.ts'),
+        'utf8'
+      );
+      expect(/state-sync/.test(content)).toBe(true);
+    });
+
+    it('remote-score.service.ts uses sendMatchCommand + syncFromState + optimistic rollback', () => {
+      const content = fs.readFileSync(
+        path.resolve(repoRoot, 'central-dashboard/src/app/features/remote/services/remote-score.service.ts'),
+        'utf8'
+      );
+      expect({
+        sendMatchCommand: /sendMatchCommand/.test(content),
+        syncFromState: /syncFromState\s*\(state/.test(content),
+        optimisticRollback: /homeScore--/.test(content),
+      }).toEqual({ sendMatchCommand: true, syncFromState: true, optimisticRollback: true });
+    });
+
+    it('remote-timer.service.ts uses sendMatchCommand + syncFromState', () => {
+      const content = fs.readFileSync(
+        path.resolve(repoRoot, 'central-dashboard/src/app/features/remote/services/remote-timer.service.ts'),
+        'utf8'
+      );
+      expect({
+        sendMatchCommand: /sendMatchCommand/.test(content),
+        syncFromState: /syncFromState\s*\(state/.test(content),
+      }).toEqual({ sendMatchCommand: true, syncFromState: true });
+    });
+  });
+
+  // =========================================================================
+  // ADR-060 — Fallback 3 couches (cloud → LAN → offline)
+  // =========================================================================
+
+  describe('ADR-060 — Transport resilience + offline queue', () => {
+    it('transport-resilience.service.ts exists with TransportMode + probeLan + getApiBaseUrl', () => {
+      const content = fs.readFileSync(
+        path.resolve(repoRoot, 'central-dashboard/src/app/features/remote/services/transport-resilience.service.ts'),
+        'utf8'
+      );
+      expect({
+        transportMode: /TransportMode/.test(content),
+        probeLan: /probeLan\(\)/.test(content),
+        getApiBaseUrl: /getApiBaseUrl\(\)/.test(content),
+        lanBaseUrl: /neopro\.local/.test(content),
+        modeSubject: /BehaviorSubject/.test(content),
+      }).toEqual({ transportMode: true, probeLan: true, getApiBaseUrl: true, lanBaseUrl: true, modeSubject: true });
+    });
+
+    it('offline-queue.service.ts exists with enqueue + drain + getPendingCount', () => {
+      const content = fs.readFileSync(
+        path.resolve(repoRoot, 'central-dashboard/src/app/features/remote/services/offline-queue.service.ts'),
+        'utf8'
+      );
+      expect({
+        enqueue: /enqueue\(/.test(content),
+        drain: /drain\(/.test(content),
+        getPendingCount: /getPendingCount\(/.test(content),
+        localStorage: /localStorage/.test(content),
+        drained$: /drained\$/.test(content),
+      }).toEqual({ enqueue: true, drain: true, getPendingCount: true, localStorage: true, drained$: true });
+    });
+
+    it('cloud-remote.component.ts wires TransportResilienceService + OfflineQueueService', () => {
+      const content = fs.readFileSync(
+        path.resolve(repoRoot, 'central-dashboard/src/app/features/remote/cloud-remote.component.ts'),
+        'utf8'
+      );
+      expect({
+        importTransport: /TransportResilienceService/.test(content),
+        importOffline: /OfflineQueueService/.test(content),
+        modeSubscription: /transport\.mode\$/.test(content),
+        drainOnRestore: /offlineQueue\.drain/.test(content),
+      }).toEqual({ importTransport: true, importOffline: true, modeSubscription: true, drainOnRestore: true });
+    });
+  });
+
+  // =========================================================================
+  // ADR-061 — Coexistence legacy/new + sunset 6 mois
+  // =========================================================================
+
+  describe('ADR-061 — Version toggle + remote auth events', () => {
+    it('remote-version-toggle.service.ts exists with toggle + sunset date + v1/v2 persistence', () => {
+      const content = fs.readFileSync(
+        path.resolve(repoRoot, 'central-dashboard/src/app/features/remote/services/remote-version-toggle.service.ts'),
+        'utf8'
+      );
+      expect({
+        sunsetDate: /LEGACY_SUNSET_DATE/.test(content),
+        toggleVersion: /toggleVersion\(/.test(content),
+        loadForSite: /loadForSite\(/.test(content),
+        localStorage: /localStorage/.test(content),
+        version$: /version\$/.test(content),
+        legacyAvailable: /legacyAvailable/.test(content),
+      }).toEqual({ sunsetDate: true, toggleVersion: true, loadForSite: true, localStorage: true, version$: true, legacyAvailable: true });
+    });
+
+    it('remote-auth-events.repository.ts exists with record + getMigrationStats + client_version', () => {
+      const content = fs.readFileSync(
+        path.resolve(repoRoot, 'central-server/src/repositories/remote-auth-events.repository.ts'),
+        'utf8'
+      );
+      expect({
+        record: /async record\(/.test(content),
+        migrationStats: /getMigrationStats/.test(content),
+        clientVersion: /client_version/.test(content),
+        purgeOld: /purgeOld/.test(content),
+        v2Ratio: /v2Ratio/.test(content),
+      }).toEqual({ record: true, migrationStats: true, clientVersion: true, purgeOld: true, v2Ratio: true });
+    });
+
+    it('remote-auth-events migration SQL exists with correct schema', () => {
+      const content = fs.readFileSync(
+        path.resolve(repoRoot, 'central-server/src/scripts/migrations/add-remote-auth-events.sql'),
+        'utf8'
+      );
+      expect({
+        tableCreate: /CREATE TABLE IF NOT EXISTS remote_auth_events/.test(content),
+        clientVersionCol: /client_version/.test(content),
+        eventTypeCheck: /pin_verify.*token_use.*state_load/.test(content),
+        indexSiteId: /idx_remote_auth_events_site_id/.test(content),
+      }).toEqual({ tableCreate: true, clientVersionCol: true, eventTypeCheck: true, indexSiteId: true });
+    });
+
+    it('repositories/index.ts exports remoteAuthEventsRepository', () => {
+      const content = fs.readFileSync(
+        path.resolve(repoRoot, 'central-server/src/repositories/index.ts'),
+        'utf8'
+      );
+      expect(/remoteAuthEventsRepository/.test(content)).toBe(true);
+    });
+  });
+
+  // =========================================================================
+  // ADR-062 — Gouvernance options remote — 3 familles distinctes
+  // =========================================================================
+
+  describe('ADR-062 — Options governance (Security / Features / UX)', () => {
+    it('remote-preferences.service.ts exists — UX family, localStorage only, no server calls', () => {
+      const content = fs.readFileSync(
+        path.resolve(repoRoot, 'central-dashboard/src/app/features/remote/services/remote-preferences.service.ts'),
+        'utf8'
+      );
+      expect({
+        haptics: /haptics/.test(content),
+        highContrast: /highContrast/.test(content),
+        localStorage: /localStorage/.test(content),
+        noHttpClient: !/HttpClient/.test(content),
+        prefs$: /prefs\$/.test(content),
+        update: /update[\s<(]/.test(content),
+      }).toEqual({ haptics: true, highContrast: true, localStorage: true, noHttpClient: true, prefs$: true, update: true });
+    });
+
+    it('preferences-menu.component.ts exists — UX prefs panel, no security options', () => {
+      const content = fs.readFileSync(
+        path.resolve(repoRoot, 'central-dashboard/src/app/features/remote/preferences-menu.component.ts'),
+        'utf8'
+      );
+      expect({
+        selector: /app-preferences-menu/.test(content),
+        usesPrefsService: /RemotePreferencesService/.test(content),
+        noPin: !/pin/i.test(content),
+        noToken: !/token/i.test(content),
+        dismissedOutput: /dismissed\s*=\s*new EventEmitter/.test(content),
+      }).toEqual({ selector: true, usesPrefsService: true, noPin: true, noToken: true, dismissedOutput: true });
+    });
+
+    it('remote-features-section component exists — Features family, gated admin, no security', () => {
+      const content = fs.readFileSync(
+        path.resolve(repoRoot, 'central-dashboard/src/app/features/sites/components/site-settings-tab/remote-features-section/remote-features-section.component.ts'),
+        'utf8'
+      );
+      expect({
+        selector: /app-remote-features-section/.test(content),
+        featureFlags: /RemoteFeatureFlags/.test(content),
+        profilesEnabled: /profilesEnabled/.test(content),
+        matchMode: /matchModeEnabled/.test(content),
+        noLocalStorage: !/localStorage/.test(content),
+      }).toEqual({ selector: true, featureFlags: true, profilesEnabled: true, matchMode: true, noLocalStorage: true });
+    });
+
+    it('remote-auth-section exists — Security family, super_admin gated (ADR-058)', () => {
+      const exists = fs.existsSync(
+        path.resolve(repoRoot, 'central-dashboard/src/app/features/sites/components/site-settings-tab/remote-auth-section/remote-auth-section.component.ts')
+      );
+      expect(exists).toBe(true);
+
+      const template = fs.readFileSync(
+        path.resolve(repoRoot, 'central-dashboard/src/app/features/sites/components/site-settings-tab/site-settings-tab.component.html'),
+        'utf8'
+      );
+      expect(/app-remote-auth-section.*isSuperAdmin|isSuperAdmin.*app-remote-auth-section/s.test(template)).toBe(true);
+    });
+  });
+});

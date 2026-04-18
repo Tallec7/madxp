@@ -3,12 +3,12 @@
  * Extracted from CloudRemoteComponent (ADR-043).
  */
 import { Injectable } from '@angular/core';
-import { Category, Video, TimeCategory } from './cloud-remote-navigation.service';
+import { Category, RemoteVideoEntry, TimeCategory } from './cloud-remote-navigation.service';
 
 export interface Configuration {
   remote?: { title?: string };
   categories: Category[];
-  sponsors: Video[];
+  sponsors: RemoteVideoEntry[];
   timeCategories?: TimeCategory[];
   liveScoreEnabled?: boolean;
 }
@@ -24,11 +24,11 @@ export class CloudRemoteConfigService {
   // Search
   public searchQuery = '';
   public readonly searchPlaceholder = 'Rechercher une vid\u00e9o...';
-  public searchResults: Video[] = [];
+  public searchResults: RemoteVideoEntry[] = [];
   public isSearching = false;
 
   // Recent videos
-  public recentVideos: Video[] = [];
+  public recentVideos: RemoteVideoEntry[] = [];
   private readonly MAX_RECENT_VIDEOS = 5;
 
   private readonly defaultTimeCategories: TimeCategory[] = [
@@ -70,7 +70,7 @@ export class CloudRemoteConfigService {
     this.liveScoreEnabled = config.liveScoreEnabled ?? false;
   }
 
-  public buildConfiguration(siteName: string, stateConfig: { categories?: Category[]; sponsors?: Video[]; timeCategories?: TimeCategory[]; liveScoreEnabled?: boolean } | undefined): Configuration {
+  public buildConfiguration(siteName: string, stateConfig: { categories?: Category[]; sponsors?: RemoteVideoEntry[]; timeCategories?: TimeCategory[]; liveScoreEnabled?: boolean } | undefined): Configuration {
     return {
       remote: { title: siteName },
       categories: stateConfig?.categories || [],
@@ -86,7 +86,7 @@ export class CloudRemoteConfigService {
   public markSecondaryVariants(config: Configuration): Configuration {
     if (this.secondaryVariantPaths.size === 0) return config;
 
-    const markVideo = (video: Video): Video =>
+    const markVideo = (video: RemoteVideoEntry): RemoteVideoEntry =>
       this.secondaryVariantPaths.has(video.path)
         ? { ...video, hasSecondaryVariant: true }
         : video;
@@ -124,9 +124,9 @@ export class CloudRemoteConfigService {
     };
   }
 
-  // Video helpers
+  // RemoteVideoEntry helpers
 
-  public getVideoCategoryName(video: Video): string {
+  public getVideoCategoryName(video: RemoteVideoEntry): string {
     if (!video.categoryId) return '';
 
     const findCategory = (categories: Category[]): string => {
@@ -173,8 +173,8 @@ export class CloudRemoteConfigService {
     return this.getCategoriesForTimeCategory(timeCategory).length;
   }
 
-  public getAllVideos(): Video[] {
-    const videos: Video[] = [];
+  public getAllVideos(): RemoteVideoEntry[] {
+    const videos: RemoteVideoEntry[] = [];
 
     const extractVideos = (category: Category) => {
       if (category.videos) {
@@ -228,7 +228,7 @@ export class CloudRemoteConfigService {
     }
   }
 
-  public addToRecentVideos(video: Video): void {
+  public addToRecentVideos(video: RemoteVideoEntry): void {
     this.recentVideos = this.recentVideos.filter(v => v.path !== video.path);
     this.recentVideos.unshift(video);
     this.recentVideos = this.recentVideos.slice(0, this.MAX_RECENT_VIDEOS);
@@ -278,7 +278,7 @@ export class CloudRemoteConfigService {
 
   // Thumbnails (not available in cloud — fallback)
 
-  public getVideoThumbnailUrl(_video: Video): string | null {
+  public getVideoThumbnailUrl(_video: RemoteVideoEntry): string | null {
     return null;
   }
 

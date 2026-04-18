@@ -7,9 +7,10 @@ import { ConfirmDialogService } from '../../core/services/confirm-dialog.service
 import { Site, Group } from '../../core/models';
 import { Subscription } from 'rxjs';
 import { VideoVariantPanelComponent } from './video-variant-panel.component';
+import { VideoCardComponent } from '../../shared/components/video-card/video-card.component';
 import {
   ContentManagementDataService,
-  Video,
+  ContentVideoRow,
   PaginationInfo,
   Deployment,
   VideoDeploymentHistory,
@@ -21,14 +22,14 @@ import { ContentDeploymentService } from './content-deployment.service';
 @Component({
   selector: 'app-content-management',
   standalone: true,
-  imports: [CommonModule, FormsModule, TranslateModule, VideoVariantPanelComponent],
+  imports: [CommonModule, FormsModule, TranslateModule, VideoVariantPanelComponent, VideoCardComponent],
   templateUrl: './content-management.component.html',
   styleUrls: ['./content-management.component.scss']
 })
 export class ContentManagementComponent implements OnInit, OnDestroy {
   activeTab: 'videos' | 'deploy' | 'history' = 'videos';
 
-  videos: Video[] = [];
+  videos: ContentVideoRow[] = [];
   allVideos: VideoName[] = [];
   deployments: Deployment[] = [];
   sites: Site[] = [];
@@ -42,9 +43,9 @@ export class ContentManagementComponent implements OnInit, OnDestroy {
   isLoadingHistory = false;
   isDragOver = false;
   isImageDragOver = false;
-  selectedVideoForHistory: Video | null = null;
+  selectedVideoForHistory: ContentVideoRow | null = null;
   videoHistory: VideoDeploymentHistory | null = null;
-  previewingVideo: Video | null = null;
+  previewingVideo: ContentVideoRow | null = null;
 
   private readonly dataService = inject(ContentManagementDataService);
   private readonly notificationService = inject(NotificationService);
@@ -106,6 +107,13 @@ export class ContentManagementComponent implements OnInit, OnDestroy {
 
   getDeploymentStatusLabel(status: string): string {
     return this.dataService.getDeploymentStatusLabel(status);
+  }
+
+  getVideoMetaParts(video: ContentVideoRow): string[] {
+    const parts = [this.formatFileSize(video.file_size)];
+    if (video.duration) parts.push(this.formatDuration(video.duration));
+    parts.push(this.formatDate(video.created_at));
+    return parts;
   }
 
   // ── Data loading ──
@@ -212,7 +220,7 @@ export class ContentManagementComponent implements OnInit, OnDestroy {
 
   // ── Video CRUD actions ──
 
-  async deleteVideo(video: Video): Promise<void> {
+  async deleteVideo(video: ContentVideoRow): Promise<void> {
     const ok = await this.confirmDialog.confirm(
       `Supprimer la vidéo "${video.title}" ?`,
       { title: 'Suppression', confirmLabel: 'Supprimer' },
@@ -235,7 +243,7 @@ export class ContentManagementComponent implements OnInit, OnDestroy {
 
   // ── Video history modal ──
 
-  showVideoHistory(video: Video): void {
+  showVideoHistory(video: ContentVideoRow): void {
     this.selectedVideoForHistory = video;
     this.showHistoryModal = true;
     this.isLoadingHistory = true;
@@ -267,7 +275,7 @@ export class ContentManagementComponent implements OnInit, OnDestroy {
 
   // ── Video preview modal ──
 
-  previewVideo(video: Video): void { this.previewingVideo = video; }
+  previewVideo(video: ContentVideoRow): void { this.previewingVideo = video; }
   closePreview(): void { this.previewingVideo = null; }
 
   deployFromPreview(): void {
@@ -280,7 +288,7 @@ export class ContentManagementComponent implements OnInit, OnDestroy {
 
   // ── Deploy actions (delegate to deployService) ──
 
-  deployVideo(video: Video): void {
+  deployVideo(video: ContentVideoRow): void {
     this.deployService.addVideoToDeploy(video.id);
     this.activeTab = 'deploy';
   }

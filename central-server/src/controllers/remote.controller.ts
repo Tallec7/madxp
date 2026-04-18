@@ -17,12 +17,14 @@ import { Request, Response } from 'express';
 import { createHash } from 'crypto';
 import jwt from 'jsonwebtoken';
 import { siteRepository } from '../repositories';
+import { configProfileRepository } from '../repositories/config-profile.repository';
 import { videoVariantRepository } from '../repositories/video-variant.repository';
 import socketService from '../services/socket.service';
 import { commandQueueService } from '../services/command-queue.service';
 import logger from '../config/logger';
 import metricsService from '../services/metrics.service';
 import { generateRemotePinToken } from '../middleware/remote-pin.middleware';
+import { migrateLegacyPinToDefaultProfile } from '../services/pin-migration.service';
 import { LicenseStatusResponse, SiteSubscriptionInfo, SubscriptionPlan, SuspensionReason } from '../types';
 
 // Lazy import to avoid circular dependency
@@ -72,17 +74,68 @@ export async function getRemoteState(req: Request, res: Response) {
     const isConnected = socketService.isConnected(siteId);
     const connectionHealth = socketService.getConnectionHealth(siteId);
 
-    // Vérifier si un PIN est configuré
-    const pinRequired = !!site.remote_pin_hash;
+    // ADR-058: profils + PIN par profil
+    let profilesMeta: Array<{
+      id: string;
+      name: string;
+      displayName: string | null;
+      city: string | null;
+      sport: string | null;
+      isDefault: boolean;
+      sortOrder: number;
+      pinRequired: boolean;
+    }> = [];
+    let defaultProfileId: string | null = null;
+    try {
+      const rows = await configProfileRepository.findProfilesMetadata(siteId);
+      profilesMeta = rows.map((r) => ({
+        id: r.id,
+        name: r.name,
+        displayName: r.display_name,
+        city: r.city,
+        sport: r.sport,
+        isDefault: r.is_default,
+        sortOrder: r.sort_order,
+        pinRequired: !!r.remote_pin_required,
+      }));
+      defaultProfileId = profilesMeta.find((p) => p.isDefault)?.id || null;
+    } catch (err) {
+      // Pre-migration fallback
+      logger.warn('findProfilesMetadata failed in getRemoteState (non-fatal)', {
+        siteId,
+        error: (err as Error).message,
+      });
+    }
 
-    // Si PIN requis, vérifier le token
+    const activeProfileId =
+      ((site as unknown as { active_profile_id?: string | null }).active_profile_id) ||
+      defaultProfileId;
+
+    // Un PIN est requis si le site a un PIN legacy OU un profil a un PIN
+    const legacyPinRequired = !!site.remote_pin_hash;
+    const anyProfilePinRequired = profilesMeta.some((p) => p.pinRequired);
+    const pinRequired = legacyPinRequired || anyProfilePinRequired;
+
+    // Si PIN requis, vérifier le token (legacy site-scope OU profile-scope)
     let pinVerified = false;
+    let authenticatedProfileId: string | null = null;
     if (pinRequired) {
       const token = req.headers['x-remote-token'] as string;
       if (token) {
         try {
-          const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as { siteId: string; type: string };
-          pinVerified = decoded.type === 'remote-pin' && decoded.siteId === siteId;
+          const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as {
+            siteId: string;
+            type: string;
+            profileId?: string;
+          };
+          if (decoded.siteId === siteId) {
+            if (decoded.type === 'remote-pin') {
+              pinVerified = true;
+            } else if (decoded.type === 'remote-profile-pin' && decoded.profileId) {
+              pinVerified = true;
+              authenticatedProfileId = decoded.profileId;
+            }
+          }
         } catch {
           // Token invalide ou expiré — pinVerified reste false
         }
@@ -131,6 +184,9 @@ export async function getRemoteState(req: Request, res: Response) {
       connectionHealth,
       lastSeenAt: site.last_seen_at,
       pinRequired,
+      profiles: profilesMeta,
+      activeProfileId,
+      authenticatedProfileId,
       licenseStatus: licenseStatus ? {
         status: licenseStatus.status,
         reason: licenseStatus.reason || null,
@@ -278,6 +334,11 @@ export async function verifyPin(req: Request, res: Response) {
       ip: req.ip,
     });
 
+    // ADR-058 Phase 2A : migration opportuniste legacy → default profile PIN.
+    // Fire-and-forget : non-bloquant, toute erreur est loguée mais n'affecte pas
+    // la réponse HTTP (le client a déjà son token legacy valide 24h).
+    void migrateLegacyPinToDefaultProfile(siteId, pin);
+
     res.json({
       success: true,
       token,
@@ -311,6 +372,16 @@ export async function sendRemoteCommand(req: Request, res: Response) {
       'match-config',
       'recording-toggle',
       'screenshot',
+      // ADR-059 — commandes granulaires (Pi autoritaire)
+      'command/increment_home',
+      'command/decrement_home',
+      'command/increment_away',
+      'command/decrement_away',
+      'command/set_phase',
+      'command/timer_start',
+      'command/timer_pause',
+      'command/timer_reset',
+      'command/score_reset',
     ];
 
     if (!validCommands.includes(type)) {
@@ -428,6 +499,28 @@ export async function sendRemoteCommand(req: Request, res: Response) {
         payload = { timestamp };
         break;
 
+      // ADR-059 — commandes granulaires (Pi autoritaire, coexistence legacy)
+      case 'command/increment_home':
+      case 'command/decrement_home':
+      case 'command/increment_away':
+      case 'command/decrement_away':
+      case 'command/score_reset':
+        eventName = type;
+        payload = { seq: data?.seq ?? null, timestamp };
+        break;
+
+      case 'command/set_phase':
+        eventName = type;
+        payload = { phase: data?.phase || 'neutral', seq: data?.seq ?? null, timestamp };
+        break;
+
+      case 'command/timer_start':
+      case 'command/timer_pause':
+      case 'command/timer_reset':
+        eventName = type;
+        payload = { time: data?.time ?? undefined, seq: data?.seq ?? null, timestamp };
+        break;
+
       case 'screenshot': {
         // Screenshot uses request-response HTTP pattern (v3.58+):
         // The controller waits for the Pi's screenshot-data response via Socket.IO,
@@ -494,6 +587,9 @@ export async function sendRemoteCommand(req: Request, res: Response) {
 
     io.to(siteId).emit(eventName, payload);
     metricsService.recordCommand(type, 'sent');
+    if (type.startsWith('command/')) {
+      metricsService.recordMatchCommand(type.replace('command/', ''));
+    }
 
     logger.info('Cloud remote command sent', {
       siteId,

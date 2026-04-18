@@ -18,6 +18,12 @@ import {
   deployProfile,
   syncProfiles,
 } from '../controllers/config-profiles.controller';
+import {
+  setProfilePin,
+  listProfileDevices,
+  revokeProfileDevice,
+  revokeAllProfileDevices,
+} from '../controllers/remote-auth.controller';
 
 const router = Router();
 
@@ -126,6 +132,56 @@ router.post(
   sensitiveRateLimit,
   validateParams(paramSchemas.siteId),
   syncProfiles
+);
+
+/**
+ * ADR-058 — Remote auth per profile.
+ * Phase 1 : super_admin uniquement.
+ * Phase 2B : ajout du rôle `club` (bypass `requireRole` déjà en place pour
+ * `user.site_id === req.params.siteId`, confirmé au niveau controller par
+ * `requireSuperAdminOrOwnClub`).
+ */
+
+// PUT /api/sites/:siteId/profiles/:profileId/remote-pin
+router.put(
+  '/:siteId/profiles/:profileId/remote-pin',
+  authenticate,
+  requireRole('super_admin', 'club'),
+  sensitiveRateLimit,
+  validateParams(paramSchemas.siteIdAndProfileId),
+  validate(schemas.setProfileRemotePin),
+  setProfilePin
+);
+
+// GET /api/sites/:siteId/profiles/:profileId/remote-devices
+router.get(
+  '/:siteId/profiles/:profileId/remote-devices',
+  authenticate,
+  requireRole('super_admin', 'club'),
+  adminRateLimit,
+  validateParams(paramSchemas.siteIdAndProfileId),
+  listProfileDevices
+);
+
+// POST /api/sites/:siteId/profiles/:profileId/remote-devices/:tokenId/revoke
+router.post(
+  '/:siteId/profiles/:profileId/remote-devices/:tokenId/revoke',
+  authenticate,
+  requireRole('super_admin', 'club'),
+  sensitiveRateLimit,
+  validateParams(paramSchemas.siteIdProfileIdTokenId),
+  revokeProfileDevice
+);
+
+// POST /api/sites/:siteId/profiles/:profileId/remote-devices/revoke-all
+router.post(
+  '/:siteId/profiles/:profileId/remote-devices/revoke-all',
+  authenticate,
+  requireRole('super_admin', 'club'),
+  sensitiveRateLimit,
+  validateParams(paramSchemas.siteIdAndProfileId),
+  validate(schemas.revokeAllDevices),
+  revokeAllProfileDevices
 );
 
 export default router;

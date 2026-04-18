@@ -102,6 +102,23 @@ class StateService {
     return this.getScore();
   }
 
+  // ADR-059 — commandes granulaires (Pi autoritaire)
+  incrementScore(side) {
+    if (!this._score) {
+      this._score = { homeTeam: 'DOMICILE', awayTeam: 'EXTÉRIEUR', homeScore: 0, awayScore: 0 };
+    }
+    if (side === 'home') this._score.homeScore++;
+    else if (side === 'away') this._score.awayScore++;
+    return this.getScore();
+  }
+
+  decrementScore(side) {
+    if (!this._score) return null;
+    if (side === 'home' && this._score.homeScore > 0) this._score.homeScore--;
+    else if (side === 'away' && this._score.awayScore > 0) this._score.awayScore--;
+    return this.getScore();
+  }
+
   // --- Phase ---
   getPhase() {
     return this._phase;

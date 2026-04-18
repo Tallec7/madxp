@@ -1,8 +1,8 @@
-import { Video } from "./video.interface";
+import { PiConfigVideoEntry } from "./video.interface";
 
 export interface Category {
     id: string;
     name: string;
-    videos?: Video[];
+    videos?: PiConfigVideoEntry[];
     subCategories?: Category[]; 
 }

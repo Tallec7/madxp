@@ -61,6 +61,17 @@ Les utilisateurs `club` ont accès aux endpoints contenu avec des restrictions :
 - **Delete/Update** : uniquement les vidéos avec `uploaded_for_site_id` = `user.site_id` ET `category ≠ NEOPRO`
 - **Deploy** : uniquement vers leur propre site
 
+## Video Streaming Proxy (ADR-068)
+
+```
+GET  /api/videos/stream?token=<jwt>  → pipe FTP upstream (Range forwarded)
+```
+
+- Token JWT HS256 court (TTL 1h) signé via `video-token.service.ts`, type = `'video-stream'`.
+- Route mount `app.use('/api/videos', videoStreamRoutes)` **DOIT** précéder `app.use('/api', contentRoutes)` dans `server.ts` — sinon `/videos/:id` capture `/videos/stream` comme `id='stream'` et impose `authenticate` middleware → 401 sur route publique (incident fixé par `c29dda5d` — smoke test enforced).
+- Feature flag `VIDEO_STREAM_PROXY_ENABLED=true` active la signature côté `saas.controller.ts` ; OFF = URLs FTP directes (fallback legacy).
+- Supervision Prometheus : `neopro_video_stream_requests_total{status=success|missing_token|expired|invalid|upstream_error|proxy_error}`.
+
 ## Config Save (SaaS direct)
 
 ```

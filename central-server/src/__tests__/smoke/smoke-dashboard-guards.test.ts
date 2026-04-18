@@ -1553,3 +1553,220 @@ describe('Dashboard template externalization guard (prevents re-inlining)', () =
     });
   }
 });
+
+// ============================================================
+// ADR-063: SocketService transient disconnect filter
+// Empêche le retour en arrière vers un warn immédiat sur 'transport close'
+// qui ramènerait le spam console pendant les flip-flops Railway.
+// ============================================================
+describe('ADR-063: SocketService transient disconnect filter', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..', '..');
+  const socketServicePath = path.join(
+    repoRoot,
+    'central-dashboard',
+    'src',
+    'app',
+    'core',
+    'services',
+    'socket.service.ts'
+  );
+
+  it('declares the grace period constant and pending timer', () => {
+    const content = fs.readFileSync(socketServicePath, 'utf-8');
+    expect({
+      hasGraceMs: /transientDisconnectGraceMs\s*=\s*3000/.test(content),
+      hasPendingTimer: content.includes('pendingDisconnectWarnTimer'),
+    }).toEqual({
+      hasGraceMs: true,
+      hasPendingTimer: true,
+    });
+  });
+
+  it("defers the warn for reason === 'transport close' via setTimeout", () => {
+    const content = fs.readFileSync(socketServicePath, 'utf-8');
+    // La branche transport close doit exister et utiliser setTimeout
+    const transportCloseBranch = /reason\s*===\s*['"]transport close['"][\s\S]{0,400}?setTimeout\(/.test(
+      content
+    );
+    expect(transportCloseBranch).toBe(true);
+  });
+
+  it('cancels the pending warn timer on successful reconnect', () => {
+    const content = fs.readFileSync(socketServicePath, 'utf-8');
+    // Le handler 'connect' doit clearTimeout sur pendingDisconnectWarnTimer
+    const connectHandler = content.match(/socket\.on\(['"]connect['"][\s\S]{0,600}?\}\);/);
+    expect(connectHandler).not.toBeNull();
+    expect(connectHandler?.[0]).toMatch(/clearTimeout\(\s*this\.pendingDisconnectWarnTimer/);
+  });
+
+  it('still warns immediately for non-transport-close reasons', () => {
+    const content = fs.readFileSync(socketServicePath, 'utf-8');
+    // La branche else du guard 'transport close' doit garder un warn immédiat
+    // pour io server disconnect / ping timeout / transport error
+    expect(content).toMatch(
+      /transientDisconnectGraceMs\s*\)[\s\S]{0,100}else\s*\{[\s\S]{0,200}logger\.warn\(\s*['"]Socket disconnected/
+    );
+  });
+
+  it('clears the pending timer in disconnect() cleanup', () => {
+    const content = fs.readFileSync(socketServicePath, 'utf-8');
+    const disconnectMethod = content.match(/disconnect\(\)\s*:\s*void\s*\{[\s\S]{0,400}?\n\s{2}\}/);
+    expect(disconnectMethod).not.toBeNull();
+    expect(disconnectMethod?.[0]).toMatch(/clearTimeout\(\s*this\.pendingDisconnectWarnTimer/);
+  });
+});
+
+// ============================================================
+// ADR-064 — Canonical Video / VideoView composition hierarchy
+// Empêche le retour aux 5 interfaces Video parallèles.
+// ============================================================
+describe('Canonical Video / VideoView hierarchy guard (ADR-064)', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..', '..');
+  const dashRoot = path.join(repoRoot, 'central-dashboard/src/app');
+  const videoModelPath = path.join(dashRoot, 'core/models/video.model.ts');
+  const modelsIndexPath = path.join(dashRoot, 'core/models/index.ts');
+  const videoLibraryTypesPath = path.join(
+    dashRoot,
+    'features/sites/components/video-library/video-library.types.ts'
+  );
+
+  it('video.model.ts exists and exports Video, VideoView (ADR-064 + ADR-065)', () => {
+    const content = fs.readFileSync(videoModelPath, 'utf-8');
+    expect(content).toMatch(/export\s+interface\s+Video\b/);
+    expect(content).toMatch(/export\s+interface\s+VideoView\b/);
+    // ADR-065 : mapVideoRowToView supprimé (dead code — aucun endpoint API
+    // ne renvoie la row snake_case brute). Si un futur endpoint le fait,
+    // écrire un mapper dédié au point de consommation.
+    expect(content).not.toMatch(/export\s+function\s+mapVideoRowToView\b/);
+  });
+
+  it('Video (canonical) keeps snake_case DB shape', () => {
+    const content = fs.readFileSync(videoModelPath, 'utf-8');
+    // Garde-fou : si quelqu'un convertit Video en camelCase, il casse le mapping DB.
+    expect(content).toMatch(/original_name\s*:/);
+    expect(content).toMatch(/file_size\s*:/);
+    expect(content).toMatch(/storage_path\s*:/);
+    expect(content).toMatch(/thumbnail_url\s*:/);
+    expect(content).toMatch(/created_at\s*:/);
+  });
+
+  it('VideoView is camelCase (UI base) — empêche le drift snake_case', () => {
+    const content = fs.readFileSync(videoModelPath, 'utf-8');
+    const viewMatch = content.match(/export\s+interface\s+VideoView\s*\{[\s\S]*?\n\}/);
+    expect(viewMatch).not.toBeNull();
+    const view = viewMatch?.[0] || '';
+    expect(view).toMatch(/displayName/);
+    expect(view).toMatch(/thumbnailUrl/);
+    // Pas de snake_case dans les déclarations de champ (les JSDoc peuvent y faire référence)
+    const viewNoComments = view.replace(/\/\*\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
+    expect(viewNoComments).not.toMatch(/^\s*original_name\s*[:?]/m);
+    expect(viewNoComments).not.toMatch(/^\s*file_size\s*[:?]/m);
+    expect(viewNoComments).not.toMatch(/^\s*thumbnail_url\s*[:?]/m);
+  });
+
+  it('core/models/index.ts re-exporte Video et VideoView (ADR-064 + ADR-065)', () => {
+    const content = fs.readFileSync(modelsIndexPath, 'utf-8');
+    expect(content).toMatch(/from\s+['"]\.\/video\.model['"]/);
+    expect(content).toMatch(/\bVideo\b/);
+    expect(content).toMatch(/\bVideoView\b/);
+    // Pas de redéclaration locale de l'interface Video
+    expect(content).not.toMatch(/export\s+interface\s+Video\s*\{/);
+    // ADR-065 : plus de re-export du mapper (supprimé)
+    expect(content).not.toMatch(/\bmapVideoRowToView\b/);
+  });
+
+  it('VideoItem extends VideoView (composition, pas duplication)', () => {
+    const content = fs.readFileSync(videoLibraryTypesPath, 'utf-8');
+    expect(content).toMatch(/interface\s+VideoItem\s+extends\s+VideoView\b/);
+    expect(content).toMatch(/from\s+['"][^'"]*core\/models[^'"]*['"]/);
+  });
+
+  it('aucun autre fichier ne redéclare interface Video (canonique = video.model.ts)', () => {
+    // Scan FS-only sur central-dashboard/src — pas de glob runtime, on whitelist le canonique.
+    const offenders: string[] = [];
+    const walk = (dir: string) => {
+      for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+        const full = path.join(dir, entry.name);
+        if (entry.isDirectory()) {
+          if (entry.name === 'node_modules' || entry.name === 'dist') continue;
+          walk(full);
+          continue;
+        }
+        if (!entry.name.endsWith('.ts')) continue;
+        if (full === videoModelPath) continue; // canonique autorisé
+        const content = fs.readFileSync(full, 'utf-8');
+        if (/\b(?:export\s+)?interface\s+Video\s*\{/.test(content)) {
+          offenders.push(path.relative(repoRoot, full));
+        }
+      }
+    };
+    walk(path.join(dashRoot));
+    expect(offenders).toEqual([]);
+  });
+
+  it('DTOs divergents sont nommés explicitement (pas "Video")', () => {
+    const contentDataPath = path.join(
+      dashRoot,
+      'features/content/content-management-data.service.ts'
+    );
+    const sponsorDataPath = path.join(
+      dashRoot,
+      'features/advertisers/sponsor-video-data.service.ts'
+    );
+    const remoteNavPath = path.join(
+      dashRoot,
+      'features/remote/services/cloud-remote-navigation.service.ts'
+    );
+
+    expect(fs.readFileSync(contentDataPath, 'utf-8')).toMatch(
+      /export\s+interface\s+ContentVideoRow\b/
+    );
+    expect(fs.readFileSync(sponsorDataPath, 'utf-8')).toMatch(
+      /export\s+interface\s+SponsorVideoRow\b/
+    );
+    expect(fs.readFileSync(remoteNavPath, 'utf-8')).toMatch(
+      /export\s+interface\s+RemoteVideoEntry\b/
+    );
+  });
+});
+
+// ============================================================
+// ADR-066 — Raspberry PiConfigVideoEntry naming discipline
+// Empêche le retour à `interface Video` côté Pi (collision sémantique
+// avec le Video canonique dashboard / backend qui représente la row DB).
+// ============================================================
+describe('Raspberry PiConfigVideoEntry naming guard (ADR-066)', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..', '..');
+  const piVideoInterface = path.join(
+    repoRoot,
+    'raspberry/src/app/interfaces/video.interface.ts'
+  );
+  const piSrcRoot = path.join(repoRoot, 'raspberry/src/app');
+
+  it('video.interface.ts exports PiConfigVideoEntry (pas Video)', () => {
+    const content = fs.readFileSync(piVideoInterface, 'utf-8');
+    expect(content).toMatch(/export\s+interface\s+PiConfigVideoEntry\b/);
+    expect(content).not.toMatch(/export\s+interface\s+Video\s*\{/);
+  });
+
+  it('aucun fichier raspberry/src/app ne redéclare interface Video', () => {
+    const offenders: string[] = [];
+    const walk = (dir: string) => {
+      for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+        const full = path.join(dir, entry.name);
+        if (entry.isDirectory()) {
+          if (entry.name === 'node_modules' || entry.name === 'dist') continue;
+          walk(full);
+          continue;
+        }
+        if (!entry.name.endsWith('.ts')) continue;
+        const content = fs.readFileSync(full, 'utf-8');
+        if (/\b(?:export\s+)?interface\s+Video\s*\{/.test(content)) {
+          offenders.push(path.relative(repoRoot, full));
+        }
+      }
+    };
+    walk(piSrcRoot);
+    expect(offenders).toEqual([]);
+  });
+});

@@ -3,7 +3,7 @@ import { SocketService, LoopState } from './socket.service';
 import { DoubleBufferVideoService } from './double-buffer-video.service';
 import { VideoPlaybackService } from './video-playback.service';
 import { ManualVideoService } from './manual-video.service';
-import { Video } from '../interfaces/video.interface';
+import { PiConfigVideoEntry } from '../interfaces/video.interface';
 
 /**
  * Callbacks fournis par TvComponent pour les operations qui dependent du contexte.
@@ -180,7 +180,7 @@ export class TvSyncService {
         name: state.manualVideoPath.split('/').pop() || 'manual',
         path: state.manualVideoPath,
         type: 'video/mp4'
-      } as Video);
+      } as PiConfigVideoEntry);
 
       // Sous-cas 1a: manualVideoVisible !== true -> preload si pas deja fait
       if (state.manualVideoVisible !== true) {

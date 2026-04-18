@@ -1,6 +1,6 @@
 # Implemented Backlog — Features Livrées
 
-> **Dernière mise à jour** : 9 Mars 2026
+> **Dernière mise à jour** : 18 Avril 2026
 > Ce document recense **toutes** les features implémentées dans le codebase NEOPRO, organisées par domaine fonctionnel. Il complète le backlog SAFe (futur) avec une vue exhaustive du produit livré.
 > **Source** : Croisement systématique de 34 changelogs, 200+ commits git (v3.47→v3.64), audit codebase, et sprint audit sponsors/analytics (26 features P0+P1+P2+P3).
 
@@ -16,45 +16,47 @@
 
 ## 1. Authentification & Sécurité
 
-| ID         | Feature                                                                         | Statut     | Fichiers clés                                                  | Version/Date |
-| ---------- | ------------------------------------------------------------------------------- | ---------- | -------------------------------------------------------------- | ------------ |
-| IMP-SEC-01 | Authentification JWT (HttpOnly cookies + Bearer)                                | Production | `auth.controller.ts`, `middleware/auth.ts`                     | Déc 2025     |
-| IMP-SEC-02 | MFA / 2FA (TOTP avec QR code)                                                   | Production | `mfa.service.ts`, `mfa.routes.ts`                              | Déc 2025     |
-| IMP-SEC-03 | Réinitialisation mot de passe (token 24h + email)                               | Production | `password-reset.service.ts`                                    | Déc 2025     |
-| IMP-SEC-04 | Journalisation d'audit GDPR                                                     | Production | `audit.service.ts`, `audit.routes.ts`                          | Déc 2025     |
-| IMP-SEC-05 | Sécurité niveau ligne (isolation multi-tenant PostgreSQL)                       | Production | `00-create-rls-functions.sql`, `enable-row-level-security.sql` | Déc 2025     |
-| IMP-SEC-06 | CORS fermé par défaut en production                                             | Production | `server.ts`                                                    | Déc 2025     |
-| IMP-SEC-07 | Auth admin Raspberry (cookies session + mot de passe initial)                   | Production | `admin-server.js`, `auth-config.json`                          | Déc 2025     |
-| IMP-SEC-08 | Suppression mot de passe en dur                                                 | Production | -                                                              | Déc 2025     |
-| IMP-SEC-09 | GDPR self-service (Art. 17 droit à l'effacement, Art. 20 portabilité)           | Production | `users.controller.ts` (deleteOwnAccount, exportMyData)         | Déc 2025     |
-| IMP-SEC-10 | Sauvegardes chiffrées PostgreSQL (pg_dump via Supabase)                         | Production | Supabase PITR (Point-in-Time Recovery)                         | Déc 2025     |
-| IMP-SEC-11 | Helmet renforcé (CSP, X-Frame-Options deny, HSTS 1 an)                          | Production | `server.ts`                                                    | Déc 2025     |
-| IMP-SEC-12 | Socket.IO CORS fermé par défaut (production)                                    | Production | `socket.service.ts`                                            | Déc 2025     |
-| IMP-SEC-13 | Pages légales intégrées (CGU, CGV, Politique de confidentialité, Registre GDPR) | Production | `/legal/privacy`, `/legal/terms`                               | Déc 2025     |
+| ID         | Feature                                                                         | Statut     | Fichiers clés                                                                             | Version/Date |
+| ---------- | ------------------------------------------------------------------------------- | ---------- | ----------------------------------------------------------------------------------------- | ------------ |
+| IMP-SEC-01 | Authentification JWT (HttpOnly cookies + Bearer)                                | Production | `auth.controller.ts`, `middleware/auth.ts`                                                | Déc 2025     |
+| IMP-SEC-02 | MFA / 2FA (TOTP avec QR code)                                                   | Production | `mfa.service.ts`, `mfa.routes.ts`                                                         | Déc 2025     |
+| IMP-SEC-03 | Réinitialisation mot de passe (token 24h + email)                               | Production | `password-reset.service.ts`                                                               | Déc 2025     |
+| IMP-SEC-04 | Journalisation d'audit GDPR                                                     | Production | `audit.service.ts`, `audit.routes.ts`                                                     | Déc 2025     |
+| IMP-SEC-05 | Sécurité niveau ligne (isolation multi-tenant PostgreSQL)                       | Production | `00-create-rls-functions.sql`, `enable-row-level-security.sql`                            | Déc 2025     |
+| IMP-SEC-06 | CORS fermé par défaut en production                                             | Production | `server.ts`                                                                               | Déc 2025     |
+| IMP-SEC-07 | Auth admin Raspberry (cookies session + mot de passe initial)                   | Production | `admin-server.js`, `auth-config.json`                                                     | Déc 2025     |
+| IMP-SEC-08 | Suppression mot de passe en dur                                                 | Production | -                                                                                         | Déc 2025     |
+| IMP-SEC-09 | GDPR self-service (Art. 17 droit à l'effacement, Art. 20 portabilité)           | Production | `users.controller.ts` (deleteOwnAccount, exportMyData)                                    | Déc 2025     |
+| IMP-SEC-10 | Sauvegardes chiffrées PostgreSQL (pg_dump via Supabase)                         | Production | Supabase PITR (Point-in-Time Recovery)                                                    | Déc 2025     |
+| IMP-SEC-11 | Helmet renforcé (CSP, X-Frame-Options deny, HSTS 1 an)                          | Production | `server.ts`                                                                               | Déc 2025     |
+| IMP-SEC-12 | Socket.IO CORS fermé par défaut (production)                                    | Production | `socket.service.ts`                                                                       | Déc 2025     |
+| IMP-SEC-13 | Pages légales intégrées (CGU, CGV, Politique de confidentialité, Registre GDPR) | Production | `/legal/privacy`, `/legal/terms`                                                          | Déc 2025     |
+| IMP-SEC-14 | PIN distant par profil + device tokens révocables (ADR-058 Phase 1, offline Pi) | Production | `remote-auth.controller.ts`, `profile-pin.service.js`, `remote-auth-section.component.ts` | Avr 2026     |
 
 ---
 
 ## 2. Gestion de Contenu & Vidéo
 
-| ID         | Feature                                                                               | Statut     | Fichiers clés                                                               | Version/Date     |
-| ---------- | ------------------------------------------------------------------------------------- | ---------- | --------------------------------------------------------------------------- | ---------------- |
-| IMP-VID-01 | Upload vidéo avec vérification checksum (SHA-256)                                     | Production | `content.controller.ts`, `upload-verification.service.ts`                   | 2025             |
-| IMP-VID-02 | Compression vidéo automatique                                                         | Production | `video-compression.service.ts`                                              | 2025             |
-| IMP-VID-03 | Conversion image vers vidéo (ffmpeg, JPG/PNG/WEBP → MP4)                              | Production | `image-to-video.service.ts`                                                 | v2.44.0 Jan 2026 |
-| IMP-VID-04 | Conversion image vers vidéo : option fond flouté                                      | Production | `image-to-video.service.ts`                                                 | Jan 2026         |
-| IMP-VID-05 | Miniatures automatiques                                                               | Production | `thumbnail.service.ts`                                                      | 2025             |
-| IMP-VID-06 | Stockage unifié FTP (Hostinger)                                                       | Production | `storage.service.ts`                                                        | 2025             |
-| IMP-VID-07 | Versioning brouillon de config (sauvegarder avant déployer)                           | Production | `draft.service.ts`, `drafts.controller.ts`                                  | Déc 2025         |
-| IMP-VID-08 | Gestion des assets (logos, images)                                                    | Production | `assets.controller.ts`, `asset.service.ts`                                  | 2025             |
-| IMP-VID-09 | Pagination côté serveur pour listing vidéos                                           | Production | `content.controller.ts`                                                     | v3.56.0          |
-| IMP-VID-10 | Prévisualisation vidéo dans page gestion contenu                                      | Production | `content-management.component.ts`                                           | 2025             |
-| IMP-VID-11 | Historique config avec détail dépliable et restauration                               | Production | `config-history.component.ts`                                               | v3.57.0          |
-| IMP-VID-12 | Restructuration UX onglet Contenu (ADR-022, P0→P3)                                    | Production | `content-tab.component.ts`                                                  | 2026             |
-| IMP-VID-13 | Historique des modifications dans onglet Contenu (P3-3)                               | Production | -                                                                           | 2026             |
-| IMP-VID-14 | Variantes vidéo par type d'écran (table `video_variants`, API CRUD, upload secondary) | Production | `video-variant.repository.ts`, `content.controller.ts`, `content.routes.ts` | Fév 2026         |
-| IMP-VID-15 | Dashboard gestion variantes vidéo écran secondaire (panel upload/delete par vidéo)    | Production | `video-variant-panel.component.ts`, `content-management.component.ts`       | Fév 2026         |
-| IMP-VID-16 | Déploiement conditionnel variantes écran secondaire (pipeline + sync-agent)           | Production | `deployment.service.ts`, `deploy-video.js`                                  | Fév 2026         |
-| IMP-VID-17 | Enrichissement variants secondaires dans pipeline de déploiement                      | Production | `deployment.service.ts`, `deploy-video.js`                                  | v3.88.0 Mar 2026 |
+| ID         | Feature                                                                                | Statut     | Fichiers clés                                                                | Version/Date      |
+| ---------- | -------------------------------------------------------------------------------------- | ---------- | ---------------------------------------------------------------------------- | ----------------- |
+| IMP-VID-01 | Upload vidéo avec vérification checksum (SHA-256)                                      | Production | `content.controller.ts`, `upload-verification.service.ts`                    | 2025              |
+| IMP-VID-02 | Compression vidéo automatique                                                          | Production | `video-compression.service.ts`                                               | 2025              |
+| IMP-VID-03 | Conversion image vers vidéo (ffmpeg, JPG/PNG/WEBP → MP4)                               | Production | `image-to-video.service.ts`                                                  | v2.44.0 Jan 2026  |
+| IMP-VID-04 | Conversion image vers vidéo : option fond flouté                                       | Production | `image-to-video.service.ts`                                                  | Jan 2026          |
+| IMP-VID-05 | Miniatures automatiques                                                                | Production | `thumbnail.service.ts`                                                       | 2025              |
+| IMP-VID-06 | Stockage unifié FTP (Hostinger)                                                        | Production | `storage.service.ts`                                                         | 2025              |
+| IMP-VID-07 | Versioning brouillon de config (sauvegarder avant déployer)                            | Production | `draft.service.ts`, `drafts.controller.ts`                                   | Déc 2025          |
+| IMP-VID-08 | Gestion des assets (logos, images)                                                     | Production | `assets.controller.ts`, `asset.service.ts`                                   | 2025              |
+| IMP-VID-09 | Pagination côté serveur pour listing vidéos                                            | Production | `content.controller.ts`                                                      | v3.56.0           |
+| IMP-VID-10 | Prévisualisation vidéo dans page gestion contenu                                       | Production | `content-management.component.ts`                                            | 2025              |
+| IMP-VID-11 | Historique config avec détail dépliable et restauration                                | Production | `config-history.component.ts`                                                | v3.57.0           |
+| IMP-VID-12 | Restructuration UX onglet Contenu (ADR-022, P0→P3)                                     | Production | `content-tab.component.ts`                                                   | 2026              |
+| IMP-VID-13 | Historique des modifications dans onglet Contenu (P3-3)                                | Production | -                                                                            | 2026              |
+| IMP-VID-14 | Variantes vidéo par type d'écran (table `video_variants`, API CRUD, upload secondary)  | Production | `video-variant.repository.ts`, `content.controller.ts`, `content.routes.ts`  | Fév 2026          |
+| IMP-VID-15 | Dashboard gestion variantes vidéo écran secondaire (panel upload/delete par vidéo)     | Production | `video-variant-panel.component.ts`, `content-management.component.ts`        | Fév 2026          |
+| IMP-VID-16 | Déploiement conditionnel variantes écran secondaire (pipeline + sync-agent)            | Production | `deployment.service.ts`, `deploy-video.js`                                   | Fév 2026          |
+| IMP-VID-17 | Enrichissement variants secondaires dans pipeline de déploiement                       | Production | `deployment.service.ts`, `deploy-video.js`                                   | v3.88.0 Mar 2026  |
+| IMP-VID-18 | Proxy streaming vidéo signé JWT pour SaaS (ADR-068, feature-flag, métrique Prometheus) | Production | `video-stream.controller.ts`, `video-token.service.ts`, `saas.controller.ts` | v3.184.0 Avr 2026 |
 
 ---
 
@@ -94,6 +96,7 @@
 | IMP-DEP-13 | OTA vérification intégrité node_modules + rollback auto                     | Production | `update-software.js`, `diagnose-pi.sh`                                                                | Fév 2026     |
 | IMP-DEP-14 | Setup.sh archive unique GitHub (remplace ~40 curl) + deploy rollback auto   | Production | `setup.sh`, `deploy-remote.sh`                                                                        | Mars 2026    |
 | IMP-DEP-15 | Feedback deployed_path — le Pi rapporte le chemin réel après déploiement    | Production | `agent.js`, `deploy-progress.handler.ts`, `deployment.repository.ts`, `site-content-tab.component.ts` | Mars 2026    |
+| IMP-DEP-16 | ADR-069 Delivery Strategy pattern (PiSocket/SaasDirect, registry, metrics)  | Production | `services/delivery/`, `deployment.service.ts`, `metrics.service.ts`, `rules.yml`                      | Avril 2026   |
 
 ---
 
@@ -357,18 +360,18 @@
 
 ## Statistiques Produit
 
-| Métrique                  | Valeur                                                                                                                                                                                               |
-| ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Features implémentées** | **231** (+26 audit, +9 E-22 TV+Secondary dual, +6 sponsor UX, +2 résilience Pi/OTA, +3 hotspot WiFi, +3 debug page, +1 EDID enrichment, +1 dashboard EDID display, +1 OTA edid-decode, +1 sysfs fix) |
-| Domaines fonctionnels     | 14                                                                                                                                                                                                   |
-| Controllers API           | 29 (+sponsor-alerts)                                                                                                                                                                                 |
-| Services métier           | 40 (+sponsor-alert, sponsor-stats, sponsor-auto-resolution)                                                                                                                                          |
-| Repositories              | 25 (+video-variant)                                                                                                                                                                                  |
-| Migrations DB             | 55 (+add-led-support-and-video-variants, +rename-led-to-secondary-display)                                                                                                                           |
-| Modules dashboard         | 21 (+advertiser-health, analytics-categories)                                                                                                                                                        |
-| Services Raspberry        | 19 (+sponsor-stats)                                                                                                                                                                                  |
-| Versions publiées         | 265+ (v2.1 → v3.62)                                                                                                                                                                                  |
-| Tests (total)             | 2 987 (1872 API + 506 Angular + 148 Admin + 71 Socket + 390 Smoke)                                                                                                                                   |
+| Métrique                  | Valeur                                                                                                                                                                                                                                                                       |
+| ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Features implémentées** | **233** (+26 audit, +9 E-22 TV+Secondary dual, +6 sponsor UX, +2 résilience Pi/OTA, +3 hotspot WiFi, +3 debug page, +1 EDID enrichment, +1 dashboard EDID display, +1 OTA edid-decode, +1 sysfs fix, +1 ADR-068 signed URL proxy SaaS, +1 ADR-069 Delivery Strategy pattern) |
+| Domaines fonctionnels     | 14                                                                                                                                                                                                                                                                           |
+| Controllers API           | 29 (+sponsor-alerts)                                                                                                                                                                                                                                                         |
+| Services métier           | 40 (+sponsor-alert, sponsor-stats, sponsor-auto-resolution)                                                                                                                                                                                                                  |
+| Repositories              | 25 (+video-variant)                                                                                                                                                                                                                                                          |
+| Migrations DB             | 55 (+add-led-support-and-video-variants, +rename-led-to-secondary-display)                                                                                                                                                                                                   |
+| Modules dashboard         | 21 (+advertiser-health, analytics-categories)                                                                                                                                                                                                                                |
+| Services Raspberry        | 19 (+sponsor-stats)                                                                                                                                                                                                                                                          |
+| Versions publiées         | 265+ (v2.1 → v3.62)                                                                                                                                                                                                                                                          |
+| Tests (total)             | 2 987 (1872 API + 506 Angular + 148 Admin + 71 Socket + 390 Smoke)                                                                                                                                                                                                           |
 
 ---
 

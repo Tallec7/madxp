@@ -1,5 +1,4 @@
 import { query } from '../config/database';
-import socketService from './socket.service';
 import { commandQueueService } from './command-queue.service';
 import logger from '../config/logger';
 import metricsService from './metrics.service';
@@ -7,20 +6,9 @@ import { getVideoUrl, deleteVideo } from './storage.service';
 import { uploadVerificationService } from './upload-verification.service';
 import { siteSponsorRepository } from '../repositories/site-sponsor.repository';
 import { videoVariantRepository } from '../repositories/video-variant.repository';
-
-// Configuration du retry
-const RETRY_CONFIG = {
-  maxRetries: 3,                    // Nombre max de tentatives
-  retryDelayMs: 5 * 60 * 1000,      // Délai minimum entre retries (5 minutes)
-  retryableErrors: [                 // Erreurs qui peuvent être retryées
-    'timeout',
-    'connection',
-    'network',
-    'ECONNREFUSED',
-    'ETIMEDOUT',
-    'Command timeout',
-  ],
-};
+import { RETRY_CONFIG, isRetryableError, getRetryCount } from './deployment-retry.util';
+import { deliveryStrategyRegistry } from './delivery/strategy-registry';
+import { DeliveryContext, DeliveryDeployment } from './delivery/delivery-strategy.interface';
 
 interface DeploymentTarget {
   siteId: string;
@@ -105,129 +93,145 @@ class DeploymentService {
       // Construire l'URL de la vidéo depuis le stockage
       const videoUrl = getVideoUrl(deployment.storage_path);
 
-      // Tenter d'envoyer aux sites (ou mettre en queue si offline)
-      let successCount = 0;
-      const commandSentSites: string[] = [];
-      const commandQueuedSites: string[] = [];
-      const commandFailedSites: string[] = [];
-
-      for (const target of targets) {
-        // Les sites SaaS n'ont pas de Pi — la vidéo est servie directement via URL FTP
-        // Le déploiement est considéré comme immédiatement réussi
-        if (target.siteType === 'saas') {
-          logger.info('SaaS site: video deployment completed immediately (no Pi)', {
-            deploymentId,
-            siteId: target.siteId,
-            siteName: target.siteName,
-          });
-          successCount++;
-          commandSentSites.push(target.siteName);
-          continue;
-        }
-
-        const isConnected = socketService.isConnected(target.siteId);
-        logger.info('Processing site for video deployment', {
-          deploymentId,
-          siteId: target.siteId,
-          siteName: target.siteName,
-          isConnected,
-        });
-
-        // deployToSite utilise maintenant sendOrQueue, donc fonctionne même si offline
-        const success = await this.deployToSite(
-          deploymentId,
-          target.siteId,
-          deployment.video_id,
-          videoUrl,
-          deployment
-        );
-
-        if (success) {
-          successCount++;
-          if (isConnected) {
-            commandSentSites.push(target.siteName);
-          } else {
-            commandQueuedSites.push(target.siteName);
-          }
-        } else {
-          commandFailedSites.push(target.siteName);
-        }
-      }
-
-      // Si TOUS les sites cibles sont SaaS, le déploiement est immédiatement terminé
-      // (pas de Pi à attendre, les vidéos sont servies via URL FTP)
-      const allSaas = targets.every(t => t.siteType === 'saas');
-
-      // Mettre à jour le statut avec des informations détaillées
-      if (successCount > 0) {
-        if (allSaas) {
-          await query(
-            `UPDATE content_deployments
-             SET status = 'completed', started_at = NOW(), completed_at = NOW(), progress = 100
-             WHERE id = $1`,
-            [deploymentId]
-          );
-
-          metricsService.recordDeployment('completed', 'site');
-          logger.info('SaaS video deployment completed immediately', {
-            deploymentId,
-            sites: commandSentSites,
-          });
-        } else {
-          // Au moins une commande envoyée ou mise en queue vers un Pi
-          const statusMessage = [];
-          if (commandSentSites.length > 0) {
-            statusMessage.push(`Envoyé: ${commandSentSites.join(', ')}`);
-          }
-          if (commandQueuedSites.length > 0) {
-            statusMessage.push(`En attente de reconnexion: ${commandQueuedSites.join(', ')}`);
-          }
-
-          await query(
-            `UPDATE content_deployments
-             SET status = 'in_progress', started_at = NOW(), error_message = $1
-             WHERE id = $2`,
-            [statusMessage.join(' | ') || null, deploymentId]
-          );
-
-          metricsService.recordDeployment('in_progress', 'site');
-          logger.info('Video deployment in progress', {
-            deploymentId,
-            commandSentSites,
-            commandQueuedSites,
-            commandFailedSites,
-          });
-        }
-      } else {
-        // Aucune commande n'a pu être envoyée ou mise en queue
-        await query(
-          `UPDATE content_deployments
-           SET error_message = $1
-           WHERE id = $2 AND status = 'pending'`,
-          ['Échec de l\'envoi à tous les sites cibles', deploymentId]
-        );
-
-        metricsService.recordDeployment('failed', 'site');
-        logger.error('Video deployment failed for all sites', {
-          deploymentId,
-          commandFailedSites,
-        });
-      }
-
-      logger.info('Deployment initiated', {
-        deploymentId,
-        videoFilename: deployment.filename,
-        totalSites: targets.length,
-        successCount,
-        commandSentSites,
-        commandQueuedSites,
-        commandFailedSites,
-      });
-
+      // ADR-069 — Dispatch via le registry de stratégies (Pi/SaaS/futurs canaux).
+      // Le chemin legacy `if (target.siteType === 'saas') continue` a été supprimé
+      // après rollout progressif validé.
+      await this.dispatchViaRegistry(deploymentId, deployment, targets, videoUrl);
     } catch (error) {
       logger.error('Error starting deployment:', error);
       await this.failDeployment(deploymentId, error instanceof Error ? error.message : 'Erreur inconnue');
     }
+  }
+
+  /**
+   * ADR-069 — Dispatch via le registry de stratégies (Pi/SaaS/futurs canaux).
+   * Seul chemin de livraison depuis la suppression du code legacy (étape 7).
+   */
+  private async dispatchViaRegistry(
+    deploymentId: string,
+    deployment: DeploymentRow,
+    targets: DeploymentTarget[],
+    videoUrl: string
+  ): Promise<void> {
+    let successCount = 0;
+    const commandSentSites: string[] = [];
+    const commandQueuedSites: string[] = [];
+    const commandFailedSites: string[] = [];
+
+    const deliveryDeployment: DeliveryDeployment = {
+      id: deployment.id,
+      video_id: deployment.video_id,
+      filename: deployment.filename,
+      original_name: deployment.original_name,
+      category: deployment.category,
+      subcategory: deployment.subcategory,
+      duration: deployment.duration,
+      storage_path: deployment.storage_path,
+      checksum: deployment.checksum,
+      metadata: deployment.metadata,
+      advertiser_id: deployment.advertiser_id,
+      analytics_category: deployment.analytics_category,
+    };
+
+    for (const target of targets) {
+      const strategy = deliveryStrategyRegistry.resolve({
+        siteId: target.siteId,
+        siteName: target.siteName,
+        siteType: target.siteType,
+      });
+
+      const ctx: DeliveryContext = {
+        deploymentId,
+        site: { siteId: target.siteId, siteName: target.siteName, siteType: target.siteType },
+        deployment: deliveryDeployment,
+        videoUrl,
+      };
+
+      try {
+        const result = await strategy.deliver(ctx);
+        metricsService.recordDelivery(strategy.name, result.outcome);
+        if (result.success) {
+          successCount++;
+          if (result.outcome === 'queued') {
+            commandQueuedSites.push(target.siteName);
+          } else {
+            commandSentSites.push(target.siteName);
+          }
+        } else {
+          commandFailedSites.push(target.siteName);
+        }
+      } catch (err) {
+        metricsService.recordDelivery(strategy.name, 'failed');
+        logger.error('Delivery strategy threw', {
+          deploymentId,
+          siteId: target.siteId,
+          strategy: strategy.name,
+          error: err instanceof Error ? err.message : String(err),
+        });
+        commandFailedSites.push(target.siteName);
+      }
+    }
+
+    const allSaas = targets.every(t => t.siteType === 'saas');
+
+    if (successCount > 0) {
+      if (allSaas) {
+        await query(
+          `UPDATE content_deployments
+           SET status = 'completed', started_at = NOW(), completed_at = NOW(), progress = 100
+           WHERE id = $1`,
+          [deploymentId]
+        );
+        metricsService.recordDeployment('completed', 'site');
+        logger.info('SaaS video deployment completed immediately', {
+          deploymentId,
+          sites: commandSentSites,
+        });
+      } else {
+        const statusMessage: string[] = [];
+        if (commandSentSites.length > 0) {
+          statusMessage.push(`Envoyé: ${commandSentSites.join(', ')}`);
+        }
+        if (commandQueuedSites.length > 0) {
+          statusMessage.push(`En attente de reconnexion: ${commandQueuedSites.join(', ')}`);
+        }
+        await query(
+          `UPDATE content_deployments
+           SET status = 'in_progress', started_at = NOW(), error_message = $1
+           WHERE id = $2`,
+          [statusMessage.join(' | ') || null, deploymentId]
+        );
+        metricsService.recordDeployment('in_progress', 'site');
+        logger.info('Video deployment in progress', {
+          deploymentId,
+          commandSentSites,
+          commandQueuedSites,
+          commandFailedSites,
+        });
+      }
+    } else {
+      await query(
+        `UPDATE content_deployments
+         SET error_message = $1
+         WHERE id = $2 AND status = 'pending'`,
+        ["Échec de l'envoi à tous les sites cibles", deploymentId]
+      );
+      metricsService.recordDeployment('failed', 'site');
+      logger.error('Video deployment failed for all sites', {
+        deploymentId,
+        commandFailedSites,
+      });
+    }
+
+    logger.info('Deployment initiated', {
+      deploymentId,
+      videoFilename: deployment.filename,
+      totalSites: targets.length,
+      successCount,
+      commandSentSites,
+      commandQueuedSites,
+      commandFailedSites,
+    });
   }
 
   /**
@@ -593,25 +597,6 @@ class DeploymentService {
   }
 
   /**
-   * Vérifie si une erreur peut être retryée
-   */
-  private isRetryableError(errorMessage: string | null): boolean {
-    if (!errorMessage) return false;
-    const lowerError = errorMessage.toLowerCase();
-    return RETRY_CONFIG.retryableErrors.some(e => lowerError.includes(e.toLowerCase()));
-  }
-
-  /**
-   * Extrait le compteur de retry depuis le message d'erreur
-   * Format: "[retry X/Y] message d'erreur"
-   */
-  private getRetryCount(errorMessage: string | null): number {
-    if (!errorMessage) return 0;
-    const match = errorMessage.match(/\[retry (\d+)\/\d+\]/);
-    return match ? parseInt(match[1], 10) : 0;
-  }
-
-  /**
    * Marque un déploiement comme échoué avec possibilité de retry
    * @param deploymentId ID du déploiement
    * @param errorMessage Message d'erreur
@@ -628,8 +613,8 @@ class DeploymentService {
       if (result.rows.length === 0) return;
 
       const currentError = result.rows[0].error_message as string | null;
-      const retryCount = this.getRetryCount(currentError);
-      const canRetry = allowRetry && this.isRetryableError(errorMessage) && retryCount < RETRY_CONFIG.maxRetries;
+      const retryCount = getRetryCount(currentError);
+      const canRetry = allowRetry && isRetryableError(errorMessage) && retryCount < RETRY_CONFIG.maxRetries;
 
       if (canRetry) {
         // Incrémenter le compteur et garder en pending pour retry
@@ -699,7 +684,7 @@ class DeploymentService {
 
       for (const row of result.rows) {
         const deployment = row as unknown as DeploymentRow & { error_message: string };
-        const retryCount = this.getRetryCount(deployment.error_message);
+        const retryCount = getRetryCount(deployment.error_message);
 
         if (retryCount >= RETRY_CONFIG.maxRetries) {
           skipped++;

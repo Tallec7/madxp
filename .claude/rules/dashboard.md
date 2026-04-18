@@ -66,3 +66,8 @@ paths:
 - NE PAS supprimer `findLastForSite()` de `software-update.repository.ts` (alimente `lastOtaDeployment` du dashboard club Pi)
 - NE PAS supprimer les OTA badges (`ota-badge`, `ota-ok`, `ota-err`, `ota-pending`) ou la card alertes actives de `club-dashboard.component.ts`
 - NE PAS rendre `<app-club-saas-actions>` ou `<app-club-help-modal>` dans `club-loop.component.ts` (Ma boucle) — ces composants vivent uniquement sur `club-dashboard.component.ts` (Mon club)
+
+## Socket client (ADR-063)
+
+- NE PAS retirer le grace timer `transientDisconnectGraceMs` / `pendingDisconnectWarnTimer` dans `SocketService` (`core/services/socket.service.ts`) — il diffère le warn `transport close` de 3s et l'annule si reconnect réussit, pour éviter le bruit des flip-flops Railway. Les métriques serveur `recordSocketDisconnect` conservent la visibilité opérationnelle — smoke test enforced
+- NE PAS remettre un warn immédiat pour `reason === 'transport close'` dans `socket.on('disconnect')` (reverter annule ADR-063 et ramène le spam console — toujours différer via `setTimeout` + annulation sur `connect`)

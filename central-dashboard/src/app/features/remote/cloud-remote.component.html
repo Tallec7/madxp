@@ -93,6 +93,26 @@
       <h2 class="pin-title">{{ clubName || siteName }}</h2>
       <p class="pin-subtitle">Saisissez le PIN pour accéder à la télécommande</p>
 
+      <!-- ADR-058 — sélecteur de profil si plusieurs profils protégés par PIN -->
+      @if (availableProfiles.length > 1) {
+        <div class="pin-profile-selector">
+          <label for="pinProfileSelect" class="pin-profile-label">Profil</label>
+          <select
+            id="pinProfileSelect"
+            class="pin-profile-select"
+            [value]="selectedProfileId || ''"
+            (change)="onProfileSelect($any($event.target).value)"
+            [disabled]="pinVerifying"
+          >
+            @for (p of availableProfiles; track p.id) {
+              <option [value]="p.id">
+                {{ p.displayName || p.name }}{{ p.pinRequired ? ' · 🔒' : '' }}
+              </option>
+            }
+          </select>
+        </div>
+      }
+
       <!-- PIN dots -->
       <div class="pin-dots">
         @for (i of [0, 1, 2, 3, 4, 5]; track i) {
@@ -454,11 +474,56 @@
                     <span>Options</span>
                   </button>
                 }
+                <!-- ADR-061 — Toggle ancienne/nouvelle télécommande (sunset 2026-11-01) -->
+                @if (legacyToggleAvailable) {
+                  <button
+                    class="header-menu-item"
+                    (click)="toggleRemoteVersion(); closeHeaderMenu()"
+                    aria-label="Basculer version télécommande"
+                  >
+                    <svg class="menu-item-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M17 1l4 4-4 4" />
+                      <path d="M3 11V9a4 4 0 014-4h14" />
+                      <path d="M7 23l-4-4 4-4" />
+                      <path d="M21 13v2a4 4 0 01-4 4H3" />
+                    </svg>
+                    <span>{{ currentRemoteVersion === 'v2' ? 'Ancienne télécommande' : 'Nouvelle télécommande' }}</span>
+                  </button>
+                }
+                <!-- ADR-062 famille UX — Préférences per-device -->
+                <button
+                  class="header-menu-item"
+                  (click)="openPreferences(); closeHeaderMenu()"
+                  aria-label="Préférences"
+                >
+                  <svg
+                    class="menu-item-icon"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <path d="M4 6h16M4 12h10M4 18h16" />
+                  </svg>
+                  <span>Préférences</span>
+                </button>
               </div>
             }
           </div>
         </div>
       </div>
+
+      <!-- ADR-062 famille UX — Overlay Préférences -->
+      @if (showPreferencesMenu) {
+        <div class="prefs-overlay" (click)="closePreferences()">
+          <div (click)="$event.stopPropagation()">
+            <app-preferences-menu
+              [siteId]="siteId"
+              (dismissed)="closePreferences()"
+            ></app-preferences-menu>
+          </div>
+        </div>
+      }
 
       <!-- Barre de recherche (visible sur la page d'accueil) -->
       @if (currentView === 'home' || isSearching) {

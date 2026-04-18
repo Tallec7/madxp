@@ -1,0 +1,113 @@
+<div class="settings-card remote-auth">
+  <div class="settings-header">
+    <span class="settings-icon">🔐</span>
+    <h4>PIN remote par profil <span class="badge-super">super_admin</span></h4>
+  </div>
+  <p class="settings-desc">
+    Chaque profil peut exiger un PIN (4-6 chiffres) pour la télécommande cloud. Une fois le PIN
+    validé, un appareil reste autorisé pendant 30 jours. Vous pouvez révoquer individuellement
+    chaque appareil ci-dessous.
+  </p>
+
+  <div *ngIf="loading" class="muted">Chargement des profils…</div>
+  <div *ngIf="error" class="error-banner">{{ error }}</div>
+
+  <div *ngIf="!loading && rows.length === 0" class="muted">Aucun profil.</div>
+
+  <ul class="profile-list" *ngIf="!loading && rows.length > 0">
+    <li *ngFor="let row of rows; trackBy: trackById" class="profile-row">
+      <div class="profile-head">
+        <div class="profile-title">
+          <strong>{{ row.profile.display_name || row.profile.name }}</strong>
+          <span *ngIf="row.profile.is_default" class="tag tag-default">défaut</span>
+          <span *ngIf="row.profile.remote_pin_required" class="tag tag-on">PIN actif</span>
+          <span *ngIf="!row.profile.remote_pin_required" class="tag tag-off">aucun PIN</span>
+        </div>
+        <button
+          type="button"
+          class="btn btn-sm btn-ghost"
+          (click)="toggleDevices(row)"
+          [attr.aria-expanded]="row.expanded"
+        >
+          {{ row.expanded ? 'Masquer appareils' : 'Voir appareils' }}
+        </button>
+      </div>
+
+      <div class="pin-actions">
+        <input
+          type="text"
+          inputmode="numeric"
+          maxlength="6"
+          placeholder="Nouveau PIN (4-6 chiffres)"
+          class="pin-input"
+          [(ngModel)]="row.pinInput"
+          [disabled]="row.saving"
+        />
+        <button
+          type="button"
+          class="btn btn-primary btn-sm"
+          (click)="setPin(row)"
+          [disabled]="row.saving || !row.pinInput"
+        >
+          {{ row.profile.remote_pin_required ? 'Changer le PIN' : 'Activer le PIN' }}
+        </button>
+        <button
+          *ngIf="row.profile.remote_pin_required"
+          type="button"
+          class="btn btn-danger btn-sm"
+          (click)="clearPin(row)"
+          [disabled]="row.saving"
+        >
+          Retirer le PIN
+        </button>
+      </div>
+
+      <div class="devices-panel" *ngIf="row.expanded">
+        <div class="devices-head">
+          <span>Appareils autorisés ({{ row.devices.length }})</span>
+          <div class="devices-actions">
+            <button
+              type="button"
+              class="btn btn-sm btn-ghost"
+              (click)="refreshDevices(row)"
+              [disabled]="row.loadingDevices"
+            >
+              ↻ Actualiser
+            </button>
+            <button
+              type="button"
+              class="btn btn-sm btn-danger"
+              (click)="revokeAll(row)"
+              [disabled]="row.loadingDevices || row.devices.length === 0"
+            >
+              Tout révoquer
+            </button>
+          </div>
+        </div>
+        <div *ngIf="row.loadingDevices" class="muted">Chargement…</div>
+        <div *ngIf="!row.loadingDevices && row.devices.length === 0" class="muted">
+          Aucun appareil actif.
+        </div>
+        <ul *ngIf="!row.loadingDevices && row.devices.length > 0" class="device-list">
+          <li *ngFor="let d of row.devices; trackBy: trackDeviceById" class="device-row">
+            <div class="device-info">
+              <div class="device-label">
+                {{ d.label || 'Appareil sans libellé' }}
+                <code class="device-id">{{ d.device_id.slice(0, 12) }}…</code>
+              </div>
+              <div class="device-meta">
+                Créé : {{ d.created_at | date: 'short' }} — Dernier usage :
+                <span *ngIf="d.last_used_at">{{ d.last_used_at | date: 'short' }}</span>
+                <span *ngIf="!d.last_used_at" class="muted">jamais</span>
+                — Expire : {{ d.expires_at | date: 'short' }}
+              </div>
+            </div>
+            <button type="button" class="btn btn-sm btn-danger" (click)="revokeDevice(row, d)">
+              Révoquer
+            </button>
+          </li>
+        </ul>
+      </div>
+    </li>
+  </ul>
+</div>

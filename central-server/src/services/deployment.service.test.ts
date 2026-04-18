@@ -77,6 +77,7 @@ jest.mock('./email.service', () => ({
 
 // Import after mocks
 import deploymentService from './deployment.service';
+import { isRetryableError, getRetryCount } from './deployment-retry.util';
 
 describe('DeploymentService', () => {
   beforeEach(() => {
@@ -692,34 +693,34 @@ describe('DeploymentService', () => {
   });
 
   describe('Retry System', () => {
-    describe('isRetryableError (private)', () => {
+    describe('isRetryableError', () => {
       it('should return true for timeout errors', () => {
-        expect((deploymentService as any).isRetryableError('Command timeout after 30s')).toBe(true);
-        expect((deploymentService as any).isRetryableError('Connection timeout')).toBe(true);
+        expect(isRetryableError('Command timeout after 30s')).toBe(true);
+        expect(isRetryableError('Connection timeout')).toBe(true);
       });
 
       it('should return true for network errors', () => {
-        expect((deploymentService as any).isRetryableError('Network error: ECONNREFUSED')).toBe(true);
-        expect((deploymentService as any).isRetryableError('ETIMEDOUT')).toBe(true);
+        expect(isRetryableError('Network error: ECONNREFUSED')).toBe(true);
+        expect(isRetryableError('ETIMEDOUT')).toBe(true);
       });
 
       it('should return false for non-retryable errors', () => {
-        expect((deploymentService as any).isRetryableError('Invalid video format')).toBe(false);
-        expect((deploymentService as any).isRetryableError('Permission denied')).toBe(false);
-        expect((deploymentService as any).isRetryableError(null)).toBe(false);
+        expect(isRetryableError('Invalid video format')).toBe(false);
+        expect(isRetryableError('Permission denied')).toBe(false);
+        expect(isRetryableError(null)).toBe(false);
       });
     });
 
-    describe('getRetryCount (private)', () => {
+    describe('getRetryCount', () => {
       it('should extract retry count from error message', () => {
-        expect((deploymentService as any).getRetryCount('[retry 1/3] timeout error')).toBe(1);
-        expect((deploymentService as any).getRetryCount('[retry 2/3] network error')).toBe(2);
-        expect((deploymentService as any).getRetryCount('[retry 3/3] connection error')).toBe(3);
+        expect(getRetryCount('[retry 1/3] timeout error')).toBe(1);
+        expect(getRetryCount('[retry 2/3] network error')).toBe(2);
+        expect(getRetryCount('[retry 3/3] connection error')).toBe(3);
       });
 
       it('should return 0 if no retry info', () => {
-        expect((deploymentService as any).getRetryCount('Simple error')).toBe(0);
-        expect((deploymentService as any).getRetryCount(null)).toBe(0);
+        expect(getRetryCount('Simple error')).toBe(0);
+        expect(getRetryCount(null)).toBe(0);
       });
     });
 
