@@ -141,64 +141,40 @@ if (target.siteType === 'saas') {
 
 ---
 
-## Phase 2 — Unification du vocabulaire (révisé 2026-04-18 après audit)
+## Phase 2 — Unification du vocabulaire (✅ Done 2026-04-18 via ADR-065)
 
-**Durée révisée** : 1-2 jours (frontend uniquement — backend déjà propre)
-**Owner** : Lead frontend
-**Objectif** : un seul `Video` dans tout le frontend
+**Statut** : ✅ Fait — travail absorbé par ADR-065 (Video type canonisation)
+**Durée réelle** : 0 jour (aucun travail supplémentaire)
+**Objectif atteint** : base canonique `VideoView` + DTOs spécialisés par domaine
 
-### Audit chiffré (fait le 2026-04-18)
+### Résultat de l'audit final (2026-04-18)
 
-**Backend — OK, pas de chantier nécessaire** :
+| Type               | Fichier                                                 | Rôle                             | Statut            |
+| ------------------ | ------------------------------------------------------- | -------------------------------- | ----------------- |
+| `Video`            | `core/models/video.model.ts:30`                         | Miroir DB snake_case (namespace) | ✅ 0 consommateur |
+| `VideoView`        | `core/models/video.model.ts:53`                         | Base UI camelCase canonique      | ✅ Utilisée       |
+| `VideoItem`        | `video-library/video-library.types.ts:22`               | `extends VideoView` (enrichi UI) | ✅ Canonisée      |
+| `CloudVideo`       | `core/models/index.ts:247`                              | DTO wire format API centrale     | ✅ Renommé        |
+| `ContentVideoRow`  | `content/content-management-data.service.ts:21`         | Row table Page Contenu           | ✅ Renommé        |
+| `SponsorVideoRow`  | `advertisers/sponsor-video-data.service.ts:14`          | Row table sponsor                | ✅ Renommé        |
+| `RemoteVideoEntry` | `remote/services/cloud-remote-navigation.service.ts:24` | Entry remote cloud               | ✅ Renommé        |
 
-- 1 interface `ContentDeployment` centrale dans `central-server/src/types/index.ts`
-- 3 variantes enrichies légitimes dans `deployment.repository.ts` (JOINs différents)
-- 28 fichiers référencent `content_deployments` — stable, pas de doublon
-- 171 occurrences de `content|asset|media` mais ce sont des colonnes SQL / URLs, pas du vocabulaire dupliqué
+Les 4 interfaces `Video` parallèles de l'audit initial ont été renommées en DTOs domaine-spécifiques, éliminant toute ambiguïté nominale.
 
-**Frontend — 5 interfaces `Video` parallèles** :
+**Note** : `CloudVideo.thumbnail_url` reste en snake_case car c'est le format wire du backend (`content.controller.ts:260`). Le renommer forcerait un mapper. Décision : on garde.
 
-| Source                                                                     | Champs           | Consommateurs     |
-| -------------------------------------------------------------------------- | ---------------- | ----------------- |
-| `core/models/index.ts:224` — `Video` (canonique DB)                        | 15 snake_case    | **0 fichiers** 🚨 |
-| `features/content/content-management-data.service.ts:14` — `Video`         | 7 champs         | 3 fichiers        |
-| `features/advertisers/sponsor-video-data.service.ts:6` — `Video`           | 6 champs         | 1 fichier         |
-| `features/remote/services/cloud-remote-navigation.service.ts:16` — `Video` | 5 champs         | 2 fichiers        |
-| `features/sites/.../video-library.types.ts:15` — `VideoItem`               | **23 camelCase** | 9 fichiers        |
-
-Le modèle canonique DB n'est utilisé par personne. `VideoItem` est la définition de fait la plus riche.
-
-### Tâches (frontend only)
-
-**2.1 Canoniser `Video` dans `core/models/video.model.ts`**
-
-- [ ] Créer `core/models/video.model.ts` qui exporte `Video` (camelCase, basé sur `VideoItem`)
-- [ ] Déprécier (commentaire `@deprecated`) les 4 autres interfaces
-
-**2.2 Migration progressive des 15 fichiers consommateurs**
-
-- [ ] Remplacer `import { Video } from '.../content-management-data.service'` par `core/models/video.model`
-- [ ] Remplacer `VideoItem` par `Video` dans video-library et ses 9 consommateurs
-- [ ] Supprimer les 4 interfaces dupliquées une fois tous les imports migrés
-
-**2.3 Tests**
-
-- [ ] `npm run test:central` — 520 Karma tests doivent passer
-- [ ] `npm run test:smoke:smart` — 0 régression
-
-### Non-goals (reportés ou abandonnés)
+### Non-goals (toujours valides)
 
 - ❌ Rename `content_deployments` en DB — trop risqué, gain nul
-- ❌ Alias `/api/deployments` ↔ `/api/content/deployments` — pas de consommateur externe, YAGNI
-- ❌ Rename `ContentDeployment` → `Deployment` backend — cohérent avec le nom de table, pas de valeur
-- ❌ ADR dédié — pas de décision structurante, c'est juste du rename frontend
+- ❌ Alias `/api/deployments` ↔ `/api/content/deployments` — pas de consommateur externe
+- ❌ Rename `ContentDeployment` → `Deployment` backend — cohérent avec la table
+- ❌ ADR dédié — absorbé par ADR-065
 
-### Critères d'acceptation
+### Critères d'acceptation (tous remplis)
 
-- ✅ Une seule interface `Video` dans tout le frontend
-- ✅ Glossaire à jour dans `docs/GLOSSARY.md`
-- ✅ Tests passent (2728 server + karma)
-- ✅ Lint pass
+- ✅ Base canonique `VideoView` unique, DTOs domaine clairement nommés
+- ✅ `VideoItem extends VideoView` (video-library)
+- ✅ Karma 520 tests pass, smoke pass, lint pass
 
 ---
 
