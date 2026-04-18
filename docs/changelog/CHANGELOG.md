@@ -1,3 +1,9 @@
+# [3.190.0](https://github.com/Tallec7/neopro/compare/v3.189.0...v3.190.0) (2026-04-18)
+
+### Features
+
+- **remote:** wire ADR-062 UX/Préférences menu on Pi remote ([#472](https://github.com/Tallec7/neopro/issues/472)) ([083a6ca](https://github.com/Tallec7/neopro/commit/083a6cad9dc7293a65bb08ab7607509d268fa316)), closes [#469](https://github.com/Tallec7/neopro/issues/469)
+
 # [3.189.0](https://github.com/Tallec7/neopro/compare/v3.188.0...v3.189.0) (2026-04-18)
 
 ### Features
