@@ -6,7 +6,7 @@ import { HttpClient } from '@angular/common/http';
 import { Subscription } from 'rxjs';
 import { Configuration, TimeCategory, SportType, ScoreOverlayPosition } from '../../interfaces/configuration.interface';
 import { Category } from '../../interfaces/category.interface';
-import { Video } from '../../interfaces/video.interface';
+import { PiConfigVideoEntry } from '../../interfaces/video.interface';
 import { SocketService } from '../../services/socket.service';
 import { AnalyticsService } from '../../services/analytics.service';
 import { RecordingStateService } from '../../services/recording-state.service';
@@ -90,7 +90,7 @@ export class RemoteComponent implements OnInit, OnDestroy {
 
   // Recherche
   public searchQuery = '';
-  public searchResults: Video[] = [];
+  public searchResults: PiConfigVideoEntry[] = [];
   public isSearching = false;
 
   // Match info
@@ -121,7 +121,7 @@ export class RemoteComponent implements OnInit, OnDestroy {
   public playingVideoPath: string | null = null;
 
   // Vidéos récentes
-  public recentVideos: Video[] = [];
+  public recentVideos: PiConfigVideoEntry[] = [];
   private readonly MAX_RECENT_VIDEOS = 5;
 
   // Analytics recording
@@ -442,7 +442,7 @@ export class RemoteComponent implements OnInit, OnDestroy {
     this.socketService.emit('command', { type: 'sponsors', ...(target ? { target } : {}) });
   }
 
-  public launchVideo(video: Video): void {
+  public launchVideo(video: PiConfigVideoEntry): void {
     this.notifyUserActivity();
     this.analyticsService.trackManualTrigger(video);
     const target = this.getCommandTarget();
@@ -470,7 +470,7 @@ export class RemoteComponent implements OnInit, OnDestroy {
   // HELPERS CATÉGORIES & VIDÉOS
   // ============================================================================
 
-  public getVideoCategoryName(video: Video): string {
+  public getVideoCategoryName(video: PiConfigVideoEntry): string {
     if (!video.categoryId) return '';
     const find = (categories: Category[]): string => {
       for (const cat of categories) {
@@ -498,7 +498,7 @@ export class RemoteComponent implements OnInit, OnDestroy {
     return this.sortByName(category.subCategories ?? []);
   }
 
-  public getCurrentVideos(): Video[] {
+  public getCurrentVideos(): PiConfigVideoEntry[] {
     return this.sortByName(this.selectedSubCategory?.videos ?? this.selectedCategory?.videos ?? []);
   }
 
@@ -566,8 +566,8 @@ export class RemoteComponent implements OnInit, OnDestroy {
     this.isSearching = false;
   }
 
-  public getAllVideos(): Video[] {
-    const videos: Video[] = [];
+  public getAllVideos(): PiConfigVideoEntry[] {
+    const videos: PiConfigVideoEntry[] = [];
     const extract = (cat: Category) => {
       if (cat.videos) videos.push(...cat.videos);
       cat.subCategories?.forEach(sub => extract(sub));
@@ -717,7 +717,7 @@ export class RemoteComponent implements OnInit, OnDestroy {
     } catch { this.recentVideos = []; }
   }
 
-  private addToRecentVideos(video: Video): void {
+  private addToRecentVideos(video: PiConfigVideoEntry): void {
     this.recentVideos = this.recentVideos.filter(v => v.path !== video.path);
     this.recentVideos.unshift(video);
     this.recentVideos = this.recentVideos.slice(0, this.MAX_RECENT_VIDEOS);
@@ -745,20 +745,20 @@ export class RemoteComponent implements OnInit, OnDestroy {
   // THUMBNAILS
   // ============================================================================
 
-  public getVideoThumbnailUrl(video: Video): string | null {
+  public getVideoThumbnailUrl(video: PiConfigVideoEntry): string | null {
     if (video.thumbnailUrl) return video.thumbnailUrl;
     if (!video.path || this.isDemoMode) return null;
     const thumbnailPath = video.path.replace(/^videos\//, 'thumbnails/').replace(/\.\w+$/, '.jpg');
     return `${this.ADMIN_BASE_URL}/${thumbnailPath}?t=${this.thumbnailCacheBuster}`;
   }
 
-  public getVideoInitials(video: Video): string {
+  public getVideoInitials(video: PiConfigVideoEntry): string {
     if (!video.name) return '▶';
     const words = video.name.trim().split(/\s+/);
     return words.length >= 2 ? (words[0][0] + words[1][0]).toUpperCase() : video.name.substring(0, 2).toUpperCase();
   }
 
-  public getVideoPlaceholderColor(video: Video): string {
+  public getVideoPlaceholderColor(video: PiConfigVideoEntry): string {
     const colors = ['placeholder-pink', 'placeholder-blue', 'placeholder-green', 'placeholder-purple', 'placeholder-orange', 'placeholder-teal'];
     let hash = 0;
     const name = video.name || video.path || '';

@@ -5,7 +5,7 @@ import { VideoErrorRecoveryService } from './video-error-recovery.service';
 import { AnalyticsService } from './analytics.service';
 import { RecordingStateService } from './recording-state.service';
 import { PlayerStateService } from './player-state.service';
-import { Video } from '../interfaces/video.interface';
+import { PiConfigVideoEntry } from '../interfaces/video.interface';
 
 /**
  * Callbacks fournis par TvComponent pour les opérations qui dépendent du contexte
@@ -38,7 +38,7 @@ export class ManualVideoService {
   private static readonly PLAY_DEBOUNCE_MS = 150;
 
   // ADR-034: Preloaded manual video state for synchronized reveal
-  private _preloadedManualVideo: Video | null = null;
+  private _preloadedManualVideo: PiConfigVideoEntry | null = null;
   private _preloadedManualPlayer: HTMLVideoElement | null = null;
   private _preloadReady = false;
   private _pendingReveal = false;
@@ -72,7 +72,7 @@ export class ManualVideoService {
   /**
    * Joue une vidéo manuelle (master path).
    */
-  play(video: Video): void {
+  play(video: PiConfigVideoEntry): void {
     const now = Date.now();
     if (now - this._lastPlayTimestamp < ManualVideoService.PLAY_DEBOUNCE_MS) {
       console.log('tv player : play manual video debounced (too rapid)', video.path);
@@ -269,7 +269,7 @@ export class ManualVideoService {
    * ADR-034: Preload a manual video without revealing it.
    * Slaves call this on 'action' and wait for master's manualVideoVisible: true signal.
    */
-  preloadManualVideo(video: Video): void {
+  preloadManualVideo(video: PiConfigVideoEntry): void {
     console.log('[TV] Slave: preloading manual video silently (no freeze/overlay):', video.path);
 
     this.cleanupPreloadState();

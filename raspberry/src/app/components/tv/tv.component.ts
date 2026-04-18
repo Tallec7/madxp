@@ -22,7 +22,7 @@ import { LicenseBlockComponent } from '../license-block/license-block.component'
 import { WaitingScreenComponent } from '../waiting-screen/waiting-screen.component';
 import { WrongPortScreenComponent } from '../wrong-port-screen/wrong-port-screen.component';
 import { ScoreOverlayComponent } from '../score-overlay/score-overlay.component';
-import { Video } from '../../interfaces/video.interface';
+import { PiConfigVideoEntry } from '../../interfaces/video.interface';
 import { Configuration } from '../../interfaces/configuration.interface';
 import { Command } from '../../interfaces/command.interface';
 import { Sponsor } from '../../interfaces/sponsor.interface';
@@ -590,7 +590,7 @@ export class TvComponent implements OnInit, OnDestroy {
       }
     }
     if (command.type === 'video' && command.data) {
-      const video = command.data as Video;
+      const video = command.data as PiConfigVideoEntry;
       if (this.isDuplicateCommand(`video:${video.path}`)) return;
       this.lastTriggerType = 'manual';
       this.tvSyncService.markActionReceived();
@@ -662,7 +662,7 @@ export class TvComponent implements OnInit, OnDestroy {
     return video;
   }
 
-  private findVideoInConfig(path: string): Video | Sponsor | null {
+  private findVideoInConfig(path: string): PiConfigVideoEntry | Sponsor | null {
     const sponsor = this.configuration.sponsors?.find(s => s.path === path);
     if (sponsor) return sponsor;
 
@@ -673,7 +673,7 @@ export class TvComponent implements OnInit, OnDestroy {
       }
     }
 
-    const searchCategories = (cats: Category[]): Video | null => {
+    const searchCategories = (cats: Category[]): PiConfigVideoEntry | null => {
       for (const cat of cats) {
         const video = cat.videos?.find(v => v.path === path);
         if (video) return video;

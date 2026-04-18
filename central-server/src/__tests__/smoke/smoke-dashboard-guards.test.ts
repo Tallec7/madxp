@@ -1729,3 +1729,44 @@ describe('Canonical Video / VideoView hierarchy guard (ADR-064)', () => {
     );
   });
 });
+
+// ============================================================
+// ADR-066 — Raspberry PiConfigVideoEntry naming discipline
+// Empêche le retour à `interface Video` côté Pi (collision sémantique
+// avec le Video canonique dashboard / backend qui représente la row DB).
+// ============================================================
+describe('Raspberry PiConfigVideoEntry naming guard (ADR-066)', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..', '..');
+  const piVideoInterface = path.join(
+    repoRoot,
+    'raspberry/src/app/interfaces/video.interface.ts'
+  );
+  const piSrcRoot = path.join(repoRoot, 'raspberry/src/app');
+
+  it('video.interface.ts exports PiConfigVideoEntry (pas Video)', () => {
+    const content = fs.readFileSync(piVideoInterface, 'utf-8');
+    expect(content).toMatch(/export\s+interface\s+PiConfigVideoEntry\b/);
+    expect(content).not.toMatch(/export\s+interface\s+Video\s*\{/);
+  });
+
+  it('aucun fichier raspberry/src/app ne redéclare interface Video', () => {
+    const offenders: string[] = [];
+    const walk = (dir: string) => {
+      for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+        const full = path.join(dir, entry.name);
+        if (entry.isDirectory()) {
+          if (entry.name === 'node_modules' || entry.name === 'dist') continue;
+          walk(full);
+          continue;
+        }
+        if (!entry.name.endsWith('.ts')) continue;
+        const content = fs.readFileSync(full, 'utf-8');
+        if (/\b(?:export\s+)?interface\s+Video\s*\{/.test(content)) {
+          offenders.push(path.relative(repoRoot, full));
+        }
+      }
+    };
+    walk(piSrcRoot);
+    expect(offenders).toEqual([]);
+  });
+});
