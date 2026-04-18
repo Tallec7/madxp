@@ -149,6 +149,7 @@ class DeploymentService {
 
       try {
         const result = await strategy.deliver(ctx);
+        metricsService.recordDelivery(strategy.name, result.outcome);
         if (result.success) {
           successCount++;
           if (result.outcome === 'queued') {
@@ -160,6 +161,7 @@ class DeploymentService {
           commandFailedSites.push(target.siteName);
         }
       } catch (err) {
+        metricsService.recordDelivery(strategy.name, 'failed');
         logger.error('Delivery strategy threw', {
           deploymentId,
           siteId: target.siteId,

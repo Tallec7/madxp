@@ -327,6 +327,21 @@ groups:
           summary: "High site_sponsor PDF report failure rate"
           description: "More than 1 PDF generation failure per minute. Possible issue with match breakdown data."
 
+      # ADR-069 — Delivery strategy failures (per-channel regression detection)
+      # Detects if a single strategy (pi-socket, saas-direct, ...) fails at an
+      # abnormal rate while others work. Avoids silent regression of one channel
+      # after adding a new one to the registry.
+      - alert: DeliveryStrategyHighFailureRate
+        expr: |
+          sum by (strategy) (rate(neopro_deployment_delivery_total{outcome="failed"}[15m]))
+            / sum by (strategy) (rate(neopro_deployment_delivery_total[15m])) > 0.3
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Delivery strategy {{ $labels.strategy }} failing >30%"
+          description: "ADR-069 strategy {{ $labels.strategy }} has >30% failed outcomes for 15m. Check central-server/src/services/delivery/{{ $labels.strategy }}.strategy.ts."
+
       # Sponsor sync deployment monitoring (P8 — dashboard→Pi sponsor sync)
       - alert: SponsorSyncMissing
         expr: rate(neopro_sponsor_sync_total{status="included"}[1h]) == 0 and rate(neopro_deployments_total{status="completed"}[1h]) > 0

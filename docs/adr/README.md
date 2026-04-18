@@ -85,7 +85,7 @@ Un ADR documente une décision technique importante avec :
 | [ADR-066](ADR-066-rename-pi-video-interface.md)                    | Rename `Video` → `PiConfigVideoEntry` (Raspberry)           | Accepté                  | Avr 2026 |
 | [ADR-067](ADR-067-video-manager-two-consumers.md)                  | Garder 2 consumers vidéo (Page Contenu vs VideoLibrary)     | Accepté                  | Avr 2026 |
 | [ADR-068](ADR-068-signed-urls-saas-video-proxy.md)                 | Signed URLs vidéo SaaS via proxy streaming Node             | Accepté                  | Avr 2026 |
-| [ADR-069](ADR-069-delivery-strategy-pattern.md)                    | Delivery Strategy pattern pour deployment.service.ts        | Proposé                  | Avr 2026 |
+| [ADR-069](ADR-069-delivery-strategy-pattern.md)                    | Delivery Strategy pattern pour deployment.service.ts        | Accepté                  | Avr 2026 |
 
 ### Supersédés
 

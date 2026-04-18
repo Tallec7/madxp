@@ -67,6 +67,17 @@ const deploymentDuration = new Histogram({
   registers: [register],
 });
 
+// ADR-069 — Livraison par stratégie (Pi socket, SaaS direct, ...).
+// Permet d'observer chaque canal indépendamment : nombre de succès/échecs par
+// strategy, utile pour détecter une régression isolée (ex: strategy X failing
+// pendant que les autres tournent bien).
+const deliveryTotal = new Counter({
+  name: 'neopro_deployment_delivery_total',
+  help: 'Total number of deliveries per strategy and outcome (ADR-069)',
+  labelNames: ['strategy', 'outcome'],
+  registers: [register],
+});
+
 const videoUploadsTotal = new Counter({
   name: 'neopro_video_uploads_total',
   help: 'Total number of video uploads',
@@ -754,6 +765,15 @@ class MetricsService {
 
   recordDeploymentDuration(targetType: string, durationSeconds: number): void {
     deploymentDuration.observe({ target_type: targetType }, durationSeconds);
+  }
+
+  /**
+   * ADR-069 — Incrémente le compteur de livraison par stratégie.
+   * @param strategy Nom de la stratégie (`pi-socket`, `saas-direct`, ...)
+   * @param outcome  Résultat (`sent` | `queued` | `completed` | `failed`)
+   */
+  recordDelivery(strategy: string, outcome: string): void {
+    deliveryTotal.inc({ strategy, outcome });
   }
 
   recordSponsorSync(status: string, count: number): void {

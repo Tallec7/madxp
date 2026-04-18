@@ -96,6 +96,7 @@
 | IMP-DEP-13 | OTA vérification intégrité node_modules + rollback auto                     | Production | `update-software.js`, `diagnose-pi.sh`                                                                | Fév 2026     |
 | IMP-DEP-14 | Setup.sh archive unique GitHub (remplace ~40 curl) + deploy rollback auto   | Production | `setup.sh`, `deploy-remote.sh`                                                                        | Mars 2026    |
 | IMP-DEP-15 | Feedback deployed_path — le Pi rapporte le chemin réel après déploiement    | Production | `agent.js`, `deploy-progress.handler.ts`, `deployment.repository.ts`, `site-content-tab.component.ts` | Mars 2026    |
+| IMP-DEP-16 | ADR-069 Delivery Strategy pattern (PiSocket/SaasDirect, registry, metrics)  | Production | `services/delivery/`, `deployment.service.ts`, `metrics.service.ts`, `rules.yml`                      | Avril 2026   |
 
 ---
 
@@ -359,18 +360,18 @@
 
 ## Statistiques Produit
 
-| Métrique                  | Valeur                                                                                                                                                                                                                                 |
-| ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Features implémentées** | **232** (+26 audit, +9 E-22 TV+Secondary dual, +6 sponsor UX, +2 résilience Pi/OTA, +3 hotspot WiFi, +3 debug page, +1 EDID enrichment, +1 dashboard EDID display, +1 OTA edid-decode, +1 sysfs fix, +1 ADR-068 signed URL proxy SaaS) |
-| Domaines fonctionnels     | 14                                                                                                                                                                                                                                     |
-| Controllers API           | 29 (+sponsor-alerts)                                                                                                                                                                                                                   |
-| Services métier           | 40 (+sponsor-alert, sponsor-stats, sponsor-auto-resolution)                                                                                                                                                                            |
-| Repositories              | 25 (+video-variant)                                                                                                                                                                                                                    |
-| Migrations DB             | 55 (+add-led-support-and-video-variants, +rename-led-to-secondary-display)                                                                                                                                                             |
-| Modules dashboard         | 21 (+advertiser-health, analytics-categories)                                                                                                                                                                                          |
-| Services Raspberry        | 19 (+sponsor-stats)                                                                                                                                                                                                                    |
-| Versions publiées         | 265+ (v2.1 → v3.62)                                                                                                                                                                                                                    |
-| Tests (total)             | 2 987 (1872 API + 506 Angular + 148 Admin + 71 Socket + 390 Smoke)                                                                                                                                                                     |
+| Métrique                  | Valeur                                                                                                                                                                                                                                                                       |
+| ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Features implémentées** | **233** (+26 audit, +9 E-22 TV+Secondary dual, +6 sponsor UX, +2 résilience Pi/OTA, +3 hotspot WiFi, +3 debug page, +1 EDID enrichment, +1 dashboard EDID display, +1 OTA edid-decode, +1 sysfs fix, +1 ADR-068 signed URL proxy SaaS, +1 ADR-069 Delivery Strategy pattern) |
+| Domaines fonctionnels     | 14                                                                                                                                                                                                                                                                           |
+| Controllers API           | 29 (+sponsor-alerts)                                                                                                                                                                                                                                                         |
+| Services métier           | 40 (+sponsor-alert, sponsor-stats, sponsor-auto-resolution)                                                                                                                                                                                                                  |
+| Repositories              | 25 (+video-variant)                                                                                                                                                                                                                                                          |
+| Migrations DB             | 55 (+add-led-support-and-video-variants, +rename-led-to-secondary-display)                                                                                                                                                                                                   |
+| Modules dashboard         | 21 (+advertiser-health, analytics-categories)                                                                                                                                                                                                                                |
+| Services Raspberry        | 19 (+sponsor-stats)                                                                                                                                                                                                                                                          |
+| Versions publiées         | 265+ (v2.1 → v3.62)                                                                                                                                                                                                                                                          |
+| Tests (total)             | 2 987 (1872 API + 506 Angular + 148 Admin + 71 Socket + 390 Smoke)                                                                                                                                                                                                           |
 
 ---
 

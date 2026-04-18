@@ -1,7 +1,7 @@
 ## ADR-069: Delivery Strategy pattern pour `deployment.service.ts`
 
 **Date** : 2026-04-18
-**Statut** : Proposé
+**Statut** : Accepté — implémenté et clôturé 2026-04-18
 **Format** : Léger
 
 ---
@@ -71,3 +71,18 @@ Le service conserve les responsabilités transverses (retry policy via `deployme
 5. Adapter les smoke tests
 6. Rollout : flag ON en staging → 1 site prod → tous
 7. Supprimer l'ancien chemin `if (target.siteType === 'saas')` une fois stable
+
+## Implémentation (2026-04-18)
+
+Commits sur `main` :
+
+- `3920674e` — étapes 1-4 : création de `delivery/` (interface, PiSocketStrategy, SaasDirectStrategy, strategy-registry), branchement conditionnel dans `startDeployment` derrière `DELIVERY_STRATEGY_ENABLED`
+- `d14548e1` — étape 5 : ajout d'assertions smoke sur la nouvelle architecture (`smoke-saas.test.ts`)
+- `1999086d` — étapes 6+7 : rollout terminé, suppression du chemin legacy + du feature flag, `dispatchViaRegistry` devient l'unique chemin de `startDeployment`
+
+**Résultat mesuré** :
+
+- `deployment.service.ts` : 754 → 615 lignes
+- Régression verrouillée : smoke `noLegacySaasShortCircuit` empêche la réintroduction du pattern `target.siteType === 'saas' ... continue`
+- Métriques Prometheus `neopro_deployment_delivery_total{strategy,outcome}` (voir `metrics.service.ts`) — permettent d'observer chaque stratégie indépendamment
+- Ajouter un canal = 1 classe `X-Strategy.ts` + 1 ligne dans `DEFAULT_STRATEGIES`, zéro modif du service principal
