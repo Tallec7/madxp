@@ -250,42 +250,41 @@ Le revert du migrate `video-library-list` → `VideoCardComponent` est cohérent
 
 ## Phase 4 — Signed URLs & sécurité SaaS
 
-**Durée** : 1 sprint
-**Owner** : Lead backend + devops
-**Objectif** : plus d'URLs FTP publiques pour les vidéos SaaS
+**Statut** : ✅ Done 2026-04-18 via [ADR-068](../../docs/adr/ADR-068-signed-urls-saas-video-proxy.md)
+**Implémenté par** : commits `c89e2d58` (ADR), `34ad7259` (code), `c29dda5d` (fix route order)
 
-### Tâches
+### Réalisé
 
-**4.1 Proxy vidéo signé**
+**4.1 Proxy vidéo signé** — ✅ Done
 
-- [ ] Créer endpoint `GET /api/videos/:id/stream?token=xxx` qui :
-  - Valide le token JWT (payload : `videoId`, `siteId`, `exp`)
-  - Proxie le flux FTP en streaming
-  - Cache-Control adapté
-- [ ] Alternative : migration vers S3-compatible (OVH Object Storage / Cloudflare R2) + signed URLs natives
+- ✅ Endpoint `GET /api/videos/stream?token=xxx` : valide JWT, proxie FTP streaming, forward Range
+- ✅ JWT type `video-stream` (≠ auth) — payload : `path`, `siteId`, `exp` (2h TTL)
+- ✅ Cache-Control `private, max-age=300`
+- ❌ S3/R2 migration : rejetée (cf. ADR-068 — trop lourde, FTP suffit)
 
-**4.2 Émission des tokens**
+**4.2 Émission des tokens** — ✅ Done (approche simplifiée)
 
-- [ ] Endpoint `GET /api/saas/:siteId/videos/:videoId/url` retourne URL signée TTL 2h
-- [ ] Rotation côté client SaaS : rafraîchir l'URL à 80% du TTL
+- ✅ Tokens embarqués directement dans les URLs `resolveVideoUrls()` de `saas.controller.ts` (helper `buildPublicVideoUrl`)
+- ⏩ Endpoint `/url` séparé non nécessaire : la config SaaS contient déjà les URLs signées
+- ⏩ Rotation client : pas nécessaire en MVP (reload config SaaS quand token expire)
 
-**4.3 CDN**
+**4.3 CDN** — ⏩ Reporté (pas critique)
 
-- [ ] Configurer Cloudflare devant le proxy (cache 5min sur signed URL)
-- [ ] Vérifier que les signed URLs incluent un `v=<checksum>` pour invalidation cache
+- ⏩ Cloudflare pas nécessaire en MVP (Railway edge suffit pour le trafic SaaS actuel)
+- 🔜 À rouvrir si latence première frame >500ms observée en prod
 
-**4.4 Migration progressive**
+**4.4 Migration progressive** — ✅ Done
 
-- [ ] Feature flag : `SAAS_SIGNED_URLS_ENABLED`
-- [ ] Rollout sur un site test (site interne Neopro)
-- [ ] Rollout général après 1 semaine stable
+- ✅ Feature flag `VIDEO_STREAM_PROXY_ENABLED` (default OFF en code, activé sur Railway)
+- ✅ Activation immédiate sur prod 2026-04-18 (rollout simple car proxy isolé)
+- ✅ Rollback instant : set `VIDEO_STREAM_PROXY_ENABLED=false` → retour direct FTP
 
 ### Critères d'acceptation
 
-- ✅ Les URLs FTP publiques ne sont plus exposées aux clients SaaS
-- ✅ TTL respecté (URL expire bien après 2h)
-- ✅ Performance : latence première frame <500ms (mesure depuis Grafana)
-- ✅ Tests smoke couvrent la signature + expiration
+- ✅ URLs FTP publiques ne sont plus exposées aux clients SaaS (quand flag ON)
+- ✅ TTL respecté (2h, testé via `jwt.verify` avec `ExpiredError`)
+- ✅ Tests smoke : 4 nouveaux dans `smoke-saas.test.ts` (sign/verify, controller, routes, flag)
+- 🔜 Mesure latence première frame en prod (Grafana — à ajouter dashboard si besoin)
 
 ---
 
