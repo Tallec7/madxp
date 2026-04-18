@@ -1,3 +1,9 @@
+## [3.183.1](https://github.com/Tallec7/neopro/compare/v3.183.0...v3.183.1) (2026-04-18)
+
+### Bug Fixes
+
+- **smoke:** update play() signature lookup after ADR-066 Video→PiConfigVideoEntry rename ([1fe0dd3](https://github.com/Tallec7/neopro/commit/1fe0dd3450b98ac8d2fa43aac732612a86747512))
+
 # [3.183.0](https://github.com/Tallec7/neopro/compare/v3.182.0...v3.183.0) (2026-04-18)
 
 ### Features
