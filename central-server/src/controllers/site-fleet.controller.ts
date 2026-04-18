@@ -416,11 +416,12 @@ export const getSiteLocalContent = async (req: AuthRequest, res: Response) => {
 
     const isClub = req.user?.role === 'club';
 
-    // Récupérer le site, les vidéos cloud et les chemins déployés en parallèle
-    const [site, allCloudVideoRows, deployedPathRows] = await Promise.all([
+    // Récupérer le site, les vidéos cloud, les chemins déployés et les IDs déployés en parallèle
+    const [site, allCloudVideoRows, deployedPathRows, deployedVideoIds] = await Promise.all([
       siteRepository.findWithLocalContent(id),
       timelineRepository.getCloudVideos(500),
       deploymentRepository.getDeployedPathsForSite(id),
+      deploymentRepository.findCompletedVideoIdsForSite(id),
     ]);
 
     if (!site) {
@@ -437,16 +438,19 @@ export const getSiteLocalContent = async (req: AuthRequest, res: Response) => {
     }
 
     // Club users: filter cloud videos to only show their own + NEOPRO + videos in config
+    // + videos explicitly deployed to this site via Page Contenu (content_deployments)
     let cloudVideoRows = allCloudVideoRows;
     if (isClub) {
       const configFilenames = effectiveConfig
         ? extractConfigVideoFilenames(effectiveConfig)
         : new Set<string>();
+      const deployedVideoIdSet = new Set(deployedVideoIds);
 
       cloudVideoRows = allCloudVideoRows.filter((v) =>
         v.uploaded_for_site_id === id
         || (v.category && v.category.toUpperCase() === 'NEOPRO')
         || configFilenames.has(v.filename.toLowerCase())
+        || deployedVideoIdSet.has(v.id)
       );
     }
 
