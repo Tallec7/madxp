@@ -1,3 +1,9 @@
+# [3.182.0](https://github.com/Tallec7/neopro/compare/v3.181.0...v3.182.0) (2026-04-18)
+
+### Features
+
+- **remote-auth:** ADR-058 Phase 2C — email alerts sur burst failures PIN ([e7514c8](https://github.com/Tallec7/neopro/commit/e7514c86fbbe044e3b6abc9203cd7cb782b56b89))
+
 # [3.181.0](https://github.com/Tallec7/neopro/compare/v3.180.0...v3.181.0) (2026-04-18)
 
 ### Features
