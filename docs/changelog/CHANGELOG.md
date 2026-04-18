@@ -1,3 +1,9 @@
+## [3.192.4](https://github.com/Tallec7/neopro/compare/v3.192.3...v3.192.4) (2026-04-18)
+
+### Bug Fixes
+
+- **reporting:** compact PR descriptions in email — 1 line impact or 2 lines summary ([86f8fa4](https://github.com/Tallec7/neopro/commit/86f8fa4055357c843b9044606aee87bc030d67df))
+
 ## [3.192.3](https://github.com/Tallec7/neopro/compare/v3.192.2...v3.192.3) (2026-04-18)
 
 ### Bug Fixes
