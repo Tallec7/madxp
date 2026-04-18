@@ -1,3 +1,9 @@
+# [3.180.0](https://github.com/Tallec7/neopro/compare/v3.179.0...v3.180.0) (2026-04-18)
+
+### Features
+
+- **remote:** ADR-058 Phase 1.1 - Cloud Remote UI + unit tests ([fdb7f46](https://github.com/Tallec7/neopro/commit/fdb7f463e9e1ae6eeb69f2b970d96476ef021e80))
+
 # [3.179.0](https://github.com/Tallec7/neopro/compare/v3.178.8...v3.179.0) (2026-04-18)
 
 ### Features
