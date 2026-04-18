@@ -322,6 +322,88 @@ describe('Club Portal video ownership guards', () => {
       shortCircuits: true,
     });
   });
+
+  // --- ADR-069: SaasDirectStrategy must short-circuit SaaS sites with outcome='completed' ---
+  // Replaces the legacy `target.siteType === 'saas' ... continue` pattern once the flag
+  // DELIVERY_STRATEGY_ENABLED is turned on and the legacy path is removed (ADR-069 step 7).
+  it('SaasDirectStrategy must canHandle saas + return outcome="completed"', () => {
+    const strategyPath = path.join(
+      repoRoot,
+      'central-server/src/services/delivery/saas-direct.strategy.ts'
+    );
+    const source = fs.readFileSync(strategyPath, 'utf8');
+
+    expect({
+      canHandleSaas: /canHandle[\s\S]*?siteType\s*===\s*['"]saas['"]/.test(source),
+      returnsCompleted: /outcome:\s*['"]completed['"]/.test(source),
+      returnsSuccess: /success:\s*true/.test(source),
+    }).toEqual({
+      canHandleSaas: true,
+      returnsCompleted: true,
+      returnsSuccess: true,
+    });
+  });
+
+  // --- ADR-069: PiSocketStrategy must handle non-saas + use sendOrQueue ---
+  it('PiSocketStrategy must canHandle non-saas + delegate to commandQueue.sendOrQueue', () => {
+    const strategyPath = path.join(
+      repoRoot,
+      'central-server/src/services/delivery/pi-socket.strategy.ts'
+    );
+    const source = fs.readFileSync(strategyPath, 'utf8');
+
+    expect({
+      canHandleNonSaas: /canHandle[\s\S]*?siteType\s*!==\s*['"]saas['"]/.test(source),
+      usesSendOrQueue: /commandQueueService\.sendOrQueue/.test(source),
+      emitsDeployVideo: /'deploy_video'/.test(source),
+      requiresChecksum: /Cannot deploy video without checksum/.test(source),
+    }).toEqual({
+      canHandleNonSaas: true,
+      usesSendOrQueue: true,
+      emitsDeployVideo: true,
+      requiresChecksum: true,
+    });
+  });
+
+  // --- ADR-069: registry must read feature flag from env ---
+  it('strategy-registry must gate delegation behind DELIVERY_STRATEGY_ENABLED env flag', () => {
+    const registryPath = path.join(
+      repoRoot,
+      'central-server/src/services/delivery/strategy-registry.ts'
+    );
+    const source = fs.readFileSync(registryPath, 'utf8');
+
+    expect({
+      readsEnvFlag: /process\.env\.DELIVERY_STRATEGY_ENABLED/.test(source),
+      hasResolveMethod: /resolve\s*\(\s*site/.test(source),
+      registersSaasStrategy: /saasDirectStrategy/.test(source),
+      registersPiStrategy: /piSocketStrategy/.test(source),
+    }).toEqual({
+      readsEnvFlag: true,
+      hasResolveMethod: true,
+      registersSaasStrategy: true,
+      registersPiStrategy: true,
+    });
+  });
+
+  // --- ADR-069: deployment.service.ts must branch to registry when flag ON ---
+  it('deployment.service.ts must call dispatchViaRegistry when DELIVERY_STRATEGY_ENABLED', () => {
+    const servicePath = path.join(
+      repoRoot,
+      'central-server/src/services/deployment.service.ts'
+    );
+    const source = fs.readFileSync(servicePath, 'utf8');
+
+    expect({
+      importsRegistry: /deliveryStrategyRegistry/.test(source),
+      checksEnabledFlag: /deliveryStrategyRegistry\.isEnabled\(\)/.test(source),
+      dispatchesViaRegistry: /dispatchViaRegistry\s*\(/.test(source),
+    }).toEqual({
+      importsRegistry: true,
+      checksEnabledFlag: true,
+      dispatchesViaRegistry: true,
+    });
+  });
 });
 
 describe('SaaS mode guards (ADR-037)', () => {
