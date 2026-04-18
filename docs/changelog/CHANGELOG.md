@@ -1,3 +1,9 @@
+## [3.192.1](https://github.com/Tallec7/neopro/compare/v3.192.0...v3.192.1) (2026-04-18)
+
+### Bug Fixes
+
+- **ci:** correct dry_run boolean check in weekly-report workflow ([d24c3c2](https://github.com/Tallec7/neopro/commit/d24c3c2dc3d3b7d92cbd8c889d024d81ad09719d))
+
 # [3.192.0](https://github.com/Tallec7/neopro/compare/v3.191.0...v3.192.0) (2026-04-18)
 
 ### Features
