@@ -267,6 +267,30 @@ describe('Club Portal video ownership guards', () => {
       autoTags: true,
     });
   });
+
+  // --- getSiteLocalContent club filter must include deployed videos (Page Contenu flow) ---
+  it('getSiteLocalContent must extend club filter with completed content_deployments', () => {
+    const controllerPath = path.join(
+      repoRoot,
+      'central-server/src/controllers/site-fleet.controller.ts'
+    );
+    const repoPath = path.join(
+      repoRoot,
+      'central-server/src/repositories/deployment.repository.ts'
+    );
+    const controller = fs.readFileSync(controllerPath, 'utf8');
+    const repo = fs.readFileSync(repoPath, 'utf8');
+
+    expect({
+      repoHasMethod: /async findCompletedVideoIdsForSite\s*\(/.test(repo),
+      controllerCallsMethod: controller.includes('findCompletedVideoIdsForSite'),
+      filterIncludesDeployedIds: /deployedVideoIdSet\.has\(v\.id\)/.test(controller),
+    }).toEqual({
+      repoHasMethod: true,
+      controllerCallsMethod: true,
+      filterIncludesDeployedIds: true,
+    });
+  });
 });
 
 describe('SaaS mode guards (ADR-037)', () => {

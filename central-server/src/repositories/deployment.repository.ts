@@ -332,6 +332,28 @@ class DeploymentRepositoryImpl extends BaseRepository<ContentDeployment> {
    * Retourne les chemins reels deployes pour un site (le dernier chemin par video).
    * Utilise par le dashboard pour afficher les vrais chemins au lieu de chemins speculatifs.
    */
+  /**
+   * Retourne les video_id déployés avec succès sur un site (direct ou via groupe).
+   * Utilisé pour étendre le filtre club du pool cloud : une vidéo déployée par
+   * l'admin via Page Contenu doit être visible dans le portail club du site cible,
+   * même si elle n'a pas `uploaded_for_site_id` ni `category = NEOPRO`.
+   */
+  async findCompletedVideoIdsForSite(siteId: string): Promise<string[]> {
+    const result = await query<{ video_id: string }>(
+      `SELECT DISTINCT video_id
+       FROM content_deployments
+       WHERE status = 'completed'
+         AND (
+           (target_type = 'site' AND target_id = $1)
+           OR (target_type = 'group' AND target_id IN (
+             SELECT group_id FROM site_groups WHERE site_id = $1
+           ))
+         )`,
+      [siteId]
+    );
+    return result.rows.map((r) => r.video_id);
+  }
+
   async getDeployedPathsForSite(siteId: string): Promise<Array<{ video_id: string; deployed_path: string; deployed_filename: string }>> {
     const result = await query<{ video_id: string; deployed_path: string; deployed_filename: string }>(
       `SELECT DISTINCT ON (video_id) video_id, deployed_path, deployed_filename
