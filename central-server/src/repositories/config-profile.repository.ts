@@ -51,6 +51,7 @@ export interface ConfigProfileMetadataRow extends QueryResultRow {
   sport: string | null;
   is_default: boolean;
   sort_order: number;
+  remote_pin_required: boolean;
 }
 
 export interface CreateProfileInput {
@@ -253,7 +254,8 @@ class ConfigProfileRepositoryImpl extends BaseRepository<ConfigProfileRow> {
    */
   async findProfilesMetadata(siteId: string): Promise<ConfigProfileMetadataRow[]> {
     const result = await query<ConfigProfileMetadataRow>(
-      `SELECT id, name, display_name, city, sport, is_default, sort_order
+      `SELECT id, name, display_name, city, sport, is_default, sort_order,
+              COALESCE(remote_pin_required, false) AS remote_pin_required
        FROM config_profiles
        WHERE site_id = $1
        ORDER BY sort_order ASC, created_at ASC`,

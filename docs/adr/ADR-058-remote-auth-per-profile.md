@@ -84,14 +84,23 @@ Adopter un modèle **PIN par profil** avec **tokens par appareil révocables** :
 ### Dashboard
 
 - `src/app/core/services/remote-auth.service.ts` — 4 méthodes (setPin, listDevices, revokeDevice, revokeAllDevices).
-- `src/app/core/services/remote.service.ts` — `verifyProfilePin`, device-ID persistant (localStorage), tokens scoped par profil.
+- `src/app/core/services/remote.service.ts` — `verifyProfilePin`, device-ID persistant (localStorage), tokens scoped par profil, map `currentProfileBySite` + fallback dans `getHeaders` pour que les commandes existantes (playVideo, resetScore…) portent automatiquement le token profil après vérification PIN.
 - `src/app/core/models/config-profile.model.ts` — champ `remote_pin_required?: boolean`.
 - `src/app/features/sites/components/site-settings-tab/remote-auth-section/` — composant standalone super_admin (liste profils, PIN input, appareils révocables).
 - `src/app/features/sites/components/site-settings-tab/site-settings-tab.component.{ts,html}` — intégration avec guard `*ngIf="isSuperAdmin"`.
 
+### Phase 1.1 — Cloud Remote UI (intégration côté télécommande)
+
+- `central-server/src/controllers/remote.controller.ts` — `getRemoteState` expose `profiles[]`, `activeProfileId` et `authenticatedProfileId` ; agrégation `pinRequired = legacy || anyProfilePinRequired` ; décodage dual legacy/profile du `x-remote-token`.
+- `central-server/src/repositories/config-profile.repository.ts` — `findProfilesMetadata` ajoute `COALESCE(remote_pin_required, false)` pour exposer le flag PIN par profil.
+- `central-dashboard/src/app/features/remote/cloud-remote.component.{ts,html}` — sélecteur de profil visible quand ≥2 profils ; dispatche vers `verifyProfilePin(siteId, profileId, pin)` quand le profil sélectionné requiert un PIN, sinon fallback legacy `verifyPin(siteId, pin)` ; sync automatique du profil sélectionné via `syncProfilesFromState` (priorité : authenticated → active → premier-avec-PIN → premier) ; `setCurrentProfileContext` après succès pour que les commandes suivantes héritent du token.
+
 ### Tests
 
-- 16 tests dans `central-server/src/__tests__/smoke/smoke-adr-refactoring.test.ts` → describe `ADR-058 Phase 1`.
+- 25 tests dans `central-server/src/__tests__/smoke/smoke-adr-refactoring.test.ts` → describe `ADR-058 Phase 1` (16 Phase 1 + 5 Phase 1.1 guards UI Cloud Remote + 4 supervision).
+- `central-server/src/controllers/remote-auth.controller.test.ts` — 15 unit tests (super_admin gate, setPin bcrypt rounds=12, verifyPin 200/401/429 lockout, revoke).
+- `central-server/src/middleware/remote-pin.middleware.test.ts` — 11 unit tests (passthrough, profile-scoped token, legacy site token, fallback pré-migration).
+- `central-dashboard/src/app/features/sites/components/site-settings-tab/remote-auth-section/remote-auth-section.component.spec.ts` — 13 Karma tests (setPin / clearPin / revokeDevice / revokeAll / toggleDevices / loadProfiles).
 - `raspberry/server/__tests__/profile-pin.service.test.js` → unit tests service Pi.
 
 ## Monitoring et supervision
@@ -136,6 +145,10 @@ Les invariants suivants sont verrouillés par `smoke-adr-refactoring.test.ts` (d
 - Routes `config-profiles.routes.ts` sont gated `requireRole('super_admin')`.
 - Composant dashboard `<app-remote-auth-section>` est gated `*ngIf="isSuperAdmin"`.
 - `server.ts` wire la purge quotidienne avec `.unref()` (pas de fuite de handler).
+- `getRemoteState` expose `profiles[]`, `activeProfileId`, `authenticatedProfileId` (Phase 1.1).
+- `findProfilesMetadata` inclut `COALESCE(remote_pin_required, false)` pour alimenter le sélecteur de profil côté Cloud Remote.
+- `cloud-remote.component` rend le sélecteur de profil (`.pin-profile-selector`) dès qu'il y a ≥2 profils et dispatche vers `verifyProfilePin` quand le profil sélectionné requiert un PIN.
+- `RemoteService` expose `setCurrentProfileContext` / `clearCurrentProfileContext` / `getCurrentProfileContext` pour que les commandes héritent du profil authentifié sans modifier leurs signatures.
 
 ## Phase 2 (prévu — hors scope ADR-058)
 
@@ -145,4 +158,4 @@ Les invariants suivants sont verrouillés par `smoke-adr-refactoring.test.ts` (d
 
 ---
 
-_Dernière mise à jour : 18 avril 2026_
+_Dernière mise à jour : 18 avril 2026 (Phase 1.1 — intégration UI Cloud Remote + tests unitaires)_

@@ -17,6 +17,7 @@ import { Request, Response } from 'express';
 import { createHash } from 'crypto';
 import jwt from 'jsonwebtoken';
 import { siteRepository } from '../repositories';
+import { configProfileRepository } from '../repositories/config-profile.repository';
 import { videoVariantRepository } from '../repositories/video-variant.repository';
 import socketService from '../services/socket.service';
 import { commandQueueService } from '../services/command-queue.service';
@@ -72,17 +73,68 @@ export async function getRemoteState(req: Request, res: Response) {
     const isConnected = socketService.isConnected(siteId);
     const connectionHealth = socketService.getConnectionHealth(siteId);
 
-    // Vérifier si un PIN est configuré
-    const pinRequired = !!site.remote_pin_hash;
+    // ADR-058: profils + PIN par profil
+    let profilesMeta: Array<{
+      id: string;
+      name: string;
+      displayName: string | null;
+      city: string | null;
+      sport: string | null;
+      isDefault: boolean;
+      sortOrder: number;
+      pinRequired: boolean;
+    }> = [];
+    let defaultProfileId: string | null = null;
+    try {
+      const rows = await configProfileRepository.findProfilesMetadata(siteId);
+      profilesMeta = rows.map((r) => ({
+        id: r.id,
+        name: r.name,
+        displayName: r.display_name,
+        city: r.city,
+        sport: r.sport,
+        isDefault: r.is_default,
+        sortOrder: r.sort_order,
+        pinRequired: !!r.remote_pin_required,
+      }));
+      defaultProfileId = profilesMeta.find((p) => p.isDefault)?.id || null;
+    } catch (err) {
+      // Pre-migration fallback
+      logger.warn('findProfilesMetadata failed in getRemoteState (non-fatal)', {
+        siteId,
+        error: (err as Error).message,
+      });
+    }
 
-    // Si PIN requis, vérifier le token
+    const activeProfileId =
+      ((site as unknown as { active_profile_id?: string | null }).active_profile_id) ||
+      defaultProfileId;
+
+    // Un PIN est requis si le site a un PIN legacy OU un profil a un PIN
+    const legacyPinRequired = !!site.remote_pin_hash;
+    const anyProfilePinRequired = profilesMeta.some((p) => p.pinRequired);
+    const pinRequired = legacyPinRequired || anyProfilePinRequired;
+
+    // Si PIN requis, vérifier le token (legacy site-scope OU profile-scope)
     let pinVerified = false;
+    let authenticatedProfileId: string | null = null;
     if (pinRequired) {
       const token = req.headers['x-remote-token'] as string;
       if (token) {
         try {
-          const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as { siteId: string; type: string };
-          pinVerified = decoded.type === 'remote-pin' && decoded.siteId === siteId;
+          const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as {
+            siteId: string;
+            type: string;
+            profileId?: string;
+          };
+          if (decoded.siteId === siteId) {
+            if (decoded.type === 'remote-pin') {
+              pinVerified = true;
+            } else if (decoded.type === 'remote-profile-pin' && decoded.profileId) {
+              pinVerified = true;
+              authenticatedProfileId = decoded.profileId;
+            }
+          }
         } catch {
           // Token invalide ou expiré — pinVerified reste false
         }
@@ -131,6 +183,9 @@ export async function getRemoteState(req: Request, res: Response) {
       connectionHealth,
       lastSeenAt: site.last_seen_at,
       pinRequired,
+      profiles: profilesMeta,
+      activeProfileId,
+      authenticatedProfileId,
       licenseStatus: licenseStatus ? {
         status: licenseStatus.status,
         reason: licenseStatus.reason || null,

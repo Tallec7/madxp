@@ -93,6 +93,26 @@
       <h2 class="pin-title">{{ clubName || siteName }}</h2>
       <p class="pin-subtitle">Saisissez le PIN pour accéder à la télécommande</p>
 
+      <!-- ADR-058 — sélecteur de profil si plusieurs profils protégés par PIN -->
+      @if (availableProfiles.length > 1) {
+        <div class="pin-profile-selector">
+          <label for="pinProfileSelect" class="pin-profile-label">Profil</label>
+          <select
+            id="pinProfileSelect"
+            class="pin-profile-select"
+            [value]="selectedProfileId || ''"
+            (change)="onProfileSelect($any($event.target).value)"
+            [disabled]="pinVerifying"
+          >
+            @for (p of availableProfiles; track p.id) {
+              <option [value]="p.id">
+                {{ p.displayName || p.name }}{{ p.pinRequired ? ' · 🔒' : '' }}
+              </option>
+            }
+          </select>
+        </div>
+      }
+
       <!-- PIN dots -->
       <div class="pin-dots">
         @for (i of [0, 1, 2, 3, 4, 5]; track i) {

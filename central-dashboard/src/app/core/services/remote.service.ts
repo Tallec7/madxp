@@ -97,6 +97,19 @@ export interface RemoteState {
   pendingCommandsCount?: number;
   secondaryDisplayEnabled?: boolean;
   secondaryVariantPaths?: string[];
+  // ADR-058 — Phase 1 : exposition des profils + profil authentifié
+  profiles?: Array<{
+    id: string;
+    name: string;
+    displayName: string | null;
+    city: string | null;
+    sport: string | null;
+    isDefault: boolean;
+    sortOrder: number;
+    pinRequired: boolean;
+  }>;
+  activeProfileId?: string | null;
+  authenticatedProfileId?: string | null;
 }
 
 export interface RemoteVideos {
@@ -277,12 +290,33 @@ export class RemoteService {
   }
 
   /**
+   * ADR-058 — profile context courant (par site) utilisé comme fallback pour
+   * ajouter automatiquement le token profil aux requêtes lorsque les wrappers
+   * de commande (playVideo, updateScore, ...) ne reçoivent pas de `profileId`
+   * explicite. Le Cloud Remote le positionne après une vérification PIN réussie.
+   */
+  private readonly currentProfileBySite = new Map<string, string>();
+
+  setCurrentProfileContext(siteId: string, profileId: string): void {
+    this.currentProfileBySite.set(siteId, profileId);
+  }
+
+  clearCurrentProfileContext(siteId: string): void {
+    this.currentProfileBySite.delete(siteId);
+  }
+
+  getCurrentProfileContext(siteId: string): string | null {
+    return this.currentProfileBySite.get(siteId) || null;
+  }
+
+  /**
    * Retourne les headers HTTP avec le token PIN si disponible.
    * Priorité au token profil (ADR-058) si profileId fourni, sinon token site legacy.
    */
   private getHeaders(siteId: string, profileId?: string | null): { headers?: Record<string, string> } {
-    if (profileId) {
-      const pToken = this.getProfileToken(siteId, profileId);
+    const resolvedProfileId = profileId || this.getCurrentProfileContext(siteId);
+    if (resolvedProfileId) {
+      const pToken = this.getProfileToken(siteId, resolvedProfileId);
       if (pToken) return { headers: { 'X-Remote-Token': pToken } };
     }
     const token = this.getToken(siteId);

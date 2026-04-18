@@ -116,6 +116,10 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
   public pinVerifying = false;
   public pinAttemptsRemaining: number | null = null;
 
+  // ADR-058 — profils exposés par /remote/:siteId/state
+  public availableProfiles: NonNullable<RemoteState['profiles']> = [];
+  public selectedProfileId: string | null = null;
+
   // Dark mode
   public isDarkMode = false;
 
@@ -206,13 +210,14 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
     this.isLoading = true;
     this.connectionError = null;
 
-    this.remoteService.getState(this.siteId).subscribe({
+    this.remoteService.getState(this.siteId, this.selectedProfileId).subscribe({
       next: (state: RemoteState) => {
         this.siteName = state.siteName;
         this.clubName = state.clubName;
         this.isConnected = state.isConnected && state.connectionHealth?.isHealthy;
         this.pendingConfigVersionId = state.pendingConfigVersionId || null;
         this.pendingCommandsCount = state.pendingCommandsCount || 0;
+        this.syncProfilesFromState(state);
 
         if (!this.isConnected) { this.isLoading = false; return; }
 
@@ -223,6 +228,9 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
         }
 
         this.pinRequired = false;
+        if (state.authenticatedProfileId) {
+          this.remoteService.setCurrentProfileContext(this.siteId, state.authenticatedProfileId);
+        }
         this.config.setSecondaryVariantPaths(state.secondaryVariantPaths || []);
         const rawConfig = this.config.buildConfiguration(state.siteName, state.config);
         this.config.initializeWithConfiguration(this.config.markSecondaryVariants(rawConfig));
@@ -248,26 +256,72 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
     this.pinVerifying = true;
     this.pinError = '';
 
-    this.remoteService.verifyPin(this.siteId, this.pinInput).subscribe({
-      next: () => {
-        this.pinRequired = false;
-        this.pinInput = '';
-        this.pinError = '';
-        this.pinVerifying = false;
-        this.pinAttemptsRemaining = null;
-        this.loadSiteState();
-      },
-      error: (err: { status: number; error?: { message?: string; attemptsRemaining?: number } }) => {
-        this.pinVerifying = false;
-        this.pinInput = '';
-        if (err.status === 429) {
-          this.pinError = err.error?.message || 'Trop de tentatives. Réessayez plus tard.';
-        } else {
-          this.pinError = err.error?.message || 'PIN incorrect';
-          this.pinAttemptsRemaining = err.error?.attemptsRemaining ?? null;
-        }
+    const profile = this.selectedProfileId
+      ? this.availableProfiles.find((p) => p.id === this.selectedProfileId)
+      : null;
+    const useProfilePin = !!(profile && profile.pinRequired);
+
+    const errorHandler = (err: { status: number; error?: { message?: string; attemptsRemaining?: number } }) => {
+      this.pinVerifying = false;
+      this.pinInput = '';
+      if (err.status === 429) {
+        this.pinError = err.error?.message || 'Trop de tentatives. Réessayez plus tard.';
+      } else {
+        this.pinError = err.error?.message || 'PIN incorrect';
+        this.pinAttemptsRemaining = err.error?.attemptsRemaining ?? null;
       }
-    });
+    };
+
+    const onSuccess = () => {
+      if (useProfilePin && this.selectedProfileId) {
+        this.remoteService.setCurrentProfileContext(this.siteId, this.selectedProfileId);
+      }
+      this.pinRequired = false;
+      this.pinInput = '';
+      this.pinError = '';
+      this.pinVerifying = false;
+      this.pinAttemptsRemaining = null;
+      this.loadSiteState();
+    };
+
+    if (useProfilePin && this.selectedProfileId) {
+      const label = profile?.displayName || profile?.name || null;
+      this.remoteService
+        .verifyProfilePin(this.siteId, this.selectedProfileId, this.pinInput, label)
+        .subscribe({ next: onSuccess, error: errorHandler });
+    } else {
+      this.remoteService.verifyPin(this.siteId, this.pinInput).subscribe({ next: onSuccess, error: errorHandler });
+    }
+  }
+
+  /**
+   * ADR-058 — synchronise la liste de profils + sélection courante depuis l'état.
+   * Priorise le profil authentifié (token actif), sinon le profil actif du Pi,
+   * sinon le premier profil qui requiert un PIN, sinon le premier profil tout court.
+   */
+  private syncProfilesFromState(state: RemoteState): void {
+    this.availableProfiles = state.profiles || [];
+    if (!this.availableProfiles.length) {
+      this.selectedProfileId = null;
+      return;
+    }
+    if (this.selectedProfileId && this.availableProfiles.some((p) => p.id === this.selectedProfileId)) {
+      return;
+    }
+    const fallback =
+      state.authenticatedProfileId ||
+      state.activeProfileId ||
+      this.availableProfiles.find((p) => p.pinRequired)?.id ||
+      this.availableProfiles[0]?.id ||
+      null;
+    this.selectedProfileId = fallback;
+  }
+
+  public onProfileSelect(profileId: string): void {
+    this.selectedProfileId = profileId;
+    this.pinInput = '';
+    this.pinError = '';
+    this.pinAttemptsRemaining = null;
   }
 
   public onPinDigit(digit: string): void {
@@ -279,14 +333,19 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
   private refreshState(): void {
     if (!this.siteId) return;
 
-    this.remoteService.getState(this.siteId).subscribe({
+    this.remoteService.getState(this.siteId, this.selectedProfileId).subscribe({
       next: (state: RemoteState) => {
         this.isConnected = state.isConnected && state.connectionHealth?.isHealthy;
         this.pendingConfigVersionId = state.pendingConfigVersionId || null;
         this.pendingCommandsCount = state.pendingCommandsCount || 0;
+        this.syncProfilesFromState(state);
 
         if (state.pinRequired && !state.config) {
           this.remoteService.clearToken(this.siteId);
+          if (this.selectedProfileId) {
+            this.remoteService.clearProfileToken(this.siteId, this.selectedProfileId);
+          }
+          this.remoteService.clearCurrentProfileContext(this.siteId);
           this.pinRequired = true;
           return;
         }
@@ -418,8 +477,9 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
     this.isReloading = true;
     this.isLoading = true;
 
-    this.remoteService.getState(this.siteId).subscribe({
+    this.remoteService.getState(this.siteId, this.selectedProfileId).subscribe({
       next: (state: RemoteState) => {
+        this.syncProfilesFromState(state);
         this.config.setSecondaryVariantPaths(state.secondaryVariantPaths || []);
         const rawConfig = this.config.buildConfiguration(state.siteName, state.config);
         const enrichedConfig = this.config.enrichVideosWithCategoryId(this.config.markSecondaryVariants(rawConfig));

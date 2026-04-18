@@ -1877,4 +1877,97 @@ describe('ADR-058 Phase 1: Pi offline PIN validation wiring', () => {
       unrefInterval: true,
     });
   });
+
+  // --- Phase 1.1 : Cloud Remote UI — profile selector + getRemoteState exposure ---
+
+  it('getRemoteState exposes profiles[] + activeProfileId + authenticatedProfileId (ADR-058 Phase 1.1)', () => {
+    const content = fs.readFileSync(
+      path.resolve(repoRoot, 'central-server/src/controllers/remote.controller.ts'),
+      'utf8'
+    );
+    expect({
+      exposesProfiles: /profiles:\s*profilesMeta/.test(content),
+      exposesActiveProfileId: /activeProfileId/.test(content),
+      exposesAuthenticatedProfileId: /authenticatedProfileId/.test(content),
+      decodesProfileToken: /remote-profile-pin/.test(content),
+      pinRequiredAggregate: /anyProfilePinRequired|p\.pinRequired/.test(content),
+    }).toEqual({
+      exposesProfiles: true,
+      exposesActiveProfileId: true,
+      exposesAuthenticatedProfileId: true,
+      decodesProfileToken: true,
+      pinRequiredAggregate: true,
+    });
+  });
+
+  it('findProfilesMetadata includes remote_pin_required flag for remote UI', () => {
+    const content = fs.readFileSync(
+      path.resolve(repoRoot, 'central-server/src/repositories/config-profile.repository.ts'),
+      'utf8'
+    );
+    expect(/remote_pin_required/.test(content)).toBe(true);
+    expect(/COALESCE\(remote_pin_required,\s*false\)/.test(content)).toBe(true);
+  });
+
+  it('cloud-remote.component dispatches to verifyProfilePin when profile.pinRequired', () => {
+    const ts = fs.readFileSync(
+      path.resolve(
+        repoRoot,
+        'central-dashboard/src/app/features/remote/cloud-remote.component.ts'
+      ),
+      'utf8'
+    );
+    expect({
+      declaresAvailableProfiles: /availableProfiles/.test(ts),
+      declaresSelectedProfileId: /selectedProfileId/.test(ts),
+      syncsFromState: /syncProfilesFromState\(/.test(ts),
+      dispatchesToProfileVerify: /verifyProfilePin\(/.test(ts),
+      setsCurrentProfileContext: /setCurrentProfileContext\(/.test(ts),
+    }).toEqual({
+      declaresAvailableProfiles: true,
+      declaresSelectedProfileId: true,
+      syncsFromState: true,
+      dispatchesToProfileVerify: true,
+      setsCurrentProfileContext: true,
+    });
+  });
+
+  it('cloud-remote.component.html renders profile selector when >1 profile available', () => {
+    const html = fs.readFileSync(
+      path.resolve(
+        repoRoot,
+        'central-dashboard/src/app/features/remote/cloud-remote.component.html'
+      ),
+      'utf8'
+    );
+    expect({
+      selectorPresent: /pin-profile-selector/.test(html),
+      guardedByLength: /availableProfiles\.length\s*>\s*1/.test(html),
+      callsOnProfileSelect: /onProfileSelect\(/.test(html),
+    }).toEqual({
+      selectorPresent: true,
+      guardedByLength: true,
+      callsOnProfileSelect: true,
+    });
+  });
+
+  it('RemoteService exposes currentProfileBySite fallback so commands carry profile token', () => {
+    const content = fs.readFileSync(
+      path.resolve(repoRoot, 'central-dashboard/src/app/core/services/remote.service.ts'),
+      'utf8'
+    );
+    expect({
+      contextMap: /currentProfileBySite/.test(content),
+      setContext: /setCurrentProfileContext\(/.test(content),
+      clearContext: /clearCurrentProfileContext\(/.test(content),
+      getContext: /getCurrentProfileContext\(/.test(content),
+      stateExtended: /authenticatedProfileId/.test(content),
+    }).toEqual({
+      contextMap: true,
+      setContext: true,
+      clearContext: true,
+      getContext: true,
+      stateExtended: true,
+    });
+  });
 });
