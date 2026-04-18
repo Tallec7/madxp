@@ -1,7 +1,7 @@
 # ADR-060: Fallback télécommande — 3 couches (cloud → LAN auto → QR hotspot + PWA queue)
 
 **Date** : 2026-04-18
-**Statut** : Accepté (partiel — couches 1+3 dashboard implémentées ; hotspot Pi + service worker PWA = phase suivante)
+**Statut** : Accepté (complet — 3 couches implémentées, hotspot Pi + PWA livrés)
 **Format** : Léger
 **Phase** : 3 du plan refonte télécommande (dépend de ADR-059)
 
@@ -40,13 +40,26 @@ Un bandeau statut évolutif informe l'utilisateur (`cloud` / `LAN` / `hotspot` /
 - `central-dashboard/src/app/features/remote/services/offline-queue.service.ts` (nouveau) — buffer localStorage FIFO, `drain()` sur reconnexion.
 - `central-dashboard/src/app/features/remote/cloud-remote.component.ts` — abonnement `transport.mode$`, drain automatique, exposition `transportMode` + `offlinePendingCount`.
 
-## Fichiers restants (Phase 2 — à implémenter)
+## Fichiers implémentés (Phase 2 — couche 2 hotspot Pi + PWA dashboard)
 
-- `central-dashboard/public/service-worker.js` + `manifest.json` — PWA.
-- `raspberry/src/app/tv/hotspot-qr.component.ts` — affichage QR sur TV.
-- `raspberry/server/services/hotspot.service.js` — PSK rotatif journalier.
+- `raspberry/server/services/hotspot.service.js` — lecture status hotspot depuis `configuration.json.hotspot`, génération payload QR `WIFI:T:WPA;...` (rotation PSK restée côté sync-agent).
+- `raspberry/server/routes/hotspot.js` — routes `GET /api/hotspot/status` (sans password) + `GET /api/hotspot/qr-payload` (avec password, local uniquement).
+- `raspberry/src/app/components/hotspot-qr/hotspot-qr.component.ts` — overlay TV, fetch status + rendu QR via `qrcode` (data URL PNG), polling 60s tant que visible.
+- `raspberry/src/app/components/tv/tv.component.{ts,html}` — intégration overlay, déclenchement via `?fallback=hotspot`.
+- `central-dashboard/src/manifest.webmanifest` — manifest PWA (name, icons, theme `#0b1020`, display standalone).
+- `central-dashboard/src/sw.js` — Service Worker v1 : navigate network-first + shell fallback, assets same-origin stale-while-revalidate, API **network-only** (aucune mise en cache des réponses `/api/*`).
+- `central-dashboard/src/index.html` — `<link rel="manifest">` + enregistrement SW conditionnel (try/catch silencieux).
+- `central-dashboard/angular.json` — copie `manifest.webmanifest` et `sw.js` en racine du build.
+
+## Runbook tests terrain
+
+- `docs/technical/REMOTE_FIELD_TESTS_T1-T15.md` — Phase 6 : banc de test, 15 tests structurés (T1-T15), critères tolérance, procédure post-tests.
 
 ## Garde-fous anti-régression
 
 - Smoke test : `TransportResilienceService` + `OfflineQueueService` présents et câblés dans le composant.
-- Test terrain : couper internet box → vérifier bascule LAN <3s + reconnexion cloud auto au retour.
+- Smoke test : route `/api/hotspot/status` montée dans `server.js` + `hotspot.service.js` existant.
+- Smoke test : `manifest.webmanifest` + `sw.js` copiés en assets angular + référencés dans `index.html`.
+- Test terrain : couper internet box → vérifier bascule LAN <3s + reconnexion cloud auto au retour (T5).
+- Test terrain : scan QR depuis iPhone, connexion hotspot < 15s, remote opérationnelle (T6).
+- Sécurité SW : jamais de cache sur `/api/*` — vérifié par invariant statique dans `sw.js` (`isApiRequest` → return avant respondWith).

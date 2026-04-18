@@ -28,6 +28,16 @@
                 "output": "/"
               },
               {
+                "glob": "manifest.webmanifest",
+                "input": "src/",
+                "output": "/"
+              },
+              {
+                "glob": "sw.js",
+                "input": "src/",
+                "output": "/"
+              },
+              {
                 "glob": ".htaccess",
                 "input": "./",
                 "output": "/"
@@ -94,6 +104,16 @@
               "src/assets",
               {
                 "glob": "health.json",
+                "input": "src/",
+                "output": "/"
+              },
+              {
+                "glob": "manifest.webmanifest",
+                "input": "src/",
+                "output": "/"
+              },
+              {
+                "glob": "sw.js",
                 "input": "src/",
                 "output": "/"
               }
