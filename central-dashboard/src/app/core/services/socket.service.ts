@@ -32,6 +32,12 @@ export class SocketService {
   private readonly baseDelay = 1000; // 1 seconde
   private readonly maxDelay = 30000; // 30 secondes
 
+  // ADR-063: grace period avant de warn un 'transport close' (flip-flop Railway / proxy recycle).
+  // Si reconnect réussit dans ce délai, le warn est annulé. Les métriques Prometheus serveur
+  // (recordSocketDisconnect) restent inchangées — visibilité opérationnelle via alerting, pas logs.
+  private readonly transientDisconnectGraceMs = 3000;
+  private pendingDisconnectWarnTimer: ReturnType<typeof setTimeout> | null = null;
+
   // Status de connexion observable
   private connectionStatusSubject = new Subject<ConnectionStatus>();
   public connectionStatus$ = this.connectionStatusSubject.asObservable();
@@ -56,6 +62,11 @@ export class SocketService {
     });
 
     this.socket.on('connect', () => {
+      // ADR-063: un reconnect rapide annule le warn différé
+      if (this.pendingDisconnectWarnTimer) {
+        clearTimeout(this.pendingDisconnectWarnTimer);
+        this.pendingDisconnectWarnTimer = null;
+      }
       this.logger.info('Socket connected to central server');
       this.connected = true;
       this.reconnectAttempt = 0;
@@ -64,10 +75,25 @@ export class SocketService {
     });
 
     this.socket.on('disconnect', (reason) => {
-      this.logger.warn('Socket disconnected from central server', { reason });
       this.connected = false;
       this.eventsSubject.next({ type: 'disconnected', data: { reason } });
       this.emitConnectionStatus();
+
+      // ADR-063: 'transport close' est souvent un flip-flop transitoire (Railway proxy, redeploy).
+      // On diffère le warn : si la reconnexion réussit sous 3s, on log juste un debug.
+      // Les autres raisons (io server disconnect, ping timeout, transport error) restent loggées
+      // immédiatement. Les métriques serveur (recordSocketDisconnect) capturent tous les events.
+      if (reason === 'transport close') {
+        if (this.pendingDisconnectWarnTimer) {
+          clearTimeout(this.pendingDisconnectWarnTimer);
+        }
+        this.pendingDisconnectWarnTimer = setTimeout(() => {
+          this.logger.warn('Socket disconnected from central server', { reason });
+          this.pendingDisconnectWarnTimer = null;
+        }, this.transientDisconnectGraceMs);
+      } else {
+        this.logger.warn('Socket disconnected from central server', { reason });
+      }
     });
 
     // Événements de reconnexion avec backoff exponentiel
@@ -137,6 +163,10 @@ export class SocketService {
   }
 
   disconnect(): void {
+    if (this.pendingDisconnectWarnTimer) {
+      clearTimeout(this.pendingDisconnectWarnTimer);
+      this.pendingDisconnectWarnTimer = null;
+    }
     if (this.socket) {
       this.socket.disconnect();
       this.socket = null;

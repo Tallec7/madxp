@@ -1553,3 +1553,65 @@ describe('Dashboard template externalization guard (prevents re-inlining)', () =
     });
   }
 });
+
+// ============================================================
+// ADR-063: SocketService transient disconnect filter
+// Empêche le retour en arrière vers un warn immédiat sur 'transport close'
+// qui ramènerait le spam console pendant les flip-flops Railway.
+// ============================================================
+describe('ADR-063: SocketService transient disconnect filter', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..', '..');
+  const socketServicePath = path.join(
+    repoRoot,
+    'central-dashboard',
+    'src',
+    'app',
+    'core',
+    'services',
+    'socket.service.ts'
+  );
+
+  it('declares the grace period constant and pending timer', () => {
+    const content = fs.readFileSync(socketServicePath, 'utf-8');
+    expect({
+      hasGraceMs: /transientDisconnectGraceMs\s*=\s*3000/.test(content),
+      hasPendingTimer: content.includes('pendingDisconnectWarnTimer'),
+    }).toEqual({
+      hasGraceMs: true,
+      hasPendingTimer: true,
+    });
+  });
+
+  it("defers the warn for reason === 'transport close' via setTimeout", () => {
+    const content = fs.readFileSync(socketServicePath, 'utf-8');
+    // La branche transport close doit exister et utiliser setTimeout
+    const transportCloseBranch = /reason\s*===\s*['"]transport close['"][\s\S]{0,400}?setTimeout\(/.test(
+      content
+    );
+    expect(transportCloseBranch).toBe(true);
+  });
+
+  it('cancels the pending warn timer on successful reconnect', () => {
+    const content = fs.readFileSync(socketServicePath, 'utf-8');
+    // Le handler 'connect' doit clearTimeout sur pendingDisconnectWarnTimer
+    const connectHandler = content.match(/socket\.on\(['"]connect['"][\s\S]{0,600}?\}\);/);
+    expect(connectHandler).not.toBeNull();
+    expect(connectHandler?.[0]).toMatch(/clearTimeout\(\s*this\.pendingDisconnectWarnTimer/);
+  });
+
+  it('still warns immediately for non-transport-close reasons', () => {
+    const content = fs.readFileSync(socketServicePath, 'utf-8');
+    // La branche else du guard 'transport close' doit garder un warn immédiat
+    // pour io server disconnect / ping timeout / transport error
+    expect(content).toMatch(
+      /transientDisconnectGraceMs\s*\)[\s\S]{0,100}else\s*\{[\s\S]{0,200}logger\.warn\(\s*['"]Socket disconnected/
+    );
+  });
+
+  it('clears the pending timer in disconnect() cleanup', () => {
+    const content = fs.readFileSync(socketServicePath, 'utf-8');
+    const disconnectMethod = content.match(/disconnect\(\)\s*:\s*void\s*\{[\s\S]{0,400}?\n\s{2}\}/);
+    expect(disconnectMethod).not.toBeNull();
+    expect(disconnectMethod?.[0]).toMatch(/clearTimeout\(\s*this\.pendingDisconnectWarnTimer/);
+  });
+});

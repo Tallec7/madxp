@@ -74,6 +74,7 @@ Un ADR documente une décision technique importante avec :
 | [ADR-055](ADR-055-remotion-template-versions.md)                   | Snapshot auto & restore des templates Remotion (audit)     | Accepté                  | Avr 2026 |
 | [ADR-056](ADR-056-watermark-persistence-across-ota-and-runtime.md) | Persistance du watermark (OTA backup + retry infini)       | Accepté                  | Avr 2026 |
 | [ADR-057](ADR-057-manual-video-launch-latency.md)                  | Réduction latence vidéo manuelle Pi (loadeddata + rAF)     | Accepté                  | Avr 2026 |
+| [ADR-063](ADR-063-dashboard-socket-transient-disconnect-filter.md) | Filtrage déconnexions WS transitoires côté dashboard       | Accepté                  | Avr 2026 |
 
 ### Supersédés
 
@@ -110,7 +111,7 @@ Un ADR documente une décision technique importante avec :
 
 1. Décider du format avec la [grille de décision](BEST_PRACTICES.md#quand-créer-un-adr-)
 2. Copier le template approprié (complet ou léger)
-3. Numéroter séquentiellement (prochain : **ADR-057**)
+3. Numéroter séquentiellement (prochain : **ADR-064**)
 4. Remplir les sections
 5. Commiter avec le code dans la même PR
 6. Mettre à jour ce README après merge
@@ -133,4 +134,4 @@ Voir **[BEST_PRACTICES.md](BEST_PRACTICES.md)** pour :
 
 ---
 
-_Dernière mise à jour : 17 avril 2026_
+_Dernière mise à jour : 18 avril 2026_
