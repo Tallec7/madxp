@@ -1,3 +1,13 @@
+# [3.184.0](https://github.com/Tallec7/neopro/compare/v3.183.1...v3.184.0) (2026-04-18)
+
+### Bug Fixes
+
+- **saas:** mount video-stream route before contentRoutes (ADR-068) ([c29dda5](https://github.com/Tallec7/neopro/commit/c29dda5d12e310ae2d6adf9157b54f279d1fca7a))
+
+### Features
+
+- **saas:** ADR-068 signed URL proxy for SaaS video streaming ([34ad725](https://github.com/Tallec7/neopro/commit/34ad725983bf9a1a6b6dcdc3df93e97aab777b4c))
+
 ## [3.183.1](https://github.com/Tallec7/neopro/compare/v3.183.0...v3.183.1) (2026-04-18)
 
 ### Bug Fixes
