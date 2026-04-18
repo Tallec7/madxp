@@ -20,14 +20,24 @@ import {
   getRemoteVideos,
   verifyPin,
 } from '../controllers/remote.controller';
+import { verifyProfilePin } from '../controllers/remote-auth.controller';
 
 const router = Router();
 
 // GET state: toujours accessible (retourne pinRequired si PIN configuré)
 router.get('/:siteId/state', remoteRateLimit, validateParams(paramSchemas.siteId), getRemoteState);
 
-// POST verify-pin: vérifie le PIN et retourne un JWT token
+// POST verify-pin: vérifie le PIN et retourne un JWT token (legacy site-level)
 router.post('/:siteId/verify-pin', remoteRateLimit, validateParams(paramSchemas.siteId), validate(schemas.remotePin), verifyPin);
+
+// ADR-058 — POST verify-pin scoped to profile (emits device token 30d)
+router.post(
+  '/:siteId/profiles/:profileId/verify-pin',
+  remoteRateLimit,
+  validateParams(paramSchemas.siteIdAndProfileId),
+  validate(schemas.verifyProfilePin),
+  verifyProfilePin
+);
 
 // POST command: protégé par middleware PIN si configuré
 router.post('/:siteId/command', remoteRateLimit, validateParams(paramSchemas.siteId), verifyRemotePin, validate(schemas.remoteCommand), sendRemoteCommand);

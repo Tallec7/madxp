@@ -5,7 +5,7 @@ import { FormsModule } from '@angular/forms';
 import { TranslateModule } from '@ngx-translate/core';
 import { NotificationService } from '../../core/services/notification.service';
 import { ConfirmDialogService } from '../../core/services/confirm-dialog.service';
-import { SponsorVideoDataService, Video, SponsorVideo } from './sponsor-video-data.service';
+import { SponsorVideoDataService, SponsorVideoRow, SponsorVideo } from './sponsor-video-data.service';
 import { DragDropService } from './drag-drop.service';
 
 @Component({
@@ -20,8 +20,8 @@ export class SponsorVideosComponent implements OnInit {
   sponsorName = '';
 
   sponsorVideos: SponsorVideo[] = [];
-  availableVideos: Video[] = [];
-  filteredAvailableVideos: Video[] = [];
+  availableVideos: SponsorVideoRow[] = [];
+  filteredAvailableVideos: SponsorVideoRow[] = [];
 
   selectedVideoIds: string[] = [];
   searchTerm = '';

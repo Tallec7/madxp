@@ -34,6 +34,24 @@ async function syncProfiles(data) {
     const profilePath = `${PROFILES_DIR}/${profile.id}.json`;
     await fs.writeFile(profilePath, JSON.stringify(profile.configuration, null, 2));
     logger.info('Profile written', { id: profile.id, name: profile.name });
+
+    // ADR-058 — metadata PIN (bcrypt hash) pour validation offline cote Pi.
+    // Ecrit profiles/{id}.pin.json avec { remote_pin_required, remote_pin_hash, remote_pin_updated_at }
+    // chmod 600 pour limiter la lecture du hash (defense-in-depth).
+    const pinMetaPath = `${PROFILES_DIR}/${profile.id}.pin.json`;
+    if (profile.remote_pin_required && profile.remote_pin_hash) {
+      const meta = {
+        remote_pin_required: true,
+        remote_pin_hash: profile.remote_pin_hash,
+        remote_pin_updated_at: profile.remote_pin_updated_at || null,
+      };
+      await fs.writeFile(pinMetaPath, JSON.stringify(meta, null, 2), { mode: 0o600 });
+      logger.info('Profile PIN metadata written', { id: profile.id });
+    } else if (await fs.pathExists(pinMetaPath)) {
+      // PIN retire cote cloud -> nettoyer le fichier local pour eviter les valid PIN orphelins
+      await fs.remove(pinMetaPath);
+      logger.info('Profile PIN metadata cleared', { id: profile.id });
+    }
   }
 
   // 3. Generer clubs.json (metadata pour le club-selector Angular)
@@ -46,12 +64,13 @@ async function syncProfiles(data) {
   await fs.writeFile(CLUBS_JSON_PATH, JSON.stringify(clubs, null, 2));
   logger.info('clubs.json generated', { count: clubs.length });
 
-  // 4. Nettoyer les profils qui n'existent plus
+  // 4. Nettoyer les profils qui n'existent plus (et leurs metadata PIN associees)
   const existingFiles = await fs.readdir(PROFILES_DIR);
   const validIds = new Set(profiles.map((p) => p.id));
   for (const file of existingFiles) {
     if (file === 'clubs.json' || file === 'active-profile') continue;
-    const fileId = file.replace('.json', '');
+    // Extraire l'id du profil (supporte "{id}.json" et "{id}.pin.json")
+    const fileId = file.replace(/\.(pin\.)?json$/, '');
     if (!validIds.has(fileId)) {
       await fs.remove(`${PROFILES_DIR}/${file}`);
       logger.info('Removed stale profile', { file });

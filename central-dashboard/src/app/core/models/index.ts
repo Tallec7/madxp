@@ -221,22 +221,10 @@ export interface Group {
   sites?: Site[];
 }
 
-export interface Video {
-  id: string;
-  filename: string;
-  original_name: string;
-  category: string | null;
-  subcategory: string | null;
-  file_size: number;
-  duration: number | null;
-  mime_type: string | null;
-  storage_path: string;
-  thumbnail_url: string | null;
-  metadata: Record<string, unknown>;
-  uploaded_by: string | null;
-  created_at: Date;
-  updated_at: Date;
-}
+// Video canonique (row DB snake_case) + VideoView (vue UI camelCase) + mapper.
+// Phase 2 du chantier video-deploy-unification — ne pas redéfinir Video ailleurs.
+export type { Video, VideoView } from './video.model';
+export { mapVideoRowToView } from './video.model';
 
 /**
  * Vidéo locale présente sur un Raspberry Pi

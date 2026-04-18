@@ -197,6 +197,21 @@ const mfaSetupTotal = new Counter({
   registers: [register],
 });
 
+// ============= Métriques Remote PIN par profil (ADR-058) =============
+
+const profilePinVerificationsTotal = new Counter({
+  name: 'neopro_profile_pin_verifications_total',
+  help: 'Total profile PIN verifications (ADR-058 Phase 1 remote auth)',
+  labelNames: ['status'], // success | failure | lockout | misconfigured
+  registers: [register],
+});
+
+const profileDeviceTokensActiveGauge = new Gauge({
+  name: 'neopro_profile_device_tokens_active',
+  help: 'Number of active (non-revoked, non-expired) profile device tokens',
+  registers: [register],
+});
+
 // ============= Métriques Canary Deployment =============
 
 const canaryDeploymentsGauge = new Gauge({
@@ -789,6 +804,18 @@ class MetricsService {
 
   recordMfaSetup(status: 'success' | 'failure'): void {
     mfaSetupTotal.inc({ status });
+  }
+
+  /** ADR-058: vérification PIN profil — status: success|failure|lockout|misconfigured */
+  recordProfilePinVerification(
+    status: 'success' | 'failure' | 'lockout' | 'misconfigured'
+  ): void {
+    profilePinVerificationsTotal.inc({ status });
+  }
+
+  /** ADR-058: gauge du nombre de device tokens actifs (appelé par cleanup cron) */
+  recordProfileDeviceTokensActive(count: number): void {
+    profileDeviceTokensActiveGauge.set(count);
   }
 
   recordCanaryDeployment(phase: string, count: number): void {

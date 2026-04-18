@@ -14,6 +14,7 @@ const HOME_DIR = process.env.HOME || '/home/pi';
 const NEOPRO_DATA_DIR = path.join(HOME_DIR, 'neopro', 'data');
 const NEOPRO_WEBAPP_DIR = path.join(HOME_DIR, 'neopro', 'webapp');
 const CONFIG_PATH = path.join(NEOPRO_WEBAPP_DIR, 'configuration.json');
+const PROFILES_DIR = path.join(NEOPRO_WEBAPP_DIR, 'profiles');
 const LICENSE_CACHE_PATH = path.join(NEOPRO_DATA_DIR, 'license_cache.json');
 const ANALYTICS_FILE_PATH = path.join(NEOPRO_DATA_DIR, 'analytics_buffer.json');
 
@@ -26,6 +27,7 @@ module.exports = {
   NEOPRO_DATA_DIR,
   NEOPRO_WEBAPP_DIR,
   CONFIG_PATH,
+  PROFILES_DIR,
   LICENSE_CACHE_PATH,
   ANALYTICS_FILE_PATH,
 };

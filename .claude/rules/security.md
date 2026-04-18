@@ -70,6 +70,16 @@ Routes `/api/remote/*` sont **PUBLIQUES** :
 - Rate limiting : 60 req/min par IP
 - Le site doit être online
 
+## Remote PIN par profil (ADR-058 Phase 1)
+
+- PIN optionnel par `config_profiles.id` (hash bcrypt rounds=12 dans `remote_pin_hash`, flag `remote_pin_required`).
+- Après validation PIN → JWT 30j (`type: 'remote-profile-pin'`) avec `tokenId` matching une ligne `profile_device_tokens.id` (révocable individuellement).
+- Gestion PIN + devices = **super_admin only** (routes + UI gated).
+- Lockout brute-force : 5 tentatives / 10 min par `ip:profileId` (in-memory, cloud) + même logique offline Pi.
+- Propagé au Pi via `sync_profiles` (hash + updated_at) → validation offline via `raspberry/server/services/profile-pin.service.js`.
+- Supervision Prometheus : `neopro_profile_pin_verifications_total{status}` + `neopro_profile_device_tokens_active`.
+- Purge quotidienne des tokens révoqués/expirés > 30j (`server.ts` bootstrap).
+
 ## NE JAMAIS FAIRE (smoke test enforced)
 
 - Permettre à un utilisateur non `super_admin` de modifier `feature_overrides` — le controller `updateSite` garde par `req.user.role === 'super_admin'` et la section UI est gardée par `*ngIf="isSuperAdmin"`

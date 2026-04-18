@@ -29,7 +29,7 @@ import {
   RemoteOptionsService, LocalOptions, SportType, ScoreOverlayPosition,
   SPORT_LABELS, SPORT_PERIODS, SPORT_PERIOD_DURATIONS,
 } from './services/remote-options.service';
-import { CloudRemoteNavigationService, Video, Category, TimeCategory } from './services/cloud-remote-navigation.service';
+import { CloudRemoteNavigationService, RemoteVideoEntry, Category, TimeCategory } from './services/cloud-remote-navigation.service';
 import { CloudRemoteConfigService, Configuration } from './services/cloud-remote-config.service';
 
 @Component({
@@ -103,7 +103,7 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
   public toastType: 'success' | 'info' = 'success';
   private toastTimeout: ReturnType<typeof setTimeout> | null = null;
 
-  // Video en cours de lecture
+  // RemoteVideoEntry en cours de lecture
   public playingVideoPath: string | null = null;
 
   // Loading state
@@ -376,7 +376,7 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
     });
   }
 
-  public launchVideo(video: Video): void {
+  public launchVideo(video: RemoteVideoEntry): void {
     this.remoteService.playVideo(this.siteId, { name: video.name, path: video.path, categoryId: video.categoryId }).subscribe({
       next: () => {
         this.config.addToRecentVideos(video);
@@ -400,17 +400,17 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
 
   // ==== HELPERS (delegated to config service) ====
 
-  public getVideoCategoryName(video: Video): string { return this.config.getVideoCategoryName(video); }
+  public getVideoCategoryName(video: RemoteVideoEntry): string { return this.config.getVideoCategoryName(video); }
   public getCategoriesForTimeCategory(tc: TimeCategory): Category[] { return this.config.getCategoriesForTimeCategory(tc); }
   public getVideosCount(cat: Category): number { return this.config.getVideosCount(cat); }
   public getSubCategoriesCount(cat: Category): number { return this.config.getSubCategoriesCount(cat); }
   public getSubCategoriesForDisplay(cat: Category): Category[] { return this.nav.getSubCategoriesForDisplay(cat); }
-  public getCurrentVideos(): Video[] { return this.nav.getCurrentVideos(); }
+  public getCurrentVideos(): RemoteVideoEntry[] { return this.nav.getCurrentVideos(); }
   public getTotalVideosForTimeCategory(tc: TimeCategory): number { return this.config.getTotalVideosForTimeCategory(tc); }
   public getTotalCategoriesForTimeCategory(tc: TimeCategory): number { return this.config.getTotalCategoriesForTimeCategory(tc); }
-  public getAllVideos(): Video[] { return this.config.getAllVideos(); }
+  public getAllVideos(): RemoteVideoEntry[] { return this.config.getAllVideos(); }
   public getTotalVideosCount(): number { return this.config.getTotalVideosCount(); }
-  public getVideoThumbnailUrl(video: Video): string | null { return this.config.getVideoThumbnailUrl(video); }
+  public getVideoThumbnailUrl(video: RemoteVideoEntry): string | null { return this.config.getVideoThumbnailUrl(video); }
   public onThumbnailError(event: Event): void { this.config.onThumbnailError(event); }
 
   public reloadConfiguration(): void {

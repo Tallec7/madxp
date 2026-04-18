@@ -22,6 +22,8 @@ export interface ConfigProfile {
   updated_by: string | null;
   created_at: string;
   updated_at: string;
+  /** ADR-058 — vrai si un PIN profil est requis pour la remote cloud */
+  remote_pin_required?: boolean;
 }
 
 /**

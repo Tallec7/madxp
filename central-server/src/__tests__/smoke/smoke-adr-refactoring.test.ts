@@ -1578,3 +1578,303 @@ describe('PROP-002 Phase 5: N-display model guards', () => {
     });
   });
 });
+
+describe('ADR-058 Phase 1: Pi offline PIN validation wiring', () => {
+  const fs = require('fs');
+  const path = require('path');
+  const repoRoot = path.resolve(__dirname, '../../../..');
+
+  it('sync-agent writes profiles/{id}.pin.json with chmod 600 and cleans stale entries', () => {
+    const content = fs.readFileSync(
+      path.resolve(repoRoot, 'raspberry/sync-agent/src/commands/sync-profiles.js'),
+      'utf8'
+    );
+    expect({
+      writesPinMeta: /\.pin\.json/.test(content),
+      chmod600: /mode:\s*0o600/.test(content),
+      cleansStale: /pin\\?\.\)\?json/.test(content),
+    }).toEqual({ writesPinMeta: true, chmod600: true, cleansStale: true });
+  });
+
+  it('Pi server exposes ProfilePinService + profile-pin route', () => {
+    const svc = path.resolve(repoRoot, 'raspberry/server/services/profile-pin.service.js');
+    const route = path.resolve(repoRoot, 'raspberry/server/routes/profile-pin.js');
+    expect(fs.existsSync(svc)).toBe(true);
+    expect(fs.existsSync(route)).toBe(true);
+    const serverJs = fs.readFileSync(
+      path.resolve(repoRoot, 'raspberry/server/server.js'),
+      'utf8'
+    );
+    expect(/createProfilePinRouter/.test(serverJs)).toBe(true);
+    expect(/ProfilePinService/.test(serverJs)).toBe(true);
+  });
+
+  it('Pi env-config exports PROFILES_DIR', () => {
+    const content = fs.readFileSync(
+      path.resolve(repoRoot, 'raspberry/server/env-config.js'),
+      'utf8'
+    );
+    expect(/PROFILES_DIR/.test(content)).toBe(true);
+  });
+
+  it('Pi profile-pin service uses bcrypt.compare and in-memory lockout', () => {
+    const content = fs.readFileSync(
+      path.resolve(repoRoot, 'raspberry/server/services/profile-pin.service.js'),
+      'utf8'
+    );
+    expect({
+      usesBcrypt: /bcrypt\.compare\(/.test(content),
+      hasLockout: /MAX_ATTEMPTS/.test(content) && /LOCKOUT_MS/.test(content),
+    }).toEqual({ usesBcrypt: true, hasLockout: true });
+  });
+
+  it('Pi server depends on bcryptjs', () => {
+    const pkg = JSON.parse(
+      fs.readFileSync(path.resolve(repoRoot, 'raspberry/server/package.json'), 'utf8')
+    );
+    expect(pkg.dependencies?.bcryptjs).toBeDefined();
+  });
+
+  it('migration SQL adds PIN columns + profile_device_tokens table', () => {
+    const content = fs.readFileSync(
+      path.resolve(repoRoot, 'central-server/src/scripts/add-profile-remote-auth.sql'),
+      'utf8'
+    );
+    expect({
+      pinColumns: /remote_pin_required/.test(content) && /remote_pin_hash/.test(content),
+      deviceTokens: /CREATE TABLE IF NOT EXISTS profile_device_tokens/.test(content),
+      cascadeOnProfile: /REFERENCES config_profiles\(id\) ON DELETE CASCADE/.test(content),
+    }).toEqual({ pinColumns: true, deviceTokens: true, cascadeOnProfile: true });
+  });
+
+  it('config-profile repository exposes findPin, setPin, and profileDeviceTokenRepository', () => {
+    const content = fs.readFileSync(
+      path.resolve(repoRoot, 'central-server/src/repositories/config-profile.repository.ts'),
+      'utf8'
+    );
+    expect({
+      findPin: /async findPin\(/.test(content),
+      setPin: /async setPin\(/.test(content),
+      deviceRepo: /export const profileDeviceTokenRepository/.test(content),
+      revoke: /async revoke\(/.test(content),
+      findByHash: /async findByHash\(/.test(content),
+    }).toEqual({ findPin: true, setPin: true, deviceRepo: true, revoke: true, findByHash: true });
+  });
+
+  it('profile-sync.service propagates PIN metadata in sync_profiles payload', () => {
+    const content = fs.readFileSync(
+      path.resolve(repoRoot, 'central-server/src/services/profile-sync.service.ts'),
+      'utf8'
+    );
+    expect({
+      fetchesPin: /configProfileRepository\.findPin\(/.test(content),
+      emitsPinRequired: /remote_pin_required/.test(content),
+      emitsPinHash: /remote_pin_hash/.test(content),
+    }).toEqual({ fetchesPin: true, emitsPinRequired: true, emitsPinHash: true });
+  });
+
+  it('config-profiles.controller includes PIN metadata at both emitter sites', () => {
+    const content = fs.readFileSync(
+      path.resolve(repoRoot, 'central-server/src/controllers/config-profiles.controller.ts'),
+      'utf8'
+    );
+    const matches = content.match(/remote_pin_required/g) || [];
+    // deploy + sync emitters = at least 2 occurrences
+    expect(matches.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('remote-auth.controller exposes super_admin PIN management endpoints', () => {
+    const content = fs.readFileSync(
+      path.resolve(repoRoot, 'central-server/src/controllers/remote-auth.controller.ts'),
+      'utf8'
+    );
+    expect({
+      setProfilePin: /export async function setProfilePin/.test(content),
+      listDevices: /export async function listProfileDevices/.test(content),
+      revokeDevice: /export async function revokeProfileDevice/.test(content),
+      revokeAll: /export async function revokeAllProfileDevices/.test(content),
+      verifyPin: /export async function verifyProfilePin/.test(content),
+      usesBcrypt: /bcrypt\.(hash|compare)/.test(content),
+      hasLockout: /MAX_PIN_ATTEMPTS/.test(content),
+      requireSuperAdmin: /role !== 'super_admin'/.test(content),
+    }).toEqual({
+      setProfilePin: true,
+      listDevices: true,
+      revokeDevice: true,
+      revokeAll: true,
+      verifyPin: true,
+      usesBcrypt: true,
+      hasLockout: true,
+      requireSuperAdmin: true,
+    });
+  });
+
+  it('remote-pin middleware supports profile-scoped + legacy site tokens', () => {
+    const content = fs.readFileSync(
+      path.resolve(repoRoot, 'central-server/src/middleware/remote-pin.middleware.ts'),
+      'utf8'
+    );
+    expect({
+      profileToken: /remote-profile-pin/.test(content),
+      legacyCompat: /remote-pin/.test(content),
+      checksRevocation: /profileDeviceTokenRepository/.test(content),
+      generatesProfileToken: /generateRemoteProfilePinToken/.test(content),
+    }).toEqual({
+      profileToken: true,
+      legacyCompat: true,
+      checksRevocation: true,
+      generatesProfileToken: true,
+    });
+  });
+
+  it('config-profiles routes wire super_admin remote-auth endpoints', () => {
+    const content = fs.readFileSync(
+      path.resolve(repoRoot, 'central-server/src/routes/config-profiles.routes.ts'),
+      'utf8'
+    );
+    expect({
+      setPin: /\/remote-pin/.test(content) && /setProfilePin/.test(content),
+      listDevices: /\/remote-devices/.test(content) && /listProfileDevices/.test(content),
+      revokeOne: /\/remote-devices\/:tokenId\/revoke/.test(content),
+      revokeAll: /\/remote-devices\/revoke-all/.test(content),
+      superAdminGuard: /requireRole\('super_admin'\)/.test(content),
+    }).toEqual({
+      setPin: true,
+      listDevices: true,
+      revokeOne: true,
+      revokeAll: true,
+      superAdminGuard: true,
+    });
+  });
+
+  it('remote routes wire profile-scoped verify-pin', () => {
+    const content = fs.readFileSync(
+      path.resolve(repoRoot, 'central-server/src/routes/remote.routes.ts'),
+      'utf8'
+    );
+    expect({
+      profileVerifyPin: /\/:siteId\/profiles\/:profileId\/verify-pin/.test(content),
+      controller: /verifyProfilePin/.test(content),
+      validation: /schemas\.verifyProfilePin/.test(content),
+    }).toEqual({ profileVerifyPin: true, controller: true, validation: true });
+  });
+
+  it('dashboard exposes RemoteAuthService with setPin / listDevices / revoke endpoints', () => {
+    const content = fs.readFileSync(
+      path.resolve(repoRoot, 'central-dashboard/src/app/core/services/remote-auth.service.ts'),
+      'utf8'
+    );
+    expect({
+      setPin: /setPin\(/.test(content),
+      listDevices: /listDevices\(/.test(content),
+      revokeDevice: /revokeDevice\(/.test(content),
+      revokeAllDevices: /revokeAllDevices\(/.test(content),
+      hitsCorrectRoute: /\/remote-pin/.test(content) && /\/remote-devices/.test(content),
+    }).toEqual({
+      setPin: true,
+      listDevices: true,
+      revokeDevice: true,
+      revokeAllDevices: true,
+      hitsCorrectRoute: true,
+    });
+  });
+
+  it('dashboard RemoteService supports profile-scoped verifyProfilePin and deviceId persistence', () => {
+    const content = fs.readFileSync(
+      path.resolve(repoRoot, 'central-dashboard/src/app/core/services/remote.service.ts'),
+      'utf8'
+    );
+    expect({
+      verifyProfilePin: /verifyProfilePin\(/.test(content),
+      deviceId: /getOrCreateDeviceId\(/.test(content),
+      profileTokenStorage: /PROFILE_TOKEN_STORAGE_PREFIX/.test(content),
+      commandAcceptsProfileId: /sendCommand\([\s\S]{0,200}profileId/.test(content),
+    }).toEqual({
+      verifyProfilePin: true,
+      deviceId: true,
+      profileTokenStorage: true,
+      commandAcceptsProfileId: true,
+    });
+  });
+
+  it('dashboard RemoteAuthSectionComponent exists and is wired into site-settings-tab (super_admin gated)', () => {
+    const comp = path.resolve(
+      repoRoot,
+      'central-dashboard/src/app/features/sites/components/site-settings-tab/remote-auth-section/remote-auth-section.component.ts'
+    );
+    const html = path.resolve(
+      repoRoot,
+      'central-dashboard/src/app/features/sites/components/site-settings-tab/site-settings-tab.component.html'
+    );
+    const ts = path.resolve(
+      repoRoot,
+      'central-dashboard/src/app/features/sites/components/site-settings-tab/site-settings-tab.component.ts'
+    );
+    expect(fs.existsSync(comp)).toBe(true);
+    const htmlContent = fs.readFileSync(html, 'utf8');
+    const tsContent = fs.readFileSync(ts, 'utf8');
+    expect(/<app-remote-auth-section[^>]*\*ngIf="isSuperAdmin"/.test(htmlContent)).toBe(true);
+    expect(/RemoteAuthSectionComponent/.test(tsContent)).toBe(true);
+  });
+
+  it('metrics.service exposes profile PIN + device tokens metrics (supervision)', () => {
+    const content = fs.readFileSync(
+      path.resolve(repoRoot, 'central-server/src/services/metrics.service.ts'),
+      'utf8'
+    );
+    expect({
+      pinCounter: /neopro_profile_pin_verifications_total/.test(content),
+      tokensGauge: /neopro_profile_device_tokens_active/.test(content),
+      recordPinMethod: /recordProfilePinVerification\(/.test(content),
+      recordTokensMethod: /recordProfileDeviceTokensActive\(/.test(content),
+    }).toEqual({
+      pinCounter: true,
+      tokensGauge: true,
+      recordPinMethod: true,
+      recordTokensMethod: true,
+    });
+  });
+
+  it('remote-auth controller records all PIN verification outcomes to metrics', () => {
+    const content = fs.readFileSync(
+      path.resolve(repoRoot, 'central-server/src/controllers/remote-auth.controller.ts'),
+      'utf8'
+    );
+    expect({
+      success: /recordProfilePinVerification\('success'\)/.test(content),
+      failure: /recordProfilePinVerification\('failure'\)/.test(content),
+      lockout: /recordProfilePinVerification\('lockout'\)/.test(content),
+      misconfigured: /recordProfilePinVerification\('misconfigured'\)/.test(content),
+    }).toEqual({ success: true, failure: true, lockout: true, misconfigured: true });
+  });
+
+  it('profile device token repository exposes cleanupExpired + countActive for daily purge', () => {
+    const content = fs.readFileSync(
+      path.resolve(repoRoot, 'central-server/src/repositories/config-profile.repository.ts'),
+      'utf8'
+    );
+    expect({
+      cleanupExpired: /async cleanupExpired\(days: number\)/.test(content),
+      countActive: /async countActive\(\)/.test(content),
+      deleteClause: /DELETE FROM profile_device_tokens/.test(content),
+    }).toEqual({ cleanupExpired: true, countActive: true, deleteClause: true });
+  });
+
+  it('server.ts wires daily cleanup + gauge refresh for profile_device_tokens', () => {
+    const content = fs.readFileSync(
+      path.resolve(repoRoot, 'central-server/src/server.ts'),
+      'utf8'
+    );
+    expect({
+      importsRepo: /profileDeviceTokenRepository/.test(content),
+      callsCleanup: /cleanupExpired\(30\)/.test(content),
+      refreshesGauge: /recordProfileDeviceTokensActive\(/.test(content),
+      unrefInterval: /profileTokensInterval\.unref\(\)/.test(content),
+    }).toEqual({
+      importsRepo: true,
+      callsCleanup: true,
+      refreshesGauge: true,
+      unrefInterval: true,
+    });
+  });
+});
