@@ -2731,7 +2731,7 @@ describe('ADR-034 synchronized manual video reveal', () => {
   it('Master play() delayed emission MUST include manualVideoVisible: true', () => {
     // The SECOND emission (after 2×rAF + 200ms) must signal slaves to reveal.
     // After extraction, play() is in manual-video.service.ts (public, not private)
-    const playStart = tvContent.indexOf('play(video: Video)');
+    const playStart = tvContent.indexOf('play(video: PiConfigVideoEntry)');
     const fullPlayMethod = tvContent.slice(playStart, playStart + 7500);
     // Count occurrences of manualVideoVisible in play()
     const visibleFalseCount = (fullPlayMethod.match(/manualVideoVisible:\s*false/g) || []).length;

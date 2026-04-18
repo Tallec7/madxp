@@ -3350,7 +3350,7 @@ describe('Manual video launch latency invariants (ADR-057)', () => {
 
   // Extract the play() method body only — preload/reveal paths have their
   // own semantics (ADR-034) and must not contaminate these checks.
-  const playStart = manualSvc.indexOf('play(video: Video): void {');
+  const playStart = manualSvc.indexOf('play(video: PiConfigVideoEntry): void {');
   const playEnd = manualSvc.indexOf('preloadManualVideo(');
   const playBody = playStart > 0 && playEnd > playStart
     ? manualSvc.slice(playStart, playEnd)
