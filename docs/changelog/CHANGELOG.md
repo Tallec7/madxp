@@ -1,3 +1,9 @@
+# [3.192.0](https://github.com/Tallec7/neopro/compare/v3.191.0...v3.192.0) (2026-04-18)
+
+### Features
+
+- **reporting:** automated weekly report — script + GitHub Actions + auto risk section ([a37502d](https://github.com/Tallec7/neopro/commit/a37502d98b484a6235338f073ad2c87b05670cbc))
+
 # [3.191.0](https://github.com/Tallec7/neopro/compare/v3.190.0...v3.191.0) (2026-04-18)
 
 ### Features
