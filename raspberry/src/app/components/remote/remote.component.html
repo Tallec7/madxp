@@ -417,6 +417,17 @@
                     </button>
                   }
                   <!-- Changer de profil (multi-profil ou mode démo) -->
+                  <!-- ADR-062 famille UX — Préférences per-device (Pi) -->
+                  <button
+                    class="header-menu-item"
+                    (click)="openPreferences(); closeHeaderMenu()"
+                    aria-label="Préférences"
+                  >
+                    <svg class="menu-item-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M4 6h16M4 12h10M4 18h16" />
+                    </svg>
+                    <span>Préférences</span>
+                  </button>
                   @if (isMultiProfile || isDemoMode) {
                     <button
                       class="header-menu-item profile-switch-item"
@@ -1824,4 +1835,13 @@
       }
     </div>
   }
+}
+
+<!-- ADR-062 famille UX — Overlay Préférences (Pi) -->
+@if (showPreferencesMenu) {
+  <div class="prefs-overlay" (click)="closePreferences()" style="position:fixed;inset:0;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;z-index:1000;">
+    <div (click)="$event.stopPropagation()">
+      <app-preferences-menu (dismissed)="closePreferences()"></app-preferences-menu>
+    </div>
+  </div>
 }

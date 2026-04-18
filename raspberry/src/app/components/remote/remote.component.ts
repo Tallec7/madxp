@@ -27,16 +27,18 @@ import { LicenseBannerComponent } from '../license-banner/license-banner.compone
 import { LicenseBlockRemoteComponent } from '../license-block-remote/license-block-remote.component';
 import { RemoteScoreService } from './remote-score.service';
 import { RemoteTimerService } from './remote-timer.service';
+import { PreferencesMenuComponent } from './preferences-menu.component';
+import { RemotePreferencesService } from './remote-preferences.service';
 
 type ViewType = 'club-selector' | 'home' | 'time-categories' | 'subcategories' | 'videos' | 'all-videos' | 'options';
 
 @Component({
   selector: 'app-remote',
   standalone: true,
-  imports: [CommonModule, FormsModule, ClubSelectorComponent, LicenseBannerComponent, LicenseBlockRemoteComponent],
+  imports: [CommonModule, FormsModule, ClubSelectorComponent, LicenseBannerComponent, LicenseBlockRemoteComponent, PreferencesMenuComponent],
   templateUrl: './remote.component.html',
   styleUrl: './remote.component.scss',
-  providers: [RemoteScoreService, RemoteTimerService],
+  providers: [RemoteScoreService, RemoteTimerService, RemotePreferencesService],
 })
 export class RemoteComponent implements OnInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);
@@ -705,6 +707,11 @@ export class RemoteComponent implements OnInit, OnDestroy {
 
   public toggleHeaderMenu(): void { this.isHeaderMenuOpen = !this.isHeaderMenuOpen; }
   public closeHeaderMenu(): void { this.isHeaderMenuOpen = false; }
+
+  // ADR-062 famille UX — overlay Préférences (per-device, zéro réseau)
+  public showPreferencesMenu = false;
+  public openPreferences(): void { this.showPreferencesMenu = true; }
+  public closePreferences(): void { this.showPreferencesMenu = false; }
 
   // ============================================================================
   // VIDÉOS RÉCENTES
