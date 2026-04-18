@@ -1,3 +1,9 @@
+# [3.187.0](https://github.com/Tallec7/neopro/compare/v3.186.1...v3.187.0) (2026-04-18)
+
+### Features
+
+- **delivery:** ADR-069 étapes 1-4 — Delivery Strategy pattern ([e6b0020](https://github.com/Tallec7/neopro/commit/e6b00201fb20881c26d71240af2e35197934e6f5))
+
 ## [3.186.1](https://github.com/Tallec7/neopro/compare/v3.186.0...v3.186.1) (2026-04-18)
 
 ### Bug Fixes
