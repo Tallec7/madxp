@@ -202,28 +202,34 @@ Le modèle canonique DB n'est utilisé par personne. `VideoItem` est la définit
 
 ---
 
-## Phase 3 — Composant `VideoManager` unifié
+## Phase 3 — Extraction primitives vidéo partagées (scope révisé ADR-067)
 
-**Durée** : 2 sprints (4 semaines)
+**Statut** : 📝 Scope révisé 2026-04-18 — voir [ADR-067](../../docs/adr/ADR-067-video-manager-two-consumers.md)
+**Durée** : 1 sprint (estimation ~400-600L récupérables, pas 3000L)
 **Owner** : Lead frontend
-**Objectif** : un seul composant Angular pour les 3 contextes
+**Objectif** : extraire les primitives présentationnelles dupliquées entre Page Contenu et VideoLibrary — **SANS** unifier en composant monolithique
 
-### Architecture cible
+### 🟡 Révision 2026-04-18 — Refus d'unification monolithique
+
+Audit a révélé :
+
+- Les 3 consumers initialement identifiés se réduisent à **2** (club-portal délègue à `site-content-tab` via propagation `[siteType]` smoke-enforced)
+- Page Contenu (fleet-wide, pagination server-side, panier multi-sites) et `VideoLibraryComponent` (per-site, 14+ inputs contextuels, action directe) ont des UX et data shapes fondamentalement différentes
+- Forcer un flag `scope: 'fleet' | 'site'` dans VideoLibrary ajouterait ~20 branches conditionnelles pour zéro gain net
+- ~80 règles smoke-enforced (`.claude/rules/saas.md` + `dashboard.md`) verrouillent des comportements par siteType qu'un composant unifié ne peut pas gérer proprement
+
+**Décision ADR-067** : garder les 2 consumers, extraire uniquement les primitives.
+
+### Architecture cible révisée
 
 ```
-<video-manager [scope]="scope" [permissions]="perms" />
-
-scope:
-  | { type: 'fleet' }                      // Page Contenu — admin
-  | { type: 'site', siteId: string }       // Onglet site
-  | { type: 'club', clubSiteId: string }   // Portail club
+shared/components/
+  video-card/          ← à créer — tuile vidéo (thumbnail + actions menu)
+  video-upload-zone/   ✅ déjà extrait
+features/
+  content/             ← garde sa structure (ContentManagementDataService + Upload + Deploy)
+  sites/components/video-library/  ← garde sa structure (déjà décomposé en sub-components)
 ```
-
-Le composant connaît :
-
-- La liste des vidéos à afficher (filtrée selon scope)
-- Les actions disponibles (selon permissions)
-- Le mode de déploiement (toujours via `createDeployment` désormais)
 
 ### Tâches
 

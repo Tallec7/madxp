@@ -79,6 +79,7 @@ Un ADR documente une décision technique importante avec :
 | [ADR-064](ADR-064-canonical-video-view-composition.md)             | Hiérarchie canonique Video / VideoView (composition)        | Accepté                  | Avr 2026 |
 | [ADR-065](ADR-065-drop-unused-video-row-view-mapper.md)            | Suppression du mapper `mapVideoRowToView` (dead code)       | Accepté                  | Avr 2026 |
 | [ADR-066](ADR-066-rename-pi-video-interface.md)                    | Rename `Video` → `PiConfigVideoEntry` (Raspberry)           | Accepté                  | Avr 2026 |
+| [ADR-067](ADR-067-video-manager-two-consumers.md)                  | Garder 2 consumers vidéo (Page Contenu vs VideoLibrary)     | Accepté                  | Avr 2026 |
 
 ### Supersédés
 
@@ -115,7 +116,7 @@ Un ADR documente une décision technique importante avec :
 
 1. Décider du format avec la [grille de décision](BEST_PRACTICES.md#quand-créer-un-adr-)
 2. Copier le template approprié (complet ou léger)
-3. Numéroter séquentiellement (prochain : **ADR-067**)
+3. Numéroter séquentiellement (prochain : **ADR-068**)
 4. Remplir les sections
 5. Commiter avec le code dans la même PR
 6. Mettre à jour ce README après merge
