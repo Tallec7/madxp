@@ -168,10 +168,14 @@ function renderPR(pr) {
   const testStatus = !testPlan ? '' : hasChecked ? ' ✅' : ' ⬜';
 
   let out = `**#${pr.number} — ${pr.title}**${testStatus}\n`;
-  const desc = (impact && !impact.match(/obligatoire|Ce que voit/i)) ? impact : summary;
-  if (desc) {
-    // Prefix each line with > for blockquote
-    out += desc.trim().split('\n').map(l => `> ${l}`).join('\n') + '\n';
+  const hasImpact = impact && !impact.match(/obligatoire|Ce que voit/i);
+  if (hasImpact) {
+    // Impact client = rédigé pour le BO, on prend tout
+    out += `> ${impact.trim().replace(/\n/g, ' ')}\n`;
+  } else if (summary) {
+    // Summary technique : limiter à 2 lignes non vides pour le mail BO
+    const lines = summary.trim().split('\n').filter(l => l.trim()).slice(0, 2);
+    out += `> ${lines.join(' — ')}\n`;
   }
   if (adr && adr !== 'Aucun' && adr.trim()) out += `> ADR : ${adr.trim()}\n`;
   return out;
