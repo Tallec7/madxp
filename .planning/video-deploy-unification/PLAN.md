@@ -180,8 +180,8 @@ Les 4 interfaces `Video` parallèles de l'audit initial ont été renommées en 
 
 ## Phase 3 — Extraction primitives vidéo partagées (ADR-067)
 
-**Statut** : 🟡 En cours — voir [ADR-067](../../docs/adr/ADR-067-video-manager-two-consumers.md)
-**Durée** : 1 sprint
+**Statut** : ✅ Done 2026-04-18 — scope respecté : `VideoCardComponent` extrait, audit des autres primitives conclut à la non-extraction justifiée (voir [ADR-067](../../docs/adr/ADR-067-video-manager-two-consumers.md))
+**Durée réelle** : 1 jour (au lieu du sprint estimé — audit a révélé moins de duplication que prévu)
 **Owner** : Lead frontend
 **Objectif** : extraire les primitives présentationnelles dupliquées entre Page Contenu et VideoLibrary — **SANS** unifier en composant monolithique
 
@@ -212,17 +212,21 @@ features/
 - [x] Migration Page Contenu (`content-management.component.html`)
 - [~] Migration VideoLibrary grid view — tentée puis revertée (commit bb5dc487 revert) : le template custom a trop de branches contextuelles (club-locked, isUploadedForThisSite, deploy states, variant badges) qui ne passent pas naturellement par slots sans alourdir l'API du card
 
-**3.2 Audit des primitives restantes** — ⏳ To do
+**3.2 Audit des primitives restantes** — ✅ Done 2026-04-18
 
-Blocs candidats à l'extraction, à valider par audit visuel :
+Audit code effectué sur `content-management.component.html` (651L) vs `video-library-list.component.html` (395L) :
 
-| Candidat            | Page Contenu         | VideoLibrary                  | Décision attendue                                        |
-| ------------------- | -------------------- | ----------------------------- | -------------------------------------------------------- |
-| `VideoFilterBar`    | filtres haut de page | filtres haut de bibliothèque  | extraire si >70% commun                                  |
-| `VideoStatsBar`     | compteurs fleet      | `library-stats` (filtered)    | garder séparés (règle smoke enforced sur stats filtrées) |
-| `VideoSortHeader`   | table sort headers   | table sort headers            | extraire si identique                                    |
-| `VideoDeployBadge`  | status pill          | status pill + deploy progress | extraire la version simple                               |
-| `VideoPreviewModal` | modal preview        | modal preview                 | déjà partagé via service ?                               |
+| Candidat            | Présent dans les 2 ? | Similarité | Décision       | Raison                                                                                                                                       |
+| ------------------- | -------------------- | ---------- | -------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| `VideoFilterBar`    | Partiellement        | ~70%       | ❌ Non extrait | CM : upload+search combo ; VLL : filtres délégués au parent via sub-components — surfaces divergentes                                        |
+| `VideoSortHeader`   | VLL only             | N/A        | ❌ Non extrait | CM est une grille de cartes sans tri table ; pas de duplication                                                                              |
+| `VideoDeployBadge`  | VLL only             | N/A        | ❌ Non extrait | CM utilise un wizard fleet-wide (`deploy-wizard` multi-select) ; VLL bouton inline avec progress per-video — UX fondamentalement différentes |
+| `VideoStatsBar`     | Partiellement        | ~50%       | ❌ Non extrait | VLL stats sur `filteredVideos` (règle smoke enforced `dashboard.md`) ; CM pagination fleet — calculs incompatibles                           |
+| `VideoPreviewModal` | Oui                  | ~65%       | ❌ Non extrait | CM possède le modal inline ; VLL émet `preview` au parent — ownership de state divergent                                                     |
+
+**Conclusion** : aucune primitive supplémentaire ne justifie l'extraction. `VideoCardComponent` était le seul vrai doublon. Le reste diverge par design parce que les 2 shells ont des modèles mentaux différents (fleet-wide vs per-site) — c'est exactement ce qu'ADR-067 anticipait.
+
+Le revert du migrate `video-library-list` → `VideoCardComponent` est cohérent avec cette conclusion : même sur la primitive la plus évidente, la version per-site a trop de branches contextuelles (club-locked, deploy states, variants, isUploadedForThisSite) pour passer proprement par slots sans alourdir l'API partagée.
 
 **3.3 Tests & non-régression** — ⏳ To do
 
