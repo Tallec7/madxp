@@ -98,17 +98,20 @@ Un ADR documente une décision technique importante avec :
 
 > Déplacées dans [`../proposals/`](../proposals/) — ce ne sont pas des ADR tant que la décision n'est pas prise.
 
-| ID                                                               | Titre                                                         | Sujet                   |
-| ---------------------------------------------------------------- | ------------------------------------------------------------- | ----------------------- |
-| [PROP-001](../proposals/PROP-001-multi-tv-single-pi.md)          | Multi-TV depuis un seul Pi                                    | Hardware / Architecture |
-| [PROP-002](../proposals/PROP-002-tv-led-dual-output.md)          | TV + LED dual output → [ADR-029](ADR-029-dual-hdmi-tv-led.md) | Hardware / Architecture |
-| [PROP-003](../proposals/PROP-003-score-live-multi-vendor.md)     | Score live multi-constructeurs                                | Intégration hardware    |
-| [PROP-004](../proposals/PROP-004-video-template-engine.md)       | Moteur de templates vidéo                                     | Feature produit         |
-| [PROP-005](../proposals/PROP-005-scheduling-local-vs-server.md)  | Planification horaire local vs serveur                        | Architecture            |
-| [PROP-006](../proposals/PROP-006-sponsor-self-service-portal.md) | Portail sponsor self-service                                  | Feature produit         |
-| [PROP-007](../proposals/PROP-007-sponsor-rotation-algorithm.md)  | Rotation équitable des sponsors                               | Algorithme              |
-| [PROP-008](../proposals/PROP-008-content-expiration.md)          | Expiration automatique de contenu                             | Feature produit         |
-| [PROP-009](../proposals/PROP-009-motion-design-personnalise.md)  | Motion design personnalisé                                    | Feature produit         |
+| ID                                                                  | Titre                                                         | Sujet                   |
+| ------------------------------------------------------------------- | ------------------------------------------------------------- | ----------------------- |
+| [PROP-001](../proposals/PROP-001-multi-tv-single-pi.md)             | Multi-TV depuis un seul Pi                                    | Hardware / Architecture |
+| [PROP-002](../proposals/PROP-002-tv-led-dual-output.md)             | TV + LED dual output → [ADR-029](ADR-029-dual-hdmi-tv-led.md) | Hardware / Architecture |
+| [PROP-003](../proposals/PROP-003-score-live-multi-vendor.md)        | Score live multi-constructeurs                                | Intégration hardware    |
+| [PROP-004](../proposals/PROP-004-video-template-engine.md)          | Moteur de templates vidéo                                     | Feature produit         |
+| [PROP-005](../proposals/PROP-005-scheduling-local-vs-server.md)     | Planification horaire local vs serveur                        | Architecture            |
+| [PROP-006](../proposals/PROP-006-sponsor-self-service-portal.md)    | Portail sponsor self-service                                  | Feature produit         |
+| [PROP-007](../proposals/PROP-007-sponsor-rotation-algorithm.md)     | Rotation équitable des sponsors                               | Algorithme              |
+| [PROP-008](../proposals/PROP-008-content-expiration.md)             | Expiration automatique de contenu                             | Feature produit         |
+| [PROP-009](../proposals/PROP-009-motion-design-personnalise.md)     | Motion design personnalisé                                    | Feature produit         |
+| [PROP-010](../proposals/PROP-010-auto-generation-video-variants.md) | Auto-génération de variantes vidéo                            | Feature produit         |
+| [PROP-011](../proposals/PROP-011-multi-zone-led.md)                 | Multi-zone LED par côté de terrain                            | Hardware / Architecture |
+| [PROP-012](../proposals/PROP-012-video-delivery-modes.md)           | Modes de livraison vidéo (Pi, SaaS, Chromecast, Smart TV…)    | Architecture / Produit  |
 
 ## Statuts
 
