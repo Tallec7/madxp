@@ -7,6 +7,7 @@ import { ConfirmDialogService } from '../../core/services/confirm-dialog.service
 import { Site, Group } from '../../core/models';
 import { Subscription } from 'rxjs';
 import { VideoVariantPanelComponent } from './video-variant-panel.component';
+import { VideoCardComponent } from '../../shared/components/video-card/video-card.component';
 import {
   ContentManagementDataService,
   ContentVideoRow,
@@ -21,7 +22,7 @@ import { ContentDeploymentService } from './content-deployment.service';
 @Component({
   selector: 'app-content-management',
   standalone: true,
-  imports: [CommonModule, FormsModule, TranslateModule, VideoVariantPanelComponent],
+  imports: [CommonModule, FormsModule, TranslateModule, VideoVariantPanelComponent, VideoCardComponent],
   templateUrl: './content-management.component.html',
   styleUrls: ['./content-management.component.scss']
 })
@@ -106,6 +107,13 @@ export class ContentManagementComponent implements OnInit, OnDestroy {
 
   getDeploymentStatusLabel(status: string): string {
     return this.dataService.getDeploymentStatusLabel(status);
+  }
+
+  getVideoMetaParts(video: ContentVideoRow): string[] {
+    const parts = [this.formatFileSize(video.file_size)];
+    if (video.duration) parts.push(this.formatDuration(video.duration));
+    parts.push(this.formatDate(video.created_at));
+    return parts;
   }
 
   // ── Data loading ──
