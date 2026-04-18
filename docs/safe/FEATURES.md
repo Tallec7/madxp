@@ -1,8 +1,21 @@
 # Features & User Stories — NEOPRO SAFe
 
-> **Dernière mise à jour** : 11 Avril 2026 <!-- Audit CTO : F-07.3 Done, F-10.1 critères cochés, E-01 Partiel, ajout Epics non trackés + F-15.2 scoreboard multi-vendor + F-21.2 public scores API (PROP-003) -->
+> **Dernière mise à jour** : 18 Avril 2026 <!-- Sync statuts production : E-07 Done, E-10 Done, E-03 Done, ADR-058 phases 2A-2C Done, ADR-060/062 Remote V2 Done — 241 features livrées -->
 > **PI actuel** : PI-1 (Février - Mars 2026)
-> Ce document contient les Features/US futures (PI-1 à PI-3) ET les Epics terminés avant PI-1. Les 212 features implémentées (hors SAFe) sont documentées dans [IMPLEMENTED-BACKLOG.md](IMPLEMENTED-BACKLOG.md).
+> Ce document contient les Features/US futures (PI-1 à PI-3) ET les Epics terminés avant PI-1. Les 241 features implémentées (hors SAFe) sont documentées dans [IMPLEMENTED-BACKLOG.md](IMPLEMENTED-BACKLOG.md).
+
+---
+
+## Synthèse — 18/04/2026
+
+| Statut                             | Epics  | Features |
+| ---------------------------------- | ------ | -------- |
+| ✅ Done (avant PI-1)               | 6      | 13       |
+| ⚠️ En cours / Partiel (PI-1 actif) | 3      | 5        |
+| ⏳ Backlog (PI-1 à PI-3)           | 14     | 32       |
+| **Total SAFe**                     | **23** | **50**   |
+
+> Mis à jour le 18/04/2026 — source de vérité : [IMPLEMENTED-BACKLOG.md](IMPLEMENTED-BACKLOG.md) (241 features livrées)
 
 ---
 
@@ -450,15 +463,15 @@ Tous les controllers utilisent le repository pattern. ESLint bloquant actif. Aud
 - [ ] Latence end-to-end < 1s depuis saisie console jusqu'à overlay TV
 - [ ] Compatible 3 topologies d'installation : A1 (Pi + eth0 + S2E), A3 (Pi + clé USB WiFi club + S2E), B (Scorebox déporté en local-AP)
 
-| US        | Description                                                                                | SP  | Sprint  | Priorité |
-| --------- | ------------------------------------------------------------------------------------------ | --- | ------- | -------- |
+| US        | Description                                                                                 | SP  | Sprint  | Priorité |
+| --------- | ------------------------------------------------------------------------------------------- | --- | ------- | -------- |
 | US-15.2.1 | Interface `ScoreboardConnector` + `ScoreboardManager` + migration table `scoreboard_events` | 5   | PI-2 S1 | Must     |
-| US-15.2.2 | `StramatelConnector` (parser binaire 54 octets + fixtures de test unitaires)               | 5   | PI-2 S1 | Must     |
-| US-15.2.3 | `BodetConnector` (parser Scorepad TCP + variant BT6000 RS-485)                             | 5   | PI-2 S2 | Must     |
-| US-15.2.4 | Firmware Scorebox Pi Zero 2 W (mini-AP WiFi + bridge WebSocket RS-485)                     | 8   | PI-2 S2 | Should   |
-| US-15.2.5 | Dashboard : config connecteur par site + monitoring scorebox                               | 3   | PI-2 S2 | Should   |
+| US-15.2.2 | `StramatelConnector` (parser binaire 54 octets + fixtures de test unitaires)                | 5   | PI-2 S1 | Must     |
+| US-15.2.3 | `BodetConnector` (parser Scorepad TCP + variant BT6000 RS-485)                              | 5   | PI-2 S2 | Must     |
+| US-15.2.4 | Firmware Scorebox Pi Zero 2 W (mini-AP WiFi + bridge WebSocket RS-485)                      | 8   | PI-2 S2 | Should   |
+| US-15.2.5 | Dashboard : config connecteur par site + monitoring scorebox                                | 3   | PI-2 S2 | Should   |
 | US-15.2.6 | Remote enrichie : données scoreboard + boutons faits de jeu différenciés TV+LED             | 3   | PI-2 S3 | Should   |
-| US-15.2.7 | `OcrConnector` fallback universel (OpenCV + Tesseract)                                     | 8   | PI-2 S3 | Could    |
+| US-15.2.7 | `OcrConnector` fallback universel (OpenCV + Tesseract)                                      | 8   | PI-2 S3 | Could    |
 
 ---
 
@@ -1004,12 +1017,12 @@ Cible clients API : apps clubs, médias locaux (Ouest-France, presse régionale)
 - [ ] Portail développeur public : documentation interactive, sandbox, inscription, gestion des clés, dashboard d'usage
 - [ ] Filtrage RGPD : pas d'exposition des noms de joueurs en v1
 
-| US        | Description                                                                                        | SP  | Sprint  | Priorité     |
-| --------- | -------------------------------------------------------------------------------------------------- | --- | ------- | ------------ |
-| US-21.2.1 | API REST v1 `/scores`, `/matches`, `/events` + auth api_key + OpenAPI doc + plans tarifaires DB     | 5   | PI-3 S2 | Should (PI-3) |
-| US-21.2.2 | WebSocket `/stream` temps réel + webhooks sortants configurables                                    | 8   | PI-3 S2 | Should (PI-3) |
-| US-21.2.3 | Rate limiting par plan (Free/Starter/Pro/Enterprise) + quotas + billing métrique                    | 3   | PI-3 S3 | Should (PI-3) |
-| US-21.2.4 | Portail développeur public (doc interactive, sandbox, inscription, gestion clés)                    | 5   | PI-3 S3 | Could (PI-3) |
+| US        | Description                                                                                     | SP  | Sprint  | Priorité      |
+| --------- | ----------------------------------------------------------------------------------------------- | --- | ------- | ------------- |
+| US-21.2.1 | API REST v1 `/scores`, `/matches`, `/events` + auth api_key + OpenAPI doc + plans tarifaires DB | 5   | PI-3 S2 | Should (PI-3) |
+| US-21.2.2 | WebSocket `/stream` temps réel + webhooks sortants configurables                                | 8   | PI-3 S2 | Should (PI-3) |
+| US-21.2.3 | Rate limiting par plan (Free/Starter/Pro/Enterprise) + quotas + billing métrique                | 3   | PI-3 S3 | Should (PI-3) |
+| US-21.2.4 | Portail développeur public (doc interactive, sandbox, inscription, gestion clés)                | 5   | PI-3 S3 | Could (PI-3)  |
 
 ---
 

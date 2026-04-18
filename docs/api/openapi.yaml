@@ -1,0 +1,1221 @@
+openapi: 3.0.3
+info:
+  title: Neopro API
+  version: "3.x"
+  description: |
+    API REST du serveur central Neopro — système de TV interactive pour clubs sportifs.
+    Architecture 3-tiers : Dashboard Angular → Central Server Express/PG → Raspberry Pi Edge.
+
+    **Auth** : JWT HttpOnly cookie (dashboard) ou Bearer token (Pi/API).
+    Rôles : super_admin > admin > operator > club > viewer.
+
+    # Voir docs/technical/REFERENCE.md pour les endpoints complets
+servers:
+  - url: https://neopro-central-production.up.railway.app
+    description: Production (Railway)
+  - url: http://localhost:3001
+    description: Local dev
+
+security:
+  - bearerAuth: []
+  - cookieAuth: []
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: token
+
+  schemas:
+    Error:
+      type: object
+      properties:
+        error: { type: string }
+      required: [error]
+
+    User:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        email: { type: string, format: email }
+        role:
+          type: string
+          enum: [super_admin, admin, operator, club, viewer, advertiser, agency]
+        site_id: { type: string, format: uuid, nullable: true }
+        is_active: { type: boolean }
+        mfa_enabled: { type: boolean }
+        created_at: { type: string, format: date-time }
+
+    Site:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        club_name: { type: string }
+        site_type:
+          type: string
+          enum: [pi, saas, demo]
+        status:
+          type: string
+          enum: [online, offline, warning, unknown]
+        api_key: { type: string }
+        software_version: { type: string }
+        last_seen_at: { type: string, format: date-time, nullable: true }
+        created_at: { type: string, format: date-time }
+
+    Video:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        title: { type: string }
+        filename: { type: string }
+        url: { type: string, format: uri }
+        duration: { type: number }
+        size: { type: integer }
+        category: { type: string }
+        owner:
+          type: string
+          enum: [neopro, club, advertiser]
+        uploaded_for_site_id: { type: string, format: uuid, nullable: true }
+        created_at: { type: string, format: date-time }
+
+    Deployment:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        video_id: { type: string, format: uuid }
+        site_id: { type: string, format: uuid }
+        status:
+          type: string
+          enum: [pending, in_progress, completed, failed]
+        created_at: { type: string, format: date-time }
+
+    RemotionTemplate:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        description: { type: string }
+        is_published: { type: boolean }
+        props_schema: { type: object }
+        default_props: { type: object }
+        created_at: { type: string, format: date-time }
+
+    Update:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        version: { type: string }
+        release_notes: { type: string }
+        package_url: { type: string, format: uri }
+        is_active: { type: boolean }
+        created_at: { type: string, format: date-time }
+
+paths:
+
+  # ─── Health ───────────────────────────────────────────────────────────────
+  /health:
+    get:
+      summary: Health check
+      tags: [Health]
+      security: []
+      responses:
+        "200":
+          description: Serveur opérationnel
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string, example: ok }
+                  uptime: { type: number }
+                  version: { type: string }
+
+  # ─── Auth ─────────────────────────────────────────────────────────────────
+  /api/auth/login:
+    post:
+      summary: Login (email + password)
+      tags: [Auth]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email: { type: string, format: email }
+                password: { type: string }
+              required: [email, password]
+      responses:
+        "200":
+          description: Authentifié — cookie JWT défini
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user: { $ref: '#/components/schemas/User' }
+                  mfaRequired: { type: boolean }
+        "401":
+          description: Identifiants invalides
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /api/auth/logout:
+    post:
+      summary: Logout (efface le cookie)
+      tags: [Auth]
+      responses:
+        "200":
+          description: Déconnecté
+
+  /api/auth/me:
+    get:
+      summary: Profil de l'utilisateur connecté
+      tags: [Auth]
+      responses:
+        "200":
+          description: Utilisateur courant
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/User' }
+
+  /api/auth/forgot-password:
+    post:
+      summary: Demande de réinitialisation de mot de passe
+      tags: [Auth]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email: { type: string, format: email }
+              required: [email]
+      responses:
+        "200":
+          description: Email envoyé si le compte existe
+
+  /api/auth/reset-password:
+    post:
+      summary: Réinitialise le mot de passe via token
+      tags: [Auth]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                token: { type: string }
+                password: { type: string }
+              required: [token, password]
+      responses:
+        "200":
+          description: Mot de passe mis à jour
+        "400":
+          description: Token invalide ou expiré
+
+  # ─── MFA ─────────────────────────────────────────────────────────────────
+  /api/mfa/status:
+    get:
+      summary: Statut MFA de l'utilisateur connecté
+      tags: [MFA]
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  enabled: { type: boolean }
+                  required: { type: boolean }
+
+  /api/mfa/setup:
+    post:
+      summary: Initialise le setup MFA (génère QR code + backup codes)
+      tags: [MFA]
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  qrCodeDataUrl: { type: string }
+                  manualEntryKey: { type: string }
+                  backupCodes: { type: array, items: { type: string } }
+
+  /api/mfa/enable:
+    post:
+      summary: Active le MFA après validation du premier code TOTP
+      tags: [MFA]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                code: { type: string, minLength: 6, maxLength: 6 }
+              required: [code]
+      responses:
+        "200":
+          description: MFA activé
+        "400":
+          description: Code invalide
+
+  /api/mfa/verify:
+    post:
+      summary: Vérifie un code TOTP lors du login
+      tags: [MFA]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                userId: { type: string, format: uuid }
+                code: { type: string }
+              required: [userId, code]
+      responses:
+        "200":
+          description: Code valide
+        "401":
+          description: Code invalide
+
+  # ─── Sites ────────────────────────────────────────────────────────────────
+  /api/sites:
+    get:
+      summary: Liste paginée des sites (clubs)
+      tags: [Sites]
+      parameters:
+        - in: query
+          name: page
+          schema: { type: integer, default: 1 }
+        - in: query
+          name: limit
+          schema: { type: integer, default: 20 }
+        - in: query
+          name: status
+          schema: { type: string, enum: [online, offline, warning] }
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/Site' }
+                  pagination:
+                    type: object
+                    properties:
+                      page: { type: integer }
+                      limit: { type: integer }
+                      total: { type: integer }
+    post:
+      summary: Créer un site (admin/operator)
+      tags: [Sites]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+                club_name: { type: string }
+                site_type: { type: string, enum: [pi, saas, demo] }
+              required: [name, club_name, site_type]
+      responses:
+        "201":
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Site' }
+
+  /api/sites/stats:
+    get:
+      summary: Statistiques agrégées de la flotte
+      tags: [Sites]
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total: { type: integer }
+                  online: { type: integer }
+                  offline: { type: integer }
+                  warning: { type: integer }
+
+  /api/sites/{id}:
+    get:
+      summary: Détails d'un site
+      tags: [Sites]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Site' }
+        "404":
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+    put:
+      summary: Mettre à jour un site (admin/operator)
+      tags: [Sites]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+                club_name: { type: string }
+      responses:
+        "200":
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Site' }
+    delete:
+      summary: Supprimer un site (admin uniquement)
+      tags: [Sites]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "204":
+          description: Supprimé
+
+  /api/sites/{id}/command:
+    post:
+      summary: Envoyer une commande au Pi (reboot, refresh, etc.)
+      tags: [Sites]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                command:
+                  type: string
+                  enum: [reboot, refresh, update, restart_services]
+                params: { type: object }
+              required: [command]
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  commandId: { type: string, format: uuid }
+                  status: { type: string }
+
+  /api/sites/{id}/dashboard:
+    get:
+      summary: Données dashboard agrégées (connection + metrics) — 1 requête
+      tags: [Sites]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Données consolidées pour le dashboard site
+
+  /api/sites/{id}/config:
+    put:
+      summary: Sauvegarde directe de config (SaaS uniquement — refuse les Pi)
+      tags: [Sites]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                config: { type: object }
+              required: [config]
+      responses:
+        "200":
+          description: Config sauvegardée
+        "400":
+          description: Refusé pour les sites Pi
+
+  /api/sites/{id}/remote-pin:
+    get:
+      summary: Statut du PIN télécommande (admin/operator)
+      tags: [Sites]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  pin_required: { type: boolean }
+                  pin_set: { type: boolean }
+    post:
+      summary: Définir le PIN télécommande d'un site
+      tags: [Sites]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                pin: { type: string, minLength: 4, maxLength: 6, pattern: '^\d+$' }
+              required: [pin]
+      responses:
+        "200":
+          description: PIN défini
+    delete:
+      summary: Supprimer le PIN télécommande d'un site
+      tags: [Sites]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "204":
+          description: PIN supprimé
+
+  # ─── Videos ───────────────────────────────────────────────────────────────
+  /api/content/videos:
+    get:
+      summary: Liste des vidéos
+      tags: [Videos]
+      parameters:
+        - in: query
+          name: page
+          schema: { type: integer, default: 1 }
+        - in: query
+          name: limit
+          schema: { type: integer, default: 20 }
+        - in: query
+          name: category
+          schema: { type: string }
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/Video' }
+                  pagination:
+                    type: object
+    post:
+      summary: Upload une vidéo (multipart/form-data)
+      tags: [Videos]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                video:
+                  type: string
+                  format: binary
+                title: { type: string }
+                category: { type: string }
+              required: [video, title]
+      responses:
+        "201":
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Video' }
+        "400":
+          description: Fichier manquant ou taille nulle
+
+  /api/content/videos/{id}:
+    get:
+      summary: Détails d'une vidéo
+      tags: [Videos]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Video' }
+    put:
+      summary: Mettre à jour les métadonnées d'une vidéo
+      tags: [Videos]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title: { type: string }
+                category: { type: string }
+      responses:
+        "200":
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Video' }
+    delete:
+      summary: Supprimer une vidéo
+      tags: [Videos]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "204":
+          description: Supprimée
+
+  /api/content/deployments:
+    post:
+      summary: Déployer une vidéo vers un site
+      tags: [Videos]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                video_id: { type: string, format: uuid }
+                site_id: { type: string, format: uuid }
+              required: [video_id, site_id]
+      responses:
+        "201":
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Deployment' }
+
+  /api/videos/stream:
+    get:
+      summary: Streaming proxy vidéo (token JWT court TTL 1h — ADR-068)
+      tags: [Videos]
+      security: []
+      parameters:
+        - in: query
+          name: token
+          required: true
+          schema: { type: string }
+          description: JWT signé par video-token.service.ts, type=video-stream
+      responses:
+        "200":
+          description: Stream vidéo (Range forwarded depuis FTP)
+          content:
+            video/mp4:
+              schema:
+                type: string
+                format: binary
+        "401":
+          description: Token manquant, invalide ou expiré
+
+  # ─── Remote (Télécommande cloud) ─────────────────────────────────────────
+  /api/remote/{siteId}/state:
+    get:
+      summary: État du site (public — pas d'auth JWT)
+      tags: [Remote]
+      security: []
+      parameters:
+        - in: path
+          name: siteId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  online: { type: boolean }
+                  pinRequired: { type: boolean }
+                  currentVideo: { type: string, nullable: true }
+
+  /api/remote/{siteId}/verify-pin:
+    post:
+      summary: Vérifier le PIN et obtenir un JWT session (legacy site-level)
+      tags: [Remote]
+      security: []
+      parameters:
+        - in: path
+          name: siteId
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                pin: { type: string }
+              required: [pin]
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token: { type: string }
+        "401":
+          description: PIN incorrect
+
+  /api/remote/{siteId}/profiles/{profileId}/verify-pin:
+    post:
+      summary: Vérifier le PIN d'un profil et obtenir un device token 30j (ADR-058)
+      tags: [Remote]
+      security: []
+      parameters:
+        - in: path
+          name: siteId
+          required: true
+          schema: { type: string, format: uuid }
+        - in: path
+          name: profileId
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                pin: { type: string }
+              required: [pin]
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token: { type: string }
+                  tokenId: { type: string, format: uuid }
+        "401":
+          description: PIN incorrect (lockout à 5 tentatives / 10 min)
+
+  /api/remote/{siteId}/command:
+    post:
+      summary: Envoyer une commande via la télécommande cloud
+      tags: [Remote]
+      security: []
+      parameters:
+        - in: path
+          name: siteId
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                command: { type: string }
+                params: { type: object }
+              required: [command]
+      responses:
+        "200":
+          description: Commande relayée au Pi
+
+  /api/remote/{siteId}/videos:
+    get:
+      summary: Vidéos disponibles par catégorie (via télécommande)
+      tags: [Remote]
+      security: []
+      parameters:
+        - in: path
+          name: siteId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  type: array
+                  items: { $ref: '#/components/schemas/Video' }
+
+  # ─── Users ────────────────────────────────────────────────────────────────
+  /api/users:
+    get:
+      summary: Liste des utilisateurs (admin+)
+      tags: [Users]
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/User' }
+    post:
+      summary: Créer un utilisateur (super_admin uniquement)
+      tags: [Users]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email: { type: string, format: email }
+                password: { type: string }
+                role:
+                  type: string
+                  enum: [admin, operator, club, viewer, advertiser, agency]
+              required: [email, password, role]
+      responses:
+        "201":
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/User' }
+
+  /api/users/{id}:
+    get:
+      summary: Détails d'un utilisateur
+      tags: [Users]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/User' }
+    put:
+      summary: Mettre à jour un utilisateur (super_admin uniquement)
+      tags: [Users]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email: { type: string }
+                role: { type: string }
+                is_active: { type: boolean }
+      responses:
+        "200":
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/User' }
+    delete:
+      summary: Supprimer un utilisateur (super_admin uniquement)
+      tags: [Users]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "204":
+          description: Supprimé
+
+  /api/users/me:
+    delete:
+      summary: Suppression de son propre compte (RGPD Art. 17)
+      tags: [Users]
+      responses:
+        "204":
+          description: Compte supprimé
+
+  # ─── Analytics ────────────────────────────────────────────────────────────
+  /api/analytics/clubs/{siteId}/dashboard:
+    get:
+      summary: Dashboard analytics complet d'un site
+      tags: [Analytics]
+      parameters:
+        - in: path
+          name: siteId
+          required: true
+          schema: { type: string, format: uuid }
+        - in: query
+          name: from
+          schema: { type: string, format: date }
+        - in: query
+          name: to
+          schema: { type: string, format: date }
+      responses:
+        "200":
+          description: Métriques agrégées (plays, sessions, durées, top vidéos)
+
+  /api/analytics/overview:
+    get:
+      summary: Vue d'ensemble multi-sites (admin/operator)
+      tags: [Analytics]
+      parameters:
+        - in: query
+          name: from
+          schema: { type: string, format: date }
+        - in: query
+          name: to
+          schema: { type: string, format: date }
+      responses:
+        "200":
+          description: Métriques agrégées toute la flotte
+
+  /api/analytics/realtime:
+    get:
+      summary: Stats temps réel (admin/operator)
+      tags: [Analytics]
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  online_sites: { type: integer }
+                  active_sessions: { type: integer }
+                  plays_last_hour: { type: integer }
+
+  /api/analytics/video-plays:
+    post:
+      summary: Enregistrer des lectures vidéo depuis le Pi (sync-agent)
+      tags: [Analytics]
+      security:
+        - bearerAuth: []
+        - {}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                site_id: { type: string, format: uuid }
+                plays:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      video_filename: { type: string }
+                      played_at: { type: string, format: date-time }
+                      duration_played: { type: integer }
+      responses:
+        "200":
+          description: Plays enregistrés
+
+  /api/analytics/sessions:
+    post:
+      summary: Gérer une session Pi (start/end)
+      tags: [Analytics]
+      security:
+        - bearerAuth: []
+        - {}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                site_id: { type: string, format: uuid }
+                action: { type: string, enum: [start, end] }
+              required: [site_id, action]
+      responses:
+        "200":
+          description: Session enregistrée
+
+  # ─── OTA Updates ──────────────────────────────────────────────────────────
+  /api/updates:
+    get:
+      summary: Liste des packages de mise à jour OTA
+      tags: [OTA]
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Update' }
+    post:
+      summary: Créer un package OTA (admin uniquement, multipart)
+      tags: [OTA]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                package:
+                  type: string
+                  format: binary
+                version: { type: string }
+                release_notes: { type: string }
+              required: [package, version]
+      responses:
+        "201":
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Update' }
+
+  /api/update-deployments:
+    post:
+      summary: Déclencher le déploiement OTA vers un ou plusieurs sites
+      tags: [OTA]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                update_id: { type: string, format: uuid }
+                site_ids:
+                  type: array
+                  items: { type: string, format: uuid }
+              required: [update_id, site_ids]
+      responses:
+        "201":
+          description: Déploiement OTA initié
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id: { type: string, format: uuid }
+                  status: { type: string }
+
+  # ─── Remotion Templates ──────────────────────────────────────────────────
+  /api/remotion-templates:
+    get:
+      summary: Liste des templates Remotion (publiés pour club, tous pour admin)
+      tags: [Remotion]
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/RemotionTemplate' }
+
+  /api/remotion-templates/{id}:
+    get:
+      summary: Détails d'un template
+      tags: [Remotion]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RemotionTemplate' }
+    patch:
+      summary: Mettre à jour un template (admin — déclenche snapshot automatique ADR-055)
+      tags: [Remotion]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+                description: { type: string }
+                props_schema: { type: object }
+                default_props: { type: object }
+      responses:
+        "200":
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RemotionTemplate' }
+
+  /api/remotion-templates/{id}/render:
+    post:
+      summary: Lancer un rendu async — retourne immédiatement job_id (ADR-054)
+      tags: [Remotion]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                props: { type: object }
+      responses:
+        "202":
+          description: Rendu enqueued
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  job_id: { type: string, format: uuid }
+
+  /api/remotion-templates/render-jobs/{jobId}:
+    get:
+      summary: Statut d'un job de rendu
+      tags: [Remotion]
+      parameters:
+        - in: path
+          name: jobId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [queued, running, completed, failed]
+                  progress: { type: integer, minimum: 0, maximum: 100 }
+                  phase: { type: string, enum: [bundling, selecting, rendering, uploading] }
+                  video_url: { type: string, format: uri, nullable: true }
+                  file_size: { type: integer, nullable: true }
+
+  # ─── SaaS (public) ───────────────────────────────────────────────────────
+  /api/saas/{siteId}/config:
+    get:
+      summary: Config complète du site SaaS avec URLs vidéo résolues (public)
+      tags: [SaaS]
+      security: []
+      parameters:
+        - in: path
+          name: siteId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Configuration du site avec playlists et URLs vidéo
+
+  /api/saas/{siteId}/profiles:
+    get:
+      summary: Liste des profils disponibles pour un site SaaS (public)
+      tags: [SaaS]
+      security: []
+      parameters:
+        - in: path
+          name: siteId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id: { type: string, format: uuid }
+                    name: { type: string }
+                    is_default: { type: boolean }
+
+tags:
+  - name: Health
+    description: Santé du serveur
+  - name: Auth
+    description: Authentification JWT — login, logout, reset password
+  - name: MFA
+    description: Authentification multi-facteurs TOTP
+  - name: Sites
+    description: Gestion des sites (clubs) — CRUD, commandes Pi, config
+  - name: Videos
+    description: Gestion et déploiement des vidéos
+  - name: Remote
+    description: Télécommande cloud (publique) — sécurisée par UUID + PIN optionnel
+  - name: Users
+    description: Gestion des utilisateurs (admin/super_admin)
+  - name: Analytics
+    description: Statistiques de lecture vidéo et sessions Pi
+  - name: OTA
+    description: Mises à jour Over-The-Air des Raspberry Pi
+  - name: Remotion
+    description: Templates vidéo dynamiques avec rendu async (ADR-054/055)
+  - name: SaaS
+    description: Endpoints publics pour les sites SaaS sans matériel (ADR-037)
