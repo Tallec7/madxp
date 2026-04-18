@@ -2185,3 +2185,71 @@ describe('SaaS config save flow', () => {
     });
   });
 });
+
+describe('ADR-068 — signed URL video stream proxy', () => {
+  const repoRoot = path.resolve(__dirname, '../../../..');
+
+  it('video-token.service exposes sign + verify with type namespacing', () => {
+    const filePath = path.join(repoRoot, 'central-server', 'src', 'services', 'video-token.service.ts');
+    const content = fs.readFileSync(filePath, 'utf8');
+    expect({
+      hasSign: /export const signVideoStreamToken/.test(content),
+      hasVerify: /export const verifyVideoStreamToken/.test(content),
+      hasTypeNamespace: /TOKEN_TYPE\s*=\s*'video-stream'/.test(content),
+      checksType: /decoded\.type\s*!==\s*TOKEN_TYPE/.test(content),
+    }).toEqual({
+      hasSign: true,
+      hasVerify: true,
+      hasTypeNamespace: true,
+      checksType: true,
+    });
+  });
+
+  it('video-stream.controller enforces token + forwards Range + pipes upstream body', () => {
+    const filePath = path.join(repoRoot, 'central-server', 'src', 'controllers', 'video-stream.controller.ts');
+    const content = fs.readFileSync(filePath, 'utf8');
+    expect({
+      rejects400OnMissing: /res\.status\(400\)[\s\S]*?Missing token/.test(content),
+      rejects401OnInvalid: /res\.status\(401\)/.test(content),
+      forwardsRange: /upstreamHeaders\[['"]Range['"]\]\s*=/.test(content),
+      pipesUpstream: /Readable\.fromWeb\(/.test(content) && /\.pipe\(res\)/.test(content),
+    }).toEqual({
+      rejects400OnMissing: true,
+      rejects401OnInvalid: true,
+      forwardsRange: true,
+      pipesUpstream: true,
+    });
+  });
+
+  it('video-stream routes mount on /api/videos with remoteRateLimit', () => {
+    const routesPath = path.join(repoRoot, 'central-server', 'src', 'routes', 'video-stream.routes.ts');
+    const routes = fs.readFileSync(routesPath, 'utf8');
+    const serverPath = path.join(repoRoot, 'central-server', 'src', 'server.ts');
+    const server = fs.readFileSync(serverPath, 'utf8');
+    expect({
+      hasRateLimit: /remoteRateLimit/.test(routes),
+      hasStreamRoute: /router\.get\(['"]\/stream['"]/.test(routes),
+      mountedOnServer: /app\.use\(['"]\/api\/videos['"]\s*,\s*videoStreamRoutes\)/.test(server),
+    }).toEqual({
+      hasRateLimit: true,
+      hasStreamRoute: true,
+      mountedOnServer: true,
+    });
+  });
+
+  it('saas.controller buildPublicVideoUrl is feature-flag gated (default OFF = direct FTP)', () => {
+    const filePath = path.join(repoRoot, 'central-server', 'src', 'controllers', 'saas.controller.ts');
+    const content = fs.readFileSync(filePath, 'utf8');
+    expect({
+      hasHelper: /function buildPublicVideoUrl/.test(content),
+      isGated: /VIDEO_STREAM_PROXY_ENABLED\s*!==\s*'true'/.test(content),
+      fallbacksToGetVideoUrl: /return getVideoUrl\(storagePath\)/.test(content),
+      signsWithSiteId: /signVideoStreamToken\(storagePath,\s*siteId\)/.test(content),
+    }).toEqual({
+      hasHelper: true,
+      isGated: true,
+      fallbacksToGetVideoUrl: true,
+      signsWithSiteId: true,
+    });
+  });
+});

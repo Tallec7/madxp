@@ -1,7 +1,7 @@
 # ADR-068: Signed URLs vidéo SaaS via proxy streaming Node
 
 **Date** : 2026-04-18
-**Statut** : Proposé
+**Statut** : Accepté
 **Format** : Léger
 
 ---

@@ -11,6 +11,7 @@
 import { Request, Response } from 'express';
 import { siteRepository, configProfileRepository, videoRepository } from '../repositories';
 import { getVideoUrl } from '../services/storage.service';
+import { signVideoStreamToken } from '../services/video-token.service';
 import { enrichConfigWithAnalyticsMetadata } from '../utils/config-analytics-metadata';
 import { enrichConfigWithDisplayVariants } from '../utils/config-secondary-variants';
 import { SiteConfiguration } from '../types';
@@ -46,33 +47,48 @@ interface TimeCategoryLike {
 }
 
 /**
- * Résout un chemin vidéo en URL FTP publique.
+ * Build the public URL the SaaS browser will hit for a given storage path.
+ * ADR-068: when VIDEO_STREAM_PROXY_ENABLED=true, emit a short-lived signed
+ * URL pointing at the streaming proxy; otherwise keep the direct FTP URL
+ * for backwards compatibility during the feature flag rollout.
+ */
+function buildPublicVideoUrl(storagePath: string, siteId: string): string {
+  if (process.env.VIDEO_STREAM_PROXY_ENABLED !== 'true') {
+    return getVideoUrl(storagePath);
+  }
+  const base = (process.env.API_PUBLIC_URL || '').replace(/\/+$/, '');
+  const token = signVideoStreamToken(storagePath, siteId);
+  return `${base}/api/videos/stream?token=${encodeURIComponent(token)}`;
+}
+
+/**
+ * Résout un chemin vidéo en URL publique (FTP direct ou proxy signé selon ADR-068).
  * Utilise le storagePathMap (filename → storage_path) pour résoudre le vrai chemin FTP.
  * Fallback sur le filename direct si pas trouvé dans la map (anciens uploads à plat).
  */
-function resolveVideoUrl(path: string | undefined, storagePathMap: Map<string, string>): string {
+function resolveVideoUrl(path: string | undefined, storagePathMap: Map<string, string>, siteId: string): string {
   if (!path) return '';
   if (path.startsWith('http://') || path.startsWith('https://')) return path;
   const filename = path.split('/').pop() || path;
   const storagePath = storagePathMap.get(filename);
-  return getVideoUrl(storagePath || filename);
+  return buildPublicVideoUrl(storagePath || filename, siteId);
 }
 
 /**
  * Résout toutes les URLs vidéo dans un tableau de vidéos.
  */
-function resolveVideoUrls(videos: VideoLike[], storagePathMap: Map<string, string>): VideoLike[] {
+function resolveVideoUrls(videos: VideoLike[], storagePathMap: Map<string, string>, siteId: string): VideoLike[] {
   return videos.map(v => {
     const resolved: VideoLike = {
       ...v,
-      path: resolveVideoUrl(v.path, storagePathMap),
+      path: resolveVideoUrl(v.path, storagePathMap, siteId),
     };
     // Resolve variant paths: storage_path is already set by enrichConfigWithDisplayVariants,
-    // so pass it directly to getVideoUrl instead of looking up in storagePathMap
+    // so pass it directly to buildPublicVideoUrl instead of looking up in storagePathMap
     if (v.variants?.secondary?.path) {
       resolved.variants = {
         ...v.variants,
-        secondary: { ...v.variants.secondary, path: getVideoUrl(v.variants.secondary.path) },
+        secondary: { ...v.variants.secondary, path: buildPublicVideoUrl(v.variants.secondary.path, siteId) },
       };
     }
     return resolved;
@@ -82,21 +98,21 @@ function resolveVideoUrls(videos: VideoLike[], storagePathMap: Map<string, strin
 /**
  * Résout les URLs vidéo dans les catégories (récursif pour les sous-catégories).
  */
-function resolveCategories(categories: CategoryLike[], storagePathMap: Map<string, string>): CategoryLike[] {
+function resolveCategories(categories: CategoryLike[], storagePathMap: Map<string, string>, siteId: string): CategoryLike[] {
   return categories.map(cat => ({
     ...cat,
-    videos: cat.videos ? resolveVideoUrls(cat.videos, storagePathMap) : [],
-    subCategories: cat.subCategories ? resolveCategories(cat.subCategories, storagePathMap) : [],
+    videos: cat.videos ? resolveVideoUrls(cat.videos, storagePathMap, siteId) : [],
+    subCategories: cat.subCategories ? resolveCategories(cat.subCategories, storagePathMap, siteId) : [],
   }));
 }
 
 /**
  * Résout les URLs vidéo dans les timeCategories.
  */
-function resolveTimeCategories(timeCategories: TimeCategoryLike[], storagePathMap: Map<string, string>): TimeCategoryLike[] {
+function resolveTimeCategories(timeCategories: TimeCategoryLike[], storagePathMap: Map<string, string>, siteId: string): TimeCategoryLike[] {
   return timeCategories.map(tc => ({
     ...tc,
-    loopVideos: tc.loopVideos ? resolveVideoUrls(tc.loopVideos, storagePathMap) : [],
+    loopVideos: tc.loopVideos ? resolveVideoUrls(tc.loopVideos, storagePathMap, siteId) : [],
   }));
 }
 
@@ -241,9 +257,9 @@ export async function getSaasConfig(req: Request, res: Response) {
     const timeCategoriesWithThumbs = applyTimeCategoryThumbnails(timeCategories, thumbnailMap);
 
     // Then resolve video URLs (filename → storage_path)
-    const resolvedSponsors = resolveVideoUrls(sponsorsWithThumbs, storagePathMap);
-    const resolvedCategories = resolveCategories(categoriesWithThumbs, storagePathMap);
-    const resolvedTimeCategories = resolveTimeCategories(timeCategoriesWithThumbs, storagePathMap);
+    const resolvedSponsors = resolveVideoUrls(sponsorsWithThumbs, storagePathMap, siteId);
+    const resolvedCategories = resolveCategories(categoriesWithThumbs, storagePathMap, siteId);
+    const resolvedTimeCategories = resolveTimeCategories(timeCategoriesWithThumbs, storagePathMap, siteId);
 
     const resolvedConfig = {
       remote: configuration.remote || { title: `Télécommande ${site.club_name || site.site_name}` },
@@ -383,9 +399,9 @@ export async function getSaasProfileConfig(req: Request, res: Response) {
     const timeCategoriesWithThumbs = applyTimeCategoryThumbnails(timeCategories, thumbnailMap);
 
     // Then resolve video URLs (filename → storage_path)
-    const resolvedSponsors = resolveVideoUrls(sponsorsWithThumbs, storagePathMap);
-    const resolvedCategories = resolveCategories(categoriesWithThumbs, storagePathMap);
-    const resolvedTimeCategories = resolveTimeCategories(timeCategoriesWithThumbs, storagePathMap);
+    const resolvedSponsors = resolveVideoUrls(sponsorsWithThumbs, storagePathMap, siteId);
+    const resolvedCategories = resolveCategories(categoriesWithThumbs, storagePathMap, siteId);
+    const resolvedTimeCategories = resolveTimeCategories(timeCategoriesWithThumbs, storagePathMap, siteId);
 
     const resolvedConfig = {
       remote: configuration.remote || { title: `Télécommande ${profile.display_name || profile.name}` },
