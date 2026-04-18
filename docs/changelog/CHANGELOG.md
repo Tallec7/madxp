@@ -1,3 +1,9 @@
+# [3.188.0](https://github.com/Tallec7/neopro/compare/v3.187.0...v3.188.0) (2026-04-18)
+
+### Features
+
+- **remote:** ADR-060 couche 2 hotspot Pi + couche 3 PWA + runbook tests T1-T15 ([#467](https://github.com/Tallec7/neopro/issues/467)) ([73f281e](https://github.com/Tallec7/neopro/commit/73f281e3ea68752aab69a0d244ad03469c657146))
+
 # [3.187.0](https://github.com/Tallec7/neopro/compare/v3.186.1...v3.187.0) (2026-04-18)
 
 ### Features
