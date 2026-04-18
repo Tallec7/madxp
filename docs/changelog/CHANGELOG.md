@@ -1,3 +1,9 @@
+# [3.181.0](https://github.com/Tallec7/neopro/compare/v3.180.0...v3.181.0) (2026-04-18)
+
+### Features
+
+- **remote-auth:** ADR-058 Phase 2B — club peut gérer le PIN de son site ([c5d4508](https://github.com/Tallec7/neopro/commit/c5d4508b0c823bc1feeb020da307e2f6ae4bfc05))
+
 # [3.180.0](https://github.com/Tallec7/neopro/compare/v3.179.0...v3.180.0) (2026-04-18)
 
 ### Features
