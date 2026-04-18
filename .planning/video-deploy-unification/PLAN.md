@@ -59,23 +59,9 @@ Les deux pages resteront. Ce qu'on unifie, c'est **le pipeline backend** et les 
 
 ## Phase 1 — Corriger la page Contenu pour les sites SaaS
 
-**Statut** : ✅ **Done by design** (2026-04-18) — misdiagnosis initial, voir note ci-dessous
 **Durée** : 2-3 jours
 **Owner** : Dev fullstack
 **Objectif** : quand un admin "déploie" une vidéo sur un site SaaS depuis la page Contenu, la vidéo doit **réellement apparaître** sur la TV SaaS (pas juste une ligne `completed` en DB)
-
-### 🟢 Résolution 2026-04-18 — Pas de bug, le mental model du plan était faux
-
-Après audit schéma + code :
-
-- **Page Contenu "déployer sur SaaS"** = rendre la vidéo **disponible dans le pool** du site. C'est tout.
-  Le `continue;` ligne 117 qui marque `content_deployments.status='completed'` est **la source de vérité** pour la visibilité : `getSiteLocalContent` (`site-fleet.controller.ts:413-454`) élargit le filtre club via `findCompletedVideoIdsForSite()` → la vidéo apparaît dans le pool.
-- **Onglet site** = placer une vidéo du pool dans des catégories/sponsors/loops (via `mergeDefaultProfileConfig`). Action distincte et complémentaire.
-- Aucune injection `config_profiles` n'est requise depuis la page Contenu — cela écraserait le travail de configuration fait depuis l'onglet site.
-
-**Smoke guard ajouté** : `smoke-saas.test.ts` — "deployment.service.ts must short-circuit SaaS targets with successCount++ and continue" verrouille le comportement `continue` pour éviter qu'une future refacto le casse.
-
-Les tâches 1.1 et 1.2 ci-dessous sont **annulées**. La tâche 1.3 est partiellement couverte (pool visibility). La clarification UX onglet site (label "Enregistrer" vs "Déployer") est repoussée à Phase 3 (VideoManager unifié) où elle a plus de sens.
 
 ### Problème concret
 
@@ -141,150 +127,179 @@ if (target.siteType === 'saas') {
 
 ---
 
-## Phase 2 — Unification du vocabulaire (✅ Done 2026-04-18 via ADR-065)
+## Phase 2 — Unification du vocabulaire (révisé 2026-04-18 après audit)
 
-**Statut** : ✅ Fait — travail absorbé par ADR-065 (Video type canonisation)
-**Durée réelle** : 0 jour (aucun travail supplémentaire)
-**Objectif atteint** : base canonique `VideoView` + DTOs spécialisés par domaine
+**Durée révisée** : 1-2 jours (frontend uniquement — backend déjà propre)
+**Owner** : Lead frontend
+**Objectif** : un seul `Video` dans tout le frontend
 
-### Résultat de l'audit final (2026-04-18)
+### Audit chiffré (fait le 2026-04-18)
 
-| Type               | Fichier                                                 | Rôle                             | Statut            |
-| ------------------ | ------------------------------------------------------- | -------------------------------- | ----------------- |
-| `Video`            | `core/models/video.model.ts:30`                         | Miroir DB snake_case (namespace) | ✅ 0 consommateur |
-| `VideoView`        | `core/models/video.model.ts:53`                         | Base UI camelCase canonique      | ✅ Utilisée       |
-| `VideoItem`        | `video-library/video-library.types.ts:22`               | `extends VideoView` (enrichi UI) | ✅ Canonisée      |
-| `CloudVideo`       | `core/models/index.ts:247`                              | DTO wire format API centrale     | ✅ Renommé        |
-| `ContentVideoRow`  | `content/content-management-data.service.ts:21`         | Row table Page Contenu           | ✅ Renommé        |
-| `SponsorVideoRow`  | `advertisers/sponsor-video-data.service.ts:14`          | Row table sponsor                | ✅ Renommé        |
-| `RemoteVideoEntry` | `remote/services/cloud-remote-navigation.service.ts:24` | Entry remote cloud               | ✅ Renommé        |
+**Backend — OK, pas de chantier nécessaire** :
 
-Les 4 interfaces `Video` parallèles de l'audit initial ont été renommées en DTOs domaine-spécifiques, éliminant toute ambiguïté nominale.
+- 1 interface `ContentDeployment` centrale dans `central-server/src/types/index.ts`
+- 3 variantes enrichies légitimes dans `deployment.repository.ts` (JOINs différents)
+- 28 fichiers référencent `content_deployments` — stable, pas de doublon
+- 171 occurrences de `content|asset|media` mais ce sont des colonnes SQL / URLs, pas du vocabulaire dupliqué
 
-**Note** : `CloudVideo.thumbnail_url` reste en snake_case car c'est le format wire du backend (`content.controller.ts:260`). Le renommer forcerait un mapper. Décision : on garde.
+**Frontend — 5 interfaces `Video` parallèles** :
 
-### Non-goals (toujours valides)
+| Source                                                                     | Champs           | Consommateurs     |
+| -------------------------------------------------------------------------- | ---------------- | ----------------- |
+| `core/models/index.ts:224` — `Video` (canonique DB)                        | 15 snake_case    | **0 fichiers** 🚨 |
+| `features/content/content-management-data.service.ts:14` — `Video`         | 7 champs         | 3 fichiers        |
+| `features/advertisers/sponsor-video-data.service.ts:6` — `Video`           | 6 champs         | 1 fichier         |
+| `features/remote/services/cloud-remote-navigation.service.ts:16` — `Video` | 5 champs         | 2 fichiers        |
+| `features/sites/.../video-library.types.ts:15` — `VideoItem`               | **23 camelCase** | 9 fichiers        |
+
+Le modèle canonique DB n'est utilisé par personne. `VideoItem` est la définition de fait la plus riche.
+
+### Tâches (frontend only)
+
+**2.1 Canoniser `Video` dans `core/models/video.model.ts`**
+
+- [ ] Créer `core/models/video.model.ts` qui exporte `Video` (camelCase, basé sur `VideoItem`)
+- [ ] Déprécier (commentaire `@deprecated`) les 4 autres interfaces
+
+**2.2 Migration progressive des 15 fichiers consommateurs**
+
+- [ ] Remplacer `import { Video } from '.../content-management-data.service'` par `core/models/video.model`
+- [ ] Remplacer `VideoItem` par `Video` dans video-library et ses 9 consommateurs
+- [ ] Supprimer les 4 interfaces dupliquées une fois tous les imports migrés
+
+**2.3 Tests**
+
+- [ ] `npm run test:central` — 520 Karma tests doivent passer
+- [ ] `npm run test:smoke:smart` — 0 régression
+
+### Non-goals (reportés ou abandonnés)
 
 - ❌ Rename `content_deployments` en DB — trop risqué, gain nul
-- ❌ Alias `/api/deployments` ↔ `/api/content/deployments` — pas de consommateur externe
-- ❌ Rename `ContentDeployment` → `Deployment` backend — cohérent avec la table
-- ❌ ADR dédié — absorbé par ADR-065
+- ❌ Alias `/api/deployments` ↔ `/api/content/deployments` — pas de consommateur externe, YAGNI
+- ❌ Rename `ContentDeployment` → `Deployment` backend — cohérent avec le nom de table, pas de valeur
+- ❌ ADR dédié — pas de décision structurante, c'est juste du rename frontend
 
-### Critères d'acceptation (tous remplis)
+### Critères d'acceptation
 
-- ✅ Base canonique `VideoView` unique, DTOs domaine clairement nommés
-- ✅ `VideoItem extends VideoView` (video-library)
-- ✅ Karma 520 tests pass, smoke pass, lint pass
+- ✅ Une seule interface `Video` dans tout le frontend
+- ✅ Glossaire à jour dans `docs/GLOSSARY.md`
+- ✅ Tests passent (2728 server + karma)
+- ✅ Lint pass
 
 ---
 
-## Phase 3 — Extraction primitives vidéo partagées (ADR-067)
+## Phase 3 — Composant `VideoManager` unifié
 
-**Statut** : ✅ Done 2026-04-18 — scope respecté : `VideoCardComponent` extrait, audit des autres primitives conclut à la non-extraction justifiée (voir [ADR-067](../../docs/adr/ADR-067-video-manager-two-consumers.md))
-**Durée réelle** : 1 jour (au lieu du sprint estimé — audit a révélé moins de duplication que prévu)
+**Durée** : 2 sprints (4 semaines)
 **Owner** : Lead frontend
-**Objectif** : extraire les primitives présentationnelles dupliquées entre Page Contenu et VideoLibrary — **SANS** unifier en composant monolithique
-
-### Décision ADR-067 (rappel)
-
-- 2 consumers conservés : Page Contenu (fleet) + VideoLibrary (per-site). Club-portal délègue à `site-content-tab`.
-- Shapes et UX fondamentalement différentes ; un flag `scope` ajouterait ~20 branches pour zéro gain.
-- ~80 règles smoke-enforced verrouillent les comportements par siteType.
-- Stratégie : extraire les primitives présentationnelles, garder les 2 shells distincts.
+**Objectif** : un seul composant Angular pour les 3 contextes
 
 ### Architecture cible
 
 ```
-shared/components/
-  video-card/          ✅ extrait (slot-based: card-badges, card-actions, card-extras)
-  video-upload-zone/   ✅ déjà extrait
-features/
-  content/             ← shell fleet-wide, consomme video-card
-  sites/components/video-library/  ← shell per-site, template custom inline (reverted 2026-04-18)
+<video-manager [scope]="scope" [permissions]="perms" />
+
+scope:
+  | { type: 'fleet' }                      // Page Contenu — admin
+  | { type: 'site', siteId: string }       // Onglet site
+  | { type: 'club', clubSiteId: string }   // Portail club
 ```
+
+Le composant connaît :
+
+- La liste des vidéos à afficher (filtrée selon scope)
+- Les actions disponibles (selon permissions)
+- Le mode de déploiement (toujours via `createDeployment` désormais)
 
 ### Tâches
 
-**3.1 `VideoCardComponent`** — ✅ Done 2026-04-18 (commit 2eb609a1)
+**3.1 Extraction composants partagés**
 
-- [x] Créer `shared/components/video-card/` (57L TS + 124L SCSS)
-- [x] Content projection : `[card-badges]`, `[card-actions]`, `[card-extras]`
-- [x] Migration Page Contenu (`content-management.component.html`)
-- [~] Migration VideoLibrary grid view — tentée puis revertée (commit bb5dc487 revert) : le template custom a trop de branches contextuelles (club-locked, isUploadedForThisSite, deploy states, variant badges) qui ne passent pas naturellement par slots sans alourdir l'API du card
+- [ ] Identifier les blocs identiques entre `content-management.component` et `video-manager.component`
+- [ ] Extraire dans `shared/components/` :
+  - `VideoGrid` (liste vidéos)
+  - `VideoCard` (carte unitaire)
+  - `DeploymentPanel` (panneau de déploiement)
+  - `DeploymentHistoryTable`
 
-**3.2 Audit des primitives restantes** — ✅ Done 2026-04-18
+**3.2 Service unifié**
 
-Audit code effectué sur `content-management.component.html` (651L) vs `video-library-list.component.html` (395L) :
+- [ ] Fusionner `features/content/video-upload.service.ts` (220L) et `shared/components/video-upload-zone/` logic dans un seul `core/services/video-upload.service.ts`
+- [ ] Fusionner `features/content/content-deployment.service.ts` (95L) et le flow custom de l'onglet site dans `core/services/deployment.service.ts`
+- [ ] Supprimer `SiteCommandService.sendCommand('deploy_video', ...)` (plus utilisé)
 
-| Candidat            | Présent dans les 2 ? | Similarité | Décision       | Raison                                                                                                                                       |
-| ------------------- | -------------------- | ---------- | -------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| `VideoFilterBar`    | Partiellement        | ~70%       | ❌ Non extrait | CM : upload+search combo ; VLL : filtres délégués au parent via sub-components — surfaces divergentes                                        |
-| `VideoSortHeader`   | VLL only             | N/A        | ❌ Non extrait | CM est une grille de cartes sans tri table ; pas de duplication                                                                              |
-| `VideoDeployBadge`  | VLL only             | N/A        | ❌ Non extrait | CM utilise un wizard fleet-wide (`deploy-wizard` multi-select) ; VLL bouton inline avec progress per-video — UX fondamentalement différentes |
-| `VideoStatsBar`     | Partiellement        | ~50%       | ❌ Non extrait | VLL stats sur `filteredVideos` (règle smoke enforced `dashboard.md`) ; CM pagination fleet — calculs incompatibles                           |
-| `VideoPreviewModal` | Oui                  | ~65%       | ❌ Non extrait | CM possède le modal inline ; VLL émet `preview` au parent — ownership de state divergent                                                     |
+**3.3 Composant `VideoManager`**
 
-**Conclusion** : aucune primitive supplémentaire ne justifie l'extraction. `VideoCardComponent` était le seul vrai doublon. Le reste diverge par design parce que les 2 shells ont des modèles mentaux différents (fleet-wide vs per-site) — c'est exactement ce qu'ADR-067 anticipait.
+- [ ] Créer `shared/components/video-manager/video-manager.component.ts`
+- [ ] Input `scope` + `permissions`
+- [ ] Template qui compose `VideoUploadZone` + `VideoGrid` + `DeploymentPanel`
 
-Le revert du migrate `video-library-list` → `VideoCardComponent` est cohérent avec cette conclusion : même sur la primitive la plus évidente, la version per-site a trop de branches contextuelles (club-locked, deploy states, variants, isUploadedForThisSite) pour passer proprement par slots sans alourdir l'API partagée.
+**3.4 Migration des 3 usages**
 
-**3.3 Tests & non-régression** — ✅ Done 2026-04-18
+- [ ] Page Contenu utilise `<video-manager scope="{type: 'fleet'}">` → supprimer `features/content/content-management.component`
+- [ ] Onglet site utilise `<video-manager scope="{type: 'site', siteId}">` → simplifier `site-content-tab`
+- [ ] Portail club utilise `<video-manager scope="{type: 'club', clubSiteId}">`
 
-- ✅ `video-card.component.spec.ts` créé — 9 tests (title/subtitle/meta, thumbnail, overlays, selected, click emit gated by clickable, tooltip fallback)
-- ✅ Karma `test:central` pass (9/9 sur video-card)
-- ✅ Smoke `test:smoke:smart` pass (0 régression sur ADR-068)
+**3.5 Nettoyage**
+
+- [ ] Supprimer `features/content/content-management.component.*` (~1472L)
+- [ ] Supprimer `features/sites/components/site-content-tab/video-manager/` (~328L) si fusionné
+- [ ] Supprimer `features/content/video-upload.service.ts` (220L)
+- [ ] Supprimer `features/content/content-deployment.service.ts` (95L)
 
 ### Critères d'acceptation
 
-- ✅ `VideoCardComponent` extrait et utilisé par au moins 1 consumer
-- ⏳ ≥1 primitive supplémentaire extraite OU décision documentée que les autres blocs divergent trop
-- ⏳ Aucun nouveau fichier >400L (règle feedback utilisateur)
-- ⏳ Karma + smoke pass
+- ✅ ~3000L supprimées (mesure : `cloc` avant/après)
+- ✅ Les 3 pages rendent visuellement identique à avant (screenshots diff)
+- ✅ Tests Karma passent
+- ✅ E2E Playwright : upload + déploiement depuis chaque page OK
+- ✅ Aucun fichier >400 lignes dans le nouveau scope
 
 ### Risques
 
-- Sur-extraction : ajouter des slots pour couvrir tous les edge cases de VideoLibrary complique l'API de VideoCard sans bénéfice
-- Règles smoke-enforced (`.claude/rules/dashboard.md` Vidéo Library) verrouillent des comportements précis (stats sur filtered, pas allVideos) — toute primitive partagée doit les respecter
+- Régressions UI visuelles : prévoir une batterie de screenshots Playwright avant/après
+- Les permissions diffèrent subtilement entre admin et club — bien tester chaque combinaison
 
 ---
 
 ## Phase 4 — Signed URLs & sécurité SaaS
 
-**Statut** : ✅ Done 2026-04-18 via [ADR-068](../../docs/adr/ADR-068-signed-urls-saas-video-proxy.md)
-**Implémenté par** : commits `c89e2d58` (ADR), `34ad7259` (code), `c29dda5d` (fix route order)
+**Durée** : 1 sprint
+**Owner** : Lead backend + devops
+**Objectif** : plus d'URLs FTP publiques pour les vidéos SaaS
 
-### Réalisé
+### Tâches
 
-**4.1 Proxy vidéo signé** — ✅ Done
+**4.1 Proxy vidéo signé**
 
-- ✅ Endpoint `GET /api/videos/stream?token=xxx` : valide JWT, proxie FTP streaming, forward Range
-- ✅ JWT type `video-stream` (≠ auth) — payload : `path`, `siteId`, `exp` (2h TTL)
-- ✅ Cache-Control `private, max-age=300`
-- ❌ S3/R2 migration : rejetée (cf. ADR-068 — trop lourde, FTP suffit)
+- [ ] Créer endpoint `GET /api/videos/:id/stream?token=xxx` qui :
+  - Valide le token JWT (payload : `videoId`, `siteId`, `exp`)
+  - Proxie le flux FTP en streaming
+  - Cache-Control adapté
+- [ ] Alternative : migration vers S3-compatible (OVH Object Storage / Cloudflare R2) + signed URLs natives
 
-**4.2 Émission des tokens** — ✅ Done (approche simplifiée)
+**4.2 Émission des tokens**
 
-- ✅ Tokens embarqués directement dans les URLs `resolveVideoUrls()` de `saas.controller.ts` (helper `buildPublicVideoUrl`)
-- ⏩ Endpoint `/url` séparé non nécessaire : la config SaaS contient déjà les URLs signées
-- ⏩ Rotation client : pas nécessaire en MVP (reload config SaaS quand token expire)
+- [ ] Endpoint `GET /api/saas/:siteId/videos/:videoId/url` retourne URL signée TTL 2h
+- [ ] Rotation côté client SaaS : rafraîchir l'URL à 80% du TTL
 
-**4.3 CDN** — ⏩ Reporté (pas critique)
+**4.3 CDN**
 
-- ⏩ Cloudflare pas nécessaire en MVP (Railway edge suffit pour le trafic SaaS actuel)
-- 🔜 À rouvrir si latence première frame >500ms observée en prod
+- [ ] Configurer Cloudflare devant le proxy (cache 5min sur signed URL)
+- [ ] Vérifier que les signed URLs incluent un `v=<checksum>` pour invalidation cache
 
-**4.4 Migration progressive** — ✅ Done
+**4.4 Migration progressive**
 
-- ✅ Feature flag `VIDEO_STREAM_PROXY_ENABLED` (default OFF en code, activé sur Railway)
-- ✅ Activation immédiate sur prod 2026-04-18 (rollout simple car proxy isolé)
-- ✅ Rollback instant : set `VIDEO_STREAM_PROXY_ENABLED=false` → retour direct FTP
+- [ ] Feature flag : `SAAS_SIGNED_URLS_ENABLED`
+- [ ] Rollout sur un site test (site interne Neopro)
+- [ ] Rollout général après 1 semaine stable
 
 ### Critères d'acceptation
 
-- ✅ URLs FTP publiques ne sont plus exposées aux clients SaaS (quand flag ON)
-- ✅ TTL respecté (2h, testé via `jwt.verify` avec `ExpiredError`)
-- ✅ Tests smoke : 4 nouveaux dans `smoke-saas.test.ts` (sign/verify, controller, routes, flag)
-- 🔜 Mesure latence première frame en prod (Grafana — à ajouter dashboard si besoin)
+- ✅ Les URLs FTP publiques ne sont plus exposées aux clients SaaS
+- ✅ TTL respecté (URL expire bien après 2h)
+- ✅ Performance : latence première frame <500ms (mesure depuis Grafana)
+- ✅ Tests smoke couvrent la signature + expiration
 
 ---
 
