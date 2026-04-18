@@ -1,3 +1,9 @@
+## [3.178.8](https://github.com/Tallec7/neopro/compare/v3.178.7...v3.178.8) (2026-04-18)
+
+### Bug Fixes
+
+- **dashboard:** filter transient socket 'transport close' warnings (ADR-063) ([#464](https://github.com/Tallec7/neopro/issues/464)) ([c87e76d](https://github.com/Tallec7/neopro/commit/c87e76d504bd55590056f9637665dd9a88a12122))
+
 ## [3.178.7](https://github.com/Tallec7/neopro/compare/v3.178.6...v3.178.7) (2026-04-18)
 
 ### Bug Fixes
