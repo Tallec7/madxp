@@ -1,3 +1,9 @@
+# [3.183.0](https://github.com/Tallec7/neopro/compare/v3.182.0...v3.183.0) (2026-04-18)
+
+### Features
+
+- **remote-auth:** ADR-058 Phase 2A — migration opportuniste legacy PIN ([5e8fa04](https://github.com/Tallec7/neopro/commit/5e8fa042c9cdd4a1fcbee1713b72c004e61f45f1))
+
 # [3.182.0](https://github.com/Tallec7/neopro/compare/v3.181.0...v3.182.0) (2026-04-18)
 
 ### Features
