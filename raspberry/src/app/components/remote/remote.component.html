@@ -15,6 +15,26 @@
     <app-license-banner [licenseState]="licenseState"></app-license-banner>
   }
 
+  <!-- ADR-058 — Écran PIN remote SaaS -->
+  @if (pinRequired) {
+    <div class="pin-entry-overlay" style="position:fixed;inset:0;background:#111;color:#fff;display:flex;align-items:center;justify-content:center;z-index:999;">
+      <div style="max-width:320px;width:90%;text-align:center;padding:24px;">
+        <h2 style="margin:0 0 8px;">🔒 Code PIN requis</h2>
+        <p style="opacity:0.7;margin:0 0 20px;">Saisissez le code PIN de la télécommande.</p>
+        <input type="password" inputmode="numeric" pattern="[0-9]*" maxlength="6"
+               [(ngModel)]="pinInput"
+               (keyup.enter)="submitPin()"
+               style="width:100%;padding:14px;font-size:1.4rem;text-align:center;letter-spacing:0.4em;border-radius:8px;border:1px solid #444;background:#1a1a2e;color:#fff;"
+               placeholder="••••" />
+        @if (pinError) { <p style="color:#f66;margin-top:12px;">{{ pinError }}</p> }
+        <button (click)="submitPin()" [disabled]="!pinInput || pinInput.length < 4 || pinSubmitting"
+                style="margin-top:16px;width:100%;padding:14px;border-radius:8px;border:0;background:#2c5eff;color:#fff;font-weight:600;cursor:pointer;">
+          Valider
+        </button>
+      </div>
+    </div>
+  }
+
   <!-- Toast notification -->
   @if (showToast) {
     <div

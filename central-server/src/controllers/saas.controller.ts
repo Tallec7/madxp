@@ -313,7 +313,7 @@ export async function getSaasProfiles(req: Request, res: Response) {
 
     const profiles = await configProfileRepository.findBySite(siteId);
 
-    const result = profiles.map((p: { id: string; name: string; display_name: string | null; city: string | null; sport: string | null; is_default: boolean; sort_order: number }) => ({
+    const result = profiles.map((p: { id: string; name: string; display_name: string | null; city: string | null; sport: string | null; is_default: boolean; sort_order: number; remote_pin_required?: boolean }) => ({
       id: p.id,
       name: p.name,
       displayName: p.display_name,
@@ -321,6 +321,7 @@ export async function getSaasProfiles(req: Request, res: Response) {
       sport: p.sport,
       isDefault: p.is_default,
       sortOrder: p.sort_order,
+      pinRequired: !!p.remote_pin_required,
     }));
 
     return res.json(result);
