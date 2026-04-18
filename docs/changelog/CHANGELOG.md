@@ -1,3 +1,9 @@
+# [3.186.0](https://github.com/Tallec7/neopro/compare/v3.185.0...v3.186.0) (2026-04-18)
+
+### Features
+
+- **remote:** ADR-059→062 — refonte complète télécommande cloud (pub/sub + résilience + coexistence + gouvernance) ([882ef66](https://github.com/Tallec7/neopro/commit/882ef66b4dda9c9669d6d3a42c14196a92a2fb9d))
+
 # [3.185.0](https://github.com/Tallec7/neopro/compare/v3.184.0...v3.185.0) (2026-04-18)
 
 ### Features
