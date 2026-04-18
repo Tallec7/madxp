@@ -84,6 +84,7 @@ Un ADR documente une décision technique importante avec :
 | [ADR-065](ADR-065-drop-unused-video-row-view-mapper.md)            | Suppression du mapper `mapVideoRowToView` (dead code)       | Accepté                  | Avr 2026 |
 | [ADR-066](ADR-066-rename-pi-video-interface.md)                    | Rename `Video` → `PiConfigVideoEntry` (Raspberry)           | Accepté                  | Avr 2026 |
 | [ADR-067](ADR-067-video-manager-two-consumers.md)                  | Garder 2 consumers vidéo (Page Contenu vs VideoLibrary)     | Accepté                  | Avr 2026 |
+| [ADR-068](ADR-068-signed-urls-saas-video-proxy.md)                 | Signed URLs vidéo SaaS via proxy streaming Node             | Proposé                  | Avr 2026 |
 
 ### Supersédés
 
