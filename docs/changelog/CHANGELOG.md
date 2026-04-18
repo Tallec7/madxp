@@ -1,3 +1,9 @@
+## [3.192.2](https://github.com/Tallec7/neopro/compare/v3.192.1...v3.192.2) (2026-04-18)
+
+### Bug Fixes
+
+- **reporting:** fix HTML email rendering — tables, lists, hr, details inline ([4a08f66](https://github.com/Tallec7/neopro/commit/4a08f66887b295b3dcb18c8dd269f8cc486cdb00))
+
 ## [3.192.1](https://github.com/Tallec7/neopro/compare/v3.192.0...v3.192.1) (2026-04-18)
 
 ### Bug Fixes
