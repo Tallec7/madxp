@@ -291,6 +291,37 @@ describe('Club Portal video ownership guards', () => {
       filterIncludesDeployedIds: true,
     });
   });
+
+  // --- deployment.service.ts must short-circuit SaaS targets as success (no Pi) ---
+  // Lock Phase 1 behavior: Page Contenu "déployer vers SaaS" marks the deployment completed
+  // immediately so `content_deployments.status='completed'` makes the video available in the
+  // SaaS pool (getSiteLocalContent filter). Removing the `continue` would either fail SaaS
+  // deployments or try to reach a Pi that doesn't exist.
+  it('deployment.service.ts must short-circuit SaaS targets with successCount++ and continue', () => {
+    const servicePath = path.join(
+      repoRoot,
+      'central-server/src/services/deployment.service.ts'
+    );
+    const service = fs.readFileSync(servicePath, 'utf8');
+
+    const saasBranch = service.match(
+      /target\.siteType\s*===\s*['"]saas['"][\s\S]*?continue\s*;/
+    );
+    expect(saasBranch).not.toBeNull();
+    const branchBody = saasBranch![0];
+
+    expect({
+      hasSaasCheck: /target\.siteType\s*===\s*['"]saas['"]/.test(branchBody),
+      incrementsSuccess: /successCount\+\+/.test(branchBody),
+      pushesCommandSent: /commandSentSites\.push/.test(branchBody),
+      shortCircuits: /continue\s*;/.test(branchBody),
+    }).toEqual({
+      hasSaasCheck: true,
+      incrementsSuccess: true,
+      pushesCommandSent: true,
+      shortCircuits: true,
+    });
+  });
 });
 
 describe('SaaS mode guards (ADR-037)', () => {

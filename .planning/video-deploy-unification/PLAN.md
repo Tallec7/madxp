@@ -59,9 +59,23 @@ Les deux pages resteront. Ce qu'on unifie, c'est **le pipeline backend** et les 
 
 ## Phase 1 — Corriger la page Contenu pour les sites SaaS
 
+**Statut** : ✅ **Done by design** (2026-04-18) — misdiagnosis initial, voir note ci-dessous
 **Durée** : 2-3 jours
 **Owner** : Dev fullstack
 **Objectif** : quand un admin "déploie" une vidéo sur un site SaaS depuis la page Contenu, la vidéo doit **réellement apparaître** sur la TV SaaS (pas juste une ligne `completed` en DB)
+
+### 🟢 Résolution 2026-04-18 — Pas de bug, le mental model du plan était faux
+
+Après audit schéma + code :
+
+- **Page Contenu "déployer sur SaaS"** = rendre la vidéo **disponible dans le pool** du site. C'est tout.
+  Le `continue;` ligne 117 qui marque `content_deployments.status='completed'` est **la source de vérité** pour la visibilité : `getSiteLocalContent` (`site-fleet.controller.ts:413-454`) élargit le filtre club via `findCompletedVideoIdsForSite()` → la vidéo apparaît dans le pool.
+- **Onglet site** = placer une vidéo du pool dans des catégories/sponsors/loops (via `mergeDefaultProfileConfig`). Action distincte et complémentaire.
+- Aucune injection `config_profiles` n'est requise depuis la page Contenu — cela écraserait le travail de configuration fait depuis l'onglet site.
+
+**Smoke guard ajouté** : `smoke-saas.test.ts` — "deployment.service.ts must short-circuit SaaS targets with successCount++ and continue" verrouille le comportement `continue` pour éviter qu'une future refacto le casse.
+
+Les tâches 1.1 et 1.2 ci-dessous sont **annulées**. La tâche 1.3 est partiellement couverte (pool visibility). La clarification UX onglet site (label "Enregistrer" vs "Déployer") est repoussée à Phase 3 (VideoManager unifié) où elle a plus de sens.
 
 ### Problème concret
 
