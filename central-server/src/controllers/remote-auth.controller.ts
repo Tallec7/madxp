@@ -48,12 +48,23 @@ setInterval(() => {
   }
 }, 60 * 1000).unref?.();
 
-function requireSuperAdmin(req: AuthRequest, res: Response): boolean {
-  if (req.user?.role !== 'super_admin') {
-    res.status(403).json({ error: 'super_admin uniquement' });
-    return false;
+/**
+ * ADR-058 Phase 2B — un club peut gérer le PIN de son propre site.
+ * Autorise `super_admin` (global) ou `club` uniquement si `user.site_id`
+ * matche `req.params.siteId` (defense-in-depth au niveau controller,
+ * au-delà du bypass middleware `requireRole`).
+ */
+function requireSuperAdminOrOwnClub(req: AuthRequest, res: Response): boolean {
+  if (req.user?.role === 'super_admin') return true;
+  if (
+    req.user?.role === 'club' &&
+    req.user.site_id &&
+    req.params.siteId === req.user.site_id
+  ) {
+    return true;
   }
-  return true;
+  res.status(403).json({ error: 'super_admin ou club propriétaire uniquement' });
+  return false;
 }
 
 async function ensureProfileBelongsToSite(
@@ -76,7 +87,7 @@ async function ensureProfileBelongsToSite(
  */
 export async function setProfilePin(req: AuthRequest, res: Response) {
   try {
-    if (!requireSuperAdmin(req, res)) return;
+    if (!requireSuperAdminOrOwnClub(req, res)) return;
     const { siteId, profileId } = req.params;
     const { pin } = req.body as { pin: string | null };
 
@@ -132,7 +143,7 @@ export async function setProfilePin(req: AuthRequest, res: Response) {
  */
 export async function listProfileDevices(req: AuthRequest, res: Response) {
   try {
-    if (!requireSuperAdmin(req, res)) return;
+    if (!requireSuperAdminOrOwnClub(req, res)) return;
     const { siteId, profileId } = req.params;
 
     if (!(await ensureProfileBelongsToSite(siteId, profileId))) {
@@ -161,7 +172,7 @@ export async function listProfileDevices(req: AuthRequest, res: Response) {
  */
 export async function revokeProfileDevice(req: AuthRequest, res: Response) {
   try {
-    if (!requireSuperAdmin(req, res)) return;
+    if (!requireSuperAdminOrOwnClub(req, res)) return;
     const { siteId, profileId, tokenId } = req.params;
 
     if (!(await ensureProfileBelongsToSite(siteId, profileId))) {
@@ -187,7 +198,7 @@ export async function revokeProfileDevice(req: AuthRequest, res: Response) {
  */
 export async function revokeAllProfileDevices(req: AuthRequest, res: Response) {
   try {
-    if (!requireSuperAdmin(req, res)) return;
+    if (!requireSuperAdminOrOwnClub(req, res)) return;
     const { siteId, profileId } = req.params;
     const { reason } = (req.body as { reason?: string | null }) || {};
 

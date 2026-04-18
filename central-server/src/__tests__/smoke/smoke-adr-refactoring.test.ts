@@ -1696,7 +1696,7 @@ describe('ADR-058 Phase 1: Pi offline PIN validation wiring', () => {
       verifyPin: /export async function verifyProfilePin/.test(content),
       usesBcrypt: /bcrypt\.(hash|compare)/.test(content),
       hasLockout: /MAX_PIN_ATTEMPTS/.test(content),
-      requireSuperAdmin: /role !== 'super_admin'/.test(content),
+      requireAuthz: /requireSuperAdminOrOwnClub/.test(content),
     }).toEqual({
       setProfilePin: true,
       listDevices: true,
@@ -1705,7 +1705,7 @@ describe('ADR-058 Phase 1: Pi offline PIN validation wiring', () => {
       verifyPin: true,
       usesBcrypt: true,
       hasLockout: true,
-      requireSuperAdmin: true,
+      requireAuthz: true,
     });
   });
 
@@ -1727,7 +1727,7 @@ describe('ADR-058 Phase 1: Pi offline PIN validation wiring', () => {
     });
   });
 
-  it('config-profiles routes wire super_admin remote-auth endpoints', () => {
+  it('config-profiles routes wire remote-auth endpoints (super_admin + club in Phase 2B)', () => {
     const content = fs.readFileSync(
       path.resolve(repoRoot, 'central-server/src/routes/config-profiles.routes.ts'),
       'utf8'
@@ -1737,13 +1737,13 @@ describe('ADR-058 Phase 1: Pi offline PIN validation wiring', () => {
       listDevices: /\/remote-devices/.test(content) && /listProfileDevices/.test(content),
       revokeOne: /\/remote-devices\/:tokenId\/revoke/.test(content),
       revokeAll: /\/remote-devices\/revoke-all/.test(content),
-      superAdminGuard: /requireRole\('super_admin'\)/.test(content),
+      roleGuard: /requireRole\('super_admin',\s*'club'\)/.test(content),
     }).toEqual({
       setPin: true,
       listDevices: true,
       revokeOne: true,
       revokeAll: true,
-      superAdminGuard: true,
+      roleGuard: true,
     });
   });
 
@@ -1968,6 +1968,65 @@ describe('ADR-058 Phase 1: Pi offline PIN validation wiring', () => {
       clearContext: true,
       getContext: true,
       stateExtended: true,
+    });
+  });
+
+  // --- Phase 2B : Club user can manage PIN on its own site ---
+
+  it('remote-auth.controller uses requireSuperAdminOrOwnClub (ADR-058 Phase 2B)', () => {
+    const content = fs.readFileSync(
+      path.resolve(repoRoot, 'central-server/src/controllers/remote-auth.controller.ts'),
+      'utf8'
+    );
+    expect({
+      helperDefined: /function requireSuperAdminOrOwnClub\(/.test(content),
+      checksClubRole: /req\.user\?\.role === 'club'/.test(content),
+      checksOwnSite: /req\.params\.siteId === req\.user\.site_id/.test(content),
+      usedInSetPin: /setProfilePin[\s\S]{0,400}requireSuperAdminOrOwnClub/.test(content),
+      usedInListDevices: /listProfileDevices[\s\S]{0,400}requireSuperAdminOrOwnClub/.test(content),
+      usedInRevoke: /revokeProfileDevice[\s\S]{0,400}requireSuperAdminOrOwnClub/.test(content),
+      usedInRevokeAll: /revokeAllProfileDevices[\s\S]{0,400}requireSuperAdminOrOwnClub/.test(content),
+      noStaleSuperAdminGate: !/function requireSuperAdmin\(/.test(content),
+    }).toEqual({
+      helperDefined: true,
+      checksClubRole: true,
+      checksOwnSite: true,
+      usedInSetPin: true,
+      usedInListDevices: true,
+      usedInRevoke: true,
+      usedInRevokeAll: true,
+      noStaleSuperAdminGate: true,
+    });
+  });
+
+  it('config-profiles routes accept role club on remote-pin/remote-devices (ADR-058 Phase 2B)', () => {
+    const content = fs.readFileSync(
+      path.resolve(repoRoot, 'central-server/src/routes/config-profiles.routes.ts'),
+      'utf8'
+    );
+    const routeMatches = content.match(/remote-(pin|devices)[\s\S]*?requireRole\([^)]+\)/g) || [];
+    expect(routeMatches.length).toBeGreaterThanOrEqual(4);
+    for (const block of routeMatches) {
+      expect(block).toMatch(/'super_admin'\s*,\s*'club'/);
+    }
+  });
+
+  it('club-dashboard renders <app-remote-auth-section> for its own site (ADR-058 Phase 2B)', () => {
+    const content = fs.readFileSync(
+      path.resolve(
+        repoRoot,
+        'central-dashboard/src/app/features/club-portal/club-dashboard.component.ts'
+      ),
+      'utf8'
+    );
+    expect({
+      imports: /RemoteAuthSectionComponent/.test(content),
+      usedInTemplate: /<app-remote-auth-section/.test(content),
+      boundToSiteId: /\[siteId\]="siteDashboard!?\.?\??\.site\.id"/.test(content),
+    }).toEqual({
+      imports: true,
+      usedInTemplate: true,
+      boundToSiteId: true,
     });
   });
 });

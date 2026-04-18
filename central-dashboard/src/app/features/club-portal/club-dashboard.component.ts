@@ -8,11 +8,19 @@ import { ClubHelpModalComponent } from './club-help-modal.component';
 import { ClubDashboardDataService, SiteDashboard } from './club-dashboard-data.service';
 import { ClubMetricsService } from './club-metrics.service';
 import { ClubRealtimeService } from './club-realtime.service';
+import { RemoteAuthSectionComponent } from '../sites/components/site-settings-tab/remote-auth-section/remote-auth-section.component';
 
 @Component({
   selector: 'app-club-dashboard',
   standalone: true,
-  imports: [CommonModule, RouterModule, TranslateModule, ClubSaasActionsComponent, ClubHelpModalComponent],
+  imports: [
+    CommonModule,
+    RouterModule,
+    TranslateModule,
+    ClubSaasActionsComponent,
+    ClubHelpModalComponent,
+    RemoteAuthSectionComponent,
+  ],
   template: `
     <div class="club-dashboard">
       <div class="page-header">
@@ -337,6 +345,12 @@ import { ClubRealtimeService } from './club-realtime.service';
           <span class="action-arrow">→</span>
         </a>
       </div>
+
+      <!-- ADR-058 Phase 2B: PIN télécommande par profil (club peut gérer le sien) -->
+      <app-remote-auth-section
+        *ngIf="siteDashboard?.site?.id"
+        [siteId]="siteDashboard!.site.id">
+      </app-remote-auth-section>
 
       <!-- Loading state -->
       <div class="loading" *ngIf="loading">

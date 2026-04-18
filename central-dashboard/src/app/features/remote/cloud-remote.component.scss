@@ -2669,6 +2669,64 @@ input:focus-visible {
   margin: 0 0 1.5rem;
 }
 
+.pin-profile-selector {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin: 0 0 1.25rem;
+  text-align: left;
+}
+
+.pin-profile-label {
+  color: #cbd5e1;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.pin-profile-select {
+  appearance: none;
+  -webkit-appearance: none;
+  background: rgba(15, 23, 42, 0.6);
+  background-image:
+    linear-gradient(45deg, transparent 50%, #94a3b8 50%),
+    linear-gradient(135deg, #94a3b8 50%, transparent 50%);
+  background-position:
+    calc(100% - 18px) 50%,
+    calc(100% - 12px) 50%;
+  background-size:
+    6px 6px,
+    6px 6px;
+  background-repeat: no-repeat;
+  border: 1px solid #334155;
+  border-radius: 10px;
+  color: #e2e8f0;
+  cursor: pointer;
+  font-size: 0.95rem;
+  padding: 0.65rem 2.25rem 0.65rem 0.85rem;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+  width: 100%;
+
+  &:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25);
+    outline: none;
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+
+  option {
+    background: #0f172a;
+    color: #e2e8f0;
+  }
+}
+
 .pin-dots {
   display: flex;
   gap: 12px;

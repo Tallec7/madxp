@@ -142,20 +142,28 @@ Les invariants suivants sont verrouillés par `smoke-adr-refactoring.test.ts` (d
 - Repository expose `findPin`, `setPin`, `cleanupExpired`, `countActive`, et le sous-repo `profileDeviceTokenRepository`.
 - Controller `remote-auth.controller.ts` enregistre les 4 statuts de métrique (`success`, `failure`, `lockout`, `misconfigured`).
 - `remote-pin.middleware.ts` supporte les deux payloads (profile + legacy).
-- Routes `config-profiles.routes.ts` sont gated `requireRole('super_admin')`.
-- Composant dashboard `<app-remote-auth-section>` est gated `*ngIf="isSuperAdmin"`.
+- Routes `config-profiles.routes.ts` sont gated `requireRole('super_admin', 'club')` (le bypass middleware `requireRole` limite déjà `club` à son propre site ; Phase 2B).
+- Controller `remote-auth.controller.ts` applique `requireSuperAdminOrOwnClub` (defense-in-depth au-delà du middleware) sur setPin/list/revoke (Phase 2B).
+- Composant dashboard `<app-remote-auth-section>` est monté dans `club-dashboard.component.ts` (Phase 2B) en plus du `site-settings-tab` super_admin.
 - `server.ts` wire la purge quotidienne avec `.unref()` (pas de fuite de handler).
 - `getRemoteState` expose `profiles[]`, `activeProfileId`, `authenticatedProfileId` (Phase 1.1).
 - `findProfilesMetadata` inclut `COALESCE(remote_pin_required, false)` pour alimenter le sélecteur de profil côté Cloud Remote.
 - `cloud-remote.component` rend le sélecteur de profil (`.pin-profile-selector`) dès qu'il y a ≥2 profils et dispatche vers `verifyProfilePin` quand le profil sélectionné requiert un PIN.
 - `RemoteService` expose `setCurrentProfileContext` / `clearCurrentProfileContext` / `getCurrentProfileContext` pour que les commandes héritent du profil authentifié sans modifier leurs signatures.
 
-## Phase 2 (prévu — hors scope ADR-058)
+## Phase 2B — Portail club (implémenté)
 
-- Remplacement progressif du PIN site-scope legacy par migration opportuniste (tous les PINs site → PIN profil par défaut).
-- UI de gestion PIN dans le portail club (rôle `club`) pour leur propre site — aujourd'hui super_admin only.
-- Notifications email au super_admin lors d'un burst de failures (>20/h sur un profil).
+- Le rôle `club` peut maintenant gérer les PIN de SON site (défini par `user.site_id`).
+- Routes `config-profiles.routes.ts` : `requireRole('super_admin', 'club')` — le bypass middleware de `requireRole` cantonne déjà les users club à leur propre site via la comparaison `user.site_id === req.params.siteId`.
+- Controller `remote-auth.controller.ts` : `requireSuperAdmin` → `requireSuperAdminOrOwnClub` (vérifie `user.role === 'club' && user.site_id === req.params.siteId`) en defense-in-depth.
+- Dashboard `club-dashboard.component.ts` : monte `<app-remote-auth-section [siteId]="...">` — même composant que super_admin, pas de duplication.
+- Tests : 2 nouveaux unit tests controller (`setProfilePin` + `listProfileDevices` club-on-own-site), 3 nouveaux smoke guards dans `smoke-adr-refactoring.test.ts`.
+
+## Phase 2 (reste — hors scope ADR-058)
+
+- **2C** : Notifications email au super_admin lors d'un burst de failures (>20/h sur un profil) — Alertmanager webhook.
+- **2A** : Remplacement progressif du PIN site-scope legacy par migration opportuniste (tous les PINs site → PIN profil par défaut).
 
 ---
 
-_Dernière mise à jour : 18 avril 2026 (Phase 1.1 — intégration UI Cloud Remote + tests unitaires)_
+_Dernière mise à jour : 18 avril 2026 (Phase 2B — club peut gérer le PIN de son propre site)_

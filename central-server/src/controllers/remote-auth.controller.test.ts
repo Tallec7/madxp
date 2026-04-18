@@ -97,8 +97,8 @@ beforeEach(() => {
   (profileDeviceTokenRepository.revokeAllForProfile as jest.Mock).mockResolvedValue(3);
 });
 
-describe('remote-auth.controller — super_admin gate', () => {
-  it('setProfilePin — returns 403 for non super_admin', async () => {
+describe('remote-auth.controller — authz gate (super_admin or own club)', () => {
+  it('setProfilePin — returns 403 for admin role (not super_admin, not club)', async () => {
     const req = asAdminReq({
       user: { id: 'u1', email: 'u@x.com', role: 'admin' },
       params: { siteId: 'site-1', profileId: 'profile-1' },
@@ -110,9 +110,9 @@ describe('remote-auth.controller — super_admin gate', () => {
     expect(bcrypt.hash).not.toHaveBeenCalled();
   });
 
-  it('listProfileDevices — returns 403 for non super_admin', async () => {
+  it('listProfileDevices — returns 403 when club user accesses a foreign site', async () => {
     const req = asAdminReq({
-      user: { id: 'u1', email: 'u@x.com', role: 'club' },
+      user: { id: 'u1', email: 'u@x.com', role: 'club', site_id: 'OTHER-SITE' },
       params: { siteId: 'site-1', profileId: 'profile-1' },
     });
     const res = createRes();
@@ -120,7 +120,7 @@ describe('remote-auth.controller — super_admin gate', () => {
     expect(res.status).toHaveBeenCalledWith(403);
   });
 
-  it('revokeAllProfileDevices — returns 403 for non super_admin', async () => {
+  it('revokeAllProfileDevices — returns 403 for operator role', async () => {
     const req = asAdminReq({
       user: { id: 'u1', email: 'u@x.com', role: 'operator' },
       params: { siteId: 'site-1', profileId: 'profile-1' },
@@ -129,6 +129,34 @@ describe('remote-auth.controller — super_admin gate', () => {
     const res = createRes();
     await revokeAllProfileDevices(req, res);
     expect(res.status).toHaveBeenCalledWith(403);
+  });
+
+  // --- Phase 2B : club peut gérer le PIN de son propre site ---
+
+  it('setProfilePin — allows club user on own site (Phase 2B)', async () => {
+    (bcrypt.hash as jest.Mock).mockResolvedValueOnce('$2b$12$hash');
+    (configProfileRepository.setPin as jest.Mock).mockResolvedValueOnce(undefined);
+    const req = asAdminReq({
+      user: { id: 'u1', email: 'club@x.com', role: 'club', site_id: 'site-1' },
+      params: { siteId: 'site-1', profileId: 'profile-1' },
+      body: { pin: '1234' },
+    });
+    const res = createRes();
+    await setProfilePin(req, res);
+    expect(res.status).not.toHaveBeenCalledWith(403);
+    expect(bcrypt.hash).toHaveBeenCalledWith('1234', 12);
+  });
+
+  it('listProfileDevices — allows club user on own site (Phase 2B)', async () => {
+    (profileDeviceTokenRepository.findActiveByProfile as jest.Mock).mockResolvedValueOnce([]);
+    const req = asAdminReq({
+      user: { id: 'u1', email: 'club@x.com', role: 'club', site_id: 'site-1' },
+      params: { siteId: 'site-1', profileId: 'profile-1' },
+    });
+    const res = createRes();
+    await listProfileDevices(req, res);
+    expect(res.status).not.toHaveBeenCalledWith(403);
+    expect(res.json).toHaveBeenCalledWith({ devices: [] });
   });
 });
 
