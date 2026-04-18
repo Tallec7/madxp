@@ -25,8 +25,21 @@
                  base-uri 'self';"
     />
     <link rel="icon" type="image/x-icon" href="favicon.ico" />
+    <!-- ADR-060 Phase 3 couche 3 — PWA manifest + theme -->
+    <link rel="manifest" href="manifest.webmanifest" />
+    <meta name="theme-color" content="#0b1020" />
   </head>
   <body>
     <app-root></app-root>
+    <!-- ADR-060 Phase 3 couche 3 — Enregistrement du Service Worker -->
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function () {
+          navigator.serviceWorker.register('sw.js').catch(function () {
+            /* SW optionnel — si l'enregistrement échoue, l'app fonctionne sans offline */
+          });
+        });
+      }
+    </script>
   </body>
 </html>
