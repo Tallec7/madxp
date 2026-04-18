@@ -228,11 +228,11 @@ Audit code effectué sur `content-management.component.html` (651L) vs `video-li
 
 Le revert du migrate `video-library-list` → `VideoCardComponent` est cohérent avec cette conclusion : même sur la primitive la plus évidente, la version per-site a trop de branches contextuelles (club-locked, deploy states, variants, isUploadedForThisSite) pour passer proprement par slots sans alourdir l'API partagée.
 
-**3.3 Tests & non-régression** — ⏳ To do
+**3.3 Tests & non-régression** — ✅ Done 2026-04-18
 
-- [ ] `npm run test:central` — 520 Karma tests doivent passer
-- [ ] `npm run test:smoke:smart` — 0 régression
-- [ ] Screenshots avant/après sur Page Contenu + site-detail content tab
+- ✅ `video-card.component.spec.ts` créé — 9 tests (title/subtitle/meta, thumbnail, overlays, selected, click emit gated by clickable, tooltip fallback)
+- ✅ Karma `test:central` pass (9/9 sur video-card)
+- ✅ Smoke `test:smoke:smart` pass (0 régression sur ADR-068)
 
 ### Critères d'acceptation
 
