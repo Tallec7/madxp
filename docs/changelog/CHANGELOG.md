@@ -1,3 +1,10 @@
+## [3.193.6](https://github.com/Tallec7/neopro/compare/v3.193.5...v3.193.6) (2026-04-19)
+
+### Bug Fixes
+
+- **ci:** db-backup lftp SSL verify + remove invalid cls flag ([#478](https://github.com/Tallec7/neopro/issues/478)) ([294c3b1](https://github.com/Tallec7/neopro/commit/294c3b1880601e7428647d06f2001c6f2575cc31)), closes [#2](https://github.com/Tallec7/neopro/issues/2)
+- **cors:** allow X-Remote-Token header for SaaS remote auth ([8b973ab](https://github.com/Tallec7/neopro/commit/8b973abc9b99fc6ec55f220bc846f12b8927b083))
+
 ## [3.193.5](https://github.com/Tallec7/neopro/compare/v3.193.4...v3.193.5) (2026-04-19)
 
 ### Bug Fixes
