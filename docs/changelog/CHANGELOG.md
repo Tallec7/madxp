@@ -1,3 +1,9 @@
+## [3.193.8](https://github.com/Tallec7/neopro/compare/v3.193.7...v3.193.8) (2026-04-19)
+
+### Bug Fixes
+
+- **docs:** remove dangling ADR-071 link (file on separate branch, not main) ([#482](https://github.com/Tallec7/neopro/issues/482)) ([1996257](https://github.com/Tallec7/neopro/commit/1996257b47a251adfaa5ede12e44292a4b74aff3)), closes [#480](https://github.com/Tallec7/neopro/issues/480)
+
 ## [3.193.7](https://github.com/Tallec7/neopro/compare/v3.193.6...v3.193.7) (2026-04-19)
 
 ### Bug Fixes
