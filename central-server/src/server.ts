@@ -212,7 +212,7 @@ app.use((req, res, next) => {
 
   // Toujours définir ces headers pour les requêtes OPTIONS
   res.header('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, X-Correlation-ID');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, X-Correlation-ID, X-Remote-Token');
 
   // Gérer les requêtes preflight
   if (req.method === 'OPTIONS') {
