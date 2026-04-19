@@ -5,6 +5,7 @@ node_modules*
 *.avi
 *.mkv
 dist/
+dist-pages/
 
 .angular/
 .DS_Store

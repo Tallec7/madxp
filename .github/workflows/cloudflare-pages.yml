@@ -1,0 +1,91 @@
+name: Cloudflare Pages Deploy
+
+# Builds dashboard + SaaS and deploys to Cloudflare Pages (ADR-071).
+#
+# CUTOVER STATUS: pre-cutover. This workflow runs in parallel with the
+# legacy Hostinger FTP deploy in release.yml. It publishes to the Pages
+# project (preview URL) on every push to main and to a PR preview on
+# each pull_request. DNS is still pointed at Hostinger.
+#
+# CUTOVER CHECKLIST (manual steps, documented in ADR-071):
+#   1. Create Pages project `neopro-admin` in Cloudflare dashboard
+#      (connect to GitHub repo, build cmd: `bash scripts/build-pages.sh`,
+#       output dir: `dist-pages`, Node 22).
+#   2. Configure secrets CF_API_TOKEN (scoped: Pages:Edit) and
+#      CF_ACCOUNT_ID in the GitHub repo.
+#   3. Verify the preview URL (*.pages.dev) serves SPA deep routes.
+#   4. Point DNS CNAME neopro-admin.kalonpartners.bzh → pages project.
+#   5. Once verified in prod: remove deploy-dashboard and deploy-saas
+#      jobs from release.yml and delete central-dashboard/.htaccess and
+#      raspberry/src/saas-htaccess.
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'central-dashboard/**'
+      - 'raspberry/src/**'
+      - 'pages/**'
+      - 'scripts/build-pages.sh'
+      - '.github/workflows/cloudflare-pages.yml'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'angular.json'
+  pull_request:
+    paths:
+      - 'central-dashboard/**'
+      - 'raspberry/src/**'
+      - 'pages/**'
+      - 'scripts/build-pages.sh'
+      - '.github/workflows/cloudflare-pages.yml'
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Build + deploy to Cloudflare Pages
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      deployments: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build unified Pages bundle
+        run: bash scripts/build-pages.sh
+
+      - name: Deploy to Cloudflare Pages
+        # Skip deploy when secrets are not yet configured (pre-cutover).
+        # The build still runs as a sanity check.
+        if: ${{ env.CF_API_TOKEN != '' && env.CF_ACCOUNT_ID != '' }}
+        env:
+          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+          CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+        uses: cloudflare/pages-action@v1
+        with:
+          apiToken: ${{ secrets.CF_API_TOKEN }}
+          accountId: ${{ secrets.CF_ACCOUNT_ID }}
+          projectName: neopro-admin
+          directory: dist-pages
+          gitHubToken: ${{ secrets.GITHUB_TOKEN }}
+          branch: ${{ github.head_ref || github.ref_name }}
+
+      - name: Pre-cutover notice
+        if: ${{ env.CF_API_TOKEN == '' || env.CF_ACCOUNT_ID == '' }}
+        env:
+          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+          CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+        run: |
+          echo "::notice::Cloudflare Pages secrets not configured — build verified but not deployed. See ADR-071 cutover checklist."

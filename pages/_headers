@@ -1,0 +1,24 @@
+# Cloudflare Pages — security headers and cache-control.
+# Docs: https://developers.cloudflare.com/pages/configuration/headers/
+
+/*
+  X-Frame-Options: SAMEORIGIN
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Strict-Transport-Security: max-age=31536000; includeSubDomains
+  Permissions-Policy: camera=(), microphone=(), geolocation=()
+
+# HTML entry points must never be cached aggressively — new deploys must
+# be picked up immediately on refresh. Hashed JS/CSS below are immutable.
+/index.html
+  Cache-Control: no-cache, no-store, must-revalidate
+
+/saas/index.html
+  Cache-Control: no-cache, no-store, must-revalidate
+
+# Angular ships hashed filenames for JS/CSS → safe to cache for 1 year.
+/*.js
+  Cache-Control: public, max-age=31536000, immutable
+
+/*.css
+  Cache-Control: public, max-age=31536000, immutable

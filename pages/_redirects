@@ -1,0 +1,11 @@
+# Cloudflare Pages SPA fallback — replaces .htaccess (ADR-071).
+#
+# IMPORTANT: order matters. The first matching rule wins.
+# Keep the SaaS fallback BEFORE the dashboard fallback so that
+# /saas/<unknown> resolves to /saas/index.html, not /index.html.
+#
+# Status 200 = rewrite (URL preserved, content from target). 301/302 would
+# change the URL in the browser.
+
+/saas/*   /saas/index.html   200
+/*        /index.html        200
