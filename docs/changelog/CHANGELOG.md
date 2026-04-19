@@ -1,3 +1,9 @@
+## [3.194.1](https://github.com/Tallec7/neopro/compare/v3.194.0...v3.194.1) (2026-04-19)
+
+### Bug Fixes
+
+- **adr-073:** smoke fix + modops + plan migration (follow-ups PR [#484](https://github.com/Tallec7/neopro/issues/484)) ([#485](https://github.com/Tallec7/neopro/issues/485)) ([1e919c6](https://github.com/Tallec7/neopro/commit/1e919c6062e1e53ed3f388d37d8e03086f634f80))
+
 # [3.194.0](https://github.com/Tallec7/neopro/compare/v3.193.9...v3.194.0) (2026-04-19)
 
 ### Features
