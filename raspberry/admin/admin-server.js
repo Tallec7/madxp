@@ -70,6 +70,7 @@ const NetworkService = require('./services/network.service');
 const BackupService = require('./services/backup.service');
 const SponsorService = require('./services/sponsor.service');
 const SponsorStatsService = require('./services/sponsor-stats.service');
+const HotspotDashboardService = require('./services/hotspot-dashboard.service');
 
 // Instantiate services (ordered by dependency)
 const configService = new ConfigurationService({ cache, NAMESPACES });
@@ -80,6 +81,7 @@ const networkService = new NetworkService();
 const backupService = new BackupService();
 const sponsorService = new SponsorService({ configService });
 const sponsorStatsService = new SponsorStatsService({ configService });
+const hotspotDashboardService = new HotspotDashboardService();
 
 // =============================================================================
 // ROUTES
@@ -100,6 +102,7 @@ const createNetworkRouter = require('./routes/network');
 const createBackupRouter = require('./routes/backup');
 const createSyncStatusRouter = require('./routes/sync-status');
 const createSponsorsRouter = require('./routes/sponsors');
+const createHotspotDashboardRouter = require('./routes/hotspot-dashboard');
 
 const systemRouter = createSystemRouter({ systemService });
 const videosRouter = createVideosRouter({ videoService, videoProcessingService, sponsorService });
@@ -108,6 +111,7 @@ const networkRouter = createNetworkRouter({ networkService });
 const backupRouter = createBackupRouter({ backupService });
 const syncStatusRouter = createSyncStatusRouter();
 const sponsorsRouter = createSponsorsRouter({ sponsorService, sponsorStatsService });
+const hotspotDashboardRouter = createHotspotDashboardRouter({ hotspotDashboardService });
 
 // =============================================================================
 // EXPRESS APP
@@ -309,6 +313,7 @@ app.use(backupRouter);
 app.use(updateRouter);
 app.use(syncStatusRouter);
 app.use(sponsorsRouter);
+app.use(hotspotDashboardRouter);
 
 // =============================================================================
 // SERVER START

@@ -765,10 +765,14 @@ describe('POST /api/auth/change-password', () => {
     await handler(req, res);
 
     expect(res._json.success).toBe(true);
-    expect(fs.writeFile).toHaveBeenCalledWith(
-      CONFIG_PATH,
-      expect.stringContaining('newpass123')
+    // ADR-073 S4 : le mot de passe est hashé (scrypt) avant écriture — on ne
+    // doit PAS retrouver le plaintext dans le fichier, mais bien un hash scrypt.
+    const configWrite = fs.writeFile.mock.calls.find(
+      (c) => c[0] === CONFIG_PATH && typeof c[1] === 'string' && c[1].includes('"password"')
     );
+    expect(configWrite).toBeDefined();
+    expect(configWrite[1]).toMatch(/"password":\s*"scrypt:[0-9a-f]+:[0-9a-f]+"/);
+    expect(configWrite[1]).not.toContain('"password": "newpass123"');
   });
 });
 

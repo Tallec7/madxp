@@ -87,7 +87,7 @@ async function getOrphanServices() {
     'neopro-kiosk',
     'neopro-sync-agent',
     'neopro-sync-guardian',
-    'neopro-hotspot-watchdog',
+    // 'neopro-hotspot-watchdog' retiré (ADR-072) — remplacé par le watchdog Node du sync-agent
     'neopro-hotspot-optimizer',
     'neopro-usb-wifi',
     'neopro-sd-health',

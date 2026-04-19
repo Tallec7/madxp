@@ -397,6 +397,26 @@ async function extractAndInstall(packagePath, version, stepTracker) {
       }
     }
 
+    // ADR-072 : retirer les services dépréciés (bash hotspot-watchdog remplacé par le Node watchdog)
+    // Idempotent : no-op si déjà retiré. Lance avant l'install des services actuels
+    // pour éviter que deux watchdogs restart hostapd en parallèle.
+    const DEPRECATED_SERVICES = ['neopro-hotspot-watchdog'];
+    for (const deprecated of DEPRECATED_SERVICES) {
+      try {
+        const { stdout } = await execAsync(
+          `systemctl list-unit-files 2>/dev/null | grep -c "^${deprecated}\\.service" || echo 0`
+        );
+        if (parseInt(stdout.trim(), 10) > 0) {
+          await execAsync(`sudo systemctl disable --now ${deprecated}.service 2>/dev/null || true`);
+          await execAsync(`sudo rm -f /etc/systemd/system/${deprecated}.service`);
+          await execAsync(`sudo rm -f /home/pi/neopro/scripts/hotspot-watchdog.sh`);
+          logger.info(`Removed deprecated service: ${deprecated}`);
+        }
+      } catch (e) {
+        logger.warn(`Failed to remove deprecated service ${deprecated}`, { error: e.message });
+      }
+    }
+
     // Installer les nouveaux services systemd si présents dans l'archive
     // IMPORTANT: lire depuis l'archive extraite (sourcePath), PAS depuis rootDir
     const systemdConfigDir = path.join(sourcePath, 'config', 'systemd');

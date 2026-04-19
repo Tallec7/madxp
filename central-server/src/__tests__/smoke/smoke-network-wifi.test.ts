@@ -1081,3 +1081,161 @@ describe('Socket reconnection stability guards', () => {
     });
   });
 });
+
+// ============================================================
+// ADR-073 — Hotspot security hardening (6 P0 + F7 + dashboard)
+// ============================================================
+describe('ADR-073 hotspot security hardening guards', () => {
+  const fs = require('fs');
+  const path = require('path');
+  const repoRoot = path.resolve(__dirname, '..', '..', '..', '..');
+  const read = (rel: string) => fs.readFileSync(path.join(repoRoot, rel), 'utf8');
+
+  // S1 — PSK unique par club : hostapd.conf doit contenir le placeholder,
+  // install.sh doit générer une clé aléatoire si arg2 absent
+  it('S1 — hostapd.conf must contain placeholder (not hardcoded PSK)', () => {
+    const hostapdConf = read('raspberry/config/systemd/hostapd.conf');
+    expect({
+      hasPlaceholder: hostapdConf.includes('NEOPRO_PLACEHOLDER_RUN_INSTALL_SH'),
+      noHardcodedDefault: !/wpa_passphrase=NeoProWiFi2025\s*$/m.test(hostapdConf),
+    }).toEqual({
+      hasPlaceholder: true,
+      noHardcodedDefault: true,
+    });
+  });
+
+  it('S1 — install.sh must generate random PSK when 2nd arg missing', () => {
+    const installSh = read('raspberry/install.sh');
+    expect({
+      usesOpenssl: /openssl rand -base64 16/.test(installSh),
+      conditionalGeneration: /WIFI_PASSWORD_GENERATED="?(true|false)"?/.test(installSh),
+    }).toEqual({
+      usesOpenssl: true,
+      conditionalGeneration: true,
+    });
+  });
+
+  // S2 — Socket.IO auth token (opt-in)
+  it('S2 — server.js must wire io.use() with token verification', () => {
+    const serverJs = read('raspberry/server/server.js');
+    expect({
+      hasGetTokenFn: /getSocketAuthToken/.test(serverJs),
+      hasIoUse: /io\.use\(\(socket,\s*next\)/.test(serverJs),
+      readsSocketAuthToken: /security\?\.socketAuthToken|security\.socketAuthToken/.test(serverJs),
+      acceptsHandshakeAuth: /handshake\.auth\?\.token|handshake\.auth\.token/.test(serverJs),
+    }).toEqual({
+      hasGetTokenFn: true,
+      hasIoUse: true,
+      readsSocketAuthToken: true,
+      acceptsHandshakeAuth: true,
+    });
+  });
+
+  // S3 — ap_isolate=1
+  it('S3 — hostapd.conf must set ap_isolate=1', () => {
+    const hostapdConf = read('raspberry/config/systemd/hostapd.conf');
+    expect(/^\s*ap_isolate=1\s*$/m.test(hostapdConf)).toBe(true);
+  });
+
+  // S4 — scrypt admin password
+  it('S4 — admin auth route must use scrypt + timingSafeEqual', () => {
+    const authJs = read('raspberry/admin/routes/auth.js');
+    expect({
+      usesScrypt: /scryptAsync|crypto\.scrypt/.test(authJs),
+      usesTimingSafe: /timingSafeEqual/.test(authJs),
+      hasScryptPrefix: /scrypt:/.test(authJs),
+      hasVerifyAndHash: /verifyPassword|hashPassword/.test(authJs),
+    }).toEqual({
+      usesScrypt: true,
+      usesTimingSafe: true,
+      hasScryptPrefix: true,
+      hasVerifyAndHash: true,
+    });
+  });
+
+  // S5 — path.basename() on filename params
+  it('S5 — backup/videos/sponsors routes must sanitize filename via path.basename', () => {
+    const files = [
+      'raspberry/admin/routes/backup.js',
+      'raspberry/admin/routes/videos.js',
+      'raspberry/admin/routes/sponsors.js',
+    ];
+    for (const rel of files) {
+      const content = read(rel);
+      expect({ file: rel, hasBasename: /path\.basename\(/.test(content) })
+        .toEqual({ file: rel, hasBasename: true });
+    }
+  });
+
+  // S6 — sudoers must not allow broad wildcards anymore
+  it('S6 — sudoers.d/neopro must not contain broad modprobe or scripts/* wildcards', () => {
+    const sudoers = read('raspberry/config/sudoers.d/neopro');
+    expect({
+      noBroadModprobe: !/\/sbin\/modprobe\s+\*$/m.test(sudoers),
+      noScriptsWildcard: !/\/home\/pi\/neopro\/scripts\/\*\s*$/m.test(sudoers),
+      hasScriptWhitelist: /fix-hotspot\.sh/.test(sudoers),
+      hasWifiDriverWhitelist: /rtl8192eu|rtl8xxxu|brcmfmac/.test(sudoers),
+    }).toEqual({
+      noBroadModprobe: true,
+      noScriptsWildcard: true,
+      hasScriptWhitelist: true,
+      hasWifiDriverWhitelist: true,
+    });
+  });
+
+  // F7 — hostapd events offline buffer
+  it('F7 — hostapd-telemetry must buffer events offline and flush on reconnect', () => {
+    const telemetry = read('raspberry/sync-agent/src/services/hostapd-telemetry.js');
+    expect({
+      hasAppend: /_appendToBuffer/.test(telemetry),
+      hasFlush: /_flushBuffer/.test(telemetry),
+      hasBufferStatus: /getBufferStatus/.test(telemetry),
+      hasRollingCap: /BUFFER_MAX_EVENTS/.test(telemetry),
+      flushesOnReconnect: /wasDisconnected[\s\S]*_flushBuffer/.test(telemetry),
+    }).toEqual({
+      hasAppend: true,
+      hasFlush: true,
+      hasBufferStatus: true,
+      hasRollingCap: true,
+      flushesOnReconnect: true,
+    });
+  });
+
+  // Dashboard hotspot local
+  it('Dashboard — admin-server.js must wire hotspotDashboardRouter', () => {
+    const adminServer = read('raspberry/admin/admin-server.js');
+    expect({
+      requiresService: /hotspot-dashboard\.service/.test(adminServer),
+      requiresRouter: /routes\/hotspot-dashboard/.test(adminServer),
+      mountsRouter: /hotspotDashboardRouter/.test(adminServer),
+    }).toEqual({
+      requiresService: true,
+      requiresRouter: true,
+      mountsRouter: true,
+    });
+  });
+
+  it('Dashboard — hotspot-dashboard service exposes required methods', () => {
+    const service = read('raspberry/admin/services/hotspot-dashboard.service.js');
+    expect({
+      hasListClients: /listClients\s*\(/.test(service),
+      hasGetEvents: /getEvents\s*\(/.test(service),
+      hasRotatePsk: /rotatePsk\s*\(/.test(service),
+      hasArchiveEvent: /archiveEvent\s*\(/.test(service),
+      hasParseAllSta: /parseAllStaOutput\s*\(/.test(service),
+      validatesPskLength: /8\s*\|\|.*length\s*>\s*63|length\s*<\s*8|length\s*>\s*63/.test(service),
+    }).toEqual({
+      hasListClients: true,
+      hasGetEvents: true,
+      hasRotatePsk: true,
+      hasArchiveEvent: true,
+      hasParseAllSta: true,
+      validatesPskLength: true,
+    });
+  });
+
+  it('Dashboard — frontend module registered in build-admin.sh', () => {
+    const build = read('raspberry/admin/public/build-admin.sh');
+    expect(build.includes('modules/network/hotspot-dashboard.js')).toBe(true);
+  });
+});

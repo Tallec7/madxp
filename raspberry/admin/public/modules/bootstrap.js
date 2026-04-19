@@ -204,6 +204,10 @@ function switchTab(tab) {
         case 'network':
             loadNetwork();
             loadWifiCurrent();
+            if (typeof refreshHotspotDashboard === 'function') {
+                refreshHotspotDashboard();
+                startHotspotDashboardAutoRefresh();
+            }
             break;
         case 'logs':
             loadLogs(currentLogService);
@@ -246,6 +250,17 @@ window.selectWifiNetwork = selectWifiNetwork;
 window.cancelWifiConnect = cancelWifiConnect;
 window.connectToWifi = connectToWifi;
 window.removeBssidLock = removeBssidLock;
+
+// Hotspot dashboard (ADR-073)
+window.refreshHotspotDashboard = refreshHotspotDashboard;
+window.loadHotspotClients = loadHotspotClients;
+window.loadHotspotEvents = loadHotspotEvents;
+window.startHotspotDashboardAutoRefresh = startHotspotDashboardAutoRefresh;
+window.stopHotspotDashboardAutoRefresh = stopHotspotDashboardAutoRefresh;
+window.openRotatePskModal = openRotatePskModal;
+window.closeRotatePskModal = closeRotatePskModal;
+window.confirmRotatePsk = confirmRotatePsk;
+window.copyNewPskToClipboard = copyNewPskToClipboard;
 
 // Sponsor functions
 window.loadSponsors = loadSponsors;

@@ -304,11 +304,13 @@ function start() {
     .then(() => logger.info('NetworkWatchdog: WiFi power management disabled on wlan1'))
     .catch(() => {});
 
-  enableGracePeriod('internet', 45000);
-  logger.info('NetworkWatchdog: boot grace period enabled (45s) for internet checks');
+  // ADR-072 OTA-2 : 60s (au lieu de 45s) — laisse hostapd/dnsmasq finir
+  // leur démarrage + wlan0 acquérir 192.168.4.1 avant toute action watchdog.
+  enableGracePeriod('internet', 60000);
+  logger.info('NetworkWatchdog: boot grace period enabled (60s) for internet checks');
 
-  enableGracePeriod('hotspot', 45000);
-  logger.info('NetworkWatchdog: boot grace period enabled (45s) for hotspot checks');
+  enableGracePeriod('hotspot', 60000);
+  logger.info('NetworkWatchdog: boot grace period enabled (60s) for hotspot checks');
 
   const ctx = getContext();
 

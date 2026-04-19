@@ -2721,67 +2721,15 @@ describe('Android captive portal iptables (HTTPS connectivity check fix)', () =>
     });
   });
 
-  // Guard 4: hotspot-watchdog must check iptables/nftables health with command detection
-  it('hotspot-watchdog.sh must check captive portal with iptables/nftables support', () => {
-    const watchdog = fs.readFileSync(
-      path.join(repoRoot, 'raspberry/scripts/hotspot-watchdog.sh'),
-      'utf8'
-    );
-    expect({
-      hasIptablesCheck: /check_captive_portal_iptables/.test(watchdog),
-      checksPort443: /dport\s+443/.test(watchdog),
-      detectsIptablesAvailability: /command -v iptables/.test(watchdog),
-      detectsNftAvailability: /command -v nft/.test(watchdog),
-    }).toEqual({
-      hasIptablesCheck: true,
-      checksPort443: true,
-      detectsIptablesAvailability: true,
-      detectsNftAvailability: true,
-    });
-  });
-
-  // Guard 4b: CRITICAL — captive portal must NOT be in critical issues that trigger recovery
-  // On Debian 13 Trixie, iptables is removed → check always fails → if treated as critical,
-  // hostapd+dnsmasq restart every 30s in an infinite loop (8h+ outage observed 2026-03-23).
-  // Captive portal must be a WARNING only, stored in CAPTIVE_PORTAL_WARNING, not in HEALTH_ISSUES.
-  it('hotspot-watchdog.sh must NOT include captive portal in critical health issues', () => {
-    const watchdog = fs.readFileSync(
-      path.join(repoRoot, 'raspberry/scripts/hotspot-watchdog.sh'),
-      'utf8'
-    );
-    // The captive portal result must go to CAPTIVE_PORTAL_WARNING, not issues[]
-    expect({
-      hasCaptivePortalWarningVar: /CAPTIVE_PORTAL_WARNING/.test(watchdog),
-      hasHealthIssuesVar: /HEALTH_ISSUES/.test(watchdog),
-      captivePortalNotInIssuesArray: !/issues\+=\(.*iptables.*captive/.test(watchdog),
-    }).toEqual({
-      hasCaptivePortalWarningVar: true,
-      hasHealthIssuesVar: true,
-      captivePortalNotInIssuesArray: true,
-    });
-  });
-
-  // Guard 5: hotspot-watchdog must recover iptables/nftables in attempt_recovery
-  it('hotspot-watchdog.sh must restore captive portal in recovery sequence (iptables or nftables)', () => {
-    const watchdog = fs.readFileSync(
-      path.join(repoRoot, 'raspberry/scripts/hotspot-watchdog.sh'),
-      'utf8'
-    );
-    expect({
-      recoversIptables: /setup-captive-portal-iptables/.test(watchdog) ||
-        /iptables.*443.*DNAT/.test(watchdog),
-      recoversNftables: /nft add/.test(watchdog),
-    }).toEqual({
-      recoversIptables: true,
-      recoversNftables: true,
-    });
-  });
+  // Guards 4, 4b, 5 (captive portal dans hotspot-watchdog.sh) retirés par ADR-072 :
+  // le watchdog bash a été supprimé (doublon dangereux avec hotspot-watchdog.js).
+  // La garde setup-captive-portal-iptables.sh lui-même reste (test plus haut).
 
   // Guard 6: hotspot recovery must restart hostapd BEFORE adding IP
   // (hostapd restart flushes manually-added IPs on wlan0 — adding IP before
   // restart means the IP is always lost → recovery always fails)
+  // ADR-072 : vérification restreinte au watchdog Node (bash supprimé).
   it('hotspot recovery must restart hostapd BEFORE adding static IP', () => {
-    // Check network-watchdog.js + hotspot-watchdog.js (ADR-044 extraction)
     const watchdogJs = [
       'raspberry/sync-agent/src/services/network-watchdog.js',
       'raspberry/sync-agent/src/services/hotspot-watchdog.js',
@@ -2793,18 +2741,18 @@ describe('Android captive portal iptables (HTTPS connectivity check fix)', () =>
     }).toEqual({
       hostapdBeforeIpAdd_js: true,
     });
+  });
 
-    // Check hotspot-watchdog.sh
-    const watchdogSh = fs.readFileSync(
-      path.join(repoRoot, 'raspberry/scripts/hotspot-watchdog.sh'),
-      'utf8'
-    );
-    const shHostapdIdx = watchdogSh.indexOf('systemctl restart hostapd');
-    const shIpAddIdx = watchdogSh.indexOf('ip addr add 192.168.4.1', shHostapdIdx);
+  // Guard ADR-072 : le watchdog hotspot bash ne doit PAS réapparaître
+  it('ADR-072: legacy bash hotspot-watchdog.sh must not be reintroduced', () => {
     expect({
-      hostapdBeforeIpAdd_sh: shHostapdIdx > 0 && shIpAddIdx > shHostapdIdx,
+      scriptAbsent: !fs.existsSync(path.join(repoRoot, 'raspberry/scripts/hotspot-watchdog.sh')),
+      serviceAbsent: !fs.existsSync(
+        path.join(repoRoot, 'raspberry/config/systemd/neopro-hotspot-watchdog.service')
+      ),
     }).toEqual({
-      hostapdBeforeIpAdd_sh: true,
+      scriptAbsent: true,
+      serviceAbsent: true,
     });
   });
 

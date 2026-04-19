@@ -54,3 +54,6 @@ raspberry/admin/public/app.js
 raspberry/admin/public/app.js.bak
 raspberry/admin/public/styles.css
 raspberry/admin/public/styles.css.bak
+
+# Claude Code runtime locks (transient)
+.claude/scheduled_tasks.lock

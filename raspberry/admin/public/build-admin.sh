@@ -78,6 +78,7 @@ MODULES=(
   "modules/sponsors/index.js"
   "modules/network/wifi.js"
   "modules/network/hotspot.js"
+  "modules/network/hotspot-dashboard.js"
   "modules/logs/index.js"
   "modules/upload/index.js"
   "modules/config/time-categories.js"

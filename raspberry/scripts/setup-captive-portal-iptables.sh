@@ -13,7 +13,7 @@
 # "Se connecter au réseau" automatiquement (comme dans un hôtel/aéroport).
 #
 # Usage : sudo ./setup-captive-portal-iptables.sh
-#         Appelé automatiquement par install.sh et hotspot-watchdog.sh
+#         Appelé automatiquement par install.sh
 #
 # Idempotent : peut être exécuté plusieurs fois sans créer de doublons
 # =============================================================================

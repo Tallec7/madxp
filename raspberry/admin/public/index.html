@@ -23,11 +23,11 @@
     <link rel="preconnect" href="//neopro.local" />
 
     <!-- Preload Critical Resources -->
-    <link rel="preload" href="/styles.css?v=3.176.7" as="style" />
-    <link rel="preload" href="/app.js?v=3.176.7" as="script" />
+    <link rel="preload" href="/styles.css?v=3.193.9" as="style" />
+    <link rel="preload" href="/app.js?v=3.193.9" as="script" />
 
     <!-- Styles -->
-    <link rel="stylesheet" href="styles.css?v=3.176.7" />
+    <link rel="stylesheet" href="styles.css?v=3.193.9" />
   </head>
   <body>
     <div class="container" role="application" aria-label="Interface d'administration Neopro">
@@ -944,6 +944,123 @@
               </div>
             </div>
           </div>
+
+          <!-- Hotspot Dashboard (ADR-073) -->
+          <div class="card tech-only">
+            <div class="card-header">
+              <h3>
+                📡 Clients WiFi connectés <small id="hotspot-clients-count" class="muted"></small>
+              </h3>
+              <button class="btn btn-secondary" onclick="refreshHotspotDashboard()">
+                🔄 Actualiser
+              </button>
+            </div>
+            <div class="card-body">
+              <div class="table-scroll">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>MAC</th>
+                      <th>Durée</th>
+                      <th>Signal</th>
+                      <th>RX / TX</th>
+                      <th>Paquets RX / TX</th>
+                    </tr>
+                  </thead>
+                  <tbody id="hotspot-clients-tbody">
+                    <tr>
+                      <td colspan="5" class="empty-row">Chargement…</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <div class="card tech-only">
+            <div class="card-header">
+              <h3>🛰️ Journal hostapd <small id="hotspot-events-count" class="muted"></small></h3>
+            </div>
+            <div class="card-body">
+              <p class="hint-text">
+                Événements récents du hotspot (associations, déconnexions, tentatives PSK
+                invalides). Les événements marqués <em>offline</em> ont été bufferisés localement
+                puis rejoués.
+              </p>
+              <div class="table-scroll">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>Date</th>
+                      <th>Événement</th>
+                      <th>Client MAC</th>
+                    </tr>
+                  </thead>
+                  <tbody id="hotspot-events-tbody">
+                    <tr>
+                      <td colspan="3" class="empty-row">Chargement…</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <div class="card tech-only">
+            <div class="card-header">
+              <h3>🔑 Rotation PSK WiFi</h3>
+            </div>
+            <div class="card-body">
+              <p class="hint-text">
+                Génère une nouvelle clé WPA2 pour le hotspot du boîtier. Tous les clients
+                actuellement connectés devront se reconnecter avec la nouvelle clé.
+              </p>
+              <button class="btn btn-warning" onclick="openRotatePskModal()">
+                🔄 Renouveler la PSK
+              </button>
+            </div>
+          </div>
+
+          <!-- Rotate PSK Modal -->
+          <div id="rotate-psk-modal" class="modal-overlay tech-only" style="display: none">
+            <div class="modal-content">
+              <h3>🔑 Renouveler la PSK WiFi</h3>
+              <p>
+                Laissez vide pour générer une clé aléatoire (recommandé), ou saisissez votre propre
+                clé (8 à 63 caractères imprimables ASCII).
+              </p>
+              <input
+                type="text"
+                id="rotate-psk-custom"
+                class="form-input"
+                placeholder="Laisser vide pour générer"
+                autocomplete="off"
+                minlength="8"
+                maxlength="63"
+              />
+              <p class="warning-text">
+                ⚠️ Les clients WiFi seront déconnectés. La nouvelle PSK sera affichée une seule
+                fois.
+              </p>
+              <div id="rotate-psk-result" style="display: none">
+                <p><strong>Nouvelle PSK :</strong></p>
+                <div class="psk-display">
+                  <code id="rotate-psk-new-value"></code>
+                  <button class="btn btn-sm" onclick="copyNewPskToClipboard()">📋 Copier</button>
+                </div>
+              </div>
+              <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="closeRotatePskModal()">Fermer</button>
+                <button
+                  class="btn btn-danger"
+                  onclick="confirmRotatePsk()"
+                  id="rotate-psk-confirm-btn"
+                >
+                  🔄 Renouveler la PSK
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
 
         <!-- Tab: Logs -->
@@ -1182,6 +1299,6 @@
          Chemin relatif obligatoire : la CSP script-src est verrouillee a 'self'. -->
     <script src="/socket.io/socket.io.js"></script>
 
-    <script src="app.js?v=3.176.7"></script>
+    <script src="app.js?v=3.193.9"></script>
   </body>
 </html>
