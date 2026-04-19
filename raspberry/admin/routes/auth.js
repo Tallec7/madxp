@@ -9,10 +9,53 @@
 
 const express = require('express');
 const crypto = require('crypto');
+const { promisify } = require('util');
 const fs = require('fs').promises;
 const path = require('path');
 
 const { NEOPRO_DIR } = require('../helpers');
+
+// ADR-073 S4 — scrypt password hashing with auto-migration from clear text.
+// Format stocké : `scrypt:<salt-hex>:<key-hex>` (64 bytes derived key).
+// scrypt = memory-hard (résistant GPU), disponible dans Node core (pas de dep native à compiler).
+const scryptAsync = promisify(crypto.scrypt);
+const SCRYPT_KEY_LENGTH = 64;
+const SCRYPT_SALT_BYTES = 16;
+
+async function hashPassword(plainPassword) {
+  const salt = crypto.randomBytes(SCRYPT_SALT_BYTES).toString('hex');
+  const derivedKey = await scryptAsync(plainPassword, salt, SCRYPT_KEY_LENGTH);
+  return `scrypt:${salt}:${derivedKey.toString('hex')}`;
+}
+
+async function verifyPassword(plainPassword, storedPassword) {
+  if (!storedPassword) return { match: false, legacy: false };
+  if (!storedPassword.startsWith('scrypt:')) {
+    // Legacy clear-text — comparaison simple, déclenche auto-migration côté caller
+    return { match: plainPassword === storedPassword, legacy: true };
+  }
+  const parts = storedPassword.split(':');
+  if (parts.length !== 3) return { match: false, legacy: false };
+  const [, salt, keyHex] = parts;
+  try {
+    const derivedKey = await scryptAsync(plainPassword, salt, SCRYPT_KEY_LENGTH);
+    const storedBuf = Buffer.from(keyHex, 'hex');
+    if (storedBuf.length !== derivedKey.length) return { match: false, legacy: false };
+    return { match: crypto.timingSafeEqual(storedBuf, derivedKey), legacy: false };
+  } catch (error) {
+    console.error('[auth] scrypt verify error:', error.message);
+    return { match: false, legacy: false };
+  }
+}
+
+async function persistHashedPassword(hashedPassword) {
+  const configPath = path.join(NEOPRO_DIR, 'webapp', 'configuration.json');
+  const data = await fs.readFile(configPath, 'utf8');
+  const config = JSON.parse(data);
+  if (!config.auth) config.auth = {};
+  config.auth.password = hashedPassword;
+  await fs.writeFile(configPath, JSON.stringify(config, null, 2));
+}
 
 const router = express.Router();
 
@@ -460,10 +503,23 @@ router.post('/api/auth/login', async (req, res) => {
     });
   }
 
-  if (password !== adminPassword) {
+  // ADR-073 S4 — scrypt verify + auto-migration des mots de passe en clair
+  const { match, legacy } = await verifyPassword(password, adminPassword);
+  if (!match) {
     recordFailedAttempt(clientIp);
     console.log('[auth] Failed login attempt');
     return res.status(401).json({ success: false, error: 'Mot de passe incorrect' });
+  }
+
+  if (legacy) {
+    try {
+      const hashed = await hashPassword(password);
+      await persistHashedPassword(hashed);
+      console.log('[auth] Legacy clear-text password migrated to scrypt hash');
+    } catch (error) {
+      console.error('[auth] Failed to migrate clear-text password to scrypt:', error.message);
+      // Ne pas échouer le login — la migration retentera au prochain succès
+    }
   }
 
   clearLoginAttempts(clientIp);
@@ -520,18 +576,16 @@ router.post('/api/auth/change-password', async (req, res) => {
   }
 
   const adminPassword = await getAdminPassword();
-  if (currentPassword !== adminPassword) {
+  const { match } = await verifyPassword(currentPassword, adminPassword);
+  if (!match) {
     return res.status(401).json({ success: false, error: 'Mot de passe actuel incorrect' });
   }
 
   try {
-    const configPath = path.join(NEOPRO_DIR, 'webapp', 'configuration.json');
-    const data = await fs.readFile(configPath, 'utf8');
-    const config = JSON.parse(data);
-    if (!config.auth) config.auth = {};
-    config.auth.password = newPassword;
-    await fs.writeFile(configPath, JSON.stringify(config, null, 2));
-    console.log('[auth] Password changed successfully');
+    // ADR-073 S4 — on stocke toujours le hash scrypt, jamais le plaintext
+    const hashed = await hashPassword(newPassword);
+    await persistHashedPassword(hashed);
+    console.log('[auth] Password changed successfully (stored as scrypt hash)');
     res.json({ success: true });
   } catch (error) {
     console.error('[auth] Failed to change password:', error.message);

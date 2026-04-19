@@ -23,7 +23,18 @@ NC='\033[0m' # No Color
 
 # Configuration par défaut
 CLUB_NAME="${1:-DEMO}"
-WIFI_PASSWORD="${2:-NeoProWiFi2025}"
+# ADR-073 S1 — plus de PSK hardcodé "NeoProWiFi2025" (connu du public via repo).
+# Si omis, on génère un mot de passe aléatoire fort via openssl (16 bytes = 22 chars base64).
+# Le PSK généré est loggé dans /var/log/neopro-install-*.log ET stocké dans club-config.json (chmod 600).
+if [ -n "${2:-}" ]; then
+    WIFI_PASSWORD="$2"
+    WIFI_PASSWORD_GENERATED="false"
+else
+    # openssl rand-base64 16 → ~22 chars [A-Za-z0-9+/=] qui satisfait les 8-63 chars WPA2
+    # On strippe les /, + et = pour éviter les soucis de sed/config manuelle
+    WIFI_PASSWORD="$(openssl rand -base64 16 | tr -d '/+=' | head -c 16)Neo"
+    WIFI_PASSWORD_GENERATED="true"
+fi
 INSTALL_DIR="/home/pi/neopro"
 NODE_VERSION="18"
 WIFI_INTERFACE=""
@@ -1225,7 +1236,12 @@ print_summary() {
     echo -e "${BLUE}Configuration du système:${NC}"
     echo "  • Nom du club: ${CLUB_NAME}"
     echo "  • WiFi SSID: NEOPRO-${CLUB_NAME}"
-    echo "  • WiFi Password: ${WIFI_PASSWORD}"
+    if [ "${WIFI_PASSWORD_GENERATED:-false}" = "true" ]; then
+        echo -e "  • WiFi Password: ${YELLOW}${WIFI_PASSWORD}${NC} ${GREEN}(généré aléatoirement — ADR-073 S1)${NC}"
+        echo -e "    ${YELLOW}⚠ Notez ce mot de passe — il est aussi sauvegardé dans ${INSTALL_DIR}/club-config.json (chmod 600)${NC}"
+    else
+        echo "  • WiFi Password: ${WIFI_PASSWORD}"
+    fi
     echo "  • IP du Raspberry: 192.168.4.1"
     echo "  • URL locale: http://neopro.local"
     echo "  • Répertoire: ${INSTALL_DIR}"

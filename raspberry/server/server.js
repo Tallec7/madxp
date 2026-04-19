@@ -1,5 +1,6 @@
 const express = require('express');
 const http = require('http');
+const fs = require('fs');
 const socketIO = require('socket.io');
 
 const {
@@ -75,6 +76,41 @@ const io = socketIO(server, {
   pingInterval: 10000,
   pingTimeout: 5000,
   transports: ['websocket', 'polling'],
+});
+
+// ---------------------------------------------------------------------------
+// ADR-073 S2 — Socket.IO handshake auth (opt-in, backward-compat)
+// ---------------------------------------------------------------------------
+// Si `security.socketAuthToken` est défini dans configuration.json, tous les clients
+// doivent passer ce token via `auth: { token }` (Socket.IO v4) ou query `?token=`.
+// Sinon (champ absent/null), pas d'auth (legacy, compat avec les remotes existantes).
+// Cache 5s pour éviter de relire le fichier à chaque connexion (rotation OK via config reload).
+let _socketAuthTokenCache = { value: null, loadedAt: 0 };
+function getSocketAuthToken() {
+  const now = Date.now();
+  if (now - _socketAuthTokenCache.loadedAt < 5000) return _socketAuthTokenCache.value;
+  try {
+    const raw = fs.readFileSync(CONFIG_PATH, 'utf8');
+    const cfg = JSON.parse(raw);
+    const token = cfg.security?.socketAuthToken || null;
+    _socketAuthTokenCache = { value: token, loadedAt: now };
+    return token;
+  } catch {
+    _socketAuthTokenCache = { value: null, loadedAt: now };
+    return null;
+  }
+}
+
+io.use((socket, next) => {
+  const required = getSocketAuthToken();
+  if (!required) return next();
+  const provided = socket.handshake.auth?.token || socket.handshake.query?.token;
+  if (provided && typeof provided === 'string' && provided === required) {
+    return next();
+  }
+  const addr = socket.handshake.address;
+  console.warn(`[socket-auth] Rejected connection from ${addr} (missing/invalid token)`);
+  return next(new Error('auth required'));
 });
 
 // Auth service needs io reference for broadcasting config reload

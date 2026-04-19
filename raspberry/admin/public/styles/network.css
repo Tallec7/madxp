@@ -301,4 +301,52 @@
   justify-content: flex-end;
 }
 
+/* Hotspot Dashboard (ADR-073) */
+.empty-row {
+  text-align: center;
+  color: var(--text-secondary);
+  font-style: italic;
+  padding: 16px !important;
+}
+
+.muted {
+  color: var(--text-secondary);
+  font-weight: normal;
+  font-size: 13px;
+  margin-left: 8px;
+}
+
+.table-scroll {
+  max-height: 360px;
+  overflow-y: auto;
+}
+
+.psk-display {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: var(--bg-tertiary);
+  border-radius: 6px;
+  margin: 8px 0;
+}
+
+.psk-display code {
+  flex: 1;
+  font-size: 16px;
+  font-family: monospace;
+  letter-spacing: 1px;
+  word-break: break-all;
+}
+
+.badge-warning {
+  display: inline-block;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 11px;
+  background: #f59e0b;
+  color: #fff;
+  margin-left: 4px;
+}
+
 /* Responsive WiFi */

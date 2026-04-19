@@ -201,9 +201,12 @@ module.exports = function createVideosRouter({ videoService, videoProcessingServ
   });
 
   // Delete a video
+  // ADR-073 S5 : path.basename() strippe tout segment `../` sur category+filename
   router.delete('/api/videos/:category/:filename', async (req, res) => {
     try {
-      const result = await videoService.deleteVideo(req.params.category, req.params.filename);
+      const safeCategory = path.basename(req.params.category);
+      const safeFilename = path.basename(req.params.filename);
+      const result = await videoService.deleteVideo(safeCategory, safeFilename);
       res.json({ success: true, message: 'Vidéo supprimée', path: result.path });
     } catch (error) {
       if (error instanceof LockedError) {

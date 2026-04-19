@@ -12,6 +12,7 @@
  */
 
 const express = require('express');
+const path = require('path');
 
 const { NotFoundError, ValidationError, CommandError } = require('../services/errors');
 
@@ -52,10 +53,13 @@ module.exports = function createBackupRouter({ backupService }) {
   });
 
   // GET /api/backups/download/:filename
+  // ADR-073 S5 : defense-in-depth — path.basename() strippe tout ../ avant
+  // que le service n'applique sa regex /^backup-\d{8}-\d{6}\.tar\.gz$/.
   router.get('/api/backups/download/:filename', async (req, res) => {
     try {
-      const backupPath = await backupService.getBackupPath(req.params.filename);
-      res.download(backupPath, req.params.filename);
+      const safeName = path.basename(req.params.filename);
+      const backupPath = await backupService.getBackupPath(safeName);
+      res.download(backupPath, safeName);
     } catch (error) {
       handleError(res, error);
     }
@@ -64,7 +68,8 @@ module.exports = function createBackupRouter({ backupService }) {
   // DELETE /api/backups/:filename
   router.delete('/api/backups/:filename', async (req, res) => {
     try {
-      await backupService.deleteBackup(req.params.filename);
+      const safeName = path.basename(req.params.filename);
+      await backupService.deleteBackup(safeName);
       res.json({ success: true, message: 'Backup supprimé' });
     } catch (error) {
       handleError(res, error);

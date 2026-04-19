@@ -18,6 +18,7 @@
  */
 
 const express = require('express');
+const path = require('path');
 const { NotFoundError, LockedError, ValidationError, DuplicateError } = require('../services/errors');
 
 /**
@@ -134,9 +135,11 @@ module.exports = function createSponsorsRouter({ sponsorService, sponsorStatsSer
   });
 
   // Unlink video from sponsor
+  // ADR-073 S5 : path.basename() défensif sur :filename avant passage au service
   router.delete('/api/sponsors/:localId/videos/:filename', async (req, res) => {
     try {
-      const sponsor = await sponsorService.unlinkVideo(req.params.localId, req.params.filename);
+      const safeFilename = path.basename(req.params.filename);
+      const sponsor = await sponsorService.unlinkVideo(req.params.localId, safeFilename);
       res.json({ sponsor });
     } catch (error) {
       handleError(res, error);

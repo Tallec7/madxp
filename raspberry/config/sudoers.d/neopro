@@ -1,10 +1,18 @@
 # /etc/sudoers.d/neopro
-# Permissions sudo ciblées pour l'utilisateur pi (sync-agent Neopro)
+# Permissions sudo ciblées pour l'utilisateur pi (sync-agent + admin-server Neopro)
 # Installé automatiquement via OTA, admin-server et deploy-remote.sh
 #
-# Principe : le sync-agent tourne en User=pi mais doit gérer
-# les services systemd, le réseau wifi, et les mises à jour.
-# Plutôt que NOPASSWD: ALL, on restreint aux commandes nécessaires.
+# Principe : le sync-agent et admin-server tournent en User=pi mais doivent gérer
+# services systemd, réseau wifi et mises à jour. Plutôt que NOPASSWD: ALL,
+# on restreint aux commandes strictement nécessaires.
+#
+# ADR-073 S6 — durcissement des wildcards :
+#   - modprobe limité aux drivers WiFi connus (USB + interne)
+#   - scripts shell : whitelist explicite des scripts réellement appelés runtime
+#   - cp/mv /tmp/neopro-* : destinations spécifiques (plus de wildcard côté dest)
+#   - apt install : wildcard conservé (OTA installe des paquets dynamiquement via
+#     ota-install.js — whitelist impossible sans casser la récupération de paquets
+#     manquants — mitigé par sanitisation des noms de paquets côté sync-agent)
 
 # --- Services systemd ---
 pi ALL=(ALL) NOPASSWD: /usr/bin/systemctl stop neopro-*
@@ -40,9 +48,29 @@ pi ALL=(ALL) NOPASSWD: /sbin/iwlist wlan0 scan
 pi ALL=(ALL) NOPASSWD: /sbin/dhclient wlan1
 pi ALL=(ALL) NOPASSWD: /usr/sbin/rfkill unblock wifi
 pi ALL=(ALL) NOPASSWD: /sbin/ip link set wlan1 *
+pi ALL=(ALL) NOPASSWD: /sbin/ip link set wlan1 down
 pi ALL=(ALL) NOPASSWD: /sbin/ip addr add 192.168.4.1/24 dev wlan0
 pi ALL=(ALL) NOPASSWD: /sbin/ip link set wlan0 up
-pi ALL=(ALL) NOPASSWD: /sbin/modprobe *
+# ADR-073 S6 — modprobe limité aux drivers WiFi USB et interne connus
+# (rtl* = Realtek USB, 8188eu/8192eu = legacy, mt76* = MediaTek USB, brcmfmac = Pi interne)
+pi ALL=(ALL) NOPASSWD: /sbin/modprobe rtl8192eu
+pi ALL=(ALL) NOPASSWD: /sbin/modprobe -r rtl8192eu
+pi ALL=(ALL) NOPASSWD: /sbin/modprobe rtl8xxxu
+pi ALL=(ALL) NOPASSWD: /sbin/modprobe -r rtl8xxxu
+pi ALL=(ALL) NOPASSWD: /sbin/modprobe rtl88XXau
+pi ALL=(ALL) NOPASSWD: /sbin/modprobe -r rtl88XXau
+pi ALL=(ALL) NOPASSWD: /sbin/modprobe 8188eu
+pi ALL=(ALL) NOPASSWD: /sbin/modprobe -r 8188eu
+pi ALL=(ALL) NOPASSWD: /sbin/modprobe 8192eu
+pi ALL=(ALL) NOPASSWD: /sbin/modprobe -r 8192eu
+pi ALL=(ALL) NOPASSWD: /sbin/modprobe mt7601u
+pi ALL=(ALL) NOPASSWD: /sbin/modprobe -r mt7601u
+pi ALL=(ALL) NOPASSWD: /sbin/modprobe mt76x0u
+pi ALL=(ALL) NOPASSWD: /sbin/modprobe -r mt76x0u
+pi ALL=(ALL) NOPASSWD: /sbin/modprobe mt76x2u
+pi ALL=(ALL) NOPASSWD: /sbin/modprobe -r mt76x2u
+pi ALL=(ALL) NOPASSWD: /sbin/modprobe brcmfmac
+pi ALL=(ALL) NOPASSWD: /sbin/modprobe -r brcmfmac
 pi ALL=(ALL) NOPASSWD: /usr/bin/killall wpa_supplicant
 pi ALL=(ALL) NOPASSWD: /usr/sbin/hostapd_cli *
 pi ALL=(ALL) NOPASSWD: /usr/bin/tee /sys/bus/usb/drivers/usb/*
@@ -56,13 +84,26 @@ pi ALL=(ALL) NOPASSWD: /usr/sbin/udevadm trigger
 pi ALL=(ALL) NOPASSWD: /usr/bin/cp /home/pi/neopro/config/modprobe.d/*.conf /etc/modprobe.d/*
 
 # --- Fichiers de config réseau ---
-pi ALL=(ALL) NOPASSWD: /usr/bin/cat /etc/wpa_supplicant/*
-pi ALL=(ALL) NOPASSWD: /usr/bin/cp /tmp/neopro-* /etc/wpa_supplicant/*
-pi ALL=(ALL) NOPASSWD: /usr/bin/mv /tmp/neopro-* /etc/wpa_supplicant/*
-pi ALL=(ALL) NOPASSWD: /usr/bin/chmod 600 /etc/wpa_supplicant/*
-pi ALL=(ALL) NOPASSWD: /usr/bin/chown root\:root /etc/wpa_supplicant/*
+# ADR-073 S6 — destinations wpa_supplicant restreintes aux fichiers réels
+# (plus de wildcard côté dest — on liste exactement les fichiers attendus)
+pi ALL=(ALL) NOPASSWD: /usr/bin/cat /etc/wpa_supplicant/wpa_supplicant-wlan1.conf
+pi ALL=(ALL) NOPASSWD: /usr/bin/cat /etc/wpa_supplicant/wpa_supplicant.conf
+pi ALL=(ALL) NOPASSWD: /usr/bin/cp /tmp/neopro-wpa.conf /etc/wpa_supplicant/wpa_supplicant-wlan1.conf
+pi ALL=(ALL) NOPASSWD: /usr/bin/cp /tmp/neopro-wpa.conf /etc/wpa_supplicant/wpa_supplicant.conf
+pi ALL=(ALL) NOPASSWD: /usr/bin/mv /tmp/neopro-wpa.conf /etc/wpa_supplicant/wpa_supplicant-wlan1.conf
+pi ALL=(ALL) NOPASSWD: /usr/bin/mv /tmp/neopro-wpa.conf /etc/wpa_supplicant/wpa_supplicant.conf
+pi ALL=(ALL) NOPASSWD: /usr/bin/chmod 600 /etc/wpa_supplicant/wpa_supplicant-wlan1.conf
+pi ALL=(ALL) NOPASSWD: /usr/bin/chmod 600 /etc/wpa_supplicant/wpa_supplicant.conf
+pi ALL=(ALL) NOPASSWD: /usr/bin/chown root\:root /etc/wpa_supplicant/wpa_supplicant-wlan1.conf
+pi ALL=(ALL) NOPASSWD: /usr/bin/chown root\:root /etc/wpa_supplicant/wpa_supplicant.conf
 pi ALL=(ALL) NOPASSWD: /usr/bin/sed -i * /etc/hostapd/hostapd.conf
 pi ALL=(ALL) NOPASSWD: /usr/bin/rm -f /tmp/neopro-*
+
+# --- Déploiement services systemd (backup timer, video-processor) ---
+# ADR-073 S6 — scopé à /etc/systemd/system/ (plus de wildcard côté src)
+pi ALL=(ALL) NOPASSWD: /usr/bin/mv /tmp/neopro-backup.service /etc/systemd/system/neopro-backup.service
+pi ALL=(ALL) NOPASSWD: /usr/bin/mv /tmp/neopro-backup.timer /etc/systemd/system/neopro-backup.timer
+pi ALL=(ALL) NOPASSWD: /usr/bin/mv /tmp/neopro-video-processor.service /etc/systemd/system/neopro-video-processor.service
 
 # --- Permissions fichiers (chown pi:pi sur /home/pi/neopro/) ---
 pi ALL=(ALL) NOPASSWD: /usr/bin/chown -R pi\:pi /home/pi/neopro/*
@@ -76,6 +117,10 @@ pi ALL=(ALL) NOPASSWD: /usr/bin/journalctl -u neopro-* *
 pi ALL=(ALL) NOPASSWD: /usr/bin/journalctl -u wpa_supplicant* *
 
 # --- Gestion des paquets (apt) ---
+# ADR-073 S6 — wildcard conservé : ota-install.js (commands/ota-install.js:504)
+# appelle apt install avec des paquets dynamiques lors de l'OTA (fix-paquets manquants).
+# Whitelist impossible sans casser la récupération. Mitigation : sync-agent sanitise
+# les noms de paquets avant exec.
 pi ALL=(ALL) NOPASSWD: /usr/bin/apt-get update
 pi ALL=(ALL) NOPASSWD: /usr/bin/apt-get install *
 pi ALL=(ALL) NOPASSWD: /usr/bin/apt-get -y install *
@@ -86,6 +131,21 @@ pi ALL=(ALL) NOPASSWD: /usr/bin/dpkg --configure -a
 
 # --- Système ---
 pi ALL=(ALL) NOPASSWD: /usr/sbin/reboot
+pi ALL=(ALL) NOPASSWD: /usr/sbin/shutdown -r +0
 
 # --- Scripts Neopro ---
-pi ALL=(ALL) NOPASSWD: /home/pi/neopro/scripts/*
+# ADR-073 S6 — whitelist explicite (plus de wildcard /home/pi/neopro/scripts/*)
+# Seuls les scripts réellement invoqués via sudo au runtime sont listés.
+# Les autres scripts (setup/diagnostic) sont invoqués par l'opérateur en SSH
+# avec password, ou par systemd en User=root (pas besoin de NOPASSWD).
+pi ALL=(ALL) NOPASSWD: /usr/bin/bash /home/pi/neopro/scripts/fix-hotspot.sh --json
+pi ALL=(ALL) NOPASSWD: /usr/bin/bash /home/pi/neopro/scripts/fix-hotspot.sh --json --auto-fix
+pi ALL=(ALL) NOPASSWD: /bin/bash /home/pi/neopro/scripts/fix-hotspot.sh --json
+pi ALL=(ALL) NOPASSWD: /bin/bash /home/pi/neopro/scripts/fix-hotspot.sh --json --auto-fix
+pi ALL=(ALL) NOPASSWD: /home/pi/neopro/scripts/fix-hotspot.sh --json
+pi ALL=(ALL) NOPASSWD: /home/pi/neopro/scripts/fix-hotspot.sh --json --auto-fix
+pi ALL=(ALL) NOPASSWD: /home/pi/neopro/scripts/validate-pi.sh --json
+pi ALL=(ALL) NOPASSWD: /home/pi/neopro/scripts/setup-captive-portal-iptables.sh
+pi ALL=(ALL) NOPASSWD: /home/pi/neopro/scripts/auto-backup.sh
+pi ALL=(ALL) NOPASSWD: /usr/bin/bash /home/pi/neopro/scripts/auto-backup.sh
+pi ALL=(ALL) NOPASSWD: /bin/bash /home/pi/neopro/scripts/auto-backup.sh
