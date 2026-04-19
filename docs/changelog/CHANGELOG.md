@@ -1,3 +1,9 @@
+## [3.193.5](https://github.com/Tallec7/neopro/compare/v3.193.4...v3.193.5) (2026-04-19)
+
+### Bug Fixes
+
+- **ci:** db-backup prepend PG18 bin to PATH ([#477](https://github.com/Tallec7/neopro/issues/477)) ([1f14daa](https://github.com/Tallec7/neopro/commit/1f14daa4e0346435bb6768bf78daa92b760401bd)), closes [#1](https://github.com/Tallec7/neopro/issues/1)
+
 ## [3.193.4](https://github.com/Tallec7/neopro/compare/v3.193.3...v3.193.4) (2026-04-19)
 
 ### Bug Fixes
