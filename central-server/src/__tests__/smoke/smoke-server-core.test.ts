@@ -481,6 +481,8 @@ describe('CORS headers', () => {
     expect(allowedHeaders).toContain('Authorization');
     expect(allowedHeaders).toContain('Content-Type');
     expect(allowedHeaders).toContain('X-Correlation-ID');
+    // ADR-058: remote PIN auth header must pass CORS preflight
+    expect(allowedHeaders).toContain('X-Remote-Token');
   });
 
   it('reflects origin in test mode (no ALLOWED_ORIGINS)', async () => {

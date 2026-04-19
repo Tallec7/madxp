@@ -92,6 +92,7 @@ Adopter un modèle **PIN par profil** avec **tokens par appareil révocables** :
 ### Phase 1.1 — Cloud Remote UI (intégration côté télécommande)
 
 - `central-server/src/controllers/remote.controller.ts` — `getRemoteState` expose `profiles[]`, `activeProfileId` et `authenticatedProfileId` ; agrégation `pinRequired = legacy || anyProfilePinRequired` ; décodage dual legacy/profile du `x-remote-token`.
+- `central-server/src/server.ts` — `X-Remote-Token` listé dans `Access-Control-Allow-Headers` (sans ça, le preflight CORS bloque les `fetch` cross-origin qui portent le PIN — cf. smoke `smoke-server-core` test "OPTIONS includes allowed headers").
 - `central-server/src/repositories/config-profile.repository.ts` — `findProfilesMetadata` ajoute `COALESCE(remote_pin_required, false)` pour exposer le flag PIN par profil.
 - `central-dashboard/src/app/features/remote/cloud-remote.component.{ts,html}` — sélecteur de profil visible quand ≥2 profils ; dispatche vers `verifyProfilePin(siteId, profileId, pin)` quand le profil sélectionné requiert un PIN, sinon fallback legacy `verifyPin(siteId, pin)` ; sync automatique du profil sélectionné via `syncProfilesFromState` (priorité : authenticated → active → premier-avec-PIN → premier) ; `setCurrentProfileContext` après succès pour que les commandes suivantes héritent du token.
 
