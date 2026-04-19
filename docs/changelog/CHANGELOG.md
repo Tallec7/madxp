@@ -1,3 +1,9 @@
+## [3.192.6](https://github.com/Tallec7/neopro/compare/v3.192.5...v3.192.6) (2026-04-19)
+
+### Bug Fixes
+
+- **dashboard:** disable broken SW + ship sw.js as kill-switch to purge stale caches ([da548c9](https://github.com/Tallec7/neopro/commit/da548c9ced8f5d275a54b62da359a1e8b2bc0f5c))
+
 ## [3.192.5](https://github.com/Tallec7/neopro/compare/v3.192.4...v3.192.5) (2026-04-18)
 
 ### Bug Fixes
