@@ -45,6 +45,7 @@
 41. [Taille vidéo affichée "-" au lieu de la vraie taille (v3.127.7+)](#taille-vidéo-affichée---au-lieu-de-la-vraie-taille-v31277)
 42. [Dashboard 403 après deploy FTP réussi (v3.158.2+)](#dashboard-403-ftp)
 43. [Admin UI — CSP bloque Socket.IO cross-origin (v3.176.8+)](#admin-ui--csp-bloque-socketio-cross-origin-v317680)
+44. [Workflow db-backup GitHub Actions échoue (post migration Railway)](#workflow-db-backup-github-actions-échoue-post-migration-railway)
 
 > **WiFi USB** : Pour un guide complet sur la clé WiFi USB (installation, diagnostic, pannes, recovery), voir [WIFI_USB_GUIDE.md](WIFI_USB_GUIDE.md).
 >
@@ -6577,3 +6578,40 @@ Les 16 tests de `raspberry/admin/__tests__/socket-proxy.test.js` garantissent qu
 - `pingSocketServer` retourne `reachable: false` (et ne throw pas) quand l'upstream est down
 
 **Voir aussi :** `.claude/rules/raspberry.md` section "Admin Server (:8080) & Socket.IO proxy", [ARCHITECTURE.md](../technical/ARCHITECTURE.md#admin-ui--socketio-reverse-proxy-same-origin)
+
+---
+
+## Workflow db-backup GitHub Actions échoue (post migration Railway)
+
+### Symptômes
+
+Le workflow [`.github/workflows/db-backup.yml`](../../.github/workflows/db-backup.yml) échoue sur une des 7 étapes (Install PG client, Dump, Sanity check, Upload FTP, Mirror Supabase, Verify checksums, Summary).
+
+### Cause + fix selon l'étape qui fail
+
+| Étape qui fail                | Cause racine                                                                                                                                  | Fix                                                                                                                                                                       |
+| ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Dump Railway production**   | `pg_dump version: 16.x ≠ server 18.x` : Ubuntu runners ont `postgresql-client-16` préinstallé et pris en priorité.                            | Vérifier que `echo "/usr/lib/postgresql/18/bin" >> $GITHUB_PATH` est présent dans l'étape Install.                                                                        |
+| **Sanity check dump size**    | Dump < 1 MB : soit `RAILWAY_PROD_URL` pointe sur une DB vide, soit pg_dump a silencieusement échoué (permissions, perte de réseau).           | Vérifier le secret `RAILWAY_PROD_URL` (URL **publique** rlwy.net — l'URL interne `.railway.internal` n'est pas joignable depuis GH Actions).                              |
+| **Upload to Hostinger FTP**   | `Certificate verification: common name doesn't match` : Hostinger utilise un cert mutualisé.                                                  | Le workflow force `set ssl:verify-certificate no; set ftp:ssl-allow no;` via `$LFTP_OPTS`. Ne pas retirer.                                                                |
+| **Upload to Hostinger FTP**   | `cls: unrecognized option '--date-format'` : option retirée dans lftp récent.                                                                 | Ne pas réintroduire de `cls --date-format`. La purge >30j se fait via `grep -oE 'neopro_[0-9]{8}_[0-9]{6}\.dump'` sur la liste `cls -l`.                                  |
+| **Mirror to Supabase**        | `duplicate key value violates unique constraint "schema_migrations_pkey"` : `DROP SCHEMA public` ne touche pas `supabase_migrations`.         | Le workflow drope aussi `supabase_migrations` avant restore. Ne pas retirer cette ligne du SQL de wipe.                                                                   |
+| **Mirror to Supabase**        | `::error::Restore incomplet — seulement X/4 tables critiques présentes` : restore silencieusement partiel (search_path, perms Supabase).      | C'est le **garde-fou volontaire**. Lire `restore.log` affiché au-dessus, vérifier les secrets, relancer. Si ça persiste → check l'état du projet Supabase (pause, quota). |
+| **Verify checksums**          | `relation "sites" does not exist` côté Supabase : search_path du user Supabase ne contient pas `public`.                                      | Les noms de tables sont schema-qualifiés (`public.sites`). Vérifier que le restore a bien créé les tables dans `public`.                                                  |
+| **Verify checksums mismatch** | Dérive données entre Railway et Supabase : **réel mismatch** (écriture sur Supabase depuis une autre source, ou restore partiel non détecté). | Investiguer le diff, comparer les row counts. Si Supabase est authoritative → rollback possible. Sinon re-triggerer le workflow.                                          |
+
+### Re-trigger manuel
+
+```bash
+gh workflow run db-backup.yml --ref main
+gh run list --workflow=db-backup.yml --limit 3
+gh run view <RUN_ID> --log-failed
+```
+
+### Règle opérationnelle
+
+> Si **2 runs consécutifs échouent**, on est en RPO > 48h → investiguer immédiatement. Le workflow envoie un email automatique à l'auteur du commit schedule ou au dernier déclencheur manuel (comportement GitHub par défaut).
+
+### Référence
+
+Voir [ADR-070](../adr/ADR-070-migration-postgres-railway-backup-strategy.md) pour la stratégie de backup triangulaire complète.

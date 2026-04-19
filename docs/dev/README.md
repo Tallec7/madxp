@@ -26,7 +26,7 @@ Ce dossier contient la documentation destinée aux développeurs du projet.
 
 - Node.js 20+
 - Angular CLI 20.3.3
-- PostgreSQL (via Supabase)
+- PostgreSQL 18 (via Railway — cf. ADR-070)
 
 ### Installation
 
@@ -38,7 +38,7 @@ cd neopro
 # Copier la configuration
 cp .env.example .env
 
-# Éditer avec vos valeurs Supabase
+# Éditer avec vos valeurs Railway (DATABASE_URL)
 nano .env
 
 # Installer les dépendances

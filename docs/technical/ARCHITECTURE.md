@@ -295,7 +295,7 @@ neopro/ (monorepo)
         │                          │
         ▼                          ▼
 ┌──────────────┐          ┌──────────────┐
-│ sync-agent   │───API───▶│  Supabase    │
+│ sync-agent   │───API───▶│   Railway    │
 │ (Node.js)    │          │ (PostgreSQL) │
 └──────────────┘          └──────────────┘
         │
@@ -523,15 +523,15 @@ Pi Frontend (ProfileConfigService — sélection locale via télécommande)
 
 ## Technologies par composant
 
-| Composant              | Stack                                                                  | Base de données                               | Déploiement            |
-| ---------------------- | ---------------------------------------------------------------------- | --------------------------------------------- | ---------------------- |
-| `raspberry/src`        | Angular 20, native HTML5 video (double-buffer), Socket.IO client       | -                                             | Raspberry Pi (systemd) |
-| `raspberry/server`     | Node.js, Socket.IO 4.8                                                 | -                                             | Raspberry Pi (systemd) |
-| `raspberry/admin`      | Express, vanilla JS (dual mode: club/tech)                             | -                                             | Raspberry Pi (systemd) |
-| `raspberry/sync-agent` | Node.js 20, Axios, SHA256 checksum                                     | -                                             | Raspberry Pi (systemd) |
-| `central-server`       | Node.js 20+, Express 4.18, TypeScript 5.9, Winston, Repository Pattern | Supabase (PostgreSQL), FTP Hostinger (vidéos) | Railway                |
-| `central-dashboard`    | Angular 20.3, Chart.js 4.5, Leaflet, Angular CDK (DragDrop)            | -                                             | Hostinger (static)     |
-| `e2e`                  | Playwright                                                             | -                                             | CI/CD                  |
+| Composant              | Stack                                                                  | Base de données                                                      | Déploiement            |
+| ---------------------- | ---------------------------------------------------------------------- | -------------------------------------------------------------------- | ---------------------- |
+| `raspberry/src`        | Angular 20, native HTML5 video (double-buffer), Socket.IO client       | -                                                                    | Raspberry Pi (systemd) |
+| `raspberry/server`     | Node.js, Socket.IO 4.8                                                 | -                                                                    | Raspberry Pi (systemd) |
+| `raspberry/admin`      | Express, vanilla JS (dual mode: club/tech)                             | -                                                                    | Raspberry Pi (systemd) |
+| `raspberry/sync-agent` | Node.js 20, Axios, SHA256 checksum                                     | -                                                                    | Raspberry Pi (systemd) |
+| `central-server`       | Node.js 20+, Express 4.18, TypeScript 5.9, Winston, Repository Pattern | Railway PostgreSQL 18 (interne, cf. ADR-070), FTP Hostinger (vidéos) | Railway                |
+| `central-dashboard`    | Angular 20.3, Chart.js 4.5, Leaflet, Angular CDK (DragDrop)            | -                                                                    | Hostinger (static)     |
+| `e2e`                  | Playwright                                                             | -                                                                    | CI/CD                  |
 
 ---
 
@@ -1244,7 +1244,7 @@ TV lente à négocier l'EDID : 3 tentatives espacées de 2s avant de passer à l
 
 - Central Server : Multi-instance (Render)
 - Socket Server : Sticky sessions (Redis adapter)
-- Database : Supabase managed scaling
+- Database : Railway Postgres Hobby → upgrade Pro si latence dégradée (cf. ADR-015, ADR-070)
 
 ### Vertical
 
