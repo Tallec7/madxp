@@ -54,18 +54,18 @@ jobs:
           FTP_USER: ${{ secrets.HOSTINGER_FTP_USERNAME }}
           FTP_PASSWORD: ${{ secrets.HOSTINGER_FTP_PASSWORD }}
         run: |
+          # Hostinger FTP : désactive verify cert (common name mismatch) et force plain FTP
+          export LFTP_OPTS="set ssl:verify-certificate no; set ftp:ssl-allow no;"
           lftp -u "$FTP_USER","$FTP_PASSWORD" "$FTP_HOST" <<EOF
-            set ftp:ssl-allow no
+            $LFTP_OPTS
             mkdir -p /db-backups || true
             cd /db-backups
             put $DUMP_FILE
-            # Retention 30 jours : supprime *.dump plus vieux que 30 jours
-            cls -1 --date-format='%Y%m%d' > /tmp/ftp-list.txt || true
             bye
           EOF
 
           # Purge FTP : on liste puis delete les dumps vieux de >30j
-          lftp -u "$FTP_USER","$FTP_PASSWORD" "$FTP_HOST" -e "cd /db-backups; cls -l; bye" > /tmp/ftp-ls.txt
+          lftp -u "$FTP_USER","$FTP_PASSWORD" "$FTP_HOST" -e "$LFTP_OPTS cd /db-backups; cls -l; bye" > /tmp/ftp-ls.txt
           cat /tmp/ftp-ls.txt
 
           CUTOFF=$(date -d '30 days ago' +%Y%m%d)
@@ -73,7 +73,7 @@ jobs:
             DATE=$(echo "$F" | sed -E 's/neopro_([0-9]{8})_.*/\1/')
             if [ "$DATE" -lt "$CUTOFF" ]; then
               echo "Deleting old backup: $F"
-              lftp -u "$FTP_USER","$FTP_PASSWORD" "$FTP_HOST" -e "cd /db-backups; rm $F; bye" || true
+              lftp -u "$FTP_USER","$FTP_PASSWORD" "$FTP_HOST" -e "$LFTP_OPTS cd /db-backups; rm $F; bye" || true
             fi
           done
 
