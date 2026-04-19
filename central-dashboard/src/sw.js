@@ -2,21 +2,20 @@
  * Service Worker Neopro Dashboard — PWA Phase A (installable, sans cache).
  *
  * Objectif : permettre l'installation du dashboard comme app (icône bureau/mobile,
- * splash screen, mode standalone) SANS stratégie de cache offline. Chrome exige
- * un SW enregistré AVEC un listener 'fetch' pour afficher le prompt d'installation.
+ * splash screen, mode standalone) SANS stratégie de cache offline.
  *
- * Ce SW se contente d'exister : le fetch listener laisse tout passer au browser
- * (pas de cache, pas d'offline). Zéro risque de stale content ou de users coincés
- * sur une vieille version — chaque requête va directement au réseau.
+ * Depuis Chrome 89 (2021), le prompt d'installation PWA ne requiert plus de
+ * fetch handler — un SW enregistré + un manifest valide suffisent. On évite
+ * donc le listener 'fetch' no-op (overhead inutile sur chaque navigation).
  *
- * À l'activation, tous les anciens caches (kill-switch précédent ou SW v1 avec
- * caching) sont purgés pour garantir un état propre.
+ * À l'activation, tous les anciens caches sont purgés pour garantir un état
+ * propre chez les users migrant depuis le SW v1 (caching) ou le kill-switch.
  *
  * Pour activer le vrai mode offline/cache plus tard : remplacer ce SW par une
  * version versionnée (voir git log) avec stratégies par type d'asset.
  */
 
-const VERSION = 'neopro-installable-v1';
+const VERSION = 'neopro-installable-v2';
 
 self.addEventListener('install', () => {
   self.skipWaiting();
@@ -30,10 +29,4 @@ self.addEventListener('activate', (event) => {
       await self.clients.claim();
     })(),
   );
-});
-
-// Fetch listener requis par Chrome pour la popup d'installation.
-// Pass-through : aucune interception, comportement réseau standard.
-self.addEventListener('fetch', () => {
-  // no-op
 });
