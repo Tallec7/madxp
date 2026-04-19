@@ -21,7 +21,9 @@ jobs:
           wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo apt-key add -
           sudo apt-get update -qq
           sudo apt-get install -y postgresql-client-18 lftp
-          pg_dump --version
+          # Ubuntu runners ont postgresql-client-16 preinstalle : prioriser PG18 via PATH
+          echo "/usr/lib/postgresql/18/bin" >> $GITHUB_PATH
+          /usr/lib/postgresql/18/bin/pg_dump --version
 
       - name: Dump Railway production
         env:
