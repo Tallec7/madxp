@@ -20,16 +20,16 @@
 
 ## Stack
 
-| Composant          | Technologies                                                   |
-| ------------------ | -------------------------------------------------------------- |
-| Frontend Raspberry | Angular 20, Socket.IO client, SCSS                             |
-| Frontend Dashboard | Angular 20, Chart.js, Leaflet, Standalone Components           |
-| Backend API        | Node.js 20+, Express 4.18, TypeScript strict                   |
-| Base de données    | PostgreSQL 15 (Supabase Transaction Mode, port 6543) - Pool: 5 |
-| Stockage           | FTP Hostinger (unifié via `storage.service.ts`)                |
-| Auth               | JWT HttpOnly cookie + Bearer token + MFA (TOTP)                |
-| Hébergement        | Railway (API, Dockerfile node:20-slim), Hostinger (Dashboard)  |
-| Tests              | Jest + Supertest (API), Karma (Angular), Playwright (E2E)      |
+| Composant          | Technologies                                                       |
+| ------------------ | ------------------------------------------------------------------ |
+| Frontend Raspberry | Angular 20, Socket.IO client, SCSS                                 |
+| Frontend Dashboard | Angular 20, Chart.js, Leaflet, Standalone Components               |
+| Backend API        | Node.js 20+, Express 4.18, TypeScript strict                       |
+| Base de données    | PostgreSQL 18 (Railway interne, port 5432) - Pool: 5 - cf. ADR-070 |
+| Stockage           | FTP Hostinger (unifié via `storage.service.ts`)                    |
+| Auth               | JWT HttpOnly cookie + Bearer token + MFA (TOTP)                    |
+| Hébergement        | Railway (API, Dockerfile node:20-slim), Hostinger (Dashboard)      |
+| Tests              | Jest + Supertest (API), Karma (Angular), Playwright (E2E)          |
 
 ## Rôles utilisateurs
 

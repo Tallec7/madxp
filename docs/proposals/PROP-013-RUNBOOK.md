@@ -175,6 +175,94 @@ Je crée ces fichiers dans `/tmp/neopro-migration/` :
 
 ## Décisions restantes
 
-1. **Me donner le `DATABASE_URL` Railway staging** dès que provisionné
-2. Date fenêtre cutover production
-3. Confirmer plan Railway (Hobby vs Pro)
+1. ~~Me donner le `DATABASE_URL` Railway staging~~ ✅ fait
+2. ~~Date fenêtre cutover production~~ ✅ exécutée 2026-04-19
+3. ~~Confirmer plan Railway (Hobby vs Pro)~~ ✅ Hobby retenu
+
+---
+
+## Phase 2 — Cutover production exécuté ✅ (2026-04-19 ~10h30 UTC)
+
+### Résultats
+
+| Étape                                    | Durée   | Résultat                                                            |
+| ---------------------------------------- | ------- | ------------------------------------------------------------------- |
+| Snapshot checksums Supabase (source)     | ~5 s    | 8 tables, hashes capturés                                           |
+| `pg_dump` Supabase → dump custom         | ~13 s   | 13 MB                                                               |
+| Wipe + prepare `postgres-prod` (Railway) | ~3 s    | Extensions `uuid-ossp`, `pgcrypto`, `pg_stat_statements` installées |
+| `pg_restore` → Railway postgres-prod     | ~8 s    | 15 erreurs résiduelles (Supabase triggers bénignes)                 |
+| Snapshot checksums Railway (dest)        | ~2 s    | 8 tables identiques                                                 |
+| Diff source ↔ dest                       | instant | ✅ **CHECKSUMS MATCH 100%**                                         |
+| Bascule `DATABASE_URL` central-server    | ~30 s   | Redeploy auto Railway                                               |
+| Health check `/health`                   | ~1 min  | `{"database": "healthy", "latencyMs": 9}`                           |
+
+### Métriques post-cutover
+
+- **Latence DB** : 166 ms (Supabase EU-West-2) → **9 ms** (Railway interne) — x18
+- **Circuit breaker** : CLOSED
+- **Pi heartbeats** : frais (< 2 min)
+- **Supabase** : figé en read-only à 10:34:59 UTC (clean cutover, ~3-4 min de fenêtre de données perdues)
+
+### Rollback possible jusqu'à
+
+**2026-05-03** (J+14) — Supabase tenu en hot standby via mirror quotidien.
+
+Procédure rollback :
+
+1. Railway Variables → `central-server` → `DATABASE_URL` = URL Supabase
+2. Redeploy → health 200
+3. Investiguer Railway à froid
+
+---
+
+## Phase 3 — Stratégie de backup triangulaire ✅ (2026-04-19)
+
+### Chaîne en place
+
+```
+Railway postgres-prod  ──pg_dump daily 03:00 UTC──▶  Hostinger FTP /db-backups/ (30j retention)
+                                                   ╲
+                                                    ▶  Supabase (wipe + restore + checksum diff)
+```
+
+Implémenté dans [`.github/workflows/db-backup.yml`](../../.github/workflows/db-backup.yml).
+
+### Validation end-to-end (run #4, 2026-04-19 11:19 UTC)
+
+| Étape                          | Durée          |
+| ------------------------------ | -------------- |
+| Install PostgreSQL 18 + lftp   | 20 s           |
+| Dump Railway                   | 38 s           |
+| Upload Hostinger FTP           | 9 s            |
+| Mirror Supabase (wipe+restore) | 2 min 3 s      |
+| Verify checksums               | 3 s            |
+| **Total**                      | **3 min 16 s** |
+
+### Garde-fous anti-régression
+
+Tous les bugs rencontrés pendant la mise au point sont désormais interceptés :
+
+| Bug rencontré                              | Garde-fou actuel                                         |
+| ------------------------------------------ | -------------------------------------------------------- |
+| pg_dump PG16 vs server PG18                | `echo "/usr/lib/postgresql/18/bin" >> $GITHUB_PATH`      |
+| Hostinger FTP cert mismatch                | `set ssl:verify-certificate no`                          |
+| `cls --date-format` invalide               | Retrait complet, purge via `grep` sur `cls -l`           |
+| Supabase `schema_migrations` duplicate key | `DROP SCHEMA supabase_migrations CASCADE` ajouté au wipe |
+| Restore silencieusement partiel            | `SELECT count(*) FROM pg_tables ... < 4 → exit 1`        |
+| Checksum Supabase avec search_path bancal  | SQL schema-qualifié (`public.sites`) + `SET search_path` |
+
+### Supervision
+
+- **Failure email GitHub** : notifié automatiquement sur workflow_dispatch ou schedule failure
+- **Dashboard** : https://github.com/Tallec7/neopro/actions/workflows/db-backup.yml
+- **Règle ops** : 2 échecs consécutifs = RPO > 48h → investiguer immédiatement (cf. [TROUBLESHOOTING § Workflow db-backup](../guides/TROUBLESHOOTING.md#workflow-db-backup-github-actions-échoue-post-migration-railway))
+
+---
+
+## Phase 4 — Sunset Supabase (J+14, 2026-05-03)
+
+- [ ] Vérifier que le workflow a tourné 14 jours consécutifs sans échec critique
+- [ ] Basculer `SUPABASE_URL` en mode **décommissionnable** (arrêt du mirror)
+- [ ] Décider : garder le projet Supabase en freeze pour compliance ou le supprimer
+- [ ] Retirer références `pooler.supabase.com` dans le code (`updates.controller.ts:385` packageUrl check)
+- [ ] Mettre ce runbook en `Archived`
