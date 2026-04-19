@@ -31,14 +31,31 @@
   </head>
   <body>
     <app-root></app-root>
-    <!-- ADR-060 Phase 3 couche 3 — Enregistrement du Service Worker -->
+    <!-- PWA temporairement désactivée — kill-switch : désinscrit les SW existants et vide les caches -->
     <script>
       if ('serviceWorker' in navigator) {
-        window.addEventListener('load', function () {
-          navigator.serviceWorker.register('sw.js').catch(function () {
-            /* SW optionnel — si l'enregistrement échoue, l'app fonctionne sans offline */
+        navigator.serviceWorker
+          .getRegistrations()
+          .then(function (regs) {
+            regs.forEach(function (reg) {
+              reg.unregister();
+            });
+          })
+          .catch(function () {
+            /* noop */
           });
-        });
+        if (window.caches && caches.keys) {
+          caches
+            .keys()
+            .then(function (keys) {
+              keys.forEach(function (k) {
+                caches.delete(k);
+              });
+            })
+            .catch(function () {
+              /* noop */
+            });
+        }
       }
     </script>
   </body>

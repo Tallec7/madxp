@@ -232,6 +232,21 @@
                 "glob": ".htaccess",
                 "input": "central-dashboard/",
                 "output": "/"
+              },
+              {
+                "glob": "sw.js",
+                "input": "central-dashboard/src/",
+                "output": "/"
+              },
+              {
+                "glob": "manifest.webmanifest",
+                "input": "central-dashboard/src/",
+                "output": "/"
+              },
+              {
+                "glob": "health.json",
+                "input": "central-dashboard/src/",
+                "output": "/"
               }
             ],
             "styles": ["central-dashboard/src/styles.scss"],
