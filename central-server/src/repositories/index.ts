@@ -36,6 +36,7 @@ export {
   type UpdateDeploymentFields,
 } from './deployment.repository';
 export { alertRepository, type CreateAlertInput, type AlertThreshold, type AlertWithSite } from './alert.repository';
+export { hostapdEventsRepository, type HostapdEventInput, type HostapdEventRow } from './hostapd-events.repository';
 export {
   remoteCommandRepository,
   type RemoteCommand,

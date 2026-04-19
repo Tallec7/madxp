@@ -1,7 +1,7 @@
 # ADR-072: Hotspot — defaults generalist pour toute la flotte
 
 **Date** : 2026-04-19
-**Statut** : Proposé
+**Statut** : Accepté (OTA-1 + OTA-2 livrés)
 **Format** : Léger
 
 ---

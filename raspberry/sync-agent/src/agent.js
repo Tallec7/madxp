@@ -31,6 +31,7 @@ const localBackup = require('./tasks/local-backup');
 const { networkDetector } = require('./services/network-detector');
 const { safeNetworkOperations } = require('./services/safe-network-operations');
 const networkWatchdog = require('./services/network-watchdog');
+const hostapdTelemetry = require('./services/hostapd-telemetry');
 const licenseCache = require('./license-cache');
 const localSocket = require('./services/local-socket');
 const commands = require('./commands');
@@ -147,6 +148,8 @@ class NeoproSyncAgent {
 
     // Injecter la référence au socket pour le watchdog cloud
     networkWatchdog.setSocketRef(this.socket);
+    // ADR-072 OTA-2 : télémetrie hostapd (événements auth/deauth → central)
+    hostapdTelemetry.setSocketRef(this.socket);
 
     this.socket.on('connect', () => this.handleConnect());
     this.socket.on('disconnect', (reason) => this.handleDisconnect(reason));
@@ -436,6 +439,8 @@ class NeoproSyncAgent {
     // Mettre à jour la ref socket et binder les events pong pour le watchdog cloud
     // (le watchdog tourne déjà depuis start(), on lui donne juste la socket authentifiée)
     networkWatchdog.setSocketRef(this.socket);
+    // ADR-072 OTA-2 : re-attacher la socket à la télémetrie hostapd après auth
+    hostapdTelemetry.setSocketRef(this.socket);
 
     // Remove old pong listeners before adding new ones (prevent accumulation on reconnect).
     // Socket.IO reuses the same socket object — without removeListener, each reconnect
@@ -933,6 +938,12 @@ class NeoproSyncAgent {
 
     logger.info('Starting network watchdog (Phase 4)');
     networkWatchdog.start();
+    // ADR-072 OTA-2 : démarrer la télémetrie hostapd
+    try {
+      hostapdTelemetry.start();
+    } catch (err) {
+      logger.warn('hostapd-telemetry start failed (non-blocking)', { error: err.message });
+    }
     this.watchdogStarted = true;
   }
 
@@ -957,6 +968,8 @@ class NeoproSyncAgent {
 
     // Arrêter le watchdog réseau
     networkWatchdog.stop();
+    // ADR-072 OTA-2 : arrêter la télémetrie hostapd
+    try { hostapdTelemetry.stop(); } catch (_e) { /* ignore */ }
 
     // Arrêter la surveillance de la configuration
     if (this.configWatcher) {

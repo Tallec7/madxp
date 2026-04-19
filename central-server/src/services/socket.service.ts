@@ -41,6 +41,7 @@ import {
 import { handleDeployProgress, handleUpdateProgress } from '../handlers/deploy-progress.handler';
 import { sendLicenseStatus } from '../handlers/license.handler';
 import { handleNetworkAlert, handleNetworkRecovered, handleNetworkRollback } from '../handlers/network-resilience.handler';
+import { handleHostapdEvent } from '../handlers/hostapd-events.handler';
 import { handleRecordingState, RecordingStateMessage } from '../handlers/recording-state.handler';
 import { sendSyncProfilesToSite } from './profile-sync.service';
 import {
@@ -466,6 +467,7 @@ class SocketService {
       network_alert: (alert: Record<string, unknown>) => handleNetworkAlert(ctx, siteId, alert),
       network_rollback: (rollback: Record<string, unknown>) => handleNetworkRollback(ctx, siteId, rollback),
       network_recovered: (payload: Record<string, unknown>) => handleNetworkRecovered(ctx, siteId, payload),
+      hostapd_event: (payload: Record<string, unknown>) => handleHostapdEvent(ctx, siteId, payload),
       'recording-state': (message: RecordingStateMessage) => handleRecordingState(ctx, siteId, message),
     };
 
@@ -491,6 +493,7 @@ class SocketService {
     socket.on('network_alert', withMetrics('network_alert', handlers.network_alert));
     socket.on('network_rollback', withMetrics('network_rollback', handlers.network_rollback));
     socket.on('network_recovered', withMetrics('network_recovered', handlers.network_recovered));
+    socket.on('hostapd_event', withMetrics('hostapd_event', handlers.hostapd_event));
     socket.on('recording-state', withMetrics('recording-state', handlers['recording-state']));
 
     // ADR-059 — relay state-sync du Pi vers les clients dashboard dans la room siteId
@@ -609,6 +612,7 @@ class SocketService {
       socket.off('network_alert', handlers.network_alert);
       socket.off('network_rollback', handlers.network_rollback);
       socket.off('network_recovered', handlers.network_recovered);
+      socket.off('hostapd_event', handlers.hostapd_event);
       socket.off('recording-state', handlers['recording-state']);
       delete (socket as any)._neoHandlers;
     }
