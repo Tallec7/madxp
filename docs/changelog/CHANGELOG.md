@@ -1,3 +1,9 @@
+## [3.193.9](https://github.com/Tallec7/neopro/compare/v3.193.8...v3.193.9) (2026-04-19)
+
+### Bug Fixes
+
+- **ci:** harden SPA fallback on Hostinger + continuous monitoring ([#481](https://github.com/Tallec7/neopro/issues/481)) ([d56de74](https://github.com/Tallec7/neopro/commit/d56de74dae74b724ca84bc9915d1b341c69b4f5f))
+
 ## [3.193.8](https://github.com/Tallec7/neopro/compare/v3.193.7...v3.193.8) (2026-04-19)
 
 ### Bug Fixes
