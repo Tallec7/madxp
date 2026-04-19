@@ -95,3 +95,7 @@ Voir `docs/clients/NLF.md` — **Ne JAMAIS lock BSSID, tester avant déploiement
 - Inclure le check captive portal iptables/nftables dans les issues critiques de `check_hotspot_health()` (WARNING non-critique — ne doit JAMAIS déclencher la recovery complète)
 - Utiliser `iptables` sans vérifier `command -v iptables` (Debian 13 Trixie : iptables absent — fallback `nft`)
 - Faire un `iwlist wlan1 scan` dans `wifi-bssid.js` sans vérifier le cache `/tmp/neopro-wlan1-scan-cache` (incident 2026-03-23)
+- Réinstaller `raspberry/scripts/hotspot-watchdog.sh` ou le service `neopro-hotspot-watchdog.service` (ADR-072 — deux watchdogs en parallèle = deauth cascades sur restart hostapd, incident 2026-04-19). Le watchdog Node `raspberry/sync-agent/src/services/hotspot-watchdog.js` est la seule source de vérité.
+- Remettre `max_num_sta=10` dans `raspberry/config/systemd/hostapd.conf` (ADR-072 — le 11e client est rejeté silencieusement, incident Strogatien 2026-04-19). Défaut actuel : 50.
+- Remettre le range DHCP à `192.168.4.10-50` ou le lease à `24h` dans `dnsmasq.conf` (ADR-072 — la rotation MAC iOS/Android sature un pool de 40 IPs sur 24h → DHCP NAK → clients rejetés). Défaut actuel : `10-200`, lease `2h`.
+- Retirer `ieee80211d=1` ou `ht_capab=[...]` de `hostapd.conf` (ADR-072 — conformité réglementaire attendue par iOS/Android récents en mode strict, sinon refus d'association silencieux).

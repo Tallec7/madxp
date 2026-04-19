@@ -437,7 +437,6 @@ check_systemd_services_installed() {
         "neopro-admin"
         "neopro-sync-agent"
         "neopro-kiosk"
-        "neopro-hotspot-watchdog"
         "neopro-sync-guardian"
     )
 

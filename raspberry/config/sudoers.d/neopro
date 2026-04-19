@@ -11,7 +11,12 @@ pi ALL=(ALL) NOPASSWD: /usr/bin/systemctl stop neopro-*
 pi ALL=(ALL) NOPASSWD: /usr/bin/systemctl start neopro-*
 pi ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart neopro-*
 pi ALL=(ALL) NOPASSWD: /usr/bin/systemctl enable neopro-*
+pi ALL=(ALL) NOPASSWD: /usr/bin/systemctl disable neopro-*
+pi ALL=(ALL) NOPASSWD: /usr/bin/systemctl disable --now neopro-*
 pi ALL=(ALL) NOPASSWD: /usr/bin/systemctl is-active neopro-*
+# ADR-072 : retrait services dépréciés lors de l'OTA
+pi ALL=(ALL) NOPASSWD: /usr/bin/rm -f /etc/systemd/system/neopro-*.service
+pi ALL=(ALL) NOPASSWD: /usr/bin/rm -f /home/pi/neopro/scripts/hotspot-watchdog.sh
 pi ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart hostapd
 pi ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart dnsmasq
 pi ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart nginx

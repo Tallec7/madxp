@@ -99,7 +99,6 @@ fi
 log_step "2/6 — Services systemd manquants"
 
 SERVICES_TO_INSTALL=(
-    "neopro-hotspot-watchdog"
     "neopro-sync-guardian"
     "neopro-hotspot-optimizer"
 )
@@ -131,7 +130,6 @@ done
 
 # Vérifier que les scripts associés existent et sont exécutables
 SCRIPTS_TO_CHECK=(
-    "hotspot-watchdog.sh"
     "sync-agent-guardian.sh"
     "hotspot-optimizer.sh"
 )
@@ -377,8 +375,8 @@ echo ""
 echo "  # Vérifier que CCMP est actif"
 echo "  grep wpa_pairwise /etc/hostapd/hostapd.conf"
 echo ""
-echo "  # Vérifier les 3 nouveaux services"
-echo "  systemctl status neopro-hotspot-watchdog neopro-sync-guardian neopro-hotspot-optimizer"
+echo "  # Vérifier les services"
+echo "  systemctl status neopro-sync-guardian neopro-hotspot-optimizer"
 echo ""
 echo "  # Vérifier les flags GPU (ne doit PAS contenir use-gl/swiftshader)"
 echo "  ps aux | grep chromium | grep -v grep"

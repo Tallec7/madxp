@@ -441,7 +441,6 @@ RUNTIME_SCRIPTS=(
     "raspberry/scripts/generate-all-thumbnails.sh"
     "raspberry/scripts/setup-wifi-client.sh"
     "raspberry/scripts/kiosk-watchdog.sh"
-    "raspberry/scripts/hotspot-watchdog.sh"
     "raspberry/scripts/hotspot-optimizer.sh"
     "raspberry/scripts/fix-hotspot.sh"
     "raspberry/scripts/sync-agent-guardian.sh"
@@ -466,7 +465,6 @@ print_step "Copie des fichiers systemd..."
 mkdir -p ${DEPLOY_DIR}/config/systemd
 SYSTEMD_FILES=(
     "raspberry/config/systemd/neopro-kiosk.service"
-    "raspberry/config/systemd/neopro-hotspot-watchdog.service"
     "raspberry/config/systemd/neopro-hotspot-optimizer.service"
     "raspberry/config/systemd/neopro-sync-guardian.service"
     "raspberry/config/systemd/neopro-app.service"
