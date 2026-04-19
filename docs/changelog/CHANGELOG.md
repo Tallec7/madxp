@@ -1,3 +1,9 @@
+# [3.193.0](https://github.com/Tallec7/neopro/compare/v3.192.6...v3.193.0) (2026-04-19)
+
+### Features
+
+- **dashboard:** make PWA installable (icons + minimal SW, no cache) ([c6068c5](https://github.com/Tallec7/neopro/commit/c6068c513cce173acdc3d00d0f761b8157abaee7)), closes [#0b1020](https://github.com/Tallec7/neopro/issues/0b1020)
+
 ## [3.192.6](https://github.com/Tallec7/neopro/compare/v3.192.5...v3.192.6) (2026-04-19)
 
 ### Bug Fixes
