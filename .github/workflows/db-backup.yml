@@ -1,0 +1,137 @@
+name: DB Backup (Railway → Hostinger FTP + Supabase mirror)
+
+on:
+  schedule:
+    - cron: '0 3 * * *'  # 03:00 UTC quotidien
+  workflow_dispatch: {}   # permet lancement manuel
+
+concurrency:
+  group: db-backup
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Install PostgreSQL 17 client + lftp
+        run: |
+          sudo sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
+          wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo apt-key add -
+          sudo apt-get update -qq
+          sudo apt-get install -y postgresql-client-17 lftp
+          pg_dump --version
+
+      - name: Dump Railway production
+        env:
+          RAILWAY_PROD_URL: ${{ secrets.RAILWAY_PROD_URL }}
+        run: |
+          TS=$(date +%Y%m%d_%H%M%S)
+          echo "TIMESTAMP=$TS" >> $GITHUB_ENV
+          DUMP_FILE="neopro_$TS.dump"
+          echo "DUMP_FILE=$DUMP_FILE" >> $GITHUB_ENV
+
+          pg_dump "$RAILWAY_PROD_URL" \
+            --no-owner --no-acl --format=custom \
+            -f "$DUMP_FILE"
+
+          ls -lh "$DUMP_FILE"
+          echo "DUMP_SIZE=$(stat -c%s $DUMP_FILE)" >> $GITHUB_ENV
+
+      - name: Sanity check dump size
+        run: |
+          SIZE=${{ env.DUMP_SIZE }}
+          if [ "$SIZE" -lt 1000000 ]; then
+            echo "::error::Dump suspicious (<1 MB) — aborting to prevent overwriting good backups"
+            exit 1
+          fi
+          echo "Dump size OK: $SIZE bytes"
+
+      - name: Upload to Hostinger FTP
+        env:
+          FTP_HOST: ${{ secrets.FTP_HOST }}
+          FTP_USER: ${{ secrets.FTP_USER }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+        run: |
+          lftp -u "$FTP_USER","$FTP_PASSWORD" "$FTP_HOST" <<EOF
+            set ftp:ssl-allow no
+            mkdir -p /db-backups || true
+            cd /db-backups
+            put $DUMP_FILE
+            # Retention 30 jours : supprime *.dump plus vieux que 30 jours
+            cls -1 --date-format='%Y%m%d' > /tmp/ftp-list.txt || true
+            bye
+          EOF
+
+          # Purge FTP : on liste puis delete les dumps vieux de >30j
+          lftp -u "$FTP_USER","$FTP_PASSWORD" "$FTP_HOST" -e "cd /db-backups; cls -l; bye" > /tmp/ftp-ls.txt
+          cat /tmp/ftp-ls.txt
+
+          CUTOFF=$(date -d '30 days ago' +%Y%m%d)
+          grep -oE 'neopro_[0-9]{8}_[0-9]{6}\.dump' /tmp/ftp-ls.txt | sort -u | while read F; do
+            DATE=$(echo "$F" | sed -E 's/neopro_([0-9]{8})_.*/\1/')
+            if [ "$DATE" -lt "$CUTOFF" ]; then
+              echo "Deleting old backup: $F"
+              lftp -u "$FTP_USER","$FTP_PASSWORD" "$FTP_HOST" -e "cd /db-backups; rm $F; bye" || true
+            fi
+          done
+
+      - name: Mirror to Supabase (hot standby)
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+        run: |
+          # Wipe + prepare schema avec extensions Supabase-specifiques
+          psql "$SUPABASE_URL" <<'SQL'
+          DROP SCHEMA IF EXISTS public CASCADE;
+          CREATE SCHEMA public;
+          GRANT ALL ON SCHEMA public TO postgres, public;
+          CREATE SCHEMA IF NOT EXISTS extensions;
+          CREATE EXTENSION IF NOT EXISTS "uuid-ossp" SCHEMA extensions;
+          CREATE EXTENSION IF NOT EXISTS pgcrypto SCHEMA extensions;
+          GRANT USAGE ON SCHEMA extensions TO public;
+          SQL
+
+          # Restore, on continue malgré erreurs Supabase-specific bénignes
+          pg_restore \
+            --no-owner --no-acl \
+            --no-comments --no-publications --no-subscriptions --no-security-labels \
+            -d "$SUPABASE_URL" \
+            "$DUMP_FILE" 2>&1 | tee restore.log | tail -20 || true
+
+          ERRORS=$(grep -c "^pg_restore: error" restore.log || echo 0)
+          echo "Restore errors: $ERRORS (bénignes attendues: Supabase triggers)"
+
+      - name: Verify checksums Railway vs Supabase
+        env:
+          RAILWAY_PROD_URL: ${{ secrets.RAILWAY_PROD_URL }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+        run: |
+          cat > /tmp/checksums.sql <<'SQL'
+          SELECT 'sites' AS t, count(*) AS n, md5(string_agg(id::text, ',' ORDER BY id)) AS hash FROM sites
+          UNION ALL SELECT 'users', count(*), md5(string_agg(id::text, ',' ORDER BY id)) FROM users
+          UNION ALL SELECT 'videos', count(*), md5(string_agg(id::text, ',' ORDER BY id)) FROM videos
+          UNION ALL SELECT 'config_profiles', count(*), md5(string_agg(id::text, ',' ORDER BY id)) FROM config_profiles
+          ORDER BY t;
+          SQL
+
+          psql "$RAILWAY_PROD_URL" -At -f /tmp/checksums.sql > /tmp/railway.txt
+          psql "$SUPABASE_URL" -At -f /tmp/checksums.sql > /tmp/supabase.txt
+
+          echo "=== Railway ==="; cat /tmp/railway.txt
+          echo "=== Supabase ==="; cat /tmp/supabase.txt
+
+          if ! diff -q /tmp/railway.txt /tmp/supabase.txt > /dev/null; then
+            echo "::error::Checksums mismatch entre Railway et Supabase"
+            diff /tmp/railway.txt /tmp/supabase.txt
+            exit 1
+          fi
+          echo "✅ Checksums match"
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "## Backup $TIMESTAMP" >> $GITHUB_STEP_SUMMARY
+          echo "- Dump: $DUMP_FILE ($DUMP_SIZE bytes)" >> $GITHUB_STEP_SUMMARY
+          echo "- Hostinger FTP: /db-backups/$DUMP_FILE" >> $GITHUB_STEP_SUMMARY
+          echo "- Supabase mirror: refreshed" >> $GITHUB_STEP_SUMMARY
