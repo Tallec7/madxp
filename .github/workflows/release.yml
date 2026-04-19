@@ -239,7 +239,17 @@ jobs:
             exit 1
           fi
 
-          echo "✅ Dashboard deployment verified — Angular app served correctly"
+          # Deep SPA route check — catches missing/broken .htaccess SPA fallback.
+          # A bare /sites/<probe> must rewrite to index.html (200), not 404.
+          DEEP_STATUS=$(curl -sI -o /dev/null -w "%{http_code}" "https://neopro-admin.kalonpartners.bzh/sites/ci-probe" 2>/dev/null)
+          echo "Dashboard deep route /sites/ci-probe status: $DEEP_STATUS"
+          if [ "$DEEP_STATUS" != "200" ]; then
+            echo "::error::Dashboard SPA fallback BROKEN — /sites/ci-probe returned $DEEP_STATUS (expected 200)."
+            echo "Likely cause: .htaccess missing or AllowOverride disabled on Hostinger."
+            exit 1
+          fi
+
+          echo "✅ Dashboard deployment verified — Angular app + SPA fallback served correctly"
 
   deploy-saas:
     name: Deploy SaaS App to Hostinger
@@ -272,6 +282,11 @@ jobs:
       - name: Prepare SaaS deploy directory
         run: |
           cp raspberry/src/saas-htaccess dist/raspberry/browser/.htaccess
+          if [ ! -s dist/raspberry/browser/.htaccess ]; then
+            echo "::error::.htaccess missing or empty in SaaS build — SPA fallback would break"
+            exit 1
+          fi
+          echo "✅ .htaccess staged in SaaS build ($(wc -c < dist/raspberry/browser/.htaccess) bytes)"
 
       - name: Create /saas/ directory on Hostinger
         run: |
@@ -288,7 +303,18 @@ jobs:
           local-dir: dist/raspberry/browser/
           server-dir: /saas/
           dangerous-clean-slate: true
+          log-level: verbose
           timeout: 60000
+
+      - name: Force upload .htaccess (dotfile safety net)
+        run: |
+          # FTP-Deploy-Action has known issues with dotfiles after clean-slate.
+          # Explicitly re-upload .htaccess via curl to guarantee SPA fallback.
+          curl --silent --show-error --fail \
+            --user "${{ secrets.HOSTINGER_FTP_USERNAME }}:${{ secrets.HOSTINGER_FTP_PASSWORD }}" \
+            -T dist/raspberry/browser/.htaccess \
+            "ftp://${{ secrets.HOSTINGER_FTP_SERVER }}/saas/.htaccess"
+          echo "✅ .htaccess force-uploaded to /saas/"
 
       - name: Verify SaaS deployment
         run: |
@@ -303,4 +329,16 @@ jobs:
             exit 1
           fi
 
-          echo "✅ SaaS deployment verified"
+          # Deep SPA route check — /saas/remote?site=<probe> must rewrite to /saas/index.html (200).
+          # Without this, missing .htaccess = 404 in prod while CI says ✅.
+          REMOTE_STATUS=$(curl -sI -o /dev/null -w "%{http_code}" "https://neopro-admin.kalonpartners.bzh/saas/remote?site=ci-probe" 2>/dev/null)
+          TV_STATUS=$(curl -sI -o /dev/null -w "%{http_code}" "https://neopro-admin.kalonpartners.bzh/saas/tv?site=ci-probe" 2>/dev/null)
+          echo "SaaS deep routes — /saas/remote: $REMOTE_STATUS, /saas/tv: $TV_STATUS"
+
+          if [ "$REMOTE_STATUS" != "200" ] || [ "$TV_STATUS" != "200" ]; then
+            echo "::error::SaaS SPA fallback BROKEN — /saas/remote=$REMOTE_STATUS /saas/tv=$TV_STATUS (expected 200)."
+            echo "Likely cause: .htaccess missing in /saas/ after clean-slate FTP deploy."
+            exit 1
+          fi
+
+          echo "✅ SaaS deployment verified — SPA fallback works on deep routes"

@@ -46,6 +46,7 @@
 42. [Dashboard 403 après deploy FTP réussi (v3.158.2+)](#dashboard-403-ftp)
 43. [Admin UI — CSP bloque Socket.IO cross-origin (v3.176.8+)](#admin-ui--csp-bloque-socketio-cross-origin-v317680)
 44. [Workflow db-backup GitHub Actions échoue (post migration Railway)](#workflow-db-backup-github-actions-échoue-post-migration-railway)
+45. [SPA 404 sur routes profondes (`/saas/remote`, `/sites/<uuid>`) (v3.193.7+)](#spa-404-sur-routes-profondes-saasremote-sitesuuid--v31937)
 
 > **WiFi USB** : Pour un guide complet sur la clé WiFi USB (installation, diagnostic, pannes, recovery), voir [WIFI_USB_GUIDE.md](WIFI_USB_GUIDE.md).
 >
@@ -6615,3 +6616,64 @@ gh run view <RUN_ID> --log-failed
 ### Référence
 
 Voir [ADR-070](../adr/ADR-070-migration-postgres-railway-backup-strategy.md) pour la stratégie de backup triangulaire complète.
+
+## SPA 404 sur routes profondes (`/saas/remote`, `/sites/<uuid>`) — v3.193.7+
+
+### Symptômes
+
+- `GET https://neopro-admin.kalonpartners.bzh/saas/remote?site=<uuid>` → **404** (alors que `/saas/` → 200)
+- `GET https://neopro-admin.kalonpartners.bzh/sites/<uuid>` → **404** (alors que `/` → 200)
+- Uniquement sur refresh (F5) ou lien direct ; la navigation interne Angular fonctionne
+- Intermittent : peut casser après un release et remarcher sans action après un nouveau deploy
+
+### Cause racine
+
+Le fallback SPA Apache repose sur des fichiers `.htaccess` servis par Hostinger mutualisé :
+
+- `/` → [central-dashboard/.htaccess](../../central-dashboard/.htaccess) (assets Angular)
+- `/saas/` → [raspberry/src/saas-htaccess](../../raspberry/src/saas-htaccess) (copié vers `.htaccess` pendant la CI)
+
+Le workflow `release.yml` utilise `SamKirkland/FTP-Deploy-Action` avec `dangerous-clean-slate: true`. Deux bugs cumulés :
+
+1. **Clean-slate wipe + dotfile upload intermittent** : FTP-Deploy-Action saute parfois les dotfiles (`.htaccess`) après un wipe complet → dossier sans fallback SPA.
+2. **Verify CI trop permissif** : l'ancien check validait juste `GET /saas/` = 200 (index.html sert), donc un `.htaccess` manquant n'était jamais détecté en CI.
+
+Résultat : Apache cherche un fichier physique `remote`, `tv`, `sites`, etc., ne le trouve pas → **404**.
+
+### Résolution
+
+**Fix permanent** (v3.193.7, Avr 2026) — voir [release.yml](../../.github/workflows/release.yml) :
+
+1. **Force-upload `.htaccess`** via `curl -T` après le FTP clean-slate (bypass du bug dotfile).
+2. **Deep-route verify** : la CI fail si `/saas/remote?site=ci-probe`, `/saas/tv?site=ci-probe` ou `/sites/ci-probe` ne retournent pas 200.
+3. **Monitoring continu** : [frontend-health.yml](../../.github/workflows/frontend-health.yml) probe les 5 routes toutes les 10 min et ouvre automatiquement un GitHub issue (label `frontend-health`) en cas d'échec.
+
+### Vérification manuelle
+
+```bash
+# 1. Check des 5 routes critiques
+for path in '/' '/sites/ci-probe' '/saas/' '/saas/remote?site=ci-probe' '/saas/tv?site=ci-probe'; do
+  code=$(curl -sI -o /dev/null -w '%{http_code}' "https://neopro-admin.kalonpartners.bzh${path}")
+  echo "${code}  ${path}"
+done
+
+# 2. Check direct du .htaccess via FTP (remplacer <user>/<pass>/<host>)
+curl -s --user "<user>:<pass>" "ftp://<host>/saas/.htaccess" | head
+```
+
+### Runbook incident
+
+Si la probe `frontend-health` fail ou qu'un user rapporte un 404 SPA :
+
+1. Lancer manuellement `gh workflow run frontend-health.yml` pour confirmer
+2. Vérifier que `.htaccess` existe côté FTP (commande ci-dessus)
+3. Si absent → relancer le job `deploy-saas` du dernier release : `gh run rerun <run-id> --failed`
+4. Si ça persiste après 2 re-runs → fallback manuel : upload `.htaccess` en SFTP via Hostinger File Manager
+5. Migration cible : [ADR-071](../adr/ADR-071-frontend-hosting-migration-cloudflare-pages.md) (Cloudflare Pages, plus d'`.htaccess` ni de FTP)
+
+### NE JAMAIS FAIRE
+
+- Retirer l'étape "Force upload .htaccess" du workflow `deploy-saas`
+- Réduire le verify à un simple check de la racine (laisser les deep-routes)
+- Désactiver le cron de `frontend-health.yml`
+- Passer `dangerous-clean-slate: false` sans repenser la stratégie de deploy (ce serait pire : builds obsolètes coexisteraient)
