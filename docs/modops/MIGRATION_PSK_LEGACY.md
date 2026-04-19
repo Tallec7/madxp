@@ -107,10 +107,24 @@ L'équipe Neopro
 2. Onglet **Network**
 3. Vérifier **Clients WiFi connectés** : noter combien sont là (pour vérification post-rotation)
 4. Cliquer **Renouveler la PSK** (carte tech-only)
-5. Laisser le champ vide → PSK auto-générée
+5. **Saisir la PSK custom** selon le tableau ci-dessous. **Ne pas laisser vide** — l'auto-gen produit une PSK 20-char alphanum imbuvable à taper pour le staff club
 6. **Confirmer**
 7. Copier la nouvelle PSK dans le presse-papiers (bouton Copier)
 8. Coller immédiatement dans le brouillon d'email + 1Password (entrée `Neopro / WiFi Pi / <club>`)
+
+#### Tableau PSK par club (parc actuel)
+
+| Club                          | PSK à appliquer         | Priorité |
+| ----------------------------- | ----------------------- | -------- |
+| NLF Handball                  | `NantesLoireFeminin26!` | P1       |
+| AS Saint Rogatien             | `SaintRogatien26!`      | P2       |
+| Corsaires de Nantes           | `CorsairesNantes26!`    | P2       |
+| Nantes Atlantique Rink Hockey | `NantesRinkHockey26!`   | P2       |
+| GLT Sport                     | `GLTSport26!`           | Test     |
+| KALON BREIZH CUP              | `KalonBreizh26!`        | P3       |
+| UCK NEF                       | `UCKNef26!`             | P3       |
+
+Pattern : `<NomClubAbbrev><Année>!`, 12-22 chars, lisible, unique par club. Valide techniquement (8-63 chars, ASCII imprimable, pas de `\n|&;`).
 
 ### 2.3 Rotation via SSH (fallback)
 
