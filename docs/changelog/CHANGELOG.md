@@ -1,3 +1,9 @@
+# [3.194.0](https://github.com/Tallec7/neopro/compare/v3.193.9...v3.194.0) (2026-04-19)
+
+### Features
+
+- **hotspot:** ADR-072 + ADR-073 — generalist defaults + security hardening ([#484](https://github.com/Tallec7/neopro/issues/484)) ([e6283a6](https://github.com/Tallec7/neopro/commit/e6283a653908b3ef2ac3d5bd6bc8ee5c91a731d4))
+
 ## [3.193.9](https://github.com/Tallec7/neopro/compare/v3.193.8...v3.193.9) (2026-04-19)
 
 ### Bug Fixes
