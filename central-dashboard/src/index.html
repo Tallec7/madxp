@@ -31,31 +31,14 @@
   </head>
   <body>
     <app-root></app-root>
-    <!-- PWA temporairement désactivée — kill-switch : désinscrit les SW existants et vide les caches -->
+    <!-- PWA Phase A — SW installable (sans cache) pour activer le prompt "Installer l'app" -->
     <script>
       if ('serviceWorker' in navigator) {
-        navigator.serviceWorker
-          .getRegistrations()
-          .then(function (regs) {
-            regs.forEach(function (reg) {
-              reg.unregister();
-            });
-          })
-          .catch(function () {
-            /* noop */
+        window.addEventListener('load', function () {
+          navigator.serviceWorker.register('sw.js').catch(function () {
+            /* Installation PWA optionnelle : si le SW échoue, l'app fonctionne normalement */
           });
-        if (window.caches && caches.keys) {
-          caches
-            .keys()
-            .then(function (keys) {
-              keys.forEach(function (k) {
-                caches.delete(k);
-              });
-            })
-            .catch(function () {
-              /* noop */
-            });
-        }
+        });
       }
     </script>
   </body>
