@@ -83,9 +83,10 @@ jobs:
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
         run: |
-          # Wipe + prepare schema avec extensions Supabase-specifiques
+          # Wipe complet : public (tables applicatives) + supabase_migrations (sinon duplicate key)
           psql "$SUPABASE_URL" <<'SQL'
           DROP SCHEMA IF EXISTS public CASCADE;
+          DROP SCHEMA IF EXISTS supabase_migrations CASCADE;
           CREATE SCHEMA public;
           GRANT ALL ON SCHEMA public TO postgres, public;
           CREATE SCHEMA IF NOT EXISTS extensions;
@@ -94,15 +95,25 @@ jobs:
           GRANT USAGE ON SCHEMA extensions TO public;
           SQL
 
-          # Restore, on continue malgré erreurs Supabase-specific bénignes
+          # Restore — on log tout pour pouvoir diagnostiquer, on garde seulement les erreurs résiduelles
           pg_restore \
             --no-owner --no-acl \
             --no-comments --no-publications --no-subscriptions --no-security-labels \
             -d "$SUPABASE_URL" \
-            "$DUMP_FILE" 2>&1 | tee restore.log | tail -20 || true
+            "$DUMP_FILE" > restore.log 2>&1 || true
 
-          ERRORS=$(grep -c "^pg_restore: error" restore.log || echo 0)
-          echo "Restore errors: $ERRORS (bénignes attendues: Supabase triggers)"
+          ERRORS=$(grep -c "^pg_restore: error" restore.log || true)
+          echo "Restore errors total: $ERRORS"
+          echo "=== Dernières erreurs (max 30) ==="
+          grep "^pg_restore: error" restore.log | tail -30 || true
+
+          # Garde-fou : si aucune table applicative n'existe côté Supabase, on fail tout de suite
+          TABLES=$(psql "$SUPABASE_URL" -At -c "SELECT count(*) FROM pg_tables WHERE schemaname='public' AND tablename IN ('sites','users','videos','config_profiles');")
+          if [ "$TABLES" -lt 4 ]; then
+            echo "::error::Restore incomplet — seulement $TABLES/4 tables critiques présentes côté Supabase"
+            exit 1
+          fi
+          echo "Tables critiques présentes: $TABLES/4"
 
       - name: Verify checksums Railway vs Supabase
         env:
@@ -110,10 +121,11 @@ jobs:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
         run: |
           cat > /tmp/checksums.sql <<'SQL'
-          SELECT 'sites' AS t, count(*) AS n, md5(string_agg(id::text, ',' ORDER BY id)) AS hash FROM sites
-          UNION ALL SELECT 'users', count(*), md5(string_agg(id::text, ',' ORDER BY id)) FROM users
-          UNION ALL SELECT 'videos', count(*), md5(string_agg(id::text, ',' ORDER BY id)) FROM videos
-          UNION ALL SELECT 'config_profiles', count(*), md5(string_agg(id::text, ',' ORDER BY id)) FROM config_profiles
+          SET search_path = public, extensions;
+          SELECT 'sites' AS t, count(*) AS n, md5(string_agg(id::text, ',' ORDER BY id)) AS hash FROM public.sites
+          UNION ALL SELECT 'users', count(*), md5(string_agg(id::text, ',' ORDER BY id)) FROM public.users
+          UNION ALL SELECT 'videos', count(*), md5(string_agg(id::text, ',' ORDER BY id)) FROM public.videos
+          UNION ALL SELECT 'config_profiles', count(*), md5(string_agg(id::text, ',' ORDER BY id)) FROM public.config_profiles
           ORDER BY t;
           SQL
 
