@@ -1,3 +1,9 @@
+## [3.193.2](https://github.com/Tallec7/neopro/compare/v3.193.1...v3.193.2) (2026-04-19)
+
+### Bug Fixes
+
+- **ci:** railway restart — use dedicated RAILWAY_API_TOKEN secret ([f93e619](https://github.com/Tallec7/neopro/commit/f93e61961b12ff2b5c86383c6cc9e4d1d083a445))
+
 ## [3.193.1](https://github.com/Tallec7/neopro/compare/v3.193.0...v3.193.1) (2026-04-19)
 
 ### Bug Fixes
