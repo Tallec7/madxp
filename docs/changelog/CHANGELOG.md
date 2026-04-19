@@ -1,3 +1,9 @@
+## [3.193.1](https://github.com/Tallec7/neopro/compare/v3.193.0...v3.193.1) (2026-04-19)
+
+### Bug Fixes
+
+- **ci:** railway restart — support account tokens + explicit link ([6dde6d1](https://github.com/Tallec7/neopro/commit/6dde6d19e2a8796f0d1738b364f64f26ef4278ce))
+
 # [3.193.0](https://github.com/Tallec7/neopro/compare/v3.192.6...v3.193.0) (2026-04-19)
 
 ### Features
