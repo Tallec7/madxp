@@ -50,9 +50,9 @@ jobs:
 
       - name: Upload to Hostinger FTP
         env:
-          FTP_HOST: ${{ secrets.FTP_HOST }}
-          FTP_USER: ${{ secrets.FTP_USER }}
-          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+          FTP_HOST: ${{ secrets.HOSTINGER_FTP_SERVER }}
+          FTP_USER: ${{ secrets.HOSTINGER_FTP_USERNAME }}
+          FTP_PASSWORD: ${{ secrets.HOSTINGER_FTP_PASSWORD }}
         run: |
           lftp -u "$FTP_USER","$FTP_PASSWORD" "$FTP_HOST" <<EOF
             set ftp:ssl-allow no
