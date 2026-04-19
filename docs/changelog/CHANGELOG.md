@@ -1,3 +1,9 @@
+## [3.193.3](https://github.com/Tallec7/neopro/compare/v3.193.2...v3.193.3) (2026-04-19)
+
+### Bug Fixes
+
+- **ci:** db-backup workflow use postgresql-client-18 ([#476](https://github.com/Tallec7/neopro/issues/476)) ([1b54ead](https://github.com/Tallec7/neopro/commit/1b54ead4840766fa78d12087e1dfb5c1c57a48c9))
+
 ## [3.193.2](https://github.com/Tallec7/neopro/compare/v3.193.1...v3.193.2) (2026-04-19)
 
 ### Bug Fixes
