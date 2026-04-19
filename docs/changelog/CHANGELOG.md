@@ -1,3 +1,9 @@
+# [3.195.0](https://github.com/Tallec7/neopro/compare/v3.194.1...v3.195.0) (2026-04-19)
+
+### Features
+
+- **db:** add sites.psk_rotated_at column (ADR-073 migration tracking) ([#486](https://github.com/Tallec7/neopro/issues/486)) ([d8f9955](https://github.com/Tallec7/neopro/commit/d8f9955cb60623874d58cdc0dd0bd09ebe7bf80b))
+
 ## [3.194.1](https://github.com/Tallec7/neopro/compare/v3.194.0...v3.194.1) (2026-04-19)
 
 ### Bug Fixes
