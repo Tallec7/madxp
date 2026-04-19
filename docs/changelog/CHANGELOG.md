@@ -1,3 +1,10 @@
+## [3.193.4](https://github.com/Tallec7/neopro/compare/v3.193.3...v3.193.4) (2026-04-19)
+
+### Bug Fixes
+
+- **ci:** railway restart — use project token (scoped, no link needed) ([fa3cef4](https://github.com/Tallec7/neopro/commit/fa3cef4aa9b09115c2e0f1769a8f8daa9d8c8e43))
+- **dashboard:** remove no-op fetch handler from SW (Chrome overhead warning) ([fd14fab](https://github.com/Tallec7/neopro/commit/fd14fab60e07c083a40a015cf4ab071b2ed0be08))
+
 ## [3.193.3](https://github.com/Tallec7/neopro/compare/v3.193.2...v3.193.3) (2026-04-19)
 
 ### Bug Fixes
