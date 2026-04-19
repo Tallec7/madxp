@@ -1934,7 +1934,8 @@ describe('Pi admin panel security & architecture guards', () => {
   it('auth.js login route must check rate limit before password (defense-in-depth order)', () => {
     const content = fs.readFileSync(path.join(adminDir, 'routes', 'auth.js'), 'utf8');
     const rateLimitPos = content.indexOf('checkRateLimit(clientIp)');
-    const passwordCheckPos = content.indexOf('password !== adminPassword');
+    // ADR-073 S4 — verifyPassword replaced plaintext comparison with scrypt verification
+    const passwordCheckPos = content.indexOf('verifyPassword(password, adminPassword)');
     expect(rateLimitPos).toBeGreaterThan(-1);
     expect(passwordCheckPos).toBeGreaterThan(-1);
     // Rate limit must come BEFORE password check
