@@ -1,3 +1,9 @@
+## [3.193.7](https://github.com/Tallec7/neopro/compare/v3.193.6...v3.193.7) (2026-04-19)
+
+### Bug Fixes
+
+- **ci:** db-backup Supabase mirror wipe + schema-qualified checksums ([#479](https://github.com/Tallec7/neopro/issues/479)) ([3f9906e](https://github.com/Tallec7/neopro/commit/3f9906e494938dda9bb9eae76f16563befd42917)), closes [#3](https://github.com/Tallec7/neopro/issues/3)
+
 ## [3.193.6](https://github.com/Tallec7/neopro/compare/v3.193.5...v3.193.6) (2026-04-19)
 
 ### Bug Fixes
