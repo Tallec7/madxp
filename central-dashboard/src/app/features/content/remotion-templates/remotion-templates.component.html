@@ -27,8 +27,38 @@
     (created)="onTemplateCreated($event)"
   ></app-create-template-wizard>
 
+  <div
+    class="template-scope-filter"
+    *ngIf="hasClubScopedTemplates"
+    role="group"
+    aria-label="Filter templates"
+    data-testid="template-scope-filter"
+  >
+    <button
+      type="button"
+      [class.active]="templateScopeFilter === 'all'"
+      (click)="setTemplateScopeFilter('all')"
+    >
+      Tous
+    </button>
+    <button
+      type="button"
+      [class.active]="templateScopeFilter === 'mine'"
+      (click)="setTemplateScopeFilter('mine')"
+    >
+      {{ currentUserSiteId ? 'Mes templates perso' : 'Templates club' }}
+    </button>
+    <button
+      type="button"
+      [class.active]="templateScopeFilter === 'global'"
+      (click)="setTemplateScopeFilter('global')"
+    >
+      Catalogue Neopro
+    </button>
+  </div>
+
   <app-template-grid
-    [templates]="templates"
+    [templates]="filteredTemplates"
     [selectedId]="selectedTemplate?.id ?? null"
     [isAdmin]="isAdmin"
     [loading]="loading"

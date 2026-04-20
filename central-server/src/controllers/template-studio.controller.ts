@@ -267,3 +267,30 @@ export const deleteImageSlot = async (req: AuthRequest, res: Response): Promise<
     templateStudioRepository.deleteImageSlot(req.params.slotId)
   );
 };
+
+// ── POST /:id/studio/scaffold
+// Seed placeholders (1 variant + 1 text_field + 1 image_slot) pour débloquer
+// le flip v1→v2 d'un template legacy. Idempotent : ne crée que les ressources
+// manquantes. super_admin only.
+export const scaffoldStudio = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    if (!(await assertTemplateExists(id))) {
+      record('studio_view', 'create', 'not_found');
+      res.status(404).json({ error: 'Template non trouvé' });
+      return;
+    }
+    const created = await templateStudioRepository.scaffoldPlaceholders(id);
+    record('studio_view', 'create', 'success');
+    logger.info('Template studio scaffold seeded', {
+      templateId: id,
+      userId: req.user?.id,
+      created,
+    });
+    res.status(201).json({ templateId: id, created });
+  } catch (error) {
+    record('studio_view', 'create', 'error');
+    logError('scaffoldStudio', req, error);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+};

@@ -37,7 +37,7 @@ async function execFileCommand(binary, args, options = {}) {
     const { stdout, stderr } = await execFileAsync(binary, args, opts);
     return { success: true, output: stdout, error: stderr };
   } catch (error) {
-    return { success: false, error: error.message };
+    return { success: false, error: error.message, output: error.stdout || '' };
   }
 }
 
@@ -53,7 +53,7 @@ async function execCommand(command) {
       }); // 50MB buffer
       return { success: true, output: stdout, error: stderr };
     } catch (error) {
-      return { success: false, error: error.message };
+      return { success: false, error: error.message, output: error.stdout || '' };
     }
   };
 

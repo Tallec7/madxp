@@ -789,7 +789,19 @@ export const schemas = {
     default_props: Joi.object().optional(),
     name: Joi.string().max(255).optional(),
     description: Joi.string().allow(null, '').max(2000).optional(),
+    // ADR-075 V2 — scope un template legacy à un club (super_admin only)
+    site_id: Joi.string().uuid().allow(null).optional(),
   }).min(1),
+
+  // ADR-075 V2 — create template avec scope club optionnel (super_admin)
+  templateCreateSchema: Joi.object({
+    name: Joi.string().max(255).required(),
+    composition_id: Joi.string().max(255).required(),
+    description: Joi.string().allow(null, '').max(2000).optional(),
+    props_schema: Joi.array().items(Joi.object()).optional(),
+    default_props: Joi.object().optional(),
+    site_id: Joi.string().uuid().allow(null).optional(),
+  }),
 
   templateDuplicate: Joi.object({
     name: Joi.string().max(255).optional(),

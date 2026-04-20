@@ -29,6 +29,15 @@ router.get(
   ctrl.getStudioView,
 );
 
+// ── Scaffold placeholders (débloque flip v1→v2)
+router.post(
+  '/:id/studio/scaffold',
+  ...adminOnly,
+  validateParams(paramSchemas.id),
+  sensitiveRateLimit,
+  ctrl.scaffoldStudio,
+);
+
 // ── Variants ────────────────────────────────────────────────────────────────
 router.get(
   '/:id/variants',

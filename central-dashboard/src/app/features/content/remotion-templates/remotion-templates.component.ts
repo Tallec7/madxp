@@ -119,6 +119,33 @@ export class RemotionTemplatesComponent implements OnInit, OnDestroy {
     if (this.selectedTemplate) this.loadStudioView(this.selectedTemplate.id);
   }
 
+  // ADR-075 V2 — filtre gallery "Mes templates perso" (white-glove scoping)
+  templateScopeFilter: 'all' | 'mine' | 'global' = 'all';
+
+  get currentUserSiteId(): string | null {
+    return this.authService.getCurrentUser()?.site_id ?? null;
+  }
+
+  get hasClubScopedTemplates(): boolean {
+    return this.templates.some((t) => !!t.site_id);
+  }
+
+  get filteredTemplates(): RemotionTemplate[] {
+    if (this.templateScopeFilter === 'all') return this.templates;
+    if (this.templateScopeFilter === 'global') {
+      return this.templates.filter((t) => !t.site_id);
+    }
+    // 'mine' : scoped au site courant (club/operator) OU tous les scopés (admin sans site_id)
+    const siteId = this.currentUserSiteId;
+    return this.templates.filter((t) =>
+      siteId ? t.site_id === siteId : !!t.site_id,
+    );
+  }
+
+  setTemplateScopeFilter(scope: 'all' | 'mine' | 'global'): void {
+    this.templateScopeFilter = scope;
+  }
+
   // ADR-075 Sprint 3 — wizard création template (super_admin)
   wizardOpen = false;
 
@@ -507,21 +534,52 @@ export class RemotionTemplatesComponent implements OnInit, OnDestroy {
       error: (err: { status?: number; error?: { error?: string; missing?: Record<string, boolean> } }) => {
         this.schemaVersionFlipping = false;
         if (err?.status === 409) {
-          const missing = err.error?.missing;
-          const parts = missing
-            ? Object.entries(missing)
-                .filter(([, m]) => m)
-                .map(([k]) => k)
-                .join(', ')
-            : '';
-          this.notifications.error(
-            parts
-              ? `Impossible de passer en v2 : shadow data manquante (${parts})`
-              : 'Impossible de passer en v2 : shadow data manquante',
-          );
+          this.handleSchemaVersionConflict(err.error?.missing);
         } else {
           this.notifications.error('Échec du changement de schéma');
         }
+      },
+    });
+  }
+
+  /**
+   * ADR-075 — UX 409 : liste le manquant et propose un seed placeholders
+   * one-click qui débloque le flip v1→v2 sans passer par le wizard complet.
+   */
+  private handleSchemaVersionConflict(missing?: Record<string, boolean>): void {
+    const parts = missing
+      ? Object.entries(missing)
+          .filter(([, m]) => m)
+          .map(([k]) => k)
+          .join(', ')
+      : '';
+    const detail = parts ? ` (${parts})` : '';
+    const confirmed = window.confirm(
+      `Impossible de passer en v2 : shadow data manquante${detail}.\n\n` +
+        `Initialiser automatiquement 1 variante + 1 champ texte + 1 slot image ` +
+        `avec des placeholders ? Tu pourras ensuite les éditer via le mode admin.`,
+    );
+    if (!confirmed || !this.selectedTemplate) return;
+    const templateId = this.selectedTemplate.id;
+    this.schemaVersionFlipping = true;
+    this.dataService.scaffoldStudio(templateId).subscribe({
+      next: () => {
+        this.dataService.setSchemaVersion(templateId, 2).subscribe({
+          next: (updated) => {
+            this.schemaVersionFlipping = false;
+            this.applyUpdatedTemplate(updated);
+            this.notifications.success('Schéma basculé en v2 avec placeholders');
+            if (isV2Template(updated)) this.loadStudioView(updated.id);
+          },
+          error: () => {
+            this.schemaVersionFlipping = false;
+            this.notifications.error('Scaffold OK mais échec du flip v2');
+          },
+        });
+      },
+      error: () => {
+        this.schemaVersionFlipping = false;
+        this.notifications.error("Échec de l'initialisation des placeholders");
       },
     });
   }

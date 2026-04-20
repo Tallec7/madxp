@@ -9,8 +9,10 @@ import {
   remotionTemplatesRepository,
   remotionTemplateVersionsRepository,
   remotionRenderJobRepository,
+  siteRepository,
 } from '../repositories';
 import { metricsService } from '../services/metrics.service';
+import { hasFeatureOverride, resolveTierLevel, TIER_LEVEL } from '../middleware/require-site-tier';
 export { prewarmRemotionBundle } from '../services/remotion-render-worker.service';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -31,8 +33,21 @@ const cleanupFile = (filePath: string) => {
  */
 export const listTemplates = async (req: AuthRequest, res: Response) => {
   try {
-    const isAdmin = req.user?.role === 'admin' || req.user?.role === 'super_admin';
-    const templates = await remotionTemplatesRepository.findAll(!isAdmin);
+    const role = req.user?.role;
+    const isAdmin = role === 'admin' || role === 'super_admin';
+    const siteId = req.user?.site_id ?? null;
+
+    // ADR-075 V2 — scope par site :
+    //   - super_admin/admin voient tout (globaux + tous les club-scoped)
+    //   - operator/club voient : globaux publiés + ceux de leur site
+    let templates;
+    if (isAdmin) {
+      templates = await remotionTemplatesRepository.findAll(false);
+    } else if (siteId) {
+      templates = await remotionTemplatesRepository.findVisibleForSite(siteId, true);
+    } else {
+      templates = await remotionTemplatesRepository.findAll(true);
+    }
     res.json(templates);
   } catch (error) {
     logger.error('listTemplates error', { error });
@@ -61,7 +76,20 @@ export const getTemplate = async (req: AuthRequest, res: Response) => {
  */
 export const createTemplate = async (req: AuthRequest, res: Response) => {
   try {
-    const { name, composition_id, description, props_schema, default_props } = req.body;
+    const { name, composition_id, description, props_schema, default_props, site_id } = req.body as {
+      name: string;
+      composition_id: string;
+      description?: string | null;
+      props_schema?: Record<string, unknown>[];
+      default_props?: Record<string, unknown>;
+      site_id?: string | null;
+    };
+
+    // ADR-075 V2 — seul super_admin peut scoper un template à un club (white-glove).
+    // Les admins classiques créent uniquement des templates globaux.
+    const scopedSiteId =
+      req.user?.role === 'super_admin' ? site_id ?? null : null;
+
     const template = await remotionTemplatesRepository.create({
       name,
       composition_id,
@@ -69,6 +97,7 @@ export const createTemplate = async (req: AuthRequest, res: Response) => {
       props_schema: props_schema ?? [],
       default_props: default_props ?? {},
       created_by: req.user?.id ?? null,
+      site_id: scopedSiteId,
     });
     res.status(201).json(template);
   } catch (error) {
@@ -358,6 +387,33 @@ export const renderTemplate = async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ error: 'Template non trouvé ou non publié' });
     }
 
+    // ADR-075 V2 — template scopé à un club (white-glove) :
+    //   1) Refuser si l'utilisateur n'appartient pas au site scope (sauf admin/super_admin)
+    //   2) Vérifier le feature gate `template_studio_club_scoped` (Premium ou override)
+    if (template.site_id) {
+      const role = req.user?.role;
+      const isPrivileged = role === 'admin' || role === 'super_admin';
+      if (!isPrivileged && req.user?.site_id !== template.site_id) {
+        return res.status(403).json({ error: 'Template réservé à un autre club' });
+      }
+      const scopedSite = await siteRepository.findById(template.site_id);
+      if (!scopedSite) {
+        return res.status(404).json({ error: 'Site du template introuvable' });
+      }
+      const hasOverride = hasFeatureOverride(
+        scopedSite as { feature_overrides?: Record<string, boolean> | null },
+        'template_studio_club_scoped',
+      );
+      const plan = (scopedSite as { subscription_plan?: string | null }).subscription_plan;
+      const tierOk = resolveTierLevel(plan) >= TIER_LEVEL.premium;
+      if (!hasOverride && !tierOk) {
+        return res.status(403).json({
+          error: 'Les templates perso club sont réservés au tier Premium',
+          required_tier: 'premium',
+        });
+      }
+    }
+
     const job = await remotionRenderJobRepository.create({
       template_id: id,
       props: props ?? {},
@@ -398,26 +454,37 @@ export const renderTemplate = async (req: AuthRequest, res: Response) => {
 export const updateTemplate = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
-    const { name, description, props_schema, default_props } = req.body as {
+    const { name, description, props_schema, default_props, site_id } = req.body as {
       name?: string;
       description?: string | null;
       props_schema?: Record<string, unknown>[];
       default_props?: Record<string, unknown>;
+      site_id?: string | null;
     };
 
     const existing = await remotionTemplatesRepository.findById(id);
     if (!existing) return res.status(404).json({ error: 'Template non trouvé' });
+
+    // ADR-075 V2 — site_id modifiable uniquement par super_admin (white-glove scoping).
+    const siteIdPatch = req.user?.role === 'super_admin' ? site_id : undefined;
 
     const updated = await remotionTemplatesRepository.update(id, {
       name,
       description,
       props_schema,
       default_props,
+      site_id: siteIdPatch,
     });
 
     logger.info('Template updated', {
       templateId: id,
-      fields: { name: name !== undefined, description: description !== undefined, props_schema: props_schema !== undefined, default_props: default_props !== undefined },
+      fields: {
+        name: name !== undefined,
+        description: description !== undefined,
+        props_schema: props_schema !== undefined,
+        default_props: default_props !== undefined,
+        site_id: siteIdPatch !== undefined,
+      },
       userId: req.user?.id,
     });
 

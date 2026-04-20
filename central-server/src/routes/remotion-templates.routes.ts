@@ -33,11 +33,12 @@ router.get(
   ctrl.getTemplate,
 );
 
-// Création — admin uniquement
+// Création — admin uniquement (super_admin requis pour scope club via site_id)
 router.post(
   '/',
   authenticate,
   requireRole('admin', 'super_admin'),
+  validate(schemas.templateCreateSchema),
   sensitiveRateLimit,
   ctrl.createTemplate,
 );

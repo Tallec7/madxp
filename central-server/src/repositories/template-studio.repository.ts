@@ -578,6 +578,76 @@ class TemplateStudioRepository {
     );
     return (rowCount ?? 0) > 0;
   }
+
+  /**
+   * ADR-075 — Scaffold placeholders pour un template legacy.
+   * Crée 1 variant + 1 text field + 1 image slot si absents, pour débloquer
+   * le flip v1→v2. Idempotent : chaque ressource est créée uniquement si sa
+   * table est vide pour ce template. Les URLs placeholders sont vides — le
+   * runtime Remotion applique un guard `isValidSrc` qui skip les URLs non
+   * valides (cf. template-runtime.tsx), donc l'aperçu montre un fond noir
+   * tant que l'admin n'a pas uploadé les vraies vidéos via le wizard.
+   */
+  async scaffoldPlaceholders(templateId: string): Promise<{
+    variantsCreated: number;
+    textFieldsCreated: number;
+    imageSlotsCreated: number;
+  }> {
+    const [variants, textFields, imageSlots] = await Promise.all([
+      this.listVariants(templateId),
+      this.listTextFields(templateId),
+      this.listImageSlots(templateId),
+    ]);
+    let variantsCreated = 0;
+    let textFieldsCreated = 0;
+    let imageSlotsCreated = 0;
+    if (variants.length === 0) {
+      await this.createVariant(templateId, {
+        name: 'Par défaut',
+        backgroundVideoUrl: '',
+        sortOrder: 0,
+      });
+      variantsCreated = 1;
+    }
+    if (textFields.length === 0) {
+      await this.createTextField(templateId, {
+        slotKey: 'title',
+        label: 'Titre',
+        positionX: 0.5,
+        positionY: 0.5,
+        maxWidth: 0.8,
+        fontFamily: 'Anton',
+        fontSize: 48,
+        color: '#FFFFFF',
+        align: 'center',
+        appearAt: 0.5,
+        appearDuration: 0.4,
+        animation: 'fade',
+        defaultValue: 'Titre',
+        multiline: false,
+        required: false,
+        sortOrder: 0,
+      });
+      textFieldsCreated = 1;
+    }
+    if (imageSlots.length === 0) {
+      await this.createImageSlot(templateId, {
+        slotKey: 'photo',
+        label: 'Image',
+        positionX: 0.5,
+        positionY: 0.5,
+        width: 0.3,
+        height: 0.3,
+        appearAt: 0.5,
+        appearDuration: 0.4,
+        animation: 'fade',
+        required: false,
+        sortOrder: 0,
+      });
+      imageSlotsCreated = 1;
+    }
+    return { variantsCreated, textFieldsCreated, imageSlotsCreated };
+  }
 }
 
 export const templateStudioRepository = new TemplateStudioRepository();

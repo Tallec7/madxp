@@ -527,12 +527,16 @@ output_json() {
         fi
     fi
 
+    # Use null for numeric fields when hostapd.conf is missing or incomplete
+    local CURRENT_CHANNEL_JSON=${CURRENT_CHANNEL:-null}
+    local RECOMMENDED_CHANNEL_JSON=${RECOMMENDED_CHANNEL:-${CURRENT_CHANNEL:-null}}
+
     cat << EOF
 {
   "success": true,
   "diagnostic": {
-    "currentChannel": $CURRENT_CHANNEL,
-    "recommendedChannel": ${RECOMMENDED_CHANNEL:-$CURRENT_CHANNEL},
+    "currentChannel": $CURRENT_CHANNEL_JSON,
+    "recommendedChannel": $RECOMMENDED_CHANNEL_JSON,
     "ssid": "$SSID",
     "hostapdActive": $HOSTAPD_ACTIVE,
     "dnsmasqActive": $DNSMASQ_ACTIVE,

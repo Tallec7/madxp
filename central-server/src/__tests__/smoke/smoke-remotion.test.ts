@@ -717,3 +717,122 @@ describe('Template Studio v2 — schema_version UI toggle (ADR-075)', () => {
     expect(componentTs).toMatch(/err\?\.status === 409|status === 409/);
   });
 });
+
+describe('Template Studio V2 — site-scoped templates (ADR-075)', () => {
+  const read = (rel: string) => fs.readFileSync(path.join(centralSrc, rel), 'utf8');
+
+  it('repository exposes findVisibleForSite for club/operator gallery', () => {
+    const repo = read('repositories/remotion-templates.repository.ts');
+    expect(repo).toMatch(/async\s+findVisibleForSite\s*\(/);
+    // Query must filter by site_id IS NULL (global) OR site_id = $1 (club-scoped)
+    expect(repo).toMatch(/site_id\s+IS\s+NULL\s+OR\s+site_id\s*=\s*\$1/i);
+  });
+
+  it('controller branches on role to scope template list (super_admin, site user, anonymous)', () => {
+    const ctl = read('controllers/remotion-templates.controller.ts');
+    expect(ctl).toMatch(/findVisibleForSite/);
+    expect(ctl).toMatch(/isAdmin/);
+    expect(ctl).toMatch(/siteId/);
+  });
+
+  it('Joi templateCreateSchema accepts optional site_id (uuid or null)', () => {
+    const v = read('middleware/validation.ts');
+    expect(v).toMatch(/templateCreateSchema\s*:\s*Joi\.object/);
+    // site_id must accept UUID or null
+    expect(v).toMatch(/site_id\s*:\s*Joi\.string\(\)\.uuid\(\)\.allow\(\s*null\s*\)/);
+  });
+
+  it('POST / route applies validate(templateCreateSchema)', () => {
+    const routes = read('routes/remotion-templates.routes.ts');
+    const postBlock = routes.match(/router\.post\(\s*['"]\/['"][\s\S]*?\)\s*;/);
+    expect(postBlock).not.toBeNull();
+    expect(postBlock?.[0]).toMatch(/validate\(\s*schemas\.templateCreateSchema\s*\)/);
+  });
+
+  it('UpdateTemplateInput interface accepts site_id for white-glove reassignment', () => {
+    const repo = read('repositories/remotion-templates.repository.ts');
+    // UpdateTemplateInput must declare site_id as optional
+    expect(repo).toMatch(/interface\s+UpdateTemplateInput[\s\S]*?site_id\?\s*:\s*string\s*\|\s*null/);
+  });
+});
+
+describe('Template Studio v2 — preview hardening (ADR-075)', () => {
+  const dashRoot = path.join(repoRoot, 'central-dashboard');
+  const readDash = (rel: string) => fs.readFileSync(path.join(dashRoot, rel), 'utf8');
+
+  it('dashboard TemplateRuntime validates URL scheme before OffthreadVideo', () => {
+    const rt = readDash(
+      'src/app/features/content/remotion-templates/studio-player/template-runtime.tsx',
+    );
+    expect(rt).toMatch(/isValidSrc/);
+    expect(rt).toMatch(/\/\^\(https\?:\|blob:\|data:\)\//);
+    // bgSrc and layerSrc must be trimmed and validated
+    expect(rt).toMatch(/\.trim\(\)/);
+  });
+
+  it('templates-remotion runtime mirrors dashboard URL validation (parity)', () => {
+    const rt = fs.readFileSync(
+      path.join(repoRoot, 'templates-remotion/src/runtime/TemplateRuntime.tsx'),
+      'utf8',
+    );
+    expect(rt).toMatch(/isValidSrc/);
+    expect(rt).toMatch(/\/\^\(https\?:\|blob:\|data:\)\//);
+    expect(rt).toMatch(/\.trim\(\)/);
+  });
+
+  it('dashboard CSP media-src allows Railway + kalonpartners for template previews', () => {
+    const csp = readDash('src/index.html');
+    expect(csp).toMatch(/media-src[^;]*neopro-central-production\.up\.railway\.app/);
+    expect(csp).toMatch(/media-src[^;]*kalonpartners\.bzh/);
+    expect(csp).toMatch(/media-src[^;]*blob:/);
+  });
+});
+
+describe('Template Studio v2 — scaffold placeholders (ADR-075)', () => {
+  const dashRoot = path.join(repoRoot, 'central-dashboard');
+  const readDash = (rel: string) => fs.readFileSync(path.join(dashRoot, rel), 'utf8');
+  const read = (rel: string) => fs.readFileSync(path.join(centralSrc, rel), 'utf8');
+
+  it('repository exposes scaffoldPlaceholders to unblock v1→v2 flip', () => {
+    const repo = read('repositories/template-studio.repository.ts');
+    expect(repo).toMatch(/async\s+scaffoldPlaceholders\s*\(/);
+    // Idempotent: only seeds when list is empty
+    expect(repo).toMatch(/variants\.length\s*===\s*0/);
+    expect(repo).toMatch(/textFields\.length\s*===\s*0/);
+    expect(repo).toMatch(/imageSlots\.length\s*===\s*0/);
+  });
+
+  it('controller exposes scaffoldStudio with metric tracking', () => {
+    const ctl = read('controllers/template-studio.controller.ts');
+    expect(ctl).toMatch(/export\s+const\s+scaffoldStudio\s*=/);
+    expect(ctl).toMatch(/scaffoldPlaceholders/);
+    expect(ctl).toMatch(/record\(\s*['"]studio_view['"]/);
+  });
+
+  it('POST /:id/studio/scaffold route is adminOnly with rate limit', () => {
+    const routes = read('routes/template-studio.routes.ts');
+    const block = routes.match(/router\.post\(\s*['"]\/:id\/studio\/scaffold['"][\s\S]*?\)\s*;/);
+    expect(block).not.toBeNull();
+    expect(block?.[0]).toMatch(/adminOnly/);
+    expect(block?.[0]).toMatch(/sensitiveRateLimit/);
+    expect(block?.[0]).toMatch(/ctrl\.scaffoldStudio/);
+  });
+
+  it('dashboard data service exposes scaffoldStudio(id)', () => {
+    const svc = readDash(
+      'src/app/features/content/remotion-templates/remotion-templates-data.service.ts',
+    );
+    expect(svc).toMatch(/scaffoldStudio\s*\([\s\S]*?id\s*:\s*string/);
+    expect(svc).toMatch(/\/studio\/scaffold/);
+  });
+
+  it('component handles 409 with scaffold confirm flow, not just a toast', () => {
+    const ts = readDash(
+      'src/app/features/content/remotion-templates/remotion-templates.component.ts',
+    );
+    expect(ts).toMatch(/handleSchemaVersionConflict/);
+    expect(ts).toMatch(/scaffoldStudio/);
+    // Confirm UX before auto-seeding
+    expect(ts).toMatch(/window\.confirm|confirm\(/);
+  });
+});

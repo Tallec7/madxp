@@ -51,7 +51,8 @@ export type FeatureKey =
   | 'white_label'             // Premium : marque blanche complete
   | 'watermark'               // Pro/Premium : watermark / logo permanent
   // Templates vidéo
-  | 'video_templates';        // Pro+ : accès aux templates vidéo Remotion (ADR-052)
+  | 'video_templates'         // Pro+ : accès aux templates vidéo Remotion (ADR-052)
+  | 'template_studio_club_scoped';  // Premium : templates perso club white-glove (ADR-075 V2)
 
 const FEATURE_TIERS: Record<FeatureKey, SiteTier> = {
   multi_profiles: 'pro',
@@ -65,6 +66,7 @@ const FEATURE_TIERS: Record<FeatureKey, SiteTier> = {
   white_label: 'premium',
   watermark: 'pro',
   video_templates: 'pro',
+  template_studio_club_scoped: 'premium',
 };
 
 /**
