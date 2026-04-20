@@ -2,7 +2,7 @@ import { Router } from 'express';
 import * as hotspotConfigController from '../controllers/hotspot-config.controller';
 import { authenticate, requireRole, authenticateSiteApiKey } from '../middleware/auth';
 import { validate, validateParams, paramSchemas, schemas } from '../middleware/validation';
-import { adminRateLimit, sensitiveRateLimit } from '../middleware/user-rate-limit';
+import { sensitiveRateLimit } from '../middleware/user-rate-limit';
 
 /**
  * ADR-074 — Hotspot config routes, mounted at /api/sites.
