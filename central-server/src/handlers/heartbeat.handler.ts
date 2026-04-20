@@ -16,6 +16,12 @@ import { metricsService } from '../services/metrics.service';
 import { alertingService } from '../services/alerting.service';
 import { SocketContext } from './socket-context';
 
+// Throttle metrics persistence: heartbeats arrive every 30s for liveness,
+// but storing every sample bloats the metrics table for no analytical value.
+// One sample per site every 5 minutes is enough for the 24h history view.
+const METRICS_PERSIST_INTERVAL_MS = 5 * 60 * 1000;
+const lastMetricsInsertAt = new Map<string, number>();
+
 /**
  * Handle a heartbeat message from a connected Raspberry Pi.
  *
@@ -33,20 +39,25 @@ export async function handleHeartbeat(
     ctx.lastPongReceived.set(siteId, Date.now());
     metricsService.recordHeartbeat();
 
-    await query(
-      `INSERT INTO metrics (site_id, cpu_usage, memory_usage, temperature, disk_usage, uptime, network_status, fan_status, recorded_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())`,
-      [
-        siteId,
-        message.metrics.cpu,
-        message.metrics.memory,
-        message.metrics.temperature,
-        message.metrics.disk,
-        Math.floor(message.metrics.uptime),
-        message.wifiStatus ? JSON.stringify(message.wifiStatus) : null,
-        message.fanStatus ? JSON.stringify(message.fanStatus) : null,
-      ]
-    );
+    const now = Date.now();
+    const lastInsert = lastMetricsInsertAt.get(siteId) ?? 0;
+    if (now - lastInsert >= METRICS_PERSIST_INTERVAL_MS) {
+      await query(
+        `INSERT INTO metrics (site_id, cpu_usage, memory_usage, temperature, disk_usage, uptime, network_status, fan_status, recorded_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())`,
+        [
+          siteId,
+          message.metrics.cpu,
+          message.metrics.memory,
+          message.metrics.temperature,
+          message.metrics.disk,
+          Math.floor(message.metrics.uptime),
+          message.wifiStatus ? JSON.stringify(message.wifiStatus) : null,
+          message.fanStatus ? JSON.stringify(message.fanStatus) : null,
+        ]
+      );
+      lastMetricsInsertAt.set(siteId, now);
+    }
 
     // Update site status, local IP and version if provided
     const localIp = message.metrics.localIp || null;
