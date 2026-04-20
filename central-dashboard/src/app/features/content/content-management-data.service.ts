@@ -26,6 +26,7 @@ export interface ContentVideoRow {
   duration?: number;
   created_at: Date;
   url?: string;
+  thumbnail_url?: string | null;
 }
 
 export interface PaginationInfo {

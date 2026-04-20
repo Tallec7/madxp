@@ -25,6 +25,51 @@
           class="search-input"
         />
       </div>
+      <div class="view-toggle">
+        <button
+          class="view-btn"
+          [class.active]="viewMode === 'grid-large'"
+          (click)="viewMode = 'grid-large'"
+          title="Grille large"
+        >
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+            <rect x="1" y="1" width="6" height="6" rx="1" />
+            <rect x="9" y="1" width="6" height="6" rx="1" />
+            <rect x="1" y="9" width="6" height="6" rx="1" />
+            <rect x="9" y="9" width="6" height="6" rx="1" />
+          </svg>
+        </button>
+        <button
+          class="view-btn"
+          [class.active]="viewMode === 'grid-compact'"
+          (click)="viewMode = 'grid-compact'"
+          title="Grille compacte"
+        >
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+            <rect x="1" y="1" width="3.5" height="3.5" rx="0.5" />
+            <rect x="6.25" y="1" width="3.5" height="3.5" rx="0.5" />
+            <rect x="11.5" y="1" width="3.5" height="3.5" rx="0.5" />
+            <rect x="1" y="6.25" width="3.5" height="3.5" rx="0.5" />
+            <rect x="6.25" y="6.25" width="3.5" height="3.5" rx="0.5" />
+            <rect x="11.5" y="6.25" width="3.5" height="3.5" rx="0.5" />
+            <rect x="1" y="11.5" width="3.5" height="3.5" rx="0.5" />
+            <rect x="6.25" y="11.5" width="3.5" height="3.5" rx="0.5" />
+            <rect x="11.5" y="11.5" width="3.5" height="3.5" rx="0.5" />
+          </svg>
+        </button>
+        <button
+          class="view-btn"
+          [class.active]="viewMode === 'list'"
+          (click)="viewMode = 'list'"
+          title="Liste"
+        >
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+            <rect x="1" y="2" width="14" height="2.5" rx="1" />
+            <rect x="1" y="6.75" width="14" height="2.5" rx="1" />
+            <rect x="1" y="11.5" width="14" height="2.5" rx="1" />
+          </svg>
+        </button>
+      </div>
       <div class="header-actions">
         <button class="btn btn-secondary" (click)="showImageModal = true">
           + Ajouter une image
@@ -35,12 +80,17 @@
       </div>
     </div>
 
-    <div class="videos-grid" *ngIf="videos.length > 0; else noVideos">
+    <div
+      class="videos-grid"
+      [ngClass]="'videos-grid--' + viewMode"
+      *ngIf="videos.length > 0; else noVideos"
+    >
       <app-video-card
         *ngFor="let video of videos"
         [title]="video.title"
         [subtitle]="video.filename"
         [metaParts]="getVideoMetaParts(video)"
+        [thumbnailUrl]="video.thumbnail_url || null"
       >
         <ng-container card-actions>
           <button

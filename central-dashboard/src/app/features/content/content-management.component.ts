@@ -28,6 +28,7 @@ import { ContentDeploymentService } from './content-deployment.service';
 })
 export class ContentManagementComponent implements OnInit, OnDestroy {
   activeTab: 'videos' | 'deploy' | 'history' = 'videos';
+  viewMode: 'grid-large' | 'grid-compact' | 'list' = 'grid-large';
 
   videos: ContentVideoRow[] = [];
   allVideos: VideoName[] = [];
