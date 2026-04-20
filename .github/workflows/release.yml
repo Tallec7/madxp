@@ -191,8 +191,10 @@ jobs:
       # live in central-dashboard/package.json (ADR-075 Sprint 2). `ng build
       # central-dashboard` resolves modules from the project's node_modules,
       # so both installs are required — matches ci.yml central-dashboard job.
+      # `npm install` (not `npm ci`) because central-dashboard/package-lock.json
+      # is gitignored (central-dashboard/.gitignore:3).
       - name: Install central-dashboard dependencies
-        run: npm ci
+        run: npm install --no-audit --no-fund
         working-directory: central-dashboard
 
       - name: Build dashboard
